@@ -53,7 +53,7 @@ typedef struct display_params {
     uint32_t refresh_rate_e2;
 } display_params_t;
 
-// Info about valid cursor configuratoins.
+// Info about valid cursor configurations.
 typedef struct cursor_info {
     // The width and height of the cursor configuration, in pixels.
     uint32_t width;
@@ -264,7 +264,7 @@ typedef struct display_config {
     //
     // (cc_coefficients * (pixel + cc_preoffsets)) + cc_postoffsets
     //
-    // where pixel is a column vector consiting of the pixel's 3 components.
+    // where pixel is a column vector consisting of the pixel's 3 components.
     float cc_preoffsets[3];
     float cc_coefficients[3][3];
     float cc_postoffsets[3];
@@ -276,10 +276,10 @@ typedef struct display_config {
 // The display mode configuration is valid. Note that this is distinct from
 // whether or not the layer configuration is valid.
 #define CONFIG_DISPLAY_OK 0
-// Error indicating that the hardware cannot simultaniously support the
+// Error indicating that the hardware cannot simultaneously support the
 // requested number of displays.
 #define CONFIG_DISPLAY_TOO_MANY 1
-// Error indicating that the hardware cannot simultaniously support the given
+// Error indicating that the hardware cannot simultaneously support the given
 // set of display modes. To support a mode, the display must be able to display
 // a single layer with width and height equal to the requested mode and the
 // preferred pixel format.
@@ -328,8 +328,8 @@ typedef struct display_controller_protocol_ops {
 
     // Validates the given configuration.
     //
-    // The configuration may not include all displays. Omiteed displays should be treated as
-    // whichever of off or displaying a blank screen results in a more premissive validation.
+    // The configuration may not include all displays. Omitted displays should be treated as
+    // whichever of off or displaying a blank screen results in a more permissive validation.
     //
     // All displays in a configuration will have at least one layer. The layers will be
     // arranged in increasing z-order, and their z_index fields will be set consecutively.
@@ -355,7 +355,7 @@ typedef struct display_controller_protocol_ops {
     // Applies the configuration.
     //
     // All configurations passed to this function will be derived from configurations which
-    // have been succesfully validated, with the only differences either being omitted layers
+    // have been successfully validated, with the only differences either being omitted layers
     // or different image handles. To account for any layers which are not present, the driver
     // must use the z_index values of the present layers to configure them as if the whole
     // configuration was present.
@@ -376,7 +376,7 @@ typedef struct display_controller_protocol_ops {
     uint32_t (*compute_linear_stride)(void* ctx, uint32_t width, zx_pixel_format_t pixel_format);
 
     // Allocates a VMO of the requested size which can be used for images.
-    // TODO: move this functionallity into a seperate video buffer management system.
+    // TODO: move this functionality into a separate video buffer management system.
     zx_status_t (*allocate_vmo)(void* ctx, uint64_t size, zx_handle_t* vmo_out);
 } display_controller_protocol_ops_t;
 

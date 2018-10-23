@@ -32,7 +32,7 @@ struct Mode {
 // Flag for interlaced display modes.
 const int32 modeInterlaced = 0x1;
 
-// Info about valid cursor configuratoins.
+// Info about valid cursor configurations.
 struct CursorInfo {
     // The width and height of the cursor configuration, in pixels.
     uint32 width;
@@ -181,7 +181,7 @@ struct ClientCompositionOp {
 // while the virtcon client is obtained by opening a 'virtcon' child of the
 // device.
 //
-// A display configuration can be seperated into two parts: the layer layout and
+// A display configuration can be separated into two parts: the layer layout and
 // the layer contents. The layout includes all parts of a configuration other
 // than the image handles. The active configuration is composed of the most
 // recently applied layout and an active image from each layer - see
@@ -253,7 +253,7 @@ interface Controller {
     //
     // (coefficients * (pixel + preoffsets)) + postoffsets
     //
-    // where pixel is a column vector consiting of the pixel's 3 components.
+    // where pixel is a column vector consisting of the pixel's 3 components.
     //
     // |coefficients| is passed in row-major order. If the first entry of an
     // array is NaN, the array is treated as the identity element for the relevant
@@ -416,6 +416,6 @@ interface Controller {
     24: ComputeLinearImageStride(uint32 width, uint32 pixel_format) -> (uint32 stride);
 
     // Allocates a VMO of the requested size which can be used for images.
-    // TODO: move this into a seperate video buffer management system.
+    // TODO: move this into a separate video buffer management system.
     25: AllocateVmo(uint64 size) -> (zx.status res, handle<vmo>? vmo);
 };
