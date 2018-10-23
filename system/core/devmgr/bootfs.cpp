@@ -71,37 +71,16 @@ zx_status_t Bootfs::Parse(Callback callback, void* cookie) {
     return ZX_OK;
 }
 
-zx_status_t Bootfs::Open(const char* name, zx::vmo* vmo_out, uint32_t* size_out) {
-    size_t name_len = strlen(name) + 1;
-    size_t avail = dirsize_;
-    auto p = static_cast<char*>(dir_);
-    bootfs_entry_t* e;
-    while (avail > sizeof(bootfs_entry_t)) {
-        e = reinterpret_cast<bootfs_entry_t*>(p);
-        size_t sz = BOOTFS_RECSIZE(e);
-        if ((e->name_len < 1) || (e->name_len > BOOTFS_MAX_NAME_LEN) ||
-            (e->name[e->name_len - 1] != 0) || (sz > avail)) {
-            printf("bootfs: bogus entry!\n");
-            return ZX_ERR_IO;
-        }
-        if ((name_len == e->name_len) && (memcmp(name, e->name, name_len) == 0)) {
-            goto found;
-        }
-        p += sz;
-        avail -= sz;
-    }
-    printf("bootfs_open: '%s' not found\n", name);
-    return ZX_ERR_NOT_FOUND;
-
-found:;
+static zx_status_t CloneVmo(const char* name, size_t name_len, const bootfs_entry_t& e,
+                            const zx::vmo& original_vmo, zx::vmo* vmo_out, uint32_t* size_out) {
     zx::vmo vmo;
     zx_status_t r;
 
     // Clone a private copy of the file's subset of the bootfs VMO.
     // TODO(mcgrathr): Create a plain read-only clone when the feature
     // is implemented in the VM.
-    if ((r = vmo_.clone(ZX_VMO_CLONE_COPY_ON_WRITE,
-                        e->data_off, e->data_len, &vmo)) != ZX_OK) {
+    if ((r = original_vmo.clone(ZX_VMO_CLONE_COPY_ON_WRITE,
+                                e.data_off, e.data_len, &vmo)) != ZX_OK) {
         return r;
     }
 
@@ -122,9 +101,32 @@ found:;
 
     *vmo_out = fbl::move(vmo);
     if (size_out) {
-        *size_out = e->data_len;
+        *size_out = e.data_len;
     }
     return ZX_OK;
+}
+
+zx_status_t Bootfs::Open(const char* name, zx::vmo* vmo_out, uint32_t* size_out) {
+    size_t name_len = strlen(name) + 1;
+    size_t avail = dirsize_;
+    auto p = static_cast<char*>(dir_);
+    bootfs_entry_t* e;
+    while (avail > sizeof(bootfs_entry_t)) {
+        e = reinterpret_cast<bootfs_entry_t*>(p);
+        size_t sz = BOOTFS_RECSIZE(e);
+        if ((e->name_len < 1) || (e->name_len > BOOTFS_MAX_NAME_LEN) ||
+            (e->name[e->name_len - 1] != 0) || (sz > avail)) {
+            printf("bootfs: bogus entry!\n");
+            return ZX_ERR_IO;
+        }
+        if ((name_len == e->name_len) && (memcmp(name, e->name, name_len) == 0)) {
+            return CloneVmo(name, name_len, *e, vmo_, vmo_out, size_out);
+        }
+        p += sz;
+        avail -= sz;
+    }
+    printf("bootfs_open: '%s' not found\n", name);
+    return ZX_ERR_NOT_FOUND;
 }
 
 zx::vmo Bootfs::DuplicateVmo() {
