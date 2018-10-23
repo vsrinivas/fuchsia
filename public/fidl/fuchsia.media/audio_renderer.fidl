@@ -285,7 +285,3 @@ interface AudioRenderer : StreamBufferSet, StreamSink {
     // induced gain/ducking changes. (Presuming that they belong at this level at
     // all; they may belong on some sort of policy object).
 };
-
-// DEPRECATED
-interface AudioOut : AudioRenderer {
-};

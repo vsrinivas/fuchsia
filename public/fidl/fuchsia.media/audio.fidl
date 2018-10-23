@@ -13,9 +13,9 @@ interface Audio {
     // audio input device, or loops-back from the current default audio output
     // device based on value passed for the the loopback flag.
     //
-    // TODO(mpuryear): Get rid of the loopback flag ASAP.  Routing decisions (and
+    // TODO(mpuryear): Get rid of the loopback flag ASAP. Routing decisions (and
     // security surrounding routing decisions) should be much more sophisticated
-    // than this.  This is just a placeholder until we have a design in place.
+    // than this. This is just a placeholder until we have a design in place.
     // Eventually, I suspect that all of this will move up into the audio policy
     // manager and application clients will obtain AudioCapturers from and control
     // through the policy manager.
@@ -71,14 +71,9 @@ interface Audio {
     0x0705: -> SystemGainMuteChanged(float32 gain_db, bool muted);
 
     0x0706: SetRoutingPolicy(AudioOutputRoutingPolicy policy);
-
-    // DEPRECATED
-    0x07FE: CreateAudioOut(request<AudioOut> audio_out_request);
-    0x07FF: CreateAudioIn(request<AudioIn> audio_in_request,
-                          bool loopback);
 };
 
-// A placeholder for various types of simple routing policies.  This should be
+// A placeholder for various types of simple routing policies. This should be
 // replaced when routing policy moves to a more centralized policy manager.
 enum AudioOutputRoutingPolicy {
     // AudioRenderers are always connected to all audio outputs which currently
@@ -86,7 +81,7 @@ enum AudioOutputRoutingPolicy {
     ALL_PLUGGED_OUTPUTS = 0;
 
     // AudioRenderers are only connected to the output stream which most
-    // recently entered the plugged state.  AudioRenderers move around from output to
+    // recently entered the plugged state. AudioRenderers move around from output to
     // output as streams are published/unpublished and become plugged/unplugged.
     //
     // This is the initial setting for audio output routing.

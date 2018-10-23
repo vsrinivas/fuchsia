@@ -292,20 +292,16 @@ interface AudioCapturer : StreamBufferSet, StreamSource {
     // Methods to be deprecated
     // These methods will go away.
 
-    // Gets the currently configured stream type.  Note: for an AudioCapturer which was
+    // Gets the currently configured stream type. Note: for an AudioCapturer which was
     // just created and has not yet had its stream type explicitly set, this will
     // retrieve the stream type -- at the time the AudioCapturer was created -- of the
     // source (input or looped-back output) to which the AudioCapturer is bound.
     //
-    // TODO(mpuryear): Get rid of this.  Eventually, AudioCapturers will be bindable to
+    // TODO(mpuryear): Get rid of this. Eventually, AudioCapturers will be bindable to
     // a set of inputs/outputs/renderers, so the concept of a "native" stream type
-    // will go away.  Mechanisms will need to be put in place to allow users to
+    // will go away. Mechanisms will need to be put in place to allow users to
     // enumerate the configuration of these bind-able endpoints (and perhaps to
     // exercise control over them), but it will be the user of the AudioCapturer's job
     // to specify the format they want.
     0xffff: GetStreamType() -> (StreamType stream_type);
-};
-
-// DEPRECATED
-interface AudioIn : AudioCapturer {
 };

@@ -36,17 +36,6 @@ class AudioCoreImpl : public fuchsia::media::Audio {
                                audio_capturer_request,
                            bool loopback) final;
 
-  // DEPRECATED
-  void CreateAudioOut(fidl::InterfaceRequest<fuchsia::media::AudioOut>
-                          audio_renderer_request) final {
-    FXL_NOTIMPLEMENTED();
-  }
-  void CreateAudioIn(
-      fidl::InterfaceRequest<fuchsia::media::AudioIn> audio_capturer_request,
-      bool loopback) final {
-    FXL_NOTIMPLEMENTED();
-  }
-
   void SetSystemGain(float gain_db) final;
   void SetSystemMute(bool muted) final;
 
