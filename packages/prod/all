@@ -70,6 +70,7 @@
         "garnet/packages/prod/scenic",
         "garnet/packages/prod/scenic_tools",
         "garnet/packages/prod/scpi",
+        "garnet/packages/prod/ssh",
         "garnet/packages/prod/stash",
         "garnet/packages/prod/sysmgr",
         "garnet/packages/prod/telephony",
