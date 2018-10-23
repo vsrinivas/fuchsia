@@ -9,10 +9,9 @@
 #include <stdint.h>
 
 CodecPacket::CodecPacket(uint64_t buffer_lifetime_ordinal,
-                         uint32_t packet_index, CodecBuffer* buffer)
+                         uint32_t packet_index)
     : buffer_lifetime_ordinal_(buffer_lifetime_ordinal),
-      packet_index_(packet_index),
-      buffer_(buffer) {
+      packet_index_(packet_index) {
   // nothing else to do here
 }
 
@@ -26,7 +25,9 @@ uint64_t CodecPacket::buffer_lifetime_ordinal() const {
 
 uint32_t CodecPacket::packet_index() const { return packet_index_; }
 
-const CodecBuffer& CodecPacket::buffer() const { return *buffer_; }
+void CodecPacket::SetBuffer(const CodecBuffer* buffer) { buffer_ = buffer; }
+
+const CodecBuffer* CodecPacket::buffer() const { return buffer_; }
 
 void CodecPacket::SetStartOffset(uint32_t start_offset) {
   start_offset_ = start_offset;
@@ -80,14 +81,6 @@ bool CodecPacket::is_free() const { return is_free_; }
 void CodecPacket::SetIsNew(bool is_new) { is_new_ = is_new; }
 
 bool CodecPacket::is_new() const { return is_new_; }
-
-void CodecPacket::SetVideoFrame(std::weak_ptr<VideoFrame> video_frame) {
-  video_frame_ = video_frame;
-}
-
-std::weak_ptr<VideoFrame> CodecPacket::video_frame() const {
-  return video_frame_;
-}
 
 void CodecPacket::ClearStartOffset() { start_offset_ = kStartOffsetNotSet; }
 

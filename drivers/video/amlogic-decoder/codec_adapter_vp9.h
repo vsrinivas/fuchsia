@@ -12,6 +12,8 @@
 
 #include "vp9_decoder.h"
 
+#include <random>
+
 class AmlogicVideo;
 struct CodecFrame;
 class DeviceCtx;
@@ -32,7 +34,7 @@ class CodecAdapterVp9 : public CodecAdapter,
   void CoreCodecQueueInputFormatDetails(
       const fuchsia::mediacodec::CodecFormatDetails&
           per_stream_override_format_details) override;
-  void CoreCodecQueueInputPacket(const CodecPacket* packet) override;
+  void CoreCodecQueueInputPacket(CodecPacket* packet) override;
   void CoreCodecQueueInputEndOfStream() override;
   void CoreCodecStopStream() override;
   void CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) override;
@@ -68,6 +70,7 @@ class CodecAdapterVp9 : public CodecAdapter,
                                       uint32_t sar_width, uint32_t sar_height);
 
   void OnCoreCodecFailStream();
+  CodecPacket* GetFreePacket();
 
   DeviceCtx* device_ = nullptr;
   AmlogicVideo* video_ = nullptr;
@@ -92,6 +95,7 @@ class CodecAdapterVp9 : public CodecAdapter,
 
   std::vector<const CodecBuffer*> all_output_buffers_;
   std::vector<CodecPacket*> all_output_packets_;
+  std::vector<uint32_t> free_output_packets_;
 
   uint32_t packet_count_total_ = 0;
   uint32_t width_ = 0;

@@ -60,6 +60,9 @@ class CanvasEntry {
 class CodecPacket;
 class VideoDecoder {
  public:
+  // In actual operation, the FrameReadyNotifier must not keep a reference on
+  // the frame shared_ptr<>, as that would interfere with muting calls to
+  // ReturnFrame().  See comment on Vp9Decoder::Frame::frame field.
   using FrameReadyNotifier = std::function<void(std::shared_ptr<VideoFrame>)>;
   using InitializeFramesHandler =
       std::function<zx_status_t(::zx::bti,
@@ -73,6 +76,7 @@ class VideoDecoder {
                                 uint32_t,  // sar_width
                                 uint32_t   // sar_height
                                 )>;
+  using CheckOutputReady = fit::function<bool()>;
   class Owner {
    public:
     virtual __WARN_UNUSED_RESULT DosRegisterIo* dosbus() = 0;
@@ -97,13 +101,16 @@ class VideoDecoder {
     return ZX_ERR_NOT_SUPPORTED;
   }
   virtual void HandleInterrupt() = 0;
-  virtual void SetFrameReadyNotifier(FrameReadyNotifier notifier) {}
+  virtual void SetFrameReadyNotifier(FrameReadyNotifier notifier) = 0;
   virtual void SetInitializeFramesHandler(InitializeFramesHandler handler) {
     ZX_ASSERT_MSG(false, "not yet implemented");
   }
   virtual void SetErrorHandler(fit::closure error_handler) {
     ZX_ASSERT_MSG(false, "not yet implemented");
   }
+  virtual void SetCheckOutputReady(CheckOutputReady checkOutputReady) {
+    ZX_ASSERT_MSG(false, "not yet implemented");
+  };
   virtual void ReturnFrame(std::shared_ptr<VideoFrame> frame) = 0;
   virtual void InitializedFrames(std::vector<CodecFrame> frames, uint32_t width,
                                  uint32_t height, uint32_t stride) = 0;

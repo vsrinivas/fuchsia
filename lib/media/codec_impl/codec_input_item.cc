@@ -19,7 +19,7 @@ CodecInputItem::CodecInputItem(
   // nothing else to do here
 }
 
-CodecInputItem::CodecInputItem(const CodecPacket* packet) : packet_(packet) {
+CodecInputItem::CodecInputItem(CodecPacket* packet) : packet_(packet) {
   // nothing else do to here
 }
 
@@ -31,7 +31,7 @@ CodecInputItem CodecInputItem::FormatDetails(
   return CodecInputItem(format_details);
 }
 
-CodecInputItem CodecInputItem::Packet(const CodecPacket* packet) {
+CodecInputItem CodecInputItem::Packet(CodecPacket* packet) {
   ZX_DEBUG_ASSERT(packet);
   return CodecInputItem(packet);
 }
@@ -56,7 +56,7 @@ CodecInputItem::format_details() {
   return *format_details_;
 }
 
-const CodecPacket* CodecInputItem::packet() const {
+CodecPacket* CodecInputItem::packet() const {
   ZX_DEBUG_ASSERT(is_packet());
   return packet_;
 }

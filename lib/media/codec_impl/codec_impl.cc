@@ -774,8 +774,13 @@ void CodecImpl::QueueInputPacket_StreamControl(
       FailLocked("client QueueInputPacket() with packet_index out of range");
       return;
     }
+    if (packet.buffer_index >= all_buffers_[kInputPort].size()) {
+      FailLocked("client QueueInputPacket() with buffer_index out of range");
+      return;
+    }
 
-    // Protocol check re. free/busy coherency.
+    // Protocol check re. free/busy coherency.  This applies to packets only,
+    // not buffers.
     if (!all_packets_[kInputPort][packet.header.packet_index]->is_free()) {
       FailLocked("client QueueInputPacket() with packet_index !free");
       return;
@@ -819,6 +824,8 @@ void CodecImpl::QueueInputPacket_StreamControl(
 
   CodecPacket* core_codec_packet =
       all_packets_[kInputPort][packet.header.packet_index].get();
+  core_codec_packet->SetBuffer(
+      all_buffers_[kInputPort][packet.buffer_index].get());
   core_codec_packet->SetStartOffset(packet.start_offset);
   core_codec_packet->SetValidLengthBytes(packet.valid_length_bytes);
   if (packet.has_timestamp_ish) {
@@ -892,7 +899,7 @@ void CodecImpl::onInputConstraintsReady() {
     return;
   }
   std::unique_lock<std::mutex> lock(lock_);
-  StartIgnoringClientOldOutputConfigLocked();
+  StartIgnoringClientOldOutputConfig(lock);
   GenerateAndSendNewOutputConfig(lock, true);
 }
 
@@ -1297,6 +1304,8 @@ bool CodecImpl::AddBufferCommon(CodecPort port,
     CoreCodecAddBuffer(port, local_buffer.get());
     all_buffers_[port].push_back(std::move(local_buffer));
     if (all_buffers_[port].size() == required_buffer_count) {
+      ZX_DEBUG_ASSERT(buffer_lifetime_ordinal_[port] ==
+                      port_settings_[port]->buffer_lifetime_ordinal);
       // Stash this while we can, before the client de-configures.
       last_provided_buffer_constraints_version_ordinal_[port] =
           port_settings_[port]->buffer_constraints_version_ordinal;
@@ -1305,16 +1314,11 @@ bool CodecImpl::AddBufferCommon(CodecPort port,
       uint32_t packet_count =
           PacketCountFromPortSettings(*port_settings_[port]);
       for (uint32_t i = 0; i < packet_count; i++) {
-        uint32_t buffer_index = required_buffer_count == 1 ? 0 : i;
-        CodecBuffer* buffer = all_buffers_[port][buffer_index].get();
-        ZX_DEBUG_ASSERT(buffer_lifetime_ordinal_[port] ==
-                        port_settings_[port]->buffer_lifetime_ordinal);
         // Private constructor to prevent core codec maybe creating its own
         // Packet instances (which isn't the intent) seems worth the hassle of
         // not using make_unique<>() here.
-        all_packets_[port].push_back(
-            std::unique_ptr<CodecPacket>(new CodecPacket(
-                port_settings_[port]->buffer_lifetime_ordinal, i, buffer)));
+        all_packets_[port].push_back(std::unique_ptr<CodecPacket>(
+            new CodecPacket(port_settings_[port]->buffer_lifetime_ordinal, i)));
       }
 
       {  // scope unlock
@@ -1510,7 +1514,7 @@ bool CodecImpl::StartNewStream(std::unique_lock<std::mutex>& lock,
   }
 
   if (is_new_config_needed) {
-    StartIgnoringClientOldOutputConfigLocked();
+    StartIgnoringClientOldOutputConfig(lock);
     EnsureBuffersNotConfigured(lock, kOutputPort);
     // This does count as a mid-stream output config change, even when this is
     // at the start of a stream - it's still while a stream is active, and still
@@ -1713,7 +1717,8 @@ bool CodecImpl::EnsureFutureStreamFlushSeenLocked(
 // the client's messages re. the old buffer_lifetime_ordinal and old
 // buffer_constraints_version_ordinal until the client catches up to the new
 // last_required_buffer_constraints_version_ordinal_[kOutputPort].
-void CodecImpl::StartIgnoringClientOldOutputConfigLocked() {
+void CodecImpl::StartIgnoringClientOldOutputConfig(
+    std::unique_lock<std::mutex>& lock) {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
 
   // The buffer_lifetime_ordinal_[kOutputPort] can be even on entry due to at
@@ -1734,6 +1739,32 @@ void CodecImpl::StartIgnoringClientOldOutputConfigLocked() {
   // next_output_buffer_constraints_version_ordinal_ in that method.
   last_required_buffer_constraints_version_ordinal_[kOutputPort] =
       next_output_buffer_constraints_version_ordinal_;
+
+  // Now that we've stopped any new calls to CoreCodecRecycleOutputPacket(),
+  // fence through any previously-started call to CoreCodecRecycleOutputPacket()
+  // that maybe have been started previously, before returning from this method.
+  //
+  // We can't just be holding lock_ during the call to
+  // CoreCodecRecycleOutputPacket() because it acquires the video_decoder_lock_
+  // and in other paths the video_decoder_lock_ is held while acquiring lock_.
+  //
+  // It's ok for the StreamControl domain to wait on the Output domain (but not
+  // the other way around).
+  bool is_output_ordering_domain_done_with_recycle_output_packet = false;
+  std::condition_variable condition_changed;
+  PostToSharedFidl([this,
+                    &is_output_ordering_domain_done_with_recycle_output_packet,
+                    &condition_changed] {
+    {  // scope lock
+      std::lock_guard<std::mutex> lock(lock_);
+      is_output_ordering_domain_done_with_recycle_output_packet = true;
+    }
+    condition_changed.notify_all();
+  });
+  while (!is_output_ordering_domain_done_with_recycle_output_packet) {
+    condition_changed.wait(lock);
+  }
+  ZX_DEBUG_ASSERT(is_output_ordering_domain_done_with_recycle_output_packet);
 }
 
 void CodecImpl::GenerateAndSendNewOutputConfig(
@@ -1755,7 +1786,7 @@ void CodecImpl::GenerateAndSendNewOutputConfig(
 
   // If buffer_constraints_action_required true, the caller bumped the
   // last_required_buffer_constraints_version_ordinal_[kOutputPort] before
-  // calling this method (using StartIgnoringClientOldOutputConfigLocked()), to
+  // calling this method (using StartIgnoringClientOldOutputConfig()), to
   // ensure any output config messages from the client are ignored until the
   // client catches up to at least
   // last_required_buffer_constraints_version_ordinal_.
@@ -1847,7 +1878,7 @@ void CodecImpl::MidStreamOutputConfigChange(uint64_t stream_lifetime_ordinal) {
     // OmxTryRecycleOutputPacketLocked() won't call OMX, and the interval during
     // which we'll ingore any in-progress client output config until the client
     // catches up.
-    StartIgnoringClientOldOutputConfigLocked();
+    StartIgnoringClientOldOutputConfig(lock);
 
     {  // scope unlock
       ScopedUnlock unlock(lock);
@@ -2197,11 +2228,15 @@ void CodecImpl::onCoreCodecMidStreamOutputConfigChange(
       });
 }
 
-void CodecImpl::onCoreCodecInputPacketDone(const CodecPacket* packet) {
+void CodecImpl::onCoreCodecInputPacketDone(CodecPacket* packet) {
   // Free/busy coherency from Codec interface to OMX doesn't involve trusting
   // the client, so assert we're doing it right server-side.
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
+    // The core codec says the buffer-referening in-flight lifetime of this
+    // packet is over.  We'll set the buffer again when this packet get's used
+    // by the client again to deliver more input data.
+    packet->SetBuffer(nullptr);
     // Unfortunately we have to insist that the core codec not call
     // onCoreCodecInputPacketDone() arbitrarily late because we need to know
     // when it's safe to deallocate binding_, and the core codec, etc.  So the
@@ -2223,6 +2258,13 @@ void CodecImpl::onCoreCodecOutputPacket(CodecPacket* packet,
                                         bool error_detected_during) {
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
+    // This helps verify that packet lifetimes are coherent, but we can't do the
+    // same for buffer_index because VP9 has show_existing_frame which is
+    // allowed to output the same buffer repeatedly.
+    //
+    // TODO(dustingreen): We could _optionally_ verify that buffer lifetimes are
+    // coherent for codecs that don't output the same buffer repeatedly and
+    // concurrently.
     all_packets_[kOutputPort][packet->packet_index()]->SetFree(false);
     ZX_DEBUG_ASSERT(packet->has_start_offset());
     ZX_DEBUG_ASSERT(packet->has_valid_length_bytes());
@@ -2241,6 +2283,7 @@ void CodecImpl::onCoreCodecOutputPacket(CodecPacket* packet,
                  .header.buffer_lifetime_ordinal =
                      packet->buffer_lifetime_ordinal(),
                  .header.packet_index = packet->packet_index(),
+                 .buffer_index = packet->buffer()->buffer_index(),
                  .stream_lifetime_ordinal = stream_lifetime_ordinal_,
                  .start_offset = packet->start_offset(),
                  .valid_length_bytes = packet->valid_length_bytes(),
@@ -2401,7 +2444,7 @@ void CodecImpl::CoreCodecQueueInputFormatDetails(
       per_stream_override_format_details);
 }
 
-void CodecImpl::CoreCodecQueueInputPacket(const CodecPacket* packet) {
+void CodecImpl::CoreCodecQueueInputPacket(CodecPacket* packet) {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
   codec_adapter_->CoreCodecQueueInputPacket(packet);
 }

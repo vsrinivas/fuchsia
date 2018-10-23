@@ -1627,6 +1627,13 @@ void OmxCodecRunner::QueueInputPacket_StreamControl(
     }
     assert(packet.stream_lifetime_ordinal == stream_lifetime_ordinal_);
 
+    if (packet.header.packet_index >= all_packets_[kInput].size()) {
+      Exit("client QueueInputPacket() with packet_index out of range");
+    }
+    if (packet.buffer_index >= all_buffers_[kInput].size()) {
+      Exit("client QueueInputPacket() with buffer_index out of range");
+    }
+
     // Protocol check re. free/busy coherency.
     if (!packet_free_bits_[kInput][packet.header.packet_index]) {
       Exit("client QueueInputPacket() with packet_index !free - exiting\n");
@@ -3084,6 +3091,7 @@ OMX_ERRORTYPE OmxCodecRunner::FillBufferDone(
                      .header.buffer_lifetime_ordinal =
                          packet->buffer_lifetime_ordinal(),
                      .header.packet_index = packet->packet_index(),
+                     .buffer_index = packet->buffer().buffer_index(),
                      .stream_lifetime_ordinal = stream_lifetime_ordinal_,
                      .start_offset = pBuffer->nOffset,
                      .valid_length_bytes = pBuffer->nFilledLen,

@@ -167,8 +167,28 @@ void CodecAdapterH264::CoreCodecStartStream() {
     io_buffer_cache_flush_invalidate(&frame->buffer, frame->uv_plane_offset,
                                      frame->stride * frame->height / 2);
 
-    CodecPacket* packet = frame->codec_packet;
+    const CodecBuffer* buffer = frame->codec_buffer;
+    ZX_DEBUG_ASSERT(buffer);
+
+    // We intentionally _don't_ use the packet with same index as the buffer (in
+    // general - it's fine that they sometimes match), to avoid clients building
+    // up inappropriate dependency on buffer index being the same as packet
+    // index (as nice as that would be, VP9, and maybe others, don't get along
+    // with that in general, so ... force clients to treat packet index and
+    // buffer index as separate things).
+    //
+    // TODO(dustingreen): Make the previous paragraph fully true.  For the
+    // moment for h264 we let the packet_index and buffer_index be equal, just
+    // to split up the separation into smaller steps.
+    CodecPacket* packet = GetFreePacket(buffer->buffer_index());
+    // With h.264, we know that an emitted buffer implies an available output
+    // packet, because h.264 doesn't put the same output buffer in flight more
+    // than once concurrently, and we have as many output packets as buffers.
+    // This contrasts with VP9 which has unbounded show_existing_frame.
     ZX_DEBUG_ASSERT(packet);
+
+    // Associate the packet with the buffer while the packet is in-flight.
+    packet->SetBuffer(buffer);
 
     packet->SetStartOffset(0);
     uint64_t total_size_bytes = frame->stride * frame->height * 3 / 2;
@@ -223,7 +243,7 @@ void CodecAdapterH264::CoreCodecQueueInputFormatDetails(
       CodecInputItem::FormatDetails(per_stream_override_format_details));
 }
 
-void CodecAdapterH264::CoreCodecQueueInputPacket(const CodecPacket* packet) {
+void CodecAdapterH264::CoreCodecQueueInputPacket(CodecPacket* packet) {
   QueueInputItem(CodecInputItem::Packet(packet));
 }
 
@@ -322,16 +342,30 @@ void CodecAdapterH264::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
   }
   ZX_DEBUG_ASSERT(!packet->is_new());
 
-  std::shared_ptr<VideoFrame> frame = packet->video_frame().lock();
-  if (!frame) {
-    // EndOfStream seen at the output, or a new InitializeFrames(), can cause
-    // !frame, which is fine.  In that case, any new stream will request
-    // allocation of new frames.
-    return;
-  }
+  // A recycled packet will have a buffer set because the packet is in-flight
+  // until put on the free list, and has a buffer associated while in-flight.
+  const CodecBuffer* buffer = packet->buffer();
+  ZX_DEBUG_ASSERT(buffer);
+
+  // Getting the buffer is all we needed the packet for.  The packet won't get
+  // re-used until after ReturnFrame() below.
+  packet->SetBuffer(nullptr);
+
+  // TODO(dustingreen): Use scrambled free_packet_list_ like for VP9, and put
+  // packet back on the free list here (and update comment above re. when re-use
+  // of the paket can happen).  For now for this codec we let packet_index ==
+  // buffer_index to split the separation of buffer_index from packet_index into
+  // smaller changes.
 
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
+    std::shared_ptr<VideoFrame> frame = buffer->video_frame().lock();
+    if (!frame) {
+      // EndOfStream seen at the output, or a new InitializeFrames(), can cause
+      // !frame, which is fine.  In that case, any new stream will request
+      // allocation of new frames.
+      return;
+    }
     // Recycle can happen while stopped, but this CodecAdapater has no way yet
     // to return frames while stopped, or to re-use buffers/frames across a
     // stream switch.  Any new stream will request allocation of new frames.
@@ -526,8 +560,9 @@ void CodecAdapterH264::CoreCodecMidStreamOutputBufferReConfigFinish() {
       ZX_DEBUG_ASSERT(all_output_buffers_[i]->buffer_index() == i);
       ZX_DEBUG_ASSERT(all_output_buffers_[i]->codec_buffer().buffer_index == i);
       frames.emplace_back(CodecFrame{
-          .codec_buffer = fidl::Clone(all_output_buffers_[i]->codec_buffer()),
-          .codec_packet = all_output_packets_[i],
+          .codec_buffer_spec =
+              fidl::Clone(all_output_buffers_[i]->codec_buffer()),
+          .codec_buffer_ptr = all_output_buffers_[i],
       });
     }
     width = width_;
@@ -643,7 +678,7 @@ void CodecAdapterH264::ProcessInput() {
     }
 
     uint8_t* data =
-        item.packet()->buffer().buffer_base() + item.packet()->start_offset();
+        item.packet()->buffer()->buffer_base() + item.packet()->start_offset();
     uint32_t len = item.packet()->valid_length_bytes();
 
     video_->pts_manager()->InsertPts(parsed_video_size_,
@@ -1042,4 +1077,12 @@ void CodecAdapterH264::OnCoreCodecFailStream() {
     is_stream_failed_ = true;
   }
   events_->onCoreCodecFailStream();
+}
+
+CodecPacket* CodecAdapterH264::GetFreePacket(uint32_t buffer_index) {
+  // TODO(dustingreen): Intentionally don't always have packet_index ==
+  // buffer_index.  However, for the moment, for h.264, always have packet_index
+  // == buffer_index, as a temporary measure to do the separation in smaller
+  // changes.
+  return all_output_packets_[buffer_index];
 }

@@ -13,6 +13,7 @@
 #include <fuchsia/mediacodec/cpp/fidl.h>
 
 #include <list>
+#include <random>
 
 class CodecBuffer;
 
@@ -136,7 +137,7 @@ class CodecAdapter {
           per_stream_override_format_details) = 0;
 
   // Only permitted between CoreCodecStartStream() and CoreCodecStopStream().
-  virtual void CoreCodecQueueInputPacket(const CodecPacket* packet) = 0;
+  virtual void CoreCodecQueueInputPacket(CodecPacket* packet) = 0;
 
   // Only permitted between CoreCodecStartStream() and CoreCodecStopStream().
   virtual void CoreCodecQueueInputEndOfStream() = 0;
@@ -275,6 +276,13 @@ class CodecAdapter {
 
   // A core codec will also want to track free output packets, but how best to
   // do that is sub-class-specific.
+
+  // It's useful to have a source of random numbers that's compatible with std::
+  // for purposes such as scrambling the order of free packets.  These are
+  // instance-specific only because of thread-safety considerations, not because
+  // of generated sequence considerations.
+  std::random_device random_device_;
+  std::mt19937 not_for_security_prng_;
 
  private:
   CodecAdapter() = delete;

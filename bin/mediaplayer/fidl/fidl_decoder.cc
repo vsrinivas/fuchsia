@@ -235,6 +235,7 @@ void FidlDecoder::PutInputPacket(PacketPtr packet, size_t input_index) {
     codec_packet.header.buffer_lifetime_ordinal =
         current_set.lifetime_ordinal();
     codec_packet.header.packet_index = packet->payload_buffer()->id();
+    codec_packet.buffer_index = packet->payload_buffer()->id();
     codec_packet.stream_lifetime_ordinal = stream_lifetime_ordinal_;
     codec_packet.start_offset = 0;
     codec_packet.valid_length_bytes = packet->size();
@@ -535,7 +536,14 @@ void FidlDecoder::OnOutputPacket(fuchsia::mediacodec::CodecPacket packet,
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   uint64_t buffer_lifetime_ordinal = packet.header.buffer_lifetime_ordinal;
-  uint32_t buffer_index = packet.header.packet_index;
+  uint32_t packet_index = packet.header.packet_index;
+  uint32_t buffer_index = packet.buffer_index;
+  FXL_DCHECK(buffer_index != 0x80000000);
+
+  // TODO(dustingreen): separate buffer_index from packet_index in FidlDecoder.
+  // Until then, this will work for h264, but won't handle VP9 with its
+  // show_existing_frame that can happen repeatedly for the same buffer.
+  FXL_CHECK(packet_index == buffer_index);
 
   if (error_detected_before) {
     FXL_LOG(WARNING) << "OnOutputPacket: error_detected_before";

@@ -15,14 +15,6 @@
 
 class CodecBuffer;
 
-// Core codec representation of a video frame.  Different core codecs may have
-// very different implementations of this.
-//
-// TODO(dustingreen): Have this be a base class that's defined by the
-// CodecImpl source_set, and have amlogic-video VideoFrame derive from that base
-// class.
-struct VideoFrame;
-
 // Instances of this class are 1:1 with fuchsia::mediacodec::CodecPacket.
 class CodecPacket {
  public:
@@ -32,7 +24,8 @@ class CodecPacket {
 
   uint32_t packet_index() const;
 
-  const CodecBuffer& buffer() const;
+  void SetBuffer(const CodecBuffer* buffer);
+  const CodecBuffer* buffer() const;
 
   void SetStartOffset(uint32_t start_offset);
   bool has_start_offset() const;
@@ -55,13 +48,6 @@ class CodecPacket {
   void SetIsNew(bool is_new);
   bool is_new() const;
 
-  // The use of weak_ptr<> here is to emphasize that we don't need shared_ptr<>
-  // to keep the VideoFrame(s) alive.  We'd use a raw pointer here if it weren't
-  // for needing to convert to a shared_ptr<> to call certain methods that
-  // expect shared_ptr<>.
-  void SetVideoFrame(std::weak_ptr<VideoFrame> video_frame);
-  std::weak_ptr<VideoFrame> video_frame() const;
-
  private:
   // The public section is for the core codec to call - the private section is
   // only for CodecImpl to call.
@@ -74,8 +60,7 @@ class CodecPacket {
 
   // The buffer ptr is not owned.  The buffer lifetime is slightly longer than
   // the Packet lifetime.
-  CodecPacket(uint64_t buffer_lifetime_ordinal, uint32_t packet_index,
-              CodecBuffer* buffer);
+  CodecPacket(uint64_t buffer_lifetime_ordinal, uint32_t packet_index);
 
   void ClearStartOffset();
   void ClearValidLengthBytes();
@@ -83,8 +68,9 @@ class CodecPacket {
   uint64_t buffer_lifetime_ordinal_ = 0;
   uint32_t packet_index_ = 0;
 
-  // not owned
-  CodecBuffer* buffer_ = nullptr;
+  // The buffer_ is meaningful only while a packet_index is in-flight, not
+  // while the packet_index is free.
+  const CodecBuffer* buffer_ = nullptr;
 
   uint32_t start_offset_ = kStartOffsetNotSet;
   uint32_t valid_length_bytes_ = kValidLengthBytesNotSet;
@@ -116,8 +102,6 @@ class CodecPacket {
   // CoreCodecRecycleOutputPacket().  Some core codecs want an internal recycle
   // call or equivalent for new packets (OMX), and some don't (amlogic-video).
   bool is_new_ = true;
-
-  std::weak_ptr<VideoFrame> video_frame_;
 
   CodecPacket() = delete;
   DISALLOW_COPY_ASSIGN_AND_MOVE(CodecPacket);

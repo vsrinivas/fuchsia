@@ -157,9 +157,14 @@ void CodecAdapterVp9::CoreCodecStartStream() {
     io_buffer_cache_flush_invalidate(&frame->buffer, frame->uv_plane_offset,
                                      frame->stride * frame->height / 2);
 
-    CodecPacket* packet = frame->codec_packet;
+    const CodecBuffer* buffer = frame->codec_buffer;
+    ZX_DEBUG_ASSERT(buffer);
+
+    CodecPacket* packet = GetFreePacket();
+    // We know there will be a free packet thanks to SetCheckOutputReady().
     ZX_DEBUG_ASSERT(packet);
 
+    packet->SetBuffer(buffer);
     packet->SetStartOffset(0);
     uint64_t total_size_bytes = frame->stride * frame->height * 3 / 2;
     packet->SetValidLengthBytes(total_size_bytes);
@@ -175,6 +180,13 @@ void CodecAdapterVp9::CoreCodecStartStream() {
   decoder->SetInitializeFramesHandler(
       fit::bind_member(this, &CodecAdapterVp9::InitializeFramesHandler));
   decoder->SetErrorHandler([this] { OnCoreCodecFailStream(); });
+  decoder->SetCheckOutputReady([this] {
+    std::lock_guard<std::mutex> lock(lock_);
+    // We're ready if output hasn't been configured yet, or if we have free
+    // output packets.  This way the decoder can swap in when there's no output
+    // config yet, but will stop trying to run when we're out of output packets.
+    return all_output_packets_.empty() || !free_output_packets_.empty();
+  });
 
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
@@ -212,7 +224,7 @@ void CodecAdapterVp9::CoreCodecQueueInputFormatDetails(
       CodecInputItem::FormatDetails(per_stream_override_format_details));
 }
 
-void CodecAdapterVp9::CoreCodecQueueInputPacket(const CodecPacket* packet) {
+void CodecAdapterVp9::CoreCodecQueueInputPacket(CodecPacket* packet) {
   QueueInputItem(CodecInputItem::Packet(packet));
 }
 
@@ -292,7 +304,13 @@ void CodecAdapterVp9::CoreCodecConfigureBuffers(
     ZX_DEBUG_ASSERT(all_output_buffers_.size() == packets.size());
     for (auto& packet : packets) {
       all_output_packets_.push_back(packet.get());
+      free_output_packets_.push_back(packet.get()->packet_index());
     }
+    // This should prevent any inadvetent dependence by clients on the ordering
+    // of packet_index values in the output stream or any assumptions re. the
+    // relationship between packet_index and buffer_index.
+    std::shuffle(free_output_packets_.begin(), free_output_packets_.end(),
+                 not_for_security_prng_);
   }
 }
 
@@ -303,16 +321,27 @@ void CodecAdapterVp9::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
   }
   ZX_DEBUG_ASSERT(!packet->is_new());
 
-  std::shared_ptr<VideoFrame> frame = packet->video_frame().lock();
-  if (!frame) {
-    // EndOfStream seen at the output, or a new InitializeFrames(), can cause
-    // !frame, which is fine.  In that case, any new stream will request
-    // allocation of new frames.
-    return;
-  }
+  const CodecBuffer* buffer = packet->buffer();
+  packet->SetBuffer(nullptr);
+
+  // Getting the buffer is all we needed the packet for, so note that the packet
+  // is free fairly early, to side-step any issues with early returns.  The
+  // CodecImpl already considers the packet free, but it won't actually get
+  // re-used until after it goes on the free list here.
+  {  // scope lock
+    std::lock_guard<std::mutex> lock(lock_);
+    free_output_packets_.push_back(packet->packet_index());
+  }  // ~lock
 
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
+    std::shared_ptr<VideoFrame> frame = buffer->video_frame().lock();
+    if (!frame) {
+      // EndOfStream seen at the output, or a new InitializeFrames(), can cause
+      // !frame, which is fine.  In that case, any new stream will request
+      // allocation of new frames.
+      return;
+    }
     // Recycle can happen while stopped, but this CodecAdapater has no way yet
     // to return frames while stopped, or to re-use buffers/frames across a
     // stream switch.  Any new stream will request allocation of new frames.
@@ -508,8 +537,9 @@ void CodecAdapterVp9::CoreCodecMidStreamOutputBufferReConfigFinish() {
       ZX_DEBUG_ASSERT(all_output_buffers_[i]->buffer_index() == i);
       ZX_DEBUG_ASSERT(all_output_buffers_[i]->codec_buffer().buffer_index == i);
       frames.emplace_back(CodecFrame{
-          .codec_buffer = fidl::Clone(all_output_buffers_[i]->codec_buffer()),
-          .codec_packet = all_output_packets_[i],
+          .codec_buffer_spec =
+              fidl::Clone(all_output_buffers_[i]->codec_buffer()),
+          .codec_buffer_ptr = all_output_buffers_[i],
       });
     }
     width = width_;
@@ -667,7 +697,7 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
     ZX_DEBUG_ASSERT(item.is_packet());
 
     uint8_t* data =
-        item.packet()->buffer().buffer_base() + item.packet()->start_offset();
+        item.packet()->buffer()->buffer_base() + item.packet()->start_offset();
     uint32_t len = item.packet()->valid_length_bytes();
 
     video_->pts_manager()->InsertPts(parsed_video_size_,
@@ -807,4 +837,11 @@ void CodecAdapterVp9::OnCoreCodecFailStream() {
     is_stream_failed_ = true;
   }
   events_->onCoreCodecFailStream();
+}
+
+CodecPacket* CodecAdapterVp9::GetFreePacket() {
+  std::lock_guard<std::mutex> lock(lock_);
+  uint32_t free_index = free_output_packets_.back();
+  free_output_packets_.pop_back();
+  return all_output_packets_[free_index];
 }

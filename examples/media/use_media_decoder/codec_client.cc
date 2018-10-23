@@ -282,6 +282,7 @@ CodecClient::BlockingGetFreeInputPacket() {
       fuchsia::mediacodec::CodecPacket::New();
   packet->header.buffer_lifetime_ordinal = kInputBufferLifetimeOrdinal;
   packet->header.packet_index = free_index;
+  packet->buffer_index = free_index;
   return packet;
 }
 

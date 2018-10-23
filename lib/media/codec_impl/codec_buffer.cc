@@ -65,3 +65,11 @@ size_t CodecBuffer::buffer_size() const {
 const fuchsia::mediacodec::CodecBuffer& CodecBuffer::codec_buffer() const {
   return buffer_;
 }
+
+void CodecBuffer::SetVideoFrame(std::weak_ptr<VideoFrame> video_frame) const {
+  video_frame_ = video_frame;
+}
+
+std::weak_ptr<VideoFrame> CodecBuffer::video_frame() const {
+  return video_frame_;
+}

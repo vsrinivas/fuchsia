@@ -122,6 +122,7 @@ void QueueH264Frames(CodecClient* codec_client, uint8_t* input_bytes,
     while (bytes_so_far != byte_count) {
       std::unique_ptr<fuchsia::mediacodec::CodecPacket> packet =
           codec_client->BlockingGetFreeInputPacket();
+      // For input we do buffer_index == packet_index.
       const CodecBuffer& buffer =
           codec_client->GetInputBufferByIndex(packet->header.packet_index);
       size_t bytes_to_copy =
@@ -201,6 +202,7 @@ void QueueVp9Frames(CodecClient* codec_client, uint8_t* input_bytes,
                                                          uint32_t frame_pts) {
     std::unique_ptr<fuchsia::mediacodec::CodecPacket> packet =
         codec_client->BlockingGetFreeInputPacket();
+    // For input we do buffer_index == packet_index.
     const CodecBuffer& buffer =
         codec_client->GetInputBufferByIndex(packet->header.packet_index);
     // VP9 decoder doesn't yet support splitting access units into multiple
@@ -404,7 +406,7 @@ static void use_video_decoder(
       // This will remain live long enough because this thread is the only
       // thread that re-allocates output buffers.
       const CodecBuffer& buffer =
-          codec_client.GetOutputBufferByIndex(packet.header.packet_index);
+          codec_client.GetOutputBufferByIndex(packet.buffer_index);
 
       if (stream_config &&
           (config->format_details.format_details_version_ordinal !=

@@ -43,7 +43,7 @@ void CodecAdapterMpeg2::CoreCodecQueueInputFormatDetails(
   ZX_DEBUG_ASSERT_MSG(false, "not yet implemented");
 }
 
-void CodecAdapterMpeg2::CoreCodecQueueInputPacket(const CodecPacket* packet) {
+void CodecAdapterMpeg2::CoreCodecQueueInputPacket(CodecPacket* packet) {
   ZX_DEBUG_ASSERT_MSG(false, "not yet implemented");
 }
 

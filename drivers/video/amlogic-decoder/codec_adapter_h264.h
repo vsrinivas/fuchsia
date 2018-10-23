@@ -28,7 +28,7 @@ class CodecAdapterH264 : public CodecAdapter {
   void CoreCodecQueueInputFormatDetails(
       const fuchsia::mediacodec::CodecFormatDetails&
           per_stream_override_format_details) override;
-  void CoreCodecQueueInputPacket(const CodecPacket* packet) override;
+  void CoreCodecQueueInputPacket(CodecPacket* packet) override;
   void CoreCodecQueueInputEndOfStream() override;
   void CoreCodecStopStream() override;
   void CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) override;
@@ -68,6 +68,7 @@ class CodecAdapterH264 : public CodecAdapter {
                                       uint32_t sar_width, uint32_t sar_height);
 
   void OnCoreCodecFailStream();
+  CodecPacket* GetFreePacket(uint32_t buffer_index);
 
   DeviceCtx* device_ = nullptr;
   AmlogicVideo* video_ = nullptr;

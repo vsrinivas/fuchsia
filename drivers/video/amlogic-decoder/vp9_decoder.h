@@ -72,10 +72,14 @@ class Vp9Decoder : public VideoDecoder {
   __WARN_UNUSED_RESULT zx_status_t Initialize() override;
   __WARN_UNUSED_RESULT zx_status_t InitializeHardware() override;
   void HandleInterrupt() override;
+  // In actual operation, the FrameReadyNotifier must not keep a reference on
+  // the frame shared_ptr<>, as that would interfere with muting calls to
+  // ReturnFrame().  See comment on Vp9Decoder::Frame::frame field.
   void SetFrameReadyNotifier(FrameReadyNotifier notifier) override;
   void ReturnFrame(std::shared_ptr<VideoFrame> frame) override;
   void SetInitializeFramesHandler(InitializeFramesHandler handler) override;
   void SetErrorHandler(fit::closure error_handler) override;
+  void SetCheckOutputReady(CheckOutputReady check_output_ready) override;
   void InitializedFrames(std::vector<CodecFrame> frames, uint32_t width,
                          uint32_t height, uint32_t stride) override;
   __WARN_UNUSED_RESULT bool CanBeSwappedIn() override;
@@ -177,7 +181,23 @@ class Vp9Decoder : public VideoDecoder {
     // This is the count of references from reference_frame_map_, last_frame_,
     // current_frame_, and any buffers the ultimate consumers have outstanding.
     int32_t refcount = 0;
-    // Allocated on demand.
+    // Each VideoFrame is managed via shared_ptr<> here and via weak_ptr<> in
+    // CodecBuffer.  There is a frame.reset() performed under
+    // video_decoder_lock_ that essentially signals to the weak_ptr<> in
+    // CodecBuffer not to call ReturnFrame() any more for this frame.  For this
+    // reason, under normal operation (not self-test), it's important that
+    // FrameReadyNotifier and weak_ptr<>::lock() not result in keeping any
+    // shared_ptr<> reference on VideoFrame that lasts beyond the current
+    // video_decoder_lock_ interval, since that could allow calling
+    // ReturnFrame() on a frame that the Vp9Decoder doesn't want to hear about
+    // any more.
+    //
+    // TODO(dustingreen): Mute ReturnFrame() a different way; maybe just
+    // explicitly.  Ideally, we'd use a way that's more similar between decoder
+    // self-test and "normal operation".
+    //
+    // This shared_ptr<> must not actually be shared outside of while
+    // video_decoder_lock_ is held.  See previous paragraphs.
     std::shared_ptr<VideoFrame> frame;
     // With the MMU enabled the compressed frame header is stored separately
     // from the data itself, allowing the data to be allocated in noncontiguous
@@ -235,6 +255,7 @@ class Vp9Decoder : public VideoDecoder {
   WorkingBuffers working_buffers_;
   FrameReadyNotifier notifier_;
   InitializeFramesHandler initialize_frames_handler_;
+  CheckOutputReady check_output_ready_;
   fit::closure error_handler_;
   DecoderState state_ = DecoderState::kSwappedOut;
 
@@ -244,7 +265,16 @@ class Vp9Decoder : public VideoDecoder {
   std::unique_ptr<loop_filter_info_n> loop_filter_info_;
   std::unique_ptr<loopfilter> loop_filter_;
   std::unique_ptr<segmentation> segmentation_ = {};
+  // Waiting for an available frame buffer (with reference count 0).
   bool waiting_for_empty_frames_ = false;
+  // Waiting for an available output packet, to avoid show_existing_frame
+  // potentially allowing too much queued output, as a show_existing_frame
+  // output frame doesn't use up a frame buffer - but it does use up an output
+  // packet.  We don't directly track the output packets in the h264_decoder,
+  // but this bool corresponds to being out of output packets in
+  // codec_adapter_vp9.  We re-try PrepareNewFrame() during ReturnFrame() even
+  // if no refcount on any Frame has reached 0
+  bool waiting_for_output_ready_ = false;
 
   // This is the count of frames decoded since this object was created.
   uint32_t decoded_frame_count_ = 0;

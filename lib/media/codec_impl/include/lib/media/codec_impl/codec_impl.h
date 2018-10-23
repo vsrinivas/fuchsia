@@ -558,7 +558,7 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
   __WARN_UNUSED_RESULT bool EnsureFutureStreamFlushSeenLocked(
       uint64_t stream_lifetime_ordinal);
 
-  void StartIgnoringClientOldOutputConfigLocked();
+  void StartIgnoringClientOldOutputConfig(std::unique_lock<std::mutex>& lock);
 
   void GenerateAndSendNewOutputConfig(std::unique_lock<std::mutex>& lock,
                                       bool buffer_constraints_action_required);
@@ -680,7 +680,7 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
   void onCoreCodecMidStreamOutputConfigChange(
       bool output_re_config_required) override;
 
-  void onCoreCodecInputPacketDone(const CodecPacket* packet) override;
+  void onCoreCodecInputPacketDone(CodecPacket* packet) override;
 
   void onCoreCodecOutputPacket(CodecPacket* packet, bool error_detected_before,
                                bool error_detected_during) override;
@@ -706,7 +706,7 @@ class CodecImpl : public fuchsia::mediacodec::Codec,
       const fuchsia::mediacodec::CodecFormatDetails&
           per_stream_override_format_details) override;
 
-  void CoreCodecQueueInputPacket(const CodecPacket* packet) override;
+  void CoreCodecQueueInputPacket(CodecPacket* packet) override;
 
   void CoreCodecQueueInputEndOfStream() override;
 

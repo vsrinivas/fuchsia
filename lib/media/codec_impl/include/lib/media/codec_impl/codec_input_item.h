@@ -23,7 +23,7 @@ class CodecInputItem {
   static CodecInputItem Invalid();
   static CodecInputItem FormatDetails(
       const fuchsia::mediacodec::CodecFormatDetails& format_details);
-  static CodecInputItem Packet(const CodecPacket* packet);
+  static CodecInputItem Packet(CodecPacket* packet);
   static CodecInputItem EndOfStream();
 
   bool is_valid() const;
@@ -32,21 +32,21 @@ class CodecInputItem {
   bool is_end_of_stream() const;
 
   const fuchsia::mediacodec::CodecFormatDetails& format_details();
-  const CodecPacket* packet() const;
+  CodecPacket* packet() const;
 
  private:
   // !is_valid()
   CodecInputItem();
   explicit CodecInputItem(
       const fuchsia::mediacodec::CodecFormatDetails& format_details);
-  explicit CodecInputItem(const CodecPacket* packet);
+  explicit CodecInputItem(CodecPacket* packet);
 
   // The fields of this class are relied upon to be move-able.
 
   bool is_valid_ = true;
   std::unique_ptr<fuchsia::mediacodec::CodecFormatDetails> format_details_;
   // If nullptr, is_end_of_stream() is true.
-  const CodecPacket* packet_ = nullptr;
+  CodecPacket* packet_ = nullptr;
 
   // Lack of format_details_ and lack of packet_ means is_end_of_stream().
 };

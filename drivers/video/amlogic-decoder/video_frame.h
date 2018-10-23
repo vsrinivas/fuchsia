@@ -9,7 +9,7 @@
 
 #include <cstdint>
 
-class CodecPacket;
+class CodecBuffer;
 struct VideoFrame {
   ~VideoFrame() { io_buffer_release(&buffer); }
 
@@ -25,7 +25,7 @@ struct VideoFrame {
   bool has_pts = false;
   uint64_t pts = 0;
 
-  CodecPacket* codec_packet = nullptr;
+  const CodecBuffer* codec_buffer = nullptr;
 };
 
 // The video frame must be in NV12 format. The output file can be read using

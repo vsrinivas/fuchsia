@@ -7,14 +7,14 @@
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 
-class CodecPacket;
+class CodecBuffer;
 // Move-only struct
 struct CodecFrame {
   CodecFrame(CodecFrame&& from) = default;
   CodecFrame& operator=(CodecFrame&& from) = default;
 
-  fuchsia::mediacodec::CodecBuffer codec_buffer;
-  CodecPacket* codec_packet;
+  fuchsia::mediacodec::CodecBuffer codec_buffer_spec;
+  const CodecBuffer* codec_buffer_ptr;
 };
 
 #endif  // GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_FRAME_H_

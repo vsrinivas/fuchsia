@@ -4,6 +4,7 @@
 
 #include "h264_decoder.h"
 
+#include <lib/media/codec_impl/codec_buffer.h>
 #include <lib/media/codec_impl/codec_frame.h>
 #include <lib/media/codec_impl/codec_packet.h>
 #include <zx/vmo.h>
@@ -400,7 +401,8 @@ void H264Decoder::InitializedFrames(std::vector<CodecFrame> frames,
     // owner_->ConfigureCanvas() below.
     zx_status_t status = io_buffer_init_vmo(
         &frame->buffer, owner_->bti(),
-        frames[i].codec_buffer.data.vmo().vmo_handle.get(), 0, IO_BUFFER_RW);
+        frames[i].codec_buffer_spec.data.vmo().vmo_handle.get(), 0,
+        IO_BUFFER_RW);
     if (status != ZX_OK) {
       DECODE_ERROR("Failed to io_buffer_init_vmo() for frame - status: %d\n",
                    status);
@@ -420,9 +422,9 @@ void H264Decoder::InitializedFrames(std::vector<CodecFrame> frames,
     frame->index = i;
 
     // can be nullptr
-    frame->codec_packet = frames[i].codec_packet;
-    if (frames[i].codec_packet) {
-      frames[i].codec_packet->SetVideoFrame(frame);
+    frame->codec_buffer = frames[i].codec_buffer_ptr;
+    if (frames[i].codec_buffer_ptr) {
+      frames[i].codec_buffer_ptr->SetVideoFrame(frame);
     }
 
     // The ConfigureCanvas() calls validate that the VMO is physically
@@ -505,14 +507,14 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
           .vmo_usable_size = frame_vmo_bytes,
       });
       frames.emplace_back(CodecFrame{
-          .codec_buffer =
+          .codec_buffer_spec =
               fuchsia::mediacodec::CodecBuffer{
                   .buffer_lifetime_ordinal =
                       next_non_codec_buffer_lifetime_ordinal_,
                   .buffer_index = i,
                   .data = std::move(codec_buffer_data),
               },
-          .codec_packet = nullptr,
+          .codec_buffer_ptr = nullptr,
       });
     }
     next_non_codec_buffer_lifetime_ordinal_++;

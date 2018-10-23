@@ -4,6 +4,7 @@
 
 #include "vp9_decoder.h"
 
+#include <lib/media/codec_impl/codec_buffer.h>
 #include <lib/media/codec_impl/codec_packet.h>
 
 #include "firmware_blob.h"
@@ -446,15 +447,16 @@ void Vp9Decoder::InitializedFrames(std::vector<CodecFrame> frames,
     video_frame->uv_plane_offset = video_frame->stride * video_frame->height;
     video_frame->index = i;
 
-    video_frame->codec_packet = frames[i].codec_packet;
-    if (frames[i].codec_packet) {
-      frames[i].codec_packet->SetVideoFrame(video_frame);
+    video_frame->codec_buffer = frames[i].codec_buffer_ptr;
+    if (frames[i].codec_buffer_ptr) {
+      frames[i].codec_buffer_ptr->SetVideoFrame(video_frame);
     }
 
     assert(video_frame->height % 2 == 0);
     zx_status_t status = io_buffer_init_vmo(
         &video_frame->buffer, owner_->bti(),
-        frames[i].codec_buffer.data.vmo().vmo_handle.get(), 0, IO_BUFFER_RW);
+        frames[i].codec_buffer_spec.data.vmo().vmo_handle.get(), 0,
+        IO_BUFFER_RW);
     if (status != ZX_OK) {
       DECODE_ERROR("Failed to io_buffer_init_vmo() for frame - status: %d\n",
                    status);
@@ -501,7 +503,13 @@ void Vp9Decoder::ReturnFrame(std::shared_ptr<VideoFrame> frame) {
   ref_frame->refcount--;
   assert(ref_frame->refcount >= 0);
 
-  if (waiting_for_empty_frames_) {
+  // If either of these bools is true, we know the decoder isn't running.  It's
+  // fine that we don't check here that there's a frame with refcount 0 or check
+  // here that the output is ready, because PrepareNewFrame() will re-check
+  // both those things, and set the appropriate waiting bool back to true if we
+  // still need to wait.
+  if (waiting_for_output_ready_ || waiting_for_empty_frames_) {
+    waiting_for_output_ready_ = false;
     waiting_for_empty_frames_ = false;
     PrepareNewFrame();
   }
@@ -847,6 +855,10 @@ bool Vp9Decoder::CanBeSwappedIn() {
   if (!has_available_output_frames)
     return false;
 
+  if (check_output_ready_ && !check_output_ready_()) {
+    return false;
+  }
+
   return frame_data_provider_->HasMoreInputData();
 }
 
@@ -888,6 +900,15 @@ void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
 }
 
 void Vp9Decoder::PrepareNewFrame() {
+  if (check_output_ready_ && !check_output_ready_()) {
+    // Becomes false when ReturnFrame() gets called, at which point
+    // PrepareNewFrame() gets another chance to check again and set back to true
+    // as necessary.  This bool needs to exist only so that ReturnFrame() can
+    // know whether the decoder is currently needing PrepareNewFrame().
+    waiting_for_output_ready_ = true;
+    return;
+  }
+
   HardwareRenderParams params;
   BarrierBeforeInvalidate();
   io_buffer_cache_flush_invalidate(&working_buffers_.rpm.buffer(), 0,
@@ -966,6 +987,10 @@ void Vp9Decoder::SetFrameReadyNotifier(FrameReadyNotifier notifier) {
   notifier_ = notifier;
 }
 
+void Vp9Decoder::SetCheckOutputReady(CheckOutputReady check_output_ready) {
+  check_output_ready_ = std::move(check_output_ready);
+}
+
 Vp9Decoder::Frame::~Frame() {
   io_buffer_release(&compressed_header);
   io_buffer_release(&compressed_data);
@@ -1001,8 +1026,45 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params) {
       (new_frame->frame->height != params->height)) {
     BarrierBeforeRelease();
     // It's simplest to allocate all frames at once on resize, though that can
-    // cause problems if show_existing_frame happens after the resize.
+    // cause frames that should have been output to not be output if a
+    // show_existing_frame after the resize wants to show a pre-resize frame, or
+    // if the reallocate leads to reference frames that aren't available to use
+    // for constructing a frame.
+    //
+    // We care that the decoder doesn't crash across buffer reallocation, and
+    // that it re-synchronizes with the stream after a while (doesn't refuse to
+    // deliver output frames forever), but we don't (so far) care that frames
+    // can be dropped when resolution switching also involves re-allocating
+    // buffers.
+    //
+    // TODO(dustingreen): When buffers are large enough and aren't reallocated,
+    // resolution switching should be seamless.  See also TODO above re. keeping
+    // larger buffers if the needed buffer size goes down.
+    //
+    // The reason for having a higher bar for degree of seamless-ness when
+    // buffers are not reallocated (vs. lower-than-"perfect" bar when they are
+    // re-allocated) is partly because of the need for phsyically contiguous
+    // VMOs and the associated potential for physical memory fragmentation
+    // caused by piecemeal buffer allocation and deallocation given an arbitrary
+    // VP9 stream that has arbitrary resolution switching and
+    // show_existing_frame.  The ability to seamlessly switch/adjust resolution
+    // within a buffer set that is large enough to support the max resolution of
+    // the stream should offer sufficient functionality to avoid causing
+    // practical problems for clients, and this bar being set where it is should
+    // avoid creating physical fragmentation / excessive physical reservation
+    // problems for the overall system.  It also reduces complexity (vs.
+    // "perfect") for clients and for codecs without sacrificing resolution
+    // switching entirely.  It also avoids assuming that buffers can be
+    // dynamically added/removed from a buffer set without creating timing
+    // problems (and/or requiring more buffers to compensate for timing effects
+    // of dynamic add/remove).
     for (uint32_t i = 0; i < frames_.size(); i++) {
+      // In normal operation (outside decoder self-tests) this reset() is relied
+      // upon to essentially signal to the CodecBuffer::frame weak_ptr<> that
+      // ReturnFrame() should no longer be called on this frame.  This implies
+      // (for now) that the VideoFrame must not be shared outside transients
+      // under video_decoder_lock_.  See comment on Vp9Decoder::Frame::frame for
+      // more.
       frames_[i]->frame.reset();
     }
 
@@ -1051,14 +1113,14 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params) {
             .vmo_usable_size = frame_vmo_bytes,
         });
         frames.emplace_back(CodecFrame{
-            .codec_buffer =
+            .codec_buffer_spec =
                 fuchsia::mediacodec::CodecBuffer{
                     .buffer_lifetime_ordinal =
                         next_non_codec_buffer_lifetime_ordinal_,
                     .buffer_index = 0,
                     .data = std::move(codec_buffer_data),
                 },
-            .codec_packet = nullptr,
+            .codec_buffer_ptr = nullptr,
         });
       }
       next_non_codec_buffer_lifetime_ordinal_++;
