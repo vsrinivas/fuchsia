@@ -395,8 +395,50 @@ void LegacyLoggerImpl::LogIntHistogram(
     fidl::VectorPtr<uint32_t> bucket_indices,
     fidl::VectorPtr<uint64_t> bucket_counts,
     fuchsia::cobalt::LoggerSimple::LogIntHistogramCallback callback) {
-  FXL_LOG(ERROR) << "Not yet implemented";
-  callback(Status::INTERNAL_ERROR);
+  const Metric* metric = encoder_.GetMetric(metric_id);
+  if (!metric) {
+    FXL_LOG(ERROR) << "There is no metric with ID = " << metric_id << ".";
+    return;
+  }
+  const std::string& metric_name = metric->name();
+
+  if (event_type_index != 0) {
+    FXL_LOG(ERROR) << "The parameter |event_type_index| in the method "
+                      "LogIntHistogram is unsupported in the current version "
+                      "of Cobalt. Pass in the value 0 for now. Metric="
+                   << metric_name;
+    callback(Status::INVALID_ARGUMENTS);
+    return;
+  }
+  if (!component->empty()) {
+    FXL_LOG(ERROR) << "The parameter |component| in the method LogIntHistogram "
+                      "is unsupported in the current version of Cobalt. Pass "
+                      "in an empty string for now. Metric="
+                   << metric_name;
+    callback(Status::INVALID_ARGUMENTS);
+    return;
+  }
+
+  uint32_t encoding_id = GetSinglePartMetricEncoding(metric_id);
+  if (encoding_id == 0) {
+    callback(Status::INVALID_ARGUMENTS);
+    return;
+  }
+
+  if (bucket_indices->size() != bucket_counts->size()) {
+    FXL_LOG(ERROR) << "[" << metric_id
+                   << "]: bucket_indices.size() != bucket_counts.size().";
+    callback(Status::INVALID_ARGUMENTS);
+    return;
+  }
+
+  std::map<uint32_t, uint64_t> histogram_map;
+  for (auto i = 0; i < bucket_indices->size(); i++) {
+    histogram_map[bucket_indices->at(i)] = bucket_counts->at(i);
+  }
+  auto result = encoder_.EncodeIntBucketDistribution(metric_id, encoding_id,
+                                                     histogram_map);
+  AddEncodedObservation(&result, std::move(callback));
 }
 
 void LegacyLoggerImpl::LogCustomEvent(
