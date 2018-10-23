@@ -17,13 +17,23 @@ namespace {
 
 namespace wlan_minstrel = ::fuchsia::wlan::minstrel;
 
+ProbeSequence::ProbeTable SequentialTable() {
+    ProbeSequence::ProbeTable sequence_table;
+    for (uint8_t i = 0; i < ProbeSequence::kNumProbeSequece; ++i) {
+        for (tx_vec_idx_t j = kStartIdx; j <= kMaxValidIdx; ++j) {
+            sequence_table[i][j - kStartIdx] = j;
+        }
+    }
+    return sequence_table;
+}
+
 static const common::MacAddr kTestMacAddr({50, 53, 51, 56, 55, 52});
 static const uint8_t kBasicRateBit = 0b10000000;
 
 struct MinstrelTest : public ::testing::Test {
     MinstrelTest()
         : minstrel_(MinstrelRateSelector(TimerManager(fbl::make_unique<TestTimer>(0, &clock)),
-                                         ProbeSequence::RandomSequence())) {
+                                         ProbeSequence(SequentialTable()))) {
         kTestMacAddr.CopyTo(assoc_ctx_ht_.bssid);
     }
 

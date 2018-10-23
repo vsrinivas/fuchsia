@@ -23,15 +23,14 @@ class ProbeSequence {
         tx_vec_idx_t probe_idx = kSequenceLength - 1;
     };
 
-    static ProbeTable RandomProbeTable();
     static ProbeSequence RandomSequence() { return ProbeSequence(RandomProbeTable()); }
-
     ProbeSequence(ProbeTable&& table) : probe_table(std::move(table)) {}
 
     // returns true if probe_idx has wrapped around, which means we have probed all tx vectors
     bool Next(Entry* entry, tx_vec_idx_t* idx) const;
 
    private:
+    static ProbeTable RandomProbeTable();
     const ProbeTable probe_table;
 };
 }  // namespace wlan
