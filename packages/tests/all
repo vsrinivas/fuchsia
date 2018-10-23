@@ -53,6 +53,7 @@
         "garnet/packages/tests/network",
         "garnet/packages/tests/network_time",
         "garnet/packages/tests/overnet",
+        "garnet/packages/tests/pm",
         "garnet/packages/tests/pmd",
         "garnet/packages/tests/power_manager",
         "garnet/packages/tests/process",

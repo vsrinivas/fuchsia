@@ -91,6 +91,11 @@ func (u *UpdateRepo) AddPackageFile(src string, name string) error {
 	if err := u.createTUFMeta(stagingPath, name); err != nil {
 		return NewAddErr("problem creating TUF metadata", err)
 	}
+	if _, err := u.AddContentBlob(src); err != nil {
+		if !os.IsExist(err) {
+			return NewAddErr("problem adding package blob", err)
+		}
+	}
 
 	return nil
 }

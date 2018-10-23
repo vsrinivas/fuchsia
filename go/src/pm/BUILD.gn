@@ -19,9 +19,20 @@ go_library("pm_lib") {
   ]
 }
 
-go_test("pm_build_test") {
-  gopackage = "fuchsia.googlesource.com/pm/build"
-  deps = [":pm_lib"]
+test_packages = [
+  "build",
+  "cmd/pm/genkey",
+  "keys",
+  "publish"
+]
+
+foreach(pkg, test_packages) {
+  pkg_ = string_replace(pkg, "/", "_")
+  name = "pm_${pkg_}_test"
+  go_test(name) {
+    gopackage = "fuchsia.googlesource.com/pm/${pkg}"
+    deps = [":pm_lib"]
+  }
 }
 
 go_binary("pm_bin") {

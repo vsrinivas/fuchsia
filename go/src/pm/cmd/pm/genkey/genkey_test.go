@@ -15,7 +15,7 @@ func TestRun(t *testing.T) {
 	cfg := build.TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
 
-	if err := Run(cfg); err != nil {
+	if err := Run(cfg, []string{}); err != nil {
 		t.Fatal(err)
 	}
 
