@@ -88,10 +88,10 @@ def assemble_manifest(manifests_dir, output_stream):
                 for line in src:
                     output_stream.write(line)
 
-def add_far_to_repo(amber_bin, name, far, key_dir, repo_dir, ver_scheme, version=0):
+def add_far_to_repo(pm_bin, name, far, key_dir, repo_dir, ver_scheme, version=0):
     """Add a FAR to the update repository under the specified name
 
-    amber_bin : path to the amber binary
+    pm_bin    : path to the pm binary
     name      : name to publish the package as
     far       : path to the FAR file to publish
     key_dir   : directory containing set of keys for the update repository
@@ -104,7 +104,7 @@ def add_far_to_repo(amber_bin, name, far, key_dir, repo_dir, ver_scheme, version
     On success returns None, otherwise returns a string describing the error
     that occurred.
     """
-    cmd = [amber_bin, "-r", repo_dir, "-p", "-f", far, "-n", "%s/%d" % (name, version), "-k", key_dir]
+    cmd = [pm_bin, "publish", "-r", repo_dir, "-p", "-f", far, "-n", "%s/%d" % (name, version), "-k", key_dir]
 
     if ver_scheme == "time":
       cmd += ["-vt"]
@@ -117,10 +117,10 @@ def add_far_to_repo(amber_bin, name, far, key_dir, repo_dir, ver_scheme, version
 
     return None
 
-def add_rsrcs_to_repo(amber_bin, manifest, key_dir, repo_dir):
+def add_rsrcs_to_repo(pm_bin, manifest, key_dir, repo_dir):
     """Add package resources, aka. content blobs to the update repository.
 
-    amber_bin: path to the amber binary
+    pm_bin: path to the pm binary
     manifest : a file containing a mapping of file paths on the target to
                paths on the host. All paths will be added to the update
                respository, named after their content ID.
@@ -131,7 +131,7 @@ def add_rsrcs_to_repo(amber_bin, manifest, key_dir, repo_dir):
     On success returns None, otherwise returns a string describing the error
     that occurred.
     """
-    cmd = [amber_bin, "-r", repo_dir, "-m", "-f", manifest, "-k", key_dir]
+    cmd = [pm_bin, "publish", "-r", repo_dir, "-m", "-f", manifest, "-k", key_dir]
 
     try:
         subprocess.check_call(cmd)
@@ -142,13 +142,12 @@ def add_rsrcs_to_repo(amber_bin, manifest, key_dir, repo_dir):
 
     return None
 
-def publish(pm_bin, amber_bin, pkg_key, repo_key_dir, pkg_stg_dir, update_repo,
+def publish(pm_bin, pkg_key, repo_key_dir, pkg_stg_dir, update_repo,
             manifests_dir, pkgs, ver_scheme, verbose):
     """Publish packages as a signed metadata FAR and a collection of content
     blobs named after their content IDs.
 
     pm_bin       : path to the pm binary
-    amber_bin    : path to the amber binary
     pkg_key      : path to the key to use to sign the metdata FARs
     repo_key_dir : directory containing keys to use for the update respository
     pkg_stg_dir  : a directory that can be used for staging temporary files
@@ -208,7 +207,7 @@ def publish(pm_bin, amber_bin, pkg_key, repo_key_dir, pkg_stg_dir, update_repo,
             print "Could not read version from %q" % pkg_json
             break
 
-        result = add_far_to_repo(amber_bin, pkg, meta_far, repo_key_dir, update_repo,
+        result = add_far_to_repo(pm_bin, pkg, meta_far, repo_key_dir, update_repo,
                                  ver_scheme, version=pkg_version)
         if result is not None:
             print "Package not added to update repo: %s" % result
@@ -216,7 +215,7 @@ def publish(pm_bin, amber_bin, pkg_key, repo_key_dir, pkg_stg_dir, update_repo,
         count -= 1
 
     master_fd.close()
-    result = add_rsrcs_to_repo(amber_bin, master_fest, repo_key_dir, update_repo)
+    result = add_rsrcs_to_repo(pm_bin, master_fest, repo_key_dir, update_repo)
     if result is not None:
         print "Package contents not added to update repo: %s" % result
         return -1
@@ -258,11 +257,6 @@ def main():
     pm_bin = os.path.join(host_tools_dir, "pm")
     if not os.path.exists(pm_bin):
         print "Could not find 'pm' tool at %s" % pm_bin
-        return -1
-
-    amber_bin = os.path.join(host_tools_dir, "amber-publish")
-    if not os.path.exists(amber_bin):
-        print "Could not find amber-publish tool at %s" % amber_bin
         return -1
 
     repo_dir = args.update_repo
@@ -313,7 +307,7 @@ def main():
     if not pkgs_dir:
       pkgs_dir = os.path.join(build_dir, "package")
 
-    return publish(pm_bin, amber_bin, pkg_key, keys_src_dir, pkg_stg_dir, repo_dir,
+    return publish(pm_bin, pkg_key, keys_src_dir, pkg_stg_dir, repo_dir,
                    pkgs_dir, pkg_list, args.ver_scheme, not args.quiet)
 
 if __name__ == '__main__':
