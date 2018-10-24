@@ -43,6 +43,8 @@ MODULE_NAME := async-loop-cpp
 
 MODULE_TYPE := userlib
 
+MODULE_COMPILEFLAGS += -fvisibility=hidden
+
 MODULE_SRCS = \
     $(LOCAL_DIR)/loop_wrapper.cpp
 
