@@ -82,7 +82,7 @@ zx_status_t RegionAllocator::AddRegion(const ralloc_region_t& region, bool allow
     if (!allow_overlap && IntersectsLocked(avail_regions_by_base_, region))
         return ZX_ERR_INVALID_ARGS;
 
-    // All sanity checks passed.  Grab a piece of free bookeeping from our pool,
+    // All sanity checks passed.  Grab a piece of free bookkeeping from our pool,
     // fill it out, then add it to the sets of available regions (indexed by
     // base address as well as size)
     Region* to_add = region_pool_->New(this);
@@ -431,7 +431,7 @@ zx_status_t RegionAllocator::AllocFromAvailLocked(Region::WAVLTreeSortBySize::it
     ZX_DEBUG_ASSERT(leftover >= overhead);
 
     // Great, we found a region.  We may have to split the available region into
-    // up to 2 sub regions depedning on where the aligned allocation lies in the
+    // up to 2 sub regions depending on where the aligned allocation lies in the
     // region.  Figure out how much splitting we need to do and attempt to
     // allocate the bookkeeping.
     bool split_before = base != source->base;

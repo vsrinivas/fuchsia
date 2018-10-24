@@ -497,7 +497,7 @@ public:
     // *** It is absolutely required that the user callback not call into any other
     // RegionAllocator public APIs, and should likely not acquire any locks of any
     // kind. This method cannot protect against deadlocks and lock inversions that
-    // are possible by acquriring the allocation lock before calling the user provided
+    // are possible by acquiring the allocation lock before calling the user provided
     // callback.
     template<typename WalkCallback>
     void WalkAllocatedRegions(WalkCallback&& cb) const
@@ -529,7 +529,7 @@ private:
      *
      * alloc_lock_ protects all of the bookkeeping members of the
      * RegionAllocator.  This includes the allocated index, the available
-     * indicies (by base and by size) and the region pool.
+     * indices (by base and by size) and the region pool.
      *
      * The alloc_lock_ may be held while calling into a RegionAllocator's
      * assigned RegionPool, but code from the RegionPool will never call into

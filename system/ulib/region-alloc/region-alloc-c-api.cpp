@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/listnode.h>   // for contiainerof
+#include <zircon/listnode.h>   // for containerof
 #include <region-alloc/region-alloc.h>
 
 extern "C" {
@@ -25,7 +25,7 @@ zx_status_t ralloc_create_pool(size_t max_memory, ralloc_pool_t** out_pool) {
 void ralloc_release_pool(ralloc_pool_t* pool) {
     ZX_DEBUG_ASSERT(pool != nullptr);
 
-    // Relclaim our reference back from the land of C by turning the pointer
+    // Reclaim our reference back from the land of C by turning the pointer
     // back into a RefPtr, then deliberately let it go out of scope, dropping
     // its reference and destructing the RegionPool if need be.
     auto release_me = fbl::internal::MakeRefPtrNoAdopt(
@@ -160,7 +160,7 @@ size_t ralloc_get_available_region_count(const ralloc_allocator_t* allocator) {
 void ralloc_put_region(const ralloc_region_t* region) {
     ZX_DEBUG_ASSERT(region);
 
-    // Relclaim our reference back from the land of C by turning the pointer
+    // Reclaim our reference back from the land of C by turning the pointer
     // back into a unique_ptr, then deliberately let it go out of scope, destroying the
     // RegionAllocator::Region in the process..
     auto raw_region = static_cast<const RegionAllocator::Region*>(region);
