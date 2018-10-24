@@ -141,7 +141,7 @@ bool trace_context_register_category_literal(
 // the process and/or thread have not previously been described.  Writes a
 // thread record into the trace buffer if the thread was added to the thread table.
 //
-// If the thread table is full, returns an inline thread refrence.
+// If the thread table is full, returns an inline thread reference.
 //
 // |context| must be a valid trace context reference.
 // |out_ref| points to where the registered thread reference should be returned.
@@ -156,7 +156,7 @@ void trace_context_register_current_thread(
 // Writes a thread record into the trace buffer if the virtual thread was added
 // to the thread table.
 //
-// If the thread table is full, returns an inline thread refrence.
+// If the thread table is full, returns an inline thread reference.
 //
 // |context| must be a valid trace context reference.
 // |process_koid| is the koid of the process which contains the thread.
@@ -178,7 +178,7 @@ void trace_context_register_vthread(
 // Writes a thread record into the trace buffer if the thread was added to the
 // thread table.
 //
-// If the thread table is full, returns an inline thread refrence.
+// If the thread table is full, returns an inline thread reference.
 //
 // Unlike |trace_context_register_current_thread()|, the caller is responsible for
 // writing a process and/or thread kernel object record into the trace buffer

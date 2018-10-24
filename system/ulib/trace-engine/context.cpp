@@ -7,7 +7,7 @@
 //
 // Threads and strings are cached to improve performance and reduce buffer
 // usage. The caching involves emitting separate records that identify
-// threads/strings and then refering to them by a numeric id. For performance
+// threads/strings and then referring to them by a numeric id. For performance
 // each thread in the application maintains its own cache.
 //
 // Oneshot: The trace buffer is just one large buffer, and records are written
@@ -32,7 +32,7 @@
 // There are two important properties we wish to preserve in circular and
 // streaming modes:
 // 1) We don't want records describing threads and strings to be dropped:
-// otherwise records refering to them will have nothing to refer to.
+// otherwise records referring to them will have nothing to refer to.
 // 2) We don't want thread records to be dropped at all: Fidelity of recording
 // of all traced threads is important, even if some of their records are
 // dropped.
