@@ -85,7 +85,7 @@ JobDispatcher::LiveRefsArray JobDispatcher::ForEachChildInLocked(
     size_t ix = 0;
 
     for (auto& craw : children) {
-        auto cref = ::fbl::internal::MakeRefPtrUpgradeFromRaw(&craw, lock_.lock());
+        auto cref = ::fbl::MakeRefPtrUpgradeFromRaw(&craw, get_lock());
         if (!cref)
             continue;
 

@@ -41,13 +41,20 @@ fbl_common_tests := \
 
 fbl_device_tests := $(fbl_common_tests)
 
-# These tests won't run on the host.
+# These tests won't run on the host. There are two primary reasons for this.
 #
-# Some of these tests need fbl::Mutex which currently isn't supported on the
-# host. TODO(ZX-1053): Support fbl::Mutex on the host and make the ref counted
-# and slab allocator tests work.
+# First, Some of these tests (ref_counted_upgradeable and slab_allocator) need
+# fbl::Mutex which currently isn't supported on the host.
+#
+# Second, some of these tests make use of the ASSERT_DEATH macro to ensure that
+# certain actions result in program termination.  Again, this is not currently
+# suppoted in the host test environment.
+#
+# See: TODO(ZX-1053)
+#
 fbl_device_tests += \
     $(LOCAL_DIR)/ref_counted_tests.cpp \
+    $(LOCAL_DIR)/ref_counted_upgradeable_tests.cpp \
     $(LOCAL_DIR)/slab_allocator_tests.cpp \
 
 fbl_host_tests := $(fbl_common_tests)

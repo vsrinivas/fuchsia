@@ -1173,7 +1173,7 @@ zx_status_t Blobfs::LookupBlob(const Digest& digest, fbl::RefPtr<VnodeBlob>* out
         fbl::AutoLock lock(&hash_lock_);
         auto raw_vn = open_hash_.find(key).CopyPointer();
         if (raw_vn != nullptr) {
-            vn = fbl::internal::MakeRefPtrUpgradeFromRaw(raw_vn, hash_lock_);
+            vn = fbl::MakeRefPtrUpgradeFromRaw(raw_vn, hash_lock_);
             if (vn == nullptr) {
                 // This condition is only possible if:
                 // - The raw pointer to the Vnode exists in the open map,

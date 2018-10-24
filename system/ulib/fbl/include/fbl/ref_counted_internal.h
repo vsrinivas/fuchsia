@@ -59,32 +59,6 @@ protected:
         }
     }
 
-    // This method should not be used. See MakeRefPtrUpgradeFromRaw()
-    // for details in the proper use of this method. The actual job of
-    // this function is to atomically increment the refcount if the
-    // refcount is greater than zero.
-    //
-    // This method returns false if the object was found with an invalid
-    // refcount (refcount was <= 0), and true if the refcount was not zero and
-    // it was incremented.
-    //
-    // The procedure used is the while-CAS loop with the advantage that
-    // compare_exchange on failure updates |old| on failure (to exchange)
-    // so the loop does not have to do a separate load.
-    //
-    bool AddRefMaybeInDestructor() const __WARN_UNUSED_RESULT {
-        int32_t old = ref_count_.load(memory_order_acquire);
-        do {
-            if (old <= 0) {
-                return false;
-            }
-        } while (!ref_count_.compare_exchange_weak(&old,
-                                                   old + 1,
-                                                   memory_order_acq_rel,
-                                                   memory_order_acquire));
-        return true;
-    }
-
     // Returns true if the object should self-delete.
     bool Release() const __WARN_UNUSED_RESULT {
         const int32_t rc = ref_count_.fetch_sub(1, memory_order_release);

@@ -17,6 +17,7 @@
 #include <fbl/mutex.h>
 #include <fbl/recycler.h>
 #include <fbl/ref_counted.h>
+#include <fbl/ref_counted_upgradeable.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 
@@ -82,13 +83,13 @@ DECLARE_DISPTAG(SuspendTokenDispatcher, ZX_OBJ_TYPE_SUSPEND_TOKEN)
 //
 // You don't derive directly from this class; instead derive
 // from SoloDispatcher or PeeredDispatcher.
-class Dispatcher : private fbl::RefCounted<Dispatcher>,
+class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
                    private fbl::Recyclable<Dispatcher> {
 public:
-    using fbl::RefCounted<Dispatcher>::AddRef;
-    using fbl::RefCounted<Dispatcher>::Release;
-    using fbl::RefCounted<Dispatcher>::Adopt;
-    using fbl::RefCounted<Dispatcher>::AddRefMaybeInDestructor;
+    using fbl::RefCountedUpgradeable<Dispatcher>::AddRef;
+    using fbl::RefCountedUpgradeable<Dispatcher>::Release;
+    using fbl::RefCountedUpgradeable<Dispatcher>::Adopt;
+    using fbl::RefCountedUpgradeable<Dispatcher>::AddRefMaybeInDestructor;
 
     // At construction, the object's state tracker is asserting
     // |signals|.

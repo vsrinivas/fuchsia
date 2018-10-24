@@ -10,15 +10,6 @@
 #include <fbl/recycler.h>
 #include <fbl/type_support.h>
 
-#if _KERNEL
-// Need the full type for the kernel's fbl::Mutex::IsHeld().
-#include <fbl/mutex.h>
-#else
-namespace fbl {
-class Mutex;
-}
-#endif
-
 namespace fbl {
 
 template <typename T>
@@ -33,9 +24,6 @@ RefPtr<T> WrapRefPtr(T* ptr);
 namespace internal {
 template <typename T>
 RefPtr<T> MakeRefPtrNoAdopt(T* ptr);
-
-template <typename T>
-RefPtr<T> MakeRefPtrUpgradeFromRaw(T* ptr, const Mutex& lock);
 } // namespace internal
 
 // RefPtr<T> holds a reference to an intrusively-refcounted object of type
@@ -209,7 +197,6 @@ private:
     friend class RefPtr;
     friend RefPtr<T> AdoptRef<T>(T*);
     friend RefPtr<T> internal::MakeRefPtrNoAdopt<T>(T*);
-    friend RefPtr<T> internal::MakeRefPtrUpgradeFromRaw<T>(T*, const Mutex&);
 
     enum AdoptTag { ADOPT };
     enum NoAdoptTag { NO_ADOPT };
@@ -223,13 +210,6 @@ private:
 
     RefPtr(T* ptr, NoAdoptTag)
         : ptr_(ptr) {}
-
-    RefPtr(T* ptr, const Mutex& dtor_lock)
-        : ptr_(ptr->AddRefMaybeInDestructor() ? ptr : nullptr) {
-#if _KERNEL
-        ZX_DEBUG_ASSERT_MSG(dtor_lock.IsHeld(), "Lock must be held while using this ctor\n");
-#endif
-    }
 
     static void recycle(T* ptr) {
         if (::fbl::internal::has_fbl_recycle<T>::value) {
@@ -278,71 +258,6 @@ namespace internal {
 template <typename T>
 inline RefPtr<T> MakeRefPtrNoAdopt(T* ptr) {
     return RefPtr<T>(ptr, RefPtr<T>::NO_ADOPT);
-}
-
-// Constructs a RefPtr from a raw T* which is being held alive by RefPtr
-// with the caveat that the existing RefPtr might be in the process of
-// destructing the T object. When the T object is in the destructor, the
-// resulting RefPtr is null, otherwise the resulting RefPtr points to T*
-// with the updated reference count.
-//
-// The only way for this to be a valid pattern is that the call is made
-// while holding |lock| and that the same lock also is used to protect the
-// value of T* .
-//
-// This pattern is needed in collaborating objects which cannot hold a
-// RefPtr to each other because it would cause a reference cycle. Instead
-// there is a raw pointer from one to the other and a RefPtr in the
-// other direction. When needed the raw pointer can be upgraded via
-// MakeRefPtrUpgradeFromRaw() and operated outside |lock|.
-//
-// For example:
-//
-//  class Holder: public RefCounted<Holder> {
-//  public:
-//      void add_client(Client* c) {
-//          Autolock al(&lock_);
-//          client_ = c;
-//      }
-//
-//      void remove_client() {
-//          Autolock al(&lock_);
-//          client_ = nullptr;
-//      }
-//
-//      void PassClient(Bar* bar) {
-//          Autolock al(&lock_);
-//          if (client_) {
-//              auto rc_client = fbl::internal::MakeRefPtrUpgradeFromRaw(client_, lock_);
-//              if (rc_client)
-//                  bar->Client(move(rc_client));  // Bar might keep a ref to client.
-//              else
-//                  bar->OnNoClient();
-//          }
-//      }
-//
-//  private:
-//      fbl::Mutex lock_;
-//      Client* client_;
-//  };
-//
-//  class Client: public RefCounted<Client> {
-//  public:
-//      Client(RefPtr<Holder> holder) : holder_(move(holder)) {
-//          holder_->add_client(this);
-//      }
-//
-//      ~Client() {
-//          holder_->remove_client();
-//      }
-//  private:
-//      RefPtr<Holder> holder_;
-//  };
-//
-//
-template <typename T>
-inline RefPtr<T> MakeRefPtrUpgradeFromRaw(T* ptr, const Mutex& lock) {
-    return RefPtr<T>(ptr, lock);
 }
 
 // This is a wrapper class that can be friended for a particular |T|, if you

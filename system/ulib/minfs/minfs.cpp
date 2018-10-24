@@ -561,7 +561,7 @@ fbl::RefPtr<VnodeMinfs> Minfs::VnodeLookupInternal(uint32_t ino) {
             // Nothing exists in the lookup table
             return nullptr;
         }
-        vn = fbl::internal::MakeRefPtrUpgradeFromRaw(rawVn.CopyPointer(), hash_lock_);
+        vn = fbl::MakeRefPtrUpgradeFromRaw(rawVn.CopyPointer(), hash_lock_);
         if (vn == nullptr) {
             // The vn 'exists' in the map, but it is being deleted.
             // Remove it (by key) so the next person doesn't trip on it,

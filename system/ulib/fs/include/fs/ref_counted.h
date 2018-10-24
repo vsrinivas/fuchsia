@@ -5,7 +5,7 @@
 #pragma once
 
 #include <fbl/atomic.h>
-#include <fbl/ref_counted_internal.h>
+#include <fbl/ref_counted_upgradeable.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -18,7 +18,8 @@ namespace fs {
 // re-used after a reference count of zero has been reached.
 template <typename T,
           bool EnableAdoptionValidator = ZX_DEBUG_ASSERT_IMPLEMENTED>
-class VnodeRefCounted : private ::fbl::internal::RefCountedBase<EnableAdoptionValidator> {
+class VnodeRefCounted :
+    private ::fbl::internal::RefCountedUpgradeableBase<EnableAdoptionValidator> {
 public:
     constexpr VnodeRefCounted() {}
     ~VnodeRefCounted() {}
@@ -29,7 +30,8 @@ public:
     using ::fbl::internal::RefCountedBase<EnableAdoptionValidator>::ref_count_debug;
 
     // Don't use this method. See the relevant RefPtr implementation for details.
-    using ::fbl::internal::RefCountedBase<EnableAdoptionValidator>::AddRefMaybeInDestructor;
+    using ::fbl::internal::RefCountedUpgradeableBase<EnableAdoptionValidator>::
+        AddRefMaybeInDestructor;
 
     // VnodeRefCounted<> instances may not be copied, assigned or moved.
     DISALLOW_COPY_ASSIGN_AND_MOVE(VnodeRefCounted);
