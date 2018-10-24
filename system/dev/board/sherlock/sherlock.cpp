@@ -88,6 +88,11 @@ int Sherlock::Thread() {
         zxlogf(ERROR, "CameraInit() failed\n");
         return -1;
     }
+
+    if (MaliInit() != ZX_OK) {
+        zxlogf(ERROR, "MaliInit() failed\n");
+        return -1;
+    }
     return 0;
 }
 

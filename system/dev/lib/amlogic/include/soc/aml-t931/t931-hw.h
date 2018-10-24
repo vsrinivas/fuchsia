@@ -18,11 +18,17 @@
 #define T931_I2C2_BASE                  (T931_CBUS_BASE + 0x1d000)
 #define T931_I2C3_BASE                  (T931_CBUS_BASE + 0x1c000)
 
+#define T931_RESET_BASE                 0xffd01000
+#define T931_RESET_LENGTH               0x1000
+
 #define T931_HIU_BASE                   0xff63c000
 #define T931_HIU_LENGTH                 0x2000
 
 #define T931_MSR_CLK_BASE               0xffd18000
 #define T931_MSR_CLK_LENGTH             0x1000
+
+#define T931_MALI_BASE                  0xffe40000
+#define T931_MALI_LENGTH                0x40000
 
 // MIPI CSI & Adapter
 #define T931_CSI_PHY0_BASE              0xff650000
@@ -43,6 +49,29 @@
 #define T931_SD_EMMC_C_BASE             0xffE07000
 #define T931_SD_EMMC_C_LENGTH           0x2000
 
+// Reset register offsets
+#define T931_RESET0_REGISTER          0x04
+#define T931_RESET1_REGISTER          0x08
+#define T931_RESET2_REGISTER          0x0c
+#define T931_RESET3_REGISTER          0x10
+#define T931_RESET4_REGISTER          0x14
+#define T931_RESET6_REGISTER          0x1c
+#define T931_RESET7_REGISTER          0x20
+#define T931_RESET0_MASK              0x40
+#define T931_RESET1_MASK              0x44
+#define T931_RESET2_MASK              0x48
+#define T931_RESET3_MASK              0x4c
+#define T931_RESET4_MASK              0x50
+#define T931_RESET6_MASK              0x58
+#define T931_RESET7_MASK              0x5c
+#define T931_RESET0_LEVEL             0x80
+#define T931_RESET1_LEVEL             0x84
+#define T931_RESET2_LEVEL             0x88
+#define T931_RESET3_LEVEL             0x8c
+#define T931_RESET4_LEVEL             0x90
+#define T931_RESET6_LEVEL             0x98
+#define T931_RESET7_LEVEL             0x9c
+
 // IRQs
 #define T931_GPIO_IRQ_0                 96
 #define T931_GPIO_IRQ_1                 97
@@ -59,6 +88,9 @@
 #define T931_I2C_AO_0_IRQ               227
 #define T931_USB0_IRQ                   62
 #define T931_SD_EMMC_C_IRQ              223
+#define T931_MALI_IRQ_GP                192
+#define T931_MALI_IRQ_GPMMU             193
+#define T931_MALI_IRQ_PP                194
 
 // Alternate Functions for EMMC
 #define T931_EMMC_D0                    T931_GPIOBOOT(0)

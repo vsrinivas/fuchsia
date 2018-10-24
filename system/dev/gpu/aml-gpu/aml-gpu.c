@@ -4,6 +4,7 @@
 
 #include "s905d2-gpu.h"
 #include "s912-gpu.h"
+#include "t931-gpu.h"
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -229,6 +230,9 @@ static zx_status_t aml_gpu_bind(void* ctx, zx_device_t* parent) {
     case PDEV_PID_AMLOGIC_S905D2:
         gpu->gpu_block = &s905d2_gpu_blocks;
         break;
+    case PDEV_PID_AMLOGIC_T931:
+        gpu->gpu_block = &t931_gpu_blocks;
+        break;
     default:
         GPU_ERROR("unsupported SOC PID %u\n", info.pid);
         goto fail;
@@ -278,11 +282,12 @@ static zx_driver_ops_t aml_gpu_driver_ops = {
     .bind = aml_gpu_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(aml_gpu, aml_gpu_driver_ops, "zircon", "0.1", 5)
+ZIRCON_DRIVER_BEGIN(aml_gpu, aml_gpu_driver_ops, "zircon", "0.1", 6)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_ARM_MALI_INIT),
     // we support multiple SOC variants
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S912),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
 ZIRCON_DRIVER_END(aml_gpu)

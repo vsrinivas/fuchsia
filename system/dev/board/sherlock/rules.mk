@@ -16,6 +16,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/sherlock-emmc.cpp \
     $(LOCAL_DIR)/sherlock-gpio.cpp \
     $(LOCAL_DIR)/sherlock-i2c.cpp \
+    $(LOCAL_DIR)/sherlock-mali.cpp \
     $(LOCAL_DIR)/sherlock-usb.cpp \
 
 MODULE_STATIC_LIBS := \
