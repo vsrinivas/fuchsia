@@ -229,11 +229,14 @@ impl<T: Tokens> State<T> {
     pub fn connect(self, cmd: ConnectCommand<T::ConnectToken>, context: &mut Context<T>) -> Self {
         self.disconnect_internal(context);
 
-        let (phy_to_use, cbw_to_use) = derive_phy_cbw(&cmd.bss, &cmd.params);
+        let mut selected_bss = clone_bss_desc(&cmd.bss);
+        let (phy_to_use, cbw_to_use)
+            = derive_phy_cbw(&selected_bss, &context.device_info, &cmd.params);
+        selected_bss.chan.cbw = cbw_to_use;
 
         context.mlme_sink.send(MlmeRequest::Join(
             fidl_mlme::JoinRequest {
-                selected_bss: clone_bss_desc(&cmd.bss),
+                selected_bss,
                 join_failure_timeout: DEFAULT_JOIN_FAILURE_TIMEOUT,
                 nav_sync_delay: 0,
                 op_rate_set: vec![],
