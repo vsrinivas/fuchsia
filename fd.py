@@ -178,7 +178,7 @@ def choose_options(t, key, choice):
   elif options.__len__() > 75:  # See def button() for the limit.
     eprint('Too many ({}) results for "{}". '
            'Refine your prefix or time to buy 4K '
-           'monitor\n').format(options.__len__(), key)
+           'monitor\n'.format(options.__len__(), key))
     return None
 
   def list_choices(l):
