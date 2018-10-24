@@ -5,7 +5,9 @@
 #include <wlan/mlme/ap/beacon_sender.h>
 
 #include <wlan/common/channel.h>
+#include <wlan/common/element_splitter.h>
 #include <wlan/common/logging.h>
+#include <wlan/common/parse_element.h>
 #include <wlan/mlme/ap/bss_interface.h>
 #include <wlan/mlme/ap/tim.h>
 #include <wlan/mlme/beacon.h>
@@ -81,39 +83,29 @@ bool BeaconSender::IsStarted() {
     return bss_ != nullptr;
 }
 
-bool BeaconSender::ShouldSendProbeResponse(const MgmtFrameView<ProbeRequest>& probe_req_frame) {
-    size_t elt_len = probe_req_frame.body_len() - probe_req_frame.hdr()->len();
-    ElementReader reader(probe_req_frame.body()->elements, elt_len);
-    while (reader.is_valid()) {
-        auto hdr = reader.peek();
-        if (hdr == nullptr) {
-            // Invalid header and thus corrupted request.
-            return false;
-        }
+static bool SsidMatch(Span<const uint8_t> our_ssid, Span<const uint8_t> req_ssid) {
+    return req_ssid.empty()  // wildcard always matches
+           || std::equal(our_ssid.begin(), our_ssid.end(), req_ssid.begin(), req_ssid.end());
+}
 
-        switch (hdr->id) {
-        case element_id::kSsid: {
-            auto ie = reader.read<SsidElement>();
-            if (ie == nullptr) { return false; };
-            if (hdr->len == 0) {
-                // Always respond to wildcard requests.
-                return true;
-            }
+bool ShouldSendProbeResponse(Span<const uint8_t> elements, Span<const uint8_t> our_ssid) {
+    auto splitter = common::ElementSplitter(elements);
+    auto it = std::find_if(splitter.begin(), splitter.end(), [](auto elem) {
+        return std::get<element_id::ElementId>(elem) == element_id::kSsid;
+    });
 
-            // Send ProbeResponse if request was targeted towards this BSS.
-            size_t ssid_len = req_.ssid->size();
-            bool to_bss =
-                (hdr->len == ssid_len) && (memcmp(ie->ssid, req_.ssid->data(), ssid_len) == 0);
-            return to_bss;
-        }
-        default:
-            reader.skip(sizeof(ElementHeader) + hdr->len);
-            break;
-        }
+    if (it == splitter.end()) {
+        // Request did not contain an SSID IE. Technically this is a malformed probe request
+        // since SSID is not optional, but we treat it as a wildcard request anyway.
+        // We might want to revisit this idea.
+        return true;
     }
 
-    // Request did not contain an SSID IE and is therefore a wildcard one.
-    return true;
+    if (auto ssid = common::ParseSsid(std::get<Span<const uint8_t>>(*it))) {
+        return SsidMatch(our_ssid, *ssid);
+    }
+    // Malformed SSID element
+    return false;
 }
 
 zx_status_t BeaconSender::BuildBeacon(const PsCfg& ps_cfg, MgmtFrame<Beacon>* frame,
@@ -154,7 +146,10 @@ zx_status_t BeaconSender::UpdateBeacon(const PsCfg& ps_cfg) {
 
 void BeaconSender::SendProbeResponse(const MgmtFrameView<ProbeRequest>& probe_req_frame) {
     if (!IsStarted()) { return; }
-    if (!ShouldSendProbeResponse(probe_req_frame)) { return; }
+    size_t elt_len = probe_req_frame.body_len() - probe_req_frame.hdr()->len();
+    if (!ShouldSendProbeResponse({probe_req_frame.body()->elements, elt_len}, *req_.ssid)) {
+        return;
+    }
 
     BeaconConfig c = {
         .bssid = bss_->bssid(),

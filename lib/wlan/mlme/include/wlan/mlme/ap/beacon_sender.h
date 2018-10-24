@@ -30,8 +30,6 @@ class BeaconSender {
     void SendProbeResponse(const MgmtFrameView<ProbeRequest>&);
 
    private:
-    bool ShouldSendProbeResponse(const MgmtFrameView<ProbeRequest>&);
-
     zx_status_t BuildBeacon(const PsCfg& ps_cfg, MgmtFrame<Beacon>* frame, size_t* tim_ele_offset);
 
     bool IsStarted();
@@ -40,6 +38,9 @@ class BeaconSender {
     ::fuchsia::wlan::mlme::StartRequest req_;
     BssInterface* bss_ = nullptr;
 };
+
+// Visible for testing
+bool ShouldSendProbeResponse(Span<const uint8_t> elements, Span<const uint8_t> our_ssid);
 
 }  // namespace wlan
 

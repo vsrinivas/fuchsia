@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <wlan/mlme/ap/beacon_sender.h>
+#include <wlan/mlme/ap/bss_interface.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
-#include <wlan/mlme/ap/bss_interface.h>
 
 #include <fbl/unique_ptr.h>
 #include <fuchsia/wlan/mlme/c/fidl.h>
@@ -19,21 +19,22 @@
 #include <gtest/gtest.h>
 
 namespace wlan {
-
 namespace {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 struct MockBss : public BssInterface {
-    const common::MacAddr& bssid() const  { return bssid_; }
-    uint64_t timestamp()  { return 0; }
+    const common::MacAddr& bssid() const { return bssid_; }
+    uint64_t timestamp() { return 0; }
 
     seq_t NextSeq(const MgmtFrameHeader& hdr) { return 0; }
     seq_t NextSeq(const MgmtFrameHeader& hdr, uint8_t aci) { return 0; }
     seq_t NextSeq(const DataFrameHeader& hdr) { return 0; }
 
     std::optional<DataFrame<LlcHeader>> EthToDataFrame(const EthFrame& eth_frame,
-                                                               bool needs_protection) { return std::nullopt; }
+                                                       bool needs_protection) {
+        return std::nullopt;
+    }
 
     bool IsRsn() const { return false; }
     HtConfig Ht() const { return {}; }
@@ -94,6 +95,28 @@ TEST_F(BeaconSenderTest, ProbeRequest) {
     bcn_sender.SendProbeResponse(probe_req);
 
     ASSERT_FALSE(device.wlan_queue.empty());
+}
+
+TEST(BeaconSender, ShouldSendProbeResponse) {
+    const uint8_t our_ssid[] = {'f', 'o', 'o'};
+
+    const uint8_t no_ssid[] = {1, 1, 1};
+    EXPECT_TRUE(ShouldSendProbeResponse(no_ssid, our_ssid));
+
+    const uint8_t different_ssid[] = {0, 3, 'b', 'a', 'r', 1, 1, 1};
+    EXPECT_FALSE(ShouldSendProbeResponse(different_ssid, our_ssid));
+
+    const uint8_t matching_ssid[] = {0, 3, 'f', 'o', 'o', 1, 1, 1};
+    EXPECT_TRUE(ShouldSendProbeResponse(matching_ssid, our_ssid));
+
+    const uint8_t wildcard_ssid[] = {0, 0, 1, 1, 1};
+    EXPECT_TRUE(ShouldSendProbeResponse(wildcard_ssid, our_ssid));
+
+    const uint8_t malformed_ssid[35] = {
+        0,
+        33,
+    };
+    EXPECT_FALSE(ShouldSendProbeResponse(malformed_ssid, our_ssid));
 }
 
 }  // namespace
