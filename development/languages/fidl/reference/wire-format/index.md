@@ -558,8 +558,8 @@ A method result message provides the result associated with a prior method call.
 The body of the message contains the method results as if they were packed in a
 **struct**.
 
-The message result header consists of `uint32 txid, uint32_t reserved, uint32
-flags, uint32_t ordinal`.  The `txid` must be equal to the `txid` of the method
+The message result header consists of `uint32 txid, uint32 reserved, uint32
+flags, uint32 ordinal`.  The `txid` must be equal to the `txid` of the method
 call to which this message is a response. The flags must be zero. The `ordinal`
 must be equal to the `ordinal` of the method call to which this message is a
 response.

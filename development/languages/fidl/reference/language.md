@@ -1,44 +1,46 @@
-# FIDL: Language Specification
+# Language Specification
 
 This document is a specification of the Fuchsia Interface Definition Language
-(FIDL) syntax.
+(**FIDL**) syntax.
 
-See [FIDL: Overview](index.md) for more information about FIDL's overall
+See [Overview](index.md) for more information about FIDL's overall
 purpose, goals, and requirements, as well as links to related documents.
+
+You can find a modified [EBNF description of the FIDL grammar here](grammar.md).
 
 [TOC]
 
 ## Syntax
 
-The Fuchsia Interface Definition Language provides a syntax for declaring named
+FIDL provides a syntax for declaring named
 constants, enums, structs, unions, and interfaces. These declarations are
 collected into libraries for distribution.
 
 FIDL declarations are stored in plain text UTF-8 files. Each file consists of a
-sequence of semicolon delimited declarations. The order of declarations within a
-FIDL file or among FIDL files within a library is irrelevant. FIDL does not
+sequence of semicolon-delimited declarations. The order of declarations within a
+FIDL file, or among FIDL files within a library, is irrelevant. FIDL does not
 require (or support) forward declarations of any kind.
 
 ### Tokens
 
 #### Comments
 
-FIDL supports C++-style comments. These go from `//` to the end of the
-line. They may contain UTF-8 content (which is of course ignored).
+FIDL comments start with two (`//`) or three (`///`) forward slashes, continue
+to the end of the line, and can contain UTF-8 content (which is, of course, ignored).
+The three-forward-slash variant is a "documentation comment", and causes the comment
+text to be emitted into the generated code (as a comment, escaped correctly
+for the target language).
 
-```
+```fidl
 // this is a comment
-struct Foo { // so is this
-    int32 f; // and this
-}; // last one!
+/// and this one is too, but it also ends up in the generated code
+struct Foo { // plain comment
+    int32 f; // as is this one
+}; // and this is the last one!
 ```
 
-#### Document Comments
-
-TODO(TO-504): We will generate online documentation from FIDL
-files. Perhaps the compiler can emit document contents together with
-the declarations in a machine-readable FIDL IR format that could be
-consumed by other tools.
+Note that documentation comments can also be provided via the
+[`[Doc]` attribute](attributes.md#Doc).
 
 #### Keywords
 
@@ -52,14 +54,14 @@ uint32, uint64, union, using, vector
 
 #### Identifiers
 
-FIDL identifiers must match the regex "[a-zA-Z]([a-zA-Z0-9_]\*[a-zA-Z0-9])?".
+FIDL identifiers must match the regex `[a-zA-Z]([a-zA-Z0-9_]*[a-zA-Z0-9])?`.
 
 In words: identifiers must start with a letter, can contain letters,
 numbers, and underscores, but cannot end with an underscore.
 
 Identifiers are case-sensitive.
 
-```
+```fidl
 // a library named "foo"
 library foo;
 
@@ -70,6 +72,10 @@ struct Foo { };
 struct struct { };
 ```
 
+> Note that while using keywords as identifiers is supported, it can lead to confusion,
+> and should the be considered on a case-by-case basis. See the `Names` section of the
+> [Readability Rubric](https://fuchsia.googlesource.com/docs/+/master/development/api/fidl.md#Names)
+
 #### Qualified Identifiers
 
 FIDL always looks for unqualified symbols within the scope of the current
@@ -78,44 +84,64 @@ prefixing the identifier with the library name or alias.
 
 **objects.fidl:**
 
-```
-    library objects;
-    using textures as tex;
+```fidl
+library objects;
+using textures as tex;
 
-    interface Frob {
-        // "Thing" refers to "Thing" in the "objects" library
-        // "tex.Color" refers to "Color" in the "textures" library
-        Paint(Thing thing, tex.Color color);
-    };
+interface Frob {
+    // "Thing" refers to "Thing" in the "objects" library
+    // "tex.Color" refers to "Color" in the "textures" library
+    1: Paint(Thing thing, tex.Color color);
+};
 
-    struct Thing {
-        string name;
-    };
+struct Thing {
+    string name;
+};
 ```
 
 **textures.fidl:**
 
-```
-    library textures;
+```fidl
+library textures;
 
-    struct Color {
-        uint32 rgba;
-    };
+struct Color {
+    uint32 rgba;
+};
 ```
 
 #### Literals
 
-FIDL supports the following literal types using C-like syntax: bools, signed
-integers, unsigned integers, floats, strings.
+FIDL supports integer, floating point, boolean, string, and enumeration literals, using
+a simplified syntax familiar to C programmers (see below for examples).
 
+#### Constants
+
+FIDL supports the following constant types: booleans, signed and unsigned integers,
+floating point values, strings, and enumerations.
+The syntax is similar to C:
+
+```fidl
+const bool enabled_flag = true;
+const int8 offset = -33;
+const uint16 answer = 42;
+const uint32 population_2018 = 7700000000;
+const uint64 diamond = 0x183c7effff7e3c18;
+const uint64 fuchsia = 4054509061583223046;
+const string username = "squeenze";
+const float32 min_temp = -273.15;
+const float64 conversion_factor = 1.41421358;
+const Beverage my_drink = WATER;
 ```
-    const bool BOOL = true;
-    const int32 INT = -333;
-    const uint32 UINT = 42;
-    const uint64 DIAMOND = 0x183c7effff7e3c18;
-    const string STRING = "a string";
-    const float32 FLOAT = 1.0;
-```
+
+These declarations introduce a name within their scope.
+The constant's type must be either a primitive or an enum.
+
+Constant expressions are either literals or the names of other
+constant expressions.
+
+> For greater clarity, there is no expression processing in FIDL; that is,
+> you *cannot* declare a constant as having the value `6 + 5`, for
+> example.
 
 #### Declaration Separator
 
@@ -126,22 +152,29 @@ file, much like C.
 
 Libraries are named containers of FIDL declarations.
 
-Each library has a name consisting of a dot-delimited identifier. Library names
-appear in [Qualified Identifiers](#qualified-identifiers).
+Each library has a name consisting of a single identifier (e.g., "objects"),
+or multiple identifiers separated by dots (e.g., "mozart.composition").
+Library names are used in [Qualified Identifiers](#qualified-identifiers).
+
+```fidl
+// library identifier separated by dots
+library mozart.composition;
+
+// "using" to import library "mozart.buffers"
+using mozart.buffers;
+
+// "using" to import library "mozart.geometry" and create a shortform called "geo"
+using mozart.geometry as geo;
+
+```
 
 Libraries may declare that they use other libraries with a "using" declaration.
 This allows the library to refer to symbols defined in other libraries upon which
-they depend. Symbols which are imported this way may be accessed either by
-qualifying them with the library name as in _"mozart.geometry.Rect"_ or by
-qualifying them with the library alias as in _"geo.Rect"_.
+they depend. Symbols which are imported this way may be accessed by:
 
-```
-    library mozart.composition;
-    using mozart.geometry as geo;
-    using mozart.buffers;
-
-    interface Compositor { … };
-```
+*   qualifying them with the fully qualified library name (as in _"mozart.geometry.Rect"_),
+*   specifying just the library name (as in _"geometry.Rect"_), or,
+*   using a library alias (as in _"geo.Rect"_).
 
 In the source tree, each library consists of a directory with some number of
 **.fidl** files. The name of the directory is irrelevant to the FIDL compiler
@@ -170,7 +203,7 @@ module for that language.
 
 The following primitive types are supported:
 
-*    Boolean         **`bool`**
+*    Boolean                 **`bool`**
 *    Signed integer          **`int8 int16 int32 int64`**
 *    Unsigned integer        **`uint8 uint16 uint32 uint64`**
 *    IEEE 754 Floating-point **`float32 float64`**
@@ -180,7 +213,7 @@ byte.
 
 ##### Use
 
-```
+```fidl
 // A record which contains fields of a few primitive types.
 struct Sprite {
     float32 x;
@@ -193,7 +226,7 @@ struct Sprite {
 
 #### Enums
 
-*   Proper enumerated types; bit fields are not valid enums.
+*   Proper enumerated types.
 *   Discrete subset of named values chosen from an underlying integer primitive
     type.
 *   Not nullable.
@@ -205,7 +238,7 @@ The ordinal index is **required** for each enum element. The underlying type of
 an enum must be one of: **int8, uint8, int16, uint16, int32, uint32, int64,
 uint64**. If omitted, the underlying type is assumed to be **uint32**.
 
-```
+```fidl
 // An enum declared at library scope.
 enum Beverage : uint8 {
     WATER = 0;
@@ -228,7 +261,7 @@ enum Vessel {
 
 Enum types are denoted by their identifier, which may be qualified if needed.
 
-```
+```fidl
 // A record which contains two enum fields.
 struct Order {
     Beverage beverage;
@@ -247,10 +280,10 @@ struct Order {
 
 Arrays are denoted **`array<T>:n`** where _T_ can
 be any FIDL type (including an array) and _n_ is a positive
-integer constant expression which specified the number of elements in
+integer constant expression which specifies the number of elements in
 the array.
 
-```
+```fidl
 // A record which contains some arrays.
 struct Record {
     // array of exactly 16 floating point numbers
@@ -275,10 +308,10 @@ Strings are denoted as follows:
 *   **`string`** : non-nullable string (validation error
     occurs if null is encountered)
 *   **`string?`** : nullable string
-*   **`string:N, string:N?`** : string with maximum
-    length of _N_ bytes
+*   **`string:N, string:N?`** : string, and nullable string, respectively,
+    with maximum length of _N_ bytes
 
-```
+```fidl
 // A record which contains some strings.
 struct Record {
     // title string, maximum of 40 bytes long
@@ -306,12 +339,12 @@ Vectors are denoted as follows:
     _T_ (validation error occurs if null is encountered)
 *   **`vector<T>?`** : nullable vector of element type
     _T_
-*   **`vector<T>:N, vector<T>:N?`** : vector with
-    maximum length of _N_ elements
+*   **`vector<T>:N, vector<T>:N?`** : vector, and nullable vector, respectively,
+    with maximum length of _N_ elements
 
 _T_ can be any FIDL type.
 
-```
+```fidl
 // A record which contains some vectors.
 struct Record {
     // a vector of up to 10 integers
@@ -323,10 +356,10 @@ struct Record {
     // a nullable vector of up to 24 strings
     vector<string>:24? nullable_vector_of_strings;
 
-    // a vector of nullable strings
+    // a vector of nullable strings, no upper bound on size
     vector<string?> vector_of_nullable_strings;
 
-    // a vector of vectors of arrays of floating point numbers
+    // a vector of vectors of 16-element arrays of floating point numbers
     vector<vector<array<float32>:16>> complex;
 };
 ```
@@ -354,7 +387,7 @@ _H_ can be one of: `channel, event, eventpair, fifo, job,
 process, port, resource, socket, thread, vmo`. New types will
 be added to the fidl language as they are added to Zircon.
 
-```
+```fidl
 // A record which contains some handles.
 struct Record {
     // a handle of unspecified type
@@ -377,7 +410,7 @@ struct Record {
 
 ##### Declaration
 
-```
+```fidl
 struct Point {
     float32 x;
     float32 y;
@@ -396,7 +429,7 @@ Structs are denoted by their declared name (eg. **Circle**) and nullability:
 *   **`Circle`** : non-nullable Circle
 *   **`Circle?`** : nullable Circle
 
-```
+```fidl
 struct Circle {
     bool filled;
     Point center;    // Point will be stored in-line
@@ -413,14 +446,14 @@ struct Circle {
     extension instead.
 *   Reference may be nullable.
 *   Unions contain one or more members. A union with no members would have
-    no inhabitants and make little sense in a wire format.
+    no inhabitants and thus would make little sense in a wire format.
 
 ##### Declaration
 
-```
+```fidl
 union Pattern {
-    Color color;
-    Texture texture;
+    Color color;        // the Pattern contains either a Color
+    Texture texture;    // or a Texture, but not both at the same time
 };
 struct Color {
     float32 r;
@@ -437,7 +470,7 @@ Union are denoted by their declared name (eg. **Pattern**) and nullability:
 *   **`Pattern`** : non-nullable Shape
 *   **`Pattern?`** : nullable Shape
 
-```
+```fidl
 struct Paint {
     Pattern fg;
     Pattern? bg;
@@ -479,7 +512,7 @@ struct Paint {
 
 ##### Declaration
 
-```
+```fidl
 interface Calculator {
     1: Add(int32 a, int32 b) -> (int32 sum);
     2: Divide(int32 dividend, int32 divisor)
@@ -518,7 +551,7 @@ optionality:
 *   **`request<Interface>?`** : nullable FIDL interface request
     (server endpoint of channel)
 
-```
+```fidl
 // A record which contains interface-bound channels.
 struct Record {
     // client endpoint of a channel bound to the Calculator interface
@@ -532,22 +565,3 @@ struct Record {
     RealCalculator? r;
 };
 ```
-
-### Constant Declarations
-
-Constant declarations introduce a name within their scope. The constant's type
-must be either a primitive or an enum.
-
-```
-// a constant declared at library scope
-const int32 FAVORITE_NUMBER = 42;
-```
-
-### Constant Expressions
-
-Constant expressions are either literals or the names of other
-constant expressions.
-
-## Grammar
-
-A modified [EBNF description of the fidl grammar is here](grammar.md).
