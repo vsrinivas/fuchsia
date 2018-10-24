@@ -8,41 +8,41 @@ library fuchsia.modular;
 // the internal state of the suggestion service.
 [Discoverable]
 interface SuggestionDebug {
-  1: WatchAskProposals(AskProposalListener listener);
-  2: WatchInterruptionProposals(InterruptionProposalListener listener);
-  3: WatchNextProposals(NextProposalListener listener);
+    1: WatchAskProposals(AskProposalListener listener);
+    2: WatchInterruptionProposals(InterruptionProposalListener listener);
+    3: WatchNextProposals(NextProposalListener listener);
 
-  // Waits until Suggestion Engine has reached a steady state such that no
-  // further activity will occur unless acted upon from the outside.
-  4: WaitUntilIdle() -> ();
-  // Calls |async::Loop::RunUntilIdle()|, which processes all immediately
-  // available messages. Unlike |WaitUntilIdle|, this does not wait for
-  // long-running delayed tasks.
-  5: RunUntilIdle() -> ();
+    // Waits until Suggestion Engine has reached a steady state such that no
+    // further activity will occur unless acted upon from the outside.
+    4: WaitUntilIdle() -> ();
+    // Calls |async::Loop::RunUntilIdle()|, which processes all immediately
+    // available messages. Unlike |WaitUntilIdle|, this does not wait for
+    // long-running delayed tasks.
+    5: RunUntilIdle() -> ();
 };
 
 interface AskProposalListener {
-  // Receives the current ask query and ranked proposals
-  1: OnAskStart(string query, vector<ProposalSummary> proposals);
-  // Receives notification of query completion or dismissal.
-  // |selected_proposal| is null if query was dismissed
-  2: OnProposalSelected(ProposalSummary? selected_proposal);
+    // Receives the current ask query and ranked proposals
+    1: OnAskStart(string query, vector<ProposalSummary> proposals);
+    // Receives notification of query completion or dismissal.
+    // |selected_proposal| is null if query was dismissed
+    2: OnProposalSelected(ProposalSummary? selected_proposal);
 };
 
 interface InterruptionProposalListener {
-  // Receives updates to the current proposal list and rankings
-  1: OnInterrupt(ProposalSummary interruption_proposal);
+    // Receives updates to the current proposal list and rankings
+    1: OnInterrupt(ProposalSummary interruption_proposal);
 };
 
 interface NextProposalListener {
-  // Receives updates to the current proposal list and rankings
-  1: OnNextUpdate(vector<ProposalSummary> proposals);
+    // Receives updates to the current proposal list and rankings
+    1: OnNextUpdate(vector<ProposalSummary> proposals);
 };
 
 // This is necessary because a Proposal is not Clone-able, as CustomAction
 // can contain an InterfaceHandle.
 struct ProposalSummary {
-  string id;
-  string publisher_url;
-  SuggestionDisplay display;
+    string id;
+    string publisher_url;
+    SuggestionDisplay display;
 };

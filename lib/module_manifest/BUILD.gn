@@ -3,7 +3,9 @@
 # found in the LICENSE file.
 
 group("module_manifest") {
-  public_deps = [":json_xdr"]
+  public_deps = [
+    ":json_xdr",
+  ]
 }
 
 group("unittests") {

@@ -66,9 +66,8 @@ std::unique_ptr<Credentials> Credentials::Parse(const rapidjson::Value& json) {
   auto client_email = json["client_email"].GetString();
   auto client_id = json["client_id"].GetString();
 
-  bssl::UniquePtr<BIO> bio(
-      BIO_new_mem_buf(json["private_key"].GetString(),
-                      json["private_key"].GetStringLength()));
+  bssl::UniquePtr<BIO> bio(BIO_new_mem_buf(
+      json["private_key"].GetString(), json["private_key"].GetStringLength()));
   bssl::UniquePtr<EVP_PKEY> private_key(
       PEM_read_bio_PrivateKey(bio.get(), nullptr, nullptr, nullptr));
 

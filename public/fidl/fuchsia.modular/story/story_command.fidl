@@ -15,76 +15,75 @@ using fuchsia.mem;
 //       operations to watchers of a story (through SessionWatcher) as are used
 //       to control a story.
 union StoryCommand {
-  // Sets the focus state of the story to |set_focus_state.focused|.
-  SetFocusState set_focus_state;
+    // Sets the focus state of the story to |set_focus_state.focused|.
+    SetFocusState set_focus_state;
 
-  // Adds a Mod.
-  AddMod add_mod;
+    // Adds a Mod.
+    AddMod add_mod;
 
-  // Updates mod link params.
-  UpdateMod update_mod;
+    // Updates mod link params.
+    UpdateMod update_mod;
 
-  // Removes an existing Mod.
-  RemoveMod remove_mod;
+    // Removes an existing Mod.
+    RemoveMod remove_mod;
 
-  // Sets the value of a Link.
-  SetLinkValue set_link_value;
+    // Sets the value of a Link.
+    SetLinkValue set_link_value;
 
-  // Brings focus to a mod.
-  FocusMod focus_mod;
+    // Brings focus to a mod.
+    FocusMod focus_mod;
 
-  // Updates the kind_of_proto_story option in a story.
-  SetKindOfProtoStoryOption set_kind_of_proto_story_option;
+    // Updates the kind_of_proto_story option in a story.
+    SetKindOfProtoStoryOption set_kind_of_proto_story_option;
 };
 
 struct SetFocusState {
-  bool focused;
+    bool focused;
 };
 
 // Adds a mod described by |intent| to the story with name |mod_name|. If
 // |mod_name| already exists in the story, the mod is updated.
 struct AddMod {
-  // The name of the mod within the story. Since AddMod is reused for
-  // observation and mod names are vector<string> inside the framework, they
-  // are vector<string> here as well.
-  //
-  // Clients should treat the full vector as a single mod name.
-  vector<string> mod_name;
-  Intent intent;
+    // The name of the mod within the story. Since AddMod is reused for
+    // observation and mod names are vector<string> inside the framework, they
+    // are vector<string> here as well.
+    //
+    // Clients should treat the full vector as a single mod name.
+    vector<string> mod_name;
+    Intent intent;
 
-  // |surface_relation| defines the visual relationship between this mod and the
-  // mod at |surface_parent_mod_name|.
-  SurfaceRelation surface_relation;
-  vector<string> surface_parent_mod_name;
+    // |surface_relation| defines the visual relationship between this mod and the
+    // mod at |surface_parent_mod_name|.
+    SurfaceRelation surface_relation;
+    vector<string> surface_parent_mod_name;
 };
 
 // Updates a mod link values through its parameters.
 struct UpdateMod {
-  vector<string> mod_name;
+    vector<string> mod_name;
 
-  // For every entry |p| in |parameters|, update the value of the link
-  // backing |p.name| to that specified in |p.data|.
-  vector<IntentParameter> parameters;
+    // For every entry |p| in |parameters|, update the value of the link
+    // backing |p.name| to that specified in |p.data|.
+    vector<IntentParameter> parameters;
 };
-
 
 // Removes the mod under |mod_name| from the story.
 struct RemoveMod {
-  vector<string> mod_name;
+    vector<string> mod_name;
 };
 
 // Sets the value of link at |path| to |value|.
 struct SetLinkValue {
-  LinkPath path;
-  fuchsia.mem.Buffer? value;
+    LinkPath path;
+    fuchsia.mem.Buffer? value;
 };
 
 // Instructs the user shell to focus the mod under |mod_name|.
 struct FocusMod {
-  vector<string> mod_name;
+    vector<string> mod_name;
 };
 
 // Updates the kind_of_proto_story option in a story.
 struct SetKindOfProtoStoryOption {
-  bool value;
+    bool value;
 };

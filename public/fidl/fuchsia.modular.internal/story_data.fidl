@@ -8,16 +8,16 @@ using fuchsia.ledger;
 using fuchsia.modular;
 
 struct StoryData {
-  // Metadata available to the UserShell.
-  fuchsia.modular.StoryInfo story_info;
+    // Metadata available to the UserShell.
+    fuchsia.modular.StoryInfo story_info;
 
-  // An optiona client-supplied name for this story.
-  string? story_name;
+    // An optiona client-supplied name for this story.
+    string? story_name;
 
-  // Story metadata and configuration.
-  fuchsia.modular.StoryOptions story_options;
+    // Story metadata and configuration.
+    fuchsia.modular.StoryOptions story_options;
 
-  // Page id on the user's ledger which stores story information. It
-  // might be NULL until the story is being started.
-  fuchsia.ledger.PageId? story_page_id;
+    // Page id on the user's ledger which stores story information. It
+    // might be NULL until the story is being started.
+    fuchsia.ledger.PageId? story_page_id;
 };

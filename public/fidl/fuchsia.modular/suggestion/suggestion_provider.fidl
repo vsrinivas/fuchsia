@@ -10,130 +10,130 @@ library fuchsia.modular;
 // "Asks".
 [Discoverable]
 interface SuggestionProvider {
-  // Creates a subscription to the "interruptions" category of Suggestions.
-  // Interruptions are delivered immediately once they become available, and are
-  // potentially unlimited in number.
-  //
-  // Closing the |listener| pipe terminates the subscription.
-  //
-  // Any user interactions received by the client should be forwarded to the
-  // SuggestionService by calling NotifyInteraction().
-  1: SubscribeToInterruptions(InterruptionListener listener);
+    // Creates a subscription to the "interruptions" category of Suggestions.
+    // Interruptions are delivered immediately once they become available, and are
+    // potentially unlimited in number.
+    //
+    // Closing the |listener| pipe terminates the subscription.
+    //
+    // Any user interactions received by the client should be forwarded to the
+    // SuggestionService by calling NotifyInteraction().
+    1: SubscribeToInterruptions(InterruptionListener listener);
 
-  // Creates a subscription to "Next" Suggestions, with changes sent to
-  // |listener|. A maximum of |count| suggestions will be returned. To
-  // change the count, call this method again with a new count.
-  //
-  // Closing the the |listener| pipe terminates the subscription.
-  2: SubscribeToNext(NextListener listener, int32 count);
+    // Creates a subscription to "Next" Suggestions, with changes sent to
+    // |listener|. A maximum of |count| suggestions will be returned. To
+    // change the count, call this method again with a new count.
+    //
+    // Closing the the |listener| pipe terminates the subscription.
+    2: SubscribeToNext(NextListener listener, int32 count);
 
-  // Must be called when the user initiates a query for suggestions, perhaps
-  // as an “Ask” or a scoped suggestion. Results are sent to |listener|. Changes
-  // to the query should be communicated by closing the previous |listener| and
-  // calling the method again with the new query.
-  //
-  // Closing the |listener| pipe signals to the SuggestionService that the query
-  // has been completed or canceled.
-  3: Query(QueryListener listener, UserInput query, int32 count);
+    // Must be called when the user initiates a query for suggestions, perhaps
+    // as an “Ask” or a scoped suggestion. Results are sent to |listener|. Changes
+    // to the query should be communicated by closing the previous |listener| and
+    // calling the method again with the new query.
+    //
+    // Closing the |listener| pipe signals to the SuggestionService that the query
+    // has been completed or canceled.
+    3: Query(QueryListener listener, UserInput query, int32 count);
 
-  // Notifies the suggestion engine that the user has interacted with the given
-  // Suggestion in the manner described in |interaction|.
-  4: NotifyInteraction(string suggestion_uuid, Interaction interaction);
+    // Notifies the suggestion engine that the user has interacted with the given
+    // Suggestion in the manner described in |interaction|.
+    4: NotifyInteraction(string suggestion_uuid, Interaction interaction);
 
-  // Creates a subscription to a "navigation" suggestion.
-  // Like an interruption, the navigation based suggestion will be provided as
-  // soon as it's available.
-  6: SubscribeToNavigation(NavigationListener listener);
+    // Creates a subscription to a "navigation" suggestion.
+    // Like an interruption, the navigation based suggestion will be provided as
+    // soon as it's available.
+    6: SubscribeToNavigation(NavigationListener listener);
 };
 
 // The navigation action requested to be performed
 enum NavigationAction {
-  UNKNOWN = 0;
+    UNKNOWN = 0;
 
-  // Navigate to the overview or home screen
-  HOME = 1;
+    // Navigate to the overview or home screen
+    HOME = 1;
 
-  // Navigate to the cover story
-  SCREENSAVER = 2;
+    // Navigate to the cover story
+    SCREENSAVER = 2;
 
-  // Launch the full settings
-  SETTINGS = 3;
+    // Launch the full settings
+    SETTINGS = 3;
 };
 
 interface NavigationListener {
-  // Notifies the user interface to perform the navigation requested
-  1: OnNavigation(NavigationAction action);
+    // Notifies the user interface to perform the navigation requested
+    1: OnNavigation(NavigationAction action);
 };
 
 interface InterruptionListener {
-  // Notifies the user interface to interrupt the user
-  1: OnInterrupt(Suggestion suggestion);
+    // Notifies the user interface to interrupt the user
+    1: OnInterrupt(Suggestion suggestion);
 };
 
 interface NextListener {
-  // Notifies the user interface that the passive suggestion results have been
-  // updated. This is called every time the suggestion results change.
-  1: OnNextResults(vector<Suggestion> suggestions);
+    // Notifies the user interface that the passive suggestion results have been
+    // updated. This is called every time the suggestion results change.
+    1: OnNextResults(vector<Suggestion> suggestions);
 
-  // Notifies the user interface when processing is occurring on the passive
-  // suggestions, which may result in additions or re-ranking.  The UI may
-  // wish to show a spinner during this time.
-  2: OnProcessingChange(bool processing);
+    // Notifies the user interface when processing is occurring on the passive
+    // suggestions, which may result in additions or re-ranking.  The UI may
+    // wish to show a spinner during this time.
+    2: OnProcessingChange(bool processing);
 };
 
 interface QueryListener {
-  // Notifies the user interface that new suggestion results are available.
-  // This may be called multiple times if the suggestion results are updated.
-  1: OnQueryResults(vector<Suggestion> suggestions);
+    // Notifies the user interface that new suggestion results are available.
+    // This may be called multiple times if the suggestion results are updated.
+    1: OnQueryResults(vector<Suggestion> suggestions);
 
-  // Notifies the user interface that query processing is completed.
-  2: OnQueryComplete();
+    // Notifies the user interface that query processing is completed.
+    2: OnQueryComplete();
 };
 
 enum InteractionType {
-  // Set when a suggestion was accepted by the user. In the case of an
-  // interruption, it won't be placed in the next suggestions.
-  SELECTED = 0;
+    // Set when a suggestion was accepted by the user. In the case of an
+    // interruption, it won't be placed in the next suggestions.
+    SELECTED = 0;
 
-  // Set when a suggestion was removed by the user. In the case of an
-  // interruption, it won't be placed in the next suggestions and in the case of
-  // a non-interruptive suggestion it will be removed from it.
-  DISMISSED = 1;
+    // Set when a suggestion was removed by the user. In the case of an
+    // interruption, it won't be placed in the next suggestions and in the case of
+    // a non-interruptive suggestion it will be removed from it.
+    DISMISSED = 1;
 
-  // Set when a suggestion was hidden by the user. An interruption that is
-  // snoozed will be placed in next.
-  // Note: as of 08/03/2018 this interaction is only defined for interruptions.
-  // TODO(miguelfrde): define for regular suggestions.
-  SNOOZED = 2;
+    // Set when a suggestion was hidden by the user. An interruption that is
+    // snoozed will be placed in next.
+    // Note: as of 08/03/2018 this interaction is only defined for interruptions.
+    // TODO(miguelfrde): define for regular suggestions.
+    SNOOZED = 2;
 
-  // Set when a suggestion is hidden by the user shell with no user interaction.
-  // An interruption that is expired is placed in the next space.
-  // This has no effect on regular suggestions, only on interruptions.
-  EXPIRED = 3;
+    // Set when a suggestion is hidden by the user shell with no user interaction.
+    // An interruption that is expired is placed in the next space.
+    // This has no effect on regular suggestions, only on interruptions.
+    EXPIRED = 3;
 };
 
 struct Interaction {
-  InteractionType type;
+    InteractionType type;
 
-  // TODO(thatguy): Include parameters for each type of interaction where
-  // applicable. Consider making this a union in lieu of the struct/enum combo.
+    // TODO(thatguy): Include parameters for each type of interaction where
+    // applicable. Consider making this a union in lieu of the struct/enum combo.
 };
 
 struct Suggestion {
-  // Uniquely and globally identifies this Suggestion.
-  string uuid;
+    // Uniquely and globally identifies this Suggestion.
+    string uuid;
 
-  // The probability that a given suggestion would be selected if it were the
-  // only suggestion shown to the user.
-  float32 confidence;
+    // The probability that a given suggestion would be selected if it were the
+    // only suggestion shown to the user.
+    float32 confidence;
 
-  // Story id for a rich suggestion. User shell may opt to start and compose the
-  // story's UI as the suggestion display, instead of making use of the properties
-  // in |display|.
-  string? preloaded_story_id;
+    // Story id for a rich suggestion. User shell may opt to start and compose the
+    // story's UI as the suggestion display, instead of making use of the properties
+    // in |display|.
+    string? preloaded_story_id;
 
-  // Display properties of the Suggestion
-  SuggestionDisplay display;
+    // Display properties of the Suggestion
+    SuggestionDisplay display;
 };
 
 // *** Speech Section ***
@@ -151,12 +151,12 @@ struct Suggestion {
 // TODO(rosswang): |IDLE| vs. |PROCESSING| is going to become the
 // |OnProcessingChanged| state event on |SuggestionHandler| soon.
 enum SpeechStatus {
-  // Exchange complete or not started
-  IDLE = 0;
-  // Query sent, awaiting results
-  PROCESSING = 1;
-  // System speaking
-  RESPONDING = 2;
+    // Exchange complete or not started
+    IDLE = 0;
+    // Query sent, awaiting results
+    PROCESSING = 1;
+    // System speaking
+    RESPONDING = 2;
 };
 
 // TODO(rosswang): This is very temporary. Probably next week, OnStatusChanged
@@ -164,16 +164,16 @@ enum SpeechStatus {
 // |SuggestionListener|'s |onProcessingChanged|. |OnTextResponse will probably
 // be part of the callback on |Query|.
 interface FeedbackListener {
-  // Called every time the internal |SpeechStatus| changes.
-  1: OnStatusChanged(SpeechStatus status);
+    // Called every time the internal |SpeechStatus| changes.
+    1: OnStatusChanged(SpeechStatus status);
 
-  // TODO(rosswang): OnAudioResponse method (or fold it into OnTextResponse),
-  // once it becomes trivial for SysUI to implement it. This would allow SysUI
-  // to make a determination as to whether playback is warranted. For now, let
-  // Suggestion Engine handle the playback. A possible next step could be to add
-  // OnAudioResponse with a method to start playback.
+    // TODO(rosswang): OnAudioResponse method (or fold it into OnTextResponse),
+    // once it becomes trivial for SysUI to implement it. This would allow SysUI
+    // to make a determination as to whether playback is warranted. For now, let
+    // Suggestion Engine handle the playback. A possible next step could be to add
+    // OnAudioResponse with a method to start playback.
 
-  // Receives a text representation of the spoken response. This method is
-  // called at the beginning of the |RESPONDING| phase.
-  2: OnTextResponse(string response_text);
+    // Receives a text representation of the spoken response. This method is
+    // called at the beginning of the |RESPONDING| phase.
+    2: OnTextResponse(string response_text);
 };

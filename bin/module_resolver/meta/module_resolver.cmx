@@ -3,12 +3,16 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "pkgfs": [ "packages" ],
+        "pkgfs": [
+            "packages"
+        ],
         "services": [
             "fuchsia.modular.ComponentContext",
             "fuchsia.modular.IntelligenceServices",
             "fuchsia.net.oldhttp.HttpService"
         ],
-        "system": [ "data/initial_module_packages" ]
+        "system": [
+            "data/initial_module_packages"
+        ]
     }
 }

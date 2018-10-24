@@ -63,8 +63,7 @@ void LevelDbFactory::CreateInitializedDb(
         std::unique_ptr<Db> db;
         if (coroutine::SyncCall(
                 handler,
-                [&](fit::function<void(Status, std::unique_ptr<Db>)>
-                        callback) {
+                [&](fit::function<void(Status, std::unique_ptr<Db>)> callback) {
                   async::PostTask(environment_->io_dispatcher(),
                                   [this, db_path = std::move(db_path),
                                    db_initialization_state,

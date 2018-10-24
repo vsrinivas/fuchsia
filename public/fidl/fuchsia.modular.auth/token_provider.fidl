@@ -8,64 +8,64 @@ library fuchsia.modular.auth;
 // can be obtained by agents via AgentContext.GetTokenProvider().
 [Discoverable]
 interface TokenProvider {
-  // Gets the access token (with pre-defined scopes) for this user. Access token
-  // is returned from cache if not expired, otherwise refreshed from the server.
-  //
-  // Empty response is returned if running in incognito mode.
-  1: GetAccessToken() -> (string? access_token, AuthErr auth_err);
+    // Gets the access token (with pre-defined scopes) for this user. Access token
+    // is returned from cache if not expired, otherwise refreshed from the server.
+    //
+    // Empty response is returned if running in incognito mode.
+    1: GetAccessToken() -> (string? access_token, AuthErr auth_err);
 
-  // Gets the Identity token (with pre-defined scopes) for this user. Identity
-  // token is returned from cache if not expired, otherwise refreshed from the
-  // server.
-  //
-  // Empty response is returned if running in incognito mode.
-  2: GetIdToken() -> (string? id_token, AuthErr auth_err);
+    // Gets the Identity token (with pre-defined scopes) for this user. Identity
+    // token is returned from cache if not expired, otherwise refreshed from the
+    // server.
+    //
+    // Empty response is returned if running in incognito mode.
+    2: GetIdToken() -> (string? id_token, AuthErr auth_err);
 
-  // Gets the |FirebaseToken| for this user for the specified firebase api key.
-  // This api invokes firebase auth's VerifyAssertion endpoint that takes an
-  // OAuth IdToken as the input. Firebase auth token is returned from cache if
-  // not expired, otherwise refreshed from the server.
-  //
-  // Empty response is returned if running in incognito mode.
-  3: GetFirebaseAuthToken(string firebase_api_key) ->
-    (FirebaseToken? firebase_token, AuthErr auth_err);
+    // Gets the |FirebaseToken| for this user for the specified firebase api key.
+    // This api invokes firebase auth's VerifyAssertion endpoint that takes an
+    // OAuth IdToken as the input. Firebase auth token is returned from cache if
+    // not expired, otherwise refreshed from the server.
+    //
+    // Empty response is returned if running in incognito mode.
+    3: GetFirebaseAuthToken(string firebase_api_key)
+           -> (FirebaseToken? firebase_token, AuthErr auth_err);
 
-  // Returns the client id used to fetch the above tokens.
-  4: GetClientId() -> (string? client_id);
+    // Returns the client id used to fetch the above tokens.
+    4: GetClientId() -> (string? client_id);
 };
 
 // Authentication errors returned by Token Manager. It contains error status
 // code along with a detailed error message.
 struct AuthErr {
-  Status status;
-  string message;
+    Status status;
+    string message;
 };
 
 // Specifies the success/failure status.
 enum Status {
-  // Success
-  OK = 0;
-  // A problem with client configuration such as invalid_client, missing params
-  // etc. This should happen only in development not at run-time, unless
-  // user/developer changes any of this config. No retry is required.
-  BAD_REQUEST = 1;
-  // Unable to parse the server side response. Retry is optional, this error
-  // should be extremely rare.
-  BAD_RESPONSE = 2;
-  // Server is reachable and propagated an error returned by OAuth Server
-  // backends.  That kind of error cannot be fixed on retries, and has some
-  // root cause that needs to be addressed either in the client's configuration
-  // or because the user explicitly revoked access to the client app.  For
-  // instance: invalid_token, expired_token, invalid_client_id, invalid_user,
-  // invalid_args, etc.
-  OAUTH_SERVER_ERROR = 3;
-  // User cancelled the flow, no need to retry.
-  USER_CANCELLED = 4;
-  // Network error, eg. unreachable. This may be temporary, a retry is
-  // recommended.
-  NETWORK_ERROR = 5;
-  // Internal error. Retry is optional, this error should be rare.
-  INTERNAL_ERROR = 6;
+    // Success
+    OK = 0;
+    // A problem with client configuration such as invalid_client, missing params
+    // etc. This should happen only in development not at run-time, unless
+    // user/developer changes any of this config. No retry is required.
+    BAD_REQUEST = 1;
+    // Unable to parse the server side response. Retry is optional, this error
+    // should be extremely rare.
+    BAD_RESPONSE = 2;
+    // Server is reachable and propagated an error returned by OAuth Server
+    // backends.  That kind of error cannot be fixed on retries, and has some
+    // root cause that needs to be addressed either in the client's configuration
+    // or because the user explicitly revoked access to the client app.  For
+    // instance: invalid_token, expired_token, invalid_client_id, invalid_user,
+    // invalid_args, etc.
+    OAUTH_SERVER_ERROR = 3;
+    // User cancelled the flow, no need to retry.
+    USER_CANCELLED = 4;
+    // Network error, eg. unreachable. This may be temporary, a retry is
+    // recommended.
+    NETWORK_ERROR = 5;
+    // Internal error. Retry is optional, this error should be rare.
+    INTERNAL_ERROR = 6;
 };
 
 // Stores attributes related to a firebase auth token for a given firebase api
@@ -75,12 +75,12 @@ enum Status {
 // These tokens are minted by the Firebase Auth servers and are meant to be used
 // for authorizing users into Firebase services such as DB and storage.
 struct FirebaseToken {
-  // The auth token in firebase database and storage requests.
-  string id_token;
+    // The auth token in firebase database and storage requests.
+    string id_token;
 
-  // Uniquely identifies the user.
-  string local_id;
+    // Uniquely identifies the user.
+    string local_id;
 
-  // User's email address as provided by the Identity Provider.
-  string email;
+    // User's email address as provided by the Identity Provider.
+    string email;
 };

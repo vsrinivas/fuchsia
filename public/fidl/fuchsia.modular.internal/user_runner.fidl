@@ -13,27 +13,27 @@ using fuchsia.ui.viewsv1token;
 // The basemgr application (there is no |Basemgr| service) requests
 // an instance of this service in order to launch and display a |UserRunner| per
 // user.
-[Discoverable]  // Created by user_runner application.
+[Discoverable] // Created by user_runner application.
 interface UserRunner {
-  // Launches a user runner instance for a user identified by |user_id| and
-  // specific TokenManager handles for ledger and agent_runner.
-  // TODO(alhaad): Fold paramters into |UserContext|.
-  1: Initialize(fuchsia.modular.auth.Account? account,
-               fuchsia.modular.AppConfig user_shell,
-               fuchsia.modular.AppConfig story_shell,
-               fuchsia.modular.auth.TokenProviderFactory? token_provider_factory,
-               fuchsia.auth.TokenManager? ledger_token_manager,
-               fuchsia.auth.TokenManager? agent_token_manager,
-               UserContext user_context,
-               request<fuchsia.ui.viewsv1token.ViewOwner>? view_owner);
+    // Launches a user runner instance for a user identified by |user_id| and
+    // specific TokenManager handles for ledger and agent_runner.
+    // TODO(alhaad): Fold paramters into |UserContext|.
+    1: Initialize(fuchsia.modular.auth.Account? account,
+                  fuchsia.modular.AppConfig user_shell,
+                  fuchsia.modular.AppConfig story_shell,
+                  fuchsia.modular.auth.TokenProviderFactory? token_provider_factory,
+                  fuchsia.auth.TokenManager? ledger_token_manager,
+                  fuchsia.auth.TokenManager? agent_token_manager,
+                  UserContext user_context,
+                  request<fuchsia.ui.viewsv1token.ViewOwner>? view_owner);
 
-  2: SwapUserShell(fuchsia.modular.AppConfig user_shell) -> ();
+    2: SwapUserShell(fuchsia.modular.AppConfig user_shell) -> ();
 };
 
 // This interface is provided by basemgr to |UserRunner|.
 interface UserContext {
-  // See detailed comments in UserShellContext.Logout().
-  1: Logout();
+    // See detailed comments in UserShellContext.Logout().
+    1: Logout();
 
-  2: GetPresentation(request<fuchsia.ui.policy.Presentation> presentation);
+    2: GetPresentation(request<fuchsia.ui.policy.Presentation> presentation);
 };

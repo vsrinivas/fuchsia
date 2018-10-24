@@ -145,8 +145,7 @@ class FocusWatcherImpl : fuchsia::modular::FocusWatcher {
 };
 
 // Cf. README.md for what this test does and how.
-class TestApp
-    : public modular::testing::ComponentBase<void> {
+class TestApp : public modular::testing::ComponentBase<void> {
  public:
   TestApp(component::StartupContext* const startup_context)
       : ComponentBase(startup_context) {

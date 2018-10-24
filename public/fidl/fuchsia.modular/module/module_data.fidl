@@ -6,69 +6,69 @@ library fuchsia.modular;
 
 /// Information about a Module instance in a story.
 struct ModuleData {
-  /// The URL of the Module binary.
-  string module_url;
+    /// The URL of the Module binary.
+    string module_url;
 
-  /// The named path leading up to this Module instance. The last name in this
-  /// array is the name by which the Module was started by the parent Module
-  /// instance calling StartModule().
-  vector<string> module_path;
+    /// The named path leading up to this Module instance. The last name in this
+    /// array is the name by which the Module was started by the parent Module
+    /// instance calling StartModule().
+    vector<string> module_path;
 
-  /// Contains the mapping of Mod parameter name to Link instances for this mod.
-  ModuleParameterMap parameter_map;
+    /// Contains the mapping of Mod parameter name to Link instances for this mod.
+    ModuleParameterMap parameter_map;
 
-  /// The way in which this Module instance was first started in the story,
-  /// either by request from another Module instance (INTERNAL) or by request
-  /// from outside the story (i.e. by suggestion from an agent - EXTERNAL).
-  ModuleSource module_source;
+    /// The way in which this Module instance was first started in the story,
+    /// either by request from another Module instance (INTERNAL) or by request
+    /// from outside the story (i.e. by suggestion from an agent - EXTERNAL).
+    ModuleSource module_source;
 
-  /// The |surface_relation| that was used to start this Module instance with.
-  /// The same is used when re-inflating the Module instance when the story is
-  /// resumed. A SurfaceRelation value of null represents an embedded Module
-  /// instance (started by EmbedModule()) that is not managed by the story shell.
-  SurfaceRelation? surface_relation;
+    /// The |surface_relation| that was used to start this Module instance with.
+    /// The same is used when re-inflating the Module instance when the story is
+    /// resumed. A SurfaceRelation value of null represents an embedded Module
+    /// instance (started by EmbedModule()) that is not managed by the story shell.
+    SurfaceRelation? surface_relation;
 
-  /// True if an externally-started module has has been stopped by the story
-  /// runner through ModuleController.Stop() called on some connection, or if an
-  /// internally-started module was stopped by its parent module using
-  /// ModuleController.Stop().
-  bool module_stopped;
+    /// True if an externally-started module has has been stopped by the story
+    /// runner through ModuleController.Stop() called on some connection, or if an
+    /// internally-started module was stopped by its parent module using
+    /// ModuleController.Stop().
+    bool module_stopped;
 
-  /// The intent that was issued to start add this Module instance to the story.
-  /// Some Module instances may have been added not by an Intent, for example as
-  /// the initial module of a story. For those the field may be null.
-  ///
-  /// TODO(thatguy,mesch): This field should now always be set, so make it
-  /// required once the framework is cleaned up enough to guarantee this
-  /// statement.
-  Intent? intent;
+    /// The intent that was issued to start add this Module instance to the story.
+    /// Some Module instances may have been added not by an Intent, for example as
+    /// the initial module of a story. For those the field may be null.
+    ///
+    /// TODO(thatguy,mesch): This field should now always be set, so make it
+    /// required once the framework is cleaned up enough to guarantee this
+    /// statement.
+    Intent? intent;
 
-  /// The manifest data of the module, resolved from the Intent above. If the
-  /// Module instance was not added with an Intent, or with an Intent that
-  /// contained a module URL directly, then there is no manifest and this field
-  /// is null.
-  ModuleManifest? module_manifest;
+    /// The manifest data of the module, resolved from the Intent above. If the
+    /// Module instance was not added with an Intent, or with an Intent that
+    /// contained a module URL directly, then there is no manifest and this field
+    /// is null.
+    ModuleManifest? module_manifest;
 };
 
 enum ModuleSource {
-  /// Module that was started from within the story by another module via
-  /// ModuleContext.StartModule() and ModuleContext.EmbedModule().
-  INTERNAL = 0;
+    /// Module that was started from within the story by another module via
+    /// ModuleContext.StartModule() and ModuleContext.EmbedModule().
+    INTERNAL = 0;
 
-  /// Module that was started from outside the story by Maxwell / UserShell via
-  /// StoryController.AddModule() or StoryProvider.CreateStory() as first
-  /// module.
-  EXTERNAL = 1;
+    /// Module that was started from outside the story by Maxwell / UserShell via
+    /// StoryController.AddModule() or StoryProvider.CreateStory() as first
+    /// module.
+    EXTERNAL = 1;
 };
 
 struct ModuleParameterMap {
-  vector<ModuleParameterMapEntry> entries;
+    vector<ModuleParameterMapEntry> entries;
 };
 
 struct ModuleParameterMapEntry {
-  /// A null [name] is allowed for backwards compatibility with default links.
-  /// TODO(thatguy); When no modules use null link names any more, make this
-  /// required.
-  string? name;
-  LinkPath link_path;
+    /// A null [name] is allowed for backwards compatibility with default links.
+    /// TODO(thatguy); When no modules use null link names any more, make this
+    /// required.
+    string? name;
+    LinkPath link_path;
 };

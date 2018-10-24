@@ -75,18 +75,18 @@ void LedgerStorageImpl::CreatePageStorage(
 
   db_factory_->CreateDb(
       std::move(path),
-      callback::MakeScoped(
-          weak_factory_.GetWeakPtr(),
-          [this, page_id = std::move(page_id),
-           callback = std::move(timed_callback)](
-              Status status, std::unique_ptr<Db> db) mutable {
-            if (status != Status::OK) {
-              callback(status, nullptr);
-              return;
-            }
-            InitializePageStorage(std::move(page_id), std::move(db),
-                                  std::move(callback));
-          }));
+      callback::MakeScoped(weak_factory_.GetWeakPtr(),
+                           [this, page_id = std::move(page_id),
+                            callback = std::move(timed_callback)](
+                               Status status, std::unique_ptr<Db> db) mutable {
+                             if (status != Status::OK) {
+                               callback(status, nullptr);
+                               return;
+                             }
+                             InitializePageStorage(std::move(page_id),
+                                                   std::move(db),
+                                                   std::move(callback));
+                           }));
 }
 
 void LedgerStorageImpl::GetPageStorage(
@@ -102,18 +102,18 @@ void LedgerStorageImpl::GetPageStorage(
 
   db_factory_->GetDb(
       std::move(path),
-      callback::MakeScoped(
-          weak_factory_.GetWeakPtr(),
-          [this, page_id = std::move(page_id),
-           callback = std::move(timed_callback)](
-              Status status, std::unique_ptr<Db> db) mutable {
-            if (status != Status::OK) {
-              callback(status, nullptr);
-              return;
-            }
-            InitializePageStorage(std::move(page_id), std::move(db),
-                                  std::move(callback));
-          }));
+      callback::MakeScoped(weak_factory_.GetWeakPtr(),
+                           [this, page_id = std::move(page_id),
+                            callback = std::move(timed_callback)](
+                               Status status, std::unique_ptr<Db> db) mutable {
+                             if (status != Status::OK) {
+                               callback(status, nullptr);
+                               return;
+                             }
+                             InitializePageStorage(std::move(page_id),
+                                                   std::move(db),
+                                                   std::move(callback));
+                           }));
 }
 
 void LedgerStorageImpl::DeletePageStorage(

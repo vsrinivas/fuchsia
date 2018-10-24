@@ -71,9 +71,7 @@ bool LoopControllerRealLoop::RunLoopUntil(fit::function<bool()> condition) {
 }
 
 void LoopControllerRealLoop::RunLoopFor(zx::duration duration) {
-  async::TaskClosure task([this] {
-    loop_.Quit();
-  });
+  async::TaskClosure task([this] { loop_.Quit(); });
   task.PostDelayed(loop_.dispatcher(), duration);
   loop_.Run();
   loop_.ResetQuit();

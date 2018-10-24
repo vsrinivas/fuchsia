@@ -11,128 +11,128 @@ library fuchsia.modular;
 // Closing a |StoryProvider| connection has no effect on the state of the
 // framework.
 interface StoryProvider {
-  // Creates a new story. If |module_url| is supplied, adds it to the story as
-  // the first module. The returned |story_id| can be used to obtain a
-  // StoryController connection to perform actions on the newly created story,
-  // specifically starting it.
-  //
-  // Providing |module_url| is deprecated. It is preferred to GetController()
-  // and call StoryController.AddModule().
-  //
-  // DEPRECATED: To create and modify existing stories, use PuppetMaster.
-  1: CreateStory(string? module_url) -> (string story_id);
+    // Creates a new story. If |module_url| is supplied, adds it to the story as
+    // the first module. The returned |story_id| can be used to obtain a
+    // StoryController connection to perform actions on the newly created story,
+    // specifically starting it.
+    //
+    // Providing |module_url| is deprecated. It is preferred to GetController()
+    // and call StoryController.AddModule().
+    //
+    // DEPRECATED: To create and modify existing stories, use PuppetMaster.
+    1: CreateStory(string? module_url) -> (string story_id);
 
-  // Like CreateStory(), but with extra info and with values for the root link
-  // atomically set.
-  //
-  // Providing |module_url| is deprecated. It is preferred to GetController()
-  // and call StoryController.AddModule().
-  //
-  // DEPRECATED: To create and modify existing stories, use PuppetMaster.
-  2: CreateStoryWithInfo(string? module_url,
-                         vector<StoryInfoExtraEntry>? extra_info,
-                         string? root_json) -> (string story_id);
+    // Like CreateStory(), but with extra info and with values for the root link
+    // atomically set.
+    //
+    // Providing |module_url| is deprecated. It is preferred to GetController()
+    // and call StoryController.AddModule().
+    //
+    // DEPRECATED: To create and modify existing stories, use PuppetMaster.
+    2: CreateStoryWithInfo(string? module_url,
+                           vector<StoryInfoExtraEntry>? extra_info,
+                           string? root_json) -> (string story_id);
 
-  // Deletes an existing story from the list of known stories. Returns when the
-  // delete notification is received from the Ledger. If the story to be deleted
-  // is running, it is first stopped and its story controller disconnected. If
-  // the story ID doesn't exist, it silently does nothing and returns.
-  //
-  // DEPRECATED: To delete stories, use PuppetMaster.
-  3: DeleteStory(string story_id) -> ();
+    // Deletes an existing story from the list of known stories. Returns when the
+    // delete notification is received from the Ledger. If the story to be deleted
+    // is running, it is first stopped and its story controller disconnected. If
+    // the story ID doesn't exist, it silently does nothing and returns.
+    //
+    // DEPRECATED: To delete stories, use PuppetMaster.
+    3: DeleteStory(string story_id) -> ();
 
-  // Requests detailed information about the given story. If the story doesn't
-  // exist, returns null. GetStoryInfo() called immediately after DeleteStory()
-  // (even before DeleteStory() returns) returns null.
-  4: GetStoryInfo(string story_id) -> (StoryInfo? story_info);
+    // Requests detailed information about the given story. If the story doesn't
+    // exist, returns null. GetStoryInfo() called immediately after DeleteStory()
+    // (even before DeleteStory() returns) returns null.
+    4: GetStoryInfo(string story_id) -> (StoryInfo? story_info);
 
-  // Obtains a controller for a previously created story identified by its story
-  // ID. Obtaining the controller doesn't run it yet. If the story doesn't
-  // exist, the interface request is closed.
-  5: GetController(string story_id, request<StoryController> request);
+    // Obtains a controller for a previously created story identified by its story
+    // ID. Obtaining the controller doesn't run it yet. If the story doesn't
+    // exist, the interface request is closed.
+    5: GetController(string story_id, request<StoryController> request);
 
-  // Returns info of known stories.
-  6: PreviousStories() -> (vector<StoryInfo> story_infos);
+    // Returns info of known stories.
+    6: PreviousStories() -> (vector<StoryInfo> story_infos);
 
-  // Returns IDs of stories on the current device that are not STOPPED. More
-  // information about the stories can be retrieved using GetStoryInfo(), or by
-  // GetController(), then StoryController.GetInfo().
-  7: RunningStories() -> (vector<string> story_ids);
+    // Returns IDs of stories on the current device that are not STOPPED. More
+    // information about the stories can be retrieved using GetStoryInfo(), or by
+    // GetController(), then StoryController.GetInfo().
+    7: RunningStories() -> (vector<string> story_ids);
 
-  // Registers a watcher for changes in the story collection.
-  8: Watch(StoryProviderWatcher watcher);
+    // Registers a watcher for changes in the story collection.
+    8: Watch(StoryProviderWatcher watcher);
 
-  // Registers a watcher for ongoing story activity. Upon registration,
-  // StoryActivityWatcher.OnStoryActivity() will be called to update clients
-  // with the initial data. See StoryActivityWatcher for motivations.
-  9: WatchActivity(StoryActivityWatcher watcher);
+    // Registers a watcher for ongoing story activity. Upon registration,
+    // StoryActivityWatcher.OnStoryActivity() will be called to update clients
+    // with the initial data. See StoryActivityWatcher for motivations.
+    9: WatchActivity(StoryActivityWatcher watcher);
 
-  // Creates a duplicate connection to this StoryProvider.
-  // DEPRECATED: Please do not use this method as it is going away.
-  11: Duplicate(request<StoryProvider> request);
+    // Creates a duplicate connection to this StoryProvider.
+    // DEPRECATED: Please do not use this method as it is going away.
+    11: Duplicate(request<StoryProvider> request);
 
-  // Creates a story and sets the options it will have.
-  // EXPERIMENTAL
-  //
-  // DEPRECATED: To create stories, use PuppetMaster.
-  13: CreateStoryWithOptions(StoryOptions story_options)
-                             -> (string story_id);
+    // Creates a story and sets the options it will have.
+    // EXPERIMENTAL
+    //
+    // DEPRECATED: To create stories, use PuppetMaster.
+    13: CreateStoryWithOptions(StoryOptions story_options)
+            -> (string story_id);
 };
 
 // Implemented by clients of StoryProvider.
 interface StoryProviderWatcher {
-  // Called in three different situations:
-  //
-  //  * Immediately when a new watcher is registered with one OnChange()
-  //    invocation with the current infor and state of each story known on the
-  //    current device.
-  //
-  //  * Every time a change to StoryInfo is applied to the record of the story
-  //    kept on the current device, including a new story created on another
-  //    device becoming known on this device for the first time.
-  //
-  //  * Every time the StoryState of the story changes on this device. The
-  //    StoryState on another device of a story known on this device is not made
-  //    known on this device.
-  //
-  //  * Every time the StoryVisibilityState of the story changes on this device.
-  //    The StoryVisibilityState on another device of a story known on this
-  //    device is not made known on this device.
-  //
-  //    I.e. if the story is started or stopped on *another* device, it does
-  //    *not* cause an OnChange() call on *this* device. Cf. OnDelete() below.
-  //
-  // The ID of the story the notifications are about are part of StoryInfo.
-  //
-  // |story_state| is STOPPED if the story was just created or just became known
-  // on this device and was not yet started on the current device. It's RUNNING
-  // when the story is started on the current device.
-  //
-  // |story_visibility_state| is DEFAULT until a mod on the current device
-  // requests for the visibility state to be changed.
-  1: OnChange(StoryInfo story_info, StoryState story_state,
-              StoryVisibilityState story_visibility_state);
+    // Called in three different situations:
+    //
+    //  * Immediately when a new watcher is registered with one OnChange()
+    //    invocation with the current infor and state of each story known on the
+    //    current device.
+    //
+    //  * Every time a change to StoryInfo is applied to the record of the story
+    //    kept on the current device, including a new story created on another
+    //    device becoming known on this device for the first time.
+    //
+    //  * Every time the StoryState of the story changes on this device. The
+    //    StoryState on another device of a story known on this device is not made
+    //    known on this device.
+    //
+    //  * Every time the StoryVisibilityState of the story changes on this device.
+    //    The StoryVisibilityState on another device of a story known on this
+    //    device is not made known on this device.
+    //
+    //    I.e. if the story is started or stopped on *another* device, it does
+    //    *not* cause an OnChange() call on *this* device. Cf. OnDelete() below.
+    //
+    // The ID of the story the notifications are about are part of StoryInfo.
+    //
+    // |story_state| is STOPPED if the story was just created or just became known
+    // on this device and was not yet started on the current device. It's RUNNING
+    // when the story is started on the current device.
+    //
+    // |story_visibility_state| is DEFAULT until a mod on the current device
+    // requests for the visibility state to be changed.
+    1: OnChange(StoryInfo story_info, StoryState story_state,
+                StoryVisibilityState story_visibility_state);
 
-  // Called in two different situations:
-  //
-  // * After the story record of a story is deleted from the current device by
-  //   an invocation of StoryProvider.DeleteStory() on the current device.
-  //
-  // * When the information reaches the current device through Ledger
-  //   synchronization that the story record of a story was deleted from another
-  //   device by an invocation by StoryProvider.DeleteStory() there.
-  //
-  //   I.e. if the story is deleted on *another* device, it eventually *does*
-  //   cause an OnDelete() call on *this* device. Cf. OnChange() above.
-  //
-  // Either way, if the story is running on this device at the time the deletion
-  // becomes known to this device on this device, it is also stopped first. This
-  // stopping of the story does not cause an OnChange() callback, only the
-  // OnDelete() here.
-  //
-  // The OnDelete() call also happen when the story record is deleted while the
-  // story is not running.
-  2: OnDelete(string story_id);
+    // Called in two different situations:
+    //
+    // * After the story record of a story is deleted from the current device by
+    //   an invocation of StoryProvider.DeleteStory() on the current device.
+    //
+    // * When the information reaches the current device through Ledger
+    //   synchronization that the story record of a story was deleted from another
+    //   device by an invocation by StoryProvider.DeleteStory() there.
+    //
+    //   I.e. if the story is deleted on *another* device, it eventually *does*
+    //   cause an OnDelete() call on *this* device. Cf. OnChange() above.
+    //
+    // Either way, if the story is running on this device at the time the deletion
+    // becomes known to this device on this device, it is also stopped first. This
+    // stopping of the story does not cause an OnChange() callback, only the
+    // OnDelete() here.
+    //
+    // The OnDelete() call also happen when the story record is deleted while the
+    // story is not running.
+    2: OnDelete(string story_id);
 };
 
 // Implemented by clients of StoryProvider in order to inform them about ongoing
@@ -146,6 +146,6 @@ interface StoryProviderWatcher {
 // via StoryProvider.WatchActivity(). |activities| can contain duplicate
 // OngoingActivityType's, ex. if a story is playing 2 videos at once.
 interface StoryActivityWatcher {
-  1: OnStoryActivityChange(string story_id,
-                           vector<OngoingActivityType> activities);
+    1: OnStoryActivityChange(string story_id,
+                             vector<OngoingActivityType> activities);
 };

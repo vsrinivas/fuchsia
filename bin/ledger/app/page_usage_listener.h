@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_APP_PAGE_USAGE_MANAGER_H_
-#define PERIDOT_BIN_LEDGER_APP_PAGE_USAGE_MANAGER_H_
+#ifndef PERIDOT_BIN_LEDGER_APP_PAGE_USAGE_LISTENER_H_
+#define PERIDOT_BIN_LEDGER_APP_PAGE_USAGE_LISTENER_H_
 
 #include "peridot/bin/ledger/storage/public/types.h"
 
@@ -42,4 +42,4 @@ class PageUsageListener {
 
 }  // namespace ledger
 
-#endif  // PERIDOT_BIN_LEDGER_APP_PAGE_USAGE_MANAGER_H_
+#endif  // PERIDOT_BIN_LEDGER_APP_PAGE_USAGE_LISTENER_H_

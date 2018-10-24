@@ -65,8 +65,7 @@ class StoryActivityWatcherImpl : fuchsia::modular::StoryActivityWatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryActivityWatcherImpl);
 };
 
-class TestApp
-    : public modular::testing::ComponentBase<void> {
+class TestApp : public modular::testing::ComponentBase<void> {
  private:
   TestPoint story_create_{"Created story."};
 

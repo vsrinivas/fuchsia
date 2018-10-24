@@ -35,31 +35,31 @@ fit::function<http::URLRequest()> MakeRequest(const std::string& url,
     }
   }
 
-  return fxl::MakeCopyable([url, method, body = std::move(body),
-                            stream_request]() {
-    http::URLRequest request;
-    request.url = url;
-    request.method = method;
-    request.auto_follow_redirects = true;
-    if (body) {
-      fsl::SizedVmo duplicated_body;
-      zx_status_t status =
-          body.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ, &duplicated_body);
-      if (status != ZX_OK) {
-        FXL_LOG(WARNING) << "Unable to duplicate a vmo. Status: " << status;
-        return http::URLRequest();
-      }
-      request.body = http::URLBody::New();
-      request.body->set_buffer(std::move(duplicated_body).ToTransport());
-    }
-    if (stream_request) {
-      http::HttpHeader accept_header;
-      accept_header.name = "Accept";
-      accept_header.value = "text/event-stream";
-      request.headers.push_back(std::move(accept_header));
-    }
-    return request;
-  });
+  return fxl::MakeCopyable(
+      [url, method, body = std::move(body), stream_request]() {
+        http::URLRequest request;
+        request.url = url;
+        request.method = method;
+        request.auto_follow_redirects = true;
+        if (body) {
+          fsl::SizedVmo duplicated_body;
+          zx_status_t status =
+              body.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ, &duplicated_body);
+          if (status != ZX_OK) {
+            FXL_LOG(WARNING) << "Unable to duplicate a vmo. Status: " << status;
+            return http::URLRequest();
+          }
+          request.body = http::URLBody::New();
+          request.body->set_buffer(std::move(duplicated_body).ToTransport());
+        }
+        if (stream_request) {
+          http::HttpHeader accept_header;
+          accept_header.name = "Accept";
+          accept_header.value = "text/event-stream";
+          request.headers.push_back(std::move(accept_header));
+        }
+        return request;
+      });
 }
 
 }  // namespace

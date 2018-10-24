@@ -18,12 +18,12 @@ library fuchsia.modular;
 ///   RUNNING  -> STOPPED     ModuleController.Stop() or StoryController.Stop()
 ///   RUNNING  -> ERROR       application exits
 enum ModuleState {
-  /// Module instance was created.
-  RUNNING = 2;
-  /// Module instance is stopped after Module.Stop(). No further transitions are
-  /// to be expected.
-  STOPPED = 4;
-  /// Connection to the Module instance was closed without Stop() request. No
-  /// further transitions are to be expected.
-  ERROR = 5;
+    /// Module instance was created.
+    RUNNING = 2;
+    /// Module instance is stopped after Module.Stop(). No further transitions are
+    /// to be expected.
+    STOPPED = 4;
+    /// Connection to the Module instance was closed without Stop() request. No
+    /// further transitions are to be expected.
+    ERROR = 5;
 };

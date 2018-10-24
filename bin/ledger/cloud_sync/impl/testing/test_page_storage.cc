@@ -78,7 +78,8 @@ void TestPageStorage::GetCommit(
 void TestPageStorage::AddCommitsFromSync(
     std::vector<PageStorage::CommitIdAndBytes> ids_and_bytes,
     storage::ChangeSource /*source*/,
-    fit::function<void(storage::Status, std::vector<storage::CommitId>)> callback) {
+    fit::function<void(storage::Status, std::vector<storage::CommitId>)>
+        callback) {
   add_commits_from_sync_calls++;
 
   if (should_fail_add_commit_from_sync) {

@@ -7,24 +7,24 @@ library fuchsia.modular;
 using zx;
 
 struct StoryOptions {
-  // Whether or not the story will be hidden on a call to
-  // StoryProvider#PreviousStories.
-  bool kind_of_proto_story;
+    // Whether or not the story will be hidden on a call to
+    // StoryProvider#PreviousStories.
+    bool kind_of_proto_story;
 
-  // If specified, the framework will enforce a story deletion policy on this
-  // story as described in |deletion_policy|. If not specified, the default
-  // policy is employed: the story is deleted only when explicitly signaled by
-  // a client.
-  StoryDeletionPolicy? deletion_policy;
+    // If specified, the framework will enforce a story deletion policy on this
+    // story as described in |deletion_policy|. If not specified, the default
+    // policy is employed: the story is deleted only when explicitly signaled by
+    // a client.
+    StoryDeletionPolicy? deletion_policy;
 };
 
 union StoryDeletionPolicy {
-  StoryDeleteAfterLastFocus delete_after_last_focus;
+    StoryDeleteAfterLastFocus delete_after_last_focus;
 };
 
 // The story will be deleted after the last time it was focused plus some
 // specified |delay|. If the story is focused again before the delay timer
 // fires, it is reset.
 struct StoryDeleteAfterLastFocus {
-  zx.duration delay;
+    zx.duration delay;
 };

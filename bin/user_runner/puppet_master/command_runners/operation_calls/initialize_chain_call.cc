@@ -70,9 +70,7 @@ class InitializeChainCall
         mapping->link_path.Clone(&out_path);
         AddSetLinkValueOperation(
             &operations_, story_storage_, std::move(out_path),
-            [initial_json](fidl::StringPtr* value) {
-                *value = initial_json;
-            },
+            [initial_json](fidl::StringPtr* value) { *value = initial_json; },
             [this, flow](fuchsia::modular::ExecuteResult result) {
               if (result.status != fuchsia::modular::ExecuteStatus::OK) {
                 result_ = std::move(result);

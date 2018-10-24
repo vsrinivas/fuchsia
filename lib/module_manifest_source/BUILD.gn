@@ -23,8 +23,8 @@ source_set("json") {
 
   deps = [
     ":module_manifest_source",
-    "//peridot/lib/module_manifest:json_xdr",
     "//peridot/lib/fidl:json_xdr",
+    "//peridot/lib/module_manifest:json_xdr",
     "//peridot/lib/rapidjson",
     "//third_party/rapidjson",
   ]
@@ -38,12 +38,12 @@ source_set("firebase_source") {
 
   public_deps = [
     ":module_manifest_source",
-    "//peridot/lib/module_manifest:json_xdr",
     "//garnet/public/fidl/fuchsia.net.oldhttp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/firebase",
+    "//peridot/lib/module_manifest:json_xdr",
     "//third_party/rapidjson",
   ]
 }

@@ -15,8 +15,8 @@
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"
-#include "peridot/bin/ledger/storage/public/db_factory.h"
 #include "peridot/bin/ledger/storage/public/db.h"
+#include "peridot/bin/ledger/storage/public/db_factory.h"
 #include "peridot/bin/ledger/storage/public/ledger_storage.h"
 
 namespace storage {

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_basemgr_USER_PROVIDER_IMPL_H_
-#define PERIDOT_BIN_basemgr_USER_PROVIDER_IMPL_H_
+#ifndef PERIDOT_BIN_BASEMGR_USER_PROVIDER_IMPL_H_
+#define PERIDOT_BIN_BASEMGR_USER_PROVIDER_IMPL_H_
 
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
@@ -140,7 +140,7 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   bool use_token_manager_factory_ = false;
   fuchsia::auth::AuthenticationContextProviderPtr
       authentication_context_provider_;
-  Delegate* const delegate_;   // Neither owned nor copied.
+  Delegate* const delegate_;  // Neither owned nor copied.
 
   fidl::Binding<fuchsia::auth::AuthenticationContextProvider>
       authentication_context_provider_binding_;
@@ -155,4 +155,4 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_basemgr_USER_PROVIDER_IMPL_H_
+#endif  // PERIDOT_BIN_BASEMGR_USER_PROVIDER_IMPL_H_

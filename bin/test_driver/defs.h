@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_TESTS_TEST_DRIVER_DEFS_H_
-#define PERIDOT_TESTS_TEST_DRIVER_DEFS_H_
+#ifndef PERIDOT_BIN_TEST_DRIVER_DEFS_H_
+#define PERIDOT_BIN_TEST_DRIVER_DEFS_H_
 
 namespace {
 
@@ -12,4 +12,4 @@ constexpr char kSubModuleName[] = "test_driver_sub_module";
 
 }  // namespace
 
-#endif  // PERIDOT_TESTS_TEST_DRIVER_DEFS_H_
+#endif  // PERIDOT_BIN_TEST_DRIVER_DEFS_H_

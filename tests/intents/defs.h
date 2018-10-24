@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_TESTS_PARENT_CHILD_DEFS_H_
-#define PERIDOT_TESTS_PARENT_CHILD_DEFS_H_
+#ifndef PERIDOT_TESTS_INTENTS_DEFS_H_
+#define PERIDOT_TESTS_INTENTS_DEFS_H_
 
 namespace {
 
@@ -29,4 +29,4 @@ constexpr int kTimeoutMilliseconds = 5000;
 
 }  // namespace
 
-#endif  // PERIDOT_TESTS_PARENT_CHILD_DEFS_H_
+#endif  // PERIDOT_TESTS_INTENTS_DEFS_H_

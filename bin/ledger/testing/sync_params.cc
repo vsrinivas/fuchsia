@@ -214,7 +214,8 @@ bool ParseSyncParamsFromCommandLine(const fxl::CommandLine& command_line,
   }
 
   sync_params->api_key = document["api-key"].GetString();
-  sync_params->credentials = service_account::Credentials::Parse(document["service-account"]);
+  sync_params->credentials =
+      service_account::Credentials::Parse(document["service-account"]);
   if (!sync_params->credentials) {
     std::cerr << "Cannot parse credentials at " << credentials_path
               << std::endl;

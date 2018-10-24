@@ -15,7 +15,7 @@ namespace rng {
 class SystemRandom final : public Random {
  private:
   void InternalDraw(void* buffer, size_t buffer_size) override {
-  zx_cprng_draw(buffer, buffer_size);
+    zx_cprng_draw(buffer, buffer_size);
   }
 };
 

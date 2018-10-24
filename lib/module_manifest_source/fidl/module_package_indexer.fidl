@@ -6,5 +6,5 @@ library fuchsia.maxwell.internal;
 
 [Discoverable]
 interface ModulePackageIndexer {
-  1: IndexManifest(string package_name, string module_manifest_path);
+    1: IndexManifest(string package_name, string module_manifest_path);
 };

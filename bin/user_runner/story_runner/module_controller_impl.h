@@ -55,9 +55,7 @@ class ModuleControllerImpl : fuchsia::modular::ModuleController {
   // in order when teardown is complete.
   void Teardown(std::function<void()> done);
 
-  component::Services& services() {
-    return app_client_.services();
-  }
+  component::Services& services() { return app_client_.services(); }
 
  private:
   // |fuchsia::modular::ModuleController|

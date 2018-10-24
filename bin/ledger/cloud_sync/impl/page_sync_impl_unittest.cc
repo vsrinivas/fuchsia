@@ -65,7 +65,8 @@ class PageSyncImplTest : public gtest::TestLoopFixture {
         std::make_unique<TestSyncStateWatcher>();
     state_watcher_ = watcher.get();
 
-    auto download_backoff = std::make_unique<backoff::TestBackoff>(zx::msec(50));
+    auto download_backoff =
+        std::make_unique<backoff::TestBackoff>(zx::msec(50));
     download_backoff_ptr_ = download_backoff.get();
     auto upload_backoff = std::make_unique<backoff::TestBackoff>(zx::msec(50));
     upload_backoff_ptr_ = upload_backoff.get();

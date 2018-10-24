@@ -16,8 +16,8 @@ library fuchsia.modular;
 // All state transitions are possible.
 //
 enum StoryVisibilityState {
-  // Default state for a story.
-  DEFAULT = 1;
-  // Full-screen user experience, e.g. playing a video.
-  IMMERSIVE = 2;
+    // Default state for a story.
+    DEFAULT = 1;
+    // Full-screen user experience, e.g. playing a video.
+    IMMERSIVE = 2;
 };

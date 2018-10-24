@@ -12,8 +12,8 @@
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"
-#include "peridot/bin/ledger/storage/public/db.h"
 #include "peridot/bin/ledger/storage/impl/page_db.h"
+#include "peridot/bin/ledger/storage/public/db.h"
 
 namespace storage {
 

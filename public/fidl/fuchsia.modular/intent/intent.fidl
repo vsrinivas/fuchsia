@@ -9,64 +9,63 @@ using fuchsia.mem;
 // The Intent struct is a runtime descriptor for an abstract action to be initiated
 // in Fuchsia. For details please see docs/intent.md.
 struct Intent {
-  // The name of the action represented by this Intent.
-  //
-  // This is nullable for backwards compatibility.
-  // TODO(MI4-1100): Make action non-nullable.
-  string? action;
+    // The name of the action represented by this Intent.
+    //
+    // This is nullable for backwards compatibility.
+    // TODO(MI4-1100): Make action non-nullable.
+    string? action;
 
-  // An explicit handler for the Intent. Specified as the component URL of the
-  // module.
-  string? handler;
+    // An explicit handler for the Intent. Specified as the component URL of the
+    // module.
+    string? handler;
 
-  // The parameters that will be passed to the handler of |action|.
-  vector<IntentParameter>? parameters;
+    // The parameters that will be passed to the handler of |action|.
+    vector<IntentParameter>? parameters;
 };
 
 // A struct representing a parameter that is passed to the handler of an Intent's
 // Action.
 struct IntentParameter {
-  // The name of the parameter. The handler (i.e. selected mod) will be provided
-  // with the data for this parameter under a link called |name|.
-  string? name;
+    // The name of the parameter. The handler (i.e. selected mod) will be provided
+    // with the data for this parameter under a link called |name|.
+    string? name;
 
-  // The data that will be passed to the intent handler.
-  IntentParameterData data;
+    // The data that will be passed to the intent handler.
+    IntentParameterData data;
 };
 
 union IntentParameterData {
-  // Set this if you already have an Entity reference at runtime.
-  // Entity.getTypes() will be used to set the constraints for this noun during
-  // resolution.
-  string entity_reference;
+    // Set this if you already have an Entity reference at runtime.
+    // Entity.getTypes() will be used to set the constraints for this noun during
+    // resolution.
+    string entity_reference;
 
-  // Set this if you have structured JSON data. Values typically are a JSON
-  // object with a "@type" attribute and other associated data.  TODO(thatguy):
-  // We need to decide if we want to keep this in place, or deprecate this
-  // eventually and move entirely to using Entity references.
-  //
-  // DEPRECATED: Use |entity_reference|.
-  fuchsia.mem.Buffer json;
+    // Set this if you have structured JSON data. Values typically are a JSON
+    // object with a "@type" attribute and other associated data.  TODO(thatguy):
+    // We need to decide if we want to keep this in place, or deprecate this
+    // eventually and move entirely to using Entity references.
+    //
+    // DEPRECATED: Use |entity_reference|.
+    fuchsia.mem.Buffer json;
 
-  // Set this if you want to explicitly define this noun's allowed types. This
-  // is also useful in the cases where the noun has a 'direction' of type
-  // 'output', and you wish to set the allowable output types from the Module
-  // (see docs/modular/manifests/action_template.md for a definition of
-  // 'direction').
-  //
-  // Only one entry in |entity_type| must match the constraint specified by
-  // the Module for the constraint to be considered satisfied.
-  vector<string> entity_type;
+    // Set this if you want to explicitly define this noun's allowed types. This
+    // is also useful in the cases where the noun has a 'direction' of type
+    // 'output', and you wish to set the allowable output types from the Module
+    // (see docs/modular/manifests/action_template.md for a definition of
+    // 'direction').
+    //
+    // Only one entry in |entity_type| must match the constraint specified by
+    // the Module for the constraint to be considered satisfied.
+    vector<string> entity_type;
 
-  // Set this to use an existing Link accessible from your Module as the noun's
-  // value.
-  // TODO(thatguy): This is allowed to be null for backwards compatibility with
-  // Mods that use the 'default link' (= a link with null name). Once no mods
-  // use the default link any more, this can be made required again.
-  // MI4-736
-  string? link_name;
+    // Set this to use an existing Link accessible from your Module as the noun's
+    // value.
+    // TODO(thatguy): This is allowed to be null for backwards compatibility with
+    // Mods that use the 'default link' (= a link with null name). Once no mods
+    // use the default link any more, this can be made required again.
+    // MI4-736
+    string? link_name;
 
-  // Set to re-use an existing link within a story.
-  LinkPath link_path;
+    // Set to re-use an existing link within a story.
+    LinkPath link_path;
 };
-

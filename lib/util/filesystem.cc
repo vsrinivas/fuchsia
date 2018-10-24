@@ -37,11 +37,12 @@ void WaitForMinfs() {
       fuchsia_io_FilesystemInfo info;
       zx_status_t status, io_status;
       fzl::FdioCaller caller(fbl::move(fd));
-      io_status = fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(),
-                                                           &status, &info);
+      io_status = fuchsia_io_DirectoryAdminQueryFilesystem(
+          caller.borrow_channel(), &status, &info);
       if (io_status == ZX_OK && status == ZX_OK) {
         const char* name = reinterpret_cast<const char*>(info.name);
-        fxl::StringView fs_name(name, strnlen(name, fuchsia_io_MAX_FS_NAME_BUFFER));
+        fxl::StringView fs_name(name,
+                                strnlen(name, fuchsia_io_MAX_FS_NAME_BUFFER));
         if (fs_name == kMinFsName) {
           return;
         }

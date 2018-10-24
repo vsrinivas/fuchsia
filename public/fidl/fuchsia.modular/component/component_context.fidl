@@ -12,53 +12,53 @@ using fuchsia.sys;
 // ModuleContext and an Agent gets it from its AgentContext.
 [Discoverable]
 interface ComponentContext {
-  // Gets the Ledger associated with this component. This ledger instance is
-  // unique to this component (nb. not the component instance) under this user.
-  1: GetLedger(request<fuchsia.ledger.Ledger> request)
-      -> (fuchsia.ledger.Status status);
+    // Gets the Ledger associated with this component. This ledger instance is
+    // unique to this component (nb. not the component instance) under this user.
+    1: GetLedger(request<fuchsia.ledger.Ledger> request)
+           -> (fuchsia.ledger.Status status);
 
-  // Used to start an agent in the user scope if it isn't already running, and
-  // connect to it.
-  2: ConnectToAgent(string url,
-                    request<fuchsia.sys.ServiceProvider> incoming_services,
-                    request<AgentController> controller);
+    // Used to start an agent in the user scope if it isn't already running, and
+    // connect to it.
+    2: ConnectToAgent(string url,
+                      request<fuchsia.sys.ServiceProvider> incoming_services,
+                      request<AgentController> controller);
 
-  // Used to create or delete a message queue or retrieve an existing queue
-  // identified by |name|. |name| is local to the calling component instance.
-  3: ObtainMessageQueue(string name, request<MessageQueue> queue);
-  4: DeleteMessageQueue(string name);
+    // Used to create or delete a message queue or retrieve an existing queue
+    // identified by |name|. |name| is local to the calling component instance.
+    3: ObtainMessageQueue(string name, request<MessageQueue> queue);
+    4: DeleteMessageQueue(string name);
 
-  // Gets a MessageSender service that can be used to send a message to a queue
-  // identified by |queue_token|. Token for a MessageQueue is obtained from its
-  // GetToken() method. The token is unique within the scope of the user, i.e.
-  // it can be used by other component instances than the one that created the
-  // message queue.
-  5: GetMessageSender(string queue_token, request<MessageSender> sender);
+    // Gets a MessageSender service that can be used to send a message to a queue
+    // identified by |queue_token|. Token for a MessageQueue is obtained from its
+    // GetToken() method. The token is unique within the scope of the user, i.e.
+    // it can be used by other component instances than the one that created the
+    // message queue.
+    5: GetMessageSender(string queue_token, request<MessageSender> sender);
 
-  // Gets the EntityResolver service, which can be used to resolve an entity
-  // reference to an Entity interface.
-  6: GetEntityResolver(request<EntityResolver> request);
+    // Gets the EntityResolver service, which can be used to resolve an entity
+    // reference to an Entity interface.
+    6: GetEntityResolver(request<EntityResolver> request);
 
-  // Creates a new entity from |type_to_data| such that duplicate types are
-  // overriden by subsequent entries.
-  //
-  // This is a useful way to represent small immutable entities without having
-  // to provide the entity using an Agent. The types and data together must be
-  // within 16KB in size.
-  7: CreateEntityWithData(vector<TypeToDataEntry> type_to_data)
-      -> (string? entity_reference);
+    // Creates a new entity from |type_to_data| such that duplicate types are
+    // overriden by subsequent entries.
+    //
+    // This is a useful way to represent small immutable entities without having
+    // to provide the entity using an Agent. The types and data together must be
+    // within 16KB in size.
+    7: CreateEntityWithData(vector<TypeToDataEntry> type_to_data)
+           -> (string? entity_reference);
 
-  // Gets the package name of this component.
-  //
-  // TODO(vardhan): MI4-939. This information should likely be exposed by a
-  // lower level (component-level, or application level). This information is
-  // most meant for a component to identify itself automatically when publishing
-  // metrics.
-  8: GetPackageName() -> (string package_name);
+    // Gets the package name of this component.
+    //
+    // TODO(vardhan): MI4-939. This information should likely be exposed by a
+    // lower level (component-level, or application level). This information is
+    // most meant for a component to identify itself automatically when publishing
+    // metrics.
+    8: GetPackageName() -> (string package_name);
 };
 
 // Used by ComponentContext.CreateEntityWithData().
 struct TypeToDataEntry {
-  string type;
-  string data;
+    string type;
+    string data;
 };

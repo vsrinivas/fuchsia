@@ -25,7 +25,8 @@ Environment::Environment(
       firebase_api_key_(std::move(firebase_api_key)),
       coroutine_service_(std::move(coroutine_service)),
       backoff_factory_(std::move(backoff_factory)),
-      clock_(std::move(clock)), random_(std::move(random)) {
+      clock_(std::move(clock)),
+      random_(std::move(random)) {
   FXL_DCHECK(dispatcher_);
   FXL_DCHECK(coroutine_service_);
   FXL_DCHECK(backoff_factory_);

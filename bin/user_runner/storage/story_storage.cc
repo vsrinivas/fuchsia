@@ -403,17 +403,17 @@ class GetEntityDataCall
             return;
           }
 
-          operation_queue_.Add(new ReadVmoCall(
-              page_client_, EntityKeyForCookie(cookie_),
-              [this, flow](fuchsia::ledger::Status status,
-                           fuchsia::mem::BufferPtr buffer) {
-                StoryStorage::Status story_status =
-                    status == fuchsia::ledger::Status::OK
-                        ? StoryStorage::Status::OK
-                        : StoryStorage::Status::LEDGER_ERROR;
-                status_ = story_status;
-                result_ = std::move(buffer);
-              }));
+          operation_queue_.Add(
+              new ReadVmoCall(page_client_, EntityKeyForCookie(cookie_),
+                              [this, flow](fuchsia::ledger::Status status,
+                                           fuchsia::mem::BufferPtr buffer) {
+                                StoryStorage::Status story_status =
+                                    status == fuchsia::ledger::Status::OK
+                                        ? StoryStorage::Status::OK
+                                        : StoryStorage::Status::LEDGER_ERROR;
+                                status_ = story_status;
+                                result_ = std::move(buffer);
+                              }));
         }));
   }
 
@@ -655,9 +655,9 @@ FuturePtr<StoryStorage::Status> StoryStorage::UpdateLinkValue(
   // We can't chain this call to the parent future chain because we do
   // not want it to happen at all in the case of errors.
   return did_update->WeakMap(
-      GetWeakPtr(), [this, key, context](bool did_update,
-                                         StoryStorage::Status status,
-                                         fidl::StringPtr new_value) {
+      GetWeakPtr(),
+      [this, key, context](bool did_update, StoryStorage::Status status,
+                           fidl::StringPtr new_value) {
         // if |new_value| is null, it means we didn't write any new data, even
         // if |status| == OK.
         if (status == StoryStorage::Status::OK && did_update) {

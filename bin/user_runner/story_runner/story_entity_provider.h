@@ -30,9 +30,9 @@ class StoryEntityProvider : public fuchsia::modular::EntityProvider {
                  fuchsia::mem::Buffer data,
                  WriteDataCallback callback) override;
   // |fuchsia::modular::EntityProvider|
-  void Watch(fidl::StringPtr cookie, fidl::StringPtr type,
-             fidl::InterfaceHandle<fuchsia::modular::EntityWatcher> watcher)
-      override;
+  void Watch(
+      fidl::StringPtr cookie, fidl::StringPtr type,
+      fidl::InterfaceHandle<fuchsia::modular::EntityWatcher> watcher) override;
 
   StoryStorage* story_storage_;
 }

@@ -6,18 +6,18 @@ library fuchsia.modular;
 
 // Module parameters are named pointers to link instances.
 struct CreateModuleParameterMapInfo {
-  // Contains instructions to create each name in the parameter map.
-  vector<CreateModuleParameterMapEntry>? property_info;
+    // Contains instructions to create each name in the parameter map.
+    vector<CreateModuleParameterMapEntry>? property_info;
 };
 
 struct CreateModuleParameterMapEntry {
-  string? key;
-  CreateModuleParameterInfo value;
+    string? key;
+    CreateModuleParameterInfo value;
 };
 
 union CreateModuleParameterInfo {
-  // Instructs parameter map initialization to either use an existing Link
-  // (|link_path| is set) or create a new Link (|create_link| is set).
-  LinkPath link_path;
-  CreateLinkInfo create_link;
+    // Instructs parameter map initialization to either use an existing Link
+    // (|link_path| is set) or create a new Link (|create_link| is set).
+    LinkPath link_path;
+    CreateLinkInfo create_link;
 };

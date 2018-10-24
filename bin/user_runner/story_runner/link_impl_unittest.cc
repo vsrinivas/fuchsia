@@ -222,13 +222,12 @@ TEST_F(LinkImplTest, SetNonJsonAndGetJsonPointer) {
   fidl::VectorPtr<fidl::StringPtr> path;
   path->push_back("one");
   bool get_done{};
-  link->Get(std::move(path),
-            [&](std::unique_ptr<fuchsia::mem::Buffer> value) {
-              std::string content_string;
-              FXL_CHECK(fsl::StringFromVmo(*value, &content_string));
-              get_done = true;
-              EXPECT_EQ("null", content_string);
-            });
+  link->Get(std::move(path), [&](std::unique_ptr<fuchsia::mem::Buffer> value) {
+    std::string content_string;
+    FXL_CHECK(fsl::StringFromVmo(*value, &content_string));
+    get_done = true;
+    EXPECT_EQ("null", content_string);
+  });
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return get_done; }));
 }
 

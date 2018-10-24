@@ -5,9 +5,9 @@
 library fuchsia.modular;
 
 enum ContextValueType {
-  STORY = 1;
-  MODULE = 2;
-  AGENT = 3;
-  ENTITY = 4;
-  LINK = 5;
+    STORY = 1;
+    MODULE = 2;
+    AGENT = 3;
+    ENTITY = 4;
+    LINK = 5;
 };

@@ -5,114 +5,113 @@
 library test.peridot.lib.fidl.jsonxdr;
 
 struct RequiredData {
-  string string;
-  bool bool;
-  int8 int8;
-  int16 int16;
-  int32 int32;
-  int64 int64;
-  uint8 uint8;
-  uint16 uint16;
-  uint32 uint32;
-  uint64 uint64;
-  float32 float32;
-  float64 float64;
-  Struct struct;
-  Enum enum;
-  Union union;
+    string string;
+    bool bool;
+    int8 int8;
+    int16 int16;
+    int32 int32;
+    int64 int64;
+    uint8 uint8;
+    uint16 uint16;
+    uint32 uint32;
+    uint64 uint64;
+    float32 float32;
+    float64 float64;
+    Struct struct;
+    Enum enum;
+    Union union;
 };
 
 struct OptionalData {
-  string? string;
-  Struct? struct;
-  Union? union;
+    string? string;
+    Struct? struct;
+    Union? union;
 };
 
 struct RequiredRepeatedRequiredData {
-  vector<string> string;
-  vector<bool> bool;
-  vector<int8> int8;
-  vector<int16> int16;
-  vector<int32> int32;
-  vector<int64> int64;
-  vector<uint8> uint8;
-  vector<uint16> uint16;
-  vector<uint32> uint32;
-  vector<uint64> uint64;
-  vector<float32> float32;
-  vector<float64> float64;
-  vector<Struct> struct;
-  vector<Enum> enum;
-  vector<Union> union;
+    vector<string> string;
+    vector<bool> bool;
+    vector<int8> int8;
+    vector<int16> int16;
+    vector<int32> int32;
+    vector<int64> int64;
+    vector<uint8> uint8;
+    vector<uint16> uint16;
+    vector<uint32> uint32;
+    vector<uint64> uint64;
+    vector<float32> float32;
+    vector<float64> float64;
+    vector<Struct> struct;
+    vector<Enum> enum;
+    vector<Union> union;
 };
 
 struct RequiredRepeatedOptionalData {
-  vector<string?> string;
-  vector<Struct?> struct;
-  vector<Union?> union;
+    vector<string?> string;
+    vector<Struct?> struct;
+    vector<Union?> union;
 };
 
 // NOTE(mesch): According to jeffbrown, optional vector typed fields are going
 // away.
 
 struct OptionalRepeatedRequiredData {
-  vector<string>? string;
-  vector<bool>? bool;
-  vector<int8>? int8;
-  vector<int16>? int16;
-  vector<int32>? int32;
-  vector<int64>? int64;
-  vector<uint8>? uint8;
-  vector<uint16>? uint16;
-  vector<uint32>? uint32;
-  vector<uint64>? uint64;
-  vector<float32>? float32;
-  vector<float64>? float64;
-  vector<Struct>? struct;
-  vector<Enum>? enum;
-  vector<Union>? union;
+    vector<string>? string;
+    vector<bool>? bool;
+    vector<int8>? int8;
+    vector<int16>? int16;
+    vector<int32>? int32;
+    vector<int64>? int64;
+    vector<uint8>? uint8;
+    vector<uint16>? uint16;
+    vector<uint32>? uint32;
+    vector<uint64>? uint64;
+    vector<float32>? float32;
+    vector<float64>? float64;
+    vector<Struct>? struct;
+    vector<Enum>? enum;
+    vector<Union>? union;
 };
 
 struct OptionalRepeatedOptionalData {
-  vector<string?>? string;
-  vector<Struct?>? struct;
-  vector<Union?>? union;
+    vector<string?>? string;
+    vector<Struct?>? struct;
+    vector<Union?>? union;
 };
 
 struct ArrayData {
-  array<string>:10 string;
-  array<bool>:10 bool;
-  array<int8>:10 int8;
-  array<int16>:10 int16;
-  array<int32>:10 int32;
-  array<int64>:10 int64;
-  array<uint8>:10 uint8;
-  array<uint16>:10 uint16;
-  array<uint32>:10 uint32;
-  array<uint64>:10 uint64;
-  array<float32>:10 float32;
-  array<float64>:10 float64;
-  array<Struct>:10 struct;
-  array<Enum>:10 enum;
-  array<Union>:10 union;
+    array<string>:10 string;
+    array<bool>:10 bool;
+    array<int8>:10 int8;
+    array<int16>:10 int16;
+    array<int32>:10 int32;
+    array<int64>:10 int64;
+    array<uint8>:10 uint8;
+    array<uint16>:10 uint16;
+    array<uint32>:10 uint32;
+    array<uint64>:10 uint64;
+    array<float32>:10 float32;
+    array<float64>:10 float64;
+    array<Struct>:10 struct;
+    array<Enum>:10 enum;
+    array<Union>:10 union;
 };
 
 // The purpose of this struct is coverage for struct valued fields above. The
 // field exists only so we have something to be checked to be there. Other types
 // of fields of structs are covered above, not here.
 struct Struct {
-  int32 item;
+    int32 item;
 };
 
 enum Enum {
-  ZERO = 0;
-  ONE = 1;
-  TWO = 2;
+    ZERO = 0;
+    ONE = 1;
+    TWO = 2;
 };
-
 
 // NOTE(mesch): Can't use struct, FIDL-130.
 union Union {
-  int32 int32;
-  string string;
+    int32 int32;
+    string string;
 };

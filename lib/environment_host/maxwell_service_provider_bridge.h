@@ -27,9 +27,9 @@ class MaxwellServiceProviderBridge {
   void AddService(fidl::InterfaceRequestHandler<Interface> handler) {
     auto service = fbl::AdoptRef(new fs::Service(
         [this, handler = std::move(handler)](zx::channel channel) {
-      handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
-      return ZX_OK;
-    }));
+          handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
+          return ZX_OK;
+        }));
     AddServiceWithName(Interface::Name_, service);
   }
 

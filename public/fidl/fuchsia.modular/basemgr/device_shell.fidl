@@ -21,39 +21,39 @@ using fuchsia.ui.policy;
 // DeviceShellContext.Shutdown(), or by the system shutting down.
 [Discoverable]
 interface DeviceShell {
-  1: Initialize(DeviceShellContext device_shell_context,
-                DeviceShellParams device_shell_params);
+    1: Initialize(DeviceShellContext device_shell_context,
+                  DeviceShellParams device_shell_params);
 
-  // This method may be invoked by the basemgr to request an
-  // AuthenticationContext associated with |username|. |request| will then be
-  // used to request the device shell to show login screen during a
-  // UserProvider.AddUser() or if a token needs to be refreshed.
-  //
-  // A |request| is tied to a |username| because the basemgr allows
-  // multiple users to be logged in at the same time.
-  // Deprecated
-  2: GetAuthenticationContext(string username,
-                              request<fuchsia.modular.auth.AuthenticationContext> request);
+    // This method may be invoked by the basemgr to request an
+    // AuthenticationContext associated with |username|. |request| will then be
+    // used to request the device shell to show login screen during a
+    // UserProvider.AddUser() or if a token needs to be refreshed.
+    //
+    // A |request| is tied to a |username| because the basemgr allows
+    // multiple users to be logged in at the same time.
+    // Deprecated
+    2: GetAuthenticationContext(string username,
+                                request<fuchsia.modular.auth.AuthenticationContext> request);
 
-  // This method may be invoked by the basemgr to request an
-  // AuthenticationUIContext. |request| will then be used to request the device
-  // shell to show login screen during a UserProvider.AddUser() or if a token
-  // needs to be refreshed.
-  3: GetAuthenticationUIContext(request<fuchsia.auth.AuthenticationUIContext> request);
+    // This method may be invoked by the basemgr to request an
+    // AuthenticationUIContext. |request| will then be used to request the device
+    // shell to show login screen during a UserProvider.AddUser() or if a token
+    // needs to be refreshed.
+    3: GetAuthenticationUIContext(request<fuchsia.auth.AuthenticationUIContext> request);
 };
 
 // This interface allows the |DeviceShell| to request capabilities from the
 // |Basemgr| in a way that is more explicit about the services that are
 // offered than a generic |ServiceProvider|.
 interface DeviceShellContext {
-  1: GetUserProvider(request<UserProvider> request);
+    1: GetUserProvider(request<UserProvider> request);
 
-  // This requests the shutdown of the basemgr.
-  2: Shutdown();
+    // This requests the shutdown of the basemgr.
+    2: Shutdown();
 };
 
 // These params are passed to |DeviceShell.Initialize|.
 struct DeviceShellParams {
-  // TODO(jjosh): make this non-optional, if feasible.
-  fuchsia.ui.policy.Presentation? presentation;
+    // TODO(jjosh): make this non-optional, if feasible.
+    fuchsia.ui.policy.Presentation? presentation;
 };

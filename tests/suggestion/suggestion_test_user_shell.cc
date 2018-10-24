@@ -23,9 +23,8 @@ using modular::testing::TestPoint;
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp
-    : fuchsia::modular::NextListener,
-      public modular::testing::ComponentBase<void> {
+class TestApp : fuchsia::modular::NextListener,
+                public modular::testing::ComponentBase<void> {
  public:
   TestApp(component::StartupContext* const startup_context)
       : ComponentBase(startup_context) {

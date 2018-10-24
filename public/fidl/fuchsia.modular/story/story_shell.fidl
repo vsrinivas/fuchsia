@@ -17,85 +17,85 @@ using fuchsia.ui.viewsv1token;
 //
 // Teardown may be initiated by the user shell calling StoryController.Stop(),
 // by the user runner being terminated, or by the system shutting down.
-[Discoverable]  // Created by story shell applications.
+[Discoverable] // Created by story shell applications.
 interface StoryShell {
-  1: Initialize(StoryShellContext story_shell_context);
+    1: Initialize(StoryShellContext story_shell_context);
 
-  // Adds a new View to be displayed by the StoryShell, creating a new
-  // StoryShell Surface. More context that allows the story shell to decide how
-  // to layout will be added later. Also, interface to influence life cycle and
-  // focus is obviously missing.
-  // |owner| the new view.
-  // |view_id| ID for the view
-  // |parent_id| ID of the view that is parent of this view.
-  // |surface_relation| the relationship between the parent view and this new
-  //     view. Used for layout optimization.
-  // |module_manifest| information about the module that is in the view.
-  // |module_source| how the view was generated. By an action internal to the
-  //     story or by an external action.
-  2: AddView(fuchsia.ui.viewsv1token.ViewOwner owner, string view_id, string parent_id,
-             SurfaceRelation? surface_relation, ModuleManifest? module_manifest,
-             ModuleSource module_source);
+    // Adds a new View to be displayed by the StoryShell, creating a new
+    // StoryShell Surface. More context that allows the story shell to decide how
+    // to layout will be added later. Also, interface to influence life cycle and
+    // focus is obviously missing.
+    // |owner| the new view.
+    // |view_id| ID for the view
+    // |parent_id| ID of the view that is parent of this view.
+    // |surface_relation| the relationship between the parent view and this new
+    //     view. Used for layout optimization.
+    // |module_manifest| information about the module that is in the view.
+    // |module_source| how the view was generated. By an action internal to the
+    //     story or by an external action.
+    2: AddView(fuchsia.ui.viewsv1token.ViewOwner owner, string view_id, string parent_id,
+               SurfaceRelation? surface_relation, ModuleManifest? module_manifest,
+               ModuleSource module_source);
 
-  // Focuses the view with view_id, bringing it to the foreground. Optionally
-  // provide a relative_view_id to focus relative to another view instead of
-  // absolutely.
-  3: FocusView(string view_id, string? relative_view_id);
+    // Focuses the view with view_id, bringing it to the foreground. Optionally
+    // provide a relative_view_id to focus relative to another view instead of
+    // absolutely.
+    3: FocusView(string view_id, string? relative_view_id);
 
-  // Defocuses the view with view_id, dismissing it to the background.
-  4: DefocusView(string view_id) -> ();
+    // Defocuses the view with view_id, dismissing it to the background.
+    4: DefocusView(string view_id) -> ();
 
-  // Adds a container, with corresponding container layouts to the story.
-  // Optionally provide a parent_id to connect to, if omitted adds the
-  // Container node as the root of a new tree in the Story
-  // DEPRECATED
-  5: AddContainer(string containerName, string? parentId,
-                  SurfaceRelation relation, // relation of container to parent
-                  vector<ContainerLayout> layout,
-                  vector<ContainerRelationEntry> relationships,
-                  vector<ContainerView> views);
+    // Adds a container, with corresponding container layouts to the story.
+    // Optionally provide a parent_id to connect to, if omitted adds the
+    // Container node as the root of a new tree in the Story
+    // DEPRECATED
+    5: AddContainer(string containerName, string? parentId,
+                    SurfaceRelation relation, // relation of container to parent
+                    vector<ContainerLayout> layout,
+                    vector<ContainerRelationEntry> relationships,
+                    vector<ContainerView> views);
 
-  // Notify when a view is focused in the story. The focus could be from a user
-  // interaction or requested by the framework through
-  // StoryController#FocusModule.
-  // EXPERIMENTAL
-  6: -> OnViewFocused(string view_id);
+    // Notify when a view is focused in the story. The focus could be from a user
+    // interaction or requested by the framework through
+    // StoryController#FocusModule.
+    // EXPERIMENTAL
+    6: -> OnViewFocused(string view_id);
 };
 
 // Maps the node_name to the specific mozart view resulting from resolving and
 // launching the intent specified in a Container node
 struct ContainerView {
-  // Name by which this container node is referenced in container layout and
-  // surface relationship specifications (cf. container.fidl)
-  string node_name;
+    // Name by which this container node is referenced in container layout and
+    // surface relationship specifications (cf. container.fidl)
+    string node_name;
 
-  // The new view resolved from the intent corresponding to node_name
-  fuchsia.ui.viewsv1token.ViewOwner owner;
+    // The new view resolved from the intent corresponding to node_name
+    fuchsia.ui.viewsv1token.ViewOwner owner;
 };
 
 // This interface provides the StoryShell instance with everything it needs to
 // know or be able to do about the Story. Not much right now, but we expect this
 // to increase.
 interface StoryShellContext {
-  // Requests a Presentation connection from the UserShell. See
-  // UserShellPresenationProvider in user_shell.fidl.
-  1: GetPresentation(request<fuchsia.ui.policy.Presentation> request);
+    // Requests a Presentation connection from the UserShell. See
+    // UserShellPresenationProvider in user_shell.fidl.
+    1: GetPresentation(request<fuchsia.ui.policy.Presentation> request);
 
-  // Starts watching Story shell's visual state.
-  2: WatchVisualState(StoryVisualStateWatcher watcher);
+    // Starts watching Story shell's visual state.
+    2: WatchVisualState(StoryVisualStateWatcher watcher);
 
-  // Gets a Link instance that the story shell can use for persisting metadata.
-  3: GetLink(request<Link> request);
+    // Gets a Link instance that the story shell can use for persisting metadata.
+    3: GetLink(request<Link> request);
 };
 
 // Implemented by StoryShell to get notified about visual state changes.
 interface StoryVisualStateWatcher {
-  1: OnVisualStateChange(StoryVisualState visual_state);
+    1: OnVisualStateChange(StoryVisualState visual_state);
 };
 
 // Defines the visual state of the Story shell.
 enum StoryVisualState {
-  MINIMIZED = 0;
-  MAXIMIZED = 1;
-  MAXIMIZED_OVERLAYED = 2;
+    MINIMIZED = 0;
+    MAXIMIZED = 1;
+    MAXIMIZED_OVERLAYED = 2;
 };

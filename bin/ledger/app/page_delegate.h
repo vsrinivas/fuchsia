@@ -40,8 +40,7 @@ class PageDelegate {
  public:
   PageDelegate(coroutine::CoroutineService* coroutine_service,
                PageManager* manager, storage::PageStorage* storage,
-               MergeResolver* merge_resolver,
-               SyncWatcherSet* watchers,
+               MergeResolver* merge_resolver, SyncWatcherSet* watchers,
                std::unique_ptr<PageDelayingFacade> page_delaying_facade);
   ~PageDelegate();
 

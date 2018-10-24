@@ -5,54 +5,54 @@
 library fuchsia.modular;
 
 // Gives access to the device map of the logged in user.
-[Discoverable]  // Exposed in user environment.
+[Discoverable] // Exposed in user environment.
 interface DeviceMap {
-  // HACK(mesch): Just exposes all Device/* entries in the ledger.
-  // We'll need something better, possibly with access policy.
-  1: Query() -> (vector<DeviceMapEntry> devices);
+    // HACK(mesch): Just exposes all Device/* entries in the ledger.
+    // We'll need something better, possibly with access policy.
+    1: Query() -> (vector<DeviceMapEntry> devices);
 
-  // Returns the current device from the device map.
-  2: GetCurrentDevice() -> (DeviceMapEntry device);
+    // Returns the current device from the device map.
+    2: GetCurrentDevice() -> (DeviceMapEntry device);
 
-  // Sets the profile string for the current device.
-  // HACK(jimbe) This is a quick-and-dirty solution for FW-316. It needs to be
-  // completely redesigned once the Framework has a concept of profile (such
-  // as landscape/portrait.)
-  3: SetCurrentDeviceProfile(string profile);
+    // Sets the profile string for the current device.
+    // HACK(jimbe) This is a quick-and-dirty solution for FW-316. It needs to be
+    // completely redesigned once the Framework has a concept of profile (such
+    // as landscape/portrait.)
+    3: SetCurrentDeviceProfile(string profile);
 
-  // Requests a notification for each change to the DeviceMap. The given
-  // watcher will receive an initial notification for each existing device.
-  4: WatchDeviceMap(DeviceMapWatcher watcher);
+    // Requests a notification for each change to the DeviceMap. The given
+    // watcher will receive an initial notification for each existing device.
+    4: WatchDeviceMap(DeviceMapWatcher watcher);
 };
 
 struct DeviceMapEntry {
-  // The device's name. This name is user editable and may be the same between
-  // any of the user's devices.
-  string name;
+    // The device's name. This name is user editable and may be the same between
+    // any of the user's devices.
+    string name;
 
-  // Semi-sticky device ID usable for syncing. Guarantees a unique device id
-  // that no another hardware will be using while this device is syncing.
-  // WARNING: This ID is persisted for an arbitrary amount of time and MAY be
-  // revoked or changed between launches of this service on this hardware.
-  string? device_id;
+    // Semi-sticky device ID usable for syncing. Guarantees a unique device id
+    // that no another hardware will be using while this device is syncing.
+    // WARNING: This ID is persisted for an arbitrary amount of time and MAY be
+    // revoked or changed between launches of this service on this hardware.
+    string? device_id;
 
-  // The device's intended usage profile (stored as JSON)
-  string? profile;
+    // The device's intended usage profile (stored as JSON)
+    string? profile;
 
-  // The last known hostname of this device.
-  // HACK(zbowling): this is temporary to assist with matching devices in
-  // netconnector RPC discovery.
-  string hostname;
+    // The last known hostname of this device.
+    // HACK(zbowling): this is temporary to assist with matching devices in
+    // netconnector RPC discovery.
+    string hostname;
 
-  // The time that this DeviceMapEntry was last changed. Will never be zero.
-  // Measured in Unix time, seconds since the epoch. This is not a heartbeat.
-  // Intended to allow detection of stale device entries.
-  uint64 last_change_timestamp;
+    // The time that this DeviceMapEntry was last changed. Will never be zero.
+    // Measured in Unix time, seconds since the epoch. This is not a heartbeat.
+    // Intended to allow detection of stale device entries.
+    uint64 last_change_timestamp;
 };
 
 // Implemented by the client calling DeviceMap.Watch().
 interface DeviceMapWatcher {
-  // Called with the current state right after registration, and subsequently
-  // when the state changes.
-  1: OnDeviceMapChange(DeviceMapEntry entry);
+    // Called with the current state right after registration, and subsequently
+    // when the state changes.
+    1: OnDeviceMapChange(DeviceMapEntry entry);
 };

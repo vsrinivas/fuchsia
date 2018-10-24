@@ -11,15 +11,15 @@ library fuchsia.modular;
 // data for |Entity|s that they create. This interface is available through an
 // agent's |AgentContext|.
 interface EntityReferenceFactory {
-  // Agents call this to manufacture a reference for an Entity they will
-  // provide. Returns an opaque, persistable |entity_reference| that components
-  // can resolve into an |Entity| interface using |EntityResolver|. When data is
-  // requested from an |Entity| interface resolved from this |entity_reference|,
-  // the |cookie| associated with this |entity_reference| will be passed back to
-  // the |EntityProvider| of the Agent that originally created this reference.
-  //
-  // |cookie| should uniquely identify the |Entity| within the scope of the
-  // calling entity provider. For example, it may be used as the primary key
-  // value for a database.
-   1: CreateReference(string cookie) -> (string entity_reference);
+    // Agents call this to manufacture a reference for an Entity they will
+    // provide. Returns an opaque, persistable |entity_reference| that components
+    // can resolve into an |Entity| interface using |EntityResolver|. When data is
+    // requested from an |Entity| interface resolved from this |entity_reference|,
+    // the |cookie| associated with this |entity_reference| will be passed back to
+    // the |EntityProvider| of the Agent that originally created this reference.
+    //
+    // |cookie| should uniquely identify the |Entity| within the scope of the
+    // calling entity provider. For example, it may be used as the primary key
+    // value for a database.
+    1: CreateReference(string cookie) -> (string entity_reference);
 };

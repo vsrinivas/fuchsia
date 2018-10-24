@@ -7,9 +7,9 @@ library fuchsia.modular;
 // Administrative interface for Suggestion Engine.
 [Discoverable]
 interface SuggestionEngine {
-  // Registers a component that produces suggestions.
-  1: RegisterProposalPublisher(string url, request<ProposalPublisher> publisher);
+    // Registers a component that produces suggestions.
+    1: RegisterProposalPublisher(string url, request<ProposalPublisher> publisher);
 
-  // Registers a component that produces suggestions based on a query.
-  2: RegisterQueryHandler(string url, QueryHandler query_handler);
+    // Registers a component that produces suggestions based on a query.
+    2: RegisterQueryHandler(string url, QueryHandler query_handler);
 };

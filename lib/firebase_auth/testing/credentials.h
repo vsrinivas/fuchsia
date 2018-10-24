@@ -41,7 +41,8 @@ class Credentials {
   // content of the service account configuration file that can be retrieved
   // from the firebase admin console (see the class-level comment).
   //
-  // These methods will return an empty unique_ptr if the json content is invalid.
+  // These methods will return an empty unique_ptr if the json content is
+  // invalid.
   static std::unique_ptr<Credentials> Parse(fxl::StringView json);
   static std::unique_ptr<Credentials> Parse(const rapidjson::Value& json);
 

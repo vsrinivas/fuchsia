@@ -19,25 +19,25 @@ using fuchsia.sys;
 //
 // Once the framework delivers a |Lifecycle.Terminate()|, the agent application
 // may exit itself, or is killed by framework after a timeout.
-[Discoverable]  // Created by each agent.
+[Discoverable] // Created by each agent.
 interface Agent {
-  // Called when some component tries to connect to this agent. |requestor_url|
-  // is the identifier for the component which called
-  // |ComponentContext.ConnectToAgent()|. The |services| are provided to that
-  // component.
-  1: Connect(string requestor_url, request<fuchsia.sys.ServiceProvider> services);
+    // Called when some component tries to connect to this agent. |requestor_url|
+    // is the identifier for the component which called
+    // |ComponentContext.ConnectToAgent()|. The |services| are provided to that
+    // component.
+    1: Connect(string requestor_url, request<fuchsia.sys.ServiceProvider> services);
 
-  // Called when some task identified by |task_id| is scheduled to run. The task
-  // was first posted by this Agent using |AgentContext.ScheduleTask()|. The
-  // return callback is called by this Agent when all work related to this task
-  // is completed. Note that the framework may call |Lifecycle.Terminate()|
-  // before RunTask returns.
-  //
-  // TODO(alhaad): The current implementation allows the Agent to run a task
-  // until its callback returns. If the task takes a long time to finish, the
-  // framework has no way to signal a request for termination other than to shut
-  // down the entire Agent instance. Instead, we should cap task length with
-  // strategies like budgets. Also, the Task should likely have its own
-  // connection that allows for more signalling.
-  2: RunTask(string task_id) -> ();
+    // Called when some task identified by |task_id| is scheduled to run. The task
+    // was first posted by this Agent using |AgentContext.ScheduleTask()|. The
+    // return callback is called by this Agent when all work related to this task
+    // is completed. Note that the framework may call |Lifecycle.Terminate()|
+    // before RunTask returns.
+    //
+    // TODO(alhaad): The current implementation allows the Agent to run a task
+    // until its callback returns. If the task takes a long time to finish, the
+    // framework has no way to signal a request for termination other than to shut
+    // down the entire Agent instance. Instead, we should cap task length with
+    // strategies like budgets. Also, the Task should likely have its own
+    // connection that allows for more signalling.
+    2: RunTask(string task_id) -> ();
 };

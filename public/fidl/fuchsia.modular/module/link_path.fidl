@@ -10,6 +10,6 @@ library fuchsia.modular;
 /// meaning.
 /// TODO(thatguy,lindkvist): Replace this structure with a vector<>. MI4-1021
 struct LinkPath {
-  vector<string> module_path;
-  string? link_name;
+    vector<string> module_path;
+    string? link_name;
 };

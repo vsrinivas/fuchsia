@@ -11,8 +11,8 @@ using fuchsia.modular;
 // its runtime dependencies from its parent process.
 [Discoverable]
 interface StoryInfoInitializer {
-  1: Initialize(
-      fuchsia.modular.StoryProvider story_provider,
-      fuchsia.modular.FocusProvider focus_provider,
-      fuchsia.modular.VisibleStoriesProvider visible_stories_provider);
+    1: Initialize(
+           fuchsia.modular.StoryProvider story_provider,
+           fuchsia.modular.FocusProvider focus_provider,
+           fuchsia.modular.VisibleStoriesProvider visible_stories_provider);
 };

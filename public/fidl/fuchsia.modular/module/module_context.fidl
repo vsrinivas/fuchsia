@@ -10,123 +10,123 @@ using fuchsia.ui.viewsv1token;
 /// create Link instances and run more Module instances.
 [Discoverable]
 interface ModuleContext {
-  /// Gets a Link instance with the given name.
-  ///
-  /// The Link instance has a name so that it can be recognized when the story is
-  /// resumed. The name is unique in the scope of the Module instance. If the
-  /// method is called again with the same argument by the same Module instance,
-  /// a new connection to the same Link instance is obtained. It's up to the
-  /// Module instance to ensure the name is unique within the scope of itself.
-  /// TODO(thatguy): When no modules use null link names any more, make name
-  /// required.
-  1: GetLink(string? name, request<Link> link);
+    /// Gets a Link instance with the given name.
+    ///
+    /// The Link instance has a name so that it can be recognized when the story is
+    /// resumed. The name is unique in the scope of the Module instance. If the
+    /// method is called again with the same argument by the same Module instance,
+    /// a new connection to the same Link instance is obtained. It's up to the
+    /// Module instance to ensure the name is unique within the scope of itself.
+    /// TODO(thatguy): When no modules use null link names any more, make name
+    /// required.
+    1: GetLink(string? name, request<Link> link);
 
-  /// Starts a new Module instance and adds it to the story. The Module to
-  /// execute is identified by the contents of [intent] and the Module instance
-  /// is given a [name] in the scope of the starting Module instance. The view
-  /// for the Module is given to the story shell for display.
-  ///
-  /// Providing a [surface_relation] advises the StoryShell how to layout
-  /// surfaces that the new module creates. If [surface_relation] is null then a
-  /// default relation is used.
-  ///
-  /// If the method is called again with the same [name] by the same Module
-  /// instance, but with different arguments, the existing Module instance is restarted
-  /// with the changed arguments. If the other arguments don't change, just an additional
-  /// ModuleController connection is made.
-  15: AddModuleToStory(string name, Intent intent,
-                       request<ModuleController> module_controller,
-                       SurfaceRelation? surface_relation)
-                       -> (StartModuleStatus status);
+    /// Starts a new Module instance and adds it to the story. The Module to
+    /// execute is identified by the contents of [intent] and the Module instance
+    /// is given a [name] in the scope of the starting Module instance. The view
+    /// for the Module is given to the story shell for display.
+    ///
+    /// Providing a [surface_relation] advises the StoryShell how to layout
+    /// surfaces that the new module creates. If [surface_relation] is null then a
+    /// default relation is used.
+    ///
+    /// If the method is called again with the same [name] by the same Module
+    /// instance, but with different arguments, the existing Module instance is restarted
+    /// with the changed arguments. If the other arguments don't change, just an additional
+    /// ModuleController connection is made.
+    15: AddModuleToStory(string name, Intent intent,
+                         request<ModuleController> module_controller,
+                         SurfaceRelation? surface_relation)
+            -> (StartModuleStatus status);
 
-  /// Like AddModuleToStory(), but requests a [view_owner] explicitly to embed the
-  /// view of the requested Module instance in the view of the requesting Module
-  /// instance, instead of relying on the story shell for display. If a Module
-  /// instance with the same [name] and [intent] is already running, [view_owner]
-  /// is just closed.
-  3: EmbedModule(string name, Intent intent,
-                 request<ModuleController> module_controller,
-                 request<fuchsia.ui.viewsv1token.ViewOwner> view_owner)
-                 -> (StartModuleStatus status);
+    /// Like AddModuleToStory(), but requests a [view_owner] explicitly to embed the
+    /// view of the requested Module instance in the view of the requesting Module
+    /// instance, instead of relying on the story shell for display. If a Module
+    /// instance with the same [name] and [intent] is already running, [view_owner]
+    /// is just closed.
+    3: EmbedModule(string name, Intent intent,
+                   request<ModuleController> module_controller,
+                   request<fuchsia.ui.viewsv1token.ViewOwner> view_owner)
+           -> (StartModuleStatus status);
 
-  /// Like StartModule(), but starts multiple modules simultaneously and
-  /// specifies a custom layout for them (aka container).
-  ///
-  /// There are multiple layouts specified, for different screen sizes etc.
-  /// DEPRECATED
-  6: StartContainerInShell(string container_name,
-                           SurfaceRelation parent_relation,
-                           vector<ContainerLayout> layout,
-                           vector<ContainerRelationEntry> relationships,
-                           vector<ContainerNode> nodes);
+    /// Like StartModule(), but starts multiple modules simultaneously and
+    /// specifies a custom layout for them (aka container).
+    ///
+    /// There are multiple layouts specified, for different screen sizes etc.
+    /// DEPRECATED
+    6: StartContainerInShell(string container_name,
+                             SurfaceRelation parent_relation,
+                             vector<ContainerLayout> layout,
+                             vector<ContainerRelationEntry> relationships,
+                             vector<ContainerNode> nodes);
 
-  /// Gets the ComponentContext instance associated with this Module instance.
-  /// This ComponentContext instance is unique to this particular Module
-  /// instance.
-  7: GetComponentContext(request<ComponentContext> request);
+    /// Gets the ComponentContext instance associated with this Module instance.
+    /// This ComponentContext instance is unique to this particular Module
+    /// instance.
+    7: GetComponentContext(request<ComponentContext> request);
 
-  /// Gets the IntelligenceServices service vendor associated with this Module
-  /// instance.
-  8: GetIntelligenceServices(request<IntelligenceServices> request);
+    /// Gets the IntelligenceServices service vendor associated with this Module
+    /// instance.
+    8: GetIntelligenceServices(request<IntelligenceServices> request);
 
-  /// Gets the id for this story which may be used to create a suggestion
-  /// proposal to resume this story, especially by agents.
-  9: GetStoryId() -> (string story_id);
+    /// Gets the id for this story which may be used to create a suggestion
+    /// proposal to resume this story, especially by agents.
+    9: GetStoryId() -> (string story_id);
 
-  /// Requests that the current story and module gain focus. It's up to the story
-  /// shell and user shell to honor that request.
-  10: RequestFocus();
+    /// Requests that the current story and module gain focus. It's up to the story
+    /// shell and user shell to honor that request.
+    10: RequestFocus();
 
-  /// DEPRECATED in favor of using StartOngoingActivity().
-  ///
-  /// Declares that activity is ongoing in this module. This information is
-  /// forwarded to the user shell (cf. StoryProvider.WatchActivity()
-  /// and StoryProviderWatcher), which may use it and the frequency at which it
-  /// receives these calls to determine to keep the story of this module in
-  /// focus. The module should call this method regularly while activity is
-  /// ongoing. Once the activity ceases, the module should just not issue calls
-  /// anymore. See StoryProviderWatcher for more motivation.
-  11: Active();
+    /// DEPRECATED in favor of using StartOngoingActivity().
+    ///
+    /// Declares that activity is ongoing in this module. This information is
+    /// forwarded to the user shell (cf. StoryProvider.WatchActivity()
+    /// and StoryProviderWatcher), which may use it and the frequency at which it
+    /// receives these calls to determine to keep the story of this module in
+    /// focus. The module should call this method regularly while activity is
+    /// ongoing. Once the activity ceases, the module should just not issue calls
+    /// anymore. See StoryProviderWatcher for more motivation.
+    11: Active();
 
-  /// When a module calls [RemoveSelfFromStory()] the framework will stop the
-  /// module and remove it from the story. If there are no more running modules
-  /// in the story the story will be stopped.
-  16: RemoveSelfFromStory();
+    /// When a module calls [RemoveSelfFromStory()] the framework will stop the
+    /// module and remove it from the story. If there are no more running modules
+    /// in the story the story will be stopped.
+    16: RemoveSelfFromStory();
 
-  /// Requests to update the visibility state of the current story within the
-  /// user shell. The framework will decide whether to honor this request, then
-  /// forward it to the user shell.
-  ///
-  /// Modules should not have any knowledge of the story's visibility state, nor
-  /// should it ever operate with any assumption of the visibility state.
-  ///
-  /// Note that the framework keeps this state only in memory, which means that
-  /// across reboots, the story visibility state will revert back to DEFAULT.
-  /// This makes it unsafe for any component outside the framework to make
-  /// assumptions about the story visibility state. Also, this differs from other
-  /// UI states such as focus state, which is persisted across reboots.
-  13: RequestStoryVisibilityState(StoryVisibilityState visibility_state);
+    /// Requests to update the visibility state of the current story within the
+    /// user shell. The framework will decide whether to honor this request, then
+    /// forward it to the user shell.
+    ///
+    /// Modules should not have any knowledge of the story's visibility state, nor
+    /// should it ever operate with any assumption of the visibility state.
+    ///
+    /// Note that the framework keeps this state only in memory, which means that
+    /// across reboots, the story visibility state will revert back to DEFAULT.
+    /// This makes it unsafe for any component outside the framework to make
+    /// assumptions about the story visibility state. Also, this differs from other
+    /// UI states such as focus state, which is persisted across reboots.
+    13: RequestStoryVisibilityState(StoryVisibilityState visibility_state);
 
-  /// Declares that activity of the given [type] is ongoing in this module.
-  /// This information is forwarded to the user shell
-  /// (cf. StoryProvider.WatchActivity() and StoryActivityWatcher).
-  ///
-  /// Modules should close [request] when the ongoing activity has stopped, and
-  /// this will also signal to the user shell that the ongoing activity has
-  /// stopped. For now, pausing media should count as a stopped ongoing activity,
-  /// and when it is resumed it should be started as a new ongoing activity.
-  /// Conversely, media playing in a continuous playlist (i.e playing the next
-  /// video or song) should be treated as the same ongoing activity.
-  /// Modules must request a connection per ongoing activity; a single connection
-  /// may not be re-used for multiple ongoing activities.
-  14: StartOngoingActivity(OngoingActivityType type,
-                           request<OngoingActivity> request);
+    /// Declares that activity of the given [type] is ongoing in this module.
+    /// This information is forwarded to the user shell
+    /// (cf. StoryProvider.WatchActivity() and StoryActivityWatcher).
+    ///
+    /// Modules should close [request] when the ongoing activity has stopped, and
+    /// this will also signal to the user shell that the ongoing activity has
+    /// stopped. For now, pausing media should count as a stopped ongoing activity,
+    /// and when it is resumed it should be started as a new ongoing activity.
+    /// Conversely, media playing in a continuous playlist (i.e playing the next
+    /// video or song) should be treated as the same ongoing activity.
+    /// Modules must request a connection per ongoing activity; a single connection
+    /// may not be re-used for multiple ongoing activities.
+    14: StartOngoingActivity(OngoingActivityType type,
+                             request<OngoingActivity> request);
 };
 
 /// Communicates the status of an Intent to a Module.
 enum StartModuleStatus {
-  SUCCESS = 0;
-  NO_MODULES_FOUND = 1;
+    SUCCESS = 0;
+    NO_MODULES_FOUND = 1;
 };
 
 /// This interface defines the protocol over which a Module can communicate about
@@ -136,7 +136,7 @@ interface OngoingActivity {
 };
 
 enum OngoingActivityType {
-  UNSPECIFIED = 0;
-  VIDEO = 1;
-  AUDIO = 2;
+    UNSPECIFIED = 0;
+    VIDEO = 1;
+    AUDIO = 2;
 };

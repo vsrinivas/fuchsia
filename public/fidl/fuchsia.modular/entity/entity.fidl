@@ -8,47 +8,47 @@ using fuchsia.mem;
 
 /// A multi-typed data entity.
 interface Entity {
-  /// Returns the types associated with this entity. Each entry in |types|
-  /// references a well-known content type.
-  1: GetTypes() -> (vector<string> types);
+    /// Returns the types associated with this entity. Each entry in |types|
+    /// references a well-known content type.
+    1: GetTypes() -> (vector<string> types);
 
-  /// Given one of the types returned from |GetTypes()| above, returns
-  /// associated short-form data, or null if the type is absent from
-  /// |GetTypes()|.
-  2: GetData(string type) -> (fuchsia.mem.Buffer? data);
+    /// Given one of the types returned from |GetTypes()| above, returns
+    /// associated short-form data, or null if the type is absent from
+    /// |GetTypes()|.
+    2: GetData(string type) -> (fuchsia.mem.Buffer? data);
 
-  /// Sets the data for a particular type. This will precipitate an |OnUpdated|
-  /// event with the associated type.
-  3: WriteData(string type, fuchsia.mem.Buffer data)
-    -> (EntityWriteStatus status);
+    /// Sets the data for a particular type. This will precipitate an |OnUpdated|
+    /// event with the associated type.
+    3: WriteData(string type, fuchsia.mem.Buffer data)
+           -> (EntityWriteStatus status);
 
-  /// Gets the entity reference for this entity, which can be persisted and
-  /// then later used to locate this entity. These references are weak
-  /// references and are not sufficient to keep the entity alive.
-  4: GetReference() -> (string entity_reference);
+    /// Gets the entity reference for this entity, which can be persisted and
+    /// then later used to locate this entity. These references are weak
+    /// references and are not sufficient to keep the entity alive.
+    4: GetReference() -> (string entity_reference);
 
-  /// Begins watching for data changes on a particular type. The watcher
-  /// immediately fires |OnUpdated| with the current value for the requested
-  /// type (or null if the type is not present). Closing the |Entity| interface
-  /// does not close the watcher.
-  5: Watch(string type, EntityWatcher watcher);
+    /// Begins watching for data changes on a particular type. The watcher
+    /// immediately fires |OnUpdated| with the current value for the requested
+    /// type (or null if the type is not present). Closing the |Entity| interface
+    /// does not close the watcher.
+    5: Watch(string type, EntityWatcher watcher);
 };
 
 interface EntityWatcher {
-  /// Fires on data updates for a particular type. If the type is initially not
-  /// present, a null |data| pointer is produced. The type may only transition
-  /// from absent to present at most once, as there is no deletion.
-  ///
-  /// No deduplication is performed.
-  ///
-  /// At most one update will be in-flight at a time; once a client is ready
-  /// for another update, it should call the callback. At most one update will
-  /// be queued for dispatch; older updates will be dropped.
-  1: OnUpdated(fuchsia.mem.Buffer? data) -> ();
+    /// Fires on data updates for a particular type. If the type is initially not
+    /// present, a null |data| pointer is produced. The type may only transition
+    /// from absent to present at most once, as there is no deletion.
+    ///
+    /// No deduplication is performed.
+    ///
+    /// At most one update will be in-flight at a time; once a client is ready
+    /// for another update, it should call the callback. At most one update will
+    /// be queued for dispatch; older updates will be dropped.
+    1: OnUpdated(fuchsia.mem.Buffer? data) -> ();
 };
 
 enum EntityWriteStatus {
-  OK = 0;
-  /// Entity providers are not necessarily required to support entity mutation.
-  READ_ONLY = 1;
+    OK = 0;
+    /// Entity providers are not necessarily required to support entity mutation.
+    READ_ONLY = 1;
 };

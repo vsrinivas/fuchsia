@@ -45,13 +45,12 @@ void AllocateStack(const zx::vmo& vmo, size_t vmo_offset, size_t stack_size,
   uintptr_t allocate_address;
   zx_status_t status = zx::vmar::root_self()->allocate(
       0, stack_size + 2 * kStackGuardSize,
-      ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC,
-      vmar, &allocate_address);
+      ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC, vmar,
+      &allocate_address);
   FXL_DCHECK(status == ZX_OK);
 
-  status = vmar->map(
-      kStackGuardSize, vmo, vmo_offset, stack_size,
-      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC, addr);
+  status = vmar->map(kStackGuardSize, vmo, vmo_offset, stack_size,
+                     ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC, addr);
   FXL_DCHECK(status == ZX_OK);
 }
 

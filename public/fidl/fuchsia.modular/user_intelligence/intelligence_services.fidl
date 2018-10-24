@@ -8,12 +8,12 @@ library fuchsia.modular;
 // services needed by any sort of Module/Agent.
 [Discoverable]
 interface IntelligenceServices {
-  // These are just here for illustrative purposes, and are not a complete
-  // list.
-  1: GetContextReader(request<ContextReader> context_reader);
-  2: GetContextWriter(request<ContextWriter> context_writer);
+    // These are just here for illustrative purposes, and are not a complete
+    // list.
+    1: GetContextReader(request<ContextReader> context_reader);
+    2: GetContextWriter(request<ContextWriter> context_writer);
 
-  3: GetProposalPublisher(request<ProposalPublisher> proposal_publisher);
+    3: GetProposalPublisher(request<ProposalPublisher> proposal_publisher);
 
-  4: RegisterQueryHandler(QueryHandler query_handler);
+    4: RegisterQueryHandler(QueryHandler query_handler);
 };
