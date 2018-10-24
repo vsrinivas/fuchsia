@@ -79,28 +79,31 @@ void HevcDec::PowerOn() {
     kGxmGp0 = 6,
     kGxmXtal = 7,  // 24 MHz
 
-    kG12aFclkDiv2p5 = 0,  // 800 MHz
-    kG12aFclkDiv3 = 1,    // 666 MHz
-    kG12aFclkDiv4 = 2,    // 500 MHz
-    kG12aFclkDiv5 = 3,    // 400 MHz
-    kG12aFclkDiv7 = 4,    // 285.7 MHz
-    kG12aHifi = 5,
-    kG12aGp0 = 6,
-    kG12aXtal = 7,  // 24 MHz
+    // G12B has the same clock inputs as G12A.
+    kG12xFclkDiv2p5 = 0,  // 800 MHz
+    kG12xFclkDiv3 = 1,    // 666 MHz
+    kG12xFclkDiv4 = 2,    // 500 MHz
+    kG12xFclkDiv5 = 3,    // 400 MHz
+    kG12xFclkDiv7 = 4,    // 285.7 MHz
+    kG12xHifi = 5,
+    kG12xGp0 = 6,
+    kG12xXtal = 7,  // 24 MHz
   };
 
   // Pick 500 MHz. The maximum frequency used in linux is 648 MHz, but that
   // requires using GP0, which is already being used by the GPU.
   // The linux driver also uses 200MHz in some circumstances for videos <=
   // 1080p30.
-  uint32_t clock_sel =
-      owner_->device_type() == DeviceType::kG12A ? kG12aFclkDiv4 : kGxmFclkDiv4;
+  uint32_t clock_sel = (owner_->device_type() == DeviceType::kG12A ||
+                        owner_->device_type() == DeviceType::kG12B)
+                           ? kG12xFclkDiv4
+                           : kGxmFclkDiv4;
 
   auto clock_cntl =
       HhiHevcClkCntl::Get().FromValue(0).set_vdec_en(true).set_vdec_sel(
           clock_sel);
   // GXM HEVC doesn't have a front half.
-  if (owner_->device_type() == DeviceType::kG12A) {
+  if (IsDeviceAtLeast(owner_->device_type(), DeviceType::kG12A)) {
     clock_cntl.set_front_enable(true).set_front_sel(clock_sel);
   }
   clock_cntl.WriteTo(mmio()->hiubus);

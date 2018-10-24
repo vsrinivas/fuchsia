@@ -184,7 +184,7 @@ void Vp9Decoder::InitializeLoopFilterData() {
 
 void Vp9Decoder::InitLoopFilter() {
   UpdateLoopFilterThresholds();
-  if (owner_->device_type() == DeviceType::kG12A) {
+  if (IsDeviceAtLeast(owner_->device_type(), DeviceType::kG12A)) {
     HevcDblkCfgB::Get()
         .FromValue(0x54 << 8)
         .set_vp9_mode(1)
@@ -259,7 +259,7 @@ zx_status_t Vp9Decoder::InitializeHardware() {
   uint8_t* firmware;
   uint32_t firmware_size;
   FirmwareBlob::FirmwareType firmware_type =
-      (owner_->device_type() == DeviceType::kG12A)
+      IsDeviceAtLeast(owner_->device_type(), DeviceType::kG12A)
           ? FirmwareBlob::FirmwareType::kVp9MmuG12a
           : FirmwareBlob::FirmwareType::kVp9Mmu;
 
@@ -300,7 +300,7 @@ zx_status_t Vp9Decoder::InitializeHardware() {
       .FromValue(working_buffers_.scale_lut.addr32())
       .WriteTo(owner_->dosbus());
 
-  if (owner_->device_type() == DeviceType::kG12A) {
+  if (IsDeviceAtLeast(owner_->device_type(), DeviceType::kG12A)) {
     HevcDblkCfgE::Get()
         .FromValue(working_buffers_.deblock_parameters2.addr32())
         .WriteTo(owner_->dosbus());
@@ -345,7 +345,7 @@ zx_status_t Vp9Decoder::InitializeHardware() {
       .FromValue(working_buffers_.count_buffer.addr32())
       .WriteTo(owner_->dosbus());
 
-  if (owner_->device_type() == DeviceType::kG12A) {
+  if (IsDeviceAtLeast(owner_->device_type(), DeviceType::kG12A)) {
     HevcAssistMmuMapAddr::Get()
         .FromValue(working_buffers_.frame_map_mmu.addr32())
         .WriteTo(owner_->dosbus());
@@ -811,7 +811,7 @@ void Vp9Decoder::ConfigureFrameOutput(uint32_t width, uint32_t height,
     auto temp = HevcSaoCtrl1::Get().ReadFrom(owner_->dosbus());
     temp.set_mem_map_mode(HevcSaoCtrl1::kMemMapModeLinear)
         .set_endianness(HevcSaoCtrl1::kBigEndian64);
-    if (owner_->device_type() == DeviceType::kG12A) {
+    if (IsDeviceAtLeast(owner_->device_type(), DeviceType::kG12A)) {
       HevcDblkCfgB::Get()
           .ReadFrom(owner_->dosbus())
           .set_compressed_write_enable(true)
@@ -1319,7 +1319,7 @@ void Vp9Decoder::InitializeParser() {
   HevcdIppTopCntl::Get().FromValue(0).set_enable_ipp(true).WriteTo(
       owner_->dosbus());
 
-  if (owner_->device_type() == DeviceType::kG12A) {
+  if (IsDeviceAtLeast(owner_->device_type(), DeviceType::kG12A)) {
     HevcStreamFifoCtl::Get()
         .ReadFrom(owner_->dosbus())
         .set_stream_fifo_hole(true)

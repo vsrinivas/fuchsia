@@ -685,6 +685,9 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
     case PDEV_PID_AMLOGIC_S905D2:
       device_type_ = DeviceType::kG12A;
       break;
+    case PDEV_PID_AMLOGIC_T931:
+      device_type_ = DeviceType::kG12B;
+      break;
     default:
       DECODE_ERROR("Unknown soc pid: %d\n", info.pid);
       return ZX_ERR_INVALID_ARGS;
@@ -754,7 +757,7 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   int64_t reset_register_offset = 0x1100 * 4;
   int64_t parser_register_offset = 0;
   int64_t demux_register_offset = 0;
-  if (device_type_ == DeviceType::kG12A) {
+  if (IsDeviceAtLeast(device_type_, DeviceType::kG12A)) {
     // Some portions of the cbus moved in newer versions (TXL and later).
     reset_register_offset = 0x0400 * 4;
     parser_register_offset = (0x3800 - 0x2900) * 4;
