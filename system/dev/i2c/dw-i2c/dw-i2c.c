@@ -101,7 +101,7 @@ static zx_status_t i2c_dw_enable(i2c_dw_dev_t* dev) {
     return ZX_OK;
 }
 
-static void i2c_dw_clear_intrrupts(i2c_dw_dev_t* dev) {
+static void i2c_dw_clear_interrupts(i2c_dw_dev_t* dev) {
     I2C_DW_READ32(DW_I2C_CLR_INTR); // reading this register will clear all the interrupts
 }
 
@@ -152,14 +152,14 @@ static int i2c_dw_irq_thread(void* arg) {
 
         uint32_t reg = I2C_DW_READ32(DW_I2C_RAW_INTR_STAT);
         if (reg & DW_I2C_INTR_TX_ABRT) {
-            // some sort of error has occured. figure it out
+            // some sort of error has occurred. figure it out
             i2c_dw_dumpstate(dev);
             zx_object_signal(dev->event_handle, 0, I2C_ERROR_SIGNAL);
             zxlogf(ERROR, "i2c: error on bus\n");
         } else {
             zx_object_signal(dev->event_handle, 0, I2C_TXN_COMPLETE_SIGNAL);
         }
-        i2c_dw_clear_intrrupts(dev);
+        i2c_dw_clear_interrupts(dev);
         i2c_dw_disable_interrupts(dev);
     }
 
@@ -194,7 +194,7 @@ static zx_status_t i2c_dw_transact(void* ctx, uint32_t bus_id, const i2c_impl_op
     i2c_dw_set_slave_addr(dev, rws[0].address);
     i2c_dw_enable(dev);
     i2c_dw_disable_interrupts(dev);
-    i2c_dw_clear_intrrupts(dev);
+    i2c_dw_clear_interrupts(dev);
 
     zx_status_t status = ZX_OK;
     for (i = 0; i < count; ++i) {
@@ -209,7 +209,7 @@ static zx_status_t i2c_dw_transact(void* ctx, uint32_t bus_id, const i2c_impl_op
     }
 
     i2c_dw_disable_interrupts(dev);
-    i2c_dw_clear_intrrupts(dev);
+    i2c_dw_clear_interrupts(dev);
     i2c_dw_disable(dev);
 
     return status;
@@ -315,7 +315,7 @@ static zx_status_t i2c_dw_host_init(i2c_dw_dev_t* dev) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    // read the various capabitlies of the component
+    // read the various capabilities of the component
     dev->tx_fifo_depth = I2C_DW_GET_BITS32(DW_I2C_COMP_PARAM_1,
                                                         DW_I2C_COMP_PARAM_1_TXFIFOSZ_START,
                                                         DW_I2C_COMP_PARAM_1_TXFIFOSZ_BITS);
@@ -358,7 +358,7 @@ static zx_status_t i2c_dw_host_init(i2c_dw_dev_t* dev) {
                                                         DW_I2C_CON_MASTER_MODE_BITS,
                                                         I2C_ENABLE);
 
-    // write ifnal mask
+    // write final mask
     I2C_DW_WRITE32(DW_I2C_CON, regval);
 
     // Write SS/FS LCNT and HCNT

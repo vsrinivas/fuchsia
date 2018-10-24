@@ -5,7 +5,7 @@
 #pragma once
 
 #define I2C_DW_COMP_TYPE_NUM    0x44570140
-#define I2C_DW_MAX_TRANSFER     64 // Local buffer for transfer and recieve. Matches FIFO size
+#define I2C_DW_MAX_TRANSFER     64 // Local buffer for transfer and receive. Matches FIFO size
 #define I2C_ERROR_SIGNAL        ZX_USER_SIGNAL_0
 #define I2C_TXN_COMPLETE_SIGNAL ZX_USER_SIGNAL_1
 
