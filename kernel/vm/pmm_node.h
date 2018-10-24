@@ -7,9 +7,9 @@
 
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
+#include <fbl/mutex.h>
 
 #include <kernel/lockdep.h>
-#include <kernel/mutex.h>
 #include <vm/pmm.h>
 
 #include "pmm_arena.h"
