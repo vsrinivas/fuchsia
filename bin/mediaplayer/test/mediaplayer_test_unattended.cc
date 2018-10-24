@@ -82,7 +82,7 @@ TEST_F(MediaPlayerTestUnattended, PlayWav) {
 
   player_->Play();
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_FALSE(RunLoopWithTimeout(zx::duration(ZX_SEC(10))));
 }
 
 }  // namespace test
