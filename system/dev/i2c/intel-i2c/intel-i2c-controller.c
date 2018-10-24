@@ -56,11 +56,13 @@ static void intel_i2c_transact(void* ctx, const i2c_op_t ops[], size_t cnt,
     i2c_slave_segment_t segs[I2C_MAX_RW_OPS];
     if (cnt >= I2C_MAX_RW_OPS) {
         transact_cb(cookie, ZX_ERR_NOT_SUPPORTED, NULL, 0);
+        return;
     }
     uint8_t* read_buffer = malloc(MAX_TRANSFER_SIZE);
     if (read_buffer == NULL) {
         zxlogf(ERROR, "intel-i2c-controller: out of memory\n");
         transact_cb(cookie, ZX_ERR_NO_MEMORY, NULL, 0);
+        return;
     }
     uint8_t* p_reads = read_buffer;
     for (size_t i = 0; i < cnt; ++i) {
@@ -71,6 +73,7 @@ static void intel_i2c_transact(void* ctx, const i2c_op_t ops[], size_t cnt,
             if (p_reads - read_buffer > MAX_TRANSFER_SIZE) {
                 free(read_buffer);
                 transact_cb(cookie, ZX_ERR_INVALID_ARGS, NULL, 0);
+                return;
             }
         } else {
             segs[i].buf = ops[i].data_buffer;
@@ -83,6 +86,7 @@ static void intel_i2c_transact(void* ctx, const i2c_op_t ops[], size_t cnt,
         zxlogf(ERROR, "intel-i2c-controller: intel_serialio_i2c_slave_transfer: %d\n", status);
         free(read_buffer);
         transact_cb(cookie, status, NULL, 0);
+        return;
     }
     i2c_op_t read_ops[I2C_MAX_RW_OPS];
     size_t read_ops_cnt = 0;
@@ -97,6 +101,7 @@ static void intel_i2c_transact(void* ctx, const i2c_op_t ops[], size_t cnt,
     }
     transact_cb(cookie, status, read_ops, read_ops_cnt);
     free(read_buffer);
+    return;
 }
 
 static zx_status_t intel_i2c_get_max_transfer_size(void* ctx, size_t* out_size) {
