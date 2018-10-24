@@ -45,6 +45,26 @@ constexpr pbus_mmio_t mipi_mmios[] = {
         .base = T931_MIPI_ADAPTER_BASE,
         .length = T931_MIPI_ADAPTER_LENGTH,
     },
+    // HIU for clocks.
+    {
+        .base = T931_HIU_BASE,
+        .length = T931_HIU_LENGTH,
+    },
+    // Power domain
+    {
+        .base = T931_POWER_DOMAIN_BASE,
+        .length = T931_POWER_DOMAIN_LENGTH,
+    },
+    // Memory PD
+    {
+        .base = T931_MEMORY_PD_BASE,
+        .length = T931_MEMORY_PD_LENGTH,
+    },
+    // Reset
+    {
+        .base = T931_RESET_BASE,
+        .length = T931_RESET_LENGTH,
+    },
 };
 
 constexpr camera_sensor_t mipi_sensor[] = {

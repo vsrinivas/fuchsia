@@ -18,12 +18,6 @@
 #define T931_I2C2_BASE                  (T931_CBUS_BASE + 0x1d000)
 #define T931_I2C3_BASE                  (T931_CBUS_BASE + 0x1c000)
 
-#define T931_DMC_BASE                   0xff638000
-#define T931_DMC_LENGTH                 0x1000
-
-#define T931_RESET_BASE                 0xffd01000
-#define T931_RESET_LENGTH               0x1000
-
 #define T931_DOS_BASE                   0xff620000
 #define T931_DOS_LENGTH                 0x10000
 
@@ -55,6 +49,19 @@
 #define T931_MIPI_ADAPTER_BASE          0xff650000
 #define T931_MIPI_ADAPTER_LENGTH        0x6000
 
+// Power domain
+#define T931_POWER_DOMAIN_BASE          0xff800000
+#define T931_POWER_DOMAIN_LENGTH        0x1000
+
+// Memory Power Domain
+#define T931_MEMORY_PD_BASE             0xff63c000
+#define T931_MEMORY_PD_LENGTH           0x1000
+
+// Reset
+#define T931_RESET_BASE                 0xffd01000
+#define T931_RESET_LENGTH               0x100
+
+// USB.
 #define T931_USB0_BASE                  0xff500000
 #define T931_USB0_LENGTH                0x100000
 

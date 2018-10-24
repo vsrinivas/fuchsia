@@ -43,6 +43,10 @@ private:
     fbl::unique_ptr<ddk::MmioBuffer> aphy0_mmio_;
     fbl::unique_ptr<ddk::MmioBuffer> csi_host0_mmio_;
     fbl::unique_ptr<ddk::MmioBuffer> mipi_adap_mmio_;
+    fbl::unique_ptr<ddk::MmioBuffer> hiu_mmio_;
+    fbl::unique_ptr<ddk::MmioBuffer> power_mmio_;
+    fbl::unique_ptr<ddk::MmioBuffer> memory_pd_mmio_;
+    fbl::unique_ptr<ddk::MmioBuffer> reset_mmio_;
 
     pdev_protocol_t pdev_;
 
@@ -56,6 +60,7 @@ private:
 
     zx_status_t InitBuffer(const mipi_adap_info_t* info, size_t size);
     zx_status_t InitPdev(zx_device_t* parent);
+    uint32_t AdapGetDepth(const mipi_adap_info_t* info);
     int AdapterIrqHandler();
 
     // MIPI Iternal APIs
@@ -82,8 +87,10 @@ private:
     void AdapReaderStart(const mipi_adap_info_t* info);
     void AdapFrontEndStart(const mipi_adap_info_t* info);
 
-    uint32_t AdapGetDepth(const mipi_adap_info_t* info);
-    void MipiDumpRegisters();
+    // MIPI & ISP Power and clock APIs.
+    void InitMipiClock();
+    void PowerUpIsp();
+    void IspHWReset(bool reset);
 };
 
 } // namespace camera

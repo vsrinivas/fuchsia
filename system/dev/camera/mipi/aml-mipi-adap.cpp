@@ -148,7 +148,9 @@ void AmlMipiDevice::AdapFrontEndStart(const mipi_adap_info_t* info) {
     auto frontend_reg = mipi_adap_mmio_->View(FRONTEND_BASE, kFrontEnd0Size);
 
     frontend_reg.SetBits32(1 << 0, CSI2_GEN_CTRL0);
-    val = static_cast<uint32_t>(ceil((width * depth) / (8 * 16)));
+    // This register information is missing in the datasheet.
+    // Best assumption is that theunit of values programmed in the register is 128bit.
+    val = static_cast<uint32_t>(ceil((width * depth) / static_cast<double>((8 * 16))));
     frontend_reg.ModifyBits32(val, 4, 28, CSI2_DDR_STRIDE_PIX);
 }
 

@@ -28,8 +28,59 @@ constexpr uint32_t kCsiPhy0 = 0;
 constexpr uint32_t kAphy0 = 1;
 constexpr uint32_t kCsiHost0 = 2;
 constexpr uint32_t kMipiAdap = 3;
+constexpr uint32_t kHiu = 4;
+constexpr uint32_t kPowerDomain = 5;
+constexpr uint32_t kMemoryDomain = 6;
+constexpr uint32_t kReset = 7;
+
+// CLK Shifts & Masks
+constexpr uint32_t kClkMuxMask = 0xfff;
+constexpr uint32_t kClkEnableShift = 8;
 
 } // namespace
+
+void AmlMipiDevice::IspHWReset(bool reset) {
+    if (reset) {
+        reset_mmio_->ClearBits32(1 << 1, RESET4_LEVEL);
+    } else {
+        reset_mmio_->SetBits32(1 << 1, RESET4_LEVEL);
+    }
+}
+
+void AmlMipiDevice::PowerUpIsp() {
+    // set bit[18-19]=0
+    power_mmio_->ClearBits32(1 << 18 | 1 << 19, AO_RTI_GEN_PWR_SLEEP0);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
+
+    // set bit[18-19]=0
+    power_mmio_->ClearBits32(1 << 18 | 1 << 19, AO_RTI_GEN_PWR_ISO0);
+
+    // MEM_PD_REG0 set 0
+    memory_pd_mmio_->Write32(0, HHI_ISP_MEM_PD_REG0);
+    // MEM_PD_REG1 set 0
+    memory_pd_mmio_->Write32(0, HHI_ISP_MEM_PD_REG1);
+
+    hiu_mmio_->Write32(0x5b446585, HHI_CSI_PHY_CNTL0);
+    hiu_mmio_->Write32(0x803f4321, HHI_CSI_PHY_CNTL1);
+}
+
+void AmlMipiDevice::InitMipiClock() {
+    // clear existing values
+    hiu_mmio_->ClearBits32(kClkMuxMask, HHI_MIPI_ISP_CLK_CNTL);
+    // set the divisor = 1 (writing (1-1) to div field)
+    // source for the unused mux = S905D2_FCLK_DIV3   = 3 // 666.7 MHz
+    hiu_mmio_->SetBits32(((1 << kClkEnableShift) | 4 << 9),
+                         HHI_MIPI_ISP_CLK_CNTL);
+
+    // clear existing values
+    hiu_mmio_->ClearBits32(kClkMuxMask, HHI_MIPI_CSI_PHY_CLK_CNTL);
+    // set the divisor = 2 (writing (2-1) to div field)
+    // source for the unused mux = S905D2_FCLK_DIV5   = 6 // 400 MHz
+    hiu_mmio_->SetBits32(((1 << kClkEnableShift) | 6 << 9 | 1),
+                         HHI_MIPI_CSI_PHY_CLK_CNTL);
+
+    zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
+}
 
 zx_status_t AmlMipiDevice::InitPdev(zx_device_t* parent) {
     zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
@@ -68,6 +119,34 @@ zx_status_t AmlMipiDevice::InitPdev(zx_device_t* parent) {
         return status;
     }
     mipi_adap_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+
+    status = pdev_map_mmio_buffer2(&pdev_, kHiu, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: pdev_map_mmio_buffer2 failed %d\n", __FUNCTION__, status);
+        return status;
+    }
+    hiu_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+
+    status = pdev_map_mmio_buffer2(&pdev_, kPowerDomain, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: pdev_map_mmio_buffer2 failed %d\n", __FUNCTION__, status);
+        return status;
+    }
+    power_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+
+    status = pdev_map_mmio_buffer2(&pdev_, kMemoryDomain, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: pdev_map_mmio_buffer2 failed %d\n", __FUNCTION__, status);
+        return status;
+    }
+    memory_pd_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
+
+    status = pdev_map_mmio_buffer2(&pdev_, kReset, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: pdev_map_mmio_buffer2 failed %d\n", __FUNCTION__, status);
+        return status;
+    }
+    reset_mmio_ = fbl::make_unique<ddk::MmioBuffer>(mmio);
 
     // Get our bti.
     status = pdev_get_bti(&pdev_, 0, bti_.reset_and_get_address());
@@ -157,10 +236,23 @@ void AmlMipiDevice::MipiCsi2Init(const mipi_info_t* info) {
     csi_host0_mmio_->Write32(0xffffffff, MIPI_CSI_PHY_SHUTDOWNZ);
 }
 
+// static
 zx_status_t AmlMipiDevice::MipiCsiInit(void* ctx,
                                        const mipi_info_t* mipi_info,
                                        const mipi_adap_info_t* adap_info) {
     auto& self = *static_cast<AmlMipiDevice*>(ctx);
+
+    // The ISP and MIPI module is in same power domain.
+    // So if we don't call the power sequence of ISP, the mipi module
+    // won't work and it will block accesses to the  mipi register block.
+    self.PowerUpIsp();
+
+    // Setup MIPI CSI PHY CLK to 200MHz.
+    // Setup MIPI ISP CLK to 667MHz.
+    self.InitMipiClock();
+
+    self.IspHWReset(true);
+    self.IspHWReset(false);
 
     // Initialize the PHY.
     self.MipiPhyInit(mipi_info);
@@ -179,6 +271,7 @@ zx_status_t AmlMipiDevice::MipiCsiInit(void* ctx,
     return status;
 }
 
+// static
 zx_status_t AmlMipiDevice::MipiCsiDeInit(void* ctx) {
     auto& self = *static_cast<AmlMipiDevice*>(ctx);
     self.MipiPhyReset();
@@ -193,6 +286,10 @@ void AmlMipiDevice::ShutDown() {
     aphy0_mmio_.reset();
     csi_host0_mmio_.reset();
     mipi_adap_mmio_.reset();
+    hiu_mmio_.reset();
+    power_mmio_.reset();
+    memory_pd_mmio_.reset();
+    reset_mmio_.reset();
 }
 
 static void DdkUnbind(void* ctx) {
@@ -231,6 +328,7 @@ static device_add_args_t mipi_dev_args = []() {
     return result;
 }();
 
+// static
 zx_status_t AmlMipiDevice::Create(zx_device_t* parent) {
     fbl::AllocChecker ac;
     auto mipi_device = fbl::make_unique_checked<AmlMipiDevice>(&ac);
