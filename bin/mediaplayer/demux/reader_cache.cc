@@ -131,8 +131,6 @@ void ReaderCache::FillHoles(std::vector<SparseByteBuffer::Hole> holes,
         }
 
         if (load_position != load_position_) {
-          FXL_LOG(INFO) << "Abandoning load for " << load_position
-                        << " to load " << load_position_;
           callback();
           return;
         }
