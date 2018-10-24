@@ -12,6 +12,7 @@
 #include <zircon/types.h>
 #include <zircon/device/vfs.h>
 
+#include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/remoteio.h>
@@ -25,14 +26,23 @@
 
 namespace devmgr {
 
-struct dc_watcher {
-    dc_watcher() = default;
+struct dc_watcher : fbl::DoublyLinkedListable<fbl::unique_ptr<dc_watcher>> {
+    dc_watcher(dc_devnode* dn, zx::channel ch, uint32_t mask);
 
-    dc_watcher* next = nullptr;
-    devnode_t* devnode = nullptr;
+    dc_watcher(const dc_watcher&) = delete;
+    dc_watcher& operator=(const dc_watcher&) = delete;
+
+    dc_watcher(dc_watcher&&) = delete;
+    dc_watcher& operator=(dc_watcher&&) = delete;
+
+    dc_devnode* devnode = nullptr;
+    zx::channel handle;
     uint32_t mask = 0;
-    zx_handle_t handle = ZX_HANDLE_INVALID;
 };
+
+dc_watcher::dc_watcher(dc_devnode* dn, zx::channel ch, uint32_t mask)
+    : devnode(dn), handle(fbl::move(ch)), mask(mask) {
+}
 
 struct dc_iostate {
     dc_iostate() = default;
@@ -71,7 +81,7 @@ struct dc_devnode {
     // otherwise the device we are referencing
     device_t* device = nullptr;
 
-    dc_watcher* watchers = nullptr;
+    fbl::DoublyLinkedList<fbl::unique_ptr<dc_watcher>> watchers;
 
     // entry in our parent devnode's children list
     list_node_t node = {};
@@ -213,8 +223,7 @@ static bool devnode_is_local(devnode_t* dn) {
 }
 
 static void devfs_notify(devnode_t* dn, const fbl::String& name, unsigned op) {
-    dc_watcher* w = dn->watchers;
-    if (w == nullptr) {
+    if (dn->watchers.is_empty()) {
         return;
     }
 
@@ -224,6 +233,7 @@ static void devfs_notify(devnode_t* dn, const fbl::String& name, unsigned op) {
     }
 
     uint8_t msg[fuchsia_io_MAX_FILENAME + 2];
+    const uint32_t msg_len = static_cast<uint32_t>(len + 2);
     msg[0] = static_cast<uint8_t>(op);
     msg[1] = static_cast<uint8_t>(len);
     memcpy(msg + 2, name.c_str(), len);
@@ -231,35 +241,31 @@ static void devfs_notify(devnode_t* dn, const fbl::String& name, unsigned op) {
     // convert to mask
     op = (1u << op);
 
-    dc_watcher** wp;
-    dc_watcher* next;
-    for (wp = &dn->watchers; w != nullptr; w = next) {
-        next = w->next;
-        if (!(w->mask & op)) {
+    for (auto itr = dn->watchers.begin(); itr != dn->watchers.end(); ) {
+        auto& cur = *itr;
+        // Advance the iterator now instead of at the end of the loop because we
+        // may erase the current element from the list.
+        ++itr;
+
+        if (!(cur.mask & op)) {
             continue;
         }
-        if (zx_channel_write(w->handle, 0, msg, static_cast<uint32_t>(len + 2), nullptr, 0) < 0) {
-            *wp = next;
-            zx_handle_close(w->handle);
-            delete w;
-        } else {
-            wp = &w->next;
+
+        if (cur.handle.write(0, msg, msg_len, nullptr, 0) != ZX_OK) {
+            dn->watchers.erase(cur);
+            // The dc_watcher is free'd here
         }
     }
 }
 
-static zx_status_t devfs_watch(devnode_t* dn, zx_handle_t h, uint32_t mask) {
-    auto watcher = fbl::make_unique<dc_watcher>();
+static zx_status_t devfs_watch(devnode_t* dn, zx::channel h, uint32_t mask) {
+    auto watcher = fbl::make_unique<dc_watcher>(dn, fbl::move(h), mask);
     if (watcher == nullptr) {
-        zx_handle_close(h);
         return ZX_ERR_NO_MEMORY;
     }
 
-    watcher->devnode = dn;
-    watcher->next = dn->watchers;
-    watcher->handle = h;
-    watcher->mask = mask;
-    dn->watchers = watcher.get();
+    dc_watcher* new_watcher = watcher.get();
+    dn->watchers.push_front(fbl::move(watcher));
 
     if (mask & fuchsia_io_WATCH_MASK_EXISTING) {
         devnode_t* child;
@@ -274,11 +280,12 @@ static zx_status_t devfs_watch(devnode_t* dn, zx_handle_t h, uint32_t mask) {
 
     }
 
-    // Don't send EXISTING or IDLE events from now on...
-    watcher->mask &= ~(fuchsia_io_WATCH_MASK_EXISTING | fuchsia_io_WATCH_MASK_IDLE);
+    // TODO(teisenbe): Fix the use-after-free here caused by devfs_notify
+    // sometimes deleting new_watcher
 
-    // dn->watchers now owns this
-    __UNUSED auto ptr = watcher.release();
+    // Don't send EXISTING or IDLE events from now on...
+    new_watcher->mask &= ~(fuchsia_io_WATCH_MASK_EXISTING | fuchsia_io_WATCH_MASK_IDLE);
+
     return ZX_OK;
 }
 
@@ -438,14 +445,7 @@ static void _devfs_remove(devnode_t* dn) {
     }
 
     // destroy all watchers
-    dc_watcher* watcher;
-    dc_watcher* next;
-    for (watcher = dn->watchers; watcher != nullptr; watcher = next) {
-        next = watcher->next;
-        zx_handle_close(watcher->handle);
-        delete watcher;
-    }
-    dn->watchers = nullptr;
+    dn->watchers.clear();
 
     // detach children
     while (list_remove_head(&dn->children) != nullptr) {
@@ -729,11 +729,13 @@ static zx_status_t devfs_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* co
     case fuchsia_io_DirectoryWatchOrdinal: {
         DECODE_REQUEST(msg, DirectoryWatch);
         DEFINE_REQUEST(msg, DirectoryWatch);
+        zx::channel watcher(request->watcher);
+
+        request->watcher = ZX_HANDLE_INVALID;
         if (request->mask & (~fuchsia_io_WATCH_MASK_ALL) || request->options != 0) {
-            zx_handle_close(request->watcher);
             return fuchsia_io_DirectoryWatch_reply(txn, ZX_ERR_INVALID_ARGS);
         }
-        r = devfs_watch(dn, request->watcher, request->mask);
+        r = devfs_watch(dn, fbl::move(watcher), request->mask);
         return fuchsia_io_DirectoryWatch_reply(txn, r);
     }
     case fuchsia_io_DirectoryAdminQueryFilesystemOrdinal: {
