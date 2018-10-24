@@ -159,9 +159,9 @@ fn handle_request(r: avdtp::Request) -> Result<(), avdtp::Error> {
             responder.send(&caps)
         }
         // Positively respond to everything else.
-        avdtp::Request::Open { responder, .. } | avdtp::Request::Close { responder, .. } => {
-            responder.send()
-        }
+        avdtp::Request::Open { responder, .. }
+        | avdtp::Request::Close { responder, .. }
+        | avdtp::Request::Abort { responder, .. } => responder.send(),
         avdtp::Request::Start { responder, .. } | avdtp::Request::Suspend { responder, .. } => {
             responder.send()
         }

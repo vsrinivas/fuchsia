@@ -10,10 +10,13 @@ extern crate failure;
 
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_info, fx_log_warn, fx_vlog};
-use fuchsia_zircon as zx;
+use fuchsia_zircon::{self as zx, Duration, Time};
+use futures::future::FusedFuture;
 use futures::ready;
+use futures::select;
 use futures::stream::Stream;
 use futures::task::{LocalWaker, Poll, Waker};
+use futures::FutureExt;
 use parking_lot::Mutex;
 use slab::Slab;
 use std::collections::VecDeque;
@@ -184,6 +187,24 @@ impl Peer {
         Ok(())
     }
 
+    /// Send a Close Stream Command (Sec 8.14) to the remote peer for the given
+    /// `stream_id`.
+    /// Returns Ok(()) if the command is accepted, and RemoteRejected if the
+    /// remote peer rejects the command with the code returned by the remote.
+    pub async fn abort<'a>(&'a self, stream_id: &'a StreamEndpointId) -> Result<(), Error> {
+        let stream_params = &[stream_id.to_msg()];
+        let response: Result<SimpleResponse, Error> =
+            await!(self.send_command(SignalIdentifier::Abort, stream_params));
+        response?;
+        Ok(())
+    }
+
+    /// The maximum amount of time we will wait for a response to a signaling command.
+    fn command_timeout() -> Duration {
+        const RTX_SIG_TIMER_MS: i64 = 3000;
+        Duration::from_millis(RTX_SIG_TIMER_MS)
+    }
+
     /// Sends a signal on the socket and receive a future that will complete
     /// when we get the expected reponse.
     async fn send_command<'a, D: Decodable>(
@@ -201,12 +222,20 @@ impl Peer {
             self.inner.send_signal(buf.as_slice())?;
         }
 
-        let response_buf = await!(CommandResponse {
+        let mut response = CommandResponse {
             id: header.label(),
             inner: Some(self.inner.clone()),
-        })?;
+        };
 
-        decode_signaling_response(header.signal(), response_buf)
+        let mut timeout = fasync::Timer::new(Time::after(Peer::command_timeout())).fuse();
+
+        select! {
+            _ = timeout => Err(Error::Timeout),
+            r = response => {
+                let response_buf = r?;
+                decode_signaling_response(header.signal(), response_buf)
+            },
+        }
     }
 }
 
@@ -243,10 +272,38 @@ pub enum Request {
         stream_ids: Vec<StreamEndpointId>,
         responder: StreamResponder,
     },
+    Abort {
+        stream_id: StreamEndpointId,
+        responder: SimpleResponder,
+    },
     // TODO(jamuraa): add the rest of the requests
 }
 
+macro_rules! parse_one_seid {
+    ($body:ident, $signal:ident, $peer:ident, $id:ident, $request_variant:ident, $responder_type:ident) => {
+        if $body.len() != 1 {
+            Err(Error::BadLength)
+        } else {
+            Ok(Request::$request_variant {
+                stream_id: StreamEndpointId::from_msg(&$body[0]),
+                responder: $responder_type {
+                    signal: $signal,
+                    peer: $peer,
+                    id: $id,
+                },
+            })
+        }
+    };
+}
+
 impl Request {
+    fn get_req_seids(body: &[u8]) -> Result<Vec<StreamEndpointId>, Error> {
+        if body.len() < 1 {
+            return Err(Error::BadLength);
+        }
+        Ok(body.iter().map(&StreamEndpointId::from_msg).collect())
+    }
+
     fn parse(
         peer: Arc<PeerInner>, id: TxLabel, signal: SignalIdentifier, body: &[u8],
     ) -> Result<Request, Error> {
@@ -260,57 +317,29 @@ impl Request {
                     responder: DiscoverResponder { peer: peer, id: id },
                 })
             }
-            SignalIdentifier::GetCapabilities => {
-                if body.len() != 1 {
-                    return Err(Error::BadLength);
-                }
-                Ok(Request::GetCapabilities {
-                    stream_id: StreamEndpointId::from_msg(&body[0]),
-                    responder: GetCapabilitiesResponder {
-                        signal: signal,
-                        peer: peer,
-                        id: id,
-                    },
-                })
-            }
-            SignalIdentifier::GetAllCapabilities => {
-                if body.len() != 1 {
-                    return Err(Error::BadLength);
-                }
-                Ok(Request::GetAllCapabilities {
-                    stream_id: StreamEndpointId::from_msg(&body[0]),
-                    responder: GetCapabilitiesResponder {
-                        signal: signal,
-                        peer: peer,
-                        id: id,
-                    },
-                })
-            }
+            SignalIdentifier::GetCapabilities => parse_one_seid!(
+                body,
+                signal,
+                peer,
+                id,
+                GetCapabilities,
+                GetCapabilitiesResponder
+            ),
+            SignalIdentifier::GetAllCapabilities => parse_one_seid!(
+                body,
+                signal,
+                peer,
+                id,
+                GetAllCapabilities,
+                GetCapabilitiesResponder
+            ),
             SignalIdentifier::Open => {
-                if body.len() != 1 {
-                    return Err(Error::BadLength);
-                }
-                Ok(Request::Open {
-                    stream_id: StreamEndpointId::from_msg(&body[0]),
-                    responder: SimpleResponder {
-                        signal: signal,
-                        peer: peer,
-                        id: id,
-                    },
-                })
+                parse_one_seid!(body, signal, peer, id, Open, SimpleResponder)
             }
             SignalIdentifier::Start => {
-                if body.len() < 1 {
-                    return Err(Error::BadLength);
-                }
-                let mut streams = Vec::<StreamEndpointId>::new();
-                let mut loc = 0;
-                while loc < body.len() {
-                    streams.push(StreamEndpointId::from_msg(&body[loc]));
-                    loc += 1;
-                }
+                let seids = Request::get_req_seids(body)?;
                 Ok(Request::Start {
-                    stream_ids: streams,
+                    stream_ids: seids,
                     responder: StreamResponder {
                         signal: signal,
                         peer: peer,
@@ -319,36 +348,21 @@ impl Request {
                 })
             }
             SignalIdentifier::Close => {
-                if body.len() != 1 {
-                    return Err(Error::BadLength);
-                }
-                Ok(Request::Close {
-                    stream_id: StreamEndpointId::from_msg(&body[0]),
-                    responder: SimpleResponder {
-                        signal: signal,
-                        peer: peer,
-                        id: id,
-                    },
-                })
+                parse_one_seid!(body, signal, peer, id, Close, SimpleResponder)
             }
             SignalIdentifier::Suspend => {
-                if body.len() < 1 {
-                    return Err(Error::BadLength);
-                }
-                let mut streams = Vec::<StreamEndpointId>::new();
-                let mut loc = 0;
-                while loc < body.len() {
-                    streams.push(StreamEndpointId::from_msg(&body[loc]));
-                    loc += 1;
-                }
+                let seids = Request::get_req_seids(body)?;
                 Ok(Request::Suspend {
-                    stream_ids: streams,
+                    stream_ids: seids,
                     responder: StreamResponder {
                         signal: signal,
                         peer: peer,
                         id: id,
                     },
                 })
+            }
+            SignalIdentifier::Abort => {
+                parse_one_seid!(body, signal, peer, id, Abort, SimpleResponder)
             }
             _ => Err(Error::UnimplementedMessage),
         }
@@ -466,7 +480,7 @@ impl Decodable for StreamInformation {
         if from.len() < 2 {
             return Err(Error::InvalidMessage);
         }
-        let id = StreamEndpointId(from[0] >> 2);
+        let id = StreamEndpointId::from_msg(&from[0]);
         let in_use: bool = from[0] & 0x02 != 0;
         let media_type = MediaType::try_from(from[1] >> 4)?;
         let endpoint_type = EndpointType::try_from((from[1] >> 3) & 0x1)?;
@@ -996,6 +1010,12 @@ impl futures::Future for CommandResponse {
         }
 
         res
+    }
+}
+
+impl FusedFuture for CommandResponse {
+    fn is_terminated(&self) -> bool {
+        self.inner.is_none()
     }
 }
 

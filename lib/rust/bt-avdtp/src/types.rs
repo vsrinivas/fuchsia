@@ -317,6 +317,10 @@ pub enum Error {
     #[fail(display = "Command has bad length")]
     BadLength,
 
+    /// The remote end failed to respond to this command in time.
+    #[fail(display = "Command timed out")]
+    Timeout,
+
     /// The Remote end rejected a command we sent (with this error code)
     #[fail(display = "Remote end rejected the command (code = {:}", _0)]
     RemoteRejected(u8),

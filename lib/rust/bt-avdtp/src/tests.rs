@@ -111,7 +111,7 @@ fn command_not_supported_response() {
     assert!(complete.is_pending());
 
     // The peer should have responded with a Response Reject message with the
-    // same TxLabel with BAD_LENGTH
+    // same TxLabel with NOT_SUPPORTED_COMMAND
     expect_remote_recv(&[0x43, 0x0D, 0x19], &remote);
 }
 
@@ -209,10 +209,48 @@ fn exhaust_request_ids() {
     }
 
     // We should be able to make new requests now.
-    let mut another_response_fut = Box::pinned(peer.discover());
-    assert!(exec
-        .run_until_stalled(&mut another_response_fut)
-        .is_pending());
+    let mut another_fut = Box::pinned(peer.discover());
+    assert!(exec.run_until_stalled(&mut another_fut).is_pending());
+}
+
+#[test]
+fn command_timeout() {
+    let mut exec = fasync::Executor::new().expect("failed to create an executor");
+    let (peer, remote) = setup_peer();
+    let mut response_fut = Box::pinned(peer.discover());
+    assert!(exec.run_until_stalled(&mut response_fut).is_pending());
+
+    let received = recv_remote(&remote).unwrap();
+    // Last half of header must be Single (0b00) and Command (0b00)
+    assert_eq!(0x00, received[0] & 0xF);
+    assert_eq!(0x01, received[1]); // 0x01 = Discover
+
+    // We should be able to timeout the discover.
+    let complete = exec.run_until_stalled(&mut response_fut);
+    assert!(complete.is_pending());
+
+    exec.wake_next_timer();
+    assert_eq!(
+        Poll::Ready(Err(Error::Timeout)),
+        exec.run_until_stalled(&mut response_fut)
+    );
+
+    // We should be able to make a new request now.
+    let mut another_fut = Box::pinned(peer.discover());
+    assert!(exec.run_until_stalled(&mut another_fut).is_pending());
+
+    // Responding to the first command after it timed out doesn't complete the new command
+    let txlabel_raw = received[0] & 0xF0;
+    let response: &[u8] = &[
+        txlabel_raw | 0x0 << 2 | 0x2, // txlabel (same), Single (0b00), Response Accept (0b10)
+        0x01,                         // Discover
+        0x3E << 2 | 0x0 << 1,         // SEID (3E), Not In Use (0b0)
+        0x00 << 4 | 0x1 << 3,         // Audio (0x00), Sink (0x01)
+    ];
+
+    assert!(remote.write(response).is_ok());
+
+    assert!(exec.run_until_stalled(&mut another_fut).is_pending());
 }
 
 // Discovery tests
@@ -990,7 +1028,7 @@ macro_rules! seid_event_responder_send_test {
                     assert_eq!(StreamEndpointId::try_from(12).unwrap(), stream_id);
                     responder.send()
                 }
-                _ => panic!("should have received a Open"),
+                _ => panic!("received the wrong request"),
             };
 
             assert!(respond_res.is_ok());
@@ -1024,7 +1062,7 @@ macro_rules! seids_event_responder_send_test {
                     );
                     responder.send()
                 }
-                _ => panic!("should have received a Open"),
+                _ => panic!("received the wrong request"),
             };
 
             assert!(respond_res.is_ok());
@@ -1055,7 +1093,7 @@ macro_rules! seid_event_responder_reject_test {
                     assert_eq!(StreamEndpointId::try_from(12).unwrap(), stream_id);
                     responder.reject(ErrorCode::BadAcpSeid)
                 }
-                _ => panic!("should have received a GetAllCapabilities"),
+                _ => panic!("received the wrong request"),
             };
 
             assert!(respond_res.is_ok());
@@ -1087,7 +1125,7 @@ macro_rules! stream_event_responder_reject_test {
                     assert_eq!(&StreamEndpointId::try_from(12).unwrap(), stream_id);
                     responder.reject(stream_id, ErrorCode::BadAcpSeid)
                 }
-                _ => panic!("should have received a GetAllCapabilities"),
+                _ => panic!("received the wrong request"),
             };
 
             assert!(respond_res.is_ok());
@@ -1178,3 +1216,46 @@ stream_event_responder_reject_test!(
     *CMD_SUSPEND_VALUE,
     CMD_SUSPEND
 );
+
+// Abort
+
+const CMD_ABORT: &'static [u8] = &[
+    0x40, // TxLabel (4), Single Packet (0b00), Command (0b00)
+    0x0A, // RFA (0b00), Suspend (0x0A)
+    0x30, // SEID 12 (0b001100)
+];
+
+const CMD_ABORT_VALUE: &'static u8 = &0x0A;
+
+incoming_cmd_length_fail_test!(abort_length_too_short, *CMD_ABORT_VALUE, 0);
+incoming_cmd_length_fail_test!(abort_length_too_long, *CMD_ABORT_VALUE, 2);
+seid_command_test!(abort_command_works, *CMD_ABORT_VALUE, abort);
+seid_command_reject_test!(abort_command_reject_works, *CMD_ABORT_VALUE, abort);
+seid_event_responder_send_test!(abort_responder_send, Abort, *CMD_ABORT_VALUE, CMD_ABORT);
+seid_event_responder_reject_test!(abort_responder_reject, Abort, *CMD_ABORT_VALUE, CMD_ABORT);
+
+/// Abort requests with an invalid SEID are allowed to be dropped.
+/// We timeout after some amount of time.
+#[test]
+fn abort_sent_no_response() {
+    let mut exec = fasync::Executor::new().expect("failed to create an executor");
+    let (peer, remote) = setup_peer();
+    let seid = StreamEndpointId::try_from(1).unwrap();
+    let mut response_fut = Box::pinned(peer.abort(&seid));
+    assert!(exec.run_until_stalled(&mut response_fut).is_pending());
+
+    let received = recv_remote(&remote).unwrap();
+    // Last half of header must be Single (0b00) and Command (0b00)
+    assert_eq!(0x00, received[0] & 0xF);
+    assert_eq!(0x0A, received[1]); // $signal_value = $request_variant
+    assert_eq!(0x01 << 2, received[2]); // SEID (0x01) , RFA
+
+    let complete = exec.run_until_stalled(&mut response_fut);
+    assert!(complete.is_pending());
+
+    exec.wake_next_timer();
+    assert_eq!(
+        Poll::Ready(Err(Error::Timeout)),
+        exec.run_until_stalled(&mut response_fut)
+    );
+}
