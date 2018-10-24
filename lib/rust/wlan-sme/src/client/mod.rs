@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 mod bss;
-mod clone_utils;
+pub mod clone_utils;
 mod phy_selection;
 mod rsn;
 mod scan;
@@ -363,7 +363,6 @@ fn report_connect_finished<T>(token: Option<T::ConnectToken>,
 mod tests {
     use super::*;
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
-    use std::collections::HashSet;
     use std::error::Error;
 
     use super::test_utils::{expect_info_event, fake_protected_bss_description,
@@ -620,8 +619,8 @@ mod tests {
 
     fn create_sme() -> (ClientSme<FakeTokens>, MlmeStream, UserStream<FakeTokens>, InfoStream) {
         ClientSme::new(DeviceInfo {
-            supported_channels: HashSet::new(),
             addr: CLIENT_ADDR,
+            bands: vec![],
         })
     }
 }

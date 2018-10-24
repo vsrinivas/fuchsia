@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_wlan_mlme::{self as fidl_mlme};
+use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BandCapabilities};
+
+pub fn clone_capability_info(c: &fidl_mlme::CapabilityInfo) -> fidl_mlme::CapabilityInfo {
+    fidl_mlme::CapabilityInfo { ..*c }
+}
 
 pub fn clone_ht_capabilities(c: &fidl_mlme::HtCapabilities) -> fidl_mlme::HtCapabilities {
     fidl_mlme::HtCapabilities {
@@ -68,7 +72,7 @@ pub fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescriptio
         timestamp: d.timestamp,
         local_time: d.local_time,
 
-        cap: fidl_mlme::CapabilityInfo { ..d.cap },
+        cap: clone_capability_info(&d.cap),
         basic_rate_set: d.basic_rate_set.clone(),
         op_rate_set: d.op_rate_set.clone(),
         country: d.country.clone(),
@@ -91,4 +95,20 @@ pub fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescriptio
         },
         rssi_dbm: d.rssi_dbm,
     }
+}
+
+pub fn clone_band_cap(b: &BandCapabilities) -> BandCapabilities {
+    BandCapabilities {
+        band_id: b.band_id,
+        basic_rates: b.basic_rates.clone(),
+        base_frequency: b.base_frequency,
+        channels: b.channels.clone(),
+        ht_cap: b.ht_cap.as_ref().map(|v| Box::new(clone_ht_capabilities(v))),
+        vht_cap: b.vht_cap.as_ref().map(|v| Box::new(clone_vht_capabilities(v))),
+        cap: clone_capability_info(&b.cap)
+    }
+}
+
+pub fn clone_bands(bv: &Vec<BandCapabilities>) -> Vec<BandCapabilities> {
+    bv.iter().map(clone_band_cap).collect()
 }

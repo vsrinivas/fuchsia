@@ -5,6 +5,7 @@
 use failure::Fail;
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, ScanResultCodes, ScanRequest};
 use log::error;
+use std::collections::HashSet;
 use std::mem;
 use std::sync::Arc;
 
@@ -292,8 +293,13 @@ fn convert_discovery_result(msg: fidl_mlme::ScanEnd,
 }
 
 fn get_channels_to_scan(device_info: &DeviceInfo) -> Vec<u8> {
+    let mut device_supported_channels : HashSet<u8> = HashSet::new();
+    for band in &device_info.bands {
+        device_supported_channels.extend(&band.channels);
+    }
+
     SUPPORTED_CHANNELS.iter()
-        .filter(|chan| device_info.supported_channels.contains(chan))
+        .filter(|chan| device_supported_channels.contains(chan))
         .map(|chan| *chan)
         .collect()
 }
@@ -315,7 +321,6 @@ const SUPPORTED_CHANNELS: &[u8] = &[
 mod tests {
     use super::*;
 
-    use std::collections::HashSet;
     use crate::client::test_utils::{fake_bss_with_bssid, fake_unprotected_bss_description};
     use crate::client::clone_utils::clone_bss_desc;
 
@@ -491,8 +496,8 @@ mod tests {
     fn create_sched() -> ScanScheduler<i32, i32> {
         ScanScheduler::new(Arc::new(
             DeviceInfo {
-                supported_channels: HashSet::new(),
                 addr: CLIENT_ADDR,
+                bands: vec![],
             }
         ))
     }

@@ -414,7 +414,6 @@ fn create_start_request(config: &Config, ap_rsn: Option<&RsnCfg>) -> fidl_mlme::
 mod tests {
     use super::*;
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
-    use std::collections::HashSet;
     use std::error::Error;
 
     use crate::{MlmeStream, Station};
@@ -671,8 +670,8 @@ mod tests {
 
     fn create_sme() -> (ApSme<FakeTokens>, MlmeStream, UserStream<FakeTokens>) {
         ApSme::new(DeviceInfo {
-            supported_channels: HashSet::new(),
             addr: AP_ADDR,
+            bands: vec![],
         })
     }
 

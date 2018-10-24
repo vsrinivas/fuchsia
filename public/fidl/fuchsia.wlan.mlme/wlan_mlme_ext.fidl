@@ -39,13 +39,18 @@ enum MacRole {
     MESH = 3;
 };
 
-struct BandCapabilities {
-    HtCapabilities? ht_cap;
-    VhtCapabilities? vht_cap;
 
+// BandInfo groups capabilities defined per band.
+// This grouping is the industry's de factor standard.
+struct BandCapabilities {
+    Band band_id;
     vector<uint16> basic_rates;
     uint16 base_frequency;
     vector<uint8> channels;
+
+    CapabilityInfo cap;
+    HtCapabilities? ht_cap;
+    VhtCapabilities? vht_cap;
 };
 
 // TODO(tkilbourn): add more fields for debugging. For now, we just have the information
@@ -53,7 +58,6 @@ struct BandCapabilities {
 struct DeviceQueryConfirm {
     array<uint8>:6 mac_addr;
     MacRole role;
-    CapabilityInfo cap;
     vector<BandCapabilities> bands;
 };
 

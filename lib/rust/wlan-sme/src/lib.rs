@@ -11,7 +11,6 @@ mod sink;
 
 use fidl_fuchsia_wlan_mlme as fidl_mlme;
 use futures::channel::mpsc;
-use std::collections::HashSet;
 
 use crate::client::InfoEvent;
 
@@ -19,8 +18,8 @@ pub type Ssid = Vec<u8>;
 pub type MacAddr = [u8; 6];
 
 pub struct DeviceInfo {
-    pub supported_channels: HashSet<u8>,
     pub addr: [u8; 6],
+    pub bands: Vec<fidl_mlme::BandCapabilities>,
 }
 
 #[derive(Debug)]

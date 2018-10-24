@@ -82,7 +82,6 @@ mod tests {
     use super::*;
     use crate::client::test_utils::{fake_protected_bss_description, fake_unprotected_bss_description};
     use crate::client::test_utils::{make_rsne, rsne_as_bytes, wpa2_psk_ccmp_rsne_with_caps};
-    use std::collections::HashSet;
     use wlan_rsn::rsne::RsnCapabilities;
 
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
@@ -187,8 +186,8 @@ mod tests {
 
     fn make_device_info() -> DeviceInfo {
         DeviceInfo {
-            supported_channels: HashSet::new(),
             addr: CLIENT_ADDR,
+            bands: vec![],
         }
     }
 }

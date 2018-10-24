@@ -5,6 +5,7 @@
 #include <wlan/mlme/dispatcher.h>
 
 #include <fbl/unique_ptr.h>
+#include <wlan/common/band.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/mac_frame.h>
 #include <wlan/common/stats.h>
@@ -221,12 +222,12 @@ zx_status_t Dispatcher::HandleDeviceQueryRequest() {
     }
 
     auto wlanmac_info = device_->GetWlanInfo().ifc_info;
-    resp.cap = CapabilityInfo::FromDdk(wlanmac_info.caps).ToFidl();
 
     resp.bands->resize(0);
     for (uint8_t band_idx = 0; band_idx < info.num_bands; band_idx++) {
         const wlan_band_info_t& band_info = info.bands[band_idx];
         wlan_mlme::BandCapabilities band;
+        band.band_id = wlan::common::BandToFidl(band_info.band_id);
         band.basic_rates->resize(0);
         for (size_t rate_idx = 0; rate_idx < sizeof(band_info.basic_rates); rate_idx++) {
             if (band_info.basic_rates[rate_idx] != 0) {
@@ -241,6 +242,8 @@ zx_status_t Dispatcher::HandleDeviceQueryRequest() {
                 band.channels->push_back(chan_list.channels[chan_idx]);
             }
         }
+
+        band.cap = CapabilityInfo::FromDdk(wlanmac_info.caps).ToFidl();
 
         if (band_info.ht_supported) {
             auto ht_cap = HtCapabilities::FromDdk(band_info.ht_caps);

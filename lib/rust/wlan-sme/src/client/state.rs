@@ -454,8 +454,6 @@ fn handle_supplicant_start_failure<T>(token: Option<T::ConnectToken>, bss: Box<B
 mod tests {
     use super::*;
     use futures::channel::mpsc;
-    use std::collections::HashSet;
-    use std::iter::FromIterator;
     use std::sync::Arc;
 
     use crate::client::test_utils::{expect_info_event, fake_unprotected_bss_description};
@@ -900,8 +898,8 @@ mod tests {
 
     fn fake_device_info() -> DeviceInfo {
         DeviceInfo {
-            supported_channels: HashSet::from_iter([1, 2, 3].into_iter().cloned()),
             addr: [ 0, 1, 2, 3, 4, 5 ],
+            bands: vec![],
         }
     }
 }

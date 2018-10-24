@@ -18,11 +18,10 @@ use {
     log::{error, info, warn},
     pin_utils::pin_mut,
     std::{
-        collections::HashSet,
         marker::Unpin,
         sync::Arc,
     },
-    wlan_sme,
+    wlan_sme::{self, client::clone_utils},
 };
 
 use crate::{
@@ -194,7 +193,12 @@ fn create_sme<S>(proxy: fidl_mlme::MlmeProxy,
     -> Result<(SmeServer, impl Future<Output = Result<(), Error>>), Error>
     where S: Stream<Item = stats_scheduler::StatsRequest> + Send + Unpin + 'static
 {
-    let device_info = convert_device_info(&query_resp);
+    let device_info =
+        wlan_sme::DeviceInfo {
+            addr: query_resp.mac_addr,
+            bands: clone_utils::clone_bands(&query_resp.bands),
+        };
+
     match query_resp.role {
         fidl_mlme::MacRole::Client => {
             let (sender, receiver) = mpsc::unbounded();
@@ -214,16 +218,5 @@ fn create_sme<S>(proxy: fidl_mlme::MlmeProxy,
                 proxy, event_stream, receiver, stats_requests);
             Ok((SmeServer::Mesh(sender), FutureObj::new(Box::new(fut))))
         }
-    }
-}
-
-fn convert_device_info(query_resp: &DeviceQueryConfirm) -> wlan_sme::DeviceInfo {
-    let mut supported_channels = HashSet::new();
-    for band in &query_resp.bands {
-        supported_channels.extend(&band.channels);
-    }
-    wlan_sme::DeviceInfo {
-        supported_channels,
-        addr: query_resp.mac_addr,
     }
 }
