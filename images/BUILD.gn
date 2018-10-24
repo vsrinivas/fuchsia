@@ -127,13 +127,6 @@ write_file("$root_build_dir/packages.json",
            },
            "json")
 
-# TODO(mcgrathr): Temporary until scripts and recipes get updated.
-legacy_images_dir = "$root_out_dir/images"
-board = "qemu"
-if (target_cpu == "x64") {
-  board = "pc"
-}
-
 ###
 ### Fuchsia system image.  This aggregates contributions from all the
 ### package() targets enabled in the build.
@@ -527,8 +520,6 @@ images += [
       # IMAGE_BOOT_RAM variable should no longer be in use.
       "IMAGE_BOOT_RAM",
     ]
-    legacy_copy = "bootdata-blob-${board}.bin"
-    legacy_copy_dir = root_out_dir
   },
 ]
 
@@ -649,8 +640,6 @@ images += [
     public = [
       "IMAGE_FVM_RAW",
     ]
-    legacy_copy = "fvm.blk"
-    legacy_copy_dir = legacy_images_dir
   },
 ]
 
@@ -724,8 +713,6 @@ images += [
     public = [
       "IMAGE_FVM_SPARSE",
     ]
-    legacy_copy = "fvm.sparse.blk"
-    legacy_copy_dir = legacy_images_dir
   },
 ]
 
@@ -763,8 +750,6 @@ images += [
     deps = [
       ":netboot",
     ]
-    legacy_copy = "netboot.bin"
-    legacy_copy_dir = root_out_dir
   },
 ]
 
@@ -794,8 +779,6 @@ images += [
     public = [
       "IMAGE_ZIRCON_VBOOT",
     ]
-    legacy_copy = "zircon-${board}.vboot"
-    legacy_copy_dir = legacy_images_dir
   },
 ]
 
@@ -846,8 +829,6 @@ if (target_cpu != "arm64") {
       public = [
         "IMAGE_ESP_RAW",
       ]
-      legacy_copy = "local-${board}.esp.blk"
-      legacy_copy_dir = legacy_images_dir
     },
     {
       deps = [
@@ -941,7 +922,6 @@ images += [
 group("images") {
   testonly = true
   deps = [
-    ":default-legacy-images",
     ":ids.txt",
     ":paver-script",
     ":netboot-script",
@@ -957,40 +937,6 @@ group("default-images") {
       deps += image.deps
     }
   }
-}
-
-legacy_images = []
-default_legacy_images = []
-foreach(image, images) {
-  if (defined(image.legacy_copy)) {
-    copy("legacy_copy_" + image.legacy_copy) {
-      visibility = [ ":legacy-images" ]
-      if (!defined(image.default) || image.default) {
-        visibility += [ ":default-legacy-images" ]
-      }
-      testonly = true
-      deps = image.deps
-      outputs = [
-        "${image.legacy_copy_dir}/${image.legacy_copy}",
-      ]
-      sources = get_target_outputs(deps[0])
-    }
-    legacy_target = ":legacy_copy_${image.legacy_copy}"
-    legacy_images += [ legacy_target ]
-    if (!defined(image.default) || image.default) {
-      default_legacy_images += [ legacy_target ]
-    }
-  }
-}
-group("legacy-images") {
-  visibility = [ ":images" ]
-  testonly = true
-  deps = legacy_images
-}
-group("default-legacy-images") {
-  visibility = [ ":images" ]
-  testonly = true
-  deps = default_legacy_images
 }
 
 ###
