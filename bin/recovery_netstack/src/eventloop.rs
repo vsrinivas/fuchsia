@@ -40,8 +40,6 @@ impl EventLoop {
             256 * eth::DEFAULT_BUFFER_SIZE as u64,
         )?;
 
-        let mut executor = fasync::Executor::new().context("could not create executor")?;
-
         let path = env::args()
             .nth(1)
             .unwrap_or_else(|| String::from(DEFAULT_ETH));
@@ -74,22 +72,19 @@ impl EventLoop {
 
         let mut buf = [0; 2048];
         let mut events = event_loop.ctx.dispatcher().eth_client.get_stream();
-        let fut = async {
-            while let Some(evt) = await!(events.try_next())? {
-                match evt {
-                    eth::Event::StatusChanged => {
-                        let status = await!(event_loop.ctx.dispatcher().eth_client.get_status())?;
-                        println!("ethernet status: {:?}", status);
-                    }
-                    eth::Event::Receive(rx) => {
-                        let len = rx.read(&mut buf);
-                        receive_frame(&mut event_loop.ctx, eth_id, &mut buf[..len]);
-                    }
+        while let Some(evt) = await!(events.try_next())? {
+            match evt {
+                eth::Event::StatusChanged => {
+                    let status = await!(event_loop.ctx.dispatcher().eth_client.get_status())?;
+                    println!("ethernet status: {:?}", status);
+                }
+                eth::Event::Receive(rx) => {
+                    let len = rx.read(&mut buf);
+                    receive_frame(&mut event_loop.ctx, eth_id, &mut buf[..len]);
                 }
             }
-            Ok(())
-        };
-        executor.run_singlethreaded(fut)
+        }
+        Ok(())
     }
 }
 
