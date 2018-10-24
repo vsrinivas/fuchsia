@@ -24,6 +24,8 @@ struct Peer {
     array<uint8>:6 mac_addr;
     uint16 max_tp;
     uint16 max_probability;
+    uint16 basic_highest;
+    uint16 basic_max_probability;
     vector<StatsEntry> entries;
 };
 // LINT.ThenChange(//garnet/drivers/wlan/wlan/minstrel.h)

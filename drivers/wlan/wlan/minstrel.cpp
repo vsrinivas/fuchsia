@@ -42,9 +42,11 @@ void EmplaceErp(std::unordered_map<tx_vec_idx_t, TxStats>* map, tx_vec_idx_t idx
     map->emplace(idx, tx_stats);
 }
 
-void AddSupportedErp(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map,
-                     const std::vector<SupportedRate>& rates) {
+std::unordered_set<tx_vec_idx_t> AddSupportedErp(
+    std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map,
+    const std::vector<SupportedRate>& rates) {
     size_t tx_stats_added = 0;
+    std::unordered_set<tx_vec_idx_t> basic_rates;
     for (const auto& rate : rates) {
         TxVector tx_vector;
         zx_status_t status = TxVector::FromSupportedRate(rate, &tx_vector);
@@ -56,8 +58,14 @@ void AddSupportedErp(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map,
         ZX_DEBUG_ASSERT(status == ZX_OK);
         EmplaceErp(tx_stats_map, tx_vector_idx, rate);
         ++tx_stats_added;
+        if (rate.is_basic()) {
+            debugmstl("basic_rate: %s\n", debug::Describe(tx_vector_idx).c_str());
+            basic_rates.emplace(tx_vector_idx);
+        }
     }
     debugmstl("%zu ERP added.\n", tx_stats_added);
+    if (basic_rates.empty()) { basic_rates.emplace(kErpStartIdx); }
+    return basic_rates;
 }
 
 bool AddMissingErp(std::unordered_map<tx_vec_idx_t, TxStats>* map, tx_vec_idx_t idx) {
@@ -164,15 +172,15 @@ MinstrelRateSelector::MinstrelRateSelector(TimerManager&& timer_mgr, ProbeSequen
     (void)probe_sequence_;
 }
 
-void AddErp(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map,
-            const wlan_assoc_ctx_t& assoc_ctx) {
+std::unordered_set<tx_vec_idx_t> AddErp(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map,
+                                        const wlan_assoc_ctx_t& assoc_ctx) {
     std::vector<SupportedRate> rates(assoc_ctx.rates_cnt);
 
     std::transform(assoc_ctx.rates, assoc_ctx.rates + assoc_ctx.rates_cnt, rates.begin(),
                    SupportedRate::raw);
 
     debugmstl("Supported rates: %s\n", debug::Describe(rates).c_str());
-    AddSupportedErp(tx_stats_map, rates);
+    return AddSupportedErp(tx_stats_map, rates);
 }
 
 void AddHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map, const HtCapabilities& ht_cap) {
@@ -229,7 +237,13 @@ void MinstrelRateSelector::AddPeer(const wlan_assoc_ctx_t& assoc_ctx) {
         }
     }
 
-    if (assoc_ctx.rates_cnt > 0) { AddErp(&peer.tx_stats_map, assoc_ctx); }
+    if (assoc_ctx.rates_cnt > 0) {
+        peer.basic_rates = AddErp(&peer.tx_stats_map, assoc_ctx);
+        if (peer.basic_rates.size() > 0) {
+            peer.basic_highest =
+                *std::max_element(peer.basic_rates.cbegin(), peer.basic_rates.cend());
+        }
+    }
     debugmstl("tx_stats_map populated. size: %zu.\n", peer.tx_stats_map.size());
 
     if (peer.tx_stats_map.size() == 0) {
@@ -429,6 +443,8 @@ zx_status_t MinstrelRateSelector::GetStatsToFidl(const common::MacAddr& peer_add
     }
     peer_fidl->max_tp = peer->max_tp;
     peer_fidl->max_probability = peer->max_probability;
+    peer_fidl->basic_highest = peer->basic_highest;
+    peer_fidl->basic_max_probability = peer->basic_max_probability;
 
     return ZX_OK;
 }

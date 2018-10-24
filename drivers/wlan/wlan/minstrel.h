@@ -51,10 +51,13 @@ struct Peer {
     bool is_vht = false;
 
     std::unordered_map<tx_vec_idx_t, TxStats> tx_stats_map;
+    std::unordered_set<tx_vec_idx_t> basic_rates;
 
+    tx_vec_idx_t basic_highest = kErpStartIdx;  // will be replaced when assoc_ctx is parsed.
+    tx_vec_idx_t basic_max_probability = kErpStartIdx;  // optimality based on success probability
     // Index of the optimal tx vector
-    tx_vec_idx_t max_tp = 0;           // optimality based on expected throughput.
-    tx_vec_idx_t max_probability = 0;  // optimality based on success probability.
+    tx_vec_idx_t max_tp = kInvalidTxVectorIdx;           // optimality based on expected throughput.
+    tx_vec_idx_t max_probability = kInvalidTxVectorIdx;  // optimality based on success probability.
 
     ProbeSequence::Entry probe_entry;
 };
