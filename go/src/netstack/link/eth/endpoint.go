@@ -51,7 +51,16 @@ func (e *endpoint) WritePacket(r *stack.Route, hdr buffer.Prependable, payload b
 
 	trace.DebugTrace("eth write")
 
-	eth := header.Ethernet(hdr.Prepend(header.EthernetMinimumSize))
+	// Call AllocForSend until it succeeds.  After each failure, call
+	// WaitSend.
+	buf := e.client.AllocForSend()
+	for ; buf == nil; buf = e.client.AllocForSend() {
+		if err := e.client.WaitSend(); err != nil {
+			trace.DebugDrop("link: alloc error: %v", err)
+			return tcpip.ErrWouldBlock
+		}
+	}
+
 	ethHdr := &header.EthernetFields{
 		Type: protocol,
 	}
@@ -71,25 +80,17 @@ func (e *endpoint) WritePacket(r *stack.Route, hdr buffer.Prependable, payload b
 	default:
 		ethHdr.DstAddr = r.RemoteLinkAddress
 	}
-	eth.Encode(ethHdr)
-
-	for {
-		if buf := e.client.AllocForSend(); buf != nil {
-			used := copy(buf, hdr.View())
-			for _, v := range payload.Views() {
-				used += copy(buf[used:], v)
-			}
-			if err := e.client.Send(buf[:used]); err != nil {
-				trace.DebugDrop("link: send error: %v", err)
-				return tcpip.ErrWouldBlock
-			}
-			return nil
-		}
-		if err := e.client.WaitSend(); err != nil {
-			trace.DebugDrop("link: alloc error: %v", err)
-			return tcpip.ErrWouldBlock
-		}
+	header.Ethernet(buf).Encode(ethHdr)
+	used := header.EthernetMinimumSize
+	used += copy(buf[used:], hdr.View())
+	for _, v := range payload.Views() {
+		used += copy(buf[used:], v)
 	}
+	if err := e.client.Send(buf[:used]); err != nil {
+		trace.DebugDrop("link: send error: %v", err)
+		return tcpip.ErrWouldBlock
+	}
+	return nil
 }
 
 func (e *endpoint) Attach(dispatcher stack.NetworkDispatcher) {

@@ -32,7 +32,9 @@ func makeStackWithChannel(linkaddr tcpip.LinkAddress, addr tcpip.Address) (*stac
 	return s, ep, nil
 }
 
-func link(a, b *channel.Endpoint) {
+// link makes a one-way connection from a to b.  If linkSpy is not
+// nil, it is run on each frame.
+func link(a, b *channel.Endpoint, linkSpy func(buffer.VectorisedView)) {
 	for p := range a.C {
 		var vv buffer.VectorisedView
 		if p.Header != nil {
@@ -41,6 +43,9 @@ func link(a, b *channel.Endpoint) {
 			vv = buffer.NewVectorisedView(len(p.Payload), []buffer.View{p.Payload})
 		}
 		b.Inject(p.Proto, vv)
+		if linkSpy != nil {
+			linkSpy(vv)
+		}
 	}
 }
 
@@ -79,6 +84,9 @@ func TestBridge(t *testing.T) {
 		},
 	})
 
+	// payload should be unique enough that it won't accidentally appear
+	// in TCP/IP packets.
+	const payload = "hello"
 	{
 		_, ep1 := channel.New(1, 101, tcpip.LinkAddress(bytes.Repeat([]byte{3}, 6)))
 		_, ep2 := channel.New(1, 100, tcpip.LinkAddress(bytes.Repeat([]byte{4}, 6)))
@@ -92,10 +100,18 @@ func TestBridge(t *testing.T) {
 		if bridge1.LinkAddress()[0]&0x2 == 0 {
 			t.Errorf("bridge1.LinkAddress() expected to be locally administered MAC address")
 		}
-		go link(s1ep, ep1)
-		go link(ep1, s1ep)
-		go link(ep2, s2ep)
-		go link(s2ep, ep2)
+		/* Connection diagram:
+		   s1ep <----> ep1         ep2 <----> s2ep
+		                ^--bridge1--^
+		*/
+		go link(s1ep, ep1, nil)
+		go link(ep1, s1ep, func(vv buffer.VectorisedView) {
+			if bytes.Contains(vv.ToView(), []byte(payload)) {
+				t.Errorf("did not expect to see TX payload return on the outgoing link")
+			}
+		})
+		go link(ep2, s2ep, nil)
+		go link(s2ep, ep2, nil)
 	}
 
 	wq := new(waiter.Queue)
@@ -135,8 +151,6 @@ func TestBridge(t *testing.T) {
 		t.Logf("s2.Stats() = %+v", s1.Stats())
 		t.Fatal(err)
 	}
-
-	const payload = "hello"
 	if _, _, err := s1txep.Write(tcpip.SlicePayload(payload), tcpip.WriteOptions{To: &s2fulladdr}); err != nil {
 		t.Logf("s1.Stats() = %+v", s1.Stats())
 		t.Fatal(err)

@@ -109,11 +109,7 @@ func (ep *endpoint) IsAttached() bool {
 	return ep.dispatcher != nil
 }
 
-func (ep *endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, dstLinkAddr, srcLinkAddr tcpip.LinkAddress, p tcpip.NetworkProtocolNumber, vv buffer.VectorisedView) {
-	payload := vv
-	hdr := buffer.NewPrependableFromView(payload.First())
-	payload.RemoveFirst()
-
+func (ep *endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, dstLinkAddr tcpip.LinkAddress, p tcpip.NetworkProtocolNumber, vv buffer.VectorisedView) {
 	for _, l := range ep.links {
 		if dstLinkAddr == l.LinkAddress() {
 			// The destination of the packet is this port on the bridge.  We
@@ -122,9 +118,19 @@ func (ep *endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, dstLinkAddr, s
 			return
 		}
 	}
+
+	payload := vv
+	hdr := buffer.NewPrependableFromView(payload.First())
+	payload.RemoveFirst()
+
 	// None of the links is the destination so forward to all links, like a hub.
 	// TODO(NET-690): Learn which destinations are on which links and restrict transmission, like a bridge.
 	for _, l := range ep.links {
+		if l == rxEP {
+			// Don't send back to the interface from which the frame arrived
+			// because that causes interoperability issues with a router.
+			continue
+		}
 		// NB: This isn't really a valid Route; Route is a public type but cannot
 		// be instantiated fully outside of the stack package, because its
 		// underlying referencedNetworkEndpoint cannot be accessed.
