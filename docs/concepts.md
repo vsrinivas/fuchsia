@@ -119,10 +119,9 @@ Sockets are stream-oriented and data may be written into or read out of them in 
 of one or more bytes.  Short writes (if the Socket's buffers are full) and short reads
 (if more data is requested than in the buffers) are possible.
 
-Channels are datagram-oriented and have a maximum message size of 64K (subject to change,
-likely to be smaller) and may also have up to 1024 Handles attached to a message (also
-subject to change, also likely to be smaller).  They do not support short reads or writes --
-either a message fits or it does not.
+Channels are datagram-oriented and have a maximum message size given by **ZX_CHANNEL_MAX_MSG_BYTES**,
+and may also have up to **ZX_CHANNEL_MAX_MSG_HANDLES** Handles attached to a message.
+They do not support short reads or writes -- either a message fits or it does not.
 
 When Handles are written into a Channel, they are removed from the sending Process.
 When a message with Handles is read from a Channel, the Handles are added to the receiving
