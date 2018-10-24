@@ -6,7 +6,7 @@
 
 #include <ddk/device.h>
 #include <ddk/protocol/ethernet_board.h>
-#include <ddk/protocol/ethernet_mac.h>
+#include <ddk/protocol/ethernet-mac.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform-device.h>
@@ -122,7 +122,7 @@ private:
     // ZX_PROTOCOL_ETH_MAC ops.
     zx_status_t MDIOWrite(uint32_t reg, uint32_t val);
     zx_status_t MDIORead(uint32_t reg, uint32_t* val);
-    zx_status_t RegisterCallbacks(eth_mac_callbacks_t* callbacks);
+    zx_status_t RegisterCallback(const eth_mac_config_phy_t* callbacks);
 
     //Number each of tx/rx transaction descriptors
     static constexpr uint32_t kNumDesc = 32;
@@ -146,7 +146,7 @@ private:
     // ethermac fields
     uint32_t features_ = 0;
     uint32_t mtu_ = 0;
-    uint8_t mac_[6] = {};
+    uint8_t mac_[MAC_ARRAY_LENGTH] = {};
     uint16_t mii_addr_ = 0;
 
     zx::bti bti_;
@@ -178,7 +178,7 @@ private:
     thrd_t worker_thread_;
 
     // PHY callbacks.
-    eth_mac_callbacks_t cb_;
+    eth_mac_config_phy_t config_phy_;
 
     // Callbacks registered signal.
     sync_completion_t cb_registered_signal_;

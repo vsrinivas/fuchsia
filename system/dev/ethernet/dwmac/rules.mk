@@ -34,10 +34,12 @@ MODULE_LIBS := \
     system/ulib/c
 
 MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-ethernet-mac \
     system/banjo/ddk-protocol-gpio \
     system/banjo/ddk-protocol-i2c \
     system/banjo/ddk-protocol-platform-device \
     system/banjo/ddk-protocol-test \
+
 
 include make/module.mk
 

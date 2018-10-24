@@ -4,14 +4,14 @@
 
 #pragma once
 #include <ddk/device.h>
-#include <ddk/protocol/ethernet_mac.h>
+#include <ddk/protocol/ethernet-mac.h>
 
 namespace phy {
 
 class PhyDevice {
 public:
     zx_device_t* device_;
-    static zx_status_t ConfigPhy(void* ctx, uint8_t* mac, uint8_t len);
+    static zx_status_t ConfigPhy(void* ctx, const uint8_t mac[MAC_ARRAY_LENGTH]);
     static zx_status_t Create(zx_device_t* device);
 
 private:

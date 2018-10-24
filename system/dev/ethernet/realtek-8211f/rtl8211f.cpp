@@ -15,65 +15,61 @@
 
 namespace phy {
 
-zx_status_t PhyDevice::ConfigPhy(void* ctx,uint8_t* mac, uint8_t len) {
+zx_status_t PhyDevice::ConfigPhy(void* ctx, const uint8_t mac[MAC_ARRAY_LENGTH]) {
     uint32_t val;
     auto& self = *static_cast<PhyDevice*>(ctx);
 
-    if (len != MAC_ARRAY_LENGTH) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
     // WOL reset.
-    mdio_write(&self.eth_mac_, MII_EPAGSR, 0xd40);
-    mdio_write(&self.eth_mac_, 22, 0x20);
-    mdio_write(&self.eth_mac_, MII_EPAGSR, 0);
+    eth_mac_mdio_write(&self.eth_mac_, MII_EPAGSR, 0xd40);
+    eth_mac_mdio_write(&self.eth_mac_, 22, 0x20);
+    eth_mac_mdio_write(&self.eth_mac_, MII_EPAGSR, 0);
 
-    mdio_write(&self.eth_mac_, MII_EPAGSR, 0xd8c);
-    mdio_write(&self.eth_mac_, 16, (mac[1] << 8) | mac[0]);
-    mdio_write(&self.eth_mac_, 17, (mac[3] << 8) | mac[2]);
-    mdio_write(&self.eth_mac_, 18, (mac[5] << 8) | mac[4]);
-    mdio_write(&self.eth_mac_, MII_EPAGSR, 0);
+    eth_mac_mdio_write(&self.eth_mac_, MII_EPAGSR, 0xd8c);
+    eth_mac_mdio_write(&self.eth_mac_, 16, (mac[1] << 8) | mac[0]);
+    eth_mac_mdio_write(&self.eth_mac_, 17, (mac[3] << 8) | mac[2]);
+    eth_mac_mdio_write(&self.eth_mac_, 18, (mac[5] << 8) | mac[4]);
+    eth_mac_mdio_write(&self.eth_mac_, MII_EPAGSR, 0);
 
-    mdio_write(&self.eth_mac_, MII_EPAGSR, 0xd8a);
-    mdio_write(&self.eth_mac_, 17, 0x9fff);
-    mdio_write(&self.eth_mac_, MII_EPAGSR, 0);
+    eth_mac_mdio_write(&self.eth_mac_, MII_EPAGSR, 0xd8a);
+    eth_mac_mdio_write(&self.eth_mac_, 17, 0x9fff);
+    eth_mac_mdio_write(&self.eth_mac_, MII_EPAGSR, 0);
 
-    mdio_write(&self.eth_mac_, MII_EPAGSR, 0xd8a);
-    mdio_write(&self.eth_mac_, 16, 0x1000);
-    mdio_write(&self.eth_mac_, MII_EPAGSR, 0);
+    eth_mac_mdio_write(&self.eth_mac_, MII_EPAGSR, 0xd8a);
+    eth_mac_mdio_write(&self.eth_mac_, 16, 0x1000);
+    eth_mac_mdio_write(&self.eth_mac_, MII_EPAGSR, 0);
 
-    mdio_write(&self.eth_mac_, MII_EPAGSR, 0xd80);
-    mdio_write(&self.eth_mac_, 16, 0x3000);
-    mdio_write(&self.eth_mac_, 17, 0x0020);
-    mdio_write(&self.eth_mac_, 18, 0x03c0);
-    mdio_write(&self.eth_mac_, 19, 0x0000);
-    mdio_write(&self.eth_mac_, 20, 0x0000);
-    mdio_write(&self.eth_mac_, 21, 0x0000);
-    mdio_write(&self.eth_mac_, 22, 0x0000);
-    mdio_write(&self.eth_mac_, 23, 0x0000);
-    mdio_write(&self.eth_mac_, MII_EPAGSR, 0);
+    eth_mac_mdio_write(&self.eth_mac_, MII_EPAGSR, 0xd80);
+    eth_mac_mdio_write(&self.eth_mac_, 16, 0x3000);
+    eth_mac_mdio_write(&self.eth_mac_, 17, 0x0020);
+    eth_mac_mdio_write(&self.eth_mac_, 18, 0x03c0);
+    eth_mac_mdio_write(&self.eth_mac_, 19, 0x0000);
+    eth_mac_mdio_write(&self.eth_mac_, 20, 0x0000);
+    eth_mac_mdio_write(&self.eth_mac_, 21, 0x0000);
+    eth_mac_mdio_write(&self.eth_mac_, 22, 0x0000);
+    eth_mac_mdio_write(&self.eth_mac_, 23, 0x0000);
+    eth_mac_mdio_write(&self.eth_mac_, MII_EPAGSR, 0);
 
-    mdio_write(&self.eth_mac_, MII_EPAGSR, 0xd8a);
-    mdio_write(&self.eth_mac_, 19, 0x1002);
-    mdio_write(&self.eth_mac_, MII_EPAGSR, 0);
+    eth_mac_mdio_write(&self.eth_mac_, MII_EPAGSR, 0xd8a);
+    eth_mac_mdio_write(&self.eth_mac_, 19, 0x1002);
+    eth_mac_mdio_write(&self.eth_mac_, MII_EPAGSR, 0);
 
     // Fix txdelay issuee for rtl8211.  When a hw reset is performed
     // on the phy, it defaults to having an extra delay in the TXD path.
     // Since we reset the phy, this needs to be corrected.
-    mdio_write(&self.eth_mac_, MII_EPAGSR, 0xd08);
-    mdio_read(&self.eth_mac_, 0x11, &val);
+    eth_mac_mdio_write(&self.eth_mac_, MII_EPAGSR, 0xd08);
+    eth_mac_mdio_read(&self.eth_mac_, 0x11, &val);
     val &= ~0x100;
-    mdio_write(&self.eth_mac_, 0x11, val);
-    mdio_write(&self.eth_mac_, MII_EPAGSR, 0x00);
+    eth_mac_mdio_write(&self.eth_mac_, 0x11, val);
+    eth_mac_mdio_write(&self.eth_mac_, MII_EPAGSR, 0x00);
 
     // Enable GigE advertisement.
-    mdio_write(&self.eth_mac_, MII_GBCR, 1 << 9);
+    eth_mac_mdio_write(&self.eth_mac_, MII_GBCR, 1 << 9);
 
     // Restart advertisements.
-    mdio_read(&self.eth_mac_, MII_BMCR, &val);
+    eth_mac_mdio_read(&self.eth_mac_, MII_BMCR, &val);
     val |= BMCR_ANENABLE | BMCR_ANRESTART;
     val &= ~BMCR_ISOLATE;
-    mdio_write(&self.eth_mac_, MII_BMCR, val);
+    eth_mac_mdio_write(&self.eth_mac_, MII_BMCR, val);
 
     return ZX_OK;
 }
@@ -127,11 +123,11 @@ zx_status_t PhyDevice::Create(zx_device_t* device) {
         return status;
     }
 
-    eth_mac_callbacks_t cb;
-    cb.config_phy = PhyDevice::ConfigPhy;
+    eth_mac_config_phy_t cb;
+    cb.callback = PhyDevice::ConfigPhy;
     cb.ctx = phy_device.get();
 
-    register_callbacks(&phy_device->eth_mac_, &cb);
+    eth_mac_register_callback(&phy_device->eth_mac_, &cb);
     return status;
 }
 

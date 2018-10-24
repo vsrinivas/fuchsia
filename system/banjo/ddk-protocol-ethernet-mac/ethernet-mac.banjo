@@ -1,0 +1,21 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.ethernet_mac;
+
+using zx;
+
+const uint32 MAC_ARRAY_LENGTH = 6;
+
+[Layout="ddk-callback"]
+interface EthMacConfigPhy {
+    1: Callback(array<uint8>:MAC_ARRAY_LENGTH mac) -> (zx.status s);
+};
+
+[Layout="ddk-protocol", DefaultProtocol]
+interface EthMac {
+    1: MdioRead(uint32 reg) -> (zx.status s, uint32 val);
+    2: MdioWrite(uint32 reg, uint32 val) -> (zx.status s);
+    3: RegisterCallback(EthMacConfigPhy cb) -> (zx.status s);
+};
