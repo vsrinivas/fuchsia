@@ -353,7 +353,7 @@ int AmlThermal::Worker() {
             }
         }
 
-    } while (sync_completion_wait(&quit_, ZX_SEC(kDeadline) == ZX_ERR_TIMED_OUT));
+    } while (sync_completion_wait(&quit_, ZX_SEC(kDeadline)) == ZX_ERR_TIMED_OUT);
     return ZX_OK;
 }
 
