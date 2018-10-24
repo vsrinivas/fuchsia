@@ -30,8 +30,26 @@ public:
         EXPECT_TRUE(handle->GetCount(&count));
         EXPECT_EQ(1u, count);
     }
+
+    static void Duplicate()
+    {
+        auto buffer = magma::PlatformBuffer::Create(PAGE_SIZE, "test");
+        ASSERT_NE(buffer, nullptr);
+        uint32_t raw_handle;
+        EXPECT_TRUE(buffer->duplicate_handle(&raw_handle));
+        uint32_t raw_handle2;
+        EXPECT_TRUE(magma::PlatformHandle::duplicate_handle(raw_handle, &raw_handle2));
+        EXPECT_NE(raw_handle, raw_handle2);
+
+        auto handle1 = magma::PlatformHandle::Create(raw_handle);
+        EXPECT_TRUE(handle1 != nullptr);
+        auto handle2 = magma::PlatformHandle::Create(raw_handle2);
+        EXPECT_TRUE(handle2 != nullptr);
+    }
 };
 
 TEST(PlatformHandle, Test) { TestPlatformHandle::Test(); }
 
 TEST(PlatformHandle, Count) { TestPlatformHandle::Count(); }
+
+TEST(PlatformHandle, Duplicate) { TestPlatformHandle::Duplicate(); }

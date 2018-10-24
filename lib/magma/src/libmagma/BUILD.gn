@@ -23,6 +23,7 @@ static_library("libmagma_static") {
     "$magma_build_root/src/magma_util:command_buffer",
     "$magma_build_root/src/magma_util/platform:buffer",
     "$magma_build_root/src/magma_util/platform:client_connection",
+    "$magma_build_root/src/magma_util/platform:handle",
     "$magma_build_root/src/magma_util/platform:port",
     "$magma_build_root/src/magma_util/platform:semaphore",
     "$magma_build_root/src/magma_util/platform:sysmem_connection",

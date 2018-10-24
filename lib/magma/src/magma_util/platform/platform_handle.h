@@ -18,6 +18,8 @@ public:
     virtual bool GetCount(uint32_t* count_out) = 0;
     virtual uint32_t release() = 0;
 
+    static bool duplicate_handle(uint32_t handle_in, uint32_t* handle_out);
+
     static std::unique_ptr<PlatformHandle> Create(uint32_t handle);
 
 private:

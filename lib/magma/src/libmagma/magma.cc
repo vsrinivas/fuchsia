@@ -8,6 +8,7 @@
 #include "magma_util/macros.h"
 #include "platform_connection.h"
 #include "platform_connection_client.h"
+#include "platform_handle.h"
 #include "platform_port.h"
 #include "platform_semaphore.h"
 #include "platform_sysmem_connection.h"
@@ -109,6 +110,13 @@ uint64_t magma_get_buffer_id(magma_buffer_t buffer)
 uint64_t magma_get_buffer_size(magma_buffer_t buffer)
 {
     return reinterpret_cast<magma::PlatformBuffer*>(buffer)->size();
+}
+
+magma_status_t magma_duplicate_handle(uint32_t buffer_handle, uint32_t* buffer_handle_out)
+{
+    if (!magma::PlatformHandle::duplicate_handle(buffer_handle, buffer_handle_out))
+        return DRET(MAGMA_STATUS_INTERNAL_ERROR);
+    return MAGMA_STATUS_OK;
 }
 
 int magma_get_notification_channel_fd(magma_connection_t connection)
@@ -226,6 +234,13 @@ void magma_map_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer,
     uint64_t buffer_id = platform_buffer->id();
     magma::PlatformConnectionClient::cast(connection)
         ->MapBufferGpu(buffer_id, gpu_va, page_offset, page_count, map_flags);
+}
+
+magma_status_t magma_get_buffer_cache_policy(magma_buffer_t buffer,
+                                             magma_cache_policy_t* cache_policy_out)
+{
+    auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
+    return platform_buffer->GetCachePolicy(cache_policy_out);
 }
 
 void magma_unmap_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer, uint64_t gpu_va)

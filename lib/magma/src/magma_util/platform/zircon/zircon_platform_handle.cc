@@ -19,6 +19,15 @@ bool ZirconPlatformHandle::GetCount(uint32_t* count_out)
     return true;
 }
 
+// static
+bool PlatformHandle::duplicate_handle(uint32_t handle_in, uint32_t* handle_out)
+{
+    zx_status_t status = zx_handle_duplicate(handle_in, ZX_RIGHT_SAME_RIGHTS, handle_out);
+    if (status != ZX_OK)
+        return DRETF(false, "zx_handle_duplicate failed: %d", status);
+    return true;
+}
+
 std::unique_ptr<PlatformHandle> PlatformHandle::Create(uint32_t handle)
 {
     return std::make_unique<ZirconPlatformHandle>(zx::handle(handle));
