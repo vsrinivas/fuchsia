@@ -30,10 +30,10 @@ class PayloadVmo : public fbl::RefCounted<PayloadVmo> {
                                         const zx::handle* bti_handle = nullptr);
 
   // Creates a |PayloadVmo| that wraps the provided VMO.
-  static fbl::RefPtr<PayloadVmo> Create(zx::vmo vmo);
+  static fbl::RefPtr<PayloadVmo> Create(zx::vmo vmo, zx_vm_option_t map_flags);
 
-  PayloadVmo(zx::vmo vmo, uint64_t vmo_size, const zx::handle* bti_handle,
-             zx_status_t* status_out);
+  PayloadVmo(zx::vmo vmo, uint64_t vmo_size, zx_vm_option_t map_flags,
+             const zx::handle* bti_handle, zx_status_t* status_out);
 
   ~PayloadVmo() = default;
 
@@ -48,9 +48,7 @@ class PayloadVmo : public fbl::RefCounted<PayloadVmo> {
   uint32_t index() { return index_; }
 
   // Sets the index of this VMO in the allocator's vector of VMOs.
-  void SetIndex(uint32_t index) {
-    index_ = index;
-  }
+  void SetIndex(uint32_t index) { index_ = index; }
 
   // Returns |start()| offset by |offset| if the VMO is mapped, nullptr
   // otherwise.

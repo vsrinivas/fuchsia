@@ -38,13 +38,15 @@ fbl::RefPtr<PayloadVmo> PayloadVmo::Create(uint64_t vmo_size,
   }
 
   zx_status_t status;
-  auto result = fbl::MakeRefCounted<PayloadVmo>(std::move(vmo), vmo_size,
-                                                bti_handle, &status);
+  auto result = fbl::MakeRefCounted<PayloadVmo>(
+      std::move(vmo), vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, bti_handle,
+      &status);
   return status == ZX_OK ? result : nullptr;
 }
 
 // static
-fbl::RefPtr<PayloadVmo> PayloadVmo::Create(zx::vmo vmo) {
+fbl::RefPtr<PayloadVmo> PayloadVmo::Create(zx::vmo vmo,
+                                           zx_vm_option_t map_flags) {
   uint64_t vmo_size;
   zx_status_t status = vmo.get_size(&vmo_size);
   if (status != ZX_OK) {
@@ -53,19 +55,18 @@ fbl::RefPtr<PayloadVmo> PayloadVmo::Create(zx::vmo vmo) {
   }
 
   auto result = fbl::MakeRefCounted<PayloadVmo>(std::move(vmo), vmo_size,
-                                                nullptr, &status);
+                                                map_flags, nullptr, &status);
   return status == ZX_OK ? result : nullptr;
 }
 
-PayloadVmo::PayloadVmo(zx::vmo vmo, uint64_t vmo_size,
+PayloadVmo::PayloadVmo(zx::vmo vmo, uint64_t vmo_size, zx_vm_option_t map_flags,
                        const zx::handle* bti_handle, zx_status_t* status_out)
     : vmo_(std::move(vmo)), size_(vmo_size) {
   FXL_DCHECK(vmo_);
   FXL_DCHECK(vmo_size != 0);
   FXL_DCHECK(status_out != nullptr);
 
-  zx_status_t status = vmo_mapper_.Map(
-      vmo_, 0, size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr);
+  zx_status_t status = vmo_mapper_.Map(vmo_, 0, size_, map_flags, nullptr);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to map VMO, status " << status;
     *status_out = status;
