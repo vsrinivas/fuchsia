@@ -325,7 +325,9 @@ static zx_status_t aml_scpi_bind(void* ctx, zx_device_t* parent) {
     return ZX_OK;
 fail:
     aml_scpi_release(scpi);
-    return ZX_OK;
+
+    ZX_ASSERT(status != ZX_OK);
+    return status;
 }
 
 static zx_driver_ops_t aml_scpi_driver_ops = {
