@@ -27,13 +27,12 @@ class UserIntelligenceProviderImpl
       component::StartupContext* context,
       fidl::InterfaceHandle<fuchsia::modular::ContextEngine>
           context_engine_handle,
-      fidl::InterfaceHandle<fuchsia::modular::StoryProvider>
-          story_provider_handle,
-      // TODO(MI4-1357) remove
-      fidl::InterfaceHandle<fuchsia::modular::FocusProvider>
-          focus_provider_handle,
-      fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
-          visible_stories_provider_handle,
+      fit::function<void(
+          fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesProvider>)>
+          visible_stories_provider_connector,
+      fit::function<
+          void(fidl::InterfaceRequest<fuchsia::modular::StoryProvider>)>
+          story_provider_connector,
       fit::function<
           void(fidl::InterfaceRequest<fuchsia::modular::FocusProvider>)>
           focus_provider_connector,
@@ -126,6 +125,11 @@ class UserIntelligenceProviderImpl
   fidl::InterfacePtr<fuchsia::modular::VisibleStoriesProvider>
       visible_stories_provider_;
 
+  fit::function<void(
+      fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesProvider>)>
+      visible_stories_provider_connector_;
+  fit::function<void(fidl::InterfaceRequest<fuchsia::modular::StoryProvider>)>
+      story_provider_connector_;
   fit::function<void(fidl::InterfaceRequest<fuchsia::modular::FocusProvider>)>
       focus_provider_connector_;
   fit::function<void(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster>)>

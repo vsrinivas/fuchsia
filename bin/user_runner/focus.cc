@@ -87,12 +87,6 @@ void FocusHandler::Request(fidl::StringPtr story_id) {
   }
 }
 
-// |fuchsia::modular::FocusProvider|
-void FocusHandler::Duplicate(
-    fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) {
-  provider_bindings_.AddBinding(this, std::move(request));
-}
-
 // |fuchsia::modular::FocusController|
 void FocusHandler::Set(fidl::StringPtr story_id) {
   fuchsia::modular::FocusInfoPtr data = fuchsia::modular::FocusInfo::New();
@@ -146,11 +140,6 @@ void VisibleStoriesHandler::Query(QueryCallback callback) {
 void VisibleStoriesHandler::Watch(
     fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesWatcher> watcher) {
   change_watchers_.push_back(watcher.Bind());
-}
-
-void VisibleStoriesHandler::Duplicate(
-    fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesProvider> request) {
-  provider_bindings_.AddBinding(this, std::move(request));
 }
 
 void VisibleStoriesHandler::Set(fidl::VectorPtr<fidl::StringPtr> story_ids) {

@@ -419,12 +419,6 @@ void StoryProviderImpl::WatchActivity(
   activity_watchers_.AddInterfacePtr(std::move(watcher_ptr));
 }
 
-// |fuchsia::modular::StoryProvider|
-void StoryProviderImpl::Duplicate(
-    fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) {
-  Connect(std::move(request));
-}
-
 std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>>
 StoryProviderImpl::StartStoryShell(
     fidl::StringPtr story_id,

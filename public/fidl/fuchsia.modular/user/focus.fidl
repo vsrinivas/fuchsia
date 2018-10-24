@@ -52,8 +52,6 @@ interface FocusProvider {
     // TODO(alhaad): Consider making this available for remote devices as
     // well.
     3: Request(string? story_id);
-
-    4: Duplicate(request<FocusProvider> provider);
 };
 
 // Implemented by anyone who is interested in getting updates when focus
@@ -89,8 +87,6 @@ interface VisibleStoriesProvider {
 
     // Watches for change in visible stories on this device.
     2: Watch(VisibleStoriesWatcher watcher);
-
-    3: Duplicate(request<VisibleStoriesProvider> provider);
 };
 
 // Implemented by anyone (maxwell) who is interested in getting updates when

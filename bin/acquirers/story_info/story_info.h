@@ -29,11 +29,9 @@ class StoryWatcherImpl;
 // TODO(thatguy): Add Link value types to the Context engine and use them
 // here. Then update the resulting published value to remove its added JSON
 // structure, since it will all be represented in the metadata of the value.
-class StoryInfoAcquirer
-    : public fuchsia::modular::VisibleStoriesWatcher,
-      public fuchsia::modular::StoryProviderWatcher,
-      public fuchsia::modular::FocusWatcher,
-      public fuchsia::maxwell::internal::StoryInfoInitializer {
+class StoryInfoAcquirer : public fuchsia::modular::VisibleStoriesWatcher,
+                          public fuchsia::modular::StoryProviderWatcher,
+                          public fuchsia::modular::FocusWatcher {
  public:
   StoryInfoAcquirer(modular::AgentHost* agent_host);
   ~StoryInfoAcquirer() override;
@@ -52,13 +50,6 @@ class StoryInfoAcquirer
   void DropStoryWatcher(const std::string& story_id);
 
  private:
-  // |StoryInfoInitializer|
-  void Initialize(
-      fidl::InterfaceHandle<fuchsia::modular::StoryProvider> story_provider,
-      fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider,
-      fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
-          visible_stories_provider) override;
-
   // |fuchsia::modular::FocusWatcher|
   void OnFocusChange(fuchsia::modular::FocusInfoPtr info) override;
 
@@ -75,9 +66,8 @@ class StoryInfoAcquirer
   fuchsia::modular::ContextReaderPtr context_reader_;
   fuchsia::modular::StoryProviderPtr story_provider_;
   fuchsia::modular::FocusProviderPtr focus_provider_;
+  fuchsia::modular::VisibleStoriesProviderPtr visible_stories_provider_;
 
-  fidl::Binding<fuchsia::maxwell::internal::StoryInfoInitializer>
-      initializer_binding_;
   fidl::Binding<fuchsia::modular::VisibleStoriesWatcher>
       visible_stories_watcher_binding_;
   fidl::Binding<fuchsia::modular::StoryProviderWatcher>

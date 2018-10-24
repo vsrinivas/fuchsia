@@ -40,11 +40,6 @@ void PuppetMasterImpl::WatchSession(
   FXL_NOTIMPLEMENTED();
 }
 
-void PuppetMasterImpl::Duplicate(
-    fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request) {
-  Connect(std::move(request));
-}
-
 void PuppetMasterImpl::DeleteStory(fidl::StringPtr story_name,
                                    DeleteStoryCallback done) {
   session_storage_->DeleteStory(story_name)->Then([done = std::move(done)] {

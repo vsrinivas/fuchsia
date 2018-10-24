@@ -31,8 +31,6 @@ class FocusHandler : fuchsia::modular::FocusProvider {
   void Query(QueryCallback callback) override{};
   void Watch(
       fidl::InterfaceHandle<fuchsia::modular::FocusWatcher> watcher) override{};
-  void Duplicate(fidl::InterfaceRequest<fuchsia::modular::FocusProvider>
-                     request) override{};
 
  private:
   std::string request_called_with_story_id_;

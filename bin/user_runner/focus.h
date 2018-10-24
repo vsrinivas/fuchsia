@@ -43,8 +43,6 @@ class FocusHandler : fuchsia::modular::FocusProvider,
   void Watch(
       fidl::InterfaceHandle<fuchsia::modular::FocusWatcher> watcher) override;
   void Request(fidl::StringPtr story_id) override;
-  void Duplicate(
-      fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) override;
 
   // |fuchsia::modular::FocusController|
   void Set(fidl::StringPtr story_id) override;
@@ -87,9 +85,6 @@ class VisibleStoriesHandler : fuchsia::modular::VisibleStoriesProvider,
   void Query(QueryCallback callback) override;
   void Watch(fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesWatcher>
                  watcher) override;
-  void Duplicate(
-      fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesProvider> request)
-      override;
 
   // |fuchsia::modular::VisibleStoriesController|
   void Set(fidl::VectorPtr<fidl::StringPtr> story_ids) override;

@@ -451,8 +451,14 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   auto visible_stories_provider_request = visible_stories_provider.NewRequest();
 
   user_intelligence_provider_impl_.reset(new UserIntelligenceProviderImpl(
-      startup_context_, std::move(context_engine), std::move(story_provider),
-      std::move(focus_provider_maxwell), std::move(visible_stories_provider),
+      startup_context_, std::move(context_engine),
+      [this](fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesProvider>
+                 request) {
+        visible_stories_handler_->AddProviderBinding(std::move(request));
+      },
+      [this](fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) {
+        story_provider_impl_->Connect(std::move(request));
+      },
       [this](fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) {
         focus_handler_->AddProviderBinding(std::move(request));
       },

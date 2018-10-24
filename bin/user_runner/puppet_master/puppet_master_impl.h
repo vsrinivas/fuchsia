@@ -41,10 +41,6 @@ class PuppetMasterImpl : public fuchsia::modular::PuppetMaster {
       WatchSessionCallback done) override;
 
   // |PuppetMaster|
-  void Duplicate(
-      fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request) override;
-
-  // |PuppetMaster|
   void DeleteStory(fidl::StringPtr story_name,
                    DeleteStoryCallback done) override;
 

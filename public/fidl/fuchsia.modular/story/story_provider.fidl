@@ -10,6 +10,7 @@ library fuchsia.modular;
 //
 // Closing a |StoryProvider| connection has no effect on the state of the
 // framework.
+[Discoverable]
 interface StoryProvider {
     // Creates a new story. If |module_url| is supplied, adds it to the story as
     // the first module. The returned |story_id| can be used to obtain a
@@ -66,10 +67,6 @@ interface StoryProvider {
     // StoryActivityWatcher.OnStoryActivity() will be called to update clients
     // with the initial data. See StoryActivityWatcher for motivations.
     9: WatchActivity(StoryActivityWatcher watcher);
-
-    // Creates a duplicate connection to this StoryProvider.
-    // DEPRECATED: Please do not use this method as it is going away.
-    11: Duplicate(request<StoryProvider> request);
 
     // Creates a story and sets the options it will have.
     // EXPERIMENTAL

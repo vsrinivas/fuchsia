@@ -114,12 +114,6 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
     callback(fidl::VectorPtr<fidl::StringPtr>::New(0));
   }
 
-  // |fuchsia::modular::StoryProvider|
-  void Duplicate(fidl::InterfaceRequest<fuchsia::modular::StoryProvider>
-                     request) override {
-    FXL_LOG(FATAL) << "StoryProviderMock::Duplicate() not implemented.";
-  }
-
   std::string last_created_story_;
   std::string last_created_kind_of_proto_story_;
   std::string deleted_story_;

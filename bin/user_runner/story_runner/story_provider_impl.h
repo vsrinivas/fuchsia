@@ -186,10 +186,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
       fidl::InterfaceHandle<fuchsia::modular::StoryActivityWatcher> watcher)
       override;
 
-  // |fuchsia::modular::StoryProvider|
-  void Duplicate(
-      fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) override;
-
   // |fuchsia::modular::FocusWatcher|
   void OnFocusChange(fuchsia::modular::FocusInfoPtr info) override;
 

@@ -14,11 +14,8 @@
 
 namespace maxwell {
 
-using ::fuchsia::maxwell::internal::StoryInfoInitializer;
-
 StoryInfoAcquirer::StoryInfoAcquirer(modular::AgentHost* const agent_host)
-    : initializer_binding_(this),
-      visible_stories_watcher_binding_(this),
+    : visible_stories_watcher_binding_(this),
       story_provider_watcher_binding_(this),
       focus_watcher_binding_(this) {
   // Initialize fuchsia::modular::IntelligenceServices.
@@ -28,12 +25,24 @@ StoryInfoAcquirer::StoryInfoAcquirer(modular::AgentHost* const agent_host)
   intelligence_services->GetContextWriter(context_writer_.NewRequest());
   intelligence_services->GetContextReader(context_reader_.NewRequest());
 
-  // This ServiceProvider is handed out in Connect().
-  agent_services_.AddService<StoryInfoInitializer>(
-      [this](fidl::InterfaceRequest<StoryInfoInitializer> request) {
-        FXL_DCHECK(!initializer_binding_.is_bound());
-        initializer_binding_.Bind(std::move(request));
-      });
+  // Watch for changes to what Stories are visible.
+  agent_host->startup_context()->ConnectToEnvironmentService(
+      visible_stories_provider_.NewRequest());
+  visible_stories_provider_->Watch(
+      visible_stories_watcher_binding_.NewBinding());
+
+  // Watch for changes in Story state.
+  agent_host->startup_context()->ConnectToEnvironmentService(
+      story_provider_.NewRequest());
+  story_provider_->Watch(story_provider_watcher_binding_.NewBinding());
+
+  // Watch for changes in the focused Story.
+  agent_host->startup_context()->ConnectToEnvironmentService(
+      focus_provider_.NewRequest());
+  focus_provider_->Watch(focus_watcher_binding_.NewBinding());
+
+  // Write initial values for visible stories.
+  OnVisibleStoriesChange({});
 }
 
 StoryInfoAcquirer::~StoryInfoAcquirer() = default;
@@ -54,29 +63,6 @@ void StoryInfoAcquirer::RunTask(
 }
 
 void StoryInfoAcquirer::Terminate(const std::function<void()>& done) { done(); }
-
-void StoryInfoAcquirer::Initialize(
-    fidl::InterfaceHandle<fuchsia::modular::StoryProvider> story_provider,
-    fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider,
-    fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
-        visible_stories_provider) {
-  story_provider_.Bind(std::move(story_provider));
-  focus_provider_.Bind(std::move(focus_provider));
-
-  // Watch for changes to what Stories are visible.
-  auto visible_stories_provider_ptr = visible_stories_provider.Bind();
-  visible_stories_provider_ptr->Watch(
-      visible_stories_watcher_binding_.NewBinding());
-
-  // Watch for changes in Story state.
-  story_provider_->Watch(story_provider_watcher_binding_.NewBinding());
-
-  // Watch for changes in the focused Story.
-  focus_provider_->Watch(focus_watcher_binding_.NewBinding());
-
-  // Write initial values for visible stories.
-  OnVisibleStoriesChange({});
-}
 
 void StoryInfoAcquirer::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
   // Set all stories to *not* focused, then set the one that's focused to

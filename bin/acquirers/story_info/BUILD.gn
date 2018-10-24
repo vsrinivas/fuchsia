@@ -6,6 +6,13 @@ import("//build/fidl/fidl.gni")
 import("//peridot/build/executable_package.gni")
 
 executable_package("story_info") {
+  meta = [
+    {
+      path = "meta/story_info.cmx"
+      dest = "story_info.cmx"
+    },
+  ]
+
   sources = [
     "link_watcher_impl.cc",
     "link_watcher_impl.h",

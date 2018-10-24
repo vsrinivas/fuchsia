@@ -33,7 +33,6 @@ fidl("maxwell_internal") {
 
   sources = [
     "module_manifest_source/fidl/module_package_indexer.fidl",
-    "story_info/fidl/initializer.fidl",
   ]
 
   deps = [
