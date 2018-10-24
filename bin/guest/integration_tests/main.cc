@@ -31,36 +31,34 @@ class GuestTest : public component::testing::TestWithEnvironment {
     auto services = CreateServices();
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = kGuestMgrUrl;
-    ASSERT_EQ(ZX_OK, services->AddServiceWithLaunchInfo(
-                         std::move(launch_info),
-                         fuchsia::guest::EnvironmentManager::Name_));
+    zx_status_t status = services->AddServiceWithLaunchInfo(
+        std::move(launch_info), fuchsia::guest::EnvironmentManager::Name_);
+    ASSERT_EQ(ZX_OK, status);
     enclosing_environment_ =
         CreateNewEnclosingEnvironment(kRealm, std::move(services));
-    ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_environment_.get()));
+    bool started = WaitForEnclosingEnvToStart(enclosing_environment_.get());
+    ASSERT_TRUE(started);
 
     fuchsia::guest::LaunchInfo guest_launch_info = LaunchInfo();
-
     std::stringstream cpu_arg;
     cpu_arg << "--cpus=" << std::to_string(num_cpus);
     guest_launch_info.args.push_back(cpu_arg.str());
-
     enclosing_environment_->ConnectToService(environment_manager_.NewRequest());
-    ASSERT_TRUE(environment_manager_);
     environment_manager_->Create(guest_launch_info.url,
                                  environment_controller_.NewRequest());
-    ASSERT_TRUE(environment_controller_);
-
+    fuchsia::ui::viewsv1::ViewProviderPtr view_provider;
     environment_controller_->LaunchInstance(
-        std::move(guest_launch_info), instance_controller_.NewRequest(),
-        [](fuchsia::guest::InstanceInfo) {});
-    ASSERT_TRUE(instance_controller_);
+        std::move(guest_launch_info), view_provider.NewRequest(),
+        instance_controller_.NewRequest(), [](...) {});
 
     zx::socket socket;
     instance_controller_->GetSerial(
         [&socket](zx::socket s) { socket = std::move(s); });
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return socket.is_valid(); },
-                                          zx::sec(5)));
-    ASSERT_EQ(serial_.Start(std::move(socket)), ZX_OK);
+    bool is_valid = RunLoopWithTimeoutOrUntil(
+        [&socket] { return socket.is_valid(); }, zx::sec(5));
+    ASSERT_TRUE(is_valid);
+    status = serial_.Start(std::move(socket));
+    ASSERT_EQ(ZX_OK, status);
   }
 
   zx_status_t Execute(std::string message, std::string* result = nullptr) {

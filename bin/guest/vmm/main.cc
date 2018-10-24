@@ -277,7 +277,6 @@ int main(int argc, char** argv) {
     // injected by the view events.
     scenic_scanout = std::make_unique<ScenicScanout>(
         context.get(), std::move(input_dispatcher), gpu.scanout());
-    instance_controller.SetViewProvider(scenic_scanout.get());
 
     // Setup GPU device.
     status = gpu.Init();

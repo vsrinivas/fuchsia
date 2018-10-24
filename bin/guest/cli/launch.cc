@@ -15,29 +15,17 @@
 void handle_launch(int argc, const char* argv[], async::Loop* loop,
                    component::StartupContext* context) {
   // Create environment.
-  fuchsia::guest::EnvironmentManagerSyncPtr environment_manager;
-
+  fuchsia::guest::EnvironmentManagerPtr environment_manager;
   context->ConnectToEnvironmentService(environment_manager.NewRequest());
-  fuchsia::guest::EnvironmentControllerSyncPtr environment_controller;
+  fuchsia::guest::EnvironmentControllerPtr environment_controller;
   environment_manager->Create(argv[0], environment_controller.NewRequest());
 
-  // Launch guest.
-  fuchsia::guest::InstanceControllerPtr instance_controller;
-  fuchsia::guest::LaunchInfo launch_info;
-  launch_info.url = argv[0];
-  for (int i = 0; i < argc - 1; ++i) {
-    launch_info.args.push_back(argv[i + 1]);
-  }
-  fuchsia::guest::InstanceInfo instance_info;
-  environment_controller->LaunchInstance(
-      std::move(launch_info), instance_controller.NewRequest(), &instance_info);
-  instance_controller.set_error_handler([loop] { loop->Shutdown(); });
-
+  // Connect to Scenic.
+  fuchsia::ui::viewsv1::ViewProviderPtr view_provider;
+  auto view_provider_request = view_provider.NewRequest();
   fxl::CommandLine cl = fxl::CommandLineFromArgcArgv(argc, argv);
   if (cl.GetOptionValueWithDefault("display", "scenic") == "scenic") {
     // Create the framebuffer view.
-    fuchsia::ui::viewsv1::ViewProviderPtr view_provider;
-    instance_controller->GetViewProvider(view_provider.NewRequest());
     fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner;
     view_provider->CreateView(view_owner.NewRequest(), nullptr);
 
@@ -47,10 +35,21 @@ void handle_launch(int argc, const char* argv[], async::Loop* loop,
     presenter->Present(std::move(view_owner), nullptr);
   }
 
-  // Open the serial service of the guest and process IO.
-  zx::socket socket;
+  // Launch guest.
+  fuchsia::guest::LaunchInfo launch_info;
+  launch_info.url = argv[0];
+  for (int i = 0; i < argc - 1; ++i) {
+    launch_info.args.push_back(argv[i + 1]);
+  }
+  fuchsia::guest::InstanceControllerPtr instance_controller;
+  environment_controller->LaunchInstance(
+      std::move(launch_info), std::move(view_provider_request),
+      instance_controller.NewRequest(), [](...) {});
+
+  // Setup serial console.
   SerialConsole console(loop);
   instance_controller->GetSerial(
       [&console](zx::socket socket) { console.Start(std::move(socket)); });
+
   loop->Run();
 }
