@@ -46,6 +46,9 @@ on the object before *deadline* passes.
 In the event of **ZX_ERR_TIMED_OUT**, *observed* may reflect state changes
 that occurred after the deadline passed, but before the syscall returned.
 
+In the event of **ZX_ERR_CANCELED**, *handle* has been closed,
+and *observed* will have the **ZX_SIGNAL_HANDLE_CLOSED** bit set.
+
 For any other return value, *observed* is undefined.
 
 ## ERRORS
