@@ -79,7 +79,9 @@ See [signals](../signals.md) for more information about signals and their termin
 
 ## SEE ALSO
 
-[port_cancel](port_cancel.md).
-[port_queue](port_queue.md).
+[object_wait_many](object_wait_many.md),
+[object_wait_one](object_wait_one.md),
+[port_cancel](port_cancel.md),
+[port_queue](port_queue.md),
 [port_wait](port_wait.md).
 

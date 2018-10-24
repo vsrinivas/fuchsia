@@ -86,6 +86,7 @@ The byte size limitation on messages is not yet finalized.
 [handle_close](handle_close.md),
 [handle_duplicate](handle_duplicate.md),
 [handle_replace](handle_replace.md),
+[object_wait_async](object_wait_async.md),
 [object_wait_one](object_wait_one.md),
 [object_wait_many](object_wait_many.md),
 [channel_call](channel_call.md),

@@ -57,6 +57,7 @@ does not belong to *process*, or the handle *process* lacks *ZX_RIGHT_WRITE* or
 
 [handle_close](handle_close.md),
 [handle_duplicate](handle_duplicate.md),
+[object_wait_async](object_wait_async.md),
 [object_wait_one](object_wait_one.md),
 [object_wait_many](object_wait_many.md),
 [process_create](process_create.md),
