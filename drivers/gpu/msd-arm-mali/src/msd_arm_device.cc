@@ -204,6 +204,7 @@ bool MsdArmDevice::Init(void* device_handle)
         return false;
 
     EnableInterrupts();
+    InitializeHardwareQuirks(&gpu_features_, register_io_.get());
 
     uint64_t enabled_cores = 1;
 #if defined(MSD_ARM_ENABLE_ALL_CORES)
@@ -915,6 +916,19 @@ magma_status_t MsdArmDevice::QueryInfo(uint64_t id, uint64_t* value_out)
         default:
             return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
     }
+}
+
+// static
+void MsdArmDevice::InitializeHardwareQuirks(GpuFeatures* features, magma::RegisterIo* reg)
+{
+    auto shader_config = registers::ShaderConfig::Get().FromValue(0);
+    const uint32_t kGpuIdTGOX = 0x7212;
+    if (features->gpu_id.product_id().get() == kGpuIdTGOX) {
+        DLOG("Enabling TLS hashing\n");
+        shader_config.tls_hashing_enable().set(1);
+    }
+
+    shader_config.WriteTo(reg);
 }
 
 void MsdArmDevice::RequestPerfCounterOperation(uint32_t type)

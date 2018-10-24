@@ -151,6 +151,8 @@ private:
     void DisableInterrupts();
     void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, bool enqueue_front = false);
     void SuspectedGpuHang();
+    static void InitializeHardwareQuirks(GpuFeatures* features, magma::RegisterIo* registers);
+
     magma::Status ProcessDumpStatusToLog();
     magma::Status ProcessGpuInterrupt();
     magma::Status ProcessJobInterrupt();

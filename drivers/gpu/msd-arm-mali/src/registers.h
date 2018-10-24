@@ -156,6 +156,13 @@ public:
     static auto GetStatus() { return magma::RegisterAddr<JobIrqFlags>(0x100c); }
 };
 
+class ShaderConfig : public magma::RegisterBase {
+public:
+    DEF_BIT(17, tls_hashing_enable);
+
+    static auto Get() { return magma::RegisterAddr<ShaderConfig>(0xf04); }
+};
+
 // Not legal to write to while the performance counters are enabled.
 class PerformanceCounterBase : public magma::RegisterPairBase {
 public:

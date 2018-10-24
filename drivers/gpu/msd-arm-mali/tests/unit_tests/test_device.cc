@@ -197,6 +197,19 @@ public:
         // failure in this may be caused by a previous test.
         EXPECT_EQ(0u, dump_state.gpu_status);
     }
+
+    void MockInitializeQuirks()
+    {
+        auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
+        GpuFeatures features;
+        features.gpu_id.set_reg_value(0x72120000);
+
+        MsdArmDevice::InitializeHardwareQuirks(&features, reg_io.get());
+        EXPECT_EQ(1u << 17, reg_io->Read32(0xf04));
+        features.gpu_id.set_reg_value(0x08000000);
+        MsdArmDevice::InitializeHardwareQuirks(&features, reg_io.get());
+        EXPECT_EQ(0u, reg_io->Read32(0xf04));
+    }
 };
 
 TEST(MsdArmDevice, CreateAndDestroy)
@@ -233,4 +246,10 @@ TEST(MsdArmDevice, Idle)
 {
     TestMsdArmDevice test;
     test.TestIdle();
+}
+
+TEST(MsdArmDevice, MockInitializeQuirks)
+{
+    TestMsdArmDevice test;
+    test.MockInitializeQuirks();
 }
