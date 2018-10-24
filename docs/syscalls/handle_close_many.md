@@ -9,7 +9,7 @@ handle_close_many - close a number of handles
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_handle_close_many(zx_handle_t* handles, size_t num_handles);
+zx_status_t zx_handle_close_many(const zx_handle_t* handles, size_t num_handles);
 ```
 
 ## DESCRIPTION
