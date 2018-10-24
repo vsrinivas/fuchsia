@@ -3,7 +3,7 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "deprecated-all-services" ],
+        "services": [ "fuchsia.tracelink.Registry" ],
         "dev": [ "sys/cpu-trace" ]
     }
 }
