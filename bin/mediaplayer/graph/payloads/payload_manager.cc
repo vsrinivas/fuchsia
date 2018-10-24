@@ -408,6 +408,22 @@ bool PayloadManager::ConfigsAreCompatible() const {
   }
 
   if ((output_.config_.mode_ == PayloadMode::kProvidesVmos) &&
+      (output_.config_.vmo_allocation_ == VmoAllocation::kUnrestricted) &&
+      (input_.config_.vmo_allocation_ != VmoAllocation::kUnrestricted)) {
+    // The output will provide VMOS and makes no promises about VMO allocation.
+    // The input has specific VMO allocation needs.
+    return false;
+  }
+
+  if ((input_.config_.mode_ == PayloadMode::kProvidesVmos) &&
+      (input_.config_.vmo_allocation_ == VmoAllocation::kUnrestricted) &&
+      (output_.config_.vmo_allocation_ != VmoAllocation::kUnrestricted)) {
+    // The input will provide VMOS and makes no promises about VMO allocation.
+    // The output has specific VMO allocation needs.
+    return false;
+  }
+
+  if ((output_.config_.mode_ == PayloadMode::kProvidesVmos) &&
       !output_.config_.physically_contiguous_ &&
       input_.config_.physically_contiguous_) {
     // The output will provide non-contiguous VMOS, but the input wants them
