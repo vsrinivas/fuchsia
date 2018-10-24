@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <arch/ops.h>
 #include <err.h>
 #include <hwreg/bitfields.h>
 #include <kernel/atomic.h>
