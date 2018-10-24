@@ -205,9 +205,9 @@ Use the following steps to execute a hard transition:
     are part of the Fuchsia source tree:
 
     1.  Upload CLs containing the changes to fuchsia-review.googlesource.com.
-    1.  Upload another CL to fuchsia-review.googlesource.com that modifies the
-        *global integration* repository to reference the git revisions from your
-        CLs. Perform a "dry run" of the commit queue for this CL.
+    1.  Upload another CL that modifies the *global integration* repository to
+        reference the git revisions from your CLs. Perform a "dry run" of the
+        commit queue for this CL.
 
 1.  Notify the team stating your intention to execute a hard transition.
 
