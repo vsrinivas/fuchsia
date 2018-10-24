@@ -597,7 +597,7 @@ zx_status_t EfiDevicePartitioner::Initialize(fbl::unique_ptr<DevicePartitioner>*
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    LOG("Successfully intitialized EFI Device Partitioner\n");
+    LOG("Successfully initialized EFI Device Partitioner\n");
     *partitioner = fbl::move(WrapUnique(new EfiDevicePartitioner(fbl::move(gpt))));
     return ZX_OK;
 }
@@ -873,7 +873,7 @@ zx_status_t FixedDevicePartitioner::Initialize(fbl::unique_ptr<DevicePartitioner
     if (HasSkipBlockDevice()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    LOG("Successfully intitialized FixedDevicePartitioner Device Partitioner\n");
+    LOG("Successfully initialized FixedDevicePartitioner Device Partitioner\n");
     *partitioner = fbl::move(WrapUnique(new FixedDevicePartitioner));
     return ZX_OK;
 }
@@ -944,7 +944,7 @@ zx_status_t SkipBlockDevicePartitioner::Initialize(
     if (!HasSkipBlockDevice()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    LOG("Successfully intitialized SkipBlockDevicePartitioner Device Partitioner\n");
+    LOG("Successfully initialized SkipBlockDevicePartitioner Device Partitioner\n");
     *partitioner = fbl::move(WrapUnique(new SkipBlockDevicePartitioner));
     return ZX_OK;
 }
