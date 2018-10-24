@@ -3,6 +3,10 @@
         "binary": "bin/integration_test_app"
     },
     "sandbox": {
-        "features": [ "deprecated-all-services", "persistent-storage" ]
+        "features": [ "persistent-storage" ],
+	"services": [
+            "fuchsia.tracelink.Registry",
+            "fuchsia.tracing.TraceController"
+        ]
     }
 }
