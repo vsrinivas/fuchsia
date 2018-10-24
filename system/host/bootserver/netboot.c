@@ -344,7 +344,7 @@ int netboot_xfer(struct sockaddr_in6* addr, const char* fn, const char* name) {
         // ACKs really are NACKs
         if (ack->cookie > 0 && ack->cmd == NB_ACK) {
             // ACKs tend to be generated in groups, since a dropped packet will cause ACKs for all
-            // outstanding packets. Therefore briefly sleep when we recieve an ACK with a different
+            // outstanding packets. Therefore briefly sleep when we receive an ACK with a different
             // position, to let things settle and prevent ourselves from fighting subsequent acks.
             if (ack->arg != current_pos) {
                 fprintf(stderr, "\n%s: need to reset to %d from %zu\n",
