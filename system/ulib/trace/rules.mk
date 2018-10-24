@@ -11,7 +11,6 @@ MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS = \
     $(LOCAL_DIR)/event.cpp \
-    $(LOCAL_DIR)/handler.cpp \
     $(LOCAL_DIR)/observer.cpp
 
 MODULE_STATIC_LIBS := \

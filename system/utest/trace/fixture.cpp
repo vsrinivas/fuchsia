@@ -18,9 +18,9 @@
 #include <fbl/vector.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/event.h>
+#include <trace-provider/handler.h>
 #include <trace-reader/reader.h>
 #include <trace-reader/reader_internal.h>
-#include <trace/handler.h>
 #include <unittest/unittest.h>
 
 namespace {

@@ -11,8 +11,8 @@
 
 #include <fbl/array.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <trace/handler.h>
 #include <lib/zx/event.h>
+#include <trace-provider/handler.h>
 
 class BenchmarkHandler : public trace::TraceHandler {
 public:

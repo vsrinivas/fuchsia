@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <trace/handler.h>
+#include <trace-provider/handler.h>
 
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/fifo.h>
@@ -19,7 +19,7 @@
 namespace trace {
 namespace internal {
 
-class TraceHandlerImpl final : public trace::TraceHandler {
+class Session final : public trace::TraceHandler {
 public:
     static void StartEngine(async_dispatcher_t* dispatcher,
                             trace_buffering_mode_t buffering_mode,
@@ -28,9 +28,9 @@ public:
     static void StopEngine();
 
 private:
-    TraceHandlerImpl(void* buffer, size_t buffer_num_bytes, zx::fifo fifo,
+    Session(void* buffer, size_t buffer_num_bytes, zx::fifo fifo,
                      fbl::Vector<fbl::String> enabled_categories);
-    ~TraceHandlerImpl() override;
+    ~Session() override;
 
     // |trace::TraceHandler|
     bool IsCategoryEnabled(const char* category) override;
@@ -55,7 +55,7 @@ private:
     void* buffer_;
     size_t buffer_num_bytes_;
     zx::fifo fifo_;
-    async::WaitMethod<TraceHandlerImpl, &TraceHandlerImpl::HandleFifo> fifo_wait_;
+    async::WaitMethod<Session, &Session::HandleFifo> fifo_wait_;
     fbl::Vector<fbl::String> const enabled_categories_;
 
     using CString = const char*;
@@ -93,7 +93,7 @@ private:
         CategoryStringKeyTraits>;
     StringSet enabled_category_set_;
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(TraceHandlerImpl);
+    DISALLOW_COPY_ASSIGN_AND_MOVE(Session);
 };
 
 } // namespace internal

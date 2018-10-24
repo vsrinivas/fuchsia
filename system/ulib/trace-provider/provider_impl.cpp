@@ -16,7 +16,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
-#include "handler_impl.h"
+#include "session.h"
 #include "trace_provider.fidl.h"
 #include "utils.h"
 
@@ -34,13 +34,13 @@ TraceProviderImpl::~TraceProviderImpl() = default;
 void TraceProviderImpl::Start(trace_buffering_mode_t buffering_mode,
                               zx::vmo buffer, zx::fifo fifo,
                               fbl::Vector<fbl::String> enabled_categories) {
-    TraceHandlerImpl::StartEngine(
+    Session::StartEngine(
         dispatcher_, buffering_mode, fbl::move(buffer), fbl::move(fifo),
         fbl::move(enabled_categories));
 }
 
 void TraceProviderImpl::Stop() {
-    TraceHandlerImpl::StopEngine();
+    Session::StopEngine();
 }
 
 void TraceProviderImpl::OnClose() {

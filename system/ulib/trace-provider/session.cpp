@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "handler_impl.h"
+#include "session.h"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -20,9 +20,9 @@
 namespace trace {
 namespace internal {
 
-TraceHandlerImpl::TraceHandlerImpl(void* buffer, size_t buffer_num_bytes,
-                                   zx::fifo fifo,
-                                   fbl::Vector<fbl::String> enabled_categories)
+Session::Session(void* buffer, size_t buffer_num_bytes,
+                 zx::fifo fifo,
+                 fbl::Vector<fbl::String> enabled_categories)
     : buffer_(buffer),
       buffer_num_bytes_(buffer_num_bytes),
       fifo_(fbl::move(fifo)),
@@ -36,7 +36,7 @@ TraceHandlerImpl::TraceHandlerImpl(void* buffer, size_t buffer_num_bytes,
     }
 }
 
-TraceHandlerImpl::~TraceHandlerImpl() {
+Session::~Session() {
     zx_status_t status = zx::vmar::root_self()->unmap(
         reinterpret_cast<uintptr_t>(buffer_), buffer_num_bytes_);
     ZX_DEBUG_ASSERT(status == ZX_OK);
@@ -44,10 +44,10 @@ TraceHandlerImpl::~TraceHandlerImpl() {
     ZX_DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_NOT_FOUND);
 }
 
-void TraceHandlerImpl::StartEngine(async_dispatcher_t* dispatcher,
-                                   trace_buffering_mode_t buffering_mode,
-                                   zx::vmo buffer, zx::fifo fifo,
-                                   fbl::Vector<fbl::String> enabled_categories) {
+void Session::StartEngine(async_dispatcher_t* dispatcher,
+                          trace_buffering_mode_t buffering_mode,
+                          zx::vmo buffer, zx::fifo fifo,
+                          fbl::Vector<fbl::String> enabled_categories) {
     ZX_DEBUG_ASSERT(buffer);
     ZX_DEBUG_ASSERT(fifo);
 
@@ -57,7 +57,7 @@ void TraceHandlerImpl::StartEngine(async_dispatcher_t* dispatcher,
     case TRACE_STOPPED:
         break;
     case TRACE_STOPPING:
-        fprintf(stderr, "TraceHandler for process %" PRIu64
+        fprintf(stderr, "Session for process %" PRIu64
                 ": cannot start engine, still stopping from previous trace\n",
                 GetPid());
         return;
@@ -65,7 +65,7 @@ void TraceHandlerImpl::StartEngine(async_dispatcher_t* dispatcher,
         // We can get here if the app errantly tried to create two providers.
         // This is a bug in the app, provide extra assistance for diagnosis.
         // Including the pid here has been extraordinarily helpful.
-        fprintf(stderr, "TraceHandler for process %" PRIu64
+        fprintf(stderr, "Session for process %" PRIu64
                 ": engine is already started. Is there perchance two"
                 " providers in this app?\n",
                 GetPid());
@@ -77,7 +77,7 @@ void TraceHandlerImpl::StartEngine(async_dispatcher_t* dispatcher,
     uint64_t buffer_num_bytes;
     zx_status_t status = buffer.get_size(&buffer_num_bytes);
     if (status != ZX_OK) {
-        fprintf(stderr, "TraceHandler: error getting buffer size, status=%d(%s)\n",
+        fprintf(stderr, "Session: error getting buffer size, status=%d(%s)\n",
                 status, zx_status_get_string(status));
         return;
     }
@@ -87,36 +87,36 @@ void TraceHandlerImpl::StartEngine(async_dispatcher_t* dispatcher,
         0u, buffer, 0u, buffer_num_bytes,
         ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &buffer_ptr);
     if (status != ZX_OK) {
-        fprintf(stderr, "TraceHandler: error mapping buffer, status=%d(%s)\n",
+        fprintf(stderr, "Session: error mapping buffer, status=%d(%s)\n",
                 status, zx_status_get_string(status));
         return;
     }
 
-    auto handler = new TraceHandlerImpl(reinterpret_cast<void*>(buffer_ptr),
-                                        buffer_num_bytes, fbl::move(fifo),
-                                        fbl::move(enabled_categories));
+    auto session = new Session(reinterpret_cast<void*>(buffer_ptr),
+                               buffer_num_bytes, fbl::move(fifo),
+                               fbl::move(enabled_categories));
 
-    status = handler->fifo_wait_.Begin(dispatcher);
+    status = session->fifo_wait_.Begin(dispatcher);
     if (status != ZX_OK) {
-        fprintf(stderr, "TraceHandler: error starting fifo wait, status=%d(%s)\n",
+        fprintf(stderr, "Session: error starting fifo wait, status=%d(%s)\n",
                 status, zx_status_get_string(status));
-        delete handler;
+        delete session;
         return;
     }
 
-    status = trace_start_engine(dispatcher, handler, buffering_mode,
-                                handler->buffer_, handler->buffer_num_bytes_);
+    status = trace_start_engine(dispatcher, session, buffering_mode,
+                                session->buffer_, session->buffer_num_bytes_);
     if (status != ZX_OK) {
-        fprintf(stderr, "TraceHandler: error starting engine, status=%d(%s)\n",
+        fprintf(stderr, "Session: error starting engine, status=%d(%s)\n",
                 status, zx_status_get_string(status));
-        delete handler;
+        delete session;
         return;
     }
 
-    // The handler will be destroyed in |TraceStopped()|.
+    // The session will be destroyed in |TraceStopped()|.
 }
 
-void TraceHandlerImpl::StopEngine() {
+void Session::StopEngine() {
     auto status = trace_stop_engine(ZX_OK);
     if (status != ZX_OK) {
         // During shutdown this can happen twice: once for the Stop() request
@@ -127,30 +127,30 @@ void TraceHandlerImpl::StopEngine() {
         if (status == ZX_ERR_BAD_STATE && trace_state() == TRACE_STOPPED) {
             // this is ok
         } else {
-            fprintf(stderr, "TraceHandler: Failed to stop engine, status=%d(%s)\n",
+            fprintf(stderr, "Session: Failed to stop engine, status=%d(%s)\n",
                     status, zx_status_get_string(status));
         }
     }
 }
 
-void TraceHandlerImpl::HandleFifo(async_dispatcher_t* dispatcher,
-                                  async::WaitBase* wait,
-                                  zx_status_t status,
-                                  const zx_packet_signal_t* signal) {
+void Session::HandleFifo(async_dispatcher_t* dispatcher,
+                         async::WaitBase* wait,
+                         zx_status_t status,
+                         const zx_packet_signal_t* signal) {
     if (status == ZX_ERR_CANCELED) {
         // The wait could be canceled if we're shutting down, e.g., the
         // program is exiting.
         return;
     }
     if (status != ZX_OK) {
-        fprintf(stderr, "TraceHandler: FIFO wait failed: status=%d(%s)\n",
+        fprintf(stderr, "Session: FIFO wait failed: status=%d(%s)\n",
                 status, zx_status_get_string(status));
     } else if (signal->observed & ZX_FIFO_READABLE) {
         if (ReadFifoMessage()) {
             if (wait->Begin(dispatcher) == ZX_OK) {
                 return;
             }
-            fprintf(stderr, "TraceHandler: Error re-registering FIFO wait\n");
+            fprintf(stderr, "Session: Error re-registering FIFO wait\n");
         }
     } else {
         ZX_DEBUG_ASSERT(signal->observed & ZX_FIFO_PEER_CLOSED);
@@ -160,12 +160,12 @@ void TraceHandlerImpl::HandleFifo(async_dispatcher_t* dispatcher,
     StopEngine();
 }
 
-bool TraceHandlerImpl::ReadFifoMessage() {
+bool Session::ReadFifoMessage() {
     trace_provider_packet_t packet;
     auto status = fifo_.read(sizeof(packet), &packet, 1u, nullptr);
     ZX_DEBUG_ASSERT(status == ZX_OK);
     if (packet.reserved != 0) {
-        fprintf(stderr, "TraceHandler: Reserved field non-zero from TraceManager: %u\n",
+        fprintf(stderr, "Session: Reserved field non-zero from TraceManager: %u\n",
                packet.reserved);
         return false;
     }
@@ -174,7 +174,7 @@ bool TraceHandlerImpl::ReadFifoMessage() {
         auto wrapped_count = packet.data32;
         auto durable_data_end = packet.data64;
 #if 0 // TODO(DX-367): Don't delete this, save for conversion to syslog.
-        fprintf(stderr, "TraceHandler: Received buffer_saved message"
+        fprintf(stderr, "Session: Received buffer_saved message"
                 ", wrapped_count=%u, durable_data_end=0x%" PRIx64 "\n",
                 wrapped_count, durable_data_end);
 #endif
@@ -182,14 +182,14 @@ bool TraceHandlerImpl::ReadFifoMessage() {
         if (status == ZX_ERR_BAD_STATE) {
             // This happens when tracing has stopped. Ignore it.
         } else if (status != ZX_OK) {
-            fprintf(stderr, "TraceHandler: MarkBufferSaved failed: status=%d\n",
+            fprintf(stderr, "Session: MarkBufferSaved failed: status=%d\n",
                     status);
             return false;
         }
         break;
     }
     default:
-        fprintf(stderr, "TraceHandler: Bad request from TraceManager: %u\n",
+        fprintf(stderr, "Session: Bad request from TraceManager: %u\n",
                 packet.request);
         return false;
     }
@@ -197,13 +197,13 @@ bool TraceHandlerImpl::ReadFifoMessage() {
     return true;
 }
 
-zx_status_t TraceHandlerImpl::MarkBufferSaved(uint32_t wrapped_count,
-                                              uint64_t durable_data_end) {
+zx_status_t Session::MarkBufferSaved(uint32_t wrapped_count,
+                                     uint64_t durable_data_end) {
     return trace_engine_mark_buffer_saved(wrapped_count,
                                           durable_data_end);
 }
 
-bool TraceHandlerImpl::IsCategoryEnabled(const char* category) {
+bool Session::IsCategoryEnabled(const char* category) {
     if (enabled_categories_.size() == 0) {
       // If none are specified, enable all categories.
       return true;
@@ -211,7 +211,7 @@ bool TraceHandlerImpl::IsCategoryEnabled(const char* category) {
     return enabled_category_set_.find(category) != enabled_category_set_.end();
 }
 
-void TraceHandlerImpl::TraceStarted() {
+void Session::TraceStarted() {
     trace_provider_packet_t packet{};
     packet.request = TRACE_PROVIDER_STARTED;
     packet.data32 = TRACE_PROVIDER_FIFO_PROTOCOL_VERSION;
@@ -220,15 +220,15 @@ void TraceHandlerImpl::TraceStarted() {
                     status == ZX_ERR_PEER_CLOSED);
 }
 
-void TraceHandlerImpl::TraceStopped(async_dispatcher_t* dispatcher, zx_status_t disposition,
-                                    size_t buffer_bytes_written) {
+void Session::TraceStopped(async_dispatcher_t* dispatcher, zx_status_t disposition,
+                           size_t buffer_bytes_written) {
     // There's no need to notify the trace manager that records were dropped
     // here. That can be determined from the buffer header.
     delete this;
 }
 
-void TraceHandlerImpl::NotifyBufferFull(uint32_t wrapped_count,
-                                        uint64_t durable_data_end) {
+void Session::NotifyBufferFull(uint32_t wrapped_count,
+                               uint64_t durable_data_end) {
     trace_provider_packet_t packet{};
     packet.request = TRACE_PROVIDER_SAVE_BUFFER;
     packet.data32 = wrapped_count;

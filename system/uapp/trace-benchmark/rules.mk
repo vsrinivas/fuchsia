@@ -16,8 +16,12 @@ MODULE_SRCS += \
 
 MODULE_NAME := trace-benchmark
 
+MODULE_HEADER_DEPS := \
+    system/ulib/trace-provider
+
 MODULE_STATIC_LIBS := \
     system/ulib/trace \
+    system/ulib/trace-provider.handler \
     system/ulib/async \
     system/ulib/async.cpp \
     system/ulib/async-loop.cpp \

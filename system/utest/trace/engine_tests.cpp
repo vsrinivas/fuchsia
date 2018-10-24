@@ -12,7 +12,7 @@
 #include <fbl/vector.h>
 #include <lib/zx/event.h>
 #include <trace/event.h>
-#include <trace/handler.h>
+#include <trace-provider/handler.h>
 
 namespace {
 int RunClosure(void* arg) {

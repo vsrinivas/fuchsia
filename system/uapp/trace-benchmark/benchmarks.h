@@ -6,7 +6,7 @@
 
 #include <stddef.h>
 
-#include <trace/handler.h>
+#include <trace-engine/types.h>
 
 struct BenchmarkSpec {
     const char* name;
