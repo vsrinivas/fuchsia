@@ -4,9 +4,25 @@
 
 #include "garnet/bin/zxdb/client/thread.h"
 
-#include "garnet/bin/zxdb/client/setting_schema.h"
+#include "garnet/bin/zxdb/client/setting_schema_definition.h"
+
+#include "garnet/bin/zxdb/client/system.h"
+#include "garnet/bin/zxdb/client/target.h"
 
 namespace zxdb {
+
+// Schema Definition -----------------------------------------------------------
+
+namespace {
+
+fxl::RefPtr<SettingSchema> CreateSchema() {
+  auto schema = fxl::MakeRefCounted<SettingSchema>();
+  return schema;
+}
+
+}  // namespace
+
+// Thread Implementation -------------------------------------------------------
 
 Thread::Thread(Session* session)
     : ClientObject(session),
@@ -27,8 +43,9 @@ void Thread::RemoveObserver(ThreadObserver* observer) {
 fxl::WeakPtr<Thread> Thread::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
 fxl::RefPtr<SettingSchema> Thread::GetSchema() {
-  // TODO(donosoc): Fill in the target schema.
-  static auto schema = fxl::MakeRefCounted<SettingSchema>();
+  // Will only run initialization once.
+  InitializeSchemas();
+  static fxl::RefPtr<SettingSchema> schema = CreateSchema();
   return schema;
 }
 

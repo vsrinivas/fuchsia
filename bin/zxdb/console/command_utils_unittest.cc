@@ -28,6 +28,10 @@ TEST(CommandUtils, StringToInt) {
   EXPECT_FALSE(StringToInt("-0x1a", &result).has_error());
   EXPECT_EQ(-0x1a, result);
 
+  // Trimmed
+  EXPECT_FALSE(StringToInt("   -0x1a     ", &result).has_error());
+  EXPECT_EQ(-0x1a, result);
+
   // Test at the limits.
   constexpr int kMax = std::numeric_limits<int>::max();
   EXPECT_FALSE(StringToInt(fxl::StringPrintf("%d", kMax), &result).has_error());
@@ -56,6 +60,10 @@ TEST(CommandUtils, StringToUint32) {
   EXPECT_FALSE(StringToUint32("0xffffffff", &result).has_error());
   EXPECT_EQ(0xffffffff, result);
   EXPECT_TRUE(StringToUint32("0x100000000", &result).has_error());
+
+  // Trimming
+  EXPECT_FALSE(StringToUint32("    0xffffffff     ", &result).has_error());
+  EXPECT_EQ(0xffffffff, result);
 }
 
 TEST(CommandUtils, StringToUint64) {
@@ -74,11 +82,9 @@ TEST(CommandUtils, StringToUint64) {
   EXPECT_TRUE(StringToUint64("+1234", &result).has_error());
   EXPECT_EQ(0u, result);
 
-  // No leading spaces permitted.
-  EXPECT_TRUE(StringToUint64(" 1234", &result).has_error());
-
-  // No trailing spaces permitted.
-  EXPECT_TRUE(StringToUint64("1234 ", &result).has_error());
+  // Trim.
+  EXPECT_FALSE(StringToUint64("   1234   ", &result).has_error());
+  EXPECT_EQ(1234u, result);
 
   // Leading 0's should still be decimal, don't trigger octal.
   EXPECT_FALSE(StringToUint64("01234", &result).has_error());

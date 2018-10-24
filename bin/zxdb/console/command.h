@@ -77,6 +77,7 @@ enum class Verb {
   kQuit,
   kRegs,
   kRun,
+  kSet,
   kStack,
   kStep,
   kStepi,

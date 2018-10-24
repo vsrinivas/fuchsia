@@ -4,9 +4,23 @@
 
 #include "garnet/bin/zxdb/client/target.h"
 
-#include "garnet/bin/zxdb/client/setting_schema.h"
+#include "garnet/bin/zxdb/client/setting_schema_definition.h"
 
 namespace zxdb {
+
+// Schema Definition -----------------------------------------------------------
+
+namespace {
+
+fxl::RefPtr<SettingSchema> CreateSchema() {
+  auto schema = fxl::MakeRefCounted<SettingSchema>();
+  return schema;
+}
+
+}  // namespace
+
+// Target Implementation -------------------------------------------------------
+
 
 Target::Target(Session* session)
     : ClientObject(session),
@@ -27,8 +41,9 @@ void Target::RemoveObserver(TargetObserver* observer) {
 fxl::WeakPtr<Target> Target::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
 fxl::RefPtr<SettingSchema> Target::GetSchema() {
-  // TODO(donosoc): Fill in the target schema.
-  static auto schema = fxl::MakeRefCounted<SettingSchema>();
+  // Will only run initialization once.
+  InitializeSchemas();
+  static fxl::RefPtr<SettingSchema> schema = CreateSchema();
   return schema;
 }
 

@@ -23,7 +23,7 @@ const char* SettingTypeToString(SettingType type) {
     case SettingType::kList:
       return "list";
     case SettingType::kNull:
-      return "null";
+      return "<null>";
   }
 }
 

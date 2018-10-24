@@ -4,6 +4,8 @@
 
 #include "garnet/bin/zxdb/console/verbs.h"
 
+#include <stdlib.h>
+
 #include <algorithm>
 
 #include "garnet/bin/zxdb/client/session.h"
@@ -16,7 +18,9 @@
 #include "garnet/bin/zxdb/console/format_settings.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "lib/fxl/strings/trim.h"
 
 namespace zxdb {
 
@@ -331,11 +335,11 @@ Err DoCls(ConsoleContext* context, const Command& cmd,
 
 // get -------------------------------------------------------------------------
 
-const char kGetShortHelp[] = "get: Get a setting value.";
+const char kGetShortHelp[] = "get: Get a setting(s) value(s).";
 const char kGetHelp[] =
     R"(get (--system|-s) [setting_name]
 
-  Gets the value of the settings that match a particular regexp.
+  Gets the value of all the settings or the detailed description of one.
 
 Arguments
 
@@ -346,6 +350,13 @@ Arguments
   [setting_name]
       Filter for one setting. Will show detailed information, such as a
       description and more easily copyable values.
+
+Setting Types
+
+  Settings have a particular type: bool, int, string or list (of strings).
+  The type is set beforehand and cannot change. Getting the detailed information
+  of a setting will show the type of setting it is, though normally it is easy
+  to tell from the list of values.
 
 Contexts
 
@@ -375,7 +386,6 @@ Contexts
 
   get -s foo
       Retrieves the value of "foo" for the system.
-
 
 Schemas
 
@@ -429,8 +439,6 @@ Examples
       List the values of settings at the system level.
   )";
 
-namespace {
-
 Err HandleSettingStore(const SettingStore& store, const std::string& setting_name) {
   OutputBuffer out;
   Err err = FormatSettings(store, setting_name, &out);
@@ -441,8 +449,6 @@ Err HandleSettingStore(const SettingStore& store, const std::string& setting_nam
   Console::get()->Output(std::move(out));
   return Err();
 }
-
-}  // namespace
 
 constexpr int kGetSystemSwitch = 0;
 
@@ -465,33 +471,210 @@ Err DoGet(ConsoleContext* context, const Command& cmd) {
   }
 
   // First we check is the user is asking for process.
-  if (cmd.HasNoun(Noun::kProcess) && !cmd.HasNoun(Noun::kProcess)) {
+  if (cmd.HasNoun(Noun::kProcess) && !cmd.HasNoun(Noun::kThread))
     return HandleSettingStore(target->settings(), setting_name);
-  }
 
-  if (cmd.HasNoun(Noun::kThread)) {
-    Process* process = target->GetProcess();
-    if (!process)
-      return Err("Process not running, no threads.");
-
-    Thread* thread = cmd.thread();
-    if (!thread) {
-      return Err("Could not find specified thread.");
-    }
-
-    return HandleSettingStore(thread->settings(), setting_name);
+  Process* process = target->GetProcess();
+  if (!process) {
+    return Err(
+        "Process not running, no threads. Is this a system setting? See \"help "
+        "get\".");
   }
 
   Thread* thread = cmd.thread();
-  if (!thread) {
-    return Err(
-        "No thread in the current context. See \"help get\" for more info.");
-  }
-
+  if (!thread)
+    return Err("Could not find specified thread.");
   return HandleSettingStore(thread->settings(), setting_name);
 }
 
-}  // namespace
+// Set -------------------------------------------------------------------------
+
+constexpr int kSetSystemSwitch = 0;
+
+const char kSetShortHelp[] = "set: Set a setting value.";
+const char kSetHelp[] =
+    R"(set <setting_name> <value>
+
+  Sets the value of a setting.
+
+Arguments
+
+  <setting_name>
+      The setting that will modified. Must match exactly.
+
+  <value>
+      The value to set. Keep in mind that settings have different types, so the
+      value will be validated. Read more below.
+
+Contexts, Schemas and Instance Overrides
+
+  Settings have a hierarchical system of contexts where settings are defined.
+  When setting a value, if it is not qualified, it will be set at a system
+  level. In order to override it at a target or thread level, the setting
+  command has to be explicitly qualified. See examples below.
+
+  There is detailed information on contexts and schemas in "help get".
+
+Setting Types
+
+  Settings have a particular type: bool, int, string or list (of strings).
+  The type is set beforehand and cannot change. Getting the detailed information
+  of a setting will show the type of setting it is, though normally it is easy
+  to tell from the list of valued.
+
+  The valid inputs for each type are:
+
+  - bool: "0", "false" -> false
+          "1", "true"  -> true
+  - int: Any string convertible to integer (think std::atoi).
+  - string: Any one-word string. Working on getting multi-word strings.
+  - list: List uses a representation of colon (:) separated values. While
+          showing the list value uses bullet points, setting it requires the
+          colon-separated representation. Running "get <setting_name>" will give
+          the current "list setting value" for a list setting, which can be
+          copy-pasted for easier editing. See example for a demostration.
+
+Examples
+
+  [zxdb] set boolean_setting true
+  Set system-level setting:
+  true
+
+  [zxdb] pr set int_setting 1024
+  Overrode setting for the given process:
+  1024
+
+  [zxdb] p 3 t 2 set string_setting somesuperlongstring
+  Overrode setting for the given thread:
+  somesuperlongstring
+
+  [zxdb] get foo
+  ...
+  • first
+  • second
+  • third
+  ...
+  Set value: first:second:third
+  [zxdb] set foo first:second:third:fourth
+  • first
+  • second
+  • third
+  • fourth
+)";
+
+Err SetBool(SettingStore* store, const std::string& setting_name,
+            const std::string& value) {
+  if (value == "0" || value == "false") {
+    store->SetBool(setting_name, false);
+  } else if (value == "1" || value == "true") {
+    store->SetBool(setting_name, true);
+  } else {
+    return Err("%s expects a boolean. See \"help set\" for valid values.",
+               setting_name.data());
+  }
+  return Err();
+}
+
+Err SetInt(SettingStore* store, const std::string& setting_name,
+           const std::string& value) {
+  int out;
+  Err err = StringToInt(value, &out);
+  if (err.has_error()) {
+    return Err("%s expects a valid int: %s", setting_name.data(),
+               err.msg().data());
+  }
+
+  return store->SetInt(setting_name, out);
+}
+
+Err SetSetting(SettingStore* store, const std::string& setting_name,
+               const std::string& value) {
+  StoredSetting setting = store->GetSetting(setting_name);
+  if (setting.value.is_null())
+    return Err("Could not find setting %s", setting_name.data());
+
+  switch (setting.value.type()) {
+    case SettingType::kBoolean:
+      return SetBool(store, setting_name, value);
+    case SettingType::kInteger:
+      return SetInt(store, setting_name, value);
+    case SettingType::kString:
+      return store->SetString(setting_name, value);
+    case SettingType::kList:
+      return store->SetList(
+          setting_name, fxl::SplitStringCopy(value, ":", fxl::kKeepWhitespace,
+                                             fxl::kSplitWantNonEmpty));
+    case SettingType::kNull:
+      return Err("Unknown type for setting %s. Please file a bug with repro.",
+                 setting_name.data());
+  }
+}
+
+Err DoSet(ConsoleContext* context, const Command& cmd) {
+  if (cmd.args().size() < 2) {
+    return Err("Wrong amount of Arguments. See \"help set\".");
+  }
+
+  const std::string& setting_name = cmd.args()[0];
+  // TODO(donosoc): Support multi word strings.
+  const std::string& value = cmd.args()[1];
+
+  Target* target = cmd.target();
+  if (!target)
+    return Err("No target found. Please file a bug with a repro.");
+
+  // Lookup the correct setting store.
+  SettingStore* store = nullptr;
+  // We see if we have an explicit thread to set.
+  if (cmd.HasNoun(Noun::kThread)) {
+    Thread* thread = cmd.thread();
+    if (!thread)
+      return Err("Could not find specified thread.");
+    store = &thread->settings();
+  } else if (cmd.HasNoun(Noun::kProcess)) {
+    Target* target = cmd.target();
+    if (!target)
+      return Err("Could not find specified target.");
+    store = &target->settings();
+  } else {
+    // Finally, because no context was explicitly defined, we set the global
+    // settings.
+    Target* current_target = cmd.target();
+    if (!current_target)
+      return Err("Could not find current target. Please file bug with repro.");
+    store = &target->session()->system().settings();
+  }
+
+  if (!store)
+    return Err("Could not find a setting store. Please file a bug with repro.");
+
+  Err err = SetSetting(store, setting_name, value);
+  if (!err.ok())
+    return err;
+
+  // There should not be a default value.
+  StoredSetting setting = store->GetSetting(setting_name, false);
+  if (setting.value.is_null())
+    return Err("Null setting after set. Please file a bug with repro.");
+
+  // Should never override default (schema) values.
+  FXL_DCHECK(setting.level != SettingStore::Level::kDefault);
+
+  // Feedback about where the setting was set.
+  if (setting.level == SettingStore::Level::kSystem) {
+    Console::get()->Output("Set system-level setting:");
+  } else {
+    Console::get()->Output(
+        fxl::StringPrintf("Overrode setting for the given %s:",
+                          SettingStoreLevelToString(setting.level)));
+  }
+
+  // We output the new value.
+  Console::get()->Output(FormatSettingValue(setting));
+  return Err();
+}
+
+} // namespace
 
 void AppendControlVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kHelp] = VerbRecord(&DoHelp, {"help", "h"}, kHelpShortHelp,
@@ -510,13 +693,19 @@ void AppendControlVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kCls] = VerbRecord(&DoCls, {"cls"}, kClsShortHelp, kClsHelp,
                                     CommandGroup::kGeneral);
 
-  // get
+  // get.
   SwitchRecord get_system(kGetSystemSwitch, false, "system", 's');
-
   VerbRecord get(&DoGet, {"get"}, kGetShortHelp, kGetHelp,
                                     CommandGroup::kGeneral);
   get.switches.push_back(std::move(get_system));
   (*verbs)[Verb::kGet] = std::move(get);
+
+  // set.
+  SwitchRecord set_system(kSetSystemSwitch, false, "system", 's');
+  VerbRecord set(&DoSet, {"set"}, kSetShortHelp, kSetHelp,
+                 CommandGroup::kGeneral);
+  set.switches.push_back(std::move(set_system));
+  (*verbs)[Verb::kSet] = std::move(set);
 }
 
 }  // namespace zxdb

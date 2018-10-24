@@ -78,6 +78,8 @@ TEST(FormatSetting, Setting) {
             "  Setting string description,\n"
             "  with many lines.\n"
             "\n"
+            "Type: string\n"
+            "\n"
             "Value(s):\n"
             "Test string\n",
             out.AsString());
@@ -105,6 +107,8 @@ TEST(FormatSetting, SchemaItemList) {
   "\n"
   "  Some very long description about how this setting is very important to the\n"
   "  company and all its customers.\n"
+  "\n"
+  "Type: list\n"
   "\n"
   "Value(s):\n"
   "• /some/very/long/and/annoying/path/that/actually/leads/nowhere\n"

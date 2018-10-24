@@ -86,7 +86,21 @@ void AddSettingToTable(const StoredSetting& setting,
   }
 }
 
+}  // namespace
+
+OutputBuffer FormatSettingValue(const StoredSetting& setting) {
+  FXL_DCHECK(!setting.value.is_null());
+
+  OutputBuffer out;
+  std::vector<std::vector<OutputBuffer>> rows;
+  AddSettingToTable(setting, &rows, false);
+  FormatTable(std::vector<ColSpec>{1}, std::move(rows), &out);
+  return out;
+}
+
 OutputBuffer FormatSetting(const StoredSetting& setting) {
+  FXL_DCHECK(!setting.value.is_null());
+
   OutputBuffer out;
   out.Append({Syntax::kHeading, setting.schema_item.name()});
   out.Append(OutputBuffer("\n"));
@@ -94,12 +108,12 @@ OutputBuffer FormatSetting(const StoredSetting& setting) {
   out.Append(setting.schema_item.description());
   out.Append(OutputBuffer("\n\n"));
 
+  out.Append({Syntax::kHeading, "Type: "});
+  out.Append(SettingTypeToString(setting.schema_item.type()));
+  out.Append("\n\n");
+
   out.Append({Syntax::kHeading, "Value(s):\n"});
-  OutputBuffer item_out;
-  std::vector<std::vector<OutputBuffer>> rows;
-  AddSettingToTable(setting, &rows, false);
-  FormatTable(std::vector<ColSpec>{1}, std::move(rows), &item_out);
-  out.Append(std::move(item_out));
+  out.Append(FormatSettingValue(setting));
 
   // List have a copy-paste value for setting the value.
   if (setting.value.is_list()) {
@@ -113,8 +127,6 @@ OutputBuffer FormatSetting(const StoredSetting& setting) {
 
   return out;
 }
-
-}  // namespace
 
 Err FormatSettings(const SettingStore& store, const std::string& setting_name,
                    OutputBuffer* out) {
@@ -141,6 +153,22 @@ Err FormatSettings(const SettingStore& store, const std::string& setting_name,
                "Run get <option> to see detailed information.\n"});
   out->Append(std::move(list_out));
   return Err();
+}
+
+const char* SettingStoreLevelToString(SettingStore::Level level) {
+  switch (level) {
+    case SettingStore::Level::kDefault:
+      return "default";
+    case SettingStore::Level::kSystem:
+      return "system";
+    case SettingStore::Level::kTarget:
+      return "target";
+    case SettingStore::Level::kThread:
+      return "thread";
+  }
+
+  // Just in case.
+  return "<invalid>";
 }
 
 }  // namespace zxdb

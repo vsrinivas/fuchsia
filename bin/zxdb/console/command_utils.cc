@@ -23,8 +23,9 @@
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/location.h"
 #include "garnet/bin/zxdb/symbols/symbol_utils.h"
-#include "garnet/public/lib/fxl/logging.h"
-#include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
+#include "lib/fxl/strings/trim.h"
 
 namespace zxdb {
 
@@ -77,11 +78,13 @@ Err StringToInt(const std::string& s, int* out) {
   if (s.empty())
     return Err(ErrType::kInput, "The empty string is not a number.");
 
+  std::string trimmed = fxl::TrimString(s, " ").ToString();
+
   // Re-uses StringToUint64's error handling and just adds support for '-' at
   // the beginning and size-checks the output.
   uint64_t absolute_val;
-  if (s[0] == '-') {
-    Err err = StringToUint64(s.substr(1), &absolute_val);
+  if (trimmed[0] == '-') {
+    Err err = StringToUint64(trimmed.substr(1), &absolute_val);
     if (err.has_error())
       return err;
     if (absolute_val >
@@ -89,7 +92,7 @@ Err StringToInt(const std::string& s, int* out) {
       return Err("This value is too small for an integer.");
     *out = -static_cast<int>(absolute_val);
   } else {
-    Err err = StringToUint64(s, &absolute_val);
+    Err err = StringToUint64(trimmed, &absolute_val);
     if (err.has_error())
       return err;
     if (absolute_val > std::numeric_limits<int>::max())
@@ -116,24 +119,26 @@ Err StringToUint32(const std::string& s, uint32_t* out) {
 }
 
 Err StringToUint64(const std::string& s, uint64_t* out) {
+  std::string trimmed = fxl::TrimString(s, " ").ToString();
+
   *out = 0;
-  if (s.empty())
+  if (trimmed.empty())
     return Err(ErrType::kInput, "The empty string is not a number.");
 
-  if (size_t hex_after_prefix = CheckHexPrefix(s)) {
-    if (hex_after_prefix == s.size())
+  if (size_t hex_after_prefix = CheckHexPrefix(trimmed)) {
+    if (hex_after_prefix == trimmed.size())
       return Err(ErrType::kInput, "Expecting number after \"0x\".");
-    for (size_t i = hex_after_prefix; i < s.size(); i++) {
-      if (!isxdigit(s[i]))
-        return Err(ErrType::kInput, "Invalid hex number: + \"" + s + "\".");
+    for (size_t i = hex_after_prefix; i < trimmed.size(); i++) {
+      if (!isxdigit(trimmed[i]))
+        return Err(ErrType::kInput, "Invalid hex number: + \"" + trimmed + "\".");
     }
-    *out = strtoull(s.c_str(), nullptr, 16);
+    *out = strtoull(trimmed.c_str(), nullptr, 16);
   } else {
-    for (size_t i = 0; i < s.size(); i++) {
-      if (!isdigit(s[i]))
-        return Err(ErrType::kInput, "Invalid number: \"" + s + "\".");
+    for (size_t i = 0; i < trimmed.size(); i++) {
+      if (!isdigit(trimmed[i]))
+        return Err(ErrType::kInput, "Invalid number: \"" + trimmed + "\".");
     }
-    *out = strtoull(s.c_str(), nullptr, 10);
+    *out = strtoull(trimmed.c_str(), nullptr, 10);
   }
 
   return Err();

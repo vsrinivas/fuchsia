@@ -5,27 +5,24 @@
 #include "garnet/bin/zxdb/client/setting_schema_definition.h"
 
 #include "garnet/bin/zxdb/client/setting_schema.h"
+#include "garnet/bin/zxdb/client/system.h"
+#include "garnet/bin/zxdb/client/target.h"
+#include "garnet/bin/zxdb/client/thread.h"
 
 namespace zxdb {
 
-// System ----------------------------------------------------------------------
+void InitializeSchemas() {
+  // Will initialize the schemas only once.
+  static bool initialized = false;
+  if (initialized)
+    return;
+  initialized = true;
 
-const char* ClientSettings::kSymbolPaths = "symbol-paths";
-const char* kSymbolPathsDescription = R"(
-      List of mapping databases, ELF files or directories for symbol lookup.
-      When a directory path is passed, the directory will be enumerated
-      non-recursively to index all ELF files within. When a .txt file is passed,
-      it will be treated as a mapping database from build ID to file path.
-      Otherwise, the path will be loaded as an ELF file.)";
-
-fxl::RefPtr<SettingSchema> CreateSystemSchema() {
-  auto schema = fxl::MakeRefCounted<SettingSchema>();
-
-  schema->AddList(ClientSettings::kSymbolPaths, kSymbolPathsDescription,
-                  {});
-
-  return schema;
+  // Simply getting the schemas will create them, so we need to make sure we
+  // get all of them.
+  System::GetSchema();
+  Target::GetSchema();
+  Thread::GetSchema();
 }
-
 
 }  // namespace zxdb
