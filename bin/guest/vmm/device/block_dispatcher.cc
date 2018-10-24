@@ -62,6 +62,7 @@ class RawBlockDispatcher : public BlockDispatcher {
       };
       auto begin = addr + at;
       fidl::VectorPtr<uint8_t> buf{{begin, begin + len}};
+      // TODO(MAC-174): Add support for channel back-pressure.
       file_->WriteAt(std::move(buf), off, write);
     }
   }
