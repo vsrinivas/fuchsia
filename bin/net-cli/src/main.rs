@@ -2,18 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro, futures_api, pin, arbitrary_self_types)]
+#![feature(
+    async_await,
+    await_macro,
+    futures_api,
+    pin,
+    arbitrary_self_types
+)]
 #![deny(warnings)]
 
 use failure::{Error, ResultExt};
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy};
+use fidl_fuchsia_net_stack_ext as pretty;
 use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;
 use structopt::StructOpt;
 
 mod opts;
-mod pretty;
 
 use crate::opts::*;
 
@@ -40,7 +46,8 @@ async fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> Result<(), Error> {
             }
         }
         IfCmd::Get { id } => {
-            let response = await!(stack.get_interface_info(id)).context("error getting response")?;
+            let response =
+                await!(stack.get_interface_info(id)).context("error getting response")?;
             if let Some(e) = response.1 {
                 println!("Error getting interface {}: {:?}", id, e)
             } else {
@@ -75,9 +82,11 @@ async fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> Result<(), Error> {
             if let Some(e) = response {
                 println!("Error adding interface address {}: {:?}", id, e)
             } else {
-                println!("Address {} added to interface {}",
-                         pretty::InterfaceAddress::from(&fidl_addr),
-                         id)
+                println!(
+                    "Address {} added to interface {}",
+                    pretty::InterfaceAddress::from(&fidl_addr),
+                    id
+                )
             }
         }
         IfCmd::Addr(AddrCmd::Del { .. }) => {

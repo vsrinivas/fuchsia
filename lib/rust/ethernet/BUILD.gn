@@ -10,12 +10,12 @@ rustc_library("ethernet") {
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/fidl_zircon_ethernet_ext",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/shared-buffer",
-    "//third_party/rust-crates/rustc_deps:bitflags",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//zircon/public/fidl/zircon-ethernet:zircon-ethernet-rustc",

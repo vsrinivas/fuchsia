@@ -1,0 +1,27 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/package.gni")
+
+rustc_library("fidl_fuchsia_net_ext") {
+  with_unit_tests = true
+  edition = "2018"
+  deps = [
+    "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
+  ]
+}
+
+# TODO(tamird): add this to packages/tests/fidlext_tests when runtests stops crashing.
+package("fidl_fuchsia_net_ext_tests") {
+  testonly = true
+  deps = [
+    ":fidl_fuchsia_net_ext",
+  ]
+  tests = [
+    {
+      name = "fidl_fuchsia_net_ext_lib_test_rustc"
+    },
+  ]
+}

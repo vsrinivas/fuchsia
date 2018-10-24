@@ -4,7 +4,7 @@
 
 use {
     failure::{self, ResultExt},
-    fuchsia_net::MacAddress,
+    fidl_zircon_ethernet_ext::MacAddress,
     serde_derive::{Deserialize, Serialize},
     std::{fs, io, path},
 };
@@ -399,8 +399,7 @@ mod tests {
             },
         ];
         // expect empty cur_config
-        let temp_dir = tempfile::TempDir::new()
-            .expect("failed to create the temp dir");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create the temp dir");
         let path = temp_dir.path().join("net.config.json");
         let mut interface_config =
             FileBackedConfig::load(&path).expect("failed to load the interface config");
@@ -447,8 +446,7 @@ mod tests {
 
     #[test]
     fn test_load_malformed_file() {
-        let temp_dir =
-            tempfile::TempDir::new().expect("failed to create the temp dir");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create the temp dir");
         let path = temp_dir.path().join("net.config.json");
         {
             let mut file = fs::File::create(&path).expect("failed to open file for writing");

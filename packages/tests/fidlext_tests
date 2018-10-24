@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/lib/rust/fidl_fuchsia_net_stack_ext:fidl_fuchsia_net_stack_ext_tests"
+    ]
+}

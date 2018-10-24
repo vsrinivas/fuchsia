@@ -23,7 +23,6 @@ use fidl_fuchsia_netstack::{
 use fidl_zircon_ethernet::{
     DeviceMarker, DeviceProxy, INFO_FEATURE_LOOPBACK, INFO_FEATURE_SYNTH, INFO_FEATURE_WLAN,
 };
-use fuchsia_net::MacAddress;
 
 mod device_id;
 mod interface;
@@ -168,7 +167,7 @@ fn main() -> Result<(), failure::Error> {
                             let name = interface_config.get_stable_name(
                                 topological_path.clone(), /* TODO(tamird): we can probably do
                                                            * better with std::borrow::Cow. */
-                                MacAddress::from_fidl(device_info.mac),
+                                device_info.mac.into(),
                                 is_wlan(device_info.features),
                             )?;
 

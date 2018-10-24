@@ -14,8 +14,8 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
-use bitflags::bitflags;
 use fidl_zircon_ethernet as sys;
+use fidl_zircon_ethernet_ext::{EthernetInfo, EthernetQueueFlags, EthernetStatus};
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::{ready, task::LocalWaker, try_ready, FutureExt, Poll, Stream};
@@ -31,78 +31,6 @@ mod buffer;
 ///
 /// It is the smallest power of 2 greater than the Ethernet MTU of 1500.
 pub const DEFAULT_BUFFER_SIZE: usize = 2048;
-
-bitflags! {
-    /// Features supported by an Ethernet device.
-    #[repr(transparent)]
-    pub struct EthernetFeatures: u32 {
-        /// The Ethernet device is a wireless device.
-        const WLAN = sys::INFO_FEATURE_WLAN;
-        /// The Ethernet device does not represent a hardware device.
-        const SYNTHETIC = sys::INFO_FEATURE_SYNTH;
-        /// The Ethernet device is a loopback device.
-        ///
-        /// This bit should not be set outside of network stacks.
-        const LOOPBACK = sys::INFO_FEATURE_LOOPBACK;
-    }
-}
-
-/// Information retrieved about an Ethernet device.
-#[derive(Debug)]
-pub struct EthernetInfo {
-    /// The features supported by the device.
-    pub features: EthernetFeatures,
-    /// The maximum transmission unit (MTU) of the device.
-    pub mtu: u32,
-    /// The MAC address of the device.
-    pub mac: fidl_zircon_ethernet::MacAddress,
-}
-
-impl From<fidl_zircon_ethernet::Info> for EthernetInfo {
-    fn from(fidl_zircon_ethernet::Info { features, mtu, mac }: fidl_zircon_ethernet::Info) -> Self {
-        let mut ethernet_features = EthernetFeatures::empty();
-        if features & sys::INFO_FEATURE_WLAN != 0 {
-            ethernet_features |= EthernetFeatures::WLAN;
-        }
-        if features & sys::INFO_FEATURE_SYNTH != 0 {
-            ethernet_features |= EthernetFeatures::SYNTHETIC;
-        }
-        if features & sys::INFO_FEATURE_LOOPBACK != 0 {
-            ethernet_features |= EthernetFeatures::LOOPBACK;
-        }
-        Self {
-            features: ethernet_features,
-            mtu,
-            mac,
-        }
-    }
-}
-
-bitflags! {
-    /// Status flags for an Ethernet device.
-    #[repr(transparent)]
-    pub struct EthernetStatus: u32 {
-        /// The Ethernet device is online, meaning its physical link is up.
-        const ONLINE = sys::DEVICE_STATUS_ONLINE;
-    }
-}
-
-bitflags! {
-    /// Status flags describing the result of queueing a packet to an Ethernet device.
-    #[repr(transparent)]
-    pub struct EthernetQueueFlags: u16 {
-        /// The packet was received correctly.
-        const RX_OK = sys::FIFO_RX_OK as u16;
-        /// The packet was transmitted correctly.
-        const TX_OK = sys::FIFO_TX_OK as u16;
-        /// The packet was out of the bounds of the memory shared with the Ethernet device driver.
-        const INVALID = sys::FIFO_INVALID as u16;
-        /// The received packet was sent by this host.
-        ///
-        /// This bit is only set after `tx_listen_start` is called.
-        const TX_ECHO = sys::FIFO_RX_TX as u16;
-    }
-}
 
 /// An Ethernet client that communicates with a device driver to send and receive packets.
 #[derive(Debug)]

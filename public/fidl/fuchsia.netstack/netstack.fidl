@@ -108,12 +108,6 @@ struct NetInterface {
 const uint32 NetInterfaceFlagUp = 0x01; // Set if the interface is up.
 const uint32 NetInterfaceFlagDhcp = 0x02; // Set if DHCP is enabled.
 
-// These values should be kept in sync with those in
-// //zircon/system/fidl/zircon-ethernet.
-const uint32 interfaceFeatureWlan = 0x01;
-const uint32 interfaceFeatureSynth = 0x02;
-const uint32 interfaceFeatureLoopback = 0x04;
-
 struct RouteTableEntry {
     NetAddress destination;
     NetAddress netmask;
