@@ -16,15 +16,15 @@
 zx_status_t SuspendTokenDispatcher::Create(fbl::RefPtr<ThreadDispatcher> thread,
                                            fbl::RefPtr<Dispatcher>* dispatcher,
                                            zx_rights_t* rights) {
-    zx_status_t status = thread->Suspend();
-    if (status != ZX_OK)
-        return ZX_ERR_BAD_STATE;
-
     fbl::AllocChecker ac;
     fbl::unique_ptr<SuspendTokenDispatcher> disp(
         new (&ac) SuspendTokenDispatcher(fbl::move(thread)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
+
+    zx_status_t status = disp->thread_->Suspend();
+    if (status != ZX_OK)
+        return ZX_ERR_BAD_STATE;
 
     *rights = default_rights();
     *dispatcher = fbl::AdoptRef<Dispatcher>(disp.release());
