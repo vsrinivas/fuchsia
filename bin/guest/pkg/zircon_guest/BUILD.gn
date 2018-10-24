@@ -5,6 +5,18 @@
 import("//build/config/fuchsia/zircon.gni")
 import("//garnet/bin/guest/pkg/guest_package.gni")
 
+package("services_config") {
+  # This package must be part of the system image (of the guest) so that it
+  # exists before sysmgr comes up.
+  deprecated_system_image = true
+  resources = [
+    {
+      path = rebase_path("services.config")
+      dest = "sysmgr/services.config"
+    },
+  ]
+}
+
 guest_package("zircon_guest") {
   zircon = "$zircon_build_dir/zircon.zbi"
 
