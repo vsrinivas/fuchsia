@@ -186,6 +186,138 @@ static bool spaceship_test(void) {
     END_TEST;
 }
 
+// A variant of spaceship which responds to requests asynchronously.
+class AsyncSpaceShip : public SpaceShip {
+public:
+    using SpaceShipBinder = fidl::Binder<AsyncSpaceShip>;
+
+    virtual ~AsyncSpaceShip() {};
+
+    // Creates a |fidl_async_txn| using the C++ wrapper, and pushes the
+    // computation to a background thread.
+    //
+    // This background thread responds to the original |txn|, and rebinds the connection
+    // to the dispatcher.
+    zx_status_t AdjustHeading(const uint32_t* stars_data, size_t stars_count,
+                              fidl_txn_t* txn) override {
+        EXPECT_EQ(3u, stars_count, "");
+        EXPECT_EQ(11u, stars_data[0], "");
+        EXPECT_EQ(0u, stars_data[1], "");
+        EXPECT_EQ(UINT32_MAX, stars_data[2], "");
+        static constexpr auto handler = [](void* arg) {
+            auto spaceship = reinterpret_cast<AsyncSpaceShip*>(arg);
+            EXPECT_EQ(ZX_OK,
+                      fidl_test_spaceship_SpaceShipAdjustHeading_reply(
+                              spaceship->async_txn_.Transaction(), -12));
+            EXPECT_EQ(ZX_OK, spaceship->async_txn_.Rebind());
+            return 0;
+        };
+
+        async_txn_.Reset(txn);
+        EXPECT_EQ(thrd_success, thrd_create(&thrd_, handler, this));
+        return ZX_ERR_ASYNC;
+    }
+
+    // Creates a |fidl_async_txn| using the C++ wrapper, and pushes the
+    // computation to a background thread.
+    //
+    // This background thread responds to the original |txn|, but does not rebind
+    // the connection to the dispatcher. This completes the asynchronous transaction and destroys
+    // the original binding.
+    zx_status_t ScanForLifeforms(fidl_txn_t* txn) override {
+        static constexpr auto handler = [](void* arg) {
+            auto spaceship = reinterpret_cast<AsyncSpaceShip*>(arg);
+            const uint32_t lifesigns[2] = {42u, 43u};
+            EXPECT_EQ(ZX_OK,
+                      fidl_test_spaceship_SpaceShipScanForLifeforms_reply(
+                              spaceship->async_txn_.Transaction(), lifesigns, 2));
+            spaceship->async_txn_.Reset();
+            return 0;
+        };
+
+        async_txn_.Reset(txn);
+        EXPECT_EQ(thrd_success, thrd_create(&thrd_, handler, this));
+        return ZX_ERR_ASYNC;
+    }
+
+    void Join() {
+        int res;
+        EXPECT_EQ(thrd_success, thrd_join(thrd_, &res));
+        EXPECT_EQ(0, res);
+    }
+
+    zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel channel) override {
+        static constexpr fidl_test_spaceship_SpaceShip_ops_t kOps = {
+            .AdjustHeading = SpaceShipBinder::BindMember<&AsyncSpaceShip::AdjustHeading>,
+            .ScanForLifeforms = SpaceShipBinder::BindMember<&AsyncSpaceShip::ScanForLifeforms>,
+            .SetAstrometricsListener =
+                    SpaceShipBinder::BindMember<&SpaceShip::SetAstrometricsListener>,
+            .SetDefenseCondition = SpaceShipBinder::BindMember<&SpaceShip::SetDefenseCondition>,
+            .GetFuelRemaining = SpaceShipBinder::BindMember<&SpaceShip::GetFuelRemaining>,
+            .AddFuelTank = SpaceShipBinder::BindMember<&SpaceShip::AddFuelTank>,
+            .ScanForTensorLifeforms =
+                    SpaceShipBinder::BindMember<&SpaceShip::ScanForTensorLifeforms>,
+        };
+
+        return SpaceShipBinder::BindOps<fidl_test_spaceship_SpaceShip_dispatch>(
+            dispatcher, fbl::move(channel), this, &kOps);
+    }
+
+private:
+    thrd_t thrd_;
+    fidl::AsyncTransaction async_txn_;
+};
+
+static bool spaceship_async_test(void) {
+    BEGIN_TEST;
+
+    zx::channel client, server;
+    zx_status_t status = zx::channel::create(0, &client, &server);
+    ASSERT_EQ(ZX_OK, status, "");
+
+    async_loop_t* loop = NULL;
+    ASSERT_EQ(ZX_OK, async_loop_create(&kAsyncLoopConfigNoAttachToThread, &loop), "");
+    ASSERT_EQ(ZX_OK, async_loop_start_thread(loop, "spaceship-dispatcher", NULL), "");
+
+    async_dispatcher_t* dispatcher = async_loop_get_dispatcher(loop);
+    AsyncSpaceShip ship;
+    ASSERT_EQ(ZX_OK, ship.Bind(dispatcher, fbl::move(server)));
+
+    // Try invoking a member function which responds asynchronously and rebinds the connection.
+    {
+        const uint32_t stars[3] = {11u, 0u, UINT32_MAX};
+        int8_t result = 0;
+        ASSERT_EQ(ZX_OK,
+                  fidl_test_spaceship_SpaceShipAdjustHeading(client.get(), stars, 3, &result));
+        ASSERT_EQ(-12, result, "");
+        ship.Join();
+    }
+
+    // Try invoking a member function which responds asynchronously, but does not rebind the
+    // connection. We should be able to observe that the server terminates the connection.
+    {
+        uint32_t lifesigns[64];
+        size_t actual = 0;
+        ASSERT_EQ(ZX_OK, fidl_test_spaceship_SpaceShipScanForLifeforms(client.get(), lifesigns,
+                                                                       64, &actual));
+        ASSERT_EQ(2u, actual, "");
+        ASSERT_EQ(42u, lifesigns[0], "");
+        ASSERT_EQ(43u, lifesigns[1], "");
+
+        zx_signals_t pending;
+        zx::time deadline = zx::deadline_after(zx::sec(5));
+        ASSERT_EQ(ZX_OK, client.wait_one(ZX_CHANNEL_PEER_CLOSED, deadline, &pending));
+        ASSERT_EQ(ZX_CHANNEL_PEER_CLOSED, pending);
+        ship.Join();
+    }
+
+    ASSERT_EQ(ZX_OK, zx_handle_close(client.release()));
+
+    async_loop_destroy(loop);
+
+    END_TEST;
+}
+
 // These classes represents a compile-time check:
 //
 // We should be able to bind a derived class to its own methods,
@@ -244,4 +376,5 @@ public:
 
 BEGIN_TEST_CASE(spaceship_tests_cpp)
 RUN_NAMED_TEST("fidl.test.spaceship.SpaceShip test", spaceship_test)
+RUN_NAMED_TEST("fidl.test.spaceship.SpaceShip async test", spaceship_async_test)
 END_TEST_CASE(spaceship_tests_cpp);

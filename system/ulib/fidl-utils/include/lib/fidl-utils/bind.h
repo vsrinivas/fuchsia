@@ -4,10 +4,12 @@
 
 #pragma once
 
+#include <fbl/macros.h>
 #include <fbl/type_support.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/bind.h>
 #include <lib/zx/channel.h>
+#include <zircon/assert.h>
 #include <zircon/fidl.h>
 
 namespace fidl {
@@ -104,6 +106,75 @@ struct Binder {
         return fidl_bind(dispatcher, channel.release(),
                          reinterpret_cast<fidl_dispatch_t*>(Dispatch), ctx, ops);
     }
+};
+
+// Wrapper class around |fidl_async_txn_t|. This allows a transaction to be
+// initialized, moved, reset, and completed without unintentionally "double completing"
+// or "forgetting to complete".
+class AsyncTransaction {
+public:
+    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AsyncTransaction);
+
+    AsyncTransaction() : txn_(nullptr) {}
+    explicit AsyncTransaction(fidl_txn_t* txn) : txn_(fidl_async_txn_create(txn)) {}
+    explicit AsyncTransaction(AsyncTransaction&& other) : txn_(other.release()) {}
+    AsyncTransaction& operator=(AsyncTransaction&& other) {
+        Reinitialize(other.release());
+        return *this;
+    }
+
+    ~AsyncTransaction() {
+        Reinitialize();
+    }
+
+    // Acquires a reference to the |fidl_txn_t| backing this txn object.
+    // This reference will be invalidated if any non-const operations are called
+    // on |AsyncTransaction|.
+    //
+    // Should not be called if the underlying transaction is invalid.
+    fidl_txn_t* Transaction() const {
+        ZX_DEBUG_ASSERT(HasTransaction());
+        return fidl_async_txn_borrow(txn_);
+    }
+
+    // Completes the transaction and rebinds the underlying channel against the binding.
+    //
+    // Causes the transaction to become invalid.
+    //
+    // Should not be called if the underlying transaction is invalid.
+    zx_status_t Rebind() {
+        ZX_DEBUG_ASSERT(HasTransaction());
+        return fidl_async_txn_complete(release(), true);
+    }
+
+    // Completes the current transaction, if one exists, and causes |AsyncTransaction| to
+    // track a new |txn|.
+    //
+    // If |txn| is nullptr, this function causes the underlying transaction to become invalid.
+    void Reset(fidl_txn_t* txn = nullptr) {
+        fidl_async_txn_t* async_txn = txn ? fidl_async_txn_create(txn) : nullptr;
+        Reinitialize(async_txn);
+    }
+
+private:
+    bool HasTransaction() const {
+        return txn_ != nullptr;
+    }
+
+    __attribute__((warn_unused_result)) fidl_async_txn_t* release() {
+        fidl_async_txn_t* txn = txn_;
+        txn_ = nullptr;
+        return txn;
+    }
+
+    void Reinitialize(fidl_async_txn_t* txn = nullptr) {
+        if (HasTransaction()) {
+            fidl_async_txn_complete(release(), false);
+        }
+        txn_ = txn;
+    }
+
+    fidl_async_txn_t* txn_;
 };
 
 } // namespace fidl

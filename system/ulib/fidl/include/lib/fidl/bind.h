@@ -43,11 +43,49 @@ typedef zx_status_t(fidl_dispatch_t)(void* ctx, fidl_txn_t* txn,
 // If the method has a reply message, the |reply| function on the |fidl_txn_t|
 // object must be called synchronously within the |dispatch| call.
 //
+// If a client wishes to reply to the message asynchronously, |fidl_async_txn_create|
+// must be invoked on |fidl_txn_t|, and ZX_ERR_ASYNC must be returned.
+//
 // Returns whether |fidl_bind| was able to begin waiting on the given |channel|.
-// Upon any error, |channel| is closed and binding is terminated. Shutdown down
+// Upon any error, |channel| is closed and the binding is terminated. Shutting down
 // the |dispatcher| also results in |channel| being closed.
+//
+// It is safe to shutdown the dispatcher at any time.
+//
+// It is unsafe to destroy the dispatcher from within a dispatch function.
+// It is unsafe to destroy the dispatcher while any |fidl_async_txn_t| objects
+// are alive.
 zx_status_t fidl_bind(async_dispatcher_t* dispatcher, zx_handle_t channel,
                       fidl_dispatch_t* dispatch, void* ctx, const void* ops);
+
+// An asynchronous FIDL txn.
+//
+// This is an opaque wrapper around |fidl_txn_t| which can extend the lifetime
+// of the object beyond the dispatched function.
+typedef struct fidl_async_txn fidl_async_txn_t;
+
+// Takes ownership of |txn| and allows usage of the txn beyond the currently
+// dispatched function.
+//
+// If this function is invoked within a dispatched function, that function
+// must return ZX_ERR_ASYNC.
+//
+// The result must be destroyed with a call to |fidl_async_txn_complete|.
+fidl_async_txn_t* fidl_async_txn_create(fidl_txn_t* txn);
+
+// Acquire a reference to the |fidl_txn_t| backing this txn object.
+//
+// It is unsafe to use this |fidl_txn_t| after |async_txn| is completed.
+fidl_txn_t* fidl_async_txn_borrow(fidl_async_txn_t* async_txn);
+
+// Destroys an asynchronous transaction created with |fidl_async_txn_create|.
+//
+// If requested, rebinds the underlying txn against the binding.
+// Returns an error if |rebind| is true and the transaction could not be
+// re-bound.
+//
+// In all cases, the |async_txn| object is consumed.
+zx_status_t fidl_async_txn_complete(fidl_async_txn_t* async_txn, bool rebind);
 
 __END_CDECLS
 
