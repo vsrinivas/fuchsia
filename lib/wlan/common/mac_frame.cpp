@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <wlan/common/element_splitter.h>
 #include <wlan/common/mac_frame.h>
 
 #include <fbl/algorithm.h>
@@ -235,57 +236,42 @@ element_id::ElementId kValidAssociationResponseIds[] = {
     element_id::kVendorSpecific,
 };
 
-bool ValidateElements(size_t len, element_id::ElementId* ids, size_t ids_len, ElementReader* r) {
-    if (!ids || !r) return false;
+bool ValidateElements(Span<const element_id::ElementId> ids, Span<const uint8_t> elem_data) {
     size_t idx = 0;
     // Iterate through the elements of the reader, ensuring that each element is in the ids list and
     // that they appear in the proper order.
     // TODO(tkilbourn): handle required vs optional elements
-    while (r->is_valid()) {
-        const ElementHeader* hdr = r->peek();
-        if (hdr == nullptr) { return false; }
-        while (idx < ids_len && hdr->id != ids[idx]) {
+    for (auto [id, body] : common::ElementSplitter(elem_data)) {
+        while (idx < ids.size() && id != ids[idx]) {
             idx++;
         }
-        if (idx == ids_len) {
+        if (idx == ids.size()) {
             // We reached the end of the valid ids without finding this one, so it's an invalid id.
             return false;
         }
-        r->skip(*hdr);
     }
-    // Ensure we've read all the data from the reader.
-    return r->offset() == len;
+    return true;
 }
 }  // namespace
 
 bool Beacon::Validate(size_t len) const {
-    ElementReader reader(elements, len);
-    constexpr size_t kValidIdSize = fbl::count_of(kValidBeaconIds);
-    return ValidateElements(len, kValidBeaconIds, kValidIdSize, &reader);
+    return ValidateElements(kValidBeaconIds, { elements, len });
 }
 
 bool ProbeRequest::Validate(size_t len) const {
-    ElementReader reader(elements, len);
-    constexpr size_t kValidIdSize = fbl::count_of(kValidProbeRequestIds);
-    return ValidateElements(len, kValidProbeRequestIds, kValidIdSize, &reader);
+    return ValidateElements(kValidProbeRequestIds, { elements, len });
 }
 
 bool ProbeResponse::Validate(size_t len) const {
-    ElementReader reader(elements, len);
-    constexpr size_t kValidIdSize = fbl::count_of(kValidProbeResponseIds);
-    return ValidateElements(len, kValidProbeResponseIds, kValidIdSize, &reader);
+    return ValidateElements(kValidProbeResponseIds, { elements, len });
 }
 
 bool AssociationRequest::Validate(size_t len) const {
-    ElementReader reader(elements, len);
-    constexpr size_t kValidIdSize = fbl::count_of(kValidAssociationRequestIds);
-    return ValidateElements(len, kValidAssociationRequestIds, kValidIdSize, &reader);
+    return ValidateElements(kValidAssociationRequestIds, { elements, len });
 }
 
 bool AssociationResponse::Validate(size_t len) const {
-    ElementReader reader(elements, len);
-    constexpr size_t kValidIdSize = fbl::count_of(kValidAssociationResponseIds);
-    return ValidateElements(len, kValidAssociationResponseIds, kValidIdSize, &reader);
+    return ValidateElements(kValidAssociationResponseIds, { elements, len });
 }
 
 CapabilityInfo IntersectCapInfo(const CapabilityInfo& lhs, const CapabilityInfo& rhs) {
