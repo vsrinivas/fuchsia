@@ -76,11 +76,10 @@ class VirtioWl : public VirtioInprocessDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
       return ZX_ERR_NOT_SUPPORTED;
     }
   };
-  using OnNewConnectionCallback = fit::function<void(zx::channel)>;
 
   VirtioWl(const PhysMem& phys_mem, zx::vmar vmar,
            async_dispatcher_t* dispatcher,
-           OnNewConnectionCallback on_new_connection_callback);
+           fuchsia::guest::WaylandDispatcher* wl_dispatcher);
   ~VirtioWl() override = default;
 
   VirtioQueue* in_queue() { return queue(VIRTWL_VQ_IN); }
@@ -119,7 +118,7 @@ class VirtioWl : public VirtioInprocessDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
 
   zx::vmar vmar_;
   async_dispatcher_t* const dispatcher_;
-  OnNewConnectionCallback on_new_connection_callback_;
+  fuchsia::guest::WaylandDispatcher* wl_dispatcher_;
   async::Wait out_queue_wait_;
   uint16_t out_queue_index_ = 0;
   size_t bytes_written_for_send_request_ = 0;

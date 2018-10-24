@@ -164,11 +164,11 @@ class Pipe : public VirtioWl::Vfd {
 
 VirtioWl::VirtioWl(const PhysMem& phys_mem, zx::vmar vmar,
                    async_dispatcher_t* dispatcher,
-                   OnNewConnectionCallback on_new_connection_callback)
+                   fuchsia::guest::WaylandDispatcher* wl_dispatcher)
     : VirtioInprocessDevice(phys_mem, VIRTIO_WL_F_TRANS_FLAGS),
       vmar_(std::move(vmar)),
       dispatcher_(dispatcher),
-      on_new_connection_callback_(std::move(on_new_connection_callback)),
+      wl_dispatcher_(wl_dispatcher),
       in_queue_wait_(dispatcher_, in_queue(),
                      fit::bind_member(this, &VirtioWl::OnQueueReady)) {}
 
@@ -478,7 +478,7 @@ void VirtioWl::HandleNewCtx(const virtio_wl_ctrl_vfd_new_t* request,
     return;
   }
 
-  on_new_connection_callback_(std::move(remote_channel));
+  wl_dispatcher_->OnNewConnection(std::move(remote_channel));
 
   response->hdr.type = VIRTIO_WL_RESP_VFD_NEW;
   response->hdr.flags = 0;

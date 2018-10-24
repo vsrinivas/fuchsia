@@ -19,13 +19,26 @@ static constexpr uint32_t kVirtioWlVmarSize = 1 << 16;
 static constexpr uint32_t kAllocateFlags =
     ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE;
 
+class TestWaylandDispatcher : public fuchsia::guest::WaylandDispatcher {
+ public:
+  TestWaylandDispatcher(fit::function<void(zx::channel)> callback)
+    : callback_(std::move(callback)) {}
+
+ private:
+  void OnNewConnection(zx::channel channel) {
+    callback_(std::move(channel));
+  }
+
+  fit::function<void(zx::channel)> callback_;
+};
+
 class VirtioWlTest : public ::gtest::TestLoopFixture {
  public:
   VirtioWlTest()
-      : wl_(phys_mem_, zx::vmar(), dispatcher(),
-            [this](zx::channel channel) {
-              channels_.emplace_back(std::move(channel));
-            }),
+      : wl_dispatcher_([this](zx::channel channel) {
+          channels_.emplace_back(std::move(channel));
+          }),
+        wl_(phys_mem_, zx::vmar(), dispatcher(), &wl_dispatcher_),
         in_queue_(wl_.in_queue(), kVirtioWlQueueSize),
         out_queue_(wl_.out_queue(), kVirtioWlQueueSize) {}
 
@@ -109,6 +122,7 @@ class VirtioWlTest : public ::gtest::TestLoopFixture {
 
  protected:
   PhysMemFake phys_mem_;
+  TestWaylandDispatcher wl_dispatcher_;
   VirtioWl wl_;
   VirtioQueueFake in_queue_;
   VirtioQueueFake out_queue_;
