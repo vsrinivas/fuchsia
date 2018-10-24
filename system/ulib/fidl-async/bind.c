@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async/wait.h>
-#include <lib/fidl/bind.h>
+#include <lib/fidl-async/bind.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/syscalls.h>

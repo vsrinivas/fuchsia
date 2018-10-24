@@ -11,7 +11,10 @@
 #include <lib/fidl/internal.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
+
+#ifdef __Fuchsia__
 #include <zircon/syscalls.h>
+#endif
 
 #include "buffer_walker.h"
 
@@ -51,9 +54,11 @@ public:
     void ClaimedHandle(zx_handle_t* out_handle, uint32_t idx) {
         if (out_handle != nullptr) {
             *out_handle = handles_[idx];
+#ifdef __Fuchsia__
         } else {
             // Return value intentionally ignored: this is best-effort cleanup.
             zx_handle_close(handles_[idx]);
+#endif
         }
     }
 
@@ -74,10 +79,12 @@ public:
         if (out_error_msg_ != nullptr) {
             *out_error_msg_ = error_msg;
         }
+#ifdef __Fuchsia__
         if (handles_) {
             // Return value intentionally ignored: this is best-effort cleanup.
             zx_handle_close_many(handles_, num_handles());
         }
+#endif
     }
 
     zx_status_t status() const { return status_; }

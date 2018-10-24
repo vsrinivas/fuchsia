@@ -4,7 +4,7 @@
 
 #include <fidl/test/spaceship/c/fidl.h>
 #include <lib/async-loop/loop.h>
-#include <lib/fidl/bind.h>
+#include <lib/fidl-async/bind.h>
 #include <string.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>

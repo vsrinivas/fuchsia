@@ -20,6 +20,7 @@ MODULE_SRCS += \
 MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/fidl \
+    system/ulib/fidl-async \
     system/ulib/fzl \
     system/ulib/zx \
     system/ulib/zxcpp \

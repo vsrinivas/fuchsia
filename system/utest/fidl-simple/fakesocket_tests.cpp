@@ -5,7 +5,7 @@
 #include <fidl/test/fakesocket/c/fidl.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/wait.h>
-#include <lib/fidl/bind.h>
+#include <lib/fidl-async/bind.h>
 #include <lib/fidl/transport.h>
 #include <lib/zx/socket.h>
 #include <string.h>
@@ -90,7 +90,7 @@ shutdown:
 zx_status_t fidl_bind_socket(async_dispatcher_t* dispatcher, zx_handle_t socket,
                              fidl_dispatch_t* dispatch, void* ctx, const void* ops) {
     fidl_socket_binding_t* binding = static_cast<fidl_socket_binding_t*>(
-            calloc(1, sizeof(fidl_socket_binding_t)));
+        calloc(1, sizeof(fidl_socket_binding_t)));
     binding->wait.handler = fidl_socket_message_handler;
     binding->wait.object = socket;
     binding->wait.trigger = ZX_SOCKET_CONTROL_READABLE | ZX_SOCKET_PEER_CLOSED;

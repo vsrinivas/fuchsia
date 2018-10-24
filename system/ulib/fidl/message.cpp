@@ -8,7 +8,10 @@
 
 #include <lib/fidl/coding.h>
 #include <lib/fidl/cpp/builder.h>
+
+#ifdef __Fuchsia__
 #include <zircon/syscalls.h>
+#endif
 
 namespace fidl {
 
@@ -19,7 +22,9 @@ Message::Message(BytePart bytes, HandlePart handles)
       handles_(static_cast<HandlePart&&>(handles)) {}
 
 Message::~Message() {
+#ifdef __Fuchsia__
     zx_handle_close_many(handles_.data(), handles_.actual());
+#endif
     ClearHandlesUnsafe();
 }
 
@@ -59,6 +64,7 @@ zx_status_t Message::Validate(const fidl_type_t* type,
                          handles_.actual(), error_msg_out);
 }
 
+#ifdef __Fuchsia__
 zx_status_t Message::Read(zx_handle_t channel, uint32_t flags) {
     uint32_t actual_bytes = 0u;
     uint32_t actual_handles = 0u;
@@ -102,6 +108,7 @@ zx_status_t Message::Call(zx_handle_t channel, uint32_t flags,
     }
     return status;
 }
+#endif
 
 void Message::ClearHandlesUnsafe() {
     handles_.set_actual(0u);

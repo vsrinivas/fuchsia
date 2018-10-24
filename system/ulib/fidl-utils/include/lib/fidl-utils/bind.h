@@ -6,7 +6,7 @@
 
 #include <fbl/macros.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fidl/bind.h>
+#include <lib/fidl-async/bind.h>
 #include <lib/zx/channel.h>
 #include <type_traits>
 #include <zircon/assert.h>
@@ -101,8 +101,8 @@ struct Binder {
     static zx_status_t BindOps(async_dispatcher_t* dispatcher, zx::channel channel,
                                T* ctx, const Ops* ops) {
         static_assert(std::is_same<decltype(Dispatch),
-                                   zx_status_t (*)(void*, fidl_txn_t*, fidl_msg_t*, const Ops* ops)
-                                  >::value, "Invalid dispatch function");
+                                   zx_status_t (*)(void*, fidl_txn_t*, fidl_msg_t*, const Ops* ops)>::value,
+                      "Invalid dispatch function");
         return fidl_bind(dispatcher, channel.release(),
                          reinterpret_cast<fidl_dispatch_t*>(Dispatch), ctx, ops);
     }

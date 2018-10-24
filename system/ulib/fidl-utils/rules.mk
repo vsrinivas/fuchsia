@@ -26,6 +26,7 @@ MODULE_STATIC_LIBS := \
 
 MODULE_LIBS := \
     system/ulib/fidl \
+    system/ulib/fidl-async \
     system/ulib/zircon \
 
 include make/module.mk

@@ -6,10 +6,10 @@
 
 #include <fbl/algorithm.h>
 #include <fuchsia/sysmem/c/fidl.h>
-#include <lib/fidl/bind.h>
+#include <lib/fidl-async/bind.h>
+#include <lib/syslog/global.h>
 #include <lib/zx/vmo.h>
 #include <string.h>
-#include <lib/syslog/global.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 

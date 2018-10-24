@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifdef __Fuchsia__
+
 #include <string.h>
 
 #include <lib/fidl/epitaph.h>
@@ -16,3 +18,5 @@ zx_status_t fidl_epitaph_write(zx_handle_t channel, zx_status_t error) {
 
     return zx_channel_write(channel, 0, &epitaph, sizeof(epitaph), NULL, 0);
 }
+
+#endif // __Fuchsia__

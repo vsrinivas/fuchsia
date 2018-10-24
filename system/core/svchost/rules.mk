@@ -36,6 +36,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/trace \
     system/ulib/fbl \
     system/ulib/fidl \
+    system/ulib/fidl-async \
     system/ulib/pretty \
     system/ulib/zxcpp \
     system/ulib/zx

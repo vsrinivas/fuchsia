@@ -22,6 +22,7 @@ MODULE_HEADER_DEPS := \
 MODULE_STATIC_LIBS := \
     system/ulib/async \
     system/ulib/fidl \
+    system/ulib/fidl-async \
     system/ulib/fbl \
     system/ulib/zx \
 
