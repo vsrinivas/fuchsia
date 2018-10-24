@@ -54,12 +54,15 @@ fxl::WeakPtr<SuggestionDebugImpl> SuggestionEngineImpl::debug() {
 
 void SuggestionEngineImpl::AddNextProposal(
     ProposalPublisherImpl* source, fuchsia::modular::Proposal proposal) {
-  if (proposal.wants_rich_suggestion &&
-      ComponentCanUseRichSuggestions(source->component_url())) {
-    AddProposalWithRichSuggestion(source, std::move(proposal));
-  } else {
-    next_processor_.AddProposal(source->component_url(), std::move(proposal));
+  if (proposal.wants_rich_suggestion) {
+    if (ComponentCanUseRichSuggestions(source->component_url())) {
+      AddProposalWithRichSuggestion(source, std::move(proposal));
+      return;
+    }
+    FXL_LOG(INFO) << "Attempt to add rich suggestion for unallowed component "
+                  << source->component_url();
   }
+  next_processor_.AddProposal(source->component_url(), std::move(proposal));
 }
 
 void SuggestionEngineImpl::ProposeNavigation(
@@ -348,6 +351,7 @@ bool SuggestionEngineImpl::ComponentCanUseRichSuggestions(
   // rich suggestions.
   // Proposinator is used for testing.
   return component_url.find("kronk") != std::string::npos ||
+         component_url.find("krohnkite") != std::string::npos ||
          component_url.find("Proposinator") != std::string::npos;
 }
 
