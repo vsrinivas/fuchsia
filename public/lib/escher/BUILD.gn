@@ -63,6 +63,34 @@ package("escher_tests") {
       path = rebase_path("shaders/model_renderer/wobble_position.vert")
       dest = "shaders/model_renderer/wobble_position.vert"
     },
+    {
+      path = rebase_path("shaders/paper/common/use.glsl")
+      dest = "shaders/paper/common/use.glsl"
+    },
+    {
+      path = rebase_path("shaders/paper/frag/main_ambient_light.frag")
+      dest = "shaders/paper/frag/main_ambient_light.frag"
+    },
+    {
+      path = rebase_path("shaders/paper/frag/main_point_light.frag")
+      dest = "shaders/paper/frag/main_point_light.frag"
+    },
+    {
+      path = rebase_path("shaders/paper/vert/compute_model_space_position.vert")
+      dest = "shaders/paper/vert/compute_model_space_position.vert"
+    },
+    {
+      path = rebase_path("shaders/paper/vert/compute_world_space_position.vert")
+      dest = "shaders/paper/vert/compute_world_space_position.vert"
+    },
+    {
+      path = rebase_path("shaders/paper/vert/main_shadow_volume_extrude.vert")
+      dest = "shaders/paper/vert/main_shadow_volume_extrude.vert"
+    },
+    {
+      path = rebase_path("shaders/paper/vert/vertex_attributes.vert")
+      dest = "shaders/paper/vert/vertex_attributes.vert"
+    },
   ]
 }
 

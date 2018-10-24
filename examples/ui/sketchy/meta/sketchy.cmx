@@ -3,13 +3,11 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "dev": [ "class/input" ],
         "services": [
-            "fuchsia.accessibility.ToggleBroadcaster",
             "fuchsia.tracelink.Registry",
             "fuchsia.ui.scenic.Scenic",
+            "fuchsia.ui.sketchy.Canvas",
             "fuchsia.ui.viewsv1.ViewManager"
-        ],
-        "system": [ "data/root_presenter" ]
+        ]
     }
 }

@@ -3,7 +3,11 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "deprecated-all-services", "vulkan" ]
+        "features": [ "vulkan" ],
+        "services": [
+          "fuchsia.tracelink.Registry",
+          "fuchsia.vulkan.loader.Loader"
+        ]
     }
 }
 

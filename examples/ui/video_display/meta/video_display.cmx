@@ -1,9 +1,0 @@
-{
-    "program": {
-        "binary": "bin/app"
-    },
-    "sandbox": {
-        "dev": [ "class/camera" ],
-        "features": [ "deprecated-all-services", "persistent-storage", "vulkan"]
-    }
-}

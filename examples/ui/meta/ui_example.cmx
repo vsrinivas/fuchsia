@@ -3,6 +3,12 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "deprecated-all-services" ]
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.tracelink.Registry",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.ui.viewsv1.ViewManager"
+        ]
     }
 }

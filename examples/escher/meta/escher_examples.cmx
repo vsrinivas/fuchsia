@@ -3,9 +3,11 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "dev": [
-            "class/display-controller"
-        ],
-        "features": [ "deprecated-all-services", "vulkan" ]
+        "dev": [ "class/display-controller" ],
+        "features": [ "vulkan" ],
+        "services": [
+            "fuchsia.tracelink.Registry",
+            "fuchsia.vulkan.loader.Loader"
+        ]
     }
 }

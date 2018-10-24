@@ -18,14 +18,10 @@ package("vulkan_is_supported") {
 
   meta = [
     {
-      path = rebase_path("meta/vulkan_is_supported.cmx")
+      path = rebase_path("vulkan_is_supported/meta/vulkan_is_supported.cmx")
       dest = "vulkan_is_supported.cmx"
     },
   ]
-
-  public_deps = vulkan_validation_layers.public_deps
-  loadable_modules = vulkan_validation_layers.loadable_modules
-  resources = vulkan_validation_layers.resources
 }
 
 package("scenic_benchmarks") {
@@ -46,13 +42,6 @@ package("scenic_benchmarks") {
     {
       name = "run_scenic_benchmark.sh"
       source = rebase_path("run_scenic_benchmark.sh")
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/scenic_benchmarks.cmx")
-      dest = "scenic_benchmarks.cmx"
     },
   ]
 }

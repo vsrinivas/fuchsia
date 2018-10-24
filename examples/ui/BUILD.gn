@@ -37,7 +37,7 @@ package("hello_base_view") {
   meta = [
     {
       path = rebase_path("meta/ui_example.cmx")
-      dest = "ui_example.cmx"
+      dest = "hello_base_view.cmx"
     },
   ]
 }
@@ -67,7 +67,7 @@ package("hello_input_child") {
   meta = [
     {
       path = rebase_path("hello_input/meta/hello_input.cmx")
-      dest = "hello_input.cmx"
+      dest = "hello_input_child.cmx"
     },
   ]
 }
@@ -75,7 +75,6 @@ package("hello_input_child") {
 package("hello_scenic") {
   deps = [
     "hello_scenic",
-    "//third_party/vulkan_loader_and_validation_layers/layers",
   ]
 
   binary = "hello_scenic"
@@ -83,13 +82,9 @@ package("hello_scenic") {
   meta = [
     {
       path = rebase_path("meta/ui_example.cmx")
-      dest = "ui_example.cmx"
+      dest = "hello_scenic.cmx"
     },
   ]
-
-  public_deps = vulkan_validation_layers.public_deps
-  loadable_modules = vulkan_validation_layers.loadable_modules
-  resources = vulkan_validation_layers.resources
 }
 
 # TODO(SCN-794): move out of system image (not sure how to do this for multiple
@@ -115,7 +110,6 @@ package("hello_views") {
 package("hello_pose_buffer") {
   deps = [
     "hello_pose_buffer",
-    "//third_party/vulkan_loader_and_validation_layers/layers",
   ]
 
   binary = "hello_pose_buffer"
@@ -123,19 +117,14 @@ package("hello_pose_buffer") {
   meta = [
     {
       path = rebase_path("meta/ui_example.cmx")
-      dest = "ui_example.cmx"
+      dest = "hello_pose_buffer.cmx"
     },
   ]
-
-  public_deps = vulkan_validation_layers.public_deps
-  loadable_modules = vulkan_validation_layers.loadable_modules
-  resources = vulkan_validation_layers.resources
 }
 
 package("hello_stereo") {
   deps = [
     "hello_stereo",
-    "//third_party/vulkan_loader_and_validation_layers/layers",
   ]
 
   binary = "hello_stereo"
@@ -143,13 +132,9 @@ package("hello_stereo") {
   meta = [
     {
       path = rebase_path("meta/ui_example.cmx")
-      dest = "ui_example.cmx"
+      dest = "hello_stereo.cmx"
     },
   ]
-
-  public_deps = vulkan_validation_layers.public_deps
-  loadable_modules = vulkan_validation_layers.loadable_modules
-  resources = vulkan_validation_layers.resources
 }
 
 package("shadertoy_client") {
@@ -161,8 +146,8 @@ package("shadertoy_client") {
 
   meta = [
     {
-      path = rebase_path("meta/ui_example.cmx")
-      dest = "ui_example.cmx"
+      path = rebase_path("shadertoy/client/meta/shadertoy_client.cmx")
+      dest = "shadertoy_client.cmx"
     },
   ]
 }
@@ -197,7 +182,7 @@ package("shapes_view") {
   meta = [
     {
       path = rebase_path("meta/ui_example.cmx")
-      dest = "ui_example.cmx"
+      dest = "shapes_view.cmx"
     },
   ]
 }
@@ -211,8 +196,8 @@ package("sketchy_client") {
 
   meta = [
     {
-      path = rebase_path("meta/ui_example.cmx")
-      dest = "ui_example.cmx"
+      path = rebase_path("sketchy/meta/sketchy.cmx")
+      dest = "sketchy_client.cmx"
     },
   ]
 }
@@ -227,7 +212,7 @@ package("spinning_square_view") {
   meta = [
     {
       path = rebase_path("meta/ui_example.cmx")
-      dest = "ui_example.cmx"
+      dest = "spinning_square_view.cmx"
     },
   ]
 }
@@ -238,6 +223,13 @@ package("spinning_square_rs_pkg") {
   ]
 
   binary = "rust_crates/spinning_square_rs"
+
+  meta = [
+    {
+      path = rebase_path("meta/ui_example.cmx")
+      dest = "spinning_square_rs_pkg.cmx"
+    },
+  ]
 }
 
 package("tile_view") {
@@ -250,7 +242,7 @@ package("tile_view") {
   meta = [
     {
       path = rebase_path("meta/ui_example.cmx")
-      dest = "ui_example.cmx"
+      dest = "tile_view.cmx"
     },
   ]
 }
@@ -264,7 +256,7 @@ package("video_display") {
 
   meta = [
     {
-      path = rebase_path("video_display/meta/video_display.cmx")
+      path = rebase_path("meta/ui_example.cmx")
       dest = "video_display.cmx"
     },
   ]
@@ -280,7 +272,7 @@ package("yuv_to_image_pipe") {
   meta = [
     {
       path = rebase_path("meta/ui_example.cmx")
-      dest = "ui_example.cmx"
+      dest = "yuv_to_image_pipe.cmx"
     },
   ]
 }

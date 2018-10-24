@@ -3,11 +3,11 @@
     "binary": "bin/app"
   },
   "sandbox": {
+    "dev": [ "class/input" ],
     "services": [
         "fuchsia.sys.Environment",
         "fuchsia.sys.Launcher",
         "fuchsia.ui.scenic.Scenic"
-    ],
-    "dev": [ "class/input" ]
+    ]
   }
 }

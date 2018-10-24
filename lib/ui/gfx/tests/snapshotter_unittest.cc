@@ -20,12 +20,12 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-class SnapshotterTest : public SessionTest {
+class SnapshotterTest : public VkSessionTest {
  public:
   int kParentId = 1;
 
   void SetUp() override {
-    SessionTest::SetUp();
+    VkSessionTest::SetUp();
 
     int nextId = kParentId + 1;
     const ResourceId kChildId = nextId++;
@@ -47,7 +47,7 @@ class SnapshotterTest : public SessionTest {
   }
 };
 
-VK_TEST_F(SnapshotterTest, Creation) {
+VK_TEST_F(SnapshotterTest, DISABLED_Creation) {
   auto escher = escher::test::GetEscher()->GetWeakPtr();
   auto uploader = escher::BatchGpuUploader::New(escher);
   Snapshotter snapshotter(uploader);
