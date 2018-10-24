@@ -54,7 +54,6 @@ typedef struct usb_request {
 
     // vmo_handle for payload
     zx_handle_t vmo_handle;
-    zx_handle_t bti_handle;
     size_t size;
     // offset of the start of data from first page address of the vmo.
     zx_off_t offset;
