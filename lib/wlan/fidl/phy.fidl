@@ -51,8 +51,10 @@ struct ChannelList {
     vector<uint8>:200 channels;
 };
 
+// BandInfo groups capabilities defined per band.
+// This grouping is the industry's de factor standard.
 struct BandInfo {
-    string description;
+    fuchsia.wlan.mlme.Band band_id;
     fuchsia.wlan.mlme.HtCapabilities? ht_caps;
     fuchsia.wlan.mlme.VhtCapabilities? vht_caps;
     vector<uint8>:16 basic_rates;

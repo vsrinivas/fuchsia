@@ -4,6 +4,7 @@
 
 #include <wlan/mlme/debug.h>
 
+#include <wlan/common/band.h>
 #include <wlan/common/channel.h>
 #include <wlan/mlme/mac_frame.h>
 
@@ -536,7 +537,7 @@ std::string Describe(const wlan_chan_list& wl) {
 std::string Describe(const wlan_band_info& bi) {
     char buf[1024];
     size_t offset = 0;
-    BUFFER("desc:%s", bi.desc);
+    BUFFER("band_id:%s", common::BandStr(bi.band_id).c_str());
     BUFFER("ht_caps:[%s]", Describe(bi.ht_caps).c_str());
     BUFFER("vht_supported:%u", bi.vht_supported);
     BUFFER("vht_caps:[to implement]");

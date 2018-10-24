@@ -4,6 +4,7 @@
 
 #include <wlan/mlme/client/station.h>
 
+#include <wlan/common/band.h>
 #include <wlan/common/buffer_writer.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/energy.h>

@@ -115,7 +115,7 @@ wlan_device::PhyInfo get_info() {
     info.caps->push_back(wlan_device::Capability::SHORT_SLOT_TIME);
 
     wlan_device::BandInfo band24;
-    band24.description = "2.4 GHz";
+    band24.band_id = wlan_mlme::Band::WLAN_BAND_2GHZ;
 
     HtCapabilities ht_caps;
     ht_caps.ht_cap_info.set_val(0x01fe);
@@ -132,7 +132,7 @@ wlan_device::PhyInfo get_info() {
     info.bands->push_back(std::move(band24));
 
     wlan_device::BandInfo band5;
-    band5.description = "5 GHz";
+    band5.band_id = wlan_mlme::Band::WLAN_BAND_5GHZ;
 
     ht_caps = HtCapabilities{};
     ht_caps.ht_cap_info.set_val(0x01fe);

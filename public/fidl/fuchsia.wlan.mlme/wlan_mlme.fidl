@@ -26,6 +26,9 @@ enum ScanTypes {
     //LAST = PASSIVE;
 };
 
+// LINT analyzer keyword intended for humans:
+// LINT.IfChange
+
 enum PHY {
     HR = 1;   // IEEE 802.11b, used for DSSS, HR/DSSS, ERP-DSSS/CCK
     ERP = 2;  // IEEE 802.11a/g, used for ERP-OFDM
@@ -34,8 +37,6 @@ enum PHY {
     HEW = 5;  // IEEE 802.11ax
 };
 
-// LINT analyzer keyword intended for humans:
-// LINT.IfChange
 enum CBW {	// Channel Bandwidth
     CBW20 = 0;
     CBW40 = 1;
@@ -53,7 +54,14 @@ struct WlanChan {
     CBW cbw;
     uint8 secondary80;
 };
-// LINT.ThenChange(//garnet/lib/wlan/protocol/include/wlan/protocol/mac.h)
+
+enum Band : uint8 {
+    WLAN_BAND_2GHZ = 0;
+    WLAN_BAND_5GHZ = 1;
+    WLAN_BAND_COUNT = 2;
+};
+
+// LINT.ThenChange(//garnet/lib/wlan/protocol/include/wlan/protocol/info.h)
 
 struct ScanRequest {
     uint64 txn_id;

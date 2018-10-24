@@ -7,6 +7,8 @@
 #include <ddk/protocol/ethernet.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <lib/fxl/arraysize.h>
+#include <wlan/common/band.h>
+#include <wlan/common/channel.h>
 #include <wlan/common/element.h>
 #include <wlan/protocol/info.h>
 
@@ -108,7 +110,7 @@ uint32_t ConvertCaps(const ::fidl::VectorPtr<wlan_device::Capability>& caps) {
 
 void ConvertBandInfo(const wlan_device::BandInfo& in, wlan_band_info_t* out) {
     memset(out, 0, sizeof(*out));
-    strlcpy(out->desc, in.description->c_str(), sizeof(out->desc));
+    out->band_id = static_cast<uint8_t>(wlan::common::BandFromFidl(in.band_id));
 
     if (in.ht_caps != nullptr) {
         out->ht_supported = true;

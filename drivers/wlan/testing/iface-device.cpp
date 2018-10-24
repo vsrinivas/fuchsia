@@ -98,7 +98,7 @@ zx_status_t IfaceDevice::Query(uint32_t options, wlanmac_info_t* info) {
     ifc_info->num_bands = 2;
     // clang-format off
     ifc_info->bands[0] = {
-        .desc = "2.4 GHz",
+        .band_id = WLAN_BAND_2GHZ,
         .ht_supported = false,
         .ht_caps = {},
         .vht_supported = false,
@@ -111,7 +111,7 @@ zx_status_t IfaceDevice::Query(uint32_t options, wlanmac_info_t* info) {
             },
     };
     ifc_info->bands[1] = {
-        .desc = "5 GHz",
+        .band_id = WLAN_BAND_5GHZ,
         .ht_supported = false,
         .ht_caps = {},
         .vht_supported = false,

@@ -2956,9 +2956,7 @@ static void ath10k_band_query_info(struct ath10k* ar, const struct ath10k_band* 
 
     ZX_DEBUG_ASSERT(ifc_info->num_bands < WLAN_MAX_BANDS);
     wlan_band_info_t* wlan_band = &ifc_info->bands[ifc_info->num_bands++];
-
-    // desc
-    strncpy(wlan_band->desc, dev_band->name, WLAN_BAND_DESC_MAX_LEN);
+    wlan_band->band_id = dev_band->band_id;
 
     // ht_caps
     if (dev_band->ht_supported) {

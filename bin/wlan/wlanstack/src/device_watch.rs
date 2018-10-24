@@ -139,7 +139,7 @@ mod tests {
 
     fn create_2_4_ghz_band_info() -> fidl_wlan_dev::BandInfo {
         fidl_wlan_dev::BandInfo{
-            description: String::from("2.4 GHz"),
+            band_id: fidl_mlme::Band::WlanBand2Ghz,
             ht_caps: Some(Box::new(fidl_mlme::HtCapabilities {
                 ht_cap_info: fidl_mlme::HtCapabilityInfo {
                     ldpc_coding_cap: false,

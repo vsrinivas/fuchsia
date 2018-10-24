@@ -3438,7 +3438,7 @@ zx_status_t Device::Query(wlan_info_t* info) {
     info->caps = WLAN_CAP_SHORT_PREAMBLE | WLAN_CAP_SHORT_SLOT_TIME;
     info->num_bands = 1;
     info->bands[0] = {
-        .desc = "2.4 GHz",
+        .band_id = WLAN_BAND_2GHZ,
         // These hard-coded values are experimentally proven to work,
         // but does not necessarily reflect the true capabilities of the chipset.
         .ht_supported = true,
@@ -3497,7 +3497,7 @@ zx_status_t Device::Query(wlan_info_t* info) {
         // Add MCS 8-15 to band 0
         info->bands[0].ht_caps.supported_mcs_set[1] = 0xff;
         info->bands[1] = {
-            .desc = "5 GHz",
+            .band_id = WLAN_BAND_5GHZ,
             // See above for descriptions of these capabilities
             .ht_supported = true,
             .ht_caps =

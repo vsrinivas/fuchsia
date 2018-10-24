@@ -61,7 +61,8 @@ struct ath10k_channel {
 };
 
 struct ath10k_band {
-    const char* name;
+    uint8_t band_id;  // WLAN_BAND_*
+
     bool ht_supported;
     bool vht_supported;
     wlan_vht_caps_t vht_caps;

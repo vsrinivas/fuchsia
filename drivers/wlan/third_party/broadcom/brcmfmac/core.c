@@ -530,7 +530,7 @@ zx_status_t brcmf_phy_query(void* ctx, wlanphy_info_t* phy_info) {
     info->driver_features = WLAN_DRIVER_FEATURE_SCAN_OFFLOAD;
     info->caps = 0xf; //WLAN_CAP_;
     info->num_bands = 1;
-    strlcpy(info->bands[0].desc, "2.4 GHz", WLAN_BAND_DESC_MAX_LEN);
+    info->bands[0].band_id = WLAN_BAND_2GHZ;
     // TODO(cphoenix): Once this isn't temp/stub code anymore, remove unnecessary "= 0" lines.
     info->bands[0].ht_supported = false;
     info->bands[0].ht_caps.ht_capability_info = 0;

@@ -6,6 +6,8 @@
 
 #include <ddk/device.h>
 #include <net/ethernet.h>
+#include <wlan/common/band.h>
+#include <wlan/common/channel.h>
 #include <wlan/common/element.h>
 #include <wlan/common/logging.h>
 #include <wlan/protocol/ioctl.h>
@@ -177,12 +179,11 @@ static void ConvertPhyBandInfo(::fidl::VectorPtr<wlan_device::BandInfo>* BandInf
     for (uint8_t band_num = 0; band_num < num_bands; band_num++) {
         wlan_device::BandInfo Band;
         const wlan_band_info_t* phy_band = &phy_bands[band_num];
-
-        // description
-        Band.description = phy_band->desc;
+        Band.band_id = wlan::common::BandToFidl(phy_band->band_id);
 
         // ht_caps
-        Band.ht_caps = std::make_unique<wlan_mlme::HtCapabilities>(::wlan::HtCapabilities::FromDdk(phy_bands->ht_caps).ToFidl());
+        Band.ht_caps = std::make_unique<wlan_mlme::HtCapabilities>(
+            ::wlan::HtCapabilities::FromDdk(phy_bands->ht_caps).ToFidl());
 
         // vht_caps
         if (phy_bands->vht_supported) {

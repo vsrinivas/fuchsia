@@ -39,7 +39,6 @@ uint8_t GetCenterChanIdx(const wlan_channel_t& chan);
 
 std::string ChanStr(const wlan_channel_t& chan);
 std::string ChanStrLong(const wlan_channel_t& chan);
-std::string BandStr(const wlan_channel_t& chan);
 
 uint8_t GetValidCbw(const wlan_channel_t& chan);
 

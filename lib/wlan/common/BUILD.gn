@@ -8,12 +8,14 @@ config("wlan_common_config") {
 
 source_set("common") {
   sources = [
+    "band.cpp",
     "channel.cpp",
     "element.cpp",
     "element_splitter.cpp",
     "energy.cpp",
     "include/wlan/common/action_frame.h",
     "include/wlan/common/bitfield.h",
+    "include/wlan/common/band.h",
     "include/wlan/common/buffer_reader.h",
     "include/wlan/common/buffer_writer.h",
     "include/wlan/common/channel.h",

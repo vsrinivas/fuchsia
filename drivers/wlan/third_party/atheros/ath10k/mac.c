@@ -110,7 +110,7 @@ static const struct ath10k_channel ath10k_5ghz_channels[] = {
 // Band information that is consistent across all supported ath10k chipsets
 static const struct ath10k_band ath10k_supported_bands[] = {
     {
-        .name = "2.4 GHz",
+        .band_id = WLAN_BAND_2GHZ,
         .ht_supported = true,
         .vht_supported = false,
         // TODO(NET-1375):
@@ -124,7 +124,7 @@ static const struct ath10k_band ath10k_supported_bands[] = {
     },
 
     {
-        .name = "5 GHz",
+        .band_id = WLAN_BAND_5GHZ,
         .ht_supported = true,
         .vht_supported = true,
         // TODO(NET-1375):

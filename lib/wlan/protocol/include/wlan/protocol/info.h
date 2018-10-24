@@ -11,6 +11,16 @@
 
 __BEGIN_CDECLS;
 
+enum Band {
+    // See IEEE Std 802.11-2016 Annex E
+    // This is a simplified expression of channel starting frequencies.
+    // Expand this list as Fuchsia evolves.
+    WLAN_BAND_2GHZ = 0,  // Channel starting frequency: 2.407 GHz
+    WLAN_BAND_5GHZ = 1,  // Channel starting frequency: 5.000 GHz
+
+    WLAN_BAND_COUNT,
+};
+
 enum CBW {
     // Channel Bandwidth. See IEEE 802.11-2016 21.2.4 Table 21-2
     // VHT notation
@@ -183,12 +193,11 @@ typedef struct wlan_chan_list {
     uint8_t channels[WLAN_CHANNELS_MAX_LEN];
 } wlan_chan_list_t;
 
-#define WLAN_BAND_DESC_MAX_LEN 16
 #define WLAN_BASIC_RATES_MAX_LEN 12
 
+// Capabilities are grouped by band, by industry de facto standard.
 typedef struct wlan_band_info {
-    // Human-readable description of the band, for debugging.
-    char desc[WLAN_BAND_DESC_MAX_LEN];
+    uint8_t band_id;
     // HT PHY capabilities.
     bool ht_supported;
     wlan_ht_caps_t ht_caps;
