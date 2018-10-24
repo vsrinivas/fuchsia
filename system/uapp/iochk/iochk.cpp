@@ -170,7 +170,7 @@ protected:
 
         while (idx < length / sizeof(uint64_t)) {
             if (buf[idx] != expected) {
-                printf("inital read verification failed: "
+                printf("initial read verification failed: "
                        "block_idx=%d offset=%zu expected=0x%016lx val=0x%016lx\n",
                        block_idx, idx, expected, buf[idx]);
                 return ZX_ERR_INTERNAL;
