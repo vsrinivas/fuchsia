@@ -25,9 +25,9 @@ zx::socket SocketFactory::MakeSocketForChannel(
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   ZX_DEBUG_ASSERT(channel);
 
-  if (channel_to_relay_.find(channel->id()) != channel_to_relay_.end()) {
-    bt_log(ERROR, "l2cap", "channel %u is already bound to a socket",
-           channel->id());
+  if (channel_to_relay_.find(channel->unique_id()) != channel_to_relay_.end()) {
+    bt_log(ERROR, "l2cap", "channel %u @ %u is already bound to a socket",
+           channel->link_handle(), channel->id());
     return {};
   }
 
@@ -35,8 +35,8 @@ zx::socket SocketFactory::MakeSocketForChannel(
   const auto status =
       zx::socket::create(ZX_SOCKET_STREAM, &local_socket, &remote_socket);
   if (status != ZX_OK) {
-    bt_log(ERROR, "l2cap", "Failed to create socket for channel %u: %s",
-           channel->id(), zx_status_get_string(status));
+    bt_log(ERROR, "l2cap", "Failed to create socket for channel %u @ %u: %s",
+           channel->link_handle(), channel->id(), zx_status_get_string(status));
     return {};
   }
 
@@ -44,11 +44,11 @@ zx::socket SocketFactory::MakeSocketForChannel(
       std::move(local_socket), channel,
       internal::SocketChannelRelay::DeactivationCallback(
           [self = weak_ptr_factory_.GetWeakPtr()](
-              l2cap::ChannelId channel_id) mutable {
-            ZX_DEBUG_ASSERT_MSG(self, "(channel_id=%u)", channel_id);
-            size_t n_erased = self->channel_to_relay_.erase(channel_id);
-            ZX_DEBUG_ASSERT_MSG(n_erased == 1, "(n_erased=%zu, channel_id=%u)",
-                                n_erased, channel_id);
+              l2cap::Channel::UniqueId unique_id) mutable {
+            ZX_DEBUG_ASSERT_MSG(self, "(unique_id=%lu)", unique_id);
+            size_t n_erased = self->channel_to_relay_.erase(unique_id);
+            ZX_DEBUG_ASSERT_MSG(n_erased == 1, "(n_erased=%zu, unique_id=%lu)",
+                                n_erased, unique_id);
           }));
 
   // Note: Activate() may abort, if |channel| has been Activated() without going
@@ -59,7 +59,7 @@ zx::socket SocketFactory::MakeSocketForChannel(
     return {};
   }
 
-  channel_to_relay_[channel->id()] = std::move(relay);
+  channel_to_relay_.emplace(channel->unique_id(), std::move(relay));
   return remote_socket;
 }
 

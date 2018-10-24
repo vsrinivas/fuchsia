@@ -6,6 +6,7 @@
 #define GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_CHANNEL_H_
 
 #include <atomic>
+#include <climits>
 #include <list>
 #include <memory>
 #include <mutex>
@@ -114,6 +115,17 @@ class Channel : public fbl::RefCounted<Channel> {
 
   // The connection handle of the underlying logical link.
   hci::ConnectionHandle link_handle() const { return link_handle_; }
+
+  // Returns a value that's unique for any channel connected to this device.
+  // If two channels have different unique_ids, they represent different
+  // channels even if their ids match.
+  using UniqueId = uint64_t;
+  UniqueId unique_id() const {
+    static_assert(
+        sizeof(UniqueId) >= sizeof(hci::ConnectionHandle) + sizeof(ChannelId),
+        "UniqueId needs to be large enough to make unique IDs");
+    return (link_handle() << (sizeof(ChannelId) * CHAR_BIT)) | id();
+  }
 
   uint16_t tx_mtu() const { return tx_mtu_; }
   uint16_t rx_mtu() const { return rx_mtu_; }

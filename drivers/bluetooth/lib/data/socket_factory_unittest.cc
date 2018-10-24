@@ -19,6 +19,7 @@ namespace {
 constexpr l2cap::ChannelId kDynamicChannelIdMin = 0x0040;
 constexpr l2cap::ChannelId kRemoteChannelId = 0x0050;
 constexpr hci::ConnectionHandle kDefaultConnectionHandle = 0x0001;
+constexpr hci::ConnectionHandle kAnotherConnectionHandle = 0x0002;
 
 class DATA_SocketFactoryTest : public ::testing::Test {
  public:
@@ -93,6 +94,15 @@ TEST_F(DATA_SocketFactoryTest, DestructionAfterDeactivatingRelayDoesNotCrash) {
   channel()->Close();
   RunLoopUntilIdle();  // Process any events related to channel closure.
   // |socket_factory| is destroyed implicitly.
+}
+
+TEST_F(DATA_SocketFactoryTest, SameChannelIdDifferentHandles) {
+  SocketFactory socket_factory;
+  EXPECT_TRUE(socket_factory.MakeSocketForChannel(channel()));
+  auto another_channel = fbl::MakeRefCounted<l2cap::testing::FakeChannel>(
+      kDynamicChannelIdMin, kRemoteChannelId, kAnotherConnectionHandle,
+      hci::Connection::LinkType::kACL);
+  EXPECT_TRUE(socket_factory.MakeSocketForChannel(another_channel));
 }
 
 }  // namespace

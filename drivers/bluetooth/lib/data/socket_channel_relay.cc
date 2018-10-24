@@ -131,7 +131,7 @@ void SocketChannelRelay::DeactivateAndRequestDestruction() {
     // owns deactivation_cb_, we move() deactivation_cb_ outside of |this|
     // before invoking the callback.
     auto moved_deactivation_cb = std::move(deactivation_cb_);
-    moved_deactivation_cb(channel_->id());
+    moved_deactivation_cb(channel_->unique_id());
   }
 }
 

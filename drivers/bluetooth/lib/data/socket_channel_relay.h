@@ -28,7 +28,7 @@ namespace internal {
 // single-threaded, must run on that same thread.
 class SocketChannelRelay final {
  public:
-  using DeactivationCallback = fit::function<void(l2cap::ChannelId)>;
+  using DeactivationCallback = fit::function<void(l2cap::Channel::UniqueId)>;
 
   // Creates a SocketChannelRelay which executes on |dispatcher|. Note that
   // |dispatcher| must be single-threaded.

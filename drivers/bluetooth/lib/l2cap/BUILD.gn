@@ -84,6 +84,7 @@ source_set("tests") {
     "bredr_command_handler_unittest.cc",
     "bredr_dynamic_channel_unittest.cc",
     "bredr_signaling_channel_unittest.cc",
+    "channel_unittest.cc",
     "channel_manager_unittest.cc",
     "dynamic_channel_registry_unittest.cc",
     "fragmenter_unittest.cc",

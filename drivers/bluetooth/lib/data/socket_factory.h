@@ -60,7 +60,7 @@ class SocketFactory {
 
   // TODO(NET-1535): Figure out what we need to do handle the possibility that a
   // channel id is recycled. (See comment in LogicalLink::HandleRxPacket.)
-  std::unordered_map<l2cap::ChannelId,
+  std::unordered_map<l2cap::Channel::UniqueId,
                      std::unique_ptr<internal::SocketChannelRelay>>
       channel_to_relay_;
 
