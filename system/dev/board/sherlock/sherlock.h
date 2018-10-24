@@ -21,6 +21,8 @@ enum {
     BTI_USB_XHCI,
     BTI_EMMC,
     BTI_MALI,
+    BTI_CANVAS,
+    BTI_VIDEO,
 };
 
 // These should match the mmio table defined in sherlock-i2c.c
@@ -49,12 +51,14 @@ private:
 
     zx_status_t Start();
     zx_status_t GpioInit();
+    zx_status_t CanvasInit();
     zx_status_t I2cInit();
     zx_status_t UsbInit();
     zx_status_t EmmcInit();
     zx_status_t ClkInit();
     zx_status_t CameraInit();
     zx_status_t MaliInit();
+    zx_status_t VideoInit();
     int Thread();
 
     ddk::PBusProtocolProxy pbus_;

@@ -73,6 +73,11 @@ int Sherlock::Thread() {
         return -1;
     }
 
+    if (CanvasInit() != ZX_OK) {
+        zxlogf(ERROR, "CanvasInit() failed\n");
+        return -1;
+    }
+
     // Then the platform device drivers.
     if (UsbInit() != ZX_OK) {
         zxlogf(ERROR, "UsbInit() failed\n");
@@ -86,6 +91,11 @@ int Sherlock::Thread() {
 
     if (CameraInit() != ZX_OK) {
         zxlogf(ERROR, "CameraInit() failed\n");
+        return -1;
+    }
+
+    if (VideoInit() != ZX_OK) {
+        zxlogf(ERROR, "VideoInit() failed\n");
         return -1;
     }
 
