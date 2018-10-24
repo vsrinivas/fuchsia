@@ -12,27 +12,29 @@ namespace media_player {
 // These must match the definitions in media_types.fidl. This is verfied by
 // the KnownEncodingsMatch function in fidl/fidl_type_conversion.cc. Changes
 // to this list should be reflected there.
-const char StreamType::kMediaEncodingUnsupported[] = "unsupported";
+const char StreamType::kMediaEncodingUnsupported[] =
+    "fuchsia.media.unsupported";
 
-const char StreamType::kAudioEncodingAac[] = "aac";
-const char StreamType::kAudioEncodingAmrNb[] = "amrnb";
-const char StreamType::kAudioEncodingAmrWb[] = "amrwb";
-const char StreamType::kAudioEncodingFlac[] = "flac";
-const char StreamType::kAudioEncodingGsmMs[] = "gsmms";
-const char StreamType::kAudioEncodingLpcm[] = "lpcm";
-const char StreamType::kAudioEncodingMp3[] = "mp3";
-const char StreamType::kAudioEncodingPcmALaw[] = "pcmalaw";
-const char StreamType::kAudioEncodingPcmMuLaw[] = "pcmmulaw";
-const char StreamType::kAudioEncodingVorbis[] = "vorbis";
+const char StreamType::kAudioEncodingAac[] = "fuchsia.media.aac";
+const char StreamType::kAudioEncodingAmrNb[] = "fuchsia.media.amrnb";
+const char StreamType::kAudioEncodingAmrWb[] = "fuchsia.media.amrwb";
+const char StreamType::kAudioEncodingFlac[] = "fuchsia.media.flac";
+const char StreamType::kAudioEncodingGsmMs[] = "fuchsia.media.gsmms";
+const char StreamType::kAudioEncodingLpcm[] = "fuchsia.media.lpcm";
+const char StreamType::kAudioEncodingMp3[] = "fuchsia.media.mp3";
+const char StreamType::kAudioEncodingPcmALaw[] = "fuchsia.media.pcmalaw";
+const char StreamType::kAudioEncodingPcmMuLaw[] = "fuchsia.media.pcmmulaw";
+const char StreamType::kAudioEncodingVorbis[] = "fuchsia.media.vorbis";
 
-const char StreamType::kVideoEncodingH263[] = "h263";
-const char StreamType::kVideoEncodingH264[] = "h264";
-const char StreamType::kVideoEncodingMpeg4[] = "mpeg4";
-const char StreamType::kVideoEncodingTheora[] = "theora";
-const char StreamType::kVideoEncodingUncompressed[] = "uncompressed_video";
-const char StreamType::kVideoEncodingVp3[] = "vp3";
-const char StreamType::kVideoEncodingVp8[] = "vp8";
-const char StreamType::kVideoEncodingVp9[] = "vp9";
+const char StreamType::kVideoEncodingH263[] = "fuchsia.media.h263";
+const char StreamType::kVideoEncodingH264[] = "fuchsia.media.h264";
+const char StreamType::kVideoEncodingMpeg4[] = "fuchsia.media.mpeg4";
+const char StreamType::kVideoEncodingTheora[] = "fuchsia.media.theora";
+const char StreamType::kVideoEncodingUncompressed[] =
+    "fuchsia.media.uncompressed_video";
+const char StreamType::kVideoEncodingVp3[] = "fuchsia.media.vp3";
+const char StreamType::kVideoEncodingVp8[] = "fuchsia.media.vp8";
+const char StreamType::kVideoEncodingVp9[] = "fuchsia.media.vp9";
 
 StreamType::StreamType(Medium medium, const std::string& encoding,
                        std::unique_ptr<Bytes> encoding_parameters)
