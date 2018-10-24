@@ -222,6 +222,36 @@ static bool devnode_is_local(devnode_t* dn) {
     return false;
 }
 
+// Notify a single watcher about the given operation and path.  On failure,
+// frees the watcher.  This can only be called on a watcher that has not yet
+// been added to a devnode_t's watchers list.
+static void devfs_notify_single(fbl::unique_ptr<dc_watcher>* watcher,
+                                const fbl::String& name, unsigned op) {
+    size_t len = name.length();
+    if (!*watcher || len > fuchsia_io_MAX_FILENAME) {
+        return;
+    }
+
+    ZX_ASSERT(!(*watcher)->InContainer());
+
+    uint8_t msg[fuchsia_io_MAX_FILENAME + 2];
+    const uint32_t msg_len = static_cast<uint32_t>(len + 2);
+    msg[0] = static_cast<uint8_t>(op);
+    msg[1] = static_cast<uint8_t>(len);
+    memcpy(msg + 2, name.c_str(), len);
+
+    // convert to mask
+    op = (1u << op);
+
+    if (!((*watcher)->mask & op)) {
+        return;
+    }
+
+    if ((*watcher)->handle.write(0, msg, msg_len, nullptr, 0) != ZX_OK) {
+        watcher->reset();
+    }
+}
+
 static void devfs_notify(devnode_t* dn, const fbl::String& name, unsigned op) {
     if (dn->watchers.is_empty()) {
         return;
@@ -264,9 +294,8 @@ static zx_status_t devfs_watch(devnode_t* dn, zx::channel h, uint32_t mask) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    dc_watcher* new_watcher = watcher.get();
-    dn->watchers.push_front(fbl::move(watcher));
-
+    // If the watcher has asked for all existing entries, send it all of them
+    // followed by the end-of-existing marker (IDLE).
     if (mask & fuchsia_io_WATCH_MASK_EXISTING) {
         devnode_t* child;
         list_for_every_entry(&dn->children, child, devnode_t, node) {
@@ -274,18 +303,16 @@ static zx_status_t devfs_watch(devnode_t* dn, zx::channel h, uint32_t mask) {
                 continue;
             }
             //TODO: send multiple per write
-            devfs_notify(dn, child->name, fuchsia_io_WATCH_EVENT_EXISTING);
+            devfs_notify_single(&watcher, child->name, fuchsia_io_WATCH_EVENT_EXISTING);
         }
-        devfs_notify(dn, "", fuchsia_io_WATCH_EVENT_IDLE);
-
+        devfs_notify_single(&watcher, "", fuchsia_io_WATCH_EVENT_IDLE);
     }
 
-    // TODO(teisenbe): Fix the use-after-free here caused by devfs_notify
-    // sometimes deleting new_watcher
-
-    // Don't send EXISTING or IDLE events from now on...
-    new_watcher->mask &= ~(fuchsia_io_WATCH_MASK_EXISTING | fuchsia_io_WATCH_MASK_IDLE);
-
+    // Watcher may have been freed by devfs_notify_single, so check before
+    // adding.
+    if (watcher) {
+        dn->watchers.push_front(fbl::move(watcher));
+    }
     return ZX_OK;
 }
 
