@@ -80,6 +80,8 @@ zx_status_t AmlThermal::Create(zx_device_t* device) {
     status = thermal->Init();
     if (status != ZX_OK) {
         THERMAL_ERROR("could not initialize thermal driver: %d\n", status);
+        thermal->DdkRemove();
+        return status;
     }
 
     thermal->DdkMakeVisible();
