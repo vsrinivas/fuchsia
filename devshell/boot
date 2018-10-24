@@ -3,8 +3,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### run bootserver in zedboot disk paver mode
+### (deprecated; use "fx pave" or "fx netboot")
 
+## (deprecated; use "fx pave" or "fx netboot")
+##
 ## usage: fx boot [--netboot] [--force-pave]
 ##                [--artifacts <dir>]
 ##                [--sign-tool <path_to_sign_tool>]
@@ -13,9 +15,6 @@
 ##   <type>        see "--help" for list (default: x64 for x64 / arm64 for arm64)
 ##   --netboot     Boot from ramdisk containing FVM
 ##   --force-pave  Force the target device to pave to persistent storage
-##   --artifacts   a directory to load files to send to the target where the
-##                 root of the directory base zircon.bin and its bootdata file
-##                 and an images sub-directory has all the images to pave
 ##   --sign-tool   Optional executable to sign kernel images.
 ##   --bootloader  Flash the bootloader in addition to other partitions. Only
 ##                 works with a limited number of device types.
@@ -35,11 +34,25 @@ force_pave=false
 
 usage() {
     fx-command-help
-    fx-machine-types
     echo
     echo "Additional bootserver arguments:"
     exec "${ZIRCON_TOOLS_DIR}/bootserver" --help
 }
+
+echo >&2
+echo >&2 "------ DEPRECATION NOTICE ------"
+echo >&2 "  fx boot is deprecated"
+echo >&2
+echo >&2 "use \"fx serve\" for most workflows"
+echo >&2
+echo >&2 "use \"fx pave\" for solely paving"
+echo >&2 "use \"fx netboot\" for solely netbooting"
+echo >&2
+echo >&2 "note: \"astro --force pave\" is no longer needed"
+echo >&2 "------ DEPRECATION NOTICE ------"
+echo >&2
+sleep 5
+
 
 netboot=false
 bootserver_extra=()
@@ -60,15 +73,6 @@ while [[ $# -gt 0 ]]; do
   --sign-tool)
     shift
     sign_tool="$1"
-    ;;
-  --artifacts)
-    shift
-    fuchsia_dir="${1}"
-    zircon_tools="${1}/tools"
-
-    # Source the image paths from the artifacts directory, so we can find them.
-    source "${fuchsia_dir}"/zedboot_image_paths.sh
-    source "${fuchsia_dir}"/image_paths.sh
     ;;
   --bootloader)
     shift

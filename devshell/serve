@@ -3,10 +3,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### start `boot` and `serve-updates` in a single command
-## usage: fx serve [-v] [--direct]
+### start `pave` and `serve-updates` in a single command
+## usage: fx serve [-v]
 ##   -v enable more verbose output (must be first argument)
-##   --no-direct configure target to use an SSH tunnel as transport (deprecated)
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
@@ -21,7 +20,6 @@ kill_child_processes() {
 }
 trap kill_child_processes EXIT
 
-boot_args=()
 serve_args=()
 
 fx-standard-switches "$@"
@@ -32,18 +30,15 @@ while (($#)); do
     -v|-vv|--verbose)
       serve_args+=("$1")
       ;;
-    --no-direct|--direct)
-      serve_args+=("$1")
-      ;;
     *)
-      boot_args+=("$1")
+      echo 2>&1 "Unknown argument: \"${1}\" ignored"
       ;;
   esac
   shift
 done
 
-fx-command-exec boot "${boot_args[@]}" &
-boot_pid=$!
+fx-command-exec pave &
+pave_pid=$!
 fx-command-exec serve-updates "${serve_args[@]}" &
 serve_pid=$!
 
@@ -52,7 +47,7 @@ while true; do
 
   # If any child exits, then exit the whole process, causing other children to
   # be cleaned up by the exit trap.
-  for pid in "${boot_pid}" "${serve_pid}"; do
+  for pid in "${pave_pid}" "${serve_pid}"; do
     if ! kill -0 $pid 2> /dev/null; then
       exit
     fi
