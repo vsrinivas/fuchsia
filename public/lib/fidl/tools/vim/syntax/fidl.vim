@@ -2,6 +2,12 @@
 " To get syntax highlighting for .fidl files, add the following to your .vimrc
 " file:
 "     source /path/to/src/tools/vim/fidl.vim
+"
+" Based on the grammar describe in
+"
+"     https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/reference/grammar.md
+"
+" There is still some work to be done.
 if !exists("g:main_syntax")
   if version < 600
     syntax clear
