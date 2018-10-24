@@ -6,6 +6,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
+#include <ddk/metadata.h>
 #include <ddk/protocol/block.h>
 
 #include <assert.h>
@@ -29,6 +30,18 @@ typedef gpt_header_t gpt_t;
 
 #define TXN_SIZE 0x4000 // 128 partition entries
 
+typedef struct guid {
+    uint32_t data1;
+    uint16_t data2;
+    uint16_t data3;
+    uint8_t data4[8];
+} guid_t;
+
+typedef struct guid_map {
+    guid_t from;
+    guid_t to;
+} guid_map_t;
+
 typedef struct gptpart_device {
     zx_device_t* zxdev;
     zx_device_t* parent;
@@ -39,17 +52,14 @@ typedef struct gptpart_device {
 
     block_info_t info;
     size_t block_op_size;
+
+    // Owned by gpt_bind_thread, or by gpt_bind if creation of the thread fails.
+    guid_map_t* guid_map;
+    size_t guid_map_entries;
 } gptpart_device_t;
 
-struct guid {
-    uint32_t data1;
-    uint16_t data2;
-    uint16_t data3;
-    uint8_t data4[8];
-};
-
 static void uint8_to_guid_string(char* dst, uint8_t* src) {
-    struct guid* guid = (struct guid*)src;
+    guid_t* guid = (guid_t*)src;
     sprintf(dst, "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X", guid->data1, guid->data2,
             guid->data3, guid->data4[0], guid->data4[1], guid->data4[2], guid->data4[3],
             guid->data4[4], guid->data4[5], guid->data4[6], guid->data4[7]);
@@ -94,6 +104,15 @@ static bool validate_header(const gpt_t* header, const block_info_t* info) {
         return false;
     }
     return true;
+}
+
+static void apply_guid_map(const guid_map_t* guid_map, size_t entries, uint8_t* guid) {
+    for (size_t i = 0; i < entries; i++) {
+        if (memcmp(guid, &guid_map[i].from, GPT_GUID_LEN) == 0) {
+            memcpy(guid, &guid_map[i].to, GPT_GUID_LEN);
+            return;
+        }
+    }
 }
 
 // implement device protocol:
@@ -221,6 +240,9 @@ static zx_status_t vmo_read(zx_handle_t vmo, void* data, uint64_t off, size_t le
 static int gpt_bind_thread(void* arg) {
     gptpart_device_t* first_dev = (gptpart_device_t*)arg;
     zx_device_t* dev = first_dev->parent;
+
+    guid_map_t* guid_map = first_dev->guid_map;
+    size_t guid_map_entries = first_dev->guid_map_entries;
 
     // used to keep track of number of partitions found
     unsigned partitions = 0;
@@ -355,6 +377,8 @@ static int gpt_bind_thread(void* arg) {
         memcpy(&device->info, &block_info, sizeof(block_info));
         device->block_op_size = block_op_size;
 
+        apply_guid_map(guid_map, guid_map_entries, device->gpt_entry.guid);
+
         char type_guid[GPT_GUID_STRLEN];
         uint8_to_guid_string(type_guid, device->gpt_entry.type);
         char partition_guid[GPT_GUID_STRLEN];
@@ -398,6 +422,9 @@ static int gpt_bind_thread(void* arg) {
 unbind:
     free(bop);
     zx_handle_close(vmo);
+
+    free(guid_map);
+
     if (first_dev) {
         // handle case where no partitions were found
         device_remove(first_dev->zxdev);
@@ -413,11 +440,35 @@ static zx_status_t gpt_bind(void* ctx, zx_device_t* parent) {
     }
     device->parent = parent;
 
+    device->guid_map = calloc(DEVICE_METADATA_GUID_MAP_MAX_ENTRIES, sizeof(*device->guid_map));
+    if (!device->guid_map) {
+        free(device);
+        return ZX_ERR_NO_MEMORY;
+    }
+
     if (device_get_protocol(parent, ZX_PROTOCOL_BLOCK, &device->bp) != ZX_OK) {
         zxlogf(ERROR, "gpt: ERROR: block device '%s': does not support block protocol\n",
                device_get_name(parent));
+        free(device->guid_map);
         free(device);
         return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    device->guid_map_entries = 0;
+
+    zx_status_t status;
+    size_t actual;
+    status = device_get_metadata(parent, DEVICE_METADATA_GUID_MAP, device->guid_map,
+                                 DEVICE_METADATA_GUID_MAP_MAX_ENTRIES * sizeof(*device->guid_map),
+                                 &actual);
+    if (status != ZX_OK) {
+        zxlogf(INFO, "gpt: device_get_metadata failed (%d)\n", status);
+        free(device->guid_map);
+    } else if (actual % sizeof(*device->guid_map) != 0) {
+        zxlogf(INFO, "gpt: GUID map size is invalid (%lu)\n", actual);
+        free(device->guid_map);
+    } else {
+        device->guid_map_entries = actual / sizeof(*device->guid_map);
     }
 
     char name[128];
@@ -433,8 +484,9 @@ static zx_status_t gpt_bind(void* ctx, zx_device_t* parent) {
         .flags = DEVICE_ADD_INVISIBLE,
     };
 
-    zx_status_t status = device_add(parent, &args, &device->zxdev);
+    status = device_add(parent, &args, &device->zxdev);
     if (status != ZX_OK) {
+        free(device->guid_map);
         free(device);
         return status;
     }
@@ -443,6 +495,7 @@ static zx_status_t gpt_bind(void* ctx, zx_device_t* parent) {
     thrd_t t;
     status = thrd_create_with_name(&t, gpt_bind_thread, device, "gpt-init");
     if (status != ZX_OK) {
+        free(device->guid_map);
         device_remove(device->zxdev);
     }
     return status;

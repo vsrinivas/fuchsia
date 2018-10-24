@@ -38,6 +38,12 @@ static_assert(DEVICE_METADATA_PARTITION_MAP == ZBI_TYPE_DRV_PARTITION_MAP, "");
 // type: uint8_t
 #define DEVICE_METADATA_INTERRUPT_CONTROLLER_TYPE 0x43544E49 // INTC
 
+// GUID map (for GPT driver)
+// type: array of struct { guid first, guid last }
+//       where guid is struct { uint32_t, uint16_t, uint16_t, uint8_t[8] }
+#define DEVICE_METADATA_GUID_MAP                  0x44495547 // GUID
+#define DEVICE_METADATA_GUID_MAP_MAX_ENTRIES      8
+
 // Metadata types that have least significant byte set to lowercase 'd'
 // signify private driver data.
 // This allows creating metadata types to be defined local to a particular
