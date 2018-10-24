@@ -5,7 +5,9 @@
 use failure::{format_err, Error};
 use fuchsia_scenic as scenic;
 use fuchsia_wayland_core as wl;
-use wayland::{WlCompositor, WlCompositorRequest, WlSurface, WlSurfaceRequest};
+use wayland::{
+    WlCompositor, WlCompositorRequest, WlRegion, WlRegionRequest, WlSurface, WlSurfaceRequest,
+};
 
 use crate::display::Callback;
 use crate::shm::Buffer;
@@ -30,7 +32,9 @@ impl wl::RequestReceiver<WlCompositor> for Compositor {
             WlCompositorRequest::CreateSurface { id } => {
                 id.implement(client, Surface::new(this.get(client)?.session.clone()))?;
             }
-            WlCompositorRequest::CreateRegion { .. } => {}
+            WlCompositorRequest::CreateRegion { id } => {
+                id.implement(client, Region)?;
+            }
         }
         Ok(())
     }
@@ -238,5 +242,20 @@ impl BufferAttachment {
     #[allow(dead_code)]
     pub fn id(&self) -> wl::ObjectId {
         self.buffer_id
+    }
+}
+
+struct Region;
+
+impl wl::RequestReceiver<WlRegion> for Region {
+    fn receive(
+        _this: wl::ObjectRef<Self>, request: WlRegionRequest, _client: &mut wl::Client,
+    ) -> Result<(), Error> {
+        match request {
+            WlRegionRequest::Destroy => {}
+            WlRegionRequest::Add { .. } => {}
+            WlRegionRequest::Subtract { .. } => {}
+        }
+        Ok(())
     }
 }
