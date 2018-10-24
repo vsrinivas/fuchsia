@@ -177,7 +177,8 @@ void BeaconSender::SendProbeResponse(const MgmtFrameView<ProbeRequest>& probe_re
     }
 
     auto packet = frame.Take();
-    packet->CopyCtrlFrom(MakeTxInfo(frame.hdr()->fc, CBW20, WLAN_PHY_OFDM));
+    auto fc = packet->field<FrameControl>(0);
+    packet->CopyCtrlFrom(MakeTxInfo(*fc, CBW20, WLAN_PHY_OFDM));
     status = device_->SendWlan(fbl::move(packet));
     if (status != ZX_OK) {
         errorf("[bcn-sender] [%s] could not send ProbeResponse packet: %d\n",

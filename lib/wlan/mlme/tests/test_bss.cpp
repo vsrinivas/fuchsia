@@ -240,6 +240,34 @@ zx_status_t CreateBeaconFrameWithBssid(fbl::unique_ptr<Packet>* out_packet, comm
     return ZX_OK;
 }
 
+zx_status_t CreateProbeRequest(fbl::unique_ptr<Packet>* out_packet) {
+    common::MacAddr bssid(kBssid1);
+    common::MacAddr client(kClientAddress);
+
+    size_t body_payload_len = 256;
+    MgmtFrame<ProbeRequest> frame;
+    auto status = CreateMgmtFrame(&frame, body_payload_len);
+    if (status != ZX_OK) { return status; }
+
+    auto hdr = frame.hdr();
+    hdr->addr1 = client;
+    hdr->addr2 = bssid;
+    hdr->addr3 = bssid;
+
+    auto probereq = frame.body();
+    BufferWriter w({probereq->elements, body_payload_len});
+    // Write wildcard SSID IE.
+    common::WriteSsid(&w, {});
+
+    auto pkt = frame.Take();
+    wlan_rx_info_t rx_info{.rx_flags = 0};
+    pkt->CopyCtrlFrom(rx_info);
+
+    *out_packet = fbl::move(pkt);
+
+    return ZX_OK;
+}
+
 zx_status_t CreateAuthReqFrame(fbl::unique_ptr<Packet>* out_packet) {
     common::MacAddr bssid(kBssid1);
     common::MacAddr client(kClientAddress);

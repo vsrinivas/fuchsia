@@ -55,6 +55,7 @@ executable("ap_tests") {
 
   sources = [
     "ap_infra_bss_unittest.cpp",
+    "beacon_sender_unittest.cpp",
   ]
 
   deps = [

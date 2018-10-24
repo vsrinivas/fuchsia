@@ -75,6 +75,7 @@ zx_status_t CreateAuthRespFrame(fbl::unique_ptr<Packet>*);
 zx_status_t CreateDeauthFrame(fbl::unique_ptr<Packet>*);
 zx_status_t CreateBeaconFrame(fbl::unique_ptr<Packet>*);
 zx_status_t CreateBeaconFrameWithBssid(fbl::unique_ptr<Packet>*, common::MacAddr);
+zx_status_t CreateProbeRequest(fbl::unique_ptr<Packet>*);
 zx_status_t CreateAssocReqFrame(fbl::unique_ptr<Packet>*);
 zx_status_t CreateAssocRespFrame(fbl::unique_ptr<Packet>*);
 zx_status_t CreateDisassocFrame(fbl::unique_ptr<Packet>*);
