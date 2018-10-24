@@ -38,8 +38,8 @@ typedef struct guid {
 } guid_t;
 
 typedef struct guid_map {
-    guid_t from;
-    guid_t to;
+    char name[GPT_NAME_LEN];
+    uint8_t guid[GPT_GUID_LEN];
 } guid_map_t;
 
 typedef struct gptpart_device {
@@ -106,10 +106,11 @@ static bool validate_header(const gpt_t* header, const block_info_t* info) {
     return true;
 }
 
-static void apply_guid_map(const guid_map_t* guid_map, size_t entries, uint8_t* guid) {
+static void apply_guid_map(const guid_map_t* guid_map, size_t entries, const char* name,
+                           uint8_t* type) {
     for (size_t i = 0; i < entries; i++) {
-        if (memcmp(guid, &guid_map[i].from, GPT_GUID_LEN) == 0) {
-            memcpy(guid, &guid_map[i].to, GPT_GUID_LEN);
+        if (strncmp(name, guid_map[i].name, GPT_NAME_LEN) == 0) {
+            memcpy(type, guid_map[i].guid, GPT_GUID_LEN);
             return;
         }
     }
@@ -377,14 +378,15 @@ static int gpt_bind_thread(void* arg) {
         memcpy(&device->info, &block_info, sizeof(block_info));
         device->block_op_size = block_op_size;
 
-        apply_guid_map(guid_map, guid_map_entries, device->gpt_entry.guid);
-
-        char type_guid[GPT_GUID_STRLEN];
-        uint8_to_guid_string(type_guid, device->gpt_entry.type);
         char partition_guid[GPT_GUID_STRLEN];
         uint8_to_guid_string(partition_guid, device->gpt_entry.guid);
         char pname[GPT_NAME_LEN];
         utf16_to_cstring(pname, device->gpt_entry.name, GPT_NAME_LEN);
+
+        apply_guid_map(guid_map, guid_map_entries, pname, device->gpt_entry.type);
+
+        char type_guid[GPT_GUID_STRLEN];
+        uint8_to_guid_string(type_guid, device->gpt_entry.type);
 
         if (first_dev) {
             // make our initial device visible and use if for partition zero
