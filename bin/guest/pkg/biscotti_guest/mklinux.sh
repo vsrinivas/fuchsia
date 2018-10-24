@@ -15,15 +15,18 @@ usage() {
   echo "usage: ${0} [options] {arm64, x64}"
   echo
   echo "  -l [linux-dir]  Linux source dir"
+  echo "  -n Do not sync repo or switch branches"
   echo
   exit 1
 }
 
 MKLINUX_ARGS=""
+MKLINUX_BRANCH_ARGS="-b biscotti-4.18"
 
-while getopts "l:o:" OPT; do
+while getopts "l:n" OPT; do
   case $OPT in
   l) MKLINUX_ARGS="${MKLINUX_ARGS} -l $OPTARG";;
+  n) MKLINUX_BRANCH_ARGS="";;
   *) usage;;
   esac
 done
@@ -35,7 +38,7 @@ arm64|x64) LINUX_ARCH="${1}" ;;
 esac
 
 $LINUX_GUEST_DIR/mklinux.sh \
-    -b biscotti-4.18 \
+    ${MKLINUX_BRANCH_ARGS} \
     -d biscotti_defconfig \
     -o "${BISCOTTI_GUEST_DIR}/images/${LINUX_ARCH}/Image" \
     ${MKLINUX_ARGS} \
