@@ -12,6 +12,7 @@
 #include <wlan/mlme/client/client_mlme.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/device_interface.h>
+#include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>
 #include <wlan/protocol/mac.h>

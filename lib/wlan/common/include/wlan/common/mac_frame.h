@@ -183,6 +183,24 @@ class CapabilityInfo : public common::BitField<uint16_t> {
 #undef BITFLAG_TO_BIT
         return cap;
     }
+
+    ::fuchsia::wlan::mlme::CapabilityInfo ToFidl() const {
+        ::fuchsia::wlan::mlme::CapabilityInfo c;
+        c.ess = (ess() == 1);
+        c.ibss = (ibss() == 1);
+        c.cf_pollable = (cf_pollable() == 1);
+        c.cf_poll_req = (cf_poll_req() == 1);
+        c.privacy = (privacy() == 1);
+        c.short_preamble = (short_preamble() == 1);
+        c.spectrum_mgmt = (spectrum_mgmt() == 1);
+        c.qos = (qos() == 1);
+        c.short_slot_time = (short_slot_time() == 1);
+        c.apsd = (apsd() == 1);
+        c.radio_msmt = (radio_msmt() == 1);
+        c.delayed_block_ack = (delayed_block_ack() == 1);
+        c.immediate_block_ack = (immediate_block_ack() == 1);
+        return c;
+    }
 };
 
 // TODO: Replace native ReasonCode with FIDL ReasonCode

@@ -115,7 +115,7 @@ zx_status_t Bss::Update(const Beacon& beacon, size_t frame_len) {
     bssid_.CopyTo(bss_desc_.bssid.mutable_data());
 
     bss_desc_.beacon_period = beacon.beacon_interval;  // name mismatch is spec-compliant.
-    ParseCapabilityInfo(beacon.cap);
+    bss_desc_.cap = beacon.cap.ToFidl();
     bss_desc_.bss_type = GetBssType(beacon.cap);
 
     // IE's.
@@ -142,23 +142,6 @@ zx_status_t Bss::Update(const Beacon& beacon, size_t frame_len) {
              bss_desc_.chan.cbw, bss_desc_.chan.secondary80);
 
     return ZX_OK;
-}
-
-void Bss::ParseCapabilityInfo(const CapabilityInfo& cap) {
-    auto& c = bss_desc_.cap;
-    c.ess = (cap.ess() == 1);
-    c.ibss = (cap.ibss() == 1);
-    c.cf_pollable = (cap.cf_pollable() == 1);
-    c.cf_poll_req = (cap.cf_poll_req() == 1);
-    c.privacy = (cap.privacy() == 1);
-    c.short_preamble = (cap.short_preamble() == 1);
-    c.spectrum_mgmt = (cap.spectrum_mgmt() == 1);
-    c.qos = (cap.qos() == 1);
-    c.short_slot_time = (cap.short_slot_time() == 1);
-    c.apsd = (cap.apsd() == 1);
-    c.radio_msmt = (cap.radio_msmt() == 1);
-    c.delayed_block_ack = (cap.delayed_block_ack() == 1);
-    c.immediate_block_ack = (cap.immediate_block_ack() == 1);
 }
 
 zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {

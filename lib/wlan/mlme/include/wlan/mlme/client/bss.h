@@ -54,8 +54,6 @@ class Bss : public fbl::RefCounted<Bss> {
 
     // Update content such as IEs.
     zx_status_t Update(const Beacon& beacon, size_t len);
-    void ParseCapabilityInfo(const CapabilityInfo& cap);
-
     zx_status_t ParseIE(const uint8_t* ie_chains, size_t ie_chains_len);
 
     // TODO(porce): Move Beacon method into Beacon class.
@@ -70,7 +68,6 @@ class Bss : public fbl::RefCounted<Bss> {
     wlan_channel_t bcn_rx_chan_;
 
     // TODO(porce): Add ProbeResponse.
-
     ::fuchsia::wlan::mlme::BSSDescription bss_desc_;
 
     // TODO(porce): Unify into FIDL data structure
