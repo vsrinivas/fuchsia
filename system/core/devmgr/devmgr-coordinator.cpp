@@ -1989,6 +1989,15 @@ static void dc_mexec(zx_handle_t* h) {
 
     build_suspend_list(ctx);
 
+    if (suspend_fallback || suspend_debug) {
+        thrd_t t;
+        int ret = thrd_create_with_name(&t, suspend_timeout_thread, ctx,
+                                        "devcoord-suspend-timeout");
+        if (ret != thrd_success) {
+            log(ERROR, "devcoord: can't create suspend timeout thread\n");
+        }
+    }
+
     ctx->dh = list_peek_head_type(&ctx->devhosts, devhost_t, snode);
     process_suspend_list(ctx);
 }
