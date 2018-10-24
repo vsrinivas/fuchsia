@@ -79,6 +79,11 @@ int Sherlock::Thread() {
         return -1;
     }
 
+    if (EmmcInit() != ZX_OK) {
+        zxlogf(ERROR, "EmmcInit() failed\n");
+        return -1;
+    }
+
     if (CameraInit() != ZX_OK) {
         zxlogf(ERROR, "CameraInit() failed\n");
         return -1;

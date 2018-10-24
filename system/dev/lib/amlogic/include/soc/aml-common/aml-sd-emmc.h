@@ -223,8 +223,8 @@ typedef struct {
 
 typedef struct {
     bool supports_dma;
-    uint32_t max_freq;
     uint32_t min_freq;
+    uint32_t max_freq;
 } aml_sd_emmc_config_t;
 
 static const uint8_t aml_sd_emmc_tuning_blk_pattern_4bit[64] = {

@@ -19,6 +19,7 @@ namespace sherlock {
 enum {
     BTI_BOARD,
     BTI_USB_XHCI,
+    BTI_EMMC,
 };
 
 // These should match the mmio table defined in sherlock-i2c.c
@@ -49,6 +50,7 @@ private:
     zx_status_t GpioInit();
     zx_status_t I2cInit();
     zx_status_t UsbInit();
+    zx_status_t EmmcInit();
     zx_status_t ClkInit();
     zx_status_t CameraInit();
     int Thread();

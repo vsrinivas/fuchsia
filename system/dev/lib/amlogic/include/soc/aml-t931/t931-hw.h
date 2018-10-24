@@ -40,6 +40,9 @@
 #define T931_USBPHY21_BASE              0xff63a000
 #define T931_USBPHY21_LENGTH            0x2000
 
+#define T931_SD_EMMC_C_BASE             0xffE07000
+#define T931_SD_EMMC_C_LENGTH           0x2000
+
 // IRQs
 #define T931_GPIO_IRQ_0                 96
 #define T931_GPIO_IRQ_1                 97
@@ -55,3 +58,30 @@
 #define T931_I2C3_IRQ                   71
 #define T931_I2C_AO_0_IRQ               227
 #define T931_USB0_IRQ                   62
+#define T931_SD_EMMC_C_IRQ              223
+
+// Alternate Functions for EMMC
+#define T931_EMMC_D0                    T931_GPIOBOOT(0)
+#define T931_EMMC_D0_FN                 1
+#define T931_EMMC_D1                    T931_GPIOBOOT(1)
+#define T931_EMMC_D1_FN                 1
+#define T931_EMMC_D2                    T931_GPIOBOOT(2)
+#define T931_EMMC_D2_FN                 1
+#define T931_EMMC_D3                    T931_GPIOBOOT(3)
+#define T931_EMMC_D3_FN                 1
+#define T931_EMMC_D4                    T931_GPIOBOOT(4)
+#define T931_EMMC_D4_FN                 1
+#define T931_EMMC_D5                    T931_GPIOBOOT(5)
+#define T931_EMMC_D5_FN                 1
+#define T931_EMMC_D6                    T931_GPIOBOOT(6)
+#define T931_EMMC_D6_FN                 1
+#define T931_EMMC_D7                    T931_GPIOBOOT(7)
+#define T931_EMMC_D7_FN                 1
+#define T931_EMMC_CLK                   T931_GPIOBOOT(8)
+#define T931_EMMC_CLK_FN                1
+#define T931_EMMC_RST                   T931_GPIOBOOT(9)
+#define T931_EMMC_RST_FN                1
+#define T931_EMMC_CMD                   T931_GPIOBOOT(10)
+#define T931_EMMC_CMD_FN                1
+#define T931_EMMC_DS                    T931_GPIOBOOT(15)
+#define T931_EMMC_DS_FN                 1
