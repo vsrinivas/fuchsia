@@ -359,7 +359,7 @@ int getaddrinfo(const char* __restrict node,
     int32_t nres = 0;
     fuchsia_net_AddrInfo ai[4];
     r = fuchsia_net_LegacySocketProviderGetAddrInfo(
-          sp, sn, ss, ht, &status, &nres, &ai[0], &ai[1], &ai[2], &ai[3]);
+          sp, sn, ss, ht, &status, &nres, ai);
 
     if (r != ZX_OK) {
         errno = fdio_status_to_errno(r);
