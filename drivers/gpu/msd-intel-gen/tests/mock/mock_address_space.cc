@@ -23,7 +23,7 @@ bool MockAddressSpace::Free(uint64_t addr)
     return true;
 }
 
-bool MockAddressSpace::Clear(uint64_t addr)
+bool MockAddressSpace::Clear(uint64_t addr, uint64_t page_count)
 {
     auto iter = allocations_.find(addr);
     if (iter == allocations_.end())

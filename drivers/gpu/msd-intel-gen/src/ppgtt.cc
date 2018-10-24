@@ -139,45 +139,18 @@ PerProcessGtt::PerProcessGtt(Owner* owner, std::unique_ptr<Pml4Table> pml4_table
                              std::shared_ptr<GpuMappingCache> cache)
     : AddressSpace(owner, ADDRESS_SPACE_PPGTT, cache), pml4_table_(std::move(pml4_table))
 {
-}
-
-// Called lazily by Alloc
-bool PerProcessGtt::Init()
-{
-    DASSERT(!initialized_);
-
-    uint64_t start = 0;
-
-    allocator_ = magma::SimpleAllocator::Create(start, Size());
-    if (!allocator_)
-        return DRETF(false, "failed to create allocator");
-
-    initialized_ = true;
-
-    return true;
-}
-
-bool PerProcessGtt::Clear(uint64_t addr)
-{
-    DASSERT(initialized_);
+    // TODO(MA-465): remove this
+    allocator_ = magma::SimpleAllocator::Create(0, Size());
     DASSERT(allocator_);
-    size_t length;
-    if (!allocator_->GetSize(addr, &length))
-        return DRETF(false, "couldn't get size for addr");
-    if (!Clear(addr, length))
-        return DRETF(false, "clear failed");
-    return true;
 }
 
-bool PerProcessGtt::Clear(uint64_t start, uint64_t length)
+bool PerProcessGtt::Clear(uint64_t start, uint64_t page_count)
 {
-    DASSERT(initialized_);
     DASSERT((start & (PAGE_SIZE - 1)) == 0);
-    DASSERT((length & (PAGE_SIZE - 1)) == 0);
-
     if (start > Size())
         return DRETF(false, "invalid start");
 
+    uint64_t length = (page_count + kOverfetchPageCount + kGuardPageCount) * PAGE_SIZE;
     if (start + length > Size())
         return DRETF(false, "invalid start + length");
 
@@ -226,9 +199,6 @@ bool PerProcessGtt::Clear(uint64_t start, uint64_t length)
 
 bool PerProcessGtt::Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out)
 {
-    if (!initialized_ && !Init())
-        return DRETF(false, "failed to initialize");
-
     DASSERT(allocator_);
     // allocate an extra page on the end to avoid page faults from over fetch
     // see
@@ -240,17 +210,7 @@ bool PerProcessGtt::Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out)
 
 bool PerProcessGtt::Free(uint64_t addr)
 {
-    DASSERT(initialized_);
     DASSERT(allocator_);
-
-    size_t length;
-    if (!allocator_->GetSize(addr, &length))
-        return DRETF(false, "couldn't find length for addr 0x%" PRIx64, addr);
-
-    if (kLogEnable)
-        magma::log(magma::LOG_INFO, "ppgtt free (%p) 0x%" PRIx64 "-0x%" PRIx64 " length 0x%" PRIx64,
-                   this, addr, addr + length - 1, length);
-
     return allocator_->Free(addr);
 }
 
@@ -261,18 +221,6 @@ bool PerProcessGtt::Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* 
         magma::log(magma::LOG_INFO,
                    "ppgtt insert (%p) 0x%" PRIx64 "-0x%" PRIx64 " length 0x%" PRIx64, this, addr,
                    addr + page_count * PAGE_SIZE - 1, page_count * PAGE_SIZE);
-
-    DASSERT(initialized_);
-
-    size_t allocated_length;
-    if (!allocator_->GetSize(addr, &allocated_length))
-        return DRETF(false, "couldn't get allocated length for addr");
-
-    // add extra pages to length to account for overfetch and guard pages
-    if (page_count * PAGE_SIZE + (kOverfetchPageCount + kGuardPageCount) * PAGE_SIZE !=
-        allocated_length)
-        return DRETF(false, "allocated length (0x%zx) doesn't match length (0x%" PRIx64 ")",
-                     allocated_length, page_count * PAGE_SIZE);
 
     auto& bus_addr_array = bus_mapping->Get();
     if (bus_addr_array.size() != page_count)

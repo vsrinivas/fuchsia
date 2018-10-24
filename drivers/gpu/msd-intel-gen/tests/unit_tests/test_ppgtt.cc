@@ -91,7 +91,6 @@ public:
     {
         auto owner = std::make_unique<AddressSpaceOwner>();
         auto ppgtt = PerProcessGtt::Create(owner.get(), GpuMappingCache::Create());
-        ASSERT_TRUE(ppgtt->Init());
 
         check_pte_entries_clear(ppgtt.get(), (1ull << 48) - PAGE_SIZE, PAGE_SIZE);
         check_pte_entries_clear(ppgtt.get(), (1ull << 47) - PAGE_SIZE, PAGE_SIZE);
@@ -102,40 +101,10 @@ public:
         check_pte_entries_clear(ppgtt.get(), 0, ppgtt->Size());
     }
 
-    static void Error()
-    {
-        auto owner = std::make_unique<AddressSpaceOwner>();
-        auto ppgtt = PerProcessGtt::Create(owner.get(), GpuMappingCache::Create());
-        EXPECT_TRUE(ppgtt->Init());
-
-        std::vector<uint64_t> addr(2);
-        std::vector<std::unique_ptr<magma::PlatformBuffer>> buffer(2);
-
-        buffer[0] = magma::PlatformBuffer::Create(PAGE_SIZE, "test");
-        EXPECT_TRUE(ppgtt->Alloc(buffer[0]->size(), 0, &addr[0]));
-
-        buffer[1] = magma::PlatformBuffer::Create(PAGE_SIZE * 2, "test");
-        EXPECT_TRUE(ppgtt->Alloc(buffer[1]->size(), 0, &addr[1]));
-
-        // Mismatch addr and buffer
-        MockBusMapping mapping(0, 0);
-        EXPECT_FALSE(ppgtt->Insert(addr[1], &mapping, 0, buffer[0]->size() / PAGE_SIZE));
-
-        // Totally bogus addr
-        EXPECT_FALSE(ppgtt->Insert(0xdead1000, &mapping, 0, buffer[0]->size() / PAGE_SIZE));
-
-        // Bogus addr
-        EXPECT_FALSE(ppgtt->Clear(0xdead1000));
-
-        // Bogus addr
-        EXPECT_FALSE(ppgtt->Free(0xdead1000));
-    }
-
     static void Insert()
     {
         auto owner = std::make_unique<AddressSpaceOwner>();
         auto ppgtt = PerProcessGtt::Create(owner.get(), GpuMappingCache::Create());
-        EXPECT_TRUE(ppgtt->Init());
 
         std::vector<uint64_t> addr(2);
         std::vector<std::unique_ptr<magma::PlatformBuffer>> buffer(2);
@@ -169,10 +138,10 @@ public:
         EXPECT_TRUE(ppgtt->Insert(addr[1], bus_mapping[1].get(), 0, buffer[1]->size() / PAGE_SIZE));
         check_pte_entries(ppgtt.get(), bus_mapping[1].get(), addr[1]);
 
-        EXPECT_TRUE(ppgtt->Clear(addr[1]));
+        EXPECT_TRUE(ppgtt->Clear(addr[1], buffer[1]->size() / PAGE_SIZE));
         check_pte_entries_clear(ppgtt.get(), addr[1], buffer[1]->size());
 
-        EXPECT_TRUE(ppgtt->Clear(addr[0]));
+        EXPECT_TRUE(ppgtt->Clear(addr[0], buffer[0]->size() / PAGE_SIZE));
         check_pte_entries_clear(ppgtt.get(), addr[0], buffer[0]->size());
 
         EXPECT_TRUE(ppgtt->Free(addr[0]));
@@ -191,8 +160,6 @@ public:
 };
 
 TEST(PerProcessGtt, Init) { TestPerProcessGtt::Init(); }
-
-TEST(PerProcessGtt, Error) { TestPerProcessGtt::Error(); }
 
 TEST(PerProcessGtt, Insert) { TestPerProcessGtt::Insert(); }
 

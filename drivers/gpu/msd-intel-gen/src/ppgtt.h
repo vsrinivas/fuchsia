@@ -45,7 +45,7 @@ public:
     bool Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out) override;
     bool Free(uint64_t addr) override;
 
-    bool Clear(uint64_t addr) override;
+    bool Clear(uint64_t addr, uint64_t page_count) override;
     bool Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* buffer, uint64_t page_offset,
                 uint64_t page_count) override;
 
@@ -285,10 +285,6 @@ private:
 
     static_assert(kSize == 1ull << 48, "ppgtt size calculation");
 
-    bool Init();
-    bool Clear(uint64_t start, uint64_t length);
-
-    bool initialized_ = false;
     std::unique_ptr<Pml4Table> pml4_table_;
     std::unique_ptr<magma::AddressSpaceAllocator> allocator_;
 

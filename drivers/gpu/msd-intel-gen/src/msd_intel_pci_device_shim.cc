@@ -44,7 +44,7 @@ public:
         return true;
     }
 
-    bool Clear(uint64_t addr) override
+    bool Clear(uint64_t addr, uint64_t page_count) override
     {
         zx_status_t status = owner_->ops()->gtt_clear(owner_->context(), addr);
         if (status != ZX_OK)

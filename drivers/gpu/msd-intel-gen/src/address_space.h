@@ -37,7 +37,7 @@ public:
     virtual bool Free(uint64_t addr) = 0;
 
     // Clears the page table entries for the allocation at the given address.
-    virtual bool Clear(uint64_t addr) = 0;
+    virtual bool Clear(uint64_t addr, uint64_t page_count) = 0;
 
     // Inserts the pages for the given buffer into page table entries for the allocation at the
     // given address.

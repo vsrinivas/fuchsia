@@ -60,8 +60,8 @@ source_set("src") {
 
   deps = [
     "$magma_build_root/src/magma_util:allocator",
-    "$magma_build_root/src/magma_util:common",
     "$magma_build_root/src/magma_util:command_buffer",
+    "$magma_build_root/src/magma_util:common",
     "$magma_build_root/src/magma_util:registers",
     "$magma_build_root/src/magma_util:semaphore_port",
     "$magma_build_root/src/magma_util:thread",

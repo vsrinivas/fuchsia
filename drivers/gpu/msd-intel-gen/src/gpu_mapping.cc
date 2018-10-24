@@ -24,7 +24,7 @@ GpuMapping::~GpuMapping()
         return;
     }
 
-    if (!address_space->Clear(gpu_addr_))
+    if (!address_space->Clear(gpu_addr_, length() / PAGE_SIZE))
         DLOG("failed to clear address");
 
     if (!address_space->Free(gpu_addr_))

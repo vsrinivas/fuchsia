@@ -25,7 +25,10 @@ public:
     }
     bool Free(uint64_t addr) override { return pci_device()->GetGtt()->Free(addr); }
 
-    bool Clear(uint64_t addr) override { return pci_device()->GetGtt()->Clear(addr); }
+    bool Clear(uint64_t addr, uint64_t page_count) override
+    {
+        return pci_device()->GetGtt()->Clear(addr, page_count);
+    }
 
     bool Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
                 uint64_t page_offset, uint64_t page_count) override
