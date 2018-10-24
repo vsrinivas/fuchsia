@@ -1,0 +1,86 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.auth.internal;
+
+using fuchsia.auth;
+using fuchsia.auth.account;
+
+// The control channel for an AccountHandler component.
+//
+// This interface is intended only for use by the AccountManager component that
+// starts instances of AccountHandler. We define which account the handler
+// should be handling one time via this channel rather than via startup flags to
+// provide additional flexibility given the range of scenarios:
+// * The account is completely new
+// * The account is being added to the current device for the first time
+// * Account information is already present on the local disk and is readable
+// * Account information is already present on the local disk but is not yet
+//   readable because the disk is not yet decrypted.
+[Discoverable]
+interface AccountHandlerControl {
+    // Creates a completely new Fuchsia account.
+    //
+    // Returns: |status| A |Status| indicating whether the operation was
+    //                   successful
+    //          |id| The new account's local identifier, if successful
+    1: CreateAccount() -> (fuchsia.auth.account.Status status,
+                           fuchsia.auth.account.LocalAccountId? id);
+
+    // Loads information about a Fuchsia account that was previously provisioned
+    // on the current device.
+    //
+    // |id| The account's local identifier
+    //
+    // Returns: |status| A |Status| indicating whether the operation was
+    //                   successful
+    2: LoadAccount(fuchsia.auth.account.LocalAccountId id)
+           -> (fuchsia.auth.account.Status status);
+
+    // TODO(jsankey): Add methods to cover adding an existing account and
+    // handling an account where the disk is not yet decrpyted.
+
+    // Connects an interface to read properties of and perform operations on
+    // the account handled by this handler. The account must have previously
+    // been initialized using CreateAccount or LoadAccount, otherwise the call
+    // will fail with a status of NOT_FOUND.
+    //
+    // |id| The account's local identifier
+    // |context_provider| An |AuthenticationContextProvider| capable of
+    //                    supplying UI contexts used for interactive
+    //                    authentication on this account
+    // |account| The server end of an |Account| channel
+    //
+    // Returns: |status| A |Status| indicating whether the operation was
+    //                   successful
+    3: GetAccount(
+           fuchsia.auth.account.LocalAccountId id,
+           fuchsia.auth.AuthenticationContextProvider auth_context_provider,
+           request<fuchsia.auth.account.Account> account)
+           -> (fuchsia.auth.account.Status status);
+
+    // Signals that the AccountHandler should tear itself down. After the
+    // receiver responds by closing its handle, the caller may terminate the
+    // component if it hasn't already exited.
+    4: Terminate();
+};
+
+// An interface that supplies the account and authentication services that
+// an AccountHandler needs to perform its role in the system. This service is
+// supplied to the AccountHandler by the component that launches it, i.e. the
+// AccountManager.
+interface AccountHandlerContext {
+    // Connects an interface to a particular AuthProvider, launching it if
+    // necessary.
+    //
+    // |auth_provider_type| An OAuth identity provider matching a configuration
+    //                      set in an AuthProviderConfig.auth_provider_type
+    // |auth_provider| The server end of an |AuthProvider| channel
+    //
+    // Returns: |status| A |Status| indicating whether the operation was
+    //                   successful
+    1: GetAuthProvider(string auth_provider_type,
+                       request<fuchsia.auth.AuthProvider> auth_provider)
+           -> (fuchsia.auth.account.Status status);
+};
