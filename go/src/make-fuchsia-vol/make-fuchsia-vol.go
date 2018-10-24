@@ -42,7 +42,7 @@ var (
 	blob        = flag.String("blob", "", "path to blob partition image (not used with ramdisk)")
 	data        = flag.String("data", "", "path to data partition image (not used with ramdisk)")
 
-	abr     = flag.Bool("abr", false, "add Zircon-{A,B,R} partitions")
+	abr     = flag.Bool("abr", true, "add Zircon-{A,B,R} partitions")
 	zirconA = flag.String("zirconA", "", "path to partition image for Zircon-A (default: from -zbi)")
 	zirconB = flag.String("zirconB", "", "path to partition image for Zircon-B (default: from -zbi)")
 	zirconR = flag.String("zirconR", "", "path to partition image for Zircon-R (default: zircon-r from image manifests)")
