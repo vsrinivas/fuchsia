@@ -168,7 +168,7 @@ static zx_status_t dsi_configure_dphy(dsi_t* dsi) {
     // Enable PHY
     DW_DSI_WRITE32(DW_DSI_PHY_RSTZ, DW_DSI_PHY_RSTZ_ENABLE);
 
-    // Wait for it to compelete
+    // Wait for it to complete
     // TODO: Define some sort of timeout
     tmp = DW_DSI_READ32(DW_DSI_PHY_STATUS);
     while ((tmp & DW_DSI_PHY_STATUS_PHY_LOCKED) != DW_DSI_PHY_STATUS_PHY_LOCKED) {
@@ -236,7 +236,7 @@ static zx_status_t dsi_mipi_init(dsi_t* dsi) {
     uint32_t hbp_time;
     uint32_t hline_time;
 
-    /* Below values are calculatd based on PHY parameters which we don't know */
+    /* Below values are calculated based on PHY parameters which we don't know */
     uint32_t clk_lane_lp2hs_time = 0x3f;
     uint32_t clk_lane_hs2lp_time = 0x3a;
     uint32_t data_lane_lp2hs_time = 0x68;

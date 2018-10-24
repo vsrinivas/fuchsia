@@ -51,7 +51,7 @@ typedef struct {
 
 typedef struct {
     uint8_t header[8];                          /* Header */
-    uint8_t id_mfg[2];                          /* ID Manfucturer Name */
+    uint8_t id_mfg[2];                          /* ID Manufacturer Name */
     uint8_t id_pcode[2];                        /* ID Produce Code */
     uint8_t id_serial[4];                       /* ID Serial Number */
     uint8_t wom;                                /* Week of Manufacture */
@@ -61,7 +61,7 @@ typedef struct {
     uint8_t vid_input_def;                      /* Video Input Definition */
     uint8_t max_hoz_img_size;                   /* cm */
     uint8_t max_ver_img_size;                   /* cm */
-    uint8_t gamma;                              /* Display tranfser characteristics */
+    uint8_t gamma;                              /* Display transfer characteristics */
     uint8_t feature_support;
     uint8_t color_char[10];                     /* Color Characteristics */
     uint8_t established_timings1;
