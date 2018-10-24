@@ -551,6 +551,33 @@ if (custom_signing_script != "") {
   ]
 }
 
+# The updater also wants the zedboot zbi as recovery.
+images += [
+  {
+    deps = [
+      "zedboot:zbi",
+    ]
+    sources = [
+      "$root_out_dir/zedboot.zbi",
+    ]
+    updater = "zedboot"
+  },
+]
+
+if (custom_signing_script != "") {
+  images += [
+    {
+      deps = [
+        "zedboot:signed",
+      ]
+      sources = [
+        "$root_out_dir/zedboot.zbi.signed",
+      ]
+      updater = "zedboot.signed"
+    },
+  ]
+}
+
 ###
 ### Complete images for booting and installing the whole system.
 ###
@@ -1134,12 +1161,14 @@ action("update.manifest") {
     entry_sources = []
     if (defined(entry.deps)) {
       deps += entry.deps
+    }
+
+    if (defined(entry.sources)) {
+      entry_sources += entry.sources
+    } else if (defined(entry.deps)) {
       foreach(label, entry.deps) {
         entry_sources += get_target_outputs(label)
       }
-    }
-    if (defined(entry.sources)) {
-      entry_sources += entry.sources
     }
     foreach(source, entry_sources) {
       source = rebase_path(source, root_build_dir)
