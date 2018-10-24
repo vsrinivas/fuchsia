@@ -47,7 +47,8 @@ MODULE_PACKAGE := src
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io \
-	system/fidl/zircon-nand.skipblock \
+    system/fidl/zircon-block \
+    system/fidl/zircon-nand.skipblock \
 
 include make/module.mk
 
@@ -94,6 +95,7 @@ MODULE_LIBS := \
 
 MODULE_FIDL_LIBS := \
     system/fidl/zircon-nand \
+    system/fidl/zircon-block \
     system/fidl/zircon-nand.skipblock \
 
 include make/module.mk

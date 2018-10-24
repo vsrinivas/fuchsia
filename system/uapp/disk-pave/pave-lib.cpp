@@ -866,6 +866,15 @@ zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
     }
 
     if (partition_type == Partition::kFuchsiaVolumeManager) {
+        if (partitioner->UseSkipBlockInterface()) {
+            LOG("Attempting to format FTL...\n");
+            status = partitioner->WipePartitions();
+            if (status != ZX_OK) {
+                ERROR("Failed to format FTL: %s\n", zx_status_get_string(status));
+            } else {
+                LOG("Formatted successfully!\n");
+            }
+        }
         LOG("Streaming partitions...\n");
         if ((status = FvmStreamPartitions(fbl::move(partition_fd), fbl::move(payload_fd))) != ZX_OK) {
             ERROR("Failed to stream partitions: %s\n", zx_status_get_string(status));

@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <libgen.h>
 
 #include <chromeos-disk-setup/chromeos-disk-setup.h>
 #include <fbl/auto_call.h>
@@ -12,8 +13,10 @@
 #include <fs-management/fvm.h>
 #include <gpt/cros.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fdio/util.h>
 #include <lib/fzl/fdio.h>
 #include <zircon/device/device.h>
+#include <zircon/block/c/fidl.h>
 #include <zircon/skipblock/c/fidl.h>
 #include <zircon/status.h>
 #include <zxcrypt/volume.h>
@@ -988,13 +991,39 @@ zx_status_t SkipBlockDevicePartitioner::FindPartition(Partition partition_type,
 zx_status_t SkipBlockDevicePartitioner::WipePartitions() {
     const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
     zx_status_t status;
-    if ((status = WipeBlockPartition(nullptr, fvm_type)) != ZX_OK) {
-        ERROR("Failed to wipe FVM.\n");
-    } else {
-        LOG("Wiped FVM successfully.\n");
+    fbl::unique_fd block_fd;
+    if ((status = OpenBlockPartition(nullptr, fvm_type, ZX_SEC(3), &block_fd)) != ZX_OK) {
+        ERROR("Warning: Could not open partition to wipe: %s\n", zx_status_get_string(status));
+        return ZX_OK;
     }
-    LOG("Immediate reboot strongly recommended\n");
-    return ZX_OK;
+
+    char name[PATH_MAX + 1];
+    ssize_t result;
+    if ((result = ioctl_device_get_topo_path(block_fd.get(), name, PATH_MAX)) < 0) {
+        status = static_cast<zx_status_t>(result);
+        ERROR("Warning: Could not get name for partition: %s\n",
+              zx_status_get_string(status));
+        return status;
+    }
+
+    const char* parent = dirname(name);
+
+    fbl::unique_fd parent_fd(open(parent, O_RDWR));
+    if (!parent_fd) {
+        ERROR("Warning: Unable to open block parent device.\n");
+        return ZX_ERR_IO;
+    }
+
+    zx::channel svc;
+    status = fdio_get_service_handle(parent_fd.release(), svc.reset_and_get_address());
+    if (status != ZX_OK) {
+        ERROR("Warning: Could not get service handle: %s\n", zx_status_get_string(status));
+        return status;
+    }
+    zx_status_t status2;
+    status = zircon_block_FtlFormat(svc.get(), &status2);
+
+    return status == ZX_OK ? status2 : status;
 }
 
 zx_status_t SkipBlockDevicePartitioner::GetBlockSize(const fbl::unique_fd& device_fd,
