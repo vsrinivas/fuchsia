@@ -5,12 +5,12 @@
 
 ### reboot a target fuchsia system
 
-## usage: fx reboot [-r|--recovery] [-b|--bootloader] [HOST]
+## usage: fx reboot [-r|--recovery] [-b|--bootloader]
 ##   -r|--recovery   Reboot into recovery image
 ##   -b|--bootloader Reboot into bootloader
-##   HOST            Fuchsia link-local name of the device. If not
-##                   specified, will connect to the only available
-##                   device on the link-local network.
+##
+## This will reboot the device specified with `fx set-device`; otherwise
+## one of the devices on the link-local network.
 
 set -e
 
@@ -26,6 +26,7 @@ while [[ "$1" =~ ^- ]]; do
   case "$1" in
   -h|--help)
     usage
+    exit 0
     ;;
   -r|--recovery)
     reboot_type="reboot-recovery"
@@ -52,6 +53,10 @@ else
   timeout_flag="--nowait"
 fi
 
-host=${1:-":"}
-echo "Rebooting system..."
-"${ZIRCON_TOOLS_DIR}/netruncmd" "${timeout_flag}" "${host}" "dm ${reboot_type}"
+device=$(get-device-name)
+if [[ -z ${device} ]]; then
+  echo "Rebooting some device... Consider using \`fx set-device\` if you have multiple devices."
+else
+  echo "Rebooting ${device}..."
+fi
+"${ZIRCON_TOOLS_DIR}/netruncmd" "${timeout_flag}" "${device}" "dm ${reboot_type}"
