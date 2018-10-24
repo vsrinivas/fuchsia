@@ -114,7 +114,7 @@ typedef struct sdhci_device {
 } sdhci_device_t;
 
 // If any of these interrupts is asserted in the SDHCI irq register, it means
-// that an error has occured.
+// that an error has occurred.
 static const uint32_t error_interrupts = (
     SDHCI_IRQ_ERR |
     SDHCI_IRQ_ERR_CMD_TIMEOUT |

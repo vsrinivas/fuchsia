@@ -24,7 +24,7 @@
 #include <lib/zx/vmo.h>
 #include <lib/sync/completion.h>
 
-// Should a reponse be sent when we hit ctr?
+// Should a response be sent when we hit ctr?
 constexpr uint32_t kTxnFlagRespond = 0x00000001;
 
 // TODO(ZX-1586): Reduce the locking of TransactionGroup.

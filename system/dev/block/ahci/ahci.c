@@ -782,7 +782,7 @@ fail:
 // implement driver object:
 
 static zx_status_t ahci_bind(void* ctx, zx_device_t* dev) {
-    // map resources and initalize the device
+    // map resources and initialize the device
     ahci_device_t* device = calloc(1, sizeof(ahci_device_t));
     if (!device) {
         zxlogf(ERROR, "ahci: out of memory\n");

@@ -35,7 +35,7 @@
 namespace zxcrypt {
 namespace {
 
-// Cap largest trasnaction to a quarter of the VMO buffer.
+// Cap largest transaction to a quarter of the VMO buffer.
 const uint32_t kMaxTransferSize = Volume::kBufferSize / 4;
 
 // Kick off |Init| thread when binding.

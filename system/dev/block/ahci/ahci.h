@@ -12,7 +12,7 @@
 #define AHCI_MAX_COMMANDS 32
 #define AHCI_MAX_PRDS     ((PAGE_SIZE / sizeof(zx_paddr_t)) + 1)
 #define AHCI_MAX_PAGES    AHCI_MAX_PRDS
-// one page less of 2M because of unnaligned offset
+// one page less of 2M because of unaligned offset
 #define AHCI_MAX_BYTES    (2 * 1024 * 1024)
 
 #define AHCI_PRD_MAX_SIZE 0x400000 // 4mb
