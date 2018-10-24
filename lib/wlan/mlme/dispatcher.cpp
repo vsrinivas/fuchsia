@@ -220,6 +220,9 @@ zx_status_t Dispatcher::HandleDeviceQueryRequest() {
         break;
     }
 
+    auto wlanmac_info = device_->GetWlanInfo().ifc_info;
+    resp.cap = CapabilityInfo::FromDdk(wlanmac_info.caps).ToFidl();
+
     resp.bands->resize(0);
     for (uint8_t band_idx = 0; band_idx < info.num_bands; band_idx++) {
         const wlan_band_info_t& band_info = info.bands[band_idx];
@@ -238,6 +241,16 @@ zx_status_t Dispatcher::HandleDeviceQueryRequest() {
                 band.channels->push_back(chan_list.channels[chan_idx]);
             }
         }
+
+        if (band_info.ht_supported) {
+            auto ht_cap = HtCapabilities::FromDdk(band_info.ht_caps);
+            band.ht_cap = std::make_unique<wlan_mlme::HtCapabilities>(ht_cap.ToFidl());
+        }
+        if (band_info.vht_supported) {
+            auto vht_cap = VhtCapabilities::FromDdk(band_info.vht_caps);
+            band.vht_cap = std::make_unique<wlan_mlme::VhtCapabilities>(vht_cap.ToFidl());
+        }
+
         resp.bands->push_back(std::move(band));
     }
 

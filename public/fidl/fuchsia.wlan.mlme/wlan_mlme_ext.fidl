@@ -40,6 +40,9 @@ enum MacRole {
 };
 
 struct BandCapabilities {
+    HtCapabilities? ht_cap;
+    VhtCapabilities? vht_cap;
+
     vector<uint16> basic_rates;
     uint16 base_frequency;
     vector<uint8> channels;
@@ -50,6 +53,7 @@ struct BandCapabilities {
 struct DeviceQueryConfirm {
     array<uint8>:6 mac_addr;
     MacRole role;
+    CapabilityInfo cap;
     vector<BandCapabilities> bands;
 };
 
