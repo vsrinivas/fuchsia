@@ -86,7 +86,8 @@ public:
 
         // Ensure we can do this > once
         for (uint32_t i = 0; i < 2; i++) {
-            std::unique_ptr<MsdVslDevice> device = MsdVslDevice::Create(GetTestDeviceHandle(), false);
+            std::unique_ptr<MsdVslDevice> device =
+                MsdVslDevice::Create(GetTestDeviceHandle(), false);
             ASSERT_NE(device, nullptr);
 
             EXPECT_TRUE(device->IsIdle());
