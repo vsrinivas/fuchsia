@@ -8,7 +8,9 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
-MODULE_SRCS += $(LOCAL_DIR)/usb-tester.c
+MODULE_SRCS += \
+    $(LOCAL_DIR)/bind.c \
+    $(LOCAL_DIR)/usb-tester.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \

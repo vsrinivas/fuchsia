@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "usb-tester.h"
+#include "usb-tester-hw.h"
 
 #define REQ_MAX_LEN 0x10000  // 64 K
 #define REQ_TIMEOUT_SECS 5
@@ -55,8 +55,8 @@ typedef struct {
     list_node_t node;
 } test_req_t;
 
-static inline int MSB(int n) { return n >> 8; }
-static inline int LSB(int n) { return n & 0xFF; }
+static inline uint8_t MSB(int n) { return static_cast<uint8_t>(n >> 8); }
+static inline uint8_t LSB(int n) { return static_cast<uint8_t>(n & 0xFF); }
 
 static void test_req_complete(usb_request_t* req, void* cookie) {
     sync_completion_signal((sync_completion_t*)cookie);
@@ -64,11 +64,10 @@ static void test_req_complete(usb_request_t* req, void* cookie) {
 
 static zx_status_t test_req_alloc(usb_tester_t* usb_tester, size_t len, uint8_t ep_address,
                                   test_req_t** out_req) {
-    test_req_t* test_req = malloc(sizeof(test_req_t));
+    test_req_t* test_req = static_cast<test_req_t*>(calloc(1, sizeof(test_req_t)));
     if (!test_req) {
         return ZX_ERR_NO_MEMORY;
     }
-    test_req->completion = SYNC_COMPLETION_INIT;
 
     usb_request_t* req;
     zx_status_t status = usb_request_alloc(&req, len, ep_address, sizeof(usb_request_t));
@@ -142,7 +141,7 @@ static zx_status_t test_req_fill_data(usb_tester_t* usb_tester, test_req_t* test
             buf[i] = TEST_DUMMY_DATA;
             break;
         case zircon_usb_tester_DataPatternType_RANDOM:
-            buf[i] = rand();
+            buf[i] = static_cast<uint8_t>(rand() % 256);
             break;
         default:
             return ZX_ERR_INVALID_ARGS;
@@ -162,9 +161,9 @@ static void test_req_list_release_reqs(usb_tester_t* usb_tester, list_node_t* te
 }
 
 // Allocates the test requests and adds them to the out_test_reqs list.
-static zx_status_t test_req_list_alloc(usb_tester_t* usb_tester, int num_reqs, size_t len,
+static zx_status_t test_req_list_alloc(usb_tester_t* usb_tester, size_t num_reqs, size_t len,
                                        uint8_t ep_addr, list_node_t* out_test_reqs) {
-    for (int i = 0; i < num_reqs; ++i) {
+    for (size_t i = 0; i < num_reqs; ++i) {
         test_req_t* test_req;
         zx_status_t status = test_req_alloc(usb_tester, len, ep_addr, &test_req);
         if (status != ZX_OK) {
@@ -252,8 +251,10 @@ static zx_status_t usb_tester_bulk_loopback(usb_tester_t* usb_tester,
     usb_request_queue(&usb_tester->usb, out_req->req);
     usb_request_queue(&usb_tester->usb, in_req->req);
 
-    zx_status_t out_status = test_req_wait_complete(usb_tester, out_req);
-    zx_status_t in_status = test_req_wait_complete(usb_tester, in_req);
+    zx_status_t out_status;
+    out_status = test_req_wait_complete(usb_tester, out_req);
+    zx_status_t in_status;
+    in_status = test_req_wait_complete(usb_tester, in_req);
     status = out_status != ZX_OK ? out_status : in_status;
     if (status != ZX_OK) {
         goto done;
@@ -336,7 +337,7 @@ static zx_status_t usb_tester_isoch_loopback(usb_tester_t* usb_tester,
     zx_status_t status = usb_set_interface(&usb_tester->usb, intf->intf_num, intf->alt_setting);
     if (status != ZX_OK) {
         zxlogf(ERROR, "usb_set_interface got err: %d\n", status);
-        goto done;
+        return status;
     }
     // TODO(jocelyndang): optionally allow the user to specify a packet size.
     uint16_t packet_size = MIN(intf->in_max_packet, intf->out_max_packet);
@@ -345,8 +346,10 @@ static zx_status_t usb_tester_isoch_loopback(usb_tester_t* usb_tester,
     zxlogf(TRACE, "allocating %lu reqs of packet size %u, total bytes %lu\n",
            num_reqs, packet_size, params->len);
 
-    list_node_t in_reqs = LIST_INITIAL_VALUE(in_reqs);
-    list_node_t out_reqs = LIST_INITIAL_VALUE(out_reqs);
+    list_node_t in_reqs;
+    in_reqs = LIST_INITIAL_VALUE(in_reqs);
+    list_node_t out_reqs;
+    out_reqs = LIST_INITIAL_VALUE(out_reqs);
     // We will likely get a few empty IN requests, as there is a delay between the start of an
     // OUT transfer and it being received. Allocate a few more IN requests to account for this.
     status = test_req_list_alloc(usb_tester, num_reqs + ISOCH_ADDITIONAL_IN_REQS, packet_size,
@@ -364,9 +367,11 @@ static zx_status_t usb_tester_isoch_loopback(usb_tester_t* usb_tester,
     }
 
     // Find the current frame so we can schedule OUT and IN requests to start simultaneously.
-    uint64_t frame = usb_get_current_frame(&usb_tester->usb);
+    uint64_t frame;
+    frame = usb_get_current_frame(&usb_tester->usb);
     // Adds some delay so we don't miss the scheduled start frame.
-    uint64_t start_frame = frame + ISOCH_START_FRAME_DELAY;
+    uint64_t start_frame;
+    start_frame = frame + ISOCH_START_FRAME_DELAY;
     zxlogf(TRACE, "scheduling isoch loopback to start on frame %lu\n", start_frame);
 
     test_req_list_queue(usb_tester, &in_reqs, start_frame);
@@ -375,7 +380,7 @@ static zx_status_t usb_tester_isoch_loopback(usb_tester_t* usb_tester,
     test_req_list_wait_complete(usb_tester, &out_reqs);
     test_req_list_wait_complete(usb_tester, &in_reqs);
 
-    size_t num_passed = 0;
+    size_t num_passed;
     status = usb_tester_verify_loopback(usb_tester, &out_reqs, &in_reqs, &num_passed);
     if (status != ZX_OK) {
         goto done;
@@ -395,28 +400,28 @@ done:;
 }
 
 static zx_status_t fidl_SetModeFwloader(void* ctx, fidl_txn_t* txn) {
-    usb_tester_t* usb_tester = ctx;
+    auto usb_tester = static_cast<usb_tester_t*>(ctx);
     return zircon_usb_tester_DeviceSetModeFwloader_reply(
         txn, usb_tester_set_mode_fwloader(usb_tester));
 }
 
 static zx_status_t fidl_BulkLoopback(void* ctx, const zircon_usb_tester_TestParams* params,
                                      fidl_txn_t* txn) {
-    usb_tester_t* usb_tester = ctx;
+    auto usb_tester = static_cast<usb_tester_t*>(ctx);
     return zircon_usb_tester_DeviceBulkLoopback_reply(
         txn, usb_tester_bulk_loopback(usb_tester, params));
 }
 
 static zx_status_t fidl_IsochLoopback(void* ctx, const zircon_usb_tester_TestParams* params,
                                       fidl_txn_t* txn) {
-    usb_tester_t* usb_tester = ctx;
+    auto usb_tester = static_cast<usb_tester_t*>(ctx);
     zircon_usb_tester_IsochResult result = {};
     zx_status_t status = usb_tester_isoch_loopback(usb_tester, params, &result);
     return zircon_usb_tester_DeviceIsochLoopback_reply(txn, status, &result);
 }
 
 static zx_status_t fidl_GetVersion(void* ctx, fidl_txn_t* txn) {
-    usb_tester_t* usb_tester = ctx;
+    auto usb_tester = static_cast<usb_tester_t*>(ctx);
     usb_device_descriptor_t desc = {};
     usb_get_device_descriptor(&usb_tester->usb, &desc);
     return zircon_usb_tester_DeviceGetVersion_reply(txn, MSB(desc.bcdDevice), LSB(desc.bcdDevice));
@@ -439,31 +444,34 @@ static void usb_tester_free(usb_tester_t* ctx) {
 
 static void usb_tester_unbind(void* ctx) {
     zxlogf(INFO, "usb_tester_unbind\n");
-    usb_tester_t* usb_tester = ctx;
+    auto usb_tester = static_cast<usb_tester_t*>(ctx);
 
     device_remove(usb_tester->zxdev);
 }
 
 static void usb_tester_release(void* ctx) {
-    usb_tester_t* usb_tester = ctx;
+    auto usb_tester = static_cast<usb_tester_t*>(ctx);
     usb_tester_free(usb_tester);
 }
 
-static zx_protocol_device_t usb_tester_device_protocol = {
-    .version = DEVICE_OPS_VERSION,
-    .unbind = usb_tester_unbind,
-    .message = usb_tester_message,
-    .release = usb_tester_release,
-};
+
+static zx_protocol_device_t usb_tester_ops = []() {
+    zx_protocol_device_t device;
+    device.version = DEVICE_OPS_VERSION;
+    device.unbind = usb_tester_unbind;
+    device.message = usb_tester_message;
+    device.release = usb_tester_release;
+    return device;
+}();
 
 static bool want_interface(usb_interface_descriptor_t* intf, void* arg) {
     return intf->bInterfaceClass == USB_CLASS_VENDOR;
 }
 
-static zx_status_t usb_tester_bind(void* ctx, zx_device_t* device) {
+static zx_status_t usb_tester_bind_internal(void* ctx, zx_device_t* device) {
     zxlogf(TRACE, "usb_tester_bind\n");
 
-    usb_tester_t* usb_tester = calloc(1, sizeof(usb_tester_t));
+    usb_tester_t* usb_tester = static_cast<usb_tester_t*>(calloc(1, sizeof(usb_tester_t)));
     if (!usb_tester) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -490,12 +498,12 @@ static zx_status_t usb_tester_bind(void* ctx, zx_device_t* device) {
         goto error_return;
     }
 
-    usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, false);
+    usb_interface_descriptor_t* intf;
+    intf = usb_desc_iter_next_interface(&iter, false);
     while (intf) {
-        isoch_loopback_intf_t isoch_intf = {
-            .intf_num = intf->bInterfaceNumber,
-            .alt_setting = intf->bAlternateSetting
-        };
+        isoch_loopback_intf_t isoch_intf = {};
+        isoch_intf.intf_num = intf->bInterfaceNumber;
+        isoch_intf.alt_setting = intf->bAlternateSetting;
 
         usb_endpoint_descriptor_t* endp = usb_desc_iter_next_endpoint(&iter);
         while (endp) {
@@ -540,14 +548,14 @@ static zx_status_t usb_tester_bind(void* ctx, zx_device_t* device) {
         goto error_return;
     }
 
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "usb-tester",
-        .ctx = usb_tester,
-        .ops = &usb_tester_device_protocol,
-        .flags = DEVICE_ADD_NON_BINDABLE,
-        .proto_id = ZX_PROTOCOL_USB_TESTER,
-    };
+    device_add_args_t args;
+    args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "usb-tester";
+    args.ctx = usb_tester;
+    args.ops = &usb_tester_ops;
+    args.flags = DEVICE_ADD_NON_BINDABLE;
+    args.proto_id = ZX_PROTOCOL_USB_TESTER;
 
     status = device_add(device, &args, &usb_tester->zxdev);
     if (status != ZX_OK) {
@@ -560,13 +568,6 @@ error_return:
     return status;
 }
 
-static zx_driver_ops_t usb_tester_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = usb_tester_bind,
-};
-
-ZIRCON_DRIVER_BEGIN(usb_tester, usb_tester_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
-    BI_ABORT_IF(NE, BIND_USB_VID, GOOGLE_VID),
-    BI_MATCH_IF(EQ, BIND_USB_PID, USB_TESTER_PID),
-ZIRCON_DRIVER_END(usb_tester)
+extern "C" zx_status_t usb_tester_bind(void* ctx, zx_device_t* parent) {
+    return usb_tester_bind_internal(ctx, parent);
+}
