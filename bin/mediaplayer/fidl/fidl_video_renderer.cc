@@ -82,6 +82,10 @@ void FidlVideoRenderer::FlushInput(bool hold_frame, size_t input_index,
 
   SetEndOfStreamPts(fuchsia::media::NO_TIMESTAMP);
 
+  while (!packets_awaiting_presentation_.empty()) {
+    packets_awaiting_presentation_.pop();
+  }
+
   if (presented_packets_not_released_ <= hold_frame ? 1 : 0) {
     callback();
     return;
