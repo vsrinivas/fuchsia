@@ -823,6 +823,9 @@ tftp_status tftp_handle_error(tftp_session* session,
                               size_t* resp_len,
                               uint32_t* timeout_ms,
                               void* cookie) {
+    if (err_len < sizeof(tftp_err_msg)) {
+        return TFTP_ERR_BUFFER_TOO_SMALL;
+    }
     uint16_t err_code = ntohs(err->err_code);
 
     // There's no need to respond to an error
@@ -958,6 +961,10 @@ tftp_status tftp_process_msg(tftp_session* session,
                              size_t* outlen,
                              uint32_t* timeout_ms,
                              void* cookie) {
+    if (inlen < sizeof(tftp_msg)) {
+        return TFTP_ERR_BUFFER_TOO_SMALL;
+    }
+
     tftp_msg* msg = incoming;
     tftp_msg* resp = outgoing;
 
