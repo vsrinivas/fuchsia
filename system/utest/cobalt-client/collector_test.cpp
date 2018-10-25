@@ -25,9 +25,14 @@ static_assert(kThreads % 2 == 0, "Use even number of threads for simplcity");
 // Number of times to perform an operation in a given thread.
 constexpr size_t kOperations = 50;
 
+// Metric Id to be used by default MetricOptions.
+constexpr uint32_t kMetricId = 1;
+
+// Event code to be used by default MetricOptions.
+constexpr uint32_t kEventCode = 1;
+
 // Fake storage used by our FakeLogger.
-template <typename T>
-class FakeStorage {
+template <typename T> class FakeStorage {
 public:
     T* GetOrNull(uint32_t metric_id, uint32_t event_type, uint32_t event_type_index) {
         size_t index = 0;
@@ -148,10 +153,18 @@ Collector MakeCollector(size_t max_histograms, size_t max_counters,
         *test_logger = logger.get();
     }
 
-    return fbl::move(Collector(MakeCollectorOptions(max_histograms, max_counters), fbl::move(logger)));
+    return fbl::move(
+        Collector(MakeCollectorOptions(max_histograms, max_counters), fbl::move(logger)));
 }
 
-HistogramOptions MakeOptions() {
+MetricOptions MakeMetricOptions(uint32_t metric_id = kMetricId, uint32_t event_code = kEventCode) {
+    MetricOptions options = MetricOptions::Remote();
+    options.metric_id = metric_id;
+    options.event_code = event_code;
+    return options;
+}
+
+HistogramOptions MakeHistogramOptions() {
     // | .....| ....| ...| .... |
     // -inf  -2     0    2    +inf
     HistogramOptions options =
@@ -163,8 +176,8 @@ HistogramOptions MakeOptions() {
 bool DebugTest() {
     BEGIN_TEST;
     Collector collector = Collector::Debug(MakeCollectorOptions(1, 1));
-    auto histogram = collector.AddHistogram(0, 1, MakeOptions());
-    auto counter = collector.AddCounter(0, 1);
+    auto histogram = collector.AddHistogram(MakeMetricOptions(), MakeHistogramOptions());
+    auto counter = collector.AddCounter(MakeMetricOptions());
 
     histogram.Add(1);
     counter.Increment();
@@ -176,8 +189,8 @@ bool DebugTest() {
 bool FishfoodTest() {
     BEGIN_TEST;
     Collector collector = Collector::Fishfood(MakeCollectorOptions(1, 1));
-    auto histogram = collector.AddHistogram(0, 1, MakeOptions());
-    auto counter = collector.AddCounter(0, 1);
+    auto histogram = collector.AddHistogram(MakeMetricOptions(), MakeHistogramOptions());
+    auto counter = collector.AddCounter(MakeMetricOptions());
 
     histogram.Add(1);
     counter.Increment();
@@ -189,8 +202,8 @@ bool FishfoodTest() {
 bool DogfoodTest() {
     BEGIN_TEST;
     Collector collector = Collector::Dogfood(MakeCollectorOptions(1, 1));
-    auto histogram = collector.AddHistogram(0, 1, MakeOptions());
-    auto counter = collector.AddCounter(0, 1);
+    auto histogram = collector.AddHistogram(MakeMetricOptions(), MakeHistogramOptions());
+    auto counter = collector.AddCounter(MakeMetricOptions());
 
     histogram.Add(1);
     counter.Increment();
@@ -202,8 +215,8 @@ bool DogfoodTest() {
 bool GeneralAvailabilityTest() {
     BEGIN_TEST;
     Collector collector = Collector::GeneralAvailability(MakeCollectorOptions(1, 1));
-    auto histogram = collector.AddHistogram(0, 1, MakeOptions());
-    auto counter = collector.AddCounter(0, 1);
+    auto histogram = collector.AddHistogram(MakeMetricOptions(), MakeHistogramOptions());
+    auto counter = collector.AddCounter(MakeMetricOptions());
 
     histogram.Add(1);
     counter.Increment();
@@ -218,7 +231,7 @@ bool AddCounterTest() {
     FakeStorage<BaseCounter> counters;
     Collector collector =
         MakeCollector(/*max_histograms=*/0, /*max_counters=*/1, &histograms, &counters);
-    auto counter = collector.AddCounter(/*metric_id=*/1, /*event_type_index=*/1);
+    auto counter = collector.AddCounter(MakeMetricOptions());
     counter.Increment(5);
     ASSERT_EQ(counter.GetRemoteCount(), 5);
     END_TEST;
@@ -231,9 +244,9 @@ bool AddCounterMultipleTest() {
     FakeStorage<BaseCounter> counters;
     Collector collector =
         MakeCollector(/*max_histograms=*/0, /*max_counters=*/3, &histograms, &counters);
-    auto counter = collector.AddCounter(/*metric_id=*/1, /*event_type_index=*/1);
-    auto counter_2 = collector.AddCounter(/*metric_id=*/1, /*event_type_index=*/2);
-    auto counter_3 = collector.AddCounter(/*metric_id=*/1, /*event_type_index=*/3);
+    auto counter = collector.AddCounter(MakeMetricOptions(1, 1));
+    auto counter_2 = collector.AddCounter(MakeMetricOptions(1, 2));
+    auto counter_3 = collector.AddCounter(MakeMetricOptions(1, 3));
     counter.Increment(5);
     counter_2.Increment(3);
     counter_3.Increment(2);
@@ -249,7 +262,7 @@ bool AddHistogramTest() {
     FakeStorage<BaseCounter> counters;
     Collector collector =
         MakeCollector(/*max_histograms=*/1, /*max_counters=*/0, &histograms, &counters);
-    auto histogram = collector.AddHistogram(/*metric_id*/ 1, /*event_type_index*/ 1, MakeOptions());
+    auto histogram = collector.AddHistogram(MakeMetricOptions(), MakeHistogramOptions());
     histogram.Add(-4, 2);
     ASSERT_EQ(histogram.GetRemoteCount(-4), 2);
     END_TEST;
@@ -262,11 +275,12 @@ bool AddHistogramMultipleTest() {
     FakeStorage<BaseCounter> counters;
     Collector collector =
         MakeCollector(/*max_histograms=*/3, /*max_counters=*/0, &histograms, &counters);
-    auto histogram = collector.AddHistogram(/*metric_id*/ 1, /*event_type_index*/ 1, MakeOptions());
-    auto histogram_2 =
-        collector.AddHistogram(/*metric_id*/ 1, /*event_type_index*/ 2, MakeOptions());
-    auto histogram_3 =
-        collector.AddHistogram(/*metric_id*/ 1, /*event_type_index*/ 3, MakeOptions());
+    auto histogram = collector.AddHistogram(
+        MakeMetricOptions(/*metric_id*/ 1, /*event_type_index*/ 1), MakeHistogramOptions());
+    auto histogram_2 = collector.AddHistogram(
+        MakeMetricOptions(/*metric_id*/ 1, /*event_type_index*/ 2), MakeHistogramOptions());
+    auto histogram_3 = collector.AddHistogram(
+        MakeMetricOptions(/*metric_id*/ 1, /*event_type_index*/ 3), MakeHistogramOptions());
     histogram.Add(-4, 2);
     histogram_2.Add(-1, 3);
     histogram_3.Add(1, 4);
@@ -282,19 +296,21 @@ bool FlushTest() {
     BEGIN_TEST;
     FakeStorage<BaseHistogram> histograms;
     FakeStorage<BaseCounter> counters;
-    HistogramOptions options = MakeOptions();
+    HistogramOptions options = MakeHistogramOptions();
     Collector collector =
         MakeCollector(/*max_histograms=*/2, /*max_counters=*/2, &histograms, &counters);
-    auto histogram = collector.AddHistogram(/*metric_id*/ 1, /*event_type_index*/ 1, options);
-    auto histogram_2 = collector.AddHistogram(/*metric_id*/ 1, /*event_type_index*/ 2, options);
-    auto counter = collector.AddCounter(/*metric_id=*/2, /*event_type_index=*/1);
-    auto counter_2 = collector.AddCounter(/*metric_id=*/2, /*event_type_index=*/2);
+    auto histogram =
+        collector.AddHistogram(MakeMetricOptions(/*metric_id*/ 1, /*event_type_index*/ 1), options);
+    auto histogram_2 =
+        collector.AddHistogram(MakeMetricOptions(/*metric_id*/ 1, /*event_type_index*/ 2), options);
+    auto counter = collector.AddCounter(MakeMetricOptions(/*metric_id=*/2, /*event_type_index=*/1));
+    auto counter_2 =
+        collector.AddCounter(MakeMetricOptions(/*metric_id=*/2, /*event_type_index=*/2));
 
     histogram.Add(-4, 2);
     histogram_2.Add(-1, 3);
     counter.Increment(5);
     counter_2.Increment(3);
-
     collector.Flush();
 
     // Verify reset of local data.
@@ -325,13 +341,16 @@ bool FlushFailTest() {
     FakeStorage<BaseHistogram> histograms;
     FakeStorage<BaseCounter> counters;
     TestLogger* logger;
-    HistogramOptions options = MakeOptions();
+    HistogramOptions options = MakeHistogramOptions();
     Collector collector =
         MakeCollector(/*max_histograms=*/2, /*max_counters=*/2, &histograms, &counters, &logger);
-    auto histogram = collector.AddHistogram(/*metric_id*/ 1, /*event_type_index*/ 1, options);
-    auto histogram_2 = collector.AddHistogram(/*metric_id*/ 1, /*event_type_index*/ 2, options);
-    auto counter = collector.AddCounter(/*metric_id=*/2, /*event_type_index=*/1);
-    auto counter_2 = collector.AddCounter(/*metric_id=*/2, /*event_type_index=*/2);
+    auto histogram =
+        collector.AddHistogram(MakeMetricOptions(/*metric_id*/ 1, /*event_type_index*/ 1), options);
+    auto histogram_2 =
+        collector.AddHistogram(MakeMetricOptions(/*metric_id*/ 1, /*event_type_index*/ 2), options);
+    auto counter = collector.AddCounter(MakeMetricOptions(/*metric_id=*/2, /*event_type_index=*/1));
+    auto counter_2 =
+        collector.AddCounter(MakeMetricOptions(/*metric_id=*/2, /*event_type_index=*/2));
 
     histogram.Add(-4, 2);
     counter.Increment(5);
@@ -385,7 +404,7 @@ struct ObserveFnArgs {
 
 int ObserveFn(void* vargs) {
     ObserveFnArgs* args = reinterpret_cast<ObserveFnArgs*>(vargs);
-    static HistogramOptions options = MakeOptions();
+    static HistogramOptions options = MakeHistogramOptions();
     sync_completion_wait(args->start, zx::sec(20).get());
     size_t curr = 0;
     for (auto& hist : args->histograms) {
@@ -433,12 +452,11 @@ int FlushFn(void* vargs) {
 // Verify that if we flush while the histograms and counters are being updated,
 // no data is lost, meaning that the sum of the persisted data and the local data
 // is equal to the expected value.
-template <bool should_fail>
-bool FlushMultithreadTest() {
+template <bool should_fail> bool FlushMultithreadTest() {
     BEGIN_TEST;
     FakeStorage<BaseHistogram> histograms;
     FakeStorage<BaseCounter> counters;
-    HistogramOptions options = MakeOptions();
+    HistogramOptions options = MakeHistogramOptions();
     sync_completion_t start;
 
     ObserveFnArgs observe_args;
@@ -451,10 +469,10 @@ bool FlushMultithreadTest() {
 
     for (uint32_t metric_id = 0; metric_id < 3; ++metric_id) {
         for (uint32_t event_type_index = 1; event_type_index < 4; ++event_type_index) {
-            observe_args.histograms.push_back(
-                collector.AddHistogram(2 * metric_id, event_type_index, options));
+            observe_args.histograms.push_back(collector.AddHistogram(
+                MakeMetricOptions(2 * metric_id, event_type_index), options));
             observe_args.counters.push_back(
-                collector.AddCounter(2 * metric_id + 1, event_type_index));
+                collector.AddCounter(MakeMetricOptions(2 * metric_id + 1, event_type_index)));
         }
     }
     // Add empty entries to the fake storage.

@@ -22,6 +22,10 @@ using internal::Metadata;
 using internal::RemoteCounter;
 using internal::RemoteHistogram;
 
+// Types for metrics
+constexpr uint8_t kLocal = 0x1;
+constexpr uint8_t kRemote = 0x2;
+
 Metadata MakeMetadata(uint32_t event_type_index) {
     Metadata metadata;
     metadata.event_type = 0;
@@ -63,6 +67,32 @@ Collector MakeCollector(CollectorOptions options, internal::CobaltOptions cobalt
 
 } // namespace
 
+MetricOptions MetricOptions::Local() {
+    MetricOptions options;
+    options.type = kLocal;
+    return options;
+}
+
+MetricOptions MetricOptions::Remote() {
+    MetricOptions options;
+    options.type = kRemote;
+    return options;
+}
+
+MetricOptions MetricOptions::Both() {
+    MetricOptions options;
+    options.type = kLocal | kRemote;
+    return options;
+}
+
+bool MetricOptions::IsLocal() const {
+    return (type & kLocal) != 0;
+}
+
+bool MetricOptions::IsRemote() const {
+    return (type & kRemote) != 0;
+}
+
 Collector::Collector(const CollectorOptions& options, fbl::unique_ptr<internal::Logger> logger)
     : logger_(fbl::move(logger)) {
     flushing_.store(false);
@@ -83,45 +113,24 @@ Collector::~Collector() {
     }
 };
 
-Histogram Collector::AddHistogram(uint32_t metric_id, uint32_t event_type_index,
+Histogram Collector::AddHistogram(const MetricOptions& metric_options,
                                   const HistogramOptions& options) {
-    ZX_DEBUG_ASSERT_MSG(event_type_index > 0,
-                        "event_type_index 0 value is reserved.");
+    ZX_DEBUG_ASSERT_MSG(metric_options.event_code > 0, "event_type_index 0 value is reserved.");
     ZX_DEBUG_ASSERT_MSG(remote_histograms_.size() < remote_histograms_.capacity(),
                         "Exceeded pre-allocated histogram capacity.");
-    RemoteHistogram::EventBuffer buffer({MakeMetadata(event_type_index)});
-    return AddHistogramInternal(metric_id, options, fbl::move(buffer), &remote_histograms_,
-                                &histogram_options_);
+    RemoteHistogram::EventBuffer buffer(metric_options.component,
+                                        {MakeMetadata(metric_options.event_code)});
+    return AddHistogramInternal(metric_options.metric_id, options, fbl::move(buffer),
+                                &remote_histograms_, &histogram_options_);
 }
 
-Histogram Collector::AddHistogram(uint32_t metric_id, uint32_t event_type_index,
-                                  const fbl::String& component, const HistogramOptions& options) {
-    ZX_DEBUG_ASSERT_MSG(event_type_index > 0,
-                        "event_type_index 0 value is reserved.");
-    ZX_DEBUG_ASSERT_MSG(remote_histograms_.size() < remote_histograms_.capacity(),
-                        "Exceeded pre-allocated histogram capacity.");
-    RemoteHistogram::EventBuffer buffer({MakeMetadata(event_type_index)});
-    return AddHistogramInternal(metric_id, options, fbl::move(buffer), &remote_histograms_,
-                                &histogram_options_);
-}
-
-Counter Collector::AddCounter(uint32_t metric_id, uint32_t event_type_index) {
-    ZX_DEBUG_ASSERT_MSG(event_type_index > 0,
-                        "event_type_index 0 value is reserved.");
+Counter Collector::AddCounter(const MetricOptions& metric_options) {
+    ZX_DEBUG_ASSERT_MSG(metric_options.event_code > 0, "event_type_index 0 value is reserved.");
     ZX_DEBUG_ASSERT_MSG(remote_counters_.size() < remote_counters_.capacity(),
                         "Exceeded pre-allocated counter capacity.");
-    RemoteCounter::EventBuffer buffer({MakeMetadata(event_type_index)});
-    return AddCounterInternal(metric_id, fbl::move(buffer), &remote_counters_);
-}
-
-Counter Collector::AddCounter(uint32_t metric_id, uint32_t event_type_index,
-                              const fbl::String& component) {
-    ZX_DEBUG_ASSERT_MSG(event_type_index > 0,
-                        "event_type_index 0 value is reserved.");
-    ZX_DEBUG_ASSERT_MSG(remote_counters_.size() < remote_counters_.capacity(),
-                        "Exceeded pre-allocated counter capacity.");
-    RemoteCounter::EventBuffer buffer(component, {MakeMetadata(event_type_index)});
-    return AddCounterInternal(metric_id, fbl::move(buffer), &remote_counters_);
+    RemoteCounter::EventBuffer buffer(metric_options.component,
+                                      {MakeMetadata(metric_options.event_code)});
+    return AddCounterInternal(metric_options.metric_id, fbl::move(buffer), &remote_counters_);
 }
 
 void Collector::Flush() {

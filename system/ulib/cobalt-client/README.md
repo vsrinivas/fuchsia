@@ -68,7 +68,12 @@ enum TimeTravelDirection : uint32_t {
     kFuture  = 2,
 };
 
-cobalt_client::Counter years_traveled = collector_.AddCounter(kTimeTravelYears, kPast, "Great Scott!");
+MetricOptions options = MetricOptions::Remote();
+options.metric_id = kTimeTravelYears;
+options.event_code = kPast;
+options.component = "Great Scott!");
+
+cobalt_client::Counter years_traveled = collector_.AddCounter(options);
 if (total_years == 1) {
     // By default Increment increments by 1 unit.
     years_travelled.Increment();
@@ -82,7 +87,12 @@ Counter is a shallow proxy, which is why it can be copied or moved, with no effe
 
 ## Histogram
 ```c++
-cobalt_client::Histogram years_per_travel = collector_.AddHistogram(kTimeTravelYears, "Great Scott!",
+MetricOptions options = MetricOptions::Remote();
+options.metric_id = kTimeTravelYears;
+options.event_code = kPast;
+options.component = "Great Scott!");
+
+cobalt_client::Histogram years_per_travel = collector_.AddHistogram(options,
         HistogramOptions::Exponential(/*bucket_count=*/10, /*base=*/2, /*scalar=*/1, /*offset=*/2));
 uint64_t current_year = 1955;
 uint64_t original_year = 1985;

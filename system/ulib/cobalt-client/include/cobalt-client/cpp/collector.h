@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <stdint.h>
+#include <unistd.h>
+
 #include <cobalt-client/cpp/counter.h>
 #include <cobalt-client/cpp/histogram.h>
 #include <fbl/atomic.h>
@@ -30,7 +33,8 @@ struct CollectorOptions {
     // to the cobalt service.
     fbl::Function<bool(zx::vmo*, size_t*)> load_config;
 
-    // Configuration for RPC behavior.
+    // Configuration for RPC behavior for remote metrics.
+    // Only set if you plan to interact with cobalt service.
 
     // When registering with cobalt, will block for this amount of time, each
     // time we need to reach cobalt, until the response is received.
@@ -44,11 +48,53 @@ struct CollectorOptions {
     // and guaranteeing no dangling pointers, plus contiguous
     // memory for cache friendliness.
 
+    // This allows to allocated memory appropiately.
+
     // Number of histograms to be used.
     size_t max_histograms;
 
     // Number of counters to be used.
     size_t max_counters;
+};
+
+// Defines basic set of options for instantiating a metric.
+struct MetricOptions {
+
+    // Returns a set of options to generate a local only metric.
+    static MetricOptions Local();
+
+    // Returns a set of options to generate a remote only metric.
+    static MetricOptions Remote();
+
+    // Will instantiate a metric that will have a local and remote version.
+    static MetricOptions Both();
+
+    bool IsRemote() const;
+    bool IsLocal() const;
+
+    // Required for local metrics.
+    fbl::String name;
+
+    // Provides refined metric collection for remote and local metrics.
+    // Warning: |component| is not yet supported in the backend, so it will be ignored.
+    fbl::String component;
+
+    // Function that translates |event_code| to a human readable name.
+    // If returns |nullptr| or is unset, the stringfied version of |uint32_t| will be used.
+    const char* (*get_event_name)(uint32_t);
+
+    // Used by remote metrics to match with the respective unique id for the projects defined
+    // metrics in the backend.
+    uint32_t metric_id;
+
+    // Provides refined metric collection for |kRemote| and |kLocal| metrics.
+    // |event_code| 0 is reserved for Unkown events.
+    // Warning: |event_code| is not yet supported in the backend, so it will be set to 0.
+    uint32_t event_code;
+
+    // Defines whether the metric is local or remote.
+    // Internal use, should not be set manually.
+    uint8_t type;
 };
 
 // This class acts as a peer for instantiating Histograms and Counters. All
@@ -87,34 +133,16 @@ public:
     // Preconditions:
     //     |metric_id| must be greater than 0.
     //     |event_type_index| must be greater than 0.
-    Histogram AddHistogram(uint32_t metric_id, uint32_t event_type_index,
-                           const HistogramOptions& options);
-
-    // Returns a histogram to log events for a given |metric_id|, |event_type_index| and |component|
-    // on a histogram described by |options|.
-    // Preconditions:
-    //     |metric_id| must be greater than 0.
-    //     |event_type_index| must be greater than 0.
-    // Warning: |component| is not yet supported in the backend, so it will be ignored.
-    // TODO(gevalentino): remove the warning when Cobalt adds the required support.
-    Histogram AddHistogram(uint32_t metric_id, uint32_t event_type_index,
-                           const fbl::String& component, const HistogramOptions& options);
-
-    // Returns a counter to log events for a given |metric_id| and |event_type_index|
-    // as a raw counter.
-    // Preconditions:
-    //     |metric_id| must be greater than 0.
-    //     |event_type_index| must be greater than 0.
-    Counter AddCounter(uint32_t metric_id, uint32_t event_type_index);
+    Histogram AddHistogram(const MetricOptions& metric_options,
+                           const HistogramOptions& histogram_options);
 
     // Returns a counter to log events for a given |metric_id|, |event_type_index| and |component|
     // as a raw counter.
     // Preconditions:
     //     |metric_id| must be greater than 0.
     //     |event_type_index| must be greater than 0.
-    // Warning: |component| is not yet supported in the backend, so it will be ignored.
     // TODO(gevalentino): remove the warning when Cobalt adds the required support.
-    Counter AddCounter(uint32_t metric_id, uint32_t event_type_index, const fbl::String& component);
+    Counter AddCounter(const MetricOptions& options);
 
     // Flushes the content of all flushable metrics into |sink_|. The |sink_| is
     // in charge of persisting the data.
