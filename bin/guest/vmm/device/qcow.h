@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_QCOW_H_
-#define GARNET_LIB_MACHINA_QCOW_H_
+#ifndef GARNET_BIN_GUEST_VMM_DEVICE_QCOW_H_
+#define GARNET_BIN_GUEST_VMM_DEVICE_QCOW_H_
 
 #include <endian.h>
 
@@ -137,4 +137,4 @@ class QcowFile {
                        BlockDispatcher::Callback callback);
 };
 
-#endif  // GARNET_LIB_MACHINA_QCOW_H_
+#endif  // GARNET_BIN_GUEST_VMM_DEVICE_QCOW_H_
