@@ -24,6 +24,10 @@ App::App(std::unique_ptr<HeartModel> heart_model)
 
   peripheral_ = context_->ConnectToEnvironmentService<ble::Peripheral>();
   FXL_DCHECK(peripheral_);
+  peripheral_.events().OnCentralConnected =
+      fit::bind_member(this, &App::OnCentralConnected);
+  peripheral_.events().OnCentralDisconnected =
+      fit::bind_member(this, &App::OnCentralDisconnected);
 }
 
 void App::StartAdvertising() {
@@ -37,15 +41,9 @@ void App::StartAdvertising() {
               << ", advertisement_id: " << advertisement_id << std::endl;
   };
 
-  peripheral_.events().OnCentralConnected =
-      fit::bind_member(this, &App::OnCentralConnected);
-  peripheral_.events().OnCentralDisconnected =
-      fit::bind_member(this, &App::OnCentralDisconnected);
   peripheral_->StartAdvertising(std::move(ad), nullptr, true, 60, false,
                                 std::move(start_adv_result_cb));
 }
-
-constexpr char App::kDeviceName[];
 
 void App::OnCentralConnected(fidl::StringPtr advertisement_id,
                              ble::RemoteDevice central) {
