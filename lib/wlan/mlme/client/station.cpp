@@ -288,11 +288,9 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
     BufferWriter elem_w({assoc->elements, reserved_ie_len});
     common::WriteSsid(&elem_w, *join_ctx_->bss()->ssid);
     common::WriteSupportedRates(&elem_w, supp_rates);
-    common::WriteExtendedSupportedRates(&elem_w, ext_rates);
+    if (!ext_rates.empty()) { common::WriteExtendedSupportedRates(&elem_w, ext_rates); }
     // Write RSNE from MLME-Association.request if available.
-    if (req.body()->rsn) {
-        elem_w.Write(*req.body()->rsn);
-    }
+    if (req.body()->rsn) { elem_w.Write(*req.body()->rsn); }
 
     if (join_ctx_->IsHtOrLater()) {
         auto ht_cap = client_capability.ht_cap.value_or(HtCapabilities{});
