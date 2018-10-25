@@ -21,11 +21,11 @@ A resource object consists of a single resource *kind*, with *base* address and
 is granted access to. The range covers *base* up to but not including *base* +
 *len*.  These objects are immutable after creation. Valid *kind*  values are
 **ZX_RSRC_KIND_ROOT**, **ZX_RSRC_KIND_HYPERVISOR**, **ZX_RSRC_KIND_MMIO**,
-**ZX_RSRC_KIND_IOPORT**, and **ZX_RSRC_KIND_IRQ**. New resources may be created
-with a root resource by calling
-[resource_create](../syscalls/resource_create.md). An initial root resource is
-created by the kernel during boot and handed off to the first userspace process
-started by userboot.
+**ZX_RSRC_KIND_IOPORT**, **ZX_RSRC_KIND_IRQ**, **ZX_RSRC_KIND_VMEX**, and
+**ZX_RSRC_KIND_SMC**. New resources may be created with a root resource by
+calling [resource_create](../syscalls/resource_create.md). An initial root
+resource is created by the kernel during boot and handed off to the first
+userspace process started by userboot.
 
 Resource allocations can be either *shared* or *exclusive*. A shared resource
 grants the permission to access the given address space, but does not reserve
@@ -42,8 +42,8 @@ not keep it alive.
 ## NOTES
 
 Resources are typically private to the DDK and platform bus drivers. Presently,
-this means ACPI and platform bus hold the root resource respectively and hand out more
-fine-grained resources to other drivers.
+this means ACPI and platform bus hold the root resource respectively and hand
+out more fine-grained resources to other drivers.
 
 ## SYSCALLS
 

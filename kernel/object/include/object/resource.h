@@ -37,3 +37,8 @@ static inline zx_status_t validate_resource_mmio(zx_handle_t handle, uint64_t ba
 static inline zx_status_t validate_resource_irq(zx_handle_t handle, uint32_t irq) {
     return validate_ranged_resource(handle, ZX_RSRC_KIND_IRQ, irq, 1);
 }
+
+// Validates access to a SMC service call number based on a resource handle
+static inline zx_status_t validate_resource_smc(zx_handle_t handle, uint64_t service_call_num) {
+    return validate_ranged_resource(handle, ZX_RSRC_KIND_SMC, service_call_num, 1);
+}

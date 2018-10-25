@@ -26,6 +26,7 @@ KCOUNTER(vmex_resource_created, "resource.vmex.created");
 KCOUNTER(mmio_resource_created, "resource.mmio.created");
 KCOUNTER(irq_resource_created, "resource.irq.created");
 KCOUNTER(ioport_resource_created, "resource.ioport.created");
+KCOUNTER(smc_resource_created, "resource.smc.created");
 
 // Storage for static members of ResourceDispatcher
 RegionAllocator ResourceDispatcher::static_rallocs_[ZX_RSRC_KIND_COUNT];
@@ -160,6 +161,9 @@ ResourceDispatcher::ResourceDispatcher(uint32_t kind,
     case ZX_RSRC_KIND_IOPORT:
         kcounter_add(ioport_resource_created, 1);
         break;
+    case ZX_RSRC_KIND_SMC:
+        kcounter_add(smc_resource_created, 1);
+        break;
     }
     resource_list_->push_back(this);
 }
@@ -281,6 +285,16 @@ void ResourceDispatcher::Dump() {
             break;
         case ZX_RSRC_KIND_MMIO:
             printf("%.*s", kTypeLen, "mmio");
+            printf("\t%.*s", kFlagLen, flag_str);
+            printf("\t%.*s", kNameLen, name);
+            printf("\t%#.*" PRIxPTR, kNumLen, r.get_base());
+            printf("\t%#.*" PRIxPTR, kNumLen, r.get_base() + r.get_size());
+            printf("\t%.*s", kPrettyLen,
+                   format_size(pretty_size, sizeof(pretty_size), r.get_size()));
+            printf("\n");
+            break;
+        case ZX_RSRC_KIND_SMC:
+            printf("%.*s", kTypeLen, "smc");
             printf("\t%.*s", kFlagLen, flag_str);
             printf("\t%.*s", kNameLen, name);
             printf("\t%#.*" PRIxPTR, kNumLen, r.get_base());

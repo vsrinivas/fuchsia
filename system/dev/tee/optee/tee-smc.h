@@ -89,8 +89,8 @@ constexpr uint8_t kCallTypeMask = 0x01;
 constexpr uint8_t kCallTypeShift = 31;
 constexpr uint8_t kCallConvMask = 0x01;
 constexpr uint8_t kCallConvShift = 30;
-constexpr uint8_t kServiceMask = 0x3F;
-constexpr uint8_t kServiceShift = 24;
+constexpr uint8_t kServiceMask = ARM_SMC_SERVICE_CALL_MASK;
+constexpr uint8_t kServiceShift = ARM_SMC_SERVICE_CALL_SHIFT;
 
 constexpr uint64_t kSmc64ReturnUnknownFunction = static_cast<uint64_t>(-1);
 constexpr uint32_t kSmc32ReturnUnknownFunction = static_cast<uint32_t>(-1);

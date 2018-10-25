@@ -554,22 +554,22 @@ zx_status_t sys_interrupt_trigger(zx_handle_t handle,
 zx_status_t sys_smc_call(zx_handle_t handle,
                          user_in_ptr<const zx_smc_parameters_t> parameters,
                          user_out_ptr<zx_smc_result_t> out_smc_result) {
-    zx_status_t status;
-    // TODO(ZX-971): finer grained validation
-    if ((status = validate_resource(handle, ZX_RSRC_KIND_ROOT)) < 0) {
-        return status;
-    }
     if (!parameters || !out_smc_result) {
         return ZX_ERR_INVALID_ARGS;
     }
 
     zx_smc_parameters_t params;
-    zx_smc_result_t result;
-
-    status = parameters.copy_from_user(&params);
+    zx_status_t status = parameters.copy_from_user(&params);
     if (status != ZX_OK) {
         return status;
     }
+
+    uint32_t service_call_num = ARM_SMC_GET_SERVICE_CALL_NUM(params.func_id);
+    if ((status = validate_resource_smc(handle, service_call_num)) != ZX_OK) {
+        return status;
+    }
+
+    zx_smc_result_t result;
 
     arch_smc_call(&params, &result);
 

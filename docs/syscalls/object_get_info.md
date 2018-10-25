@@ -629,6 +629,8 @@ The resource kind is one of
 *   *ZX_RSRC_KIND_IOPORT*
 *   *ZX_RSRC_KIND_IRQ*
 *   *ZX_RSRC_KIND_HYPERVISOR*
+*   *ZX_RSRC_KIND_VMEX*
+*   *ZX_RSRC_KIND_SMC*
 
 ### ZX_INFO_BTI
 

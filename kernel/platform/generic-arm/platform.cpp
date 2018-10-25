@@ -45,8 +45,8 @@
 #include <vm/vm_aspace.h>
 
 #include <lib/console.h>
-#include <lib/memory_limit.h>
 #include <lib/debuglog.h>
+#include <lib/memory_limit.h>
 #if WITH_PANIC_BACKTRACE
 #include <kernel/thread.h>
 #endif
@@ -55,6 +55,7 @@
 #include <pdev/pdev.h>
 #include <zircon/boot/image.h>
 #include <zircon/rights.h>
+#include <zircon/syscalls/smc.h>
 #include <zircon/types.h>
 
 // Defined in start.S.
@@ -617,6 +618,13 @@ static void arm_resource_dispatcher_init_hook(unsigned int rl) {
                                                      interrupt_get_max_vector());
     if (status != ZX_OK) {
         printf("Resources: Failed to initialize IRQ allocator: %d\n", status);
+    }
+    // Set up SMC valid service call range
+    status = ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_SMC,
+                                                     0,
+                                                     ARM_SMC_MAX_SERVICE_CALL + 1);
+    if (status != ZX_OK) {
+        printf("Resources: Failed to initialize SMC allocator: %d\n", status);
     }
 }
 

@@ -8,6 +8,12 @@
 
 __BEGIN_CDECLS
 
+#define ARM_SMC_MAX_SERVICE_CALL 0x3F
+#define ARM_SMC_SERVICE_CALL_MASK 0x3F
+#define ARM_SMC_SERVICE_CALL_SHIFT 24
+#define ARM_SMC_GET_SERVICE_CALL_NUM(func_id) \
+    (((func_id) >> ARM_SMC_SERVICE_CALL_SHIFT) & ARM_SMC_SERVICE_CALL_MASK)
+
 typedef struct zx_smc_parameters {
     uint32_t func_id;
     uint64_t arg1;

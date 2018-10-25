@@ -374,9 +374,7 @@ typedef struct zx_info_kmem_stats {
 } zx_info_kmem_stats_t;
 
 typedef struct zx_info_resource {
-    // The resource kind, one of:
-    // ZX_RSRC_KIND_ROOT, ZX_RSRC_KIND_MMIO, ZX_RSRC_KIND_IRQ,
-    // ZX_RSRC_KIND_IOPORT, or ZX_RSRC_KIND_HYPERVISOR
+    // The resource kind; resource object kinds are detailed in the resource.md
     uint32_t kind;
     // Resource's creation flags
     uint32_t flags;
