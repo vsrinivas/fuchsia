@@ -6,6 +6,7 @@
 #include <iomanip>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fit/defer.h>
 #include <trace-provider/provider.h>
 #include <virtio/input.h>
 
@@ -210,10 +211,14 @@ static uint32_t YCoordinate(float y) {
 
 // Stream for event queue.
 class EventStream : public StreamBase,
-                    public fuchsia::ui::input::InputDispatcher {
+                    public fuchsia::ui::input::InputListener,
+                    public fuchsia::guest::device::ViewListener {
  public:
   EventStream(component::StartupContext* context) {
-    context->outgoing().AddPublicService(bindings_.GetHandler(this));
+    context->outgoing().AddPublicService(
+        input_listener_bindings_.GetHandler(this));
+    context->outgoing().AddPublicService(
+        view_listener_bindings_.GetHandler(this));
   }
 
   void DoEvent() {
@@ -227,12 +232,14 @@ class EventStream : public StreamBase,
   }
 
  private:
-  fidl::BindingSet<InputDispatcher> bindings_;
+  fidl::BindingSet<InputListener> input_listener_bindings_;
+  fidl::BindingSet<ViewListener> view_listener_bindings_;
   std::array<virtio_input_event_t, 64> event_ring_;
   size_t head_ = 0;
   size_t tail_ = 0;
+  fuchsia::math::SizeF view_size_ = {0, 0};
 
-  void DispatchKeyboard(const fuchsia::ui::input::KeyboardEvent& keyboard) {
+  void OnKeyboard(const fuchsia::ui::input::KeyboardEvent& keyboard) {
     uint32_t hid_usage = keyboard.hid_usage;
     if (hid_usage >= kKeyMap.size()) {
       FXL_LOG(WARNING) << "Unsupported keyboard event";
@@ -254,7 +261,7 @@ class EventStream : public StreamBase,
     }
   }
 
-  void DispatchPointer(const fuchsia::ui::input::PointerEvent& pointer) {
+  void OnPointer(const fuchsia::ui::input::PointerEvent& pointer) {
     switch (pointer.phase) {
       case fuchsia::ui::input::PointerEventPhase::MOVE: {
         virtio_input_event_t events[] = {
@@ -311,13 +318,24 @@ class EventStream : public StreamBase,
     }
   }
 
-  void DispatchEvent(fuchsia::ui::input::InputEvent event) override {
+  // |fuchsia::ui::input::InputListener|
+  void OnEvent(fuchsia::ui::input::InputEvent event,
+               OnEventCallback callback) override {
+    auto deferred = fit::defer([&callback] { callback(false); });
+
     switch (event.Which()) {
       case fuchsia::ui::input::InputEvent::Tag::kKeyboard:
-        DispatchKeyboard(event.keyboard());
+        OnKeyboard(event.keyboard());
         break;
       case fuchsia::ui::input::InputEvent::Tag::kPointer:
-        DispatchPointer(event.pointer());
+        if (view_size_.width > 0 && view_size_.height > 0) {
+          // Normalize pointer positions to 0..1.
+          // TODO(SCN-921): pointer event positions outside view boundaries.
+          auto& pointer = event.pointer();
+          pointer.x /= view_size_.width;
+          pointer.y /= view_size_.height;
+          OnPointer(pointer);
+        }
         break;
       default:
         return;
@@ -325,6 +343,9 @@ class EventStream : public StreamBase,
 
     DoEvent();
   }
+
+  // |fuchsia::guest::device::ViewListener|
+  void OnSizeChanged(fuchsia::math::SizeF size) override { view_size_ = size; }
 
   template <size_t N>
   bool EnqueueEvents(virtio_input_event_t (&events)[N]) {

@@ -6,6 +6,8 @@ library fuchsia.guest.device;
 
 using fuchsia.guest;
 using fuchsia.io;
+using fuchsia.math;
+using fuchsia.ui.input;
 using zx;
 
 // Contains the details of a device trap.
@@ -94,6 +96,13 @@ interface VirtioBlock : VirtioDevice {
 interface VirtioConsole : VirtioDevice {
     // Start the console device. This uses |socket| to handle input and output.
     0x81000001: Start(StartInfo start_info, handle<socket> socket);
+};
+
+// Provides a way for VirtioInput to listen to changes to a View.
+[Discoverable]
+interface ViewListener {
+    // Called when a View's size is changed.
+    1: OnSizeChanged(fuchsia.math.SizeF size);
 };
 
 [Discoverable]

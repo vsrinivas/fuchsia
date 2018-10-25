@@ -22,10 +22,13 @@ class VirtioInput
  public:
   explicit VirtioInput(const PhysMem& phys_mem);
 
-  zx_status_t Start(
-      const zx::guest& guest,
-      fidl::InterfaceRequest<fuchsia::ui::input::InputDispatcher> request,
-      fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher);
+  zx_status_t Start(const zx::guest& guest,
+                    fidl::InterfaceRequest<fuchsia::ui::input::InputListener>
+                        input_listener_request,
+                    fidl::InterfaceRequest<fuchsia::guest::device::ViewListener>
+                        view_listener_request,
+                    fuchsia::sys::Launcher* launcher,
+                    async_dispatcher_t* dispatcher);
 
  private:
   fuchsia::sys::ComponentControllerPtr controller_;

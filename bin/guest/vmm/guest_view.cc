@@ -4,44 +4,13 @@
 
 #include "garnet/bin/guest/vmm/guest_view.h"
 
-#include <semaphore.h>
-
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async/cpp/task.h>
-#include <lib/async/default.h>
+#include <lib/fxl/logging.h>
 #include <lib/images/cpp/images.h>
-
-ScenicScanout::ScenicScanout(
-    component::StartupContext* startup_context,
-    fuchsia::ui::input::InputDispatcherPtr input_dispatcher,
-    machina::GpuScanout* scanout)
-    : scanout_(scanout),
-      input_dispatcher_(std::move(input_dispatcher)),
-      startup_context_(startup_context) {
-  startup_context_->outgoing().AddPublicService(bindings_.GetHandler(this));
-}
-
-void ScenicScanout::CreateView(
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-        view_owner_request,
-    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> view_services) {
-  if (view_) {
-    FXL_LOG(ERROR) << "CreateView called when a view already exists";
-    return;
-  }
-  auto view_manager =
-      startup_context_
-          ->ConnectToEnvironmentService<::fuchsia::ui::viewsv1::ViewManager>();
-  view_ = std::make_unique<GuestView>(scanout_, std::move(input_dispatcher_),
-                                      std::move(view_manager),
-                                      std::move(view_owner_request));
-  view_->SetReleaseHandler([this] { view_.reset(); });
-}
 
 GuestView::GuestView(
     machina::GpuScanout* scanout,
-    fuchsia::ui::input::InputDispatcherPtr input_dispatcher,
+    fidl::InterfaceHandle<fuchsia::ui::input::InputListener> input_listener,
+    fuchsia::guest::device::ViewListenerPtr view_listener,
     ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
     fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request)
@@ -49,9 +18,10 @@ GuestView::GuestView(
       background_node_(session()),
       material_(session()),
       scanout_(scanout),
-      input_dispatcher_(std::move(input_dispatcher)) {
+      view_listener_(std::move(view_listener)) {
   background_node_.SetMaterial(material_);
   parent_node().AddChild(background_node_);
+  input_connection()->SetEventListener(std::move(input_listener));
 
   scanout_->SetFlushHandler(
       [this](virtio_gpu_rect_t rect) { InvalidateScene(); });
@@ -63,7 +33,10 @@ GuestView::GuestView(
   });
 }
 
-GuestView::~GuestView() = default;
+void GuestView::OnPropertiesChanged(
+    fuchsia::ui::viewsv1::ViewProperties old_properties) {
+  view_listener_->OnSizeChanged(logical_size());
+}
 
 void GuestView::OnSceneInvalidated(
     fuchsia::images::PresentationInfo presentation_info) {
@@ -119,38 +92,33 @@ void GuestView::OnSceneInvalidated(
 
   scenic::Image image(*memory_, 0u, image_info_);
   material_.SetTexture(image);
-
-  view_ready_ = true;
 }
 
-bool GuestView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
-  if (event.is_pointer()) {
-    if (!view_ready_) {
-      // Ignore pointer events that come in before the view is ready.
-      return true;
-    }
+ScenicScanout::ScenicScanout(
+    component::StartupContext* startup_context,
+    fidl::InterfaceHandle<fuchsia::ui::input::InputListener> input_listener_,
+    fuchsia::guest::device::ViewListenerPtr view_listener,
+    machina::GpuScanout* scanout)
+    : scanout_(scanout),
+      input_listener_(std::move(input_listener_)),
+      view_listener_(std::move(view_listener)),
+      startup_context_(startup_context) {
+  startup_context_->outgoing().AddPublicService(bindings_.GetHandler(this));
+}
 
-    // Normalize pointer positions to 0..1.
-    // TODO(SCN-921): pointer event positions outside view boundaries.
-    event.pointer().x /= logical_size().width;
-    event.pointer().y /= logical_size().height;
-
-    // Override the pointer type to touch because the view event positions are
-    // always absolute.
-    event.pointer().type = fuchsia::ui::input::PointerEventType::TOUCH;
-
-    // Ignore unsupported event phases. Note that these are opt-out so that if
-    // new phases are added, VirtioInput will log a warning message.
-    switch (event.pointer().phase) {
-      case fuchsia::ui::input::PointerEventPhase::ADD:
-      case fuchsia::ui::input::PointerEventPhase::HOVER:
-      case fuchsia::ui::input::PointerEventPhase::REMOVE:
-      case fuchsia::ui::input::PointerEventPhase::CANCEL:
-        return true;
-      default:
-        break;
-    }
+void ScenicScanout::CreateView(
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+        view_owner_request,
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> view_services) {
+  if (view_) {
+    FXL_LOG(ERROR) << "CreateView called when a view already exists";
+    return;
   }
-  input_dispatcher_->DispatchEvent(std::move(event));
-  return false;
+  auto view_manager =
+      startup_context_
+          ->ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewManager>();
+  view_ = std::make_unique<GuestView>(
+      scanout_, std::move(input_listener_), std::move(view_listener_),
+      std::move(view_manager), std::move(view_owner_request));
+  view_->SetReleaseHandler([this] { view_.reset(); });
 }

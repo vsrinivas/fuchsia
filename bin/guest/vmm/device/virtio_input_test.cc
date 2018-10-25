@@ -25,8 +25,9 @@ class VirtioInputTest : public TestWithDevice {
     ASSERT_EQ(ZX_OK, status);
 
     // Start device execution.
+    services.ConnectToService(view_listener_.NewRequest());
     services.ConnectToService(input_.NewRequest());
-    services.ConnectToService(dispatcher_.NewRequest());
+    services.ConnectToService(input_listener_.NewRequest());
     status = input_->Start(std::move(start_info));
     ASSERT_EQ(ZX_OK, status);
 
@@ -42,7 +43,8 @@ class VirtioInputTest : public TestWithDevice {
   }
 
   fuchsia::guest::device::VirtioInputSyncPtr input_;
-  fuchsia::ui::input::InputDispatcherSyncPtr dispatcher_;
+  fuchsia::ui::input::InputListenerSyncPtr input_listener_;
+  fuchsia::guest::device::ViewListenerSyncPtr view_listener_;
   VirtioQueueFake event_queue_;
 };
 
@@ -52,7 +54,8 @@ TEST_F(VirtioInputTest, Keyboard) {
       .phase = fuchsia::ui::input::KeyboardEventPhase::PRESSED,
       .hid_usage = 4,
   });
-  dispatcher_->DispatchEvent(std::move(fuchsia_event));
+  bool consumed;
+  input_listener_->OnEvent(std::move(fuchsia_event), &consumed);
 
   virtio_input_event_t* event_1;
   virtio_input_event_t* event_2;
@@ -74,13 +77,15 @@ TEST_F(VirtioInputTest, Keyboard) {
 }
 
 TEST_F(VirtioInputTest, PointerMove) {
+  view_listener_->OnSizeChanged({1, 1});
   fuchsia::ui::input::InputEvent fuchsia_event;
   fuchsia_event.set_pointer({
       .phase = fuchsia::ui::input::PointerEventPhase::MOVE,
       .x = 0.25,
       .y = 0.5,
   });
-  dispatcher_->DispatchEvent(std::move(fuchsia_event));
+  bool consumed;
+  input_listener_->OnEvent(std::move(fuchsia_event), &consumed);
 
   virtio_input_event_t* event_1;
   virtio_input_event_t* event_2;
@@ -109,13 +114,15 @@ TEST_F(VirtioInputTest, PointerMove) {
 }
 
 TEST_F(VirtioInputTest, PointerUp) {
+  view_listener_->OnSizeChanged({1, 1});
   fuchsia::ui::input::InputEvent fuchsia_event;
   fuchsia_event.set_pointer({
       .phase = fuchsia::ui::input::PointerEventPhase::UP,
       .x = 0.25,
       .y = 0.5,
   });
-  dispatcher_->DispatchEvent(std::move(fuchsia_event));
+  bool consumed;
+  input_listener_->OnEvent(std::move(fuchsia_event), &consumed);
 
   virtio_input_event_t* event_1;
   virtio_input_event_t* event_2;

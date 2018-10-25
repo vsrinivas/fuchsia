@@ -257,8 +257,8 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  machina::VirtioInput input(guest.phys_mem());
   machina::VirtioGpu gpu(guest.phys_mem(), guest.device_dispatcher());
+  machina::VirtioInput input(guest.phys_mem());
   std::unique_ptr<ScenicScanout> scenic_scanout;
   if (cfg.display() == GuestDisplay::SCENIC) {
     // Setup input device.
@@ -266,9 +266,11 @@ int main(int argc, char** argv) {
     if (status != ZX_OK) {
       return status;
     }
-    fuchsia::ui::input::InputDispatcherPtr input_dispatcher;
-    status = input.Start(*guest.object(), input_dispatcher.NewRequest(),
-                         launcher.get(), guest.device_dispatcher());
+    fidl::InterfaceHandle<fuchsia::ui::input::InputListener> input_listener;
+    fuchsia::guest::device::ViewListenerPtr view_listener;
+    status = input.Start(*guest.object(), input_listener.NewRequest(),
+                         view_listener.NewRequest(), launcher.get(),
+                         guest.device_dispatcher());
     if (status != ZX_OK) {
       return status;
     }
@@ -276,14 +278,15 @@ int main(int argc, char** argv) {
     // Expose a view that can be composited by mozart. Input events will be
     // injected by the view events.
     scenic_scanout = std::make_unique<ScenicScanout>(
-        context.get(), std::move(input_dispatcher), gpu.scanout());
+        context.get(), std::move(input_listener), std::move(view_listener),
+        gpu.scanout());
 
     // Setup GPU device.
-    status = gpu.Init();
+    status = bus.Connect(gpu.pci_device());
     if (status != ZX_OK) {
       return status;
     }
-    status = bus.Connect(gpu.pci_device());
+    status = gpu.Init();
     if (status != ZX_OK) {
       return status;
     }
