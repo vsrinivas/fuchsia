@@ -36,11 +36,18 @@
 #ifdef __ASSEMBLER__
 #define ZBI_ALIGNMENT           (8)
 #else
-#define ZBI_ALIGNMENT           (8ul)
+#define ZBI_ALIGNMENT           (8u)
 #endif
 
 // Round n up to the next 8 byte boundary
-#define ZBI_ALIGN(n)            (((n) + ZBI_ALIGNMENT - 1) & -ZBI_ALIGNMENT)
+#ifndef __ASSEMBLER__
+#ifdef __cplusplus
+constexpr
+#endif
+static inline uint32_t ZBI_ALIGN(uint32_t n) {
+    return ((n + ZBI_ALIGNMENT - 1) & -ZBI_ALIGNMENT);
+}
+#endif
 
 // LSW of sha256("bootdata")
 #define ZBI_CONTAINER_MAGIC     (0x868cf7e6)

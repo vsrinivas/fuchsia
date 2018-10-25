@@ -45,7 +45,7 @@ static void pdev_run_hooks(uint level) {
             // driver data follows boot item
             pdev_init_driver(item->extra, &item[1], item->length, level);
         }
-        start += ZBI_ALIGN(sizeof(zbi_header_t) + item->length);
+        start += ZBI_ALIGN((uint32_t)sizeof(zbi_header_t) + item->length);
     }
 }
 
