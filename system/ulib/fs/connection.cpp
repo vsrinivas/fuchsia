@@ -31,7 +31,7 @@ void WriteDescribeError(zx::channel channel, zx_status_t status) {
     memset(&msg, 0, sizeof(msg));
     msg.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
     msg.status = status;
-    channel.write(0, &msg, sizeof(zxrio_describe_t), nullptr, 0);
+    channel.write(0, &msg, ZXRIO_DESCRIBE_HDR_SZ, nullptr, 0);
 }
 
 zx_status_t GetNodeInfo(const fbl::RefPtr<Vnode>& vn, uint32_t flags,

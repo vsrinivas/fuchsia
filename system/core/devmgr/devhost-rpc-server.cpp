@@ -44,7 +44,7 @@ void describe_error(zx::channel h, zx_status_t status) {
     memset(&msg, 0, sizeof(msg));
     msg.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
     msg.status = status;
-    h.write(0, &msg, sizeof(msg), nullptr, 0);
+    h.write(0, &msg, ZXRIO_DESCRIBE_HDR_SZ, nullptr, 0);
 }
 
 static zx_status_t create_description(zx_device_t* dev, zxrio_describe_t* msg,

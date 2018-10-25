@@ -161,7 +161,7 @@ void describe_error(zx_handle_t h, zx_status_t status) {
     memset(&msg, 0, sizeof(msg));
     msg.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
     msg.status = status;
-    zx_channel_write(h, 0, &msg, sizeof(zxrio_describe_t), nullptr, 0);
+    zx_channel_write(h, 0, &msg, ZXRIO_DESCRIBE_HDR_SZ, nullptr, 0);
     zx_handle_close(h);
 }
 
