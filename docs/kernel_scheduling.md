@@ -26,10 +26,11 @@ Assignment*](#cpu-assignment-and-migration) below for how we decide
 which CPU a thread is on, and how/when it migrates.
 
 Each CPU has its own set of priority queues. One for each priority level
-in the system, currently 32. In each queue is an ordered list of runnable
-threads awaiting execution. When it is time for a new thread to run, the
-scheduler simply looks at the highest numbered queue that contains a
-thread, pops the head off of that queue and runs that thread.See
+in the system, currently 32. Note that these are fifo queues, not the data
+structure known as a priority queue. In each queue is an ordered list of
+runnable threads awaiting execution. When it is time for a new thread to run,
+the scheduler simply looks at the highest numbered queue that contains a thread,
+pops the head off of that queue and runs that thread.See
 [*Priority Management*](#priority-management) below for more details
 about how it decides which thread should be in which queue. If there are no
 threads in the queues to run it will instead run the idle thread, see [*Realtime
@@ -37,10 +38,11 @@ and Idle Threads*](#realtime-and-idle-threads) below for more details.
 
 Each thread is assigned the same timeslice size (THREAD_INITIAL_TIME_SLICE)
 when it is picked to start running. If it uses its whole timeslice it will be
-reinserted into the end of the same priority queue. However if it has reamining
-timeslice from a previous run it will be inserted into the head of its priority
-queue so it will be able to resume as quickly as possible. When it is picked
-back up again it will only run for the remainder of its previous timeslice.
+reinserted at the end of the appropriate priority queue. However if it has
+some of its timeslice remaining from a previous run it will be inserted at the
+head of the priority queue so it will be able to resume as quickly as possible.
+When it is picked back up again it will only run for the remainder of its
+previous timeslice.
 
 When the scheduler selects a new thread from the priority queue it sets
 the CPU's preemption timer for either a full timeslice, or the remainder of the
