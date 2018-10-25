@@ -28,7 +28,7 @@ interface EnvironmentController {
     // Launch a new guest instance into this environment. The |cid| of the
     // instance is returned so that it can be uniquely identified.
     1: LaunchInstance(LaunchInfo launch_info,
-                      request<fuchsia.ui.viewsv1.ViewProvider> view_provider,
+                      request<fuchsia.ui.viewsv1.ViewProvider>? view_provider,
                       request<InstanceController> controller)
                       -> (uint32 cid);
 
