@@ -33,25 +33,26 @@ namespace {
 // Generates ranges for a CodeBlock. The attributes may be not present, this
 // function will compute what it can given the information (which may be an
 // empty vector).
-//
-// TODO(brettw) add a parameter for DW_AT_ranges to handle discontiguous code
-// ranges also (normally either that or low/high will be set).
-
-CodeBlock::CodeRanges MakeCodeRanges(
-    const llvm::Optional<uint64_t>& low_pc,
-    const llvm::Optional<DwarfDieDecoder::HighPC>& high_pc) {
+CodeBlock::CodeRanges GetCodeRanges(const llvm::DWARFDie& die) {
   CodeBlock::CodeRanges code_ranges;
-  if (low_pc && high_pc) {
-    if (high_pc->is_constant)
-      code_ranges.push_back(AddressRange(*low_pc, *low_pc + high_pc->value));
-    else
-      code_ranges.push_back(AddressRange(*low_pc, high_pc->value));
+
+  // It would be trivially more efficient to get the DW_AT_ranges, etc.
+  // attributes out when we're iterating through the DIE. But the address
+  // ranges have many different forms and also vary between DWARF versions 4
+  // and 5. It's easier to let LLVM deal with this complexity.
+  auto expected_ranges = die.getAddressRanges();
+  if (!expected_ranges || expected_ranges->empty())
+    return code_ranges;
+
+  code_ranges.reserve(expected_ranges->size());
+  for (const llvm::DWARFAddressRange& range : *expected_ranges) {
+    if (range.valid())
+      code_ranges.emplace_back(range.LowPC, range.HighPC);
   }
 
   // Generally DWARF will put these in order, but we want to guarantee they're
   // sorted.
   std::sort(code_ranges.begin(), code_ranges.end(), AddressRangeBeginCmp());
-
   return code_ranges;
 }
 
@@ -243,12 +244,6 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
   llvm::Optional<const char*> linkage_name;
   decoder.AddCString(llvm::dwarf::DW_AT_linkage_name, &linkage_name);
 
-  llvm::Optional<uint64_t> low_pc;
-  decoder.AddAddress(llvm::dwarf::DW_AT_low_pc, &low_pc);
-
-  llvm::Optional<DwarfDieDecoder::HighPC> high_pc;
-  decoder.AddHighPC(&high_pc);
-
   llvm::DWARFDie type;
   decoder.AddReference(llvm::dwarf::DW_AT_type, &type);
 
@@ -267,8 +262,6 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
 
   llvm::DWARFDie object_ptr;
   decoder.AddReference(llvm::dwarf::DW_AT_object_pointer, &object_ptr);
-
-  // TODO(brettw) handle DW_AT_ranges.
 
   if (!decoder.Decode(die))
     return fxl::MakeRefCounted<Symbol>();
@@ -294,7 +287,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
     function->set_assigned_name(*name);
   if (linkage_name)
     function->set_linkage_name(*linkage_name);
-  function->set_code_ranges(MakeCodeRanges(low_pc, high_pc));
+  function->set_code_ranges(GetCodeRanges(die));
   function->set_decl_line(MakeFileLine(decl_file, decl_line));
   if (type)
     function->set_return_type(MakeLazy(type));
@@ -535,21 +528,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeInheritedFrom(
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeLexicalBlock(
     const llvm::DWARFDie& die) {
-  DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
-
-  llvm::Optional<uint64_t> low_pc;
-  decoder.AddAddress(llvm::dwarf::DW_AT_low_pc, &low_pc);
-
-  llvm::Optional<DwarfDieDecoder::HighPC> high_pc;
-  decoder.AddHighPC(&high_pc);
-
-  // TODO(brettw) handle DW_AT_ranges.
-
-  if (!decoder.Decode(die))
-    return fxl::MakeRefCounted<Symbol>();
-
   auto block = fxl::MakeRefCounted<CodeBlock>(Symbol::kTagLexicalBlock);
-  block->set_code_ranges(MakeCodeRanges(low_pc, high_pc));
+  block->set_code_ranges(GetCodeRanges(die));
 
   // Handle sub-DIEs: child blocks and variables.
   std::vector<LazySymbol> inner_blocks;
