@@ -6,6 +6,7 @@
 #define LIB_SYNC_INTERNAL_CONDVAR_TEMPLATE_H_
 
 #include <zircon/syscalls.h>
+#include <lib/sync/completion.h>
 #include <lib/sync/mtx.h>
 
 namespace condvar_impl_internal {
@@ -44,12 +45,6 @@ struct MutexOps {
 // Note that this library is used by libc, and as such needs to use
 // '_zx_' function names for syscalls and not the regular 'zx_' names.
 
-enum {
-    UNLOCKED = 0,
-    LOCKED_NO_WAITERS = 1,
-    LOCKED_MAYBE_WAITERS = 2,
-};
-
 static inline void spin() {
 #if defined(__x86_64__)
     __asm__ __volatile__("pause"
@@ -82,31 +77,6 @@ static inline void wait(int* futex, int current_value) {
     }
 }
 
-// TODO(ZX-2882): consider replacing lock()/unlock() etc. with sync_completion
-static inline void lock(int* l) {
-    int old = UNLOCKED;
-    if (!cas(l, &old, LOCKED_NO_WAITERS)) {
-        old = LOCKED_NO_WAITERS;
-        cas(l, &old, LOCKED_MAYBE_WAITERS);
-        do {
-            wait(l, LOCKED_MAYBE_WAITERS);
-            old = UNLOCKED;
-        } while (!cas(l, &old, LOCKED_MAYBE_WAITERS));
-    }
-}
-
-static inline void unlock(int* l) {
-    if (__atomic_exchange_n(l, UNLOCKED, __ATOMIC_SEQ_CST) == LOCKED_MAYBE_WAITERS) {
-        _zx_futex_wake(l, 1);
-    }
-}
-
-static inline void unlock_requeue(int* l, zx_futex_t* r) {
-    __atomic_store_n(l, UNLOCKED, __ATOMIC_SEQ_CST);
-    _zx_futex_requeue(l, /* wake count */ 0, /* l futex value */ UNLOCKED,
-                      r, /* requeue count */ 1);
-}
-
 enum {
     WAITING,
     SIGNALED,
@@ -117,7 +87,7 @@ struct Waiter {
     Waiter* prev = nullptr;
     Waiter* next = nullptr;
     int state = WAITING;
-    int barrier = LOCKED_MAYBE_WAITERS;
+    sync_completion_t ready;
     int* notify = nullptr;
 };
 
@@ -149,7 +119,7 @@ static inline zx_status_t timedwait(Condvar* c, Mutex* mutex, zx_time_t deadline
 
     MutexOps<Mutex>::unlock(mutex);
 
-    // Wait to be signaled.  There are multiple ways this loop could exit:
+    // Wait to be signaled.  There are multiple ways this wait could finish:
     //  1) After being woken by signal().
     //  2) After being woken by a mutex unlock, after we were
     //     requeued from the condvar's futex to the mutex's futex (by
@@ -157,17 +127,7 @@ static inline zx_status_t timedwait(Condvar* c, Mutex* mutex, zx_time_t deadline
     //  3) After a timeout.
     // In the original Linux version of this algorithm, this could also exit
     // when interrupted by an asynchronous signal, but that does not apply on Zircon.
-    zx_status_t status;
-    while (true) {
-        status = _zx_futex_wait(&node.barrier, LOCKED_MAYBE_WAITERS, deadline);
-        if (status == ZX_ERR_TIMED_OUT) {
-            break;
-        }
-        status = ZX_OK;
-        if (__atomic_load_n(&node.barrier, __ATOMIC_SEQ_CST) != LOCKED_MAYBE_WAITERS) {
-            break;
-        }
-    }
+    zx_status_t status = sync_completion_wait_deadline(&node.ready, deadline);
 
     int oldstate = WAITING;
     if (cas(&node.state, &oldstate, LEAVING)) {
@@ -224,13 +184,16 @@ static inline zx_status_t timedwait(Condvar* c, Mutex* mutex, zx_time_t deadline
         return ZX_ERR_TIMED_OUT;
     }
 
-    // Lock barrier first to control wake order
-    lock(&node.barrier);
+    // Since the CAS above failed, we have been signaled.
+    // It could still be the case that sync_completion_wait_deadline() above timed out,
+    // so we need to make sure to wait for the completion to control the wake order.
+    // If the completion has already been signaled, this will return immediately.
+    sync_completion_wait_deadline(&node.ready, ZX_TIME_INFINITE);
 
     // By this point, our part of the waiter list cannot change further.
     // It has been unlinked from the condvar by signal().
     // Any timed out waiters would have removed themselves from the list
-    // before signal() signaled the first node.barrier in our list.
+    // before signal() signaled the first node.ready in our list.
     //
     // It is therefore safe now to read node.next and node.prev without
     // holding c->lock.
@@ -260,10 +223,10 @@ static inline zx_status_t timedwait(Condvar* c, Mutex* mutex, zx_time_t deadline
     }
 
     if (node.prev) {
-        // Unlock the barrier that's holding back the next waiter, and
+        // Signal the completion that's holding back the next waiter, and
         // requeue it to the mutex so that it will be woken when the
         // mutex is unlocked.
-        unlock_requeue(&node.prev->barrier, MutexOps<Mutex>::get_futex(mutex));
+        sync_completion_signal_requeue(&node.prev->ready, MutexOps<Mutex>::get_futex(mutex));
     }
 
     return status;
@@ -317,7 +280,7 @@ static inline void signal(Condvar* c, int n) {
 
     // Allow first signaled waiter, if any, to proceed.
     if (first) {
-        unlock(&first->barrier);
+        sync_completion_signal(&first->ready);
     }
 }
 

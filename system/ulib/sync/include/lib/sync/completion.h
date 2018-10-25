@@ -33,10 +33,19 @@ zx_status_t sync_completion_wait(sync_completion_t* completion, zx_duration_t ti
 // signaled.
 zx_status_t sync_completion_wait_deadline(sync_completion_t* completion, zx_time_t deadline);
 
-// Awakens all waiters on the completion, and marks the it as
+// Awakens all waiters on the completion, and marks it as
 // signaled. Waits after this call but before a reset of the
 // completion will also see the signal and immediately return.
 void sync_completion_signal(sync_completion_t* completion);
+
+// Marks the completion as signaled, but doesn't awaken all waiters
+// right away. Instead, all waiters are requeued to the |futex|.
+// Waits after this call but before a reset of the
+// completion will also see the signal and immediately return.
+//
+// Intended to be used by libsync internally, e.g. the condition variable
+// implementation.
+void sync_completion_signal_requeue(sync_completion_t* completion, zx_futex_t* futex);
 
 // Resets the completion's signaled state to unsignaled.
 void sync_completion_reset(sync_completion_t* completion);

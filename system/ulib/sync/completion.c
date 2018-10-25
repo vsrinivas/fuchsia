@@ -53,6 +53,20 @@ void sync_completion_signal(sync_completion_t* completion) {
     _zx_futex_wake(futex, UINT32_MAX);
 }
 
+void sync_completion_signal_requeue(sync_completion_t* completion, zx_futex_t* futex) {
+    atomic_store(&completion->futex, SIGNALED);
+    // Note that _zx_futex_requeue() will check the value of &completion->futex
+    // and return ZX_ERR_BAD_STATE if it is not SIGNALED. The only way that could
+    // happen is racing with sync_completion_reset(). This is not an intended use
+    // case for this function: we only expect it to be used internally by libsync
+    // and without sync_completion_reset().
+    //
+    // However, if this theoretical scenario actually occurs, we can still safely
+    // ignore the error: there is no point in waking up the waiters since they
+    // would find an UNSIGNALED value and go back to sleep.
+    _zx_futex_requeue(&completion->futex, 0, SIGNALED, futex, UINT32_MAX);
+}
+
 void sync_completion_reset(sync_completion_t* completion) {
     atomic_store(&completion->futex, UNSIGNALED);
 }
