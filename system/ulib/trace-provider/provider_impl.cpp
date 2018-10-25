@@ -11,6 +11,7 @@
 #include <lib/async/default.h>
 #include <lib/fdio/util.h>
 #include <lib/fidl/coding.h>
+#include <lib/zx/process.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
@@ -232,7 +233,15 @@ trace_provider_t* trace_provider_create_with_name(async_dispatcher_t* dispatcher
 }
 
 trace_provider_t* trace_provider_create(async_dispatcher_t* dispatcher) {
-    return trace_provider_create_with_name(dispatcher, "");
+    auto self = zx::process::self();
+    char name[ZX_MAX_NAME_LEN];
+    auto status = self->get_property(ZX_PROP_NAME, name, sizeof(name));
+    if (status != ZX_OK) {
+        fprintf(stderr, "TraceProvider: error getting process name: status=%d(%s)\n",
+                status, zx_status_get_string(status));
+        name[0] = '\0';
+    }
+    return trace_provider_create_with_name(dispatcher, name);
 }
 
 trace_provider_t* trace_provider_create_synchronously(async_dispatcher_t* dispatcher,
