@@ -133,7 +133,7 @@ zx_status_t PlatformProxy::RegisterProtocol(uint32_t proto_id, const void* proto
         args.prop_count = fbl::count_of(props);
 
         status = ProxyDevice::CreateChild(zxdev(), ROOT_DEVICE_ID, fbl::RefPtr<PlatformProxy>(this),
-                                          &args);
+                                          &args, nullptr);
         if (status != ZX_OK) {
             zxlogf(ERROR, "%s: ProxyDevice::Create failed %d\n", __func__, status);
             return status;
