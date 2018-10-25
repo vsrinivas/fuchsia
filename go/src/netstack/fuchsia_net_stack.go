@@ -42,19 +42,8 @@ func getInterfaceInfo(nicid tcpip.NICID, ifs *ifState) *stack.InterfaceInfo {
 		status |= stack.InterfaceStatusEnabled
 	}
 
-	features := []stack.InterfaceFeature{}
-	if ifs.nic.Features&ethernet.InfoFeatureWlan != 0 {
-		features = append(features, stack.InterfaceFeatureWlan)
-	}
-	if ifs.nic.Features&ethernet.InfoFeatureSynth != 0 {
-		features = append(features, stack.InterfaceFeatureSynthetic)
-	}
-	if ifs.nic.Features&ethernet.InfoFeatureLoopback != 0 {
-		features = append(features, stack.InterfaceFeatureLoopback)
-	}
-
 	// TODO(tkilbourn): implement interface addresses
-	addrs := []stack.InterfaceAddress{}
+	addrs := make([]stack.InterfaceAddress, 0, 1)
 	if len(ifs.nic.Addr) > 0 {
 		addrs = append(addrs, stack.InterfaceAddress{
 			IpAddress: fidlconv.ToNetIpAddress(ifs.nic.Addr),
@@ -62,20 +51,20 @@ func getInterfaceInfo(nicid tcpip.NICID, ifs *ifState) *stack.InterfaceInfo {
 		})
 	}
 
-	var mac net.MacAddress
+	var mac *ethernet.MacAddress
 	var path string
 	if eth := ifs.eth; eth != nil {
-		mac.Addr = eth.Info.Mac.Octets
+		mac = &eth.Info.Mac
 		path = eth.Path
 	}
 
 	return &stack.InterfaceInfo{
 		Id:        uint64(nicid),
 		Path:      path,
-		Mac:       &mac,
+		Mac:       mac,
 		Mtu:       uint32(ifs.statsEP.MTU()),
 		Status:    status,
-		Features:  features,
+		Features:  ifs.nic.Features,
 		Addresses: addrs,
 	}
 
