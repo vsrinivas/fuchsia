@@ -600,6 +600,8 @@ uint64_t Adapter::BuildEventMask() {
   ENABLE_EVT(kDisconnectionCompleteEvent);
   ENABLE_EVT(kEncryptionChangeEvent);
   ENABLE_EVT(kEncryptionKeyRefreshCompleteEvent);
+  ENABLE_EVT(kLinkKeyRequestEvent);
+  ENABLE_EVT(kLinkKeyNotificationEvent);
   ENABLE_EVT(kExtendedInquiryResultEvent);
   ENABLE_EVT(kHardwareErrorEvent);
   ENABLE_EVT(kInquiryCompleteEvent);

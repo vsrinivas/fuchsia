@@ -252,6 +252,43 @@ struct RejectConnectionRequestCommandParams {
 // Controller to indicate that this command has been completed. Instead, the
 // Connection Complete event will indicate that this command has been completed.
 
+// ====================================================
+// Link Key Request Reply Command (v1.1) (BR/EDR)
+constexpr OpCode kLinkKeyRequestReply = LinkControlOpCode(0x000B);
+
+struct LinkKeyRequestReplyCommandParams {
+  // BD_ADDR of the peer device the link key is for.
+  common::DeviceAddressBytes bd_addr;
+
+  // Link key to use for the connection with the peer device.
+  uint8_t link_key[16];
+} __PACKED;
+
+struct LinkKeyRequestReplyReturnParams {
+  // See enum StatusCode in hci_constants.h.
+  StatusCode status;
+
+  // BD_ADDR of the device whose Link Key Request was fulfilled.
+  common::DeviceAddressBytes bd_addr;
+} __PACKED;
+
+// =============================================================
+// Link Key Request Negative Reply Command (v1.1) (BR/EDR)
+constexpr OpCode kLinkKeyRequestNegativeReply = LinkControlOpCode(0x000C);
+
+struct LinkKeyRequestNegativeReplyCommandParams {
+  // BD_ADDR of the peer device that the host does not have a link key for.
+  common::DeviceAddressBytes bd_addr;
+} __PACKED;
+
+struct LinkKeyRequestNegativeReplyReturnParams {
+  // See enum StatusCode in hci_constants.h.
+  StatusCode status;
+
+  // BD_ADDR of the device whose Link Key Request was denied.
+  common::DeviceAddressBytes bd_addr;
+} __PACKED;
+
 // ============================================================
 // Read Remote Version Information Command (v1.1) (BR/EDR & LE)
 constexpr OpCode kRemoteNameRequest = LinkControlOpCode(0x0019);
@@ -1120,6 +1157,30 @@ struct NumberOfCompletedPacketsEventParams {
   NumberOfCompletedPacketsEventData data[];
 } __PACKED;
 
+// ========================================
+// Link Key Request Event (v1.1) (BR/EDR)
+constexpr EventCode kLinkKeyRequestEventCode = 0x17;
+
+struct LinkKeyRequestParams {
+  // The address for the device that a host-stored link key is being requested.
+  common::DeviceAddressBytes bd_addr;
+} __PACKED;
+
+// ========================================
+// Link Key Notification Event (v1.1) (BR/EDR)
+constexpr EventCode kLinkKeyNotificationEventCode = 0x18;
+
+struct LinkKeyNotificationEventParams {
+  // The address for the device for which a new link key has been generated.
+  common::DeviceAddressBytes bd_addr;
+
+  // Link key for the associated address.
+  uint8_t link_key[16];
+
+  // Type of key used when pairing.
+  uint8_t key_type;
+} __PACKED;
+
 // ==============================================
 // Inquiry Result with RSSI Event (v1.2) (BR/EDR)
 constexpr EventCode kInquiryResultWithRSSIEventCode = 0x22;
@@ -1231,7 +1292,7 @@ struct EncryptionKeyRefreshCompleteEventParams {
 } __PACKED;
 
 // =============================================
-// IO Capability Request Event (xxx) (BR/EDR)
+// IO Capability Request Event (v2.1 + EDR) (BR/EDR)
 constexpr EventCode kIOCapabilityRequestEventCode = 0x31;
 
 struct IOCapabilityRequestEventParams {
@@ -1240,7 +1301,7 @@ struct IOCapabilityRequestEventParams {
 } __PACKED;
 
 // =============================================
-// IO Capability Response Event (xxx) (BR/EDR)
+// IO Capability Response Event (v2.1 + EDR) (BR/EDR)
 constexpr EventCode kIOCapabilityResponseEventCode = 0x32;
 
 struct IOCapabilityResponseEventParams {

@@ -222,11 +222,28 @@ const auto kReadRemoteExtended2Complete = common::CreateStaticByteBuffer(
     hci::kReadRemoteExtendedFeaturesCompleteEventCode,
     0x0D,                       // parameter_total_size (13 bytes)
     hci::StatusCode::kSuccess,  // status
-    0xAA, 0x0B,                 // conneciton_handle,
+    0xAA, 0x0B,                 // connection_handle,
     0x02,                       // page_number
     0x03,                       // max_page_number (3 pages)
     0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0xFF, 0x00
     // lmp_features  - All the bits should be ignored.
+);
+
+const auto kDisconnect = common::CreateStaticByteBuffer(
+    LowerBits(hci::kDisconnect), UpperBits(hci::kDisconnect),
+    0x03,        // parameter_total_size (3 bytes)
+    0xAA, 0x0B,  // connection_handle
+    0x13         // Reason (Remote User Terminated Connection)
+);
+const auto kDisconnectRsp =
+    COMMAND_STATUS_RSP(hci::kDisconnect, hci::StatusCode::kSuccess);
+
+const auto kDisconnectionComplete = common::CreateStaticByteBuffer(
+    hci::kDisconnectionCompleteEventCode,
+    0x04,                       // parameter_total_size (4 bytes)
+    hci::StatusCode::kSuccess,  // status
+    0xAA, 0x0B,                 // connection_handle
+    0x13                        // Reason (Remote User Terminated Connection)
 );
 
 class BrEdrConnectionManagerTest : public TestingBase {
@@ -299,6 +316,11 @@ class BrEdrConnectionManagerTest : public TestingBase {
     test_device()->QueueCommandTransaction(CommandTransaction(
         kReadRemoteExtended2,
         {&kReadRemoteExtendedFeaturesRsp, &kReadRemoteExtended2Complete}));
+  }
+
+  void QueueDisconnection() const {
+    test_device()->QueueCommandTransaction(CommandTransaction(
+        kDisconnect, {&kDisconnectRsp, &kDisconnectionComplete}));
   }
 
  private:
@@ -379,23 +401,6 @@ TEST_F(GAP_BrEdrConnectionManagerTest, EnableConnectivity) {
 
   EXPECT_EQ(2u, cb_count);
 }
-
-const auto kDisconnect = common::CreateStaticByteBuffer(
-    LowerBits(hci::kDisconnect), UpperBits(hci::kDisconnect),
-    0x03,        // parameter_total_size (3 bytes)
-    0xAA, 0x0B,  // connection_handle
-    0x13         // Reason (Remote User Terminated Connection)
-);
-const auto kDisconnectRsp =
-    COMMAND_STATUS_RSP(hci::kDisconnect, hci::StatusCode::kSuccess);
-
-const auto kDisconnectionComplete = common::CreateStaticByteBuffer(
-    hci::kDisconnectionCompleteEventCode,
-    0x04,                       // parameter_total_size (4 bytes)
-    hci::StatusCode::kSuccess,  // status
-    0xAA, 0x0B,                 // connection_handle
-    0x13                        // Reason (Remote User Terminated Connection)
-);
 
 // Test: An incoming connection request should trigger an acceptance and
 // interrogation should allow a device that only report the first Extended
@@ -499,8 +504,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest,
   EXPECT_EQ(TechnologyType::kDualMode, dev->technology());
 
   // Prepare for disconnection upon teardown.
-  test_device()->QueueCommandTransaction(CommandTransaction(
-      kDisconnect, {&kDisconnectRsp, &kDisconnectionComplete}));
+  QueueDisconnection();
 }
 
 // Test: A remote disconnect should correctly remove the conneection.
@@ -583,15 +587,15 @@ const auto kCapabilitiesRequest =
                                    TEST_DEV_ADDR_BYTES_LE  // address
     );
 
-const auto kCapabilitiesRequestReply =
-    common::CreateStaticByteBuffer(LowerBits(hci::kIOCapabilityRequestReply),
-                                   UpperBits(hci::kIOCapabilityRequestReply),
-                                   0x09,  // parameter_total_size (9 bytes)
-                                   TEST_DEV_ADDR_BYTES_LE,  // peer address
-                                   0x03,  // No input, No output
-                                   0x00,  // No OOB data present
-                                   0x00   // No MITM, No Pairing
-    );
+const auto kCapabilitiesRequestReply = common::CreateStaticByteBuffer(
+    LowerBits(hci::kIOCapabilityRequestReply),
+    UpperBits(hci::kIOCapabilityRequestReply),
+    0x09,                    // parameter_total_size (9 bytes)
+    TEST_DEV_ADDR_BYTES_LE,  // peer address
+    0x03,                    // No input, No output
+    0x00,                    // No OOB data present
+    0x04                     // MITM Protection Not Required – General Bonding
+);
 
 const auto kCapabilitiesRequestReplyRsp =
     common::CreateStaticByteBuffer(hci::kCommandCompleteEventCode, 0x0A, 0xF0,
@@ -644,6 +648,228 @@ TEST_F(GAP_BrEdrConnectionManagerTest, ConfirmationRequest) {
   EXPECT_EQ(1, transaction_count());
 }
 
+const auto kLinkKeyRequest =
+    common::CreateStaticByteBuffer(hci::kLinkKeyRequestEventCode,
+                                   0x06,  // parameter_total_size (6 bytes)
+                                   TEST_DEV_ADDR_BYTES_LE  // peer address
+    );
+
+const auto kLinkKeyRequestNegativeReply =
+    common::CreateStaticByteBuffer(LowerBits(hci::kLinkKeyRequestNegativeReply),
+                                   UpperBits(hci::kLinkKeyRequestNegativeReply),
+                                   0x06,  // parameter_total_size (6 bytes)
+                                   TEST_DEV_ADDR_BYTES_LE  // peer address
+    );
+
+const auto kLinkKeyRequestNegativeReplyRsp =
+    common::CreateStaticByteBuffer(hci::kCommandCompleteEventCode, 0x0A, 0xF0,
+                                   LowerBits(hci::kLinkKeyRequestNegativeReply),
+                                   UpperBits(hci::kLinkKeyRequestNegativeReply),
+                                   hci::kSuccess,          // status
+                                   TEST_DEV_ADDR_BYTES_LE  // peer address
+    );
+
+// Test: replies negative to Link Key Requests for unknown and unbonded devices
+TEST_F(GAP_BrEdrConnectionManagerTest, LinkKeyRequestAndNegativeReply) {
+  test_device()->QueueCommandTransaction(kLinkKeyRequestNegativeReply,
+                                         {&kLinkKeyRequestNegativeReplyRsp});
+
+  test_device()->SendCommandChannelPacket(kLinkKeyRequest);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(1, transaction_count());
+
+  QueueSuccessfulIncomingConn();
+
+  test_device()->SendCommandChannelPacket(kConnectionRequest);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(7, transaction_count());
+
+  auto* dev = device_cache()->FindDeviceByAddress(kTestDevAddr);
+  ASSERT_TRUE(dev);
+  ASSERT_TRUE(dev->connected());
+  ASSERT_FALSE(dev->bonded());
+
+  test_device()->QueueCommandTransaction(kLinkKeyRequestNegativeReply,
+                                         {&kLinkKeyRequestNegativeReplyRsp});
+
+  test_device()->SendCommandChannelPacket(kLinkKeyRequest);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(8, transaction_count());
+
+  QueueDisconnection();
+}
+
+const auto kLinkKeyNotification = common::CreateStaticByteBuffer(
+    hci::kLinkKeyNotificationEventCode,
+    0x17,                    // parameter_total_size (17 bytes)
+    TEST_DEV_ADDR_BYTES_LE,  // peer address
+    0xc0, 0xde, 0xfa, 0x57, 0x4b, 0xad, 0xf0, 0x0d, 0xa7, 0x60, 0x06, 0x1e,
+    0xca, 0x1e, 0xca, 0xfe,  // link key
+    0x04  // key type (Unauthenticated Combination Key generated from P-192)
+);
+
+const auto kLinkKeyRequestReply = common::CreateStaticByteBuffer(
+    LowerBits(hci::kLinkKeyRequestReply), UpperBits(hci::kLinkKeyRequestReply),
+    0x16,                    // parameter_total_size (22 bytes)
+    TEST_DEV_ADDR_BYTES_LE,  // peer address
+    0xc0, 0xde, 0xfa, 0x57, 0x4b, 0xad, 0xf0, 0x0d, 0xa7, 0x60, 0x06, 0x1e,
+    0xca, 0x1e, 0xca, 0xfe  // link key
+);
+
+const auto kLinkKeyRequestReplyRsp = common::CreateStaticByteBuffer(
+    hci::kCommandCompleteEventCode, 0x0A, 0xF0,
+    LowerBits(hci::kLinkKeyRequestReply), UpperBits(hci::kLinkKeyRequestReply),
+    hci::kSuccess,          // status
+    TEST_DEV_ADDR_BYTES_LE  // peer address
+);
+
+const auto kLinkKeyNotificationChanged = common::CreateStaticByteBuffer(
+    hci::kLinkKeyNotificationEventCode,
+    0x17,                    // parameter_total_size (17 bytes)
+    TEST_DEV_ADDR_BYTES_LE,  // peer address
+    0xfa, 0xce, 0xb0, 0x0c, 0xa5, 0x1c, 0xcd, 0x15, 0xea, 0x5e, 0xfe, 0xdb,
+    0x1d, 0x0d, 0x0a, 0xd5,  // link key
+    0x06                     // key type (Changed Combination Key)
+);
+
+const auto kLinkKeyRequestReplyChanged = common::CreateStaticByteBuffer(
+    LowerBits(hci::kLinkKeyRequestReply), UpperBits(hci::kLinkKeyRequestReply),
+    0x16,                    // parameter_total_size (22 bytes)
+    TEST_DEV_ADDR_BYTES_LE,  // peer address
+    0xfa, 0xce, 0xb0, 0x0c, 0xa5, 0x1c, 0xcd, 0x15, 0xea, 0x5e, 0xfe, 0xdb,
+    0x1d, 0x0d, 0x0a, 0xd5  // link key
+);
+
+// Test: stores and recalls link key for a remote device
+TEST_F(GAP_BrEdrConnectionManagerTest, BondRemoteDevice) {
+  QueueSuccessfulIncomingConn();
+
+  test_device()->SendCommandChannelPacket(kConnectionRequest);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(6, transaction_count());
+
+  auto* dev = device_cache()->FindDeviceByAddress(kTestDevAddr);
+  ASSERT_TRUE(dev);
+  ASSERT_TRUE(dev->connected());
+  ASSERT_FALSE(dev->bonded());
+
+  test_device()->SendCommandChannelPacket(kLinkKeyNotification);
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(dev->bonded());
+
+  test_device()->QueueCommandTransaction(kLinkKeyRequestReply,
+                                         {&kLinkKeyRequestReplyRsp});
+
+  test_device()->SendCommandChannelPacket(kLinkKeyRequest);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(7, transaction_count());
+
+  // Change the link key.
+  test_device()->SendCommandChannelPacket(kLinkKeyNotificationChanged);
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(dev->bonded());
+
+  test_device()->QueueCommandTransaction(kLinkKeyRequestReplyChanged,
+                                         {&kLinkKeyRequestReplyRsp});
+
+  test_device()->SendCommandChannelPacket(kLinkKeyRequest);
+
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(dev->bonded());
+  EXPECT_EQ(8, transaction_count());
+
+  QueueDisconnection();
+}
+
+// Test: can't change the link key of an unbonded device
+TEST_F(GAP_BrEdrConnectionManagerTest, UnbondedDeviceChangeLinkKey) {
+  QueueSuccessfulIncomingConn();
+
+  test_device()->SendCommandChannelPacket(kConnectionRequest);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(6, transaction_count());
+
+  auto* dev = device_cache()->FindDeviceByAddress(kTestDevAddr);
+  ASSERT_TRUE(dev);
+  ASSERT_TRUE(dev->connected());
+  ASSERT_FALSE(dev->bonded());
+
+  // Change the link key.
+  test_device()->SendCommandChannelPacket(kLinkKeyNotificationChanged);
+
+  RunLoopUntilIdle();
+  EXPECT_FALSE(dev->bonded());
+
+  test_device()->QueueCommandTransaction(kLinkKeyRequestNegativeReply,
+                                         {&kLinkKeyRequestReplyRsp});
+
+  test_device()->SendCommandChannelPacket(kLinkKeyRequest);
+
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(dev->bonded());
+  EXPECT_EQ(7, transaction_count());
+
+  QueueDisconnection();
+}
+
+const auto kLinkKeyNotificationLegacy = common::CreateStaticByteBuffer(
+    hci::kLinkKeyNotificationEventCode,
+    0x17,                    // parameter_total_size (17 bytes)
+    TEST_DEV_ADDR_BYTES_LE,  // peer address
+    0x41, 0x33, 0x7c, 0x0d, 0xef, 0xee, 0xda, 0xda, 0xba, 0xad, 0x0f, 0xf1,
+    0xce, 0xc0, 0xff, 0xee,  // link key
+    0x00                     // key type (Combination Key)
+);
+
+// Test: don't bond if the link key resulted from legacy pairing
+TEST_F(GAP_BrEdrConnectionManagerTest, LegacyLinkKeyNotBonded) {
+  QueueSuccessfulIncomingConn();
+
+  test_device()->SendCommandChannelPacket(kConnectionRequest);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(6, transaction_count());
+
+  auto* dev = device_cache()->FindDeviceByAddress(kTestDevAddr);
+  ASSERT_TRUE(dev);
+  ASSERT_TRUE(dev->connected());
+  ASSERT_FALSE(dev->bonded());
+
+  test_device()->SendCommandChannelPacket(kLinkKeyNotificationLegacy);
+
+  RunLoopUntilIdle();
+  EXPECT_FALSE(dev->bonded());
+
+  test_device()->QueueCommandTransaction(kLinkKeyRequestNegativeReply,
+                                         {&kLinkKeyRequestReplyRsp});
+
+  test_device()->SendCommandChannelPacket(kLinkKeyRequest);
+
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(dev->bonded());
+  EXPECT_EQ(7, transaction_count());
+
+  QueueDisconnection();
+}
+
 // Test: if L2CAP gets a link error, we disconnect the connection
 TEST_F(GAP_BrEdrConnectionManagerTest, DisconnectOnLinkError) {
   QueueSuccessfulIncomingConn();
@@ -655,8 +881,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, DisconnectOnLinkError) {
   EXPECT_EQ(6, transaction_count());
 
   // When we deallocate the connection manager next, we should disconnect.
-  test_device()->QueueCommandTransaction(CommandTransaction(
-      kDisconnect, {&kDisconnectRsp, &kDisconnectionComplete}));
+  QueueDisconnection();
 
   data_domain()->TriggerLinkError(kConnectionHandle);
 

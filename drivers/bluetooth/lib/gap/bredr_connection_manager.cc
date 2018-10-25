@@ -100,6 +100,12 @@ BrEdrConnectionManager::BrEdrConnectionManager(
   disconn_cmpl_handler_id_ = AddEventHandler(
       hci::kDisconnectionCompleteEventCode,
       fbl::BindMember(this, &BrEdrConnectionManager::OnDisconnectionComplete));
+  link_key_request_handler_id_ = AddEventHandler(
+      hci::kLinkKeyRequestEventCode,
+      fbl::BindMember(this, &BrEdrConnectionManager::OnLinkKeyRequest));
+  link_key_notification_handler_id_ = AddEventHandler(
+      hci::kLinkKeyNotificationEventCode,
+      fbl::BindMember(this, &BrEdrConnectionManager::OnLinkKeyNotification));
   io_cap_req_handler_id_ = AddEventHandler(
       hci::kIOCapabilityRequestEventCode,
       fbl::BindMember(this, &BrEdrConnectionManager::OnIOCapabilitiesRequest));
@@ -116,6 +122,9 @@ BrEdrConnectionManager::~BrEdrConnectionManager() {
   hci_->command_channel()->RemoveEventHandler(conn_request_handler_id_);
   hci_->command_channel()->RemoveEventHandler(conn_complete_handler_id_);
   hci_->command_channel()->RemoveEventHandler(disconn_cmpl_handler_id_);
+  hci_->command_channel()->RemoveEventHandler(link_key_request_handler_id_);
+  hci_->command_channel()->RemoveEventHandler(
+      link_key_notification_handler_id_);
   hci_->command_channel()->RemoveEventHandler(io_cap_req_handler_id_);
   hci_->command_channel()->RemoveEventHandler(user_conf_handler_id_);
 }
@@ -400,6 +409,106 @@ void BrEdrConnectionManager::OnDisconnectionComplete(
   conn->set_closed();
 }
 
+void BrEdrConnectionManager::OnLinkKeyRequest(const hci::EventPacket& event) {
+  ZX_DEBUG_ASSERT(event.event_code() == hci::kLinkKeyRequestEventCode);
+  const auto& params = event.view().payload<hci::LinkKeyRequestParams>();
+
+  common::DeviceAddress addr(common::DeviceAddress::Type::kBREDR,
+                             params.bd_addr);
+
+  auto* device = cache_->FindDeviceByAddress(addr);
+  if (!device || !device->bredr()->bonded()) {
+    bt_log(INFO, "gap-bredr", "no known peer with address %s found",
+           addr.ToString().c_str());
+
+    auto reply = hci::CommandPacket::New(
+        hci::kLinkKeyRequestNegativeReply,
+        sizeof(hci::LinkKeyRequestNegativeReplyCommandParams));
+    auto reply_params =
+        reply->mutable_view()
+            ->mutable_payload<hci::LinkKeyRequestNegativeReplyCommandParams>();
+
+    reply_params->bd_addr = params.bd_addr;
+
+    hci_->command_channel()->SendCommand(std::move(reply), dispatcher_,
+                                         nullptr);
+    return;
+  }
+
+  bt_log(INFO, "gap-bredr", "recalling link key for bonded peer %s",
+         device->identifier().c_str());
+
+  auto reply = hci::CommandPacket::New(
+      hci::kLinkKeyRequestReply, sizeof(hci::LinkKeyRequestReplyCommandParams));
+  auto reply_params =
+      reply->mutable_view()
+          ->mutable_payload<hci::LinkKeyRequestReplyCommandParams>();
+
+  reply_params->bd_addr = params.bd_addr;
+  const sm::LTK& link_key = *device->bredr()->link_key();
+  ZX_DEBUG_ASSERT(link_key.security().enc_key_size() == 16);
+  const auto& key_value = link_key.key().value();
+  std::copy(key_value.begin(), key_value.end(), reply_params->link_key);
+
+  hci_->command_channel()->SendCommand(
+      std::move(reply), dispatcher_, [](auto, const hci::EventPacket& event) {
+        bt_log(SPEW, "gap-bredr", "completed Link Key Request Reply");
+      });
+}
+
+void BrEdrConnectionManager::OnLinkKeyNotification(
+    const hci::EventPacket& event) {
+  ZX_DEBUG_ASSERT(event.event_code() == hci::kLinkKeyNotificationEventCode);
+  const auto& params =
+      event.view().payload<hci::LinkKeyNotificationEventParams>();
+
+  common::DeviceAddress addr(common::DeviceAddress::Type::kBREDR,
+                             params.bd_addr);
+
+  bt_log(TRACE, "gap-bredr", "got link key (type %u) for address %s",
+         params.key_type, addr.ToString().c_str());
+
+  auto* device = cache_->FindDeviceByAddress(addr);
+  if (!device) {
+    bt_log(WARN, "gap-bredr",
+           "no known peer with address %s found; link key not stored",
+           addr.ToString().c_str());
+    return;
+  }
+
+  const auto key_type = static_cast<hci::LinkKeyType>(params.key_type);
+  sm::SecurityProperties sec_props;
+  if (key_type == hci::LinkKeyType::kChangedCombination) {
+    if (!device->bredr() || !device->bredr()->bonded()) {
+      bt_log(WARN, "gap-bredr", "can't update link key of unbonded peer %s",
+             device->identifier().c_str());
+      return;
+    }
+
+    // Reuse current properties
+    ZX_DEBUG_ASSERT(device->bredr()->link_key());
+    sec_props = device->bredr()->link_key()->security();
+  } else {
+    sec_props = sm::SecurityProperties(key_type);
+  }
+
+  if (sec_props.level() == sm::SecurityLevel::kNoSecurity) {
+    bt_log(WARN, "gap-bredr",
+           "link key for peer %s has insufficient security; not stored",
+           device->identifier().c_str());
+    return;
+  }
+
+  common::UInt128 key_value;
+  std::copy(params.link_key, &params.link_key[key_value.size()],
+            key_value.begin());
+  sm::LTK key(sec_props, hci::LinkKey(key_value, 0, 0));
+  if (!cache_->StoreBrEdrBond(addr, key)) {
+    bt_log(ERROR, "gap-bredr", "failed to cache bonding data (id: %s)",
+           device->identifier().c_str());
+  }
+}
+
 void BrEdrConnectionManager::OnIOCapabilitiesRequest(
     const hci::EventPacket& event) {
   ZX_DEBUG_ASSERT(event.event_code() == hci::kIOCapabilityRequestEventCode);
@@ -414,13 +523,13 @@ void BrEdrConnectionManager::OnIOCapabilitiesRequest(
           ->mutable_payload<hci::IOCapabilityRequestReplyCommandParams>();
 
   reply_params->bd_addr = params.bd_addr;
-  // TODO(jamuraa, NET-882): ask the PairingDelegate if it's set what the IO
+  // TODO(jamuraa, BT-169): ask the PairingDelegate if it's set what the IO
   // capabilities it has.
   reply_params->io_capability = hci::IOCapability::kNoInputNoOutput;
-  // TODO(NET-1155): Add OOB status from RemoteDeviceCache.
+  // TODO(BT-8): Add OOB status from RemoteDeviceCache.
   reply_params->oob_data_present = 0x00;  // None present.
-  // TODO(jamuraa): Determine this based on the service requirements.
-  reply_params->auth_requirements = hci::AuthRequirements::kNoBonding;
+  // TODO(BT-656): Determine this based on the service requirements.
+  reply_params->auth_requirements = hci::AuthRequirements::kGeneralBonding;
 
   hci_->command_channel()->SendCommand(std::move(reply), dispatcher_, nullptr);
 }
@@ -434,7 +543,7 @@ void BrEdrConnectionManager::OnUserConfirmationRequest(
   bt_log(INFO, "gap-bredr", "auto-confirming pairing from %s (%lu)",
          params.bd_addr.ToString().c_str(), params.numeric_value);
 
-  // TODO(jamuraa, NET-882): if we are not NoInput/NoOutput then we need to ask
+  // TODO(jamuraa, BT-169): if we are not NoInput/NoOutput then we need to ask
   // the pairing delegate.  This currently will auto accept any pairing
   // (JustWorks)
   auto reply = hci::CommandPacket::New(

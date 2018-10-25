@@ -65,19 +65,13 @@ class BrEdrConnectionManager final {
   hci::CommandChannel::EventHandlerId AddEventHandler(
       const hci::EventCode& code, hci::CommandChannel::EventCallback cb);
 
-  // Called when a ConnectionRequest event is received.
+  // Callbacks for registered events
   void OnConnectionRequest(const hci::EventPacket& event);
-
-  // Called when a ConnectionComplete event is received.
   void OnConnectionComplete(const hci::EventPacket& event);
-
-  // Called when a DisconnectComplete event is received.
   void OnDisconnectionComplete(const hci::EventPacket& event);
-
-  // Called when an IO Capabilies Reqeust event is received.
+  void OnLinkKeyRequest(const hci::EventPacket& event);
+  void OnLinkKeyNotification(const hci::EventPacket& event);
   void OnIOCapabilitiesRequest(const hci::EventPacket& event);
-
-  // Called when an User Confirmation Reqeust event is received.
   void OnUserConfirmationRequest(const hci::EventPacket& event);
 
   fxl::RefPtr<hci::Transport> hci_;
@@ -102,6 +96,8 @@ class BrEdrConnectionManager final {
   hci::CommandChannel::EventHandlerId disconn_cmpl_handler_id_;
 
   // Handler IDs for pairing events
+  hci::CommandChannel::EventHandlerId link_key_request_handler_id_;
+  hci::CommandChannel::EventHandlerId link_key_notification_handler_id_;
   hci::CommandChannel::EventHandlerId io_cap_req_handler_id_;
   hci::CommandChannel::EventHandlerId user_conf_handler_id_;
 
