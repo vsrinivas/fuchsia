@@ -138,7 +138,7 @@ void Interrupts::EnableHotplugInterrupts() {
 zx_status_t Interrupts::SetInterruptCallback(const zx_intel_gpu_core_interrupt_t* callback,
                                              uint32_t interrupt_mask) {
     fbl::AutoLock lock(&lock_);
-    if (callback != nullptr && interrupt_cb_.callback != nullptr) {
+    if (callback->callback != nullptr && interrupt_cb_.callback != nullptr) {
         return ZX_ERR_ALREADY_BOUND;
     }
     interrupt_cb_ = *callback;
