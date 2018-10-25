@@ -12,6 +12,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/binding.c \
     $(LOCAL_DIR)/aml-mipi.cpp \
     $(LOCAL_DIR)/aml-mipi-adap.cpp \
+    $(LOCAL_DIR)/aml-mipi-debug.cpp \
 
 MODULE_HEADER_DEPS := \
     system/dev/lib/amlogic

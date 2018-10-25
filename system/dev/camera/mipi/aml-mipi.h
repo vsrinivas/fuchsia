@@ -5,8 +5,8 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/mipicsi.h>
 #include <ddk/protocol/platform-bus.h>
-#include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/platform-device-lib.h>
+#include <ddk/protocol/platform-device.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
 #include <fbl/atomic.h>
@@ -91,6 +91,16 @@ private:
     void InitMipiClock();
     void PowerUpIsp();
     void IspHWReset(bool reset);
+
+    // Debug.
+    void DumpCsiPhyRegs();
+    void DumpAPhyRegs();
+    void DumpHostRegs();
+    void DumpFrontEndRegs();
+    void DumpReaderRegs();
+    void DumpAlignRegs();
+    void DumpPixelRegs();
+    void DumpMiscRegs();
 };
 
 } // namespace camera
