@@ -98,7 +98,7 @@ optional arguments:
   --dir=BUILD_DIR       Path to the build directory to use when running COMMAND.
                         If specified, FILE is ignored.
   -d=DEVICE_NAME        Target a specific device. DEVICE_NAME may be a Fuchsia
-                        device name. Note: `fx set-device` can be used to set a
+                        device name. Note: "fx set-device" can be used to set a
                         default DEVICE_NAME for a BUILD_DIR.
   -i                    Iterative mode.  Repeat the command whenever a file is
                         modified under your Fuchsia directory, not including
