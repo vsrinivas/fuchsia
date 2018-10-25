@@ -46,7 +46,7 @@ struct MutexOps {
 
 enum {
     UNLOCKED = 0,
-    LOCKED_NO_WAITERS = 0,
+    LOCKED_NO_WAITERS = 1,
     LOCKED_MAYBE_WAITERS = 2,
 };
 
