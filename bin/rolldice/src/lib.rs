@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use rand::{Rand, Rng};
+use rand::Rng;
+use rand::distributions::{Distribution, Standard};
 use std::fmt;
 use std::iter::Iterator;
 
@@ -22,8 +23,8 @@ pub enum RollResult {
     Six,
 }
 
-impl Rand for RollResult {
-    fn rand<R: Rng>(rng: &mut R) -> RollResult {
+impl Distribution<RollResult> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> RollResult {
         match rng.gen_range(0, 6) {
             0 => RollResult::One,
             1 => RollResult::Two,

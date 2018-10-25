@@ -18,6 +18,7 @@ use futures::future;
 use futures::prelude::*;
 use log::warn;
 use rand::{thread_rng, Rng};
+use rand::distributions::Alphanumeric;
 use std::time::Duration;
 
 const TOKEN_LIFETIME: Duration = Duration::from_secs(3600); // one hour lifetime
@@ -32,7 +33,7 @@ const RANDOM_STRING_LENGTH: usize = 10;
 /// for creating unique tokens or id.
 fn generate_random_string() -> String {
     thread_rng()
-        .gen_ascii_chars()
+        .sample_iter(&Alphanumeric)
         .take(RANDOM_STRING_LENGTH)
         .collect()
 }

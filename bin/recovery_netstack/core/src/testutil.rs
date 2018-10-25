@@ -7,6 +7,7 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
+use byteorder::{ByteOrder, NativeEndian};
 use rand::{SeedableRng, XorShiftRng};
 
 use crate::device::{DeviceId, DeviceLayerEventDispatcher};
@@ -15,17 +16,17 @@ use crate::transport::TransportLayerEventDispatcher;
 use crate::{handle_timeout, Context, EventDispatcher, TimerId};
 
 /// Create a new deterministic RNG from a seed.
-pub fn new_rng(mut seed: u64) -> impl SeedableRng<[u32; 4]> {
+pub fn new_rng(mut seed: u64) -> XorShiftRng {
     if seed == 0 {
         // XorShiftRng can't take 0 seeds
         seed = 1;
     }
-    XorShiftRng::from_seed([
-        seed as u32,
-        (seed >> 32) as u32,
-        seed as u32,
-        (seed >> 32) as u32,
-    ])
+    let mut bytes = [0; 16];
+    NativeEndian::write_u32(&mut bytes[0..4], seed as u32);
+    NativeEndian::write_u32(&mut bytes[4..8], (seed >> 32) as u32);
+    NativeEndian::write_u32(&mut bytes[8..12], seed as u32);
+    NativeEndian::write_u32(&mut bytes[12..16], (seed >> 32) as u32);
+    XorShiftRng::from_seed(bytes)
 }
 
 #[derive(Default, Debug)]
