@@ -68,3 +68,15 @@ MODULE_SRCS := $(LOCAL_DIR)/tftp.c
 MODULE_COMPILEFLAGS := -DTFTP_EFILIB
 
 include make/module.mk
+
+MODULE := $(LOCAL_DIR).fuzztest
+
+MODULE_TYPE := fuzztest
+
+MODULE_SRCS := $(LOCAL_DIR)/tftp-fuzztest.cpp
+
+MODULE_STATIC_LIBS := system/ulib/tftp system/ulib/fbl system/ulib/zxcpp
+
+MODULE_LIBS := system/ulib/fdio system/ulib/c
+
+include make/module.mk
