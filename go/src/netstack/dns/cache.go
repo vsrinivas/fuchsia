@@ -41,30 +41,29 @@ func (entry *cacheEntry) isDanglingCNAME(cache *cacheInfo) bool {
 // The full cache.
 type cacheInfo struct {
 	mu         sync.Mutex
-	m          map[string][]*cacheEntry
+	m          map[string][]cacheEntry
 	numEntries int
 }
 
 func newCache() cacheInfo {
-	return cacheInfo{m: make(map[string][]*cacheEntry)}
+	return cacheInfo{m: make(map[string][]cacheEntry)}
 }
 
 // Returns a list of Resources that match the given Question (same class and type and matching domain name).
 func (cache *cacheInfo) lookup(question *dnsmessage.Question) []dnsmessage.Resource {
 	entries := cache.m[question.Name]
 
-	rrs := []dnsmessage.Resource{}
+	rrs := make([]dnsmessage.Resource, 0, len(entries))
 	for _, entry := range entries {
 		h := entry.rr.Header()
 		if h.Class == question.Class && h.Name == question.Name {
 			switch rr := entry.rr.(type) {
 			case *dnsmessage.CNAMEResource:
-				cnamerrs := cache.lookup(&dnsmessage.Question{
+				rrs = append(rrs, cache.lookup(&dnsmessage.Question{
 					Name:  rr.CNAME,
 					Class: question.Class,
 					Type:  question.Type,
-				})
-				rrs = append(rrs, cnamerrs...)
+				})...)
 			default:
 				if h.Type == question.Type {
 					rrs = append(rrs, rr)
@@ -95,10 +94,10 @@ func resourceEqual(r1 dnsmessage.Resource, r2 dnsmessage.Resource) bool {
 }
 
 // Searches `entries` for an exact resource match, returning the entry if found.
-func findExact(entries []*cacheEntry, rr dnsmessage.Resource) *cacheEntry {
-	for _, entry := range entries {
+func findExact(entries []cacheEntry, rr dnsmessage.Resource) *cacheEntry {
+	for i, entry := range entries {
 		if resourceEqual(entry.rr, rr) {
-			return entry
+			return &entries[i]
 		}
 	}
 	return nil
@@ -150,7 +149,7 @@ func (cache *cacheInfo) insert(rr dnsmessage.Resource) {
 		if debug {
 			log.Printf("DNS cache insert: %v(%v) expires %v", h.Name, h.Type, newEntry.ttd)
 		}
-		cache.m[h.Name] = append(entries, &newEntry)
+		cache.m[h.Name] = append(entries, newEntry)
 		cache.numEntries++
 	} else {
 		// TODO(mpcomplete): might be better to evict the LRU entry instead.
