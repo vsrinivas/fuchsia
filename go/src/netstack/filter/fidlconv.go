@@ -97,20 +97,22 @@ func toTransProto(o net.SocketProtocol) (tcpip.TransportProtocolNumber, error) {
 }
 
 func fromAddress(o tcpip.Address) (*net.IpAddress, error) {
-	addr := &net.IpAddress{}
 	switch len(o) {
 	case 4:
+		addr := &net.IpAddress{}
 		ipv4 := net.IPv4Address{}
 		copy(ipv4.Addr[:], o)
 		addr.SetIpv4(ipv4)
+		return addr, nil
 	case 16:
+		addr := &net.IpAddress{}
 		ipv6 := net.IPv6Address{}
 		copy(ipv6.Addr[:], o)
 		addr.SetIpv6(ipv6)
+		return addr, nil
 	default:
-		return addr, ErrUnknownAddressType
+		return nil, ErrUnknownAddressType
 	}
-	return addr, nil
 }
 
 func toAddress(o *net.IpAddress) (tcpip.Address, error) {
@@ -127,7 +129,7 @@ func toAddress(o *net.IpAddress) (tcpip.Address, error) {
 func fromSubnet(o *tcpip.Subnet) (*net.Subnet, error) {
 	addr, err := fromAddress(o.ID())
 	if err != nil {
-		return &net.Subnet{}, ErrBadAddress
+		return nil, ErrBadAddress
 	}
 	return &net.Subnet{
 		Addr:      *addr,
@@ -138,7 +140,7 @@ func fromSubnet(o *tcpip.Subnet) (*net.Subnet, error) {
 func toSubnet(o *net.Subnet) (*tcpip.Subnet, error) {
 	addr, err := toAddress(&o.Addr)
 	if err != nil {
-		return &tcpip.Subnet{}, ErrBadAddress
+		return nil, ErrBadAddress
 	}
 	mask := util.CIDRMask(int(o.PrefixLen), 8*len(addr))
 	subnet, err := tcpip.NewSubnet(addr, mask)
@@ -148,15 +150,15 @@ func toSubnet(o *net.Subnet) (*tcpip.Subnet, error) {
 func fromRule(o *Rule) (*filter.Rule, error) {
 	action, err := fromAction(o.action)
 	if err != nil {
-		return &filter.Rule{}, err
+		return nil, err
 	}
 	direction, err := fromDirection(o.direction)
 	if err != nil {
-		return &filter.Rule{}, err
+		return nil, err
 	}
 	transProto, err := fromTransProto(o.transProto)
 	if err != nil {
-		return &filter.Rule{}, err
+		return nil, err
 	}
 	var srcSubnet, dstSubnet *net.Subnet
 	if o.srcSubnet == nil {
@@ -164,7 +166,7 @@ func fromRule(o *Rule) (*filter.Rule, error) {
 	} else {
 		srcSubnet, err = fromSubnet(o.srcSubnet)
 		if err != nil {
-			return &filter.Rule{}, err
+			return nil, err
 		}
 	}
 	if o.dstSubnet == nil {
@@ -172,7 +174,7 @@ func fromRule(o *Rule) (*filter.Rule, error) {
 	} else {
 		dstSubnet, err = fromSubnet(o.dstSubnet)
 		if err != nil {
-			return &filter.Rule{}, err
+			return nil, err
 		}
 	}
 	return &filter.Rule{
@@ -195,15 +197,15 @@ func fromRule(o *Rule) (*filter.Rule, error) {
 func toRule(o *filter.Rule) (*Rule, error) {
 	action, err := toAction(o.Action)
 	if err != nil {
-		return &Rule{}, err
+		return nil, err
 	}
 	direction, err := toDirection(o.Direction)
 	if err != nil {
-		return &Rule{}, err
+		return nil, err
 	}
 	transProto, err := toTransProto(o.Proto)
 	if err != nil {
-		return &Rule{}, err
+		return nil, err
 	}
 	var srcSubnet, dstSubnet *tcpip.Subnet
 	if o.SrcSubnet == nil {
@@ -211,7 +213,7 @@ func toRule(o *filter.Rule) (*Rule, error) {
 	} else {
 		srcSubnet, err = toSubnet(o.SrcSubnet)
 		if err != nil {
-			return &Rule{}, err
+			return nil, err
 		}
 	}
 	if o.DstSubnet == nil {
@@ -219,7 +221,7 @@ func toRule(o *filter.Rule) (*Rule, error) {
 	} else {
 		dstSubnet, err = toSubnet(o.DstSubnet)
 		if err != nil {
-			return &Rule{}, err
+			return nil, err
 		}
 	}
 	return &Rule{
@@ -244,7 +246,7 @@ func fromRules(rs []*Rule) ([]filter.Rule, error) {
 	for _, r := range rs {
 		nr, err := fromRule(r)
 		if err != nil {
-			return []filter.Rule{}, err
+			return nil, err
 		}
 		nrs = append(nrs, *nr)
 	}
@@ -256,7 +258,7 @@ func toRules(nrs []filter.Rule) ([]*Rule, error) {
 	for _, nr := range nrs {
 		r, err := toRule(&nr)
 		if err != nil {
-			return []*Rule{}, err
+			return nil, err
 		}
 		rs = append(rs, r)
 	}
@@ -266,15 +268,15 @@ func toRules(nrs []filter.Rule) ([]*Rule, error) {
 func fromNAT(o *NAT) (*filter.Nat, error) {
 	transProto, err := fromTransProto(o.transProto)
 	if err != nil {
-		return &filter.Nat{}, err
+		return nil, err
 	}
 	srcSubnet, err := fromSubnet(o.srcSubnet)
 	if err != nil {
-		return &filter.Nat{}, err
+		return nil, err
 	}
 	newSrcAddr, err := fromAddress(o.newSrcAddr)
 	if err != nil {
-		return &filter.Nat{}, err
+		return nil, err
 	}
 	return &filter.Nat{
 		Proto:      transProto,
@@ -287,15 +289,15 @@ func fromNAT(o *NAT) (*filter.Nat, error) {
 func toNAT(o *filter.Nat) (*NAT, error) {
 	transProto, err := toTransProto(o.Proto)
 	if err != nil {
-		return &NAT{}, err
+		return nil, err
 	}
 	srcSubnet, err := toSubnet(&o.SrcSubnet)
 	if err != nil {
-		return &NAT{}, err
+		return nil, err
 	}
 	newSrcAddr, err := toAddress(&o.NewSrcAddr)
 	if err != nil {
-		return &NAT{}, err
+		return nil, err
 	}
 	return &NAT{
 		transProto: transProto,
@@ -310,7 +312,7 @@ func fromNATs(ns []*NAT) ([]filter.Nat, error) {
 	for _, n := range ns {
 		nn, err := fromNAT(n)
 		if err != nil {
-			return []filter.Nat{}, err
+			return nil, err
 		}
 		nns = append(nns, *nn)
 	}
@@ -322,7 +324,7 @@ func toNATs(nns []filter.Nat) ([]*NAT, error) {
 	for _, nn := range nns {
 		n, err := toNAT(&nn)
 		if err != nil {
-			return []*NAT{}, err
+			return nil, err
 		}
 		ns = append(ns, n)
 	}
@@ -332,15 +334,15 @@ func toNATs(nns []filter.Nat) ([]*NAT, error) {
 func fromRDR(o *RDR) (*filter.Rdr, error) {
 	transProto, err := fromTransProto(o.transProto)
 	if err != nil {
-		return &filter.Rdr{}, err
+		return nil, err
 	}
 	dstAddr, err := fromAddress(o.dstAddr)
 	if err != nil {
-		return &filter.Rdr{}, err
+		return nil, err
 	}
 	newDstAddr, err := fromAddress(o.newDstAddr)
 	if err != nil {
-		return &filter.Rdr{}, err
+		return nil, err
 	}
 	return &filter.Rdr{
 		Proto:      transProto,
@@ -355,15 +357,15 @@ func fromRDR(o *RDR) (*filter.Rdr, error) {
 func toRDR(o *filter.Rdr) (*RDR, error) {
 	transProto, err := toTransProto(o.Proto)
 	if err != nil {
-		return &RDR{}, err
+		return nil, err
 	}
 	dstAddr, err := toAddress(&o.DstAddr)
 	if err != nil {
-		return &RDR{}, err
+		return nil, err
 	}
 	newDstAddr, err := toAddress(&o.NewDstAddr)
 	if err != nil {
-		return &RDR{}, err
+		return nil, err
 	}
 	return &RDR{
 		transProto: transProto,
@@ -380,7 +382,7 @@ func fromRDRs(rs []*RDR) ([]filter.Rdr, error) {
 	for _, r := range rs {
 		nr, err := fromRDR(r)
 		if err != nil {
-			return []filter.Rdr{}, err
+			return nil, err
 		}
 		nrs = append(nrs, *nr)
 	}
@@ -392,7 +394,7 @@ func toRDRs(nrs []filter.Rdr) ([]*RDR, error) {
 	for _, nr := range nrs {
 		r, err := toRDR(&nr)
 		if err != nil {
-			return []*RDR{}, err
+			return nil, err
 		}
 		rs = append(rs, r)
 	}
