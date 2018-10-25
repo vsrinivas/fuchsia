@@ -375,7 +375,13 @@ declare_args() {
     # in undefined symbols in shared objects that are satisfied in the final,
     # statically linked fuzzer.
     {
-      forward_variables_from(_asan_variant, "*")
+      # TODO(aarongreen): TC-264: Clang emits new/new[]/delete/delete[] into
+      # libfuzzer's static libc++.  Remove this when fixed.
+      forward_variables_from(_asan_variant, "*", [ "toolchain_args" ])
+      toolchain_args = {
+        forward_variables_from(_asan_variant.toolchain_args, "*")
+        asan_default_options = "alloc_dealloc_mismatch=0"
+      }
       configs += [ "//build/config/sanitizers:fuzzer" ]
       remove_shared_configs = [ "//build/config:symbol_no_undefined" ]
     },
