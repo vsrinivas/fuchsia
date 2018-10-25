@@ -95,7 +95,7 @@ TODO(ZX-2399)
 
 **ZX_ERR_INVALID_ARGS** *packet* isn't a valid pointer
 
-**ZX_ERR_ACCESS_DENIED** *handle* does not have **ZX_RIGHT_WRITE** and may
+**ZX_ERR_ACCESS_DENIED** *handle* does not have **ZX_RIGHT_READ* and may
 not be waited upon.
 
 **ZX_ERR_TIMED_OUT** *deadline* passed and no packet was available.
