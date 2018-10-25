@@ -4,7 +4,7 @@
 
 #include <lib/sync/cnd.h>
 #include <lib/sync/internal/condvar-template.h>
-#include <zircon/assert.h>
+#include <assert.h>
 
 template <>
 struct condvar_impl_internal::MutexOps<sync_mtx_t> {
@@ -31,7 +31,7 @@ struct condvar_impl_internal::MutexOps<sync_mtx_t> {
 void sync_cnd_wait(sync_cnd_t* condvar, sync_mtx_t* mutex) {
     zx_status_t status = condvar_impl_internal::timedwait(
         condvar, mutex, ZX_TIME_INFINITE, nullptr);
-    ZX_DEBUG_ASSERT(status == ZX_OK);
+    assert(status == ZX_OK);
 }
 
 zx_status_t sync_cnd_timedwait(sync_cnd_t* condvar, sync_mtx_t* mutex, zx_time_t deadline) {

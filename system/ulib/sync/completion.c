@@ -50,7 +50,7 @@ zx_status_t sync_completion_wait_deadline(sync_completion_t* completion, zx_time
 void sync_completion_signal(sync_completion_t* completion) {
     atomic_int* futex = &completion->futex;
     atomic_store(futex, SIGNALED);
-    zx_futex_wake(futex, UINT32_MAX);
+    _zx_futex_wake(futex, UINT32_MAX);
 }
 
 void sync_completion_reset(sync_completion_t* completion) {
