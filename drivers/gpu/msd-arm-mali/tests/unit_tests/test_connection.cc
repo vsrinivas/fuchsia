@@ -53,7 +53,7 @@ public:
 
 private:
     TestAddressSpaceObserver observer_;
-    MockBusMapper bus_mapper_;
+    MockConsistentBusMapper bus_mapper_;
     std::vector<MsdArmConnection*> cancel_atoms_list_;
     std::vector<std::shared_ptr<MsdArmAtom>> atoms_list_;
 };
@@ -157,8 +157,10 @@ public:
 
         constexpr uint64_t kGpuOffset[] = {1000, 1100};
 
-        EXPECT_TRUE(connection->AddMapping(std::make_unique<GpuMapping>(
-            kGpuOffset[0] * PAGE_SIZE, 1, PAGE_SIZE * 99, 0, connection.get(), buffer)));
+        auto mapping0 = std::make_unique<GpuMapping>(kGpuOffset[0] * PAGE_SIZE, 1, PAGE_SIZE * 99,
+                                                     0, connection.get(), buffer);
+        GpuMapping* mapping0_ptr = mapping0.get();
+        EXPECT_TRUE(connection->AddMapping(std::move(mapping0)));
 
         EXPECT_TRUE(connection->CommitMemoryForBuffer(buffer.get(), 1, 1));
         mali_pte_t pte;
@@ -178,6 +180,11 @@ public:
 
         EXPECT_TRUE(connection->CommitMemoryForBuffer(buffer.get(), 1, 5));
 
+        ASSERT_EQ(2u, mapping0_ptr->bus_mappings_.size());
+        EXPECT_EQ(1u, mapping0_ptr->bus_mappings_[0]->page_count());
+        EXPECT_EQ(2u, mapping0_ptr->bus_mappings_[1]->page_offset());
+        EXPECT_EQ(4u, mapping0_ptr->bus_mappings_[1]->page_count());
+
         EXPECT_TRUE(address_space->ReadPteForTesting((kGpuOffset[1] + 1) * PAGE_SIZE, &pte));
         EXPECT_NE(kInvalidPte, pte);
         // The mapping should be truncated because it's only for 2 pages.
@@ -192,6 +199,10 @@ public:
         EXPECT_TRUE(connection->CommitMemoryForBuffer(buffer.get(), 1, 4));
         EXPECT_TRUE(address_space->ReadPteForTesting((kGpuOffset[0] + 4) * PAGE_SIZE, &pte));
         EXPECT_EQ(kInvalidPte, pte);
+        ASSERT_EQ(1u, mapping0_ptr->bus_mappings_.size());
+        EXPECT_EQ(1u, mapping0_ptr->bus_mappings_[0]->page_offset());
+        EXPECT_EQ(4u, mapping0_ptr->bus_mappings_[0]->page_count());
+        EXPECT_EQ(4u, mapping0_ptr->pinned_page_count());
 
         // Should be ignored because offset isn't supported.
         EXPECT_FALSE(connection->CommitMemoryForBuffer(buffer.get(), 0, 6));

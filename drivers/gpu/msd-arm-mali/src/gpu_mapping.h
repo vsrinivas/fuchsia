@@ -37,10 +37,32 @@ public:
     uint64_t flags() const { return flags_; }
 
     uint64_t pinned_page_count() const { return pinned_page_count_; }
-    void shrink_pinned_pages(uint64_t pages_removed)
+    void shrink_pinned_pages(uint64_t pages_removed,
+                             std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping)
     {
         DASSERT(pinned_page_count_ >= pages_removed);
         pinned_page_count_ -= pages_removed;
+        if (bus_mapping) {
+            DASSERT(pinned_page_count_ == bus_mapping->page_count());
+            if (magma::kDebug) {
+                // Check that the physical addresses of pages haven't changed
+                // (e.g. due to being mapped to a new place with the iommu).
+                for (auto& mapping : bus_mappings_) {
+                    for (uint32_t i = 0; i < mapping->page_count(); i++) {
+                        if (mapping->page_offset() + i < bus_mapping->page_offset())
+                            continue;
+                        uint64_t new_offset =
+                            mapping->page_offset() + i - bus_mapping->page_offset();
+                        if (new_offset >= bus_mapping->page_count())
+                            continue;
+                        DASSERT(bus_mapping->Get()[new_offset] == mapping->Get()[i]);
+                    }
+                }
+            }
+
+            bus_mappings_.clear();
+            bus_mappings_.push_back(std::move(bus_mapping));
+        }
     }
     void grow_pinned_pages(std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping)
     {
@@ -53,6 +75,7 @@ public:
     bool UpdateCommittedMemory() { return owner_->UpdateCommittedMemory(this); }
 
 private:
+    friend class TestConnection;
     const uint64_t addr_;
     const uint64_t page_offset_;
     const uint64_t size_;

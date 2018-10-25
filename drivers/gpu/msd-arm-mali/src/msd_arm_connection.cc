@@ -323,8 +323,22 @@ bool MsdArmConnection::UpdateCommittedMemory(GpuMapping* mapping) __TA_NO_THREAD
         uint64_t pages_to_remove = prev_committed_page_count - committed_page_count;
         address_space_->Clear(mapping->gpu_va() + committed_page_count * PAGE_SIZE,
                               pages_to_remove * PAGE_SIZE);
-        mapping->shrink_pinned_pages(pages_to_remove);
-
+        // Technically if there's an IOMMU the new mapping might be at a different
+        // address, so we'd need to update the GPU address space to represent
+        // that. However, on current systems (amlogic and hikey960) that doesn't
+        // happen.
+        // TODO(ZX-2924): Shrink existing PMTs when that's supported.
+        std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping =
+            owner_->GetBusMapper()->MapPageRangeBus(buffer->platform_buffer(),
+                                                    mapping->page_offset(), committed_page_count);
+        // Call shrink_pinned_pages even if the bus mapping isn't created, because if the committed
+        // memory size is later increased, we need to ensure the previously-shrunk region is
+        // remapped into the GPU.
+        mapping->shrink_pinned_pages(pages_to_remove, std::move(bus_mapping));
+        if (!bus_mapping) {
+            DLOG("Failed to shrink bus mapping by %ld pages", pages_to_remove);
+            // The mapping is still usable, so don't count this as an error.
+        }
     } else {
         uint64_t pages_to_add = committed_page_count - prev_committed_page_count;
         uint64_t page_offset_in_buffer = mapping->page_offset() + prev_committed_page_count;
