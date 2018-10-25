@@ -11,7 +11,6 @@
 #include <unittest/unittest.h>
 #include <zircon/assert.h>
 #include <zircon/device/device.h>
-#include <zircon/device/nand-broker.h>
 
 constexpr char kUsageMessage[] = R"""(
 Basic functionality test for a nand device.

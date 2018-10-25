@@ -10,13 +10,15 @@
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/nand/c/fidl.h>
+#include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/mapped-vmo.h>
 #include <lib/cksum.h>
+#include <lib/zx/channel.h>
 #include <pretty/hexdump.h>
 #include <zircon/assert.h>
 #include <zircon/device/device.h>
-#include <zircon/device/nand-broker.h>
 #include <zircon/nand/c/fidl.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -104,9 +106,6 @@ class NandBroker {
     // Returns true on success.
     bool Initialize();
 
-    // Returns a file descriptor for the device.
-    int get() const { return device_.get(); }
-
     // The internal buffer can access a block at a time.
     const char* data() const { return reinterpret_cast<char*>(vmo_->GetData()); }
     const char* oob() const { return data() + info_.page_size * info_.pages_per_block; }
@@ -125,8 +124,11 @@ class NandBroker {
     // on success.
     bool LoadBroker();
 
+    zx_handle_t channel() const { return caller_.get(); }
+
     const char* path_;
     fbl::unique_fd device_;
+    zx::channel caller_;
     zircon_nand_Info info_ = {};
     fbl::unique_ptr<fzl::MappedVmo> vmo_;
 };
@@ -135,6 +137,13 @@ bool NandBroker::Initialize()  {
     if (!LoadBroker()) {
         return false;
     }
+    zx_status_t status =
+            fdio_get_service_handle(device_.release(), caller_.reset_and_get_address());
+    if (status != ZX_OK) {
+        printf("Failed to get device handle: %s\n", zx_status_get_string(status));
+        return false;
+    }
+
     if (!Query()) {
         printf("Failed to open or query the device\n");
         return false;
@@ -148,11 +157,12 @@ bool NandBroker::Initialize()  {
 }
 
 bool NandBroker::Query() {
-    if (!device_) {
+    if (!caller_) {
         return false;
     }
 
-    return ioctl_nand_broker_get_info(device_.get(), &info_) == sizeof(info_);
+    zx_status_t status;
+    return fuchsia_nand_BrokerGetInfo(channel(), &status, &info_) == ZX_OK && status == ZX_OK;
 }
 
 void NandBroker::ShowInfo() const {
@@ -163,8 +173,7 @@ void NandBroker::ShowInfo() const {
 
 bool NandBroker::ReadPages(uint32_t first_page, uint32_t count) const {
     ZX_DEBUG_ASSERT(count <= info_.pages_per_block);
-    nand_broker_request_t request = {};
-    nand_broker_response_t response = {};
+    fuchsia_nand_BrokerRequest request = {};
 
     request.length = count;
     request.offset_nand = first_page;
@@ -177,25 +186,28 @@ bool NandBroker::ReadPages(uint32_t first_page, uint32_t count) const {
         return false;
     }
 
-    if (ioctl_nand_broker_read(get(), &request, &response) != sizeof(response)) {
-        printf("Failed to issue command to driver\n");
+    zx_status_t status;
+    uint32_t bit_flips;
+    zx_status_t io_status = fuchsia_nand_BrokerRead(channel(), &request, &status, &bit_flips);
+    if (io_status != ZX_OK) {
+        printf("Failed to issue command to driver: %s\n", zx_status_get_string(io_status));
         return false;
     }
 
-    if (response.status != ZX_OK) {
+    if (status != ZX_OK) {
         printf("Read to %d pages starting at %d failed with %s\n", count, first_page,
-               zx_status_get_string(response.status));
+               zx_status_get_string(status));
         return false;
     }
 
-    if (response.corrected_bit_flips > info_.ecc_bits) {
+    if (bit_flips > info_.ecc_bits) {
         printf("Read to %d pages starting at %d unable to correct all bit flips\n", count,
                first_page);
-    } else if (response.corrected_bit_flips) {
+    } else if (bit_flips) {
         // If the nand protocol is modified to provide more info, we could display something
         // like average bit flips.
         printf("Read to %d pages starting at %d corrected %d errors\n", count, first_page,
-               response.corrected_bit_flips);
+               bit_flips);
     }
 
     return true;
@@ -236,19 +248,20 @@ bool NandBroker::DumpPage(uint32_t page) const {
 }
 
 bool NandBroker::EraseBlock(uint32_t block) const {
-    nand_broker_request_t request = {};
-    nand_broker_response_t response = {};
-
+    fuchsia_nand_BrokerRequest request = {};
     request.length = 1;
     request.offset_nand = block;
 
-    if (ioctl_nand_broker_erase(get(), &request, &response) != sizeof(response)) {
-        printf("Failed to issue erase command for block %d\n", block);
+    zx_status_t status;
+    zx_status_t io_status = fuchsia_nand_BrokerErase(channel(), &request, &status);
+    if (io_status != ZX_OK) {
+        printf("Failed to issue erase command for block %d: %s\n", block,
+               zx_status_get_string(io_status));
         return false;
     }
 
-    if (response.status != ZX_OK) {
-        printf("Erase block %d failed with %s\n", block, zx_status_get_string(response.status));
+    if (status != ZX_OK) {
+        printf("Erase block %d failed with %s\n", block, zx_status_get_string(status));
         return false;
     }
 

@@ -1,0 +1,33 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.nand;
+using zircon.nand;
+using zx;
+
+// Defines a Read/Write/Erase request to be sent to the nand driver.
+struct BrokerRequest {
+    handle<vmo>? vmo;           // Only used for read and write.
+    uint32 length;              // In pages (read / write) or blocks (erase).
+    uint32 offset_nand;         // In pages (read / write) or blocks (erase).
+    uint64 offset_data_vmo;     // In pages.
+    uint64 offset_oob_vmo;      // In pages.
+    bool data_vmo;              // True to read or write data.
+    bool oob_vmo;               // True to read or write OOB data.
+};
+
+[Layout = "Simple"]
+interface Broker {
+    // Retrieves the nand info from the underlying device.
+    1: GetInfo() -> (zx.status status, zircon.nand.Info? info);
+
+    // Reads from the nand device.
+    2: Read(BrokerRequest request) -> (zx.status status, uint32 corrected_bit_flips);
+
+    // Writes to the nand device.
+    3: Write(BrokerRequest request) -> (zx.status status);
+
+    // Erases part of the nand device.
+    4: Erase(BrokerRequest request) -> (zx.status status);
+};

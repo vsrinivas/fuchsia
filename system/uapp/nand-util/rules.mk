@@ -28,6 +28,7 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-nand \
     system/fidl/zircon-nand \
 
 include make/module.mk

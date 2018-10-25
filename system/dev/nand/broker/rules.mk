@@ -18,6 +18,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
+    system/ulib/fidl \
     system/ulib/sync \
     system/ulib/zx \
     system/ulib/zxcpp \
@@ -28,6 +29,7 @@ MODULE_LIBS := \
     system/ulib/c \
 
 MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-nand \
     system/fidl/zircon-nand \
 
 include make/module.mk
@@ -60,6 +62,7 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-nand \
     system/fidl/zircon-nand \
 
 include make/module.mk

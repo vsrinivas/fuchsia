@@ -15,10 +15,9 @@
 #include <lib/sync/completion.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/nand/c/fidl.h>
 #include <zircon/assert.h>
-#include <zircon/device/nand-broker.h>
 #include <zircon/types.h>
-
 
 namespace {
 
@@ -57,7 +56,7 @@ class Operation {
 };
 
 class Broker;
-using DeviceType = ddk::Device<Broker, ddk::Unbindable, ddk::Ioctlable>;
+using DeviceType = ddk::Device<Broker, ddk::Unbindable, ddk::Messageable>;
 
 // Exposes a control device (nand-broker) for a nand protocol device.
 class Broker : public DeviceType {
@@ -70,16 +69,62 @@ class Broker : public DeviceType {
 
     // Device protocol implementation.
     void DdkUnbind() { DdkRemove(); }
-    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                         void* out_buf, size_t out_len, size_t* out_actual);
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+
+    // fidl interface.
+    zx_status_t GetInfo(zircon_nand_Info* info) {
+        return Query(info);
+    }
+    zx_status_t Read(const fuchsia_nand_BrokerRequest& request, uint32_t* corrected_bits) {
+        return Queue(NAND_OP_READ, request, corrected_bits);
+    }
+    zx_status_t Write(const fuchsia_nand_BrokerRequest& request) {
+        return Queue(NAND_OP_WRITE, request, nullptr);
+    }
+    zx_status_t Erase(const fuchsia_nand_BrokerRequest& request) {
+        return Queue(NAND_OP_ERASE, request, nullptr);
+    }
 
   private:
     zx_status_t Query(zircon_nand_Info* info);
-    zx_status_t Queue(uint32_t command, const nand_broker_request_t& request,
-                      nand_broker_response_t* response);
+    zx_status_t Queue(uint32_t command, const fuchsia_nand_BrokerRequest& request,
+                      uint32_t* corrected_bits);
 
     nand_protocol_t nand_protocol_;
     size_t op_size_ = 0;
+};
+
+zx_status_t GetInfo(void* ctx, fidl_txn_t* txn)  {
+    Broker* device = reinterpret_cast<Broker*>(ctx);
+    zircon_nand_Info info;
+    zx_status_t status = device->GetInfo(&info);
+    return fuchsia_nand_BrokerGetInfo_reply(txn, status, &info);
+}
+
+zx_status_t Read(void* ctx, const fuchsia_nand_BrokerRequest* request, fidl_txn_t* txn)  {
+    Broker* device = reinterpret_cast<Broker*>(ctx);
+    uint32_t corrected_bits = 0;
+    zx_status_t status = device->Read(*request, &corrected_bits);
+    return fuchsia_nand_BrokerRead_reply(txn, status, corrected_bits);
+}
+
+zx_status_t Write(void* ctx, const fuchsia_nand_BrokerRequest* request, fidl_txn_t* txn)  {
+    Broker* device = reinterpret_cast<Broker*>(ctx);
+    zx_status_t status = device->Write(*request);
+    return fuchsia_nand_BrokerWrite_reply(txn, status);
+}
+
+zx_status_t Erase(void* ctx, const fuchsia_nand_BrokerRequest* request, fidl_txn_t* txn)  {
+    Broker* device = reinterpret_cast<Broker*>(ctx);
+    zx_status_t status = device->Erase(*request);
+    return fuchsia_nand_BrokerErase_reply(txn, status);
+}
+
+fuchsia_nand_Broker_ops_t fidl_ops = {
+    .GetInfo = GetInfo,
+    .Read = Read,
+    .Write = Write,
+    .Erase = Erase
 };
 
 zx_status_t Broker::Bind() {
@@ -101,36 +146,8 @@ zx_status_t Broker::Bind() {
     return DdkAdd("broker");
 }
 
-zx_status_t Broker::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                             void* out_buf, size_t out_len, size_t* out_actual) {
-    switch (op) {
-    case IOCTL_NAND_BROKER_UNLINK:
-        DdkUnbind();
-        return ZX_OK;
-
-    case IOCTL_NAND_BROKER_GET_INFO:
-        if (out_len < sizeof(zircon_nand_Info)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        *out_actual = sizeof(zircon_nand_Info);
-        return Query(reinterpret_cast<zircon_nand_Info*>(out_buf));
-
-    case IOCTL_NAND_BROKER_READ:
-    case IOCTL_NAND_BROKER_WRITE:
-    case IOCTL_NAND_BROKER_ERASE:
-        if (in_len != sizeof(nand_broker_request_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        if (out_len < sizeof(nand_broker_response_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        *out_actual = sizeof(nand_broker_response_t);
-        return Queue(op, *reinterpret_cast<const nand_broker_request_t*>(in_buf),
-                     reinterpret_cast<nand_broker_response_t*>(out_buf));
-
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+zx_status_t Broker::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_nand_Broker_dispatch(this, txn, msg, &fidl_ops);
 }
 
 zx_status_t Broker::Query(zircon_nand_Info* info) {
@@ -139,16 +156,15 @@ zx_status_t Broker::Query(zircon_nand_Info* info) {
     return ZX_OK;
 }
 
-zx_status_t Broker::Queue(uint32_t command, const nand_broker_request_t& request,
-                          nand_broker_response_t* response) {
+zx_status_t Broker::Queue(uint32_t command, const fuchsia_nand_BrokerRequest& request,
+                          uint32_t* corrected_bits) {
     Operation operation(op_size_);
     nand_op_t* op = operation.GetOperation();
-    *response = {};
+    op->rw.command = command;
 
     switch (command) {
-    case IOCTL_NAND_BROKER_READ:
-    case IOCTL_NAND_BROKER_WRITE:
-        op->rw.command = (command == IOCTL_NAND_BROKER_READ) ? NAND_OP_READ : NAND_OP_WRITE;
+    case NAND_OP_READ:
+    case NAND_OP_WRITE:
         op->rw.length = request.length;
         op->rw.offset_nand = request.offset_nand;
         op->rw.offset_data_vmo = request.offset_data_vmo;
@@ -156,8 +172,7 @@ zx_status_t Broker::Queue(uint32_t command, const nand_broker_request_t& request
         op->rw.data_vmo = request.data_vmo ? request.vmo : ZX_HANDLE_INVALID;
         op->rw.oob_vmo = request.oob_vmo ? request.vmo : ZX_HANDLE_INVALID;
         break;
-    case IOCTL_NAND_BROKER_ERASE:
-        op->erase.command = NAND_OP_ERASE;
+    case NAND_OP_ERASE:
         op->erase.first_block = request.offset_nand;
         op->erase.num_blocks = request.length;
         break;
@@ -168,18 +183,18 @@ zx_status_t Broker::Queue(uint32_t command, const nand_broker_request_t& request
     ddk::NandProtocolProxy proxy(&nand_protocol_);
     proxy.Queue(op);
 
-    response->status = operation.Wait();
+    zx_status_t status = operation.Wait();
 
-    if (command == IOCTL_NAND_BROKER_READ) {
-        response->corrected_bit_flips = op->rw.corrected_bit_flips;
+    if (command == NAND_OP_READ) {
+        *corrected_bits = op->rw.corrected_bit_flips;
     }
 
-    if ((command == IOCTL_NAND_BROKER_READ || command == IOCTL_NAND_BROKER_WRITE) &&
+    if ((command == NAND_OP_READ || command == NAND_OP_WRITE) &&
         request.vmo != ZX_HANDLE_INVALID) {
         zx_handle_close(request.vmo);
     }
 
-    return ZX_OK;
+    return status;
 }
 
 }  // namespace
