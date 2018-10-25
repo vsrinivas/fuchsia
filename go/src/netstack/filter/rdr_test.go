@@ -19,7 +19,7 @@ func createTestStackRouterRDR(t *testing.T) (*stack.Stack, *channel.Endpoint, *c
 
 	f := New(s.PortManager)
 	f.rulesetRDR.Lock()
-	f.rulesetRDR.v = []*RDR{
+	f.rulesetRDR.v = []RDR{
 		{
 			transProto: header.UDPProtocolNumber,
 			dstAddr:    testRouterNICAddr2,

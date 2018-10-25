@@ -91,17 +91,17 @@ type RDR struct {
 type RulesetMain struct {
 	sync.RWMutex
 	generation uint32
-	v          []*Rule
+	v          []Rule
 }
 
 type RulesetNAT struct {
 	sync.RWMutex
 	generation uint32
-	v          []*NAT
+	v          []NAT
 }
 
 type RulesetRDR struct {
 	sync.RWMutex
 	generation uint32
-	v          []*RDR
+	v          []RDR
 }

@@ -96,22 +96,22 @@ func toTransProto(o net.SocketProtocol) (tcpip.TransportProtocolNumber, error) {
 	}
 }
 
-func fromAddress(o tcpip.Address) (*net.IpAddress, error) {
+func fromAddress(o tcpip.Address) (net.IpAddress, error) {
 	switch len(o) {
 	case 4:
-		addr := &net.IpAddress{}
+		addr := net.IpAddress{}
 		ipv4 := net.IPv4Address{}
 		copy(ipv4.Addr[:], o)
 		addr.SetIpv4(ipv4)
 		return addr, nil
 	case 16:
-		addr := &net.IpAddress{}
+		addr := net.IpAddress{}
 		ipv6 := net.IPv6Address{}
 		copy(ipv6.Addr[:], o)
 		addr.SetIpv6(ipv6)
 		return addr, nil
 	default:
-		return nil, ErrUnknownAddressType
+		return net.IpAddress{}, ErrUnknownAddressType
 	}
 }
 
@@ -126,58 +126,56 @@ func toAddress(o *net.IpAddress) (tcpip.Address, error) {
 	}
 }
 
-func fromSubnet(o *tcpip.Subnet) (*net.Subnet, error) {
+func fromSubnet(o *tcpip.Subnet) (net.Subnet, error) {
 	addr, err := fromAddress(o.ID())
 	if err != nil {
-		return nil, ErrBadAddress
+		return net.Subnet{}, ErrBadAddress
 	}
-	return &net.Subnet{
-		Addr:      *addr,
+	return net.Subnet{
+		Addr:      addr,
 		PrefixLen: uint8(o.Prefix()),
 	}, nil
 }
 
-func toSubnet(o *net.Subnet) (*tcpip.Subnet, error) {
+func toSubnet(o *net.Subnet) (tcpip.Subnet, error) {
 	addr, err := toAddress(&o.Addr)
 	if err != nil {
-		return nil, ErrBadAddress
+		return tcpip.Subnet{}, ErrBadAddress
 	}
 	mask := util.CIDRMask(int(o.PrefixLen), 8*len(addr))
 	subnet, err := tcpip.NewSubnet(addr, mask)
-	return &subnet, err
+	return subnet, err
 }
 
-func fromRule(o *Rule) (*filter.Rule, error) {
+func fromRule(o *Rule) (filter.Rule, error) {
 	action, err := fromAction(o.action)
 	if err != nil {
-		return nil, err
+		return filter.Rule{}, err
 	}
 	direction, err := fromDirection(o.direction)
 	if err != nil {
-		return nil, err
+		return filter.Rule{}, err
 	}
 	transProto, err := fromTransProto(o.transProto)
 	if err != nil {
-		return nil, err
+		return filter.Rule{}, err
 	}
 	var srcSubnet, dstSubnet *net.Subnet
-	if o.srcSubnet == nil {
-		srcSubnet = nil
-	} else {
-		srcSubnet, err = fromSubnet(o.srcSubnet)
+	if o.srcSubnet != nil {
+		subnet, err := fromSubnet(o.srcSubnet)
 		if err != nil {
-			return nil, err
+			return filter.Rule{}, err
 		}
+		srcSubnet = &subnet
 	}
-	if o.dstSubnet == nil {
-		dstSubnet = nil
-	} else {
-		dstSubnet, err = fromSubnet(o.dstSubnet)
+	if o.dstSubnet != nil {
+		subnet, err := fromSubnet(o.dstSubnet)
 		if err != nil {
-			return nil, err
+			return filter.Rule{}, err
 		}
+		dstSubnet = &subnet
 	}
-	return &filter.Rule{
+	return filter.Rule{
 		Action:               action,
 		Direction:            direction,
 		Quick:                o.quick,
@@ -194,37 +192,35 @@ func fromRule(o *Rule) (*filter.Rule, error) {
 	}, nil
 }
 
-func toRule(o *filter.Rule) (*Rule, error) {
+func toRule(o *filter.Rule) (Rule, error) {
 	action, err := toAction(o.Action)
 	if err != nil {
-		return nil, err
+		return Rule{}, err
 	}
 	direction, err := toDirection(o.Direction)
 	if err != nil {
-		return nil, err
+		return Rule{}, err
 	}
 	transProto, err := toTransProto(o.Proto)
 	if err != nil {
-		return nil, err
+		return Rule{}, err
 	}
 	var srcSubnet, dstSubnet *tcpip.Subnet
-	if o.SrcSubnet == nil {
-		srcSubnet = nil
-	} else {
-		srcSubnet, err = toSubnet(o.SrcSubnet)
+	if o.SrcSubnet != nil {
+		subnet, err := toSubnet(o.SrcSubnet)
 		if err != nil {
-			return nil, err
+			return Rule{}, err
 		}
+		srcSubnet = &subnet
 	}
-	if o.DstSubnet == nil {
-		dstSubnet = nil
-	} else {
-		dstSubnet, err = toSubnet(o.DstSubnet)
+	if o.DstSubnet != nil {
+		subnet, err := toSubnet(o.DstSubnet)
 		if err != nil {
-			return nil, err
+			return Rule{}, err
 		}
+		dstSubnet = &subnet
 	}
-	return &Rule{
+	return Rule{
 		action:               action,
 		direction:            direction,
 		quick:                o.Quick,
@@ -241,22 +237,22 @@ func toRule(o *filter.Rule) (*Rule, error) {
 	}, nil
 }
 
-func fromRules(rs []*Rule) ([]filter.Rule, error) {
+func fromRules(rs []Rule) ([]filter.Rule, error) {
 	var nrs []filter.Rule
-	for _, r := range rs {
-		nr, err := fromRule(r)
+	for i := range rs {
+		nr, err := fromRule(&rs[i])
 		if err != nil {
 			return nil, err
 		}
-		nrs = append(nrs, *nr)
+		nrs = append(nrs, nr)
 	}
 	return nrs, nil
 }
 
-func toRules(nrs []filter.Rule) ([]*Rule, error) {
-	var rs []*Rule
-	for _, nr := range nrs {
-		r, err := toRule(&nr)
+func toRules(nrs []filter.Rule) ([]Rule, error) {
+	var rs []Rule
+	for i := range nrs {
+		r, err := toRule(&nrs[i])
 		if err != nil {
 			return nil, err
 		}
@@ -265,64 +261,64 @@ func toRules(nrs []filter.Rule) ([]*Rule, error) {
 	return rs, nil
 }
 
-func fromNAT(o *NAT) (*filter.Nat, error) {
+func fromNAT(o *NAT) (filter.Nat, error) {
 	transProto, err := fromTransProto(o.transProto)
 	if err != nil {
-		return nil, err
+		return filter.Nat{}, err
 	}
 	srcSubnet, err := fromSubnet(o.srcSubnet)
 	if err != nil {
-		return nil, err
+		return filter.Nat{}, err
 	}
 	newSrcAddr, err := fromAddress(o.newSrcAddr)
 	if err != nil {
-		return nil, err
+		return filter.Nat{}, err
 	}
-	return &filter.Nat{
+	return filter.Nat{
 		Proto:      transProto,
-		SrcSubnet:  *srcSubnet,
-		NewSrcAddr: *newSrcAddr,
+		SrcSubnet:  srcSubnet,
+		NewSrcAddr: newSrcAddr,
 		Nic:        uint32(o.nic),
 	}, nil
 }
 
-func toNAT(o *filter.Nat) (*NAT, error) {
+func toNAT(o *filter.Nat) (NAT, error) {
 	transProto, err := toTransProto(o.Proto)
 	if err != nil {
-		return nil, err
+		return NAT{}, err
 	}
 	srcSubnet, err := toSubnet(&o.SrcSubnet)
 	if err != nil {
-		return nil, err
+		return NAT{}, err
 	}
 	newSrcAddr, err := toAddress(&o.NewSrcAddr)
 	if err != nil {
-		return nil, err
+		return NAT{}, err
 	}
-	return &NAT{
+	return NAT{
 		transProto: transProto,
-		srcSubnet:  srcSubnet,
+		srcSubnet:  &srcSubnet,
 		newSrcAddr: newSrcAddr,
 		nic:        tcpip.NICID(o.Nic),
 	}, nil
 }
 
-func fromNATs(ns []*NAT) ([]filter.Nat, error) {
+func fromNATs(ns []NAT) ([]filter.Nat, error) {
 	var nns []filter.Nat
-	for _, n := range ns {
-		nn, err := fromNAT(n)
+	for i := range ns {
+		nn, err := fromNAT(&ns[i])
 		if err != nil {
 			return nil, err
 		}
-		nns = append(nns, *nn)
+		nns = append(nns, nn)
 	}
 	return nns, nil
 }
 
-func toNATs(nns []filter.Nat) ([]*NAT, error) {
-	var ns []*NAT
-	for _, nn := range nns {
-		n, err := toNAT(&nn)
+func toNATs(nns []filter.Nat) ([]NAT, error) {
+	var ns []NAT
+	for i := range nns {
+		n, err := toNAT(&nns[i])
 		if err != nil {
 			return nil, err
 		}
@@ -331,43 +327,43 @@ func toNATs(nns []filter.Nat) ([]*NAT, error) {
 	return ns, nil
 }
 
-func fromRDR(o *RDR) (*filter.Rdr, error) {
+func fromRDR(o *RDR) (filter.Rdr, error) {
 	transProto, err := fromTransProto(o.transProto)
 	if err != nil {
-		return nil, err
+		return filter.Rdr{}, err
 	}
 	dstAddr, err := fromAddress(o.dstAddr)
 	if err != nil {
-		return nil, err
+		return filter.Rdr{}, err
 	}
 	newDstAddr, err := fromAddress(o.newDstAddr)
 	if err != nil {
-		return nil, err
+		return filter.Rdr{}, err
 	}
-	return &filter.Rdr{
+	return filter.Rdr{
 		Proto:      transProto,
-		DstAddr:    *dstAddr,
+		DstAddr:    dstAddr,
 		DstPort:    o.dstPort,
-		NewDstAddr: *newDstAddr,
+		NewDstAddr: newDstAddr,
 		NewDstPort: o.newDstPort,
 		Nic:        uint32(o.nic),
 	}, nil
 }
 
-func toRDR(o *filter.Rdr) (*RDR, error) {
+func toRDR(o *filter.Rdr) (RDR, error) {
 	transProto, err := toTransProto(o.Proto)
 	if err != nil {
-		return nil, err
+		return RDR{}, err
 	}
 	dstAddr, err := toAddress(&o.DstAddr)
 	if err != nil {
-		return nil, err
+		return RDR{}, err
 	}
 	newDstAddr, err := toAddress(&o.NewDstAddr)
 	if err != nil {
-		return nil, err
+		return RDR{}, err
 	}
-	return &RDR{
+	return RDR{
 		transProto: transProto,
 		dstAddr:    dstAddr,
 		dstPort:    o.DstPort,
@@ -377,22 +373,22 @@ func toRDR(o *filter.Rdr) (*RDR, error) {
 	}, nil
 }
 
-func fromRDRs(rs []*RDR) ([]filter.Rdr, error) {
+func fromRDRs(rs []RDR) ([]filter.Rdr, error) {
 	var nrs []filter.Rdr
-	for _, r := range rs {
-		nr, err := fromRDR(r)
+	for i := range rs {
+		nr, err := fromRDR(&rs[i])
 		if err != nil {
 			return nil, err
 		}
-		nrs = append(nrs, *nr)
+		nrs = append(nrs, nr)
 	}
 	return nrs, nil
 }
 
-func toRDRs(nrs []filter.Rdr) ([]*RDR, error) {
-	var rs []*RDR
-	for _, nr := range nrs {
-		r, err := toRDR(&nr)
+func toRDRs(nrs []filter.Rdr) ([]RDR, error) {
+	var rs []RDR
+	for i := range nrs {
+		r, err := toRDR(&nrs[i])
 		if err != nil {
 			return nil, err
 		}

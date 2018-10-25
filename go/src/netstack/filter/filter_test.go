@@ -12,12 +12,12 @@ import (
 	"github.com/google/netstack/tcpip/header"
 )
 
-func ruleset1() ([]*Rule, error) {
+func ruleset1() ([]Rule, error) {
 	srcSubnet, err := tcpip.NewSubnet("\x0a\x00\x00\x00", "\xff\x00\x00\x00")
 	if err != nil {
 		return nil, err
 	}
-	return []*Rule{
+	return []Rule{
 		{
 			action:     Drop,
 			direction:  Incoming,
@@ -29,12 +29,12 @@ func ruleset1() ([]*Rule, error) {
 	}, nil
 }
 
-func ruleset2() ([]*Rule, error) {
+func ruleset2() ([]Rule, error) {
 	srcSubnet, err := tcpip.NewSubnet("\x0a\x00\x00\x00", "\xff\x00\x00\x00")
 	if err != nil {
 		return nil, err
 	}
-	return []*Rule{
+	return []Rule{
 		{
 			action:     Drop,
 			direction:  Incoming,
@@ -54,7 +54,7 @@ func ruleset2() ([]*Rule, error) {
 
 func TestRun(t *testing.T) {
 	var tests = []struct {
-		ruleset  func() ([]*Rule, error)
+		ruleset  func() ([]Rule, error)
 		dir      Direction
 		netProto tcpip.NetworkProtocolNumber
 		packet   func() (buffer.Prependable, buffer.VectorisedView)

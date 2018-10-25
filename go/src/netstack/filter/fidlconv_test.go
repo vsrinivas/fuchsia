@@ -406,8 +406,8 @@ func TestRules(t *testing.T) {
 		t.Errorf("ParseCIDR error: %v", err)
 	}
 
-	want := []*Rule{
-		&Rule{
+	want := []Rule{
+		{
 			action:               Drop,
 			direction:            Incoming,
 			quick:                false,
@@ -422,7 +422,7 @@ func TestRules(t *testing.T) {
 			log:                  false,
 			keepState:            false,
 		},
-		&Rule{
+		{
 			action:               Pass,
 			direction:            Outgoing,
 			quick:                true,
@@ -437,7 +437,7 @@ func TestRules(t *testing.T) {
 			log:                  true,
 			keepState:            true,
 		},
-		&Rule{
+		{
 			action:               Pass,
 			direction:            Outgoing,
 			quick:                true,
@@ -480,14 +480,14 @@ func TestNATs(t *testing.T) {
 	}
 	srcAddr := util.Parse("5.6.7.8")
 
-	want := []*NAT{
-		&NAT{
+	want := []NAT{
+		{
 			transProto: header.TCPProtocolNumber,
 			srcSubnet:  &srcSubnet,
 			newSrcAddr: srcAddr,
 			nic:        tcpip.NICID(1),
 		},
-		&NAT{
+		{
 			transProto: header.UDPProtocolNumber,
 			srcSubnet:  &srcSubnet,
 			newSrcAddr: srcAddr,
@@ -518,8 +518,8 @@ func TestRDRs(t *testing.T) {
 	dstAddr := util.Parse("1.2.3.4")
 	dstAddr2 := util.Parse("5.6.7.8")
 
-	want := []*RDR{
-		&RDR{
+	want := []RDR{
+		{
 			transProto: header.TCPProtocolNumber,
 			dstAddr:    dstAddr,
 			dstPort:    1000,
@@ -527,7 +527,7 @@ func TestRDRs(t *testing.T) {
 			newDstPort: 1500,
 			nic:        tcpip.NICID(1),
 		},
-		&RDR{
+		{
 			transProto: header.UDPProtocolNumber,
 			dstAddr:    dstAddr,
 			dstPort:    2000,

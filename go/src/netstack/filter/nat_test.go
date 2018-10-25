@@ -98,7 +98,7 @@ func createTestStackRouterNAT(t *testing.T) (*stack.Stack, *channel.Endpoint, *c
 		t.Fatalf("NewSubnet error: %s", terr)
 	}
 	f.rulesetNAT.Lock()
-	f.rulesetNAT.v = []*NAT{
+	f.rulesetNAT.v = []NAT{
 		{
 			transProto: header.UDPProtocolNumber,
 			srcSubnet:  &srcSubnet,
