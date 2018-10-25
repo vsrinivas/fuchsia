@@ -31,8 +31,15 @@ std::string RecursiveFormatCat(const Options& options, const ObjectNode& root,
   std::ostringstream ss;
   const auto& object = root.object;
   for (const auto& property : *object.properties) {
-    ss << Indent(indent) << FormatStringHexFallback(*property.key) << " = "
-       << FormatStringHexFallback(*property.value) << std::endl;
+    ss << Indent(indent) << FormatStringHexFallback(*property.key) << " = ";
+
+    if (property.value.is_str()) {
+      ss << FormatStringHexFallback(*property.value.str()) << std::endl;
+    } else {
+      auto& val = property.value.bytes();
+      ss << FormatStringHexFallback({(char*)val->data(), val->size()})
+         << std::endl;
+    }
   }
 
   for (const auto& metric : *object.metrics) {

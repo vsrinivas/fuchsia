@@ -16,6 +16,7 @@
 
 #include <set>
 #include <unordered_map>
+#include <variant>
 
 namespace component {
 
@@ -27,32 +28,36 @@ namespace component {
 // coordination.
 class Property {
  public:
-  using ValueCallback = fit::function<std::string()>;
+  using ByteVector = std::vector<uint8_t>;
+  using StringValueCallback = fit::function<std::string()>;
+  using VectorValueCallback = fit::function<ByteVector()>;
+
   // Constructs an empty property with string value "".
   Property() { Set(""); }
 
   // Constructs a property from a string.
   Property(std::string value) { Set(std::move(value)); }
+  Property(ByteVector value) { Set(std::move(value)); }
 
   // Constructs a property with value set on each read by the given callback.
-  Property(ValueCallback callback) { Set(std::move(callback)); }
+  Property(StringValueCallback callback) { Set(std::move(callback)); }
+  Property(VectorValueCallback callback) { Set(std::move(callback)); }
 
   // Sets the property from a string.
   void Set(std::string value);
+  void Set(ByteVector value);
 
   // Sets the property with value set on each read by the given callback.
-  void Set(ValueCallback callback);
+  void Set(StringValueCallback callback);
+  void Set(VectorValueCallback callback);
 
-  // Gets the current value of this property.
-  std::string Get() const;
+  fuchsia::inspect::Property ToFidl(const std::string& name) const;
 
  private:
-  // If true, use the callback instead of the contained value.
-  bool use_callback_ = false;
-  // The current value of this |Property|.
-  std::string value_;
-  // A callback to be used to retrieve the value on read.
-  ValueCallback callback_;
+  // Variants of possible values for this property.
+  std::variant<std::string, ByteVector, StringValueCallback,
+               VectorValueCallback>
+      value_;
 };
 
 // Metric is a numeric value associated with an |Object| belonging to
@@ -272,7 +277,7 @@ class Object : public fuchsia::inspect::Inspect, public fs::LazyDir {
                       fbl::String name) override;
 
  private:
-  enum { kChanId = 1, kDataId, kSpecialIdMax };
+  enum { kChanId = 1, kSpecialIdMax };
 
   // Helper function to populate an output vector of children objects.
   void PopulateChildVector(StringOutputVector* out_vector)

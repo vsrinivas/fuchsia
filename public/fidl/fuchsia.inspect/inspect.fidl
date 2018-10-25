@@ -4,10 +4,15 @@
 
 library fuchsia.inspect;
 
+union PropertyValue {
+  string str;
+  vector<uint8> bytes;
+};
+
 // A string property on an |Object|. Consisting of a key and value.
 struct Property {
     string key;
-    string value;
+    PropertyValue value;
 };
 
 // The value of a metric is one of these numeric types.

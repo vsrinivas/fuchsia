@@ -9,6 +9,7 @@
 
 #include "gmock/gmock.h"
 #include "lib/component/cpp/environment_services_helper.h"
+#include "lib/component/cpp/expose.h"
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
 #include "lib/fxl/files/glob.h"
@@ -22,6 +23,7 @@ using ::fxl::Substitute;
 using ::testing::ElementsAre;
 using testing::EnclosingEnvironment;
 using ::testing::UnorderedElementsAre;
+using ByteVector = ::component::Property::ByteVector;
 
 const char kTestComponent[] = "inspect_test_app";
 
@@ -80,8 +82,12 @@ TEST_F(InspectTest, InspectTopLevel) {
       ElementsAre(GetObjectPath("table-t1"), GetObjectPath("table-t2")));
 }
 
-MATCHER_P2(Property, name, value, "") {
-  return arg.key == name && arg.value == value;
+MATCHER_P2(StringProperty, name, value, "") {
+  return arg.value.is_str() && arg.key == name && arg.value.str() == value;
+}
+
+MATCHER_P2(VectorProperty, name, value, "") {
+  return arg.value.is_bytes() && arg.key == name && *arg.value.bytes() == value;
 }
 
 MATCHER_P2(UIntMetric, name, value, "") {
@@ -110,9 +116,9 @@ TEST_F(InspectTest, InspectOpenRead) {
   EXPECT_EQ("table-t1", obj.name);
   EXPECT_THAT(*obj.properties,
               UnorderedElementsAre(
-                  Property("version", "1.0"),
-                  Property("frame", std::string("\x00\x00\x00", 3)),
-                  Property("\x10\x10", std::string("\x00\x00\x00", 3))));
+                  StringProperty("version", "1.0"),
+                  VectorProperty("frame", ByteVector({0x10, 0x00, 0x10})),
+                  VectorProperty("\x10\x10", ByteVector({0x00, 0x00, 0x00}))));
   EXPECT_THAT(*obj.metrics, UnorderedElementsAre(UIntMetric("item_size", 32),
                                                  IntMetric("\x10", -10)));
 }

@@ -33,9 +33,9 @@ class Table : public component::ExposedObject {
         }));
     object_dir().set_prop("version", "1.0");
     // Try binary values and keys.
-    object_dir().set_prop("frame", std::string("\x00\x00\x00", 3));
+    object_dir().set_prop("frame", std::vector<uint8_t>({0x10, 0x00, 0x10}));
     object_dir().set_prop(std::string("\x10\x10", 2),
-                          std::string("\x00\x00\x00", 3));
+                          std::vector<uint8_t>({0, 0, 0}));
     object_dir().set_metric(std::string("\x10", 1), component::IntMetric(-10));
   }
 

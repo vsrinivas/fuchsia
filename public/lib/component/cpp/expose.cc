@@ -11,19 +11,40 @@
 namespace component {
 
 void Property::Set(std::string value) {
-  use_callback_ = false;
-  value_ = std::move(value);
-}
-void Property::Set(ValueCallback callback) {
-  use_callback_ = true;
-  callback_ = std::move(callback);
+  value_.emplace<std::string>(std::move(value));
 }
 
-std::string Property::Get() const {
-  if (use_callback_) {
-    return callback_();
+void Property::Set(ByteVector value) {
+  value_.emplace<ByteVector>(std::move(value));
+}
+
+void Property::Set(StringValueCallback callback) {
+  value_.emplace<StringValueCallback>(std::move(callback));
+}
+
+void Property::Set(VectorValueCallback callback) {
+  value_.emplace<VectorValueCallback>(std::move(callback));
+}
+
+fuchsia::inspect::Property Property::ToFidl(const std::string& name) const {
+  fuchsia::inspect::Property ret;
+  ret.key = name;
+  if (std::holds_alternative<std::string>(value_)) {
+    ret.value.set_str(std::get<std::string>(value_));
+  } else if (std::holds_alternative<ByteVector>(value_)) {
+    fidl::VectorPtr<uint8_t> vec;
+    auto& val = std::get<ByteVector>(value_);
+    std::copy(val.begin(), val.end(), std::back_inserter(*vec));
+    ret.value.set_bytes(std::move(vec));
+  } else if (std::holds_alternative<StringValueCallback>(value_)) {
+    ret.value.set_str(std::get<StringValueCallback>(value_)());
+  } else if (std::holds_alternative<VectorValueCallback>(value_)) {
+    fidl::VectorPtr<uint8_t> vec;
+    auto val = std::get<VectorValueCallback>(value_)();
+    std::copy(val.begin(), val.end(), std::back_inserter(*vec));
+    ret.value.set_bytes(std::move(vec));
   }
-  return value_;
+  return ret;
 }
 
 void Metric::SetInt(int64_t value) {
@@ -200,7 +221,6 @@ bool Object::SetMetric(const std::string& name, Metric metric) {
 void Object::GetContents(LazyEntryVector* out_vector) {
   fbl::AutoLock lock(&mutex_);
   out_vector->push_back({kChanId, ".channel", V_TYPE_FILE});
-  out_vector->push_back({kDataId, ".data", V_TYPE_FILE});
   uint64_t index = kSpecialIdMax;
 
   // Each child gets a unique ID, which is just its index in the directory.
@@ -233,31 +253,6 @@ zx_status_t Object::GetFile(fbl::RefPtr<Vnode>* out_vnode, uint64_t id,
           ref, fidl::InterfaceRequest<Inspect>(std::move(chan)));
       return ZX_OK;
     });
-    return ZX_OK;
-  } else if (id == kDataId) {
-    // `.data` is a pseudofile that simply dumps out the properties and
-    // metrics for this object in a TAB-separated format. This is just
-    // for debugging.
-    auto ref = fbl::WrapRefPtr(this);
-    *out_vnode =
-        fbl::MakeRefCounted<fs::BufferedPseudoFile>([ref](fbl::String* out) {
-          std::string output;
-          {
-            fbl::AutoLock lock(&ref->mutex_);
-            for (const auto& prop : ref->properties_) {
-              // Lines starting with "P" are Properties.
-              fxl::StringAppendf(&output, "P\t%s\t%s\n", prop.first.c_str(),
-                                 prop.second.Get().c_str());
-            }
-            for (const auto& metric : ref->metrics_) {
-              // Lines starting with "M" are Metrics.
-              fxl::StringAppendf(&output, "M\t%s\t%s\n", metric.first.c_str(),
-                                 metric.second.ToString().c_str());
-            }
-          }
-          *out = output;
-          return ZX_OK;
-        });
     return ZX_OK;
   }
 
@@ -303,7 +298,7 @@ fuchsia::inspect::Object Object::ToFidl() __TA_REQUIRES(mutex_) {
   fuchsia::inspect::Object ret;
   ret.name = name_.data();
   for (const auto& it : properties_) {
-    ret.properties.push_back({it.first, it.second.Get()});
+    ret.properties.push_back(it.second.ToFidl(it.first));
   }
   for (const auto& it : metrics_) {
     ret.metrics.push_back(it.second.ToFidl(it.first));

@@ -75,7 +75,13 @@ void RecursiveFormatCat(rapidjson::PrettyWriter<OutputStream>* writer,
   // Properties.
   for (const auto& property : *root.object.properties) {
     writer->String(FormatStringBase64Fallback(*property.key));
-    writer->String(FormatStringBase64Fallback(*property.value));
+    if (property.value.is_str()) {
+      writer->String(FormatStringBase64Fallback(*property.value.str()));
+    } else {
+      auto& val = property.value.bytes();
+      writer->String(
+          FormatStringBase64Fallback({(char*)val->data(), val->size()}));
+    }
   }
 
   // Metrics.

@@ -65,29 +65,18 @@ class ObjectDir {
   ObjectDir find(ObjectPath path, bool initialize = true) const;
 
   // Sets a property on this object to the given value.
-  void set_prop(std::string name, const std::string& value) const {
-    inner_set_prop({}, std::move(name), Property(value));
+  template <typename T>
+  bool set_prop(std::string name, T value) const {
+    return inner_set_prop({}, std::move(name), Property(std::move(value)));
   }
 
   // Sets a property on the child specified by path to the given value.
   // All objects along the path that do not exist will be initialized.
-  bool set_prop(ObjectPath path, std::string name,
-                const std::string& value) const {
-    return inner_set_prop(std::move(path), std::move(name), Property(value));
-  }
-
-  // Sets a property on this object to use the given callback for its value.
-  bool set_prop(std::string name, Property::ValueCallback callback) const {
-    return inner_set_prop({}, std::move(name), Property(std::move(callback)));
-  }
-
-  // Sets a property on the child specified by path to use the given callback
-  // for its value.
-  // All objects along the path that do not exist will be initialized.
-  bool set_prop(ObjectPath path, std::string name,
-                Property::ValueCallback callback) const {
+  template <typename T>
+  typename std::enable_if_t<std::is_lvalue_reference<T>::value, bool>::type
+  set_prop(ObjectPath path, std::string name, T value) const {
     return inner_set_prop(std::move(path), std::move(name),
-                          Property(std::move(callback)));
+                          Property(std::move(value)));
   }
 
   // Sets a metric on this object to the given value.
