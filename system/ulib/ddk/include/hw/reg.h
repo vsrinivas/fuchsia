@@ -92,13 +92,13 @@ static inline uint64_t readll(const volatile void* a) {
     writell((readll(addr) & ~(((1ull << (width)) - 1) << (startbit))) | ((val) << (startbit)), (addr))
 
 #define set_bitsb(v, a) writeb(readb(a) | (v), (a))
-#define clr_bitsb(v, a) writeb(readb(a) & ~(v), (a))
+#define clr_bitsb(v, a) writeb(readb(a) & (uint8_t)~(v), (a))
 
 #define set_bitsw(v, a) writew(readw(a) | (v), (a))
-#define clr_bitsw(v, a) writew(readw(a) & ~(v), (a))
+#define clr_bitsw(v, a) writew(readw(a) & (uint16_t)~(v), (a))
 
 #define set_bitsl(v, a) writel(readl(a) | (v), (a))
-#define clr_bitsl(v, a) writel(readl(a) & ~(v), (a))
+#define clr_bitsl(v, a) writel(readl(a) & (uint32_t)~(v), (a))
 
 #define set_bitsll(v, a) writell(readll(a) | (v), (a))
-#define clr_bitsll(v, a) writell(readll(a) & ~(v), (a))
+#define clr_bitsll(v, a) writell(readll(a) & (uint64_t)~(v), (a))
