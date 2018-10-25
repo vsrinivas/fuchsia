@@ -132,6 +132,29 @@ zx_status_t PlatformDevice::RpcGetBti(const DeviceResources* dr, uint32_t index,
     return status;
 }
 
+zx_status_t PlatformDevice::RpcGetSmc(const DeviceResources* dr, uint32_t index,
+                                      zx_handle_t* out_handle, uint32_t* out_handle_count) {
+    if (index >= dr->smc_count()) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    zx_handle_t handle;
+    const pbus_smc_t& smc = dr->smc(index);
+    uint32_t options = ZX_RSRC_KIND_SMC | ZX_RSRC_FLAG_EXCLUSIVE;
+    char rsrc_name[ZX_MAX_NAME_LEN];
+    snprintf(rsrc_name, ZX_MAX_NAME_LEN - 1, "%s.pbus[%u]", name_, index);
+    zx_status_t status = zx_resource_create(bus_->GetResource(), options, smc.service_call_num_base,
+                                            smc.count, rsrc_name, sizeof(rsrc_name), &handle);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: pdev_rpc_get_smc: zx_resource_create failed: %d\n", name_, status);
+        return status;
+    }
+
+    *out_handle_count = 1;
+    *out_handle = handle;
+    return status;
+}
+
 zx_status_t PlatformDevice::RpcGetDeviceInfo(const DeviceResources* dr, pdev_device_info_t* out_info) {
     pdev_device_info_t info = {
         .vid = vid_,
@@ -143,6 +166,7 @@ zx_status_t PlatformDevice::RpcGetDeviceInfo(const DeviceResources* dr, pdev_dev
         .i2c_channel_count = static_cast<uint32_t>(dr->i2c_channel_count()),
         .clk_count = static_cast<uint32_t>(dr->clk_count()),
         .bti_count = static_cast<uint32_t>(dr->bti_count()),
+        .smc_count = static_cast<uint32_t>(dr->smc_count()),
         .metadata_count = static_cast<uint32_t>(dr->metadata_count() + dr->boot_metadata_count()),
         .reserved = {},
         .name = {},
@@ -406,6 +430,9 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
             break;
         case PDEV_GET_BTI:
             status = RpcGetBti(dr, req->index, resp_handles, &resp_handle_count);
+            break;
+        case PDEV_GET_SMC:
+            status = RpcGetSmc(dr, req->index, resp_handles, &resp_handle_count);
             break;
         case PDEV_GET_DEVICE_INFO:
             status = RpcGetDeviceInfo(dr, &resp->device_info);

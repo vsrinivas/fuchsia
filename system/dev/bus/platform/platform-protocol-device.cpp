@@ -184,6 +184,30 @@ zx_status_t ProtocolDevice::PDevGetBti(uint32_t index, zx_handle_t* out_handle) 
     return bus_->IommuGetBti(bti.iommu_index, bti.bti_id, out_handle);
 }
 
+zx_status_t ProtocolDevice::PDevGetSmc(uint32_t index, zx_handle_t* out_handle) {
+    if (index >= resources_.smc_count()) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    if (out_handle == nullptr) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    const pbus_smc_t& smc = resources_.smc(index);
+
+    zx_handle_t handle;
+    uint32_t options = ZX_RSRC_KIND_SMC | ZX_RSRC_FLAG_EXCLUSIVE;
+    char rsrc_name[ZX_MAX_NAME_LEN];
+    snprintf(rsrc_name, ZX_MAX_NAME_LEN - 1, "%s.pbus[%u]", name_, index);
+    zx_status_t status = zx_resource_create(bus_->GetResource(), options, smc.service_call_num_base,
+                                            smc.count, rsrc_name, sizeof(rsrc_name), &handle);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    *out_handle = handle;
+    return status;
+}
+
 zx_status_t ProtocolDevice::PDevGetDeviceInfo(pdev_device_info_t* out_info) {
     pdev_device_info_t info = {
         .vid = vid_,
@@ -195,6 +219,7 @@ zx_status_t ProtocolDevice::PDevGetDeviceInfo(pdev_device_info_t* out_info) {
         .i2c_channel_count = static_cast<uint32_t>(resources_.i2c_channel_count()),
         .clk_count = static_cast<uint32_t>(resources_.clk_count()),
         .bti_count = static_cast<uint32_t>(resources_.bti_count()),
+        .smc_count = static_cast<uint32_t>(resources_.smc_count()),
         .metadata_count = static_cast<uint32_t>(resources_.metadata_count()),
         .reserved = {},
         .name = {},

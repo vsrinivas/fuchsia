@@ -41,6 +41,7 @@ public:
     inline const pbus_i2c_channel_t& i2c_channel(size_t i) const { return i2c_channels_[i]; }
     inline const pbus_clk_t& clk(size_t i) const { return clks_[i]; }
     inline const pbus_bti_t& bti(size_t i) const { return btis_[i]; }
+    inline const pbus_smc_t& smc(size_t i) const { return smcs_[i]; }
     inline const pbus_metadata_t& metadata(size_t i) const { return metadata_[i]; }
     inline const pbus_boot_metadata_t& boot_metadata(size_t i) const { return boot_metadata_[i]; }
     inline const uint32_t* protocols() const { return protocols_.begin(); }
@@ -52,6 +53,7 @@ public:
     inline size_t i2c_channel_count() const { return i2c_channels_.size(); }
     inline size_t clk_count() const { return clks_.size(); }
     inline size_t bti_count() const { return btis_.size(); }
+    inline size_t smc_count() const { return smcs_.size(); }
     inline size_t metadata_count() const { return metadata_.size(); }
     inline size_t boot_metadata_count() const { return boot_metadata_.size(); }
     inline size_t child_count() const { return children_.size(); }
@@ -68,6 +70,7 @@ private:
     fbl::Array<pbus_i2c_channel_t> i2c_channels_;
     fbl::Array<pbus_clk_t> clks_;
     fbl::Array<pbus_bti_t> btis_;
+    fbl::Array<pbus_smc_t> smcs_;
     fbl::Array<pbus_metadata_t> metadata_;
     fbl::Array<pbus_boot_metadata_t> boot_metadata_;
     fbl::Array<uint32_t> protocols_;

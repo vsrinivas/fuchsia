@@ -49,6 +49,8 @@
 //
 //     zx_status_t PDevGetBti(uint32_t index, zx_handle_t* out_bti);
 //
+//     zx_status_t PDevGetSmc(uint32_t index, zx_handle_t* out_smc);
+//
 //     zx_status_t PDevGetDeviceInfo(pdev_device_info_t* out_info);
 //
 //     zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info);
@@ -73,6 +75,7 @@ public:
         ops_.map_mmio = PDevMapMmio;
         ops_.get_interrupt = PDevGetInterrupt;
         ops_.get_bti = PDevGetBti;
+        ops_.get_smc = PDevGetSmc;
         ops_.get_device_info = PDevGetDeviceInfo;
         ops_.get_board_info = PDevGetBoardInfo;
         ops_.device_add = PDevDeviceAdd;
@@ -103,6 +106,9 @@ private:
     }
     static zx_status_t PDevGetBti(void* ctx, uint32_t index, zx_handle_t* out_bti) {
         return static_cast<D*>(ctx)->PDevGetBti(index, out_bti);
+    }
+    static zx_status_t PDevGetSmc(void* ctx, uint32_t index, zx_handle_t* out_smc) {
+        return static_cast<D*>(ctx)->PDevGetSmc(index, out_smc);
     }
     static zx_status_t PDevGetDeviceInfo(void* ctx, pdev_device_info_t* out_info) {
         return static_cast<D*>(ctx)->PDevGetDeviceInfo(out_info);
@@ -149,6 +155,9 @@ public:
     }
     zx_status_t GetBti(uint32_t index, zx_handle_t* out_bti) {
         return ops_->get_bti(ctx_, index, out_bti);
+    }
+    zx_status_t GetSmc(uint32_t index, zx_handle_t* out_smc) {
+        return ops_->get_smc(ctx_, index, out_smc);
     }
     zx_status_t GetDeviceInfo(pdev_device_info_t* out_info) {
         return ops_->get_device_info(ctx_, out_info);

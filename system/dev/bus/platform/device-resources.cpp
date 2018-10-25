@@ -34,6 +34,7 @@ zx_status_t DeviceResources::Init(const pbus_dev_t* pdev, uint32_t* next_index) 
         !CopyResources(pdev->i2c_channel_count, pdev->i2c_channel_list, &i2c_channels_) ||
         !CopyResources(pdev->clk_count, pdev->clk_list, &clks_) ||
         !CopyResources(pdev->bti_count, pdev->bti_list, &btis_) ||
+        !CopyResources(pdev->smc_count, pdev->smc_list, &smcs_) ||
         !CopyResources(pdev->metadata_count, pdev->metadata_list, &metadata_) ||
         !CopyResources(pdev->boot_metadata_count, pdev->boot_metadata_list, &boot_metadata_) ||
         !CopyResources(pdev->protocol_count, pdev->protocol_list, &protocols_)) {

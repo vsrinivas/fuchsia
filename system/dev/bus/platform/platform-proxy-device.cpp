@@ -394,6 +394,17 @@ zx_status_t ProxyDevice::PDevGetBti(uint32_t index, zx_handle_t* out_handle) {
                        out_handle, 1, nullptr);
 }
 
+zx_status_t ProxyDevice::PDevGetSmc(uint32_t index, zx_handle_t* out_handle) {
+    rpc_pdev_req_t req = {};
+    rpc_pdev_rsp_t resp = {};
+    req.header.proto_id = ZX_PROTOCOL_PDEV;
+    req.header.op = PDEV_GET_SMC;
+    req.index = index;
+
+    return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp), nullptr, 0,
+                       out_handle, 1, nullptr);
+}
+
 zx_status_t ProxyDevice::PDevGetDeviceInfo(pdev_device_info_t* out_info) {
     rpc_pdev_req_t req = {};
     rpc_pdev_rsp_t resp = {};

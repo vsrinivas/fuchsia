@@ -72,9 +72,9 @@ After the platform devices are created, the platform bus initialization is compl
 
 The [platform device protocol](../../system/ulib/ddk/include/ddk/protocol/platform-device.h)
 (`ZX_PROTOCOL_PDEV`) is the main protocol provided by the platform bus to
-platform device drivers. This protocol provides access to resources like MMIO ranges, interrupts
-and BTIs to the platform device driver. Rather than requesting MMIOs and interrupts by physical
-addresses or IRQ numbers, these resource are requested by a zero-based index.
+platform device drivers. This protocol provides access to resources like MMIO ranges, interrupts,
+BTIs, and SMC ranges to the platform device driver. Rather than requesting MMIOs and interrupts by
+physical addresses or IRQ numbers, these resource are requested by a zero-based index.
 This allows us to have platform device drivers for particular IP that works across multiple
 platforms, since the knowledge of the exact MMIO addresses and interrupt numbers do not need to be
 known by the driver. Instead the board driver configures the MMIO addresses and IRQ numbers in the

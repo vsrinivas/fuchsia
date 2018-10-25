@@ -39,6 +39,13 @@ struct PbusBti {
     uint32    bti_id;
 };
 
+struct PbusSmc {
+    /// The device is granted the ability to make SMC calls with service call numbers ranging from
+    /// service_call_num_base to service_call_num_base + count - 1.
+    uint32    service_call_num_base;
+    uint32    count;
+};
+
 /// Device metadata.
 struct PbusMetadata {
     /// Metadata type.
@@ -70,6 +77,7 @@ struct PbusDev {
     vector<PbusI2cChannel> i2c_channel;
     vector<PbusClk> clk;
     vector<PbusBti> bti;
+    vector<PbusSmc> smc;
     vector<PbusMetadata> metadata;
     vector<PbusBootMetadata> boot_metadata;
     /// List of this device's child devices.

@@ -52,6 +52,7 @@ public:
                             size_t* out_size, zx_paddr_t* out_paddr, zx_handle_t* out_handle);
     zx_status_t PDevGetInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle);
     zx_status_t PDevGetBti(uint32_t index, zx_handle_t* out_handle);
+    zx_status_t PDevGetSmc(uint32_t index, zx_handle_t* out_handle);
     zx_status_t PDevGetDeviceInfo(pdev_device_info_t* out_info);
     zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info);
     zx_status_t PDevDeviceAdd(uint32_t index, const device_add_args_t* args, zx_device_t** device);

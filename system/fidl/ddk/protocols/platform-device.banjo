@@ -17,6 +17,7 @@ struct PdevDeviceInfo {
     uint32 i2c_channel_count;
     uint32 clk_count;
     uint32 bti_count;
+    uint32 smc_count;
     uint32 metadata_count;
     array<uint32>:8 reserved;
     string:32 name;
@@ -48,8 +49,9 @@ interface PDev {
                                                       zx.paddr paddr, handle<vmo> @handle);
     3: GetInterrupt(uint32 index, uint32 flags) -> (zx.status s, handle<interrupt> irq);
     4: GetBti(uint32 index) -> (zx.status s, handle<bti> bti);
-    5: GetDeviceInfo() -> (zx.status s, PdevDeviceInfo info);
-    6: GetBoardInfo() -> (zx.status s, PdevBoardInfo info);
-    7: DeviceAdd (uint32 index, ddk.driver.DeviceAddArgs args) -> (zx.status s, ddk.driver.ZxDevice? device);
-    8: GetProtocol (uint32 proto_id, uint32 index) -> (zx.status s, vector<void> out_protocol);
+    5: GetSmc(uint32 index) -> (zx.status s, handle<resource> smc);
+    6: GetDeviceInfo() -> (zx.status s, PdevDeviceInfo info);
+    7: GetBoardInfo() -> (zx.status s, PdevBoardInfo info);
+    8: DeviceAdd (uint32 index, ddk.driver.DeviceAddArgs args) -> (zx.status s, ddk.driver.ZxDevice? device);
+    9: GetProtocol (uint32 proto_id, uint32 index) -> (zx.status s, vector<void> out_protocol);
 };

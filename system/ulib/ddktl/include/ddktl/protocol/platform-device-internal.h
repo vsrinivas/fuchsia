@@ -25,6 +25,8 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pdev_protocol_get_interrupt, PDevGetInt
                                                         zx_handle_t* out_irq));
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pdev_protocol_get_bti, PDevGetBti,
                                      zx_status_t (C::*)(uint32_t index, zx_handle_t* out_bti));
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pdev_protocol_get_smc, PDevGetSmc,
+                                     zx_status_t (C::*)(uint32_t index, zx_handle_t* out_smc));
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pdev_protocol_get_device_info, PDevGetDeviceInfo,
                                      zx_status_t (C::*)(pdev_device_info_t* out_info));
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pdev_protocol_get_board_info, PDevGetBoardInfo,
@@ -56,6 +58,9 @@ constexpr void CheckPDevProtocolSubclass() {
     static_assert(internal::has_pdev_protocol_get_bti<D>::value,
                   "PDevProtocol subclasses must implement "
                   "zx_status_t PDevGetBti(uint32_t index, zx_handle_t* out_bti");
+    static_assert(internal::has_pdev_protocol_get_smc<D>::value,
+                  "PDevProtocol subclasses must implement "
+                  "zx_status_t PDevGetSmc(uint32_t index, zx_handle_t* out_smc");
     static_assert(internal::has_pdev_protocol_get_device_info<D>::value,
                   "PDevProtocol subclasses must implement "
                   "zx_status_t PDevGetDeviceInfo(pdev_device_info_t* out_info");

@@ -32,6 +32,7 @@ struct pdev_device_info {
     uint32_t i2c_channel_count;
     uint32_t clk_count;
     uint32_t bti_count;
+    uint32_t smc_count;
     uint32_t metadata_count;
     uint32_t reserved[8];
     char name[32];
@@ -63,6 +64,7 @@ typedef struct pdev_protocol_ops {
                             zx_handle_t* out_handle);
     zx_status_t (*get_interrupt)(void* ctx, uint32_t index, uint32_t flags, zx_handle_t* out_irq);
     zx_status_t (*get_bti)(void* ctx, uint32_t index, zx_handle_t* out_bti);
+    zx_status_t (*get_smc)(void* ctx, uint32_t index, zx_handle_t* out_smc);
     zx_status_t (*get_device_info)(void* ctx, pdev_device_info_t* out_info);
     zx_status_t (*get_board_info)(void* ctx, pdev_board_info_t* out_info);
     zx_status_t (*device_add)(void* ctx, uint32_t index, const device_add_args_t* args,
@@ -95,6 +97,10 @@ static inline zx_status_t pdev_get_interrupt(const pdev_protocol_t* proto, uint3
 static inline zx_status_t pdev_get_bti(const pdev_protocol_t* proto, uint32_t index,
                                        zx_handle_t* out_bti) {
     return proto->ops->get_bti(proto->ctx, index, out_bti);
+}
+static inline zx_status_t pdev_get_smc(const pdev_protocol_t* proto, uint32_t index,
+                                       zx_handle_t* out_smc) {
+    return proto->ops->get_smc(proto->ctx, index, out_smc);
 }
 static inline zx_status_t pdev_get_device_info(const pdev_protocol_t* proto,
                                                pdev_device_info_t* out_info) {

@@ -64,6 +64,8 @@ private:
                                 uint32_t* out_handle_count);
     zx_status_t RpcGetBti(const DeviceResources* dr, uint32_t index, zx_handle_t* out_handle,
                           uint32_t* out_handle_count);
+    zx_status_t RpcGetSmc(const DeviceResources* dr, uint32_t index,
+                          zx_handle_t* out_handle, uint32_t* out_handle_count);
     zx_status_t RpcGetDeviceInfo(const DeviceResources* dr, pdev_device_info_t* out_info);
     zx_status_t RpcDeviceAdd(const DeviceResources* dr, uint32_t index, uint32_t* out_device_id);
     zx_status_t RpcGetMetadata(const DeviceResources* dr, uint32_t index, uint32_t* out_type,

@@ -21,6 +21,7 @@ typedef struct pbus_board_info pbus_board_info_t;
 typedef struct pbus_metadata pbus_metadata_t;
 typedef struct pbus_mmio pbus_mmio_t;
 typedef struct pbus_gpio pbus_gpio_t;
+typedef struct pbus_smc pbus_smc_t;
 typedef struct pbus_irq pbus_irq_t;
 typedef struct pbus_dev pbus_dev_t;
 typedef struct pbus_protocol pbus_protocol_t;
@@ -80,6 +81,13 @@ struct pbus_gpio {
     uint32_t gpio;
 };
 
+struct pbus_smc {
+    // The device is granted the ability to make SMC calls with service call numbers ranging from
+    // service_call_num_base to service_call_num_base + count - 1.
+    uint32_t service_call_num_base;
+    uint32_t count;
+};
+
 struct pbus_irq {
     uint32_t irq;
     // `ZX_INTERRUPT_MODE_*` flags
@@ -106,6 +114,8 @@ struct pbus_dev {
     size_t clk_count;
     const pbus_bti_t* bti_list;
     size_t bti_count;
+    const pbus_smc_t* smc_list;
+    size_t smc_count;
     const pbus_metadata_t* metadata_list;
     size_t metadata_count;
     const pbus_boot_metadata_t* boot_metadata_list;

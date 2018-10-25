@@ -60,7 +60,7 @@ public:
     // IOMMU protocol implementation.
     zx_status_t IommuGetBti(uint32_t iommu_index, uint32_t bti_id, zx_handle_t* out_handle);
 
-    // Returns the resource handle to be used for creating MMIO regions and IRQs.
+    // Returns the resource handle to be used for creating MMIO regions, IRQs, and SMC ranges.
     // Currently this just returns the root resource, but we may change this to a more
     // limited resource in the future.
     zx_handle_t GetResource() const { return get_root_resource(); }
