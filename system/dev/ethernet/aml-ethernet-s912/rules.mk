@@ -29,6 +29,7 @@ MODULE_LIBS := \
     system/ulib/c
 
 MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-ethernet-board \
     system/banjo/ddk-protocol-gpio \
     system/banjo/ddk-protocol-i2c \
     system/banjo/ddk-protocol-platform-device \

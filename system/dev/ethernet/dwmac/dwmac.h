@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/device.h>
-#include <ddk/protocol/ethernet_board.h>
+#include <ddk/protocol/ethernet-board.h>
 #include <ddk/protocol/ethernet-mac.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/i2c.h>
