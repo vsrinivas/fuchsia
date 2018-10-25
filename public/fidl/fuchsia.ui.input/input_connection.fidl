@@ -33,6 +33,7 @@ interface InputConnection {
 // An interface applications may implement to receive events from an
 // input connection.
 // TODO(MZ-33): This should include hit testing and an input arena.
+[Discoverable]
 interface InputListener {
   // Called to deliver an input event.
   //
