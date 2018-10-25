@@ -4,9 +4,9 @@
 
 #include <stdio.h>
 
-#include "garnet/lib/profiler/test.h"
+#include "gperftools/profiler.h"
 
 int main(int argc, char** argv) {
-  printf("Hello profiler: %d\n", test());
+  printf("Hello profiler\n");
   return 0;
 }

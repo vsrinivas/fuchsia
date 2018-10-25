@@ -6,11 +6,20 @@ import("//build/package.gni")
 
 gperftools_src_root = "//third_party/gperftools/src/"
 
+if (!is_debug) {
+  cflags_cc = [ "-DNO_FRAME_POINTER" ]
+}
+
 config("headers_config") {
   include_dirs = [
+    "fuchsia",
     gperftools_src_root,
     "include",
   ]
+}
+
+source_set("profiler_headers") {
+  public_configs = [ ":headers_config" ]
 }
 
 static_library("profiler") {
@@ -18,7 +27,6 @@ static_library("profiler") {
 
   gperftools_sources = [
     "gperftools/profiler.h",
-    "profiledata.h",
     "profile-handler.h",
     "getpc.h",
     "base/basictypes.h",
@@ -28,11 +36,13 @@ static_library("profiler") {
     "base/simple_mutex.h",
     "base/sysinfo.h",
 
-    "profiler.cc",
-    "profile-handler.cc",
     "profiledata.cc",
+    "profiler.cc",
+    "gperftools/stacktrace.h",
     "stacktrace.cc",
+    "stacktrace_libunwind-inl.h",
     "emergency_malloc_for_stacktrace.cc",
+    "profile-handler.cc",
 
     "base/spinlock.cc",
     "base/spinlock_internal.cc",
@@ -41,15 +51,24 @@ static_library("profiler") {
   ]
 
   additional_sources = [
-    "test.h",
-    "test.cc",
+    "fuchsia/profiler_log_listener.h",
+    "fuchsia/profiler_log_listener.cc",
+    "fuchsia/thread_interrupter.cc",
+    "fuchsia/thread_interrupter_fuchsia.cc",
+    "fuchsia/thread_interrupter.h",
   ]
 
   sources = rebase_path(gperftools_sources, ".", gperftools_src_root) +
             additional_sources
 
   deps = [
+    ":profiler_headers",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/syslog/cpp",
+    "//zircon/public/fidl/fuchsia-logger",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/syslog",
   ]
 }

@@ -7,7 +7,7 @@ import("//build/package.gni")
 gperftools_src_root = "//third_party/gperftools/src/tests/"
 
 executable("stacktrace_unittest") {
-#  testonly = true
+  #  testonly = true
 
   sources = [
     rebase_path("stacktrace_unittest.cc", ".", gperftools_src_root),
@@ -30,7 +30,7 @@ source_set("testutil") {
 }
 
 executable("profiler_unittest") {
-#  testonly = true
+  #  testonly = true
 
   sources = [
     rebase_path("profiler_unittest.cc", ".", gperftools_src_root),
@@ -44,23 +44,8 @@ executable("profiler_unittest") {
   ]
 }
 
-executable("profile-handler_unittest") {
-#  testonly = true
-
-  sources = [
-    rebase_path("profile-handler_unittest.cc", ".", gperftools_src_root),
-  ]
-
-  public_deps = [
-    ":testutil",
-    "//garnet/lib/profiler",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
-  ]
-}
-
 executable("profiledata_unittest") {
-#  testonly = true
+  #  testonly = true
 
   sources = [
     rebase_path("profiledata_unittest.cc", ".", gperftools_src_root),
@@ -75,11 +60,10 @@ executable("profiledata_unittest") {
 }
 
 package("profiler_tests") {
-#  testonly = true
+  #  testonly = true
   deprecated_system_image = true
 
   deps = [
-    ":profile-handler_unittest",
     ":profiledata_unittest",
     ":profiler_unittest",
     ":stacktrace_unittest",
@@ -93,9 +77,6 @@ package("profiler_tests") {
     },
     {
       name = "profiler_unittest"
-    },
-    {
-      name = "profile-handler_unittest"
     },
     {
       name = "profiledata_unittest"

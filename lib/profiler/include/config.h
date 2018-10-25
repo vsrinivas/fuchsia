@@ -1,5 +1,6 @@
-/* src/config.h.  Generated from config.h.in by configure.  */
-/* src/config.h.in.  Generated from configure.ac by autoheader.  */
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 #ifndef GARNET_LIB_PROFILER_INCLUDE_CONFIG_H_
 #define GARNET_LIB_PROFILER_INCLUDE_CONFIG_H_
@@ -263,7 +264,7 @@
 #elif defined(__x86_64__)
 #define PC_FROM_UCONTEXT uc_mcontext.gregs[REG_RIP]
 #else
-error("Unsupported Architecture")
+#error "Unsupported Architecture"
 #endif
 
 /* Always the empty-string on non-windows systems. On windows, should be
