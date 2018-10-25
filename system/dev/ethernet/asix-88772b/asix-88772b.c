@@ -68,6 +68,8 @@ typedef struct {
     ethmac_ifc_t* ifc;
     void* cookie;
 
+    size_t parent_req_size;
+
     mtx_t mutex;
 } ax88772b_t;
 
@@ -653,6 +655,8 @@ static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device) {
     eth->usb_device = device;
     memcpy(&eth->usb, &usb, sizeof(eth->usb));
 
+    eth->parent_req_size = usb_get_request_size(&eth->usb);
+
     eth->bulk_in_addr = bulk_in_addr;
     eth->bulk_out_addr = bulk_out_addr;
 
@@ -661,7 +665,7 @@ static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device) {
     zx_status_t status = ZX_OK;
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, USB_BUF_IN_SIZE, bulk_in_addr, sizeof(usb_request_t));
+        status = usb_request_alloc(&req, USB_BUF_IN_SIZE, bulk_in_addr, eth->parent_req_size);
         if (status != ZX_OK) {
             goto fail;
         }
@@ -671,7 +675,7 @@ static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device) {
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, USB_BUF_OUT_SIZE, bulk_out_addr, sizeof(usb_request_t));
+        status = usb_request_alloc(&req, USB_BUF_OUT_SIZE, bulk_out_addr, eth->parent_req_size);
         if (status != ZX_OK) {
             goto fail;
         }
@@ -681,7 +685,7 @@ static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device) {
     }
     for (int i = 0; i < INTR_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, INTR_REQ_SIZE, intr_addr, sizeof(usb_request_t));
+        status = usb_request_alloc(&req, INTR_REQ_SIZE, intr_addr, eth->parent_req_size);
         if (status != ZX_OK) {
             goto fail;
         }

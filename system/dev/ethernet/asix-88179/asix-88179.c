@@ -88,6 +88,7 @@ typedef struct {
     ethmac_ifc_t* ifc;
     void* cookie;
 
+    size_t parent_req_size;
     thrd_t thread;
     mtx_t mutex;
 } ax88179_t;
@@ -947,12 +948,14 @@ static zx_status_t ax88179_bind(void* ctx, zx_device_t* device) {
     eth->bulk_in_addr = bulk_in_addr;
     eth->bulk_out_addr = bulk_out_addr;
 
+    eth->parent_req_size = usb_get_request_size(&eth->usb);
+
     eth->rx_endpoint_delay = ETHMAC_INITIAL_RECV_DELAY;
     eth->tx_endpoint_delay = ETHMAC_INITIAL_TRANSMIT_DELAY;
     zx_status_t status = ZX_OK;
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, USB_BUF_SIZE, bulk_in_addr, sizeof(usb_request_t));
+        status = usb_request_alloc(&req, USB_BUF_SIZE, bulk_in_addr, eth->parent_req_size);
         if (status != ZX_OK) {
             goto fail;
         }
@@ -962,7 +965,7 @@ static zx_status_t ax88179_bind(void* ctx, zx_device_t* device) {
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, USB_BUF_SIZE, bulk_out_addr, sizeof(usb_request_t));
+        status = usb_request_alloc(&req, USB_BUF_SIZE, bulk_out_addr, eth->parent_req_size);
         if (status != ZX_OK) {
             goto fail;
         }
@@ -971,7 +974,7 @@ static zx_status_t ax88179_bind(void* ctx, zx_device_t* device) {
         list_add_head(&eth->free_write_reqs, &req->node);
     }
     usb_request_t* int_req;
-    status = usb_request_alloc(&int_req, INTR_REQ_SIZE, intr_addr, sizeof(usb_request_t));
+    status = usb_request_alloc(&int_req, INTR_REQ_SIZE, intr_addr, eth->parent_req_size);
     if (status != ZX_OK) {
         goto fail;
     }

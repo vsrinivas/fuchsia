@@ -54,10 +54,11 @@ typedef struct usb_device {
 
     // pool of requests that can be reused
     usb_request_pool_t free_reqs;
-    size_t parent_request_size;
+    size_t parent_req_size;
+    size_t req_size;
 } usb_device_t;
 
-typedef struct usb_device_request_internal {
+typedef struct usb_device_req_internal {
     // callback to client driver
     usb_request_complete_cb complete_cb;
     // callback only on error
@@ -66,7 +67,7 @@ typedef struct usb_device_request_internal {
     void* cookie;
     // for queueing at the usb-bus level
     list_node_t node;
-} usb_device_request_internal_t;
+} usb_device_req_internal_t;
 
 void usb_device_set_hub_interface(usb_device_t* dev, usb_hub_interface_t* hub_intf);
 

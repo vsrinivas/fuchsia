@@ -50,6 +50,8 @@ typedef struct usb_hub {
     // length is num_ports
     port_status_t* port_status;
 
+    size_t parent_req_size;
+
     // bit field indicating which ports have devices attached
     uint8_t attached_ports[128 / 8];
 } usb_hub_t;
@@ -462,8 +464,10 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device) {
     memcpy(&hub->usb, &usb, sizeof(usb_protocol_t));
     memcpy(&hub->bus, &bus, sizeof(usb_bus_protocol_t));
 
+    hub->parent_req_size = usb_get_request_size(&usb);
+
     usb_request_t* req;
-    status = usb_request_alloc(&req, max_packet_size, ep_addr, sizeof(usb_request_t));
+    status = usb_request_alloc(&req, max_packet_size, ep_addr, hub->parent_req_size);
     if (status != ZX_OK) {
         usb_desc_iter_release(&iter);
         usb_hub_free(hub);
