@@ -53,6 +53,7 @@ also provides core drivers and Fuchsia's libc implementation.
  - Ethernet
  - [Wireless](wireless_networking.md)
  - [Bluetooth][bluetooth]
+ - [Telephony][telephony]
  - Sockets
  - HTTP
 
@@ -101,6 +102,7 @@ also provides core drivers and Fuchsia's libc implementation.
 [framework-agent]: https://fuchsia.googlesource.com/peridot/+/master/docs/modular/agent.md
 [ledger]: https://fuchsia.googlesource.com/peridot/+/master/docs/ledger/README.md
 [bluetooth]: https://fuchsia.googlesource.com/garnet/+/HEAD/bin/bluetooth/README.md
+[telephony]: https://fuchsia.googlesource.com/garnet/+/HEAD/bin/telephony/README.md
 [magma]: https://fuchsia.googlesource.com/garnet/+/master/lib/magma/
 [escher]: https://fuchsia.googlesource.com/garnet/+/master/public/lib/escher/
 [scenic]: https://fuchsia.googlesource.com/garnet/+/master/docs/ui_scenic.md
