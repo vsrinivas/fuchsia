@@ -19,7 +19,6 @@ rustc_library("fidl_zircon_ethernet_ext") {
   ]
 }
 
-# TODO(tamird): add this to packages/tests/fidlext_tests when runtests stops crashing.
 package("fidl_zircon_ethernet_ext_tests") {
   testonly = true
   deps = [

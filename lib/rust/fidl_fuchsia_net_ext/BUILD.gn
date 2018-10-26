@@ -13,7 +13,6 @@ rustc_library("fidl_fuchsia_net_ext") {
   ]
 }
 
-# TODO(tamird): add this to packages/tests/fidlext_tests when runtests stops crashing.
 package("fidl_fuchsia_net_ext_tests") {
   testonly = true
   deps = [
