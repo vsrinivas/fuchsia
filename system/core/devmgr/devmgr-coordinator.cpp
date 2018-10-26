@@ -1244,7 +1244,7 @@ static zx_status_t dc_handle_device_read(Device* dev) {
         return ZX_ERR_INTERNAL;
     }
 
-    dc_status_t dcs;
+    Status dcs;
     dcs.txid = msg.txid;
 
     switch (msg.op) {
@@ -1353,7 +1353,7 @@ static zx_status_t dc_handle_device_read(Device* dev) {
             goto fail_wrong_hcount;
         }
         struct {
-            dc_status_t rsp;
+            Status rsp;
             char path[DC_PATH_MAX];
         } reply;
         if ((r = dc_get_topo_path(dev, reply.path, DC_PATH_MAX)) < 0) {
@@ -1372,7 +1372,7 @@ static zx_status_t dc_handle_device_read(Device* dev) {
         }
         zx_handle_t vmo;
         struct {
-            dc_status_t rsp;
+            Status rsp;
             size_t size;
         } reply;
         if ((r = dc_load_firmware(dev, args, &vmo, &reply.size)) < 0) {
@@ -1425,7 +1425,7 @@ static zx_status_t dc_handle_device_read(Device* dev) {
             goto fail_wrong_hcount;
         }
         struct {
-            dc_status_t rsp;
+            Status rsp;
             uint8_t data[DC_MAX_DATA];
         } reply;
         size_t actual = 0;

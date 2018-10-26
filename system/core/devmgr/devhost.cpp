@@ -749,7 +749,7 @@ zx_status_t devhost_add(zx_device_t* parent, zx_device_t* child, const char* pro
         return r;
     }
 
-    dc_status_t rsp;
+    Status rsp;
     if ((r = dc_msg_rpc(parent->rpc, &msg, msglen, &hsend, 1, &rsp, sizeof(rsp), nullptr, nullptr)) < 0) {
         log(ERROR, "devhost[%s] add '%s': rpc failed: %d\n", path, child->name, r);
     } else {
@@ -771,7 +771,7 @@ zx_status_t devhost_add(zx_device_t* parent, zx_device_t* child, const char* pro
 static zx_status_t devhost_rpc_etc(zx_device_t* dev, Message::Op op,
                                    const char* args, const char* opname,
                                    uint32_t value, const void* data, size_t datalen,
-                                   dc_status_t* rsp, size_t rsp_len, size_t* actual,
+                                   Status* rsp, size_t rsp_len, size_t* actual,
                                    zx_handle_t* outhandle) {
     char buffer[512];
     const char* path = mkdevpath(dev, buffer, sizeof(buffer));
@@ -794,13 +794,13 @@ static zx_status_t devhost_rpc_etc(zx_device_t* dev, Message::Op op,
 
 static zx_status_t devhost_rpc(zx_device_t* dev, Message::Op op,
                                const char* args, const char* opname,
-                               dc_status_t* rsp, size_t rsp_len,
+                               Status* rsp, size_t rsp_len,
                                zx_handle_t* outhandle) {
     return devhost_rpc_etc(dev, op, args, opname, 0, nullptr, 0, rsp, rsp_len, nullptr, outhandle);
 }
 
 void devhost_make_visible(zx_device_t* dev) {
-    dc_status_t rsp;
+    Status rsp;
     devhost_rpc(dev, Message::Op::kMakeVisible, nullptr, "make-visible", &rsp,
                 sizeof(rsp), nullptr);
 }
@@ -830,7 +830,7 @@ zx_status_t devhost_remove(zx_device_t* dev) {
     ios->ph.handle = ZX_HANDLE_INVALID;
     dev->ios = nullptr;
 
-    dc_status_t rsp;
+    Status rsp;
     devhost_rpc(dev, Message::Op::kRemoveDevice, nullptr, "remove-device", &rsp,
                 sizeof(rsp), nullptr);
 
@@ -862,7 +862,7 @@ zx_status_t devhost_get_topo_path(zx_device_t* dev, char* path, size_t max, size
     }
 
     struct {
-        dc_status_t rsp;
+        Status rsp;
         char path[DC_PATH_MAX];
     } reply;
     zx_status_t r;
@@ -883,7 +883,7 @@ zx_status_t devhost_get_topo_path(zx_device_t* dev, char* path, size_t max, size
 }
 
 zx_status_t devhost_device_bind(zx_device_t* dev, const char* drv_libname) {
-    dc_status_t rsp;
+    Status rsp;
     return devhost_rpc(dev, Message::Op::kBindDevice, drv_libname,
                        "bind-device", &rsp, sizeof(rsp), nullptr);
 }
@@ -895,7 +895,7 @@ zx_status_t devhost_load_firmware(zx_device_t* dev, const char* path,
     }
 
     struct {
-        dc_status_t rsp;
+        Status rsp;
         size_t size;
     } reply;
     zx_status_t r;
@@ -917,7 +917,7 @@ zx_status_t devhost_get_metadata(zx_device_t* dev, uint32_t type, void* buf, siz
     }
 
     struct {
-        dc_status_t rsp;
+        Status rsp;
         uint8_t data[DC_MAX_DATA];
     } reply;
     zx_status_t r;
@@ -943,7 +943,7 @@ zx_status_t devhost_get_metadata(zx_device_t* dev, uint32_t type, void* buf, siz
 
 zx_status_t devhost_add_metadata(zx_device_t* dev, uint32_t type, const void* data,
                                  size_t length) {
-    dc_status_t rsp;
+    Status rsp;
 
     if (!data && length) {
         return ZX_ERR_INVALID_ARGS;
@@ -954,7 +954,7 @@ zx_status_t devhost_add_metadata(zx_device_t* dev, uint32_t type, const void* da
 
 zx_status_t devhost_publish_metadata(zx_device_t* dev, const char* path, uint32_t type,
                                      const void* data, size_t length) {
-    dc_status_t rsp;
+    Status rsp;
 
     if (!path || (!data && length)) {
         return ZX_ERR_INVALID_ARGS;

@@ -26,7 +26,7 @@ static zx_status_t dmctl_cmd(Message::Op op, const char* cmd, size_t cmdlen,
         return ZX_ERR_INVALID_ARGS;
     }
     msg.op = op;
-    dc_status_t rsp;
+    Status rsp;
     return dc_msg_rpc(dmctl_dev->rpc, &msg, msglen, h, hcount, &rsp, sizeof(rsp), nullptr, nullptr);
 }
 

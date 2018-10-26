@@ -378,10 +378,10 @@ struct Message {
     uint8_t data[DC_MAX_DATA];
 };
 
-typedef struct {
+struct Status {
     zx_txid_t txid;
     zx_status_t status;
-} dc_status_t;
+};
 
 #define DC_PATH_MAX 1024
 
@@ -392,7 +392,7 @@ zx_status_t dc_msg_unpack(Message* msg, size_t len, const void** data,
                           const char** name, const char** args);
 zx_status_t dc_msg_rpc(zx_handle_t h, Message* msg, size_t msglen,
                        zx_handle_t* handles, size_t hcount,
-                       dc_status_t* rsp, size_t rsp_len, size_t* resp_actual,
+                       Status* rsp, size_t rsp_len, size_t* resp_actual,
                        zx_handle_t* outhandle);
 
 extern bool dc_asan_drivers;
