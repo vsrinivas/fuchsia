@@ -9,8 +9,8 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/hidbus.h>
 
+#include <fbl/array.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 
 #include <hid/buttons.h>
 
@@ -59,7 +59,6 @@ private:
         gpio_protocol_t gpio;
         zx::interrupt irq;
     };
-    fbl::unique_ptr<GpioKeys[]> keys_;
 
     int Thread();
     void ShutDown() TA_EXCL(proxy_lock_);
@@ -69,5 +68,6 @@ private:
     zx_handle_t port_handle_;
     fbl::Mutex proxy_lock_;
     ddk::HidbusIfcProxy proxy_ TA_GUARDED(proxy_lock_);
+    fbl::Array<GpioKeys> keys_;
 };
 }

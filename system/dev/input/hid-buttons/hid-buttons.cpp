@@ -221,11 +221,15 @@ zx_status_t HidButtonsDevice::Bind() {
                pdev_info.gpio_count, kNumberOfRequiredGpios);
         return ZX_ERR_NOT_SUPPORTED;
     }
-    keys_ = fbl::make_unique<GpioKeys[]>(pdev_info.gpio_count);
-    // TODO(andresoportus): use fbl::make_unique_checked once array can be used.
 
+    // TODO(andresoportus): Make what GPIOs are required variable per board's metadata.
+    fbl::AllocChecker ac;
+    keys_ = fbl::Array(new (&ac) GpioKeys[kNumberOfRequiredGpios], kNumberOfRequiredGpios);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
     for (uint32_t i = 0; i < kNumberOfRequiredGpios; ++i) {
-         size_t actual;
+        size_t actual;
         status = pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, i, &keys_[i].gpio,
                                    sizeof(keys_[i].gpio), &actual);
         if (status != ZX_OK) {
