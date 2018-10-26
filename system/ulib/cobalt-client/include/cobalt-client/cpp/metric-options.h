@@ -7,9 +7,54 @@
 #include <stdint.h>
 
 #include <fbl/function.h>
+#include <fbl/string.h>
 #include <zircon/compiler.h>
 
 namespace cobalt_client {
+
+// Defines basic set of options for instantiating a metric.
+struct MetricOptions {
+    // Set option to generate a local only metric.
+    void Local();
+
+    // Set option to generate a remote only metric.
+    void Remote();
+
+    // Set options that will have a local and remote version.
+    void Both();
+
+    // Returns true if the metrics supports remote collection.
+    // This is values collected by another service, such as Cobalt.
+    bool IsRemote() const;
+
+    // Returns true if the metric supports in process collection.
+    // This is values tied to the process life-time.
+    bool IsLocal() const;
+
+    // Required for local metrics.
+    fbl::String name;
+
+    // Provides refined metric collection for remote and local metrics.
+    // Warning: |component| is not yet supported in the backend, so it will be ignored.
+    fbl::String component;
+
+    // Function that translates |event_code| to a human readable name.
+    // If returns |nullptr| or is unset, the stringfied version of |uint32_t| will be used.
+    const char* (*get_event_name)(uint32_t);
+
+    // Used by remote metrics to match with the respective unique id for the projects defined
+    // metrics in the backend.
+    uint32_t metric_id;
+
+    // Provides refined metric collection for |kRemote| and |kLocal| metrics.
+    // |event_code| 0 is reserved for Unkown events.
+    // Warning: |event_code| is not yet supported in the backend, so it will be set to 0.
+    uint32_t event_code;
+
+    // Defines whether the metric is local or remote.
+    // Internal use, should not be set manually.
+    uint8_t type;
+};
 
 // Describes an histogram, and provides data for mapping a value to a given bucket.
 // Every histogram contains two additional buckets, one at index 0 and bucket_count + 1.
@@ -23,7 +68,7 @@ namespace cobalt_client {
 // If using cobalt to flush your observations to the backend, this options should match
 // your metric definitions for correct behavior. Mismatch with the respective metric definition
 // will not allow proper collection and aggregation of metrics in the backend.
-struct HistogramOptions {
+struct HistogramOptions : public MetricOptions {
     enum class Type {
         // Each bucket is described in the following form:
         // range(i) =  [ b * i + c, b * {i +1} + c)
@@ -71,10 +116,10 @@ struct HistogramOptions {
     // This parameters should not be set manually.
 
     // Function used for mapping a value to a given bucket.
-    fbl::Function<uint32_t(double, const HistogramOptions&)> map_fn = nullptr;
+    uint32_t (*map_fn)(double, const HistogramOptions&) = nullptr;
 
     // Function used for mapping a bucket to its lowerbound.
-    fbl::Function<double(uint32_t, const HistogramOptions&)> reverse_map_fn = nullptr;
+    double (*reverse_map_fn)(uint32_t, const HistogramOptions&) = nullptr;
 
     // Base to describe the width of each step, in |kExponentialWidth|.
     double base = 1;
@@ -87,6 +132,9 @@ struct HistogramOptions {
 
     // Number of buckets needed.
     uint32_t bucket_count = 1;
+
+    // Cached upper bound for the histogram.
+    double max_value = 0;
 
     // Type of the histogram to be constructed.
     Type type;

@@ -7,11 +7,41 @@
 #include <stdint.h>
 #include <unistd.h>
 
-#include <cobalt-client/cpp/histogram-options.h>
+#include <cobalt-client/cpp/metric-options.h>
 #include <unittest/unittest.h>
 
 namespace cobalt_client {
 namespace {
+
+bool TestLocal() {
+    BEGIN_TEST;
+    MetricOptions options;
+    options.Remote();
+    options.Local();
+    ASSERT_TRUE(options.IsLocal());
+    ASSERT_FALSE(options.IsRemote());
+    END_TEST;
+}
+
+bool TestRemote() {
+    BEGIN_TEST;
+    MetricOptions options;
+    options.Local();
+    options.Remote();
+    ASSERT_TRUE(options.IsRemote());
+    ASSERT_FALSE(options.IsLocal());
+    END_TEST;
+}
+
+bool TestBoth() {
+    BEGIN_TEST;
+    MetricOptions options;
+    options.Local();
+    options.Both();
+    ASSERT_TRUE(options.IsRemote());
+    ASSERT_TRUE(options.IsLocal());
+    END_TEST;
+}
 
 bool TestMakeExponentialOptions() {
     BEGIN_TEST;
@@ -160,6 +190,12 @@ bool TestLinearReverseMap() {
     EXPECT_EQ(options.reverse_map_fn(4, options), -4);
     END_TEST;
 }
+
+BEGIN_TEST_CASE(MetricOptionsTest)
+RUN_TEST(TestLocal)
+RUN_TEST(TestRemote)
+RUN_TEST(TestBoth)
+END_TEST_CASE(MetricOptionsTest);
 
 BEGIN_TEST_CASE(HistogramOptionsTest)
 RUN_TEST(TestMakeExponentialOptions)

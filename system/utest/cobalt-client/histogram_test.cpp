@@ -11,8 +11,8 @@
 #include <unistd.h>
 
 #include <cobalt-client/cpp/histogram-internal.h>
-#include <cobalt-client/cpp/histogram-options.h>
 #include <cobalt-client/cpp/histogram.h>
+#include <cobalt-client/cpp/metric-options.h>
 #include <fbl/auto_call.h>
 #include <fbl/string.h>
 #include <fbl/string_printf.h>

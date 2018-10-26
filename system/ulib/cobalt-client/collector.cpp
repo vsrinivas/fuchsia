@@ -8,7 +8,9 @@
 #include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/counter-internal.h>
 #include <cobalt-client/cpp/histogram-internal.h>
+#include <cobalt-client/cpp/metric-options.h>
 #include <cobalt-client/cpp/types-internal.h>
+
 #include <fuchsia/cobalt/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <lib/fidl/cpp/vector_view.h>
@@ -67,22 +69,16 @@ Collector MakeCollector(CollectorOptions options, internal::CobaltOptions cobalt
 
 } // namespace
 
-MetricOptions MetricOptions::Local() {
-    MetricOptions options;
-    options.type = kLocal;
-    return options;
+void MetricOptions::Local() {
+    type = kLocal;
 }
 
-MetricOptions MetricOptions::Remote() {
-    MetricOptions options;
-    options.type = kRemote;
-    return options;
+void MetricOptions::Remote() {
+    type = kRemote;
 }
 
-MetricOptions MetricOptions::Both() {
-    MetricOptions options;
-    options.type = kLocal | kRemote;
-    return options;
+void MetricOptions::Both() {
+    type = kLocal | kRemote;
 }
 
 bool MetricOptions::IsLocal() const {
@@ -113,24 +109,23 @@ Collector::~Collector() {
     }
 };
 
-Histogram Collector::AddHistogram(const MetricOptions& metric_options,
-                                  const HistogramOptions& options) {
-    ZX_DEBUG_ASSERT_MSG(metric_options.event_code > 0, "event_type_index 0 value is reserved.");
+Histogram Collector::AddHistogram(const HistogramOptions& options) {
+    ZX_DEBUG_ASSERT_MSG(options.event_code > 0, "event_type_index 0 value is reserved.");
     ZX_DEBUG_ASSERT_MSG(remote_histograms_.size() < remote_histograms_.capacity(),
                         "Exceeded pre-allocated histogram capacity.");
-    RemoteHistogram::EventBuffer buffer(metric_options.component,
-                                        {MakeMetadata(metric_options.event_code)});
-    return AddHistogramInternal(metric_options.metric_id, options, fbl::move(buffer),
+    RemoteHistogram::EventBuffer buffer(options.component,
+                                        {MakeMetadata(options.event_code)});
+    return AddHistogramInternal(options.metric_id, options, fbl::move(buffer),
                                 &remote_histograms_, &histogram_options_);
 }
 
-Counter Collector::AddCounter(const MetricOptions& metric_options) {
-    ZX_DEBUG_ASSERT_MSG(metric_options.event_code > 0, "event_type_index 0 value is reserved.");
+Counter Collector::AddCounter(const MetricOptions& options) {
+    ZX_DEBUG_ASSERT_MSG(options.event_code > 0, "event_type_index 0 value is reserved.");
     ZX_DEBUG_ASSERT_MSG(remote_counters_.size() < remote_counters_.capacity(),
                         "Exceeded pre-allocated counter capacity.");
-    RemoteCounter::EventBuffer buffer(metric_options.component,
-                                      {MakeMetadata(metric_options.event_code)});
-    return AddCounterInternal(metric_options.metric_id, fbl::move(buffer), &remote_counters_);
+    RemoteCounter::EventBuffer buffer(options.component,
+                                      {MakeMetadata(options.event_code)});
+    return AddCounterInternal(options.metric_id, fbl::move(buffer), &remote_counters_);
 }
 
 void Collector::Flush() {

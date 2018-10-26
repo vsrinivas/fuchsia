@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <cobalt-client/cpp/histogram-options.h>
+#include <cobalt-client/cpp/metric-options.h>
 #include <stdint.h>
 
 namespace cobalt_client {

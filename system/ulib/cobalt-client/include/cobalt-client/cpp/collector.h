@@ -9,6 +9,8 @@
 
 #include <cobalt-client/cpp/counter.h>
 #include <cobalt-client/cpp/histogram.h>
+#include <cobalt-client/cpp/metric-options.h>
+
 #include <fbl/atomic.h>
 #include <fbl/function.h>
 #include <fbl/string.h>
@@ -57,46 +59,6 @@ struct CollectorOptions {
     size_t max_counters;
 };
 
-// Defines basic set of options for instantiating a metric.
-struct MetricOptions {
-
-    // Returns a set of options to generate a local only metric.
-    static MetricOptions Local();
-
-    // Returns a set of options to generate a remote only metric.
-    static MetricOptions Remote();
-
-    // Will instantiate a metric that will have a local and remote version.
-    static MetricOptions Both();
-
-    bool IsRemote() const;
-    bool IsLocal() const;
-
-    // Required for local metrics.
-    fbl::String name;
-
-    // Provides refined metric collection for remote and local metrics.
-    // Warning: |component| is not yet supported in the backend, so it will be ignored.
-    fbl::String component;
-
-    // Function that translates |event_code| to a human readable name.
-    // If returns |nullptr| or is unset, the stringfied version of |uint32_t| will be used.
-    const char* (*get_event_name)(uint32_t);
-
-    // Used by remote metrics to match with the respective unique id for the projects defined
-    // metrics in the backend.
-    uint32_t metric_id;
-
-    // Provides refined metric collection for |kRemote| and |kLocal| metrics.
-    // |event_code| 0 is reserved for Unkown events.
-    // Warning: |event_code| is not yet supported in the backend, so it will be set to 0.
-    uint32_t event_code;
-
-    // Defines whether the metric is local or remote.
-    // Internal use, should not be set manually.
-    uint8_t type;
-};
-
 // This class acts as a peer for instantiating Histograms and Counters. All
 // objects instantiated through this class act as a view, which means that
 // their lifetime is coupled to this object's lifetime. This class does require
@@ -133,8 +95,7 @@ public:
     // Preconditions:
     //     |metric_id| must be greater than 0.
     //     |event_type_index| must be greater than 0.
-    Histogram AddHistogram(const MetricOptions& metric_options,
-                           const HistogramOptions& histogram_options);
+    Histogram AddHistogram(const HistogramOptions& histogram_options);
 
     // Returns a counter to log events for a given |metric_id|, |event_type_index| and |component|
     // as a raw counter.
