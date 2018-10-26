@@ -28,14 +28,28 @@ void StartModuleWithJsonParameter(
   intent.handler = kChildModuleUrl;
   intent.action = kChildModuleAction;
 
-  fuchsia::modular::IntentParameter intent_parameter;
-  intent_parameter.name = parameter_name;
-  intent_parameter.data = fuchsia::modular::IntentParameterData();
-  fsl::SizedVmo vmo;
-  FXL_CHECK(fsl::VmoFromString(parameter_content, &vmo));
-  intent_parameter.data.set_json(std::move(vmo).ToTransport());
+  {
+    fuchsia::modular::IntentParameter intent_parameter;
+    intent_parameter.name = parameter_name;
+    intent_parameter.data = fuchsia::modular::IntentParameterData();
+    fsl::SizedVmo vmo;
+    FXL_CHECK(fsl::VmoFromString(parameter_content, &vmo));
+    intent_parameter.data.set_json(std::move(vmo).ToTransport());
+    intent.parameters.push_back(std::move(intent_parameter));
+  }
 
-  intent.parameters.push_back(std::move(intent_parameter));
+  // This tests a null parameter name; it should be excluded from module
+  // resolution altogether.
+  {
+    fuchsia::modular::IntentParameter intent_parameter;
+    intent_parameter.name = nullptr;
+    intent_parameter.data = fuchsia::modular::IntentParameterData();
+    fsl::SizedVmo vmo;
+    FXL_CHECK(fsl::VmoFromString(R"("")", &vmo));
+    intent_parameter.data.set_json(std::move(vmo).ToTransport());
+    intent.parameters.push_back(std::move(intent_parameter));
+  }
+
   module_context->AddModuleToStory(
       module_name, std::move(intent), std::move(request), nullptr,
       [](const fuchsia::modular::StartModuleStatus) {});

@@ -56,9 +56,9 @@ class FindModulesCall
     resolver_query_.action = intent_->action;
     resolver_query_.handler = intent_->handler;
     resolver_query_.parameter_constraints.resize(0);
-    resolver_query_.parameter_constraints->reserve(intent_->parameters->size());
 
     for (auto& param : *intent_->parameters) {
+      // TODO(MF-23): Deprecate parameter name nullability altogether.
       if (param.name.is_null() && intent_->handler.is_null()) {
         result_.error_message =
             "A null-named module parameter is not allowed "
@@ -66,6 +66,12 @@ class FindModulesCall
         result_.status = fuchsia::modular::ExecuteStatus::INVALID_COMMAND;
         return;
         // Operation finishes since |flow| goes out of scope.
+      }
+
+      // Skip processing null intent parameter names (these are generally
+      // root/null link names).
+      if (param.name.is_null()) {
+        param.name = "";
       }
 
       constraint_futs_.push_back(
