@@ -4243,7 +4243,8 @@ int Device::AddTxStatsFifoEntry(const wlan_tx_packet_t& wlan_pkt) {
 zx_status_t FillTxStatusEntries(tx_vec_idx_t vec_idx_first, tx_vec_idx_t vec_idx_last,
                                 const TxStatFifo& stat_fifo, const uint8_t num_retries,
                                 wlan_tx_status_entry_t* entries) {
-    if (vec_idx_last < vec_idx_first) {
+    if (vec_idx_first < vec_idx_last) {
+        debugmstl("invalid retry chain. first: %u < last: %u\n", vec_idx_first, vec_idx_last);
         ZX_DEBUG_ASSERT(0);
         return ZX_ERR_INTERNAL;
     }
