@@ -119,17 +119,16 @@ static const char* proto_name(uint32_t id, char buf[PNMAX]) {
     }
 }
 
-typedef struct {
+struct ProtocolInfo {
     const char* name;
     devnode_t* devnode;
     uint32_t id;
     uint32_t flags;
-} pinfo_t;
+};
 
-static pinfo_t proto_info[] = {
+static ProtocolInfo proto_infos[] = {
 #define DDK_PROTOCOL_DEF(tag, val, name, flags) { name, nullptr, val, flags },
 #include <ddk/protodefs.h>
-    { nullptr, nullptr, 0, 0 },
 };
 
 dc_devnode::dc_devnode(fbl::String name)
@@ -139,9 +138,9 @@ dc_devnode::dc_devnode(fbl::String name)
 }
 
 static devnode_t* proto_dir(uint32_t id) {
-    for (pinfo_t* info = proto_info; info->name; info++) {
-        if (info->id == id) {
-            return info->devnode;
+    for (const auto& info : proto_infos) {
+        if (info.id == id) {
+            return info.devnode;
         }
     }
     return nullptr;
@@ -149,9 +148,9 @@ static devnode_t* proto_dir(uint32_t id) {
 
 static void prepopulate_protocol_dirs() {
     class_devnode = devfs_mkdir(root_devnode.get(), "class");
-    for (pinfo_t* info = proto_info; info->name; info++) {
-        if (!(info->flags & PF_NOPUB)) {
-            info->devnode = devfs_mkdir(class_devnode.get(), info->name).release();
+    for (auto& info : proto_infos) {
+        if (!(info.flags & PF_NOPUB)) {
+            info.devnode = devfs_mkdir(class_devnode.get(), info.name).release();
         }
     }
 }
