@@ -48,7 +48,7 @@ int InitThread(void* arg) {
 // Public methods
 
 Device::Device(zx_device_t* parent)
-    : DeviceType(parent), active_(false), stalled_(false), info_(nullptr), hint_(0) {
+    : DeviceType(parent), active_(false), stalled_(false), num_ops_(0), info_(nullptr), hint_(0) {
     LOG_ENTRY();
 
     list_initialize(&queue_);
@@ -296,18 +296,14 @@ void Device::DdkRelease() {
         return;
     }
 
-    // Reclaim |info_| to ensure its memory is freed.
-    fbl::unique_ptr<DeviceInfo> info(const_cast<DeviceInfo*>(info_));
-
     // Stop workers; send a stop message to each, then join each (possibly in different order).
-    zx_port_packet_t packet;
-    Worker::MakeRequest(&packet, Worker::kStopRequest);
-    for (size_t i = 0; i < info->num_workers; ++i) {
-        port_.queue(&packet);
-    }
-    for (size_t i = 0; i < info->num_workers; ++i) {
+    StopWorkersIfDone();
+    for (size_t i = 0; i < info_->num_workers; ++i) {
         workers_[i].Stop();
     }
+
+    // Reclaim |info_| to ensure its memory is freed.
+    fbl::unique_ptr<DeviceInfo> info(const_cast<DeviceInfo*>(info_));
 
     // Release write buffer
     const uintptr_t address = reinterpret_cast<uintptr_t>(info->base);
@@ -337,9 +333,10 @@ void Device::BlockQueue(block_op_t* block) {
     // Check if the device is active.
     if (!active_.load()) {
         zxlogf(ERROR, "rejecting I/O request: device is not active\n");
-        BlockComplete(block, ZX_ERR_BAD_STATE);
+        block->completion_cb(block, ZX_ERR_BAD_STATE);
         return;
     }
+    num_ops_.fetch_add(1);
 
     // Initialize our extra space and save original values
     extra_op_t* extra = BlockToExtra(block, info_->op_size);
@@ -413,6 +410,10 @@ void Device::BlockComplete(block_op_t* block, zx_status_t status) {
     // lock.
     if (stalled_.exchange(false)) {
         EnqueueWrite();
+    }
+
+    if (num_ops_.fetch_sub(1) == 1) {
+        StopWorkersIfDone();
     }
 }
 
@@ -518,6 +519,17 @@ void Device::BlockCallback(block_op_t* block, zx_status_t status) {
     default:
         device->BlockComplete(block, ZX_OK);
         break;
+    }
+}
+
+void Device::StopWorkersIfDone() {
+    // Multiple threads may pass this check, but that's harmless.
+    if (!active_.load() && num_ops_.load() == 0) {
+        zx_port_packet_t packet;
+        Worker::MakeRequest(&packet, Worker::kStopRequest);
+        for (size_t i = 0; i < info_->num_workers; ++i) {
+            port_.queue(&packet);
+        }
     }
 }
 

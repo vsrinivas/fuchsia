@@ -94,6 +94,9 @@ private:
     // |BlockForward|.
     static void BlockCallback(block_op_t* block, zx_status_t status);
 
+    // Requests that the workers stop if it the device is inactive and no ops are "in-flight".
+    void StopWorkersIfDone();
+
     // Set if device is active, i.e. |Init| has been called but |DdkUnbind| hasn't. I/O requests to
     // |BlockQueue| are immediately completed with |ZX_ERR_BAD_STATE| if this is not set.
     fbl::atomic_bool active_;
@@ -101,6 +104,9 @@ private:
     // Set if writes are stalled, i.e.  a write request was deferred due to lack of space in the
     // write buffer, and no requests have since completed.
     fbl::atomic_bool stalled_;
+
+    // the number of operations currently "in-flight".
+    fbl::atomic_uint64_t num_ops_;
 
     // This struct bundles several commonly accessed fields.  The bare pointer IS owned by the
     // object; it's "constness" prevents it from being an automatic pointer but allows it to be used
