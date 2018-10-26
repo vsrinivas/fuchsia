@@ -52,7 +52,7 @@ static zx_handle_t root_resource_handle;
 static zx::unowned_job root_job_handle;
 static zx::job svcs_job_handle;
 static zx::job fuchsia_job_handle;
-static zx_handle_t exception_channel;
+static zx::channel exception_channel;
 static zx::channel svchost_outgoing;
 
 zx_handle_t virtcon_open;
@@ -156,8 +156,8 @@ int crash_analyzer_listener(void* arg) {
     for (;;) {
         zx_signals_t observed;
         zx_status_t status =
-            zx_object_wait_one(exception_channel, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                               ZX_TIME_INFINITE, &observed);
+            exception_channel.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                       zx::time::infinite(), &observed);
         if (status != ZX_OK) {
             printf("devmgr: crash_analyzer_listener zx_object_wait_one failed: %d\n", status);
             return 1;
@@ -171,8 +171,8 @@ int crash_analyzer_listener(void* arg) {
         zx_handle_t handles[3];
         uint32_t actual_bytes, actual_handles;
         status =
-            zx_channel_read(exception_channel, 0, &exception_type, handles, sizeof(exception_type),
-                            fbl::count_of(handles), &actual_bytes, &actual_handles);
+            exception_channel.read(0, &exception_type, sizeof(exception_type), &actual_bytes,
+                                   handles, fbl::count_of(handles), &actual_handles);
         if (status != ZX_OK) {
             printf("devmgr: zx_channel_read failed: %d\n", status);
             continue;
@@ -274,9 +274,9 @@ int service_starter(void* arg) {
     // crashsvc writes messages to the passed channel when an analyzer for an
     // exception is required.
     zx::port exception_port;
-    zx_handle_t exception_channel_passed;
+    zx::channel exception_channel_passed;
     if (zx::port::create(0, &exception_port) == ZX_OK &&
-        zx_channel_create(0, &exception_channel, &exception_channel_passed) == ZX_OK &&
+        zx::channel::create(0, &exception_channel, &exception_channel_passed) == ZX_OK &&
         root_job_handle->bind_exception_port(exception_port, 0, 0) == ZX_OK) {
         thrd_t t;
         if ((thrd_create_with_name(&t, crash_analyzer_listener, nullptr,
@@ -285,7 +285,11 @@ int service_starter(void* arg) {
         }
         zx::job duplicate_job;
         root_job_handle->duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate_job);
-        zx_handle_t handles[] = {duplicate_job.release(), exception_port.release(), exception_channel_passed};
+        zx_handle_t handles[] = {
+            duplicate_job.release(),
+            exception_port.release(),
+            exception_channel_passed.release()
+        };
         uint32_t handle_types[] = {PA_HND(PA_USER0, 0), PA_HND(PA_USER0, 1), PA_HND(PA_USER0, 2)};
         static const char* argv_crashsvc[] = {"/boot/bin/crashsvc"};
         devmgr_launch(svcs_job_handle.get(), "crashsvc",
