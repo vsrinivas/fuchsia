@@ -1808,8 +1808,6 @@ static zx_status_t dc_suspend_devhost(Devhost* dh, suspend_context_t* ctx) {
     log(DEVLC, "devcoord: suspend devhost %p device '%s' (%p)\n",
         dh, dev->name, dev);
 
-    zx_handle_t rpc = ZX_HANDLE_INVALID;
-
     auto pending = fbl::make_unique<Pending>();
     if (pending == nullptr) {
         return ZX_ERR_NO_MEMORY;
@@ -1824,8 +1822,7 @@ static zx_status_t dc_suspend_devhost(Devhost* dh, suspend_context_t* ctx) {
     msg.txid = 0;
     msg.op = Message::Op::kSuspend;
     msg.value = ctx->sflags;
-    rpc = dev->hrpc;
-    if ((r = zx_channel_write(rpc, 0, &msg, mlen, nullptr, 0)) != ZX_OK) {
+    if ((r = zx_channel_write(dev->hrpc, 0, &msg, mlen, nullptr, 0)) != ZX_OK) {
         return r;
     }
 
