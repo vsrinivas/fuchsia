@@ -31,7 +31,7 @@ def extract_update_root_keys(manifest_path):
 
 
 def generate_devhost_config(args):
-  manifest_path = os.path.join(args.build_dir, 'root_manifest.json')
+  manifest_path = os.path.join(args.build_dir, 'amber-files', 'repository', 'root.json')
   rootKeys = extract_update_root_keys(manifest_path)
   status_config = collections.OrderedDict()
   status_config['enabled']=args.enabled
