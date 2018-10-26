@@ -62,11 +62,11 @@ struct dc_pending {
     } op;
 };
 
-struct dc_metadata_t {
-    fbl::DoublyLinkedListNodeState<fbl::unique_ptr<dc_metadata_t>> node;
+struct Metadata {
+    fbl::DoublyLinkedListNodeState<fbl::unique_ptr<Metadata>> node;
     struct Node {
-        static fbl::DoublyLinkedListNodeState<fbl::unique_ptr<dc_metadata_t>>& node_state(
-            dc_metadata_t& obj) {
+        static fbl::DoublyLinkedListNodeState<fbl::unique_ptr<Metadata>>& node_state(
+            Metadata& obj) {
             return obj.node;
         }
     };
@@ -83,32 +83,32 @@ struct dc_metadata_t {
         return reinterpret_cast<const char*>(this + 1);
     }
 
-    static zx_status_t Create(size_t data_len, fbl::unique_ptr<dc_metadata_t>* out) {
-        uint8_t* buf = new uint8_t[sizeof(dc_metadata_t) + data_len];
+    static zx_status_t Create(size_t data_len, fbl::unique_ptr<Metadata>* out) {
+        uint8_t* buf = new uint8_t[sizeof(Metadata) + data_len];
         if (!buf) {
             return ZX_ERR_NO_MEMORY;
         }
-        new (buf) dc_metadata_t();
+        new (buf) Metadata();
 
-        out->reset(reinterpret_cast<dc_metadata_t*>(buf));
+        out->reset(reinterpret_cast<Metadata*>(buf));
         return ZX_OK;
     }
 
     // Implement a custom delete to deal with the allocation mechanism used in
-    // Create().  Since the ctor is private, all dc_metadata_t* will come from
+    // Create().  Since the ctor is private, all Metadata* will come from
     // Create().
     void operator delete(void* ptr) {
         delete [] reinterpret_cast<uint8_t*>(ptr);
     }
 
  private:
-    dc_metadata_t() = default;
+    Metadata() = default;
 
-    dc_metadata_t(const dc_metadata_t&) = delete;
-    dc_metadata_t& operator=(const dc_metadata_t&) = delete;
+    Metadata(const Metadata&) = delete;
+    Metadata& operator=(const Metadata&) = delete;
 
-    dc_metadata_t(dc_metadata_t&&) = delete;
-    dc_metadata_t& operator=(dc_metadata_t&&) = delete;
+    Metadata(Metadata&&) = delete;
+    Metadata& operator=(Metadata&&) = delete;
 };
 
 #define DEV_HOST_DYING 1
@@ -173,7 +173,7 @@ struct dc_device {
     };
 
     // Metadata entries associated to this device.
-    fbl::DoublyLinkedList<fbl::unique_ptr<dc_metadata_t>, dc_metadata_t::Node> metadata;
+    fbl::DoublyLinkedList<fbl::unique_ptr<Metadata>, Metadata::Node> metadata;
 
     fbl::unique_ptr<zx_device_prop_t[]> props;
 

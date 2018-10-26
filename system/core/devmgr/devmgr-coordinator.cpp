@@ -76,7 +76,7 @@ static suspend_context_t suspend_ctx = []() {
     return suspend;
 }();
 
-static fbl::DoublyLinkedList<fbl::unique_ptr<dc_metadata_t>, dc_metadata_t::Node> published_metadata;
+static fbl::DoublyLinkedList<fbl::unique_ptr<Metadata>, Metadata::Node> published_metadata;
 
 static bool dc_in_suspend() {
     return suspend_ctx.flags == suspend_context_t::Flags::kSuspend;
@@ -758,7 +758,7 @@ static void dc_release_device(device_t* dev) {
 
     cancel_work(&dev->work);
 
-    fbl::unique_ptr<dc_metadata_t> md;
+    fbl::unique_ptr<Metadata> md;
     while ((md = dev->metadata.pop_front()) != nullptr) {
         if (md->has_path) {
             // return to published_metadata list
@@ -1157,8 +1157,8 @@ static zx_status_t dc_get_metadata(device_t* dev, uint32_t type, void* buffer, s
 
 static zx_status_t dc_add_metadata(device_t* dev, uint32_t type, const void* data,
                                    uint32_t length) {
-    fbl::unique_ptr<dc_metadata_t> md;
-    zx_status_t status = dc_metadata_t::Create(length, &md);
+    fbl::unique_ptr<Metadata> md;
+    zx_status_t status = Metadata::Create(length, &md);
     if (status != ZX_OK) {
         return status;
     }
@@ -1195,8 +1195,8 @@ static zx_status_t dc_publish_metadata(device_t* dev, const char* path, uint32_t
         }
     }
 
-    fbl::unique_ptr<dc_metadata_t> md;
-    status = dc_metadata_t::Create(length + strlen(path) + 1, &md);
+    fbl::unique_ptr<Metadata> md;
+    status = Metadata::Create(length + strlen(path) + 1, &md);
     if (status != ZX_OK) {
         return status;
     }
