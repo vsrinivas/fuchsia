@@ -343,6 +343,34 @@ func (ns *Netstack) getDNSServers() []tcpip.Address {
 	return out
 }
 
+func (ns *Netstack) getNodeName() string {
+	nodename, status, err := ns.deviceSettings.GetString(deviceSettingsManagerNodenameKey)
+	if err != nil {
+		log.Printf("getNodeName: error accessing device settings: %s", err)
+		return defaultNodename
+	}
+	if status != devicesettings.StatusOk {
+		var reportStatus string
+		switch status {
+		case devicesettings.StatusErrNotSet:
+			reportStatus = "key not set"
+		case devicesettings.StatusErrInvalidSetting:
+			reportStatus = "invalid setting"
+		case devicesettings.StatusErrRead:
+			reportStatus = "error reading key"
+		case devicesettings.StatusErrIncorrectType:
+			reportStatus = "value type was incorrect"
+		case devicesettings.StatusErrUnknown:
+			reportStatus = "unknown"
+		default:
+			reportStatus = fmt.Sprintf("unknown status code: %d", status)
+		}
+		log.Printf("getNodeName: device settings error: %s", reportStatus)
+		return defaultNodename
+	}
+	return nodename
+}
+
 // TODO(tamird): refactor to use addEndpoint.
 func (ns *Netstack) addLoopback() error {
 	const nicid = 1

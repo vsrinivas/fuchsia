@@ -132,18 +132,19 @@ func (sp *socketProviderImpl) GetAddrInfo(n *net.String, s *net.String, hints *n
 	var addrs []tcpip.Address
 	if node == nil {
 		addrs = append(addrs, "\x00\x00\x00\x00")
+	} else if *node == "localhost" {
+		addrs = append(addrs, "\x7f\x00\x00\x01")
+	} else if *node == sp.ns.getNodeName() {
+		addrs = append(addrs, "\x7f\x00\x00\x01")
 	} else {
 		addrs, err = sp.ns.dnsClient.LookupIP(*node)
 		if err != nil {
-			if *node == "localhost" {
-				addrs = append(addrs, "\x7f\x00\x00\x01")
-			} else {
-				addrs = append(addrs, util.Parse(*node))
-				if debug {
-					log.Printf("getaddrinfo: addr=%v, err=%v", addrs, err)
-				}
+			addrs = append(addrs, util.Parse(*node))
+			if debug {
+				log.Printf("getaddrinfo: addr=%v, err=%v", addrs, err)
 			}
 		}
+
 	}
 	if len(addrs) == 0 || len(addrs[0]) == 0 {
 		return net.AddrInfoStatusNoName, 0, nil, nil, nil, nil, nil
