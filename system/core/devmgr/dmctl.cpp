@@ -18,9 +18,9 @@ namespace devmgr {
 
 static zx_device_t* dmctl_dev;
 
-static zx_status_t dmctl_cmd(dc_msg_t::Op op, const char* cmd, size_t cmdlen,
+static zx_status_t dmctl_cmd(Message::Op op, const char* cmd, size_t cmdlen,
                              zx_handle_t* h, uint32_t hcount) {
-    dc_msg_t msg;
+    Message msg;
     uint32_t msglen;
     if (dc_msg_pack(&msg, &msglen, cmd, cmdlen, nullptr, nullptr) < 0) {
         return ZX_ERR_INVALID_ARGS;
@@ -32,7 +32,7 @@ static zx_status_t dmctl_cmd(dc_msg_t::Op op, const char* cmd, size_t cmdlen,
 
 static zx_status_t dmctl_write(void* ctx, const void* buf, size_t count, zx_off_t off,
                                size_t* actual) {
-    zx_status_t status = dmctl_cmd(dc_msg_t::Op::kDmCommand, static_cast<const char*>(buf), count,
+    zx_status_t status = dmctl_cmd(Message::Op::kDmCommand, static_cast<const char*>(buf), count,
                                    nullptr, 0);
     if (status >= 0) {
         *actual = count;
@@ -53,7 +53,7 @@ static zx_status_t dmctl_ioctl(void* ctx, uint32_t op,
         memcpy(&cmd, in_buf, sizeof(cmd));
         cmd.name[sizeof(cmd.name) - 1] = 0;
         *out_actual = 0;
-        zx_status_t status = dmctl_cmd(dc_msg_t::Op::kDmCommand, cmd.name, strlen(cmd.name),
+        zx_status_t status = dmctl_cmd(Message::Op::kDmCommand, cmd.name, strlen(cmd.name),
                                        &cmd.h, (cmd.h != ZX_HANDLE_INVALID) ? 1 : 0);
         // NOT_SUPPORTED tells the dispatcher to close the handle for
         // ioctls that accept a handle argument, so we have to avoid
@@ -68,17 +68,17 @@ static zx_status_t dmctl_ioctl(void* ctx, uint32_t op,
         if (in_len != sizeof(zx_handle_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        return dmctl_cmd(dc_msg_t::Op::kDmOpenVirtcon, nullptr, 0, ((zx_handle_t*) in_buf), 1);
+        return dmctl_cmd(Message::Op::kDmOpenVirtcon, nullptr, 0, ((zx_handle_t*) in_buf), 1);
     case IOCTL_DMCTL_WATCH_DEVMGR:
         if (in_len != sizeof(zx_handle_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        return dmctl_cmd(dc_msg_t::Op::kDmWatch, nullptr, 0, ((zx_handle_t*) in_buf), 1);
+        return dmctl_cmd(Message::Op::kDmWatch, nullptr, 0, ((zx_handle_t*) in_buf), 1);
     case IOCTL_DMCTL_MEXEC:
         if (in_len != sizeof(dmctl_mexec_args_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        return dmctl_cmd(dc_msg_t::Op::kDmMexec, nullptr, 0, ((zx_handle_t*) in_buf), 2);
+        return dmctl_cmd(Message::Op::kDmMexec, nullptr, 0, ((zx_handle_t*) in_buf), 2);
     default:
         return ZX_ERR_INVALID_ARGS;
     }

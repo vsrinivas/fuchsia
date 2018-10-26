@@ -16,7 +16,7 @@
 
 namespace devmgr {
 
-zx_status_t dc_msg_pack(dc_msg_t* msg, uint32_t* len_out,
+zx_status_t dc_msg_pack(Message* msg, uint32_t* len_out,
                         const void* data, size_t datalen,
                         const char* name, const char* args) {
     size_t max = DC_MAX_DATA;
@@ -56,17 +56,17 @@ zx_status_t dc_msg_pack(dc_msg_t* msg, uint32_t* len_out,
     } else {
         msg->argslen = 0;
     }
-    *len_out = static_cast<uint32_t>(sizeof(dc_msg_t) - DC_MAX_DATA + (ptr - msg->data));
+    *len_out = static_cast<uint32_t>(sizeof(Message) - DC_MAX_DATA + (ptr - msg->data));
     return ZX_OK;
 }
 
 
-zx_status_t dc_msg_unpack(dc_msg_t* msg, size_t len, const void** data,
+zx_status_t dc_msg_unpack(Message* msg, size_t len, const void** data,
                           const char** name, const char** args) {
-    if (len < (sizeof(dc_msg_t) - DC_MAX_DATA)) {
+    if (len < (sizeof(Message) - DC_MAX_DATA)) {
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
-    len -= sizeof(dc_msg_t);
+    len -= sizeof(Message);
     uint8_t* ptr = msg->data;
     if (msg->datalen) {
         if (msg->datalen > len) {
@@ -101,7 +101,7 @@ zx_status_t dc_msg_unpack(dc_msg_t* msg, size_t len, const void** data,
     return ZX_OK;
 }
 
-zx_status_t dc_msg_rpc(zx_handle_t h, dc_msg_t* msg, size_t msglen,
+zx_status_t dc_msg_rpc(zx_handle_t h, Message* msg, size_t msglen,
                        zx_handle_t* handles, size_t hcount,
                        dc_status_t* rsp, size_t rsplen, size_t* resp_actual,
                        zx_handle_t* outhandle) {

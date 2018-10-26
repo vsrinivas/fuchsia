@@ -800,7 +800,7 @@ Device::~Device() {
 // New device is published in devfs.
 // Caller closes handles on error, so we don't have to.
 static zx_status_t dc_add_device(Device* parent, zx_handle_t hrpc,
-                                 dc_msg_t* msg, const char* name,
+                                 Message* msg, const char* name,
                                  const char* args, const void* data,
                                  bool invisible) {
     if (msg->datalen % sizeof(zx_device_prop_t)) {
@@ -955,14 +955,14 @@ static zx_status_t dc_remove_device(Device* dev, bool forced) {
     devfs_unpublish(dev);
 
     if (dev->proxy) {
-        dc_msg_t msg;
+        Message msg;
         uint32_t mlen;
         zx_status_t r;
         if ((r = dc_msg_pack(&msg, &mlen, nullptr, 0, nullptr, nullptr)) < 0) {
             log(ERROR, "devcoord: dc_msg_pack failed in dc_remove_device\n");
         } else {
             msg.txid = 0;
-            msg.op = dc_msg_t::Op::kRemoveDevice;
+            msg.op = Message::Op::kRemoveDevice;
             if ((r = zx_channel_write(dev->proxy->hrpc, 0, &msg, mlen, nullptr, 0)) != ZX_OK) {
             log(ERROR, "devcoord: zx_channel_write failed in dc_remove_devicey\n");
             }
@@ -1221,7 +1221,7 @@ static zx_status_t dc_publish_metadata(Device* dev, const char* path, uint32_t t
 }
 
 static zx_status_t dc_handle_device_read(Device* dev) {
-    dc_msg_t msg;
+    Message msg;
     zx_handle_t hin[3];
     uint32_t msize = sizeof(msg);
     uint32_t hcount = 3;
@@ -1251,8 +1251,8 @@ static zx_status_t dc_handle_device_read(Device* dev) {
     dcs.txid = msg.txid;
 
     switch (msg.op) {
-    case dc_msg_t::Op::kAddDevice:
-    case dc_msg_t::Op::kAddDeviceInvisible:
+    case Message::Op::kAddDevice:
+    case Message::Op::kAddDeviceInvisible:
         if (hcount != 1) {
             goto fail_wrong_hcount;
         }
@@ -1264,12 +1264,12 @@ static zx_status_t dc_handle_device_read(Device* dev) {
         }
         log(RPC_IN, "devcoord: rpc: add-device '%s' args='%s'\n", name, args);
         if ((r = dc_add_device(dev, hin[0], &msg, name, args, data,
-                               msg.op == dc_msg_t::Op::kAddDeviceInvisible)) < 0) {
+                               msg.op == Message::Op::kAddDeviceInvisible)) < 0) {
             zx_handle_close(hin[0]);
         }
         break;
 
-    case dc_msg_t::Op::kRemoveDevice:
+    case Message::Op::kRemoveDevice:
         if (hcount != 0) {
             goto fail_wrong_hcount;
         }
@@ -1283,7 +1283,7 @@ static zx_status_t dc_handle_device_read(Device* dev) {
         dc_remove_device(dev, false);
         goto disconnect;
 
-    case dc_msg_t::Op::kMakeVisible:
+    case Message::Op::kMakeVisible:
         if (hcount != 0) {
             goto fail_wrong_hcount;
         }
@@ -1298,7 +1298,7 @@ static zx_status_t dc_handle_device_read(Device* dev) {
         r = ZX_OK;
         break;
 
-    case dc_msg_t::Op::kBindDevice:
+    case Message::Op::kBindDevice:
         if (hcount != 0) {
             goto fail_wrong_hcount;
         }
@@ -1312,7 +1312,7 @@ static zx_status_t dc_handle_device_read(Device* dev) {
         r = dc_bind_device(dev, args);
         break;
 
-    case dc_msg_t::Op::kDmCommand:
+    case Message::Op::kDmCommand:
         if (hcount > 1) {
             goto fail_wrong_hcount;
         }
@@ -1326,7 +1326,7 @@ static zx_status_t dc_handle_device_read(Device* dev) {
         }
         break;
 
-    case dc_msg_t::Op::kDmOpenVirtcon:
+    case Message::Op::kDmOpenVirtcon:
         if (hcount != 1) {
             goto fail_wrong_hcount;
         }
@@ -1334,7 +1334,7 @@ static zx_status_t dc_handle_device_read(Device* dev) {
         r = ZX_OK;
         break;
 
-    case dc_msg_t::Op::kDmWatch:
+    case Message::Op::kDmWatch:
         if (hcount != 1) {
             goto fail_wrong_hcount;
         }
@@ -1342,7 +1342,7 @@ static zx_status_t dc_handle_device_read(Device* dev) {
         r = ZX_OK;
         break;
 
-    case dc_msg_t::Op::kDmMexec:
+    case Message::Op::kDmMexec:
         if (hcount != 2) {
             log(ERROR, "devcoord: rpc: mexec wrong hcount %d\n", hcount);
             goto fail_wrong_hcount;
@@ -1351,7 +1351,7 @@ static zx_status_t dc_handle_device_read(Device* dev) {
         r = ZX_OK;
         break;
 
-    case dc_msg_t::Op::kGetTopoPath: {
+    case Message::Op::kGetTopoPath: {
         if (hcount != 0) {
             goto fail_wrong_hcount;
         }
@@ -1369,7 +1369,7 @@ static zx_status_t dc_handle_device_read(Device* dev) {
         }
         return ZX_OK;
     }
-    case dc_msg_t::Op::kLoadFirmware: {
+    case Message::Op::kLoadFirmware: {
         if (hcount != 0) {
             goto fail_wrong_hcount;
         }
@@ -1388,7 +1388,7 @@ static zx_status_t dc_handle_device_read(Device* dev) {
         }
         return ZX_OK;
     }
-    case dc_msg_t::Op::kStatus: {
+    case Message::Op::kStatus: {
         if (hcount != 0) {
             goto fail_wrong_hcount;
         }
@@ -1423,7 +1423,7 @@ static zx_status_t dc_handle_device_read(Device* dev) {
         delete pending;
         return ZX_OK;
     }
-    case dc_msg_t::Op::kGetMetadata: {
+    case Message::Op::kGetMetadata: {
         if (hcount != 0) {
             goto fail_wrong_hcount;
         }
@@ -1438,14 +1438,14 @@ static zx_status_t dc_handle_device_read(Device* dev) {
         uint32_t reply_size = static_cast<uint32_t>(sizeof(reply.rsp) + actual);
         return zx_channel_write(dev->hrpc, 0, &reply, reply_size, nullptr, 0);
     }
-    case dc_msg_t::Op::kAddMetadata: {
+    case Message::Op::kAddMetadata: {
         if (hcount != 0) {
             goto fail_wrong_hcount;
         }
         r = dc_add_metadata(dev, msg.value, data, msg.datalen);
         break;
     }
-    case dc_msg_t::Op::kPublishMetadata: {
+    case Message::Op::kPublishMetadata: {
         if (hcount != 0) {
             goto fail_wrong_hcount;
         }
@@ -1509,7 +1509,7 @@ static zx_status_t dc_handle_device(port_handler_t* ph, zx_signals_t signals, ui
 // send message to devhost, requesting the creation of a device
 static zx_status_t dh_create_device(Device* dev, Devhost* dh,
                                     const char* args, zx_handle_t rpc_proxy) {
-    dc_msg_t msg;
+    Message msg;
     uint32_t mlen;
     zx_status_t r;
 
@@ -1529,9 +1529,9 @@ static zx_status_t dh_create_device(Device* dev, Devhost* dh,
             goto fail;
         }
         hcount++;
-        msg.op = dc_msg_t::Op::kCreateDevice;
+        msg.op = Message::Op::kCreateDevice;
     } else {
-        msg.op = dc_msg_t::Op::kCreateDeviceStub;
+        msg.op = Message::Op::kCreateDeviceStub;
     }
 
     if (rpc_proxy) {
@@ -1630,7 +1630,7 @@ Pending::Pending() = default;
 
 // send message to devhost, requesting the binding of a driver to a device
 static zx_status_t dh_bind_driver(Device* dev, const char* libname) {
-    dc_msg_t msg;
+    Message msg;
     uint32_t mlen;
 
     auto pending = fbl::make_unique<Pending>();
@@ -1649,7 +1649,7 @@ static zx_status_t dh_bind_driver(Device* dev, const char* libname) {
     }
 
     msg.txid = 0;
-    msg.op = dc_msg_t::Op::kBindDriver;
+    msg.op = Message::Op::kBindDriver;
 
     if ((r = zx_channel_write(dev->hrpc, 0, &msg, mlen, &vmo, 1)) < 0) {
         return r;
@@ -1663,7 +1663,7 @@ static zx_status_t dh_bind_driver(Device* dev, const char* libname) {
 }
 
 static zx_status_t dh_connect_proxy(const Device* dev, zx_handle_t h) {
-    dc_msg_t msg;
+    Message msg;
     uint32_t mlen;
     zx_status_t r;
     if ((r = dc_msg_pack(&msg, &mlen, nullptr, 0, nullptr, nullptr)) < 0) {
@@ -1671,7 +1671,7 @@ static zx_status_t dh_connect_proxy(const Device* dev, zx_handle_t h) {
         return r;
     }
     msg.txid = 0;
-    msg.op = dc_msg_t::Op::kConnectProxy;
+    msg.op = Message::Op::kConnectProxy;
     return zx_channel_write(dev->hrpc, 0, &msg, mlen, &h, 1);
 }
 
@@ -1815,14 +1815,14 @@ static zx_status_t dc_suspend_devhost(Devhost* dh, suspend_context_t* ctx) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    dc_msg_t msg;
+    Message msg;
     uint32_t mlen;
     zx_status_t r;
     if ((r = dc_msg_pack(&msg, &mlen, nullptr, 0, nullptr, nullptr)) < 0) {
         return r;
     }
     msg.txid = 0;
-    msg.op = dc_msg_t::Op::kSuspend;
+    msg.op = Message::Op::kSuspend;
     msg.value = ctx->sflags;
     rpc = dev->hrpc;
     if ((r = zx_channel_write(rpc, 0, &msg, mlen, nullptr, 0)) != ZX_OK) {
@@ -1872,7 +1872,7 @@ static void process_suspend_list(suspend_context_t* ctx) {
     Devhost* parent = nullptr;
     do {
         if (!parent || (dh->parent == parent)) {
-            // send dc_msg_t::Op::kSuspend each set of children of a devhost at a time,
+            // send Message::Op::kSuspend each set of children of a devhost at a time,
             // since they can run in parallel
             dc_suspend_devhost(dh.CopyPointer(), &suspend_ctx);
             parent = dh->parent;

@@ -329,7 +329,7 @@ bool dc_is_bindable(const driver_t* drv, uint32_t protocol_id,
 // with those of remoteio messages so we avoid needing a
 // dedicated channel for forwarding OPEN operations.
 // Our opcodes set the high bit to avoid overlap.
-typedef struct {
+struct Message {
     zx_txid_t txid;     // FIDL message header
     uint32_t reserved0;
 
@@ -376,7 +376,7 @@ typedef struct {
     uint32_t argslen;
 
     uint8_t data[DC_MAX_DATA];
-} dc_msg_t;
+};
 
 typedef struct {
     zx_txid_t txid;
@@ -385,12 +385,12 @@ typedef struct {
 
 #define DC_PATH_MAX 1024
 
-zx_status_t dc_msg_pack(dc_msg_t* msg, uint32_t* len_out,
+zx_status_t dc_msg_pack(Message* msg, uint32_t* len_out,
                         const void* data, size_t datalen,
                         const char* name, const char* args);
-zx_status_t dc_msg_unpack(dc_msg_t* msg, size_t len, const void** data,
+zx_status_t dc_msg_unpack(Message* msg, size_t len, const void** data,
                           const char** name, const char** args);
-zx_status_t dc_msg_rpc(zx_handle_t h, dc_msg_t* msg, size_t msglen,
+zx_status_t dc_msg_rpc(zx_handle_t h, Message* msg, size_t msglen,
                        zx_handle_t* handles, size_t hcount,
                        dc_status_t* rsp, size_t rsp_len, size_t* resp_actual,
                        zx_handle_t* outhandle);

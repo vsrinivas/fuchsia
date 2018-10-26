@@ -595,7 +595,7 @@ fail:
 // Double-check that Open (the only message we forward)
 // cannot be mistaken for an internal dev coordinator RPC message
 static_assert((fuchsia_io_DirectoryOpenOrdinal &
-               static_cast<uint32_t>(dc_msg_t::Op::kIdBit)) == 0, "");
+               static_cast<uint32_t>(Message::Op::kIdBit)) == 0, "");
 
 static zx_status_t fill_dirent(vdirent_t* de, size_t delen, uint64_t ino,
                                const fbl::String& name, uint8_t type) {
