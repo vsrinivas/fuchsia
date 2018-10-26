@@ -33,8 +33,8 @@
 
 namespace devmgr {
 
-static void dc_driver_added(driver_t* drv, const char* version);
-static void dc_driver_added_init(driver_t* drv, const char* version);
+static void dc_driver_added(Driver* drv, const char* version);
+static void dc_driver_added_init(Driver* drv, const char* version);
 
 
 #define BOOT_FIRMWARE_DIR "/boot/lib/firmware"
@@ -284,7 +284,7 @@ static zx_status_t handle_dmctl_write(size_t len, const char* cmd) {
 }
 
 static zx_status_t dc_handle_device(port_handler_t* ph, zx_signals_t signals, uint32_t evt);
-static zx_status_t dc_attempt_bind(const driver_t* drv, Device* dev);
+static zx_status_t dc_attempt_bind(const Driver* drv, Device* dev);
 
 static bool dc_running;
 
@@ -294,13 +294,13 @@ static zx_handle_t devhost_job;
 port_t dc_port;
 
 // All Drivers
-static fbl::DoublyLinkedList<driver_t*, driver_t::Node> list_drivers;
+static fbl::DoublyLinkedList<Driver*, Driver::Node> list_drivers;
 
 // Drivers to add to All Drivers
-static fbl::DoublyLinkedList<driver_t*, driver_t::Node> list_drivers_new;
+static fbl::DoublyLinkedList<Driver*, Driver::Node> list_drivers_new;
 
 // Drivers to try last
-static fbl::DoublyLinkedList<driver_t*, driver_t::Node> list_drivers_fallback;
+static fbl::DoublyLinkedList<Driver*, Driver::Node> list_drivers_fallback;
 
 // All Devices (excluding static immortal devices)
 static fbl::DoublyLinkedList<Device*, Device::AllDevicesNode> list_devices;
@@ -308,7 +308,7 @@ static fbl::DoublyLinkedList<Device*, Device::AllDevicesNode> list_devices;
 // All DevHosts
 static fbl::DoublyLinkedList<Devhost*, Devhost::AllDevhostsNode> list_devhosts;
 
-static const driver_t* libname_to_driver(const char* libname) {
+static const Driver* libname_to_driver(const char* libname) {
     for (const auto& drv : list_drivers) {
         if (!strcmp(libname, drv.libname.c_str())) {
             return &drv;
@@ -339,7 +339,7 @@ static zx_status_t load_vmo(const char* libname, zx_handle_t* out) {
 }
 
 static zx_status_t libname_to_vmo(const char* libname, zx_handle_t* out) {
-    const driver_t* drv = libname_to_driver(libname);
+    const Driver* drv = libname_to_driver(libname);
     if (drv == nullptr) {
         log(ERROR, "devcoord: cannot find driver '%s'\n", libname);
         return ZX_ERR_NOT_FOUND;
@@ -1735,7 +1735,7 @@ static zx_status_t dc_prepare_proxy(Device* dev) {
     return ZX_OK;
 }
 
-static zx_status_t dc_attempt_bind(const driver_t* drv, Device* dev) {
+static zx_status_t dc_attempt_bind(const Driver* drv, Device* dev) {
     // cannot bind driver to already bound device
     if ((dev->flags & DEV_CTX_BOUND) && (!(dev->flags & DEV_CTX_MULTI_BIND))) {
         return ZX_ERR_BAD_STATE;
@@ -2040,7 +2040,7 @@ static void dc_continue_suspend(suspend_context_t* ctx) {
 static struct zx_bind_inst misc_device_binding =
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT);
 
-static bool is_misc_driver(driver_t* drv) {
+static bool is_misc_driver(Driver* drv) {
     return (drv->binding_size == sizeof(misc_device_binding)) &&
         (memcmp(&misc_device_binding, drv->binding.get(), sizeof(misc_device_binding)) == 0);
 }
@@ -2050,7 +2050,7 @@ static bool is_misc_driver(driver_t* drv) {
 static struct zx_bind_inst test_device_binding =
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT);
 
-static bool is_test_driver(driver_t* drv) {
+static bool is_test_driver(Driver* drv) {
     return (drv->binding_size == sizeof(test_device_binding)) &&
         (memcmp(&test_device_binding, drv->binding.get(), sizeof(test_device_binding)) == 0);
 }
@@ -2061,7 +2061,7 @@ static bool is_test_driver(driver_t* drv) {
 static struct zx_bind_inst root_device_binding =
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_ROOT);
 
-static bool is_root_driver(driver_t* drv) {
+static bool is_root_driver(Driver* drv) {
     return (drv->binding_size == sizeof(root_device_binding)) &&
         (memcmp(&root_device_binding, drv->binding.get(), sizeof(root_device_binding)) == 0);
 }
@@ -2071,7 +2071,7 @@ static bool is_root_driver(driver_t* drv) {
 // drivers are added directly to the all-drivers or fallback list.
 //
 // TODO: fancier priorities
-static void dc_driver_added_init(driver_t* drv, const char* version) {
+static void dc_driver_added_init(Driver* drv, const char* version) {
     if (version[0] == '*') {
         // fallback driver, load only if all else fails
         list_drivers_fallback.push_back(drv);
@@ -2089,7 +2089,7 @@ static Work new_driver_work;
 // dc_driver_added is called when a driver is added after the
 // devcoordinator has started.  The driver is added to the new-drivers
 // list and work is queued to process it.
-static void dc_driver_added(driver_t* drv, const char* version) {
+static void dc_driver_added(Driver* drv, const char* version) {
     list_drivers_new.push_back(drv);
     if (new_driver_work.op == Work::Op::kIdle) {
         queue_work(&new_driver_work, Work::Op::kDriverAdded, 0);
@@ -2121,7 +2121,7 @@ Device* coordinator_init(zx_handle_t root_job) {
 // dc_bind_driver is called when a new driver becomes available to
 // the devcoordinator.  Existing devices are inspected to see if the
 // new driver is bindable to them (unless they are already bound).
-void dc_bind_driver(driver_t* drv) {
+void dc_bind_driver(Driver* drv) {
     if (dc_running) {
         printf("devcoord: driver '%s' added\n", drv->name.c_str());
     }
@@ -2150,7 +2150,7 @@ void dc_bind_driver(driver_t* drv) {
 }
 
 void dc_handle_new_driver() {
-    driver_t* drv;
+    Driver* drv;
     while ((drv = list_drivers_new.pop_front()) != nullptr) {
         list_drivers.push_back(drv);
         dc_bind_driver(drv);
@@ -2164,7 +2164,7 @@ static bool system_available;
 static bool system_loaded;
 
 // List of drivers loaded from /system by system_driver_loader()
-static fbl::DoublyLinkedList<driver_t*, driver_t::Node> list_drivers_system;
+static fbl::DoublyLinkedList<Driver*, Driver::Node> list_drivers_system;
 
 static int system_driver_loader(void* arg);
 
@@ -2181,7 +2181,7 @@ static zx_status_t dc_control_event(port_handler_t* ph, zx_signals_t signals, ui
         }
         break;
     case CTL_ADD_SYSTEM: {
-        driver_t* drv;
+        Driver* drv;
         // Add system drivers to the new list
         while ((drv = list_drivers_system.pop_front()) != nullptr) {
             list_drivers_new.push_back(drv);
@@ -2212,7 +2212,7 @@ static port_handler_t control_handler = []() {
 // CTL_ADD_SYSTEM is sent.
 //
 // TODO: fancier priority management
-static void dc_driver_added_sys(driver_t* drv, const char* version) {
+static void dc_driver_added_sys(Driver* drv, const char* version) {
     log(INFO, "devmgr: adding system driver '%s' '%s'\n", drv->name.c_str(), drv->libname.c_str());
 
     if (load_vmo(drv->libname.c_str(), &drv->dso_vmo)) {
@@ -2287,7 +2287,7 @@ void coordinator() {
     if (require_system && !system_loaded) {
         printf("devcoord: full system required, ignoring fallback drivers until /system is loaded\n");
     } else {
-        driver_t* drv;
+        Driver* drv;
         while ((drv = list_drivers_fallback.pop_back()) != nullptr) {
             list_drivers.push_back(drv);
         }

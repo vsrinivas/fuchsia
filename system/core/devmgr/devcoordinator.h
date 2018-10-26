@@ -22,7 +22,6 @@ namespace devmgr {
 
 struct Devhost;
 
-typedef struct dc_driver driver_t;
 typedef struct dc_devnode devnode_t;
 
 struct Work {
@@ -282,8 +281,8 @@ struct Devhost {
 // return to this state once made visible.
 #define DEV_CTX_INVISIBLE     0x80
 
-struct dc_driver {
-    dc_driver() = default;
+struct Driver {
+    Driver() = default;
 
     fbl::String name;
     fbl::unique_ptr<const zx_bind_inst_t[]> binding;
@@ -293,10 +292,10 @@ struct dc_driver {
     uint32_t flags = 0;
     zx_handle_t dso_vmo = ZX_HANDLE_INVALID;
 
-    fbl::DoublyLinkedListNodeState<dc_driver*> node;
+    fbl::DoublyLinkedListNodeState<Driver*> node;
     struct Node {
-        static fbl::DoublyLinkedListNodeState<dc_driver*>& node_state(
-            dc_driver& obj) {
+        static fbl::DoublyLinkedListNodeState<Driver*>& node_state(
+            Driver& obj) {
             return obj.node;
         }
     };
@@ -315,11 +314,11 @@ Device* coordinator_init(zx_handle_t root_job);
 void coordinator();
 
 void load_driver(const char* path,
-                 void (*func)(driver_t* drv, const char* version));
+                 void (*func)(Driver* drv, const char* version));
 void find_loadable_drivers(const char* path,
-                           void (*func)(driver_t* drv, const char* version));
+                           void (*func)(Driver* drv, const char* version));
 
-bool dc_is_bindable(const driver_t* drv, uint32_t protocol_id,
+bool dc_is_bindable(const Driver* drv, uint32_t protocol_id,
                     zx_device_prop_t* props, size_t prop_count,
                     bool autobind);
 

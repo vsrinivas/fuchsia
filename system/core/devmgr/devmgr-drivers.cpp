@@ -22,7 +22,7 @@ namespace devmgr {
 
 struct AddContext {
     const char* libname;
-    using Func = void(*)(driver_t* drv, const char* version);
+    using Func = void(*)(Driver* drv, const char* version);
     Func func;
 };
 
@@ -58,7 +58,7 @@ static void found_driver(zircon_driver_note_payload_t* note,
         dc_asan_drivers = true;
     }
 
-    auto drv = fbl::make_unique<dc_driver>();
+    auto drv = fbl::make_unique<Driver>();
     if (drv == nullptr) {
         return;
     }
@@ -91,7 +91,7 @@ static void found_driver(zircon_driver_note_payload_t* note,
 }
 
 void find_loadable_drivers(const char* path,
-                           void (*func)(driver_t* drv, const char* version)) {
+                           void (*func)(Driver* drv, const char* version)) {
 
     DIR* dir = opendir(path);
     if (dir == nullptr) {
@@ -131,7 +131,7 @@ void find_loadable_drivers(const char* path,
 }
 
 void load_driver(const char* path,
-                 void (*func)(driver_t* drv, const char* version)) {
+                 void (*func)(Driver* drv, const char* version)) {
     //TODO: check for duplicate driver add
     int fd;
     if ((fd = open(path, O_RDONLY)) < 0) {

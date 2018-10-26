@@ -140,7 +140,7 @@ next_instruction:
     return false;
 }
 
-bool dc_is_bindable(const driver_t* drv, uint32_t protocol_id,
+bool dc_is_bindable(const Driver* drv, uint32_t protocol_id,
                     zx_device_prop_t* props, size_t prop_count,
                     bool autobind) {
     if (drv->binding_size == 0) {
