@@ -79,7 +79,7 @@ struct dc_devnode {
 
     // nullptr if we are a pure directory node,
     // otherwise the device we are referencing
-    device_t* device = nullptr;
+    Device* device = nullptr;
 
     fbl::DoublyLinkedList<fbl::unique_ptr<dc_watcher>> watchers;
 
@@ -315,7 +315,7 @@ static zx_status_t devfs_watch(devnode_t* dn, zx::channel h, uint32_t mask) {
     return ZX_OK;
 }
 
-static fbl::unique_ptr<devnode_t> devfs_mknode(device_t* dev, const char* name) {
+static fbl::unique_ptr<devnode_t> devfs_mknode(Device* dev, const char* name) {
     auto dn = fbl::make_unique<devnode_t>(name);
     if (!dn) {
         return nullptr;
@@ -344,7 +344,7 @@ static devnode_t* devfs_lookup(devnode_t* parent, const char* name) {
     return nullptr;
 }
 
-void devfs_advertise(device_t* dev) {
+void devfs_advertise(Device* dev) {
     if (dev->link) {
         devnode_t* dir = proto_dir(dev->protocol_id);
         devfs_notify(dir, dev->link->name, fuchsia_io_WATCH_EVENT_ADDED);
@@ -355,7 +355,7 @@ void devfs_advertise(device_t* dev) {
 }
 
 // TODO: generate a MODIFIED event rather than back to back REMOVED and ADDED
-void devfs_advertise_modified(device_t* dev) {
+void devfs_advertise_modified(Device* dev) {
     if (dev->link) {
         devnode_t* dir = proto_dir(dev->protocol_id);
         devfs_notify(dir, dev->link->name, fuchsia_io_WATCH_EVENT_REMOVED);
@@ -367,7 +367,7 @@ void devfs_advertise_modified(device_t* dev) {
     }
 }
 
-zx_status_t devfs_publish(device_t* parent, device_t* dev) {
+zx_status_t devfs_publish(Device* parent, Device* dev) {
     if ((parent->self == nullptr) || (dev->self != nullptr) || (dev->link != nullptr)) {
         return ZX_ERR_INTERNAL;
     }
@@ -480,7 +480,7 @@ static void _devfs_remove(devnode_t* dn) {
     }
 }
 
-void devfs_unpublish(device_t* dev) {
+void devfs_unpublish(Device* dev) {
     if (dev->self != nullptr) {
         _devfs_remove(dev->self);
         dev->self = nullptr;

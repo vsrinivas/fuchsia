@@ -22,7 +22,6 @@ namespace devmgr {
 
 struct Devhost;
 
-typedef struct dc_device device_t;
 typedef struct dc_driver driver_t;
 typedef struct dc_devnode devnode_t;
 
@@ -114,9 +113,9 @@ struct Metadata {
 #define DEV_HOST_DYING 1
 #define DEV_HOST_SUSPEND 2
 
-struct dc_device {
-    dc_device();
-    ~dc_device();
+struct Device {
+    Device();
+    ~Device();
 
     zx_handle_t hrpc;
     uint32_t flags;
@@ -133,41 +132,41 @@ struct dc_device {
     uint32_t prop_count;
     devnode_t* self;
     devnode_t* link;
-    device_t* parent;
-    device_t* proxy;
+    Device* parent;
+    Device* proxy;
 
     // listnode for this device in its parent's
     // list-of-children
-    fbl::DoublyLinkedListNodeState<dc_device*> node;
+    fbl::DoublyLinkedListNodeState<Device*> node;
     struct Node {
-        static fbl::DoublyLinkedListNodeState<dc_device*>& node_state(
-            dc_device& obj) {
+        static fbl::DoublyLinkedListNodeState<Device*>& node_state(
+            Device& obj) {
             return obj.node;
         }
     };
 
     // listnode for this device in its devhost's
     // list-of-devices
-    fbl::DoublyLinkedListNodeState<dc_device*> dhnode;
+    fbl::DoublyLinkedListNodeState<Device*> dhnode;
     struct DevhostNode {
-        static fbl::DoublyLinkedListNodeState<dc_device*>& node_state(
-            dc_device& obj) {
+        static fbl::DoublyLinkedListNodeState<Device*>& node_state(
+            Device& obj) {
             return obj.dhnode;
         }
     };
 
     // list of all child devices of this device
-    fbl::DoublyLinkedList<dc_device*, Node> children;
+    fbl::DoublyLinkedList<Device*, Node> children;
 
     // list of outstanding requests from the devcoord
     // to this device's devhost, awaiting a response
     fbl::DoublyLinkedList<Pending*, Pending::Node> pending;
 
     // listnode for this device in the all devices list
-    fbl::DoublyLinkedListNodeState<dc_device*> anode;
+    fbl::DoublyLinkedListNodeState<Device*> anode;
     struct AllDevicesNode {
-        static fbl::DoublyLinkedListNodeState<dc_device*>& node_state(
-            dc_device& obj) {
+        static fbl::DoublyLinkedListNodeState<Device*>& node_state(
+            Device& obj) {
             return obj.anode;
         }
     };
@@ -205,7 +204,7 @@ struct Devhost {
     Devhost* parent;
 
     // list of all devices on this devhost
-    fbl::DoublyLinkedList<dc_device*, dc_device::DevhostNode> devices;
+    fbl::DoublyLinkedList<Device*, Device::DevhostNode> devices;
 
     // listnode for this devhost in the all devhosts list
     fbl::DoublyLinkedListNodeState<Devhost*> anode;
@@ -307,12 +306,12 @@ struct dc_driver {
 
 #define DRIVER_NAME_LEN_MAX 64
 
-zx_status_t devfs_publish(device_t* parent, device_t* dev);
-void devfs_unpublish(device_t* dev);
-void devfs_advertise(device_t* dev);
-void devfs_advertise_modified(device_t* dev);
+zx_status_t devfs_publish(Device* parent, Device* dev);
+void devfs_unpublish(Device* dev);
+void devfs_advertise(Device* dev);
+void devfs_advertise_modified(Device* dev);
 
-device_t* coordinator_init(zx_handle_t root_job);
+Device* coordinator_init(zx_handle_t root_job);
 void coordinator();
 
 void load_driver(const char* path,
