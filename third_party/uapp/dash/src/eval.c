@@ -497,6 +497,7 @@ evalsubshell(union node *n, int flags)
 		/* Process-tracking management */
 		forkparent(jp, n, backgnd, process);
         } else {
+		freejob(jp);
 		sh_error("Failed to create subshell: %d (%s): %s", exec_result, zx_status_get_string(exec_result), err_msg);
 		return exec_result;
 	}
@@ -506,6 +507,7 @@ evalsubshell(union node *n, int flags)
 		zx_handle_close(process);
 	}
 	INTON;
+	freejob(jp);
 	return status;
 }
 
