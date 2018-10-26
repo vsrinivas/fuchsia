@@ -30,8 +30,7 @@ public:
         return pci_device()->GetGtt()->Clear(addr, page_count);
     }
 
-    bool Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
-                uint64_t page_offset, uint64_t page_count) override
+    bool Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override
     {
         DASSERT(false);
         return false;

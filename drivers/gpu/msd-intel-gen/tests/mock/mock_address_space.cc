@@ -32,8 +32,7 @@ bool MockAddressSpace::Clear(uint64_t addr, uint64_t page_count)
     return true;
 }
 
-bool MockAddressSpace::Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
-                              uint64_t offset, uint64_t length)
+bool MockAddressSpace::Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping)
 {
     auto iter = allocations_.find(addr);
     if (iter == allocations_.end())

@@ -132,10 +132,10 @@ public:
             phys_addr = phys_addr_base += PAGE_SIZE;
         }
 
-        EXPECT_TRUE(ppgtt->Insert(addr[0], bus_mapping[0].get(), 0, buffer[0]->size() / PAGE_SIZE));
+        EXPECT_TRUE(ppgtt->Insert(addr[0], bus_mapping[0].get()));
         check_pte_entries(ppgtt.get(), bus_mapping[0].get(), addr[0]);
 
-        EXPECT_TRUE(ppgtt->Insert(addr[1], bus_mapping[1].get(), 0, buffer[1]->size() / PAGE_SIZE));
+        EXPECT_TRUE(ppgtt->Insert(addr[1], bus_mapping[1].get()));
         check_pte_entries(ppgtt.get(), bus_mapping[1].get(), addr[1]);
 
         EXPECT_TRUE(ppgtt->Clear(addr[1], buffer[1]->size() / PAGE_SIZE));

@@ -214,17 +214,15 @@ bool PerProcessGtt::Free(uint64_t addr)
     return allocator_->Free(addr);
 }
 
-bool PerProcessGtt::Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
-                           uint64_t page_offset, uint64_t page_count)
+bool PerProcessGtt::Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping)
 {
+    auto& bus_addr_array = bus_mapping->Get();
+    uint64_t page_count = bus_addr_array.size();
+
     if (kLogEnable)
         magma::log(magma::LOG_INFO,
                    "ppgtt insert (%p) 0x%" PRIx64 "-0x%" PRIx64 " length 0x%" PRIx64, this, addr,
                    addr + page_count * PAGE_SIZE - 1, page_count * PAGE_SIZE);
-
-    auto& bus_addr_array = bus_mapping->Get();
-    if (bus_addr_array.size() != page_count)
-        return DRETF(false, "incorrect bus mapping length");
 
     uint32_t page_table_index = (addr >>= PAGE_SHIFT) & kPageTableMask;
     uint32_t page_directory_index = (addr >>= kPageTableShift) & kPageDirectoryMask;

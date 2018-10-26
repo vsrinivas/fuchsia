@@ -52,8 +52,7 @@ public:
         return true;
     }
 
-    bool Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
-                uint64_t page_offset, uint64_t page_count) override
+    bool Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override
     {
         DASSERT(false);
         return false;
