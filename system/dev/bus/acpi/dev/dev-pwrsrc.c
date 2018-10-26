@@ -2,22 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/debug.h>
-
-#include <zircon/types.h>
-#include <zircon/syscalls.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <threads.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
 
 #include <acpica/acpi.h>
-#include <zircon/device/power.h>
+#include <fuchsia/power/c/fidl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <threads.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include "dev.h"
 #include "errors.h"
+#include "power.h"
 
 typedef struct acpi_pwrsrc_device {
     zx_device_t* zxdev;
@@ -64,50 +64,6 @@ static void acpi_pwrsrc_notify(ACPI_HANDLE handle, UINT32 value, void* ctx) {
     call_PSR(dev, true);
 }
 
-static zx_status_t acpi_pwrsrc_ioctl(void* ctx, uint32_t op,
-                                     const void* in_buf, size_t in_len,
-                                     void* out_buf, size_t out_len, size_t* out_actual) {
-    acpi_pwrsrc_device_t* dev = ctx;
-    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-    switch (op) {
-    case IOCTL_POWER_GET_INFO: {
-        if (out_len != sizeof(power_info_t)) {
-            status = ZX_ERR_INVALID_ARGS;
-            goto err;
-        }
-
-        // reading state clears the signal
-        zx_object_signal(dev->event, ZX_USER_SIGNAL_0, 0);
-
-        power_info_t* info = (power_info_t*)out_buf;
-        mtx_lock(&dev->lock);
-        memcpy(info, &dev->info, sizeof(power_info_t));
-        mtx_unlock(&dev->lock);
-        *out_actual = sizeof(power_info_t);
-        return ZX_OK;
-    }
-    case IOCTL_POWER_GET_STATE_CHANGE_EVENT: {
-        if (out_len != sizeof(zx_handle_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        zx_handle_t* out = (zx_handle_t*)out_buf;
-        zx_status_t status = zx_handle_duplicate(dev->event,
-                                                 ZX_RIGHT_READ | ZX_RIGHT_WAIT | ZX_RIGHT_TRANSFER,
-                                                 out);
-        if (status != ZX_OK) {
-            goto err;
-        }
-        // clear the signal before returning
-        zx_object_signal(dev->event, ZX_USER_SIGNAL_0, 0);
-        *out_actual = sizeof(zx_handle_t);
-        return ZX_OK;
-    }
-    }
-err:
-    *out_actual = 0;
-    return status;
-}
-
 static void acpi_pwrsrc_release(void* ctx) {
     acpi_pwrsrc_device_t* dev = ctx;
     AcpiRemoveNotifyHandler(dev->acpi_handle, ACPI_DEVICE_NOTIFY, acpi_pwrsrc_notify);
@@ -117,9 +73,45 @@ static void acpi_pwrsrc_release(void* ctx) {
     free(dev);
 }
 
+zx_status_t fidl_pwrsrc_get_power_info(void* ctx, fidl_txn_t* txn) {
+    acpi_pwrsrc_device_t* dev = ctx;
+    struct fuchsia_power_SourceInfo info;
+
+    mtx_lock(&dev->lock);
+    info.state = dev->info.state;
+    info.type = dev->info.type;
+    mtx_unlock(&dev->lock);
+
+    // reading state clears the signal
+    zx_object_signal(dev->event, ZX_USER_SIGNAL_0, 0);
+    return fuchsia_power_SourceGetPowerInfo_reply(txn, &info);
+}
+
+zx_status_t fidl_pwrsrc_get_state_change_event(void* ctx, fidl_txn_t* txn) {
+    acpi_pwrsrc_device_t* dev = ctx;
+    zx_handle_t out_handle;
+    zx_rights_t rights = ZX_RIGHT_READ | ZX_RIGHT_WAIT | ZX_RIGHT_TRANSFER;
+    zx_status_t status = zx_handle_duplicate(dev->event, rights, &out_handle);
+
+    if (status == ZX_OK) {
+        // clear the signal before returning
+        zx_object_signal(dev->event, ZX_USER_SIGNAL_0, 0);
+    }
+    return fuchsia_power_SourceGetStateChangeEvent_reply(txn, status, out_handle);
+}
+
+static fuchsia_power_Source_ops_t fidl_ops = {
+    .GetPowerInfo = fidl_pwrsrc_get_power_info,
+    .GetStateChangeEvent = fidl_pwrsrc_get_state_change_event,
+};
+
+static zx_status_t fuchsia_power_message_instance(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_power_Source_dispatch(ctx, txn, msg, &fidl_ops);
+}
+
 static zx_protocol_device_t acpi_pwrsrc_device_proto = {
     .version = DEVICE_OPS_VERSION,
-    .ioctl = acpi_pwrsrc_ioctl,
+    .message = fuchsia_power_message_instance,
     .release = acpi_pwrsrc_release,
 };
 
@@ -142,7 +134,7 @@ zx_status_t pwrsrc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
     call_PSR(dev, false);
 
     ACPI_STATUS acpi_status = AcpiInstallNotifyHandler(acpi_handle, ACPI_DEVICE_NOTIFY,
-            acpi_pwrsrc_notify, dev);
+                                                       acpi_pwrsrc_notify, dev);
     if (acpi_status != AE_OK) {
         zxlogf(ERROR, "acpi-pwrsrc: could not install notify handler\n");
         acpi_pwrsrc_release(dev);

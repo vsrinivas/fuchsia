@@ -2,26 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
 
-#include <zircon/types.h>
-#include <zircon/syscalls.h>
-#include <zircon/device/power.h>
-#include <stdlib.h>
+#include <fuchsia/power/c/fidl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <threads.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <acpica/acpi.h>
 
 #include "dev.h"
 #include "errors.h"
+#include "power.h"
 
 #define ACPI_BATTERY_STATE_DISCHARGING (1 << 0)
-#define ACPI_BATTERY_STATE_CHARGING    (1 << 1)
-#define ACPI_BATTERY_STATE_CRITICAL    (1 << 2)
+#define ACPI_BATTERY_STATE_CHARGING (1 << 1)
+#define ACPI_BATTERY_STATE_CRITICAL (1 << 2)
 
 typedef struct acpi_battery_device {
     zx_device_t* zxdev;
@@ -79,7 +80,7 @@ static zx_status_t call_BIF(acpi_battery_device_t* dev) {
     mtx_lock(&dev->lock);
 
     ACPI_STATUS acpi_status = AcpiEvaluateObject(dev->acpi_handle,
-            (char*)"_BIF", NULL, &dev->bif_buffer);
+                                                 (char*)"_BIF", NULL, &dev->bif_buffer);
     if (acpi_status != AE_OK) {
         zxlogf(TRACE, "acpi-battery: acpi error 0x%x in _BIF\n", acpi_status);
         goto err;
@@ -125,7 +126,7 @@ static zx_status_t call_BST(acpi_battery_device_t* dev) {
     mtx_lock(&dev->lock);
 
     ACPI_STATUS acpi_status = AcpiEvaluateObject(dev->acpi_handle,
-            (char*)"_BST", NULL, &dev->bst_buffer);
+                                                 (char*)"_BST", NULL, &dev->bst_buffer);
     if (acpi_status != AE_OK) {
         zxlogf(TRACE, "acpi-battery: acpi error 0x%x in _BST\n", acpi_status);
         goto err;
@@ -204,67 +205,6 @@ static void acpi_battery_notify(ACPI_HANDLE handle, UINT32 value, void* ctx) {
     }
 }
 
-static zx_status_t acpi_battery_ioctl(void* ctx, uint32_t op,
-                                      const void* in_buf, size_t in_len,
-                                      void* out_buf, size_t out_len, size_t* out_actual) {
-    acpi_battery_device_t* dev = ctx;
-    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-    switch (op) {
-    case IOCTL_POWER_GET_INFO: {
-        if (out_len != sizeof(power_info_t)) {
-            status = ZX_ERR_INVALID_ARGS;
-            goto err;
-        }
-
-        // reading state clears the signal
-        zx_object_signal(dev->event, ZX_USER_SIGNAL_0, 0);
-
-        power_info_t* info = (power_info_t*)out_buf;
-        mtx_lock(&dev->lock);
-        memcpy(info, &dev->power_info, sizeof(power_info_t));
-        mtx_unlock(&dev->lock);
-        *out_actual = sizeof(power_info_t);
-        return ZX_OK;
-    }
-    case IOCTL_POWER_GET_BATTERY_INFO: {
-        if (out_len != sizeof(battery_info_t)) {
-            status = ZX_ERR_INVALID_ARGS;
-            goto err;
-        }
-        call_BST(dev);
-        battery_info_t* info = (battery_info_t*)out_buf;
-        mtx_lock(&dev->lock);
-        memcpy(info, &dev->battery_info, sizeof(battery_info_t));
-        mtx_unlock(&dev->lock);
-        *out_actual = sizeof(battery_info_t);
-        return ZX_OK;
-    }
-    case IOCTL_POWER_GET_STATE_CHANGE_EVENT: {
-        if (out_len != sizeof(zx_handle_t)) {
-            status = ZX_ERR_INVALID_ARGS;
-            goto err;
-        }
-        zx_handle_t* out = (zx_handle_t*)out_buf;
-        zx_status_t status = zx_handle_duplicate(dev->event,
-                                                 ZX_RIGHT_READ | ZX_RIGHT_TRANSFER | ZX_RIGHT_WAIT,
-                                                 out);
-        if (status != ZX_OK) {
-            goto err;
-        }
-
-        // clear the signal before returning
-        zx_object_signal(dev->event, ZX_USER_SIGNAL_0, 0);
-        *out_actual = sizeof(zx_handle_t);
-        return ZX_OK;
-    }
-    default:
-        status = ZX_ERR_NOT_SUPPORTED;
-    }
-err:
-    *out_actual = 0;
-    return status;
-}
-
 static void acpi_battery_release(void* ctx) {
     acpi_battery_device_t* dev = ctx;
     atomic_store(&dev->shutdown, true);
@@ -295,9 +235,68 @@ static zx_status_t acpi_battery_suspend(void* ctx, uint32_t flags) {
     return ZX_OK;
 }
 
+zx_status_t fidl_battery_get_power_info(void* ctx, fidl_txn_t* txn) {
+    acpi_battery_device_t* dev = ctx;
+    struct fuchsia_power_SourceInfo info;
+
+    mtx_lock(&dev->lock);
+    info.state = dev->power_info.state;
+    info.type = dev->power_info.type;
+    mtx_unlock(&dev->lock);
+
+    // reading state clears the signal
+    zx_object_signal(dev->event, ZX_USER_SIGNAL_0, 0);
+    return fuchsia_power_SourceGetPowerInfo_reply(txn, &info);
+}
+
+zx_status_t fidl_battery_get_battery_info(void* ctx, fidl_txn_t* txn) {
+    acpi_battery_device_t* dev = ctx;
+    struct fuchsia_power_BatteryInfo info;
+
+    call_BST(dev);
+    mtx_lock(&dev->lock);
+    info.unit = dev->battery_info.unit;
+    info.design_capacity = dev->battery_info.design_capacity;
+    info.last_full_capacity = dev->battery_info.last_full_capacity;
+    info.design_voltage = dev->battery_info.design_voltage;
+    info.capacity_warning = dev->battery_info.capacity_warning;
+    info.capacity_low = dev->battery_info.capacity_low;
+    info.capacity_granularity_low_warning = dev->battery_info.capacity_granularity_low_warning;
+    info.capacity_granularity_warning_full = dev->battery_info.capacity_granularity_warning_full;
+    info.present_rate = dev->battery_info.present_rate;
+    info.remaining_capacity = dev->battery_info.remaining_capacity;
+    info.present_voltage = dev->battery_info.present_voltage;
+    mtx_unlock(&dev->lock);
+
+    return fuchsia_power_SourceGetBatteryInfo_reply(txn, &info);
+}
+
+zx_status_t fidl_battery_get_state_change_event(void* ctx, fidl_txn_t* txn) {
+    acpi_battery_device_t* dev = ctx;
+    zx_handle_t out_handle;
+    zx_rights_t rights = ZX_RIGHT_READ | ZX_RIGHT_WAIT | ZX_RIGHT_TRANSFER;
+    zx_status_t status = zx_handle_duplicate(dev->event, rights, &out_handle);
+
+    if (status == ZX_OK) {
+        // clear the signal before returning
+        zx_object_signal(dev->event, ZX_USER_SIGNAL_0, 0);
+    }
+    return fuchsia_power_SourceGetStateChangeEvent_reply(txn, status, out_handle);
+}
+
+static fuchsia_power_Source_ops_t fidl_ops = {
+    .GetPowerInfo = fidl_battery_get_power_info,
+    .GetStateChangeEvent = fidl_battery_get_state_change_event,
+    .GetBatteryInfo = fidl_battery_get_battery_info,
+};
+
+static zx_status_t fuchsia_battery_message_instance(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_power_Source_dispatch(ctx, txn, msg, &fidl_ops);
+}
+
 static zx_protocol_device_t acpi_battery_device_proto = {
     .version = DEVICE_OPS_VERSION,
-    .ioctl = acpi_battery_ioctl,
+    .message = fuchsia_battery_message_instance,
     .release = acpi_battery_release,
     .suspend = acpi_battery_suspend,
 };
@@ -354,7 +353,7 @@ zx_status_t battery_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
 
     // install acpi event handler
     ACPI_STATUS acpi_status = AcpiInstallNotifyHandler(acpi_handle, ACPI_DEVICE_NOTIFY,
-            acpi_battery_notify, dev);
+                                                       acpi_battery_notify, dev);
     if (acpi_status != AE_OK) {
         zxlogf(ERROR, "acpi-battery: could not install notify handler\n");
         acpi_battery_release(dev);
@@ -363,14 +362,14 @@ zx_status_t battery_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
 
     // deprecated - create polling thread
     int rc = thrd_create_with_name(&dev->poll_thread,
-            acpi_battery_poll_thread, dev, "acpi-battery-poll");
+                                   acpi_battery_poll_thread, dev, "acpi-battery-poll");
     if (rc != thrd_success) {
         zxlogf(ERROR, "acpi-battery: polling thread did not start (%d)\n", rc);
         acpi_battery_release(dev);
         return rc;
     }
 
-   device_add_args_t args = {
+    device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "acpi-battery",
         .ctx = dev,

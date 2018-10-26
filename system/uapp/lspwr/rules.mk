@@ -11,6 +11,12 @@ MODULE_GROUP := misc
 
 MODULE_SRCS += $(LOCAL_DIR)/lspwr.c
 
-MODULE_LIBS := system/ulib/zircon system/ulib/c system/ulib/fdio
+MODULE_LIBS := \
+    system/ulib/zircon \
+    system/ulib/c \
+    system/ulib/fdio \
+
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-power
 
 include make/module.mk

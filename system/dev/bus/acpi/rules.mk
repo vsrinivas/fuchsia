@@ -44,10 +44,14 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/resources.c \
     $(LOCAL_DIR)/util.c \
 
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-power
+
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
+    system/ulib/fidl \
     system/ulib/hid \
     system/ulib/pci \
     system/ulib/region-alloc \
