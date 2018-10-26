@@ -8,6 +8,8 @@
 
 #include <string>
 
+#include "garnet/bin/zxdb/client/session.h"
+
 namespace crashpad {
 
 class ProcessSnapshotMinidump;
@@ -21,7 +23,7 @@ class Session;
 // An implementation of RemoteAPI for Session that accesses a minidump file.
 class MinidumpRemoteAPI : public RemoteAPI {
  public:
-  MinidumpRemoteAPI();
+  explicit MinidumpRemoteAPI(Session* session);
   ~MinidumpRemoteAPI();
 
   Err Open(const std::string& path);
@@ -83,6 +85,7 @@ class MinidumpRemoteAPI : public RemoteAPI {
   std::string ProcessName();
 
   bool attached_ = false;
+  Session* session_;
 
   std::unique_ptr<crashpad::ProcessSnapshotMinidump> minidump_;
   FXL_DISALLOW_COPY_AND_ASSIGN(MinidumpRemoteAPI);

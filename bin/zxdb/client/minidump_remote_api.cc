@@ -261,7 +261,8 @@ void PopulateRegistersX86_64(const crashpad::CPUContextX86_64& ctx,
 
 }  // namespace
 
-MinidumpRemoteAPI::MinidumpRemoteAPI() = default;
+MinidumpRemoteAPI::MinidumpRemoteAPI(Session* session) : session_(session) {}
+
 MinidumpRemoteAPI::~MinidumpRemoteAPI() = default;
 
 std::string MinidumpRemoteAPI::ProcessName() {
@@ -344,12 +345,36 @@ void MinidumpRemoteAPI::Attach(
 
   if (static_cast<pid_t>(request.koid) != minidump_->ProcessID()) {
     reply.status = kAttachNotFound;
-  } else {
-    reply.status = kAttachOk;
-    attached_ = true;
+    Succeed(cb, reply);
+    return;
   }
 
-  Succeed(cb, reply);
+  reply.status = kAttachOk;
+  attached_ = true;
+
+  std::vector<debug_ipc::NotifyThread> notifications;
+
+  for (const auto& thread : minidump_->Threads()) {
+    auto& notification = notifications.emplace_back();
+
+    notification.process_koid = minidump_->ProcessID();
+    notification.record.koid = thread->ThreadID();
+    notification.record.state = debug_ipc::ThreadRecord::State::kCoreDump;
+  }
+
+  Session* session = session_;
+
+  std::function<void(const Err&, debug_ipc::AttachReply)> new_cb =
+    [cb, notifications, session](const Err& e, debug_ipc::AttachReply a) {
+      cb(e, a);
+
+      for (const auto& notification : notifications) {
+        session->DispatchNotifyThread(
+          debug_ipc::MsgHeader::Type::kNotifyThreadStarting, notification);
+      }
+    };
+
+  Succeed(new_cb, reply);
 }
 
 void MinidumpRemoteAPI::Detach(

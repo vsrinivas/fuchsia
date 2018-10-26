@@ -412,7 +412,7 @@ void Session::OpenMinidump(const std::string& path,
   }
 
   is_minidump_ = true;
-  remote_api_ = std::make_unique<MinidumpRemoteAPI>();
+  remote_api_ = std::make_unique<MinidumpRemoteAPI>(this);
   Err err = reinterpret_cast<MinidumpRemoteAPI*>(remote_api_.get())->Open(path);
 
   debug_ipc::MessageLoop::Current()->PostTask(
@@ -479,7 +479,7 @@ void Session::DispatchNotifyThread(debug_ipc::MsgHeader::Type type,
   } else {
     fprintf(stderr,
             "Warning: received thread notification for an "
-            "unexpected process %" PRIu64 ".",
+            "unexpected process %" PRIu64 ".\n",
             notify.process_koid);
   }
 }
