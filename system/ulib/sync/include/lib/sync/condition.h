@@ -47,7 +47,44 @@ void sync_condition_wait(sync_condition_t* condition, sync_mutex_t* mutex);
 //      ZX_ERR_TIMED_OUT if the wait timed out.
 zx_status_t sync_condition_timedwait(sync_condition_t* condition, sync_mutex_t* mutex, zx_time_t deadline);
 
-// Wake up one thread waiting for |condition|
+// Wake up one thread waiting for |condition|.
+//
+// If the woken thread was waiting on sync_condition_timedwait(), then it is guaranteed
+// to receive a ZX_OK return value even if a race with a timeout occurs. As an example
+// where this makes a difference, consider the following implementation of a multi-producer,
+// multi-consumer queue:
+//
+// Message* MessageQueue::DequeueTimeout(zx_time_t deadline) {
+//    sync_mutex_lock(&mutex_);
+//    for (;;) {
+//        if (!list_.empty()) {
+//            Message* msg = list_.front();
+//            list_.pop_front();
+//            sync_mutex_unlock(&mutex_);
+//            return msg;
+//        }
+//        zx_status_t status = sync_condition_timedwait(&condition_, &mutex_, deadline);
+//        if (status == ZX_ERR_TIMED_OUT) {
+//            // Without the above guarantee, this would be a bug: a race between
+//            // a timeout and a signal() would result in a missed wakeup.
+//            // To fix that, we would need to recheck list_.empty() here, which
+//            // is not obvious and would make the code more complex.
+//            sync_mutex_unlock(&mutex_);
+//            return nullptr;
+//        }
+//    }
+// }
+//
+// void MessageQueue::Enqueue(Message* msg) {
+//     sync_mutex_lock(&mutex_);
+//     list_.push_back(msg);
+//     // Signal just one waiter. Assumes that any possible waiter will dequeue the message.
+//     sync_condition_signal(&condvar_);
+//     sync_mutex_unlock(&mutex_);
+// }
+//
+// Note that pthread does not seem to require this property, and in fact the current upstream
+// implementation of pthread_cond_timedwait() in MUSL does not have it.
 void sync_condition_signal(sync_condition_t* condition);
 
 // Wake up all threads that are currently waiting for |condition|.

@@ -127,7 +127,7 @@ static inline zx_status_t timedwait(Condition* c, Mutex* mutex, zx_time_t deadli
     //  3) After a timeout.
     // In the original Linux version of this algorithm, this could also exit
     // when interrupted by an asynchronous signal, but that does not apply on Zircon.
-    zx_status_t status = sync_completion_wait_deadline(&node.ready, deadline);
+    sync_completion_wait_deadline(&node.ready, deadline);
 
     int oldstate = WAITING;
     if (cas(&node.state, &oldstate, LEAVING)) {
@@ -218,9 +218,7 @@ static inline zx_status_t timedwait(Condition* c, Mutex* mutex, zx_time_t deadli
     //     mutex unlock, there *might* be another thread waiting for
     //     the mutex after us in the queue.  We need to ensure that it
     //     will be signaled by zxr_mutex_unlock() in future.
-    if (MutexOps<Mutex>::lock_with_waiters(mutex, waiters_delta, mutex_lock_err) != ZX_OK) {
-        status = ZX_ERR_BAD_STATE;
-    }
+    zx_status_t status = MutexOps<Mutex>::lock_with_waiters(mutex, waiters_delta, mutex_lock_err);
 
     if (node.prev) {
         // Signal the completion that's holding back the next waiter, and
@@ -229,6 +227,15 @@ static inline zx_status_t timedwait(Condition* c, Mutex* mutex, zx_time_t deadli
         sync_completion_signal_requeue(&node.prev->ready, MutexOps<Mutex>::get_futex(mutex));
     }
 
+    // Even if the first call to sync_completion_wait_deadline() timed out,
+    // we still have been signaled. Thus we still return ZX_OK rather than
+    // ZX_ERR_TIMED_OUT. This provides the following guarantee: if multiple
+    // threads are waiting when signal() is called, at least one waiting
+    // thread will be woken *and* get a ZX_OK from timedwait() (unless there
+    // is an error locking the mutex). This property does not appear to be
+    // required by pthread condvars, although an analogous property is
+    // required for futex wake-ups. We also require this property for
+    // sync_condition_t.
     return status;
 }
 
