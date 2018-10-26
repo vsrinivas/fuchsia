@@ -133,6 +133,25 @@ bool ReadDebugRegs(const zx::thread& thread,
   if (status != ZX_OK)
     return false;
 
+  if (debug_regs.hw_bps_count >= AARCH64_MAX_HW_BREAKPOINTS) {
+    FXL_LOG(ERROR) << "Received too many HW breakpoints: "
+                   << debug_regs.hw_bps_count
+                   << " (max: " << AARCH64_MAX_HW_BREAKPOINTS << ").";
+    return false;
+  }
+
+  auto bcr_base = static_cast<uint32_t>(RegisterID::kARMv8_dbgbcr0_el1);
+  auto bvr_base = static_cast<uint32_t>(RegisterID::kARMv8_dbgbvr0_el1);
+  for (size_t i = 0; i < debug_regs.hw_bps_count; i++) {
+    auto bcr_id = static_cast<RegisterID>(bcr_base + i);
+    out->push_back(CreateRegister(bcr_id, sizeof(debug_regs.hw_bps[i].dbgbcr),
+                                  &debug_regs.hw_bps[i].dbgbcr));
+
+    auto bvr_id = static_cast<RegisterID>(bvr_base + i);
+    out->push_back(CreateRegister(bvr_id, sizeof(debug_regs.hw_bps[i].dbgbvr),
+                                  &debug_regs.hw_bps[i].dbgbvr));
+  }
+
   // TODO(donosoc): Currently this registers that are platform information are
   //                being hacked out as HW breakpoint values in order to know
   //                what the actual settings are.

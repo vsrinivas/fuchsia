@@ -102,6 +102,40 @@ enum class RegisterID : uint32_t {
   kARMv8_id_aa64dfr0_el1 = 1300,  // Debug Feature Register 0.
   kARMv8_mdscr_el1 = 1301,        // Debug System Control Register.
 
+  kARMv8_dbgbcr0_el1 = 1320,
+  kARMv8_dbgbcr1_el1 = 1321,
+  kARMv8_dbgbcr2_el1 = 1322,
+  kARMv8_dbgbcr3_el1 = 1323,
+  kARMv8_dbgbcr4_el1 = 1324,
+  kARMv8_dbgbcr5_el1 = 1325,
+  kARMv8_dbgbcr6_el1 = 1326,
+  kARMv8_dbgbcr7_el1 = 1327,
+  kARMv8_dbgbcr8_el1 = 1328,
+  kARMv8_dbgbcr9_el1 = 1329,
+  kARMv8_dbgbcr10_el1 = 1330,
+  kARMv8_dbgbcr11_el1 = 1331,
+  kARMv8_dbgbcr12_el1 = 1332,
+  kARMv8_dbgbcr13_el1 = 1333,
+  kARMv8_dbgbcr14_el1 = 1334,
+  kARMv8_dbgbcr15_el1 = 1335,
+
+  kARMv8_dbgbvr0_el1 = 1350,
+  kARMv8_dbgbvr1_el1 = 1351,
+  kARMv8_dbgbvr2_el1 = 1352,
+  kARMv8_dbgbvr3_el1 = 1353,
+  kARMv8_dbgbvr4_el1 = 1354,
+  kARMv8_dbgbvr5_el1 = 1355,
+  kARMv8_dbgbvr6_el1 = 1356,
+  kARMv8_dbgbvr7_el1 = 1357,
+  kARMv8_dbgbvr8_el1 = 1358,
+  kARMv8_dbgbvr9_el1 = 1359,
+  kARMv8_dbgbvr10_el1 = 1360,
+  kARMv8_dbgbvr11_el1 = 1361,
+  kARMv8_dbgbvr12_el1 = 1362,
+  kARMv8_dbgbvr13_el1 = 1363,
+  kARMv8_dbgbvr14_el1 = 1364,
+  kARMv8_dbgbvr15_el1 = 1365,
+
   // x64 (Range: 2000-2999) ----------------------------------------------------
 
   // General purpose

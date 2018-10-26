@@ -393,10 +393,76 @@ const char* RegisterIDToString(RegisterID id) {
     case RegisterID::kARMv8_mdscr_el1:
       return "mdscr_el1";
 
-    // x64
-    // ---------------------------------------------------------------------
+    case RegisterID::kARMv8_dbgbcr0_el1:
+      return "kARMv8_dbgbcr0_el1";
+    case RegisterID::kARMv8_dbgbcr1_el1:
+      return "kARMv8_dbgbcr1_el1";
+    case RegisterID::kARMv8_dbgbcr2_el1:
+      return "kARMv8_dbgbcr2_el1";
+    case RegisterID::kARMv8_dbgbcr3_el1:
+      return "kARMv8_dbgbcr3_el1";
+    case RegisterID::kARMv8_dbgbcr4_el1:
+      return "kARMv8_dbgbcr4_el1";
+    case RegisterID::kARMv8_dbgbcr5_el1:
+      return "kARMv8_dbgbcr5_el1";
+    case RegisterID::kARMv8_dbgbcr6_el1:
+      return "kARMv8_dbgbcr6_el1";
+    case RegisterID::kARMv8_dbgbcr7_el1:
+      return "kARMv8_dbgbcr7_el1";
+    case RegisterID::kARMv8_dbgbcr8_el1:
+      return "kARMv8_dbgbcr8_el1";
+    case RegisterID::kARMv8_dbgbcr9_el1:
+      return "kARMv8_dbgbcr9_el1";
+    case RegisterID::kARMv8_dbgbcr10_el1:
+      return "kARMv8_dbgbcr10_el1";
+    case RegisterID::kARMv8_dbgbcr11_el1:
+      return "kARMv8_dbgbcr11_el1";
+    case RegisterID::kARMv8_dbgbcr12_el1:
+      return "kARMv8_dbgbcr12_el1";
+    case RegisterID::kARMv8_dbgbcr13_el1:
+      return "kARMv8_dbgbcr13_el1";
+    case RegisterID::kARMv8_dbgbcr14_el1:
+      return "kARMv8_dbgbcr14_el1";
+    case RegisterID::kARMv8_dbgbcr15_el1:
+      return "kARMv8_dbgbcr15_el1";
 
-    // General purpose.
+    case RegisterID::kARMv8_dbgbvr0_el1:
+      return "kARMv8_dbgbvr0_el1";
+    case RegisterID::kARMv8_dbgbvr1_el1:
+      return "kARMv8_dbgbvr1_el1";
+    case RegisterID::kARMv8_dbgbvr2_el1:
+      return "kARMv8_dbgbvr2_el1";
+    case RegisterID::kARMv8_dbgbvr3_el1:
+      return "kARMv8_dbgbvr3_el1";
+    case RegisterID::kARMv8_dbgbvr4_el1:
+      return "kARMv8_dbgbvr4_el1";
+    case RegisterID::kARMv8_dbgbvr5_el1:
+      return "kARMv8_dbgbvr5_el1";
+    case RegisterID::kARMv8_dbgbvr6_el1:
+      return "kARMv8_dbgbvr6_el1";
+    case RegisterID::kARMv8_dbgbvr7_el1:
+      return "kARMv8_dbgbvr7_el1";
+    case RegisterID::kARMv8_dbgbvr8_el1:
+      return "kARMv8_dbgbvr8_el1";
+    case RegisterID::kARMv8_dbgbvr9_el1:
+      return "kARMv8_dbgbvr9_el1";
+    case RegisterID::kARMv8_dbgbvr10_el1:
+      return "kARMv8_dbgbvr10_el1";
+    case RegisterID::kARMv8_dbgbvr11_el1:
+      return "kARMv8_dbgbvr11_el1";
+    case RegisterID::kARMv8_dbgbvr12_el1:
+      return "kARMv8_dbgbvr12_el1";
+    case RegisterID::kARMv8_dbgbvr13_el1:
+      return "kARMv8_dbgbvr13_el1";
+    case RegisterID::kARMv8_dbgbvr14_el1:
+      return "kARMv8_dbgbvr14_el1";
+    case RegisterID::kARMv8_dbgbvr15_el1:
+      return "kARMv8_dbgbvr15_el1";
+
+      // x64
+      // ---------------------------------------------------------------------
+
+      // General purpose.
 
     case RegisterID::kX64_rax:
       return "rax";

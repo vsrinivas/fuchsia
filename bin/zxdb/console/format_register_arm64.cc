@@ -98,6 +98,30 @@ void FormatGeneralRegisters(const FormatRegisterOptions& options,
   }
 }
 
+// DBGBCR ----------------------------------------------------------------------
+
+std::vector<OutputBuffer> FormatDBGBCR(const Register& reg,
+                                       TextForegroundColor color) {
+  std::vector<OutputBuffer> row;
+  row.reserve(3);
+  row.emplace_back(color, RegisterIDToString(reg.id()));
+
+  uint64_t value = reg.GetValue();
+  row.emplace_back(color, fxl::StringPrintf("0x%08" PRIx64, value));
+
+  row.emplace_back(
+      color,
+      fxl::StringPrintf("E=%d, PMC=%d, BAS=%d, HMC=%d, SSC=%d, LBN=%d, BT=%d",
+                        ARM64_FLAG_VALUE(value, DBGBCR, E),
+                        ARM64_FLAG_VALUE(value, DBGBCR, PMC),
+                        ARM64_FLAG_VALUE(value, DBGBCR, BAS),
+                        ARM64_FLAG_VALUE(value, DBGBCR, HMC),
+                        ARM64_FLAG_VALUE(value, DBGBCR, SSC),
+                        ARM64_FLAG_VALUE(value, DBGBCR, LBN),
+                        ARM64_FLAG_VALUE(value, DBGBCR, BT)));
+  return row;
+}
+
 // ID_AA64DFR0_EL1 -------------------------------------------------------------
 
 std::vector<OutputBuffer> FormatID_AA64FR0_EL1(const Register& reg,
@@ -160,12 +184,33 @@ void FormatDebugRegisters(const FormatRegisterOptions& options,
 
   for (const Register& reg : registers) {
     auto color = GetRowColor(rows.size() + 1);
-    if (reg.id() == RegisterID::kARMv8_id_aa64dfr0_el1) {
-      rows.push_back(FormatID_AA64FR0_EL1(reg, color));
-    } else if (reg.id() == RegisterID::kARMv8_mdscr_el1) {
-      rows.push_back(FormatMDSCR(reg, color));
-    } else {
-      rows.push_back(DescribeRegister(reg, color));
+    switch (reg.id()) {
+      case RegisterID::kARMv8_dbgbcr0_el1:
+      case RegisterID::kARMv8_dbgbcr1_el1:
+      case RegisterID::kARMv8_dbgbcr2_el1:
+      case RegisterID::kARMv8_dbgbcr3_el1:
+      case RegisterID::kARMv8_dbgbcr4_el1:
+      case RegisterID::kARMv8_dbgbcr5_el1:
+      case RegisterID::kARMv8_dbgbcr6_el1:
+      case RegisterID::kARMv8_dbgbcr7_el1:
+      case RegisterID::kARMv8_dbgbcr8_el1:
+      case RegisterID::kARMv8_dbgbcr9_el1:
+      case RegisterID::kARMv8_dbgbcr10_el1:
+      case RegisterID::kARMv8_dbgbcr11_el1:
+      case RegisterID::kARMv8_dbgbcr12_el1:
+      case RegisterID::kARMv8_dbgbcr13_el1:
+      case RegisterID::kARMv8_dbgbcr14_el1:
+      case RegisterID::kARMv8_dbgbcr15_el1:
+        rows.push_back(FormatDBGBCR(reg, color));
+        break;
+      case RegisterID::kARMv8_id_aa64dfr0_el1:
+        rows.push_back(FormatID_AA64FR0_EL1(reg, color));
+        break;
+      case RegisterID::kARMv8_mdscr_el1:
+        rows.push_back(FormatMDSCR(reg, color));
+        break;
+      default:
+        rows.push_back(DescribeRegister(reg, color));
     }
   }
 

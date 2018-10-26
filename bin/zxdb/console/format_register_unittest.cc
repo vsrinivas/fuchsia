@@ -426,7 +426,7 @@ TEST(FormatRegisters, CPSRValues) {
       out.AsString());
 }
 
-TEST(FormatRegisters, DebugRegisters) {
+TEST(FormatRegisters, DebugRegisters_x86) {
   RegisterSet register_set;
   auto& cat = register_set.category_map()[RegisterCategory::Type::kDebug];
   cat.push_back(CreateRegisterWithValue(RegisterID::kX64_dr0, 0x1234));
@@ -461,6 +461,62 @@ TEST(FormatRegisters, DebugRegisters) {
       "LE=0, GE=1, GD=1\n"
       "                       R/W0=2, LEN0=2, R/W1=2, LEN1=2, R/W2=2, LEN2=2, "
       "R/W3=2, LEN3=2\n"
+      "\n",
+      out.AsString());
+}
+
+TEST(FormatRegisters, DebugRegisters_arm64) {
+  RegisterSet register_set;
+  auto& cat = register_set.category_map()[RegisterCategory::Type::kDebug];
+  cat.push_back(CreateRegisterWithValue(RegisterID::kARMv8_dbgbcr0_el1,
+                                        ARM64_FLAG_MASK(DBGBCR, PMC) |
+                                            ARM64_FLAG_MASK(DBGBCR, HMC) |
+                                            ARM64_FLAG_MASK(DBGBCR, LBN)));
+  cat.push_back(CreateRegisterWithValue(RegisterID::kARMv8_dbgbvr0_el1,
+                                        0xdeadbeefaabbccdd));
+  cat.push_back(CreateRegisterWithValue(
+      RegisterID::kARMv8_dbgbcr15_el1,
+      ARM64_FLAG_MASK(DBGBCR, E) | ARM64_FLAG_MASK(DBGBCR, BAS) |
+          ARM64_FLAG_MASK(DBGBCR, SSC) | ARM64_FLAG_MASK(DBGBCR, BT)));
+  cat.push_back(CreateRegisterWithValue(RegisterID::kARMv8_dbgbvr0_el1,
+                                        0xaabbccdd11223344));
+  cat.push_back(
+      CreateRegisterWithValue(RegisterID::kARMv8_id_aa64dfr0_el1,
+                              ARM64_FLAG_MASK(ID_AA64DFR0_EL1, DV) |
+                                  ARM64_FLAG_MASK(ID_AA64DFR0_EL1, PMUV) |
+                                  ARM64_FLAG_MASK(ID_AA64DFR0_EL1, BRP) |
+                                  ARM64_FLAG_MASK(ID_AA64DFR0_EL1, WRP) |
+                                  ARM64_FLAG_MASK(ID_AA64DFR0_EL1, PMSV)));
+  cat.push_back(CreateRegisterWithValue(
+      RegisterID::kARMv8_mdscr_el1,
+      ARM64_FLAG_MASK(MDSCR_EL1, SS) | ARM64_FLAG_MASK(MDSCR_EL1, TDCC) |
+          ARM64_FLAG_MASK(MDSCR_EL1, MDE) | ARM64_FLAG_MASK(MDSCR_EL1, TXU) |
+          ARM64_FLAG_MASK(MDSCR_EL1, RXfull)));
+
+  FormatRegisterOptions options;
+  options.arch = debug_ipc::Arch::kArm64;
+  options.categories = {RegisterCategory::Type::kDebug};
+
+  FilteredRegisterSet filtered_set;
+  Err err = FilterRegisters(options, register_set, &filtered_set);
+  ASSERT_FALSE(err.has_error()) << err.msg();
+
+  OutputBuffer out;
+  err = FormatRegisters(options, filtered_set, &out);
+  ASSERT_FALSE(err.has_error()) << err.msg();
+
+  EXPECT_EQ(
+      "Debug Registers\n"
+      " kARMv8_dbgbcr0_el1          0x000f2006 E=0, PMC=3, BAS=0, HMC=1, "
+      "SSC=0, LBN=15, BT=0\n"
+      " kARMv8_dbgbvr0_el1  0xdeadbeefaabbccdd \n"
+      "kARMv8_dbgbcr15_el1          0x00f0c1e1 E=1, PMC=0, BAS=15, HMC=0, "
+      "SSC=3, LBN=0, BT=15\n"
+      " kARMv8_dbgbvr0_el1  0xaabbccdd11223344 \n"
+      "    id_aa64dfr0_el1         0xf00f0ff0f DV=15, TV=0, PMUV=15, BRP=16, "
+      "WRP=16, CTX_CMP=1, PMSV=15\n"
+      "          mdscr_el1          0x44009001 SS=1, TDCC=1, KDE=0, HDE=0, "
+      "MDE=1, RAZ/WI=0, TDA=0, INTdis=0, TXU=1, RXO=0, TXfull=0, RXfull=1\n"
       "\n",
       out.AsString());
 }

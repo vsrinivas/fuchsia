@@ -59,6 +59,23 @@ constexpr uint64_t kCpsr_Z_Mask = 0x1;
 constexpr uint64_t kCpsr_N_Shift = 31;  // Negative bit.
 constexpr uint64_t kCpsr_N_Mask = 0x1;
 
+// DBGBCR ----------------------------------------------------------------------
+
+constexpr uint64_t kDBGBCR_E_Shift = 0;
+constexpr uint64_t kDBGBCR_E_Mask = 0b1;
+constexpr uint64_t kDBGBCR_PMC_Shift = 1;
+constexpr uint64_t kDBGBCR_PMC_Mask = 0b11;
+constexpr uint64_t kDBGBCR_BAS_Shift = 5;
+constexpr uint64_t kDBGBCR_BAS_Mask = 0b1111;
+constexpr uint64_t kDBGBCR_HMC_Shift = 13;
+constexpr uint64_t kDBGBCR_HMC_Mask = 0b1;
+constexpr uint64_t kDBGBCR_SSC_Shift = 14;
+constexpr uint64_t kDBGBCR_SSC_Mask = 0b11;
+constexpr uint64_t kDBGBCR_LBN_Shift = 16;
+constexpr uint64_t kDBGBCR_LBN_Mask = 0b1111;
+constexpr uint64_t kDBGBCR_BT_Shift = 20;
+constexpr uint64_t kDBGBCR_BT_Mask = 0b1111;
+
 // ID_AA64DFR0_EL1 -------------------------------------------------------------
 
 constexpr uint64_t kID_AA64DFR0_EL1_DV_Shift = 0;  // Debug Version.
@@ -76,7 +93,7 @@ constexpr uint64_t kID_AA64DFR0_EL1_WRP_Mask = 0b1111;
 // Number of breakpoints that are context-aware (value is count - 1).
 // These are the highest numbered breakpoints.
 // TODO(donosoc): Actually find out what this means.
-constexpr uint64_t kID_AA64DFR0_EL1_CTX_CMP_Shift = 31;
+constexpr uint64_t kID_AA64DFR0_EL1_CTX_CMP_Shift = 28;
 constexpr uint64_t kID_AA64DFR0_EL1_CTX_CMP_Mask = 0b1111;
 // Statistical Profiling Extension version.
 constexpr uint64_t kID_AA64DFR0_EL1_PMSV_Shift = 32;
