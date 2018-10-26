@@ -348,6 +348,11 @@ typedef struct {
     uint32_t programmable_counter_width;
     // The PERF_CAPABILITIES MSR.
     uint64_t perf_capabilities;
+    // The size of the LBR (Last Branch Record) stack.
+    // A value of zero means LBR is not supported. This may be zero even if
+    // LBR is supported by the chip because the device is not recognized as
+    // supporting it.
+    uint32_t lbr_stack_size;
 } zx_x86_ipm_properties_t;
 
 // This is for passing buffer specs to the kernel.

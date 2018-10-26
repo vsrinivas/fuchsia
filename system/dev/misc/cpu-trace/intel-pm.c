@@ -284,8 +284,7 @@ static int ipm_lookup_misc_event(cpuperf_event_id_t id) {
 }
 
 static bool ipm_lbr_supported(void) {
-    // KISS: For now LBR support is available for PM version >= 4.
-    return ipm_properties.pm_version >= 4;
+    return ipm_properties.lbr_stack_size > 0;
 }
 
 

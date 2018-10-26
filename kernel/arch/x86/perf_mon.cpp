@@ -360,6 +360,10 @@ static fbl::unique_ptr<PerfmonState> perfmon_state TA_GUARDED(perfmon_lock);
 // This is accessed atomically as it is also accessed by the PMI handler.
 static int perfmon_active = false;
 
+static inline bool x86_perfmon_lbr_is_supported() {
+    return perfmon_lbr_stack_size > 0;
+}
+
 zx_status_t PerfmonState::Create(unsigned n_cpus, fbl::unique_ptr<PerfmonState>* out_state) {
     fbl::AllocChecker ac;
     auto state = fbl::unique_ptr<PerfmonState>(new (&ac) PerfmonState(n_cpus));
@@ -439,16 +443,12 @@ static void x86_perfmon_init_mchbar() {
 
 // Return the size of the LBR stack, or zero if not supported.
 static unsigned x86_perfmon_lbr_stack_size() {
-    // This table comes from Intel Volume 3, Table 17.15
-    // "LBR Stack Size and TOS Pointer Range".
-    // TODO(dje): Use X86_MICROARCH_INTEL_SKYLAKE,etc.? Move this out?
     static const struct {
-        uint8_t display_family;
-        uint8_t display_model;
+        x86_microarch_list microarch;
         uint8_t stack_size;
-    } supported_models[] = {
-        { 0x06, 0x4e, 32 },
-        { 0x06, 0x5e, 32 },
+    } supported_chips[] = {
+        { X86_MICROARCH_INTEL_SKYLAKE, 32 },
+        { X86_MICROARCH_INTEL_KABYLAKE, 32 },
     };
 
     unsigned lbr_format =
@@ -461,11 +461,9 @@ static unsigned x86_perfmon_lbr_stack_size() {
         return 0;
     }
 
-    const x86_model_info* model_info = x86_get_model();
-    for (const auto& model : supported_models) {
-        if (model.display_family == model_info->display_family &&
-                model.display_model == model_info->display_model)
-            return model.stack_size;
+    for (const auto& chip : supported_chips) {
+        if (chip.microarch == x86_microarch)
+            return chip.stack_size;
     }
 
     return 0;
@@ -683,6 +681,7 @@ zx_status_t x86_ipm_get_properties(zx_x86_ipm_properties_t* props) {
     props->fixed_counter_width = perfmon_fixed_counter_width;
     props->programmable_counter_width = perfmon_programmable_counter_width;
     props->perf_capabilities = perfmon_capabilities;
+    props->lbr_stack_size = perfmon_lbr_stack_size;
     return ZX_OK;
 }
 
@@ -797,6 +796,12 @@ static zx_status_t x86_ipm_verify_fixed_config(
                 TRACEF("Unused bits set in |fixed_flags[%u]|\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
+            if (!x86_perfmon_lbr_is_supported() &&
+                (config->fixed_flags[i] & IPM_CONFIG_FLAG_LBR) != 0) {
+                TRACEF("Last branch records requested for |fixed_flags[%u]|,"
+                       " but not supported\n", i);
+                return ZX_ERR_NOT_SUPPORTED;
+            }
             if ((config->fixed_flags[i] & IPM_CONFIG_FLAG_TIMEBASE) &&
                     config->timebase_id == CPUPERF_EVENT_ID_NONE) {
                 TRACEF("Timebase requested for |fixed_flags[%u]|, but not provided\n", i);
@@ -854,6 +859,12 @@ static zx_status_t x86_ipm_verify_programmable_config(
             if (config->programmable_flags[i] & ~IPM_CONFIG_FLAG_MASK) {
                 TRACEF("Unused bits set in |programmable_flags[%u]|\n", i);
                 return ZX_ERR_INVALID_ARGS;
+            }
+            if (!x86_perfmon_lbr_is_supported() &&
+                (config->programmable_flags[i] & IPM_CONFIG_FLAG_LBR) != 0) {
+                TRACEF("Last branch records requested for |programmable_flags[%u]|,"
+                       " but not supported\n", i);
+                return ZX_ERR_NOT_SUPPORTED;
             }
             if ((config->programmable_flags[i] & IPM_CONFIG_FLAG_TIMEBASE) &&
                     config->timebase_id == CPUPERF_EVENT_ID_NONE) {
@@ -1085,7 +1096,10 @@ zx_status_t x86_ipm_stage_config(zx_x86_ipm_config_t* config) {
     state->timebase_id = config->timebase_id;
 
     if (state->debug_ctrl & IA32_DEBUGCTL_LBR_MASK) {
-        DEBUG_ASSERT(perfmon_lbr_stack_size > 0);
+        if (!x86_perfmon_lbr_is_supported()) {
+            TRACEF("Last branch records requested in |debug_ctrl|, but not supported\n");
+            return ZX_ERR_NOT_SUPPORTED;
+        }
         state->request_lbr_record = true;
     }
 
@@ -1814,7 +1828,9 @@ static cpuperf_record_header_t* x86_perfmon_write_last_branches(
         cpuperf_event_id_t id) {
     auto rec = reinterpret_cast<cpuperf_last_branch_record_t*>(hdr);
     auto num_entries = perfmon_lbr_stack_size;
-    DEBUG_ASSERT(num_entries > 0 && num_entries <= countof(rec->branches));
+    static_assert(CPUPERF_MAX_NUM_LAST_BRANCH ==
+                  countof(cpuperf_last_branch_record_t::branches), "");
+    DEBUG_ASSERT(num_entries > 0 && num_entries <= CPUPERF_MAX_NUM_LAST_BRANCH);
     x86_perfmon_write_header(&rec->header, CPUPERF_RECORD_LAST_BRANCH, id);
     rec->num_branches = num_entries;
     rec->aspace = cr3;
