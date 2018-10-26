@@ -46,7 +46,7 @@ static void fdio_zxio_wait_begin(fdio_t* io, uint32_t events,
     zxio_t* z = fdio_get_zxio(io);
     zxio_signals_t signals = ZXIO_SIGNAL_NONE;
     if (events & POLLIN) {
-        signals |= ZXIO_READABLE | ZX_SOCKET_READ_DISABLED;
+        signals |= ZXIO_READABLE | ZXIO_READ_DISABLED;
     }
     if (events & POLLOUT) {
         signals |= ZXIO_WRITABLE | ZXIO_WRITE_DISABLED;
@@ -64,13 +64,13 @@ static void fdio_zxio_wait_end(fdio_t* io, zx_signals_t signals,
     zxio_wait_end(z, signals, &zxio_signals);
 
     uint32_t events = 0;
-    if (signals & (ZXIO_READABLE | ZXIO_READ_DISABLED)) {
+    if (zxio_signals & (ZXIO_READABLE | ZXIO_READ_DISABLED)) {
         events |= POLLIN;
     }
-    if (signals & (ZXIO_WRITABLE | ZXIO_WRITE_DISABLED)) {
+    if (zxio_signals & (ZXIO_WRITABLE | ZXIO_WRITE_DISABLED)) {
         events |= POLLOUT;
     }
-    if (signals & ZXIO_READ_DISABLED) {
+    if (zxio_signals & ZXIO_READ_DISABLED) {
         events |= POLLRDHUP;
     }
     *out_events = events;

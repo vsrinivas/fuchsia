@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include <lib/fdio/limits.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/fdio/util.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
@@ -539,6 +540,64 @@ bool socketpair_sendmsg_nonblock_boundary_test(void) {
     END_TEST;
 }
 
+bool socketpair_wait_begin_end(void) {
+    BEGIN_TEST;
+
+    int fds[2];
+    int status = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+    ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed");
+
+    fdio_t* io = fdio_unsafe_fd_to_io(fds[0]);
+
+    // fdio_unsafe_wait_begin
+
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    zx_signals_t signals = ZX_SIGNAL_NONE;
+    fdio_unsafe_wait_begin(io, POLLIN, &handle, &signals);
+    EXPECT_NE(handle, ZX_HANDLE_INVALID, "");
+    EXPECT_EQ(signals, ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED, "");
+
+    handle = ZX_HANDLE_INVALID;
+    signals = ZX_SIGNAL_NONE;
+    fdio_unsafe_wait_begin(io, POLLOUT, &handle, &signals);
+    EXPECT_NE(handle, ZX_HANDLE_INVALID, "");
+    EXPECT_EQ(signals, ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_DISABLED, "");
+
+    handle = ZX_HANDLE_INVALID;
+    signals = ZX_SIGNAL_NONE;
+    fdio_unsafe_wait_begin(io, POLLRDHUP, &handle, &signals);
+    EXPECT_NE(handle, ZX_HANDLE_INVALID, "");
+    EXPECT_EQ(signals, ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED, "");
+
+    // fdio_unsafe_wait_end
+
+    uint32_t events = 0u;
+    fdio_unsafe_wait_end(io, ZX_SOCKET_READABLE, &events);
+    EXPECT_EQ(events, (uint32_t)POLLIN, "");
+
+    events = 0u;
+    fdio_unsafe_wait_end(io, ZX_SOCKET_PEER_CLOSED, &events);
+    EXPECT_EQ(events, (uint32_t)(POLLIN | POLLRDHUP), "");
+
+    events = 0u;
+    fdio_unsafe_wait_end(io, ZX_SOCKET_PEER_WRITE_DISABLED, &events);
+    EXPECT_EQ(events, (uint32_t)(POLLIN | POLLRDHUP), "");
+
+    events = 0u;
+    fdio_unsafe_wait_end(io, ZX_SOCKET_WRITABLE, &events);
+    EXPECT_EQ(events, (uint32_t)POLLOUT, "");
+
+    events = 0u;
+    fdio_unsafe_wait_end(io, ZX_SOCKET_WRITE_DISABLED, &events);
+    EXPECT_EQ(events, (uint32_t)POLLOUT, "");
+
+    fdio_unsafe_release(io);
+    close(fds[0]);
+    close(fds[1]);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(fdio_socketpair_test)
 RUN_TEST(socketpair_test);
 RUN_TEST(socketpair_shutdown_rd_test);
@@ -553,4 +612,5 @@ RUN_TEST(socketpair_shutdown_peer_rd_during_send_test);
 RUN_TEST(socketpair_clone_or_unwrap_and_wrap_test);
 RUN_TEST(socketpair_recvmsg_nonblock_boundary_test);
 RUN_TEST(socketpair_sendmsg_nonblock_boundary_test);
+RUN_TEST(socketpair_wait_begin_end);
 END_TEST_CASE(fdio_socketpair_test)

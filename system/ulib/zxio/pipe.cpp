@@ -38,8 +38,7 @@ static void zxio_pipe_wait_begin(zxio_t* io, zxio_signals_t zxio_signals,
     *out_handle = pipe->socket;
 
     zx_signals_t zx_signals = static_cast<zx_signals_t>(zxio_signals);
-    if ((zxio_signals & ZXIO_READ_DISABLED)
-        || (zxio_signals & ZXIO_WRITE_DISABLED)) {
+    if (zxio_signals & ZXIO_READ_DISABLED) {
         zx_signals |= ZX_SOCKET_PEER_CLOSED;
     }
     *out_zx_signals = zx_signals;
@@ -50,7 +49,7 @@ static void zxio_pipe_wait_end(zxio_t* io, zx_signals_t zx_signals,
     zxio_signals_t zxio_signals =
         static_cast<zxio_signals_t>(zx_signals) & ZXIO_SIGNAL_ALL;
     if (zx_signals & ZX_SOCKET_PEER_CLOSED) {
-        zxio_signals |= ZXIO_READ_DISABLED | ZXIO_WRITE_DISABLED;
+        zxio_signals |= ZXIO_READ_DISABLED;
     }
     *out_zxio_signals = zxio_signals;
 }
