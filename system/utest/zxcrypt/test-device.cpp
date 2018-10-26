@@ -17,13 +17,14 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <fbl/string.h>
 #include <fbl/unique_fd.h>
-#include <lib/fdio/debug.h>
-#include <lib/fdio/watcher.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
 #include <fvm/fvm.h>
+#include <lib/fdio/debug.h>
+#include <lib/fdio/watcher.h>
 #include <lib/zx/time.h>
 #include <unittest/unittest.h>
 #include <zircon/assert.h>
@@ -123,7 +124,7 @@ bool TestDevice::Create(size_t device_size, size_t block_size, bool fvm) {
         return rc;
     }
 #else
-    uint8_t *buf;
+    uint8_t* buf;
     ASSERT_OK(key_.Allocate(kZx1130KeyLen, &buf));
     memset(buf, 0, key_.len());
 #endif
@@ -141,20 +142,39 @@ bool TestDevice::Bind(Volume::Version version, bool fvm) {
 
 bool TestDevice::Rebind() {
     BEGIN_HELPER;
-    Disconnect();
 
-    ASSERT_OK(ToStatus(ioctl_block_rr_part(ramdisk_.get())));
+    const char* sep = strrchr(ramdisk_path_, '/');
+    ASSERT_NONNULL(sep);
+    fbl::String path(ramdisk_path_, sep - ramdisk_path_);
+    DIR* dir = opendir(path.c_str());
+    ASSERT_NONNULL(dir);
+    auto close_dir = fbl::MakeAutoCall([&] { closedir(dir); });
+
+    zx::time deadline = zx::deadline_after(kTimeout);
+
+    Disconnect();
     zxcrypt_.reset();
     fvm_part_.reset();
-
-    ASSERT_TRUE(WaitAndOpen(ramdisk_path_, &ramdisk_), Error("failed to open %s", ramdisk_path_));
+    ASSERT_EQ(fdio_watch_directory(dirfd(dir), RebindWatcher, deadline.get(), this), ZX_ERR_STOP);
+    ASSERT_TRUE(WaitAndOpen(ramdisk_path_, &ramdisk_));
     if (strlen(fvm_part_path_) != 0) {
-        ASSERT_TRUE(WaitAndOpen(fvm_part_path_, &fvm_part_),
-                    Error("failed to open %s", fvm_part_path_));
+        ASSERT_TRUE(WaitAndOpen(fvm_part_path_, &fvm_part_));
     }
-
     ASSERT_TRUE(Connect());
+
     END_HELPER;
+}
+
+zx_status_t TestDevice::RebindWatcher(int dirfd, int event, const char* fn, void* cookie) {
+    TestDevice* device = static_cast<TestDevice*>(cookie);
+    switch (event) {
+    case WATCH_EVENT_IDLE:
+        return ToStatus(ioctl_block_rr_part(device->ramdisk_.get()));
+    case WATCH_EVENT_REMOVE_FILE:
+        return strcmp(fn, "block") == 0 ? ZX_ERR_STOP : ZX_OK;
+    default:
+        return ZX_OK;
+    }
 }
 
 bool TestDevice::SleepUntil(uint64_t num, bool deferred) {

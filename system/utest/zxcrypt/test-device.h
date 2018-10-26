@@ -164,6 +164,9 @@ private:
     // Destroys the ramdisk, killing any active transactions
     void DestroyRamdisk();
 
+    // Waits until idle, rebinds a ramdisk, and waits until it has been removed.
+    static zx_status_t RebindWatcher(int dirfd, int event, const char* fn, void* cookie);
+
     // Creates a ramdisk of with enough blocks of |block_size| bytes to hold both FVM metadata and
     // an FVM partition of at least |device_size| bytes.  It formats the ramdisk to be an FVM
     // device, and allocates a partition with a single slice of size FVM_BLOCK_SIZE.
