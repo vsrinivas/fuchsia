@@ -2,23 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! AuthCache manages an in-memory cache of recently used short-lived authentication tokens.
 #![deny(warnings)]
+#![deny(missing_docs)]
 
 use failure::{format_err, Error, Fail};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::{Duration, SystemTime};
 
 /// Constant offset for the cache expiry. Tokens will only be returned from
 /// the cache if they have at least this much life remaining.
 const PADDING_FOR_TOKEN_EXPIRY: Duration = Duration::from_secs(600);
 
+/// An enumeration of the possile failure modes for operations on a `TokenCache`.
 #[derive(Debug, PartialEq, Eq, Fail)]
 pub enum AuthCacheError {
+    /// One or more inputs were not valid.
     #[fail(display = "invalid argument")]
     InvalidArguments,
+    /// The supplied key could not be found in the cache.
     #[fail(display = "supplied key not found in cache")]
     KeyNotFound,
 }
@@ -26,8 +31,15 @@ pub enum AuthCacheError {
 /// Representation of a single OAuth token including its expiry time.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OAuthToken {
-    expiry_time: Instant,
+    expiry_time: SystemTime,
     token: String,
+}
+
+impl OAuthToken {
+    /// Gets the `SystemTime` at which the token will no longer be valid.
+    pub fn expiry_time(&self) -> &SystemTime {
+        &self.expiry_time
+    }
 }
 
 impl Deref for OAuthToken {
@@ -41,7 +53,7 @@ impl Deref for OAuthToken {
 impl From<fidl_fuchsia_auth::AuthToken> for OAuthToken {
     fn from(auth_token: fidl_fuchsia_auth::AuthToken) -> OAuthToken {
         OAuthToken {
-            expiry_time: Instant::now() + Duration::from_secs(auth_token.expires_in),
+            expiry_time: SystemTime::now() + Duration::from_secs(auth_token.expires_in),
             token: auth_token.token,
         }
     }
@@ -53,7 +65,7 @@ pub struct FirebaseAuthToken {
     id_token: String,
     local_id: Option<String>,
     email: Option<String>,
-    expiry_time: Instant,
+    expiry_time: SystemTime,
 }
 
 impl From<fidl_fuchsia_auth::FirebaseToken> for FirebaseAuthToken {
@@ -62,7 +74,7 @@ impl From<fidl_fuchsia_auth::FirebaseToken> for FirebaseAuthToken {
             id_token: firebase_token.id_token,
             local_id: firebase_token.local_id,
             email: firebase_token.email,
-            expiry_time: Instant::now() + Duration::from_secs(firebase_token.expires_in),
+            expiry_time: SystemTime::now() + Duration::from_secs(firebase_token.expires_in),
         }
     }
 }
@@ -71,15 +83,13 @@ impl FirebaseAuthToken {
     /// Returns a new FIDL `FirebaseToken` using data cloned from our
     /// internal representation.
     pub fn to_fidl(&self) -> fidl_fuchsia_auth::FirebaseToken {
-        let now = Instant::now();
         fidl_fuchsia_auth::FirebaseToken {
             id_token: self.id_token.clone(),
             local_id: self.local_id.clone(),
             email: self.email.clone(),
-            expires_in: if self.expiry_time > now {
-                (self.expiry_time - now).as_secs()
-            } else {
-                0
+            expires_in: match self.expiry_time.duration_since(SystemTime::now()) {
+                Ok(duration) => duration.as_secs(),
+                Err(_) => 0,
             },
         }
     }
@@ -120,7 +130,7 @@ impl TokenSet {
     /// Removes any expired OAuth and Firebase tokens from this set and
     /// returns true iff no valid OAuth tokens remain.
     fn remove_expired_tokens(&mut self) -> bool {
-        let current_time = Instant::now();
+        let current_time = SystemTime::now();
         self.id_token_map
             .retain(|_, v| current_time <= (v.expiry_time - PADDING_FOR_TOKEN_EXPIRY));
         self.access_token_map
@@ -336,14 +346,14 @@ mod tests {
 
     fn build_test_id_token(time_until_expiry: Duration, suffix: &str) -> Arc<OAuthToken> {
         Arc::new(OAuthToken {
-            expiry_time: Instant::now() + time_until_expiry,
+            expiry_time: SystemTime::now() + time_until_expiry,
             token: TEST_ID_TOKEN.to_string() + suffix,
         })
     }
 
     fn build_test_access_token(time_until_expiry: Duration, suffix: &str) -> Arc<OAuthToken> {
         Arc::new(OAuthToken {
-            expiry_time: Instant::now() + time_until_expiry,
+            expiry_time: SystemTime::now() + time_until_expiry,
             token: TEST_ACCESS_TOKEN.to_string() + suffix,
         })
     }
@@ -352,7 +362,7 @@ mod tests {
         time_until_expiry: Duration, suffix: &str,
     ) -> Arc<FirebaseAuthToken> {
         Arc::new(FirebaseAuthToken {
-            expiry_time: Instant::now() + time_until_expiry,
+            expiry_time: SystemTime::now() + time_until_expiry,
             id_token: TEST_FIREBASE_ID_TOKEN.to_string() + suffix,
             local_id: Some(TEST_FIREBASE_LOCAL_ID.to_string() + suffix),
             email: Some(TEST_EMAIL.to_string()),
@@ -367,9 +377,9 @@ mod tests {
             token: TEST_ACCESS_TOKEN.to_string(),
         };
 
-        let time_before_conversion = Instant::now();
+        let time_before_conversion = SystemTime::now();
         let native_type = OAuthToken::from(fidl_type);
-        let time_after_conversion = Instant::now();
+        let time_after_conversion = SystemTime::now();
 
         assert_eq!(&native_type.token, TEST_ACCESS_TOKEN);
         assert!(native_type.expiry_time >= time_before_conversion + LONG_EXPIRY);
@@ -388,9 +398,9 @@ mod tests {
             expires_in: LONG_EXPIRY.as_secs(),
         };
 
-        let time_before_conversion = Instant::now();
+        let time_before_conversion = SystemTime::now();
         let native_type = FirebaseAuthToken::from(fidl_type);
-        let time_after_conversion = Instant::now();
+        let time_after_conversion = SystemTime::now();
 
         assert_eq!(&native_type.id_token, TEST_FIREBASE_ID_TOKEN);
         assert_eq!(
@@ -404,7 +414,7 @@ mod tests {
 
     #[test]
     fn test_firebase_to_fidl() {
-        let time_before_conversion = Instant::now();
+        let time_before_conversion = SystemTime::now();
         let native_type = FirebaseAuthToken {
             id_token: TEST_FIREBASE_ID_TOKEN.to_string(),
             local_id: Some(TEST_FIREBASE_LOCAL_ID.to_string()),
@@ -413,7 +423,9 @@ mod tests {
         };
 
         let fidl_type = native_type.to_fidl();
-        let elapsed_time_during_conversion = Instant::now().duration_since(time_before_conversion);
+        let elapsed_time_during_conversion = SystemTime::now()
+            .duration_since(time_before_conversion)
+            .unwrap();
 
         assert_eq!(&fidl_type.id_token, TEST_FIREBASE_ID_TOKEN);
         assert_eq!(fidl_type.local_id, Some(TEST_FIREBASE_LOCAL_ID.to_string()));
