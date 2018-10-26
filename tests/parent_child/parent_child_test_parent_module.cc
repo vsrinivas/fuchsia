@@ -27,18 +27,13 @@ using modular::testing::TestPoint;
 
 namespace {
 
-void StartModuleWithLinkMapping(
+void StartModuleWithHandler(
     fuchsia::modular::ModuleContext* const module_context,
-    std::string link_name,
-    fidl::InterfaceRequest<fuchsia::modular::ModuleController> request) {
+    fidl::InterfaceRequest<fuchsia::modular::ModuleController> request,
+    fidl::StringPtr handler) {
   fuchsia::modular::Intent intent;
-  intent.handler = kChildModuleUrl;
+  intent.handler = handler;
   intent.action = kChildModuleAction;
-  fuchsia::modular::IntentParameter intent_parameter;
-  intent_parameter.name = "link";
-  intent_parameter.data = fuchsia::modular::IntentParameterData();
-  intent_parameter.data.set_link_name(link_name);
-  intent.parameters.push_back(std::move(intent_parameter));
   module_context->AddModuleToStory(
       kChildModuleName, std::move(intent), std::move(request), nullptr,
       [](const fuchsia::modular::StartModuleStatus) {});
@@ -56,10 +51,6 @@ class TestApp {
     modular::testing::Init(module_host->startup_context(), __FILE__);
     initialized_.Pass();
 
-    // The child module uses this TestStore value to track how many times
-    // it has been initialized.
-    Put("child_module_init_count", "0");
-
     StartChildModuleTwice();
   }
 
@@ -72,45 +63,24 @@ class TestApp {
   }
 
  private:
-  void SetLink(fuchsia::modular::Link* link,
-               fidl::VectorPtr<fidl::StringPtr> path,
-               const std::string& value) {
-    fsl::SizedVmo vmo;
-    FXL_CHECK(fsl::VmoFromString(value, &vmo));
-    link->Set(std::move(path), std::move(vmo).ToTransport());
-  }
-
   TestPoint second_child_module_controller_closed_{
       "Second child module controller closed"};
 
   void StartChildModuleTwice() {
-    // We set the two links to different values ("1" and "2"). The child module
-    // checks this: the first time it is started, it will be attached to
-    // module1link, and expects to see "1" in its link. The second time, it
-    // expects to see "2". If it sees anything else, there was a failure in
-    // starting, or not, the module given the StartModule() request.
-    //
-    // Internally, the child module tracks how many times its instance was
-    // started.
-    module_host_->module_context()->GetLink("module1link", link1_.NewRequest());
-    SetLink(link1_.get(), nullptr, "1");
-    module_host_->module_context()->GetLink("module2link", link2_.NewRequest());
-    SetLink(link2_.get(), nullptr, "2");
-
-    StartModuleWithLinkMapping(module_host_->module_context(), "module1link",
-                               child_module_.NewRequest());
+    StartModuleWithHandler(module_host_->module_context(),
+                               child_module_.NewRequest(), kChildModuleUrl1);
     child_module_.set_error_handler([this] { OnFirstChildModuleStopped(); });
 
     // Once the module starts, start the same module again with the same
-    // Intent, and then again but with a different link mapping. The second
+    // Intent, and then again but with a different Intent.handler. The second
     // call stops the previous module instance and starts a new one.
-    Await("child_module_init_1", [this] {
-      StartModuleWithLinkMapping(module_host_->module_context(), "module1link",
-                                 child_module_again_.NewRequest());
+    Await("child_module_1_init", [this] {
+      StartModuleWithHandler(module_host_->module_context(),
+                                 child_module_again_.NewRequest(), kChildModuleUrl1);
       child_module_again_.set_error_handler(
           [this] { second_child_module_controller_closed_.Pass(); });
-      StartModuleWithLinkMapping(module_host_->module_context(), "module2link",
-                                 child_module2_.NewRequest());
+      StartModuleWithHandler(module_host_->module_context(),
+                                 child_module2_.NewRequest(), kChildModuleUrl2);
     });
   }
 
@@ -121,8 +91,8 @@ class TestApp {
 
     // Confirm that the first module instance stopped, and then stop the second
     // module instance.
-    Await("child_module_stop", [this] {
-      Await("child_module_init_2", [this] {
+    Await("child_module_1_stop", [this] {
+      Await("child_module_2_init", [this] {
         child_module2_->Stop([this] { OnChildModule2Stopped(); });
       });
     });
@@ -140,8 +110,6 @@ class TestApp {
   fuchsia::modular::ModuleControllerPtr child_module_again_;
   fuchsia::modular::ModuleControllerPtr child_module2_;
 
-  fuchsia::modular::LinkPtr link1_;
-  fuchsia::modular::LinkPtr link2_;
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 

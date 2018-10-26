@@ -19,36 +19,9 @@
 #include "gtest/gtest.h"
 
 using fuchsia::modular::Intent;
-using fuchsia::modular::IntentParameter;
-using fuchsia::modular::IntentParameterData;
 
 namespace modular {
 namespace {
-
-IntentParameter CreateLinkNameParam(std::string name, std::string link) {
-  IntentParameter param;
-  param.name = name;
-  param.data.set_link_name(link);
-  return param;
-}
-
-IntentParameter CreateLinkPathParam(std::string name, std::string link) {
-  IntentParameter param;
-  param.name = name;
-  LinkPath path;
-  path.module_path->push_back(link);
-  param.data.set_link_path(std::move(path));
-  return param;
-}
-
-IntentParameter CreateJsonParam(std::string name, std::string json) {
-  IntentParameter param;
-  param.name = name;
-  fsl::SizedVmo vmo;
-  FXL_CHECK(fsl::VmoFromString(json, &vmo));
-  param.data.set_json(std::move(vmo).ToTransport());
-  return param;
-}
 
 TEST(StoryControllerImplTest, ShouldRestartModuleForNewIntent) {
   Intent one;
@@ -59,34 +32,6 @@ TEST(StoryControllerImplTest, ShouldRestartModuleForNewIntent) {
   two.handler = "handler2";
   EXPECT_TRUE(ShouldRestartModuleForNewIntent(one, two));
   two.handler = "handler1";
-  EXPECT_FALSE(ShouldRestartModuleForNewIntent(one, two));
-
-  // Action name differs.
-  one.action = "name1";
-  two.action = "name2";
-  EXPECT_TRUE(ShouldRestartModuleForNewIntent(one, two));
-  two.action = "name1";
-  EXPECT_FALSE(ShouldRestartModuleForNewIntent(one, two));
-
-  // Param count differs.
-  one.parameters->push_back(CreateLinkNameParam("param1", "link1"));
-  EXPECT_TRUE(ShouldRestartModuleForNewIntent(one, two));
-
-  // Param link mapping differs.
-  two.parameters->push_back(CreateLinkNameParam("param1", "link2"));
-  EXPECT_TRUE(ShouldRestartModuleForNewIntent(one, two));
-  two.parameters->clear();
-  two.parameters->push_back(CreateLinkPathParam("param1", "link1"));
-  EXPECT_TRUE(ShouldRestartModuleForNewIntent(one, two));
-
-  // Now they are the same.
-  two.parameters->clear();
-  two.parameters->push_back(CreateLinkNameParam("param1", "link1"));
-  EXPECT_FALSE(ShouldRestartModuleForNewIntent(one, two));
-
-  // Different JSON values are OK.
-  one.parameters->push_back(CreateJsonParam("param2", "json1"));
-  two.parameters->push_back(CreateJsonParam("param2", "json2"));
   EXPECT_FALSE(ShouldRestartModuleForNewIntent(one, two));
 }
 

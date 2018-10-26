@@ -106,58 +106,6 @@ bool ShouldRestartModuleForNewIntent(
     return true;
   }
 
-  if (old_intent.action != new_intent.action) {
-    return true;
-  }
-
-  std::map<fidl::StringPtr, const fuchsia::modular::IntentParameterData*>
-      old_params;
-  if (old_intent.parameters) {
-    for (const auto& entry : *old_intent.parameters) {
-      old_params[entry.name] = &entry.data;
-    }
-  }
-
-  std::map<fidl::StringPtr, const fuchsia::modular::IntentParameterData*>
-      new_params;
-  if (new_intent.parameters) {
-    for (const auto& entry : *new_intent.parameters) {
-      new_params[entry.name] = &entry.data;
-    }
-  }
-
-  if (new_params.size() != old_params.size()) {
-    return true;
-  }
-
-  for (const auto& entry : new_params) {
-    const auto& name = entry.first;
-    if (old_params.count(name) == 0) {
-      return true;
-    }
-
-    const auto& new_param = *entry.second;
-    const auto& old_param = *old_params[name];
-
-    // If a parameter type changed, or a link mapping changed, we
-    // need to relaunch.
-    if (old_param.Which() != new_param.Which()) {
-      return true;
-    }
-
-    if (old_param.is_link_name() &&
-        old_param.link_name() != new_param.link_name()) {
-      return true;
-    }
-    if (old_param.is_link_path() &&
-        old_param.link_path() != new_param.link_path()) {
-      return true;
-    }
-
-    // For now, if the param is static data (ie, json or entity_reference), we
-    // do NOT want to force restart, even if the data is different.
-  }
-
   return false;
 }
 
