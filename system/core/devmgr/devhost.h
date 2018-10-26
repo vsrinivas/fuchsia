@@ -51,11 +51,21 @@ namespace devmgr {
 extern zx_protocol_device_t device_default_ops;
 
 // locking and lock debugging
-extern mtx_t __devhost_api_lock;
-extern bool __dm_locked;
 
-#define REQ_DM_LOCK TA_REQ(&__devhost_api_lock)
-#define USE_DM_LOCK TA_GUARDED(&__devhost_api_lock)
+namespace internal {
+extern mtx_t devhost_api_lock;
+} // namespace internal
+
+#define REQ_DM_LOCK TA_REQ(&internal::devhost_api_lock)
+#define USE_DM_LOCK TA_GUARDED(&internal::devhost_api_lock)
+
+static inline void DM_LOCK() TA_ACQ(&internal::devhost_api_lock) {
+    mtx_lock(&internal::devhost_api_lock);
+}
+
+static inline void DM_UNLOCK() TA_REL(&internal::devhost_api_lock) {
+    mtx_unlock(&internal::devhost_api_lock);
+}
 
 zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
                                const zx_device_prop_t* props, uint32_t prop_count,
@@ -124,38 +134,5 @@ struct CreationContext {
 };
 
 void devhost_set_creation_context(CreationContext* ctx);
-
-#if 0
-static inline void __DM_DIE(const char* fn, int ln) {
-    cprintf("OOPS: %s: %d\n", fn, ln);
-    *((int*) 0x3333) = 1;
-}
-static inline void __DM_LOCK(const char* fn, int ln) __TA_ACQUIRE(&__devhost_api_lock) {
-    //cprintf(devhost_is_remote ? "X" : "+");
-    if (__dm_locked) __DM_DIE(fn, ln);
-    mtx_lock(&__devhost_api_lock);
-    cprintf("LOCK: %s: %d\n", fn, ln);
-    __dm_locked = true;
-}
-
-static inline void __DM_UNLOCK(const char* fn, int ln) __TA_RELEASE(&__devhost_api_lock) {
-    cprintf("UNLK: %s: %d\n", fn, ln);
-    //cprintf(devhost_is_remote ? "x" : "-");
-    if (!__dm_locked) __DM_DIE(fn, ln);
-    __dm_locked = false;
-    mtx_unlock(&__devhost_api_lock);
-}
-
-#define DM_LOCK() __DM_LOCK(__FILE__, __LINE__)
-#define DM_UNLOCK() __DM_UNLOCK(__FILE__, __LINE__)
-#else
-static inline void DM_LOCK() __TA_ACQUIRE(&__devhost_api_lock) {
-    mtx_lock(&__devhost_api_lock);
-}
-
-static inline void DM_UNLOCK() __TA_RELEASE(&__devhost_api_lock) {
-    mtx_unlock(&__devhost_api_lock);
-}
-#endif
 
 } // namespace devmgr

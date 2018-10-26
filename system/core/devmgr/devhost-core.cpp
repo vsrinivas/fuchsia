@@ -39,8 +39,9 @@ namespace devmgr {
 
 #define TRACE_ADD_REMOVE 0
 
-bool __dm_locked = false;
-mtx_t __devhost_api_lock = MTX_INIT;
+namespace internal {
+mtx_t devhost_api_lock = MTX_INIT;
+} // namespace internal
 
 static thread_local CreationContext* creation_ctx;
 
