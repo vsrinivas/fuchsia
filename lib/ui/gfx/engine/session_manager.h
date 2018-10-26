@@ -62,6 +62,10 @@ class SessionManager {
   // Destroys the session with the given id.
   void TearDownSession(SessionId id);
 
+  // Removes the session from the session_manager_ map.  We assume that the
+  // SessionHandler has already taken care of itself and its Session.
+  void RemoveSession(SessionId id);
+
   virtual std::unique_ptr<SessionHandler> CreateSessionHandler(
       CommandDispatcherContext context, Engine* engine, SessionId session_id,
       EventReporter* event_reporter, ErrorReporter* error_reporter) const;

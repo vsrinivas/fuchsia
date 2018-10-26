@@ -23,7 +23,10 @@ SessionHandler::SessionHandler(CommandDispatcherContext dispatcher_context,
   FXL_DCHECK(engine);
 }
 
-SessionHandler::~SessionHandler() { TearDown(); }
+SessionHandler::~SessionHandler() {
+  TearDown();
+  session_manager_->RemoveSession(session_->id());
+}
 
 void SessionHandler::Present(
     uint64_t presentation_time, ::fidl::VectorPtr<zx::event> acquire_fences,

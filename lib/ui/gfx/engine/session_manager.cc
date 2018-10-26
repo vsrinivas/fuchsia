@@ -94,5 +94,14 @@ void SessionManager::TearDownSession(SessionId id) {
   }
 }
 
+void SessionManager::RemoveSession(SessionId id) {
+  auto it = session_manager_.find(id);
+  if (it != session_manager_.end()) {
+    session_manager_.erase(it);
+    FXL_DCHECK(session_count_ > 0);
+    --session_count_;
+  }
+}
+
 }  // namespace gfx
 }  // namespace scenic_impl
