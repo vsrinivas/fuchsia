@@ -21,8 +21,7 @@
 namespace devmgr {
 
 struct Devhost;
-
-typedef struct dc_devnode devnode_t;
+struct Devnode;
 
 struct Work {
     fbl::DoublyLinkedListNodeState<Work*> node;
@@ -129,8 +128,8 @@ struct Device {
     mutable int32_t refcount_;
     uint32_t protocol_id;
     uint32_t prop_count;
-    devnode_t* self;
-    devnode_t* link;
+    Devnode* self;
+    Devnode* link;
     Device* parent;
     Device* proxy;
 
