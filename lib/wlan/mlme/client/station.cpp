@@ -1355,8 +1355,20 @@ zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& f
     }
 
     assoc_ctx_.phy = join_ctx_->phy();
-    assoc_ctx_.chan = join_ctx_->channel();
+    if (assoc_ctx_.ht_cap.has_value() && assoc_ctx_.ht_op.has_value()) {
+        assoc_ctx_.phy = WLAN_PHY_HT;
+    }
+    if (assoc_ctx_.vht_cap.has_value() && assoc_ctx_.vht_op.has_value()) {
+        assoc_ctx_.phy = WLAN_PHY_VHT;
+    }
 
+    // Validate if the AP accepted the requested PHY
+    if (assoc_ctx_.phy != join_ctx_->phy()) {
+        warnf("PHY for join (%u) and for association (%u) differ. AssocResp:[%s]", join_ctx_->phy(),
+              assoc_ctx_.phy, debug::Describe(ap).c_str());
+    }
+
+    assoc_ctx_.chan = join_ctx_->channel();
     assoc_ctx_.is_cbw40_rx =
         assoc_ctx_.ht_cap &&
         ap.ht_cap->ht_cap_info.chan_width_set() == HtCapabilityInfo::TWENTY_FORTY &&
