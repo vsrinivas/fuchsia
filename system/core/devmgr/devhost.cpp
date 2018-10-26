@@ -25,6 +25,8 @@
 #include <lib/fdio/util.h>
 #include <lib/fdio/remoteio.h>
 #include <lib/fidl/coding.h>
+#include <lib/zx/debuglog.h>
+#include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 #include <zxcpp/new.h>
 
@@ -632,14 +634,14 @@ static void proxy_ios_destroy(zx_device_t* dev) {
 
 #define LOGBUF_MAX (ZX_LOG_RECORD_MAX - sizeof(zx_log_record_t))
 
-static zx_handle_t devhost_log_handle;
+static zx::debuglog devhost_log_handle;
 
 static ssize_t _devhost_log_write(uint32_t flags, const void* _data, size_t len) {
     struct Context {
         Context() = default;
 
         uint32_t next = 0;
-        zx_handle_t handle = ZX_HANDLE_INVALID;
+        zx::unowned_debuglog handle;
         char data[LOGBUF_MAX] = {};
     };
     static thread_local fbl::unique_ptr<Context> ctx;
@@ -649,7 +651,7 @@ static ssize_t _devhost_log_write(uint32_t flags, const void* _data, size_t len)
         if (ctx == nullptr) {
             return len;
         }
-        ctx->handle = devhost_log_handle;
+        ctx->handle = zx::unowned_debuglog(devhost_log_handle);
     }
 
     const char* data = static_cast<const char*>(_data);
@@ -660,7 +662,7 @@ static ssize_t _devhost_log_write(uint32_t flags, const void* _data, size_t len)
         if (c == '\n') {
             if (ctx->next) {
 flush_ctx:
-                zx_debuglog_write(ctx->handle, flags, ctx->data, ctx->next);
+                ctx->handle->write(flags, ctx->data, ctx->next);
                 ctx->next = 0;
             }
             continue;
@@ -699,7 +701,7 @@ static ssize_t devhost_log_write(void* cookie, const void* data, size_t len) {
 }
 
 static void devhost_io_init() {
-    if (zx_debuglog_create(ZX_HANDLE_INVALID, 0, &devhost_log_handle) < 0) {
+    if (zx::debuglog::create(zx::resource(), 0, &devhost_log_handle) < 0) {
         return;
     }
     fdio_t* io;
