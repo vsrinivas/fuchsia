@@ -46,7 +46,6 @@ typedef struct {
     uint8_t bulk_out_addr;
 
     isoch_loopback_intf_t isoch_loopback_intf;
-    size_t parent_req_size;
 } usb_tester_t;
 
 typedef struct {
@@ -72,7 +71,7 @@ static zx_status_t test_req_alloc(usb_tester_t* usb_tester, size_t len, uint8_t 
     test_req->completion = SYNC_COMPLETION_INIT;
 
     usb_request_t* req;
-    zx_status_t status = usb_request_alloc(&req, len, ep_address, usb_tester->parent_req_size);
+    zx_status_t status = usb_request_alloc(&req, len, ep_address, sizeof(usb_request_t));
     if (status != ZX_OK) {
         free(test_req);
         return status;
@@ -484,9 +483,6 @@ static zx_status_t usb_tester_bind(void* ctx, zx_device_t* device) {
     if (status != ZX_OK) {
         goto error_return;
     }
-
-    usb_tester->parent_req_size = usb_get_request_size(&usb_tester->usb);
-
     // Find the endpoints.
     usb_desc_iter_t iter;
     status = usb_desc_iter_init(&usb_tester->usb, &iter);

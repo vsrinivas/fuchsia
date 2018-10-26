@@ -47,7 +47,6 @@ typedef struct {
     usb_request_t* cbw_req;
     usb_request_t* data_req;
     usb_request_t* csw_req;
-    size_t parent_req_size;
 
     usb_request_t data_transfer_req;  // for use in ums_data_transfer
 

@@ -72,8 +72,6 @@ typedef struct {
     bool unbound;                   // set to true when device is going away. Guarded by tx_mutex
     uint64_t tx_endpoint_delay;     // wait time between 2 transmit requests
 
-    size_t parent_req_size;
-
     // Receive context
     ecm_endpoint_t rx_endpoint;
     uint64_t rx_endpoint_delay;    // wait time between 2 recv requests
@@ -545,8 +543,6 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
     mtx_init(&ecm_ctx->ethmac_mutex, mtx_plain);
     mtx_init(&ecm_ctx->tx_mutex, mtx_plain);
 
-    ecm_ctx->parent_req_size = usb_get_request_size(&ecm_ctx->usb);
-
     usb_desc_iter_t iter;
     result = usb_desc_iter_init(&usb, &iter);
     if (result != ZX_OK) {
@@ -669,7 +665,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
     zx_status_t alloc_result = usb_request_alloc(&int_buf,
                                              ecm_ctx->int_endpoint.max_packet_size,
                                              ecm_ctx->int_endpoint.addr,
-                                             ecm_ctx->parent_req_size);
+                                             sizeof(usb_request_t));
     if (alloc_result != ZX_OK) {
         result = alloc_result;
         goto fail;
@@ -692,7 +688,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
         usb_request_t* tx_buf;
         zx_status_t alloc_result = usb_request_alloc(&tx_buf, tx_buf_sz,
                                                  ecm_ctx->tx_endpoint.addr,
-                                                 ecm_ctx->parent_req_size);
+                                                 sizeof(usb_request_t));
         if (alloc_result != ZX_OK) {
             result = alloc_result;
             goto fail;
@@ -721,7 +717,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
         usb_request_t* rx_buf;
         zx_status_t alloc_result = usb_request_alloc(&rx_buf, rx_buf_sz,
                                                  ecm_ctx->rx_endpoint.addr,
-                                                 ecm_ctx->parent_req_size);
+                                                 sizeof(usb_request_t));
         if (alloc_result != ZX_OK) {
             result = alloc_result;
             goto fail;

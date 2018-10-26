@@ -57,8 +57,6 @@ typedef struct {
     ethmac_ifc_t* ifc;
     void* cookie;
 
-    size_t parent_req_size;
-
     mtx_t mutex;
 } rndishost_t;
 
@@ -515,12 +513,10 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* device) {
     eth->ifc = NULL;
     memcpy(&eth->usb, &usb, sizeof(eth->usb));
 
-    eth->parent_req_size = usb_get_request_size(&eth->usb);
-
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         usb_request_t* req;
         zx_status_t alloc_result = usb_request_alloc(&req, RNDIS_BUFFER_SIZE, bulk_in_addr,
-                                                     eth->parent_req_size);
+                                                     sizeof(usb_request_t));
         if (alloc_result != ZX_OK) {
             status = alloc_result;
             goto fail;
@@ -533,7 +529,7 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* device) {
         usb_request_t* req;
         // TODO: Allocate based on mtu.
         zx_status_t alloc_result = usb_request_alloc(&req, RNDIS_BUFFER_SIZE, bulk_out_addr,
-                                                     eth->parent_req_size);
+                                                     sizeof(usb_request_t));
         if (alloc_result != ZX_OK) {
             status = alloc_result;
             goto fail;

@@ -42,7 +42,6 @@ typedef struct usb_hid_device {
     uint8_t interface;
     usb_desc_iter_t desc_iter;
     usb_hid_descriptor_t* hid_desc;
-    size_t parent_req_size;
 } usb_hid_device_t;
 
 static void usb_interrupt_callback(usb_request_t* req, void* cookie) {
@@ -250,8 +249,6 @@ static zx_status_t usb_hid_bind(void* ctx, zx_device_t* dev) {
         goto fail;
     }
 
-    usbhid->parent_req_size = usb_get_request_size(&usbhid->usb);
-
     status = usb_desc_iter_init(&usbhid->usb, &usbhid->desc_iter);
     if (status != ZX_OK) {
         goto fail;
@@ -300,7 +297,7 @@ static zx_status_t usb_hid_bind(void* ctx, zx_device_t* dev) {
 
     status = usb_request_alloc(&usbhid->req, usb_ep_max_packet(endpt),
                                endpt->bEndpointAddress,
-                               usbhid->parent_req_size);
+                               sizeof(usb_request_t));
     if (status != ZX_OK) {
         status = ZX_ERR_NO_MEMORY;
         goto fail;
