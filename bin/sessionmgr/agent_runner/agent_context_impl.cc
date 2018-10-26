@@ -56,8 +56,9 @@ class AgentContextImpl::InitializeCall : public Operation<> {
   InitializeCall(AgentContextImpl* const agent_context_impl,
                  fuchsia::sys::Launcher* const launcher,
                  fuchsia::modular::AppConfig agent_config)
-      : Operation("AgentContextImpl::InitializeCall", [] {},
-                  agent_context_impl->url_),
+      : Operation(
+            "AgentContextImpl::InitializeCall", [] {},
+            agent_context_impl->url_),
         agent_context_impl_(agent_context_impl),
         launcher_(launcher),
         agent_config_(std::move(agent_config)) {}
@@ -321,11 +322,13 @@ void AgentContextImpl::DeleteTask(fidl::StringPtr task_id) {
   agent_runner_->DeleteTask(url_, task_id);
 }
 
-void AgentContextImpl::Authorize(fuchsia::auth::AppConfig app_config,
-                                 fidl::VectorPtr<::fidl::StringPtr> app_scopes,
-                                 fidl::StringPtr user_profile_id,
-                                 fidl::StringPtr auth_code,
-                                 AuthorizeCallback callback) {
+void AgentContextImpl::Authorize(
+    fuchsia::auth::AppConfig app_config,
+    fidl::InterfaceHandle<fuchsia::auth::AuthenticationUIContext>
+        auth_ui_context,
+    fidl::VectorPtr<::fidl::StringPtr> app_scopes,
+    fidl::StringPtr user_profile_id, fidl::StringPtr auth_code,
+    AuthorizeCallback callback) {
   FXL_LOG(ERROR) << "AgentContextImpl::Authorize() not supported from agent "
                  << "context";
   callback(fuchsia::auth::Status::INVALID_REQUEST, nullptr);

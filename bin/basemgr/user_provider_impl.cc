@@ -306,7 +306,7 @@ void UserProviderImpl::AddUserV2(
       MapIdentityProviderToAuthProviderType(identity_provider);
   auto scopes = fidl::VectorPtr<fidl::StringPtr>::New(0);
   token_manager->Authorize(
-      std::move(fuchsia_app_config), std::move(scopes), "", "",
+      std::move(fuchsia_app_config), nullptr, std::move(scopes), "", "",
       [this, identity_provider, account_id,
        token_manager = std::move(token_manager),
        callback](fuchsia::auth::Status status,

@@ -105,6 +105,8 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
 
   // |fuchsia::auth::TokenManager|
   void Authorize(fuchsia::auth::AppConfig app_config,
+                 fidl::InterfaceHandle<fuchsia::auth::AuthenticationUIContext>
+                     auth_ui_context,
                  fidl::VectorPtr<::fidl::StringPtr> app_scopes,
                  fidl::StringPtr user_profile_id, fidl::StringPtr auth_code,
                  AuthorizeCallback callback) override;
