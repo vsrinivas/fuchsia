@@ -17,14 +17,17 @@ public:
     static std::unique_ptr<TestPlatformConnection> Create();
 
     TestPlatformConnection(std::unique_ptr<magma::PlatformIpcConnection> ipc_connection,
-                           std::thread ipc_thread)
-        : ipc_connection_(std::move(ipc_connection)), ipc_thread_(std::move(ipc_thread))
+                           std::thread ipc_thread,
+                           std::shared_ptr<magma::PlatformConnection> connection)
+        : ipc_connection_(std::move(ipc_connection)), ipc_thread_(std::move(ipc_thread)),
+          connection_(std::move(connection))
     {
     }
 
     ~TestPlatformConnection()
     {
         ipc_connection_.reset();
+        connection_.reset();
         if (ipc_thread_.joinable())
             ipc_thread_.join();
         EXPECT_TRUE(test_complete);
@@ -125,10 +128,26 @@ public:
         EXPECT_EQ(5u, out_data);
 
         // No more data to read.
+        poll_status = poll(&pfd, 1, 0);
+        EXPECT_EQ(0, poll_status);
+
         status =
             ipc_connection_->ReadNotificationChannel(&out_data, sizeof(out_data), &out_data_size);
         EXPECT_EQ(MAGMA_STATUS_OK, status);
         EXPECT_EQ(0u, out_data_size);
+
+        // Shutdown other end of pipe.
+        connection_->ShutdownEvent()->Signal();
+        connection_.reset();
+        ipc_thread_.join();
+
+        // Poll should still terminate early.
+        poll_status = poll(&pfd, 1, 5000);
+        EXPECT_EQ(1, poll_status);
+
+        status =
+            ipc_connection_->ReadNotificationChannel(&out_data, sizeof(out_data), &out_data_size);
+        EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, status);
     }
 
     void TestExecuteImmediateCommands()
@@ -165,6 +184,7 @@ private:
 
     std::unique_ptr<magma::PlatformIpcConnection> ipc_connection_;
     std::thread ipc_thread_;
+    std::shared_ptr<magma::PlatformConnection> connection_;
 };
 
 uint64_t TestPlatformConnection::test_buffer_id;
@@ -308,10 +328,10 @@ std::unique_ptr<TestPlatformConnection> TestPlatformConnection::Create()
     if (!ipc_connection)
         return DRETP(nullptr, "failed to create PlatformIpcConnection");
 
-    auto ipc_thread = std::thread(IpcThreadFunc, std::move(connection));
+    auto ipc_thread = std::thread(IpcThreadFunc, connection);
 
     return std::make_unique<TestPlatformConnection>(std::move(ipc_connection),
-                                                    std::move(ipc_thread));
+                                                    std::move(ipc_thread), connection);
 }
 
 TEST(PlatformConnection, GetError)

@@ -267,7 +267,8 @@ public:
 
     int GetNotificationChannelFd() override
     {
-        return fdio_handle_fd(notification_channel_.get(), ZX_CHANNEL_READABLE, 0, true);
+        return fdio_handle_fd(notification_channel_.get(),
+                              ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0, true);
     }
 
     magma_status_t ReadNotificationChannel(void* buffer, size_t buffer_size,
