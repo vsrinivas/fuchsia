@@ -126,19 +126,6 @@ package("amber_tests") {
   }
 }
 
-copy("amber-srv-keys") {
-  sources = [
-    "keys/root.json",
-    "keys/root_manifest.json",
-    "keys/snapshot.json",
-    "keys/targets.json",
-    "keys/timestamp.json",
-  ]
-  outputs = [
-    "$root_out_dir/{{source_file_part}}",
-  ]
-}
-
 package("test_config") {
   deprecated_system_image = true
   package_name = "amber_test_config"
