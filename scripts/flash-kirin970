@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+
+# Copyright 2017 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+MEMBASE=0x00000000
+KERNEL_OFFSET=0x00080000
+RAMDISK_OFFSET=0x07c00000
+DT_OFFSET=0x07a00000
+
+CMDLINE=
+
+SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+ZIRCON_DIR="${SCRIPTS_DIR}/.."
+
+MKBOOTIMG="${ZIRCON_DIR}/third_party/tools/android/mkbootimg"
+MKDTIMG="${ZIRCON_DIR}/third_party/tools/android/mkdtimg"
+
+help() {
+    echo "usage: ${0} [options]"
+    echo "  -b [build-dir]  Use specified build directory."
+    echo "                  Defaults to build-kirin970/."
+    echo "  -d [ramdisk]    Use specified ramdisk file."
+    echo "                  Defaults to BUILD_DIR/bootdata.bin."
+    echo "  -f              Download and flash firmware."
+    echo "  -m              Add mexec option to kernel command line to enable netboot."
+    echo "  -h              Show this help message."
+    exit 1
+}
+
+help_fastboot() {
+    echo
+    echo "Check that the device is in fastboot mode:"
+    echo "  Auto Power up(Switch 1)   closed/ON"
+    echo "  Recovery(Switch 2)        open/OFF"
+    echo "  Fastboot(Switch 3)        closed/ON"
+
+    read -p "Proceed (y|n)? " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+}
+
+git_clone() {
+    git clone --depth 1 $@
+}
+
+flash_kernel() {
+    "${MKBOOTIMG}" \
+        --kernel $KERNEL \
+        --kernel_offset $KERNEL_OFFSET \
+        --base $MEMBASE \
+        --ramdisk_offset $RAMDISK_OFFSET \
+        --ramdisk "${RAMDISK}" \
+        --tags_offset $DT_OFFSET \
+        --cmdline "${CMDLINE}" \
+        -o $OUT_IMAGE
+
+    fastboot flash boot $OUT_IMAGE
+    # Can't guarantee that the target has written image to flash before the
+    # fastboot command completes, so short delay here before reboot.
+    sleep 1
+    fastboot reboot
+}
+
+while getopts "b:d:fmnp:ruh" FLAG; do
+    case $FLAG in
+    b) BUILD_DIR="${OPTARG}";;
+    d) RAMDISK="${OPTARG}";;
+    f) FLAG_FIRMWARE=true;;
+    m) CMDLINE+=" netsvc.netboot=true";;
+    *) help;;
+    esac
+done
+shift $((OPTIND-1))
+
+BUILD_DIR="${BUILD_DIR:-build-arm64}"
+RAMDISK="${RAMDISK:-${BUILD_DIR}/kirin970-bootdata.bin}"
+OUT_IMAGE="${BUILD_DIR}/boot.img"
+
+BOARD=kirin970
+BOOTDATA_BIN="${BUILD_DIR}/${BOARD}-zircon-bootimage.bin"
+ZBOOTDATA_BIN="${BUILD_DIR}/z${BOARD}-zircon-bootimage.bin"
+gzip -c ${BOOTDATA_BIN} > ${ZBOOTDATA_BIN}
+KERNEL=${ZBOOTDATA_BIN}
+RAMDISK="${BUILD_DIR}/dummy-ramdisk.bin"
+dd if=/dev/zero of=${RAMDISK} bs=4096 count=1
+
+flash_kernel

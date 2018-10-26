@@ -149,4 +149,8 @@ __BEGIN_CDECLS;
 #define PDEV_VID_SONY               14
 #define PDEV_PID_SONY_IMX227        1
 
+// Hisilicon
+#define PDEV_VID_HISILICON          15
+#define PDEV_PID_CORNEL             1
+
 __END_CDECLS;
