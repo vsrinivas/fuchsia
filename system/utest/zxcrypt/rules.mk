@@ -12,8 +12,8 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/test-device.cpp \
     $(LOCAL_DIR)/volume.cpp \
-    $(LOCAL_DIR)/zxcrypt.cpp \
 
+# Disabled (See ZX-2442):  $(LOCAL_DIR)/zxcrypt.cpp \
 
 MODULE_NAME := zxcrypt-test
 
