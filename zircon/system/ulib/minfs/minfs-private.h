@@ -128,13 +128,28 @@ private:
 };
 #endif
 
+class TransactionalFs {
+public:
+#ifdef __Fuchsia__
+    virtual fbl::Mutex* GetLock() const = 0;
+#endif
+    // Begin a transaction with |reserve_inodes| inodes and |reserve_blocks| blocks reserved.
+    virtual zx_status_t BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
+                                         fbl::unique_ptr<Transaction>* transaction_out) = 0;
+
+    // Complete a transaction by persisting its contents to disk.
+    virtual zx_status_t CommitTransaction(fbl::unique_ptr<Transaction> transaction) = 0;
+
+    virtual Bcache* GetMutableBcache() = 0;
+};
+
 class Minfs :
 #ifdef __Fuchsia__
     public fs::ManagedVfs,
 #else
     public fs::Vfs,
 #endif
-    public fbl::RefCounted<Minfs> {
+    public fbl::RefCounted<Minfs>, public TransactionalFs {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Minfs);
 
@@ -202,18 +217,17 @@ public:
         ZX_DEBUG_ASSERT(bno < Info().block_count);
     }
 
-    // Begin a transaction with a WritebackWork, |reserve_inodes| inodes reserved,
-    // and |reserve_blocks| blocks reserved.
     zx_status_t BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
                                  fbl::unique_ptr<Transaction>* transaction) __WARN_UNUSED_RESULT;
 
     // Enqueues a WritebackWork to the WritebackQueue.
     zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work) __WARN_UNUSED_RESULT;
 
-    void EnqueueAllocation(fbl::RefPtr<VnodeMinfs> vnode);
+    void EnqueueAllocation(fbl::unique_ptr<Transaction> transaction);
 
     // Complete a transaction by enqueueing its WritebackWork to the WritebackQueue.
-    zx_status_t CommitTransaction(fbl::unique_ptr<Transaction> transaction) __WARN_UNUSED_RESULT;
+    zx_status_t CommitTransaction(fbl::unique_ptr<Transaction> transaction) final
+        __WARN_UNUSED_RESULT;
 
 #ifdef __Fuchsia__
     // Returns the capacity of the writeback buffer, in blocks.
@@ -289,8 +303,10 @@ public:
     }
 
 #ifdef __Fuchsia__
-    fbl::Mutex* GetLock() const { return &txn_lock_; }
+    fbl::Mutex* GetLock() const final { return &txn_lock_; }
 #endif
+
+    Bcache* GetMutableBcache() final { return bc_.get(); }
 
     // TODO(rvargas): Make private.
     fbl::unique_ptr<Bcache> bc_;
@@ -349,7 +365,7 @@ private:
     fbl::Closure on_unmount_{};
     fuchsia_minfs_Metrics metrics_ = {};
     fbl::unique_ptr<WritebackQueue> writeback_;
-    DataBlockAssigner assigner_;
+    fbl::unique_ptr<DataBlockAssigner> assigner_;
     uint64_t fs_id_ = 0;
 #else
     // Store start block + length for all extents. These may differ from info block for
@@ -385,9 +401,11 @@ public:
     virtual void fbl_recycle() = 0;
 
 #ifdef __Fuchsia__
-    // Using the provided |transaction|, allocate all pending data blocks. Returns the number of
-    // reserved blocks that were freed up during this operation.
+    // Using the provided |transaction|, allocate all pending data blocks.
     virtual void AllocateData(Transaction* transaction) = 0;
+
+protected:
+    PendingAllocationData allocation_state_;
 #endif
 };
 
@@ -476,6 +494,12 @@ private:
 #ifdef __Fuchsia__
     zx_status_t QueryFilesystem(fuchsia_io_FilesystemInfo* out) final;
     zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
+
+    // Transfers |requested| blocks from the provided |transaction|'s block promise and gives them
+    // to the allocation_state_'s block promise. Additionally adds the vnode to |transaction| to be
+    // processed later. |transaction| must be non-null and possess an initialized block promise
+    // with at least as many reserved blocks as |block_count|.
+    void ScheduleAllocation(Transaction* transaction, blk_t block_count);
 #endif
 
     // Internal functions
@@ -680,7 +704,9 @@ private:
     // - Are fully unlinked (link count == 0)
     void Purge(Transaction* transaction);
 
-    blk_t GetBlockCount() const;
+    // Returns the current block count of the vnode. Must be accessed with |transaction| to ensure
+    // that the count isn't modified asynchronously.
+    blk_t GetBlockCount(const Transaction& transaction) const;
 
     // Returns current size of vnode.
     blk_t GetSize() const;
@@ -690,6 +716,14 @@ private:
 
 #ifdef __Fuchsia__
     zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+
+    // For data vnodes, if the pending size differs from the actual inode size, resolve them by
+    // setting the inode size to the pending size.
+    void ResolveSize() {
+        if (!IsDirectory() && inode_.size != allocation_state_.GetNodeSize()) {
+            inode_.size = allocation_state_.GetNodeSize();
+        }
+    }
 
     // For all direct blocks in the range |start| to |start + count|, reserve specific blocks in
     // the allocator to be swapped in at the time the old blocks are swapped out. Indirect blocks
@@ -755,8 +789,6 @@ private:
 
     fs::RemoteContainer remoter_{};
     fs::WatcherContainer watcher_{};
-
-    PendingAllocationData allocation_state_;
 #endif
 
     ino_t ino_{};

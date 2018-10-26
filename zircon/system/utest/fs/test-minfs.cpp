@@ -42,6 +42,9 @@ bool QueryInfo(fuchsia_io_FilesystemInfo* info) {
     BEGIN_HELPER;
     fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
     ASSERT_TRUE(fd);
+    // Sync before querying fs so that we can obtain an accurate number of used bytes. Otherwise,
+    // blocks which are reserved but not yet allocated won't be counted.
+    fsync(fd.get());
     zx_status_t status;
     fzl::FdioCaller caller(std::move(fd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, info),

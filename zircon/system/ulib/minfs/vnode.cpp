@@ -426,7 +426,7 @@ zx_status_t VnodeMinfs::BlockOpDirect(Transaction* transaction, DirectArgs* para
                 if (!IsDirectory()) {
                     new_block = false;
                     blk_t rel_bno = params->GetRelativeBlock() + i;
-                    allocation_state_.SetPending(rel_bno);
+                    allocation_state_.SetPending(rel_bno, new_block);
                 }
 #endif
                 if (new_block) {
@@ -1193,9 +1193,16 @@ void VnodeMinfs::AllocateData(Transaction* transaction) {
     blk_t expected_blocks = allocation_state_.GetTotalPending();
 
     if (expected_blocks == 0) {
-        // Return early if we have not found any data blocks to update.
+        // Return early if we have not found any data blocks to update. Since we may have pending
+        // reservations from an expected update, reset the allocation state. This may happen if the
+        // same block range is allocated and de-allocated (e.g. written and truncated) before the
+        // state is resolved.
+        allocation_state_.Reset(inode_.size);
         return;
     }
+
+    // Transfer reserved blocks from the vnode's allocation state to the current Transaction.
+    transaction->MergeBlockPromise(allocation_state_.GetPromise());
 
     // Write to data blocks must be done in a separate transaction from the metadata updates to
     // ensure that all user data goes out to disk before associated metadata.
@@ -1251,10 +1258,16 @@ void VnodeMinfs::AllocateData(Transaction* transaction) {
     transaction->GetDataWork()->PinVnode(fbl::WrapRefPtr(this));
     status = fs_->EnqueueWork(transaction->RemoveDataWork());
 
+    // Update on-disk size to the reserved size.
+    ResolveSize();
     InodeSync(transaction->GetWork(), kMxFsSyncMtime);
+
+    // In the future we could resolve on a per transaction (i.e. promise) basis, but since swaps are
+    // currently only made within a single thread, for now it is okay to resolve everything.
     transaction->GetWork()->PinVnode(fbl::WrapRefPtr(this));
     transaction->Resolve();
 
+    allocation_state_.Reset(inode_.size);
     ZX_DEBUG_ASSERT(allocation_state_.IsEmpty());
 }
 #endif // __Fuchsia__
@@ -1323,16 +1336,33 @@ void VnodeMinfs::Purge(Transaction* transaction) {
 #endif
 }
 
+blk_t VnodeMinfs::GetBlockCount(const Transaction& transaction) const {
+#ifdef __Fuchsia__
+    if (!IsDirectory()) {
+        return inode_.block_count + allocation_state_.GetNewPending();
+    }
 
-blk_t VnodeMinfs::GetBlockCount() const {
+    ZX_DEBUG_ASSERT(allocation_state_.GetNewPending() == 0);
+#endif
     return inode_.block_count;
 }
 
 blk_t VnodeMinfs::GetSize() const {
+#ifdef __Fuchsia__
+    if (!IsDirectory()) {
+        return allocation_state_.GetNodeSize();
+    }
+#endif
     return inode_.size;
 }
 
 void VnodeMinfs::SetSize(blk_t new_size) {
+#ifdef __Fuchsia__
+    if (!IsDirectory()) {
+        allocation_state_.SetNodeSize(new_size);
+        return;
+    }
+#endif
     inode_.size = new_size;
 }
 
@@ -1466,9 +1496,6 @@ zx_status_t VnodeMinfs::Write(const void* data, size_t len, size_t offset,
         return fs_->CommitTransaction(std::move(transaction));
     }
 
-#ifdef __Fuchsia__
-    ZX_DEBUG_ASSERT(allocation_state_.IsEmpty());
-#endif
     return ZX_OK;
 }
 
@@ -1486,17 +1513,15 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const void* data
         *actual = 0;
         return ZX_OK;
     }
-
     zx_status_t status;
 #ifdef __Fuchsia__
-    ZX_DEBUG_ASSERT(allocation_state_.IsEmpty());
     // TODO(planders): Once we are splitting up write transactions, assert this on host as well.
     ZX_DEBUG_ASSERT(len < TransactionLimits::kMaxWriteBytes);
     if ((status = InitVmo(transaction)) != ZX_OK) {
         return status;
     }
 
-    size_t new_data_blocks = 0;
+    blk_t new_data_blocks = 0;
 #else
     size_t max_size = off + len;
 #endif
@@ -1587,7 +1612,7 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const void* data
     ValidateVmoTail(GetSize());
 #ifdef __Fuchsia__
     if (new_data_blocks > 0) {
-        fs_->EnqueueAllocation(fbl::WrapRefPtr(this));
+        ScheduleAllocation(transaction, new_data_blocks);
     }
 #endif
     return ZX_OK;
@@ -1634,7 +1659,7 @@ zx_status_t VnodeMinfs::Getattr(vnattr_t* a) {
     a->inode = ino_;
     a->size = GetSize();
     a->blksize = kMinfsBlockSize;
-    a->blkcount = GetBlockCount() * (kMinfsBlockSize / VNATTR_BLKSIZE);
+    a->blkcount = GetBlockCount(transaction) * (kMinfsBlockSize / VNATTR_BLKSIZE);
     a->nlink = inode_.link_count;
     a->create_time = inode_.create_time;
     a->modify_time = inode_.modify_time;
@@ -1783,6 +1808,7 @@ zx_status_t VnodeMinfs::Recreate(Minfs* fs, ino_t ino, fbl::RefPtr<VnodeMinfs>* 
     }
     fs->InodeLoad(ino, &(*out)->inode_);
     (*out)->ino_ = ino;
+    (*out)->SetSize((*out)->inode_.size);
     return ZX_OK;
 }
 
@@ -1912,6 +1938,14 @@ zx_status_t VnodeMinfs::GetDevicePath(size_t buffer_len, char* out_name, size_t*
     return fs_->bc_->GetDevicePath(buffer_len, out_name, out_len);
 }
 
+void VnodeMinfs::ScheduleAllocation(Transaction* transaction, blk_t block_count) {
+    ZX_ASSERT(transaction != nullptr);
+    AllocatorPromise block_promise;
+    transaction->SplitBlockPromise(block_count, &block_promise);
+    block_promise.Split(block_count, allocation_state_.GetPromise());
+    transaction->SetTargetVnode(fbl::WrapRefPtr(this));
+}
+
 zx_status_t VnodeMinfs::GetMetrics(fidl_txn_t* transaction) {
     fuchsia_minfs_Metrics metrics;
     zx_status_t status = fs_->GetMetrics(&metrics);
@@ -2001,18 +2035,12 @@ zx_status_t VnodeMinfs::Truncate(size_t len) {
 
     InodeSync(transaction->GetWork(), kMxFsSyncMtime);
     transaction->GetWork()->PinVnode(fbl::WrapRefPtr(this));
-
-    status = fs_->CommitTransaction(std::move(transaction));
-#ifdef __Fuchsia__
-    ZX_DEBUG_ASSERT(allocation_state_.IsEmpty());
-#endif
-    return status;
+    return fs_->CommitTransaction(std::move(transaction));
 }
 
 zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
     zx_status_t status = ZX_OK;
 #ifdef __Fuchsia__
-    ZX_DEBUG_ASSERT(allocation_state_.IsEmpty());
     // TODO(smklein): We should only init up to 'len'; no need
     // to read in the portion of a large file we plan on deleting.
     if ((status = InitVmo(transaction)) != ZX_OK) {
@@ -2062,7 +2090,7 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
             size_t adjust = len % kMinfsBlockSize;
 #ifdef __Fuchsia__
             bool allocated = (bno != 0);
-            if (allocated) {
+            if (allocated || allocation_state_.IsPending(rel_bno)) {
                 if ((status = vmo_.read(bdata, len - adjust, adjust)) != ZX_OK) {
                     FS_TRACE_ERROR("minfs: Truncate failed to read last block: %d\n", status);
                     return ZX_ERR_IO;
@@ -2077,12 +2105,12 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
                 if (IsDirectory()) {
                     transaction->GetWork()->Enqueue(vmo_.get(), rel_bno,
                                                     bno + fs_->Info().dat_block, 1);
-                } else if (allocation_state_.SetPending(rel_bno)) {
+                } else if (allocation_state_.SetPending(rel_bno, allocated)) {
                     // Write to data blocks must be done in a separate transaction from the
                     // metadata updates.
                     // Now that we have updated the vmo based on the truncation, it is safe to
                     // allocate and enqueue the data block transaction.
-                    fs_->EnqueueAllocation(fbl::WrapRefPtr(this));
+                    ScheduleAllocation(transaction, 1);
                 }
             }
 #else // __Fuchsia__
@@ -2114,6 +2142,15 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
     }
 
     SetSize(static_cast<uint32_t>(len));
+
+#ifdef __Fuchsia__
+    if (!transaction->HasTargetVnode()) {
+        // If we do not need to allocate any data blocks asynchronously,
+        // we can resolve the inode size now.
+        ResolveSize();
+    }
+#endif
+
     ValidateVmoTail(GetSize());
     return ZX_OK;
 }

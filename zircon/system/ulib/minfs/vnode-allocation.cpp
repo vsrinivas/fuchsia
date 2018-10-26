@@ -6,6 +6,13 @@
 
 namespace minfs {
 
+void PendingAllocationData::Reset(blk_t size) {
+    new_blocks_ = 0;
+    node_size_ = size;
+    block_map_.ClearAll();
+    reservation_.Cancel();
+}
+
 zx_status_t PendingAllocationData::GetNextRange(blk_t* start, blk_t* count) const {
     auto range = block_map_.begin();
 
@@ -28,7 +35,11 @@ blk_t PendingAllocationData::GetLongestRange() const {
     return block_count;
 }
 
-bool PendingAllocationData::SetPending(blk_t block_num) {
+bool PendingAllocationData::SetPending(blk_t block_num, bool allocated) {
+    if (!allocated) {
+        new_blocks_++;
+    }
+
     size_t initial_bits = block_map_.num_bits();
     ZX_ASSERT(block_map_.SetOne(block_num) == ZX_OK);
     return block_map_.num_bits() > initial_bits;

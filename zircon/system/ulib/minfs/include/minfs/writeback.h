@@ -28,8 +28,9 @@
 
 namespace minfs {
 
+class DataAssignableVnode;
 class InodeManager;
-class Minfs;
+class TransactionalFs;
 class VnodeMinfs;
 
 // A wrapper around a WriteTxn, holding references to the underlying Vnodes
@@ -88,18 +89,20 @@ private:
 // will protect against multiple simultaneous writes to these structures.
 class Transaction {
 public:
-    static zx_status_t Create(Minfs* minfs, size_t reserve_inodes, size_t reserve_blocks,
+    static zx_status_t Create(TransactionalFs* minfs,
+                              size_t reserve_inodes, size_t reserve_blocks,
                               InodeManager* inode_manager, Allocator* block_allocator,
                               fbl::unique_ptr<Transaction>* out);
 
     Transaction() = delete;
 
-    Transaction(Minfs* minfs);
+    Transaction(TransactionalFs* minfs);
 
     ~Transaction() {
         // Unreserve all reserved inodes/blocks while the lock is still held.
         inode_promise_.Cancel();
         block_promise_.Cancel();
+        ZX_ASSERT(scheduled_vnode_ == nullptr);
     }
 
     void InitWork() {
@@ -166,6 +169,15 @@ public:
     void MergeBlockPromise(AllocatorPromise* other_promise) {
         other_promise->Split(other_promise->GetReserved(), &block_promise_);
     }
+
+    void SetTargetVnode(fbl::RefPtr<DataAssignableVnode> vnode) {
+        ZX_ASSERT(scheduled_vnode_.get() == nullptr);
+        scheduled_vnode_ = std::move(vnode);
+    }
+
+    bool HasTargetVnode() const { return scheduled_vnode_ != nullptr; }
+
+    fbl::RefPtr<DataAssignableVnode> TakeTargetVnode() { return std::move(scheduled_vnode_); }
 #endif
 
 private:
@@ -178,6 +190,9 @@ private:
     fbl::unique_ptr<WritebackWork> data_work_;
     AllocatorPromise inode_promise_;
     AllocatorPromise block_promise_;
+
+    // Vnode which has been scheduled for a data block allocation.
+    fbl::RefPtr<DataAssignableVnode> scheduled_vnode_;
 };
 
 } // namespace minfs

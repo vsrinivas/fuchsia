@@ -143,7 +143,8 @@ zx_status_t WritebackWork::Complete() {
     return status;
 }
 
-zx_status_t Transaction::Create(Minfs* minfs, size_t reserve_inodes, size_t reserve_blocks,
+zx_status_t Transaction::Create(TransactionalFs* minfs,
+                                size_t reserve_inodes, size_t reserve_blocks,
                                 InodeManager* inode_manager, Allocator* block_allocator,
                                 fbl::unique_ptr<Transaction>* out) {
     fbl::unique_ptr<Transaction> transaction(new Transaction(minfs));
@@ -173,11 +174,11 @@ zx_status_t Transaction::Create(Minfs* minfs, size_t reserve_inodes, size_t rese
     return ZX_OK;
 }
 
-Transaction::Transaction(Minfs* minfs) :
+Transaction::Transaction(TransactionalFs* minfs) :
 #ifdef __Fuchsia__
     lock_(minfs->GetLock()),
 #endif
-    bc_(minfs->bc_.get()) {}
+    bc_(minfs->GetMutableBcache()) {}
 
 #ifdef __Fuchsia__
 void WritebackWork::SetSyncCallback(SyncCallback closure) {

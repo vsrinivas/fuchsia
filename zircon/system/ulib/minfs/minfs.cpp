@@ -303,8 +303,12 @@ zx_status_t Minfs::EnqueueWork(fbl::unique_ptr<WritebackWork> work) {
 }
 
 #ifdef __Fuchsia__
-void Minfs::EnqueueAllocation(fbl::RefPtr<VnodeMinfs> vnode) {
-    assigner_.EnqueueAllocation(std::move(vnode));
+void Minfs::EnqueueAllocation(fbl::unique_ptr<Transaction> state) {
+    fbl::RefPtr<DataAssignableVnode> vnode = state->TakeTargetVnode();
+    state.reset();
+    if (vnode != nullptr) {
+        assigner_->EnqueueAllocation(std::move(vnode));
+    }
 }
 #endif
 
@@ -313,25 +317,23 @@ zx_status_t Minfs::CommitTransaction(fbl::unique_ptr<Transaction> transaction) {
     ZX_DEBUG_ASSERT(writeback_ != nullptr);
     // TODO(planders): Move this check to Journal enqueue.
     ZX_DEBUG_ASSERT(transaction->GetWork()->BlockCount() <= limits_.GetMaximumEntryDataBlocks());
-    assigner_.Process(transaction.get());
-#endif
+    zx_status_t status = EnqueueWork(transaction->RemoveWork());
+    EnqueueAllocation(std::move(transaction));
+    return status;
+#else
     return EnqueueWork(transaction->RemoveWork());
+#endif
 }
 
 #ifdef __Fuchsia__
 void Minfs::Sync(SyncCallback closure) {
-    fbl::unique_ptr<Transaction> transaction;
-    zx_status_t status = BeginTransaction(0, 0, &transaction);
-
-    if (status != ZX_OK) {
-        closure(status);
-        return;
+    if (assigner_ != nullptr) {
+        assigner_->EnqueueCallback(std::move(closure));
+    } else {
+        // If Minfs is read-only (data block assigner has not been initialized), immediately
+        // resolve the callback.
+        closure(ZX_OK);
     }
-
-    transaction->GetWork()->SetSyncCallback(std::move(closure));
-
-    // This may return an error, but it doesn't matter - the closure will be called anyway.
-    status = CommitTransaction(std::move(transaction));
 }
 #endif
 
@@ -364,6 +366,10 @@ zx_status_t Minfs::FVMQuery(fuchsia_hardware_block_volume_VolumeInfo* info) cons
 
 zx_status_t Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn) {
     TRACE_DURATION("minfs", "Minfs::InoFree", "ino", vn->ino_);
+
+#ifdef __Fuchsia__
+    vn->allocation_state_.Reset(vn->inode_.size);
+#endif
 
     inodes_->Free(transaction->GetWork(), vn->ino_);
     uint32_t block_count = vn->inode_.block_count;
@@ -839,8 +845,9 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
         return status;
     }
 
-    *out = fbl::unique_ptr<Minfs>(new Minfs(std::move(bc), std::move(sb),
-                                            std::move(block_allocator), std::move(inodes), id));
+    *out =
+        fbl::unique_ptr<Minfs>(new Minfs(std::move(bc), std::move(sb), std::move(block_allocator),
+                                         std::move(inodes), id));
 #else
     *out =
         fbl::unique_ptr<Minfs>(new Minfs(std::move(bc), std::move(sb), std::move(block_allocator),
@@ -867,6 +874,10 @@ zx_status_t Minfs::InitializeWriteback() {
     }
 
     if ((status = PurgeUnlinked()) != ZX_OK) {
+        return status;
+    }
+
+    if ((status = DataBlockAssigner::Create(this, &assigner_)) != ZX_OK) {
         return status;
     }
 
@@ -936,6 +947,9 @@ void Minfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
             async::PostTask(dispatcher(), [this, cb = std::move(cb)]() mutable {
                 // Ensure writeback buffer completes before auxilliary structures
                 // are deleted.
+                // The data block assigner must be resolved first, so it can enqueue any pending
+                // transactions to the writeback buffer.
+                assigner_ = nullptr;
                 writeback_ = nullptr;
                 bc_->Sync();
 

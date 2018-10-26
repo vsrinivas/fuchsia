@@ -757,8 +757,9 @@ bool GetStatsTest(fs_test_utils::Fixture* fixture) {
     fsync(file_to_create.get());
     ASSERT_OK(fuchsia_hardware_block_BlockGetStats(caller.borrow_channel(), clear,
                                                    &status, &block_stats));
-    // 5 ops total, 4 for the write and 1 for the sync, 64 blocks written by 4 16 block writes
-    ASSERT_TRUE(CheckStats(block_stats, 5, 64, 0, 0, 4, 64));
+    // 6 ops total, 5 for the write and 1 for the sync, 80 blocks written by 5 16 block writes.
+    // 1 extra write is required since the inode is updated synchronously and asynchronously.
+    ASSERT_TRUE(CheckStats(block_stats, 6, 80, 0, 0, 5, 80));
     ASSERT_EQ(lseek(file_to_create.get(), 0, SEEK_SET), 0);
     // Reset file to clear it from the cache
     file_to_create.reset();
