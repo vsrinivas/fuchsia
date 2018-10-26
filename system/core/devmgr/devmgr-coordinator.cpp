@@ -1394,13 +1394,13 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         }
         // all of these return directly and do not write a
         // reply, since this message is a reply itself
-        pending_t* pending = dev->pending.pop_front();
+        Pending* pending = dev->pending.pop_front();
         if (pending == nullptr) {
             log(ERROR, "devcoord: rpc: spurious status message\n");
             return ZX_OK;
         }
         switch (pending->op) {
-        case dc_pending::Op::kBind:
+        case Pending::Op::kBind:
             if (msg.status != ZX_OK) {
                 log(ERROR, "devcoord: rpc: bind-driver '%s' status %d\n",
                     dev->name, msg.status);
@@ -1409,7 +1409,7 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
             }
             //TODO: try next driver, clear BOUND flag
             break;
-        case dc_pending::Op::kSuspend: {
+        case Pending::Op::kSuspend: {
             if (msg.status != ZX_OK) {
                 log(ERROR, "devcoord: rpc: suspend '%s' status %d\n",
                     dev->name, msg.status);
@@ -1626,14 +1626,14 @@ static zx_status_t dc_create_proxy(device_t* parent) {
     return ZX_OK;
 }
 
-dc_pending::dc_pending() = default;
+Pending::Pending() = default;
 
 // send message to devhost, requesting the binding of a driver to a device
 static zx_status_t dh_bind_driver(device_t* dev, const char* libname) {
     dc_msg_t msg;
     uint32_t mlen;
 
-    auto pending = fbl::make_unique<pending_t>();
+    auto pending = fbl::make_unique<Pending>();
     if (pending == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -1656,7 +1656,7 @@ static zx_status_t dh_bind_driver(device_t* dev, const char* libname) {
     }
 
     dev->flags |= DEV_CTX_BOUND;
-    pending->op = dc_pending::Op::kBind;
+    pending->op = Pending::Op::kBind;
     pending->ctx = nullptr;
     dev->pending.push_back(pending.release());
     return ZX_OK;
@@ -1810,7 +1810,7 @@ static zx_status_t dc_suspend_devhost(devhost_t* dh, suspend_context_t* ctx) {
 
     zx_handle_t rpc = ZX_HANDLE_INVALID;
 
-    auto pending = fbl::make_unique<pending_t>();
+    auto pending = fbl::make_unique<Pending>();
     if (pending == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -1830,7 +1830,7 @@ static zx_status_t dc_suspend_devhost(devhost_t* dh, suspend_context_t* ctx) {
     }
 
     dh->flags |= DEV_HOST_SUSPEND;
-    pending->op = dc_pending::Op::kSuspend;
+    pending->op = Pending::Op::kSuspend;
     pending->ctx = ctx;
     dev->pending.push_back(pending.release());
 
@@ -1895,7 +1895,7 @@ static void process_suspend_list(suspend_context_t* ctx) {
 }
 
 static bool check_pending(const device_t* dev) {
-    const pending_t* pending = nullptr;
+    const Pending* pending = nullptr;
     if (dev->proxy) {
         if (!dev->proxy->pending.is_empty()) {
             pending = &dev->proxy->pending.back();
@@ -1905,7 +1905,7 @@ static bool check_pending(const device_t* dev) {
             pending = &dev->pending.back();
         }
     }
-    if ((pending == nullptr) || (pending->op != dc_pending::Op::kSuspend)) {
+    if ((pending == nullptr) || (pending->op != Pending::Op::kSuspend)) {
         return false;
     } else {
         log(ERROR, "  devhost with device '%s' timed out\n", dev->name);

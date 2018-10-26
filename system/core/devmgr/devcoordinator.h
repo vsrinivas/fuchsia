@@ -20,7 +20,6 @@
 
 namespace devmgr {
 
-typedef struct dc_pending pending_t;
 typedef struct dc_devhost devhost_t;
 typedef struct dc_device device_t;
 typedef struct dc_driver driver_t;
@@ -44,13 +43,13 @@ struct Work {
     void* ptr;
 };
 
-struct dc_pending {
-    dc_pending();
+struct Pending {
+    Pending();
 
-    fbl::DoublyLinkedListNodeState<dc_pending*> node;
+    fbl::DoublyLinkedListNodeState<Pending*> node;
     struct Node {
-        static fbl::DoublyLinkedListNodeState<dc_pending*>& node_state(
-            dc_pending& obj) {
+        static fbl::DoublyLinkedListNodeState<Pending*>& node_state(
+            Pending& obj) {
             return obj.node;
         }
     };
@@ -161,7 +160,7 @@ struct dc_device {
 
     // list of outstanding requests from the devcoord
     // to this device's devhost, awaiting a response
-    fbl::DoublyLinkedList<dc_pending*, dc_pending::Node> pending;
+    fbl::DoublyLinkedList<Pending*, Pending::Node> pending;
 
     // listnode for this device in the all devices list
     fbl::DoublyLinkedListNodeState<dc_device*> anode;
