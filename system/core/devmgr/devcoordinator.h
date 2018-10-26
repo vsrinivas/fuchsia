@@ -16,6 +16,7 @@
 #include <fbl/new.h>
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
+#include <lib/zx/job.h>
 #include <port/port.h>
 
 namespace devmgr {
@@ -309,7 +310,7 @@ void devfs_unpublish(Device* dev);
 void devfs_advertise(Device* dev);
 void devfs_advertise_modified(Device* dev);
 
-Device* coordinator_init(zx_handle_t root_job);
+Device* coordinator_init(const zx::job& root_job);
 void coordinator();
 
 void load_driver(const char* path,

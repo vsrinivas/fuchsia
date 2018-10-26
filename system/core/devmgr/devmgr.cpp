@@ -26,6 +26,9 @@
 
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/util.h>
+#include <lib/zx/debuglog.h>
+#include <lib/zx/port.h>
+#include <lib/zx/resource.h>
 
 #include "bootfs.h"
 #include "devhost.h"
@@ -46,11 +49,11 @@ static zx_handle_t appmgr_req_cli;
 static zx_handle_t appmgr_req_srv;
 
 static zx_handle_t root_resource_handle;
-static zx_handle_t root_job_handle;
-static zx_handle_t svcs_job_handle;
-static zx_handle_t fuchsia_job_handle;
+static zx::unowned_job root_job_handle;
+static zx::job svcs_job_handle;
+static zx::job fuchsia_job_handle;
 static zx_handle_t exception_channel;
-static zx_handle_t svchost_outgoing;
+static zx::channel svchost_outgoing;
 
 zx_handle_t virtcon_open;
 
@@ -59,12 +62,12 @@ zx_handle_t get_root_resource() {
 }
 
 zx_handle_t get_sysinfo_job_root() {
-    zx_handle_t h;
+    zx::job h;
     //TODO: limit to enumerate rights
-    if (zx_handle_duplicate(root_job_handle, ZX_RIGHT_SAME_RIGHTS, &h) < 0) {
+    if (root_job_handle->duplicate(ZX_RIGHT_SAME_RIGHTS, &h) < 0) {
         return ZX_HANDLE_INVALID;
     } else {
-        return h;
+        return h.release();
     }
 }
 
@@ -74,7 +77,7 @@ static const char* argv_appmgr[] = {"/system/bin/appmgr"};
 void do_autorun(const char* name, const char* env) {
     const char* cmd = getenv(env);
     if (cmd != nullptr) {
-        devmgr_launch_cmdline(env, svcs_job_handle, name,
+        devmgr_launch_cmdline(env, svcs_job_handle.get(), name,
                               &devmgr_launch_load, nullptr, cmd,
                               nullptr, nullptr, 0, nullptr, FS_ALL);
     }
@@ -134,7 +137,7 @@ static int fuchsia_starter(void* arg) {
                 appmgr_hnd_count++;
                 appmgr_req_srv = ZX_HANDLE_INVALID;
             }
-            devmgr_launch(fuchsia_job_handle, "appmgr",
+            devmgr_launch(fuchsia_job_handle.get(), "appmgr",
                           &devmgr_launch_load, nullptr,
                           fbl::count_of(argv_appmgr), argv_appmgr, nullptr, -1,
                           appmgr_hnds, appmgr_ids, appmgr_hnd_count,
@@ -220,7 +223,7 @@ int crash_analyzer_listener(void* arg) {
             appmgr_svc_request = ZX_HANDLE_INVALID;
             status = fdio_service_connect_at(appmgr_svc, fuchsia_crash_Analyzer_Name, analyzer_request);
         } else {
-            status = fdio_service_connect_at(svchost_outgoing, "public/" fuchsia_crash_Analyzer_Name, analyzer_request);
+            status = fdio_service_connect_at(svchost_outgoing.get(), "public/" fuchsia_crash_Analyzer_Name, analyzer_request);
         }
         analyzer_request = ZX_HANDLE_INVALID;
         if (status != ZX_OK)
@@ -271,20 +274,22 @@ int service_starter(void* arg) {
     // that might occur early on before crashsvc has finished initializing.
     // crashsvc writes messages to the passed channel when an analyzer for an
     // exception is required.
-    zx_handle_t exception_port, exception_channel_passed;
-    if (zx_port_create(0, &exception_port) == ZX_OK &&
+    zx::port exception_port;
+    zx_handle_t exception_channel_passed;
+    if (zx::port::create(0, &exception_port) == ZX_OK &&
         zx_channel_create(0, &exception_channel, &exception_channel_passed) == ZX_OK &&
-        zx_task_bind_exception_port(root_job_handle, exception_port, 0, 0) == ZX_OK) {
+        root_job_handle->bind_exception_port(exception_port, 0, 0) == ZX_OK) {
         thrd_t t;
         if ((thrd_create_with_name(&t, crash_analyzer_listener, nullptr,
                                    "crash-analyzer-listener")) == thrd_success) {
             thrd_detach(t);
         }
-        zx_handle_t handles[] = {ZX_HANDLE_INVALID, exception_port, exception_channel_passed};
-        zx_handle_duplicate(root_job_handle, ZX_RIGHT_SAME_RIGHTS, &handles[0]);
+        zx::job duplicate_job;
+        root_job_handle->duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate_job);
+        zx_handle_t handles[] = {duplicate_job.release(), exception_port.release(), exception_channel_passed};
         uint32_t handle_types[] = {PA_HND(PA_USER0, 0), PA_HND(PA_USER0, 1), PA_HND(PA_USER0, 2)};
         static const char* argv_crashsvc[] = {"/boot/bin/crashsvc"};
-        devmgr_launch(svcs_job_handle, "crashsvc",
+        devmgr_launch(svcs_job_handle.get(), "crashsvc",
                       &devmgr_launch_load, nullptr,
                       fbl::count_of(argv_crashsvc), argv_crashsvc, nullptr, -1,
                       handles, handle_types, fbl::count_of(handles), nullptr, 0);
@@ -319,7 +324,7 @@ int service_starter(void* arg) {
         }
 
         zx_handle_t proc;
-        if (devmgr_launch(svcs_job_handle, "netsvc",
+        if (devmgr_launch(svcs_job_handle.get(), "netsvc",
                           &devmgr_launch_load, nullptr, argc, args,
                           nullptr, -1, nullptr, nullptr, 0, &proc, FS_ALL) == ZX_OK) {
             if (vruncmd) {
@@ -353,7 +358,7 @@ int service_starter(void* arg) {
         zx_handle_t h = ZX_HANDLE_INVALID;
         zx_channel_create(0, &h, &virtcon_open);
         const char* args[] = {"/boot/bin/virtual-console", "--shells", num_shells, "--run", vcmd};
-        devmgr_launch(svcs_job_handle, "virtual-console",
+        devmgr_launch(svcs_job_handle.get(), "virtual-console",
                       &devmgr_launch_load, nullptr,
                       vruncmd ? 5 : 3, args, envp, -1,
                       &h, &type, (h == ZX_HANDLE_INVALID) ? 0 : 1, nullptr, FS_ALL);
@@ -399,7 +404,7 @@ static int console_starter(void* arg) {
     for (unsigned n = 0; n < 30; n++) {
         int fd;
         if ((fd = open(device, O_RDWR)) >= 0) {
-            devmgr_launch(svcs_job_handle, "sh:console",
+            devmgr_launch(svcs_job_handle.get(), "sh:console",
                           &devmgr_launch_load, nullptr,
                           fbl::count_of(argv_sh), argv_sh, envp, fd, nullptr, nullptr, 0, nullptr, FS_ALL);
             break;
@@ -414,12 +419,11 @@ static int pwrbtn_monitor_starter(void* arg) {
     const char* argv[] = {"/boot/bin/pwrbtn-monitor"};
     int argc = 1;
 
-    zx_handle_t job_copy = ZX_HANDLE_INVALID;
-    zx_handle_duplicate(svcs_job_handle, ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE,
-                        &job_copy);
+    zx::job job_copy;
+    svcs_job_handle.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &job_copy);
 
     launchpad_t* lp;
-    launchpad_create(job_copy, name, &lp);
+    launchpad_create(job_copy.get(), name, &lp);
 
     zx_status_t status = devmgr_launch_load(nullptr, lp, argv[0]);
     if (status != ZX_OK) {
@@ -463,7 +467,6 @@ static int pwrbtn_monitor_starter(void* arg) {
     } else {
         printf("devmgr: launch %s (%s) OK\n", argv[0], name);
     }
-    zx_handle_close(job_copy);
     return 0;
 }
 
@@ -541,20 +544,20 @@ static void load_cmdline_from_bootfs() {
 }
 
 static zx_status_t fuchsia_create_job() {
-    zx_status_t status = zx_job_create(root_job_handle, 0u, &fuchsia_job_handle);
+    zx_status_t status = zx::job::create(*root_job_handle, 0u, &fuchsia_job_handle);
     if (status != ZX_OK) {
         printf("devmgr: unable to create fuchsia job: %d (%s)\n", status,
                zx_status_get_string(status));
         return status;
     }
 
-    zx_object_set_property(fuchsia_job_handle, ZX_PROP_NAME, "fuchsia", 7);
+    fuchsia_job_handle.set_property(ZX_PROP_NAME, "fuchsia", 7);
 
     const zx_policy_basic_t fuchsia_job_policy[] = {
         {.condition = ZX_POL_NEW_PROCESS, .policy = ZX_POL_ACTION_DENY}};
 
-    status = zx_job_set_policy(fuchsia_job_handle, ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC,
-                               fuchsia_job_policy, fbl::count_of(fuchsia_job_policy));
+    status = fuchsia_job_handle.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC,
+                                           fuchsia_job_policy, fbl::count_of(fuchsia_job_policy));
     if (status != ZX_OK) {
         printf("devmgr: unable to set policy fuchsia job: %d (%s)\n", status,
                zx_status_get_string(status));
@@ -576,19 +579,19 @@ int main(int argc, char** argv) {
     devmgr_io_init();
 
     root_resource_handle = zx_take_startup_handle(PA_HND(PA_RESOURCE, 0));
-    root_job_handle = zx_job_default();
+    root_job_handle = zx::job::default_job();
 
     printf("devmgr: main()\n");
 
-    devfs_init(root_job_handle);
+    devfs_init(*root_job_handle);
 
-    zx_object_set_property(root_job_handle, ZX_PROP_NAME, "root", 4);
+    root_job_handle->set_property(ZX_PROP_NAME, "root", 4);
 
-    zx_status_t status = zx_job_create(root_job_handle, 0u, &svcs_job_handle);
+    zx_status_t status = zx::job::create(*root_job_handle, 0u, &svcs_job_handle);
     if (status < 0) {
         printf("unable to create service job\n");
     }
-    zx_object_set_property(svcs_job_handle, ZX_PROP_NAME, "zircon-services", 16);
+    svcs_job_handle.set_property(ZX_PROP_NAME, "zircon-services", 16);
 
     if (fuchsia_create_job() != ZX_OK)
         return 1;
@@ -787,7 +790,7 @@ void fshost_start() {
     }
     envp[envc] = nullptr;
 
-    devmgr_launch(svcs_job_handle, "fshost",
+    devmgr_launch(svcs_job_handle.get(), "fshost",
                   &devmgr_launch_load, nullptr, argc, argv, envp, -1,
                   handles, types, n, nullptr, 0);
 
@@ -843,7 +846,7 @@ zx::channel fs_clone(const char* path) {
         fs = appmgr_req_cli;
     } else if (!strcmp(path, "svc")) {
         flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
-        fs = svchost_outgoing;
+        fs = svchost_outgoing.get();
         path = "public";
     } else if (!strncmp(path, "dev/", 4)) {
         fs = devfs_root_clone();
@@ -886,83 +889,66 @@ void devmgr_vfs_init() {
 }
 
 zx_status_t svchost_start() {
-    zx_handle_t dir_request = ZX_HANDLE_INVALID;
-    zx_handle_t logger = ZX_HANDLE_INVALID;
-    zx_handle_t appmgr_svc_req = ZX_HANDLE_INVALID;
-    zx_handle_t appmgr_svc = ZX_HANDLE_INVALID;
+    zx::channel dir_request;
+    zx::debuglog logger;
+    zx::channel appmgr_svc_req;
+    zx::channel appmgr_svc;
 
-    zx_status_t status = zx_channel_create(0, &dir_request, &svchost_outgoing);
+    zx_status_t status = zx::channel::create(0, &dir_request, &svchost_outgoing);
     if (status != ZX_OK) {
-        goto error;
+        return status;
     }
 
-    status = zx_debuglog_create(ZX_HANDLE_INVALID, 0, &logger);
+    status = zx::debuglog::create(zx::resource(), 0, &logger);
     if (status != ZX_OK) {
-        goto error;
+        return status;
     }
 
-    status = zx_channel_create(0, &appmgr_svc_req, &appmgr_svc);
+    status = zx::channel::create(0, &appmgr_svc_req, &appmgr_svc);
     if (status != ZX_OK) {
-        goto error;
+        return status;
     }
 
-    status = fdio_service_connect_at(appmgr_req_cli, "svc", appmgr_svc_req);
+    status = fdio_service_connect_at(appmgr_req_cli, "svc", appmgr_svc_req.release());
     if (status != ZX_OK) {
-        goto error;
+        return status;
     }
 
-    const char* name;
-    name = "svchost";
-    const char* argv[2];
-    argv[0] = "/boot/bin/svchost";
-    argv[1] = require_system ? "--require-system" : nullptr;
-    int argc;
-    argc = require_system ? 2 : 1;
+    const char* name = "svchost";
+    const char* argv[2] = {
+        "/boot/bin/svchost",
+        require_system ? "--require-system" : nullptr,
+    };
+    int argc = require_system ? 2 : 1;
 
-    zx_handle_t svchost_vmo;
-    svchost_vmo = devmgr_load_file(argv[0], nullptr);
+    zx_handle_t svchost_vmo = devmgr_load_file(argv[0], nullptr);
     if (svchost_vmo == ZX_HANDLE_INVALID) {
-        goto error;
+        // TODO(kulakowski/teisenbe) Synthesize a status here.
+        return status;
     }
 
-    zx_handle_t job_copy;
-    job_copy = ZX_HANDLE_INVALID;
-    zx_handle_duplicate(svcs_job_handle, ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_MANAGE_JOB, &job_copy);
+    zx::job job_copy;
+    svcs_job_handle.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_MANAGE_JOB, &job_copy);
 
-    launchpad_t* lp;
-    lp = nullptr;
-    launchpad_create(job_copy, name, &lp);
+    launchpad_t* lp = nullptr;
+    launchpad_create(job_copy.get(), name, &lp);
     launchpad_load_from_vmo(lp, svchost_vmo);
     launchpad_set_args(lp, argc, argv);
-    launchpad_add_handle(lp, dir_request, PA_DIRECTORY_REQUEST);
-    launchpad_add_handle(lp, logger, PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO));
+    launchpad_add_handle(lp, dir_request.release(), PA_DIRECTORY_REQUEST);
+    launchpad_add_handle(lp, logger.release(), PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO));
 
     // Remove once svchost hosts the tracelink serice itself.
-    launchpad_add_handle(lp, appmgr_svc, PA_HND(PA_USER0, 0));
+    launchpad_add_handle(lp, appmgr_svc.release(), PA_HND(PA_USER0, 0));
 
-    zx_handle_t process;
-    process = ZX_HANDLE_INVALID;
-    const char* errmsg;
-    errmsg = nullptr;
+    zx_handle_t process = ZX_HANDLE_INVALID;
+    const char* errmsg = nullptr;
     if ((status = launchpad_go(lp, &process, &errmsg)) < 0) {
         printf("devmgr: launchpad %s (%s) failed: %s: %d\n",
                argv[0], name, errmsg, status);
     } else {
         printf("devmgr: launch %s (%s) OK\n", argv[0], name);
     }
-    zx_handle_close(job_copy);
     return ZX_OK;
-
-error:
-    if (dir_request != ZX_HANDLE_INVALID)
-        zx_handle_close(dir_request);
-    if (logger != ZX_HANDLE_INVALID)
-        zx_handle_close(logger);
-    // We don't need to clean up appmgr_svc_req because it is always consumed by
-    // fdio_service_connect_at.
-    if (appmgr_svc != ZX_HANDLE_INVALID)
-        zx_handle_close(appmgr_svc);
-    return status;
 }
 
 void devmgr_svc_init() {

@@ -24,6 +24,7 @@
 #include <zircon/boot/bootdata.h>
 #include <lib/fdio/io.h>
 #include <lib/zircon-internal/ktrace.h>
+#include <lib/zx/job.h>
 #include <lib/zx/socket.h>
 
 #include "devcoordinator.h"
@@ -290,7 +291,8 @@ static bool dc_running;
 
 static zx::channel dc_watch_channel;
 
-static zx_handle_t devhost_job;
+static zx::job devhost_job;
+
 port_t dc_port;
 
 // All Drivers
@@ -633,7 +635,7 @@ static zx_status_t dc_launch_devhost(Devhost* host,
     const char* devhost_bin = get_devhost_bin();
 
     launchpad_t* lp;
-    launchpad_create_with_jobs(devhost_job, 0, name, &lp);
+    launchpad_create_with_jobs(devhost_job.get(), 0, name, &lp);
     launchpad_load_from_file(lp, devhost_bin);
     launchpad_set_args(lp, 1, &devhost_bin);
 
@@ -2088,22 +2090,22 @@ static void dc_driver_added(Driver* drv, const char* version) {
     }
 }
 
-Device* coordinator_init(zx_handle_t root_job) {
+Device* coordinator_init(const zx::job& root_job) {
     printf("coordinator_init()\n");
 
-    zx_status_t status = zx_job_create(root_job, 0u, &devhost_job);
+    zx_status_t status = zx::job::create(root_job, 0u, &devhost_job);
     if (status < 0) {
         log(ERROR, "devcoord: unable to create devhost job\n");
     }
     static const zx_policy_basic_t policy[] = {
         { ZX_POL_BAD_HANDLE, ZX_POL_ACTION_EXCEPTION },
     };
-    status = zx_job_set_policy(devhost_job, ZX_JOB_POL_RELATIVE,
-                               ZX_JOB_POL_BASIC, &policy, fbl::count_of(policy));
+    status = devhost_job.set_policy(ZX_JOB_POL_RELATIVE,
+                                    ZX_JOB_POL_BASIC, &policy, fbl::count_of(policy));
     if (status < 0) {
         log(ERROR, "devcoord: zx_job_set_policy() failed\n");
     }
-    zx_object_set_property(devhost_job, ZX_PROP_NAME, "zircon-drivers", 15);
+    devhost_job.set_property(ZX_PROP_NAME, "zircon-drivers", 15);
 
     port_init(&dc_port);
 

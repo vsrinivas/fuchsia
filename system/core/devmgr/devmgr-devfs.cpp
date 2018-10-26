@@ -809,7 +809,7 @@ zx_handle_t devfs_root_clone() {
     return fdio_service_clone(devfs_root);
 }
 
-void devfs_init(zx_handle_t root_job) {
+void devfs_init(const zx::job& root_job) {
     printf("devmgr: init\n");
 
     root_devnode = fbl::make_unique<Devnode>("");

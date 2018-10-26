@@ -9,6 +9,7 @@
 #include <fbl/function.h>
 #include <launchpad/launchpad.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/job.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 #include <zircon/device/vfs.h>
@@ -17,7 +18,7 @@ namespace devmgr {
 
 void coordinator();
 
-void devfs_init(zx_handle_t root_job);
+void devfs_init(const zx::job& root_job);
 
 void devmgr_io_init();
 void devmgr_svc_init();
