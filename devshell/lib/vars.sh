@@ -261,21 +261,13 @@ function fx-standard-switches {
 }
 
 function fx-choose-build-concurrency {
-  local -r cpu_count=$(getconf _NPROCESSORS_ONLN)
-  local job_count="$cpu_count"
-
-  # macOS needs a lower value of -j parameter, because it has a limit on the
-  # number of open file descriptors. Use 4 * cpu_count, which works well in
-  # practice.
   if grep -q "use_goma = true" "${FUCHSIA_BUILD_DIR}/args.gn"; then
-    if [[ "$(uname -s)" = "Darwin" ]]; then
-      ((job_count *= 4))
-    else
-      job_count=1000
-    fi
+    # The recommendation from the Goma team is to use 10*cpu-count.
+    local cpus="$(fx-cpu-count)"
+    echo $(($cpus * 10))
+  else
+    fx-cpu-count
   fi
-
-  echo "$job_count"
 }
 
 function fx-cpu-count {
