@@ -40,7 +40,7 @@ func (fi *filterImpl) GetRules() ([]filter.Rule, uint32, filter.Status, error) {
 	fi.filter.rulesetMain.RLock()
 	nrs, err := fromRules(fi.filter.rulesetMain.v)
 	generation := fi.filter.rulesetMain.generation
-	fi.filter.rulesetMain.Unlock()
+	fi.filter.rulesetMain.RUnlock()
 	if err != nil {
 		// This error should not happen.
 		log.Printf("GetRules error %v", err)
@@ -68,7 +68,7 @@ func (fi *filterImpl) GetNatRules() ([]filter.Nat, uint32, filter.Status, error)
 	fi.filter.rulesetNAT.RLock()
 	nns, err := fromNATs(fi.filter.rulesetNAT.v)
 	generation := fi.filter.rulesetNAT.generation
-	fi.filter.rulesetNAT.Unlock()
+	fi.filter.rulesetNAT.RUnlock()
 	if err != nil {
 		// This error should not happen.
 		log.Printf("GetNATRules error %v", err)
@@ -96,7 +96,7 @@ func (fi *filterImpl) GetRdrRules() ([]filter.Rdr, uint32, filter.Status, error)
 	fi.filter.rulesetRDR.RLock()
 	nrs, err := fromRDRs(fi.filter.rulesetRDR.v)
 	generation := fi.filter.rulesetRDR.generation
-	fi.filter.rulesetRDR.Unlock()
+	fi.filter.rulesetRDR.RUnlock()
 	if err != nil {
 		// This error should not happen.
 		log.Printf("GetRdrRules error %v", err)
