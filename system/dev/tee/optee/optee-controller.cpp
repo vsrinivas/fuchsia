@@ -195,8 +195,12 @@ zx_status_t OpteeController::Bind() {
         return status;
     }
 
-    // TODO(rjascani): Replace this with a real secure monitor only resource
-    secure_monitor_ = get_root_resource();
+    static constexpr uint32_t kTrustedOsSmcIndex = 0;
+    status = pdev_get_smc(&pdev_proto_, kTrustedOsSmcIndex, &secure_monitor_);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "optee: Unable to get secure monitor handle\n");
+        return status;
+    }
 
     // TODO(MTWN-140): Remove this once we have a tee core driver that will discover the TEE OS
     status = ValidateApiUid();

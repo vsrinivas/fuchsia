@@ -6,6 +6,7 @@
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-bus.h>
+#include <zircon/syscalls/smc.h>
 
 #include "astro.h"
 
@@ -29,6 +30,13 @@ static const pbus_bti_t astro_tee_btis[] = {
     },
 };
 
+static const pbus_smc_t astro_tee_smcs[] = {
+    {
+        .service_call_num_base = ARM_SMC_SERVICE_CALL_NUM_TRUSTED_OS_BASE,
+        .count = ARM_SMC_SERVICE_CALL_NUM_TRUSTED_OS_LENGTH,
+    },
+};
+
 static const pbus_dev_t tee_dev = {
     .name = "tee",
     .vid = PDEV_VID_GENERIC,
@@ -38,6 +46,8 @@ static const pbus_dev_t tee_dev = {
     .mmio_count = countof(astro_tee_mmios),
     .bti_list = astro_tee_btis,
     .bti_count = countof(astro_tee_btis),
+    .smc_list = astro_tee_smcs,
+    .smc_count = countof(astro_tee_smcs),
 };
 
 zx_status_t astro_tee_init(aml_bus_t* bus) {
