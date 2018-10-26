@@ -184,11 +184,11 @@ InputSystem::InputSystem(SystemContext context, gfx::GfxSystem* gfx_system)
   gfx_system_->AddInitClosure([this]() {
     SetToInitialized();
 
-    text_sync_service_.set_error_handler(
-        [] { FXL_LOG(ERROR) << "Scenic lost connection to TextSync"; });
     text_sync_service_ = this->context()
                              ->app_context()
                              ->ConnectToEnvironmentService<ImeService>();
+    text_sync_service_.set_error_handler(
+        [] { FXL_LOG(ERROR) << "Scenic lost connection to TextSync"; });
 
     FXL_LOG(INFO) << "Scenic input system initialized.";
   });
@@ -383,7 +383,8 @@ void InputCommandDispatcher::DispatchCommand(
   }
 }
 
-void InputCommandDispatcher::DispatchCommand(const SetParallelDispatchCmd command) {
+void InputCommandDispatcher::DispatchCommand(
+    const SetParallelDispatchCmd command) {
   FXL_LOG(INFO) << "Scenic: Parallel dispatch is turned "
                 << (command.parallel_dispatch ? "ON" : "OFF");
   parallel_dispatch_ = command.parallel_dispatch;
