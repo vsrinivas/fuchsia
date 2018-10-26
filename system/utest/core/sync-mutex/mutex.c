@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
-#include <lib/sync/mtx.h>
+#include <lib/sync/mutex.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,7 +15,7 @@
 #include <zircon/time.h>
 #include <zircon/types.h>
 
-static sync_mtx_t g_mutex = SYNC_MTX_INIT;
+static sync_mutex_t g_mutex = SYNC_MUTEX_INIT;
 
 static void xlog(const char* str) {
     zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
@@ -27,9 +27,9 @@ static int mutex_thread_1(void* arg) {
     xlog("thread 1 started\n");
 
     for (int times = 0; times < 300; times++) {
-        sync_mtx_lock(&g_mutex);
+        sync_mutex_lock(&g_mutex);
         zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
-        sync_mtx_unlock(&g_mutex);
+        sync_mutex_unlock(&g_mutex);
     }
 
     xlog("thread 1 done\n");
@@ -40,9 +40,9 @@ static int mutex_thread_2(void* arg) {
     xlog("thread 2 started\n");
 
     for (int times = 0; times < 150; times++) {
-        sync_mtx_lock(&g_mutex);
+        sync_mutex_lock(&g_mutex);
         zx_nanosleep(zx_deadline_after(ZX_USEC(2)));
-        sync_mtx_unlock(&g_mutex);
+        sync_mutex_unlock(&g_mutex);
     }
 
     xlog("thread 2 done\n");
@@ -53,9 +53,9 @@ static int mutex_thread_3(void* arg) {
     xlog("thread 3 started\n");
 
     for (int times = 0; times < 100; times++) {
-        sync_mtx_lock(&g_mutex);
+        sync_mutex_lock(&g_mutex);
         zx_nanosleep(zx_deadline_after(ZX_USEC(3)));
-        sync_mtx_unlock(&g_mutex);
+        sync_mutex_unlock(&g_mutex);
     }
 
     xlog("thread 3 done\n");
@@ -72,11 +72,11 @@ static int mutex_try_thread_1(void* arg) TA_NO_THREAD_SAFETY_ANALYSIS {
     xlog("thread 1 started\n");
 
     for (int times = 0; times < 300 || !got_lock_1; times++) {
-        zx_status_t status = sync_mtx_trylock(&g_mutex);
+        zx_status_t status = sync_mutex_trylock(&g_mutex);
         zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
         if (status == ZX_OK) {
             got_lock_1 = true;
-            sync_mtx_unlock(&g_mutex);
+            sync_mutex_unlock(&g_mutex);
         }
     }
 
@@ -88,11 +88,11 @@ static int mutex_try_thread_2(void* arg) TA_NO_THREAD_SAFETY_ANALYSIS {
     xlog("thread 2 started\n");
 
     for (int times = 0; times < 150 || !got_lock_2; times++) {
-        zx_status_t status = sync_mtx_trylock(&g_mutex);
+        zx_status_t status = sync_mutex_trylock(&g_mutex);
         zx_nanosleep(zx_deadline_after(ZX_USEC(2)));
         if (status == ZX_OK) {
             got_lock_2 = true;
-            sync_mtx_unlock(&g_mutex);
+            sync_mutex_unlock(&g_mutex);
         }
     }
 
@@ -104,11 +104,11 @@ static int mutex_try_thread_3(void* arg) TA_NO_THREAD_SAFETY_ANALYSIS {
     xlog("thread 3 started\n");
 
     for (int times = 0; times < 100 || !got_lock_3; times++) {
-        zx_status_t status = sync_mtx_trylock(&g_mutex);
+        zx_status_t status = sync_mutex_trylock(&g_mutex);
         zx_nanosleep(zx_deadline_after(ZX_USEC(3)));
         if (status == ZX_OK) {
             got_lock_3 = true;
-            sync_mtx_unlock(&g_mutex);
+            sync_mutex_unlock(&g_mutex);
         }
     }
 
@@ -151,21 +151,21 @@ static bool test_try_mutexes(void) {
 }
 
 typedef struct {
-    sync_mtx_t mutex;
+    sync_mutex_t mutex;
     zx_handle_t start_event;
     zx_handle_t done_event;
 } timeout_args;
 
 static int test_timeout_helper(void* ctx) TA_NO_THREAD_SAFETY_ANALYSIS {
     timeout_args* args = ctx;
-    sync_mtx_lock(&args->mutex);
+    sync_mutex_lock(&args->mutex);
     // Inform the main thread that we have acquired the lock.
     ASSERT_EQ(zx_object_signal(args->start_event, 0, ZX_EVENT_SIGNALED), ZX_OK,
               "failed to signal");
     // Wait until the main thread has completed its test.
     ASSERT_EQ(zx_object_wait_one(args->done_event, ZX_EVENT_SIGNALED, ZX_TIME_INFINITE, NULL),
               ZX_OK, "failed to wait");
-    sync_mtx_unlock(&args->mutex);
+    sync_mutex_unlock(&args->mutex);
     return 0;
 }
 
@@ -175,7 +175,7 @@ static bool test_timeout_elapsed(void) {
     const zx_duration_t kRelativeDeadline = ZX_MSEC(100);
 
     timeout_args args;
-    args.mutex = SYNC_MTX_INIT;
+    args.mutex = SYNC_MUTEX_INIT;
     ASSERT_EQ(zx_event_create(0, &args.start_event), ZX_OK, "could not create event");
     ASSERT_EQ(zx_event_create(0, &args.done_event), ZX_OK, "could not create event");
 
@@ -187,7 +187,7 @@ static bool test_timeout_elapsed(void) {
 
     for (int i = 0; i < 5; ++i) {
         zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
-        zx_status_t status = sync_mtx_timedlock(&args.mutex, now + kRelativeDeadline);
+        zx_status_t status = sync_mutex_timedlock(&args.mutex, now + kRelativeDeadline);
         ASSERT_EQ(status, ZX_ERR_TIMED_OUT, "wait should time out");
         zx_duration_t elapsed = zx_time_sub_time(zx_clock_get(ZX_CLOCK_MONOTONIC), now);
         EXPECT_GE(elapsed, kRelativeDeadline, "wait returned early");
@@ -204,11 +204,11 @@ static bool test_timeout_elapsed(void) {
     END_TEST;
 }
 
-BEGIN_TEST_CASE(sync_mtx_tests)
+BEGIN_TEST_CASE(sync_mutex_tests)
 RUN_TEST(test_mutexes)
 RUN_TEST(test_try_mutexes)
 RUN_TEST(test_timeout_elapsed)
-END_TEST_CASE(sync_mtx_tests)
+END_TEST_CASE(sync_mutex_tests)
 
 #ifndef BUILD_COMBINED_TESTS
 int main(int argc, char** argv) {

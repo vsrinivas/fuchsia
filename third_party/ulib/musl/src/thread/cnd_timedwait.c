@@ -2,7 +2,7 @@
 
 #include <errno.h>
 
-#include <lib/sync/mtx.h>
+#include <lib/sync/mutex.h>
 
 #include "futex_impl.h"
 #include "libc.h"
@@ -22,7 +22,7 @@ enum {
 
 int cnd_timedwait(cnd_t* restrict c, mtx_t* restrict mutex,
                   const struct timespec* restrict ts) __TA_NO_THREAD_SAFETY_ANALYSIS {
-    sync_mtx_t* m = (sync_mtx_t*)mutex;
+    sync_mutex_t* m = (sync_mutex_t*)mutex;
     int e, clock = c->_c_clock, oldstate;
 
     if (ts && ts->tv_nsec >= 1000000000UL)
@@ -47,11 +47,11 @@ int cnd_timedwait(cnd_t* restrict c, mtx_t* restrict mutex,
 
     unlock(&c->_c_lock);
 
-    sync_mtx_unlock(m);
+    sync_mutex_unlock(m);
 
     /* Wait to be signaled.  There are multiple ways this loop could exit:
      *  1) After being woken by __private_cond_signal().
-     *  2) After being woken by sync_mtx_unlock(), after we were
+     *  2) After being woken by sync_mutex_unlock(), after we were
      *     requeued from the condvar's futex to the mutex's futex (by
      *     cnd_timedwait() in another thread).
      *  3) After a timeout.
@@ -113,12 +113,12 @@ int cnd_timedwait(cnd_t* restrict c, mtx_t* restrict mutex,
      * There are two reasons for that:
      *  1) If we do the unlock_requeue() below, a condvar waiter will be
      *     requeued to the mutex's futex.  We need to ensure that it will
-     *     be signaled by sync_mtx_unlock() in future.
+     *     be signaled by sync_mutex_unlock() in future.
      *  2) If the current thread was woken via an unlock_requeue() +
-     *     sync_mtx_unlock(), there *might* be another thread waiting for
+     *     sync_mutex_unlock(), there *might* be another thread waiting for
      *     the mutex after us in the queue.  We need to ensure that it
-     *     will be signaled by sync_mtx_unlock() in future. */
-    sync_mtx_lock_with_waiter(m);
+     *     will be signaled by sync_mutex_unlock() in future. */
+    sync_mutex_lock_with_waiter(m);
 
     /* By this point, our part of the waiter list cannot change further.
      * It has been unlinked from the condvar by __private_cond_signal().

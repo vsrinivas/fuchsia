@@ -11,9 +11,9 @@ MODULE_TYPE := usertest
 MODULE_USERTEST_GROUP := ddk
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/cnd.cpp \
+    $(LOCAL_DIR)/mutex.c \
 
-MODULE_NAME := sync-cnd-test
+MODULE_NAME := sync-mutex-test
 
 MODULE_STATIC_LIBS := \
     system/ulib/sync \

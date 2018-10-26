@@ -11,9 +11,9 @@ MODULE_TYPE := usertest
 MODULE_USERTEST_GROUP := ddk
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/mtx.c \
+    $(LOCAL_DIR)/condition.cpp \
 
-MODULE_NAME := sync-mtx-test
+MODULE_NAME := sync-condition-test
 
 MODULE_STATIC_LIBS := \
     system/ulib/sync \

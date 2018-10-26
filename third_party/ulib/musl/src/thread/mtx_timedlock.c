@@ -1,5 +1,5 @@
 #include <zircon/syscalls.h>
-#include <lib/sync/mtx.h>
+#include <lib/sync/mutex.h>
 #include <threads.h>
 
 #include "time_conversion.h"
@@ -10,7 +10,7 @@ int mtx_timedlock(mtx_t* restrict m, const struct timespec* restrict ts) {
     if (ret)
         return ret == ETIMEDOUT ? thrd_timedout : thrd_error;
 
-    zx_status_t status = sync_mtx_timedlock((sync_mtx_t*)&m->__i, deadline);
+    zx_status_t status = sync_mutex_timedlock((sync_mutex_t*)&m->__i, deadline);
     switch (status) {
     default:
         return thrd_error;

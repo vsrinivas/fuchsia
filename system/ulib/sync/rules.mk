@@ -10,9 +10,9 @@ MODULE_TYPE := userlib
 MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/cnd.cpp \
     $(LOCAL_DIR)/completion.c \
-    $(LOCAL_DIR)/mtx.c \
+    $(LOCAL_DIR)/condition.cpp \
+    $(LOCAL_DIR)/mutex.c \
 
 MODULE_LIBS := \
     system/ulib/zircon \

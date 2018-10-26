@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_SYNC_INTERNAL_CONDVAR_TEMPLATE_H_
-#define LIB_SYNC_INTERNAL_CONDVAR_TEMPLATE_H_
+#ifndef LIB_SYNC_INTERNAL_CONDITION_TEMPLATE_H_
+#define LIB_SYNC_INTERNAL_CONDITION_TEMPLATE_H_
 
 #include <zircon/syscalls.h>
 #include <lib/sync/completion.h>
-#include <lib/sync/mtx.h>
+#include <lib/sync/mutex.h>
 
-namespace condvar_impl_internal {
+namespace condition_impl_internal {
 
 // A template implementation of a condition variable.
 // The algorithm is borrowed from MUSL.
 //
-// The 'Condvar' struct must contain the following fields:
+// The 'Condition' struct must contain the following fields:
 //      int lock;
 //      void* head;
 //      void* tail;
@@ -97,15 +97,15 @@ struct Waiter {
 //      - ZX_ERR_BAD_STATE if there was an error locking the mutex.
 //        In this case, |mutex_lock_err|, if not null, will be populated with an error code
 //        provided by the mutex implementation.
-template <typename Condvar, typename Mutex>
-static inline zx_status_t timedwait(Condvar* c, Mutex* mutex, zx_time_t deadline,
+template <typename Condition, typename Mutex>
+static inline zx_status_t timedwait(Condition* c, Mutex* mutex, zx_time_t deadline,
                                     int* mutex_lock_err)
     __TA_NO_THREAD_SAFETY_ANALYSIS {
-    sync_mtx_lock(reinterpret_cast<sync_mtx_t*>(&c->lock));
+    sync_mutex_lock(reinterpret_cast<sync_mutex_t*>(&c->lock));
 
     Waiter node;
 
-    // Add our waiter node onto the condvar's list.  We add the node to the
+    // Add our waiter node onto the condition's list.  We add the node to the
     // head of the list, but this is logically the end of the queue.
     node.next = static_cast<Waiter*>(c->head);
     c->head = &node;
@@ -115,14 +115,14 @@ static inline zx_status_t timedwait(Condvar* c, Mutex* mutex, zx_time_t deadline
         node.next->prev = &node;
     }
 
-    sync_mtx_unlock(reinterpret_cast<sync_mtx_t*>(&c->lock));
+    sync_mutex_unlock(reinterpret_cast<sync_mutex_t*>(&c->lock));
 
     MutexOps<Mutex>::unlock(mutex);
 
     // Wait to be signaled.  There are multiple ways this wait could finish:
     //  1) After being woken by signal().
     //  2) After being woken by a mutex unlock, after we were
-    //     requeued from the condvar's futex to the mutex's futex (by
+    //     requeued from the condition's futex to the mutex's futex (by
     //     timedwait() in another thread).
     //  3) After a timeout.
     // In the original Linux version of this algorithm, this could also exit
@@ -143,7 +143,7 @@ static inline zx_status_t timedwait(Condvar* c, Mutex* mutex, zx_time_t deadline
         // after seeing a LEAVING waiter without getting notified
         // via the futex notify below.
 
-        sync_mtx_lock(reinterpret_cast<sync_mtx_t*>(&c->lock));
+        sync_mutex_lock(reinterpret_cast<sync_mutex_t*>(&c->lock));
 
         // Remove our waiter node from the list.
         if (c->head == &node) {
@@ -158,7 +158,7 @@ static inline zx_status_t timedwait(Condvar* c, Mutex* mutex, zx_time_t deadline
             node.next->prev = node.prev;
         }
 
-        sync_mtx_unlock(reinterpret_cast<sync_mtx_t*>(&c->lock));
+        sync_mutex_unlock(reinterpret_cast<sync_mutex_t*>(&c->lock));
 
         // It is possible that signal() saw our waiter node after we set
         // node.state to LEAVING but before we removed the node from the
@@ -191,7 +191,7 @@ static inline zx_status_t timedwait(Condvar* c, Mutex* mutex, zx_time_t deadline
     sync_completion_wait_deadline(&node.ready, ZX_TIME_INFINITE);
 
     // By this point, our part of the waiter list cannot change further.
-    // It has been unlinked from the condvar by signal().
+    // It has been unlinked from the condition by signal().
     // Any timed out waiters would have removed themselves from the list
     // before signal() signaled the first node.ready in our list.
     //
@@ -211,7 +211,7 @@ static inline zx_status_t timedwait(Condvar* c, Mutex* mutex, zx_time_t deadline
     // We must leave the mutex in the "locked with waiters" state here
     // (or adjust its waiter count, depending on the implementation).
     // There are two reasons for that:
-    //  1) If we do the unlock_requeue() below, a condvar waiter will be
+    //  1) If we do the unlock_requeue() below, a condition waiter will be
     //     requeued to the mutex's futex.  We need to ensure that it will
     //     be signaled by mutex unlock() in future.
     //  2) If the current thread was woken via an unlock_requeue() +
@@ -232,16 +232,16 @@ static inline zx_status_t timedwait(Condvar* c, Mutex* mutex, zx_time_t deadline
     return status;
 }
 
-// This will wake up to |n| threads that are waiting on the condvar,
+// This will wake up to |n| threads that are waiting on the condition,
 // or all waiting threads if |n| is set to -1
-template <typename Condvar>
-static inline void signal(Condvar* c, int n) {
+template <typename Condition>
+static inline void signal(Condition* c, int n) {
     Waiter* p;
     Waiter* first = nullptr;
     int ref = 0;
     int cur;
 
-    sync_mtx_lock(reinterpret_cast<sync_mtx_t*>(&c->lock));
+    sync_mutex_lock(reinterpret_cast<sync_mutex_t*>(&c->lock));
     for (p = static_cast<Waiter*>(c->tail); n && p; p = p->prev) {
         int oldstate = WAITING;
         if (!cas(&p->state, &oldstate, SIGNALED)) {
@@ -269,7 +269,7 @@ static inline void signal(Condvar* c, int n) {
         c->head = 0;
     }
     c->tail = p;
-    sync_mtx_unlock(reinterpret_cast<sync_mtx_t*>(&c->lock));
+    sync_mutex_unlock(reinterpret_cast<sync_mutex_t*>(&c->lock));
 
     // Wait for any waiters in the LEAVING state to remove
     // themselves from the list before returning or allowing
@@ -284,6 +284,6 @@ static inline void signal(Condvar* c, int n) {
     }
 }
 
-} // namespace condvar_impl_internal
+} // namespace condition_impl_internal
 
-#endif // LIB_SYNC_INTERNAL_CONDVAR_TEMPLATE_H_
+#endif // LIB_SYNC_INTERNAL_CONDITION_TEMPLATE_H_

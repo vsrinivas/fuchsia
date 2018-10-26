@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UTEST_CORE_CONDVAR_GENERIC_CONDVAR_GENERIC_H_
-#define ZIRCON_SYSTEM_UTEST_CORE_CONDVAR_GENERIC_CONDVAR_GENERIC_H_
+#ifndef ZIRCON_SYSTEM_UTEST_CORE_CONDITION_GENERIC_CONDITION_GENERIC_H_
+#define ZIRCON_SYSTEM_UTEST_CORE_CONDITION_GENERIC_CONDITION_GENERIC_H_
 
 #include <sched.h>
 #include <threads.h>
@@ -11,10 +11,10 @@
 
 #include <unittest/unittest.h>
 
-template <typename Mutex, typename Condvar>
-class GenericCondvarTest {
+template <typename Mutex, typename Condition>
+class GenericConditionTest {
 public:
-    static bool cnd_test() {
+    static bool condition_test() {
         BEGIN_TEST;
 
         Context ctx;
@@ -71,10 +71,10 @@ public:
         END_TEST;
     }
 
-    static bool cnd_timeout_test() {
+    static bool condition_timeout_test() {
         BEGIN_TEST;
 
-        Condvar cond;
+        Condition cond;
         Mutex mutex;
 
         mutex.lock();
@@ -89,7 +89,7 @@ public:
  private:
     struct Context {
         Mutex mutex;
-        Condvar cond;
+        Condition cond;
         int threads_waked = 0;
         int threads_started = 0;
         int threads_woke_first_barrier = 0;
@@ -109,4 +109,4 @@ public:
     }
 };
 
-#endif // ZIRCON_SYSTEM_UTEST_CORE_CONDVAR_GENERIC_CONDVAR_GENERIC_H_
+#endif // ZIRCON_SYSTEM_UTEST_CORE_CONDITION_GENERIC_CONDITION_GENERIC_H_
