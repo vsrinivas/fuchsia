@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test.gni")
+import("//build/test/test_package.gni")
 
 # This DFX exists for test purposes, to validate the DFX interface.
 loadable_module("audio_dfx") {
@@ -27,7 +26,7 @@ loadable_module("audio_dfx") {
 }
 
 # This standalone test expects to find a audio_dfx.so in this package.
-test("test_bin") {
+executable("test_bin") {
   testonly = true
   output_name = "audio_dfx_tests"
 
@@ -50,10 +49,7 @@ test("test_bin") {
   ]
 }
 
-package("audio_dfx_tests") {
-  testonly = true
-  deprecated_system_image = true
-
+test_package("audio_dfx_tests") {
   deps = [
     ":audio_dfx",
     ":test_bin",

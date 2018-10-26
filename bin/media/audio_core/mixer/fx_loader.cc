@@ -52,7 +52,11 @@ void FxLoader::ClearExports() {
 //
 // Virtual, can be overridden by children (test fixtures)
 void* FxLoader::OpenLoadableModuleBinary() {
-  return dlopen("audiofx.so", RTLD_LAZY | RTLD_GLOBAL);
+  auto module = dlopen("audiofx.so", RTLD_LAZY | RTLD_GLOBAL);
+  if (module == nullptr) {
+    FXL_LOG(ERROR) << "audiofx.so did not load";
+  }
+  return module;
 }
 
 //
@@ -67,7 +71,6 @@ zx_status_t FxLoader::LoadLibrary() {
 
   fx_lib_ = OpenLoadableModuleBinary();
   if (fx_lib_ == nullptr) {
-    FXL_LOG(ERROR) << "audiofx.so did not load";
     return ZX_ERR_UNAVAILABLE;
   }
 
