@@ -49,7 +49,7 @@ uint32_t log_flags = LOG_ERROR | LOG_INFO;
 bool dc_asan_drivers = false;
 bool dc_launched_first_devhost = false;
 
-static zx_handle_t bootdata_vmo;
+static zx::vmo bootdata_vmo;
 
 static void dc_dump_state();
 static void dc_dump_devprops();
@@ -364,10 +364,11 @@ static zx_status_t libname_to_vmo(const char* libname, zx::vmo* out_vmo) {
     }
 }
 
-void devmgr_set_bootdata(zx_handle_t vmo) {
-    if (bootdata_vmo == ZX_HANDLE_INVALID) {
-        zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &bootdata_vmo);
+void devmgr_set_bootdata(const zx::unowned_vmo vmo) {
+    if (bootdata_vmo.is_valid()) {
+        return;
     }
+    vmo->duplicate(ZX_RIGHT_SAME_RIGHTS, &bootdata_vmo);
 }
 
 static void dc_dump_device(const Device* dev, size_t indent) {
@@ -1704,35 +1705,36 @@ static zx_status_t dc_prepare_proxy(Device* dev) {
 
     // if this device has no devhost, first instantiate it
     if (dev->proxy->host == nullptr) {
-        zx_handle_t h0 = ZX_HANDLE_INVALID, h1 = ZX_HANDLE_INVALID;
+        zx::channel h0;
+        // May be either a VMO or a channel.
+        zx::handle h1;
 
         // the immortal root devices do not provide proxy rpc
         bool need_proxy_rpc = !(dev->flags & DEV_CTX_IMMORTAL);
 
         if (need_proxy_rpc) {
             // create rpc channel for proxy device to talk to the busdev it proxys
-            if ((r = zx_channel_create(0, &h0, &h1)) < 0) {
+            zx::channel c1;
+            if ((r = zx::channel::create(0, &h0, &c1)) < 0) {
                 log(ERROR, "devcoord: cannot create proxy rpc channel: %d\n", r);
                 return r;
             }
+            h1 = fbl::move(c1);
         } else if (dev == &sys_device) {
             // pass bootdata VMO handle to sys device
-            h1 = bootdata_vmo;
+            h1 = fbl::move(bootdata_vmo);
         }
         if ((r = dc_new_devhost(devhostname, dev->host,
                                 &dev->proxy->host)) < 0) {
             log(ERROR, "devcoord: dc_new_devhost: %d\n", r);
-            zx_handle_close(h0);
-            zx_handle_close(h1);
             return r;
         }
-        if ((r = dh_create_device(dev->proxy, dev->proxy->host, arg1, h1)) < 0) {
+        if ((r = dh_create_device(dev->proxy, dev->proxy->host, arg1, h1.release())) < 0) {
             log(ERROR, "devcoord: dh_create_device: %d\n", r);
-            zx_handle_close(h0);
             return r;
         }
         if (need_proxy_rpc) {
-            if ((r = dh_connect_proxy(dev, h0)) < 0) {
+            if ((r = dh_connect_proxy(dev, h0.release())) < 0) {
                 log(ERROR, "devcoord: dh_connect_proxy: %d\n", r);
             }
         }

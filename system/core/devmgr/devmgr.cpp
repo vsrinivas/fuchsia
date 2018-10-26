@@ -742,7 +742,7 @@ void fshost_start() {
     for (uint32_t m = 0; n < MAXHND; m++) {
         uint32_t type = PA_HND(PA_VMO_BOOTDATA, m);
         if ((handles[n] = zx_take_startup_handle(type)) != ZX_HANDLE_INVALID) {
-            devmgr_set_bootdata(handles[n]);
+            devmgr_set_bootdata(zx::unowned_vmo(handles[n]));
             types[n++] = type;
         } else {
             break;

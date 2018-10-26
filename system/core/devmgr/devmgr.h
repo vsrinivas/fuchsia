@@ -10,6 +10,7 @@
 #include <launchpad/launchpad.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
+#include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 #include <zircon/device/vfs.h>
@@ -23,7 +24,7 @@ void devfs_init(const zx::job& root_job);
 void devmgr_io_init();
 void devmgr_svc_init();
 void devmgr_vfs_init();
-void devmgr_set_bootdata(zx_handle_t vmo);
+void devmgr_set_bootdata(zx::unowned_vmo vmo);
 
 zx_handle_t devmgr_load_file(const char* path, uint32_t* out_size);
 
