@@ -199,6 +199,19 @@ static bool TestBasics() {
     END_TEST;
 }
 
+static bool TestInvalidRights() {
+    BEGIN_TEST;
+    zxr_thread_t thread;
+    zx_handle_t ro_process_h;
+
+    ASSERT_EQ(zx_handle_duplicate(zx_process_self(), ZX_RIGHT_DESTROY, &ro_process_h), ZX_OK);
+    ASSERT_EQ(zxr_thread_create(ro_process_h, "test_thread", false, &thread),
+              ZX_ERR_ACCESS_DENIED);
+
+    ASSERT_EQ(zx_handle_close(ro_process_h), ZX_OK);
+    END_TEST;
+}
+
 static bool TestDetach() {
     BEGIN_TEST;
     zxr_thread_t thread;
@@ -1533,6 +1546,7 @@ static bool TestDebugRegistersValidation() {
 
 BEGIN_TEST_CASE(threads_tests)
 RUN_TEST(TestBasics)
+RUN_TEST(TestInvalidRights)
 RUN_TEST(TestDetach)
 RUN_TEST(TestLongNameSucceeds)
 RUN_TEST(TestThreadStartOnInitialThread)

@@ -36,7 +36,7 @@ For thread lifecycle details see [thread object](../objects/thread.md).
 
 <!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
 
-*process* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_WRITE**.
+*process* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_MANAGE_THREAD**.
 
 ## RETURN VALUE
 
@@ -49,6 +49,8 @@ returned.
 **ZX_ERR_BAD_HANDLE**  *process* is not a valid handle.
 
 **ZX_ERR_WRONG_TYPE**  *process* is not a process handle.
+
+**ZX_ERR_ACCESS_DENIED**  *process* does not have the **ZX_RIGHT_MANAGE_THREAD** right.
 
 **ZX_ERR_INVALID_ARGS**  *name* or *out* was an invalid pointer, or *options* was
 non-zero.
