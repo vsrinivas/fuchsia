@@ -17,6 +17,9 @@ extern "C" {
 
 #define MAGMA_QUERY_VENDOR_PARAM_0 10000
 
+// reserved ID to represent an invalid object
+#define MAGMA_INVALID_OBJECT_ID 0ull
+
 // possible values for magma_status_t
 #define MAGMA_STATUS_OK (0)
 #define MAGMA_STATUS_INTERNAL_ERROR (-1)

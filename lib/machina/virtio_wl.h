@@ -16,11 +16,14 @@
 #include <zircon/types.h>
 
 #include "garnet/lib/machina/virtio_device.h"
+#include "garnet/lib/machina/virtio_magma.h"
 #include "garnet/lib/machina/virtio_queue_waiter.h"
 
 #define VIRTWL_VQ_IN 0
 #define VIRTWL_VQ_OUT 1
-#define VIRTWL_QUEUE_COUNT 2
+#define VIRTWL_VQ_MAGMA_IN 2
+#define VIRTWL_VQ_MAGMA_OUT 3
+#define VIRTWL_QUEUE_COUNT 4
 #define VIRTWL_NEXT_VFD_ID_BASE (1 << 31)
 #define VIRTWL_VFD_ID_HOST_MASK VIRTWL_NEXT_VFD_ID_BASE
 
@@ -81,6 +84,7 @@ class VirtioWl : public VirtioInprocessDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
            async_dispatcher_t* dispatcher,
            fuchsia::guest::WaylandDispatcher* wl_dispatcher);
   ~VirtioWl() override = default;
+  zx_status_t OnDeviceReady(uint32_t negotiated_features);
 
   VirtioQueue* in_queue() { return queue(VIRTWL_VQ_IN); }
   VirtioQueue* out_queue() { return queue(VIRTWL_VQ_OUT); }
@@ -126,6 +130,7 @@ class VirtioWl : public VirtioInprocessDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
   std::unordered_map<uint32_t, std::unique_ptr<Vfd>> vfds_;
   std::unordered_map<uint32_t, zx_signals_t> ready_vfds_;
   uint32_t next_vfd_id_ = VIRTWL_NEXT_VFD_ID_BASE;
+  std::unique_ptr<VirtioMagma> magma_;
 };
 
 }  // namespace machina

@@ -30,13 +30,22 @@ static constexpr bool kDebug = MAGMA_DEBUG_INTERNAL_USE_ONLY;
         }                                                                                          \
     } while (0)
 
+#define DMESSAGE(...)                                                                              \
+    do {                                                                                           \
+        if (magma::kDebug) {                                                                       \
+            printf("%s:%d ", __FILE__, __LINE__);                                                  \
+            printf(__VA_ARGS__);                                                                   \
+        }                                                                                          \
+    } while (0)
+
 static constexpr bool kMagmaDretEnable = kDebug;
 
 template <typename T>
 __attribute__((format(printf, 4, 5))) static inline T dret(const char* file, int line, T ret,
                                                            const char* msg, ...)
 {
-    printf("%s:%d returning error %d", file, line, ret);
+    printf(sizeof(T) == sizeof(uint64_t) ? "%s:%d returning error %lu" : "%s:%d returning error %d",
+           file, line, ret);
     if (msg) {
         va_list args;
         va_start(args, msg);

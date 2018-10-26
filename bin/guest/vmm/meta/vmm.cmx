@@ -7,6 +7,10 @@
             "class/ethernet",
             "misc"
         ],
+        "TODO(MAC-173)": "remove vulkan feature once virtio-magma is out of proc",
+        "features": [
+            "vulkan"
+        ],
         "services": [
             "fuchsia.guest.vmm.LaunchInfoProvider",
             "fuchsia.sys.Environment",

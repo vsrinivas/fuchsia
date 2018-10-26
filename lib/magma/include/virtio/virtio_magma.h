@@ -368,8 +368,8 @@ typedef struct virtio_magma_execute_immediate_commands {
     virtio_magma_ctrl_hdr_t hdr;
     uint64_t connection;
     uint64_t command_count;
+    uint64_t commands; // magma_system_inline_command_buffer[command_count]
     uint32_t context_id;
-    uint8_t data[0]; // magma_system_inline_command_buffer[command_count]
 } __PACKED virtio_magma_execute_immediate_commands_t;
 
 typedef struct virtio_magma_execute_immediate_commands_resp {
@@ -428,10 +428,10 @@ typedef struct virtio_magma_reset_semaphore_resp {
 typedef struct virtio_magma_wait_semaphores {
     virtio_magma_ctrl_hdr_t hdr;
     uint64_t timeout_ms;
+    uint64_t semaphores; // magma_semaphore_t[count]
     uint32_t count;
     uint32_t status_return;
     uint8_t wait_all;
-    uint8_t data[0]; // magma_semaphore_t[count]
 } __PACKED virtio_magma_wait_semaphores_t;
 
 typedef struct virtio_magma_wait_semaphores_resp {
@@ -487,4 +487,4 @@ typedef struct virtio_magma_read_notification_channel_resp {
 
 __END_CDECLS
 
-#endif  // GARNET_LIB_MAGMA_INCLUDE_VIRTIO_VIRTIO_MAGMA_H_
+#endif // GARNET_LIB_MAGMA_INCLUDE_VIRTIO_VIRTIO_MAGMA_H_

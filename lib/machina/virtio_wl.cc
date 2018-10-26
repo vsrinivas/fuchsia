@@ -162,15 +162,30 @@ class Pipe : public VirtioWl::Vfd {
 
 }  // namespace
 
+#define VIRTIO_WL_F_MAGMA (1u << 1)
+
 VirtioWl::VirtioWl(const PhysMem& phys_mem, zx::vmar vmar,
                    async_dispatcher_t* dispatcher,
                    fuchsia::guest::WaylandDispatcher* wl_dispatcher)
-    : VirtioInprocessDevice(phys_mem, VIRTIO_WL_F_TRANS_FLAGS),
+    : VirtioInprocessDevice(
+          phys_mem, VIRTIO_WL_F_TRANS_FLAGS | VIRTIO_WL_F_MAGMA,
+          noop_config_device, fit::bind_member(this, &VirtioWl::OnDeviceReady)),
       vmar_(std::move(vmar)),
       dispatcher_(dispatcher),
       wl_dispatcher_(wl_dispatcher),
       in_queue_wait_(dispatcher_, in_queue(),
                      fit::bind_member(this, &VirtioWl::OnQueueReady)) {}
+
+zx_status_t VirtioWl::OnDeviceReady(uint32_t negotiated_features) {
+  if (negotiated_features & VIRTIO_WL_F_MAGMA) {
+    FXL_LOG(INFO) << "driver advertised magma support";
+    magma_ = std::make_unique<VirtioMagma>(&vmar_, dispatcher_,
+                                           queue(VIRTWL_VQ_MAGMA_IN),
+                                           queue(VIRTWL_VQ_MAGMA_OUT));
+    return magma_->Init("/dev/class/gpu/000");
+  }
+  return ZX_OK;
+}
 
 zx_status_t VirtioWl::Init() {
   out_queue_wait_.set_object(out_queue()->event());
