@@ -7,6 +7,7 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/metadata.h>
+#include <ddk/metadata/gpt.h>
 #include <ddk/protocol/block.h>
 
 #include <assert.h>
@@ -24,8 +25,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <zircon/hw/gpt.h>
-
 typedef gpt_header_t gpt_t;
 
 #define TXN_SIZE 0x4000 // 128 partition entries
@@ -36,11 +35,6 @@ typedef struct guid {
     uint16_t data3;
     uint8_t data4[8];
 } guid_t;
-
-typedef struct guid_map {
-    char name[GPT_NAME_LEN];
-    uint8_t guid[GPT_GUID_LEN];
-} guid_map_t;
 
 typedef struct gptpart_device {
     zx_device_t* zxdev;

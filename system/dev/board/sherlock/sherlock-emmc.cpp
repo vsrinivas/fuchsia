@@ -5,6 +5,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
+#include <ddk/metadata/gpt.h>
 #include <ddktl/mmio.h>
 #include <ddk/platform-defs.h>
 #include <fbl/optional.h>
@@ -55,12 +56,24 @@ static aml_sd_emmc_config_t config = {
     .max_freq = 120000000,
 };
 
+static const guid_map_t guid_map[] = {
+    { "boot", GUID_ZIRCON_A_VALUE },
+    { "recovery", GUID_ZIRCON_R_VALUE },
+    { "cache", GUID_FVM_VALUE }
+};
+static_assert(sizeof(guid_map) / sizeof(guid_map[0]) <= DEVICE_METADATA_GUID_MAP_MAX_ENTRIES);
+
 static const pbus_metadata_t emmc_metadata[] = {
     {
         .type       = DEVICE_METADATA_PRIVATE,
         .data_buffer       = &config,
         .data_size        = sizeof(config),
     },
+    {
+        .type = DEVICE_METADATA_GUID_MAP,
+        .data_buffer = guid_map,
+        .data_size = sizeof(guid_map),
+    }
 };
 
 static const pbus_boot_metadata_t emmc_boot_metadata[] = {

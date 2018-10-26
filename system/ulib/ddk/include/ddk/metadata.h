@@ -39,7 +39,7 @@ static_assert(DEVICE_METADATA_PARTITION_MAP == ZBI_TYPE_DRV_PARTITION_MAP, "");
 #define DEVICE_METADATA_INTERRUPT_CONTROLLER_TYPE 0x43544E49 // INTC
 
 // GUID map (for GPT driver)
-// type: array of struct { char[GPT_NAME_LEN], uint8_t[GPT_GUID_LEN] }
+// type: array of guid_map_t
 #define DEVICE_METADATA_GUID_MAP                  0x44495547 // GUID
 #define DEVICE_METADATA_GUID_MAP_MAX_ENTRIES      8
 

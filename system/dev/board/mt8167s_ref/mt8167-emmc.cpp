@@ -5,20 +5,15 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
+#include <ddk/metadata/gpt.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-bus.h>
-#include <zircon/hw/gpt.h>
 
 #include <soc/mt8167/mt8167-hw.h>
 
 #include "mt8167.h"
 
 namespace board_mt8167 {
-
-struct GuidMap {
-    const char name[GPT_NAME_LEN];
-    const uint8_t guid[GPT_GUID_LEN];
-};
 
 zx_status_t Mt8167::EmmcInit() {
     const pbus_mmio_t emmc_mmios[] = {
@@ -37,7 +32,7 @@ zx_status_t Mt8167::EmmcInit() {
 
     static uint32_t msdc_fifo_depth = 128;
 
-    static const GuidMap guid_map[] = {
+    static const guid_map_t guid_map[] = {
         { "boot_a", GUID_ZIRCON_A_VALUE },
         { "boot_b", GUID_ZIRCON_B_VALUE },
         { "userdata", GUID_FVM_VALUE }
