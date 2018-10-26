@@ -474,33 +474,33 @@ static void dc_dump_drivers() {
 static void dc_handle_new_device(device_t* dev);
 static void dc_handle_new_driver();
 
-static fbl::DoublyLinkedList<dc_work*, dc_work::Node> list_pending_work;
+static fbl::DoublyLinkedList<Work*, Work::Node> list_pending_work;
 
-static void queue_work(work_t* work, dc_work::Op op, uint32_t arg) {
-    ZX_ASSERT(work->op == dc_work::Op::kIdle);
+static void queue_work(Work* work, Work::Op op, uint32_t arg) {
+    ZX_ASSERT(work->op == Work::Op::kIdle);
     work->op = op;
     work->arg = arg;
     list_pending_work.push_back(work);
 }
 
-static void cancel_work(work_t* work) {
-    if (work->op != dc_work::Op::kIdle) {
+static void cancel_work(Work* work) {
+    if (work->op != Work::Op::kIdle) {
         list_pending_work.erase(*work);
-        work->op = dc_work::Op::kIdle;
+        work->op = Work::Op::kIdle;
     }
 }
 
-static void process_work(work_t* work) {
-    dc_work::Op op = work->op;
-    work->op = dc_work::Op::kIdle;
+static void process_work(Work* work) {
+    Work::Op op = work->op;
+    work->op = Work::Op::kIdle;
 
     switch (op) {
-    case dc_work::Op::kDeviceAdded: {
+    case Work::Op::kDeviceAdded: {
         device_t* dev = containerof(work, device_t, work);
         dc_handle_new_device(dev);
         break;
     }
-    case dc_work::Op::kDriverAdded: {
+    case Work::Op::kDriverAdded: {
         dc_handle_new_driver();
         break;
     }
@@ -893,7 +893,7 @@ static zx_status_t dc_add_device(device_t* parent, zx_handle_t hrpc,
 
     if (!invisible) {
         dc_notify(dev.get(), DEVMGR_OP_DEVICE_ADDED);
-        queue_work(&dev->work, dc_work::Op::kDeviceAdded, 0);
+        queue_work(&dev->work, Work::Op::kDeviceAdded, 0);
     }
     // TODO(teisenbe/kulakowski): This should go away once we switch to refptrs
     // here
@@ -909,7 +909,7 @@ static zx_status_t dc_make_visible(device_t* dev) {
         dev->flags &= ~DEV_CTX_INVISIBLE;
         devfs_advertise(dev);
         dc_notify(dev, DEVMGR_OP_DEVICE_ADDED);
-        queue_work(&dev->work, dc_work::Op::kDeviceAdded, 0);
+        queue_work(&dev->work, Work::Op::kDeviceAdded, 0);
     }
     return ZX_OK;
 }
@@ -1021,7 +1021,7 @@ static zx_status_t dc_remove_device(device_t* dev, bool forced) {
                         parent, parent->name);
 
                     //TODO: introduce timeout, exponential backoff
-                    queue_work(&parent->work, dc_work::Op::kDeviceAdded, 0);
+                    queue_work(&parent->work, Work::Op::kDeviceAdded, 0);
                 }
             }
         }
@@ -2074,15 +2074,15 @@ static void dc_driver_added_init(driver_t* drv, const char* version) {
     }
 }
 
-static work_t new_driver_work;
+static Work new_driver_work;
 
 // dc_driver_added is called when a driver is added after the
 // devcoordinator has started.  The driver is added to the new-drivers
 // list and work is queued to process it.
 static void dc_driver_added(driver_t* drv, const char* version) {
     list_drivers_new.push_back(drv);
-    if (new_driver_work.op == dc_work::Op::kIdle) {
-        queue_work(&new_driver_work, dc_work::Op::kDriverAdded, 0);
+    if (new_driver_work.op == Work::Op::kIdle) {
+        queue_work(&new_driver_work, Work::Op::kDriverAdded, 0);
     }
 }
 
@@ -2182,8 +2182,8 @@ static zx_status_t dc_control_event(port_handler_t* ph, zx_signals_t signals, ui
             list_drivers_new.push_back(drv);
         }
         // Queue Driver Added work if not already queued
-        if (new_driver_work.op == dc_work::Op::kIdle) {
-            queue_work(&new_driver_work, dc_work::Op::kDriverAdded, 0);
+        if (new_driver_work.op == Work::Op::kIdle) {
+            queue_work(&new_driver_work, Work::Op::kDriverAdded, 0);
         }
         break;
     }

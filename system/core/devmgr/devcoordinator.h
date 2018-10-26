@@ -20,18 +20,17 @@
 
 namespace devmgr {
 
-typedef struct dc_work work_t;
 typedef struct dc_pending pending_t;
 typedef struct dc_devhost devhost_t;
 typedef struct dc_device device_t;
 typedef struct dc_driver driver_t;
 typedef struct dc_devnode devnode_t;
 
-struct dc_work {
-    fbl::DoublyLinkedListNodeState<dc_work*> node;
+struct Work {
+    fbl::DoublyLinkedListNodeState<Work*> node;
     struct Node {
-        static fbl::DoublyLinkedListNodeState<dc_work*>& node_state(
-            dc_work& obj) {
+        static fbl::DoublyLinkedListNodeState<Work*>& node_state(
+            Work& obj) {
             return obj.node;
         }
     };
@@ -128,7 +127,7 @@ struct dc_device {
     const char* name;
     const char* libname;
     fbl::unique_ptr<const char[]> args;
-    work_t work;
+    Work work;
     mutable int32_t refcount_;
     uint32_t protocol_id;
     uint32_t prop_count;
