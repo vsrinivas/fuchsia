@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <zircon/boot/bootdata.h>
 #include <zircon/types.h>
 #include <zircon/compiler.h>
 #include <stdint.h>
@@ -12,8 +13,6 @@
 #include <lib/zx/vmo.h>
 
 namespace devmgr {
-
-typedef struct bootfs_entry bootfs_entry_t;
 
 class Bootfs {
 public:
