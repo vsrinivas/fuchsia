@@ -26,21 +26,21 @@
 
 namespace devmgr {
 
-struct dc_watcher : fbl::DoublyLinkedListable<fbl::unique_ptr<dc_watcher>> {
-    dc_watcher(Devnode* dn, zx::channel ch, uint32_t mask);
+struct Watcher : fbl::DoublyLinkedListable<fbl::unique_ptr<Watcher>> {
+    Watcher(Devnode* dn, zx::channel ch, uint32_t mask);
 
-    dc_watcher(const dc_watcher&) = delete;
-    dc_watcher& operator=(const dc_watcher&) = delete;
+    Watcher(const Watcher&) = delete;
+    Watcher& operator=(const Watcher&) = delete;
 
-    dc_watcher(dc_watcher&&) = delete;
-    dc_watcher& operator=(dc_watcher&&) = delete;
+    Watcher(Watcher&&) = delete;
+    Watcher& operator=(Watcher&&) = delete;
 
     Devnode* devnode = nullptr;
     zx::channel handle;
     uint32_t mask = 0;
 };
 
-dc_watcher::dc_watcher(Devnode* dn, zx::channel ch, uint32_t mask)
+Watcher::Watcher(Devnode* dn, zx::channel ch, uint32_t mask)
     : devnode(dn), handle(fbl::move(ch)), mask(mask) {
 }
 
@@ -81,7 +81,7 @@ struct Devnode {
     // otherwise the device we are referencing
     Device* device = nullptr;
 
-    fbl::DoublyLinkedList<fbl::unique_ptr<dc_watcher>> watchers;
+    fbl::DoublyLinkedList<fbl::unique_ptr<Watcher>> watchers;
 
     // entry in our parent devnode's children list
     list_node_t node = {};
@@ -224,7 +224,7 @@ static bool devnode_is_local(Devnode* dn) {
 // Notify a single watcher about the given operation and path.  On failure,
 // frees the watcher.  This can only be called on a watcher that has not yet
 // been added to a Devnode's watchers list.
-static void devfs_notify_single(fbl::unique_ptr<dc_watcher>* watcher,
+static void devfs_notify_single(fbl::unique_ptr<Watcher>* watcher,
                                 const fbl::String& name, unsigned op) {
     size_t len = name.length();
     if (!*watcher || len > fuchsia_io_MAX_FILENAME) {
@@ -282,13 +282,13 @@ static void devfs_notify(Devnode* dn, const fbl::String& name, unsigned op) {
 
         if (cur.handle.write(0, msg, msg_len, nullptr, 0) != ZX_OK) {
             dn->watchers.erase(cur);
-            // The dc_watcher is free'd here
+            // The Watcher is free'd here
         }
     }
 }
 
 static zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask) {
-    auto watcher = fbl::make_unique<dc_watcher>(dn, fbl::move(h), mask);
+    auto watcher = fbl::make_unique<Watcher>(dn, fbl::move(h), mask);
     if (watcher == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
