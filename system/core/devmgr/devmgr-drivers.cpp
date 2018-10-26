@@ -20,10 +20,11 @@
 
 namespace devmgr {
 
-typedef struct {
+struct AddContext {
     const char* libname;
-    void (*func)(driver_t* drv, const char* version);
-} add_ctx_t;
+    using Func = void(*)(driver_t* drv, const char* version);
+    Func func;
+};
 
 static bool is_driver_disabled(const char* name) {
     // driver.<driver_name>.disable
@@ -34,7 +35,7 @@ static bool is_driver_disabled(const char* name) {
 
 static void found_driver(zircon_driver_note_payload_t* note,
                          const zx_bind_inst_t* bi, void* cookie) {
-    auto ctx = static_cast<add_ctx_t*>(cookie);
+    auto context = static_cast<const AddContext*>(cookie);
 
     // ensure strings are terminated
     note->name[sizeof(note->name) - 1] = 0;
@@ -45,7 +46,7 @@ static void found_driver(zircon_driver_note_payload_t* note,
         return;
     }
 
-    const char* libname = ctx->libname;
+    const char* libname = context->libname;
 
     if ((note->flags & ZIRCON_DRIVER_NOTE_FLAG_ASAN) && !dc_asan_drivers) {
         if (dc_launched_first_devhost) {
@@ -86,7 +87,7 @@ static void found_driver(zircon_driver_note_payload_t* note,
     }
 #endif
 
-    ctx->func(drv.release(), note->version);
+    context->func(drv.release(), note->version);
 }
 
 void find_loadable_drivers(const char* path,
@@ -114,11 +115,8 @@ void find_loadable_drivers(const char* path,
         if ((fd = openat(dirfd(dir), de->d_name, O_RDONLY)) < 0) {
             continue;
         }
-        add_ctx_t ctx = {
-            .libname = libname,
-            .func = func,
-        };
-        zx_status_t status = di_read_driver_info(fd, &ctx, found_driver);
+        AddContext context = { libname, func };
+        zx_status_t status = di_read_driver_info(fd, &context, found_driver);
         close(fd);
 
         if (status) {
@@ -141,11 +139,8 @@ void load_driver(const char* path,
         return;
     }
 
-    add_ctx_t ctx = {
-        .libname = path,
-        .func = func,
-    };
-    zx_status_t status = di_read_driver_info(fd, &ctx, found_driver);
+    AddContext context = { path, func };
+    zx_status_t status = di_read_driver_info(fd, &context, found_driver);
     close(fd);
 
     if (status) {
