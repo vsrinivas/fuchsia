@@ -1,0 +1,29 @@
+{
+  "structures": [
+    {
+      "type": "standard",
+      "transaction_len": 2
+    }
+  ],
+  "services": [{
+    "name": "TEST",
+    "type": "0x42",
+    "message_structure": "standard",
+    "result_structure": "standard",
+    "messages": [
+        {
+          "name": "Test",
+          "type": "0x0120",
+          "version": "1.0",
+          "request": [
+            {
+              "param": "blah",
+              "id": "0x01",
+              "size": 2
+            }
+          ],
+          "response": []
+        }
+    ]
+ }]
+}

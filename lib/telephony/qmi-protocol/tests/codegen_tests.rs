@@ -2,49 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use pretty_assertions::assert_eq;
+use qmigen_lib::{ast, codegen};
 use std::env;
 use std::fs;
 use std::io::BufRead;
 use std::io::Read;
-use qmigen_lib::{ast, codegen};
-use pretty_assertions::assert_eq;
 
 use crate::macros::*;
 mod macros;
 
 #[test]
 fn optional_response() {
-    let source = r#"{
-      "structures": [
-        {
-          "type": "standard",
-          "transaction_len": 2
-        }
-      ],
-      "services": [{
-        "name": "TEST",
-        "type": "0x42",
-        "message_structure": "standard",
-        "result_structure": "standard",
-        "messages": [
-            {
-              "name": "Test",
-              "type": "0x0120",
-              "version": "1.0",
-              "request": [ ],
-              "response": [
-                {
-                  "param": "blah",
-                  "id": "0x01",
-                  "size": 2,
-                  "optional": true
-                }
-              ]
-            }
-        ]
-     }]
-    }"#;
-
+    let source = include_str!("optional_response.test.json");
     let mut output = vec![];
     let mut c = codegen::Codegen::new(&mut output);
     let mut svc_set = ast::ServiceSet::new();
@@ -56,53 +26,12 @@ fn optional_response() {
         }
     }
     let output = String::from_utf8(output).unwrap();
-    eprintln!("{}", output);
-
     assert_eq!(output, include_str!("optional_response.test.rs"))
 }
 
 #[test]
 fn subparam_request() {
-    let source = r#"{
-      "structures": [
-        {
-          "type": "standard",
-          "transaction_len": 2
-        }
-      ],
-      "services": [{
-        "name": "TEST",
-        "type": "0x42",
-        "message_structure": "standard",
-        "result_structure": "standard",
-        "messages": [
-            {
-              "name": "Test",
-              "type": "0x0120",
-              "version": "1.0",
-              "request": [
-                {
-                  "param": "blah",
-                  "id": "0x01",
-                  "size": 2,
-                  "subparams": [
-                    {
-                        "size": 1,
-                        "param": "part_a"
-                    },
-                    {
-                        "size": 1,
-                        "param": "part_b"
-                    }
-                  ]
-                }
-              ],
-              "response": []
-            }
-        ]
-     }]
-    }"#;
-
+    let source = include_str!("subparam_request.test.json");
     let mut output = vec![];
     let mut c = codegen::Codegen::new(&mut output);
     let mut svc_set = ast::ServiceSet::new();
@@ -116,48 +45,10 @@ fn subparam_request() {
     let output = String::from_utf8(output).unwrap();
     assert_eq!(output, include_str!("subparam_request.test.rs"));
 }
+
 #[test]
 fn subparam_response() {
-    let source = r#"{
-      "structures": [
-        {
-          "type": "standard",
-          "transaction_len": 2
-        }
-      ],
-      "services": [{
-        "name": "TEST",
-        "type": "0x42",
-        "message_structure": "standard",
-        "result_structure": "standard",
-        "messages": [
-            {
-              "name": "Test",
-              "type": "0x0120",
-              "version": "1.0",
-              "request": [],
-              "response": [
-                {
-                  "param": "blah",
-                  "id": "0x01",
-                  "size": 2,
-                  "subparams": [
-                    {
-                        "size": 1,
-                        "param": "part_a"
-                    },
-                    {
-                        "size": 1,
-                        "param": "part_b"
-                    }
-                  ]
-                }
-              ]
-            }
-        ]
-     }]
-    }"#;
-
+    let source = include_str!("subparam_response.test.json");
     let mut output = vec![];
     let mut c = codegen::Codegen::new(&mut output);
     let mut svc_set = ast::ServiceSet::new();
@@ -174,35 +65,7 @@ fn subparam_response() {
 
 #[test]
 fn string_request_decode() {
-    let source = r#"{
-      "structures": [
-        {
-          "type": "standard",
-          "transaction_len": 2
-        }
-      ],
-      "services": [{
-        "name": "TEST",
-        "type": "0x42",
-        "message_structure": "standard",
-        "result_structure": "standard",
-        "messages": [
-            {
-              "name": "Test",
-              "type": "0x0120",
-              "version": "1.0",
-              "request": [],
-              "response": [
-                {
-                  "param": "blah",
-                  "id": "0x01"
-                }
-              ]
-            }
-        ]
-     }]
-    }"#;
-
+    let source = include_str!("string_request_decode.test.json");
     let mut output = vec![];
     let mut c = codegen::Codegen::new(&mut output);
     let mut svc_set = ast::ServiceSet::new();
@@ -214,88 +77,29 @@ fn string_request_decode() {
         }
     }
     let output = String::from_utf8(output).unwrap();
-    assert_eq!(output, include_str!("simple_request_decode.test.rs"));
+    assert_eq!(output, include_str!("string_request_decode.test.rs"));
 }
 
 #[test]
 fn simple_response() {
-    let mut code_gen = generate_source_code!(r#"{
-      "structures": [
-        {
-          "type": "standard",
-          "transaction_len": 2
-        }
-      ],
-      "services": [{
-        "name": "TEST",
-        "type": "0x42",
-        "message_structure": "standard",
-        "result_structure": "standard",
-        "messages": [
-            {
-              "name": "Test",
-              "type": "0x0120",
-              "version": "1.0",
-              "request": [],
-              "response": [
-                {
-                  "param": "blah",
-                  "id": "0x01",
-                  "size": 2
-                }
-              ]
-            }
-        ]
-     }]
-    }"#);
-
+    let mut code_gen = generate_source_code!(include_str!("simple_response.test.json"));
     let mut err_body = consume_header!(code_gen);
     let mut body = consume_empty_err!(err_body);
-
     assert_eq!(body, include_str!("simple_response.test.rs"))
 }
 
 #[test]
 fn simple_request() {
-    let mut code_gen = generate_source_code!(r#"{
-      "structures": [
-        {
-          "type": "standard",
-          "transaction_len": 2
-        }
-      ],
-      "services": [{
-        "name": "TEST",
-        "type": "0x42",
-        "message_structure": "standard",
-        "result_structure": "standard",
-        "messages": [
-            {
-              "name": "Test",
-              "type": "0x0120",
-              "version": "1.0",
-              "request": [
-                {
-                  "param": "blah",
-                  "id": "0x01",
-                  "size": 2
-                }
-              ],
-              "response": []
-            }
-        ]
-     }]
-    }"#);
-
+    let mut code_gen = generate_source_code!(include_str!("simple_request.test.json"));
     let mut err_body = consume_header!(code_gen);
     let mut body = consume_empty_err!(err_body);
-
     assert_eq!(body, include_str!("simple_request.test.rs"));
 }
 
 #[test]
 fn generate_service_stub() {
-    let mut code_gen = generate_source_code!(r#"{
+    let mut code_gen = generate_source_code!(
+        r#"{
       "structures": [
         {
           "type": "standard",
@@ -309,16 +113,20 @@ fn generate_service_stub() {
         "result_structure": "standard",
         "messages": []
         }]
-    }"#);
+    }"#
+    );
 
     let mut err_body = consume_header!(code_gen);
     let mut body = consume_empty_err!(err_body);
 
-    assert_eq!(body, r#"pub mod TEST {
+    assert_eq!(
+        body,
+        r#"pub mod TEST {
     use crate::{Decodable, Encodable};
     use crate::QmiError;
     use bytes::{Bytes, Buf, BufMut, BytesMut};
     const MSG_MAX: usize = 512;
 }
-"#);
+"#
+    );
 }

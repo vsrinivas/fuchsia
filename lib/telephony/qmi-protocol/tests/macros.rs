@@ -4,9 +4,8 @@
 
 #[macro_export]
 macro_rules! consume_empty_err {
-    ($data:expr) => {
-        {
-            let header = r#"#[derive(Debug, Fail)]
+    ($data:expr) => {{
+        let header = r#"#[derive(Debug, Fail)]
 pub enum QmiError {
 }
 impl QmiError {
@@ -17,18 +16,16 @@ impl QmiError {
     }
 }
 "#;
-            let h = $data.split_off(header.len());
-            assert_eq!($data, header);
-            h
-        }
-    }
+        let h = $data.split_off(header.len());
+        assert_eq!($data, header);
+        h
+    }};
 }
 
 #[macro_export]
 macro_rules! consume_header {
-    ($data:expr) => {
-        {
-            let header = r#"// Copyright 2018 The Fuchsia Authors. All rights reserved.
+    ($data:expr) => {{
+        let header = r#"// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -53,23 +50,20 @@ pub trait Decodable {
 
 
 "#;
-            let h = $data.split_off(header.len());
-            assert_eq!($data, header);
-            h
-        }
-    }
+        let h = $data.split_off(header.len());
+        assert_eq!($data, header);
+        h
+    }};
 }
 
 #[macro_export]
 macro_rules! generate_source_code {
-    ($data:expr) => {
-        {
-            let mut output = vec![];
-            let mut c = codegen::Codegen::new(&mut output);
-            let mut svc_set = ast::ServiceSet::new();
-            svc_set.parse_service_file($data.as_bytes()).unwrap();
-            c.codegen(svc_set).unwrap();
-            String::from_utf8(output.clone()).unwrap()
-        }
-    };
+    ($data:expr) => {{
+        let mut output = vec![];
+        let mut c = codegen::Codegen::new(&mut output);
+        let mut svc_set = ast::ServiceSet::new();
+        svc_set.parse_service_file($data.as_bytes()).unwrap();
+        c.codegen(svc_set).unwrap();
+        String::from_utf8(output.clone()).unwrap()
+    }};
 }
