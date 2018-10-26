@@ -121,13 +121,13 @@ __EXPORT zx_device_t* device_get_parent(zx_device_t* dev) {
     return dev->parent;
 }
 
-typedef struct {
+struct GenericProtocol {
     void* ops;
     void* ctx;
-} generic_protocol_t;
+};
 
 __EXPORT zx_status_t device_get_protocol(const zx_device_t* dev, uint32_t proto_id, void* out) {
-    auto proto = static_cast<generic_protocol_t*>(out);
+    auto proto = static_cast<GenericProtocol*>(out);
     if (dev->ops->get_protocol) {
         return dev->ops->get_protocol(dev->ctx, proto_id, out);
     }
