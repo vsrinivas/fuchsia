@@ -9,6 +9,10 @@ mod macros;
 mod common;
 mod icmpv4;
 mod icmpv6;
+mod ndp;
+
+#[cfg(test)]
+mod testdata;
 
 pub use self::icmpv4::Packet as Icmpv4Packet;
 pub use self::icmpv6::Packet as Icmpv6Packet;
@@ -163,8 +167,10 @@ impl IcmpIpExt for Ipv6 {
 
 /// `MessageBody` represents the parsed body of the ICMP packet.
 ///
-/// For messages that expect no body, the MessageBody is of type (), otherwise
-/// we use the type `OriginalPacket` which is a thin wrapper around B.
+/// - For messages that expect no body, the `MessageBody` is of type `()`.
+/// - For NDP messages, the `MessageBody` is of the type `ndp::Options`.
+/// - For all other messages, the `MessageBody` will be of the type
+///   `OriginalPacket`, which is a thin wrapper around `B`.
 pub trait MessageBody<B>: Sized {
     const EXPECTS_BODY: bool = true;
 
@@ -236,6 +242,29 @@ impl<B> MessageBody<B> for OriginalPacket<B> {
         B: Deref<Target = [u8]>,
     {
         &self.0
+    }
+}
+
+impl<B, O: for<'a> OptionImpl<'a>> MessageBody<B> for Options<B, O> {
+    fn parse(bytes: B) -> Result<Options<B, O>, ParseError>
+    where
+        B: ByteSlice,
+    {
+        Self::parse(bytes).map_err(|e| debug_err!(ParseError::Format, "unable to parse options"))
+    }
+
+    fn len(&self) -> usize
+    where
+        B: ByteSlice,
+    {
+        self.bytes().len()
+    }
+
+    fn bytes(&self) -> &[u8]
+    where
+        B: Deref<Target = [u8]>,
+    {
+        self.bytes()
     }
 }
 
@@ -401,6 +430,13 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B, Body = OriginalPacket<B>>>
     }
 
     pub fn original_packet(&self) -> &OriginalPacket<B> {
+        &self.message_body
+    }
+}
+
+impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B, Body = ndp::Options<B>>> IcmpPacket<I, B, M> {
+    /// Get the pared list of NDP options from the ICMP message.
+    pub fn ndp_options(&self) -> &ndp::Options<B> {
         &self.message_body
     }
 }

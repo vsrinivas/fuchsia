@@ -12,7 +12,7 @@ use crate::error::ParseError;
 use crate::ip::{Ipv6, Ipv6Addr};
 
 use super::common::{IcmpDestUnreachable, IcmpEchoReply, IcmpEchoRequest, IcmpTimeExceeded};
-use super::{peek_message_type, IcmpIpExt, IcmpPacket, IcmpUnusedCode, OriginalPacket};
+use super::{ndp, peek_message_type, IcmpIpExt, IcmpPacket, IcmpUnusedCode, OriginalPacket};
 
 /// An ICMPv6 packet with a dynamic message type.
 ///
@@ -29,6 +29,11 @@ pub enum Packet<B> {
     ParameterProblem(IcmpPacket<Ipv6, B, Icmpv6ParameterProblem>),
     EchoRequest(IcmpPacket<Ipv6, B, IcmpEchoRequest>),
     EchoReply(IcmpPacket<Ipv6, B, IcmpEchoReply>),
+    RouterSolicitation(IcmpPacket<Ipv6, B, ndp::RouterSolicitation>),
+    RouterAdvertisment(IcmpPacket<Ipv6, B, ndp::RouterAdvertisment>),
+    NeighborSolicitation(IcmpPacket<Ipv6, B, ndp::NeighborSolicitation>),
+    NeighborAdvertisment(IcmpPacket<Ipv6, B, ndp::NeighborAdvertisment>),
+    Redirect(IcmpPacket<Ipv6, B, ndp::Redirect>),
 }
 
 impl<B: ByteSlice> Packet<B> {
@@ -63,6 +68,11 @@ impl<B: ByteSlice> Packet<B> {
             ParameterProblem => Icmpv6ParameterProblem,
             EchoRequest => IcmpEchoRequest,
             EchoReply => IcmpEchoReply,
+            RouterSolicitation => ndp::RouterSolicitation,
+            RouterAdvertisment => ndp::RouterAdvertisment,
+            NeighborSolicitation => ndp::NeighborSolicitation,
+            NeighborAdvertisment => ndp::NeighborAdvertisment,
+            Redirect => ndp::Redirect,
         ))
     }
 }
@@ -75,6 +85,13 @@ create_net_enum! {
     ParameterProblem: PARAMETER_PROBLEM = 4,
     EchoRequest: ECHO_REQUEST = 128,
     EchoReply: ECHO_REPLY = 129,
+
+    // NDP messages
+    RouterSolicitation: ROUTER_SOLICITATION = 133,
+    RouterAdvertisment: ROUTER_ADVERTISMENT = 134,
+    NeighborSolicitation: NEIGHBOR_SOLICITATION = 135,
+    NeighborAdvertisment: NEIGHBOR_ADVERTISMENT = 136,
+    Redirect: REDIRECT = 137,
 }
 
 impl_icmp_message!(

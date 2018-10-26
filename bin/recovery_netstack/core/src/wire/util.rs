@@ -317,12 +317,30 @@ mod options {
         type Error;
     }
 
+    // End of Options List in both IPv4 and TCP
+    const END_OF_OPTIONS: u8 = 0;
+
+    // NOP in both IPv4 and TCP
+    const NOP: u8 = 1;
+
     /// An implementation of an options parser.
     ///
     /// `OptionImpl` provides functions to parse fixed- and variable-length
     /// options. It is required in order to construct an `Options` or
     /// `OptionIter`.
     pub trait OptionImpl<'a>: OptionImplErr {
+        /// The value to multiply read lengths by.
+        ///
+        /// By default, this value is 1, but some options (such as NDP) this
+        /// may be different.
+        const OPTION_LEN_MULTIPLIER: usize = 1;
+
+        /// The End of options type (if one exists).
+        const END_OF_OPTIONS: Option<u8> = Some(END_OF_OPTIONS);
+
+        /// The No-op type (if one exists).
+        const NOP: Option<u8> = Some(NOP);
+
         /// The type of an option; the output from the `parse` function.
         ///
         /// For long or variable-length data, the user is advised to make
@@ -375,6 +393,14 @@ mod options {
         }
     }
 
+    impl<B: Deref<Target = [u8]>, O> Deref for Options<B, O> {
+        type Target = [u8];
+
+        fn deref(&self) -> &[u8] {
+            &self.bytes
+        }
+    }
+
     impl<B: Deref<Target = [u8]>, O> Options<B, O> {
         /// Get the underlying bytes.
         ///
@@ -420,11 +446,6 @@ mod options {
         }
     }
 
-    // End of Options List in both IPv4 and TCP
-    const END_OF_OPTIONS: u8 = 0;
-    // NOP in both IPv4 and TCP
-    const NOP: u8 = 1;
-
     fn next<'a, O>(
         bytes: &'a [u8], idx: &mut usize,
     ) -> Result<Option<O::Output>, OptionParseErr<O::Error>>
@@ -438,14 +459,14 @@ mod options {
             if bytes.is_empty() {
                 return Ok(None);
             }
-            if bytes[0] == END_OF_OPTIONS {
+            if Some(bytes[0]) == O::END_OF_OPTIONS {
                 return Ok(None);
             }
-            if bytes[0] == NOP {
+            if Some(bytes[0]) == O::NOP {
                 *idx += 1;
                 continue;
             }
-            let len = bytes[1] as usize;
+            let len = bytes[1] as usize * O::OPTION_LEN_MULTIPLIER;
             if len < 2 || len > bytes.len() {
                 return Err(OptionParseErr::Internal);
             }
@@ -492,6 +513,29 @@ mod options {
             }
         }
 
+        #[derive(Debug)]
+        struct DummyNdpOptionImpl;
+
+        impl OptionImplErr for DummyNdpOptionImpl {
+            type Error = ();
+        }
+
+        impl<'a> OptionImpl<'a> for DummyNdpOptionImpl {
+            type Output = (u8, Vec<u8>);
+
+            const OPTION_LEN_MULTIPLIER: usize = 8;
+
+            const END_OF_OPTIONS: Option<u8> = None;
+
+            const NOP: Option<u8> = None;
+
+            fn parse(kind: u8, data: &'a [u8]) -> Result<Option<Self::Output>, Self::Error> {
+                let mut v = Vec::with_capacity(data.len());
+                v.extend_from_slice(data);
+                Ok(Some((kind, v)))
+            }
+        }
+
         #[test]
         fn test_empty_options() {
             // all END_OF_OPTIONS
@@ -527,7 +571,6 @@ mod options {
                 assert_eq!(data.len(), idx);
                 let mut bytes = Vec::new();
                 for i in (2..(idx + 2)).rev() {
-                    println!("{}", i);
                     bytes.push(i as u8);
                 }
                 assert_eq!(data, bytes);
@@ -538,6 +581,31 @@ mod options {
             let bytes = [NOP; 64];
             let options = Options::<_, AlwaysErrOptionImpl>::parse(&bytes[..]).unwrap();
             assert_eq!(options.iter().count(), 0);
+        }
+
+        #[test]
+        fn test_parse_ndp_options() {
+            let mut bytes = Vec::new();
+            for i in 0..16 {
+                bytes.push(i);
+                // NDP uses len*8 for the actual length.
+                bytes.push(i + 1);
+                // Write remaining 6 bytes.
+                for j in 2..((i + 1) * 8) {
+                    bytes.push(j)
+                }
+            }
+
+            let options = Options::<_, DummyNdpOptionImpl>::parse(bytes.as_slice()).unwrap();
+            for (idx, (kind, data)) in options.iter().enumerate() {
+                assert_eq!(kind as usize, idx);
+                assert_eq!(data.len(), ((idx + 1) * 8) - 2);
+                let mut bytes = Vec::new();
+                for i in (2..((idx + 1) * 8)) {
+                    bytes.push(i as u8);
+                }
+                assert_eq!(data, bytes);
+            }
         }
 
         #[test]
