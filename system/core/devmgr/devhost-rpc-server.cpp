@@ -78,7 +78,7 @@ static zx_status_t devhost_get_handles(zx::channel rh, zx_device_t* dev,
     bool describe = flags & ZX_FS_FLAG_DESCRIBE;
     flags &= (~ZX_FS_FLAG_DESCRIBE);
 
-    auto newios = fbl::make_unique<devhost_iostate_t>();
+    auto newios = fbl::make_unique<DevhostIostate>();
     if (!newios) {
         r = ZX_ERR_NO_MEMORY;
         if (describe) {
@@ -247,7 +247,7 @@ static ssize_t do_ioctl(zx_device_t* dev, uint32_t op, const void* in_buf, size_
 }
 
 static zx_status_t fidl_node_clone(void* ctx, uint32_t flags, zx_handle_t object) {
-    auto ios = static_cast<devhost_iostate_t*>(ctx);
+    auto ios = static_cast<DevhostIostate*>(ctx);
     zx::channel c(object);
     flags = ios->flags | (flags & ZX_FS_FLAG_DESCRIBE);
     devhost_get_handles(fbl::move(c), ios->dev, nullptr, flags);
@@ -255,7 +255,7 @@ static zx_status_t fidl_node_clone(void* ctx, uint32_t flags, zx_handle_t object
 }
 
 static zx_status_t fidl_node_close(void* ctx, fidl_txn_t* txn) {
-    auto ios = static_cast<devhost_iostate_t*>(ctx);
+    auto ios = static_cast<DevhostIostate*>(ctx);
     device_close(ios->dev, ios->flags);
     // The ios released its reference to this device by calling
     // device_close() Put an invalid pointer in its dev field to ensure any
@@ -266,7 +266,7 @@ static zx_status_t fidl_node_close(void* ctx, fidl_txn_t* txn) {
 }
 
 static zx_status_t fidl_node_describe(void* ctx, fidl_txn_t* txn) {
-    auto ios = static_cast<devhost_iostate_t*>(ctx);
+    auto ios = static_cast<DevhostIostate*>(ctx);
     zx_device_t* dev = ios->dev;
     fuchsia_io_NodeInfo info;
     memset(&info, 0, sizeof(info));
@@ -285,7 +285,7 @@ static zx_status_t fidl_directory_open(void* ctx, uint32_t flags, uint32_t mode,
                                        const char* path_data, size_t path_size,
                                        zx_handle_t object) {
     zx::channel c(object);
-    auto ios = static_cast<devhost_iostate_t*>(ctx);
+    auto ios = static_cast<DevhostIostate*>(ctx);
     zx_device_t* dev = ios->dev;
     if ((path_size < 1) || (path_size > 1024)) {
         return ZX_OK;
@@ -400,7 +400,7 @@ static const fuchsia_io_DirectoryAdmin_ops_t kDirectoryAdminOps = []() {
 }();
 
 static zx_status_t fidl_file_read(void* ctx, uint64_t count, fidl_txn_t* txn) {
-    auto ios = static_cast<devhost_iostate_t*>(ctx);
+    auto ios = static_cast<DevhostIostate*>(ctx);
     zx_device_t* dev = ios->dev;
     if (!CAN_READ(ios)) {
         return fuchsia_io_FileRead_reply(txn, ZX_ERR_ACCESS_DENIED, nullptr, 0);
@@ -422,7 +422,7 @@ static zx_status_t fidl_file_read(void* ctx, uint64_t count, fidl_txn_t* txn) {
 }
 
 static zx_status_t fidl_file_readat(void* ctx, uint64_t count, uint64_t offset, fidl_txn_t* txn) {
-    auto ios = static_cast<devhost_iostate_t*>(ctx);
+    auto ios = static_cast<DevhostIostate*>(ctx);
     if (!CAN_READ(ios)) {
         return fuchsia_io_FileReadAt_reply(txn, ZX_ERR_ACCESS_DENIED, nullptr, 0);
     } else if (count > ZXFIDL_MAX_MSG_BYTES) {
@@ -442,7 +442,7 @@ static zx_status_t fidl_file_readat(void* ctx, uint64_t count, uint64_t offset, 
 }
 
 static zx_status_t fidl_file_write(void* ctx, const uint8_t* data, size_t count, fidl_txn_t* txn) {
-    auto ios = static_cast<devhost_iostate_t*>(ctx);
+    auto ios = static_cast<DevhostIostate*>(ctx);
     if (!CAN_WRITE(ios)) {
         return fuchsia_io_FileWrite_reply(txn, ZX_ERR_ACCESS_DENIED, 0);
     }
@@ -460,7 +460,7 @@ static zx_status_t fidl_file_write(void* ctx, const uint8_t* data, size_t count,
 
 static zx_status_t fidl_file_writeat(void* ctx, const uint8_t* data, size_t count,
                                      uint64_t offset, fidl_txn_t* txn) {
-    auto ios = static_cast<devhost_iostate_t*>(ctx);
+    auto ios = static_cast<DevhostIostate*>(ctx);
     if (!CAN_WRITE(ios)) {
         return fuchsia_io_FileWriteAt_reply(txn, ZX_ERR_ACCESS_DENIED, 0);
     }
@@ -478,7 +478,7 @@ static zx_status_t fidl_file_writeat(void* ctx, const uint8_t* data, size_t coun
 
 static zx_status_t fidl_file_seek(void* ctx, int64_t offset, fuchsia_io_SeekOrigin start,
                                   fidl_txn_t* txn) {
-    auto ios = static_cast<devhost_iostate_t*>(ctx);
+    auto ios = static_cast<DevhostIostate*>(ctx);
     size_t end, n;
     end = ios->dev->GetSize();
     switch (start) {
@@ -566,7 +566,7 @@ static const fuchsia_io_File_ops_t kFileOps = []() {
 }();
 
 static zx_status_t fidl_node_sync(void* ctx, fidl_txn_t* txn) {
-    auto ios = static_cast<devhost_iostate_t*>(ctx);
+    auto ios = static_cast<DevhostIostate*>(ctx);
     size_t actual;
     ssize_t r = do_ioctl(ios->dev, IOCTL_DEVICE_SYNC, nullptr, 0, nullptr, 0, &actual);
     auto status = static_cast<zx_status_t>(r);
@@ -574,7 +574,7 @@ static zx_status_t fidl_node_sync(void* ctx, fidl_txn_t* txn) {
 }
 
 static zx_status_t fidl_node_getattr(void* ctx, fidl_txn_t* txn) {
-    auto ios = static_cast<devhost_iostate_t*>(ctx);
+    auto ios = static_cast<DevhostIostate*>(ctx);
     fuchsia_io_NodeAttributes attributes;
     memset(&attributes, 0, sizeof(attributes));
     attributes.mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
@@ -593,7 +593,7 @@ static zx_status_t fidl_node_ioctl(void* ctx, uint32_t opcode, uint64_t max_out,
                                    const zx_handle_t* handles_data, size_t handles_count,
                                    const uint8_t* in_data, size_t in_count,
                                    fidl_txn_t* txn) {
-    auto ios = static_cast<devhost_iostate_t*>(ctx);
+    auto ios = static_cast<DevhostIostate*>(ctx);
     char in_buf[FDIO_IOCTL_MAX_INPUT];
     size_t hsize = handles_count * sizeof(zx_handle_t);
     if ((in_count > FDIO_IOCTL_MAX_INPUT) || (max_out > ZXFIDL_MAX_MSG_BYTES)) {
@@ -655,7 +655,7 @@ zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie)
                hdr->ordinal <= fuchsia_io_DirectoryAdminGetDevicePathOrdinal) {
         return fuchsia_io_DirectoryAdmin_dispatch(cookie, txn, msg, &kDirectoryAdminOps);
     } else {
-        auto ios = static_cast<devhost_iostate_t*>(cookie);
+        auto ios = static_cast<DevhostIostate*>(cookie);
         return ios->dev->Message(msg, txn);
     }
 }

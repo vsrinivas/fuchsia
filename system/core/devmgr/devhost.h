@@ -98,19 +98,19 @@ zx_status_t devhost_publish_metadata(zx_device_t* dev, const char* path, uint32_
                                      const void* data, size_t length);
 
 // shared between devhost.c and rpc-device.c
-typedef struct devhost_iostate {
-    devhost_iostate() = default;
+struct DevhostIostate {
+    DevhostIostate() = default;
 
     zx_device_t* dev = nullptr;
     size_t io_off = 0;
     uint32_t flags = 0;
     bool dead = false;
     port_handler_t ph = {};
-} devhost_iostate_t;
+};
 
 zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie);
 
-zx_status_t devhost_start_iostate(fbl::unique_ptr<devhost_iostate_t> ios, zx::channel h);
+zx_status_t devhost_start_iostate(fbl::unique_ptr<DevhostIostate> ios, zx::channel h);
 
 // routines devhost uses to talk to dev coordinator
 zx_status_t devhost_add(zx_device_t* dev, zx_device_t* child, const char* proxy_args,

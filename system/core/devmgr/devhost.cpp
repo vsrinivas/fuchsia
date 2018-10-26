@@ -53,14 +53,14 @@ static void proxy_ios_destroy(zx_device_t* dev);
 
 #define proxy_ios_from_ph(ph) containerof(ph, ProxyIostate, ph)
 
-#define ios_from_ph(ph) containerof(ph, devhost_iostate_t, ph)
+#define ios_from_ph(ph) containerof(ph, DevhostIostate, ph)
 
 static zx_status_t dh_handle_dc_rpc(port_handler_t* ph, zx_signals_t signals, uint32_t evt);
 
 static port_t dh_port;
 
-static devhost_iostate_t root_ios = []() {
-    devhost_iostate_t ios;
+static DevhostIostate root_ios = []() {
+    DevhostIostate ios;
     ios.ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
     ios.ph.func = dh_handle_dc_rpc;
     return ios;
@@ -240,7 +240,7 @@ static fidl_txn_t dh_null_txn = {
     .reply = dh_null_reply,
 };
 
-static zx_status_t dh_handle_rpc_read(zx_handle_t h, devhost_iostate_t* ios) {
+static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
     Message msg;
     zx_handle_t hin[3];
     uint32_t msize = sizeof(msg);
@@ -287,7 +287,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, devhost_iostate_t* ios) {
             r = ZX_ERR_INVALID_ARGS;
             goto fail;
         }
-        auto newios = fbl::make_unique<devhost_iostate_t>();
+        auto newios = fbl::make_unique<DevhostIostate>();
         if (!newios) {
             r = ZX_ERR_NO_MEMORY;
             break;
@@ -335,7 +335,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, devhost_iostate_t* ios) {
             r = ZX_ERR_INVALID_ARGS;
             break;
         }
-        auto newios = fbl::make_unique<devhost_iostate_t>();
+        auto newios = fbl::make_unique<DevhostIostate>();
         if (!newios) {
             r = ZX_ERR_NO_MEMORY;
             break;
@@ -485,7 +485,7 @@ fail:
 
 // handles devcoordinator rpc
 static zx_status_t dh_handle_dc_rpc(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
-    devhost_iostate_t* ios = ios_from_ph(ph);
+    DevhostIostate* ios = ios_from_ph(ph);
 
     if (evt != 0) {
         // we send an event to request the destruction
@@ -518,7 +518,7 @@ static zx_status_t dh_handle_dc_rpc(port_handler_t* ph, zx_signals_t signals, ui
 
 // handles remoteio rpc
 static zx_status_t dh_handle_fidl_rpc(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
-    devhost_iostate_t* ios = ios_from_ph(ph);
+    DevhostIostate* ios = ios_from_ph(ph);
 
     zx_status_t r;
     if (signals & ZX_CHANNEL_READABLE) {
@@ -726,7 +726,7 @@ zx_status_t devhost_add(zx_device_t* parent, zx_device_t* child, const char* pro
     char name[namelen];
     snprintf(name, namelen, "%s,%s", libname, child->name);
 
-    auto ios = fbl::make_unique<devhost_iostate_t>();
+    auto ios = fbl::make_unique<DevhostIostate>();
     if (!ios) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -808,7 +808,7 @@ void devhost_make_visible(zx_device_t* dev) {
 // Send message to devcoordinator informing it that this device
 // is being removed.  Called under devhost api lock.
 zx_status_t devhost_remove(zx_device_t* dev) {
-    devhost_iostate_t* ios = static_cast<devhost_iostate_t*>(dev->ios);
+    DevhostIostate* ios = static_cast<DevhostIostate*>(dev->ios);
     if (ios == nullptr) {
         log(ERROR, "removing device %p, ios is nullptr\n", dev);
         return ZX_ERR_INTERNAL;
@@ -966,7 +966,7 @@ zx_status_t devhost_publish_metadata(zx_device_t* dev, const char* path, uint32_
 zx_handle_t root_resource_handle;
 
 
-zx_status_t devhost_start_iostate(fbl::unique_ptr<devhost_iostate_t> ios, zx::channel h) {
+zx_status_t devhost_start_iostate(fbl::unique_ptr<DevhostIostate> ios, zx::channel h) {
     ios->ph.handle = h.get();
     ios->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
     ios->ph.func = dh_handle_fidl_rpc;
