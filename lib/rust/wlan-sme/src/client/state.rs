@@ -8,13 +8,13 @@ use wlan_rsn::key::exchange::Key;
 use wlan_rsn::rsna::{self, SecAssocUpdate, SecAssocStatus};
 
 use super::bss::convert_bss_description;
-use super::phy_selection::{derive_phy_cbw};
+use crate::phy_selection::{derive_phy_cbw};
 use super::{ConnectFailure, ConnectPhyParams, ConnectResult, InfoEvent, Status, Tokens};
 use super::rsn::Rsna;
 
 use crate::MlmeRequest;
 use crate::client::{Context, report_connect_finished};
-use crate::client::clone_utils::clone_bss_desc;
+use crate::clone_utils::clone_bss_desc;
 use crate::sink::MlmeSink;
 
 const DEFAULT_JOIN_FAILURE_TIMEOUT: u32 = 20; // beacon intervals

@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 mod bss;
-pub mod clone_utils;
-mod phy_selection;
 mod rsn;
 mod scan;
 mod state;
@@ -25,7 +23,7 @@ use self::rsn::get_rsna;
 use self::state::{ConnectCommand, State};
 
 use crate::client::bss::{get_best_bss, get_channel_map, get_standard_map, group_networks};
-use crate::client::clone_utils::clone_bss_desc;
+use crate::clone_utils::clone_bss_desc;
 use crate::sink::{InfoSink, MlmeSink};
 use crate::timer::TimedEvent;
 

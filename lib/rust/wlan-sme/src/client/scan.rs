@@ -322,7 +322,7 @@ mod tests {
     use super::*;
 
     use crate::client::test_utils::{fake_bss_with_bssid, fake_unprotected_bss_description};
-    use crate::client::clone_utils::clone_bss_desc;
+    use crate::clone_utils::clone_bss_desc;
 
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
 

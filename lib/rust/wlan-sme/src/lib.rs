@@ -7,6 +7,8 @@
 pub mod ap;
 pub mod client;
 pub mod mesh;
+pub mod phy_selection;
+pub mod clone_utils;
 mod sink;
 pub mod timer;
 

@@ -22,7 +22,7 @@ use {
         marker::Unpin,
         sync::Arc,
     },
-    wlan_sme::{self, client::clone_utils},
+    wlan_sme::{self, clone_utils},
 };
 
 use crate::{

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme};
-use super::{ConnectPhyParams};
+use crate::client::{ConnectPhyParams};
 
 pub fn derive_cbw_ht(bss: &fidl_mlme::BssDescription, params: &ConnectPhyParams)
     -> fidl_mlme::Cbw {

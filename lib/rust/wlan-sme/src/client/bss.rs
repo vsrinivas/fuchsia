@@ -10,7 +10,7 @@ use std::hash::Hash;
 use wlan_rsn::rsne;
 
 use crate::Ssid;
-use crate::client::clone_utils::clone_bss_desc;
+use crate::clone_utils::clone_bss_desc;
 use crate::client::Standard;
 use super::rsn::is_rsn_compatible;
 
