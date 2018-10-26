@@ -17,6 +17,7 @@
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 #include <lib/zx/job.h>
+#include <lib/zx/vmo.h>
 #include <port/port.h>
 
 namespace devmgr {
@@ -290,7 +291,7 @@ struct Driver {
     // TODO: Change it to number of entries
     uint32_t binding_size = 0;
     uint32_t flags = 0;
-    zx_handle_t dso_vmo = ZX_HANDLE_INVALID;
+    zx::vmo dso_vmo;
 
     fbl::DoublyLinkedListNodeState<Driver*> node;
     struct Node {

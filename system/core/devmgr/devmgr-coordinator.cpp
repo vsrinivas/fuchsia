@@ -319,13 +319,14 @@ static const Driver* libname_to_driver(const char* libname) {
     return nullptr;
 }
 
-static zx_status_t load_vmo(const char* libname, zx_handle_t* out) {
+static zx_status_t load_vmo(const char* libname, zx::vmo* out_vmo) {
     int fd = open(libname, O_RDONLY);
     if (fd < 0) {
         log(ERROR, "devcoord: cannot open driver '%s'\n", libname);
         return ZX_ERR_IO;
     }
-    zx_status_t r = fdio_get_vmo_clone(fd, out);
+    zx::vmo vmo;
+    zx_status_t r = fdio_get_vmo_clone(fd, vmo.reset_and_get_address());
     close(fd);
     if (r < 0) {
         log(ERROR, "devcoord: cannot get driver vmo '%s'\n", libname);
@@ -336,11 +337,12 @@ static zx_status_t load_vmo(const char* libname, zx_handle_t* out) {
     } else {
         vmo_name = libname;
     }
-    zx_object_set_property(*out, ZX_PROP_NAME, vmo_name, strlen(vmo_name));
+    vmo.set_property(ZX_PROP_NAME, vmo_name, strlen(vmo_name));
+    *out_vmo = fbl::move(vmo);
     return r;
 }
 
-static zx_status_t libname_to_vmo(const char* libname, zx_handle_t* out) {
+static zx_status_t libname_to_vmo(const char* libname, zx::vmo* out_vmo) {
     const Driver* drv = libname_to_driver(libname);
     if (drv == nullptr) {
         log(ERROR, "devcoord: cannot find driver '%s'\n", libname);
@@ -349,17 +351,16 @@ static zx_status_t libname_to_vmo(const char* libname, zx_handle_t* out) {
 
     // Check for cached DSO
     if (drv->dso_vmo != ZX_HANDLE_INVALID) {
-        zx_status_t r = zx_handle_duplicate(drv->dso_vmo,
-                                            ZX_RIGHTS_BASIC | ZX_RIGHTS_PROPERTY |
-                                            ZX_RIGHT_READ | ZX_RIGHT_EXECUTE | ZX_RIGHT_MAP,
-                                            out);
+        zx_status_t r = drv->dso_vmo.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHTS_PROPERTY |
+                                               ZX_RIGHT_READ | ZX_RIGHT_EXECUTE | ZX_RIGHT_MAP,
+                                               out_vmo);
         if (r != ZX_OK) {
             log(ERROR, "devcoord: cannot duplicate cached dso for '%s' '%s'\n", drv->name.c_str(),
                 libname);
         }
         return r;
     } else {
-        return load_vmo(libname, out);
+        return load_vmo(libname, out_vmo);
     }
 }
 
@@ -1521,9 +1522,11 @@ static zx_status_t dh_create_device(Device* dev, Devhost* dh,
     hcount++;
 
     if (dev->libname[0]) {
-        if ((r = libname_to_vmo(dev->libname, handle + 1)) < 0) {
+        zx::vmo vmo;
+        if ((r = libname_to_vmo(dev->libname, &vmo)) < 0) {
             goto fail;
         }
+        handle[1] = vmo.release();
         hcount++;
         msg.op = Message::Op::kCreateDevice;
     } else {
@@ -1639,7 +1642,7 @@ static zx_status_t dh_bind_driver(Device* dev, const char* libname) {
         return r;
     }
 
-    zx_handle_t vmo;
+    zx::vmo vmo;
     if ((r = libname_to_vmo(libname, &vmo)) < 0) {
         return r;
     }
@@ -1647,7 +1650,8 @@ static zx_status_t dh_bind_driver(Device* dev, const char* libname) {
     msg.txid = 0;
     msg.op = Message::Op::kBindDriver;
 
-    if ((r = zx_channel_write(dev->hrpc, 0, &msg, mlen, &vmo, 1)) < 0) {
+    zx_handle_t handles[] = { vmo.release() };
+    if ((r = zx_channel_write(dev->hrpc, 0, &msg, mlen, handles, fbl::count_of(handles))) < 0) {
         return r;
     }
 
