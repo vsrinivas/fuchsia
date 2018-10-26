@@ -20,7 +20,8 @@
 
 namespace devmgr {
 
-typedef struct dc_devhost devhost_t;
+struct Devhost;
+
 typedef struct dc_device device_t;
 typedef struct dc_driver driver_t;
 typedef struct dc_devnode devnode_t;
@@ -122,7 +123,7 @@ struct dc_device {
 
     port_handler_t ph;
 
-    devhost_t* host;
+    Devhost* host;
     const char* name;
     const char* libname;
     fbl::unique_ptr<const char[]> args;
@@ -192,8 +193,8 @@ struct dc_device {
     }
 };
 
-struct dc_devhost {
-    dc_devhost();
+struct Devhost {
+    Devhost();
 
     port_handler_t ph;
     zx_handle_t hrpc;
@@ -201,40 +202,40 @@ struct dc_devhost {
     zx_koid_t koid;
     mutable int32_t refcount_;
     uint32_t flags;
-    devhost_t* parent;
+    Devhost* parent;
 
     // list of all devices on this devhost
     fbl::DoublyLinkedList<dc_device*, dc_device::DevhostNode> devices;
 
     // listnode for this devhost in the all devhosts list
-    fbl::DoublyLinkedListNodeState<dc_devhost*> anode;
+    fbl::DoublyLinkedListNodeState<Devhost*> anode;
     struct AllDevhostsNode {
-        static fbl::DoublyLinkedListNodeState<dc_devhost*>& node_state(
-            dc_devhost& obj) {
+        static fbl::DoublyLinkedListNodeState<Devhost*>& node_state(
+            Devhost& obj) {
             return obj.anode;
         }
     };
 
     // listnode for this devhost in the order-to-suspend list
-    fbl::DoublyLinkedListNodeState<dc_devhost*> snode;
+    fbl::DoublyLinkedListNodeState<Devhost*> snode;
     struct SuspendNode {
-        static fbl::DoublyLinkedListNodeState<dc_devhost*>& node_state(
-            dc_devhost& obj) {
+        static fbl::DoublyLinkedListNodeState<Devhost*>& node_state(
+            Devhost& obj) {
             return obj.snode;
         }
     };
 
     // listnode for this devhost in its parent devhost's list-of-children
-    fbl::DoublyLinkedListNodeState<dc_devhost*> node;
+    fbl::DoublyLinkedListNodeState<Devhost*> node;
     struct Node {
-        static fbl::DoublyLinkedListNodeState<dc_devhost*>& node_state(
-            dc_devhost& obj) {
+        static fbl::DoublyLinkedListNodeState<Devhost*>& node_state(
+            Devhost& obj) {
             return obj.node;
         }
     };
 
     // list of all child devhosts of this devhost
-    fbl::DoublyLinkedList<dc_devhost*, Node> children;
+    fbl::DoublyLinkedList<Devhost*, Node> children;
 
     // The AddRef and Release functions follow the contract for fbl::RefPtr.
     void AddRef() const {

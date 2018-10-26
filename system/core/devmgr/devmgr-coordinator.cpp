@@ -73,8 +73,8 @@ typedef struct suspend_context {
     // outstanding msgs
     uint32_t count = 0u;
     // next devhost to process
-    devhost_t* dh = nullptr;
-    fbl::DoublyLinkedList<dc_devhost*, dc_devhost::SuspendNode> devhosts;
+    Devhost* dh = nullptr;
+    fbl::DoublyLinkedList<Devhost*, Devhost::SuspendNode> devhosts;
 
     // socket to notify on for 'dm reboot' and 'dm poweroff'
     zx_handle_t socket = ZX_HANDLE_INVALID;
@@ -306,7 +306,7 @@ static fbl::DoublyLinkedList<driver_t*, driver_t::Node> list_drivers_fallback;
 static fbl::DoublyLinkedList<dc_device*, dc_device::AllDevicesNode> list_devices;
 
 // All DevHosts
-static fbl::DoublyLinkedList<dc_devhost*, dc_devhost::AllDevhostsNode> list_devhosts;
+static fbl::DoublyLinkedList<Devhost*, Devhost::AllDevhostsNode> list_devhosts;
 
 static const driver_t* libname_to_driver(const char* libname) {
     for (const auto& drv : list_drivers) {
@@ -631,7 +631,7 @@ static void dc_watch(zx_handle_t h) {
     }
 }
 
-static zx_status_t dc_launch_devhost(devhost_t* host,
+static zx_status_t dc_launch_devhost(Devhost* host,
                                      const char* name, zx_handle_t hrpc) {
     const char* devhost_bin = get_devhost_bin();
 
@@ -688,14 +688,14 @@ static zx_status_t dc_launch_devhost(devhost_t* host,
     return ZX_OK;
 }
 
-dc_devhost::dc_devhost()
+Devhost::Devhost()
     : ph({}), hrpc(ZX_HANDLE_INVALID), proc(ZX_HANDLE_INVALID), koid(0), refcount_(0),
       flags(0), parent(nullptr), anode({}), snode({}), node({}) {
 }
 
-static zx_status_t dc_new_devhost(const char* name, devhost_t* parent,
-                                  devhost_t** out) {
-    auto dh = fbl::make_unique<devhost_t>();
+static zx_status_t dc_new_devhost(const char* name, Devhost* parent,
+                                  Devhost** out) {
+    auto dh = fbl::make_unique<Devhost>();
     if (dh == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -724,12 +724,12 @@ static zx_status_t dc_new_devhost(const char* name, devhost_t* parent,
     return ZX_OK;
 }
 
-static void dc_release_devhost(devhost_t* dh) {
+static void dc_release_devhost(Devhost* dh) {
     if (!dh->Release()) {
         return;
     }
     log(INFO, "devcoord: destroy host %p\n", dh);
-    devhost_t* parent = dh->parent;
+    Devhost* parent = dh->parent;
     if (parent != nullptr) {
         dh->parent->children.erase(*dh);
         dh->parent = nullptr;
@@ -970,7 +970,7 @@ static zx_status_t dc_remove_device(device_t* dev, bool forced) {
     }
 
     // detach from devhost
-    devhost_t* dh = dev->host;
+    Devhost* dh = dev->host;
     if (dh != nullptr) {
         dev->host->devices.erase(*dev);
         dev->host = nullptr;
@@ -1507,7 +1507,7 @@ static zx_status_t dc_handle_device(port_handler_t* ph, zx_signals_t signals, ui
 }
 
 // send message to devhost, requesting the creation of a device
-static zx_status_t dh_create_device(device_t* dev, devhost_t* dh,
+static zx_status_t dh_create_device(device_t* dev, Devhost* dh,
                                     const char* args, zx_handle_t rpc_proxy) {
     dc_msg_t msg;
     uint32_t mlen;
@@ -1793,7 +1793,7 @@ static void dc_suspend_fallback(uint32_t flags) {
     }
 }
 
-static zx_status_t dc_suspend_devhost(devhost_t* dh, suspend_context_t* ctx) {
+static zx_status_t dc_suspend_devhost(Devhost* dh, suspend_context_t* ctx) {
     if (dh->devices.is_empty()) {
         return ZX_OK;
     }
@@ -1839,7 +1839,7 @@ static zx_status_t dc_suspend_devhost(devhost_t* dh, suspend_context_t* ctx) {
     return ZX_OK;
 }
 
-static void append_suspend_list(suspend_context_t* ctx, devhost_t* dh) {
+static void append_suspend_list(suspend_context_t* ctx, Devhost* dh) {
     // suspend order is children first
     for (auto& child : dh->children) {
         ctx->devhosts.push_front(&child);
@@ -1850,7 +1850,7 @@ static void append_suspend_list(suspend_context_t* ctx, devhost_t* dh) {
 }
 
 // Returns the devhost at the front of the queue.
-static devhost_t* build_suspend_list(suspend_context_t* ctx) {
+static Devhost* build_suspend_list(suspend_context_t* ctx) {
     // sys_device must suspend last as on x86 it invokes
     // ACPI S-state transition
     ctx->devhosts.push_front(sys_device.proxy->host);
@@ -1869,7 +1869,7 @@ static devhost_t* build_suspend_list(suspend_context_t* ctx) {
 
 static void process_suspend_list(suspend_context_t* ctx) {
     auto dh = ctx->devhosts.make_iterator(*ctx->dh);
-    devhost_t* parent = nullptr;
+    Devhost* parent = nullptr;
     do {
         if (!parent || (dh->parent == parent)) {
             // send dc_msg_t::Op::kSuspend each set of children of a devhost at a time,
