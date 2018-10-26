@@ -190,7 +190,7 @@ int crash_analyzer_listener(void* arg) {
             printf("devmgr: crash_analyzer_listener: thread handle duplicate failed: %d\n", status);
             // If thread handle duplication failed, try to resume and bail.
             zx_task_resume_from_exception(handles[1], handles[2], ZX_RESUME_TRY_NEXT);
-            zx_handle_close_many(handles, countof(handles));
+            zx_handle_close_many(handles, fbl::count_of(handles));
             continue;
         }
 
