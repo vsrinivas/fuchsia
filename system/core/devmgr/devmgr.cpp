@@ -42,11 +42,11 @@ namespace devmgr {
 bool require_system;
 
 // The handle used to transmit messages to appmgr.
-static zx_handle_t appmgr_req_cli;
+static zx::channel appmgr_req_cli;
 
 // The handle used by appmgr to serve incoming requests.
 // If appmgr cannot be launched within a timeout, this handle is closed.
-static zx_handle_t appmgr_req_srv;
+static zx::channel appmgr_req_srv;
 
 static zx_handle_t root_resource_handle;
 static zx::unowned_job root_job_handle;
@@ -102,11 +102,11 @@ static int fuchsia_starter(void* arg) {
     do {
         zx_status_t status = zx_object_wait_one(fshost_event, FSHOST_SIGNAL_READY, deadline, nullptr);
         if (status == ZX_ERR_TIMED_OUT) {
-            if (appmgr_req_srv != ZX_HANDLE_INVALID) {
+            if (appmgr_req_srv.is_valid()) {
                 if (require_system) {
                     printf("devmgr: appmgr not launched in 10s, closing appmgr handle\n");
                 }
-                zx_handle_close(appmgr_req_srv);
+                appmgr_req_srv.reset();
             }
             deadline = ZX_TIME_INFINITE;
             continue;
@@ -130,12 +130,11 @@ static int fuchsia_starter(void* arg) {
             unsigned int appmgr_hnd_count = 0;
             zx_handle_t appmgr_hnds[2] = {};
             uint32_t appmgr_ids[2] = {};
-            if (appmgr_req_srv) {
+            if (appmgr_req_srv.is_valid()) {
                 assert(appmgr_hnd_count < fbl::count_of(appmgr_hnds));
-                appmgr_hnds[appmgr_hnd_count] = appmgr_req_srv;
+                appmgr_hnds[appmgr_hnd_count] = appmgr_req_srv.release();
                 appmgr_ids[appmgr_hnd_count] = PA_DIRECTORY_REQUEST;
                 appmgr_hnd_count++;
-                appmgr_req_srv = ZX_HANDLE_INVALID;
             }
             devmgr_launch(fuchsia_job_handle.get(), "appmgr",
                           &devmgr_launch_load, nullptr,
@@ -217,7 +216,7 @@ int crash_analyzer_listener(void* arg) {
             status = zx_channel_create(0, &appmgr_svc_request, &appmgr_svc);
             if (status != ZX_OK)
                 goto cleanup;
-            status = fdio_service_connect_at(appmgr_req_cli, "svc", appmgr_svc_request);
+            status = fdio_service_connect_at(appmgr_req_cli.get(), "svc", appmgr_svc_request);
             if (status != ZX_OK)
                 goto cleanup;
             appmgr_svc_request = ZX_HANDLE_INVALID;
@@ -596,7 +595,7 @@ int main(int argc, char** argv) {
     if (fuchsia_create_job() != ZX_OK)
         return 1;
 
-    zx_channel_create(0, &appmgr_req_cli, &appmgr_req_srv);
+    zx::channel::create(0, &appmgr_req_cli, &appmgr_req_srv);
     zx_event_create(0, &fshost_event);
 
     bootfs_create_from_startup_handle();
@@ -843,7 +842,7 @@ zx::channel fs_clone(const char* path) {
     zx_handle_t fs = fs_root;
     int flags = FS_DIR_FLAGS;
     if (!strcmp(path, "hub")) {
-        fs = appmgr_req_cli;
+        fs = appmgr_req_cli.get();
     } else if (!strcmp(path, "svc")) {
         flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
         fs = svchost_outgoing.get();
@@ -909,7 +908,7 @@ zx_status_t svchost_start() {
         return status;
     }
 
-    status = fdio_service_connect_at(appmgr_req_cli, "svc", appmgr_svc_req.release());
+    status = fdio_service_connect_at(appmgr_req_cli.get(), "svc", appmgr_svc_req.release());
     if (status != ZX_OK) {
         return status;
     }
