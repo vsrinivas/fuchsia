@@ -353,7 +353,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, devhost_iostate_t* ios) {
             char dummy_name[sizeof(parent.name)] = "device_create dummy";
             memcpy(&parent.name, &dummy_name, sizeof(parent.name));
 
-            creation_context_t ctx = {
+            CreationContext ctx = {
                 .parent = &parent,
                 .child = nullptr,
                 .rpc = hin[0],
@@ -408,7 +408,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, devhost_iostate_t* ios) {
             if ((r = dh_find_driver(name, fbl::move(vmo), &drv)) < 0) {
                 log(ERROR, "devhost[%s] driver load failed: %d\n", path, r);
             } else if (drv->ops->bind) {
-                creation_context_t ctx = {
+                CreationContext ctx = {
                     .parent = ios->dev,
                     .child = nullptr,
                     .rpc = ZX_HANDLE_INVALID,

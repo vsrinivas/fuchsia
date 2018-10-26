@@ -117,13 +117,13 @@ static inline void dev_ref_acquire(zx_device_t* dev) {
 
 zx_handle_t get_root_resource();
 
-typedef struct {
+struct CreationContext {
     zx_device_t* parent;
     zx_device_t* child;
     zx_handle_t rpc;
-} creation_context_t;
+};
 
-void devhost_set_creation_context(creation_context_t* ctx);
+void devhost_set_creation_context(CreationContext* ctx);
 
 #if 0
 static inline void __DM_DIE(const char* fn, int ln) {
