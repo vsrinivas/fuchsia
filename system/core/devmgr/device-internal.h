@@ -10,7 +10,7 @@
 
 namespace devmgr {
 
-typedef struct proxy_iostate proxy_iostate_t;
+struct ProxyIostate;
 
 } // namespace devmgr
 
@@ -125,7 +125,7 @@ struct zx_device {
 
     // iostate
     void* ios = nullptr;
-    devmgr::proxy_iostate_t* proxy_ios = nullptr;
+    devmgr::ProxyIostate* proxy_ios = nullptr;
 
     char name[ZX_DEVICE_NAME_MAX + 1] = {};
 };

@@ -40,8 +40,8 @@ namespace devmgr {
 
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
-struct proxy_iostate {
-    proxy_iostate() = default;
+struct ProxyIostate {
+    ProxyIostate() = default;
 
     zx_device_t* dev = nullptr;
     port_handler_t ph = {};
@@ -49,7 +49,7 @@ struct proxy_iostate {
 static void proxy_ios_create(zx_device_t* dev, zx_handle_t h);
 static void proxy_ios_destroy(zx_device_t* dev);
 
-#define proxy_ios_from_ph(ph) containerof(ph, proxy_iostate_t, ph)
+#define proxy_ios_from_ph(ph) containerof(ph, ProxyIostate, ph)
 
 #define ios_from_ph(ph) containerof(ph, devhost_iostate_t, ph)
 
@@ -545,7 +545,7 @@ static zx_status_t dh_handle_fidl_rpc(port_handler_t* ph, zx_signals_t signals, 
 // Handling RPC From Proxy Devices to BusDevs
 
 static zx_status_t dh_handle_proxy_rpc(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
-    proxy_iostate_t* ios = proxy_ios_from_ph(ph);
+    ProxyIostate* ios = proxy_ios_from_ph(ph);
 
     if (evt != 0) {
         // TODO(kulakowski/teisenbe): Can |ios->dev| still have a reference to
@@ -591,7 +591,7 @@ static void proxy_ios_create(zx_device_t* dev, zx_handle_t h) {
         proxy_ios_destroy(dev);
     }
 
-    auto ios = fbl::make_unique<proxy_iostate>();
+    auto ios = fbl::make_unique<ProxyIostate>();
     if (ios == nullptr) {
         zx_handle_close(h);
         return;
@@ -611,7 +611,7 @@ static void proxy_ios_create(zx_device_t* dev, zx_handle_t h) {
 }
 
 static void proxy_ios_destroy(zx_device_t* dev) {
-    proxy_iostate_t* ios = dev->proxy_ios;
+    ProxyIostate* ios = dev->proxy_ios;
     if (ios) {
         dev->proxy_ios = nullptr;
 
