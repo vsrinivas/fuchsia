@@ -62,6 +62,61 @@ fn optional_response() {
 }
 
 #[test]
+fn subparam_request() {
+    let source = r#"{
+      "structures": [
+        {
+          "type": "standard",
+          "transaction_len": 2
+        }
+      ],
+      "services": [{
+        "name": "TEST",
+        "type": "0x42",
+        "message_structure": "standard",
+        "result_structure": "standard",
+        "messages": [
+            {
+              "name": "Test",
+              "type": "0x0120",
+              "version": "1.0",
+              "request": [
+                {
+                  "param": "blah",
+                  "id": "0x01",
+                  "size": 2,
+                  "subparams": [
+                    {
+                        "size": 1,
+                        "param": "part_a"
+                    },
+                    {
+                        "size": 1,
+                        "param": "part_b"
+                    }
+                  ]
+                }
+              ],
+              "response": []
+            }
+        ]
+     }]
+    }"#;
+
+    let mut output = vec![];
+    let mut c = codegen::Codegen::new(&mut output);
+    let mut svc_set = ast::ServiceSet::new();
+    svc_set.parse_service_file(source.as_bytes()).unwrap();
+    for svc in svc_set.get_services() {
+        let structure = svc_set.get_structure(&svc.message_structure).unwrap();
+        for msg in svc.get_messages() {
+            c.codegen_svc_encode(svc.ty, msg, &structure).unwrap();
+        }
+    }
+    let output = String::from_utf8(output).unwrap();
+    assert_eq!(output, include_str!("subparam_request.test.rs"));
+}
+#[test]
 fn subparam_response() {
     let source = r#"{
       "structures": [
