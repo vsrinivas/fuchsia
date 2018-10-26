@@ -173,8 +173,10 @@ Cannot guess archive format from file name %r; use --format.
 
     # First write the local scripts that work relative to the build directory.
     if args.pave:
+        outfile = args.pave
         write_script_for(args.pave, 'bootserver_pave')
     if args.netboot:
+        outfile = args.netboot
         write_script_for(args.netboot, 'bootserver_netboot')
 
 
