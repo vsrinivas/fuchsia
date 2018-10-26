@@ -161,7 +161,7 @@ void old_launch_blob_init(BlockWatcher* watcher) {
     const zx_handle_t raw_handle = handle.release();
     zx_status_t status = devmgr_launch(
         *watcher->Job(), "pkgfs", &fshost_launch_load, nullptr, argc, &argv[0], nullptr, -1,
-        &raw_handle, &type, 1, proc.reset_and_get_address(), FS_DATA | FS_BLOB | FS_SVC);
+        &raw_handle, &type, 1, &proc, FS_DATA | FS_BLOB | FS_SVC);
 
     if (status != ZX_OK) {
         printf("fshost: '%s' failed to launch: %d\n", blob_init, status);
@@ -297,7 +297,7 @@ bool pkgfs_launch(BlockWatcher* watcher) {
         "fshost", *watcher->Job(), "pkgfs",
         &pkgfs_launch_load, (void*)(intptr_t)fs_blob_fd.release(), cmd,
         &raw_h1, (const uint32_t[]){ PA_HND(PA_USER0, 0) }, 1,
-        proc.reset_and_get_address(), FS_DATA | FS_BLOB | FS_SVC);
+        &proc, FS_DATA | FS_BLOB | FS_SVC);
     if (status != ZX_OK) {
         printf("fshost: failed to launch %s: %d (%s)\n",
                cmd, status, zx_status_get_string(status));
@@ -394,7 +394,7 @@ zx_status_t BlockWatcher::CheckFilesystem(const char* device_path, disk_format_t
         zx::process proc;
         zx_status_t status = devmgr_launch(*g_job, "fsck", &fshost_launch_load, nullptr,
                                            argc, argv, nullptr, -1, hnd, ids, len,
-                                           proc.reset_and_get_address(), FS_FOR_FSPROC);
+                                           &proc, FS_FOR_FSPROC);
         if (status != ZX_OK) {
             fprintf(stderr, "fshost: Couldn't launch fsck\n");
             return status;

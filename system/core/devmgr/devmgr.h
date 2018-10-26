@@ -10,6 +10,7 @@
 #include <launchpad/launchpad.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
+#include <lib/zx/process.h>
 #include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -55,14 +56,14 @@ zx_status_t devmgr_launch(
     int argc, const char* const* argv,
     const char** envp, int stdiofd,
     const zx_handle_t* handles, const uint32_t* types, size_t hcount,
-    zx_handle_t* proc_out, uint32_t flags);
+    zx::process* proc_out, uint32_t flags);
 zx_status_t devmgr_launch_load(void* ctx, launchpad_t* lp, const char* file);
 zx_status_t devmgr_launch_cmdline(
     const char* me, const zx::job& job, const char* name,
     zx_status_t (*load)(void* ctx, launchpad_t*, const char* file), void* ctx,
     const char* cmdline,
     const zx_handle_t* handles, const uint32_t* types, size_t hcount,
-    zx_handle_t* proc_out, uint32_t flags);
+    zx::process* proc_out, uint32_t flags);
 bool secondary_bootfs_ready();
 
 #define FSHOST_SIGNAL_READY      ZX_USER_SIGNAL_0  // Signalled by fshost

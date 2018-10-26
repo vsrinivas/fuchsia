@@ -72,7 +72,7 @@ zx_status_t devmgr_launch(
     int argc, const char* const* argv,
     const char** _envp, int stdiofd,
     const zx_handle_t* handles, const uint32_t* types, size_t hcount,
-    zx_handle_t* proc, uint32_t flags) {
+    zx::process* out_proc, uint32_t flags) {
     zx_status_t status;
     const char* envp[MAX_ENVP + 1];
     unsigned envn = 0;
@@ -127,11 +127,15 @@ zx_status_t devmgr_launch(
 
     launchpad_add_handles(lp, hcount, handles, types);
 
+    zx::process proc;
     const char* errmsg;
-    if ((status = launchpad_go(lp, proc, &errmsg)) < 0) {
+    if ((status = launchpad_go(lp, proc.reset_and_get_address(), &errmsg)) < 0) {
         printf("devmgr: launchpad %s (%s) failed: %s: %d\n",
                argv[0], name, errmsg, status);
     } else {
+        if (out_proc != nullptr) {
+            *out_proc = fbl::move(proc);
+        }
         printf("devmgr: launch %s (%s) OK\n", argv[0], name);
     }
     return status;
@@ -142,7 +146,7 @@ zx_status_t devmgr_launch_cmdline(
     zx_status_t (*load)(void* ctx, launchpad_t*, const char* file), void* ctx,
     const char* cmdline,
     const zx_handle_t* handles, const uint32_t* types, size_t hcount,
-    zx_handle_t* proc, uint32_t flags) {
+    zx::process* proc, uint32_t flags) {
 
     // Get the full commandline by splitting on '+'.
     char* buf = strdup(cmdline);

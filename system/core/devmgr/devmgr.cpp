@@ -326,20 +326,20 @@ int service_starter(void* arg) {
             args[argc++] = nodename;
         }
 
-        zx_handle_t proc;
+        zx::process proc;
         if (devmgr_launch(svcs_job_handle, "netsvc",
                           &devmgr_launch_load, nullptr, argc, args,
                           nullptr, -1, nullptr, nullptr, 0, &proc, FS_ALL) == ZX_OK) {
             if (vruncmd) {
                 zx_info_handle_basic_t info = {};
-                zx_object_get_info(proc, ZX_INFO_HANDLE_BASIC,
-                                   &info, sizeof(info), nullptr, nullptr);
-                zx_handle_close(proc);
+                proc.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+                proc.reset();
                 snprintf(vcmd, sizeof(vcmd), "dlog -f -t -p %zu", info.koid);
             }
         } else {
             vruncmd = false;
         }
+        __UNUSED auto leaked_handle = proc.release();
     }
 
     if (!getenv_bool("virtcon.disable", false)) {
@@ -939,9 +939,8 @@ zx_status_t svchost_start() {
     // Remove once svchost hosts the tracelink serice itself.
     launchpad_add_handle(lp, appmgr_svc.release(), PA_HND(PA_USER0, 0));
 
-    zx_handle_t process = ZX_HANDLE_INVALID;
     const char* errmsg = nullptr;
-    if ((status = launchpad_go(lp, &process, &errmsg)) < 0) {
+    if ((status = launchpad_go(lp, nullptr, &errmsg)) < 0) {
         printf("devmgr: launchpad %s (%s) failed: %s: %d\n",
                argv[0], name, errmsg, status);
     } else {
