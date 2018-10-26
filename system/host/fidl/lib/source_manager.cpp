@@ -5,10 +5,18 @@
 #include "fidl/source_manager.h"
 
 #include <utility>
+#include <sys/stat.h>
 
 namespace fidl {
 
 bool SourceManager::CreateSource(StringView filename) {
+    struct stat s;
+    if (stat(filename.data(), &s) != 0)
+        return false;
+
+    if ((s.st_mode & S_IFREG) != S_IFREG)
+        return false;
+
     FILE* file = fopen(filename.data(), "rb");
     if (!file)
         return false;
