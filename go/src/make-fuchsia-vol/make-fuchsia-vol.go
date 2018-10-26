@@ -354,7 +354,7 @@ func main() {
 		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
 			PartitionTypeGUID:   gpt.GUIDFuchsiaZirconA,
 			UniquePartitionGUID: gpt.NewRandomGUID(),
-			PartitionName:       gpt.NewPartitionName("zircon-a"),
+			PartitionName:       gpt.NewPartitionName("ZIRCON-A"),
 			StartingLBA:         aStart,
 			EndingLBA:           end,
 		})
@@ -363,7 +363,7 @@ func main() {
 		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
 			PartitionTypeGUID:   gpt.GUIDFuchsiaZirconB,
 			UniquePartitionGUID: gpt.NewRandomGUID(),
-			PartitionName:       gpt.NewPartitionName("zircon-b"),
+			PartitionName:       gpt.NewPartitionName("ZIRCON-B"),
 			StartingLBA:         bStart,
 			EndingLBA:           end,
 		})
@@ -372,7 +372,7 @@ func main() {
 		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
 			PartitionTypeGUID:   gpt.GUIDFuchsiaZirconR,
 			UniquePartitionGUID: gpt.NewRandomGUID(),
-			PartitionName:       gpt.NewPartitionName("zircon-r"),
+			PartitionName:       gpt.NewPartitionName("ZIRCON-R"),
 			StartingLBA:         rStart,
 			EndingLBA:           end,
 		})
