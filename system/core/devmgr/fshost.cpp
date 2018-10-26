@@ -130,7 +130,7 @@ using RamdiskList = fbl::SinglyLinkedList<fbl::unique_ptr<BootdataRamdisk>>;
 
 bool has_secondary_bootfs = false;
 fbl::unique_ptr<FshostConnections> fshost;
-zx_handle_t fshost_event;
+zx::event fshost_event;
 
 using AddFileFn = fbl::Function<zx_status_t(const char* path, zx_handle_t vmo,
                                             zx_off_t off, size_t len)>;
@@ -403,7 +403,7 @@ zx::channel fs_clone(const char* path) {
 }
 
 void fuchsia_start() {
-    zx_object_signal(fshost_event, 0, FSHOST_SIGNAL_READY);
+    fshost_event.signal(0, FSHOST_SIGNAL_READY);
 }
 
 bool secondary_bootfs_ready() {
@@ -432,7 +432,7 @@ int main(int argc, char** argv) {
     zx::channel devfs_root = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 1)));
     zx::channel svc_root = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 2)));
     zx_handle_t devmgr_loader = zx_take_startup_handle(PA_HND(PA_USER0, 3));
-    fshost_event = zx_take_startup_handle(PA_HND(PA_USER1, 0));
+    fshost_event.reset(zx_take_startup_handle(PA_HND(PA_USER1, 0)));
 
     // First, initialize the local filesystem in isolation.
     fbl::unique_ptr<FsManager> root = fbl::make_unique<FsManager>();

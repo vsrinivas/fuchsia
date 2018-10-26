@@ -83,7 +83,7 @@ void do_autorun(const char* name, const char* env) {
     }
 }
 
-static zx_handle_t fshost_event;
+static zx::event fshost_event;
 
 static int fuchsia_starter(void* arg) {
     bool appmgr_started = false;
@@ -97,10 +97,10 @@ static int fuchsia_starter(void* arg) {
         appmgr_timeout *= 2;
     }
 
-    zx_time_t deadline = zx_deadline_after(ZX_SEC(appmgr_timeout));
+    zx::time deadline = zx::deadline_after(zx::sec(appmgr_timeout));
 
     do {
-        zx_status_t status = zx_object_wait_one(fshost_event, FSHOST_SIGNAL_READY, deadline, nullptr);
+        zx_status_t status = fshost_event.wait_one(FSHOST_SIGNAL_READY, deadline, nullptr);
         if (status == ZX_ERR_TIMED_OUT) {
             if (appmgr_req_srv.is_valid()) {
                 if (require_system) {
@@ -108,14 +108,14 @@ static int fuchsia_starter(void* arg) {
                 }
                 appmgr_req_srv.reset();
             }
-            deadline = ZX_TIME_INFINITE;
+            deadline = zx::time::infinite();
             continue;
         }
         if (status != ZX_OK) {
             printf("devmgr: error waiting on fuchsia start event: %d\n", status);
             break;
         }
-        zx_object_signal(fshost_event, FSHOST_SIGNAL_READY, 0);
+        fshost_event.signal(FSHOST_SIGNAL_READY, 0);
 
         if (!drivers_loaded) {
             // we're starting the appmgr because /system is present
@@ -600,7 +600,7 @@ int main(int argc, char** argv) {
         return 1;
 
     zx::channel::create(0, &appmgr_req_cli, &appmgr_req_srv);
-    zx_event_create(0, &fshost_event);
+    zx::event::create(0, &fshost_event);
 
     bootfs_create_from_startup_handle();
 
@@ -732,7 +732,9 @@ void fshost_start() {
     }
 
     // pass fuchsia start event to fshost
-    if (zx_handle_duplicate(fshost_event, ZX_RIGHT_SAME_RIGHTS, &handles[n]) == ZX_OK) {
+    zx::event fshost_event_duplicate;
+    if (fshost_event.duplicate(ZX_RIGHT_SAME_RIGHTS, &fshost_event_duplicate) == ZX_OK) {
+        handles[n] = fshost_event_duplicate.release();
         types[n++] = PA_HND(PA_USER1, 0);
     }
 
@@ -824,12 +826,11 @@ zx_status_t devmgr_launch_load(void* ctx, launchpad_t* lp, const char* file) {
 
 void devmgr_vfs_exit() {
     zx_status_t status;
-    if ((status = zx_object_signal(fshost_event, 0, FSHOST_SIGNAL_EXIT)) != ZX_OK) {
+    if ((status = fshost_event.signal(0, FSHOST_SIGNAL_EXIT)) != ZX_OK) {
         printf("devmgr: Failed to signal VFS exit\n");
         return;
-    } else if ((status = zx_object_wait_one(fshost_event,
-                                            FSHOST_SIGNAL_EXIT_DONE,
-                                            zx_deadline_after(ZX_SEC(5)), nullptr)) != ZX_OK) {
+    } else if ((status = fshost_event.wait_one(FSHOST_SIGNAL_EXIT_DONE,
+                                               zx::deadline_after(zx::sec(5)), nullptr)) != ZX_OK) {
         printf("devmgr: Failed to wait for VFS exit completion\n");
     }
 }

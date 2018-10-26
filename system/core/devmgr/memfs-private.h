@@ -50,7 +50,7 @@ public:
     //
     // Triggers unmount when the FSHOST_SIGNAL_EXIT signal is raised.
     // Sets FSHOST_SIGNAL_EXIT_DONE when unmounting is complete.
-    void WatchExit(zx_handle_t event);
+    void WatchExit(const zx::event& event);
 
 private:
     zx_status_t ServeVnode(fbl::RefPtr<memfs::VnodeDir>& vn, zx::channel server);

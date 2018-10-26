@@ -147,17 +147,17 @@ zx_status_t FsManager::ServeRoot(zx::channel* out) {
     return ZX_OK;
 }
 
-void FsManager::WatchExit(zx_handle_t event) {
-    global_shutdown_.set_handler([this, event](async_dispatcher_t* dispatcher,
-                                               async::Wait* wait,
-                                               zx_status_t status,
-                                               const zx_packet_signal_t* signal) {
+void FsManager::WatchExit(const zx::event& event) {
+    global_shutdown_.set_handler([this, &event](async_dispatcher_t* dispatcher,
+                                                async::Wait* wait,
+                                                zx_status_t status,
+                                                const zx_packet_signal_t* signal) {
         root_vfs_.UninstallAll(ZX_TIME_INFINITE);
         system_vfs_.UninstallAll(ZX_TIME_INFINITE);
-        zx_object_signal(event, 0, FSHOST_SIGNAL_EXIT_DONE);
+        event.signal(0, FSHOST_SIGNAL_EXIT_DONE);
     });
 
-    global_shutdown_.set_object(event);
+    global_shutdown_.set_object(event.get());
     global_shutdown_.set_trigger(FSHOST_SIGNAL_EXIT);
     global_shutdown_.Begin(global_loop_->dispatcher());
 }
