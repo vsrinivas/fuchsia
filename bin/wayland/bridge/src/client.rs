@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use failure::Error;
 use fuchsia_async as fasync;
+use fuchsia_wayland_core as wl;
 use fuchsia_zircon as zx;
 use futures::channel::mpsc;
 use futures::prelude::*;
@@ -14,13 +15,11 @@ use futures::select;
 
 use parking_lot::Mutex;
 
-use crate::{
-    Interface, IntoMessage, Message, MessageGroupSpec, MessageReceiver, ObjectId,
-    ObjectLookupError, ObjectMap, ObjectRef, Registry, RequestReceiver,
-};
+use crate::object::{MessageReceiver, ObjectLookupError, ObjectMap, ObjectRef, RequestReceiver};
+use crate::registry::Registry;
 
 type Task = Box<FnMut(&mut Client) -> Result<(), Error> + 'static>;
-type ObjectDeleter = fn(&mut Client, ObjectId) -> Result<(), Error>;
+type ObjectDeleter = fn(&mut Client, wl::ObjectId) -> Result<(), Error>;
 
 /// The state of a single client connection. Each client connection will have
 /// have its own zircon channel and its own set of protocol objects. The
@@ -71,6 +70,7 @@ impl Client {
         }
     }
 
+    #[allow(dead_code)]
     pub fn next_event_serial(&mut self) -> u32 {
         let serial = self.next_event_serial;
         self.next_event_serial += 1;
@@ -148,20 +148,17 @@ impl Client {
         self.registry.clone()
     }
 
-    /// A pointer to the underlying zircon channel for this client.
-    pub fn chan(&self) -> Arc<fasync::Channel> {
-        self.chan.clone()
-    }
-
     /// Looks up an object in the map and returns a downcasted reference to
     /// the implementation.
-    pub fn get_object<T: Any>(&self, id: ObjectId) -> Result<&T, ObjectLookupError> {
+    pub fn get_object<T: Any>(&self, id: wl::ObjectId) -> Result<&T, ObjectLookupError> {
         self.objects.get(id)
     }
 
     /// Looks up an object in the map and returns a downcasted mutable
     /// reference to the implementation.
-    pub fn get_object_mut<T: Any>(&mut self, id: ObjectId) -> Result<&mut T, ObjectLookupError> {
+    pub fn get_object_mut<T: Any>(
+        &mut self, id: wl::ObjectId,
+    ) -> Result<&mut T, ObjectLookupError> {
         self.objects.get_mut(id)
     }
 
@@ -170,7 +167,7 @@ impl Client {
     /// message will be decoded and forwarded to the |RequestReceiver|.
     ///
     /// Returns Err if there is already an object for |id| in this |ObjectMap|.
-    pub fn add_object<I: Interface + 'static, R: RequestReceiver<I> + 'static>(
+    pub fn add_object<I: wl::Interface + 'static, R: RequestReceiver<I> + 'static>(
         &mut self, id: u32, receiver: R,
     ) -> Result<ObjectRef<R>, Error> {
         self.objects.add_object(id, receiver)
@@ -180,13 +177,13 @@ impl Client {
     /// to use instead |add_object| if the wayland interface for the object is
     /// statically known.
     pub fn add_object_raw(
-        &mut self, id: ObjectId, receiver: Box<MessageReceiver>,
-        request_spec: &'static MessageGroupSpec,
+        &mut self, id: wl::ObjectId, receiver: Box<MessageReceiver>,
+        request_spec: &'static wl::MessageGroupSpec,
     ) -> Result<(), Error> {
         self.objects.add_object_raw(id, receiver, request_spec)
     }
 
-    pub fn delete_id(&mut self, id: ObjectId) -> Result<(), Error> {
+    pub fn delete_id(&mut self, id: wl::ObjectId) -> Result<(), Error> {
         self.objects.delete(id)?;
         self.object_deleter.map_or(Ok(()), |f| f(self, id))
     }
@@ -196,7 +193,7 @@ impl Client {
     ///
     /// Returns Err if no object is associated with the sender field in the
     /// message header, or if the objects receiver itself fails.
-    pub(crate) fn receive_message(&mut self, mut message: Message) -> Result<(), Error> {
+    pub(crate) fn receive_message(&mut self, mut message: wl::Message) -> Result<(), Error> {
         while !message.is_empty() {
             let header = message.read_header()?;
             // Lookup the table entry for this object & fail if there is no entry
@@ -210,7 +207,7 @@ impl Client {
         Ok(())
     }
 
-    pub fn post<E: IntoMessage>(&self, sender: ObjectId, event: E) -> Result<(), Error> {
+    pub fn post<E: wl::IntoMessage>(&self, sender: wl::ObjectId, event: E) -> Result<(), Error> {
         if self.protocol_logging() {
             println!("<-e-- {}", event.log(sender));
         }
@@ -227,7 +224,7 @@ impl Client {
 /// Ex:
 ///   let foo: ObjectRef<Foo> = get_foo_ref();
 ///   let tasks = client.task_queue();
-///   task.post_at(zx::Time::after(100.millis()), |client| {
+///   task.post(|client| {
 ///       let foo = foo.get(client);
 ///       foo.handle_delayed_operation();
 ///   });
@@ -243,17 +240,5 @@ impl TaskQueue {
         self.0
             .unbounded_send(Box::new(f))
             .expect("failed to send task");
-    }
-
-    /// Posts the task to be run after the provided deadline.
-    pub fn post_at<F>(&self, deadline: zx::Time, f: F)
-    where
-        F: FnMut(&mut Client) -> Result<(), Error> + 'static,
-    {
-        let tx = self.0.clone();
-        fasync::spawn_local(fasync::Timer::new(deadline).map(move |_| {
-            tx.unbounded_send(Box::new(f))
-                .expect("Failed to send closure");
-        }));
     }
 }

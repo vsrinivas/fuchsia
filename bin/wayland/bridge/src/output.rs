@@ -10,6 +10,9 @@ use fuchsia_wayland_core as wl;
 use futures::prelude::*;
 use wayland::{wl_output, WlOutput, WlOutputEvent, WlOutputRequest};
 
+use crate::client::Client;
+use crate::object::{ObjectRef, RequestReceiver};
+
 /// An implementation of the wl_output global.
 pub struct Output;
 
@@ -20,7 +23,7 @@ impl Output {
     }
 
     /// Queries the system display info and posts back to the client.
-    pub fn update_display_info(this: wl::ObjectId, client: &mut wl::Client, scenic: &ScenicProxy) {
+    pub fn update_display_info(this: wl::ObjectId, client: &mut Client, scenic: &ScenicProxy) {
         let task_queue = client.task_queue();
         fasync::spawn_local(scenic.get_display_info().map(move |result| {
             if let Ok(display_info) = result {
@@ -34,7 +37,7 @@ impl Output {
     }
 
     fn post_display_info(
-        this: wl::ObjectRef<Self>, client: &mut wl::Client, display_info: &DisplayInfo,
+        this: ObjectRef<Self>, client: &mut Client, display_info: &DisplayInfo,
     ) -> Result<(), Error> {
         // Only post messages if the underlying output is still valid. This is
         // to guard against the case where the wl_output has been released
@@ -82,9 +85,9 @@ impl Output {
     }
 }
 
-impl wl::RequestReceiver<WlOutput> for Output {
+impl RequestReceiver<WlOutput> for Output {
     fn receive(
-        this: wl::ObjectRef<Self>, request: WlOutputRequest, client: &mut wl::Client,
+        this: ObjectRef<Self>, request: WlOutputRequest, client: &mut Client,
     ) -> Result<(), Error> {
         let WlOutputRequest::Release = request;
         client.delete_id(this.id())?;

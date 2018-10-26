@@ -3,22 +3,14 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
-#![feature(async_await, await_macro, futures_api, pin)]
 
 use failure::{Error, Fail};
-use std::fmt::{self, Display};
+use std::fmt::{self, Debug, Display};
 use std::io;
+use std::marker::PhantomData;
 
-mod client;
-pub use crate::client::*;
 mod message;
 pub use crate::message::*;
-mod object;
-pub use crate::object::*;
-mod registry;
-pub use crate::registry::*;
-#[cfg(test)]
-mod test_protocol;
 
 pub type ObjectId = u32;
 pub type NewId = u32;
@@ -137,5 +129,42 @@ impl<E: Copy + Display> Display for Enum<E> {
             Enum::Recognized(e) => write!(f, "{}", e),
             Enum::Unrecognized(v) => write!(f, "{}", v),
         }
+    }
+}
+
+/// A `NewObject` is a type-safe wrapper around a 'new_id' argument that has
+/// a static wayland interface. This wrapper will enforce that the object is
+/// only implemented by types that can receive wayland messages for the
+/// expected interface.
+pub struct NewObject<I: Interface + 'static>(PhantomData<I>, ObjectId);
+impl<I: Interface + 'static> Display for NewObject<I> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "NewObject<{}>({})", I::NAME, self.1)
+    }
+}
+impl<I: Interface + 'static> Debug for NewObject<I> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "{}", self)
+    }
+}
+
+/// Support turning raw `ObjectId`s into `NewObject`s.
+///
+/// Ex:
+///   let id: ObjectId = 3;
+///   let new_object: NewObject<MyInterface> = id.into();
+impl<I: Interface + 'static> From<ObjectId> for NewObject<I> {
+    fn from(id: ObjectId) -> Self {
+        Self::from_id(id)
+    }
+}
+
+impl<I: Interface + 'static> NewObject<I> {
+    pub fn from_id(id: ObjectId) -> Self {
+        NewObject(PhantomData, id)
+    }
+
+    pub fn id(&self) -> ObjectId {
+        self.1
     }
 }

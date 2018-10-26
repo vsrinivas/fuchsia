@@ -9,7 +9,9 @@ use wayland::{
     WlCompositor, WlCompositorRequest, WlRegion, WlRegionRequest, WlSurface, WlSurfaceRequest,
 };
 
+use crate::client::Client;
 use crate::display::Callback;
+use crate::object::{NewObjectExt, ObjectRef, RequestReceiver};
 use crate::shm::Buffer;
 
 /// An implementation of the wl_compositor global.
@@ -24,9 +26,9 @@ impl Compositor {
     }
 }
 
-impl wl::RequestReceiver<WlCompositor> for Compositor {
+impl RequestReceiver<WlCompositor> for Compositor {
     fn receive(
-        this: wl::ObjectRef<Self>, request: WlCompositorRequest, client: &mut wl::Client,
+        this: ObjectRef<Self>, request: WlCompositorRequest, client: &mut Client,
     ) -> Result<(), Error> {
         match request {
             WlCompositorRequest::CreateSurface { id } => {
@@ -68,7 +70,7 @@ pub struct Surface {
     /// xdg_surface role to the wl_surface.
     role: Option<SurfaceRole>,
 
-    frame: Option<wl::ObjectRef<Callback>>,
+    frame: Option<ObjectRef<Callback>>,
 
     /// The scenic node that represents this surface. Views can present this
     /// surface by placeing this node in their view hierarchy.
@@ -92,16 +94,14 @@ impl Surface {
 
     /// Returns a reference to the `scenic::ShapeNode` for this surface.
     #[allow(dead_code)]
-    pub fn node(
-        this: wl::ObjectRef<Self>, client: &mut wl::Client,
-    ) -> Result<&scenic::ShapeNode, Error> {
+    pub fn node(this: ObjectRef<Self>, client: &mut Client) -> Result<&scenic::ShapeNode, Error> {
         Ok(&this.get(client)?.node)
     }
 
     /// Returns the `BufferAttachment` for this surface.
     #[allow(dead_code)]
     pub fn buffer(
-        this: wl::ObjectRef<Self>, client: &mut wl::Client,
+        this: ObjectRef<Self>, client: &mut Client,
     ) -> Result<Option<BufferAttachment>, Error> {
         Ok(this.get(client)?.buffer.clone())
     }
@@ -111,7 +111,7 @@ impl Surface {
     /// This is called internally by a wl_surface::attach request from the
     /// client.
     fn set_buffer(
-        this: wl::ObjectRef<Self>, client: &mut wl::Client, buffer: BufferAttachment,
+        this: ObjectRef<Self>, client: &mut Client, buffer: BufferAttachment,
     ) -> Result<(), Error> {
         this.get_mut(client)?.buffer = Some(buffer);
         Ok(())
@@ -123,7 +123,7 @@ impl Surface {
     /// different role for that same surface.
     #[allow(dead_code)]
     pub fn set_role(
-        this: wl::ObjectRef<Self>, client: &mut wl::Client, role: SurfaceRole,
+        this: ObjectRef<Self>, client: &mut Client, role: SurfaceRole,
     ) -> Result<(), Error> {
         let this = this.get_mut(client)?;
         if let Some(current_role) = this.role {
@@ -168,9 +168,9 @@ impl Surface {
     }
 }
 
-impl wl::RequestReceiver<WlSurface> for Surface {
+impl RequestReceiver<WlSurface> for Surface {
     fn receive(
-        this: wl::ObjectRef<Self>, request: WlSurfaceRequest, client: &mut wl::Client,
+        this: ObjectRef<Self>, request: WlSurfaceRequest, client: &mut Client,
     ) -> Result<(), Error> {
         match request {
             WlSurfaceRequest::Destroy => {
@@ -219,7 +219,7 @@ pub enum SurfaceRole {}
 impl SurfaceRole {
     /// Dispatches a commit command to the concrete role objects.
     fn commit(
-        &self, _client: &mut wl::Client, _frame: Option<wl::ObjectRef<Callback>>,
+        &self, _client: &mut Client, _frame: Option<ObjectRef<Callback>>,
     ) -> Result<(), Error> {
         match *self {}
     }
@@ -246,9 +246,9 @@ impl BufferAttachment {
 
 struct Region;
 
-impl wl::RequestReceiver<WlRegion> for Region {
+impl RequestReceiver<WlRegion> for Region {
     fn receive(
-        _this: wl::ObjectRef<Self>, request: WlRegionRequest, _client: &mut wl::Client,
+        _this: ObjectRef<Self>, request: WlRegionRequest, _client: &mut Client,
     ) -> Result<(), Error> {
         match request {
             WlRegionRequest::Destroy => {}

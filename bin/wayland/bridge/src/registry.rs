@@ -5,8 +5,10 @@
 use std::mem;
 
 use failure::Error;
+use fuchsia_wayland_core as wl;
 
-use crate::{Client, Interface, MessageGroupSpec, MessageReceiver, ObjectId};
+use crate::client::Client;
+use crate::object::MessageReceiver;
 
 /// Helper for constructing a |Registry|.
 ///
@@ -38,8 +40,8 @@ impl RegistryBuilder {
     /// |MessageReceiver| that will be use to handle requests to the instance
     /// of that global.
     pub fn add_global<
-        I: Interface + 'static,
-        F: FnMut(ObjectId, &mut Client) -> Result<Box<MessageReceiver>, Error> + Send + 'static,
+        I: wl::Interface + 'static,
+        F: FnMut(wl::ObjectId, &mut Client) -> Result<Box<MessageReceiver>, Error> + Send + 'static,
     >(
         &mut self, _: I, bind: F,
     ) -> &mut Self {
@@ -73,8 +75,8 @@ impl Registry {
 pub struct Global {
     name: &'static str,
     version: u32,
-    requests: &'static MessageGroupSpec,
-    bind_fn: Box<FnMut(ObjectId, &mut Client) -> Result<Box<MessageReceiver>, Error> + Send>,
+    requests: &'static wl::MessageGroupSpec,
+    bind_fn: Box<FnMut(wl::ObjectId, &mut Client) -> Result<Box<MessageReceiver>, Error> + Send>,
 }
 
 impl Global {
@@ -89,7 +91,7 @@ impl Global {
     }
 
     /// A descriptor of the set of requests this global can handle.
-    pub fn request_spec(&self) -> &'static MessageGroupSpec {
+    pub fn request_spec(&self) -> &'static wl::MessageGroupSpec {
         self.requests
     }
 
@@ -97,7 +99,7 @@ impl Global {
     /// |MessageReceiver| will be used to handle all requests for the new
     /// object.
     pub fn bind(
-        &mut self, id: ObjectId, client: &mut Client,
+        &mut self, id: wl::ObjectId, client: &mut Client,
     ) -> Result<Box<MessageReceiver>, Error> {
         (*self.bind_fn)(id, client)
     }
@@ -112,11 +114,13 @@ mod tests {
     use crate::test_protocol::{TestInterface, TestInterface2};
     use failure::Error;
     use fuchsia_async as fasync;
+    use fuchsia_wayland_core::{Interface, IntoMessage};
     use fuchsia_zircon as zx;
     use parking_lot::Mutex;
 
+    use crate::client::Client;
+    use crate::object::RequestDispatcher;
     use crate::test_protocol::*;
-    use crate::{Client, Interface, IntoMessage, RequestDispatcher};
 
     #[test]
     fn registry_bind() -> Result<(), Error> {

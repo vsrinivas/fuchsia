@@ -17,15 +17,13 @@
 ///! glue and dispatch logic.
 use std::any::Any;
 use std::collections::hash_map::{Entry, HashMap};
-use std::fmt::{self, Debug, Display};
+use std::fmt::{self, Debug};
 use std::marker::PhantomData;
 
 use failure::{format_err, Error, Fail};
+use fuchsia_wayland_core::{self as wl, FromArgs, MessageType};
 
-use crate::{
-    Arg, Client, FromArgs, Interface, MessageGroupSpec, MessageHeader, MessageSpec, MessageType,
-    ObjectId,
-};
+use crate::client::Client;
 
 /// The |ObjectMap| holds the state of active objects for a single connection.
 ///
@@ -42,7 +40,7 @@ pub(crate) struct ObjectMap {
 
 struct ObjectMapEntry {
     /// The opcodes and method signatures accepted by this object.
-    request_spec: &'static MessageGroupSpec,
+    request_spec: &'static wl::MessageGroupSpec,
     /// The handler for this object.
     receiver: Box<dyn MessageReceiver>,
 }
@@ -59,11 +57,6 @@ pub enum ObjectMapError {
     /// unsupported or unknown opcode.
     #[fail(display = "Opcode {} is not supported", _0)]
     InvalidOpcode(u16),
-
-    /// An error raised if a request is dispatched to object ID that does not
-    /// have an assocated |MessageReceiver|.
-    #[fail(display = "Object is not implemented")]
-    ObjectNotImplemented,
 }
 
 /// Errors generated when looking up objects from the map.
@@ -84,7 +77,7 @@ impl ObjectMap {
 
     /// Looks up an object in the map and returns a downcasted reference to
     /// the implementation.
-    pub fn get<T: Any>(&self, id: ObjectId) -> Result<&T, ObjectLookupError> {
+    pub fn get<T: Any>(&self, id: wl::ObjectId) -> Result<&T, ObjectLookupError> {
         match self.objects.get(&id) {
             Some(entry) => match entry.receiver.data().downcast_ref() {
                 Some(t) => Ok(t),
@@ -96,7 +89,7 @@ impl ObjectMap {
 
     /// Looks up an object in the map and returns a downcasted mutable
     /// reference to the implementation.
-    pub fn get_mut<T: Any>(&mut self, id: ObjectId) -> Result<&mut T, ObjectLookupError> {
+    pub fn get_mut<T: Any>(&mut self, id: wl::ObjectId) -> Result<&mut T, ObjectLookupError> {
         match self.objects.get_mut(&id) {
             Some(entry) => match entry.receiver.data_mut().downcast_mut() {
                 Some(t) => Ok(t),
@@ -108,8 +101,8 @@ impl ObjectMap {
 
     /// Looks up the recevier function and the message structure from the map.
     pub(crate) fn lookup_internal(
-        &self, header: &MessageHeader,
-    ) -> Result<(MessageReceiverFn, &'static MessageSpec), Error> {
+        &self, header: &wl::MessageHeader,
+    ) -> Result<(MessageReceiverFn, &'static wl::MessageSpec), Error> {
         let ObjectMapEntry {
             request_spec,
             receiver,
@@ -130,7 +123,7 @@ impl ObjectMap {
     /// message will be decoded and forwarded to the |RequestReceiver|.
     ///
     /// Returns Err if there is already an object for |id| in this |ObjectMap|.
-    pub fn add_object<I: Interface + 'static, R: RequestReceiver<I> + 'static>(
+    pub fn add_object<I: wl::Interface + 'static, R: RequestReceiver<I> + 'static>(
         &mut self, id: u32, receiver: R,
     ) -> Result<ObjectRef<R>, Error> {
         self.add_object_raw(id, Box::new(RequestDispatcher::new(receiver)), &I::REQUESTS)?;
@@ -141,8 +134,8 @@ impl ObjectMap {
     /// to use instead |add_object| if the wayland interface for the object is
     /// statically known.
     pub fn add_object_raw(
-        &mut self, id: ObjectId, receiver: Box<MessageReceiver>,
-        request_spec: &'static MessageGroupSpec,
+        &mut self, id: wl::ObjectId, receiver: Box<MessageReceiver>,
+        request_spec: &'static wl::MessageGroupSpec,
     ) -> Result<(), Error> {
         if let Entry::Vacant(entry) = self.objects.entry(id) {
             entry.insert(ObjectMapEntry {
@@ -155,7 +148,7 @@ impl ObjectMap {
         }
     }
 
-    pub fn delete(&mut self, id: ObjectId) -> Result<(), Error> {
+    pub fn delete(&mut self, id: wl::ObjectId) -> Result<(), Error> {
         if self.objects.remove(&id).is_some() {
             // TODO: Send wl_display::delete_id.
             Ok(())
@@ -170,7 +163,7 @@ impl ObjectMap {
 /// simpler.
 ///
 /// This is primarily useful when vending self references to MessageReceviers.
-pub struct ObjectRef<T: 'static>(PhantomData<T>, ObjectId);
+pub struct ObjectRef<T: 'static>(PhantomData<T>, wl::ObjectId);
 
 // We cannot just derive these since that will place the corresponding trait
 // bound on `T`.
@@ -185,18 +178,18 @@ impl<T: 'static> Debug for ObjectRef<T> {
         write!(f, "ObjectRef({})", self.1)
     }
 }
-impl<T> From<ObjectId> for ObjectRef<T> {
-    fn from(id: ObjectId) -> Self {
+impl<T> From<wl::ObjectId> for ObjectRef<T> {
+    fn from(id: wl::ObjectId) -> Self {
         Self::from_id(id)
     }
 }
 
 impl<T> ObjectRef<T> {
-    pub fn from_id(id: ObjectId) -> Self {
+    pub fn from_id(id: wl::ObjectId) -> Self {
         ObjectRef(PhantomData, id)
     }
 
-    pub fn id(&self) -> ObjectId {
+    pub fn id(&self) -> wl::ObjectId {
         self.1
     }
 
@@ -225,46 +218,17 @@ impl<T> ObjectRef<T> {
     }
 }
 
-/// A `NewObject` is a type-safe wrapper around a 'new_id' argument that has
-/// a static wayland interface. This wrapper will enforce that the object is
-/// only implemented by types that can receive wayland messages for the
-/// expected interface.
-pub struct NewObject<I: Interface + 'static>(PhantomData<I>, ObjectId);
-impl<I: Interface + 'static> Display for NewObject<I> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        write!(f, "NewObject<{}>({})", I::NAME, self.1)
-    }
-}
-impl<I: Interface + 'static> Debug for NewObject<I> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        write!(f, "{}", self)
-    }
+pub trait NewObjectExt<I: wl::Interface> {
+    fn implement<R: RequestReceiver<I>>(
+        self, client: &mut Client, receiver: R,
+    ) -> Result<ObjectRef<R>, Error>;
 }
 
-/// Support turning raw `ObjectId`s into `NewObject`s.
-///
-/// Ex:
-///   let id: ObjectId = 3;
-///   let new_object: NewObject<MyInterface> = id.into();
-impl<I: Interface + 'static> From<ObjectId> for NewObject<I> {
-    fn from(id: ObjectId) -> Self {
-        Self::from_id(id)
-    }
-}
-
-impl<I: Interface + 'static> NewObject<I> {
-    pub fn from_id(id: ObjectId) -> Self {
-        NewObject(PhantomData, id)
-    }
-
-    pub fn id(&self) -> ObjectId {
-        self.1
-    }
-
-    pub fn implement<R: RequestReceiver<I>>(
+impl<I: wl::Interface> NewObjectExt<I> for wl::NewObject<I> {
+    fn implement<R: RequestReceiver<I>>(
         self, client: &mut Client, receiver: R,
     ) -> Result<ObjectRef<R>, Error> {
-        client.add_object(self.1, receiver)
+        client.add_object(self.id(), receiver)
     }
 }
 
@@ -274,7 +238,8 @@ impl<I: Interface + 'static> NewObject<I> {
 /// The server will dispatch |Message|s to the appropriate |MessageReceiver|
 /// by reading the sender field in the message header.
 type MessageReceiverFn =
-    fn(this: ObjectId, opcode: u16, args: Vec<Arg>, client: &mut Client) -> Result<(), Error>;
+    fn(this: wl::ObjectId, opcode: u16, args: Vec<wl::Arg>, client: &mut Client)
+        -> Result<(), Error>;
 pub trait MessageReceiver {
     /// Returns a function pointer that will be called to handle requests
     /// targeting this object.
@@ -287,7 +252,7 @@ pub trait MessageReceiver {
 
 /// The |RequestReceiver| trait is what high level code will use to work with
 /// request messages for a given type.
-pub trait RequestReceiver<I: Interface>: Any + Sized {
+pub trait RequestReceiver<I: wl::Interface>: Any + Sized {
     /// Handle a decoded message for the associated |Interface|.
     ///
     /// |self| is not directly provided, but instead is provided as an
@@ -318,12 +283,12 @@ pub trait RequestReceiver<I: Interface>: Any + Sized {
 /// |MessageReceiver| trait that is used to dispatch raw message buffers and
 /// the higher level |RequestReceiver| that operates on the decoded request
 /// enums.
-pub struct RequestDispatcher<I: Interface, R: RequestReceiver<I>> {
+pub struct RequestDispatcher<I: wl::Interface, R: RequestReceiver<I>> {
     _marker: PhantomData<I>,
     receiver: R,
 }
 
-impl<I: Interface, R: RequestReceiver<I>> RequestDispatcher<I, R> {
+impl<I: wl::Interface, R: RequestReceiver<I>> RequestDispatcher<I, R> {
     pub fn new(receiver: R) -> Self {
         RequestDispatcher {
             receiver,
@@ -332,8 +297,8 @@ impl<I: Interface, R: RequestReceiver<I>> RequestDispatcher<I, R> {
     }
 }
 
-fn receive_message<I: Interface, R: RequestReceiver<I>>(
-    this: ObjectId, opcode: u16, args: Vec<Arg>, client: &mut Client,
+fn receive_message<I: wl::Interface, R: RequestReceiver<I>>(
+    this: wl::ObjectId, opcode: u16, args: Vec<wl::Arg>, client: &mut Client,
 ) -> Result<(), Error> {
     let request = I::Request::from_args(opcode, args)?;
     if client.protocol_logging() {
@@ -346,7 +311,7 @@ fn receive_message<I: Interface, R: RequestReceiver<I>>(
 /// Convert the raw Message into the appropriate request type by delegating
 /// to the associated |Request| type of |Interface|, and then invoke the
 /// receiver.
-impl<I: Interface, R: RequestReceiver<I>> MessageReceiver for RequestDispatcher<I, R> {
+impl<I: wl::Interface, R: RequestReceiver<I>> MessageReceiver for RequestDispatcher<I, R> {
     fn receiver(&self) -> MessageReceiverFn {
         receive_message::<I, R>
     }
@@ -365,12 +330,13 @@ mod tests {
     use super::*;
 
     use fuchsia_async as fasync;
+    use fuchsia_wayland_core::IntoMessage;
     use fuchsia_zircon as zx;
     use parking_lot::Mutex;
     use std::sync::Arc;
 
+    use crate::registry::RegistryBuilder;
     use crate::test_protocol::*;
-    use crate::{IntoMessage, RegistryBuilder};
 
     fn create_client() -> Result<Client, Error> {
         let _executor = fasync::Executor::new();

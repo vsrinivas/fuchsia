@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
-#![feature(async_await, await_macro, futures_api)]
+#![feature(async_await, await_macro, futures_api, pin)]
 
 use std::sync::Arc;
 
@@ -14,11 +14,15 @@ use fidl_fuchsia_guest::{
 };
 use fuchsia_app::server::{ServiceFactory, ServicesServer};
 use fuchsia_async as fasync;
-use fuchsia_wayland_core as wl;
 use futures::prelude::*;
 use parking_lot::Mutex;
 use wayland::{WlCompositor, WlOutput, WlSeat, WlShm};
 
+mod client;
+mod object;
+use crate::object::*;
+mod registry;
+use crate::registry::*;
 mod compositor;
 use crate::compositor::*;
 mod display;
@@ -32,6 +36,9 @@ use crate::seat::*;
 mod shm;
 use crate::shm::*;
 
+#[cfg(test)]
+mod test_protocol;
+
 /// The main FIDL server that listens for incomming client connection
 /// requests.
 struct WaylandDispatcher {
@@ -44,11 +51,11 @@ impl WaylandDispatcher {
     pub fn new() -> Result<Self, Error> {
         let view_sink = TileViewSink::new()?;
         let scenic = view_sink.scenic_session();
-        let mut registry = wl::RegistryBuilder::new();
+        let mut registry = RegistryBuilder::new();
         {
             let scenic = scenic.clone();
             registry.add_global(WlCompositor, move |_, _| {
-                Ok(Box::new(wl::RequestDispatcher::new(Compositor::new(
+                Ok(Box::new(RequestDispatcher::new(Compositor::new(
                     scenic.clone(),
                 ))))
             });
@@ -57,14 +64,14 @@ impl WaylandDispatcher {
             let view_sink = view_sink.clone();
             registry.add_global(WlOutput, move |id, client| {
                 Output::update_display_info(id, client, view_sink.scenic());
-                Ok(Box::new(wl::RequestDispatcher::new(Output::new())))
+                Ok(Box::new(RequestDispatcher::new(Output::new())))
             });
         }
         {
             registry.add_global(WlSeat, move |id, client| {
                 let seat = Seat::new();
                 seat.post_seat_info(id, client)?;
-                Ok(Box::new(wl::RequestDispatcher::new(seat)))
+                Ok(Box::new(RequestDispatcher::new(seat)))
             });
         }
         {
@@ -73,7 +80,7 @@ impl WaylandDispatcher {
                 let shm = Shm::new(scenic.clone());
                 // announce the set of supported shm pixel formats.
                 shm.post_formats(id, client)?;
-                Ok(Box::new(wl::RequestDispatcher::new(shm)))
+                Ok(Box::new(RequestDispatcher::new(shm)))
             });
         }
         Ok(WaylandDispatcher {

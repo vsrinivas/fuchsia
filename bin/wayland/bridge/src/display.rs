@@ -10,38 +10,42 @@ use fuchsia_wayland_core as wl;
 use parking_lot::Mutex;
 use wayland::*;
 
+use crate::client::Client;
+use crate::object::{NewObjectExt, ObjectRef, RequestReceiver};
+use crate::registry::Registry;
+
 /// When the connection is created it is initialized with a 'wl_display' object
 /// that the client can immediately interact with.
 const DISPLAY_SINGLETON_OBJECT_ID: u32 = 1;
 
-/// Since `wl::Client` is in the core library, it doesn't have access to the
+/// Since `Client` is in the core library, it doesn't have access to the
 /// protocol bindings required to send delete_id events for us as we'd like,
 ///
-/// Instead we provide this callback function to `wl::Client` to send the
+/// Instead we provide this callback function to `Client` to send the
 /// wl_display::delete_id event after the key has been cleared from the internal
 /// object map.
-fn send_delete_id_event(client: &mut wl::Client, id: wl::ObjectId) -> Result<(), Error> {
+fn send_delete_id_event(client: &mut Client, id: wl::ObjectId) -> Result<(), Error> {
     client.post(DISPLAY_SINGLETON_OBJECT_ID, WlDisplayEvent::DeleteId { id })
 }
 
 /// |Display| is the global object used to manage a wayland server.
 ///
-/// The |Display| has a |wl::Registry| that will hold the set of global
+/// The |Display| has a |Registry| that will hold the set of global
 /// interfaces that will be advertised to clients.
 #[derive(Clone)]
 pub struct Display {
-    registry: Arc<Mutex<wl::Registry>>,
+    registry: Arc<Mutex<Registry>>,
 }
 
 impl Display {
-    pub fn new(registry: wl::Registry) -> Self {
+    pub fn new(registry: Registry) -> Self {
         Display {
             registry: Arc::new(Mutex::new(registry)),
         }
     }
 
     pub fn spawn_new_client(&self, chan: fasync::Channel) {
-        let mut client = wl::Client::new(chan, self.registry.clone());
+        let mut client = Client::new(chan, self.registry.clone());
         client.set_object_deleter(send_delete_id_event);
         client.set_protocol_logging(true);
 
@@ -59,9 +63,9 @@ impl Display {
 /// An implementation of wl_display.
 struct DisplayReceiver;
 
-impl wl::RequestReceiver<WlDisplay> for DisplayReceiver {
+impl RequestReceiver<WlDisplay> for DisplayReceiver {
     fn receive(
-        this: wl::ObjectRef<Self>, request: WlDisplayRequest, client: &mut wl::Client,
+        this: ObjectRef<Self>, request: WlDisplayRequest, client: &mut Client,
     ) -> Result<(), Error> {
         match request {
             WlDisplayRequest::GetRegistry { registry } => {
@@ -73,7 +77,7 @@ impl wl::RequestReceiver<WlDisplay> for DisplayReceiver {
                 // Since we callback immediately we'll skip actually adding this
                 // object, but we need to send the wl_display::delete_id event
                 // explicitly, which is otherwise done for us in
-                // wl::Client:delete_id,
+                // Client:delete_id,
                 client.post(callback.id(), WlCallbackEvent::Done { callback_data: 0 })?;
                 client.post(this.id(), WlDisplayEvent::DeleteId { id: callback.id() })?;
                 Ok(())
@@ -86,8 +90,8 @@ impl wl::RequestReceiver<WlDisplay> for DisplayReceiver {
 struct RegistryReceiver;
 
 impl RegistryReceiver {
-    /// Sends a wl_registry::global event for each entry in the |wl::Registry|.
-    pub fn report_globals(this: wl::ObjectRef<Self>, client: &wl::Client) -> Result<(), Error> {
+    /// Sends a wl_registry::global event for each entry in the |Registry|.
+    pub fn report_globals(this: ObjectRef<Self>, client: &Client) -> Result<(), Error> {
         let registry = client.registry();
         for (name, global) in registry.lock().globals().iter().enumerate() {
             client.post(
@@ -103,9 +107,9 @@ impl RegistryReceiver {
     }
 }
 
-impl wl::RequestReceiver<WlRegistry> for RegistryReceiver {
+impl RequestReceiver<WlRegistry> for RegistryReceiver {
     fn receive(
-        _this: wl::ObjectRef<Self>, request: WlRegistryRequest, client: &mut wl::Client,
+        _this: ObjectRef<Self>, request: WlRegistryRequest, client: &mut Client,
     ) -> Result<(), Error> {
         let WlRegistryRequest::Bind { name, id, .. } = request;
         let registry = client.registry();
@@ -129,15 +133,15 @@ impl Callback {
     /// Posts the `done` event for this callback.
     #[allow(dead_code)]
     pub fn done(
-        this: wl::ObjectRef<Self>, client: &mut wl::Client, callback_data: u32,
+        this: ObjectRef<Self>, client: &mut Client, callback_data: u32,
     ) -> Result<(), Error> {
         client.post(this.id(), WlCallbackEvent::Done { callback_data })
     }
 }
 
-impl wl::RequestReceiver<WlCallback> for Callback {
+impl RequestReceiver<WlCallback> for Callback {
     fn receive(
-        _this: wl::ObjectRef<Self>, request: WlCallbackRequest, _client: &mut wl::Client,
+        _this: ObjectRef<Self>, request: WlCallbackRequest, _client: &mut Client,
     ) -> Result<(), Error> {
         match request {}
     }

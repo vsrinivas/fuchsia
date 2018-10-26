@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use failure::Error;
+use fuchsia_wayland_core as wl;
 
-use crate::*;
+use crate::client::Client;
+use crate::object::{ObjectRef, RequestReceiver};
 
 ///! An example of a simple wayland interface that uses the primives in this
 ///! crate.
@@ -26,22 +28,22 @@ impl TestMessage {
     }
 }
 
-impl FromArgs for TestMessage {
-    fn from_args(op: u16, _: Vec<Arg>) -> Result<Self, Error> {
+impl wl::FromArgs for TestMessage {
+    fn from_args(op: u16, _: Vec<wl::Arg>) -> Result<Self, Error> {
         match op {
             0 => Ok(TestMessage::Message1),
             1 => Ok(TestMessage::Message2),
-            op => Err(DecodeError::InvalidOpcode(op).into()),
+            op => Err(wl::DecodeError::InvalidOpcode(op).into()),
         }
     }
 }
 
-impl IntoMessage for TestMessage {
-    type Error = EncodeError;
+impl wl::IntoMessage for TestMessage {
+    type Error = wl::EncodeError;
 
-    fn into_message(self, id: u32) -> Result<Message, Self::Error> {
-        let mut message = Message::new();
-        message.write_header(&MessageHeader {
+    fn into_message(self, id: u32) -> Result<wl::Message, Self::Error> {
+        let mut message = wl::Message::new();
+        message.write_header(&wl::MessageHeader {
             sender: id,
             opcode: self.opcode(),
             length: 8,
@@ -51,32 +53,36 @@ impl IntoMessage for TestMessage {
     }
 }
 
-impl MessageType for TestMessage {
-    fn log(&self, this: ObjectId) -> String {
+impl wl::MessageType for TestMessage {
+    fn log(&self, this: wl::ObjectId) -> String {
         format!("TestMessage@{}", this)
     }
 }
 
 pub struct TestInterface;
 
-impl Interface for TestInterface {
+impl wl::Interface for TestInterface {
     const NAME: &'static str = "test_interface";
     const VERSION: u32 = 0;
     // |TestMessage| contains 2 operations; neither has arguments.
-    const REQUESTS: MessageGroupSpec = MessageGroupSpec(&[MessageSpec(&[]), MessageSpec(&[])]);
-    const EVENTS: MessageGroupSpec = MessageGroupSpec(&[MessageSpec(&[]), MessageSpec(&[])]);
+    const REQUESTS: wl::MessageGroupSpec =
+        wl::MessageGroupSpec(&[wl::MessageSpec(&[]), wl::MessageSpec(&[])]);
+    const EVENTS: wl::MessageGroupSpec =
+        wl::MessageGroupSpec(&[wl::MessageSpec(&[]), wl::MessageSpec(&[])]);
     type Request = TestMessage;
     type Event = TestMessage;
 }
 
 pub struct TestInterface2;
 
-impl Interface for TestInterface2 {
+impl wl::Interface for TestInterface2 {
     const NAME: &'static str = "test_interface2";
     const VERSION: u32 = 0;
     // |TestMessage| contains 2 operations; neither has arguments.
-    const REQUESTS: MessageGroupSpec = MessageGroupSpec(&[MessageSpec(&[]), MessageSpec(&[])]);
-    const EVENTS: MessageGroupSpec = MessageGroupSpec(&[MessageSpec(&[]), MessageSpec(&[])]);
+    const REQUESTS: wl::MessageGroupSpec =
+        wl::MessageGroupSpec(&[wl::MessageSpec(&[]), wl::MessageSpec(&[])]);
+    const EVENTS: wl::MessageGroupSpec =
+        wl::MessageGroupSpec(&[wl::MessageSpec(&[]), wl::MessageSpec(&[])]);
     type Request = TestMessage;
     type Event = TestMessage;
 }

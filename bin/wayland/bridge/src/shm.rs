@@ -9,6 +9,9 @@ use fuchsia_wayland_core as wl;
 use std::rc::Rc;
 use wayland::*;
 
+use crate::client::Client;
+use crate::object::{NewObjectExt, ObjectRef, RequestReceiver};
+
 /// The set of pixel formats that will be announced to clients.
 const SUPPORTED_PIXEL_FORMATS: &[wl_shm::Format] =
     &[wl_shm::Format::Argb8888, wl_shm::Format::Xrgb8888];
@@ -35,7 +38,7 @@ impl Shm {
     }
 
     /// Posts an event back to the client for each supported SHM pixel format.
-    pub fn post_formats(&self, this: wl::ObjectId, client: &wl::Client) -> Result<(), Error> {
+    pub fn post_formats(&self, this: wl::ObjectId, client: &Client) -> Result<(), Error> {
         for format in SUPPORTED_PIXEL_FORMATS.iter() {
             client.post(this, WlShmEvent::Format { format: *format })?;
         }
@@ -43,9 +46,9 @@ impl Shm {
     }
 }
 
-impl wl::RequestReceiver<WlShm> for Shm {
+impl RequestReceiver<WlShm> for Shm {
     fn receive(
-        this: wl::ObjectRef<Self>, request: WlShmRequest, client: &mut wl::Client,
+        this: ObjectRef<Self>, request: WlShmRequest, client: &mut Client,
     ) -> Result<(), Error> {
         let WlShmRequest::CreatePool { id, fd, size } = request;
         let scenic = this.get(client)?.scenic.clone();
@@ -82,7 +85,7 @@ impl ShmPool {
     /// buffer must hold a strong reference to any resources it depends on
     /// post-creation.
     pub fn create_buffer(
-        this: wl::ObjectRef<Self>, client: &mut wl::Client, offset: u32, width: i32, height: i32,
+        this: ObjectRef<Self>, client: &mut Client, offset: u32, width: i32, height: i32,
         stride: i32, format: wl_shm::Format,
     ) -> Result<Buffer, Error> {
         // TODO(tjdetwiler): Support sending the protocol-modeled errors,
@@ -109,9 +112,9 @@ impl ShmPool {
     }
 }
 
-impl wl::RequestReceiver<WlShmPool> for ShmPool {
+impl RequestReceiver<WlShmPool> for ShmPool {
     fn receive(
-        this: wl::ObjectRef<Self>, request: WlShmPoolRequest, client: &mut wl::Client,
+        this: ObjectRef<Self>, request: WlShmPoolRequest, client: &mut Client,
     ) -> Result<(), Error> {
         match request {
             WlShmPoolRequest::Destroy => {
@@ -187,9 +190,9 @@ impl Buffer {
     }
 }
 
-impl wl::RequestReceiver<WlBuffer> for Buffer {
+impl RequestReceiver<WlBuffer> for Buffer {
     fn receive(
-        this: wl::ObjectRef<Self>, request: WlBufferRequest, client: &mut wl::Client,
+        this: ObjectRef<Self>, request: WlBufferRequest, client: &mut Client,
     ) -> Result<(), Error> {
         let WlBufferRequest::Destroy = request;
         client.delete_id(this.id())?;
