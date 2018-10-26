@@ -151,7 +151,7 @@ func WriteImgs(imgs []string, imgsPath string) error {
 	for _, img := range imgs {
 		imgPath := filepath.Join(imgsPath, img)
 		if fi, err := os.Stat(imgPath); err != nil || fi.Size() == 0 {
-			logger.Errorf("img_writer: %s image not found or zero length, skipping", img)
+			logger.Errorf("img_writer: %q image not found or zero length, skipping", img)
 			continue
 		}
 
@@ -175,39 +175,38 @@ func WriteImgs(imgs []string, imgsPath string) error {
 			return fmt.Errorf("unrecognized image %q", img)
 		}
 
-		err := writeImg(c, imgPath)
+		logger.Infof("img_writer: writing %q from %q", img, imgPath)
+		out, err := writeImg(c, imgPath)
+		if len(out) != 0 {
+			logger.Infof("img_writer: %s", string(out))
+		}
 		if err != nil {
-			logger.Errorf("img_writer: error writing image: %s", err)
+			logger.Errorf("img_writer: error writing %q from %q: %s", img, imgPath, err)
+			if len(out) != 0 {
+				logger.Errorf("img_writer: %s", string(out))
+			}
 			return err
 		}
-		logger.Infof("img_writer: wrote %s successfully from %s", img, imgPath)
+		logger.Infof("img_writer: wrote %q successfully from %q", img, imgPath)
 	}
 	return nil
 }
 
-func writeImg(c *exec.Cmd, path string) error {
+func writeImg(c *exec.Cmd, path string) ([]byte, error) {
 	info, err := os.Stat(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if info.Size() == 0 {
-		return fmt.Errorf("img_writer: image file is empty!")
+		return nil, fmt.Errorf("img_writer: image file is empty!")
 	}
 	imgFile, err := os.Open(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	defer imgFile.Close()
 	c.Stdin = imgFile
 
-	if err = c.Start(); err != nil {
-		return fmt.Errorf("img_writer: error starting command: %s", err)
-	}
-
-	if err = c.Wait(); err != nil {
-		return fmt.Errorf("img_writer: command failed during execution: %s", err)
-	}
-
-	return nil
+	return c.CombinedOutput()
 }
