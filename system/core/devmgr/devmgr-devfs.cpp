@@ -44,16 +44,16 @@ Watcher::Watcher(Devnode* dn, zx::channel ch, uint32_t mask)
     : devnode(dn), handle(fbl::move(ch)), mask(mask) {
 }
 
-struct dc_iostate {
-    dc_iostate() = default;
+struct DcIostate {
+    DcIostate() = default;
 
     port_handler_t ph = {};
 
     // entry in our devnode's iostate list
-    fbl::DoublyLinkedListNodeState<dc_iostate*> node;
+    fbl::DoublyLinkedListNodeState<DcIostate*> node;
     struct Node {
-        static fbl::DoublyLinkedListNodeState<dc_iostate*>& node_state(
-            dc_iostate& obj) {
+        static fbl::DoublyLinkedListNodeState<DcIostate*>& node_state(
+            DcIostate& obj) {
             return obj.node;
         }
     };
@@ -90,7 +90,7 @@ struct Devnode {
     list_node_t children;
 
     // list of attached iostates
-    fbl::DoublyLinkedList<dc_iostate*, dc_iostate::Node> iostate;
+    fbl::DoublyLinkedList<DcIostate*, DcIostate::Node> iostate;
 
     // used to assign unique small device numbers
     // for class device links
@@ -165,7 +165,7 @@ void describe_error(zx_handle_t h, zx_status_t status) {
 }
 
 static zx_status_t iostate_create(Devnode* dn, zx_handle_t h) {
-    auto ios = fbl::make_unique<dc_iostate>();
+    auto ios = fbl::make_unique<DcIostate>();
     if (ios == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -186,7 +186,7 @@ static zx_status_t iostate_create(Devnode* dn, zx_handle_t h) {
     return r;
 }
 
-static void iostate_destroy(dc_iostate* ios) {
+static void iostate_destroy(DcIostate* ios) {
     if (ios->devnode) {
         ios->devnode->iostate.erase(*ios);
         ios->devnode = nullptr;
@@ -671,7 +671,7 @@ static zx_status_t devfs_readdir(Devnode* dn, uint64_t* _ino, void* data, size_t
 
 
 static zx_status_t devfs_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie) {
-    auto ios = static_cast<dc_iostate*>(cookie);
+    auto ios = static_cast<DcIostate*>(cookie);
     Devnode* dn = ios->devnode;
     if (dn == nullptr) {
         return ZX_ERR_PEER_CLOSED;
@@ -784,7 +784,7 @@ static zx_status_t devfs_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* co
 }
 
 static zx_status_t dc_fidl_handler(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
-    dc_iostate* ios = containerof(ph, dc_iostate, ph);
+    DcIostate* ios = containerof(ph, DcIostate, ph);
 
     zx_status_t r;
     if (signals & ZX_CHANNEL_READABLE) {
