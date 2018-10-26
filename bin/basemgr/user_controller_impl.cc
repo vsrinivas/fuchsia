@@ -64,6 +64,12 @@ UserControllerImpl::UserControllerImpl(
       std::move(token_provider_factory), std::move(ledger_token_manager),
       std::move(agent_token_manager), user_context_binding_.NewBinding(),
       std::move(view_owner_request));
+
+  user_runner_app_->SetAppErrorHandler([this] {
+    FXL_LOG(ERROR) << "User runner seems to have crashed unexpectedly. "
+                   << "Logging out.";
+    Logout();
+  });
 }
 
 // |fuchsia::modular::UserController|
