@@ -23,7 +23,7 @@ def main():
     parser.add_argument('--godepfile', help='Path to godepfile tool', required=True)
     parser.add_argument('--root-out-dir', help='Path to root of build output',
                         required=True)
-    parser.add_argument('--zircon-sysroot', help='The Zircon sysroot to use',
+    parser.add_argument('--sysroot', help='The sysroot to use',
                         required=False)
     parser.add_argument('--depfile', help='The path to the depfile',
                         required=True)
@@ -108,20 +108,17 @@ def main():
     # Some users have GOROOT set in their parent environment, which can break
     # things, so it is always set explicitly here.
     env['GOROOT'] = build_goroot
+    env['CGO_CFLAGS'] = "--sysroot=" + args.sysroot
 
     if goos == 'fuchsia':
         env['CGO_ENABLED'] = '1'
         env['CC'] = os.path.join(build_goroot, 'misc', 'fuchsia', 'clangwrap.sh')
-        env['ZIRCON_SYSROOT'] = args.zircon_sysroot
-
-        # These are used by gccwrap.sh
-        env['ZIRCON'] = os.path.join(args.fuchsia_root, 'zircon')
-        env['FUCHSIA_ROOT_OUT_DIR'] = os.path.abspath(args.root_out_dir)
 
         # These are used by clangwrap.sh
         env['FUCHSIA_SHARED_LIBS'] = args.shared_libs_root
         env['CLANG_PREFIX'] = args.toolchain_prefix
         env['FDIO_INCLUDE'] = args.fdio_include
+        env['ZIRCON_SYSROOT'] = args.sysroot
 
     # /usr/bin:/bin are required for basic things like bash(1) and env(1), but
     # preference the toolchain path. Note that on Mac, ld is also found from

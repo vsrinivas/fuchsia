@@ -88,6 +88,8 @@ template("go_build") {
       "--shared-libs-root",
       rebase_path(
           get_label_info("//default($shlib_toolchain)", "root_out_dir")),
+      "--sysroot",
+      sysroot
     ]
 
     if (is_fuchsia) {
@@ -101,12 +103,7 @@ template("go_build") {
       # GN provides no way to propagate include paths like this, so, this is brittle:
       fdio_include = rebase_path("//zircon/system/ulib/fdio/include")
 
-      zircon_sysroot = rebase_path(
-              "$root_out_dir/sdk/exported/zircon_sysroot/arch/$target_cpu/sysroot")
-
       args += [
-        "--zircon-sysroot",
-        zircon_sysroot,
         "--fdio-include",
         fdio_include,
         "--go-root",
