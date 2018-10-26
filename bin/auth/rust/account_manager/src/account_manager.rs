@@ -84,6 +84,10 @@ impl AccountManager {
                     self.provision_from_auth_provider(auth_context_provider, auth_provider_type);
                 future::ready(responder.send(response.0, response.1.as_mut().map(|x| OutOfLine(x))))
             }
+            AccountManagerRequest::ProvisionNewAccount { responder } => {
+                let mut response = self.provision_new_account();
+                future::ready(responder.send(response.0, response.1.as_mut().map(|x| OutOfLine(x))))
+            }
         }
     }
 
@@ -134,10 +138,7 @@ impl AccountManager {
         }
     }
 
-    fn provision_from_auth_provider(
-        &mut self, _auth_context_provider: ClientEnd<AuthenticationContextProviderMarker>,
-        _auth_provider_type: String,
-    ) -> (Status, Option<FidlLocalAccountId>) {
+    fn provision_new_account(&mut self) -> (Status, Option<FidlLocalAccountId>) {
         // TODO(jsankey): Use the specified account auth_provider_type to invoke an
         // AuthProvider rather than creating a local-only account.
         let new_id = LocalAccountId::new(self.next_id);
@@ -146,6 +147,14 @@ impl AccountManager {
         info!("Adding new local account {:?}", new_id);
         // TODO(jsankey): Persist the change in installed accounts.
         (Status::Ok, Some(new_id.into()))
+    }
+
+    fn provision_from_auth_provider(
+        &mut self, _auth_context_provider: ClientEnd<AuthenticationContextProviderMarker>,
+        _auth_provider_type: String,
+    ) -> (Status, Option<FidlLocalAccountId>) {
+        // TODO(jsankey): Implement this method
+        (Status::InternalError, None)
     }
 }
 
@@ -156,8 +165,6 @@ mod tests {
     use fidl_fuchsia_auth_account::{AccountManagerProxy, AccountManagerRequestStream};
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
-
-    const TEST_AUTH_PROVIDER_TYPE: &str = "dev";
 
     fn async_test<TestFn, Fut>(test_fn: TestFn)
     where
@@ -180,11 +187,6 @@ mod tests {
         executor
             .run_singlethreaded(test_fn(proxy))
             .expect("Executor run failed.")
-    }
-
-    fn create_fake_auth_context_provider() -> ClientEnd<AuthenticationContextProviderMarker> {
-        let (_, client_chan) = zx::Channel::create().expect("Failed to create channel");
-        ClientEnd::new(client_chan)
     }
 
     fn fidl_local_id_vec(ints: Vec<u64>) -> Vec<FidlLocalAccountId> {
@@ -211,21 +213,15 @@ mod tests {
     }
 
     #[test]
-    fn test_provision_from_auth_provider() {
+    fn test_provision_new_account() {
         async_test(async move |account_manager| {
             // Add two accounts.
             assert_eq!(
-                await!(account_manager.provision_from_auth_provider(
-                    create_fake_auth_context_provider(),
-                    TEST_AUTH_PROVIDER_TYPE
-                ))?,
+                await!(account_manager.provision_new_account())?,
                 (Status::Ok, Some(fidl_local_id_box(1)))
             );
             assert_eq!(
-                await!(account_manager.provision_from_auth_provider(
-                    create_fake_auth_context_provider(),
-                    TEST_AUTH_PROVIDER_TYPE
-                ))?,
+                await!(account_manager.provision_new_account())?,
                 (Status::Ok, Some(fidl_local_id_box(2)))
             );
 
@@ -254,10 +250,7 @@ mod tests {
     fn test_remove_missing_account() {
         async_test(async move |account_manager| {
             assert_eq!(
-                await!(account_manager.provision_from_auth_provider(
-                    create_fake_auth_context_provider(),
-                    TEST_AUTH_PROVIDER_TYPE
-                ))?,
+                await!(account_manager.provision_new_account())?,
                 (Status::Ok, Some(fidl_local_id_box(1)))
             );
 
@@ -275,17 +268,11 @@ mod tests {
         async_test(async move |account_manager| {
             // Add two accounts.
             assert_eq!(
-                await!(account_manager.provision_from_auth_provider(
-                    create_fake_auth_context_provider(),
-                    TEST_AUTH_PROVIDER_TYPE
-                ))?,
+                await!(account_manager.provision_new_account())?,
                 (Status::Ok, Some(fidl_local_id_box(1)))
             );
             assert_eq!(
-                await!(account_manager.provision_from_auth_provider(
-                    create_fake_auth_context_provider(),
-                    TEST_AUTH_PROVIDER_TYPE
-                ))?,
+                await!(account_manager.provision_new_account())?,
                 (Status::Ok, Some(fidl_local_id_box(2)))
             );
 

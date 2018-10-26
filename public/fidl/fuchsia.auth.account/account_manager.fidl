@@ -164,8 +164,16 @@ interface AccountManager {
              string auth_provider_type)
              -> (Status status, LocalAccountId? account_id);
 
-    // TODO(jsankey): Add methods to provision by creating a completely new
-    //                Fuchsia account or authenticating directly to an
+    // Adds a new, initially empty, Fuchsia account to the current device.
+    //
+    // Returns: |status| A |Status| indicating whether the operation was
+    //                   successful
+    //          |account_id| The identifier of the newly added account, if the
+    //                       operation was successful.
+    102: ProvisionNewAccount() -> (Status status, LocalAccountId? account_id);
+
+ 
+    // TODO(jsankey): Add methods to provision by authenticating directly to an
     //                existing Fuchsia account.
 
     // TODO(jsankey): Add methods to list AuthProviders and manage their dynamic
