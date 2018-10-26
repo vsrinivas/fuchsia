@@ -6,7 +6,6 @@ use std::sync::Arc;
 
 use failure::{format_err, Error};
 use fuchsia_async as fasync;
-use fuchsia_wayland_core as wl;
 use parking_lot::Mutex;
 use wayland::*;
 
@@ -16,17 +15,7 @@ use crate::registry::Registry;
 
 /// When the connection is created it is initialized with a 'wl_display' object
 /// that the client can immediately interact with.
-const DISPLAY_SINGLETON_OBJECT_ID: u32 = 1;
-
-/// Since `Client` is in the core library, it doesn't have access to the
-/// protocol bindings required to send delete_id events for us as we'd like,
-///
-/// Instead we provide this callback function to `Client` to send the
-/// wl_display::delete_id event after the key has been cleared from the internal
-/// object map.
-fn send_delete_id_event(client: &mut Client, id: wl::ObjectId) -> Result<(), Error> {
-    client.post(DISPLAY_SINGLETON_OBJECT_ID, WlDisplayEvent::DeleteId { id })
-}
+pub const DISPLAY_SINGLETON_OBJECT_ID: u32 = 1;
 
 /// |Display| is the global object used to manage a wayland server.
 ///
@@ -46,7 +35,6 @@ impl Display {
 
     pub fn spawn_new_client(&self, chan: fasync::Channel) {
         let mut client = Client::new(chan, self.registry.clone());
-        client.set_object_deleter(send_delete_id_event);
         client.set_protocol_logging(true);
 
         // Add the global wl_display object. We unwrap here since the object map

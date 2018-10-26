@@ -12,14 +12,14 @@ use fuchsia_zircon as zx;
 use futures::channel::mpsc;
 use futures::prelude::*;
 use futures::select;
-
 use parking_lot::Mutex;
+use wayland::WlDisplayEvent;
 
+use crate::display::DISPLAY_SINGLETON_OBJECT_ID;
 use crate::object::{MessageReceiver, ObjectLookupError, ObjectMap, ObjectRef, RequestReceiver};
 use crate::registry::Registry;
 
 type Task = Box<FnMut(&mut Client) -> Result<(), Error> + 'static>;
-type ObjectDeleter = fn(&mut Client, wl::ObjectId) -> Result<(), Error>;
 
 /// The state of a single client connection. Each client connection will have
 /// have its own zircon channel and its own set of protocol objects. The
@@ -43,11 +43,6 @@ pub struct Client {
     /// The sending endpoint for the task channel.
     task_queue: TaskQueue,
 
-    /// A function that will be called after objects have been deleted from
-    /// the underlying `ObjectMap`. The purpose of this is to allow the
-    /// application to send the wl_display::delete_id event
-    object_deleter: Option<ObjectDeleter>,
-
     /// A monotonically increasing value that can be embedded in certain events.
     next_event_serial: u32,
 
@@ -64,7 +59,6 @@ impl Client {
             objects: ObjectMap::new(),
             tasks: receiver,
             task_queue: TaskQueue(sender),
-            object_deleter: None,
             next_event_serial: 0,
             protocol_logging: false,
         }
@@ -85,10 +79,6 @@ impl Client {
     /// Returns `true` if protocol messages should be logged.
     pub(crate) fn protocol_logging(&self) -> bool {
         self.protocol_logging
-    }
-
-    pub fn set_object_deleter(&mut self, deleter: ObjectDeleter) {
-        self.object_deleter = Some(deleter);
     }
 
     /// Returns a object that can post messages to the `Client`.
@@ -183,9 +173,11 @@ impl Client {
         self.objects.add_object_raw(id, receiver, request_spec)
     }
 
+    /// Deletes the object `id` from the local object map and send a notification to the
+    /// client confirming that `id` can be reused.
     pub fn delete_id(&mut self, id: wl::ObjectId) -> Result<(), Error> {
         self.objects.delete(id)?;
-        self.object_deleter.map_or(Ok(()), |f| f(self, id))
+        self.post(DISPLAY_SINGLETON_OBJECT_ID, WlDisplayEvent::DeleteId { id })
     }
 
     /// Reads the message header to find the target for this message and then
