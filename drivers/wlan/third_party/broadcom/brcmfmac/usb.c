@@ -182,7 +182,7 @@ struct brcmf_usbdev_info {
 
 // Linux->ZX glue functions start here
 
-struct brcmf_urb* brcmf_usb_allocate_urb(usb_protocol_t* usb) {
+struct brcmf_urb* brcmf_usb_allocate_urb(usb_protocol_t* usb, size_t parent_req_size) {
     zx_status_t result;
     struct brcmf_urb* urb;
 
@@ -190,7 +190,7 @@ struct brcmf_urb* brcmf_usb_allocate_urb(usb_protocol_t* usb) {
     if (urb == NULL) {
         return NULL;
     }
-    result = usb_request_alloc(&urb->zxurb, USB_MAX_TRANSFER_SIZE, 0, sizeof(usb_request_t));
+    result = usb_request_alloc(&urb->zxurb, USB_MAX_TRANSFER_SIZE, 0, parent_req_size);
     if (result != ZX_OK) {
         free(urb);
         return NULL;
@@ -522,7 +522,7 @@ static struct brcmf_usbreq* brcmf_usbdev_qinit(struct brcmf_usbdev_info* devinfo
     req = reqs;
 
     for (i = 0; i < qsize; i++) {
-        req->urb = brcmf_usb_allocate_urb(&devinfo->protocol);
+        req->urb = brcmf_usb_allocate_urb(&devinfo->protocol, devinfo->usbdev->parent_req_size);
         if (!req->urb) {
             goto fail;
         }
@@ -1244,11 +1244,13 @@ static struct brcmf_usbdev* brcmf_usb_attach(struct brcmf_usbdev_info* devinfo, 
     }
     devinfo->tx_freecount = ntxq;
 
-    devinfo->ctl_urb = brcmf_usb_allocate_urb(&devinfo->protocol);
+    devinfo->ctl_urb = brcmf_usb_allocate_urb(&devinfo->protocol,
+                                              devinfo->usbdev->parent_req_size);
     if (!devinfo->ctl_urb) {
         goto error;
     }
-    devinfo->bulk_urb = brcmf_usb_allocate_urb(&devinfo->protocol);
+    devinfo->bulk_urb = brcmf_usb_allocate_urb(&devinfo->protocol,
+                                               devinfo->usbdev->parent_req_size);
     if (!devinfo->bulk_urb) {
         goto error;
     }
@@ -1720,6 +1722,7 @@ zx_status_t brcmf_usb_register(zx_device_t* zxdev, usb_protocol_t* usb_proto) {
         return ZX_ERR_NO_MEMORY;
     }
 
+    usb_device->parent_req_size = usb_get_request_size(usb_proto);
     usb_desc_iter_t iter;
     result = usb_desc_iter_init(usb_proto, &iter);
     if (result != ZX_OK) {

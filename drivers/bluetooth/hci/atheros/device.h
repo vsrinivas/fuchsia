@@ -88,6 +88,8 @@ class Device {
   bt_hci_protocol_t hci_;
   usb_protocol_t usb_;
 
+  size_t parent_req_size_ = 0;
+
   bool firmware_loaded_ __TA_GUARDED(mutex_);
 };
 

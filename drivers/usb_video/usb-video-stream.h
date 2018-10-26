@@ -42,7 +42,7 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
                             usb_video_vs_input_header_desc* input_header,
                             UvcFormatList format_list,
                             fbl::Vector<UsbVideoStreamingSetting>* settings,
-                            UsbDeviceInfo device_info);
+                            UsbDeviceInfo device_info, size_t parent_req_size);
 
   // DDK device implementation
   void DdkUnbind();
@@ -61,7 +61,7 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
   UsbVideoStream(zx_device_t* parent, usb_protocol_t* usb,
                  UvcFormatList format_list,
                  fbl::Vector<UsbVideoStreamingSetting>* settings,
-                 UsbDeviceInfo device_info);
+                 UsbDeviceInfo device_info, size_t parent_req_size);
 
   zx_status_t Bind(const char* devname, usb_interface_descriptor_t* intf,
                    usb_video_vc_header_desc* control_header,
@@ -195,6 +195,8 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
   // Size of underlying VMO backing the USB request.
   uint64_t allocated_req_size_ = 0;
 
+  //usb request size queried from the usb stack
+  size_t parent_req_size_ = 0;
   // Bulk transfer specific fields.
   // Total bytes received so far for the current payload, including headers.
   // A bulk payload may be split across multiple usb requests,

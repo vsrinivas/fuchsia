@@ -22,6 +22,7 @@ extern "C" zx_status_t ralink_bind(void* ctx, zx_device_t* device) {
     zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
     if (result != ZX_OK) { return result; }
 
+    size_t parent_req_size = usb_get_request_size(&usb);
     usb_desc_iter_t iter;
     result = usb_desc_iter_init(&usb, &iter);
     if (result < 0) return result;
@@ -51,7 +52,8 @@ extern "C" zx_status_t ralink_bind(void* ctx, zx_device_t* device) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    auto rtdev = new ralink::Device(device, usb, blkin_endpt, std::move(blkout_endpts));
+    auto rtdev = new ralink::Device(device, usb, blkin_endpt, std::move(blkout_endpts),
+                                    parent_req_size);
     zx_status_t status = rtdev->Bind();
     if (status != ZX_OK) { delete rtdev; }
 

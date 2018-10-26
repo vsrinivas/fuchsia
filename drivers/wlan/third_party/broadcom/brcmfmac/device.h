@@ -143,6 +143,7 @@ struct brcmf_usb_device {
         int bNumConfigurations;
         int bDeviceClass;
     } descriptor;
+    size_t parent_req_size;
 };
 
 struct brcmf_endpoint_container {
