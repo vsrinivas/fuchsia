@@ -288,7 +288,7 @@ static zx_status_t dc_attempt_bind(const driver_t* drv, Device* dev);
 
 static bool dc_running;
 
-static zx_handle_t dc_watch_channel;
+static zx::channel dc_watch_channel;
 
 static zx_handle_t devhost_job;
 port_t dc_port;
@@ -597,7 +597,7 @@ static zx_status_t dc_notify(const Device* dev, uint32_t op) {
         evt->u.add.protocol_id = dev->protocol_id;
         evt->u.add.props_len = static_cast<uint32_t>(propslen);
         evt->u.add.path_len = static_cast<uint32_t>(pathlen);
-        r = zx_channel_write(dc_watch_channel, 0, msg, static_cast<uint32_t>(len), nullptr, 0);
+        r = dc_watch_channel.write(0, msg, static_cast<uint32_t>(len), nullptr, 0);
     } else {
         devmgr_event_t evt;
         memset(&evt, 0, sizeof(evt));
@@ -606,20 +606,17 @@ static zx_status_t dc_notify(const Device* dev, uint32_t op) {
             evt.flags |= DEVMGR_FLAGS_BOUND;
         }
         evt.id = (uintptr_t) dev;
-        r = zx_channel_write(dc_watch_channel, 0, &evt, sizeof(evt), nullptr, 0);
+        r = dc_watch_channel.write(0, &evt, sizeof(evt), nullptr, 0);
     }
     if (r < 0) {
-        zx_handle_close(dc_watch_channel);
-        dc_watch_channel = ZX_HANDLE_INVALID;
+        dc_watch_channel.reset();
     }
     return r;
 }
 
 static void dc_watch(zx_handle_t h) {
-    if (dc_watch_channel != ZX_HANDLE_INVALID) {
-        zx_handle_close(dc_watch_channel);
-    }
-    dc_watch_channel = h;
+    dc_watch_channel.reset(h);
+
     for (const auto& dev : list_devices) {
         if (dev.flags & (DEV_CTX_DEAD | DEV_CTX_ZOMBIE)) {
             // if device is dead, ignore it
