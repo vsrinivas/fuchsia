@@ -30,7 +30,7 @@
 namespace devmgr {
 
 static FsInstallerFn g_installer;
-static zx_handle_t job;
+static zx::unowned_job job;
 static bool netboot;
 
 static zx_status_t fshost_launch_load(void* ctx, launchpad_t* lp,
@@ -108,7 +108,7 @@ static void old_launch_blob_init() {
 
     const zx_handle_t raw_handle = handle.release();
     zx_status_t status = devmgr_launch(
-        job, "pkgfs", &fshost_launch_load, nullptr, argc, &argv[0], nullptr, -1,
+        *job, "pkgfs", &fshost_launch_load, nullptr, argc, &argv[0], nullptr, -1,
         &raw_handle, &type, 1, proc.reset_and_get_address(), FS_DATA | FS_BLOB | FS_SVC);
 
     if (status != ZX_OK) {
@@ -247,7 +247,7 @@ static bool pkgfs_launch() {
     const zx_handle_t raw_h1 = h1.release();
     zx::process proc;
     status = devmgr_launch_cmdline(
-        "fshost", job, "pkgfs",
+        "fshost", *job, "pkgfs",
         &pkgfs_launch_load, (void*)(intptr_t)fs_blob_fd, cmd,
         &raw_h1, (const uint32_t[]){ PA_HND(PA_USER0, 0) }, 1,
         proc.reset_and_get_address(), FS_DATA | FS_BLOB | FS_SVC);
@@ -270,21 +270,21 @@ static void launch_blob_init() {
 
 static zx_status_t launch_blobfs(int argc, const char** argv, zx_handle_t* hnd,
                                  uint32_t* ids, size_t len) {
-    return devmgr_launch(job, "blobfs:/blob",
+    return devmgr_launch(*job, "blobfs:/blob",
                          &fshost_launch_load, nullptr, argc, argv, nullptr, -1,
                          hnd, ids, len, nullptr, FS_FOR_FSPROC);
 }
 
 static zx_status_t launch_minfs(int argc, const char** argv, zx_handle_t* hnd,
                                 uint32_t* ids, size_t len) {
-    return devmgr_launch(job, "minfs:/data",
+    return devmgr_launch(*job, "minfs:/data",
                          &fshost_launch_load, nullptr, argc, argv, nullptr, -1,
                          hnd, ids, len, nullptr, FS_FOR_FSPROC);
 }
 
 static zx_status_t launch_fat(int argc, const char** argv, zx_handle_t* hnd,
                               uint32_t* ids, size_t len) {
-    return devmgr_launch(job, "fatfs:/volume",
+    return devmgr_launch(*job, "fatfs:/volume",
                          &fshost_launch_load, nullptr, argc, argv, nullptr, -1,
                          hnd, ids, len, nullptr, FS_FOR_FSPROC);
 }
@@ -304,7 +304,7 @@ static zx_status_t fshost_fsck(const char* device_path, disk_format_t df) {
     auto launch_fsck = [](int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
                           size_t len) {
         zx::process proc;
-        zx_status_t status = devmgr_launch(job, "fsck", &fshost_launch_load, nullptr, argc, argv,
+        zx_status_t status = devmgr_launch(*job, "fsck", &fshost_launch_load, nullptr, argc, argv,
                                            nullptr, -1, hnd, ids, len, proc.reset_and_get_address(),
                                            FS_FOR_FSPROC);
         if (status != ZX_OK) {
@@ -580,7 +580,7 @@ static zx_status_t block_device_added(int dirfd, int event, const char* name, vo
     }
 }
 
-void block_device_watcher(FsInstallerFn installer, zx_handle_t _job, bool _netboot) {
+void block_device_watcher(FsInstallerFn installer, zx::unowned_job _job, bool _netboot) {
     job = _job;
     netboot = _netboot;
     g_installer = fbl::move(installer);

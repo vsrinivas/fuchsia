@@ -67,7 +67,7 @@ void devmgr_disable_appmgr_services() {
 }
 
 zx_status_t devmgr_launch(
-    zx_handle_t job, const char* name,
+    const zx::job& job, const char* name,
     zx_status_t (*load)(void*, launchpad_t*, const char*), void* ctx,
     int argc, const char* const* argv,
     const char** _envp, int stdiofd,
@@ -86,11 +86,11 @@ zx_status_t devmgr_launch(
     }
     envp[envn++] = nullptr;
 
-    zx_handle_t job_copy = ZX_HANDLE_INVALID;
-    zx_handle_duplicate(job, CHILD_JOB_RIGHTS, &job_copy);
+    zx::job job_copy;
+    job.duplicate(CHILD_JOB_RIGHTS, &job_copy);
 
     launchpad_t* lp;
-    launchpad_create(job_copy, name, &lp);
+    launchpad_create(job_copy.get(), name, &lp);
 
     status = (*load)(ctx, lp, argv[0]);
     if (status != ZX_OK) {
@@ -134,12 +134,11 @@ zx_status_t devmgr_launch(
     } else {
         printf("devmgr: launch %s (%s) OK\n", argv[0], name);
     }
-    zx_handle_close(job_copy);
     return status;
 }
 
 zx_status_t devmgr_launch_cmdline(
-    const char* me, zx_handle_t job, const char* name,
+    const char* me, const zx::job& job, const char* name,
     zx_status_t (*load)(void* ctx, launchpad_t*, const char* file), void* ctx,
     const char* cmdline,
     const zx_handle_t* handles, const uint32_t* types, size_t hcount,

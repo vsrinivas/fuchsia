@@ -49,7 +49,7 @@ zx_handle_t devmgr_load_file(const char* path, uint32_t* out_size);
     ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE)
 
 zx_status_t devmgr_launch(
-    zx_handle_t job, const char* name,
+    const zx::job& job, const char* name,
     zx_status_t (*load)(void* ctx, launchpad_t*, const char* file), void* ctx,
     int argc, const char* const* argv,
     const char** envp, int stdiofd,
@@ -57,7 +57,7 @@ zx_status_t devmgr_launch(
     zx_handle_t* proc_out, uint32_t flags);
 zx_status_t devmgr_launch_load(void* ctx, launchpad_t* lp, const char* file);
 zx_status_t devmgr_launch_cmdline(
-    const char* me, zx_handle_t job, const char* name,
+    const char* me, const zx::job& job, const char* name,
     zx_status_t (*load)(void* ctx, launchpad_t*, const char* file), void* ctx,
     const char* cmdline,
     const zx_handle_t* handles, const uint32_t* types, size_t hcount,
@@ -72,7 +72,7 @@ void bootfs_create_from_startup_handle();
 void fshost_start();
 zx_status_t copy_vmo(zx_handle_t src, zx_off_t offset, size_t length, zx_handle_t* out_dest);
 
-zx_handle_t get_sysinfo_job_root();
+zx::job get_sysinfo_job_root();
 
 void load_system_drivers();
 
@@ -89,7 +89,7 @@ zx::channel fs_clone(const char* path);
 
 // Function which mounts a handle on behalf of the block watcher.
 using FsInstallerFn = fbl::Function<zx_status_t(const char* path, zx_handle_t h)>;
-void block_device_watcher(FsInstallerFn install_callback, zx_handle_t job, bool netboot);
+void block_device_watcher(FsInstallerFn install_callback, zx::unowned_job job, bool netboot);
 
 // getenv_bool looks in the environment for name. If not found, it returns
 // default. If found, it returns false if the found value matches "0", "off", or

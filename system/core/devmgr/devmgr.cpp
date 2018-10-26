@@ -61,13 +61,13 @@ zx_handle_t get_root_resource() {
     return root_resource_handle;
 }
 
-zx_handle_t get_sysinfo_job_root() {
+zx::job get_sysinfo_job_root() {
     zx::job h;
     //TODO: limit to enumerate rights
     if (root_job_handle->duplicate(ZX_RIGHT_SAME_RIGHTS, &h) < 0) {
-        return ZX_HANDLE_INVALID;
+        return zx::job();
     } else {
-        return h.release();
+        return h;
     }
 }
 
@@ -77,7 +77,7 @@ static const char* argv_appmgr[] = {"/system/bin/appmgr"};
 void do_autorun(const char* name, const char* env) {
     const char* cmd = getenv(env);
     if (cmd != nullptr) {
-        devmgr_launch_cmdline(env, svcs_job_handle.get(), name,
+        devmgr_launch_cmdline(env, svcs_job_handle, name,
                               &devmgr_launch_load, nullptr, cmd,
                               nullptr, nullptr, 0, nullptr, FS_ALL);
     }
@@ -136,7 +136,7 @@ static int fuchsia_starter(void* arg) {
                 appmgr_ids[appmgr_hnd_count] = PA_DIRECTORY_REQUEST;
                 appmgr_hnd_count++;
             }
-            devmgr_launch(fuchsia_job_handle.get(), "appmgr",
+            devmgr_launch(fuchsia_job_handle, "appmgr",
                           &devmgr_launch_load, nullptr,
                           fbl::count_of(argv_appmgr), argv_appmgr, nullptr, -1,
                           appmgr_hnds, appmgr_ids, appmgr_hnd_count,
@@ -292,7 +292,7 @@ int service_starter(void* arg) {
         };
         uint32_t handle_types[] = {PA_HND(PA_USER0, 0), PA_HND(PA_USER0, 1), PA_HND(PA_USER0, 2)};
         static const char* argv_crashsvc[] = {"/boot/bin/crashsvc"};
-        devmgr_launch(svcs_job_handle.get(), "crashsvc",
+        devmgr_launch(svcs_job_handle, "crashsvc",
                       &devmgr_launch_load, nullptr,
                       fbl::count_of(argv_crashsvc), argv_crashsvc, nullptr, -1,
                       handles, handle_types, fbl::count_of(handles), nullptr, 0);
@@ -327,7 +327,7 @@ int service_starter(void* arg) {
         }
 
         zx_handle_t proc;
-        if (devmgr_launch(svcs_job_handle.get(), "netsvc",
+        if (devmgr_launch(svcs_job_handle, "netsvc",
                           &devmgr_launch_load, nullptr, argc, args,
                           nullptr, -1, nullptr, nullptr, 0, &proc, FS_ALL) == ZX_OK) {
             if (vruncmd) {
@@ -361,7 +361,7 @@ int service_starter(void* arg) {
         zx_handle_t h = ZX_HANDLE_INVALID;
         zx_channel_create(0, &h, &virtcon_open);
         const char* args[] = {"/boot/bin/virtual-console", "--shells", num_shells, "--run", vcmd};
-        devmgr_launch(svcs_job_handle.get(), "virtual-console",
+        devmgr_launch(svcs_job_handle, "virtual-console",
                       &devmgr_launch_load, nullptr,
                       vruncmd ? 5 : 3, args, envp, -1,
                       &h, &type, (h == ZX_HANDLE_INVALID) ? 0 : 1, nullptr, FS_ALL);
@@ -407,7 +407,7 @@ static int console_starter(void* arg) {
     for (unsigned n = 0; n < 30; n++) {
         int fd;
         if ((fd = open(device, O_RDWR)) >= 0) {
-            devmgr_launch(svcs_job_handle.get(), "sh:console",
+            devmgr_launch(svcs_job_handle, "sh:console",
                           &devmgr_launch_load, nullptr,
                           fbl::count_of(argv_sh), argv_sh, envp, fd, nullptr, nullptr, 0, nullptr, FS_ALL);
             break;
@@ -793,7 +793,7 @@ void fshost_start() {
     }
     envp[envc] = nullptr;
 
-    devmgr_launch(svcs_job_handle.get(), "fshost",
+    devmgr_launch(svcs_job_handle, "fshost",
                   &devmgr_launch_load, nullptr, argc, argv, envp, -1,
                   handles, types, n, nullptr, 0);
 

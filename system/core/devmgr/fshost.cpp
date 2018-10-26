@@ -498,7 +498,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    block_device_watcher(fbl::BindMember(root.get(), &FsManager::InstallFs), zx_job_default(),
+    block_device_watcher(fbl::BindMember(root.get(), &FsManager::InstallFs), zx::job::default_job(),
                          netboot);
 
     printf("fshost: terminating (block device watcher finished?)\n");

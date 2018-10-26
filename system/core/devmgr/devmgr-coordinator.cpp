@@ -665,7 +665,7 @@ static zx_status_t dc_launch_devhost(Devhost* host,
     launchpad_set_nametable(lp, name_count, nametable);
 
     //TODO: limit root job access to root devhost only
-    launchpad_add_handle(lp, get_sysinfo_job_root(),
+    launchpad_add_handle(lp, get_sysinfo_job_root().release(),
                          PA_HND(PA_USER0, ID_HJOBROOT));
 
     const char* errmsg;
