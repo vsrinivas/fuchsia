@@ -10,6 +10,8 @@
 #include <fbl/algorithm.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/util.h>
+#include <lib/zx/debuglog.h>
+#include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 
 #include <zircon/paths.h>
@@ -27,12 +29,12 @@ namespace devmgr {
 
 void devmgr_io_init() {
     // setup stdout
-    zx_handle_t h;
-    if (zx_debuglog_create(ZX_HANDLE_INVALID, 0, &h) < 0) {
+    zx::debuglog h;
+    if (zx::debuglog::create(zx::resource(), 0, &h) < 0) {
         return;
     }
     fdio_t* logger;
-    if ((logger = fdio_logger_create(h)) == nullptr) {
+    if ((logger = fdio_logger_create(h.release())) == nullptr) {
         return;
     }
     close(1);
