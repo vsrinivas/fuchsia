@@ -12,7 +12,7 @@
 
 namespace devmgr {
 
-typedef struct {
+struct BindProgramContext {
     const zx_device_prop_t* props;
     const zx_device_prop_t* end;
     uint32_t protocol_id;
@@ -20,9 +20,9 @@ typedef struct {
     const zx_bind_inst_t* binding;
     const char* name;
     uint32_t autobind;
-} bpctx_t;
+};
 
-static uint32_t dev_get_prop(bpctx_t* ctx, uint32_t id) {
+static uint32_t dev_get_prop(BindProgramContext* ctx, uint32_t id) {
     const zx_device_prop_t* props = ctx->props;
     const zx_device_prop_t* end = ctx->end;
 
@@ -45,7 +45,7 @@ static uint32_t dev_get_prop(bpctx_t* ctx, uint32_t id) {
     }
 }
 
-static bool is_bindable(bpctx_t* ctx) {
+static bool is_bindable(BindProgramContext* ctx) {
     const zx_bind_inst_t* ip = ctx->binding;
     const zx_bind_inst_t* end = ip + (ctx->binding_size / sizeof(zx_bind_inst_t));
     uint32_t flags = 0;
@@ -146,7 +146,7 @@ bool dc_is_bindable(const driver_t* drv, uint32_t protocol_id,
     if (drv->binding_size == 0) {
         return false;
     }
-    bpctx_t ctx;
+    BindProgramContext ctx;
     ctx.props = props;
     ctx.end = props + prop_count;
     ctx.protocol_id = protocol_id;
