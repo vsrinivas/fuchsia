@@ -303,7 +303,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
         strcpy(dev->name, "proxy");
         dev->protocol_id = msg.protocol_id;
         dev->ops = &device_default_ops;
-        dev->rpc = hin[0];
+        dev->rpc.reset(hin[0]);
         dev->refcount = 1;
         newios->dev = dev.get();
 
@@ -750,7 +750,8 @@ zx_status_t devhost_add(zx_device_t* parent, zx_device_t* child, const char* pro
     }
 
     Status rsp;
-    if ((r = dc_msg_rpc(parent->rpc, &msg, msglen, &hsend, 1, &rsp, sizeof(rsp), nullptr, nullptr)) < 0) {
+    if ((r = dc_msg_rpc(parent->rpc.get(), &msg, msglen, &hsend, 1, &rsp, sizeof(rsp), nullptr,
+                        nullptr)) < 0) {
         log(ERROR, "devhost[%s] add '%s': rpc failed: %d\n", path, child->name, r);
     } else {
         ios->dev = child;
@@ -758,7 +759,7 @@ zx_status_t devhost_add(zx_device_t* parent, zx_device_t* child, const char* pro
         ios->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
         ios->ph.func = dh_handle_dc_rpc;
         if ((r = port_wait(&dh_port, &ios->ph)) == ZX_OK) {
-            child->rpc = hrpc;
+            child->rpc.reset(hrpc);
             child->ios = ios.release();
             return ZX_OK;
         }
@@ -784,7 +785,8 @@ static zx_status_t devhost_rpc_etc(zx_device_t* dev, Message::Op op,
     }
     msg.op = op;
     msg.value = value;
-    if ((r = dc_msg_rpc(dev->rpc, &msg, msglen, nullptr, 0, rsp, rsp_len, actual, outhandle)) < 0) {
+    if ((r = dc_msg_rpc(dev->rpc.get(), &msg, msglen, nullptr, 0, rsp, rsp_len, actual,
+                        outhandle)) < 0) {
         if (!(op == Message::Op::kGetMetadata && r == ZX_ERR_NOT_FOUND)) {
             log(ERROR, "devhost: rpc:%s failed: %d\n", opname, r);
         }
@@ -835,8 +837,7 @@ zx_status_t devhost_remove(zx_device_t* dev) {
                 sizeof(rsp), nullptr);
 
     // shut down our rpc channel
-    zx_handle_close(dev->rpc);
-    dev->rpc = ZX_HANDLE_INVALID;
+    dev->rpc.reset();
 
     // queue an event to destroy the iostate
     port_queue(&dh_port, &ios->ph, 1);

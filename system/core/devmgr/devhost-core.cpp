@@ -192,7 +192,6 @@ void devhost_device_destroy(zx_device_t* dev) REQ_DM_LOCK {
     // ensure all handles are invalid
     dev->event = 0xffffffff;
     dev->local_event = 0xffffffff;
-    dev->rpc = 0xFFFFFFFF;
 
     // ensure all pointers are invalid
     dev->ctx = 0;
@@ -485,7 +484,7 @@ zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
         }
         dev->flags |= DEV_FLAG_ADDED;
         dev->flags &= (~DEV_FLAG_BUSY);
-        dev->rpc = ctx->rpc;
+        dev->rpc.reset(ctx->rpc);
         ctx->child = dev;
         return ZX_OK;
     }

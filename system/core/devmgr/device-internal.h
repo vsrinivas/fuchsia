@@ -6,6 +6,7 @@
 
 #include <ddk/device.h>
 #include <fbl/intrusive_double_list.h>
+#include <lib/zx/channel.h>
 #include <zircon/compiler.h>
 
 namespace devmgr {
@@ -89,7 +90,7 @@ struct zx_device {
 
     zx_handle_t event = ZX_HANDLE_INVALID;
     zx_handle_t local_event = ZX_HANDLE_INVALID;
-    zx_handle_t rpc = ZX_HANDLE_INVALID;
+    zx::channel rpc;
 
     // most devices implement a single
     // protocol beyond the base device protocol

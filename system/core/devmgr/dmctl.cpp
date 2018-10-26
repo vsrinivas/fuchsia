@@ -27,7 +27,8 @@ static zx_status_t dmctl_cmd(Message::Op op, const char* cmd, size_t cmdlen,
     }
     msg.op = op;
     Status rsp;
-    return dc_msg_rpc(dmctl_dev->rpc, &msg, msglen, h, hcount, &rsp, sizeof(rsp), nullptr, nullptr);
+    return dc_msg_rpc(dmctl_dev->rpc.get(), &msg, msglen, h, hcount, &rsp, sizeof(rsp), nullptr,
+                      nullptr);
 }
 
 static zx_status_t dmctl_write(void* ctx, const void* buf, size_t count, zx_off_t off,
