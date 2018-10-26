@@ -669,15 +669,14 @@ static zx_status_t dc_launch_devhost(Devhost* host,
                          PA_HND(PA_USER0, ID_HJOBROOT));
 
     const char* errmsg;
-    zx_status_t status = launchpad_go(lp, &host->proc, &errmsg);
+    zx_status_t status = launchpad_go(lp, host->proc.reset_and_get_address(), &errmsg);
     if (status < 0) {
         log(ERROR, "devcoord: launch devhost '%s': failed: %d: %s\n",
             name, status, errmsg);
         return status;
     }
     zx_info_handle_basic_t info;
-    if (zx_object_get_info(host->proc, ZX_INFO_HANDLE_BASIC, &info,
-                           sizeof(info), nullptr, nullptr) == ZX_OK) {
+    if (host->proc.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr) == ZX_OK) {
         host->koid = info.koid;
     }
     log(INFO, "devcoord: launch devhost '%s': pid=%zu\n",
@@ -737,8 +736,7 @@ static void dc_release_devhost(Devhost* dh) {
     }
     list_devhosts.erase(*dh);
     zx_handle_close(dh->hrpc);
-    zx_task_kill(dh->proc);
-    zx_handle_close(dh->proc);
+    dh->proc.kill();
     delete dh;
 }
 

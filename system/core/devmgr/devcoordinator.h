@@ -17,6 +17,7 @@
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 #include <lib/zx/job.h>
+#include <lib/zx/process.h>
 #include <lib/zx/vmo.h>
 #include <port/port.h>
 
@@ -197,7 +198,7 @@ struct Devhost {
 
     port_handler_t ph;
     zx_handle_t hrpc;
-    zx_handle_t proc;
+    zx::process proc;
     zx_koid_t koid;
     mutable int32_t refcount_;
     uint32_t flags;
