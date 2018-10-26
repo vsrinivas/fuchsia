@@ -24,6 +24,7 @@
 #include <zircon/boot/bootdata.h>
 #include <lib/fdio/io.h>
 #include <lib/zircon-internal/ktrace.h>
+#include <lib/zx/socket.h>
 
 #include "devcoordinator.h"
 #include "devhost.h"
@@ -77,7 +78,7 @@ struct SuspendContext {
     fbl::DoublyLinkedList<Devhost*, Devhost::SuspendNode> devhosts;
 
     // socket to notify on for 'dm reboot' and 'dm poweroff'
-    zx_handle_t socket = ZX_HANDLE_INVALID;
+    zx::socket socket;
 
     // mexec arguments
     zx_handle_t kernel = ZX_HANDLE_INVALID;
@@ -176,10 +177,10 @@ static zx_status_t initialize_core_devices() {
     return ZX_OK;
 }
 
-static zx_handle_t dmctl_socket;
+static zx::socket dmctl_socket;
 
 static void dmprintf(const char* fmt, ...) {
-    if (dmctl_socket == ZX_HANDLE_INVALID) {
+    if (!dmctl_socket.is_valid()) {
         return;
     }
     char buf[1024];
@@ -188,9 +189,8 @@ static void dmprintf(const char* fmt, ...) {
     vsnprintf(buf, sizeof(buf), fmt, ap);
     va_end(ap);
     size_t actual;
-    if (zx_socket_write(dmctl_socket, 0, buf, strlen(buf), &actual) < 0) {
-        zx_handle_close(dmctl_socket);
-        dmctl_socket = ZX_HANDLE_INVALID;
+    if (dmctl_socket.write(0, buf, strlen(buf), &actual) != ZX_OK) {
+        dmctl_socket.reset();
     }
 }
 
@@ -1314,13 +1314,10 @@ static zx_status_t dc_handle_device_read(Device* dev) {
             goto fail_wrong_hcount;
         }
         if (hcount == 1) {
-            dmctl_socket = hin[0];
+            dmctl_socket.reset(hin[0]);
         }
         r = handle_dmctl_write(msg.datalen, static_cast<const char*>(data));
-        if (dmctl_socket != ZX_HANDLE_INVALID) {
-            zx_handle_close(dmctl_socket);
-            dmctl_socket = ZX_HANDLE_INVALID;
-        }
+        dmctl_socket.reset();
         break;
 
     case Message::Op::kDmOpenVirtcon:
@@ -1947,8 +1944,7 @@ static void dc_suspend(uint32_t flags) {
     ctx->status = ZX_OK;
     ctx->flags = SuspendContext::Flags::kSuspend;
     ctx->sflags = flags;
-    ctx->socket = dmctl_socket;
-    dmctl_socket = ZX_HANDLE_INVALID;   // to prevent the rpc handler from closing this handle
+    ctx->socket = fbl::move(dmctl_socket); // to prevent the rpc handler from closing this handle
 
     ctx->dh = build_suspend_list(ctx);
 
@@ -2004,9 +2000,7 @@ static void dc_continue_suspend(SuspendContext* ctx) {
         // problem and should show as a bug
         log(ERROR, "devcoord: failed to suspend\n");
         // notify dmctl
-        if (ctx->socket) {
-            zx_handle_close(ctx->socket);
-        }
+        ctx->socket.reset();
         if (ctx->sflags == DEVICE_SUSPEND_FLAG_MEXEC) {
             zx_object_signal(ctx->kernel, 0, ZX_USER_SIGNAL_0);
         }
@@ -2026,9 +2020,7 @@ static void dc_continue_suspend(SuspendContext* ctx) {
             // suspend go to the kernel fallback
             dc_suspend_fallback(ctx->sflags);
             // this handle is leaked on the shutdown path for x86
-            if (ctx->socket) {
-                zx_handle_close(ctx->socket);
-            }
+            ctx->socket.reset();
             // if we get here the system did not suspend successfully
             ctx->flags = SuspendContext::Flags::kRunning;
         }
