@@ -3,8 +3,8 @@
 ## Environment
 
 The benchmarks recorded below are obtained by running zircon-benchmarks in a
-release build of fuchsia via ssh. When the benchmarks are recorded the Fuchsia user
-shell (GPU-accelerated) is running but no user has yet logged in.
+release build of fuchsia via ssh. When the benchmarks are recorded the Fuchsia
+user shell (GPU-accelerated) is running but no user has yet logged in.
 
 These are the running processes at the time of the benchmark:
 
