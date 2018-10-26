@@ -35,7 +35,7 @@
 
 // Safe external APIs are in device.h and device_internal.h
 
-typedef struct zx_driver : fbl::DoublyLinkedListable<fbl::unique_ptr<zx_driver>> {
+struct zx_driver : fbl::DoublyLinkedListable<fbl::unique_ptr<zx_driver>> {
     zx_driver() = default;
 
     const char* name = nullptr;
@@ -44,7 +44,7 @@ typedef struct zx_driver : fbl::DoublyLinkedListable<fbl::unique_ptr<zx_driver>>
     void* ctx = nullptr;
     fbl::String libname;
     zx_status_t status = ZX_OK;
-} zx_driver_t;
+};
 
 namespace devmgr {
 
