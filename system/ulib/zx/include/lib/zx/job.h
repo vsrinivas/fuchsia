@@ -44,7 +44,7 @@ public:
     zx_status_t get_child(uint64_t koid, zx_rights_t rights,
                           process* result) const;
 
-    zx_status_t set_policy(uint32_t options, uint32_t topic, void* policy, uint32_t count) const {
+    zx_status_t set_policy(uint32_t options, uint32_t topic, const void* policy, uint32_t count) const {
       return zx_job_set_policy(get(), options, topic, policy, count);
     }
 
