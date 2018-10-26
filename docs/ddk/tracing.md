@@ -92,7 +92,8 @@ Example:
 First build with driver tracing enabled:
 
 ```sh
-$ fx build-zircon ENABLE_DRIVER_TRACING=true
+$ fx set $arch --zircon-arg ENABLE_DRIVER_TRACING=true
+$ fx build-zircon
 $ fx build
 ```
 
