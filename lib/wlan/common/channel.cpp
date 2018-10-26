@@ -212,5 +212,22 @@ uint8_t GetValidCbw(const wlan_channel_t& chan) {
     return CBW20;  // Fallback to the minimum bandwidth
 }
 
+std::string GetPhyStr(enum PHY phy) {
+    switch (phy) {
+    case WLAN_PHY_DSSS:
+        return "802.11 DSSS";
+    case WLAN_PHY_CCK:
+        return "802.11b CCK/DSSS";
+    case WLAN_PHY_OFDM:  // and WLAN_PHY_ERP
+        return "802.11a/g OFDM";
+    case WLAN_PHY_HT:
+        return "802.11n HT";
+    case WLAN_PHY_VHT:
+        return "802.11ac VHT";
+    default:
+        return "UNKNOWN_PHY";
+    }
+}
+
 }  // namespace common
 }  // namespace wlan

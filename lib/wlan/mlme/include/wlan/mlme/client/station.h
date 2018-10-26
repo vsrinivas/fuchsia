@@ -115,7 +115,6 @@ class Station {
 
     bool IsCbw40Rx() const;
     bool IsQosReady() const;
-    std::string GetPhyStr() const;
 
     CapabilityInfo OverrideCapability(CapabilityInfo cap) const;
     zx_status_t OverrideHtCapability(HtCapabilities* htc) const;

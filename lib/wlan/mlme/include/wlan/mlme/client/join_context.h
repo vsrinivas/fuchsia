@@ -22,12 +22,10 @@ class JoinContext {
     const common::MacAddr& bssid() const { return bssid_; }
     const wlan_channel_t& channel() const { return channel_; }
     const wlan_channel_t& bss_channel() const { return bss_channel_; }
-    const ::fuchsia::wlan::mlme::PHY& phy() const { return phy_; }
+    enum PHY phy() const { return phy_; }
     const ::fuchsia::wlan::mlme::BSSDescription* bss() const { return &bss_; }
 
-    bool IsHtOrLater() const {
-        return (phy_ == ::fuchsia::wlan::mlme::PHY::HT || phy_ == ::fuchsia::wlan::mlme::PHY::VHT);
-    }
+    bool IsHtOrLater() const { return (phy_ == WLAN_PHY_HT || phy_ == WLAN_PHY_VHT); }
 
     // SanitizeChannel tests the validation of input wlan_channel_t
     // to support interoperable Join and Association.
@@ -39,7 +37,7 @@ class JoinContext {
     ::fuchsia::wlan::mlme::BSSDescription bss_;
     wlan_channel_t channel_;
     wlan_channel_t bss_channel_;
-    ::fuchsia::wlan::mlme::PHY phy_;
+    enum PHY phy_;
     common::MacAddr bssid_;
 };
 

@@ -41,6 +41,7 @@ std::string ChanStr(const wlan_channel_t& chan);
 std::string ChanStrLong(const wlan_channel_t& chan);
 
 uint8_t GetValidCbw(const wlan_channel_t& chan);
+std::string GetPhyStr(enum PHY phy);
 
 struct Channel {
     wlan_channel_t chan;

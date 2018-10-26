@@ -43,12 +43,11 @@ struct AssocContext {
     std::optional<VhtCapabilities> vht_cap = std::nullopt;
     std::optional<VhtOperation> vht_op = std::nullopt;
 
+    PHY phy;
     wlan_channel_t chan;
 
-    bool is_ht = false;
     bool is_cbw40_rx = false;
     bool is_cbw40_tx = false;
-    bool is_vht = false;
 
     void set_aid(uint16_t aid) { aid = aid & kAidMask; }
 };

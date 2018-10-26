@@ -491,8 +491,8 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
 
     infof("NIC %s associated with \"%s\"(%s) in channel %s, %s, %s\n",
           self_addr().ToString().c_str(), debug::ToAsciiOrHexStr(*join_ctx_->bss()->ssid).c_str(),
-          join_ctx_->bssid().ToString().c_str(), common::ChanStr(join_ctx_->channel()).c_str(),
-          common::BandStr(join_ctx_->channel()).c_str(), GetPhyStr().c_str());
+          assoc_ctx_.bssid.ToString().c_str(), common::ChanStr(assoc_ctx_.chan).c_str(),
+          common::BandStr(assoc_ctx_.chan).c_str(), common::GetPhyStr(assoc_ctx_.phy).c_str());
 
     // TODO(porce): Time when to establish BlockAck session
     // Handle MLME-level retry, if MAC-level retry ultimately fails
@@ -774,7 +774,7 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
 
     CBW cbw = CBW20;
     PHY phy = WLAN_PHY_OFDM;
-    if (assoc_ctx_.is_ht) {
+    if (assoc_ctx_.phy == WLAN_PHY_HT) {
         if (assoc_ctx_.is_cbw40_tx && data_hdr->addr3.IsUcast()) {
             // 40 MHz direction does not matter here.
             // Radio uses the operational channel setting. This indicates the bandwidth without
@@ -1244,7 +1244,7 @@ bool Station::IsQosReady() const {
 
     // Aruba / Ubiquiti are confirmed to be compatible with QoS field for the BlockAck session,
     // independently of 40MHz operation.
-    return assoc_ctx_.is_ht;
+    return assoc_ctx_.phy == WLAN_PHY_HT || assoc_ctx_.phy == WLAN_PHY_VHT;
 }
 
 CapabilityInfo Station::OverrideCapability(CapabilityInfo cap) const {
@@ -1354,9 +1354,9 @@ zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& f
         assoc_ctx_.vht_op = ap.vht_op;
     }
 
+    assoc_ctx_.phy = join_ctx_->phy();
     assoc_ctx_.chan = join_ctx_->channel();
 
-    assoc_ctx_.is_ht = assoc_ctx_.ht_cap.has_value();
     assoc_ctx_.is_cbw40_rx =
         assoc_ctx_.ht_cap &&
         ap.ht_cap->ht_cap_info.chan_width_set() == HtCapabilityInfo::TWENTY_FORTY &&
@@ -1402,18 +1402,6 @@ wlan_stats::ClientMlmeStats Station::stats() const {
 
 void Station::ResetStats() {
     stats_.Reset();
-}
-
-std::string Station::GetPhyStr() const {
-    if (assoc_ctx_.is_vht) {
-        return "802.11ac VHT";
-    } else if (assoc_ctx_.is_ht) {
-        return "802.11n HT";
-    } else if (common::Is5Ghz(join_ctx_->channel())) {
-        return "802.11a";
-    } else {
-        return "802.11g";
-    }
 }
 
 }  // namespace wlan
