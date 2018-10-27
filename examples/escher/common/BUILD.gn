@@ -47,6 +47,7 @@ source_set("demo_harness_fuchsia") {
   ]
   public_deps = [
     ":headers",
+    "//garnet/bin/ui/input_reader",
   ]
 }
 

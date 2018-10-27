@@ -10,11 +10,13 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
 
+#include "garnet/bin/ui/input_reader/input_reader.h"
 #include "garnet/examples/escher/common/demo_harness.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 
-class DemoHarnessFuchsia : public DemoHarness {
+class DemoHarnessFuchsia : public DemoHarness,
+                           fuchsia::ui::input::InputDeviceRegistry {
  public:
   DemoHarnessFuchsia(async::Loop* loop, WindowParams window_params);
 
@@ -26,17 +28,25 @@ class DemoHarnessFuchsia : public DemoHarness {
   }
 
  private:
+  // |DemoHarness|
   // Called by Init().
   void InitWindowSystem() override;
   vk::SurfaceKHR CreateWindowAndSurface(
       const WindowParams& window_params) override;
 
+  // |DemoHarness|
   // Called by Init() via CreateInstance().
   void AppendPlatformSpecificInstanceExtensionNames(
       InstanceParams* params) override;
 
+  // |DemoHarness|
   // Called by Shutdown().
   void ShutdownWindowSystem() override;
+
+  // |fuchsia::ui::input::InputDeviceRegistry|
+  void RegisterDevice(fuchsia::ui::input::DeviceDescriptor descriptor,
+                      fidl::InterfaceRequest<fuchsia::ui::input::InputDevice>
+                          input_device) override;
 
   void RenderFrameOrQuit();
 
@@ -47,6 +57,10 @@ class DemoHarnessFuchsia : public DemoHarness {
   trace::TraceProvider trace_provider_;
 
   std::unique_ptr<component::StartupContext> startup_context_;
+  mozart::InputReader input_reader_;
+  fidl::BindingSet<fuchsia::ui::input::InputDevice,
+                   std::unique_ptr<fuchsia::ui::input::InputDevice>>
+      input_devices_;
 };
 
 #endif  // GARNET_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_FUCHSIA_H_

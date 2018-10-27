@@ -41,6 +41,10 @@ static void DemoGlfwKeyCallback(GLFWwindow* window, int key, int scancode,
       case GLFW_KEY_SPACE:
         demo->HandleKeyPress("SPACE");
         break;
+      case GLFW_KEY_ENTER:
+      case GLFW_KEY_KP_ENTER:
+        demo->HandleKeyPress("RETURN");
+        break;
       case GLFW_KEY_0:
       case GLFW_KEY_1:
       case GLFW_KEY_2:

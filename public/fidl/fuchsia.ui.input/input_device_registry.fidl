@@ -7,16 +7,14 @@ library fuchsia.ui.input;
 // Service to receive input events.
 //
 // Input devices can describe their capabilities using |DeviceDescriptor|
-// and register themselves with the |InputDeviceRegistry|. They will receive
-// a |DeviceToken| which can be used to send |InputReports| and unregister
-// the device.
+// and register themselves with the |InputDeviceRegistry|.
 [Discoverable]
 interface InputDeviceRegistry {
-  // Register a device with the capabilities described by |DeviceDescriptor|
-  1: RegisterDevice(DeviceDescriptor descriptor, request<InputDevice> input_device);
+    // Register a device with the capabilities described by |DeviceDescriptor|
+    1: RegisterDevice(DeviceDescriptor descriptor, request<InputDevice> input_device);
 };
 
 interface InputDevice {
-  // Dispatch an |InputReport| from the device |token|
-  1: DispatchReport(InputReport report);
+    // Dispatch an |InputReport| from the device |token|
+    1: DispatchReport(InputReport report);
 };
