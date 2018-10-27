@@ -9,9 +9,9 @@ function usage {
   cat <<END
 usage: bootstrap [zircon|garnet|peridot|topaz]
 
-Bootstrap a Fuchsia development environment for the given layer. Defaults to
-boostraping at the topaz layer. For more information about the Fuchsia layer
-cake, see <https://fuchsia.googlesource.com/docs/+/master/development/source_code/layers.md>.
+Bootstrap a Fuchsia development environment for the given project. Defaults to
+boostraping at topaz. For more information about the Fuchsia tree
+see <https://fuchsia.googlesource.com/docs/+/master/development/source_code/layers.md>.
 END
 }
 
@@ -20,12 +20,12 @@ if [[ $# -gt 1 ]]; then
   exit 1
 fi
 
-layer=${1:-topaz}
+project=${1:-topaz}
 
-if [[ "${layer}" != "zircon" ]] &&
-   [[ "${layer}" != "garnet" ]] &&
-   [[ "${layer}" != "peridot" ]] &&
-   [[ "${layer}" != "topaz" ]]; then
+if [[ "${project}" != "zircon" ]] &&
+   [[ "${project}" != "garnet" ]] &&
+   [[ "${project}" != "peridot" ]] &&
+   [[ "${project}" != "topaz" ]]; then
   usage
   exit 1
 fi
@@ -36,9 +36,9 @@ fi
 curl -s "https://fuchsia.googlesource.com/jiri/+/master/scripts/bootstrap_jiri?format=TEXT" | base64 --decode | bash -s fuchsia
 cd fuchsia
 
-.jiri_root/bin/jiri import -name="${layer}" "manifest/${layer}" "https://fuchsia.googlesource.com/${layer}"
-
+.jiri_root/bin/jiri import -name="${project}" "${project}/${project}" "https://fuchsia.googlesource.com/integration"
+.jiri_root/bin/jiri override ${project} "https://fuchsia.googlesource.com/${project}"
 .jiri_root/bin/jiri update
 
-echo "Done creating ${layer} development environment at \"$(pwd)\"."
+echo "Done creating ${project} development environment at \"$(pwd)\"."
 echo "Recommended: export PATH=\"$(pwd)/.jiri_root/bin:\$PATH\""
