@@ -42,7 +42,7 @@ infra/cmake/${platform} version:3.10.0
 
 # Clang
 @Subdir clang
-fuchsia/clang/${platform} git_revision:1cadbeb9a6d8c7c36f3117bf1c9c7db5ce1ce6d2
+fuchsia/clang/${platform} git_revision:e26bce5269e367446e2adb259e2394ce4bd5235e
 
 # Go
 @Subdir go
