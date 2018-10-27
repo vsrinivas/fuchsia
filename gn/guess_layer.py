@@ -17,13 +17,12 @@ import xml.etree.ElementTree
 LAYERS_RE = re.compile('^(garnet|peridot|topaz|vendor/.*)$')
 
 
-# Returns 0 if name does not match LAYERS_RE.
-# Returns 1 and prints name if it does match.
+# Returns True iff LAYERS_RE matches name.
 def check_import(name):
     if LAYERS_RE.match(name):
         print name
-        return 1
-    return 0
+        return True
+    return False
 
 
 def main():
@@ -39,8 +38,12 @@ def main():
 
     tree = xml.etree.ElementTree.parse(args.manifest)
 
-    if sum(check_import(elt.attrib['name']) for elt in tree.iter('import')):
-        return 0
+    # Guess the layer from the name of the <project> that is overriden in the
+    # current manifest.
+    for elt in tree.iter('overrides'):
+      for project in elt.findall('project'):
+        if check_import(project.attrib.get('name', '')):
+          return 0
 
     sys.stderr.write('ERROR: Could not guess cake layer from %s\n' %
                      args.manifest.name)
