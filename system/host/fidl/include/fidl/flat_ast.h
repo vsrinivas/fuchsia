@@ -209,8 +209,8 @@ struct Type {
 };
 
 struct ArrayType : public Type {
-    ArrayType(uint32_t size, std::unique_ptr<Type> element_type, Size element_count)
-        : Type(Kind::kArray, size, types::Nullability::kNonnullable),
+    ArrayType(std::unique_ptr<Type> element_type, Size element_count)
+        : Type(Kind::kArray, 0u, types::Nullability::kNonnullable),
           element_type(std::move(element_type)),
           element_count(std::move(element_count)) {}
 

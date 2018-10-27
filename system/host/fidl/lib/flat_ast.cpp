@@ -226,7 +226,9 @@ TypeShape CTableTypeShape(std::vector<TypeShape*>* fields, uint32_t extra_handle
 }
 
 TypeShape ArrayTypeShape(TypeShape element, uint32_t count) {
-    return TypeShape(element.Size() * count,
+    // TODO(FIDL-345): once TypeShape builders are done and methods can fail, do a
+    // __builtin_mul_overflow and fail on overflow instead of ClampedMultiply(element.Size(), count)
+    return TypeShape(ClampedMultiply(element.Size(), count),
                      element.Alignment(),
                      element.Depth(),
                      ClampedMultiply(element.MaxHandles(), count));
@@ -530,12 +532,8 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, SourceLocation lo
         Size element_count;
         if (!ParseSize(std::move(constant), &element_count))
             return Fail(location, "Unable to parse array element count");
-        uint32_t size;
-        if (__builtin_mul_overflow(element_count.Value(), element_type->size, &size)) {
-            return Fail(location, "The array's size overflows a uint32_t");
-        }
         *out_type =
-            std::make_unique<ArrayType>(size, std::move(element_type), std::move(element_count));
+            std::make_unique<ArrayType>(std::move(element_type), std::move(element_count));
         break;
     }
     case raw::Type::Kind::kVector: {
@@ -1660,7 +1658,12 @@ bool Library::CompileArrayType(flat::ArrayType* array_type, TypeShape* out_types
     TypeShape element_typeshape;
     if (!CompileType(array_type->element_type.get(), &element_typeshape))
         return false;
-    *out_typeshape = ArrayTypeShape(element_typeshape, array_type->element_count.Value());
+
+    TypeShape typeshape = ArrayTypeShape(element_typeshape, array_type->element_count.Value());
+
+    // Now that the array element type is compiled and the size is resolved, set the array size.
+    array_type->size = typeshape.Size();
+    *out_typeshape = typeshape;
     return true;
 }
 
