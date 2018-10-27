@@ -379,9 +379,9 @@ Command::Info Record::Describe() {
         "to that address. This option is generally only used by traceutil."},
        {"compress=[false]", "Compress trace output. This option is ignored "
         "when streaming over a TCP socket."},
-       {"duration=[10s]",
-        "Trace will be active for this long after the session has been "
-        "started"},
+       {"duration=[10]",
+        "Trace will be active for this many seconds after the session has been "
+        "started. The provided value must be integral."},
        {"categories=[\"\"]", "Categories that should be enabled for tracing"},
        {"append-args=[\"\"]",
         "Additional args for the app being traced, appended to those from the "

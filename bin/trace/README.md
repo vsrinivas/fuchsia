@@ -20,8 +20,8 @@ trace [options] command [command-specific options]
     --categories=[""]: Categories that should be enabled for tracing
     --decouple=[false]: Don't stop tracing when the traced program exits
     --detach=[false]: Don't stop the traced program when tracing finished
-    --duration=[10s]: Trace will be active for this long after the session has
-        been started
+    --duration=[10]: Trace will be active for this many seconds after the
+        session has been started. The provided value must be integral.
     --output-file=[/data/trace.json]: Trace data is stored in this file
         The output file may be "tcp:IP-ADDRESS:PORT" in which case a stream
         socket is connected to that address and trace data is streamed directly
