@@ -41,6 +41,11 @@ if (asan_default_options != "") {
       "asan_default_options.c",
     ]
     defines = [ "ASAN_DEFAULT_OPTIONS=\"${asan_default_options}\"" ]
+
+    # On Fuchsia, the ASan runtime is dynamically linked and needs to have
+    # the __asan_default_options symbol exported.  On systems where the
+    # ASan runtime is statically linked, it doesn't matter either way.
+    configs -= [ "//build/config:symbol_visibility_hidden" ]
   }
 }
 

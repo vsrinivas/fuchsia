@@ -46,5 +46,9 @@ source_set("scudo_default_options") {
       options_string += ":$option"
     }
     defines = [ "SCUDO_DEFAULT_OPTIONS=\"${options_string}\"" ]
+
+    # The Scudo runtime is dynamically linked and needs to have
+    # the __scudo_default_options symbol exported.
+    configs -= [ "//build/config:symbol_visibility_hidden" ]
   }
 }
