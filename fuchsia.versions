@@ -58,12 +58,12 @@ fuchsia/tools/godepfile/mac-amd64
 	1dab9f74af2bee9727594a65fca29498e56b7ed2
 
 gn/gn/linux-amd64
-	git_revision:edbcffa99515b523ba5aacbb1649db5f44370c9f
-	7gNvGc6BhbxKraGuDC7N3C5a_upkU-pFujZCC1YlgQ4C
+	git_revision:bdb0fd02324b120cacde634a9235405061c8ea06
+	0uGjKAZkJXPZjtYktgEwHiNbwsut_qRsk7ZCGGxi82IC
 
 gn/gn/mac-amd64
-	git_revision:edbcffa99515b523ba5aacbb1649db5f44370c9f
-	Wu80hXWrEjm5xRPBGeJCkS4W-JYlfypn48BDU7Mkrb0C
+	git_revision:bdb0fd02324b120cacde634a9235405061c8ea06
+	rN2F641yR4Bj-H1q8OwC_RiqRpUYxy3hryzRfPER9wcC
 
 infra/cmake/linux-amd64
 	version:3.10.0

@@ -13,7 +13,7 @@ $ParanoidMode CheckPresence
 $ResolvedVersions fuchsia.versions
 
 # GN
-gn/gn/${platform} git_revision:edbcffa99515b523ba5aacbb1649db5f44370c9f
+gn/gn/${platform} git_revision:bdb0fd02324b120cacde634a9235405061c8ea06
 
 # vpython
 infra/tools/luci/vpython/${platform} git_revision:9a931a5307c46b16b1c12e01e8239d4a73830b89
