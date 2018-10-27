@@ -22,7 +22,7 @@
 // TODO: how can we parameterize this?
 #define TARGET_BAUD_RATE    2000000
 
-#define FIRMWARE_PATH "/boot/lib/firmware/BCM4345C4.bin"
+#define FIRMWARE_PATH "BCM4345C4.bin"
 
 #define FIRMWARE_DOWNLOAD_DELAY ZX_MSEC(50)
 
@@ -192,7 +192,7 @@ static zx_status_t bcm_hci_set_baud_rate(bcm_hci_t* hci, uint32_t baud_rate) {
     bcm_set_baud_rate_cmd_t command = {
         .header = {
             .opcode =  BCM_SET_BAUD_RATE_CMD,
-            .parameter_total_size = sizeof(bcm_set_baud_rate_cmd_t) - sizeof(hci_command_header_t), 
+            .parameter_total_size = sizeof(bcm_set_baud_rate_cmd_t) - sizeof(hci_command_header_t),
         },
         .unused = 0,
         .baud_rate = htole32(baud_rate),

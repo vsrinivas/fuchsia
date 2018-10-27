@@ -15,7 +15,7 @@
 
 #include "fx3.h"
 
-#define FIRMWARE_PATH "/boot/lib/firmware/fx3.img"
+#define FIRMWARE_PATH "fx3.img"
 
 // The header contains the 2 byte "CY" signature, and 2 byte image metadata.
 #define IMAGE_HEADER_SIZE 4

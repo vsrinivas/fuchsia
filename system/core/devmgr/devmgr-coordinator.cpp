@@ -1096,6 +1096,11 @@ static zx_status_t dc_load_firmware(Device* dev, const char* path,
         SYSTEM_FIRMWARE_DIR,
     };
 
+    // Must be a relative path and no funny business.
+    if (path[0] == '/' || path[0] == '.') {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
     int fd, fwfd;
     for (unsigned n = 0; n < fbl::count_of(fwdirs); n++) {
         if ((fd = open(fwdirs[n], O_RDONLY, O_DIRECTORY)) < 0) {

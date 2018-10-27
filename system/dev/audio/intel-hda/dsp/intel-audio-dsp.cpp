@@ -22,7 +22,7 @@ constexpr size_t SKL_ADSP_SRAM1_OFFSET  = 0xA000;
 // Mailbox offsets
 constexpr size_t ADSP_MAILBOX_IN_OFFSET = 0x1000; // Section 5.5 Offset from SRAM0
 
-constexpr const char* ADSP_FIRMWARE_PATH = "/boot/lib/firmware/dsp_fw_kbl_v3266.bin";
+constexpr const char* ADSP_FIRMWARE_PATH = "dsp_fw_kbl_v3266.bin";
 
 constexpr uint32_t EXT_MANIFEST_HDR_MAGIC = 0x31454124;
 
