@@ -196,6 +196,8 @@ ComponentControllerImpl::ComponentControllerImpl(
   hub()->SetProcessId(koid_);
 
   hub()->AddEntry("system_objects", debug_directory_.object());
+
+  hub()->AddIncomingServices(this->incoming_services());
 }
 
 ComponentControllerImpl::~ComponentControllerImpl() {
@@ -308,6 +310,8 @@ ComponentBridge::ComponentBridge(
   });
   // The destructor of the temporary returned by ExtractComponent destroys
   // |this| at the end of the previous statement.
+
+  hub()->AddIncomingServices(this->incoming_services());
 }
 
 ComponentBridge::~ComponentBridge() {

@@ -31,10 +31,19 @@ class ComponentHub : public Hub {
     return AddEntry("out", std::move(vn));
   }
 
+  // Add a list of incoming services that the component has access to.
+  zx_status_t AddIncomingServices(fbl::RefPtr<fs::Vnode> incoming_services);
+
   ~ComponentHub();
 
  private:
   ComponentHub();
+
+  // Initialize |in_dir_| if it hasn't already been initialized.
+  zx_status_t EnsureInDir();
+
+  // "in" directory
+  fbl::RefPtr<fs::PseudoDir> in_dir_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentHub);
 };

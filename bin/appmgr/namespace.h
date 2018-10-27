@@ -28,7 +28,9 @@ class Namespace : public fuchsia::sys::Environment,
                   public fuchsia::process::Resolver,
                   public fxl::RefCountedThreadSafe<Namespace> {
  public:
-  const fbl::RefPtr<ServiceProviderDirImpl>& services() { return services_; }
+  const fbl::RefPtr<ServiceProviderDirImpl>& services() const {
+    return services_;
+  }
   const fbl::RefPtr<JobProviderImpl>& job_provider() { return job_provider_; }
 
   void AddBinding(

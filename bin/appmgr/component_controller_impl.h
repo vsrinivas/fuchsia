@@ -9,6 +9,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/process.h>
+#include <zircon/assert.h>
 
 #include "garnet/bin/appmgr/component_container.h"
 #include "garnet/bin/appmgr/debug_directory.h"
@@ -128,6 +129,13 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
 
  protected:
   ComponentHub* hub() { return &hub_; }
+
+  // Returns the incoming services from the namespace.
+  const fbl::RefPtr<ServiceProviderDirImpl>& incoming_services() const {
+    ZX_DEBUG_ASSERT(ns_);
+    return ns_->services();
+  };
+
   fidl::Binding<fuchsia::sys::ComponentController> binding_;
 
  private:
