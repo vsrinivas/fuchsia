@@ -31,18 +31,17 @@ TEST_F(UserControllerImplTest, StartUserRunnerWithTokenProviderFactory) {
         callback_called = true;
       });
 
-  fuchsia::modular::auth::TokenProviderFactoryPtr token_provider_factory_ptr;
-  auto token_provider_factory_request = token_provider_factory_ptr.NewRequest();
-
+  fuchsia::modular::auth::TokenProviderFactoryPtr token_provider_factory;
   fuchsia::auth::TokenManagerPtr ledger_token_manager;
   fuchsia::auth::TokenManagerPtr agent_token_manager;
-  fuchsia::modular::UserControllerPtr user_controller_ptr;
+  fuchsia::modular::UserControllerPtr user_controller;
+
   UserControllerImpl impl(
       &launcher, CloneStruct(app_config), CloneStruct(app_config),
-      CloneStruct(app_config), std::move(token_provider_factory_ptr),
+      CloneStruct(app_config), std::move(token_provider_factory),
       std::move(ledger_token_manager), std::move(agent_token_manager),
       nullptr /* account */, nullptr /* view_owner_request */,
-      nullptr /* base_shell_services */, user_controller_ptr.NewRequest(),
+      nullptr /* base_shell_services */, user_controller.NewRequest(),
       nullptr /* done_callback */);
 
   EXPECT_TRUE(callback_called);
@@ -62,24 +61,56 @@ TEST_F(UserControllerImplTest, StartUserRunnerWithTokenManagers) {
         callback_called = true;
       });
 
-  fuchsia::modular::auth::TokenProviderFactoryPtr token_provider_factory_ptr;
-  fuchsia::auth::TokenManagerPtr ledger_token_manager_ptr;
-  auto ledger_token_manager = ledger_token_manager_ptr.NewRequest();
-  fuchsia::auth::TokenManagerPtr agent_token_manager_ptr;
-  auto agent_token_manager = agent_token_manager_ptr.NewRequest();
+  fuchsia::modular::auth::TokenProviderFactoryPtr token_provider_factory;
+  fuchsia::auth::TokenManagerPtr ledger_token_manager;
+  fuchsia::auth::TokenManagerPtr agent_token_manager;
+  fuchsia::modular::UserControllerPtr user_controller;
 
-  fuchsia::modular::UserControllerPtr user_controller_ptr;
   UserControllerImpl impl(
       &launcher, CloneStruct(app_config), CloneStruct(app_config),
-      CloneStruct(app_config), std::move(token_provider_factory_ptr),
-      std::move(ledger_token_manager_ptr), std::move(agent_token_manager_ptr),
+      CloneStruct(app_config), std::move(token_provider_factory),
+      std::move(ledger_token_manager), std::move(agent_token_manager),
       nullptr /* account */, nullptr /* view_owner_request */,
-      nullptr /* base_shell_services */, user_controller_ptr.NewRequest(),
+      nullptr /* base_shell_services */, user_controller.NewRequest(),
       nullptr /* done_callback */);
 
   EXPECT_TRUE(callback_called);
 }
 
+TEST_F(UserControllerImplTest, UserRunnerCrashInvokesDoneCallback) {
+  // Program the fake launcher to drop the CreateComponent request such that
+  // the error handler of the user_runner_app is invoked. This should invoke the
+  // done_callback.
+  FakeLauncher launcher;
+  std::string url = "test_url_string";
+  fuchsia::modular::AppConfig app_config;
+  app_config.url = url;
+
+  launcher.RegisterComponent(
+      url, [](fuchsia::sys::LaunchInfo launch_info,
+              fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+        return;
+      });
+
+  fuchsia::modular::auth::TokenProviderFactoryPtr token_provider_factory;
+  fuchsia::auth::TokenManagerPtr ledger_token_manager;
+  fuchsia::auth::TokenManagerPtr agent_token_manager;
+  fuchsia::modular::UserControllerPtr user_controller;
+
+  bool done_callback_called = false;
+  UserControllerImpl impl(
+      &launcher, CloneStruct(app_config), CloneStruct(app_config),
+      CloneStruct(app_config), std::move(token_provider_factory),
+      std::move(ledger_token_manager), std::move(agent_token_manager),
+      nullptr /* account */, nullptr /* view_owner_request */,
+      nullptr /* base_shell_services */, user_controller.NewRequest(),
+      /* done_callback = */ [&done_callback_called](UserControllerImpl*) {
+        done_callback_called = true;
+      });
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(done_callback_called);
+}
 }  // namespace
 }  // namespace testing
 }  // namespace modular

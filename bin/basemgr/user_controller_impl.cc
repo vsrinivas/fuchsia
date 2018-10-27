@@ -67,8 +67,13 @@ UserControllerImpl::UserControllerImpl(
 
   user_runner_app_->SetAppErrorHandler([this] {
     FXL_LOG(ERROR) << "User runner seems to have crashed unexpectedly. "
-                   << "Logging out.";
-    Logout();
+                   << "Calling done_().";
+    // This prevents us from receiving any further requests.
+    user_controller_binding_.Unbind();
+    user_context_binding_.Unbind();
+    // Logout(), which expects a graceful shutdown of user_runner, does not
+    // apply here because user_runner crashed. Just run |done_| directly.
+    done_(this);
   });
 }
 
