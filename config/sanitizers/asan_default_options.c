@@ -3,12 +3,11 @@
 // found in the LICENSE file.
 
 #include <sanitizer/asan_interface.h>
-#include <zircon/compiler.h>
 
 // This exists to be built into every executable selected to use the
 // asan_no_detect_leaks variant.  ASan applies the options here before
 // looking at the ASAN_OPTIONS environment variable.
-__EXPORT const char* __asan_default_options(void) {
+const char* __asan_default_options(void) {
   // This macro is defined by BUILD.gn from the `asan_default_options` GN
   // build argument.
   return ASAN_DEFAULT_OPTIONS;
