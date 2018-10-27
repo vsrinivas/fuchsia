@@ -5,9 +5,7 @@
 static_library("common") {
   sources = [
     "demo.cc",
-    "demo.h",
     "demo_harness.cc",
-    "demo_harness.h",
   ]
   deps = [
     "//garnet/public/lib/fxl",
@@ -16,7 +14,7 @@ static_library("common") {
     "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
   ]
   public_deps = [
-    "//garnet/public/lib/escher",
+    ":headers",
   ]
   libs = [
     "dl",
@@ -24,36 +22,62 @@ static_library("common") {
   ]
   include_dirs = [
     "//lib",
-    "//garnet/public/lib/escher",
     "//third_party/glm",
   ]
 
   if (is_fuchsia) {
-    deps += [
-      "//garnet/public/lib/component/cpp",
-      "//garnet/public/lib/fsl",
-      "//zircon/public/lib/async-loop-cpp",
-      "//zircon/public/lib/trace-provider",
-    ]
-    sources += [
-      "demo_harness_fuchsia.cc",
-      "demo_harness_fuchsia.h",
-    ]
+    deps += [ ":demo_harness_fuchsia" ]
   }
-
   if (is_linux) {
-    deps += [ "//third_party/glfw" ]
-    sources += [
-      "demo_harness_linux.cc",
-      "demo_harness_linux.h",
-    ]
-    libs += [
-      "X11",
-      "Xinerama",
-      "Xcursor",
-      "Xrandr",
-    ]
-
-    include_dirs += [ "//third_party/glfw/include" ]
+    deps += [ ":demo_harness_linux" ]
   }
+}
+
+source_set("demo_harness_fuchsia") {
+  visibility = [ ":*" ]
+  sources = [
+    "demo_harness_fuchsia.cc",
+    "demo_harness_fuchsia.h",
+  ]
+  deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace-provider",
+  ]
+  public_deps = [
+    ":headers",
+  ]
+}
+
+source_set("demo_harness_linux") {
+  visibility = [ ":*" ]
+  sources = [
+    "demo_harness_linux.cc",
+    "demo_harness_linux.h",
+  ]
+  deps = [
+    "//third_party/glfw",
+  ]
+  public_deps = [
+    ":headers",
+  ]
+  libs = [
+    "X11",
+    "Xinerama",
+    "Xcursor",
+    "Xrandr",
+  ]
+  include_dirs = [ "//third_party/glfw/include" ]
+}
+
+source_set("headers") {
+  visibility = [ ":*" ]
+  sources = [
+    "demo.h",
+    "demo_harness.h",
+  ]
+  public_deps = [
+    "//garnet/public/lib/escher",
+  ]
 }
