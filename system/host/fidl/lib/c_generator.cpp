@@ -731,7 +731,7 @@ CGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& 
                 std::string coded_name = NameTable(c_name);
                 named_method.request = std::make_unique<NamedMessage>(NamedMessage{
                     std::move(c_name), std::move(coded_name),
-                    method.maybe_request->parameters, method.maybe_request->typeshape});
+                    method.maybe_request->members, method.maybe_request->typeshape});
             }
             if (method.maybe_response != nullptr) {
                 if (method.maybe_request == nullptr) {
@@ -740,14 +740,14 @@ CGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& 
                     std::string coded_name = NameTable(c_name);
                     named_method.response = std::make_unique<NamedMessage>(
                         NamedMessage{std::move(c_name), std::move(coded_name),
-                                     method.maybe_response->parameters,
+                                     method.maybe_response->members,
                                      method.maybe_response->typeshape});
                 } else {
                     std::string c_name = NameMessage(method_name, types::MessageKind::kResponse);
                     std::string coded_name = NameTable(c_name);
                     named_method.response = std::make_unique<NamedMessage>(
                         NamedMessage{std::move(c_name), std::move(coded_name),
-                                     method.maybe_response->parameters,
+                                     method.maybe_response->members,
                                      method.maybe_response->typeshape});
                 }
             }
@@ -762,6 +762,8 @@ std::map<const flat::Decl*, CGenerator::NamedStruct>
 CGenerator::NameStructs(const std::vector<std::unique_ptr<flat::Struct>>& struct_infos) {
     std::map<const flat::Decl*, NamedStruct> named_structs;
     for (const auto& struct_info : struct_infos) {
+        if (struct_info->anonymous)
+            continue;
         std::string c_name = NameName(struct_info->name, "_", "_");
         std::string coded_name = c_name + "Coded";
         named_structs.emplace(struct_info.get(),

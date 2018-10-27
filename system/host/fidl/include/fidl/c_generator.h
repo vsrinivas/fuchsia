@@ -56,7 +56,7 @@ public:
     struct NamedMessage {
         std::string c_name;
         std::string coded_name;
-        const std::vector<flat::Interface::Method::Parameter>& parameters;
+        const std::vector<flat::Struct::Member>& parameters;
         const TypeShape& typeshape;
     };
 

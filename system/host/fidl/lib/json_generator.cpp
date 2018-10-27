@@ -120,6 +120,32 @@ void JSONGenerator::GenerateArray(Iterator begin, Iterator end) {
     EmitArrayEnd(&json_file_);
 }
 
+// Temporarily specializing for structs to avoid printing anonymous
+// declarations.
+template <>
+void JSONGenerator::GenerateArray(
+    std::vector<std::unique_ptr<flat::Struct>>::const_iterator begin,
+    std::vector<std::unique_ptr<flat::Struct>>::const_iterator end) {
+    EmitArrayBegin(&json_file_);
+
+    bool is_first = true;
+    for (std::vector<std::unique_ptr<flat::Struct>>::const_iterator it = begin; it != end; ++it) {
+        if ((*it)->anonymous)
+            continue;
+        if (is_first) {
+            EmitNewlineAndIndent(&json_file_, ++indent_level_);
+            is_first = false;
+        } else {
+            EmitArraySeparator(&json_file_, indent_level_);
+        }
+        Generate(*it);
+    }
+    if (!is_first)
+        EmitNewlineAndIndent(&json_file_, --indent_level_);
+
+    EmitArrayEnd(&json_file_);
+}
+
 template <typename Collection>
 void JSONGenerator::GenerateArray(const Collection& collection) {
     GenerateArray(collection.begin(), collection.end());
@@ -383,34 +409,25 @@ void JSONGenerator::Generate(const flat::Interface::Method* method) {
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
         if (value.maybe_request != nullptr) {
-            GenerateObjectMember("maybe_request", value.maybe_request->parameters);
-            GenerateObjectMember("maybe_request_size", value.maybe_request->typeshape.Size());
-            GenerateObjectMember("maybe_request_alignment",
-                                 value.maybe_request->typeshape.Alignment());
+            GenerateRequest("maybe_request", *value.maybe_request);
         }
         GenerateObjectMember("has_response", value.maybe_response != nullptr);
         if (value.maybe_response != nullptr) {
-            GenerateObjectMember("maybe_response", value.maybe_response->parameters);
-            GenerateObjectMember("maybe_response_size", value.maybe_response->typeshape.Size());
-            GenerateObjectMember("maybe_response_alignment",
-                                 value.maybe_response->typeshape.Alignment());
+            GenerateRequest("maybe_response", *value.maybe_response);
         }
     });
 }
 
-void JSONGenerator::Generate(const flat::Interface::Method::Parameter& value) {
-    GenerateObject([&]() {
-        GenerateObjectMember("type", value.type, Position::kFirst);
-        GenerateObjectMember("name", value.name);
-        GenerateObjectMember("size", value.fieldshape.Size());
-        GenerateObjectMember("alignment", value.fieldshape.Alignment());
-        GenerateObjectMember("offset", value.fieldshape.Offset());
-    });
+void JSONGenerator::GenerateRequest(const std::string& prefix, const flat::Struct& value) {
+    GenerateObjectMember(prefix, value.members);
+    GenerateObjectMember(prefix + "_size", value.typeshape.Size());
+    GenerateObjectMember(prefix + "_alignment", value.typeshape.Alignment());
 }
 
 void JSONGenerator::Generate(const flat::Struct& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::kFirst);
+        GenerateObjectMember("anonymous", value.anonymous);
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
         GenerateObjectMember("members", value.members);
@@ -522,8 +539,11 @@ void JSONGenerator::GenerateDeclarationsMember(const flat::Library* library, Pos
         for (const auto& decl : library->interface_declarations_)
             GenerateDeclarationsEntry(count++, decl->name, "interface");
 
-        for (const auto& decl : library->struct_declarations_)
+        for (const auto& decl : library->struct_declarations_) {
+            if (decl->anonymous)
+                continue;
             GenerateDeclarationsEntry(count++, decl->name, "struct");
+        }
 
         for (const auto& decl : library->table_declarations_)
             GenerateDeclarationsEntry(count++, decl->name, "table");
@@ -563,6 +583,11 @@ std::ostringstream JSONGenerator::Produce() {
         // for this specific library.
         std::vector<std::string> declaration_order;
         for (flat::Decl* decl : library_->declaration_order_) {
+            if (decl->kind == flat::Decl::Kind::kStruct) {
+                auto struct_decl = static_cast<flat::Struct*>(decl);
+                if (struct_decl->anonymous)
+                    continue;
+            }
             if (decl->name.library() == library_)
                 declaration_order.push_back(NameName(decl->name, ".", "/"));
         }

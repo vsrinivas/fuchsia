@@ -306,6 +306,10 @@
                     "description": "Name of struct",
                     "$ref": "#/definitions/compound-identifier"
                 },
+                "anonymous": {
+                    "description": "Flag indicating that struct is anonymous",
+                    "type": "boolean"
+                },
                 "members": {
                     "description": "List of struct members",
                     "type": "array",

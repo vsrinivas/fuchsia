@@ -368,57 +368,6 @@ struct Enum : public Decl {
     TypeShape typeshape;
 };
 
-struct Interface : public Decl {
-    struct Method {
-        struct Parameter {
-            Parameter(std::unique_ptr<Type> type, SourceLocation name)
-                : type(std::move(type)), name(std::move(name)) {}
-            std::unique_ptr<Type> type;
-            SourceLocation name;
-            FieldShape fieldshape;
-
-            // A simple parameter is one that is easily represented in C.
-            // Specifically, the parameter is either a string with a max length
-            // or does not reference any secondary objects,
-            bool IsSimple() const;
-        };
-
-        struct Message {
-            std::vector<Parameter> parameters;
-            TypeShape typeshape;
-        };
-
-        Method(Method&&) = default;
-        Method& operator=(Method&&) = default;
-
-        Method(std::unique_ptr<raw::AttributeList> attributes,
-               std::unique_ptr<raw::Ordinal> ordinal, SourceLocation name,
-               std::unique_ptr<Message> maybe_request,
-               std::unique_ptr<Message> maybe_response)
-            : attributes(std::move(attributes)), ordinal(std::move(ordinal)), name(std::move(name)),
-              maybe_request(std::move(maybe_request)), maybe_response(std::move(maybe_response)) {
-            assert(this->maybe_request != nullptr || this->maybe_response != nullptr);
-        }
-
-        std::unique_ptr<raw::AttributeList> attributes;
-        std::unique_ptr<raw::Ordinal> ordinal;
-        SourceLocation name;
-        std::unique_ptr<Message> maybe_request;
-        std::unique_ptr<Message> maybe_response;
-    };
-
-    Interface(std::unique_ptr<raw::AttributeList> attributes, Name name,
-              std::vector<Name> superinterfaces, std::vector<Method> methods)
-        : Decl(Kind::kInterface, std::move(attributes), std::move(name)),
-          superinterfaces(std::move(superinterfaces)), methods(std::move(methods)) {}
-
-    std::vector<Name> superinterfaces;
-    std::vector<Method> methods;
-    // Pointers here are set after superinterfaces are compiled, and
-    // are owned by the correspending superinterface.
-    std::vector<const Method*> all_methods;
-};
-
 struct Struct : public Decl {
     struct Member {
         Member(std::unique_ptr<Type> type, SourceLocation name,
@@ -434,11 +383,14 @@ struct Struct : public Decl {
         FieldShape fieldshape;
     };
 
-    Struct(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
-        : Decl(Kind::kStruct, std::move(attributes), std::move(name)), members(std::move(members)) {
+    Struct(std::unique_ptr<raw::AttributeList> attributes, Name name,
+           std::vector<Member> members, bool anonymous = false)
+        : Decl(Kind::kStruct, std::move(attributes), std::move(name)),
+        members(std::move(members)), anonymous(anonymous) {
     }
 
     std::vector<Member> members;
+    const bool anonymous;
     TypeShape typeshape;
     bool recursive = false;
 };
@@ -501,6 +453,39 @@ struct Union : public Decl {
     bool recursive = false;
 };
 
+struct Interface : public Decl {
+    struct Method {
+        Method(Method&&) = default;
+        Method& operator=(Method&&) = default;
+
+        Method(std::unique_ptr<raw::AttributeList> attributes,
+               std::unique_ptr<raw::Ordinal> ordinal, SourceLocation name,
+               Struct* maybe_request,
+               Struct* maybe_response)
+            : attributes(std::move(attributes)), ordinal(std::move(ordinal)), name(std::move(name)),
+              maybe_request(maybe_request), maybe_response(maybe_response) {
+            assert(this->maybe_request != nullptr || this->maybe_response != nullptr);
+        }
+
+        std::unique_ptr<raw::AttributeList> attributes;
+        std::unique_ptr<raw::Ordinal> ordinal;
+        SourceLocation name;
+        Struct* maybe_request;
+        Struct* maybe_response;
+    };
+
+    Interface(std::unique_ptr<raw::AttributeList> attributes, Name name,
+              std::vector<Name> superinterfaces, std::vector<Method> methods)
+        : Decl(Kind::kInterface, std::move(attributes), std::move(name)),
+          superinterfaces(std::move(superinterfaces)), methods(std::move(methods)) {}
+
+    std::vector<Name> superinterfaces;
+    std::vector<Method> methods;
+    // Pointers here are set after superinterfaces are compiled, and
+    // are owned by the correspending superinterface.
+    std::vector<const Method*> all_methods;
+};
+
 class Libraries {
 public:
     // Insert |library|.
@@ -556,6 +541,8 @@ private:
     bool Fail(const Name& name, StringView message) { return Fail(name.name(), message); }
     bool Fail(const Decl& decl, StringView message) { return Fail(decl.name, message); }
 
+    Name NextAnonymousName();
+
     bool CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,
                                    SourceLocation location, Name* out_name);
 
@@ -575,6 +562,8 @@ private:
     bool ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration);
     bool
     ConsumeInterfaceDeclaration(std::unique_ptr<raw::InterfaceDeclaration> interface_declaration);
+    bool ConsumeParameterList(std::unique_ptr<raw::ParameterList> parameter_list,
+                              Struct** out_struct_decl);
     bool ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration);
     bool ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration);
     bool ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration);
@@ -735,6 +724,8 @@ private:
     std::map<const Name*, Const*, PtrCompare<Name>> constants_;
 
     ErrorReporter* error_reporter_;
+
+    std::vector<std::unique_ptr<SourceFile>> anon_source_files_;
 };
 
 } // namespace flat

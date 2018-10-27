@@ -84,6 +84,7 @@ struct Simple {
   "struct_declarations": [
     {
       "name": "fidl.test.json/Simple",
+      "anonymous": false,
       "members": [
         {
           "type": {
@@ -235,6 +236,7 @@ union PizzaOrPasta {
   "struct_declarations": [
     {
       "name": "fidl.test.json/Pizza",
+      "anonymous": false,
       "members": [
         {
           "type": {
@@ -259,6 +261,7 @@ union PizzaOrPasta {
     },
     {
       "name": "fidl.test.json/Pasta",
+      "anonymous": false,
       "members": [
         {
           "type": {
@@ -375,7 +378,8 @@ interface sub : super {
               "name": "s",
               "size": 16,
               "alignment": 8,
-              "offset": 16
+              "offset": 16,
+              "max_handles": 0
             }
           ],
           "maybe_request_size": 32,
@@ -390,7 +394,8 @@ interface sub : super {
               "name": "y",
               "size": 8,
               "alignment": 8,
-              "offset": 16
+              "offset": 16,
+              "max_handles": 0
             }
           ],
           "maybe_response_size": 24,
@@ -414,7 +419,8 @@ interface sub : super {
               "name": "s",
               "size": 16,
               "alignment": 8,
-              "offset": 16
+              "offset": 16,
+              "max_handles": 0
             }
           ],
           "maybe_request_size": 32,
@@ -429,7 +435,8 @@ interface sub : super {
               "name": "y",
               "size": 8,
               "alignment": 8,
-              "offset": 16
+              "offset": 16,
+              "max_handles": 0
             }
           ],
           "maybe_response_size": 24,

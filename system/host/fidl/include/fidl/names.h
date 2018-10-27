@@ -42,8 +42,6 @@ std::string NameDiscoverable(const flat::Interface& interface);
 std::string NameMethod(StringView interface_name, const flat::Interface::Method& method);
 std::string NameOrdinal(StringView method_name);
 std::string NameMessage(StringView method_name, types::MessageKind kind);
-std::string NameParameter(StringView message_name,
-                          const flat::Interface::Method::Parameter& parameter);
 
 std::string NameTable(StringView type_name);
 std::string NamePointer(StringView name);

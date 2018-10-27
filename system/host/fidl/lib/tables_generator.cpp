@@ -493,10 +493,10 @@ void TablesGenerator::CompileFields(const flat::Decl* decl) {
         for (const auto& method_pointer : interface_decl->all_methods) {
             assert(method_pointer != nullptr);
             const auto& method = *method_pointer;
-            auto CompileMessage = [&](const flat::Interface::Method::Message& message) -> void {
+            auto CompileMessage = [&](const flat::Struct& message) -> void {
                 std::unique_ptr<coded::MessageType>& coded_message = coded_interface->messages[i++];
                 std::vector<coded::StructField>& request_fields = coded_message->fields;
-                for (const auto& parameter : message.parameters) {
+                for (const auto& parameter : message.members) {
                     std::string parameter_name =
                         coded_message->coded_name + "_" + std::string(parameter.name.data());
                     auto coded_parameter_type = CompileType(parameter.type.get());
@@ -520,6 +520,8 @@ void TablesGenerator::CompileFields(const flat::Decl* decl) {
     }
     case flat::Decl::Kind::kStruct: {
         auto struct_decl = static_cast<const flat::Struct*>(decl);
+        if (struct_decl->anonymous)
+            break;
         coded::StructType* coded_struct =
             static_cast<coded::StructType*>(named_coded_types_[&decl->name].get());
         std::vector<coded::StructField>& struct_fields = coded_struct->fields;
@@ -602,7 +604,7 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
             const auto& method = *method_pointer;
             std::string method_name = NameMethod(interface_name, method);
             std::string method_qname = NameMethod(interface_qname, method);
-            auto CreateMessage = [&](const flat::Interface::Method::Message& message,
+            auto CreateMessage = [&](const flat::Struct& message,
                                      types::MessageKind kind) -> void {
                 std::string message_name = NameMessage(method_name, kind);
                 std::string message_qname = NameMessage(method_qname, kind);
@@ -636,6 +638,8 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
     }
     case flat::Decl::Kind::kStruct: {
         auto struct_decl = static_cast<const flat::Struct*>(decl);
+        if (struct_decl->anonymous)
+            break;
         std::string struct_name = NameCodedStruct(struct_decl);
         std::string pointer_name = NamePointer(struct_name);
         named_coded_types_.emplace(

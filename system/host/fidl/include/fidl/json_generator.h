@@ -89,7 +89,7 @@ private:
     void Generate(const flat::Enum::Member& value);
     void Generate(const flat::Interface& value);
     void Generate(const flat::Interface::Method* value);
-    void Generate(const flat::Interface::Method::Parameter& value);
+    void GenerateRequest(const std::string& prefix, const flat::Struct& value);
     void Generate(const flat::Struct& value);
     void Generate(const flat::Struct::Member& value);
     void Generate(const flat::Table& value);

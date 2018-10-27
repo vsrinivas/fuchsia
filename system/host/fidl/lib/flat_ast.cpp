@@ -309,10 +309,10 @@ std::string Decl::GetName() const {
     return name.name().data();
 }
 
-bool Interface::Method::Parameter::IsSimple() const {
+bool IsSimple(const Type* type, const FieldShape& fieldshape) {
     switch (type->kind) {
     case Type::Kind::kVector: {
-        auto vector_type = static_cast<VectorType*>(type.get());
+        auto vector_type = static_cast<const VectorType*>(type);
         if (vector_type->element_count.Value() == Size::Max().Value())
             return false;
         switch (vector_type->element_type->kind) {
@@ -328,7 +328,7 @@ bool Interface::Method::Parameter::IsSimple() const {
         }
     }
     case Type::Kind::kString: {
-        auto string_type = static_cast<StringType*>(type.get());
+        auto string_type = static_cast<const StringType*>(type);
         return string_type->max_size.Value() < Size::Max().Value();
     }
     case Type::Kind::kArray:
@@ -337,7 +337,7 @@ bool Interface::Method::Parameter::IsSimple() const {
     case Type::Kind::kPrimitive:
         return fieldshape.Depth() == 0u;
     case Type::Kind::kIdentifier: {
-        auto identifier_type = static_cast<IdentifierType*>(type.get());
+        auto identifier_type = static_cast<const IdentifierType*>(type);
         switch (identifier_type->nullability) {
         case types::Nullability::kNullable:
             // If the identifier is nullable, then we can handle a depth of 1
@@ -437,6 +437,20 @@ bool Library::Fail(StringView message) {
 bool Library::Fail(const SourceLocation& location, StringView message) {
     error_reporter_->ReportError(location, message);
     return false;
+}
+
+Name Library::NextAnonymousName() {
+    // TODO(pascallouis): Improve anonymous name generation. We want to be
+    // specific about how these names are generated once they appear in the
+    // JSON IR, and are exposed to the backends.
+    std::ostringstream data;
+    data << "SomeLongAnonymousPrefix";
+    data << anon_source_files_.size();
+    anon_source_files_.push_back(std::make_unique<SourceFile>(
+        "anonymous", StringView(data.str())));
+    auto src_file = anon_source_files_.back().get();
+    auto name = Name(this, SourceLocation(src_file->data(), *src_file));
+    return name;
 }
 
 bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,
@@ -729,32 +743,19 @@ bool Library::ConsumeInterfaceDeclaration(
         auto attributes = std::move(method->attributes);
         SourceLocation method_name = method->identifier->location();
 
-        std::unique_ptr<Interface::Method::Message> maybe_request;
+        Struct* maybe_request = nullptr;
         if (method->maybe_request != nullptr) {
-            maybe_request.reset(new Interface::Method::Message());
-            for (auto& parameter : method->maybe_request->parameter_list) {
-                SourceLocation parameter_name = parameter->identifier->location();
-                std::unique_ptr<Type> type;
-                if (!ConsumeType(std::move(parameter->type), parameter_name, &type))
-                    return false;
-                maybe_request->parameters.emplace_back(std::move(type), std::move(parameter_name));
-            }
+            if (!ConsumeParameterList(std::move(method->maybe_request), &maybe_request))
+                return false;
         }
 
-        std::unique_ptr<Interface::Method::Message> maybe_response;
+        Struct* maybe_response = nullptr;
         if (method->maybe_response != nullptr) {
-            maybe_response.reset(new Interface::Method::Message());
-            for (auto& parameter : method->maybe_response->parameter_list) {
-                SourceLocation parameter_name = parameter->identifier->location();
-                std::unique_ptr<Type> type;
-                if (!ConsumeType(std::move(parameter->type), parameter_name, &type))
-                    return false;
-                maybe_response->parameters.emplace_back(std::move(type), parameter_name);
-            }
+            if (!ConsumeParameterList(std::move(method->maybe_response), &maybe_response))
+                return false;
         }
 
         assert(maybe_request != nullptr || maybe_response != nullptr);
-
         methods.emplace_back(std::move(attributes),
                              std::move(ordinal_literal),
                              std::move(method_name), std::move(maybe_request),
@@ -765,6 +766,33 @@ bool Library::ConsumeInterfaceDeclaration(
         std::make_unique<Interface>(std::move(attributes), std::move(name),
                                     std::move(superinterfaces), std::move(methods)));
     return RegisterDecl(interface_declarations_.back().get());
+}
+
+bool Library::ConsumeParameterList(std::unique_ptr<raw::ParameterList> parameter_list,
+                                   Struct** out_struct_decl) {
+    std::vector<Struct::Member> members;
+    for (auto& parameter : parameter_list->parameter_list) {
+        const SourceLocation name = parameter->identifier->location();
+        std::unique_ptr<Type> type;
+        if (!ConsumeType(std::move(parameter->type), name, &type))
+            return false;
+        members.emplace_back(
+            std::move(type), name,
+            nullptr /* maybe_default_value */,
+            nullptr /* attributes */);
+    }
+
+    auto name = NextAnonymousName();
+    struct_declarations_.push_back(
+        std::make_unique<Struct>(nullptr /* attributes */, std::move(name), std::move(members),
+                                 true /* anonymous */));
+
+    auto struct_decl = struct_declarations_.back().get();
+    if (!RegisterDecl(struct_decl))
+        return false;
+
+    *out_struct_decl = struct_decl;
+    return true;
 }
 
 bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration) {
@@ -1218,14 +1246,10 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
         }
         for (const auto& method : interface_decl->methods) {
             if (method.maybe_request != nullptr) {
-                for (const auto& parameter : method.maybe_request->parameters) {
-                    maybe_add_decl(parameter.type.get(), LookupOption::kIncludeNullable);
-                }
+                edges.insert(method.maybe_request);
             }
             if (method.maybe_response != nullptr) {
-                for (const auto& parameter : method.maybe_response->parameters) {
-                    maybe_add_decl(parameter.type.get(), LookupOption::kIncludeNullable);
-                }
+                edges.insert(method.maybe_response);
             }
         }
         break;
@@ -1233,7 +1257,10 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
     case Decl::Kind::kStruct: {
         auto struct_decl = static_cast<const Struct*>(decl);
         for (const auto& member : struct_decl->members) {
-            maybe_add_decl(member.type.get(), LookupOption::kIgnoreNullable);
+            auto option = struct_decl->anonymous ?
+                LookupOption::kIncludeNullable :
+                LookupOption::kIgnoreNullable;
+            maybe_add_decl(member.type.get(), option);
             if (member.maybe_default_value) {
                 if (!maybe_add_constant(member.type.get(), member.maybe_default_value.get()))
                     return false;
@@ -1426,13 +1453,23 @@ bool Library::CompileInterface(Interface* interface_declaration) {
     if (!CheckScopes(interface_declaration, CheckScopes))
         return false;
 
+    // Beware, hacky solution: method request and response are structs, whose
+    // typeshape is computed separately. However, in the JSON IR, we add 16 bytes
+    // to request and response to account for the header size (and ensure the
+    // alignment is at least 4 bytes). Now that we represent request and responses
+    // as structs, we should represent this differently in the JSON IR, and let the
+    // backends figure this out, or better yet, describe the header directly.
+    //
+    // For now though, due to topological sort, the code below will always overwrite
+    // the previous calculation of the typeshape for these request and response
+    // struct, hence keeping the behavior of the compiler unchanged.
     for (auto& method : interface_declaration->methods) {
-        auto CreateMessage = [&](Interface::Method::Message* message) -> bool {
+        auto CreateMessage = [&](Struct* message) -> bool {
             Scope<StringView> scope;
             auto header_field_shape = FieldShape(TypeShape(16u, 4u));
             std::vector<FieldShape*> message_struct;
             message_struct.push_back(&header_field_shape);
-            for (auto& param : message->parameters) {
+            for (auto& param : message->members) {
                 if (!scope.Insert(param.name.data(), param.name).ok())
                     return Fail(param.name, "Multiple parameters with the same name in a method");
                 if (!CompileType(param.type.get(), &param.fieldshape.Typeshape()))
@@ -1443,30 +1480,30 @@ bool Library::CompileInterface(Interface* interface_declaration) {
             return true;
         };
         if (method.maybe_request) {
-            if (!CreateMessage(method.maybe_request.get()))
+            if (!CreateMessage(method.maybe_request))
                 return false;
         }
         if (method.maybe_response) {
-            if (!CreateMessage(method.maybe_response.get()))
+            if (!CreateMessage(method.maybe_response))
                 return false;
         }
     }
 
     if (HasSimpleLayout(interface_declaration)) {
         for (const auto& method_pointer : interface_declaration->all_methods) {
-            auto CheckSimpleMessage = [&](const Interface::Method::Message* message) -> bool {
-                for (const auto& parameter : message->parameters) {
-                    if (!parameter.IsSimple())
+            auto CheckSimpleMessage = [&](const Struct* struct_decl) -> bool {
+                for (const auto& parameter : struct_decl->members) {
+                    if (!IsSimple(parameter.type.get(), parameter.fieldshape))
                         return Fail(parameter.name, "Non-simple parameter in interface with [Layout=\"Simple\"]");
                 }
                 return true;
             };
             if (method_pointer->maybe_request) {
-                if (!CheckSimpleMessage(method_pointer->maybe_request.get()))
+                if (!CheckSimpleMessage(method_pointer->maybe_request))
                     return false;
             }
             if (method_pointer->maybe_response) {
-                if (!CheckSimpleMessage(method_pointer->maybe_response.get()))
+                if (!CheckSimpleMessage(method_pointer->maybe_response))
                     return false;
             }
         }
