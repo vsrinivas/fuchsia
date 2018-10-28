@@ -9,6 +9,7 @@ import("//build/gn/packages.gni")
 import("//build/images/boot.gni")
 import("//build/images/crashpad.gni")
 import("//build/images/custom_signing.gni")
+import("//build/images/fvm.gni")
 import("//build/images/json.gni")
 import("//build/images/manifest.gni")
 import("//build/package.gni")
@@ -188,6 +189,40 @@ action("pkgsvr_index") {
     args += [ "@" + rebase_path(pkg_rspfile, root_build_dir) ]
   }
 }
+
+# preinstall.manifest is a manifest of files that are a pkgfs "dynamic index"
+# populated inside /pkgfs/packages that are {name}/{version} containing the
+# merkleroot of the meta.far of that package.
+action("preinstall.manifest") {
+  visibility = [
+    ":data.blk",
+  ]
+  testonly = true
+
+  script = "manifest.py"
+  args = [
+    "--rewrite=*=pkgfs_index/packages/{target}={source}"
+  ]
+  outputs = [
+    # The output is in the root build dir in order to avoid a complex rewrite
+    # of the source path. The minfs tool this is passed to interprets source
+    # locations relative to the manifest.
+    "$root_build_dir/$target_name",
+  ]
+  args += [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
+  sources = []
+  deps = []
+  foreach(pkg_label, preinstall_packages) {
+    # Find the response file written by package().
+    pkg_target_name = get_label_info(pkg_label, "name")
+    pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
+    pkg_rspfile = "$pkg_target_out_dir/${pkg_target_name}.pkgsvr_index.rsp"
+    deps += [ "${pkg_label}.pkgsvr_index.rsp" ]
+    sources += [ pkg_rspfile ]
+    args += [ "@" + rebase_path(pkg_rspfile, root_build_dir) ]
+  }
+}
+
 
 # The /boot and /system manifests have to be generated in concert.  Things
 # like drivers going into /system can affect what needs to go into /boot.
@@ -598,101 +633,28 @@ declare_args() {
   # 10mb (the default) in order to be succesfully initialized.
   data_image_size = "10m"
 
-  # The size in bytes of the FVM partition image to create. Normally this is
-  # computed to be just large enough to fit the blob and data images. The
-  # default value is "", which means to size based on inputs. Specifying a size
-  # that is too small will result in build failure.
-  fvm_image_size = ""
-
-  # The size of the FVM partition images "slice size". The FVM slice size is a
-  # minimum size of a particular chunk of a partition that is stored within
-  # FVM. A very small slice size may lead to decreased throughput. A very large
-  # slice size may lead to wasted space. The selected default size of 8mb is
-  # selected for conservation of space, rather than performance.
-  fvm_slice_size = "8388608"
-
   # Build boot images that prefer Zedboot over local boot (only for EFI).
   always_zedboot = false
 }
 
-template("generate_fvm") {
-  zircon_tool_action(target_name) {
-    visibility = [ ":*" ]
-    forward_variables_from(invoker, [ "testonly" ])
-    tool = "fvm"
-    outputs = [
-      invoker.output_name,
-    ]
-    sources = []
-    deps = invoker.deps
-    foreach(label, deps) {
-      sources += get_target_outputs(label)
-    }
-    args = rebase_path(outputs, root_build_dir) + invoker.args +
-           rebase_path(sources, root_build_dir)
-  }
-}
-
-fvm_slice_args = [
-  "--slice",
-  fvm_slice_size,
-]
-
-fvm_create_args = [ "create" ] + fvm_slice_args
-
-fvm_sparse_args = [
-                    "sparse",
-                    "--compress",
-                    "lz4",
-                  ] + fvm_slice_args
-
-# fvm.blk creates a non-sparse FVM partition image containing the blob
-# partition produced by blob.blk.  fvm.blk is primarily invoked and used
-# by the qemu run, via `fx run-fvm`.
-generate_fvm("fvm.blk") {
-  testonly = true
-  output_name = "$target_out_dir/fvm.blk"
-  deps = [
-    ":blob.blk",
-  ]
-  args = fvm_create_args
-  if (fvm_image_size != "") {
-    args += [
-      "--length",
-      fvm_image_size,
-    ]
-  }
-  args += [ "--blob" ]
-}
-images += [
-  {
-    deps = [
-      ":fvm.blk",
-    ]
-    json = {
-      name = "storage-full"
-      type = "blk"
-    }
-    sdk = "fvm.blk"
-    public = [
-      "IMAGE_FVM_RAW",
-    ]
-  },
-]
-
-# data.blk creates an empty but initialized minfs data partition.
-# The partition is included in fvm.sparse.blk.
+# data.blk creates minfs data partition containing the preinstall package
+# index. The partition is included in fvm.blk and fvm.sparse.blk.
 zircon_tool_action("data.blk") {
+  testonly = true
   tool = "minfs"
   data_image_path = "$target_out_dir/$target_name"
   outputs = [
     data_image_path,
   ]
-  depfile = "$target_out_dir/data.blk.d"
+  depfile = data_image_path + ".d"
+  deps = [ ":preinstall.manifest" ]
+  preinstall_manifest = get_target_outputs(deps[0])
   args = [
     "--depfile",
-    rebase_path(data_image_path, root_build_dir) + "@${data_image_size}",
+    rebase_path(data_image_path, root_build_dir),
     "create",
+    "--manifest",
+    rebase_path(preinstall_manifest[0], root_build_dir),
   ]
   if (data_partition_manifest != "") {
     args += [
@@ -716,32 +678,68 @@ images += [
   },
 ]
 
+# fvm.blk creates an FVM partition image containing the blob partition produced
+# by blob.blk and the data partition produced by data.blk. fvm.blk is primarily
+# invoked and used by the qemu run, via `fx run`.
+generate_fvm("fvm.blk") {
+  testonly = true
+  output_name = "$target_out_dir/fvm.blk"
+  args = fvm_create_args
+  if (fvm_image_size != "") {
+    args += [
+      "--length",
+      fvm_image_size,
+    ]
+  }
+  partitions = [
+    {
+      type = "blob"
+      dep = ":blob.blk"
+    },
+    {
+      type = "data"
+      dep = ":data.blk"
+    },
+  ]
+}
+images += [
+  {
+    deps = [
+      ":fvm.blk",
+    ]
+    json = {
+      name = "storage-full"
+      type = "blk"
+    }
+    sdk = "fvm.blk"
+    public = [
+      "IMAGE_FVM_RAW",
+    ]
+  },
+]
+
 # fvm.sparse.blk creates a sparse FVM partition image containing the blob
 # partition produced by blob.blk and the data partition produced by data.blk.
 # fvm.sparse.blk is primarily invoked and used by the paver boot, via `fx
-# boot`.
-zircon_tool_action("fvm.sparse.blk") {
+# pave`.
+generate_fvm("fvm.sparse.blk") {
   testonly = true
-  visibility = [ ":*" ]
-  tool = "fvm"
-  outputs = [
-    "$target_out_dir/fvm.sparse.blk",
-  ]
-  sources = []
+  output_name = "$target_out_dir/fvm.sparse.blk"
   deps = [
     ":blob.blk",
     ":data.blk",
   ]
-  foreach(label, deps) {
-    sources += get_target_outputs(label)
-  }
-
-  # Note: this action can not be expressed using the `generate_fvm` template
-  # because it needs to interleave the blob and data flags.
-  args = rebase_path(outputs, root_build_dir) + fvm_sparse_args + [ "--blob" ] +
-         rebase_path(get_target_outputs(":blob.blk"), root_build_dir) +
-         [ "--data" ] +
-         rebase_path(get_target_outputs(":data.blk"), root_build_dir)
+  args = fvm_sparse_args
+  partitions = [
+    {
+      type = "blob"
+      dep = ":blob.blk"
+    },
+    {
+      type = "data"
+      dep = ":data.blk"
+    },
+  ]
 }
 images += [
   {
