@@ -2238,8 +2238,13 @@ static void ath10k_peer_assoc_h_rates(struct ath10k* ar,
 
     size_t rates_size = sizeof(rateset->rates) / sizeof(rateset->rates[0]);
     rateset->num_rates = 0;
-    for(i = 0; i < MIN(rates_size, assoc->supported_rates_cnt); i++) {
+    for (i = 0; i < assoc->supported_rates_cnt && rateset->num_rates < rates_size; i++) {
         rateset->rates[rateset->num_rates] = ath10k_mac_bitrate_to_rate(assoc->supported_rates[i]);
+        rateset->num_rates++;
+    }
+    for (i = 0; i < assoc->ext_supported_rates_cnt && rateset->num_rates < rates_size; i++) {
+        rateset->rates[rateset->num_rates] =
+            ath10k_mac_bitrate_to_rate(assoc->ext_supported_rates[i]);
         rateset->num_rates++;
     }
 }

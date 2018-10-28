@@ -833,7 +833,7 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
     size_t num_rates;
     auto* rates = bss_->Rates(&num_rates);
 
-    RatesWriter rates_writer {{ rates, num_rates }};
+    RatesWriter rates_writer{{rates, num_rates}};
 
     rates_writer.WriteSupportedRates(&w);
     rates_writer.WriteExtendedSupportedRates(&w);
@@ -1023,8 +1023,25 @@ wlan_assoc_ctx_t RemoteClient::BuildAssocContext(uint16_t aid) {
     const SupportedRate* rates;
     size_t num_rates;
     rates = bss_->Rates(&num_rates);
-    assoc.supported_rates_cnt = num_rates;
-    memcpy(assoc.supported_rates, rates, sizeof(rates[0]) * num_rates);
+    // |supported_rates| in |wlan_assoc_ctx_t| has a maximum of 8 rates. Move the additional ones
+    // to |ext_supported_rates|
+    size_t num_supp_rates =
+        std::min(num_rates, static_cast<size_t>(WLAN_MAC_SUPPORTED_RATES_MAX_LEN));
+    size_t num_ext_rates = 0;
+    if (num_supp_rates < num_rates) {
+        num_ext_rates = num_rates - num_supp_rates;
+        if (num_ext_rates > WLAN_MAC_EXT_SUPPORTED_RATES_MAX_LEN) {
+            warnf("num_ext_rates is throttled from %zu to %d", num_ext_rates,
+                  WLAN_MAC_EXT_SUPPORTED_RATES_MAX_LEN);
+            num_ext_rates = WLAN_MAC_EXT_SUPPORTED_RATES_MAX_LEN;
+        }
+    }
+
+    assoc.supported_rates_cnt = num_supp_rates;
+    memcpy(assoc.supported_rates, rates, sizeof(rates[0]) * num_supp_rates);
+
+    assoc.ext_supported_rates_cnt = num_ext_rates;
+    memcpy(assoc.ext_supported_rates, rates + num_supp_rates, sizeof(rates[0]) * num_ext_rates);
 
     auto ht = bss_->Ht();
     if (ht.ready) {
