@@ -307,7 +307,7 @@ static bool spaceship_async_test(void) {
         zx_signals_t pending;
         zx::time deadline = zx::deadline_after(zx::sec(5));
         ASSERT_EQ(ZX_OK, client.wait_one(ZX_CHANNEL_PEER_CLOSED, deadline, &pending));
-        ASSERT_EQ(pending & ZX_CHANNEL_PEER_CLOSED, pending);
+        ASSERT_EQ(pending & ZX_CHANNEL_PEER_CLOSED, ZX_CHANNEL_PEER_CLOSED);
         ship.Join();
     }
 
