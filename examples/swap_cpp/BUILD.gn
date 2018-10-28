@@ -5,6 +5,8 @@
 import("//peridot/build/executable_package.gni")
 
 executable_package("swap_module1") {
+  deprecated_no_cmx = "//build"
+
   sources = [
     "swap_module1.cc",
   ]
@@ -16,6 +18,8 @@ executable_package("swap_module1") {
 }
 
 executable_package("swap_module2") {
+  deprecated_no_cmx = "//build"
+
   sources = [
     "swap_module2.cc",
   ]
@@ -44,6 +48,8 @@ source_set("module") {
 }
 
 executable_package("swap_recipe") {
+  deprecated_no_cmx = "//build"
+
   sources = [
     "swap_recipe.cc",
   ]

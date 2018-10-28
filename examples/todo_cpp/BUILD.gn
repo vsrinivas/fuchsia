@@ -5,6 +5,8 @@
 import("//peridot/build/executable_package.gni")
 
 executable_package("todo_cpp") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",

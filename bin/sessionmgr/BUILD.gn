@@ -91,6 +91,8 @@ executable_package("sessionmgr") {
 }
 
 executable_package("dev_user_shell") {
+  deprecated_no_cmx = "//build"
+
   sources = [
     "dev_user_shell.cc",
   ]
