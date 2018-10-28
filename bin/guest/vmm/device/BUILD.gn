@@ -225,6 +225,16 @@ executable("device_tests") {
   defines = [ "_ALL_SOURCE=1" ]
 }
 
+source_set("qcow_test_data") {
+  visibility = [ "//garnet/bin/guest/*" ]
+  sources = [
+    "qcow_test_data.h",
+  ]
+  deps = [
+    ":block_lib",
+  ]
+}
+
 executable("device_unittests") {
   visibility = [ "//garnet/bin/guest/vmm:*" ]
   testonly = true
@@ -236,6 +246,7 @@ executable("device_unittests") {
 
   deps = [
     ":block_lib",
+    ":qcow_test_data",
     "//garnet/public/lib/fxl",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/fbl",
