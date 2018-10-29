@@ -4,14 +4,23 @@
 
 #include "peridot/bin/ledger/storage/fake/fake_db_factory.h"
 
+#include <lib/fxl/files/directory.h>
+
 #include "peridot/bin/ledger/storage/fake/fake_db.h"
 
 namespace storage {
 namespace fake {
 
 void FakeDbFactory::CreateDb(
-    ledger::DetachedPath /*db_path*/,
+    ledger::DetachedPath db_path,
     fit::function<void(Status, std::unique_ptr<Db>)> callback) {
+  // Create the path to fake the creation of the Db at the expected destination.
+  if (!files::CreateDirectoryAt(db_path.root_fd(), db_path.path())) {
+    FXL_LOG(ERROR) << "Failed to create the storage directory in "
+                   << db_path.path();
+    callback(Status::INTERNAL_IO_ERROR, nullptr);
+    return;
+  }
   CreateInitializedDb(std::move(callback));
 }
 

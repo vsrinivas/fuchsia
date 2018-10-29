@@ -41,6 +41,7 @@ namespace {
 //   <base_path>
 //   ├── content/
 //   │   ├── name
+//   │   ├── cache/
 //   │   ├── page_usage_db/
 //   │   └── ...
 //   └── staging/
@@ -54,6 +55,8 @@ namespace {
 //   |LedgerRepositoryImpl| to store this repository's Ledger instances.
 // - <base_path>/content/name
 //   Stores the name of the repository, which is randomly chosen on creation.
+// - <base_path>/content/cache/
+//   The path used by |LevelDbFactory| as the cache directory.
 // - <base_path>/content/page_usage_db/
 //   The path used by |DiskCleanupManagerImpl| to store statistics on pages.
 // - <base_path>/staging/
@@ -66,6 +69,7 @@ namespace {
 // state even if the deletion execution is unexpectedly terminated.
 
 constexpr fxl::StringView kContentPath = "content";
+constexpr fxl::StringView kCachePath = "cache";
 constexpr fxl::StringView kPageUsageDbPath = "page_usage_db";
 constexpr fxl::StringView kStagingPath = "staging";
 constexpr fxl::StringView kNamePath = "name";
@@ -194,6 +198,7 @@ struct LedgerRepositoryFactoryImpl::RepositoryInformation {
   explicit RepositoryInformation(int root_fd)
       : base_path(root_fd),
         content_path(base_path.SubPath(kContentPath)),
+        cache_path(content_path.SubPath(kCachePath)),
         page_usage_db_path(content_path.SubPath(kPageUsageDbPath)),
         staging_path(base_path.SubPath(kStagingPath)) {}
 
@@ -206,6 +211,7 @@ struct LedgerRepositoryFactoryImpl::RepositoryInformation {
 
   DetachedPath base_path;
   DetachedPath content_path;
+  DetachedPath cache_path;
   DetachedPath page_usage_db_path;
   DetachedPath staging_path;
   std::string name;
@@ -284,7 +290,8 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
   DiskCleanupManagerImpl* disk_cleanup_manager_ptr = disk_cleanup_manager.get();
   auto repository = std::make_unique<LedgerRepositoryImpl>(
       repository_information.content_path, environment_,
-      std::make_unique<storage::LevelDbFactory>(environment_),
+      std::make_unique<storage::LevelDbFactory>(
+          environment_, repository_information.cache_path),
       std::move(watchers), std::move(user_sync),
       std::move(disk_cleanup_manager), disk_cleanup_manager_ptr);
   disk_cleanup_manager_ptr->SetPageEvictionDelegate(repository.get());

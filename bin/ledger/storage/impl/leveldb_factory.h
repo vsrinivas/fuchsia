@@ -23,7 +23,8 @@ namespace storage {
 // path.
 class LevelDbFactory : public DbFactory {
  public:
-  explicit LevelDbFactory(ledger::Environment* environment);
+  LevelDbFactory(ledger::Environment* environment,
+                 ledger::DetachedPath cache_path);
 
   // TODO(LE-617): Update implementation to return pre-cached, LevelDb
   // instances.
@@ -37,22 +38,34 @@ class LevelDbFactory : public DbFactory {
 
  private:
   struct DbInitializationState;
+  enum class CreateInStagingPath : bool;
 
   // Creates a new instance of LevelDb in the given |db_path|, initializes it
   // in the I/O thread and then returns it through the |callback|.
   void CreateInitializedDb(
-      ledger::DetachedPath db_path,
+      ledger::DetachedPath db_path, CreateInStagingPath create_in_staging_path,
       fit::function<void(Status, std::unique_ptr<Db>)> callback);
 
   // Creates and initializes a new LevelDb instance. This method should be
   // called from the I/O thread. When initialization is complete, it makes sure
   // to call the |callback| with the computed result from the main thread.
   void InitOnIOThread(
-      ledger::DetachedPath db_path,
+      ledger::DetachedPath db_path, CreateInStagingPath create_in_staging_path,
       fxl::RefPtr<DbInitializationState> initialization_state,
       fit::function<void(Status, std::unique_ptr<Db>)> callback);
 
+  // Synchronously creates and initializes a new LevelDb instance in a two-step
+  // process: the new instance is created in a temporary directory under the
+  // staging path and, if successful, it is then moved to the given |db_path|.
+  // This way, if initialization is interrupted, the potentially corrupted
+  // database will be in the staging area.
+  Status CreateInitializedDbThroughStagingPath(ledger::DetachedPath db_path,
+                                               std::unique_ptr<LevelDb>* db);
+
   ledger::Environment* environment_;
+  // The path where new LevelDb instances are created, before they are moved to
+  // their final destination.
+  ledger::DetachedPath staging_path_;
   coroutine::CoroutineManager coroutine_manager_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LevelDbFactory);

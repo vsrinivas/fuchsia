@@ -5,10 +5,29 @@
 #include "peridot/bin/ledger/storage/impl/leveldb_factory.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/fxl/files/directory.h>
+#include <lib/fxl/files/scoped_temp_dir.h>
 #include <lib/fxl/memory/ref_counted.h>
 #include <lib/fxl/memory/ref_ptr.h>
+#include <lib/fxl/strings/string_view.h>
+
+#include "peridot/lib/convert/convert.h"
 
 namespace storage {
+namespace {
+
+// TODO(LE-635): We need to clean the staging path, so that we don't leave
+// unreachable storage on disk.
+constexpr fxl::StringView kStagingPath = "staging";
+
+constexpr size_t kRandomBytesCount = 16;
+
+}  // namespace
+
+enum class LevelDbFactory::CreateInStagingPath : bool {
+  YES,
+  NO,
+};
 
 // Holds information on the initialization state of the LevelDb object, allowing
 // the coordination between the main and the I/O thread for the creation of new
@@ -33,28 +52,37 @@ struct LevelDbFactory::DbInitializationState
   ~DbInitializationState() {}
 };
 
-LevelDbFactory::LevelDbFactory(ledger::Environment* environment)
+LevelDbFactory::LevelDbFactory(ledger::Environment* environment,
+                               ledger::DetachedPath cache_path)
     : environment_(environment),
+      staging_path_(cache_path.SubPath(kStagingPath)),
       coroutine_manager_(environment->coroutine_service()) {}
 
 void LevelDbFactory::CreateDb(
     ledger::DetachedPath db_path,
     fit::function<void(Status, std::unique_ptr<Db>)> callback) {
-  CreateInitializedDb(std::move(db_path), std::move(callback));
+  CreateInitializedDb(std::move(db_path), CreateInStagingPath::YES,
+                      std::move(callback));
 }
 
 void LevelDbFactory::GetDb(
     ledger::DetachedPath db_path,
     fit::function<void(Status, std::unique_ptr<Db>)> callback) {
-  CreateInitializedDb(std::move(db_path), std::move(callback));
+  // TODO(nellyv): Merge GetDb and CreateDb to GetOrCreateDb.
+  CreateInStagingPath create_in_staging_path =
+      files::IsDirectoryAt(db_path.root_fd(), db_path.path())
+          ? CreateInStagingPath::NO
+          : CreateInStagingPath::YES;
+  CreateInitializedDb(std::move(db_path), create_in_staging_path,
+                      std::move(callback));
 }
 
 void LevelDbFactory::CreateInitializedDb(
-    ledger::DetachedPath db_path,
+    ledger::DetachedPath db_path, CreateInStagingPath create_in_staging_path,
     fit::function<void(Status, std::unique_ptr<Db>)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
-      [this, db_path = std::move(db_path)](
+      [this, db_path = std::move(db_path), create_in_staging_path](
           coroutine::CoroutineHandler* handler,
           fit::function<void(Status, std::unique_ptr<Db>)> callback) {
         auto db_initialization_state =
@@ -64,15 +92,16 @@ void LevelDbFactory::CreateInitializedDb(
         if (coroutine::SyncCall(
                 handler,
                 [&](fit::function<void(Status, std::unique_ptr<Db>)> callback) {
-                  async::PostTask(environment_->io_dispatcher(),
-                                  [this, db_path = std::move(db_path),
-                                   db_initialization_state,
-                                   callback = std::move(callback)]() mutable {
-                                    InitOnIOThread(
-                                        std::move(db_path),
-                                        std::move(db_initialization_state),
-                                        std::move(callback));
-                                  });
+                  async::PostTask(
+                      environment_->io_dispatcher(),
+                      [this, db_path = std::move(db_path),
+                       create_in_staging_path, db_initialization_state,
+                       callback = std::move(callback)]() mutable {
+                        InitOnIOThread(std::move(db_path),
+                                       create_in_staging_path,
+                                       std::move(db_initialization_state),
+                                       std::move(callback));
+                      });
                 },
                 &status, &db) == coroutine::ContinuationStatus::OK) {
           // The coroutine returned normally, the initialization was done
@@ -103,16 +132,23 @@ void LevelDbFactory::CreateInitializedDb(
 }
 
 void LevelDbFactory::InitOnIOThread(
-    ledger::DetachedPath db_path,
+    ledger::DetachedPath db_path, CreateInStagingPath create_in_staging_path,
     fxl::RefPtr<DbInitializationState> initialization_state,
     fit::function<void(Status, std::unique_ptr<Db>)> callback) {
   std::lock_guard<std::mutex> guard(initialization_state->mutex);
   if (initialization_state->cancelled) {
     return;
   }
-  auto db =
-      std::make_unique<LevelDb>(environment_->dispatcher(), std::move(db_path));
-  Status status = db->Init();
+  Status status;
+  std::unique_ptr<LevelDb> db;
+  if (create_in_staging_path == CreateInStagingPath::YES) {
+    status = CreateInitializedDbThroughStagingPath(std::move(db_path), &db);
+  } else {
+    FXL_DCHECK(files::IsDirectoryAt(db_path.root_fd(), db_path.path()));
+    db = std::make_unique<LevelDb>(environment_->dispatcher(),
+                                   std::move(db_path));
+    status = db->Init();
+  }
   async::PostTask(
       environment_->dispatcher(),
       [status, db = std::move(db), callback = std::move(callback)]() mutable {
@@ -123,6 +159,31 @@ void LevelDbFactory::InitOnIOThread(
         }
         callback(Status::OK, std::move(db));
       });
+}
+
+Status LevelDbFactory::CreateInitializedDbThroughStagingPath(
+    ledger::DetachedPath db_path, std::unique_ptr<LevelDb>* db) {
+  char name[kRandomBytesCount];
+  environment_->random()->Draw(name, kRandomBytesCount);
+  ledger::DetachedPath tmp_destination = staging_path_.SubPath(
+      convert::ToHex(fxl::StringView(name, kRandomBytesCount)));
+  // Create a LevelDb instance in a temporary path.
+  auto result =
+      std::make_unique<LevelDb>(environment_->dispatcher(), tmp_destination);
+  Status status = result->Init();
+  if (status != Status::OK) {
+    return status;
+  }
+  // Move it to the final destination.
+  if (renameat(tmp_destination.root_fd(), tmp_destination.path().c_str(),
+               db_path.root_fd(), db_path.path().c_str()) != 0) {
+    FXL_LOG(ERROR) << "Unable to move LevelDb from staging path to final "
+                      "destination: "
+                   << db_path.path() << ". Error: " << strerror(errno);
+    return Status::IO_ERROR;
+  }
+  *db = std::move(result);
+  return Status::OK;
 }
 
 }  // namespace storage

@@ -65,6 +65,9 @@ void LedgerStorageImpl::CreatePageStorage(
     fit::function<void(Status, std::unique_ptr<PageStorage>)> callback) {
   auto timed_callback = TRACE_CALLBACK(std::move(callback), "ledger",
                                        "ledger_storage_create_page_storage");
+  // Create the path up to one level before the db path.
+  // TODO(nellyv): Remove the directory creation when no intermediary directory
+  // is needed.
   ledger::DetachedPath path = GetPathFor(page_id);
   if (!files::CreateDirectoryAt(path.root_fd(), path.path())) {
     FXL_LOG(ERROR) << "Failed to create the storage directory in "
@@ -73,8 +76,9 @@ void LedgerStorageImpl::CreatePageStorage(
     return;
   }
 
+  ledger::DetachedPath actual_path = GetDeprecatedPathFor(page_id);
   db_factory_->CreateDb(
-      std::move(path),
+      std::move(actual_path),
       callback::MakeScoped(weak_factory_.GetWeakPtr(),
                            [this, page_id = std::move(page_id),
                             callback = std::move(timed_callback)](
@@ -94,7 +98,7 @@ void LedgerStorageImpl::GetPageStorage(
     fit::function<void(Status, std::unique_ptr<PageStorage>)> callback) {
   auto timed_callback = TRACE_CALLBACK(std::move(callback), "ledger",
                                        "ledger_storage_get_page_storage");
-  ledger::DetachedPath path = GetPathFor(page_id);
+  ledger::DetachedPath path = GetDeprecatedPathFor(page_id);
   if (!files::IsDirectoryAt(path.root_fd(), path.path())) {
     timed_callback(Status::NOT_FOUND, nullptr);
     return;
@@ -190,6 +194,13 @@ void LedgerStorageImpl::InitializePageStorage(
 }
 
 ledger::DetachedPath LedgerStorageImpl::GetPathFor(PageIdView page_id) {
+  FXL_DCHECK(!page_id.empty());
+  return storage_dir_.SubPath(GetDirectoryName(page_id));
+}
+
+// TODO(nellyv): Remove "/leveldb" altogether from the page path.
+ledger::DetachedPath LedgerStorageImpl::GetDeprecatedPathFor(
+    PageIdView page_id) {
   FXL_DCHECK(!page_id.empty());
   return storage_dir_.SubPath({GetDirectoryName(page_id), kLevelDbDir});
 }

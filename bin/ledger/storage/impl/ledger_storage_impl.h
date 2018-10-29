@@ -53,6 +53,7 @@ class LedgerStorageImpl : public LedgerStorage {
       fit::function<void(Status, std::unique_ptr<PageStorage>)> callback);
 
   ledger::DetachedPath GetPathFor(PageIdView page_id);
+  ledger::DetachedPath GetDeprecatedPathFor(PageIdView page_id);
 
   // Returns the staging path for the given |page_id|.
   ledger::DetachedPath GetStagingPathFor(PageIdView page_id);
