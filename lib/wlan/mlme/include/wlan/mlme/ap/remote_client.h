@@ -180,7 +180,7 @@ class AuthenticatedState : public BaseState {
 
 class AssociatingState : public BaseState {
    public:
-    AssociatingState(RemoteClient* client, MgmtFrame<AssociationRequest>&& frame);
+    AssociatingState(RemoteClient* client);
 
     void OnEnter() override;
     void OnExit() override;

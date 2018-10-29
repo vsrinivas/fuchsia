@@ -75,8 +75,8 @@ struct ApInfraBssTest : public ::testing::Test {
         return HandleFrame([](auto pkt) { return CreateDeauthFrame(pkt); });
     }
 
-    zx_status_t SendClientAssocReqFrame() {
-        return HandleFrame([](auto pkt) { return CreateAssocReqFrame(pkt); });
+    zx_status_t SendClientAssocReqFrame(Span<const uint8_t> ssid = kSsid, bool rsn = true) {
+        return HandleFrame([=](auto pkt) { return CreateAssocReqFrame(pkt, ssid, rsn); });
     }
 
     zx_status_t SendClientDisassocFrame() {
@@ -205,7 +205,7 @@ struct ApInfraBssTest : public ::testing::Test {
         EXPECT_EQ(msg.body()->reason_code, reason_code);
     }
 
-    void AssertAssocInd(fbl::unique_ptr<Packet> pkt) {
+    void AssertAssocInd(fbl::unique_ptr<Packet> pkt, bool rsn = true) {
         ASSERT_EQ(pkt->peer(), Packet::Peer::kService);
         MlmeMsg<wlan_mlme::AssociateIndication> msg;
         auto status = MlmeMsg<wlan_mlme::AssociateIndication>::FromPacket(fbl::move(pkt), &msg);
@@ -214,7 +214,11 @@ struct ApInfraBssTest : public ::testing::Test {
         EXPECT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), kClientAddress, 6), 0);
         EXPECT_EQ(msg.body()->listen_interval, kListenInterval);
         EXPECT_EQ(std::memcmp(msg.body()->ssid->data(), kSsid, msg.body()->ssid->size()), 0);
-        EXPECT_EQ(std::memcmp(msg.body()->rsn->data(), kRsne, sizeof(kRsne)), 0);
+        if (rsn) {
+            EXPECT_EQ(std::memcmp(msg.body()->rsn->data(), kRsne, sizeof(kRsne)), 0);
+        } else {
+            EXPECT_TRUE(msg.body()->rsn.is_null());
+        }
     }
 
     void AssertDisassocInd(fbl::unique_ptr<Packet> pkt) {
@@ -486,6 +490,46 @@ TEST_F(ApInfraBssTest, Associate_Timeout) {
     wlan_assoc_ctx_t expected_ctx = {};
     const wlan_assoc_ctx_t* actual_ctx = device.GetStationAssocContext();
     EXPECT_EQ(std::memcmp(actual_ctx, &expected_ctx, sizeof(expected_ctx)), 0);
+}
+
+TEST_F(ApInfraBssTest, Associate_EmptySsid) {
+    StartAp(false);
+    AuthenticateClient();
+
+    // Send association request frame without an SSID
+    auto ssid = Span<uint8_t>();
+    SendClientAssocReqFrame(ssid, true);
+
+    // Verify that no Association.indication msg is sent out
+    ASSERT_TRUE(device.svc_queue.empty());
+    ASSERT_TRUE(device.wlan_queue.empty());
+
+    // Send a valid association request frame
+    SendClientAssocReqFrame();
+
+    // Verify that an Association.indication msg is sent out (to SME)
+    ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
+    ASSERT_TRUE(device.wlan_queue.empty());
+    auto assoc_inds =
+        device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateIndOrdinal>);
+    ASSERT_FALSE(assoc_inds.empty());
+    AssertAssocInd(fbl::move(*assoc_inds.begin()));
+}
+
+TEST_F(ApInfraBssTest, Associate_EmptyRsn) {
+    StartAp(false);
+    AuthenticateClient();
+
+    // Send association request frame
+    SendClientAssocReqFrame(kSsid, false);
+
+    // Verify that an Association.indication msg is sent out (to SME)
+    ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
+    ASSERT_TRUE(device.wlan_queue.empty());
+    auto assoc_inds =
+        device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateIndOrdinal>);
+    ASSERT_FALSE(assoc_inds.empty());
+    AssertAssocInd(fbl::move(*assoc_inds.begin()), false);
 }
 
 TEST_F(ApInfraBssTest, DeauthenticateWhileAssociated) {

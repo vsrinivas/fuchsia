@@ -180,18 +180,6 @@ void AuthenticatedState::HandleDeauthentication(MgmtFrame<Deauthentication>&& fr
 }
 
 void AuthenticatedState::HandleAssociationRequest(MgmtFrame<AssociationRequest>&& frame) {
-    // Received request which we've been waiting for. Timer can get canceled.
-    auth_timeout_.Cancel();
-
-    // Move into Associating state state which responds to incoming Association
-    // requests.
-    MoveToState<AssociatingState>(fbl::move(frame));
-}
-
-// AssociatingState implementation.
-
-AssociatingState::AssociatingState(RemoteClient* client, MgmtFrame<AssociationRequest>&& frame)
-    : BaseState(client), aid_(kUnknownAid) {
     debugfn();
     ZX_DEBUG_ASSERT(frame.hdr()->addr2 == client_->addr());
     debugbss("[client] [%s] received Assocation Request\n", client_->addr().ToString().c_str());
@@ -206,23 +194,34 @@ AssociatingState::AssociatingState(RemoteClient* client, MgmtFrame<AssociationRe
         const ElementHeader* header = reader.peek();
         ZX_DEBUG_ASSERT(header != nullptr);
         switch (header->id) {
-        case element_id::kSsid:
-            ssid_element = reader.read<SsidElement>();
-            break;
-        case element_id::kRsn:
-            rsn_element = reader.read<RsnElement>();
-            break;
-        default:
-            reader.skip(*header);
-            break;
+            case element_id::kSsid:
+                ssid_element = reader.read<SsidElement>();
+                break;
+            case element_id::kRsn:
+                rsn_element = reader.read<RsnElement>();
+                break;
+            default:
+                reader.skip(*header);
+                break;
         }
     }
 
-    ZX_DEBUG_ASSERT(ssid_element != nullptr);
+    if (ssid_element == nullptr) {
+        return;
+    }
 
-    service::SendAssocIndication(client_->device(), client_->addr(), frame.body()->listen_interval,
-                                 *ssid_element, rsn_element);
+    // Received a valid association request. Timer can get canceled.
+    auth_timeout_.Cancel();
+    service::SendAssocIndication(client_->device(), client_->addr(),
+                                 frame.body()->listen_interval, *ssid_element, rsn_element);
+
+    // Move into Associating state state which waits for associate response from SME.
+    MoveToState<AssociatingState>();
 }
+
+// AssociatingState implementation.
+
+AssociatingState::AssociatingState(RemoteClient* client) : BaseState(client), aid_(kUnknownAid) {}
 
 void AssociatingState::OnEnter() {
     auto deadline = client_->DeadlineAfterTus(kAssociatingTimeoutTu);
@@ -330,9 +329,10 @@ void AssociatedState::HandleAssociationRequest(MgmtFrame<AssociationRequest>&& f
     ZX_DEBUG_ASSERT(frame.hdr()->addr2 == client_->addr());
     debugbss("[client] [%s] received Assocation Request while being associated\n",
              client_->addr().ToString().c_str());
-    // Client believes it is not yet associated. Thus, there is no need to send an
-    // explicit Deauthentication.
-    MoveToState<AssociatingState>(fbl::move(frame));
+    // Client believes it is not yet associated. Move it back to authenticated state and then have
+    // it process the frame.
+    MoveToState<AuthenticatedState>();
+    client_->HandleAnyMgmtFrame(MgmtFrame<>(frame.Take()));
 }
 
 void AssociatedState::OnEnter() {

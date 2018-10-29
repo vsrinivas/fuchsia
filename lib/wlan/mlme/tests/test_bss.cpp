@@ -366,7 +366,8 @@ zx_status_t CreateDeauthFrame(fbl::unique_ptr<Packet>* out_packet) {
     return ZX_OK;
 }
 
-zx_status_t CreateAssocReqFrame(fbl::unique_ptr<Packet>* out_packet) {
+zx_status_t CreateAssocReqFrame(fbl::unique_ptr<Packet>* out_packet, Span<const uint8_t> ssid,
+                                bool rsn) {
     common::MacAddr bssid(kBssid1);
     common::MacAddr client(kClientAddress);
 
@@ -393,8 +394,8 @@ zx_status_t CreateAssocReqFrame(fbl::unique_ptr<Packet>* out_packet) {
     assoc->listen_interval = kListenInterval;
 
     BufferWriter elem_w({assoc->elements, w.RemainingBytes()});
-    common::WriteSsid(&w, kSsid);
-    w.Write(kRsne);
+    if (!ssid.empty()) { common::WriteSsid(&w, ssid); }
+    if (rsn) { w.Write(kRsne); }
 
     packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
