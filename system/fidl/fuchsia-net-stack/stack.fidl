@@ -5,7 +5,19 @@
 library fuchsia.net.stack;
 
 using fuchsia.net;
-using zircon.ethernet;
+
+// Features that may be present on a network interface.
+// TODO(tkilbourn): consider a bitfield for this.
+enum InterfaceFeature : uint8 {
+    // The interface is a wireless network interface.
+    wlan = 1;
+
+    // The interface is synthetic, i.e., not backed by hardware.
+    synthetic = 2;
+
+    // The interface is a loopback device provided by the stack.
+    loopback = 3;
+};
 
 // Status constants
 // The interface is enabled.
@@ -35,13 +47,14 @@ struct InterfaceInfo {
     string path;
 
     // The MAC address of the interface, if available.
-    zircon.ethernet.MacAddress? mac;
+    fuchsia.net.MacAddress? mac;
 
     // The maximum transmission unit for the interface in bytes.
     uint32 mtu;
 
     // The features present on the interface.
-    uint32 features;
+    // TODO(tkilbourn): consider a bitfield for this.
+    vector<InterfaceFeature> features;
 
     // The status of the interface. This is a bitfield containing the "Status constants" in this
     // file.

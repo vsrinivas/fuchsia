@@ -12,7 +12,7 @@ MODULE_PACKAGE := fidl
 
 MODULE_FIDL_LIBRARY := fuchsia.net.stack
 
-MODULE_FIDL_DEPS := system/fidl/fuchsia-net system/fidl/zircon-ethernet
+MODULE_FIDL_DEPS := system/fidl/fuchsia-net
 
 MODULE_SRCS += $(LOCAL_DIR)/stack.fidl
 
