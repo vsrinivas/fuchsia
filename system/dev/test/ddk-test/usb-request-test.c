@@ -10,6 +10,13 @@
 
 extern zx_handle_t get_root_resource(void);
 
+static bool test_alloc_zero_size_request(void) {
+    BEGIN_TEST;
+    usb_request_t* req;
+    ASSERT_EQ(usb_request_alloc(&req, PAGE_SIZE, 1, 0), ZX_ERR_INVALID_ARGS, "");
+    END_TEST;
+}
+
 static bool test_alloc_simple(void) {
     BEGIN_TEST;
     zx_handle_t iommu_handle;
@@ -98,6 +105,7 @@ static bool test_pool(void) {
 }
 
 BEGIN_TEST_CASE(usb_request_tests)
+RUN_TEST(test_alloc_zero_size_request)
 RUN_TEST(test_alloc_simple)
 RUN_TEST(test_alloc_vmo)
 RUN_TEST(test_pool)

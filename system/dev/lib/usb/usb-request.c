@@ -58,6 +58,9 @@ static void usb_request_release_free(usb_request_t* req) {
 
 __EXPORT zx_status_t usb_request_alloc(usb_request_t** out, uint64_t data_size,
                                        uint8_t ep_address, size_t req_size) {
+    if (req_size < sizeof(usb_request_t)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
     usb_request_t* req = calloc(1, req_size);
     if (!req) {
         return ZX_ERR_NO_MEMORY;
