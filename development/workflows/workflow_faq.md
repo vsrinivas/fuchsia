@@ -159,15 +159,8 @@ tools with the MacOS Application Firewall.
 
 ## Q: When/how do I make a soft vs hard transition when changing APIs?
 
-A: Most API transitions in the SDK should be *soft transitions*. A soft
-transition is one in which the new version of the SDK is compatible with both
-old and new clients. After the old clients have migrated to the new API, support
-for the old clients can be removed from the SDK.
-
-Soft transitions will become the only practical way to make changes to the
-system as the project grows more and more incoming dependencies. Executing a
-hard transition implies a degree of synchronization that is difficult to achieve
-across many different source repositories.
+See [this section](/development/workflows/multilayer_changes.md#hard-and-soft-transitions)
+about hard and soft transitions.
 
 ## Q: How do I update a FIDL protocol?
 
