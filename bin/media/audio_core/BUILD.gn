@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test.gni")
+import("//build/test/test_package.gni")
 
 action_foreach("generate_schemas") {
   visibility = [ ":*" ]
@@ -98,7 +97,7 @@ executable("audio_core") {
   ]
 }
 
-test("test_bin") {
+executable("test_bin") {
   testonly = true
   output_name = "audio_core_tests"
 
@@ -118,10 +117,7 @@ test("test_bin") {
   ]
 }
 
-package("audio_core_tests") {
-  testonly = true
-  deprecated_system_image = true
-
+test_package("audio_core_tests") {
   deps = [
     ":test_bin",
   ]

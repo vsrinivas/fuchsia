@@ -2,7 +2,16 @@
     "program": {
         "binary": "test/audio_core_tests"
     },
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.media.Audio": "fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core.cmx"
+            }
+        }
+    },
     "sandbox": {
-        "services": [ ]
+        "services": [
+            "fuchsia.media.Audio"
+        ]
     }
 }
