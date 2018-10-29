@@ -28,10 +28,24 @@ struct AccountMutation {
     AccountOperation operation;
 };
 
+/// Operations supported by wireless settings.
+enum WirelessOperation {
+    CONNECT = 1;
+    DISCONNECT = 2;
+};
+
+/// Configuration for wireless mutations.
+struct WirelessMutation {
+    WirelessOperation operation;
+    int64 network_id;
+    string password;
+};
+
 /// Container for setting mutations.
 union Mutation {
     AccountMutation account_mutation_value;
     StringMutation string_mutation_value;
+    WirelessMutation wireless_mutation_value;
 };
 
 struct AccountMutationHandles {
