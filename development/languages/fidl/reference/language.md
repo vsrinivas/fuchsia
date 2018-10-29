@@ -462,14 +462,15 @@ struct Paint {
         each invocation of the method generates a response from the server.
     *   If only results are declared, the method is referred to as an
         *event*. It then defines an unsolicited message from the server.
-*   When a client or server of an interface is about to close its side of the
-    channel, it may elect to send an **epitaph** message to its peer to indicate
-    the disposition of the connection. If sent, the epitaph must be the last
-    message delivered through the channel. An epitaph message includes:
-    *   32-bit generic status: one of the **ZX_status_t** constants
-    *   32-bit protocol-specific code: meaning is left up to the interface in
-        question
-    *   a string: a human-readable message explaining the disposition
+
+*   When a server of an interface is about to close its side of the channel, it
+    may elect to send an **epitaph** message to the client to indicate the
+    disposition of the connection. The epitaph must be the last message
+    delivered through the channel. An epitaph message includes a 32-bit int
+    value of type **zx_status_t**.  Negative values are reserved for system
+    error codes.  Positive values are reserved for application errors.  A status
+    of ZX_OK indicates successful operation.
+
 *   **Interface extension:** New methods can be added to existing interfaces as
     long as they do not collide with existing methods.
 *   **Interface derivation:** New interfaces can be derived from any number of

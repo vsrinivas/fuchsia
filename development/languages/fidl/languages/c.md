@@ -351,6 +351,18 @@ type. Unless the object encoding includes internal references which
 must be fixed up, the only work amounts to checking the object size and the
 ranges of data types such as enums and union tags.
 
+### fidl_epitaph_write
+
+Declared in
+[lib/fidl/epitaph.h](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fidl/include/lib/fidl/epitaph.h),
+defined in
+[epitaph.c](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fidl/epitaph.c).
+
+This function sends an epitaph with the given error number down the given
+channel.  An epitaph is a special message, with ordinal 0xFFFFFFFF, which
+contains an error code.  The epitaph must be the last thing sent down the
+channel before it is closed.
+
 ### Sending Messages
 
 The client performs the following operations to send a message through a
@@ -397,6 +409,13 @@ channel.
 
 For especially simple messages, it may be possible to skip the encoding step
 altogether (or do it manually).
+
+### Closing Channels
+
+The C language bindings do not provide any special affordances for closing
+channels.  Per the FIDL specification, an epitaph must be sent as the last
+message prior to closing a channel.  Code should call **fidl_epitaph_write()**
+prior to closing a channel.
 
 ### Dispatching Messages
 

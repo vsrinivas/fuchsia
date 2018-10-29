@@ -609,39 +609,23 @@ messages in the protocol.
 The maximum size of a valid control message is **512 bytes**, including the
 header.
 
-##### Epitaph (Control Message Ordinal 0x80000001)
+##### Epitaph (Control Message Ordinal 0xFFFFFFFF)
 
-An epitaph is a message with ordinal **0x80000001** which a client or server
-sends just prior to closing the connection to provide an indication of why the
-connection is being closed. No further messages must be sent through the channel
-after the epitaph.
+An epitaph is a message with ordinal **0xFFFFFFFF**.  A server may send an
+epitaph as the last message prior to closing the connection, to provide an
+indication of why the connection is being closed.  No further messages may be
+sent through the channel after the epitaph.  Epitaphs are not sent from clients
+to servers.
 
-When a client or server receives an epitaph message, it can assume that it has
-received the last message and the channel is about to be closed. The contents of
-the epitaph message explains the disposition of the channel.
+When a client receives an epitaph message, it can assume that it has received
+the last message, and the channel is about to be closed. The contents of the
+epitaph message explain the disposition of the channel.
 
-The body of an epitaph is described by the following structure:
-
-```
-struct Epitaph {
-    // Generic protocol status, represented as a zx_status_t.
-    uint32 status;
-
-    // Protocol-specific data, interpretation depends on the interface
-    // associated with the channel.
-    uint32 code;
-
-    // Human-readable message.
-    string:480 message;
-};
-```
-
-TODO: Should we allow custom epitaph structures as in the original proposal? On
-the other hand, making them system-defined greatly simplifies the bindings and
-is probably sufficient for the most common usage of simply indicating why a
-connection is being closed.
-
-![drawing](epitaph.png)
+The epitaph contains an error status.  The error status of the epitaph is stored
+in the reserved uint32 of the message header.  The reserved word is treated as
+being of type **zx_status_t**: negative numbers are reserved for system error
+codes, positive numbers are reserved for application error codes, and ZX_OK is
+used to indicate normal connection closure.  The message is otherwise empty.
 
 ## Details
 
