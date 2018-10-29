@@ -36,7 +36,7 @@ fi
 curl -s "https://fuchsia.googlesource.com/jiri/+/master/scripts/bootstrap_jiri?format=TEXT" | base64 --decode | bash -s fuchsia
 cd fuchsia
 
-.jiri_root/bin/jiri import -name="${project}" "${project}/${project}" "https://fuchsia.googlesource.com/integration"
+.jiri_root/bin/jiri import -name="integration" "${project}/${project}" "https://fuchsia.googlesource.com/integration"
 .jiri_root/bin/jiri override ${project} "https://fuchsia.googlesource.com/${project}"
 .jiri_root/bin/jiri update
 
