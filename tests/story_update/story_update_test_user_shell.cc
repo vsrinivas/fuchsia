@@ -23,6 +23,8 @@ using modular::testing::TestPoint;
 
 namespace {
 
+const char kStoryName[] = "story";
+
 // Tests how modules are updated in a story.
 class TestApp : public modular::testing::ComponentBase<void> {
  public:
@@ -30,6 +32,9 @@ class TestApp : public modular::testing::ComponentBase<void> {
       : ComponentBase(startup_context) {
     TestInit(__FILE__);
 
+    puppet_master_ =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
     user_shell_context_ =
         startup_context
             ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
@@ -44,20 +49,31 @@ class TestApp : public modular::testing::ComponentBase<void> {
   TestPoint story_create_{"Story Create"};
 
   void CreateStory() {
-    story_provider_->CreateStory(nullptr, [this](fidl::StringPtr story_id) {
-      story_create_.Pass();
-      GetController(story_id);
-    });
+    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+    fuchsia::modular::AddMod add_mod;
+    add_mod.mod_name.push_back("root");
+    add_mod.surface_parent_mod_name.resize(0);
+    add_mod.intent.action = kCommonNullAction;
+    add_mod.intent.handler = kCommonNullModule;
+
+    fuchsia::modular::StoryCommand command;
+    command.set_add_mod(std::move(add_mod));
+    commands.push_back(std::move(command));
+
+    puppet_master_->ControlStory(kStoryName,
+                                 story_puppet_master_.NewRequest());
+    story_puppet_master_->Enqueue(std::move(commands));
+    story_puppet_master_->Execute(
+        [this](fuchsia::modular::ExecuteResult result) {
+          story_create_.Pass();
+          StartStory();
+        });
   }
 
   TestPoint root_running_{"Root Module RUNNING"};
 
-  void GetController(fidl::StringPtr story_id) {
-    story_provider_->GetController(story_id, story_controller_.NewRequest());
-    fuchsia::modular::Intent intent;
-    intent.handler = kCommonNullModule;
-    intent.action = kCommonNullAction;
-    story_controller_->AddModule(nullptr, "root", std::move(intent), nullptr);
+  void StartStory() {
+    story_provider_->GetController(kStoryName, story_controller_.NewRequest());
 
     fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
@@ -65,6 +81,8 @@ class TestApp : public modular::testing::ComponentBase<void> {
     fidl::VectorPtr<fidl::StringPtr> module_path;
     module_path.push_back("root");
 
+    story_controller_->GetModuleController(std::move(module_path),
+                                           module0_controller_.NewRequest());
     module0_controller_.events().OnStateChange =
         [this](fuchsia::modular::ModuleState module_state) {
           if (module_state == fuchsia::modular::ModuleState::RUNNING) {
@@ -72,9 +90,6 @@ class TestApp : public modular::testing::ComponentBase<void> {
             PipelinedAddGetStop();
           }
         };
-
-    story_controller_->GetModuleController(std::move(module_path),
-                                           module0_controller_.NewRequest());
   }
 
   TestPoint module1_stopped_{"Module1 STOPPED"};
@@ -201,6 +216,8 @@ class TestApp : public modular::testing::ComponentBase<void> {
 
   void Logout() { user_shell_context_->Logout(); }
 
+  fuchsia::modular::PuppetMasterPtr puppet_master_;
+  fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
   fuchsia::modular::UserShellContextPtr user_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;
   fuchsia::modular::StoryControllerPtr story_controller_;
