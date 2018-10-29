@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -44,7 +45,7 @@ func InitRepo(r string, k string) (*UpdateRepo, error) {
 	}
 
 	keysDir := filepath.Join(r, "keys")
-	if e := os.MkdirAll(keysDir, 0777); e != nil {
+	if e := os.MkdirAll(keysDir, os.ModePerm); e != nil {
 		return nil, e
 	}
 
@@ -52,12 +53,12 @@ func InitRepo(r string, k string) (*UpdateRepo, error) {
 		return nil, e
 	}
 
-	if e := copyFile(filepath.Join(r, "repository", "root.json"), filepath.Join(k, rootJSONName)); e != nil {
-		fmt.Println("Failed to copy root manifest")
+	rootOut := filepath.Join(r, "repository", "root.json")
+	if e := copyFile(rootOut, filepath.Join(k, rootJSONName)); e != nil {
 		return nil, e
 	}
 
-	s := tuf.FileSystemStore(r, func(role string, confirm bool) ([]byte, error) { return []byte(""), nil })
+	s := tuf.FileSystemStore(r, func(role string, confirm bool) ([]byte, error) { return []byte{}, nil })
 	repo, e := tuf.NewRepo(s, "sha512")
 	if e != nil {
 		return nil, e
@@ -82,19 +83,28 @@ func InitRepo(r string, k string) (*UpdateRepo, error) {
 	return u, nil
 }
 
-func (u *UpdateRepo) AddPackageFile(src string, name string) error {
+// Add a package with the given name with the content from the given reader. The
+// package blob is also added.
+func (u *UpdateRepo) AddPackage(name string, r io.Reader) error {
 	stagingPath := filepath.Join(u.stagedFilesPath(), name)
+	os.MkdirAll(filepath.Dir(stagingPath), os.ModePerm)
 
-	if err := copyFile(stagingPath, src); err != nil {
-		return NewAddErr("copying file to staging directory failed", err)
+	dst, err := os.Create(stagingPath)
+	if err != nil {
+		return NewAddErr("creating file in staging directory", err)
 	}
-	if err := u.createTUFMeta(stagingPath, name); err != nil {
-		return NewAddErr("problem creating TUF metadata", err)
+	root, err := u.AddBlob("", io.TeeReader(r, dst))
+	dst.Close()
+	if err != nil {
+		return NewAddErr("adding package blob", err)
 	}
-	if _, err := u.AddContentBlob(src); err != nil {
-		if !os.IsExist(err) {
-			return NewAddErr("problem adding package blob", err)
-		}
+
+	// add merkle root as custom JSON
+	jsonStr := fmt.Sprintf("{\"merkle\":\"%x\"}", root)
+
+	// add file with custom JSON to repository
+	if err := u.repo.AddTarget(name, json.RawMessage(jsonStr)); err != nil {
+		return fmt.Errorf("failed adding target %s to TUF repo: %s", name, err)
 	}
 
 	return nil
@@ -104,31 +114,35 @@ func (u *UpdateRepo) AbortStaged() error {
 	return u.repo.Clean()
 }
 
-// AddContentBlob adds the blob specified by src to the repository. The blob is
-// named according to its Merkle root. Upon success the Merkle root is returned
-// as a string. If the blob already exists the error return value is set to
-// os.ErrExist and the Merkle root is valid. If an error occurs computing the
-// Merkle root, the returned Merkle root will be invalid and the error value
-// is set. If an error happens while copying the file that error is returned
-// and the Merkle root is valid.
-func (u *UpdateRepo) AddContentBlob(src string) (string, error) {
-	root, err := computeMerkle(src)
+// AddBlob writes the content of the given reader to the blob identified by the
+// given merkleroot. If merkleroot is empty string, a merkleroot is computed.
+func (u *UpdateRepo) AddBlob(root string, r io.Reader) (string, error) {
+	blobDir := filepath.Join(u.path, "repository", "blobs")
+	os.MkdirAll(blobDir, os.ModePerm)
+
+	if root != "" {
+		dst := filepath.Join(blobDir, root)
+		f, err := os.OpenFile(dst, os.O_CREATE|os.O_EXCL|os.O_WRONLY, os.ModePerm)
+		if err != nil {
+			return root, err
+		}
+		defer f.Close()
+		_, err = io.Copy(f, r)
+		return root, err
+	}
+
+	var tree merkle.Tree
+	f, err := ioutil.TempFile(blobDir, "blob")
 	if err != nil {
 		return "", err
 	}
-
-	rootStr := hex.EncodeToString(root)
-	return u.AddContentBlobWithMerkle(src, rootStr)
-}
-
-// AddContentBlobWithMerkle adds the blob specified by src with the precomputed
-// merkle root `merkle` to the repository.
-func (u *UpdateRepo) AddContentBlobWithMerkle(src, merkle string) (string, error) {
-	dst := filepath.Join(u.path, "repository", "blobs", merkle)
-	if _, err := os.Stat(dst); err == nil {
-		return merkle, os.ErrExist
+	if _, err := tree.ReadFrom(io.TeeReader(r, f)); err != nil {
+		f.Close()
+		return "", err
 	}
-	return merkle, copyFile(dst, src)
+	f.Close()
+	root = hex.EncodeToString(tree.Root())
+	return root, os.Rename(f.Name(), filepath.Join(blobDir, root))
 }
 
 func (u *UpdateRepo) RemoveContentBlob(merkle string) error {
@@ -184,24 +198,6 @@ func (u *UpdateRepo) commitUpdates() error {
 	return nil
 }
 
-func (u *UpdateRepo) createTUFMeta(path string, name string) error {
-	// compute merkle root
-	root, err := computeMerkle(path)
-	if err != nil {
-		return fmt.Errorf("merkle computation failed: %s", err)
-	}
-
-	// add merkle root as custom JSON
-	jsonStr := fmt.Sprintf("{\"merkle\":\"%x\"}", root)
-	json := json.RawMessage(jsonStr)
-
-	// add file with custom JSON to repository
-	if err := u.repo.AddTarget(name, json); err != nil {
-		return fmt.Errorf("failed adding target to TUF repo: %s", err)
-	}
-	return nil
-}
-
 func (u *UpdateRepo) stagedFilesPath() string {
 	return filepath.Join(u.path, "staged", "targets")
 }
@@ -216,7 +212,7 @@ func copyFile(dst string, src string) error {
 		return os.ErrInvalid
 	}
 
-	os.MkdirAll(path.Dir(dst), 0777)
+	os.MkdirAll(path.Dir(dst), os.ModePerm)
 
 	in, err := os.Open(src)
 	if err != nil {

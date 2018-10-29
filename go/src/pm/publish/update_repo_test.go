@@ -6,22 +6,26 @@ package publish
 
 import (
 	"bytes"
+	"crypto/rand"
 	"fmt"
+	"io"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	tuf "github.com/flynn/go-tuf"
 )
 
 func TestCopyFile(t *testing.T) {
 	fileSize := 8193
-	src, fileContent := writeRandFile(t, fileSize)
+	src := writeRandFile(t, fileSize)
 	defer os.Remove(src)
+	fileContent, err := ioutil.ReadFile(src)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	dst := filepath.Join(os.TempDir(), fmt.Sprintf("publish-test-dest-%x", fileContent[fileSize-8:]))
 	defer os.Remove(dst)
@@ -35,6 +39,9 @@ func TestCopyFile(t *testing.T) {
 	}
 
 	copyContent, err := ioutil.ReadFile(dst)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if len(copyContent) != fileSize || err != nil {
 		t.Fatalf("Copied file could not be read")
@@ -47,7 +54,7 @@ func TestCopyFile(t *testing.T) {
 
 func TestCopyMakingDirs(t *testing.T) {
 	fileSize := 8193
-	src, _ := writeRandFile(t, fileSize)
+	src := writeRandFile(t, fileSize)
 	defer os.Remove(src)
 
 	nonPath := filepath.Join(os.TempDir(), "abc", "789")
@@ -171,11 +178,8 @@ func TestAddTUFFile(t *testing.T) {
 		t.Fatalf("Repo init returned error %v", err)
 	}
 
-	rf, _ := writeRandFile(t, 8193)
-	defer os.Remove(rf)
-
 	targetName := "test-test"
-	err = amberRepo.AddPackageFile(rf, "test-test")
+	err = amberRepo.AddPackage("test-test", io.LimitReader(rand.Reader, 8193))
 
 	if err != nil {
 		t.Fatalf("Problem adding repo file %v", err)
@@ -256,10 +260,7 @@ func TestAddBlob(t *testing.T) {
 	}
 	defer os.RemoveAll(repoDir)
 
-	rf, _ := writeRandFile(t, 8193)
-	defer os.Remove(rf)
-
-	repo.AddContentBlob(rf)
+	repo.AddBlob("", io.LimitReader(rand.Reader, 8193))
 	blobs, err := os.Open(filepath.Join(repoDir, "repository", "blobs"))
 	if err != nil {
 		t.Fatalf("Couldn't open blobs directory for reading %v", err)
@@ -277,21 +278,16 @@ func TestAddBlob(t *testing.T) {
 	// TODO(jmatt) Verify name is merkle root?
 }
 
-func writeRandFile(t *testing.T, size int) (string, []byte) {
-	fileContent := make([]byte, size)
-	rand.Seed(time.Now().UnixNano())
-	rand.Read(fileContent)
-
-	src, err := ioutil.TempFile("", "publish-test")
+func writeRandFile(t *testing.T, size int) string {
+	dst, err := ioutil.TempFile("", "publish-test")
 	if err != nil {
-		t.Fatalf("Could not make temporary source file, %v", err)
+		t.Fatalf("Could not make temporary file, %v", err)
 	}
-
-	defer src.Close()
-	if _, err = src.Write(fileContent); err != nil {
+	defer dst.Close()
+	if _, err = io.Copy(dst, io.LimitReader(rand.Reader, int64(size))); err != nil {
 		t.Fatalf("Unable to write to temp file %v", err)
 	}
-	return src.Name(), fileContent
+	return dst.Name()
 }
 
 func createFakeKeys(t *testing.T) string {

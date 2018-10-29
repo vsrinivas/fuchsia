@@ -58,9 +58,9 @@ template("pm_publish") {
     args = [
       "publish",
       "-r",
-      rebase_path(amber_repository_dir),
+      rebase_path(amber_repository_dir, root_build_dir),
       "-k",
-      rebase_path(amber_keys_dir),
+      rebase_path(amber_keys_dir, root_build_dir),
       "-ps",
       "-f",
       rebase_path(inputs[0]),

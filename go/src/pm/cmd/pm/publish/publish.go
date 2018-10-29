@@ -6,6 +6,8 @@ package publish
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -14,13 +16,18 @@ import (
 	"path/filepath"
 	"strings"
 
+	"fuchsia.googlesource.com/far"
 	"fuchsia.googlesource.com/pm/build"
+	"fuchsia.googlesource.com/pm/pkg"
 	"fuchsia.googlesource.com/pm/publish"
 )
 
 const (
-	usage      = "Usage: %s publish (-p|-b|-m) [-k=<keys_dir>] [-n=<name>] [-r=<repo_path>] -f=file "
+	usage = `Usage: %s publish (-a|-p|-ps|-b|-bs|-m) -f file [-k <keys_dir>] [-r <repo_path>]
+		Pass any one of the mode flags (-a|-p|-ps|-b|-bs|-m), and at least one file to pubish.
+`
 	serverBase = "amber-files"
+	metaFar    = "meta.far"
 )
 
 type RepeatedArg []string
@@ -42,17 +49,20 @@ type manifestEntry struct {
 func Run(cfg *build.Config, args []string) error {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
 
-	tufFile := fs.Bool("p", false, "Publish a package.")
-	packageSet := fs.Bool("ps", false, "Publish a set of packages from a manifest.")
-	regFile := fs.Bool("b", false, "Publish a content blob.")
-	blobSet := fs.Bool("bs", false, "Publish a set of blobs from a manifest.")
-	manifestFile := fs.Bool("m", false, "Publish a the contents of a manifest as as content blobs.")
+	archiveMode := fs.Bool("a", false, "(mode) Publish an archived package.")
+	packageMode := fs.Bool("p", false, "(mode) Publish a package.")
+	packageSetMode := fs.Bool("ps", false, "(mode) Publish a set of packages from a manifest.")
+	blobMode := fs.Bool("b", false, "(mode) Publish a content blob.")
+	blobSetMode := fs.Bool("bs", false, "(mode) Publish a set of blobs from a manifest.")
+	manifestMode := fs.Bool("m", false, "(mode) Publish a the contents of a manifest as as content blobs.")
+	commitMode := fs.Bool("po", false, "(mode) Publish only, commit any staged updates to the update repo.")
+	modeFlags := []*bool{archiveMode, packageMode, packageSetMode, blobMode, blobSetMode, manifestMode, commitMode}
+
 	name := fs.String("n", "", "Name/path used for the published file. This only applies to '-p', package files If not supplied, the relative path supplied to '-f' will be used.")
 	repoDir := fs.String("r", "", "Path to the TUF repository directory.")
 	keyDir := fs.String("k", "", "Directory containing the signing keys.")
 	verbose := fs.Bool("v", false, "Print out more informational messages.")
 	verTime := fs.Bool("vt", false, "Set repo versioning based on time rather than a monotonic increment")
-	commitStaged := fs.Bool("po", false, "Publish only, commit any staged updates to the update repo.")
 
 	filePaths := RepeatedArg{}
 	fs.Var(&filePaths, "f", "Path(s) of the file(s) to publish")
@@ -70,35 +80,30 @@ func Run(cfg *build.Config, args []string) error {
 		if buildDir, ok := os.LookupEnv("FUCHSIA_BUILD_DIR"); ok {
 			*repoDir = filepath.Join(buildDir, serverBase)
 		} else {
-			return fmt.Errorf("Either set $FUCHSIA_BUILD_DIR or supply a path with -r.")
+			return fmt.Errorf("either set $FUCHSIA_BUILD_DIR or supply a path with -r")
 		}
 	}
 
 	if *keyDir == "" {
-		if buildDir, ok := os.LookupEnv("FUCHSIA_BUILD_DIR"); ok {
-			*keyDir = buildDir
-		} else {
-			return fmt.Errorf("Either set $FUCHSIA_BUILD_DIR or supply a key directory with -k .")
+		return fmt.Errorf("a keys directory is requried")
+	}
+
+	var numModes int
+	for _, v := range modeFlags {
+		if *v {
+			numModes++
 		}
 	}
 
-	modeCheck := false
-	for _, v := range []bool{*tufFile, *packageSet, *regFile, *blobSet, *manifestFile,
-		*commitStaged} {
-		if v {
-			if modeCheck {
-				return fmt.Errorf("Only one mode, -p, -ps, -b, -bs, or -m may be selected")
-			}
-			modeCheck = true
-		}
+	if numModes > 1 {
+		return fmt.Errorf("only one mode flag may be passed")
+	}
+	if numModes == 0 {
+		return fmt.Errorf("at least one mode flag must be passed")
 	}
 
-	if !modeCheck {
-		return fmt.Errorf("A mode, -p, -ps, -b, or -m must be selected")
-	}
-
-	if !*commitStaged && len(filePaths) == 0 {
-		return fmt.Errorf("No file path supplied.")
+	if !*commitMode && len(filePaths) == 0 {
+		return fmt.Errorf("no file path supplied")
 	}
 
 	// Make sure the the paths to publish actually exist.
@@ -134,9 +139,69 @@ func Run(cfg *build.Config, args []string) error {
 		return fmt.Errorf("error initializing repo: %s", err)
 	}
 
-	if *packageSet {
+	switch {
+	case *archiveMode:
 		if len(filePaths) != 1 {
-			return fmt.Errorf("too many file paths supplied.")
+			return fmt.Errorf("too many file paths supplied")
+		}
+
+		f, err := os.Open(filePaths[0])
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		ar, err := far.NewReader(f)
+		if err != nil {
+			return err
+		}
+
+		b, err := ar.ReadFile(metaFar)
+		if err != nil {
+			return err
+		}
+
+		if len(*name) == 0 {
+			mf, err := far.NewReader(bytes.NewReader(b))
+			if err != nil {
+				return err
+			}
+			pb, err := mf.ReadFile("package")
+			if err != nil {
+				return err
+			}
+			var p pkg.Package
+			if err := json.Unmarshal(pb, &p); err != nil {
+				return err
+			}
+
+			s := p.Name + "/" + p.Version
+			name = &s
+		}
+
+		if err := repo.AddPackage(*name, bytes.NewReader(b)); err != nil {
+			return err
+		}
+
+		for _, n := range ar.List() {
+			if len(n) != 64 {
+				continue
+			}
+			b, err := ar.ReadFile(n)
+			if err != nil {
+				return err
+			}
+			if _, err := repo.AddBlob(n, bytes.NewReader(b)); err != nil {
+				return err
+			}
+		}
+		if err := repo.CommitUpdates(*verTime); err != nil {
+			log.Fatalf("error committing repository updates: %s", err)
+		}
+
+	case *packageSetMode:
+		if len(filePaths) != 1 {
+			return fmt.Errorf("too many file paths supplied")
 		}
 		f, err := os.Open(filePaths[0])
 		if err != nil {
@@ -151,15 +216,22 @@ func Run(cfg *build.Config, args []string) error {
 
 			line := s.Text()
 			parts := strings.SplitN(line, "=", 2)
-
-			if err := repo.AddPackageFile(parts[1], parts[0]); err != nil {
+			name := parts[0]
+			f, err := os.Open(parts[1])
+			if err != nil {
+				return err
+			}
+			if err := repo.AddPackage(name, f); err != nil {
+				f.Close()
 				return fmt.Errorf("failed to add package %q from %q: %s", parts[0], parts[1], err)
 			}
+			f.Close()
 		}
 		if err := repo.CommitUpdates(*verTime); err != nil {
 			log.Fatalf("error committing repository updates: %s", err)
 		}
-	} else if *blobSet {
+
+	case *blobSetMode:
 		if len(filePaths) != 1 {
 			log.Fatalf("too many file paths supplied.")
 		}
@@ -176,48 +248,69 @@ func Run(cfg *build.Config, args []string) error {
 
 			line := s.Text()
 			parts := strings.SplitN(line, "=", 2)
-
-			if _, err = repo.AddContentBlobWithMerkle(parts[0], parts[1]); err != nil {
-				if err != os.ErrExist {
-					return fmt.Errorf("Error adding regular file: %s", err)
-				}
+			root := parts[1]
+			f, err := os.Open(parts[0])
+			if err != nil {
+				return err
+			}
+			_, err = repo.AddBlob(root, f)
+			f.Close()
+			if err != nil && err != os.ErrExist {
+				return fmt.Errorf("Error adding regular file: %s", err)
 			}
 		}
 
-	} else if *tufFile {
+	case *packageMode:
 		if len(filePaths) != 1 {
-			return fmt.Errorf("too many file paths supplied.")
+			return fmt.Errorf("too many file paths supplied")
 		}
 		if len(*name) == 0 {
 			name = &filePaths[0]
 		}
-		if err = repo.AddPackageFile(filePaths[0], *name); err != nil {
+		f, err := os.Open(filePaths[0])
+		if err != nil {
+			return err
+		}
+		err = repo.AddPackage(*name, f)
+		f.Close()
+		if err != nil {
 			return fmt.Errorf("problem adding signed file: %s", err)
 		}
 		if err = repo.CommitUpdates(*verTime); err != nil {
 			return fmt.Errorf("error signing added file: %s", err)
 		}
-	} else if *regFile {
+
+	case *blobMode:
 		if len(*name) > 0 {
 			return fmt.Errorf("name is not a valid argument for content addressed files")
 		}
 		for _, path := range filePaths {
-			//var filename string
-			if *name, err = repo.AddContentBlob(path); err != nil && err != os.ErrExist {
+			f, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			*name, err = repo.AddBlob("", f)
+			f.Close()
+			if err != nil && err != os.ErrExist {
 				return fmt.Errorf("Error adding regular file: %s %s", path, err)
 			}
 		}
-	} else if *commitStaged {
+
+	case *commitMode:
 		if err := repo.CommitUpdates(*verTime); err != nil {
 			fmt.Printf("error committing updates: %s", err)
 		}
-	} else {
+
+	case *manifestMode:
 		if len(filePaths) != 1 {
-			return fmt.Errorf("too many file paths supplied.")
+			return fmt.Errorf("too many file paths supplied")
 		}
 		if err = publishManifest(filePaths[0], repo, *verbose); err != nil {
 			return fmt.Errorf("error processing manifest: %s", err)
 		}
+
+	default:
+		panic("unhandled mode")
 	}
 
 	return nil
@@ -259,7 +352,14 @@ func publishPkgUpdates(repo *publish.UpdateRepo, manifest []manifestEntry) ([]st
 	blobIndex := make(map[string]string)
 	// read the manifest content
 	for _, entry := range manifest {
-		merkle, err := repo.AddContentBlob(entry.localPath)
+		f, err := os.Open(entry.localPath)
+		if err != nil {
+			return nil, nil, fmt.Errorf("publish: error adding blob %s", err)
+		}
+
+		merkle, err := repo.AddBlob("", f)
+		f.Close()
+
 		if err == nil {
 			addedBlobs = append(addedBlobs, merkle)
 		} else if !os.IsExist(err) {
