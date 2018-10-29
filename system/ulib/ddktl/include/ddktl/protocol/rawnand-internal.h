@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-//          MODIFY system/fidl/protocols/rawnand.fidl INSTEAD.
+//          MODIFY system/fidl/protocols/rawnand.banjo INSTEAD.
 
 #pragma once
 
@@ -26,11 +26,7 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_raw_nand_protocol_write_page_hwecc, Raw
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_raw_nand_protocol_erase_block, RawNandEraseBlock,
                                      zx_status_t (C::*)(uint32_t nandpage));
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_raw_nand_protocol_get_nand_info, RawNandGetNandInfo,
-                                     zx_status_t (C::*)(zircon_nand_Info* out_info));
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_raw_nand_protocol_cmd_ctrl, RawNandCmdCtrl,
-                                     void (C::*)(zx_status_t cmd, uint32_t ctrl));
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_raw_nand_protocol_read_byte, RawNandReadByte,
-                                     uint8_t (C::*)());
+                                     zx_status_t (C::*)(nand_info_t* out_info));
 
 template <typename D>
 constexpr void CheckRawNandProtocolSubclass() {
@@ -48,13 +44,7 @@ constexpr void CheckRawNandProtocolSubclass() {
                   "zx_status_t RawNandEraseBlock(uint32_t nandpage");
     static_assert(internal::has_raw_nand_protocol_get_nand_info<D>::value,
                   "RawNandProtocol subclasses must implement "
-                  "zx_status_t RawNandGetNandInfo(zircon_nand_Info* out_info");
-    static_assert(internal::has_raw_nand_protocol_cmd_ctrl<D>::value,
-                  "RawNandProtocol subclasses must implement "
-                  "void RawNandCmdCtrl(zx_status_t cmd, uint32_t ctrl");
-    static_assert(internal::has_raw_nand_protocol_read_byte<D>::value,
-                  "RawNandProtocol subclasses must implement "
-                  "uint8_t RawNandReadByte(");
+                  "zx_status_t RawNandGetNandInfo(nand_info_t* out_info");
 }
 
 } // namespace internal

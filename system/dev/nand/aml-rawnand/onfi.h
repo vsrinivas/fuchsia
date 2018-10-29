@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <zircon/types.h>
+
 #define NAND_CE0 (0xe << 10)
 #define NAND_CE1 (0xd << 10)
 
@@ -63,13 +65,17 @@ struct nand_chip_table {
     uint32_t bus_width;        /* 8 vs 16 bit */
 };
 
-#define MAX(A, B) ((A > B) ? A : B)
-#define MIN(A, B) ((A < B) ? A : B)
+typedef struct onfi_callback {
+    void* ctx;
+    void (*cmd_ctrl)(void* ctx, zx_status_t cmd, uint32_t ctrl);
+    uint8_t (*read_byte)(void* ctx);
+} onfi_callback_t;
 
 struct nand_chip_table* find_nand_chip_table(uint8_t manuf_id,
                                              uint8_t device_id);
-void onfi_command(raw_nand_protocol_t* proto, uint32_t command,
+void onfi_command(onfi_callback_t* cb, uint32_t command,
                   int32_t column, int32_t page_addr,
                   uint32_t capacity_mb, uint32_t chip_delay_us,
                   int buswidth_16);
-zx_status_t onfi_wait(raw_nand_protocol_t* proto, uint32_t timeout_ms);
+zx_status_t onfi_wait(onfi_callback_t* cb, uint32_t timeout_ms);
+

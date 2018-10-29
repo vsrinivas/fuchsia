@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-//          MODIFY system/fidl/protocols/rawnand.fidl INSTEAD.
+//          MODIFY system/fidl/protocols/rawnand.banjo INSTEAD.
 
 #pragma once
 
 #include <zircon/compiler.h>
-#include <zircon/nand/c/fidl.h>
+#include <zircon/device/nand.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS;
@@ -27,9 +27,7 @@ typedef struct raw_nand_protocol_ops {
     zx_status_t (*write_page_hwecc)(void* ctx, const void* data_buffer, size_t data_size,
                                     const void* oob_buffer, size_t oob_size, uint32_t nandpage);
     zx_status_t (*erase_block)(void* ctx, uint32_t nandpage);
-    zx_status_t (*get_nand_info)(void* ctx, zircon_nand_Info* out_info);
-    void (*cmd_ctrl)(void* ctx, zx_status_t cmd, uint32_t ctrl);
-    uint8_t (*read_byte)(void* ctx);
+    zx_status_t (*get_nand_info)(void* ctx, nand_info_t* out_info);
 } raw_nand_protocol_ops_t;
 
 struct raw_nand_protocol {
@@ -60,17 +58,8 @@ static inline zx_status_t raw_nand_erase_block(const raw_nand_protocol_t* proto,
     return proto->ops->erase_block(proto->ctx, nandpage);
 }
 static inline zx_status_t raw_nand_get_nand_info(const raw_nand_protocol_t* proto,
-                                                 zircon_nand_Info* out_info) {
+                                                 nand_info_t* out_info) {
     return proto->ops->get_nand_info(proto->ctx, out_info);
-}
-// Send ONFI command down to controller.
-static inline void raw_nand_cmd_ctrl(const raw_nand_protocol_t* proto, zx_status_t cmd,
-                                     uint32_t ctrl) {
-    proto->ops->cmd_ctrl(proto->ctx, cmd, ctrl);
-}
-// Read byte (used to read status as well as other info, such as ID).
-static inline uint8_t raw_nand_read_byte(const raw_nand_protocol_t* proto) {
-    return proto->ops->read_byte(proto->ctx);
 }
 
 __END_CDECLS;

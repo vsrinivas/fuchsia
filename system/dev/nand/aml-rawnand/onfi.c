@@ -2,22 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdint.h>
-#include <stdlib.h>
+#include "onfi.h"
+
+#include <string.h>
 #include <unistd.h>
 
-#include <bits/limits.h>
 #include <ddk/debug.h>
-#include <ddk/protocol/rawnand.h>
-
-#include <lib/sync/completion.h>
-#include <zircon/assert.h>
-#include <zircon/status.h>
-#include <zircon/threads.h>
-#include <zircon/types.h>
-
-#include "onfi.h"
-#include <string.h>
 
 /*
  * Database of settings for the NAND flash devices we support.
@@ -57,14 +47,13 @@ struct nand_chip_table* find_nand_chip_table(uint8_t manuf_id,
  * Generic wait function used by both program (write) and erase
  * functionality.
  */
-zx_status_t onfi_wait(raw_nand_protocol_t* proto, uint32_t timeout_ms) {
+zx_status_t onfi_wait(onfi_callback_t* cb, uint32_t timeout_ms) {
     uint64_t total_time = 0;
     uint8_t cmd_status;
 
-    raw_nand_cmd_ctrl(proto, NAND_CMD_STATUS,
-                      NAND_CTRL_CLE | NAND_CTRL_CHANGE);
-    raw_nand_cmd_ctrl(proto, NAND_CMD_NONE, NAND_NCE | NAND_CTRL_CHANGE);
-    while (!((cmd_status = raw_nand_read_byte(proto)) & NAND_STATUS_READY)) {
+    cb->cmd_ctrl(cb->ctx, NAND_CMD_STATUS, NAND_CTRL_CLE | NAND_CTRL_CHANGE);
+    cb->cmd_ctrl(cb->ctx, NAND_CMD_NONE, NAND_NCE | NAND_CTRL_CHANGE);
+    while (!((cmd_status = cb->read_byte(cb->ctx)) & NAND_STATUS_READY)) {
         usleep(10);
         total_time += 10;
         if (total_time > (timeout_ms * 1000)) {
@@ -85,11 +74,11 @@ zx_status_t onfi_wait(raw_nand_protocol_t* proto, uint32_t timeout_ms) {
 /*
  * Send onfi command down to the controller.
  */
-void onfi_command(raw_nand_protocol_t* proto, uint32_t command,
+void onfi_command(onfi_callback_t* cb, uint32_t command,
                   int32_t column, int32_t page_addr,
                   uint32_t capacity_mb, uint32_t chip_delay_us,
                   int buswidth_16) {
-    raw_nand_cmd_ctrl(proto, command, NAND_NCE | NAND_CLE | NAND_CTRL_CHANGE);
+    cb->cmd_ctrl(cb->ctx, command, NAND_NCE | NAND_CLE | NAND_CTRL_CHANGE);
     if (column != -1 || page_addr != -1) {
         uint32_t ctrl = NAND_CTRL_CHANGE | NAND_NCE | NAND_ALE;
 
@@ -97,41 +86,36 @@ void onfi_command(raw_nand_protocol_t* proto, uint32_t command,
             /* 16 bit buswidth ? */
             if (buswidth_16)
                 column >>= 1;
-            raw_nand_cmd_ctrl(proto, column, ctrl);
+            cb->cmd_ctrl(cb->ctx, column, ctrl);
             ctrl &= ~NAND_CTRL_CHANGE;
-            raw_nand_cmd_ctrl(proto, column >> 8, ctrl);
+            cb->cmd_ctrl(cb->ctx, column >> 8, ctrl);
         }
         if (page_addr != -1) {
-            raw_nand_cmd_ctrl(proto, page_addr, ctrl);
-            raw_nand_cmd_ctrl(proto, page_addr >> 8,
+            cb->cmd_ctrl(cb->ctx, page_addr, ctrl);
+            cb->cmd_ctrl(cb->ctx, page_addr >> 8,
                               NAND_NCE | NAND_ALE);
             /* one more address cycle for devices > 128M */
             if (capacity_mb > 128)
-                raw_nand_cmd_ctrl(proto, page_addr >> 16,
-                                  NAND_NCE | NAND_ALE);
+                cb->cmd_ctrl(cb->ctx, page_addr >> 16, NAND_NCE | NAND_ALE);
         }
     }
-    raw_nand_cmd_ctrl(proto, NAND_CMD_NONE, NAND_NCE | NAND_CTRL_CHANGE);
+    cb->cmd_ctrl(cb->ctx, NAND_CMD_NONE, NAND_NCE | NAND_CTRL_CHANGE);
 
     if (command == NAND_CMD_ERASE1 || command == NAND_CMD_ERASE2 ||
         command == NAND_CMD_SEQIN || command == NAND_CMD_PAGEPROG)
         return;
     if (command == NAND_CMD_RESET) {
         usleep(chip_delay_us);
-        raw_nand_cmd_ctrl(proto, NAND_CMD_STATUS,
-                          NAND_NCE | NAND_CLE | NAND_CTRL_CHANGE);
-        raw_nand_cmd_ctrl(proto, NAND_CMD_NONE,
-                          NAND_NCE | NAND_CTRL_CHANGE);
+        cb->cmd_ctrl(cb->ctx, NAND_CMD_STATUS, NAND_NCE | NAND_CLE | NAND_CTRL_CHANGE);
+        cb->cmd_ctrl(cb->ctx, NAND_CMD_NONE, NAND_NCE | NAND_CTRL_CHANGE);
         /* We have to busy loop until ready */
-        while (!(raw_nand_read_byte(proto) & NAND_STATUS_READY))
+        while (!(cb->read_byte(cb->ctx) & NAND_STATUS_READY))
             ;
         return;
     }
     if (command == NAND_CMD_READ0) {
-        raw_nand_cmd_ctrl(proto, NAND_CMD_READSTART,
-                          NAND_NCE | NAND_CLE | NAND_CTRL_CHANGE);
-        raw_nand_cmd_ctrl(proto, NAND_CMD_NONE,
-                          NAND_NCE | NAND_CTRL_CHANGE);
+        cb->cmd_ctrl(cb->ctx, NAND_CMD_READSTART, NAND_NCE | NAND_CLE | NAND_CTRL_CHANGE);
+        cb->cmd_ctrl(cb->ctx, NAND_CMD_NONE, NAND_NCE | NAND_CTRL_CHANGE);
     }
     usleep(chip_delay_us);
 }

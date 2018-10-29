@@ -20,10 +20,4 @@ interface RawNand {
     3: EraseBlock(uint32 nandpage) -> (zx.status s);
 
     4: GetNandInfo() -> (zx.status s, zircon.device.nand.NandInfo info);
-
-    /// Send ONFI command down to controller.
-    5: CmdCtrl(int32 cmd, uint32 ctrl) -> ();
-
-    /// Read byte (used to read status as well as other info, such as ID).
-    6: ReadByte() -> (uint8 byte);
 };

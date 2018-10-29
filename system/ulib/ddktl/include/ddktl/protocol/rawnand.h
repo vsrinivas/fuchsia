@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-//          MODIFY system/fidl/protocols/rawnand.fidl INSTEAD.
+//          MODIFY system/fidl/protocols/rawnand.banjo INSTEAD.
 
 #pragma once
 
@@ -11,7 +11,7 @@
 #include <ddktl/device-internal.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
-#include <zircon/nand/c/fidl.h>
+#include <zircon/device/nand.h>
 #include <zircon/types.h>
 
 #include "rawnand-internal.h"
@@ -49,11 +49,7 @@
 //
 //     zx_status_t RawNandEraseBlock(uint32_t nandpage);
 //
-//     zx_status_t RawNandGetNandInfo(zircon_nand_Info* out_info);
-//
-//     void RawNandCmdCtrl(zx_status_t cmd, uint32_t ctrl);
-//
-//     uint8_t RawNandReadByte();
+//     zx_status_t RawNandGetNandInfo(nand_info_t* out_info);
 //
 //     ...
 // };
@@ -69,8 +65,6 @@ public:
         raw_nand_protocol_ops_.write_page_hwecc = RawNandWritePageHwecc;
         raw_nand_protocol_ops_.erase_block = RawNandEraseBlock;
         raw_nand_protocol_ops_.get_nand_info = RawNandGetNandInfo;
-        raw_nand_protocol_ops_.cmd_ctrl = RawNandCmdCtrl;
-        raw_nand_protocol_ops_.read_byte = RawNandReadByte;
     }
 
 protected:
@@ -97,15 +91,9 @@ private:
     static zx_status_t RawNandEraseBlock(void* ctx, uint32_t nandpage) {
         return static_cast<D*>(ctx)->RawNandEraseBlock(nandpage);
     }
-    static zx_status_t RawNandGetNandInfo(void* ctx, zircon_nand_Info* out_info) {
+    static zx_status_t RawNandGetNandInfo(void* ctx, nand_info_t* out_info) {
         return static_cast<D*>(ctx)->RawNandGetNandInfo(out_info);
     }
-    // Send ONFI command down to controller.
-    static void RawNandCmdCtrl(void* ctx, zx_status_t cmd, uint32_t ctrl) {
-        static_cast<D*>(ctx)->RawNandCmdCtrl(cmd, ctrl);
-    }
-    // Read byte (used to read status as well as other info, such as ID).
-    static uint8_t RawNandReadByte(void* ctx) { return static_cast<D*>(ctx)->RawNandReadByte(); }
 };
 
 class RawNandProtocolProxy {
@@ -136,11 +124,7 @@ public:
     }
     // Erase nand block.
     zx_status_t EraseBlock(uint32_t nandpage) { return ops_->erase_block(ctx_, nandpage); }
-    zx_status_t GetNandInfo(zircon_nand_Info* out_info) { return ops_->get_nand_info(ctx_, out_info); }
-    // Send ONFI command down to controller.
-    void CmdCtrl(zx_status_t cmd, uint32_t ctrl) { ops_->cmd_ctrl(ctx_, cmd, ctrl); }
-    // Read byte (used to read status as well as other info, such as ID).
-    uint8_t ReadByte() { return ops_->read_byte(ctx_); }
+    zx_status_t GetNandInfo(nand_info_t* out_info) { return ops_->get_nand_info(ctx_, out_info); }
 
 private:
     raw_nand_protocol_ops_t* ops_;

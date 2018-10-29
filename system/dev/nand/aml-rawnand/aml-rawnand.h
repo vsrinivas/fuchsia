@@ -4,6 +4,20 @@
 
 #pragma once
 
+#include <assert.h>
+
+#include <ddk/io-buffer.h>
+#include <ddk/mmio-buffer.h>
+#include <ddk/protocol/platform-device.h>
+
+#include <hw/reg.h>
+#include <lib/sync/completion.h>
+#include <soc/aml-common/aml-rawnand.h>
+#include <zircon/threads.h>
+#include <zircon/types.h>
+
+#include "onfi.h"
+
 typedef enum raw_nand_addr_window {
     NANDREG_WINDOW = 0,
     CLOCKREG_WINDOW,
@@ -20,7 +34,7 @@ typedef struct {
 } aml_controller_t;
 
 typedef struct {
-    raw_nand_protocol_t raw_nand_proto;
+    onfi_callback_t onfi;
     pdev_protocol_t pdev;
     zx_device_t* zxdev;
     mmio_buffer_t mmio[ADDR_WINDOW_COUNT];
