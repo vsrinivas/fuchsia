@@ -38,6 +38,14 @@ def main():
 
     tree = xml.etree.ElementTree.parse(args.manifest)
 
+    # For people that haven't switched to the flower model, keep using the old
+    # method of guessing the import.
+    if not tree.find('overrides'): # overrides don't exist pre-flower
+      sys.stderr.write('found no overrides. guessing project from imports\n')
+      for elt in tree.iter('import'):
+        if check_import(elt.attrib['name']):
+          return 0
+
     # Guess the layer from the name of the <project> that is overriden in the
     # current manifest.
     for elt in tree.iter('overrides'):
