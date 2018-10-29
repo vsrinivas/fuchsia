@@ -4,9 +4,8 @@
 # found in the LICENSE file.
 
 ### start the update server and attach to a running fuchsia device
-## usage: fx serve-updates [-v] [--direct]
+## usage: fx serve-updates [-v]
 ##   -v verbose (do not suppress `pm serve` output)
-##   --no-direct configure target to use an SSH tunnel as transport (deprecated)
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
@@ -20,7 +19,6 @@ set -- "${FX_ARGV[@]}"
 
 verbose=false
 very_verbose=false
-direct=true
 while (($#)); do
   case "$1" in
     -v|--verbose)
@@ -33,12 +31,6 @@ while (($#)); do
     -vv)
       verbose=true
       very_verbose=true
-      ;;
-    --no-direct)
-      direct=false
-      ;;
-    --direct)
-      direct=true
       ;;
     *)
       echo "Unrecognized option: $1"
@@ -114,8 +106,8 @@ while true; do
     exit 1
   fi
 
-  if [[ "$direct" == false ]]; then
-    log_verbose "Updating device address with device arg \"$device\""
+  if [[ "$state" == "discover" || "$state" == "discover1" ]]; then
+    log_verbose "Updating device address (direct) with \"$device\""
     update_device_addr
     if [[ -z "${device_addr}" ]]; then
       if [[ "${state}" != "discover1" ]]; then
@@ -126,82 +118,35 @@ while true; do
       continue
     fi
 
-    if [[ "$state" == "discover" || "$state" == "discover1" ]]; then
-      log "SSH Tunnel connecting to ${device_addr}..."
-      if fx-command-run ssh -f -o LogLevel=ERROR -o ExitOnForwardFailure=yes -R 8083:localhost:8083 "${device_addr}" "echo -n"; then
-        log "Tunnel up"
-        state="config"
-      fi
+    log_verbose "Ping $device_addr"
+    if ping_device $device_addr; then
+      log "Device up"
+      state="config"
+    fi
 
+    sleep 1
+  fi
+
+  if [[ "$state" == "config" ]]; then
+    log "Registering devhost as update source"
+    if fx-command-run add-update-source --disable-source=localhost $device_arg; then
+      log "Ready to push packages!"
+      state="ready"
+    else
+      log "Device lost while configuring update source"
+      state="discover"
+    fi
+
+    sleep 1
+  fi
+
+  if [[ "$state" == "ready" ]]; then
+    log_verbose "Ping $device_addr"
+    if ping_device $device_addr; then
       sleep 1
-    fi
-
-    if [[ "$state" == "config" ]]; then
-      log "Registering target's localhost as update source"
-      if fx-command-run add-update-source --type=localhost --disable-source=devhost $device_arg; then
-        log "Ready to push packages!"
-        state="ready"
-      else
-        log "Device lost while configuring update source"
-        state="discover"
-      fi
-
-      sleep 1
-    fi
-
-    if [[ "$state" == "ready" ]]; then
-      if fx-command-run ssh -O check "${device_addr}" 2> /dev/null; then
-        sleep 1
-      else
-        log "SSH Tunnel lost, restarting..."
-        state="discover"
-      fi
-    fi
-
-  else # $direct == true
-
-    if [[ "$state" == "discover" || "$state" == "discover1" ]]; then
-      log_verbose "Updating device address (direct) with \"$device\""
-      update_device_addr
-      if [[ -z "${device_addr}" ]]; then
-        if [[ "${state}" != "discover1" ]]; then
-          log "No device found, waiting..."
-          state="discover1"
-        fi
-        sleep 1
-        continue
-      fi
-
-      log_verbose "Ping $device_addr"
-      if ping_device $device_addr; then
-        log "Device up"
-        state="config"
-      fi
-
-      sleep 1
-    fi
-
-    if [[ "$state" == "config" ]]; then
-      log "Registering devhost as update source"
-      if fx-command-run add-update-source --disable-source=localhost $device_arg; then
-        log "Ready to push packages!"
-        state="ready"
-      else
-        log "Device lost while configuring update source"
-        state="discover"
-      fi
-
-      sleep 1
-    fi
-
-    if [[ "$state" == "ready" ]]; then
-      log_verbose "Ping $device_addr"
-      if ping_device $device_addr; then
-        sleep 1
-      else
-        log "Device lost"
-        state="discover"
-      fi
+    else
+      log "Device lost"
+      state="discover"
     fi
   fi
 done
