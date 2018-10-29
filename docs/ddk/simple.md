@@ -1,5 +1,3 @@
-
-
 <!--
     (C) Copyright 2018 The Fuchsia Authors. All rights reserved.
     Use of this source code is governed by a BSD-style license that can be
@@ -40,7 +38,7 @@ For reference, the source code for all of these drivers is in the
 
 ## Registration
 
-A system process called the device manager is responsible for device drivers.
+A system process called the device manager (`devmgr` henceforth) is responsible for device drivers.
 During initialization, it searches `/boot/driver` and `/system/driver` for drivers.
 <!-- @@@ TODO Brian says that /system is going away as we transition to a package-based
 world, at which point these drivers will be provided by the package manager in garnet -->
@@ -75,12 +73,12 @@ provided in the `ZIRCON_DRIVER_BEGIN` macro.
 
 We can ignore this "glue" for now, and just note that this part of the code:
 
-*   tells the device manager that this driver can be bound to devices requiring the
+*   tells `devmgr` that this driver can be bound to devices requiring the
     `ZX_PROTOCOL_MISC_PARENT` protocol, and
 *   contains a pointer to the `zx_drivers_ops_t` table that lists the
     functions provided by this DSO.
 
-To initialize the device, the device manager calls the binding function **null_bind()**
+To initialize the device, `devmgr` calls the binding function **null_bind()**
 through the `.bind` member (also in `demo-null.c`):
 
 ```c
@@ -115,7 +113,7 @@ We'll see these functions, **null_read()** and **null_write()**, below.
 After calling **device_add()**,
 the device name is registered, and the operations passed in
 the `.ops` member of the argument structure are bound to the device.
-A successful return from **null_bind()** indicates to the device manager that the driver is now
+A successful return from **null_bind()** indicates to `devmgr` that the driver is now
 associated with the device.
 
 At this point, our `/dev/misc/demo-null` device is ready to handle client requests,
@@ -517,7 +515,7 @@ interface Number {
 The first line, `library zircon.sample.number;` provides a name for the library that will
 be generated.
 
-> Next, `[Layout="Simple"]` indicates @@@ I have no idea @@@.
+Next, `[Layout="Simple"]` generates [simple C bindings](https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/languages/c.md#simple-bindings).
 
 Finally, the `interface` section defines all of the interfaces that are available.
 Each interface is numbered, has a name, and specifies inputs and outputs.
