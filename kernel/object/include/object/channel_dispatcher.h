@@ -38,14 +38,24 @@ public:
     // size and handle count, respectively. On ZX_OK or ZX_ERR_BUFFER_TOO_SMALL, they specify the
     // actual size and handle count of the next message. The next message is returned in |*msg| on
     // ZX_OK and also on ZX_ERR_BUFFER_TOO_SMALL when |may_discard| is set.
-    zx_status_t Read(uint32_t* msg_size,
+    zx_status_t Read(zx_koid_t owner,
+                     uint32_t* msg_size,
                      uint32_t* msg_handle_count,
                      fbl::unique_ptr<MessagePacket>* msg,
                      bool may_disard);
 
-    // Write to the opposing endpoint's message queue.
-    zx_status_t Write(fbl::unique_ptr<MessagePacket> msg) TA_NO_THREAD_SAFETY_ANALYSIS;
-    zx_status_t Call(fbl::unique_ptr<MessagePacket> msg, zx_time_t deadline,
+    // Write to the opposing endpoint's message queue. |owner| is the process attempting to
+    // write to the channel, or ZX_KOID_INVALID if kernel is doing it. If |owner| does not
+    // match what was last set by Dispatcher::set_owner() the call will fail.
+    zx_status_t Write(zx_koid_t owner,
+                      fbl::unique_ptr<MessagePacket> msg) TA_NO_THREAD_SAFETY_ANALYSIS;
+
+    // Perform a transacted Write + Read. |owner| is the process attempting to write
+    // to the channel, or ZX_KOID_INVALID if kernel is doing it. If |owner| does not
+    // match what was last set by Dispatcher::set_owner() the call will fail.
+    zx_status_t Call(zx_koid_t owner,
+                     fbl::unique_ptr<MessagePacket> msg,
+                     zx_time_t deadline,
                      fbl::unique_ptr<MessagePacket>* reply) TA_NO_THREAD_SAFETY_ANALYSIS;
 
     // Performs the wait-then-read half of Call.  This is meant for retrying
@@ -99,6 +109,8 @@ public:
     void on_zero_handles_locked() TA_REQ(get_lock());
     void OnPeerZeroHandlesLocked() TA_REQ(get_lock());
 
+    void set_owner(zx_koid_t new_owner) final;
+
 private:
     using MessageList = fbl::DoublyLinkedList<fbl::unique_ptr<MessagePacket>>;
     using WaiterList = fbl::DoublyLinkedList<MessageWaiter*>;
@@ -115,6 +127,13 @@ private:
     MessageList messages_ TA_GUARDED(get_lock());
     uint64_t message_count_ TA_GUARDED(get_lock()) = 0;
     uint64_t max_message_count_ TA_GUARDED(get_lock()) = 0;
+    // Tracks the process that is allowed to issue calls, for example write
+    // to the opposite end. Without it, one can see writes out of order with
+    // respect of the previous and current owner. We avoid locking and updating
+    // the |owner_| if the new owner is kernel, which happens when the endpoint
+    // is written into a channel or during process destruction.
+    zx_koid_t owner_ TA_GUARDED(get_lock()) = ZX_KOID_INVALID;
+
     uint32_t txid_ TA_GUARDED(get_lock()) = 0;
     WaiterList waiters_ TA_GUARDED(get_lock());
 };

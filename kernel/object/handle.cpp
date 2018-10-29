@@ -56,6 +56,11 @@ void Handle::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
     arena_.Init("handles", sizeof(Handle), kMaxHandleCount);
 }
 
+void Handle::set_process_id(zx_koid_t pid) {
+    process_id_.store(pid, fbl::memory_order_relaxed);
+    dispatcher_->set_owner(pid);
+}
+
 // Returns a new |base_value| based on the value stored in the free
 // arena slot pointed to by |addr|. The new value will be different
 // from the last |base_value| used by this slot.

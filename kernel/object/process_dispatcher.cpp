@@ -345,7 +345,7 @@ void ProcessDispatcher::FinishDeadTransition() {
     {
         Guard<fbl::Mutex> guard{&handle_table_lock_};
         for (auto& handle : handles_) {
-            handle.set_process_id(0u);
+            handle.set_process_id(ZX_KOID_INVALID);
         }
         to_clean.swap(handles_);
     }
@@ -429,7 +429,7 @@ HandleOwner ProcessDispatcher::RemoveHandleLocked(zx_handle_t handle_value) {
     if (!handle)
         return nullptr;
 
-    handle->set_process_id(0u);
+    handle->set_process_id(ZX_KOID_INVALID);
     handles_.erase(*handle);
 
     return HandleOwner(handle);

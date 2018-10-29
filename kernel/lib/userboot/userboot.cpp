@@ -160,7 +160,7 @@ static zx_status_t make_bootstrap_channel(
     }
 
     // Here it goes!
-    zx_status_t status = kernel_channel->Write(fbl::move(msg));
+    zx_status_t status = kernel_channel->Write(ZX_KOID_INVALID, fbl::move(msg));
     if (status != ZX_OK)
         return status;
 

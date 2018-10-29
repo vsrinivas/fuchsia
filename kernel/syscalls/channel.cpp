@@ -132,7 +132,7 @@ static zx_status_t channel_read(zx_handle_t handle_value, uint32_t options,
         return ZX_ERR_NOT_SUPPORTED;
 
     fbl::unique_ptr<MessagePacket> msg;
-    result = channel->Read(&num_bytes, &num_handles, &msg,
+    result = channel->Read(up->get_koid(), &num_bytes, &num_handles, &msg,
                            options & ZX_CHANNEL_READ_MAY_DISCARD);
     if (result != ZX_OK && result != ZX_ERR_BUFFER_TOO_SMALL)
         return result;
@@ -309,7 +309,7 @@ zx_status_t sys_channel_write(zx_handle_t handle_value, uint32_t options,
             return status;
     }
 
-    status = channel->Write(fbl::move(msg));
+    status = channel->Write(up->get_koid(), fbl::move(msg));
     if (status != ZX_OK)
         return status;
 
@@ -368,7 +368,7 @@ zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options,
 
     // Write message and wait for reply, deadline, or cancelation
     fbl::unique_ptr<MessagePacket> reply;
-    status = channel->Call(fbl::move(msg), deadline, &reply);
+    status = channel->Call(up->get_koid(), fbl::move(msg), deadline, &reply);
     if (status != ZX_OK)
         return status;
     return channel_call_epilogue(up, fbl::move(reply), &args, actual_bytes, actual_handles);

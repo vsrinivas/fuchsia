@@ -89,9 +89,7 @@ public:
     }
 
     // Sets the value returned by process_id().
-    void set_process_id(zx_koid_t pid) {
-        process_id_.store(pid, fbl::memory_order_relaxed);
-    }
+    void set_process_id(zx_koid_t pid);
 
     // Returns the |rights| parameter that was provided when this instance
     // was created.

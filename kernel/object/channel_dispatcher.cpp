@@ -136,6 +136,18 @@ void ChannelDispatcher::on_zero_handles_locked() {
     }
 }
 
+void ChannelDispatcher::set_owner(zx_koid_t new_owner) {
+    // Testing for ZX_KOID_INVALID is an optimization so we don't
+    // pay the cost of grabbing the lock when the endpoint moves
+    // from the process to channel; the one that we must get right
+    // is from channel to new owner.
+    if (new_owner == ZX_KOID_INVALID)
+        return;
+
+    Guard<fbl::Mutex> guard{get_lock()};
+    owner_ = new_owner;
+}
+
 // This requires holding the shared channel lock. The thread analysis
 // can reason about repeated calls to get_lock() on the shared object,
 // but cannot reason about the aliasing between left->get_lock() and
@@ -154,7 +166,8 @@ void ChannelDispatcher::OnPeerZeroHandlesLocked() {
     }
 }
 
-zx_status_t ChannelDispatcher::Read(uint32_t* msg_size,
+zx_status_t ChannelDispatcher::Read(zx_koid_t owner,
+                                    uint32_t* msg_size,
                                     uint32_t* msg_handle_count,
                                     fbl::unique_ptr<MessagePacket>* msg,
                                     bool may_discard) {
@@ -164,6 +177,9 @@ zx_status_t ChannelDispatcher::Read(uint32_t* msg_size,
     auto max_handle_count = *msg_handle_count;
 
     Guard<fbl::Mutex> guard{get_lock()};
+
+    if (owner != owner_)
+        return ZX_ERR_BAD_HANDLE;
 
     if (messages_.is_empty())
         return peer_ ? ZX_ERR_SHOULD_WAIT : ZX_ERR_PEER_CLOSED;
@@ -186,23 +202,30 @@ zx_status_t ChannelDispatcher::Read(uint32_t* msg_size,
     return rv;
 }
 
-zx_status_t ChannelDispatcher::Write(fbl::unique_ptr<MessagePacket> msg) {
+zx_status_t ChannelDispatcher::Write(zx_koid_t owner, fbl::unique_ptr<MessagePacket> msg) {
     canary_.Assert();
 
     AutoReschedDisable resched_disable; // Must come before the lock guard.
     resched_disable.Disable();
     Guard<fbl::Mutex> guard{get_lock()};
 
+    // Faling this test is only possible if this process has two threads racing:
+    // one thread is issuing channel_write() and one thread is moving the handle
+    // to another process.
+    if (owner != owner_)
+        return ZX_ERR_BAD_HANDLE;
+
     if (!peer_)
         return ZX_ERR_PEER_CLOSED;
+
     peer_->WriteSelf(fbl::move(msg));
 
     return ZX_OK;
 }
 
-zx_status_t ChannelDispatcher::Call(fbl::unique_ptr<MessagePacket> msg,
+zx_status_t ChannelDispatcher::Call(zx_koid_t owner,
+                                    fbl::unique_ptr<MessagePacket> msg,
                                     zx_time_t deadline, fbl::unique_ptr<MessagePacket>* reply) {
-
     canary_.Assert();
 
     auto waiter = ThreadDispatcher::GetCurrent()->GetMessageWaiter();
@@ -217,6 +240,10 @@ zx_status_t ChannelDispatcher::Call(fbl::unique_ptr<MessagePacket> msg,
         AutoReschedDisable resched_disable; // Must come before the lock guard.
         resched_disable.Disable();
         Guard<fbl::Mutex> guard{get_lock()};
+
+        // See Write() for an explanation of this test.
+        if (owner != owner_)
+            return ZX_ERR_BAD_HANDLE;
 
         if (!peer_) {
             waiter->EndWait(reply);

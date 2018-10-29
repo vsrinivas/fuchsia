@@ -178,6 +178,11 @@ public:
         }
     };
 
+    // Called whenever the object is bound to a new process. The |new_owner| is
+    // the koid of the new process. It is only overriden for objects where a single
+    // owner makes sense.
+    virtual void set_owner(zx_koid_t new_owner) {}
+
 protected:
     // Notify others of a change in state (possibly waking them). (Clearing satisfied signals or
     // setting satisfiable signals should not wake anyone.)
