@@ -326,7 +326,10 @@ typedef struct x86_debug_state {
 /* Disables the HW debug functionalities for the current thread.
  * There is no "enable" call. To do this, use the x86_write_debug_state call. */
 void x86_disable_debug_state(void);
-/* Checks whether the given state is valid to install on a running thread */
+/* Checks whether the given state is valid to install on a running thread.
+ * Will mask out reserved values on DR6 and DR7. This is for the caller convenience, considering
+ * that we don't have a good mechanism to communicate back to the user what went wrong with the
+ * call. */
 bool x86_validate_debug_state(x86_debug_state_t* debug_state);
 
 /* Only update the status section of |debug_state| (DR6). All other state will not be modified */

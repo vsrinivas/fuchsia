@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <arch/arm64.h>
+#include <arch/arm64/registers.h>
 #include <arch/debugger.h>
 #include <err.h>
 #include <kernel/thread.h>
@@ -147,11 +148,55 @@ zx_status_t arch_set_vector_regs(struct thread* thread, const zx_thread_state_ve
 }
 
 zx_status_t arch_get_debug_regs(struct thread* thread, zx_thread_state_debug_regs* out) {
-  return ZX_ERR_NOT_SUPPORTED;
+    arm64_debug_state_t state = {};
+    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+
+    if (thread->state == THREAD_RUNNING)
+        return ZX_ERR_BAD_STATE;
+
+    arm64_read_hw_debug_regs(&state);
+
+    // Copy over the state from the internal representation.
+    out->hw_bps_count = state.hw_bps_count;
+    for (size_t i = 0; i < state.hw_bps_count; i++) {
+        out->hw_bps[i].dbgbcr = state.hw_bps[i].dbgbcr;
+        out->hw_bps[i].dbgbvr = state.hw_bps[i].dbgbvr;
+    }
+
+    // Hacked through the last debug registers for now for development.
+    // THIS CODE WILL GO AWAY!
+    // This normally doesn't affect functionality as normally a CPU implementation has around six
+    // debug registers.
+    // TODO(donosoc): This should be exposed through a standard interface.
+    //                Either the sysinfo fidl, the vDSO info mapping or some other mechanism.
+    out->hw_bps[AARCH64_MAX_HW_BREAKPOINTS - 1].dbgbvr = ARM64_READ_SYSREG(id_aa64dfr0_el1);
+    out->hw_bps[AARCH64_MAX_HW_BREAKPOINTS - 2].dbgbvr = ARM64_READ_SYSREG(mdscr_el1);
+
+    return ZX_OK;
 }
 
 zx_status_t arch_set_debug_regs(struct thread* thread, const zx_thread_state_debug_regs* in) {
-  return ZX_ERR_NOT_SUPPORTED;
+    arm64_debug_state_t state = {};
+    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+
+    if (thread->state == THREAD_RUNNING)
+        return ZX_ERR_BAD_STATE;
+
+    // We copy over the state from the input.
+    state.hw_bps_count = in->hw_bps_count;
+    size_t bp_count = arm64_hw_breakpoint_count();
+    for (size_t i = 0; i < bp_count; i++) {
+        state.hw_bps[i].dbgbcr = in->hw_bps[i].dbgbcr;
+        state.hw_bps[i].dbgbvr = in->hw_bps[i].dbgbvr;
+    }
+
+    if (!arm64_validate_debug_state(&state)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    arm64_write_hw_debug_regs(&state);
+
+    return ZX_OK;
 }
 
 zx_status_t arch_get_x86_register_fs(struct thread* thread, uint64_t* out) {

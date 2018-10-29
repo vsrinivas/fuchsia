@@ -8,6 +8,7 @@
 #include <arch.h>
 #include <arch/arm64.h>
 #include <arch/arm64/feature.h>
+#include <arch/arm64/registers.h>
 #include <arch/arm64/mmu.h>
 #include <arch/mp.h>
 #include <arch/ops.h>
@@ -31,13 +32,11 @@
 // Counter-timer Kernel Control Register, EL1.
 static constexpr uint64_t CNTKCTL_EL1_ENABLE_VIRTUAL_COUNTER = 1 << 1;
 
-// Monitor Debug System Control Register, EL1.
-static constexpr uint32_t MDSCR_EL1_ENABLE_DEBUG_EXCEPTIONS = 1 << 13;
-static constexpr uint32_t MDSCR_EL1_ENABLE_DEBUG_BREAKPOINTS = 1 << 15;
-
-// Initial value for MSDCR_EL1 when starting userspace.
-static constexpr uint32_t MSDCR_EL1_INITIAL_VALUE =
-    MDSCR_EL1_ENABLE_DEBUG_EXCEPTIONS | MDSCR_EL1_ENABLE_DEBUG_BREAKPOINTS;
+// Initial value for MSDCR_EL1 when starting userspace, which disables all debug exceptions.
+// Instruction Breakpoint Exceptions (software breakpoints) cannot be disabled and MDSCR does not
+// affect single-step behaviour.
+// TODO(donosoc): Enable HW exceptions when debug context switch is implemented.
+static constexpr uint32_t MSDCR_EL1_INITIAL_VALUE = 0;
 
 // Performance Monitors Count Enable Set, EL0.
 static constexpr uint64_t PMCNTENSET_EL0_ENABLE = 1UL << 31;  // Enable cycle count register.

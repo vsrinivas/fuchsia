@@ -31,6 +31,21 @@ zircon/syscalls/debug.h for the contents of the structures on each platform.
 See [thread_read_state](thread_read_state.md) for the list of available states
 and their corresponding values.
 
+### ZX_THREAD_STATE_DEBUG_REGS
+
+#### ARM
+
+ARM has a variable amount of debug breakpoints and watchpoints. For this
+architecture, **zx_thread_state_debug_regs_t** is big enough to hold the maximum
+amount of breakpoints possible. But in most cases a given CPU implementation
+holds a lesser amount, meaning that the upper values beyond the limit are not
+used.
+
+Any setting call **must** set the correct amount of breakpoints/watchpoints in
+every call. The syscall will return **ZX_ERR_INVALID_ARGS** otherwise. You can
+get the correct amount of registers by getting the
+[the debug state through thread_read_state](thread_read_state.md#zx_thread_state_debug_regs).
+
 ## RIGHTS
 
 TODO(ZX-2399)
@@ -49,7 +64,8 @@ In the event of failure, a negative error value is returned.
 **ZX_ERR_ACCESS_DENIED**  *handle* lacks *ZX_RIGHT_WRITE*.
 
 **ZX_ERR_INVALID_ARGS**  *kind* is not valid, *buffer* is an invalid pointer,
-or *len* doesn't match the size of the structure expected for *kind*.
+*len* doesn't match the size of the structure expected for *kind* or the given
+values to set are not valid.
 
 **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
 There is no good way for userspace to handle this (unlikely) error.

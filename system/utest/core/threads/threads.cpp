@@ -1391,6 +1391,47 @@ static bool TestWriteReadDebugRegisterState() {
               ZX_OK);
 
     ASSERT_TRUE(debug_regs_expect_eq(__FILE__, __LINE__, regs, debug_regs_expected));
+
+#elif defined(__aarch64__)
+    // We get how many breakpoints we have.
+    zx_thread_state_debug_regs_t actual_regs = {};
+    RegisterReadSetup<zx_thread_state_debug_regs_t> setup;
+    ASSERT_TRUE(setup.Init(&spin_with_debug_regs, &actual_regs));
+
+    ASSERT_EQ(zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS,
+              &actual_regs, sizeof(actual_regs)), ZX_OK);
+
+    // Arm ensures at least 2 breakpoints.
+    ASSERT_GE(actual_regs.hw_bps_count, 2u);
+    ASSERT_LE(actual_regs.hw_bps_count, 16u);
+
+    // TODO(donosoc): Once the context switch state tracking is done, add the resume-suspect test
+    //                to ensure that it's keeping the state correctly. This is what is done in the
+    //                x86 portion of this test.
+
+    zx_thread_state_debug_regs_t regs = {};
+    regs.hw_bps_count = actual_regs.hw_bps_count;
+
+    // We use the address of a function we know is in userspace.
+    uint64_t base = reinterpret_cast<uint64_t>(TestWriteReadDebugRegisterState);
+
+    // install the registers. We only test two breakpoints because those are the only ones we know
+    // for sure will be there.
+    regs.hw_bps[0].dbgbvr = 0x0;   // 0 is valid.
+    regs.hw_bps[0].dbgbcr = 0x0;
+    regs.hw_bps[1].dbgbvr = base;
+    regs.hw_bps[1].dbgbcr = 0x0;
+
+    ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS,
+                                   &regs, sizeof(regs)),
+              ZX_OK);
+    ASSERT_EQ(zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS,
+                                   &regs, sizeof(regs)),
+              ZX_OK);
+
+    ASSERT_EQ(regs.hw_bps[0].dbgbvr, 0x0);
+    ASSERT_EQ(regs.hw_bps[1].dbgbvr, base);
+
 #endif
     END_TEST;
 }
@@ -1453,7 +1494,53 @@ static bool TestDebugRegistersValidation() {
     ASSERT_EQ(debug_regs.dr6, DR6_ZERO_MASK);
     ASSERT_EQ(debug_regs.dr7, 0xffff07ff);
 #elif defined(__aarch64__)
-    // TODO(donosoc): Add ARM64 support.
+    zx_thread_state_debug_regs_t debug_regs = {};
+    zx_thread_state_debug_regs_t actual_regs = {};
+    RegisterReadSetup<zx_thread_state_debug_regs_t> setup;
+    ASSERT_TRUE(setup.Init(&spin_with_debug_regs, &actual_regs));
+
+    // We read the initial state to know how many HW breakpoints we have.
+    ASSERT_EQ(zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS,
+                                   &actual_regs, sizeof(actual_regs)),
+              ZX_OK);
+
+    // Wrong amount of HW breakpoints should fail.
+    debug_regs.hw_bps_count = actual_regs.hw_bps_count;
+    debug_regs.hw_bps_count++;
+    ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS,
+                                    &debug_regs, sizeof(debug_regs)),
+              ZX_ERR_INVALID_ARGS, "Wrong amount of bps should fail");
+
+    // Writing a kernel address should fail.
+    debug_regs.hw_bps_count = actual_regs.hw_bps_count;
+    debug_regs.hw_bps[0].dbgbvr = (uint64_t)-1;
+    ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS,
+                                    &debug_regs, sizeof(debug_regs)),
+              ZX_ERR_INVALID_ARGS, "Kernel address should fail");
+
+    // Validation should mask unwanted values from the control register.
+    // Only bit 0 is unset. This means the breakpoint is disabled.
+    debug_regs.hw_bps[0].dbgbcr = 0xfffffffe;
+    debug_regs.hw_bps[0].dbgbvr = 0; // 0 is a valid value.
+
+    debug_regs.hw_bps[1].dbgbcr = 0x1; // Only the enabled value is set.
+    // We use the address of a function we know is in userspace.
+    debug_regs.hw_bps[1].dbgbvr = reinterpret_cast<uint64_t>(TestDebugRegistersValidation);
+    ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS,
+                                    &debug_regs, sizeof(debug_regs)),
+              ZX_OK, "Validation should correctly mask invalid values");
+
+
+    // Re-read the state and verify.
+    ASSERT_EQ(zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS,
+                                   &actual_regs, sizeof(actual_regs)),
+              ZX_OK);
+
+    EXPECT_EQ(actual_regs.hw_bps_count, debug_regs.hw_bps_count);
+    EXPECT_EQ(actual_regs.hw_bps[0].dbgbcr, 0x000001e4);
+    EXPECT_EQ(actual_regs.hw_bps[0].dbgbvr, 0);
+    EXPECT_EQ(actual_regs.hw_bps[1].dbgbcr, 0x000001e5);
+    EXPECT_EQ(actual_regs.hw_bps[1].dbgbvr, debug_regs.hw_bps[1].dbgbvr);
 #endif
     END_TEST;
 }

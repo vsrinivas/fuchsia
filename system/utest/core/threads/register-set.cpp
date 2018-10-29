@@ -480,7 +480,8 @@ __asm__(".pushsection .text, \"ax\", %progbits\n"
         "spin_with_debug_regs:\n"
 
         // Do nothing.
-        // TODO(donosoc): Add ARM64 debug support.
+        // The register state will be set through syscalls because setting the debug registers
+        // is a privileged instruction.
 
         "spin_with_debug_regs_spin_address:\n"
         "b spin_with_debug_regs_spin_address\n"

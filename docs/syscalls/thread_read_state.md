@@ -43,6 +43,11 @@ is empty.
 
 The buffer must point to a **zx_thread_state_vector_regs_t** structure.
 
+### ZX_THREAD_STATE_DEBUG_REGS
+
+The buffer must point to a **zx_thread_state_debug_regs_t** structure. All input
+fields will be ignored and overwritten with the actual values for the thread.
+
 ### ZX_THREAD_STATE_SINGLE_STEP
 
 The buffer must point to a **zx_thread_state_single_step_t** value which
