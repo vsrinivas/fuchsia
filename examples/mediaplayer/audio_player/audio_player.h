@@ -11,6 +11,7 @@
 
 #include "garnet/examples/mediaplayer/audio_player/audio_player_params.h"
 #include "lib/component/cpp/startup_context.h"
+#include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/macros.h"
 #include "lib/media/timeline/timeline_function.h"
 
@@ -31,11 +32,16 @@ class AudioPlayer {
                                 const std::string& property_label,
                                 const std::string& prefix);
 
+  void GetKeystroke();
+  void HandleKeystroke(zx_status_t status, uint32_t events);
+
   fit::closure quit_callback_;
   fuchsia::mediaplayer::PlayerPtr player_;
   bool metadata_shown_ = false;
   bool problem_shown_ = false;
   bool quit_when_done_;
+
+  fsl::FDWaiter keystroke_waiter_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AudioPlayer);
 };

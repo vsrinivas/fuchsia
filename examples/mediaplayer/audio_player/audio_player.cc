@@ -47,6 +47,7 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params,
     } else {
       player_->SetHttpSource(params.url(), nullptr);
     }
+    GetKeystroke();
 
     player_->Play();
   }
@@ -99,6 +100,38 @@ void AudioPlayer::HandleStatusChanged(
                              "composer   ");
     metadata_shown_ = true;
   }
+}
+
+void AudioPlayer::HandleKeystroke(zx_status_t status, uint32_t events) {
+  if (status != ZX_OK) {
+    printf("Bad status in HandleKeystroke (status %d)\n", status);
+    quit_callback_();
+  }
+
+  char c;
+  ssize_t res = ::read(STDIN_FILENO, &c, sizeof(c));
+  if (res != 1) {
+    printf("Error reading keystroke (res %zd, errno %d)\n", res, errno);
+    quit_callback_();
+  }
+
+  switch (c) {
+    case 'q':
+    case 'Q':
+      quit_callback_();
+      break;
+    default:
+      printf("q - Quit\n");
+      break;
+  }
+
+  GetKeystroke();
+}
+
+void AudioPlayer::GetKeystroke() {
+  keystroke_waiter_.Wait(
+      [this](zx_status_t s, uint32_t e) { HandleKeystroke(s, e); },
+      STDIN_FILENO, POLLIN);
 }
 
 void AudioPlayer::MaybeLogMetadataProperty(
