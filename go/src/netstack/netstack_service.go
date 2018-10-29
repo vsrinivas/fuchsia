@@ -60,11 +60,6 @@ func getInterfaces(ns *Netstack) (out []netstack.NetInterface) {
 			flags |= netstack.NetInterfaceFlagDhcp
 		}
 
-		var mac []uint8
-		if eth := ifs.eth; eth != nil {
-			mac = eth.Info.Mac.Octets[:]
-		}
-
 		outif := netstack.NetInterface{
 			Id:        uint32(nicid),
 			Flags:     flags,
@@ -73,7 +68,7 @@ func getInterfaces(ns *Netstack) (out []netstack.NetInterface) {
 			Addr:      fidlconv.ToNetIpAddress(ifs.nic.Addr),
 			Netmask:   fidlconv.ToNetIpAddress(tcpip.Address(ifs.nic.Netmask)),
 			Broadaddr: fidlconv.ToNetIpAddress(tcpip.Address(broadaddr)),
-			Hwaddr:    mac,
+			Hwaddr:    []uint8(ifs.statsEP.LinkAddress()[:]),
 			Ipv6addrs: toSubnets(ifs.nic.Ipv6addrs),
 		}
 

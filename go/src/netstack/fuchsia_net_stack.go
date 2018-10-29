@@ -54,7 +54,8 @@ func getInterfaceInfo(nicid tcpip.NICID, ifs *ifState) *stack.InterfaceInfo {
 	var mac *ethernet.MacAddress
 	var path string
 	if eth := ifs.eth; eth != nil {
-		mac = &eth.Info.Mac
+		mac = &ethernet.MacAddress{}
+		copy(mac.Octets[:], ifs.statsEP.LinkAddress())
 		path = eth.Path
 	}
 
