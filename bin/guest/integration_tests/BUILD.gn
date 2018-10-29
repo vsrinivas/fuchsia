@@ -21,9 +21,8 @@ executable("bin") {
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
-    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
     "//third_party/googletest:gmock",
-    "//zircon/public/fidl/zircon-sysinfo:zircon-sysinfo_c",
+    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fs-management",
   ]
