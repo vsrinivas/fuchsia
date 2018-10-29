@@ -41,7 +41,7 @@ constexpr uint8_t kSENSOR_IMX227_SEQUENCE_1080P_TESTPATTERN = 3;
 constexpr uint8_t kSENSOR_IMX227_SEQUENCE_1080P_PREVIEW = 4;
 constexpr uint8_t kSENSOR_IMX227_SEQUENCE_DEFAULT_FULLSENSOR_PREVIEW = 5;
 
-constexpr init_seq_fmt_t setting_2200_2720_2lane_1g_30fps[] = {
+constexpr init_seq_fmt_t setting_2200_2720_2lane_996mhz_30fps[] = {
     {0x0136, 0x18, 0xFF, 1},
     {0x0137, 0x00, 0xFF, 1},
     {0xAE20, 0x00, 0xFF, 1},
@@ -111,9 +111,9 @@ constexpr init_seq_fmt_t setting_2200_2720_2lane_1g_30fps[] = {
     {0x0307, 0xC8, 0xFF, 1},
     {0x0309, 0x0A, 0xFF, 1},
     {0x030B, 0x01, 0xFF, 1},
-    {0x030D, 0x0F, 0xFF, 1},
-    {0x030E, 0x02, 0xFF, 1},
-    {0x030F, 0x71, 0xFF, 1},
+    {0x030D, 0x0C, 0xFF, 1}, //Update
+    {0x030E, 0x01, 0xFF, 1}, //Update
+    {0x030F, 0xF2, 0xFF, 1}, //Update
     {0x0310, 0x01, 0xFF, 1},
     {0x0820, 0x07, 0xFF, 1},
     {0x0821, 0xD0, 0xFF, 1},
@@ -123,13 +123,13 @@ constexpr init_seq_fmt_t setting_2200_2720_2lane_1g_30fps[] = {
     {0x3002, 0x01, 0xFF, 1},
     {0x3003, 0x35, 0xFF, 1},
     {0x6259, 0x06, 0xFF, 1},
-    {0x0202, 0x0A, 0xFF, 1}, // int time
+    {0x0202, 0x0A, 0xFF, 1},// int time
     {0x0203, 0xDE, 0xFF, 1},
     {0x0204, 0x00, 0xFF, 1},
-    {0x0205, 0xC0, 0xFF, 1}, //a gain
+    {0x0205, 0xC0, 0xFF, 1},//a gain
     {0x020E, 0x01, 0xFF, 1},
     {0x020F, 0x00, 0xFF, 1},
-    {0x0000, 0x0000, 0x0000, 0x0000},
+    { 0x0000, 0x0000, 0x0000, 0x0000 },
 };
 
 constexpr init_seq_fmt_t setting_2200_2720_2lane_1g_30fps_test_pattern[] = {
@@ -580,7 +580,7 @@ constexpr init_seq_fmt_t setting_2400_2720_2lane_1g_28fps[] = {
 // -----------------------//
 
 const init_seq_fmt_t* kSEQUENCE_TABLE[] = {
-    setting_2200_2720_2lane_1g_30fps,
+    setting_2200_2720_2lane_996mhz_30fps,
     setting_2200_2720_2lane_1g_30fps_test_pattern,
     setting_2200_2720_2lane_960m_30fps_test_pattern,
     setting_1920_1080_2lane_1g_30fps_test_pattern,

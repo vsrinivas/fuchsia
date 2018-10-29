@@ -17,12 +17,12 @@ __BEGIN_CDECLS;
 typedef struct image_resolution image_resolution_t;
 // Values for Image Formats.
 typedef uint32_t image_format_t;
-#define IMAGE_FORMAT_AM_RAW6 UINT32_C(0)
-#define IMAGE_FORMAT_AM_RAW7 UINT32_C(1)
-#define IMAGE_FORMAT_AM_RAW8 UINT32_C(2)
-#define IMAGE_FORMAT_AM_RAW10 UINT32_C(3)
-#define IMAGE_FORMAT_AM_RAW12 UINT32_C(4)
-#define IMAGE_FORMAT_AM_RAW14 UINT32_C(5)
+#define IMAGE_FORMAT_AM_RAW6 UINT32_C(1)
+#define IMAGE_FORMAT_AM_RAW7 UINT32_C(2)
+#define IMAGE_FORMAT_AM_RAW8 UINT32_C(3)
+#define IMAGE_FORMAT_AM_RAW10 UINT32_C(4)
+#define IMAGE_FORMAT_AM_RAW12 UINT32_C(5)
+#define IMAGE_FORMAT_AM_RAW14 UINT32_C(6)
 
 // Values for different MIPI modes.
 typedef uint32_t mipi_modes_t;

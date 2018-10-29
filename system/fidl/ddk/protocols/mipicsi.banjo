@@ -24,12 +24,12 @@ struct MipiInfo {
 
 /// Values for Image Formats.
 enum ImageFormat : uint32 {
-    AM_RAW6 = 0x0;
-    AM_RAW7 = 0x1;
-    AM_RAW8 = 0x2;
-    AM_RAW10 = 0x3;
-    AM_RAW12 = 0x4;
-    AM_RAW14 = 0x5;
+    AM_RAW6 = 0x1;
+    AM_RAW7 = 0x2;
+    AM_RAW8 = 0x3;
+    AM_RAW10 = 0x4;
+    AM_RAW12 = 0x5;
+    AM_RAW14 = 0x6;
 };
 
 /// Values for different MIPI modes.
