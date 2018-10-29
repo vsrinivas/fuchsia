@@ -108,6 +108,7 @@ executable("test_bin") {
     "test/audio_sync_test.cc",
     "test/audio_test.cc",
     "test/gain_control_test.cc",
+    "test/gain_control_test.h",
     "test/main.cc",
   ]
 

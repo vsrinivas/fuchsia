@@ -163,7 +163,7 @@ class AudioCapturerImpl
     FXL_NOTIMPLEMENTED();
   }
   void SetMute(bool mute) final;
-  // TODO(mpuryear): Need to implement OnGainMuteChanged event.
+  void NotifyGainMuteChanged();
 
   // Methods used by capture/mixer thread(s). Must be called from mix_domain.
   zx_status_t Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());

@@ -784,47 +784,6 @@ zx_status_t AudioCapturerImpl::Process() {
   }  // while (true)
 }
 
-void AudioCapturerImpl::BindGainControl(
-    fidl::InterfaceRequest<fuchsia::media::GainControl> request) {
-  gain_control_bindings_.AddBinding(this, std::move(request));
-}
-
-void AudioCapturerImpl::SetGain(float gain_db) {
-  auto cleanup = fit::defer([this]() { Shutdown(); });
-
-  if ((gain_db < fuchsia::media::MUTED_GAIN_DB) ||
-      (gain_db > fuchsia::media::MAX_GAIN_DB)) {
-    FXL_LOG(ERROR) << "Invalid Gain " << gain_db;
-    return;
-  }
-  // Anywhere we set stream_gain_db_, we should perform the above range check.
-  stream_gain_db_.store(gain_db);
-
-  ForEachSourceLink([gain_db](auto& link) {
-    // Gain objects contain multiple stages. In capture, device/master gain is
-    // the "source" stage and stream gain is the "dest" stage.
-    link->bookkeeping()->gain.SetDestGain(gain_db);
-  });
-
-  // Things went well, cancel the cleanup hook.
-  cleanup.cancel();
-}
-
-void AudioCapturerImpl::SetMute(bool mute) {
-  auto cleanup = fit::defer([this]() { Shutdown(); });
-
-  // Check for whether this represents no change.
-  if (mute_ != mute) {
-    mute_ = mute;
-
-    ForEachSourceLink(
-        [mute](auto& link) { link->bookkeeping()->gain.SetDestMute(mute); });
-  }
-
-  // Things went well, cancel the cleanup hook.
-  cleanup.cancel();
-}
-
 bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
   // Take a snapshot of our source link references; skip the packet based
   // sources, we don't know how to sample from them yet.
@@ -1420,6 +1379,58 @@ zx_status_t AudioCapturerImpl::ChooseMixer(
   info->gain.SetDestGain(stream_gain_db_.load());
 
   return ZX_OK;
+}
+
+void AudioCapturerImpl::BindGainControl(
+    fidl::InterfaceRequest<fuchsia::media::GainControl> request) {
+  gain_control_bindings_.AddBinding(this, std::move(request));
+}
+
+void AudioCapturerImpl::SetGain(float gain_db) {
+  // Before setting stream_gain_db_, we should always perform this range check.
+  if ((gain_db < fuchsia::media::MUTED_GAIN_DB) ||
+      (gain_db > fuchsia::media::MAX_GAIN_DB)) {
+    FXL_LOG(ERROR) << "SetGain(" << gain_db << " dB) out of range.";
+    Shutdown();
+    return;
+  }
+
+  // If the incoming SetGain request represents no change, we're done.
+  // TODO(mpuryear): once we add gain ramping, this type of check isn't workable
+  if (stream_gain_db_ == gain_db) {
+    return;
+  }
+
+  stream_gain_db_.store(gain_db);
+
+  ForEachSourceLink([gain_db](auto& link) {
+    // Gain objects contain multiple stages. In capture, device/master gain is
+    // the "source" stage and stream gain is the "dest" stage.
+    link->bookkeeping()->gain.SetDestGain(gain_db);
+  });
+
+  NotifyGainMuteChanged();
+}
+
+void AudioCapturerImpl::SetMute(bool mute) {
+  // If the incoming SetMute request represents no change, we're done.
+  if (mute_ == mute) {
+    return;
+  }
+
+  mute_ = mute;
+
+  ForEachSourceLink(
+      [mute](auto& link) { link->bookkeeping()->gain.SetDestMute(mute); });
+
+  NotifyGainMuteChanged();
+}
+
+void AudioCapturerImpl::NotifyGainMuteChanged() {
+  // TODO(mpuryear): consider making these events disable-able like MinLeadTime.
+  for (auto& gain_binding : gain_control_bindings_.bindings()) {
+    gain_binding->events().OnGainMuteChanged(stream_gain_db_, mute_);
+  }
 }
 
 }  // namespace audio
