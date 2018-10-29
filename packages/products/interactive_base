@@ -9,6 +9,7 @@
         "garnet/packages/prod/bluetooth",
         "garnet/packages/prod/build_info",
         "garnet/packages/prod/cobalt_client",
+        "garnet/packages/prod/crashpad",
         "garnet/packages/prod/device_settings",
         "garnet/packages/prod/display_manager",
         "garnet/packages/prod/fonts",
