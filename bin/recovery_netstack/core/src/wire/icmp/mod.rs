@@ -179,9 +179,7 @@ impl<B: ByteSlice> Icmpv6Packet<B> {
     /// body to send to another layer of the stack. If the message type has no
     /// body, then the range is meaningless and should be ignored.
     pub fn parse(
-        bytes: B,
-        src_ip: Ipv6Addr,
-        dst_ip: Ipv6Addr,
+        bytes: B, src_ip: Ipv6Addr, dst_ip: Ipv6Addr,
     ) -> Result<(Icmpv6Packet<B>, Range<usize>), ParseError> {
         macro_rules! mtch {
             ($bytes:expr, $src_ip:expr, $dst_ip:expr, $($variant:ident => $type:ty,)*) => {
@@ -358,7 +356,8 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I>> IcmpPacket<I, B, M> {
             &message_body,
             src_ip,
             dst_ip,
-        ).ok_or_else(debug_err_fn!(ParseError::Format, "packet too large"))?
+        )
+        .ok_or_else(debug_err_fn!(ParseError::Format, "packet too large"))?
         {
             return debug_err!(Err(ParseError::Checksum), "invalid checksum");
         }
@@ -512,7 +511,8 @@ impl<I: IcmpIpExt, M: IcmpMessage<I>> PacketSerializer for IcmpPacketSerializer<
                 message_body,
                 self.src_ip,
                 self.dst_ip,
-            ).unwrap_or_else(|| {
+            )
+            .unwrap_or_else(|| {
                 panic!(
                     "total ICMP packet length of {} overflows 32-bit length field of pseudo-header",
                     header.bytes().len() + message.bytes().len() + message_body.len(),
@@ -1026,9 +1026,7 @@ mod tests {
     }
 
     fn serialize_v6_to_bytes<B: ByteSlice, M: IcmpMessage<Ipv6>>(
-        src_ip: Ipv6Addr,
-        dst_ip: Ipv6Addr,
-        icmp: &IcmpPacket<Ipv6, B, M>,
+        src_ip: Ipv6Addr, dst_ip: Ipv6Addr, icmp: &IcmpPacket<Ipv6, B, M>,
         serializer: Ipv6PacketSerializer,
     ) -> Vec<u8> {
         let icmp_serializer = icmp.serializer(src_ip, dst_ip);
