@@ -381,6 +381,6 @@ func (dns *dnsImpl) GetNameServers() ([]netstack.NetAddress, error) {
 }
 
 func (ns *netstackImpl) AddEthernetDevice(topological_path string, interfaceConfig netstack.InterfaceConfig, device ethernet.DeviceInterface) error {
-	_, err := ns.ns.addEth(topological_path, interfaceConfig, device)
+	_, err := ns.ns.addEth(topological_path, interfaceConfig, &device)
 	return err
 }

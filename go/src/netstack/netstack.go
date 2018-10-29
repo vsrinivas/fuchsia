@@ -459,11 +459,11 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) error {
 	return err
 }
 
-func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceConfig, device ethernet.DeviceInterface) (tcpip.NICID, error) {
+func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceConfig, device ethernet.Device) (tcpip.NICID, error) {
 	var client *eth.Client
 	return ns.addEndpoint(func(ifs *ifState) (stack.LinkEndpoint, error) {
 		var err error
-		client, err = eth.NewClient("netstack", topological_path, &device, ns.arena, ifs.stateChange)
+		client, err = eth.NewClient("netstack", topological_path, device, ns.arena, ifs.stateChange)
 		if err != nil {
 			return nil, err
 		}

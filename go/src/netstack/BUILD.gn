@@ -68,7 +68,7 @@ package("netstack_gotests") {
     ":netstack_link_bridge_test",
     ":netstack_link_eth_test",
     ":netstack_netiface_test",
-    ":netstack_service_impl_test",
+    ":netstack_test",
     "netstack_service_test",
     "//garnet/go/src/netstack/ifconfig:netstack_ifconfig_test",
     "//garnet/go/src/netstack/netstat:netstack_netstat_test",
@@ -107,10 +107,10 @@ package("netstack_gotests") {
       name = "netstack_netiface_test"
     },
     {
-      name = "netstack_service_impl_test"
+      name = "netstack_netstat_test"
     },
     {
-      name = "netstack_netstat_test"
+      name = "netstack_test"
     },
     {
       name = "netstack_util_test"
@@ -122,6 +122,7 @@ go_library("netstack_lib") {
   name = "netstack"
 
   deps = [
+    "//garnet/go/src/fidlext/zircon/ethernet:fidlext_zircon_ethernet_fake_lib($go_toolchain)",
     "//garnet/public/fidl/fuchsia.devicesettings($go_toolchain)",
     "//garnet/public/fidl/fuchsia.net.filter($go_toolchain)",
     "//garnet/public/fidl/fuchsia.netstack($go_toolchain)",
@@ -194,7 +195,7 @@ go_test("netstack_netiface_test") {
   ]
 }
 
-go_test("netstack_service_impl_test") {
+go_test("netstack_test") {
   gopackage = "netstack"
   deps = [
     ":netstack_lib",
