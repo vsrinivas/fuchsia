@@ -391,6 +391,88 @@ func installSysroot(list []Lock, installDir, debsCache string) error {
 		}
 	}
 
+	// Ensure that we don't have duplicate file names that only differ in case.
+	type rename struct { oldpath, newpath string }
+	renames := []rename{}
+
+	for _, d := range []string{"usr/include/linux"} {
+		p := filepath.Join(installDir, d)
+		if _, err := os.Stat(p); os.IsNotExist(err) {
+			continue
+		}
+		paths := make(map[string][]string)
+		if err := filepath.Walk(p, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if info.Mode().IsRegular() && filepath.Ext(path) == ".h" {
+				name := strings.ToLower(path)
+				if _, ok := paths[name]; !ok {
+					paths[name] = []string{}
+				}
+				paths[name] = append(paths[name], path)
+			}
+			return nil
+		}); err != nil {
+			return err
+		}
+
+		for _, ps := range paths {
+			if len(ps) > 1 {
+				sort.Sort(sort.Reverse(sort.StringSlice(ps)))
+				for i, p := range ps {
+					if i > 0 {
+						ext := filepath.Ext(p)
+						renames = append(renames, rename{ p, p[:len(p)-len(ext)] + strings.Repeat("_", i) + ext })
+					}
+				}
+			}
+		}
+	}
+
+	for _, r := range renames {
+		fmt.Printf("Renaming %s to %s\n", r.oldpath, r.newpath)
+		if err := os.Rename(r.oldpath, r.newpath); err != nil {
+			return err
+		}
+	}
+
+	for _, d := range []string{"usr/include/linux"} {
+		p := filepath.Join(installDir, d)
+		if _, err := os.Stat(p); os.IsNotExist(err) {
+			continue
+		}
+		if err := filepath.Walk(p, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			update := false
+			if info.Mode().IsRegular() && filepath.Ext(path) == ".h" {
+				content, err := ioutil.ReadFile(path)
+				if err != nil {
+					return err
+				}
+				for _, r := range renames {
+					oldbase := filepath.Base(r.oldpath)
+					newbase := filepath.Base(r.newpath)
+					if strings.Contains(string(content), oldbase) {
+						content = bytes.Replace(content, []byte(oldbase), []byte(newbase), 1)
+						update = true
+					}
+				}
+				if update {
+					fmt.Printf("Updating %s...\n", path)
+					if err := ioutil.WriteFile(path, content, info.Mode()); err != nil {
+						return err
+					}
+				}
+			}
+			return nil
+		}); err != nil {
+			return err
+		}
+	}
+
 	// Relativize all symlinks within the sysroot.
 	for _, d := range []string{"usr/lib", "lib64", "lib"} {
 		p := filepath.Join(installDir, d)
