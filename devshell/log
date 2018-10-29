@@ -6,10 +6,12 @@
 ### listen for kernel logs.
 
 ## This command delegates to the Zircon `loglistener` binary.
+## This will listen to the device specified with `fx set-device`; otherwise
+## one of the devices on the link-local network.
 
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
-exec "${ZIRCON_TOOLS_DIR}/loglistener" "$@"
+exec "${ZIRCON_TOOLS_DIR}/loglistener" "$(get-device-name)"
