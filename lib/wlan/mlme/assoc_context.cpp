@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <wlan/common/channel.h>
+#include <wlan/common/element_splitter.h>
+#include <wlan/common/parse_element.h>
 #include <wlan/mlme/assoc_context.h>
 
 #include <set>
@@ -79,59 +81,48 @@ std::optional<std::vector<SupportedRate>> BuildAssocReqSuppRates(
 zx_status_t ParseAssocRespIe(const uint8_t* ie_chains, size_t ie_chains_len,
                              AssocContext* assoc_ctx) {
     ZX_DEBUG_ASSERT(assoc_ctx != nullptr);
-
-    ElementReader reader(ie_chains, ie_chains_len);
-    while (reader.is_valid()) {
-        const ElementHeader* hdr = reader.peek();
-        if (hdr == nullptr) { break; }
-
-        switch (hdr->id) {
+    for (auto [id, raw_body] : common::ElementSplitter({ie_chains, ie_chains_len})) {
+        switch (id) {
         case element_id::kSuppRates: {
-            auto ie = reader.read<SupportedRatesElement>();
-            if (ie == nullptr) { return ZX_ERR_INTERNAL; }
-            for (uint8_t i = 0; i < ie->hdr.len; i++) {
-                assoc_ctx->rates.push_back(ie->rates[i]);
-            }
+            auto rates = common::ParseSupportedRates(raw_body);
+            if (!rates) { return ZX_ERR_INVALID_ARGS; }
+            assoc_ctx->rates.insert(assoc_ctx->rates.end(), rates->begin(), rates->end());
             break;
         }
         case element_id::kExtSuppRates: {
-            auto ie = reader.read<ExtendedSupportedRatesElement>();
-            if (ie == nullptr) { return ZX_ERR_INTERNAL; }
-            for (uint8_t i = 0; i < ie->hdr.len; i++) {
-                assoc_ctx->rates.push_back(ie->rates[i]);
-            }
+            auto rates = common::ParseExtendedSupportedRates(raw_body);
+            if (!rates) { return ZX_ERR_INVALID_ARGS; }
+            assoc_ctx->rates.insert(assoc_ctx->rates.end(), rates->begin(), rates->end());
             break;
         }
         case element_id::kHtCapabilities: {
-            auto ie = reader.read<HtCapabilitiesElement>();
-            if (ie == nullptr) { return ZX_ERR_INTERNAL; }
-            assoc_ctx->ht_cap = std::make_optional(ie->body);
+            auto ht_cap = common::ParseHtCapabilities(raw_body);
+            if (!ht_cap) { return ZX_ERR_INVALID_ARGS; }
+            assoc_ctx->ht_cap = {*ht_cap};
             break;
         }
         case element_id::kHtOperation: {
-            auto ie = reader.read<HtOperationElement>();
-            if (ie == nullptr) { return ZX_ERR_INTERNAL; }
-            assoc_ctx->ht_op = std::make_optional(ie->body);
+            auto ht_op = common::ParseHtOperation(raw_body);
+            if (!ht_op) { return ZX_ERR_INVALID_ARGS; }
+            assoc_ctx->ht_op = {*ht_op};
             break;
         }
         case element_id::kVhtCapabilities: {
-            auto ie = reader.read<VhtCapabilitiesElement>();
-            if (ie == nullptr) { return ZX_ERR_INTERNAL; }
-            assoc_ctx->vht_cap = std::make_optional(ie->body);
+            auto vht_cap = common::ParseVhtCapabilities(raw_body);
+            if (!vht_cap) { return ZX_ERR_INVALID_ARGS; }
+            assoc_ctx->vht_cap = {*vht_cap};
             break;
         }
         case element_id::kVhtOperation: {
-            auto ie = reader.read<VhtOperationElement>();
-            if (ie == nullptr) { return ZX_ERR_INTERNAL; }
-            assoc_ctx->vht_op = std::make_optional(ie->body);
+            auto vht_op = common::ParseVhtOperation(raw_body);
+            if (!vht_op) { return ZX_ERR_INVALID_ARGS; }
+            assoc_ctx->vht_op = {*vht_op};
             break;
         }
         default:
-            reader.skip(sizeof(ElementHeader) + hdr->len);
             break;
         }
     }
-
     return ZX_OK;
 }
 
