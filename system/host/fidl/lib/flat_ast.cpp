@@ -231,7 +231,8 @@ TypeShape ArrayTypeShape(TypeShape element, uint32_t count) {
     return TypeShape(ClampedMultiply(element.Size(), count),
                      element.Alignment(),
                      element.Depth(),
-                     ClampedMultiply(element.MaxHandles(), count));
+                     ClampedMultiply(element.MaxHandles(), count),
+                     ClampedMultiply(element.MaxOutOfLine(), count));
 }
 
 TypeShape VectorTypeShape(TypeShape element, uint32_t max_element_count) {
