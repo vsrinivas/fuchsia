@@ -71,7 +71,29 @@ static zx_status_t handle_message(async::Wait* wait, zxsio_msg_t* msg) {
         break;
     }
     case ZXSIO_SETSOCKOPT: {
-        // Do nothing.
+        zxrio_sockopt_req_reply_t payload;
+        memset(&payload, 0, sizeof(payload));
+        memcpy(&payload, msg->data, sizeof(payload));
+        if (payload.level != IPPROTO_IP || payload.optname != IP_TTL) {
+            return ZX_ERR_STOP;
+        }
+        break;
+    }
+    case ZXSIO_GETSOCKOPT: {
+        zxrio_sockopt_req_reply_t payload;
+        memset(&payload, 0, sizeof(payload));
+        memcpy(&payload, msg->data, sizeof(payload));
+        if (payload.level != IPPROTO_IP || payload.optname != IP_TTL
+            || payload.optlen != 0) {
+            return ZX_ERR_STOP;
+        }
+        int result = 128;
+        memset(payload.optval, 0, sizeof(payload.optval));
+        memcpy(payload.optval, &result, sizeof(result));
+        payload.optlen = sizeof(int);
+
+        reply.datalen = sizeof(payload);
+        memcpy(reply.data, &payload, sizeof(payload));
         break;
     }
     case ZXSIO_CLOSE:
@@ -80,7 +102,6 @@ static zx_status_t handle_message(async::Wait* wait, zxsio_msg_t* msg) {
     case ZXSIO_CONNECT:
     case ZXSIO_BIND:
     case ZXSIO_LISTEN:
-    case ZXSIO_GETSOCKOPT:
     default:
         return ZX_ERR_STOP;
     }
@@ -189,6 +210,14 @@ bool basic_test(void) {
 
     status = zxs_setsockopts(&socket, &option, 1u);
     ASSERT_EQ(ZX_OK, status);
+
+    ttl = 0;
+    actual = 0u;
+    status = zxs_getsockopt(&socket, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl),
+                            &actual);
+    ASSERT_EQ(ZX_OK, status);
+    ASSERT_EQ(sizeof(int), actual);
+    ASSERT_EQ(128, ttl);
 
     local.reset();
 

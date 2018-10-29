@@ -31,10 +31,6 @@
 
 zx_status_t zxsio_accept(fdio_t* io, zx_handle_t* s2);
 
-static zx_status_t fdio_getsockopt(fdio_t* io, int level, int optname,
-                                   void* restrict optval,
-                                   socklen_t* restrict optlen);
-
 static zx_status_t get_service_handle(const char* path, zx_handle_t* saved,
                                       mtx_t* lock, zx_handle_t* out) {
     zx_status_t r;
@@ -138,7 +134,8 @@ int socket(int domain, int type, int protocol) {
 
 __EXPORT
 int connect(int fd, const struct sockaddr* addr, socklen_t len) {
-    fdio_t* io = fd_to_io(fd);
+    const zxs_socket_t* socket;
+    fdio_t* io = fd_to_socket(fd, &socket);
     if (io == NULL) {
         return ERRNO(EBADF);
     }
@@ -178,8 +175,8 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
 
     // check the result
     zx_status_t status;
-    socklen_t status_len = sizeof(status);
-    r = fdio_getsockopt(io, SOL_SOCKET, SO_ERROR, &status, &status_len);
+    size_t actual = 0u;
+    r = zxs_getsockopt(socket, SOL_SOCKET, SO_ERROR, &status, sizeof(status), &actual);
     if (r < 0) {
         fdio_release(io);
         return ERRNO(EIO);
@@ -478,33 +475,11 @@ int getpeername(int fd, struct sockaddr* restrict addr, socklen_t* restrict len)
     return STATUS(status);
 }
 
-static zx_status_t fdio_getsockopt(fdio_t* io, int level, int optname,
-                                   void* restrict optval, socklen_t* restrict optlen) {
-    if (optval == NULL || optlen == NULL) {
-        return ERRNO(EINVAL);
-    }
-
-    zxrio_sockopt_req_reply_t req_reply;
-    req_reply.level = level;
-    req_reply.optname = optname;
-    zx_status_t r = io->ops->misc(io, ZXSIO_GETSOCKOPT, 0,
-                                  sizeof(zxrio_sockopt_req_reply_t),
-                                  &req_reply, sizeof(req_reply));
-    if (r < 0) {
-        return r;
-    }
-    socklen_t avail = *optlen;
-    *optlen = req_reply.optlen;
-    memcpy(optval, req_reply.optval,
-           (avail < req_reply.optlen) ? avail : req_reply.optlen);
-
-    return ZX_OK;
-}
-
 __EXPORT
 int getsockopt(int fd, int level, int optname, void* restrict optval,
                socklen_t* restrict optlen) {
-    fdio_t* io = fd_to_io(fd);
+    const zxs_socket_t* socket;
+    fdio_t* io = fd_to_socket(fd, &socket);
     if (io == NULL) {
         return ERRNO(EBADF);
     }
@@ -515,8 +490,9 @@ int getsockopt(int fd, int level, int optname, void* restrict optval,
             r = ZX_ERR_INVALID_ARGS;
         } else {
             zx_status_t status;
-            socklen_t status_len = sizeof(status);
-            r = fdio_getsockopt(io, SOL_SOCKET, SO_ERROR, &status, &status_len);
+            size_t actual = 0u;
+            r = zxs_getsockopt(socket, SOL_SOCKET, SO_ERROR, &status,
+                               sizeof(status), &actual);
             if (r == ZX_OK) {
                 int errno_ = 0;
                 if (status != ZX_OK) {
@@ -527,7 +503,15 @@ int getsockopt(int fd, int level, int optname, void* restrict optval,
             }
         }
     } else {
-        r = fdio_getsockopt(io, level, optname, optval, optlen);
+        if (optval == NULL || optlen == NULL) {
+            r = ZX_ERR_INVALID_ARGS;
+        } else {
+            size_t actual = 0u;
+            r = zxs_getsockopt(socket, level, optname, optval, *optlen, &actual);
+            if (r == ZX_OK) {
+                *optlen = actual;
+            }
+        }
     }
     fdio_release(io);
 
