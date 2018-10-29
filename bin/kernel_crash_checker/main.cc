@@ -39,7 +39,11 @@ class CrashpadAnalyzer {
     context_->ConnectToEnvironmentService(analyzer.NewRequest());
     FXL_DCHECK(analyzer);
 
-    analyzer->ProcessCrashlog(fbl::move(crashlog));
+    const zx_status_t status = analyzer->ProcessCrashlog(fbl::move(crashlog));
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "failed to connect to crash analyzer: " << status
+                     << " (" << zx_status_get_string(status) << ")";
+    }
   }
 
  private:
