@@ -33,28 +33,6 @@ size_t ElementReader::NextElementLen() const {
     return sizeof(ElementHeader) + hdr->len;
 }
 
-// TODO(hahnr): Support dot11MultiBSSIDActivated is true.
-bool TimElement::traffic_buffered(uint16_t aid) const {
-    // Illegal arguments or no partial virtual bitmap. No traffic buffered.
-    if (aid >= kMaxLenBmp * 8 || hdr.len < kMinLen) return false;
-    if (!tim_hdr.bmp_ctrl.offset() && hdr.len == kMinLen) return false;
-
-    // Safe to use uint8 since offset is 7 bits.
-    uint8_t n1 = tim_hdr.bmp_ctrl.offset() << 1;
-    uint16_t n2 = (hdr.len - kMinLen) + n1;
-    if (n2 > static_cast<uint16_t>(kMaxLenBmp)) return false;
-
-    // No traffic buffered for aid.
-    uint8_t octet = aid / 8;
-    if (octet < n1 || octet > n2) return false;
-
-    // Traffic might be buffered for aid
-    // Bounds are not exceeded since (n2 - n1 + 4) = hdr.len, and
-    // n1 <= octet <= n2, and hdr.len >= 4. This simplifies to:
-    // 0 <=  octet - n1 <= (hdr.len - 4)
-    return bmp[octet - n1] & (1 << (aid % 8));
-}
-
 // The macros below assumes that the two data structures being intersected be named lhs and rhs.
 // Both of them must be the same sub-class of common::BitField<>.
 #define SET_BITFIELD_MIN(element, field) \

@@ -73,7 +73,7 @@ class Station {
     zx_status_t HandleAnyMgmtFrame(MgmtFrame<>&&);
     zx_status_t HandleAnyDataFrame(DataFrame<>&&);
     bool ShouldDropMgmtFrame(const MgmtFrameView<>&);
-    zx_status_t HandleBeacon(MgmtFrame<Beacon>&&);
+    void HandleBeacon(MgmtFrame<Beacon>&&);
     zx_status_t HandleAuthentication(MgmtFrame<Authentication>&&);
     zx_status_t HandleDeauthentication(MgmtFrame<Deauthentication>&&);
     zx_status_t HandleAssociationResponse(MgmtFrame<AssociationResponse>&&);

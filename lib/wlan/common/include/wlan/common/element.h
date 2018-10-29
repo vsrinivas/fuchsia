@@ -204,8 +204,6 @@ struct TimElement : public Element<TimElement, element_id::kTim> {
 
     // body: variable length 1-251 bytes.
     uint8_t bmp[];
-
-    bool traffic_buffered(uint16_t aid) const;
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.9. Figure 9-131, 9-132.

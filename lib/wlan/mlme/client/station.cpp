@@ -10,6 +10,7 @@
 #include <wlan/common/energy.h>
 #include <wlan/common/logging.h>
 #include <wlan/common/stats.h>
+#include <wlan/common/tim_element.h>
 #include <wlan/common/write_element.h>
 #include <wlan/mlme/client/bss.h>
 #include <wlan/mlme/client/client_mlme.h>
@@ -345,39 +346,23 @@ bool Station::ShouldDropMgmtFrame(const MgmtFrameView<>& frame) {
 
 // TODO(NET-500): Using a single method for joining and associated state is not ideal.
 // The logic should be split up and decided on a higher level based on the current state.
-zx_status_t Station::HandleBeacon(MgmtFrame<Beacon>&& frame) {
+void Station::HandleBeacon(MgmtFrame<Beacon>&& frame) {
     debugfn();
 
     auto rssi_dbm = frame.View().rx_info()->rssi_dbm;
     avg_rssi_dbm_.add(dBm(rssi_dbm));
     WLAN_RSSI_HIST_INC(beacon_rssi, rssi_dbm);
 
-    if (state_ != WlanState::kAssociated) { return ZX_OK; }
+    if (state_ != WlanState::kAssociated) { return; }
 
     remaining_auto_deauth_timeout_ = FullAutoDeauthDuration();
     auto_deauth_last_accounted_ = timer_mgr_.Now();
 
     size_t elt_len = frame.body_len() - frame.body()->len();
-    ElementReader reader(frame.body()->elements, elt_len);
-    while (reader.is_valid()) {
-        const ElementHeader* hdr = reader.peek();
-        if (hdr == nullptr) break;
-
-        switch (hdr->id) {
-        case element_id::kTim: {
-            auto tim = reader.read<TimElement>();
-            if (tim == nullptr) goto done_iter;
-            if (tim->traffic_buffered(assoc_ctx_.aid)) { SendPsPoll(); }
-            break;
-        }
-        default:
-            reader.skip(sizeof(ElementHeader) + hdr->len);
-            break;
-        }
+    auto tim = common::FindAndParseTim({frame.body()->elements, elt_len});
+    if (tim && common::IsTrafficBuffered(assoc_ctx_.aid, tim->header, tim->bitmap)) {
+        SendPsPoll();
     }
-
-done_iter:
-    return ZX_OK;
 }
 
 zx_status_t Station::HandleAuthentication(MgmtFrame<Authentication>&& frame) {

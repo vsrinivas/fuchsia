@@ -143,60 +143,6 @@ class Elements : public ::testing::Test {
     size_t actual_ = 0;
 };
 
-TEST_F(Elements, TimBufferedTraffic) {
-    // Set traffic for aids
-    std::vector<uint16_t> aids = {1, 42, 1337, 1338, 2007};
-    std::vector<uint8_t> bmp(251, 0);
-    for (auto const& aid : aids) {
-        bmp[aid / 8] |= 1 << (aid % 8);
-    }
-
-    TimHeader hdr;
-    hdr.dtim_count = 1;
-    hdr.dtim_period = 2;
-    hdr.bmp_ctrl.set_group_traffic_ind(0);
-    hdr.bmp_ctrl.set_offset(0);
-
-    BufferWriter w(buf_);
-    common::WriteTim(&w, hdr, bmp);
-    EXPECT_EQ(sizeof(TimElement) + bmp.size(), w.WrittenBytes());
-
-    auto element = FromBytes<TimElement>(buf_, sizeof(buf_));
-    ASSERT_NE(nullptr, element);
-    for (auto const& aid : aids) {
-        EXPECT_EQ(true, element->traffic_buffered(aid));
-    }
-}
-
-TEST_F(Elements, TimPartialBitmapBufferedTraffic) {
-    // Set traffic for aids
-    std::vector<uint8_t> bmp(8, 0);  // Include traffic for 64 aids
-    bmp[0] |= 1;                     // aid = 32
-    bmp[2] |= 1 << 7;                // aid = 55
-    bmp[7] |= 1 << 7;                // aid = 95
-
-    TimHeader hdr;
-    hdr.dtim_count = 1;
-    hdr.dtim_period = 2;
-    hdr.bmp_ctrl.set_group_traffic_ind(0);
-    hdr.bmp_ctrl.set_offset(2);  // Skip first 32 aids
-
-    BufferWriter w(buf_);
-    common::WriteTim(&w, hdr, bmp);
-    EXPECT_EQ(sizeof(TimElement) + bmp.size(), w.WrittenBytes());
-
-    auto element = FromBytes<TimElement>(buf_, sizeof(buf_));
-    ASSERT_NE(nullptr, element);
-    EXPECT_EQ(true, element->traffic_buffered(32));
-    EXPECT_EQ(true, element->traffic_buffered(55));
-    EXPECT_EQ(true, element->traffic_buffered(95));
-
-    EXPECT_EQ(false, element->traffic_buffered(31));
-    EXPECT_EQ(false, element->traffic_buffered(54));
-    EXPECT_EQ(false, element->traffic_buffered(56));
-    EXPECT_EQ(false, element->traffic_buffered(96));
-}
-
 TEST_F(Elements, Tspec) {
     // Values are chosen randomly.
     constexpr uint8_t ts_info[3] = {97, 54, 13};
