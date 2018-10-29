@@ -84,27 +84,19 @@ zx_status_t SendAssocConfirm(DeviceInterface* device, wlan_mlme::AssociateResult
 }
 
 zx_status_t SendAssocIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
-                                uint16_t listen_interval, const SsidElement& ssid_element,
-                                const RsnElement* rsn_elem) {
+                                uint16_t listen_interval, Span<const uint8_t> ssid,
+                                std::optional<Span<const uint8_t>> rsn_body) {
     debugfn();
     wlan_mlme::AssociateIndication ind;
     peer_sta.CopyTo(ind.peer_sta_address.mutable_data());
     ind.listen_interval = listen_interval;
-    ind.ssid = ::fidl::VectorPtr<uint8_t>::New(ssid_element.body_len());
-    std::memcpy(ind.ssid->data(), ssid_element.ssid, ssid_element.body_len());
-
-    if (rsn_elem != nullptr) {
-        std::vector<uint8_t> rsne_raw;
-        rsne_raw.reserve(rsn_elem->len());
-        rsne_raw.emplace_back(rsn_elem->hdr.id);
-        rsne_raw.emplace_back(rsn_elem->hdr.len);
-        rsne_raw.emplace_back(static_cast<uint8_t>(rsn_elem->version & 0xffu));
-        rsne_raw.emplace_back(static_cast<uint8_t>(rsn_elem->version >> 8u));
-        rsne_raw.insert(rsne_raw.end(), rsn_elem->fields,
-                        rsn_elem->fields + rsn_elem->body_len() - sizeof(rsn_elem->version));
-        ind.rsn.reset(std::move(rsne_raw));
-    } else {
-        ind.rsn.reset();
+    ind.ssid.resize(0);
+    ind.ssid->assign(ssid.begin(), ssid.end());
+    if (rsn_body) {
+        ind.rsn->reserve(2 + rsn_body->size());
+        ind.rsn->push_back(static_cast<uint8_t>(element_id::kRsn));
+        ind.rsn->push_back(rsn_body->size());
+        ind.rsn->insert(ind.rsn->end(), rsn_body->begin(), rsn_body->end());
     }
     return SendServiceMsg(device, &ind, fuchsia_wlan_mlme_MLMEAssociateIndOrdinal);
 }

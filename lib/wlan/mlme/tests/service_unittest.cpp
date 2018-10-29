@@ -107,14 +107,12 @@ TEST_F(ServiceTest, SendAssocInd) {
     const common::MacAddr peer_sta({0x48, 0x0f, 0xcf, 0x54, 0xb9, 0xb1});
     uint16_t listen_interval = 100;
 
-    constexpr uint8_t sside_bytes[] = {0u, 7u, 'F', 'U', 'C', 'H', 'S', 'I', 'A'};
-    auto ssid_elem = reinterpret_cast<const SsidElement*>(sside_bytes);
-
-    constexpr uint8_t rsne_bytes[] = {0x30, 8u, 1, 2, 3, 4, 5, 6, 7, 8};
-    auto rsn_elem = reinterpret_cast<const RsnElement*>(rsne_bytes);
+    constexpr uint8_t ssid[] = {'F', 'U', 'C', 'H', 'S', 'I', 'A'};
+    constexpr uint8_t rsne_body[] = {1, 2, 3, 4, 5, 6, 7, 8};
+    constexpr uint8_t expected_rsne[] = {0x30, 8u, 1, 2, 3, 4, 5, 6, 7, 8};
 
     // -- execute
-    service::SendAssocIndication(&device, peer_sta, listen_interval, *ssid_elem, rsn_elem);
+    service::SendAssocIndication(&device, peer_sta, listen_interval, ssid, {{rsne_body}});
 
     // -- verify
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
@@ -127,8 +125,9 @@ TEST_F(ServiceTest, SendAssocInd) {
 
     ASSERT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), peer_sta.byte, 6), 0);
     ASSERT_EQ(msg.body()->listen_interval, 100);
-    ASSERT_EQ(std::memcmp(msg.body()->ssid->data(), sside_bytes + 2, sizeof(sside_bytes) - 2), 0);
-    ASSERT_EQ(std::memcmp(msg.body()->rsn->data(), rsne_bytes, sizeof(rsne_bytes)), 0);
+    ASSERT_TRUE(std::equal(msg.body()->ssid->begin(), msg.body()->ssid->end(), std::begin(ssid),
+                           std::end(ssid)));
+    ASSERT_EQ(std::memcmp(msg.body()->rsn->data(), expected_rsne, sizeof(expected_rsne)), 0);
 }
 
 TEST_F(ServiceTest, SendAssocInd_EmptyRsne) {
@@ -136,13 +135,9 @@ TEST_F(ServiceTest, SendAssocInd_EmptyRsne) {
     const common::MacAddr peer_sta({0x48, 0x0f, 0xcf, 0x54, 0xb9, 0xb1});
     uint16_t listen_interval = 100;
 
-    constexpr uint8_t sside_bytes[] = {0u, 7u, 'F', 'U', 'C', 'H', 'S', 'I', 'A'};
-    auto ssid_elem = reinterpret_cast<const SsidElement*>(sside_bytes);
-
-    RsnElement* rsn_elem = nullptr;
-
+    constexpr uint8_t ssid[] = {'F', 'U', 'C', 'H', 'S', 'I', 'A'};
     // -- execute
-    service::SendAssocIndication(&device, peer_sta, listen_interval, *ssid_elem, rsn_elem);
+    service::SendAssocIndication(&device, peer_sta, listen_interval, ssid, {});
 
     // -- verify
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
@@ -155,7 +150,8 @@ TEST_F(ServiceTest, SendAssocInd_EmptyRsne) {
 
     ASSERT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), peer_sta.byte, 6), 0);
     ASSERT_EQ(msg.body()->listen_interval, 100);
-    ASSERT_EQ(std::memcmp(msg.body()->ssid->data(), sside_bytes + 2, sizeof(sside_bytes) - 2), 0);
+    ASSERT_TRUE(std::equal(msg.body()->ssid->begin(), msg.body()->ssid->end(), std::begin(ssid),
+                           std::end(ssid)));
     ASSERT_TRUE(msg.body()->rsn.is_null());
 }
 

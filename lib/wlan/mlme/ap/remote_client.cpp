@@ -5,6 +5,8 @@
 #include <wlan/mlme/ap/remote_client.h>
 
 #include <wlan/common/buffer_writer.h>
+#include <wlan/common/element_splitter.h>
+#include <wlan/common/parse_element.h>
 #include <wlan/common/write_element.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/mac_frame.h>
@@ -12,6 +14,7 @@
 #include <wlan/mlme/packet_utils.h>
 #include <wlan/mlme/rates_elements.h>
 #include <wlan/mlme/service.h>
+#include <zircon/status.h>
 
 namespace wlan {
 
@@ -189,37 +192,33 @@ void AuthenticatedState::HandleAssociationRequest(MgmtFrame<AssociationRequest>&
     debugbss("[client] [%s] received Assocation Request\n", client_->addr().ToString().c_str());
 
     auto assoc_req_frame = frame.View().NextFrame();
-    size_t elements_len = assoc_req_frame.body_len();
-    ElementReader reader(assoc_req_frame.hdr()->elements, elements_len);
+    Span<const uint8_t> ies = {assoc_req_frame.hdr()->elements, assoc_req_frame.body_len()};
 
-    const SsidElement* ssid_element = nullptr;
-    const RsnElement* rsn_element = nullptr;
-    while (reader.is_valid()) {
-        const ElementHeader* header = reader.peek();
-        ZX_DEBUG_ASSERT(header != nullptr);
-        switch (header->id) {
-            case element_id::kSsid:
-                ssid_element = reader.read<SsidElement>();
-                break;
-            case element_id::kRsn:
-                rsn_element = reader.read<RsnElement>();
-                break;
-            default:
-                reader.skip(*header);
-                break;
+    std::optional<Span<const uint8_t>> ssid;
+    std::optional<Span<const uint8_t>> rsn_body;
+    for (auto [id, raw_body] : common::ElementSplitter(ies)) {
+        switch (id) {
+        case element_id::kSsid:
+            ssid = common::ParseSsid(raw_body);
+            break;
+        case element_id::kRsn:
+            rsn_body = {raw_body};
+            break;
+        default:
+            break;
         }
     }
 
-    if (ssid_element == nullptr) {
-        return;
-    }
+    if (!ssid) { return; }
 
     // Received a valid association request. Timer can get canceled.
     auth_timeout_.Cancel();
-    service::SendAssocIndication(client_->device(), client_->addr(),
-                                 frame.body()->listen_interval, *ssid_element, rsn_element);
-
-    // Move into Associating state state which waits for associate response from SME.
+    zx_status_t status = service::SendAssocIndication(
+        client_->device(), client_->addr(), frame.body()->listen_interval, *ssid, rsn_body);
+    if (status != ZX_OK) {
+        errorf("Failed to send AssocIndication service message: %s\n",
+               zx_status_get_string(status));
+    }
     MoveToState<AssociatingState>();
 }
 

@@ -171,8 +171,8 @@ zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr&
 zx_status_t SendAssocConfirm(DeviceInterface* device,
                              ::fuchsia::wlan::mlme::AssociateResultCodes code, uint16_t aid = 0);
 zx_status_t SendAssocIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
-                                uint16_t listen_interval, const SsidElement& ssid_element,
-                                const RsnElement* rsn_elem);
+                                uint16_t listen_interval, Span<const uint8_t> ssid,
+                                std::optional<Span<const uint8_t>> rsn_body);
 zx_status_t SendDisassociateIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
                                        uint16_t code);
 
