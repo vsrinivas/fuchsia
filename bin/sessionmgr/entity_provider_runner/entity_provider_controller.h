@@ -15,17 +15,26 @@
 
 namespace modular {
 
-class EntityProviderLauncher;
 class EntityProviderRunner;
 
-// This class runs and manages the lifetime of an agent's
-// fuchsia::modular::EntityProvider service. It holds on to one
-// fuchsia::modular::AgentController connection to the agent.
+// This class runs and manages the lifetime of an EntityProvider service.
+//
+// When the entity provider is an agent the controller keeps the agent
+// connection alive.
 class EntityProviderController {
  public:
-  EntityProviderController(EntityProviderRunner* entity_provider_runner,
-                           EntityProviderLauncher* entity_provider_launcher,
-                           const std::string& agent_url);
+  // Creates an controller for a given entity provider.
+  //
+  // |entity_provider| The provider which is managed by this controller.
+  // |agent_controller| If the entity provider is backed by an agent, this is
+  //   the associated agent controller. If no such controller exists, nullptr is
+  //   acceptable.
+  // |done| The callback which is called when the entity provider managed by
+  //   this controller has finished running.
+  EntityProviderController(
+      fuchsia::modular::EntityProviderPtr entity_provider,
+      fuchsia::modular::AgentControllerPtr agent_controller,
+      std::function<void()> done);
 
   ~EntityProviderController();
 
@@ -46,12 +55,17 @@ class EntityProviderController {
   // |EntityImpl| providing for this cookie.
   void OnEmptyEntityImpls(const std::string cookie);
 
-  EntityProviderRunner* const entity_provider_runner_;
-  const std::string agent_url_;
   // cookie -> EntityImpl
   std::map<std::string, std::unique_ptr<EntityImpl>> entity_impls_;
-  fuchsia::modular::AgentControllerPtr agent_controller_;
+
+  // The managed entity provider connection.
   fuchsia::modular::EntityProviderPtr entity_provider_;
+
+  // The agent controller connection for entity providers which are agents.
+  fuchsia::modular::AgentControllerPtr agent_controller_;
+
+  // The callback which is called when the entity provider finishes running.
+  std::function<void()> done_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(EntityProviderController);
 };

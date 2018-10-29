@@ -175,6 +175,12 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
       const fuchsia::modular::OngoingActivityType ongoing_activity_type,
       fidl::InterfaceRequest<fuchsia::modular::OngoingActivity> request);
 
+  // Called by ModuleContextImpl.
+  void CreateEntity(
+      fidl::StringPtr type, fuchsia::mem::Buffer data,
+      fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
+      std::function<void(std::string /* entity_reference */)> callback);
+
  private:
   // |StoryController|
   void GetInfo(GetInfoCallback callback) override;

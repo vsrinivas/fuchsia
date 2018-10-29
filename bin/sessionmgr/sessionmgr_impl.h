@@ -168,6 +168,12 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
       fidl::InterfaceRequest<fuchsia::modular::AgentController>
           agent_controller_request) override;
 
+  // |EntityProviderLauncher|
+  void ConnectToStoryEntityProvider(
+      const std::string& story_id,
+      fidl::InterfaceRequest<fuchsia::modular::EntityProvider>
+          entity_provider_request) override;
+
   fuchsia::sys::ServiceProviderPtr GetServiceProvider(
       fuchsia::modular::AppConfig config);
   fuchsia::sys::ServiceProviderPtr GetServiceProvider(const std::string& url);

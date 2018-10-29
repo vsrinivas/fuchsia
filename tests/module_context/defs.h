@@ -37,6 +37,12 @@ constexpr char kSecondModuleCallStopActivity[] = "second_activity_stop";
 constexpr char kFirstModuleTerminated[] = "first terminated";
 constexpr char kSecondModuleTerminated[] = "second terminated";
 
+// The signals the entity module sends once it's done verifying the entity
+// related methods on module context. Once all these have been signaled the
+// module is done.
+constexpr char kEntityModuleDoneFirstTask[] = "entity_module_done_first";
+constexpr char kEntityModuleDoneSecondTask[] = "entity_module_done_second";
+
 }  // namespace
 
 #endif  // PERIDOT_TESTS_MODULE_CONTEXT_DEFS_H_

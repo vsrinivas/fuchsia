@@ -115,6 +115,19 @@ class TestApp : public modular::testing::ComponentBase<void> {
       command.set_add_mod(std::move(add_mod));
       commands.push_back(std::move(command));
     }
+    {
+      fuchsia::modular::Intent intent;
+      intent.handler = "module_context_test_entity_module";
+      intent.action = "test";
+      fuchsia::modular::AddMod add_mod;
+      add_mod.mod_name.push_back("entity_module");
+      add_mod.intent = std::move(intent);
+      add_mod.surface_parent_mod_name.resize(0);
+
+      fuchsia::modular::StoryCommand command;
+      command.set_add_mod(std::move(add_mod));
+      commands.push_back(std::move(command));
+    }
 
     puppet_master_->ControlStory(kStoryName, story_puppet_master_.NewRequest());
     story_puppet_master_->Enqueue(std::move(commands));
@@ -212,8 +225,33 @@ class TestApp : public modular::testing::ComponentBase<void> {
                   fuchsia::modular::OngoingActivityType::VIDEO) {
             on_stop_remaining_ongoing_activities_dispatched.Pass();
           }
-          PerformFirstModuleDone();
+          TestModuleCreatingEntity();
         });
+  }
+
+  void TestModuleCreatingEntity() {
+    Await(kEntityModuleDoneFirstTask, [this] {
+      Await(kEntityModuleDoneSecondTask, [this] {
+        fuchsia::modular::Intent intent;
+        intent.handler = "module_context_test_entity_module";
+        intent.action = "test";
+        fuchsia::modular::RemoveMod remove_mod;
+        remove_mod.mod_name.push_back("entity_module");
+
+        fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
+        fuchsia::modular::StoryCommand command;
+        command.set_remove_mod(std::move(remove_mod));
+        commands.push_back(std::move(command));
+
+        puppet_master_->ControlStory(kStoryName,
+                                     story_puppet_master_.NewRequest());
+        story_puppet_master_->Enqueue(std::move(commands));
+        story_puppet_master_->Execute(
+            [this](fuchsia::modular::ExecuteResult result) {
+              PerformFirstModuleDone();
+            });
+      });
+    });
   }
 
   TestPoint on_done_ongoing_activities_stopped{

@@ -30,17 +30,24 @@ class EntityProviderRunner : public fuchsia::modular::EntityResolver {
   EntityProviderRunner(EntityProviderLauncher* entity_provider_launcher);
   ~EntityProviderRunner() override;
 
+  // Connects to the entity reference factory for the agent at |agent_url|.
+  //
+  // The created entity references will be resolved back to that particular
+  // agent.
   void ConnectEntityReferenceFactory(
       const std::string& agent_url,
       fidl::InterfaceRequest<fuchsia::modular::EntityReferenceFactory> request);
+
+  // Connects to the entity resolver service. The resolver service can resolve
+  // any references, regardless if they are backed by an agent or a story entity
+  // provider.
   void ConnectEntityResolver(
       fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request);
 
-  // Called by an EntityProviderController when the entity provider for a
-  // component ID doesn't need to live anymore.
-  // TODO(vardhan): Maybe wrap this into an interface used by
-  // EntityProviderController.
-  void OnEntityProviderFinished(const std::string agent_url);
+  // Creates an entity reference for the given |cookie| associated with the
+  // specified |story_id|.
+  std::string CreateStoryEntityReference(const std::string& story_id,
+                                         const std::string& cookie);
 
   // Given a map of entity type -> entity data, creates an entity reference for
   // it. This data is encoded into the entity reference, and must be within
@@ -56,9 +63,15 @@ class EntityProviderRunner : public fuchsia::modular::EntityResolver {
   class EntityReferenceFactoryImpl;
   class DataEntity;
 
-  // Called by |EntityReferenceFactoryImpl|.
+  // The |EntityReferenceFactory| uses this to create entity references for
+  // a particular agent.
+  //
+  // |agent_url| The url of the agent creating the entity reference.
+  // |cookie| The cookie identifying the entity.
+  // |callback| The callback which is called with the constructed entity
+  //   reference.
   void CreateReference(
-      const std::string& agent_url, fidl::StringPtr cookie,
+      const std::string& agent_url, const std::string& cookie,
       fuchsia::modular::EntityReferenceFactory::CreateReferenceCallback
           callback);
 
@@ -71,11 +84,20 @@ class EntityProviderRunner : public fuchsia::modular::EntityResolver {
       fidl::StringPtr entity_reference,
       fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request);
 
+  // Performs the cleanup required when the entity provider at the provided
+  // agent_url finished.
+  void OnEntityProviderFinished(const std::string agent_url);
+
   EntityProviderLauncher* const entity_provider_launcher_;
 
-  // component id -> fuchsia::modular::EntityReferenceFactory
+  // agent url -> EntityReferenceFactoryImpl
   std::map<std::string, std::unique_ptr<EntityReferenceFactoryImpl>>
       entity_reference_factory_bindings_;
+
+  // story id -> StoryEntityReferenceFactoryImpl
+  std::map<std::string, std::unique_ptr<EntityReferenceFactoryImpl>>
+      story_entity_reference_factory_bindings_;
+
   fidl::BindingSet<fuchsia::modular::EntityResolver> entity_resolver_bindings_;
 
   // These are the running entity providers.

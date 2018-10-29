@@ -28,6 +28,7 @@
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "peridot/bin/sessionmgr/component_context_impl.h"
 #include "peridot/bin/sessionmgr/message_queue/message_queue_manager.h"
+#include "peridot/bin/sessionmgr/story_runner/story_entity_provider.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/environment.h"
 #include "peridot/lib/fidl/proxy.h"
@@ -54,7 +55,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
       fuchsia::modular::FocusProviderPtr focus_provider,
       fuchsia::modular::UserIntelligenceProvider* user_intelligence_provider,
       fuchsia::modular::ModuleResolver* module_resolver,
-      fuchsia::modular::EntityResolver* entity_resolver,
+      EntityProviderRunner* entity_provider_runner,
       modular::ModuleFacetReader* module_facet_reader,
       PresentationProvider* presentation_provider,
       fuchsia::ui::viewsv1::ViewSnapshotPtr view_snapshot, bool test);
@@ -91,7 +92,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   }
 
   fuchsia::modular::EntityResolver* entity_resolver() {
-    return entity_resolver_;
+    return entity_provider_runner_;
   }
 
   modular::ModuleFacetReader* module_facet_reader() {
@@ -152,6 +153,27 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request,
       fidl::InterfaceRequest<fuchsia::scenic::snapshot::Loader> loader_request);
+
+  // Creates an entity with the specified |type| and |data| in the story with
+  // |story_id|.
+  //
+  // |callback| will be called with a reference to the created entity. If the
+  // creation failed the |entity_request| is dropped.
+  void CreateEntity(
+      const std::string& story_id, fidl::StringPtr type,
+      fuchsia::mem::Buffer data,
+      fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
+      std::function<void(std::string /* entity_reference */)> callback);
+
+  // Creates an entity with the specified |type| and |data| in the story with
+  // |story_id|.
+  //
+  // The story provider guarantees the uniqueness of the EntityProvider
+  // associated with any given story.
+  void ConnectToStoryEntityProvider(
+      const std::string& story_id,
+      fidl::InterfaceRequest<fuchsia::modular::EntityProvider>
+          entity_provider_request);
 
  private:
   // |fuchsia::modular::StoryProvider|
@@ -251,6 +273,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   struct StoryControllerImplContainer {
     std::unique_ptr<StoryControllerImpl> impl;
     std::unique_ptr<StoryStorage> storage;
+    std::unique_ptr<StoryEntityProvider> entity_provider;
     fuchsia::modular::StoryInfoPtr current_info;
   };
   std::map<std::string, StoryControllerImplContainer> story_controller_impls_;
@@ -260,7 +283,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   fuchsia::modular::UserIntelligenceProvider* const
       user_intelligence_provider_;                           // Not owned.
   fuchsia::modular::ModuleResolver* const module_resolver_;  // Not owned.
-  fuchsia::modular::EntityResolver* const entity_resolver_;  // Not owned.
+  EntityProviderRunner* const entity_provider_runner_;       // Not owned.
   modular::ModuleFacetReader* const module_facet_reader_;  // Not owned.
   PresentationProvider* const presentation_provider_;        // Not owned.
 
@@ -306,9 +329,10 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   // Operations implemented here.
   class CreateStoryCall;
   class DeleteStoryCall;
-  class GetControllerCall;
+  class GetStoryControllerContainerCall;
   class StopAllStoriesCall;
   class StopStoryShellCall;
+  class GetStoryEntityProviderCall;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryProviderImpl);
 };

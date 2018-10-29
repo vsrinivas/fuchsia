@@ -101,6 +101,12 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
       fidl::InterfaceRequest<fuchsia::modular::OngoingActivity> request)
       override;
 
+  // |fuchsia::modular::ModuleContext|
+  void CreateEntity(
+      fidl::StringPtr type, fuchsia::mem::Buffer data,
+      fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
+      CreateEntityCallback callback) override;
+
   // Identifies the module by its path, holds the URL of the running module, and
   // the link it was started with.
   const fuchsia::modular::ModuleData* const module_data_;

@@ -86,6 +86,13 @@ class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
                                            std::move(agent_controller_request));
   }
 
+  void ConnectToStoryEntityProvider(
+      const std::string& story_id,
+      fidl::InterfaceRequest<fuchsia::modular::EntityProvider>
+          entity_provider_request) override {
+    FXL_NOTIMPLEMENTED();
+  }
+
   FakeLauncher launcher_;
 
   files::ScopedTempDir mq_data_dir_;

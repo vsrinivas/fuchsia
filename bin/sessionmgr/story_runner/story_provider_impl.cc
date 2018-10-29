@@ -19,6 +19,7 @@
 #include <lib/fsl/handles/object_info.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/functional/make_copyable.h>
+#include <lib/fxl/random/uuid.h>
 #include <lib/zx/time.h>
 
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
@@ -196,28 +197,29 @@ class StoryProviderImpl::DeleteStoryCall : public Operation<> {
 // 1. Ensure that the story data in the root page isn't dirty due to a crash
 // 2. Retrieve the page specific to this story.
 // 3. Return a controller for this story that contains the page pointer.
-class StoryProviderImpl::GetControllerCall : public Operation<> {
+class StoryProviderImpl::GetStoryControllerContainerCall
+    : public Operation<StoryControllerImplContainer*> {
  public:
-  GetControllerCall(
-      StoryProviderImpl* const story_provider_impl,
-      SessionStorage* const session_storage, fidl::StringPtr story_id,
-      fidl::InterfaceRequest<fuchsia::modular::StoryController> request)
-      : Operation("StoryProviderImpl::GetControllerCall", [] {}),
+  GetStoryControllerContainerCall(StoryProviderImpl* const story_provider_impl,
+                                  SessionStorage* const session_storage,
+                                  fidl::StringPtr story_id,
+                                  ResultCall result_call)
+      : Operation("StoryProviderImpl::GetStoryControllerContainerCall",
+                  std::move(result_call)),
         story_provider_impl_(story_provider_impl),
         session_storage_(session_storage),
-        story_id_(story_id),
-        request_(std::move(request)) {}
+        story_id_(story_id) {}
 
  private:
   void Run() override {
-    FlowToken flow{this};
+    FlowToken flow{this, &story_controller_container_};
 
     // Use the existing controller, if possible.
     // This won't race against itself because it's managed by an operation
     // queue.
     auto i = story_provider_impl_->story_controller_impls_.find(story_id_);
     if (i != story_provider_impl_->story_controller_impls_.end()) {
-      i->second.impl->Connect(std::move(request_));
+      story_controller_container_ = &i->second;
       return;
     }
 
@@ -242,10 +244,12 @@ class StoryProviderImpl::GetControllerCall : public Operation<> {
           container.impl = std::make_unique<StoryControllerImpl>(
               story_id_, session_storage_, container.storage.get(),
               story_provider_impl_);
-          container.impl->Connect(std::move(request_));
           container.current_info = std::move(story_info_);
-          story_provider_impl_->story_controller_impls_.emplace(
+          container.entity_provider =
+              std::make_unique<StoryEntityProvider>(container.storage.get());
+          auto it = story_provider_impl_->story_controller_impls_.emplace(
               story_id_, std::move(container));
+          story_controller_container_ = &it.first->second;
         });
   }
 
@@ -253,12 +257,13 @@ class StoryProviderImpl::GetControllerCall : public Operation<> {
   SessionStorage* const session_storage_;         // not owned
   const fidl::StringPtr story_id_;
   fuchsia::modular::StoryInfoPtr story_info_;
-  fidl::InterfaceRequest<fuchsia::modular::StoryController> request_;
+
+  StoryControllerImplContainer* story_controller_container_ = nullptr;
 
   // Sub operations run in this queue.
   OperationQueue operation_queue_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(GetControllerCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(GetStoryControllerContainerCall);
 };
 
 class StoryProviderImpl::StopAllStoriesCall : public Operation<> {
@@ -322,6 +327,45 @@ class StoryProviderImpl::StopStoryShellCall : public Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(StopStoryShellCall);
 };
 
+class StoryProviderImpl::GetStoryEntityProviderCall
+    : public Operation<StoryEntityProvider*> {
+ public:
+  GetStoryEntityProviderCall(StoryProviderImpl* const story_provider_impl,
+                             const std::string& story_id,
+                             ResultCall result_call)
+      : Operation("StoryProviderImpl::GetStoryEntityProviderCall",
+                  std::move(result_call)),
+        story_provider_impl_(story_provider_impl),
+        story_id_(story_id) {}
+
+ private:
+  void Run() override {
+    FlowToken flow{this, &story_entity_provider_};
+
+    operation_queue_.Add(new GetStoryControllerContainerCall(
+        story_provider_impl_, story_provider_impl_->session_storage_, story_id_,
+        [this, flow](StoryControllerImplContainer* story_controller_container) {
+          if (story_controller_container) {
+            story_entity_provider_ =
+                story_controller_container->entity_provider.get();
+          }
+        }));
+  }
+
+  StoryProviderImpl* const story_provider_impl_;  // not owned
+
+  // The returned story entity provider.
+  StoryEntityProvider* story_entity_provider_ = nullptr;
+
+  fuchsia::modular::StoryInfoPtr story_info_;
+
+  OperationQueue operation_queue_;
+
+  std::string story_id_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(GetStoryEntityProviderCall);
+};
+
 StoryProviderImpl::StoryProviderImpl(
     Environment* const user_environment, std::string device_id,
     SessionStorage* const session_storage,
@@ -331,7 +375,7 @@ StoryProviderImpl::StoryProviderImpl(
     fuchsia::modular::UserIntelligenceProvider* const
         user_intelligence_provider,
     fuchsia::modular::ModuleResolver* const module_resolver,
-    fuchsia::modular::EntityResolver* const entity_resolver,
+    EntityProviderRunner* const entity_provider_runner,
     modular::ModuleFacetReader* const module_facet_reader,
     PresentationProvider* const presentation_provider,
     fuchsia::ui::viewsv1::ViewSnapshotPtr view_snapshot, const bool test)
@@ -343,7 +387,7 @@ StoryProviderImpl::StoryProviderImpl(
       component_context_info_(component_context_info),
       user_intelligence_provider_(user_intelligence_provider),
       module_resolver_(module_resolver),
-      entity_resolver_(entity_resolver),
+      entity_provider_runner_(entity_provider_runner),
       module_facet_reader_(module_facet_reader),
       presentation_provider_(presentation_provider),
       focus_provider_(std::move(focus_provider)),
@@ -578,8 +622,15 @@ void StoryProviderImpl::NotifyStoryActivityChange(
 void StoryProviderImpl::GetController(
     fidl::StringPtr story_id,
     fidl::InterfaceRequest<fuchsia::modular::StoryController> request) {
-  operation_queue_.Add(new GetControllerCall(this, session_storage_, story_id,
-                                             std::move(request)));
+  operation_queue_.Add(new GetStoryControllerContainerCall(
+      this, session_storage_, story_id,
+      fxl::MakeCopyable([request = std::move(request)](
+                            StoryControllerImplContainer*
+                                story_controller_container) mutable {
+        if (story_controller_container) {
+          story_controller_container->impl->Connect(std::move(request));
+        }
+      })));
 }
 
 // |fuchsia::modular::StoryProvider|
@@ -732,6 +783,60 @@ void StoryProviderImpl::NotifyStoryWatchers(
     (*i)->OnChange(CloneStruct(story_data->story_info), story_state,
                    story_visibility_state);
   }
+}
+
+void StoryProviderImpl::CreateEntity(
+    const std::string& story_id, fidl::StringPtr type,
+    fuchsia::mem::Buffer data,
+    fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
+    std::function<void(std::string /* entity_reference */)> callback) {
+  operation_queue_.Add(new GetStoryEntityProviderCall(
+      this, story_id,
+      fxl::MakeCopyable([this, type, story_id, data = std::move(data),
+                         callback = std::move(callback),
+                         entity_request = std::move(entity_request)](
+                            StoryEntityProvider* entity_provider) mutable {
+        // Once the entity provider for the given story is available, create the
+        // entity.
+        entity_provider->CreateEntity(
+            type, std::move(data),
+            fxl::MakeCopyable([this, entity_request = std::move(entity_request),
+                               callback = std::move(callback),
+                               story_id](std::string cookie) mutable {
+              if (cookie.empty()) {
+                // Return nullptr to indicate the entity creation failed.
+                callback(nullptr);
+                return;
+              }
+
+              std::string entity_reference =
+                  entity_provider_runner_->CreateStoryEntityReference(story_id,
+                                                                      cookie);
+
+              // Once the entity reference has been created, it can be
+              // used to connect the entity request.
+              fuchsia::modular::EntityResolverPtr resolver;
+              entity_provider_runner_->ConnectEntityResolver(
+                  resolver.NewRequest());
+              resolver->ResolveEntity(entity_reference,
+                                      std::move(entity_request));
+
+              callback(entity_reference);
+            }));
+      })));
+}
+
+void StoryProviderImpl::ConnectToStoryEntityProvider(
+    const std::string& story_id,
+    fidl::InterfaceRequest<fuchsia::modular::EntityProvider>
+        entity_provider_request) {
+  operation_queue_.Add(new GetStoryEntityProviderCall(
+      this, story_id,
+      fxl::MakeCopyable(
+          [entity_provider_request = std::move(entity_provider_request)](
+              StoryEntityProvider* entity_provider) mutable {
+            entity_provider->Connect(std::move(entity_provider_request));
+          })));
 }
 
 void StoryProviderImpl::GetPresentation(

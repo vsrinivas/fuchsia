@@ -1695,8 +1695,18 @@ void StoryControllerImpl::StartOngoingActivity(
   dispatch_to_story_provider();
 }
 
+void StoryControllerImpl::CreateEntity(
+    fidl::StringPtr type, fuchsia::mem::Buffer data,
+    fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
+    std::function<void(std::string /* entity_reference */)> callback) {
+  story_provider_impl_->CreateEntity(story_id_, type, std::move(data),
+                                     std::move(entity_request),
+                                     std::move(callback));
+}
+
 void StoryControllerImpl::OnSurfaceFocused(fidl::StringPtr surface_id) {
   auto module_path = StringToPath(surface_id);
+
   for (auto& watcher : watchers_.ptrs()) {
     (*watcher)->OnModuleFocused(std::move(module_path));
   }

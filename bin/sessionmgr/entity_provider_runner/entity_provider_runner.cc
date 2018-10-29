@@ -15,6 +15,7 @@
 #include <lib/fxl/type_converter.h>
 
 #include "peridot/bin/sessionmgr/entity_provider_runner/entity_provider_controller.h"
+#include "peridot/bin/sessionmgr/entity_provider_runner/entity_provider_launcher.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/util/string_escape.h"
 
@@ -23,6 +24,7 @@ namespace {
 
 constexpr char kEntityReferencePrefix[] = "EntityRef";
 constexpr char kEntityDataReferencePrefix[] = "EntityData";
+constexpr char kStoryEntityReferencePrefix[] = "Story";
 
 using StringMap = std::map<std::string, std::string>;
 constexpr XdrFilterType<StringMap> XdrStringMap[] = {
@@ -30,26 +32,43 @@ constexpr XdrFilterType<StringMap> XdrStringMap[] = {
     nullptr,
 };
 
-// Given an agent_url and a cookie, encodes it into an entity reference.
-std::string EncodeEntityReference(const std::string& agent_url,
-                                  fidl::StringPtr cookie) {
+// Given a |entity_namespace|, |provider_uri| and a |cookie|, encodes it into an
+// entity reference.
+std::string EncodeEntityReference(const std::string& entity_namespace,
+                                  const std::string& provider_uri,
+                                  const std::string& cookie) {
   std::vector<std::string> parts(3);
-  parts[0] = kEntityReferencePrefix;
-  parts[1] = StringEscape(agent_url, "/");
-  std::string cookie_str = cookie;
-  parts[2] = StringEscape(cookie_str, "/");
+  parts[0] = entity_namespace;
+  parts[1] = StringEscape(provider_uri, "/");
+  parts[2] = StringEscape(cookie, "/");
   return fxl::JoinStrings(parts, "/");
+}
+
+// Returns an entity reference for an entity associated with the given
+// |story_id| and |cookie|.
+std::string EncodeStoryEntityReference(const std::string& story_id,
+                                       const std::string& cookie) {
+  return EncodeEntityReference(kStoryEntityReferencePrefix, story_id, cookie);
+}
+
+// Returns an entity reference for an entity associated with the given
+// |agent_url| and |cookie|.
+std::string EncodeAgentEntityReference(const std::string& agent_url,
+                                       const std::string& cookie) {
+  return EncodeEntityReference(kEntityReferencePrefix, agent_url, cookie);
 }
 
 // Inverse of EncodeEntityReference.
 bool DecodeEntityReference(const std::string& entity_reference,
-                           std::string* const agent_url,
+                           std::string* const prefix,
+                           std::string* const provider_uri,
                            std::string* const cookie) {
   auto parts = SplitEscapedString(entity_reference, '/');
-  if (parts.size() != 3 || StringUnescape(parts[0]) != kEntityReferencePrefix) {
+  if (parts.size() != 3) {
     return false;
   }
-  *agent_url = StringUnescape(parts[1].ToString());
+  *prefix = StringUnescape(parts[0].ToString());
+  *provider_uri = StringUnescape(parts[1].ToString());
   *cookie = StringUnescape(parts[2].ToString());
   return true;
 }
@@ -70,6 +89,10 @@ bool DecodeEntityDataReference(const std::string& entity_reference,
 class EntityProviderRunner::EntityReferenceFactoryImpl
     : fuchsia::modular::EntityReferenceFactory {
  public:
+  // Creates an entity reference factory for the given |provider_uri|.
+  //
+  // |entity_provider_runner| exposes the concrete implementations for encoding
+  //  entity references.
   EntityReferenceFactoryImpl(const std::string& agent_url,
                              EntityProviderRunner* const entity_provider_runner)
       : agent_url_(agent_url),
@@ -92,7 +115,11 @@ class EntityProviderRunner::EntityReferenceFactoryImpl
     entity_provider_runner_->CreateReference(agent_url_, cookie, callback);
   }
 
+  // The agent url if the entity reference factory produces references to
+  // entities backed by agents, otherwise the story id of the story entity
+  // provider.
   const std::string agent_url_;
+
   EntityProviderRunner* const entity_provider_runner_;
   fidl::BindingSet<fuchsia::modular::EntityReferenceFactory> bindings_;
 
@@ -188,6 +215,11 @@ void EntityProviderRunner::ConnectEntityReferenceFactory(
   it->second->AddBinding(std::move(request));
 }
 
+std::string EntityProviderRunner::CreateStoryEntityReference(
+    const std::string& story_id, const std::string& cookie) {
+  return EncodeStoryEntityReference(story_id, cookie);
+}
+
 void EntityProviderRunner::ConnectEntityResolver(
     fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request) {
   entity_resolver_bindings_.AddBinding(this, std::move(request));
@@ -217,10 +249,10 @@ std::string EntityProviderRunner::CreateReferenceFromData(
 }
 
 void EntityProviderRunner::CreateReference(
-    const std::string& agent_url, fidl::StringPtr cookie,
+    const std::string& agent_url, const std::string& cookie,
     fuchsia::modular::EntityReferenceFactory::CreateReferenceCallback
         callback) {
-  auto entity_ref = EncodeEntityReference(agent_url, cookie);
+  auto entity_ref = EncodeAgentEntityReference(agent_url, cookie);
   callback(entity_ref);
 }
 
@@ -257,21 +289,46 @@ void EntityProviderRunner::ResolveEntity(
     return;
   }
 
-  std::string agent_url;
+  std::string provider_uri;
   std::string cookie;
-  if (!DecodeEntityReference(entity_reference, &agent_url, &cookie)) {
+  std::string prefix;
+  fuchsia::modular::EntityProviderPtr entity_provider;
+  fuchsia::modular::AgentControllerPtr agent_controller;
+
+  if (!DecodeEntityReference(entity_reference, &prefix, &provider_uri,
+                             &cookie)) {
+    return;
+    // |entity_request| is closed here.
+  }
+
+  bool is_story_entity = prefix == kStoryEntityReferencePrefix;
+
+  if (is_story_entity) {
+    entity_provider_launcher_->ConnectToStoryEntityProvider(
+        provider_uri, entity_provider.NewRequest());
+  } else if (prefix == kEntityReferencePrefix) {
+    entity_provider_launcher_->ConnectToEntityProvider(
+        provider_uri, entity_provider.NewRequest(),
+        agent_controller.NewRequest());
+  } else {
     return;
     // |entity_request| is closed here.
   }
 
   // Connect to the EntityProviderController managing this entity.
-  auto it = entity_provider_controllers_.find(agent_url);
+  auto it = entity_provider_controllers_.find(provider_uri);
   if (it == entity_provider_controllers_.end()) {
     bool inserted;
     std::tie(it, inserted) =
         entity_provider_controllers_.emplace(std::make_pair(
-            agent_url, std::make_unique<EntityProviderController>(
-                           this, entity_provider_launcher_, agent_url)));
+            provider_uri,
+            std::make_unique<EntityProviderController>(
+                std::move(entity_provider), std::move(agent_controller),
+                [this, is_story_entity, provider_uri] {
+                  if (!is_story_entity) {
+                    OnEntityProviderFinished(provider_uri);
+                  }
+                })));
     FXL_DCHECK(inserted);
   }
 

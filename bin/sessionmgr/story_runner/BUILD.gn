@@ -24,6 +24,8 @@ source_set("story_runner") {
     "ongoing_activity_impl.h",
     "story_controller_impl.cc",
     "story_controller_impl.h",
+    "story_entity_provider.cc",
+    "story_entity_provider.h",
     "story_provider_impl.cc",
     "story_provider_impl.h",
     "story_shell_context_impl.cc",

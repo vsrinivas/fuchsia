@@ -886,6 +886,14 @@ void SessionmgrImpl::ConnectToEntityProvider(
                                          std::move(agent_controller_request));
 }
 
+void SessionmgrImpl::ConnectToStoryEntityProvider(
+    const std::string& story_id,
+    fidl::InterfaceRequest<fuchsia::modular::EntityProvider>
+        entity_provider_request) {
+  story_provider_impl_->ConnectToStoryEntityProvider(
+      story_id, std::move(entity_provider_request));
+}
+
 fuchsia::ledger::cloud::CloudProviderPtr SessionmgrImpl::GetCloudProvider(
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager) {
   fuchsia::ledger::cloud::CloudProviderPtr cloud_provider;

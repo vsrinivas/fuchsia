@@ -6,7 +6,6 @@
 
 #include <lib/fxl/logging.h>
 
-#include "peridot/bin/sessionmgr/entity_provider_runner/entity_provider_launcher.h"
 #include "peridot/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"
 
 namespace modular {
@@ -71,18 +70,19 @@ class EntityProviderController::EntityImpl : fuchsia::modular::Entity {
 };
 
 EntityProviderController::EntityProviderController(
-    EntityProviderRunner* const entity_provider_runner,
-    EntityProviderLauncher* const entity_provider_launcher,
-    const std::string& agent_url)
-    : entity_provider_runner_(entity_provider_runner), agent_url_(agent_url) {
-  FXL_DLOG(INFO) << "Running fuchsia::modular::EntityProvider " << agent_url;
-  entity_provider_launcher->ConnectToEntityProvider(
-      agent_url_, entity_provider_.NewRequest(),
-      agent_controller_.NewRequest());
-  agent_controller_.set_error_handler([this](zx_status_t status) {
-    entity_provider_runner_->OnEntityProviderFinished(agent_url_);
-    // |this| no longer valid.
-  });
+    fuchsia::modular::EntityProviderPtr entity_provider,
+    fuchsia::modular::AgentControllerPtr agent_controller,
+    std::function<void()> done)
+    : entity_provider_(std::move(entity_provider)),
+      agent_controller_(std::move(agent_controller)),
+      done_(done) {
+  FXL_DLOG(INFO) << "Running fuchsia::modular::EntityProvider";
+  if (agent_controller_) {
+    agent_controller_.set_error_handler([this] {
+      done_();
+      // |this| no longer valid.
+    });
+  }
 }
 
 EntityProviderController::~EntityProviderController() = default;
@@ -108,7 +108,7 @@ void EntityProviderController::OnEmptyEntityImpls(const std::string cookie) {
   if (entity_impls_.size() == 0ul) {
     // We can drop our connection to the fuchsia::modular::EntityProvider at
     // this point.
-    entity_provider_runner_->OnEntityProviderFinished(agent_url_);
+    done_();
     // |this| no longer valid.
   }
 }

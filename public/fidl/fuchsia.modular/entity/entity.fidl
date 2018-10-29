@@ -49,6 +49,8 @@ interface EntityWatcher {
 
 enum EntityWriteStatus {
     OK = 0;
+    /// Indicates a failure of the entity provider to write the update.
+    ERROR = 1;
     /// Entity providers are not necessarily required to support entity mutation.
-    READ_ONLY = 1;
+    READ_ONLY = 2;
 };
