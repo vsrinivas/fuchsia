@@ -560,11 +560,12 @@ zx_status_t MinfsCreator::ProcessFile(char* src, char* dst) {
 }
 
 void MinfsCreator::ProcessDirectoryEntry(char* path) {
-    char* last_slash = strrchr(path, '/');
-    last_slash = last_slash == nullptr ? path + 2 : last_slash + 1;
-    if (last_slash != nullptr) {
-        dir_bytes_ += minfs::DirentSize(strlen(last_slash));
+    if (path == nullptr) {
+        return;
     }
+    char* last_slash = strrchr(path, '/');
+    last_slash = last_slash == nullptr ? path : last_slash + 1;
+    dir_bytes_ += minfs::DirentSize(strlen(last_slash));
 }
 
 zx_status_t MinfsCreator::ProcessBlocks(off_t file_size) {
