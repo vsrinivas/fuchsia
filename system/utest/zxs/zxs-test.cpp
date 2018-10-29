@@ -70,6 +70,10 @@ static zx_status_t handle_message(async::Wait* wait, zxsio_msg_t* msg) {
         memcpy(reply.data, &payload, sizeof(payload));
         break;
     }
+    case ZXSIO_SETSOCKOPT: {
+        // Do nothing.
+        break;
+    }
     case ZXSIO_CLOSE:
     case ZXSIO_OPEN:
     case ZXSIO_IOCTL:
@@ -77,7 +81,6 @@ static zx_status_t handle_message(async::Wait* wait, zxsio_msg_t* msg) {
     case ZXSIO_BIND:
     case ZXSIO_LISTEN:
     case ZXSIO_GETSOCKOPT:
-    case ZXSIO_SETSOCKOPT:
     default:
         return ZX_ERR_STOP;
     }
@@ -175,6 +178,17 @@ bool basic_test(void) {
     ASSERT_EQ(ZX_OK, status);
     ASSERT_EQ(sizeof(addr), actual);
     ASSERT_EQ('p', addr.sa_data[4]);
+
+    int ttl = 255;
+    zxs_option_t option = {
+        .level = IPPROTO_IP,
+        .name = IP_TTL,
+        .value = &ttl,
+        .length = sizeof(ttl),
+    };
+
+    status = zxs_setsockopts(&socket, &option, 1u);
+    ASSERT_EQ(ZX_OK, status);
 
     local.reset();
 

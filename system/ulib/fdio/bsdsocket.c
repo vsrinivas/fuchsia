@@ -537,22 +537,20 @@ int getsockopt(int fd, int level, int optname, void* restrict optval,
 __EXPORT
 int setsockopt(int fd, int level, int optname, const void* optval,
                socklen_t optlen) {
-    fdio_t* io = fd_to_io(fd);
+    const zxs_socket_t* socket;
+    fdio_t* io = fd_to_socket(fd, &socket);
     if (io == NULL) {
         return ERRNO(EBADF);
     }
 
-    zxrio_sockopt_req_reply_t req;
-    req.level = level;
-    req.optname = optname;
-    if (optlen > sizeof(req.optval)) {
-        fdio_release(io);
-        return ERRNO(EINVAL);
-    }
-    memcpy(req.optval, optval, optlen);
-    req.optlen = optlen;
-    zx_status_t r = io->ops->misc(io, ZXSIO_SETSOCKOPT, 0, 0, &req,
-                                  sizeof(req));
+    zxs_option_t option = {
+        .level = level,
+        .name = optname,
+        .value = optval,
+        .length = optlen,
+    };
+
+    zx_status_t status = zxs_setsockopts(socket, &option, 1u);
     fdio_release(io);
-    return STATUS(r);
+    return STATUS(status);
 }

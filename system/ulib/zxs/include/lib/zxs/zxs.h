@@ -51,7 +51,7 @@ typedef struct zxs_option {
     int32_t name;
 
     // A pointer to the value of the option.
-    void* value;
+    const void* value;
 
     // The number of bytes pointed to by |value|.
     size_t length;
@@ -127,7 +127,8 @@ zx_status_t zxs_getsockopt(const zxs_socket_t* socket, int32_t level,
 //
 // The |count| parameter is the number of |zxs_option_t| records pointed to by
 // |options|.
-zx_status_t zxs_setsockopts(zx_handle_t socket, zxs_option_t* options,
+zx_status_t zxs_setsockopts(const zxs_socket_t* socket,
+                            const zxs_option_t* options,
                             size_t count);
 
 // Send the data in the given |buffer| over |socket|.

@@ -226,9 +226,27 @@ zx_status_t zxs_getsockopt(const zxs_socket_t* socket, int32_t level,
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t zxs_setsockopts(zx_handle_t socket, zxs_option_t* options,
+zx_status_t zxs_setsockopts(const zxs_socket_t* socket,
+                            const zxs_option_t* options,
                             size_t count) {
-    return ZX_ERR_NOT_SUPPORTED;
+    for (size_t i = 0u; i < count; ++i) {
+        zxrio_sockopt_req_reply_t request;
+        memset(&request, 0, sizeof(request));
+        request.level = options[i].level;
+        request.optname = options[i].name;
+        size_t length = options[i].length;
+        if (length > sizeof(request.optval)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        memcpy(request.optval, options[i].value, length);
+        request.optlen = static_cast<socklen_t>(length);
+        zx_status_t status = zxsio_op(socket->socket, ZXSIO_SETSOCKOPT, 0, 0,
+                                      &request, sizeof(request));
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
+    return ZX_OK;
 }
 
 zx_status_t zxs_send(const zxs_socket_t* socket, const void* buffer,
