@@ -37,20 +37,48 @@ namespace ledger {
 
 namespace {
 
+// The contents of each repository are organized in the following way:
+//   <base_path>
+//   ├── content/
+//   │   ├── name
+//   │   ├── page_usage_db/
+//   │   └── ...
+//   └── staging/
+//
+// - <base_path>/
+//   The base path of this repository. It is defined by the channel given in
+//   |LedgerRepositoryFactory::GetRepository| (see the internal.fidl API).
+// - <base_path>/content/
+//   Contains all the contents of this repository. It is used to store the
+//   `name` file, `page_usage_db/` (see below), and is also used by
+//   |LedgerRepositoryImpl| to store this repository's Ledger instances.
+// - <base_path>/content/name
+//   Stores the name of the repository, which is randomly chosen on creation.
+// - <base_path>/content/page_usage_db/
+//   The path used by |DiskCleanupManagerImpl| to store statistics on pages.
+// - <base_path>/staging/
+//   The staging path. Used for removing all contents of this repository.
+//
+// Note that content/ should be the only directory storing information on the
+// repository: When deleting a repository, the content/ directory is moved
+// atomically to the staging path and then contents are recursively deleted.
+// This two-phase deletion guarantees that the repository will be in a correct
+// state even if the deletion execution is unexpectedly terminated.
+
 constexpr fxl::StringView kContentPath = "content";
 constexpr fxl::StringView kPageUsageDbPath = "page_usage_db";
 constexpr fxl::StringView kStagingPath = "staging";
 constexpr fxl::StringView kNamePath = "name";
 
-bool GetRepositoryName(rng::Random* random, const DetachedPath& base_path,
+bool GetRepositoryName(rng::Random* random, const DetachedPath& content_path,
                        std::string* name) {
-  DetachedPath name_path = base_path.SubPath(kNamePath);
+  DetachedPath name_path = content_path.SubPath(kNamePath);
 
   if (files::ReadFileToStringAt(name_path.root_fd(), name_path.path(), name)) {
     return true;
   }
 
-  if (!files::CreateDirectoryAt(base_path.root_fd(), base_path.path())) {
+  if (!files::CreateDirectoryAt(content_path.root_fd(), content_path.path())) {
     return false;
   }
 
@@ -166,7 +194,7 @@ struct LedgerRepositoryFactoryImpl::RepositoryInformation {
   explicit RepositoryInformation(int root_fd)
       : base_path(root_fd),
         content_path(base_path.SubPath(kContentPath)),
-        page_usage_db_path(base_path.SubPath(kPageUsageDbPath)),
+        page_usage_db_path(content_path.SubPath(kPageUsageDbPath)),
         staging_path(base_path.SubPath(kStagingPath)) {}
 
   RepositoryInformation(const RepositoryInformation& other) = default;
@@ -278,7 +306,7 @@ LedgerRepositoryFactoryImpl::CreateUserSync(
   user_config.user_directory = repository_information.content_path;
   user_config.cloud_provider = std::move(cloud_provider_ptr);
   fit::closure on_version_mismatch = [this, repository_information]() mutable {
-    OnVersionMismatch(repository_information);
+    OnVersionMismatch(std::move(repository_information));
   };
   auto cloud_sync = std::make_unique<cloud_sync::UserSyncImpl>(
       environment_, std::move(user_config), environment_->MakeBackoff(),
@@ -305,7 +333,7 @@ LedgerRepositoryFactoryImpl::CreateP2PSync(
 }
 
 void LedgerRepositoryFactoryImpl::OnVersionMismatch(
-    const RepositoryInformation& repository_information) {
+    RepositoryInformation repository_information) {
   FXL_LOG(WARNING)
       << "Data in the cloud was wiped out, erasing local state. "
       << "This should log you out, log back in to start syncing again.";

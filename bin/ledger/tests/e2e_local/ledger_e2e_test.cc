@@ -18,8 +18,11 @@
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/svc/cpp/services.h>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
+#include "peridot/bin/ledger/filesystem/detached_path.h"
+#include "peridot/bin/ledger/filesystem/directory_reader.h"
 #include "peridot/bin/ledger/testing/cloud_provider/fake_cloud_provider.h"
 #include "peridot/bin/ledger/testing/cloud_provider/types.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
@@ -27,6 +30,8 @@
 namespace test {
 namespace e2e_local {
 namespace {
+
+using ::testing::ElementsAre;
 
 template <class A>
 bool Equals(const fidl::VectorPtr<uint8_t>& a1, const A& a2) {
@@ -243,6 +248,17 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
   });
   EXPECT_FALSE(files::IsFileAt(tmpfs.root_fd(), deletion_sentinel_path));
   EXPECT_TRUE(repo_disconnected);
+
+  // Make sure all the contents are deleted. Only the staging directory should
+  // be present.
+  std::vector<std::string> directory_entries;
+  auto on_next_directory_entry = [&](fxl::StringView entry) {
+    directory_entries.push_back(entry.ToString());
+    return true;
+  };
+  EXPECT_TRUE(ledger::GetDirectoryEntries(ledger::DetachedPath(tmpfs.root_fd()),
+                                          on_next_directory_entry));
+  EXPECT_THAT(directory_entries, ElementsAre("staging"));
 
   // Verify that the Ledger app didn't crash.
   EXPECT_FALSE(ledger_shut_down);

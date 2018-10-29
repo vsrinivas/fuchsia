@@ -22,8 +22,10 @@ executable("e2e_local") {
     "//peridot/bin/ledger/testing:get_ledger",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/bin/ledger/testing/cloud_provider",
+    "//peridot/bin/ledger/filesystem",
     "//peridot/lib/scoped_tmpfs",
     "//peridot/public/fidl/fuchsia.ledger",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest_main",
   ]
 

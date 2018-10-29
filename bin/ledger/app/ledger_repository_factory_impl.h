@@ -63,7 +63,7 @@ class LedgerRepositoryFactoryImpl
       SyncWatcherSet* watchers);
   std::unique_ptr<p2p_sync::UserCommunicator> CreateP2PSync(
       const RepositoryInformation& repository_information);
-  void OnVersionMismatch(const RepositoryInformation& repository_information);
+  void OnVersionMismatch(RepositoryInformation repository_information);
 
   Status DeleteRepositoryDirectory(
       const RepositoryInformation& repository_information);
