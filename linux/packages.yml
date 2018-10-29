@@ -1,5 +1,5 @@
 dists:
-  - testing 
+  - testing
   - testing-updates
 components:
   - main
@@ -7,26 +7,6 @@ keyring: debian-archive-keyring.gpg
 packages:
   - package: libc6
   - package: libc6-dev
-  - package: libedit2
-  - package: libedit-dev
-  - package: libegl1-mesa
-  - package: libegl1-mesa-dev
-  - package: libgl1-mesa-dev
-  - package: libgl1-mesa-glx
-  - package: libglapi-mesa
-  - package: libglib2.0-0
-  - package: libglib2.0-dev
-  - package: libglu1-mesa
-  - package: libglu1-mesa-dev
-  - package: libicu60
-  - package: libicu-dev
-  - package: libncurses5
-  - package: libncurses5-dev
-  - package: libpython2.7
-  - package: libpython2.7-dev
-  - package: libx11-6
-  - package: libx11-dev
-  - package: libxml2
-  - package: libxml2-dev
-  - package: zlib1g
-  - package: zlib1g-dev
+  - package: libgcc-6-dev
+  - package: libgcc1
+  - package: linux-libc-dev

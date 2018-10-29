@@ -129,7 +129,7 @@ func parsePackages(r io.Reader) ([]Descriptor, error) {
 	return descriptors, nil
 }
 
-func downloadPackageList(config *Config, arch string) ([]Lock, error) {
+func downloadPackageList(config *Config, arch string, depends bool) ([]Lock, error) {
 	pkgs := map[string]Descriptor{}
 
 	file, err := os.Open(config.Keyring)
@@ -254,9 +254,11 @@ func downloadPackageList(config *Config, arch string) ([]Lock, error) {
 				Filename: pkg["Filename"],
 				Hash:     pkg["SHA256"],
 			}
-			for _, n := range strings.Split(pkg["Depends"], ", ") {
-				d := strings.Split(strings.TrimSpace(n), " ")[0]
-				queue = append(queue, d)
+			if depends {
+				for _, n := range strings.Split(pkg["Depends"], ", ") {
+					d := strings.Split(strings.TrimSpace(n), " ")[0]
+					queue = append(queue, d)
+				}
 			}
 		}
 	}
@@ -461,6 +463,7 @@ type updateCmd struct {
 	arch     string
 	config   string
 	lockfile string
+	depends  bool
 }
 
 func (*updateCmd) Name() string     { return "update" }
@@ -475,6 +478,7 @@ func (c *updateCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.arch, "arch", "amd64", "Target architecture")
 	f.StringVar(&c.config, "config", "packages.yml", "Package configuration")
 	f.StringVar(&c.lockfile, "lock", "packages.lock", "Lockfile filename")
+	f.BoolVar(&c.depends, "depends", false, "Transitively include dependencies")
 }
 
 func (c *updateCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -494,7 +498,7 @@ func (c *updateCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 		return subcommands.ExitUsageError
 	}
 
-	list, err := downloadPackageList(config, c.arch)
+	list, err := downloadPackageList(config, c.arch, c.depends)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to download package list: %v\n", err)
 		return subcommands.ExitFailure
