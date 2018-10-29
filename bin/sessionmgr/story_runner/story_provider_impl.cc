@@ -581,6 +581,38 @@ void StoryProviderImpl::GetController(
 }
 
 // |fuchsia::modular::StoryProvider|
+void StoryProviderImpl::GetStories(
+    fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher,
+    PreviousStoriesCallback callback) {
+  auto watcher_ptr = watcher.Bind();
+  auto on_run = Future<>::Create("StoryProviderImpl.GetStories.on_run");
+  auto done =
+      on_run->AsyncMap([this] { return session_storage_->GetAllStoryData(); })
+          ->Map(fxl::MakeCopyable(
+              [this, watcher_ptr = std::move(watcher_ptr)](
+                  fidl::VectorPtr<fuchsia::modular::internal::StoryData>
+                      all_story_data) mutable {
+                FXL_DCHECK(all_story_data);
+                auto result =
+                    fidl::VectorPtr<fuchsia::modular::StoryInfo>::New(0);
+
+                for (auto& story_data : *all_story_data) {
+                  if (!story_data.story_options.kind_of_proto_story) {
+                    result.push_back(std::move(story_data.story_info));
+                  }
+                }
+
+                if (watcher_ptr) {
+                  watchers_.AddInterfacePtr(std::move(watcher_ptr));
+                }
+                return result;
+              }));
+
+  operation_queue_.Add(WrapFutureAsOperation("StoryProviderImpl::GetStories",
+                                             on_run, done, callback));
+}
+
+// |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::PreviousStories(PreviousStoriesCallback callback) {
   auto on_run = Future<>::Create("StoryProviderImpl.PreviousStories.on_run");
   auto done =

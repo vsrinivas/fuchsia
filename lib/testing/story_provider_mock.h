@@ -72,6 +72,15 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
   }
 
   // |fuchsia::modular::StoryProvider|
+  void GetStories(
+      fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher,
+      GetStoriesCallback callback) override {
+    fidl::VectorPtr<fuchsia::modular::StoryInfo> stories;
+    stories.resize(0);
+    callback(std::move(stories));
+  }
+
+  // |fuchsia::modular::StoryProvider|
   void Watch(fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher>
                  watcher) override {
     watchers_.AddInterfacePtr(watcher.Bind());

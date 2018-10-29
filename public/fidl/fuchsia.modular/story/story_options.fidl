@@ -8,7 +8,7 @@ using zx;
 
 struct StoryOptions {
     // Whether or not the story will be hidden on a call to
-    // StoryProvider#PreviousStories.
+    // StoryProvider#GetStories.
     bool kind_of_proto_story;
 
     // If specified, the framework will enforce a story deletion policy on this

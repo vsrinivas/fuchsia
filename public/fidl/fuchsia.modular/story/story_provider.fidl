@@ -42,37 +42,45 @@ interface StoryProvider {
     // DEPRECATED: To delete stories, use PuppetMaster.
     3: DeleteStory(string story_id) -> ();
 
+    // Returns a list of existing stories. If |watcher| is provided, the client will
+    // be notified of story changes (new stories, deleted stories, runtime
+    // state changes).
+    4: GetStories(StoryProviderWatcher? watcher) -> (vector<StoryInfo> story_infos);
+
     // Requests detailed information about the given story. If the story doesn't
     // exist, returns null. GetStoryInfo() called immediately after DeleteStory()
     // (even before DeleteStory() returns) returns null.
-    4: GetStoryInfo(string story_id) -> (StoryInfo? story_info);
+    5: GetStoryInfo(string story_id) -> (StoryInfo? story_info);
 
     // Obtains a controller for a previously created story identified by its story
     // ID. Obtaining the controller doesn't run it yet. If the story doesn't
     // exist, the interface request is closed.
-    5: GetController(string story_id, request<StoryController> request);
+    6: GetController(string story_id, request<StoryController> request);
 
     // Returns info of known stories.
-    6: PreviousStories() -> (vector<StoryInfo> story_infos);
+    // DEPRECATED: In favor of GetStories().
+    7: PreviousStories() -> (vector<StoryInfo> story_infos);
 
     // Returns IDs of stories on the current device that are not STOPPED. More
     // information about the stories can be retrieved using GetStoryInfo(), or by
     // GetController(), then StoryController.GetInfo().
-    7: RunningStories() -> (vector<string> story_ids);
+    // DEPRECATED: Use GetStories() and examine StoryInfo for running state.
+    8: RunningStories() -> (vector<string> story_ids);
 
     // Registers a watcher for changes in the story collection.
-    8: Watch(StoryProviderWatcher watcher);
+    // DEPRECATED: In favor of GetStories().
+    9: Watch(StoryProviderWatcher watcher);
 
     // Registers a watcher for ongoing story activity. Upon registration,
     // StoryActivityWatcher.OnStoryActivity() will be called to update clients
     // with the initial data. See StoryActivityWatcher for motivations.
-    9: WatchActivity(StoryActivityWatcher watcher);
+    10: WatchActivity(StoryActivityWatcher watcher);
 
     // Creates a story and sets the options it will have.
     // EXPERIMENTAL
     //
     // DEPRECATED: To create stories, use PuppetMaster.
-    13: CreateStoryWithOptions(StoryOptions story_options)
+    11: CreateStoryWithOptions(StoryOptions story_options)
             -> (string story_id);
 };
 

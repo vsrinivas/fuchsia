@@ -34,7 +34,16 @@ StoryInfoAcquirer::StoryInfoAcquirer(modular::AgentHost* const agent_host)
   // Watch for changes in Story state.
   agent_host->startup_context()->ConnectToEnvironmentService(
       story_provider_.NewRequest());
-  story_provider_->Watch(story_provider_watcher_binding_.NewBinding());
+  story_provider_->GetStories(
+      story_provider_watcher_binding_.NewBinding(),
+      [this](fidl::VectorPtr<fuchsia::modular::StoryInfo> stories) {
+        for (const auto& story : *stories) {
+          stories_.emplace(
+              std::make_pair(story.id, std::make_unique<StoryWatcherImpl>(
+                                           this, context_writer_.get(),
+                                           story_provider_.get(), story.id)));
+        }
+      });
 
   // Watch for changes in the focused Story.
   agent_host->startup_context()->ConnectToEnvironmentService(

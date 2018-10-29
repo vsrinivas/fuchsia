@@ -179,15 +179,15 @@ class TestApp : public modular::testing::ComponentBase<void> {
     user_shell_link_->Get(nullptr,
                           [this](std::unique_ptr<fuchsia::mem::Buffer> value) {
                             get_link_.Pass();
-                            TestStoryProvider_PreviousStories();
+                            TestStoryProvider_GetStories();
                           });
   }
 
-  TestPoint previous_stories_{"StoryProvider.PreviousStories()"};
+  TestPoint previous_stories_{"StoryProvider.GetStories()"};
 
-  void TestStoryProvider_PreviousStories() {
-    story_provider_->PreviousStories(
-        [this](fidl::VectorPtr<fuchsia::modular::StoryInfo> stories) {
+  void TestStoryProvider_GetStories() {
+    story_provider_->GetStories(
+        nullptr, [this](fidl::VectorPtr<fuchsia::modular::StoryInfo> stories) {
           previous_stories_.Pass();
           TestStoryProvider_GetStoryInfo(std::move(stories));
         });
@@ -412,23 +412,22 @@ class TestApp : public modular::testing::ComponentBase<void> {
                                       fuchsia::modular::StoryState state) {
       story_info_ = std::move(story_info);
       story3_get_controller_.Pass();
-      TestStory3_PreviousStories();
+      TestStory3_GetStories();
     });
   }
 
-  TestPoint story3_previous_stories_{"Story3 GetPreviousStories"};
+  TestPoint story3_previous_stories_{"Story3 GetGetStories"};
 
-  void TestStory3_PreviousStories() {
-    story_provider_->PreviousStories(
-        [this](fidl::VectorPtr<fuchsia::modular::StoryInfo> stories) {
+  void TestStory3_GetStories() {
+    story_provider_->GetStories(
+        nullptr, [this](fidl::VectorPtr<fuchsia::modular::StoryInfo> stories) {
           // Since this is a kind-of-proto story, it shouldn't appear in
-          // PreviousStories calls. Note that we still expect 1 story to be here
+          // GetStories calls. Note that we still expect 1 story to be here
           // since Story1 wasn't deleted.
           if (stories->size() == 1 && stories->at(0).id != story_info_.id) {
             story3_previous_stories_.Pass();
           } else {
-            FXL_LOG(ERROR) << "StoryProvider.PreviousStories() "
-                           << stories->size();
+            FXL_LOG(ERROR) << "StoryProvider.GetStories() " << stories->size();
             for (const auto& item : stories.get()) {
               FXL_LOG(INFO) << item.id;
             }
