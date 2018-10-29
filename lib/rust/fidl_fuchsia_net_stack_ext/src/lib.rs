@@ -91,7 +91,22 @@ impl From<fidl::InterfaceInfo> for InterfaceInfo {
         }: fidl::InterfaceInfo,
     ) -> Self {
         let mac = mac.map(|mac| (*mac).into());
-        let features = fidl_zircon_ethernet_ext::EthernetFeatures::from_bits_truncate(features);
+        let features = features.iter().fold(
+            fidl_zircon_ethernet_ext::EthernetFeatures::empty(),
+            |features, feature| {
+                features | match feature {
+                    fidl::InterfaceFeature::Wlan => {
+                        fidl_zircon_ethernet_ext::EthernetFeatures::WLAN
+                    }
+                    fidl::InterfaceFeature::Synthetic => {
+                        fidl_zircon_ethernet_ext::EthernetFeatures::SYNTHETIC
+                    }
+                    fidl::InterfaceFeature::Loopback => {
+                        fidl_zircon_ethernet_ext::EthernetFeatures::LOOPBACK
+                    }
+                }
+            },
+        );
         let status = InterfaceStatus::from_bits_truncate(status);
         Self {
             id,

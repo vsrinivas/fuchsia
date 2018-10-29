@@ -78,12 +78,12 @@ func netStringToString(ns *net.String) (string, net.AddrInfoStatus) {
 	return string(v[:ns.Len]), net.AddrInfoStatusOk
 }
 
-func (sp *socketProviderImpl) GetAddrInfo(n *net.String, s *net.String, hints *net.AddrInfoHints) (net.AddrInfoStatus, int32, [4]net.AddrInfo, error) {
+func (sp *socketProviderImpl) GetAddrInfo(n *net.String, s *net.String, hints *net.AddrInfoHints) (net.AddrInfoStatus, int32, *net.AddrInfo, *net.AddrInfo, *net.AddrInfo, *net.AddrInfo, error) {
 	var node *string
 	if n != nil {
 		str, status := netStringToString(n)
 		if status != net.AddrInfoStatusOk {
-			return status, 0, [4]net.AddrInfo{}, nil
+			return status, 0, nil, nil, nil, nil, nil
 		}
 		node = &str
 	}
@@ -91,7 +91,7 @@ func (sp *socketProviderImpl) GetAddrInfo(n *net.String, s *net.String, hints *n
 	if s != nil {
 		str, status := netStringToString(s)
 		if status != net.AddrInfoStatusOk {
-			return status, 0, [4]net.AddrInfo{}, nil
+			return status, 0, nil, nil, nil, nil, nil
 		}
 		service = &str
 	}
@@ -115,7 +115,7 @@ func (sp *socketProviderImpl) GetAddrInfo(n *net.String, s *net.String, hints *n
 		if debug {
 			log.Printf("getaddrinfo: sockProto: %v", err)
 		}
-		return net.AddrInfoStatusSystemError, 0, [4]net.AddrInfo{}, nil
+		return net.AddrInfoStatusSystemError, 0, nil, nil, nil, nil, nil
 	}
 
 	var port uint16
@@ -125,7 +125,7 @@ func (sp *socketProviderImpl) GetAddrInfo(n *net.String, s *net.String, hints *n
 			if debug {
 				log.Printf("getaddrinfo: serviceLookup: %v", err)
 			}
-			return net.AddrInfoStatusSystemError, 0, [4]net.AddrInfo{}, nil
+			return net.AddrInfoStatusSystemError, 0, nil, nil, nil, nil, nil
 		}
 	}
 
@@ -146,49 +146,48 @@ func (sp *socketProviderImpl) GetAddrInfo(n *net.String, s *net.String, hints *n
 		}
 	}
 	if len(addrs) == 0 || len(addrs[0]) == 0 {
-		return net.AddrInfoStatusNoName, 0, [4]net.AddrInfo{}, nil
+		return net.AddrInfoStatusNoName, 0, nil, nil, nil, nil, nil
 	}
 
 	// Reply up to 4 addresses.
 	num := int32(0)
-	var results [4]net.AddrInfo
-	for _, addr := range addrs {
-		ai := net.AddrInfo{
+	results := make([]*net.AddrInfo, 4)
+	values := make([]net.AddrInfo, 4)
+	for i := 0; i < len(addrs) && i < 4; i++ {
+		ai := &values[i]
+		*ai = net.AddrInfo{
 			Flags:    0,
 			SockType: hints.SockType,
 			Protocol: hints.Protocol,
 			Port:     port,
 		}
 
-		switch len(addr) {
+		switch len(addrs[i]) {
 		case 4:
 			if hints.Family != AF_UNSPEC && hints.Family != AF_INET {
 				continue
 			}
 			ai.Family = AF_INET
 			ai.Addr.Len = 4
-			copy(ai.Addr.Val[:4], addr)
+			copy(ai.Addr.Val[:4], addrs[i])
 		case 16:
 			if hints.Family != AF_UNSPEC && hints.Family != AF_INET6 {
 				continue
 			}
 			ai.Family = AF_INET6
 			ai.Addr.Len = 16
-			copy(ai.Addr.Val[:16], addr)
+			copy(ai.Addr.Val[:16], addrs[i])
 		default:
 			if debug {
-				log.Printf("getaddrinfo: len(addr)=%d, wrong size", len(addr))
+				log.Printf("getaddrinfo: len(addr)=%d, wrong size", len(addrs[i]))
 			}
 			// TODO: failing to resolve is a valid reply. fill out retval
-			return net.AddrInfoStatusSystemError, 0, results, nil
+			return net.AddrInfoStatusSystemError, 0, nil, nil, nil, nil, nil
 		}
 
 		results[num] = ai
 		num++
-		if int(num) == len(results) {
-			break
-		}
 	}
 
-	return 0, num, results, nil
+	return 0, num, results[0], results[1], results[2], results[3], nil
 }
