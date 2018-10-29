@@ -27,7 +27,7 @@ namespace usb {
 //    zx_status_t wait_status = req->WaitComplete(&usb_);
 class TestRequest {
 public:
-    static fbl::optional<TestRequest> Create(size_t len, uint8_t ep_address);
+    static fbl::optional<TestRequest> Create(size_t len, uint8_t ep_address, size_t parent_req_size);
 
     ~TestRequest();
 
@@ -96,18 +96,20 @@ private:
     };
 
     UsbTester(zx_device_t* parent, const usb_protocol_t& usb,
-              uint8_t bulk_in_addr, uint8_t bulk_out_addr, const IsochLoopbackIntf& isoch_intf)
+              uint8_t bulk_in_addr, uint8_t bulk_out_addr, const IsochLoopbackIntf& isoch_intf,
+              size_t parent_req_size)
         : UsbTesterBase(parent),
           usb_(usb),
           bulk_in_addr_(bulk_in_addr),
           bulk_out_addr_(bulk_out_addr),
-          isoch_loopback_intf_(isoch_intf) {}
+          isoch_loopback_intf_(isoch_intf),
+          parent_req_size_(parent_req_size) {}
 
     zx_status_t Bind();
 
     // Allocates the test requests and adds them to the out_test_reqs list.
     zx_status_t AllocTestReqs(size_t num_reqs, size_t len, uint8_t ep_addr,
-                              fbl::Vector<TestRequest>* out_test_reqs);
+                              fbl::Vector<TestRequest>* out_test_reqs, size_t parent_req_size);
     // Waits for the completion of each request contained in the test_reqs list in sequential
     // order.
     // The caller should check each request for its completion status.
@@ -132,6 +134,7 @@ private:
     uint8_t bulk_out_addr_;
 
     IsochLoopbackIntf isoch_loopback_intf_;
+    size_t parent_req_size_;
 };
 
 }  // namespace usb

@@ -78,6 +78,7 @@ typedef struct {
     list_node_t free_acl_write_reqs;
 
     mtx_t mutex;
+    size_t parent_req_size;
 } hci_t;
 
 static void queue_acl_read_requests_locked(hci_t* hci) {
@@ -629,9 +630,10 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
     hci->usb_zxdev = device;
     memcpy(&hci->usb, &usb, sizeof(hci->usb));
 
+    hci->parent_req_size = usb_get_request_size(&hci->usb);
     for (int i = 0; i < EVENT_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, intr_max_packet, intr_addr, sizeof(usb_request_t));
+        status = usb_request_alloc(&req, intr_max_packet, intr_addr, hci->parent_req_size);
         if (status != ZX_OK) {
             goto fail;
         }
@@ -641,7 +643,7 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
     }
     for (int i = 0; i < ACL_READ_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, ACL_MAX_FRAME_SIZE, bulk_in_addr, sizeof(usb_request_t));
+        status = usb_request_alloc(&req, ACL_MAX_FRAME_SIZE, bulk_in_addr, hci->parent_req_size);
         if (status != ZX_OK) {
             goto fail;
         }
@@ -651,7 +653,7 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
     }
     for (int i = 0; i < ACL_WRITE_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, ACL_MAX_FRAME_SIZE, bulk_out_addr, sizeof(usb_request_t));
+        status = usb_request_alloc(&req, ACL_MAX_FRAME_SIZE, bulk_out_addr, hci->parent_req_size);
         if (status != ZX_OK) {
             goto fail;
         }

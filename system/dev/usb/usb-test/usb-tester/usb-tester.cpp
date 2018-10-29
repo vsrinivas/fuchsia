@@ -37,9 +37,9 @@ inline uint8_t LSB(int n) { return static_cast<uint8_t>(n & 0xFF); }
 
 namespace usb {
 
-fbl::optional<TestRequest> TestRequest::Create(size_t len, uint8_t ep_address) {
+fbl::optional<TestRequest> TestRequest::Create(size_t len, uint8_t ep_address, size_t req_size) {
     usb_request_t* usb_req;
-    zx_status_t status = usb_request_alloc(&usb_req, len, ep_address, sizeof(usb_request_t));
+    zx_status_t status = usb_request_alloc(&usb_req, len, ep_address, req_size);
     if (status != ZX_OK) {
         return fbl::optional<TestRequest>();
     }
@@ -112,7 +112,7 @@ zx_status_t TestRequest::FillData(zircon_usb_tester_DataPatternType data_pattern
 }
 
 zx_status_t UsbTester::AllocTestReqs(size_t num_reqs, size_t len, uint8_t ep_addr,
-                                     fbl::Vector<TestRequest>* out_test_reqs) {
+                                     fbl::Vector<TestRequest>* out_test_reqs, size_t req_size) {
 
     fbl::AllocChecker ac;
     out_test_reqs->reserve(num_reqs, &ac);
@@ -120,7 +120,7 @@ zx_status_t UsbTester::AllocTestReqs(size_t num_reqs, size_t len, uint8_t ep_add
         return ZX_ERR_NO_MEMORY;
     }
     for (size_t i = 0; i < num_reqs; ++i) {
-        auto test_req = TestRequest::Create(len, ep_addr);
+        auto test_req = TestRequest::Create(len, ep_addr, req_size);
         if (!test_req.has_value()) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -178,11 +178,11 @@ zx_status_t UsbTester::BulkLoopback(const zircon_usb_tester_TestParams* params) 
     if (params->len > kReqMaxLen) {
         return ZX_ERR_INVALID_ARGS;
     }
-    auto out_req = TestRequest::Create(params->len, bulk_out_addr_);
+    auto out_req = TestRequest::Create(params->len, bulk_out_addr_, parent_req_size_);
     if (!out_req.has_value()) {
         return ZX_ERR_NO_MEMORY;
     }
-    auto in_req = TestRequest::Create(params->len, bulk_in_addr_);
+    auto in_req = TestRequest::Create(params->len, bulk_in_addr_, parent_req_size_);
     if (!in_req.has_value()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -285,11 +285,11 @@ zx_status_t UsbTester::IsochLoopback(const zircon_usb_tester_TestParams* params,
     // We will likely get a few empty IN requests, as there is a delay between the start of an
     // OUT transfer and it being received. Allocate a few more IN requests to account for this.
     status = AllocTestReqs(num_reqs + kIsochAdditionalInReqs, packet_size, intf->in_addr,
-                           &in_reqs);
+                           &in_reqs, parent_req_size_);
     if (status != ZX_OK) {
         goto done;
     }
-    status = AllocTestReqs(num_reqs, packet_size, intf->out_addr, &out_reqs);
+    status = AllocTestReqs(num_reqs, packet_size, intf->out_addr, &out_reqs, parent_req_size_);
     if (status != ZX_OK) {
         goto done;
     }
@@ -401,6 +401,9 @@ zx_status_t UsbTester::Create(zx_device_t* parent) {
     if (status != ZX_OK) {
         return status;
     }
+
+    size_t parent_req_size = usb_get_request_size(&usb);
+
     // Find the endpoints.
     usb_desc_iter_t iter;
     status = usb_desc_iter_init(&usb, &iter);
@@ -465,7 +468,7 @@ zx_status_t UsbTester::Create(zx_device_t* parent) {
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<UsbTester> dev(
-        new (&ac) UsbTester(parent, usb, bulk_in_addr, bulk_out_addr, isoch_loopback_intf));
+        new (&ac) UsbTester(parent, usb, bulk_in_addr, bulk_out_addr, isoch_loopback_intf, parent_req_size));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }

@@ -56,6 +56,9 @@ typedef struct {
     // list of received packets not yet read by upper layer
     list_node_t completed_reads;
     size_t read_offset;
+
+    size_t parent_req_size;
+
     mtx_t mutex;
 } ftdi_t;
 
@@ -399,9 +402,11 @@ static zx_status_t ftdi_bind(void* ctx, zx_device_t* device) {
 
     mtx_init(&ftdi->mutex, mtx_plain);
 
+    ftdi->parent_req_size = usb_get_request_size(&ftdi->usb);
+
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, USB_BUF_SIZE, bulk_in_addr, sizeof(usb_request_t));
+        status = usb_request_alloc(&req, USB_BUF_SIZE, bulk_in_addr, ftdi->parent_req_size);
         if (status != ZX_OK) {
             goto fail;
         }
@@ -411,7 +416,7 @@ static zx_status_t ftdi_bind(void* ctx, zx_device_t* device) {
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
         usb_request_t* req;
-        status = usb_request_alloc(&req, USB_BUF_SIZE, bulk_out_addr, sizeof(usb_request_t));
+        status = usb_request_alloc(&req, USB_BUF_SIZE, bulk_out_addr, ftdi->parent_req_size);
         if (status != ZX_OK) {
             goto fail;
         }

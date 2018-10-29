@@ -166,7 +166,7 @@ static zx_status_t usb_device_control(void* ctx, uint8_t request_type, uint8_t r
     }
 
     if (req == NULL) {
-        zx_status_t status = usb_request_alloc(&req, length, 0, sizeof(usb_request_t));
+        zx_status_t status = usb_request_alloc(&req, length, 0, dev->req_size);
         if (status != ZX_OK) {
             return status;
         }
@@ -363,7 +363,7 @@ static uint64_t usb_device_get_current_frame(void* ctx) {
 
 static size_t usb_device_get_request_size(void* ctx) {
     usb_device_t* dev = ctx;
-    return sizeof(usb_device_request_internal_t) + dev->parent_request_size;
+    return dev->req_size;
 }
 
 static usb_protocol_ops_t _usb_protocol = {
@@ -497,6 +497,9 @@ zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
 
     // Needed for usb_util_control requests.
     memcpy(&dev->hci, &bus->hci, sizeof(usb_hci_protocol_t));
+    dev->parent_req_size = usb_hci_get_request_size(&dev->hci);
+    dev->req_size = dev->parent_req_size + sizeof(usb_device_req_internal_t);
+
     dev->bus = bus;
     dev->device_id = device_id;
     mtx_init(&dev->callback_lock, mtx_plain);
@@ -583,7 +586,6 @@ zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
     dev->hub_id = hub_id;
     dev->speed = speed;
     dev->config_descs = configs;
-    dev->parent_request_size = usb_hci_get_request_size(&dev->hci);
 
     // callback thread must be started before device_add() since it will recursively
     // bind other drivers to us before it returns.
