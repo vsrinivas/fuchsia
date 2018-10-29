@@ -5,105 +5,21 @@
 package cpp
 
 import (
-	"fidl/compiler/backend/cpp/ir"
-	"fidl/compiler/backend/cpp/templates"
-	"fidl/compiler/backend/types"
+	"io"
 	"os"
 	"path/filepath"
 	"text/template"
+
+	"fidl/compiler/backend/cpp/ir"
+	"fidl/compiler/backend/cpp/templates"
+	"fidl/compiler/backend/types"
 )
 
-type FidlGenerator struct{}
-
-func generateHeader(headerPath string, tmpls *template.Template, tree ir.Root) error {
-	if err := os.MkdirAll(filepath.Dir(headerPath), os.ModePerm); err != nil {
-		return err
-	}
-
-	f, err := os.Create(headerPath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	if err := tmpls.ExecuteTemplate(f, "GenerateHeaderPreamble", tree); err != nil {
-		return err
-	}
-
-	for _, d := range tree.Decls {
-		if err := d.ForwardDeclaration(tmpls, f); err != nil {
-			return err
-		}
-	}
-
-	for _, d := range tree.Decls {
-		if err := d.Declaration(tmpls, f); err != nil {
-			return err
-		}
-	}
-
-	if err := tmpls.ExecuteTemplate(f, "GenerateHeaderPostamble", tree); err != nil {
-		return err
-	}
-
-	if err := tmpls.ExecuteTemplate(f, "GenerateTraitsPreamble", tree); err != nil {
-		return err
-	}
-
-	for _, d := range tree.Decls {
-		if err := d.Traits(tmpls, f); err != nil {
-			return err
-		}
-	}
-
-	if err := tmpls.ExecuteTemplate(f, "GenerateTraitsPostamble", tree); err != nil {
-		return err
-	}
-
-	return nil
+type FidlGenerator struct {
+	tmpls *template.Template
 }
 
-func generateImplementation(implementationPath string, tmpls *template.Template, tree ir.Root) error {
-	if err := os.MkdirAll(filepath.Dir(implementationPath), os.ModePerm); err != nil {
-		return err
-	}
-
-	f, err := os.Create(implementationPath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	if err := tmpls.ExecuteTemplate(f, "GenerateImplementationPreamble", tree); err != nil {
-		return err
-	}
-
-	for _, d := range tree.Decls {
-		err = d.Definition(tmpls, f)
-		if err != nil {
-			return err
-		}
-	}
-
-	if err := tmpls.ExecuteTemplate(f, "GenerateImplementationPostamble", tree); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (_ FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error {
-	tree := ir.Compile(fidl)
-
-	relStem, err := filepath.Rel(config.IncludeBase, config.OutputBase)
-	if err != nil {
-		return err
-	}
-
-	headerPath := config.OutputBase + ".h"
-	implementationPath := config.OutputBase + ".cc"
-	tree.PrimaryHeader = relStem + ".h"
-
+func NewFidlGenerator() *FidlGenerator {
 	tmpls := template.New("CPPTemplates")
 	template.Must(tmpls.Parse(templates.Const))
 	template.Must(tmpls.Parse(templates.Enum))
@@ -113,14 +29,105 @@ func (_ FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error
 	template.Must(tmpls.Parse(templates.Struct))
 	template.Must(tmpls.Parse(templates.Table))
 	template.Must(tmpls.Parse(templates.Union))
+	return &FidlGenerator{
+		tmpls: tmpls,
+	}
+}
 
-	err = generateHeader(headerPath, tmpls, tree)
-	if err != nil {
+// GenerateHeader generates the C++ bindings header.
+func (gen *FidlGenerator) GenerateHeader(wr io.Writer, tree ir.Root) error {
+	tmpls := gen.tmpls
+	if err := tmpls.ExecuteTemplate(wr, "GenerateHeaderPreamble", tree); err != nil {
 		return err
 	}
 
-	err = generateImplementation(implementationPath, tmpls, tree)
+	for _, d := range tree.Decls {
+		if err := d.ForwardDeclaration(tmpls, wr); err != nil {
+			return err
+		}
+	}
+
+	for _, d := range tree.Decls {
+		if err := d.Declaration(tmpls, wr); err != nil {
+			return err
+		}
+	}
+
+	if err := tmpls.ExecuteTemplate(wr, "GenerateHeaderPostamble", tree); err != nil {
+		return err
+	}
+
+	if err := tmpls.ExecuteTemplate(wr, "GenerateTraitsPreamble", tree); err != nil {
+		return err
+	}
+
+	for _, d := range tree.Decls {
+		if err := d.Traits(tmpls, wr); err != nil {
+			return err
+		}
+	}
+
+	if err := tmpls.ExecuteTemplate(wr, "GenerateTraitsPostamble", tree); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GenerateSource generates the C++ bindings source, i.e. implementation.
+func (gen *FidlGenerator) GenerateSource(wr io.Writer, tree ir.Root) error {
+	tmpls := gen.tmpls
+	if err := tmpls.ExecuteTemplate(wr, "GenerateImplementationPreamble", tree); err != nil {
+		return err
+	}
+
+	for _, d := range tree.Decls {
+		if err := d.Definition(tmpls, wr); err != nil {
+			return err
+		}
+	}
+
+	if err := tmpls.ExecuteTemplate(wr, "GenerateImplementationPostamble", tree); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GenerateFidl generates all files required for the C++ bindings.
+func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error {
+	tree := ir.Compile(fidl)
+
+	relStem, err := filepath.Rel(config.IncludeBase, config.OutputBase)
 	if err != nil {
+		return err
+	}
+	tree.PrimaryHeader = relStem + ".h"
+
+	headerPath := config.OutputBase + ".h"
+	sourcePath := config.OutputBase + ".cc"
+
+	if err := os.MkdirAll(filepath.Dir(config.OutputBase), os.ModePerm); err != nil {
+		return err
+	}
+
+	headerFile, err := os.Create(headerPath)
+	if err != nil {
+		return err
+	}
+	defer headerFile.Close()
+
+	if err := gen.GenerateHeader(headerFile, tree); err != nil {
+		return err
+	}
+
+	sourceFile, err := os.Create(sourcePath)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+
+	if err := gen.GenerateSource(sourceFile, tree); err != nil {
 		return err
 	}
 

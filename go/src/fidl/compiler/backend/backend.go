@@ -5,15 +5,16 @@
 package main
 
 import (
+	"flag"
+	"log"
+	"os"
+
 	"fidl/compiler/backend/cmdline"
 	"fidl/compiler/backend/cpp"
 	"fidl/compiler/backend/golang"
 	"fidl/compiler/backend/rust"
 	"fidl/compiler/backend/syzkaller"
 	"fidl/compiler/backend/types"
-	"flag"
-	"log"
-	"os"
 )
 
 type GenerateFidl interface {
@@ -21,7 +22,7 @@ type GenerateFidl interface {
 }
 
 var generators = map[string]GenerateFidl{
-	"cpp":       cpp.FidlGenerator{},
+	"cpp":       cpp.NewFidlGenerator(),
 	"go":        golang.NewFidlGenerator(),
 	"rust":      rust.FidlGenerator{},
 	"syzkaller": syzkaller.FidlGenerator{},
