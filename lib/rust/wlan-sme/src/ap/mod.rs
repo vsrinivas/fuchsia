@@ -12,9 +12,7 @@ use futures::channel::mpsc;
 use log::{debug, info, error, warn};
 use wlan_rsn::{
     Authenticator,
-    key::exchange::Key,
     nonce::NonceReader,
-    rsna::{UpdateSink, SecAssocUpdate},
     rsne::Rsne
 };
 
@@ -71,6 +69,10 @@ struct InfraBss<T: Tokens> {
     ssid: Ssid,
     rsn_cfg: Option<RsnCfg>,
     client_map: remote_client::Map,
+    ctx: Context<T>,
+}
+
+pub struct Context<T: Tokens> {
     device_info: DeviceInfo,
     mlme_sink: MlmeSink,
     user_sink: UserSink<T>,
@@ -130,15 +132,17 @@ impl<T: Tokens> ApSme<T> {
                         ssid: config.ssid,
                         rsn_cfg,
                         client_map: Default::default(),
-                        device_info,
-                        mlme_sink,
-                        user_sink,
+                        ctx: Context {
+                            device_info,
+                            mlme_sink,
+                            user_sink,
+                        },
                     }
                 }
             }
-            State::Started { bss: InfraBss { ref mut user_sink, .. } } => {
+            State::Started { bss: InfraBss { ref mut ctx, .. } } => {
                 let result = StartResult::AlreadyStarted;
-                user_sink.send(UserEvent::StartComplete { token, result });
+                ctx.user_sink.send(UserEvent::StartComplete { token, result });
                 state
             }
         });
@@ -152,14 +156,14 @@ impl<T: Tokens> ApSme<T> {
             },
             State::Started { bss } => {
                 let req = fidl_mlme::StopRequest { ssid: bss.ssid.clone() };
-                bss.mlme_sink.send(MlmeRequest::Stop(req));
+                bss.ctx.mlme_sink.send(MlmeRequest::Stop(req));
                 // Currently, MLME doesn't send any response back. We simply assume
                 // that the stop request succeeded immediately
-                bss.user_sink.send(UserEvent::StopComplete { token });
+                bss.ctx.user_sink.send(UserEvent::StopComplete { token });
                 State::Idle {
-                    device_info: bss.device_info,
-                    mlme_sink: bss.mlme_sink,
-                    user_sink: bss.user_sink,
+                    device_info: bss.ctx.device_info,
+                    mlme_sink: bss.ctx.mlme_sink,
+                    user_sink: bss.ctx.user_sink,
                 }
             }
         });
@@ -210,7 +214,7 @@ impl<T: Tokens> InfraBss<T> {
             peer_sta_address: ind.peer_sta_address,
             result_code,
         };
-        self.mlme_sink.send(MlmeRequest::AuthResponse(resp));
+        self.ctx.mlme_sink.send(MlmeRequest::AuthResponse(resp));
     }
 
     fn handle_deauth_ind(&mut self, ind: fidl_mlme::DeauthenticateIndication) {
@@ -242,9 +246,13 @@ impl<T: Tokens> InfraBss<T> {
             association_id: aid,
         };
 
-        self.mlme_sink.send(MlmeRequest::AssocResponse(resp));
+        self.ctx.mlme_sink.send(MlmeRequest::AssocResponse(resp));
         if result_code == fidl_mlme::AssociateResultCodes::Success && self.rsn_cfg.is_some() {
-            self.initiate_key_exchange(&ind.peer_sta_address);
+            match self.client_map.get_mut_client(&ind.peer_sta_address) {
+                Some(client) => client.initiate_key_exchange(&mut self.ctx),
+                None => error!("cannot initiate key exchange for unknown client: {:02X?}",
+                               ind.peer_sta_address),
+            }
         }
     }
 
@@ -265,14 +273,14 @@ impl<T: Tokens> InfraBss<T> {
 
         // Note: There should be one Reader per device, not per SME.
         // Follow-up with improving on this.
-        let nonce_rdr = NonceReader::new(&self.device_info.addr[..]).map_err(|e| {
+        let nonce_rdr = NonceReader::new(&self.ctx.device_info.addr[..]).map_err(|e| {
             warn!("failed to create NonceReader: {}", e);
             fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
         })?;
         let authenticator =
             Authenticator::new_wpa2psk_ccmp128(nonce_rdr,
                                                &self.ssid, &a_rsn.password, client_addr.clone(),
-                                               s_rsne, self.device_info.addr, a_rsn.rsne)
+                                               s_rsne, self.ctx.device_info.addr, a_rsn.rsne)
                 .map_err(|e| {
                     warn!("failed to create authenticator: {}", e);
                     fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
@@ -290,93 +298,10 @@ impl<T: Tokens> InfraBss<T> {
 
     fn handle_eapol_ind(&mut self, ind: fidl_mlme::EapolIndication) -> Result<(), failure::Error> {
         let client_addr = &ind.src_addr;
-        let authenticator = match self.client_map.get_mut_client(client_addr)
-                                                 .and_then(|c| c.authenticator.as_mut()) {
-            Some(authenticator) => authenticator,
-            None => bail!("authenticator not found for {:?}; ignoring EapolInd msg", client_addr),
-        };
-        let mic_size = authenticator.get_negotiated_rsne().mic_size;
-        match eapol::key_frame_from_bytes(&ind.data, mic_size).to_full_result() {
-            Ok(key_frame) => {
-                let frame = eapol::Frame::Key(key_frame);
-                let mut update_sink = UpdateSink::default();
-                match authenticator.on_eapol_frame(&mut update_sink, &frame) {
-                    Ok(()) => self.process_authenticator_updates(&update_sink,client_addr),
-                    Err(e) => bail!("failed processing EAPoL key frame: {}", e),
-                }
-            },
-            Err(_) => bail!("error parsing EAPoL key frame"),
+        match self.client_map.get_mut_client(client_addr) {
+            Some(client) => client.handle_eapol_ind(ind, &mut self.ctx),
+            None => bail!("client {:02X?} not found; ignoring EapolInd msg", client_addr),
         }
-        Ok(())
-    }
-
-    fn initiate_key_exchange(&mut self, client_addr: &MacAddr) {
-        match self.client_map.get_mut_client(client_addr).and_then(|c| c.authenticator.as_mut()) {
-            Some(authenticator) => {
-                let mut update_sink = UpdateSink::default();
-                match authenticator.initiate(&mut update_sink) {
-                    Ok(()) => self.process_authenticator_updates(&update_sink, client_addr),
-                    Err(e) => error!("error initiating key exchange: {}", e),
-                }
-            }
-            None => error!("authenticator not found for {:?}", client_addr),
-        }
-    }
-
-    fn process_authenticator_updates(&mut self, update_sink: &UpdateSink, s_addr: &MacAddr) {
-        for update in update_sink {
-            match update {
-                SecAssocUpdate::TxEapolKeyFrame(frame) => {
-                    let mut buf = Vec::with_capacity(frame.len());
-                    frame.as_bytes(false, &mut buf);
-                    self.mlme_sink.send(MlmeRequest::Eapol(
-                        fidl_mlme::EapolRequest {
-                            src_addr: self.device_info.addr.clone(),
-                            dst_addr: s_addr.clone(),
-                            data: buf,
-                        }
-                    ));
-                }
-                SecAssocUpdate::Key(key) => self.send_key(key, s_addr),
-                _ => {}
-            }
-        }
-    }
-
-    fn send_key(&mut self, key: &Key, s_addr: &MacAddr) {
-        let set_key_descriptor = match key {
-            Key::Ptk(ptk) => {
-                fidl_mlme::SetKeyDescriptor {
-                    key: ptk.tk().to_vec(),
-                    key_id: 0,
-                    key_type: fidl_mlme::KeyType::Pairwise,
-                    address: s_addr.clone(),
-                    rsc: [0u8; 8],
-                    cipher_suite_oui: eapol::to_array(&ptk.cipher.oui[..]),
-                    cipher_suite_type: ptk.cipher.suite_type,
-                }
-            }
-            Key::Gtk(gtk) => {
-                fidl_mlme::SetKeyDescriptor {
-                    key: gtk.tk().to_vec(),
-                    key_id: gtk.key_id() as u16,
-                    key_type: fidl_mlme::KeyType::Group,
-                    address: [0xFFu8; 6],
-                    rsc: [0u8; 8],
-                    cipher_suite_oui: eapol::to_array(&gtk.cipher.oui[..]),
-                    cipher_suite_type: gtk.cipher.suite_type,
-                }
-            }
-            _ => {
-                error!("unsupported key type in UpdateSink");
-                return;
-            }
-        };
-        self.mlme_sink.send(MlmeRequest::SetKeys(
-            fidl_mlme::SetKeysRequest {
-                keylist: vec![set_key_descriptor]
-            }
-        ));
     }
 }
 

@@ -1,17 +1,25 @@
-use failure::ensure;
+use failure::{bail, ensure};
+use fidl_fuchsia_wlan_mlme as fidl_mlme;
+use log::error;
 use std::collections::HashMap;
-use wlan_rsn::Authenticator;
+use wlan_rsn::{
+    Authenticator,
+    key::exchange::Key,
+    rsna::{UpdateSink, SecAssocUpdate},
+};
 
-use crate::ap::aid::{self, AssociationId};
-use crate::MacAddr;
+use crate::ap::{
+    aid::{self, AssociationId},
+    Context,
+    Tokens
+};
+use crate::{MacAddr, MlmeRequest};
 
 #[derive(Debug)]
 pub struct RemoteClient {
     pub addr: MacAddr,
     pub aid: AssociationId,
-    // TODO: change this to Authenticator type when cl/202680 lands
     pub authenticator: Option<Authenticator>,
-    _inner: (),
 }
 
 impl RemoteClient {
@@ -20,8 +28,101 @@ impl RemoteClient {
             addr,
             aid,
             authenticator,
-            _inner: (),
         }
+    }
+
+    pub fn handle_eapol_ind<T: Tokens>(&mut self, ind: fidl_mlme::EapolIndication,
+                                       ctx: &mut Context<T>)
+        -> Result<(), failure::Error> {
+
+        let authenticator = match self.authenticator.as_mut() {
+            Some(authenticator) => authenticator,
+            None => bail!("ignoring EapolInd msg; BSS is not protected"),
+        };
+        let mic_size = authenticator.get_negotiated_rsne().mic_size;
+        match eapol::key_frame_from_bytes(&ind.data, mic_size).to_full_result() {
+            Ok(key_frame) => {
+                let frame = eapol::Frame::Key(key_frame);
+                let mut update_sink = UpdateSink::default();
+                match authenticator.on_eapol_frame(&mut update_sink, &frame) {
+                    Ok(()) => self.process_authenticator_updates(&update_sink, ctx),
+                    Err(e) => bail!("failed processing EAPoL key frame: {}", e),
+                }
+            },
+            Err(_) => bail!("error parsing EAPoL key frame"),
+        }
+        Ok(())
+    }
+
+    pub fn initiate_key_exchange<T: Tokens>(&mut self, ctx: &mut Context<T>) {
+        match self.authenticator.as_mut() {
+            Some(authenticator) => {
+                let mut update_sink = UpdateSink::default();
+                match authenticator.initiate(&mut update_sink) {
+                    Ok(()) => self.process_authenticator_updates(&update_sink, ctx),
+                    Err(e) => error!("error initiating key exchange: {}", e),
+                }
+            }
+            None => error!("authenticator not found for {:?}", self.addr),
+        }
+    }
+
+    fn process_authenticator_updates<T: Tokens>(&mut self, update_sink: &UpdateSink,
+                                                ctx: &mut Context<T>) {
+        for update in update_sink {
+            match update {
+                SecAssocUpdate::TxEapolKeyFrame(frame) => {
+                    let mut buf = Vec::with_capacity(frame.len());
+                    frame.as_bytes(false, &mut buf);
+                    let a_addr = ctx.device_info.addr.clone();
+                    ctx.mlme_sink.send(MlmeRequest::Eapol(
+                        fidl_mlme::EapolRequest {
+                            src_addr: a_addr,
+                            dst_addr: self.addr.clone(),
+                            data: buf,
+                        }
+                    ));
+                }
+                SecAssocUpdate::Key(key) => self.send_key(key, ctx),
+                _ => {}
+            }
+        }
+    }
+
+    fn send_key<T: Tokens>(&mut self, key: &Key, ctx: &mut Context<T>) {
+        let set_key_descriptor = match key {
+            Key::Ptk(ptk) => {
+                fidl_mlme::SetKeyDescriptor {
+                    key: ptk.tk().to_vec(),
+                    key_id: 0,
+                    key_type: fidl_mlme::KeyType::Pairwise,
+                    address: self.addr.clone(),
+                    rsc: [0u8; 8],
+                    cipher_suite_oui: eapol::to_array(&ptk.cipher.oui[..]),
+                    cipher_suite_type: ptk.cipher.suite_type,
+                }
+            }
+            Key::Gtk(gtk) => {
+                fidl_mlme::SetKeyDescriptor {
+                    key: gtk.tk().to_vec(),
+                    key_id: gtk.key_id() as u16,
+                    key_type: fidl_mlme::KeyType::Group,
+                    address: [0xFFu8; 6],
+                    rsc: [0u8; 8],
+                    cipher_suite_oui: eapol::to_array(&gtk.cipher.oui[..]),
+                    cipher_suite_type: gtk.cipher.suite_type,
+                }
+            }
+            _ => {
+                error!("unsupported key type in UpdateSink");
+                return;
+            }
+        };
+        ctx.mlme_sink.send(MlmeRequest::SetKeys(
+            fidl_mlme::SetKeysRequest {
+                keylist: vec![set_key_descriptor]
+            }
+        ));
     }
 }
 
