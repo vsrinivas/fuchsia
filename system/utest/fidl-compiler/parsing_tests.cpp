@@ -4,6 +4,8 @@
 
 #include <unittest/unittest.h>
 
+#include <locale.h>
+
 #include <fidl/flat_ast.h>
 #include <fidl/lexer.h>
 #include <fidl/parser.h>
@@ -169,6 +171,50 @@ struct test_ {
     END_TEST;
 }
 
+class LocaleSwapper {
+public:
+    explicit LocaleSwapper(const char* new_locale) {
+        old_locale_ = setlocale(LC_ALL, new_locale);
+    }
+    ~LocaleSwapper() {
+        setlocale(LC_ALL, old_locale_);
+    }
+
+private:
+    const char* old_locale_;
+};
+
+static bool invalid_character_test(void) {
+    BEGIN_TEST;
+
+    class InvalidCharacterLibrary : public TestLibrary {
+    public:
+        InvalidCharacterLibrary()
+        : TestLibrary("invalid.character.fidl", R"FIDL(
+library fidl.test.maxbytes;
+
+// This is all alphanumeric in the appropriate locale, but not a valid
+// identifier.
+struct ß {
+    int32 x;
+};
+
+)FIDL") {}
+    } test_library;
+
+    {
+        LocaleSwapper("de_DE.iso88591");
+        EXPECT_FALSE(test_library.Compile());
+    }
+
+    const auto& errors = test_library.errors();
+    EXPECT_NE(errors.size(), 0);
+    ASSERT_STR_STR(errors[0].data(), "invalid character");
+    printf("GGKK %s\n", errors[0].data());
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(parser_tests);
@@ -178,4 +224,5 @@ RUN_TEST(parsing_reserved_words_in_interface_test);
 RUN_TEST(bad_char_at_sign_test);
 RUN_TEST(bad_char_slash_test);
 RUN_TEST(bad_identifier_test);
+RUN_TEST(invalid_character_test);
 END_TEST_CASE(parser_tests);
