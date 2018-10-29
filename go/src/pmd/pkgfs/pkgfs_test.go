@@ -44,21 +44,6 @@ func tmain(m *testing.M) int {
 	}
 	defer os.RemoveAll(blobfsPath)
 
-	staticFile, err := ioutil.TempFile("", "pkgfs-test-static-index")
-	if err != nil {
-		panic(err)
-	}
-	fmt.Fprintf(staticFile, "static-package/0=331e2e4b22e61fba85c595529103f957d7fe19731a278853361975d639a1bdd8\n")
-	staticFile.Close()
-	staticPath := staticFile.Name()
-	defer os.RemoveAll(staticPath)
-
-	indexPath, err := ioutil.TempDir("", "pkgfs-test-index")
-	if err != nil {
-		panic(err)
-	}
-	defer os.RemoveAll(indexPath)
-
 	rd, err := ramdisk.New(10 * 1024 * 1024)
 	if err != nil {
 		panic(err)
@@ -75,6 +60,71 @@ func tmain(m *testing.M) int {
 	defer rd.Umount(blobfsPath)
 
 	fmt.Printf("blobfs mounted at %s\n", blobfsPath)
+
+	cfg := build.TestConfig()
+	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+	build.TestPackage(cfg)
+
+	err = build.Update(cfg)
+	if err != nil {
+		panic(err)
+	}
+	err = build.Sign(cfg)
+	if err != nil {
+		panic(err)
+	}
+	_, err = build.Seal(cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	src, err := os.Open(filepath.Join(cfg.OutputDir, "meta.far"))
+	if err != nil {
+		panic(err)
+	}
+
+	var tree merkle.Tree
+
+	_, err = tree.ReadFrom(src)
+	if err != nil {
+		panic(err)
+	}
+	merkleroot := fmt.Sprintf("%x", tree.Root())
+
+	src.Seek(0, os.SEEK_SET)
+
+	f, err := os.Create(filepath.Join(blobfsPath, merkleroot))
+	if err != nil {
+		panic(err)
+	}
+	fi, err := src.Stat()
+	if err != nil {
+		panic(err)
+	}
+	if err := f.Truncate(fi.Size()); err != nil {
+		panic(err)
+	}
+	if _, err := io.Copy(f, src); err != nil {
+		panic(err)
+	}
+	if err := f.Close(); err != nil {
+		panic(err)
+	}
+
+	staticFile, err := ioutil.TempFile("", "pkgfs-test-static-index")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Fprintf(staticFile, "static-package/0=%s\n", merkleroot)
+	staticFile.Close()
+	staticPath := staticFile.Name()
+	defer os.RemoveAll(staticPath)
+
+	indexPath, err := ioutil.TempDir("", "pkgfs-test-index")
+	if err != nil {
+		panic(err)
+	}
+	defer os.RemoveAll(indexPath)
 
 	d, err := ioutil.TempDir("", "pkgfs-test-mount")
 	if err != nil {
@@ -245,6 +295,15 @@ func TestAddPackage(t *testing.T) {
 			t.Errorf("got %q, want %q", got, want)
 		}
 	}
+
+	// assert that the dynamically added package appears in /versions
+	contents2, err := ioutil.ReadFile(filepath.Join(pkgfsMount, "versions", merkleroot, "meta", "contents"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := string(contents2), string(contents); got != want {
+		t.Errorf("add dynamic package, bad version: got %q, want %q", got, want)
+	}
 }
 
 func TestListContainsStatic(t *testing.T) {
@@ -270,7 +329,7 @@ func TestListRoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"install", "needs", "packages", "system"}
+	want := []string{"install", "needs", "packages", "system", "versions"}
 	sort.Strings(names)
 	sort.Strings(want)
 
@@ -285,6 +344,30 @@ func TestListRoot(t *testing.T) {
 		}
 	}
 
+}
+
+func TestVersions(t *testing.T) {
+	names, err := filepath.Glob(filepath.Join(pkgfsMount, "versions", "*"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(names) == 0 {
+		t.Fatal("observed no versions")
+	}
+
+	for _, name := range names {
+		if !merklePat.MatchString(filepath.Base(name)) {
+			t.Fatalf("got non-merkle version: %s", name)
+		}
+
+		b, err := ioutil.ReadFile(filepath.Join(name, "meta"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got, want := string(b), filepath.Base(name); got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	}
 }
 
 func copyBlob(dest, src string) error {

@@ -7,11 +7,13 @@
 package index
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 
 	"fuchsia.googlesource.com/pmd/amberer"
@@ -256,14 +258,18 @@ func (idx *DynamicIndex) PackageBlobs() ([]string, error) {
 		return nil, err
 	}
 
+	var errs []string
 	blobIds := make([]string, 0, len(paths))
 	for _, path := range paths {
 		merkle, err := ioutil.ReadFile(path)
 		if err != nil {
-			return nil, err
+			errs = append(errs, err.Error())
 		}
 		blobIds = append(blobIds, string(merkle))
 	}
-	log.Printf("Number of blobs in dynamic index: %d", len(blobIds))
-	return blobIds, nil
+	if len(errs) > 0 {
+		err = fmt.Errorf("package index errors: %s", strings.Join(errs, ", "))
+		log.Printf("%s", err)
+	}
+	return blobIds, err
 }
