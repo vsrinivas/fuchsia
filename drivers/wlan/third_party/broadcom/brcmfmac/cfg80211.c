@@ -1119,12 +1119,14 @@ static uint16_t brcmf_map_fw_linkdown_reason(const struct brcmf_event_msg* e) {
     switch (e->event_code) {
     case BRCMF_E_DEAUTH:
     case BRCMF_E_DEAUTH_IND:
+        reason = WLAN_DEAUTH_REASON_LEAVING_NETWORK_DEAUTH;
+        break;
     case BRCMF_E_DISASSOC_IND:
-        reason = e->reason;
+        reason = WLAN_DEAUTH_REASON_LEAVING_NETWORK_DISASSOC;
         break;
     case BRCMF_E_LINK:
     default:
-        reason = 0;
+        reason = WLAN_DEAUTH_REASON_UNSPECIFIED;
         break;
     }
     return reason;
@@ -1155,11 +1157,11 @@ static zx_status_t brcmf_set_pmk(struct brcmf_if* ifp, const uint8_t* pmk_data, 
 
 static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif, uint16_t reason) {
     struct net_device* ndev = vif->wdev.netdev;
-    wlanif_disassoc_indication_t ind;
+    wlanif_deauth_indication_t ind;
 
     memcpy(ind.peer_sta_address, vif->profile.bssid, ETH_ALEN);
     ind.reason_code = reason;
-    ndev->if_callbacks->disassoc_ind(ndev->if_callback_cookie, &ind);
+    ndev->if_callbacks->deauth_ind(ndev->if_callback_cookie, &ind);
 }
 
 static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t reason) {
@@ -1352,7 +1354,7 @@ static zx_status_t brcmf_cfg80211_leave_ibss(struct wiphy* wiphy, struct net_dev
         return ZX_OK;
     }
 
-    brcmf_link_down(ifp->vif, WLAN_REASON_DEAUTH_LEAVING);
+    brcmf_link_down(ifp->vif, WLAN_DEAUTH_REASON_LEAVING_NETWORK_DEAUTH);
     brcmf_net_setcarrier(ifp, false);
 
     brcmf_dbg(TRACE, "Exit\n");
@@ -3337,7 +3339,7 @@ static zx_status_t brcmf_cfg80211_suspend(struct wiphy* wiphy, struct cfg80211_w
              * disassociate from AP to save power while system is
              * in suspended state
              */
-            brcmf_link_down(vif, WLAN_REASON_UNSPECIFIED);
+            brcmf_link_down(vif, WLAN_DEAUTH_REASON_UNSPECIFIED);
             /* Make sure WPA_Supplicant receives all the event
              * generated due to DISASSOC call to the fw to keep
              * the state fw and WPA_Supplicant state consistent
@@ -6200,7 +6202,7 @@ static zx_status_t __brcmf_cfg80211_down(struct brcmf_if* ifp) {
      * from AP to save power
      */
     if (check_vif_up(ifp->vif)) {
-        brcmf_link_down(ifp->vif, WLAN_REASON_UNSPECIFIED);
+        brcmf_link_down(ifp->vif, WLAN_DEAUTH_REASON_UNSPECIFIED);
 
         /* Make sure WPA_Supplicant receives all the event
            generated due to DISASSOC call to the fw to keep
