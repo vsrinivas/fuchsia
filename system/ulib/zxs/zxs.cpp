@@ -223,7 +223,27 @@ zx_status_t zxs_getpeername(const zxs_socket_t* socket, struct sockaddr* addr,
 zx_status_t zxs_getsockopt(const zxs_socket_t* socket, int32_t level,
                            int32_t name, void* buffer, size_t capacity,
                            size_t* out_actual) {
-    return ZX_ERR_NOT_SUPPORTED;
+    zxrio_sockopt_req_reply_t req_reply;
+    memset(&req_reply, 0, sizeof(req_reply));
+    req_reply.level = level;
+    req_reply.optname = name;
+    if (capacity > sizeof(req_reply.optval)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    memcpy(req_reply.optval, buffer, capacity);
+    req_reply.optlen = static_cast<socklen_t>(capacity);
+    zx_status_t status = zxsio_op(socket->socket, ZXSIO_GETSOCKOPT, 0,
+                                  sizeof(req_reply), &req_reply,
+                                  sizeof(req_reply));
+    if (status < 0) {
+        return status;
+    }
+    size_t actual = (capacity < req_reply.optlen) ? capacity : req_reply.optlen;
+    memcpy(buffer, req_reply.optval, actual);
+    // Notice that |*out_actual| could be larger than |capacity| if the server
+    // misbehaves. It would be safer to set |*out_actual| to |actual|.
+    *out_actual = req_reply.optlen;
+    return ZX_OK;
 }
 
 zx_status_t zxs_setsockopts(const zxs_socket_t* socket,
