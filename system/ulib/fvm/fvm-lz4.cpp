@@ -196,7 +196,10 @@ zx_status_t SparseReader::ReadData(uint8_t* data, size_t length, size_t* actual)
             }
 
             // Make sure we have read all data from in_buf_
-            ZX_ASSERT(in_buf_.size == 0);
+            if (in_buf_.size > 0) {
+                return ZX_ERR_IO;
+            }
+
             in_buf_.offset = 0;
 
             // Copy newly decompressed data from outbuf
