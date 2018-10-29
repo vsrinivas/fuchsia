@@ -128,7 +128,7 @@ pub async fn run(hd: HostDispatcher, host: Arc<RwLock<HostDevice>>) -> fidl::Res
                 host_.write().info.state = Some(Box::new(clone_host_state(&state)));
             }
             // TODO(NET-968): Add integration test for this.
-            HostEvent::OnDeviceUpdated { mut device } => hd.on_device_updated(device),
+            HostEvent::OnDeviceUpdated { device } => hd.on_device_updated(device),
             // TODO(NET-1038): Add integration test for this.
             HostEvent::OnDeviceRemoved { identifier } => hd.on_device_removed(identifier),
             HostEvent::OnNewBondingData { data } => {

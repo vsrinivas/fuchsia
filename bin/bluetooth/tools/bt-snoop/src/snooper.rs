@@ -153,7 +153,7 @@ impl Unpin for Snooper {}
 impl Stream for Snooper {
     type Item = SnooperPacket;
 
-    fn poll_next(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
+    fn poll_next(self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
         let mut buf = MessageBuf::new();
         match self.chan.recv_from(&mut buf, lw) {
             Poll::Ready(_t) => Poll::Ready(Snooper::build_pkt(buf)),

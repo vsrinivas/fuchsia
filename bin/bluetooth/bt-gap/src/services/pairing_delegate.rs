@@ -75,7 +75,7 @@ fn handle_remote_keypress(
 }
 
 pub fn start_pairing_delegate(
-    mut hd: HostDispatcher, channel: fasync::Channel,
+    hd: HostDispatcher, channel: fasync::Channel,
 ) -> impl Future<Output = fidl::Result<()>> {
     let stream = PairingDelegateRequestStream::from_channel(channel);
     stream.try_for_each_concurrent(MAX_CONCURRENT_REQUESTS, move |event| {

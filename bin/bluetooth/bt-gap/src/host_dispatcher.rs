@@ -85,7 +85,7 @@ pub struct DiscoverableRequestToken {
 impl Drop for DiscoverableRequestToken {
     fn drop(&mut self) {
         if let Some(host) = self.adap.upgrade() {
-            let mut host = host.write();
+            let host = host.write();
             host.set_discoverable(false);
         }
     }

@@ -326,10 +326,9 @@ mod tests {
     fn test_get_persistent_credential_from_attestation_jwt() {
         async_test(|dev_auth_provider_iotid| {
             let attestation_signer = get_attestation_signer();
-            let mut certificate_chain: Vec<String> = Vec::new();
             let mut jwt_params = AttestationJwtParams {
                 credential_eckey: get_credential_key(),
-                certificate_chain: certificate_chain,
+                certificate_chain: vec![],
                 auth_code: "test_auth_code".to_string(),
             };
             dev_auth_provider_iotid

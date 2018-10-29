@@ -171,7 +171,7 @@ mod tests {
         let bss1 = fake_bss_with_bssid(b"foo".to_vec(), [1, 1, 1, 1, 1, 1]);
         let bss2 = fake_bss_with_bssid(b"bar".to_vec(), [2, 2, 2, 2, 2, 2]);
         let bss3 = fake_bss_with_bssid(b"foo".to_vec(), [3, 3, 3, 3, 3, 3]);
-        let mut ess_list = group_networks(&vec![bss1, bss2, bss3]);
+        let ess_list = group_networks(&vec![bss1, bss2, bss3]);
 
         let mut ssid_list = ess_list.into_iter().map(|ess| ess.best_bss.ssid).collect::<Vec<_>>();
         ssid_list.sort();

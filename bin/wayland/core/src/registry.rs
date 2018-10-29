@@ -146,7 +146,7 @@ mod tests {
         }
 
         // Build the registry & verify initial counts.
-        let mut registry = registry.build();
+        let registry = registry.build();
         assert_eq!(0, counts.lock().interface_1_bind_count);
         assert_eq!(0, counts.lock().interface_2_bind_count);
 
@@ -156,7 +156,7 @@ mod tests {
         let _executor = fasync::Executor::new();
         let mut client = Client::new(fasync::Channel::from_channel(c1)?, registry.clone());
 
-        let mut receivers: Vec<Box<MessageReceiver>> = registry
+        let receivers: Vec<Box<MessageReceiver>> = registry
             .lock()
             .globals
             .iter_mut()

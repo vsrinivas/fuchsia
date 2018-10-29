@@ -310,8 +310,8 @@ async fn fetch_and_discard_url(
     Ok(())
 }
 
-async fn get_ip_addrs_for_wlan_iface(
-    wlan_svc: &'static DeviceServiceProxy, network_svc: &'static StackProxy, wlan_iface_id: u16,
+async fn get_ip_addrs_for_wlan_iface<'a>(
+    wlan_svc: &'a DeviceServiceProxy, network_svc: &'a StackProxy, wlan_iface_id: u16,
 ) -> Result<Vec<netstack::InterfaceAddress>, Error> {
     // temporary implementation for getting the ip addrs for a wlan iface.  A more robust
     // lookup will be designed and implemented in the future (TODO: <bug already filed?>)

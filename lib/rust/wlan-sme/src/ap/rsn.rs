@@ -158,21 +158,21 @@ mod tests {
 
     #[test]
     fn test_rsne_unsupported_group_data_cipher() {
-        let mut s_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
+        let s_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
         let a_rsne = make_rsne(Some(cipher::GCMP_256), vec![cipher::CCMP_128], vec![akm::PSK]);
         assert!(!is_valid_rsne_subset(&s_rsne, &a_rsne).expect("expect Ok result"));
     }
 
     #[test]
     fn test_rsne_unsupported_pairwise_cipher() {
-        let mut s_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
+        let s_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
         let a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::BIP_CMAC_256], vec![akm::PSK]);
         assert!(!is_valid_rsne_subset(&s_rsne, &a_rsne).expect("expect Ok result"));
     }
 
     #[test]
     fn test_rsne_unsupported_akm() {
-        let mut s_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
+        let s_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
         let a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::EAP]);
         assert!(!is_valid_rsne_subset(&s_rsne, &a_rsne).expect("expect Ok result"));
     }

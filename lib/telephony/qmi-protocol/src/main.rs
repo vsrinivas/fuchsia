@@ -49,7 +49,7 @@ fn main() -> Result<(), Error> {
     let mut file = fs::File::create(&outputs[0])?;
     let mut c = codegen::Codegen::new(&mut file);
     for file in inputs.into_iter().take_while(|s| s != "-o") {
-        let mut svc_file = fs::File::open(&file)?;
+        let svc_file = fs::File::open(&file)?;
         svc_set.parse_service_file(svc_file)?;
     }
 

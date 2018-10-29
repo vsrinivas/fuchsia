@@ -26,7 +26,7 @@ impl ControlSession {
 
 /// Build the ControlImpl to interact with fidl messages
 /// State is stored in the HostDispatcher object
-pub async fn start_control_service(mut hd: HostDispatcher, chan: fasync::Channel) -> Result<(), Error> {
+pub async fn start_control_service(hd: HostDispatcher, chan: fasync::Channel) -> Result<(), Error> {
     let mut stream = ControlRequestStream::from_channel(chan);
     hd.add_event_listener(stream.control_handle());
     let mut session = ControlSession::new();
@@ -77,7 +77,7 @@ async fn handler(
             Ok(())
         }
         ControlRequest::SetPairingDelegate { delegate, responder } => {
-            let mut status = match delegate.map(|d| d.into_proxy()) {
+            let status = match delegate.map(|d| d.into_proxy()) {
                 Some(Ok(proxy)) => hd.set_pairing_delegate(Some(proxy)),
                 Some(Err(_ignored)) => return Ok(()), // TODO - should we return this error?
                 None => hd.set_pairing_delegate(None)
