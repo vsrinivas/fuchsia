@@ -155,14 +155,8 @@ TEST_F(NetstackLaunchTest, AddEthernetDevice) {
   stack->ListInterfaces(
       [&](::fidl::VectorPtr<::fuchsia::net::stack::InterfaceInfo> interfaces) {
         for (const auto& iface : *interfaces) {
-          bool loopback = false;
-          for (const auto& feat : *iface.features) {
-            if (feat == ::fuchsia::net::stack::InterfaceFeature::loopback) {
-              loopback = true;
-              break;
-            }
-          }
-          ASSERT_TRUE(loopback);
+          ASSERT_TRUE(iface.features &
+                      ::zircon::ethernet::INFO_FEATURE_LOOPBACK);
         }
         list_ifs = true;
       });
@@ -188,14 +182,7 @@ TEST_F(NetstackLaunchTest, AddEthernetDevice) {
   stack->ListInterfaces(
       [&](::fidl::VectorPtr<::fuchsia::net::stack::InterfaceInfo> interfaces) {
         for (const auto& iface : *interfaces) {
-          bool loopback = false;
-          for (const auto& feat : *iface.features) {
-            if (feat == ::fuchsia::net::stack::InterfaceFeature::loopback) {
-              loopback = true;
-              break;
-            }
-          }
-          if (loopback) {
+          if (iface.features & ::zircon::ethernet::INFO_FEATURE_LOOPBACK) {
             continue;
           }
           ASSERT_EQ(eth_id, iface.id);
