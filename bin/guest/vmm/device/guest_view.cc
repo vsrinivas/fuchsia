@@ -2,31 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/vmm/guest_view.h"
+#include "garnet/bin/guest/vmm/device/guest_view.h"
 
 #include <lib/fxl/logging.h>
 #include <lib/images/cpp/images.h>
 
 GuestView::GuestView(
-    machina::GpuScanout* scanout,
+    GpuScanout* scanout,
     fidl::InterfaceHandle<fuchsia::ui::input::InputListener> input_listener,
-    fuchsia::guest::device::ViewListenerPtr view_listener,
-    ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+    fidl::InterfaceHandle<fuchsia::guest::device::ViewListener> view_listener,
+    fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request)
     : BaseView(std::move(view_manager), std::move(view_owner_request), "Guest"),
       background_node_(session()),
       material_(session()),
-      scanout_(scanout),
-      view_listener_(std::move(view_listener)) {
+      scanout_(*scanout),
+      view_listener_(view_listener.Bind()) {
   background_node_.SetMaterial(material_);
   parent_node().AddChild(background_node_);
   input_connection()->SetEventListener(std::move(input_listener));
 
-  scanout_->SetFlushHandler(
+  scanout_.SetFlushHandler(
       [this](virtio_gpu_rect_t rect) { InvalidateScene(); });
 
-  scanout_->SetUpdateSourceHandler([this](uint32_t width, uint32_t height) {
+  scanout_.SetUpdateSourceHandler([this](uint32_t width, uint32_t height) {
     scanout_source_width_ = width;
     scanout_source_height_ = height;
     InvalidateScene();
@@ -44,8 +44,8 @@ void GuestView::OnSceneInvalidated(
     return;
   }
 
-  if (physical_size().width != image_info_.width ||
-      physical_size().height != image_info_.height) {
+  if (static_cast<uint32_t>(physical_size().width) != image_info_.width ||
+      static_cast<uint32_t>(physical_size().height) != image_info_.height) {
     image_info_.width = physical_size().width;
     image_info_.height = physical_size().height;
     image_info_.stride = image_info_.width * 4;
@@ -65,9 +65,10 @@ void GuestView::OnSceneInvalidated(
         session(), std::move(scenic_vmo), vmo_size,
         fuchsia::images::MemoryType::HOST_MEMORY);
 
-    scanout_->SetFlushTarget(std::move(scanout_vmo), vmo_size,
-                             image_info_.width, image_info_.height,
-                             image_info_.stride);
+    status = scanout_.SetFlushTarget(std::move(scanout_vmo), vmo_size,
+                                     image_info_.width, image_info_.height,
+                                     image_info_.stride);
+    FXL_CHECK(status == ZX_OK) << "Scanout target VMO flush failed " << status;
   }
 
   const float width = logical_size().width;
@@ -92,33 +93,4 @@ void GuestView::OnSceneInvalidated(
 
   scenic::Image image(*memory_, 0u, image_info_);
   material_.SetTexture(image);
-}
-
-ScenicScanout::ScenicScanout(
-    component::StartupContext* startup_context,
-    fidl::InterfaceHandle<fuchsia::ui::input::InputListener> input_listener_,
-    fuchsia::guest::device::ViewListenerPtr view_listener,
-    machina::GpuScanout* scanout)
-    : scanout_(scanout),
-      input_listener_(std::move(input_listener_)),
-      view_listener_(std::move(view_listener)),
-      startup_context_(startup_context) {
-  startup_context_->outgoing().AddPublicService(bindings_.GetHandler(this));
-}
-
-void ScenicScanout::CreateView(
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-        view_owner_request,
-    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> view_services) {
-  if (view_) {
-    FXL_LOG(ERROR) << "CreateView called when a view already exists";
-    return;
-  }
-  auto view_manager =
-      startup_context_
-          ->ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewManager>();
-  view_ = std::make_unique<GuestView>(
-      scanout_, std::move(input_listener_), std::move(view_listener_),
-      std::move(view_manager), std::move(view_owner_request));
-  view_->SetReleaseHandler([this] { view_.reset(); });
 }

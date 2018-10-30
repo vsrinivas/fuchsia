@@ -75,7 +75,7 @@ class RequestStream : public StreamBase {
         DoError(std::move(request), VIRTIO_BLK_S_IOERR);
         continue;
       }
-      auto header = static_cast<virtio_blk_req_t*>(desc_.addr);
+      const auto header = static_cast<virtio_blk_req_t*>(desc_.addr);
       // Virtio 1.0, Section 5.2.5.2: If the VIRTIO_BLK_F_BLK_SIZE feature is
       // negotiated, blk_size can be read to determine the optimal sector size
       // for the driver to use. This does not affect the units used in the

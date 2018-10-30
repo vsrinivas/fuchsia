@@ -24,8 +24,6 @@ executable("bin") {
   deps = [
     "//garnet/public/fidl/fuchsia.guest",
     "//garnet/public/fidl/fuchsia.sys",
-    "//garnet/public/fidl/fuchsia.ui.policy",
-    "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/svc/cpp",

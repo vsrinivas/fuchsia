@@ -2,28 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_GPU_SCANOUT_H_
-#define GARNET_LIB_MACHINA_GPU_SCANOUT_H_
+#ifndef GARNET_BIN_GUEST_VMM_DEVICE_GPU_SCANOUT_H_
+#define GARNET_BIN_GUEST_VMM_DEVICE_GPU_SCANOUT_H_
 
-#include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
+#include <fuchsia/guest/device/cpp/fidl.h>
 #include <lib/zx/vmo.h>
 #include <virtio/gpu.h>
-#include <zircon/types.h>
 
-#include <mutex>
+#include "garnet/lib/machina/device/gpu.h"
 
-namespace machina {
-
-class VirtioGpu;
 class GpuResource;
 
 // A scanout represents a display that GPU resources can be flushed to.
 class GpuScanout {
  public:
-  GpuScanout(VirtioGpu* gpu) : gpu_(gpu){};
-
   virtio_gpu_rect_t extents() { return extents_; }
+
+  void SetConfigChangedHandler(fit::closure config_changed_handler);
 
   // Set a source-update handler for this scanout. On receiving a SetScanout
   // command from the guest (e.g. resulting from a manual mode change), the
@@ -69,25 +64,20 @@ class GpuScanout {
   void OnMoveCursor(uint32_t x, uint32_t y);
 
  private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(GpuScanout);
-
+  fit::closure config_changed_handler_;
   fit::function<void(uint32_t, uint32_t)> update_source_handler_;
   fit::function<void(virtio_gpu_rect_t)> flush_handler_;
 
-  std::mutex target_mutex_;
-  uint64_t __TA_GUARDED(target_mutex_) target_size_;
-  uint32_t __TA_GUARDED(target_mutex_) target_width_;
-  uint32_t __TA_GUARDED(target_mutex_) target_height_;
-  uint32_t __TA_GUARDED(target_mutex_) target_stride_;
-  zx::vmo __TA_GUARDED(target_mutex_) target_vmo_;
-  uintptr_t __TA_GUARDED(target_mutex_) target_vmo_addr_;
-
-  VirtioGpu* gpu_;
+  uint64_t target_size_;
+  uint32_t target_width_;
+  uint32_t target_height_;
+  uint32_t target_stride_;
+  zx::vmo target_vmo_;
+  uintptr_t target_vmo_addr_;
 
   // Scanout parameters.
-  static constexpr uint32_t kStartupWidth = 1280;
-  static constexpr uint32_t kStartupHeight = 720;
-  virtio_gpu_rect_t extents_{0, 0, kStartupWidth, kStartupHeight};
+  virtio_gpu_rect_t extents_{0, 0, machina::kGpuStartupWidth,
+                             machina::kGpuStartupHeight};
   const GpuResource* source_resource_ = nullptr;
   virtio_gpu_rect_t source_rect_;
   const GpuResource* cursor_resource_ = nullptr;
@@ -97,6 +87,4 @@ class GpuScanout {
   uint32_t cursor_hot_y_;
 };
 
-}  // namespace machina
-
-#endif  // GARNET_LIB_MACHINA_GPU_SCANOUT_H_
+#endif  // GARNET_BIN_GUEST_VMM_DEVICE_GPU_SCANOUT_H_

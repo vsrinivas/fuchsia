@@ -29,7 +29,6 @@
 #include <zircon/syscalls/hypervisor.h>
 
 #include "garnet/bin/guest/vmm/guest_config.h"
-#include "garnet/bin/guest/vmm/guest_view.h"
 #include "garnet/bin/guest/vmm/instance_controller_impl.h"
 #include "garnet/bin/guest/vmm/linux.h"
 #include "garnet/bin/guest/vmm/zircon.h"
@@ -244,7 +243,7 @@ int main(int argc, char** argv) {
     block_devices.push_back(std::move(block));
   }
 
-  // Setup console
+  // Setup console device.
   machina::VirtioConsole console(guest.phys_mem());
   status = bus.Connect(console.pci_device(), true);
   if (status != ZX_OK) {
@@ -257,9 +256,8 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  machina::VirtioGpu gpu(guest.phys_mem(), guest.device_dispatcher());
+  machina::VirtioGpu gpu(guest.phys_mem());
   machina::VirtioInput input(guest.phys_mem());
-  std::unique_ptr<ScenicScanout> scenic_scanout;
   if (cfg.display() == GuestDisplay::SCENIC) {
     // Setup input device.
     status = bus.Connect(input.pci_device(), true);
@@ -267,7 +265,7 @@ int main(int argc, char** argv) {
       return status;
     }
     fidl::InterfaceHandle<fuchsia::ui::input::InputListener> input_listener;
-    fuchsia::guest::device::ViewListenerPtr view_listener;
+    fidl::InterfaceHandle<fuchsia::guest::device::ViewListener> view_listener;
     status = input.Start(*guest.object(), input_listener.NewRequest(),
                          view_listener.NewRequest(), launcher.get(),
                          guest.device_dispatcher());
@@ -275,18 +273,14 @@ int main(int argc, char** argv) {
       return status;
     }
 
-    // Expose a view that can be composited by mozart. Input events will be
-    // injected by the view events.
-    scenic_scanout = std::make_unique<ScenicScanout>(
-        context.get(), std::move(input_listener), std::move(view_listener),
-        gpu.scanout());
-
     // Setup GPU device.
-    status = bus.Connect(gpu.pci_device());
+    status = bus.Connect(gpu.pci_device(), true);
     if (status != ZX_OK) {
       return status;
     }
-    status = gpu.Init();
+    status = gpu.Start(*guest.object(), std::move(input_listener),
+                       std::move(view_listener), launcher.get(),
+                       guest.device_dispatcher());
     if (status != ZX_OK) {
       return status;
     }
@@ -307,7 +301,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  // Setup rng device
+  // Setup RNG device.
   machina::VirtioRng rng(guest.phys_mem());
   status = bus.Connect(rng.pci_device(), true);
   if (status != ZX_OK) {

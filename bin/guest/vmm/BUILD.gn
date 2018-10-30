@@ -10,8 +10,6 @@ source_set("lib") {
   sources = [
     "guest_config.cc",
     "guest_config.h",
-    "guest_view.cc",
-    "guest_view.h",
     "instance_controller_impl.cc",
     "instance_controller_impl.h",
     "linux.cc",

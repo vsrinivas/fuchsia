@@ -66,14 +66,6 @@ interface VirtioBalloon : VirtioDevice {
 
 const uint64 MAX_ID_SIZE = 20;
 
-// Data format of the file backing a block device.
-enum BlockFormat {
-    // Raw IO. All reads and writes go directly to disk.
-    RAW = 0;
-    // QCOW image. All reads and writes go to a QCOW image.
-    QCOW = 1;
-};
-
 // Mode of the file backing a block device.
 enum BlockMode {
     // Reads and writes are allowed.
@@ -82,6 +74,14 @@ enum BlockMode {
     READ_ONLY = 1;
     // Writes are allowed, but are stored in memory, not to disk.
     VOLATILE_WRITE = 2;
+};
+
+// Data format of the file backing a block device.
+enum BlockFormat {
+    // Raw IO. All reads and writes go directly to disk.
+    RAW = 0;
+    // QCOW image. All reads and writes go to a QCOW image.
+    QCOW = 1;
 };
 
 [Discoverable]
@@ -103,6 +103,17 @@ interface VirtioConsole : VirtioDevice {
 interface ViewListener {
     // Called when a View's size is changed.
     1: OnSizeChanged(fuchsia.math.SizeF size);
+};
+
+[Discoverable]
+interface VirtioGpu : VirtioDevice {
+    // Start the GPU device.
+    0x81000001: Start(StartInfo start_info,
+                      fuchsia.ui.input.InputListener? input_listener,
+                      ViewListener? view_listener);
+
+    // Called when a device's configuration is changed.
+    0x81000002: -> OnConfigChanged();
 };
 
 [Discoverable]

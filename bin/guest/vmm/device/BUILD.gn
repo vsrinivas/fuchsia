@@ -114,6 +114,39 @@ package("virtio_input") {
   ]
 }
 
+executable("virtio_gpu_bin") {
+  visibility = [ ":*" ]
+
+  output_name = "virtio_gpu"
+  sources = [
+    "gpu_resource.cc",
+    "gpu_resource.h",
+    "gpu_scanout.cc",
+    "gpu_scanout.h",
+    "guest_view.cc",
+    "guest_view.h",
+    "virtio_gpu.cc",
+  ]
+  deps = [
+    ":device_lib",
+    "//garnet/public/fidl/fuchsia.ui.policy",
+    "//garnet/public/lib/ui/view_framework",
+  ]
+}
+
+package("virtio_gpu") {
+  binary = "virtio_gpu"
+  deps = [
+    ":virtio_gpu_bin",
+  ]
+  meta = [
+    {
+      path = rebase_path("//garnet/bin/guest/vmm/meta/virtio_gpu.cmx")
+      dest = "virtio_gpu.cmx"
+    },
+  ]
+}
+
 executable("virtio_rng_bin") {
   visibility = [ ":*" ]
 
@@ -144,6 +177,7 @@ executable("device_tests") {
     "virtio_balloon_test.cc",
     "virtio_block_test.cc",
     "virtio_console_test.cc",
+    "virtio_gpu_test.cc",
     "virtio_input_test.cc",
     "virtio_queue_fake.cc",
     "virtio_queue_fake.h",

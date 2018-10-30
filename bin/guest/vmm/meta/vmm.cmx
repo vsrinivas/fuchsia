@@ -5,15 +5,12 @@
     "sandbox": {
         "dev": [
             "class/block",
-            "class/display-controller",
             "class/ethernet",
-            "class/input",
             "misc"
         ],
         "services": [
             "fuchsia.sys.Environment",
-            "fuchsia.tracelink.Registry",
-            "fuchsia.ui.viewsv1.ViewManager"
+            "fuchsia.tracelink.Registry"
         ]
     }
 }
