@@ -77,7 +77,7 @@ zx_status_t VirtioQueueFake::WriteDesc(void** buf, uint32_t len, uint16_t flags,
 void VirtioQueueFake::WriteAvail(uint16_t head_idx) {
   auto& avail = const_cast<volatile vring_avail&>(*ring_.avail);
   auto& idx = const_cast<uint16_t&>(ring_.avail->idx);
-  avail.ring[idx++ & ring_.size] = head_idx;
+  avail.ring[idx++ % ring_.size] = head_idx;
 }
 
 zx_status_t VirtioQueueFake::SetNext(uint16_t desc_idx, uint16_t next_idx) {
