@@ -1624,7 +1624,7 @@ void brcmf_return_assoc_result(struct net_device* ndev, uint8_t result_code) {
 zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, wlanif_assoc_req_t* req) {
     struct brcmf_if* ifp = ndev_to_if(ndev);
     struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
-    struct brcmf_join_params join_params;
+    struct brcmf_ext_join_params_le join_params;
     uint16_t chanspec;
     size_t join_params_size;
     const void* ie;
@@ -1716,20 +1716,32 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, wlanif_assoc_req_t* 
 #endif // FIGURE_THIS_OUT_LATER
 
     ssid_len = min_t(uint32_t, ifp->bss.ssid.len, WLAN_MAX_SSID_LEN);
-    memset(&join_params, 0, sizeof(join_params));
-    join_params_size = sizeof(join_params.ssid_le);
+    join_params_size = sizeof(join_params);
+    memset(&join_params, 0, join_params_size);
 
     memcpy(&join_params.ssid_le.SSID, ifp->bss.ssid.data, ssid_len);
     join_params.ssid_le.SSID_len = ssid_len;
 
-    memcpy(join_params.params_le.bssid, ifp->bss.bssid, ETH_ALEN);
-    join_params.params_le.chanspec_num = 1;
-    join_params.params_le.chanspec_list[0] = chanspec;
+    memcpy(join_params.assoc_le.bssid, ifp->bss.bssid, ETH_ALEN);
+    join_params.assoc_le.chanspec_num = 1;
+    join_params.assoc_le.chanspec_list[0] = chanspec;
 
-    brcmf_dbg(CONN, "Sending SET_SSID request\n");
-    err = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID, &join_params, sizeof(join_params));
+    join_params.scan_le.scan_type = 0; // use default
+    join_params.scan_le.home_time = -1; // use default
+
+    /* Increase dwell time to receive probe response or detect beacon from target AP at a noisy
+       air only during connect command. */
+    join_params.scan_le.active_time = BRCMF_SCAN_JOIN_ACTIVE_DWELL_TIME_MS;
+    join_params.scan_le.passive_time = BRCMF_SCAN_JOIN_PASSIVE_DWELL_TIME_MS;
+    /* To sync with presence period of VSDB GO send probe request more frequently. Probe request
+       will be stopped when it gets probe response from target AP/GO. */
+    join_params.scan_le.nprobes = BRCMF_SCAN_JOIN_ACTIVE_DWELL_TIME_MS /
+                                  BRCMF_SCAN_JOIN_PROBE_INTERVAL_MS;
+
+    brcmf_dbg(CONN, "Sending join request\n");
+    err = brcmf_fil_bsscfg_data_set(ifp, "join", &join_params, join_params_size);
     if (err != ZX_OK) {
-        brcmf_err("BRCMF_C_SET_SSID failed (%d)\n", err);
+        brcmf_err("join failed (%d)\n", err);
     }
 
 done:
@@ -5249,7 +5261,7 @@ static bool brcmf_is_nonetwork(struct brcmf_cfg80211_info* cfg, const struct brc
     }
 
     if (event == BRCMF_E_SET_SSID && status != BRCMF_E_STATUS_SUCCESS) {
-        brcmf_dbg(CONN, "Processing connecting & no network found\n");
+        brcmf_dbg(CONN, "Processing connecting & no network found: %d\n", status);
         return true;
     }
 
@@ -5474,6 +5486,7 @@ static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp,
         }
         brcmf_net_setcarrier(ifp, false);
     } else if (brcmf_is_nonetwork(cfg, e)) {
+        brcmf_dbg(CONN, "No network\n");
         brcmf_bss_connect_done(cfg, ndev, e, false);
         brcmf_disconnect_done(cfg);
     }
