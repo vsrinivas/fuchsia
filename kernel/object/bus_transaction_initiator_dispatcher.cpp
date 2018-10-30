@@ -11,7 +11,7 @@
 #include <vm/pinned_vm_object.h>
 #include <vm/vm_object.h>
 #include <zircon/rights.h>
-#include <zxcpp/new.h>
+#include <new>
 
 zx_status_t BusTransactionInitiatorDispatcher::Create(fbl::RefPtr<Iommu> iommu, uint64_t bti_id,
                                                       fbl::RefPtr<Dispatcher>* dispatcher,

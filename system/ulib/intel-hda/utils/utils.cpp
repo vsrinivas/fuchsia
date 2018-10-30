@@ -155,7 +155,7 @@ zx_status_t MakeFormatRangeList(const SampleCaps& sample_caps,
     // try to do so.
     for (const auto& family : FRAME_RATE_LUTS) {
         bool active_range = false;
-        uint32_t min_rate, max_rate;
+        uint32_t min_rate = 0, max_rate = 0;
 
         for (size_t i = 0; i < family.lut_size; ++i) {
             const auto& entry = family.lut[i];

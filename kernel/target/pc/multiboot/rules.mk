@@ -37,7 +37,7 @@ $(filter %.S.o,$(MULTIBOOT_OBJS)): \
 		       $(GLOBAL_OPTFLAGS) $(GLOBAL_ASMFLAGS) \
 		       $(KERNEL_ASMFLAGS) $(ARCH_ASMFLAGS) \
 		       $(KERNEL_COMPILEFLAGS) $(MULTIBOOT_COMPILEFLAGS) \
-		       $(GLOBAL_INCLUDES) $(KERNEL_INCLUDES) \
+		       $(KERNEL_INCLUDES) $(GLOBAL_INCLUDES) \
 		       -c $< -MMD -MP -MT $@ -MF $(@:%o=%d) -o $@
 
 $(filter %.c.o,$(MULTIBOOT_OBJS)): \
@@ -48,7 +48,7 @@ $(filter %.c.o,$(MULTIBOOT_OBJS)): \
 		       $(GLOBAL_OPTFLAGS) $(GLOBAL_CFLAGS) \
 		       $(KERNEL_CFLAGS) $(ARCH_CFLAGS) \
 		       $(KERNEL_COMPILEFLAGS) $(MULTIBOOT_COMPILEFLAGS) \
-		       $(GLOBAL_INCLUDES) $(KERNEL_INCLUDES) \
+		       $(KERNEL_INCLUDES) $(GLOBAL_INCLUDES) \
 		       -c $< -MMD -MP -MT $@ -MF $(@:%o=%d) -o $@
 
 ALLSRCS += $(MULTIBOOT_SRCS)

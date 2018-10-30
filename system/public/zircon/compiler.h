@@ -41,13 +41,16 @@
 #define __EXTERNALLY_VISIBLE __attribute__((__externally_visible__))
 #define __THREAD_ANNOTATION(x)
 #define __NO_SAFESTACK
-#define __has_feature(x) 0
 #else
 #define __LEAF_FN
 #define __OPTIMIZE(x)
 #define __EXTERNALLY_VISIBLE
 #define __THREAD_ANNOTATION(x) __attribute__((x))
 #define __NO_SAFESTACK __attribute__((__no_sanitize__("safe-stack")))
+#endif
+
+#ifndef __has_feature
+#define __has_feature(x) 0
 #endif
 
 #define __ALWAYS_INLINE __attribute__((__always_inline__))

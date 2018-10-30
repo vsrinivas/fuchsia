@@ -12,10 +12,10 @@
 #include <vm/pinned_vm_object.h>
 #include <vm/vm.h>
 #include <vm/vm_object.h>
-#include <zxcpp/new.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <new>
 #include <object/bus_transaction_initiator_dispatcher.h>
 #include <trace.h>
 

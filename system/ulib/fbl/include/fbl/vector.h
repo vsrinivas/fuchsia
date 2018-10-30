@@ -4,12 +4,12 @@
 
 #pragma once
 
+#include <new>
 #include <string.h>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/initializer_list.h>
 #include <fbl/macros.h>
-#include <fbl/new.h>
 #include <fbl/type_support.h>
 #include <zircon/assert.h>
 

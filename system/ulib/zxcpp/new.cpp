@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zxcpp/new.h>
+#include <new>
+
+// Placement new operators are inlined in the <new> header.
+// No linkage definitions are required.
 
 #include <zircon/assert.h>
 #include <stdlib.h>

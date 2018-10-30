@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <new>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -16,7 +17,6 @@
 #include <unittest/unittest.h>
 #include <zircon/device/device.h>
 #include <zircon/syscalls.h>
-#include <zxcpp/new.h>
 
 #include "parent.h"
 

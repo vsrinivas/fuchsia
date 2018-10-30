@@ -14,6 +14,7 @@
 #include <kernel/timer.h>
 #include <lib/console.h>
 #include <lk/init.h>
+#include <new>
 #include <platform.h>
 #include <pow2.h>
 #include <stdlib.h>
@@ -33,7 +34,6 @@
 #include <zircon/thread_annotations.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
-#include <zxcpp/new.h>
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 

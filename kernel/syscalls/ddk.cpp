@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
+#include <new>
 #include <platform.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -34,7 +35,6 @@
 #include <zircon/syscalls/iommu.h>
 #include <zircon/syscalls/pci.h>
 #include <zircon/syscalls/smc.h>
-#include <zxcpp/new.h>
 
 #if ARCH_X86
 #include <platform/pc/bootloader.h>

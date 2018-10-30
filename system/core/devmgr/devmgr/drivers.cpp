@@ -4,6 +4,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <new>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,7 +18,6 @@
 #include <driver-info/driver-info.h>
 
 #include <zircon/driver/binding.h>
-#include <zxcpp/new.h>
 
 namespace devmgr {
 

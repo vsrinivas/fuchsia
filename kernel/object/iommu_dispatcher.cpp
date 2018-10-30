@@ -7,9 +7,9 @@
 #include <object/iommu_dispatcher.h>
 
 #include <dev/iommu.h>
+#include <new>
 #include <zircon/rights.h>
 #include <zircon/syscalls/iommu.h>
-#include <zxcpp/new.h>
 
 #include <assert.h>
 #include <err.h>

@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <new>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,7 +14,6 @@
 
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
-#include <fbl/new.h>
 #include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 

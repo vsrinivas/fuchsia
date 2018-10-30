@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <new>
 #include <poll.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -24,7 +25,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
 #include <fbl/limits.h>
-#include <fbl/new.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_fd.h>

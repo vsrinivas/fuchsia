@@ -156,7 +156,6 @@ GLOBAL_COMPILEFLAGS += -fno-common
 # kernel/include/lib/counters.h and kernel.ld depend on -fdata-sections.
 GLOBAL_COMPILEFLAGS += -ffunction-sections -fdata-sections
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
-GLOBAL_COMPILEFLAGS += -nostdlibinc
 GLOBAL_COMPILEFLAGS += -no-canonical-prefixes
 GLOBAL_COMPILEFLAGS += -Wno-address-of-packed-member
 GLOBAL_COMPILEFLAGS += -Wthread-safety
@@ -518,6 +517,26 @@ GLOBAL_COMPILEFLAGS += -flto -fwhole-program-vtables
 # Full LTO doesn't require any special ld flags.
 endif
 endif
+
+# This needs to find the standard C++ library headers for the header-only
+# facilities that can be used in Zircon C++ code.  The only implementation
+# that's been tested is libc++ (aka libcxx) from the LLVM project.  In the
+# prebuilt Fuchsia Clang/LLVM toolchain, the libc++ headers are provided
+# with the toolchain and the compiler puts them in the default include
+# path, so nothing is needed here.  Normally when using the prebuilt
+# Fuchsia GCC toolchain, we just use the headers directly from the prebuilt
+# Clang toolchain since they're on hand.  If using a different compiler,
+# set this to a directory where the include/ subdirectory from
+# https://git.llvm.org/git/libcxx is unpacked.
+LIBCXX_INCLUDES ?=
+ifeq ($(call TOBOOL,$(USE_CLANG))$(strip $(LIBC_INCLUDES)),false)
+LIBCXX_INCLUDES := \
+    $(shell $(CLANG_TOOLCHAIN_PREFIX)clang --target=$(CLANG_ARCH) \
+            -print-file-name=include/c++/v1)
+endif
+GLOBAL_INCLUDES += $(LIBCXX_INCLUDES)
+# Visibility annotations conflict with kernel/include/hidden.h.
+KERNEL_CPPFLAGS += -D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS
 
 ifeq ($(call TOBOOL,$(USE_SANCOV)),true)
 ifeq ($(call TOBOOL,$(USE_ASAN)),false)

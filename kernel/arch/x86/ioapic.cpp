@@ -12,12 +12,12 @@
 #include <fbl/array.h>
 #include <kernel/auto_lock.h>
 #include <kernel/spinlock.h>
+#include <new>
 #include <trace.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
 #include <zircon/types.h>
-#include <zxcpp/new.h>
 
 #define IO_APIC_IND(base) ((volatile uint32_t*)(((uint8_t*)(base)) + IO_APIC_IOREGSEL))
 #define IO_APIC_DAT(base) ((volatile uint32_t*)(((uint8_t*)(base)) + IO_APIC_IOWIN))

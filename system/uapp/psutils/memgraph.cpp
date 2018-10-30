@@ -7,6 +7,7 @@
 
 #include <getopt.h>
 #include <inttypes.h>
+#include <new>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -16,7 +17,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/object.h>
-#include <zxcpp/new.h>
 #include <task-utils/walker.h>
 
 #include "resources.h"

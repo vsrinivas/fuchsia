@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <new>
 #include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -23,7 +24,6 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/thread_annotations.h>
-#include <zxcpp/new.h>
 
 #if !defined(__x86_64__) && !defined(__x86__)
 #error "Unsupported architecture"

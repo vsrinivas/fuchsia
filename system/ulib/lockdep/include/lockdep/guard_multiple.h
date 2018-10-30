@@ -5,9 +5,9 @@
 #pragma once
 
 #include <stddef.h>
+#include <new>
 
 #include <fbl/integer_sequence.h>
-#include <fbl/new.h>
 
 #include <lockdep/common.h>
 #include <lockdep/guard.h>

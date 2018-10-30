@@ -8,6 +8,7 @@
 
 #include <assert.h>
 #include <err.h>
+#include <new>
 #include <stdio.h>
 #include <string.h>
 #include <trace.h>
@@ -15,7 +16,6 @@
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_paged.h>
-#include <zxcpp/new.h>
 #include <fbl/auto_call.h>
 
 #define LOCAL_TRACE 0

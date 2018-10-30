@@ -4,13 +4,13 @@
 
 #pragma once
 
+#include <new>
 #include <stddef.h>
 
 #include <zircon/assert.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/macros.h>
-#include <fbl/new.h>
 #include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 

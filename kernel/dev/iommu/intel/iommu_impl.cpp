@@ -13,13 +13,13 @@
 #include <fbl/limits.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <new>
 #include <platform.h>
 #include <trace.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_paged.h>
 #include <vm/vm_object_physical.h>
 #include <zircon/time.h>
-#include <zxcpp/new.h>
 
 #include "context_table_state.h"
 #include "device_context.h"

@@ -4,13 +4,12 @@
 
 #include <fbl/string.h>
 
+#include <new>
 #include <string.h>
 
 #include <zircon/assert.h>
-
 #include <fbl/algorithm.h>
 #include <fbl/atomic.h>
-#include <fbl/new.h>
 
 namespace fbl {
 namespace {

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <new>
 #include <stdint.h>
 
 #include <zircon/assert.h>
@@ -13,7 +14,6 @@
 
 #include <fbl/array.h>
 #include <fbl/macros.h>
-#include <fbl/new.h>
 #include <fbl/string.h>
 #include <fbl/type_support.h>
 #include <fbl/vector.h>

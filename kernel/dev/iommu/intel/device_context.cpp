@@ -9,10 +9,10 @@
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
 #include <kernel/range_check.h>
+#include <new>
 #include <trace.h>
 #include <vm/vm.h>
 #include <vm/vm_object_paged.h>
-#include <zxcpp/new.h>
 
 #include "hw.h"
 #include "iommu_impl.h"

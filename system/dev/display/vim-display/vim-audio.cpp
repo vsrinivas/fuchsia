@@ -7,7 +7,7 @@
 #include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
 #include <math.h>
-#include <zxcpp/new.h>
+#include <new>
 
 #include "hdmitx.h"
 #include "vim-audio.h"

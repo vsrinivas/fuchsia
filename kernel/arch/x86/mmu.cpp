@@ -17,12 +17,12 @@
 #include <arch/x86/mmu.h>
 #include <arch/x86/mmu_mem_types.h>
 #include <kernel/mp.h>
+#include <new>
 #include <vm/arch_vm_aspace.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
 #include <zircon/types.h>
-#include <zxcpp/new.h>
 
 #define LOCAL_TRACE 0
 

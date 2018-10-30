@@ -6,6 +6,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <new>
 #include <string.h>
 #include <unistd.h>
 
@@ -17,7 +18,6 @@
 #include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
-#include <zxcpp/new.h>
 
 namespace {
 

@@ -4,9 +4,9 @@
 
 #include <fbl/alloc_checker.h>
 
-#include <fbl/new.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
+#include <new>
 
 namespace fbl {
 namespace {
@@ -76,10 +76,12 @@ void* operator new[](size_t size, fbl::AllocChecker* ac) noexcept {
 #else // _KERNEL
 
 void* operator new(size_t size, fbl::AllocChecker* ac) noexcept {
+    void* operator new(size_t s, void* caller, const std::nothrow_t&) noexcept;
     return fbl::checked(size, ac, operator new(size, __GET_CALLER(), std::nothrow_t()));
 }
 
 void* operator new[](size_t size, fbl::AllocChecker* ac) noexcept {
+    void* operator new[](size_t s, void* caller, const std::nothrow_t&) noexcept;
     return fbl::checked(size, ac, operator new[](size, __GET_CALLER(), std::nothrow_t()));
 }
 

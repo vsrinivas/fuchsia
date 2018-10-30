@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <new>
 #include <stdint.h>
 #include <string.h>
 
@@ -17,7 +18,6 @@
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <zircon/types.h>
-#include <zxcpp/new.h>
 
 // BufferChain is a list of fixed-size buffers allocated from the PMM.
 //

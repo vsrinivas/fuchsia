@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <new>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,7 +25,6 @@
 
 #include <fbl/auto_lock.h>
 #include <lib/fdio/remoteio.h>
-#include <zxcpp/new.h>
 
 namespace devmgr {
 

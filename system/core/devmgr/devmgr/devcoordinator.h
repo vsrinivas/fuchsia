@@ -4,16 +4,10 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
-#include <zircon/listnode.h>
-
 #include <fbl/intrusive_double_list.h>
-#include <fbl/new.h>
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 #include <lib/async/cpp/wait.h>

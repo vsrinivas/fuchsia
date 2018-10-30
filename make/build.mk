@@ -69,7 +69,7 @@ $(KERNEL_IMAGE_OBJ): $(KERNEL_IMAGE_ASM) $(KERNEL_FIXUPS) $(KERNEL_RAW)
 	$(NOECHO)$(CC) $(GLOBAL_OPTFLAGS)  \
 	    $(GLOBAL_COMPILEFLAGS) $(KERNEL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS) \
 	    $(GLOBAL_ASMFLAGS) $(KERNEL_ASMFLAGS) $(ARCH_ASMFLAGS) \
-	    $(GLOBAL_INCLUDES) $(KERNEL_INCLUDES) -I$(BUILDDIR) \
+	    $(KERNEL_INCLUDES) $(GLOBAL_INCLUDES) -I$(BUILDDIR) \
 	    -c $< -MD -MP -MT $@ -MF $(@:.o=.d) -o $@
 
 # Now link the final load image, using --just-symbols to let image.S refer

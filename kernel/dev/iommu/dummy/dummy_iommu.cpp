@@ -7,8 +7,8 @@
 #include <dev/iommu/dummy.h>
 
 #include <err.h>
-#include <fbl/new.h>
 #include <fbl/ref_ptr.h>
+#include <new>
 #include <vm/vm.h>
 
 #define INVALID_PADDR UINT64_MAX

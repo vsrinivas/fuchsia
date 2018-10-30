@@ -16,12 +16,12 @@
 #include <kernel/mutex.h>
 #include <lib/crypto/cryptolib.h>
 #include <lib/crypto/entropy/collector.h>
-#include <lib/crypto/entropy/jitterentropy_collector.h>
 #include <lib/crypto/entropy/hw_rng_collector.h>
+#include <lib/crypto/entropy/jitterentropy_collector.h>
 #include <lib/crypto/entropy/quality_test.h>
 #include <lib/crypto/prng.h>
-#include <zxcpp/new.h>
 #include <lk/init.h>
+#include <new>
 #include <string.h>
 #include <trace.h>
 

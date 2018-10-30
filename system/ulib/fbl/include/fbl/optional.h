@@ -5,8 +5,8 @@
 #pragma once
 
 #include <assert.h>
+#include <new>
 
-#include <fbl/new.h>
 #include <fbl/type_support.h>
 
 namespace fbl {

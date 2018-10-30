@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unistd.h>
-
+#include <new>
 #include <stdbool.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <ddk/device.h>
 #include <ddk/protocol/block.h>
@@ -14,7 +14,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/limits.h>
-#include <fbl/new.h>
 #include <fbl/ref_ptr.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>

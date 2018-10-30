@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <inttypes.h>
+#include <new>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,7 +17,6 @@
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <fbl/macros.h>
-#include <fbl/new.h>
 #include <fbl/unique_ptr.h>
 #include <lib/fdio/debug.h>
 #include <fs/block-txn.h>

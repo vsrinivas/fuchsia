@@ -8,9 +8,9 @@
 
 #include <err.h>
 #include <fbl/algorithm.h>
+#include <new>
 #include <stdint.h>
 #include <string.h>
-#include <zxcpp/new.h>
 
 // MessagePackets have special allocation requirements because they can contain a variable number of
 // handles and a variable size payload.

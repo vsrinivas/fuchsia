@@ -7,7 +7,6 @@
 #include <acpica/acuuid.h>
 #include <bits/limits.h>
 #include <ddk/debug.h>
-#include <fbl/new.h>
 #include <fbl/vector.h>
 #include <region-alloc/region-alloc.h>
 #include <stdio.h>

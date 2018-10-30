@@ -7,6 +7,7 @@
 
 #include <assert.h>
 #include <fcntl.h>
+#include <new>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,7 +31,6 @@
 #include <lib/fdio/vfs.h>
 #include <lib/fidl/coding.h>
 #include <lib/zx/channel.h>
-#include <zxcpp/new.h>
 
 namespace devmgr {
 

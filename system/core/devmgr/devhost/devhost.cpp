@@ -4,6 +4,7 @@
 
 #include <dlfcn.h>
 #include <inttypes.h>
+#include <new>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,7 +35,6 @@
 #include <lib/zx/debuglog.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
-#include <zxcpp/new.h>
 
 #include "../shared/async-loop-owned-rpc-handler.h"
 #include "devhost.h"

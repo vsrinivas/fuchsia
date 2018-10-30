@@ -4,18 +4,18 @@
 
 #pragma once
 
-#include <zircon/compiler.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/deleter.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/mutex.h>
-#include <fbl/new.h>
 #include <fbl/null_lock.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_malloc.h>
 #include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
+#include <new>
+#include <zircon/compiler.h>
 
 // Usage Notes:
 //

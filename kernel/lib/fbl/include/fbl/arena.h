@@ -6,11 +6,11 @@
 
 #pragma once
 
+#include <new>
 #include <stddef.h>
 
 #include <vm/vm_address_region.h>
 
-#include <zxcpp/new.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/type_support.h>

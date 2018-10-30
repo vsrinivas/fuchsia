@@ -4,6 +4,7 @@
 
 #include <unistd.h>
 
+#include <new>
 #include <stdbool.h>
 #include <string.h>
 
@@ -14,7 +15,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/limits.h>
-#include <fbl/new.h>
 #include <fbl/ref_ptr.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>

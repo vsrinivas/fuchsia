@@ -16,10 +16,10 @@
 #include <lib/version.h>
 
 #include <inttypes.h>
+#include <new>
 #include <string.h>
 
 #include <fbl/atomic.h>
-#include <fbl/new.h>
 #include <lockdep/lockdep.h>
 
 // Always assert to catch changes when lockdep is not enabled.

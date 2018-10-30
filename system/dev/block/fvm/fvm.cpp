@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <new>
 #include <stdbool.h>
 #include <string.h>
 #include <threads.h>
@@ -13,7 +14,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/limits.h>
-#include <fbl/new.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
