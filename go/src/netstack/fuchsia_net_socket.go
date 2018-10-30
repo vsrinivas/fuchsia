@@ -132,10 +132,17 @@ func (sp *socketProviderImpl) GetAddrInfo(n *net.String, s *net.String, hints *n
 	var addrs []tcpip.Address
 	if node == nil {
 		addrs = append(addrs, "\x00\x00\x00\x00")
-	} else if *node == "localhost" {
-		addrs = append(addrs, "\x7f\x00\x00\x01")
-	} else if *node == sp.ns.getNodeName() {
-		addrs = append(addrs, "\x7f\x00\x00\x01")
+	} else if *node == "localhost" || *node == sp.ns.getNodeName() {
+		switch hints.Family {
+		case AF_UNSPEC:
+			addrs = append(addrs, ipv4Loopback, ipv6Loopback)
+		case AF_INET:
+			addrs = append(addrs, ipv4Loopback)
+		case AF_INET6:
+			addrs = append(addrs, ipv6Loopback)
+		default:
+			return net.AddrInfoStatusSystemError, 0, nil, nil, nil, nil, nil
+		}
 	} else {
 		addrs, err = sp.ns.dnsClient.LookupIP(*node)
 		if err != nil {
@@ -152,35 +159,31 @@ func (sp *socketProviderImpl) GetAddrInfo(n *net.String, s *net.String, hints *n
 
 	// Reply up to 4 addresses.
 	num := int32(0)
-	results := make([]*net.AddrInfo, 4)
-	values := make([]net.AddrInfo, 4)
-	for i := 0; i < len(addrs) && i < 4; i++ {
-		ai := &values[i]
-		*ai = net.AddrInfo{
+	var results [4]net.AddrInfo
+	for _, addr := range addrs {
+		ai := net.AddrInfo{
 			Flags:    0,
 			SockType: hints.SockType,
 			Protocol: hints.Protocol,
 			Port:     port,
 		}
 
-		switch len(addrs[i]) {
+		switch len(addr) {
 		case 4:
 			if hints.Family != AF_UNSPEC && hints.Family != AF_INET {
 				continue
 			}
 			ai.Family = AF_INET
-			ai.Addr.Len = 4
-			copy(ai.Addr.Val[:4], addrs[i])
+			ai.Addr.Len = uint32(copy(ai.Addr.Val[:], addr))
 		case 16:
 			if hints.Family != AF_UNSPEC && hints.Family != AF_INET6 {
 				continue
 			}
 			ai.Family = AF_INET6
-			ai.Addr.Len = 16
-			copy(ai.Addr.Val[:16], addrs[i])
+			ai.Addr.Len = uint32(copy(ai.Addr.Val[:], addr))
 		default:
 			if debug {
-				log.Printf("getaddrinfo: len(addr)=%d, wrong size", len(addrs[i]))
+				log.Printf("getaddrinfo: len(addr)=%d, wrong size", len(addr))
 			}
 			// TODO: failing to resolve is a valid reply. fill out retval
 			return net.AddrInfoStatusSystemError, 0, nil, nil, nil, nil, nil
@@ -188,7 +191,10 @@ func (sp *socketProviderImpl) GetAddrInfo(n *net.String, s *net.String, hints *n
 
 		results[num] = ai
 		num++
+		if int(num) == len(results) {
+			break
+		}
 	}
 
-	return 0, num, results[0], results[1], results[2], results[3], nil
+	return net.AddrInfoStatusOk, num, &results[0], &results[1], &results[2], &results[3], nil
 }

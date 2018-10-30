@@ -8,9 +8,10 @@ package("netstack_tests") {
   testonly = true
 
   deps = [
+    "integration:netstack_launch_test",
+    "//garnet/go/src/netstack/tests/automated/netstack_getaddrinfo_test",
     "//garnet/go/src/netstack/tests/automated/netstack_gonet_test",
     "//garnet/go/src/netstack/tests/automated/netstack_loopback_test",
-    "integration:netstack_launch_test",
   ]
 
   tests = [
@@ -19,6 +20,9 @@ package("netstack_tests") {
     },
     {
       name = "netstack_loopback_test"
+    },
+    {
+      name = "netstack_getaddrinfo_test"
     },
     {
       name = "netstack_gonet_test"
@@ -30,10 +34,10 @@ package("netstack_manual_tests") {
   testonly = true
 
   deps = [
-    "//garnet/go/src/netstack/tests/manual:keepalivetest",
     "//garnet/go/src/netstack/tests/manual:closetest",
     "//garnet/go/src/netstack/tests/manual:getaddrinfo_test",
     "//garnet/go/src/netstack/tests/manual:gethostbyname_test",
+    "//garnet/go/src/netstack/tests/manual:keepalivetest",
     "//garnet/go/src/netstack/tests/manual:mctest",
     "//garnet/go/src/netstack/tests/manual:nbiotest",
     "//garnet/go/src/netstack/tests/manual:passfdtest",
