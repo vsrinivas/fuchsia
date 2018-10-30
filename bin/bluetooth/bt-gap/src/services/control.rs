@@ -28,12 +28,14 @@ impl ControlSession {
 /// State is stored in the HostDispatcher object
 pub async fn start_control_service(hd: HostDispatcher, chan: fasync::Channel) -> Result<(), Error> {
     let mut stream = ControlRequestStream::from_channel(chan);
-    hd.add_event_listener(stream.control_handle());
+    let event_listener = Arc::new(stream.control_handle());
+    hd.add_event_listener(Arc::downgrade(&event_listener));
     let mut session = ControlSession::new();
 
     while let Some(event) = await!(stream.next()) {
         await!(handler(hd.clone(), &mut session, event?))?;
     }
+    // event_listener will now be dropped, closing the listener
     Ok(())
 }
 

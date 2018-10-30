@@ -112,7 +112,7 @@ struct HostDispatcherState {
     remote_devices: HashMap<DeviceId, RemoteDevice>,
 
     pub pairing_delegate: Option<PairingDelegateProxy>,
-    pub event_listeners: Vec<ControlControlHandle>,
+    pub event_listeners: Vec<Weak<ControlControlHandle>>,
 
     // Pending requests to obtain a Host.
     host_requests: Slab<Waker>,
@@ -212,14 +212,26 @@ impl HostDispatcherState {
         fx_log_info!("New active adapter: {:?}", id);
         self.active_id = id;
         if let Some(ref mut adapter_info) = self.get_active_adapter_info() {
-            for events in self.event_listeners.iter() {
-                let _res = events.send_on_active_adapter_changed(Some(OutOfLine(adapter_info)));
-            }
+            self.notify_event_listeners(|listener| {
+                let _res = listener.send_on_active_adapter_changed(Some(OutOfLine(adapter_info)));
+            })
         }
     }
 
     pub fn get_active_adapter_info(&mut self) -> Option<AdapterInfo> {
         self.get_active_host().map(|host| util::clone_host_info(host.read().get_info()))
+    }
+
+    pub fn notify_event_listeners<F>(&mut self, f: F) where F: FnMut(&ControlControlHandle) -> () {
+        self.event_listeners.retain(|listener| {
+            match listener.upgrade() {
+                Some(listener_) => {
+                    f(&listener_);
+                    true
+                }
+                None => false
+            }
+        })
     }
 }
 
@@ -452,12 +464,12 @@ impl HostDispatcher {
         state.output = output;
     }
 
-    pub fn add_event_listener(&self, handle: ControlControlHandle) {
+    pub fn add_event_listener(&self, handle: Weak<ControlControlHandle>) {
         self.state.write().event_listeners.push(handle);
     }
 
-    pub fn event_listeners(&self) -> Vec<ControlControlHandle> {
-        self.state.read().event_listeners.clone()
+    pub fn notify_event_listeners<F>(&self, f: F) where F: FnMut(&ControlControlHandle) -> () {
+        self.state.write().notify_event_listeners(f);
     }
 
     /// Returns the current pairing delegate proxy if it exists and has not been closed. Clears the
@@ -472,21 +484,22 @@ impl HostDispatcher {
 
     pub fn on_device_updated(&self, mut device: RemoteDevice ) {
         // TODO(NET-1297): generic method for this pattern
-        for listener in self.event_listeners().iter() {
+        self.notify_event_listeners(|listener| {
             let _res = listener
                 .send_on_device_updated(&mut device)
                 .map_err(|e| fx_log_err!("Failed to send device updated event: {:?}", e));
-        }
+        });
+
         let _drop_old_value = self.state.write().remote_devices.insert(device.identifier.clone(), device);
     }
 
     pub fn on_device_removed( &self, identifier: String ) {
         self.state.write().remote_devices.remove(&identifier);
-        for listener in self.event_listeners().iter() {
+        self.notify_event_listeners(|listener| {
             let _res = listener
                 .send_on_device_removed(&identifier)
                 .map_err(|e| fx_log_err!("Failed to send device removed event: {:?}", e));
-        }
+        })
     }
 
     pub fn get_remote_devices(&self) -> Vec<RemoteDevice> {
@@ -614,10 +627,9 @@ async fn add_adapter(hd: HostDispatcher, host_path: PathBuf) -> Result<(), Error
     // Notify Control interface clients about the new device.
     // TODO(armansito): This layering isn't quite right. It's better to do this in
     // HostDispatcher::add_host instead.
-    for listener in hd.state.read().event_listeners.iter() {
-        let _res =
-            listener.send_on_adapter_updated(&mut clone_host_info(host_device.read().get_info()));
-    }
+    hd.notify_event_listeners(|l| {
+        let _res = l.send_on_adapter_updated(&mut clone_host_info(host_device.read().get_info()));
+    });
 
     // Resolve pending adapter futures.
     hd.state.write().resolve_host_requests();
