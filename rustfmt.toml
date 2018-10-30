@@ -57,4 +57,5 @@ use_field_init_shorthand = false
 use_small_heuristics = "Default"
 use_try_shorthand = true # Fuchsia prefers the shortcut
 where_single_line = false
-wrap_comments = true # otherwise comments will violate max_width
+wrap_comments = false # TODO make true when rustfmt#3153 is fixed,
+# otherwise comments will violate max_width
