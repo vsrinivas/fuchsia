@@ -312,8 +312,17 @@ void EmitLinearizeMessage(std::ostream* file,
         case flat::Type::Kind::kString:
             *file << kIndent << receiver << "->" << name << ".data = &" << bytes << "[_next];\n";
             *file << kIndent << receiver << "->" << name << ".size = " << name << "_size;\n";
-            *file << kIndent << "memcpy(" << receiver << "->" << name << ".data, " << name << "_data, " << name << "_size);\n";
             *file << kIndent << "_next += FIDL_ALIGN(" << name << "_size);\n";
+            *file << kIndent << "if (" << name << "_data) {\n";
+            *file << kIndent << kIndent << "memcpy(" << receiver << "->" << name << ".data, " << name << "_data, " << name << "_size);\n";
+            *file << kIndent << "} else {\n";
+            *file << kIndent << kIndent << "if (" << name << "_size != 0) {\n";
+            *file << kIndent << kIndent << kIndent << "return ZX_ERR_INVALID_ARGS;\n";
+            *file << kIndent << kIndent << "}\n";
+            if (member.nullability == types::Nullability::kNullable) {
+                *file << kIndent << kIndent << receiver << "->" << name << ".data = NULL;\n";
+            }
+            *file << kIndent << "}\n";
             break;
         case flat::Type::Kind::kHandle:
         case flat::Type::Kind::kRequestHandle:
@@ -488,18 +497,39 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl) {
     auto type_name = NameFlatCType(type, decl_kind);
     std::string element_type_name;
     std::vector<uint32_t> array_counts;
-    if (type->kind == flat::Type::Kind::kArray) {
-        ArrayCountsAndElementTypeName(library, type, &array_counts, &element_type_name);
+    types::Nullability nullability = types::Nullability::kNonnullable;
+    switch (type->kind) {
+    case flat::Type::Kind::kArray: {
+        ArrayCountsAndElementTypeName(library,
+                                      type,
+                                      &array_counts,
+                                      &element_type_name);
+        break;
     }
-    if (type->kind == flat::Type::Kind::kVector) {
+    case flat::Type::Kind::kVector: {
         auto vector_type = static_cast<const flat::VectorType*>(type);
         const flat::Type* element_type = vector_type->element_type.get();
-        element_type_name = NameFlatCType(element_type, GetDeclKind(library, element_type));
+        element_type_name =
+            NameFlatCType(element_type, GetDeclKind(library, element_type));
+        break;
     }
-    types::Nullability nullability = types::Nullability::kNonnullable;
-    if (type->kind == flat::Type::Kind::kIdentifier) {
-        auto identifier_type = static_cast<const flat::IdentifierType*>(type);
+    case flat::Type::Kind::kIdentifier: {
+        auto identifier_type =
+            static_cast<const flat::IdentifierType*>(type);
         nullability = identifier_type->nullability;
+        break;
+    }
+    case flat::Type::Kind::kString: {
+        auto string_type = static_cast<const flat::StringType*>(type);
+        nullability = string_type->nullability;
+        break;
+    }
+    case flat::Type::Kind::kHandle:
+        break;
+    case flat::Type::Kind::kRequestHandle:
+        break;
+    case flat::Type::Kind::kPrimitive:
+        break;
     }
     return CGenerator::Member{
         type->kind,
