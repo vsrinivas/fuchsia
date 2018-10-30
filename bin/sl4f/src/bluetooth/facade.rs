@@ -5,10 +5,12 @@
 use failure::{bail, Error, Fail, ResultExt};
 use fidl;
 use fidl::encoding::OutOfLine;
-use fidl_fuchsia_bluetooth_gatt::{ClientProxy, ServiceInfo};
+use fidl::endpoints;
 use fidl_fuchsia_bluetooth_gatt::{
-    LocalServiceDelegateMarker, LocalServiceMarker, LocalServiceProxy, Server_Marker, Server_Proxy,
+    Characteristic, LocalServiceDelegateMarker, LocalServiceMarker, LocalServiceProxy,
+    RemoteServiceProxy, Server_Marker, Server_Proxy,
 };
+use fidl_fuchsia_bluetooth_gatt::{ClientProxy, ServiceInfo};
 use fidl_fuchsia_bluetooth_le::RemoteDevice;
 use fidl_fuchsia_bluetooth_le::{CentralEvent, CentralMarker, CentralProxy, ScanFilter};
 use fuchsia_app as app;
@@ -66,6 +68,9 @@ pub struct BluetoothFacade {
     // service_proxies: HashMap of key = String (randomly generated local_service_id) and val:
     // LocalServiceProxy
     service_proxies: HashMap<String, (LocalServiceProxy, fasync::Channel)>,
+
+    // FIDL proxy to the currently connected service, if any.
+    active_proxy: Option<RemoteServiceProxy>,
 }
 
 impl BluetoothFacade {
@@ -77,6 +82,7 @@ impl BluetoothFacade {
             host_requests: Slab::new(),
             server_proxy: None,
             service_proxies: HashMap::new(),
+            active_proxy: None,
         }))
     }
 
@@ -262,7 +268,7 @@ impl BluetoothFacade {
             Some(c) => {
                 let status = await!(c.start_scan(filter.as_mut().map(OutOfLine)))?;
                 match status.error {
-                    Some(e) => bail!("Faile to start scan: {}", BTError::from(*e)),
+                    Some(e) => bail!("Failed to start scan: {}", BTError::from(*e)),
                     None => Ok(()),
                 }
             }
@@ -290,28 +296,20 @@ impl BluetoothFacade {
             Some(c) => {
                 let status = await!(c.connect_peripheral(&mut identifier, server_end))?;
                 match status.error {
-                    Some(e) => {
-                        bail!("Failed to connect to peripheral: {}", BTError::from(*e))
-                    }
+                    Some(e) => bail!("Failed to connect to peripheral: {}", BTError::from(*e)),
                     None => {}
                 }
             }
-            None => {
-                bail!("No central proxy created.")
-            }
+            None => bail!("No central proxy created."),
         };
-        BluetoothFacade::update_peripheral_id(
-            &bt_facade,
-            &identifier,
-            proxy,
-        );
+        BluetoothFacade::update_peripheral_id(&bt_facade, &identifier, proxy);
         Ok(())
     }
 
     pub fn list_services(
         bt_facade: &RwLock<BluetoothFacade>, id: String,
     ) -> impl Future<Output = Result<Vec<ServiceInfo>, Error>> {
-        let client_proxy = BluetoothFacade::get_client_from_peripherals(bt_facade.clone(), id);
+        let client_proxy = BluetoothFacade::get_client_from_peripherals(&bt_facade, id);
 
         match client_proxy {
             Some(c) => Right(
@@ -332,6 +330,192 @@ impl BluetoothFacade {
         }
     }
 
+    pub async fn gattc_connect_to_service(
+        bt_facade: &RwLock<BluetoothFacade>, periph_id: String, service_id: u64,
+    ) -> Result<(), Error> {
+        let client_proxy = BluetoothFacade::get_client_from_peripherals(&bt_facade, periph_id);
+        let (proxy, server) = endpoints::create_proxy()?;
+
+        // First close the connection to the currently active service.
+        if bt_facade.read().active_proxy.is_some() {
+            bt_facade.write().active_proxy = None;
+        }
+        match client_proxy {
+            Some(c) => {
+                c.connect_to_service(service_id, server)?;
+                bt_facade.write().active_proxy = Some(proxy);
+                Ok(())
+            }
+            None => {
+                fx_log_err!(tag: "gattc_connect_to_service", "Unable to connect to service.");
+                bail!("No peripheral proxy created.")
+            }
+        }
+    }
+
+    pub async fn gattc_discover_characteristics(
+        bt_facade: Arc<RwLock<BluetoothFacade>>,
+    ) -> Result<Vec<Characteristic>, Error> {
+        let discover_characteristics = bt_facade
+            .read()
+            .active_proxy
+            .as_ref()
+            .unwrap()
+            .discover_characteristics();
+
+        let (status, chrcs) =
+            await!(discover_characteristics).map_err(|_| BTError::new("Failed to send message"))?;
+        if let Some(e) = status.error {
+            bail!("Failed to read characteristics: {}", BTError::from(*e));
+        }
+        Ok(chrcs)
+    }
+
+    pub async fn gattc_write_char_by_id(
+        bt_facade: Arc<RwLock<BluetoothFacade>>, id: u64, offset: u16, write_value: Vec<u8>,
+    ) -> Result<(), Error> {
+        let write_characteristic = bt_facade
+            .read()
+            .active_proxy
+            .as_ref()
+            .unwrap()
+            .write_characteristic(id, offset, &mut write_value.into_iter());
+
+        let status =
+            await!(write_characteristic).map_err(|_| BTError::new("Failed to send message"))?;
+
+        match status.error {
+            Some(e) => bail!("Failed to write to characteristic: {}", BTError::from(*e)),
+            None => Ok(()),
+        }
+    }
+
+    pub async fn gattc_write_char_by_id_without_response(
+        bt_facade: Arc<RwLock<BluetoothFacade>>, id: u64, write_value: Vec<u8>,
+    ) -> Result<(), Error> {
+        bt_facade
+            .read()
+            .active_proxy
+            .as_ref()
+            .unwrap()
+            .write_characteristic_without_response(id, &mut write_value.into_iter())
+            .map_err(|_| BTError::new("Failed to send message").into())
+    }
+
+    pub async fn gattc_read_char_by_id(
+        bt_facade: Arc<RwLock<BluetoothFacade>>, id: u64,
+    ) -> Result<Vec<u8>, Error> {
+        let read_characteristic = bt_facade
+            .read()
+            .active_proxy
+            .as_ref()
+            .unwrap()
+            .read_characteristic(id);
+
+        let (status, value) =
+            await!(read_characteristic).map_err(|_| BTError::new("Failed to send message"))?;
+
+        match status.error {
+            Some(e) => bail!("Failed to read characteristic: {}", BTError::from(*e)),
+            None => Ok(value),
+        }
+    }
+
+    pub async fn gattc_read_long_char_by_id(
+        bt_facade: Arc<RwLock<BluetoothFacade>>, id: u64, offset: u16, max_bytes: u16,
+    ) -> Result<Vec<u8>, Error> {
+        let read_long_characteristic = bt_facade
+            .read()
+            .active_proxy
+            .as_ref()
+            .unwrap()
+            .read_long_characteristic(id, offset, max_bytes);
+
+        let (status, value) =
+            await!(read_long_characteristic).map_err(|_| BTError::new("Failed to send message"))?;
+
+        match status.error {
+            Some(e) => bail!("Failed to read characteristic: {}", BTError::from(*e)),
+            None => Ok(value),
+        }
+    }
+
+    pub async fn gattc_read_desc_by_id(
+        bt_facade: Arc<RwLock<BluetoothFacade>>, id: u64,
+    ) -> Result<Vec<u8>, Error> {
+        let read_descriptor = bt_facade
+            .read()
+            .active_proxy
+            .as_ref()
+            .unwrap()
+            .read_descriptor(id);
+
+        let (status, value) =
+            await!(read_descriptor).map_err(|_| BTError::new("Failed to send message"))?;
+
+        match status.error {
+            Some(e) => bail!("Failed to read descriptor: {}", BTError::from(*e)),
+            None => Ok(value),
+        }
+    }
+
+    pub async fn gattc_read_long_desc_by_id(
+        bt_facade: Arc<RwLock<BluetoothFacade>>, id: u64, offset: u16, max_bytes: u16,
+    ) -> Result<Vec<u8>, Error> {
+        let read_long_descriptor = bt_facade
+            .read()
+            .active_proxy
+            .as_ref()
+            .unwrap()
+            .read_long_descriptor(id, offset, max_bytes);
+
+        let (status, value) =
+            await!(read_long_descriptor).map_err(|_| BTError::new("Failed to send message"))?;
+
+        match status.error {
+            Some(e) => bail!("Failed to read descriptor: {}", BTError::from(*e)),
+            None => Ok(value),
+        }
+    }
+
+    pub async fn gattc_write_desc_by_id(
+        bt_facade: Arc<RwLock<BluetoothFacade>>, id: u64, write_value: Vec<u8>,
+    ) -> Result<(), Error> {
+        let write_descriptor = bt_facade
+            .read()
+            .active_proxy
+            .as_ref()
+            .unwrap()
+            .write_descriptor(id, &mut write_value.into_iter());
+
+        let status =
+            await!(write_descriptor).map_err(|_| BTError::new("Failed to send message"))?;
+
+        match status.error {
+            Some(e) => bail!("Failed to write to descriptor: {}", BTError::from(*e)),
+            None => Ok(()),
+        }
+    }
+
+    pub async fn gattc_toggle_notify_characteristic(
+        bt_facade: Arc<RwLock<BluetoothFacade>>, id: u64, value: bool,
+    ) -> Result<(), Error> {
+        let notify_characteristic = bt_facade
+            .read()
+            .active_proxy
+            .as_ref()
+            .unwrap()
+            .notify_characteristic(id, value);
+
+        let status =
+            await!(notify_characteristic).map_err(|_| BTError::new("Failed to send message"))?;
+
+        match status.error {
+            Some(e) => bail!("Failed to enable notifications: {}", BTError::from(*e)),
+            None => {}
+        };
+        Ok(())
+    }
 
     pub async fn disconnect_peripheral(
         bt_facade: &RwLock<BluetoothFacade>, id: String,
@@ -341,12 +525,10 @@ impl BluetoothFacade {
                 let status = await!(c.disconnect_peripheral(&id))?;
                 match status.error {
                     None => {}
-                    Some(e) => bail!("Failed to disconnect: {:?}", e)
+                    Some(e) => bail!("Failed to disconnect: {:?}", e),
                 }
             }
-            None => {
-                bail!("Failed to disconnect from perpheral.")
-            }
+            None => bail!("Failed to disconnect from perpheral."),
         };
         // Remove current id from map of peripheral_ids
         BluetoothFacade::remove_peripheral_id(&bt_facade, &id);

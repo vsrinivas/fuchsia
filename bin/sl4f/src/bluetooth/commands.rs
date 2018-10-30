@@ -14,7 +14,9 @@ use std::sync::Arc;
 // Bluetooth-related functionality
 use crate::bluetooth::ble_advertise_facade::BleAdvertiseFacade;
 use crate::bluetooth::facade::BluetoothFacade;
-use crate::bluetooth::types::{BleConnectPeripheralResponse, BluetoothMethod};
+use crate::bluetooth::types::{
+    BleConnectPeripheralResponse, BluetoothMethod, GattcDiscoverCharacteristicResponse,
+};
 
 macro_rules! parse_arg {
     ($args:ident, $func:ident, $name:expr) => {
@@ -121,6 +123,34 @@ fn parse_identifier(args_raw: Value) -> Result<String, Error> {
     }
 }
 
+fn parse_service_identifier(args_raw: Value) -> Result<u64, Error> {
+    parse_arg!(args_raw, as_u64, "service_identifier").map_err(Into::into)
+}
+
+fn parse_u64_identifier(args_raw: Value) -> Result<u64, Error> {
+    parse_arg!(args_raw, as_u64, "identifier").map_err(Into::into)
+}
+
+fn parse_offset(args_raw: Value) -> Result<u64, Error> {
+    parse_arg!(args_raw, as_u64, "offset").map_err(Into::into)
+}
+
+fn parse_max_bytes(args_raw: Value) -> Result<u64, Error> {
+    parse_arg!(args_raw, as_u64, "max_bytes").map_err(Into::into)
+}
+
+fn parse_write_value(args_raw: Value) -> Result<Vec<u8>, Error> {
+    let arr = parse_arg!(args_raw, as_array, "write_value")?;
+    let mut vector: Vec<u8> = Vec::new();
+    for value in arr.into_iter() {
+        match value.as_u64() {
+            Some(num) => vector.push(num as u8),
+            None => {}
+        };
+    }
+    Ok(vector)
+}
+
 fn ble_publish_service_to_fidl(args_raw: Value) -> Result<(ServiceInfo, String), Error> {
     let id = parse_arg!(args_raw, as_u64, "id")?;
     let primary = parse_arg!(args_raw, as_bool, "primary")?;
@@ -180,15 +210,107 @@ pub async fn ble_method_to_fidl(
         }
         BluetoothMethod::BleConnectPeripheral => {
             let id = parse_identifier(args)?;
-            await!(connect_peripheral_async(facade.clone(), id.clone()))
+            await!(connect_peripheral_async(facade.clone(), id))
         }
         BluetoothMethod::BleDisconnectPeripheral => {
             let id = parse_identifier(args)?;
-            await!(disconnect_peripheral_async(&facade, id.clone()))
+            await!(disconnect_peripheral_async(&facade, id))
         }
         BluetoothMethod::BleListServices => {
             let id = parse_identifier(args)?;
-            await!(list_services_async(&facade, id.clone()))
+            await!(list_services_async(&facade, id))
+        }
+        BluetoothMethod::GattcConnectToService => {
+            let periph_id = parse_identifier(args.clone())?;
+            let service_id = parse_service_identifier(args)?;
+            await!(gattc_connect_to_service_async(
+                &facade,
+                periph_id,
+                service_id
+            ))
+        }
+        BluetoothMethod::GattcDiscoverCharacteristics => {
+            await!(gattc_discover_characteristics_async(facade.clone()))
+        }
+        BluetoothMethod::GattcWriteCharacteristicById => {
+            let id = parse_u64_identifier(args.clone())?;
+            let offset_as_u64 = parse_offset(args.clone())?;
+            let offset = offset_as_u64 as u16;
+            let value = parse_write_value(args)?;
+            await!(gattc_write_char_by_id_async(
+                facade.clone(),
+                id,
+                offset,
+                value
+            ))
+        }
+        BluetoothMethod::GattcWriteCharacteristicByIdWithoutResponse => {
+            let id = parse_u64_identifier(args.clone())?;
+            let value = parse_write_value(args)?;
+            await!(gattc_write_char_by_id_without_response_async(
+                facade.clone(),
+                id,
+                value
+            ))
+        }
+        BluetoothMethod::GattcEnableNotifyCharactertistic => {
+            let id = parse_u64_identifier(args.clone())?;
+            await!(gattc_toggle_notify_characteristic_async(
+                facade.clone(),
+                id,
+                true
+            ))
+        }
+        BluetoothMethod::GattcDisableNotifyCharactertistic => {
+            let id = parse_u64_identifier(args.clone())?;
+            await!(gattc_toggle_notify_characteristic_async(
+                facade.clone(),
+                id,
+                false
+            ))
+        }
+        BluetoothMethod::GattcReadCharacteristicById => {
+            let id = parse_u64_identifier(args)?;
+            await!(gattc_read_char_by_id_async(facade.clone(), id))
+        }
+        BluetoothMethod::GattcReadLongCharacteristicById => {
+            let id = parse_u64_identifier(args.clone())?;
+            let offset_as_u64 = parse_offset(args.clone())?;
+            let offset = offset_as_u64 as u16;
+            let max_bytes_as_u64 = parse_max_bytes(args)?;
+            let max_bytes = max_bytes_as_u64 as u16;
+            await!(gattc_read_long_char_by_id_async(
+                facade.clone(),
+                id,
+                offset,
+                max_bytes
+            ))
+        }
+        BluetoothMethod::GattcReadLongDescriptorById => {
+            let id = parse_u64_identifier(args.clone())?;
+            let offset_as_u64 = parse_offset(args.clone())?;
+            let offset = offset_as_u64 as u16;
+            let max_bytes_as_u64 = parse_max_bytes(args)?;
+            let max_bytes = max_bytes_as_u64 as u16;
+            await!(gattc_read_long_desc_by_id_async(
+                facade.clone(),
+                id,
+                offset,
+                max_bytes
+            ))
+        }
+        BluetoothMethod::GattcWriteDescriptorById => {
+            let id = parse_u64_identifier(args.clone())?;
+            let value = parse_write_value(args)?;
+            await!(gattc_write_desc_by_id_async(
+                facade.clone(),
+                id,
+                value
+            ))
+        }
+        BluetoothMethod::GattcReadDescriptorById => {
+            let id = parse_u64_identifier(args)?;
+            await!(gattc_read_desc_by_id_async(facade.clone(), id))
         }
         BluetoothMethod::BlePublishService => {
             let (service_info, local_service_id) = ble_publish_service_to_fidl(args)?;
@@ -240,7 +362,7 @@ async fn connect_peripheral_async(
 ) -> Result<Value, Error> {
     let connect_periph_result = await!(BluetoothFacade::connect_peripheral(
         facade.clone(),
-        id.clone()
+        id
     ))?;
     Ok(to_value(connect_periph_result)?)
 }
@@ -248,17 +370,128 @@ async fn connect_peripheral_async(
 async fn disconnect_peripheral_async(
     facade: &RwLock<BluetoothFacade>, id: String,
 ) -> Result<Value, Error> {
-    let value = await!(BluetoothFacade::disconnect_peripheral(&facade, id.clone()))?;
+    let value = await!(BluetoothFacade::disconnect_peripheral(&facade, id))?;
     Ok(to_value(value)?)
 }
 
 // Uses the same return type as connect_peripheral_async -- Returns subset of
 // fidl::ServiceInfo
 async fn list_services_async(facade: &RwLock<BluetoothFacade>, id: String) -> Result<Value, Error> {
-    let list_services_result = await!(BluetoothFacade::list_services(&facade, id.clone()))?;
+    let list_services_result = await!(BluetoothFacade::list_services(&facade, id))?;
     Ok(to_value(BleConnectPeripheralResponse::new(
         list_services_result,
     ))?)
+}
+
+async fn gattc_connect_to_service_async(
+    facade: &RwLock<BluetoothFacade>, periph_id: String, service_id: u64,
+) -> Result<Value, Error> {
+    let connect_to_service_result = await!(BluetoothFacade::gattc_connect_to_service(
+        &facade,
+        periph_id,
+        service_id
+    ))?;
+    Ok(to_value(connect_to_service_result)?)
+}
+
+async fn gattc_discover_characteristics_async(
+    facade: Arc<RwLock<BluetoothFacade>>,
+) -> Result<Value, Error> {
+    let discover_characteristics_results = await!(
+        BluetoothFacade::gattc_discover_characteristics(facade.clone())
+    )?;
+    Ok(to_value(GattcDiscoverCharacteristicResponse::new(
+        discover_characteristics_results,
+    ))?)
+}
+
+async fn gattc_write_char_by_id_async(
+    facade: Arc<RwLock<BluetoothFacade>>, id: u64, offset: u16, write_value: Vec<u8>,
+) -> Result<Value, Error> {
+    let write_char_status = await!(BluetoothFacade::gattc_write_char_by_id(
+        facade.clone(),
+        id,
+        offset,
+        write_value
+    ))?;
+    Ok(to_value(write_char_status)?)
+}
+
+async fn gattc_write_char_by_id_without_response_async(
+    facade: Arc<RwLock<BluetoothFacade>>, id: u64, write_value: Vec<u8>,
+) -> Result<Value, Error> {
+    let write_char_status = await!(BluetoothFacade::gattc_write_char_by_id_without_response(
+        facade.clone(),
+        id,
+        write_value
+    ))?;
+    Ok(to_value(write_char_status)?)
+}
+
+async fn gattc_read_char_by_id_async(
+    facade: Arc<RwLock<BluetoothFacade>>, id: u64,
+) -> Result<Value, Error> {
+    let read_char_status = await!(BluetoothFacade::gattc_read_char_by_id(
+        facade.clone(),
+        id
+    ))?;
+    Ok(to_value(read_char_status)?)
+}
+
+async fn gattc_read_long_char_by_id_async(
+    facade: Arc<RwLock<BluetoothFacade>>, id: u64, offset: u16, max_bytes: u16,
+) -> Result<Value, Error> {
+    let read_long_char_status = await!(BluetoothFacade::gattc_read_long_char_by_id(
+        facade.clone(),
+        id,
+        offset,
+        max_bytes
+    ))?;
+    Ok(to_value(read_long_char_status)?)
+}
+
+async fn gattc_read_long_desc_by_id_async(
+    facade: Arc<RwLock<BluetoothFacade>>, id: u64, offset: u16, max_bytes: u16,
+) -> Result<Value, Error> {
+    let read_long_desc_status = await!(BluetoothFacade::gattc_read_long_desc_by_id(
+        facade.clone(),
+        id,
+        offset,
+        max_bytes
+    ))?;
+    Ok(to_value(read_long_desc_status)?)
+}
+
+async fn gattc_read_desc_by_id_async(
+    facade: Arc<RwLock<BluetoothFacade>>, id: u64,
+) -> Result<Value, Error> {
+    let read_desc_status = await!(BluetoothFacade::gattc_read_desc_by_id(
+        facade.clone(),
+        id
+    ))?;
+    Ok(to_value(read_desc_status)?)
+}
+
+async fn gattc_write_desc_by_id_async(
+    facade: Arc<RwLock<BluetoothFacade>>, id: u64, write_value: Vec<u8>,
+) -> Result<Value, Error> {
+    let write_desc_status = await!(BluetoothFacade::gattc_write_desc_by_id(
+        facade.clone(),
+        id,
+        write_value
+    ))?;
+    Ok(to_value(write_desc_status)?)
+}
+
+async fn gattc_toggle_notify_characteristic_async(
+    facade: Arc<RwLock<BluetoothFacade>>, id: u64, value: bool,
+) -> Result<Value, Error> {
+    let toggle_notify_result = await!(BluetoothFacade::gattc_toggle_notify_characteristic(
+        facade.clone(),
+        id,
+        value
+    ))?;
+    Ok(to_value(toggle_notify_result)?)
 }
 
 async fn publish_service_async(
