@@ -90,8 +90,8 @@ void Imx227Device::WriteReg(uint16_t addr, uint8_t val) {
     // The camera sensor expects in this format.
     // First two bytes are the address, third one is the value to be written.
     uint8_t buf[3];
-    buf[0] = static_cast<uint8_t>(addr & 0xFF);
-    buf[1] = static_cast<uint8_t>((addr >> 8) & 0xFF);
+    buf[1] = static_cast<uint8_t>(addr & 0xFF);
+    buf[0] = static_cast<uint8_t>((addr >> 8) & 0xFF);
     buf[2] = val;
 
     zx_status_t status = i2c_write_sync(&i2c_, buf, 3);
@@ -154,7 +154,7 @@ zx_status_t Imx227Device::Init() {
     // Enable 24M clock for sensor.
     ddk::ClkProtocolProxy clk(&clk_);
     clk.Enable(0);
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
 
     ddk::GpioProtocolProxy gpio_rst(&gpios_[CAM_SENSOR_RST]);
     gpio_rst.ConfigOut(0);
