@@ -15,8 +15,9 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 use crate::error::ParseError;
 use crate::ip::{Ip, IpAddr, IpProto};
 use crate::transport::tcp::TcpOption;
-use crate::wire::util::{fits_in_u16, fits_in_u32, BufferAndRange, Checksum, Options,
-                        PacketSerializer};
+use crate::wire::util::{
+    fits_in_u16, fits_in_u32, BufferAndRange, Checksum, Options, PacketSerializer,
+};
 
 use self::options::TcpOptionImpl;
 
@@ -398,7 +399,7 @@ mod options {
     use byteorder::{ByteOrder, NetworkEndian};
 
     use crate::transport::tcp::{TcpOption, TcpSackBlock};
-    use crate::wire::util::OptionImpl;
+    use crate::wire::util::{OptionImpl, OptionImplErr};
 
     fn parse_sack_block(bytes: &[u8]) -> TcpSackBlock {
         TcpSackBlock {
@@ -417,54 +418,66 @@ mod options {
 
     pub struct TcpOptionImpl;
 
-    impl OptionImpl for TcpOptionImpl {
-        type Output = TcpOption;
+    impl OptionImplErr for TcpOptionImpl {
         type Error = ();
+    }
 
-        fn parse(kind: u8, data: &[u8]) -> Result<Option<TcpOption>, ()> {
+    impl<'a> OptionImpl<'a> for TcpOptionImpl {
+        type Output = TcpOption<'a>;
+
+        fn parse(kind: u8, data: &'a [u8]) -> Result<Option<TcpOption>, ()> {
             match kind {
                 self::OPTION_KIND_EOL | self::OPTION_KIND_NOP => {
                     unreachable!("wire::util::Options promises to handle EOL and NOP")
                 }
-                self::OPTION_KIND_MSS => if data.len() != 2 {
-                    Err(())
-                } else {
-                    Ok(Some(TcpOption::Mss(NetworkEndian::read_u16(&data))))
-                },
-                self::OPTION_KIND_WINDOW_SCALE => if data.len() != 1 {
-                    Err(())
-                } else {
-                    Ok(Some(TcpOption::WindowScale(data[0])))
-                },
-                self::OPTION_KIND_SACK_PERMITTED => if !data.is_empty() {
-                    Err(())
-                } else {
-                    Ok(Some(TcpOption::SackPermitted))
-                },
+                self::OPTION_KIND_MSS => {
+                    if data.len() != 2 {
+                        Err(())
+                    } else {
+                        Ok(Some(TcpOption::Mss(NetworkEndian::read_u16(&data))))
+                    }
+                }
+                self::OPTION_KIND_WINDOW_SCALE => {
+                    if data.len() != 1 {
+                        Err(())
+                    } else {
+                        Ok(Some(TcpOption::WindowScale(data[0])))
+                    }
+                }
+                self::OPTION_KIND_SACK_PERMITTED => {
+                    if !data.is_empty() {
+                        Err(())
+                    } else {
+                        Ok(Some(TcpOption::SackPermitted))
+                    }
+                }
                 self::OPTION_KIND_SACK => match data.len() {
                     8 | 16 | 24 | 32 => {
                         let num_blocks = data.len() / mem::size_of::<TcpSackBlock>();
-                        let mut blocks = [TcpSackBlock::default(); 4];
-                        for i in 0..num_blocks {
-                            blocks[i] = parse_sack_block(&data[i * 8..]);
-                        }
-                        Ok(Some(TcpOption::Sack {
-                            blocks,
-                            num_blocks: num_blocks as u8,
-                        }))
+                        // TODO(joshlf): Figure out how to support this safely
+                        // with zerocopy mechanisms.
+                        let blocks = unsafe {
+                            std::slice::from_raw_parts(
+                                data.as_ptr() as *const TcpSackBlock,
+                                num_blocks,
+                            )
+                        };
+                        Ok(Some(TcpOption::Sack(blocks)))
                     }
                     _ => Err(()),
                 },
-                self::OPTION_KIND_TIMESTAMP => if data.len() != 8 {
-                    Err(())
-                } else {
-                    let ts_val = NetworkEndian::read_u32(&data);
-                    let ts_echo_reply = NetworkEndian::read_u32(&data[4..]);
-                    Ok(Some(TcpOption::Timestamp {
-                        ts_val,
-                        ts_echo_reply,
-                    }))
-                },
+                self::OPTION_KIND_TIMESTAMP => {
+                    if data.len() != 8 {
+                        Err(())
+                    } else {
+                        let ts_val = NetworkEndian::read_u32(&data);
+                        let ts_echo_reply = NetworkEndian::read_u32(&data[4..]);
+                        Ok(Some(TcpOption::Timestamp {
+                            ts_val,
+                            ts_echo_reply,
+                        }))
+                    }
+                }
                 _ => Ok(None),
             }
         }
@@ -585,7 +598,8 @@ mod tests {
                 &hdr_prefix_to_bytes(hdr_prefix)[..],
                 TEST_SRC_IPV4,
                 TEST_DST_IPV4
-            ).unwrap_err(),
+            )
+            .unwrap_err(),
             ParseError::Format
         );
 
@@ -597,7 +611,8 @@ mod tests {
                 &hdr_prefix_to_bytes(hdr_prefix)[..],
                 TEST_SRC_IPV4,
                 TEST_DST_IPV4
-            ).unwrap_err(),
+            )
+            .unwrap_err(),
             ParseError::Format
         );
 
@@ -610,7 +625,8 @@ mod tests {
                 &hdr_prefix_to_bytes(hdr_prefix)[..],
                 TEST_SRC_IPV4,
                 TEST_DST_IPV4
-            ).unwrap_err(),
+            )
+            .unwrap_err(),
             ParseError::Format
         );
 
@@ -623,7 +639,8 @@ mod tests {
                 &hdr_prefix_to_bytes(hdr_prefix)[..],
                 TEST_SRC_IPV4,
                 TEST_DST_IPV4
-            ).unwrap_err(),
+            )
+            .unwrap_err(),
             ParseError::Format
         );
     }

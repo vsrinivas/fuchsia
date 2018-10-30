@@ -15,7 +15,7 @@
 /// [RFC 793]: https://tools.ietf.org/html/rfc793#page-17
 #[allow(missing_docs)]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub enum TcpOption {
+pub enum TcpOption<'a> {
     /// A Maximum Segment Size (MSS) option.
     Mss(u16),
     /// A window scale option.
@@ -24,13 +24,9 @@ pub enum TcpOption {
     SackPermitted,
     /// A selective ACK option.
     ///
-    /// A variable-length number of selective ACK blocks indicated by
-    /// `num_blocks`. All blocks beyond `num_blocks` are meaningless and should
-    /// be ignored.
-    Sack {
-        blocks: [TcpSackBlock; 4],
-        num_blocks: u8,
-    },
+    /// A variable-length number of selective ACK blocks. The length is in the
+    /// range [0, 4].
+    Sack(&'a [TcpSackBlock]),
     /// A timestamp option.
     Timestamp { ts_val: u32, ts_echo_reply: u32 },
 }

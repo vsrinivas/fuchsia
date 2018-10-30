@@ -190,7 +190,8 @@ pub fn send_ip_frame<D: EventDispatcher, A, S>(
                 src_mac,
                 dst_mac,
                 A::Version::EtherType,
-            )).serialize_outer();
+            ))
+            .serialize_outer();
         ctx.dispatcher()
             .send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
     }
@@ -302,9 +303,7 @@ impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
         get_device_state(ctx, device_id).ipv4_addr.map(|x| x.0)
     }
 
-    fn get_hardware_addr<D: EventDispatcher>(
-        ctx: &mut Context<D>, device_id: u64,
-    ) -> Mac {
+    fn get_hardware_addr<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64) -> Mac {
         get_device_state(ctx, device_id).mac
     }
 }

@@ -308,14 +308,27 @@ mod options {
         External(E),
     }
 
+    /// An implementation of an options parser which can return errors.
+    ///
+    /// This is split from the `OptionImpl` trait so that the associated `Error`
+    /// type does not depend on the lifetime parameter to `OptionImpl`.
+    /// Lifetimes aside, `OptionImplError` is conceptually part of `OptionImpl`.
+    pub trait OptionImplErr {
+        type Error;
+    }
+
     /// An implementation of an options parser.
     ///
     /// `OptionImpl` provides functions to parse fixed- and variable-length
     /// options. It is required in order to construct an `Options` or
     /// `OptionIter`.
-    pub trait OptionImpl {
+    pub trait OptionImpl<'a>: OptionImplErr {
+        /// The type of an option; the output from the `parse` function.
+        ///
+        /// For long or variable-length data, the user is advised to make
+        /// `Output` a reference into the bytes passed to `parse`. This is
+        /// achievable because of the lifetime parameter to this trait.
         type Output;
-        type Error;
 
         /// Parse an option.
         ///
@@ -329,13 +342,13 @@ mod options {
         /// `parse` must be deterministic, or else `Options::parse` cannot
         /// guarantee that future iterations will not produce errors (and
         /// panic).
-        fn parse(kind: u8, data: &[u8]) -> Result<Option<Self::Output>, Self::Error>;
+        fn parse(kind: u8, data: &'a [u8]) -> Result<Option<Self::Output>, Self::Error>;
     }
 
     impl<B, O> Options<B, O>
     where
         B: ByteSlice,
-        O: OptionImpl,
+        O: for<'a> OptionImpl<'a>,
     {
         /// Parse a set of options.
         ///
@@ -354,7 +367,7 @@ mod options {
             // - B could return different bytes each time
             // - O::parse could be non-deterministic
             let mut idx = 0;
-            while next::<B, O>(&bytes, &mut idx)?.is_some() {}
+            while next::<O>(bytes.deref(), &mut idx)?.is_some() {}
             Ok(Options {
                 bytes,
                 _marker: PhantomData,
@@ -375,7 +388,7 @@ mod options {
     impl<'a, B, O> Options<B, O>
     where
         B: 'a + ByteSlice,
-        O: OptionImpl,
+        O: OptionImpl<'a>,
     {
         /// Create an iterator over options.
         ///
@@ -393,14 +406,14 @@ mod options {
 
     impl<'a, O> Iterator for OptionIter<'a, O>
     where
-        O: OptionImpl,
+        O: OptionImpl<'a>,
     {
         type Item = O::Output;
 
         fn next(&mut self) -> Option<O::Output> {
             // use match rather than expect because expect requires that Err: Debug
             #[cfg_attr(feature = "cargo-clippy", allow(match_wild_err_arm))]
-            match next::<&'a [u8], O>(&self.bytes, &mut self.idx) {
+            match next::<O>(&self.bytes[..], &mut self.idx) {
                 Ok(o) => o,
                 Err(_) => panic!("already-validated options should not fail to parse"),
             }
@@ -412,10 +425,11 @@ mod options {
     // NOP in both IPv4 and TCP
     const NOP: u8 = 1;
 
-    fn next<B, O>(bytes: &B, idx: &mut usize) -> Result<Option<O::Output>, OptionParseErr<O::Error>>
+    fn next<'a, O>(
+        bytes: &'a [u8], idx: &mut usize,
+    ) -> Result<Option<O::Output>, OptionParseErr<O::Error>>
     where
-        B: ByteSlice,
-        O: OptionImpl,
+        O: OptionImpl<'a>,
     {
         // For an explanation of this format, see the "Options" section of
         // https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TCP_segment_structure
@@ -451,11 +465,13 @@ mod options {
         #[derive(Debug)]
         struct DummyOptionImpl;
 
-        impl OptionImpl for DummyOptionImpl {
-            type Output = (u8, Vec<u8>);
+        impl OptionImplErr for DummyOptionImpl {
             type Error = ();
+        }
+        impl<'a> OptionImpl<'a> for DummyOptionImpl {
+            type Output = (u8, Vec<u8>);
 
-            fn parse(kind: u8, data: &[u8]) -> Result<Option<Self::Output>, Self::Error> {
+            fn parse(kind: u8, data: &'a [u8]) -> Result<Option<Self::Output>, Self::Error> {
                 let mut v = Vec::new();
                 v.extend_from_slice(data);
                 Ok(Some((kind, v)))
@@ -465,11 +481,13 @@ mod options {
         #[derive(Debug)]
         struct AlwaysErrOptionImpl;
 
-        impl OptionImpl for AlwaysErrOptionImpl {
-            type Output = ();
+        impl OptionImplErr for AlwaysErrOptionImpl {
             type Error = ();
+        }
+        impl<'a> OptionImpl<'a> for AlwaysErrOptionImpl {
+            type Output = ();
 
-            fn parse(_kind: u8, _data: &[u8]) -> Result<Option<()>, ()> {
+            fn parse(_kind: u8, _data: &'a [u8]) -> Result<Option<()>, ()> {
                 Err(())
             }
         }
@@ -925,7 +943,8 @@ mod buffer {
             let next_min_body = min_body_and_padding_bytes
                 .checked_sub(
                     self.serializer.min_header_bytes() + self.serializer.min_footer_bytes(),
-                ).unwrap_or(0);
+                )
+                .unwrap_or(0);
 
             let EncapsulatingSerializationRequest { serializer, inner } = self;
             let mut buffer = inner.serialize(

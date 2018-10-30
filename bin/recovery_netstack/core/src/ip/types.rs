@@ -417,12 +417,12 @@ impl Debug for IpProto {
 ///
 /// [Wikipedia]: https://en.wikipedia.org/wiki/IPv4#Options
 /// [RFC 791]: https://tools.ietf.org/html/rfc791#page-15
-pub struct Ipv4Option {
+pub struct Ipv4Option<'a> {
     /// Whether this option needs to be copied into all fragments of a fragmented packet.
     pub copied: bool,
     // TODO(joshlf): include "Option Class"?
     /// The variable-length option data.
-    pub data: Ipv4OptionData,
+    pub data: Ipv4OptionData<'a>,
 }
 
 /// The data associated with an IPv4 header option.
@@ -430,7 +430,7 @@ pub struct Ipv4Option {
 /// `Ipv4OptionData` represents the variable-length data field of an IPv4 header
 /// option.
 #[allow(missing_docs)]
-pub enum Ipv4OptionData {
+pub enum Ipv4OptionData<'a> {
     // The maximum header length is 60 bytes, and the fixed-length header is 20
     // bytes, so there are 40 bytes for the options. That leaves a maximum
     // options size of 1 kind byte + 1 length byte + 38 data bytes.
@@ -439,7 +439,9 @@ pub enum Ipv4OptionData {
     /// Any unrecognized option kind will have its data parsed using this
     /// variant. This allows code to copy unrecognized options into packets when
     /// forwarding.
-    Unrecognized { kind: u8, len: u8, data: [u8; 38] },
+    ///
+    /// `data`'s length is in the range [0, 38].
+    Unrecognized { kind: u8, len: u8, data: &'a [u8] },
 }
 
 #[cfg(test)]

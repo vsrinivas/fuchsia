@@ -234,8 +234,10 @@ pub fn send_udp_listener<D: EventDispatcher, A: IpAddr>(
                     } else {
                         None
                     }
-                }).ok_or(unimplemented!())
-        }).or_else(|| {
+                })
+                .ok_or(unimplemented!())
+        })
+        .or_else(|| {
             // We didn't find the listener in state.listeners. Maybe it's a
             // wildcard listener. Wildcard listeners are only associated with
             // ports, so if we find it, we can return Ok immediately to match
@@ -248,7 +250,8 @@ pub fn send_udp_listener<D: EventDispatcher, A: IpAddr>(
                 .get_by_listener(listener)
                 .map(|ports| Ok(ports[0]))
             // We didn't find the listener in either map, so we panic.
-        }).expect("transport::udp::send_udp_listener: no such listener");
+        })
+        .expect("transport::udp::send_udp_listener: no such listener");
 
     // TODO(joshlf): Return an error rather than panicking.
     let local_port = local_port.unwrap();

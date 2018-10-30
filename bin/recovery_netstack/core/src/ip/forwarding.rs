@@ -122,7 +122,8 @@ impl<I: Ip> ForwardingTable<I> {
                 } else {
                     None
                 }
-            }).max_by_key(|e| e.subnet.prefix());
+            })
+            .max_by_key(|e| e.subnet.prefix());
 
         match best_match {
             Some(Entry {

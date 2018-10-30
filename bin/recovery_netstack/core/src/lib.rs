@@ -33,8 +33,10 @@ mod testutil;
 mod transport;
 mod wire;
 
-pub use crate::device::{ethernet::Mac, receive_frame, set_ip_addr, DeviceId,
-                        DeviceLayerEventDispatcher, DeviceLayerTimerId};
+pub use crate::device::{
+    ethernet::Mac, receive_frame, set_ip_addr, DeviceId, DeviceLayerEventDispatcher,
+    DeviceLayerTimerId,
+};
 pub use crate::ip::{Ipv4Addr, Subnet};
 pub use crate::transport::udp::UdpEventDispatcher;
 pub use crate::transport::{TransportLayerEventDispatcher, TransportLayerTimerId};
@@ -122,8 +124,12 @@ enum TimerIdInner {
 /// Handle a generic timer event.
 pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: TimerId) {
     match id {
-        TimerId(TimerIdInner::DeviceLayer(x)) => { device::handle_timeout(ctx, x); },
-        TimerId(TimerIdInner::TransportLayer(x)) => { transport::handle_timeout(ctx, x); },
+        TimerId(TimerIdInner::DeviceLayer(x)) => {
+            device::handle_timeout(ctx, x);
+        }
+        TimerId(TimerIdInner::TransportLayer(x)) => {
+            transport::handle_timeout(ctx, x);
+        }
     }
 }
 

@@ -23,8 +23,8 @@
 //! ## Listeners
 //!
 //! A listener, on the other hand, can be bound to any number of local addresses
-//! (although it is still always bound to a particular port). From the perspective
-//! of this crate, there are two ways of registering a listener:
+//! (although it is still always bound to a particular port). From the
+//! perspective of this crate, there are two ways of registering a listener:
 //! - By specifying one or more local addresses, the listener will be bound to
 //!   each of those local addresses.
 //! - By specifying zero local addresses, the listener will be bound to all

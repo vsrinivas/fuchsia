@@ -439,7 +439,8 @@ mod tests {
                 TEST_DST_IPV4,
                 NonZeroU16::new(1),
                 NonZeroU16::new(2).unwrap(),
-            ).serialize(&mut buffer);
+            )
+            .serialize(&mut buffer);
             assert_eq!(buffer.range(), 0..8);
         }
         // assert that we get the literal bytes we expected
@@ -462,14 +463,16 @@ mod tests {
             TEST_DST_IPV4,
             NonZeroU16::new(1),
             NonZeroU16::new(2).unwrap(),
-        ).serialize(&mut BufferAndRange::new_from(&mut buf_0[..], 8..));
+        )
+        .serialize(&mut BufferAndRange::new_from(&mut buf_0[..], 8..));
         let mut buf_1 = [0xFF; 8];
         UdpPacketSerializer::new(
             TEST_SRC_IPV4,
             TEST_DST_IPV4,
             NonZeroU16::new(1),
             NonZeroU16::new(2).unwrap(),
-        ).serialize(&mut BufferAndRange::new_from(&mut buf_1[..], 8..));
+        )
+        .serialize(&mut BufferAndRange::new_from(&mut buf_1[..], 8..));
         assert_eq!(buf_0, buf_1);
     }
 
@@ -533,7 +536,8 @@ mod tests {
             TEST_DST_IPV4,
             None,
             NonZeroU16::new(1).unwrap(),
-        ).serialize(&mut BufferAndRange::new_from(&mut buf[..], 7..));
+        )
+        .serialize(&mut BufferAndRange::new_from(&mut buf[..], 7..));
     }
 
     #[test]
@@ -545,7 +549,8 @@ mod tests {
             TEST_DST_IPV4,
             None,
             NonZeroU16::new(1).unwrap(),
-        ).serialize(&mut BufferAndRange::new_from(&mut buf[..], 8..));
+        )
+        .serialize(&mut BufferAndRange::new_from(&mut buf[..], 8..));
     }
 
     // This test tries to allocate 4GB of memory. Run at your own risk.
@@ -561,6 +566,7 @@ mod tests {
             TEST_DST_IPV4,
             None,
             NonZeroU16::new(1).unwrap(),
-        ).serialize(&mut BufferAndRange::new_from(&mut buf[..], 8..));
+        )
+        .serialize(&mut BufferAndRange::new_from(&mut buf[..], 8..));
     }
 }

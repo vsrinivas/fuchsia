@@ -446,16 +446,19 @@ const MF_FLAG_OFFSET: u32 = 0;
 
 mod options {
     use crate::ip::{Ipv4Option, Ipv4OptionData};
-    use crate::wire::util::OptionImpl;
+    use crate::wire::util::{OptionImpl, OptionImplErr};
 
     const OPTION_KIND_EOL: u8 = 0;
     const OPTION_KIND_NOP: u8 = 1;
 
     pub struct Ipv4OptionImpl;
 
-    impl OptionImpl for Ipv4OptionImpl {
-        type Output = Ipv4Option;
+    impl OptionImplErr for Ipv4OptionImpl {
         type Error = ();
+    }
+
+    impl<'a> OptionImpl<'a> for Ipv4OptionImpl {
+        type Output = Ipv4Option<'a>;
 
         fn parse(kind: u8, data: &[u8]) -> Result<Option<Ipv4Option>, ()> {
             let copied = kind & (1 << 7) > 0;
@@ -463,21 +466,20 @@ mod options {
                 self::OPTION_KIND_EOL | self::OPTION_KIND_NOP => {
                     unreachable!("wire::util::Options promises to handle EOL and NOP")
                 }
-                kind => if data.len() > 38 {
-                    Err(())
-                } else {
-                    let len = data.len();
-                    let mut d = [0u8; 38];
-                    (&mut d[..len]).copy_from_slice(data);
-                    Ok(Some(Ipv4Option {
-                        copied,
-                        data: Ipv4OptionData::Unrecognized {
-                            kind,
-                            len: len as u8,
-                            data: d,
-                        },
-                    }))
-                },
+                kind => {
+                    if data.len() > 38 {
+                        Err(())
+                    } else {
+                        Ok(Some(Ipv4Option {
+                            copied,
+                            data: Ipv4OptionData::Unrecognized {
+                                kind,
+                                len: data.len() as u8,
+                                data,
+                            },
+                        }))
+                    }
+                }
             }
         }
     }

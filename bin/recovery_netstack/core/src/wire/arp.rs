@@ -21,8 +21,7 @@ use crate::wire::util::{BufferAndRange, InnerPacketSerializer};
 
 // Header has the same memory layout (thanks to repr(C, packed)) as an ARP
 // header. Thus, we can simply reinterpret the bytes of the ARP header as a
-// Header and then safely access its fields.
-// Note the following caveats:
+// Header and then safely access its fields. Note the following caveats:
 // - We cannot make any guarantees about the alignment of an instance of this
 //   struct in memory or of any of its fields. This is true both because
 //   repr(packed) removes the padding that would be used to ensure the alignment

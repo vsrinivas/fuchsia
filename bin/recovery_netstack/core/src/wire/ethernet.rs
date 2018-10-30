@@ -405,7 +405,8 @@ mod tests {
             Mac::new([0, 1, 2, 3, 4, 5]),
             Mac::new([6, 7, 8, 9, 10, 11]),
             EtherType::Arp,
-        ).serialize(&mut BufferAndRange::new_from(
+        )
+        .serialize(&mut BufferAndRange::new_from(
             &mut buf[..],
             (60 - (MIN_BODY_BYTES - 1))..,
         ));

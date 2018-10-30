@@ -11,12 +11,12 @@ use std::time::Duration;
 use crate::device::ethernet::EthernetArpDevice;
 use crate::device::DeviceLayerTimerId;
 use crate::ip::Ipv4Addr;
-use log::debug;
 use crate::wire::{
     arp::{ArpPacket, ArpPacketSerializer, HType, PType},
     BufferAndRange, SerializationRequest,
 };
 use crate::{Context, EventDispatcher, TimerId, TimerIdInner};
+use log::debug;
 
 /// The type of an ARP operation.
 #[derive(Debug, Eq, PartialEq)]
@@ -104,7 +104,9 @@ pub trait ArpDevice<P: PType + Eq + Hash>: Sized {
     /// Get the protocol address of this interface.
     fn get_protocol_addr<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64) -> Option<P>;
 
-    fn get_hardware_addr<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64) -> Self::HardwareAddr;
+    fn get_hardware_addr<D: EventDispatcher>(
+        ctx: &mut Context<D>, device_id: u64,
+    ) -> Self::HardwareAddr;
 }
 
 /// Handle a ARP timer event
@@ -116,11 +118,9 @@ pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: ArpTimerId<I
     handle_timeout_inner::<D, Ipv4Addr, EthernetArpDevice>(ctx, id);
 }
 
-fn handle_timeout_inner<
-    D: EventDispatcher,
-    P: PType + Eq + Hash,
-    AD: ArpDevice<P>,
->(ctx: &mut Context<D>, id: ArpTimerId<P>) {
+fn handle_timeout_inner<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
+    ctx: &mut Context<D>, id: ArpTimerId<P>,
+) {
     send_arp_request::<D, P, AD>(ctx, id.device_id, id.ip_addr);
 }
 
@@ -195,14 +195,13 @@ pub fn receive_arp_packet<
             );
             // Since we just got the protocol -> hardware address mapping, we can cancel a timeout
             // to resend a request.
-            ctx.dispatcher.cancel_timeout(
-                TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId::ArpIpv4(
-                    ArpTimerId {
+            ctx.dispatcher
+                .cancel_timeout(TimerId(TimerIdInner::DeviceLayer(
+                    DeviceLayerTimerId::ArpIpv4(ArpTimerId {
                         device_id: device_id,
                         ip_addr: packet.sender_protocol_address().addr(),
-                    },
-                ))),
-            );
+                    }),
+                )));
         }
         if addressed_to_me && packet.operation() == ArpOp::Request {
             let self_hw_addr = AD::get_hardware_addr(ctx, device_id);
@@ -216,7 +215,8 @@ pub fn receive_arp_packet<
                     packet.target_protocol_address(),
                     packet.sender_hardware_address(),
                     packet.sender_protocol_address(),
-                ).serialize_outer(),
+                )
+                .serialize_outer(),
             );
         }
     } else {
@@ -247,11 +247,9 @@ pub fn lookup<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
     result
 }
 
-fn send_arp_request<
-    D: EventDispatcher,
-    P: PType + Eq + Hash,
-    AD: ArpDevice<P>,
->(ctx: &mut Context<D>, device_id: u64, lookup_addr: P) {
+fn send_arp_request<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
+    ctx: &mut Context<D>, device_id: u64, lookup_addr: P,
+) {
     if let Some(sender_protocol_addr) = AD::get_protocol_addr(ctx, device_id) {
         let self_hw_addr = AD::get_hardware_addr(ctx, device_id);
         AD::send_arp_frame(
@@ -267,7 +265,8 @@ fn send_arp_request<
                 // address we are sending the packet to.
                 AD::BROADCAST,
                 lookup_addr,
-            ).serialize_outer(),
+            )
+            .serialize_outer(),
         );
 
         // TODO(wesleyac): Configurable timeout.
@@ -283,7 +282,9 @@ fn send_arp_request<
             ))),
         );
 
-        AD::get_arp_state(ctx, device_id).table.set_waiting(lookup_addr);
+        AD::get_arp_state(ctx, device_id)
+            .table
+            .set_waiting(lookup_addr);
     } else {
         // RFC 826 does not specify what to do if we don't have a local address, but there is no
         // reasonable way to send an ARP request without one (as the receiver will cache our local
@@ -395,7 +396,8 @@ mod tests {
         for packet_num in 0..3 {
             assert_eq!(ctx.dispatcher.frames_sent().len(), packet_num + 1);
 
-            let (frame, _) = EthernetFrame::parse(&ctx.dispatcher.frames_sent()[packet_num].1[..]).unwrap();
+            let (frame, _) =
+                EthernetFrame::parse(&ctx.dispatcher.frames_sent()[packet_num].1[..]).unwrap();
             assert_eq!(frame.ethertype(), Some(Ok(EtherType::Arp)));
             assert_eq!(frame.src_mac(), TEST_LOCAL_MAC);
             assert_eq!(EthernetArpDevice::BROADCAST, frame.dst_mac());
@@ -413,9 +415,8 @@ mod tests {
 
             testutil::trigger_next_timer(&mut ctx);
         }
-        
-        // TODO(wesleyac): Check that once we receive a response, we no longer resend packets
 
+        // TODO(wesleyac): Check that once we receive a response, we no longer resend packets
     }
 
     #[test]
@@ -437,7 +438,8 @@ mod tests {
             TEST_REMOTE_IPV4,
             TEST_LOCAL_MAC,
             TEST_LOCAL_IPV4,
-        )).serialize_outer();
+        ))
+        .serialize_outer();
         let (hw, proto) = peek_arp_types(buf.as_ref()).unwrap();
         assert_eq!(hw, ArpHardwareType::Ethernet);
         assert_eq!(proto, EtherType::Ipv4);
@@ -456,7 +458,8 @@ mod tests {
                 0,
                 TEST_LOCAL_MAC,
                 TEST_REMOTE_IPV4
-            ).unwrap(),
+            )
+            .unwrap(),
             TEST_REMOTE_MAC
         );
 
