@@ -30,7 +30,11 @@ interface EnvironmentController {
     1: LaunchInstance(LaunchInfo launch_info,
                       request<fuchsia.ui.viewsv1.ViewProvider>? view_provider,
                       request<InstanceController> controller)
-                      -> (uint32 cid);
+                        -> (uint32 cid);
+
+    9: LaunchInstance2(LaunchInfo launch_info,
+                       request<InstanceController> controller)
+                        -> (uint32 cid);
 
     // Query for guests running in this environment.
     2: ListInstances() -> (vector<InstanceInfo> instances);

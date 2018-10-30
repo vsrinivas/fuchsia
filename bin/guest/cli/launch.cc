@@ -23,9 +23,8 @@ void handle_launch(int argc, const char* argv[], async::Loop* loop,
     launch_info.args.push_back(argv[i + 1]);
   }
   fuchsia::guest::InstanceControllerPtr instance_controller;
-  environment_controller->LaunchInstance(std::move(launch_info), nullptr,
-                                         instance_controller.NewRequest(),
-                                         [](...) {});
+  environment_controller->LaunchInstance2(
+      std::move(launch_info), instance_controller.NewRequest(), [](...) {});
 
   // Setup serial console.
   SerialConsole console(loop);

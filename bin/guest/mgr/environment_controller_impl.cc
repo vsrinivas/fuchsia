@@ -51,12 +51,12 @@ void EnvironmentControllerImpl::LaunchInstance(
   info.flat_namespace = std::move(launch_info.flat_namespace);
   launcher_->CreateComponent(std::move(info),
                              component_controller.NewRequest());
-  services.ConnectToService(std::move(view_provider));
   services.ConnectToService(std::move(controller));
 
   // Setup guest endpoint.
   const uint32_t cid = next_guest_cid_++;
   fuchsia::guest::GuestVsockEndpointPtr guest_endpoint;
+  services.ConnectToService(std::move(view_provider));
   services.ConnectToService(guest_endpoint.NewRequest());
   auto endpoint = std::make_unique<GuestVsockEndpoint>(
       cid, std::move(guest_endpoint), &host_vsock_endpoint_);
@@ -76,6 +76,14 @@ void EnvironmentControllerImpl::LaunchInstance(
   }
 
   callback(cid);
+}
+
+void EnvironmentControllerImpl::LaunchInstance2(
+    fuchsia::guest::LaunchInfo launch_info,
+    fidl::InterfaceRequest<fuchsia::guest::InstanceController> controller,
+    LaunchInstanceCallback callback) {
+  LaunchInstance(std::move(launch_info), nullptr, std::move(controller),
+                 std::move(callback));
 }
 
 void EnvironmentControllerImpl::GetHostVsockEndpoint(

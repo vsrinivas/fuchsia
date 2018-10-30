@@ -49,10 +49,9 @@ zx_status_t EnclosedGuest::Start(fuchsia::guest::LaunchInfo guest_launch_info) {
   environment_manager_->Create(guest_launch_info.url,
                                environment_controller_.NewRequest());
 
-  fuchsia::ui::viewsv1::ViewProviderPtr view_provider;
-  environment_controller_->LaunchInstance(
-      std::move(guest_launch_info), view_provider.NewRequest(),
-      instance_controller_.NewRequest(), [](...) {});
+  environment_controller_->LaunchInstance2(std::move(guest_launch_info),
+                                           instance_controller_.NewRequest(),
+                                           [](...) {});
 
   zx::socket socket;
   instance_controller_->GetSerial(

@@ -47,6 +47,10 @@ class EnvironmentControllerImpl : public fuchsia::guest::EnvironmentController {
       fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider> view_provider,
       fidl::InterfaceRequest<fuchsia::guest::InstanceController> controller,
       LaunchInstanceCallback callback) override;
+  void LaunchInstance2(
+      fuchsia::guest::LaunchInfo launch_info,
+      fidl::InterfaceRequest<fuchsia::guest::InstanceController> controller,
+      LaunchInstanceCallback callback) override;
   void ListInstances(ListInstancesCallback callback) override;
   void ConnectToInstance(
       uint32_t id,
