@@ -46,7 +46,7 @@ static void nand_io_complete(nand_op_t* nand_op, zx_status_t status) {
 // ecc could not correct all bitflips - caller needs to check that).
 // retries : Retry logic may not be needed.
 zx_status_t nand_read_page(nand_device_t* dev, void* data, void* oob, uint32_t nand_page,
-                           int* corrected_bits, int retries) {
+                           uint32_t* corrected_bits, int retries) {
     zx_status_t status;
 
     do {
@@ -138,15 +138,15 @@ static zx_status_t nand_read_op(nand_device_t* dev, nand_op_t* nand_op) {
 
     uint32_t max_corrected_bits = 0;
     for (uint32_t i = 0; i < nand_op->rw.length; i++) {
-        int ecc_correct = 0;
-        status = nand_read_page(dev, vaddr_data, vaddr_oob, nand_op->rw.offset_nand + i, &ecc_correct,
-                                NAND_READ_RETRIES);
+        uint32_t ecc_correct = 0;
+        status = nand_read_page(dev, vaddr_data, vaddr_oob, nand_op->rw.offset_nand + i,
+                                &ecc_correct, NAND_READ_RETRIES);
         if (status != ZX_OK) {
             zxlogf(ERROR, "nand: Read data error %d at page offset %u\n",
                    status, nand_op->rw.offset_nand);
             break;
         } else {
-            max_corrected_bits = MAX(max_corrected_bits, (uint32_t)ecc_correct);
+            max_corrected_bits = MAX(max_corrected_bits, ecc_correct);
         }
 
         if (vaddr_data) {

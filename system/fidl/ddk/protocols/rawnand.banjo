@@ -11,7 +11,7 @@ using zx;
 interface RawNand {
     /// Read one nand page with hwecc.
     1: ReadPageHwecc(uint32 nandpage) -> (zx.status s, vector<void> data, vector<void> oob,
-                                          int32 ecc_correct);
+                                          uint32 ecc_correct);
 
     /// Write one nand page with hwecc.
     2: WritePageHwecc(vector<void> data, vector<void> oob, uint32 nandpage) -> (zx.status s);

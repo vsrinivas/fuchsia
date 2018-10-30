@@ -284,8 +284,8 @@ static zx_status_t aml_set_oob_byte(aml_raw_nand_t* raw_nand,
  * Returns the maximum bitflips corrected on this NAND page
  * (the maximum bitflips across all of the ECC pages in this page).
  */
-static int aml_get_ecc_corrections(aml_raw_nand_t* raw_nand, int ecc_pages,
-                                   uint32_t nand_page) {
+static zx_status_t aml_get_ecc_corrections(aml_raw_nand_t* raw_nand, int ecc_pages,
+                                           uint32_t nand_page, uint32_t* ecc_corrected) {
     struct aml_info_format* info;
     int bitflips = 0;
     uint8_t zero_bits;
@@ -296,7 +296,7 @@ static int aml_get_ecc_corrections(aml_raw_nand_t* raw_nand, int ecc_pages,
             if (!raw_nand->controller_params.rand_mode) {
                 zxlogf(ERROR, "%s: ECC failure (non-randomized)@%u\n", __func__, nand_page);
                 raw_nand->stats.failed++;
-                return ECC_CHECK_RETURN_FF;
+                return ZX_ERR_IO;
             }
             /*
              * Why are we checking for zero_bits here ?
@@ -318,7 +318,7 @@ static int aml_get_ecc_corrections(aml_raw_nand_t* raw_nand, int ecc_pages,
                 zxlogf(ERROR, "%s: ECC failure (randomized)@%u zero_bits=%u\n",
                        __func__, nand_page, zero_bits);
                 raw_nand->stats.failed++;
-                return ECC_CHECK_RETURN_FF;
+                return ZX_ERR_IO;
             }
             zxlogf(INFO, "%s: Blank Page@%u\n", __func__, nand_page);
             continue;
@@ -326,7 +326,8 @@ static int aml_get_ecc_corrections(aml_raw_nand_t* raw_nand, int ecc_pages,
         raw_nand->stats.ecc_corrected += info->ecc.eccerr_cnt;
         bitflips = MAX(bitflips, info->ecc.eccerr_cnt);
     }
-    return bitflips;
+    *ecc_corrected = bitflips;
+    return ZX_OK;
 }
 
 static zx_status_t aml_check_ecc_pages(aml_raw_nand_t* raw_nand, int ecc_pages) {
@@ -479,13 +480,12 @@ static zx_status_t aml_read_page_hwecc(void* ctx,
                                        void* oob,
                                        size_t oob_size,
                                        size_t* oob_actual,
-                                       int* ecc_correct) {
+                                       uint32_t* ecc_correct) {
     aml_raw_nand_t* raw_nand = (aml_raw_nand_t*)ctx;
     uint32_t cmd;
     zx_status_t status;
     uint64_t daddr = raw_nand->data_buf_paddr;
     uint64_t iaddr = raw_nand->info_buf_paddr;
-    int ecc_c;
     volatile uint8_t* reg = (volatile uint8_t*)
         raw_nand->mmio[NANDREG_WINDOW].vaddr;
     uint32_t ecc_pagesize = 0; /* initialize to silence compiler */
@@ -551,13 +551,12 @@ static zx_status_t aml_read_page_hwecc(void* ctx,
     }
     if (oob != NULL)
         status = aml_get_oob_byte(raw_nand, oob);
-    ecc_c = aml_get_ecc_corrections(raw_nand, ecc_pages, nand_page);
-    if (ecc_c < 0) {
+    status = aml_get_ecc_corrections(raw_nand, ecc_pages, nand_page, ecc_correct);
+    if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Uncorrectable ECC error on read\n",
                __func__);
-        status = ZX_ERR_IO;
+        *ecc_correct = raw_nand->controller_params.ecc_strength + 1;
     }
-    *ecc_correct = ecc_c;
     return status;
 }
 
@@ -834,7 +833,7 @@ static zx_status_t aml_read_page0(aml_raw_nand_t* raw_nand,
                                   void* oob,
                                   size_t oob_size,
                                   uint32_t nand_page,
-                                  int* ecc_correct,
+                                  uint32_t* ecc_correct,
                                   int retries) {
     zx_status_t status;
 
@@ -856,7 +855,7 @@ static zx_status_t aml_nand_init_from_page0(aml_raw_nand_t* raw_nand) {
     zx_status_t status;
     char* data;
     nand_page0_t* page0;
-    int ecc_correct;
+    uint32_t ecc_correct;
 
     data = malloc(raw_nand->writesize);
     if (data == NULL) {

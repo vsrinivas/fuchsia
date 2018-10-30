@@ -33,6 +33,6 @@ typedef struct nand_io {
 } nand_io_t;
 
 zx_status_t nand_read_page(nand_device_t* dev, void* data, void* oob, uint32_t nand_page,
-                           int* ecc_correct, int retries);
+                           uint32_t* ecc_correct, int retries);
 zx_status_t nand_write_page(nand_device_t* dev, void* data, void* oob, uint32_t nand_page);
 zx_status_t nand_erase_block(nand_device_t* dev, uint32_t nand_page);

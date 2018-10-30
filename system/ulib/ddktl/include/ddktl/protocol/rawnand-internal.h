@@ -18,7 +18,7 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_raw_nand_protocol_read_page_hwecc, RawN
                                                         size_t data_size, size_t* out_data_actual,
                                                         void* out_oob_buffer, size_t oob_size,
                                                         size_t* out_oob_actual,
-                                                        zx_status_t* out_ecc_correct));
+                                                        uint32_t* out_ecc_correct));
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_raw_nand_protocol_write_page_hwecc, RawNandWritePageHwecc,
                                      zx_status_t (C::*)(const void* data_buffer, size_t data_size,
                                                         const void* oob_buffer, size_t oob_size,
@@ -34,7 +34,7 @@ constexpr void CheckRawNandProtocolSubclass() {
                   "RawNandProtocol subclasses must implement "
                   "zx_status_t RawNandReadPageHwecc(uint32_t nandpage, void* out_data_buffer, "
                   "size_t data_size, size_t* out_data_actual, void* out_oob_buffer, size_t "
-                  "oob_size, size_t* out_oob_actual, zx_status_t* out_ecc_correct");
+                  "oob_size, size_t* out_oob_actual, uint32_t* out_ecc_correct");
     static_assert(internal::has_raw_nand_protocol_write_page_hwecc<D>::value,
                   "RawNandProtocol subclasses must implement "
                   "zx_status_t RawNandWritePageHwecc(const void* data_buffer, size_t data_size, "

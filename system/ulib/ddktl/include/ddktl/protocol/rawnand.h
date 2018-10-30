@@ -42,7 +42,7 @@
 //
 //     zx_status_t RawNandReadPageHwecc(uint32_t nandpage, void* out_data_buffer, size_t data_size,
 //     size_t* out_data_actual, void* out_oob_buffer, size_t oob_size, size_t* out_oob_actual,
-//     zx_status_t* out_ecc_correct);
+//     uint32_t* out_ecc_correct);
 //
 //     zx_status_t RawNandWritePageHwecc(const void* data_buffer, size_t data_size, const void*
 //     oob_buffer, size_t oob_size, uint32_t nandpage);
@@ -75,7 +75,7 @@ private:
     static zx_status_t RawNandReadPageHwecc(void* ctx, uint32_t nandpage, void* out_data_buffer,
                                             size_t data_size, size_t* out_data_actual,
                                             void* out_oob_buffer, size_t oob_size,
-                                            size_t* out_oob_actual, zx_status_t* out_ecc_correct) {
+                                            size_t* out_oob_actual, uint32_t* out_ecc_correct) {
         return static_cast<D*>(ctx)->RawNandReadPageHwecc(nandpage, out_data_buffer, data_size,
                                                           out_data_actual, out_oob_buffer, oob_size,
                                                           out_oob_actual, out_ecc_correct);
@@ -113,7 +113,7 @@ public:
     // Read one nand page with hwecc.
     zx_status_t ReadPageHwecc(uint32_t nandpage, void* out_data_buffer, size_t data_size,
                               size_t* out_data_actual, void* out_oob_buffer, size_t oob_size,
-                              size_t* out_oob_actual, zx_status_t* out_ecc_correct) {
+                              size_t* out_oob_actual, uint32_t* out_ecc_correct) {
         return ops_->read_page_hwecc(ctx_, nandpage, out_data_buffer, data_size, out_data_actual,
                                      out_oob_buffer, oob_size, out_oob_actual, out_ecc_correct);
     }
