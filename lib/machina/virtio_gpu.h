@@ -23,7 +23,7 @@ class VirtioGpu
     : public VirtioComponentDevice<VIRTIO_ID_GPU, kVirtioGpuNumQueues,
                                    virtio_gpu_config_t> {
  public:
-  VirtioGpu(const PhysMem& phys_mem);
+  explicit VirtioGpu(const PhysMem& phys_mem);
 
   zx_status_t Start(
       const zx::guest& guest,
