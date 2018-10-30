@@ -314,10 +314,9 @@ struct ath10k_peer {
     uint8_t addr[ETH_ALEN];
     BITARR(peer_ids, ATH10K_MAX_NUM_PEER_IDS);
 
-#if 0   // NEEDS PORTING
+    size_t num_wlan_cfg;
     /* protected by ar->data_lock */
-    struct ieee80211_key_conf* keys[WMI_MAX_KEY_INDEX + 1];
-#endif  // NEEDS PORTING
+    wlan_key_config_t wlan_cfg[WMI_MAX_KEY_INDEX];  // Save the config for deletion.
 };
 
 #if 0  // NEEDS PORTING

@@ -355,6 +355,10 @@ static zx_status_t ath10k_send_key(struct ath10k_vif* arvif, wlan_key_config_t* 
     ASSERT_MTX_HELD(&arvif->ar->conf_mutex);
 
     switch (key_config->cipher_type) {
+    case IEEE80211_CIPHER_SUITE_NONE:  // to delete a key.
+        arg.key_cipher = WMI_CIPHER_NONE;
+        arg.key_data = NULL;
+        break;
     case IEEE80211_CIPHER_SUITE_CCMP_128:
     case IEEE80211_CIPHER_SUITE_CCMP_256:
         arg.key_cipher = WMI_CIPHER_AES_CCM;
@@ -401,14 +405,11 @@ static zx_status_t ath10k_install_key(struct ath10k_vif* arvif, wlan_key_config_
     return ZX_OK;
 }
 
-#if 0   // NEEDS PORTING
-static int ath10k_clear_peer_keys(struct ath10k_vif* arvif,
-                                  const uint8_t* addr) {
+static zx_status_t ath10k_clear_peer_keys(struct ath10k_vif* arvif, const uint8_t* addr) {
     struct ath10k* ar = arvif->ar;
     struct ath10k_peer* peer;
-    int first_errno = 0;
-    int ret;
-    int i;
+    zx_status_t first_errno = ZX_OK;
+    zx_status_t status = ZX_OK;
     uint32_t flags = 0;
 
     ASSERT_MTX_HELD(&ar->conf_mutex);
@@ -418,33 +419,48 @@ static int ath10k_clear_peer_keys(struct ath10k_vif* arvif,
     mtx_unlock(&ar->data_lock);
 
     if (!peer) {
-        return -ENOENT;
+        return ZX_ERR_NOT_FOUND;
     }
 
-    for (i = 0; i < countof(peer->keys); i++) {
-        if (peer->keys[i] == NULL) {
-            continue;
-        }
+    size_t num_wlan_cfg = peer->num_wlan_cfg;
+    char ethaddr_str[ETH_ALEN * 3];
+    ethaddr_sprintf(ethaddr_str, addr);
+    ath10k_dbg(ar, ATH10K_DBG_MAC, "Removing %zu key(s) of %s...\n", num_wlan_cfg, ethaddr_str);
 
+    for (size_t i = 0; i < num_wlan_cfg; i++) {
         /* key flags are not required to delete the key */
-        ret = ath10k_install_key(arvif, peer->keys[i],
-                                 DISABLE_KEY, addr, flags);
-        if (ret < 0 && first_errno == 0) {
-            first_errno = ret;
+        mtx_lock(&ar->data_lock);
+        wlan_key_config_t key_config = {
+            .cipher_type = IEEE80211_CIPHER_SUITE_NONE,
+            .key_idx = peer->wlan_cfg[i].key_idx,
+            .key_len = peer->wlan_cfg[i].key_len,
+        };
+        mtx_unlock(&ar->data_lock);
+
+        status = ath10k_install_key(arvif, &key_config, addr, flags);
+        if (status != ZX_OK && first_errno == ZX_OK) {
+            first_errno = status;
         }
 
-        if (ret < 0)
-            ath10k_warn("failed to remove peer wep key %d: %d\n",
-                        i, ret);
-
-        mtx_lock(&ar->data_lock);
-        peer->keys[i] = NULL;
-        mtx_unlock(&ar->data_lock);
+        if (status != ZX_OK) {
+            ath10k_warn("failed to remove peer key %zu of %s: %s\n",
+                        i, ethaddr_str, zx_status_get_string(status));
+        }
     }
+    if (first_errno != ZX_OK) {
+        ath10k_warn("Some keys are not deleted %zu: %s\n",
+                    peer->num_wlan_cfg, zx_status_get_string(first_errno));
+    }
+
+    // Reset the counter no matter keys are deleted or not.
+    mtx_lock(&ar->data_lock);
+    peer->num_wlan_cfg = 0;
+    mtx_unlock(&ar->data_lock);
 
     return first_errno;
 }
 
+#if 0   // NEEDS PORTING
 static int ath10k_clear_vdev_key(struct ath10k_vif* arvif,
                                  struct ieee80211_key_conf* key) {
     struct ath10k* ar = arvif->ar;
@@ -1805,6 +1821,15 @@ zx_status_t ath10k_mac_start_ap(struct ath10k_vif* arvif) {
     }
 
     ath10k_control_beaconing(arvif);
+
+    // In the protected AP mode, the firmware requires a broadcast peer existed before the group key
+    // (WLAN_KEY_TYPE_GROUP) can be added. Otherwise, the firmware will reject that key.
+    // Since group key will be added per AP, add the peer here.
+    uint8_t broadcast[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+    ret = ath10k_peer_create(ar, arvif->vdev_id, broadcast, WMI_PEER_TYPE_DEFAULT);
+    if (ret != ZX_OK) {
+        ath10k_warn("Failed to create the peer for group key: %s\n", zx_status_get_string(ret));
+    }
 
     mtx_unlock(&ar->conf_mutex);
     return ret;
@@ -3373,6 +3398,7 @@ static zx_status_t ath10k_station_assoc(struct ath10k* ar,
 }
 
 // Used by an AP after accepted a station's association request.
+// Keys will be added by ath10k_mac_set_key().
 zx_status_t ath10k_mac_ap_assoc_with_sta(struct ath10k* ar, wlan_assoc_ctx_t* assoc) {
     struct ath10k_vif* arvif = &ar->arvif;
     zx_status_t ret;
@@ -3396,15 +3422,14 @@ out:
     return ret;
 }
 
+// Used by an AP to disassociate a station.
+zx_status_t ath10k_mac_ap_disassoc_sta(struct ath10k* ar, const uint8_t* peer_addr) {
+    struct ath10k_vif* arvif = &ar->arvif;
+    zx_status_t ret;
+
+    mtx_lock(&ar->conf_mutex);
+
 #if 0  // NEEDS PORTING
-static int ath10k_station_disassoc(struct ath10k* ar,
-                                   struct ieee80211_vif* vif,
-                                   struct ieee80211_sta* sta) {
-    struct ath10k_vif* arvif = (void*)vif->drv_priv;
-    int ret = 0;
-
-    ASSERT_MTX_HELD(&ar->conf_mutex);
-
     if (!sta->wme) {
         arvif->num_legacy_stations--;
         ret = ath10k_recalc_rtscts_prot(arvif);
@@ -3414,26 +3439,23 @@ static int ath10k_station_disassoc(struct ath10k* ar,
             return ret;
         }
     }
-
-    ret = ath10k_clear_peer_keys(arvif, sta->addr);
-    if (ret) {
-        ath10k_warn("failed to clear all peer wep keys for vdev %i: %d\n",
-                    arvif->vdev_id, ret);
-        return ret;
-    }
-
-    return ret;
-}
-
 #endif
 
-// Used by an AP to disassociate a station.
-zx_status_t ath10k_mac_ap_disassoc_sta(struct ath10k* ar, const uint8_t* peer_addr) {
-    struct ath10k_vif* arvif = &ar->arvif;
+    ret = ath10k_clear_peer_keys(arvif, peer_addr);
+    if (ret != ZX_OK) {
+        char ethaddr_str[ETH_ALEN * 3];
+        ethaddr_sprintf(ethaddr_str, peer_addr);
+        ath10k_warn("failed to clear all peer keys for vdev %i: %s : %s\n",
+                    arvif->vdev_id, ethaddr_str, zx_status_get_string(ret));
+    }
 
-    mtx_lock(&ar->conf_mutex);
-
-    zx_status_t ret = ath10k_peer_delete(ar, arvif->vdev_id, peer_addr);
+    ret = ath10k_peer_delete(ar, arvif->vdev_id, peer_addr);
+    if (ret != ZX_OK) {
+        char ethaddr_str[ETH_ALEN * 3];
+        ethaddr_sprintf(ethaddr_str, peer_addr);
+        ath10k_err("failed to delete a peer for vdev %i: %s : %s\n",
+                   arvif->vdev_id, ethaddr_str, zx_status_get_string(ret));
+    }
 
     mtx_unlock(&ar->conf_mutex);
 
@@ -5802,19 +5824,29 @@ zx_status_t ath10k_mac_set_key(struct ath10k* ar, wlan_key_config_t* key_config)
     const uint8_t* peer_addr;
     zx_status_t ret = ZX_OK;
     uint32_t flags = 0;
+    bool is_an_ap_group_key = arvif->vdev_type == WMI_VDEV_TYPE_AP &&
+                              key_config->key_type == WLAN_KEY_TYPE_GROUP;
 
     if (arvif->nohwcrypt) { return ZX_ERR_NOT_SUPPORTED; }
 
     if (key_config->key_idx > WMI_MAX_KEY_INDEX) { return ZX_ERR_INVALID_ARGS; }
 
     // TODO: We should retrieve this value from key_config, but it is currently unavailable.
-    peer_addr = arvif->bssid;
+    switch (arvif->vdev_type) {
+    case WMI_VDEV_TYPE_STA:
+        peer_addr = arvif->bssid;
+        break;
+    case WMI_VDEV_TYPE_AP:
+        peer_addr = key_config->peer_addr;
+        break;
+    default:
+        ath10k_err("Unsupported vdev_type: %d\n", arvif->vdev_type);
+        ZX_ASSERT(0);  // Unknown type
+    }
 
     mtx_lock(&ar->conf_mutex);
 
-#if 0   // NEEDS PORTING
     struct ath10k_peer* peer;
-
     /* the peer should not disappear in mid-way (unless FW goes awry) since
      * we already hold conf_mutex. we just make sure its there now.
      */
@@ -5823,11 +5855,21 @@ zx_status_t ath10k_mac_set_key(struct ath10k* ar, wlan_key_config_t* key_config)
     mtx_unlock(&ar->data_lock);
 
     if (!peer) {
-        ath10k_warn("failed to install key for non-existent peer %pM\n", peer_addr);
+        char ethaddr_str[ETH_ALEN * 3];
+        ethaddr_sprintf(ethaddr_str, peer_addr);
+        ath10k_err("failed to install key for non-existent peer %s\n", ethaddr_str);
         ret = ZX_ERR_NOT_FOUND;
         goto exit;
     }
-#endif  // NEEDS PORTING
+
+    if (peer->num_wlan_cfg >= WMI_MAX_KEY_INDEX) {
+        char ethaddr_str[ETH_ALEN * 3];
+        ethaddr_sprintf(ethaddr_str, peer_addr);
+        ath10k_err("failed to install key for %s (key index too large: %zu >= %d)\n",
+                   ethaddr_str, peer->num_wlan_cfg, WMI_MAX_KEY_INDEX);
+        ret = ZX_ERR_INVALID_ARGS;
+        goto exit;
+    }
 
     switch (key_config->key_type) {
     case WLAN_KEY_TYPE_PAIRWISE:
@@ -5844,10 +5886,24 @@ zx_status_t ath10k_mac_set_key(struct ath10k* ar, wlan_key_config_t* key_config)
 
     ret = ath10k_install_key(arvif, key_config, peer_addr, flags);
     if (ret != ZX_OK) {
-        ath10k_warn("failed to install key for vdev %i peer %pM: %d\n", arvif->vdev_id, peer_addr,
-                    ret);
+        char ethaddr_str[ETH_ALEN * 3];
+        ethaddr_sprintf(ethaddr_str, peer_addr);
+        ath10k_warn("failed to install key for vdev %i peer %s: %s\n",
+                    arvif->vdev_id, ethaddr_str, zx_status_get_string(ret));
+
+        if (is_an_ap_group_key) {
+            ath10k_warn("But this could be fine. The group key might have been setup already.\n");
+            ret = ZX_OK;
+        }
+
         goto exit;
     }
+
+    ath10k_dbg(ar, ATH10K_DBG_MAC, "Added wlan_cfg[%zu] with key index: %hhu\n",
+               peer->num_wlan_cfg, key_config->key_idx);
+    mtx_lock(&ar->data_lock);
+    peer->wlan_cfg[peer->num_wlan_cfg++] = *key_config;
+    mtx_unlock(&ar->data_lock);
 
     ath10k_set_key_h_def_keyidx(ar, key_config);
 

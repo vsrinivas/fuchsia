@@ -3120,8 +3120,9 @@ static zx_status_t ath10k_pci_configure_beacon(void* ctx, uint32_t options, wlan
 static zx_status_t ath10k_pci_set_key(void* ctx, uint32_t options, wlan_key_config_t* key_config) {
     struct ath10k* ar = ctx;
     ath10k_info(
-        "attempting to set key (prot: %s, cipher: %s, type: %s, len: %d,"
+        "attempting to set key (bssid: %d, prot: %s, cipher: %s, type: %s, len: %d,"
         " addr: %02x:%02x:%02x:%02x:%02x:%02x key_idx: %d)\n",
+        key_config->bssid,
         key_config->protection == WLAN_PROTECTION_NONE
             ? "none"
             : key_config->protection == WLAN_PROTECTION_RX

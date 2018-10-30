@@ -211,7 +211,9 @@ enum ieee80211_cipher_suite {
     IEEE80211_CIPHER_SUITE_CCMP_256 = 10,
     IEEE80211_CIPHER_SUITE_GMAC_128 = 11,
     IEEE80211_CIPHER_SUITE_GMAC_256 = 12,
-    IEEE80211_CIPHER_SUITE_CMAC_256 = 13
+    IEEE80211_CIPHER_SUITE_CMAC_256 = 13,
+    IEEE80211_CIPHER_SUITE_NONE     = 255,  // Not in the spec, a special value for driver to delete
+                                            // a key.
 };
 
 static inline const char* ieee80211_cipher_str(uint8_t* oui, uint8_t cipher_type) {
