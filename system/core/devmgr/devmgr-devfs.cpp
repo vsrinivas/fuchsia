@@ -803,10 +803,14 @@ static zx_status_t dc_fidl_handler(port_handler_t* ph, zx_signals_t signals, uin
     return r;
 }
 
-static zx_handle_t devfs_root;
+static zx::channel g_devfs_root;
 
-zx_handle_t devfs_root_clone() {
-    return fdio_service_clone(devfs_root);
+zx::unowned_channel devfs_root_borrow() {
+    return zx::unowned_channel(g_devfs_root);
+}
+
+zx::channel devfs_root_clone() {
+    return zx::channel(fdio_service_clone(g_devfs_root.get()));
 }
 
 void devfs_init(const zx::job& root_job) {
@@ -824,16 +828,14 @@ void devfs_init(const zx::job& root_job) {
     root_devnode->device = coordinator_init(root_job);
     root_devnode->device->self = root_devnode.get();
 
-    zx_handle_t h0, h1;
-    if (zx_channel_create(0, &h0, &h1) != ZX_OK) {
+    zx::channel h0, h1;
+    if (zx::channel::create(0, &h0, &h1) != ZX_OK) {
         return;
-    } else if (iostate_create(root_devnode.get(), h0) != ZX_OK) {
-        zx_handle_close(h0);
-        zx_handle_close(h1);
+    } else if (iostate_create(root_devnode.get(), h0.release()) != ZX_OK) {
         return;
     }
 
-    devfs_root = h1;
+    g_devfs_root = fbl::move(h1);
 }
 
 } // namespace devmgr

@@ -713,7 +713,7 @@ void fshost_start() {
     if (zx_channel_create(0, &fs_root, &handles[0]) == ZX_OK) {
         types[n++] = PA_HND(PA_USER0, 0);
     }
-    if ((handles[n] = devfs_root_clone()) != ZX_HANDLE_INVALID) {
+    if ((handles[n] = devfs_root_clone().release()) != ZX_HANDLE_INVALID) {
         types[n++] = PA_HND(PA_USER0, 1);
     }
     if ((handles[n] = fs_clone("svc").release()) != ZX_HANDLE_INVALID) {
@@ -837,30 +837,25 @@ void devmgr_vfs_exit() {
 
 zx::channel fs_clone(const char* path) {
     if (!strcmp(path, "dev")) {
-        return zx::channel(devfs_root_clone());
+        return devfs_root_clone();
     }
     zx::channel h0, h1;
     if (zx::channel::create(0, &h0, &h1) != ZX_OK) {
         return zx::channel();
     }
-    bool close_fs = false;
-    zx_handle_t fs = fs_root;
+    zx::unowned_channel fs(fs_root);
     int flags = FS_DIR_FLAGS;
     if (!strcmp(path, "hub")) {
-        fs = appmgr_req_cli.get();
+        fs = zx::unowned_channel(appmgr_req_cli);
     } else if (!strcmp(path, "svc")) {
         flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
-        fs = svchost_outgoing.get();
+        fs = zx::unowned_channel(svchost_outgoing);
         path = "public";
     } else if (!strncmp(path, "dev/", 4)) {
-        fs = devfs_root_clone();
-        close_fs = true;
+        fs = devfs_root_borrow();
         path += 4;
     }
-    zx_status_t status = fdio_open_at(fs, path, flags, h1.release());
-    if (close_fs) {
-        zx_handle_close(fs);
-    }
+    zx_status_t status = fdio_open_at(fs->get(), path, flags, h1.release());
     if (status != ZX_OK) {
         return zx::channel();
     }

@@ -84,7 +84,19 @@ void devmgr_disable_appmgr_services();
 // The env var to set to enable ld.so tracing.
 #define LDSO_TRACE_ENV "LD_TRACE=1"
 
-zx_handle_t devfs_root_clone();
+// Borrows the channel connected to the root of devfs.
+zx::unowned_channel devfs_root_borrow();
+
+// Clones the channel connected to the root of devfs.
+zx::channel devfs_root_clone();
+
+// Opens a path relative to locally-specified roots.
+//
+// This acts similar to 'open', but avoids utilizing the local process' namespace.
+// Instead, it manually translates hardcoded paths, such as "svc", "dev", etc into
+// their corresponding root connection, where the request is forwarded.
+//
+// This function is implemented by both devmgr and fshost.
 zx::channel fs_clone(const char* path);
 
 // getenv_bool looks in the environment for name. If not found, it returns
