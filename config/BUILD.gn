@@ -91,7 +91,7 @@ config("relative_paths") {
 }
 
 config("debug") {
-  cflags = [ "-Og" ]
+  cflags = [ "-O0" ]
   ldflags = cflags
 }
 
