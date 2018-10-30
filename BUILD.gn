@@ -1,0 +1,13 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+
+group("no_cmx_whitelist") {
+  # TODO(CP-129) Restrict this.
+  visibility = [
+      "//garnet/*",
+      "//peridot/*",
+      "//topaz/*",
+  ]
+}

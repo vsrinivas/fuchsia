@@ -1,0 +1,44 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+
+template("assert_cmx") {
+  package_meta = []
+  if (defined(invoker.meta)) {
+    package_meta = invoker.meta
+  }
+
+  found_cmx = false
+
+  # deprecated_system_image are not fuchsia packages. Skip.
+  if (invoker.deprecated_system_image) {
+    found_cmx = true
+  }
+
+  # Tests don't launch as components by default, so no cmx is required.
+  if (defined(invoker.testonly) && invoker.testonly) {
+    found_cmx = true
+  }
+
+  # Unmigrated targets are whitelisted.
+  if (defined(invoker.deprecated_no_cmx)) {
+    found_cmx = true
+  }
+
+  foreach(item, package_meta) {
+    dest = item.path
+    if (defined(item.dest)) {
+      dest = item.dest
+    }
+    if (get_path_info(dest, "extension") == "cmx") {
+      found_cmx = true
+    }
+  }
+
+  # TODO(CF-129): Turn on the assertions by removing this line.
+  found_cmx = true
+
+  assert(found_cmx == true,
+      "No cmx found in package $target_name. Please add cmx to your component.")
+}
