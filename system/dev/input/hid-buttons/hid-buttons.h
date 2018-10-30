@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddk/metadata/buttons.h>
 #include <ddk/protocol/gpio.h>
 
 #include <ddktl/device.h>
@@ -11,6 +12,7 @@
 
 #include <fbl/array.h>
 #include <fbl/mutex.h>
+#include <fbl/optional.h>
 
 #include <hid/buttons.h>
 
@@ -48,26 +50,24 @@ public:
     void DdkRelease();
 
 private:
-    enum {
-        kGpioVolumeUp = 0,
-        kGpioVolumeDown,
-        kGpioVolumeUpDown,
-        kGpioMicPrivacy,
-        kNumberOfRequiredGpios,
-    };
-    struct GpioKeys {
+    struct Gpio {
         gpio_protocol_t gpio;
         zx::interrupt irq;
+        buttons_gpio_config_t config;
     };
 
     int Thread();
     void ShutDown() TA_EXCL(proxy_lock_);
-    zx_status_t ReconfigureGpio(uint32_t idx, uint64_t int_port);
+    void ReconfigurePolarity(uint32_t idx, uint64_t int_port);
+    zx_status_t ConfigureInterrupt(uint32_t idx, uint64_t int_port);
+    bool MatrixScan(uint32_t row, uint32_t col, zx_duration_t delay);
 
     thrd_t thread_;
     zx_handle_t port_handle_;
     fbl::Mutex proxy_lock_;
     ddk::HidbusIfcProxy proxy_ TA_GUARDED(proxy_lock_);
-    fbl::Array<GpioKeys> keys_;
+    fbl::Array<buttons_button_config_t> buttons_;
+    fbl::Array<Gpio> gpios_;
+    fbl::optional<uint8_t> fdr_gpio_;
 };
 }

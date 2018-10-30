@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/metadata/buttons.h>
+
 #include <hid/buttons.h>
 #include <hid/descriptor.h>
 
@@ -43,3 +45,22 @@ size_t get_buttons_report_desc(const uint8_t** buf) {
     *buf = buttons_report_desc;
     return sizeof(buttons_report_desc);
 }
+
+void fill_button_in_report(uint8_t id, bool value, buttons_input_rpt_t* rpt) {
+    switch (id) {
+    case BUTTONS_ID_VOLUME_UP:
+        if (value) {
+            rpt->volume = 1;
+        }
+        break;
+    case BUTTONS_ID_VOLUME_DOWN:
+        if (value) {
+            rpt->volume = 3; // 3 == -1 for 2 bits
+        }
+        break;
+    case BUTTONS_ID_MIC_MUTE:
+        rpt->mute = value;
+        break;
+    }
+}
+

@@ -29,6 +29,7 @@ __BEGIN_CDECLS;
 #define PDEV_DID_ETH_MAC            16  // Ethernet MAC
 #define PDEV_DID_ETH_PHY            17  // Ethernet PHY
 #define PDEV_DID_CAMERA_SENSOR      18  // Camera Sensor
+#define PDEV_DID_HID_BUTTONS        19  // HID Buttons
 
 // QEMU emulator
 #define PDEV_VID_QEMU               1
@@ -61,8 +62,6 @@ __BEGIN_CDECLS;
 #define PDEV_DID_GAUSS_LED          4
 #define PDEV_DID_ASTRO_FOCALTOUCH   5
 #define PDEV_DID_ASTRO_GOODIXTOUCH  6
-#define PDEV_DID_ASTRO_BUTTONS      7
-
 
 // Khadas
 #define PDEV_VID_KHADAS             4

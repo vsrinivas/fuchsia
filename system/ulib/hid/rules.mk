@@ -24,6 +24,9 @@ MODULE_SRCS += \
 MODULE_EXPORT := so
 MODULE_SO_NAME := hid
 
+MODULE_STATIC_LIBS := \
+    system/ulib/ddk \
+
 MODULE_LIBS := \
     system/ulib/zircon \
     system/ulib/fdio \

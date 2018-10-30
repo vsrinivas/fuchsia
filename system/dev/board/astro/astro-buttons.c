@@ -4,6 +4,8 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
+#include <ddk/metadata/buttons.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 
@@ -32,13 +34,44 @@ static const pbus_gpio_t astro_buttons_gpios[] = {
     },
 };
 
+// clang-format off
+static const buttons_button_config_t buttons[] = {
+    {BUTTONS_TYPE_DIRECT, BUTTONS_ID_VOLUME_UP,   0, 0, 0},
+    {BUTTONS_TYPE_DIRECT, BUTTONS_ID_VOLUME_DOWN, 1, 0, 0},
+    {BUTTONS_TYPE_DIRECT, BUTTONS_ID_FDR,         2, 0, 0},
+    {BUTTONS_TYPE_DIRECT, BUTTONS_ID_MIC_MUTE,    3, 0, 0},
+};
+// No need for internal pull, external pull-ups used.
+static const buttons_gpio_config_t gpios[] = {
+    {BUTTONS_GPIO_TYPE_INTERRUPT, BUTTONS_GPIO_FLAG_INVERTED, {GPIO_NO_PULL}},
+    {BUTTONS_GPIO_TYPE_INTERRUPT, BUTTONS_GPIO_FLAG_INVERTED, {GPIO_NO_PULL}},
+    {BUTTONS_GPIO_TYPE_INTERRUPT, BUTTONS_GPIO_FLAG_INVERTED, {GPIO_NO_PULL}},
+    {BUTTONS_GPIO_TYPE_INTERRUPT, BUTTONS_GPIO_FLAG_INVERTED, {GPIO_NO_PULL}},
+};
+// clang-format on
+
+static const pbus_metadata_t available_buttons_metadata[] = {
+    {
+        .type = DEVICE_METADATA_BUTTONS_BUTTONS,
+        .data_buffer = &buttons,
+        .data_size = sizeof(buttons),
+    },
+    {
+        .type = DEVICE_METADATA_BUTTONS_GPIOS,
+        .data_buffer = &gpios,
+        .data_size = sizeof(gpios),
+    }
+};
+
 static pbus_dev_t astro_buttons_dev = {
     .name = "astro-buttons",
-    .vid = PDEV_VID_GOOGLE,
-    .pid = PDEV_PID_ASTRO,
-    .did = PDEV_DID_ASTRO_BUTTONS,
+    .vid = PDEV_VID_GENERIC,
+    .pid = PDEV_PID_GENERIC,
+    .did = PDEV_DID_HID_BUTTONS,
     .gpio_list = astro_buttons_gpios,
     .gpio_count = countof(astro_buttons_gpios),
+    .metadata_list = available_buttons_metadata,
+    .metadata_count = countof(available_buttons_metadata),
 };
 
 zx_status_t astro_buttons_init(aml_bus_t* bus) {

@@ -72,6 +72,10 @@ int Mt8167::Thread() {
         zxlogf(ERROR, "DisplayInit() failed\n");
         return -1;
     }
+    if (ButtonsInit() != ZX_OK) {
+        zxlogf(ERROR, "DisplayInit() failed\n");
+        return -1;
+    }
 
     return 0;
 }
