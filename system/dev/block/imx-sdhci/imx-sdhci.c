@@ -27,6 +27,7 @@
 #include <ddk/protocol/sdmmc.h>
 #include <ddk/protocol/sdhci.h>
 #include <hw/reg.h>
+#include <hw/sdhci.h>
 #include <hw/sdmmc.h>
 #include <zircon/types.h>
 

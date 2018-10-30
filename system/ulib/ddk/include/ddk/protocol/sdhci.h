@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <hw/sdhci.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 

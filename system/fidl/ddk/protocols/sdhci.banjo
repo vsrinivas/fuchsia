@@ -4,7 +4,6 @@
 
 library ddk.protocol.sdhci;
 
-using hw.sdhci;
 using zx;
 
 enum SdhciQuirk : uint64 {

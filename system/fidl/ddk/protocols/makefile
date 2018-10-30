@@ -93,7 +93,7 @@ rawnand: $(LOCAL_DIR)/libs/nand.banjo
 scpi:
 	$(run-banjo)
 
-sdhci: $(LOCAL_DIR)/libs/sdhci.banjo
+sdhci:
 	$(run-banjo)
 
 sdio:
