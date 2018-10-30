@@ -274,7 +274,7 @@ func (ni *netstackImpl) BridgeInterfaces(nicids []uint32) (netstack.NetErr, erro
 	for i, n := range nicids {
 		nics[i] = tcpip.NICID(n)
 	}
-	err := ni.ns.Bridge(nics)
+	_, err := ni.ns.Bridge(nics)
 	if err != nil {
 		return netstack.NetErr{Status: netstack.StatusUnknownError}, nil
 	}

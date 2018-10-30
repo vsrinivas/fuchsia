@@ -11,6 +11,8 @@ import (
 	"testing"
 )
 
+const testDeviceName string = "testdevice"
+
 func TestRunning(t *testing.T) {
 	arena, err := eth.NewArena()
 	if err != nil {
@@ -23,7 +25,7 @@ func TestRunning(t *testing.T) {
 	ns.mu.stack = stack.New(nil, nil, stack.Options{})
 
 	OnInterfacesChanged = func() {}
-	ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{}, &ethernetext.Device{
+	_, err = ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{}, &ethernetext.Device{
 		TB:                t,
 		GetInfoImpl:       func() (ethernet.Info, error) { return ethernet.Info{}, nil },
 		SetClientNameImpl: func(string) (int32, error) { return 0, nil },
