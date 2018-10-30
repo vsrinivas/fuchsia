@@ -23,10 +23,14 @@ _FLUTTER_JIT_RUNNER_CONTENT = """{
 def _flutter_app_impl(context):
     kernel_snapshot_file = context.outputs.kernel_snapshot
     manifest_file = context.outputs.manifest
+    # TODO(CF-170): Make cmx mandatory.
+    if context.files.component_manifest:
+        component_name = context.files.component_manifest[0].basename.split(".")[0]
     mappings = compile_kernel_action(
         context = context,
         package_name = context.attr.package_name,
         fuchsia_package_name = context.attr.fuchsia_package_name,
+        component_name = component_name,
         dart_exec = context.executable._dart,
         kernel_compiler = context.files._kernel_compiler[0],
         sdk_root = context.files._platform_lib[0],
@@ -38,21 +42,28 @@ def _flutter_app_impl(context):
         dilp_list_file = context.outputs.dilp_list,
     )
     flutter_jit_runner = context.actions.declare_file("runtime")
+    # TODO(CF-80): Remove meta/deprecated_runtime
     context.actions.write(
         output = flutter_jit_runner,
         content = _FLUTTER_JIT_RUNNER_CONTENT,
     )
     mappings["meta/deprecated_runtime"] = flutter_jit_runner
+    # TODO(CF-170): Make cmx mandatory.
+    if context.files.component_manifest:
+        mappings["meta/%s.cmx" % component_name] = context.files.component_manifest[0]
 
     # Package the assets.
-    data_root = "data/%s/" % context.attr.fuchsia_package_name
+    if context.attr.fuchsia_package_name:
+        data_root = "data/%s/" % context.attr.fuchsia_package_name
+    else:
+        data_root = "data/%s/" % component_name
     asset_manifest_dict = {}
     package_name_len = len(context.label.package)
     for asset in context.files.assets:
         # Remove the package name from the path.
         short_path = asset.short_path[package_name_len + 1:]
 
-        # TODO(alainv): Remove once duplication is no longer needed from
+        # TODO(CF-170): Remove once duplication is no longer needed from
         #               https://github.com/flutter/flutter/pull/20728
         mappings["data/%s" % short_path] = asset
         mappings[data_root + short_path] = asset
@@ -64,7 +75,7 @@ def _flutter_app_impl(context):
         content = "%s" % asset_manifest_dict,
     )
 
-    # TODO(alainv): Remove once duplication is no longer needed from
+    # TODO(CF-170): Remove once duplication is no longer needed from
     #               https://github.com/flutter/flutter/pull/20728
     mappings["data/AssetManifest.json"] = asset_manifest
     mappings[data_root + "AssetManifest.json"] = asset_manifest
@@ -80,6 +91,12 @@ flutter_app = rule(
         "assets": attr.label_list(
             doc = "The app's assets",
             allow_files = True,
+        ),
+        "component_manifest": attr.label(
+            doc = "The flutter component's cmx",
+            mandatory = False, # TODO(CF-170): Make cmx mandatory.
+            allow_files = True,
+            single_file = True,
         ),
         "_platform_lib": attr.label(
             default = Label("//tools/dart_prebuilts/flutter_runner:platform_strong.dill"),

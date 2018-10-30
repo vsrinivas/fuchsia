@@ -31,7 +31,11 @@ COMMON_COMPILE_KERNEL_ACTION_ATTRS = {
     ),
     "fuchsia_package_name": attr.string(
         doc = "The Fuchsia package name embedding this app",
-        mandatory = True,
+        mandatory = False,
+    ),
+    "component_name": attr.string(
+        doc = "The name of this component",
+        mandatory = False,
     ),
     "deps": attr.label_list(
         doc = "The list of libraries this app depends on",
@@ -55,6 +59,7 @@ def compile_kernel_action(
         context,
         package_name,
         fuchsia_package_name,
+        component_name,
         dart_exec,
         kernel_compiler,
         sdk_root,
@@ -70,6 +75,7 @@ def compile_kernel_action(
         context: The rule context.
         package_name: The Dart package name.
         fuchsia_package_name: The name of the Fuchsia package using this kernel.
+        component_name: The name of this component.
         dart_exec: The Dart executable `File`.
         kernel_compiler: The kernel compiler snapshot `File`.
         sdk_root: The Dart SDK root `File` (Dart or Flutter's platform libs).
@@ -110,7 +116,13 @@ def compile_kernel_action(
         build_dir_files = {}
 
     # 3. Declare *.dilp files for all dependencies.
-    data_root = "data/%s/" % fuchsia_package_name
+    if (fuchsia_package_name and component_name) or (not fuchsia_package_name and not component_name):
+        fail("Only one of fuchsia_package_name or component_name must be specified")
+    if fuchsia_package_name:
+        component_name = fuchsia_package_name
+        data_root = "data/%s/" % fuchsia_package_name
+    else:
+        data_root = "data/%s/" % component_name
     mappings = {}
     dart_ctxs = collect_dart_context(dart_ctx).values()
     for dc in dart_ctxs:
@@ -151,7 +163,7 @@ def compile_kernel_action(
         arguments = [
             kernel_compiler.path,
             "--component-name",
-            fuchsia_package_name,
+            component_name,
             "--target",
             "dart_runner",
             "--sdk-root",

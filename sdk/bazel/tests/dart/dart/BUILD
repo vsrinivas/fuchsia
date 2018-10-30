@@ -4,10 +4,19 @@
 
 load("@fuchsia_sdk//build_defs:dart_app.bzl", "dart_app")
 load("@fuchsia_sdk//build_defs:package.bzl", "fuchsia_package")
+load("@fuchsia_sdk//build_defs:package_files.bzl", "package_files")
 
 dart_app(
     name = "dart",
+    component_manifest = "meta/dart.cmx",
     package_name = "tests.dart_app",
+    main = "lib/main.dart",
+    srcs = glob(["lib/*.dart"]),
+)
+
+dart_app(
+    name = "dart2",
+    package_name = "tests.dart_app2",
     fuchsia_package_name = "hello_dart_package",
     main = "lib/main.dart",
     srcs = glob(["lib/*.dart"]),
@@ -17,13 +26,14 @@ fuchsia_package(
     name = "hello_dart_package",
     deps = [
         ":dart",
+        ":dart2",
     ],
 )
 
 dart_app(
     name = "dart_with_unused_dependencies",
+    component_manifest = "meta/dart_with_unused_dependencies.cmx",
     package_name = "tests.dart_app",
-    fuchsia_package_name = "hello_unused_package",
     main = "lib/main.dart",
     srcs = glob(["lib/*.dart"]),
     deps = [

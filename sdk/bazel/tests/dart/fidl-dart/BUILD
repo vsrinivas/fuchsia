@@ -5,6 +5,7 @@
 load("@fuchsia_sdk//build_defs:dart_app.bzl", "dart_app")
 load("@fuchsia_sdk//build_defs:dart_fidl_library.bzl", "dart_fidl_library")
 load("@fuchsia_sdk//build_defs:package.bzl", "fuchsia_package")
+load("@fuchsia_sdk//build_defs:package_files.bzl", "package_files")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -25,8 +26,8 @@ dart_fidl_library(
 
 dart_app(
     name = "compile",
+    component_manifest = "meta/compile.cmx",
     package_name = "tests.fidl_dart_compile",
-    fuchsia_package_name = "fidl_dart_package",
     main = "instrument_bindings.dart",
     deps = [
         ":simple",

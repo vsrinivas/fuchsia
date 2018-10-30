@@ -1,0 +1,6 @@
+{
+    "program": {
+        "data": "data/app"
+    },
+    "runner": "flutter_jit_runner"
+}
