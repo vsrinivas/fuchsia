@@ -57,5 +57,5 @@ zx_status_t TestWithDevice::WaitOnInterrupt() {
   if (!(pending & signals)) {
     return ZX_ERR_BAD_STATE;
   }
-  return ZX_OK;
+  return event_.signal(pending, 0);
 }
