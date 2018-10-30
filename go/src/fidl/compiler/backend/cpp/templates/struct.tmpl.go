@@ -10,10 +10,16 @@ class {{ .Name }};
 {{- end }}
 
 {{- define "StructDeclaration" }}
+{{range .DocComments}}
+//{{ . }}
+{{- end}}
 class {{ .Name }}  {
  public:
   static const fidl_type_t* FidlType;
   {{- range .Members }}
+  {{range .DocComments}}
+  //{{ . }}
+  {{- end}}
   {{ .Type.Decl }} {{ .Name }}{{ if .DefaultValue }} = {{ .DefaultValue }}{{ else }}{}{{ end }};
   {{- end }}
 

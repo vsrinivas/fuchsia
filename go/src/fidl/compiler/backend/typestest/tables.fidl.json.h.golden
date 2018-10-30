@@ -15,15 +15,18 @@ namespace name {
 class OlderSimpleTable;
 class NewerSimpleTable;
 class SimpleTable;
+
 class OlderSimpleTable  {
  public:
   static const fidl_type_t* FidlType;
+  
   const int64_t* x() const {
     return has_x_ ? &x_.value : nullptr;
   }
   bool has_x() const {
     return has_x_;
   }
+  
   int64_t* mutable_x() {
     if (!has_x_) {
       has_x_ = true;
@@ -84,15 +87,18 @@ inline bool operator!=(const OlderSimpleTable& lhs, const OlderSimpleTable& rhs)
 }
 
 using OlderSimpleTablePtr = ::std::unique_ptr<OlderSimpleTable>;
+
 class NewerSimpleTable  {
  public:
   static const fidl_type_t* FidlType;
+  
   const int64_t* x() const {
     return has_x_ ? &x_.value : nullptr;
   }
   bool has_x() const {
     return has_x_;
   }
+  
   int64_t* mutable_x() {
     if (!has_x_) {
       has_x_ = true;
@@ -115,12 +121,14 @@ class NewerSimpleTable  {
     has_x_ = false;
     Destruct(&x_.value);
   }
+  
   const int64_t* y() const {
     return has_y_ ? &y_.value : nullptr;
   }
   bool has_y() const {
     return has_y_;
   }
+  
   int64_t* mutable_y() {
     if (!has_y_) {
       has_y_ = true;
@@ -143,12 +151,14 @@ class NewerSimpleTable  {
     has_y_ = false;
     Destruct(&y_.value);
   }
+  
   const int64_t* z() const {
     return has_z_ ? &z_.value : nullptr;
   }
   bool has_z() const {
     return has_z_;
   }
+  
   int64_t* mutable_z() {
     if (!has_z_) {
       has_z_ = true;
@@ -225,15 +235,18 @@ inline bool operator!=(const NewerSimpleTable& lhs, const NewerSimpleTable& rhs)
 }
 
 using NewerSimpleTablePtr = ::std::unique_ptr<NewerSimpleTable>;
+
 class SimpleTable  {
  public:
   static const fidl_type_t* FidlType;
+  
   const int64_t* x() const {
     return has_x_ ? &x_.value : nullptr;
   }
   bool has_x() const {
     return has_x_;
   }
+  
   int64_t* mutable_x() {
     if (!has_x_) {
       has_x_ = true;
@@ -256,12 +269,14 @@ class SimpleTable  {
     has_x_ = false;
     Destruct(&x_.value);
   }
+  
   const int64_t* y() const {
     return has_y_ ? &y_.value : nullptr;
   }
   bool has_y() const {
     return has_y_;
   }
+  
   int64_t* mutable_y() {
     if (!has_y_) {
       has_y_ = true;

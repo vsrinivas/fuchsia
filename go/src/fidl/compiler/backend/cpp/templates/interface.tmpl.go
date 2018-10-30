@@ -55,6 +55,9 @@ class {{ .SyncProxyName }};
 {{ end -}}
 
 {{- define "InterfaceDeclaration" }}
+{{range .DocComments}}
+//{{ . }}
+{{- end}}
 class {{ .Name }} {
  public:
   using Proxy_ = {{ .ProxyName }};
@@ -72,6 +75,9 @@ class {{ .Name }} {
       {{ .CallbackWrapper }}<void({{ template "ParamTypes" .Response }})>;
     {{- end }}
     {{- if .HasRequest }}
+  {{range .DocComments}}
+  //{{ . }}
+  {{- end}}
   virtual void {{ template "RequestMethodSignature" . }} = 0;
     {{- end }}
   {{- end }}

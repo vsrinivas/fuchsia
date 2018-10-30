@@ -10,6 +10,9 @@ class {{ .Name }};
 {{- end }}
 
 {{- define "UnionDeclaration" }}
+{{range .DocComments}}
+//{{ . }}
+{{- end}}
 class {{ .Name }} {
  public:
   {{ .Name }}();
@@ -36,7 +39,13 @@ class {{ .Name }} {
   {{- range $index, $member := .Members }}
 
   bool is_{{ .Name }}() const { return tag_ == {{ $index }}; }
+  {{range .DocComments}}
+  //{{ . }}
+  {{- end}}
   {{ .Type.Decl }}& {{ .Name }}() { return {{ .StorageName }}; }
+  {{range .DocComments}}
+  //{{ . }}
+  {{- end}}
   const {{ .Type.Decl }}& {{ .Name }}() const { return {{ .StorageName }}; }
   void set_{{ .Name }}({{ .Type.Decl }} value);
   {{- end }}

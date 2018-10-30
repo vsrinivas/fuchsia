@@ -10,16 +10,25 @@ class {{ .Name }};
 {{- end }}
 
 {{- define "TableDeclaration" }}
+{{range .DocComments}}
+//{{ . }}
+{{- end}}
 class {{ .Name }}  {
  public:
   static const fidl_type_t* FidlType;
   {{- range .Members }}
+  {{range .DocComments}}
+  //{{ . }}
+  {{- end}}
   const {{ .Type.Decl }}* {{ .Name }}() const {
     return {{ .FieldPresenceName }} ? &{{ .FieldDataName }}.value : nullptr;
   }
   bool {{ .MethodHasName }}() const {
     return {{ .FieldPresenceName }};
   }
+  {{range .DocComments}}
+  //{{ . }}
+  {{- end}}
   {{ .Type.Decl }}* mutable_{{ .Name }}() {
     if (!{{ .FieldPresenceName }}) {
       {{ .FieldPresenceName }} = true;

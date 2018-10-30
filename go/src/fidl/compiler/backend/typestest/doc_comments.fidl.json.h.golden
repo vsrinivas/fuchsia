@@ -23,6 +23,10 @@ class Interface_SyncProxy;
 class Struct;
 class Union;
 class Table;
+
+// interface comment #1
+//
+// interface comment #3
 class Interface {
  public:
   using Proxy_ = Interface_Proxy;
@@ -30,6 +34,10 @@ class Interface {
   using EventSender_ = Interface_EventSender;
   using Sync_ = Interface_Sync;
   virtual ~Interface();
+  
+  // method comment #1
+  //
+  // method comment #3
   virtual void Method() = 0;
 };
 
@@ -84,9 +92,17 @@ class Interface_SyncProxy : public Interface_Sync {
   private:
   ::fidl::internal::SynchronousProxy proxy_;
 };
+
+// struct comment #1
+//
+// struct comment #3
 class Struct  {
  public:
   static const fidl_type_t* FidlType;
+  
+  // struct member comment #1
+  //
+  // struct member comment #3
   int32_t Field{};
 
   static inline ::std::unique_ptr<Struct> New() { return ::std::make_unique<Struct>(); }
@@ -107,6 +123,10 @@ inline zx_status_t Clone(const ::test::name::Struct& value,
 }
 
 using StructPtr = ::std::unique_ptr<Struct>;
+
+// union comment #1
+//
+// union comment #3
 class Union {
  public:
   Union();
@@ -129,7 +149,15 @@ class Union {
   bool has_invalid_tag() const { return tag_ == ::std::numeric_limits<::fidl_union_tag_t>::max(); }
 
   bool is_Field() const { return tag_ == 0; }
+  
+  // union member comment #1
+  //
+  // union member comment #3
   int32_t& Field() { return Field_; }
+  
+  // union member comment #1
+  //
+  // union member comment #3
   const int32_t& Field() const { return Field_; }
   void set_Field(int32_t value);
 
@@ -156,15 +184,27 @@ inline zx_status_t Clone(const ::test::name::Union& value,
 }
 
 using UnionPtr = ::std::unique_ptr<Union>;
+
+// table comment #1
+//
+// table comment #3
 class Table  {
  public:
   static const fidl_type_t* FidlType;
+  
+  // table field comment #1
+  //
+  // table field comment #3
   const int32_t* Field() const {
     return has_Field_ ? &Field_.value : nullptr;
   }
   bool has_Field() const {
     return has_Field_;
   }
+  
+  // table field comment #1
+  //
+  // table field comment #3
   int32_t* mutable_Field() {
     if (!has_Field_) {
       has_Field_ = true;
@@ -225,6 +265,10 @@ inline bool operator!=(const Table& lhs, const Table& rhs) {
 }
 
 using TablePtr = ::std::unique_ptr<Table>;
+
+// const comment #1
+//
+// const comment #3
 constexpr int32_t C = 4;
 }  // namespace name
 }  // namespace test

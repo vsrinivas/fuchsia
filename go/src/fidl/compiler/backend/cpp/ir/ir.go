@@ -35,6 +35,7 @@ type Type struct {
 }
 
 type Const struct {
+	types.Attributes
 	Extern    bool
 	Decorator string
 	Type      Type
@@ -55,6 +56,7 @@ type EnumMember struct {
 }
 
 type Union struct {
+	types.Attributes
 	Namespace string
 	Name      string
 	Members   []UnionMember
@@ -62,6 +64,7 @@ type Union struct {
 }
 
 type UnionMember struct {
+	types.Attributes
 	Type        Type
 	Name        string
 	StorageName string
@@ -93,6 +96,7 @@ type TableMember struct {
 }
 
 type Struct struct {
+	types.Attributes
 	Namespace string
 	Name      string
 	TableType string
@@ -101,6 +105,7 @@ type Struct struct {
 }
 
 type StructMember struct {
+	types.Attributes
 	Type         Type
 	Name         string
 	DefaultValue string
@@ -122,6 +127,7 @@ type Interface struct {
 }
 
 type Method struct {
+	types.Attributes
 	Ordinal             types.Ordinal
 	OrdinalName         string
 	Name                string
@@ -562,6 +568,7 @@ func (c *compiler) compileType(val types.Type) Type {
 func (c *compiler) compileConst(val types.Const) Const {
 	if val.Type.Kind == types.StringType {
 		return Const{
+			val.Attributes,
 			true,
 			"const",
 			Type{
@@ -573,6 +580,7 @@ func (c *compiler) compileConst(val types.Const) Const {
 	} else {
 		t := c.compileType(val.Type)
 		return Const{
+			val.Attributes,
 			false,
 			"constexpr",
 			t,
@@ -639,6 +647,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			responseTypeNameSuffix = "EventTable"
 		}
 		m := Method{
+			v.Attributes,
 			v.Ordinal,
 			fmt.Sprintf("k%s_%s_Ordinal", r.Name, v.Name),
 			name,
@@ -669,6 +678,7 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	}
 
 	return StructMember{
+		val.Attributes,
 		t,
 		changeIfReserved(val.Name, ""),
 		defaultValue,
@@ -679,6 +689,7 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 func (c *compiler) compileStruct(val types.Struct) Struct {
 	name := c.compileCompoundIdentifier(val.Name, "")
 	r := Struct{
+		val.Attributes,
 		c.namespace,
 		name,
 		fmt.Sprintf("%s_%sTable", c.symbolPrefix, name),
@@ -756,6 +767,7 @@ func (c *compiler) compileTable(val types.Table) Table {
 func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 	n := changeIfReserved(val.Name, "")
 	return UnionMember{
+		val.Attributes,
 		c.compileType(val.Type),
 		n,
 		changeIfReserved(val.Name, "_"),
@@ -766,6 +778,7 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 
 func (c *compiler) compileUnion(val types.Union) Union {
 	r := Union{
+		val.Attributes,
 		c.namespace,
 		c.compileCompoundIdentifier(val.Name, ""),
 		[]UnionMember{},
