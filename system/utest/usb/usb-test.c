@@ -11,9 +11,53 @@
 #include <unistd.h>
 
 #define USB_TESTER_DEV_DIR "/dev/class/usb-tester"
+#define USB_DEVICE_DEV_DIR "/dev/class/usb-device"
 
 #define ISOCH_MIN_PASS_PERCENT 80
 #define ISOCH_MIN_PACKETS      10lu
+
+static DIR* open_usb_device_dir(void) {
+    return opendir(USB_DEVICE_DEV_DIR);
+}
+
+static zx_status_t check_xhci_root_hubs(DIR* d) {
+    struct dirent* de;
+    uint8_t count = 0;
+    while ((de = readdir(d)) != NULL) {
+        count++;
+    }
+    //TODO(ravoorir): Use FIDL apis to read the descriptors
+    //of the devices and ensure that both 2.0 root hub and
+    //3.0 root hub showed up.
+    if (count < 2) {
+        return ZX_ERR_BAD_STATE;
+    }
+    closedir(d);
+    return ZX_OK;
+}
+
+static bool usb_root_hubs_test(void) {
+    BEGIN_TEST;
+    //TODO(ravoorir): Wait for /dev/class/usb
+    //to be created.
+    DIR* d = open_usb_device_dir();
+    if (d == NULL) {
+        //TODO(ravoorir): At the moment we cannot restrict a test
+        //to only run on hardware(IN-497) and not the qemu instances.
+        //We should fail here when running on hardware.
+        unittest_printf_critical(" Root hub creation failed.[SKIPPING]");
+        return true;
+    }
+    //TODO(ravoorir): There should be a matrix of hardware that should
+    //be accessible from here. Depending on whether the hardware has
+    //xhci/ehci, we should check the root hubs.
+    zx_status_t status = check_xhci_root_hubs(d);
+    if (status != ZX_OK) {
+        unittest_printf_critical(" Root hub creation failed.[SKIPPING]");
+        return true;
+    }
+    END_TEST;
+}
 
 static zx_status_t open_test_device(zx_handle_t* out_svc) {
     DIR* d = opendir(USB_TESTER_DEV_DIR);
@@ -116,6 +160,7 @@ static bool usb_isoch_loopback_test(void) {
 }
 
 BEGIN_TEST_CASE(usb_tests)
+RUN_TEST(usb_root_hubs_test)
 RUN_TEST(usb_bulk_loopback_test)
 RUN_TEST(usb_isoch_loopback_test)
 END_TEST_CASE(usb_tests)
