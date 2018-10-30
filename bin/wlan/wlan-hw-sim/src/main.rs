@@ -7,12 +7,15 @@
 
 use {
     byteorder::{LittleEndian, ReadBytesExt},
+    failure::format_err,
     fidl_fuchsia_wlan_device as wlan_device,
     fidl_fuchsia_wlan_mlme as wlan_mlme,
     fidl_fuchsia_wlan_tap as wlantap,
     fuchsia_async as fasync,
+    fuchsia_zircon as zx,
     fuchsia_zircon::prelude::*,
-    futures::prelude::*,
+    futures::{prelude::*, channel::mpsc},
+    std::fs::{self, File},
     std::io::Cursor,
     std::sync::{Arc, Mutex},
     wlantap_client::Wlantap,
@@ -276,8 +279,30 @@ fn handle_tx(args: wlantap::TxArgs, state: &mut State, proxy: &wlantap::WlantapP
             send_association_response(&mut state.frame_buf, &state.current_channel, &BSSID, proxy)
                 .expect("Error sending fake association response frame.");
             println!("Association Response sent.");
+            state.is_associated = true;
         }
     }
+}
+
+async fn create_eth_client(mac: &[u8; 6]) -> Result<ethernet::Client, failure::Error> {
+    const ETH_PATH : &str = "/dev/class/ethernet";
+    let files = fs::read_dir(ETH_PATH)?;
+    for file in files {
+        let vmo = zx::Vmo::create_with_opts(
+            zx::VmoOptions::NON_RESIZABLE,
+            256 * ethernet::DEFAULT_BUFFER_SIZE as u64,
+        )?;
+
+        let path = file?.path();
+        let dev = File::open(path)?;
+        if let Ok(client) = await!(ethernet::Client::from_file(dev, vmo,
+                                   ethernet::DEFAULT_BUFFER_SIZE, "wlan-hw-sim")) {
+            if let Ok(info) = await!(client.info()) {
+                if &info.mac.octets == mac { return Ok(client); }
+            }
+        }
+    }
+    Err(format_err!("No ethernet device found with MAC address {:?}", mac))
 }
 
 fn main() -> Result<(), failure::Error> {
@@ -285,20 +310,26 @@ fn main() -> Result<(), failure::Error> {
     let wlantap = Wlantap::open()?;
     let state = Arc::new(Mutex::new(State::new()));
     let proxy = wlantap.create_phy(create_wlantap_config())?;
+    let (sender, mut receiver) = mpsc::channel(1);
+
     let event_listener = async {
         let state = state.clone();
         let mut events = proxy.take_event_stream();
         while let Some(event) = await!(events.try_next()).unwrap() {
             match event {
-                wlantap::WlantapPhyEvent::SetChannel{ args } => {
+                wlantap::WlantapPhyEvent::SetChannel { args } => {
                     let mut state = state.lock().unwrap();
                     state.current_channel = args.chan;
                     println!("setting channel to {:?}", state.current_channel);
                 }
                 wlantap::WlantapPhyEvent::Tx { args } => {
                     let mut state = state.lock().unwrap();
+                    let was_associated = state.is_associated;
                     handle_tx(args, &mut state, &proxy);
-                },
+                    if !was_associated && state.is_associated {
+                        await!(sender.send(()));
+                    }
+                }
                 _ => {}
             }
         }
@@ -316,7 +347,23 @@ fn main() -> Result<(), failure::Error> {
         }
     };
 
-    exec.run_singlethreaded(event_listener.join(beacon_timer));
+    let ethernet_sender = async {
+        match await!(receiver.next()) {
+            Some(()) => println !("associated signal received from mpsc channel"),
+            other => {
+                println!("mpsc channel returned {:?}", other);
+                return;
+            }
+        };
+
+        let client = await!(create_eth_client(&HW_MAC_ADDR))
+                     .expect("cannot create ethernet client");
+        println!("ethernet client created: {:?}", client);
+        println!("info: {:?} status: {:?}", await!(client.info()).unwrap(),
+                 await!(client.get_status()).unwrap());
+    };
+
+    exec.run_singlethreaded(event_listener.join3(beacon_timer, ethernet_sender));
     Ok(())
 }
 

@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
   name = "wlan_hw_sim"
@@ -12,6 +12,7 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/ethernet",
     "//garnet/lib/rust/wlantap-client",
     "//garnet/lib/wlan/fidl:fidl-rustc",
     "//garnet/lib/wlan/fidl:wlantap-rustc",
