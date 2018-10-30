@@ -74,7 +74,7 @@ zx_status_t VirtioQueue::NextAvailLocked(uint16_t* index) {
 }
 
 bool VirtioQueue::HasAvailLocked() const {
-  return ring_.avail->idx != ring_.index;
+  return ring_.avail != nullptr && ring_.avail->idx != ring_.index;
 }
 
 uint32_t VirtioQueue::RingIndexLocked(uint32_t index) const {
@@ -87,42 +87,6 @@ zx_status_t VirtioQueue::Notify() {
     return event_.signal(0, SIGNAL_QUEUE_AVAIL);
   }
   return ZX_OK;
-}
-
-zx_status_t VirtioQueue::PollAsync(async_dispatcher_t* dispatcher,
-                                   async::Wait* wait, PollFn handler) {
-  wait->set_object(event_.get());
-  wait->set_trigger(SIGNAL_QUEUE_AVAIL);
-  wait->set_handler([this, handler = std::move(handler)](
-                        async_dispatcher_t* dispatcher, async::Wait* wait,
-                        zx_status_t status, const zx_packet_signal_t* signal) {
-    InvokeAsyncHandler(dispatcher, wait, status, handler);
-  });
-  return wait->Begin(dispatcher);
-}
-
-void VirtioQueue::InvokeAsyncHandler(async_dispatcher_t* dispatcher,
-                                     async::Wait* wait, zx_status_t status,
-                                     const PollFn& handler) {
-  if (status != ZX_OK) {
-    return;
-  }
-
-  uint16_t head;
-  uint32_t used = 0;
-  status = NextAvail(&head);
-  if (status == ZX_OK) {
-    status = handler(this, head, &used);
-    // Try to return the buffer to the queue, even if the handler has failed
-    // so we don't leak the descriptor.
-    zx_status_t return_status = Return(head, used);
-    if (status == ZX_OK) {
-      status = return_status;
-    }
-  }
-  if (status == ZX_OK || status == ZX_ERR_SHOULD_WAIT) {
-    wait->Begin(dispatcher);  // ignore errors
-  }
 }
 
 zx_status_t VirtioQueue::ReadDesc(uint16_t desc_index, VirtioDescriptor* out) {

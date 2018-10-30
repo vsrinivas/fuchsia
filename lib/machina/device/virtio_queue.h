@@ -157,37 +157,12 @@ class VirtioQueue {
   __WARN_UNUSED_RESULT zx_status_t ReadDesc(uint16_t index,
                                             VirtioDescriptor* desc);
 
-  // Callback for |Poll| and |PollAsync|.
-  //
-  // queue    - The queue being polled.
-  // head     - Descriptor index of the buffer chain to process.
-  // used     - The number of bytes written to the descriptor chain must be
-  //            written here.
-  //
-  // The queue will continue to be polled as long as this method returns ZX_OK.
-  // The error ZX_ERR_STOP will be treated as a special value to indicate queue
-  // polling should stop gracefully and (in the case of |Poll|)terminate the
-  // thread.
-  //
-  // Any other error values will be treated as unexpected errors that will cause
-  // the polling thread to be terminated with a non-zero exit value.
-  using PollFn = fit::function<zx_status_t(VirtioQueue* queue, uint16_t head,
-                                           uint32_t* used)>;
-
-  // Monitors the queue signal for available descriptors and run the callback
-  // when one is available.
-  zx_status_t PollAsync(async_dispatcher_t* dispatcher, async::Wait* wait,
-                        PollFn handler);
-
  private:
   zx_status_t NextAvailLocked(uint16_t* index) __TA_REQUIRES(mutex_);
   bool HasAvailLocked() const __TA_REQUIRES(mutex_);
 
   // Returns a circular index into a Virtio ring.
   uint32_t RingIndexLocked(uint32_t index) const __TA_REQUIRES(mutex_);
-
-  void InvokeAsyncHandler(async_dispatcher_t* dispatcher, async::Wait* wait,
-                          zx_status_t status, const PollFn& handler);
 
   mutable std::mutex mutex_;
   const PhysMem* phys_mem_ = nullptr;
