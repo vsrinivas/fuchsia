@@ -108,7 +108,7 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   // Only src_pos_modulo needs to be written back before returning.
   uint32_t step_size = info->step_size;
   uint32_t rate_modulo, denominator, src_pos_modulo;
-  if (HasModulo) {
+  if constexpr (HasModulo) {
     rate_modulo = info->rate_modulo;
     denominator = info->denominator;
     src_pos_modulo = info->src_pos_modulo;
@@ -117,13 +117,13 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     FXL_DCHECK(denominator > rate_modulo);
     FXL_DCHECK(denominator > src_pos_modulo);
   }
-  if (kVerboseRampDebug) {
+  if constexpr (kVerboseRampDebug) {
     FXL_LOG(INFO) << "Linear(" << this
                   << ") Ramping: " << (ScaleType == ScalerType::RAMPING)
                   << ", dest_frames: " << dest_frames
                   << ", dest_off: " << dest_off;
   }
-  if (ScaleType == ScalerType::RAMPING) {
+  if constexpr (ScaleType == ScalerType::RAMPING) {
     if (dest_frames > Bookkeeping::kScaleArrLen + dest_off) {
       dest_frames = Bookkeeping::kScaleArrLen + dest_off;
     }
@@ -149,7 +149,7 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   FXL_DCHECK(src_off + FRAC_ONE <= frac_src_frames + neg_filter_width());
 
   Gain::AScale amplitude_scale;
-  if (ScaleType != ScalerType::RAMPING) {
+  if constexpr (ScaleType != ScalerType::RAMPING) {
     amplitude_scale = info->gain.GetGainScale();
   }
 
@@ -158,7 +158,7 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   // If we are not attenuated to the point of being muted, go ahead and perform
   // the mix.  Otherwise, just update the source and dest offsets and hold onto
   // any relevant filter data from the end of the source.
-  if (ScaleType != ScalerType::MUTED) {
+  if constexpr (ScaleType != ScalerType::MUTED) {
     // If src_off is negative, we must incorporate previously-cached samples.
     // Add a new sample, to complete the filter set, and compute the output.
     if (src_off < 0) {
@@ -167,7 +167,7 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       }
 
       while ((dest_off < dest_frames) && (src_off < 0)) {
-        if (ScaleType == ScalerType::RAMPING) {
+        if constexpr (ScaleType == ScalerType::RAMPING) {
           amplitude_scale = info->scale_arr[dest_off - dest_off_start];
         }
 
@@ -183,7 +183,7 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
         dest_off += 1;
         src_off += step_size;
 
-        if (HasModulo) {
+        if constexpr (HasModulo) {
           src_pos_modulo += rate_modulo;
           if (src_pos_modulo >= denominator) {
             ++src_off;
@@ -197,7 +197,7 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     while ((dest_off < dest_frames) && (src_off < src_end)) {
       uint32_t S = (src_off >> kPtsFractionalBits) * SrcChanCount;
       float* out = dest + (dest_off * DestChanCount);
-      if (ScaleType == ScalerType::RAMPING) {
+      if constexpr (ScaleType == ScalerType::RAMPING) {
         amplitude_scale = info->scale_arr[dest_off - dest_off_start];
       }
 
@@ -211,7 +211,7 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       dest_off += 1;
       src_off += step_size;
 
-      if (HasModulo) {
+      if constexpr (HasModulo) {
         src_pos_modulo += rate_modulo;
         if (src_pos_modulo >= denominator) {
           ++src_off;
@@ -230,7 +230,7 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       dest_off += avail;
       src_off += avail * step_size;
 
-      if (HasModulo) {
+      if constexpr (HasModulo) {
         src_pos_modulo += (rate_modulo * avail);
         src_off += (src_pos_modulo / denominator);
         src_pos_modulo %= denominator;
@@ -242,12 +242,12 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   // hits the input buffer's final frame exactly ...
   if ((dest_off < dest_frames) && (src_off == src_end)) {
     // ... and if we are not muted, of course ...
-    if (ScaleType != ScalerType::MUTED) {
+    if constexpr (ScaleType != ScalerType::MUTED) {
       // ... then we can _point-sample_ one final frame into our output buffer.
       // We need not _interpolate_ since fractional position is exactly zero.
       uint32_t S = (src_off >> kPtsFractionalBits) * SrcChanCount;
       float* out = dest + (dest_off * DestChanCount);
-      if (ScaleType == ScalerType::RAMPING) {
+      if constexpr (ScaleType == ScalerType::RAMPING) {
         amplitude_scale = info->scale_arr[dest_off - dest_off_start];
       }
 
@@ -260,7 +260,7 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     dest_off += 1;
     src_off += step_size;
 
-    if (HasModulo) {
+    if constexpr (HasModulo) {
       src_pos_modulo += rate_modulo;
       if (src_pos_modulo >= denominator) {
         ++src_off;
@@ -272,7 +272,7 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   // Update all our returned in-out parameters
   *dest_offset = dest_off;
   *frac_src_offset = src_off;
-  if (HasModulo) {
+  if constexpr (HasModulo) {
     info->src_pos_modulo = src_pos_modulo;
   }
 
@@ -280,7 +280,7 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   if (src_off > src_end) {
     uint32_t S = (src_end >> kPtsFractionalBits) * SrcChanCount;
     // ... and if we are not mute, of course...
-    if (ScaleType != ScalerType::MUTED) {
+    if constexpr (ScaleType != ScalerType::MUTED) {
       // ... cache our final frame for use in future interpolation ...
       for (size_t D = 0; D < DestChanCount; ++D) {
         filter_data_[D] = SR::Read(src + S + (D / SR::DestPerSrc));
@@ -398,7 +398,7 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
   // Only src_pos_modulo needs to be written back before returning.
   uint32_t step_size = info->step_size;
   uint32_t rate_modulo, denominator, src_pos_modulo;
-  if (HasModulo) {
+  if constexpr (HasModulo) {
     rate_modulo = info->rate_modulo;
     denominator = info->denominator;
     src_pos_modulo = info->src_pos_modulo;
@@ -407,13 +407,13 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
     FXL_DCHECK(denominator > rate_modulo);
     FXL_DCHECK(denominator > src_pos_modulo);
   }
-  if (kVerboseRampDebug) {
+  if constexpr (kVerboseRampDebug) {
     FXL_LOG(INFO) << "Linear-NxN(" << this
                   << ") Ramping: " << (ScaleType == ScalerType::RAMPING)
                   << ", dest_frames: " << dest_frames
                   << ", dest_off: " << dest_off;
   }
-  if (ScaleType == ScalerType::RAMPING) {
+  if constexpr (ScaleType == ScalerType::RAMPING) {
     if (dest_frames > Bookkeeping::kScaleArrLen + dest_off) {
       dest_frames = Bookkeeping::kScaleArrLen + dest_off;
     }
@@ -435,7 +435,7 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
   FXL_DCHECK(src_off + FRAC_ONE <= frac_src_frames + neg_filter_width());
 
   Gain::AScale amplitude_scale;
-  if (ScaleType != ScalerType::RAMPING) {
+  if constexpr (ScaleType != ScalerType::RAMPING) {
     amplitude_scale = info->gain.GetGainScale();
   }
 
@@ -444,7 +444,7 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
   // If we are not attenuated to the point of being muted, go ahead and perform
   // the mix.  Otherwise, just update the source and dest offsets and hold onto
   // any relevant filter data from the end of the source.
-  if (ScaleType != ScalerType::MUTED) {
+  if constexpr (ScaleType != ScalerType::MUTED) {
     // When starting "between buffers", we must rely on previously-cached vals.
     if (src_off < 0) {
       for (size_t D = 0; D < chan_count; ++D) {
@@ -453,7 +453,7 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
       }
 
       while ((dest_off < dest_frames) && (src_off < 0)) {
-        if (ScaleType == ScalerType::RAMPING) {
+        if constexpr (ScaleType == ScalerType::RAMPING) {
           amplitude_scale = info->scale_arr[dest_off - dest_off_start];
         }
 
@@ -468,7 +468,7 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
         dest_off += 1;
         src_off += step_size;
 
-        if (HasModulo) {
+        if constexpr (HasModulo) {
           src_pos_modulo += rate_modulo;
           if (src_pos_modulo >= denominator) {
             ++src_off;
@@ -482,7 +482,7 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
     while ((dest_off < dest_frames) && (src_off < src_end)) {
       uint32_t S = (src_off >> kPtsFractionalBits) * chan_count;
       float* out = dest + (dest_off * chan_count);
-      if (ScaleType == ScalerType::RAMPING) {
+      if constexpr (ScaleType == ScalerType::RAMPING) {
         amplitude_scale = info->scale_arr[dest_off - dest_off_start];
       }
 
@@ -497,7 +497,7 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
       dest_off += 1;
       src_off += step_size;
 
-      if (HasModulo) {
+      if constexpr (HasModulo) {
         src_pos_modulo += rate_modulo;
         if (src_pos_modulo >= denominator) {
           ++src_off;
@@ -516,7 +516,7 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
       dest_off += avail;
       src_off += avail * step_size;
 
-      if (HasModulo) {
+      if constexpr (HasModulo) {
         src_pos_modulo += (rate_modulo * avail);
         src_off += (src_pos_modulo / denominator);
         src_pos_modulo %= denominator;
@@ -528,12 +528,12 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
   // hits the input buffer's final frame exactly ...
   if ((dest_off < dest_frames) && (src_off == src_end)) {
     // ... and if we are not muted, of course ...
-    if (ScaleType != ScalerType::MUTED) {
+    if constexpr (ScaleType != ScalerType::MUTED) {
       // ... then we can _point-sample_ one final frame into our output buffer.
       // We need not _interpolate_ since fractional position is exactly zero.
       uint32_t S = (src_off >> kPtsFractionalBits) * chan_count;
       float* out = dest + (dest_off * chan_count);
-      if (ScaleType == ScalerType::RAMPING) {
+      if constexpr (ScaleType == ScalerType::RAMPING) {
         amplitude_scale = info->scale_arr[dest_off - dest_off_start];
       }
 
@@ -546,7 +546,7 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
     dest_off += 1;
     src_off += step_size;
 
-    if (HasModulo) {
+    if constexpr (HasModulo) {
       src_pos_modulo += rate_modulo;
       if (src_pos_modulo >= denominator) {
         ++src_off;
@@ -558,7 +558,7 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
   // Update all our returned in-out parameters
   *dest_offset = dest_off;
   *frac_src_offset = src_off;
-  if (HasModulo) {
+  if constexpr (HasModulo) {
     info->src_pos_modulo = src_pos_modulo;
   }
 
@@ -566,7 +566,7 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
   if (src_off > src_end) {
     uint32_t S = (src_end >> kPtsFractionalBits) * chan_count;
     // ... and if we are not mute, of course...
-    if (ScaleType != ScalerType::MUTED) {
+    if constexpr (ScaleType != ScalerType::MUTED) {
       // ... cache our final frame for use in future interpolation ...
       for (size_t D = 0; D < chan_count; ++D) {
         filter_data_u_[D] = SampleNormalizer<SrcSampleType>::Read(src + S + D);

@@ -44,7 +44,7 @@ void Gain::SetSourceGainWithRamp(float source_gain_db,
     // Already at the ramp destination: we are done.
     ClearSourceRamp();
   }
-  if (kVerboseRampDebug) {
+  if constexpr (kVerboseRampDebug) {
     FXL_LOG(INFO) << "Gain(" << this << "): SetSourceGainWithRamp("
                   << source_gain_db << " dB, " << duration_ns << " nsec)";
   }
@@ -78,7 +78,7 @@ void Gain::Advance(uint32_t num_frames, const TimelineRate& local_to_output) {
 
   target_src_gain_db_.store(src_gain_db);
 
-  if (kVerboseRampDebug) {
+  if constexpr (kVerboseRampDebug) {
     FXL_LOG(INFO) << "Advanced " << advance_ns << " nsec for " << num_frames
                   << " frames. Total frames ramped: " << frames_ramped_ << ".";
     FXL_LOG(INFO) << "Src_gain is now " << src_gain_db << " dB for this "
@@ -97,7 +97,13 @@ void Gain::GetScaleArray(AScale* scale_arr, uint32_t num_frames,
   FXL_CHECK(scale_arr != nullptr);
 
   AScale scale;
-  if (IsRamping()) {
+  if (src_mute_ || dest_mute_ || !IsRamping()) {
+    // Gain is flat for this mix job; retrieve gainscale once and set them all.
+    scale = GetGainScale();
+    for (uint32_t idx = 0; idx < num_frames; ++idx) {
+      scale_arr[idx] = scale;
+    }
+  } else {
     // If the output device's clock is not running, then it isn't possible to
     // convert from output frames to wallclock (local) time.
     FXL_CHECK(local_to_output.invertable()) << "Output clock must be running!";
@@ -119,18 +125,16 @@ void Gain::GetScaleArray(AScale* scale_arr, uint32_t num_frames,
                 source_ramp_duration_ns_;
       }
     }
-  } else {
-    // We aren't ramping, so retrieve the gainscale once and set them all.
-    scale = GetGainScale();
-    for (uint32_t idx = 0; idx < num_frames; ++idx) {
-      scale_arr[idx] = scale;
-    }
   }
 }
 
 // Calculate a stream's gain-scale multiplier from source and dest gains in
 // dB. Optimize to avoid doing the full calculation unless we must.
 Gain::AScale Gain::GetGainScale(float src_gain_db, float dest_gain_db) {
+  if (src_mute_ || dest_mute_) {
+    return kMuteScale;
+  }
+
   // If nothing changed, return the previously-computed amplitude scale value.
   if ((current_src_gain_db_ == src_gain_db) &&
       (current_dest_gain_db_ == dest_gain_db)) {

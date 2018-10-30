@@ -60,6 +60,8 @@ void AudioDevice::SetGainInfo(const ::fuchsia::media::AudioGainInfo& info,
     fbl::AutoLock links_lock(&links_lock_);
     for (auto& link : source_links_) {
       if (link->GetSource()->type() == AudioObject::Type::AudioRenderer) {
+        link->bookkeeping()->gain.SetDestMute(
+            limited.flags & fuchsia::media::AudioGainInfoFlag_Mute);
         link->bookkeeping()->gain.SetDestGain(limited.gain_db);
       }
     }
@@ -69,6 +71,8 @@ void AudioDevice::SetGainInfo(const ::fuchsia::media::AudioGainInfo& info,
     fbl::AutoLock links_lock(&links_lock_);
     for (auto& link : dest_links_) {
       if (link->GetDest()->type() == AudioObject::Type::AudioCapturer) {
+        link->bookkeeping()->gain.SetSourceMute(
+            limited.flags & fuchsia::media::AudioGainInfoFlag_Mute);
         link->bookkeeping()->gain.SetSourceGain(limited.gain_db);
       }
     }

@@ -191,33 +191,44 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans,
       (source_rate * Mixer::FRAC_ONE) - (info.step_size * dest_rate);
 
   float gain_db;
+  bool source_mute = false;
+
   char gain_char;
   switch (gain_type) {
     case GainType::Mute:
-      gain_db = Gain::kMinGainDb;
+      // 0dB, Mute
+      gain_db = Gain::kUnityGainDb;
+      source_mute = true;
       gain_char = 'M';
       break;
     case GainType::Unity:
+      // 0dB
       gain_db = Gain::kUnityGainDb;
       gain_char = 'U';
       break;
     case GainType::Scaled:
+      // -42dB
       gain_db = -42.0f;
       gain_char = 'S';
       break;
     case GainType::Ramped:
-      gain_db = -1.0f;
+      // -1dB => -159dB
+      gain_db = Gain::kUnityGainDb - 1.0f;
       gain_char = 'R';
       break;
   }
 
   info.gain.SetDestGain(Gain::kUnityGainDb);
+  info.gain.SetDestMute(false);
+
   for (uint32_t i = 0; i < kNumMixerProfilerRuns; ++i) {
     info.gain.SetSourceGain(gain_db);
+    info.gain.SetSourceMute(source_mute);
+
     if (gain_type == GainType::Ramped) {
       // Ramp within the "greater than Mute but less than Unity" range.
       // Ramp duration assumes a mix duration of less than two secs.
-      info.gain.SetSourceGainWithRamp(-121.0f, ZX_SEC(2));
+      info.gain.SetSourceGainWithRamp(Gain::kMinGainDb + 1.0f, ZX_SEC(2));
     }
 
     zx_duration_t elapsed;

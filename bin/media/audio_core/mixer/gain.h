@@ -17,6 +17,8 @@
 namespace media {
 namespace audio {
 
+constexpr bool kVerboseGainDebug = false;
+constexpr bool kVerboseMuteDebug = false;
 constexpr bool kVerboseRampDebug = false;
 
 // A class containing factors used for software scaling in the mixer pipeline.
@@ -88,8 +90,15 @@ class Gain {
   // consume it at any time without needing a lock for synchronization.
   void SetSourceGain(float gain_db) {
     target_src_gain_db_.store(gain_db);
-    if (kVerboseRampDebug) {
+    if constexpr (kVerboseGainDebug) {
       FXL_LOG(INFO) << "Gain(" << this << "): SetSourceGain(" << gain_db << ")";
+    }
+  }
+
+  void SetSourceMute(bool muted) {
+    src_mute_ = muted;
+    if constexpr (kVerboseMuteDebug) {
+      FXL_LOG(INFO) << "Gain(" << this << "): SetSourceMute(" << muted << ")";
     }
   }
 
@@ -116,8 +125,15 @@ class Gain {
   // when performing the current Mix operation for that particular source.
   void SetDestGain(float gain_db) {
     target_dest_gain_db_.store(gain_db);
-    if (kVerboseRampDebug) {
+    if constexpr (kVerboseGainDebug) {
       FXL_LOG(INFO) << "Gain(" << this << "): SetDestGain(" << gain_db << ")";
+    }
+  }
+
+  void SetDestMute(bool muted) {
+    dest_mute_ = muted;
+    if constexpr (kVerboseMuteDebug) {
+      FXL_LOG(INFO) << "Gain(" << this << "): SetDestMute(" << muted << ")";
     }
   }
 
@@ -127,10 +143,9 @@ class Gain {
                         target_dest_gain_db_.load());
   }
 
-  // Retrieve combined amplitude scale for a mix stream, when provided gain for
-  // the mix's "destination" (output device, or capturer in API). This is only
-  // called by the link's mixer. For performance reasons, values are cached and
-  // recomputed only as needed.
+  // Retrieve combined amplitude scale for a mix stream, given gain for a mix's
+  // "destination" (output device, or capturer in API). Only called by a link's
+  // mixer. For performance, values are cached and recomputed only as needed.
   AScale GetGainScale(float dest_gain_db) {
     return GetGainScale(target_src_gain_db_.load(), dest_gain_db);
   }
@@ -146,15 +161,17 @@ class Gain {
   // GetGainScale(dest_gain_db) variant -- it doesn't cache dest_gain_db.
   bool IsUnity() {
     return (target_src_gain_db_.load() == -(target_dest_gain_db_.load())) &&
-           !IsRamping();
+           !src_mute_ && !dest_mute_ && !IsRamping();
   }
 
   bool IsSilent() {
-    return (IsSilentNow() &&
+    return src_mute_ || dest_mute_ ||
+           (IsSilentNow() &&
             (!IsRamping() || start_src_gain_db_ >= end_src_gain_db_ ||
              end_src_gain_db_ <= kMinGainDb));
   }
 
+  // Note: a Gain object can be considered "ramping" even if it is Muted.
   bool IsRamping() { return (source_ramp_duration_ns_ > 0); }
 
  private:
@@ -176,7 +193,9 @@ class Gain {
   std::atomic<float> target_dest_gain_db_;
 
   float current_src_gain_db_ = kUnityGainDb;
+  bool src_mute_ = false;
   float current_dest_gain_db_ = kUnityGainDb;
+  bool dest_mute_ = false;
   AScale combined_gain_scale_ = kUnityScale;
 
   float start_src_scale_ = kUnityScale;

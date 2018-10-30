@@ -86,7 +86,7 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   // Only src_pos_modulo needs to be written back before returning.
   uint32_t step_size = info->step_size;
   uint32_t rate_modulo, denominator, src_pos_modulo;
-  if (HasModulo) {
+  if constexpr (HasModulo) {
     rate_modulo = info->rate_modulo;
     denominator = info->denominator;
     src_pos_modulo = info->src_pos_modulo;
@@ -95,12 +95,12 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     FXL_DCHECK(denominator > rate_modulo);
     FXL_DCHECK(denominator > src_pos_modulo);
   }
-  if (kVerboseRampDebug) {
+  if constexpr (kVerboseRampDebug) {
     FXL_LOG(INFO) << "Point Ramping: " << (ScaleType == ScalerType::RAMPING)
                   << ", dest_frames: " << dest_frames
                   << ", dest_off: " << dest_off;
   }
-  if (ScaleType == ScalerType::RAMPING) {
+  if constexpr (ScaleType == ScalerType::RAMPING) {
     if (dest_frames > Bookkeeping::kScaleArrLen + dest_off) {
       dest_frames = Bookkeeping::kScaleArrLen + dest_off;
     }
@@ -121,15 +121,15 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
 
   // If we are not attenuated to the point of being muted, go ahead and perform
   // the mix.  Otherwise, just update the source and dest offsets.
-  if (ScaleType != ScalerType::MUTED) {
+  if constexpr (ScaleType != ScalerType::MUTED) {
     Gain::AScale amplitude_scale;
-    if (ScaleType != ScalerType::RAMPING) {
+    if constexpr (ScaleType != ScalerType::RAMPING) {
       amplitude_scale = info->gain.GetGainScale();
     }
 
     while ((dest_off < dest_frames) &&
            (src_off < static_cast<int32_t>(frac_src_frames))) {
-      if (ScaleType == ScalerType::RAMPING) {
+      if constexpr (ScaleType == ScalerType::RAMPING) {
         amplitude_scale = info->scale_arr[dest_off - dest_off_start];
       }
       uint32_t src_iter = (src_off >> kPtsFractionalBits) * SrcChanCount;
@@ -143,7 +143,7 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       ++dest_off;
       src_off += step_size;
 
-      if (HasModulo) {
+      if constexpr (HasModulo) {
         src_pos_modulo += rate_modulo;
         if (src_pos_modulo >= denominator) {
           ++src_off;
@@ -163,7 +163,7 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       src_off += avail * step_size;
       dest_off += avail;
 
-      if (HasModulo) {
+      if constexpr (HasModulo) {
         src_pos_modulo += (rate_modulo * avail);
         src_off += (src_pos_modulo / denominator);
         src_pos_modulo %= denominator;
@@ -174,7 +174,7 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   // Update all our returned in-out parameters
   *dest_offset = dest_off;
   *frac_src_offset = src_off;
-  if (HasModulo) {
+  if constexpr (HasModulo) {
     info->src_pos_modulo = src_pos_modulo;
   }
 
@@ -275,7 +275,7 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
   // Only src_pos_modulo needs to be written back before returning.
   uint32_t step_size = info->step_size;
   uint32_t rate_modulo, denominator, src_pos_modulo;
-  if (HasModulo) {
+  if constexpr (HasModulo) {
     rate_modulo = info->rate_modulo;
     denominator = info->denominator;
     src_pos_modulo = info->src_pos_modulo;
@@ -284,12 +284,12 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
     FXL_DCHECK(denominator > rate_modulo);
     FXL_DCHECK(denominator > src_pos_modulo);
   }
-  if (kVerboseRampDebug) {
+  if constexpr (kVerboseRampDebug) {
     FXL_LOG(INFO) << "Point-NxN Ramping: " << (ScaleType == ScalerType::RAMPING)
                   << ", dest_frames: " << dest_frames
                   << ", dest_off: " << dest_off;
   }
-  if (ScaleType == ScalerType::RAMPING) {
+  if constexpr (ScaleType == ScalerType::RAMPING) {
     if (dest_frames > Bookkeeping::kScaleArrLen + dest_off) {
       dest_frames = Bookkeeping::kScaleArrLen + dest_off;
     }
@@ -310,15 +310,15 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
 
   // If we are not attenuated to the point of being muted, go ahead and perform
   // the mix.  Otherwise, just update the source and dest offsets.
-  if (ScaleType != ScalerType::MUTED) {
+  if constexpr (ScaleType != ScalerType::MUTED) {
     Gain::AScale amplitude_scale;
-    if (ScaleType != ScalerType::RAMPING) {
+    if constexpr (ScaleType != ScalerType::RAMPING) {
       amplitude_scale = info->gain.GetGainScale();
     }
 
     while ((dest_off < dest_frames) &&
            (src_off < static_cast<int32_t>(frac_src_frames))) {
-      if (ScaleType == ScalerType::RAMPING) {
+      if constexpr (ScaleType == ScalerType::RAMPING) {
         amplitude_scale = info->scale_arr[dest_off - dest_off_start];
       }
 
@@ -334,7 +334,7 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
       dest_off += 1;
       src_off += step_size;
 
-      if (HasModulo) {
+      if constexpr (HasModulo) {
         src_pos_modulo += rate_modulo;
         if (src_pos_modulo >= denominator) {
           ++src_off;
@@ -353,7 +353,7 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
       src_off += avail * step_size;
       dest_off += avail;
 
-      if (HasModulo) {
+      if constexpr (HasModulo) {
         src_pos_modulo += (rate_modulo * avail);
         src_off += (src_pos_modulo / denominator);
         src_pos_modulo %= denominator;
@@ -364,7 +364,7 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
   // Update all our returned in-out parameters
   *dest_offset = dest_off;
   *frac_src_offset = src_off;
-  if (HasModulo) {
+  if constexpr (HasModulo) {
     info->src_pos_modulo = src_pos_modulo;
   }
 

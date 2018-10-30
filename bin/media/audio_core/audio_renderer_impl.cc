@@ -661,16 +661,14 @@ void AudioRendererImpl::SetGain(float gain_db) {
   }
 
   stream_gain_db_ = gain_db;
-  float effective_gain_db =
-      mute_ ? fuchsia::media::MUTED_GAIN_DB : stream_gain_db_;
 
   // Set this gain with every link (except the link to throttle output)
-  ForEachDestLink([throttle_ptr = throttle_output_link_.get(),
-                   effective_gain_db](auto& link) {
-    if (link.get() != throttle_ptr) {
-      link->bookkeeping()->gain.SetSourceGain(effective_gain_db);
-    }
-  });
+  ForEachDestLink(
+      [throttle_ptr = throttle_output_link_.get(), gain_db](auto& link) {
+        if (link.get() != throttle_ptr) {
+          link->bookkeeping()->gain.SetSourceGain(gain_db);
+        }
+      });
 
   NotifyGainMuteChanged();
 }
@@ -710,15 +708,12 @@ void AudioRendererImpl::SetMute(bool mute) {
 
   mute_ = mute;
 
-  float effective_gain_db =
-      mute_ ? fuchsia::media::MUTED_GAIN_DB : stream_gain_db_;
-
-  ForEachDestLink([throttle_ptr = throttle_output_link_.get(),
-                   effective_gain_db](auto& link) {
-    if (link.get() != throttle_ptr) {
-      link->bookkeeping()->gain.SetSourceGain(effective_gain_db);
-    }
-  });
+  ForEachDestLink(
+      [throttle_ptr = throttle_output_link_.get(), mute](auto& link) {
+        if (link.get() != throttle_ptr) {
+          link->bookkeeping()->gain.SetSourceMute(mute);
+        }
+      });
 
   NotifyGainMuteChanged();
 }

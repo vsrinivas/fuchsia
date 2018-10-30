@@ -179,10 +179,8 @@ zx_status_t StandardOutputBase::InitializeSourceLink(const AudioLinkPtr& link) {
     AudioDeviceSettings::GainState cur_gain_state;
     device_settings_->SnapshotGainState(&cur_gain_state);
 
-    float effective_gain_db =
-        (cur_gain_state.muted ? fuchsia::media::MUTED_GAIN_DB
-                              : cur_gain_state.gain_db);
-    mix_bookkeeping->gain.SetDestGain(effective_gain_db);
+    mix_bookkeeping->gain.SetDestMute(cur_gain_state.muted);
+    mix_bookkeeping->gain.SetDestGain(cur_gain_state.gain_db);
   }
   // Settings should exist but if they don't, we use default DestGain (Unity).
 

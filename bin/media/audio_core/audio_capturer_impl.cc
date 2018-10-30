@@ -259,7 +259,7 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
 
   // Allocate our intermediate buffer for mixing.
   //
-  // TODO(johngro):  This does not need to be as long (in frames) as the user
+  // TODO(johngro): This does not need to be as long (in frames) as the user
   // supplied VMO. Limit this to something more reasonable.
   mix_buf_.reset(new float[payload_buf_frames_]);
 
@@ -493,7 +493,7 @@ void AudioCapturerImpl::StartAsyncCapture(uint32_t frames_per_packet) {
   //
   // TODO(johngro) : This effectivly sets the minimum number of frames per
   // packet to produce at 1. This is still absurdly low; what is the proper
-  // number?  We should decide on a proper lower bound, document it, and enforce
+  // number? We should decide on a proper lower bound, document it, and enforce
   // the limit here.
   if (frames_per_packet == 0) {
     FXL_LOG(ERROR) << "Frames per packet may not be zero.";
@@ -792,21 +792,19 @@ void AudioCapturerImpl::BindGainControl(
 void AudioCapturerImpl::SetGain(float gain_db) {
   auto cleanup = fit::defer([this]() { Shutdown(); });
 
-  if (stream_gain_db_.load() != gain_db) {
-    if ((gain_db < fuchsia::media::MUTED_GAIN_DB) ||
-        (gain_db > fuchsia::media::MAX_GAIN_DB)) {
-      FXL_LOG(ERROR) << "Invalid Gain " << gain_db;
-      return;
-    }
-    // Anywhere we set stream_gain_db_, we should perform the above range check.
-    stream_gain_db_.store(gain_db);
-
-    float effective_gain_db = (mute_ ? fuchsia::media::MUTED_GAIN_DB : gain_db);
-
-    ForEachSourceLink([effective_gain_db](auto& link) {
-      link->bookkeeping()->gain.SetDestGain(effective_gain_db);
-    });
+  if ((gain_db < fuchsia::media::MUTED_GAIN_DB) ||
+      (gain_db > fuchsia::media::MAX_GAIN_DB)) {
+    FXL_LOG(ERROR) << "Invalid Gain " << gain_db;
+    return;
   }
+  // Anywhere we set stream_gain_db_, we should perform the above range check.
+  stream_gain_db_.store(gain_db);
+
+  ForEachSourceLink([gain_db](auto& link) {
+    // Gain objects contain multiple stages. In capture, device/master gain is
+    // the "source" stage and stream gain is the "dest" stage.
+    link->bookkeeping()->gain.SetDestGain(gain_db);
+  });
 
   // Things went well, cancel the cleanup hook.
   cleanup.cancel();
@@ -815,18 +813,12 @@ void AudioCapturerImpl::SetGain(float gain_db) {
 void AudioCapturerImpl::SetMute(bool mute) {
   auto cleanup = fit::defer([this]() { Shutdown(); });
 
+  // Check for whether this represents no change.
   if (mute_ != mute) {
     mute_ = mute;
 
-    float effective_gain_db =
-        mute_ ? fuchsia::media::MUTED_GAIN_DB : stream_gain_db_.load();
-
-    ForEachSourceLink([effective_gain_db](auto& link) {
-      // The Gain object contains multiple stages. In capture, device (or
-      // master) gain is "source" gain and stream gain is "dest" gain.
-      link->bookkeeping()->gain.SetDestGain(effective_gain_db);
-      // TODO(mpuryear): Implement true Mute in Gain; call SetDestMute here.
-    });
+    ForEachSourceLink(
+        [mute](auto& link) { link->bookkeeping()->gain.SetDestMute(mute); });
   }
 
   // Things went well, cancel the cleanup hook.
@@ -856,8 +848,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
   //    analysis attributes of MixToIntermediate, including the assertion that
   //    MixToIntermediate is running in the mixer execution domain, which is
   //    what guards the source_link_refs_ member.
-  // Because of this, we manually disable the thread analysis on this cleanup
-  // lambda.
+  // For this reason, we manually disable thread analysis on the cleanup lambda.
   auto release_snapshot_refs = fit::defer(
       [this]() FXL_NO_THREAD_SAFETY_ANALYSIS { source_link_refs_.clear(); });
 
@@ -1417,19 +1408,16 @@ zx_status_t AudioCapturerImpl::ChooseMixer(
     fuchsia::media::AudioDeviceInfo device_info;
     device->GetDeviceInfo(&device_info);
 
-    float effective_device_gain_db =
-        (device_info.gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute)
-            ? fuchsia::media::MUTED_GAIN_DB
-            : device_info.gain_info.gain_db;
-    info->gain.SetSourceGain(effective_device_gain_db);
+    info->gain.SetSourceMute(device_info.gain_info.flags &
+                             fuchsia::media::AudioGainInfoFlag_Mute);
+    info->gain.SetSourceGain(device_info.gain_info.gain_db);
   }
   // Else (if device is an Audio Output), use default SourceGain (Unity). Device
   // gain has already been applied "on the way down" during the render mix.
 
-  // Second, set the destination gain -- based on stream gain.
-  float effective_stream_gain_db =
-      mute_ ? fuchsia::media::MUTED_GAIN_DB : stream_gain_db_.load();
-  info->gain.SetDestGain(effective_stream_gain_db);
+  // Second, set the destination gain -- based on stream gain/mute settings.
+  info->gain.SetDestMute(mute_);
+  info->gain.SetDestGain(stream_gain_db_.load());
 
   return ZX_OK;
 }

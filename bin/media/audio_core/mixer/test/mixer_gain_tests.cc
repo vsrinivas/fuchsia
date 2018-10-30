@@ -72,6 +72,10 @@ class GainTest : public ::testing::Test {
   TimelineRate rate_1khz_output_;
 };
 
+class MuteTest : public GainTest {};
+class RampTest : public GainTest {};
+class ScaleArrayTest : public GainTest {};
+
 TEST_F(GainTest, Defaults) {
   EXPECT_EQ(gain_.GetGainScale(), Gain::kUnityScale);
   EXPECT_TRUE(gain_.IsUnity());
@@ -196,8 +200,97 @@ TEST_F(GainTest, MinMute) {
   TestMinMuteGain(-2.0f, Gain::kMinGainDb + 1.0f);
 }
 
+// Mute-related tests
+//
+// These tests use SetMute itself (as opposed to Gain tests that use gain values
+// that exceed our lower limit and hence produce silence).
+//
+TEST_F(MuteTest, SourceGainThenMute) {
+  gain_.SetSourceGain(Gain::kMaxGainDb);
+  EXPECT_GT(gain_.GetGainScale(), Gain::kUnityScale);
+  EXPECT_FALSE(gain_.IsUnity());
+  EXPECT_FALSE(gain_.IsSilent());
+
+  gain_.SetSourceMute(true);
+  EXPECT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
+  EXPECT_TRUE(gain_.IsSilent());
+
+  gain_.SetSourceMute(false);
+  EXPECT_GT(gain_.GetGainScale(), Gain::kUnityScale);
+  EXPECT_FALSE(gain_.IsSilent());
+
+  gain_.SetDestMute(true);
+  EXPECT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
+  EXPECT_FALSE(gain_.IsUnity());
+  EXPECT_TRUE(gain_.IsSilent());
+
+  gain_.SetDestMute(false);
+  EXPECT_GT(gain_.GetGainScale(), Gain::kUnityScale);
+  EXPECT_FALSE(gain_.IsSilent());
+}
+
+TEST_F(MuteTest, DestGainThenMute) {
+  gain_.SetDestGain(Gain::kMaxGainDb);
+  EXPECT_GT(gain_.GetGainScale(), Gain::kUnityScale);
+  EXPECT_FALSE(gain_.IsSilent());
+
+  gain_.SetSourceMute(true);
+  EXPECT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
+  EXPECT_FALSE(gain_.IsUnity());
+  EXPECT_TRUE(gain_.IsSilent());
+
+  gain_.SetDestMute(true);
+  EXPECT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
+  EXPECT_TRUE(gain_.IsSilent());
+
+  gain_.SetSourceMute(false);
+  EXPECT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
+  EXPECT_TRUE(gain_.IsSilent());
+
+  gain_.SetDestMute(false);
+  EXPECT_GT(gain_.GetGainScale(), Gain::kUnityScale);
+  EXPECT_FALSE(gain_.IsUnity());
+  EXPECT_FALSE(gain_.IsSilent());
+}
+
+TEST_F(MuteTest, SourceMuteThenGain) {
+  gain_.SetSourceMute(true);
+  EXPECT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
+  EXPECT_FALSE(gain_.IsUnity());
+  EXPECT_TRUE(gain_.IsSilent());
+
+  gain_.SetDestGain(Gain::kMaxGainDb);
+  EXPECT_TRUE(gain_.IsSilent());
+
+  gain_.SetSourceGain(Gain::kMinGainDb);
+  EXPECT_TRUE(gain_.IsSilent());
+
+  gain_.SetSourceGain(Gain::kUnityGainDb);
+  EXPECT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
+  EXPECT_TRUE(gain_.IsSilent());
+}
+
+TEST_F(MuteTest, DestMuteThenGain) {
+  gain_.SetDestMute(true);
+  EXPECT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
+  EXPECT_FALSE(gain_.IsUnity());
+  EXPECT_TRUE(gain_.IsSilent());
+
+  gain_.SetDestGain(Gain::kMaxGainDb);
+  EXPECT_TRUE(gain_.IsSilent());
+
+  gain_.SetSourceGain(Gain::kMinGainDb);
+  EXPECT_TRUE(gain_.IsSilent());
+
+  gain_.SetSourceGain(Gain::kUnityGainDb);
+  EXPECT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
+  EXPECT_TRUE(gain_.IsSilent());
+}
+
+// Ramp-related tests
+//
 // Setting a ramp with zero duration is the same as an immediate gain change.
-TEST_F(GainTest, SetRampWithNoDurationChangesGain) {
+TEST_F(RampTest, SetRampWithNoDurationChangesGain) {
   gain_.SetSourceGain(-11.0f);
   gain_.SetDestGain(-1.0f);
 
@@ -208,7 +301,7 @@ TEST_F(GainTest, SetRampWithNoDurationChangesGain) {
 }
 
 // Setting a ramp with non-zero duration does not take effect until Advance.
-TEST_F(GainTest, SetRampWithDurationDoesntChangeGain) {
+TEST_F(RampTest, SetRampWithDurationDoesntChangeGain) {
   gain_.SetSourceGain(24.0f);
   gain_.SetDestGain(-24.0f);
 
@@ -222,7 +315,7 @@ TEST_F(GainTest, SetRampWithDurationDoesntChangeGain) {
 }
 
 // If a ramp-up is active/pending, then IsSilent should not be true.
-TEST_F(GainTest, RampingUpIsNeverSilent) {
+TEST_F(RampTest, RampingUpIsNeverSilent) {
   gain_.SetSourceGain(-150.0f);
   gain_.SetDestGain(-22.0f);
 
@@ -235,7 +328,7 @@ TEST_F(GainTest, RampingUpIsNeverSilent) {
 }
 
 // If we are ramping-down and already silent, IsSilent should remain true.
-TEST_F(GainTest, SilentAndRampingDownIsSilent) {
+TEST_F(RampTest, SilentAndRampingDownIsSilent) {
   gain_.SetDestGain(-160.0f);
   gain_.SetSourceGainWithRamp(-1.0f, ZX_SEC(1));
 
@@ -246,7 +339,7 @@ TEST_F(GainTest, SilentAndRampingDownIsSilent) {
 }
 
 // If a ramp is active/pending, then IsUnity should never be true.
-TEST_F(GainTest, RampingIsNeverUnity) {
+TEST_F(RampTest, RampingIsNeverUnity) {
   gain_.SetSourceGain(Gain::kUnityGainDb);
   gain_.SetDestGain(Gain::kUnityGainDb);
   EXPECT_TRUE(gain_.IsUnity());
@@ -260,7 +353,7 @@ TEST_F(GainTest, RampingIsNeverUnity) {
 }
 
 // If the beginning and end of a ramp are the same, it isn't ramping.
-TEST_F(GainTest, FlatIsntRamping) {
+TEST_F(RampTest, FlatIsntRamping) {
   gain_.SetSourceGain(Gain::kUnityGainDb);
   gain_.SetDestGain(-20.0f);
 
@@ -273,7 +366,7 @@ TEST_F(GainTest, FlatIsntRamping) {
 }
 
 // Upon Advance, we should see a change in the instantaneous GetGainScale().
-TEST_F(GainTest, AdvanceChangesGain) {
+TEST_F(RampTest, AdvanceChangesGain) {
   gain_.SetSourceGain(-150.0f);
   gain_.SetDestGain(-13.0f);
 
@@ -288,8 +381,46 @@ TEST_F(GainTest, AdvanceChangesGain) {
   EXPECT_FALSE(gain_.IsRamping());
 }
 
+TEST_F(RampTest, SourceMuteRampIsRampingButSilent) {
+  gain_.SetSourceMute(true);
+  EXPECT_FALSE(gain_.IsRamping());
+
+  gain_.SetSourceGainWithRamp(-20.0f, ZX_MSEC(9));
+  EXPECT_TRUE(gain_.IsRamping());
+  EXPECT_FALSE(gain_.IsUnity());
+  EXPECT_TRUE(gain_.IsSilent());
+}
+
+TEST_F(RampTest, DestMuteRampIsRampingButSilent) {
+  gain_.SetDestMute(true);
+  gain_.SetSourceGainWithRamp(10.0f, ZX_MSEC(5));
+  EXPECT_TRUE(gain_.IsRamping());
+  EXPECT_FALSE(gain_.IsUnity());
+  EXPECT_TRUE(gain_.IsSilent());
+}
+
+TEST_F(RampTest, RampSourceMuteIsRampingButSilent) {
+  gain_.SetSourceGainWithRamp(-20.0f, ZX_MSEC(9));
+  gain_.SetSourceMute(true);
+
+  EXPECT_TRUE(gain_.IsRamping());
+  EXPECT_FALSE(gain_.IsUnity());
+  EXPECT_TRUE(gain_.IsSilent());
+}
+
+TEST_F(RampTest, RampDestMuteIsRampingButSilent) {
+  gain_.SetSourceGainWithRamp(-20.0f, ZX_MSEC(9));
+  gain_.SetDestMute(true);
+
+  EXPECT_TRUE(gain_.IsRamping());
+  EXPECT_FALSE(gain_.IsUnity());
+  EXPECT_TRUE(gain_.IsSilent());
+}
+
+// ScaleArray-related tests
+//
 // If no ramp, all vals returned by GetScaleArray should equal GetGainScale().
-TEST_F(GainTest, GetScaleArrayNoRampEqualsGetScale) {
+TEST_F(ScaleArrayTest, GetScaleArrayNoRampEqualsGetScale) {
   Gain::AScale scale_arr[3];
   gain_.SetDestGain(-42.0f);
   gain_.SetSourceGain(-68.0f);
@@ -305,7 +436,7 @@ TEST_F(GainTest, GetScaleArrayNoRampEqualsGetScale) {
 }
 
 // Validate when ramp and GetScaleArray are identical length.
-TEST_F(GainTest, GetScaleArrayRamp) {
+TEST_F(ScaleArrayTest, GetScaleArrayRamp) {
   Gain::AScale scale_arr[6];
   Gain::AScale expect_arr[6] = {1.0, 0.82, 0.64, 0.46, 0.28, 0.1};
 
@@ -322,7 +453,7 @@ TEST_F(GainTest, GetScaleArrayRamp) {
 }
 
 // Validate when ramp duration is greater than GetScaleArray.
-TEST_F(GainTest, GetScaleArrayLongRamp) {
+TEST_F(ScaleArrayTest, GetScaleArrayLongRamp) {
   Gain::AScale scale_arr[4];  // At 1kHz this is less than the ramp duration.
   Gain::AScale expect_arr[4] = {1.0, 0.901, 0.802, 0.703};
 
@@ -339,7 +470,7 @@ TEST_F(GainTest, GetScaleArrayLongRamp) {
 }
 
 // Validate when ramp duration is shorter than GetScaleArray.
-TEST_F(GainTest, GetScaleArrayShortRamp) {
+TEST_F(ScaleArrayTest, GetScaleArrayShortRamp) {
   Gain::AScale scale_arr[9];  // At 1kHz this is longer than the ramp duration.
   Gain::AScale expect_arr[9] = {1.0, 0.82, 0.64, 0.46, 0.28,
                                 0.1, 0.1,  0.1,  0.1};
@@ -357,7 +488,7 @@ TEST_F(GainTest, GetScaleArrayShortRamp) {
 }
 
 // Successive GetScaleArray calls without Advance should return same results.
-TEST_F(GainTest, GetScaleArrayWithoutAdvance) {
+TEST_F(ScaleArrayTest, GetScaleArrayWithoutAdvance) {
   gain_.SetSourceGainWithRamp(-123.45678, ZX_MSEC(9));
 
   Gain::AScale scale_arr[10];
@@ -370,7 +501,7 @@ TEST_F(GainTest, GetScaleArrayWithoutAdvance) {
 }
 
 // Advances that exceed ramp durations should lead to end-to-ramp conditions.
-TEST_F(GainTest, GetScaleArrayBigAdvance) {
+TEST_F(ScaleArrayTest, GetScaleArrayBigAdvance) {
   Gain::AScale scale_arr[6];
   Gain::AScale expect = Gain::kUnityScale * 2;
 
@@ -393,7 +524,7 @@ TEST_F(GainTest, GetScaleArrayBigAdvance) {
 }
 
 // Clearing a ramp should reset any in-process ramps.
-TEST_F(GainTest, ClearSourceRamp) {
+TEST_F(ScaleArrayTest, ClearSourceRamp) {
   Gain::AScale scale_arr[6];
   Gain::AScale scale_arr2[6];
 
@@ -428,7 +559,7 @@ TEST_F(GainTest, ClearSourceRamp) {
 }
 
 // After partial Advance through a ramp, instantaneous gain should be accurate.
-TEST_F(GainTest, AdvanceHalfwayThroughRamp) {
+TEST_F(ScaleArrayTest, AdvanceHalfwayThroughRamp) {
   Gain::AScale scale_arr[4];  // At 1kHz this is less than the ramp duration.
   Gain::AScale expect_arr[4];
 
@@ -470,10 +601,55 @@ TEST_F(GainTest, AdvanceHalfwayThroughRamp) {
   EXPECT_FALSE(gain_.IsSilent());
 }
 
+TEST_F(ScaleArrayTest, MuteDuringRamp) {
+  Gain::AScale scale_arr[4];  // At 1kHz this is less than the ramp duration.
+  Gain::AScale expect_arr[4];
+
+  gain_.SetSourceGainWithRamp(-20.0f, ZX_MSEC(9));
+  gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
+
+  Gain::AScale expect_scale = Gain::kUnityScale;
+  EXPECT_EQ(gain_.GetGainScale(), expect_scale);
+  gain_.SetSourceMute(true);
+  EXPECT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
+
+  for (uint32_t idx = 0; idx < fbl::count_of(expect_arr); ++idx) {
+    expect_arr[idx] = expect_scale;
+    expect_scale -= 0.1;
+  }
+  // When comparing buffers, do it within the tolerance of 32-bit float
+  EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr),
+                             true, true));
+
+  // Advance only partially through the duration of the ramp.
+  const uint32_t kFramesToAdvance = 2;
+  gain_.Advance(kFramesToAdvance, rate_1khz_output_);
+  EXPECT_FALSE(gain_.IsUnity());
+  EXPECT_TRUE(gain_.IsRamping());
+  EXPECT_TRUE(gain_.IsSilent());
+  gain_.SetSourceMute(false);
+  gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
+  // DisplayScaleVals(scale_arr, fbl::count_of(scale_arr));
+
+  expect_scale = expect_arr[kFramesToAdvance];
+  EXPECT_TRUE(
+      CompareBufferToVal(&expect_scale, gain_.GetGainScale(), 1, true, true));
+
+  for (uint32_t idx = 0; idx < fbl::count_of(expect_arr); ++idx) {
+    expect_arr[idx] = expect_scale;
+    expect_scale -= 0.1;
+  }
+  EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr),
+                             true, true));
+  EXPECT_TRUE(gain_.IsRamping());
+  EXPECT_FALSE(gain_.IsUnity());
+  EXPECT_FALSE(gain_.IsSilent());
+}
+
 //
 // Data scaling tests
 //
-// Tests using Gain and Mixer objects together in a mixing environment.
+// Tests using Gain via a Mixer object, in a mixing environment.
 //
 // These validate the actual scaling of audio data, including overflow and any
 // truncation or rounding (above just checks the generation of scale values).
@@ -485,13 +661,12 @@ TEST_F(GainTest, AdvanceHalfwayThroughRamp) {
 // down to the actual pipeline width.
 //
 // The 'MixGain' tests involve gain-scaling in the context of mixing (as opposed
-// to earlier tests that probe the Gain object in isolation).
+// to earlier tests that directly probe the Gain object in isolation).
 
 // Verify whether per-stream gain interacts linearly with accumulation buffer.
 TEST(MixGain, Scaling_Linearity) {
   int16_t source[] = {0x0CE4, 0x0CCC, 0x23, 4, -0x0E, -0x19, -0x0CCC, -0x0CDB};
   float accum[8];
-  Gain gain;
 
   // Validate that +20.00 dB leads to exactly 10x in value (within limits)
   float stream_gain_db = 20.0f;
