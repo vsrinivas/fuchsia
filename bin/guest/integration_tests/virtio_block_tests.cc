@@ -29,14 +29,16 @@ static constexpr uint32_t kVirtioBlockCount = 32;
 static constexpr uint32_t kVirtioQcowBlockCount = 4 * 1024 * 1024 * 2;
 static constexpr uint32_t kVirtioTestStep = 8;
 
-class ZirconReadOnlyRamdiskGuestTest : public GuestTest<ZirconReadOnlyRamdiskGuestTest> {
+class ZirconReadOnlyRamdiskGuestTest
+    : public GuestTest<ZirconReadOnlyRamdiskGuestTest> {
  public:
   static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
     create_ramdisk(kBlockSectorSize, kVirtioBlockCount, ramdisk_path_);
     launch_info->url = kZirconGuestUrl;
     launch_info->args.push_back("--display=none");
     launch_info->args.push_back("--cpus=1");
-    launch_info->args.push_back(fxl::StringPrintf("--block=%s,ro", ramdisk_path_));
+    launch_info->args.push_back(
+        fxl::StringPrintf("--block=%s,ro", ramdisk_path_));
     return true;
   }
 
@@ -55,7 +57,7 @@ char ZirconReadOnlyRamdiskGuestTest::ramdisk_path_[PATH_MAX] = "";
 
 TEST_F(ZirconReadOnlyRamdiskGuestTest, BlockDeviceExists) {
   ASSERT_EQ(WaitForPkgfs(), ZX_OK);
-  std::string cmd = fxl::StringPrintf("run %s#%s check %lu %u", kTestUtilsUrl,
+  std::string cmd = fxl::StringPrintf("run %s#%s %lu %u check", kTestUtilsUrl,
                                       kVirtioBlockUtilCmx, kBlockSectorSize,
                                       kVirtioBlockCount);
   std::string result;
@@ -76,7 +78,7 @@ TEST_F(ZirconReadOnlyRamdiskGuestTest, Read) {
         pwrite(fd.get(), &data, kBlockSectorSize, offset * kBlockSectorSize),
         static_cast<ssize_t>(kBlockSectorSize));
     std::string cmd = fxl::StringPrintf(
-        "run %s#%s read %lu %u %d %d", kTestUtilsUrl, kVirtioBlockUtilCmx,
+        "run %s#%s %lu %u read %d %d", kTestUtilsUrl, kVirtioBlockUtilCmx,
         kBlockSectorSize, kVirtioBlockCount, static_cast<int>(offset), 0xab);
     std::string result;
     EXPECT_EQ(Execute(cmd, &result), ZX_OK);
@@ -100,16 +102,16 @@ TEST_F(ZirconReadOnlyRamdiskGuestTest, Write) {
 
     // Tell the guest to write bytes to the block.
     std::string cmd = fxl::StringPrintf(
-        "run %s#%s write %lu %u %d %d", kTestUtilsUrl, kVirtioBlockUtilCmx,
+        "run %s#%s %lu %u write %d %d", kTestUtilsUrl, kVirtioBlockUtilCmx,
         kBlockSectorSize, kVirtioBlockCount, static_cast<int>(offset), 0xab);
     std::string result;
     EXPECT_EQ(Execute(cmd, &result), ZX_OK);
     EXPECT_THAT(result, HasSubstr("PASS"));
 
     // Check that the guest reads zero from the block (i.e. it wasn't written).
-    cmd = fxl::StringPrintf(
-        "run %s#%s read %lu %u %d %d", kTestUtilsUrl, kVirtioBlockUtilCmx,
-        kBlockSectorSize, kVirtioBlockCount, static_cast<int>(offset), 0);
+    cmd = fxl::StringPrintf("run %s#%s %lu %u read %d %d", kTestUtilsUrl,
+                            kVirtioBlockUtilCmx, kBlockSectorSize,
+                            kVirtioBlockCount, static_cast<int>(offset), 0);
     EXPECT_EQ(Execute(cmd, &result), ZX_OK);
     EXPECT_THAT(result, HasSubstr("PASS"));
 
@@ -123,14 +125,16 @@ TEST_F(ZirconReadOnlyRamdiskGuestTest, Write) {
   }
 }
 
-class ZirconReadWriteRamdiskGuestTest : public GuestTest<ZirconReadWriteRamdiskGuestTest> {
+class ZirconReadWriteRamdiskGuestTest
+    : public GuestTest<ZirconReadWriteRamdiskGuestTest> {
  public:
   static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
     create_ramdisk(kBlockSectorSize, kVirtioBlockCount, ramdisk_path_);
     launch_info->url = kZirconGuestUrl;
     launch_info->args.push_back("--display=none");
     launch_info->args.push_back("--cpus=1");
-    launch_info->args.push_back(fxl::StringPrintf("--block=%s,rw", ramdisk_path_));
+    launch_info->args.push_back(
+        fxl::StringPrintf("--block=%s,rw", ramdisk_path_));
     return true;
   }
 
@@ -149,7 +153,7 @@ char ZirconReadWriteRamdiskGuestTest::ramdisk_path_[PATH_MAX] = "";
 
 TEST_F(ZirconReadWriteRamdiskGuestTest, BlockDeviceExists) {
   ASSERT_EQ(WaitForPkgfs(), ZX_OK);
-  std::string cmd = fxl::StringPrintf("run %s#%s check %lu %u", kTestUtilsUrl,
+  std::string cmd = fxl::StringPrintf("run %s#%s %lu %u check", kTestUtilsUrl,
                                       kVirtioBlockUtilCmx, kBlockSectorSize,
                                       kVirtioBlockCount);
   std::string result;
@@ -170,7 +174,7 @@ TEST_F(ZirconReadWriteRamdiskGuestTest, Read) {
         pwrite(fd.get(), &data, kBlockSectorSize, offset * kBlockSectorSize),
         static_cast<ssize_t>(kBlockSectorSize));
     std::string cmd = fxl::StringPrintf(
-        "run %s#%s read %lu %u %d %d", kTestUtilsUrl, kVirtioBlockUtilCmx,
+        "run %s#%s %lu %u read %d %d", kTestUtilsUrl, kVirtioBlockUtilCmx,
         kBlockSectorSize, kVirtioBlockCount, static_cast<int>(offset), 0xab);
     std::string result;
     EXPECT_EQ(Execute(cmd, &result), ZX_OK);
@@ -194,16 +198,16 @@ TEST_F(ZirconReadWriteRamdiskGuestTest, Write) {
 
     // Tell the guest to write bytes to the block.
     std::string cmd = fxl::StringPrintf(
-        "run %s#%s write %lu %u %d %d", kTestUtilsUrl, kVirtioBlockUtilCmx,
+        "run %s#%s %lu %u write %d %d", kTestUtilsUrl, kVirtioBlockUtilCmx,
         kBlockSectorSize, kVirtioBlockCount, static_cast<int>(offset), 0xab);
     std::string result;
     EXPECT_EQ(Execute(cmd, &result), ZX_OK);
     EXPECT_THAT(result, HasSubstr("PASS"));
 
     // Check that the guest reads the written bytes from the block.
-    cmd = fxl::StringPrintf(
-        "run %s#%s read %lu %u %d %d", kTestUtilsUrl, kVirtioBlockUtilCmx,
-        kBlockSectorSize, kVirtioBlockCount, static_cast<int>(offset), 0xab);
+    cmd = fxl::StringPrintf("run %s#%s %lu %u read %d %d", kTestUtilsUrl,
+                            kVirtioBlockUtilCmx, kBlockSectorSize,
+                            kVirtioBlockCount, static_cast<int>(offset), 0xab);
     EXPECT_EQ(Execute(cmd, &result), ZX_OK);
     EXPECT_THAT(result, HasSubstr("PASS"));
 
@@ -217,14 +221,16 @@ TEST_F(ZirconReadWriteRamdiskGuestTest, Write) {
   }
 }
 
-class ZirconVolatileRamdiskGuestTest : public GuestTest<ZirconVolatileRamdiskGuestTest> {
+class ZirconVolatileRamdiskGuestTest
+    : public GuestTest<ZirconVolatileRamdiskGuestTest> {
  public:
   static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
     create_ramdisk(kBlockSectorSize, kVirtioBlockCount, ramdisk_path_);
     launch_info->url = kZirconGuestUrl;
     launch_info->args.push_back("--display=none");
     launch_info->args.push_back("--cpus=1");
-    launch_info->args.push_back(fxl::StringPrintf("--block=%s,volatile", ramdisk_path_));
+    launch_info->args.push_back(
+        fxl::StringPrintf("--block=%s,volatile", ramdisk_path_));
     return true;
   }
 
@@ -243,7 +249,7 @@ char ZirconVolatileRamdiskGuestTest::ramdisk_path_[PATH_MAX] = "";
 
 TEST_F(ZirconVolatileRamdiskGuestTest, BlockDeviceExists) {
   ASSERT_EQ(WaitForPkgfs(), ZX_OK);
-  std::string cmd = fxl::StringPrintf("run %s#%s check %lu %u", kTestUtilsUrl,
+  std::string cmd = fxl::StringPrintf("run %s#%s %lu %u check", kTestUtilsUrl,
                                       kVirtioBlockUtilCmx, kBlockSectorSize,
                                       kVirtioBlockCount);
   std::string result;
@@ -264,7 +270,7 @@ TEST_F(ZirconVolatileRamdiskGuestTest, Read) {
         pwrite(fd.get(), &data, kBlockSectorSize, offset * kBlockSectorSize),
         static_cast<ssize_t>(kBlockSectorSize));
     std::string cmd = fxl::StringPrintf(
-        "run %s#%s read %lu %u %d %d", kTestUtilsUrl, kVirtioBlockUtilCmx,
+        "run %s#%s %lu %u read %d %d", kTestUtilsUrl, kVirtioBlockUtilCmx,
         kBlockSectorSize, kVirtioBlockCount, static_cast<int>(offset), 0xab);
     std::string result;
     EXPECT_EQ(Execute(cmd, &result), ZX_OK);
@@ -288,16 +294,16 @@ TEST_F(ZirconVolatileRamdiskGuestTest, Write) {
 
     // Tell the guest to write bytes to the block.
     std::string cmd = fxl::StringPrintf(
-        "run %s#%s write %lu %u %d %d", kTestUtilsUrl, kVirtioBlockUtilCmx,
+        "run %s#%s %lu %u write %d %d", kTestUtilsUrl, kVirtioBlockUtilCmx,
         kBlockSectorSize, kVirtioBlockCount, static_cast<int>(offset), 0xab);
     std::string result;
     EXPECT_EQ(Execute(cmd, &result), ZX_OK);
     EXPECT_THAT(result, HasSubstr("PASS"));
 
     // Check that the guest reads the written bytes from the block.
-    cmd = fxl::StringPrintf(
-        "run %s#%s read %lu %u %d %d", kTestUtilsUrl, kVirtioBlockUtilCmx,
-        kBlockSectorSize, kVirtioBlockCount, static_cast<int>(offset), 0xab);
+    cmd = fxl::StringPrintf("run %s#%s %lu %u read %d %d", kTestUtilsUrl,
+                            kVirtioBlockUtilCmx, kBlockSectorSize,
+                            kVirtioBlockCount, static_cast<int>(offset), 0xab);
     EXPECT_EQ(Execute(cmd, &result), ZX_OK);
     EXPECT_THAT(result, HasSubstr("PASS"));
 
@@ -324,7 +330,6 @@ static bool write_at(int fd, const T* ptr, size_t len, off_t off) {
   return written == static_cast<ssize_t>(len * sizeof(T));
 }
 
-
 static bool write_qcow_file(int fd) {
   if (!fd) {
     return false;
@@ -344,7 +349,7 @@ static bool write_qcow_file(int fd) {
 
   // Write L1 table.
   write_success = write_at(fd, be_table, countof(kL2TableClusterOffsets),
-                          kDefaultHeaderV2.l1_table_offset);
+                           kDefaultHeaderV2.l1_table_offset);
   if (!write_success) {
     return false;
   }
@@ -352,7 +357,7 @@ static bool write_qcow_file(int fd) {
   // Initialize empty L2 tables.
   for (size_t i = 0; i < countof(kL2TableClusterOffsets); ++i) {
     write_success = write_at(fd, kZeroCluster, sizeof(kZeroCluster),
-                            kL2TableClusterOffsets[i]);
+                             kL2TableClusterOffsets[i]);
     if (!write_success) {
       return false;
     }
@@ -370,8 +375,7 @@ static bool write_qcow_file(int fd) {
   // Write data to cluster.
   uint8_t cluster_data[kClusterSize];
   memset(cluster_data, 0xab, sizeof(cluster_data));
-  write_success =
-      write_at(fd, cluster_data, kClusterSize, data_cluster_offset);
+  write_success = write_at(fd, cluster_data, kClusterSize, data_cluster_offset);
   if (!write_success) {
     return false;
   }
@@ -379,7 +383,8 @@ static bool write_qcow_file(int fd) {
   return true;
 }
 
-class ZirconReadOnlyQcowGuestTest : public GuestTest<ZirconReadOnlyQcowGuestTest> {
+class ZirconReadOnlyQcowGuestTest
+    : public GuestTest<ZirconReadOnlyQcowGuestTest> {
  public:
   static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
     fbl::unique_fd fd(mkstemp(&qcow_path_[0]));
@@ -407,10 +412,11 @@ class ZirconReadOnlyQcowGuestTest : public GuestTest<ZirconReadOnlyQcowGuestTest
   static char qcow_path_[PATH_MAX];
 };
 
-char ZirconReadOnlyQcowGuestTest::qcow_path_[PATH_MAX] = "/tmp/guest-test.XXXXXX";
+char ZirconReadOnlyQcowGuestTest::qcow_path_[PATH_MAX] =
+    "/tmp/guest-test.XXXXXX";
 
 TEST_F(ZirconReadOnlyQcowGuestTest, BlockDeviceExists) {
-  std::string cmd = fxl::StringPrintf("run %s#%s check %lu %u", kTestUtilsUrl,
+  std::string cmd = fxl::StringPrintf("run %s#%s %lu %u check", kTestUtilsUrl,
                                       kVirtioBlockUtilCmx, kBlockSectorSize,
                                       kVirtioQcowBlockCount);
   std::string result;
@@ -421,7 +427,7 @@ TEST_F(ZirconReadOnlyQcowGuestTest, BlockDeviceExists) {
 TEST_F(ZirconReadOnlyQcowGuestTest, ReadMappedCluster) {
   for (off_t offset = 0; offset != kClusterSize / kBlockSectorSize;
        offset += kVirtioTestStep) {
-    std::string cmd = fxl::StringPrintf("run %s#%s read %lu %u %d %d",
+    std::string cmd = fxl::StringPrintf("run %s#%s %lu %u read %d %d",
                                         kTestUtilsUrl, kVirtioBlockUtilCmx,
                                         kBlockSectorSize, kVirtioQcowBlockCount,
                                         static_cast<int>(offset), 0xab);
@@ -436,7 +442,7 @@ TEST_F(ZirconReadOnlyQcowGuestTest, ReadUnmappedCluster) {
        offset != kClusterSize + (kClusterSize / kBlockSectorSize);
        offset += kVirtioTestStep) {
     std::string cmd = fxl::StringPrintf(
-        "run %s#%s read %lu %u %d %d", kTestUtilsUrl, kVirtioBlockUtilCmx,
+        "run %s#%s %lu %u read %d %d", kTestUtilsUrl, kVirtioBlockUtilCmx,
         kBlockSectorSize, kVirtioQcowBlockCount, static_cast<int>(offset), 0);
     std::string result;
     EXPECT_EQ(Execute(cmd, &result), ZX_OK);
@@ -448,22 +454,24 @@ TEST_F(ZirconReadOnlyQcowGuestTest, Write) {
   for (off_t offset = kClusterSize;
        offset != kClusterSize + (kClusterSize / kBlockSectorSize);
        offset += kVirtioTestStep) {
-    std::string cmd = fxl::StringPrintf(
-        "run %s#%s write %lu %u %d %d", kTestUtilsUrl, kVirtioBlockUtilCmx,
-        kBlockSectorSize, kVirtioQcowBlockCount, static_cast<int>(offset), 0xab);
+    std::string cmd = fxl::StringPrintf("run %s#%s %lu %u write %d %d",
+                                        kTestUtilsUrl, kVirtioBlockUtilCmx,
+                                        kBlockSectorSize, kVirtioQcowBlockCount,
+                                        static_cast<int>(offset), 0xab);
     std::string result;
     EXPECT_EQ(Execute(cmd, &result), ZX_OK);
     EXPECT_THAT(result, HasSubstr("PASS"));
 
-    cmd = fxl::StringPrintf(
-        "run %s#%s read %lu %u %d %d", kTestUtilsUrl, kVirtioBlockUtilCmx,
-        kBlockSectorSize, kVirtioQcowBlockCount, static_cast<int>(offset), 0);
+    cmd = fxl::StringPrintf("run %s#%s %lu %u read %d %d", kTestUtilsUrl,
+                            kVirtioBlockUtilCmx, kBlockSectorSize,
+                            kVirtioQcowBlockCount, static_cast<int>(offset), 0);
     EXPECT_EQ(Execute(cmd, &result), ZX_OK);
     EXPECT_THAT(result, HasSubstr("PASS"));
   }
 }
 
-class ZirconVolatileQcowGuestTest : public GuestTest<ZirconVolatileQcowGuestTest> {
+class ZirconVolatileQcowGuestTest
+    : public GuestTest<ZirconVolatileQcowGuestTest> {
  public:
   static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
     fbl::unique_fd fd(mkstemp(&qcow_path_[0]));
@@ -491,10 +499,11 @@ class ZirconVolatileQcowGuestTest : public GuestTest<ZirconVolatileQcowGuestTest
   static char qcow_path_[PATH_MAX];
 };
 
-char ZirconVolatileQcowGuestTest::qcow_path_[PATH_MAX] = "/tmp/guest-test.XXXXXX";
+char ZirconVolatileQcowGuestTest::qcow_path_[PATH_MAX] =
+    "/tmp/guest-test.XXXXXX";
 
 TEST_F(ZirconVolatileQcowGuestTest, BlockDeviceExists) {
-  std::string cmd = fxl::StringPrintf("run %s#%s check %lu %u", kTestUtilsUrl,
+  std::string cmd = fxl::StringPrintf("run %s#%s %lu %u check", kTestUtilsUrl,
                                       kVirtioBlockUtilCmx, kBlockSectorSize,
                                       kVirtioQcowBlockCount);
   std::string result;
@@ -505,7 +514,7 @@ TEST_F(ZirconVolatileQcowGuestTest, BlockDeviceExists) {
 TEST_F(ZirconVolatileQcowGuestTest, ReadMappedCluster) {
   for (off_t offset = 0; offset != kClusterSize / kBlockSectorSize;
        offset += kVirtioTestStep) {
-    std::string cmd = fxl::StringPrintf("run %s#%s read %lu %u %d %d",
+    std::string cmd = fxl::StringPrintf("run %s#%s %lu %u read %d %d",
                                         kTestUtilsUrl, kVirtioBlockUtilCmx,
                                         kBlockSectorSize, kVirtioQcowBlockCount,
                                         static_cast<int>(offset), 0xab);
@@ -520,7 +529,7 @@ TEST_F(ZirconVolatileQcowGuestTest, ReadUnmappedCluster) {
        offset != kClusterSize + (kClusterSize / kBlockSectorSize);
        offset += kVirtioTestStep) {
     std::string cmd = fxl::StringPrintf(
-        "run %s#%s read %lu %u %d %d", kTestUtilsUrl, kVirtioBlockUtilCmx,
+        "run %s#%s %lu %u read %d %d", kTestUtilsUrl, kVirtioBlockUtilCmx,
         kBlockSectorSize, kVirtioQcowBlockCount, static_cast<int>(offset), 0);
     std::string result;
     EXPECT_EQ(Execute(cmd, &result), ZX_OK);
@@ -532,16 +541,18 @@ TEST_F(ZirconVolatileQcowGuestTest, Write) {
   for (off_t offset = kClusterSize;
        offset != kClusterSize + (kClusterSize / kBlockSectorSize);
        offset += kVirtioTestStep) {
-    std::string cmd = fxl::StringPrintf(
-        "run %s#%s write %lu %u %d %d", kTestUtilsUrl, kVirtioBlockUtilCmx,
-        kBlockSectorSize, kVirtioQcowBlockCount, static_cast<int>(offset), 0xab);
+    std::string cmd = fxl::StringPrintf("run %s#%s %lu %u write %d %d",
+                                        kTestUtilsUrl, kVirtioBlockUtilCmx,
+                                        kBlockSectorSize, kVirtioQcowBlockCount,
+                                        static_cast<int>(offset), 0xab);
     std::string result;
     EXPECT_EQ(Execute(cmd, &result), ZX_OK);
     EXPECT_THAT(result, HasSubstr("PASS"));
 
-    cmd = fxl::StringPrintf(
-        "run %s#%s read %lu %u %d %d", kTestUtilsUrl, kVirtioBlockUtilCmx,
-        kBlockSectorSize, kVirtioQcowBlockCount, static_cast<int>(offset), 0xab);
+    cmd = fxl::StringPrintf("run %s#%s %lu %u read %d %d", kTestUtilsUrl,
+                            kVirtioBlockUtilCmx, kBlockSectorSize,
+                            kVirtioQcowBlockCount, static_cast<int>(offset),
+                            0xab);
     EXPECT_EQ(Execute(cmd, &result), ZX_OK);
     EXPECT_THAT(result, HasSubstr("PASS"));
   }

@@ -59,28 +59,15 @@ test_package("guest_integration_tests") {
   ]
 }
 
-executable("virtio_block_test_util") {
-  output_name = "virtio_block_test_util"
-
-  deps = [
-    "//garnet/public/lib/fxl",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/zx",
-  ]
-
-  sources = [
-    "virtio_block_test_util.cc",
-  ]
-}
-
 package("guest_integration_tests_utils") {
   deps = [
-    ":virtio_block_test_util",
+    "virtio_block_test_util:virtio_block_test_util",
   ]
 
   meta = [
     {
-      path = rebase_path("meta/virtio_block_test_util.cmx")
+      path =
+          rebase_path("virtio_block_test_util/meta/virtio_block_test_util.cmx")
       dest = "virtio_block_test_util.cmx"
     },
   ]
