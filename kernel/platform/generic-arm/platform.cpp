@@ -622,7 +622,7 @@ static void arm_resource_dispatcher_init_hook(unsigned int rl) {
     // Set up SMC valid service call range
     status = ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_SMC,
                                                      0,
-                                                     ARM_SMC_MAX_SERVICE_CALL + 1);
+                                                     ARM_SMC_SERVICE_CALL_NUM_MAX + 1);
     if (status != ZX_OK) {
         printf("Resources: Failed to initialize SMC allocator: %d\n", status);
     }

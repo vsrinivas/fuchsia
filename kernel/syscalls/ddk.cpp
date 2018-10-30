@@ -564,7 +564,7 @@ zx_status_t sys_smc_call(zx_handle_t handle,
         return status;
     }
 
-    uint32_t service_call_num = ARM_SMC_GET_SERVICE_CALL_NUM(params.func_id);
+    uint32_t service_call_num = ARM_SMC_GET_SERVICE_CALL_NUM_FROM_FUNC_ID(params.func_id);
     if ((status = validate_resource_smc(handle, service_call_num)) != ZX_OK) {
         return status;
     }
