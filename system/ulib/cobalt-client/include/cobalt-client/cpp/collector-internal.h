@@ -9,6 +9,7 @@
 
 #include <cobalt-client/cpp/counter-internal.h>
 #include <cobalt-client/cpp/histogram-internal.h>
+#include <cobalt-client/cpp/types-internal.h>
 #include <fbl/atomic.h>
 #include <fbl/string_buffer.h>
 #include <lib/zx/channel.h>
@@ -29,10 +30,12 @@ public:
     virtual ~Logger() = default;
 
     // Returns true if the histogram was persisted.
-    virtual bool Log(uint32_t metric_id, const RemoteHistogram::EventBuffer& histogram) = 0;
+    virtual bool Log(const RemoteMetricInfo& metric_info,
+                     const RemoteHistogram::EventBuffer& histogram) = 0;
 
     // Returns true if the counter was persisted.
-    virtual bool Log(uint32_t metric_id, const RemoteCounter::EventBuffer& counter) = 0;
+    virtual bool Log(const RemoteMetricInfo& metric_info,
+                     const RemoteCounter::EventBuffer& counter) = 0;
 
 protected:
     Logger() = default;
@@ -72,10 +75,12 @@ public:
     ~CobaltLogger() override{};
 
     // Returns true if the histogram was persisted.
-    bool Log(uint32_t metric_id, const RemoteHistogram::EventBuffer& histogram) override;
+    bool Log(const RemoteMetricInfo& metric_info,
+             const RemoteHistogram::EventBuffer& histogram) override;
 
     // Returns true if the counter was persisted.
-    bool Log(uint32_t metric_id, const RemoteCounter::EventBuffer& counter) override;
+    bool Log(const RemoteMetricInfo& metric_info,
+             const RemoteCounter::EventBuffer& counter) override;
 
     bool IsListeningForReply() const { return logger_factory_.is_valid(); }
 

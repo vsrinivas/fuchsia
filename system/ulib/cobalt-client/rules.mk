@@ -16,6 +16,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/counter.cpp \
     $(LOCAL_DIR)/histogram.cpp \
     $(LOCAL_DIR)/event_buffer.cpp \
+    $(LOCAL_DIR)/metric_info.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/fbl \

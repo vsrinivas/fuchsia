@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include <unistd.h>
 
+#include <cobalt-client/cpp/metric-options.h>
+
 #include <fbl/atomic.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
@@ -28,12 +30,41 @@ enum class ReleaseStage : fuchsia_cobalt_ReleaseStage {
     kDebug = fuchsia_cobalt_ReleaseStage_DEBUG,
 };
 
-// Each metadata entry is defined as a pair describing a dimension and
-// the value of the given dimension. This values are defined in the metric
-// definition.
-struct Metadata {
-    uint32_t event_type;
-    uint32_t event_type_index;
+struct RemoteMetricInfo {
+    // Generates |name| from the contents of metric options.
+    static RemoteMetricInfo From(const MetricOptions& options);
+
+    RemoteMetricInfo() = default;
+    RemoteMetricInfo(const RemoteMetricInfo&) = default;
+
+    // Allows comparing two |RemoteMetricInfo|, which is a shortcut for checking if
+    // all fields are equal.
+    bool operator==(const RemoteMetricInfo& rhs) const;
+    bool operator!=(const RemoteMetricInfo& rhs) const;
+
+    // Provides refined metric collection for remote metrics.
+    // Warning: |component| is not yet supported in the backend, so it will be ignored.
+    fbl::String component;
+
+    // Used by remote metrics to match with the respective unique id for the projects defined
+    // metrics in the backend.
+    uint32_t metric_id;
+
+    // Provides refined metric collection for remote metrics.
+    // Warning: |event_code| is not yet supported in the backend, so it will be treated as 0.
+    uint32_t event_code;
+};
+
+struct LocalMetricInfo {
+    // Generates |name| from the contents of metric options.
+    static LocalMetricInfo From(const MetricOptions& options);
+
+    LocalMetricInfo() = default;
+    LocalMetricInfo(const LocalMetricInfo&) = default;
+    bool operator==(const LocalMetricInfo& rhs) const;
+    bool operator!=(const LocalMetricInfo& rhs) const;
+
+    fbl::String name;
 };
 
 // Wraps a collection of observations. The buffer provides two methods for
@@ -50,28 +81,20 @@ struct Metadata {
 // // Do Flush.
 // buffer_.CompleteFlush();
 //
-// Note: To make the behaviour more predictable and easier to verify,
-// the metadata will always come before the metric, and metric will always be
-// the last element in the buffer.
-//
-// This class is thread-compatible.
+// This class is thread-compatible, and thread-safe if a thread only access the buffer data,
+// when TryBeginFlush is true.
 // This class is moveable, but not copyable or assignable.
-template <typename BufferType> class EventBuffer {
+template <typename BufferType>
+class EventBuffer {
 public:
-    EventBuffer() = delete;
-    explicit EventBuffer(const fbl::Vector<Metadata>& metadata);
-    EventBuffer(const fbl::String& component, const fbl::Vector<Metadata>& metadata);
+    EventBuffer() : flushing_(false) {}
     EventBuffer(const EventBuffer&) = delete;
     EventBuffer(EventBuffer&&);
     EventBuffer& operator=(const EventBuffer&) = delete;
     EventBuffer& operator=(EventBuffer&&) = delete;
     ~EventBuffer();
 
-    const fbl::Vector<Metadata>& metadata() const { return metadata_; }
-
     const BufferType& event_data() const { return buffer_; }
-
-    const fidl::StringView component() const;
 
     // Returns a pointer to metric where the value should be written.
     // The metric should only be modified by a flushing thread, and only during the flushing
@@ -87,18 +110,10 @@ public:
     void CompleteFlush() { flushing_.exchange(false); };
 
 private:
-    // Unique string representing a component.
-    fbl::String component_;
-
-    // Collection of metadata for the given metric.
-    fbl::Vector<Metadata> metadata_;
-
     // Dumping ground for the metric itself for recording.
     BufferType buffer_;
 
     fbl::atomic<bool> flushing_;
-
-    bool has_component_;
 };
 
 } // namespace internal

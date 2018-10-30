@@ -31,36 +31,36 @@ constexpr uint32_t kMetricId = 1;
 // Event code to be used by default MetricOptions.
 constexpr uint32_t kEventCode = 1;
 
+// Component name used for the tests.
+constexpr char kComponent[] = "SomeRandomCollectorComponent";
+
 // Fake storage used by our FakeLogger.
-template <typename T> class FakeStorage {
+template <typename T>
+class FakeStorage {
 public:
-    T* GetOrNull(uint32_t metric_id, uint32_t event_type, uint32_t event_code) {
+    T* GetOrNull(const RemoteMetricInfo& metric_info) {
         size_t index = 0;
-        if (!Find(metric_id, event_type, event_code, &index)) {
+        if (!Find(metric_info, &index)) {
             return nullptr;
         }
         return entries_[index].data.get();
     };
 
-    void InsertOrUpdateEntry(uint32_t metric_id, uint32_t event_type, uint32_t event_code,
+    void InsertOrUpdateEntry(const RemoteMetricInfo& metric_info,
                              const fbl::Function<void(fbl::unique_ptr<T>*)>& update) {
         size_t index = 0;
-        if (!Find(metric_id, event_type, event_code, &index)) {
-            entries_.push_back({.metric_id = metric_id,
-                                .event_type = event_type,
-                                .event_code = event_code,
-                                .data = nullptr});
+        if (!Find(metric_info, &index)) {
+            entries_.push_back({.metric_info = metric_info, .data = nullptr});
             index = entries_.size() - 1;
         }
         update(&entries_[index].data);
     }
 
 private:
-    bool Find(uint32_t metric_id, uint32_t event_type, uint32_t event_code, size_t* index) const {
+    bool Find(const RemoteMetricInfo& metric_info, size_t* index) const {
         *index = 0;
         for (auto& entry : entries_) {
-            if (entry.metric_id == metric_id && entry.event_type == event_type &&
-                entry.event_code == event_code) {
+            if (metric_info == entry.metric_info) {
                 return true;
             }
             ++(*index);
@@ -70,9 +70,7 @@ private:
 
     // Help to identify event data logged.
     struct Entry {
-        uint32_t metric_id;
-        uint32_t event_type;
-        uint32_t event_code;
+        RemoteMetricInfo metric_info;
         fbl::unique_ptr<T> data;
     };
     fbl::Vector<Entry> entries_;
@@ -90,12 +88,11 @@ public:
     ~TestLogger() override = default;
 
     // Returns true if the histogram was persisted.
-    bool Log(uint32_t metric_id, const RemoteHistogram::EventBuffer& histogram) override {
+    bool Log(const RemoteMetricInfo& metric_info,
+             const RemoteHistogram::EventBuffer& histogram) override {
         if (!fail_.load()) {
             histograms_->InsertOrUpdateEntry(
-                metric_id, histogram.metadata()[0].event_type,
-                histogram.metadata()[0].event_type_index,
-                [&histogram](fbl::unique_ptr<BaseHistogram>* persisted) {
+                metric_info, [&histogram](fbl::unique_ptr<BaseHistogram>* persisted) {
                     if (*persisted == nullptr) {
                         persisted->reset(new BaseHistogram(
                             static_cast<uint32_t>(histogram.event_data().count())));
@@ -109,10 +106,10 @@ public:
     }
 
     // Returns true if the counter was persisted.
-    bool Log(uint32_t metric_id, const RemoteCounter::EventBuffer& counter) override {
+    bool Log(const RemoteMetricInfo& metric_info,
+             const RemoteCounter::EventBuffer& counter) override {
         if (!fail_.load()) {
-            counters_->InsertOrUpdateEntry(metric_id, counter.metadata()[0].event_type,
-                                           counter.metadata()[0].event_type_index,
+            counters_->InsertOrUpdateEntry(metric_info,
                                            [&counter](fbl::unique_ptr<BaseCounter>* persisted) {
                                                if (*persisted == nullptr) {
                                                    persisted->reset(new BaseCounter());
@@ -130,6 +127,16 @@ private:
     FakeStorage<BaseCounter>* counters_;
     fbl::atomic<bool> fail_;
 };
+
+RemoteMetricInfo MakeRemoteMetricInfo(uint32_t metric_id = kMetricId,
+                                      uint32_t event_code = kEventCode,
+                                      const char* component = kComponent) {
+    RemoteMetricInfo metric_info;
+    metric_info.component = component;
+    metric_info.metric_id = metric_id;
+    metric_info.event_code = event_code;
+    return metric_info;
+}
 
 CollectorOptions MakeCollectorOptions(size_t max_histograms, size_t max_counters) {
     CollectorOptions options;
@@ -161,6 +168,7 @@ MetricOptions MakeMetricOptions(uint32_t metric_id = kMetricId, uint32_t event_c
     options.Remote();
     options.metric_id = metric_id;
     options.event_code = event_code;
+    options.component = kComponent;
     return options;
 }
 
@@ -173,6 +181,7 @@ HistogramOptions MakeHistogramOptions(uint32_t metric_id = kMetricId,
     options.Remote();
     options.metric_id = metric_id;
     options.event_code = event_code;
+    options.component = kComponent;
     return fbl::move(options);
 }
 
@@ -327,15 +336,15 @@ bool FlushTest() {
     // Note: for now event_type is 0 for all metrics.
 
     // -4 goes to underflow bucket(0)
-    EXPECT_EQ(histograms.GetOrNull(/*metric_id=*/1, /*event_type=*/0, /*event_code=*/1)
-                  ->GetCount(options.map_fn(-4, options)),
-              2);
+    EXPECT_EQ(
+        histograms.GetOrNull(MakeRemoteMetricInfo(1, 1))->GetCount(options.map_fn(-4, options)), 2);
 
     // -1 goes to first non underflow bucket(1)
-    EXPECT_EQ(histograms.GetOrNull(1, 0, 2)->GetCount(options.map_fn(-1, options)), 3);
+    EXPECT_EQ(
+        histograms.GetOrNull(MakeRemoteMetricInfo(1, 2))->GetCount(options.map_fn(-1, options)), 3);
 
-    EXPECT_EQ(counters.GetOrNull(2, 0, 1)->Load(), 5);
-    EXPECT_EQ(counters.GetOrNull(2, 0, 2)->Load(), 3);
+    EXPECT_EQ(counters.GetOrNull(MakeRemoteMetricInfo(2, 1))->Load(), 5);
+    EXPECT_EQ(counters.GetOrNull(MakeRemoteMetricInfo(2, 2))->Load(), 3);
     END_TEST;
 }
 
@@ -375,23 +384,24 @@ bool FlushFailTest() {
     // Note: for now event_type is 0 for all metrics.
 
     // -4 goes to underflow bucket(0)
-    EXPECT_EQ(histograms.GetOrNull(/*metric_id=*/1, /*event_type=*/0, /*event_code=*/1)
-                  ->GetCount(options.map_fn(-4, options)),
-              2);
+    EXPECT_EQ(
+        histograms.GetOrNull(MakeRemoteMetricInfo(1, 1))->GetCount(options.map_fn(-4, options)), 2);
 
     // -1 goes to first non underflow bucket(1), and its expected to be 0 because the logger failed.
-    EXPECT_EQ(histograms.GetOrNull(1, 0, 2)->GetCount(options.map_fn(-1, options)), 0);
+    EXPECT_EQ(
+        histograms.GetOrNull(MakeRemoteMetricInfo(1, 2))->GetCount(options.map_fn(-1, options)), 0);
 
-    EXPECT_EQ(counters.GetOrNull(2, 0, 1)->Load(), 5);
+    EXPECT_EQ(counters.GetOrNull(MakeRemoteMetricInfo(2, 1))->Load(), 5);
 
     // Expected to be 0, because the logger failed.
-    EXPECT_EQ(counters.GetOrNull(2, 0, 2)->Load(), 0);
+    EXPECT_EQ(counters.GetOrNull(MakeRemoteMetricInfo(2, 2))->Load(), 0);
     END_TEST;
 }
 
 // All histograms have the same shape bucket for simplicity,
 // and we either operate on even or odd buckets.
 struct ObserveFnArgs {
+
     // List of histograms to operate on.
     fbl::Vector<Histogram> histograms;
 
@@ -405,9 +415,11 @@ struct ObserveFnArgs {
     sync_completion_t* start;
 };
 
+static const HistogramOptions kDefaultObserverOptions = MakeHistogramOptions();
+
 int ObserveFn(void* vargs) {
     ObserveFnArgs* args = reinterpret_cast<ObserveFnArgs*>(vargs);
-    static HistogramOptions options = MakeHistogramOptions();
+    const auto& options = kDefaultObserverOptions;
     sync_completion_wait(args->start, zx::sec(20).get());
     size_t curr = 0;
     for (auto& hist : args->histograms) {
@@ -448,14 +460,14 @@ int FlushFn(void* vargs) {
     for (size_t i = 0; i < args->count; ++i) {
         args->collector->Flush();
     }
-
     return thrd_success;
 }
 
 // Verify that if we flush while the histograms and counters are being updated,
 // no data is lost, meaning that the sum of the persisted data and the local data
 // is equal to the expected value.
-template <bool should_fail> bool FlushMultithreadTest() {
+template <bool should_fail>
+bool FlushMultithreadTest() {
     BEGIN_TEST;
     FakeStorage<BaseHistogram> histograms;
     FakeStorage<BaseCounter> counters;
@@ -514,7 +526,7 @@ template <bool should_fail> bool FlushMultithreadTest() {
     for (uint32_t metric_id = 0; metric_id < 3; ++metric_id) {
         for (uint32_t event_code = 1; event_code < 4; ++event_code) {
             size_t index = 3 * metric_id + event_code - 1;
-            auto* tmp_hist = histograms.GetOrNull(2 * metric_id, 0, event_code);
+            auto* tmp_hist = histograms.GetOrNull(MakeRemoteMetricInfo(2 * metric_id, event_code));
             // Each bucket is increased |index| + |i| for each thread recording observations.
             for (uint32_t i = 0; i < 4; ++i) {
                 ASSERT_TRUE(tmp_hist != nullptr);
@@ -523,7 +535,8 @@ template <bool should_fail> bool FlushMultithreadTest() {
                           target_count * (i + index));
             }
 
-            auto* tmp_counter = counters.GetOrNull(2 * metric_id + 1, 0, event_code);
+            auto* tmp_counter =
+                counters.GetOrNull(MakeRemoteMetricInfo(2 * metric_id + 1, event_code));
             ASSERT_TRUE(tmp_counter != nullptr);
             // Each counter is increased by |index| for each thread recording observations.
             EXPECT_EQ(tmp_counter->Load() + observe_args.counters[index].GetRemoteCount(),

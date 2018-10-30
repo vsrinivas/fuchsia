@@ -4,6 +4,7 @@
 
 #include <threads.h>
 
+#include <cobalt-client/cpp/metric-options.h>
 #include <cobalt-client/cpp/types-internal.h>
 #include <fbl/string.h>
 #include <lib/sync/completion.h>
@@ -17,60 +18,18 @@ namespace {
 // Number of threads to spawn on multi threaded test.
 constexpr size_t kThreads = 20;
 
-// Fixed component name.
+// Name of component used for options.
 constexpr char kComponent[] = "SomeRandomComponent";
+
+constexpr uint32_t kMetricId = 1;
+
+constexpr uint32_t kEventCode = 2;
 
 // Return a buffer with two event_types each with their own event_type_index.
 EventBuffer<uint32_t> MakeBuffer() {
-    fbl::Vector<Metadata> metadata = {{.event_type = 1, .event_type_index = 2},
-                                      {.event_type = 2, .event_type_index = 4}};
-    EventBuffer<uint32_t> buffer(kComponent, metadata);
+    EventBuffer<uint32_t> buffer;
     *buffer.mutable_event_data() = 0;
     return buffer;
-}
-
-// Return a buffer with two event_types each with their own event_type_index.
-EventBuffer<uint32_t> MakeBufferWithoutComponent() {
-    fbl::Vector<Metadata> metadata = {{.event_type = 1, .event_type_index = 2},
-                                      {.event_type = 2, .event_type_index = 4}};
-    EventBuffer<uint32_t> buffer(metadata);
-    *buffer.mutable_event_data() = 0;
-    return buffer;
-}
-
-// Verify that the metadata is stored correctly.
-bool TestMetadataPreserved() {
-    BEGIN_TEST;
-    EventBuffer<uint32_t> buffer = MakeBuffer();
-
-    ASSERT_EQ(buffer.metadata().size(), 2);
-    ASSERT_EQ(buffer.metadata()[0].event_type, 1);
-    ASSERT_EQ(buffer.metadata()[0].event_type_index, 2);
-    ASSERT_EQ(buffer.metadata()[1].event_type, 2);
-    ASSERT_EQ(buffer.metadata()[1].event_type_index, 4);
-    ASSERT_EQ(buffer.event_data(), 0);
-    ASSERT_EQ(buffer.component().size(), strlen(kComponent));
-    ASSERT_STR_EQ(buffer.component().data(), kComponent);
-
-    END_TEST;
-}
-
-// Verify that the metadata is stored correctly.
-bool TestMetadataPreservedNoComponent() {
-    BEGIN_TEST;
-    EventBuffer<uint32_t> buffer = MakeBufferWithoutComponent();
-
-    ASSERT_EQ(buffer.metadata().size(), 2);
-    ASSERT_EQ(buffer.metadata()[0].event_type, 1);
-    ASSERT_EQ(buffer.metadata()[0].event_type_index, 2);
-    ASSERT_EQ(buffer.metadata()[1].event_type, 2);
-    ASSERT_EQ(buffer.metadata()[1].event_type_index, 4);
-    ASSERT_EQ(buffer.event_data(), 0);
-    ASSERT_EQ(buffer.component().size(), 0);
-    printf("%p\n", buffer.component().data());
-    ASSERT_TRUE(buffer.component().is_null());
-
-    END_TEST;
 }
 
 // Verify that changes on GetMetric are persisted.
@@ -182,9 +141,77 @@ bool TestSingleFlushWithMultipleThreads() {
     END_TEST;
 }
 
+const char* GetMetricName(uint32_t metric_id) {
+    if (metric_id == kMetricId) {
+        return "MetricName";
+    }
+    return "UnknownMetric";
+}
+
+const char* GetEventName(uint32_t event_code) {
+    if (event_code == kEventCode) {
+        return "EventName";
+    }
+    return "UnknownEvent";
+}
+
+MetricOptions MakeMetricOptions() {
+    MetricOptions options;
+    options.component = kComponent;
+    options.event_code = kEventCode;
+    options.metric_id = kMetricId;
+    options.get_metric_name = GetMetricName;
+    options.get_event_name = GetEventName;
+    return options;
+}
+
+bool TestFromMetricOptions() {
+    BEGIN_TEST;
+    MetricOptions options = MakeMetricOptions();
+    options.Both();
+    LocalMetricInfo info = LocalMetricInfo::From(options);
+    ASSERT_STR_EQ(info.name.c_str(), "MetricName.SomeRandomComponent.EventName");
+    END_TEST;
+}
+
+bool TestFromMetricOptionsNoGetMetricName() {
+    BEGIN_TEST;
+    MetricOptions options = MakeMetricOptions();
+    options.Both();
+    options.get_metric_name = nullptr;
+    LocalMetricInfo info = LocalMetricInfo::From(options);
+    ASSERT_STR_EQ(info.name.c_str(), "1.SomeRandomComponent.EventName");
+    END_TEST;
+}
+
+bool TestFromMetricOptionsNoGetEventName() {
+    BEGIN_TEST;
+    MetricOptions options = MakeMetricOptions();
+    options.Both();
+    options.get_event_name = nullptr;
+    LocalMetricInfo info = LocalMetricInfo::From(options);
+    ASSERT_STR_EQ(info.name.c_str(), "MetricName.SomeRandomComponent.2");
+    END_TEST;
+}
+
+bool TestFromMetricOptionsNoComponent() {
+    BEGIN_TEST;
+    MetricOptions options = MakeMetricOptions();
+    options.Both();
+    options.component.clear();
+    LocalMetricInfo info = LocalMetricInfo::From(options);
+    ASSERT_STR_EQ(info.name.c_str(), "MetricName.EventName");
+    END_TEST;
+}
+
+BEGIN_TEST_CASE(LocalMetricInfo)
+RUN_TEST(TestFromMetricOptions)
+RUN_TEST(TestFromMetricOptionsNoComponent)
+RUN_TEST(TestFromMetricOptionsNoGetMetricName)
+RUN_TEST(TestFromMetricOptionsNoGetEventName)
+END_TEST_CASE(LocalMetricInfo)
+
 BEGIN_TEST_CASE(EventBufferTest)
-RUN_TEST(TestMetadataPreserved)
-RUN_TEST(TestMetadataPreservedNoComponent)
 RUN_TEST(TestMetricUpdatePersisted)
 RUN_TEST(TestFlushDoNotOverlap)
 RUN_TEST(TestSingleFlushWithMultipleThreads)

@@ -31,12 +31,18 @@ struct MetricOptions {
     // This is values tied to the process life-time.
     bool IsLocal() const;
 
-    // Required for local metrics.
+    // Required for local metrics. If not set, and metric is both Local and Remote,
+    // this will be generated from the |metric_id|, |event_code|(if not 0) and |component|(if not
+    // empty).
     fbl::String name;
 
     // Provides refined metric collection for remote and local metrics.
     // Warning: |component| is not yet supported in the backend, so it will be ignored.
     fbl::String component;
+
+    // Function that translates |metric_id| to a human readable name.
+    // If returns |nullptr| or is unset, the stringfied version of |uint32_t| will be used.
+    const char* (*get_metric_name)(uint32_t);
 
     // Function that translates |event_code| to a human readable name.
     // If returns |nullptr| or is unset, the stringfied version of |uint32_t| will be used.

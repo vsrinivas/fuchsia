@@ -96,9 +96,9 @@ BaseHistogram::BaseHistogram(uint32_t num_buckets) {
 
 BaseHistogram::BaseHistogram(BaseHistogram&& other) = default;
 
-RemoteHistogram::RemoteHistogram(uint32_t num_buckets, uint32_t metric_id,
+RemoteHistogram::RemoteHistogram(uint32_t num_buckets, const RemoteMetricInfo& metric_info,
                                  RemoteHistogram::EventBuffer buffer)
-    : BaseHistogram(num_buckets), buffer_(fbl::move(buffer)), metric_id_(metric_id) {
+    : BaseHistogram(num_buckets), buffer_(fbl::move(buffer)), metric_info_(metric_info) {
     bucket_buffer_.reserve(num_buckets);
     for (uint32_t i = 0; i < num_buckets; ++i) {
         HistogramBucket bucket;
@@ -113,8 +113,7 @@ RemoteHistogram::RemoteHistogram(uint32_t num_buckets, uint32_t metric_id,
 
 RemoteHistogram::RemoteHistogram(RemoteHistogram&& other)
     : BaseHistogram(fbl::move(other)), bucket_buffer_(fbl::move(other.bucket_buffer_)),
-      buffer_(fbl::move(other.buffer_)),
-      metric_id_(other.metric_id_) {}
+      buffer_(fbl::move(other.buffer_)), metric_info_(other.metric_info_) {}
 
 bool RemoteHistogram::Flush(const RemoteHistogram::FlushFn& flush_handler) {
     if (!buffer_.TryBeginFlush()) {
@@ -127,7 +126,7 @@ bool RemoteHistogram::Flush(const RemoteHistogram::FlushFn& flush_handler) {
         bucket_buffer_[bucket_index].count = buckets_[bucket_index].Exchange();
     }
 
-    flush_handler(metric_id_, buffer_, fbl::BindMember(&buffer_, &EventBuffer::CompleteFlush));
+    flush_handler(metric_info_, buffer_, fbl::BindMember(&buffer_, &EventBuffer::CompleteFlush));
     return true;
 }
 } // namespace internal

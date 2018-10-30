@@ -76,7 +76,8 @@ void HandleChannelStatus(zx::channel* logger_client, zx_status_t result) {
 CobaltLogger::CobaltLogger(CobaltOptions options)
     : options_(fbl::move(options)), logger_(ZX_HANDLE_INVALID) {}
 
-bool CobaltLogger::Log(uint32_t metric_id, const RemoteHistogram::EventBuffer& histogram) {
+bool CobaltLogger::Log(const RemoteMetricInfo& metric_info,
+                       const RemoteHistogram::EventBuffer& histogram) {
     if (!IsLoggerReady()) {
         return false;
     }
@@ -91,25 +92,27 @@ bool CobaltLogger::Log(uint32_t metric_id, const RemoteHistogram::EventBuffer& h
         counts[bucket_index] = histogram.event_data()[bucket_index].count;
     };
     fuchsia_cobalt_Status cobalt_status;
-    // TODO(gevalentino): Use EventBuffer::component and the respective event_type_index
-    // when cobalt allows it.
+    // TODO(gevalentino): Use RemoteMetricInfo::event_cote and RemoteMetricInfo::component once
+    // availbale.
     zx_status_t result = fuchsia_cobalt_LoggerSimpleLogIntHistogram(
-        logger_.get(), metric_id, 0, nullptr, 0, indexes, buckets, counts, buckets, &cobalt_status);
+        logger_.get(), metric_info.metric_id, 0, nullptr, 0, indexes, buckets, counts, buckets,
+        &cobalt_status);
     HandleChannelStatus(&logger_, result);
     return result == ZX_OK && cobalt_status == fuchsia_cobalt_Status_OK;
 }
 
-bool CobaltLogger::Log(uint32_t metric_id, const RemoteCounter::EventBuffer& counter) {
+bool CobaltLogger::Log(const RemoteMetricInfo& metric_info,
+                       const RemoteCounter::EventBuffer& counter) {
     if (!IsLoggerReady()) {
         return false;
     }
 
     fuchsia_cobalt_Status cobalt_status;
-    // TODO(gevalentino): Use EventBuffer::component and the respective event_type_index
-    // when cobalt allows it.
+    // TODO(gevalentino): Use RemoteMetricInfo::event_cote and RemoteMetricInfo::component once
+    // availbale.
     zx_status_t result = fuchsia_cobalt_LoggerBaseLogEventCount(
-        logger_.get(), metric_id, 0, nullptr, 0, 0, static_cast<int64_t>(counter.event_data()),
-        &cobalt_status);
+        logger_.get(), metric_info.metric_id, 0, nullptr, 0, 0,
+        static_cast<int64_t>(counter.event_data()), &cobalt_status);
     HandleChannelStatus(&logger_, result);
     return result == ZX_OK && cobalt_status == fuchsia_cobalt_Status_OK;
 }

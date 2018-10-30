@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <unistd.h>
 
+#include <cobalt-client/cpp/metric-options.h>
 #include <cobalt-client/cpp/types-internal.h>
 #include <fbl/atomic.h>
 #include <fbl/function.h>
@@ -67,11 +68,11 @@ public:
     using EventBuffer = internal::EventBuffer<uint32_t>;
 
     // Function in charge persisting or processing the ObservationValue buffer.
-    using FlushFn =
-        fbl::Function<void(uint32_t metric_id, const EventBuffer&, FlushCompleteFn complete)>;
+    using FlushFn = fbl::Function<void(const RemoteMetricInfo& metric_info, const EventBuffer&,
+                                       FlushCompleteFn complete)>;
 
     RemoteCounter() = delete;
-    RemoteCounter(uint32_t metric_id, EventBuffer buffer);
+    RemoteCounter(const RemoteMetricInfo& metric_info, EventBuffer buffer);
     RemoteCounter(const RemoteCounter&) = delete;
     RemoteCounter(RemoteCounter&&);
     RemoteCounter& operator=(const RemoteCounter&) = delete;
@@ -81,15 +82,15 @@ public:
     // Returns true if the contests were flushed.
     bool Flush(const FlushFn& flush_handler);
 
-    // Returns the metric Id associated with this counter.
-    uint32_t metric_id() const { return metric_id_; }
+    // Returns the metric_id associated with this remote metric.
+    const RemoteMetricInfo& metric_info() const { return metric_info_; }
 
 private:
     // The buffer containing the data to be flushed.
     EventBuffer buffer_;
 
     // Unique-Id representing this metric in the backend.
-    uint32_t metric_id_;
+    RemoteMetricInfo metric_info_;
 };
 
 } // namespace internal

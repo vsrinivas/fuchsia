@@ -28,32 +28,6 @@ using internal::RemoteHistogram;
 constexpr uint8_t kLocal = 0x1;
 constexpr uint8_t kRemote = 0x2;
 
-Metadata MakeMetadata(uint32_t event_type_index) {
-    Metadata metadata;
-    metadata.event_type = 0;
-    metadata.event_type_index = event_type_index;
-
-    return metadata;
-}
-
-Counter AddCounterInternal(uint32_t metric_id, internal::RemoteCounter::EventBuffer buffer,
-                           fbl::Vector<RemoteCounter>* remote_counters) {
-    remote_counters->push_back(RemoteCounter(metric_id, fbl::move(buffer)));
-    size_t index = remote_counters->size() - 1;
-    return Counter(&((*remote_counters)[index]));
-}
-
-Histogram AddHistogramInternal(uint32_t metric_id, const HistogramOptions& options,
-                               internal::RemoteHistogram::EventBuffer buffer,
-                               fbl::Vector<RemoteHistogram>* remote_histograms,
-                               fbl::Vector<HistogramOptions>* histogram_options) {
-    remote_histograms->push_back(
-        RemoteHistogram(options.bucket_count + 2, metric_id, fbl::move(buffer)));
-    histogram_options->push_back(options);
-    size_t index = remote_histograms->size() - 1;
-    return Histogram(&(*histogram_options)[index], &(*remote_histograms)[index]);
-}
-
 Collector MakeCollector(CollectorOptions options, internal::CobaltOptions cobalt_options) {
     ZX_DEBUG_ASSERT_MSG(options.load_config, "Must define a load_config function.");
     cobalt_options.logger_deadline_first_attempt = options.initial_response_deadline;
@@ -113,19 +87,24 @@ Histogram Collector::AddHistogram(const HistogramOptions& options) {
     ZX_DEBUG_ASSERT_MSG(options.event_code > 0, "event_type_index 0 value is reserved.");
     ZX_DEBUG_ASSERT_MSG(remote_histograms_.size() < remote_histograms_.capacity(),
                         "Exceeded pre-allocated histogram capacity.");
-    RemoteHistogram::EventBuffer buffer(options.component,
-                                        {MakeMetadata(options.event_code)});
-    return AddHistogramInternal(options.metric_id, options, fbl::move(buffer),
-                                &remote_histograms_, &histogram_options_);
+    RemoteHistogram::EventBuffer buffer;
+    // RemoteMetricInfo metric_info
+    remote_histograms_.push_back(RemoteHistogram(
+        options.bucket_count + 2, internal::RemoteMetricInfo::From(options), fbl::move(buffer)));
+    histogram_options_.push_back(options);
+    size_t index = remote_histograms_.size() - 1;
+    return Histogram(&histogram_options_[index], &remote_histograms_[index]);
 }
 
 Counter Collector::AddCounter(const MetricOptions& options) {
     ZX_DEBUG_ASSERT_MSG(options.event_code > 0, "event_type_index 0 value is reserved.");
     ZX_DEBUG_ASSERT_MSG(remote_counters_.size() < remote_counters_.capacity(),
                         "Exceeded pre-allocated counter capacity.");
-    RemoteCounter::EventBuffer buffer(options.component,
-                                      {MakeMetadata(options.event_code)});
-    return AddCounterInternal(options.metric_id, fbl::move(buffer), &remote_counters_);
+    RemoteCounter::EventBuffer buffer;
+    remote_counters_.push_back(
+        RemoteCounter(internal::RemoteMetricInfo::From(options), fbl::move(buffer)));
+    size_t index = remote_counters_.size() - 1;
+    return Counter(&(remote_counters_[index]));
 }
 
 void Collector::Flush() {
@@ -148,10 +127,10 @@ void Collector::Flush() {
 }
 
 void Collector::LogHistogram(RemoteHistogram* histogram) {
-    histogram->Flush([this, histogram](uint32_t metric_id,
-                                       const RemoteHistogram::EventBuffer& buffer,
+    histogram->Flush([this, histogram](const internal::RemoteMetricInfo& metric_info,
+                                       const internal::RemoteHistogram::EventBuffer& buffer,
                                        RemoteHistogram::FlushCompleteFn complete_fn) {
-        if (!logger_->Log(metric_id, buffer)) {
+        if (!logger_->Log(metric_info, buffer)) {
             // If we failed to log the data, then add the values again to the histogram, so they may
             // be flushed in the future, and we don't need to keep a buffer around for retrying or
             // anything.
@@ -168,11 +147,12 @@ void Collector::LogHistogram(RemoteHistogram* histogram) {
 }
 
 void Collector::LogCounter(RemoteCounter* counter) {
-    counter->Flush([this, counter](uint32_t metric_id, const RemoteCounter::EventBuffer& buffer,
+    counter->Flush([this, counter](const internal::RemoteMetricInfo& metric_info,
+                                   const internal::RemoteCounter::EventBuffer& buffer,
                                    RemoteCounter::FlushCompleteFn complete_fn) {
         // Attempt to log data, if we fail, we increase the in process counter by the amount
         // flushed.
-        if (!logger_->Log(metric_id, buffer)) {
+        if (!logger_->Log(metric_info, buffer)) {
             if (buffer.event_data() > 0) {
                 counter->Increment(buffer.event_data());
             }

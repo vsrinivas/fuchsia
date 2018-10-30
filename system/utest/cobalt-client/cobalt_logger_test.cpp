@@ -5,6 +5,7 @@
 #include <limits.h>
 
 #include <cobalt-client/cpp/collector-internal.h>
+#include <cobalt-client/cpp/types-internal.h>
 #include <fbl/algorithm.h>
 #include <fbl/type_info.h>
 #include <fbl/unique_ptr.h>
@@ -33,6 +34,8 @@ constexpr uint32_t kCounterValue = 21;
 // Metric Id.
 constexpr uint32_t kMetricId = 25;
 
+constexpr uint32_t kEventCode = 26;
+
 // Expected stage.
 constexpr ReleaseStage kReleaseStage = ReleaseStage::kDebug;
 
@@ -42,43 +45,39 @@ constexpr char kSvcPath[] = "/svc/cobalt_service";
 // Component name being logged.
 constexpr char kComponent[] = "ImportantComponent";
 
-fbl::Vector<Metadata> MakeMetadata() {
-    Metadata metadata;
-    metadata.event_type = 0;
-    metadata.event_type_index = 1;
-    return {metadata};
+RemoteMetricInfo MakeRemoteMetricInfo() {
+    RemoteMetricInfo metric_info;
+    metric_info.metric_id = kMetricId;
+    metric_info.event_code = kEventCode;
+    metric_info.component = kComponent;
+    return metric_info;
 }
 
 // Handles RPC call to LoggerSimple.
 class FakeSimpleLogger {
 public:
-    zx_status_t LogIntHistogram(uint32_t metric_id, uint32_t event_type_index,
-                                const char* component_data, size_t component_size,
-                                const uint32_t* bucket_indices_data, size_t bucket_indices_count,
-                                const uint64_t* bucket_counts_data, size_t bucket_counts_count,
-                                fidl_txn_t* txn) {
+    zx_status_t LogIntHistogram(uint32_t metric_id, uint32_t event_code, const char* component_data,
+                                size_t component_size, const uint32_t* bucket_indices_data,
+                                size_t bucket_indices_count, const uint64_t* bucket_counts_data,
+                                size_t bucket_counts_count, fidl_txn_t* txn) {
         EXPECT_EQ(metric_id, kMetricId);
         EXPECT_EQ(bucket_indices_count, bucket_counts_count);
         for (size_t i = 0; i < bucket_indices_count; ++i) {
             // We enforce our test data to be bucket_i = i
             EXPECT_EQ(bucket_counts_data[bucket_indices_data[i]], bucket_indices_data[i]);
         }
-        // TODO(gevalentino): Uncomment when cobalt supports this.
-        // EXPECT_EQ(event_type_index, MakeMetadata()[0].event_type_index);
-        // EXPECT_EQ(component_size, strlen(kComponent));
-        // EXPECT_STR_EQ(component_data, kComponent);
+        // TODO(gevalentino): Verify |event_code| and |component_data| once cobalt
+        // allows it.
         return fuchsia_cobalt_LoggerSimpleLogIntHistogram_reply(txn, response_status_);
     }
 
-    zx_status_t LogCounter(uint32_t metric_id, uint32_t event_type_index,
-                           const char* component_data, size_t component_size, int64_t duration_ms,
-                           int64_t count, fidl_txn_t* txn) {
+    zx_status_t LogCounter(uint32_t metric_id, uint32_t event_code, const char* component_data,
+                           size_t component_size, int64_t duration_ms, int64_t count,
+                           fidl_txn_t* txn) {
         EXPECT_EQ(metric_id, kMetricId);
         EXPECT_EQ(count, kCounterValue);
-        // TODO(gevalentino): Uncomment when cobalt supports this.
-        // EXPECT_EQ(event_type_index, MakeMetadata()[0].event_type_index);
-        // EXPECT_EQ(component_size, strlen(kComponent));
-        // EXPECT_STR_EQ(component_data, kComponent);
+        // TODO(gevalentino): Verify |event_code| and |component_data| once cobalt
+        // allows it.
         return fuchsia_cobalt_LoggerSimpleLogEventCount_reply(txn, response_status_);
     }
 
@@ -140,9 +139,8 @@ public:
             .CreateLogger = Binder::BindMember<&FakeLoggerFactory::CreateLogger>,
             .CreateLoggerSimple = Binder::BindMember<&FakeLoggerFactory::CreateLoggerSimple>,
         };
-        return Binder::BindOps<fuchsia_cobalt_LoggerFactory_dispatch>(dispatcher,
-                                                                      fbl::move(channel),
-                                                                      this, &kOps);
+        return Binder::BindOps<fuchsia_cobalt_LoggerFactory_dispatch>(
+            dispatcher, fbl::move(channel), this, &kOps);
     }
 
     void set_logger_create_status(fuchsia_cobalt_Status status) { logger_create_status = status; }
@@ -177,7 +175,8 @@ CobaltOptions MakeOptions(bool config_reader, zx::channel* svc_channel,
 }
 
 // Template for providing checks on FIDL calls.
-template <typename MetricType, typename BufferType> class CobaltLoggerTestBase {
+template <typename MetricType, typename BufferType>
+class CobaltLoggerTestBase {
 public:
     // Verify we do not keep waiting on reply, after we failed to connect to the initial
     // service (LoggerFactory).
@@ -187,7 +186,7 @@ public:
         context.return_values.service_connect = ZX_ERR_NOT_DIR;
         SetEventBuffer(&context);
         fbl::unique_ptr<CobaltLogger> logger = context.MakeLogger();
-        ASSERT_FALSE(logger->Log(kMetricId, context.event_buffer));
+        ASSERT_FALSE(logger->Log(MakeRemoteMetricInfo(), context.event_buffer));
         ASSERT_FALSE(logger->IsListeningForReply());
         END_TEST;
     }
@@ -199,7 +198,7 @@ public:
         context.return_values.config_reader = false;
         SetEventBuffer(&context);
         fbl::unique_ptr<CobaltLogger> logger = context.MakeLogger();
-        ASSERT_FALSE(logger->Log(kMetricId, context.event_buffer));
+        ASSERT_FALSE(logger->Log(MakeRemoteMetricInfo(), context.event_buffer));
         ASSERT_FALSE(logger->IsListeningForReply());
         END_TEST;
     }
@@ -213,7 +212,7 @@ public:
         fbl::unique_ptr<CobaltLogger> logger = context.MakeLogger();
         // In order to capture the other endpoint of the channel, we need to attempt to
         // connect first. This will set |Context::channels::factory| to the other endpoint.
-        ASSERT_FALSE(logger->Log(kMetricId, context.event_buffer));
+        ASSERT_FALSE(logger->Log(MakeRemoteMetricInfo(), context.event_buffer));
         // service_connect returned |ZX_OK|, so we should be waiting for a reply, meaning
         // each call to Log, will assert the channel for a reply.
         ASSERT_TRUE(logger->IsListeningForReply());
@@ -229,7 +228,7 @@ public:
         fbl::unique_ptr<CobaltLogger> logger = context.MakeLogger();
         // In order to capture the other endpoint of the channel, we need to attempt to
         // connect first. This will set |Context::channels::factory| to the other endpoint.
-        ASSERT_FALSE(logger->Log(kMetricId, context.event_buffer));
+        ASSERT_FALSE(logger->Log(MakeRemoteMetricInfo(), context.event_buffer));
         // We set a bad status, so the reply is handled, but we are not able to log.
         context.services.factory.set_logger_create_status(fuchsia_cobalt_Status_INVALID_ARGUMENTS);
         // Now we can start servicing factory requests.
@@ -239,7 +238,7 @@ public:
         // Now that the service has started, but no bound SimpleLoggerService exists,
         // the log will still fail, BUT we will not longer be waiting for a reply.
         ASSERT_EQ(logger->WaitForReply(), ZX_OK);
-        ASSERT_FALSE(logger->Log(kMetricId, context.event_buffer));
+        ASSERT_FALSE(logger->Log(MakeRemoteMetricInfo(), context.event_buffer));
         ASSERT_FALSE(logger->IsListeningForReply());
         END_TEST;
     }
@@ -251,7 +250,7 @@ public:
         fbl::unique_ptr<CobaltLogger> logger = context.MakeLogger();
         // In order to capture the other endpoint of the channel, we need to attempt to
         // connect first. This will set |Context::channels::factory| to the other endpoint.
-        ASSERT_FALSE(logger->Log(kMetricId, context.event_buffer));
+        ASSERT_FALSE(logger->Log(MakeRemoteMetricInfo(), context.event_buffer));
         ASSERT_TRUE(logger->IsListeningForReply());
 
         // Close the channel instead of binding it. After we attempt to connect again,
@@ -264,7 +263,7 @@ public:
         ASSERT_NE(observed & ZX_CHANNEL_PEER_CLOSED, 0);
 
         // Restablish the channel with the Factory service.
-        ASSERT_FALSE(logger->Log(kMetricId, context.event_buffer));
+        ASSERT_FALSE(logger->Log(MakeRemoteMetricInfo(), context.event_buffer));
         ASSERT_TRUE(logger->IsListeningForReply());
 
         ASSERT_TRUE(context.channels.factory.is_valid());
@@ -285,12 +284,12 @@ public:
 
         // In order to capture the other endpoint of the channel, we need to attempt to
         // connect first. This will set |Context::channels::factory| to the other endpoint.
-        ASSERT_FALSE(logger->Log(kMetricId, context.event_buffer));
+        ASSERT_FALSE(logger->Log(MakeRemoteMetricInfo(), context.event_buffer));
         // Now we can start servicing factory requests.
         ASSERT_TRUE(context.StartFactoryService());
         ASSERT_TRUE(context.services.ProcessAllMessages());
         ASSERT_EQ(logger->WaitForReply(), ZX_OK);
-        ASSERT_FALSE(logger->Log(kMetricId, context.event_buffer));
+        ASSERT_FALSE(logger->Log(MakeRemoteMetricInfo(), context.event_buffer));
         ASSERT_FALSE(logger->IsListeningForReply());
         END_TEST;
     }
@@ -309,12 +308,12 @@ public:
 
         // In order to capture the other endpoint of the channel, we need to attempt to
         // connect first. This will set |Context::channels::factory| to the other endpoint.
-        ASSERT_FALSE(logger->Log(kMetricId, context.event_buffer));
+        ASSERT_FALSE(logger->Log(MakeRemoteMetricInfo(), context.event_buffer));
         // Now we can start servicing factory requests.
         ASSERT_TRUE(context.StartFactoryService());
         ASSERT_TRUE(context.services.ProcessAllMessages());
         ASSERT_EQ(logger->WaitForReply(), ZX_OK);
-        ASSERT_TRUE(logger->Log(kMetricId, context.event_buffer));
+        ASSERT_TRUE(logger->Log(MakeRemoteMetricInfo(), context.event_buffer));
         END_TEST;
     }
 
@@ -399,8 +398,7 @@ private:
         BufferType internal_buffer;
 
         // Event buffer sent to the SimpleLogger service.
-        typename MetricType::EventBuffer event_buffer =
-            typename MetricType::EventBuffer(kComponent, MakeMetadata());
+        typename MetricType::EventBuffer event_buffer = typename MetricType::EventBuffer();
     };
 
     // Sets the data of the event buffer for the context.

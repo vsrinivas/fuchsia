@@ -73,11 +73,11 @@ public:
     using EventBuffer = internal::EventBuffer<fidl::VectorView<HistogramBucket>>;
 
     // Function in charge persisting or processing the EventValue buffer.
-    using FlushFn =
-        fbl::Function<void(uint32_t metric_id, const EventBuffer&, FlushCompleteFn complete)>;
+    using FlushFn = fbl::Function<void(const RemoteMetricInfo& metric_info, const EventBuffer&,
+                                       FlushCompleteFn complete)>;
 
     RemoteHistogram() = delete;
-    RemoteHistogram(uint32_t num_buckets, uint32_t metric_id, EventBuffer buffer);
+    RemoteHistogram(uint32_t num_buckets, const RemoteMetricInfo& metric_info, EventBuffer buffer);
     RemoteHistogram(const RemoteHistogram&) = delete;
     RemoteHistogram(RemoteHistogram&&);
     RemoteHistogram& operator=(const RemoteHistogram&) = delete;
@@ -92,7 +92,7 @@ public:
     bool Flush(const FlushFn& flush_handler);
 
     // Returns the metric_id associated with this remote metric.
-    uint32_t metric_id() const { return metric_id_; }
+    const RemoteMetricInfo& metric_info() const { return metric_info_; }
 
 private:
     // Buffer for out of line allocation for the data being sent
@@ -103,8 +103,8 @@ private:
     // Keeps a buffer for the metadata and the metric.
     EventBuffer buffer_;
 
-    // Id for the cobalt metric backed by this histogram.
-    uint32_t metric_id_;
+    // Metric information such as metric_id, event_code and component.
+    RemoteMetricInfo metric_info_;
 };
 
 } // namespace internal
