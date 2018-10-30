@@ -177,7 +177,6 @@ zx_status_t ClientMlme::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>&
         return status;
     }
     JoinContext join_ctx(std::move(bss), req.body()->phy, req.body()->cbw);
-    infof("JoinReq %s", debug::Describe(join_ctx).c_str());
 
     auto join_chan = join_ctx.channel();
     debugjoin("setting channel to %s\n", common::ChanStrLong(join_chan).c_str());
