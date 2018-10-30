@@ -7,6 +7,9 @@
 # `jiri import -json-output` to yield imports in some JSON schema.
 # That could be parsed directly from GN.
 
+from __future__ import absolute_import
+from __future__ import print_function
+
 import argparse
 import os
 import re
@@ -20,7 +23,7 @@ LAYERS_RE = re.compile('^(garnet|peridot|topaz|vendor/.*)$')
 # Returns True iff LAYERS_RE matches name.
 def check_import(name):
     if LAYERS_RE.match(name):
-        print name
+        print(name)
         return True
     return False
 
@@ -40,7 +43,7 @@ def main():
 
     # For people that haven't switched to the flower model, keep using the old
     # method of guessing the import.
-    if not tree.find('overrides'): # overrides don't exist pre-flower
+    if tree.find('overrides') is None:
       sys.stderr.write('found no overrides. guessing project from imports\n')
       for elt in tree.iter('import'):
         if check_import(elt.attrib['name']):
