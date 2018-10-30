@@ -9,6 +9,10 @@ import("//build/host.gni")
 
 go_library("fidl_lib") {
   name = "fidl"
+
+  deps = [
+    "//garnet/public/go/third_party:github.com/google/go-cmp",
+  ]
 }
 
 go_binary("fidlgen") {
@@ -28,6 +32,12 @@ install_host_tools("fidl") {
   ]
 }
 
+go_test("fidlgen_cpp_test") {
+  gopackage = "fidl/compiler/backend/cpp"
+
+  deps = [ ":fidl_lib" ]
+}
+
 go_test("fidlgen_cpp_ir_test") {
   gopackage = "fidl/compiler/backend/cpp/ir"
 
@@ -37,10 +47,7 @@ go_test("fidlgen_cpp_ir_test") {
 go_test("fidlgen_golang_test") {
   gopackage = "fidl/compiler/backend/golang"
 
-  deps = [
-    ":fidl_lib",
-    "//garnet/public/go/third_party:github.com/google/go-cmp",
-  ]
+  deps = [ ":fidl_lib" ]
 }
 
 go_test("fidlgen_golang_ir_test") {

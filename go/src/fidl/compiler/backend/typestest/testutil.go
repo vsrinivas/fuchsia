@@ -11,8 +11,11 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"testing"
 
 	"fidl/compiler/backend/types"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 var basePath = func() string {
@@ -31,17 +34,35 @@ var basePath = func() string {
 
 // GetExample retrieves an example by filename, and parses it.
 func GetExample(filename string) types.Root {
+	var (
+		data = GetGolden(filename)
+		fidl types.Root
+	)
+	if err := json.Unmarshal(data, &fidl); err != nil {
+		panic(err)
+	}
+	return fidl
+}
+
+// GetGolden retrieves a golden example by filename, and returns the raw
+// content.
+func GetGolden(filename string) []byte {
 	data, err := ioutil.ReadFile(filepath.Join(basePath, filename))
 	if err != nil {
 		panic(err)
 	}
+	return data
+}
 
-	var fidl types.Root
-	if err := json.Unmarshal(data, &fidl); err != nil {
-		panic(err)
+// AssertCodegenCmp assert that the actual codegen matches the expected codegen.
+func AssertCodegenCmp(t *testing.T, expected, actual []byte) {
+	var (
+		splitExpected = strings.Split(strings.TrimSpace(string(expected)), "\n")
+		splitActual   = strings.Split(strings.TrimSpace(string(actual)), "\n")
+	)
+	if diff := cmp.Diff(splitActual, splitExpected); diff != "" {
+		t.Errorf("unexpected impl.go: %s\ngot: %s", diff, string(actual))
 	}
-
-	return fidl
 }
 
 func NumericLiteral(value int) types.Constant {
