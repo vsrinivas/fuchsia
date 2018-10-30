@@ -78,14 +78,16 @@ executable("tests") {
     "test/mediaplayer_test_unattended.cc",
     "test/mediaplayer_test_view.cc",
     "test/mediaplayer_test_view.h",
+    "test/sink_feeder.cc",
+    "test/sink_feeder.h",
   ]
 
   deps = [
     ":mediaplayer_bin",
     "//garnet/bin/mediaplayer/graph",
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/fidl/fuchsia.mediaplayer",
     "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/media/transport",

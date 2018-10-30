@@ -192,6 +192,7 @@ class PlayerCore {
   std::vector<Stream> streams_;
   std::unordered_map<StreamType::Medium, std::unique_ptr<SinkSegment>>
       parked_sink_segments_;
+  bool primed_ = false;
   media::TimelineFunction timeline_function_;
 };
 

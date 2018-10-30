@@ -113,6 +113,8 @@ void PlayerCore::SetSinkSegment(std::unique_ptr<SinkSegment> sink_segment,
 }
 
 void PlayerCore::Prime(fit::closure callback) {
+  primed_ = true;
+
   auto callback_joiner = CallbackJoiner::Create();
 
   for (auto& stream : streams_) {
@@ -127,6 +129,8 @@ void PlayerCore::Prime(fit::closure callback) {
 }
 
 void PlayerCore::Flush(bool hold_frame, fit::closure callback) {
+  primed_ = false;
+
   if (source_segment_) {
     source_segment_->Flush(hold_frame,
                            [this, callback = std::move(callback)]() mutable {
@@ -396,14 +400,23 @@ void PlayerCore::ConnectStream(Stream* stream) {
   FXL_DCHECK(stream->output_);
 
   stream->sink_segment_->Connect(
-      *stream->stream_type_, stream->output_,
-      [this, medium = stream->stream_type_->medium()](Result result) {
+      *stream->stream_type_, stream->output_, [this, stream](Result result) {
         if (result != Result::kOk) {
           // The segment will report a problem separately.
           return;
         }
 
         MaybeCompleteSetSourceSegment();
+
+        if (primed_ && stream->sink_segment_) {
+          stream->sink_segment_->Prime([this, stream]() {
+            if (timeline_function_.subject_delta() != 0 &&
+                stream->sink_segment_) {
+              stream->sink_segment_->SetTimelineFunction(timeline_function_,
+                                                         []() {});
+            }
+          });
+        }
       });
 }
 

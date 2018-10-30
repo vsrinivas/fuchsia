@@ -6,7 +6,6 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-
 #include "garnet/bin/mediaplayer/util/safe_clone.h"
 #include "lib/fxl/logging.h"
 
@@ -19,11 +18,10 @@ std::unique_ptr<DemuxSourceSegment> DemuxSourceSegment::Create(
 }
 
 DemuxSourceSegment::DemuxSourceSegment(std::shared_ptr<Demux> demux)
-    : demux_(demux) {
+    : SourceSegment(true), demux_(demux) {
   FXL_DCHECK(demux_);
 
-  demux_->SetStatusCallback([this](int64_t duration_ns,
-                                   bool can_seek,
+  demux_->SetStatusCallback([this](int64_t duration_ns, bool can_seek,
                                    const Metadata& metadata,
                                    const std::string& problem_type,
                                    const std::string& problem_details) {

@@ -56,6 +56,15 @@ interface StreamSource {
     0x0405: DiscardAllPacketsNoReply();
 };
 
+// A StreamSink that uses StreamBufferSet for buffer management.
+interface SimpleStreamSink : StreamSink, StreamBufferSet {
+    ////////////////////////////////////////////////////////////////////////////
+    // StreamBufferSet methods
+
+    ////////////////////////////////////////////////////////////////////////////
+    // StreamSink methods
+};
+
 // Describes a packet consumed by StreamSink or produced by StreamSource.
 struct StreamPacket {
     // Time at which the packet is to be presented, according to the presentation

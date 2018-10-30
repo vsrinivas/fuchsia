@@ -8,6 +8,7 @@
 #include <fuchsia/mediaplayer/cpp/fidl.h>
 #include <vector>
 #include "garnet/bin/mediaplayer/core/demux_source_segment.h"
+#include "garnet/bin/mediaplayer/core/stream_source_segment.h"
 #include "garnet/bin/mediaplayer/demux/demux.h"
 #include "garnet/bin/mediaplayer/graph/graph.h"
 #include "lib/fidl/cpp/binding.h"
@@ -101,6 +102,52 @@ class DemuxSourceImpl : public SourceImpl, public fuchsia::mediaplayer::Source {
   fidl::Binding<fuchsia::mediaplayer::Source> binding_;
 
   std::unique_ptr<DemuxSourceSegment> demux_source_segment_;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// StreamSourceImpl declaration.
+
+// |SourceImpl| that hosts a |StreamSourceSegment|.
+class StreamSourceImpl : public SourceImpl,
+                         public fuchsia::mediaplayer::StreamSource {
+ public:
+  // Creates a |StreamSourceImpl|. |request| is required.
+  // |connection_failure_callback|, which is also optional, allows the source
+  // to signal that its connection has failed.
+  static std::unique_ptr<StreamSourceImpl> Create(
+      int64_t duration_ns, bool can_pause, bool can_seek,
+      std::unique_ptr<fuchsia::mediaplayer::Metadata> metadata, Graph* graph,
+      fidl::InterfaceRequest<fuchsia::mediaplayer::StreamSource> request,
+      fit::closure connection_failure_callback);
+
+  StreamSourceImpl(
+      int64_t duration_ns, bool can_pause, bool can_seek,
+      std::unique_ptr<fuchsia::mediaplayer::Metadata> metadata, Graph* graph,
+      fidl::InterfaceRequest<fuchsia::mediaplayer::StreamSource> request,
+      fit::closure connection_failure_callback);
+
+  ~StreamSourceImpl() override;
+
+  // SourceImpl overrides.
+  std::unique_ptr<SourceSegment> TakeSourceSegment() override;
+
+  void SendStatusUpdates() override;
+
+  // StreamSource implementation.
+  void AddStream(fuchsia::media::StreamType type,
+                 uint32_t tick_per_second_numerator,
+                 uint32_t tick_per_second_denominator,
+                 ::fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink>
+                     simple_stream_sink_request) override;
+
+  void AddBinding(fidl::InterfaceRequest<fuchsia::mediaplayer::StreamSource>
+                      stream_source_request) override;
+
+ private:
+  fidl::BindingSet<fuchsia::mediaplayer::StreamSource> bindings_;
+
+  std::unique_ptr<StreamSourceSegment> stream_source_segment_;
+  StreamSourceSegment* stream_source_segment_raw_ptr_;
 };
 
 }  // namespace media_player

@@ -67,6 +67,38 @@ class PlayerImpl : public fuchsia::mediaplayer::Player {
   void AddBinding(
       fidl::InterfaceRequest<fuchsia::mediaplayer::Player> request) override;
 
+  void CreateHttpSource(
+      fidl::StringPtr http_url,
+      fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers,
+      fidl::InterfaceRequest<fuchsia::mediaplayer::Source> source_request)
+      override;
+
+  void CreateFileSource(::zx::channel file_channel,
+                        fidl::InterfaceRequest<fuchsia::mediaplayer::Source>
+                            source_request) override;
+
+  void CreateReaderSource(
+      fidl::InterfaceHandle<fuchsia::mediaplayer::SeekingReader> seeking_reader,
+      fidl::InterfaceRequest<fuchsia::mediaplayer::Source> source_request)
+      override;
+
+  void CreateStreamSource(
+      int64_t duration_ns, bool can_pause, bool can_seek,
+      std::unique_ptr<fuchsia::mediaplayer::Metadata> metadata,
+      ::fidl::InterfaceRequest<fuchsia::mediaplayer::StreamSource>
+          source_request) override;
+
+  void SetSource(
+      fidl::InterfaceHandle<fuchsia::mediaplayer::Source> source) override;
+
+  void TransitionToSource(
+      fidl::InterfaceHandle<fuchsia::mediaplayer::Source> source,
+      int64_t transition_pts, int64_t start_pts) override;
+
+  void CancelSourceTransition(
+      fidl::InterfaceRequest<fuchsia::mediaplayer::Source>
+          returned_source_request) override;
+
  private:
   static constexpr int64_t kMinimumLeadTime = media::Timeline::ns_from_ms(30);
   static constexpr int64_t kMinTime = std::numeric_limits<int64_t>::min();
@@ -178,6 +210,21 @@ class PlayerImpl : public fuchsia::mediaplayer::Player {
   // existing source and transition to kInactive.
   std::unique_ptr<SourceImpl> new_source_;
 
+  // Handle for |new_source_| passed to |SetSource|. We keep this around in
+  // case there are messages in the channel that need to be processed.
+  fidl::InterfaceHandle<fuchsia::mediaplayer::Source> new_source_handle_;
+
+  // |SourceImpl| that wrapped the |SourceSegment| currently in use by |core_|
+  // and the corresponding handle.
+  std::unique_ptr<SourceImpl> current_source_;
+  fidl::InterfaceHandle<fuchsia::mediaplayer::Source> current_source_handle_;
+
+  // Stores all the sources that have been created and not destroyed or set
+  // on the player via |SetSource| (which, actually, destroys the |SourceImpl|).
+  std::unordered_map<zx_koid_t, std::unique_ptr<SourceImpl>>
+      source_impls_by_koid_;
+
+  // Current status.
   fuchsia::mediaplayer::PlayerStatus status_;
 };
 

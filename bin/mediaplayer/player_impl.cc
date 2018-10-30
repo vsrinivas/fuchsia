@@ -40,6 +40,22 @@ static const char* kDumpEntry = "dump";
 static constexpr zx_duration_t kCacheLead = ZX_SEC(15);
 static constexpr zx_duration_t kCacheBacktrack = ZX_SEC(5);
 
+template <typename T>
+zx_koid_t GetKoid(const fidl::InterfaceRequest<T>& request) {
+  zx_info_handle_basic_t info;
+  zx_status_t status = request.channel().get_info(
+      ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  return status == ZX_OK ? info.koid : ZX_KOID_INVALID;
+}
+
+template <typename T>
+zx_koid_t GetRelatedKoid(const fidl::InterfaceHandle<T>& request) {
+  zx_info_handle_basic_t info;
+  zx_status_t status = request.channel().get_info(
+      ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  return status == ZX_OK ? info.related_koid : ZX_KOID_INVALID;
+}
+
 }  // namespace
 
 // static
@@ -172,7 +188,7 @@ void PlayerImpl::Update() {
   //
   // The states are as follows:
   //
-  // |kInactive|- Indicates that we have no reader.
+  // |kInactive|- Indicates that we have no source.
   // |kWaiting| - Indicates that we've done something asynchronous, and no
   //              further action should be taken by the state machine until that
   //              something completes (at which point the callback will change
@@ -199,17 +215,24 @@ void PlayerImpl::Update() {
     switch (state_) {
       case State::kInactive:
         if (setting_source_) {
-          // Need to set the reader. |FinishSetSource| will set the
-          // reader and post another call to |Update|.
+          // Need to set the source. |FinishSetSource| will set the source and
+          // post another call to |Update|.
           FinishSetSource();
         }
         return;
 
       case State::kFlushed:
         if (setting_source_) {
-          // We have a new reader. Get rid of the current reader and transition
-          // to inactive state. From there, we'll set up the new reader.
+          // We have a new source. Get rid of the current source and transition
+          // to inactive state. From there, we'll set up the new source.
           core_.ClearSourceSegment();
+
+          // It's important to destroy the source at the same time we call
+          // |ClearSourceSegment|, because the source has a raw pointer to the
+          // source segment we just destroyed.
+          current_source_ = nullptr;
+          current_source_handle_ = nullptr;
+
           state_ = State::kInactive;
           break;
         }
@@ -249,11 +272,19 @@ void PlayerImpl::Update() {
                   return;
                 }
 
-                // Seek to the new position.
-                core_.Seek(target_position, [this]() {
+                if (!core_.can_seek()) {
+                  // We can't seek, so |target_position| should be zero.
+                  FXL_DCHECK(target_position == 0)
+                      << "Can't seek, target_position is " << target_position;
                   state_ = State::kFlushed;
                   Update();
-                });
+                } else {
+                  // Seek to the new position.
+                  core_.Seek(target_position, [this]() {
+                    state_ = State::kFlushed;
+                    Update();
+                  });
+                }
               });
 
           // Done for now. We're in kWaiting, and the callback will call
@@ -289,7 +320,7 @@ void PlayerImpl::Update() {
         // Presentation time is not progressing, and the pipeline is primed with
         // packets.
         if (NeedToFlush()) {
-          // Either we have a new reader, want to seek, or we otherwise want to
+          // Either we have a new source, want to seek, or we otherwise want to
           // flush.
           state_ = State::kWaiting;
           waiting_reason_ = "for flushing to complete";
@@ -326,7 +357,7 @@ void PlayerImpl::Update() {
         // Presentation time is progressing, and packets are moving through
         // the pipeline.
         if (NeedToFlush() || target_state_ == State::kPrimed) {
-          // Either we have a new reader, we want to seek or we want to stop
+          // Either we have a new source, we want to seek or we want to stop
           // playback. In any case, we need to enter |kWaiting|, stop the
           // presentation timeline and transition to |kPrimed| when the
           // operation completes.
@@ -417,8 +448,9 @@ void PlayerImpl::FinishSetSource() {
   setting_source_ = false;
 
   if (!new_source_) {
-    // We were asked to clear the source  which was already done by the state
-    // machine. We're done.
+    // We were asked to clear the source which was already done by the state
+    // machine. All we need to do is clean up the |SourceImpl| and handle
+    // references.
     return;
   }
 
@@ -435,7 +467,11 @@ void PlayerImpl::FinishSetSource() {
     Update();
   });
 
-  new_source_ = nullptr;
+  current_source_ = std::move(new_source_);
+  current_source_handle_ = std::move(new_source_handle_);
+  FXL_DCHECK(current_source_);
+  // There's no handle if |SetHttpSource|, |SetFileSource| or |SetReaderSource|
+  // was used.
 }
 
 void PlayerImpl::Play() {
@@ -506,6 +542,104 @@ void PlayerImpl::AddBinding(
 
   // Fire |OnStatusChanged| event for the new client.
   bindings_.bindings().back()->events().OnStatusChanged(fidl::Clone(status_));
+}
+
+void PlayerImpl::CreateHttpSource(
+    fidl::StringPtr http_url,
+    fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers,
+    fidl::InterfaceRequest<fuchsia::mediaplayer::Source> source_request) {
+  FXL_DCHECK(source_request);
+
+  zx_koid_t koid = GetKoid(source_request);
+  source_impls_by_koid_.emplace(
+      koid, CreateSource(HttpReader::Create(startup_context_, http_url,
+                                            std::move(headers)),
+                         std::move(source_request), [this, koid]() {
+                           source_impls_by_koid_.erase(koid);
+                         }));
+}
+
+void PlayerImpl::CreateFileSource(
+    ::zx::channel file_channel,
+    fidl::InterfaceRequest<fuchsia::mediaplayer::Source> source_request) {
+  FXL_DCHECK(source_request);
+
+  zx_koid_t koid = GetKoid(source_request);
+  source_impls_by_koid_.emplace(
+      koid, CreateSource(FileReader::Create(std::move(file_channel)),
+                         std::move(source_request), [this, koid]() {
+                           source_impls_by_koid_.erase(koid);
+                         }));
+}
+
+void PlayerImpl::CreateReaderSource(
+    fidl::InterfaceHandle<fuchsia::mediaplayer::SeekingReader> seeking_reader,
+    fidl::InterfaceRequest<fuchsia::mediaplayer::Source> source_request) {
+  FXL_DCHECK(source_request);
+
+  zx_koid_t koid = GetKoid(source_request);
+  source_impls_by_koid_.emplace(
+      koid, CreateSource(FidlReader::Create(seeking_reader.Bind()),
+                         std::move(source_request), [this, koid]() {
+                           source_impls_by_koid_.erase(koid);
+                         }));
+}
+
+void PlayerImpl::CreateStreamSource(
+    int64_t duration_ns, bool can_pause, bool can_seek,
+    std::unique_ptr<fuchsia::mediaplayer::Metadata> metadata,
+    ::fidl::InterfaceRequest<fuchsia::mediaplayer::StreamSource>
+        source_request) {
+  FXL_DCHECK(source_request);
+
+  zx_koid_t koid = GetKoid(source_request);
+  source_impls_by_koid_.emplace(
+      koid, StreamSourceImpl::Create(
+                duration_ns, can_pause, can_seek, std::move(metadata),
+                core_.graph(), std::move(source_request),
+                [this, koid]() { source_impls_by_koid_.erase(koid); }));
+}
+
+void PlayerImpl::SetSource(
+    fidl::InterfaceHandle<fuchsia::mediaplayer::Source> source_handle) {
+  FXL_DCHECK(source_handle);
+
+  // Keep |source_handle| in scope until we're done with the |SourceImpl|.
+  // Otherwise, the |SourceImpl| will get a connection error and call its
+  // remove callback.
+
+  // The related koid for |source_handle| should be the same koid under which
+  // we filed the |SourceImpl|.
+  zx_koid_t source_koid = GetRelatedKoid(source_handle);
+
+  auto iter = source_impls_by_koid_.find(source_koid);
+  if (iter == source_impls_by_koid_.end()) {
+    FXL_LOG(ERROR)
+        << "Bad source handle passed to SetSource. Closing connection.";
+    bindings_.CloseAll();
+    return;
+  }
+
+  // Keep the handle around in case there are messages in the channel that need
+  // to be processed.
+  new_source_handle_ = std::move(source_handle);
+
+  FXL_DCHECK(iter->second);
+  BeginSetSource(std::move(iter->second));
+}
+
+void PlayerImpl::TransitionToSource(
+    fidl::InterfaceHandle<fuchsia::mediaplayer::Source> source,
+    int64_t transition_pts, int64_t start_pts) {
+  FXL_NOTIMPLEMENTED();
+  bindings_.CloseAll();
+}
+
+void PlayerImpl::CancelSourceTransition(
+    fidl::InterfaceRequest<fuchsia::mediaplayer::Source>
+        returned_source_request) {
+  FXL_NOTIMPLEMENTED();
+  bindings_.CloseAll();
 }
 
 std::unique_ptr<SourceImpl> PlayerImpl::CreateSource(

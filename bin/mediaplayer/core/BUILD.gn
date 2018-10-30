@@ -20,6 +20,8 @@ source_set("core") {
     "sink_segment.h",
     "source_segment.cc",
     "source_segment.h",
+    "stream_source_segment.cc",
+    "stream_source_segment.h",
   ]
 
   deps = [

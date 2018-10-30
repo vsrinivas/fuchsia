@@ -6,8 +6,6 @@
 #define GARNET_BIN_MEDIAPLAYER_CORE_DEMUX_SOURCE_SEGMENT_H_
 
 #include <memory>
-#include <vector>
-
 #include "garnet/bin/mediaplayer/core/source_segment.h"
 #include "garnet/bin/mediaplayer/demux/demux.h"
 #include "garnet/bin/mediaplayer/util/incident.h"

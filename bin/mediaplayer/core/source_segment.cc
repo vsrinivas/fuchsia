@@ -9,7 +9,8 @@
 
 namespace media_player {
 
-SourceSegment::SourceSegment() {}
+SourceSegment::SourceSegment(bool stream_add_imminent)
+    : weak_factory_(this), stream_add_imminent_(stream_add_imminent) {}
 
 SourceSegment::~SourceSegment() {}
 

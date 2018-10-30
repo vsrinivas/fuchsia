@@ -20,7 +20,7 @@ class FakeSourceSegment : public SourceSegment {
   }
 
   FakeSourceSegment(fit::function<void(FakeSourceSegment*)> destroy_callback)
-      : destroy_callback_(std::move(destroy_callback)) {
+      : SourceSegment(true), destroy_callback_(std::move(destroy_callback)) {
     FXL_DCHECK(destroy_callback_);
   }
 

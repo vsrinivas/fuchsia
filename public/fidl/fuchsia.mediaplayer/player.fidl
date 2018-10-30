@@ -13,7 +13,7 @@ using fuchsia.ui.viewsv1token;
 // Plays media.
 // Ordinal range: 0x1001-10ff
 [Discoverable]
-interface Player {
+interface Player : SourceManager {
     /////////////////////////////////////////////////////////////////////////////
     // Player methods
     // These methods will remain in Player.
@@ -53,20 +53,19 @@ interface Player {
 
     /////////////////////////////////////////////////////////////////////////////
     // SourceManager methods
-    // Player will inherit the SourceManager interface. Currently, we have only
-    // the deprecated method SetReaderSource.
-    // TODO(dalesat): Include and implement SourceManager methods.
-
-    // DEPRECATED
-    0x1101: SetReaderSource(SeekingReader? reader);
+    // See source_manager.fidl
 
     /////////////////////////////////////////////////////////////////////////////
     // SinkManager methods
-    // Player will inherit the SinkManager interface. Currently, we have only
-    // the deprecated method SetAudioRenderer.
+    // Player will inherit the SinkManager interface.
 
     // DEPRECATED
-    0x1501: SetAudioRenderer(fuchsia.media.AudioRenderer? audio_renderer);
+    // TODO(dalesat): Remove once tests no longer require this.
+    0x1098: SetReaderSource(SeekingReader? reader);
+
+    // DEPRECATED
+    // TODO(dalesat): Remove once tests no longer require this.
+    0x1099: SetAudioRenderer(fuchsia.media.AudioRenderer? audio_renderer);
 };
 
 // Player status information.
@@ -86,9 +85,9 @@ struct PlayerStatus {
     // Whether the source has a video stream.
     bool has_video;
 
-    // Indicates whether the player is ready to play. After SetSource is called,
-    // this value is false until the player is fully prepared to play the content
-    // from the source.
+    // Indicates whether the player is ready to play. After SetHttpSource,
+    // SetFileSource or SourceManager.SetSource is called, this value is false
+    // until the player is fully prepared to play the content from the source.
     bool ready;
 
     // Describes the media.

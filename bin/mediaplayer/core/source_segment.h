@@ -11,6 +11,7 @@
 #include "garnet/bin/mediaplayer/core/segment.h"
 #include "garnet/bin/mediaplayer/graph/graph.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace media_player {
 
@@ -62,7 +63,11 @@ class SourceSegment : public Segment {
   using StreamUpdateCallback =
       fit::function<void(size_t index, const Stream* stream, bool more)>;
 
-  SourceSegment();
+  // Constructs a |SourceSegment|. |stream_add_imminent| should be true if the
+  // subclass will immediately enumerate streams after |Provision| is called.
+  // It would be false if the subclass can't control when streams are
+  // enumerated.
+  SourceSegment(bool stream_add_imminent);
 
   ~SourceSegment() override;
 
@@ -112,6 +117,11 @@ class SourceSegment : public Segment {
   virtual NodeRef source_node() const { return NodeRef(); }
 
  protected:
+  // Gets a weak pointer to this |SourceSegment|.
+  fxl::WeakPtr<SourceSegment> GetWeakThis() {
+    return weak_factory_.GetWeakPtr();
+  }
+
   // Called by subclasses when a stream is updated.
   void OnStreamUpdated(size_t index, const StreamType& type, OutputRef output,
                        bool more);
@@ -120,6 +130,7 @@ class SourceSegment : public Segment {
   void OnStreamRemoved(size_t index, bool more);
 
  private:
+  fxl::WeakPtrFactory<SourceSegment> weak_factory_;
   bool stream_add_imminent_ = true;
   StreamUpdateCallback stream_update_callback_;
   // TODO(dalesat): Do we really need to maintain this or can we just have an
