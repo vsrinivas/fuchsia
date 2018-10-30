@@ -168,20 +168,20 @@ enum class Queue : uint16_t {
   STATUS = 1,
 };
 
-static uint16_t KeyOrRepeat(fuchsia::ui::input::KeyboardEventPhase phase) {
+static uint16_t key_or_repeat(fuchsia::ui::input::KeyboardEventPhase phase) {
   return phase == fuchsia::ui::input::KeyboardEventPhase::REPEAT
              ? VIRTIO_INPUT_EV_REP
              : VIRTIO_INPUT_EV_KEY;
 }
 
-static uint32_t PressOrRelease(fuchsia::ui::input::KeyboardEventPhase phase) {
+static uint32_t press_or_release(fuchsia::ui::input::KeyboardEventPhase phase) {
   return phase == fuchsia::ui::input::KeyboardEventPhase::PRESSED ||
                  phase == fuchsia::ui::input::KeyboardEventPhase::REPEAT
              ? VIRTIO_INPUT_EV_KEY_PRESSED
              : VIRTIO_INPUT_EV_KEY_RELEASED;
 }
 
-static uint32_t PressOrRelease(fuchsia::ui::input::PointerEventPhase phase) {
+static uint32_t press_or_release(fuchsia::ui::input::PointerEventPhase phase) {
   return phase == fuchsia::ui::input::PointerEventPhase::DOWN
              ? VIRTIO_INPUT_EV_KEY_PRESSED
              : VIRTIO_INPUT_EV_KEY_RELEASED;
@@ -191,7 +191,7 @@ static uint32_t PressOrRelease(fuchsia::ui::input::PointerEventPhase phase) {
 // coordinate space expected in the VIRTIO_INPUT_EV_[REL/ABS] event payload.
 // The incoming event coordinates are expected to be in the floating-point 0..1
 // range, which are mapped to the nearest integer in 0..kAbsMax[X/Y].
-static uint32_t XCoordinate(float x) {
+static uint32_t x_coordinate(float x) {
   if (x < 0.0f || x > 1.0f) {
     FXL_LOG(WARNING) << "PointerEvent::x out of range (" << std::fixed
                      << std::setprecision(7) << x << ")";
@@ -200,7 +200,7 @@ static uint32_t XCoordinate(float x) {
   return static_cast<uint32_t>(x * machina::kInputAbsMaxX + 0.5f);
 }
 
-static uint32_t YCoordinate(float y) {
+static uint32_t y_coordinate(float y) {
   if (y < 0.0f || y > 1.0f) {
     FXL_LOG(WARNING) << "PointerEvent::y out of range (" << std::fixed
                      << std::setprecision(7) << y << ")";
@@ -247,9 +247,9 @@ class EventStream : public StreamBase,
     }
     virtio_input_event_t events[] = {
         {
-            .type = KeyOrRepeat(keyboard.phase),
+            .type = key_or_repeat(keyboard.phase),
             .code = kKeyMap[hid_usage],
-            .value = PressOrRelease(keyboard.phase),
+            .value = press_or_release(keyboard.phase),
         },
         {
             .type = VIRTIO_INPUT_EV_SYN,
@@ -268,12 +268,12 @@ class EventStream : public StreamBase,
             {
                 .type = VIRTIO_INPUT_EV_ABS,
                 .code = VIRTIO_INPUT_EV_ABS_X,
-                .value = XCoordinate(pointer.x),
+                .value = x_coordinate(pointer.x),
             },
             {
                 .type = VIRTIO_INPUT_EV_ABS,
                 .code = VIRTIO_INPUT_EV_ABS_Y,
-                .value = YCoordinate(pointer.y),
+                .value = y_coordinate(pointer.y),
             },
             {
                 .type = VIRTIO_INPUT_EV_SYN,
@@ -291,17 +291,17 @@ class EventStream : public StreamBase,
             {
                 .type = VIRTIO_INPUT_EV_ABS,
                 .code = VIRTIO_INPUT_EV_ABS_X,
-                .value = XCoordinate(pointer.x),
+                .value = x_coordinate(pointer.x),
             },
             {
                 .type = VIRTIO_INPUT_EV_ABS,
                 .code = VIRTIO_INPUT_EV_ABS_Y,
-                .value = YCoordinate(pointer.y),
+                .value = y_coordinate(pointer.y),
             },
             {
                 .type = VIRTIO_INPUT_EV_KEY,
                 .code = machina::kButtonTouchCode,
-                .value = PressOrRelease(pointer.phase),
+                .value = press_or_release(pointer.phase),
             },
             {
                 .type = VIRTIO_INPUT_EV_SYN,
