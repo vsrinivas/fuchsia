@@ -264,35 +264,15 @@ int getaddrinfo(const char* __restrict node,
         return EAI_SYSTEM;
     }
 
-    fuchsia_net_String sn_storage, *sn;
-    memset(&sn_storage, 0, sizeof(sn_storage));
-    sn = &sn_storage;
-    if (node == NULL) {
-        sn = NULL;
-    } else {
-        size_t len = strlen(node);
-        if (len > sizeof(sn->val)) {
-            errno = EINVAL;
-            return EAI_SYSTEM;
-        }
-        memcpy(sn->val, node, len);
-        sn->len = len;
+    size_t node_size = 0;
+    if (node) {
+        node_size = strlen(node);
+    }
+    size_t service_size = 0;
+    if (service) {
+        service_size = strlen(service);
     }
 
-    fuchsia_net_String ss_storage, *ss;
-    memset(&ss_storage, 0, sizeof(ss_storage));
-    ss = &ss_storage;
-    if (service == NULL) {
-        ss = NULL;
-    } else {
-        size_t len = strlen(service);
-        if (len > sizeof(ss->val)) {
-            errno = EINVAL;
-            return EAI_SYSTEM;
-        }
-        memcpy(ss->val, service, len);
-        ss->len = len;
-    }
 
     fuchsia_net_AddrInfoHints ht_storage, *ht;
     memset(&ht_storage, 0, sizeof(ht_storage));
@@ -307,10 +287,10 @@ int getaddrinfo(const char* __restrict node,
     }
 
     fuchsia_net_AddrInfoStatus status = 0;
-    int32_t nres = 0;
+    uint32_t nres = 0;
     fuchsia_net_AddrInfo ai[4];
     r = fuchsia_net_LegacySocketProviderGetAddrInfo(
-          sp, sn, ss, ht, &status, &nres, &ai[0], &ai[1], &ai[2], &ai[3]);
+          sp, node, node_size, service, service_size, ht, &status, &nres, ai);
 
     if (r != ZX_OK) {
         errno = fdio_status_to_errno(r);
@@ -324,7 +304,7 @@ int getaddrinfo(const char* __restrict node,
         }
         return eai;
     }
-    if (nres < 0 || nres > 4) {
+    if (nres > 4) {
         errno = EIO;
         return EAI_SYSTEM;
     }
@@ -335,39 +315,51 @@ int getaddrinfo(const char* __restrict node,
     };
     struct res_entry* entry = calloc(nres, sizeof(struct res_entry));
 
-    for (int i = 0; i < nres; i++) {
+    for (uint32_t i = 0; i < nres; i++) {
         entry[i].ai.ai_flags = ai[i].flags;
         entry[i].ai.ai_family = ai[i].family;
         entry[i].ai.ai_socktype = ai[i].sock_type;
         entry[i].ai.ai_protocol = ai[i].protocol;
-        entry[i].ai.ai_addr = (struct sockaddr*)&entry[i].addr_storage;
+        entry[i].ai.ai_addr = (struct sockaddr*) &entry[i].addr_storage;
         entry[i].ai.ai_canonname = NULL; // TODO: support canonname
-        if (entry[i].ai.ai_family == AF_INET) {
-            struct sockaddr_in* addr = (struct sockaddr_in*)entry[i].ai.ai_addr;
-            addr->sin_family = AF_INET;
-            addr->sin_port = htons(ai[i].port);
-            if (ai[i].addr.len > sizeof(ai[i].addr.val)) {
+        switch (entry[i].ai.ai_family) {
+            case AF_INET: {
+                struct sockaddr_in
+                    * addr = (struct sockaddr_in*) entry[i].ai.ai_addr;
+                addr->sin_family = AF_INET;
+                addr->sin_port = htons(ai[i].port);
+                if (ai[i].addr.len > sizeof(ai[i].addr.val)) {
+                    free(entry);
+                    errno = EIO;
+                    return EAI_SYSTEM;
+                }
+                memcpy(&addr->sin_addr, ai[i].addr.val, ai[i].addr.len);
+                entry[i].ai.ai_addrlen = sizeof(struct sockaddr_in);
+
+                break;
+            }
+
+            case AF_INET6: {
+                struct sockaddr_in6
+                    * addr = (struct sockaddr_in6*) entry[i].ai.ai_addr;
+                addr->sin6_family = AF_INET6;
+                addr->sin6_port = htons(ai[i].port);
+                if (ai[i].addr.len > sizeof(ai[i].addr.val)) {
+                    free(entry);
+                    errno = EIO;
+                    return EAI_SYSTEM;
+                }
+                memcpy(&addr->sin6_addr, ai[i].addr.val, ai[i].addr.len);
+                entry[i].ai.ai_addrlen = sizeof(struct sockaddr_in6);
+
+                break;
+            }
+
+            default: {
                 free(entry);
                 errno = EIO;
                 return EAI_SYSTEM;
             }
-            memcpy(&addr->sin_addr, ai[i].addr.val, ai[i].addr.len);
-            entry[i].ai.ai_addrlen = sizeof(struct sockaddr_in);
-        } else if (entry[i].ai.ai_family == AF_INET6) {
-            struct sockaddr_in6* addr = (struct sockaddr_in6*)entry[i].ai.ai_addr;
-            addr->sin6_family = AF_INET6;
-            addr->sin6_port = htons(ai[i].port);
-            if (ai[i].addr.len > sizeof(ai[i].addr.val)) {
-                free(entry);
-                errno = EIO;
-                return EAI_SYSTEM;
-            }
-            memcpy(&addr->sin6_addr, ai[i].addr.val, ai[i].addr.len);
-            entry[i].ai.ai_addrlen = sizeof(struct sockaddr_in6);
-        } else {
-            free(entry);
-            errno = EIO;
-            return EAI_SYSTEM;
         }
     }
     struct addrinfo* next = NULL;
