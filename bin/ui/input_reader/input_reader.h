@@ -6,15 +6,16 @@
 #define GARNET_BIN_UI_INPUT_READER_INPUT_READER_H_
 
 #include <map>
-#include <utility>
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
-#include "garnet/bin/ui/input_reader/input_interpreter.h"
-#include "lib/fsl/io/device_watcher.h"
+
+#include "garnet/bin/ui/input_reader/device_watcher.h"
 #include "lib/fxl/macros.h"
 
 namespace mozart {
+
+class InputInterpreter;
 
 // InputReader does four things:
 // 1- Watches who owns the display, which can be us, or the console.
@@ -31,7 +32,10 @@ class InputReader {
               bool ignore_console = false);
   ~InputReader();
 
+  // Starts the |InputReader| with the default FDIO device watcher.
   void Start();
+  // Starts the |InputReader| with a custom device watcher (e.g. for testing).
+  void Start(std::unique_ptr<DeviceWatcher> device_watcher);
   void SetOwnershipEvent(zx::event event);
 
  private:
@@ -53,8 +57,7 @@ class InputReader {
   const bool ignore_console_;
 
   std::map<zx_handle_t, std::unique_ptr<DeviceInfo>> devices_;
-  std::unique_ptr<fsl::DeviceWatcher> device_watcher_;
-  std::unique_ptr<fsl::DeviceWatcher> console_watcher_;
+  std::unique_ptr<DeviceWatcher> device_watcher_;
   zx_handle_t display_ownership_event_;
   async::WaitMethod<InputReader, &InputReader::OnDisplayHandleReady>
       display_ownership_waiter_{this};
