@@ -54,6 +54,12 @@ package("virtio_balloon") {
   deps = [
     ":virtio_balloon_bin",
   ]
+  meta = [
+    {
+      path = rebase_path("//garnet/bin/guest/vmm/meta/virtio_balloon.cmx")
+      dest = "virtio_balloon.cmx"
+    },
+  ]
 }
 
 executable("virtio_block_bin") {
@@ -74,6 +80,12 @@ package("virtio_block") {
   deps = [
     ":virtio_block_bin",
   ]
+  meta = [
+    {
+      path = rebase_path("//garnet/bin/guest/vmm/meta/virtio_block.cmx")
+      dest = "virtio_block.cmx"
+    },
+  ]
 }
 
 executable("virtio_console_bin") {
@@ -93,6 +105,12 @@ package("virtio_console") {
   deps = [
     ":virtio_console_bin",
   ]
+  meta = [
+    {
+      path = rebase_path("//garnet/bin/guest/vmm/meta/virtio_console.cmx")
+      dest = "virtio_console.cmx"
+    },
+  ]
 }
 
 executable("virtio_input_bin") {
@@ -111,6 +129,12 @@ package("virtio_input") {
   binary = "virtio_input"
   deps = [
     ":virtio_input_bin",
+  ]
+  meta = [
+    {
+      path = rebase_path("//garnet/bin/guest/vmm/meta/virtio_input.cmx")
+      dest = "virtio_input.cmx"
+    },
   ]
 }
 
@@ -161,9 +185,14 @@ executable("virtio_rng_bin") {
 
 package("virtio_rng") {
   binary = "virtio_rng"
-
   deps = [
     ":virtio_rng_bin",
+  ]
+  meta = [
+    {
+      path = rebase_path("//garnet/bin/guest/vmm/meta/virtio_rng.cmx")
+      dest = "virtio_rng.cmx"
+    },
   ]
 }
 

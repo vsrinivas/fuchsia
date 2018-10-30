@@ -20,7 +20,8 @@ zx_status_t VirtioRng::Start(const zx::guest& guest,
                              async_dispatcher_t* dispatcher) {
   component::Services services;
   fuchsia::sys::LaunchInfo launch_info{
-      .url = kVirtioRngUrl, .directory_request = services.NewRequest(),
+      .url = kVirtioRngUrl,
+      .directory_request = services.NewRequest(),
   };
   launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
   services.ConnectToService(rng_.NewRequest());
