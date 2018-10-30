@@ -13,7 +13,6 @@
 
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <zircon/boot/image.h>
-#include <zircon/device/sysinfo.h>
 #include <zircon/syscalls/resource.h>
 
 #include <stdio.h>
@@ -123,106 +122,8 @@ static zx_status_t sysinfo_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) 
     return fuchsia_sysinfo_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
-static zx_status_t sysinfo_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen,
-                             void* reply, size_t max, size_t* out_actual) {
-    sysinfo_t* sysinfo = ctx;
-
-    switch (op) {
-    case IOCTL_SYSINFO_GET_ROOT_JOB: {
-        if ((cmdlen != 0) || (max < sizeof(zx_handle_t))) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        zx_handle_t h = get_sysinfo_job_root(sysinfo);
-        if (h == ZX_HANDLE_INVALID) {
-            return ZX_ERR_NOT_SUPPORTED;
-        } else {
-            memcpy(reply, &h, sizeof(zx_handle_t));
-            *out_actual = sizeof(zx_handle_t);
-            return ZX_OK;
-        }
-    }
-    case IOCTL_SYSINFO_GET_ROOT_RESOURCE: {
-        if ((cmdlen != 0) || (max < sizeof(zx_handle_t))) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        zx_handle_t h = get_root_resource();
-        if (h == ZX_HANDLE_INVALID) {
-            return ZX_ERR_NOT_SUPPORTED;
-        }
-        zx_status_t status = zx_handle_duplicate(h, ZX_RIGHT_TRANSFER, &h);
-        if (status < 0) {
-            return status;
-        }
-        memcpy(reply, &h, sizeof(zx_handle_t));
-        *out_actual = sizeof(zx_handle_t);
-        return ZX_OK;
-    }
-    case IOCTL_SYSINFO_GET_HYPERVISOR_RESOURCE: {
-        if ((cmdlen != 0) || (max < sizeof(zx_handle_t))) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        zx_handle_t h;
-        const char name[] = "hypervisor";
-        zx_status_t status = zx_resource_create(get_root_resource(),
-                                                ZX_RSRC_KIND_HYPERVISOR,
-                                                0, 0, name, sizeof(name), &h);
-        if (status < 0) {
-            return status;
-        }
-        memcpy(reply, &h, sizeof(zx_handle_t));
-        *out_actual = sizeof(zx_handle_t);
-        return ZX_OK;
-    }
-    case IOCTL_SYSINFO_GET_BOARD_NAME: {
-        if ((cmdlen != 0) || (max < sizeof(sysinfo->board_name))) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        zx_status_t status = ZX_OK;
-
-        mtx_lock(&sysinfo->lock);
-        if (sysinfo->board_name[0] == 0) {
-            size_t actual = 0;
-            status = device_get_metadata(sysinfo->zxdev, DEVICE_METADATA_BOARD_NAME,
-                                         sysinfo->board_name, sizeof(sysinfo->board_name),
-                                         &actual);
-        }
-        mtx_unlock(&sysinfo->lock);
-        if (status != ZX_OK) {
-            return status;
-        }
-        memcpy(reply, sysinfo->board_name, sizeof(sysinfo->board_name));
-        *out_actual = sizeof(sysinfo->board_name);
-        return ZX_OK;
-    }
-    case IOCTL_SYSINFO_GET_INTERRUPT_CONTROLLER_INFO : {
-        interrupt_controller_info_t info = {};
-
-#if defined(__aarch64__)
-        size_t actual = 0;
-        zx_status_t status = device_get_metadata(sysinfo->zxdev,
-                                                 DEVICE_METADATA_INTERRUPT_CONTROLLER_TYPE,
-                                                 &info.type, sizeof(uint8_t), &actual);
-        if (status != ZX_OK) {
-            return status;
-        }
-#elif defined(__x86_64__)
-        info.type = INTERRUPT_CONTROLLER_TYPE_APIC;
-#else
-        info.type = INTERRUPT_CONTROLLER_TYPE_UNKNOWN;
-#endif
-
-        memcpy(reply, &info, sizeof(interrupt_controller_info_t));
-        *out_actual = sizeof(interrupt_controller_info_t);
-        return ZX_OK;
-    }
-    default:
-        return ZX_ERR_INVALID_ARGS;
-    }
-}
-
 static zx_protocol_device_t sysinfo_ops = {
     .version = DEVICE_OPS_VERSION,
-    .ioctl = sysinfo_ioctl,
     .message = sysinfo_message,
 };
 
