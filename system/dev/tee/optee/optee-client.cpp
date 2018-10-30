@@ -17,14 +17,11 @@ namespace {
 constexpr const char* kUuidNameFormat = "%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x";
 constexpr size_t kUuidNameLength = 36;
 
-constexpr const char kFirmwarePathPrefix[] = "/boot/lib/firmware/";
 constexpr const char kTaFileExtension[] = ".ta";
 
-// The length of a path to a trusted app consists of the path prefix, the UUID, and file extension
+// The length of a path to a trusted app consists of its UUID and file extension
 // Subtracting 1 from sizeof(char[])s to account for the terminating null character.
-constexpr size_t kTaPathLength = (sizeof(kFirmwarePathPrefix) - 1u) +
-                                 kUuidNameLength +
-                                 (sizeof(kTaFileExtension) - 1u);
+constexpr size_t kTaPathLength = kUuidNameLength + (sizeof(kTaFileExtension) - 1u);
 
 template <typename SRC_T, typename DST_T>
 static constexpr typename fbl::enable_if<
@@ -69,12 +66,23 @@ static fbl::StringBuffer<kUuidNameLength> BuildUuidString(const TEEC_UUID& ta_uu
     return buf;
 }
 
-// Builds the expected path to a trusted application, given its UUID string.
-static fbl::StringBuffer<kTaPathLength> BuildTaPath(const fbl::StringPiece& uuid_str) {
+// Builds the expected path to a trusted application, formatting the file name per the RFC 4122
+// specification.
+static fbl::StringBuffer<kTaPathLength> BuildTaPath(const TEEC_UUID& ta_uuid) {
     fbl::StringBuffer<kTaPathLength> buf;
 
-    buf.Append(kFirmwarePathPrefix);
-    buf.Append(uuid_str);
+    buf.AppendPrintf(kUuidNameFormat,
+                     ta_uuid.timeLow,
+                     ta_uuid.timeMid,
+                     ta_uuid.timeHiAndVersion,
+                     ta_uuid.clockSeqAndNode[0],
+                     ta_uuid.clockSeqAndNode[1],
+                     ta_uuid.clockSeqAndNode[2],
+                     ta_uuid.clockSeqAndNode[3],
+                     ta_uuid.clockSeqAndNode[4],
+                     ta_uuid.clockSeqAndNode[5],
+                     ta_uuid.clockSeqAndNode[6],
+                     ta_uuid.clockSeqAndNode[7]);
     buf.Append(kTaFileExtension);
 
     return buf;
@@ -482,8 +490,7 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(LoadTaRpcMessage* message) {
         out_ta_mem = nullptr;
     }
 
-    auto ta_name = BuildUuidString(message->ta_uuid());
-    auto ta_path = BuildTaPath(ta_name.ToStringPiece());
+    auto ta_path = BuildTaPath(message->ta_uuid());
 
     // Load the trusted app into a VMO
     size_t ta_size;
