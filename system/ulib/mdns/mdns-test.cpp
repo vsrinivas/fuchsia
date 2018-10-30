@@ -16,7 +16,7 @@ const char kRrName[] = "test_rr";
 //
 // TODO(kjharland): Rector existing tests to use this and reduce boilerplate.
 struct test_data {
-    bool reset() {
+    test_data() {
         // Init message.
         mdns_init_message(&message);
 
@@ -27,8 +27,15 @@ struct test_data {
         rr.rdata = const_cast<uint8_t*>(kRdata);
         rr.rdlength = sizeof(kRdata);
         rr.ttl = 42;
-        return true;
     }
+
+    test_data(const test_data&) = delete;
+    test_data& operator=(const test_data&) = delete;
+
+    test_data(const test_data&&) = delete;
+    test_data& operator=(const test_data&&) = delete;
+
+    ~test_data() { mdns_free_message(&message); }
 
     mdns_message message;
     mdns_rr rr;
@@ -164,7 +171,6 @@ static bool test_mdns_add_first_answer(void) {
     BEGIN_TEST;
 
     test_data t;
-    t.reset();
 
     int retval = mdns_add_answer(&t.message, t.rr.name, t.rr.type, t.rr.clazz,
                                  t.rr.rdata, t.rr.rdlength, t.rr.ttl);
@@ -181,7 +187,6 @@ static bool test_mdns_add_nth_answer(void) {
     BEGIN_TEST;
 
     test_data t;
-    t.reset();
 
     int retval = mdns_add_answer(&t.message, t.rr.name, t.rr.type, t.rr.clazz,
                                  t.rr.rdata, t.rr.rdlength, t.rr.ttl);
@@ -214,7 +219,6 @@ static bool test_mdns_add_answer_bad_rr_type(void) {
     BEGIN_TEST;
 
     test_data t;
-    t.reset();
     t.rr.type = (uint16_t)(RR_TYPE_A + 1); // Unsupported record type.
     int retval = mdns_add_answer(&t.message, t.rr.name, t.rr.type, t.rr.clazz,
                                  t.rr.rdata, t.rr.rdlength, t.rr.ttl);
@@ -230,7 +234,6 @@ static bool test_mdns_add_answer_bad_rr_class(void) {
     BEGIN_TEST;
 
     test_data t;
-    t.reset();
     t.rr.clazz = (uint16_t)(RR_CLASS_IN + 1); // Unsupported record class.
     int retval = mdns_add_answer(&t.message, t.rr.name, t.rr.type, t.rr.clazz,
                                  t.rr.rdata, t.rr.rdlength, t.rr.ttl);
@@ -246,7 +249,6 @@ static bool test_mdns_add_first_authority(void) {
     BEGIN_TEST;
 
     test_data t;
-    t.reset();
 
     int retval = mdns_add_authority(&t.message, t.rr.name, t.rr.type, t.rr.clazz,
                                     t.rr.rdata, t.rr.rdlength, t.rr.ttl);
@@ -263,7 +265,6 @@ static bool test_mdns_add_nth_authority(void) {
     BEGIN_TEST;
 
     test_data t;
-    t.reset();
 
     int retval = mdns_add_authority(&t.message, t.rr.name, t.rr.type, t.rr.clazz,
                                     t.rr.rdata, t.rr.rdlength, t.rr.ttl);
@@ -296,7 +297,6 @@ static bool test_mdns_add_authority_bad_rr_type(void) {
     BEGIN_TEST;
 
     test_data t;
-    t.reset();
     t.rr.type = (uint16_t)(RR_TYPE_A + 1); // Unsupported record type.
     int retval = mdns_add_authority(&t.message, t.rr.name, t.rr.type, t.rr.clazz,
                                     t.rr.rdata, t.rr.rdlength, t.rr.ttl);
@@ -312,7 +312,6 @@ static bool test_mdns_add_authority_bad_rr_class(void) {
     BEGIN_TEST;
 
     test_data t;
-    t.reset();
     t.rr.clazz = (uint16_t)(RR_CLASS_IN + 1); // Unsupported record class.
     int retval = mdns_add_authority(&t.message, t.rr.name, t.rr.type, t.rr.clazz,
                                     t.rr.rdata, t.rr.rdlength, t.rr.ttl);
@@ -328,7 +327,6 @@ static bool test_mdns_add_first_additional(void) {
     BEGIN_TEST;
 
     test_data t;
-    t.reset();
 
     int retval = mdns_add_additional(&t.message, t.rr.name, t.rr.type, t.rr.clazz,
                                      t.rr.rdata, t.rr.rdlength, t.rr.ttl);
@@ -345,7 +343,6 @@ static bool test_mdns_add_nth_additional(void) {
     BEGIN_TEST;
 
     test_data t;
-    t.reset();
 
     int retval = mdns_add_additional(&t.message, t.rr.name, t.rr.type, t.rr.clazz,
                                      t.rr.rdata, t.rr.rdlength, t.rr.ttl);
@@ -378,7 +375,6 @@ static bool test_mdns_add_additional_bad_rr_type(void) {
     BEGIN_TEST;
 
     test_data t;
-    t.reset();
     t.rr.type = (uint16_t)(RR_TYPE_A + 1); // Unsupported record type.
     int retval = mdns_add_additional(&t.message, t.rr.name, t.rr.type, t.rr.clazz,
                                      t.rr.rdata, t.rr.rdlength, t.rr.ttl);
@@ -394,7 +390,6 @@ static bool test_mdns_add_additional_bad_rr_class(void) {
     BEGIN_TEST;
 
     test_data t;
-    t.reset();
     t.rr.clazz = (uint16_t)(RR_CLASS_IN + 1); // Unsupported record class.
     int retval = mdns_add_additional(&t.message, t.rr.name, t.rr.type, t.rr.clazz,
                                      t.rr.rdata, t.rr.rdlength, t.rr.ttl);

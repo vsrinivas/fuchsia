@@ -32,7 +32,6 @@ void mdns_free_message(mdns_message* m) {
     // Free all answers in this message.
     while (m->answers != NULL) {
         next_rr = m->answers->next;
-        free(m->answers->name);
         free(m->answers);
         m->answers = next_rr;
     }
