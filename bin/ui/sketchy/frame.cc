@@ -11,9 +11,12 @@
 
 namespace sketchy_service {
 
-Frame::Frame(SharedBufferPool* shared_buffer_pool, bool enable_profiler)
+Frame::Frame(escher::Escher* escher, SharedBufferPool* shared_buffer_pool,
+             escher::BufferFactory* unshared_buffer_factory,
+             bool enable_profiler)
     : shared_buffer_pool_(shared_buffer_pool),
-      escher_(shared_buffer_pool->escher()),
+      unshared_buffer_factory_(unshared_buffer_factory),
+      escher_(escher),
       command_(escher_->command_buffer_pool()->GetCommandBuffer()) {
   auto acquire_semaphore_pair = escher::NewSemaphoreEventPair(escher_);
   if (!acquire_semaphore_pair.first) {

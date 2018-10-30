@@ -31,7 +31,7 @@ class MeshBuffer final {
   // Reserve appropriately-sized regions within the underlying vertex/index
   // buffers, each of which will be resized automatically if not enough free
   // space is available.
-  std::pair<escher::BufferRange, escher::BufferRange> Reserve(
+  std::pair<escher::impl::BufferRange, escher::impl::BufferRange> Reserve(
       Frame* frame, uint32_t vertex_count, uint32_t index_count,
       const escher::BoundingBox& bbox);
 

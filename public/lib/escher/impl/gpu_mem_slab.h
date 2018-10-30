@@ -25,8 +25,6 @@ typedef fxl::RefPtr<GpuMemSlab> GpuMemSlabPtr;
 // GpuAllocator for more details.
 class GpuMemSlab final : public GpuMem {
  public:
-  uint32_t memory_type_index() const { return memory_type_index_; }
-
   ~GpuMemSlab() override;
 
  private:
@@ -40,7 +38,7 @@ class GpuMemSlab final : public GpuMem {
                            vk::MemoryPropertyFlags flags,
                            GpuAllocator* allocator);
   GpuMemSlab(vk::Device device, vk::DeviceMemory base, vk::DeviceSize size,
-             uint8_t* mapped_ptr, uint32_t memory_type_index,
+             bool needs_mapped_ptr, uint32_t memory_type_index,
              GpuAllocator* allocator);
 
   void OnAllocationDestroyed(vk::DeviceSize size,

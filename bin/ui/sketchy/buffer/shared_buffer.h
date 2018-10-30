@@ -5,7 +5,9 @@
 #ifndef GARNET_BIN_UI_SKETCHY_BUFFER_SHARED_BUFFER_H_
 #define GARNET_BIN_UI_SKETCHY_BUFFER_SHARED_BUFFER_H_
 
-#include "lib/escher/vk/buffer_factory.h"
+#include "garnet/public/lib/escher/impl/compute_shader.h"
+#include "lib/escher/resources/resource_recycler.h"
+#include "lib/escher/vk/buffer.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
 
@@ -23,7 +25,7 @@ using SharedBufferPtr = fxl::RefPtr<SharedBuffer>;
 class SharedBuffer final : public fxl::RefCountedThreadSafe<SharedBuffer> {
  public:
   static SharedBufferPtr New(scenic::Session* session,
-                             escher::BufferFactory* factory,
+                             escher::ResourceRecycler* recycler,
                              vk::DeviceSize capacity);
 
   // Reserve a chunk of |size| for use. The requested |size| MUST fit in the
@@ -31,7 +33,7 @@ class SharedBuffer final : public fxl::RefCountedThreadSafe<SharedBuffer> {
   // that may be used by the caller; it is unsafe to use anything outside
   // this range (unless the caller somehow knows about the previously-reserved
   // ranges).
-  escher::BufferRange Reserve(vk::DeviceSize size);
+  escher::impl::BufferRange Reserve(vk::DeviceSize size);
 
   // Discard the original content, and copy the content from the other one.
   void Copy(Frame* frame, const SharedBufferPtr& from);
@@ -47,10 +49,9 @@ class SharedBuffer final : public fxl::RefCountedThreadSafe<SharedBuffer> {
  private:
   friend class SharedBufferPool;
 
-  SharedBuffer(scenic::Session* session, escher::BufferFactory* factory,
+  SharedBuffer(scenic::Session* session, escher::ResourceRecycler* recycler,
                vk::DeviceSize capacity);
 
-  scenic::Session* const session_;
   escher::BufferPtr escher_buffer_;
   std::unique_ptr<scenic::Buffer> scenic_buffer_;
   vk::DeviceSize size_ = 0;

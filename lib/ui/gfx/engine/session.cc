@@ -1151,8 +1151,14 @@ ResourcePtr Session::CreateBuffer(ResourceId id, MemoryPtr memory,
     return ResourcePtr();
   }
 
-  return fxl::MakeRefCounted<Buffer>(this, id, std::move(memory), num_bytes,
-                                     memory_offset);
+  // Make a pointer to a subregion of the memory, if necessary.
+  escher::GpuMemPtr gpu_mem =
+      (memory_offset > 0 || num_bytes < memory->size())
+          ? memory->gpu_mem()->Allocate(num_bytes, memory_offset)
+          : memory->gpu_mem();
+
+  return fxl::MakeRefCounted<Buffer>(this, id, std::move(gpu_mem),
+                                     std::move(memory));
 }
 
 ResourcePtr Session::CreateScene(ResourceId id,

@@ -2,10 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/lib/ui/gfx/resources/buffer.h"
 #include "garnet/lib/ui/gfx/resources/material.h"
 #include "garnet/lib/ui/gfx/resources/nodes/shape_node.h"
 #include "garnet/lib/ui/gfx/resources/shapes/circle_shape.h"
 #include "garnet/lib/ui/gfx/tests/session_test.h"
+#include "garnet/lib/ui/gfx/tests/vk_session_test.h"
+#include "public/lib/escher/test/gtest_vulkan.h"
+
 #include "lib/ui/scenic/cpp/commands.h"
 
 #include "gtest/gtest.h"
@@ -101,6 +105,52 @@ TEST_F(SessionTest, Labeling) {
   shape_node->SetLabel(kTooLongLabel);
   EXPECT_EQ(kTooLongLabel.substr(0, ::fuchsia::ui::gfx::kLabelMaxLength),
             shape_node->label());
+}
+
+using BufferSessionTest = VkSessionTest;
+
+VK_TEST_F(BufferSessionTest, BufferAliasing) {
+  size_t vmo_size = 1024;
+  size_t offset = 512;
+
+  zx::vmo vmo;
+  zx_status_t status = zx::vmo::create(vmo_size, 0u, &vmo);
+  EXPECT_TRUE(status == ZX_OK);
+
+  zx::vmo dup_vmo;
+  status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
+  EXPECT_TRUE(status == ZX_OK);
+
+  // TODO(SCN-273): When VK_HOST_MEMORY is supported, this test should be
+  // converted over. It only works now because we test on UMA platforms.
+  EXPECT_TRUE(Apply(scenic::NewCreateMemoryCmd(
+      1, std::move(dup_vmo), vmo_size,
+      fuchsia::images::MemoryType::VK_DEVICE_MEMORY)));
+  EXPECT_TRUE(Apply(scenic::NewCreateBufferCmd(2, 1, 0, vmo_size)));
+  EXPECT_TRUE(
+      Apply(scenic::NewCreateBufferCmd(3, 1, offset, vmo_size - offset)));
+
+  auto base_buffer = FindResource<Buffer>(2);
+  auto offset_buffer = FindResource<Buffer>(3);
+
+  EXPECT_TRUE(base_buffer);
+  EXPECT_TRUE(base_buffer->escher_buffer());
+  EXPECT_TRUE(base_buffer->escher_buffer()->host_ptr());
+
+  EXPECT_TRUE(offset_buffer);
+  EXPECT_TRUE(offset_buffer->escher_buffer());
+  EXPECT_TRUE(offset_buffer->escher_buffer()->host_ptr());
+
+  auto shared_vmo = fxl::AdoptRef(
+      new fsl::SharedVmo(std::move(vmo), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE));
+  uint8_t* raw_memory = static_cast<uint8_t*>(shared_vmo->Map());
+  EXPECT_TRUE(raw_memory);
+
+  memset(raw_memory, 0, vmo_size);
+  raw_memory[512] = 1;
+  EXPECT_EQ(base_buffer->escher_buffer()->host_ptr()[0], 0);
+  EXPECT_EQ(base_buffer->escher_buffer()->host_ptr()[512], 1);
+  EXPECT_EQ(offset_buffer->escher_buffer()->host_ptr()[0], 1);
 }
 
 // TODO:

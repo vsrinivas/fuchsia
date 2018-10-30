@@ -11,19 +11,18 @@ namespace gfx {
 
 const ResourceTypeInfo Buffer::kTypeInfo = {ResourceType::kBuffer, "Buffer"};
 
-Buffer::Buffer(Session* session, ResourceId id, MemoryPtr memory, uint32_t size,
-               uint32_t offset)
+Buffer::Buffer(Session* session, ResourceId id, escher::GpuMemPtr gpu_mem,
+               ResourcePtr backing_resource)
     : Resource(session, id, Buffer::kTypeInfo),
-      memory_(std::move(memory)),
+      backing_resource_(std::move(backing_resource)),
       escher_buffer_(escher::Buffer::New(
-          session->escher()->resource_recycler(), memory_->gpu_mem(),
+          session->escher()->resource_recycler(), std::move(gpu_mem),
           vk::BufferUsageFlagBits::eTransferSrc |
               vk::BufferUsageFlagBits::eTransferDst |
               vk::BufferUsageFlagBits::eStorageTexelBuffer |
               vk::BufferUsageFlagBits::eStorageBuffer |
               vk::BufferUsageFlagBits::eIndexBuffer |
-              vk::BufferUsageFlagBits::eVertexBuffer,
-          size, offset)) {}
+              vk::BufferUsageFlagBits::eVertexBuffer)) {}
 
 }  // namespace gfx
 }  // namespace scenic_impl

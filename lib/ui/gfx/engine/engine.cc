@@ -53,9 +53,12 @@ static uint32_t GetImportedMemoryTypeIndex(vk::PhysicalDevice physical_device,
   vk::MemoryRequirements reqs = device.getBufferMemoryRequirements(vk_buffer);
   device.destroyBuffer(vk_buffer);
 
+  // TODO(SCN-998): Decide how to determine if we're on an UMA platform
+  // or not.
   return escher::impl::GetMemoryTypeIndex(
       physical_device, reqs.memoryTypeBits,
-      vk::MemoryPropertyFlagBits::eDeviceLocal);
+      vk::MemoryPropertyFlagBits::eDeviceLocal |
+          vk::MemoryPropertyFlagBits::eHostVisible);
 }
 
 Engine::Engine(DisplayManager* display_manager,

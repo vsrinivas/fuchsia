@@ -20,9 +20,8 @@ BufferPtr BufferFactory::NewBuffer(
 }
 
 BufferPtr BufferFactory::NewBuffer(GpuMemPtr mem,
-                                   vk::BufferUsageFlags usage_flags,
-                                   vk::DeviceSize size, vk::DeviceSize offset) {
-  return Buffer::New(this, mem, usage_flags, size, offset);
+                                   vk::BufferUsageFlags usage_flags) {
+  return Buffer::New(this, mem, usage_flags);
 }
 
 }  // namespace escher

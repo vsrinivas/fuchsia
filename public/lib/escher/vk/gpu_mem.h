@@ -30,7 +30,8 @@ class GpuMem : public fxl::RefCountedThreadSafe<GpuMem> {
   // Create a GpuMem that takes ownership of |mem|, which will be destroyed hen
   // the GpuMem dies. Guaranteed to return non-null result.
   static GpuMemPtr New(vk::Device device, vk::DeviceMemory mem,
-                       vk::DeviceSize size, uint32_t memory_type_index);
+                       vk::DeviceSize size, bool needs_mapped_ptr,
+                       uint32_t memory_type_index);
 
   // Sub-allocate a GpuMem that represents a sub-range of the memory in this
   // GpuMem.  Since these sub-allocations reference the parent GpuMem, the

@@ -22,8 +22,9 @@ GpuMemPtr GpuMem::New(vk::Device device, vk::PhysicalDevice physical_device,
 }
 
 GpuMemPtr GpuMem::New(vk::Device device, vk::DeviceMemory mem,
-                      vk::DeviceSize size, uint32_t memory_type_index) {
-  return fxl::AdoptRef(new impl::GpuMemSlab(device, mem, size, nullptr,
+                      vk::DeviceSize size, bool needs_mapped_ptr,
+                      uint32_t memory_type_index) {
+  return fxl::AdoptRef(new impl::GpuMemSlab(device, mem, size, needs_mapped_ptr,
                                             memory_type_index, nullptr));
 }
 

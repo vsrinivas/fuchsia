@@ -20,7 +20,8 @@ class SharedBufferPool;
 // corresponding synchronization semantics.
 class Frame final {
  public:
-  explicit Frame(SharedBufferPool* shared_buffer_pool,
+  explicit Frame(escher::Escher* escher, SharedBufferPool* shared_buffer_pool,
+                 escher::BufferFactory* unshared_buffer_factory,
                  bool enable_profiler = false);
 
   zx::event DuplicateReleaseFence();
@@ -29,12 +30,16 @@ class Frame final {
                             scenic::Session::PresentCallback callback);
 
   SharedBufferPool* shared_buffer_pool() const { return shared_buffer_pool_; }
+  escher::BufferFactory* unshared_buffer_factory() const {
+    return unshared_buffer_factory_;
+  }
   escher::impl::CommandBuffer* command() const { return command_; }
   escher::TimestampProfiler* profiler() const { return profiler_.get(); }
   bool init_failed() const { return init_failed_; }
 
  private:
   SharedBufferPool* shared_buffer_pool_;
+  escher::BufferFactory* unshared_buffer_factory_;
   escher::Escher* escher_;
   escher::impl::CommandBuffer* command_;
   escher::TimestampProfilerPtr profiler_;

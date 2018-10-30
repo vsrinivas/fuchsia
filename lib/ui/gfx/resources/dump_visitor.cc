@@ -67,7 +67,9 @@ void DumpVisitor::Visit(Buffer* r) {
   WriteProperty("size") << r->size();
   VisitResource(r);
   BeginSection("memory");
-  r->memory()->Accept(this);
+  if (r->backing_resource()) {
+    r->backing_resource()->Accept(this);
+  }
   EndSection();
   EndItem();
 }

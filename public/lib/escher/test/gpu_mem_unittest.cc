@@ -54,7 +54,7 @@ void TestSubAllocation(GpuMemPtr mem) {
 TEST(GpuMem, WrapExisting) {
   const uint32_t kMemoryTypeIndex = 0;
   auto mem = GpuMem::New(vk::Device(), vk::DeviceMemory(), kDeviceSize,
-                         kMemoryTypeIndex);
+                         false /* needs_mapped_ptr */, kMemoryTypeIndex);
   TestSubAllocation(mem);
 }
 

@@ -249,7 +249,7 @@ VK_TEST(BatchGpuUploader, ReadBufferTest) {
   bool read_buffer_done = false;
   uploader->PostReader(std::move(reader),
                        [&read_buffer_done](BufferPtr buffer) {
-                         void* host_ptr = buffer->host_ptr() + buffer->offset();
+                         void* host_ptr = buffer->host_ptr();
                          vec3* const verts = static_cast<vec3*>(host_ptr);
                          EXPECT_EQ(verts[0], vec3(0.f, 0.f, 0.f));
                          EXPECT_EQ(verts[1], vec3(0.f, 1.f, 0.f));

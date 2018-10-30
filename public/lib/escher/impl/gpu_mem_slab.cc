@@ -9,13 +9,25 @@
 #include "lib/escher/vk/gpu_allocator.h"
 #include "lib/fxl/logging.h"
 
+namespace {
+
+uint8_t* GetMappedPtr(vk::Device device, vk::DeviceMemory base,
+                      vk::DeviceSize size) {
+  TRACE_DURATION("gfx", "escher::GpuMemSlab::New[map]");
+  auto ptr = escher::ESCHER_CHECKED_VK_RESULT(device.mapMemory(base, 0, size));
+  return reinterpret_cast<uint8_t*>(ptr);
+}
+
+}  // namespace
+
 namespace escher {
 namespace impl {
 
 GpuMemSlab::GpuMemSlab(vk::Device device, vk::DeviceMemory base,
-                       vk::DeviceSize size, uint8_t* mapped_ptr,
+                       vk::DeviceSize size, bool needs_mapped_ptr,
                        uint32_t memory_type_index, GpuAllocator* allocator)
-    : GpuMem(base, size, 0, mapped_ptr),
+    : GpuMem(base, size, 0,
+             needs_mapped_ptr ? GetMappedPtr(device, base, size) : nullptr),
       device_(device),
       memory_type_index_(memory_type_index),
       allocator_(allocator) {
@@ -31,14 +43,13 @@ GpuMemSlabPtr GpuMemSlab::New(vk::Device device,
                               GpuAllocator* allocator) {
   TRACE_DURATION("gfx", "escher::GpuMemSlab::New");
   vk::DeviceMemory vk_mem;
-  uint8_t* mapped_ptr = nullptr;
   uint32_t memory_type_index = 0;
+  bool needs_mapped_ptr = false;
   if (!device) {
     // To support testing, we allow a null device, and respond by creating
     // a GpuMemSlab with a null vk::DeviceMemory.
   } else {
     // Determine whether we will need to map the memory.
-    bool needs_mapped_ptr = false;
     if (flags & vk::MemoryPropertyFlagBits::eHostVisible) {
       // We don't currently provide an interface for flushing mapped data, so
       // ensure that the allocated memory is cache-coherent.  This is more
@@ -59,17 +70,11 @@ GpuMemSlabPtr GpuMemSlab::New(vk::Device device,
       info.memoryTypeIndex = memory_type_index;
       vk_mem = ESCHER_CHECKED_VK_RESULT(device.allocateMemory(info));
     }
-
-    if (needs_mapped_ptr) {
-      TRACE_DURATION("gfx", "escher::GpuMemSlab::New[map]");
-      auto ptr =
-          ESCHER_CHECKED_VK_RESULT(device.mapMemory(vk_mem, 0, reqs.size));
-      mapped_ptr = reinterpret_cast<uint8_t*>(ptr);
-    }
   }
 
-  return fxl::AdoptRef(new GpuMemSlab(device, vk_mem, reqs.size, mapped_ptr,
-                                      memory_type_index, allocator));
+  return fxl::AdoptRef(new GpuMemSlab(device, vk_mem, reqs.size,
+                                      needs_mapped_ptr, memory_type_index,
+                                      allocator));
 }
 
 GpuMemSlab::~GpuMemSlab() {

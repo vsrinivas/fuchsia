@@ -24,12 +24,22 @@ const vk::MemoryPropertyFlags kMemoryPropertyFlags =
     vk::MemoryPropertyFlagBits::eDeviceLocal;
 
 std::unique_ptr<scenic::Buffer> NewScenicBufferFromEscherBuffer(
-    const escher::BufferPtr& buffer, scenic::Session* session) {
-  zx::vmo vmo = escher::ExportMemoryAsVmo(buffer->escher(), buffer->mem());
-
-  scenic::Memory memory(session, std::move(vmo), buffer->size(),
+    const escher::BufferPtr& buffer, scenic::Session* session,
+    const escher::GpuMemPtr& mem) {
+  // This code assumes that the VMO extracted from the memory pointer is solely
+  // used for the buffer assigned to that memory. Otherwise, this will have the
+  // unfortunate side effect of mapping much more memory into the Scenic process
+  // than expected.
+  //
+  // It also assumes the GpuMemPtr passed in is the backing memory for the
+  // escher::Buffer object, as we can no longer extract the GpuMemPtr from the
+  // escher::Buffer object directly.
+  FXL_DCHECK(mem->offset() == 0);
+  FXL_DCHECK(mem->size() == buffer->size());
+  zx::vmo vmo = escher::ExportMemoryAsVmo(buffer->escher(), mem);
+  scenic::Memory memory(session, std::move(vmo), mem->size(),
                         fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
-  return std::make_unique<scenic::Buffer>(memory, 0, buffer->size());
+  return std::make_unique<scenic::Buffer>(memory, mem->offset(), mem->size());
 }
 
 }  // namespace
@@ -37,21 +47,29 @@ std::unique_ptr<scenic::Buffer> NewScenicBufferFromEscherBuffer(
 namespace sketchy_service {
 
 SharedBufferPtr SharedBuffer::New(scenic::Session* session,
-                                  escher::BufferFactory* factory,
+                                  escher::ResourceRecycler* recycler,
                                   vk::DeviceSize capacity) {
-  return fxl::AdoptRef(new SharedBuffer(session, factory, capacity));
+  return fxl::AdoptRef(new SharedBuffer(session, recycler, capacity));
 }
 
 SharedBuffer::SharedBuffer(scenic::Session* session,
-                           escher::BufferFactory* factory,
-                           vk::DeviceSize capacity)
-    : session_(session),
-      escher_buffer_(factory->NewBuffer(capacity, kBufferUsageFlags,
-                                        kMemoryPropertyFlags)),
-      scenic_buffer_(NewScenicBufferFromEscherBuffer(escher_buffer_, session)) {
+                           escher::ResourceRecycler* recycler,
+                           vk::DeviceSize capacity) {
+  // Normally, this code might use a buffer factory or a gpu_allocator
+  // to construct its buffer. However, if we did that, then we might not have a
+  // unique VMO just for this one resource. Instead, we might get a VMO for a
+  // managed pool or a circular buffer. Therefore, we go through the steps here
+  // to create our own fresh slab, to make sure that the VMO is isolated in its
+  // contents.
+  escher::GpuMemPtr mem;
+  escher_buffer_ =
+      escher::Buffer::New(recycler, nullptr, capacity, kBufferUsageFlags,
+                          kMemoryPropertyFlags, &mem);
+  scenic_buffer_ =
+      NewScenicBufferFromEscherBuffer(escher_buffer_, session, mem);
 }
 
-escher::BufferRange SharedBuffer::Reserve(vk::DeviceSize size) {
+escher::impl::BufferRange SharedBuffer::Reserve(vk::DeviceSize size) {
   FXL_DCHECK(size_ + size <= capacity());
   auto old_size = size_;
   size_ += size;

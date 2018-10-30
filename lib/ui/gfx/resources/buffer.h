@@ -11,22 +11,24 @@
 namespace scenic_impl {
 namespace gfx {
 
-// Wraps a Vulkan buffer object.
+// A resource that represents an escher::Buffer object. This class also keeps
+// track of an optional backing resource for reporting purposes (e.g.,
+// dump_visitor).
 class Buffer : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Buffer(Session* session, ResourceId id, MemoryPtr memory, uint32_t size,
-         uint32_t offset);
+  Buffer(Session* session, ResourceId id, escher::GpuMemPtr gpu_mem,
+         ResourcePtr backing_resource);
 
   void Accept(class ResourceVisitor* visitor) override;
 
-  const MemoryPtr& memory() const { return memory_; }
+  const ResourcePtr& backing_resource() { return backing_resource_; }
   const escher::BufferPtr& escher_buffer() const { return escher_buffer_; }
   vk::DeviceSize size() const { return escher_buffer_->size(); }
 
  private:
-  MemoryPtr memory_;
+  ResourcePtr backing_resource_;
   escher::BufferPtr escher_buffer_;
 };
 

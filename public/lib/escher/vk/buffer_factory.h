@@ -24,8 +24,7 @@ class BufferFactory : private ResourceRecycler {
                               vk::MemoryPropertyFlags memory_property_flags);
 
   // Creates a buffer for the given memory.
-  virtual BufferPtr NewBuffer(GpuMemPtr mem, vk::BufferUsageFlags usage_flags,
-                              vk::DeviceSize size, vk::DeviceSize offset);
+  virtual BufferPtr NewBuffer(GpuMemPtr mem, vk::BufferUsageFlags usage_flags);
 
   // Expose escher()... this is one aspect of ResourceRecycler that we want to
   // inherit publicly.

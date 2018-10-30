@@ -152,9 +152,9 @@ void BatchGpuUploader::Initialize() {
   // directly, rather than use a frame to manage GPU submits, when command
   // buffer recycling is refactored.
   if (!frame_) {
-      frame_ = escher_->NewFrame("Gpu Uploader", frame_trace_number_,
-                                 /* enable_gpu_logging */ false,
-                                 CommandBuffer::Type::kTransfer);
+    frame_ = escher_->NewFrame("Gpu Uploader", frame_trace_number_,
+                               /* enable_gpu_logging */ false,
+                               CommandBuffer::Type::kTransfer);
   }
   FXL_DCHECK(frame_);
   if (!buffer_cache_) {

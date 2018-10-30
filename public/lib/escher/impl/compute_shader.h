@@ -7,12 +7,20 @@
 
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/impl/descriptor_set_pool.h"
-#include "lib/escher/vk/buffer.h"
 
 namespace escher {
 namespace impl {
 
 class GlslToSpirvCompiler;
+
+// Range within the buffer.
+struct BufferRange {
+  vk::DeviceSize offset;
+  vk::DeviceSize size;
+
+  BufferRange(vk::DeviceSize _offset, vk::DeviceSize _size)
+      : offset(_offset), size(_size) {}
+};
 
 // Simplifies the creation and use of Vulkan compute pipelines.  The current
 // implementation is limited to using images, storage/uniform buffers, and

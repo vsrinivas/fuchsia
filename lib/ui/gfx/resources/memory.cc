@@ -10,7 +10,7 @@
 
 namespace {
 
-bool IsGpuMappable() {
+bool IsHostMemoryGpuMappable() {
   // TODO(MZ-998): Decide how to determine if we're on an UMA platform
   // or not.
   return true;
@@ -67,7 +67,7 @@ escher::GpuMemPtr Memory::ImportGpuMemory() {
   // different resources, we may need to change driver semantics so that you can
   // import a VMO twice. Referencing the test bug for now, since it should
   // uncover the bug.
-  if (!IsGpuMappable()) {
+  if (is_host_ && !IsHostMemoryGpuMappable()) {
     return nullptr;
   }
 
@@ -79,8 +79,9 @@ escher::GpuMemPtr Memory::ImportGpuMemory() {
       vk::ExternalMemoryHandleTypeFlagBits::eFuchsiaVmoKHR,
       DuplicateVmo().release());
 
-  vk::MemoryAllocateInfo memory_allocate_info(
-      size(), session()->engine()->imported_memory_type_index());
+  uint32_t memory_type_index =
+      session()->engine()->imported_memory_type_index();
+  vk::MemoryAllocateInfo memory_allocate_info(size(), memory_type_index);
   memory_allocate_info.setPNext(&memory_import_info);
 
   vk::Result err = session()->engine()->vk_device().allocateMemory(
@@ -91,13 +92,11 @@ escher::GpuMemPtr Memory::ImportGpuMemory() {
     return nullptr;
   }
 
-  // TODO(MZ-388): Need to be able to get the memory type index using
-  // vkGetMemoryFuchsiaHandlePropertiesKHR.
-  uint32_t memory_type_index = 0;
-
+  // TODO(SCN-1115): This currently does not request a mapped ptr, as it gets
+  // the uint8_t* directly from the VMO.
   return escher::GpuMem::New(session()->engine()->vk_device(),
                              vk::DeviceMemory(memory), vk::DeviceSize(size()),
-                             memory_type_index);
+                             false /* needs_mapped_ptr */, memory_type_index);
 }
 
 zx::vmo Memory::DuplicateVmo() {

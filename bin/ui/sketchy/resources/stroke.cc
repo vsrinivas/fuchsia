@@ -111,7 +111,7 @@ void Stroke::TessellateAndMerge(Frame* frame, MeshBuffer* mesh_buffer) {
   }
 
   auto command = frame->command();
-  auto buffer_factory = frame->shared_buffer_pool()->factory();
+  auto buffer_factory = frame->unshared_buffer_factory();
   auto profiler = frame->profiler();
 
   if (is_path_updated_) {

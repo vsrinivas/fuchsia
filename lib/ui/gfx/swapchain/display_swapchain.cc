@@ -179,8 +179,9 @@ bool DisplaySwapchain::InitializeFramebuffers(
     }
 
     Framebuffer buffer;
-    buffer.device_memory = escher::GpuMem::New(
-        device_, mem_result.value, memory_requirements.size, memory_type_index);
+    buffer.device_memory =
+        escher::GpuMem::New(device_, mem_result.value, memory_requirements.size,
+                            false /* needs_mapped_ptr */, memory_type_index);
     FXL_CHECK(buffer.device_memory);
 
     // Wrap the image and device memory in a escher::Image.

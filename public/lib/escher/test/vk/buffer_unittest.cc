@@ -40,10 +40,9 @@ VK_TEST(BufferTest, CreateWithPreExistingMemory) {
 
   // Allocate 2 buffers, one from the original allocation, and one from the
   // sub-allocation.
-  auto buf1 =
-      Buffer::New(recycler, mem1, kBufferUsageFlags, kBufferSize, kOffset);
-  auto buf2 = Buffer::New(recycler, mem2, kBufferUsageFlags, kBufferSize, 0);
-  EXPECT_EQ(buf1->host_ptr(), buf2->host_ptr());
+  auto buf1 = Buffer::New(recycler, mem1, kBufferUsageFlags);
+  auto buf2 = Buffer::New(recycler, mem2, kBufferUsageFlags);
+  EXPECT_EQ(mem1->mapped_ptr(), buf1->host_ptr());
   EXPECT_EQ(mem2->mapped_ptr(), buf2->host_ptr());
 }
 

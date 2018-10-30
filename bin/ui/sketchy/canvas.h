@@ -71,7 +71,11 @@ class CanvasImpl final : public ::fuchsia::ui::sketchy::Canvas {
 
   async::Loop* const loop_;
   scenic::Session* const session_;
+  const escher::EscherWeakPtr escher_;
+  // Buffers which are sent over the wire are constructed using this pool.
   SharedBufferPool shared_buffer_pool_;
+  // For non-shared buffers, we use this factory instead.
+  escher::BufferFactory unshared_buffer_factory_;
 
   ::fidl::VectorPtr<::fuchsia::ui::sketchy::Command> commands_;
   ResourceMap resource_map_;

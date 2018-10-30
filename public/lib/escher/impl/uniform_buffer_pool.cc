@@ -78,8 +78,7 @@ void UniformBufferPool::InternalAllocate() {
     // Workaround for dealing with RefPtr/Reffable Adopt() semantics.  Let the
     // RefPtr go out of scope immediately; the Buffer will be added to
     // free_buffers_ via OnReceiveOwnable().
-    fxl::MakeRefCounted<Buffer>(this, std::move(mem), new_buffers[i],
-                                BufferRange(0, buffer_size_));
+    fxl::MakeRefCounted<Buffer>(this, std::move(mem), new_buffers[i]);
   }
 
   is_allocating_ = false;

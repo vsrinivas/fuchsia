@@ -45,9 +45,9 @@ void MeshBuffer::Prepare(Frame* frame, bool from_scratch,
   }
 }
 
-std::pair<escher::BufferRange, escher::BufferRange> MeshBuffer::Reserve(
-    Frame* frame, uint32_t vertex_count, uint32_t index_count,
-    const escher::BoundingBox& bbox) {
+std::pair<escher::impl::BufferRange, escher::impl::BufferRange>
+MeshBuffer::Reserve(Frame* frame, uint32_t vertex_count, uint32_t index_count,
+                    const escher::BoundingBox& bbox) {
   vertex_count_ += vertex_count;
   index_count_ += index_count;
   bbox_.Join(bbox);

@@ -21,9 +21,9 @@ class StrokeTessellator final {
                 const escher::BufferPtr& cumulative_division_counts_buffer,
                 const escher::BufferPtr& division_segment_index_buffer,
                 escher::BufferPtr vertex_buffer,
-                const escher::BufferRange& vertex_range,
+                const escher::impl::BufferRange& vertex_range,
                 escher::BufferPtr index_buffer,
-                const escher::BufferRange& index_range,
+                const escher::impl::BufferRange& index_range,
                 escher::impl::CommandBuffer* command,
                 escher::TimestampProfiler* profiler, uint32_t division_count,
                 bool apply_barrier);
