@@ -108,7 +108,10 @@ TEST(InterfacePtr, MoveConstructWithOutstandingTransaction) {
   fidl::test::frobinator::FrobinatorPtr ptr;
 
   int error_count = 0;
-  ptr.set_error_handler([&error_count]() { ++error_count; });
+  ptr.set_error_handler([&error_count](zx_status_t status) {
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
+    ++error_count;
+  });
 
   EXPECT_EQ(ZX_OK, ptr.Bind(std::move(h1)));
 
@@ -157,7 +160,10 @@ TEST(InterfacePtr, MoveAssignWithOutstandingTransaction) {
   fidl::test::frobinator::FrobinatorPtr ptr;
 
   int error_count = 0;
-  ptr.set_error_handler([&error_count]() { ++error_count; });
+  ptr.set_error_handler([&error_count](zx_status_t status) {
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
+    ++error_count;
+  });
 
   EXPECT_EQ(ZX_OK, ptr.Bind(std::move(h1)));
 

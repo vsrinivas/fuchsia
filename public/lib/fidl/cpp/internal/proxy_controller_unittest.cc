@@ -113,7 +113,11 @@ TEST(ProxyController, BadSend) {
   // Bad message format.
 
   int error_count = 0;
-  controller.reader().set_error_handler([&error_count]() { ++error_count; });
+  controller.reader().set_error_handler(
+      [&error_count](zx_status_t status) {
+        EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
+        ++error_count;
+      });
 
   EXPECT_EQ(0, error_count);
   EXPECT_EQ(ZX_ERR_INVALID_ARGS,
@@ -146,8 +150,13 @@ TEST(ProxyController, BadReply) {
   ProxyController controller;
   EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
 
+  zx_status_t expected_error = ZX_ERR_NOT_SUPPORTED;
   int error_count = 0;
-  controller.reader().set_error_handler([&error_count]() { ++error_count; });
+  controller.reader().set_error_handler(
+      [&expected_error, &error_count](zx_status_t status) {
+        EXPECT_EQ(expected_error, status);
+        ++error_count;
+      });
 
   fidl_message_header_t header = {};
   header.txid = 0;
@@ -165,6 +174,7 @@ TEST(ProxyController, BadReply) {
 
   header.txid = 42u;
 
+  expected_error = ZX_ERR_NOT_FOUND;
   EXPECT_EQ(ZX_OK,
             h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
 
@@ -182,8 +192,13 @@ TEST(ProxyController, ShortReply) {
   ProxyController controller;
   EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
 
+  int expected_error = ZX_ERR_NOT_SUPPORTED;
   int error_count = 0;
-  controller.reader().set_error_handler([&error_count]() { ++error_count; });
+  controller.reader().set_error_handler(
+      [&expected_error, &error_count](zx_status_t status) {
+        EXPECT_EQ(expected_error, status);
+        ++error_count;
+      });
 
   fidl_message_header_t header = {};
   header.txid = 0;
@@ -196,6 +211,7 @@ TEST(ProxyController, ShortReply) {
   loop.RunUntilIdle();
   EXPECT_EQ(1, error_count);
 
+  expected_error = ZX_ERR_INVALID_ARGS;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
   EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
 

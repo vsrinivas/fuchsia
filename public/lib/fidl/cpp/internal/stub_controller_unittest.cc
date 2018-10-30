@@ -244,7 +244,11 @@ TEST(StubController, BadResponse) {
   EXPECT_EQ(ZX_OK, stub_ctrl.reader().Bind(std::move(h1)));
 
   int error_count = 0;
-  stub_ctrl.reader().set_error_handler([&error_count]() { ++error_count; });
+  stub_ctrl.reader().set_error_handler(
+      [&error_count](zx_status_t status) {
+        EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
+        ++error_count;
+      });
 
   ProxyController proxy_ctrl;
   EXPECT_EQ(ZX_OK, proxy_ctrl.reader().Bind(std::move(h2)));
@@ -298,7 +302,11 @@ TEST(StubController, BadMessage) {
   EXPECT_EQ(ZX_OK, stub_ctrl.reader().Bind(std::move(h1)));
 
   int error_count = 0;
-  stub_ctrl.reader().set_error_handler([&error_count]() { ++error_count; });
+  stub_ctrl.reader().set_error_handler(
+      [&error_count](zx_status_t status) {
+        EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
+        ++error_count;
+      });
 
   CallbackStub stub;
 

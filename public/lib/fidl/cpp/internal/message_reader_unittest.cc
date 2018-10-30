@@ -117,7 +117,10 @@ TEST(MessageReader, Control) {
   EXPECT_EQ(0u, handler.handles_.size());
 
   int error_count = 0;
-  reader.set_error_handler([&error_count] { ++error_count; });
+  reader.set_error_handler([&error_count](zx_status_t status) {
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
+    ++error_count;
+  });
 
   h2.reset();
   EXPECT_EQ(0, error_count);
@@ -139,7 +142,10 @@ TEST(MessageReader, HandlerError) {
   reader.set_message_handler(&handler);
 
   int error_count = 0;
-  reader.set_error_handler([&error_count] { ++error_count; });
+  reader.set_error_handler([&error_count](zx_status_t status) {
+    EXPECT_EQ(ZX_ERR_INTERNAL, status);
+    ++error_count;
+  });
 
   fidl::test::AsyncLoopForTest loop;
 
@@ -201,7 +207,10 @@ TEST(MessageReader, BindTwice) {
 TEST(MessageReader, WaitAndDispatchOneMessageUntilErrors) {
   MessageReader reader;
   int error_count = 0;
-  reader.set_error_handler([&error_count] { ++error_count; });
+  reader.set_error_handler([&error_count](zx_status_t status) {
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
+    ++error_count;
+  });
 
   EXPECT_EQ(0, error_count);
   EXPECT_EQ(ZX_ERR_BAD_STATE,
@@ -249,7 +258,10 @@ TEST(MessageReader, UnbindDuringHandler) {
   reader.set_message_handler(&handler);
 
   int error_count = 0;
-  reader.set_error_handler([&error_count] { ++error_count; });
+  reader.set_error_handler([&error_count](zx_status_t status) {
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
+    ++error_count;
+  });
 
   fidl::test::AsyncLoopForTest loop;
 
@@ -302,7 +314,10 @@ TEST(MessageReader, ShouldWaitFromRead) {
   };
 
   int error_count = 0;
-  reader.set_error_handler([&error_count] { ++error_count; });
+  reader.set_error_handler([&error_count](zx_status_t status) {
+    EXPECT_EQ(ZX_ERR_CANCELED, status);
+    ++error_count;
+  });
 
   fidl::test::AsyncLoopForTest loop;
   reader.Bind(std::move(h1));
@@ -352,7 +367,10 @@ TEST(MessageReader, ShouldWaitFromReadWithUnbind) {
   };
 
   int error_count = 0;
-  reader.set_error_handler([&error_count] { ++error_count; });
+  reader.set_error_handler([&error_count](zx_status_t status) {
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
+    ++error_count;
+  });
 
   fidl::test::AsyncLoopForTest loop;
   reader.Bind(std::move(h1));
@@ -378,7 +396,10 @@ TEST(MessageReader, NoHandler) {
   MessageReader reader;
 
   int error_count = 0;
-  reader.set_error_handler([&error_count] { ++error_count; });
+  reader.set_error_handler([&error_count](zx_status_t status) {
+    EXPECT_EQ(ZX_ERR_CANCELED, status);
+    ++error_count;
+  });
 
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
@@ -400,7 +421,8 @@ TEST(MessageReader, Reset) {
 
   int destruction_count = 0;
   DestructionCounter counter(&destruction_count);
-  reader.set_error_handler([counter = std::move(counter)] {});
+  reader.set_error_handler(
+      [counter = std::move(counter)](zx_status_t status) {});
 
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
@@ -425,7 +447,10 @@ TEST(MessageReader, TakeChannelAndErrorHandlerFrom) {
   reader1.set_message_handler(&handler1);
 
   int error_count = 0;
-  reader1.set_error_handler([&error_count] { ++error_count; });
+  reader1.set_error_handler([&error_count](zx_status_t status) {
+    EXPECT_EQ(ZX_ERR_INTERNAL, status);
+    ++error_count;
+  });
 
   StatusMessageHandler handler2;
   handler2.status = ZX_ERR_INTERNAL;

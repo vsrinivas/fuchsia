@@ -50,16 +50,16 @@ class BindingSet {
   // |impl|. If |ImplPtr| is a |unique_ptr|, then running |~ImplPtr| when the
   // binding generates an error will delete |impl| because |~ImplPtr| is
   // |~unique_ptr|, which deletes |impl|.
-  void AddBinding(
-      ImplPtr impl, InterfaceRequest<Interface> request,
-      async_dispatcher_t* dispatcher = nullptr) {
-    bindings_.push_back(std::make_unique<Binding>(std::forward<ImplPtr>(impl),
-                                                  std::move(request), dispatcher));
+  void AddBinding(ImplPtr impl, InterfaceRequest<Interface> request,
+                  async_dispatcher_t* dispatcher = nullptr) {
+    bindings_.push_back(std::make_unique<Binding>(
+        std::forward<ImplPtr>(impl), std::move(request), dispatcher));
     auto* binding = bindings_.back().get();
     // Set the connection error handler for the newly added Binding to be a
     // function that will erase it from the vector.
-    binding->set_error_handler(
-        std::bind(&BindingSet::RemoveOnError, this, binding));
+    binding->set_error_handler([binding, this](zx_status_t status) {
+      this->RemoveOnError(binding);
+    });
   }
 
   // Adds a binding to the set for the given implementation.

@@ -68,7 +68,7 @@ class ThreadSafeBindingSet {
     // Set the connection error handler for the newly added Binding to be a
     // function that will erase it from the vector.
     binding->set_error_handler(
-        std::bind(&ThreadSafeBindingSet::RemoveOnError, this, binding));
+        [binding, this](zx_status_t status) { this->RemoveOnError(binding); });
   }
 
   // Adds a binding to the set for the given implementation.

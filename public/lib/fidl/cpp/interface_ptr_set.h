@@ -49,7 +49,7 @@ class InterfacePtrSet {
     ptrs_.push_back(std::make_unique<Ptr>(std::move(ptr)));
     auto* pointer = ptrs_.back().get();
     pointer->set_error_handler(
-        std::bind(&InterfacePtrSet::RemoveOnError, this, pointer));
+        [pointer, this](zx_status_t status) { this->RemoveOnError(pointer); });
   }
 
   // The |InterfacePtr| objects stored in this set.
