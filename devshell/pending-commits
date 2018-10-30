@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### view commits not yet rolled to a layer
+### view commits not yet published to global integration
 
 import argparse
 from argparse import RawTextHelpFormatter
@@ -15,13 +15,16 @@ import urllib2
 import xml.etree.ElementTree as xml
 
 
-LAYERS = [
-    'vendor', # For checkouts building on top of Topaz.
+PETALS = [
     'topaz',
     'peridot',
     'garnet',
     'zircon',
+    'build',
+    'buildtools',
+    'scripts',
 ]
+
 
 # Authors whose commits are not displayed.
 IGNORED_AUTHORS = [
@@ -44,48 +47,25 @@ def http_get(url):
             target.close()
 
 
-def get_lower_layer(layer):
-    """Returns the layer immediately below the given layer."""
-    if layer not in LAYERS:
-        # Special case for "build", "buildtools", and "scripts".
-        return None
-    index = LAYERS.index(layer)
-    if index == len(LAYERS) - 1:
-        return None
-    return LAYERS[index + 1]
-
-
-def get_lower_layer_commit(layer, at, lower_layer):
-    """Returns the pinned revision of a layer below the given layer."""
-    url = ('https://fuchsia.googlesource.com/%s/+/%s/manifest/%s?format=TEXT'
-           % (layer, at, layer))
+def get_published_commit_for(petal):
+    """Returns the pinned revision of a petal in global integration."""
+    url = ('https://fuchsia.googlesource.com/integration/+/master/%s/minimal?format=TEXT'
+           % petal)
     content = http_get(url)
     content = base64.b64decode(content)
     manifest = xml.fromstring(content)
-    nodes = manifest.findall('./imports/import[@name="%s"]' % lower_layer)
-    return (lower_layer, nodes[0].get('revision'))
+    nodes = manifest.findall('./projects/project[@name="%s"]' % petal)
+    return (petal, nodes[0].get('revision'))
 
 
-def get_lower_layer_commits(layer, at):
-    """Returns the pinned revision of the 'layers' below the given layer.
-       Multiple 'layers' are needed for the Garnet case, where we want to be
-       able to inspect the revisions of //build, //buildtools, and //scripts.
-       """
-    if layer != 'garnet':
-        lower_layer = get_lower_layer(layer)
-        if not lower_layer:
-            return []
-        return [get_lower_layer_commit(layer, at, lower_layer)]
-    return [
-        get_lower_layer_commit('garnet', at, 'zircon'),
-        get_lower_layer_commit('garnet', at, 'build'),
-        get_lower_layer_commit('garnet', at, 'buildtools'),
-        get_lower_layer_commit('garnet', at, 'scripts'),
-    ]
+def get_published_commits():
+    """Returns the published revision of all the petals."""
+    return [get_published_commit_for(petal) for petal in PETALS]
 
-def get_commits(layer, revision):
-    """Returns the commits in the given layer up to a given commit."""
-    url = 'https://fuchsia.googlesource.com/%s/+log/master?format=JSON' % layer
+
+def get_commits(petal, revision):
+    """Returns the commits in the given petal up to a given commit."""
+    url = 'https://fuchsia.googlesource.com/%s/+log/master?format=JSON' % petal
     def get_more(result, start=None):
         get_url = url
         if start:
@@ -151,7 +131,7 @@ def get_time_since(timestamp):
     return '%sm' % minutes
 
 
-def print_commits(layer, commits, print_all=False):
+def print_commits(petal, commits, print_all=False):
     """Prints the given commits in a user=pleasing format."""
     commit_filter = (lambda c: c) if print_all else filter_commit
     commits = filter(commit_filter, commits)
@@ -161,7 +141,7 @@ def print_commits(layer, commits, print_all=False):
     else:
         elapsed_time = ''
     print('--------------')
-    print('| %s | %s' % ('{:^10}'.format(layer), elapsed_time))
+    print('| %s | %s' % ('{:^10}'.format(petal), elapsed_time))
     print('--------------')
     for commit in commits:
         print('%s | %s | %s' % (commit['commit'][:7],
@@ -173,48 +153,15 @@ def print_commits(layer, commits, print_all=False):
 
 def main():
     parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter,
-        description="""Displays the commits not yet rolled to a given layer.
-For vendor layers, specify the Topaz revision with --topaz-revision.""")
-    parser.add_argument('--layer',
-                        help='Name of the layer to inspect',
-                        choices=LAYERS,
-                        default='topaz')
-    parser.add_argument('--topaz-revision',
-                        help='(vendor only) revision of the Topaz layer')
+        description="""Displays the commits not yet published to global integration.""")
     parser.add_argument('--all',
-                        help='Whether to print all commits, including rolls',
+                        help='Whether to print all commits, including rollers',
                         action='store_true')
     args = parser.parse_args()
 
-    layer = args.layer
-    revision = args.topaz_revision
-
-    if layer != 'vendor' and revision:
-        print('Warning: Topaz revision only used with vendor layers.')
-
-    if layer == 'vendor' and not revision:
-        print('Error: vendor layers require a Topaz revision.')
-        return 1
-
-    print('Pending commits for: %s' % layer.upper())
-
-    if layer == 'vendor':
-        commits = get_commits('topaz', revision)
-        print_commits('topaz', commits, print_all=args.all)
-        layer = 'topaz'
-    else:
-        revision = 'master'
-
-    next_layers = [(layer, revision)]
-    while next_layers:
-        layer, revision = next_layers.pop(0)
-        layer_refs = get_lower_layer_commits(layer, revision)
-        if not layer_refs:
-            continue
-        for lower_layer, lower_revision in layer_refs:
-            commits = get_commits(lower_layer, lower_revision)
-            print_commits(lower_layer, commits, print_all=args.all)
-        next_layers.extend(layer_refs)
+    for (petal, published_commit) in get_published_commits():
+        commits = get_commits(petal, published_commit)
+        print_commits(petal, commits, print_all=args.all)
 
     return 0
 
