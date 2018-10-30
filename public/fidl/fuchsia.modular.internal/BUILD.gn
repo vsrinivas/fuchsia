@@ -9,7 +9,7 @@ fidl("fuchsia.modular.internal") {
 
   sources = [
     "story_data.fidl",
-    "user_runner.fidl",
+    "sessionmgr.fidl",
   ]
   deps = [
     "//garnet/public/fidl/fuchsia.auth",

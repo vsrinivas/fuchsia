@@ -31,7 +31,7 @@ enum class CobaltMetric : uint32_t {
 // Next enum value: 2
 enum class ModularEvent : uint32_t {
   BOOTED_TO_BASEMGR = 0,
-  BOOTED_TO_USER_RUNNER = 1,
+  BOOTED_TO_SESSIONMGR = 1,
 };
 
 // The sesssion agent events to report.

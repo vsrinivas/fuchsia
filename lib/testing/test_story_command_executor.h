@@ -7,7 +7,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <vector>
-#include "peridot/bin/user_runner/puppet_master/story_command_executor.h"
+#include "peridot/bin/sessionmgr/puppet_master/story_command_executor.h"
 
 namespace modular {
 namespace testing {

@@ -84,7 +84,7 @@ source_set("common") {
   ]
 
   deps = [
-    "//peridot/bin/user_runner:agent_launcher",
+    "//peridot/bin/sessionmgr:agent_launcher",
     "//peridot/lib/environment_host",
     "//peridot/lib/testing:component_context_fake",
     "//peridot/lib/testing:entity_resolver_fake",

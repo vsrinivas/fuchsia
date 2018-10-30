@@ -22,5 +22,5 @@ apps that use Ledger through Framework fuchsia::modular::Link objects.
 [clipboard]: /bin/agents/clipboard/
 [contacts]: https://fuchsia.googlesource.com/topaz/+/master/app/contacts/
 [Ledger benchmarks]: /bin/ledger/tests/benchmark
-[story runner]: /bin/user_runner/story_runner/
+[story runner]: /bin/sessionmgr/story_runner/
 [todo list]: https://fuchsia.googlesource.com/topaz/+/master/examples/ledger/todo_list/

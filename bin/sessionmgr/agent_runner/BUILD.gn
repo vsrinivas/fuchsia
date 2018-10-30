@@ -1,0 +1,96 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//peridot/build/tests_package.gni")
+
+source_set("agent_runner") {
+  sources = [
+    "agent_context_impl.cc",
+    "agent_context_impl.h",
+    "agent_runner.cc",
+    "agent_runner_storage_impl.cc",
+    "agent_runner_storage_impl.h",
+  ]
+
+  public_deps = [
+    ":public",
+  ]
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/sessionmgr:component_context",
+    "//peridot/bin/sessionmgr/message_queue",
+    "//peridot/bin/sessionmgr/storage:constants_and_utils",
+    "//peridot/lib/common:teardown",
+    "//peridot/lib/fidl:app_client",
+    "//peridot/lib/fidl:array_to_string",
+    "//peridot/lib/fidl:json_xdr",
+    "//peridot/lib/ledger_client:page_client",
+    "//peridot/lib/ledger_client:types",
+    "//peridot/public/fidl/fuchsia.ledger",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.auth",
+    "//peridot/public/lib/async/cpp:operation",
+  ]
+}
+
+executable("agent_runner_unittest") {
+  testonly = true
+
+  sources = [
+    "agent_runner_unittest.cc",
+  ]
+
+  deps = [
+    ":agent_runner",
+    ":public",
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing:fake_launcher",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/sessionmgr/entity_provider_runner",
+    "//peridot/bin/sessionmgr/message_queue",
+    "//peridot/lib/fidl:array_to_string",
+    "//peridot/lib/ledger_client:page_client",
+    "//peridot/lib/testing:fake_agent_runner_storage",
+    "//peridot/lib/testing:mock_base",
+    "//peridot/lib/testing:test_with_ledger",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.auth",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/trace",
+  ]
+}
+
+tests_package("agent_runner_unittests") {
+  deps = [
+    ":agent_runner_unittest",
+  ]
+}
+
+# Broken out for component to depend on w/o creating circles.
+source_set("public") {
+  sources = [
+    "agent_runner.h",
+    "agent_runner_storage.cc",
+    "agent_runner_storage.h",
+  ]
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/ledger/fidl",
+    "//peridot/bin/sessionmgr/entity_provider_runner",
+    "//peridot/public/fidl/fuchsia.ledger",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.auth",
+    "//peridot/public/lib/async/cpp:operation",
+  ]
+}

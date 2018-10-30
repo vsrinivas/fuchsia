@@ -174,7 +174,7 @@ executable("suggestion_engine_impl_unittest") {
   deps = [
     ":suggestion_engine_impl",
     "//garnet/public/lib/fsl",
-    "//peridot/bin/user_runner/puppet_master:puppet_master_impl",
+    "//peridot/bin/sessionmgr/puppet_master:puppet_master_impl",
     "//peridot/lib/testing:test_story_command_executor",
     "//peridot/lib/testing:test_with_session_storage",
     "//peridot/public/fidl/fuchsia.modular",

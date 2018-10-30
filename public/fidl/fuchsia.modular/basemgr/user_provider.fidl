@@ -88,8 +88,8 @@ struct UserLoginParams {
 // than |Foo| directly) is a hallmark of inversion of control that pervades the
 // design of our services.
 interface UserController {
-    // Logs out a user by tearing down its user runner. Returns once the
-    // UserRunner has been torn down. This also triggers OnLogout() for
+    // Logs out a user by tearing down its sessionmgr. Returns once the
+    // Sessionmgr has been torn down. This also triggers OnLogout() for
     // |UserWatcher|s.
     1: Logout() -> ();
 
@@ -107,7 +107,7 @@ interface UserController {
 interface UserWatcher {
     // Called when a user has logged out, either by UserController.Logout() or by
     // UserContext.Logout(). By the time this event is processed by a watcher, the
-    // UserRunner may already be torn down.
+    // Sessionmgr may already be torn down.
     //
     // TODO(vardhan): Make a guarantee that once OnLogout() is invoked, it is
     // possible to UserProvider.Login() the same user.

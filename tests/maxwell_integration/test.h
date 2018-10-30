@@ -11,7 +11,7 @@
 #include <lib/component/cpp/startup_context.h>
 
 #include "gtest/gtest.h"
-#include "peridot/bin/user_runner/agent_launcher.h"
+#include "peridot/bin/sessionmgr/agent_launcher.h"
 #include "peridot/lib/testing/component_context_fake.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
 

@@ -16,7 +16,7 @@ using fuchsia.ui.viewsv1token;
 // the story shell may be implemented as a flutter component.
 //
 // Teardown may be initiated by the user shell calling StoryController.Stop(),
-// by the user runner being terminated, or by the system shutting down.
+// by the sessionmgr being terminated, or by the system shutting down.
 [Discoverable] // Created by story shell applications.
 interface StoryShell {
     1: Initialize(StoryShellContext story_shell_context);

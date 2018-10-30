@@ -4,7 +4,7 @@
 
 library fuchsia.modular;
 
-// UserRunner creates an instance of this service and passes it to the
+// Sessionmgr creates an instance of this service and passes it to the
 // UserShell so it can observe Agents for the user.
 //
 // TODO(alhaad): Add interfaces for modifying Agents for the user.

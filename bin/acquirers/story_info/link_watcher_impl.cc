@@ -16,7 +16,7 @@
 #include <lib/fxl/functional/make_copyable.h>
 
 #include "peridot/bin/acquirers/story_info/story_watcher_impl.h"
-#include "peridot/bin/user_runner/storage/constants_and_utils.h"  // MakeLinkKey
+#include "peridot/bin/sessionmgr/storage/constants_and_utils.h"  // MakeLinkKey
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 

@@ -51,8 +51,8 @@ class Settings {
         "base_shell", "userpicker_base_shell");
     story_shell.url =
         command_line.GetOptionValueWithDefault("story_shell", "mondrian");
-    user_runner.url =
-        command_line.GetOptionValueWithDefault("user_runner", "user_runner");
+    sessionmgr.url =
+        command_line.GetOptionValueWithDefault("sessionmgr", "sessionmgr");
     user_shell.url = command_line.GetOptionValueWithDefault(
         "user_shell", "ermine_user_shell");
     account_provider.url = command_line.GetOptionValueWithDefault(
@@ -79,9 +79,16 @@ class Settings {
         command_line.GetOptionValueWithDefault("story_shell_args", ""),
         &story_shell.args);
 
-    ParseShellArgs(
-        command_line.GetOptionValueWithDefault("user_runner_args", ""),
-        &user_runner.args);
+    // TODO(alexmin): Remove user_runner_args after migration is complete.
+    if (command_line.HasOption("user_runner_args")) {
+      ParseShellArgs(
+          command_line.GetOptionValueWithDefault("user_runner_args", ""),
+          &sessionmgr.args);
+    } else {
+      ParseShellArgs(
+          command_line.GetOptionValueWithDefault("sessionmgr_args", ""),
+          &sessionmgr.args);
+    }
 
     ParseShellArgs(
         command_line.GetOptionValueWithDefault("user_shell_args", ""),
@@ -90,7 +97,7 @@ class Settings {
     if (test) {
       base_shell.args.push_back("--test");
       story_shell.args.push_back("--test");
-      user_runner.args.push_back("--test");
+      sessionmgr.args.push_back("--test");
       user_shell.args.push_back("--test");
       test_name = FindTestName(user_shell.url, user_shell.args);
       disable_statistics = true;
@@ -118,8 +125,8 @@ class Settings {
     BASE_SHELL:  URL of the base shell to run.
                 Defaults to "userpicker_base_shell".
                 For integration testing use "dev_base_shell".
-    USER_RUNNER: URL of the user runner to run.
-                Defaults to "user_runner".
+    SESSIONMGR: URL of the sessionmgr to run.
+                Defaults to "sessionmgr".
     USER_SHELL: URL of the user shell to run.
                 Defaults to "ermine_user_shell".
                 For integration testing use "dev_user_shell".
@@ -134,7 +141,7 @@ class Settings {
 
   fuchsia::modular::AppConfig base_shell;
   fuchsia::modular::AppConfig story_shell;
-  fuchsia::modular::AppConfig user_runner;
+  fuchsia::modular::AppConfig sessionmgr;
   fuchsia::modular::AppConfig user_shell;
   fuchsia::modular::AppConfig account_provider;
 
@@ -411,7 +418,7 @@ class BasemgrApp : fuchsia::modular::BaseShellContext,
         account_provider_context_binding_.NewBinding());
 
     user_provider_impl_.reset(new UserProviderImpl(
-        context_, settings_.user_runner, settings_.user_shell,
+        context_, settings_.sessionmgr, settings_.user_shell,
         settings_.story_shell, account_provider_->primary_service().get(),
         token_manager_factory_.get(),
         authentication_context_provider_binding_.NewBinding().Bind(),

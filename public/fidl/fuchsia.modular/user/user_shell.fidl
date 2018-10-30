@@ -30,7 +30,7 @@ interface UserShellContext {
     13: GetVisibleStoriesController(request<VisibleStoriesController> request);
 
     // Requests logout of the user. This causes the basemgr to tear down the
-    // |UserRunner| instance of the user.
+    // |Sessionmgr| instance of the user.
     16: Logout();
 };
 

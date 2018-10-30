@@ -17,7 +17,7 @@ namespace {
 using ::component::testing::FakeLauncher;
 using UserControllerImplTest = gtest::TestLoopFixture;
 
-TEST_F(UserControllerImplTest, StartUserRunnerWithTokenProviderFactory) {
+TEST_F(UserControllerImplTest, StartSessionmgrWithTokenProviderFactory) {
   FakeLauncher launcher;
   std::string url = "test_url_string";
   fuchsia::modular::AppConfig app_config;
@@ -47,7 +47,7 @@ TEST_F(UserControllerImplTest, StartUserRunnerWithTokenProviderFactory) {
   EXPECT_TRUE(callback_called);
 }
 
-TEST_F(UserControllerImplTest, StartUserRunnerWithTokenManagers) {
+TEST_F(UserControllerImplTest, StartSessionmgrWithTokenManagers) {
   FakeLauncher launcher;
   std::string url = "test_url_string";
   fuchsia::modular::AppConfig app_config;
@@ -77,9 +77,9 @@ TEST_F(UserControllerImplTest, StartUserRunnerWithTokenManagers) {
   EXPECT_TRUE(callback_called);
 }
 
-TEST_F(UserControllerImplTest, UserRunnerCrashInvokesDoneCallback) {
+TEST_F(UserControllerImplTest, SessionmgrCrashInvokesDoneCallback) {
   // Program the fake launcher to drop the CreateComponent request such that
-  // the error handler of the user_runner_app is invoked. This should invoke the
+  // the error handler of the sessionmgr_app is invoked. This should invoke the
   // done_callback.
   FakeLauncher launcher;
   std::string url = "test_url_string";

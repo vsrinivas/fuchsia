@@ -1,7 +1,7 @@
 {
     "packages": [
         "//peridot/bin/basemgr",
-        "//peridot/bin/user_runner"
+        "//peridot/bin/sessionmgr"
     ],
     "labels": [
       "//peridot/cloud/go/src/remote_module_resolver:host"

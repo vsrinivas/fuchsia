@@ -29,7 +29,7 @@ executable_package("story_info") {
     "//garnet/public/lib/svc/cpp",
 
     # TODO(thatguy): Do not depend on constants_and_utils.
-    "//peridot/bin/user_runner/storage:constants_and_utils",
+    "//peridot/bin/sessionmgr/storage:constants_and_utils",
     "//peridot/lib:maxwell_internal",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/rapidjson",

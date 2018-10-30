@@ -6,7 +6,7 @@ import("//third_party/cobalt_config/cobalt_config.gni")
 
 visibility = [
   "//peridot/bin/basemgr/*",
-  "//peridot/bin/user_runner/*",
+  "//peridot/bin/sessionmgr/*",
 ]
 
 cobalt_config("generate_basemgr_config") {

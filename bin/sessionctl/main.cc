@@ -34,23 +34,23 @@ struct ActiveSession {
 
 // Returns a list of all running sessions.
 std::vector<ActiveSession> FindAllSessions() {
-  // All user_runner processes contain the control interfaces for sessions.
-  constexpr char kUserRunnerPrefix[] = "/hub/c/user_runner";
+  // All sessionmgr processes contain the control interfaces for sessions.
+  constexpr char kSessionmgrPrefix[] = "/hub/c/sessionmgr";
   constexpr char kOutDebugPath[] = "out/debug";
-  // See peridot/bin/user_runner/user_runner_impl.cc's definition of
+  // See peridot/bin/sessionmgr/sessionmgr_impl.cc's definition of
   // kSessionCtlDir.
   constexpr char kSessionCtlDir[] = "sessionctl";
-  auto glob_str = fxl::StringPrintf("%s/*/%s/%s", kUserRunnerPrefix,
+  auto glob_str = fxl::StringPrintf("%s/*/%s/%s", kSessionmgrPrefix,
                                     kOutDebugPath, kSessionCtlDir);
 
-  std::regex name_regex(fxl::StringPrintf("%s/([^/]+)/%s/%s", kUserRunnerPrefix,
+  std::regex name_regex(fxl::StringPrintf("%s/([^/]+)/%s/%s", kSessionmgrPrefix,
                                           kOutDebugPath, kSessionCtlDir));
 
   glob_t globbuf;
   std::vector<ActiveSession> sessions;
 
-  bool user_runner_exists = glob(glob_str.data(), 0, nullptr, &globbuf) == 0;
-  if (user_runner_exists) {
+  bool sessionmgr_exists = glob(glob_str.data(), 0, nullptr, &globbuf) == 0;
+  if (sessionmgr_exists) {
     for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
       ActiveSession s;
       s.service_path = globbuf.gl_pathv[i];
@@ -117,7 +117,7 @@ int main(int argc, const char** argv) {
 
   if (sessions.empty()) {
     logger.LogError(
-        cmd, "Could not find a running user_runner. Is the user logged in?");
+        cmd, "Could not find a running sessionmgr. Is the user logged in?");
     return 1;
   }
 

@@ -7,8 +7,8 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 
-#include "peridot/bin/user_runner/storage/session_storage.h"
-#include "peridot/bin/user_runner/storage/story_storage.h"
+#include "peridot/bin/sessionmgr/storage/session_storage.h"
+#include "peridot/bin/sessionmgr/storage/story_storage.h"
 #include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/testing/test_with_ledger.h"
 

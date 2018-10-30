@@ -26,8 +26,8 @@
 
 namespace modular {
 
-// |UserControllerImpl| starts and manages a UserRunner. The life time of a
-// UserRunner is bound to this class.  |UserControllerImpl| is not self-owned,
+// |UserControllerImpl| starts and manages a Sessionmgr. The life time of a
+// Sessionmgr is bound to this class.  |UserControllerImpl| is not self-owned,
 // but still drives its own deletion: On logout, it signals its
 // owner (BasemgrApp) to delete it.
 class UserControllerImpl : fuchsia::modular::UserController,
@@ -40,7 +40,7 @@ class UserControllerImpl : fuchsia::modular::UserController,
   using DoneCallback = std::function<void(UserControllerImpl*)>;
 
   UserControllerImpl(
-      fuchsia::sys::Launcher* launcher, fuchsia::modular::AppConfig user_runner,
+      fuchsia::sys::Launcher* launcher, fuchsia::modular::AppConfig sessionmgr,
       fuchsia::modular::AppConfig user_shell,
       fuchsia::modular::AppConfig story_shell,
       fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
@@ -79,9 +79,9 @@ class UserControllerImpl : fuchsia::modular::UserController,
   void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                            request) override;
 
-  std::unique_ptr<Environment> user_runner_environment_;
-  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> user_runner_app_;
-  fuchsia::modular::internal::UserRunnerPtr user_runner_;
+  std::unique_ptr<Environment> sessionmgr_environment_;
+  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> sessionmgr_app_;
+  fuchsia::modular::internal::SessionmgrPtr sessionmgr_;
 
   fidl::Binding<fuchsia::modular::internal::UserContext> user_context_binding_;
   fidl::Binding<fuchsia::modular::UserController> user_controller_binding_;

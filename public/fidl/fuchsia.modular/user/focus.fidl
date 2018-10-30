@@ -16,10 +16,10 @@ library fuchsia.modular;
 // and visible stories on this device.
 //
 // NOTE(alhaad): The information about visible stories can be used by
-// user runner to stop / pause stories that are not visible to the
+// sessionmgr to stop / pause stories that are not visible to the
 // user.
 
-// Implemented by user runner. Given to user shell through its namespace.
+// Implemented by sessionmgr. Given to user shell through its namespace.
 interface FocusController {
     // Sets the focus on this device.
     1: Set(string? focused_story_id);
@@ -33,7 +33,7 @@ interface FocusRequestWatcher {
     1: OnFocusRequest(string story_id);
 };
 
-// Implemented by user runner. Given to user shell and session agents through
+// Implemented by sessionmgr. Given to user shell and session agents through
 // their namespace. Focus is persisted on the ledger.
 [Discoverable]
 interface FocusProvider {
@@ -73,12 +73,12 @@ struct FocusInfo {
     uint64 last_focus_change_timestamp;
 };
 
-// Implemented by user runner. Given to user shell through its namespace.
+// Implemented by sessionmgr. Given to user shell through its namespace.
 interface VisibleStoriesController {
     1: Set(vector<string>? visible_story_ids);
 };
 
-// Implemented by user runner. Given to story info through its namespace.
+// Implemented by sessionmgr. Given to story info through its namespace.
 // Visible stories are NOT stored on the ledger.
 [Discoverable] // Maxwell apps request this from environment.
 interface VisibleStoriesProvider {

@@ -120,7 +120,7 @@ source_set("test_story_command_executor") {
   ]
 
   deps = [
-    "//peridot/bin/user_runner/puppet_master:story_command_executor",
+    "//peridot/bin/sessionmgr/puppet_master:story_command_executor",
     "//peridot/lib/fidl:clone",
     "//peridot/public/fidl/fuchsia.modular",
   ]
@@ -155,7 +155,7 @@ source_set("test_with_session_storage") {
 
   public_deps = [
     ":test_with_ledger",
-    "//peridot/bin/user_runner/storage",
+    "//peridot/bin/sessionmgr/storage",
     "//peridot/public/fidl/fuchsia.modular",
   ]
 }
@@ -170,7 +170,7 @@ source_set("fake_agent_runner_storage") {
   deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/user_runner/agent_runner:public",
+    "//peridot/bin/sessionmgr/agent_runner:public",
   ]
 }
 

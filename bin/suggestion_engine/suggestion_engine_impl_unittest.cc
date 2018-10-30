@@ -10,7 +10,7 @@
 
 #include "gtest/gtest.h"
 #include "peridot/bin/suggestion_engine/proposal_publisher_impl.h"
-#include "peridot/bin/user_runner/puppet_master/puppet_master_impl.h"
+#include "peridot/bin/sessionmgr/puppet_master/puppet_master_impl.h"
 #include "peridot/lib/testing/test_story_command_executor.h"
 #include "peridot/lib/testing/test_with_session_storage.h"
 

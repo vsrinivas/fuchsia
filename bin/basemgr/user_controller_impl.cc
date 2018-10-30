@@ -18,7 +18,7 @@ namespace modular {
 
 UserControllerImpl::UserControllerImpl(
     fuchsia::sys::Launcher* const launcher,
-    fuchsia::modular::AppConfig user_runner,
+    fuchsia::modular::AppConfig sessionmgr,
     fuchsia::modular::AppConfig user_shell,
     fuchsia::modular::AppConfig story_shell,
     fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
@@ -37,7 +37,7 @@ UserControllerImpl::UserControllerImpl(
       base_shell_services_(base_shell_services ? base_shell_services.Bind()
                                                : nullptr),
       done_(std::move(done)) {
-  // 0. Generate the path to map '/data' for the user runner we are starting.
+  // 0. Generate the path to map '/data' for the sessionmgr we are starting.
   std::string data_origin;
   if (!account) {
     // Guest user.
@@ -51,28 +51,28 @@ UserControllerImpl::UserControllerImpl(
     data_origin = std::string("/data/modular/USER_") + std::string(account->id);
   }
 
-  FXL_LOG(INFO) << "USER RUNNER DATA ORIGIN IS " << data_origin;
+  FXL_LOG(INFO) << "SESSIONMGR DATA ORIGIN IS " << data_origin;
 
-  // 1. Launch UserRunner in the current environment.
-  user_runner_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      launcher, std::move(user_runner), data_origin);
+  // 1. Launch Sessionmgr in the current environment.
+  sessionmgr_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
+      launcher, std::move(sessionmgr), data_origin);
 
-  // 2. Initialize the UserRunner service.
-  user_runner_app_->services().ConnectToService(user_runner_.NewRequest());
-  user_runner_->Initialize(
+  // 2. Initialize the Sessionmgr service.
+  sessionmgr_app_->services().ConnectToService(sessionmgr_.NewRequest());
+  sessionmgr_->Initialize(
       std::move(account), std::move(user_shell), std::move(story_shell),
       std::move(token_provider_factory), std::move(ledger_token_manager),
       std::move(agent_token_manager), user_context_binding_.NewBinding(),
       std::move(view_owner_request));
 
-  user_runner_app_->SetAppErrorHandler([this] {
-    FXL_LOG(ERROR) << "User runner seems to have crashed unexpectedly. "
+  sessionmgr_app_->SetAppErrorHandler([this] {
+    FXL_LOG(ERROR) << "Sessionmgr seems to have crashed unexpectedly. "
                    << "Calling done_().";
     // This prevents us from receiving any further requests.
     user_controller_binding_.Unbind();
     user_context_binding_.Unbind();
-    // Logout(), which expects a graceful shutdown of user_runner, does not
-    // apply here because user_runner crashed. Just run |done_| directly.
+    // Logout(), which expects a graceful shutdown of sessionmgr, does not
+    // apply here because sessionmgr crashed. Just run |done_| directly.
     done_(this);
   });
 }
@@ -89,7 +89,7 @@ void UserControllerImpl::Logout(LogoutCallback done) {
   user_controller_binding_.Unbind();
   user_context_binding_.Unbind();
 
-  user_runner_app_->Teardown(kUserRunnerTimeout, [this] {
+  sessionmgr_app_->Teardown(kSessionmgrTimeout, [this] {
     for (const auto& done : logout_response_callbacks_) {
       done();
     }
@@ -123,7 +123,7 @@ FuturePtr<> UserControllerImpl::SwapUserShell(
 void UserControllerImpl::SwapUserShell(
     fuchsia::modular::AppConfig user_shell_config,
     SwapUserShellCallback callback) {
-  user_runner_->SwapUserShell(std::move(user_shell_config), callback);
+  sessionmgr_->SwapUserShell(std::move(user_shell_config), callback);
 }
 
 // |fuchsia::modular::UserController|
