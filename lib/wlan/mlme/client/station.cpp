@@ -19,6 +19,7 @@
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/packet_utils.h>
+#include <wlan/mlme/rates_elements.h>
 #include <wlan/mlme/sequence.h>
 #include <wlan/mlme/service.h>
 
@@ -280,16 +281,15 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
     assoc->cap = OverrideCapability(client_capability.cap);
     assoc->listen_interval = 0;
 
-    std::vector<SupportedRate> supp_rates;
-    std::vector<SupportedRate> ext_rates;
-    auto status =
-        BuildAssocReqSuppRates(*join_ctx_->bss(), client_capability, &supp_rates, &ext_rates);
-    if (status != ZX_OK) { return status; }
+    auto rates = BuildAssocReqSuppRates(join_ctx_->bss()->basic_rate_set,
+                                        join_ctx_->bss()->op_rate_set, client_capability.rates);
+    if (!rates.has_value()) { return ZX_ERR_NOT_SUPPORTED; }
 
     BufferWriter elem_w({assoc->elements, reserved_ie_len});
     common::WriteSsid(&elem_w, *join_ctx_->bss()->ssid);
-    common::WriteSupportedRates(&elem_w, supp_rates);
-    if (!ext_rates.empty()) { common::WriteExtendedSupportedRates(&elem_w, ext_rates); }
+    RatesWriter rates_writer{{rates->data(), rates->size()}};
+    rates_writer.WriteSupportedRates(&elem_w);
+    rates_writer.WriteExtendedSupportedRates(&elem_w);
 
     // Write RSNE from MLME-Association.request if available.
     if (req.body()->rsn) { elem_w.Write(*req.body()->rsn); }
@@ -315,7 +315,7 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
     packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
     finspect("Outbound Mgmt Frame (AssocReq): %s\n", debug::Describe(*mgmt_hdr).c_str());
-    status = SendNonData(fbl::move(packet));
+    zx_status_t status = SendNonData(fbl::move(packet));
     if (status != ZX_OK) {
         errorf("could not send assoc packet: %d\n", status);
         service::SendAssocConfirm(device_,
@@ -1340,9 +1340,7 @@ zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& f
     debugjoin("from WlanInfo: [%s]\n", debug::Describe(client).c_str());
 
     assoc_ctx_.cap = IntersectCapInfo(ap.cap, client.cap);
-    FindCommonSuppRates(ap.supported_rates, ap.ext_supported_rates, client.supported_rates,
-                        client.ext_supported_rates, &assoc_ctx_.supported_rates,
-                        &assoc_ctx_.ext_supported_rates);
+    assoc_ctx_.rates = IntersectRatesAp(ap.rates, client.rates);
 
     if (ap.ht_cap.has_value() && client.ht_cap.has_value()) {
         // TODO(porce): Supported MCS Set field from the outcome of the intersection
@@ -1402,15 +1400,10 @@ zx_status_t Station::NotifyAssocContext() {
     assoc_ctx_.bssid.CopyTo(ddk.bssid);
     ddk.aid = assoc_ctx_.aid;
 
-    auto& sr = assoc_ctx_.supported_rates;
-    ZX_DEBUG_ASSERT(sr.size() <= WLAN_MAC_SUPPORTED_RATES_MAX_LEN);
-    ddk.supported_rates_cnt = static_cast<uint8_t>(sr.size());
-    std::copy(sr.begin(), sr.end(), ddk.supported_rates);
-
-    auto& esr = assoc_ctx_.ext_supported_rates;
-    ZX_DEBUG_ASSERT(esr.size() <= WLAN_MAC_EXT_SUPPORTED_RATES_MAX_LEN);
-    ddk.ext_supported_rates_cnt = static_cast<uint8_t>(esr.size());
-    std::copy(esr.begin(), esr.end(), ddk.ext_supported_rates);
+    auto& rates = assoc_ctx_.rates;
+    ZX_DEBUG_ASSERT(rates.size() <= WLAN_MAC_MAX_RATES);
+    ddk.rates_cnt = static_cast<uint8_t>(rates.size());
+    std::copy(rates.cbegin(), rates.cend(), ddk.rates);
 
     ddk.has_ht_cap = assoc_ctx_.ht_cap.has_value();
     if (assoc_ctx_.ht_cap.has_value()) { ddk.ht_cap = assoc_ctx_.ht_cap->ToDdk(); }
@@ -1433,152 +1426,6 @@ wlan_stats::ClientMlmeStats Station::stats() const {
 
 void Station::ResetStats() {
     stats_.Reset();
-}
-
-const wlan_band_info_t* FindBand(const wlan_info_t& ifc_info, bool is_5ghz) {
-    ZX_DEBUG_ASSERT(ifc_info.num_bands <= WLAN_MAX_BANDS);
-
-    for (uint8_t idx = 0; idx < ifc_info.num_bands; idx++) {
-        auto bi = &ifc_info.bands[idx];
-        auto base_freq = bi->supported_channels.base_freq;
-
-        if (is_5ghz && base_freq == common::kBaseFreq5Ghz) {
-            return bi;
-        } else if (!is_5ghz && base_freq == common::kBaseFreq2Ghz) {
-            return bi;
-        }
-    }
-
-    return nullptr;
-}
-
-// TODO(NET-1287): Refactor together with Bss::ParseIE()
-zx_status_t ParseAssocRespIe(const uint8_t* ie_chains, size_t ie_chains_len,
-                             AssocContext* assoc_ctx) {
-    ZX_DEBUG_ASSERT(assoc_ctx != nullptr);
-
-    ElementReader reader(ie_chains, ie_chains_len);
-    while (reader.is_valid()) {
-        const ElementHeader* hdr = reader.peek();
-        if (hdr == nullptr) { break; }
-
-        switch (hdr->id) {
-        case element_id::kSuppRates: {
-            auto ie = reader.read<SupportedRatesElement>();
-            if (ie == nullptr) { return ZX_ERR_INTERNAL; }
-            for (uint8_t i = 0; i < ie->hdr.len; i++) {
-                assoc_ctx->supported_rates.push_back(ie->rates[i]);
-            }
-            break;
-        }
-        case element_id::kExtSuppRates: {
-            auto ie = reader.read<ExtendedSupportedRatesElement>();
-            if (ie == nullptr) { return ZX_ERR_INTERNAL; }
-            for (uint8_t i = 0; i < ie->hdr.len; i++) {
-                assoc_ctx->ext_supported_rates.push_back(ie->rates[i]);
-            }
-            break;
-        }
-        case element_id::kHtCapabilities: {
-            auto ie = reader.read<HtCapabilitiesElement>();
-            if (ie == nullptr) { return ZX_ERR_INTERNAL; }
-            assoc_ctx->ht_cap = std::make_optional(ie->body);
-            break;
-        }
-        case element_id::kHtOperation: {
-            auto ie = reader.read<HtOperationElement>();
-            if (ie == nullptr) { return ZX_ERR_INTERNAL; }
-            assoc_ctx->ht_op = std::make_optional(ie->body);
-            break;
-        }
-        case element_id::kVhtCapabilities: {
-            auto ie = reader.read<VhtCapabilitiesElement>();
-            if (ie == nullptr) { return ZX_ERR_INTERNAL; }
-            assoc_ctx->vht_cap = std::make_optional(ie->body);
-            break;
-        }
-        case element_id::kVhtOperation: {
-            auto ie = reader.read<VhtOperationElement>();
-            if (ie == nullptr) { return ZX_ERR_INTERNAL; }
-            assoc_ctx->vht_op = std::make_optional(ie->body);
-            break;
-        }
-        default:
-            reader.skip(sizeof(ElementHeader) + hdr->len);
-            break;
-        }
-    }
-
-    return ZX_OK;
-}
-
-AssocContext ToAssocContext(const wlan_info_t& ifc_info, const wlan_channel_t join_chan) {
-    AssocContext assoc_ctx{};
-    assoc_ctx.cap = CapabilityInfo::FromDdk(ifc_info.caps);
-
-    auto band_info = FindBand(ifc_info, common::Is5Ghz(join_chan));
-    for (uint8_t rate : band_info->basic_rates) {
-        if (rate == 0) { break; }  // basic_rates has fixed-length and is "null-terminated".
-        // SupportedRates Element can hold only 8 rates.
-        if (assoc_ctx.supported_rates.size() < SupportedRatesElement::kMaxLen) {
-            assoc_ctx.supported_rates.emplace_back(rate);
-        } else {
-            assoc_ctx.ext_supported_rates.emplace_back(rate);
-        }
-    }
-
-    if (ifc_info.supported_phys & WLAN_PHY_HT) {
-        assoc_ctx.ht_cap = std::make_optional(HtCapabilities::FromDdk(band_info->ht_caps));
-    }
-
-    if (band_info->vht_supported) {
-        assoc_ctx.vht_cap = std::make_optional(VhtCapabilities::FromDdk(band_info->vht_caps));
-    }
-
-    return assoc_ctx;
-}
-
-void FindCommonSuppRates(const std::vector<SupportedRate>& ap_supp_rates,
-                         const std::vector<SupportedRate>& ap_ext_rates,
-                         const std::vector<SupportedRate>& client_supp_rates,
-                         const std::vector<SupportedRate>& client_ext_rates,
-                         std::vector<SupportedRate>* supp_rates,
-                         std::vector<SupportedRate>* ext_rates) {
-    auto ap_rates(ap_supp_rates);
-    ap_rates.insert(ap_rates.end(), ap_ext_rates.cbegin(), ap_ext_rates.cend());
-    auto client_rates(client_supp_rates);
-    client_rates.insert(client_rates.end(), client_ext_rates.cbegin(), client_ext_rates.cend());
-
-    *supp_rates = IntersectRatesAp(ap_rates, client_rates);
-
-    // SupportedRates Element can hold at most 8 rates. The rest go to ExtSupportedRates
-    if (supp_rates->size() > SupportedRatesElement::kMaxLen) {
-        std::move(supp_rates->cbegin() + SupportedRatesElement::kMaxLen, supp_rates->cend(),
-                  std::back_inserter(*ext_rates));
-        supp_rates->resize(SupportedRatesElement::kMaxLen);
-    }
-}
-
-zx_status_t BuildAssocReqSuppRates(const ::fuchsia::wlan::mlme::BSSDescription& bss,
-                                   const AssocContext& client_capability,
-                                   std::vector<SupportedRate>* supp_rates,
-                                   std::vector<SupportedRate>* ext_rates) {
-    std::vector<SupportedRate> ap_supp_rates;
-    std::vector<SupportedRate> ap_ext_rates;
-    BssDescToSuppRates(bss, &ap_supp_rates, &ap_ext_rates);
-
-    FindCommonSuppRates(ap_supp_rates, ap_ext_rates, client_capability.supported_rates,
-                        client_capability.ext_supported_rates, supp_rates, ext_rates);
-    for (uint8_t rate : bss.basic_rate_set.get()) {
-        const auto basic_rate = SupportedRate::basic(rate);
-        if (std::binary_search(supp_rates->cbegin(), supp_rates->cend(), basic_rate) ||
-            std::binary_search(ext_rates->cbegin(), ext_rates->cend(), basic_rate)) {
-            continue;
-        }
-        errorf("AP basic rate %hhu is not supported by client.\n", rate);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    return ZX_OK;
 }
 
 std::string Station::GetPhyStr() const {

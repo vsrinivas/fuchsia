@@ -238,19 +238,17 @@ typedef struct wlan_info {
 // Many parameters do not distinguish Rx capability from Tx capability.
 // In those cases, a capability is commonly applied to both Rx and Tx.
 // Some parameters are distinctively for Rx only, and some are Tx only.
-#define WLAN_MAC_SUPPORTED_RATES_MAX_LEN 8
-#define WLAN_MAC_EXT_SUPPORTED_RATES_MAX_LEN 255
+#define WLAN_MAC_MAX_SUPP_RATES 8
+#define WLAN_MAC_MAX_EXT_RATES 255
+#define WLAN_MAC_MAX_RATES 8 + 255
 typedef struct wlan_assoc_ctx {
     uint8_t bssid[6];
     uint16_t aid;
 
-    // IEEE Std 802.11-2016, 9.4.2.3
-    uint8_t supported_rates_cnt;
-    uint8_t supported_rates[WLAN_MAC_SUPPORTED_RATES_MAX_LEN];
-
-    // IEEE Std 802.11-2016, 9.4.2.13
-    uint8_t ext_supported_rates_cnt;
-    uint8_t ext_supported_rates[WLAN_MAC_EXT_SUPPORTED_RATES_MAX_LEN];
+    // Coincatenation of SupportedRates and ExtendedSupportedRates
+    // IEEE Std 802.11-2016, 9.4.2.3 & 9.4.2.13
+    uint16_t rates_cnt;
+    uint8_t rates[WLAN_MAC_MAX_RATES];
 
     // IEEE Std 802.11-2016, 9.4.1.4
     uint8_t cap_info[2];

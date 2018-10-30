@@ -4,6 +4,8 @@
 
 #include <wlan/common/element.h>
 
+#include <set>
+
 namespace wlan {
 
 ElementReader::ElementReader(const uint8_t* buf, size_t len) : buf_(buf), len_(len) {}
@@ -244,48 +246,13 @@ VhtCapabilities IntersectVhtCap(const VhtCapabilities& lhs, const VhtCapabilitie
 
 std::vector<SupportedRate> IntersectRatesAp(const std::vector<SupportedRate>& ap_rates,
                                             const std::vector<SupportedRate>& client_rates) {
-    std::vector<SupportedRate> first(ap_rates);
-    std::vector<SupportedRate> second(client_rates);
-
-    std::sort(first.begin(), first.end());
-    std::sort(second.begin(), second.end());
+    std::set<SupportedRate> ap(ap_rates.cbegin(), ap_rates.cend());
+    std::set<SupportedRate> client(client_rates.cbegin(), client_rates.cend());
 
     std::vector<SupportedRate> result;
-    // C++11 Standard 25.4.5.3 - set_intersection ALWAYS takes elements from the first vector.
-    std::set_intersection(first.cbegin(), first.cend(), second.cbegin(), second.cend(),
+    // C++11 Standard 25.4.5.3 - set_intersection ALWAYS takes elements from the first input.
+    std::set_intersection(ap.cbegin(), ap.cend(), client.cbegin(), client.cend(),
                           std::back_inserter(result));
     return result;
-}
-
-void BssDescToSuppRates(const ::fuchsia::wlan::mlme::BSSDescription& bss,
-                        std::vector<SupportedRate>* supp_rates,
-                        std::vector<SupportedRate>* ext_rates) {
-    std::vector<uint8_t> basic_rates(bss.basic_rate_set);
-    std::vector<uint8_t> op_rates(bss.op_rate_set);
-
-    constexpr size_t kMaxSuppRates = SupportedRatesElement::kMaxLen;
-    constexpr size_t kMaxExtRates = ExtendedSupportedRatesElement::kMaxLen;
-
-    if (op_rates.size() >= kMaxSuppRates + kMaxExtRates) {
-        errorf("op_rates.size() is %lu > max allowed size: %zu\n", op_rates.size(),
-               kMaxSuppRates + kMaxExtRates);
-        ZX_DEBUG_ASSERT(false);
-    }
-
-    std::sort(basic_rates.begin(), basic_rates.end());
-    std::sort(op_rates.begin(), op_rates.end());
-    size_t count = 0;
-    for (auto r : op_rates) {
-        bool is_basic = std::binary_search(basic_rates.cbegin(), basic_rates.cend(), r);
-        if (count < kMaxSuppRates) {
-            supp_rates->emplace_back(SupportedRate(r, is_basic));
-        } else {
-            ext_rates->emplace_back(SupportedRate(r, is_basic));
-        }
-        ++count;
-    }
-    if (ext_rates->size() > kMaxExtRates) {
-        ext_rates->resize(kMaxExtRates);
-    }
 }
 }  // namespace wlan

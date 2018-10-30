@@ -54,12 +54,11 @@ typedef struct wlanif_bss_description {
     uint32_t dtim_period;
     uint64_t timestamp;
     uint64_t local_time;
-    // IEEE Std 802.11-2016, 9.4.2.3 - MSB indicates basic rate
-    uint8_t supp_rates[WLAN_MAC_SUPPORTED_RATES_MAX_LEN];
-    uint8_t num_supp_rates;
-    // IEEE Std 802.11-2016, 9.4.2.13 - MSB indicates basic rate
-    uint8_t num_ext_supp_rates;
-    uint8_t ext_supp_rates[WLAN_MAC_EXT_SUPPORTED_RATES_MAX_LEN];
+    // Concatenation of SuppRates and ExtSuppRates - MSB indicates basic rate
+    // IEEE Std 802.11-2016, 9.4.2.3 & 9.4.2.13
+    uint8_t rates[WLAN_MAC_MAX_RATES];
+    uint16_t num_rates;
+
     size_t rsne_len;
     uint8_t rsne[WLAN_RSNE_MAX_LEN];
     wlan_channel_t chan;
@@ -428,7 +427,7 @@ enum {
 };
 
 typedef union wlanif_mlme_stats {
-    uint8_t tag; // WLANIF_MLME_STATS_TYPE_*
+    uint8_t tag;  // WLANIF_MLME_STATS_TYPE_*
     union {
         wlanif_client_mlme_stats_t client_mlme_stats;
         wlanif_ap_mlme_stats_t ap_mlme_stats;

@@ -31,10 +31,8 @@ struct MinstrelTest : public ::testing::Test {
     timekeeper::TestClock clock;
     MinstrelRateSelector minstrel_;
     wlan_assoc_ctx_t assoc_ctx_ht_{
-        .supported_rates_cnt = 8,
-        .supported_rates = {2, 4, 11, 22, 12, 18, 24, 36},
-        .ext_supported_rates_cnt = 4,
-        .ext_supported_rates = {48, 72, 96, 108},
+        .rates_cnt = 12,
+        .rates = {2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108},
         .has_ht_cap = true,
         .ht_cap =
             {

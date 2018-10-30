@@ -394,17 +394,17 @@ TEST_F(ApInfraBssTest, Associate_Success) {
     const SupportedRate* rates;
     size_t num_rates;
     rates = bss.Rates(&num_rates);
-    EXPECT_EQ(actual_ctx->supported_rates_cnt, num_rates);
+    EXPECT_EQ(actual_ctx->rates_cnt, num_rates);
     for (size_t i = 0; i < num_rates; i++) {
-        EXPECT_EQ(actual_ctx->supported_rates[i], rates[i]);
+        EXPECT_EQ(actual_ctx->rates[i], rates[i]);
     }
     EXPECT_TRUE(actual_ctx->has_ht_cap);
     const wlan_ht_caps_t expected_ht_cap = BuildHtCapabilities(bss.Ht()).ToDdk();
     const wlan_ht_caps_t actual_ht_cap = actual_ctx->ht_cap;
     EXPECT_EQ(actual_ht_cap.ht_capability_info, expected_ht_cap.ht_capability_info);
     EXPECT_EQ(actual_ht_cap.ampdu_params, expected_ht_cap.ampdu_params);
-    size_t len = sizeof(expected_ht_cap.supported_mcs_set) /
-                 sizeof(expected_ht_cap.supported_mcs_set[0]);
+    size_t len =
+        sizeof(expected_ht_cap.supported_mcs_set) / sizeof(expected_ht_cap.supported_mcs_set[0]);
     for (size_t i = 0; i < len; i++) {
         EXPECT_EQ(actual_ht_cap.supported_mcs_set[i], expected_ht_cap.supported_mcs_set[i]);
     }

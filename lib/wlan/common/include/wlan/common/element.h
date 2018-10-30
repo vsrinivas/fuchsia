@@ -121,6 +121,7 @@ struct SupportedRate : public common::BitField<uint8_t> {
     }
 
     static SupportedRate basic(uint8_t rate) { return SupportedRate(rate, true); }
+    static SupportedRate raw(uint8_t rate) { return SupportedRate(rate); }
 
     WLAN_BIT_FIELD(rate, 0, 7);
     WLAN_BIT_FIELD(is_basic, 7, 1);
@@ -214,7 +215,6 @@ struct SubbandTriplet {
     uint8_t max_tx_power;  // dBm
 } __PACKED;
 
-
 // IEEE Std 802.11-2016, 9.4.2.9
 struct Country {
     static constexpr size_t kCountryLen = 3;
@@ -252,8 +252,8 @@ struct CountryElement : public Element<CountryElement, element_id::kCountry> {
 // IEEE Std 802.11-2016, 9.4.2.13
 struct ExtendedSupportedRatesElement
     : public Element<ExtendedSupportedRatesElement, element_id::kExtSuppRates> {
-    static bool Create(void* buf, size_t len, size_t* actual,
-                       const SupportedRate rates[], size_t num_rates);
+    static bool Create(void* buf, size_t len, size_t* actual, const SupportedRate rates[],
+                       size_t num_rates);
     static const size_t kMinLen = 1;
     static const size_t kMaxLen = 255;
 
@@ -1426,7 +1426,8 @@ struct VhtCapabilities {
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.158
-struct VhtCapabilitiesElement : public Element<VhtCapabilitiesElement, element_id::kVhtCapabilities> {
+struct VhtCapabilitiesElement
+    : public Element<VhtCapabilitiesElement, element_id::kVhtCapabilities> {
     static constexpr size_t kMinLen = 12;
     static constexpr size_t kMaxLen = 12;
 
@@ -1569,10 +1570,6 @@ VhtCapabilities IntersectVhtCap(const VhtCapabilities& lhs, const VhtCapabilitie
 // The outcoming "Basic rates" follows those specified in AP
 std::vector<SupportedRate> IntersectRatesAp(const std::vector<SupportedRate>& ap_rates,
                                             const std::vector<SupportedRate>& client_rates);
-void BssDescToSuppRates(const ::fuchsia::wlan::mlme::BSSDescription& bss,
-                        std::vector<SupportedRate>* supp_rates,
-                        std::vector<SupportedRate>* ext_rates);
-
 }  // namespace wlan
 
 #endif  // GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_ELEMENT_H_

@@ -472,6 +472,9 @@ TEST(Intersector, IntersectRates) {
     for (auto vec : list) {
         auto got = IntersectRatesAp(vec.ap, vec.client);
         EXPECT_EQ(vec.want, got);
+        for (size_t i = 0; i < got.size(); ++i) {
+            EXPECT_EQ(vec.want[i].val(), got[i].val());
+        }
     }
 }
 

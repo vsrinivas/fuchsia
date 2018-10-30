@@ -76,7 +76,6 @@ executable("client_tests") {
 
   sources = [
     "client_unittest.cpp",
-    "station_unittest.cpp",
   ]
 
   deps = [
@@ -96,6 +95,7 @@ executable("mac_tests") {
   testonly = true
 
   sources = [
+    "assoc_ctx_unittest.cpp",
     "channel_unittest.cpp",
     "element_fidl_unittest.cpp",
     "element_splitter_unittest.cpp",

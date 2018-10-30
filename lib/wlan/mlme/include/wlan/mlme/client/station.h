@@ -5,6 +5,7 @@
 #ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_STATION_H_
 #define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_STATION_H_
 
+#include <wlan/mlme/assoc_context.h>
 #include <wlan/mlme/client/channel_scheduler.h>
 #include <wlan/mlme/client/join_context.h>
 #include <wlan/mlme/device_interface.h>
@@ -31,46 +32,6 @@
 namespace wlan {
 
 class Packet;
-
-// Information defined only within a context of association
-// Beware the subtle interpretation of each field: they are designed to
-// reflect the parameters safe to use within an association
-// Many parameters do not distinguish Rx capability from Tx capability.
-// In those cases, a capability is commonly applied to both Rx and Tx.
-// Some parameters are distinctively for Rx only, and some are Tx only.
-struct AssocContext {
-    // TODO(porce): Move association-related variables of class Station to here
-    zx::time ts_start;  // timestamp of the beginning of the association
-
-    // BSSID of the association.
-    // Not necessarily the same as the BSSID that is used outside this context.
-    // E.g., during joining, authenticating, asssociating, off-channel scanning.
-    common::MacAddr bssid;
-
-    CapabilityInfo cap;
-    uint16_t aid = 0;
-
-    // Negotiated configurations
-    // This is an outcome of intersection of capabilities and configurations.
-    std::vector<SupportedRate> supported_rates;
-    std::vector<SupportedRate> ext_supported_rates;
-
-    // Rx MCS Bitmask in Supported MCS Set field represents the set of MCS
-    // the peer can receive at from this device, considering this device's Tx capability.
-    std::optional<HtCapabilities> ht_cap = std::nullopt;
-    std::optional<HtOperation> ht_op = std::nullopt;
-    std::optional<VhtCapabilities> vht_cap = std::nullopt;
-    std::optional<VhtOperation> vht_op = std::nullopt;
-
-    wlan_channel_t chan;
-
-    bool is_ht = false;
-    bool is_cbw40_rx = false;
-    bool is_cbw40_tx = false;
-    bool is_vht = false;
-
-    void set_aid(uint16_t aid) { aid = aid & kAidMask; }
-};
 
 class Station {
    public:
@@ -192,20 +153,6 @@ class Station {
     PacketQueue bu_queue_;
 };
 
-const wlan_band_info_t* FindBand(const wlan_info_t& ifc_info, bool is_5ghz);
-zx_status_t ParseAssocRespIe(const uint8_t* ie_chains, size_t ie_chains_len,
-                             AssocContext* assoc_ctx);
-AssocContext ToAssocContext(const wlan_info_t& ifc_info, const wlan_channel_t join_chan);
-void FindCommonSuppRates(const std::vector<SupportedRate>& ap_supp_rates,
-                         const std::vector<SupportedRate>& ap_ext_rates,
-                         const std::vector<SupportedRate>& client_supp_rates,
-                         const std::vector<SupportedRate>& client_ext_rates,
-                         std::vector<SupportedRate>* supp_rates,
-                         std::vector<SupportedRate>* ext_rates);
-zx_status_t BuildAssocReqSuppRates(const ::fuchsia::wlan::mlme::BSSDescription& bss,
-                                   const AssocContext& client_capability,
-                                   std::vector<SupportedRate>* supp_rates,
-                                   std::vector<SupportedRate>* ext_rates);
 }  // namespace wlan
 
 #endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_STATION_H_

@@ -240,9 +240,8 @@ static bool ath10k_mac_bitrate_is_cck(int bitrate) {
     return false;
 }
 
-static uint8_t ath10k_mac_bitrate_to_rate(int bitrate) {
-    return DIV_ROUNDUP(bitrate, 5) |
-           (ath10k_mac_bitrate_is_cck(bitrate) ? (1 << 7) : 0);
+static uint8_t ath10k_mac_supp_rate_to_rate(int supp_rate) {
+    return supp_rate | (ath10k_mac_bitrate_is_cck(5 * supp_rate) ? (1 << 7) : 0);
 }
 
 #if 0  // NEEDS PORTING
@@ -2237,15 +2236,9 @@ static void ath10k_peer_assoc_h_rates(struct ath10k* ar,
 #endif  // NEEDS PORTING
 
     size_t rates_size = sizeof(rateset->rates) / sizeof(rateset->rates[0]);
-    rateset->num_rates = 0;
-    for (i = 0; i < assoc->supported_rates_cnt && rateset->num_rates < rates_size; i++) {
-        rateset->rates[rateset->num_rates] = ath10k_mac_bitrate_to_rate(assoc->supported_rates[i]);
-        rateset->num_rates++;
-    }
-    for (i = 0; i < assoc->ext_supported_rates_cnt && rateset->num_rates < rates_size; i++) {
-        rateset->rates[rateset->num_rates] =
-            ath10k_mac_bitrate_to_rate(assoc->ext_supported_rates[i]);
-        rateset->num_rates++;
+    rateset->num_rates = MIN(assoc->rates_cnt, rates_size);
+    for (i = 0; i < rateset->num_rates; i++) {
+        rateset->rates[i] = ath10k_mac_supp_rate_to_rate(assoc->rates[i]);
     }
 }
 

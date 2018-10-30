@@ -2447,15 +2447,15 @@ static void brcmf_parse_ies(uint8_t* ie, size_t ie_len, wlanif_bss_description_t
             break;
         }
         case WLAN_IE_TYPE_SUPP_RATES: {
-            uint8_t num_supp_rates = min(length, WLAN_MAC_SUPPORTED_RATES_MAX_LEN);
-            memcpy(bss->supp_rates, ie + offset + 2, num_supp_rates);
-            bss->num_supp_rates = num_supp_rates;
+            uint8_t num_supp_rates = min(length, WLAN_MAC_MAX_SUPP_RATES);
+            memcpy(bss->rates, ie + offset + 2, num_supp_rates);
+            bss->num_rates = num_supp_rates;
             break;
         }
         case WLAN_IE_TYPE_EXT_SUPP_RATES: {
-            uint8_t num_ext_supp_rates = min(length, WLAN_MAC_EXT_SUPPORTED_RATES_MAX_LEN);
-            memcpy(bss->ext_supp_rates, ie + offset + 2, num_ext_supp_rates);
-            bss->num_ext_supp_rates = num_ext_supp_rates;
+            uint8_t num_ext_supp_rates = min(length, WLAN_MAC_MAX_EXT_RATES);
+            memcpy(bss->rates + bss->num_rates, ie + offset + 2, num_ext_supp_rates);
+            bss->num_rates += num_ext_supp_rates;
             break;
         }
         default:

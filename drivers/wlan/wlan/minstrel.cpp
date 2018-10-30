@@ -150,18 +150,13 @@ MinstrelRateSelector::MinstrelRateSelector(TimerManager&& timer_mgr, ProbeSequen
 
 void AddErp(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map,
             const wlan_assoc_ctx_t& assoc_ctx) {
-    std::vector<SupportedRate> legacy_rates(assoc_ctx.supported_rates_cnt +
-                                            assoc_ctx.ext_supported_rates_cnt);
+    std::vector<SupportedRate> rates(assoc_ctx.rates_cnt);
 
-    std::transform(assoc_ctx.supported_rates,
-                   assoc_ctx.supported_rates + assoc_ctx.supported_rates_cnt, legacy_rates.begin(),
-                   SupportedRate::basic);
-    std::transform(assoc_ctx.ext_supported_rates,
-                   assoc_ctx.ext_supported_rates + assoc_ctx.ext_supported_rates_cnt,
-                   legacy_rates.begin() + assoc_ctx.supported_rates_cnt, SupportedRate::basic);
+    std::transform(assoc_ctx.rates, assoc_ctx.rates + assoc_ctx.rates_cnt, rates.begin(),
+                   SupportedRate::raw);
 
-    debugmstl("Supported rates: %s\n", debug::Describe(legacy_rates).c_str());
-    AddSupportedErp(tx_stats_map, legacy_rates);
+    debugmstl("Supported rates: %s\n", debug::Describe(rates).c_str());
+    AddSupportedErp(tx_stats_map, rates);
 }
 
 void AddHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map, const HtCapabilities& ht_cap) {
@@ -218,9 +213,7 @@ void MinstrelRateSelector::AddPeer(const wlan_assoc_ctx_t& assoc_ctx) {
         }
     }
 
-    if (assoc_ctx.supported_rates_cnt + assoc_ctx.ext_supported_rates_cnt > 0) {
-        AddErp(&peer.tx_stats_map, assoc_ctx);
-    }
+    if (assoc_ctx.rates_cnt > 0) { AddErp(&peer.tx_stats_map, assoc_ctx); }
     debugmstl("tx_stats_map populated. size: %zu.\n", peer.tx_stats_map.size());
 
     if (peer.tx_stats_map.size() == 0) {
