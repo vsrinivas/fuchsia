@@ -44,38 +44,41 @@ void DeauthenticatingState::OnEnter() {
 DeauthenticatedState::DeauthenticatedState(RemoteClient* client) : BaseState(client) {}
 
 void DeauthenticatedState::HandleAnyMgmtFrame(MgmtFrame<>&& frame) {
-    if (auto auth = frame.View().CheckBodyType<Authentication>().CheckLength()) {
-        MoveToState<AuthenticatingState>(auth.IntoOwned(frame.Take()));
+    if (auto auth_frame = frame.View().CheckBodyType<Authentication>().CheckLength()) {
+        ZX_DEBUG_ASSERT(frame.hdr()->addr2 == client_->addr());
+        debugbss("[client] [%s] received Authentication request...\n",
+                 client_->addr().ToString().c_str());
+
+        auto auth_alg = auth_frame.body()->auth_algorithm_number;
+        if (auth_alg != AuthAlgorithm::kOpenSystem) {
+            errorf("[client] [%s] received auth attempt with unsupported algorithm: %u\n",
+                   client_->addr().ToString().c_str(), auth_alg);
+            FailAuthentication(status_code::kUnsupportedAuthAlgorithm);
+            return;
+        }
+
+        auto auth_txn_seq_no = auth_frame.body()->auth_txn_seq_number;
+        if (auth_txn_seq_no != 1) {
+            errorf("[client] [%s] received auth attempt with invalid tx seq no: %u\n",
+                   client_->addr().ToString().c_str(), auth_txn_seq_no);
+            FailAuthentication(status_code::kRefused);
+            return;
+        }
+
+        service::SendAuthIndication(client_->device(), client_->addr(),
+                                    wlan_mlme::AuthenticationTypes::OPEN_SYSTEM);
+        MoveToState<AuthenticatingState>();
     }
+}
+
+void DeauthenticatedState::FailAuthentication(const status_code::StatusCode st_code) {
+    client_->SendAuthentication(st_code);
+    client_->ReportFailedAuth();
 }
 
 // AuthenticatingState implementation.
 
-AuthenticatingState::AuthenticatingState(RemoteClient* client, MgmtFrame<Authentication>&& frame)
-    : BaseState(client) {
-    ZX_DEBUG_ASSERT(frame.hdr()->addr2 == client_->addr());
-    debugbss("[client] [%s] received Authentication request...\n",
-             client_->addr().ToString().c_str());
-
-    auto auth_alg = frame.body()->auth_algorithm_number;
-    if (auth_alg != AuthAlgorithm::kOpenSystem) {
-        errorf("[client] [%s] received auth attempt with unsupported algorithm: %u\n",
-               client_->addr().ToString().c_str(), auth_alg);
-        FinalizeAuthenticationAttempt(status_code::kUnsupportedAuthAlgorithm);
-        return;
-    }
-
-    auto auth_txn_seq_no = frame.body()->auth_txn_seq_number;
-    if (auth_txn_seq_no != 1) {
-        errorf("[client] [%s] received auth attempt with invalid tx seq no: %u\n",
-               client_->addr().ToString().c_str(), auth_txn_seq_no);
-        FinalizeAuthenticationAttempt(status_code::kRefused);
-        return;
-    }
-
-    service::SendAuthIndication(client_->device(), client_->addr(),
-                                wlan_mlme::AuthenticationTypes::OPEN_SYSTEM);
-}
+AuthenticatingState::AuthenticatingState(RemoteClient* client) : BaseState(client) {}
 
 void AuthenticatingState::OnEnter() {
     auto deadline = client_->DeadlineAfterTus(kAuthenticatingTimeoutTu);
@@ -168,7 +171,8 @@ void AuthenticatedState::HandleAuthentication(MgmtFrame<Authentication>&& frame)
         "[client] [%s] received Authentication request while being "
         "authenticated\n",
         client_->addr().ToString().c_str());
-    MoveToState<AuthenticatingState>(fbl::move(frame));
+    MoveToState<DeauthenticatedState>();
+    client_->HandleAnyMgmtFrame(MgmtFrame<>(frame.Take()));
 }
 
 void AuthenticatedState::HandleDeauthentication(MgmtFrame<Deauthentication>&& frame) {
@@ -221,7 +225,7 @@ void AuthenticatedState::HandleAssociationRequest(MgmtFrame<AssociationRequest>&
 
 // AssociatingState implementation.
 
-AssociatingState::AssociatingState(RemoteClient* client) : BaseState(client), aid_(kUnknownAid) {}
+AssociatingState::AssociatingState(RemoteClient* client) : BaseState(client) {}
 
 void AssociatingState::OnEnter() {
     auto deadline = client_->DeadlineAfterTus(kAssociatingTimeoutTu);
@@ -247,15 +251,16 @@ zx_status_t AssociatingState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
         // Received request which we've been waiting for. Timer can get canceled.
         assoc_timeout_.Cancel();
 
+        std::optional<uint16_t> aid = std::nullopt;
         status_code::StatusCode st_code;
         if (assoc_resp->body()->result_code == wlan_mlme::AssociateResultCodes::SUCCESS) {
-            aid_ = assoc_resp->body()->association_id;
+            aid.emplace(assoc_resp->body()->association_id);
             st_code = status_code::kSuccess;
         } else {
             // TODO(NET-1464): map result code to status code;
             st_code = status_code::kRefused;
         }
-        return FinalizeAssociationAttempt(st_code);
+        return FinalizeAssociationAttempt(aid, st_code);
     } else {
         warnf("[client] [%s] unexpected MLME msg type in associating state; ordinal: %u\n",
               client_->addr().ToString().c_str(), msg.ordinal());
@@ -263,11 +268,12 @@ zx_status_t AssociatingState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     }
 }
 
-zx_status_t AssociatingState::FinalizeAssociationAttempt(status_code::StatusCode st_code) {
-    bool assoc_success = st_code == status_code::kSuccess;
-    auto status = client_->SendAssociationResponse(aid_, st_code);
+zx_status_t AssociatingState::FinalizeAssociationAttempt(std::optional<uint16_t> aid,
+                                                         status_code::StatusCode st_code) {
+    bool assoc_success = aid.has_value() && st_code == status_code::kSuccess;
+    auto status = client_->SendAssociationResponse(aid.value_or(kUnknownAid), st_code);
     if (assoc_success && status == ZX_OK) {
-        MoveToState<AssociatedState>(aid_);
+        MoveToState<AssociatedState>(aid.value());
     } else {
         service::SendDisassociateIndication(client_->device(), client_->addr(),
                                             reason_code::ReasonCode::kUnspecifiedReason);
@@ -321,7 +327,8 @@ void AssociatedState::HandleAuthentication(MgmtFrame<Authentication>&& frame) {
              client_->addr().ToString().c_str());
     // Client believes it is not yet authenticated. Thus, there is no need to send
     // an explicit Deauthentication.
-    MoveToState<AuthenticatingState>(fbl::move(frame));
+    MoveToState<DeauthenticatedState>();
+    client_->HandleAnyMgmtFrame(MgmtFrame<>(frame.Take()));
 }
 
 void AssociatedState::HandleAssociationRequest(MgmtFrame<AssociationRequest>&& frame) {
