@@ -140,55 +140,16 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
         return ERRNO(EBADF);
     }
 
-    zx_status_t r;
-    r = io->ops->misc(io, ZXSIO_CONNECT, 0, 0, (void*)addr, len);
-    if (r == ZX_ERR_SHOULD_WAIT) {
-        if (io->ioflag & IOFLAG_NONBLOCK) {
-            io->ioflag |= IOFLAG_SOCKET_CONNECTING;
-            fdio_release(io);
-            return ERRNO(EINPROGRESS);
-        }
-        // going to wait for the completion
-    } else {
-        if (r == ZX_OK) {
-            io->ioflag |= IOFLAG_SOCKET_CONNECTED;
-        }
+    zx_status_t status = zxs_connect(socket, addr, len);
+    if (status == ZX_ERR_SHOULD_WAIT) {
+        io->ioflag |= IOFLAG_SOCKET_CONNECTING;
         fdio_release(io);
-        return STATUS(r);
-    }
-
-    // wait for the completion
-    uint32_t events = POLLOUT;
-    zx_handle_t h;
-    zx_signals_t sigs;
-    io->ops->wait_begin(io, events, &h, &sigs);
-    r = zx_object_wait_one(h, sigs, ZX_TIME_INFINITE, &sigs);
-    io->ops->wait_end(io, sigs, &events);
-    if (!(events & POLLOUT)) {
-        fdio_release(io);
-        return ERRNO(EIO);
-    }
-    if (r < 0) {
-        fdio_release(io);
-        return ERROR(r);
-    }
-
-    // check the result
-    zx_status_t status;
-    size_t actual = 0u;
-    r = zxs_getsockopt(socket, SOL_SOCKET, SO_ERROR, &status, sizeof(status), &actual);
-    if (r < 0) {
-        fdio_release(io);
-        return ERRNO(EIO);
-    }
-    if (status == ZX_OK) {
+        return ERRNO(EINPROGRESS);
+    } else if (status == ZX_OK) {
         io->ioflag |= IOFLAG_SOCKET_CONNECTED;
     }
     fdio_release(io);
-    if (status != ZX_OK) {
-        return ERRNO(fdio_status_to_errno(status));
-    }
-    return 0;
+    return STATUS(status);
 }
 
 __EXPORT

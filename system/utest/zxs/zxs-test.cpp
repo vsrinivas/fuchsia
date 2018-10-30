@@ -96,10 +96,13 @@ static zx_status_t handle_message(async::Wait* wait, zxsio_msg_t* msg) {
         memcpy(reply.data, &payload, sizeof(payload));
         break;
     }
+    case ZXSIO_CONNECT: {
+        // No reply needed.
+        break;
+    }
     case ZXSIO_CLOSE:
     case ZXSIO_OPEN:
     case ZXSIO_IOCTL:
-    case ZXSIO_CONNECT:
     case ZXSIO_BIND:
     case ZXSIO_LISTEN:
     default:
@@ -184,7 +187,7 @@ bool basic_test(void) {
     struct sockaddr addr;
     memset(&addr, 0, sizeof(addr));
     status = zxs_connect(&socket, &addr, sizeof(addr));
-    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, status);
+    ASSERT_EQ(ZX_OK, status);
 
     memset(&addr, 0, sizeof(addr));
     size_t actual = 0u;

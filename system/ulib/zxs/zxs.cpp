@@ -171,7 +171,29 @@ zx_status_t zxs_socket(zx_handle_t socket_provider,
 
 zx_status_t zxs_connect(const zxs_socket_t* socket, const struct sockaddr* addr,
                         size_t addr_length) {
-    return ZX_ERR_NOT_SUPPORTED;
+    zx_status_t status = zxsio_op(socket->socket, ZXSIO_CONNECT, 0, 0,
+                                  const_cast<struct sockaddr*>(addr),
+                                  addr_length);
+
+    if (status == ZX_ERR_SHOULD_WAIT && (socket->flags & ZXS_FLAG_BLOCKING)) {
+        zx_signals_t observed = ZX_SIGNAL_NONE;
+        status = zx_object_wait_one(socket->socket, ZXSIO_SIGNAL_OUTGOING,
+                                    ZX_TIME_INFINITE, &observed);
+        if (status != ZX_OK) {
+            return ZX_ERR_IO;
+        }
+
+        zx_status_t socket_status;
+        size_t actual = 0u;
+        status = zxs_getsockopt(socket, SOL_SOCKET, SO_ERROR, &socket_status,
+                                sizeof(socket_status), &actual);
+        if (status != ZX_OK) {
+            return ZX_ERR_IO;
+        }
+        return socket_status;
+    }
+
+    return status;
 }
 
 zx_status_t zxs_bind(const zxs_socket_t* socket, const struct sockaddr* addr,

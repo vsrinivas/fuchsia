@@ -715,17 +715,25 @@ fdio_t* fd_to_socket(int fd, const zxs_socket_t** out_socket) {
         return NULL;
     }
 
-    if (io->ops == &fdio_socket_stream_ops) {
+    if (io->ops == &fdio_socket_stream_ops
+        || io->ops == &fdio_socket_dgram_ops) {
         zxsio_t* sio = (zxsio_t*)io;
+
+        // Ideally, we would keep the blocking state of the embedded
+        // |zxs_socket_t| up to date as the IOFLAG_NONBLOCK state of the ioflag
+        // changes, but that would involve changing generic code in unistd.c.
+        // For now, we update the |zxs_socket_t| flag state lazily here.
+        if (io->ioflag & IOFLAG_NONBLOCK) {
+            sio->s.flags &= ~ZXS_FLAG_BLOCKING;
+        } else {
+            sio->s.flags |= ZXS_FLAG_BLOCKING;
+        }
+
         *out_socket = &sio->s;
-    } else if (io->ops == &fdio_socket_dgram_ops) {
-        zxsio_t* sio = (zxsio_t*)io;
-        *out_socket = &sio->s;
-    } else {
-        fdio_release(io);
-        *out_socket = NULL;
-        return NULL;
+        return io;
     }
 
-    return io;
+    fdio_release(io);
+    *out_socket = NULL;
+    return NULL;
 }
