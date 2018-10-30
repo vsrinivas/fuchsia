@@ -10,8 +10,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "pave-logging.h"
 #include "pave-lib.h"
+#include "pave-logging.h"
 
 namespace {
 
@@ -29,10 +29,12 @@ void PrintUsage() {
     ERROR("  install-zirconb    : Install a ZIRCON-B partition to the device\n");
     ERROR("  install-zirconr    : Install a ZIRCON-R partition to the device\n");
     ERROR("  install-fvm        : Install a sparse FVM to the device\n");
+    ERROR("  install-data-file  : Install a file to DATA (--path required)\n");
     ERROR("  wipe               : Clean up the install disk\n");
     ERROR("Options:\n");
     ERROR("  --file <file>: Read from FILE instead of stdin\n");
     ERROR("  --force: Install partition even if inappropriate for the device\n");
+    ERROR("  --path <path>: Install DATA file to path\n");
 }
 
 bool ParseFlags(int argc, char** argv, Flags* flags) {
@@ -61,6 +63,8 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
         flags->cmd = Command::kInstallZirconB;
     } else if (!strcmp(argv[0], "install-zirconr")) {
         flags->cmd = Command::kInstallZirconR;
+    } else if (!strcmp(argv[0], "install-data-file")) {
+        flags->cmd = Command::kInstallDataFile;
     } else if (!strcmp(argv[0], "install-fvm")) {
         flags->cmd = Command::kInstallFvm;
     } else if (!strcmp(argv[0], "wipe")) {
@@ -91,6 +95,13 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
                 ERROR("Couldn't open supplied file\n");
                 return false;
             }
+        } else if (!strcmp(argv[0], "--path")) {
+            SHIFT_ARGS;
+            if (argc < 1) {
+                ERROR("'--path' argument requires a path\n");
+                return false;
+            }
+            flags->path = argv[0];
         } else if (!strcmp(argv[0], "--force")) {
             flags->force = true;
         } else {
@@ -98,6 +109,12 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
         }
         SHIFT_ARGS;
     }
+
+    if (flags->cmd == Command::kInstallDataFile && flags->path == nullptr) {
+        ERROR("install-data-file requires --path\n");
+        return false;
+    }
+
     return true;
 #undef SHIFT_ARGS
 }

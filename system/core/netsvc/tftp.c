@@ -207,7 +207,7 @@ done:
 
 static tftp_status paver_open_write(const char* filename, size_t size, file_info_t* file_info) {
     // paving an image to disk
-    const char* argv[] = {"/boot/bin/install-disk-image", NULL, NULL};
+    const char* argv[] = {"/boot/bin/install-disk-image", NULL, NULL, NULL, NULL};
 
     if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_FVM_HOST_FILENAME)) {
         printf("netsvc: Running FVM Paver\n");
@@ -230,6 +230,11 @@ static tftp_status paver_open_write(const char* filename, size_t size, file_info
     } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_ZIRCONR_HOST_FILENAME)) {
         printf("netsvc: Running ZIRCON-R Paver\n");
         argv[1] = "install-zirconr";
+    } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_SSHAUTH_HOST_FILENAME)) {
+        printf("netsvc: Installing SSH authorized_keys\n");
+        argv[1] = "install-data-file";
+        argv[2] = "--path";
+        argv[3] = "ssh/authorized_keys";
     } else {
         fprintf(stderr, "netsvc: Unknown Paver\n");
         return TFTP_ERR_IO;

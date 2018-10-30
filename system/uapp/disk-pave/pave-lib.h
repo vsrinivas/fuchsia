@@ -21,6 +21,7 @@ enum class Command {
     kInstallZirconA,
     kInstallZirconB,
     kInstallZirconR,
+    kInstallDataFile,
     kInstallFvm,
     kWipe,
 };
@@ -36,11 +37,16 @@ struct Flags {
     Arch arch = Arch::X64;
     bool force = false;
     fbl::unique_fd payload_fd;
+    char* path = nullptr;
 };
 
 // Paves an image onto the disk.
 extern zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
                                  fbl::unique_fd payload_fd, Partition partition_type, Arch arch);
+
+// Paves |fd| to a target |data_path| within the /data partition.
+zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner,
+                         fbl::unique_fd payload_fd, char* data_path);
 
 // Reads the entire file from supplied file descriptor. This is necessary due to
 // implementation of streaming protocol which forces entire file to be

@@ -4,6 +4,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <libgen.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
@@ -40,11 +41,13 @@
 #include "pave-logging.h"
 #include "pave-utils.h"
 
+#define ZXCRYPT_DRIVER_LIB "/boot/driver/zxcrypt.so"
+
 namespace paver {
 namespace {
 
 static Partition PartitionType(const Command command) {
-    switch(command) {
+    switch (command) {
     case Command::kInstallBootloader:
         return Partition::kBootloader;
     case Command::kInstallEfi:
@@ -88,7 +91,8 @@ zx_status_t FvmIsVirtualPartition(const fbl::unique_fd& fd, bool* out) {
 // Describes the state of a partition actively being written
 // out to disk.
 struct PartitionInfo {
-    PartitionInfo() : pd(nullptr) {}
+    PartitionInfo()
+        : pd(nullptr) {}
 
     fvm::partition_descriptor_t* pd;
     fbl::unique_fd new_part;
@@ -619,7 +623,6 @@ zx_status_t ValidatePartitions(const fbl::unique_fd& fvm_fd,
 
     *out_requested_slices = requested_slices;
     return ZX_OK;
-
 }
 
 // Allocates the space requested by the partitions by creating new
@@ -977,12 +980,120 @@ zx_status_t RealMain(Flags flags) {
             return ZX_OK;
         }
         break;
+    case Command::kInstallDataFile:
+        return DataFilePave(fbl::move(device_partitioner), fbl::move(flags.payload_fd), flags.path);
+
     default:
         ERROR("Unsupported command.");
         return ZX_ERR_NOT_SUPPORTED;
     }
     return PartitionPave(fbl::move(device_partitioner), fbl::move(flags.payload_fd),
-                            PartitionType(flags.cmd), flags.arch);
+                         PartitionType(flags.cmd), flags.arch);
+}
+
+zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner,
+                         fbl::unique_fd payload_fd, char* data_path) {
+
+    const char* mount_path = "/volume/data";
+    const uint8_t data_guid[] = GUID_DATA_VALUE;
+    char minfs_path[PATH_MAX] = {0};
+    char path[PATH_MAX] = {0};
+    zx_status_t status = ZX_OK;
+
+    fbl::unique_fd part_fd(open_partition(nullptr, data_guid, ZX_SEC(1), path));
+    if (!part_fd) {
+        ERROR("DATA partition not found in FVM\n");
+        Drain(fbl::move(payload_fd));
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    switch (detect_disk_format(part_fd.get())) {
+    case DISK_FORMAT_MINFS:
+        // If the disk we found is actually minfs, we can just use the block
+        // device path we were given by open_partition.
+        strncpy(minfs_path, path, PATH_MAX);
+        break;
+
+    case DISK_FORMAT_ZXCRYPT:
+        // Compute the topological path of the FVM block driver, and then tack
+        // the zxcrypt-device string onto the end. This should be improved.
+        ioctl_device_get_topo_path(part_fd.get(), path, sizeof(path));
+        snprintf(minfs_path, sizeof(minfs_path), "%s/zxcrypt/block", path);
+
+        // TODO(security): ZX-1130. We need to bind with channel in order to
+        // pass a key here. Where does the key come from? We need to determine
+        // if this is unattended.
+        ioctl_device_bind(part_fd.get(), ZXCRYPT_DRIVER_LIB, strlen(ZXCRYPT_DRIVER_LIB));
+
+        if ((status = wait_for_device(minfs_path, ZX_SEC(5))) != ZX_OK) {
+            ERROR("zxcrypt bind error: %s\n", zx_status_get_string(status));
+            return status;
+        }
+
+        break;
+
+    default:
+        ERROR("unsupported disk format at %s\n", path);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    mount_options_t opts(default_mount_options);
+    opts.create_mountpoint = true;
+    if ((status = mount(open(minfs_path, O_RDWR), mount_path, DISK_FORMAT_MINFS,
+                        &opts, launch_logs_async)) != ZX_OK) {
+        ERROR("mount error: %s\n", zx_status_get_string(status));
+        Drain(fbl::move(payload_fd));
+        return status;
+    }
+
+    // mkdir any intermediate directories between mount_path and basename(data_path)
+    snprintf(path, sizeof(path), "%s/%s", mount_path, data_path);
+    size_t cur = strlen(mount_path);
+    size_t max = strlen(path) - strlen(basename(path));
+    // note: the call to basename above modifies path, so it needs reconstruction.
+    snprintf(path, sizeof(path), "%s/%s", mount_path, data_path);
+    while (cur < max) {
+        ++cur;
+        if (path[cur] == '/') {
+            path[cur] = 0;
+            // errors ignored, let the open() handle that later.
+            mkdir(path, 0700);
+            path[cur] = '/';
+        }
+    }
+
+    // We append here, because the primary use case here is to send SSH keys
+    // which can be appended, but we may want to revisit this choice for other
+    // files in the future.
+    {
+        char buf[8192];
+        ssize_t n;
+        fbl::unique_fd kfd(open(path, O_CREAT | O_WRONLY | O_APPEND, 0600));
+        if (!kfd) {
+            umount(mount_path);
+            ERROR("open %s error: %s\n", data_path, strerror(errno));
+            Drain(fbl::move(payload_fd));
+            return ZX_ERR_IO;
+        }
+        while ((n = read(payload_fd.get(), &buf, sizeof(buf))) > 0) {
+            if (write(kfd.get(), &buf, n) != n) {
+                umount(mount_path);
+                ERROR("write %s error: %s\n", data_path, strerror(errno));
+                Drain(fbl::move(payload_fd));
+                return ZX_ERR_IO;
+            }
+        }
+        fsync(kfd.get());
+    }
+
+    if ((status = umount(mount_path)) != ZX_OK) {
+        ERROR("unmount %s failed: %s\n", mount_path,
+            zx_status_get_string(status));
+        return status;
+    }
+
+    LOG("Wrote %s\n", data_path);
+    return ZX_OK;
 }
 
 } //  namespace paver

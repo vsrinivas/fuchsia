@@ -195,13 +195,14 @@ void usage(void) {
             "             (ignored with --tftp)\n"
             "  -n         only boot device with this nodename\n"
             "  -w <sz>    tftp window size (default=%d, ignored with --netboot)\n"
-            "  --fvm <file>        use the supplied file as a sparse FVM image (up to 4 times)\n"
-            "  --bootloader <file> use the supplied file as a BOOTLOADER image\n"
-            "  --efi <file>        use the supplied file as an EFI image\n"
-            "  --kernc <file>      use the supplied file as a KERN-C CrOS image\n"
-            "  --zircona <file>    use the supplied file as a ZIRCON-A ZBI\n"
-            "  --zirconb <file>    use the supplied file as a ZIRCON-B ZBI\n"
-            "  --zirconr <file>    use the supplied file as a ZIRCON-R ZBI\n"
+            "  --fvm <file>             use the supplied file as a sparse FVM image (up to 4 times)\n"
+            "  --bootloader <file>      use the supplied file as a BOOTLOADER image\n"
+            "  --efi <file>             use the supplied file as an EFI image\n"
+            "  --kernc <file>           use the supplied file as a KERN-C CrOS image\n"
+            "  --zircona <file>         use the supplied file as a ZIRCON-A ZBI\n"
+            "  --zirconb <file>         use the supplied file as a ZIRCON-B ZBI\n"
+            "  --zirconr <file>         use the supplied file as a ZIRCON-R ZBI\n"
+            "  --authorized_keys <file> use the supplied file as an authorized_keys file\n"
             "  --netboot    use the netboot protocol\n"
             "  --tftp       use the tftp protocol (default)\n"
             "  --nocolor    disable ANSI color (false)\n",
@@ -293,6 +294,7 @@ int main(int argc, char** argv) {
     const char* zircona_image = NULL;
     const char* zirconb_image = NULL;
     const char* zirconr_image = NULL;
+    const char* authorized_keys = NULL;
     const char* fvm_images[MAX_FVM_IMAGES] = {NULL, NULL, NULL, NULL};
     const char* kernel_fn = NULL;
     const char* ramdisk_fn = NULL;
@@ -376,6 +378,15 @@ int main(int argc, char** argv) {
                 return -1;
             }
             zirconr_image = argv[1];
+        } else if (!strcmp(argv[1], "--authorized_keys")) {
+            argc--;
+            argv++;
+            if (argc <= 1) {
+                fprintf(stderr,
+                        "'--authorized_keys' option requires an argument (authorized_keys)\n");
+                return -1;
+            }
+            authorized_keys = argv[1];
         } else if (!strcmp(argv[1], "-1")) {
             once = 1;
         } else if (!strcmp(argv[1], "-b")) {
@@ -607,6 +618,9 @@ int main(int argc, char** argv) {
         }
         if (status == 0 && zirconr_image) {
             status = xfer(&ra, zirconr_image, NB_ZIRCONR_FILENAME);
+        }
+        if (status == 0 && authorized_keys) {
+            status = xfer(&ra, authorized_keys, NB_SSHAUTH_FILENAME);
         }
         if (status == 0 && kernel_fn) {
             status = xfer(&ra, kernel_fn, NB_KERNEL_FILENAME);
