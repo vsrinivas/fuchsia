@@ -33,9 +33,13 @@ template("executable_package") {
                              "tests",
                              "resources",
                            ])
-    deps += [
-      ":${binary_rule}",
-    ]
+    if (defined(deps)) {
+      deps += [ ":${binary_rule}" ]
+    } else {
+      deps = [
+        ":${binary_rule}",
+      ]
+    }
 
     binary = binary_name
   }
