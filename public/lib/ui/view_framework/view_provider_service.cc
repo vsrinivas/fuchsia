@@ -37,7 +37,7 @@ void ViewProviderService::CreateView(
 
   std::unique_ptr<BaseView> view = view_factory_(std::move(view_context));
   if (view) {
-    view->SetReleaseHandler([this, view = view.get()] {
+    view->SetReleaseHandler([this, view = view.get()](zx_status_t status) {
       auto it = std::find_if(views_.begin(), views_.end(),
                              [view](const std::unique_ptr<BaseView>& other) {
                                return other.get() == view;

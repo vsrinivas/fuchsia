@@ -68,7 +68,13 @@ fuchsia::sys::ServiceProvider* BaseView::GetViewServiceProvider() {
   return view_container_.get();
 }
 
+// TODO(FIDL-319): Migrate callers to this method to
+// SetReleaseHandler(fit::function<void(zx_status_t)>).
 void BaseView::SetReleaseHandler(fit::closure callback) {
+  view_listener_binding_.set_error_handler(std::move(callback));
+}
+
+void BaseView::SetReleaseHandler(fit::function<void(zx_status_t)> callback) {
   view_listener_binding_.set_error_handler(std::move(callback));
 }
 

@@ -78,7 +78,15 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
   //
   // This should be used to implement cleanup policies to release resources
   // associated with the view (including the object itself).
+  // TODO(FIDL-319): Remove this function.
   void SetReleaseHandler(fit::closure callback);
+
+  // Sets a callback which is invoked when the view's owner releases the
+  // view causing the view manager to unregister it.
+  //
+  // This should be used to implement cleanup policies to release resources
+  // associated with the view (including the object itself).
+  void SetReleaseHandler(fit::function<void(zx_status_t)> callback);
 
   // Serves as the return value for LaunchAppAndCreateView(), below.
   struct EmbeddedViewInfo {

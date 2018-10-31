@@ -80,20 +80,21 @@ void ViewProviderService::CreateView(
 
   if (view_factory_) {
     if (auto base_view = view_factory_(std::move(context))) {
-      base_view->SetReleaseHandler([this, base_view = base_view.get()] {
-        auto it =
-            std::find_if(views_.begin(), views_.end(),
-                         [base_view](const std::unique_ptr<BaseView>& other) {
-                           return other.get() == base_view;
-                         });
-        FXL_DCHECK(it != views_.end());
-        views_.erase(it);
-      });
+      base_view->SetReleaseHandler(
+          [this, base_view = base_view.get()](zx_status_t status) {
+            auto it = std::find_if(
+                views_.begin(), views_.end(),
+                [base_view](const std::unique_ptr<BaseView>& other) {
+                  return other.get() == base_view;
+                });
+            FXL_DCHECK(it != views_.end());
+            views_.erase(it);
+          });
       views_.push_back(std::move(base_view));
     }
   } else if (old_view_factory_) {
     if (auto view = old_view_factory_(std::move(context))) {
-      view->SetReleaseHandler([this, view = view.get()] {
+      view->SetReleaseHandler([this, view = view.get()](zx_status_t status) {
         auto it =
             std::find_if(old_views_.begin(), old_views_.end(),
                          [view](const std::unique_ptr<V1BaseView>& other) {

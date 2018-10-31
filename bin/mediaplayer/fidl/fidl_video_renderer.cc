@@ -284,7 +284,7 @@ void FidlVideoRenderer::CreateView(
   views_.emplace(view_raw_ptr, std::move(view));
 
   view_raw_ptr->SetReleaseHandler(
-      [this, view_raw_ptr]() { views_.erase(view_raw_ptr); });
+      [this, view_raw_ptr](zx_status_t status) { views_.erase(view_raw_ptr); });
 
   if (have_valid_image_info() && input_connection_ready_) {
     // We're ready to add images to the new view, so do so.
@@ -422,7 +422,7 @@ FidlVideoRenderer::View::View(
   session()->Enqueue(scenic::NewCreateImagePipeCmd(
       image_pipe_id, image_pipe_.NewRequest(renderer_->dispatcher())));
 
-  image_pipe_.set_error_handler([this]() {
+  image_pipe_.set_error_handler([this](zx_status_t status) {
     images_.reset();
     image_pipe_ = nullptr;
   });

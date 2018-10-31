@@ -349,7 +349,7 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
       view_ = std::make_unique<GuestView>(
           &scanout_, std::move(input_listener), std::move(view_listener),
           std::move(view_manager), view_owner.NewRequest());
-      view_->SetReleaseHandler([this] { view_.reset(); });
+      view_->SetReleaseHandler([this](zx_status_t status) { view_.reset(); });
 
       // Present view.
       auto presenter =
