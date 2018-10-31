@@ -30,6 +30,8 @@ struct Struct : public Base1, private Base2 {
 
 EXPORT Struct GetStruct() { return Struct(); }
 
+EXPORT void PassRValueRef(int&& rval_ref) { }
+
 // This provides a test for struct type decode, function parameters, and
 // local variables.
 EXPORT int DoStructCall(const Struct& arg1, int arg2) {

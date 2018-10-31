@@ -86,7 +86,8 @@ void EnsureResolveReference(fxl::RefPtr<SymbolDataProvider> data_provider,
   }
 
   const Type* concrete = type->GetConcreteType();  // Strip "const", etc.
-  if (concrete->tag() != Symbol::kTagReferenceType) {
+  if (concrete->tag() != Symbol::kTagReferenceType &&
+      concrete->tag() != Symbol::kTagRvalueReferenceType) {
     // Not a reference, nothing to do.
     cb(Err(), std::move(value));
     return;

@@ -29,8 +29,9 @@ void ResolvePointer(fxl::RefPtr<SymbolDataProvider> data_provider,
                     const ExprValue& pointer,
                     std::function<void(const Err&, ExprValue)> cb);
 
-// Ensures that the value is not a reference type. The result will be an
-// ExprValue passed to the callback that has any reference types stripped.
+// Ensures that the value is not a reference type (rvalue or regular). The
+// result will be an ExprValue passed to the callback that has any reference
+// types stripped.
 //
 // If the input ExprValue does not have a reference type, calls the callback
 // immediately (from within the calling function's stack frame) with the input.

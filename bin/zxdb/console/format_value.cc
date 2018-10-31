@@ -194,7 +194,8 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
 
   // References (these require asynchronous calls to format so can't be in the
   // "modified types" block below in the synchronous section).
-  if (type->tag() == Symbol::kTagReferenceType) {
+  if (type->tag() == Symbol::kTagReferenceType ||
+      type->tag() == Symbol::kTagRvalueReferenceType) {
     FormatReference(data_provider, value, options, output_key);
     return;
   }

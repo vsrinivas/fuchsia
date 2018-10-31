@@ -396,6 +396,14 @@ TEST_F(FormatValueTest, Reference) {
   value = ExprValue(ref_type, bad_data);
   EXPECT_EQ("(int&) 0x2200 = <Invalid pointer 0x2200>",
             SyncFormatValue(value, opts));
+
+  // Test an rvalue reference. This is treated the same as a regular reference
+  // from an interpretation and printing perspective.
+  auto rvalue_ref_type =  fxl::MakeRefCounted<ModifiedType>(
+      Symbol::kTagRvalueReferenceType, LazySymbol(base_type));
+  value = ExprValue(rvalue_ref_type, data);
+  opts.always_show_types = false;
+  EXPECT_EQ("(int&&) 0x1100 = 123", SyncFormatValue(value, opts));
 }
 
 TEST_F(FormatValueTest, Structs) {

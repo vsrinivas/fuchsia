@@ -24,6 +24,7 @@ namespace {
 
 const char kDoStructCallName[] = "DoStructCall";
 const char kGetIntPtrName[] = "GetIntPtr";
+const char kPassRValueRefName[] = "PassRValueRef";
 
 // Returns the function symbol with the given name. The name is assumed to
 // exit as this function will EXPECT_* it to be valid. Returns empty refptr on
@@ -125,6 +126,27 @@ TEST(DwarfSymbolFactory, ModifiedBaseType) {
   // This is not a bitfield.
   EXPECT_EQ(0u, base->bit_size());
   EXPECT_EQ(0u, base->bit_offset());
+}
+
+TEST(DwarfSymbolFactory, RValueRef) {
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  Err err = module.Load();
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  // Find the GetIntPtr function.
+  fxl::RefPtr<const Function> function =
+      GetFunctionWithName(module, kPassRValueRefName);
+  ASSERT_TRUE(function);
+
+  // Should have one parameter of rvalue ref type.
+  ASSERT_EQ(1u, function->parameters().size());
+  const Variable* var = function->parameters()[0].Get()->AsVariable();
+  ASSERT_TRUE(var);
+  const ModifiedType* modified = var->type().Get()->AsModifiedType();
+  ASSERT_TRUE(modified);
+  EXPECT_EQ(Symbol::kTagRvalueReferenceType, modified->tag());
+
+  EXPECT_EQ("int&&", modified->GetFullName());
 }
 
 TEST(DwarfSymbolFactory, ArrayType) {
