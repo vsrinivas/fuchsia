@@ -681,13 +681,9 @@ void InputInterpreter::ParseKeyboardReport(uint8_t* report, size_t len) {
   hid_kbd_parse_report(report, &key_state);
   keyboard_report_->event_time = InputEventTimestampNow();
 
-  size_t index = 0;
-  keyboard_report_->keyboard->pressed_keys.resize(index);
-  hid_for_every_key(&key_state, keycode) {
-    keyboard_report_->keyboard->pressed_keys.resize(index + 1);
-    keyboard_report_->keyboard->pressed_keys->at(index) = keycode;
-    index++;
-  }
+  auto& pressed_keys = keyboard_report_->keyboard->pressed_keys;
+  pressed_keys.resize(0);
+  hid_for_every_key(&key_state, keycode) { pressed_keys.push_back(keycode); }
   FXL_VLOG(2) << name() << " parsed: " << *keyboard_report_;
 }
 

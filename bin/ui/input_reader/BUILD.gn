@@ -55,8 +55,6 @@ source_set("fdio") {
 }
 
 source_set("device") {
-  visibility = [ ":*" ]
-
   sources = [
     "device_watcher.h",
     "hid_decoder.cc",
