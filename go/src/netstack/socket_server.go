@@ -108,15 +108,10 @@ type iostate struct {
 	refs      int
 	lastError *tcpip.Error // if not-nil, next error returned via getsockopt
 
-	// Signals to wait before we close iostate (These channels are unbuffered).
-	loopWriteDone   chan struct{} // report that loop[Stream|Dgram]Write finished
-	loopControlDone chan struct{} // report that loopControl finished
-	loopListenDone  chan struct{} // report that loopListen finished
+	loopWriteDone  chan struct{} // report that loop[Stream|Dgram]Write finished
+	loopListenDone chan struct{} // report that loopListen finished
 
-	// Signals to send out when we close iostate (These channels are buffered).
-	loopListenClosing chan struct{} // tell loopListen to finish
-	loopReadClosing   chan struct{} // tell loop[Stream|Dgram]Read to finish
-	connectClosing    chan struct{} // tell the connecting goroutine to finish
+	closing chan struct{}
 }
 
 // loopStreamWrite connects libc write to the network stack for TCP sockets.
@@ -125,8 +120,6 @@ type iostate struct {
 // That's not so bad for small client work, but even a client OS is
 // eventually going to feel the overhead of this.
 func (ios *iostate) loopStreamWrite(stk *stack.Stack) {
-	defer func() { ios.loopWriteDone <- struct{}{} }()
-
 	// Warm up.
 	_, err := zxwait.Wait(zx.Handle(ios.dataHandle),
 		zx.SignalSocketReadable|zx.SignalSocketReadDisabled|
@@ -282,10 +275,9 @@ func (ios *iostate) loopStreamRead(stk *stack.Stack) {
 				select {
 				case <-notifyCh:
 					continue
-					// TODO: Uncomment this after writing an unit test.
-					//
-					// case <-ios.loopReadClosing:
-					//	return
+				case <-ios.closing:
+					// TODO: write a unit test that exercises this.
+					return
 				}
 			} else if err == tcpip.ErrClosedForReceive || err == tcpip.ErrConnectionRefused {
 				if err == tcpip.ErrConnectionRefused {
@@ -376,7 +368,7 @@ func (ios *iostate) loopDgramRead(stk *stack.Stack) {
 				select {
 				case <-notifyCh:
 					continue
-				case <-ios.loopReadClosing:
+				case <-ios.closing:
 					return
 				}
 			} else if err == tcpip.ErrClosedForReceive {
@@ -419,8 +411,6 @@ func (ios *iostate) loopDgramRead(stk *stack.Stack) {
 
 // loopDgramWrite connects libc write to the network stack for UDP messages.
 func (ios *iostate) loopDgramWrite(stk *stack.Stack) {
-	defer func() { ios.loopWriteDone <- struct{}{} }()
-
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 	for {
 		v := buffer.NewView(2048)
@@ -500,7 +490,10 @@ func (ios *iostate) loopControl(s *socketServer, cookie int64) {
 				log.Printf("synethsize close failed: %v", err)
 			}
 		}
-		ios.loopControlDone <- struct{}{}
+
+		if err := ios.dataHandle.Close(); err != nil {
+			log.Printf("dataHandle.Close() failed: %v", err)
+		}
 	}()
 
 	for {
@@ -543,38 +536,35 @@ func (ios *iostate) loopControl(s *socketServer, cookie int64) {
 	}
 }
 
-func (s *socketServer) newIostate(netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, isAccept bool) (localS, peerS zx.Socket, err error) {
-	ios := &iostate{
-		netProto:        netProto,
-		transProto:      transProto,
-		wq:              wq,
-		ep:              ep,
-		refs:            1,
-		loopControlDone: make(chan struct{}),
-		loopWriteDone:   make(chan struct{}),
-		loopReadClosing: make(chan struct{}, 1),
-	}
+func (s *socketServer) newIostate(netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, isAccept bool) (zx.Socket, zx.Socket, error) {
+	var t uint32
 	switch transProto {
-	case tcp.ProtocolNumber, udp.ProtocolNumber, ping.ProtocolNumber4:
-		var t uint32
-		switch transProto {
-		case tcp.ProtocolNumber:
-			t = zx.SocketStream
-		case udp.ProtocolNumber:
-			t = zx.SocketDatagram
-		}
-		t |= zx.SocketHasControl
-		if !isAccept {
-			t |= zx.SocketHasAccept
-		}
-		localS, peerS, err = zx.NewSocket(t)
-		if err != nil {
-			return zx.Socket(zx.HandleInvalid), zx.Socket(zx.HandleInvalid), err
-		}
+	case tcp.ProtocolNumber:
+		t = zx.SocketStream
+	case udp.ProtocolNumber:
+		t = zx.SocketDatagram
+	case ping.ProtocolNumber4, ping.ProtocolNumber6:
 	default:
 		panic(fmt.Sprintf("unknown transport protocol number: %v", transProto))
 	}
-	ios.dataHandle = localS
+	t |= zx.SocketHasControl
+	if !isAccept {
+		t |= zx.SocketHasAccept
+	}
+	localS, peerS, err := zx.NewSocket(t)
+	if err != nil {
+		return zx.Socket(zx.HandleInvalid), zx.Socket(zx.HandleInvalid), err
+	}
+	ios := &iostate{
+		netProto:      netProto,
+		transProto:    transProto,
+		wq:            wq,
+		ep:            ep,
+		refs:          1,
+		dataHandle:    localS,
+		loopWriteDone: make(chan struct{}),
+		closing:       make(chan struct{}),
+	}
 
 	s.mu.Lock()
 	newCookie := s.next
@@ -582,31 +572,19 @@ func (s *socketServer) newIostate(netProto tcpip.NetworkProtocolNumber, transPro
 	s.io[newCookie] = ios
 	s.mu.Unlock()
 
-	defer func() {
-		if err != nil {
-			if err := ios.dataHandle.Close(); err != nil {
-				log.Printf("data handle close failed: %v", err)
-			}
-			if err := peerS.Close(); err != nil {
-				log.Printf("peer socket close failed: %v", err)
-			}
+	go ios.loopControl(s, int64(newCookie))
+	go func() {
+		defer close(ios.loopWriteDone)
 
-			s.mu.Lock()
-			delete(s.io, newCookie)
-			s.mu.Unlock()
+		switch transProto {
+		case tcp.ProtocolNumber:
+			go ios.loopStreamRead(s.stack)
+			ios.loopStreamWrite(s.stack)
+		case udp.ProtocolNumber, ping.ProtocolNumber4:
+			go ios.loopDgramRead(s.stack)
+			ios.loopDgramWrite(s.stack)
 		}
 	}()
-
-	go ios.loopControl(s, int64(newCookie))
-
-	switch transProto {
-	case tcp.ProtocolNumber:
-		go ios.loopStreamRead(s.stack)
-		go ios.loopStreamWrite(s.stack)
-	case udp.ProtocolNumber, ping.ProtocolNumber4:
-		go ios.loopDgramRead(s.stack)
-		go ios.loopDgramWrite(s.stack)
-	}
 
 	return localS, peerS, nil
 }
@@ -957,15 +935,13 @@ func (s *socketServer) opGetPeerName(ios *iostate, msg *zxsocket.Msg) (status zx
 }
 
 func (s *socketServer) loopListen(ios *iostate, inCh chan struct{}) {
-	defer func() { ios.loopListenDone <- struct{}{} }()
-
 	// When an incoming connection is available, wait for the listening socket to
 	// enter a shareable state, then share it with zircon.
 	for {
 		select {
 		case <-inCh:
 			// NOP
-		case <-ios.loopListenClosing:
+		case <-ios.closing:
 			return
 		}
 		obs, err := zxwait.Wait(zx.Handle(ios.dataHandle),
@@ -1052,10 +1028,9 @@ func (s *socketServer) opListen(ios *iostate, msg *zxsocket.Msg) (status zx.Stat
 		}
 	}
 
-	// TODO: Make ios.loopListenClosing buffered (make(chan struct{}, 1)) for consistency.
-	ios.loopListenClosing = make(chan struct{})
 	ios.loopListenDone = make(chan struct{})
 	go func() {
+		defer close(ios.loopListenDone)
 		s.loopListen(ios, inCh)
 		ios.wq.EventUnregister(&inEntry)
 	}()
@@ -1111,11 +1086,10 @@ func (s *socketServer) opConnect(ios *iostate, msg *zxsocket.Msg) (status zx.Sta
 	msg.Datalen = 0
 
 	if e == tcpip.ErrConnectStarted {
-		ios.connectClosing = make(chan struct{}, 1)
 		go func() {
 			select {
 			case <-notifyCh:
-			case <-ios.connectClosing:
+			case <-ios.closing:
 				ios.wq.EventUnregister(&waitEntry)
 				return
 			}
@@ -1162,43 +1136,20 @@ func (s *socketServer) opClose(ios *iostate, cookie cookie) zx.Status {
 
 	// Signal that we're about to close. This tells the various message loops to finish
 	// processing, and let us know when they're done.
-	err := ios.dataHandle.Handle().Signal(0, LOCAL_SIGNAL_CLOSING)
-	if ios.connectClosing != nil {
-		ios.connectClosing <- struct{}{}
-	}
-	if ios.loopListenClosing != nil {
-		ios.loopListenClosing <- struct{}{}
-	}
-	if ios.loopReadClosing != nil {
-		ios.loopReadClosing <- struct{}{}
-	}
-
-	switch mxerror.Status(err) {
-	case zx.ErrOk:
-		if ios.loopWriteDone != nil {
-			<-ios.loopWriteDone
+	err := mxerror.Status(ios.dataHandle.Handle().Signal(0, LOCAL_SIGNAL_CLOSING))
+	close(ios.closing)
+	for _, c := range []<-chan struct{}{
+		ios.loopWriteDone,
+		ios.loopListenDone,
+	} {
+		if c != nil {
+			<-c
 		}
-		if ios.loopListenDone != nil {
-			<-ios.loopListenDone
-		}
-	case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
-		// Ignore.
-	default:
-		log.Printf("close: signal failed: %v", err)
 	}
 
 	ios.ep.Close()
 
-	go func() {
-		if ios.loopControlDone != nil {
-			<-ios.loopControlDone
-		}
-		if err := ios.dataHandle.Close(); err != nil {
-			log.Printf("data handle close failed: %v", err)
-		}
-	}()
-
-	return zx.ErrOk
+	return err
 }
 
 func (s *socketServer) zxsocketHandler(msg *zxsocket.Msg, rh zx.Socket, cookieVal int64) zx.Status {
