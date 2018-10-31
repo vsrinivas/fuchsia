@@ -30,9 +30,9 @@
 #include <lib/zx/vmo.h>
 #include <zxcpp/new.h>
 
-#include "devcoordinator.h"
 #include "devhost.h"
 #include "devhost-main.h"
+#include "devhost-shared.h"
 #if ENABLE_DRIVER_TRACING
 #include "devhost-tracing.h"
 #endif

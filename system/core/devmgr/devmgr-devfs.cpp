@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "devcoordinator.h"
+#include "devhost-shared.h"
 #include "devmgr.h"
 #include "fshost.h"
 

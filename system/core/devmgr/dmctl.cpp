@@ -10,7 +10,7 @@
 #include <ddk/driver.h>
 
 #include "device-internal.h"
-#include "devcoordinator.h"
+#include "devhost-shared.h"
 
 #include <zircon/device/dmctl.h>
 

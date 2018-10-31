@@ -12,7 +12,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
-#include "devcoordinator.h"
+#include "devhost-shared.h"
 
 namespace devmgr {
 

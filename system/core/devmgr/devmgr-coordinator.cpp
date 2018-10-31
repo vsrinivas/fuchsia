@@ -29,6 +29,7 @@
 
 #include "devcoordinator.h"
 #include "devhost.h"
+#include "devhost-shared.h"
 #include "devmgr.h"
 #include "log.h"
 #include "fshost.h"
