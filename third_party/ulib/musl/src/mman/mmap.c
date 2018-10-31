@@ -64,6 +64,13 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t fd_off)
             return MAP_FAILED;
         }
         _zx_object_set_property(vmo, ZX_PROP_NAME, mmap_vmo_name, strlen(mmap_vmo_name));
+
+        if (flags & MAP_JIT) {
+            status = _zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &vmo);
+            if (status < 0) {
+                goto fail;
+            }
+        }
     } else {
         status = _mmap_file(offset, len, zx_options, flags, fd, fd_off, &ptr);
         if (status < 0) {
