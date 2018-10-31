@@ -87,7 +87,7 @@ static void WriteMeshId(BufferWriter* w, const BeaconConfig& config) {
 }
 
 static void WriteElements(BufferWriter* w, const BeaconConfig& config, size_t* rel_tim_ele_offset) {
-    RatesWriter rates_writer{{config.rates, config.rates_len}};
+    RatesWriter rates_writer{config.rates};
     // TODO(hahnr): Query from hardware which IEs must be filled out here.
     WriteSsid(w, config);
     rates_writer.WriteSupportedRates(w);

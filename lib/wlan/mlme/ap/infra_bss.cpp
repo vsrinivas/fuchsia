@@ -526,11 +526,11 @@ HtConfig InfraBss::Ht() const {
     };
 }
 
-const SupportedRate* InfraBss::Rates(size_t* num_rates) const {
-    const uint8_t* rates = GetRatesByChannel(device_->GetWlanInfo().ifc_info,
-                                             device_->GetState()->channel().primary, num_rates);
+const Span<const SupportedRate> InfraBss::Rates() const {
+    const auto rates =
+        GetRatesByChannel(device_->GetWlanInfo().ifc_info, device_->GetState()->channel().primary);
     static_assert(sizeof(SupportedRate) == sizeof(rates[0]));
-    return reinterpret_cast<const SupportedRate*>(rates);
+    return {reinterpret_cast<const SupportedRate*>(rates.data()), rates.size()};
 }
 
 }  // namespace wlan

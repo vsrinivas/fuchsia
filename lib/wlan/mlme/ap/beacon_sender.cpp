@@ -121,7 +121,7 @@ zx_status_t BeaconSender::BuildBeacon(const PsCfg& ps_cfg, MgmtFrame<Beacon>* fr
         .ps_cfg = &ps_cfg,
         .ht = bss_->Ht(),
     };
-    c.rates = bss_->Rates(&c.rates_len);
+    c.rates = bss_->Rates();
     return ::wlan::BuildBeacon(c, frame, tim_ele_offset);
 }
 
@@ -162,7 +162,7 @@ void BeaconSender::SendProbeResponse(const MgmtFrameView<ProbeRequest>& probe_re
         .ps_cfg = nullptr,  // no TIM element in probe response
         .ht = bss_->Ht(),
     };
-    c.rates = bss_->Rates(&c.rates_len);
+    c.rates = bss_->Rates();
 
     MgmtFrame<ProbeResponse> frame;
     zx_status_t status = BuildProbeResponse(c, probe_req_frame.hdr()->addr2, &frame);

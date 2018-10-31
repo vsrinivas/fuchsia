@@ -849,10 +849,9 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
     // Write elements.
     BufferWriter elem_w({assoc->elements, reserved_ie_len});
 
-    size_t num_rates;
-    auto* rates = bss_->Rates(&num_rates);
+    auto rates = bss_->Rates();
 
-    RatesWriter rates_writer{{rates, num_rates}};
+    RatesWriter rates_writer{rates};
 
     rates_writer.WriteSupportedRates(&elem_w);
     rates_writer.WriteExtendedSupportedRates(&elem_w);
@@ -1036,16 +1035,13 @@ wlan_assoc_ctx_t RemoteClient::BuildAssocContext(uint16_t aid) {
     addr().CopyTo(assoc.bssid);
     assoc.aid = aid;
 
-    const SupportedRate* rates;
-    size_t num_rates;
-    rates = bss_->Rates(&num_rates);
-
-    assoc.rates_cnt = std::min(num_rates, static_cast<size_t>(WLAN_MAC_MAX_RATES));
-    if (assoc.rates_cnt != num_rates) {
-        warnf("num_rates is truncated from %zu to %d", num_rates, WLAN_MAC_MAX_RATES);
+    auto rates = bss_->Rates();
+    assoc.rates_cnt = std::min(rates.size(), static_cast<size_t>(WLAN_MAC_MAX_RATES));
+    if (assoc.rates_cnt != rates.size()) {
+        warnf("num_rates is truncated from %zu to %d", rates.size(), WLAN_MAC_MAX_RATES);
     }
 
-    std::copy(rates, rates + assoc.rates_cnt, assoc.rates);
+    std::copy(rates.cbegin(), rates.cend(), assoc.rates);
 
     auto ht = bss_->Ht();
     if (ht.ready) {

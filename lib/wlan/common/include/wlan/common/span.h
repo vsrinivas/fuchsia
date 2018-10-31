@@ -78,6 +78,14 @@ class Span {
         return ptr_ + size_;
     }
 
+    constexpr const T* cbegin() const {
+        return ptr_;
+    }
+
+    constexpr const T* cend() const {
+        return ptr_ + size_;
+    }
+
     constexpr Span<T> subspan(size_t offset) const {
         ZX_DEBUG_ASSERT(offset <= size_);
         return Span(ptr_ + offset, size_ - offset);

@@ -391,11 +391,9 @@ TEST_F(ApInfraBssTest, Associate_Success) {
     const wlan_assoc_ctx_t* actual_ctx = device.GetStationAssocContext();
     EXPECT_EQ(std::memcmp(actual_ctx->bssid, kClientAddress, 6), 0);
     EXPECT_EQ(actual_ctx->aid, kAid);
-    const SupportedRate* rates;
-    size_t num_rates;
-    rates = bss.Rates(&num_rates);
-    EXPECT_EQ(actual_ctx->rates_cnt, num_rates);
-    for (size_t i = 0; i < num_rates; i++) {
+    auto rates = bss.Rates();
+    EXPECT_EQ(actual_ctx->rates_cnt, rates.size());
+    for (size_t i = 0; i < rates.size(); i++) {
         EXPECT_EQ(actual_ctx->rates[i], rates[i]);
     }
     EXPECT_TRUE(actual_ctx->has_ht_cap);

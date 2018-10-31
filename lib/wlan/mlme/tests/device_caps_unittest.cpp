@@ -9,18 +9,22 @@ namespace wlan {
 
 TEST(FindBandByChannel, OneBands) {
     constexpr wlan_info_t info = {
-        .bands = {
+        .bands =
             {
-                .supported_channels = {
-                    .channels = { 1, 2, 3 },
+                {
+                    .supported_channels =
+                        {
+                            .channels = {1, 2, 3},
+                        },
+                },
+                {
+                    // Still fill out the second band with "garbage":
+                    .supported_channels =
+                        {
+                            .channels = {4, 5, 6, 7},
+                        },
                 },
             },
-            { // Still fill out the second band with "garbage":
-                .supported_channels = {
-                    .channels = { 4, 5, 6, 7 },
-                },
-            },
-        },
         .num_bands = 1,
     };
     EXPECT_EQ(&info.bands[0], FindBandByChannel(info, 3));
@@ -30,18 +34,21 @@ TEST(FindBandByChannel, OneBands) {
 
 TEST(FindBandByChannel, TwoBands) {
     constexpr static wlan_info_t info = {
-        .bands = {
+        .bands =
             {
-                .supported_channels = {
-                    .channels = { 1, 2, 3 },
+                {
+                    .supported_channels =
+                        {
+                            .channels = {1, 2, 3},
+                        },
+                },
+                {
+                    .supported_channels =
+                        {
+                            .channels = {4, 5, 6, 7},
+                        },
                 },
             },
-            {
-                .supported_channels = {
-                    .channels = { 4, 5, 6, 7 },
-                },
-            },
-        },
         .num_bands = 2,
     };
 
@@ -52,32 +59,37 @@ TEST(FindBandByChannel, TwoBands) {
 
 TEST(GetRatesByChannel, SimpleTest) {
     constexpr static wlan_info_t info = {
-        .bands = {
+        .bands =
             {
-                .supported_channels = {
-                    .channels = { 1, 2, 3 },
+                {
+                    .supported_channels =
+                        {
+                            .channels = {1, 2, 3},
+                        },
+                    .basic_rates = {10, 20, 30},
                 },
-                .basic_rates = { 10, 20, 30 },
-            },
-            {
-                .supported_channels = {
-                    .channels = { 4, 5, 6, 7 },
+                {
+                    .supported_channels =
+                        {
+                            .channels = {4, 5, 6, 7},
+                        },
+                    .basic_rates = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120},
                 },
-                .basic_rates = { 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120 },
             },
-        },
         .num_bands = 2,
     };
 
-    size_t n_rates;
-    EXPECT_EQ(info.bands[0].basic_rates, GetRatesByChannel(info, 2, &n_rates));
-    EXPECT_EQ(3u, n_rates);
+    auto rates = GetRatesByChannel(info, 2);
+    EXPECT_EQ(info.bands[0].basic_rates, rates.data());
+    EXPECT_EQ(3u, rates.size());
 
-    EXPECT_EQ(info.bands[1].basic_rates, GetRatesByChannel(info, 5, &n_rates));
-    EXPECT_EQ(static_cast<size_t>(WLAN_BASIC_RATES_MAX_LEN), n_rates);
+    rates = GetRatesByChannel(info, 5);
+    EXPECT_EQ(info.bands[1].basic_rates, rates.data());
+    EXPECT_EQ(static_cast<size_t>(WLAN_BASIC_RATES_MAX_LEN), rates.size());
 
-    EXPECT_EQ(nullptr, GetRatesByChannel(info, 17, &n_rates));
-    EXPECT_EQ(0u, n_rates);
+    rates = GetRatesByChannel(info, 17);
+    EXPECT_EQ(nullptr, rates.data());
+    EXPECT_EQ(0u, rates.size());
 }
 
-} // namespace wlan
+}  // namespace wlan

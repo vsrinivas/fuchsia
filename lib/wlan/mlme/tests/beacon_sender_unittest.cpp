@@ -38,7 +38,7 @@ struct MockBss : public BssInterface {
 
     bool IsRsn() const { return false; }
     HtConfig Ht() const { return {}; }
-    const SupportedRate* Rates(size_t* num_rates) const { return nullptr; }
+    const Span<const SupportedRate> Rates() const { return {}; }
 
     zx_status_t SendMgmtFrame(MgmtFrame<>&& mgmt_frame) { return ZX_ERR_NOT_SUPPORTED; }
     zx_status_t SendDataFrame(DataFrame<>&& data_frame) { return ZX_ERR_NOT_SUPPORTED; }

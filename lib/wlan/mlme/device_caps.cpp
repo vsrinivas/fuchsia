@@ -20,18 +20,13 @@ const wlan_band_info_t* FindBandByChannel(const wlan_info_t& device_info, uint8_
     return nullptr;
 }
 
-const uint8_t* GetRatesByChannel(const wlan_info_t& device_info,
-                                 uint8_t channel,
-                                 size_t* num_rates) {
+const Span<const uint8_t> GetRatesByChannel(const wlan_info_t& device_info, uint8_t channel) {
     const wlan_band_info_t* band = FindBandByChannel(device_info, channel);
-    if (band == nullptr) {
-        *num_rates = 0;
-        return nullptr;
-    }
+    if (band == nullptr) { return {}; }
 
-    *num_rates = strnlen(reinterpret_cast<const char*>(band->basic_rates),
-                         sizeof(band->basic_rates));
-    return band->basic_rates;
+    size_t num_rates =
+        strnlen(reinterpret_cast<const char*>(band->basic_rates), sizeof(band->basic_rates));
+    return {band->basic_rates, num_rates};
 }
 
-} // namespace wlan
+}  // namespace wlan
