@@ -26,12 +26,6 @@ from create_test_workspace import create_test_workspace, SdkWorkspaceInfo
 import template_model as model
 
 
-ARCH_MAP = {
-    'arm64': 'aarch64',
-    'x64': 'x86_64',
-}
-
-
 def sanitize(name):
     return name.replace('-', '_').replace('.', '_')
 
@@ -114,6 +108,7 @@ class BazelBuilder(Frontend):
 
         self.workspace_info.with_cc = self.has_cc
         self.workspace_info.with_dart = self.has_dart
+        self.workspace_info.target_arches = self.target_arches
 
 
     def finalize(self, arch, types):
@@ -134,12 +129,7 @@ class BazelBuilder(Frontend):
         '''
         if not self.has_cc:
             return
-        crosstool = model.Crosstool()
-        for arch in arches['target']:
-            if arch in ARCH_MAP:
-                crosstool.arches.append(model.Arch(arch, ARCH_MAP[arch]))
-            else:
-                print('Unknown target arch: %s' % arch)
+        crosstool = model.Crosstool(arches['target'])
         self.write_file(self.dest('build_defs', 'crosstool.bzl'),
                         'crosstool_bzl', crosstool)
         self.write_file(self.dest('build_defs', 'BUILD.crosstool'),

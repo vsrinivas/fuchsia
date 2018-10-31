@@ -5,6 +5,13 @@
 
 '''A collection of storage classes to use with Mako templates.'''
 
+
+ARCH_MAP = {
+    'arm64': 'aarch64',
+    'x64': 'x86_64',
+}
+
+
 class _CppLibrary(object):
 
     def __init__(self, name):
@@ -59,8 +66,14 @@ class Arch(object):
 
 class Crosstool(object):
 
-    def __init__(self):
+    def __init__(self, arches=[]):
         self.arches = []
+        for arch in arches:
+            if arch in ARCH_MAP:
+                self.arches.append(Arch(arch, ARCH_MAP[arch]))
+            else:
+                print('Unknown target arch: %s' % arch)
+
 
 
 class DartLibrary(object):
@@ -70,6 +83,16 @@ class DartLibrary(object):
         self.package_name = package
         self.deps = []
 
+
 class Images(object):
+
     def __init__(self, arches):
         self.arches = arches
+
+
+class TestWorkspace(object):
+
+    def __init__(self, sdk_path, with_cc, with_dart):
+        self.sdk_path = sdk_path
+        self.with_cc = with_cc
+        self.with_dart = with_dart

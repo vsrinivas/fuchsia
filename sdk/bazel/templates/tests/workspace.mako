@@ -2,17 +2,17 @@
 
 local_repository(
     name = "fuchsia_sdk",
-    path = "${data['sdk_path']}",
+    path = "${data.sdk_path}",
 )
 
-% if data['with_cc']:
+% if data.with_cc:
 load("@fuchsia_sdk//build_defs:crosstool.bzl", "install_fuchsia_crosstool")
 install_fuchsia_crosstool(
 name = "fuchsia_crosstool",
 )
 % endif
 
-% if data['with_dart']:
+% if data.with_dart:
 http_archive(
     name = "io_bazel_rules_dart",
     url = "https://github.com/dart-lang/rules_dart/archive/master.zip",

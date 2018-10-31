@@ -12,9 +12,17 @@ import sys
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
+ARCHES = [
+% for arch in data.arches:
+    '${arch.short_name}',
+% endfor
+]
+
+
 class BazelTester(object):
 
-    def __init__(self, without_sdk, with_ignored, bazel_bin, optional_flags=[]):
+    def __init__(self, without_sdk, with_ignored, bazel_bin,
+                 optional_flags=[]):
         self.without_sdk = without_sdk
         self.with_ignored = with_ignored
         self.bazel_bin = bazel_bin
@@ -22,7 +30,7 @@ class BazelTester(object):
 
 
     def _invoke_bazel(self, command, targets):
-        command = [self.bazel_bin, command, '--config=fuchsia', '--keep_going']
+        command = [self.bazel_bin, command, '--keep_going']
         command += self.optional_flags
         command += targets
         job = Popen(command, cwd=SCRIPT_DIR)
@@ -95,14 +103,18 @@ def main():
                         default='bazel')
     args = parser.parse_args()
 
-    print(' (A) Testing with C++14 (default)')
-    if not BazelTester(args.no_sdk, args.ignored, args.bazel).run():
-        return 1
-    print(' (B) Testing with C++17')
-    cpp17_flags = ['--cxxopt=-std=c++17', '--cxxopt=-Wc++17-compat']
-    if not BazelTester(args.no_sdk, args.ignored, args.bazel,
-                       optional_flags=cpp17_flags).run():
-        return 1
+    for arch in ARCHES:
+        print('--> Testing for %s target' % arch)
+        config_flags = ['--config=fuchsia_%s' % arch]
+        print(' (A) Testing with C++14 (default)')
+        if not BazelTester(args.no_sdk, args.ignored, args.bazel,
+                           optional_flags=config_flags).run():
+            return 1
+        print(' (B) Testing with C++17')
+        cpp17_flags = ['--cxxopt=-std=c++17', '--cxxopt=-Wc++17-compat']
+        if not BazelTester(args.no_sdk, args.ignored, args.bazel,
+                           optional_flags=config_flags + cpp17_flags).run():
+            return 1
     return 0
 
 

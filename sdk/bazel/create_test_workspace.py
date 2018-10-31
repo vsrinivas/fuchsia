@@ -6,6 +6,7 @@
 import argparse
 import os
 import shutil
+import stat
 import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -19,6 +20,7 @@ from mako.lookup import TemplateLookup
 from mako.template import Template
 sys.path += [os.path.join(FUCHSIA_ROOT, 'scripts', 'sdk', 'common')]
 from files import copy_tree, make_dir
+import template_model as model
 
 
 class SdkWorkspaceInfo(object):
@@ -34,15 +36,20 @@ class SdkWorkspaceInfo(object):
         self.with_cc = False
         # Whether the workspace has Dart content.
         self.with_dart = False
+        # Supported target arches.
+        self.target_arches = []
 
 
-def write_file(path, template_name, data):
+def write_file(path, template_name, data, is_executable=False):
     '''Writes a file based on a Mako template.'''
     base = os.path.join(SCRIPT_DIR, 'templates')
     lookup = TemplateLookup(directories=[base, os.path.join(base, 'tests')])
     template = lookup.get_template(template_name + '.mako')
     with open(path, 'w') as file:
         file.write(template.render(data=data))
+    if is_executable:
+        st = os.stat(path)
+        os.chmod(path, st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 
 def create_test_workspace(sdk, output, workspace_info):
@@ -57,11 +64,18 @@ def create_test_workspace(sdk, output, workspace_info):
         copy_tree(os.path.join(SCRIPT_DIR, 'tests', 'dart'), output)
 
     # WORKSPACE file.
-    write_file(os.path.join(output, 'WORKSPACE'), 'workspace', {
-        'sdk_path': os.path.relpath(sdk, output),
-        'with_cc': workspace_info.with_cc,
-        'with_dart': workspace_info.with_dart,
-    })
+    workspace = model.TestWorkspace(os.path.relpath(sdk, output),
+                                    workspace_info.with_cc,
+                                    workspace_info.with_dart)
+    write_file(os.path.join(output, 'WORKSPACE'), 'workspace', workspace)
+
+    # .bazelrc file.
+    crosstool = model.Crosstool(workspace_info.target_arches)
+    write_file(os.path.join(output, '.bazelrc'), 'bazelrc', crosstool)
+
+    # run.py file
+    write_file(os.path.join(output, 'run.py'), 'run_py', crosstool,
+               is_executable=True)
 
     if workspace_info.with_cc:
         # Generate test to verify that headers compile fine.
