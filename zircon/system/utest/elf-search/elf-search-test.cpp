@@ -87,6 +87,7 @@ bool MakeELF(Module* mod) {
     }
     ASSERT_EQ(ZX_OK, zx::vmo::create(size, 0, &mod->vmo));
     EXPECT_EQ(ZX_OK, mod->vmo.set_property(ZX_PROP_NAME, mod->name.data(), mod->name.size()));
+    EXPECT_EQ(ZX_OK, mod->vmo.replace_as_executable(zx::handle(), &mod->vmo));
     EXPECT_TRUE(WriteHeaders(mod->phdrs, mod->vmo));
     for (const auto& phdr : mod->phdrs) {
         if (phdr.p_type == PT_NOTE) {

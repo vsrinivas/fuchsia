@@ -600,7 +600,6 @@ bool vmo_rights_test() {
         ZX_RIGHT_WAIT |
         ZX_RIGHT_READ |
         ZX_RIGHT_WRITE |
-        ZX_RIGHT_EXECUTE |
         ZX_RIGHT_MAP |
         ZX_RIGHT_GET_PROPERTY |
         ZX_RIGHT_SET_PROPERTY;
@@ -635,6 +634,10 @@ bool vmo_rights_test() {
     status = zx_vmo_write(vmo2, buf, 0, 0);
     EXPECT_EQ(ZX_ERR_ACCESS_DENIED, status, "vmo_write");
     zx_handle_close(vmo2);
+
+    status = zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &vmo);
+    EXPECT_EQ(ZX_OK, status, "vmo_replace_as_executable");
+    EXPECT_EQ(kExpectedRights | ZX_RIGHT_EXECUTE, (kExpectedRights | ZX_RIGHT_EXECUTE) & get_handle_rights(vmo));
 
     // full perm test
     if (!rights_test_map_helper(vmo, len, 0, true, 0, "map_noperms")) return false;

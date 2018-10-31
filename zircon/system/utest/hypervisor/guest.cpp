@@ -120,6 +120,9 @@ static bool setup(test_t* test, const char* start, const char* end) {
                                          &test->host_addr),
               ZX_OK);
 
+    // Add ZX_RIGHT_EXECUTABLE so we can map into guest address space.
+    ASSERT_EQ(test->vmo.replace_as_executable(zx::handle(), &test->vmo), ZX_OK);
+
     zx::resource resource;
     zx_status_t status = get_resource<fuchsia_sysinfo_DeviceGetHypervisorResource>(&resource);
     ASSERT_EQ(status, ZX_OK);

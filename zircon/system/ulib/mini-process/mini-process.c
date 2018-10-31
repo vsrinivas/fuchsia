@@ -62,6 +62,12 @@ static zx_status_t prepare_stack_vmo(zx_handle_t vmar, zx_vaddr_t* stack_base, z
     if (status != ZX_OK)
         goto exit;
 
+    // TODO(mdempsky): Separate minipr_thread_loop and stack into
+    // separate VMOs to enforce W^X.
+    status = zx_vmo_replace_as_executable(stack_vmo, ZX_HANDLE_INVALID, &stack_vmo);
+    if (status != ZX_OK)
+        goto exit;
+
     zx_vm_option_t perms = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE;
     status = zx_vmar_map(vmar, perms, 0, stack_vmo, 0, stack_size, stack_base);
     if (status != ZX_OK)

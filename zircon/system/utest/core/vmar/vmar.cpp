@@ -935,6 +935,7 @@ bool rights_drop_test() {
     ASSERT_EQ(zx_process_create(zx_job_default(), kProcessName, sizeof(kProcessName) - 1,
                                 0, &process, &vmar), ZX_OK);
     ASSERT_EQ(zx_vmo_create(PAGE_SIZE, 0, &vmo), ZX_OK);
+    ASSERT_EQ(zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &vmo), ZX_OK);
 
     const uint32_t test_rights[][3] = {
         { ZX_RIGHT_READ, ZX_VM_PERM_READ },
@@ -990,6 +991,7 @@ bool protect_test() {
     ASSERT_EQ(zx_process_create(zx_job_default(), kProcessName, sizeof(kProcessName) - 1,
                                 0, &process, &vmar), ZX_OK);
     ASSERT_EQ(zx_vmo_create(PAGE_SIZE, 0, &vmo), ZX_OK);
+    ASSERT_EQ(zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &vmo), ZX_OK);
 
     const uint32_t test_rights[][3] = {
         { ZX_RIGHT_READ, ZX_VM_PERM_READ },
@@ -1048,6 +1050,7 @@ bool nested_region_perms_test() {
                                 0, &process, &vmar), ZX_OK);
 
     ASSERT_EQ(zx_vmo_create(PAGE_SIZE, 0, &vmo), ZX_OK);
+    ASSERT_EQ(zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &vmo), ZX_OK);
 
     // List of pairs of alloc/map perms to try to exclude
     const zx_vm_option_t test_perm[][2] = {

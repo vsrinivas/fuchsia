@@ -240,6 +240,9 @@ zx_handle_t get_test_process_etc(const TestMappingInfo** info) {
         static const char vmo_name[] = "test:mapped";
         zx_object_set_property(vmo, ZX_PROP_NAME, vmo_name, sizeof(vmo_name));
 
+        // TODO(mdempsky): Restructure test to satisfy W^X.
+        zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &vmo);
+
         // Record the VMOs now that we have both of them.
         ti->num_vmos = 2;
         ti->vmos = (TestVmo*)malloc(2 * sizeof(TestVmo));
