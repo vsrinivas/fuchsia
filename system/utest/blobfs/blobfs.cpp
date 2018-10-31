@@ -2588,7 +2588,6 @@ static bool TestLargeBlob() {
     END_TEST;
 }
 
-
 // TODO(ZX-2416): Add tests to manually corrupt journal entries/metadata.
 
 BEGIN_TEST_CASE(blobfs_tests)

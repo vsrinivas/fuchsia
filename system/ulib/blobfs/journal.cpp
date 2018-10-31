@@ -347,7 +347,10 @@ zx_status_t Journal::Enqueue(fbl::unique_ptr<WritebackWork> work) {
 }
 
 void Journal::SendSignalLocked(zx_status_t status) {
-    if (status != ZX_OK) {
+    if (status == ZX_OK) {
+        // Once writeback has entered a read only state, no further transactions should succeed.
+        ZX_ASSERT(state_ != WritebackState::kReadOnly);
+    } else {
         state_ = WritebackState::kReadOnly;
     }
     consumer_signalled_ = true;
@@ -886,9 +889,9 @@ ProcessResult JournalProcessor::ProcessEntry(JournalEntry* entry) {
     // Retrieve the entry status once up front so we don't have to keep atomically loading it.
     EntryStatus entry_status = entry->GetStatus();
 
-    if (!error_ && entry_status == EntryStatus::kWaiting) {
-        // If we are not in an error state and the entry at the front of the queue is still
-        // waiting, we are done processing this queue for the time being.
+    if (entry_status == EntryStatus::kWaiting) {
+        // If the entry at the front of the queue is still waiting, we are done processing this
+        // queue for the time being.
         return ProcessResult::kWait;
     }
 
@@ -951,6 +954,7 @@ ProcessResult JournalProcessor::ProcessWorkDefault(JournalEntry* entry) {
         // kWaiting, we will never get another callback for this journal entry and
         // we will be stuck forever waiting for it to complete.
         error_ = true;
+        entry->SetStatus(EntryStatus::kError);
     } else {
         ZX_DEBUG_ASSERT(last_status == EntryStatus::kInit);
         if (work_ == nullptr) {
