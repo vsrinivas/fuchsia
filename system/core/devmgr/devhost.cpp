@@ -38,8 +38,8 @@
 #endif
 #include "log.h"
 
-zx_status_t zx_driver::Create(fbl::unique_ptr<zx_driver>* out_driver) {
-    *out_driver = fbl::make_unique<zx_driver>();
+zx_status_t zx_driver::Create(fbl::RefPtr<zx_driver>* out_driver) {
+    *out_driver = fbl::AdoptRef(new zx_driver());
     return ZX_OK;
 }
 
@@ -71,7 +71,7 @@ static DevhostIostate root_ios = []() {
     return ios;
 }();
 
-static fbl::DoublyLinkedList<fbl::unique_ptr<zx_driver>> dh_drivers;
+static fbl::DoublyLinkedList<fbl::RefPtr<zx_driver>> dh_drivers;
 
 static const char* mkdevpath(zx_device_t* dev, char* path, size_t max) {
     if (dev == nullptr) {
@@ -137,70 +137,69 @@ static void logflag(char* flag, uint32_t* flags) {
     }
 }
 
-static zx_status_t dh_find_driver(const char* libname, zx::vmo vmo, zx_driver_t** out) {
+static zx_status_t dh_find_driver(const char* libname, zx::vmo vmo, fbl::RefPtr<zx_driver_t>* out) {
     // check for already-loaded driver first
     for (auto& drv : dh_drivers) {
         if (!strcmp(libname, drv.libname().c_str())) {
-            *out = &drv;
+            *out = fbl::RefPtr(&drv);
             return drv.status();
         }
     }
 
-    // TODO(kulakowski/teisenbe): This should probably be a RefPtr
-    fbl::unique_ptr<zx_driver> new_driver;
+    fbl::RefPtr<zx_driver> new_driver;
     zx_status_t status = zx_driver::Create(&new_driver);
     if (status != ZX_OK) {
         return status;
     }
     new_driver->set_libname(libname);
-    zx_driver_t* drv = new_driver.get();
-    dh_drivers.push_back(fbl::move(new_driver));
-    *out = drv;
+
+    // Let the |dh_drivers| list and our out parameter each have a refcount.
+    dh_drivers.push_back(new_driver);
+    *out = new_driver;
 
     void* dl = dlopen_vmo(vmo.get(), RTLD_NOW);
     if (dl == nullptr) {
         log(ERROR, "devhost: cannot load '%s': %s\n", libname, dlerror());
-        drv->set_status(ZX_ERR_IO);
-        return drv->status();
+        new_driver->set_status(ZX_ERR_IO);
+        return new_driver->status();
     }
 
     const zircon_driver_note_t* dn;
     dn = static_cast<const zircon_driver_note_t*>(dlsym(dl, "__zircon_driver_note__"));
     if (dn == nullptr) {
         log(ERROR, "devhost: driver '%s' missing __zircon_driver_note__ symbol\n", libname);
-        drv->set_status(ZX_ERR_IO);
-        return drv->status();
+        new_driver->set_status(ZX_ERR_IO);
+        return new_driver->status();
     }
     zx_driver_rec_t* dr;
     dr = static_cast<zx_driver_rec_t*>(dlsym(dl, "__zircon_driver_rec__"));
     if (dr == nullptr) {
         log(ERROR, "devhost: driver '%s' missing __zircon_driver_rec__ symbol\n", libname);
-        drv->set_status(ZX_ERR_IO);
-        return drv->status();
+        new_driver->set_status(ZX_ERR_IO);
+        return new_driver->status();
     }
     if (!dr->ops) {
         log(ERROR, "devhost: driver '%s' has nullptr ops\n", libname);
-        drv->set_status(ZX_ERR_INVALID_ARGS);
-        return drv->status();
+        new_driver->set_status(ZX_ERR_INVALID_ARGS);
+        return new_driver->status();
     }
     if (dr->ops->version != DRIVER_OPS_VERSION) {
         log(ERROR, "devhost: driver '%s' has bad driver ops version %" PRIx64
             ", expecting %" PRIx64 "\n", libname,
             dr->ops->version, DRIVER_OPS_VERSION);
-        drv->set_status(ZX_ERR_INVALID_ARGS);
-        return drv->status();
+        new_driver->set_status(ZX_ERR_INVALID_ARGS);
+        return new_driver->status();
     }
 
-    drv->set_driver_rec(dr);
-    drv->set_name(dn->payload.name);
-    drv->set_ops(dr->ops);
-    dr->driver = drv;
+    new_driver->set_driver_rec(dr);
+    new_driver->set_name(dn->payload.name);
+    new_driver->set_ops(dr->ops);
+    dr->driver = new_driver.get();
 
     // check for dprintf log level flags
     char tmp[128];
-    snprintf(tmp, sizeof(tmp), "driver.%s.log", drv->name());
-    char* log;
-    log = getenv(tmp);
+    snprintf(tmp, sizeof(tmp), "driver.%s.log", new_driver->name());
+    char* log = getenv(tmp);
     if (log) {
         while (log) {
             char* sep = strchr(log, ',');
@@ -214,20 +213,20 @@ static zx_status_t dh_find_driver(const char* libname, zx::vmo vmo, zx_driver_t*
                 break;
             }
         }
-        log(INFO, "devhost: driver '%s': log flags set to: 0x%x\n", drv->name(), dr->log_flags);
+        log(INFO, "devhost: driver '%s': log flags set to: 0x%x\n", new_driver->name(), dr->log_flags);
     }
 
-    if (drv->has_init_op()) {
-        drv->set_status(drv->InitOp());
-        if (drv->status() != ZX_OK) {
+    if (new_driver->has_init_op()) {
+        new_driver->set_status(new_driver->InitOp());
+        if (new_driver->status() != ZX_OK) {
             log(ERROR, "devhost: driver '%s' failed in init: %d\n",
-                libname, drv->status());
+                libname, new_driver->status());
         }
     } else {
-        drv->set_status(ZX_OK);
+        new_driver->set_status(ZX_OK);
     }
 
-    return drv->status();
+    return new_driver->status();
 }
 
 static void dh_send_status(zx_handle_t h, zx_status_t status) {
@@ -350,7 +349,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
         // named driver -- ask it to create the device
         zx::vmo vmo(hin[1]);
         hin[1] = ZX_HANDLE_INVALID;
-        zx_driver_t* drv;
+        fbl::RefPtr<zx_driver_t> drv;
         if ((r = dh_find_driver(name, fbl::move(vmo), &drv)) < 0) {
             log(ERROR, "devhost[%s] driver load failed: %d\n", path, r);
             break;
@@ -399,14 +398,14 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
         return ZX_OK;
     }
 
-    case Message::Op::kBindDriver:
+    case Message::Op::kBindDriver: {
         if (hcount != 1) {
             r = ZX_ERR_INVALID_ARGS;
             break;
         }
         //TODO: api lock integration
         log(RPC_IN, "devhost[%s] bind driver '%s'\n", path, name);
-        zx_driver_t* drv;
+        fbl::RefPtr<zx_driver> drv;
         if (ios->dev->flags & DEV_FLAG_DEAD) {
             log(ERROR, "devhost[%s] bind to removed device disallowed\n", path);
             r = ZX_ERR_IO_NOT_PRESENT;
@@ -441,6 +440,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
         }
         dh_send_status(h, r);
         return ZX_OK;
+    }
 
     case Message::Op::kConnectProxy:
         if (hcount != 1) {

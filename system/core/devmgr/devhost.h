@@ -12,6 +12,8 @@
 #include <ddk/driver.h>
 
 #include <fbl/intrusive_double_list.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 
@@ -36,8 +38,9 @@
 // Safe external APIs are in device.h and device_internal.h
 
 // Note that this must be a struct to match the public opaque declaration.
-struct zx_driver : fbl::DoublyLinkedListable<fbl::unique_ptr<zx_driver>> {
-    static zx_status_t Create(fbl::unique_ptr<zx_driver>* out_driver);
+struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>,
+                   fbl::RefCounted<zx_driver> {
+    static zx_status_t Create(fbl::RefPtr<zx_driver>* out_driver);
 
     const char* name() const {
         return name_;
