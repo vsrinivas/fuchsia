@@ -1,0 +1,11 @@
+{
+  "imports": [
+    "garnet/packages/config/terminal",
+    "garnet/packages/prod/fonts",
+    "garnet/packages/prod/media_audio",
+    "garnet/packages/prod/scenic",
+    "garnet/packages/prod/terminal",
+    "garnet/packages/products/base",
+    "garnet/packages/tools/tiles"
+  ]
+}

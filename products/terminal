@@ -1,0 +1,10 @@
+{
+    "monolith": [
+        "garnet/packages/products/terminal"
+    ],
+    "preinstall": [
+    ],
+    "available": [
+        "garnet/packages/prod/vboot_reference"
+    ]
+}

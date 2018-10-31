@@ -1,0 +1,31 @@
+{
+  "imports": [
+    "garnet/packages/config/amber",
+    "garnet/packages/config/kernel_crash_checker",
+    "garnet/packages/config/network",
+    "garnet/packages/config/openssh_keys",
+    "garnet/packages/config/thermd",
+    "garnet/packages/prod/amber",
+    "garnet/packages/prod/auth",
+    "garnet/packages/prod/bluetooth",
+    "garnet/packages/prod/build_info",
+    "garnet/packages/prod/cobalt_client",
+    "garnet/packages/prod/device_settings",
+    "garnet/packages/prod/log_listener",
+    "garnet/packages/prod/logger",
+    "garnet/packages/prod/netstack",
+    "garnet/packages/prod/network",
+    "garnet/packages/prod/network_time",
+    "garnet/packages/prod/openssh",
+    "garnet/packages/prod/power_manager",
+    "garnet/packages/prod/root_ssl_certificates",
+    "garnet/packages/prod/runtime",
+    "garnet/packages/prod/scpi",
+    "garnet/packages/prod/stash",
+    "garnet/packages/prod/thermd",
+    "garnet/packages/prod/timezone",
+    "garnet/packages/prod/wlancfg",
+    "garnet/packages/prod/wlanstack"
+  ]
+}
+

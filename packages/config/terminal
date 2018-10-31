@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/bin/terminal:tiles_with_terminal_config"
+    ]
+}
