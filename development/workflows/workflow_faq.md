@@ -15,7 +15,7 @@ Update all projects simultaneously, and rebase your work branch on `JIRI_HEAD`:
 
 ```shell
 $ jiri update -gc -rebase-untracked
-$ cd garnet  # go into a layer
+$ cd garnet  # go into a petal
 $ git checkout <my_branch>
 $ git rebase JIRI_HEAD
 ```
@@ -86,38 +86,35 @@ boot`, `fx log`, etc).
 
 ## Q: Will a git rebase to origin/master mess up my jiri-updated (i.e. synchronized) view of the repository?
 
-A: No, if jiri is managing up to the *same layer* as your repository. Possibly
-yes, if you git rebase a repository that is lower in the layer cake managed by
-jiri.
+A: No, if jiri is managing up to the *same petal* as your repository.
 
-When working at layer X (accomplished with `fx set-layer X`), `jiri update` will
-rebase the local branches in repo X onto HEAD of origin/master. But lower
-layers' repos will be synced to specific revisions that may be behind HEAD of
+When working at petal X (accomplished with `fx set-petal X`), `jiri update` will
+rebase the local branches in repo X onto HEAD of origin/master. But other
+petals' repos will be synced to specific revisions that may be behind HEAD of
 their origin/master.
 
 Our continuous integration system (specifically rollers) makes a new revision of
-a lower layer available to the higher layer only after testing that the new
-revision doesn't break the higher layer. `jiri update` will always leave lower
-layer repos synced to these successfully-tested revisions. But a git rebase to
-origin/master for a lower layer may advance that repo beyond the tested
-revision, which has the potential to introduce breaking changes. The result may
-be that you can build up to a certain layer, but not past that layer (e.g.,
-correctly build up to garnet, but not be able to build topaz).
+a petal available to other petals only after testing that the new revision
+doesn't break other petals. `jiri update` will always leave other petals synced
+to these successfully-tested revisions. But a git rebase to origin/master for a
+petal may advance that repo beyond the tested revision, which has the potential
+to introduce breaking changes. The result may be that you can build for a
+certain petal, but not for other petals (e.g., correctly build garnet, but not
+be able to build topaz).
 
 If you have a particular commit that you want jiri to honor, download its
 `jiri.update` file and feed it to `jiri update`.
 
 ## Q: What if I need an atomic commit across git repositories?
 
-A: Can't, sorry. Try to arrange your CLs to not break each layer during a
+A: Can't, sorry. Try to arrange your CLs to not break each petal during a
 transition (i.e., do a [soft
 transition](multilayer_changes.md#soft-transitions-preferred)). But sometimes
 you will necessarily break things; aim to minimize the duration of breakage
 (i.e., a [hard transition](multilayer_changes.md#hard-transitions)).
 
-Example scenario: I have an interface defined in a lower layer, and it is
-implemented in an upper layer. If I change the interface, am I doomed to break
-the upper layer?
+Example scenario: I have an interface defined in stem, and it is implemented in
+another petal. If I change the interface, am I doomed to break other petals?
 
 Yes. But you can "babysit" the rollers so that the breakage range is minimized.
 The gotcha with babysitting is that others may *also* be babysitting a breakage,
