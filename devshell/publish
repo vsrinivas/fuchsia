@@ -6,11 +6,11 @@
 ### create and publish packages from a build directory
 
 ## usage: fx publish [--build-dir <DIR>] [--pkg-key <key file>]
-##                   [--far-dir <DIR>] [--update-repo <DIR>] [pkg1 pkg2 ...]
+##                   [--far-dir <DIR>] [--update-repo <DIR>]
+##                   pkg1 [pkg2 pkg3 ...]
 ##
-## One or more package name arguments may be supplied as the last arguments.
-## If no package name is supplied, all packages from the current build output
-## will be published.
+## One or more package name arguments must be supplied as the last arguments.
+## If you would like to publish all packages, please use `fx ota`.
 ##
 ## optional arguments:
 ##   --build-dir          Directory containing the build output

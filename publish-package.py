@@ -293,11 +293,8 @@ def main():
 
     pkg_list = args.pkgs
     if not pkg_list:
-        pkg_list = []
-        list_path = os.path.join(build_dir, "gen", "build", "gn", "packages")
-        with open(list_path, "r") as pfile:
-            for l in pfile:
-                pkg_list.append(l.strip())
+        print "At least one package name must be specified"
+        return -1
 
     if args.ver_scheme != "mono" and args.ver_scheme != "time":
       print "'%s' is not a recognized version scheme, use 'time' or 'mono'"
