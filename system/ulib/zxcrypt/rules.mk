@@ -22,6 +22,7 @@ MODULE_LIBS := \
 MODULE_STATIC_LIBS := \
     third_party/ulib/uboringssl \
     system/ulib/ddk \
+    system/ulib/elf-search \
     system/ulib/fbl \
     system/ulib/fs-management \
     system/ulib/pretty \

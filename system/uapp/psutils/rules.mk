@@ -245,6 +245,7 @@ MODULE_LIBS := \
     system/ulib/c
 
 MODULE_STATIC_LIBS := \
+    system/ulib/elf-search \
     system/ulib/inspector \
     system/ulib/pretty \
     system/ulib/fbl \

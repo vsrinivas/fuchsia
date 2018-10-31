@@ -317,8 +317,10 @@ static void process_report(zx_handle_t process, zx_handle_t thread, zx_handle_t 
     printf("arch: %s\n", arch);
 
     {
+        // TODO (jakehehrlich): Remove old dso format.
         inspector_dsoinfo_t* dso_list = inspector_dso_fetch_list(process);
         inspector_dso_print_list(stdout, dso_list);
+        inspector_print_markup_context(stdout, process);
         // TODO (jakehehrlich): Remove the old backtrace format.
         inspector_print_backtrace(stdout, process, thread, dso_list,
                                   pc, sp, fp, use_libunwind);

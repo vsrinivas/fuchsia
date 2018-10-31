@@ -21,6 +21,7 @@ MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-sysmem \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/elf-search \
     system/ulib/inspector \
     system/ulib/logger \
     system/ulib/svc \

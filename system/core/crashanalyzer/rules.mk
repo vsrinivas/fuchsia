@@ -19,6 +19,7 @@ MODULE_HEADER_DEPS := \
     system/ulib/svc \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/elf-search \
     system/ulib/inspector \
     system/ulib/async \
     system/ulib/async.cpp \

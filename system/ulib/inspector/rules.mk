@@ -17,6 +17,8 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/utils.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/elf-search \
+    system/ulib/zx \
     system/ulib/zxcpp \
     system/ulib/fbl \
 

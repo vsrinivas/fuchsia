@@ -65,6 +65,10 @@ extern void inspector_dso_free_list(inspector_dsoinfo_t*);
 extern inspector_dsoinfo_t* inspector_dso_lookup (inspector_dsoinfo_t* dso_list,
                                                   zx_vaddr_t pc);
 
+// Print markup context to |f|. This includes every module and every mapped
+// region of memory derived from those modules.
+void inspector_print_markup_context(FILE* f, zx_handle_t process);
+
 // Print |dso_list| to |f|.
 // The format of the output is verify specific: It is read by
 // zircon/scripts/symbolize in order to add source location to the output.
