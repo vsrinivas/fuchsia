@@ -385,6 +385,24 @@ caused a crash, leaked memory, timed out, etc.
 As with `fuzz start`, the fuzzer will echo the command it is invoking, prefixed by `+`.  This can be
 useful if you need to manually reproduce the bug with modified parameters.
 
+## Q: What should I do with these bugs?
+
+A: File them, then fix them!
+
+*__NOTE:__ The bug tracker is currently only open to Googlers.*
+
+When filing bugs, please use both the custom `found-by-fuzzing` label, as well as the custom
+`Sec-TriageMe` label.  This will help the security team see where fuzzers are being used and stay
+aware of any critical issues they are finding.
+
+As with other potential security issues, bugs should be filed __in the project of the code under
+test__ (and __not__ in the [security project]).  Conversely, if you encounter problems or
+shortcomings in the fuzzing framework _itself_, please __do__ open bugs or feature requests in the
+[security project] with the label `fuzzing`.
+
+As with all potential security issues, don't wait for triage to begin fixing the bug!  Once fixed,
+don't forget to link to the bug in the commit message.  This may also be a good time to consider
+minimizing and uploading your corpus at the same time (see the next section).
 
 ## Q: How do I manage my corpus?
 
@@ -501,3 +519,4 @@ become available.
 [sec-144]: https://fuchsia.atlassian.net/browse/SEC-144
 [tc-241]: https://fuchsia.atlassian.net/browse/TC-241
 [pod]: http://www.cplusplus.com/reference/type_traits/is_pod/
+[security project]: https://fuchsia.atlassian.net/browse/SEC
