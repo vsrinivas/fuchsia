@@ -82,7 +82,7 @@ public:
 
     constexpr optional()
         : has_value_(false) {}
-    explicit constexpr optional(nullopt_t)
+    constexpr optional(nullopt_t)
         : has_value_(false) {}
 
     explicit constexpr optional(T value)
