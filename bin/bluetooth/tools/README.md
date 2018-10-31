@@ -25,30 +25,30 @@ $ bt-hci-tool read-bdaddr
   BD_ADDR: 00:1A:7D:DA:71:0A
 ```
 
-## bt-snoop
+## bt-snoop-cli
 
-`bt-snoop` uses the snoop channel of a specified bt-hci device
-(`/dev/class/bt-hci/000` by default) and writes HCI traffic to a file (stdout by
-default) supporting both
-[BTSnoop](http://www.fte.com/webhelp/bpa600/Content/Technical_Information/BT_Snoop_File_Format.htm)
-and pcap formats. The captured packets can be visualized using any protocol
-analyzer that supports BTSnoop or pcap (e.g. Wireshark).
+`bt-snoop-cli` is a command line client of the `bt-snoop` service. `bt-snoop` monitors snoop
+channels for all bluetooth adapters on the system.
+`bt-snoop-cli` subscribes to snoop logs for HCI devices and writes traffic to a file (stdout by
+default) supporting the pcap format. The captured packets can be visualized using any protocol
+analyzer that supports pcap (e.g. Wireshark).
 
-This will monitor `/dev/class/bt-hci/000` and output the traffic to stdout:
+This will fetch the current buffer of packets for all devices under `/dev/class/bt-hci/`,
+output the traffic to stdout, then exit:
 
 ```
-$ bt-snoop
+$ bt-snoop-cli --dump --format=pretty
 ```
 
 To initiate a live capture using Wireshark (on host):
 
 ```
-$ fx shell bt-snoop --format=pcap | wireshark -k -i -
+$ fx shell bt-snoop | wireshark -k -i -
 ```
 
-To specify a custom HCI device and output location (on device):
+To specify a custom HCI device ("005") and output location (on device):
 ```
-$ bt-snoop --output=/my/custom/path --device=/dev/class/bt-hci/005
+$ bt-snoop-cli --output=/my/custom/path --device=005
 ```
 
 Logs can then be copied from the Fuchsia device and given to any tool that can
@@ -56,6 +56,11 @@ parse BTSnoop (e.g. Wireshark):
 ```
 $ fx cp --to-host :/tmp/btsnoop.log ./
 $ wireshark ./btsnoop.log
+```
+
+See the tool's help for complete usage:
+```
+$ bt-snoop-cli --help
 ```
 
 ## bt-cli

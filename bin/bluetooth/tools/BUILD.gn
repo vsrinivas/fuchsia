@@ -9,6 +9,7 @@ package("bt-tools") {
 
   deps = [
     "bt-cli:bin",
+    "bt-snoop-cli:bin",
     "bt-fake-hci",
     "bt-hci-tool",
     "bt-intel-tool",
@@ -21,6 +22,10 @@ package("bt-tools") {
     {
       name = "bt_cli"
       dest = "bt-cli"
+    },
+    {
+      name = "bt_snoop_cli"
+      dest = "bt-snoop-cli"
     },
     {
       name = "bt_fake_hci"
