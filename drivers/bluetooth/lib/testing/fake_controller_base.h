@@ -7,6 +7,7 @@
 
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
+#include <zircon/device/bt-hci.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/packet_view.h"
@@ -42,6 +43,9 @@ class FakeControllerBase {
   // Immediately closes the ACL data channel endpoint.
   void CloseACLDataChannel();
 
+  // Immediately closes the Snoop channel endpoint.
+  void CloseSnoopChannel();
+
   // Starts listening for command/event packets on the given channel.
   // Returns false if already listening on a command channel
   bool StartCmdChannel(zx::channel chan);
@@ -50,10 +54,15 @@ class FakeControllerBase {
   // Returns false if already listening on a acl channel
   bool StartAclChannel(zx::channel chan);
 
+  // Starts listening for snoop packets on the given channel.
+  // Returns false if already listening on a snoop channel
+  bool StartSnoopChannel(zx::channel chan);
+
  protected:
   // Getters for our channel endpoints.
   const zx::channel& command_channel() const { return cmd_channel_; }
   const zx::channel& acl_data_channel() const { return acl_channel_; }
+  const zx::channel& snoop_channel() const { return snoop_channel_; }
 
   // Called when there is an incoming command packet.
   virtual void OnCommandPacketReceived(
@@ -74,8 +83,16 @@ class FakeControllerBase {
                        zx_status_t wait_status,
                        const zx_packet_signal_t* signal);
 
+  // Sends the given packet over this FakeController's Snoop channel
+  // endpoint.
+  // Retuns the result of the write operation on the channel.
+  void SendSnoopChannelPacket(const common::ByteBuffer& packet,
+                              bt_hci_snoop_type_t packet_type,
+                              bool is_received);
+
   zx::channel cmd_channel_;
   zx::channel acl_channel_;
+  zx::channel snoop_channel_;
 
   async::WaitMethod<FakeControllerBase,
                     &FakeControllerBase::HandleCommandPacket>

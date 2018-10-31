@@ -6,6 +6,7 @@
 
 #include <lib/async/default.h>
 #include <zircon/status.h>
+#include <zircon/device/bt-hci.h>
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/hci/acl_data_packet.h"
@@ -59,6 +60,14 @@ bool FakeControllerBase::StartAclChannel(zx::channel chan) {
   return true;
 }
 
+bool FakeControllerBase::StartSnoopChannel(zx::channel chan) {
+  if (snoop_channel_.is_valid()) {
+    return false;
+  }
+  snoop_channel_ = std::move(chan);
+  return true;
+}
+
 void FakeControllerBase::Stop() {
   CloseCommandChannel();
   CloseACLDataChannel();
@@ -71,8 +80,12 @@ zx_status_t FakeControllerBase::SendCommandChannelPacket(
   if (status != ZX_OK) {
     bt_log(WARN, "fake-hci", "failed to write to control channel: %s",
            zx_status_get_string(status));
+    return status;
   }
-  return status;
+
+  SendSnoopChannelPacket(packet, BT_HCI_SNOOP_TYPE_EVT, true);
+
+  return ZX_OK;
 }
 
 zx_status_t FakeControllerBase::SendACLDataChannelPacket(
@@ -82,8 +95,34 @@ zx_status_t FakeControllerBase::SendACLDataChannelPacket(
   if (status != ZX_OK) {
     bt_log(WARN, "fake-hci", "failed to write to ACL data channel: %s",
            zx_status_get_string(status));
+    return status;
   }
-  return status;
+
+  SendSnoopChannelPacket(packet, BT_HCI_SNOOP_TYPE_ACL, true);
+
+  return ZX_OK;
+}
+
+void FakeControllerBase::SendSnoopChannelPacket(
+    const common::ByteBuffer& packet,
+    bt_hci_snoop_type_t packet_type,
+    bool is_received) {
+
+  if (snoop_channel_.is_valid()) {
+    uint8_t snoop_buffer[packet.size() + 1];
+    uint8_t flags = bt_hci_snoop_flags(packet_type, is_received);
+
+    snoop_buffer[0] = flags;
+    memcpy(snoop_buffer + 1, packet.data(), packet.size());
+    zx_status_t status =
+        snoop_channel_.write(0, snoop_buffer, packet.size() + 1, nullptr, 0);
+    if (status != ZX_OK) {
+      bt_log(WARN, "fake-hci", "cleaning up snoop channel after failed write: %s",
+             zx_status_get_string(status));
+      CloseSnoopChannel();
+    }
+  }
+
 }
 
 void FakeControllerBase::CloseCommandChannel() {
@@ -99,6 +138,12 @@ void FakeControllerBase::CloseACLDataChannel() {
     acl_channel_wait_.Cancel();
     acl_channel_wait_.set_object(ZX_HANDLE_INVALID);
     acl_channel_.reset();
+  }
+}
+
+void FakeControllerBase::CloseSnoopChannel() {
+  if (snoop_channel_.is_valid()) {
+    snoop_channel_.reset();
   }
 }
 
@@ -130,6 +175,7 @@ void FakeControllerBase::HandleCommandPacket(
     common::MutableBufferView view(buffer.mutable_data(), read_size);
     common::PacketView<hci::CommandHeader> packet(
         &view, read_size - sizeof(hci::CommandHeader));
+    SendSnoopChannelPacket(packet.data(), BT_HCI_SNOOP_TYPE_CMD, false);
     OnCommandPacketReceived(packet);
   }
 
@@ -166,6 +212,7 @@ void FakeControllerBase::HandleACLPacket(
   }
 
   common::BufferView view(buffer.data(), read_size);
+  SendSnoopChannelPacket(view, BT_HCI_SNOOP_TYPE_ACL, false);
   OnACLDataPacketReceived(view);
 
   status = wait->Begin(dispatcher);

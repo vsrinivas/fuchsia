@@ -126,6 +126,8 @@ zx_status_t Device::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
     status = OpenChan(Channel::COMMAND, reply);
   } else if (op == IOCTL_BT_HCI_GET_ACL_DATA_CHANNEL) {
     status = OpenChan(Channel::ACL, reply);
+  } else if (op == IOCTL_BT_HCI_GET_SNOOP_CHANNEL) {
+    status = OpenChan(Channel::SNOOP, reply);
   }
 
   if (status == ZX_OK) {
@@ -154,6 +156,11 @@ zx_status_t Device::OpenChan(Channel chan_type, zx_handle_t* out_channel) {
     async::PostTask(loop_.dispatcher(),
                     [device = fake_device_, in = std::move(in)]() mutable {
                       device->StartAclChannel(std::move(in));
+                    });
+  } else if (chan_type == Channel::SNOOP) {
+    async::PostTask(loop_.dispatcher(),
+                    [device = fake_device_, in = std::move(in)]() mutable {
+                      device->StartSnoopChannel(std::move(in));
                     });
   } else {
     return ZX_ERR_NOT_SUPPORTED;
