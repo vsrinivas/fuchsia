@@ -184,7 +184,6 @@ go_test("netstack_link_eth_test") {
   gopackage = "netstack/link/eth"
   deps = [
     ":netstack_lib",
-    "//garnet/go/src/fidlext/zircon/ethernet:fidlext_zircon_ethernet_fake_lib($go_toolchain)",
   ]
 }
 

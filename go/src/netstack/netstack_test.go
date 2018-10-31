@@ -5,6 +5,9 @@ import (
 	"fidl/zircon/ethernet"
 	ethernetext "fidlext/zircon/ethernet"
 	"github.com/google/netstack/tcpip"
+	"github.com/google/netstack/tcpip/network/arp"
+	"github.com/google/netstack/tcpip/network/ipv4"
+	"github.com/google/netstack/tcpip/network/ipv6"
 	"github.com/google/netstack/tcpip/stack"
 	"netstack/link/eth"
 	"syscall/zx"
@@ -13,7 +16,7 @@ import (
 
 const testDeviceName string = "testdevice"
 
-func TestRunning(t *testing.T) {
+func TestNicName(t *testing.T) {
 	arena, err := eth.NewArena()
 	if err != nil {
 		t.Fatal(err)
@@ -22,10 +25,16 @@ func TestRunning(t *testing.T) {
 		arena:    arena,
 		ifStates: make(map[tcpip.NICID]*ifState),
 	}
-	ns.mu.stack = stack.New(nil, nil, stack.Options{})
+	ns.mu.stack = stack.New(
+		[]string{
+			ipv4.ProtocolName,
+			ipv6.ProtocolName,
+			arp.ProtocolName,
+		}, nil, stack.Options{})
 
 	OnInterfacesChanged = func() {}
-	_, err = ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{}, &ethernetext.Device{
+
+	ifs, err := ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{Name: testDeviceName}, &ethernetext.Device{
 		TB:                t,
 		GetInfoImpl:       func() (ethernet.Info, error) { return ethernet.Info{}, nil },
 		SetClientNameImpl: func(string) (int32, error) { return 0, nil },
@@ -34,6 +43,9 @@ func TestRunning(t *testing.T) {
 				TxDepth: 1,
 			}, nil
 		},
+		GetStatusImpl: func() (uint32, error) {
+			return uint32(eth.LinkUp), nil
+		},
 		SetIoBufferImpl: func(zx.VMO) (int32, error) {
 			return int32(zx.ErrOk), nil
 		},
@@ -41,4 +53,11 @@ func TestRunning(t *testing.T) {
 			return int32(zx.ErrOk), nil
 		},
 	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ifs.nic.Name != testDeviceName {
+		t.Errorf("ifs.nic.Name = %v, want %v", ifs.nic.Name, testDeviceName)
+	}
 }
