@@ -44,11 +44,20 @@ rm -f -- "${FUCHSIA_DIR}/.jiri_manifest"
 "${jiri}" import -name=integration topaz/topaz "https://fuchsia.googlesource.com/integration"
 "${jiri}" override "${petal}" "https://fuchsia.googlesource.com/${petal}"
 
-  cat <<END
-Configured jiri for ${petal}. Run these commands to update your build:
+echo "Configured jiri for ${petal}. Run these commands to update your build:"
 
+if [[ "${petal}" == "zircon" ]]; then
+cat <<END
+ * jiri update -gc     # Updates your source tree to contain ${petal} and
+                       # removes unneeded repositories.
+
+ * cd zircon && scripts/build-zircon-<arch>  # Acutally builds ${petal}.
+END
+else
+cat <<END
  * jiri update -gc     # Updates your source tree to contain ${petal} and
                        # removes unneeded repositories.
  * fx set x64          # Updates your build directory to build ${petal}.
- * fx full-build       # Actually builds ${petal}.
+ * fx full-build       # Actually builds ${petal}
 END
+fi
