@@ -7,14 +7,19 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/gpio-impl.h>
 #include <ddk/protocol/platform-bus.h>
-#include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/platform-device-lib.h>
+#include <ddk/protocol/platform-device.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/gpio-impl.h>
 
+#include <fbl/array.h>
+
 #include <hw/reg.h>
 #include <hwreg/mmio.h>
+
+#include <lib/zx/interrupt.h>
+#include <lib/zx/port.h>
 
 namespace gpio {
 
@@ -26,16 +31,20 @@ class Mt8167GpioDevice : public DeviceType,
 public:
     static zx_status_t Create(zx_device_t* parent);
 
-    Mt8167GpioDevice(zx_device_t* parent, mmio_buffer_t mmio)
+    explicit Mt8167GpioDevice(zx_device_t* parent, mmio_buffer_t gpio_mmio,
+                              mmio_buffer_t iocfg_mmio, mmio_buffer_t eint_mmio)
         : DeviceType(parent),
-          mmio_(mmio),
-          dir_(mmio),
-          out_(mmio),
-          in_(mmio),
-          pull_en_(mmio),
-          pull_sel_(mmio) {}
+          gpio_mmio_(gpio_mmio),
+          dir_(gpio_mmio),
+          out_(gpio_mmio),
+          in_(gpio_mmio),
+          pull_en_(gpio_mmio),
+          pull_sel_(gpio_mmio),
+          iocfg_(iocfg_mmio),
+          eint_(eint_mmio) {}
 
     zx_status_t Bind();
+    zx_status_t Init();
 
     // Methods required by the ddk mixins
     void DdkUnbind();
@@ -51,13 +60,20 @@ public:
     zx_status_t GpioImplSetPolarity(uint32_t index, uint32_t polarity);
 
 private:
-    ddk::MmioBuffer mmio_;
+    void ShutDown();
+    int Thread();
+
+    ddk::MmioBuffer gpio_mmio_;
     const GpioDirReg dir_;
     const GpioOutReg out_;
     const GpioInReg in_;
     const GpioPullEnReg pull_en_;
     const GpioPullSelReg pull_sel_;
-
-    void ShutDown();
+    const IoConfigReg iocfg_;
+    const ExtendedInterruptReg eint_;
+    zx::interrupt int_;
+    zx::port port_;
+    thrd_t thread_;
+    fbl::Array<zx::interrupt> interrupts_;
 };
 } // namespace gpio

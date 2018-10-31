@@ -11,6 +11,12 @@
 #define MT8167_GPIO_BASE                                    0x10005000
 #define MT8167_GPIO_SIZE                                    0x700
 
+#define MT8167_IOCFG_BASE                                   0x10005900
+#define MT8167_IOCFG_SIZE                                   0x700
+
+#define MT8167_EINT_BASE                                    0x1000B000
+#define MT8167_EINT_SIZE                                    0x800
+
 #define MT8167_SOC_BASE                                     0x10200000
 #define MT8167_SOC_SIZE                                     0x1D00
 
@@ -59,6 +65,7 @@
 #define MT8167_IRQ_UART1                                    117
 #define MT8167_IRQ_HDMI_SIFM                                142
 #define MT8167_IRQ_ETHER_NIC_WRAP                           143
+#define MT8167_IRQ_ARM_EINT                                 166
 #define MT8167_IRQ_DISP_OVL0                                192
 #define MT8167_IRQ_DISP_RDMA0                               194
 #define MT8167_IRQ_DISP_RDMA1                               195
@@ -69,3 +76,4 @@
 #define MT8167_IRQ_UART2                                    243
 
 #define MT8167_I2C_CNT                                      3
+#define MT8167_GPIO_EINT_MAX                                131

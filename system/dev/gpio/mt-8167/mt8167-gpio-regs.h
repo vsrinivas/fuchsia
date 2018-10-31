@@ -11,11 +11,22 @@
 
 namespace gpio {
 
+constexpr bool kGpioPullValid[][16] = {
+    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
+    {0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1},
+    {1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1},
+    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+    {1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+    {1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0},
+};
+
 // GPIO MODE defines PINMUX for this device
 class GpioModeReg : public hwreg::RegisterBase<GpioModeReg, uint16_t> {
 public:
     static constexpr uint16_t kModeGpio = 0; // GPIO mode is always 0
-    static constexpr uint64_t kModeMax = 8; // 3 bits per mode
+    static constexpr uint64_t kModeMax = 8;  // 3 bits per mode
 
     static uint16_t GetMode(ddk::MmioBuffer* mmio, size_t idx) {
         return Read(mmio, idx).GetMode(idx % kItemsPerReg);
@@ -84,7 +95,7 @@ public:
         ddk::MmioView::ModifyBit<uint16_t>(val, idx % 16, Idx2Offset(idx));
     }
 
-    uint16_t GetBit(size_t idx)  const {
+    uint16_t GetBit(size_t idx) const {
         return ddk::MmioView::GetBit<uint16_t>(idx % 16, Idx2Offset(idx));
     }
 };
@@ -114,18 +125,13 @@ class GpioPullEnReg : public GpioBitFieldView {
 public:
     explicit GpioPullEnReg(mmio_buffer_t& mmio)
         : GpioBitFieldView(mmio, 0x500, 0x100) {}
-    bool Enable(size_t idx, bool val) const {
-        static const bool valid[][16] = {
-            {1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 0, 0},
-            {0, 0, 1, 1, 1, 0, 0, 0,  1, 1, 1, 1, 1, 1, 1, 1},
-            {1, 1, 1, 1, 1, 1, 1, 1,  0, 0, 0, 0, 1, 1, 1, 1},
-            {1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1},
-            {1, 1, 1, 1, 0, 0, 0, 0,  0, 0, 1, 1, 1, 1, 1, 1},
-            {1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1},
-            {1, 1, 1, 1, 1, 1, 1, 1,  0, 0, 0, 0, 0, 0, 0, 0},
-            {0, 0, 0, 0, 0, 0, 0, 0,  0, 1, 1, 1, 1, 0, 0, 0},
-        };
-        if (idx >= sizeof(valid) / sizeof(bool) || !valid[idx / 16][idx % 16]) {
+
+    bool PullEnable(size_t idx) const { return PullEnableInternal(idx, true); }
+    bool PullDisable(size_t idx) const { return PullEnableInternal(idx, false); }
+
+private:
+    bool PullEnableInternal(size_t idx, bool val) const {
+        if (idx >= countof(kGpioPullValid) || !kGpioPullValid[idx / 16][idx % 16]) {
             return false;
         }
         ModifyBit(idx, val);
@@ -137,6 +143,113 @@ class GpioPullSelReg : public GpioBitFieldView {
 public:
     explicit GpioPullSelReg(mmio_buffer_t& mmio)
         : GpioBitFieldView(mmio, 0x600, 0x100) {}
-    void SetUp(size_t idx, bool up) const { ModifyBit(idx, up); }
+    bool SetPullUp(size_t idx) const { return SetPullInternal(idx, true); }
+    bool SetPullDown(size_t idx) const { return SetPullInternal(idx, false); }
+
+private:
+    bool SetPullInternal(size_t idx, bool up) const {
+        if (idx >= countof(kGpioPullValid) || !kGpioPullValid[idx / 16][idx % 16]) {
+            return false;
+        }
+        ModifyBit(idx, up);
+        return true;
+    }
+};
+
+class IoConfigReg : public ddk::MmioBuffer {
+public:
+    explicit IoConfigReg(mmio_buffer_t& mmio)
+        : ddk::MmioBuffer(mmio) {}
+    bool SetPullUp(size_t idx) const { return SetPullInternal(idx, true); }
+    bool SetPullDown(size_t idx) const { return SetPullInternal(idx, false); }
+    bool PullEnable(size_t idx) const { return PullEnableInternal(idx, true); }
+    bool PullDisable(size_t idx) const { return PullEnableInternal(idx, false); }
+
+private:
+    bool SetPullInternal(size_t idx, bool up) const {
+        switch (idx) {
+        case 40:
+            ModifyBit<uint32_t>(!up, 2, 0x580);
+            return true;
+        case 41:
+            ModifyBit<uint32_t>(!up, 6, 0x580);
+            return true;
+        case 42:
+            ModifyBit<uint32_t>(!up, 2, 0x590);
+            return true;
+        case 43:
+            ModifyBit<uint32_t>(!up, 6, 0x590);
+            return true;
+        }
+        return false;
+    }
+    bool PullEnableInternal(size_t idx, bool enable) const {
+        constexpr uint32_t r75K = 1;
+        switch (idx) {
+        case 40:
+            ModifyBits(enable ? r75K : 0, 0, 2, 0x580);
+            return true;
+        case 41:
+            ModifyBits(enable ? r75K : 0, 4, 2, 0x580);
+            return true;
+        case 42:
+            ModifyBits(enable ? r75K : 0, 0, 2, 0x590);
+            return true;
+        case 43:
+            ModifyBits(enable ? r75K : 0, 4, 2, 0x590);
+            return true;
+        }
+        return false;
+    }
+};
+
+class ExtendedInterruptReg : public ddk::MmioBuffer {
+public:
+    explicit ExtendedInterruptReg(mmio_buffer_t& mmio)
+        : ddk::MmioBuffer(mmio) {}
+    void Enable(size_t idx) const { EnableInternal(idx, true); }
+    void Disable(size_t idx) const { EnableInternal(idx, false); }
+    bool IsEnabled(size_t idx) const {
+        return !GetBit<uint32_t>(
+            idx % kBitsPerReg, 0x80 + (idx / kBitsPerReg) * kBytesRegSeparation);
+    }
+    void SetPolarity(size_t idx, bool high) const {
+        SetBit<uint32_t>(idx % kBitsPerReg,
+                         (high ? 0x340 : 0x380) + (idx / kBitsPerReg) * kBytesRegSeparation);
+    }
+    void SetEdge(size_t idx, bool edge) const {
+        SetBit<uint32_t>(idx % kBitsPerReg,
+                         (edge ? 0x1C0 : 0x180) + (idx / kBitsPerReg) * kBytesRegSeparation);
+    }
+
+    void SetDomain0(size_t idx) const {
+        // These registers are not described on the reference manual.
+        SetBit<uint32_t>(idx % kBitsPerReg, 0x400 + (idx / kBitsPerReg) * kBytesRegSeparation);
+    }
+    void AckInterrupt(size_t idx) const {
+        // These registers are not described on the reference manual.
+        SetBit<uint32_t>(idx % kBitsPerReg, 0x040 + (idx / kBitsPerReg) * kBytesRegSeparation);
+    }
+    uint32_t GetNextInterrupt(uint32_t start) const {
+        for (uint32_t i = start; i < MT8167_GPIO_EINT_MAX; i += kBitsPerReg) {
+            // These registers are not described on the reference manual.
+            auto reg = Read<uint32_t>(
+                0x000 + (i / kBitsPerReg) * kBytesRegSeparation);
+            if (reg) {
+                return i + 31 - __builtin_clz(reg);
+            }
+        }
+        return kInvalidInterruptIdx;
+    }
+
+    static constexpr uint32_t kInvalidInterruptIdx = static_cast<uint32_t>(-1);
+
+private:
+    void EnableInternal(size_t idx, bool enable) const {
+        SetBit<uint32_t>(idx % kBitsPerReg,
+                         (enable ? 0x100 : 0xC0) + (idx / kBitsPerReg) * kBytesRegSeparation);
+    }
+    static constexpr uint32_t kBitsPerReg = 32;
+    static constexpr uint32_t kBytesRegSeparation = 4;
 };
 } // namespace gpio
