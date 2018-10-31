@@ -47,7 +47,7 @@ void InputReader::SetOwnershipEvent(zx::event event) {
   display_ownership_waiter_.set_trigger(signals);
   zx_status_t status =
       display_ownership_waiter_.Begin(async_get_default_dispatcher());
-  FXL_CHECK(status == ZX_OK);
+  FXL_DCHECK(status == ZX_OK) << "Status is: " << status;
 }
 
 void InputReader::DeviceRemoved(zx_handle_t handle) {
