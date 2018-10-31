@@ -44,7 +44,6 @@ class EnvironmentControllerImpl : public fuchsia::guest::EnvironmentController {
   // |fuchsia::guest::EnvironmentController|
   void LaunchInstance(
       fuchsia::guest::LaunchInfo launch_info,
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider> view_provider,
       fidl::InterfaceRequest<fuchsia::guest::InstanceController> controller,
       LaunchInstanceCallback callback) override;
   void LaunchInstance2(

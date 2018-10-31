@@ -39,7 +39,6 @@ void EnvironmentControllerImpl::AddBinding(
 
 void EnvironmentControllerImpl::LaunchInstance(
     fuchsia::guest::LaunchInfo launch_info,
-    fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider> view_provider,
     fidl::InterfaceRequest<fuchsia::guest::InstanceController> controller,
     LaunchInstanceCallback callback) {
   component::Services services;
@@ -56,7 +55,6 @@ void EnvironmentControllerImpl::LaunchInstance(
   // Setup guest endpoint.
   const uint32_t cid = next_guest_cid_++;
   fuchsia::guest::GuestVsockEndpointPtr guest_endpoint;
-  services.ConnectToService(std::move(view_provider));
   services.ConnectToService(guest_endpoint.NewRequest());
   auto endpoint = std::make_unique<GuestVsockEndpoint>(
       cid, std::move(guest_endpoint), &host_vsock_endpoint_);
@@ -82,7 +80,7 @@ void EnvironmentControllerImpl::LaunchInstance2(
     fuchsia::guest::LaunchInfo launch_info,
     fidl::InterfaceRequest<fuchsia::guest::InstanceController> controller,
     LaunchInstanceCallback callback) {
-  LaunchInstance(std::move(launch_info), nullptr, std::move(controller),
+  LaunchInstance(std::move(launch_info), std::move(controller),
                  std::move(callback));
 }
 

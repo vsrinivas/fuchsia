@@ -165,7 +165,7 @@ void Guest::StartGuest() {
   fuchsia::guest::LaunchInfo launch_info;
   launch_info.url = kLinuxGuestPackage;
   launch_info.args.push_back("--display=none");
-  guest_env_->LaunchInstance2(
+  guest_env_->LaunchInstance(
       std::move(launch_info), guest_controller_.NewRequest(),
       [this](uint32_t cid) {
         FXL_LOG(INFO) << "Guest launched with CID " << cid;
