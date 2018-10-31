@@ -5,12 +5,13 @@
 package dns
 
 import (
+	"fmt"
 	"log"
 	"math"
 	"sync"
 	"time"
 
-	"netstack/dns/dnsmessage"
+	"golang.org/x/net/dns/dnsmessage"
 )
 
 const (
@@ -30,7 +31,7 @@ type cacheEntry struct {
 
 // Returns true if this entry is a CNAME that points at something no longer in our cache.
 func (entry *cacheEntry) isDanglingCNAME(cache *cacheInfo) bool {
-	switch rr := entry.rr.(type) {
+	switch rr := entry.rr.Body.(type) {
 	case *dnsmessage.CNAMEResource:
 		return cache.m[rr.CNAME] == nil
 	default:
@@ -41,66 +42,37 @@ func (entry *cacheEntry) isDanglingCNAME(cache *cacheInfo) bool {
 // The full cache.
 type cacheInfo struct {
 	mu         sync.Mutex
-	m          map[string][]cacheEntry
+	m          map[dnsmessage.Name][]cacheEntry
 	numEntries int
 }
 
 func newCache() cacheInfo {
-	return cacheInfo{m: make(map[string][]cacheEntry)}
+	return cacheInfo{m: make(map[dnsmessage.Name][]cacheEntry)}
 }
 
 // Returns a list of Resources that match the given Question (same class and type and matching domain name).
-func (cache *cacheInfo) lookup(question *dnsmessage.Question) []dnsmessage.Resource {
+func (cache *cacheInfo) lookup(question dnsmessage.Question) []dnsmessage.Resource {
 	entries := cache.m[question.Name]
 
 	rrs := make([]dnsmessage.Resource, 0, len(entries))
 	for _, entry := range entries {
-		h := entry.rr.Header()
+		h := entry.rr.Header
 		if h.Class == question.Class && h.Name == question.Name {
-			switch rr := entry.rr.(type) {
+			switch body := entry.rr.Body.(type) {
 			case *dnsmessage.CNAMEResource:
-				rrs = append(rrs, cache.lookup(&dnsmessage.Question{
-					Name:  rr.CNAME,
+				rrs = append(rrs, cache.lookup(dnsmessage.Question{
+					Name:  body.CNAME,
 					Class: question.Class,
 					Type:  question.Type,
 				})...)
 			default:
 				if h.Type == question.Type {
-					rrs = append(rrs, rr)
+					rrs = append(rrs, entry.rr)
 				}
 			}
 		}
 	}
 	return rrs
-}
-
-func resourceEqual(r1 dnsmessage.Resource, r2 dnsmessage.Resource) bool {
-	h1 := r1.Header()
-	h2 := r2.Header()
-	if h1.Class != h2.Class || h1.Type != h2.Type || h1.Name != h2.Name {
-		return false
-	}
-	switch r1 := r1.(type) {
-	case *dnsmessage.AResource:
-		return r1.A == r2.(*dnsmessage.AResource).A
-	case *dnsmessage.AAAAResource:
-		return r1.AAAA == r2.(*dnsmessage.AAAAResource).AAAA
-	case *dnsmessage.CNAMEResource:
-		return r1.CNAME == r2.(*dnsmessage.CNAMEResource).CNAME
-	case *dnsmessage.NegativeResource:
-		return true
-	}
-	panic("unexpected resource type")
-}
-
-// Searches `entries` for an exact resource match, returning the entry if found.
-func findExact(entries []cacheEntry, rr dnsmessage.Resource) *cacheEntry {
-	for i, entry := range entries {
-		if resourceEqual(entry.rr, rr) {
-			return &entries[i]
-		}
-	}
-	return nil
 }
 
 // Finds the minimum TTL value of any SOA resource in a response. Returns 0 if not found.
@@ -109,8 +81,8 @@ func findSOAMinTTL(auths []dnsmessage.Resource) uint32 {
 	minTTL := uint32(math.MaxUint32)
 	foundSOA := false
 	for _, auth := range auths {
-		if auth.Header().Class == dnsmessage.ClassINET {
-			switch soa := auth.(type) {
+		if auth.Header.Class == dnsmessage.ClassINET {
+			switch soa := auth.Body.(type) {
 			case *dnsmessage.SOAResource:
 				foundSOA = true
 				if soa.MinTTL < minTTL {
@@ -127,25 +99,49 @@ func findSOAMinTTL(auths []dnsmessage.Resource) uint32 {
 
 // Attempts to add a new entry into the cache. Can fail if the cache is full.
 func (cache *cacheInfo) insert(rr dnsmessage.Resource) {
-	h := rr.Header()
+	h := rr.Header
 	newEntry := cacheEntry{
 		ttd: testHookNow().Add(time.Duration(h.TTL) * time.Second),
 		rr:  rr,
 	}
 
 	entries := cache.m[h.Name]
-	if existing := findExact(entries, rr); existing != nil {
-		if _, ok := existing.rr.(*dnsmessage.NegativeResource); ok {
+	for i := range entries {
+		existing := &entries[i]
+		if h.Class != existing.rr.Header.Class || h.Type != existing.rr.Header.Type || h.Name != existing.rr.Header.Name {
+			continue
+		}
+		if existing.rr.Body == nil {
 			// We have a valid record now; replace the negative resource entirely.
 			existing.rr = rr
 			existing.ttd = newEntry.ttd
-		} else if newEntry.ttd.After(existing.ttd) {
-			existing.ttd = newEntry.ttd
+		} else {
+			switch b1 := rr.Body.(type) {
+			case *dnsmessage.AResource:
+				if b2, ok := existing.rr.Body.(*dnsmessage.AResource); !ok || b1.A != b2.A {
+					continue
+				}
+			case *dnsmessage.AAAAResource:
+				if b2, ok := existing.rr.Body.(*dnsmessage.AAAAResource); !ok || b1.AAAA != b2.AAAA {
+					continue
+				}
+			case *dnsmessage.CNAMEResource:
+				if b2, ok := existing.rr.Body.(*dnsmessage.CNAMEResource); !ok || b1.CNAME != b2.CNAME {
+					continue
+				}
+			default:
+				panic(fmt.Sprintf("unknown type %T", b1))
+			}
+			if newEntry.ttd.After(existing.ttd) {
+				existing.ttd = newEntry.ttd
+			}
 		}
 		if debug {
 			log.Printf("DNS cache update: %v(%v) expires %v", h.Name, h.Type, existing.ttd)
 		}
-	} else if cache.numEntries+1 <= maxEntries {
+		return
+	}
+	if cache.numEntries+1 <= maxEntries {
 		if debug {
 			log.Printf("DNS cache insert: %v(%v) expires %v", h.Name, h.Type, newEntry.ttd)
 		}
@@ -163,7 +159,7 @@ func (cache *cacheInfo) insert(rr dnsmessage.Resource) {
 func (cache *cacheInfo) insertAll(rrs []dnsmessage.Resource) {
 	cache.prune()
 	for _, rr := range rrs {
-		h := rr.Header()
+		h := rr.Header
 		if h.Class == dnsmessage.ClassINET {
 			switch h.Type {
 			case dnsmessage.TypeA, dnsmessage.TypeAAAA, dnsmessage.TypeCNAME:
@@ -173,22 +169,22 @@ func (cache *cacheInfo) insertAll(rrs []dnsmessage.Resource) {
 	}
 }
 
-func (cache *cacheInfo) insertNegative(question *dnsmessage.Question, msg *dnsmessage.Message) {
+func (cache *cacheInfo) insertNegative(question dnsmessage.Question, msg dnsmessage.Message) {
 	cache.prune()
 	minTTL := findSOAMinTTL(msg.Authorities)
 	if minTTL == 0 {
 		// Don't cache without a TTL value.
 		return
 	}
-	rr := &dnsmessage.NegativeResource{
-		ResourceHeader: dnsmessage.ResourceHeader{
+	cache.insert(dnsmessage.Resource{
+		Header: dnsmessage.ResourceHeader{
 			Name:  question.Name,
 			Type:  question.Type,
 			Class: dnsmessage.ClassINET,
 			TTL:   minTTL,
 		},
-	}
-	cache.insert(rr)
+		Body: nil,
+	})
 }
 
 // Removes every expired/dangling entry from the cache.
@@ -217,19 +213,19 @@ func (cache *cacheInfo) prune() {
 var cache = newCache()
 
 func newCachedResolver(fallback Resolver) Resolver {
-	return func(c *Client, question dnsmessage.Question) (string, []dnsmessage.Resource, *dnsmessage.Message, error) {
+	return func(c *Client, question dnsmessage.Question) (dnsmessage.Name, []dnsmessage.Resource, dnsmessage.Message, error) {
 		if !(question.Class == dnsmessage.ClassINET && (question.Type == dnsmessage.TypeA || question.Type == dnsmessage.TypeAAAA)) {
 			panic("unexpected question type")
 		}
 
 		cache.mu.Lock()
-		rrs := cache.lookup(&question)
+		rrs := cache.lookup(question)
 		cache.mu.Unlock()
 		if len(rrs) != 0 {
 			if debug {
 				log.Printf("DNS cache hit %v(%v) => %v", question.Name, question.Type, rrs)
 			}
-			return "", rrs, nil, nil
+			return dnsmessage.Name{}, rrs, dnsmessage.Message{}, nil
 		}
 
 		cname, rrs, msg, err := fallback(c, question)
@@ -240,7 +236,7 @@ func newCachedResolver(fallback Resolver) Resolver {
 		if err == nil {
 			cache.insertAll(msg.Answers)
 		} else if err, ok := err.(*Error); ok && err.CacheNegative {
-			cache.insertNegative(&question, msg)
+			cache.insertNegative(question, msg)
 		}
 		cache.mu.Unlock()
 

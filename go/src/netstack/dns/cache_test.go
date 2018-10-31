@@ -8,10 +8,14 @@ import (
 	"testing"
 	"time"
 
-	"netstack/dns/dnsmessage"
+	"golang.org/x/net/dns/dnsmessage"
 )
 
-func makeResourceHeader(name string, ttl uint32) dnsmessage.ResourceHeader {
+func makeResourceHeader(nameStr string, ttl uint32) dnsmessage.ResourceHeader {
+	name, err := dnsmessage.NewName(nameStr)
+	if err != nil {
+		panic(err)
+	}
 	return dnsmessage.ResourceHeader{
 		Name:  name,
 		Type:  dnsmessage.TypeA,
@@ -20,8 +24,12 @@ func makeResourceHeader(name string, ttl uint32) dnsmessage.ResourceHeader {
 	}
 }
 
-func makeQuestion(name string) *dnsmessage.Question {
-	return &dnsmessage.Question{
+func makeQuestion(nameStr string) dnsmessage.Question {
+	name, err := dnsmessage.NewName(nameStr)
+	if err != nil {
+		panic(err)
+	}
+	return dnsmessage.Question{
 		Name:  name,
 		Type:  dnsmessage.TypeA,
 		Class: dnsmessage.ClassINET,
@@ -29,21 +37,27 @@ func makeQuestion(name string) *dnsmessage.Question {
 }
 
 var smallTestResources = []dnsmessage.Resource{
-	&dnsmessage.AResource{
-		ResourceHeader: makeResourceHeader("example.com.", 5),
-		A:              [4]byte{127, 0, 0, 1},
+	{
+		Header: makeResourceHeader("example.com.", 5),
+		Body: &dnsmessage.AResource{
+			A: [4]byte{127, 0, 0, 1},
+		},
 	},
-	&dnsmessage.AResource{
-		ResourceHeader: makeResourceHeader("example.com.", 5),
-		A:              [4]byte{127, 0, 0, 2},
+	{
+		Header: makeResourceHeader("example.com.", 5),
+		Body: &dnsmessage.AResource{
+			A: [4]byte{127, 0, 0, 2},
+		},
 	},
 }
 
 var smallTestQuestion = makeQuestion("example.com.")
 
-var soaAuthority = dnsmessage.SOAResource{
-	ResourceHeader: makeResourceHeader("example.com.", 5),
-	MinTTL:         12,
+var soaAuthority = dnsmessage.Resource{
+	Header: makeResourceHeader("example.com.", 5),
+	Body: &dnsmessage.SOAResource{
+		MinTTL: 12,
+	},
 }
 
 // Tests a simple insert and lookup pair.
@@ -55,8 +69,8 @@ func TestLookup(t *testing.T) {
 		t.Errorf("cache.lookup failed. Got %d. Want %d.", len(rrs), 2)
 	}
 	for _, rr := range rrs {
-		if rr.Header().Name != "example.com." {
-			t.Errorf("cache.lookup failed. Got '%q'. Want 'example.com.'", rr.Header().Name)
+		if rr.Header.Name != smallTestQuestion.Name {
+			t.Errorf("got cache.lookup(...) = %v, want = %v", rr.Header.Name, smallTestQuestion.Name)
 		}
 	}
 }
@@ -96,18 +110,22 @@ func TestMaxEntries(t *testing.T) {
 
 	// One record that expires at 10 seconds.
 	cache.insertAll([]dnsmessage.Resource{
-		&dnsmessage.AResource{
-			ResourceHeader: makeResourceHeader("example.com.", 10),
-			A:              [4]byte{127, 0, 0, 1},
+		{
+			Header: makeResourceHeader("example.com.", 10),
+			Body: &dnsmessage.AResource{
+				A: [4]byte{127, 0, 0, 1},
+			},
 		},
 	})
 
 	// A bunch that expire at 5 seconds.
 	for i := 0; i < maxEntries; i++ {
 		cache.insertAll([]dnsmessage.Resource{
-			&dnsmessage.AResource{
-				ResourceHeader: makeResourceHeader("example.com.", 5),
-				A:              [4]byte{byte(i >> 24), byte(i >> 16), byte(i >> 8), byte(i)},
+			{
+				Header: makeResourceHeader("example.com.", 5),
+				Body: &dnsmessage.AResource{
+					A: [4]byte{byte(i >> 24), byte(i >> 16), byte(i >> 8), byte(i)},
+				},
 			},
 		})
 	}
@@ -119,9 +137,11 @@ func TestMaxEntries(t *testing.T) {
 
 	// Cache is at capacity. Can't insert anymore.
 	cache.insertAll([]dnsmessage.Resource{
-		&dnsmessage.AResource{
-			ResourceHeader: makeResourceHeader("foo.example.com.", 5),
-			A:              [4]byte{192, 168, 0, 1},
+		{
+			Header: makeResourceHeader("foo.example.com.", 5),
+			Body: &dnsmessage.AResource{
+				A: [4]byte{192, 168, 0, 1},
+			},
 		},
 	})
 	rrs = cache.lookup(makeQuestion("foo.example.com."))
@@ -132,9 +152,11 @@ func TestMaxEntries(t *testing.T) {
 	// Advance the clock so the 5 second entries expire. Insert should succeed.
 	testTime = testTime.Add(6 * time.Second)
 	cache.insertAll([]dnsmessage.Resource{
-		&dnsmessage.AResource{
-			ResourceHeader: makeResourceHeader("foo.example.com.", 5),
-			A:              [4]byte{192, 168, 0, 1},
+		{
+			Header: makeResourceHeader("foo.example.com.", 5),
+			Body: &dnsmessage.AResource{
+				A: [4]byte{192, 168, 0, 1},
+			},
 		},
 	})
 
@@ -154,21 +176,29 @@ func TestCNAME(t *testing.T) {
 	cache := newCache()
 	cache.insertAll(smallTestResources)
 
+	name, err := dnsmessage.NewName("example.com.")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// One CNAME record that points at an existing record.
 	cache.insertAll([]dnsmessage.Resource{
-		&dnsmessage.CNAMEResource{
-			ResourceHeader: makeResourceHeader("foobar.com.", 10),
-			CNAME:          "example.com.",
+		{
+			Header: makeResourceHeader("foobar.com.", 10),
+			Body: &dnsmessage.CNAMEResource{
+				CNAME: name,
+			},
 		},
 	})
 
-	rrs := cache.lookup(makeQuestion("foobar.com."))
+	question := makeQuestion("foobar.com.")
+	rrs := cache.lookup(question)
 	if len(rrs) != 2 {
 		t.Errorf("cache.lookup failed. Got %d. Want %d.", len(rrs), 2)
 	}
 	for _, rr := range rrs {
-		if rr.Header().Name != "example.com." {
-			t.Errorf("cache.lookup failed. Got '%q'. Want 'example.com.'", rr.Header().Name)
+		if rr.Header.Name != name {
+			t.Errorf("got cache.lookup(%#v) = %v, want = %v", question, rr.Header.Name, name)
 		}
 	}
 }
@@ -191,9 +221,9 @@ func TestNegative(t *testing.T) {
 	// The negative record expires at 12 seconds (taken from the SOA authority resource).
 	testTime := time.Now()
 	testHookNow = func() time.Time { return testTime }
-	cache.insertNegative(smallTestQuestion, &dnsmessage.Message{
-		Questions:   []dnsmessage.Question{*smallTestQuestion},
-		Authorities: []dnsmessage.Resource{&soaAuthority},
+	cache.insertNegative(smallTestQuestion, dnsmessage.Message{
+		Questions:   []dnsmessage.Question{smallTestQuestion},
+		Authorities: []dnsmessage.Resource{soaAuthority},
 	})
 
 	// Still there after t=11 seconds.
@@ -216,9 +246,9 @@ func TestNegative(t *testing.T) {
 // Tests that a negative resource is replaced when we have an actual resource for that query.
 func TestNegativeUpdate(t *testing.T) {
 	cache := newCache()
-	cache.insertNegative(smallTestQuestion, &dnsmessage.Message{
-		Questions:   []dnsmessage.Question{*smallTestQuestion},
-		Authorities: []dnsmessage.Resource{&soaAuthority},
+	cache.insertNegative(smallTestQuestion, dnsmessage.Message{
+		Questions:   []dnsmessage.Question{smallTestQuestion},
+		Authorities: []dnsmessage.Resource{soaAuthority},
 	})
 	cache.insertAll(smallTestResources)
 	rrs := cache.lookup(smallTestQuestion)

@@ -26,14 +26,13 @@ import (
 	"sync"
 	"time"
 
-	"netstack/dns/dnsmessage"
-
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/stack"
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
 	"github.com/google/netstack/waiter"
+	"golang.org/x/net/dns/dnsmessage"
 )
 
 var staticDNSConfig = dnsConfig{
@@ -54,7 +53,7 @@ type Client struct {
 }
 
 // A Resolver answers DNS Questions.
-type Resolver func(c *Client, question dnsmessage.Question) (cname string, rrs []dnsmessage.Resource, msg *dnsmessage.Message, err error)
+type Resolver func(c *Client, question dnsmessage.Question) (dnsmessage.Name, []dnsmessage.Resource, dnsmessage.Message, error)
 
 // Error represents an error while issuing a DNS query for a hostname.
 type Error struct {
@@ -81,10 +80,10 @@ func NewClient(s *stack.Stack) *Client {
 // roundTrip writes the query to and reads the response from the Endpoint.
 // The message format is slightly different depending on the transport protocol
 // (for TCP, a 2 byte message length is prepended). See RFC 1035.
-func roundTrip(ctx context.Context, transport tcpip.TransportProtocolNumber, ep tcpip.Endpoint, wq *waiter.Queue, query *dnsmessage.Message) (response *dnsmessage.Message, err error) {
+func roundTrip(ctx context.Context, transport tcpip.TransportProtocolNumber, ep tcpip.Endpoint, wq *waiter.Queue, query *dnsmessage.Message) (dnsmessage.Message, error) {
 	b, err := query.Pack()
 	if err != nil {
-		return nil, err
+		return dnsmessage.Message{}, err
 	}
 	if transport == tcp.ProtocolNumber {
 		l := len(b)
@@ -101,12 +100,12 @@ func roundTrip(ctx context.Context, transport tcpip.TransportProtocolNumber, ep 
 			case <-resCh:
 				continue
 			case <-ctx.Done():
-				return nil, fmt.Errorf("dns: write: %v (%v)", err, ctx.Err())
+				return dnsmessage.Message{}, fmt.Errorf("dns: write: %v (%v)", err, ctx.Err())
 			}
 		}
 
 		if err != nil {
-			return nil, fmt.Errorf("dns: write: %v", err)
+			return dnsmessage.Message{}, fmt.Errorf("dns: write: %v", err)
 		}
 	}
 
@@ -119,7 +118,7 @@ func roundTrip(ctx context.Context, transport tcpip.TransportProtocolNumber, ep 
 		v, _, err := ep.Read(nil)
 		if err != nil {
 			if err == tcpip.ErrClosedForReceive {
-				break
+				return dnsmessage.Message{}, nil
 			}
 
 			if err == tcpip.ErrWouldBlock {
@@ -127,11 +126,11 @@ func roundTrip(ctx context.Context, transport tcpip.TransportProtocolNumber, ep 
 				case <-notifyCh:
 					continue
 				case <-ctx.Done():
-					return nil, fmt.Errorf("dns: read: %v", tcpip.ErrTimeout)
+					return dnsmessage.Message{}, fmt.Errorf("dns: read: %v", tcpip.ErrTimeout)
 				}
 			}
 
-			return nil, fmt.Errorf("dns: read: %v", err)
+			return dnsmessage.Message{}, fmt.Errorf("dns: read: %v", err)
 		}
 
 		b = append(b, []byte(v)...)
@@ -150,17 +149,15 @@ func roundTrip(ctx context.Context, transport tcpip.TransportProtocolNumber, ep 
 			bcontents = b
 		}
 
-		response = &dnsmessage.Message{}
+		var response dnsmessage.Message
 		if err := response.Unpack(bcontents); err != nil {
 			// Ignore invalid responses as they may be malicious
 			// forgery attempts. Instead continue waiting until
 			// timeout. See golang.org/issue/13281.
 			continue
 		}
-		break
+		return response, nil
 	}
-
-	return response, nil
 }
 
 func (c *Client) connect(ctx context.Context, transport tcpip.TransportProtocolNumber, server tcpip.FullAddress) (tcpip.Endpoint, *waiter.Queue, error) {
@@ -192,7 +189,7 @@ func (c *Client) connect(ctx context.Context, transport tcpip.TransportProtocolN
 }
 
 // exchange sends a query on the connection and hopes for a response.
-func (c *Client) exchange(server tcpip.FullAddress, name string, qtype dnsmessage.Type, timeout time.Duration) (response *dnsmessage.Message, err error) {
+func (c *Client) exchange(server tcpip.FullAddress, name dnsmessage.Name, qtype dnsmessage.Type, timeout time.Duration) (dnsmessage.Message, error) {
 	query := dnsmessage.Message{
 		Header: dnsmessage.Header{
 			RecursionDesired: true,
@@ -202,39 +199,34 @@ func (c *Client) exchange(server tcpip.FullAddress, name string, qtype dnsmessag
 		},
 	}
 
-	protos := []tcpip.TransportProtocolNumber{udp.ProtocolNumber, tcp.ProtocolNumber}
-	for _, proto := range protos {
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	for _, proto := range []tcpip.TransportProtocolNumber{udp.ProtocolNumber, tcp.ProtocolNumber} {
+		response, err := func() (dnsmessage.Message, error) {
+			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+			defer cancel()
 
-		ep, wq, err := c.connect(ctx, proto, server)
-		defer func() {
-			if ep != nil {
-				ep.Close()
+			ep, wq, err := c.connect(ctx, proto, server)
+			if err != nil {
+				return dnsmessage.Message{}, err
 			}
+			defer ep.Close()
+
+			query.ID = uint16(rand.Int()) ^ uint16(time.Now().UnixNano())
+			return roundTrip(ctx, proto, ep, wq, &query)
 		}()
 		if err != nil {
-			cancel()
-			return nil, err
-		}
-
-		query.ID = uint16(rand.Int()) ^ uint16(time.Now().UnixNano())
-		response, err = roundTrip(ctx, proto, ep, wq, &query)
-		cancel()
-
-		if err != nil {
-			return nil, err
+			return dnsmessage.Message{}, err
 		}
 		if response.Truncated { // see RFC 5966
 			continue
 		}
 		return response, nil
 	}
-	return nil, errors.New("no answer from the DNS server")
+	return dnsmessage.Message{}, errors.New("no answer from the DNS server")
 }
 
 // Do a lookup for a single name, which must be rooted
 // (otherwise answer will not find the answers).
-func (c *Client) tryOneName(cfg *dnsConfig, name string, qtype dnsmessage.Type) (string, []dnsmessage.Resource, *dnsmessage.Message, error) {
+func (c *Client) tryOneName(cfg *dnsConfig, name dnsmessage.Name, qtype dnsmessage.Type) (dnsmessage.Name, []dnsmessage.Resource, dnsmessage.Message, error) {
 	var lastErr error
 
 	for i := 0; i < cfg.attempts; i++ {
@@ -249,7 +241,7 @@ func (c *Client) tryOneName(cfg *dnsConfig, name string, qtype dnsmessage.Type) 
 					if err != nil {
 						lastErr = &Error{
 							Err:    err.Error(),
-							Name:   name,
+							Name:   name.String(),
 							Server: &server,
 						}
 						continue
@@ -257,7 +249,7 @@ func (c *Client) tryOneName(cfg *dnsConfig, name string, qtype dnsmessage.Type) 
 					// libresolv continues to the next server when it receives
 					// an invalid referral response. See golang.org/issue/15434.
 					if msg.RCode == dnsmessage.RCodeSuccess && !msg.Authoritative && !msg.RecursionAvailable && len(msg.Answers) == 0 && len(msg.Additionals) == 0 {
-						lastErr = &Error{Err: "lame referral", Name: name, Server: &server}
+						lastErr = &Error{Err: "lame referral", Name: name.String(), Server: &server}
 						continue
 					}
 
@@ -276,10 +268,10 @@ func (c *Client) tryOneName(cfg *dnsConfig, name string, qtype dnsmessage.Type) 
 	}
 
 	if lastErr == nil {
-		lastErr = &Error{Err: "no DNS servers", Name: name}
+		lastErr = &Error{Err: "no DNS servers", Name: name.String()}
 	}
 
-	return "", nil, nil, lastErr
+	return dnsmessage.Name{}, nil, dnsmessage.Message{}, lastErr
 }
 
 // addrRecordList converts and returns a list of IP addresses from DNS
@@ -287,7 +279,7 @@ func (c *Client) tryOneName(cfg *dnsConfig, name string, qtype dnsmessage.Type) 
 func addrRecordList(rrs []dnsmessage.Resource) []tcpip.Address {
 	addrs := make([]tcpip.Address, 0, 4)
 	for _, rr := range rrs {
-		switch rr := rr.(type) {
+		switch rr := rr.Body.(type) {
 		case *dnsmessage.AResource:
 			addrs = append(addrs, tcpip.Address(rr.A[:]))
 		case *dnsmessage.AAAAResource:
@@ -317,7 +309,7 @@ type dnsConfig struct {
 var clientConf clientConfig
 
 func newNetworkResolver(cfg *dnsConfig) Resolver {
-	return func(c *Client, question dnsmessage.Question) (string, []dnsmessage.Resource, *dnsmessage.Message, error) {
+	return func(c *Client, question dnsmessage.Question) (dnsmessage.Name, []dnsmessage.Resource, dnsmessage.Message, error) {
 		return c.tryOneName(cfg, question.Name, question.Type)
 	}
 }
@@ -425,8 +417,12 @@ func (c *Client) LookupIP(name string) (addrs []tcpip.Address, err error) {
 	var lastErr error
 	for _, fqdn := range conf.nameList(name) {
 		for _, qtype := range qtypes {
+			name, err := dnsmessage.NewName(fqdn)
+			if err != nil {
+				continue
+			}
 			go func(qtype dnsmessage.Type) {
-				_, rrs, _, err := resolver(c, dnsmessage.Question{Name: fqdn, Type: qtype, Class: dnsmessage.ClassINET})
+				_, rrs, _, err := resolver(c, dnsmessage.Question{Name: name, Type: qtype, Class: dnsmessage.ClassINET})
 				lane <- racer{fqdn, rrs, err}
 			}(qtype)
 		}
@@ -464,19 +460,19 @@ const noSuchHost = "no such host"
 // for (name, qtype) from the response message msg, which
 // is assumed to have come from server.
 // It is exported mainly for use by registered helpers.
-func answer(name string, server tcpip.FullAddress, msg *dnsmessage.Message, qtype dnsmessage.Type) (cname string, addrs []dnsmessage.Resource, err error) {
+func answer(name dnsmessage.Name, server tcpip.FullAddress, msg dnsmessage.Message, qtype dnsmessage.Type) (cname dnsmessage.Name, addrs []dnsmessage.Resource, err error) {
 	addrs = make([]dnsmessage.Resource, 0, len(msg.Answers))
 	if msg.RCode == dnsmessage.RCodeNameError {
 		// TODO: There seem to be some cases where we should cache a name error, but not all. The
 		// spec is confusing on this point. See RFC 2308.
-		return "", nil, &Error{Err: noSuchHost, Name: name, Server: &server, CacheNegative: false}
+		return dnsmessage.Name{}, nil, &Error{Err: noSuchHost, Name: name.String(), Server: &server, CacheNegative: false}
 	}
 	if msg.RCode != dnsmessage.RCodeSuccess {
 		// None of the error codes make sense
 		// for the query we sent.  If we didn't get
 		// a name error and we didn't get success,
 		// the server is behaving incorrectly.
-		return "", nil, &Error{Err: "server misbehaving", Name: name, Server: &server}
+		return dnsmessage.Name{}, nil, &Error{Err: "server misbehaving", Name: name.String(), Server: &server}
 	}
 
 	// Look for the name.
@@ -488,25 +484,25 @@ Cname:
 	for cnameloop := 0; cnameloop < 10; cnameloop++ {
 		addrs = addrs[0:0]
 		for _, rr := range msg.Answers {
-			h := rr.Header()
-			if h.Class == dnsmessage.ClassINET && equalASCIILabel(h.Name, name) {
+			h := rr.Header
+			if h.Class == dnsmessage.ClassINET && equalASCIILabel(h.Name.String(), name.String()) {
 				switch h.Type {
 				case qtype:
 					addrs = append(addrs, rr)
 				case dnsmessage.TypeCNAME:
 					// redirect to cname
-					name = rr.(*dnsmessage.CNAMEResource).CNAME
+					name = rr.Body.(*dnsmessage.CNAMEResource).CNAME
 					continue Cname
 				}
 			}
 		}
 		if len(addrs) == 0 {
-			return "", nil, &Error{Err: noSuchHost, Name: name, Server: &server, CacheNegative: true}
+			return dnsmessage.Name{}, nil, &Error{Err: noSuchHost, Name: name.String(), Server: &server, CacheNegative: true}
 		}
 		return name, addrs, nil
 	}
 
-	return "", nil, &Error{Err: "too many redirects", Name: name, Server: &server}
+	return dnsmessage.Name{}, nil, &Error{Err: "too many redirects", Name: name.String(), Server: &server}
 }
 
 func equalASCIILabel(x, y string) bool {
