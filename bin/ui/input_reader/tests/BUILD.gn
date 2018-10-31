@@ -15,16 +15,74 @@ executable("input_apptests") {
 
   testonly = true
 
+  deps = [
+    ":interface_tests",
+    ":reader_interpreter_tests",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+source_set("interface_tests") {
+  visibility = [ ":*" ]
+  testonly = true
+
   sources = [
-    "input_test.cc",
+    "interface_tests.cc",
   ]
 
   deps = [
-    "//garnet/public/lib/fidl/cpp",
-    "//garnet/public/lib/gtest",
     "//garnet/public/fidl/fuchsia.ui.input",
+    "//garnet/public/lib/gtest",
     "//garnet/public/lib/ui/tests/mocks",
-    "//third_party/googletest:gtest_main",
     "//zircon/public/lib/hid",
+  ]
+}
+
+source_set("reader_interpreter_tests") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = [
+    "reader_interpreter_tests.cc",
+  ]
+
+  deps = [
+    ":mock_device_watcher",
+    ":mock_hid_decoder",
+    "//garnet/bin/ui/input_reader",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/ui/tests/mocks",
+  ]
+}
+
+source_set("mock_device_watcher") {
+  sources = [
+    "mock_device_watcher.cc",
+    "mock_device_watcher.h",
+  ]
+
+  public_deps = [
+    "//garnet/bin/ui/input_reader:device",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("mock_hid_decoder") {
+  sources = [
+    "mock_hid_decoder.cc",
+    "mock_hid_decoder.h",
+  ]
+
+  public_deps = [
+    "//garnet/bin/ui/input_reader:device",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
   ]
 }

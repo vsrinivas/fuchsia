@@ -14,7 +14,7 @@
 namespace input {
 namespace test {
 
-using InputTest = ::gtest::TestLoopFixture;
+using InputInterfaceTest = ::gtest::TestLoopFixture;
 
 fuchsia::ui::input::DeviceDescriptor GenerateKeyboardDescriptor() {
   fuchsia::ui::input::KeyboardDescriptorPtr keyboard =
@@ -29,7 +29,7 @@ fuchsia::ui::input::DeviceDescriptor GenerateKeyboardDescriptor() {
   return descriptor;
 }
 
-TEST_F(InputTest, RegisterKeyboardTest) {
+TEST_F(InputInterfaceTest, RegisterKeyboardTest) {
   fuchsia::ui::input::DeviceDescriptor descriptor =
       GenerateKeyboardDescriptor();
 
@@ -47,7 +47,7 @@ TEST_F(InputTest, RegisterKeyboardTest) {
   EXPECT_EQ(1u, on_register_count);
 }
 
-TEST_F(InputTest, InputKeyboardTest) {
+TEST_F(InputInterfaceTest, InputKeyboardTest) {
   fuchsia::ui::input::DeviceDescriptor descriptor =
       GenerateKeyboardDescriptor();
 
