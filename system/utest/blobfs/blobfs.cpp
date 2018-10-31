@@ -522,11 +522,19 @@ static int StreamAll(T func, int fd, U* buf, size_t max) {
 static bool VerifyContents(int fd, const char* data, size_t size_data) {
     // Verify the contents of the Blob
     fbl::AllocChecker ac;
-    fbl::unique_ptr<char[]> buf(new (&ac) char[size_data]);
+    constexpr size_t kReadSize = 8192;
+    fbl::unique_ptr<char[]> buffer(new (&ac) char[kReadSize]);
     EXPECT_EQ(ac.check(), true);
     ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
-    ASSERT_EQ(StreamAll(read, fd, &buf[0], size_data), 0, "Failed to read data");
-    ASSERT_EQ(memcmp(buf.get(), data, size_data), 0, "Read data, but it was bad");
+
+    size_t total_read = 0;
+    while (total_read != size_data) {
+        ssize_t result = read(fd, buffer.get(), kReadSize);
+        ASSERT_GT(result, 0);
+        ASSERT_EQ(memcmp(buffer.get(), &data[total_read], result), 0);
+        total_read += result;
+    }
+
     return true;
 }
 
