@@ -76,14 +76,6 @@ void EnvironmentControllerImpl::LaunchInstance(
   callback(cid);
 }
 
-void EnvironmentControllerImpl::LaunchInstance2(
-    fuchsia::guest::LaunchInfo launch_info,
-    fidl::InterfaceRequest<fuchsia::guest::InstanceController> controller,
-    LaunchInstanceCallback callback) {
-  LaunchInstance(std::move(launch_info), std::move(controller),
-                 std::move(callback));
-}
-
 void EnvironmentControllerImpl::GetHostVsockEndpoint(
     fidl::InterfaceRequest<fuchsia::guest::HostVsockEndpoint> request) {
   host_vsock_endpoint_.AddBinding(std::move(request));
