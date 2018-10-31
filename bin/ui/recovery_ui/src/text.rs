@@ -4,8 +4,7 @@
 
 use font_rs::font::{parse, Font, FontError, GlyphBitmap};
 use fuchsia_framebuffer::Frame;
-use std::cmp::max;
-use std::collections::HashMap;
+use std::{cmp::max, collections::HashMap};
 
 #[derive(Hash, Eq, PartialEq, Debug)]
 struct GlyphDescriptor {

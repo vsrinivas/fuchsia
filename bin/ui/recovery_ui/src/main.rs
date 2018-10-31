@@ -11,24 +11,10 @@ use fuchsia_app as app;
 use fuchsia_async::{self as fasync, futures::TryFutureExt};
 use fuchsia_framebuffer::{Config, Frame, FrameBuffer, PixelFormat};
 use fuchsia_zircon as zx;
-use std::cell::RefCell;
-use std::io::{self, Read};
-use std::rc::Rc;
-use std::thread;
+use std::{cell::RefCell, rc::Rc};
 
 static FONT_DATA: &'static [u8] =
     include_bytes!("../../../fonts/third_party/robotoslab/RobotoSlab-Regular.ttf");
-
-/// Convenience function that can be called from main and causes the Fuchsia process being
-/// run over ssh to be terminated when the user hits control-C.
-fn wait_for_close() {
-    thread::spawn(move || loop {
-        let mut input = [0; 1];
-        if io::stdin().read_exact(&mut input).is_err() {
-            std::process::exit(0);
-        }
-    });
-}
 
 struct RecoveryUI<'a> {
     face: Face<'a>,
@@ -77,7 +63,6 @@ impl<'a> RecoveryUI<'a> {
 
 fn main() {
     println!("Recovery UI");
-    wait_for_close();
 
     let face = Face::new(FONT_DATA).unwrap();
 

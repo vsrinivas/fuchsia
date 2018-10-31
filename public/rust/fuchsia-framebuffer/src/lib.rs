@@ -4,7 +4,7 @@
 
 #![allow(dead_code)]
 
-use failure::{format_err, Error};
+use failure::{format_err, Error, ResultExt};
 use fdio::fdio_sys::{fdio_ioctl, IOCTL_FAMILY_DISPLAY_CONTROLLER, IOCTL_KIND_GET_HANDLE};
 use fdio::make_ioctl;
 use fidl_fuchsia_display::{ControllerEvent, ControllerProxy, ImageConfig, ImagePlane};
@@ -21,6 +21,7 @@ use std::mem;
 use std::os::unix::io::AsRawFd;
 use std::ptr;
 use std::rc::Rc;
+use std::{thread, time};
 
 #[allow(non_camel_case_types, non_upper_case_globals)]
 const ZX_PIXEL_FORMAT_NONE: u32 = 0;
@@ -134,7 +135,7 @@ impl Frame {
                     vmo.replace(allocated_vmo);
                 }
             });
-        executor.run_singlethreaded(vmo_response)?;
+        executor.run_singlethreaded(vmo_response).context("allocate_image_vmo - run_singlethreaded")?;
         let vmo = vmo.replace(None);
         if let Some(vmo) = vmo {
             Ok(vmo)
@@ -183,7 +184,7 @@ impl Frame {
                 }
             });
 
-        executor.run_singlethreaded(import_response)?;
+        executor.run_singlethreaded(import_response).context("import_image_vmo - run_singlethreaded")?;
 
         let image_id = image_id.replace(None);
         if let Some(image_id) = image_id {
@@ -194,9 +195,9 @@ impl Frame {
     }
 
     pub fn new(framebuffer: &FrameBuffer, executor: &mut fasync::Executor) -> Result<Frame, Error> {
-        let image_vmo = Self::allocate_image_vmo(framebuffer, executor)?;
+        let image_vmo = Self::allocate_image_vmo(framebuffer, executor).context("Frame::new() allocate_image_vmo")?;
 
-        image_vmo.set_cache_policy(ZX_CACHE_POLICY_WRITE_COMBINING)?;
+        image_vmo.set_cache_policy(ZX_CACHE_POLICY_WRITE_COMBINING).unwrap_or_else(|_err| println!("set_cache_policy failed"));
 
         // map image VMO
         let pixel_buffer_addr = Vmar::root_self().map(
@@ -208,7 +209,7 @@ impl Frame {
         )?;
 
         // import image VMO
-        let image_id = Self::import_image_vmo(framebuffer, executor, image_vmo)?;
+        let image_id = Self::import_image_vmo(framebuffer, executor, image_vmo).context("Frame::new() import_image_vmo")?;
 
         // construct frame
         let frame_buffer_pixel_ptr = pixel_buffer_addr as *mut u8;
@@ -257,8 +258,8 @@ impl Frame {
         }
         framebuffer
             .controller
-            .set_layer_image(framebuffer.layer_id, self.image_id, 0, 0)?;
-        framebuffer.controller.apply_config()?;
+            .set_layer_image(framebuffer.layer_id, self.image_id, 0, 0).context("Frame::present() set_layer_image")?;
+        framebuffer.controller.apply_config().context("Frame::present() apply_config")?;
         Ok(())
     }
 
@@ -341,7 +342,15 @@ impl FrameBuffer {
             future::ready(true)
         });
 
-        executor.run_singlethreaded(event_listener.try_next())?;
+        // run for two seconds waiting for a ControllerEvent::DisplaysChanged event,
+        // needed since other events may come in first
+        let delay = time::Duration::from_millis(100);
+        let timeout = time::Duration::from_millis(2000);
+        let now = time::Instant::now();
+        while display_info.borrow().is_none() && now.elapsed() < timeout {
+            executor.run_singlethreaded(event_listener.try_next())?;
+            thread::sleep(delay);
+        }
 
         let display_info = display_info.replace(None);
         if let Some((display_id, pixel_format, width, height)) = display_info {
@@ -352,7 +361,7 @@ impl FrameBuffer {
                     stride.replace(px_stride);
                 });
 
-            executor.run_singlethreaded(stride_response)?;
+            executor.run_singlethreaded(stride_response).context("")?;
 
             let stride = stride.replace(0);
             if 0 == stride {
