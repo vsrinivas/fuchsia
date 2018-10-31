@@ -14,12 +14,18 @@
 mod eventloop;
 
 use crate::eventloop::EventLoop;
+use std::env;
 
 fn main() -> Result<(), failure::Error> {
     fuchsia_syslog::init()?;
     // Severity is set to debug during development.
     fuchsia_syslog::set_severity(-1);
 
+    let path = env::args()
+        .nth(1)
+        .unwrap_or_else(|| String::from(eventloop::DEFAULT_ETH));
+    let eth_future = EventLoop::run_ethernet(&path);
+
     let mut executor = fuchsia_async::Executor::new()?;
-    Ok(executor.run_singlethreaded(EventLoop::dummy_run())?)
+    executor.run_singlethreaded(eth_future)
 }

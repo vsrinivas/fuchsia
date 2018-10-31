@@ -5,13 +5,10 @@
 //! The special-purpose event loop used by the recovery netstack.
 
 use ethernet as eth;
-use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 
-use std::env;
 use std::fs::File;
 
-use failure::ResultExt;
 use futures::prelude::*;
 
 use netstack_core::{
@@ -24,13 +21,14 @@ pub struct EventLoop {
     ctx: Context<EventLoopInner>,
 }
 
+pub const DEFAULT_ETH: &str = "/dev/class/ethernet/000";
+
 impl EventLoop {
     /// Run a dummy event loop.
     ///
     /// This function hard-codes way too many things, and will soon be replaced
     /// with a more general-purpose mechanism.
-    pub async fn dummy_run() -> Result<(), failure::Error> {
-        const DEFAULT_ETH: &str = "/dev/class/ethernet/000";
+    pub async fn run_ethernet(path: &str) -> Result<(), failure::Error> {
         // Hardcoded IPv4 address: if you use something other than a /24, update the subnet below
         // as well.
         const FIXED_IPADDR: Ipv4Addr = Ipv4Addr::new([192, 168, 1, 39]);
@@ -40,9 +38,6 @@ impl EventLoop {
             256 * eth::DEFAULT_BUFFER_SIZE as u64,
         )?;
 
-        let path = env::args()
-            .nth(1)
-            .unwrap_or_else(|| String::from(DEFAULT_ETH));
         let dev = File::open(path)?;
 
         let eth_client = await!(eth::Client::new(
