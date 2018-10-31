@@ -1167,25 +1167,26 @@ func (s *socketServer) opClose(ios *iostate, cookie cookie) zx.Status {
 		ios.loopReadClosing <- struct{}{}
 	}
 
-	go func() {
-		switch mxerror.Status(err) {
-		case zx.ErrOk:
-			if ios.loopWriteDone != nil {
-				<-ios.loopWriteDone
-			}
-			if ios.loopControlDone != nil {
-				<-ios.loopControlDone
-			}
-			if ios.loopListenDone != nil {
-				<-ios.loopListenDone
-			}
-		case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
-			// Ignore.
-		default:
-			log.Printf("close: signal failed: %v", err)
+	switch mxerror.Status(err) {
+	case zx.ErrOk:
+		if ios.loopWriteDone != nil {
+			<-ios.loopWriteDone
 		}
+		if ios.loopListenDone != nil {
+			<-ios.loopListenDone
+		}
+	case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
+		// Ignore.
+	default:
+		log.Printf("close: signal failed: %v", err)
+	}
 
-		ios.ep.Close()
+	ios.ep.Close()
+
+	go func() {
+		if ios.loopControlDone != nil {
+			<-ios.loopControlDone
+		}
 		if err := ios.dataHandle.Close(); err != nil {
 			log.Printf("data handle close failed: %v", err)
 		}
