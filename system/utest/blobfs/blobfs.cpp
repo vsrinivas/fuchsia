@@ -2418,6 +2418,7 @@ static bool TestExtendFailure(void) {
 
     fbl::unique_fd fd;
     ASSERT_TRUE(MakeBlob(info.get(), &fd));
+    ASSERT_EQ(syncfs(fd.get()), 0);
     ASSERT_EQ(close(fd.release()), 0);
 
     // Ensure that an FVM extension did not occur.
@@ -2426,7 +2427,8 @@ static bool TestExtendFailure(void) {
     ASSERT_EQ(current_bytes, original_bytes);
 
     // Generate another blob of the smallest size possible.
-    ASSERT_TRUE(GenerateRandomBlob(blobfs::kBlobfsBlockSize, &info));
+    fbl::unique_ptr<blob_info_t> new_info;
+    ASSERT_TRUE(GenerateRandomBlob(blobfs::kBlobfsBlockSize, &new_info));
 
     // Since the FVM metadata covers a large range of blocks, it will take a while to test a
     // ramdisk failure after each individual block. Since we mostly care about what happens with
@@ -2447,11 +2449,12 @@ static bool TestExtendFailure(void) {
         unittest_set_output_function(silent_printf, nullptr);
 
         // Blob creation may or may not succeed - as long as fsck passes, it doesn't matter.
-        MakeBlob(info.get(), &fd);
+        MakeBlob(new_info.get(), &fd);
         current_test_info->all_ok = true;
 
         // Resolve all transactions before waking the ramdisk.
         syncfs(fd.get());
+
         unittest_restore_output_function();
         ASSERT_TRUE(blobfsTest.ToggleSleep());
 
@@ -2461,9 +2464,18 @@ static bool TestExtendFailure(void) {
         // Remount again to check fsck results.
         ASSERT_TRUE(blobfsTest.Remount());
 
-        // Once file creation is successful, break out of the loop.
+        // Check that the original blob still exists.
         fd.reset(open(info->path, O_RDONLY));
-        if (fd) break;
+        ASSERT_TRUE(fd);
+
+        // Once file creation is successful, break out of the loop.
+        fd.reset(open(new_info->path, O_RDONLY));
+        if (fd) {
+            struct stat stats;
+            ASSERT_EQ(fstat(fd.get(), &stats), 0);
+            ASSERT_EQ(static_cast<uint64_t>(stats.st_size), info->size_data);
+            break;
+        }
 
         if (blocks >= metadata_blocks) {
             blocks++;
