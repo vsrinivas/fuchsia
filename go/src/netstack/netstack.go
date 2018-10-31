@@ -449,14 +449,15 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) error {
 		links = append(links, &nic.statsEP)
 	}
 
-	return ns.addEndpoint(func(*ifState) (stack.LinkEndpoint, error) {
+	_, err := ns.addEndpoint(func(*ifState) (stack.LinkEndpoint, error) {
 		return bridge.New(links), nil
 	}, func(*ifState) error {
 		return nil
 	})
+	return err
 }
 
-func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceConfig, device ethernet.DeviceInterface) error {
+func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceConfig, device ethernet.DeviceInterface) (tcpip.NICID, error) {
 	var client *eth.Client
 	return ns.addEndpoint(func(ifs *ifState) (stack.LinkEndpoint, error) {
 		var err error
@@ -499,7 +500,7 @@ func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceCon
 	})
 }
 
-func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint, error), finalize func(*ifState) error) error {
+func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint, error), finalize func(*ifState) error) (tcpip.NICID, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	ifs := &ifState{
@@ -513,7 +514,7 @@ func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint,
 
 	ep, err := makeEndpoint(ifs)
 	if err != nil {
-		return err
+		return tcpip.NICID(0), err
 	}
 	linkID := stack.RegisterLinkEndpoint(ep)
 	linkAddr := ep.LinkAddress()
@@ -544,17 +545,17 @@ func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint,
 	log.Printf("NIC %s added", ifs.nic.Name)
 
 	if err := ns.mu.stack.CreateNIC(nicid, linkID); err != nil {
-		return fmt.Errorf("NIC %s: could not create NIC: %v", ifs.nic.Name, err)
+		return tcpip.NICID(0), fmt.Errorf("NIC %s: could not create NIC: %v", ifs.nic.Name, err)
 	}
 	if err := ns.mu.stack.AddAddress(nicid, arp.ProtocolNumber, arp.ProtocolAddress); err != nil {
-		return fmt.Errorf("NIC %s: adding arp address failed: %v", ifs.nic.Name, err)
+		return tcpip.NICID(0), fmt.Errorf("NIC %s: adding arp address failed: %v", ifs.nic.Name, err)
 	}
 	if err := ns.mu.stack.AddAddress(nicid, ipv6.ProtocolNumber, lladdr); err != nil {
-		return fmt.Errorf("NIC %s: adding link-local IPv6 %v failed: %v", ifs.nic.Name, lladdr, err)
+		return tcpip.NICID(0), fmt.Errorf("NIC %s: adding link-local IPv6 %v failed: %v", ifs.nic.Name, lladdr, err)
 	}
 	snaddr := header.SolicitedNodeAddr(lladdr)
 	if err := ns.mu.stack.AddAddress(nicid, ipv6.ProtocolNumber, snaddr); err != nil {
-		return fmt.Errorf("NIC %s: adding solicited-node IPv6 %v (link-local IPv6 %v) failed: %v", ifs.nic.Name, snaddr, lladdr, err)
+		return tcpip.NICID(0), fmt.Errorf("NIC %s: adding solicited-node IPv6 %v (link-local IPv6 %v) failed: %v", ifs.nic.Name, snaddr, lladdr, err)
 	}
 	log.Printf("NIC %s: link-local IPv6: %v", ifs.nic.Name, lladdr)
 
@@ -563,7 +564,7 @@ func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint,
 	// Add default route. This will get clobbered later when we get a DHCP response.
 	ns.mu.stack.SetRouteTable(ns.flattenRouteTables())
 
-	return finalize(ifs)
+	return ifs.nic.ID, finalize(ifs)
 }
 
 func (ns *Netstack) validateInterfaceAddress(address netstack.NetAddress, prefixLen uint8) (tcpip.NetworkProtocolNumber, tcpip.Address, netstack.NetErr) {
