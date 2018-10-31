@@ -15,7 +15,6 @@ package("bt-tools") {
     "bt-le-peripheral",
     "bt-le-central",
     "bt-pairing-tool",
-    "bt-snoop",
   ]
 
   binaries = [
@@ -44,10 +43,6 @@ package("bt-tools") {
     {
       name = "bt_pairing_tool"
       dest = "bt-pairing-tool"
-    },
-    {
-      name = "bt_snoop"
-      dest = "bt-snoop"
     },
   ]
 }
