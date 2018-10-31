@@ -38,6 +38,11 @@
 #endif
 #include "log.h"
 
+zx_status_t zx_driver::Create(fbl::unique_ptr<zx_driver>* out_driver) {
+    *out_driver = fbl::make_unique<zx_driver>();
+    return ZX_OK;
+}
+
 namespace devmgr {
 
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
@@ -135,18 +140,19 @@ static void logflag(char* flag, uint32_t* flags) {
 static zx_status_t dh_find_driver(const char* libname, zx::vmo vmo, zx_driver_t** out) {
     // check for already-loaded driver first
     for (auto& drv : dh_drivers) {
-        if (!strcmp(libname, drv.libname.c_str())) {
+        if (!strcmp(libname, drv.libname().c_str())) {
             *out = &drv;
-            return drv.status;
+            return drv.status();
         }
     }
 
     // TODO(kulakowski/teisenbe): This should probably be a RefPtr
-    auto new_driver = fbl::make_unique<zx_driver_t>();
-    if (new_driver == nullptr) {
-        return ZX_ERR_NO_MEMORY;
+    fbl::unique_ptr<zx_driver> new_driver;
+    zx_status_t status = zx_driver::Create(&new_driver);
+    if (status != ZX_OK) {
+        return status;
     }
-    new_driver->libname.Set(libname);
+    new_driver->set_libname(libname);
     zx_driver_t* drv = new_driver.get();
     dh_drivers.push_back(fbl::move(new_driver));
     *out = drv;
@@ -154,45 +160,45 @@ static zx_status_t dh_find_driver(const char* libname, zx::vmo vmo, zx_driver_t*
     void* dl = dlopen_vmo(vmo.get(), RTLD_NOW);
     if (dl == nullptr) {
         log(ERROR, "devhost: cannot load '%s': %s\n", libname, dlerror());
-        drv->status = ZX_ERR_IO;
-        return drv->status;
+        drv->set_status(ZX_ERR_IO);
+        return drv->status();
     }
 
     const zircon_driver_note_t* dn;
     dn = static_cast<const zircon_driver_note_t*>(dlsym(dl, "__zircon_driver_note__"));
     if (dn == nullptr) {
         log(ERROR, "devhost: driver '%s' missing __zircon_driver_note__ symbol\n", libname);
-        drv->status = ZX_ERR_IO;
-        return drv->status;
+        drv->set_status(ZX_ERR_IO);
+        return drv->status();
     }
     zx_driver_rec_t* dr;
     dr = static_cast<zx_driver_rec_t*>(dlsym(dl, "__zircon_driver_rec__"));
     if (dr == nullptr) {
         log(ERROR, "devhost: driver '%s' missing __zircon_driver_rec__ symbol\n", libname);
-        drv->status = ZX_ERR_IO;
-        return drv->status;
+        drv->set_status(ZX_ERR_IO);
+        return drv->status();
     }
     if (!dr->ops) {
         log(ERROR, "devhost: driver '%s' has nullptr ops\n", libname);
-        drv->status = ZX_ERR_INVALID_ARGS;
-        return drv->status;
+        drv->set_status(ZX_ERR_INVALID_ARGS);
+        return drv->status();
     }
     if (dr->ops->version != DRIVER_OPS_VERSION) {
         log(ERROR, "devhost: driver '%s' has bad driver ops version %" PRIx64
             ", expecting %" PRIx64 "\n", libname,
             dr->ops->version, DRIVER_OPS_VERSION);
-        drv->status = ZX_ERR_INVALID_ARGS;
-        return drv->status;
+        drv->set_status(ZX_ERR_INVALID_ARGS);
+        return drv->status();
     }
 
-    drv->driver_rec = dr;
-    drv->name = dn->payload.name;
-    drv->ops = dr->ops;
+    drv->set_driver_rec(dr);
+    drv->set_name(dn->payload.name);
+    drv->set_ops(dr->ops);
     dr->driver = drv;
 
     // check for dprintf log level flags
     char tmp[128];
-    snprintf(tmp, sizeof(tmp), "driver.%s.log", drv->name);
+    snprintf(tmp, sizeof(tmp), "driver.%s.log", drv->name());
     char* log;
     log = getenv(tmp);
     if (log) {
@@ -208,20 +214,20 @@ static zx_status_t dh_find_driver(const char* libname, zx::vmo vmo, zx_driver_t*
                 break;
             }
         }
-        log(INFO, "devhost: driver '%s': log flags set to: 0x%x\n", drv->name, dr->log_flags);
+        log(INFO, "devhost: driver '%s': log flags set to: 0x%x\n", drv->name(), dr->log_flags);
     }
 
-    if (drv->ops->init) {
-        drv->status = drv->ops->init(&drv->ctx);
-        if (drv->status < 0) {
+    if (drv->has_init_op()) {
+        drv->set_status(drv->InitOp());
+        if (drv->status() != ZX_OK) {
             log(ERROR, "devhost: driver '%s' failed in init: %d\n",
-                libname, drv->status);
+                libname, drv->status());
         }
     } else {
-        drv->status = ZX_OK;
+        drv->set_status(ZX_OK);
     }
 
-    return drv->status;
+    return drv->status();
 }
 
 static void dh_send_status(zx_handle_t h, zx_status_t status) {
@@ -349,7 +355,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
             log(ERROR, "devhost[%s] driver load failed: %d\n", path, r);
             break;
         }
-        if (drv->ops->create) {
+        if (drv->has_create_op()) {
             // magic cookie for device create handshake
             zx_device_t parent = {};
             char dummy_name[sizeof(parent.name)] = "device_create dummy";
@@ -361,7 +367,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
                 .rpc = hin[0],
             };
             devhost_set_creation_context(&ctx);
-            r = drv->ops->create(drv->ctx, &parent, "proxy", args, hin[2]);
+            r = drv->CreateOp(&parent, "proxy", args, hin[2]);
             devhost_set_creation_context(nullptr);
 
             if (r < 0) {
@@ -409,14 +415,14 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
             hin[0] = ZX_HANDLE_INVALID;
             if ((r = dh_find_driver(name, fbl::move(vmo), &drv)) < 0) {
                 log(ERROR, "devhost[%s] driver load failed: %d\n", path, r);
-            } else if (drv->ops->bind) {
+            } else if (drv->has_bind_op()) {
                 CreationContext ctx = {
                     .parent = ios->dev,
                     .child = nullptr,
                     .rpc = ZX_HANDLE_INVALID,
                 };
                 devhost_set_creation_context(&ctx);
-                r = drv->ops->bind(drv->ctx, ios->dev);
+                r = drv->BindOp(ios->dev);
                 devhost_set_creation_context(nullptr);
 
                 if ((r == ZX_OK) && (ctx.child == nullptr)) {
@@ -426,7 +432,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
                     log(ERROR, "devhost[%s] bind driver '%s' failed: %d\n", path, name, r);
                 }
             } else {
-                if (!drv->ops->create) {
+                if (!drv->has_create_op()) {
                     log(ERROR, "devhost[%s] neither create nor bind are implemented: '%s'\n",
                         path, name);
                 }
@@ -721,7 +727,7 @@ zx_status_t devhost_add(zx_device_t* parent, zx_device_t* child, const char* pro
     const char* path = mkdevpath(parent, buffer, sizeof(buffer));
     log(RPC_OUT, "devhost[%s] add '%s'\n", path, child->name);
 
-    const char* libname = child->driver->libname.c_str();
+    const char* libname = child->driver->libname().c_str();
     size_t namelen = strlen(libname) + strlen(child->name) + 2;
     char name[namelen];
     snprintf(name, namelen, "%s,%s", libname, child->name);

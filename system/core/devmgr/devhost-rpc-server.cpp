@@ -176,7 +176,7 @@ static ssize_t do_ioctl(zx_device_t* dev, uint32_t op, const void* in_buf, size_
         if (!dev->driver) {
             return ZX_ERR_NOT_SUPPORTED;
         }
-        const char* name = dev->driver->name;
+        const char* name = dev->driver->name();
         if (name == nullptr) {
             name = "unknown";
         }
@@ -220,7 +220,7 @@ static ssize_t do_ioctl(zx_device_t* dev, uint32_t op, const void* in_buf, size_
         if (out_len < sizeof(uint32_t)) {
             return ZX_ERR_BUFFER_TOO_SMALL;
         }
-        *((uint32_t *)out_buf) = dev->driver->driver_rec->log_flags;
+        *((uint32_t *)out_buf) = dev->driver->driver_rec()->log_flags;
         *out_actual = sizeof(uint32_t);
         return ZX_OK;
     }
@@ -232,8 +232,8 @@ static ssize_t do_ioctl(zx_device_t* dev, uint32_t op, const void* in_buf, size_
             return ZX_ERR_BUFFER_TOO_SMALL;
         }
         driver_log_flags_t* flags = (driver_log_flags_t *)in_buf;
-        dev->driver->driver_rec->log_flags &= ~flags->clear;
-        dev->driver->driver_rec->log_flags |= flags->set;
+        dev->driver->driver_rec()->log_flags &= ~flags->clear;
+        dev->driver->driver_rec()->log_flags |= flags->set;
         *out_actual = sizeof(driver_log_flags_t);
         return ZX_OK;
     }

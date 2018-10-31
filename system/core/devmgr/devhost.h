@@ -35,15 +35,89 @@
 
 // Safe external APIs are in device.h and device_internal.h
 
+// Note that this must be a struct to match the public opaque declaration.
 struct zx_driver : fbl::DoublyLinkedListable<fbl::unique_ptr<zx_driver>> {
+    static zx_status_t Create(fbl::unique_ptr<zx_driver>* out_driver);
+
+    const char* name() const {
+        return name_;
+    }
+
+    zx_driver_rec_t* driver_rec() const {
+        return driver_rec_;
+    }
+
+    zx_status_t status() const {
+        return status_;
+    }
+
+    const fbl::String& libname() const {
+        return libname_;
+    }
+
+    void set_name(const char* name) {
+        name_ = name;
+    }
+
+    void set_driver_rec(zx_driver_rec_t* driver_rec) {
+        driver_rec_ = driver_rec;
+    }
+
+    void set_ops(const zx_driver_ops_t* ops) {
+        ops_ = ops;
+    }
+
+    void set_status(zx_status_t status) {
+        status_ = status;
+    }
+
+    void set_libname(fbl::StringPiece libname) {
+        libname_ = libname;
+    }
+
+    // Interface to |ops|. These names contain Op in order to not
+    // collide with e.g. RefPtr names.
+
+    bool has_init_op() const {
+        return ops_->init != nullptr;
+    }
+
+    bool has_bind_op() const {
+        return ops_->bind != nullptr;
+    }
+
+    bool has_create_op() const {
+        return ops_->create != nullptr;
+    }
+
+    zx_status_t InitOp() {
+        return ops_->init(&ctx_);
+    }
+
+    zx_status_t BindOp(zx_device_t* device) const {
+        return ops_->bind(ctx_, device);
+    }
+
+    zx_status_t CreateOp(zx_device_t* parent, const char* name, const char* args,
+                         zx_handle_t rpc_channel) const {
+        return ops_->create(ctx_, parent, name, args, rpc_channel);
+    }
+
+    void ReleaseOp() const {
+        // TODO(kulakowski/teisenbe) Consider poisoning the ops_ table on release.
+        ops_->release(ctx_);
+    }
+
+private:
+    friend fbl::unique_ptr<zx_driver> fbl::make_unique<zx_driver>();
     zx_driver() = default;
 
-    const char* name = nullptr;
-    zx_driver_rec_t* driver_rec = nullptr;
-    const zx_driver_ops_t* ops = nullptr;
-    void* ctx = nullptr;
-    fbl::String libname;
-    zx_status_t status = ZX_OK;
+    const char* name_ = nullptr;
+    zx_driver_rec_t* driver_rec_ = nullptr;
+    const zx_driver_ops_t* ops_ = nullptr;
+    void* ctx_ = nullptr;
+    fbl::String libname_;
+    zx_status_t status_ = ZX_OK;
 };
 
 namespace devmgr {
