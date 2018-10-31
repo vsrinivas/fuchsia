@@ -118,9 +118,9 @@ Libfuzzer already [provides tips][fuzz target] on writing the fuzz target itself
 Next, add the build instructions to the library's BUILD.gn file.  Adding an import to
 [//build/fuzzing/fuzzer.gni][fuzzer.gni] will provide two templates:
 
-### The `fuzz-target` GN [template][fuzzer.gni]
+### The fuzz-target GN template
 
-The `fuzz-target` template is used to build the fuzzer executable.  Given a fuzzing target as a
+The `fuzz-target` [template][fuzzer.gni] is used to build the fuzzer executable.  Given a fuzzing target as a
 source and a the library under test as a dependency, it will provided the correct [compiler flags]
 to link against the fuzzing engine:
 
@@ -152,9 +152,9 @@ per line, of libFuzzer command line [options].  The ```merge```, ```jobs```, ```
 ```artifact_prefix``` are set automatically when using the [fuzz tool] described below, and do not
 need to be specified unless they differ from the defaults.
 
-### The `fuzz-package` GN [template][fuzzer.gni]
+### The fuzz-package GN template
 
-The `fuzz-package`template bundles fuzz-targets into Fuchsia packages in the same way that normal
+The `fuzz-package` [template][fuzzer.gni] bundles fuzz-targets into Fuchsia packages in the same way that normal
 packages bundle binaries.  In addition, the `fuzz-package` template provides a way to specify which
 sanitizers can be used with the given fuzzing targets:
 
@@ -317,29 +317,57 @@ caused a crash, leaked memory, timed out, etc.
 As with `fuzz start`, the fuzzer will echo the command it is invoking, prefixed by `+`.  This can be
 useful if you need to manually reproduce the bug with modified parameters.
 
+
+## Q: How do I manage my corpus?
+
+A: When you first begin fuzzing a new target, the fuzzer may crash very quickly.  Typically, fuzzing
+has a large initial spike of defects found followed by a long tail.  Fixing these initial, shallow
+defects will allow your fuzzer to reach deeper and deeper into the code. Eventually your fuzzer will
+run for several hours (e.g. overnight) without crashing.  At this point, you will want to save the
+corpus:
+
+1. First, minimize the corpus using `fx fuzz merge [package]/[target]`.  This will instruct the
+fuzzer to use the current corpus instead of looking for new inputs.  It will run repeatedly to find
+the most compact set of inputs with the same coverage as the current corpus. As this may take a long
+time, you may want to provide a `max_total_time` [option][options] (perhaps again running
+overnight).
+
+1. Once complete, you can upload the corpus using `fx fuzz store [package]/[target]`.  This will
+store the corpus in [CIPD][cipd].  Each fuzz target will have its own corpus CIPD package, organized
+by fuzz package.  Take note of the corpus digest that is printed when the corpus is stored; it is
+used as the package version.
+
+1. Add the digest from the previous step to the `fuzz-target` in the appropriate BUILD.gn file, and
+submit the resulting CL.  This creates a clear association between the state of the corpus and the
+state of the source code at various points in time.
+
+1. When deploying your fuzzer to a different instance of Fuchsia, you can install the latest version
+of the target's corpus in [CIPD] using `fx fuzz fetch [package]/[target]`.  To use a specific
+version of the corpus, you may add the version digest, e.g.
+`fx fuzz fetch [package]/[target] digest`.
+
+## Q: Can I use an existing third party corpus?
+
+A: Yes! The `corpora` list in the `fuzz-target` [template][fuzzer.gni] can contain either digests or
+source paths.  In general, git isn't the best way to store fuzzing corpora, which typically contain
+many small binary files that may change dramatically over time.  Still, if you have a fuzzing
+corpus already, perhaps as part of a third party project, you can provide the source path to it,
+e.g. `corpora = [ "//third_party/boringssl/src/fuzz/bn_div_corpus" ]`.
+
+Running `fx fuzz fetch [package]/[target]` will pull the corpus from the source location and install
+it.  Subsequently running `fx fuzz store [package]/[target]` will store this corpus in [CIPD][cipd].
+If you need to submit this corpus back upstream, you can save a local copy by explicitly setting the
+local "staging" directory, e.g. `fx fuzz -s <source-path> store [package]/[target]`.
+
 ## Q: How do make my fuzzer better?
 
-A: The basic work flow is as follows:
-
-1. When you first begin fuzzing a new target, the fuzzer may crash very quickly.  Typically, fuzzing
-has a large initial spike of defects found followed by a long tail.  Fixing these initial, shallow
-defects will allow your fuzzer to reach deeper and deeper into the code.
-
-1. Eventually your fuzzer will run for several hours (e.g. overnight) without crashing.  At this
-point, you will want to save the corpus.  First, minimize the corpus using
-`fx fuzz merge [package]/[target]`.  This will instruct the fuzzer to run repeatedly to find the
-most compact set of inputs with the same coverage as the current corpus. As this may take a long
-time, you may want to provide a `max_len_time` [option][options] (perhaps again running overnight).
-When this is complete, you can upload the corpus using `fx fuzz upload`.
-  * *__NOTE:__: CIPD/GCS support is under [active development][todo].*
-
-1. The decreasing frequency of crashes at this point may be because almost all the bugs have been
+A: Once crashes begin to become infrequent, it may be because almost all the bugs have been
 fixed, but it may also be because the fuzzer isn't reaching new code that still has bugs.  Code
 coverage information is needed to determine the quality of the fuzzer.  Use
 [source-based code coverage] to see what your current corpus reaches.
   * *__NOTE:__ Source-based code coverage is under [active development][todo].*
 
-1. If coverage in a certain area is low, there are a few options:
+If coverage in a certain area is low, there are a few options:
   * Improve the [corpus].  If there are types of inputs that aren't represented well, add some
   manually.  For code dealing with large inputs with complex types (e.g. X.509 certificates), you
   probably want to provide an initial corpus from the start.
@@ -351,7 +379,7 @@ coverage information is needed to determine the quality of the fuzzer.  Use
   disable such checks by wrapping them in the `FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION`
   [build macro] described [above][gn fuzz target].
 
-1. These "run, merge, measure, improve" steps can be repeated for as many iterations as you feel are
+The "run, merge, measure, improve" steps can be repeated for as many iterations as you feel are
 needed to create a quality fuzzer.  Once ready, you'll need to upload your corpus and update the
 [GN fuzz target] in the appropriate project.  At this point, others will be able use your fuzzer,
 This includes [ClusterFuzz] which will automatically find new fuzzers and continuously fuzz them,
@@ -399,5 +427,6 @@ become available.
 [go-fuzzing]: https://github.com/dvyukov/go-fuzz
 [ubsan]: https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html
 [oss-fuzz]: https://github.com/google/oss-fuzz
+[cipd]: https://chrome-infra-packages.appspot.com/p/fuchsia/test_data/fuzzing
 [sec-144]: https://fuchsia.atlassian.net/browse/SEC-144
 [tc-241]: https://fuchsia.atlassian.net/browse/TC-241
