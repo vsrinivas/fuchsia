@@ -31,6 +31,9 @@ fidl::VectorPtr<zx::event> CopyEventIntoFidlArray(const zx::event& event);
 // Create a duplicate of the eventpair.
 zx::eventpair CopyEventPair(const zx::eventpair& eventpair);
 
+// Get the size of the VMO.
+uint64_t GetVmoSize(const zx::vmo& vmo);
+
 // Create a duplicate of the VMO.
 zx::vmo CopyVmo(const zx::vmo& vmo);
 

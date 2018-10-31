@@ -64,10 +64,11 @@ class ImagePipeSurfaceAsync : public ImagePipeSurface {
   }
 
   void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
-                zx::vmo buffer) override {
+                zx::vmo buffer, uint64_t size_bytes) override {
     std::lock_guard<std::mutex> lock(mutex_);
-    image_pipe_->AddImage(image_id, std::move(image_info), std::move(buffer),
-                          fuchsia::images::MemoryType::VK_DEVICE_MEMORY, 0);
+    image_pipe_->AddImage(image_id, std::move(image_info), std::move(buffer), 0,
+                          size_bytes,
+                          fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
   }
 
   void RemoveImage(uint32_t image_id) override {
@@ -335,7 +336,8 @@ VkResult ImagePipeSwapchain::Initialize(
     image_info.color_space = fuchsia::images::ColorSpace::SRGB;
     image_info.tiling = fuchsia::images::Tiling::GPU_OPTIMAL;
 
-    surface()->AddImage(images_[i].id, std::move(image_info), std::move(vmo));
+    surface()->AddImage(images_[i].id, std::move(image_info), std::move(vmo),
+                        alloc_info.allocationSize);
 
     VkExportSemaphoreCreateInfoKHR export_create_info = {
         .sType = VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO_KHR,

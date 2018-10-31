@@ -131,8 +131,9 @@ TEST_F(ImagePipeTest, ImagePipeImageIdMustNotBeZero) {
 
     // Add the image to the image pipe with ImagePipe.AddImage().
     image_pipe->AddImage(imageId1, std::move(image_info),
-                         CopyVmo(checkerboard->vmo()),
-                         fuchsia::images::MemoryType::HOST_MEMORY, 0);
+                         CopyVmo(checkerboard->vmo()), 0,
+                         GetVmoSize(checkerboard->vmo()),
+                         fuchsia::images::MemoryType::HOST_MEMORY);
 
     ExpectLastReportedError(
         "ImagePipe::AddImage: Image can not be assigned an ID of 0.");
@@ -154,8 +155,9 @@ TEST_F(ImagePipeTest, PresentImagesOutOfOrder) {
 
     // Add the image to the image pipe with ImagePipe.AddImage().
     image_pipe->AddImage(imageId1, std::move(image_info),
-                         CopyVmo(checkerboard->vmo()),
-                         fuchsia::images::MemoryType::HOST_MEMORY, 0);
+                         CopyVmo(checkerboard->vmo()), 0,
+                         GetVmoSize(checkerboard->vmo()),
+                         fuchsia::images::MemoryType::HOST_MEMORY);
   }
   fuchsia::images::ImagePipe::PresentImageCallback callback = [](auto) {};
 
@@ -186,8 +188,9 @@ TEST_F(ImagePipeTest, PresentImagesInOrder) {
 
     // Add the image to the image pipe with ImagePipe.AddImage().
     image_pipe->AddImage(imageId1, std::move(image_info),
-                         CopyVmo(checkerboard->vmo()),
-                         fuchsia::images::MemoryType::HOST_MEMORY, 0);
+                         CopyVmo(checkerboard->vmo()), 0,
+                         GetVmoSize(checkerboard->vmo()),
+                         fuchsia::images::MemoryType::HOST_MEMORY);
   }
   fuchsia::images::ImagePipe::PresentImageCallback callback = [](auto) {};
 
@@ -222,9 +225,10 @@ TEST_F(ImagePipeTest, PresentImagesWithOffset) {
     auto image_info = CreateImageInfoForBgra8Image(w, h);
 
     // Add the image to the image pipe with ImagePipe.AddImage().
-    image_pipe->AddImage(
-        imageId1, std::move(image_info), CopyVmo(shared_vmo->vmo()),
-        fuchsia::images::MemoryType::HOST_MEMORY, offset_bytes);
+    image_pipe->AddImage(imageId1, std::move(image_info),
+                         CopyVmo(shared_vmo->vmo()), offset_bytes,
+                         GetVmoSize(shared_vmo->vmo()),
+                         fuchsia::images::MemoryType::HOST_MEMORY);
   }
   fuchsia::images::ImagePipe::PresentImageCallback callback = [](auto) {};
 
@@ -255,8 +259,9 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
 
     // Add the image to the image pipe with ImagePipe.AddImage().
     image_pipe->AddImage(imageId1, std::move(image_info),
-                         CopyVmo(checkerboard->vmo()),
-                         fuchsia::images::MemoryType::HOST_MEMORY, 0);
+                         CopyVmo(checkerboard->vmo()), 0,
+                         GetVmoSize(checkerboard->vmo()),
+                         fuchsia::images::MemoryType::HOST_MEMORY);
   }
 
   // Make checkerboard the currently displayed image.
@@ -290,9 +295,9 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
     auto image_info = CreateImageInfoForBgra8Image(image_dim, image_dim);
 
     // Add the image to the image pipe.
-    image_pipe->AddImage(imageId2, std::move(image_info),
-                         CopyVmo(gradient->vmo()),
-                         fuchsia::images::MemoryType::HOST_MEMORY, 0);
+    image_pipe->AddImage(
+        imageId2, std::move(image_info), CopyVmo(gradient->vmo()), 0,
+        GetVmoSize(gradient->vmo()), fuchsia::images::MemoryType::HOST_MEMORY);
   }
 
   // The first image should not have been released.
@@ -341,12 +346,12 @@ TEST_F(ImagePipeTest, ImagePipeUpdateTwoFrames) {
   auto image_info_b = CreateImageInfoForBgra8Image(imageIdB, imageIdB);
   auto gradient_a = CreateVmoWithGradientPixels(imageIdA, imageIdA);
   auto gradient_b = CreateVmoWithGradientPixels(imageIdB, imageIdB);
-  image_pipe->AddImage(imageIdA, std::move(image_info_a),
-                       CopyVmo(gradient_a->vmo()),
-                       fuchsia::images::MemoryType::HOST_MEMORY, 0);
-  image_pipe->AddImage(imageIdB, std::move(image_info_b),
-                       CopyVmo(gradient_b->vmo()),
-                       fuchsia::images::MemoryType::HOST_MEMORY, 0);
+  image_pipe->AddImage(
+      imageIdA, std::move(image_info_a), CopyVmo(gradient_a->vmo()), 0,
+      GetVmoSize(gradient_a->vmo()), fuchsia::images::MemoryType::HOST_MEMORY);
+  image_pipe->AddImage(
+      imageIdB, std::move(image_info_b), CopyVmo(gradient_b->vmo()), 0,
+      GetVmoSize(gradient_b->vmo()), fuchsia::images::MemoryType::HOST_MEMORY);
 
   image_pipe->PresentImage(imageIdA, 0, nullptr, nullptr, nullptr);
   image_pipe->PresentImage(imageIdB, 0, nullptr, nullptr, nullptr);

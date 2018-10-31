@@ -497,8 +497,8 @@ void FidlVideoRenderer::View::UpdateImages(
         image.image_id_, image_info,
         image.vmo_->Duplicate(ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER |
                               ZX_RIGHT_DUPLICATE | ZX_RIGHT_WRITE),
-        fuchsia::images::MemoryType::HOST_MEMORY,
-        0);  // memory_offset
+        /*offset_bytes=*/0, image.vmo_->size(),
+        fuchsia::images::MemoryType::HOST_MEMORY);
   }
 }
 

@@ -128,8 +128,9 @@ zx_status_t VideoDisplay::SetupBuffers(
       FXL_LOG(ERROR) << "Failed to duplicate vmo (status: " << status << ").";
       return status;
     }
-    image_pipe_->AddImage(id + 1, image_info, std::move(vmo_dup),
-                          fuchsia::images::MemoryType::HOST_MEMORY, 0);
+    image_pipe_->AddImage(id + 1, image_info, std::move(vmo_dup), 0,
+                          buffer_collection.vmo_size,
+                          fuchsia::images::MemoryType::HOST_MEMORY);
 
     // Now create the fence for the buffer:
     std::unique_ptr<BufferFence> fence = BufferFence::Create(id);

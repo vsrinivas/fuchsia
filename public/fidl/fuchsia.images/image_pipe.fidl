@@ -62,58 +62,60 @@ library fuchsia.images;
 // close the image pipe, release all resources which were shared with the
 // other party, and re-establish the connection to recover.
 interface ImagePipe {
-  // Adds an image resource to image pipe.
-  //
-  // The |memory| is the handle of a memory object which contains the image
-  // data.  It is valid to create multiple images backed by the same memory object;
-  // they may even overlap.  Consumers must detect this and handle it accordingly.
-  // The type of memory stored in the VMO is |memory_type| (e.g. GPU memory, host
-  // memory). The |memory_offset| indicates the offset within the memory object at
-  // which the image data begins.
-  //
-  // The following errors will cause the connection to be closed:
-  // - |image_id| is already registered
-  // - |image_info| represents a format not supported by the consumer
-  // - |memory| is not a handle for a readable VMO
-  // - the image data expected at |memory_offset| according to the |image_info|
-  //   exceeds the memory object's bounds
-  1: AddImage(uint32 image_id, ImageInfo image_info,
-             handle<vmo> memory, MemoryType memory_type, uint64 memory_offset);
+    // Adds an image resource to image pipe.
+    //
+    // The |memory| is the handle of a memory object which contains the image
+    // data.  It is valid to create multiple images backed by the same memory
+    // object; they may even overlap.  Consumers must detect this and handle
+    // it accordingly.  The |offset_bytes| indicates the offset within the
+    // memory object at which the image data begins.  The |size_bytes|
+    // indicates the amount of memory from |memory| that should be utilized.
+    // The type of memory stored in the VMO is |memory_type| (e.g. GPU memory,
+    // host memory).
+    //
+    // The following errors will cause the connection to be closed:
+    // - |image_id| is already registered
+    // - |image_info| represents a format not supported by the consumer
+    // - |memory| is not a handle for a readable VMO
+    // - the image data expected at |offset_bytes| according to the |image_info|
+    //   exceeds the memory object's bounds
+    1: AddImage(uint32 image_id, ImageInfo image_info,
+                handle<vmo> memory, uint64 offset_bytes, uint64 size_bytes, MemoryType memory_type);
 
-  // Removes an image resource from the pipe.
-  //
-  // The |image_id| is detached from the image resource and is free to be
-  // reused to add a new image resource.
-  //
-  // Removing an image from the image pipe does not affect the presentation
-  // queue or the currently presented image.
-  //
-  // The producer must wait for all release fences associated with the image to
-  // be signaled before freeing or modifying the underlying memory object since
-  // the image may still be in use in the presentation queue.
-  //
-  // The following errors will cause the connection to be closed:
-  // - |image_id| does not reference a currently registered image resource
-  2: RemoveImage(uint32 image_id);
+    // Removes an image resource from the pipe.
+    //
+    // The |image_id| is detached from the image resource and is free to be
+    // reused to add a new image resource.
+    //
+    // Removing an image from the image pipe does not affect the presentation
+    // queue or the currently presented image.
+    //
+    // The producer must wait for all release fences associated with the image to
+    // be signaled before freeing or modifying the underlying memory object since
+    // the image may still be in use in the presentation queue.
+    //
+    // The following errors will cause the connection to be closed:
+    // - |image_id| does not reference a currently registered image resource
+    2: RemoveImage(uint32 image_id);
 
-  // Enqueues the specified image for presentation by the consumer.
-  //
-  // The |acquire_fences| are a set of fences which must all be signaled by the
-  // producer before the consumer presents the image.
-  // The |release_fences| are set of fences which must all be signaled by the
-  // consumer before it is safe for the producer to free or modify the image.
-  // |presentation_time| specifies the time on or after which the
-  // client would like the enqueued operations should take visible effect
-  // (light up pixels on the screen), expressed in nanoseconds in the
-  // |CLOCK_MONOTONIC| timebase.  Desired presentation times must be
-  // monotonically non-decreasing.
-  //
-  // |presentation_info| returns timing information about the submitted frame
-  // and future frames (see presentation_info.fidl).
-  //
-  // The following errors will cause the connection to be closed:
-  // - |image_id| does not reference a currently registered image resource
-  3: PresentImage(uint32 image_id, uint64 presentation_time,
-      vector<handle<event>> acquire_fences, vector<handle<event>> release_fences) ->
-          (PresentationInfo presentation_info);
+    // Enqueues the specified image for presentation by the consumer.
+    //
+    // The |acquire_fences| are a set of fences which must all be signaled by the
+    // producer before the consumer presents the image.
+    // The |release_fences| are set of fences which must all be signaled by the
+    // consumer before it is safe for the producer to free or modify the image.
+    // |presentation_time| specifies the time on or after which the
+    // client would like the enqueued operations should take visible effect
+    // (light up pixels on the screen), expressed in nanoseconds in the
+    // |CLOCK_MONOTONIC| timebase.  Desired presentation times must be
+    // monotonically non-decreasing.
+    //
+    // |presentation_info| returns timing information about the submitted frame
+    // and future frames (see presentation_info.fidl).
+    //
+    // The following errors will cause the connection to be closed:
+    // - |image_id| does not reference a currently registered image resource
+    3: PresentImage(uint32 image_id, uint64 presentation_time,
+                    vector<handle<event>> acquire_fences, vector<handle<event>> release_fences)
+           -> (PresentationInfo presentation_info);
 };

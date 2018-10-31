@@ -20,8 +20,8 @@ class ImagePipeHandler : public fuchsia::images::ImagePipe {
 
  private:
   void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
-                zx::vmo memory, fuchsia::images::MemoryType memory_type,
-                uint64_t memory_offset) override;
+                zx::vmo memory, uint64_t offset_bytes, uint64_t size_bytes,
+                fuchsia::images::MemoryType memory_type) override;
   void RemoveImage(uint32_t image_id) override;
 
   void PresentImage(uint32_t image_id, uint64_t presentation_time,

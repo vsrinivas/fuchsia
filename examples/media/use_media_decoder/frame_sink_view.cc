@@ -148,8 +148,16 @@ void FrameSinkView::PutFrame(
     FXL_NOTREACHED();
   }
 
-  image_pipe_->AddImage(image_id, image_info, std::move(image_vmo),
-                        fuchsia::images::MemoryType::HOST_MEMORY, vmo_offset);
+  size_t image_vmo_size;
+  status = image_vmo.get_size(&image_vmo_size);
+  if (status != ZX_OK) {
+    FXL_LOG(FATAL) << "vmo.get_size() failed - status: " << status;
+    FXL_NOTREACHED();
+  }
+
+  image_pipe_->AddImage(image_id, image_info, std::move(image_vmo), vmo_offset,
+                        image_vmo_size,
+                        fuchsia::images::MemoryType::HOST_MEMORY);
 
   ::zx::eventpair release_frame_client;
   ::zx::eventpair release_frame_server;

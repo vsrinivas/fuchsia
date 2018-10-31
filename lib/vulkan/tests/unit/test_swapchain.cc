@@ -8,7 +8,7 @@
 class MockImagePipeSurface : public image_pipe_swapchain::ImagePipeSurface {
  public:
   void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
-                zx::vmo buffer) override {}
+                zx::vmo buffer, uint64_t size_bytes) override {}
   void RemoveImage(uint32_t image_id) override {}
   void PresentImage(uint32_t image_id,
                     fidl::VectorPtr<zx::event> acquire_fences,

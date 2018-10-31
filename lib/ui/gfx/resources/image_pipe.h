@@ -35,8 +35,8 @@ class ImagePipe : public ImageBase {
 
   // Called by |ImagePipeHandler|, part of |ImagePipe| interface.
   void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
-                zx::vmo memory, fuchsia::images::MemoryType memory_type,
-                uint64_t memory_offset);
+                zx::vmo memory, uint64_t offset_bytes, uint64_t size_bytes,
+                fuchsia::images::MemoryType memory_type);
   void RemoveImage(uint32_t image_id);
 
   void PresentImage(uint32_t image_id, uint64_t presentation_time,

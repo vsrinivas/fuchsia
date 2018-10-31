@@ -17,11 +17,11 @@ ImagePipeHandler::ImagePipeHandler(
 
 void ImagePipeHandler::AddImage(uint32_t image_id,
                                 fuchsia::images::ImageInfo image_info,
-                                zx::vmo memory,
-                                fuchsia::images::MemoryType memory_type,
-                                uint64_t memory_offset) {
+                                zx::vmo memory, uint64_t offset_bytes,
+                                uint64_t size_bytes,
+                                fuchsia::images::MemoryType memory_type) {
   image_pipe_->AddImage(image_id, std::move(image_info), std::move(memory),
-                        memory_type, memory_offset);
+                        offset_bytes, size_bytes, memory_type);
 }
 
 void ImagePipeHandler::RemoveImage(uint32_t image_id) {

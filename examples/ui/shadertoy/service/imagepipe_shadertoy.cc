@@ -8,6 +8,7 @@
 #include "lib/escher/flib/fence.h"
 #include "lib/escher/util/fuchsia_utils.h"
 #include "lib/escher/vk/framebuffer.h"
+#include "lib/escher/vk/gpu_mem.h"
 #include "lib/escher/vk/image.h"
 #include "lib/escher/vk/simple_image_factory.h"
 
@@ -93,9 +94,10 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
     image_info.stride = 0;  // inapplicable to GPU_OPTIMAL tiling.
     image_info.tiling = fuchsia::images::Tiling::GPU_OPTIMAL;
 
-    image_pipe_->AddImage(
-        fb.image_pipe_id, std::move(image_info), std::move(vmo),
-        fuchsia::images::MemoryType::VK_DEVICE_MEMORY, image->memory_offset());
+    image_pipe_->AddImage(fb.image_pipe_id, std::move(image_info),
+                          std::move(vmo), image->memory_offset(),
+                          image->memory()->size(),
+                          fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
   }
 }
 

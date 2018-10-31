@@ -38,6 +38,15 @@ zx::eventpair CopyEventPair(const zx::eventpair& eventpair) {
   return eventpair_copy;
 }
 
+uint64_t GetVmoSize(const zx::vmo& vmo) {
+  uint64_t size;
+  if (vmo.get_size(&size) != ZX_OK) {
+    FXL_LOG(ERROR) << "Getting zx::vmo size failed";
+    return 0u;
+  }
+  return size;
+}
+
 zx::vmo CopyVmo(const zx::vmo& vmo) {
   zx::vmo vmo_copy;
   if (vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy) != ZX_OK)

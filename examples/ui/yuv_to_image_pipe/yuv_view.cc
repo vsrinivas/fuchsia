@@ -111,8 +111,8 @@ void YuvView::StartYuv() {
   constexpr uint64_t kMemoryOffset = 0;
 
   image_pipe_->AddImage(kImageId, image_info, std::move(image_vmo),
-                        fuchsia::images::MemoryType::HOST_MEMORY,
-                        kMemoryOffset);
+                        kMemoryOffset, image_vmo_bytes,
+                        fuchsia::images::MemoryType::HOST_MEMORY);
 
   ::fidl::VectorPtr<::zx::event> acquire_fences =
       ::fidl::VectorPtr<::zx::event>::New(0);
