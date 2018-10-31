@@ -6,7 +6,7 @@ Bluetooth Host Subsystem (5.0+) supporting a framework for developing Low Energy
 and Traditional profiles.
 
 Source code shortcuts:
-- Public API: 
+- Public API:
   * [shared](../../public/fidl/fuchsia.bluetooth)
   * [BR/EDR](../../public/fidl/fuchsia.bluetooth.bredr)
   * [Control](../../public/fidl/fuchsia.bluetooth.control)

@@ -22,11 +22,11 @@ struct HciFlags(u8);
 
 impl HciFlags {
     const IS_RECEIVED: u8 = 0b100;
-    const HCI_TYPE_CMD: u8 = 0b00;
-    const HCI_TYPE_EVENT: u8 = 0b01;
+    const PACKET_TYPE_CMD: u8 = 0b00;
+    const PACKET_TYPE_EVENT: u8 = 0b01;
     // Included for completeness. Used in tests
     #[allow(dead_code)]
-    const HCI_TYPE_DATA: u8 = 0b10;
+    const PACKET_TYPE_DATA: u8 = 0b10;
 
     /// Does the packet represent an HCI event sent from the controller to the host?
     fn is_received(&self) -> bool {
@@ -35,8 +35,8 @@ impl HciFlags {
     /// Returns the packet type.
     fn hci_packet_type(&self) -> PacketType {
         match self.0 & 0b11 {
-            HciFlags::HCI_TYPE_CMD => PacketType::Cmd,
-            HciFlags::HCI_TYPE_EVENT => PacketType::Event,
+            HciFlags::PACKET_TYPE_CMD => PacketType::Cmd,
+            HciFlags::PACKET_TYPE_EVENT => PacketType::Event,
             _ => PacketType::Data,
         }
     }
@@ -45,7 +45,7 @@ impl HciFlags {
 
 /// A Snooper provides a `Stream` associated with the snoop channel for a single HCI device. This
 /// stream can be polled for `SnoopPacket`s coming off the channel.
-pub struct Snooper {
+pub(crate) struct Snooper {
     pub device_name: String,
     pub device_path: PathBuf,
     pub chan: fuchsia_async::Channel,
@@ -116,7 +116,10 @@ impl Stream for Snooper {
     fn poll_next(self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
         let mut buf = MessageBuf::new();
         match self.chan.recv_from(&mut buf, lw) {
-            Poll::Ready(_t) => Poll::Ready(Snooper::build_pkt(buf).map(|pkt| (self.device_name.clone(), pkt))),
+            Poll::Ready(_t) => {
+                let item = Snooper::build_pkt(buf).map(|pkt| (self.device_name.clone(), pkt));
+                Poll::Ready(item)
+            },
             Poll::Pending => Poll::Pending,
         }
     }
@@ -143,7 +146,7 @@ mod tests {
 
     #[test]
     fn test_build_pkt() {
-        let flags = 0b100; // is_received = true
+        let flags = HciFlags::IS_RECEIVED;
         let buf = MessageBuf::new_with(vec![flags], vec![]);
         let pkt = Snooper::build_pkt(buf).unwrap();
         assert!(pkt.is_received);
@@ -151,7 +154,7 @@ mod tests {
         assert!(pkt.timestamp.seconds > 0);
         assert_eq!(pkt.type_, PacketType::Cmd);
 
-        let flags = 0b10; // data packet
+        let flags = HciFlags::PACKET_TYPE_DATA;
         let buf = MessageBuf::new_with(vec![flags, 0, 1, 2], vec![]);
         let pkt = Snooper::build_pkt(buf).unwrap();
         assert!(!pkt.is_received);
@@ -164,8 +167,7 @@ mod tests {
         let mut exec = fasync::Executor::new().unwrap();
         let (tx, rx) = Channel::create().unwrap();
         let mut snooper = Snooper::from_channel(rx, PathBuf::from("/a/b/c")).unwrap();
-        let mut flags = 0;
-        flags |= 0b101; // event packet, is_received = true
+        let flags = HciFlags::IS_RECEIVED | HciFlags::PACKET_TYPE_EVENT;
         tx.write(&[flags, 0, 1, 2], &mut vec![]).unwrap();
         tx.write(&[0, 3, 4, 5], &mut vec![]).unwrap();
 
