@@ -167,13 +167,14 @@ zx_status_t AmlThermal::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
         if (in_len != sizeof(uint32_t) || out_len != sizeof(uint32_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        uint16_t idx;
         auto in = *static_cast<const uint8_t*>(in_buf);
-        auto status = scpi_.GetDvfsIdx(in, &idx);
-        if (status != ZX_OK) {
-            return status;
+        if (in == BIG_CLUSTER_POWER_DOMAIN) {
+            *static_cast<uint32_t*>(out_buf) = cur_bigcluster_opp_idx_;
+        } else if (in == LITTLE_CLUSTER_POWER_DOMAIN) {
+            *static_cast<uint32_t*>(out_buf) = cur_littlecluster_opp_idx_;
+        } else {
+            return ZX_ERR_INVALID_ARGS;
         }
-        *static_cast<uint32_t*>(out_buf) = idx;
         *actual = sizeof(uint32_t);
         return ZX_OK;
     }
@@ -184,7 +185,24 @@ zx_status_t AmlThermal::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
             return ZX_ERR_INVALID_ARGS;
         }
         auto in = static_cast<const dvfs_info_t*>(in_buf);
-        return scpi_.SetDvfsIdx(static_cast<uint8_t>(in->power_domain), in->op_idx);
+        bool set_new_opp = false;
+        if (in->power_domain == BIG_CLUSTER_POWER_DOMAIN) {
+            if (cur_bigcluster_opp_idx_ != in->op_idx) {
+                set_new_opp = true;
+                cur_bigcluster_opp_idx_ = in->op_idx;
+            }
+        } else {
+            if (cur_littlecluster_opp_idx_ != in->op_idx) {
+                set_new_opp = true;
+                cur_littlecluster_opp_idx_ = in->op_idx;
+            }
+        }
+
+        if (set_new_opp) {
+            return scpi_.SetDvfsIdx(static_cast<uint8_t>(in->power_domain), in->op_idx);
+        } else {
+            return ZX_OK;
+        }
     }
 
     // Input: None, Output: uint32_t.
@@ -236,6 +254,18 @@ zx_status_t AmlThermal::Init() {
     } else if (read != sizeof(thermal_device_info_t)) {
         THERMAL_ERROR("could not read device metadata\n");
         return ZX_ERR_NO_MEMORY;
+    }
+
+    status = scpi_.GetDvfsInfo(BIG_CLUSTER_POWER_DOMAIN, &info_.opps[0]);
+    if (status != ZX_OK) {
+        THERMAL_ERROR("could not get bigcluster dvfs opps: %d\n", status);
+        return status;
+    }
+
+    status = scpi_.GetDvfsInfo(LITTLE_CLUSTER_POWER_DOMAIN, &info_.opps[1]);
+    if (status != ZX_OK) {
+        THERMAL_ERROR("could not get littlecluster dvfs opps: %d\n", status);
+        return status;
     }
 
     auto start_thread = [](void* arg) { return static_cast<AmlThermal*>(arg)->Worker(); };

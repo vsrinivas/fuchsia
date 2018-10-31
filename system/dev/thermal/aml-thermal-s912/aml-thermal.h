@@ -91,6 +91,8 @@ private:
     FanLevel fan_level_ = FAN_L0;
     uint32_t temperature_ = 0;
     sync_completion quit_;
+    uint32_t cur_bigcluster_opp_idx_ = 0;
+    uint32_t cur_littlecluster_opp_idx_ = 0;
 };
 
 } // namespace thermal

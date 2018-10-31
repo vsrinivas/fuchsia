@@ -93,10 +93,10 @@ static int vim_start_thread(void* arg) {
         goto fail;
     }
 
-    // if ((status = vim2_thermal_init(bus)) != ZX_OK) {
-    //     zxlogf(ERROR, "vim2_thermal_init failed: %d\n", status);
-    //     goto fail;
-    // }
+    if ((status = vim2_thermal_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "vim2_thermal_init failed: %d\n", status);
+        goto fail;
+    }
 
     if ((status = vim_display_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "vim_display_init failed: %d\n", status);
