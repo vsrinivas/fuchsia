@@ -24,8 +24,8 @@
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/component_base.h"
-#include "peridot/lib/testing/reporting.h"
-#include "peridot/lib/testing/testing.h"
+#include "peridot/public/lib/integration_testing/cpp/reporting.h"
+#include "peridot/public/lib/integration_testing/cpp/testing.h"
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/story_shell/defs.h"
 
@@ -79,14 +79,12 @@ class TestApp : public modular::testing::ComponentBase<void>,
   void GetPresentation(fidl::StringPtr story_id,
                        fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                            request) override {
-    if (story_id == kStoryName1 &&
-        !story1_presentation_request_received_) {
+    if (story_id == kStoryName1 && !story1_presentation_request_received_) {
       story1_presentation_request_.Pass();
       story1_presentation_request_received_ = true;
     }
 
-    if (story_id == kStoryName2 &&
-        !story2_presentation_request_received_) {
+    if (story_id == kStoryName2 && !story2_presentation_request_received_) {
       story2_presentation_request_.Pass();
       story2_presentation_request_received_ = true;
     }

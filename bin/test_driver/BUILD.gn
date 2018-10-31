@@ -17,7 +17,7 @@ executable_package("test_driver_module") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/lib/rapidjson",
-    "//peridot/lib/testing",
+    "//peridot/public/lib/integration_testing/cpp",
     "//peridot/lib/testing:test_driver",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",

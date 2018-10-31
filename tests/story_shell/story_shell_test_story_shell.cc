@@ -19,8 +19,8 @@
 
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/component_base.h"
-#include "peridot/lib/testing/reporting.h"
-#include "peridot/lib/testing/testing.h"
+#include "peridot/public/lib/integration_testing/cpp/reporting.h"
+#include "peridot/public/lib/integration_testing/cpp/testing.h"
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/story_shell/defs.h"
 #include "rapidjson/document.h"

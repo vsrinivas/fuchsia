@@ -15,8 +15,8 @@
 #include <lib/message_queue/cpp/message_queue_client.h>
 #include <test/peridot/tests/componentcontext/cpp/fidl.h>
 
-#include "peridot/lib/testing/reporting.h"
-#include "peridot/lib/testing/testing.h"
+#include "peridot/public/lib/integration_testing/cpp/reporting.h"
+#include "peridot/public/lib/integration_testing/cpp/testing.h"
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/component_context/defs.h"
 

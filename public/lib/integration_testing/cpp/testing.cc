@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/testing/testing.h"
+#include <lib/integration_testing/cpp/testing.h>
 
 #include <set>
 
@@ -115,8 +115,6 @@ void Await(const fidl::StringPtr& condition, std::function<void()> cont) {
       condition, [cont = std::move(cont)](fidl::StringPtr) { cont(); });
 }
 
-namespace internal {
-
 void RegisterTestPoint(const std::string& label) {
   // Test points can only be registered before Init is called.
   FXL_CHECK(!g_test_runner.is_bound())
@@ -146,6 +144,5 @@ void PassTestPoint(const std::string& label) {
   g_test_runner->PassTestPoint();
 }
 
-}  // namespace internal
 }  // namespace testing
 }  // namespace modular

@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_TESTING_REPORTING_H_
-#define PERIDOT_LIB_TESTING_REPORTING_H_
+#ifndef LIB_INTEGRATION_TESTING_CPP_REPORTING_H_
+#define LIB_INTEGRATION_TESTING_CPP_REPORTING_H_
 
 #include <iostream>
 
 #include <fuchsia/testing/runner/cpp/fidl.h>
 
-#include "peridot/lib/testing/testing.h"
+#include <lib/integration_testing/cpp/testing.h>
 
 #define TEST_PASS(label) std::cerr << "[TEST] PASS: " << (label) << std::endl
 #define TEST_FAIL(label)                                  \
@@ -39,4 +39,4 @@ class TestPoint {
 }  // namespace testing
 }  // namespace modular
 
-#endif  // PERIDOT_LIB_TESTING_REPORTING_H_
+#endif  // LIB_INTEGRATION_TESTING_CPP_REPORTING_H_

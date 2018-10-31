@@ -13,9 +13,9 @@
 
 #include "peridot/bin/test_driver/defs.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
-#include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/test_driver.h"
-#include "peridot/lib/testing/testing.h"
+#include "peridot/public/lib/integration_testing/cpp/reporting.h"
+#include "peridot/public/lib/integration_testing/cpp/testing.h"
 
 using modular::testing::Signal;
 using modular::testing::TestPoint;

@@ -10,8 +10,8 @@
 #include <lib/callback/scoped_callback.h>
 #include <lib/component/cpp/connect.h>
 
-#include "peridot/lib/testing/reporting.h"
-#include "peridot/lib/testing/testing.h"
+#include "peridot/public/lib/integration_testing/cpp/reporting.h"
+#include "peridot/public/lib/integration_testing/cpp/testing.h"
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/suggestion/defs.h"
 

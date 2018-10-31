@@ -13,8 +13,8 @@
 #include <lib/message_queue/cpp/message_sender_client.h>
 #include <test/peridot/tests/queuepersistence/cpp/fidl.h>
 
-#include "peridot/lib/testing/reporting.h"
-#include "peridot/lib/testing/testing.h"
+#include "peridot/public/lib/integration_testing/cpp/reporting.h"
+#include "peridot/public/lib/integration_testing/cpp/testing.h"
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/queue_persistence/defs.h"
 

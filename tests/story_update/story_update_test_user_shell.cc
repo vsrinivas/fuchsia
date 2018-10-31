@@ -14,8 +14,8 @@
 
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/component_base.h"
-#include "peridot/lib/testing/reporting.h"
-#include "peridot/lib/testing/testing.h"
+#include "peridot/public/lib/integration_testing/cpp/reporting.h"
+#include "peridot/public/lib/integration_testing/cpp/testing.h"
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/story_update/defs.h"
 
@@ -60,8 +60,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
     command.set_add_mod(std::move(add_mod));
     commands.push_back(std::move(command));
 
-    puppet_master_->ControlStory(kStoryName,
-                                 story_puppet_master_.NewRequest());
+    puppet_master_->ControlStory(kStoryName, story_puppet_master_.NewRequest());
     story_puppet_master_->Enqueue(std::move(commands));
     story_puppet_master_->Execute(
         [this](fuchsia::modular::ExecuteResult result) {

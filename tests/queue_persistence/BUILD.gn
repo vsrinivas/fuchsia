@@ -24,7 +24,7 @@ executable_package("queue_persistence_test_module") {
     ":defs",
     ":queue_persistence_test_service",
     "//garnet/public/lib/callback",
-    "//peridot/lib/testing",
+    "//peridot/public/lib/integration_testing/cpp",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/public/lib/message_queue/cpp",
@@ -43,7 +43,7 @@ executable_package("queue_persistence_test_agent") {
   deps = [
     ":defs",
     ":queue_persistence_test_service",
-    "//peridot/lib/testing",
+    "//peridot/public/lib/integration_testing/cpp",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
     "//peridot/public/lib/message_queue/cpp",

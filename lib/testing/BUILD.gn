@@ -2,20 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("testing") {
-  sources = [
-    "reporting.cc",
-    "reporting.h",
-    "testing.cc",
-    "testing.h",
-  ]
-
-  deps = [
-    "//garnet/public/fidl/fuchsia.testing.runner",
-    "//garnet/public/lib/component/cpp",
-  ]
-}
-
 source_set("component_base") {
   testonly = true
 
@@ -24,11 +10,11 @@ source_set("component_base") {
   ]
 
   public_deps = [
-    ":testing",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/public/lib/app_driver/cpp:app_driver",
+    "//peridot/public/lib/integration_testing/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

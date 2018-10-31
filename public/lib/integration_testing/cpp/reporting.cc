@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/testing/reporting.h"
+#include <lib/integration_testing/cpp/reporting.h>
 
 namespace modular {
 namespace testing {
 
 TestPoint::TestPoint(std::string label) : label_(std::move(label)) {
-  internal::RegisterTestPoint(label_);
+  RegisterTestPoint(label_);
 }
 
 TestPoint::~TestPoint() {
@@ -19,7 +19,7 @@ TestPoint::~TestPoint() {
 void TestPoint::Pass() {
   value_ = true;
   TEST_PASS(label_);
-  internal::PassTestPoint(label_);
+  PassTestPoint(label_);
 }
 
 }  // namespace testing

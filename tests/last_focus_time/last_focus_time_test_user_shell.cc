@@ -14,7 +14,7 @@
 
 #include "peridot/lib/common/story_provider_watcher_base.h"
 #include "peridot/lib/testing/component_base.h"
-#include "peridot/lib/testing/testing.h"
+#include "peridot/public/lib/integration_testing/cpp/testing.h"
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/last_focus_time/defs.h"
 

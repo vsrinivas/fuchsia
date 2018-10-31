@@ -7,8 +7,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fxl/logging.h>
 
-#include "peridot/lib/testing/reporting.h"
-#include "peridot/lib/testing/testing.h"
+#include "peridot/public/lib/integration_testing/cpp/reporting.h"
+#include "peridot/public/lib/integration_testing/cpp/testing.h"
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/component_context/defs.h"
 

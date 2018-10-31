@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_TESTING_TESTING_H_
-#define PERIDOT_LIB_TESTING_TESTING_H_
+#ifndef LIB_INTEGRATION_TESTING_CPP_TESTING_H_
+#define LIB_INTEGRATION_TESTING_CPP_TESTING_H_
 
 #include <string>
 
 #include <fuchsia/testing/runner/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
-
-using fuchsia::testing::runner::TestRunnerStore;
 
 namespace modular {
 namespace testing {
@@ -62,7 +60,7 @@ void Teardown(const std::function<void()>& ack);
 
 // Returns the TestRunnerStore interface from the caller's
 // Environment. Init() must be called before GetStore().
-TestRunnerStore* GetStore();
+fuchsia::testing::runner::TestRunnerStore* GetStore();
 
 // Creates function that invokes the |proceed| callback after being called
 // |limit| times.
@@ -89,8 +87,6 @@ void Signal(const fidl::StringPtr& condition);
 // that key is not exposed to the receiver function |cont|.
 void Await(const fidl::StringPtr& condition, std::function<void()> cont);
 
-namespace internal {
-
 // Registers a test point that should pass for a test to be considered
 // successful.
 void RegisterTestPoint(const std::string& label);
@@ -98,8 +94,7 @@ void RegisterTestPoint(const std::string& label);
 // Signals that a test point has been passed.
 void PassTestPoint(const std::string& label);
 
-}  // namespace internal
 }  // namespace testing
 }  // namespace modular
 
-#endif  // PERIDOT_LIB_TESTING_TESTING_H_
+#endif  // LIB_INTEGRATION_TESTING_CPP_TESTING_H_

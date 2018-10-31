@@ -11,8 +11,8 @@
 #include <lib/fxl/macros.h>
 
 #include "peridot/lib/testing/component_base.h"
-#include "peridot/lib/testing/reporting.h"
-#include "peridot/lib/testing/testing.h"
+#include "peridot/public/lib/integration_testing/cpp/reporting.h"
+#include "peridot/public/lib/integration_testing/cpp/testing.h"
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/suggestion/defs.h"
 
@@ -65,13 +65,10 @@ class TestApp : fuchsia::modular::NextListener,
     command.set_add_mod(std::move(add_mod));
     commands.push_back(std::move(command));
 
-    puppet_master_->ControlStory(kStoryName,
-                                 story_puppet_master_.NewRequest());
+    puppet_master_->ControlStory(kStoryName, story_puppet_master_.NewRequest());
     story_puppet_master_->Enqueue(std::move(commands));
     story_puppet_master_->Execute(
-        [this](fuchsia::modular::ExecuteResult result) {
-          StartStory();
-        });
+        [this](fuchsia::modular::ExecuteResult result) { StartStory(); });
 
     Await(kSuggestionTestModuleDone, [this] {
       story_controller_->Stop([this] {

@@ -23,8 +23,8 @@
 #include "lib/fxl/strings/string_number_conversions.h"
 
 #include "peridot/lib/fidl/single_service_app.h"
-#include "peridot/lib/testing/reporting.h"
-#include "peridot/lib/testing/testing.h"
+#include "peridot/public/lib/integration_testing/cpp/reporting.h"
+#include "peridot/public/lib/integration_testing/cpp/testing.h"
 
 namespace modular {
 

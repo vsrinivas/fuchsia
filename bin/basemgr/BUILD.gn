@@ -115,7 +115,7 @@ executable_package("dev_base_shell") {
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:single_service_app",
-    "//peridot/lib/testing",
+    "//peridot/public/lib/integration_testing/cpp",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
     "//zircon/public/lib/async-loop-cpp",

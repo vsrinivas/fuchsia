@@ -14,8 +14,8 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/memory/weak_ptr.h>
 
-#include "peridot/lib/testing/reporting.h"
-#include "peridot/lib/testing/testing.h"
+#include "peridot/public/lib/integration_testing/cpp/reporting.h"
+#include "peridot/public/lib/integration_testing/cpp/testing.h"
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/parent_child/defs.h"
 
@@ -68,7 +68,7 @@ class TestApp {
 
   void StartChildModuleTwice() {
     StartModuleWithHandler(module_host_->module_context(),
-                               child_module_.NewRequest(), kChildModuleUrl1);
+                           child_module_.NewRequest(), kChildModuleUrl1);
     child_module_.set_error_handler([this] { OnFirstChildModuleStopped(); });
 
     // Once the module starts, start the same module again with the same
@@ -76,11 +76,12 @@ class TestApp {
     // call stops the previous module instance and starts a new one.
     Await("child_module_1_init", [this] {
       StartModuleWithHandler(module_host_->module_context(),
-                                 child_module_again_.NewRequest(), kChildModuleUrl1);
+                             child_module_again_.NewRequest(),
+                             kChildModuleUrl1);
       child_module_again_.set_error_handler(
           [this] { second_child_module_controller_closed_.Pass(); });
       StartModuleWithHandler(module_host_->module_context(),
-                                 child_module2_.NewRequest(), kChildModuleUrl2);
+                             child_module2_.NewRequest(), kChildModuleUrl2);
     });
   }
 

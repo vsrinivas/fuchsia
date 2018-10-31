@@ -24,8 +24,8 @@
 #include "peridot/lib/common/names.h"
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/testing/component_base.h"
-#include "peridot/lib/testing/reporting.h"
-#include "peridot/lib/testing/testing.h"
+#include "peridot/public/lib/integration_testing/cpp/reporting.h"
+#include "peridot/public/lib/integration_testing/cpp/testing.h"
 #include "peridot/tests/benchmarks/story/tracing_waiter.h"
 
 namespace {
@@ -178,8 +178,7 @@ class TestApp : public modular::ViewApp {
   void StoryCreate() {
     FXL_LOG(INFO) << "StoryCreate()";
     TRACE_ASYNC_BEGIN("benchmark", "story/create", 0);
-    puppet_master_->ControlStory(kStoryName,
-                                 story_puppet_master_.NewRequest());
+    puppet_master_->ControlStory(kStoryName, story_puppet_master_.NewRequest());
 
     fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
     fuchsia::modular::AddMod add_mod;

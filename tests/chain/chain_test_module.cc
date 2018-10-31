@@ -11,8 +11,8 @@
 #include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/time/time_delta.h>
 
-#include "peridot/lib/testing/reporting.h"
-#include "peridot/lib/testing/testing.h"
+#include "peridot/public/lib/integration_testing/cpp/reporting.h"
+#include "peridot/public/lib/integration_testing/cpp/testing.h"
 #include "peridot/tests/chain/defs.h"
 #include "peridot/tests/common/defs.h"
 
