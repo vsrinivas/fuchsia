@@ -83,8 +83,65 @@ With a corpus of JSON inputs, `Data` may be close to what the `Metadata` object 
 If not, the fuzzer will eventually discover what inputs are meaningful to it through random
 mutations, trial and error, and code coverage data.
 
-The key is that for an in-process coverage-based fuzzer, iterations should be __short__ and
-__focused__.
+### Q: How do I fuzz more complex interfaces?
+
+A: It is easy to map portions of the provided `Data` to ["plain old data" (POD)][pod] types.  The
+data can also be sliced into variable length arrays. More complex objects can almost always be
+(eventually) built out of POD types and variable arrays. If `Size` isn't long enough for your needs,
+you can simply return `0`.  The fuzzer will quickly learn that inputs below that length aren't
+interesting and will stop generating them.
+
+```cpp
+  uint32_t flags;
+  char name[MAX_NAME_LEN];
+  if (Size < sizeof(flags)) {
+    return 0;
+  }
+  memcpy(&flags, Data, sizeof(flags));
+  Data += sizeof(flags);
+  Size -= sizeof(flags);
+
+  size_t name_len;
+  if (Size < sizeof(name_len)) {
+    return 0;
+  }
+  memcpy(&name_len, Data, sizeof(name_len));
+  Data += sizeof(name_len);
+  Size -= sizeof(name_len);
+  name_len %= sizeof(name_len) - 1;
+
+  if (Size < name_len) {
+    return 0;
+  }
+  memcpy(name, Data, name_len);
+  Data += name_len;
+  Size -= name_len;
+  name[name_len] = '\0';
+
+  Parser parser(name, flags);
+  parser.Parse(Data, Size);
+```
+
+*__NOTE__: A small library to make this easier is under development.*
+
+In some cases, you may have expensive set-up operations that you would like to do once.  The
+libfuzzer documentation has tips on how to do [startup initialization].  Be aware though that such
+state will be carried over from iteration to iteration.  This can be useful as it may expose new
+bugs that depend on the library's persisted state, but it may also make bugs harder to reproduce
+when they depend on a sequence of inputs rather than a single one.
+
+### Q: How should I scope my fuzz targets?
+
+A: In general, an in-process coverage-based fuzzer, iterations should be __short__ and __focused__.
+The more focused a fuzz target is, the faster libfuzzer will be able to find "interesting" inputs
+that increase code coverage.
+
+At the same time, becoming __too__ focused can lead to a proliferation of fuzz targets.  Consider the
+example of a routine that parses incoming requests.  The parser may recognize dozens of different
+request types, so developing a separate fuzz target for each may be cumbersome.  An alternative in
+this case may be to develop a single fuzzer, and include examples of the different requests in the
+initial [corpus].  In this way the single fuzz target can still bypass a large amount of shallow
+fuzzing by being guided towards the interesting inputs.
 
 *__NOTE:__ Currently, libFuzzer can be used in Fuchsia to fuzz C/C++ code.   Additional language
 support is [planned][todo].*
@@ -147,7 +204,8 @@ on this macro, e.g.:
 This can be useful to allow either more deterministic fuzzing and/or deeper coverage.
 
 The fuzz-target template also allows you include additional inputs to control the fuzzer:
-* Seed [corpora][corpus] are digests or source paths (described in more detail below).
+* Seed [corpora][corpus] are digests or source paths (described in more detail
+[below][3p-corpus]).
 * [Dictionaries] are files with tokens, one per line, that commonly appear in the target's input,
 e.g. "GET" and "POST" for HTTP.
 * An options file, made up a series of key-value pairs, one per line, of libFuzzer command line
@@ -359,7 +417,7 @@ version of the corpus, you may add the version digest, e.g.
 ## Q: Can I use an existing third party corpus?
 
 A: Yes! The `corpora` list in the `fuzz-target` [template][fuzzer.gni] can contain either digests or
-source paths.  In general, git isn't the best way to store fuzzing corpora, which typically contain
+source paths.  In general, `git` isn't the best way to store fuzzing corpora, which typically contain
 many small binary files that may change dramatically over time.  Still, if you have a fuzzing
 corpus already, perhaps as part of a third party project, you can provide the source path to it,
 e.g. `corpora = [ "//third_party/boringssl/src/fuzz/bn_div_corpus" ]`.
@@ -422,10 +480,12 @@ become available.
 [syzkaller]: https://github.com/google/syzkaller
 [todo]: #q-what-can-i-expect-in-the-future-for-fuzzing-in-fuchsia-
 [thin-air]: https://lcamtuf.blogspot.com/2014/11/pulling-jpegs-out-of-thin-air.html
+[startup initialization]: https://llvm.org/docs/LibFuzzer.html#startup-initialization
 [fuzzer.gni]: https://fuchsia.googlesource.com/build/+/master/fuzzing/fuzzer.gni
 [build macro]: https://llvm.org/docs/LibFuzzer.html#fuzzer-friendly-build-mode
 [compiler flags]: https://fuchsia.googlesource.com/build/+/master/config/sanitizers/BUILD.gn
 [corpus]: https://llvm.org/docs/LibFuzzer.html#corpus
+[3p-corpus]: #q-can-i-use-an-existing-third-party-corpus-
 [dictionaries]: https://llvm.org/docs/LibFuzzer.html#dictionaries
 [options]: https://llvm.org/docs/LibFuzzer.html#options
 [fuzz tool]: #q-how-do-i-run-a-fuzzer-
@@ -440,3 +500,4 @@ become available.
 [cipd]: https://chrome-infra-packages.appspot.com/p/fuchsia/test_data/fuzzing
 [sec-144]: https://fuchsia.atlassian.net/browse/SEC-144
 [tc-241]: https://fuchsia.atlassian.net/browse/TC-241
+[pod]: http://www.cplusplus.com/reference/type_traits/is_pod/
