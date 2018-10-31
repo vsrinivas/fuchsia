@@ -535,7 +535,7 @@ static zx_status_t aml_gpio_bind(void* ctx, zx_device_t* parent) {
     pbus_register_protocol(&pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio->gpio, sizeof(gpio->gpio),
                            &kCallback);
     gpio->gpio_interrupt->irq_info = calloc(gpio->gpio_interrupt->irq_count,
-                                     sizeof(uint8_t));
+                                     sizeof(uint16_t));
     if (!gpio->gpio_interrupt->irq_info) {
         zxlogf(ERROR, "aml_gpio_bind: irq_info calloc failed\n");
         goto fail;
