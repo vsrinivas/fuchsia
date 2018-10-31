@@ -188,25 +188,27 @@ static uint32_t press_or_release(fuchsia::ui::input::PointerEventPhase phase) {
 }
 
 // Retrieves the position of a pointer event and translates it into the
-// coordinate space expected in the VIRTIO_INPUT_EV_[REL/ABS] event payload.
-// The incoming event coordinates are expected to be in the floating-point 0..1
+// coordinate space expected in the VIRTIO_INPUT_EV_ABS event payload. The
+// incoming event coordinates are expected to be in the floating-point 0..1
 // range, which are mapped to the nearest integer in 0..kAbsMax[X/Y].
-static uint32_t x_coordinate(float x) {
-  if (x < 0.0f || x > 1.0f) {
+//
+// TODO(SCN-921): pointer event positions outside view boundaries.
+static uint32_t x_coordinate(float x, float width) {
+  if (x < 0.0f || x > width) {
     FXL_LOG(WARNING) << "PointerEvent::x out of range (" << std::fixed
                      << std::setprecision(7) << x << ")";
-    x = std::clamp(x, 0.0f, 1.0f);
+    x = std::clamp(x, 0.0f, width);
   }
-  return static_cast<uint32_t>(x * machina::kInputAbsMaxX + 0.5f);
+  return static_cast<uint32_t>(x * machina::kInputAbsMaxX / width + 0.5f);
 }
 
-static uint32_t y_coordinate(float y) {
-  if (y < 0.0f || y > 1.0f) {
+static uint32_t y_coordinate(float y, float height) {
+  if (y < 0.0f || y > height) {
     FXL_LOG(WARNING) << "PointerEvent::y out of range (" << std::fixed
                      << std::setprecision(7) << y << ")";
-    y = std::clamp(y, 0.0f, 1.0f);
+    y = std::clamp(y, 0.0f, height);
   }
-  return static_cast<uint32_t>(y * machina::kInputAbsMaxY + 0.5f);
+  return static_cast<uint32_t>(y * machina::kInputAbsMaxY / height + 0.5f);
 }
 
 // Stream for event queue.
@@ -268,12 +270,12 @@ class EventStream : public StreamBase,
             {
                 .type = VIRTIO_INPUT_EV_ABS,
                 .code = VIRTIO_INPUT_EV_ABS_X,
-                .value = x_coordinate(pointer.x),
+                .value = x_coordinate(pointer.x, view_size_.width),
             },
             {
                 .type = VIRTIO_INPUT_EV_ABS,
                 .code = VIRTIO_INPUT_EV_ABS_Y,
-                .value = y_coordinate(pointer.y),
+                .value = y_coordinate(pointer.y, view_size_.height),
             },
             {
                 .type = VIRTIO_INPUT_EV_SYN,
@@ -291,12 +293,12 @@ class EventStream : public StreamBase,
             {
                 .type = VIRTIO_INPUT_EV_ABS,
                 .code = VIRTIO_INPUT_EV_ABS_X,
-                .value = x_coordinate(pointer.x),
+                .value = x_coordinate(pointer.x, view_size_.width),
             },
             {
                 .type = VIRTIO_INPUT_EV_ABS,
                 .code = VIRTIO_INPUT_EV_ABS_Y,
-                .value = y_coordinate(pointer.y),
+                .value = y_coordinate(pointer.y, view_size_.height),
             },
             {
                 .type = VIRTIO_INPUT_EV_KEY,
@@ -329,12 +331,7 @@ class EventStream : public StreamBase,
         break;
       case fuchsia::ui::input::InputEvent::Tag::kPointer:
         if (view_size_.width > 0 && view_size_.height > 0) {
-          // Normalize pointer positions to 0..1.
-          // TODO(SCN-921): pointer event positions outside view boundaries.
-          auto& pointer = event.pointer();
-          pointer.x /= view_size_.width;
-          pointer.y /= view_size_.height;
-          OnPointer(pointer);
+          OnPointer(event.pointer());
         }
         break;
       default:
