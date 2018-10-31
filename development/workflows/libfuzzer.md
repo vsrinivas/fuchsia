@@ -131,7 +131,7 @@ fuzz_target("cowsay_simple_fuzzer") {
 }
 ```
 
-It also enables the  ```FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION``` [build macro].  If the software
+It also enables the  `FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION` [build macro].  If the software
 under test needs fuzzing-specific modifications, they can be wrapped in a preprocessor conditional
 on this macro, e.g.:
 
@@ -146,11 +146,25 @@ on this macro, e.g.:
 
 This can be useful to allow either more deterministic fuzzing and/or deeper coverage.
 
-Additionally, the fuzz-target template also allows you include seed [corpora][corpus],
-[dictionaries], and an options file.  The options file is made up a series of key-value pairs, one
-per line, of libFuzzer command line [options].  The ```merge```, ```jobs```, ```dict```, and
-```artifact_prefix``` are set automatically when using the [fuzz tool] described below, and do not
-need to be specified unless they differ from the defaults.
+The fuzz-target template also allows you include additional inputs to control the fuzzer:
+* Seed [corpora][corpus] are digests or source paths (described in more detail below).
+* [Dictionaries] are files with tokens, one per line, that commonly appear in the target's input,
+e.g. "GET" and "POST" for HTTP.
+* An options file, made up a series of key-value pairs, one per line, of libFuzzer command line
+[options].
+
+```python
+fuzz_target("cowsay_simple_fuzzer") {
+  sources = [ "cowsay_fuzztest.cpp" ]
+  deps = [ ":cowsay_sources" ]
+  corpora = [ "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" ]
+  dictionary = "test_data/various_moos.dict"
+  options = "test_data/fuzzer.opts"
+}
+```
+
+The `merge`, `jobs`, `dict`, and `artifact_prefix` are set automatically when using the [fuzz tool]
+described below, and do not need to be specified unless they differ from the defaults.
 
 ### The fuzz-package GN template
 
@@ -159,7 +173,7 @@ packages bundle binaries.  In addition, the `fuzz-package` template provides a w
 sanitizers can be used with the given fuzzing targets:
 
 ```python
-fuzz_package("cowsay") {
+fuzz_package("cowsay_fuzzers") {
   targets = [ ":cowsay_simple_fuzzer" ]
   sanitizers = [ "asan", "ubsan" ]
 }
@@ -167,12 +181,8 @@ fuzz_package("cowsay") {
 
 Once this is defined, a package manifest needs to reference this package the usual way.  If the
 package already has a package manifest under `packages/tests` for the appropriate layer, it may be
-added there.
+added there:
 
-__IMPORTANT__: The GN template will *automatically* add a `_fuzzers` suffix to the package name.
-This means you can use the same name as the corresponding production package, but the full name must
-be used in the package manifest, i.e. to build `fuzz_package("boringssl")`, the package manifest
-file `//garnet/packages/tests/boringssl` should look similar to the following:
 ```json
 {
     "imports": [
@@ -333,9 +343,9 @@ time, you may want to provide a `max_total_time` [option][options] (perhaps agai
 overnight).
 
 1. Once complete, you can upload the corpus using `fx fuzz store [package]/[target]`.  This will
-store the corpus in [CIPD][cipd].  Each fuzz target will have its own corpus CIPD package, organized
-by fuzz package.  Take note of the corpus digest that is printed when the corpus is stored; it is
-used as the package version.
+store the corpus in [CIPD].  Each fuzz target will have its own corpus CIPD package, organized by
+fuzz package.  Take note of the corpus digest that is printed when the corpus is stored; it is used
+as the package version.
 
 1. Add the digest from the previous step to the `fuzz-target` in the appropriate BUILD.gn file, and
 submit the resulting CL.  This creates a clear association between the state of the corpus and the
@@ -355,8 +365,8 @@ corpus already, perhaps as part of a third party project, you can provide the so
 e.g. `corpora = [ "//third_party/boringssl/src/fuzz/bn_div_corpus" ]`.
 
 Running `fx fuzz fetch [package]/[target]` will pull the corpus from the source location and install
-it.  Subsequently running `fx fuzz store [package]/[target]` will store this corpus in [CIPD][cipd].
-If you need to submit this corpus back upstream, you can save a local copy by explicitly setting the
+it.  Subsequently running `fx fuzz store [package]/[target]` will store this corpus in [CIPD]. If
+you need to submit this corpus back upstream, you can save a local copy by explicitly setting the
 local "staging" directory, e.g. `fx fuzz -s <source-path> store [package]/[target]`.
 
 ## Q: How do make my fuzzer better?
