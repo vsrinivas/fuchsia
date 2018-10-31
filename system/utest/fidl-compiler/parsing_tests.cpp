@@ -210,7 +210,6 @@ struct ß {
     const auto& errors = test_library.errors();
     EXPECT_NE(errors.size(), 0);
     ASSERT_STR_STR(errors[0].data(), "invalid character");
-    printf("GGKK %s\n", errors[0].data());
 
     END_TEST;
 }
