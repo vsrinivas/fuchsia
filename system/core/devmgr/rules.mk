@@ -43,7 +43,9 @@ MODULE_STATIC_LIBS := \
     system/ulib/bootdata \
     system/ulib/loader-service \
     system/ulib/async \
+    system/ulib/async.cpp \
     system/ulib/async-loop \
+    system/ulib/async-loop.cpp \
     system/ulib/sync \
     third_party/ulib/lz4 \
     system/ulib/port \
@@ -156,7 +158,11 @@ MODULE_SRCS := \
 	$(LOCAL_DIR)/dmctl.cpp \
 	$(LOCAL_DIR)/devhost-shared.cpp \
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/port system/ulib/fbl system/ulib/zx
+MODULE_STATIC_LIBS := \
+	system/ulib/ddk \
+	system/ulib/port \
+	system/ulib/fbl \
+	system/ulib/zx \
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
