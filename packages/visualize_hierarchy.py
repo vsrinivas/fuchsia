@@ -23,16 +23,27 @@ def get_package_nick(package):
 def main():
     parser = argparse.ArgumentParser(
             description=('Creates a graph of a build package hierarchy'))
-    parser.add_argument('--package',
-                        help='Path to the build package file to analyze',
-                        required=True)
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--product',
+                        help='Path to the build product file to analyze')
+    group.add_argument('--package',
+                        help='Path to the build package file to analyze')
     parser.add_argument('--output',
                         help='Path to the generated .dot file',
                         required=True)
     args = parser.parse_args()
 
+    packages = []
+    if args.product:
+        with open(args.product) as product_file:
+            data = json.load(product_file)
+            packages.extend(data['monolith'] if 'monolith' in data else [])
+            packages.extend(data['preinstall'] if 'preinstall' in data else [])
+            packages.extend(data['available'] if 'available' in data else [])
+    else:
+        packages = [args.package]
+
     # Build the dependency tree of packages.
-    packages = [args.package]
     deps = {}
     while packages:
         current = packages.pop(0)
