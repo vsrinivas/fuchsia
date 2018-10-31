@@ -272,6 +272,14 @@ func (ns *Netstack) delForwardingEntry(subnet net.Subnet) *stack.Error {
 	return &stack.Error{Type: stack.ErrorTypeNotFound}
 }
 
+func (ni *stackImpl) AddEthernetInterface(topologicalPath string, device ethernet.DeviceInterface) (*stack.Error, uint64, error) {
+	return &stack.Error{Type: stack.ErrorTypeNotSupported}, 0, nil
+}
+
+func (ni *stackImpl) DelEthernetInterface(id uint64) (*stack.Error, error) {
+	return &stack.Error{Type: stack.ErrorTypeNotSupported}, nil
+}
+
 func (ni *stackImpl) ListInterfaces() ([]stack.InterfaceInfo, error) {
 	return ni.ns.getNetInterfaces(), nil
 }
