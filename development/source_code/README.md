@@ -12,21 +12,16 @@ For how to build, see Fuchsia's [Getting Started](/getting_started.md) doc.
 The bootstrap procedure requires that you have Go 1.6 or newer and Git
 installed and on your PATH.
 
-In the following command, select the [layer](layers.md) of the system you wish
-to build. If you're unsure, select `topaz`, which contains the lower layers.
-
-This script will bootstrap a development environment for the given layer
-by first creating directories `fuchsia`, then downloading repositories for
-`<layer>` as well as dependent repositories required in building `<layer>`.
+This script will bootstrap a development environment for by first creating
+directories `fuchsia`.
 
 ```
-curl -s "https://fuchsia.googlesource.com/scripts/+/master/bootstrap?format=TEXT" | base64 --decode | bash -s <layer>
+curl -s "https://fuchsia.googlesource.com/scripts/+/master/bootstrap?format=TEXT" | base64 --decode
 ```
 
-If you change your mind later, you can use `scripts/fx set-layer <layer>` to
-[pick another layer](
-/development/workflows/multilayer_changes.md#switching-between-layers).
-
+This script will set up your development environment to track the HEAD of the
+`topaz` repository. If you wish to track a different repository at HEAD, you can
+use the `fx set-petal` command.
 
 ### Setting up environment variables
 

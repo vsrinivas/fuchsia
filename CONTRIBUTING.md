@@ -250,10 +250,9 @@ Multipart changes are tracked in Gerrit via topics, will be tested together,
 and can be landed in Gerrit at the same time with `Submit Whole Topic`. Topics
 can be edited via the web UI.
 
-## Changes that span layers
+## Changes that span repositories
 
-See [Changes that span layers](development/workflows/multilayer_changes.md) on
-how to work across [layers](development/source_code/layers.md).
+See [Changes that span repositories](development/workflows/multilayer_changes.md).
 
 ## Resolving merge conflicts
 

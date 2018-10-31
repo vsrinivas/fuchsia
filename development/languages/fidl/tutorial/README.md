@@ -39,7 +39,7 @@ While you're reading on, warm up your build:
 
 ```sh
 # You'll need Topaz for Dart later
-fx set-layer topaz
+fx set-petal topaz
 # Also include garnet examples when building Topaz
 fx set x64 --packages topaz/packages/default,garnet/packages/examples/fidl
 fx full-build
@@ -48,7 +48,7 @@ fx full-build
 Alternatively if you're not interested in Dart:
 
 ```sh
-fx set-layer garnet
+fx set-petal garnet
 fx full-build
 ```
 
