@@ -46,10 +46,9 @@ executable("mediaplayer_bin") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/timeline",
-    "//garnet/public/lib/ui/base_view/cpp",
+    "//garnet/public/lib/ui/view_framework",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
-    "//zircon/public/lib/zx",
   ]
 }
 
@@ -84,17 +83,16 @@ executable("tests") {
   deps = [
     ":mediaplayer_bin",
     "//garnet/bin/mediaplayer/graph",
+    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/fidl/fuchsia.mediaplayer",
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/media/transport",
-    "//garnet/public/lib/ui/base_view/cpp",
+    "//garnet/public/lib/ui/view_framework:view_provider",
     "//garnet/public/lib/url",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/hid",
-    "//zircon/public/lib/zx",
   ]
 }
 

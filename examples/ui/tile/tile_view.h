@@ -19,16 +19,19 @@
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
-#include "lib/ui/base_view/cpp/base_view.h"
-#include "lib/ui/base_view/cpp/v1_base_view.h"
 #include "lib/ui/scenic/cpp/resources.h"
+#include "lib/ui/view_framework/base_view.h"
 
 namespace examples {
 
-class TileView : public scenic::V1BaseView,
+class TileView : public mozart::BaseView,
                  public fuchsia::ui::policy::Presenter {
  public:
-  TileView(scenic::ViewContext context, TileParams tile_params);
+  TileView(::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+           fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+               view_owner_request,
+           component::StartupContext* startup_context,
+           const TileParams& tile_params);
 
   ~TileView() override;
 
@@ -79,7 +82,7 @@ class TileView : public scenic::V1BaseView,
 
   zx::channel OpenAsDirectory();
 
-  void AddChildView(zx::eventpair view_owner_token,
+  void AddChildView(zx::eventpair child_view_owner_token,
                     fuchsia::sys::ComponentControllerPtr);
   void RemoveChildView(uint32_t child_key);
 
@@ -89,6 +92,9 @@ class TileView : public scenic::V1BaseView,
   fs::SynchronousVfs vfs_;
   fbl::RefPtr<fs::PseudoDir> services_dir_;
   fuchsia::sys::LauncherPtr env_launcher_;
+
+  // Context inherited when TileView is launched.
+  component::StartupContext* startup_context_;
 
   // Parsed command-line parameters for this program.
   TileParams params_;

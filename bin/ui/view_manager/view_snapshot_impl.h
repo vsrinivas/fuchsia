@@ -8,6 +8,7 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include "garnet/bin/ui/view_manager/view_registry.h"
 #include "lib/fxl/macros.h"
+#include "lib/ui/view_framework/base_view.h"
 
 namespace view_manager {
 

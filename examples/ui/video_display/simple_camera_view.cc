@@ -33,11 +33,16 @@ constexpr float kInitialWindowYPos = 240;
 
 static const std::string kSimpleCameraServiceUrl = "simple_camera_server_cpp";
 
-SimpleCameraView::SimpleCameraView(scenic::ViewContext view_context)
-    : V1BaseView(std::move(view_context), "Video Display Example"),
+SimpleCameraView::SimpleCameraView(
+    async::Loop* loop, component::StartupContext* startup_context,
+    ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+        view_owner_request,
+    bool use_fake_camera)
+    : BaseView(std::move(view_manager), std::move(view_owner_request),
+               "Video Display Example"),
       node_(session()) {
-  FXL_VLOG(4) << "Creating video_display View";
-
+  FXL_VLOG(4) << "Creating View";
   // Create an ImagePipe and pass one end to the Session:
   fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe_handle;
   uint32_t image_pipe_id = session()->AllocResourceId();
@@ -53,8 +58,8 @@ SimpleCameraView::SimpleCameraView(scenic::ViewContext view_context)
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kSimpleCameraServiceUrl;
   launch_info.directory_request = simple_camera_provider_.NewRequest();
-  startup_context()->launcher()->CreateComponent(std::move(launch_info),
-                                                 controller_.NewRequest());
+  startup_context->launcher()->CreateComponent(std::move(launch_info),
+                                               controller_.NewRequest());
 
   simple_camera_provider_.ConnectToService(
       simple_camera_.NewRequest().TakeChannel(),

@@ -6,21 +6,23 @@
 #define GARNET_EXAMPLES_UI_SHAPES_SHAPES_VIEW_H_
 
 #include "lib/fxl/macros.h"
-#include "lib/ui/base_view/cpp/v1_base_view.h"
 #include "lib/ui/scenic/cpp/resources.h"
+#include "lib/ui/view_framework/base_view.h"
 
 class SkCanvas;
 
 namespace examples {
 
-class ShapesView : public scenic::V1BaseView {
+class ShapesView : public mozart::BaseView {
  public:
-  ShapesView(scenic::ViewContext context);
+  ShapesView(::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+             fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+                 view_owner_request);
 
   ~ShapesView() override;
 
  private:
-  // | scenic::V1BaseView |
+  // |BaseView|:
   void OnSceneInvalidated(
       fuchsia::images::PresentationInfo presentation_info) override;
 

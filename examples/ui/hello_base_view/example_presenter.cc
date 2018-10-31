@@ -4,21 +4,12 @@
 
 #include "garnet/examples/ui/hello_base_view/example_presenter.h"
 
-#include <fuchsia/ui/gfx/cpp/fidl.h>
-
 #include "lib/fxl/logging.h"
 
 namespace hello_base_view {
 
 ExamplePresenter::ExamplePresenter(fuchsia::ui::scenic::Scenic* scenic)
-    : session_(scenic), layers_(&session_) {
-  // This would typically be done by the root Presenter.
-  scenic->GetDisplayInfo(
-      [this](fuchsia::ui::gfx::DisplayInfo display_info) mutable {
-        Init(static_cast<float>(display_info.width_in_px),
-             static_cast<float>(display_info.height_in_px));
-      });
-}
+    : session_(scenic), layers_(&session_) {}
 
 void ExamplePresenter::Init(float width, float height) {
   FXL_CHECK(!compositor_);

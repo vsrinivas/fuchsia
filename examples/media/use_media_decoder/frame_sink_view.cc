@@ -98,9 +98,13 @@ class Frame {
 }  // namespace
 
 std::unique_ptr<FrameSinkView> FrameSinkView::Create(
-    scenic::ViewContext context, FrameSink* parent, async::Loop* main_loop) {
+    FrameSink* parent, async::Loop* main_loop,
+    ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+        view_owner_request) {
   return std::unique_ptr<FrameSinkView>(
-      new FrameSinkView(std::move(context), parent, main_loop));
+      new FrameSinkView(parent, main_loop, std::move(view_manager),
+                        std::move(view_owner_request)));
 }
 
 FrameSinkView::~FrameSinkView() { parent_->RemoveFrameSinkView(this); }
@@ -230,9 +234,13 @@ void FrameSinkView::PutFrame(
   frame.release();
 }
 
-FrameSinkView::FrameSinkView(scenic::ViewContext context, FrameSink* parent,
-                             async::Loop* main_loop)
-    : V1BaseView(std::move(context), "FrameSinkView"),
+FrameSinkView::FrameSinkView(
+    FrameSink* parent, async::Loop* main_loop,
+    ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+        view_owner_request)
+    : BaseView(std::move(view_manager), std::move(view_owner_request),
+               "FrameSinkView"),
       parent_(parent),
       main_loop_(main_loop),
       node_(session()) {
@@ -262,6 +270,7 @@ FrameSinkView::FrameSinkView(scenic::ViewContext context, FrameSink* parent,
   parent_->AddFrameSinkView(this);
 }
 
+// From mozart::BaseView. Called when the scene is "invalidated".
 void FrameSinkView::OnSceneInvalidated(
     fuchsia::images::PresentationInfo presentation_info) {
   if (!has_logical_size()) {

@@ -16,8 +16,12 @@ constexpr float kCircleElevation = 8.f;
 constexpr float kCircleRadius = 40.f;
 }  // namespace
 
-ShapesView::ShapesView(scenic::ViewContext context)
-    : V1BaseView(std::move(context), "Shapes"),
+ShapesView::ShapesView(
+    ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+        view_owner_request)
+    : BaseView(std::move(view_manager), std::move(view_owner_request),
+               "Shapes"),
       background_node_(session()),
       card_node_(session()),
       circle_node_(session()) {

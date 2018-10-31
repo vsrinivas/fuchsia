@@ -34,8 +34,6 @@
 #endif
 
 #if defined(CUBE_USE_IMAGE_PIPE)
-#include <fuchsia/ui/gfx/cpp/fidl.h>
-
 #include <lib/async-loop/cpp/loop.h>
 
 #include "lib/component/cpp/connect.h"
@@ -43,10 +41,12 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings.h"
 #include "lib/fxl/logging.h"
-#include "lib/ui/base_view/cpp/view_provider_component.h"
-#include "lib/ui/scenic/cpp/commands.h"
+
+#include <fuchsia/ui/gfx/cpp/fidl.h>
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
+#include "lib/ui/scenic/cpp/commands.h"
+#include "lib/ui/view_framework/view_provider_service.h"
 #include "vkcube_view.h"
 #endif  // defined(CUBE_USE_IMAGE_PIPE)
 
@@ -86,7 +86,7 @@ struct FuchsiaState {
   async::Loop loop;
   uint32_t image_pipe_handle = 0;
   fuchsia::images::ImagePipePtr pipe;
-  std::unique_ptr<scenic::ViewProviderComponent> component;
+  std::unique_ptr<mozart::ViewProviderService> view_provider_service;
   uint32_t num_frames = 60;
   uint32_t elapsed_frames = 0;
   std::chrono::time_point<std::chrono::high_resolution_clock> t0{};

@@ -2,31 +2,36 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_UI_VIDEO_DISPLAY_SIMPLE_CAMERA_VIEW_H_
-#define GARNET_EXAMPLES_UI_VIDEO_DISPLAY_SIMPLE_CAMERA_VIEW_H_
+#pragma once
 
 #include <deque>
 #include <list>
 
 #include <fbl/vector.h>
 #include <fuchsia/simplecamera/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fxl/macros.h>
-#include <lib/ui/base_view/cpp/v1_base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>
+#include <lib/ui/view_framework/base_view.h>
 
 namespace video_display {
 
-class SimpleCameraView : public scenic::V1BaseView {
+class SimpleCameraView : public mozart::BaseView {
  public:
-  SimpleCameraView(scenic::ViewContext view_context);
+  SimpleCameraView(
+      async::Loop* loop, component::StartupContext* startup_context,
+      ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+          view_owner_request,
+      bool use_fake_camera);
 
   ~SimpleCameraView() override;
 
  private:
-  // | scenic::V1BaseView |
-  // Called when the scene is "invalidated". Invalidation happens when surface
-  // dimensions or metrics change, but not necessarily when surface contents
-  // change.
+  // From mozart::BaseView. Called when the scene is "invalidated".
+  // Invalidation should happen when the surfaces change, but not
+  // necessarily when a texture changes.
   void OnSceneInvalidated(
       fuchsia::images::PresentationInfo presentation_info) override;
 
@@ -41,5 +46,3 @@ class SimpleCameraView : public scenic::V1BaseView {
 };
 
 }  // namespace video_display
-
-#endif  // GARNET_EXAMPLES_UI_VIDEO_DISPLAY_SIMPLE_CAMERA_VIEW_H_

@@ -8,11 +8,13 @@
 #include <lib/images/cpp/images.h>
 
 GuestView::GuestView(
-    scenic::ViewContext view_context,
-    fidl::InterfaceHandle<fuchsia::guest::device::ViewListener> view_listener,
+    GpuScanout* scanout,
     fidl::InterfaceHandle<fuchsia::ui::input::InputListener> input_listener,
-    GpuScanout* scanout)
-    : V1BaseView(std::move(view_context), "Guest"),
+    fidl::InterfaceHandle<fuchsia::guest::device::ViewListener> view_listener,
+    fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
+        view_owner_request)
+    : BaseView(std::move(view_manager), std::move(view_owner_request), "Guest"),
       background_node_(session()),
       material_(session()),
       scanout_(*scanout),

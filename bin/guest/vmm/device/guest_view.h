@@ -6,17 +6,19 @@
 #define GARNET_BIN_GUEST_VMM_DEVICE_GUEST_VIEW_H_
 
 #include <fuchsia/guest/device/cpp/fidl.h>
-#include <lib/ui/base_view/cpp/v1_base_view.h>
+#include <lib/ui/view_framework/base_view.h>
 
 #include "garnet/bin/guest/vmm/device/gpu_scanout.h"
 
-class GuestView : public scenic::V1BaseView {
+class GuestView : public mozart::BaseView {
  public:
   GuestView(
-      scenic::ViewContext view_context,
-      fidl::InterfaceHandle<fuchsia::guest::device::ViewListener> view_listener,
+      GpuScanout* scanout,
       fidl::InterfaceHandle<fuchsia::ui::input::InputListener> input_listener,
-      GpuScanout* scanout);
+      fidl::InterfaceHandle<fuchsia::guest::device::ViewListener> view_listener,
+      fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
+          view_owner_request);
 
  private:
   scenic::ShapeNode background_node_;
@@ -29,7 +31,7 @@ class GuestView : public scenic::V1BaseView {
   GpuScanout& scanout_;
   fuchsia::guest::device::ViewListenerPtr view_listener_;
 
-  // | scenic::V1BaseView |
+  // |mozart::BaseView|
   void OnPropertiesChanged(
       fuchsia::ui::viewsv1::ViewProperties old_properties) override;
   void OnSceneInvalidated(

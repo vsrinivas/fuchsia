@@ -10,7 +10,7 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
-#include <lib/ui/base_view/cpp/view_provider_component.h>
+#include <lib/ui/view_framework/view_provider_app.h>
 #include <lib/zx/vmo.h>
 
 #include <stdint.h>
@@ -92,7 +92,7 @@ class FrameSink {
   // this reason, and because we want to be able to assert in ~FrameSink that
   // there are zero views, we use a unique_ptr<> here so we can delete
   // view_provider_app_ early during ~FrameSink.
-  std::unique_ptr<scenic::ViewProviderComponent> view_provider_component_;
+  std::unique_ptr<mozart::ViewProviderApp> view_provider_app_;
 
   uint32_t frames_outstanding_ = 0;
 

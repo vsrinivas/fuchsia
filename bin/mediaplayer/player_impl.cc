@@ -30,7 +30,6 @@
 #include "lib/fxl/type_converter.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/type_converters.h"
-#include "lib/ui/base_view/cpp/base_view.h"
 
 namespace media_player {
 namespace {
@@ -148,7 +147,7 @@ void PlayerImpl::MaybeCreateRenderer(StreamType::Medium medium) {
       break;
     case StreamType::Medium::kVideo:
       if (!video_renderer_) {
-        video_renderer_ = FidlVideoRenderer::Create(startup_context_);
+        video_renderer_ = FidlVideoRenderer::Create();
         video_renderer_->SetGeometryUpdateCallback(
             [this]() { SendStatusUpdates(); });
 
@@ -468,16 +467,13 @@ void PlayerImpl::CreateView(
     fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewManager> view_manager,
     fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request) {
-  CreateView2(zx::eventpair(view_owner_request.TakeChannel().release()));
-}
-
-void PlayerImpl::CreateView2(zx::eventpair view_token) {
   MaybeCreateRenderer(StreamType::Medium::kVideo);
   if (!video_renderer_) {
     return;
   }
 
-  video_renderer_->CreateView(std::move(view_token));
+  video_renderer_->CreateView(view_manager.Bind(),
+                              std::move(view_owner_request));
 }
 
 void PlayerImpl::BindGainControl(

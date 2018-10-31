@@ -23,19 +23,22 @@ constexpr float kInitialWindowYPos = 240;
 
 }  // namespace
 
-YuvView::YuvView(scenic::ViewContext context,
+YuvView::YuvView(async::Loop* loop, component::StartupContext* startup_context,
+                 ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+                 fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+                     view_owner_request,
                  fuchsia::images::PixelFormat pixel_format)
-    : V1BaseView(std::move(context), "YuvView Example"),
+    : BaseView(std::move(view_manager), std::move(view_owner_request),
+               "YuvView Example"),
       node_(session()),
       pixel_format_(pixel_format),
       stride_(static_cast<uint32_t>(
           kShapeWidth * images::StrideBytesPerWidthPixel(pixel_format_))) {
   FXL_VLOG(4) << "Creating View";
-
   // Create an ImagePipe and use it.
   uint32_t image_pipe_id = session()->AllocResourceId();
-  session()->Enqueue(
-      scenic::NewCreateImagePipeCmd(image_pipe_id, image_pipe_.NewRequest()));
+  session()->Enqueue(scenic::NewCreateImagePipeCmd(
+      image_pipe_id, image_pipe_.NewRequest(loop->dispatcher())));
 
   // Create a material that has our image pipe mapped onto it:
   scenic::Material material(session());

@@ -27,8 +27,12 @@ constexpr int kColumns = 33;
 constexpr int kColumnsPerScreen = 5.f;
 }  // namespace
 
-ImageGridView::ImageGridView(scenic::ViewContext view_context)
-    : V1BaseView(std::move(view_context), "Image Grid Benchmark (cpp)"),
+ImageGridView::ImageGridView(
+    fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
+        view_owner_request)
+    : BaseView(std::move(view_manager), std::move(view_owner_request),
+               "Image Grid Benchmark (cpp)"),
       background_node_(session()),
       cards_parent_node_(session()),
       spring_(0.0 /* initial value */, 10.0 /* tension */,

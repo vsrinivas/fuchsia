@@ -3,12 +3,9 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
 #include <virtio/gpu.h>
-
-#include "lib/ui/scenic/cpp/session.h"
 
 #include "garnet/bin/guest/vmm/device/device_base.h"
 #include "garnet/bin/guest/vmm/device/gpu_resource.h"
@@ -345,29 +342,20 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
 
     if (input_listener && view_listener) {
       // Create view.
-      auto scenic =
-          context_.ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
-      zx::eventpair view_owner_token, view_token;
-      FXL_DCHECK(zx::eventpair::create(0u, &view_owner_token, &view_token) ==
-                 ZX_OK);
-
-      scenic::ViewContext view_context = {
-          .session_and_listener_request =
-              scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-          .view_token = std::move(view_token),
-          .startup_context = &context_,
-      };
-
-      view_ = std::make_unique<GuestView>(std::move(view_context),
-                                          std::move(view_listener),
-                                          std::move(input_listener), &scanout_);
+      fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner;
+      auto view_manager =
+          context_
+              .ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewManager>();
+      view_ = std::make_unique<GuestView>(
+          &scanout_, std::move(input_listener), std::move(view_listener),
+          std::move(view_manager), view_owner.NewRequest());
       view_->SetReleaseHandler([this] { view_.reset(); });
 
       // Present view.
       auto presenter =
           context_
               .ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
-      presenter->Present2(std::move(view_owner_token), nullptr);
+      presenter->Present(std::move(view_owner), nullptr);
     }
 
     // Initialize streams.

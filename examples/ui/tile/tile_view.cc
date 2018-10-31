@@ -12,14 +12,20 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/svc/cpp/services.h"
+#include "lib/ui/geometry/cpp/geometry_util.h"
 
 namespace examples {
 
-TileView::TileView(scenic::ViewContext context, TileParams params)
-    : V1BaseView(std::move(context), "Tile"),
+TileView::TileView(
+    ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+        view_owner_request,
+    component::StartupContext* startup_context, const TileParams& params)
+    : BaseView(std::move(view_manager), std::move(view_owner_request), "Tile"),
       vfs_(async_get_default_dispatcher()),
       services_dir_(fbl::AdoptRef(new fs::PseudoDir())),
-      params_(std::move(params)),
+      startup_context_(startup_context),
+      params_(params),
       container_node_(session()) {
   parent_node().AddChild(container_node_);
 
@@ -103,7 +109,7 @@ void TileView::CreateNestedEnvironment() {
   fuchsia::sys::ServiceListPtr service_list(new fuchsia::sys::ServiceList);
   service_list->names.push_back(fuchsia::ui::policy::Presenter::Name_);
   service_list->host_directory = OpenAsDirectory();
-  startup_context()->environment()->CreateNestedEnvironment(
+  startup_context_->environment()->CreateNestedEnvironment(
       env_.NewRequest(), env_controller_.NewRequest(), "tile",
       std::move(service_list), {.inherit_parent_services = true});
   env_->GetLauncher(env_launcher_.NewRequest());
@@ -123,7 +129,7 @@ void TileView::OnChildUnavailable(uint32_t child_key) {
   RemoveChildView(child_key);
 }
 
-void TileView::AddChildView(zx::eventpair view_owner_token,
+void TileView::AddChildView(zx::eventpair child_view_owner_token,
                             fuchsia::sys::ComponentControllerPtr controller) {
   const uint32_t view_key = next_child_view_key_++;
 
@@ -139,7 +145,7 @@ void TileView::AddChildView(zx::eventpair view_owner_token,
 
   views_.emplace(view_key, std::move(view_data));
 
-  GetViewContainer()->AddChild2(view_key, std::move(view_owner_token),
+  GetViewContainer()->AddChild2(view_key, std::move(child_view_owner_token),
                                 std::move(host_import_token));
   InvalidateScene();
 }
@@ -151,7 +157,7 @@ void TileView::RemoveChildView(uint32_t child_key) {
   it->second->host_node.Detach();
   views_.erase(it);
 
-  GetViewContainer()->RemoveChild2(child_key, zx::eventpair());
+  GetViewContainer()->RemoveChild(child_key, nullptr);
   InvalidateScene();
 }
 

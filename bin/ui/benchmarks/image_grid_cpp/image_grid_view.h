@@ -7,7 +7,7 @@
 
 #include "garnet/lib/ui/scenic/util/rk4_spring_simulation.h"
 #include "lib/fxl/macros.h"
-#include "lib/ui/base_view/cpp/v1_base_view.h"
+#include "lib/ui/view_framework/base_view.h"
 
 class SkCanvas;
 
@@ -16,14 +16,16 @@ namespace image_grid {
 class Frame;
 class Rasterizer;
 
-class ImageGridView : public scenic::V1BaseView {
+class ImageGridView : public mozart::BaseView {
  public:
-  ImageGridView(scenic::ViewContext view_context);
+  ImageGridView(fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+                fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
+                    view_owner_request);
 
   ~ImageGridView() override;
 
  private:
-  // | scenic::V1BaseView |
+  // |BaseView|:
   void OnSceneInvalidated(
       fuchsia::images::PresentationInfo presentation_info) override;
 

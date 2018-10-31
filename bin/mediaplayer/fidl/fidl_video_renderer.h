@@ -7,10 +7,9 @@
 
 #include <fbl/array.h>
 #include <fuchsia/media/cpp/fidl.h>
-#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/ui/base_view/cpp/v1_base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>
+#include <lib/ui/view_framework/base_view.h>
 #include <queue>
 #include <unordered_map>
 #include "garnet/bin/mediaplayer/metrics/packet_timing_tracker.h"
@@ -23,10 +22,9 @@ class FidlVideoRenderer
     : public VideoRenderer,
       public std::enable_shared_from_this<FidlVideoRenderer> {
  public:
-  static std::shared_ptr<FidlVideoRenderer> Create(
-      component::StartupContext* startup_context);
+  static std::shared_ptr<FidlVideoRenderer> Create();
 
-  FidlVideoRenderer(component::StartupContext* startup_context);
+  FidlVideoRenderer();
 
   ~FidlVideoRenderer() override;
 
@@ -62,7 +60,10 @@ class FidlVideoRenderer
   void SetGeometryUpdateCallback(fit::closure callback);
 
   // Creates a view.
-  void CreateView(zx::eventpair view_token);
+  void CreateView(
+      fidl::InterfacePtr<::fuchsia::ui::viewsv1::ViewManager> view_manager,
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+          view_owner_request);
 
  protected:
   // Renderer overrides.
@@ -108,9 +109,11 @@ class FidlVideoRenderer
     async::WaitMethod<Image, &Image::WaitHandler> wait_;
   };
 
-  class View : public scenic::V1BaseView {
+  class View : public mozart::BaseView {
    public:
-    View(scenic::ViewContext context,
+    View(::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+         fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+             view_owner_request,
          std::shared_ptr<FidlVideoRenderer> renderer);
 
     ~View() override;
@@ -129,7 +132,7 @@ class FidlVideoRenderer
                       async_dispatcher_t* dispatcher);
 
    private:
-    // | scenic::V1BaseView |
+    // |BaseView|:
     void OnSceneInvalidated(
         fuchsia::images::PresentationInfo presentation_info) override;
 
@@ -174,9 +177,6 @@ class FidlVideoRenderer
   bool have_valid_image_info() {
     return image_info_.width != 0 && image_info_.height != 0;
   }
-
-  component::StartupContext* startup_context_;
-  fidl::InterfacePtr<fuchsia::ui::scenic::Scenic> scenic_;
 
   std::vector<std::unique_ptr<StreamTypeSet>> supported_stream_types_;
   bool input_connection_ready_ = false;

@@ -2,28 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{bail, Error, ResultExt};
-use fidl::endpoints::{create_endpoints, create_proxy, RequestStream, ServerEnd, ServiceMarker};
-use fidl_fuchsia_ui_app as viewsv2;
+use failure::{Error, ResultExt, bail};
+use fidl::endpoints::{create_proxy, create_endpoints, RequestStream, ServerEnd, ServiceMarker};
 use fidl_fuchsia_ui_gfx::{self as gfx, ColorRgba};
 use fidl_fuchsia_ui_scenic::{SessionListenerMarker, SessionListenerRequest};
 use fidl_fuchsia_ui_viewsv1::ViewProviderRequest::CreateView;
-use fidl_fuchsia_ui_viewsv1::{
-    ViewListenerMarker, ViewListenerRequest, ViewManagerMarker, ViewManagerProxy,
-    ViewProviderMarker, ViewProviderRequestStream, ViewProxy,
-};
+use fidl_fuchsia_ui_viewsv1::{ViewListenerMarker, ViewListenerRequest, ViewManagerMarker,
+                              ViewManagerProxy, ViewProviderMarker, ViewProviderRequestStream};
+use fidl_fuchsia_ui_viewsv1token::ViewOwnerMarker;
 use fuchsia_app as component;
 use fuchsia_app::{client::connect_to_service, server::ServiceFactory};
 use fuchsia_async::{self as fasync, Interval};
-use fuchsia_scenic::{ImportNode, Material, Rectangle, Session, SessionPtr, ShapeNode};
-use fuchsia_zircon::{self as zx, ClockId, Duration, EventPair, Handle, Time};
+use fuchsia_scenic::{ImportNode, Material, Rectangle, Session, SessionPtr,
+                     ShapeNode};
+use fuchsia_zircon::{self as zx, ClockId, Duration, Time};
 use futures::future::ready as fready;
 use futures::{StreamExt, TryFutureExt, TryStreamExt};
 use std::f32::consts::PI;
 use std::sync::{Arc, Mutex};
 
 struct SpinningSquareView {
-    _view: ViewProxy,
+    _view: fidl_fuchsia_ui_viewsv1::ViewProxy,
     session: SessionPtr,
     import_node: ImportNode,
     background_node: ShapeNode,
@@ -37,7 +36,8 @@ type SpinningSquareViewPtr = Arc<Mutex<SpinningSquareView>>;
 
 impl SpinningSquareView {
     pub fn new(
-        view_listener_request: ServerEnd<ViewListenerMarker>, view: ViewProxy, mine: zx::EventPair,
+        view_listener_request: ServerEnd<ViewListenerMarker>,
+        view: fidl_fuchsia_ui_viewsv1::ViewProxy, mine: zx::EventPair,
         scenic: fidl_fuchsia_ui_scenic::ScenicProxy,
     ) -> Result<SpinningSquareViewPtr, Error> {
         let (session_listener, session_listener_request) = create_endpoints()?;
@@ -79,14 +79,12 @@ impl SpinningSquareView {
         let f = timer
             .map(move |_| {
                 view_controller.lock().unwrap().update();
-            })
-            .collect::<()>();
+            }).collect::<()>();
         fasync::spawn(f);
     }
 
     fn setup_session_listener(
-        view_controller: &SpinningSquareViewPtr,
-        session_listener_request: ServerEnd<SessionListenerMarker>,
+        view_controller: &SpinningSquareViewPtr, session_listener_request: ServerEnd::<SessionListenerMarker>,
     ) {
         let view_controller = view_controller.clone();
         fasync::spawn(
@@ -99,8 +97,7 @@ impl SpinningSquareView {
                         .unwrap()
                         .handle_session_events(events),
                     _ => (),
-                })
-                .try_collect::<()>()
+                }).try_collect::<()>()
                 .unwrap_or_else(|e| eprintln!("view listener error: {:?}", e)),
         );
     }
@@ -125,8 +122,7 @@ impl SpinningSquareView {
                             .handle_properies_changed(&properties);
                         fready(responder.send())
                     },
-                )
-                .unwrap_or_else(|e| eprintln!("view listener error: {:?}", e)),
+                ).unwrap_or_else(|e| eprintln!("view listener error: {:?}", e)),
         );
     }
 
@@ -230,98 +226,68 @@ impl App {
         }))
     }
 
-    pub fn spawn_v1_view_provider_server(app: &AppPtr, chan: fasync::Channel) {
+    pub fn spawn_view_provider_server(app: &AppPtr, chan: fasync::Channel) {
         let app = app.clone();
         fasync::spawn(
             ViewProviderRequestStream::from_channel(chan)
                 .try_for_each(move |req| {
                     let CreateView { view_owner, .. } = req;
-                    let token: EventPair = EventPair::from(Handle::from(view_owner.into_channel()));
-                    App::app_create_view(app.clone(), token).unwrap();
+                    App::app_create_view(app.clone(), view_owner).unwrap();
                     futures::future::ready(Ok(()))
-                })
-                .unwrap_or_else(|e| eprintln!("error running V1 view_provider server: {:?}", e)),
+                }).unwrap_or_else(|e| eprintln!("error running view_provider server: {:?}", e)),
         )
     }
 
-    pub fn spawn_v2_view_provider_server(app: &AppPtr, chan: fasync::Channel) {
-        let app = app.clone();
-        fasync::spawn(
-            viewsv2::ViewProviderRequestStream::from_channel(chan)
-                .try_for_each(move |req| {
-                    let viewsv2::ViewProviderRequest::CreateView { token, .. } = req;
-                    App::app_create_view(app.clone(), token).unwrap();
-                    futures::future::ready(Ok(()))
-                })
-                .unwrap_or_else(|e| eprintln!("error running V2 view_provider server: {:?}", e)),
-        )
+    pub fn app_create_view(app: AppPtr, req: ServerEnd<ViewOwnerMarker>) -> Result<(), Error> {
+        app.lock().unwrap().create_view(req)
     }
 
-    pub fn app_create_view(app: AppPtr, view_token: EventPair) -> Result<(), Error> {
-        app.lock().unwrap().create_view(view_token)
-    }
-
-    pub fn create_view(&mut self, view_token: EventPair) -> Result<(), Error> {
+    pub fn create_view(&mut self, req: ServerEnd<ViewOwnerMarker>) -> Result<(), Error> {
         let (view, view_server_end) = create_proxy()?;
         let (view_listener, view_listener_request) = create_endpoints()?;
         let (mine, theirs) = zx::EventPair::create().unwrap();
-        self.view_manager.create_view2(
+        self.view_manager.create_view(
             view_server_end,
-            view_token,
+            req,
             view_listener,
             theirs,
-            Some("spinning_square_rs"),
+            None,
         )?;
         let (scenic, scenic_request) = create_proxy()?;
         self.view_manager.get_scenic(scenic_request).unwrap();
-        self.views.push(SpinningSquareView::new(
-            view_listener_request,
-            view,
-            mine,
-            scenic,
-        )?);
+        let view_ptr = SpinningSquareView::new(view_listener_request, view, mine, scenic).unwrap();
+        self.views.push(view_ptr);
         Ok(())
     }
 }
 
-struct V1ViewProvider {
+struct ViewProvider {
     app: AppPtr,
 }
 
-impl ServiceFactory for V1ViewProvider {
+impl ServiceFactory for ViewProvider {
     fn service_name(&self) -> &str {
         ViewProviderMarker::NAME
     }
 
     fn spawn_service(&mut self, channel: fasync::Channel) {
-        App::spawn_v1_view_provider_server(&self.app, channel);
-    }
-}
-
-struct V2ViewProvider {
-    app: AppPtr,
-}
-
-impl ServiceFactory for V2ViewProvider {
-    fn service_name(&self) -> &str {
-        viewsv2::ViewProviderMarker::NAME
-    }
-
-    fn spawn_service(&mut self, channel: fasync::Channel) {
-        App::spawn_v2_view_provider_server(&self.app, channel);
+        App::spawn_view_provider_server(&self.app, channel);
     }
 }
 
 fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
+
     let app = App::new();
 
+    let view_provider = ViewProvider { app: app.clone() };
+
     let fut = component::server::ServicesServer::new()
-        .add_service(V1ViewProvider { app: app.clone() })
-        .add_service(V2ViewProvider { app: app.clone() })
+        .add_service(view_provider)
         .start()
         .context("Error starting view provider server")?;
 
     executor.run_singlethreaded(fut)?;
+
     Ok(())
 }

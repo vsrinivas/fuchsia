@@ -6,18 +6,21 @@
 #define GARNET_EXAMPLES_UI_SPINNING_SQUARE_SPINNING_SQUARE_VIEW_H_
 
 #include "lib/fxl/macros.h"
-#include "lib/ui/base_view/cpp/v1_base_view.h"
 #include "lib/ui/scenic/cpp/resources.h"
+#include "lib/ui/view_framework/base_view.h"
 
 namespace examples {
 
-class SpinningSquareView : public scenic::V1BaseView {
+class SpinningSquareView : public mozart::BaseView {
  public:
-  SpinningSquareView(scenic::ViewContext context);
+  SpinningSquareView(
+      ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+          view_owner_request);
   ~SpinningSquareView() override;
 
  private:
-  // | scenic::V1BaseView |
+  // |BaseView|:
   void OnSceneInvalidated(
       fuchsia::images::PresentationInfo presentation_info) override;
 

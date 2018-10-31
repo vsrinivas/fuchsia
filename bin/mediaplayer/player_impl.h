@@ -8,7 +8,6 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
-#include <zx/eventpair.h>
 #include <unordered_map>
 #include "garnet/bin/mediaplayer/core/player_core.h"
 #include "garnet/bin/mediaplayer/decode/decoder.h"
@@ -58,8 +57,6 @@ class PlayerImpl : public fuchsia::mediaplayer::Player {
       fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewManager> view_manager,
       fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request) override;
-
-  void CreateView2(zx::eventpair view_token) override;
 
   void BindGainControl(fidl::InterfaceRequest<fuchsia::media::GainControl>
                            gain_control_request) override;

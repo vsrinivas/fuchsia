@@ -8,7 +8,7 @@
 #include "garnet/bin/mediaplayer/test/mediaplayer_test_params.h"
 #include "garnet/bin/mediaplayer/test/mediaplayer_test_view.h"
 #include "lib/fxl/command_line.h"
-#include "lib/ui/base_view/cpp/view_provider_component.h"
+#include "lib/ui/view_framework/view_provider_app.h"
 
 int main(int argc, char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -29,12 +29,13 @@ int main(int argc, char** argv) {
     async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });
   };
 
-  scenic::ViewProviderComponent component(
-      [&params, quit_callback](scenic::ViewContext view_context) {
+  mozart::ViewProviderApp app(
+      [&loop, &params, quit_callback](mozart::ViewContext view_context) {
         return std::make_unique<media_player::test::MediaPlayerTestView>(
-            std::move(view_context), quit_callback, params);
-      },
-      &loop);
+            quit_callback, std::move(view_context.view_manager),
+            std::move(view_context.view_owner_request),
+            view_context.startup_context, params);
+      });
 
   loop.Run();
 

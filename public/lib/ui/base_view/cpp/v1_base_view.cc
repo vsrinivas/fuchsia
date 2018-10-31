@@ -20,7 +20,6 @@ V1BaseView::V1BaseView(scenic::ViewContext context,
       view_listener_binding_(this),
       view_container_listener_binding_(this),
       input_listener_binding_(this),
-      outgoing_services_(std::move(context.incoming_services)),
       session_(std::move(context.session_and_listener_request)),
       parent_node_(&session_) {
   FXL_DCHECK(context.view_token);

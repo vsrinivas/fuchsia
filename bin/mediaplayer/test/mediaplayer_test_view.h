@@ -17,16 +17,20 @@
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/media/timeline/timeline_function.h"
-#include "lib/ui/base_view/cpp/v1_base_view.h"
+#include "lib/ui/view_framework/base_view.h"
 
 namespace media_player {
 namespace test {
 
-class MediaPlayerTestView : public scenic::V1BaseView {
+class MediaPlayerTestView : public mozart::BaseView {
  public:
-  MediaPlayerTestView(scenic::ViewContext view_context,
-                      fit::function<void(int)> quit_callback,
-                      const MediaPlayerTestParams& params);
+  MediaPlayerTestView(
+      fit::function<void(int)> quit_callback,
+      ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
+          view_owner_request,
+      component::StartupContext* startup_context,
+      const MediaPlayerTestParams& params);
 
   ~MediaPlayerTestView() override;
 

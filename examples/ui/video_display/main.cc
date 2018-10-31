@@ -8,22 +8,25 @@
 #include "garnet/examples/ui/video_display/simple_camera_view.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
-#include "lib/ui/base_view/cpp/view_provider_component.h"
+#include "lib/ui/view_framework/view_provider_app.h"
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  trace::TraceProvider trace_provider(loop.dispatcher());
-
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  scenic::ViewProviderComponent component(
-      [](scenic::ViewContext view_context) {
+  bool use_fake_camera = command_line.HasOption("fake_camera");
+
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  trace::TraceProvider trace_provider(loop.dispatcher());
+
+  mozart::ViewProviderApp app(
+      [&loop, use_fake_camera](mozart::ViewContext view_context) {
         return std::make_unique<video_display::SimpleCameraView>(
-            std::move(view_context));
-      },
-      &loop);
+            &loop, view_context.startup_context,
+            std::move(view_context.view_manager),
+            std::move(view_context.view_owner_request), use_fake_camera);
+      });
 
   loop.Run();
   return 0;
