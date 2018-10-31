@@ -286,7 +286,7 @@ void InputCommandDispatcher::DispatchCommand(
       }
 
       // Determine focusability of top-level view.
-      if (views.size() > 0) {
+      if (views.size() > 0 && views[0]) {
         hit_views.focus_change = IsFocusChange(views[0]);
       }
     }
