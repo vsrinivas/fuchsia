@@ -91,7 +91,7 @@ constexpr uint64_t kAsyncTxInterruptKey = 2;
 constexpr uint64_t kTbttInterruptKey = 3;
 
 // TODO(hahnr): Use bcast_mac from MacAddr once it was moved to common/.
-const uint8_t kBcastAddr[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+const uint8_t kBcastAddr[ETH_MAC_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 // TX packet ID used to signal an invalid or untracked (e.g. beacon frame) packet.
 constexpr int kInvalidTxPacketId = 0;
@@ -169,8 +169,7 @@ static wlanmac_protocol_ops_t wlanmac_ops = {
         return ZX_OK;
     },
     .clear_assoc = [](void* ctx, uint32_t options, const uint8_t* mac) -> zx_status_t {
-        // TODO(NET-1759): Configure the chipset to support disassociation
-        return ZX_OK;
+        return DEV(ctx)->WlanmacClearAssoc(options, mac);
     },
 };
 #undef DEV
@@ -4529,17 +4528,15 @@ setchan_failure:
     return status;
 }
 
-zx_status_t Device::WlanmacConfigureBss(uint32_t options, wlan_bss_config_t* config) {
-    if (options != 0) { return ZX_ERR_INVALID_ARGS; }
-
+zx_status_t Device::SetBss(const uint8_t* bssid) {
     MacBssidDw0 bss0;
     MacBssidDw1 bss1;
-    bss0.set_mac_addr_0(config->bssid[0]);
-    bss0.set_mac_addr_1(config->bssid[1]);
-    bss0.set_mac_addr_2(config->bssid[2]);
-    bss0.set_mac_addr_3(config->bssid[3]);
-    bss1.set_mac_addr_4(config->bssid[4]);
-    bss1.set_mac_addr_5(config->bssid[5]);
+    bss0.set_mac_addr_0(bssid[0]);
+    bss0.set_mac_addr_1(bssid[1]);
+    bss0.set_mac_addr_2(bssid[2]);
+    bss0.set_mac_addr_3(bssid[3]);
+    bss1.set_mac_addr_4(bssid[4]);
+    bss1.set_mac_addr_5(bssid[5]);
     bss1.set_multi_bss_mode(MultiBssIdMode::k1BssIdMode);
 
     auto status = WriteRegister(bss0);
@@ -4547,7 +4544,25 @@ zx_status_t Device::WlanmacConfigureBss(uint32_t options, wlan_bss_config_t* con
     status = WriteRegister(bss1);
     CHECK_WRITE(BSSID_DW1, status);
 
-    memcpy(bssid_, config->bssid, 6);
+    memcpy(bssid_, bssid, ETH_MAC_SIZE);
+
+    return ZX_OK;
+}
+
+zx_status_t Device::WlanmacConfigureBss(uint32_t options, wlan_bss_config_t* config) {
+    if (options != 0) { return ZX_ERR_INVALID_ARGS; }
+
+    // Some APs balk at being asked to associate immediately after disassociation, so add a
+    // short quiesce period if we're reconnecting to one we just disconnected from (NET-1389).
+    if (!std::memcmp(config->bssid, last_disconnect_bssid_, ETH_MAC_SIZE)) {
+        zx::time curr_time = zx::clock::get_monotonic();
+        if (curr_time - last_disconnect_time_ < kDisconnectQuiescePeriod) {
+            sleep_for((last_disconnect_time_ + kDisconnectQuiescePeriod) - curr_time);
+        }
+    }
+
+    zx_status_t status = SetBss(config->bssid);
+    if (status != ZX_OK) { return status; }
 
     // Additional configurations when BSS is managed by this device.
     // This will allow offloading Beacon management to hardware.
@@ -4893,6 +4908,25 @@ zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_confi
     }
     }
 
+    return status;
+}
+
+zx_status_t Device::WlanmacClearAssoc(uint32_t options, const uint8_t* bssid) {
+    if (options != 0) { return ZX_ERR_INVALID_ARGS; }
+
+    if (std::memcmp(bssid, bssid_, ETH_MAC_SIZE)) {
+        errorf("request to disassociate from bssid we are not currently associated with\n");
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    // Set bssid to zeroes to force disassociation
+    uint8_t null_bssid[ETH_MAC_SIZE] = { 0 };
+    zx_status_t status = SetBss(null_bssid);
+    if (status == ZX_OK) {
+        last_disconnect_time_ = zx::clock::get_monotonic();
+        std::memcpy(last_disconnect_bssid_, bssid, ETH_MAC_SIZE);
+        std::memcpy(bssid_, null_bssid, ETH_MAC_SIZE);
+    }
     return status;
 }
 

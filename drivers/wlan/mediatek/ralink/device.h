@@ -98,6 +98,7 @@ class Device {
     zx_status_t WlanmacEnableBeaconing(uint32_t options, bool enabled);
     zx_status_t WlanmacConfigureBeacon(uint32_t options, wlan_tx_packet_t* pkt);
     zx_status_t WlanmacSetKey(uint32_t options, wlan_key_config_t* key_config);
+    zx_status_t WlanmacClearAssoc(uint32_t options, const uint8_t* bssid);
 
     zx_status_t Query(wlan_info_t* info);
 
@@ -242,6 +243,8 @@ class Device {
     template <typename R, typename Predicate>
     zx_status_t BusyWait(R* reg, Predicate pred, zx::duration delay = kDefaultBusyWait);
 
+    zx_status_t SetBss(const uint8_t* bssid);
+
     void HandleRxComplete(usb_request_t* request);
     void HandleTxComplete(usb_request_t* request);
 
@@ -321,16 +324,20 @@ class Device {
     };
     uint16_t lna_gain_ = 0;
     uint8_t bg_rssi_offset_[3] = {};
-    uint8_t bssid_[6];
+    uint8_t bssid_[ETH_MAC_SIZE];
 
     std::vector<usb_request_t*> free_write_reqs_ __TA_GUARDED(lock_);
     uint16_t iface_id_ __TA_GUARDED(lock_) = 0;
     uint16_t iface_role_ __TA_GUARDED(lock_) = 0;
 
+    constexpr static zx::duration kDisconnectQuiescePeriod = zx::msec(10);
+    zx::time last_disconnect_time_ = {};
+    uint8_t last_disconnect_bssid_[ETH_MAC_SIZE] = {0};
+
     // TX statistics reporting
     struct TxStatsFifoEntry {
         // Destination mac address, or addr1 in packet header.
-        uint8_t peer_addr[6] = {};
+        uint8_t peer_addr[ETH_MAC_SIZE] = {};
         // DDK index to uniquely identify a tx vector.
         tx_vec_idx_t tx_vector_idx = WLAN_TX_VECTOR_IDX_INVALID;
         // True iff this FIFO entry is in use.
