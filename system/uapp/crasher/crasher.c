@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 
 #include <zircon/syscalls.h>
 
@@ -98,21 +99,75 @@ volatile char* mem_alloc;
 int mem(volatile unsigned int* arg) {
     int count = 0;
     for (;;) {
-        mem_alloc = malloc(1024*1024);
-        memset((void*)mem_alloc, 0xa5, 1024*1024);
+        mem_alloc = malloc(1024 * 1024);
+        memset((void*)mem_alloc, 0xa5, 1024 * 1024);
         count++;
         if ((count % 128) == 0) {
             zx_nanosleep(zx_deadline_after(ZX_MSEC(250)));
             write(1, ".", 1);
         }
     }
-
 }
 
 int use_after_free(volatile unsigned int* arg) {
-    char *p = strdup("Hello, world!");
+    char* p = strdup("Hello, world!");
     free(p);
     puts(p);
+    return 0;
+}
+
+typedef struct {
+    int depth;
+    int max_depth;
+} deep_sleep_args_t;
+
+int deep_sleep(deep_sleep_args_t* args) {
+    if (args->depth < args->max_depth) {
+        args->depth++;
+        deep_sleep(args);
+    }
+    // The compiler chokes on -Winfinite-recursion otherwise.
+    volatile bool running = true;
+    while (running) {
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
+    }
+    return 0;
+}
+
+int thread_func(void* arg) {
+    return deep_sleep((deep_sleep_args_t*)arg);
+}
+
+int blind_write_multithreaded(volatile unsigned int* addr) {
+    // Start 5 separate threads that will recurse a bit then sleep.
+    int kThreads = 5;
+    thrd_t threads[kThreads];
+    deep_sleep_args_t args[kThreads];
+    for (int i = 0; i < kThreads; ++i) {
+        args[i].depth = 0;
+        args[i].max_depth = 5;
+        int ret = thrd_create_with_name(&threads[i], thread_func, &args[i], "deep_sleep");
+        if (ret != thrd_success) {
+            printf("Unexpected thread create return: %d\n", ret);
+            return 1;
+        }
+    }
+
+    // Wait for the threads to have finished their recursion then crash the main thread.
+    for (int i = 0; i < kThreads; ++i) {
+        while (args[i].depth < args[i].max_depth) {
+            zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
+        }
+    }
+    blind_write(addr);
+
+    for (int i = 0; i < kThreads; ++i) {
+        int ret = thrd_join(threads[i], NULL);
+        if (ret != thrd_success) {
+            printf("Unexpected thread join return: %d\n", ret);
+            return 1;
+        }
+    }
     return 0;
 }
 
@@ -127,7 +182,9 @@ command_t commands[] = {
     {"oom", oom, "out of memory c++ death"},
     {"mem", mem, "out of memory"},
     {"use_after_free", use_after_free, "use memory after freeing it"},
-    {NULL, NULL, NULL}};
+    {"write0_mt", blind_write_multithreaded, "write to address 0x0 in one thread, sleeping in 5 others"},
+    {NULL, NULL, NULL},
+};
 
 int main(int argc, char** argv) {
     printf("=@ crasher @=\n");
