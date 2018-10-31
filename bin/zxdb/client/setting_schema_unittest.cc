@@ -12,8 +12,10 @@ const char kKey[] = "key";
 const char kName[] = "name";
 const char kDescription[] = "description";
 
+constexpr SettingSchema::Level kLevel = SettingSchema::Level::kDefault;
+
 TEST(SettingSchema, Bool) {
-  auto schema = fxl::MakeRefCounted<SettingSchema>();
+  auto schema = fxl::MakeRefCounted<SettingSchema>(kLevel);
 
   bool value = true;
   SettingSchemaItem item(kName, kDescription, value);
@@ -39,7 +41,7 @@ TEST(SettingSchema, Bool) {
 }
 
 TEST(SettingSchema, Int) {
-  auto schema = fxl::MakeRefCounted<SettingSchema>();
+  auto schema = fxl::MakeRefCounted<SettingSchema>(kLevel);
 
   int value = 10;
   SettingSchemaItem item(kName, kDescription, value);
@@ -64,7 +66,7 @@ TEST(SettingSchema, Int) {
 }
 
 TEST(SettingSchema, String) {
-  auto schema = fxl::MakeRefCounted<SettingSchema>();
+  auto schema = fxl::MakeRefCounted<SettingSchema>(kLevel);
 
   std::string value = "test";
   SettingSchemaItem item(kName, kDescription, value);
@@ -89,7 +91,7 @@ TEST(SettingSchema, String) {
 }
 
 TEST(SettingSchema, StringWithOptions) {
-  auto schema = fxl::MakeRefCounted<SettingSchema>();
+  auto schema = fxl::MakeRefCounted<SettingSchema>(kLevel);
 
   std::string value = "valid";
   std::vector<std::string> valid_values = {value, "another"};
@@ -107,7 +109,7 @@ TEST(SettingSchema, StringWithOptions) {
 }
 
 TEST(SettingSchema, List) {
-  auto schema = fxl::MakeRefCounted<SettingSchema>();
+  auto schema = fxl::MakeRefCounted<SettingSchema>(kLevel);
 
   std::vector<std::string> value = {"test", "vector"};
   SettingSchemaItem item(kName, kDescription, value);

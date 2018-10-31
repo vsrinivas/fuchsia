@@ -5,6 +5,7 @@
 #include "garnet/bin/zxdb/client/target.h"
 
 #include "garnet/bin/zxdb/client/setting_schema_definition.h"
+#include "garnet/bin/zxdb/client/system.h"
 
 namespace zxdb {
 
@@ -13,7 +14,8 @@ namespace zxdb {
 namespace {
 
 fxl::RefPtr<SettingSchema> CreateSchema() {
-  auto schema = fxl::MakeRefCounted<SettingSchema>();
+  auto schema =
+      fxl::MakeRefCounted<SettingSchema>(SettingSchema::Level::kTarget);
   return schema;
 }
 
@@ -21,11 +23,10 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
 
 // Target Implementation -------------------------------------------------------
 
-
 Target::Target(Session* session)
     : ClientObject(session),
       // Implementations can set up fallbacks if needed.
-      settings_(SettingStore::Level::kTarget, GetSchema(), nullptr),
+      settings_(GetSchema(), nullptr),
       weak_factory_(this) {}
 
 Target::~Target() = default;

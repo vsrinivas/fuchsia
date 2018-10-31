@@ -26,6 +26,6 @@ OutputBuffer FormatSetting(const StoredSetting&);
 // Useful for feedback.
 OutputBuffer FormatSettingValue(const StoredSetting&);
 
-const char* SettingStoreLevelToString(SettingStore::Level);
+const char* SettingSchemaLevelToString(SettingSchema::Level);
 
 }  // namespace zxdb

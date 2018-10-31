@@ -21,7 +21,8 @@ const char* kSymbolPathsDescription = R"(
 namespace {
 
 fxl::RefPtr<SettingSchema> CreateSchema() {
-  auto schema = fxl::MakeRefCounted<SettingSchema>();
+  auto schema =
+      fxl::MakeRefCounted<SettingSchema>(SettingSchema::Level::kSystem);
 
   schema->AddList(ClientSettings::kSymbolPaths, kSymbolPathsDescription, {});
 
@@ -33,8 +34,7 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
 // System Implementation -------------------------------------------------------
 
 System::System(Session* session)
-    : ClientObject(session),
-      settings_(SettingStore::Level::kSystem, GetSchema(), nullptr) {}
+    : ClientObject(session), settings_(GetSchema(), nullptr) {}
 System::~System() = default;
 
 void System::AddObserver(SystemObserver* observer) {

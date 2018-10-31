@@ -6,6 +6,9 @@
 
 #include "garnet/bin/zxdb/client/setting_schema.h"
 #include "garnet/bin/zxdb/client/setting_store.h"
+#include "garnet/bin/zxdb/client/system.h"
+#include "garnet/bin/zxdb/client/target.h"
+#include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
@@ -86,6 +89,59 @@ void AddSettingToTable(const StoredSetting& setting,
   }
 }
 
+// Prints all the values for |store| associated with a particular schema.
+// A SettingStore can have values associated with many values as many settings
+// are added to a lower-level schema to implement overriding.
+OutputBuffer PrintSettingStoreFromSchema(const SettingStore& store,
+                                         const SettingSchema& schema) {
+  std::vector<std::vector<OutputBuffer>> rows;
+  for (auto [key, item] : schema.items()) {
+    // Overriden settings are meant to be listed in another schema.
+    if (item.overriden())
+      continue;
+
+    // A particular store could not have this setting in its schema, meaning
+    // that it will return a null value if the value is not meant to be an
+    // override. In that case, we return the schema default.
+    auto setting = store.GetSetting(key);
+    if (setting.value.is_null()) {
+      // We simply override the value for the purpose of printing.
+      setting.schema_item = item;
+      setting.value = schema.GetDefault(key);
+    }
+
+    AddSettingToTable(setting, &rows);
+  }
+
+  OutputBuffer table;
+  FormatTable(std::vector<ColSpec>(3), rows, &table);
+  return table;
+}
+
+OutputBuffer PrintSettingStore(const SettingStore& store) {
+  OutputBuffer out;
+
+  auto schema = System::GetSchema();
+  if (!schema->items().empty()) {
+    out.Append({Syntax::kHeading, "System\n"});
+    out.Append(PrintSettingStoreFromSchema(store, *schema));
+  }
+
+  schema = Target::GetSchema();
+  if (!schema->items().empty()) {
+    out.Append({Syntax::kHeading, "Target/Process\n"});
+    out.Append(PrintSettingStoreFromSchema(store, *schema));
+  }
+
+  schema = Thread::GetSchema();
+  if (!schema->items().empty()) {
+    out.Append({Syntax::kHeading, "Thread\n"});
+    out.Append(PrintSettingStoreFromSchema(store, *schema));
+  }
+
+  return out;
+}
+
 }  // namespace
 
 OutputBuffer FormatSettingValue(const StoredSetting& setting) {
@@ -142,28 +198,21 @@ Err FormatSettings(const SettingStore& store, const std::string& setting_name,
     return Err();
   }
 
-  // List all settings.
-  std::vector<std::vector<OutputBuffer>> rows;
-  for (auto& [key, setting] : store.GetSettings())
-    AddSettingToTable(setting, &rows);
-
-  OutputBuffer list_out;
-  FormatTable(std::vector<ColSpec>(2), std::move(rows), &list_out);
   out->Append({Syntax::kComment,
                "Run get <option> to see detailed information.\n"});
-  out->Append(std::move(list_out));
+  out->Append(PrintSettingStore(store));
   return Err();
 }
 
-const char* SettingStoreLevelToString(SettingStore::Level level) {
+const char* SettingSchemaLevelToString(SettingSchema::Level level) {
   switch (level) {
-    case SettingStore::Level::kDefault:
+    case SettingSchema::Level::kDefault:
       return "default";
-    case SettingStore::Level::kSystem:
+    case SettingSchema::Level::kSystem:
       return "system";
-    case SettingStore::Level::kTarget:
+    case SettingSchema::Level::kTarget:
       return "target";
-    case SettingStore::Level::kThread:
+    case SettingSchema::Level::kThread:
       return "thread";
   }
 

@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include "lib/fxl/memory/ref_ptr.h"
-
 namespace zxdb {
 
 // This header contains the definitions for all the settings used within the

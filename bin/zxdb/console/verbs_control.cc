@@ -462,31 +462,38 @@ Err DoGet(ConsoleContext* context, const Command& cmd) {
     setting_name = cmd.args()[0];
   }
 
+  // We get the correct SettingStore. We try to be as specific as possible.
+  SettingStore* store = nullptr;
   Target* target = cmd.target();
   if (!target)
     return Err("No target found. Please file a bug with a repro.");
-
-  // See if the user is asking for system-level settings.
-  if (cmd.HasSwitch(kGetSystemSwitch)) {
-    return HandleSettingStore(target->session()->system().settings(),
-                              setting_name);
-  }
-
-  // First we check is the user is asking for process.
-  if (cmd.HasNoun(Noun::kProcess) && !cmd.HasNoun(Noun::kThread))
-    return HandleSettingStore(target->settings(), setting_name);
-
-  Process* process = target->GetProcess();
-  if (!process) {
-    return Err(
-        "Process not running, no threads. Is this a system setting? See \"help "
-        "get\".");
-  }
-
   Thread* thread = cmd.thread();
-  if (!thread)
-    return Err("Could not find specified thread.");
-  return HandleSettingStore(thread->settings(), setting_name);
+
+  // We check to see if the user specified an explicit context.
+  if (cmd.HasNoun(Noun::kThread)) {
+    if (!thread)
+      return Err("Could not find specified thread.");
+    store = &thread->settings();
+  } else if (cmd.HasNoun(Noun::kProcess)) {
+    if (!target)
+      return Err("Could not find specified target.");
+    store = &target->settings();
+  }
+
+  // If we didn't find an explicit context, we query the current one.
+  if (!store) {
+    if (thread) {
+      store = &thread->settings();
+    } else {
+      // Since there is always a target, the system settings are never queried
+      // directly.
+      store = &target->settings();
+    }
+  }
+
+  if (!store)
+    return Err("Could not find a setting store. Please file a bug with repro.");
+  return HandleSettingStore(*store, setting_name);
 }
 
 // Set -------------------------------------------------------------------------
@@ -660,15 +667,15 @@ Err DoSet(ConsoleContext* context, const Command& cmd) {
     return Err("Null setting after set. Please file a bug with repro.");
 
   // Should never override default (schema) values.
-  FXL_DCHECK(setting.level != SettingStore::Level::kDefault);
+  FXL_DCHECK(setting.level != SettingSchema::Level::kDefault);
 
   // Feedback about where the setting was set.
-  if (setting.level == SettingStore::Level::kSystem) {
+  if (setting.level == SettingSchema::Level::kSystem) {
     Console::get()->Output("Set system-level setting:");
   } else {
     Console::get()->Output(
         fxl::StringPrintf("Overrode setting for the given %s:",
-                          SettingStoreLevelToString(setting.level)));
+                          SettingSchemaLevelToString(setting.level)));
   }
 
   // We output the new value.

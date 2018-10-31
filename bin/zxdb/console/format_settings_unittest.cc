@@ -12,8 +12,9 @@
 
 namespace zxdb {
 
-fxl::RefPtr<SettingSchema> GetSchema() {
-  auto schema = fxl::MakeRefCounted<SettingSchema>();
+fxl::RefPtr<SettingSchema> GetSchema(
+    SettingSchema::Level level = SettingSchema::Level::kDefault) {
+  auto schema = fxl::MakeRefCounted<SettingSchema>(level);
 
   schema->AddBool("setting-bool", "Setting bool description");
   schema->AddBool("setting-bool2", "Setting bool description", true);
@@ -36,29 +37,8 @@ fxl::RefPtr<SettingSchema> GetSchema() {
   return schema;
 }
 
-TEST(FormatSetting, Store) {
-  SettingStore store(SettingStore::Level::kDefault, GetSchema(), nullptr);
-
-  OutputBuffer out;
-  Err err = FormatSettings(store, "", &out);
-  EXPECT_FALSE(err.has_error()) << err.msg();
-
-  EXPECT_EQ("Run get <option> to see detailed information.\n"
-            "setting-bool    false\n"
-            "setting-bool2   true\n"
-            "setting-int     0\n"
-            "setting-int2    12334\n"
-            "setting-list    <empty>\n"
-            "setting-list2   • first\n"
-            "                • second\n"
-            "                • third\n"
-            "setting-string  <empty>\n"
-            "setting-string2 Test string\n",
-            out.AsString());
-}
-
 TEST(FormatSetting, NotFound) {
-  SettingStore store(SettingStore::Level::kDefault, GetSchema(), nullptr);
+  SettingStore store(GetSchema(), nullptr);
 
   OutputBuffer out;
   Err err = FormatSettings(store, "invalid", &out);
@@ -67,7 +47,7 @@ TEST(FormatSetting, NotFound) {
 
 
 TEST(FormatSetting, Setting) {
-  SettingStore store(SettingStore::Level::kDefault, GetSchema(), nullptr);
+  SettingStore store(GetSchema(), nullptr);
 
   OutputBuffer out;
   Err err = FormatSettings(store, "setting-string2", &out);
@@ -92,7 +72,7 @@ TEST(FormatSetting, SchemaItemList) {
       "/yet/another/some/very/long/and/annoying/path/that/actually/leads/"
       "nowhere"};
 
-  SettingStore store(SettingStore::Level::kDefault, GetSchema(), nullptr);
+  SettingStore store(GetSchema(), nullptr);
   Err err = store.SetList("setting-list2", std::move(options));
   EXPECT_FALSE(err.has_error()) << err.msg();
 

@@ -19,8 +19,9 @@ std::vector<std::string> DefaultList() {
   return {kDefaultString, "list"};
 }
 
-fxl::RefPtr<SettingSchema> GetSchema() {
-  auto schema = fxl::MakeRefCounted<SettingSchema>();
+fxl::RefPtr<SettingSchema> GetSchema(
+    SettingSchema::Level level = SettingSchema::Level::kDefault) {
+  auto schema = fxl::MakeRefCounted<SettingSchema>(level);
 
   SettingSchemaItem item("bool", "bool option", true);
   schema->AddSetting("bool", item);
@@ -70,34 +71,34 @@ class SettingObserver : public SettingStoreObserver {
 }  // namespace
 
 TEST(SettingStore, Defaults) {
-  SettingStore store(SettingStore::Level::kThread, GetSchema(), nullptr);
+  SettingStore store(GetSchema(), nullptr);
 
   auto setting = store.GetSetting("bool");
   ASSERT_TRUE(setting.value.is_bool());
   EXPECT_TRUE(setting.value.GetBool());
-  EXPECT_EQ(setting.level, SettingStore::Level::kDefault);
+  EXPECT_EQ(setting.level, SettingSchema::Level::kDefault);
 
   setting = store.GetSetting("int");
   ASSERT_TRUE(setting.value.is_int());
   EXPECT_EQ(setting.value.GetInt(), kDefaultInt);
-  EXPECT_EQ(setting.level, SettingStore::Level::kDefault);
+  EXPECT_EQ(setting.level, SettingSchema::Level::kDefault);
 
   setting = store.GetSetting("string");
   ASSERT_TRUE(setting.value.is_string());
   EXPECT_EQ(setting.value.GetString(), kDefaultString);
-  EXPECT_EQ(setting.level, SettingStore::Level::kDefault);
+  EXPECT_EQ(setting.level, SettingSchema::Level::kDefault);
 
   setting = store.GetSetting("list");
   ASSERT_TRUE(setting.value.is_list());
   EXPECT_EQ(setting.value.GetList(), DefaultList());
-  EXPECT_EQ(setting.level, SettingStore::Level::kDefault);
+  EXPECT_EQ(setting.level, SettingSchema::Level::kDefault);
 
   // Not found.
   EXPECT_TRUE(store.GetSetting("unexistent").value.is_null());
 }
 
 TEST(SettingStore, Overrides) {
-  SettingStore store(SettingStore::Level::kDefault, GetSchema(), nullptr);
+  SettingStore store(GetSchema(), nullptr);
 
   Err err;
 
@@ -126,15 +127,15 @@ TEST(SettingStore, Overrides) {
 }
 
 TEST(SettingStore, Fallback) {
-  SettingStore fallback2(SettingStore::Level::kSystem, GetSchema(), nullptr);
+  SettingStore fallback2(GetSchema(SettingSchema::Level::kSystem), nullptr);
   std::vector<std::string> new_list = {"new", "list"};
   fallback2.SetList("list", new_list);
 
-  SettingStore fallback(SettingStore::Level::kTarget, GetSchema(), &fallback2);
+  SettingStore fallback(GetSchema(SettingSchema::Level::kTarget), &fallback2);
   std::string new_string = "new string";
   fallback.SetString("string", new_string);
 
-  SettingStore store(SettingStore::Level::kThread, GetSchema(), &fallback);
+  SettingStore store(GetSchema(SettingSchema::Level::kThread), &fallback);
   store.SetBool("bool", false);
 
   // Also test that the correct fallback level is communicated.
@@ -143,29 +144,29 @@ TEST(SettingStore, Fallback) {
   auto setting = store.GetSetting("int");
   ASSERT_TRUE(setting.value.is_int());
   EXPECT_EQ(setting.value.GetInt(), kDefaultInt);
-  EXPECT_EQ(setting.level, SettingStore::Level::kDefault);
+  EXPECT_EQ(setting.level, SettingSchema::Level::kDefault);
 
   // Should get local level.
   setting = store.GetSetting("bool");
   ASSERT_TRUE(setting.value.is_bool());
   EXPECT_FALSE(setting.value.GetBool());
-  EXPECT_EQ(setting.level, SettingStore::Level::kThread);
+  EXPECT_EQ(setting.level, SettingSchema::Level::kThread);
 
   // Should get one override hop.
   setting = store.GetSetting("string");
   ASSERT_TRUE(setting.value.is_string());
   EXPECT_EQ(setting.value.GetString(), new_string);
-  EXPECT_EQ(setting.level, SettingStore::Level::kTarget);
+  EXPECT_EQ(setting.level, SettingSchema::Level::kTarget);
 
   // Should fallback through the chain.
   setting = store.GetSetting("list");
   ASSERT_TRUE(setting.value.is_list());
   EXPECT_EQ(setting.value.GetList(), new_list);
-  EXPECT_EQ(setting.level, SettingStore::Level::kSystem);
+  EXPECT_EQ(setting.level, SettingSchema::Level::kSystem);
 }
 
 TEST(SettingStore, Notifications) {
-  SettingStore store(SettingStore::Level::kDefault, GetSchema(), nullptr);
+  SettingStore store(GetSchema(), nullptr);
 
   SettingObserver observer;
   store.AddObserver("int", &observer);

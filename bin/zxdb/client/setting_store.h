@@ -16,37 +16,25 @@
 
 namespace zxdb {
 
-class SettingSchema;
 struct StoredSetting;
 
 // SettingStore is in charge of maintaining a structured group of settings.
-// settings are indexed by a unique "path". Paths are dot (.) separated paths
-// that point to a particular settings (eg. "this.is.a.path").
-//
-// These paths creates a hierarchical structure that can then be queried and
-// shown to users.
+// settings are indexed by a unique key.
 class SettingStore {
  public:
-  // The store has some knowledge about what "level" it is coming from. This
-  // enables us to communicate this back when we query for a value. This is
-  // because a store can fallback to another stores and we need to communicate
-  // to the caller that the value was overriden (and where).
-  enum class Level {
-    kSystem,
-    kTarget,
-    kThread,
-    kDefault,  // Means no override, so value is the schema's default.
-  };
-
-  SettingStore(Level, fxl::RefPtr<SettingSchema> schema,
+  SettingStore(fxl::RefPtr<SettingSchema> schema,
                SettingStore* fallback);
 
+  SettingStore* fallback() const { return fallback_; }
   void set_fallback(SettingStore* fallback) { fallback_ = fallback; }
+
+  fxl::RefPtr<SettingSchema> schema() const { return schema_; }
 
   void AddObserver(const std::string& setting_name, SettingStoreObserver*);
   void RemoveObserver(const std::string& setting_name, SettingStoreObserver*);
 
-  Level level() const { return level_; }
+  // What level is this store associated with.
+  SettingSchema::Level level() const { return schema_->level(); }
 
   Err SetBool(const std::string& key, bool);
   Err SetInt(const std::string& key, int);
@@ -96,7 +84,6 @@ class SettingStore {
   // SettingStore this store lookup settings when it cannot find them locally.
   // Can be null. If set, should outlive |this|.
   SettingStore* fallback_;
-  Level level_;
   std::map<std::string, SettingValue> settings_;
 
   std::map<std::string, fxl::ObserverList<SettingStoreObserver>> observer_map_;
@@ -110,7 +97,7 @@ struct StoredSetting {
   SettingValue value;
   SettingSchemaItem schema_item;
   // From what context level the value actually came from.
-  SettingStore::Level level = SettingStore::Level::kDefault;
+  SettingSchema::Level level = SettingSchema::Level::kDefault;
 };
 
 }  // namespace zxdg

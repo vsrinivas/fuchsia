@@ -16,7 +16,8 @@ namespace zxdb {
 namespace {
 
 fxl::RefPtr<SettingSchema> CreateSchema() {
-  auto schema = fxl::MakeRefCounted<SettingSchema>();
+  auto schema =
+      fxl::MakeRefCounted<SettingSchema>(SettingSchema::Level::kThread);
   return schema;
 }
 
@@ -27,7 +28,7 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
 Thread::Thread(Session* session)
     : ClientObject(session),
       // Implementations can set up fallbacks if needed.
-      settings_(SettingStore::Level::kThread, GetSchema(), nullptr),
+      settings_(GetSchema(), nullptr),
       weak_factory_(this) {}
 
 Thread::~Thread() = default;

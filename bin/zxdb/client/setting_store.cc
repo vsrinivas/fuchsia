@@ -11,8 +11,8 @@ namespace zxdb {
 
 namespace {
 
-StoredSetting CreateStoredSetting(SettingStore::Level level, SettingValue value,
-                                  SettingSchemaItem item) {
+StoredSetting CreateStoredSetting(SettingValue value, SettingSchemaItem item,
+                                  SettingSchema::Level level) {
   StoredSetting setting = {};
   setting.value = std::move(value);
   setting.schema_item = std::move(item);
@@ -22,10 +22,9 @@ StoredSetting CreateStoredSetting(SettingStore::Level level, SettingValue value,
 
 }  // namespace
 
-SettingStore::SettingStore(SettingStore::Level level,
-                           fxl::RefPtr<SettingSchema> schema,
+SettingStore::SettingStore(fxl::RefPtr<SettingSchema> schema,
                            SettingStore* fallback)
-    : schema_(std::move(schema)), fallback_(fallback), level_(level) {}
+    : schema_(std::move(schema)), fallback_(fallback) {}
 
 void SettingStore::AddObserver(const std::string& setting_name,
                                SettingStoreObserver* observer) {
@@ -75,15 +74,17 @@ std::vector<std::string> SettingStore::GetList(const std::string& key) const {
 
 StoredSetting SettingStore::GetSetting(const std::string& key,
                                        bool return_default) const {
-  // See if is within the schema.
-  auto schema_item = schema_->GetItem(key);
-  if (schema_item.value().is_null())
-    return StoredSetting();
 
   // Check if it already exists. If so, return it.
   auto it = settings_.find(key);
-  if (it != settings_.end())
-    return CreateStoredSetting(level_, it->second, std::move(schema_item));
+  if (it != settings_.end()) {
+
+    // We found it. We check to see if is within the schema.
+    auto schema_item = schema_->GetItem(key);
+    if (schema_item.value().is_null())
+      return StoredSetting();
+    return CreateStoredSetting(it->second, std::move(schema_item), level());
+  }
 
   // We check the fallback SettingStore to see if it has the setting.
   StoredSetting setting;
@@ -94,12 +95,17 @@ StoredSetting SettingStore::GetSetting(const std::string& key,
       return setting;
   }
 
+  // None of our fallbacks have this setting, so we check to see if it's within
+  // our schema.
+  auto schema_item = schema_->GetItem(key);
+  if (schema_item.value().is_null())
+    return StoredSetting();
+
   // We return the schema value only if we were told to.
   if (!return_default)
     return StoredSetting();
-  return CreateStoredSetting(SettingStore::Level::kDefault,
-                             schema_item.value(),
-                             schema_item);
+  return CreateStoredSetting(schema_item.value(), schema_item,
+                             SettingSchema::Level::kDefault);
 }
 
 std::map<std::string, StoredSetting> SettingStore::GetSettings() const {
