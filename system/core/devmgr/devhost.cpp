@@ -22,7 +22,11 @@
 #include <zircon/syscalls/log.h>
 
 #include <fbl/auto_lock.h>
+#include <fbl/function.h>
 #include <fuchsia/io/c/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/receiver.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/remoteio.h>
 #include <lib/fidl/coding.h>
@@ -31,6 +35,7 @@
 #include <lib/zx/vmo.h>
 #include <zxcpp/new.h>
 
+#include "async-loop-owned-rpc-handler.h"
 #include "devhost.h"
 #include "devhost-main.h"
 #include "devhost-shared.h"
@@ -48,7 +53,7 @@ namespace devmgr {
 
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
-struct ProxyIostate {
+struct ProxyIostate : AsyncLoopOwnedRpcHandler<ProxyIostate> {
     ProxyIostate() = default;
     ~ProxyIostate();
 
@@ -60,28 +65,100 @@ struct ProxyIostate {
     // Request the destruction of the proxy connection
     void Cancel();
 
+    static void HandleRpc(fbl::unique_ptr<ProxyIostate> conn,
+                          async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                          const zx_packet_signal_t* signal);
+
     fbl::RefPtr<zx_device_t> dev;
-    port_handler_t ph = {};
 };
 static void proxy_ios_destroy(const fbl::RefPtr<zx_device_t>& dev);
 
-#define proxy_ios_from_ph(ph) containerof(ph, ProxyIostate, ph)
-
-#define conn_from_ph(ph) containerof(ph, DevcoordinatorConnection, ph)
-#define devfs_conn_from_ph(ph) containerof(ph, DevfsConnection, ph)
-
-static zx_status_t dh_handle_dc_rpc(port_handler_t* ph, zx_signals_t signals, uint32_t evt);
-
-static port_t dh_port;
-
-static DevcoordinatorConnection root_dc_conn = []() {
-    DevcoordinatorConnection conn;
-    conn.ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-    conn.ph.func = dh_handle_dc_rpc;
-    return conn;
-}();
-
 static fbl::DoublyLinkedList<fbl::RefPtr<zx_driver>> dh_drivers;
+
+// Access the devhost's async event loop
+async::Loop* DevhostAsyncLoop() {
+    static async::Loop loop(&kAsyncLoopConfigAttachToThread);
+    return &loop;
+}
+
+static zx_status_t SetupRootDevcoordinatorConnection(zx::channel ch) {
+    auto conn = fbl::make_unique<DevcoordinatorConnection>();
+    if (conn == nullptr) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    conn->set_channel(fbl::move(ch));
+    return DevcoordinatorConnection::BeginWait(fbl::move(conn), DevhostAsyncLoop()->dispatcher());
+}
+
+// Handles destroying Connection objects in the single-threaded DevhostAsyncLoop().
+// This allows us to prevent races between canceling waiting on the connection
+// channel and executing the connection's handler.
+class ConnectionDestroyer {
+public:
+    static ConnectionDestroyer* Get() {
+        static ConnectionDestroyer destroyer;
+        return &destroyer;
+    }
+
+    zx_status_t QueueDevcoordinatorConnection(DevcoordinatorConnection* conn);
+    zx_status_t QueueProxyConnection(ProxyIostate* conn);
+private:
+    ConnectionDestroyer() = default;
+
+    ConnectionDestroyer(const ConnectionDestroyer&) = delete;
+    ConnectionDestroyer& operator=(const ConnectionDestroyer&) = delete;
+
+    ConnectionDestroyer(ConnectionDestroyer&&) = delete;
+    ConnectionDestroyer& operator=(ConnectionDestroyer&&) = delete;
+
+    static void Handler(async_dispatcher_t* dispatcher, async::Receiver* receiver,
+                        zx_status_t status, const zx_packet_user_t* data);
+
+    enum class Type {
+        Devcoordinator,
+        Proxy,
+    };
+
+    async::Receiver receiver_{ConnectionDestroyer::Handler};
+};
+
+zx_status_t ConnectionDestroyer::QueueProxyConnection(ProxyIostate* conn) {
+    zx_packet_user_t pkt = {};
+    pkt.u64[0] = static_cast<uint64_t>(Type::Proxy);
+    pkt.u64[1] = reinterpret_cast<uintptr_t>(conn);
+    return receiver_.QueuePacket(DevhostAsyncLoop()->dispatcher(), &pkt);
+}
+
+zx_status_t ConnectionDestroyer::QueueDevcoordinatorConnection(DevcoordinatorConnection* conn) {
+    zx_packet_user_t pkt = {};
+    pkt.u64[0] = static_cast<uint64_t>(Type::Devcoordinator);
+    pkt.u64[1] = reinterpret_cast<uintptr_t>(conn);
+    return receiver_.QueuePacket(DevhostAsyncLoop()->dispatcher(), &pkt);
+}
+
+void ConnectionDestroyer::Handler(async_dispatcher_t* dispatcher, async::Receiver* receiver,
+                               zx_status_t status, const zx_packet_user_t* data) {
+    Type type = static_cast<Type>(data->u64[0]);
+    uintptr_t ptr = data->u64[1];
+
+    switch (type) {
+        case Type::Devcoordinator: {
+            auto conn = reinterpret_cast<DevcoordinatorConnection*>(ptr);
+            log(TRACE, "devhost: destroying devcoord conn '%p'\n", conn);
+            delete conn;
+            break;
+        }
+        case Type::Proxy: {
+            auto conn = reinterpret_cast<ProxyIostate*>(ptr);
+            log(TRACE, "devhost: destroying proxy conn '%p'\n", conn);
+            delete conn;
+            break;
+        }
+        default:
+            ZX_ASSERT_MSG(false, "Unknown IosDestructionType %" PRIu64 "\n", data->u64[0]);
+    }
+}
 
 static const char* mkdevpath(const fbl::RefPtr<zx_device_t>& dev, char* path, size_t max) {
     if (dev == nullptr) {
@@ -338,15 +415,14 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevcoordinatorConnection* c
         dev->rpc = zx::unowned_channel(hin[0]);
         newconn->dev = dev;
 
-        newconn->ph.handle = hin[0];
-        newconn->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-        newconn->ph.func = dh_handle_dc_rpc;
-        if ((r = port_wait(&dh_port, &newconn->ph)) < 0) {
+        log(RPC_IN, "devhost[%s] creating '%s' ios=%p\n", path, name, newconn.get());
+
+        newconn->set_channel(zx::channel(hin[0]));
+        hin[0] = ZX_HANDLE_INVALID;
+        if ((r = DevcoordinatorConnection::BeginWait(fbl::move(newconn),
+                                                     DevhostAsyncLoop()->dispatcher())) != ZX_OK) {
             break;
         }
-        log(RPC_IN, "devhost[%s] created '%s' conn=%p\n", path, name, newconn.get());
-        // dh_port has now taken ownership of newconn.
-        __UNUSED auto ptr = newconn.release();
         return ZX_OK;
     }
 
@@ -420,15 +496,14 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevcoordinatorConnection* c
         }
         //TODO: inform devcoord
 
-        newconn->ph.handle = hin[0];
-        newconn->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-        newconn->ph.func = dh_handle_dc_rpc;
-        if ((r = port_wait(&dh_port, &newconn->ph)) < 0) {
+        log(RPC_IN, "devhost[%s] creating '%s' ios=%p\n", path, name, newconn.get());
+
+        newconn->set_channel(zx::channel(hin[0]));
+        hin[0] = ZX_HANDLE_INVALID;
+        if ((r = DevcoordinatorConnection::BeginWait(fbl::move(newconn),
+                                                     DevhostAsyncLoop()->dispatcher())) != ZX_OK) {
             break;
         }
-        log(RPC_IN, "devhost[%s] created '%s' conn=%p\n", path, name, newconn.get());
-        // dh_port has now taken ownership of newconn
-        __UNUSED auto ptr = newconn.release();
         return ZX_OK;
     }
 
@@ -529,124 +604,108 @@ fail:
 }
 
 // handles devcoordinator rpc
-static zx_status_t dh_handle_dc_rpc(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
-    DevcoordinatorConnection* conn = conn_from_ph(ph);
-
-    if (evt != 0) {
-        // ensure we get no further events
-        port_cancel(&dh_port, &conn->ph);
-        zx_handle_close(conn->ph.handle);
-
-        // we send an event to request the destruction
-        // of a connection, to ensure that's the *last*
-        // packet about the connection that we get
-        delete conn;
-        return ZX_ERR_STOP;
+void DevcoordinatorConnection::HandleRpc(fbl::unique_ptr<DevcoordinatorConnection> conn,
+                                         async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                         zx_status_t status, const zx_packet_signal_t* signal) {
+    if (status != ZX_OK) {
+        log(ERROR, "devhost: devcoord conn wait error: %d\n", status);
+        return;
     }
-    if (signals & ZX_CHANNEL_READABLE) {
-        zx_status_t r = dh_handle_rpc_read(ph->handle, conn);
+    if (signal->observed & ZX_CHANNEL_READABLE) {
+        zx_status_t r = dh_handle_rpc_read(wait->object(), conn.get());
         if (r != ZX_OK) {
-            log(ERROR, "devhost: devmgr rpc unhandleable conn=%p r=%d. fatal.\n", conn, r);
+            log(ERROR, "devhost: devmgr rpc unhandleable ios=%p r=%d. fatal.\n", conn.get(), r);
             exit(0);
         }
-        return r;
+        BeginWait(fbl::move(conn), dispatcher);
+        return;
     }
-    if (signals & ZX_CHANNEL_PEER_CLOSED) {
+    if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
         // Check if we were expecting this peer close.  If not, this could be a
         // serious bug.
         if (conn->dev->conn.load() == nullptr) {
             // We're in the middle of shutting down, so just stop processing
-            // signals and wait for the queued shutdown packet.
-            return ZX_ERR_STOP;
+            // signals and wait for the queued shutdown packet.  It has a
+            // reference to the connection, which it will use to recover
+            // ownership of it.
+            __UNUSED auto r = conn.release();
+            return;
         }
 
-        log(ERROR, "devhost: devmgr disconnected! fatal. (conn=%p)\n", conn);
+        log(ERROR, "devhost: devmgr disconnected! fatal. (conn=%p)\n", conn.get());
         exit(0);
     }
-    log(ERROR, "devhost: no work? %08x\n", signals);
-    return ZX_OK;
+    log(ERROR, "devhost: no work? %08x\n", signal->observed);
+    BeginWait(fbl::move(conn), dispatcher);
 }
 
 // handles remoteio rpc
-static zx_status_t dh_handle_fidl_rpc(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
-    DevfsConnection* conn = devfs_conn_from_ph(ph);
+void DevfsConnection::HandleRpc(fbl::unique_ptr<DevfsConnection> conn,
+                                async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                zx_status_t status, const zx_packet_signal_t* signal) {
+    if (status != ZX_OK) {
+        log(ERROR, "devhost: devfs conn wait error: %d\n", status);
+        return;
+    }
 
-    zx_status_t r;
-    if (signals & ZX_CHANNEL_READABLE) {
-        if ((r = zxfidl_handler(ph->handle, devhost_fidl_handler, conn)) == ZX_OK) {
-            return ZX_OK;
+    if (signal->observed & ZX_CHANNEL_READABLE) {
+        if (zxfidl_handler(wait->object(), devhost_fidl_handler, conn.get()) == ZX_OK) {
+            BeginWait(fbl::move(conn), dispatcher);
+            return;
         }
-    } else if (signals & ZX_CHANNEL_PEER_CLOSED) {
-        zxfidl_handler(ZX_HANDLE_INVALID, devhost_fidl_handler, conn);
-        r = ZX_ERR_STOP;
+    } else if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
+        zxfidl_handler(ZX_HANDLE_INVALID, devhost_fidl_handler, conn.get());
     } else {
-        printf("dh_handle_fidl_rpc: invalid signals %x\n", signals);
+        printf("dh_handle_fidl_rpc: invalid signals %x\n", signal->observed);
         exit(0);
     }
 
-    // We arrive here if handle_rpc was a clean close (ERR_DISPATCHER_DONE),
+    // We arrive here if devhost_fidl_handler was a clean close (ERR_DISPATCHER_DONE),
     // or close-due-to-error (non-ZX_OK), or if the channel was closed
-    // out from under us (ZX_ERR_STOP).  In all cases, the conn's reference to
-    // the device was released, and will no longer be used, so we will free
-    // it before returning.
-    zx_handle_close(conn->ph.handle);
-    delete conn;
-    return r;
+    // out from under us.  In all cases, we are done with this connection, so we
+    // will destroy it by letting it leave scope.
+    log(TRACE, "devhost: destroying devfs conn %p\n", conn.get());
 }
 
 ProxyIostate::~ProxyIostate() {
-    // cancel any pending waits
-    port_cancel(&dh_port, &this->ph);
-
-    // close the proxy channel
-    zx_handle_close(this->ph.handle);
+    fbl::AutoLock guard(&dev->proxy_ios_lock);
+    if (dev->proxy_ios == this) {
+        dev->proxy_ios = nullptr;
+    }
 }
 
-
 // Handling RPC From Proxy Devices to BusDevs
-
-static zx_status_t dh_handle_proxy_rpc(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
-    ProxyIostate* ios = proxy_ios_from_ph(ph);
-
-    auto destroy = [&ios]() -> zx_status_t {
-        fbl::AutoLock guard(&ios->dev->proxy_ios_lock);
-        ios->dev->proxy_ios = nullptr;
-        delete ios;
-        return ZX_ERR_STOP;
-    };
-
-    if (evt != 0) {
-        log(RPC_SDW, "proxy-rpc: destroy (ios=%p)\n", ios);
-
-        // we send an event to request the destruction
-        // of an iostate, to ensure that's the *last*
-        // packet about the iostate that we get
-        delete ios;
-        return ZX_ERR_STOP;
+void ProxyIostate::HandleRpc(fbl::unique_ptr<ProxyIostate> conn, async_dispatcher_t* dispatcher,
+                             async::WaitBase* wait, zx_status_t status,
+                             const zx_packet_signal_t* signal) {
+    if (status != ZX_OK) {
+        return;
     }
-    if (ios->dev == nullptr) {
-        log(RPC_SDW, "proxy-rpc: stale rpc? (ios=%p)\n", ios);
-        // ports does not let us cancel packets that are
-        // already in the queue, so the dead flag enables us
-        // to ignore them
-        return ZX_ERR_STOP;
+
+    if (conn->dev == nullptr) {
+        log(RPC_SDW, "proxy-rpc: stale rpc? (ios=%p)\n", conn.get());
+        // Do not re-issue the wait here
+        return;
     }
-    if (signals & ZX_CHANNEL_READABLE) {
-        log(RPC_SDW, "proxy-rpc: rpc readable (ios=%p,dev=%p)\n", ios, ios->dev.get());
-        zx_status_t r;
-        r = ios->dev->ops->rxrpc(ios->dev->ctx, ph->handle);
+    if (signal->observed & ZX_CHANNEL_READABLE) {
+        log(RPC_SDW, "proxy-rpc: rpc readable (ios=%p,dev=%p)\n", conn.get(), conn->dev.get());
+        zx_status_t r = conn->dev->ops->rxrpc(conn->dev->ctx, wait->object());
         if (r != ZX_OK) {
-            log(RPC_SDW, "proxy-rpc: rpc cb error %d (ios=%p,dev=%p)\n", r, ios, ios->dev.get());
-            return destroy();
+            log(RPC_SDW, "proxy-rpc: rpc cb error %d (ios=%p,dev=%p)\n", r, conn.get(),
+                conn->dev.get());
+            // Let |conn| be destroyed
+            return;
         }
-        return ZX_OK;
+        BeginWait(fbl::move(conn), dispatcher);
+        return;
     }
-    if (signals & ZX_CHANNEL_PEER_CLOSED) {
-        log(RPC_SDW, "proxy-rpc: peer closed (ios=%p,dev=%p)\n", ios, ios->dev.get());
-        return destroy();
+    if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
+        log(RPC_SDW, "proxy-rpc: peer closed (ios=%p,dev=%p)\n", conn.get(), conn->dev.get());
+        // Let |conn| be destroyed
+        return;
     }
-    log(ERROR, "devhost: no work? %08x\n", signals);
-    return ZX_OK;
+    log(ERROR, "devhost: no work? %08x\n", signal->observed);
+    BeginWait(fbl::move(conn), dispatcher);
 }
 
 zx_status_t ProxyIostate::Create(const fbl::RefPtr<zx_device_t>& dev, zx::channel rpc) {
@@ -665,27 +724,27 @@ zx_status_t ProxyIostate::Create(const fbl::RefPtr<zx_device_t>& dev, zx::channe
     }
 
     ios->dev = dev;
-    ios->ph.handle = rpc.get();
-    ios->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-    ios->ph.func = dh_handle_proxy_rpc;
-    zx_status_t status = port_wait(&dh_port, &ios->ph);
+    ios->set_channel(fbl::move(rpc));
+
+    // |ios| is will be owned by the async loop.  |dev| holds a reference that will be
+    // cleared prior to destruction.
+    dev->proxy_ios = ios.get();
+
+    zx_status_t status = BeginWait(fbl::move(ios), DevhostAsyncLoop()->dispatcher());
     if (status != ZX_OK) {
+        dev->proxy_ios = nullptr;
         return status;
     }
-    // |rpc| is now owned by |ios|
-    __UNUSED auto h = rpc.release();
 
-    // |ios| is now owned by |dh_port|.  |dev| holds a reference that will be
-    // cleared prior to destruction.
-    dev->proxy_ios = ios.release();
     return ZX_OK;
 }
 
 // The device for which ProxyIostate is currently attached to should have
 // its proxy_ios_lock held across Cancel().
 void ProxyIostate::Cancel() {
-    // queue an event to destroy the iostate if we saw it was still around.
-    port_queue(&dh_port, &this->ph, 1);
+    // TODO(teisenbe): We should probably check the return code in case the
+    // queue was full
+    ConnectionDestroyer::Get()->QueueProxyConnection(this);
 }
 
 static void proxy_ios_destroy(const fbl::RefPtr<zx_device_t>& dev) {
@@ -825,16 +884,18 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
                         nullptr)) < 0) {
         log(ERROR, "devhost[%s] add '%s': rpc failed: %d\n", path, child->name, r);
     } else {
+        child->rpc = zx::unowned_channel(hrpc);
+        child->conn.store(conn.get());
+
         conn->dev = child;
-        conn->ph.handle = hrpc;
-        conn->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-        conn->ph.func = dh_handle_dc_rpc;
-        if ((r = port_wait(&dh_port, &conn->ph)) == ZX_OK) {
-            child->rpc = zx::unowned_channel(hrpc);
-            child->conn.store(conn.release());
+        conn->set_channel(zx::channel(hrpc));
+        hrpc = ZX_HANDLE_INVALID;
+        r = DevcoordinatorConnection::BeginWait(fbl::move(conn), DevhostAsyncLoop()->dispatcher());
+        if (r == ZX_OK) {
             return ZX_OK;
         }
-
+        child->conn.store(nullptr);
+        child->rpc = zx::unowned_channel();
     }
     zx_handle_close(hrpc);
     return r;
@@ -910,7 +971,7 @@ zx_status_t devhost_remove(const fbl::RefPtr<zx_device_t>& dev) {
     dev->rpc = zx::unowned_channel();
 
     // queue an event to destroy the connection
-    port_queue(&dh_port, &conn->ph, 1);
+    ConnectionDestroyer::Get()->QueueDevcoordinatorConnection(conn);
 
     // shut down our proxy rpc channel if it exists
     proxy_ios_destroy(dev);
@@ -1040,16 +1101,8 @@ zx_handle_t root_resource_handle;
 
 
 zx_status_t devhost_start_connection(fbl::unique_ptr<DevfsConnection> conn, zx::channel h) {
-    conn->ph.handle = h.get();
-    conn->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-    conn->ph.func = dh_handle_fidl_rpc;
-    zx_status_t status = port_wait(&dh_port, &conn->ph);
-    if (status == ZX_OK) {
-        // dh_port now owns the connection and handle
-        __UNUSED auto ptr = conn.release();
-        __UNUSED auto channel = h.release();
-    }
-    return status;
+    conn->set_channel(fbl::move(h));
+    return DevfsConnection::BeginWait(fbl::move(conn), DevhostAsyncLoop()->dispatcher());
 }
 
 __EXPORT int device_host_main(int argc, char** argv) {
@@ -1057,8 +1110,8 @@ __EXPORT int device_host_main(int argc, char** argv) {
 
     log(TRACE, "devhost: main()\n");
 
-    root_dc_conn.ph.handle = zx_take_startup_handle(PA_HND(PA_USER0, 0));
-    if (root_dc_conn.ph.handle == ZX_HANDLE_INVALID) {
+    zx::channel root_conn_channel(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
+    if (!root_conn_channel.is_valid()) {
         log(ERROR, "devhost: rpc handle invalid\n");
         return -1;
     }
@@ -1082,18 +1135,13 @@ __EXPORT int device_host_main(int argc, char** argv) {
         }
     }
 #endif
-
-    if ((r = port_init(&dh_port)) < 0) {
-        log(ERROR, "devhost: could not create port: %d\n", r);
-        return -1;
-    }
-    if ((r = port_wait(&dh_port, &root_dc_conn.ph)) < 0) {
+    if ((r = SetupRootDevcoordinatorConnection(fbl::move(root_conn_channel))) != ZX_OK) {
         log(ERROR, "devhost: could not watch rpc channel: %d\n", r);
         return -1;
     }
 
-    r = port_dispatch(&dh_port, ZX_TIME_INFINITE, false);
-    log(ERROR, "devhost: port dispatch finished: %d\n", r);
+    r = DevhostAsyncLoop()->Run(zx::time::infinite(), false /* once */);
+    log(ERROR, "devhost: async loop finished: %d\n", r);
 
     return 0;
 }

@@ -36,7 +36,11 @@ MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/async \
     system/ulib/async.cpp \
+    system/ulib/async.default \
+    system/ulib/async-loop \
+    system/ulib/async-loop.cpp \
     system/ulib/ddk \
     system/ulib/fbl \
     system/ulib/fidl \
@@ -54,9 +58,6 @@ MODULE_STATIC_LIBS += \
 ifeq ($(call TOBOOL,$(ENABLE_DRIVER_TRACING)),true)
 
 MODULE_STATIC_LIBS += \
-    system/ulib/async \
-    system/ulib/async.default \
-    system/ulib/async-loop \
     system/ulib/trace.driver \
     system/ulib/trace-provider
 

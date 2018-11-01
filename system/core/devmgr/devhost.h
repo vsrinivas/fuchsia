@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "async-loop-owned-rpc-handler.h"
 #include "devhost-lock.h"
 #include "device-internal.h"
 
@@ -16,6 +17,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/fdio/remoteio.h>
 #include <lib/zx/channel.h>
 #include <port/port.h>
@@ -163,20 +165,26 @@ zx_status_t devhost_publish_metadata(const fbl::RefPtr<zx_device_t>& dev, const 
                                      uint32_t type, const void* data, size_t length) REQ_DM_LOCK;
 
 // shared between devhost.c and rpc-device.c
-struct DevcoordinatorConnection {
+struct DevcoordinatorConnection : AsyncLoopOwnedRpcHandler<DevcoordinatorConnection> {
     DevcoordinatorConnection() = default;
 
+    static void HandleRpc(fbl::unique_ptr<DevcoordinatorConnection> conn,
+                          async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                          const zx_packet_signal_t* signal);
+
     fbl::RefPtr<zx_device_t> dev;
-    port_handler_t ph = {};
 };
 
-struct DevfsConnection {
+struct DevfsConnection : AsyncLoopOwnedRpcHandler<DevfsConnection> {
     DevfsConnection() = default;
+
+    static void HandleRpc(fbl::unique_ptr<DevfsConnection> conn,
+                          async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                          const zx_packet_signal_t* signal);
 
     fbl::RefPtr<zx_device_t> dev;
     size_t io_off = 0;
     uint32_t flags = 0;
-    port_handler_t ph = {};
 };
 
 zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie);
