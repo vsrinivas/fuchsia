@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "features": [ "persistent-storage" ],
+        "services": [ "fuchsia.wlan.device.service.DeviceService",
+                      "fuchsia.logger.LogSink" ]
+    }
+}

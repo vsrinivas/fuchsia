@@ -90,6 +90,7 @@
         "garnet/packages/prod/wlan_tools",
         "garnet/packages/prod/wlan-hw-sim",
         "garnet/packages/prod/wlan-smoke-test",
+        "garnet/packages/prod/wlan-stress-test",
         "garnet/packages/prod/wlancfg",
         "garnet/packages/prod/wlanif",
         "garnet/packages/prod/wlanphy",
