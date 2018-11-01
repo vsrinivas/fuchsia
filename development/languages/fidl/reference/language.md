@@ -385,7 +385,7 @@ Handles are denoted:
 
 _H_ can be one of: `channel, event, eventpair, fifo, job,
 process, port, resource, socket, thread, vmo`. New types will
-be added to the fidl language as they are added to Zircon.
+be added to the FIDL language as they are added to Zircon.
 
 ```fidl
 // A record which contains some handles.

@@ -1,9 +1,9 @@
-# FIDL: Wire Format Specification
+# Wire Format Specification
 
 This document is a specification of the Fuchsia Interface Definition Language
 (FIDL) data structure encoding.
 
-See [FIDL: Overview](../README.md) for more information about FIDL's overall
+See [Overview](../index.md) for more information about FIDL's overall
 purpose, goals, and requirements, as well as links to related documents.
 
 [TOC]
@@ -68,7 +68,7 @@ are stored in-line whereas each Region structure contains a vector with a
 variable number of Rect objects which are stored sequentially out-of-line. In
 this case, the secondary object is the vector's content (as a unit).
 
-```
+```fidl
 struct Region {
     vector<Rect> rects;
 };
@@ -89,7 +89,7 @@ of references.
 
 Given the following structure:
 
-```
+```fidl
 struct Cart {
     vector<Item> items;
 };
@@ -212,7 +212,7 @@ ordinary C `int32_t` would be.
 
 Arrays are denoted:
 
-*   `T[n]`: where *T* can be any FIDL type
+*   `array<T>:n`: where *T* can be any FIDL type
     (including an array) and *n* is the number of elements in the array.
 
 ![drawing](arrays.png)
@@ -385,7 +385,7 @@ nullability:
 
 The following example shows how structs are laid out according to their fields.
 
-```
+```fidl
 struct Circle {
     bool filled;
     Point center;    // Point will be stored in-line
@@ -448,7 +448,7 @@ nullability:
 
 The following example shows how unions are laid out according to their options.
 
-```
+```fidl
 struct Paint {
     Pattern fg;
     Pattern? bg;
@@ -514,7 +514,7 @@ syntactic; it does not affect the wire format).
 
 We'll use the following interface for the next few examples.
 
-```
+```fidl
     interface Calculator {
         1: Add(int32 a, int32 b) -> (int32 sum);
         2: Divide(int32 dividend, int32 divisor)
@@ -570,7 +570,7 @@ response.
 
 These support sending unsolicited messages from the server back to the client.
 
-```
+```fidl
 interface Calculator {
     1: Add(int32 a, int32 b) -> (int32 sum);
     2: Divide(int32 dividend, int32 divisor) -> (int32 quotient, int32 remainder);
@@ -621,11 +621,28 @@ When a client receives an epitaph message, it can assume that it has received
 the last message, and the channel is about to be closed. The contents of the
 epitaph message explain the disposition of the channel.
 
-The epitaph contains an error status.  The error status of the epitaph is stored
-in the reserved uint32 of the message header.  The reserved word is treated as
-being of type **zx_status_t**: negative numbers are reserved for system error
-codes, positive numbers are reserved for application error codes, and ZX_OK is
-used to indicate normal connection closure.  The message is otherwise empty.
+The body of an epitaph is described by the following structure:
+
+```fidl
+struct Epitaph {
+    // Generic protocol status, represented as a zx_status_t.
+    uint32 status;
+
+    // Protocol-specific data, interpretation depends on the interface
+    // associated with the channel.
+    uint32 code;
+
+    // Human-readable message.
+    string:480 message;
+};
+```
+
+TODO: Should we allow custom epitaph structures as in the original proposal? On
+the other hand, making them system-defined greatly simplifies the bindings and
+is probably sufficient for the most common usage of simply indicating why a
+connection is being closed.
+
+![drawing](epitaph.png)
 
 ## Details
 
@@ -736,7 +753,7 @@ alignment.
    </td>
   </tr>
   <tr>
-   <td>T[n]
+   <td>array<T>:n
    </td>
    <td>sizeof(T) * n
    </td>
@@ -835,7 +852,7 @@ this by keeping track of the current nesting level during message validation.
 
 Complex objects are arrays, vectors, structures, or unions which contain
 pointers or handles which require fix-up. These are precisely the kinds of
-objects for which **encoding tables** must be generated. See [FIDL: C
+objects for which **encoding tables** must be generated. See [C
 Language Bindings](https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/c.md)
 for information about encoding
 tables. Therefore limiting the nesting depth of complex objects has the effect

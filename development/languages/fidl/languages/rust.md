@@ -1,4 +1,4 @@
 
-# FIDL: Rust Language Bindings
+# Rust Language Bindings
 
 (to be completed)

@@ -1,4 +1,4 @@
 
-# FIDL: Go Language Bindings
+# Go Language Bindings
 
 (to be completed)

@@ -1,8 +1,8 @@
-# fidl grammar
+# Grammar
 
 ## Modified BNF rules
 
-This is the grammar for fidl source files. The grammar is expressed in
+This is the grammar for FIDL source files. The grammar is expressed in
 a modified BNF format.
 
 A nonterminal symbol matches a sequence of other symbols, delimited by

@@ -1,5 +1,5 @@
 
-# FIDL: C Language Bindings
+# C Language Bindings
 
 This document is a description of the Fuchsia Interface Definition Language
 (FIDL) implementation for C, including its libraries and code generator.
@@ -89,7 +89,7 @@ system headers and a small portion of the C standard library.
 
 ### fidl_message_header_t
 
-```
+```c
 typedef struct fidl_message_header {
     zx_txid_t txid;
     uint32_t reserved0;
@@ -104,7 +104,7 @@ flags to be set, and so `flags` must be zero.
 
 ### fidl_string_t
 
-```
+```c
 typedef struct fidl_string {
     // Number of UTF-8 code units (bytes), must be 0 if |data| is null.
     uint64_t size;
@@ -126,7 +126,7 @@ message during decoding.
 
 ### fidl_vector_t
 
-```
+```c
 typedef struct fidl_vector {
     // Number of elements, must be 0 if |data| is null.
     uint64_t count;
@@ -148,7 +148,7 @@ message during decoding.
 
 ### fidl_msg_t
 
-```
+```c
 typedef struct fidl_msg {
     // The bytes of the message.
     //
@@ -179,7 +179,7 @@ the `fidl_msg_t` struct is used.
 
 ### fidl_txn_t
 
-```
+```c
 typedef struct fidl_txn fidl_txn_t;
 struct fidl_txn {
     // Replies to the outstanding request and complete the FIDL transaction.
@@ -452,7 +452,7 @@ and interfaces are allowed because they're stored inline as `ZX_HANDLE_INVALID`.
 
 Below is an example of an interface that meets these requirements:
 
-```
+```fidl
 library unn.fleet;
 
 struct SolarPosition {
@@ -479,7 +479,7 @@ For clients, the simple C bindings generate a function for each method that
 takes a channel as its first parameter. These functions are safe to use from any
 thread and do not require any coordination:
 
-```
+```c
 zx_status_t unn_fleet_SpaceShipSetDefenseCondition(
     zx_handle_t channel,
     const unn_fleet_Alert* alert);
@@ -489,12 +489,12 @@ If the method has a response, the generated function will wait synchronously for
 the server to reply. If the response contains any data, the data is returned to
 the caller through out parameters:
 
-``
+```c
 zx_status_t unn_fleet_SpaceShipAdjustHeading(
     zx_handle_t channel,
     const unn_fleet_SolarPosition* destination,
     int8_t* result);
-``
+```
 
 The `zx_status_t` returned by these functions indicates whether the transport
 was successful. Protocol-level status is communicated through out parameters.
@@ -505,7 +505,7 @@ For servers, the simple C bindings generate an ops table that contains a
 function pointer for every method in the interface and a dispatch method that
 decodes the `fidl_msg_t` and calls the appropriate function pointer:
 
-```
+```c
 typedef struct unn_fleet_SpaceShip_ops {
     zx_status_t (*AdjustHeading)(void* ctx,
                                  const unn_fleet_SolarPosition* destination,
@@ -529,7 +529,7 @@ The `txn` parameter is passed through the dispatch function to function pointers
 for methods that have responses. To reply to a message, the implementation of
 that method should call the appropriate reply function:
 
-```
+```c
 zx_status_t unn_fleet_SpaceShipScanForLifeforms_reply(
     fidl_txn_t* txn,
     const uint32_t* life_signs_data,
@@ -538,7 +538,7 @@ zx_status_t unn_fleet_SpaceShipScanForLifeforms_reply(
 
 For example, `ScanForLifeforms` might be implemented as follows:
 
-```
+```c
 static zx_status_t SpaceShip_ScanForLifeforms(void* ctx, fidl_txn_t* txn) {
     uint32_t life_signs[4] = {42u, 32u, 79u, 23u};
     return unn_fleet_SpaceShipScanForLifeforms_reply(txn, life_signs, 4);

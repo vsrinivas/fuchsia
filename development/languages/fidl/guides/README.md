@@ -8,6 +8,6 @@ various use cases for FIDL, such as:
 * error codes using FIDL enums
 * IP addresses using FIDL unions
 * fire-and-forget messages (for example, for configuration)
-* RCP style messages (when you need to wait for the reply)
+* RPC style messages (when you need to wait for the reply)
 * notifications (when you want to receive messages asynchronously)
 

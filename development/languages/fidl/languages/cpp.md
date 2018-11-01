@@ -1,13 +1,13 @@
 
-# FIDL: C++ Language Bindings
+# C++ Language Bindings
 
 This document is a description of the Fuchsia Interface Definition Language
 (FIDL) implementation for C++, including its libraries and code generator.
 
-See [FIDL: Overview][fidl-overview] for more information about FIDL's overall
+See [Overview][fidl-overview] for more information about FIDL's overall
 purpose, goals, and requirements, as well as links to related documents.
 
-This specification builds on the [FIDL: C Language
+This specification builds on the [C Language
 Bindings](c.md) and reuses many of its elements where
 appropriate.
 
@@ -366,7 +366,7 @@ produces.
    </td>
   </tr>
   <tr>
-   <td>T[N]
+   <td>array<T>:N
    </td>
    <td>fidl::array<T, N>
    </td>
@@ -467,7 +467,7 @@ Zircon so we may prefer to follow the C++ standard library style here as well.
 
 #### fidl::string
 
-```
+```cpp
 class string {
 public:
     void init(size_t size, uint8_t* data);
@@ -493,7 +493,7 @@ No constructor or destructor so this is POD.
 
 #### fidl::vector<T>
 
-```
+```cpp
 template<typename T>
 class vector {
 public:
@@ -520,7 +520,7 @@ No constructor or destructor so this is POD.
 
 #### fidl::array<T, N>
 
-```
+```cpp
 template<typename T, size_t N>
 class array {
 public:
@@ -546,7 +546,7 @@ No constructor or destructor so this is POD.
 
 #### fidl::buffer
 
-```
+```cpp
 class buffer {
 public:
     buffer(size_t max_capacity = ZX_MAX_MESSAGE_SIZE);
@@ -582,7 +582,7 @@ something similar for incoming messages.
 
 ##### Example
 
-```
+```cpp
 ZX_status_t say_hello(
 const zx::channel& channel, const char* text, zx::handle token) {
     assert(strlen(text) <= MAX_TEXT_SIZE);

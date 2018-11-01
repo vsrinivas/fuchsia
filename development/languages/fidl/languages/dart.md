@@ -1,4 +1,4 @@
 
-# FIDL: Dart Language Bindings
+# Dart Language Bindings
 
 (to be completed)

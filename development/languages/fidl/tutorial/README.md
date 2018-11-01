@@ -107,7 +107,6 @@ The example file `echo2.fidl`, with line numbers added, looks like this:
 
 ```
 1. library fidl.examples.echo;
-
 2. [Discoverable]
 3. interface Echo {
 4.   1: EchoString(string? value) -> (string? response);

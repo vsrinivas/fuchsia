@@ -1,29 +1,29 @@
-# FIDL: Overview
+# Overview
 
 This document is a description of the Fuchsia Interface Definition Language
 (FIDL) purpose, high-level goals, and requirements.
 
 ## Related Documents
 
-*   [FIDL: Wire Format Specification]
-*   [FIDL: Language Specification]
-*   [FIDL: Compiler Specification]
-*   [FIDL: API Readability / Style Guide]
-*   [FIDL: C Language Bindings]
-*   [FIDL: C++ Language Bindings]
-*   [FIDL Examples]: Some small example code used during development
-*   [FIDL Tutorial]: A tutorial on using FIDL services in several languages
+*   [Wire Format Specification]
+*   [Language Specification]
+*   [Compiler Specification]
+*   [API Readability / Style Guide]
+*   [C Language Bindings]
+*   [C++ Language Bindings]
+*   [Examples]: Some small example code used during development
+*   [Tutorial]: A tutorial on using FIDL services in several languages
 
 <!-- Reference links because these are used again below. -->
 
-[FIDL: Wire Format Specification]: ../reference/wire-format/index.md
-[FIDL: Language Specification]: ../reference/language.md
-[FIDL: Compiler Specification]: ../reference/compiler.md
-[FIDL: API Readability / Style Guide]: ../../../api/fidl.md
-[FIDL: C Language Bindings]: ../languages/c.md
-[FIDL: C++ Language Bindings]: ../languages/cpp.md
-[FIDL Examples]: https://fuchsia.googlesource.com/zircon/+/master/system/host/fidl/examples
-[FIDL Tutorial]: ../tutorial/README.md
+[Wire Format Specification]: ../reference/wire-format/index.md
+[Language Specification]: ../reference/language.md
+[Compiler Specification]: ../reference/compiler.md
+[API Readability / Style Guide]: ../../../api/fidl.md
+[C Language Bindings]: ../languages/c.md
+[C++ Language Bindings]: ../languages/cpp.md
+[Examples]: https://fuchsia.googlesource.com/zircon/+/master/system/host/fidl/examples
+[Tutorial]: ../tutorial/README.md
 
 [TOC]
 
@@ -152,21 +152,21 @@ Requirements
 The FIDL wire format specified how FIDL messages are represented in memory for
 transmission over IPC.
 
-The fidl wire format is documented [FIDL: Wire Format Specification].
+The FIDL wire format is documented [Wire Format Specification].
 
 ### FIDL Language
 
 The FIDL language is the syntax by which interfaces are described in ***.fidl**
 files.
 
-The fidl language is documented [FIDL: Language Specification].
+The FIDL language is documented [Language Specification].
 
 ### FIDL Compiler
 
 The FIDL compiler generates code for programs to use and implement interfaces
 described by the FIDL language.
 
-The fidl compiler is documented [FIDL: Compiler Specification].
+The FIDL compiler is documented [Compiler Specification].
 
 ### FIDL Bindings
 
@@ -176,8 +176,8 @@ interfaces.
 
 Languages-specific topics:
 
-*   [FIDL: C Language Bindings]
-*   [FIDL: C++ Language Bindings]
+*   [C Language Bindings]
+*   [C++ Language Bindings]
 
 Bindings are available in various flavors depending on the language:
 
