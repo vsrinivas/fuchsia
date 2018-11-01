@@ -134,7 +134,7 @@ if [[ -z "${ZSH_VERSION}" ]]; then
         esac
         ;;
 
-      set-layer)
+      set-petal)
         if [[ ${COMP_CWORD} -eq 2 ]]; then
           COMPREPLY=($(compgen -W "garnet peridot topaz" "${cur}"))
           return
