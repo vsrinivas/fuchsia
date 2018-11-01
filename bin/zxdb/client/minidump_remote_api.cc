@@ -124,7 +124,7 @@ void PopulateRegistersARM64(const crashpad::CPUContextARM64& ctx,
     AddReg(category, R::kARMv8_lr, ctx.regs[30]);
     AddReg(category, R::kARMv8_sp, ctx.sp);
     AddReg(category, R::kARMv8_pc, ctx.pc);
-    AddReg(category, R::kARMv8_cpsr, ctx.pstate);
+    AddReg(category, R::kARMv8_cpsr, ctx.spsr);
   }
 
   // ARM doesn't define any registers in this category.
