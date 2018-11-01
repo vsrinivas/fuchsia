@@ -50,26 +50,22 @@ class DevStoryShellApp
   }
 
   // |fuchsia::modular::StoryShell|
-  void AddView(
-      fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
-      fidl::StringPtr /*view_id*/, fidl::StringPtr /* parent_id */,
-      fuchsia::modular::SurfaceRelationPtr /* surface_relation */,
-      fuchsia::modular::ModuleManifestPtr /* module_manifest */,
-      fuchsia::modular::ModuleSource /* module_source */) override {
+  void AddSurface(
+      fuchsia::modular::ViewConnection view_connection,
+      fuchsia::modular::SurfaceInfo /*surface_info*/) override {
     if (view_) {
-      view_->ConnectView(std::move(view_owner));
+      view_->ConnectView(std::move(view_connection.owner));
     } else {
-      child_views_.push_back(std::move(view_owner));
+      child_views_.push_back(std::move(view_connection.owner));
     }
   }
 
   // |fuchsia::modular::StoryShell|
-  void FocusView(fidl::StringPtr /*view_id*/,
-                 fidl::StringPtr /*relative_view_id*/) override {}
+  void FocusSurface(fidl::StringPtr /*surface_id*/) override {}
 
   // |fuchsia::modular::StoryShell|
-  void DefocusView(fidl::StringPtr /*view_id*/,
-                   DefocusViewCallback callback) override {
+  void DefocusSurface(fidl::StringPtr /*surface_id*/,
+                   DefocusSurfaceCallback callback) override {
     callback();
   }
 
@@ -81,6 +77,16 @@ class DevStoryShellApp
       fidl::VectorPtr<
           fuchsia::modular::ContainerRelationEntry> /* relationships */,
       fidl::VectorPtr<fuchsia::modular::ContainerView> /* views */) override {}
+
+  // |fuchsia::modular::StoryShell|
+  void RemoveSurface(fidl::StringPtr /*surface_id*/) override {}
+
+  // |fuchsia::modular::StoryShell|
+  void ReconnectView(fuchsia::modular::ViewConnection view_connection) override {}
+
+  // |fuchsia::modular::StoryShell|
+  void UpdateSurface(fuchsia::modular::ViewConnection view_connection,
+        fuchsia::modular::SurfaceInfo /*surface_info*/) override {};
 
   void Connect() {
     if (story_shell_context_.is_bound() && view_owner_request_) {

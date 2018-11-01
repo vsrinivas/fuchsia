@@ -52,4 +52,8 @@ void StoryShellContextImpl::GetLink(
                                           std::move(request));
 }
 
+void StoryShellContextImpl::RequestView(fidl::StringPtr surface_id) {}
+
+void StoryShellContextImpl::OnSurfaceOffScreen(fidl::StringPtr surface_id) {}
+
 }  // namespace modular

@@ -300,7 +300,7 @@ class StoryControllerImpl::KillModuleCall : public Operation<> {
     if (story_controller_impl_->story_shell_ &&
         module_data_.module_source ==
             fuchsia::modular::ModuleSource::EXTERNAL) {
-      story_controller_impl_->story_shell_->DefocusView(
+      story_controller_impl_->story_shell_->DefocusSurface(
           PathString(module_data_.module_path), future->Completer());
     } else {
       future->Complete();
@@ -451,15 +451,21 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
   void ConnectView(FlowToken flow, fidl::StringPtr anchor_view_id) {
     const auto view_id = PathString(module_data_.module_path);
 
-    story_controller_impl_->story_shell_->AddView(
-        std::move(view_owner_), view_id, anchor_view_id,
-        std::move(module_data_.surface_relation),
-        std::move(module_data_.module_manifest),
-        std::move(module_data_.module_source));
+    fuchsia::modular::ViewConnection view_connection;
+    view_connection.surface_id = view_id;
+    view_connection.owner = std::move(view_owner_);
+
+    fuchsia::modular::SurfaceInfo surface_info;
+    surface_info.parent_id = anchor_view_id;
+    surface_info.surface_relation = std::move(module_data_.surface_relation);
+    surface_info.module_manifest = std::move(module_data_.module_manifest);
+    surface_info.module_source = std::move(module_data_.module_source);
+    story_controller_impl_->story_shell_->AddSurface(
+        std::move(view_connection), std::move(surface_info));
 
     story_controller_impl_->connected_views_.emplace(view_id);
     story_controller_impl_->ProcessPendingViews();
-    story_controller_impl_->story_shell_->FocusView(view_id, anchor_view_id);
+    story_controller_impl_->story_shell_->FocusSurface(view_id);
   }
 
   StoryControllerImpl* const story_controller_impl_;
@@ -749,18 +755,7 @@ class StoryControllerImpl::FocusCall : public Operation<> {
       return;
     }
 
-    RunningModInfo* const anchor = story_controller_impl_->FindAnchor(
-        story_controller_impl_->FindRunningModInfo(module_path_));
-    if (anchor) {
-      // Focus modules relative to their anchor module.
-      story_controller_impl_->story_shell_->FocusView(
-          PathString(module_path_),
-          PathString(anchor->module_data->module_path));
-    } else {
-      // Focus root modules absolutely.
-      story_controller_impl_->story_shell_->FocusView(PathString(module_path_),
-                                                      nullptr);
-    }
+    story_controller_impl_->story_shell_->FocusSurface(PathString(module_path_));
   }
 
   OperationQueue operation_queue_;
@@ -788,8 +783,8 @@ class StoryControllerImpl::DefocusCall : public Operation<> {
 
     // NOTE(mesch): We don't wait for defocus to return. TODO(mesch): What is
     // the return callback good for anyway?
-    story_controller_impl_->story_shell_->DefocusView(PathString(module_path_),
-                                                      [] {});
+    story_controller_impl_->story_shell_->DefocusSurface(PathString(module_path_),
+                                                         [] {});
   }
 
   OperationQueue operation_queue_;
@@ -1412,10 +1407,16 @@ void StoryControllerImpl::ProcessPendingViews() {
     }
 
     const auto view_id = PathString(kv.second.module_path);
-    story_shell_->AddView(std::move(kv.second.view_owner), view_id,
-                          anchor_view_id, std::move(kv.second.surface_relation),
-                          std::move(kv.second.module_manifest),
-                          std::move(kv.second.module_source));
+    fuchsia::modular::ViewConnection view_connection;
+    view_connection.surface_id = view_id;
+    view_connection.owner = std::move(kv.second.view_owner);
+    fuchsia::modular::SurfaceInfo surface_info;
+    surface_info.parent_id = anchor_view_id;
+    surface_info.surface_relation = std::move(kv.second.surface_relation);
+    surface_info.module_manifest = std::move(kv.second.module_manifest);
+    surface_info.module_source = std::move(kv.second.module_source);
+    story_shell_->AddSurface(std::move(view_connection),
+                          std::move(surface_info));
     connected_views_.emplace(view_id);
 
     added_keys.push_back(kv.first);
@@ -1608,8 +1609,8 @@ void StoryControllerImpl::StartStoryShell(
   fuchsia::modular::StoryShellContextPtr story_shell_context;
   story_shell_context_impl_.Connect(story_shell_context.NewRequest());
   story_shell_->Initialize(std::move(story_shell_context));
-  story_shell_.events().OnViewFocused =
-      fit::bind_member(this, &StoryControllerImpl::OnViewFocused);
+  story_shell_.events().OnSurfaceFocused =
+      fit::bind_member(this, &StoryControllerImpl::OnSurfaceFocused);
 }
 
 void StoryControllerImpl::SetState(
@@ -1733,8 +1734,8 @@ void StoryControllerImpl::StartOngoingActivity(
   dispatch_to_story_provider();
 }
 
-void StoryControllerImpl::OnViewFocused(fidl::StringPtr view_id) {
-  auto module_path = StringToPath(view_id);
+void StoryControllerImpl::OnSurfaceFocused(fidl::StringPtr surface_id) {
+  auto module_path = StringToPath(surface_id);
   for (auto& watcher : watchers_.ptrs()) {
     (*watcher)->OnModuleFocused(std::move(module_path));
   }

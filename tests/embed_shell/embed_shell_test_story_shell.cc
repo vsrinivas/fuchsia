@@ -43,31 +43,27 @@ class TestApp
     story_shell_context_.Bind(std::move(story_shell_context));
   }
 
-  TestPoint add_view_{"AddView root:child:child root"};
+  TestPoint add_surface_{"AddSurface root:child:child root"};
 
   // |fuchsia::modular::StoryShell|
-  void AddView(
-      fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
-      fidl::StringPtr view_id, fidl::StringPtr anchor_id,
-      fuchsia::modular::SurfaceRelationPtr /* surface_relation */,
-      fuchsia::modular::ModuleManifestPtr /* module_manifest */,
-      fuchsia::modular::ModuleSource /* module_source */) override {
-    FXL_LOG(INFO) << "view_id=" << view_id << ", anchor_id=" << anchor_id;
-    if (view_id == "root:child:child" && anchor_id == "root") {
-      add_view_.Pass();
+  void AddSurface(
+      fuchsia::modular::ViewConnection view_connection,
+       fuchsia::modular::SurfaceInfo surface_info) override {
+    FXL_LOG(INFO) << "surface_id=" << view_connection.surface_id << ", anchor_id=" << surface_info.parent_id;
+    if (view_connection.surface_id == "root:child:child" && surface_info.parent_id == "root") {
+      add_surface_.Pass();
       modular::testing::GetStore()->Put("story_shell_done", "1", [] {});
     } else {
-      FXL_LOG(WARNING) << "AddView " << view_id << " anchor " << anchor_id;
+      FXL_LOG(WARNING) << "AddView " << view_connection.surface_id << " anchor " << surface_info.parent_id;
     }
   }
 
   // |fuchsia::modular::StoryShell|
-  void FocusView(fidl::StringPtr /*view_id*/,
-                 fidl::StringPtr /*relative_view_id*/) override {}
+  void FocusSurface(fidl::StringPtr /*surface_id*/) override {}
 
   // |fuchsia::modular::StoryShell|
-  void DefocusView(fidl::StringPtr /*view_id*/,
-                   DefocusViewCallback callback) override {
+  void DefocusSurface(fidl::StringPtr /*surface_id*/,
+                   DefocusSurfaceCallback callback) override {
     callback();
   }
 
@@ -79,6 +75,16 @@ class TestApp
       fidl::VectorPtr<
           fuchsia::modular::ContainerRelationEntry> /* relationships */,
       fidl::VectorPtr<fuchsia::modular::ContainerView> /* views */) override {}
+
+  // |fuchsia::modular::StoryShell|
+  void RemoveSurface(fidl::StringPtr /*surface_id*/) override {}
+
+  // |fuchsia::modular::StoryShell|
+  void ReconnectView(fuchsia::modular::ViewConnection view_connection) override {}
+
+  // |fuchsia::modular::StoryShell|
+  void UpdateSurface(fuchsia::modular::ViewConnection view_connection,
+        fuchsia::modular::SurfaceInfo /*surface_info*/) override {};
 
   fuchsia::modular::StoryShellContextPtr story_shell_context_;
 

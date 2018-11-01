@@ -73,16 +73,14 @@ class TestApp
   bool seen_root_one_{};
 
   // |fuchsia::modular::StoryShell|
-  void AddView(
-      fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
-      fidl::StringPtr view_id, fidl::StringPtr anchor_id,
-      fuchsia::modular::SurfaceRelationPtr /*surface_relation*/,
-      fuchsia::modular::ModuleManifestPtr module_manifest,
-      fuchsia::modular::ModuleSource /* module_source */) override {
-    FXL_LOG(INFO) << "AddView " << view_id << " " << anchor_id << " "
+  void AddSurface(
+      fuchsia::modular::ViewConnection view_connection,
+      fuchsia::modular::SurfaceInfo surface_info) override {
+    fuchsia::modular::ModuleManifestPtr module_manifest = std::move(surface_info.module_manifest);
+    FXL_LOG(INFO) << "AddSurface " << view_connection.surface_id << " " << surface_info.parent_id << " "
                   << (module_manifest ? module_manifest->composition_pattern
                                       : " NO MANIFEST");
-    if (view_id == "root:one" && anchor_id == "root") {
+    if (view_connection.surface_id == "root:one" && surface_info.parent_id == "root") {
       Signal("root:one");
 
       if (module_manifest && module_manifest->composition_pattern == "ticker" &&
@@ -95,7 +93,7 @@ class TestApp
       seen_root_one_ = true;
     }
 
-    if (view_id == "root:one:two" && anchor_id == "root:one") {
+    if (view_connection.surface_id == "root:one:two" && surface_info.parent_id == "root:one") {
       Signal("root:one:two");
 
       if (module_manifest && module_manifest->composition_pattern == "ticker" &&
@@ -112,12 +110,11 @@ class TestApp
   }
 
   // |fuchsia::modular::StoryShell|
-  void FocusView(fidl::StringPtr /*view_id*/,
-                 fidl::StringPtr /*relative_view_id*/) override {}
+  void FocusSurface(fidl::StringPtr /*surface_id*/) override {}
 
   // |fuchsia::modular::StoryShell|
-  void DefocusView(fidl::StringPtr /*view_id*/,
-                   DefocusViewCallback callback) override {
+  void DefocusSurface(fidl::StringPtr /*surface_id*/,
+                   DefocusSurfaceCallback callback) override {
     callback();
   }
 
@@ -129,6 +126,17 @@ class TestApp
       fidl::VectorPtr<
           fuchsia::modular::ContainerRelationEntry> /* relationships */,
       fidl::VectorPtr<fuchsia::modular::ContainerView> /* views */) override {}
+
+  // |fuchsia::modular::StoryShell|
+  void RemoveSurface(fidl::StringPtr /*surface_id*/) override {}
+
+  // |fuchsia::modular::StoryShell|
+  void ReconnectView(fuchsia::modular::ViewConnection view_connection) override {}
+
+  // |fuchsia::modular::StoryShell|
+  void UpdateSurface(fuchsia::modular::ViewConnection view_connection,
+        fuchsia::modular::SurfaceInfo /*surface_info*/) override {};
+
 
   fuchsia::modular::StoryShellContextPtr story_shell_context_;
   fuchsia::modular::LinkPtr story_shell_link_;

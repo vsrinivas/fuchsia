@@ -7,6 +7,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/fidl/cpp/string.h>
 
 namespace modular {
 
@@ -31,6 +32,8 @@ class StoryShellContextImpl : fuchsia::modular::StoryShellContext {
       fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher)
       override;
   void GetLink(fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
+  void RequestView(fidl::StringPtr surface_id) override;
+  void OnSurfaceOffScreen(fidl::StringPtr surface_id) override;
 
   const fidl::StringPtr story_id_;
   // Not owned. The StoryProviderImpl corresponding to this context.

@@ -21,29 +21,19 @@ using fuchsia.ui.viewsv1token;
 interface StoryShell {
     1: Initialize(StoryShellContext story_shell_context);
 
-    // Adds a new View to be displayed by the StoryShell, creating a new
-    // StoryShell Surface. More context that allows the story shell to decide how
+    // Adds a new Surface and its corresponding view to be displayed by the
+    // StoryShell. More context that allows the story shell to decide how
     // to layout will be added later. Also, interface to influence life cycle and
     // focus is obviously missing.
-    // |owner| the new view.
-    // |view_id| ID for the view
-    // |parent_id| ID of the view that is parent of this view.
-    // |surface_relation| the relationship between the parent view and this new
-    //     view. Used for layout optimization.
-    // |module_manifest| information about the module that is in the view.
-    // |module_source| how the view was generated. By an action internal to the
-    //     story or by an external action.
-    2: AddView(fuchsia.ui.viewsv1token.ViewOwner owner, string view_id, string parent_id,
-               SurfaceRelation? surface_relation, ModuleManifest? module_manifest,
-               ModuleSource module_source);
+    // |view_connection| the new view and the associated Surface ID.
+    // |surface_info| metadata relating to the Surface.
+    2: AddSurface(ViewConnection view_connection, SurfaceInfo surface_info);
 
-    // Focuses the view with view_id, bringing it to the foreground. Optionally
-    // provide a relative_view_id to focus relative to another view instead of
-    // absolutely.
-    3: FocusView(string view_id, string? relative_view_id);
+    // Focuses the surface with surface_id, bringing it to the foreground.
+    3: FocusSurface(string surface_id);
 
-    // Defocuses the view with view_id, dismissing it to the background.
-    4: DefocusView(string view_id) -> ();
+    // Defocuses the surface with surface_id, dismissing it to the background.
+    4: DefocusSurface(string surface_id) -> ();
 
     // Adds a container, with corresponding container layouts to the story.
     // Optionally provide a parent_id to connect to, if omitted adds the
@@ -55,11 +45,64 @@ interface StoryShell {
                     vector<ContainerRelationEntry> relationships,
                     vector<ContainerView> views);
 
-    // Notify when a view is focused in the story. The focus could be from a user
-    // interaction or requested by the framework through
+    // Notify when a Surface is focused in the story. The focus could be from
+    // a user interaction or requested by the framework through
     // StoryController#FocusModule.
     // EXPERIMENTAL
-    6: -> OnViewFocused(string view_id);
+    6: -> OnSurfaceFocused(string surface_id);
+
+    // Remove the Surface with surface_id from the StoryShell entirely. This is
+    // final. The Surface is removed from the graph. If necessary, the
+    // associated Surface is defocused. There is no expectation that
+    // DefocusSurface is called before this.
+    7: RemoveSurface(string surface_id);
+
+    // Reconnect the view in viewConnection.
+    //
+    // Called to reconnect views that have previously been added
+    // to the StoryShell via addView, and then disconnected. a ViewOwner
+    // connects to a child view and is notified if the view is available. If
+    // it becomes unavailable it's disconnected. If a surface with a
+    // disconnected view is to be shown again, ReconnectView is called.
+    //
+    // E.g. called in response to StoryShell calling RequestView().
+    8: ReconnectView(ViewConnection view_connection);
+
+    // Update the surface
+    // This is called when the intent is to update the surface metadata in the
+    // story graph in place. Any fields, except for the surface_id can be
+    // updated. If no value or null is passed for a field it remains unchanged.
+    // This includes the ViewOwner inside the connection.
+    //
+    // E.g called when an intent resolves to a module that is known by the
+    // caller to already be running, to update associated metadata.
+    9: UpdateSurface(ViewConnection view_connection, SurfaceInfo surface_info);
+};
+
+// A pair mapping the view owner to surface ID
+struct ViewConnection {
+    // The new view corresponding to the surface.
+    fuchsia.ui.viewsv1token.ViewOwner owner;
+
+    // The ID for the surface
+    string surface_id;
+};
+
+// Contain metadata for a Surface
+struct SurfaceInfo {
+    // ID of the view that is parent of this Surface.
+    string parent_id;
+
+    // The relationship between the parent Surface and this new Surface. Used
+    // for layout optimization
+    SurfaceRelation? surface_relation;
+
+    // Information about the module populates the view.
+    ModuleManifest? module_manifest;
+
+    // How the Surface was generated. By an action internal to the story or by
+    // an external action.
+    ModuleSource module_source;
 };
 
 // Maps the node_name to the specific mozart view resulting from resolving and
@@ -86,6 +129,14 @@ interface StoryShellContext {
 
     // Gets a Link instance that the story shell can use for persisting metadata.
     3: GetLink(request<Link> request);
+
+    // Requests a view for a Surface.
+    // Requests that a view for |surface_id| is provided through
+    // StoryShell.ReconnectView().
+    4: RequestView(string surface_id);
+
+    // Notification that the Surface is no longer on screen.
+    5: OnSurfaceOffScreen(string surface_id);
 };
 
 // Implemented by StoryShell to get notified about visual state changes.
