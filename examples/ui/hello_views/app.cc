@@ -99,7 +99,7 @@ App::App(async::Loop* loop, AppType type)
   FXL_LOG(INFO) << AppTypeString(type_) << "Connecting to Scenic service.";
   scenic_ = startup_context_
                 ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
-  scenic_.set_error_handler([this]() {
+  scenic_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << AppTypeString(type_)
                   << "Scenic error.  Connection dropped.";
     ReleaseSessionResources();
@@ -107,7 +107,7 @@ App::App(async::Loop* loop, AppType type)
   });
   FXL_LOG(INFO) << AppTypeString(type_) << "Creating new session.";
   session_ = std::make_unique<scenic::Session>(scenic_.get());
-  session_->set_error_handler([this]() {
+  session_->set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << AppTypeString(type_)
                   << "Session error.  Connection dropped.";
     ReleaseSessionResources();

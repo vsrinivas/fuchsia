@@ -115,7 +115,7 @@ void TraceManager::RegisterTraceProviderWorker(
       TraceProviderBundle{provider.Bind(), next_provider_id_++, pid,
           name.get()});
 
-  it->provider.set_error_handler([this, it]() {
+  it->provider.set_error_handler([this, it](zx_status_t status) {
     if (session_)
       session_->RemoveDeadProvider(&(*it));
     providers_.erase(it);

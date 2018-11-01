@@ -18,7 +18,7 @@ EnvironmentControllerImpl::EnvironmentControllerImpl(
     : binding_(this), realm_(std::move(realm)) {
   if (request.is_valid()) {
     binding_.Bind(std::move(request));
-    binding_.set_error_handler([this] {
+    binding_.set_error_handler([this](zx_status_t status) {
       realm_->parent()->ExtractChild(realm_.get());
       // The destructor of the temporary returned by ExtractChild destroys
       // |this| at the end of the previous statement.

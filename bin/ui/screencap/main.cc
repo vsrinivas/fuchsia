@@ -34,7 +34,7 @@ class ScreenshotTaker {
     // Connect to the Scenic service.
     scenic_ =
         context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
-    scenic_.set_error_handler([this] {
+    scenic_.set_error_handler([this](zx_status_t status) {
       FXL_LOG(ERROR) << "Lost connection to Scenic service.";
       encountered_error_ = true;
       loop_->Quit();

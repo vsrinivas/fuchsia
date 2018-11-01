@@ -26,7 +26,7 @@ class MediaPlayerTestUnattended : public gtest::RealLoopFixture {
     environment_services_ = component::GetEnvironmentServices();
     environment_services_->ConnectToService(player_.NewRequest());
 
-    player_.set_error_handler([this]() {
+    player_.set_error_handler([this](zx_status_t status) {
       FXL_LOG(ERROR) << "Player connection closed.";
       player_connection_closed_ = true;
       QuitLoop();

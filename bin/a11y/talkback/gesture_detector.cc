@@ -11,7 +11,7 @@ GestureDetector::GestureDetector(component::StartupContext* startup_context,
     : startup_context_(startup_context),
       listener_(listener),
       tap_dispatcher_(async_get_default_dispatcher()) {
-  touch_dispatcher_.set_error_handler([this]() {
+  touch_dispatcher_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR) << "Cannot connect to a11y touch dispatcher";
   });
   touch_dispatcher_.events().OnInputEvent =

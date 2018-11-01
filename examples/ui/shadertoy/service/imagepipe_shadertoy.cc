@@ -16,7 +16,7 @@ namespace shadertoy {
 ShadertoyStateForImagePipe::ShadertoyStateForImagePipe(
     App* app, ::fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe)
     : ShadertoyState(app), image_pipe_(image_pipe.Bind()) {
-  image_pipe_.set_error_handler([this] { this->Close(); });
+  image_pipe_.set_error_handler([this](zx_status_t status) { this->Close(); });
 }
 
 ShadertoyStateForImagePipe::~ShadertoyStateForImagePipe() = default;

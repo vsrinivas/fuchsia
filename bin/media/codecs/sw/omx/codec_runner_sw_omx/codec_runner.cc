@@ -28,7 +28,7 @@ void CodecRunner::BindAndOwnSelf(
   assert(input_constraints_);
 
   binding_ = std::make_unique<BindingType>(std::move(self));
-  binding_->set_error_handler([this] {
+  binding_->set_error_handler([this](zx_status_t error) {
     // No point in trying to send an epitaph here since the reason we're here
     // is the other end being gone.
     //

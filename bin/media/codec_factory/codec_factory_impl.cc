@@ -106,7 +106,7 @@ void CodecFactoryImpl::CreateDecoder(
   launch_info.directory_request = services.NewRequest();
   startup_context_->launcher()->CreateComponent(
       std::move(launch_info), component_controller.NewRequest());
-  component_controller.set_error_handler([url] {
+  component_controller.set_error_handler([url](zx_status_t status) {
     FXL_LOG(ERROR) << "app_controller_ error connecting to CodecFactoryImpl of "
                    << url;
   });

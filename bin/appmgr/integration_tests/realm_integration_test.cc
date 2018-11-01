@@ -184,7 +184,7 @@ TEST_F(RealmTest, KillRealmKillsComponent) {
       [&] { return std::string(ret_msg) == message; }, kTimeout));
 
   bool killed = false;
-  echo.set_error_handler([&] { killed = true; });
+  echo.set_error_handler([&](zx_status_t status) { killed = true; });
   enclosing_environment->Kill();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [&] { return enclosing_environment->is_running(); }, kTimeout));

@@ -10,8 +10,9 @@ MockSemanticsProvider::MockSemanticsProvider(component::StartupContext* context,
                                              int32_t view_id)
     : binding_(this), context_(context), view_id_(view_id) {
   context_->ConnectToEnvironmentService(root_.NewRequest());
-  root_.set_error_handler(
-      [this]() { FXL_LOG(ERROR) << "Cannot connect to semantics root."; });
+  root_.set_error_handler([this](zx_status_t status) {
+    FXL_LOG(ERROR) << "Cannot connect to semantics root.";
+  });
   root_->RegisterSemanticsProvider(view_id, binding_.NewBinding());
 }
 

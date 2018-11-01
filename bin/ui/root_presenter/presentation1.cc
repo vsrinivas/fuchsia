@@ -102,7 +102,7 @@ Presentation1::Presentation1(::fuchsia::ui::viewsv1::ViewManager* view_manager,
   {
     a11y_toggle_.events().OnAccessibilityToggle =
         fit::bind_member(this, &Presentation1::OnAccessibilityToggle);
-    a11y_toggle_.set_error_handler([this]() {
+    a11y_toggle_.set_error_handler([this](zx_status_t error) {
       FXL_LOG(INFO) << "Disconnected from a11y toggle broadcaster.";
       // If we disconnect from the a11y toggler, we have no way of turning on or
       // off accessibility support, so we just force it to stay disabled.
@@ -117,7 +117,7 @@ Presentation1::Presentation1(::fuchsia::ui::viewsv1::ViewManager* view_manager,
     a11y_input_connection_.events().OnReturnInputEvent =
         fit::bind_member(this, &Presentation1::OnEvent);
     a11y_input_connection_.set_error_handler(
-        [this] { a11y_input_connection_.Unbind(); });
+        [this](zx_status_t error) { a11y_input_connection_.Unbind(); });
   }
 
   FXL_CHECK(display_startup_rotation_adjustment_ % 90 == 0)
@@ -192,7 +192,7 @@ void Presentation1::CreateViewTree(
   tree_listener_binding_.Bind(tree_listener.NewRequest());
   view_manager_->CreateViewTree(tree_.NewRequest(), std::move(tree_listener),
                                 "Presentation");
-  tree_.set_error_handler([this] {
+  tree_.set_error_handler([this](zx_status_t error) {
     FXL_LOG(ERROR) << "Root presenter: View tree connection error.";
     Shutdown();
   });
@@ -206,7 +206,7 @@ void Presentation1::CreateViewTree(
 
   // Prepare the view container for the root.
   tree_->GetContainer(tree_container_.NewRequest());
-  tree_container_.set_error_handler([this] {
+  tree_container_.set_error_handler([this](zx_status_t error) {
     FXL_LOG(ERROR) << "Root presenter: Tree view container connection error.";
     Shutdown();
   });
@@ -220,7 +220,7 @@ void Presentation1::CreateViewTree(
   input_dispatcher_ =
       component::ConnectToService<fuchsia::ui::input::InputDispatcher>(
           tree_service_provider.get());
-  input_dispatcher_.set_error_handler([this] {
+  input_dispatcher_.set_error_handler([this](zx_status_t error) {
     // This isn't considered a fatal error right now since it is still useful
     // to be able to test a view system that has graphics but no input.
     FXL_LOG(WARNING)
@@ -586,15 +586,16 @@ void Presentation1::CaptureKeyboardEventHACK(
   fuchsia::ui::policy::KeyboardCaptureListenerHACKPtr listener;
   listener.Bind(std::move(listener_handle));
   // Auto-remove listeners if the interface closes.
-  listener.set_error_handler([this, listener = listener.get()] {
-    captured_keybindings_.erase(
-        std::remove_if(captured_keybindings_.begin(),
-                       captured_keybindings_.end(),
-                       [listener](const KeyboardCaptureItem& item) -> bool {
-                         return item.listener.get() == listener;
-                       }),
-        captured_keybindings_.end());
-  });
+  listener.set_error_handler(
+      [this, listener = listener.get()](zx_status_t error) {
+        captured_keybindings_.erase(
+            std::remove_if(captured_keybindings_.begin(),
+                           captured_keybindings_.end(),
+                           [listener](const KeyboardCaptureItem& item) -> bool {
+                             return item.listener.get() == listener;
+                           }),
+            captured_keybindings_.end());
+      });
 
   captured_keybindings_.push_back(
       KeyboardCaptureItem{std::move(event_to_capture), std::move(listener)});
@@ -606,15 +607,16 @@ void Presentation1::CapturePointerEventsHACK(
   fuchsia::ui::policy::PointerCaptureListenerHACKPtr listener;
   listener.Bind(std::move(listener_handle));
   // Auto-remove listeners if the interface closes.
-  listener.set_error_handler([this, listener = listener.get()] {
-    captured_pointerbindings_.erase(
-        std::remove_if(captured_pointerbindings_.begin(),
-                       captured_pointerbindings_.end(),
-                       [listener](const PointerCaptureItem& item) -> bool {
-                         return item.listener.get() == listener;
-                       }),
-        captured_pointerbindings_.end());
-  });
+  listener.set_error_handler(
+      [this, listener = listener.get()](zx_status_t error) {
+        captured_pointerbindings_.erase(
+            std::remove_if(captured_pointerbindings_.begin(),
+                           captured_pointerbindings_.end(),
+                           [listener](const PointerCaptureItem& item) -> bool {
+                             return item.listener.get() == listener;
+                           }),
+            captured_pointerbindings_.end());
+      });
 
   captured_pointerbindings_.push_back(PointerCaptureItem{std::move(listener)});
 }

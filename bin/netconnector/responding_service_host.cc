@@ -48,11 +48,12 @@ void RespondingServiceHost::RegisterSingleton(
           launcher_->CreateComponent(std::move(dup_launch_info),
                                      controller.NewRequest());
 
-          controller.set_error_handler([this, service_name] {
-            FXL_LOG(INFO) << "Service " << service_name
-                          << " provider disconnected";
-            service_providers_by_name_.erase(service_name);
-          });
+          controller.set_error_handler(
+              [this, service_name](zx_status_t status) {
+                FXL_LOG(INFO)
+                    << "Service " << service_name << " provider disconnected";
+                service_providers_by_name_.erase(service_name);
+              });
 
           std::tie(iter, std::ignore) = service_providers_by_name_.emplace(
               std::make_pair<const std::string&, ServicesHolder>(
@@ -69,7 +70,7 @@ void RespondingServiceHost::RegisterProvider(
     fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> handle) {
   fuchsia::sys::ServiceProviderPtr service_provider = handle.Bind();
 
-  service_provider.set_error_handler([this, service_name] {
+  service_provider.set_error_handler([this, service_name](zx_status_t status) {
     FXL_LOG(INFO) << "Service " << service_name << " provider disconnected";
     service_providers_by_name_.erase(service_name);
   });

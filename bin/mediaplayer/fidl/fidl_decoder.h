@@ -93,7 +93,7 @@ class FidlDecoder : public Decoder {
   void MaybeRequestInputPacket();
 
   // Handles failure of the connection to the outboard decoder.
-  void OnConnectionFailed();
+  void OnConnectionFailed(zx_status_t error);
 
   // Handles the |OnStreamFailed| event from the outboard decoder.
   void OnStreamFailed(uint64_t stream_lifetime_ordinal);

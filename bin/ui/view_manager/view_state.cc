@@ -27,9 +27,10 @@ ViewState::ViewState(
   FXL_DCHECK(registry_);
   FXL_DCHECK(view_listener_);
 
-  view_binding_.set_error_handler(
-      [this] { registry_->OnViewDied(this, "View connection closed"); });
-  view_listener_.set_error_handler([this] {
+  view_binding_.set_error_handler([this](zx_status_t status) {
+    registry_->OnViewDied(this, "View connection closed");
+  });
+  view_listener_.set_error_handler([this](zx_status_t status) {
     registry_->OnViewDied(this, "ViewListener connection closed");
   });
 }

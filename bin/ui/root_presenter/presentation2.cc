@@ -499,15 +499,16 @@ void Presentation2::CaptureKeyboardEventHACK(
   fuchsia::ui::policy::KeyboardCaptureListenerHACKPtr listener;
   listener.Bind(std::move(listener_handle));
   // Auto-remove listeners if the interface closes.
-  listener.set_error_handler([this, listener = listener.get()] {
-    captured_keybindings_.erase(
-        std::remove_if(captured_keybindings_.begin(),
-                       captured_keybindings_.end(),
-                       [listener](const KeyboardCaptureItem& item) -> bool {
-                         return item.listener.get() == listener;
-                       }),
-        captured_keybindings_.end());
-  });
+  listener.set_error_handler(
+      [this, listener = listener.get()](zx_status_t status) {
+        captured_keybindings_.erase(
+            std::remove_if(captured_keybindings_.begin(),
+                           captured_keybindings_.end(),
+                           [listener](const KeyboardCaptureItem& item) -> bool {
+                             return item.listener.get() == listener;
+                           }),
+            captured_keybindings_.end());
+      });
 
   captured_keybindings_.push_back(
       KeyboardCaptureItem{std::move(event_to_capture), std::move(listener)});
@@ -519,15 +520,16 @@ void Presentation2::CapturePointerEventsHACK(
   fuchsia::ui::policy::PointerCaptureListenerHACKPtr listener;
   listener.Bind(std::move(listener_handle));
   // Auto-remove listeners if the interface closes.
-  listener.set_error_handler([this, listener = listener.get()] {
-    captured_pointerbindings_.erase(
-        std::remove_if(captured_pointerbindings_.begin(),
-                       captured_pointerbindings_.end(),
-                       [listener](const PointerCaptureItem& item) -> bool {
-                         return item.listener.get() == listener;
-                       }),
-        captured_pointerbindings_.end());
-  });
+  listener.set_error_handler(
+      [this, listener = listener.get()](zx_status_t status) {
+        captured_pointerbindings_.erase(
+            std::remove_if(captured_pointerbindings_.begin(),
+                           captured_pointerbindings_.end(),
+                           [listener](const PointerCaptureItem& item) -> bool {
+                             return item.listener.get() == listener;
+                           }),
+            captured_pointerbindings_.end());
+      });
 
   captured_pointerbindings_.push_back(PointerCaptureItem{std::move(listener)});
 }

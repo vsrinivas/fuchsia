@@ -46,8 +46,8 @@ void test_factory() {
   });
 
   fuchsia::mediacodec::CodecFactoryPtr codec_factory;
-  codec_factory.set_error_handler([] {
-    printf("codec_factory failed\n");
+  codec_factory.set_error_handler([](zx_status_t error) {
+    printf("codec_factory failed with error %d\n", error);
     FailFatal();
   });
 
@@ -64,9 +64,11 @@ void test_factory() {
       });
 
   fuchsia::mediacodec::CodecPtr codec;
-  codec.set_error_handler([] {
+  codec.set_error_handler([](zx_status_t error) {
     printf(
-        "codec failed (for now this is normal if not running this on VIM2)\n");
+        "codec failed with error %d (for now this is normal if not running "
+        "this on VIM2)\n",
+        error);
     FailFatal();
   });
   // Use FIDL thread to send request for Codec.

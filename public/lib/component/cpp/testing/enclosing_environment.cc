@@ -69,7 +69,7 @@ zx_status_t EnvironmentServices::AddServiceWithLaunchInfo(
           enclosing_env_->CreateComponent(std::move(dup_launch_info),
                                           controller.NewRequest());
           controller.set_error_handler(
-              [this, url = launch_info.url, &controller] {
+              [this, url = launch_info.url, &controller](zx_status_t status) {
                 // TODO: show error? where on stderr?
                 controller.Unbind();  // kills the singleton application
                 singleton_services_.erase(url);
@@ -114,7 +114,8 @@ EnclosingEnvironment::EnclosingEnvironment(
   parent_env->CreateNestedEnvironment(env.NewRequest(),
                                       env_controller_.NewRequest(), label_,
                                       std::move(service_list), options);
-  env_controller_.set_error_handler([this] { running_ = false; });
+  env_controller_.set_error_handler(
+      [this](zx_status_t status) { running_ = false; });
   // Connect to launcher
   env->GetLauncher(launcher_.NewRequest());
 

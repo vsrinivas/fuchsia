@@ -23,7 +23,8 @@ BaseView::BaseView(ViewContext context, const std::string& debug_name)
 }
 
 void BaseView::SetReleaseHandler(fit::closure callback) {
-  listener_binding_.set_error_handler([cb = std::move(callback)] (zx_status_t status) {cb();});
+  listener_binding_.set_error_handler(
+      [cb = std::move(callback)](zx_status_t status) { cb(); });
 }
 
 void BaseView::SetReleaseHandler(fit::function<void(zx_status_t)> callback) {

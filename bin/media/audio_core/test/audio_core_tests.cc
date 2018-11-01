@@ -29,7 +29,7 @@ class AudioCoreTest : public gtest::RealLoopFixture {
     environment_services_->ConnectToService(audio_.NewRequest());
     ASSERT_TRUE(audio_);
 
-    audio_.set_error_handler([this]() {
+    audio_.set_error_handler([this](zx_status_t status) {
       error_occurred_ = true;
       QuitLoop();
     });

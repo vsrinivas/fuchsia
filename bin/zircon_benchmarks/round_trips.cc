@@ -549,7 +549,7 @@ class FidlTest {
     RoundTripServiceImpl service_impl;
     fidl::Binding<fuchsia::zircon::benchmarks::RoundTripService> binding(
         &service_impl, std::move(channel));
-    binding.set_error_handler([&loop] { loop.Quit(); });
+    binding.set_error_handler([&loop](zx_status_t status) { loop.Quit(); });
     loop.Run();
   }
 

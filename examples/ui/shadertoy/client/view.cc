@@ -39,7 +39,7 @@ ViewImpl::ViewImpl(component::StartupContext* startup_context,
       shadertoy_factory_(startup_context_->ConnectToEnvironmentService<
                          fuchsia::examples::shadertoy::ShadertoyFactory>()),
       start_time_(zx_clock_get(ZX_CLOCK_MONOTONIC)) {
-  shadertoy_factory_.set_error_handler([this] {
+  shadertoy_factory_.set_error_handler([this] (zx_status_t status){
     FXL_LOG(INFO) << "Lost connection to ShadertoyFactory.";
     QuitLoop();
   });
@@ -50,7 +50,7 @@ ViewImpl::ViewImpl(component::StartupContext* startup_context,
   auto image_pipe_request = image_pipe_handle.NewRequest();
   shadertoy_factory_->NewImagePipeShadertoy(shadertoy_.NewRequest(),
                                             std::move(image_pipe_handle));
-  shadertoy_.set_error_handler([this] {
+  shadertoy_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "Lost connection to Shadertoy.";
     QuitLoop();
   });

@@ -139,7 +139,8 @@ void CobaltLoggerImpl::ConnectToCobaltApplication() {
       CloneProjectProfile(), logger_.NewRequest(), [this](Status status) {
         if (status == Status::OK) {
           if (logger_) {
-            logger_.set_error_handler([this]() { OnConnectionError(); });
+            logger_.set_error_handler(
+                [this](zx_status_t status) { OnConnectionError(); });
             SendEvents();
           } else {
             OnConnectionError();

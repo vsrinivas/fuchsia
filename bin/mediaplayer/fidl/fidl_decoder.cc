@@ -448,7 +448,7 @@ void FidlDecoder::MaybeRequestInputPacket() {
   }
 }
 
-void FidlDecoder::OnConnectionFailed() {
+void FidlDecoder::OnConnectionFailed(zx_status_t error) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   InitFailed();

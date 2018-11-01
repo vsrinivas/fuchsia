@@ -60,7 +60,8 @@ void EnvironmentControllerImpl::LaunchInstance(
       cid, std::move(guest_endpoint), &host_vsock_endpoint_);
 
   auto& label = launch_info.label ? launch_info.label : launch_info.url;
-  component_controller.set_error_handler([this, cid] { guests_.erase(cid); });
+  component_controller.set_error_handler(
+      [this, cid](zx_status_t status) { guests_.erase(cid); });
   auto component = std::make_unique<GuestComponent>(
       label, std::move(endpoint), std::move(services),
       std::move(component_controller));

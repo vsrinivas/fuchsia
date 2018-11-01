@@ -16,7 +16,7 @@ Canvas::Canvas(component::StartupContext* context, async::Loop* loop)
 
 Canvas::Canvas(::fuchsia::ui::sketchy::CanvasPtr canvas, async::Loop* loop)
     : canvas_(std::move(canvas)), loop_(loop), next_resource_id_(1) {
-  canvas_.set_error_handler([this] {
+  canvas_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "sketchy_lib::Canvas: lost connection to "
                      "::fuchsia::ui::sketchy::Canvas.";
     loop_->Quit();

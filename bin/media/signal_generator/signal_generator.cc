@@ -241,13 +241,13 @@ void MediaApp::AcquireAudioRenderer(component::StartupContext* app_context) {
   audio->CreateAudioRenderer(audio_renderer_.NewRequest());
   audio_renderer_->BindGainControl(gain_control_.NewRequest());
 
-  audio_renderer_.set_error_handler([this]() {
+  audio_renderer_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR)
         << "fuchsia::media::AudioRenderer connection lost. Quitting.";
     Shutdown();
   });
 
-  gain_control_.set_error_handler([this]() {
+  gain_control_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR) << "fuchsia::media::GainControl connection lost. Quitting.";
     Shutdown();
   });

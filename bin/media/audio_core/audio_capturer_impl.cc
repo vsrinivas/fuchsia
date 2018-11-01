@@ -51,7 +51,7 @@ AudioCapturerImpl::AudioCapturerImpl(
   mix_wakeup_ = ::dispatcher::WakeupEvent::Create();
   mix_timer_ = ::dispatcher::Timer::Create();
 
-  binding_.set_error_handler([this]() { Shutdown(); });
+  binding_.set_error_handler([this](zx_status_t status) { Shutdown(); });
   source_link_refs_.reserve(16u);
 
   // TODO(johngro) : Initialize this with the native configuration of the source

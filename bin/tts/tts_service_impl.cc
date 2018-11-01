@@ -40,7 +40,7 @@ zx_status_t TtsServiceImpl::Init() {
 TtsServiceImpl::Client::Client(TtsServiceImpl* owner,
                                fidl::InterfaceRequest<TtsService> request)
     : owner_(owner), binding_(this, std::move(request)) {
-  binding_.set_error_handler([this] { Shutdown(); });
+  binding_.set_error_handler([this](zx_status_t status) { Shutdown(); });
 }
 
 TtsServiceImpl::Client::~Client() {

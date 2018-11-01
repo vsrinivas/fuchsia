@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
   main_loop.StartThread("FIDL_thread");
 
   fuchsia::mediacodec::CodecFactoryPtr codec_factory;
-  codec_factory.set_error_handler([] {
+  codec_factory.set_error_handler([](zx_status_t status) {
     // TODO(dustingreen): get and print CodecFactory channel epitaph once that's
     // possible.
     FXL_LOG(ERROR) << "codec_factory failed - unexpected";

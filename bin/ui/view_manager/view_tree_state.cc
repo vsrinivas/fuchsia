@@ -27,10 +27,10 @@ ViewTreeState::ViewTreeState(
       weak_factory_(this) {
   FXL_DCHECK(view_tree_listener_);
 
-  view_tree_binding_.set_error_handler([this, registry] {
+  view_tree_binding_.set_error_handler([this, registry](zx_status_t status) {
     registry->OnViewTreeDied(this, "ViewTree connection closed");
   });
-  view_tree_listener_.set_error_handler([this, registry] {
+  view_tree_listener_.set_error_handler([this, registry](zx_status_t status) {
     registry->OnViewTreeDied(this, "ViewTreeListener connection closed");
   });
 }

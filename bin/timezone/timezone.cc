@@ -166,8 +166,9 @@ void TimezoneImpl::Watch(
     fidl::InterfaceHandle<fuchsia::timezone::TimezoneWatcher> watcher) {
   fuchsia::timezone::TimezoneWatcherPtr watcher_proxy = watcher.Bind();
   fuchsia::timezone::TimezoneWatcher* proxy_raw_ptr = watcher_proxy.get();
-  watcher_proxy.set_error_handler(
-      [this, proxy_raw_ptr] { ReleaseWatcher(proxy_raw_ptr); });
+  watcher_proxy.set_error_handler([this, proxy_raw_ptr](zx_status_t status) {
+    ReleaseWatcher(proxy_raw_ptr);
+  });
   watchers_.push_back(std::move(watcher_proxy));
 }
 

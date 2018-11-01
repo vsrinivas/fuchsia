@@ -7,10 +7,12 @@
 namespace talkback {
 
 TalkbackImpl::TalkbackImpl(component::StartupContext* startup_context) {
-  manager_.set_error_handler(
-      [this]() { FXL_LOG(ERROR) << "Cannot connect to a11y manager"; });
-  tts_.set_error_handler(
-      [this]() { FXL_LOG(ERROR) << "Cannot connect to tts service"; });
+  manager_.set_error_handler([this](zx_status_t status) {
+    FXL_LOG(ERROR) << "Cannot connect to a11y manager";
+  });
+  tts_.set_error_handler([this](zx_status_t status) {
+    FXL_LOG(ERROR) << "Cannot connect to tts service";
+  });
   manager_.events().OnNodeAction =
       fit::bind_member(this, &TalkbackImpl::OnNodeAction);
   startup_context->ConnectToEnvironmentService(manager_.NewRequest());

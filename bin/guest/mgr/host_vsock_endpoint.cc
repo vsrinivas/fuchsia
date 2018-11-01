@@ -60,7 +60,7 @@ void HostVsockEndpoint::Listen(
   }
   bool inserted;
   auto acceptor_ptr = acceptor.Bind();
-  acceptor_ptr.set_error_handler([this, port]() {
+  acceptor_ptr.set_error_handler([this, port](zx_status_t status) {
     port_bitmap_.ClearOne(port);
     listeners_.erase(port);
   });

@@ -103,7 +103,8 @@ InputDispatcherImpl::InputDispatcherImpl(
       weak_factory_(this) {
   FXL_DCHECK(inspector_);
 
-  binding_.set_error_handler([this] { owner_->OnInputDispatcherDied(this); });
+  binding_.set_error_handler(
+      [this](zx_status_t status) { owner_->OnInputDispatcherDied(this); });
 }
 
 InputDispatcherImpl::~InputDispatcherImpl() {}

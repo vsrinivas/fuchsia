@@ -30,7 +30,7 @@ MdnsImpl::MdnsImpl(component::StartupContext* startup_context,
       startup_context
           ->ConnectToEnvironmentService<fuchsia::mdns::MdnsService>();
 
-  mdns_service_.set_error_handler([this]() {
+  mdns_service_.set_error_handler([this](zx_status_t status) {
     mdns_service_.set_error_handler(nullptr);
     mdns_service_.Unbind();
     subscriber_.Reset();
@@ -169,7 +169,7 @@ void MdnsImpl::Respond(const std::string& service_name,
   fidl::InterfaceHandle<fuchsia::mdns::MdnsResponder> responder_handle;
 
   binding_.Bind(responder_handle.NewRequest());
-  binding_.set_error_handler([this]() {
+  binding_.set_error_handler([this](zx_status_t status) {
     binding_.set_error_handler(nullptr);
     binding_.Unbind();
     std::cout << "mDNS service disconnected from responder unexpectedly\n";

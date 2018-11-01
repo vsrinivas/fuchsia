@@ -23,7 +23,7 @@ WaylandDispatcherImpl::GetOrStartBridgeLocked() {
         .directory_request = services.NewRequest(),
     };
     launcher_->CreateComponent(std::move(launch_info), bridge_.NewRequest());
-    bridge_.set_error_handler([this]() {
+    bridge_.set_error_handler([this](zx_status_t status) {
       std::lock_guard lock(mutex_);
       bridge_ = nullptr;
       dispatcher_ = nullptr;

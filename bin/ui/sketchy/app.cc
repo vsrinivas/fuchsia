@@ -16,11 +16,11 @@ App::App(async::Loop* loop, escher::EscherWeakPtr weak_escher)
                                            std::move(weak_escher))) {
   context_->outgoing().AddPublicService(bindings_.GetHandler(canvas_.get()));
 
-  session_->set_error_handler([this] {
+  session_->set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "Sketchy service lost connection to Session.";
     loop_->Quit();
   });
-  scenic_.set_error_handler([this] {
+  scenic_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "Sketchy service lost connection to Mozart.";
     loop_->Quit();
   });

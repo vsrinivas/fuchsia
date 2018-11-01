@@ -10,12 +10,12 @@ A11yTouchDispatcherImpl::A11yTouchDispatcherImpl()
     : input_receiver_binding_(this),
       touch_dispatcher_binding_(this),
       presentation_valid_(false) {
-  input_receiver_binding_.set_error_handler([this] {
+  input_receiver_binding_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "Input receiver client disconnected";
     presentation_valid_ = false;
     input_receiver_binding_.Unbind();
   });
-  touch_dispatcher_binding_.set_error_handler([this] {
+  touch_dispatcher_binding_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "Touch dispatcher client disconnected.";
     touch_dispatcher_binding_.Unbind();
   });

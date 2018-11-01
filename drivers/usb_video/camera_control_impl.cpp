@@ -21,7 +21,8 @@ ControlImpl::ControlImpl(video::usb::UsbVideoStream* usb_video_stream,
                          fit::closure on_connection_closed)
     : binding_(this, fbl::move(control), dispatcher),
       usb_video_stream_(usb_video_stream) {
-  binding_.set_error_handler(fbl::move(on_connection_closed));
+  binding_.set_error_handler(
+      [occ = fbl::move(on_connection_closed)](zx_status_t status) { occ(); });
 }
 
 void ControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
@@ -152,8 +153,9 @@ ControlImpl::StreamImpl::StreamImpl(
   // The waiter, dispatcher and token are known to be valid, so this should
   // never fail.
   FXL_CHECK(status == ZX_OK);
-  binding_.set_error_handler(
-      [this] { owner_.usb_video_stream_->DeactivateVideoBuffer(); });
+  binding_.set_error_handler([this](zx_status_t status) {
+    owner_.usb_video_stream_->DeactivateVideoBuffer();
+  });
 }
 
 }  // namespace camera

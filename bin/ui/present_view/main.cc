@@ -54,7 +54,7 @@ int main(int argc, const char** argv) {
   fuchsia::sys::ComponentControllerPtr controller;
   startup_context_->launcher()->CreateComponent(std::move(launch_info),
                                                 controller.NewRequest());
-  controller.set_error_handler([&loop] {
+  controller.set_error_handler([&loop](zx_status_t status) {
     FXL_LOG(INFO) << "Launched application terminated.";
     loop.Quit();
   });

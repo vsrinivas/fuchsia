@@ -672,7 +672,7 @@ void Record::LaunchApp() {
 
   context()->launcher()->CreateComponent(std::move(launch_info),
                                          component_controller_.NewRequest());
-  component_controller_.set_error_handler([this] {
+  component_controller_.set_error_handler([this](zx_status_t error) {
     out() << "Application terminated" << std::endl;
     if (!options_.decouple)
       // The trace might have been already stopped by the |Wait()| callback. In

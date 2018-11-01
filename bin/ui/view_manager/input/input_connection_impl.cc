@@ -22,7 +22,8 @@ InputConnectionImpl::InputConnectionImpl(
       editor_binding_(this),
       client_binding_(this) {
   FXL_DCHECK(inspector_);
-  binding_.set_error_handler([this] { owner_->OnInputConnectionDied(this); });
+  binding_.set_error_handler(
+      [this](zx_status_t status) { owner_->OnInputConnectionDied(this); });
 }
 
 InputConnectionImpl::~InputConnectionImpl() {}
@@ -80,7 +81,8 @@ void InputConnectionImpl::GetInputMethodEditor(
           return;
 
         editor_binding_.Bind(std::move(editor_request));
-        editor_binding_.set_error_handler([this] { OnEditorDied(); });
+        editor_binding_.set_error_handler(
+            [this](zx_status_t status) { OnEditorDied(); });
 
         client_ = client.Bind();
 
@@ -125,7 +127,7 @@ void InputConnectionImpl::ConnectWithImeService(
   // Retrieve IME Service from the view tree
   if (!ime_service_.is_bound()) {
     inspector_->GetImeService(view_token_, ime_service_.NewRequest());
-    ime_service_.set_error_handler([this] {
+    ime_service_.set_error_handler([this](zx_status_t status) {
       FXL_LOG(ERROR) << "IME Service Died.";
       Reset();
     });
@@ -134,7 +136,8 @@ void InputConnectionImpl::ConnectWithImeService(
   // GetInputMethodEditor from IME service
   fuchsia::ui::input::InputMethodEditorClientPtr client_ptr;
   client_binding_.Bind(client_ptr.NewRequest());
-  client_binding_.set_error_handler([this] { OnClientDied(); });
+  client_binding_.set_error_handler(
+      [this](zx_status_t status) { OnClientDied(); });
   ime_service_->GetInputMethodEditor(keyboard_type, action, std::move(state),
                                      std::move(client_ptr),
                                      editor_.NewRequest());

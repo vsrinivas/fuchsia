@@ -52,7 +52,7 @@ int main(int argc, const char** argv) {
   auto presenter =
       startup_context_
           ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
-  presenter.set_error_handler([&loop] {
+  presenter.set_error_handler([&loop](zx_status_t status) {
     FXL_LOG(INFO) << "Lost connection to Presenter service.";
     loop.Quit();
   });

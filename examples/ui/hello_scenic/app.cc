@@ -44,7 +44,7 @@ App::App(async::Loop* loop)
   // Connect to the SceneManager service.
   scenic_ = startup_context_
                 ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
-  scenic_.set_error_handler([this] {
+  scenic_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "Lost connection to Scenic service.";
     loop_->Quit();
   });
@@ -199,7 +199,7 @@ void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
 
   // TODO: set up SessionListener.
   session_ = std::make_unique<scenic::Session>(scenic_.get());
-  session_->set_error_handler([this] {
+  session_->set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "Session terminated.";
     loop_->Quit();
   });

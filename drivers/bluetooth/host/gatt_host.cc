@@ -69,12 +69,13 @@ void GattHost::BindGattServer(
   PostMessage([this, request = std::move(request)]() mutable {
     auto self = weak_ptr_factory_.GetWeakPtr();
     auto server = std::make_unique<GattServerServer>(gatt_, std::move(request));
-    server->set_error_handler([self, server = server.get()] {
-      if (self) {
-        bt_log(TRACE, "bt-host", "GATT server disconnected");
-        self->server_servers_.erase(server);
-      }
-    });
+    server->set_error_handler(
+        [self, server = server.get()](zx_status_t status) {
+          if (self) {
+            bt_log(TRACE, "bt-host", "GATT server disconnected");
+            self->server_servers_.erase(server);
+          }
+        });
     server_servers_[server.get()] = std::move(server);
   });
 }
@@ -94,7 +95,7 @@ void GattHost::BindGattClient(
     auto self = weak_ptr_factory_.GetWeakPtr();
     auto server = std::make_unique<GattClientServer>(std::move(peer_id), gatt_,
                                                      std::move(request));
-    server->set_error_handler([self, token] {
+    server->set_error_handler([self, token](zx_status_t status) {
       if (self) {
         bt_log(TRACE, "bt-host", "GATT client disconnected");
         self->client_servers_.erase(token);

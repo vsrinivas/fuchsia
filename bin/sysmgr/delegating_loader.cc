@@ -90,7 +90,7 @@ void DelegatingLoader::StartDelegate(LoaderRecord* record) {
                                       record->controller.NewRequest());
 
   record->loader = services.ConnectToService<fuchsia::sys::Loader>();
-  record->loader.set_error_handler([this, record] {
+  record->loader.set_error_handler([this, record](zx_status_t status) {
     // proactively kill the loader app entirely if its Loader died on
     // us
     record->controller.Unbind();

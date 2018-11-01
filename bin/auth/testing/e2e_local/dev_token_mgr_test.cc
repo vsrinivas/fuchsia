@@ -89,7 +89,7 @@ class DevTokenManagerAppTest
     }
     startup_context_->launcher()->CreateComponent(std::move(launch_info),
                                                   controller_.NewRequest());
-    controller_.set_error_handler([] {
+    controller_.set_error_handler([](zx_status_t status) {
       FXL_LOG(ERROR) << "Error in connecting to TokenManagerFactory service.";
     });
 

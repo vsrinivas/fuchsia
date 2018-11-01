@@ -135,8 +135,8 @@ void CodecFactoryApp::DiscoverMediaCodecDriversAndListenForMoreAsync() {
         discovery_entry->codec_factory =
             std::make_shared<fuchsia::mediacodec::CodecFactoryPtr>();
         discovery_entry->codec_factory->set_error_handler(
-            [this, device_path,
-             factory = discovery_entry->codec_factory.get()] {
+            [this, device_path, factory = discovery_entry->codec_factory.get()](
+                zx_status_t status) {
               FXL_LOG(INFO) << "Device's CodecFactoryPtr error handler - "
                                "cancelling discovery or de-registering: "
                             << device_path;

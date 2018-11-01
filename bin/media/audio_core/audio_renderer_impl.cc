@@ -31,7 +31,7 @@ AudioRendererImpl::AudioRendererImpl(
       audio_renderer_binding_(this, std::move(audio_renderer_request)),
       pts_ticks_per_second_(1000000000, 1),
       ref_clock_to_frac_frames_(0, 0, {0, 1}) {
-  audio_renderer_binding_.set_error_handler([this]() {
+  audio_renderer_binding_.set_error_handler([this](zx_status_t status) {
     audio_renderer_binding_.Unbind();
     Shutdown();
   });

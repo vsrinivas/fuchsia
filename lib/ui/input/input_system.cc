@@ -187,8 +187,9 @@ InputSystem::InputSystem(SystemContext context, gfx::GfxSystem* gfx_system)
     text_sync_service_ = this->context()
                              ->app_context()
                              ->ConnectToEnvironmentService<ImeService>();
-    text_sync_service_.set_error_handler(
-        [] { FXL_LOG(ERROR) << "Scenic lost connection to TextSync"; });
+    text_sync_service_.set_error_handler([](zx_status_t status) {
+      FXL_LOG(ERROR) << "Scenic lost connection to TextSync";
+    });
 
     FXL_LOG(INFO) << "Scenic input system initialized.";
   });

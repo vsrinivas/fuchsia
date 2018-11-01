@@ -66,12 +66,12 @@ void WavRecorder::Run(component::StartupContext* app_context) {
 
   audio->CreateAudioCapturer(audio_capturer_.NewRequest(), loopback_);
   audio_capturer_->BindGainControl(gain_control_.NewRequest());
-  audio_capturer_.set_error_handler([this]() {
+  audio_capturer_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR)
         << "AudioCapturer connection lost unexpectedly, shutting down.";
     Shutdown();
   });
-  gain_control_.set_error_handler([this]() {
+  gain_control_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR)
         << "GainControl connection lost unexpectedly, shutting down.";
     Shutdown();

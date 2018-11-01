@@ -30,7 +30,7 @@ A11yToggler::A11yToggler(fit::closure quit_callback)
   FXL_DCHECK(quit_callback_);
   auto context_ = component::StartupContext::CreateFromStartupInfo();
   context_->ConnectToEnvironmentService(a11y_toggler_.NewRequest());
-  a11y_toggler_.set_error_handler([this]() {
+  a11y_toggler_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "Connection error connecting to a11y toggler.";
     quit_callback_();
   });

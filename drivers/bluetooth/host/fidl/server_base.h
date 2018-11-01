@@ -34,7 +34,7 @@ class Server {
  public:
   virtual ~Server() = default;
 
-  virtual void set_error_handler(fit::closure handler) = 0;
+  virtual void set_error_handler(fit::function<void(zx_status_t)> handler) = 0;
 };
 
 // ServerBase is a common base implementation for FIDL interface servers.
@@ -53,7 +53,7 @@ class ServerBase : public Server, public Interface {
 
   ~ServerBase() override = default;
 
-  void set_error_handler(fit::closure handler) override {
+  void set_error_handler(fit::function<void(zx_status_t)> handler) override {
     binding_.set_error_handler(std::move(handler));
   }
 

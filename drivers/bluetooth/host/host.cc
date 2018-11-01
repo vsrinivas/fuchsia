@@ -97,7 +97,7 @@ void Host::BindHostInterface(zx::channel channel) {
 
   host_server_ = std::make_unique<HostServer>(std::move(channel),
                                               gap_->AsWeakPtr(), gatt_host_);
-  host_server_->set_error_handler([this] {
+  host_server_->set_error_handler([this](zx_status_t status) {
     ZX_DEBUG_ASSERT(host_server_);
     bt_log(TRACE, "bt-host", "Host interface disconnected");
     host_server_ = nullptr;

@@ -74,7 +74,7 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
   async::PostTask(dispatcher, [this, dispatcher, run_sysmgr] {
     run_sysmgr();
 
-    auto retry_handler = [this, dispatcher, run_sysmgr] {
+    auto retry_handler = [this, dispatcher, run_sysmgr](zx_status_t error) {
       if (sysmgr_permanently_failed_) {
         FXL_LOG(ERROR)
             << "sysmgr permanently failed. Check system configuration.";

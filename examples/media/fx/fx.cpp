@@ -183,7 +183,7 @@ void FxProcessor::Startup(fuchsia::media::AudioPtr audio) {
   // Create an AudioRenderer. Setup connection error handlers.
   audio->CreateAudioRenderer(audio_renderer_.NewRequest());
 
-  audio_renderer_.set_error_handler([this]() {
+  audio_renderer_.set_error_handler([this](zx_status_t status) {
     Shutdown("fuchsia::media::AudioRenderer connection closed");
   });
 

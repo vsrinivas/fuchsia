@@ -192,7 +192,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
           loop_(loop),
           user_channel_binding_(this, std::move(user_channel), loop),
           event_sender_(user_channel_binding_.channel()) {
-        user_channel_binding_.set_error_handler([this] {
+        user_channel_binding_.set_error_handler([this](zx_status_t status) {
             zxlogf(INFO, "wlantap phy: unbinding device because the channel was closed\n");
             // Remove the device if the client closed the channel
             user_channel_binding_.set_error_handler(nullptr);

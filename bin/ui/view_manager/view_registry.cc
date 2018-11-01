@@ -135,12 +135,12 @@ ViewRegistry::ViewRegistry(component::StartupContext* startup_context)
   // TODO(MZ-128): Register session listener and destroy views if their
   // content nodes become unavailable.
 
-  scenic_.set_error_handler([] {
+  scenic_.set_error_handler([](zx_status_t error) {
     FXL_LOG(ERROR) << "Exiting due to scene manager connection error.";
     exit(1);
   });
 
-  session_.set_error_handler([] {
+  session_.set_error_handler([](zx_status_t error) {
     FXL_LOG(ERROR) << "Exiting due to session connection error.";
     exit(1);
   });

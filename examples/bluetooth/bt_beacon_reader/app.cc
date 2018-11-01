@@ -30,7 +30,7 @@ App::App(async::Loop* loop, bool just_tilts)
   central_ = context_->ConnectToEnvironmentService<ble::Central>();
   FXL_DCHECK(central_);
 
-  central_.set_error_handler([this] {
+  central_.set_error_handler([this](zx_status_t status) {
     printf("Central disconnected\n");
     loop_->Quit();
   });

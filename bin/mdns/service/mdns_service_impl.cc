@@ -213,10 +213,11 @@ MdnsServiceImpl::Subscriber::Subscriber(
     fidl::InterfaceRequest<fuchsia::mdns::MdnsServiceSubscription> request,
     fit::closure deleter)
     : binding_(this, std::move(request)) {
-  binding_.set_error_handler([this, deleter = std::move(deleter)]() {
-    binding_.set_error_handler(nullptr);
-    deleter();
-  });
+  binding_.set_error_handler(
+      [this, deleter = std::move(deleter)](zx_status_t status) {
+        binding_.set_error_handler(nullptr);
+        deleter();
+      });
 
   instances_publisher_.SetCallbackRunner(
       [this](GetInstancesCallback callback, uint64_t version) {
@@ -293,10 +294,11 @@ MdnsServiceImpl::ResponderPublisher::ResponderPublisher(
     : responder_(std::move(responder)) {
   FXL_DCHECK(responder_);
 
-  responder_.set_error_handler([this, deleter = std::move(deleter)]() {
-    responder_.set_error_handler(nullptr);
-    deleter();
-  });
+  responder_.set_error_handler(
+      [this, deleter = std::move(deleter)](zx_status_t status) {
+        responder_.set_error_handler(nullptr);
+        deleter();
+      });
 }
 
 void MdnsServiceImpl::ResponderPublisher::ReportSuccess(bool success) {

@@ -11,7 +11,8 @@ ImagePipeHandler::ImagePipeHandler(
     ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request,
     ::scenic_impl::gfx::ImagePipe* image_pipe)
     : binding_(this, std::move(request)), image_pipe_(image_pipe) {
-  binding_.set_error_handler([image_pipe] { image_pipe->OnConnectionError(); });
+  binding_.set_error_handler(
+      [image_pipe](zx_status_t status) { image_pipe->OnConnectionError(); });
 }
 
 void ImagePipeHandler::AddImage(uint32_t image_id,

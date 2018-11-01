@@ -114,7 +114,7 @@ ComponentControllerBase::ComponentControllerBase(
       ns_(std::move(ns)) {
   if (request.is_valid()) {
     binding_.Bind(std::move(request));
-    binding_.set_error_handler([this] { Kill(); });
+    binding_.set_error_handler([this](zx_status_t status) { Kill(); });
   }
 
   if (!exported_dir_) {
@@ -301,7 +301,7 @@ ComponentBridge::ComponentBridge(
     binding_.events().OnDirectoryReady();
   };
 
-  remote_controller_.set_error_handler([this] {
+  remote_controller_.set_error_handler([this](zx_status_t status) {
     if (remote_controller_.events().OnTerminated != nullptr) {
       remote_controller_.events().OnTerminated(-1, TerminationReason::UNKNOWN);
     }

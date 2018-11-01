@@ -202,7 +202,7 @@ void use_aac_decoder(async::Loop* main_loop,
       read_whole_file(input_adts_file.c_str(), &input_size);
   VLOGF("done reading adts file.\n");
 
-  codec_factory.set_error_handler([] {
+  codec_factory.set_error_handler([](zx_status_t status) {
     // TODO(dustingreen): get and print CodecFactory channel epitaph once that's
     // possible.
     LOGF("codec_factory failed - unexpected\n");

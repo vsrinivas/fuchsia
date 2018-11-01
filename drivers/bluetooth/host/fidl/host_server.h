@@ -115,8 +115,9 @@ class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host>,
   void BindServer(Args... args) {
     auto server = std::make_unique<ServerType>(adapter()->AsWeakPtr(),
                                                std::move(args)...);
+    Server *s = server.get();
     server->set_error_handler(
-        std::bind(&HostServer::OnConnectionError, this, server.get()));
+        [this, s](zx_status_t status) { this->OnConnectionError(s); });
     servers_[server.get()] = std::move(server);
   }
 

@@ -57,7 +57,7 @@ TestRunObserver::~TestRunObserver() = default;
 TestRunnerImpl::TestRunnerImpl(fidl::InterfaceRequest<TestRunner> request,
                                TestRunContext* test_run_context)
     : binding_(this, std::move(request)), test_run_context_(test_run_context) {
-  binding_.set_error_handler([this] {
+  binding_.set_error_handler([this](zx_status_t status) {
     if (termination_task_.is_pending()) {
       FXL_LOG(INFO) << "Test " << program_name_ << " terminated as expected.";
       // Client terminated but that was expected.
@@ -185,7 +185,7 @@ TestRunContext::TestRunContext(
   launcher->CreateComponent(std::move(info), child_controller_.NewRequest());
 
   // If the child app closes, the test is reported as a failure.
-  child_controller_.set_error_handler([this] {
+  child_controller_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(WARNING) << "Child app connection closed unexpectedly. Remaining "
                         "TestRunner clients = "
                      << test_runner_clients_.size();

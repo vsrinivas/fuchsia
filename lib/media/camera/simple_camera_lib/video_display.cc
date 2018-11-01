@@ -224,7 +224,7 @@ zx_status_t VideoDisplay::ConnectToCamera(
   on_shut_down_callback_ = std::move(callback);
 
   image_pipe_ = image_pipe.Bind();
-  image_pipe_.set_error_handler([this] {
+  image_pipe_.set_error_handler([this](zx_status_t status) {
     // Deal with image_pipe_ issues
     on_shut_down_callback_();
   });
@@ -237,7 +237,7 @@ zx_status_t VideoDisplay::ConnectToCamera(
         video_display->IncomingBufferFilled(frame);
       };
 
-  camera_client_->stream_.set_error_handler([this] {
+  camera_client_->stream_.set_error_handler([this](zx_status_t status) {
     DisconnectFromCamera();
     on_shut_down_callback_();
   });

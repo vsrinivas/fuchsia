@@ -26,7 +26,7 @@ FakeSubComponent::FakeSubComponent(
       startup_context_(StartupContext::CreateFrom(std::move(startup_info))) {
   if (controller.is_valid()) {
     binding_.Bind(std::move(controller));
-    binding_.set_error_handler([this] { Kill(); });
+    binding_.set_error_handler([this](zx_status_t status) { Kill(); });
   }
 }
 

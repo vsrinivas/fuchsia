@@ -32,7 +32,7 @@ int main(int argc, const char** argv) {
   auto scenic =
       startup_context
           ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
-  scenic.set_error_handler([&loop] {
+  scenic.set_error_handler([&loop](zx_status_t status) {
     FXL_LOG(INFO) << "Lost connection to Scenic.";
     loop.Quit();
   });

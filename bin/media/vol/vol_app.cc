@@ -165,7 +165,7 @@ class VolApp {
 
     audio_ = startup_context_->ConnectToEnvironmentService<
         fuchsia::media::AudioDeviceEnumerator>();
-    audio_.set_error_handler([this]() {
+    audio_.set_error_handler([this](zx_status_t status) {
       std::cout << "System error: audio service failure";
       quit_callback_();
     });

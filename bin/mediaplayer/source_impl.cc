@@ -157,7 +157,7 @@ DemuxSourceImpl::DemuxSourceImpl(
 
   if (request) {
     binding_.Bind(std::move(request));
-    binding_.set_error_handler([this]() { Remove(); });
+    binding_.set_error_handler([this](zx_status_t status) { Remove(); });
   }
 
   SourceImpl::CompleteConstruction(demux_source_segment_.get());

@@ -35,7 +35,7 @@ DeviceServiceProvider::DeviceServiceProvider(
   FXL_DCHECK(binding_.is_bound());
   FXL_DCHECK(owner_ != nullptr);
 
-  binding_.set_error_handler([this]() {
+  binding_.set_error_handler([this](zx_status_t status) {
     FXL_DCHECK(owner_ != nullptr);
     binding_.set_error_handler(nullptr);
     binding_.Unbind();

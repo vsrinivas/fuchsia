@@ -114,7 +114,7 @@ class ComponentBridgeTest : public gtest::RealLoopFixture,
     gtest::RealLoopFixture::SetUp();
     vfs_.SetDispatcher(async_get_default_dispatcher());
     binding_.Bind(remote_controller_.NewRequest());
-    binding_.set_error_handler([this] {
+    binding_.set_error_handler([this](zx_status_t status) {
       binding_error_handler_called_ = true;
       Kill();
     });

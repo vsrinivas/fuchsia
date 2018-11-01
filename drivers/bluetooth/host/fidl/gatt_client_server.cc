@@ -123,7 +123,8 @@ void GattClientServer::ConnectToService(
 
     auto server = std::make_unique<GattRemoteServiceServer>(
         std::move(service), self->gatt(), std::move(request));
-    server->set_error_handler(std::move(error_cb));
+    server->set_error_handler(
+        [cb = std::move(error_cb)](zx_status_t status) { cb(); });
 
     self->connected_services_[id] = std::move(server);
   };

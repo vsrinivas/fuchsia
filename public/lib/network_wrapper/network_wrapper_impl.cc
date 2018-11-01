@@ -101,7 +101,7 @@ class NetworkWrapperImpl::RunningRequest {
             "network_wrapper", "network_url_loader_start", "url", url, "method",
             method));
 
-    url_loader_.set_error_handler([this]() {
+    url_loader_.set_error_handler([this](zx_status_t status) {
       // If the connection to the url loader failed, restart the request.
       // TODO(qsr): LE-77: Handle multiple failures with:
       // 1) backoff.
@@ -182,7 +182,7 @@ fxl::RefPtr<callback::Cancellable> NetworkWrapperImpl::Request(
 http::HttpService* NetworkWrapperImpl::GetHttpService() {
   if (!http_service_) {
     http_service_ = http_service_factory_();
-    http_service_.set_error_handler([this]() {
+    http_service_.set_error_handler([this](zx_status_t status) {
       FXL_LOG(WARNING) << "Network service crashed or not configured "
                        << "in environment, trying to reconnect.";
       FXL_DCHECK(!in_backoff_);

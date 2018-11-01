@@ -408,7 +408,7 @@ void HostServer::SetPairingDelegate(
 
   auto self = weak_ptr_factory_.GetWeakPtr();
   adapter()->SetPairingDelegate(self);
-  pairing_delegate_.set_error_handler([self] {
+  pairing_delegate_.set_error_handler([self](zx_status_t status) {
     bt_log(TRACE, "bt-host", "PairingDelegate disconnected");
     if (self) {
       self->ResetPairingDelegate();

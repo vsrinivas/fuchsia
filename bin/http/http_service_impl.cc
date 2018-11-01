@@ -121,7 +121,8 @@ class HttpServiceImpl::UrlLoaderContainer : public URLLoaderImpl::Coordinator {
     url_loader_ = std::make_unique<URLLoaderImpl>(this);
     binding_ = std::make_unique<fidl::Binding<oldhttp::URLLoader>>(
         url_loader_.get(), std::move(request_));
-    binding_->set_error_handler([this] { StopOnIOThread(); });
+    binding_->set_error_handler(
+        [this](zx_status_t status) { StopOnIOThread(); });
   }
 
   void StopOnIOThread() {

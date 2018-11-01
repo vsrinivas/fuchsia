@@ -112,7 +112,7 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
   }
   context_->launcher()->CreateComponent(std::move(launch_info),
                                         controller_.NewRequest());
-  controller_.set_error_handler([] {
+  controller_.set_error_handler([](zx_status_t status) {
     FXL_LOG(ERROR) << "Connection error from CobaltTestApp to CobaltClient.";
   });
 

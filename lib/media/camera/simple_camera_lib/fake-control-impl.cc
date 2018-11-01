@@ -57,7 +57,8 @@ FakeControlImpl::FakeControlImpl(fidl::InterfaceRequest<Control> control,
                                  async_dispatcher_t* dispatcher,
                                  fit::closure on_connection_closed)
     : binding_(this, fbl::move(control), dispatcher) {
-  binding_.set_error_handler(fbl::move(on_connection_closed));
+  binding_.set_error_handler(
+      [occ = fbl::move(on_connection_closed)](zx_status_t status) { occ(); });
 }
 
 void FakeControlImpl::PostNextCaptureTask() {
@@ -203,7 +204,7 @@ FakeControlImpl::FakeStreamImpl::FakeStreamImpl(
     FakeControlImpl& owner,
     fidl::InterfaceRequest<fuchsia::camera::Stream> stream)
     : owner_(owner), binding_(this, fbl::move(stream)) {
-  binding_.set_error_handler([this] {
+  binding_.set_error_handler([this](zx_status_t status) {
     // Anything to do here?
   });
 }

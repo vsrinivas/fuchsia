@@ -74,7 +74,7 @@ Tones::Tones(bool interactive, fit::closure quit_callback)
 
   audio->CreateAudioRenderer(audio_renderer_.NewRequest());
 
-  audio_renderer_.set_error_handler([this]() {
+  audio_renderer_.set_error_handler([this](zx_status_t status) {
     std::cerr << "Unexpected error: channel to audio service closed\n";
     Quit();
   });

@@ -11,7 +11,7 @@ void MockRunnerRegistry::Register(
     ::fidl::InterfaceHandle<mockrunner::MockRunner> runner) {
   connect_count_++;
   auto runner_ptr = runner.Bind();
-  runner_ptr.set_error_handler([this]() {
+  runner_ptr.set_error_handler([this](zx_status_t status) {
     dead_runner_count_++;
     runner_.reset();
   });

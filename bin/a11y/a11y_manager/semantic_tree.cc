@@ -71,7 +71,7 @@ void SemanticTree::RegisterSemanticsProvider(
                              std::vector<fuchsia::accessibility::Node>());
   uncommitted_deletes_.emplace(view_id, std::vector<int32_t>());
   fuchsia::accessibility::SemanticsProviderPtr provider = handle.Bind();
-  provider.set_error_handler([this, view_id]() {
+  provider.set_error_handler([this, view_id](zx_status_t status) {
     FXL_LOG(INFO) << "Semantic provider disconnected with id: " << view_id;
     this->nodes_.erase(view_id);
     this->uncommitted_nodes_.erase(view_id);

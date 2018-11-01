@@ -30,7 +30,7 @@ TtsClient::TtsClient(fit::closure quit_callback)
   auto app_ctx = component::StartupContext::CreateFromStartupInfo();
   tts_service_ =
       app_ctx->ConnectToEnvironmentService<fuchsia::tts::TtsService>();
-  tts_service_.set_error_handler([this]() {
+  tts_service_.set_error_handler([this](zx_status_t status) {
     printf("Connection error when trying to talk to the TtsService\n");
     quit_callback_();
   });

@@ -52,11 +52,12 @@ App::App(async::Loop* loop)
 
   scenic_ = startup_context_
                 ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
-  scenic_.set_error_handler([this]() { OnScenicError(); });
+  scenic_.set_error_handler([this](zx_status_t status) { OnScenicError(); });
   FXL_LOG(INFO) << "HelloInput - scenic connection";
 
   session_ = std::make_unique<scenic::Session>(scenic_.get());
-  session_->set_error_handler(fit::bind_member(this, &App::OnSessionError));
+  session_->set_error_handler(
+      [this](zx_status_t status) { this->OnSessionError(); });
   session_->set_event_handler(fit::bind_member(this, &App::OnSessionEvents));
   FXL_LOG(INFO) << "HelloInput - session set up";
 

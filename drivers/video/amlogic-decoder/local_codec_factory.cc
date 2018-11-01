@@ -134,8 +134,9 @@ LocalCodecFactory::~LocalCodecFactory() {
 
 void LocalCodecFactory::SetErrorHandler(fit::closure error_handler) {
   ZX_DEBUG_ASSERT(!factory_binding_.is_bound());
-  factory_binding_.set_error_handler([this, error_handler = std::move(
-                                                error_handler)]() mutable {
+  factory_binding_.set_error_handler([this,
+                                      error_handler = std::move(error_handler)](
+                                         zx_status_t status) mutable {
     ZX_DEBUG_ASSERT(thrd_current() == device_->driver()->shared_fidl_thread());
     // This queues after the similar posting in CreateDecoder() (via
     // TryAddCodec()), so that LocalCodecFactory won't get deleted until

@@ -25,7 +25,7 @@ ViewProviderComponent::ViewProviderComponent(
     startup_context_.release();
   }
 
-  scenic_.set_error_handler([loop] {
+  scenic_.set_error_handler([loop](zx_status_t status) {
     FXL_LOG(INFO) << "Lost connection to Scenic.";
     loop->Quit();
   });
@@ -47,7 +47,7 @@ ViewProviderComponent::ViewProviderComponent(
     startup_context_.release();
   }
 
-  scenic_.set_error_handler([loop] {
+  scenic_.set_error_handler([loop](zx_status_t status) {
     FXL_LOG(INFO) << "Lost connection to Scenic.";
     loop->Quit();
   });

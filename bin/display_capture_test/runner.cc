@@ -221,8 +221,9 @@ void Runner::InitDisplay() {
   display_controller_.events().ClientOwnershipChange =
       fit::bind_member(this, &Runner::OnClientOwnershipChange);
   display_controller_.events().Vsync = fit::bind_member(this, &Runner::OnVsync);
-  display_controller_.set_error_handler(
-      [this]() { ZX_ASSERT_MSG(false, "Display controller failure"); });
+  display_controller_.set_error_handler([this](zx_status_t status) {
+    ZX_ASSERT_MSG(false, "Display controller failure");
+  });
 
   calibration_image_a_ = runner_context_.CreateImage(width_, height_);
   calibration_image_b_ = runner_context_.CreateImage(width_, height_);

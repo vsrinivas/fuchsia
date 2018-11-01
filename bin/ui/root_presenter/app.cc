@@ -265,19 +265,19 @@ void App::OnReport(mozart::InputDeviceImpl* input_device,
 void App::InitializeServices() {
   if (!view_manager_) {
     startup_context_->ConnectToEnvironmentService(view_manager_.NewRequest());
-    view_manager_.set_error_handler([this] {
+    view_manager_.set_error_handler([this](zx_status_t error) {
       FXL_LOG(ERROR) << "ViewManager died, destroying view trees.";
       Reset();
     });
 
     view_manager_->GetScenic(scenic_.NewRequest());
-    scenic_.set_error_handler([this] {
+    scenic_.set_error_handler([this](zx_status_t error) {
       FXL_LOG(ERROR) << "Scenic died, destroying view trees.";
       Reset();
     });
 
     session_ = std::make_unique<scenic::Session>(scenic_.get());
-    session_->set_error_handler([this] {
+    session_->set_error_handler([this](zx_status_t error) {
       FXL_LOG(ERROR) << "Session died, destroying view trees.";
       Reset();
     });

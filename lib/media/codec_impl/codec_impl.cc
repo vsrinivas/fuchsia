@@ -162,7 +162,7 @@ CodecImpl::CodecImpl(
   ZX_DEBUG_ASSERT(tmp_interface_request_);
   // This is the binding_'s error handler, not the owner_error_handler_ which
   // is related but separate.
-  binding_.set_error_handler(fit::bind_member(this, &CodecImpl::Unbind));
+  binding_.set_error_handler([this](zx_status_t status) { this->Unbind(); });
   initial_input_format_details_ = &decoder_params_->input_details;
 }
 

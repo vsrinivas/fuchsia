@@ -300,7 +300,7 @@ void GattServerServer::PublishService(
 
     // This will be called if either the delegate or the service connection
     // closes.
-    auto connection_error_cb = [self, id] {
+    auto connection_error_cb = [self, id](zx_status_t status) {
       bt_log(TRACE, "bt-host", "removing GATT service (id: %u)", id);
       if (self)
         self->RemoveService(id);

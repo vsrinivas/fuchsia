@@ -65,7 +65,7 @@ ManagerImpl::ManagerImpl(component::StartupContext* startup_context,
   startup_context_->ConnectToEnvironmentService<
       fuchsia::ui::viewsv1::AccessibilityViewInspector>(
       a11y_view_inspector_.NewRequest());
-  a11y_view_inspector_.set_error_handler([this]() {
+  a11y_view_inspector_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(FATAL) << "Exiting due to view inspector connection error.";
   });
 }
