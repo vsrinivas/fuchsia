@@ -158,6 +158,7 @@ public:
 
 class ShaderConfig : public magma::RegisterBase {
 public:
+    DEF_BIT(16, ls_allow_attr_types);
     DEF_BIT(17, tls_hashing_enable);
 
     static auto Get() { return magma::RegisterAddr<ShaderConfig>(0xf04); }

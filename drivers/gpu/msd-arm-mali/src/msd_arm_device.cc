@@ -923,9 +923,17 @@ void MsdArmDevice::InitializeHardwareQuirks(GpuFeatures* features, magma::Regist
 {
     auto shader_config = registers::ShaderConfig::Get().FromValue(0);
     const uint32_t kGpuIdTGOX = 0x7212;
-    if (features->gpu_id.product_id().get() == kGpuIdTGOX) {
+    uint32_t gpu_product_id = features->gpu_id.product_id().get();
+    if (gpu_product_id == kGpuIdTGOX) {
         DLOG("Enabling TLS hashing\n");
         shader_config.tls_hashing_enable().set(1);
+    }
+
+    if (0x750 <= gpu_product_id && gpu_product_id <= 0x880) {
+        DLOG("Enabling LS attr types\n");
+        // This seems necessary for geometry shaders to work with non-indexed draws with point and
+        // line lists on T8xx and T7xx.
+        shader_config.ls_allow_attr_types().set(1);
     }
 
     shader_config.WriteTo(reg);

@@ -206,7 +206,10 @@ public:
 
         MsdArmDevice::InitializeHardwareQuirks(&features, reg_io.get());
         EXPECT_EQ(1u << 17, reg_io->Read32(0xf04));
-        features.gpu_id.set_reg_value(0x08000000);
+        features.gpu_id.set_reg_value(0x08201000); // T820 R1P0
+        MsdArmDevice::InitializeHardwareQuirks(&features, reg_io.get());
+        EXPECT_EQ(1u << 16, reg_io->Read32(0xf04));
+        features.gpu_id.set_reg_value(0x9990000);
         MsdArmDevice::InitializeHardwareQuirks(&features, reg_io.get());
         EXPECT_EQ(0u, reg_io->Read32(0xf04));
     }
