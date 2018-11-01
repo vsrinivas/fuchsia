@@ -16,14 +16,14 @@ __BEGIN_CDECLS
 // vectors) counts as one step in the recursion depth.
 #define FIDL_RECURSION_DEPTH 32
 
-// See https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/c.md#fidl_encode-fidl_encode_msg
+// See https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/languages/c.md#fidl_encode-fidl_encode_msg
 zx_status_t fidl_encode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                         zx_handle_t* handles, uint32_t max_handles,
                         uint32_t* out_actual_handles, const char** out_error_msg);
 zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_msg_t* msg,
                             uint32_t* out_actual_handles, const char** out_error_msg);
 
-// See https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/c.md#fidl_decode-fidl_decode_msg
+// See https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/languages/c.md#fidl_decode-fidl_decode_msg
 zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                         const zx_handle_t* handles, uint32_t num_handles,
                         const char** error_msg_out);
