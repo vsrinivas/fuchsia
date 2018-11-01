@@ -86,7 +86,8 @@ void CodecFactoryImpl::CreateDecoder(
   }
 
   if (params.require_hw) {
-    printf("require_hw, but no matching HW decoder factory found; closing\n");
+    FXL_LOG(WARNING)
+        << "require_hw, but no matching HW decoder factory found; closing";
     // TODO(dustingreen): Send epitaph when possible.
     // ~decoder
     return;

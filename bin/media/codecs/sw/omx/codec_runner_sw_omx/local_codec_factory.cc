@@ -8,6 +8,7 @@
 #include "omx_codec_runner.h"
 
 #include <lib/fxl/arraysize.h>
+#include <lib/fxl/logging.h>
 
 #include <list>
 #include <map>
@@ -82,10 +83,8 @@ void LocalCodecFactory::CreateCommon(
   std::unique_ptr<codec_runner::CodecRunner> codec_runner =
       CreateCodec(fidl_dispatcher_, fidl_thread_, codec_type, mime_type);
   if (!codec_runner) {
-    // TODO(dustingreen): epitaph, log
-    codec_request.TakeChannel();  // ~zx::channel
-    binding_.reset();
-    assert(codec_runner);
+    // TODO(dustingreen): epitaph
+    FXL_LOG(WARNING) << "!codec_runner - exiting";
     exit(-1);
   }
   set_type_specific_params(codec_runner.get());
@@ -129,14 +128,21 @@ std::unique_ptr<codec_runner::CodecRunner> LocalCodecFactory::CreateCodec(
     }
   }
   if (!strategy) {
+    // Currently this is what's seen when there's an overall failure to find a
+    // usable codec, when !require_hw.
+    FXL_LOG(WARNING) << "!strategy - no codec found - codec_type: "
+                     << static_cast<uint32_t>(codec_type)
+                     << " mime_type: " << mime_type;
     return nullptr;
   }
   std::unique_ptr<codec_runner::CodecRunner> codec_runner =
       strategy->create_runner(fidl_dispatcher, fidl_thread, *strategy);
   if (!codec_runner) {
+    FXL_LOG(WARNING) << "!codec_runner";
     return nullptr;
   }
   if (!codec_runner->Load()) {
+    FXL_LOG(WARNING) << "!codec_runner->Load()";
     return nullptr;
   }
   return codec_runner;
