@@ -1,20 +1,19 @@
 # Scenic, the Fuchsia graphics engine
 
-- [Introduction](#introduction)
-- [Concepts](#concepts)
- - [Scenic](#scenic)
- - [Sessions](#sessions)
- - [Resources](#resources)
-   - [Nodes](#nodes)
-   - [Scenes](#scenes)
-   - [Compositors](#compositors)
-   - [TODO: More resources](#moreresources)
- - [Timing Model](#timingmodel)
- - [Fences](#fences)
-- [API Guide](#apiguide)
-  - TODO
+* [Introduction](#introduction)
+* [Concepts](#concepts)
+  * [Scenic](#scenic)
+  * [Sessions](#sessions)
+  * [Resources](#resources)
+    * [Nodes](#nodes)
+    * [Scenes](#scenes)
+    * [Compositors](#compositors)
+  * [Timing Model](#timing-model)
+  * [Fences](#fences)
+* [API Guide](#api-guide)
+  * [FIDL interfaces](#fidl-interfaces)
 
-# <a name="introduction"></a>Introduction
+# Introduction
 
 Scenic is a Garnet service that composes graphical objects from multiple
 processes into a shared scene graph.  These objects are rendered within a
@@ -44,9 +43,9 @@ Scenic's responsibilities are:
 - Diagnostics: Scenic provides a diagnostic interface to help developers
   debug their models and measure performance.
 
-# <a name="concepts"></a>Concepts
+# Concepts
 
-## <a name="scenic"></a>Scenic
+## Scenic
 
 The `Scenic` FIDL interface is Scenic's front door.  Each instance of the
 interface represents a Scenic instance. Each Scenic instance is an isolated
@@ -73,7 +72,7 @@ inoperable and its rendering ceases.
 `Views` typically do not deal with the Scenic instance directly; instead
 they receive a Scenic `Session` from the view manager.
 
-## <a name="sessions"></a>Sessions
+## Sessions
 
 The `Session` FIDL interface is the primary API used by clients of Scenic to
 contribute graphical content in the form of `Resources`.  Each session has
@@ -93,7 +92,7 @@ its links become inoperable.
 
 `Views` typically receive separate sessions from the view manager.
 
-## <a name="resources"></a>Resources
+## Resources
 
 `Resources` represent scene elements such as nodes, shapes, materials, and
 animations which belong to particular `Sessions`.
@@ -139,7 +138,7 @@ See also [Fences](#fences).
 This process of addition, modification, and removal may be repeated
 indefinitely to incrementally update resources within a session.
 
-### <a name="nodes"></a>Nodes
+### Nodes
 
 A `Node` resource represents a graphical object which can be assembled into
 a hierarchy called a `node tree` for rendering.
@@ -147,7 +146,7 @@ a hierarchy called a `node tree` for rendering.
 TODO: Discuss this in more detail, especially hierarchical modeling concepts
 such as per-node transforms, groups, adding and removing children, etc.
 
-### <a name="scenes"></a>Scenes
+### Scenes
 
 A `Scene` resource combines a tree of nodes with the scene-wide parameters
 needed to render it.  A Scenic instance may contain multiple scenes but
@@ -160,7 +159,7 @@ A scene resource has the following properties:
 
 In order to render a scene, a `Camera` must be pointed at it.
 
-### <a name="compositors"></a>Compositors
+### Compositors
 
 Compositors are resources that come in two flavors: `DisplayCompositor` and
 `ImagePipeCompositor`; their job is to draw the content of a `LayerStack`
@@ -173,20 +172,58 @@ A `LayerStack` resource consists of an ordered list of `Layers`.  Each layer
 can contain either an `Image` (perhaps transformed by a matrix), or a
 `Camera` that points at a `Scene` to be rendered (as described above).
 
-### <a name="moreresources"></a>TODO: More Resources
+### TODO: More Resources
 
 Add sections to discuss all other kinds of resources: shapes, materials,
 links, memory, images, buffers, animations, variables, renderers etc.
 
-## <a name="timingmodel"></a>Timing Model
+## Timing Model
 
 TODO: Talk about scheduling frames, presentation timestamps, etc.
 
-## <a name="fences"></a>Fences
+## Fences
 
 TODO: Talk about synchronization.
 
-# <a name="apiguide"></a>API Guide
+# API Guide
+
+## FIDL interfaces
+
+The following files define and document the collection of FIDL interfaces that
+make up Scenic.
+
+* [Scenic top-level interfaces](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.scenic) (`fuchsia.ui.scenic`)
+  * [scenic.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.scenic/scenic.fidl)
+  * [session.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.scenic/session.fidl)
+  * [commands.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.scenic/commands.fidl)
+  * [events.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.scenic/events.fidl)
+
+* [Gfx](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.gfx) (`fuchsia.ui.gfx`)
+  * [commands.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.gfx/commands.fidl)
+  * [events.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.gfx/events.fidl)
+  * [resources.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.gfx/resources.fidl)
+  * [nodes.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.gfx/nodes.fidl)
+  * [shapes.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.gfx/shades.fidl)
+  * [...](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.gfx)
+
+* [Views](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.views) (`fuchsia.ui.views`)
+  * [commands.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.views/commands.fidl)
+  * [events.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.views/events.fidl)
+
+* [Input](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.input) (`fuchsia.ui.input`)
+  * [commands.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.input/commands.fidl)
+  * [input_events.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.input/input_events.fidl)
+
+* [Policy](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.policy) (`fuchsia.ui.policy`)
+  * [presenter.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.policy/presenter.fidl)
+  * [presentation.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.policy/presentation.fidl)
+  * [...](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.policy)
+
+* [App](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.app) (`fuchsia.ui.app`)
+  * [view_provider.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.app/view_provider.fidl)
+
+* [experimental] [Sketchy](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.sketchy) (`fuchsia.ui.sketchy`)
+* [experimental] [Vectorial](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.vectorial) (`fuchsia.ui.vectorial`)
 
 ## TODO
 
