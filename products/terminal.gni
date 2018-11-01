@@ -17,4 +17,5 @@ preinstall += [
 
 available += [
   "garnet/packages/prod/media_audio",
+  "garnet/packages/tools/audio",
 ]

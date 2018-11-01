@@ -1,5 +1,6 @@
 {
     "imports": [
+        "garnet/packages/tools/audio",
         "garnet/packages/tools/curl",
         "garnet/packages/tools/fidlmerge",
         "garnet/packages/tools/iperf",

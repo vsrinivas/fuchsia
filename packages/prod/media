@@ -5,9 +5,6 @@
         "garnet/packages/prod/mediaplayer"
     ],
     "packages": [
-        "//garnet/bin/media/signal_generator",
-        "//garnet/bin/media/vol",
-        "//garnet/bin/media/wav_recorder",
         "//garnet/bin/tts:tts_service",
         "//garnet/lib/media/camera/simple_camera_server:simple_camera_server_cpp",
         "//garnet/bin/media/camera_manager:camera_manager_cpp"

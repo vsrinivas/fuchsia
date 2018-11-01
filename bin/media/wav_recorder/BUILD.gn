@@ -6,20 +6,18 @@ import("//build/package.gni")
 
 package("wav_recorder") {
   deps = [
-    ":bin",
+    ":wav_rec_bin",
   ]
 
-  # Because this utility uses stdin, it must use deprecated_system_image rather
-  # than be a separate component with a cmx.
-  deprecated_system_image = true
   binaries = [
     {
       name = "wav_recorder"
+      shell = true
     },
   ]
 }
 
-executable("bin") {
+executable("wav_rec_bin") {
   output_name = "wav_recorder"
 
   sources = [

@@ -5,21 +5,19 @@
 import("//build/package.gni")
 
 package("signal_generator") {
-  # For now, need this so the binary can be conveniently run from system/bin.
-  deprecated_system_image = true
-
   deps = [
-    ":bin",
+    ":sig_gen_bin",
   ]
 
   binaries = [
     {
       name = "signal_generator"
+      shell = true
     },
   ]
 }
 
-executable("bin") {
+executable("sig_gen_bin") {
   output_name = "signal_generator"
 
   sources = [

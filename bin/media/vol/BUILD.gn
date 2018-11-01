@@ -6,7 +6,7 @@ import("//build/package.gni")
 
 package("vol") {
   deps = [
-    ":bin",
+    ":vol_bin",
   ]
 
   binaries = [
@@ -17,7 +17,7 @@ package("vol") {
   ]
 }
 
-executable("bin") {
+executable("vol_bin") {
   output_name = "vol"
 
   sources = [
