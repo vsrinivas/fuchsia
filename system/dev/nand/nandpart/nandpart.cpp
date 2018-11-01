@@ -30,9 +30,29 @@ namespace {
 
 constexpr uint8_t fvm_guid[] = GUID_FVM_VALUE;
 
+struct NandPartOpContext {
+    uint32_t offset;
+    void (*completion_cb)(nand_op_t* op, zx_status_t status);
+    void* cookie;
+};
+
 // Shim for calling sub-partition's callback.
 void CompletionCallback(nand_op_t* op, zx_status_t status) {
-    op = static_cast<nand_op_t*>(op->cookie);
+    auto* ctx = static_cast<NandPartOpContext*>(op->cookie);
+    // Re-translate the offsets.
+    switch (op->command) {
+    case NAND_OP_READ:
+    case NAND_OP_WRITE:
+        op->rw.offset_nand -= ctx->offset;
+        break;
+    case NAND_OP_ERASE:
+        op->erase.first_block -= ctx->offset;
+        break;
+    default:
+        ZX_ASSERT(false);
+    }
+    op->completion_cb = ctx->completion_cb;
+    op->cookie = ctx->cookie;
     op->completion_cb(op, status);
 }
 
@@ -188,37 +208,39 @@ zx_status_t NandPartDevice::Bind(const char* name, uint32_t copy_count) {
 
 void NandPartDevice::Query(zircon_nand_Info* info_out, size_t* nand_op_size_out) {
     memcpy(info_out, &nand_info_, sizeof(*info_out));
-    // Add size of translated_op.
-    *nand_op_size_out = parent_op_size_ + sizeof(nand_op_t);
+    // Add size of extra context.
+    *nand_op_size_out = parent_op_size_ + sizeof(NandPartOpContext);
 }
 
 void NandPartDevice::Queue(nand_op_t* op) {
-    auto* translated_op =
-        reinterpret_cast<nand_op_t*>(reinterpret_cast<uintptr_t>(op) + parent_op_size_);
+    auto* ctx =
+        reinterpret_cast<NandPartOpContext*>(reinterpret_cast<uintptr_t>(op) + parent_op_size_);
     uint32_t command = op->command;
-
-    // Copy client's op to translated op
-    memcpy(translated_op, op, sizeof(*translated_op));
 
     // Make offset relative to full underlying device
     switch (command) {
     case NAND_OP_READ:
     case NAND_OP_WRITE:
-        translated_op->rw.offset_nand += (erase_block_start_ * nand_info_.pages_per_block);
+        ctx->offset = erase_block_start_ * nand_info_.pages_per_block;
+        op->rw.offset_nand += ctx->offset;
         break;
     case NAND_OP_ERASE:
-        translated_op->erase.first_block += erase_block_start_;
+        ctx->offset = erase_block_start_;
+        op->erase.first_block += erase_block_start_;
         break;
     default:
         op->completion_cb(op, ZX_ERR_NOT_SUPPORTED);
         return;
     }
 
-    translated_op->completion_cb = CompletionCallback;
-    translated_op->cookie = op;
+    ctx->completion_cb = op->completion_cb;
+    ctx->cookie = op->cookie;
+
+    op->completion_cb = CompletionCallback;
+    op->cookie = ctx;
 
     // Call parent's queue
-    nand_.Queue(translated_op);
+    nand_.Queue(op);
 }
 
 zx_status_t NandPartDevice::GetFactoryBadBlockList(uint32_t* bad_blocks, uint32_t bad_block_len,
