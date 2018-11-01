@@ -17,6 +17,8 @@ executable("bin") {
 }
 
 package("profiler_example") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     ":bin",
   ]

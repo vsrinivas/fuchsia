@@ -25,6 +25,8 @@ executable("bin") {
 }
 
 package("standalone") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     ":bin",
   ]

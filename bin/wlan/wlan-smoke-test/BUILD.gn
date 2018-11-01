@@ -33,6 +33,8 @@ rustc_binary("bin") {
 }
 
 package("wlan-smoke-test") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     ":bin",
   ]

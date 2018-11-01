@@ -17,6 +17,7 @@ go_test("go_far_test") {
 }
 
 package("go_far_tests") {
+  deprecated_no_cmx = "//build"
 
   deps = [
     ":go_far_test",

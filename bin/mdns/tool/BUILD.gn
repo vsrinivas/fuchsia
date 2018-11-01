@@ -5,6 +5,8 @@
 import("//build/package.gni")
 
 package("tool") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     ":bin",
   ]

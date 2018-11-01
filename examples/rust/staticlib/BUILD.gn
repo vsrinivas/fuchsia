@@ -5,6 +5,8 @@
 import("//build/package.gni")
 
 package("crust") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     "c:bin",
   ]

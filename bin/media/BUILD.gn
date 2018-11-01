@@ -57,6 +57,8 @@ package("codec_factory") {
 
 # This package is only really expected to be used by the codec_factory package.
 package("codec_runner_sw_omx") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     "//garnet/bin/media/codecs/sw/omx/codec_runner_sw_omx:codec_runner_sw_omx",
 
@@ -75,6 +77,8 @@ package("codec_runner_sw_omx") {
 
 # This package is only really expected to be used by the codec_factory package.
 package("codec_runner_sw_ffmpeg") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     "//garnet/bin/media/codecs/sw/ffmpeg:codec_runner_sw_ffmpeg",
   ]

@@ -70,6 +70,8 @@ executable("exiter_bin") {
 
 # Helper program for tests
 package("run_test_exiter") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     ":exiter_bin",
   ]

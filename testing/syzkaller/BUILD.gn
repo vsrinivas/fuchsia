@@ -28,6 +28,8 @@ executable("syz-executor") {
 }
 
 package("syzkaller") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     ":syz-execprog",
     ":syz-executor",

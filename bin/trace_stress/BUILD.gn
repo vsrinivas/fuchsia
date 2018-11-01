@@ -19,6 +19,8 @@ executable("bin") {
 }
 
 package("trace_stress") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     ":bin",
   ]

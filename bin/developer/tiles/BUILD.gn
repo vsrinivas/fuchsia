@@ -42,6 +42,8 @@ executable("bin") {
 }
 
 package("tiles") {
+  deprecated_no_cmx = "//build"
+
   binary = "tiles"
 
   deps = [

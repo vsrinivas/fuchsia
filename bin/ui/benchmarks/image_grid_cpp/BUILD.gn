@@ -27,6 +27,8 @@ executable("bin") {
 }
 
 package("image_grid_cpp") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     ":bin",
   ]

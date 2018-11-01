@@ -147,6 +147,8 @@ package("scenic") {
 }
 
 package("screencap") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     "screencap",
   ]
@@ -155,6 +157,8 @@ package("screencap") {
 }
 
 package("snapshot") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     "snapshot",
   ]
@@ -163,6 +167,8 @@ package("snapshot") {
 }
 
 package("gltf_export") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     "gltf_export",
   ]

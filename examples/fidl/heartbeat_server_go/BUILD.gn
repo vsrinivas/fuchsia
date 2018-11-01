@@ -27,6 +27,8 @@ go_library("heartbeat_server_go_lib") {
 }
 
 package("heartbeat_server_go") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     ":heartbeat_server_go_bin",
   ]

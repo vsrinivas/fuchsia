@@ -116,6 +116,8 @@ executable("mock_pose_buffer_provider_cc") {
 }
 
 package("mock_pose_buffer_provider") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     ":mock_pose_buffer_provider_cc",
   ]

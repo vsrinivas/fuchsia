@@ -23,6 +23,8 @@ rustc_binary("bin") {
 }
 
 package("xi_core") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     ":bin",
   ]

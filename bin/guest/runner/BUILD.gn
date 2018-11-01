@@ -32,6 +32,8 @@ executable("bin") {
 }
 
 package("guest_runner") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     ":bin",
   ]

@@ -22,6 +22,8 @@ executable("bin") {
 }
 
 package("network_loader") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     ":bin",
   ]

@@ -26,6 +26,8 @@ rustc_binary("bin") {
 }
 
 package("net-cli") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     ":bin",
   ]

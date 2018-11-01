@@ -52,6 +52,8 @@ foreach(testpkg, test_packages) {
 }
 
 package("pkgsvr") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     ":pkgsvr_bin",
   ]

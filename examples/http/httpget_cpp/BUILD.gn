@@ -22,6 +22,8 @@ executable("bin") {
 }
 
 package("httpget_cpp") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     ":bin",
   ]

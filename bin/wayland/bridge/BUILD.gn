@@ -25,6 +25,8 @@ rustc_binary("bin") {
 }
 
 package("bridge") {
+  deprecated_no_cmx = "//build"
+
   package_name = "wayland_bridge"
   binary = "wayland_bridge"
   deps = [

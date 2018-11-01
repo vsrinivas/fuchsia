@@ -17,6 +17,8 @@ go_test("go_benchmarking_test") {
 }
 
 package("go_benchmarking_tests") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     ":go_benchmarking_test",
   ]

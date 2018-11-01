@@ -18,6 +18,8 @@ executable("benchmark_example") {
 }
 
 package("benchmark") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     ":benchmark_example",
   ]

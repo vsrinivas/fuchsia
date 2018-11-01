@@ -6,6 +6,8 @@ import("//build/package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
 package("magma-vsl-gc") {
+  deprecated_no_cmx = "//build"
+
   if (build_vsl_gc) {
     deprecated_system_image = true
     if (magma_enable_developer_build) {

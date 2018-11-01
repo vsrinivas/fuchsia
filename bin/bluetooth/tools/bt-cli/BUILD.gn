@@ -29,6 +29,8 @@ rustc_binary("bin") {
 }
 
 package("bt-cli") {
+  deprecated_no_cmx = "//build"
+
   deps = [
     ":bin",
   ]
