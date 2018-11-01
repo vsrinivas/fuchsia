@@ -12,12 +12,68 @@
 #include <fbl/unique_ptr.h>
 #include <hw/sdio.h>
 #include <hw/sdmmc.h>
+#include <lib/fzl/vmo-mapper.h>
 
 namespace {
 
 constexpr uint32_t kPageMask = PAGE_SIZE - 1;
 constexpr uint32_t kMsdcSrcCkFreq = 188000000;
 constexpr uint32_t kIdentificationModeBusFreq = 400000;
+constexpr int kTuningDelayIterations = 4;
+
+constexpr uint8_t kTuningBlockPattern4Bit[64] = {
+    0xff, 0x0f, 0xff, 0x00, 0xff, 0xcc, 0xc3, 0xcc,
+    0xc3, 0x3c, 0xcc, 0xff, 0xfe, 0xff, 0xfe, 0xef,
+    0xff, 0xdf, 0xff, 0xdd, 0xff, 0xfb, 0xff, 0xfb,
+    0xbf, 0xff, 0x7f, 0xff, 0x77, 0xf7, 0xbd, 0xef,
+    0xff, 0xf0, 0xff, 0xf0, 0x0f, 0xfc, 0xcc, 0x3c,
+    0xcc, 0x33, 0xcc, 0xcf, 0xff, 0xef, 0xff, 0xee,
+    0xff, 0xfd, 0xff, 0xfd, 0xdf, 0xff, 0xbf, 0xff,
+    0xbb, 0xff, 0xf7, 0xff, 0xf7, 0x7f, 0x7b, 0xde,
+};
+
+constexpr uint8_t kTuningBlockPattern8Bit[128] = {
+    0xff, 0xff, 0x00, 0xff, 0xff, 0xff, 0x00, 0x00,
+    0xff, 0xff, 0xcc, 0xcc, 0xcc, 0x33, 0xcc, 0xcc,
+    0xcc, 0x33, 0x33, 0xcc, 0xcc, 0xcc, 0xff, 0xff,
+    0xff, 0xee, 0xff, 0xff, 0xff, 0xee, 0xee, 0xff,
+    0xff, 0xff, 0xdd, 0xff, 0xff, 0xff, 0xdd, 0xdd,
+    0xff, 0xff, 0xff, 0xbb, 0xff, 0xff, 0xff, 0xbb,
+    0xbb, 0xff, 0xff, 0xff, 0x77, 0xff, 0xff, 0xff,
+    0x77, 0x77, 0xff, 0x77, 0xbb, 0xdd, 0xee, 0xff,
+    0xff, 0xff, 0xff, 0x00, 0xff, 0xff, 0xff, 0x00,
+    0x00, 0xff, 0xff, 0xcc, 0xcc, 0xcc, 0x33, 0xcc,
+    0xcc, 0xcc, 0x33, 0x33, 0xcc, 0xcc, 0xcc, 0xff,
+    0xff, 0xff, 0xee, 0xff, 0xff, 0xff, 0xee, 0xee,
+    0xff, 0xff, 0xff, 0xdd, 0xff, 0xff, 0xff, 0xdd,
+    0xdd, 0xff, 0xff, 0xff, 0xbb, 0xff, 0xff, 0xff,
+    0xbb, 0xbb, 0xff, 0xff, 0xff, 0x77, 0xff, 0xff,
+    0xff, 0x77, 0x77, 0xff, 0x77, 0xbb, 0xdd, 0xee,
+};
+
+// Returns false if all tuning tests failed. Chooses the best window and sets sample and delay to
+// the optimal sample edge and delay values.
+bool GetBestWindow(const sdmmc::TuneWindow& rising_window, const sdmmc::TuneWindow& falling_window,
+                   uint32_t* sample, uint32_t* delay) {
+    uint32_t rising_value = 0;
+    uint32_t falling_value = 0;
+    uint32_t rising_size = rising_window.GetDelay(&rising_value);
+    uint32_t falling_size = falling_window.GetDelay(&falling_value);
+
+    if (rising_size == 0 && falling_size == 0) {
+        return false;
+    }
+
+    if (falling_size > rising_size) {
+        *sample = sdmmc::MsdcIoCon::kSampleFallingEdge;
+        *delay = falling_value;
+    } else {
+        *sample = sdmmc::MsdcIoCon::kSampleRisingEdge;
+        *delay = rising_value;
+    }
+
+    return true;
+}
 
 }  // namespace
 
@@ -63,8 +119,8 @@ zx_status_t MtkSdmmc::Create(zx_device_t* parent) {
         // TODO(bradenkell): Support descriptor DMA for reading/writing multiple pages.
         .max_transfer_size = PAGE_SIZE,
         .max_transfer_size_non_dma = fifo_depth,
-        // TODO(bradenkell): Remove these once tuning is implemented.
-        .prefs = SDMMC_HOST_PREFS_DISABLE_HS200 | SDMMC_HOST_PREFS_DISABLE_HS400
+        // TODO(bradenkell): Remove this once HS400 has been tested.
+        .prefs = SDMMC_HOST_PREFS_DISABLE_HS400
     };
 
     fbl::AllocChecker ac;
@@ -92,12 +148,7 @@ void MtkSdmmc::Init() {
     // Set bus clock to f_OD (400 kHZ) for identification mode.
     SdmmcSetBusFreq(kIdentificationModeBusFreq);
 
-    // Set read timeout to the maximum so SEND_EXT_CSD at f_OD succeeds.
-    SdcCfg::Get()
-        .ReadFrom(&mmio_)
-        .set_bus_width(SdcCfg::kBusWidth1)
-        .set_read_timeout(SdcCfg::kReadTimeoutMax)
-        .WriteTo(&mmio_);
+    SdcCfg::Get().ReadFrom(&mmio_).set_bus_width(SdcCfg::kBusWidth1).WriteTo(&mmio_);
 }
 
 zx_status_t MtkSdmmc::SdmmcHostInfo(sdmmc_host_info_t* info) {
@@ -137,22 +188,48 @@ zx_status_t MtkSdmmc::SdmmcSetBusFreq(uint32_t bus_freq) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    // The bus clock frequency is determined as follows:
-    // msdc_ck = cckdiv=0: msdc_src_ck / 2
-    //           cckdiv>0: msdc_src_ck / (4 * cckdiv)
-    // In DDR mode the bus clock is half of msdc_ck.
+    // For kCardCkModeDiv the bus clock frequency is determined as follows:
+    //     msdc_ck = card_ck_div=0: msdc_src_ck / 2
+    //               card_ck_div>0: msdc_src_ck / (4 * card_ck_div)
+    // For kCardCkModeNoDiv the bus clock frequency is msdc_src_ck
+    // For kCardCkModeDdr the bus clock frequency half that of kCardCkModeDiv.
+    // For kCardCkModeHs400 the bus clock frequency is the same as kCardCkModeDiv, unless
+    // hs400_ck_mode is set in which case it is the same as kCardCkModeNoDiv.
 
-    // TODO(bradenkell): Double the requested frequency if DDR mode is currently selected.
+    auto msdc_cfg = MsdcCfg::Get().ReadFrom(&mmio_);
 
-    uint32_t cckdiv = kMsdcSrcCkFreq / bus_freq;
-    cckdiv = ((cckdiv + 3) >> 2) & 0xff;  // Round the divider up, i.e. to a lower frequency.
-    uint32_t actual = cckdiv == 0 ? kMsdcSrcCkFreq >> 1 : kMsdcSrcCkFreq / (cckdiv << 2);
-    zxlogf(INFO, "MtkSdmmc::%s: requested frequency=%u, actual frequency=%u\n", __FUNCTION__,
-           bus_freq, actual);
+    uint32_t ck_mode = msdc_cfg.card_ck_mode();
+    const bool is_ddr = (ck_mode == MsdcCfg::kCardCkModeDdr ||
+                         ck_mode == MsdcCfg::kCardCkModeHs400);
 
-    MsdcCfg::Get().ReadFrom(&mmio_).set_card_ck_div(cckdiv).WriteTo(&mmio_);
+    uint32_t hs400_ck_mode = msdc_cfg.hs400_ck_mode();
 
-    // TODO(bradenkell): Check stability with the ccksb bit.
+    // Double the requested frequency if a DDR mode is currently selected.
+    uint32_t requested = is_ddr ? bus_freq * 2 : bus_freq;
+
+    // Round the divider up, i.e. to a lower frequency.
+    uint32_t ck_div = (((kMsdcSrcCkFreq / requested) + 3) / 4);
+    if (requested >= kMsdcSrcCkFreq / 2) {
+        ck_div = 0;
+    } else if (ck_div > 0xff) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    msdc_cfg.set_ck_pwr_down(0).WriteTo(&mmio_);
+
+    if (ck_mode == MsdcCfg::kCardCkModeHs400) {
+        hs400_ck_mode = requested >= kMsdcSrcCkFreq ? 1 : 0;
+    } else if (!is_ddr) {
+        ck_mode = requested >= kMsdcSrcCkFreq ? MsdcCfg::kCardCkModeNoDiv : MsdcCfg::kCardCkModeDiv;
+    }
+
+    msdc_cfg.set_hs400_ck_mode(hs400_ck_mode)
+        .set_card_ck_mode(ck_mode)
+        .set_card_ck_div(ck_div)
+        .WriteTo(&mmio_);
+
+    while (!msdc_cfg.ReadFrom(&mmio_).card_ck_stable()) {}
+    msdc_cfg.set_ck_pwr_down(1).WriteTo(&mmio_);
 
     return ZX_OK;
 }
@@ -160,73 +237,214 @@ zx_status_t MtkSdmmc::SdmmcSetBusFreq(uint32_t bus_freq) {
 zx_status_t MtkSdmmc::SdmmcSetTiming(sdmmc_timing_t timing) {
     uint32_t ck_mode;
 
+    MsdcCfg::Get().ReadFrom(&mmio_).set_ck_pwr_down(0).WriteTo(&mmio_);
+
     switch (timing) {
+    case SDMMC_TIMING_DDR50:
     case SDMMC_TIMING_HSDDR:
         ck_mode = MsdcCfg::kCardCkModeDdr;
-        // TODO(bradenkell): Double msdc_ck to maintain the selected bus frequency.
         break;
     case SDMMC_TIMING_HS400:
-    case SDMMC_TIMING_DDR50:
-        return ZX_ERR_NOT_SUPPORTED;
+        ck_mode = MsdcCfg::kCardCkModeHs400;
+        break;
     default:
         ck_mode = MsdcCfg::kCardCkModeDiv;
         break;
     }
 
     MsdcCfg::Get().ReadFrom(&mmio_).set_card_ck_mode(ck_mode).WriteTo(&mmio_);
+    while (!MsdcCfg::Get().ReadFrom(&mmio_).card_ck_stable()) {}
+    MsdcCfg::Get().ReadFrom(&mmio_).set_ck_pwr_down(1).WriteTo(&mmio_);
 
     return ZX_OK;
 }
 
 void MtkSdmmc::SdmmcHwReset() {
     // TODO(bradenkell): Use MSDC0_RTSB (GPIO 114) to reset the eMMC chip.
+    MsdcCfg::Get().ReadFrom(&mmio_).set_reset(1).WriteTo(&mmio_);
+    while (MsdcCfg::Get().ReadFrom(&mmio_).reset()) {}
+}
+
+RequestStatus MtkSdmmc::SendTuningBlock(uint32_t cmd_idx, zx_handle_t vmo) {
+    uint32_t bus_width = SdcCfg::Get().ReadFrom(&mmio_).bus_width();
+
+    sdmmc_req_t request;
+    request.cmd_idx = cmd_idx;
+    request.cmd_flags = MMC_SEND_TUNING_BLOCK_FLAGS;
+    request.arg = 0;
+    request.blockcount = 1;
+    request.blocksize = bus_width == SdcCfg::kBusWidth4 ? sizeof(kTuningBlockPattern4Bit)
+                                                        : sizeof(kTuningBlockPattern8Bit);
+    request.use_dma = true;
+    request.dma_vmo = vmo;
+    request.buf_offset = 0;
+
+    RequestStatus status = SdmmcRequestWithStatus(&request);
+    if (status.Get() != ZX_OK) {
+        return status;
+    }
+
+    const uint8_t* tuning_block_pattern = kTuningBlockPattern8Bit;
+    if (bus_width == SdcCfg::kBusWidth4) {
+        tuning_block_pattern = kTuningBlockPattern4Bit;
+    }
+
+    uint8_t buf[sizeof(kTuningBlockPattern8Bit)];
+    if ((status.data_status = zx_vmo_read(vmo, buf, 0, request.blocksize)) != ZX_OK) {
+        zxlogf(ERROR, "%s: Failed to read VMO\n", __FILE__);
+        return status;
+    }
+
+    status.data_status = memcmp(buf, tuning_block_pattern, request.blocksize) == 0 ? ZX_OK
+                                                                                   : ZX_ERR_IO;
+    return status;
+}
+
+template <typename DelayCallback, typename RequestCallback>
+void MtkSdmmc::TestDelaySettings(DelayCallback&& set_delay, RequestCallback&& do_request,
+                                 TuneWindow* window) {
+    for (uint32_t delay = 0; delay <= PadTune0::kDelayMax; delay++) {
+        fbl::forward<DelayCallback>(set_delay)(delay);
+
+        for (int i = 0; i < kTuningDelayIterations; i++) {
+            if (fbl::forward<RequestCallback>(do_request)() != ZX_OK) {
+                window->Fail();
+                break;
+            } else if (i == kTuningDelayIterations - 1) {
+                window->Pass();
+            }
+        }
+    }
 }
 
 zx_status_t MtkSdmmc::SdmmcPerformTuning(uint32_t cmd_idx) {
-    // TODO(bradenkell): Implement this.
+    uint32_t bus_width = SdcCfg::Get().ReadFrom(&mmio_).bus_width();
+    if (bus_width != SdcCfg::kBusWidth4 && bus_width != SdcCfg::kBusWidth8) {
+        return ZX_ERR_INTERNAL;
+    }
+
+    // Enable the cmd and data delay lines.
+    auto pad_tune0 = PadTune0::Get()
+                         .ReadFrom(&mmio_)
+                         .set_cmd_delay_sel(1)
+                         .set_data_delay_sel(1)
+                         .WriteTo(&mmio_);
+
+    auto msdc_iocon = MsdcIoCon::Get().ReadFrom(&mmio_);
+
+    zx::vmo vmo;
+    fzl::VmoMapper vmo_mapper;
+    zx_status_t status = vmo_mapper.CreateAndMap(sizeof(kTuningBlockPattern8Bit),
+                                                 ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                                 nullptr, &vmo);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: Failed to create and map VMO\n", __FILE__);
+        return status;
+    }
+
+    auto set_cmd_delay = [this](uint32_t delay) {
+        PadTune0::Get().ReadFrom(&mmio_).set_cmd_delay(delay).WriteTo(&mmio_);
+    };
+
+    zx_handle_t vmo_handle = vmo.get();
+    auto test_cmd = [this, vmo_handle, cmd_idx]() {
+        return SendTuningBlock(cmd_idx, vmo_handle).cmd_status;
+    };
+
+    TuneWindow cmd_rising_window, cmd_falling_window;
+
+    // Find the best window when sampling on the clock rising edge.
+    msdc_iocon.set_cmd_sample(MsdcIoCon::kSampleRisingEdge).WriteTo(&mmio_);
+    TestDelaySettings(set_cmd_delay, test_cmd, &cmd_rising_window);
+
+    // Find the best window when sampling on the clock falling edge.
+    msdc_iocon.set_cmd_sample(MsdcIoCon::kSampleFallingEdge).WriteTo(&mmio_);
+    TestDelaySettings(set_cmd_delay, test_cmd, &cmd_falling_window);
+
+    uint32_t sample, delay;
+    if (!GetBestWindow(cmd_rising_window, cmd_falling_window, &sample, &delay)) {
+        return ZX_ERR_IO;
+    }
+
+    // Select the best sampling edge and delay value.
+    msdc_iocon.set_cmd_sample(sample).WriteTo(&mmio_);
+    pad_tune0.set_cmd_delay(delay).WriteTo(&mmio_);
+
+    auto set_data_delay = [this](uint32_t delay) {
+        PadTune0::Get().ReadFrom(&mmio_).set_data_delay(delay).WriteTo(&mmio_);
+    };
+
+    auto test_data = [this, vmo_handle, cmd_idx]() {
+        return SendTuningBlock(cmd_idx, vmo_handle).Get();
+    };
+
+    // Repeat this process for the data bus.
+    TuneWindow data_rising_window, data_falling_window;
+
+    msdc_iocon.set_data_sample(MsdcIoCon::kSampleRisingEdge).WriteTo(&mmio_);
+    TestDelaySettings(set_data_delay, test_data, &data_rising_window);
+
+    msdc_iocon.set_data_sample(MsdcIoCon::kSampleFallingEdge).WriteTo(&mmio_);
+    TestDelaySettings(set_data_delay, test_data, &data_falling_window);
+
+    if (!GetBestWindow(data_rising_window, data_falling_window, &sample, &delay)) {
+        return ZX_ERR_IO;
+    }
+
+    msdc_iocon.set_data_sample(sample).WriteTo(&mmio_);
+    pad_tune0.set_data_delay(delay).WriteTo(&mmio_);
+
     return ZX_OK;
 }
 
-zx_status_t MtkSdmmc::RequestPrepareDma(sdmmc_req_t* req) {
+RequestStatus MtkSdmmc::RequestPrepareDma(sdmmc_req_t* req) {
     const uint64_t req_len = req->blockcount * req->blocksize;
     const bool is_read = req->cmd_flags & SDMMC_CMD_READ;
 
     // TODO(bradenkell): Support descriptor DMA for reading/writing multiple pages.
 
+    RequestStatus status;
+
     zx_paddr_t phys;
     uint32_t options = is_read ? ZX_BTI_PERM_WRITE : ZX_BTI_PERM_READ;
-    zx_status_t status = zx_bti_pin(bti_.get(), options, req->dma_vmo, req->buf_offset & ~kPageMask,
-                                    PAGE_SIZE, &phys, 1, pmt_.reset_and_get_address());
-    if (status != ZX_OK) {
+    status.cmd_status = zx_bti_pin(bti_.get(), options, req->dma_vmo, req->buf_offset & ~kPageMask,
+                                   PAGE_SIZE, &phys, 1, pmt_.reset_and_get_address());
+    if (status.Get() != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to pin DMA buffer\n", __FILE__);
         return status;
     }
 
     if (is_read) {
-        status = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, req->buf_offset,
-                                 req_len, NULL, 0);
+        status.cmd_status = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN_INVALIDATE,
+                                            req->buf_offset, req_len, nullptr, 0);
     } else {
-        status = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN, req->buf_offset, req_len,
-                                 NULL, 0);
+        status.cmd_status = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN, req->buf_offset,
+                                            req_len, nullptr, 0);
     }
 
-    if (status != ZX_OK) {
+    if (status.Get() != ZX_OK) {
         zxlogf(ERROR, "%s: Cache invalidate failed\n", __FILE__);
         pmt_.unpin();
-        return status;
+    } else {
+        MsdcCfg::Get().ReadFrom(&mmio_).set_pio_mode(0).WriteTo(&mmio_);
+
+        DmaLength::Get().FromValue(static_cast<uint32_t>(req_len)).WriteTo(&mmio_);
+        DmaStartAddr::Get().FromValue(0).set(phys).WriteTo(&mmio_);
+        DmaStartAddrHigh4Bits::Get().FromValue(0).set(phys).WriteTo(&mmio_);
     }
 
-    MsdcCfg::Get().ReadFrom(&mmio_).set_pio_mode(0).WriteTo(&mmio_);
-
-    DmaLength::Get().FromValue(static_cast<uint32_t>(req_len)).WriteTo(&mmio_);
-    DmaStartAddr::Get().FromValue(0).set(phys).WriteTo(&mmio_);
-    DmaStartAddrHigh4Bits::Get().FromValue(0).set(phys).WriteTo(&mmio_);
-
-    return ZX_OK;
+    return status;
 }
 
-zx_status_t MtkSdmmc::RequestFinishDma(sdmmc_req_t* req) {
-    while (!MsdcInt::Get().ReadFrom(&mmio_).cmd_ready()) {}
+RequestStatus MtkSdmmc::RequestFinishDma(sdmmc_req_t* req) {
+    auto msdc_int = MsdcInt::Get().ReadFrom(&mmio_);
+
+    while (!msdc_int.ReadFrom(&mmio_).CmdInterrupt()) {}
+    if (msdc_int.cmd_crc_err()) {
+        return RequestStatus(ZX_ERR_IO_DATA_INTEGRITY);
+    } else if (msdc_int.cmd_timeout()) {
+        return RequestStatus(ZX_ERR_TIMED_OUT);
+    }
 
     DmaCtrl::Get()
         .ReadFrom(&mmio_)
@@ -234,42 +452,60 @@ zx_status_t MtkSdmmc::RequestFinishDma(sdmmc_req_t* req) {
         .set_dma_start(1)
         .WriteTo(&mmio_);
 
-    while (!MsdcInt::Get().ReadFrom(&mmio_).transfer_complete()) {}
+    while (!msdc_int.ReadFrom(&mmio_).DataInterrupt()) {}
+
+    RequestStatus status;
+    if (msdc_int.data_crc_err()) {
+        status.data_status = ZX_ERR_IO_DATA_INTEGRITY;
+    } else if (msdc_int.data_timeout()) {
+        status.data_status = ZX_ERR_TIMED_OUT;
+    }
 
     DmaCtrl::Get().ReadFrom(&mmio_).set_dma_stop(1).WriteTo(&mmio_);
     while (DmaCfg::Get().ReadFrom(&mmio_).dma_active()) {}
+
+    if (status.Get() != ZX_OK) {
+        return status;
+    }
 
     zx_status_t cache_status = ZX_OK;
     if (req->cmd_flags & SDMMC_CMD_READ) {
         const uint64_t req_len = req->blockcount * req->blocksize;
         cache_status = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN_INVALIDATE,
-                                       req->buf_offset, req_len, NULL, 0);
+                                       req->buf_offset, req_len, nullptr, 0);
     }
 
     zx_status_t unpin_status = pmt_.unpin();
 
     if (cache_status != ZX_OK) {
         zxlogf(ERROR, "%s: Cache invalidate failed\n", __FILE__);
-        return cache_status;
+        status.data_status = cache_status;
     } else if (unpin_status != ZX_OK) {
         zxlogf(ERROR, "%s Failed to unpin DMA buffer\n", __FILE__);
-        return unpin_status;
+        status.data_status = unpin_status;
     }
 
-    return ZX_OK;
+    return status;
 }
 
-zx_status_t MtkSdmmc::RequestPreparePolled(sdmmc_req_t* req) {
+RequestStatus MtkSdmmc::RequestPreparePolled(sdmmc_req_t* req) {
     MsdcCfg::Get().ReadFrom(&mmio_).set_pio_mode(1).WriteTo(&mmio_);
 
     // Clear the FIFO.
     MsdcFifoCs::Get().ReadFrom(&mmio_).set_fifo_clear(1).WriteTo(&mmio_);
     while (MsdcFifoCs::Get().ReadFrom(&mmio_).fifo_clear()) {}
 
-    return ZX_OK;
+    return RequestStatus();
 }
 
-zx_status_t MtkSdmmc::RequestFinishPolled(sdmmc_req_t* req) {
+RequestStatus MtkSdmmc::RequestFinishPolled(sdmmc_req_t* req) {
+    while (SdcStatus::Get().ReadFrom(&mmio_).cmd_busy()) {}
+    if (MsdcInt::Get().ReadFrom(&mmio_).cmd_crc_err()) {
+        return RequestStatus(ZX_ERR_IO_DATA_INTEGRITY);
+    } else if (MsdcInt::Get().ReadFrom(&mmio_).cmd_timeout()) {
+        return RequestStatus(ZX_ERR_TIMED_OUT);
+    }
+
     uint32_t bytes_remaining = req->blockcount * req->blocksize;
     uint8_t* data_ptr = reinterpret_cast<uint8_t*>(req->virt_buffer) + req->buf_offset;
     while (bytes_remaining > 0) {
@@ -282,20 +518,24 @@ zx_status_t MtkSdmmc::RequestFinishPolled(sdmmc_req_t* req) {
         bytes_remaining -= fifo_count;
     }
 
-    return ZX_OK;
+    return RequestStatus();
 }
 
 zx_status_t MtkSdmmc::SdmmcRequest(sdmmc_req_t* req) {
+    return SdmmcRequestWithStatus(req).Get();
+}
+
+RequestStatus MtkSdmmc::SdmmcRequestWithStatus(sdmmc_req_t* req) {
     uint32_t is_data_request = req->cmd_flags & SDMMC_RESP_DATA_PRESENT;
     if (is_data_request && !req->use_dma && !(req->cmd_flags & SDMMC_CMD_READ)) {
         // TODO(bradenkell): Implement polled block writes.
-        return ZX_ERR_NOT_SUPPORTED;
+        return RequestStatus(ZX_ERR_NOT_SUPPORTED);
     }
 
-    zx_status_t status;
+    RequestStatus status;
     if (is_data_request) {
         status = req->use_dma ? RequestPrepareDma(req) : RequestPreparePolled(req);
-        if (status != ZX_OK) {
+        if (status.Get() != ZX_OK) {
             zxlogf(ERROR, "%s: %s request prepare failed\n", __FILE__,
                    req->use_dma ? "DMA" : "PIO");
             return status;
@@ -312,30 +552,30 @@ zx_status_t MtkSdmmc::SdmmcRequest(sdmmc_req_t* req) {
 
     if (is_data_request) {
         status = req->use_dma ? RequestFinishDma(req) : RequestFinishPolled(req);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "%s: %s response read failed\n", __FILE__, req->use_dma ? "DMA" : "PIO");
+    } else {
+        while (SdcStatus::Get().ReadFrom(&mmio_).cmd_busy()) {}
+        if (MsdcInt::Get().ReadFrom(&mmio_).cmd_crc_err()) {
+            status.cmd_status = ZX_ERR_IO_DATA_INTEGRITY;
+        } else if (MsdcInt::Get().ReadFrom(&mmio_).cmd_timeout()) {
+            status.cmd_status = ZX_ERR_TIMED_OUT;
         }
     }
 
-    while (SdcStatus::Get().ReadFrom(&mmio_).busy()) {}
-
-    if (req->cmd_flags & SDMMC_RESP_LEN_136) {
-        req->response[0] = SdcResponse::Get(0).ReadFrom(&mmio_).response();
-        req->response[1] = SdcResponse::Get(1).ReadFrom(&mmio_).response();
-        req->response[2] = SdcResponse::Get(2).ReadFrom(&mmio_).response();
-        req->response[3] = SdcResponse::Get(3).ReadFrom(&mmio_).response();
-    } else if (req->cmd_flags & (SDMMC_RESP_LEN_48 | SDMMC_RESP_LEN_48B)) {
-        req->response[0] = SdcResponse::Get(0).ReadFrom(&mmio_).response();
+    if (status.Get() == ZX_OK) {
+        if (req->cmd_flags & SDMMC_RESP_LEN_136) {
+            req->response[0] = SdcResponse::Get(0).ReadFrom(&mmio_).response();
+            req->response[1] = SdcResponse::Get(1).ReadFrom(&mmio_).response();
+            req->response[2] = SdcResponse::Get(2).ReadFrom(&mmio_).response();
+            req->response[3] = SdcResponse::Get(3).ReadFrom(&mmio_).response();
+        } else if (req->cmd_flags & (SDMMC_RESP_LEN_48 | SDMMC_RESP_LEN_48B)) {
+            req->response[0] = SdcResponse::Get(0).ReadFrom(&mmio_).response();
+        }
+    } else {
+        MsdcCfg::Get().ReadFrom(&mmio_).set_reset(1).WriteTo(&mmio_);
+        while (MsdcCfg::Get().ReadFrom(&mmio_).reset()) {}
     }
 
-    MsdcInt int_reg = MsdcInt::Get().ReadFrom(&mmio_);
-    if (int_reg.cmd_timeout() || int_reg.data_timeout()) {
-        return ZX_ERR_TIMED_OUT;
-    } else if (int_reg.cmd_crc_err() || int_reg.data_crc_err()) {
-        return ZX_ERR_IO_DATA_INTEGRITY;
-    }
-
-    return ZX_OK;
+    return status;
 }
 
 }  // namespace sdmmc

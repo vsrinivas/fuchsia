@@ -11,17 +11,31 @@ namespace sdmmc {
 
 class MsdcCfg : public hwreg::RegisterBase<MsdcCfg, uint32_t> {
 public:
-    static constexpr uint32_t kCardCkModeNoDiv = 0;
-    static constexpr uint32_t kCardCkModeDiv   = 1;
+    static constexpr uint32_t kCardCkModeDiv   = 0;
+    static constexpr uint32_t kCardCkModeNoDiv = 1;
     static constexpr uint32_t kCardCkModeDdr   = 2;
     static constexpr uint32_t kCardCkModeHs400 = 3;
 
     static auto Get() { return hwreg::RegisterAddr<MsdcCfg>(0x00); }
 
     DEF_FIELD(21, 20, card_ck_mode);
-    DEF_FIELD(19, 8, card_ck_div);
+    DEF_BIT(18, hs400_ck_mode);
+    DEF_FIELD(15, 8, card_ck_div);
     DEF_BIT(7, card_ck_stable);
     DEF_BIT(3, pio_mode);
+    DEF_BIT(2, reset);
+    DEF_BIT(1, ck_pwr_down);
+};
+
+class MsdcIoCon : public hwreg::RegisterBase<MsdcIoCon, uint32_t> {
+public:
+    static constexpr uint32_t kSampleRisingEdge  = 0;
+    static constexpr uint32_t kSampleFallingEdge = 1;
+
+    static auto Get() { return hwreg::RegisterAddr<MsdcIoCon>(0x04); }
+
+    DEF_BIT(2, data_sample);
+    DEF_BIT(1, cmd_sample);
 };
 
 class MsdcInt : public hwreg::RegisterBase<MsdcInt, uint32_t> {
@@ -29,6 +43,14 @@ public:
     static constexpr uint32_t kAllInterruptBits = 0xffffffff;
 
     static auto Get() { return hwreg::RegisterAddr<MsdcInt>(0x0c); }
+
+    bool CmdInterrupt() {
+        return cmd_ready() || cmd_timeout() || cmd_crc_err();
+    }
+
+    bool DataInterrupt() {
+        return transfer_complete() || data_timeout() || data_crc_err();
+    }
 
     DEF_BIT(15, data_crc_err);
     DEF_BIT(14, data_timeout);
@@ -209,6 +231,18 @@ public:
 class DmaLength : public hwreg::RegisterBase<DmaLength, uint32_t> {
 public:
     static auto Get() { return hwreg::RegisterAddr<DmaLength>(0xa8); }
+};
+
+class PadTune0 : public hwreg::RegisterBase<PadTune0, uint32_t> {
+public:
+    static constexpr int kDelayMax = 0x1f;
+
+    static auto Get() { return hwreg::RegisterAddr<PadTune0>(0xf0); }
+
+    DEF_BIT(21, cmd_delay_sel);
+    DEF_FIELD(20, 16, cmd_delay);
+    DEF_BIT(13, data_delay_sel);
+    DEF_FIELD(12, 8, data_delay);
 };
 
 }  // namespace sdmmc
