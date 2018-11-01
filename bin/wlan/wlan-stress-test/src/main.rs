@@ -24,7 +24,7 @@ use {
     std::collections::HashMap,
     std::process,
     std::thread::sleep,
-    std::time::Duration,
+    std::time::{Duration, Instant},
     structopt::StructOpt,
 };
 
@@ -66,6 +66,10 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
+fn duration_to_ms(duration: Duration) -> u128 {
+    (duration.as_secs() * 1000 + duration.subsec_millis() as u64) as u128
+}
+
 fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
     let mut scan_test_pass = true;
     let mut connect_test_pass = true;
@@ -95,12 +99,15 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
 
         // now that we have interfaces...  let's try to use them!
         for (_iface_id, wlaniface) in test_results.iface_objects.iter_mut() {
+            let mut total_connect_time_ms = 0;
+            let mut total_disconnect_time_ms = 0;
             for i in 0..opt.repetitions {
                 if opt.scan_test_enabled {
                     // TODO(NET-1817): Fill this when scan test api is available
                 }
 
                 if opt.connect_test_enabled {
+                    let start = Instant::now();
                     let result = await!(wlan_service_util::connect_to_network(
                         &wlaniface.sme_proxy,
                         opt.target_ssid.as_bytes().to_vec(),
@@ -108,6 +115,8 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                     ));
                     match result {
                         Ok(true) => {
+                            total_connect_time_ms +=
+                                duration_to_ms(Instant::now().duration_since(start));
                             wlaniface.report.num_successful_connects += 1;
                             wlaniface.report.last_successful_connection_attempt = i + 1;
                         }
@@ -116,11 +125,14 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                 }
 
                 if opt.disconnect_test_enabled {
+                    let start = Instant::now();
                     let result = await!(wlan_service_util::disconnect_from_network(
                         &wlaniface.sme_proxy
                     ));
                     match result {
                         Ok(()) => {
+                            total_disconnect_time_ms +=
+                                duration_to_ms(Instant::now().duration_since(start));
                             wlaniface.report.num_successful_disconnects += 1;
                             wlaniface.report.last_successful_disconnect_attempt = i + 1;
                         }
@@ -128,6 +140,14 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                     };
                 }
                 sleep(Duration::from_millis(opt.wait_time_ms));
+            }
+            if wlaniface.report.num_successful_connects > 0 {
+                wlaniface.report.average_connect_time_ms =
+                    total_connect_time_ms / wlaniface.report.num_successful_connects;
+            }
+            if wlaniface.report.num_successful_disconnects > 0 {
+                wlaniface.report.average_disconnect_time_ms =
+                    total_disconnect_time_ms / wlaniface.report.num_successful_disconnects;
             }
         }
 
@@ -175,9 +195,11 @@ struct TestReport {
 
     num_successful_connects: u128,
     last_successful_connection_attempt: u128,
+    average_connect_time_ms: u128,
 
     num_successful_disconnects: u128,
     last_successful_disconnect_attempt: u128,
+    average_disconnect_time_ms: u128,
 }
 
 impl TestReport {
@@ -188,9 +210,11 @@ impl TestReport {
 
             num_successful_connects: 0,
             last_successful_connection_attempt: 0,
+            average_connect_time_ms: 0,
 
             num_successful_disconnects: 0,
             last_successful_disconnect_attempt: 0,
+            average_disconnect_time_ms: 0,
         }
     }
 }
