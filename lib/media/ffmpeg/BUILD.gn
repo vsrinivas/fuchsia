@@ -31,7 +31,10 @@ if (ffmpeg_prebuilts + [ toolchain_variant.name ] -
 }
 
 group("ffmpeg") {
-  visibility = [ "//garnet/bin/mediaplayer/ffmpeg" ]
+  visibility = [
+    "//garnet/bin/mediaplayer/ffmpeg",
+    "//garnet/bin/media/codecs/sw/ffmpeg:codec_runner_sw_ffmpeg",
+  ]
 
   if (use_prebuilt_ffmpeg) {
     public_deps = [
