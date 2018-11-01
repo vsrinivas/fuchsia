@@ -62,6 +62,8 @@ bool EngineCommandStreamer::InitContextCacheConfig(std::shared_ptr<MsdIntelConte
 
 void EngineCommandStreamer::InitHardware()
 {
+    Reset();
+
     HardwareStatusPage* status_page = hardware_status_page(id());
 
     registers::HardwareStatusPageAddress::write(register_io(), mmio_base_, status_page->gpu_addr());
@@ -97,6 +99,22 @@ void EngineCommandStreamer::InitHardware()
 
     // WaEnableGapsTsvCreditFix
     registers::ArbiterControl::workaround(register_io());
+}
+
+void EngineCommandStreamer::InvalidateTlbs()
+{
+    // Should only be called when gpu is idle.
+    switch (id()) {
+        case RENDER_COMMAND_STREAMER: {
+            auto reg = registers::RenderEngineTlbControl::Get().FromValue(0);
+            reg.invalidate().set(1);
+            reg.WriteTo(register_io());
+            break;
+        }
+        default:
+            DASSERT(false);
+            break;
+    }
 }
 
 // Register definitions from BSpec BXML Reference.
@@ -451,27 +469,38 @@ bool EngineCommandStreamer::Reset()
     auto start = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> elapsed;
 
+    bool ready_for_reset = false;
     do {
-        if (registers::ResetControl::ready_for_reset(register_io(), mmio_base())) {
-            registers::GraphicsDeviceResetControl::initiate_reset(register_io(), engine);
-
-            start = std::chrono::high_resolution_clock::now();
-            do {
-                if (registers::GraphicsDeviceResetControl::is_reset_complete(register_io(), engine))
-                    return true;
-                std::this_thread::sleep_for(std::chrono::milliseconds(kRetryMs));
-                elapsed = std::chrono::high_resolution_clock::now() - start;
-
-            } while (elapsed.count() < kRetryTimeoutMs);
-
-            return DRETF(false, "reset failed to complete");
+        ready_for_reset = registers::ResetControl::ready_for_reset(register_io(), mmio_base());
+        if (ready_for_reset) {
+            break;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(kRetryMs));
         elapsed = std::chrono::high_resolution_clock::now() - start;
-
     } while (elapsed.count() < kRetryTimeoutMs);
 
-    return DRETF(false, "Ready for reset failed");
+    bool reset_complete = false;
+    if (ready_for_reset) {
+        registers::GraphicsDeviceResetControl::initiate_reset(register_io(), engine);
+        start = std::chrono::high_resolution_clock::now();
+
+        do {
+            reset_complete =
+                registers::GraphicsDeviceResetControl::is_reset_complete(register_io(), engine);
+            if (reset_complete) {
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(kRetryMs));
+            elapsed = std::chrono::high_resolution_clock::now() - start;
+        } while (elapsed.count() < kRetryTimeoutMs);
+    }
+
+    // Always invalidate tlbs, otherwise risk memory corruption.
+    InvalidateTlbs();
+
+    DLOG("ready_for_reset %d reset_complete %d", ready_for_reset, reset_complete);
+
+    return DRETF(reset_complete, "Reset did not complete");
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -570,6 +570,12 @@ public:
     }
 };
 
+class RenderEngineTlbControl : public magma::RegisterBase {
+public:
+    DEF_BIT(0, invalidate);
+    static auto Get() { return magma::RegisterAddr<RenderEngineTlbControl>(0x4260); }
+};
+
 } // namespace registers
 
 #endif // REGISTERS_H

@@ -28,26 +28,28 @@ class TestMsdIntelDevice {
 public:
     void CreateAndDestroy()
     {
-        magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
-        ASSERT_NE(platform_device, nullptr);
+        for (uint32_t i = 0; i < 100; i++) {
+            magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
+            ASSERT_NE(platform_device, nullptr);
 
-        std::unique_ptr<MsdIntelDevice> device =
-            MsdIntelDevice::Create(platform_device->GetDeviceHandle(), false);
-        EXPECT_NE(device, nullptr);
+            std::unique_ptr<MsdIntelDevice> device =
+                MsdIntelDevice::Create(platform_device->GetDeviceHandle(), false);
+            EXPECT_NE(device, nullptr);
 
-        EXPECT_TRUE(device->WaitIdle());
+            EXPECT_TRUE(device->WaitIdle());
 
-        // check that the render init batch succeeded.
-        EXPECT_EQ(device->global_context()
-                      ->hardware_status_page(RENDER_COMMAND_STREAMER)
-                      ->read_sequence_number(),
-                  0x1001u);
+            // check that the render init batch succeeded.
+            EXPECT_EQ(device->global_context()
+                          ->hardware_status_page(RENDER_COMMAND_STREAMER)
+                          ->read_sequence_number(),
+                      0x1001u);
 
-        // test register access
-        uint32_t expected = 0xabcd1234;
-        device->register_io()->Write32(0x4f100, expected);
-        uint32_t value = device->register_io()->Read32(0x4f100);
-        EXPECT_EQ(expected, value);
+            // test register access
+            uint32_t expected = 0xabcd1234;
+            device->register_io()->Write32(0x4f100, expected);
+            uint32_t value = device->register_io()->Read32(0x4f100);
+            EXPECT_EQ(expected, value);
+        }
     }
 
     class FormattedString {
