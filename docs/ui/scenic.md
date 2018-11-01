@@ -1,5 +1,21 @@
 # Scenic, the Fuchsia graphics engine
 
+- [Introduction](#introduction)
+- [Concepts](#concepts)
+ - [Scenic](#scenic)
+ - [Sessions](#sessions)
+ - [Resources](#resources)
+   - [Nodes](#nodes)
+   - [Scenes](#scenes)
+   - [Compositors](#compositors)
+   - [TODO: More resources](#moreresources)
+ - [Timing Model](#timingmodel)
+ - [Fences](#fences)
+- [API Guide](#apiguide)
+  - TODO
+
+# <a name="introduction"></a>Introduction
+
 Scenic is a Garnet service that composes graphical objects from multiple
 processes into a shared scene graph.  These objects are rendered within a
 unified lighting environment (to a display or other render target); this
@@ -28,24 +44,16 @@ Scenic's responsibilities are:
 - Diagnostics: Scenic provides a diagnostic interface to help developers
   debug their models and measure performance.
 
-# Concepts
+# <a name="concepts"></a>Concepts
 
-## Scenic
+## <a name="scenic"></a>Scenic
 
-The `SceneManager` FIDL interface is Scenic's front door.  Each instance
-of the interface represents a Scenic instance (we plan to rename the
-interface to `Scenic` soon). Each Scenic instance is an isolated rendering
-context with its own content, render targets, and scheduling loop.
+The `Scenic` FIDL interface is Scenic's front door.  Each instance of the
+interface represents a Scenic instance. Each Scenic instance is an isolated
+rendering context with its own content, render targets, and scheduling loop.
 
-The following operations are provided:
-
-- Create client `Sessions` to publish graphical content to this instance.
-- Create rendering targets to specify where the output of the instance
-  should be rendered, such as to a display or to an image (e.g. screen
-  shots).
-- Bind scenes to rendering targets.
-- Obtain another Zircon channel which is bound to the same Scenic
-  instance.  (Duplicate)
+The `Scenic` interface allows a client to create a [`Session`](#session) which
+is the communication channel used to publish graphical content to this instance.
 
 A single Scenic instance can update, animate, and render multiple
 `Scenes` (trees of graphical objects) to multiple targets in tandem on the same
@@ -53,10 +61,11 @@ scheduling loop.  This means that the timing model for a Scenic instance
 is _coherent_: all of its associated content belongs to the same scheduling
 domain and can be seamlessly intermixed.
 
-Conversely, independent Scenic instances cannot share content and are
-therefore not coherent amongst themselves.  Creating separate Scenic
-instances can be useful for rendering to targets which have very different
-scheduling requirements or for running tests in isolation.
+In practice, there is one instance of Scenic and one Scene that is rendered to a
+target. However, creating separate Scenic instances can be useful for rendering
+to targets which have very different scheduling requirements or for running
+tests in isolation. Independent Scenic instances cannot share content and are
+therefore not coherent amongst themselves.
 
 When a Scenic instance is destroyed, all of its sessions become
 inoperable and its rendering ceases.
@@ -64,7 +73,7 @@ inoperable and its rendering ceases.
 `Views` typically do not deal with the Scenic instance directly; instead
 they receive a Scenic `Session` from the view manager.
 
-## Sessions
+## <a name="sessions"></a>Sessions
 
 The `Session` FIDL interface is the primary API used by clients of Scenic to
 contribute graphical content in the form of `Resources`.  Each session has
@@ -84,7 +93,7 @@ its links become inoperable.
 
 `Views` typically receive separate sessions from the view manager.
 
-## Resources
+## <a name="resources"></a>Resources
 
 `Resources` represent scene elements such as nodes, shapes, materials, and
 animations which belong to particular `Sessions`.
@@ -130,7 +139,7 @@ See also [Fences](#fences).
 This process of addition, modification, and removal may be repeated
 indefinitely to incrementally update resources within a session.
 
-### Nodes
+### <a name="nodes"></a>Nodes
 
 A `Node` resource represents a graphical object which can be assembled into
 a hierarchy called a `node tree` for rendering.
@@ -138,7 +147,7 @@ a hierarchy called a `node tree` for rendering.
 TODO: Discuss this in more detail, especially hierarchical modeling concepts
 such as per-node transforms, groups, adding and removing children, etc.
 
-### Scenes
+### <a name="scenes"></a>Scenes
 
 A `Scene` resource combines a tree of nodes with the scene-wide parameters
 needed to render it.  A Scenic instance may contain multiple scenes but
@@ -151,7 +160,7 @@ A scene resource has the following properties:
 
 In order to render a scene, a `Camera` must be pointed at it.
 
-### Compositors
+### <a name="compositors"></a>Compositors
 
 Compositors are resources that come in two flavors: `DisplayCompositor` and
 `ImagePipeCompositor`; their job is to draw the content of a `LayerStack`
@@ -164,20 +173,20 @@ A `LayerStack` resource consists of an ordered list of `Layers`.  Each layer
 can contain either an `Image` (perhaps transformed by a matrix), or a
 `Camera` that points at a `Scene` to be rendered (as described above).
 
-### TODO: More Resources
+### <a name="moreresources"></a>TODO: More Resources
 
 Add sections to discuss all other kinds of resources: shapes, materials,
 links, memory, images, buffers, animations, variables, renderers etc.
 
-## Timing Model
+## <a name="timingmodel"></a>Timing Model
 
 TODO: Talk about scheduling frames, presentation timestamps, etc.
 
-## Fences
+## <a name="fences"></a>Fences
 
 TODO: Talk about synchronization.
 
-# API Guide
+# <a name="apiguide"></a>API Guide
 
 ## TODO
 
