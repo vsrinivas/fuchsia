@@ -5,7 +5,7 @@
 import("//build/package.gni")
 
 executable("bin") {
-  output_name = "mdns_service"
+  output_name = "mdns"
 
   sources = [
     "fidl_interface_monitor.cc",
@@ -101,14 +101,14 @@ package("service") {
     ":bin",
   ]
 
-  binary = "mdns_service"
+  binary = "mdns"
 
-  package_name = "mdns_service"
+  package_name = "mdns"
 
   meta = [
     {
-      path = rebase_path("meta/mdns_service.cmx")
-      dest = "mdns_service.cmx"
+      path = rebase_path("meta/mdns.cmx")
+      dest = "mdns.cmx"
     },
   ]
 }

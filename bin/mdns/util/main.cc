@@ -1,12 +1,12 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Cop / bingarnet / bin / mdns / util /uthors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 
-#include "garnet/bin/mdns/tool/mdns_impl.h"
-#include "garnet/bin/mdns/tool/mdns_params.h"
+#include "garnet/bin/mdns/util/mdns_impl.h"
+#include "garnet/bin/mdns/util/mdns_params.h"
 #include "lib/fxl/command_line.h"
 
 int main(int argc, const char** argv) {

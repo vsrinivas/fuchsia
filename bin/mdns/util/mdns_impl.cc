@@ -1,8 +1,8 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Cop / bingarnet / bin / mdns / util /uthors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/mdns/tool/mdns_impl.h"
+#include "garnet/bin/mdns/util/mdns_impl.h"
 
 #include <iostream>
 #include <unordered_set>
@@ -11,8 +11,8 @@
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
 
-#include "garnet/bin/mdns/tool/formatting.h"
-#include "garnet/bin/mdns/tool/mdns_params.h"
+#include "garnet/bin/mdns/util/formatting.h"
+#include "garnet/bin/mdns/util/mdns_params.h"
 #include "lib/fsl/types/type_converters.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/type_converter.h"
