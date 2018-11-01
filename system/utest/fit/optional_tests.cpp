@@ -265,6 +265,23 @@ bool assign_move() {
 }
 
 template <typename T>
+bool emplace() {
+    BEGIN_TEST;
+
+    fit::optional<T> a;
+    EXPECT_EQ(55, a.emplace(55).value);
+    EXPECT_TRUE(a.has_value());
+    EXPECT_EQ(55, a.value().value);
+
+    fit::optional<T> b({42});
+    EXPECT_EQ(66, b.emplace(66).value);
+    EXPECT_TRUE(b.has_value());
+    EXPECT_EQ(66, b.value().value);
+
+    END_TEST;
+}
+
+template <typename T>
 bool invoke() {
     BEGIN_TEST;
 
@@ -390,6 +407,8 @@ RUN_TEST(assign_copy<slot<false>>)
 RUN_TEST(assign_copy<slot<true>>)
 RUN_TEST(assign_move<slot<false>>)
 RUN_TEST(assign_move<slot<true>>)
+RUN_TEST(emplace<slot<false>>)
+RUN_TEST(emplace<slot<true>>)
 RUN_TEST(invoke<slot<false>>)
 RUN_TEST(invoke<slot<true>>)
 RUN_TEST(comparisons<slot<false>>)

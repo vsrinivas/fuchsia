@@ -228,6 +228,14 @@ public:
         }
     }
 
+    template <typename... Args>
+    T& emplace(Args&&... args) {
+        reset();
+        new (&value_) T(std::forward<Args...>(args)...);
+        has_value_ = true;
+        return value_;
+    }
+
 private:
     bool has_value_;
     union {
