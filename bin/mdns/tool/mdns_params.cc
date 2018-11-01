@@ -135,13 +135,13 @@ MdnsParams::MdnsParams(const fxl::CommandLine& command_line) {
 
 void MdnsParams::Usage() {
   std::cout << "commands:\n";
-  std::cout << "    verbose\n";
-  std::cout << "    quiet\n";
   std::cout << "    resolve <host_name>\n";
   std::cout << "    subscribe <service_name>\n";
   std::cout << "    publish <service_name> <instance_name> <port>\n";
   std::cout << "    unpublish <service_name> <instance_name>\n";
   std::cout << "    respond <service_name> <instance_name> <port>\n";
+  std::cout << "    verbose (debug build only)\n";
+  std::cout << "    quiet (debug build only)\n";
   std::cout << "options:\n";
   std::cout << "    --timeout=<seconds>       # applies to resolve\n";
   std::cout << "    --text=<text,...>         # applies to publish, respond\n";

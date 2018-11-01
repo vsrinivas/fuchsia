@@ -14,6 +14,8 @@
 
 namespace mdns {
 
+#ifndef NDEBUG
+
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
   if (value.size() == 0) {
@@ -42,6 +44,8 @@ std::ostream& operator<<(std::ostream& os, const DnsHeader& value);
 std::ostream& operator<<(std::ostream& os, const DnsQuestion& value);
 std::ostream& operator<<(std::ostream& os, const DnsResource& value);
 std::ostream& operator<<(std::ostream& os, const DnsMessage& value);
+
+#endif // ifndef NDEBUG
 
 }  // namespace mdns
 

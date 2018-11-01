@@ -34,7 +34,11 @@ void Mdns::EnableInterface(const std::string& name, sa_family_t family) {
   transceiver_.EnableInterface(name, family);
 }
 
-void Mdns::SetVerbose(bool verbose) { verbose_ = verbose; }
+void Mdns::SetVerbose(bool verbose) {
+#ifndef NDEBUG
+  verbose_ = verbose;
+#endif // ifndef NDEBUG
+}
 
 void Mdns::Start(std::unique_ptr<InterfaceMonitor> interface_monitor,
                  const std::string& host_name) {
@@ -74,10 +78,12 @@ void Mdns::Start(std::unique_ptr<InterfaceMonitor> interface_monitor,
       },
       [this](std::unique_ptr<DnsMessage> message,
              const ReplyAddress& reply_address) {
+#ifndef NDEBUG
         if (verbose_) {
           FXL_LOG(INFO) << "Inbound message from " << reply_address << ":"
                         << *message;
         }
+#endif // ifndef NDEBUG
 
         for (auto& question : message->questions_) {
           // We reply to questions using unicast if specifically requested in
@@ -369,6 +375,7 @@ void Mdns::SendMessages() {
       message.header_.SetAuthoritativeAnswer(true);
     }
 
+#ifndef NDEBUG
     if (verbose_) {
       if (reply_address == MdnsAddresses::kV4MulticastReply) {
         FXL_LOG(INFO) << "Outbound message (multicast): " << message;
@@ -377,6 +384,7 @@ void Mdns::SendMessages() {
                       << message;
       }
     }
+#endif // ifndef NDEBUG
 
     transceiver_.SendMessage(&message, reply_address);
   }

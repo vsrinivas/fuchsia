@@ -12,6 +12,8 @@
 
 namespace mdns {
 
+#ifndef NDEBUG
+
 std::ostream& operator<<(std::ostream& os, DnsType value) {
   switch (value) {
     case DnsType::kA:
@@ -192,5 +194,7 @@ std::ostream& operator<<(std::ostream& os, const DnsMessage& value) {
   }
   return os << fostr::Outdent;
 }
+
+#endif // ifndef NDEBUG
 
 }  // namespace mdns
