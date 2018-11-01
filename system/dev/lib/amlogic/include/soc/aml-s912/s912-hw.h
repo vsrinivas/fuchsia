@@ -87,6 +87,7 @@
 #define S912_GPIO_IRQ_5                 101
 #define S912_GPIO_IRQ_6                 102
 #define S912_GPIO_IRQ_7                 103
+#define S912_RDMA_DONE_IRQ              121
 #define S912_MALI_IRQ_GP                192
 #define S912_MALI_IRQ_GPMMU             193
 #define S912_MALI_IRQ_PP                194

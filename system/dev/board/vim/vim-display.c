@@ -58,6 +58,10 @@ static const pbus_irq_t vim_display_irqs[] = {
         .irq = S912_VIU1_VSYNC_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
+    {
+        .irq = S912_RDMA_DONE_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
 };
 
 static const pbus_bti_t vim_display_btis[] = {

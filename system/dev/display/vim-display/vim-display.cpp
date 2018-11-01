@@ -431,6 +431,7 @@ static void display_release(void* ctx) {
     if (display) {
         disable_osd(display, 1);
         disable_vd(display, 0);
+        release_osd(display);
         bool wait_for_vsync_shutdown = false;
         if (display->vsync_interrupt != ZX_HANDLE_INVALID) {
             zx_interrupt_trigger(display->vsync_interrupt, 0, 0);
@@ -587,8 +588,7 @@ static int hdmi_irq_handler(void *arg) {
     }
 }
 
-static int vsync_thread(void *arg)
-{
+static int vsync_thread(void *arg) {
     vim2_display_t* display = static_cast<vim2_display_t*>(arg);
 
     for (;;) {
@@ -756,9 +756,15 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         return status;
     }
 
-    status = pdev_map_interrupt(&display->pdev, 0, &display->vsync_interrupt);
+    status = pdev_map_interrupt(&display->pdev, IRQ_VSYNC, &display->vsync_interrupt);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map vsync interrupt\n");
+        return status;
+    }
+
+    status = pdev_map_interrupt(&display->pdev, IRQ_RDMA, &display->rdma_interrupt);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not map RDMA interrupt\n");
         return status;
     }
 
@@ -771,6 +777,13 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     // For some reason the vsync interrupt enable bit needs to be cleared for
     // vsync interrupts to occur at the correct rate.
     display->mmio_vpu->ClearBits32(1 << 8, VPU_VIU_MISC_CTRL0);
+
+    // Setup RDMA
+    status = setup_rdma(display);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not setup RDMA (status %d)\n", status);
+        return status;
+    }
 
     fbl::AllocChecker ac;
     display->p = new(&ac) struct hdmi_param();
@@ -814,6 +827,7 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
 
     thrd_create_with_name(&display->main_thread, hdmi_irq_handler, display, "hdmi_irq_handler");
     thrd_create_with_name(&display->vsync_thread, vsync_thread, display, "vsync_thread");
+    thrd_create_with_name(&display->rdma_thread, rdma_thread, display, "rdma_thread");
 
     // Things went well!  Cancel our cleanup auto call
     cleanup.cancel();

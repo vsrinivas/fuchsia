@@ -293,6 +293,60 @@
 #define VPU_ENCP_VIDEO_BLANKPB_VAL                          (0x1bb3 << 2)
 #define VPU_ENCP_VIDEO_BLANKPR_VAL                          (0x1bb4 << 2)
 
+#define VPU_VD1_IF0_GEN_REG                                 (0x1a50 << 2)
+#define VPU_VD1_IF0_CANVAS0                                 (0x1a51 << 2)
+#define VPU_VD1_IF0_CANVAS1                                 (0x1a52 << 2)
+#define VPU_VD1_IF0_LUMA_X0                                 (0x1a53 << 2)
+#define VPU_VD1_IF0_LUMA_Y0                                 (0x1a54 << 2)
+#define VPU_VD1_IF0_CHROMA_X0                               (0x1a55 << 2)
+#define VPU_VD1_IF0_CHROMA_Y0                               (0x1a56 << 2)
+#define VPU_VD1_IF0_LUMA_X1                                 (0x1a57 << 2)
+#define VPU_VD1_IF0_LUMA_Y1                                 (0x1a58 << 2)
+#define VPU_VD1_IF0_CHROMA_X1                               (0x1a59 << 2)
+#define VPU_VD1_IF0_CHROMA_Y1                               (0x1a5a << 2)
+#define VPU_VD1_IF0_RPT_LOOP                                (0x1a5b << 2)
+#define VPU_VD1_IF0_LUMA0_RPT_PAT                           (0x1a5c << 2)
+#define VPU_VD1_IF0_CHROMA0_RPT_PAT                         (0x1a5d << 2)
+#define VPU_VD1_IF0_LUMA1_RPT_PAT                           (0x1a5e << 2)
+#define VPU_VD1_IF0_CHROMA1_RPT_PAT                         (0x1a5f << 2)
+#define VPU_VD1_IF0_LUMA_PSEL                               (0x1a60 << 2)
+#define VPU_VD1_IF0_CHROMA_PSEL                             (0x1a61 << 2)
+#define VPU_VD1_IF0_DUMMY_PIXEL                             (0x1a62 << 2)
+#define VPU_VD1_IF0_LUMA_FIFO_SIZE                          (0x1a63 << 2)
+#define VPU_VD1_IF0_RANGE_MAP_Y                             (0x1a6a << 2)
+#define VPU_VD1_IF0_RANGE_MAP_CB                            (0x1a6b << 2)
+#define VPU_VD1_IF0_RANGE_MAP_CR                            (0x1a6c << 2)
+#define VPU_VD1_IF0_GEN_REG2                                (0x1a6d << 2)
+#define VPU_VD1_IF0_PROT_CNTL                               (0x1a6e << 2)
+#define VPU_VIU_VD1_FMT_CTRL                                (0x1a68 << 2)
+#define VPU_VIU_VD1_FMT_W                                   (0x1a69 << 2)
+#define VPU_VD2_IF0_GEN_REG                                 (0x1a70 << 2)
+#define VPU_VD2_IF0_CANVAS0                                 (0x1a71 << 2)
+#define VPU_VD2_IF0_CANVAS1                                 (0x1a72 << 2)
+#define VPU_VD2_IF0_LUMA_X0                                 (0x1a73 << 2)
+#define VPU_VD2_IF0_LUMA_Y0                                 (0x1a74 << 2)
+#define VPU_VD2_IF0_CHROMA_X0                               (0x1a75 << 2)
+#define VPU_VD2_IF0_CHROMA_Y0                               (0x1a76 << 2)
+#define VPU_VD2_IF0_LUMA_X1                                 (0x1a77 << 2)
+#define VPU_VD2_IF0_LUMA_Y1                                 (0x1a78 << 2)
+#define VPU_VD2_IF0_CHROMA_X1                               (0x1a79 << 2)
+#define VPU_VD2_IF0_CHROMA_Y1                               (0x1a7a << 2)
+#define VPU_VD2_IF0_RPT_LOOP                                (0x1a7b << 2)
+#define VPU_VD2_IF0_LUMA0_RPT_PAT                           (0x1a7c << 2)
+#define VPU_VD2_IF0_CHROMA0_RPT_PAT                         (0x1a7d << 2)
+#define VPU_VD2_IF0_LUMA1_RPT_PAT                           (0x1a7e << 2)
+#define VPU_VD2_IF0_CHROMA1_RPT_PAT                         (0x1a7f << 2)
+#define VPU_VD2_IF0_LUMA_PSEL                               (0x1a80 << 2)
+#define VPU_VD2_IF0_CHROMA_PSEL                             (0x1a81 << 2)
+#define VPU_VD2_IF0_DUMMY_PIXEL                             (0x1a82 << 2)
+#define VPU_VD2_IF0_LUMA_FIFO_SIZE                          (0x1a83 << 2)
+#define VPU_VD2_IF0_RANGE_MAP_Y                             (0x1a8a << 2)
+#define VPU_VD2_IF0_RANGE_MAP_CB                            (0x1a8b << 2)
+#define VPU_VD2_IF0_RANGE_MAP_CR                            (0x1a8c << 2)
+#define VPU_VD2_IF0_GEN_REG2                                (0x1a8d << 2)
+#define VPU_VD2_IF0_PROT_CNTL                               (0x1a8e << 2)
+#define VPU_VIU_VD2_FMT_CTRL                                (0x1a88 << 2)
+#define VPU_VIU_VD2_FMT_W                                   (0x1a89 << 2)
 
 #define VPU_VPU_VIU_VENC_MUX_CTRL                           (0x271a << 2)
  #define VIU_VENC_MUX_CTRL_VIU2(x)                      (x << 2)
@@ -480,3 +534,88 @@
 #define VPU_VPP_OSD_SCALE_COEF_IDX                          (0x1dcc << 2)
 #define VPU_VPP_OSD_SCALE_COEF                              (0x1dcd << 2)
 #define VPU_VPP_INT_LINE_NUM                                (0x1dce << 2)
+
+/// RDMA Related Registers
+#define VPU_RDMA_AHB_START_ADDR_MAN                 (0x1100 << 2)
+#define VPU_RDMA_AHB_END_ADDR_MAN                   (0x1101 << 2)
+#define VPU_RDMA_AHB_START_ADDR_1                   (0x1102 << 2)
+#define VPU_RDMA_AHB_END_ADDR_1                     (0x1103 << 2)
+#define VPU_RDMA_AHB_START_ADDR_2                   (0x1104 << 2)
+#define VPU_RDMA_AHB_END_ADDR_2                     (0x1105 << 2)
+#define VPU_RDMA_AHB_START_ADDR_3                   (0x1106 << 2)
+#define VPU_RDMA_AHB_END_ADDR_3                     (0x1107 << 2)
+#define VPU_RDMA_AHB_START_ADDR_4                   (0x1108 << 2)
+#define VPU_RDMA_AHB_END_ADDR_4                     (0x1109 << 2)
+#define VPU_RDMA_AHB_START_ADDR_5                   (0x110a << 2)
+#define VPU_RDMA_AHB_END_ADDR_5                     (0x110b << 2)
+#define VPU_RDMA_AHB_START_ADDR_6                   (0x110c << 2)
+#define VPU_RDMA_AHB_END_ADDR_6                     (0x110d << 2)
+#define VPU_RDMA_AHB_START_ADDR_7                   (0x110e << 2)
+#define VPU_RDMA_AHB_END_ADDR_7                     (0x110f << 2)
+#define VPU_RDMA_AHB_START_ADDR(x)                  (VPU_RDMA_AHB_START_ADDR_MAN + ((x + 1) << 3))
+#define VPU_RDMA_AHB_END_ADDR(x)                    (VPU_RDMA_AHB_END_ADDR_MAN + ((x + 1)  << 3))
+#define VPU_RDMA_ACCESS_AUTO                        (0x1110 << 2)
+#define VPU_RDMA_ACCESS_AUTO2                       (0x1111 << 2)
+#define VPU_RDMA_ACCESS_AUTO3                       (0x1112 << 2)
+#define VPU_RDMA_ACCESS_MAN                         (0x1113 << 2)
+#define VPU_RDMA_CTRL                               (0x1114 << 2)
+#define VPU_RDMA_STATUS                             (0x1115 << 2)
+#define VPU_RDMA_STATUS2                            (0x1116 << 2)
+#define VPU_RDMA_STATUS3                            (0x1117 << 2)
+
+// VPU_RDMA_ACCESS_AUTO Bit Definition
+#define RDMA_ACCESS_AUTO_INT_EN_ALL                 (0xFF << 8)
+#define RDMA_ACCESS_AUTO_INT_EN(channel)            (1 << ((channel + 1) << 3))
+#define RDMA_ACCESS_AUTO_WRITE(channel)             (1 << ((channel + 1) + 4))
+#define RDMA_ACCESS_AUTO_INCREMENT(channel)         (1 << (channel + 1))
+
+// VPU_RDMA_CTRL Bit Definition
+#define RMA_CTR_ALL_INT_DONE                        (0xFF << 24)
+#define RDMA_CTRL_INT_DONE(channel)                 (1 << (24 + (channel + 1)))
+#define RDMA_CTRL_WRITE_URGENT                      (1 << 7)
+#define RDMA_CTRL_READ_URGENT                       (1 << 6)
+#define RDMA_CTRL_WRITE_BURST_SIZE_4x16B            (0 << 4)
+#define RDMA_CTRL_WRITE_BURST_SIZE_8x16B            (1 << 4)
+#define RDMA_CTRL_WRITE_BURST_SIZE_12x16B           (2 << 4)
+#define RDMA_CTRL_WRITE_BURST_SIZE_16x16B           (3 << 4)
+#define RDMA_CTRL_READ_BURST_SIZE_4x16B             (0 << 4)
+#define RDMA_CTRL_READ_BURST_SIZE_8x16B             (1 << 4)
+#define RDMA_CTRL_READ_BURST_SIZE_12x16B            (2 << 4)
+#define RDMA_CTRL_READ_BURST_SIZE_16x16B            (3 << 4)
+#define RDMA_CTRL_RESET                             (1 << 1)
+#define RDMA_CTRL_CLK_GATE_EN                       (1 << 0)
+
+// VPU_RDMA_STATUS Bit Definition
+#define RDMA_STATUS_BUSY                            (0x0003C0FF)
+#define RDMA_STATUS_DONE(channel)                   (1 << (24 + (channel + 1)))
+
+__BEGIN_CDECLS
+
+// RDMA Channel used by OSD/VD.
+constexpr uint8_t kMaxRetries = 100;
+constexpr uint8_t kMaxRdmaChannels = 3;
+// spread channels 512B apart (make sure it's greater than a cache line size)
+constexpr size_t  kChannelBaseOffset = 512;
+
+struct RdmaTable {
+    uint32_t reg;
+    uint32_t val;
+};
+
+struct RdmaChannelContainer {
+    zx_paddr_t      phys_offset;    // offset into physical address
+    uint8_t*        virt_offset;    // offset into virtual address (vmar buf)
+    bool            active;         // indicated whether channel is being used or not
+};
+
+struct RdmaContainer {
+    zx_handle_t rdma_vmo;
+    zx_paddr_t rdma_phys;
+    uint8_t* rdma_vbuf;
+    zx_handle_t rdma_pmt;
+    // container that holds channel specific properties
+    RdmaChannelContainer rdma_chnl_container[kMaxRdmaChannels];
+};
+
+__END_CDECLS
+

@@ -21,11 +21,13 @@
 #include <optional>
 
 #include "vim-audio.h"
+#include "vpu.h"
 
 __BEGIN_CDECLS
 
 #define DISP_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define DISP_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
+#define DISP_SPEW(fmt, ...) zxlogf(SPEW, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define DISP_TRACE  zxlogf(INFO, "[%s %d]\n", __func__, __LINE__)
 
 #define NUM_CANVAS_ENTRIES 256
@@ -34,6 +36,15 @@ __BEGIN_CDECLS
 // From uBoot source
 #define VFIFO2VD_TO_HDMI_LATENCY 2
 #define EDID_BUF_SIZE       256
+
+#define MAX_RDMA_CHANNELS 3
+
+// Should match display_irqs table in board driver
+enum {
+    IRQ_VSYNC,
+    IRQ_RDMA,
+};
+
 
 // MMIO indices (based on vim2_display_mmios)
 enum {
@@ -68,6 +79,10 @@ typedef struct vim2_display {
 
     thrd_t                              main_thread;
     thrd_t                              vsync_thread;
+
+    // RDMA IRQ thread
+    thrd_t                              rdma_thread;
+
     // Lock for general display state, in particular display_id.
     mtx_t                               display_lock;
     // Lock for imported images.
@@ -90,6 +105,8 @@ typedef struct vim2_display {
     std::optional<ddk::MmioBuffer>    mmio_cbus;
 
     zx_handle_t                         vsync_interrupt;
+    zx_handle_t                         rdma_interrupt;
+    RdmaContainer                       rdma_container;
 
     bool                                display_attached;
     // The current display id (if display_attached), or the next display id
@@ -123,6 +140,9 @@ zx_status_t configure_osd(vim2_display_t* display, uint32_t osd_index);
 void flip_osd(vim2_display_t* display, uint32_t osd_index, uint8_t idx);
 void osd_debug_dump_register_all(vim2_display_t* display);
 void osd_dump(vim2_display_t* display);
+void release_osd(vim2_display_t* display);
+zx_status_t setup_rdma(vim2_display_t* display);
+int rdma_thread(void *arg);
 zx_status_t get_preferred_res(vim2_display_t* display, uint16_t edid_buf_size);
 struct hdmi_param** get_supported_formats(void);
 
