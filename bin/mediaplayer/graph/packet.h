@@ -36,6 +36,9 @@ class Packet {
   // Creates an end-of-stream packet with no payload.
   static PacketPtr CreateEndOfStream(int64_t pts, media::TimelineRate pts_rate);
 
+  // Function type used for |AfterRecycling|.
+  using Action = fit::function<void(Packet*)>;
+
   Packet(int64_t pts, media::TimelineRate pts_rate, bool keyframe,
          bool end_of_stream, size_t size,
          fbl::RefPtr<PayloadBuffer> payload_buffer);
@@ -96,6 +99,17 @@ class Packet {
   // returns 0. Specialized implementations are free to do otherwise.
   virtual uint64_t GetLabel();
 
+  // Registers a function to be called after recycling. This method may only
+  // be called once on a given instance. An |Action| should not hold a reference
+  // to the |Packet|, because this would produce a circular reference, and the
+  // |Packet| would never be released. |action| will be called on an arbitrary
+  // thread.
+  // NOTE: This method may seem to be oddly named, but the name is consistent
+  // with a method in |PayloadBuffer|. Also, |Packet| will soon be managed with
+  // a |RefPtr|, which will make the name more relevant.
+  // TODO(dalesat): Switch from |std::shared_ptr| to |fbl::RefPtr|.
+  void AfterRecycling(Action action);
+
  private:
   int64_t pts_;
   media::TimelineRate pts_rate_;
@@ -104,6 +118,7 @@ class Packet {
   size_t size_;
   fbl::RefPtr<PayloadBuffer> payload_buffer_;
   std::unique_ptr<StreamType> revised_stream_type_;
+  Action after_recycling_;
 };
 
 }  // namespace media_player

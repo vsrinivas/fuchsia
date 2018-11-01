@@ -14,7 +14,8 @@
 namespace media_player {
 
 // Fidl decoder as exposed by the codec factory service.
-class FidlDecoder : public Decoder {
+class FidlDecoder : public Decoder,
+                    public std::enable_shared_from_this<FidlDecoder> {
  public:
   // Creates a fidl decoder factory. Calls the callback with the initalized
   // decoder on success. Calls the callback with nullptr on failure.
@@ -116,9 +117,6 @@ class FidlDecoder : public Decoder {
 
   // Handles the |OnFreeInputPacket| event from the outboard decoder.
   void OnFreeInputPacket(fuchsia::mediacodec::CodecPacketHeader packet_header);
-
-  // Recycles an output packet back to the outboard decoder.
-  void RecycleOutputPacket(PayloadBuffer* payload_buffer);
 
   // Determines if the output stream type has changed and takes action if it
   // has.

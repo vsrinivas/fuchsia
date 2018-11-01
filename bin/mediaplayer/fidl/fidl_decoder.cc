@@ -415,6 +415,14 @@ void FidlDecoder::AddOutputBuffers() {
   FXL_DCHECK(stage());
   FXL_DCHECK(stage()->OutputConnectionReady());
 
+  // We allocate all the buffers on behalf of the outboard decoder. We give
+  // the outboard decoder ownership of these buffers as long as this set is
+  // current. The decoder decides what buffers to use for output. When an
+  // output packet is produced, the player shares ownership of the buffer until
+  // all packets referencing the buffer are recycled. This ownership model
+  // reflects the fact that the outboard decoder is free to use output buffers
+  // as references and even use the same output buffer for multiple packets as
+  // happens with VP9.
   BufferSet& current_set = output_buffers_.current_set();
   current_set.AllocateAllBuffersForDecoder(stage()->UseOutputVmos());
 
@@ -513,6 +521,9 @@ void FidlDecoder::OnOutputConfig(
   }
 
   if (output_buffers_.has_current_set()) {
+    // All the old output buffers were owned by the outboard decoder. We release
+    // that ownership. The buffers will continue to exist until all packets
+    // referencing them are destroyed.
     output_buffers_.current_set().ReleaseAllDecoderOwnedBuffers();
   }
 
@@ -539,11 +550,6 @@ void FidlDecoder::OnOutputPacket(fuchsia::mediacodec::CodecPacket packet,
   uint32_t packet_index = packet.header.packet_index;
   uint32_t buffer_index = packet.buffer_index;
   FXL_DCHECK(buffer_index != 0x80000000);
-
-  // TODO(dustingreen): separate buffer_index from packet_index in FidlDecoder.
-  // Until then, this will work for h264, but won't handle VP9 with its
-  // show_existing_frame that can happen repeatedly for the same buffer.
-  FXL_CHECK(packet_index == buffer_index);
 
   if (error_detected_before) {
     FXL_LOG(WARNING) << "OnOutputPacket: error_detected_before";
@@ -576,18 +582,12 @@ void FidlDecoder::OnOutputPacket(fuchsia::mediacodec::CodecPacket packet,
     return;
   }
 
+  // All the output buffers in the current set are always owned by the outboard
+  // decoder. Get another reference to the |PayloadBuffer| for the specified
+  // buffer.
   FXL_DCHECK(buffer_lifetime_ordinal == current_set.lifetime_ordinal());
   fbl::RefPtr<PayloadBuffer> payload_buffer =
-      current_set.TakeBufferFromDecoder(buffer_index);
-  if (!payload_buffer) {
-    FXL_LOG(FATAL) << "OnOutputPacket delivered packet using buffer that the "
-                      "decoder didn't own.";
-    return;
-  }
-
-  payload_buffer->AfterRecycling([this](PayloadBuffer* payload_buffer) {
-    RecycleOutputPacket(payload_buffer);
-  });
+      current_set.GetDecoderOwnedBuffer(buffer_index);
 
   // TODO(dalesat): Tolerate !has_timestamp_ish somehow.
   if (!packet.has_timestamp_ish) {
@@ -604,6 +604,23 @@ void FidlDecoder::OnOutputPacket(fuchsia::mediacodec::CodecPacket packet,
   if (revised_output_stream_type_) {
     output_packet->SetRevisedStreamType(std::move(revised_output_stream_type_));
   }
+
+  output_packet->AfterRecycling(
+      [this, shared_this = shared_from_this(), packet_index](Packet* packet) {
+        PostTask([this, shared_this, packet_index,
+                  buffer_lifetime_ordinal =
+                      packet->payload_buffer()->buffer_config()]() {
+          FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+
+          // |outboard_decoder_| is always set after |Init| is called, so we
+          // can rely on it here.
+          FXL_DCHECK(outboard_decoder_);
+          outboard_decoder_->RecycleOutputPacket(
+              fuchsia::mediacodec::CodecPacketHeader{
+                  .buffer_lifetime_ordinal = buffer_lifetime_ordinal,
+                  .packet_index = packet_index});
+        });
+      });
 
   stage()->PutOutputPacket(std::move(output_packet));
 }
@@ -625,30 +642,6 @@ void FidlDecoder::OnFreeInputPacket(
 
   input_buffers_.ReleaseBufferForDecoder(packet_header.buffer_lifetime_ordinal,
                                          packet_header.packet_index);
-}
-
-void FidlDecoder::RecycleOutputPacket(PayloadBuffer* payload_buffer) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FXL_DCHECK(payload_buffer);
-
-  if (!output_buffers_.has_current_set() ||
-      payload_buffer->buffer_config() !=
-          output_buffers_.current_set().lifetime_ordinal()) {
-    // This buffer is part of an obsolete set, so disregard it.
-    return;
-  }
-
-  FXL_DCHECK(payload_buffer->buffer_config() ==
-             output_buffers_.current_set().lifetime_ordinal());
-  // Here we're creating a |PayloadBuffer| with a legit |RefPtr|, but the
-  // |BufferSet| holds that |RefPtr| on the outboard decoder's behalf until
-  // the decoder gives up ownership.
-  output_buffers_.current_set().CreateBufferForDecoder(
-      payload_buffer->id(), stage()->UseOutputVmos());
-
-  outboard_decoder_->RecycleOutputPacket(fuchsia::mediacodec::CodecPacketHeader{
-      .buffer_lifetime_ordinal = payload_buffer->buffer_config(),
-      .packet_index = payload_buffer->id()});
 }
 
 void FidlDecoder::HandlePossibleOutputStreamTypeChange(

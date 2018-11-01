@@ -38,7 +38,11 @@ Packet::Packet(int64_t pts, media::TimelineRate pts_rate, bool keyframe,
   FXL_DCHECK(!payload_buffer_ || (payload_buffer_->size() >= size_));
 }
 
-Packet::~Packet() {}
+Packet::~Packet() {
+  if (after_recycling_) {
+    after_recycling_(this);
+  }
+}
 
 int64_t Packet::GetPts(media::TimelineRate pts_rate) {
   // We're asking for an inexact product here, because, in some cases,
@@ -61,6 +65,10 @@ void Packet::SetPtsRate(media::TimelineRate pts_rate) {
 
   pts_ = GetPts(pts_rate);
   pts_rate_ = pts_rate;
+}
+
+void Packet::AfterRecycling(Action action) {
+  after_recycling_ = std::move(action);
 }
 
 }  // namespace media_player

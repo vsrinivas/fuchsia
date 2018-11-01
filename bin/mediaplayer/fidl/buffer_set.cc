@@ -123,6 +123,17 @@ fbl::RefPtr<PayloadBuffer> BufferSet::TakeBufferFromDecoder(
   return result;
 }
 
+fbl::RefPtr<PayloadBuffer> BufferSet::GetDecoderOwnedBuffer(
+    uint32_t buffer_index) {
+  std::lock_guard<std::mutex> locker(mutex_);
+  FXL_DCHECK(buffer_index < buffers_.size());
+  // Buffer must already be owned by the decoder.
+  FXL_DCHECK(!buffers_[buffer_index].free_);
+  FXL_DCHECK(buffers_[buffer_index].decoder_ref_);
+
+  return buffers_[buffer_index].decoder_ref_;
+}
+
 void BufferSet::AllocateAllBuffersForDecoder(const PayloadVmos& payload_vmos) {
   std::lock_guard<std::mutex> locker(mutex_);
 

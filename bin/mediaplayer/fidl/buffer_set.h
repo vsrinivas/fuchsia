@@ -99,6 +99,9 @@ class BufferSet : public fbl::RefCounted<BufferSet> {
   // reference to the |PayloadBuffer|.
   fbl::RefPtr<PayloadBuffer> TakeBufferFromDecoder(uint32_t buffer_index);
 
+  // Gets a new reference to a buffer already owned by the outboard decoder.
+  fbl::RefPtr<PayloadBuffer> GetDecoderOwnedBuffer(uint32_t buffer_index);
+
   // Allocates all buffers for the outboard decoder. All buffers must be free
   // when this method is called.
   void AllocateAllBuffersForDecoder(const PayloadVmos& payload_vmos);
