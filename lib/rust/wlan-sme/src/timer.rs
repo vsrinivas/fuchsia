@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(dead_code)]
-
 use fuchsia_zircon as zx;
 use futures::channel::mpsc;
 use std::fmt;
@@ -24,6 +22,15 @@ pub(crate) fn create_timer<E>() -> (Timer<E>, TimeStream<E>) {
 pub struct TimedEvent<E> {
     pub id: EventId,
     pub event: E,
+}
+
+impl<E: Clone> Clone for TimedEvent<E> {
+    fn clone(&self) -> Self {
+        TimedEvent {
+            id: self.id,
+            event: self.event.clone(),
+        }
+    }
 }
 
 pub(crate) struct Timer<E> {

@@ -226,7 +226,8 @@ class AssociatedState : public BaseState {
     static constexpr size_t kMaxPowerSavingQueueSize = 30;
 
     zx_status_t HandleMlmeEapolReq(const MlmeMsg<::fuchsia::wlan::mlme::EapolRequest>& req);
-    zx_status_t HandleMlmeSetKeysReq(const MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest>& req);
+    zx_status_t HandleMlmeDeauthReq(
+        const MlmeMsg<::fuchsia::wlan::mlme::DeauthenticateRequest>& req);
 
     // TODO(hahnr): Use WLAN_MIN_TU once defined.
     static constexpr wlan_tu_t kInactivityTimeoutTu = 300000;  // ~5min

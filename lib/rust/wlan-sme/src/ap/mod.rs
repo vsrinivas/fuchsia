@@ -189,7 +189,9 @@ impl<T: Tokens> super::Station for ApSme<T> {
             State::Idle { .. } => warn!("received MlmeEvent while ApSme is idle {:?}", event),
             State::Started { ref mut bss } => match event {
                 MlmeEvent::AuthenticateInd { ind } => bss.handle_auth_ind(ind),
-                MlmeEvent::DeauthenticateInd { ind } => bss.handle_deauth_ind(ind),
+                MlmeEvent::DeauthenticateInd { ind } => bss.handle_deauth(&ind.peer_sta_address),
+                MlmeEvent::DeauthenticateConf { resp } =>
+                    bss.handle_deauth(&resp.peer_sta_address),
                 MlmeEvent::AssociateInd { ind } => bss.handle_assoc_ind(ind),
                 MlmeEvent::DisassociateInd { ind } => bss.handle_disassoc_ind(ind),
                 MlmeEvent::EapolInd { ind } => {
@@ -236,8 +238,8 @@ impl<T: Tokens> InfraBss<T> {
         self.ctx.mlme_sink.send(MlmeRequest::AuthResponse(resp));
     }
 
-    fn handle_deauth_ind(&mut self, ind: fidl_mlme::DeauthenticateIndication) {
-        let _ = self.client_map.remove_client(&ind.peer_sta_address);
+    fn handle_deauth(&mut self, client_addr: &MacAddr) {
+        let _ = self.client_map.remove_client(client_addr);
     }
 
     fn handle_assoc_ind(&mut self, ind: fidl_mlme::AssociateIndication) {
@@ -268,7 +270,7 @@ impl<T: Tokens> InfraBss<T> {
         self.ctx.mlme_sink.send(MlmeRequest::AssocResponse(resp));
         if result_code == fidl_mlme::AssociateResultCodes::Success && self.rsn_cfg.is_some() {
             match self.client_map.get_mut_client(&ind.peer_sta_address) {
-                Some(client) => client.initiate_key_exchange(&mut self.ctx),
+                Some(client) => client.initiate_key_exchange(&mut self.ctx, 1),
                 None => error!("cannot initiate key exchange for unknown client: {:02X?}",
                                ind.peer_sta_address),
             }
@@ -323,8 +325,11 @@ impl<T: Tokens> InfraBss<T> {
         }
     }
 
-    fn handle_timeout(&mut self, _timed_event: TimedEvent<Event>) {
-        unimplemented!();
+    fn handle_timeout(&mut self, timed_event: TimedEvent<Event>) {
+        let event = timed_event.event;
+        if let Some(client) = self.client_map.get_mut_client(&event.addr) {
+            client.handle_timeout(timed_event.id, event.event, &mut self.ctx);
+        }
     }
 }
 
@@ -482,6 +487,33 @@ mod tests {
     }
 
     #[test]
+    fn rsn_handshake_timeout() {
+        let (mut sme, mut mlme_stream, _, mut time_stream) = start_protected_ap();
+        let client = Client::default();
+        client.authenticate_and_drain_mlme(&mut sme, &mut mlme_stream);
+
+        sme.on_mlme_event(client.create_assoc_ind(Some(RSNE.to_vec())));
+        client.verify_assoc_resp(&mut mlme_stream, 1, fidl_mlme::AssociateResultCodes::Success);
+
+        for _i in 0..4 {
+            client.verify_eapol_req(&mut mlme_stream);
+
+            let (_, event) = time_stream.try_next().unwrap().expect("expect timer message");
+            // Calling `on_timeout` with a different event ID is a no-op
+            let mut fake_event = event.clone();
+            fake_event.id += 1;
+            sme.on_timeout(fake_event);
+            match mlme_stream.try_next() {
+                Err(e) => assert_eq!(e.description(), "receiver channel is empty"),
+                _ => panic!("unexpected event in mlme stream"),
+            }
+            sme.on_timeout(event);
+        }
+
+        client.verify_deauth_req(&mut mlme_stream, fidl_mlme::ReasonCode::FourwayHandshakeTimeout);
+    }
+
+    #[test]
     fn client_restarts_authentication_flow() {
         let (mut sme, mut mlme_stream, _, _) = start_unprotected_ap();
         let client = Client::default();
@@ -603,6 +635,17 @@ mod tests {
                 assert!(eapol_req.data.len() > 0);
             } else {
                 panic!("expect eapol request to MLME");
+            }
+        }
+
+        fn verify_deauth_req(&self, mlme_stream: &mut MlmeStream,
+                             reason_code: fidl_mlme::ReasonCode) {
+            let msg = mlme_stream.try_next().unwrap().expect("expect mlme message");
+            if let MlmeRequest::Deauthenticate(deauth_req) = msg {
+                assert_eq!(deauth_req.peer_sta_address, self.addr);
+                assert_eq!(deauth_req.reason_code, reason_code);
+            } else {
+                panic!("expect deauthenticate request to MLME");
             }
         }
     }

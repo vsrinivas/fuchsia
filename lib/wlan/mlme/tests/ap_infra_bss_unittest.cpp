@@ -127,6 +127,12 @@ struct ApInfraBssTest : public ::testing::Test {
         });
     }
 
+    zx_status_t SendDeauthReqMsg(wlan_mlme::ReasonCode reason_code) {
+        return HandleMlmeMsg<wlan_mlme::DeauthenticateRequest>([=](auto msg) {
+            return CreateDeauthRequest(msg, common::MacAddr(kClientAddress), reason_code);
+        });
+    }
+
     zx_status_t SendAuthResponseMsg(wlan_mlme::AuthenticateResultCodes result_code) {
         return HandleMlmeMsg<wlan_mlme::AuthenticateResponse>(
             [=](auto msg) { return CreateAuthResponse(msg, result_code); });
@@ -639,6 +645,35 @@ TEST_F(ApInfraBssTest, UnprotectedApReceiveFramesAfterAssociation) {
     auto eth_frames = device.GetEthPackets();
     ASSERT_EQ(eth_frames.size(), static_cast<size_t>(1));
     AssertEthFrame(std::move(*eth_frames.begin()), kTestPayload);
+}
+
+TEST_F(ApInfraBssTest, MlmeDeauthReqWhileAssociated) {
+    StartAp();
+    AuthenticateAndAssociateClient();
+
+    // Send MLME-DEAUTHENTICATE.request
+    auto reason_code = wlan_mlme::ReasonCode::FOURWAY_HANDSHAKE_TIMEOUT;
+    SendDeauthReqMsg(reason_code);
+
+    // Verify MLME-DEAUTHENTICATE.confirm message was sent
+    ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
+    auto deauth_conf = device.GetServicePackets(
+        IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateConfOrdinal>);
+    ASSERT_FALSE(deauth_conf.empty());
+    auto pkt = fbl::move(*deauth_conf.begin());
+    ASSERT_EQ(pkt->peer(), Packet::Peer::kService);
+    MlmeMsg<wlan_mlme::DeauthenticateConfirm> msg;
+    auto status = MlmeMsg<wlan_mlme::DeauthenticateConfirm>::FromPacket(fbl::move(pkt), &msg);
+    ASSERT_EQ(status, ZX_OK);
+
+    // Verify deauthenticate frame was sent
+    ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
+    pkt = std::move(*device.wlan_queue.begin());
+    auto frame = TypeCheckWlanFrame<MgmtFrameView<Deauthentication>>(pkt.get());
+    EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, kClientAddress, 6), 0);
+    EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
+    EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
+    EXPECT_EQ(frame.body()->reason_code, static_cast<uint16_t>(reason_code));
 }
 
 TEST_F(ApInfraBssTest, SetKeys) {

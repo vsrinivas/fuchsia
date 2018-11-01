@@ -131,6 +131,14 @@ zx_status_t CreateAuthRequest(MlmeMsg<wlan_mlme::AuthenticateRequest>* out_msg) 
     return WriteServiceMessage(req.get(), fuchsia_wlan_mlme_MLMEAuthenticateReqOrdinal, out_msg);
 }
 
+zx_status_t CreateDeauthRequest(MlmeMsg<wlan_mlme::DeauthenticateRequest>* out_msg,
+                                common::MacAddr peer_addr, wlan_mlme::ReasonCode reason_code) {
+    auto req = wlan_mlme::DeauthenticateRequest::New();
+    std::memcpy(req->peer_sta_address.mutable_data(), peer_addr.byte, common::kMacAddrLen);
+    req->reason_code = reason_code;
+    return WriteServiceMessage(req.get(), fuchsia_wlan_mlme_MLMEDeauthenticateReqOrdinal, out_msg);
+}
+
 zx_status_t CreateAuthResponse(MlmeMsg<wlan_mlme::AuthenticateResponse>* out_msg,
                                wlan_mlme::AuthenticateResultCodes result_code) {
     common::MacAddr client(kClientAddress);

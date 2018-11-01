@@ -64,6 +64,8 @@ zx_status_t CreateJoinRequest(MlmeMsg<::fuchsia::wlan::mlme::JoinRequest>*);
 zx_status_t CreateAuthRequest(MlmeMsg<::fuchsia::wlan::mlme::AuthenticateRequest>*);
 zx_status_t CreateAuthResponse(MlmeMsg<::fuchsia::wlan::mlme::AuthenticateResponse>*,
                                ::fuchsia::wlan::mlme::AuthenticateResultCodes result_code);
+zx_status_t CreateDeauthRequest(MlmeMsg<::fuchsia::wlan::mlme::DeauthenticateRequest>*,
+                                common::MacAddr, ::fuchsia::wlan::mlme::ReasonCode reason_code);
 zx_status_t CreateAssocRequest(MlmeMsg<::fuchsia::wlan::mlme::AssociateRequest>* out_msg);
 zx_status_t CreateAssocResponse(MlmeMsg<::fuchsia::wlan::mlme::AssociateResponse>*,
                                 ::fuchsia::wlan::mlme::AssociateResultCodes result_code);

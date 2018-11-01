@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use wlan_rsn::{
     Authenticator,
     key::exchange::Key,
-    rsna::{UpdateSink, SecAssocUpdate},
+    rsna::{UpdateSink, SecAssocStatus, SecAssocUpdate},
 };
 
 use crate::{
@@ -17,7 +17,9 @@ use crate::{
     ap::{
         Context, Tokens,
         aid::{self, AssociationId},
+        event::{self, ClientEvent, Event},
     },
+    timer::EventId,
 };
 
 #[derive(Debug)]
@@ -25,6 +27,7 @@ pub struct RemoteClient {
     pub addr: MacAddr,
     pub aid: AssociationId,
     pub authenticator: Option<Authenticator>,
+    key_exchange_timeout: Option<EventId>,
 }
 
 impl RemoteClient {
@@ -33,6 +36,29 @@ impl RemoteClient {
             addr,
             aid,
             authenticator,
+            key_exchange_timeout: None,
+        }
+    }
+
+    pub fn handle_timeout<T: Tokens>(&mut self, event_id: EventId, event: ClientEvent,
+                                     ctx: &mut Context<T>) {
+        match event {
+            ClientEvent::KeyExchangeTimeout { attempt }
+                if triggered(&self.key_exchange_timeout, event_id) => {
+
+                if attempt < event::KEY_EXCHANGE_MAX_ATTEMPTS {
+                    self.initiate_key_exchange(ctx, attempt + 1);
+                } else {
+                    cancel(&mut self.key_exchange_timeout);
+                    ctx.mlme_sink.send(MlmeRequest::Deauthenticate(
+                        fidl_mlme::DeauthenticateRequest {
+                            peer_sta_address: self.addr.clone(),
+                            reason_code: fidl_mlme::ReasonCode::FourwayHandshakeTimeout,
+                        }
+                    ));
+                }
+            }
+            _ => (),
         }
     }
 
@@ -59,7 +85,9 @@ impl RemoteClient {
         Ok(())
     }
 
-    pub fn initiate_key_exchange<T: Tokens>(&mut self, ctx: &mut Context<T>) {
+    pub fn initiate_key_exchange<T: Tokens>(&mut self, ctx: &mut Context<T>, attempt: u32) {
+        let event_id = self.schedule_timer(ClientEvent::KeyExchangeTimeout { attempt }, ctx);
+        self.key_exchange_timeout.replace(event_id);
         match self.authenticator.as_mut() {
             Some(authenticator) => {
                 let mut update_sink = UpdateSink::default();
@@ -70,6 +98,11 @@ impl RemoteClient {
             }
             None => error!("authenticator not found for {:?}", self.addr),
         }
+    }
+
+    fn schedule_timer<T: Tokens>(&self, event: ClientEvent, ctx: &mut Context<T>) -> EventId {
+        let event = Event { addr: self.addr.clone(), event };
+        ctx.timer.schedule(event.timeout_duration().after_now(), event)
     }
 
     fn process_authenticator_updates<T: Tokens>(&mut self, update_sink: &UpdateSink,
@@ -89,7 +122,10 @@ impl RemoteClient {
                     ));
                 }
                 SecAssocUpdate::Key(key) => self.send_key(key, ctx),
-                _ => {}
+                SecAssocUpdate::Status(status) => match status {
+                    SecAssocStatus::EssSaEstablished => cancel(&mut self.key_exchange_timeout),
+                    _ => (),
+                }
             }
         }
     }
@@ -129,6 +165,14 @@ impl RemoteClient {
             }
         ));
     }
+}
+
+fn triggered(id: &Option<EventId>, received_id: EventId) -> bool {
+    id.map_or(false, |id| id == received_id)
+}
+
+fn cancel(event_id: &mut Option<EventId>) {
+    let _ = event_id.take();
 }
 
 #[derive(Default)]

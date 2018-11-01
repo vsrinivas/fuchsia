@@ -515,6 +515,8 @@ void AssociatedState::HandleDataLlcFrame(DataFrame<LlcHeader>&& frame) {
 zx_status_t AssociatedState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     if (auto eapol_request = msg.As<wlan_mlme::EapolRequest>()) {
         return HandleMlmeEapolReq(*eapol_request);
+    } else if (auto deauth_req = msg.As<wlan_mlme::DeauthenticateRequest>()) {
+        return HandleMlmeDeauthReq(*deauth_req);
     } else {
         warnf("[client] [%s] unexpected MLME msg type in associated state; ordinal: %u\n",
               client_->addr().ToString().c_str(), msg.ordinal());
@@ -608,26 +610,13 @@ zx_status_t AssociatedState::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRe
     return status;
 }
 
-zx_status_t AssociatedState::HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysRequest>& req) {
-    debugfn();
+zx_status_t AssociatedState::HandleMlmeDeauthReq(
+    const MlmeMsg<wlan_mlme::DeauthenticateRequest>& req) {
 
-    for (auto& keyDesc : *req.body()->keylist) {
-        if (keyDesc.key.is_null()) { return ZX_ERR_NOT_SUPPORTED; }
-
-        switch (keyDesc.key_type) {
-        case wlan_mlme::KeyType::PAIRWISE:
-            // Once a pairwise key was exchange, RSNA was established.
-            // TODO(NET-790): This is a pretty simplified assumption and an RSNA
-            // should only be established once all required keys by the RSNE were
-            // exchanged.
-            eapol_controlled_port_ = eapol::PortState::kOpen;
-        default:
-            break;
-        }
-
-        // TODO(hahnr): Configure Key in hardware.
-    }
-
+    client_->ReportDeauthentication();
+    client_->SendDeauthentication(req.body()->reason_code);
+    service::SendDeauthConfirm(client_->device(), client_->addr());
+    MoveToState<DeauthenticatedState>();
     return ZX_OK;
 }
 
