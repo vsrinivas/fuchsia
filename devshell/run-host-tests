@@ -20,42 +20,47 @@ set -o pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
-ARGS=""
+ARGS=()
+TEST_NAMES=()
 function main {
-  while getopts "v" opt; do
-    case $opt in
-      v)
-        shift
-        ARGS="$ARGS -v"
-        ;;
+  while [[ -n "$1" ]]; do
+    case "$1" in
+      -v) ARGS+=("-v");;
+      -z) ZIRCON=1 ;;
+      # break at bare double dash
+      # allow passing args to runtests
+      --) shift
+          break
+          ;;
+      *) TEST_NAMES+=("$1");;
     esac
+    shift
   done
 
-  if [[ $# -gt 0 ]] && [[ $1 = "-z" ]]; then
+  if [[ $ZIRCON -eq 1 ]]; then
     host_test_dir="${ZIRCON_BUILD_DIR}/host_tests"
     fx-command-run build-zircon "-v"
-    shift
   else
     host_test_dir="${FUCHSIA_BUILD_DIR}/host_tests"
     # If test names are supplied, rebuild the associated tests; else rebuild
     # everything under the GN 'host_tests' label.
-    [[ $# -gt 0 ]] && build_targets="${@/#/host_tests/}" ||
-        build_targets="./build/gn:host_tests"
-    fx-command-run build "${build_targets}"
+    if [[ -n "$TEST_NAMES" ]]; then
+      build_targets=(${TEST_NAMES[@]/#/host_tests/})
+    else 
+      build_targets=("./build/gn:host_tests")
+    fi
+    fx-command-run build "${build_targets[@]}"
   fi
 
-  runtests_cmd="${ZIRCON_TOOLS_DIR}/runtests $ARGS"
+  runtests_cmd=("${ZIRCON_TOOLS_DIR}/runtests" "${ARGS[@]}")
 
-  if [[ $# -gt 0 ]]; then
+  if [[ -n "$TEST_NAMES" ]]; then
     # Comma-separated list of host test names to filter by.
-    local IFS=","
-    filtered_host_tests="'$*'"
-
-    runtests_cmd="${runtests_cmd} -t ${filtered_host_tests} $ARGS"
+    IFS="," runtests_cmd+=("-t" "${TEST_NAMES[*]}")
   fi
 
-  runtests_cmd="${runtests_cmd} ${host_test_dir}"
-  eval "${runtests_cmd}"
+  # remaining arguments after -- are passed to test runner
+  "${runtests_cmd[@]}" "${host_test_dir}" -- "$@"
 }
 
 main "$@"
