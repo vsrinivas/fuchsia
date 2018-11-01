@@ -94,18 +94,28 @@ zx_status_t Gt92xxDevice::Create(zx_device_t* device) {
 
     zxlogf(INFO, "gt92xx: driver started...\n");
 
-    auto pdev = ddk::Pdev::Create(device);
-    if (!pdev) {
+    pdev_protocol_t pdev_proto;
+    zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_PDEV, &pdev_proto);
+    if (status) {
         zxlogf(ERROR, "%s could not acquire platform device\n", __func__);
+        return status;
+    }
+    ddk::PDev pdev(&pdev_proto);
+
+
+    auto i2c = pdev.GetI2c(0);
+    auto intr = pdev.GetGpio(0);
+    auto reset = pdev.GetGpio(1);
+    if (!i2c || !intr || !reset) {
+        zxlogf(ERROR, "%s failed to allocate gpio or i2c\n", __func__);
         return ZX_ERR_NO_RESOURCES;
     }
-
     auto goodix_dev = fbl::make_unique<Gt92xxDevice>(device,
-                                                     fbl::move(pdev->GetI2cChan(0)),
-                                                     fbl::move(pdev->GetGpio(0)),
-                                                     fbl::move(pdev->GetGpio(1)));
+                                                     fbl::move(*i2c),
+                                                     fbl::move(*intr),
+                                                     fbl::move(*reset));
 
-    zx_status_t status = goodix_dev->Init();
+    status = goodix_dev->Init();
     if (status != ZX_OK) {
         zxlogf(ERROR, "Could not initialize gt92xx hardware %d\n", status);
         return status;
@@ -160,7 +170,7 @@ zx_status_t Gt92xxDevice::Init() {
                     (GT_REG_CONFIG_REFRESH - GT_REG_CONFIG_DATA + 1));
 
     // Write conf data to registers
-    zx_status_t status = i2c_.Transact(conf_data, sizeof(conf_data), NULL, 0);
+    zx_status_t status = i2c_.WriteReadSync(conf_data, sizeof(conf_data), NULL, 0);
     if (status != ZX_OK) {
         return status;
     }
@@ -170,7 +180,7 @@ zx_status_t Gt92xxDevice::Init() {
     // during startup
     Write(GT_REG_TOUCH_STATUS, 0);
 
-    status = int_gpio_.GetInterrupt(ZX_INTERRUPT_MODE_EDGE_HIGH, &irq_);
+    status = int_gpio_.GetInterrupt(ZX_INTERRUPT_MODE_EDGE_HIGH, irq_.reset_and_get_address());
 
     return status;
 }
@@ -289,7 +299,7 @@ zx_status_t Gt92xxDevice::Read(uint16_t addr, uint8_t* buf, uint8_t len) {
     uint8_t tbuf[2];
     tbuf[0] = static_cast<uint8_t>(addr >> 8);
     tbuf[1] = static_cast<uint8_t>(addr & 0xff);
-    return i2c_.Transact(tbuf, 2, buf, len);
+    return i2c_.WriteReadSync(tbuf, 2, buf, len);
 }
 
 zx_status_t Gt92xxDevice::Write(uint16_t addr, uint8_t val) {
@@ -297,7 +307,7 @@ zx_status_t Gt92xxDevice::Write(uint16_t addr, uint8_t val) {
     tbuf[0] = static_cast<uint8_t>(addr >> 8);
     tbuf[1] = static_cast<uint8_t>(addr & 0xff);
     tbuf[2] = val;
-    return i2c_.Transact(tbuf, 3, NULL, 0);
+    return i2c_.WriteReadSync(tbuf, 3, NULL, 0);
 }
 
 } // namespace ft

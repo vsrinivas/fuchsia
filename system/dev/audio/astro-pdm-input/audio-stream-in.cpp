@@ -1,14 +1,13 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+#include "audio-stream-in.h"
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/pdev.h>
 #include <math.h>
-
-#include "audio-stream-in.h"
 
 namespace audio {
 namespace astro {
@@ -23,7 +22,7 @@ AstroAudioStreamIn::AstroAudioStreamIn(zx_device_t* parent)
 zx_status_t AstroAudioStreamIn::Init() {
     zx_status_t status;
 
-    status = InitPdev();
+    status = InitPDev();
     if (status != ZX_OK) {
         return status;
     }
@@ -51,24 +50,25 @@ zx_status_t AstroAudioStreamIn::Init() {
     return ZX_OK;
 }
 
-zx_status_t AstroAudioStreamIn::InitPdev() {
-
-    pdev_ = ddk::Pdev::Create(parent());
-    if (!pdev_) {
-        return ZX_ERR_NO_RESOURCES;
+zx_status_t AstroAudioStreamIn::InitPDev() {
+    pdev_protocol_t pdev;
+    zx_status_t status = device_get_protocol(parent(), ZX_PROTOCOL_PDEV, &pdev);
+    if (status) {
+        return status;
     }
+    pdev_ = ddk::PDev(&pdev);
 
-    zx_status_t status = pdev_->GetBti(0, &bti_);
+    status = pdev_->GetBti(0, &bti_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s could not obtain bti - %d\n", __func__, status);
         return status;
     }
     fbl::optional<ddk::MmioBuffer> mmio0, mmio1;
-    status = pdev_->GetMmio(0, &mmio0);
+    status = pdev_->MapMmio(0, &mmio0);
     if (status != ZX_OK) {
         return status;
     }
-    status = pdev_->GetMmio(1, &mmio1);
+    status = pdev_->MapMmio(1, &mmio1);
     if (status != ZX_OK) {
         return status;
     }

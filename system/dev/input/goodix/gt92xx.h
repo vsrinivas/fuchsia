@@ -5,10 +5,10 @@
 #pragma once
 
 #include <ddk/device.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/i2c.h>
 #include <ddktl/device.h>
+#include <ddktl/i2c-channel.h>
 #include <ddktl/pdev.h>
+#include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/hidbus.h>
 #include <fbl/atomic.h>
 #include <fbl/mutex.h>
@@ -42,7 +42,7 @@ class Gt92xxDevice : public ddk::Device<Gt92xxDevice, ddk::Unbindable>,
                      public ddk::HidbusProtocol<Gt92xxDevice> {
 public:
     Gt92xxDevice(zx_device_t* device, ddk::I2cChannel i2c,
-                 ddk::GpioPin intr, ddk::GpioPin reset)
+                 ddk::GpioProtocolProxy intr, ddk::GpioProtocolProxy reset)
         : ddk::Device<Gt92xxDevice, ddk::Unbindable>(device),
           i2c_(fbl::move(i2c)), int_gpio_(fbl::move(intr)),
           reset_gpio_(fbl::move(reset)){};
@@ -89,9 +89,9 @@ private:
 
     int Thread();
 
-    const ddk::I2cChannel i2c_;
-    const ddk::GpioPin int_gpio_;
-    const ddk::GpioPin reset_gpio_;
+    ddk::I2cChannel i2c_;
+    ddk::GpioProtocolProxy int_gpio_;
+    ddk::GpioProtocolProxy reset_gpio_;
 
     gt92xx_touch_t gt_rpt_ __TA_GUARDED(proxy_lock_);
     zx::interrupt irq_;

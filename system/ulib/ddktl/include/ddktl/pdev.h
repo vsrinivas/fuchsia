@@ -4,64 +4,47 @@
 
 #pragma once
 
-#include <ddk/device.h>
-#include <ddk/protocol/platform-device.h>
-#include <ddktl/gpio_pin.h>
 #include <ddktl/i2c-channel.h>
 #include <ddktl/mmio.h>
+#include <ddktl/protocol/gpio.h>
+#include <ddktl/protocol/platform-device.h>
 
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
 #include <fbl/optional.h>
-#include <fbl/vector.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
+#include <zircon/types.h>
 
 namespace ddk {
 
-class Pdev : public fbl::RefCounted<Pdev> {
+class PDev : public PDevProtocolProxy {
 
 public:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Pdev);
+    PDev(pdev_protocol_t* proto)
+        : PDevProtocolProxy(proto){};
 
-    static fbl::RefPtr<Pdev> Create(zx_device_t* parent);
+    ~PDev() = default;
+
+    // Prints out information about the platform device.
     void ShowInfo();
 
-    zx_status_t GetMmio(uint32_t index, fbl::optional<MmioBuffer>* mmio);
+    zx_status_t MapMmio(uint32_t index, fbl::optional<MmioBuffer>* mmio);
 
-    zx_status_t MapInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out) {
-        return pdev_get_interrupt(&pdev_, index, flags,
-                                  out->reset_and_get_address());
+    // TODO(surajmalhotra): Remove once feature once implemented in banjo.
+    zx_status_t GetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out) {
+        return PDevProtocolProxy::GetInterrupt(index, flags, out->reset_and_get_address());
     }
 
-    zx_status_t MapInterrupt(uint32_t index, zx::interrupt* out) {
-        return MapInterrupt(index, 0, out);
+    zx_status_t GetInterrupt(uint32_t index, zx::interrupt* out) {
+        return GetInterrupt(index, 0, out);
     }
 
+    // TODO(surajmalhotra): Remove once feature once implemented in banjo.
     zx_status_t GetBti(uint32_t index, zx::bti* out) {
-        return pdev_get_bti(&pdev_, index, out->reset_and_get_address());
+        return PDevProtocolProxy::GetBti(index, out->reset_and_get_address());
     }
 
-    zx_status_t GetInfo(uint32_t index, pdev_device_info_t* out) {
-        return pdev_get_device_info(&pdev_, out);
-    }
-
-    I2cChannel GetI2cChan(uint32_t index);
-    GpioPin GetGpio(uint32_t index);
-
-private:
-    friend class fbl::RefPtr<Pdev>;
-
-    Pdev(zx_device_t* parent)
-        : parent_(parent){};
-
-    ~Pdev() = default;
-
-    const zx_device_t* parent_;
-
-    pdev_protocol_t pdev_ = {};
-
-    pdev_device_info_t pdev_info_ = {};
+    fbl::optional<I2cChannel> GetI2c(uint32_t index);
+    fbl::optional<GpioProtocolProxy> GetGpio(uint32_t index);
 };
 
 } // namespace ddk

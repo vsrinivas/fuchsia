@@ -13,17 +13,12 @@ namespace astro {
 
 // static
 fbl::unique_ptr<Tas27xx> Tas27xx::Create(ddk::I2cChannel&& i2c) {
-    if (!i2c.is_valid()) {
-        return nullptr;
-    }
-
     fbl::AllocChecker ac;
 
-    auto ptr = fbl::unique_ptr<Tas27xx>(new (&ac) Tas27xx());
+    auto ptr = fbl::unique_ptr<Tas27xx>(new (&ac) Tas27xx(fbl::move(i2c)));
     if (!ac.check()) {
         return nullptr;
     }
-    ptr->i2c_ = fbl::move(i2c);
 
     return ptr;
 }
@@ -103,7 +98,7 @@ zx_status_t Tas27xx::ExitStandby() {
 
 uint8_t Tas27xx::ReadReg(uint8_t reg) {
     uint8_t val;
-    i2c_.Read(reg, &val, 1);
+    i2c_.ReadSync(reg, &val, 1);
     return val;
 }
 
@@ -111,7 +106,7 @@ zx_status_t Tas27xx::WriteReg(uint8_t reg, uint8_t value) {
     uint8_t write_buf[2];
     write_buf[0] = reg;
     write_buf[1] = value;
-    return i2c_.Write(write_buf, 2);
+    return i2c_.WriteSync(write_buf, 2);
 }
 } //namespace astro
 } //namespace audio

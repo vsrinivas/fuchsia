@@ -8,8 +8,6 @@
 #include <ddktl/pdev.h>
 #include <fbl/unique_ptr.h>
 
-
-
 namespace audio {
 namespace astro {
 
@@ -50,7 +48,7 @@ private:
     static constexpr float kMinGain = -100.0;
     static constexpr float kGainStep = 0.5;
 
-    Tas27xx() = default;
+    Tas27xx(ddk::I2cChannel&& i2c) : i2c_(i2c) {}
     ~Tas27xx() = default;
 
     zx_status_t WriteReg(uint8_t reg, uint8_t value);

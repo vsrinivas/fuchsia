@@ -9,7 +9,8 @@
 #include <ddk/protocol/platform-device.h>
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
-#include <ddktl/gpio_pin.h>
+#include <ddktl/pdev.h>
+#include <ddktl/protocol/gpio.h>
 #include <dispatcher-pool/dispatcher-timer.h>
 #include <fbl/mutex.h>
 #include <lib/fzl/pinned-vmo.h>
@@ -52,14 +53,14 @@ private:
 
     zx_status_t AddFormats() __TA_REQUIRES(domain_->token());;
     zx_status_t InitBuffer(size_t size);
-    zx_status_t InitPdev();
+    zx_status_t InitPDev();
     zx_status_t ProcessRingNotification();
 
     uint32_t us_per_notification_ = 0;
 
     fbl::RefPtr<dispatcher::Timer> notify_timer_;
 
-    fbl::RefPtr<ddk::Pdev> pdev_;
+    fbl::optional<ddk::PDev> pdev_;
 
     fbl::unique_ptr<Tas27xx> codec_;
 
@@ -67,8 +68,8 @@ private:
     fzl::PinnedVmo pinned_ring_buffer_;
 
     fbl::unique_ptr<AmlTdmDevice> aml_audio_;
-    ddk::GpioPin audio_en_;
-    ddk::GpioPin audio_fault_;
+    fbl::optional<ddk::GpioProtocolProxy> audio_en_;
+    fbl::optional<ddk::GpioProtocolProxy> audio_fault_;
 
     zx::bti bti_;
 };

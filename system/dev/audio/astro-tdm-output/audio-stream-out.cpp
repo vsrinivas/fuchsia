@@ -1,12 +1,10 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+#include "audio-stream-out.h"
 
 #include <ddk/debug.h>
-#include <ddktl/pdev.h>
 #include <math.h>
-
-#include "audio-stream-out.h"
 
 namespace audio {
 namespace astro {
@@ -18,35 +16,41 @@ AstroAudioStreamOut::AstroAudioStreamOut(zx_device_t* parent)
     : SimpleAudioStream(parent, false) {
 }
 
-zx_status_t AstroAudioStreamOut::InitPdev() {
-
-    pdev_ = ddk::Pdev::Create(parent());
-    if (!pdev_) {
-        return ZX_ERR_NO_RESOURCES;
+zx_status_t AstroAudioStreamOut::InitPDev() {
+    pdev_protocol_t pdev;
+    zx_status_t status = device_get_protocol(parent(), ZX_PROTOCOL_PDEV, &pdev);
+    if (status) {
+        return status;
     }
+    pdev_ = ddk::PDev(&pdev);
 
     audio_fault_ = pdev_->GetGpio(0);
     audio_en_ = pdev_->GetGpio(1);
 
-    if (!(audio_fault_.is_valid() && audio_en_.is_valid())) {
+    if (!audio_fault_ || !audio_en_) {
         zxlogf(ERROR, "%s failed to allocate gpio\n", __func__);
         return ZX_ERR_NO_RESOURCES;
     }
 
-    codec_ = Tas27xx::Create(fbl::move(pdev_->GetI2cChan(0)));
+    auto i2c = pdev_->GetI2c(0);
+    if (!i2c) {
+        zxlogf(ERROR, "%s failed to allocate i2c\n", __func__);
+        return ZX_ERR_NO_RESOURCES;
+    }
+    codec_ = Tas27xx::Create(fbl::move(*i2c));
     if (!codec_) {
         zxlogf(ERROR, "%s could not get tas27xx\n", __func__);
         return ZX_ERR_NO_RESOURCES;
     }
 
-    zx_status_t status = pdev_->GetBti(0, &bti_);
+    status = pdev_->GetBti(0, &bti_);
     if (status  != ZX_OK) {
         zxlogf(ERROR, "%s could not obtain bti - %d\n", __func__, status);
         return status;
     }
 
     fbl::optional<ddk::MmioBuffer> mmio;
-    status = pdev_->GetMmio(0, &mmio);
+    status = pdev_->MapMmio(0, &mmio);
     if (status != ZX_OK) {
         return status;
     }
@@ -58,7 +62,7 @@ zx_status_t AstroAudioStreamOut::InitPdev() {
     }
 
     //Enable Codec
-    audio_en_.Write(1);
+    audio_en_->Write(1);
 
     codec_->Init();
 
@@ -83,7 +87,7 @@ zx_status_t AstroAudioStreamOut::InitPdev() {
 zx_status_t AstroAudioStreamOut::Init() {
     zx_status_t status;
 
-    status = InitPdev();
+    status = InitPDev();
     if (status != ZX_OK) {
         return status;
     }
@@ -157,7 +161,7 @@ zx_status_t AstroAudioStreamOut::ChangeFormat(const audio_proto::StreamSetFmtReq
 
 void AstroAudioStreamOut::ShutdownHook() {
     aml_audio_->Shutdown();
-    audio_en_.Write(0);
+    audio_en_->Write(0);
 }
 
 zx_status_t AstroAudioStreamOut::SetGain(const audio_proto::SetGainReq& req) {
