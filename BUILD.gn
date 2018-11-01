@@ -51,6 +51,7 @@ group("no_cmx_whitelist") {
       "//garnet/go/src/merkle:*",
       "//garnet/go/src/pmd:*",
       "//garnet/lib/magma/gnbuild/magma-arm-mali:*",
+      "//garnet/lib/magma/gnbuild/magma-intel-gen:*",
       "//garnet/lib/magma/gnbuild/magma-vsl-gc:*",
       "//garnet/lib/root_ssl_certificates:*",
       "//garnet/lib/ui/gfx/tests:*",
