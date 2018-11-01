@@ -462,8 +462,8 @@ static zx_status_t sdmmc_bind(void* ctx, zx_device_t* parent) {
     zx_status_t st = device_get_protocol(parent, ZX_PROTOCOL_SDMMC, &dev->host);
     if (st != ZX_OK) {
         zxlogf(ERROR, "sdmmc: failed to get sdmmc protocol\n");
-        st = ZX_ERR_NOT_SUPPORTED;
-        goto fail;
+        free(dev);
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     mtx_init(&dev->lock, mtx_plain);
@@ -482,22 +482,18 @@ static zx_status_t sdmmc_bind(void* ctx, zx_device_t* parent) {
 
     st = device_add(parent, &block_args, &dev->zxdev);
     if (st != ZX_OK) {
-        goto fail;
+        free(dev);
+        return st;
     }
 
     // bootstrap in a thread
     int rc = thrd_create_with_name(&dev->worker_thread, sdmmc_worker_thread, dev, "sdmmc-worker");
     if (rc != thrd_success) {
         st = thrd_status_to_zx_status(rc);
-        goto fail_remove;
+        device_remove(dev->zxdev);
+        return st;
     }
     return ZX_OK;
-
-fail_remove:
-    device_remove(dev->zxdev);
-fail:
-    free(dev);
-    return st;
 }
 
 static zx_driver_ops_t sdmmc_driver_ops = {
