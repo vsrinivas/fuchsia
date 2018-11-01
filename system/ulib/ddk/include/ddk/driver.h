@@ -122,6 +122,10 @@ zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* parent,
 // The newly added device will be active before this call returns, so be sure to have
 // the "out" pointer point to your device-local structure so callbacks can access
 // it immediately.
+//
+// If this call is successful, but the device needs to be torn down, device_remove() should be
+// called.  If |args->ctx| is backed by memory, it is the programmer's responsibility to not free
+// that memory until the device's |release| hook is called.
 static inline zx_status_t device_add(zx_device_t* parent, device_add_args_t* args, zx_device_t** out) {
     return device_add_from_driver(__zircon_driver_rec__.driver, parent, args, out);
 }
