@@ -10,11 +10,11 @@ pub use self::tcp::{TcpListener, TcpStream};
 mod udp;
 pub use self::udp::UdpSocket;
 
+use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::io::{self, AsyncRead, AsyncWrite, Initializer};
 use futures::task::{AtomicWaker, LocalWaker};
-use futures::{Poll, try_ready};
+use futures::{try_ready, Poll};
 use libc;
-use fuchsia_zircon::{self as zx, AsHandleRef};
 
 use std::io::{Read, Write};
 use std::marker::Unpin;
@@ -83,16 +83,8 @@ pub struct EventedFd<T> {
     signal_receiver: mem::ManuallyDrop<ReceiverRegistration<EventedFdPacketReceiver>>,
 }
 
-unsafe impl<T> Send for EventedFd<T>
-where
-    T: Send,
-{
-}
-unsafe impl<T> Sync for EventedFd<T>
-where
-    T: Sync,
-{
-}
+unsafe impl<T> Send for EventedFd<T> where T: Send {}
+unsafe impl<T> Sync for EventedFd<T> where T: Sync {}
 
 impl<T> Unpin for EventedFd<T> {}
 
@@ -261,9 +253,7 @@ impl<T: AsRawFd + Read> AsyncRead for EventedFd<T> {
         Initializer::nop()
     }
 
-    fn poll_read(&mut self, lw: &LocalWaker, buf: &mut [u8])
-        -> Poll<Result<usize, io::Error>>
-    {
+    fn poll_read(&mut self, lw: &LocalWaker, buf: &mut [u8]) -> Poll<Result<usize, io::Error>> {
         try_ready!(EventedFd::poll_readable(self, lw));
         let res = self.as_mut().read(buf);
         if let Err(e) = &res {
@@ -279,9 +269,7 @@ impl<T: AsRawFd + Read> AsyncRead for EventedFd<T> {
 }
 
 impl<T: AsRawFd + Write> AsyncWrite for EventedFd<T> {
-    fn poll_write(&mut self, lw: &LocalWaker, buf: &[u8])
-        -> Poll<Result<usize, io::Error>>
-    {
+    fn poll_write(&mut self, lw: &LocalWaker, buf: &[u8]) -> Poll<Result<usize, io::Error>> {
         try_ready!(EventedFd::poll_writable(self, lw));
         let res = self.as_mut().write(buf);
         if let Err(e) = &res {
@@ -315,9 +303,7 @@ where
         Initializer::nop()
     }
 
-    fn poll_read(&mut self, lw: &LocalWaker, buf: &mut [u8])
-        -> Poll<Result<usize, io::Error>>
-    {
+    fn poll_read(&mut self, lw: &LocalWaker, buf: &mut [u8]) -> Poll<Result<usize, io::Error>> {
         try_ready!(EventedFd::poll_readable(self, lw));
         let res = self.as_ref().read(buf);
         if let Err(e) = &res {
@@ -335,9 +321,7 @@ where
     T: AsRawFd,
     for<'b> &'b T: Write,
 {
-    fn poll_write(&mut self, lw: &LocalWaker, buf: &[u8])
-        -> Poll<Result<usize, io::Error>>
-    {
+    fn poll_write(&mut self, lw: &LocalWaker, buf: &[u8]) -> Poll<Result<usize, io::Error>> {
         try_ready!(EventedFd::poll_writable(self, lw));
         let res = self.as_ref().write(buf);
         if let Err(e) = &res {
@@ -360,8 +344,8 @@ where
 
 mod syscall {
     #![allow(non_camel_case_types, improper_ctypes)]
-    use std::os::unix::io::RawFd;
     pub use fuchsia_zircon::sys::{zx_handle_t, zx_signals_t};
+    use std::os::unix::io::RawFd;
 
     // This is the "improper" c type
     pub type fdio_t = ();

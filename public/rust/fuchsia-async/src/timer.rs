@@ -11,15 +11,15 @@ use {
     crate::executor::EHandle,
     fuchsia_zircon as zx,
     futures::{
-        Future, FutureExt, Stream, Poll,
         task::{AtomicWaker, LocalWaker},
+        Future, FutureExt, Poll, Stream,
     },
     pin_utils::{unsafe_pinned, unsafe_unpinned},
     std::{
         pin::{Pin, Unpin},
         sync::{
-            Arc,
             atomic::{AtomicBool, Ordering},
+            Arc,
         },
     },
 };
@@ -28,9 +28,9 @@ use {
 pub trait TimeoutExt: Future + Sized {
     /// Wraps the future in a timeout, calling `on_timeout` to produce a result
     /// when the timeout occurs.
-    fn on_timeout<OT>(self, time: zx::Time, on_timeout: OT)
-        -> OnTimeout<Self, OT>
-        where OT: FnOnce() -> Self::Output,
+    fn on_timeout<OT>(self, time: zx::Time, on_timeout: OT) -> OnTimeout<Self, OT>
+    where
+        OT: FnOnce() -> Self::Output,
     {
         OnTimeout {
             timer: Timer::new(time),
@@ -63,18 +63,18 @@ impl<F, OT> OnTimeout<F, OT> {
 impl<F: Unpin, OT> Unpin for OnTimeout<F, OT> {}
 
 impl<F: Future, OT> Future for OnTimeout<F, OT>
-    where OT: FnOnce() -> F::Output,
+where
+    OT: FnOnce() -> F::Output,
 {
     type Output = F::Output;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker)
-        -> Poll<Self::Output>
-    {
+    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
         if let Poll::Ready(item) = self.as_mut().future().poll(lw) {
             return Poll::Ready(item);
         }
         if let Poll::Ready(()) = self.as_mut().timer().poll_unpin(lw) {
-            let ot = OnTimeout::on_timeout(&mut self).take()
+            let ot = OnTimeout::on_timeout(&mut self)
+                .take()
                 .expect("polled withtimeout after completion");
             let item = (ot)();
             return Poll::Ready(item);
@@ -155,9 +155,7 @@ impl Unpin for Interval {}
 
 impl Stream for Interval {
     type Item = ();
-    fn poll_next(mut self: Pin<&mut Self>, lw: &LocalWaker)
-        -> Poll<Option<Self::Item>>
-    {
+    fn poll_next(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
         let this = &mut *self;
         match this.timer.poll_unpin(lw) {
             Poll::Ready(()) => {
@@ -177,9 +175,12 @@ impl Stream for Interval {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{Executor, Timer, temp::{Either, TempFutureExt}};
-    use futures::prelude::*;
+    use crate::{
+        temp::{Either, TempFutureExt},
+        Executor, Timer,
+    };
     use fuchsia_zircon::prelude::*;
+    use futures::prelude::*;
 
     #[test]
     fn shorter_fires_first() {
@@ -187,7 +188,7 @@ mod test {
         let shorter = Timer::new(100.millis().after_now());
         let longer = Timer::new(1.second().after_now());
         match exec.run_singlethreaded(shorter.select(longer)) {
-            Either::Left(()) => {},
+            Either::Left(()) => {}
             Either::Right(()) => panic!("wrong timer fired"),
         }
     }
@@ -198,7 +199,7 @@ mod test {
         let shorter = Timer::new(100.millis().after_now());
         let longer = Timer::new(1.second().after_now());
         match exec.run(shorter.select(longer), 4) {
-            Either::Left(()) => {},
+            Either::Left(()) => {}
             Either::Right(()) => panic!("wrong timer fired"),
         }
     }
@@ -233,7 +234,9 @@ mod test {
         assert_eq!(0, counter.load(Ordering::SeqCst));
 
         // Pretend to wait until the next timer
-        let first_deadline = exec.wake_next_timer().expect("Expected a pending timeout (1)");
+        let first_deadline = exec
+            .wake_next_timer()
+            .expect("Expected a pending timeout (1)");
         assert!(first_deadline >= start + 5.seconds());
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut future));
         assert_eq!(1, counter.load(Ordering::SeqCst));
@@ -243,7 +246,9 @@ mod test {
         assert_eq!(1, counter.load(Ordering::SeqCst));
 
         // "Wait" until the next timeout and poll again: expect another item from the stream
-        let second_deadline = exec.wake_next_timer().expect("Expected a pending timeout (2)");
+        let second_deadline = exec
+            .wake_next_timer()
+            .expect("Expected a pending timeout (2)");
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut future));
         assert_eq!(2, counter.load(Ordering::SeqCst));
 

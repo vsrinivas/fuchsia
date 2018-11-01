@@ -12,10 +12,10 @@ use {
     std::{
         io,
         marker::Unpin,
-        pin::Pin,
         net::{self, SocketAddr},
         ops::Deref,
         os::unix::io::AsRawFd,
+        pin::Pin,
     },
 };
 
@@ -64,7 +64,11 @@ impl UdpSocket {
     }
 
     pub fn send_to<'a>(&'a self, buf: &'a [u8], addr: SocketAddr) -> SendTo<'a> {
-        SendTo { socket: self, buf, addr }
+        SendTo {
+            socket: self,
+            buf,
+            addr,
+        }
     }
 
     pub fn async_send_to(
@@ -95,9 +99,7 @@ impl<'a> Unpin for RecvFrom<'a> {}
 impl<'a> Future for RecvFrom<'a> {
     type Output = io::Result<(usize, SocketAddr)>;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker)
-        -> Poll<Self::Output>
-    {
+    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
         let this = &mut *self;
         let (received, addr) = try_ready!(this.socket.async_recv_from(this.buf, lw));
         Poll::Ready(Ok((received, addr)))
@@ -115,17 +117,15 @@ impl<'a> Unpin for SendTo<'a> {}
 impl<'a> Future for SendTo<'a> {
     type Output = io::Result<()>;
 
-    fn poll(self: Pin<&mut Self>, lw: &LocalWaker)
-        -> Poll<Self::Output>
-    {
+    fn poll(self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
         self.socket.async_send_to(self.buf, self.addr, lw)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::Executor;
     use super::UdpSocket;
+    use crate::Executor;
     use std::io::Error;
 
     #[test]
@@ -145,6 +145,7 @@ mod tests {
             Ok::<(), Error>(())
         };
 
-        exec.run_singlethreaded(fut).expect("failed to run udp socket test");
+        exec.run_singlethreaded(fut)
+            .expect("failed to run udp socket test");
     }
 }

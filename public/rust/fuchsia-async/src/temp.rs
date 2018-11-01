@@ -11,16 +11,17 @@
 use {
     futures::{
         future::{Future, FutureExt},
-        stream::{Stream, StreamExt},
         io::{self, AsyncRead, AsyncWrite},
+        ready,
+        stream::{Stream, StreamExt},
         task::{LocalWaker, Poll},
-        ready, try_ready,
+        try_ready,
     },
+    pin_utils::unsafe_pinned,
     std::{
         mem,
         pin::{Pin, Unpin},
     },
-    pin_utils::unsafe_pinned,
 };
 
 pub trait TempStreamExt: Stream + Sized {
@@ -28,7 +29,8 @@ pub trait TempStreamExt: Stream + Sized {
         FirstElem { stream: self }
     }
     fn try_into_future<T, E>(self) -> TryIntoFuture<Self>
-        where Self: Stream<Item = Result<T, E>> + Unpin,
+    where
+        Self: Stream<Item = Result<T, E>> + Unpin,
     {
         TryIntoFuture { stream: Some(self) }
     }
@@ -36,7 +38,9 @@ pub trait TempStreamExt: Stream + Sized {
 
 impl<T: Stream + Sized> TempStreamExt for T {}
 
-pub struct FirstElem<St> { stream: St }
+pub struct FirstElem<St> {
+    stream: St,
+}
 
 impl<St> FirstElem<St> {
     // Safety: `FirstElem` is `Unpin` iff `St` is `Unpin`.
@@ -46,9 +50,7 @@ impl<St> FirstElem<St> {
 impl<St: Stream> Future for FirstElem<St> {
     type Output = Option<St::Item>;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker)
-        -> Poll<Self::Output>
-    {
+    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
         self.stream().poll_next(lw)
     }
 }
@@ -62,24 +64,20 @@ impl<St> Unpin for TryIntoFuture<St> {}
 impl<T, E, St: Stream<Item = Result<T, E>> + Unpin> Future for TryIntoFuture<St> {
     type Output = Result<(Option<T>, St), E>;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker)
-        -> Poll<Self::Output>
-    {
+    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
         let res = ready!(self.stream.as_mut().unwrap().poll_next_unpin(lw));
         Poll::Ready(match res {
-            Some(Ok(elem)) =>
-                Ok((Some(elem), self.stream.take().unwrap())),
-            None =>
-                Ok((None, self.stream.take().unwrap())),
+            Some(Ok(elem)) => Ok((Some(elem), self.stream.take().unwrap())),
+            None => Ok((None, self.stream.take().unwrap())),
             Some(Err(e)) => Err(e),
         })
     }
 }
 
 pub trait TempAsyncWriteExt: AsyncWrite + Sized {
-	fn write_all<T: AsRef<[u8]>>(self, buf: T) -> WriteAll<Self, T> {
-		write_all(self, buf)
-	}
+    fn write_all<T: AsRef<[u8]>>(self, buf: T) -> WriteAll<Self, T> {
+        write_all(self, buf)
+    }
 }
 
 impl<T: AsyncWrite + Sized> TempAsyncWriteExt for T {}
@@ -91,17 +89,14 @@ pub struct WriteAll<A, T> {
 impl<A, T> Unpin for WriteAll<A, T> {}
 
 enum WriteState<A, T> {
-    Writing {
-        a: A,
-        buf: T,
-        pos: usize,
-    },
+    Writing { a: A, buf: T, pos: usize },
     Empty,
 }
 
 pub fn write_all<A, T>(a: A, buf: T) -> WriteAll<A, T>
-    where A: AsyncWrite,
-          T: AsRef<[u8]>,
+where
+    A: AsyncWrite,
+    T: AsRef<[u8]>,
 {
     WriteAll {
         state: WriteState::Writing {
@@ -117,20 +112,25 @@ fn zero_write() -> io::Error {
 }
 
 impl<A, T> Future for WriteAll<A, T>
-    where A: AsyncWrite,
-          T: AsRef<[u8]>,
+where
+    A: AsyncWrite,
+    T: AsRef<[u8]>,
 {
     type Output = io::Result<(A, T)>;
 
     fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
         match self.state {
-            WriteState::Writing { ref mut a, ref buf, ref mut pos } => {
+            WriteState::Writing {
+                ref mut a,
+                ref buf,
+                ref mut pos,
+            } => {
                 let buf = buf.as_ref();
                 while *pos < buf.len() {
                     let n = try_ready!(a.poll_write(lw, &buf[*pos..]));
                     *pos += n;
                     if n == 0 {
-                        return Poll::Ready(Err(zero_write()))
+                        return Poll::Ready(Err(zero_write()));
                     }
                 }
             }
@@ -146,7 +146,7 @@ impl<A, T> Future for WriteAll<A, T>
 
 pub trait TempAsyncReadExt: AsyncRead + Sized {
     fn read_to_end(self, buf: Vec<u8>) -> ReadToEnd<Self> {
-		read_to_end(self, buf)
+        read_to_end(self, buf)
     }
 }
 
@@ -159,29 +159,29 @@ pub struct ReadToEnd<A> {
 impl<A> Unpin for ReadToEnd<A> {}
 
 enum State<A> {
-    Reading {
-        a: A,
-        buf: Vec<u8>,
-    },
+    Reading { a: A, buf: Vec<u8> },
     Empty,
 }
 
 pub fn read_to_end<A>(a: A, buf: Vec<u8>) -> ReadToEnd<A>
-    where A: AsyncRead,
+where
+    A: AsyncRead,
 {
     ReadToEnd {
-        state: State::Reading {
-            a,
-            buf,
-        }
+        state: State::Reading { a, buf },
     }
 }
 
-struct Guard<'a> { buf: &'a mut Vec<u8>, len: usize }
+struct Guard<'a> {
+    buf: &'a mut Vec<u8>,
+    len: usize,
+}
 
 impl<'a> Drop for Guard<'a> {
     fn drop(&mut self) {
-        unsafe { self.buf.set_len(self.len); }
+        unsafe {
+            self.buf.set_len(self.len);
+        }
     }
 }
 
@@ -194,11 +194,14 @@ impl<'a> Drop for Guard<'a> {
 //
 // Because we're extending the buffer with uninitialized data for trusted
 // readers, we need to make sure to truncate that if any of this panics.
-fn read_to_end_internal<R: AsyncRead>(r: &mut R, lw: &LocalWaker, buf: &mut Vec<u8>)
-    -> Poll<io::Result<usize>>
-{
+fn read_to_end_internal<R: AsyncRead>(
+    r: &mut R, lw: &LocalWaker, buf: &mut Vec<u8>,
+) -> Poll<io::Result<usize>> {
     let start_len = buf.len();
-    let mut g = Guard { len: buf.len(), buf: buf };
+    let mut g = Guard {
+        len: buf.len(),
+        buf: buf,
+    };
     let ret;
     loop {
         if g.len == g.buf.len() {
@@ -227,19 +230,23 @@ fn read_to_end_internal<R: AsyncRead>(r: &mut R, lw: &LocalWaker, buf: &mut Vec<
 }
 
 impl<A> Future for ReadToEnd<A>
-    where A: AsyncRead,
+where
+    A: AsyncRead,
 {
     type Output = io::Result<(A, Vec<u8>)>;
 
     fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
-		let this = &mut *self;
+        let this = &mut *self;
         match this.state {
-            State::Reading { ref mut a, ref mut buf } => {
+            State::Reading {
+                ref mut a,
+                ref mut buf,
+            } => {
                 // If we get `Ok`, then we know the stream hit EOF and we're done. If we
                 // hit "would block" then all the read data so far is in our buffer, and
                 // otherwise we propagate errors
                 try_ready!(read_to_end_internal(a, lw, buf));
-            },
+            }
             State::Empty => panic!("poll ReadToEnd after it's done"),
         }
 
@@ -268,7 +275,10 @@ pub trait TempFutureExt: Future + Sized {
         Self: Unpin,
         B: Unpin,
     {
-        SelectUnpin { a: Some(self), b: Some(b) }
+        SelectUnpin {
+            a: Some(self),
+            b: Some(b),
+        }
     }
 }
 
@@ -280,11 +290,7 @@ pub enum Either<A, B> {
 }
 
 impl<A, B> Either<A, B> {
-    pub fn either<T>(
-        self,
-        lf: impl FnOnce(A) -> T,
-        rf: impl FnOnce(B) -> T,
-    ) -> T {
+    pub fn either<T>(self, lf: impl FnOnce(A) -> T, rf: impl FnOnce(B) -> T) -> T {
         match self {
             Either::Left(a) => (lf)(a),
             Either::Right(b) => (rf)(b),

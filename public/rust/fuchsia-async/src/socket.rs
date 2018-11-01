@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::fmt;
-use futures::{Poll, task::LocalWaker, try_ready};
-use futures::io::{self, AsyncRead, AsyncWrite, Initializer};
 use fuchsia_zircon::{self as zx, AsHandleRef};
+use futures::io::{self, AsyncRead, AsyncWrite, Initializer};
+use futures::{task::LocalWaker, try_ready, Poll};
+use std::fmt;
 
 use crate::RWHandle;
 
@@ -98,29 +98,21 @@ impl AsyncRead for Socket {
         Initializer::nop()
     }
 
-    fn poll_read(&mut self, lw: &LocalWaker, buf: &mut [u8])
-        -> Poll<io::Result<usize>>
-    {
+    fn poll_read(&mut self, lw: &LocalWaker, buf: &mut [u8]) -> Poll<io::Result<usize>> {
         self.read_nomut(buf, lw).map_err(Into::into)
     }
 }
 
 impl AsyncWrite for Socket {
-    fn poll_write(&mut self, lw: &LocalWaker, buf: &[u8])
-        -> Poll<io::Result<usize>>
-    {
+    fn poll_write(&mut self, lw: &LocalWaker, buf: &[u8]) -> Poll<io::Result<usize>> {
         self.write_nomut(buf, lw).map_err(Into::into)
     }
 
-    fn poll_flush(&mut self, _: &LocalWaker)
-        -> Poll<io::Result<()>>
-    {
+    fn poll_flush(&mut self, _: &LocalWaker) -> Poll<io::Result<()>> {
         Poll::Ready(Ok(()))
     }
 
-    fn poll_close(&mut self, _: &LocalWaker)
-        -> Poll<io::Result<()>>
-    {
+    fn poll_close(&mut self, _: &LocalWaker) -> Poll<io::Result<()>> {
         Poll::Ready(Ok(()))
     }
 }
@@ -132,17 +124,13 @@ impl<'a> AsyncRead for &'a Socket {
         Initializer::nop()
     }
 
-    fn poll_read(&mut self, lw: &LocalWaker, buf: &mut [u8])
-        -> Poll<io::Result<usize>>
-    {
+    fn poll_read(&mut self, lw: &LocalWaker, buf: &mut [u8]) -> Poll<io::Result<usize>> {
         self.read_nomut(buf, lw).map_err(Into::into)
     }
 }
 
 impl<'a> AsyncWrite for &'a Socket {
-    fn poll_write(&mut self, lw: &LocalWaker, buf: &[u8])
-        -> Poll<io::Result<usize>>
-    {
+    fn poll_write(&mut self, lw: &LocalWaker, buf: &[u8]) -> Poll<io::Result<usize>> {
         self.write_nomut(buf, lw).map_err(Into::into)
     }
 
@@ -158,14 +146,17 @@ impl<'a> AsyncWrite for &'a Socket {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Executor, Timer, TimeoutExt, temp::{TempAsyncWriteExt, TempAsyncReadExt}};
-    use futures::future::{FutureExt, TryFutureExt};
+    use crate::{
+        temp::{TempAsyncReadExt, TempAsyncWriteExt},
+        Executor, TimeoutExt, Timer,
+    };
     use fuchsia_zircon::prelude::*;
+    use futures::future::{FutureExt, TryFutureExt};
 
     #[test]
     fn can_read_write() {
         let mut exec = Executor::new().unwrap();
-        let bytes = &[0,1,2,3];
+        let bytes = &[0, 1, 2, 3];
 
         let (tx, rx) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
         let (tx, rx) = (
@@ -178,14 +169,12 @@ mod tests {
         });
 
         // add a timeout to receiver so if test is broken it doesn't take forever
-        let receiver = receive_future.on_timeout(
-                            300.millis().after_now(),
-                            || panic!("timeout"));
+        let receiver = receive_future.on_timeout(300.millis().after_now(), || panic!("timeout"));
 
         // Sends a message after the timeout has passed
         let sender = Timer::new(100.millis().after_now())
-                        .then(|()| tx.write_all(bytes))
-                        .map_ok(|_tx| ());
+            .then(|()| tx.write_all(bytes))
+            .map_ok(|_tx| ());
 
         let done = receiver.try_join(sender);
         exec.run_singlethreaded(done).unwrap();

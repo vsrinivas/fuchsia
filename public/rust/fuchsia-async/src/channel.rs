@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::fmt;
 use std::io;
 use std::pin::Pin;
-use std::fmt;
 
-use futures::{Poll, Future, task::LocalWaker, try_ready};
 use fuchsia_zircon::{self as zx, AsHandleRef, MessageBuf};
+use futures::{task::LocalWaker, try_ready, Future, Poll};
 
 use crate::RWHandle;
 
@@ -55,9 +55,7 @@ impl Channel {
 
     /// Receives a message on the channel and registers this `Channel` as
     /// needing a read on receiving a `zx::Status::SHOULD_WAIT`.
-    pub fn recv_from(&self, buf: &mut MessageBuf, lw: &LocalWaker)
-        -> Poll<Result<(), zx::Status>>
-    {
+    pub fn recv_from(&self, buf: &mut MessageBuf, lw: &LocalWaker) -> Poll<Result<(), zx::Status>> {
         try_ready!(self.poll_read(lw));
 
         let res = self.0.get_ref().read(buf);
@@ -74,18 +72,11 @@ impl Channel {
     /// The returned future will return after a message has been received on
     /// this socket and been placed into the buffer.
     pub fn recv_msg<'a>(&'a self, buf: &'a mut MessageBuf) -> RecvMsg<'a> {
-        RecvMsg {
-            channel: self,
-            buf,
-        }
+        RecvMsg { channel: self, buf }
     }
 
     /// Writes a message into the channel.
-    pub fn write(&self,
-                 bytes: &[u8],
-                 handles: &mut Vec<zx::Handle>,
-                ) -> Result<(), zx::Status>
-    {
+    pub fn write(&self, bytes: &[u8], handles: &mut Vec<zx::Handle>) -> Result<(), zx::Status> {
         self.0.get_ref().write(bytes, handles)
     }
 
@@ -121,15 +112,15 @@ impl<'a> Future for RecvMsg<'a> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::Executor;
     use fuchsia_zircon::{self as zx, MessageBuf};
     use pin_utils::pin_mut;
-    use super::*;
 
     #[test]
     fn can_receive() {
         let mut exec = Executor::new().unwrap();
-        let bytes = &[0,1,2,3];
+        let bytes = &[0, 1, 2, 3];
 
         let (tx, rx) = zx::Channel::create().unwrap();
         let f_rx = Channel::from_channel(rx).unwrap();
@@ -144,7 +135,8 @@ mod tests {
         assert!(exec.run_until_stalled(&mut receiver).is_pending());
 
         let mut handles = Vec::new();
-        tx.write(bytes, &mut handles).expect("failed to write message");
+        tx.write(bytes, &mut handles)
+            .expect("failed to write message");
 
         assert!(exec.run_until_stalled(&mut receiver).is_ready());
     }

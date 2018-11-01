@@ -5,23 +5,22 @@
 use crate::atomic_future::AtomicFuture;
 use crossbeam::sync::SegQueue;
 use fuchsia_zircon as zx;
-use futures::{Poll, Future, FutureExt, task};
 use futures::future::{self, FutureObj, LocalFutureObj};
 use futures::task::{
-    AtomicWaker, local_waker_from_nonlocal, local_waker_ref_from_nonlocal,
-    Spawn, SpawnError,
+    local_waker_from_nonlocal, local_waker_ref_from_nonlocal, AtomicWaker, Spawn, SpawnError,
 };
-use parking_lot::{Mutex, Condvar};
+use futures::{task, Future, FutureExt, Poll};
+use parking_lot::{Condvar, Mutex};
 use pin_utils::pin_mut;
 use slab::Slab;
-use std::{cmp, fmt, mem};
 use std::cell::RefCell;
-use std::marker::Unpin;
-use std::sync::{Arc, Weak};
 use std::collections::BinaryHeap;
+use std::marker::Unpin;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::{Arc, Weak};
 use std::thread;
-use std::{usize, u64};
+use std::{cmp, fmt, mem};
+use std::{u64, usize};
 
 const EMPTY_WAKEUP_ID: u64 = u64::MAX;
 const TASK_READY_WAKEUP_ID: u64 = u64::MAX - 1;
@@ -31,7 +30,8 @@ const TASK_READY_WAKEUP_ID: u64 = u64::MAX - 1;
 /// Tasks spawned using this method must be threadsafe (implement the `Send` trait),
 /// as they may be run on either a singlethreaded or multithreaded executor.
 pub fn spawn<F>(future: F)
-    where F: Future<Output = ()> + Send + 'static
+where
+    F: Future<Output = ()> + Send + 'static,
 {
     Inner::spawn(&EHandle::local().inner, FutureObj::new(Box::new(future)));
 }
@@ -43,9 +43,13 @@ pub fn spawn<F>(future: F)
 /// requires that the current executor never be run in a multithreaded mode-- only
 /// `run_singlethreaded` can be used.
 pub fn spawn_local<F>(future: F)
-    where F: Future<Output = ()> + 'static
+where
+    F: Future<Output = ()> + 'static,
 {
-    Inner::spawn_local(&EHandle::local().inner, LocalFutureObj::new(Box::new(future)));
+    Inner::spawn_local(
+        &EHandle::local().inner,
+        LocalFutureObj::new(Box::new(future)),
+    );
 }
 
 /// A trait for handling the arrival of a packet on a `zx::Port`.
@@ -76,7 +80,10 @@ pub struct ReceiverRegistration<T: PacketReceiver> {
     key: u64,
 }
 
-impl<T> ReceiverRegistration<T> where T: PacketReceiver {
+impl<T> ReceiverRegistration<T>
+where
+    T: PacketReceiver,
+{
     /// The key with which `Packet`s destined for this receiver should be sent on the `zx::Port`.
     pub fn key(&self) -> u64 {
         self.key
@@ -93,7 +100,10 @@ impl<T> ReceiverRegistration<T> where T: PacketReceiver {
     }
 }
 
-impl<T> Drop for ReceiverRegistration<T> where T: PacketReceiver {
+impl<T> Drop for ReceiverRegistration<T>
+where
+    T: PacketReceiver,
+{
     fn drop(&mut self) {
         self.ehandle.deregister_receiver(self.key);
     }
@@ -108,8 +118,8 @@ pub struct Executor {
 impl fmt::Debug for Executor {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Executor")
-         .field("port", &self.inner.port)
-         .finish()
+            .field("port", &self.inner.port)
+            .finish()
     }
 }
 
@@ -120,11 +130,15 @@ thread_local!(
 );
 
 fn with_local_timer_heap<F, R>(f: F) -> R
-    where F: FnOnce(&mut TimerHeap) -> R
+where
+    F: FnOnce(&mut TimerHeap) -> R,
 {
     EXECUTOR.with(|e| {
-        (f)(&mut e.borrow_mut().as_mut().expect(
-            "can't get timer heap before fuchsia_async::Executor is initialized").1)
+        (f)(&mut e
+            .borrow_mut()
+            .as_mut()
+            .expect("can't get timer heap before fuchsia_async::Executor is initialized")
+            .1)
     })
 }
 
@@ -139,7 +153,7 @@ impl Executor {
                 threads: Mutex::new(Vec::new()),
                 receivers: Mutex::new(Slab::new()),
                 ready_tasks: SegQueue::new(),
-            })
+            }),
         };
 
         executor.ehandle().set_local(TimerHeap::new());
@@ -150,18 +164,19 @@ impl Executor {
     /// Returns a handle to the executor.
     pub fn ehandle(&self) -> EHandle {
         EHandle {
-            inner: self.inner.clone()
+            inner: self.inner.clone(),
         }
     }
 
     /// Run a single future to completion on a single thread.
     // Takes `&mut self` to ensure that only one thread-manager is running at a time.
     pub fn run_singlethreaded<F>(&mut self, main_future: F) -> F::Output
-        where F: Future
+    where
+        F: Future,
     {
         pin_mut!(main_future);
-        let lw = local_waker_from_nonlocal(
-            Arc::new(SingleThreadedMainTaskWake(self.inner.clone())));
+        let lw =
+            local_waker_from_nonlocal(Arc::new(SingleThreadedMainTaskWake(self.inner.clone())));
 
         let mut res = main_future.as_mut().poll(&lw);
 
@@ -171,12 +186,11 @@ impl Executor {
             }
 
             let packet = with_local_timer_heap(|timer_heap| {
-                let deadline = next_deadline(timer_heap).map(|t| t.time)
+                let deadline = next_deadline(timer_heap)
+                    .map(|t| t.time)
                     .unwrap_or(zx::Time::INFINITE);
                 match self.inner.port.wait(deadline) {
-                    Ok(packet) => {
-                        Some(packet)
-                    },
+                    Ok(packet) => Some(packet),
                     Err(zx::Status::TIMED_OUT) => {
                         let time_waker = timer_heap.pop().unwrap();
                         time_waker.wake();
@@ -218,10 +232,11 @@ impl Executor {
     /// Unpin: this function requires all futures to be `Unpin`able, so any `!Unpin`
     /// futures must first be pinned using the `pin_mut!` macro from the `pin-utils` crate.
     pub fn run_until_stalled<F>(&mut self, main_future: &mut F) -> Poll<F::Output>
-        where F: Future + Unpin
+    where
+        F: Future + Unpin,
     {
-        let lw = local_waker_from_nonlocal(
-            Arc::new(SingleThreadedMainTaskWake(self.inner.clone())));
+        let lw =
+            local_waker_from_nonlocal(Arc::new(SingleThreadedMainTaskWake(self.inner.clone())));
 
         let mut res = main_future.poll_unpin(&lw);
 
@@ -280,26 +295,30 @@ impl Executor {
 
     /// Run a single future to completion using multiple threads.
     // Takes `&mut self` to ensure that only one thread-manager is running at a time.
-    pub fn run<F>(&mut self, future: F, num_threads: usize)
-        -> F::Output
-        where F: Future + Send + 'static,
-              F::Output: Send + 'static,
+    pub fn run<F>(&mut self, future: F, num_threads: usize) -> F::Output
+    where
+        F: Future + Send + 'static,
+        F::Output: Send + 'static,
     {
-        self.inner.threadiness.require_multithreaded()
-            .expect("Error: called `run` on executor after using `spawn_local`. \
-                    Use `run_singlethreaded` instead.");
+        self.inner.threadiness.require_multithreaded().expect(
+            "Error: called `run` on executor after using `spawn_local`. \
+             Use `run_singlethreaded` instead.",
+        );
 
         let pair = Arc::new((Mutex::new(None), Condvar::new()));
         let pair2 = pair.clone();
 
         // Spawn a future which will set the result upon completion.
-        Inner::spawn(&self.inner, FutureObj::new(Box::new(future.then(move |fut_result| {
-            let (lock, cvar) = &*pair2;
-            let mut result = lock.lock();
-            *result = Some(fut_result);
-            cvar.notify_one();
-            future::ready(())
-        }))));
+        Inner::spawn(
+            &self.inner,
+            FutureObj::new(Box::new(future.then(move |fut_result| {
+                let (lock, cvar) = &*pair2;
+                let mut result = lock.lock();
+                *result = Some(fut_result);
+                cvar.notify_one();
+                future::ready(())
+            }))),
+        );
 
         // Start worker threads, handing off timers from the current thread.
         self.inner.done.store(false, Ordering::SeqCst);
@@ -352,7 +371,9 @@ impl Executor {
     }
 
     fn worker_lifecycle(inner: Arc<Inner>, timers: Option<TimerHeap>) {
-        let executor: EHandle = EHandle { inner: inner.clone() };
+        let executor: EHandle = EHandle {
+            inner: inner.clone(),
+        };
         executor.set_local(timers.unwrap_or(TimerHeap::new()));
         loop {
             if inner.done.load(Ordering::SeqCst) {
@@ -361,7 +382,8 @@ impl Executor {
             }
 
             let packet = with_local_timer_heap(|timer_heap| {
-                let deadline = next_deadline(timer_heap).map(|t| t.time)
+                let deadline = next_deadline(timer_heap)
+                    .map(|t| t.time)
                     .unwrap_or(zx::Time::INFINITE);
                 match inner.port.wait(deadline) {
                     Ok(packet) => Some(packet),
@@ -405,7 +427,7 @@ fn next_deadline(heap: &mut TimerHeap) -> Option<&TimeWaker> {
 fn is_defunct_timer(timer: Option<&TimeWaker>) -> bool {
     match timer {
         None => false,
-        Some(timer) => timer.waker_and_bool.upgrade().is_none()
+        Some(timer) => timer.waker_and_bool.upgrade().is_none(),
     }
 }
 
@@ -448,8 +470,8 @@ pub struct EHandle {
 impl fmt::Debug for EHandle {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("EHandle")
-         .field("port", &self.inner.port)
-         .finish()
+            .field("port", &self.inner.port)
+            .finish()
     }
 }
 
@@ -469,7 +491,8 @@ impl<'a> Spawn for &'a EHandle {
 impl EHandle {
     /// Returns the thread-local executor.
     pub fn local() -> Self {
-        let inner = EXECUTOR.with(|e| e.borrow().as_ref().map(|x| x.0.clone()))
+        let inner = EXECUTOR
+            .with(|e| e.borrow().as_ref().map(|x| x.0.clone()))
             .expect("Fuchsia Executor must be created first");
 
         EHandle { inner }
@@ -496,7 +519,8 @@ impl EHandle {
     /// Registers a `PacketReceiver` with the executor and returns a registration.
     /// The `PacketReceiver` will be deregistered when the `Registration` is dropped.
     pub fn register_receiver<T>(&self, receiver: Arc<T>) -> ReceiverRegistration<T>
-        where T: PacketReceiver
+    where
+        T: PacketReceiver,
     {
         let key = self.inner.receivers.lock().insert(receiver.clone()) as u64;
 
@@ -514,19 +538,22 @@ impl EHandle {
             lock.remove(key);
         } else {
             // The executor is shutting down and already removed the entry.
-            assert!(self.inner.done.load(Ordering::SeqCst),
-                "Missing receiver to deregister");
+            assert!(
+                self.inner.done.load(Ordering::SeqCst),
+                "Missing receiver to deregister"
+            );
         }
     }
 
     pub(crate) fn register_timer(
-        &self,
-        time: zx::Time,
-        waker_and_bool: &Arc<(AtomicWaker, AtomicBool)>
+        &self, time: zx::Time, waker_and_bool: &Arc<(AtomicWaker, AtomicBool)>,
     ) {
         with_local_timer_heap(|timer_heap| {
             let waker_and_bool = Arc::downgrade(waker_and_bool);
-            timer_heap.push(TimeWaker { time, waker_and_bool })
+            timer_heap.push(TimeWaker {
+                time,
+                waker_and_bool,
+            })
         })
     }
 }
@@ -560,7 +587,7 @@ impl Threadiness {
         ) {
             Ok(_) => Ok(()),
             Err(x) if x == target => Ok(()),
-            Err(_) => Err(())
+            Err(_) => Err(()),
         }
     }
 
@@ -634,9 +661,10 @@ impl Inner {
     }
 
     fn spawn_local(arc_self: &Arc<Self>, future: LocalFutureObj<'static, ()>) {
-        arc_self.threadiness.require_singlethreaded()
-            .expect("Error: called `spawn_local` after calling `run` on executor. \
-                    Use `spawn` or `run_singlethreaded` instead.");
+        arc_self.threadiness.require_singlethreaded().expect(
+            "Error: called `spawn_local` after calling `run` on executor. \
+             Use `spawn` or `run_singlethreaded` instead.",
+        );
         Inner::spawn(
             arc_self,
             // Unsafety: we've confirmed that the boxed futures here will never be used
@@ -658,8 +686,7 @@ impl Inner {
 
     fn notify_id(&self, id: u64) {
         let up = zx::UserPacket::from_u8_array([0; 32]);
-        let packet = zx::Packet::from_user_packet(
-            id, 0 /* status??? */, up);
+        let packet = zx::Packet::from_user_packet(id, 0 /* status??? */, up);
         if let Err(e) = self.port.queue(&packet) {
             // TODO: logging
             eprintln!("Failed to queue notify in port: {:?}", e);

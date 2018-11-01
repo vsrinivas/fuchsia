@@ -4,16 +4,13 @@
 
 use {
     crate::RWHandle,
-    futures::{
-        Poll, Future, ready,
-        task::LocalWaker,
-    },
     fuchsia_zircon::{self as zx, AsHandleRef},
+    futures::{ready, task::LocalWaker, Future, Poll},
     std::{
         fmt,
         marker::PhantomData,
         pin::{Pin, Unpin},
-    }
+    },
 };
 
 /// Marker trait for types that can be read/written with a `Fifo`.
@@ -21,7 +18,10 @@ use {
 pub unsafe trait FifoEntry {}
 
 /// Identifies that the object may be used to write entries into a FIFO.
-pub trait FifoWritable<W: FifoEntry> where Self: Sized {
+pub trait FifoWritable<W: FifoEntry>
+where
+    Self: Sized,
+{
     /// Creates a future that transmits entries to be written.
     ///
     /// The returned future will return after an entry has been received on
@@ -42,7 +42,10 @@ pub trait FifoWritable<W: FifoEntry> where Self: Sized {
 }
 
 /// Identifies that the object may be used to read entries from a FIFO.
-pub trait FifoReadable<R: FifoEntry> where Self: Sized {
+pub trait FifoReadable<R: FifoEntry>
+where
+    Self: Sized,
+{
     /// Creates a future that receives an entry to be written to the element
     /// provided.
     ///
@@ -109,9 +112,7 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
     /// needing a write on receiving a `zx::Status::SHOULD_WAIT`.
     ///
     /// Returns the number of elements processed.
-    pub fn try_write(&self, entries: &[W], lw: &LocalWaker)
-        -> Poll<Result<usize, zx::Status>>
-    {
+    pub fn try_write(&self, entries: &[W], lw: &LocalWaker) -> Poll<Result<usize, zx::Status>> {
         ready!(self.poll_write(lw)?);
         let elem_size = ::std::mem::size_of::<W>();
         let elembuf = unsafe {
@@ -126,9 +127,7 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
                     Poll::Ready(Err(e))
                 }
             }
-            Ok(count) => {
-                Poll::Ready(Ok(count))
-            }
+            Ok(count) => Poll::Ready(Ok(count)),
         }
     }
 
@@ -144,9 +143,7 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
 
     /// Reads an entry from the fifo and registers this `Fifo` as
     /// needing a read on receiving a `zx::Status::SHOULD_WAIT`.
-    pub fn try_read(&self, lw: &LocalWaker)
-        -> Poll<Result<Option<R>, zx::Status>>
-    {
+    pub fn try_read(&self, lw: &LocalWaker) -> Poll<Result<Option<R>, zx::Status>> {
         ready!(self.poll_read(lw)?);
         let mut element = unsafe { ::std::mem::uninitialized() };
         let elembuf = unsafe {
@@ -254,9 +251,9 @@ impl<'a, F: FifoReadable<R>, R: FifoEntry> Future for ReadEntry<'a, F, R> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use futures::prelude::*;
-    use fuchsia_zircon::prelude::*;
     use crate::{Executor, TimeoutExt, Timer};
+    use fuchsia_zircon::prelude::*;
+    use futures::prelude::*;
 
     #[derive(Clone, Debug, PartialEq, Eq)]
     #[repr(C)]
@@ -290,12 +287,10 @@ mod tests {
         });
 
         // add a timeout to receiver so if test is broken it doesn't take forever
-        let receiver = receive_future
-            .on_timeout(300.millis().after_now(), || panic!("timeout"));
+        let receiver = receive_future.on_timeout(300.millis().after_now(), || panic!("timeout"));
 
         // Sends an entry after the timeout has passed
-        let sender = Timer::new(10.millis().after_now())
-            .then(|()| tx.write_entries(elements));
+        let sender = Timer::new(10.millis().after_now()).then(|()| tx.write_entries(elements));
 
         let done = receiver.try_join(sender);
         exec.run_singlethreaded(done)
@@ -319,12 +314,10 @@ mod tests {
             .map_ok(|_entry| panic!("read should have failed"));
 
         // add a timeout to receiver so if test is broken it doesn't take forever
-        let receiver = receive_future
-            .on_timeout(300.millis().after_now(), || panic!("timeout"));
+        let receiver = receive_future.on_timeout(300.millis().after_now(), || panic!("timeout"));
 
         // Sends an entry after the timeout has passed
-        let sender = Timer::new(10.millis().after_now())
-            .then(|()| tx.write_entries(elements));
+        let sender = Timer::new(10.millis().after_now()).then(|()| tx.write_entries(elements));
 
         let done = receiver.try_join(sender);
         let res = exec.run_singlethreaded(done);
@@ -346,8 +339,7 @@ mod tests {
             Fifo::<entry>::from_fifo(rx).expect("failed to create async rx fifo"),
         );
 
-        let sender = Timer::new(10.millis().after_now())
-            .then(|()| tx.write_entries(elements));
+        let sender = Timer::new(10.millis().after_now()).then(|()| tx.write_entries(elements));
 
         let res = exec.run_singlethreaded(sender);
         match res {
@@ -402,8 +394,7 @@ mod tests {
         };
 
         // add a timeout to receiver so if test is broken it doesn't take forever
-        let receiver = receive_future
-            .on_timeout(300.millis().after_now(), || panic!("timeout"));
+        let receiver = receive_future.on_timeout(300.millis().after_now(), || panic!("timeout"));
 
         let done = receiver.try_join(sender);
 
@@ -442,8 +433,7 @@ mod tests {
         };
 
         // add a timeout to receiver so if test is broken it doesn't take forever
-        let receiver = receive_future
-            .on_timeout(300.millis().after_now(), || panic!("timeout"));
+        let receiver = receive_future.on_timeout(300.millis().after_now(), || panic!("timeout"));
 
         let done = receiver.try_join(sender);
 

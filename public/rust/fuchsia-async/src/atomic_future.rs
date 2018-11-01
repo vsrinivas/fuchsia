@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use futures::{Poll, FutureExt};
 use futures::future::FutureObj;
 use futures::task::LocalWaker;
+use futures::{FutureExt, Poll};
 use std::cell::UnsafeCell;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::{AcqRel, Relaxed};
@@ -68,9 +68,7 @@ pub enum AttemptPollResult {
 
 impl AtomicFuture {
     /// Create a new `AtomicFuture`.
-    pub fn new(
-        future: FutureObj<'static, ()>,
-    ) -> Self {
+    pub fn new(future: FutureObj<'static, ()>) -> Self {
         AtomicFuture {
             state: AtomicUsize::new(INACTIVE),
             future: UnsafeCell::new(Some(future)),
@@ -81,8 +79,7 @@ impl AtomicFuture {
     ///
     /// `try_poll` ensures that the future is polled at least once more
     /// unless it has already finished.
-    pub fn try_poll(&self, lw: &LocalWaker) -> AttemptPollResult
-    {
+    pub fn try_poll(&self, lw: &LocalWaker) -> AttemptPollResult {
         // AcqRel is used instead of SeqCst in the following code.
         //
         // AcqRel behaves like Acquire on loads and Release on stores.
@@ -111,8 +108,9 @@ impl AtomicFuture {
                             // This `UnsafeCell` access is valid because `self.future.get()`
                             // is only called here, inside the critical section where
                             // we performed the transition from INACTIVE to ACTIVE.
-                            let opt: &mut Option<FutureObj<'static, ()>> =
-                                unsafe { &mut *self.future.get() };
+                            let opt: &mut Option<
+                                FutureObj<'static, ()>,
+                            > = unsafe { &mut *self.future.get() };
 
                             // We know that the future is still there and hasn't completed
                             // because `state` != `DONE`
@@ -123,8 +121,9 @@ impl AtomicFuture {
                         match poll_res {
                             Poll::Ready(()) => {
                                 // Take the future so that its innards can be dropped
-                                let future_opt: &mut Option<FutureObj<'static, ()>> =
-                                    unsafe { &mut *self.future.get() };
+                                let future_opt: &mut Option<
+                                    FutureObj<'static, ()>,
+                                > = unsafe { &mut *self.future.get() };
                                 future_opt.take();
 
                                 // No one else will read `future` unless they see
@@ -167,7 +166,7 @@ impl AtomicFuture {
                         INACTIVE => {
                             // Ooh, the worker finished before we could notify.
                             // Let's start over and try and become the new worker.
-                            continue
+                            continue;
                         }
                         ACTIVE | NOTIFIED => {
                             // Either we CAS'd to NOTIFIED or someone else did.
@@ -190,11 +189,11 @@ impl AtomicFuture {
                             //
                             // This means `state` was definitely NOTIFIED at some point
                             // after the initial EVENT.
-                            return AttemptPollResult::Busy
+                            return AttemptPollResult::Busy;
                         }
                         DONE => {
                             // The worker completed this future already
-                            return AttemptPollResult::SomeoneElseFinished
+                            return AttemptPollResult::SomeoneElseFinished;
                         }
                         _ => {
                             panic!("Unexpected AtomicFuture state");
@@ -203,11 +202,11 @@ impl AtomicFuture {
                 }
                 NOTIFIED => {
                     // The worker is already going to poll at least one more time.
-                    return AttemptPollResult::Busy
+                    return AttemptPollResult::Busy;
                 }
                 DONE => {
                     // Someone else completed this future already
-                    return AttemptPollResult::SomeoneElseFinished
+                    return AttemptPollResult::SomeoneElseFinished;
                 }
                 _ => {
                     panic!("Unexpected AtomicFuture state");
