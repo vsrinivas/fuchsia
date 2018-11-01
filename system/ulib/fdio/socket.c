@@ -20,41 +20,6 @@
 #include "private-socket.h"
 #include "unistd.h"
 
-zx_status_t zxsio_accept(fdio_t* io, zx_handle_t* s2) {
-    zxsio_t* sio = (zxsio_t*)io;
-
-    if (!(sio->flags & ZXSIO_DID_LISTEN)) {
-        return ZX_ERR_BAD_STATE;
-    }
-
-    zx_status_t r;
-    for (;;) {
-        r = zx_socket_accept(sio->s.socket, s2);
-        if (r == ZX_ERR_SHOULD_WAIT) {
-            if (io->ioflag & IOFLAG_NONBLOCK) {
-                return ZX_ERR_SHOULD_WAIT;
-            }
-
-            // wait for an incoming connection
-            zx_signals_t pending;
-            r = zx_object_wait_one(sio->s.socket, ZX_SOCKET_ACCEPT | ZX_SOCKET_PEER_CLOSED, ZX_TIME_INFINITE, &pending);
-            if (r < 0) {
-                return r;
-            }
-            if (pending & ZX_SOCKET_ACCEPT) {
-                continue;
-            }
-            if (pending & ZX_SOCKET_PEER_CLOSED) {
-                return ZX_ERR_PEER_CLOSED;
-            }
-            // impossible
-            return ZX_ERR_INTERNAL;
-        }
-        break;
-    }
-    return r;
-}
-
 static ssize_t zxsio_read_stream(fdio_t* io, void* data, size_t len) {
     zxsio_t* sio = (zxsio_t*)io;
     int nonblock = sio->io.ioflag & IOFLAG_NONBLOCK;

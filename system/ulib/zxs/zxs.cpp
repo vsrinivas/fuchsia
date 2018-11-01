@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zx/socket.h>
 #include <lib/zxs/inception.h>
 #include <lib/zxs/protocol.h>
 #include <lib/zxs/zxs.h>
@@ -205,11 +206,52 @@ zx_status_t zxs_listen(const zxs_socket_t* socket, uint32_t backlog) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t zxs_accept(const zxs_socket_t* socket, const zxs_option_t* options,
-                       size_t options_count, struct sockaddr* addr,
+zx_status_t zxs_accept(const zxs_socket_t* socket, struct sockaddr* addr,
                        size_t addr_capacity, size_t* out_addr_actual,
                        zxs_socket_t* out_socket) {
-    return ZX_ERR_NOT_SUPPORTED;
+    zx_status_t status = ZX_OK;
+    zx::socket accepted;
+    for (;;) {
+        status = zx_socket_accept(socket->socket,
+                                  accepted.reset_and_get_address());
+        if (status == ZX_ERR_SHOULD_WAIT
+            && (socket->flags & ZXS_FLAG_BLOCKING)) {
+
+            zx_signals_t observed = ZX_SIGNAL_NONE;
+            status = zx_object_wait_one(socket->socket, ZX_SOCKET_ACCEPT | ZX_SOCKET_PEER_CLOSED, ZX_TIME_INFINITE, &observed);
+            if (status != ZX_OK) {
+                break;
+            }
+            if (observed & ZX_SOCKET_ACCEPT) {
+                continue;
+            }
+            if (observed & ZX_SOCKET_PEER_CLOSED) {
+                return ZX_ERR_PEER_CLOSED;
+            }
+            // impossible
+            return ZX_ERR_INTERNAL;
+        }
+        break;
+    }
+
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    zxs_socket_t accepted_socket = {
+        .socket = accepted.release(),
+        .flags = 0u,
+    };
+
+    status = zxs_getpeername(&accepted_socket, addr, addr_capacity, out_addr_actual);
+    if (status != ZX_OK) {
+        zx_handle_close(accepted_socket.socket);
+        accepted_socket.socket = ZX_HANDLE_INVALID;
+        return status;
+    }
+
+    *out_socket = accepted_socket;
+    return ZX_OK;
 }
 
 zx_status_t zxs_getsockname(const zxs_socket_t* socket, struct sockaddr* addr,

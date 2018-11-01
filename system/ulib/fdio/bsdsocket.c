@@ -29,8 +29,6 @@
 #include "private-socket.h"
 #include "unistd.h"
 
-zx_status_t zxsio_accept(fdio_t* io, zx_handle_t* s2);
-
 static zx_status_t get_service_handle(const char* path, zx_handle_t* saved,
                                       mtx_t* lock, zx_handle_t* out) {
     zx_status_t r;
@@ -134,7 +132,7 @@ int socket(int domain, int type, int protocol) {
 
 __EXPORT
 int connect(int fd, const struct sockaddr* addr, socklen_t len) {
-    const zxs_socket_t* socket;
+    const zxs_socket_t* socket = NULL;
     fdio_t* io = fd_to_socket(fd, &socket);
     if (io == NULL) {
         return ERRNO(EBADF);
@@ -185,22 +183,31 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
         return ERRNO(EINVAL);
     }
 
-    fdio_t* io = fd_to_io(fd);
+    const zxs_socket_t* socket = NULL;
+    fdio_t* io = fd_to_socket(fd, &socket);
     if (io == NULL) {
         return ERRNO(EBADF);
     }
 
-    zx_handle_t s2;
-    zx_status_t r = zxsio_accept(io, &s2);
-    fdio_release(io);
-    if (r == ZX_ERR_SHOULD_WAIT) {
-        return ERRNO(EWOULDBLOCK);
-    } else if (r != ZX_OK) {
-        return ERROR(r);
+    zxsio_t* sio = (zxsio_t*)io;
+    if (!(sio->flags & ZXSIO_DID_LISTEN)) {
+        fdio_release(io);
+        return ERROR(ZX_ERR_BAD_STATE);
     }
 
-    fdio_t* io2;
-    if ((io2 = fdio_socket_create_stream(s2, IOFLAG_SOCKET_CONNECTED)) == NULL) {
+    size_t actual = 0u;
+    zxs_socket_t accepted;
+    memset(&accepted, 0, sizeof(accepted));
+    zx_status_t status = zxs_accept(socket, addr, len ? *len : 0u, &actual, &accepted);
+    fdio_release(io);
+    if (status == ZX_ERR_SHOULD_WAIT) {
+        return ERRNO(EWOULDBLOCK);
+    } else if (status != ZX_OK) {
+        return ERROR(status);
+    }
+
+    fdio_t* io2 = NULL;
+    if ((io2 = fdio_socket_create_stream(accepted.socket, IOFLAG_SOCKET_CONNECTED)) == NULL) {
         return ERROR(ZX_ERR_NO_RESOURCES);
     }
 
@@ -208,18 +215,8 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
         io2->ioflag |= IOFLAG_NONBLOCK;
     }
 
-    if (addr != NULL && len != NULL) {
-        zxrio_sockaddr_reply_t reply;
-        if ((r = io2->ops->misc(io2, ZXSIO_GETPEERNAME, 0,
-                                sizeof(zxrio_sockaddr_reply_t), &reply,
-                                sizeof(reply))) < 0) {
-            io->ops->close(io2);
-            fdio_release(io2);
-            return ERROR(r);
-        }
-        socklen_t avail = *len;
-        *len = reply.len;
-        memcpy(addr, &reply.addr, (avail < reply.len) ? avail : reply.len);
+    if (len != NULL) {
+        *len = actual;
     }
 
     int fd2;
@@ -400,7 +397,7 @@ int getsockname(int fd, struct sockaddr* restrict addr, socklen_t* restrict len)
         return ERRNO(EINVAL);
     }
 
-    const zxs_socket_t* socket;
+    const zxs_socket_t* socket = NULL;
     fdio_t* io = fd_to_socket(fd, &socket);
     if (io == NULL) {
         return ERRNO(EBADF);
@@ -421,7 +418,7 @@ int getpeername(int fd, struct sockaddr* restrict addr, socklen_t* restrict len)
         return ERRNO(EINVAL);
     }
 
-    const zxs_socket_t* socket;
+    const zxs_socket_t* socket = NULL;
     fdio_t* io = fd_to_socket(fd, &socket);
     if (io == NULL) {
         return ERRNO(EBADF);
@@ -439,7 +436,7 @@ int getpeername(int fd, struct sockaddr* restrict addr, socklen_t* restrict len)
 __EXPORT
 int getsockopt(int fd, int level, int optname, void* restrict optval,
                socklen_t* restrict optlen) {
-    const zxs_socket_t* socket;
+    const zxs_socket_t* socket = NULL;
     fdio_t* io = fd_to_socket(fd, &socket);
     if (io == NULL) {
         return ERRNO(EBADF);
@@ -482,7 +479,7 @@ int getsockopt(int fd, int level, int optname, void* restrict optval,
 __EXPORT
 int setsockopt(int fd, int level, int optname, const void* optval,
                socklen_t optlen) {
-    const zxs_socket_t* socket;
+    const zxs_socket_t* socket = NULL;
     fdio_t* io = fd_to_socket(fd, &socket);
     if (io == NULL) {
         return ERRNO(EBADF);

@@ -162,15 +162,18 @@ static zx_status_t start_socket_server(async_dispatcher_t* dispatcher,
     return status;
 }
 
-bool basic_test(void) {
-    BEGIN_TEST;
+struct FakeNetstack {
+    async_loop_t* loop;
+    zxs_socket_t socket;
+};
+
+static bool SetUp(FakeNetstack* fake) {
     zx_status_t status = ZX_OK;
 
-    async_loop_t* loop = nullptr;
-    ASSERT_EQ(ZX_OK, async_loop_create(&kAsyncLoopConfigNoAttachToThread, &loop), "");
-    ASSERT_EQ(ZX_OK, async_loop_start_thread(loop, "fake-netstack", nullptr), "");
+    ASSERT_EQ(ZX_OK, async_loop_create(&kAsyncLoopConfigNoAttachToThread, &fake->loop), "");
+    ASSERT_EQ(ZX_OK, async_loop_start_thread(fake->loop, "fake-netstack", nullptr), "");
 
-    async_dispatcher_t* dispatcher = async_loop_get_dispatcher(loop);
+    async_dispatcher_t* dispatcher = async_loop_get_dispatcher(fake->loop);
 
     zx::socket local, remote;
     status = zx::socket::create(ZX_SOCKET_HAS_CONTROL, &local, &remote);
@@ -179,29 +182,83 @@ bool basic_test(void) {
     status = start_socket_server(dispatcher, fbl::move(remote));
     ASSERT_EQ(ZX_OK, status);
 
-    zxs_socket_t socket = {
-        .socket = local.get(),
+    fake->socket = {
+        .socket = local.release(),
         .flags = 0u,
     };
 
+    return true;
+}
+
+static void TearDown(FakeNetstack* fake) {
+    zx_handle_close(fake->socket.socket);
+    async_loop_destroy(fake->loop);
+}
+
+static bool connect_test(void) {
+    BEGIN_TEST;
+
+    FakeNetstack fake;
+    if (!SetUp(&fake))
+        return false;
+    zxs_socket_t* socket = &fake.socket;
+
     struct sockaddr addr;
     memset(&addr, 0, sizeof(addr));
-    status = zxs_connect(&socket, &addr, sizeof(addr));
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_EQ(ZX_OK, zxs_connect(socket, &addr, sizeof(addr)));
 
+    TearDown(&fake);
+
+    END_TEST;
+}
+
+static bool getsockname_test(void) {
+    BEGIN_TEST;
+
+    FakeNetstack fake;
+    if (!SetUp(&fake))
+        return false;
+    zxs_socket_t* socket = &fake.socket;
+
+    struct sockaddr addr;
     memset(&addr, 0, sizeof(addr));
     size_t actual = 0u;
-    status = zxs_getsockname(&socket, &addr, sizeof(addr), &actual);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_EQ(ZX_OK, zxs_getsockname(socket, &addr, sizeof(addr), &actual));
     ASSERT_EQ(sizeof(addr), actual);
     ASSERT_EQ('s', addr.sa_data[4]);
 
+    TearDown(&fake);
+
+    END_TEST;
+}
+
+static bool getpeername_test(void) {
+    BEGIN_TEST;
+
+    FakeNetstack fake;
+    if (!SetUp(&fake))
+        return false;
+    zxs_socket_t* socket = &fake.socket;
+
+    struct sockaddr addr;
     memset(&addr, 0, sizeof(addr));
-    actual = 0u;
-    status = zxs_getpeername(&socket, &addr, sizeof(addr), &actual);
-    ASSERT_EQ(ZX_OK, status);
+    size_t actual = 0u;
+    ASSERT_EQ(ZX_OK, zxs_getpeername(socket, &addr, sizeof(addr), &actual));
     ASSERT_EQ(sizeof(addr), actual);
     ASSERT_EQ('p', addr.sa_data[4]);
+
+    TearDown(&fake);
+
+    END_TEST;
+}
+
+static bool sockopts_test(void) {
+    BEGIN_TEST;
+
+    FakeNetstack fake;
+    if (!SetUp(&fake))
+        return false;
+    zxs_socket_t* socket = &fake.socket;
 
     int ttl = 255;
     zxs_option_t option = {
@@ -211,24 +268,23 @@ bool basic_test(void) {
         .length = sizeof(ttl),
     };
 
-    status = zxs_setsockopts(&socket, &option, 1u);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_EQ(ZX_OK, zxs_setsockopts(socket, &option, 1u));
 
     ttl = 0;
-    actual = 0u;
-    status = zxs_getsockopt(&socket, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl),
-                            &actual);
-    ASSERT_EQ(ZX_OK, status);
+    size_t actual = 0u;
+    ASSERT_EQ(ZX_OK, zxs_getsockopt(socket, IPPROTO_IP, IP_TTL, &ttl,
+                                    sizeof(ttl), &actual));
     ASSERT_EQ(sizeof(int), actual);
     ASSERT_EQ(128, ttl);
 
-    local.reset();
-
-    async_loop_destroy(loop);
+    TearDown(&fake);
 
     END_TEST;
 }
 
 BEGIN_TEST_CASE(zxs_test)
-RUN_TEST(basic_test);
+RUN_TEST(connect_test);
+RUN_TEST(getsockname_test);
+RUN_TEST(getpeername_test);
+RUN_TEST(sockopts_test);
 END_TEST_CASE(zxs_test)

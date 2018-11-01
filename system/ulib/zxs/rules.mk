@@ -15,7 +15,9 @@ MODULE_SRCS += \
 
 MODULE_FIDL_LIBS := system/fidl/fuchsia-net
 
-MODULE_LIBS := system/ulib/zircon
+MODULE_LIBS := \
+    system/ulib/zx \
+    system/ulib/zircon \
 
 MODULE_PACKAGE := static
 
