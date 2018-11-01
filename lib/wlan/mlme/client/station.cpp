@@ -288,7 +288,7 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
 
     BufferWriter elem_w({assoc->elements, reserved_ie_len});
     common::WriteSsid(&elem_w, *join_ctx_->bss()->ssid);
-    RatesWriter rates_writer{{rates->data(), rates->size()}};
+    RatesWriter rates_writer{*rates};
     rates_writer.WriteSupportedRates(&elem_w);
     rates_writer.WriteExtendedSupportedRates(&elem_w);
 
