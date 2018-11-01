@@ -288,10 +288,11 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
   }
 
   DiskCleanupManagerImpl* disk_cleanup_manager_ptr = disk_cleanup_manager.get();
+  auto db_factory = std::make_unique<storage::LevelDbFactory>(
+      environment_, repository_information.cache_path);
+  db_factory->Init();
   auto repository = std::make_unique<LedgerRepositoryImpl>(
-      repository_information.content_path, environment_,
-      std::make_unique<storage::LevelDbFactory>(
-          environment_, repository_information.cache_path),
+      repository_information.content_path, environment_, std::move(db_factory),
       std::move(watchers), std::move(user_sync),
       std::move(disk_cleanup_manager), disk_cleanup_manager_ptr);
   disk_cleanup_manager_ptr->SetPageEvictionDelegate(repository.get());

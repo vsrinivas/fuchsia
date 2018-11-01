@@ -9,6 +9,7 @@
 #include <lib/fxl/files/directory.h>
 #include <lib/fxl/files/path.h>
 #include <lib/fxl/macros.h>
+#include <lib/fxl/strings/string_number_conversions.h>
 
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"
@@ -36,6 +37,9 @@ class LevelDbFactoryTest : public ledger::TestWithEnvironment {
     ASSERT_TRUE(
         files::CreateDirectoryAt(cache_path_.root_fd(), cache_path_.path()));
     ASSERT_TRUE(files::CreateDirectoryAt(db_path_.root_fd(), db_path_.path()));
+
+    db_factory_.Init();
+    RunLoopUntilIdle();
   }
 
  private:
@@ -85,6 +89,117 @@ TEST_F(LevelDbFactoryTest, GetOrCreateDb) {
     EXPECT_EQ(Status::OK, db->Get(handler, "key", &value));
     EXPECT_EQ("value", value);
   });
+}
+
+TEST_F(LevelDbFactoryTest, CreateMultipleDbs) {
+  int N = 5;
+  Status status;
+  std::unique_ptr<Db> db;
+  bool called;
+
+  // Create N LevelDb instances, one after the other. All of them will use the
+  // existing cached instance and then, initialize the creation of a new one.
+  for (int i = 0; i < N; ++i) {
+    ledger::DetachedPath path = db_path_.SubPath(fxl::NumberToString(i));
+    EXPECT_FALSE(files::IsDirectoryAt(path.root_fd(), path.path()));
+
+    db_factory_.GetOrCreateDb(
+        path,
+        callback::Capture(callback::SetWhenCalled(&called), &status, &db));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
+    EXPECT_EQ(Status::OK, status);
+    EXPECT_NE(nullptr, db);
+    // Check that the directory was created.
+    EXPECT_TRUE(files::IsDirectoryAt(path.root_fd(), path.path()));
+  }
+}
+
+TEST_F(LevelDbFactoryTest, CreateMultipleDbsConcurrently) {
+  int N = 5;
+  Status statuses[N];
+  std::unique_ptr<Db> dbs[N];
+  bool called[N];
+
+  // Create N LevelDb instances concurrently. The first one will use the cached
+  // instance, the 2nd one will be queued up to get the cached one when it's
+  // initialized, and all the others will be created directly at the destination
+  // directory.
+  for (int i = 0; i < N; ++i) {
+    ledger::DetachedPath path = db_path_.SubPath(fxl::NumberToString(i));
+    EXPECT_FALSE(files::IsDirectoryAt(path.root_fd(), path.path()));
+
+    db_factory_.GetOrCreateDb(
+        db_path_.SubPath(fxl::NumberToString(i)),
+        callback::Capture(callback::SetWhenCalled(&called[i]), &statuses[i],
+                          &dbs[i]));
+  }
+  RunLoopUntilIdle();
+
+  for (int i = 0; i < N; ++i) {
+    ledger::DetachedPath path = db_path_.SubPath(fxl::NumberToString(i));
+    EXPECT_TRUE(called[i]);
+    EXPECT_EQ(Status::OK, statuses[i]);
+    EXPECT_NE(nullptr, dbs[i]);
+    // Check that the directory was created.
+    EXPECT_TRUE(files::IsDirectoryAt(path.root_fd(), path.path()));
+  }
+}
+
+TEST_F(LevelDbFactoryTest, GetOrCreateDbInCallback) {
+  bool called1;
+  ledger::DetachedPath path1 = db_path_.SubPath("1");
+
+  bool called2;
+  ledger::DetachedPath path2 = db_path_.SubPath("2");
+  Status status2;
+  std::unique_ptr<Db> db2;
+
+  db_factory_.GetOrCreateDb(
+      path1, [&](Status status1, std::unique_ptr<Db> db1) {
+        called1 = true;
+        EXPECT_EQ(Status::OK, status1);
+        EXPECT_NE(nullptr, db1);
+        db_factory_.GetOrCreateDb(
+            path2, callback::Capture(callback::SetWhenCalled(&called2),
+                                     &status2, &db2));
+      });
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called1);
+  EXPECT_TRUE(called2);
+  EXPECT_EQ(Status::OK, status2);
+  EXPECT_NE(nullptr, db2);
+
+  // Check that the directories were created.
+  EXPECT_TRUE(files::IsDirectoryAt(path1.root_fd(), path1.path()));
+  EXPECT_TRUE(files::IsDirectoryAt(path2.root_fd(), path2.path()));
+}
+
+TEST_F(LevelDbFactoryTest, InitWithCachedDbAvailable) {
+  // When an empty LevelDb instance is already cached from a previous
+  // LevelDbFactory execution, don't create a new instance, but use the existing
+  // one directly.
+  scoped_tmpfs::ScopedTmpFS tmpfs;
+  ledger::DetachedPath cache_path(tmpfs.root_fd(), "cache");
+  auto db_factory = std::make_unique<LevelDbFactory>(&environment_, cache_path);
+
+  // The cache directory should not be created, yet.
+  EXPECT_FALSE(files::IsDirectoryAt(cache_path.root_fd(), cache_path.path()));
+
+  // Initialize and wait for the cached instance to be created.
+  db_factory->Init();
+  RunLoopUntilIdle();
+
+  // Close the factory. This will not affect the created cached instance, which
+  // was created under |cache_path|.
+  db_factory.reset();
+  EXPECT_TRUE(files::IsDirectoryAt(cache_path.root_fd(), cache_path.path()));
+
+  // Reset and re-initialize the factory object. It should now use the
+  // previously created instance.
+  db_factory = std::make_unique<LevelDbFactory>(&environment_, cache_path);
+  db_factory->Init();
+  RunLoopUntilIdle();
 }
 
 }  // namespace
