@@ -6,7 +6,7 @@ use failure::bail;
 use fidl::{endpoints::RequestStream, endpoints::ServerEnd};
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEventStream, MlmeProxy};
 use fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeRequest};
-use futures::{prelude::*, select};
+use futures::{Poll, prelude::*, select, stream};
 use futures::channel::mpsc;
 use log::{error, info};
 use pin_utils::pin_mut;
@@ -16,6 +16,7 @@ use wlan_sme::{client as client_sme, DeviceInfo, InfoStream};
 use wlan_sme::client::{BssInfo, ConnectionAttemptId, ConnectResult,
                        ConnectPhyParams, DiscoveryError,
                        EssDiscoveryResult, EssInfo, InfoEvent, ScanTxnId};
+use wlan_sme::timer::TimeEntry;
 use fuchsia_zircon as zx;
 
 use fuchsia_cobalt::CobaltSender;
@@ -55,8 +56,9 @@ pub async fn serve<S>(proxy: MlmeProxy,
 {
     let (sme, mlme_stream, user_stream, info_stream) = Sme::new(device_info);
     let sme = Arc::new(Mutex::new(sme));
+    let time_stream = stream::poll_fn::<TimeEntry<()>, _>(|_| Poll::Pending);
     let mlme_sme = super::serve_mlme_sme(
-        proxy, event_stream, Arc::clone(&sme), mlme_stream, stats_requests);
+        proxy, event_stream, Arc::clone(&sme), mlme_stream, stats_requests, time_stream);
     let sme_fidl = serve_fidl(sme, new_fidl_clients, user_stream, info_stream, cobalt_sender);
     pin_mut!(mlme_sme);
     pin_mut!(sme_fidl);

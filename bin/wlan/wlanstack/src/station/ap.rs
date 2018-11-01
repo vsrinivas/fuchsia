@@ -36,10 +36,10 @@ pub async fn serve<S>(proxy: MlmeProxy,
     -> Result<(), failure::Error>
     where S: Stream<Item = StatsRequest> + Send + Unpin
 {
-    let (sme, mlme_stream, user_stream) = Sme::new(device_info);
+    let (sme, mlme_stream, user_stream, time_stream) = Sme::new(device_info);
     let sme = Arc::new(Mutex::new(sme));
     let mlme_sme = super::serve_mlme_sme(
-        proxy, event_stream, Arc::clone(&sme), mlme_stream, stats_requests);
+        proxy, event_stream, Arc::clone(&sme), mlme_stream, stats_requests, time_stream);
     let sme_fidl = serve_fidl(sme, new_fidl_clients, user_stream);
     pin_mut!(mlme_sme);
     pin_mut!(sme_fidl);

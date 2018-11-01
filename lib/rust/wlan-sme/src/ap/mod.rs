@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod aid;
+mod event;
 mod remote_client;
 mod rsn;
 
@@ -18,10 +19,12 @@ use wlan_rsn::{
 
 use crate::ap::{
     aid::AssociationId,
+    event::Event,
     rsn::{create_wpa2_psk_rsne, is_valid_rsne_subset},
 };
 use crate::{DeviceInfo, MacAddr, MlmeRequest, Ssid};
 use crate::sink::MlmeSink;
+use crate::timer::{self, TimedEvent, Timer};
 
 const DEFAULT_BEACON_PERIOD: u16 = 100;
 const DEFAULT_DTIM_PERIOD: u8 = 1;
@@ -47,12 +50,14 @@ mod internal {
 use self::internal::*;
 
 pub type UserStream<T> = mpsc::UnboundedReceiver<UserEvent<T>>;
+pub type TimeStream = timer::TimeStream<Event>;
 
 enum State<T: Tokens> {
     Idle {
         device_info: DeviceInfo,
         mlme_sink: MlmeSink,
         user_sink: UserSink<T>,
+        timer: Timer<Event>,
     },
     Started {
         bss: InfraBss<T>,
@@ -76,6 +81,7 @@ pub struct Context<T: Tokens> {
     device_info: DeviceInfo,
     mlme_sink: MlmeSink,
     user_sink: UserSink<T>,
+    timer: Timer<Event>,
 }
 
 pub struct ApSme<T: Tokens> {
@@ -102,22 +108,24 @@ pub enum UserEvent<T: Tokens> {
 }
 
 impl<T: Tokens> ApSme<T> {
-    pub fn new(device_info: DeviceInfo) -> (Self, crate::MlmeStream, UserStream<T>) {
+    pub fn new(device_info: DeviceInfo) -> (Self, crate::MlmeStream, UserStream<T>, TimeStream) {
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
         let (user_sink, user_stream) = mpsc::unbounded();
+        let (timer, time_stream) = timer::create_timer();
         let sme = ApSme {
             state: Some(State::Idle {
                 device_info,
                 mlme_sink: MlmeSink::new(mlme_sink),
                 user_sink: UserSink::new(user_sink),
+                timer,
             })
         };
-        (sme, mlme_stream, user_stream)
+        (sme, mlme_stream, user_stream, time_stream)
     }
 
     pub fn on_start_command(&mut self, config: Config, token: T::StartToken) {
         self.state = self.state.take().map(|mut state| match state {
-            State::Idle { device_info, mlme_sink, user_sink } => {
+            State::Idle { device_info, mlme_sink, user_sink, timer } => {
                 let rsn_cfg = create_rsn_cfg(config.password.clone());
                 let req = create_start_request(&config, rsn_cfg.as_ref());
                 mlme_sink.send(MlmeRequest::Start(req));
@@ -136,7 +144,8 @@ impl<T: Tokens> ApSme<T> {
                             device_info,
                             mlme_sink,
                             user_sink,
-                        },
+                            timer,
+                        }
                     }
                 }
             }
@@ -164,6 +173,7 @@ impl<T: Tokens> ApSme<T> {
                     device_info: bss.ctx.device_info,
                     mlme_sink: bss.ctx.mlme_sink,
                     user_sink: bss.ctx.user_sink,
+                    timer: bss.ctx.timer,
                 }
             }
         });
@@ -171,6 +181,8 @@ impl<T: Tokens> ApSme<T> {
 }
 
 impl<T: Tokens> super::Station for ApSme<T> {
+    type Event = Event;
+
     fn on_mlme_event(&mut self, event: MlmeEvent) {
         debug!("received MLME event: {:?}", event);
         self.state.as_mut().map(|state| match state {
@@ -193,6 +205,13 @@ impl<T: Tokens> super::Station for ApSme<T> {
                 }
                 _ => warn!("unsupported MlmeEvent type {:?}; ignoring", event),
             }
+        });
+    }
+
+    fn on_timeout(&mut self, timed_event: TimedEvent<Event>) {
+        self.state.as_mut().map(|state| match state {
+            State::Idle { .. } => debug!("received timeout while ApSme is idle"),
+            State::Started { ref mut bss } => bss.handle_timeout(timed_event),
         });
     }
 }
@@ -303,6 +322,10 @@ impl<T: Tokens> InfraBss<T> {
             None => bail!("client {:02X?} not found; ignoring EapolInd msg", client_addr),
         }
     }
+
+    fn handle_timeout(&mut self, _timed_event: TimedEvent<Event>) {
+        unimplemented!();
+    }
 }
 
 fn validate_s_rsne(s_rsne: &Rsne, a_rsne: &Rsne) -> Result<(), failure::Error> {
@@ -380,7 +403,7 @@ mod tests {
 
     #[test]
     fn authenticate_while_sme_is_idle() {
-        let (mut sme, mut mlme_stream, _) = create_sme();
+        let (mut sme, mut mlme_stream, _, _) = create_sme();
         let client = Client::default();
         sme.on_mlme_event(client.create_auth_ind(fidl_mlme::AuthenticationTypes::OpenSystem));
 
@@ -392,7 +415,7 @@ mod tests {
 
     #[test]
     fn ap_starting() {
-        let (mut sme, mut mlme_stream, _) = create_sme();
+        let (mut sme, mut mlme_stream, _, _) = create_sme();
         sme.on_start_command(unprotected_config(), 10);
 
         let msg = mlme_stream.try_next().unwrap().expect("expect mlme message");
@@ -410,7 +433,7 @@ mod tests {
 
     #[test]
     fn client_authenticates_supported_authentication_type() {
-        let (mut sme, mut mlme_stream, _) = start_unprotected_ap();
+        let (mut sme, mut mlme_stream, _, _) = start_unprotected_ap();
         let client = Client::default();
         sme.on_mlme_event(client.create_auth_ind(fidl_mlme::AuthenticationTypes::OpenSystem));
         client.verify_auth_resp(&mut mlme_stream, fidl_mlme::AuthenticateResultCodes::Success);
@@ -418,7 +441,7 @@ mod tests {
 
     #[test]
     fn client_authenticates_unsupported_authentication_type() {
-        let (mut sme, mut mlme_stream, _) = start_unprotected_ap();
+        let (mut sme, mut mlme_stream, _, _) = start_unprotected_ap();
         let client = Client::default();
         let auth_ind = client.create_auth_ind(fidl_mlme::AuthenticationTypes::FastBssTransition);
         sme.on_mlme_event(auth_ind);
@@ -427,7 +450,7 @@ mod tests {
 
     #[test]
     fn client_associates_unprotected_network() {
-        let (mut sme, mut mlme_stream, _) = start_unprotected_ap();
+        let (mut sme, mut mlme_stream, _, _) = start_unprotected_ap();
         let client = Client::default();
         sme.on_mlme_event(client.create_auth_ind(fidl_mlme::AuthenticationTypes::OpenSystem));
         client.verify_auth_resp(&mut mlme_stream, fidl_mlme::AuthenticateResultCodes::Success);
@@ -438,7 +461,7 @@ mod tests {
 
     #[test]
     fn client_associates_valid_rsne() {
-        let (mut sme, mut mlme_stream, _) = start_protected_ap();
+        let (mut sme, mut mlme_stream, _, _) = start_protected_ap();
         let client = Client::default();
         client.authenticate_and_drain_mlme(&mut sme, &mut mlme_stream);
 
@@ -449,7 +472,7 @@ mod tests {
 
     #[test]
     fn client_associates_invalid_rsne() {
-        let (mut sme, mut mlme_stream, _) = start_protected_ap();
+        let (mut sme, mut mlme_stream, _, _) = start_protected_ap();
         let client = Client::default();
         client.authenticate_and_drain_mlme(&mut sme, &mut mlme_stream);
 
@@ -460,7 +483,7 @@ mod tests {
 
     #[test]
     fn client_restarts_authentication_flow() {
-        let (mut sme, mut mlme_stream, _) = start_unprotected_ap();
+        let (mut sme, mut mlme_stream, _, _) = start_unprotected_ap();
         let client = Client::default();
         client.authenticate_and_drain_mlme(&mut sme, &mut mlme_stream);
         client.associate_and_drain_mlme(&mut sme, &mut mlme_stream, None);
@@ -474,7 +497,7 @@ mod tests {
 
     #[test]
     fn multiple_clients_associate() {
-        let (mut sme, mut mlme_stream, _) = start_protected_ap();
+        let (mut sme, mut mlme_stream, _, _) = start_protected_ap();
         let client1 = Client::default();
         let client2 = Client { addr: CLIENT_ADDR2 };
 
@@ -584,26 +607,30 @@ mod tests {
         }
     }
 
-    fn start_protected_ap() -> (ApSme<FakeTokens>, crate::MlmeStream, UserStream<FakeTokens>) {
+    fn start_protected_ap() -> (ApSme<FakeTokens>, crate::MlmeStream, UserStream<FakeTokens>,
+                                TimeStream) {
         start_ap(true)
     }
 
-    fn start_unprotected_ap() -> (ApSme<FakeTokens>, crate::MlmeStream, UserStream<FakeTokens>) {
+    fn start_unprotected_ap() -> (ApSme<FakeTokens>, crate::MlmeStream, UserStream<FakeTokens>,
+                                  TimeStream) {
         start_ap(false)
     }
 
-    fn start_ap(protected: bool) -> (ApSme<FakeTokens>, crate::MlmeStream, UserStream<FakeTokens>) {
-        let (mut sme, mut mlme_stream, event_stream) = create_sme();
+    fn start_ap(protected: bool) -> (ApSme<FakeTokens>, crate::MlmeStream, UserStream<FakeTokens>,
+                                     TimeStream) {
+
+        let (mut sme, mut mlme_stream, event_stream, timeout_stream) = create_sme();
         let config = if protected { protected_config() } else { unprotected_config() };
         sme.on_start_command(config, 10);
         match mlme_stream.try_next().unwrap().expect("expect mlme message") {
             MlmeRequest::Start(..) => {} // expected path
             _ => panic!("expect start AP to MLME"),
         }
-        (sme, mlme_stream, event_stream)
+        (sme, mlme_stream, event_stream, timeout_stream)
     }
 
-    fn create_sme() -> (ApSme<FakeTokens>, MlmeStream, UserStream<FakeTokens>) {
+    fn create_sme() -> (ApSme<FakeTokens>, MlmeStream, UserStream<FakeTokens>, TimeStream) {
         ApSme::new(DeviceInfo {
             addr: AP_ADDR,
             bands: vec![],

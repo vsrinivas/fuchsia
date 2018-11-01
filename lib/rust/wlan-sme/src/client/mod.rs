@@ -27,6 +27,7 @@ use self::state::{ConnectCommand, State};
 use crate::client::bss::{get_best_bss, get_channel_map, get_standard_map, group_networks};
 use crate::client::clone_utils::clone_bss_desc;
 use crate::sink::{InfoSink, MlmeSink};
+use crate::timer::TimedEvent;
 
 pub use self::bss::{BssInfo, EssInfo};
 pub use self::scan::{DiscoveryError};
@@ -247,6 +248,8 @@ impl<T: Tokens> ClientSme<T> {
 }
 
 impl<T: Tokens> super::Station for ClientSme<T> {
+    type Event = ();
+
     fn on_mlme_event(&mut self, event: MlmeEvent) {
         self.state = self.state.take().map(|state| match event {
             MlmeEvent::OnScanResult { result } => {
@@ -338,6 +341,10 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                 state.on_mlme_event(other, &mut self.context)
             }
         });
+    }
+
+    fn on_timeout(&mut self, _timed_event: TimedEvent<()>) {
+        unimplemented!();
     }
 }
 

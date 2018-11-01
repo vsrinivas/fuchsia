@@ -1,3 +1,7 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 use failure::{bail, ensure};
 use fidl_fuchsia_wlan_mlme as fidl_mlme;
 use log::error;
@@ -8,12 +12,13 @@ use wlan_rsn::{
     rsna::{UpdateSink, SecAssocUpdate},
 };
 
-use crate::ap::{
-    aid::{self, AssociationId},
-    Context,
-    Tokens
+use crate::{
+    MacAddr, MlmeRequest,
+    ap::{
+        Context, Tokens,
+        aid::{self, AssociationId},
+    },
 };
-use crate::{MacAddr, MlmeRequest};
 
 #[derive(Debug)]
 pub struct RemoteClient {

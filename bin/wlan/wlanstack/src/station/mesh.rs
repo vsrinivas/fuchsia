@@ -8,8 +8,10 @@ use {
     fidl_fuchsia_wlan_sme as fidl_sme,
     futures::{
         channel::{mpsc, oneshot},
+        Poll,
         prelude::*,
         select,
+        stream,
     },
     log::error,
     pin_utils::pin_mut,
@@ -17,7 +19,10 @@ use {
         marker::Unpin,
         sync::{Arc, Mutex},
     },
-    wlan_sme::mesh::{self as mesh_sme, UserEvent},
+    wlan_sme::{
+        mesh::{self as mesh_sme, UserEvent},
+        timer::TimeEntry,
+    },
     crate::{
         future_util::ConcurrentTasks,
         Never,
@@ -43,8 +48,9 @@ pub async fn serve<S>(proxy: MlmeProxy,
 {
     let (sme, mlme_stream, user_stream) = Sme::new();
     let sme = Arc::new(Mutex::new(sme));
+    let time_stream = stream::poll_fn::<TimeEntry<()>, _>(|_| Poll::Pending);
     let mlme_sme = super::serve_mlme_sme(
-        proxy, event_stream, Arc::clone(&sme), mlme_stream, stats_requests);
+        proxy, event_stream, Arc::clone(&sme), mlme_stream, stats_requests, time_stream);
     let sme_fidl = serve_fidl(sme, new_fidl_clients, user_stream);
     pin_mut!(mlme_sme);
     pin_mut!(sme_fidl);

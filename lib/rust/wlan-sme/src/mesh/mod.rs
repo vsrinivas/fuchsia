@@ -8,7 +8,8 @@ use {
     log::{error},
     crate::{
         MlmeRequest,
-        sink::MlmeSink
+        sink::MlmeSink,
+        timer::TimedEvent,
     },
 };
 
@@ -97,6 +98,8 @@ fn create_start_request(config: &Config) -> fidl_mlme::StartRequest {
 }
 
 impl<T: Tokens> super::Station for MeshSme<T> {
+    type Event = ();
+
     fn on_mlme_event(&mut self, event: MlmeEvent) {
         self.state = Some(match self.state.take().unwrap() {
             State::Idle => State::Idle,
@@ -116,6 +119,10 @@ impl<T: Tokens> super::Station for MeshSme<T> {
             },
             State::Joined => State::Joined,
         });
+    }
+
+    fn on_timeout(&mut self, _timed_event: TimedEvent<()>) {
+        unimplemented!();
     }
 }
 

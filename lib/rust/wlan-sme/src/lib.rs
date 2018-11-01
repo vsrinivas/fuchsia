@@ -8,11 +8,13 @@ pub mod ap;
 pub mod client;
 pub mod mesh;
 mod sink;
+pub mod timer;
 
 use fidl_fuchsia_wlan_mlme as fidl_mlme;
 use futures::channel::mpsc;
 
 use crate::client::InfoEvent;
+use crate::timer::TimedEvent;
 
 pub type Ssid = Vec<u8>;
 pub type MacAddr = [u8; 6];
@@ -38,7 +40,10 @@ pub enum MlmeRequest {
 }
 
 pub trait Station {
+    type Event;
+
     fn on_mlme_event(&mut self, event: fidl_mlme::MlmeEvent);
+    fn on_timeout(&mut self, timed_event: TimedEvent<Self::Event>);
 }
 
 pub type MlmeStream = mpsc::UnboundedReceiver<MlmeRequest>;

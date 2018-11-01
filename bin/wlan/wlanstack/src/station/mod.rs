@@ -9,6 +9,7 @@ pub mod mesh;
 use failure::{bail, format_err};
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent, MlmeEventStream, MlmeProxy};
 use fidl_fuchsia_wlan_stats::IfaceStats;
+use fuchsia_async as fasync;
 use futures::channel::mpsc;
 use futures::prelude::*;
 use futures::select;
@@ -16,26 +17,32 @@ use log::warn;
 use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
-use wlan_sme::{Station, MlmeRequest, MlmeStream};
+use wlan_sme::{Station, MlmeRequest, MlmeStream, timer::{TimeEntry, TimedEvent}};
 
 use crate::fidl_util::is_peer_closed;
 use crate::Never;
 use crate::stats_scheduler::StatsRequest;
 
 // The returned future successfully terminates when MLME closes the channel
-async fn serve_mlme_sme<STA, SRS>(proxy: MlmeProxy, mut event_stream: MlmeEventStream,
-                                  station: Arc<Mutex<STA>>, mut mlme_stream: MlmeStream,
-                                  stats_requests: SRS)
+async fn serve_mlme_sme<STA, SRS, TS>(proxy: MlmeProxy, mut event_stream: MlmeEventStream,
+                                      station: Arc<Mutex<STA>>, mut mlme_stream: MlmeStream,
+                                      stats_requests: SRS, time_stream: TS)
     -> Result<(), failure::Error>
     where STA: Station,
-          SRS: Stream<Item = StatsRequest> + Unpin
+          SRS: Stream<Item = StatsRequest> + Unpin,
+          TS: Stream<Item = TimeEntry<<STA as wlan_sme::Station>::Event>> + Unpin,
 {
     let (mut stats_sender, stats_receiver) = mpsc::channel(1);
     let stats_fut = serve_stats(proxy.clone(), stats_requests, stats_receiver);
     pin_mut!(stats_fut);
+
+    let mut timeout_stream = make_timer_stream(time_stream);
+
     loop {
         let mut mlme_event = event_stream.next();
         let mut mlme_req = mlme_stream.next();
+        let mut timeout = timeout_stream.next();
+
         select! {
             mlme_event => match mlme_event {
                 // Handle the stats response separately since it is SME-independent
@@ -53,9 +60,21 @@ async fn serve_mlme_sme<STA, SRS>(proxy: MlmeProxy, mut event_stream: MlmeEventS
                 },
                 None => bail!("Stream of requests from SME to MLME has ended unexpectedly"),
             },
+            timeout => match timeout {
+                Some(timed_event) => station.lock().unwrap().on_timeout(timed_event),
+                None => bail!("SME timer stream has ended unexpectedly"),
+            },
             stats_fut => stats_fut?.into_any(),
         }
     }
+}
+
+fn make_timer_stream<E>(time_stream: impl Stream<Item = TimeEntry<E>>)
+    -> impl Stream<Item = TimedEvent<E>> {
+
+    time_stream
+        .map(|(deadline, timed_event)| fasync::Timer::new(deadline).map(|_| timed_event))
+        .buffer_unordered(usize::max_value())
 }
 
 fn forward_mlme_request(req: MlmeRequest, proxy: &MlmeProxy) -> Result<(), fidl::Error> {
@@ -102,4 +121,54 @@ async fn serve_stats<S>(proxy: MlmeProxy, mut stats_requests: S,
         };
     }
     Err(format_err!("Stream of stats requests has ended unexpectedly"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use {
+        fuchsia_zircon::{self as zx, prelude::DurationNum},
+        futures::channel::mpsc::{self, UnboundedSender},
+        pin_utils::pin_mut,
+        futures::Poll,
+    };
+
+    type Event = u32;
+
+    #[test]
+    fn test_timer() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let fut = async {
+            let (timer, time_stream) = mpsc::unbounded::<TimeEntry<Event>>();
+            let mut timeout_stream = make_timer_stream(time_stream);
+            let now = zx::Time::get(zx::ClockId::Monotonic);
+            schedule(&timer, now + 40.millis(), 0);
+            schedule(&timer, now + 10.millis(), 1);
+            schedule(&timer, now + 20.millis(), 2);
+            schedule(&timer, now + 30.millis(), 3);
+
+            let mut events = vec![];
+            for _ in 0u32..4 {
+                match await!(timeout_stream.next()) {
+                    Some(event) => events.push(event.event),
+                    None => panic!("timer terminates prematurely"),
+                }
+            }
+            events
+        };
+        pin_mut!(fut);
+        for _ in 0u32..4 {
+            assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+            assert!(exec.wake_next_timer().is_some());
+        }
+        match exec.run_until_stalled(&mut fut) {
+            Poll::Ready(events) => assert_eq!(events, vec![1, 2, 3, 0]),
+            Poll::Pending => panic!("expect future to complete"),
+        }
+    }
+
+    fn schedule(timer: &UnboundedSender<TimeEntry<Event>>, deadline: zx::Time, event: Event) {
+        let entry = (deadline, TimedEvent { id: 0, event });
+        timer.unbounded_send(entry).expect("expect send successful");
+    }
 }

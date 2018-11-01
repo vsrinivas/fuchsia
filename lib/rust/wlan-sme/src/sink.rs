@@ -4,6 +4,7 @@
 
 use futures::channel::mpsc;
 
+#[derive(Debug)]
 pub struct UnboundedSink<T> {
     sink: mpsc::UnboundedSender<T>,
 }
