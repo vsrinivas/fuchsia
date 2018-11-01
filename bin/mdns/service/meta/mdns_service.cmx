@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.net.LegacySocketProvider",
             "fuchsia.netstack.Netstack"
         ]
     }
