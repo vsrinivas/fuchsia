@@ -23,6 +23,8 @@ use {
     fuchsia_syslog::{self as syslog, fx_log, fx_log_info},
     std::collections::HashMap,
     std::process,
+    std::thread::sleep,
+    std::time::Duration,
     structopt::StructOpt,
 };
 
@@ -38,7 +40,7 @@ fn main() -> Result<(), Error> {
     if opt.connect_test_enabled && opt.target_ssid.is_empty() {
         bail!("A target_ssid must be provided for connect tests");
     }
-    if !opt.scan_test_enabled && !opt.connect_test_enabled {
+    if !opt.scan_test_enabled && !opt.connect_test_enabled && !opt.disconnect_test_enabled {
         bail!("At least one api must be selected for testing");
     }
 
@@ -47,6 +49,7 @@ fn main() -> Result<(), Error> {
     test_results.num_repetitions = opt.repetitions;
     test_results.scan_test_enabled = opt.scan_test_enabled;
     test_results.connect_test_enabled = opt.connect_test_enabled;
+    test_results.disconnect_test_enabled = opt.disconnect_test_enabled;
 
     let mut test_pass = true;
     if let Err(e) = run_test(opt, &mut test_results) {
@@ -66,6 +69,7 @@ fn main() -> Result<(), Error> {
 fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
     let mut scan_test_pass = true;
     let mut connect_test_pass = true;
+    let mut disconnect_test_pass = true;
     let mut exec = fasync::Executor::new().context("Error creating event loop")?;
     let wlan_svc =
         connect_to_service::<DeviceServiceMarker>().context("Failed to connect to wlan_service")?;
@@ -110,6 +114,20 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                         _ => {}
                     };
                 }
+
+                if opt.disconnect_test_enabled {
+                    let result = await!(wlan_service_util::disconnect_from_network(
+                        &wlaniface.sme_proxy
+                    ));
+                    match result {
+                        Ok(()) => {
+                            wlaniface.report.num_successful_disconnects += 1;
+                            wlaniface.report.last_successful_disconnect_attempt = i + 1;
+                        }
+                        _ => {}
+                    };
+                }
+                sleep(Duration::from_millis(opt.wait_time_ms));
             }
         }
 
@@ -121,6 +139,11 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                 && (wlaniface.report.num_successful_connects < opt.repetitions)
             {
                 connect_test_pass = false;
+            }
+            if opt.disconnect_test_enabled
+                && (wlaniface.report.num_successful_disconnects < opt.repetitions)
+            {
+                disconnect_test_pass = false;
             }
         }
 
@@ -135,7 +158,10 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
     if opt.connect_test_enabled && !connect_test_pass {
         error_string.push_str(" Connect Failed");
     }
-    if !(scan_test_pass && connect_test_pass) {
+    if opt.disconnect_test_enabled && !disconnect_test_pass {
+        error_string.push_str(" Disconnect Failed");
+    }
+    if !(scan_test_pass && connect_test_pass && disconnect_test_pass) {
         bail!(error_string)
     }
 
@@ -149,6 +175,9 @@ struct TestReport {
 
     num_successful_connects: u128,
     last_successful_connection_attempt: u128,
+
+    num_successful_disconnects: u128,
+    last_successful_disconnect_attempt: u128,
 }
 
 impl TestReport {
@@ -159,6 +188,9 @@ impl TestReport {
 
             num_successful_connects: 0,
             last_successful_connection_attempt: 0,
+
+            num_successful_disconnects: 0,
+            last_successful_disconnect_attempt: 0,
         }
     }
 }
@@ -186,6 +218,7 @@ struct TestResults {
     num_repetitions: u128,
     scan_test_enabled: bool,
     connect_test_enabled: bool,
+    disconnect_test_enabled: bool,
 
     #[serde(flatten)]
     iface_objects: HashMap<u16, WlanIface>,
