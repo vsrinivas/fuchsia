@@ -14,7 +14,7 @@ class Collection final : public Type {
   // Construct with fxl::MakeRefCounted().
 
   // Symbol overrides.
-  const Collection* AsCollection() const;
+  const Collection* AsCollection() const override;
 
   // Data members. These should be DataMember objects.
   const std::vector<LazySymbol>& data_members() const { return data_members_; }
@@ -47,6 +47,9 @@ class Collection final : public Type {
 
   explicit Collection(int kind);
   virtual ~Collection();
+
+  // Symbol protected overrides.
+  std::string ComputeFullName() const override;
 
   std::vector<LazySymbol> data_members_;
   std::vector<LazySymbol> inherited_from_;

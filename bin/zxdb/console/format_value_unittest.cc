@@ -449,6 +449,15 @@ TEST_F(FormatValueTest, Structs) {
       "0x12}, "
       "(Foo) second = {(int32_t) a = 0x330033, (int32_t&) b = 0x1100 = 0x12}}",
       SyncFormatValue(pair_value, opts));
+
+  // Test an anonymous struct. Clang will generate structs with no names for
+  // things like closures.
+  auto anon_struct = fxl::MakeRefCounted<Collection>(Symbol::kTagStructureType);
+  auto anon_struct_ptr = fxl::MakeRefCounted<ModifiedType>(Symbol::kTagPointerType,
+      LazySymbol(anon_struct));
+  ExprValue anon_value(anon_struct_ptr, {
+             0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
+  EXPECT_EQ("((anon struct)*) 0x1100", SyncFormatValue(anon_value, opts));
 }
 
 // GDB and LLDB both print all members of a union and accept the possibility
