@@ -553,6 +553,6 @@ template("clang_host_toolchain_suite") {
     toolchain_os = host_os
 
     with_shared = false
-    use_strip = true
+    use_strip = false
   }
 }
