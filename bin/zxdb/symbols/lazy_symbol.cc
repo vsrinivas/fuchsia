@@ -9,6 +9,13 @@
 
 namespace zxdb {
 
+namespace {
+
+// Singleton null symbol to return when a LazySymbol is invalid.
+fxl::RefPtr<Symbol> null_symbol;
+
+}  // namespace
+
 LazySymbol::LazySymbol() = default;
 LazySymbol::LazySymbol(const LazySymbol& other) = default;
 LazySymbol::LazySymbol(LazySymbol&& other) = default;
@@ -25,10 +32,15 @@ LazySymbol& LazySymbol::operator=(LazySymbol&& other) = default;
 
 const Symbol* LazySymbol::Get() const {
   if (!symbol_.get()) {
-    if (is_valid())
+    if (is_valid()) {
       symbol_ = factory_->CreateSymbol(factory_data_ptr_, factory_data_offset_);
-    else
-      symbol_ = fxl::MakeRefCounted<Symbol>();
+    } else {
+      // Return the null symbol. Don't populate symbol_ for this case because
+      // it will mean is_valid() will always return true.
+      if (!null_symbol)
+        null_symbol = fxl::MakeRefCounted<Symbol>();
+      return null_symbol.get();
+    }
   }
   return symbol_.get();
 }

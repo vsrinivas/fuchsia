@@ -77,6 +77,27 @@ TEST(ModifiedType, GetFullName) {
   typedef_etc->set_assigned_name("Foo");
   EXPECT_EQ("Foo", typedef_etc->GetFullName());
   EXPECT_EQ(kPtrSize, typedef_etc->byte_size());
+
+  // typedef void VoidType;
+  auto typedef_void = fxl::MakeRefCounted<ModifiedType>(
+      Symbol::kTagTypedef, LazySymbol());
+  typedef_void->set_assigned_name("VoidType");
+  EXPECT_EQ("VoidType", typedef_void->GetFullName());
+
+  // void*
+  auto void_ptr = fxl::MakeRefCounted<ModifiedType>(
+      Symbol::kTagPointerType, LazySymbol());
+  EXPECT_EQ("void*", void_ptr->GetFullName());
+
+  // const void
+  auto const_void = fxl::MakeRefCounted<ModifiedType>(Symbol::kTagConstType,
+                                                     LazySymbol());
+  EXPECT_EQ("const void", const_void->GetFullName());
+
+  // const void*
+  auto const_void_ptr = fxl::MakeRefCounted<ModifiedType>(
+      Symbol::kTagPointerType, LazySymbol(const_void));
+  EXPECT_EQ("const void*", const_void_ptr->GetFullName());
 }
 
 }  // namespace zxdb

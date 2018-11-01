@@ -32,6 +32,10 @@ class ModifiedType final : public Type {
   // The underlying modified type. Note that there is no setter for this, it
   // must be supplied in the constructor since the setter will decode the
   // modified type if necessary to compute its size.
+  //
+  // This may be null. This means the modified type is "void" (e.g. a pointer
+  // modifying nothing is a void*, and a typedef of nothing is a typedef for
+  // void).
   const LazySymbol& modified() const { return modified_; }
 
  private:

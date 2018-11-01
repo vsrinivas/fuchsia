@@ -59,38 +59,49 @@ bool ModifiedType::IsTypeModifierTag(int tag) {
 
 std::string ModifiedType::ComputeFullName() const {
   static const char kUnknown[] = "<unknown>";
-  const Type* modified_type = modified().Get()->AsType();
-  if (!modified_type)
-    return kUnknown;
+
+  // Typedefs are special and just use the assigned name. Every other modifier
+  // below is based on the underlying type name.
+  if (tag() == kTagTypedef)
+    return GetAssignedName();
+
+  const Type* modified_type = nullptr;
+  std::string modified_name;
+  if (!modified()) {
+    // No modified type means "void".
+    modified_name = "void";
+  } else {
+    if ((modified_type = modified().Get()->AsType()))
+      modified_name = modified_type->GetFullName();
+    else
+      modified_name = kUnknown;  // Symbols likely corrupt.
+  }
 
   switch (tag()) {
     case kTagConstType:
-      if (modified_type->AsModifiedType()) {
+      if (modified_type && modified_type->AsModifiedType()) {
         // When the underlying type is another modifier, add it to the end,
         // e.g. a "constant pointer to a nonconstant int" is "int* const".
-        return modified_type->GetFullName() + " const";
+        return modified_name + " const";
       } else {
         // Though the above formatting is always valid, most people write a
         // "constant int" / "pointer to a constant int" as either "const int" /
         // "const int*" so special-case.
-        return "const " + modified_type->GetFullName();
+        return "const " + modified_name;
       }
     case kTagPointerType:
-      return modified_type->GetFullName() + "*";
+      return modified_name + "*";
     case kTagReferenceType:
-      return modified_type->GetFullName() + "&";
+      return modified_name + "&";
     case kTagRestrictType:
-      return "restrict " + modified_type->GetFullName();
+      return "restrict " + modified_name;
     case kTagRvalueReferenceType:
-      return modified_type->GetFullName() + "&&";
-    case kTagTypedef:
-      // Typedefs just use the assigned name.
-      return GetAssignedName();
+      return modified_name + "&&";
     case kTagVolatileType:
-      return "volatile " + modified_type->GetFullName();
+      return "volatile " + modified_name;
     case kTagImportedDeclaration:
       // Using statements use the underlying name.
-      return modified_type->GetFullName();
+      return modified_name;
   }
   return kUnknown;
 }
