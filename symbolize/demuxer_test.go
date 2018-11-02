@@ -43,9 +43,9 @@ func (t *triggerTester) HandleDump(dump *DumpfileElement) {
 }
 
 func TestDumpfile(t *testing.T) {
-	msg := "[123.456] 1234.5678> {{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
-		"[123.456] 1234.5678> {{{mmap:0x12345000:849596:load:1:rx:0x0}}}\n" +
-		"[123.456] 1234.5678> {{{dumpfile:llvm-cov:test}}}\n"
+	msg := "[123.456] 01234.5678> {{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
+		"[123.456] 1234.05678> {{{mmap:0x12345000:849596:load:1:rx:0x0}}}\n" +
+		"[123.456] 01234.05678> {{{dumpfile:llvm-cov:test}}}\n"
 
 	symbo := newMockSymbolizer([]mockModule{})
 	repo := NewRepo()
@@ -247,10 +247,10 @@ func ExampleNewBacktracePresenter() {
 
 	// define a little message that will need to be parsed
 	msg := "[131.200] 1234.5678> {{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
-		"[131.301] 1234.5678> {{{module:2:libcrypto.so:elf:12ef5c50b3ed3599c07c02d4509311be}}}\n" +
+		"[131.301] 1234.5678> {{{module:9:libcrypto.so:elf:12ef5c50b3ed3599c07c02d4509311be}}}\n" +
 		"[131.301] 1234.5678> {{{module:3:libmissing.no:elf:deadbeef}}}\n" +
 		"[131.402] 1234.5678> {{{mmap:0x12345000:0xcf6bc:load:1:rx:0x0}}}\n" +
-		"[131.503] 1234.5678> {{{mmap:0x23456000:0x83c80:load:2:rx:0x80000}}}\n" +
+		"[131.503] 1234.5678> {{{mmap:0x23456000:0x83c80:load:09:rx:0x80000}}}\n" +
 		"[131.503] 1234.5678> {{{mmap:0x34567000:0x1000:load:3:rx:0x0}}}\n" +
 		"[131.604] 1234.5678> Backtrace:\n" +
 		"[131.604] 1234.5678> {{{bt:0:0x12388680}}}\n" +
@@ -297,6 +297,7 @@ func ExampleBadAddr() {
 	// define a little message that will need to be parsed
 	msg := "[131.200] 1234.5678> {{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
 		"[131.402] 1234.5678> {{{mmap:0x12345000:0xcf6bc:load:1:rx:0x0}}}\n" +
+		"[131.402] 1234.5678> {{{mmap:0x12345000:0xcf6bc:load:01:rx:0x0}}}\n" +
 		"[131.604] 1234.5678> {{{pc:0x123879ff}}}\n" +
 		"[131.605] 1234.5678> {{{pc:0x123879c0}}}\n" +
 		"[131.606] 1234.5678> {{{pc:0x12388680}}}\n"

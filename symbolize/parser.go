@@ -10,10 +10,15 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 )
 
 // TODO: Implement a reflection based means of automatically doing these conversions.
 func str2dec(what string) uint64 {
+	what = strings.TrimLeft(what, "0")
+	if len(what) == 0 {
+		return 0
+	}
 	out, err := strconv.ParseUint(what, 10, 64)
 	if err != nil {
 		panic(err.Error())
@@ -22,6 +27,18 @@ func str2dec(what string) uint64 {
 }
 
 func str2int(what string) uint64 {
+	// str2int assumes that the |what| matches either decRegex or ptrRegex.
+	// If we come across a hex value, we don't want to trim the leading zero.
+	// If we come across anything else and it still matched one of dec or ptr
+	// regexes then we want to trim leading zeros. This lets us match things like
+	// "01234" which is important for pids and things like that but also prevents
+	// panics like those seen in TC-273.
+	if !strings.HasPrefix(what, "0x") {
+		what = strings.TrimLeft(what, "0")
+		if len(what) == 0 {
+			return 0
+		}
+	}
 	out, err := strconv.ParseUint(what, 0, 64)
 	if err != nil {
 		panic(err.Error())
