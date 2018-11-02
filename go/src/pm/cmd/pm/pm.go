@@ -20,6 +20,7 @@ import (
 	"fuchsia.googlesource.com/pm/cmd/pm/genkey"
 	initcmd "fuchsia.googlesource.com/pm/cmd/pm/init"
 	"fuchsia.googlesource.com/pm/cmd/pm/install"
+	"fuchsia.googlesource.com/pm/cmd/pm/newrepo"
 	"fuchsia.googlesource.com/pm/cmd/pm/publish"
 	"fuchsia.googlesource.com/pm/cmd/pm/seal"
 	"fuchsia.googlesource.com/pm/cmd/pm/serve"
@@ -30,24 +31,26 @@ import (
 )
 
 const usage = `Usage: %s [-k key] [-m manifest] [-o output dir] [-t tempdir] <command>
-Commands
+
+Package Commands:
     init     - initialize a package meta directory in the standard form
     genkey   - generate a new private key
-
     build    - perform update, sign and seal in order
     update   - update the merkle roots in meta/contents
     sign     - sign a package with the given key
     seal     - seal package metadata into a signed meta.far
     verify   - verify metadata signature against the embedded public key
     archive  - construct a single .far representation of the package
-    expand   - expand a single .far representation of a package into a repository
-    publish  - publish the package to a local TUF directory
-    serve    - serve a TUF directory of packages
+
+Repository Commands:
+    newrepo  - create a new local repostory
+    publish  - publish a package to a local repository
+    serve    - serve a local repository
+    expand   - (deprecated) expand an archive
+
+Tools:
     snapshot - capture metadata from multiple packages in a single file
     delta    - compare two snapshot files
-
-Dev Only:
-    install  - install a single .far representation of the package
 `
 
 var tracePath = flag.String("trace", "", "write runtime trace to `file`")
@@ -126,6 +129,9 @@ func doMain() int {
 
 	case "verify":
 		err = verify.Run(cfg, flag.Args()[1:])
+
+	case "newrepo":
+		err = newrepo.Run(cfg, flag.Args()[1:])
 
 	default:
 		flag.Usage()

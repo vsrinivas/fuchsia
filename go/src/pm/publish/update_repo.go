@@ -20,7 +20,7 @@ import (
 	tuf "github.com/flynn/go-tuf"
 )
 
-var keySet = [3]string{"timestamp.json", "targets.json", "snapshot.json"}
+var keySet = []string{"timestamp.json", "targets.json", "snapshot.json"}
 
 const rootJSONName = "root_manifest.json"
 
@@ -53,13 +53,17 @@ func InitRepo(r string, k string) (*UpdateRepo, error) {
 		return nil, e
 	}
 
-	if e := populateKeys(keysDir, k); e != nil {
-		return nil, e
-	}
+	// If we're copying pre-made keys from some source, then we need to do that
+	// before initializing the repositroy.
+	if k != keysDir {
+		if e := populateKeys(keysDir, k); e != nil {
+			return nil, e
+		}
 
-	rootOut := filepath.Join(r, "repository", "root.json")
-	if e := copyFile(rootOut, filepath.Join(k, rootJSONName)); e != nil {
-		return nil, e
+		rootOut := filepath.Join(r, "repository", "root.json")
+		if e := copyFile(rootOut, filepath.Join(k, rootJSONName)); e != nil {
+			return nil, e
+		}
 	}
 
 	s := tuf.FileSystemStore(r, func(role string, confirm bool) ([]byte, error) { return []byte{}, nil })
@@ -68,21 +72,19 @@ func InitRepo(r string, k string) (*UpdateRepo, error) {
 		return nil, e
 	}
 
+	// If we're constructing the roles ourself, we use the repo initialized above.
+	if k == keysDir {
+		for _, role := range []string{"root", "targets", "snapshot", "timestamp"} {
+			if ss, err := s.GetSigningKeys(role); err != nil || len(ss) == 0 {
+				_, err := repo.GenKey(role)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
 	u := &UpdateRepo{repo: repo, path: r}
-
-	// do a commit of the empty repository so that we are
-	// always have a valid repository
-	if e := os.MkdirAll(u.stagedFilesPath(), os.ModePerm); e != nil {
-		return nil, e
-	}
-
-	if e := repo.AddTargets([]string{}, nil); e != nil {
-		return nil, e
-	}
-
-	if e := u.CommitUpdates(false); e != nil {
-		return nil, e
-	}
 
 	return u, nil
 }

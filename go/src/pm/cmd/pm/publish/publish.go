@@ -20,6 +20,7 @@ import (
 	"fuchsia.googlesource.com/pm/build"
 	"fuchsia.googlesource.com/pm/pkg"
 	"fuchsia.googlesource.com/pm/publish"
+	"fuchsia.googlesource.com/pm/repo"
 )
 
 const (
@@ -59,8 +60,12 @@ func Run(cfg *build.Config, args []string) error {
 	modeFlags := []*bool{archiveMode, packageMode, packageSetMode, blobMode, blobSetMode, manifestMode, commitMode}
 
 	name := fs.String("n", "", "Name/path used for the published file. This only applies to '-p', package files If not supplied, the relative path supplied to '-f' will be used.")
-	repoDir := fs.String("r", "", "Path to the TUF repository directory.")
-	keyDir := fs.String("k", "", "Directory containing the signing keys.")
+
+	// TODO(raggi): cleanup args...
+	config := &repo.Config{}
+	//config.Vars(fs)
+	fs.StringVar(&config.RepoDir, "r", "", "Path to the TUF repository directory.")
+	fs.StringVar(&config.KeyDir, "k", "", "Directory containing the signing keys.")
 	verbose := fs.Bool("v", false, "Print out more informational messages.")
 	verTime := fs.Bool("vt", false, "Set repo versioning based on time rather than a monotonic increment")
 
@@ -76,17 +81,7 @@ func Run(cfg *build.Config, args []string) error {
 		return err
 	}
 
-	if *repoDir == "" {
-		if buildDir, ok := os.LookupEnv("FUCHSIA_BUILD_DIR"); ok {
-			*repoDir = filepath.Join(buildDir, serverBase)
-		} else {
-			return fmt.Errorf("either set $FUCHSIA_BUILD_DIR or supply a path with -r")
-		}
-	}
-
-	if *keyDir == "" {
-		return fmt.Errorf("a keys directory is requried")
-	}
+	config.ApplyDefaults()
 
 	var numModes int
 	for _, v := range modeFlags {
@@ -114,29 +109,32 @@ func Run(cfg *build.Config, args []string) error {
 	}
 
 	// allow mkdir to fail, but check if the path exists afterward.
-	os.MkdirAll(*repoDir, os.ModePerm)
-	fi, err := os.Stat(*repoDir)
+	os.MkdirAll(config.RepoDir, os.ModePerm)
+	fi, err := os.Stat(config.RepoDir)
 	if err != nil {
-		return fmt.Errorf("repository path %q is not valid: %s", *repoDir, err)
+		return fmt.Errorf("repository path %q is not valid: %s", config.RepoDir, err)
 	}
 
 	if !fi.IsDir() {
-		return fmt.Errorf("repository path %q is not a directory", *repoDir)
+		return fmt.Errorf("repository path %q is not a directory", config.RepoDir)
 	}
 
 	// make sure the key directory exists and is actually a directory.
-	fi, err = os.Stat(*keyDir)
+	fi, err = os.Stat(config.KeyDir)
 	if err != nil {
-		return fmt.Errorf("key path %q is not not valid: %s", *keyDir, err)
+		return fmt.Errorf("key path %q is not not valid: %s", config.KeyDir, err)
 	}
 
 	if !fi.IsDir() {
-		return fmt.Errorf("key path %q is not a directory", *keyDir)
+		return fmt.Errorf("key path %q is not a directory", config.KeyDir)
 	}
 
-	repo, err := publish.InitRepo(*repoDir, *keyDir)
+	repo, err := publish.InitRepo(config.RepoDir, config.KeyDir)
 	if err != nil {
 		return fmt.Errorf("error initializing repo: %s", err)
+	}
+	if *verbose {
+		fmt.Printf("initialized repo %s\n", config.RepoDir)
 	}
 
 	switch {
@@ -147,18 +145,18 @@ func Run(cfg *build.Config, args []string) error {
 
 		f, err := os.Open(filePaths[0])
 		if err != nil {
-			return err
+			return fmt.Errorf("open %s: %s", filePaths[0], err)
 		}
 		defer f.Close()
 
 		ar, err := far.NewReader(f)
 		if err != nil {
-			return err
+			return fmt.Errorf("open far %s: %s", f.Name(), err)
 		}
 
 		b, err := ar.ReadFile(metaFar)
 		if err != nil {
-			return err
+			return fmt.Errorf("open %s from %s: %s", metaFar, f.Name(), err)
 		}
 
 		if len(*name) == 0 {
@@ -166,9 +164,9 @@ func Run(cfg *build.Config, args []string) error {
 			if err != nil {
 				return err
 			}
-			pb, err := mf.ReadFile("package")
+			pb, err := mf.ReadFile("meta/package")
 			if err != nil {
-				return err
+				return fmt.Errorf("open meta/package from %s from %s: %s", metaFar, f.Name(), err)
 			}
 			var p pkg.Package
 			if err := json.Unmarshal(pb, &p); err != nil {
@@ -179,6 +177,9 @@ func Run(cfg *build.Config, args []string) error {
 			name = &s
 		}
 
+		if *verbose {
+			fmt.Printf("adding package %s\n", *name)
+		}
 		if err := repo.AddPackage(*name, bytes.NewReader(b)); err != nil {
 			return err
 		}
