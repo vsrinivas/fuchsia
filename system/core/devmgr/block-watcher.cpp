@@ -549,10 +549,12 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
         return ZX_OK;
     }
     case DISK_FORMAT_ZXCRYPT: {
-        printf("devmgr: %s: zxcrypt?\n", device_path);
-        // TODO(security): ZX-1130. We need to bind with channel in order to pass a key here.
-        // Where does the key come from?  We need to determine if this is unattended.
-        ioctl_device_bind(fd.get(), ZXCRYPT_DRIVER_LIB, STRLEN(ZXCRYPT_DRIVER_LIB));
+        if (!watcher->Netbooting()) {
+            printf("devmgr: %s: zxcrypt?\n", device_path);
+            // TODO(security): ZX-1130. We need to bind with channel in order to pass a key here.
+            // Where does the key come from?  We need to determine if this is unattended.
+            ioctl_device_bind(fd.get(), ZXCRYPT_DRIVER_LIB, STRLEN(ZXCRYPT_DRIVER_LIB));
+        }
         return ZX_OK;
     }
     default:

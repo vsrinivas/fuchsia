@@ -268,7 +268,7 @@ zx_status_t Volume::Unlock(const crypto::Secret& key, key_slot_t slot) {
         } else if ((rc = UnsealBlock(key, slot)) != ZX_OK) {
             xprintf("failed to open block at %" PRIu64 ": %d\n", offset_, rc);
         } else {
-            return CommitBlock();
+            return ZX_OK;
         }
     }
 
@@ -592,15 +592,21 @@ zx_status_t Volume::CommitBlock() {
     // writes we must do.
     crypto::Bytes block;
     if ((rc = block.Copy(block_)) != ZX_OK) {
+        xprintf("zxcrypt: Cannot copy block: %s\n", zx_status_get_string(rc));
         return rc;
     }
     for (rc = Begin(); rc == ZX_ERR_NEXT; rc = Next()) {
-        // Only write back blocks that don't match
-        if (Read() == ZX_OK && block_ == block) {
+        if ((rc = Read()) != ZX_OK) {
+            xprintf("zxcrypt: CommitBlock Read failed: %s\n", zx_status_get_string(rc));
+            return rc;
+        }
+        // Only write back blocks that don't match.
+        if (block_ == block) {
             continue;
         }
         if ((rc = block_.Copy(block)) != ZX_OK || (rc = Write()) != ZX_OK) {
-            xprintf("write failed for offset %" PRIu64 ": %s\n", offset_, zx_status_get_string(rc));
+            xprintf("zxcrypt: CommitBlock Write failed for offset %" PRIu64 ": %s\n",
+                    offset_, zx_status_get_string(rc));
         }
     }
     return ZX_OK;
@@ -642,7 +648,7 @@ zx_status_t Volume::UnsealBlock(const crypto::Secret& key, key_slot_t slot) {
     zx_status_t rc;
 
     // Check the type GUID matches |kTypeGuid|.
-    uint8_t* in = block_.get();
+    const uint8_t* in = block_.get();
     if (memcmp(in, zxcrypt_magic, sizeof(zxcrypt_magic)) != 0) {
         xprintf("not a zxcrypt device\n");
         return ZX_ERR_NOT_SUPPORTED;
@@ -761,7 +767,7 @@ zx_status_t Volume::Write() {
         return ZX_ERR_IO;
     }
     if (static_cast<size_t>(res) != block_.len()) {
-        xprintf("short read: have %zd, need %zu\n", res, block_.len());
+        xprintf("short write: have %zd, need %zu\n", res, block_.len());
         return ZX_ERR_IO;
     }
     return ZX_OK;
