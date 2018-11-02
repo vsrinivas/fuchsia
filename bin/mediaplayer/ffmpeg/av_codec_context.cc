@@ -64,6 +64,8 @@ const char* EncodingFromCodecId(AVCodecID from) {
       return StreamType::kAudioEncodingAmrNb;
     case AV_CODEC_ID_AMR_WB:
       return StreamType::kAudioEncodingAmrWb;
+    case AV_CODEC_ID_APTX:
+      return StreamType::kAudioEncodingAptX;
     case AV_CODEC_ID_FLAC:
       return StreamType::kAudioEncodingFlac;
     case AV_CODEC_ID_GSM_MS:
@@ -74,6 +76,8 @@ const char* EncodingFromCodecId(AVCodecID from) {
       return StreamType::kAudioEncodingPcmALaw;
     case AV_CODEC_ID_PCM_MULAW:
       return StreamType::kAudioEncodingPcmMuLaw;
+    case AV_CODEC_ID_SBC:
+      return StreamType::kAudioEncodingSbc;
     case AV_CODEC_ID_VORBIS:
       return StreamType::kAudioEncodingVorbis;
     case AV_CODEC_ID_H263:
@@ -316,6 +320,8 @@ AvCodecContextPtr AVCodecContextFromAudioStreamType(
     codec_id = AV_CODEC_ID_AMR_NB;
   } else if (stream_type.encoding() == StreamType::kAudioEncodingAmrWb) {
     codec_id = AV_CODEC_ID_AMR_WB;
+  } else if (stream_type.encoding() == StreamType::kAudioEncodingAptX) {
+    codec_id = AV_CODEC_ID_APTX;
   } else if (stream_type.encoding() == StreamType::kAudioEncodingFlac) {
     codec_id = AV_CODEC_ID_FLAC;
   } else if (stream_type.encoding() == StreamType::kAudioEncodingGsmMs) {
@@ -326,6 +332,8 @@ AvCodecContextPtr AVCodecContextFromAudioStreamType(
     codec_id = AV_CODEC_ID_PCM_ALAW;
   } else if (stream_type.encoding() == StreamType::kAudioEncodingPcmMuLaw) {
     codec_id = AV_CODEC_ID_PCM_MULAW;
+  } else if (stream_type.encoding() == StreamType::kAudioEncodingSbc) {
+    codec_id = AV_CODEC_ID_SBC;
   } else if (stream_type.encoding() == StreamType::kAudioEncodingVorbis) {
     codec_id = AV_CODEC_ID_VORBIS;
   } else if (stream_type.encoding() == StreamType::kMediaEncodingUnsupported) {

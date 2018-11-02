@@ -18,12 +18,14 @@ const char StreamType::kMediaEncodingUnsupported[] =
 const char StreamType::kAudioEncodingAac[] = "fuchsia.media.aac";
 const char StreamType::kAudioEncodingAmrNb[] = "fuchsia.media.amrnb";
 const char StreamType::kAudioEncodingAmrWb[] = "fuchsia.media.amrwb";
+const char StreamType::kAudioEncodingAptX[] = "fuchsia.media.aptx";
 const char StreamType::kAudioEncodingFlac[] = "fuchsia.media.flac";
 const char StreamType::kAudioEncodingGsmMs[] = "fuchsia.media.gsmms";
 const char StreamType::kAudioEncodingLpcm[] = "fuchsia.media.lpcm";
 const char StreamType::kAudioEncodingMp3[] = "fuchsia.media.mp3";
 const char StreamType::kAudioEncodingPcmALaw[] = "fuchsia.media.pcmalaw";
 const char StreamType::kAudioEncodingPcmMuLaw[] = "fuchsia.media.pcmmulaw";
+const char StreamType::kAudioEncodingSbc[] = "fuchsia.media.sbc";
 const char StreamType::kAudioEncodingVorbis[] = "fuchsia.media.vorbis";
 
 const char StreamType::kVideoEncodingH263[] = "fuchsia.media.h263";

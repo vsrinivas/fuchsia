@@ -31,12 +31,14 @@ class StreamType {
   static const char kAudioEncodingAac[];
   static const char kAudioEncodingAmrNb[];
   static const char kAudioEncodingAmrWb[];
+  static const char kAudioEncodingAptX[];
   static const char kAudioEncodingFlac[];
   static const char kAudioEncodingGsmMs[];
   static const char kAudioEncodingLpcm[];
   static const char kAudioEncodingMp3[];
   static const char kAudioEncodingPcmALaw[];
   static const char kAudioEncodingPcmMuLaw[];
+  static const char kAudioEncodingSbc[];
   static const char kAudioEncodingVorbis[];
 
   static const char kVideoEncodingH263[];
