@@ -99,13 +99,15 @@ function fx-config-write {
   local -r build_dir="$1"
   if [[ "$build_dir" == /* ]]; then
     local -r args_file="${build_dir}/args.gn"
+    local -r zircon_args_file="${build_dir}.zircon-args"
   else
     local -r args_file="${FUCHSIA_DIR}/${build_dir}/args.gn"
+    local -r zircon_args_file="${FUCHSIA_DIR}/${build_dir}.zircon-args"
   fi
   local arch zircon_args
   arch="$(fx-config-glean-arch "$args_file")" || return
-  if [[ -f "${build_dir}.zircon-args" ]]; then
-    zircon_args=$(<"${build_dir}.zircon-args")
+  if [[ -f "${zircon_args_file}" ]]; then
+    zircon_args=$(<"${zircon_args_file}")
   fi
   shift
   echo > "${FUCHSIA_CONFIG}" "\
