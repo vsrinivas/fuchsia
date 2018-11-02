@@ -15,6 +15,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/counter_test.cpp \
     $(LOCAL_DIR)/histogram_test.cpp \
     $(LOCAL_DIR)/metric_options_test.cpp \
+    $(LOCAL_DIR)/timer_test.cpp \
     $(LOCAL_DIR)/test_main.cpp \
     $(LOCAL_DIR)/types_internal_test.cpp \
 
@@ -25,6 +26,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/async-loop.cpp \
     system/ulib/cobalt-client \
     system/ulib/fbl \
+    system/ulib/fzl \
     system/ulib/sync \
     system/ulib/fidl \
     system/ulib/fidl-utils \
