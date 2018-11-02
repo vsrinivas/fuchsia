@@ -78,7 +78,7 @@ type EndpointState int
 const (
 	// Note that we currently allow numeric comparison between two
 	// EndpointStates so that the state related logic can be described
-	// compactly. We assume an EndpointState's nemeric value will only
+	// compactly. We assume an EndpointState's numeric value will only
 	// increase monotonically during the lifetime of the endpoint
 	// (e.g. TCPFirstPacket => TCPOpening => TCPEstablished => TCPClosing =>
 	// TCPFinWait => TCPClosed).
@@ -580,7 +580,7 @@ func (ss *States) findStateICMPv4(dir Direction, netProto tcpip.NetworkProtocolN
 			srcPort := udp.SourcePort()
 			dstPort := udp.DestinationPort()
 			s := ss.getState(dir, transProto2, srcAddr, srcPort, dstAddr, dstPort)
-			// There is nothing we can use in the first 8 byte to update the state.
+			// There is nothing we can use in the first 8 bytes to update the state.
 			return s, nil
 		case header.TCPProtocolNumber:
 			tcp := header.TCP(th2)
