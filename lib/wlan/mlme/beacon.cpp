@@ -28,7 +28,7 @@ static void WriteTim(BufferWriter* w, const PsCfg* ps_cfg, size_t* rel_tim_ele_o
 
     size_t bitmap_len;
     uint8_t bitmap_offset;
-    uint8_t pvb[TimElement::kMaxLenBmp];
+    uint8_t pvb[kMaxTimBitmapLen];
     ps_cfg->GetTim()->WritePartialVirtualBitmap(pvb, sizeof(pvb), &bitmap_len, &bitmap_offset);
 
     TimHeader header;

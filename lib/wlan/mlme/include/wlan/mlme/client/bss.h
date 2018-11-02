@@ -30,7 +30,7 @@ typedef uint32_t BeaconHash;
 class Bss : public fbl::RefCounted<Bss> {
    public:
     Bss(const common::MacAddr& bssid) : bssid_(bssid) {
-        supported_rates_.reserve(SupportedRatesElement::kMaxLen);
+        supported_rates_.reserve(kMaxSupportedRatesLen);
         bss_desc_.ssid.resize(0);  // Make sure SSID is not marked as null
     }
 

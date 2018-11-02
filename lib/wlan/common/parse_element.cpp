@@ -19,14 +19,14 @@ namespace {
 } // namespace
 
 std::optional<Span<const uint8_t>> ParseSsid(Span<const uint8_t> raw_body) {
-    if (raw_body.size() > SsidElement::kMaxLen) {
+    if (raw_body.size() > kMaxSsidLen) {
         return {};
     }
     return { raw_body };
 }
 
 std::optional<Span<const SupportedRate>> ParseSupportedRates(Span<const uint8_t> raw_body) {
-    if (raw_body.empty() || raw_body.size() > SupportedRatesElement::kMaxLen) {
+    if (raw_body.empty() || raw_body.size() > kMaxSupportedRatesLen) {
         return {};
     }
     auto rates = reinterpret_cast<const SupportedRate*>(raw_body.data());
@@ -81,7 +81,7 @@ const MeshConfiguration* ParseMeshConfiguration(Span<const uint8_t> raw_body) {
 }
 
 std::optional<Span<const uint8_t>> ParseMeshId(Span<const uint8_t> raw_body) {
-    if (raw_body.size() > MeshIdElement::kMaxLen) {
+    if (raw_body.size() > kMaxMeshIdLen) {
         return {};
     }
     return { raw_body };

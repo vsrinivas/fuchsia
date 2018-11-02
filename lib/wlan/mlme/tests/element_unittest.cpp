@@ -49,8 +49,6 @@ TEST_F(Elements, Tspec) {
     constexpr uint32_t surplus_bw_allowance = 12936;
     constexpr uint32_t medium_time = 2196;
 
-    add_to_buf(static_cast<uint8_t>(146));
-    add_to_buf(static_cast<uint8_t>(55));
     add_to_buf(ts_info);
     add_to_buf<uint16_t>(nominal_msdu_size);
     add_to_buf<uint16_t>(max_msdu_size);
@@ -68,7 +66,7 @@ TEST_F(Elements, Tspec) {
     add_to_buf<uint16_t>(surplus_bw_allowance);
     add_to_buf<uint16_t>(medium_time);
 
-    auto element = FromBytes<TspecElement>(buf_, sizeof(buf_));
+    auto element = FromBytes<Tspec>(buf_, sizeof(buf_));
     ASSERT_NE(nullptr, element);
     EXPECT_EQ(element->nominal_msdu_size.size(), nominal_msdu_size);
     EXPECT_EQ(element->nominal_msdu_size.fixed(), 0);

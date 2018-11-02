@@ -136,7 +136,8 @@ struct DelBaFrame {
 
     BlockAckDelBaParameters params;
     uint16_t reason_code;         // TODO(porce): Refactor mac_frame.h and use ReasonCode type
-    GcrGroupAddressElement addr;  // Info Element with ID kGcrGroupAddress
+    ElementHeader gcr_elem_hdr;
+    common::MacAddr gcr_group_addr;
 
     // TODO(porce): Evaluate the use cases and support optional fields.
     // Multi-band

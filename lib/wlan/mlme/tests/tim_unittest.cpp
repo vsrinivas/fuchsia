@@ -242,7 +242,7 @@ TEST_F(TimTest, WriteLastBytePartialVirtualBitmap) {
 }
 
 TEST_F(TimTest, WriteMaxSizedPartialVirtualBitmap) {
-    constexpr size_t kMaxBitmapLen = TimElement::kMaxLenBmp;
+    constexpr size_t kMaxBitmapLen = kMaxTimBitmapLen;
 
     uint8_t buf[kMaxBitmapLen];
 
