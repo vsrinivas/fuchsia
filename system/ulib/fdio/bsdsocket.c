@@ -165,15 +165,21 @@ int bind(int fd, const struct sockaddr* addr, socklen_t len) {
 
 __EXPORT
 int listen(int fd, int backlog) {
-    fdio_t* io = fd_to_io(fd);
+    const zxs_socket_t* socket;
+    fdio_t* io = fd_to_socket(fd, &socket);
     if (io == NULL) {
         return ERRNO(EBADF);
     }
 
-    zx_status_t r;
-    r = io->ops->misc(io, ZXSIO_LISTEN, 0, 0, &backlog, sizeof(backlog));
+    zx_status_t status = zxs_listen(socket, backlog);
+
+    if (status == ZX_OK) {
+        zxsio_t* sio = (zxsio_t*)io;
+        sio->flags |= ZXSIO_DID_LISTEN;
+    }
+
     fdio_release(io);
-    return STATUS(r);
+    return STATUS(status);
 }
 
 __EXPORT

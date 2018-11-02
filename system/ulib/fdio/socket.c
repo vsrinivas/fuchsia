@@ -496,11 +496,7 @@ static void zxsio_wait_end_dgram(fdio_t* io, zx_signals_t signals, uint32_t* _ev
 static zx_status_t zxsio_misc(fdio_t* io, uint32_t op, int64_t off,
                               uint32_t maxreply, void* ptr, size_t len) {
     zxsio_t* sio = (zxsio_t*)io;
-    zx_status_t status = zxsio_op(sio->s.socket, op, off, maxreply, ptr, len);
-    if (op == ZXSIO_LISTEN && status == ZX_OK) {
-        sio->flags |= ZXSIO_DID_LISTEN;
-    }
-    return status;
+    return zxsio_op(sio->s.socket, op, off, maxreply, ptr, len);
 }
 
 static zx_status_t zxsio_close(fdio_t* io) {

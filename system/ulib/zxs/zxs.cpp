@@ -203,7 +203,8 @@ zx_status_t zxs_bind(const zxs_socket_t* socket, const struct sockaddr* addr,
 }
 
 zx_status_t zxs_listen(const zxs_socket_t* socket, uint32_t backlog) {
-    return ZX_ERR_NOT_SUPPORTED;
+    return zxsio_op(socket->socket, ZXSIO_LISTEN, 0, 0, &backlog,
+                    sizeof(backlog));
 }
 
 zx_status_t zxs_accept(const zxs_socket_t* socket, struct sockaddr* addr,

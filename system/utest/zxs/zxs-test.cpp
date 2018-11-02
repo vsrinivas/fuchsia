@@ -11,6 +11,7 @@
 #include <lib/zxs/zxs.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <zircon/status.h>
 
 #include <unittest/unittest.h>
 
@@ -19,7 +20,11 @@ static void destroy_wait(async::Wait* wait) {
     delete wait;
 }
 
-static zx_status_t handle_message(async::Wait* wait, zxsio_msg_t* msg) {
+static zx_status_t start_socket_server(async_dispatcher_t* dispatcher,
+                                       zx::socket remote);
+
+static zx_status_t handle_message(async_dispatcher_t* dispatcher,
+                                  async::Wait* wait, zxsio_msg_t* msg) {
     zxsio_msg_t reply;
     memset(&reply, 0, sizeof(reply));
     reply.txid = msg->txid;
@@ -100,11 +105,42 @@ static zx_status_t handle_message(async::Wait* wait, zxsio_msg_t* msg) {
         // No reply needed.
         break;
     }
+    case ZXSIO_LISTEN: {
+        int backlog = -1;
+        memcpy(&backlog, msg->data, sizeof(backlog));
+        if (backlog != 5) {
+            printf("ZXSIO_LISTEN received backlog=%d.\n", backlog);
+            return ZX_ERR_STOP;
+        }
+
+        zx::socket local, remote;
+        zx_status_t status = zx::socket::create(ZX_SOCKET_HAS_CONTROL,
+                                                &local, &remote);
+        if (status != ZX_OK) {
+            printf("ZXSIO_LISTEN failed to create sockets: %d (%s)\n",
+                   status, zx_status_get_string(status));
+            return ZX_ERR_STOP;
+        }
+
+        status = zx_socket_share(wait->object(), remote.release());
+        if (status != ZX_OK) {
+            printf("ZXSIO_LISTEN failed to share socket: %d (%s)\n",
+                   status, zx_status_get_string(status));
+            return ZX_ERR_STOP;
+        }
+
+        status = start_socket_server(dispatcher, fbl::move(local));
+        if (status != ZX_OK) {
+            printf("ZXSIO_LISTEN failed to start socket server: %d (%s)\n",
+                   status, zx_status_get_string(status));
+            return ZX_ERR_STOP;
+        }
+        break;
+    }
     case ZXSIO_CLOSE:
     case ZXSIO_OPEN:
     case ZXSIO_IOCTL:
     case ZXSIO_BIND:
-    case ZXSIO_LISTEN:
     default:
         return ZX_ERR_STOP;
     }
@@ -140,7 +176,7 @@ static zx_status_t start_socket_server(async_dispatcher_t* dispatcher,
                 return;
             }
 
-            zx_status_t status = handle_message(wait, &msg);
+            zx_status_t status = handle_message(dispatcher, wait, &msg);
             if (status != ZX_OK) {
                 destroy_wait(wait);
                 return;
@@ -176,7 +212,8 @@ static bool SetUp(FakeNetstack* fake) {
     async_dispatcher_t* dispatcher = async_loop_get_dispatcher(fake->loop);
 
     zx::socket local, remote;
-    status = zx::socket::create(ZX_SOCKET_HAS_CONTROL, &local, &remote);
+    status = zx::socket::create(ZX_SOCKET_HAS_CONTROL | ZX_SOCKET_HAS_ACCEPT,
+                                &local, &remote);
     ASSERT_EQ(ZX_OK, status);
 
     status = start_socket_server(dispatcher, fbl::move(remote));
@@ -282,9 +319,38 @@ static bool sockopts_test(void) {
     END_TEST;
 }
 
+static bool listen_accept_test(void) {
+    BEGIN_TEST;
+
+    FakeNetstack fake;
+    if (!SetUp(&fake))
+        return false;
+    zxs_socket_t* socket = &fake.socket;
+    socket->flags = ZXS_FLAG_BLOCKING;
+
+    ASSERT_EQ(ZX_OK, zxs_listen(socket, 5));
+
+    struct sockaddr addr;
+    memset(&addr, 0, sizeof(addr));
+    size_t actual = 0u;
+    zxs_socket_t accepted;
+    memset(&accepted, 0, sizeof(accepted));
+
+    ASSERT_EQ(ZX_OK, zxs_accept(socket, &addr, sizeof(addr), &actual, &accepted));
+    ASSERT_EQ(sizeof(addr), actual);
+    ASSERT_EQ('p', addr.sa_data[4]);
+    ASSERT_NE(ZX_HANDLE_INVALID, accepted.socket);
+    ASSERT_EQ(ZX_OK, zx_handle_close(accepted.socket));
+
+    TearDown(&fake);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(zxs_test)
 RUN_TEST(connect_test);
 RUN_TEST(getsockname_test);
 RUN_TEST(getpeername_test);
 RUN_TEST(sockopts_test);
+RUN_TEST(listen_accept_test);
 END_TEST_CASE(zxs_test)
