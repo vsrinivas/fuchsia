@@ -8,31 +8,6 @@
 
 namespace wlan {
 
-ElementReader::ElementReader(const uint8_t* buf, size_t len) : buf_(buf), len_(len) {}
-
-bool ElementReader::is_valid() const {
-    // Test in order.
-    // Test 1. If at least ElementHeader can be safely read: 2 bytes test.
-    if (len_ < offset_ + sizeof(ElementHeader)) return false;
-
-    // Test 2. If the full element can be safely read.
-    // NextElementLen() needs pass from Test 1.
-    if (len_ < offset_ + NextElementLen()) return false;
-
-    // Add more test here.
-    return true;
-}
-
-const ElementHeader* ElementReader::peek() const {
-    if (!is_valid()) return nullptr;
-    return reinterpret_cast<const ElementHeader*>(buf_ + offset_);
-}
-
-size_t ElementReader::NextElementLen() const {
-    auto hdr = reinterpret_cast<const ElementHeader*>(buf_ + offset_);
-    return sizeof(ElementHeader) + hdr->len;
-}
-
 // The macros below assumes that the two data structures being intersected be named lhs and rhs.
 // Both of them must be the same sub-class of common::BitField<>.
 #define SET_BITFIELD_MIN(element, field) \

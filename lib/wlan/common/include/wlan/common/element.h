@@ -52,55 +52,6 @@ template <typename E, uint8_t ID> struct Element {
     bool is_valid() const { return is_len_valid(); }
 };
 
-// An ElementReader can be used to retrieve Elements from a Management frame. The peek() method will
-// read the ElementHeader without advancing the iterator. The caller may then use the id in the
-// header and call read() to retrieve the next Element. is_valid() will return false after reaching
-// the end or parse errors. It is an error to call read() for a type different than the one
-// specified in the ElementHeader.
-class ElementReader {
-   public:
-    ElementReader(const uint8_t* buf, size_t len);
-
-    bool is_valid() const;
-    size_t offset() const { return offset_; }
-    const ElementHeader* peek() const;
-    void skip(size_t offset) { offset_ += offset; }
-    void skip(const ElementHeader& hdr) { offset_ += sizeof(ElementHeader) + hdr.len; }
-
-    template <typename E> const E* read() {
-        static_assert(fbl::is_base_of<Element<E, E::element_id()>, E>::value,
-                      "Only Elements may be retrieved.");
-        if (!is_valid()) {
-            debugbcn("IE validity test failed: ID %3u len_ %3zu offset_ %3zu elem_len %3zu\n",
-                     E::element_id(), len_, offset_, NextElementLen());
-
-            return nullptr;
-        }
-
-        if (offset_ + sizeof(E) > len_) {
-            debugbcn(
-                "IE validity test failed: ID %3u len_ %3zu offset_ %3zu elem_len %3zu sizeof(E) "
-                "%3zu\n",
-                E::element_id(), len_, offset_, NextElementLen(), sizeof(E));
-            return nullptr;
-        }
-
-        const E* elt = reinterpret_cast<const E*>(buf_ + offset_);
-        ZX_DEBUG_ASSERT(elt->hdr.id == E::element_id());
-        if (!elt->is_valid()) return nullptr;
-
-        offset_ += sizeof(ElementHeader) + elt->hdr.len;
-        return elt;
-    }
-
-   private:
-    size_t NextElementLen() const;
-
-    const uint8_t* const buf_;
-    const size_t len_;
-    size_t offset_ = 0;
-};
-
 // IEEE Std 802.11-2016, 9.4.2.2
 struct SsidElement : public Element<SsidElement, element_id::kSsid> {
     static constexpr size_t kMinLen = 0;
