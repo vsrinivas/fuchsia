@@ -100,7 +100,7 @@ func (u *UpdateRepo) AddPackage(name string, r io.Reader) error {
 	}
 
 	// add merkle root as custom JSON
-	jsonStr := fmt.Sprintf("{\"merkle\":\"%x\"}", root)
+	jsonStr := fmt.Sprintf("{\"merkle\":\"%s\"}", root)
 
 	// add file with custom JSON to repository
 	if err := u.repo.AddTarget(name, json.RawMessage(jsonStr)); err != nil {
