@@ -47,25 +47,14 @@ Watcher::Watcher(Devnode* dn, zx::channel ch, uint32_t mask)
     : devnode(dn), handle(fbl::move(ch)), mask(mask) {
 }
 
-class DcIostate {
-public:
-    explicit DcIostate(Devnode* dn);
-    ~DcIostate();
-
-    // Claims ownership of |*h| on success
-    static zx_status_t Create(Devnode* dn, zx::channel* h);
-
-    static zx_status_t DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie);
-
-    static void HandleIpc(fbl::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher,
-                          async::WaitBase* wait, zx_status_t status,
-                          const zx_packet_signal_t* signal);
+struct DcIostate {
+    DcIostate() = default;
 
     // Begins waiting in |dispatcher| on |ios->wait|.  This transfers ownership
     // of |ios| to the dispatcher.  The dispatcher returns ownership when the
     // handler is invoked.
     static zx_status_t BeginWait(fbl::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher) {
-        zx_status_t status = ios->wait_.Begin(dispatcher);
+        zx_status_t status = ios->wait.Begin(dispatcher);
         if (status == ZX_OK) {
             __UNUSED auto ptr = ios.release();
         }
@@ -80,23 +69,25 @@ public:
         HandleIpc(fbl::move(self), dispatcher, wait, status, signal);
     }
 
-    struct Node {
-        static fbl::DoublyLinkedListNodeState<DcIostate*>& node_state(DcIostate& obj) {
-            return obj.node_;
-        }
-    };
-    // Remove this DcIostate from its devnode
-    void DetachFromDevnode();
+    static void HandleIpc(fbl::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher,
+                          async::WaitBase* wait, zx_status_t status,
+                          const zx_packet_signal_t* signal);
 
- private:
-    uint64_t readdir_ino_ = 0;
-
-    // pointer to our devnode, nullptr if it has been removed
-    Devnode* devnode_ = nullptr;
-    async::WaitMethod<DcIostate, &DcIostate::HandleIpcEntry> wait_;
+     async::WaitMethod<DcIostate, &DcIostate::HandleIpcEntry> wait{this};
 
     // entry in our devnode's iostate list
-    fbl::DoublyLinkedListNodeState<DcIostate*> node_;
+    fbl::DoublyLinkedListNodeState<DcIostate*> node;
+    struct Node {
+        static fbl::DoublyLinkedListNodeState<DcIostate*>& node_state(
+            DcIostate& obj) {
+            return obj.node;
+        }
+    };
+
+    // pointer to our devnode, nullptr if it has been removed
+    Devnode* devnode = nullptr;
+
+    uint64_t readdir_ino = 0;
 };
 
 // BUG(ZX-2868): We currently never free these after allocating them
@@ -187,53 +178,43 @@ static void prepopulate_protocol_dirs() {
     }
 }
 
-void describe_error(zx::channel h, zx_status_t status) {
+void describe_error(zx_handle_t h, zx_status_t status) {
     zxrio_describe_t msg;
     memset(&msg, 0, sizeof(msg));
     msg.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
     msg.status = status;
-    h.write(0, &msg, sizeof(zxrio_describe_t), nullptr, 0);
+    zx_channel_write(h, 0, &msg, sizeof(zxrio_describe_t), nullptr, 0);
+    zx_handle_close(h);
 }
 
-DcIostate::DcIostate(Devnode* dn)
-    : devnode_(dn), wait_(this, ZX_HANDLE_INVALID, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED) {
-
-    devnode_->iostate.push_back(this);
-}
-
-zx_status_t DcIostate::Create(Devnode* dn, zx::channel* ipc) {
-    auto ios = fbl::make_unique<DcIostate>(dn);
+static zx_status_t iostate_create(Devnode* dn, zx_handle_t h) {
+    auto ios = fbl::make_unique<DcIostate>();
     if (ios == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    ios->wait_.set_object(ipc->release());
-    // We use wait_.Begin here instead of DcIostate::BeginWait because we need
-    // to be able to not close the IPC channel in the event of failure.
-    zx_status_t status = ios->wait_.Begin(DcAsyncLoop()->dispatcher());
-    if (status != ZX_OK) {
-        // Take the handle back from |ios| so it doesn't close it when it's
-        // destroyed
-        ipc->reset(ios->wait_.object());
-        ios->wait_.set_object(ZX_HANDLE_INVALID);
+    ios->wait.set_object(h);
+    ios->wait.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+    ios->devnode = dn;
+    dn->iostate.push_back(ios.get());
+
+    zx_status_t r;
+    if ((r = ios->wait.Begin(DcAsyncLoop()->dispatcher())) != ZX_OK) {
+        dn->iostate.erase(*ios);
     } else {
-        // If the wait succeeded, DcAsyncLoop() now owns |ios|.
+        // |ios->wait| now owns |ios|
         __UNUSED auto ptr = ios.release();
     }
-    return status;
+    return r;
 }
 
-void DcIostate::DetachFromDevnode() {
-    if (devnode_) {
-        devnode_->iostate.erase(*this);
-        devnode_ = nullptr;
+static void iostate_destroy(fbl::unique_ptr<DcIostate> ios) {
+    if (ios->devnode) {
+        ios->devnode->iostate.erase(*ios);
+        ios->devnode = nullptr;
     }
-    zx_handle_close(wait_.object());
-    wait_.set_object(ZX_HANDLE_INVALID);
-}
-
-DcIostate::~DcIostate() {
-    DetachFromDevnode();
+    zx_handle_close(ios->wait.object());
+    // Let |ios| be deleted
 }
 
 // A devnode is a directory (from stat's perspective) if
@@ -476,8 +457,10 @@ static void _devfs_remove(Devnode* dn) {
     }
 
     // detach all connected iostates
-    while (!dn->iostate.is_empty()) {
-        dn->iostate.pop_front()->DetachFromDevnode();
+    for (auto& ios : dn->iostate) {
+        ios.devnode = nullptr;
+        zx_handle_close(ios.wait.object());
+        ios.wait.set_object(ZX_HANDLE_INVALID);
     }
 
     // notify own file watcher
@@ -568,9 +551,6 @@ again:
 }
 
 static void devfs_open(Devnode* dirdn, zx_handle_t h, char* path, uint32_t flags) {
-    zx::channel ipc(h);
-    h = ZX_HANDLE_INVALID;
-
     if (!strcmp(path, ".")) {
         path = nullptr;
     }
@@ -601,9 +581,12 @@ static void devfs_open(Devnode* dirdn, zx_handle_t h, char* path, uint32_t flags
         path = (char*) ".";
     }
 
-    if (r != ZX_OK) {
+    if (r < 0) {
+fail:
         if (describe) {
-            describe_error(fbl::move(ipc), r);
+            describe_error(h, r);
+        } else {
+            zx_handle_close(h);
         }
         return;
     }
@@ -611,12 +594,8 @@ static void devfs_open(Devnode* dirdn, zx_handle_t h, char* path, uint32_t flags
     // If we are a local-only node, or we are asked to not go remote,
     // or we are asked to open-as-a-directory, open locally:
     if (local_requested || local_required) {
-        zx::unowned_channel unowned_ipc(ipc);
-        if ((r = DcIostate::Create(dn, &ipc)) != ZX_OK) {
-            if (describe) {
-                describe_error(fbl::move(ipc), r);
-            }
-            return;
+        if ((r = iostate_create(dn, h)) < 0) {
+            goto fail;
         }
         if (describe) {
             zxrio_describe_t msg;
@@ -625,16 +604,13 @@ static void devfs_open(Devnode* dirdn, zx_handle_t h, char* path, uint32_t flags
             msg.status = ZX_OK;
             msg.extra_ptr = (zxrio_node_info_t*)FIDL_ALLOC_PRESENT;
             msg.extra.tag = fuchsia_io_NodeInfoTag_directory;
-
-            // This is safe because this is executing on the same thread as the
-            // DcAsyncLoop(), so the handle can't be closed underneath us.
-            unowned_ipc->write(0, &msg, sizeof(zxrio_describe_t), nullptr, 0);
+            zx_channel_write(h, 0, &msg, sizeof(zxrio_describe_t), nullptr, 0);
         }
         return;
     }
 
     // Otherwise we will pass the request on to the remote.
-    fuchsia_io_DirectoryOpen(dn->device->hrpc, flags, 0, path, strlen(path), ipc.release());
+    fuchsia_io_DirectoryOpen(dn->device->hrpc, flags, 0, path, strlen(path), h);
 }
 
 // Double-check that Open (the only message we forward)
@@ -694,7 +670,7 @@ static zx_status_t devfs_readdir(Devnode* dn, uint64_t* _ino, void* data, size_t
     return static_cast<zx_status_t>(ptr - static_cast<char*>(data));
 }
 
-// Helper macros for |DevfsFidlHandler| which make it easier
+// Helper macros for |devfs_fidl_handler| which make it easier
 // avoid typing generated names.
 
 // Decode the incoming request, returning an error and consuming
@@ -715,9 +691,9 @@ static zx_status_t devfs_readdir(Devnode* dn, uint64_t* _ino, void* data, size_t
         (fuchsia_io_ ## METHOD ## Request*) MSG->bytes;
 
 
-zx_status_t DcIostate::DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie) {
+static zx_status_t devfs_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie) {
     auto ios = static_cast<DcIostate*>(cookie);
-    Devnode* dn = ios->devnode_;
+    Devnode* dn = ios->devnode;
     if (dn == nullptr) {
         return ZX_ERR_PEER_CLOSED;
     }
@@ -777,7 +753,7 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* 
     }
     case fuchsia_io_DirectoryRewindOrdinal: {
         DECODE_REQUEST(msg, DirectoryRewind);
-        ios->readdir_ino_ = 0;
+        ios->readdir_ino = 0;
         return fuchsia_io_DirectoryRewind_reply(txn, ZX_OK);
     }
     case fuchsia_io_DirectoryReadDirentsOrdinal: {
@@ -790,7 +766,7 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* 
 
         uint8_t data[request->max_bytes];
         size_t actual = 0;
-        r = devfs_readdir(dn, &ios->readdir_ino_, data, request->max_bytes);
+        r = devfs_readdir(dn, &ios->readdir_ino, data, request->max_bytes);
         if (r >= 0) {
             actual = r;
             r = ZX_OK;
@@ -837,17 +813,19 @@ void DcIostate::HandleIpc(fbl::unique_ptr<DcIostate> ios, async_dispatcher_t* di
     }
 
     if (signal->observed & ZX_CHANNEL_READABLE) {
-        if (zxfidl_handler(wait->object(), DcIostate::DevfsFidlHandler, ios.get()) == ZX_OK) {
+        if (zxfidl_handler(wait->object(), devfs_fidl_handler, ios.get()) == ZX_OK) {
             ios->BeginWait(fbl::move(ios), dispatcher);
             return;
         }
     } else if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-        zxfidl_handler(ZX_HANDLE_INVALID, DcIostate::DevfsFidlHandler, ios.get());
+        zxfidl_handler(ZX_HANDLE_INVALID, devfs_fidl_handler, ios.get());
     } else {
         log(ERROR, "devcoord: dc_fidl_handler: invalid signals %x\n", signal->observed);
         exit(0);
     }
-    // Do not start waiting again, and destroy |ios|
+
+    iostate_destroy(fbl::move(ios));
+    // Do not start waiting again
 }
 
 static zx::channel g_devfs_root;
@@ -878,7 +856,7 @@ void devfs_init(const zx::job& root_job) {
     zx::channel h0, h1;
     if (zx::channel::create(0, &h0, &h1) != ZX_OK) {
         return;
-    } else if (DcIostate::Create(root_devnode.get(), &h0) != ZX_OK) {
+    } else if (iostate_create(root_devnode.get(), h0.release()) != ZX_OK) {
         return;
     }
 
