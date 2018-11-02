@@ -7,6 +7,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/tee.h>
 #include <fbl/intrusive_double_list.h>
+#include <fbl/intrusive_hash_table.h>
 #include <zircon/tee/c/fidl.h>
 
 #include "optee-controller.h"
@@ -55,6 +56,17 @@ public:
 
 private:
     using SharedMemoryList = fbl::DoublyLinkedList<fbl::unique_ptr<SharedMemory>>;
+
+    struct OpteeSession : fbl::SinglyLinkedListable<fbl::unique_ptr<OpteeSession>> {
+        OpteeSession(uint32_t id)
+            : id(id) {}
+        uint32_t GetKey() const { return id; }
+        static size_t GetHash(uint32_t key) { return static_cast<size_t>(key); }
+        uint32_t id;
+    };
+    using OpenSessionsTable = fbl::HashTable<uint32_t, fbl::unique_ptr<OpteeSession>>;
+
+    zx_status_t CloseSession(uint32_t session_id);
 
     // Attempts to allocate a block of SharedMemory from a designated memory pool.
     //
@@ -151,6 +163,7 @@ private:
     OpteeController* controller_;
     bool needs_to_close_ = false;
     SharedMemoryList allocated_shared_memory_;
+    OpenSessionsTable open_sessions_;
 };
 
 } // namespace optee

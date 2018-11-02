@@ -6,6 +6,7 @@
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
 #include <fbl/type_support.h>
+#include <fbl/vector.h>
 #include <lib/zx/vmo.h>
 #include <tee-client-api/tee-client-types.h>
 
@@ -121,6 +122,22 @@ zx_status_t OpteeClient::DdkClose(uint32_t flags) {
 
 void OpteeClient::DdkRelease() {
     // devmgr has given up ownership, so we must clean ourself up.
+    //
+    // Try and cleanly close all sessions
+    fbl::Vector<uint32_t> session_ids;
+    session_ids.reserve(open_sessions_.size());
+    for (const OpteeSession& session : open_sessions_) {
+        session_ids.push_back(session.id);
+    }
+
+    for (uint32_t id : session_ids) {
+        // Regardless of CloseSession response, continue closing all other sessions
+        __UNUSED zx_status_t status = CloseSession(id);
+    }
+
+    // Clear memory list, which releases all memory blocks back to their respective pools
+    allocated_shared_memory_.clear();
+
     delete this;
 }
 
@@ -171,7 +188,9 @@ zx_status_t OpteeClient::OpenSession(const zircon_tee_Uuid* trusted_app,
 
     zxlogf(SPEW, "optee: OpenSession returned 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32 "\n",
            call_code, message.return_code(), message.return_origin());
-    // TODO(rjascani): Add session id to tracking struct to ensure closure
+
+    open_sessions_.insert(fbl::make_unique<OpteeSession>(message.session_id()));
+
     result.return_code = message.return_code();
     result.return_origin = message.return_origin();
     return zircon_tee_DeviceOpenSession_reply(txn, message.session_id(), &result);
@@ -184,6 +203,12 @@ zx_status_t OpteeClient::InvokeCommand(uint32_t session_id,
     ZX_DEBUG_ASSERT(parameter_set != nullptr);
 
     zircon_tee_Result result = {};
+
+    if (!open_sessions_.find(session_id).IsValid()) {
+        result.return_code = TEEC_ERROR_BAD_STATE;
+        result.return_origin = zircon_tee_ReturnOrigin_COMMUNICATION;
+        return zircon_tee_DeviceInvokeCommand_reply(txn, &result);
+    }
 
     InvokeCommandMessage message{controller_->driver_pool(), session_id,
                                  command_id, *parameter_set};
@@ -209,8 +234,7 @@ zx_status_t OpteeClient::InvokeCommand(uint32_t session_id,
     return zircon_tee_DeviceInvokeCommand_reply(txn, &result);
 }
 
-zx_status_t OpteeClient::CloseSession(uint32_t session_id,
-                                      fidl_txn_t* txn) {
+zx_status_t OpteeClient::CloseSession(uint32_t session_id) {
     CloseSessionMessage message{controller_->driver_pool(), session_id};
 
     if (!message.is_valid()) {
@@ -220,8 +244,21 @@ zx_status_t OpteeClient::CloseSession(uint32_t session_id,
     uint32_t call_code = controller_->CallWithMessage(
         message, fbl::BindMember(this, &OpteeClient::HandleRpc));
 
+    if (call_code == kReturnOk) {
+        open_sessions_.erase(session_id);
+    }
+
     zxlogf(SPEW, "optee: CloseSession returned %" PRIx32 " %" PRIx32 " %" PRIx32 "\n",
            call_code, message.return_code(), message.return_origin());
+    return ZX_OK;
+}
+
+zx_status_t OpteeClient::CloseSession(uint32_t session_id,
+                                      fidl_txn_t* txn) {
+    zx_status_t status = CloseSession(session_id);
+    if (status != ZX_OK) {
+        return status;
+    }
 
     return zircon_tee_DeviceCloseSession_reply(txn);
 }
