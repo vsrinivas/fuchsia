@@ -148,12 +148,12 @@ void disable_osd(vim2_display_t* display, uint32_t osd_index) {
     if (osd_index == 0) {
         registers::VpuVppMisc::Get()
             .ReadFrom(vpu)
-            .set_osd2_enable_postblend(false)
+            .set_osd1_enable_postblend(false)
             .WriteTo(vpu);
     } else {
         registers::VpuVppMisc::Get()
             .ReadFrom(vpu)
-            .set_osd1_enable_postblend(false)
+            .set_osd2_enable_postblend(false)
             .WriteTo(vpu);
     }
 }
