@@ -289,8 +289,16 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
                 guest_state->rbx &= ~(1u << X86_FEATURE_INVPCID.bit);
             // Disable the Processor Trace bit.
             guest_state->rbx &= ~(1u << X86_FEATURE_PT.bit);
-            // Disable the Indirect Branch Prediction Barrier bit.
-            guest_state->rdx &= ~(1u << X86_FEATURE_IBRS_IBPB.bit);
+            // Disable:
+            //  * Indirect Branch Prediction Barrier bit
+            //  * Single Thread Indirect Brance Predictors bit
+            //  * Speculative Store Bypass Disable bit
+            // These imply support for the IA32_SPEC_CTRL and IA32_PRED_CMD
+            // MSRs, which are not implemented.
+            guest_state->rdx &= ~(
+                1u << X86_FEATURE_IBRS_IBPB.bit |
+                1u << X86_FEATURE_STIBP.bit |
+                1u << X86_FEATURE_SSBD.bit);
             break;
         }
         return ZX_OK;
