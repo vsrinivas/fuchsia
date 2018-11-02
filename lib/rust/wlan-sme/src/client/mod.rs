@@ -8,7 +8,7 @@ mod scan;
 mod state;
 
 #[cfg(test)]
-mod test_utils;
+pub mod test_utils;
 
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent, ScanRequest};
 use futures::channel::mpsc;
