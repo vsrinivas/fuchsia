@@ -70,7 +70,7 @@ private:
 
     uint32_t job_slots_;
 
-    uint64_t timeout_duration_ms_ = 1000;
+    uint64_t timeout_duration_ms_ = 2000;
     // Semaphore timeout is longer because one semaphore may need to wait for a
     // lot of atoms to complete.
     uint64_t semaphore_timeout_duration_ms_ = 5000;
