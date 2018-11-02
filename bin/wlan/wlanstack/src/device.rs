@@ -7,6 +7,7 @@ use {
     fidl_fuchsia_wlan_device as fidl_wlan_dev,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceQueryConfirm, MlmeEventStream},
     fuchsia_async::Timer,
+    fuchsia_cobalt::CobaltSender,
     fuchsia_wlan_dev as wlan_dev,
     fuchsia_zircon::prelude::*,
     futures::{
@@ -25,7 +26,6 @@ use {
 };
 
 use crate::{
-    cobalt_reporter::CobaltSender,
     device_watch::{self, NewIfaceDevice},
     future_util::ConcurrentTasks,
     mlme_query_proxy::MlmeQueryProxy,

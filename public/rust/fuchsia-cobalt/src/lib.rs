@@ -2,19 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{format_err, Error, ResultExt};
-use fdio;
-use fidl_fuchsia_cobalt::{HistogramBucket, LoggerFactoryMarker, LoggerProxy,
-                          ProjectProfile, ReleaseStage, Status};
-use fidl_fuchsia_mem as fuchsia_mem;
-use futures::channel::mpsc;
-use futures::prelude::*;
-use futures::StreamExt;
-use log::{error, info};
-use std::fs::File;
-use std::io::Seek;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+#![feature(async_await, await_macro, futures_api)]
+
+use {
+    failure::{format_err, Error, ResultExt},
+    fdio,
+    fidl,
+    fidl_fuchsia_cobalt::{HistogramBucket, LoggerFactoryMarker, LoggerProxy,
+                          ProjectProfile, ReleaseStage, Status},
+    fidl_fuchsia_mem as fuchsia_mem,
+    futures::{
+        channel::mpsc,
+        prelude::*,
+        StreamExt,
+    },
+    log::{error, info},
+    std::{
+        fs::File,
+        io::Seek,
+        sync::{
+            Arc, atomic::{AtomicBool, Ordering},
+        },
+    },
+};
 
 const COBALT_CONFIG_PATH: &'static str = "/pkg/data/cobalt_config.pb";
 

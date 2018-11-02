@@ -23,7 +23,7 @@ use std::ops::Sub;
 use std::sync::Arc;
 use wlan_sme::client::{ConnectFailure, ConnectResult, Standard};
 
-use crate::cobalt_reporter::CobaltSender;
+use fuchsia_cobalt::CobaltSender;
 use crate::device::IfaceMap;
 
 type StatsRef = Arc<Mutex<fidl_stats::IfaceStats>>;

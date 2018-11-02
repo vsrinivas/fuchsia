@@ -18,7 +18,7 @@ use wlan_sme::client::{BssInfo, ConnectionAttemptId, ConnectResult,
                        EssDiscoveryResult, EssInfo, InfoEvent, ScanTxnId};
 use fuchsia_zircon as zx;
 
-use crate::cobalt_reporter::CobaltSender;
+use fuchsia_cobalt::CobaltSender;
 use crate::fidl_util::is_peer_closed;
 use crate::future_util::ConcurrentTasks;
 use crate::Never;

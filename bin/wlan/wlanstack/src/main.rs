@@ -8,7 +8,6 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
-mod cobalt_reporter;
 mod device;
 mod device_watch;
 mod fidl_util;
@@ -27,6 +26,7 @@ use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_wlan_device_service::DeviceServiceMarker;
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
+use fuchsia_cobalt;
 use futures::prelude::*;
 use futures::channel::mpsc::{self, UnboundedReceiver};
 use log::info;
@@ -63,7 +63,7 @@ fn main() -> Result<(), Error> {
 
     let phy_server = device::serve_phys(phys.clone())
         .map_ok(|x| x.into_any());
-    let (cobalt_sender, cobalt_reporter) = cobalt_reporter::serve();
+    let (cobalt_sender, cobalt_reporter) = fuchsia_cobalt::serve();
     let telemetry_server = telemetry::report_telemetry_periodically(ifaces.clone(), cobalt_sender.clone());
     let iface_server = device::serve_ifaces(ifaces.clone(), cobalt_sender)
         .map_ok(|x| x.into_any());
