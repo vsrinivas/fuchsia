@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/mediaplayer_core_tests"
+    }
+}

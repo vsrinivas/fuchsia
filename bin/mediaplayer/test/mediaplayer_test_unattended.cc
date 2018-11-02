@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/gtest/real_loop_fixture.h>
 #include <iostream>
-#include "garnet/bin/mediaplayer/test/fakes/fake_audio_renderer.h"
+#include "garnet/bin/mediaplayer/test/fakes/fake_audio.h"
 #include "garnet/bin/mediaplayer/test/fakes/fake_wav_reader.h"
 #include "garnet/bin/mediaplayer/test/sink_feeder.h"
-#include "lib/component/cpp/environment_services_helper.h"
+#include "lib/component/cpp/testing/test_util.h"
+#include "lib/component/cpp/testing/test_with_environment.h"
 #include "lib/fxl/logging.h"
 
 namespace media_player {
@@ -20,11 +20,27 @@ static constexpr uint32_t kSinkFeedMaxPacketSize = 4096;
 static constexpr uint32_t kSinkFeedMaxPacketCount = 10;
 
 // Base class for mediaplayer tests.
-class MediaPlayerTestUnattended : public gtest::RealLoopFixture {
+class MediaPlayerTestUnattended
+    : public component::testing::TestWithEnvironment {
  protected:
   void SetUp() override {
-    environment_services_ = component::GetEnvironmentServices();
-    environment_services_->ConnectToService(player_.NewRequest());
+    auto services = CreateServices();
+
+    // Add the service under test using its launch info.
+    fuchsia::sys::LaunchInfo launch_info{
+        "fuchsia-pkg://fuchsia.com/mediaplayer#meta/mediaplayer.cmx"};
+    zx_status_t status = services->AddServiceWithLaunchInfo(
+        std::move(launch_info), fuchsia::mediaplayer::Player::Name_);
+    EXPECT_EQ(ZX_OK, status);
+
+    services->AddService(fake_audio_.GetRequestHandler());
+
+    // Create the synthetic environment.
+    environment_ =
+        CreateNewEnclosingEnvironment("mediaplayer_tests", std::move(services));
+
+    // Instantiate the player under test.
+    environment_->ConnectToService(player_.NewRequest());
 
     player_.set_error_handler([this](zx_status_t status) {
       FXL_LOG(ERROR) << "Player connection closed.";
@@ -35,12 +51,12 @@ class MediaPlayerTestUnattended : public gtest::RealLoopFixture {
 
   void TearDown() override { EXPECT_FALSE(player_connection_closed_); }
 
-  std::shared_ptr<component::Services> environment_services_;
   fuchsia::mediaplayer::PlayerPtr player_;
   bool player_connection_closed_ = false;
 
   FakeWavReader fake_reader_;
-  FakeAudioRenderer fake_audio_renderer_;
+  FakeAudio fake_audio_;
+  std::unique_ptr<component::testing::EnclosingEnvironment> environment_;
   bool sink_connection_closed_ = false;
   SinkFeeder sink_feeder_;
 };
@@ -51,14 +67,14 @@ TEST_F(MediaPlayerTestUnattended, PlayWav) {
       [this](fuchsia::mediaplayer::PlayerStatus status) {
         if (status.end_of_stream) {
           EXPECT_TRUE(status.ready);
-          EXPECT_TRUE(fake_audio_renderer_.expected());
+          EXPECT_TRUE(fake_audio_.renderer().expected());
           QuitLoop();
         }
       };
 
-  fake_audio_renderer_.SetPtsUnits(kFramesPerSecond, 1);
+  fake_audio_.renderer().SetPtsUnits(kFramesPerSecond, 1);
 
-  fake_audio_renderer_.ExpectPackets({{0, 4096, 0x20c39d1e31991800},
+  fake_audio_.renderer().ExpectPackets({{0, 4096, 0x20c39d1e31991800},
                                       {1024, 4096, 0xeaf137125d313800},
                                       {2048, 4096, 0x6162095671991800},
                                       {3072, 4096, 0x36e551c7dd41f800},
@@ -80,11 +96,6 @@ TEST_F(MediaPlayerTestUnattended, PlayWav) {
       fake_reader_ptr.NewRequest();
   fake_reader_.Bind(std::move(reader_request));
 
-  fuchsia::media::AudioRendererPtr fake_audio_renderer_ptr;
-  fake_audio_renderer_.Bind(fake_audio_renderer_ptr.NewRequest());
-
-  player_->SetAudioRenderer(std::move(fake_audio_renderer_ptr));
-
   player_->SetReaderSource(std::move(fake_reader_ptr));
 
   player_->Play();
@@ -98,14 +109,14 @@ TEST_F(MediaPlayerTestUnattended, StreamSource) {
       [this](fuchsia::mediaplayer::PlayerStatus status) {
         if (status.end_of_stream) {
           EXPECT_TRUE(status.ready);
-          EXPECT_TRUE(fake_audio_renderer_.expected());
+          EXPECT_TRUE(fake_audio_.renderer().expected());
           QuitLoop();
         }
       };
 
-  fake_audio_renderer_.SetPtsUnits(kFramesPerSecond, 1);
+  fake_audio_.renderer().SetPtsUnits(kFramesPerSecond, 1);
 
-  fake_audio_renderer_.ExpectPackets({{0, 4096, 0xd2fbd957e3bf0000},
+  fake_audio_.renderer().ExpectPackets({{0, 4096, 0xd2fbd957e3bf0000},
                                       {1024, 4096, 0xda25db3fa3bf0000},
                                       {2048, 4096, 0xe227e0f6e3bf0000},
                                       {3072, 4096, 0xe951e2dea3bf0000},
@@ -152,11 +163,6 @@ TEST_F(MediaPlayerTestUnattended, StreamSource) {
   // TODO(dalesat): Do this safely once FIDL-329 is fixed.
   player_->SetSource(fidl::InterfaceHandle<fuchsia::mediaplayer::Source>(
       stream_source.Unbind().TakeChannel()));
-
-  fuchsia::media::AudioRendererPtr fake_audio_renderer_ptr;
-  fake_audio_renderer_.Bind(fake_audio_renderer_ptr.NewRequest());
-
-  player_->SetAudioRenderer(std::move(fake_audio_renderer_ptr));
 
   sink_feeder_.Init(std::move(sink), kSinkFeedSize,
                     kSamplesPerFrame * sizeof(int16_t), kSinkFeedMaxPacketSize,
