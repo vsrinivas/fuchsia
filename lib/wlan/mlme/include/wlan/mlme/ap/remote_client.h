@@ -188,14 +188,15 @@ class AssociatingState : public BaseState {
 
     void HandleTimeout(zx::time now) override;
     zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) override;
-    zx_status_t FinalizeAssociationAttempt(std::optional<uint16_t> aid,
-                                           status_code::StatusCode st_code);
 
     inline const char* name() const override { return kName; }
 
    private:
     static constexpr const char* kName = "Associating";
     static constexpr wlan_tu_t kAssociatingTimeoutTu = 60000;  // ~1 minute
+
+    zx_status_t FinalizeAssociationAttempt(std::optional<uint16_t> aid,
+                                           status_code::StatusCode st_code);
 
     TimedEvent assoc_timeout_;
 };

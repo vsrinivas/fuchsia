@@ -455,8 +455,8 @@ TEST_F(ApInfraBssTest, Associate_SmeRefuses) {
     EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, kClientAddress, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
-    EXPECT_EQ(frame.body()->status_code, status_code::kRefused);
-    EXPECT_EQ(frame.body()->aid, kUnknownAid);
+    EXPECT_EQ(frame.body()->status_code, status_code::kRefusedCapabilitiesMismatch);
+    EXPECT_EQ(frame.body()->aid, 0);
 
     device.wlan_queue.clear();
     // Sending frame should be a no-op since association fails

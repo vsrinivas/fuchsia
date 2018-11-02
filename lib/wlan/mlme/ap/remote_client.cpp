@@ -8,6 +8,7 @@
 #include <wlan/common/element_splitter.h>
 #include <wlan/common/parse_element.h>
 #include <wlan/common/write_element.h>
+#include <wlan/mlme/convert.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
@@ -107,13 +108,7 @@ zx_status_t AuthenticatingState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
         // Received request which we've been waiting for. Timer can get canceled.
         auth_timeout_.Cancel();
 
-        status_code::StatusCode st_code;
-        if (auth_resp->body()->result_code == wlan_mlme::AuthenticateResultCodes::SUCCESS) {
-            st_code = status_code::kSuccess;
-        } else {
-            // TODO(NET-1464): map result code to status code;
-            st_code = status_code::kRefused;
-        }
+        status_code::StatusCode st_code = ToStatusCode(auth_resp->body()->result_code);
         return FinalizeAuthenticationAttempt(st_code);
     } else {
         warnf("[client] [%s] unexpected MLME msg type in authenticating state; ordinal: %u\n",
@@ -249,14 +244,10 @@ zx_status_t AssociatingState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
         // Received request which we've been waiting for. Timer can get canceled.
         assoc_timeout_.Cancel();
 
-        std::optional<uint16_t> aid = std::nullopt;
-        status_code::StatusCode st_code;
-        if (assoc_resp->body()->result_code == wlan_mlme::AssociateResultCodes::SUCCESS) {
-            aid.emplace(assoc_resp->body()->association_id);
-            st_code = status_code::kSuccess;
-        } else {
-            // TODO(NET-1464): map result code to status code;
-            st_code = status_code::kRefused;
+        std::optional<uint16_t> aid = {};
+        status_code::StatusCode st_code = ToStatusCode(assoc_resp->body()->result_code);
+        if (st_code == status_code::StatusCode::kSuccess) {
+            aid = {assoc_resp->body()->association_id};
         }
         return FinalizeAssociationAttempt(aid, st_code);
     } else {
@@ -269,7 +260,7 @@ zx_status_t AssociatingState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
 zx_status_t AssociatingState::FinalizeAssociationAttempt(std::optional<uint16_t> aid,
                                                          status_code::StatusCode st_code) {
     bool assoc_success = aid.has_value() && st_code == status_code::kSuccess;
-    auto status = client_->SendAssociationResponse(aid.value_or(kUnknownAid), st_code);
+    auto status = client_->SendAssociationResponse(aid.value_or(0), st_code);
     if (assoc_success && status == ZX_OK) {
         MoveToState<AssociatedState>(aid.value());
     } else {
