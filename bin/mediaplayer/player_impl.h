@@ -43,10 +43,6 @@ class PlayerImpl : public fuchsia::mediaplayer::Player {
 
   void SetFileSource(zx::channel file_channel) override;
 
-  void SetReaderSource(
-      fidl::InterfaceHandle<fuchsia::mediaplayer::SeekingReader> reader_handle)
-      override;
-
   void Play() override;
 
   void Pause() override;
@@ -60,9 +56,6 @@ class PlayerImpl : public fuchsia::mediaplayer::Player {
 
   void BindGainControl(fidl::InterfaceRequest<fuchsia::media::GainControl>
                            gain_control_request) override;
-
-  void SetAudioRenderer(fidl::InterfaceHandle<fuchsia::media::AudioRenderer>
-                            audio_renderer) override;
 
   void AddBinding(
       fidl::InterfaceRequest<fuchsia::mediaplayer::Player> request) override;

@@ -96,7 +96,9 @@ TEST_F(MediaPlayerTestUnattended, PlayWav) {
       fake_reader_ptr.NewRequest();
   fake_reader_.Bind(std::move(reader_request));
 
-  player_->SetReaderSource(std::move(fake_reader_ptr));
+  fuchsia::mediaplayer::SourcePtr source;
+  player_->CreateReaderSource(std::move(fake_reader_ptr), source.NewRequest());
+  player_->SetSource(std::move(source));
 
   player_->Play();
 

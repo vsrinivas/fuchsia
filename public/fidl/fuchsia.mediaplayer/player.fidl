@@ -58,14 +58,6 @@ interface Player : SourceManager {
     /////////////////////////////////////////////////////////////////////////////
     // SinkManager methods
     // Player will inherit the SinkManager interface.
-
-    // DEPRECATED
-    // TODO(dalesat): Remove once tests no longer require this.
-    0x1098: SetReaderSource(SeekingReader? reader);
-
-    // DEPRECATED
-    // TODO(dalesat): Remove once tests no longer require this.
-    0x1099: SetAudioRenderer(fuchsia.media.AudioRenderer? audio_renderer);
 };
 
 // Player status information.

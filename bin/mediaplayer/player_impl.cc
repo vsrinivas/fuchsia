@@ -416,17 +416,6 @@ void PlayerImpl::SetFileSource(zx::channel file_channel) {
       CreateSource(FileReader::Create(std::move(file_channel)), nullptr));
 }
 
-void PlayerImpl::SetReaderSource(
-    fidl::InterfaceHandle<fuchsia::mediaplayer::SeekingReader> reader_handle) {
-  if (!reader_handle) {
-    BeginSetSource(nullptr);
-    return;
-  }
-
-  BeginSetSource(
-      CreateSource(FidlReader::Create(reader_handle.Bind()), nullptr));
-}
-
 void PlayerImpl::BeginSetSource(std::unique_ptr<SourceImpl> source) {
   // Note the pending source change and advance the state machine. When the old
   // source (if any) is shut down, the state machine will call
@@ -522,19 +511,6 @@ void PlayerImpl::BindGainControl(
   audio_renderer_->BindGainControl(std::move(gain_control_request));
 }
 
-void PlayerImpl::SetAudioRenderer(
-    fidl::InterfaceHandle<fuchsia::media::AudioRenderer> audio_renderer) {
-  if (audio_renderer_) {
-    return;
-  }
-
-  audio_renderer_ = FidlAudioRenderer::Create(audio_renderer.Bind());
-
-  core_.SetSinkSegment(
-      RendererSinkSegment::Create(audio_renderer_, decoder_factory_.get()),
-      StreamType::Medium::kAudio);
-}
-
 void PlayerImpl::AddBinding(
     fidl::InterfaceRequest<fuchsia::mediaplayer::Player> request) {
   FXL_DCHECK(request);
@@ -562,6 +538,7 @@ void PlayerImpl::CreateHttpSource(
 void PlayerImpl::CreateFileSource(
     ::zx::channel file_channel,
     fidl::InterfaceRequest<fuchsia::mediaplayer::Source> source_request) {
+  FXL_DCHECK(file_channel);
   FXL_DCHECK(source_request);
 
   zx_koid_t koid = GetKoid(source_request);
@@ -575,6 +552,7 @@ void PlayerImpl::CreateFileSource(
 void PlayerImpl::CreateReaderSource(
     fidl::InterfaceHandle<fuchsia::mediaplayer::SeekingReader> seeking_reader,
     fidl::InterfaceRequest<fuchsia::mediaplayer::Source> source_request) {
+  FXL_DCHECK(seeking_reader);
   FXL_DCHECK(source_request);
 
   zx_koid_t koid = GetKoid(source_request);
@@ -602,7 +580,10 @@ void PlayerImpl::CreateStreamSource(
 
 void PlayerImpl::SetSource(
     fidl::InterfaceHandle<fuchsia::mediaplayer::Source> source_handle) {
-  FXL_DCHECK(source_handle);
+  if (!source_handle) {
+    BeginSetSource(nullptr);
+    return;
+  }
 
   // Keep |source_handle| in scope until we're done with the |SourceImpl|.
   // Otherwise, the |SourceImpl| will get a connection error and call its
