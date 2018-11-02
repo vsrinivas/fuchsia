@@ -149,7 +149,10 @@ class Union {
   // union member comment #1
   //
   // union member comment #3
-  int32_t& Field() { return Field_; }
+  int32_t& Field() {
+    EnsureStorageInitialized(0);
+    return Field_;
+  }
   
   // union member comment #1
   //
@@ -162,6 +165,7 @@ class Union {
  private:
   friend bool operator==(const Union& lhs, const Union& rhs);
   void Destroy();
+  void EnsureStorageInitialized(::fidl_union_tag_t tag);
 
   ::fidl_union_tag_t tag_;
   union {

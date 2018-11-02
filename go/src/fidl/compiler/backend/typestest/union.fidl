@@ -1,0 +1,7 @@
+library test.name;
+
+union Union {
+    int32 Primitive;
+    string StringNeedsConstructor;
+    vector<string> VectorStringAlsoNeedsConstructor;
+};

@@ -42,7 +42,7 @@ namespace fidl {
 //   class FooImpl : public Foo {
 //    public:
 //     explicit FooImpl(InterfaceRequest<Foo> request)
-//         : binding_(this, std::move(request) {}
+//         : binding_(this, std::move(request)) {}
 //
 //     // Foo implementation here.
 //

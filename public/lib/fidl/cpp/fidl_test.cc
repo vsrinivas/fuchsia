@@ -106,6 +106,14 @@ TEST(FidlTest, UnionComparison) {
   EXPECT_TRUE(CheckComparisonOperators(unions));
 }
 
+TEST(FidlTest, UnionAssignment) {
+  SimpleUnion u;
+  u.str() = "foo";
+  EXPECT_EQ(u.str(), "foo");
+  u.i32() = 3;
+  EXPECT_EQ(u.i32(), 3);
+}
+
 // Build a vector of fidl::VectorPtr, lexicographically sorted given that
 // generator generates values ordered by the given index.
 template <typename A>

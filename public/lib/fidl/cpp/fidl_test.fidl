@@ -22,6 +22,7 @@ union SimpleUnion {
   int64 i64;
   Int64Struct s;
   Int64Struct? os;
+  string str;
 };
 
 table SimpleTable {

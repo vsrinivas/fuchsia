@@ -1,0 +1,60 @@
+{
+  "version": "0.0.1",
+  "name": "test.name",
+  "library_dependencies": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [
+    {
+      "name": "test.name/Union",
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32"
+          },
+          "name": "Primitive",
+          "size": 4,
+          "alignment": 4,
+          "offset": 8
+        },
+        {
+          "type": {
+            "kind": "string",
+            "nullable": false
+          },
+          "name": "StringNeedsConstructor",
+          "size": 16,
+          "alignment": 8,
+          "offset": 8
+        },
+        {
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "string",
+              "nullable": false
+            },
+            "nullable": false
+          },
+          "name": "VectorStringAlsoNeedsConstructor",
+          "size": 16,
+          "alignment": 8,
+          "offset": 8
+        }
+      ],
+      "size": 24,
+      "alignment": 8,
+      "max_handles": 0
+    }
+  ],
+  "declaration_order": [
+    "test.name/Union"
+  ],
+  "declarations": {
+    "test.name/Union": "union"
+  }
+}

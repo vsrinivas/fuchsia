@@ -42,7 +42,10 @@ class {{ .Name }} {
   {{range .DocComments}}
   //{{ . }}
   {{- end}}
-  {{ .Type.Decl }}& {{ .Name }}() { return {{ .StorageName }}; }
+  {{ .Type.Decl }}& {{ .Name }}() {
+    EnsureStorageInitialized({{ $index }});
+    return {{ .StorageName }};
+  }
   {{range .DocComments}}
   //{{ . }}
   {{- end}}
@@ -55,6 +58,7 @@ class {{ .Name }} {
  private:
   friend bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs);
   void Destroy();
+  void EnsureStorageInitialized(::fidl_union_tag_t tag);
 
   ::fidl_union_tag_t tag_;
   union {
@@ -154,13 +158,13 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
   result->tag_ = tag_;
   switch (tag_) {
     {{- range $index, $member := .Members }}
-     case {{ $index }}:
+    case {{ $index }}:
       {{- if .Type.Dtor }}
       new (&result->{{ .StorageName }}) {{ .Type.Decl }}();
       {{- end }}
       return ::fidl::Clone({{ .StorageName }}, &result->{{ .StorageName }});
     {{- end }}
-     default:
+    default:
       return ZX_OK;
   }
 }
@@ -184,11 +188,7 @@ bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
 {{- range $index, $member := .Members }}
 
 void {{ $.Name }}::set_{{ .Name }}({{ .Type.Decl }} value) {
-  Destroy();
-  tag_ = {{ $index }};
-  {{- if .Type.Dtor }}
-  new (&{{ .StorageName }}) {{ .Type.Decl }}();
-  {{- end }}
+  EnsureStorageInitialized({{ $index }});
   {{ .StorageName }} = std::move(value);
 }
 
@@ -208,6 +208,25 @@ void {{ .Name }}::Destroy() {
   }
   tag_ = ::std::numeric_limits<::fidl_union_tag_t>::max();
 }
+
+void {{ .Name }}::EnsureStorageInitialized(::fidl_union_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      {{- range $index, $member := .Members }}
+      {{- if .Type.Dtor }}
+      case {{ $index }}:
+        new (&{{ .StorageName }}) {{ .Type.Decl }}();
+        break;
+      {{- end }}
+      {{- end }}
+      default:
+        break;
+    }
+  }
+}
+
 {{- end }}
 
 {{- define "UnionTraits" }}

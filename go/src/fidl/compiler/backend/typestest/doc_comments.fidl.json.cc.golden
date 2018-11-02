@@ -169,9 +169,9 @@ zx_status_t Union::Clone(Union* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
-     case 0:
+    case 0:
       return ::fidl::Clone(Field_, &result->Field_);
-     default:
+    default:
       return ZX_OK;
   }
 }
@@ -191,8 +191,7 @@ bool operator==(const Union& lhs, const Union& rhs) {
 }
 
 void Union::set_Field(int32_t value) {
-  Destroy();
-  tag_ = 0;
+  EnsureStorageInitialized(0);
   Field_ = std::move(value);
 }
 
@@ -204,6 +203,17 @@ void Union::Destroy() {
     break;
   }
   tag_ = ::std::numeric_limits<::fidl_union_tag_t>::max();
+}
+
+void Union::EnsureStorageInitialized(::fidl_union_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      default:
+        break;
+    }
+  }
 }
 extern "C" const fidl_type_t test_name_TableTable;
 const fidl_type_t* Table::FidlType = &test_name_TableTable;
