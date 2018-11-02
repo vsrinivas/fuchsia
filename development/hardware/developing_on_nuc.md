@@ -68,7 +68,7 @@ NUCs don’t come with RAM or an SSD so you need to install them.
 1. Identify the path to your USB key by running `fx list-usb-disks`
 1. Create a Zedboot USB by running `fx mkzedboot /path/to/usb/disk`
 1. Plug the Zedboot USB key into the NUC and boot it
-1. Run `fx boot` on your workstation
+1. Run `fx pave` on your workstation
 
 ## 4. Install Fuchsia <a name="install"/>
 
