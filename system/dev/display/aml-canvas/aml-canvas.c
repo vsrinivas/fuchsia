@@ -54,6 +54,13 @@ static zx_status_t aml_canvas_config(void* ctx, zx_handle_t vmo,
     uint32_t height = info->height;
     uint32_t width = info->stride_bytes;
 
+    if (!(info->wrap & DMC_CAV_YWRAP)) {
+        // The precise height of the canvas doesn't matter if wrapping isn't in
+        // use (as long as the user doesn't try to read or write outside of
+        // the defined area).
+        height = ROUNDUP(height, 8);
+    }
+
     if (!IS_ALIGNED(height, 8) || !IS_ALIGNED(width, 8)) {
         CANVAS_ERROR("Height or width is not aligned\n");
         status = ZX_ERR_INVALID_ARGS;
