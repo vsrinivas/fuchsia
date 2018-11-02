@@ -5,61 +5,97 @@
 declare_args() {
   # Use a prebuilt ffmpeg binary rather than building it locally.  See
   # //garnet/lib/media/ffmpeg/README.md for details.  This is ignored when
-  # building in variant builds (e.g. sanitizers); in that case, ffmpeg is always
-  # built from source so as to be built with the selected variant's config.  When
-  # this is false (either explicitly or in a variant build) then
-  # //third_party/ffmpeg must be in the source tree, which requires:
+  # building in variant builds for which there is no prebuilt.  In that
+  # case, ffmpeg is always built from source so as to be built with the
+  # selected variant's config.  When this is false (either explicitly or in
+  # a variant build) then //third_party/ffmpeg must be in the source tree,
+  # which requires:
   # `jiri import -name garnet manifest/ffmpeg https://fuchsia.googlesource.com/garnet`
   use_prebuilt_ffmpeg = true
 }
 
-if (toolchain_variant.name != "" && toolchain_variant.name != "debug" &&
-    toolchain_variant.name != "release") {
+ffmpeg_prebuilts = [
+  "",
+  "debug",
+  "release",
+  "asan",
+  "lto",
+  "profile",
+  "thinlto",
+  "ubsan",
+]
+
+if (ffmpeg_prebuilts + [ toolchain_variant.name ] -
+    [ toolchain_variant.name ] == ffmpeg_prebuilts) {
   use_prebuilt_ffmpeg = false
 }
 
 group("ffmpeg") {
-  visibility = ["//garnet/bin/mediaplayer/ffmpeg"]
+  visibility = [ "//garnet/bin/mediaplayer/ffmpeg" ]
 
-  deps = []
   if (use_prebuilt_ffmpeg) {
-    deps += [ ":prebuilt_ffmpeg" ]
-    public_configs = [ ":prebuilt_ffmpeg_config" ]
+    public_deps = [
+      ":prebuilt_ffmpeg($shlib_toolchain)",
+    ]
   } else {
-    deps += [ "//third_party/ffmpeg" ]
+    deps = [
+      "//third_party/ffmpeg",
+    ]
     public_configs = [ "//third_party/ffmpeg:ffmpeg_dependent_config" ]
   }
 }
 
 if (use_prebuilt_ffmpeg) {
   assert(
-      toolchain_variant.name == "" || toolchain_variant.name == "debug" ||
-          toolchain_variant.name == "release",
-      "Set use_prebuilt_ffmpeg=false when selecting variants for ffmpeg clients.")
+      ffmpeg_prebuilts + [ toolchain_variant.name ] -
+          [ toolchain_variant.name ] != ffmpeg_prebuilts,
+      "Set use_prebuilt_ffmpeg=false when selecting variants outside $ffmpeg_prebuilts for ffmpeg clients.")
 
   group("prebuilt_ffmpeg") {
     deps = [
-      ":prebuilt_ffmpeg_copy",
+      ":prebuilt_libffmpeg_copy",
+      ":prebuilt_libffmpeg_debug_copy",
     ]
 
     public_configs = [ ":prebuilt_ffmpeg_config" ]
   }
 
-  copy("prebuilt_ffmpeg_copy") {
-    visibility = [ ":prebuilt_ffmpeg" ]
+  variant_prefix = toolchain_variant.name
+  if (variant_prefix == "debug" || variant_prefix == "release") {
+    variant_prefix = ""
+  }
+  if (variant_prefix != "") {
+    variant_prefix += "/"
+  }
 
+  prebuilt_dir = "prebuilt/arch/$current_cpu"
+  libffmpeg = "$prebuilt_dir/lib/${variant_prefix}libffmpeg.so"
+  libffmpeg_debug = "$prebuilt_dir/debug/${variant_prefix}libffmpeg.so"
+
+  copy("prebuilt_libffmpeg_copy") {
+    visibility = [ ":prebuilt_ffmpeg" ]
     sources = [
-      "prebuilt/${current_cpu}/libffmpeg.so",
+      libffmpeg,
     ]
     outputs = [
-      "$root_out_dir/${current_cpu}-shared/libffmpeg.so",
+      "$root_out_dir/libffmpeg.so",
+    ]
+  }
+
+  copy("prebuilt_libffmpeg_debug_copy") {
+    visibility = [ ":prebuilt_ffmpeg" ]
+    sources = [
+      libffmpeg_debug,
+    ]
+    outputs = [
+      "$root_out_dir/lib.unstripped/libffmpeg.so",
     ]
   }
 
   config("prebuilt_ffmpeg_config") {
     visibility = [ ":prebuilt_ffmpeg" ]
 
-    prebuilt_ffmpeg_base = "prebuilt/${current_cpu}/"
+    ffmpeg_include = "prebuilt/pkg/ffmpeg/include"
     if (current_cpu == "x64") {
       ffmpeg_config = "max"
     } else {
@@ -67,11 +103,10 @@ if (use_prebuilt_ffmpeg) {
     }
 
     include_dirs = [
-      prebuilt_ffmpeg_base,
-      prebuilt_ffmpeg_base + "/fuchsia/config/" + ffmpeg_config + "/" +
-          current_cpu,
+      ffmpeg_include,
+      "$ffmpeg_include/fuchsia/config/$ffmpeg_config/$current_cpu",
     ]
 
-    libs = get_target_outputs(":prebuilt_ffmpeg_copy")
+    libs = get_target_outputs(":prebuilt_libffmpeg_copy")
   }
 }

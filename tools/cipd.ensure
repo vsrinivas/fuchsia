@@ -15,3 +15,7 @@ fuchsia/test_data/third_party/chromium_media_test_data 90a7f69f134fffcb58c127847
 # Chromium media test data downstream
 @Subdir test_data/media/third_party/chromium_media_test_data_downstream
 fuchsia/test_data/third_party/chromium_media_test_data_downstream 6c913dc0cd4d4812e1fefd3e58de7660805a380b
+
+# Prebuilt ffmpeg library.
+@Subdir lib/media/ffmpeg/prebuilt
+fuchsia/lib/ffmpeg/fuchsia git_revision:635bdae185e8df082e60c9e230f5087f8f89929a
