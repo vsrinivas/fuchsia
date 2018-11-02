@@ -14,7 +14,7 @@ $ cd $FUCHSIA_DIR
 $ ./garnet/bin/guest/pkg/debian_guest/build-image.sh x64
 $ fx set x64 --packages "garnet/packages/default,garnet/packages/experimental/disabled/debian_guest"
 $ fx full-build
-$ fx boot
+$ fx pave
 ```
 
 To boot on a VIM2, replace `x64` with `arm64`.
@@ -34,7 +34,7 @@ $ cd $FUCHSIA_DIR
 $ ./garnet/bin/guest/pkg/debian_guest/build-usb.sh x64
 $ fx set x64 --packages "garnet/packages/default,garnet/packages/experimental/disabled/debian_guest" --args "debian_guest_usb_root=true"
 $ fx full-build
-$ fx boot
+$ fx pave
 ```
 
 To boot on a VIM2, replace `x64` with `arm64`.

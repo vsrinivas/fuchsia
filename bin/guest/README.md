@@ -14,7 +14,7 @@ Configure, build, and boot the guest package as follows:
 ```
 $ fx set S{ARCH} --packages garnet/packages/default
 $ fx full-build
-$ fx boot
+$ fx pave
 ```
 Where `${ARCH}` is one of `x64` or `arm64`.
 

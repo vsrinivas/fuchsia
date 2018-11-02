@@ -11,7 +11,7 @@ to the kernel command line:
 
 On host machine:
 ```
-$ fx boot -- -- driver.bthost.disable
+$ fx pave -- driver.bthost.disable
 ```
 
 On Fuchsia:
