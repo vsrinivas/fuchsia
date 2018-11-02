@@ -11,7 +11,6 @@ MODULE_TYPE := usertest
 MODULE_SRCS += \
     $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/fzl-test.cpp \
-    $(LOCAL_DIR)/mapped-vmo.cpp \
     $(LOCAL_DIR)/owned-vmo-mapper-tests.cpp \
     $(LOCAL_DIR)/resizeable-vmo-mapper-tests.cpp \
     $(LOCAL_DIR)/vmo-pool-tests.cpp \
