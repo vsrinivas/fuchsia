@@ -152,18 +152,18 @@ void FakeSession::Present(uint64_t presentation_time,
 
     Resource* memory = FindResource(image->memory_id);
     if (memory != nullptr) {
-      if (!memory->mapped_buffer_.initialized()) {
-        FXL_DCHECK(memory->args_.is_memory());
+      if (memory->vmo_mapper_.start() == nullptr) {
+        FXL_CHECK(memory->args_.is_memory());
         FXL_DCHECK(memory->args_.memory().vmo);
-        memory->mapped_buffer_.InitFromVmo(
-            std::move(memory->args_.memory().vmo), ZX_VM_PERM_READ);
+        memory->vmo_mapper_.Map(std::move(memory->args_.memory().vmo), 0, 0,
+                                ZX_VM_PERM_READ);
       }
 
       uint64_t size = image->info.stride * image->info.height;
 
-      if (image->memory_offset + size >= memory->mapped_buffer_.size()) {
+      if (image->memory_offset + size >= memory->vmo_mapper_.size()) {
         FXL_LOG(ERROR) << "image exceeds vmo limits";
-        FXL_LOG(ERROR) << "    vmo size     " << memory->mapped_buffer_.size();
+        FXL_LOG(ERROR) << "    vmo size     " << memory->vmo_mapper_.size();
         FXL_LOG(ERROR) << "    image offset " << image->memory_offset;
         FXL_LOG(ERROR) << "    image stride " << image->info.stride;
         FXL_LOG(ERROR) << "    image height " << image->info.height;
@@ -172,7 +172,8 @@ void FakeSession::Present(uint64_t presentation_time,
       }
 
       void* image_payload =
-          memory->mapped_buffer_.PtrFromOffset(image->memory_offset);
+          reinterpret_cast<uint8_t*>(memory->vmo_mapper_.start()) +
+          image->memory_offset;
 
       if (dump_packets_) {
         std::cerr << "{ " << presentation_time - initial_presentation_time_

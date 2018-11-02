@@ -39,7 +39,7 @@ void FakeAudioRenderer::SetStreamType(fuchsia::media::StreamType format) {
 void FakeAudioRenderer::AddPayloadBuffer(uint32_t id,
                                          ::zx::vmo payload_buffer) {
   FXL_DCHECK(id == 0) << "Only ID 0 is currently supported.";
-  mapped_buffer_.InitFromVmo(std::move(payload_buffer), ZX_VM_PERM_READ);
+  vmo_mapper_.Map(std::move(payload_buffer), 0, 0, ZX_VM_PERM_READ);
 }
 
 void FakeAudioRenderer::RemovePayloadBuffer(uint32_t id) {
@@ -66,7 +66,8 @@ void FakeAudioRenderer::SendPacket(fuchsia::media::StreamPacket packet,
     std::cerr << "{ " << packet.pts << ", " << packet.payload_size << ", 0x"
               << std::hex << std::setw(16) << std::setfill('0')
               << PacketInfo::Hash(
-                     mapped_buffer_.PtrFromOffset(packet.payload_offset),
+                     reinterpret_cast<uint8_t*>(vmo_mapper_.start()) +
+                         packet.payload_offset,
                      packet.payload_size)
               << std::dec << " },\n";
   }
@@ -80,9 +81,9 @@ void FakeAudioRenderer::SendPacket(fuchsia::media::StreamPacket packet,
     if (expected_packets_info_iter_->pts() != packet.pts ||
         expected_packets_info_iter_->size() != packet.payload_size ||
         expected_packets_info_iter_->hash() !=
-            PacketInfo::Hash(
-                mapped_buffer_.PtrFromOffset(packet.payload_offset),
-                packet.payload_size)) {
+            PacketInfo::Hash(reinterpret_cast<uint8_t*>(vmo_mapper_.start()) +
+                                 packet.payload_offset,
+                             packet.payload_size)) {
       FXL_DLOG(ERROR) << "supplied packet doesn't match expected packet info";
       expected_ = false;
     }

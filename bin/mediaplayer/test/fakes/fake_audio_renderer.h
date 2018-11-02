@@ -5,18 +5,16 @@
 #ifndef GARNET_BIN_MEDIAPLAYER_TEST_FAKES_FAKE_AUDIO_RENDERER_H_
 #define GARNET_BIN_MEDIAPLAYER_TEST_FAKES_FAKE_AUDIO_RENDERER_H_
 
+#include <fuchsia/media/cpp/fidl.h>
+#include <lib/async/dispatcher.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <memory>
 #include <queue>
 #include <vector>
-
-#include <fuchsia/media/cpp/fidl.h>
-#include <lib/async/dispatcher.h>
-
 #include "garnet/bin/mediaplayer/test/fakes/packet_info.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/media/timeline/timeline_function.h"
-#include "lib/media/transport/mapped_shared_buffer.h"
 
 namespace media_player {
 namespace test {
@@ -119,7 +117,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
   fidl::BindingSet<fuchsia::media::GainControl> gain_control_bindings_;
 
   fuchsia::media::AudioStreamType format_;
-  media::MappedSharedBuffer mapped_buffer_;
+  fzl::VmoMapper vmo_mapper_;
   float threshold_seconds_ = 0.0f;
   float gain_ = 1.0f;
   bool mute_ = false;

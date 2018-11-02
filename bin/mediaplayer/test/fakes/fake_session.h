@@ -5,18 +5,16 @@
 #ifndef GARNET_BIN_MEDIAPLAYER_TEST_FAKES_FAKE_SESSION_H_
 #define GARNET_BIN_MEDIAPLAYER_TEST_FAKES_FAKE_SESSION_H_
 
-#include <memory>
-#include <unordered_map>
-#include <unordered_set>
-
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-
+#include <lib/fzl/vmo-mapper.h>
+#include <memory>
+#include <unordered_map>
+#include <unordered_set>
 #include "garnet/bin/mediaplayer/test/fakes/packet_info.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/optional.h"
-#include "lib/media/transport/mapped_shared_buffer.h"
 
 namespace media_player {
 namespace test {
@@ -81,7 +79,7 @@ class FakeSession : public ::fuchsia::ui::scenic::Session {
     std::unique_ptr<fuchsia::ui::gfx::ImageArgs> image_texture_;
 
     // For memory only.
-    media::MappedSharedBuffer mapped_buffer_;
+    fzl::VmoMapper vmo_mapper_;
   };
 
   Resource* FindResource(uint32_t id);
