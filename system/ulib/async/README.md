@@ -99,7 +99,7 @@ void handler(async_dispatcher_t* async, async_exception_t* exception,
            status, exception ? exception->type : 0);
     if (status == ZX_OK) {
         // ... process exception ...
-		// N.B. If the port is attached to a process or job then we will
+        // N.B. If the port is attached to a process or job then we will
         // get exceptions for more than just |exception->task|.
         zx_handle_t task = handle_of(exception_packet->exception.tid);
         uint32_t options = exception_handled ? 0u : ZX_RESUME_TRY_NEXT;
