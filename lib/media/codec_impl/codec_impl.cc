@@ -1300,8 +1300,11 @@ bool CodecImpl::AddBufferCommon(CodecPort port,
           port);
       return false;
     }
-    // Inform the core codec up-front about each buffer.
-    CoreCodecAddBuffer(port, local_buffer.get());
+    {
+      ScopedUnlock unlock(lock);
+      // Inform the core codec up-front about each buffer.
+      CoreCodecAddBuffer(port, local_buffer.get());
+    }
     all_buffers_[port].push_back(std::move(local_buffer));
     if (all_buffers_[port].size() == required_buffer_count) {
       ZX_DEBUG_ASSERT(buffer_lifetime_ordinal_[port] ==
