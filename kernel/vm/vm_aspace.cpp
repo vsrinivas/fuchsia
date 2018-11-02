@@ -203,7 +203,8 @@ fbl::RefPtr<VmAspace> VmAspace::Create(uint32_t flags, const char* name) {
     // initialize the arch specific component to our address space
     auto err = aspace->Init();
     if (err < 0) {
-        aspace->Destroy();
+        zx_status_t status = aspace->Destroy();
+        DEBUG_ASSERT(status == ZX_OK);
         return nullptr;
     }
 
@@ -241,7 +242,8 @@ VmAspace::~VmAspace() {
     // TODO(teisenbe): Move this to Destroy().  Currently can't move since
     // ProcessDispatcher calls Destroy() from the context of a thread in the
     // aspace.
-    arch_aspace_.Destroy();
+    zx_status_t status = arch_aspace_.Destroy();
+    DEBUG_ASSERT(status == ZX_OK);
 }
 
 fbl::RefPtr<VmAddressRegion> VmAspace::RootVmar() {

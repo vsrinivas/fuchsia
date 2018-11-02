@@ -151,7 +151,7 @@ static bool vmm_alloc_smoke_test() {
     auto kaspace = VmAspace::kernel_aspace();
     auto err = kaspace->Alloc(
         "test", alloc_size, &ptr, 0, 0, kArchRwFlags);
-    ASSERT_EQ(0, err, "VmAspace::Alloc region of memory");
+    ASSERT_EQ(ZX_OK, err, "VmAspace::Alloc region of memory");
     ASSERT_NE(nullptr, ptr, "VmAspace::Alloc region of memory");
 
     // fill with known pattern and test
@@ -161,7 +161,7 @@ static bool vmm_alloc_smoke_test() {
 
     // free the region
     err = kaspace->FreeRegion(reinterpret_cast<vaddr_t>(ptr));
-    EXPECT_EQ(0, err, "VmAspace::FreeRegion region of memory");
+    EXPECT_EQ(ZX_OK, err, "VmAspace::FreeRegion region of memory");
     END_TEST;
 }
 
@@ -177,7 +177,7 @@ static bool vmm_alloc_contiguous_smoke_test() {
     auto err = kaspace->AllocContiguous("test",
                                         alloc_size, &ptr, 0,
                                         VmAspace::VMM_FLAG_COMMIT, kArchRwFlags);
-    ASSERT_EQ(0, err, "VmAspace::AllocContiguous region of memory");
+    ASSERT_EQ(ZX_OK, err, "VmAspace::AllocContiguous region of memory");
     ASSERT_NE(nullptr, ptr, "VmAspace::AllocContiguous region of memory");
 
     // fill with known pattern and test
@@ -199,7 +199,7 @@ static bool vmm_alloc_contiguous_smoke_test() {
 
     // free the region
     err = kaspace->FreeRegion(reinterpret_cast<vaddr_t>(ptr));
-    EXPECT_EQ(0, err, "VmAspace::FreeRegion region of memory");
+    EXPECT_EQ(ZX_OK, err, "VmAspace::FreeRegion region of memory");
     END_TEST;
 }
 
@@ -218,7 +218,7 @@ static bool multiple_regions_test() {
 
     // allocate region 0
     zx_status_t err = aspace->Alloc("test0", alloc_size, &ptr, 0, 0, kArchRwFlags);
-    ASSERT_EQ(0, err, "VmAspace::Alloc region of memory");
+    ASSERT_EQ(ZX_OK, err, "VmAspace::Alloc region of memory");
     ASSERT_NE(nullptr, ptr, "VmAspace::Alloc region of memory");
 
     // fill with known pattern and test
@@ -228,7 +228,7 @@ static bool multiple_regions_test() {
 
     // allocate region 1
     err = aspace->Alloc("test1", 16384, &ptr, 0, 0, kArchRwFlags);
-    ASSERT_EQ(0, err, "VmAspace::Alloc region of memory");
+    ASSERT_EQ(ZX_OK, err, "VmAspace::Alloc region of memory");
     ASSERT_NE(nullptr, ptr, "VmAspace::Alloc region of memory");
 
     // fill with known pattern and test
@@ -238,7 +238,7 @@ static bool multiple_regions_test() {
 
     // allocate region 2
     err = aspace->Alloc("test2", 16384, &ptr, 0, 0, kArchRwFlags);
-    ASSERT_EQ(0, err, "VmAspace::Alloc region of memory");
+    ASSERT_EQ(ZX_OK, err, "VmAspace::Alloc region of memory");
     ASSERT_NE(nullptr, ptr, "VmAspace::Alloc region of memory");
 
     // fill with known pattern and test
@@ -250,7 +250,7 @@ static bool multiple_regions_test() {
 
     // free the address space all at once
     err = aspace->Destroy();
-    EXPECT_EQ(0, err, "VmAspace::Destroy");
+    EXPECT_EQ(ZX_OK, err, "VmAspace::Destroy");
     END_TEST;
 }
 
@@ -300,7 +300,8 @@ static bool vmm_alloc_contiguous_zero_size_fails() {
 static bool vmaspace_create_smoke_test() {
     BEGIN_TEST;
     auto aspace = VmAspace::Create(0, "test aspace");
-    aspace->Destroy();
+    zx_status_t err = aspace->Destroy();
+    EXPECT_EQ(ZX_OK, err, "VmAspace::Destroy");
     END_TEST;
 }
 
@@ -315,7 +316,8 @@ static bool vmaspace_alloc_smoke_test() {
     ASSERT_EQ(ZX_OK, err, "allocating region\n");
 
     // destroy the aspace, which should drop all the internal refs to it
-    aspace->Destroy();
+    err = aspace->Destroy();
+    EXPECT_EQ(ZX_OK, err, "VmAspace::Destroy");
 
     // drop the ref held by this pointer
     aspace.reset();
@@ -355,7 +357,7 @@ static bool vmo_commit_test() {
 
     uint64_t committed;
     auto ret = vmo->CommitRange(0, alloc_size, &committed);
-    ASSERT_EQ(0, ret, "committing vm object\n");
+    ASSERT_EQ(ZX_OK, ret, "committing vm object\n");
     EXPECT_EQ(ROUNDUP_PAGE_SIZE(alloc_size), committed,
               "committing vm object\n");
     END_TEST;
@@ -486,7 +488,7 @@ static bool vmo_odd_size_commit_test() {
 
     uint64_t committed;
     auto ret = vmo->CommitRange(0, alloc_size, &committed);
-    EXPECT_EQ(0, ret, "committing vm object\n");
+    EXPECT_EQ(ZX_OK, ret, "committing vm object\n");
     EXPECT_EQ(ROUNDUP_PAGE_SIZE(alloc_size), committed,
               "committing vm object\n");
     END_TEST;
