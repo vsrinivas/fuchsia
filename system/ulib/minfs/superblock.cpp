@@ -8,7 +8,7 @@
 #include <bitmap/raw-bitmap.h>
 
 #ifdef __Fuchsia__
-#include <lib/fzl/mapped-vmo.h>
+#include <lib/fzl/owned-vmo-mapper.h>
 #endif
 
 #include <minfs/block-txn.h>
@@ -18,10 +18,8 @@ namespace minfs {
 
 #ifdef __Fuchsia__
 
-SuperblockManager::SuperblockManager(const Superblock* info,
-                                     fbl::unique_ptr<fzl::MappedVmo> info_vmo) :
-    info_vmo_(fbl::move(info_vmo)) {
-}
+SuperblockManager::SuperblockManager(const Superblock* info, fzl::OwnedVmoMapper mapper) :
+    mapping_(fbl::move(mapper)) {}
 
 #else
 
@@ -42,20 +40,19 @@ zx_status_t SuperblockManager::Create(Bcache* bc, const Superblock* info,
     }
 
 #ifdef __Fuchsia__
-    fbl::unique_ptr<fzl::MappedVmo> info_vmo;
+    fzl::OwnedVmoMapper mapper;
     // Create the info vmo
+    if ((status = mapper.CreateAndMap(kMinfsBlockSize, "minfs-superblock")) != ZX_OK) {
+        return status;
+    }
+
     vmoid_t info_vmoid;
-    if ((status = fzl::MappedVmo::Create(kMinfsBlockSize, "minfs-superblock",
-                                        &info_vmo)) != ZX_OK) {
+    if ((status = bc->AttachVmo(mapper.vmo().get(), &info_vmoid)) != ZX_OK) {
         return status;
     }
+    memcpy(mapper.start(), info, sizeof(Superblock));
 
-    if ((status = bc->AttachVmo(info_vmo->GetVmo(), &info_vmoid)) != ZX_OK) {
-        return status;
-    }
-    memcpy(info_vmo->GetData(), info, sizeof(Superblock));
-
-    auto sb = fbl::unique_ptr<SuperblockManager>(new SuperblockManager(info, fbl::move(info_vmo)));
+    auto sb = fbl::unique_ptr<SuperblockManager>(new SuperblockManager(info, fbl::move(mapper)));
 #else
     auto sb = fbl::unique_ptr<SuperblockManager>(new SuperblockManager(info));
 #endif
@@ -65,7 +62,7 @@ zx_status_t SuperblockManager::Create(Bcache* bc, const Superblock* info,
 
 void SuperblockManager::Write(WriteTxn* txn) {
 #ifdef __Fuchsia__
-    auto data = info_vmo_->GetVmo();
+    auto data = mapping_.vmo().get();
 #else
     auto data = &info_blk_[0];
 #endif

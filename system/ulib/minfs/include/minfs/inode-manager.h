@@ -12,7 +12,7 @@
 #include <fs/block-txn.h>
 
 #ifdef __Fuchsia__
-#include <lib/fzl/mapped-vmo.h>
+#include <lib/fzl/resizeable-vmo-mapper.h>
 #endif
 
 #include <minfs/allocator.h>
@@ -68,7 +68,7 @@ private:
     blk_t start_block_;
     fbl::unique_ptr<Allocator> inode_allocator_;
 #ifdef __Fuchsia__
-    fbl::unique_ptr<fzl::MappedVmo> inode_table_{};
+    fzl::ResizeableVmoMapper inode_table_;
 #endif
 };
 

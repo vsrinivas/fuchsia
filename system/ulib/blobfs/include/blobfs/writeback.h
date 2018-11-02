@@ -24,7 +24,7 @@
 
 #include <lib/sync/completion.h>
 
-#include <lib/fzl/mapped-vmo.h>
+#include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/vmo.h>
 
 #include <blobfs/blobfs.h>
@@ -227,16 +227,15 @@ public:
     // Returns data starting at block |index| in the buffer.
     void* MutableData(size_t index) {
         ZX_DEBUG_ASSERT(index < capacity_);
-        return reinterpret_cast<char*>(vmo_->GetData()) + (index * kBlobfsBlockSize);
+        return reinterpret_cast<char*>(mapper_.start()) + (index * kBlobfsBlockSize);
     }
 private:
-    Buffer(Blobfs* blobfs, fbl::unique_ptr<fzl::MappedVmo> vmo)
-        : blobfs_(blobfs), vmo_(fbl::move(vmo)), start_(0), length_(0),
-          capacity_(vmo_->GetSize() / kBlobfsBlockSize) {}
+    Buffer(Blobfs* blobfs, fzl::OwnedVmoMapper mapper)
+        : blobfs_(blobfs), mapper_(fbl::move(mapper)), start_(0), length_(0),
+          capacity_(mapper_.size() / kBlobfsBlockSize) {}
 
     Blobfs* blobfs_;
-
-    fbl::unique_ptr<fzl::MappedVmo> vmo_;
+    fzl::OwnedVmoMapper mapper_;
     vmoid_t vmoid_ = VMOID_INVALID;
 
     // The units of all the following are "Blobfs blocks".

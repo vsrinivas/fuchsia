@@ -29,7 +29,7 @@
 #include <fs-management/ramdisk.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fifo.h>
-#include <lib/fzl/mapped-vmo.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
@@ -1474,23 +1474,28 @@ bool RamdiskTestFifoSleepDeferred(void) {
     groupid_t group = 0;
 
     // Create an arbitrary VMO, fill it with some stuff
-    uint64_t vmo_size = PAGE_SIZE * 16;
-    fbl::unique_ptr<fzl::MappedVmo> vmo;
-    ASSERT_EQ(fzl::MappedVmo::Create(vmo_size, "ramdisk-test", &vmo), ZX_OK);
+    const uint64_t kVmoSize = PAGE_SIZE * 16;
+    fzl::VmoMapper mapping;
+    zx::vmo vmo;
+    ASSERT_EQ(ZX_OK, mapping.CreateAndMap(kVmoSize,
+                                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                          nullptr,
+                                          &vmo));
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[vmo_size]);
+    fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[kVmoSize]);
     ASSERT_TRUE(ac.check());
-    fill_random(buf.get(), vmo_size);
+    fill_random(buf.get(), kVmoSize);
 
-    ASSERT_EQ(zx_vmo_write(vmo->GetVmo(), buf.get(), 0, vmo_size), ZX_OK);
+    ASSERT_EQ(vmo.write(buf.get(), 0, kVmoSize), ZX_OK);
 
     // Send a handle to the vmo to the block device, get a vmoid which identifies it
     vmoid_t vmoid;
     expected = sizeof(vmoid_t);
-    zx_handle_t xfer_vmo;
-    ASSERT_EQ(zx_handle_duplicate(vmo->GetVmo(), ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
-    ASSERT_EQ(ioctl_block_attach_vmo(ramdisk->fd(), &xfer_vmo, &vmoid), expected,
+    zx::vmo xfer_vmo;
+    ASSERT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
+    zx_handle_t xfer_vmo_raw = xfer_vmo.release();
+    ASSERT_EQ(ioctl_block_attach_vmo(ramdisk->fd(), &xfer_vmo_raw, &vmoid), expected,
               "Failed to attach vmo");
 
     block_client::Client client;
@@ -1538,7 +1543,7 @@ bool RamdiskTestFifoSleepDeferred(void) {
     ASSERT_EQ(client.Transaction(&requests[0], fbl::count_of(requests)), ZX_OK);
 
     // Verify that the contents of the vmo match the buffer.
-    ASSERT_EQ(memcmp(vmo->GetData(), buf.get(), vmo_size), 0);
+    ASSERT_EQ(memcmp(mapping.start(), buf.get(), kVmoSize), 0);
 
     // Now send 1 transaction with the full length of the VMO.
     requests[0].opcode = BLOCKIO_WRITE;
@@ -1559,7 +1564,7 @@ bool RamdiskTestFifoSleepDeferred(void) {
     ASSERT_EQ(res, 0, "Background thread failed");
     requests[0].opcode = BLOCKIO_READ;
     ASSERT_EQ(client.Transaction(&requests[0], 1), ZX_OK);
-    ASSERT_EQ(memcmp(vmo->GetData(), buf.get(), vmo_size), 0);
+    ASSERT_EQ(memcmp(mapping.start(), buf.get(), kVmoSize), 0);
 
     // Check that we can do I/O normally again.
     requests[0].opcode = BLOCKIO_WRITE;

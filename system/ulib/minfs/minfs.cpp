@@ -756,7 +756,6 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
     }
 
 #ifdef __Fuchsia__
-    fbl::unique_ptr<fzl::MappedVmo> buffer;
     // Use a heuristics-based approach based on physical RAM size to
     // determine the size of the writeback buffer.
     //
@@ -765,12 +764,15 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
     const size_t write_buffer_size =
         fbl::round_up((zx_system_get_physmem() * 2) / 100, kMinfsBlockSize);
 
-    if ((status = fzl::MappedVmo::Create(write_buffer_size, "minfs-writeback", &buffer)) != ZX_OK) {
+    fzl::OwnedVmoMapper mapper;
+    zx::vmo vmo;
+    if ((status = mapper.CreateAndMap(write_buffer_size, "minfs-writeback")) != ZX_OK) {
         return status;
     }
 
     fbl::unique_ptr<WritebackBuffer> writeback;
-    if ((status = WritebackBuffer::Create(bc.get(), fbl::move(buffer), &writeback)) != ZX_OK) {
+    status = WritebackBuffer::Create(bc.get(), fbl::move(mapper), &writeback);
+    if (status != ZX_OK) {
         return status;
     }
 

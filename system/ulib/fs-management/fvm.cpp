@@ -21,7 +21,6 @@
 #include <lib/fdio/util.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fzl/mapped-vmo.h>
 #include <fs/client.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
@@ -85,17 +84,12 @@ zx_status_t fvm_init(int fd, size_t slice_size) {
     size_t disk_size = block_info.block_count * block_info.block_size;
     size_t metadata_size = fvm::MetadataSize(disk_size, slice_size);
 
-    fbl::unique_ptr<fzl::MappedVmo> mvmo;
-    zx_status_t status = fzl::MappedVmo::Create(metadata_size * 2, "fvm-meta", &mvmo);
-    if (status != ZX_OK) {
-        return status;
-    }
-
+    fbl::unique_ptr<uint8_t[]> mvmo(new uint8_t[metadata_size * 2]);
     // Clear entire primary copy of metadata
-    memset(mvmo->GetData(), 0, metadata_size);
+    memset(mvmo.get(), 0, metadata_size);
 
     // Superblock
-    fvm::fvm_t* sb = static_cast<fvm::fvm_t*>(mvmo->GetData());
+    fvm::fvm_t* sb = reinterpret_cast<fvm::fvm_t*>(mvmo.get());
     sb->magic = FVM_MAGIC;
     sb->version = FVM_VERSION;
     sb->pslice_count = (disk_size - metadata_size * 2) / slice_size;
@@ -109,11 +103,11 @@ zx_status_t fvm_init(int fd, size_t slice_size) {
         return ZX_ERR_NO_SPACE;
     }
 
-    fvm_update_hash(mvmo->GetData(), metadata_size);
+    fvm_update_hash(mvmo.get(), metadata_size);
 
-    const void* backup = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(mvmo->GetData()) +
+    const void* backup = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(mvmo.get()) +
                                                  metadata_size);
-    status = fvm_validate_header(mvmo->GetData(), backup, metadata_size, nullptr);
+    zx_status_t status = fvm_validate_header(mvmo.get(), backup, metadata_size, nullptr);
     if (status != ZX_OK) {
         return status;
     }
@@ -122,12 +116,12 @@ zx_status_t fvm_init(int fd, size_t slice_size) {
         return ZX_ERR_BAD_STATE;
     }
     // Write to primary copy.
-    if (write(fd, mvmo->GetData(), metadata_size) != static_cast<ssize_t>(metadata_size)) {
+    if (write(fd, mvmo.get(), metadata_size) != static_cast<ssize_t>(metadata_size)) {
         return ZX_ERR_BAD_STATE;
     }
     // Write to secondary copy, to overwrite any previous FVM metadata copy that
     // could be here.
-    if (write(fd, mvmo->GetData(), metadata_size) != static_cast<ssize_t>(metadata_size)) {
+    if (write(fd, mvmo.get(), metadata_size) != static_cast<ssize_t>(metadata_size)) {
         return ZX_ERR_BAD_STATE;
     }
 

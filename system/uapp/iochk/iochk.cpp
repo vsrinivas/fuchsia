@@ -18,7 +18,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <lib/fzl/fdio.h>
-#include <lib/fzl/mapped-vmo.h>
+#include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/thread.h>
 
@@ -188,15 +188,15 @@ public:
     static zx_status_t Initialize(const fbl::unique_fd& fd, block_info_t info,
                                   block_client::Client& client,
                                   fbl::unique_ptr<Checker>* checker) {
-        fbl::unique_ptr<fzl::MappedVmo> mapped_vmo;
-        zx_status_t status = fzl::MappedVmo::Create(block_size, "", &mapped_vmo);
+        fzl::OwnedVmoMapper mapping;
+        zx_status_t status = mapping.CreateAndMap(block_size, "");
         if (status != ZX_OK) {
-            printf("Failled to create MappedVmo\n");
+            printf("Failled to CreateAndMap Vmo\n");
             return status;
         }
 
-        zx_handle_t dup;
-        status = zx_handle_duplicate(mapped_vmo->GetVmo(), ZX_RIGHT_SAME_RIGHTS, &dup);
+        zx::vmo dup;
+        status = mapping.vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
         if (status != ZX_OK) {
             printf("cannot duplicate handle\n");
             return status;
@@ -204,7 +204,8 @@ public:
 
         size_t s;
         vmoid_t vmoid;
-        if ((s = ioctl_block_attach_vmo(fd.get(), &dup, &vmoid) != sizeof(vmoid_t))) {
+        zx_handle_t raw_dup = dup.release();
+        if ((s = ioctl_block_attach_vmo(fd.get(), &raw_dup, &vmoid) != sizeof(vmoid_t))) {
             printf("cannot attach vmo for init %lu\n", s);
             return ZX_ERR_IO;
         }
@@ -212,7 +213,7 @@ public:
         groupid_t group = next_txid_.fetch_add(1);
         ZX_ASSERT(group < MAX_TXN_GROUP_COUNT);
 
-        checker->reset(new BlockChecker(fbl::move(mapped_vmo), info, client, vmoid, group));
+        checker->reset(new BlockChecker(fbl::move(mapping), info, client, vmoid, group));
         return ZX_OK;
     }
 
@@ -277,15 +278,15 @@ public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(BlockChecker);
 
 private:
-    BlockChecker(fbl::unique_ptr<fzl::MappedVmo> mapped_vmo, block_info_t info,
+    BlockChecker(fzl::OwnedVmoMapper mapper, block_info_t info,
                  block_client::Client& client, vmoid_t vmoid, groupid_t group)
-        : Checker(mapped_vmo->GetData()), mapped_vmo_(fbl::move(mapped_vmo)), info_(info),
+        : Checker(mapper.start()), mapper_(fbl::move(mapper)), info_(info),
           client_(client), vmoid_(vmoid), group_(group) {}
     ~BlockChecker() = default;
 
     static fbl::atomic<uint16_t> next_txid_;
 
-    fbl::unique_ptr<fzl::MappedVmo> mapped_vmo_;
+    fzl::OwnedVmoMapper mapper_;
     block_info_t info_;
     block_client::Client& client_;
     vmoid_t vmoid_;
@@ -298,14 +299,16 @@ class SkipBlockChecker : public Checker {
 public:
     static zx_status_t Initialize(fzl::FdioCaller& caller, zircon_skipblock_PartitionInfo info,
                                   fbl::unique_ptr<Checker>* checker) {
-        fbl::unique_ptr<fzl::MappedVmo> mapped_vmo;
-        zx_status_t status = fzl::MappedVmo::Create(block_size, "", &mapped_vmo);
+        fzl::VmoMapper mapping;
+        zx::vmo vmo;
+        zx_status_t status = mapping.CreateAndMap(block_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                                  nullptr, &vmo);
         if (status != ZX_OK) {
-            printf("Failled to create MappedVmo\n");
+            printf("Failled to CreateAndMap Vmo\n");
             return status;
         }
 
-        checker->reset(new SkipBlockChecker(fbl::move(mapped_vmo), caller, info));
+        checker->reset(new SkipBlockChecker(fbl::move(mapping), fbl::move(vmo), caller, info));
         return ZX_OK;
     }
 
@@ -317,8 +320,8 @@ public:
                 length = block_size;
             }
 
-            zx_handle_t dup;
-            zx_status_t st = zx_handle_duplicate(mapped_vmo_->GetVmo(), ZX_RIGHT_SAME_RIGHTS, &dup);
+            zx::vmo dup;
+            zx_status_t st = vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
             if (st != ZX_OK) {
                 printf("cannot duplicate handle\n");
                 return st;
@@ -326,7 +329,7 @@ public:
 
             GenerateBlockData(block_idx, block_size);
             zircon_skipblock_ReadWriteOperation request = {
-                .vmo = dup,
+                .vmo = dup.release(),
                 .vmo_offset = 0,
                 .block = static_cast<uint32_t>((block_idx * block_size) / info_.block_size_bytes),
                 .block_count = static_cast<uint32_t>(length / info_.block_size_bytes),
@@ -350,15 +353,15 @@ public:
                 length = block_size;
             }
 
-            zx_handle_t dup;
-            zx_status_t st = zx_handle_duplicate(mapped_vmo_->GetVmo(), ZX_RIGHT_SAME_RIGHTS, &dup);
+            zx::vmo dup;
+            zx_status_t st = vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
             if (st != ZX_OK) {
                 printf("cannot duplicate handle\n");
                 return st;
             }
 
             zircon_skipblock_ReadWriteOperation request = {
-                .vmo = dup,
+                .vmo = dup.release(),
                 .vmo_offset = 0,
                 .block = static_cast<uint32_t>((block_idx * block_size) / info_.block_size_bytes),
                 .block_count = static_cast<uint32_t>(length / info_.block_size_bytes),
@@ -378,13 +381,14 @@ public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(SkipBlockChecker);
 
 private:
-    SkipBlockChecker(fbl::unique_ptr<fzl::MappedVmo> mapped_vmo, fzl::FdioCaller& caller,
+    SkipBlockChecker(fzl::VmoMapper mapper, zx::vmo vmo, fzl::FdioCaller& caller,
                      zircon_skipblock_PartitionInfo info)
-        : Checker(mapped_vmo->GetData()), mapped_vmo_(fbl::move(mapped_vmo)), caller_(caller),
-          info_(info) {}
+        : Checker(mapper.start()), mapper_(fbl::move(mapper)), vmo_(fbl::move(vmo)),
+          caller_(caller), info_(info) {}
     ~SkipBlockChecker() = default;
 
-    fbl::unique_ptr<fzl::MappedVmo> mapped_vmo_;
+    fzl::VmoMapper mapper_;
+    zx::vmo vmo_;
     fzl::FdioCaller& caller_;
     zircon_skipblock_PartitionInfo info_;
 };

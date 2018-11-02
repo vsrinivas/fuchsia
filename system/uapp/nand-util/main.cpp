@@ -6,6 +6,7 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
@@ -13,9 +14,10 @@
 #include <fuchsia/nand/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fzl/mapped-vmo.h>
+#include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/cksum.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/vmo.h>
 #include <pretty/hexdump.h>
 #include <zircon/assert.h>
 #include <zircon/device/device.h>
@@ -107,7 +109,7 @@ class NandBroker {
     bool Initialize();
 
     // The internal buffer can access a block at a time.
-    const char* data() const { return reinterpret_cast<char*>(vmo_->GetData()); }
+    const char* data() const { return reinterpret_cast<char*>(mapping_.start()); }
     const char* oob() const { return data() + info_.page_size * info_.pages_per_block; }
 
     const zircon_nand_Info& Info() const { return info_; }
@@ -130,7 +132,7 @@ class NandBroker {
     fbl::unique_fd device_;
     zx::channel caller_;
     zircon_nand_Info info_ = {};
-    fbl::unique_ptr<fzl::MappedVmo> vmo_;
+    fzl::OwnedVmoMapper mapping_;
 };
 
 bool NandBroker::Initialize()  {
@@ -149,7 +151,7 @@ bool NandBroker::Initialize()  {
         return false;
     }
     const uint32_t size = (info_.page_size + info_.oob_size) * info_.pages_per_block;
-    if (fzl::MappedVmo::Create(size, nullptr, &vmo_) != ZX_OK) {
+    if (mapping_.CreateAndMap(size, "nand-broker-vmo") != ZX_OK) {
         printf("Failed to allocate VMO\n");
         return false;
     }
@@ -181,10 +183,12 @@ bool NandBroker::ReadPages(uint32_t first_page, uint32_t count) const {
     request.data_vmo = true;
     request.oob_vmo = true;
 
-    if (zx_handle_duplicate(vmo_->GetVmo(), ZX_RIGHT_SAME_RIGHTS, &request.vmo) != ZX_OK) {
+    zx::vmo vmo;
+    if (mapping_.vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo) != ZX_OK) {
         printf("Failed to duplicate VMO\n");
         return false;
     }
+    request.vmo = vmo.release();
 
     zx_status_t status;
     uint32_t bit_flips;

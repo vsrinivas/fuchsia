@@ -8,7 +8,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
-#include <lib/fzl/mapped-vmo.h>
+#include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #endif
 
@@ -152,10 +152,10 @@ void WritebackWork::PinVnode(fbl::RefPtr<VnodeMinfs> vn) {
 
 #ifdef __Fuchsia__
 
-zx_status_t WritebackBuffer::Create(Bcache* bc, fbl::unique_ptr<fzl::MappedVmo> buffer,
+zx_status_t WritebackBuffer::Create(Bcache* bc, fzl::OwnedVmoMapper mapper,
                                     fbl::unique_ptr<WritebackBuffer>* out) {
-    fbl::unique_ptr<WritebackBuffer> wb(new WritebackBuffer(bc, fbl::move(buffer)));
-    if (wb->buffer_->GetSize() % kMinfsBlockSize != 0) {
+    fbl::unique_ptr<WritebackBuffer> wb(new WritebackBuffer(bc, fbl::move(mapper)));
+    if (wb->mapper_.size() % kMinfsBlockSize != 0) {
         return ZX_ERR_INVALID_ARGS;
     } else if (cnd_init(&wb->consumer_cvar_) != thrd_success) {
         return ZX_ERR_NO_RESOURCES;
@@ -166,7 +166,7 @@ zx_status_t WritebackBuffer::Create(Bcache* bc, fbl::unique_ptr<fzl::MappedVmo> 
                                      "minfs-writeback") != thrd_success) {
         return ZX_ERR_NO_RESOURCES;
     }
-    zx_status_t status = wb->bc_->AttachVmo(wb->buffer_->GetVmo(), &wb->buffer_vmoid_);
+    zx_status_t status = wb->bc_->AttachVmo(wb->mapper_.vmo().get(), &wb->buffer_vmoid_);
     if (status != ZX_OK) {
         return status;
     }
@@ -175,9 +175,9 @@ zx_status_t WritebackBuffer::Create(Bcache* bc, fbl::unique_ptr<fzl::MappedVmo> 
     return ZX_OK;
 }
 
-WritebackBuffer::WritebackBuffer(Bcache* bc, fbl::unique_ptr<fzl::MappedVmo> buffer) :
-    bc_(bc), unmounting_(false), buffer_(fbl::move(buffer)),
-    cap_(buffer_->GetSize() / kMinfsBlockSize) {}
+WritebackBuffer::WritebackBuffer(Bcache* bc, fzl::OwnedVmoMapper mapper) :
+    bc_(bc), unmounting_(false), mapper_(fbl::move(mapper)),
+    cap_(mapper_.size() / kMinfsBlockSize) {}
 
 WritebackBuffer::~WritebackBuffer() {
     // Block until the background thread completes itself.
@@ -234,7 +234,7 @@ void WritebackBuffer::CopyToBufferLocked(WriteTxn* txn) {
         ZX_DEBUG_ASSERT(wb_offset < cap_);
         zx_handle_t vmo = reqs[i].vmo;
 
-        void* ptr = (void*)((uintptr_t)(buffer_->GetData()) +
+        void* ptr = (void*)((uintptr_t)(mapper_.start()) +
                             (uintptr_t)(wb_offset * kMinfsBlockSize));
         zx_status_t status;
         ZX_DEBUG_ASSERT((start_ <= wb_offset) ?
@@ -254,7 +254,7 @@ void WritebackBuffer::CopyToBufferLocked(WriteTxn* txn) {
             vmo_offset += wb_len;
             dev_offset += wb_len;
             wb_len = vmo_len - wb_len;
-            ptr = buffer_->GetData();
+            ptr = mapper_.start();
             ZX_DEBUG_ASSERT((start_ == 0) ?  (start_ < wb_len) : (wb_len <= start_)); // Wraparound
             ZX_ASSERT(zx_vmo_read(vmo, ptr, vmo_offset * kMinfsBlockSize,
                                   wb_len * kMinfsBlockSize) == ZX_OK);
@@ -325,7 +325,7 @@ int WritebackBuffer::WritebackThread(void* arg) {
             // TODO(smklein): We could add additional validation that the blocks
             // in "work" are contiguous and in the range of [start_, len_) (including
             // wraparound).
-            size_t blks_consumed = work->Complete(b->buffer_->GetVmo(), b->buffer_vmoid_);
+            size_t blks_consumed = work->Complete(b->mapper_.vmo().get(), b->buffer_vmoid_);
             TRACE_FLOW_END("minfs", "writeback", reinterpret_cast<trace_flow_id_t>(work.get()));
             work = nullptr;
 

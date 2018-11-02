@@ -4,12 +4,13 @@
 
 #include <fcntl.h>
 #include <getopt.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include <fbl/unique_fd.h>
 #include <fs-management/ram-nand.h>
-#include <lib/fzl/mapped-vmo.h>
+#include <lib/fzl/owned-vmo-mapper.h>
 #include <zircon/nand/c/fidl.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -111,23 +112,25 @@ bool FinishDeviceConfig(const char* path, zircon_nand_RamNandInfo* device_config
     }
     info.num_blocks = static_cast<uint32_t>(in_size / block_size);
 
-    fbl::unique_ptr<fzl::MappedVmo> vmo;
-    zx_status_t status = fzl::MappedVmo::Create(in_size, nullptr, &vmo);
+    fzl::OwnedVmoMapper mapper;
+    zx_status_t status = mapper.CreateAndMap(in_size, "nand-loader");
     if (status != ZX_OK) {
         printf("Unable to create VMO\n");
         return false;
     }
 
-    if (pread(in.get(), vmo->GetData(), in_size, 0) != static_cast<ssize_t>(in_size)) {
+    if (pread(in.get(), mapper.start(), in_size, 0) != static_cast<ssize_t>(in_size)) {
         printf("Unable to read data\n");
         return false;
     }
 
-    status = zx_handle_duplicate(vmo->GetVmo(), ZX_RIGHT_SAME_RIGHTS, &device_config->vmo);
+    zx::vmo dup;
+    status = mapper.vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
     if (status != ZX_OK) {
         printf("Unable to duplicate VMO handle\n");
         return false;
     }
+    device_config->vmo = dup.release();
     return true;
 }
 

@@ -16,7 +16,7 @@
 #include <fs/watcher.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/minfs/c/fidl.h>
-#include <lib/fzl/mapped-vmo.h>
+#include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
 #endif
@@ -680,7 +680,7 @@ private:
     // Next kMinfsDoublyIndirect blocks                           - doubly indirect blocks
     // Next kMinfsDoublyIndirect * kMinfsDirectPerIndirect blocks - indirect blocks pointed to
     //                                                              by doubly indirect blocks
-    fbl::unique_ptr<fzl::MappedVmo> vmo_indirect_{};
+    fbl::unique_ptr<fzl::ResizeableVmoMapper> vmo_indirect_;
 
     vmoid_t vmoid_{};
     vmoid_t vmoid_indirect_{};

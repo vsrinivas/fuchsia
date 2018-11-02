@@ -35,13 +35,13 @@ zx_status_t InodeManager::Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn*
 #ifdef __Fuchsia__
     uint32_t inoblks = (static_cast<uint32_t>(inodes) + kMinfsInodesPerBlock - 1) /
             kMinfsInodesPerBlock;
-    if ((status = fzl::MappedVmo::Create(inoblks * kMinfsBlockSize, "minfs-inode-table",
-                                         &mgr->inode_table_)) != ZX_OK) {
+    if ((status = mgr->inode_table_.CreateAndMap(inoblks * kMinfsBlockSize, "minfs-inode-table"))
+        != ZX_OK) {
         return status;
     }
 
     vmoid_t vmoid;
-    if ((status = bc->AttachVmo(mgr->inode_table_->GetVmo(), &vmoid)) != ZX_OK) {
+    if ((status = bc->AttachVmo(mgr->inode_table_.vmo().get(), &vmoid)) != ZX_OK) {
         return status;
     }
     txn->Enqueue(vmoid, 0, start_block, inoblks);
@@ -57,10 +57,10 @@ void InodeManager::Update(WriteTxn* txn, ino_t ino, const Inode* inode) {
     const blk_t inoblock_abs = inoblock_rel + start_block_;
     assert(inoblock_abs < kFVMBlockDataStart);
 #ifdef __Fuchsia__
-    void* inodata = (void*)((uintptr_t)(inode_table_->GetData()) +
+    void* inodata = (void*)((uintptr_t)(inode_table_.start()) +
                             (uintptr_t)(inoblock_rel * kMinfsBlockSize));
     memcpy((void*)((uintptr_t)inodata + off_of_ino), inode, kMinfsInodeSize);
-    txn->Enqueue(inode_table_->GetVmo(), inoblock_rel, inoblock_abs, 1);
+    txn->Enqueue(inode_table_.vmo().get(), inoblock_rel, inoblock_abs, 1);
 #else
     // Since host-side tools don't have "mapped vmos", just read / update /
     // write the single absolute inode block.
@@ -75,7 +75,7 @@ void InodeManager::Load(ino_t ino, Inode* out) const {
     // obtain the block of the inode table we need
     uint32_t off_of_ino = (ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
 #ifdef __Fuchsia__
-    void* inodata = (void*)((uintptr_t)(inode_table_->GetData()) +
+    void* inodata = (void*)((uintptr_t)(inode_table_.start()) +
                             (uintptr_t)((ino / kMinfsInodesPerBlock) * kMinfsBlockSize));
 #else
     uint8_t inodata[kMinfsBlockSize];
@@ -90,7 +90,7 @@ zx_status_t InodeManager::Grow(size_t inodes) {
 #ifdef __Fuchsia__
     uint32_t inoblks = (static_cast<uint32_t>(inodes) + kMinfsInodesPerBlock - 1) /
             kMinfsInodesPerBlock;
-    if (inode_table_->Grow(inoblks * kMinfsBlockSize) != ZX_OK) {
+    if (inode_table_.Grow(inoblks * kMinfsBlockSize) != ZX_OK) {
         return ZX_ERR_NO_SPACE;
     }
     return ZX_OK;

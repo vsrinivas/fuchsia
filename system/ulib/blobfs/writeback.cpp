@@ -174,17 +174,16 @@ Buffer::~Buffer() {
 
 zx_status_t Buffer::Create(Blobfs* blobfs, size_t blocks, const char* label,
                            fbl::unique_ptr<Buffer>* out) {
-    zx_status_t status;
-    fbl::unique_ptr<fzl::MappedVmo> buffer_vmo;
-    if ((status = fzl::MappedVmo::Create(blocks * kBlobfsBlockSize, label,
-                                        &buffer_vmo)) != ZX_OK) {
+
+    fzl::OwnedVmoMapper mapper;
+    zx_status_t status = mapper.CreateAndMap(blocks * kBlobfsBlockSize, "blob-writeback");
+    if (status != ZX_OK) {
         fprintf(stderr, "Buffer: Failed to create vmo\n");
         return status;
     }
 
-    fbl::unique_ptr<Buffer> buffer(new Buffer(blobfs, fbl::move(buffer_vmo)));
-
-    if ((status = buffer->blobfs_->AttachVmo(buffer->vmo_->GetVmo(), &buffer->vmoid_))
+    fbl::unique_ptr<Buffer> buffer(new Buffer(blobfs, fbl::move(mapper)));
+    if ((status = buffer->blobfs_->AttachVmo(buffer->mapper_.vmo().get(), &buffer->vmoid_))
         != ZX_OK) {
         fprintf(stderr, "Buffer: Failed to attach vmo\n");
         return status;
@@ -226,7 +225,7 @@ void Buffer::CopyTransaction(WriteTxn* txn) {
         ZX_DEBUG_ASSERT(buf_len <= vmo_len);
         ZX_DEBUG_ASSERT(buf_len < capacity_);
         zx_handle_t vmo = reqs[i].vmo;
-        ZX_DEBUG_ASSERT(vmo != vmo_->GetVmo());
+        ZX_DEBUG_ASSERT(vmo != mapper_.vmo().get());
 
         // Write data from the vmo into the buffer.
         void* ptr = MutableData(buf_offset);
@@ -291,7 +290,7 @@ void Buffer::AddTransaction(size_t start, size_t disk_start, size_t length, Writ
     ZX_DEBUG_ASSERT(length > 0);
     ZX_DEBUG_ASSERT(start + length <= capacity_);
     ZX_DEBUG_ASSERT(work != nullptr);
-    work->Enqueue(vmo_->GetVmo(), start, disk_start, length);
+    work->Enqueue(mapper_.vmo().get(), start, disk_start, length);
 }
 
 bool Buffer::VerifyTransaction(WriteTxn* txn) const {
@@ -319,7 +318,7 @@ void Buffer::ValidateTransaction(WriteTxn* txn) {
         for (size_t i = 0; i < reqs.size(); i++) {
             // Verify that each request references this buffer VMO,
             // and that the transaction fits within the buffer.
-            ZX_DEBUG_ASSERT(reqs[i].vmo == vmo_->GetVmo());
+            ZX_DEBUG_ASSERT(reqs[i].vmo == mapper_.vmo().get());
             reqs[i].vmo = ZX_HANDLE_INVALID;
         }
 

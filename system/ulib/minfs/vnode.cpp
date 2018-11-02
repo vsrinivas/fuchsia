@@ -172,7 +172,7 @@ zx_status_t VnodeMinfs::BlocksShrink(Transaction* state, blk_t start) {
     }
 
     // Shrink the indirect vmo if necessary
-    if (vmo_indirect_ != nullptr && vmo_indirect_->GetSize() > size) {
+    if (vmo_indirect_ != nullptr && vmo_indirect_->size() > size) {
         if ((status = vmo_indirect_->Shrink(size)) != ZX_OK) {
             return status;
         }
@@ -189,7 +189,7 @@ zx_status_t VnodeMinfs::LoadIndirectBlocks(blk_t* iarray, uint32_t count, uint32
         return status;
     }
 
-    if (vmo_indirect_->GetSize() < size) {
+    if (vmo_indirect_->size() < size) {
         zx_status_t status;
         if ((status = vmo_indirect_->Grow(size)) != ZX_OK) {
             return status;
@@ -213,7 +213,7 @@ zx_status_t VnodeMinfs::LoadIndirectWithinDoublyIndirect(uint32_t dindex) {
     uint32_t* dientry;
 
     size_t size = GetVmoSizeForIndirect(dindex);
-    if (vmo_indirect_->GetSize() >= size) {
+    if (vmo_indirect_->size() >= size) {
         // We've already loaded this indirect (within dind) block.
         return ZX_OK;
     }
@@ -228,12 +228,11 @@ zx_status_t VnodeMinfs::InitIndirectVmo() {
         return ZX_OK;
     }
 
+    vmo_indirect_ = fzl::ResizeableVmoMapper::Create(
+            kMinfsBlockSize * (kMinfsIndirect + kMinfsDoublyIndirect), "minfs-indirect");
+
     zx_status_t status;
-    if ((status = fzl::MappedVmo::Create(kMinfsBlockSize * (kMinfsIndirect + kMinfsDoublyIndirect),
-                                        "minfs-indirect", &vmo_indirect_)) != ZX_OK) {
-        return status;
-    }
-    if ((status = fs_->bc_->AttachVmo(vmo_indirect_->GetVmo(), &vmoid_indirect_)) != ZX_OK) {
+    if ((status = fs_->bc_->AttachVmo(vmo_indirect_->vmo().get(), &vmoid_indirect_)) != ZX_OK) {
         vmo_indirect_ = nullptr;
         return status;
     }
@@ -440,7 +439,7 @@ zx_status_t VnodeMinfs::BlockOpIndirect(Transaction* state, IndirectArgs* params
 
 #ifdef __Fuchsia__
     if (params->GetOp() == BlockOp::kRead || params->GetOp() == BlockOp::kWrite) {
-        ValidateVmoSize(vmo_indirect_->GetVmo(), params->GetOffset() + params->GetCount());
+        ValidateVmoSize(vmo_indirect_->vmo().get(), params->GetOffset() + params->GetCount());
     }
 #endif
 
@@ -477,7 +476,7 @@ zx_status_t VnodeMinfs::BlockOpIndirect(Transaction* state, IndirectArgs* params
         // only update the indirect block if an entry was deleted
         if (dirty || direct_params.IsDirty()) {
 #ifdef __Fuchsia__
-            state->GetWork()->Enqueue(vmo_indirect_->GetVmo(), params->GetOffset() + i,
+            state->GetWork()->Enqueue(vmo_indirect_->vmo().get(), params->GetOffset() + i,
                         params->GetBno(i) + fs_->Info().dat_block, 1);
 #else
             fs_->bc_->Writeblk(params->GetBno(i) + fs_->Info().dat_block, entry);
@@ -503,7 +502,7 @@ zx_status_t VnodeMinfs::BlockOpDindirect(Transaction* state, DindirectArgs* para
 
 #ifdef __Fuchsia__
     if (params->GetOp() == BlockOp::kRead || params->GetOp() == BlockOp::kWrite) {
-        ValidateVmoSize(vmo_indirect_->GetVmo(), params->GetOffset() + params->GetCount());
+        ValidateVmoSize(vmo_indirect_->vmo().get(), params->GetOffset() + params->GetCount());
     }
 #endif
 
@@ -541,7 +540,7 @@ zx_status_t VnodeMinfs::BlockOpDindirect(Transaction* state, DindirectArgs* para
         // only update the indirect block if an entry was deleted
         if (dirty || indirect_params.IsDirty()) {
 #ifdef __Fuchsia__
-            state->GetWork()->Enqueue(vmo_indirect_->GetVmo(), params->GetOffset() + i,
+            state->GetWork()->Enqueue(vmo_indirect_->vmo().get(), params->GetOffset() + i,
                                       params->GetBno(i) + fs_->Info().dat_block, 1);
 #else
             fs_->bc_->Writeblk(params->GetBno(i) + fs_->Info().dat_block, dientry);
@@ -566,15 +565,15 @@ zx_status_t VnodeMinfs::BlockOpDindirect(Transaction* state, DindirectArgs* para
 #ifdef __Fuchsia__
 void VnodeMinfs::ReadIndirectVmoBlock(uint32_t offset, uint32_t** entry) {
     ZX_DEBUG_ASSERT(vmo_indirect_ != nullptr);
-    uintptr_t addr = reinterpret_cast<uintptr_t>(vmo_indirect_->GetData());
-    ValidateVmoSize(vmo_indirect_->GetVmo(), offset);
+    uintptr_t addr = reinterpret_cast<uintptr_t>(vmo_indirect_->start());
+    ValidateVmoSize(vmo_indirect_->vmo().get(), offset);
     *entry = reinterpret_cast<uint32_t*>(addr + kMinfsBlockSize * offset);
 }
 
 void VnodeMinfs::ClearIndirectVmoBlock(uint32_t offset) {
     ZX_DEBUG_ASSERT(vmo_indirect_ != nullptr);
-    uintptr_t addr = reinterpret_cast<uintptr_t>(vmo_indirect_->GetData());
-    ValidateVmoSize(vmo_indirect_->GetVmo(), offset);
+    uintptr_t addr = reinterpret_cast<uintptr_t>(vmo_indirect_->start());
+    ValidateVmoSize(vmo_indirect_->vmo().get(), offset);
     memset(reinterpret_cast<void*>(addr + kMinfsBlockSize * offset), 0, kMinfsBlockSize);
 }
 #else
@@ -709,7 +708,7 @@ zx_status_t VnodeMinfs::BlockGet(Transaction* state, blk_t n, blk_t* bno) {
             ZX_DEBUG_ASSERT(dibindex < kMinfsDoublyIndirect);
             uint64_t vmo_size = GetVmoSizeForIndirect(dibindex);
             // Grow VMO if we need more space to fit doubly indirect blocks
-            if (vmo_indirect_->GetSize() < vmo_size) {
+            if (vmo_indirect_->size() < vmo_size) {
                 if ((status = vmo_indirect_->Grow(vmo_size)) != ZX_OK) {
                     return status;
                 }

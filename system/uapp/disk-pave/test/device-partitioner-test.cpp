@@ -14,7 +14,7 @@
 #include <fbl/unique_ptr.h>
 #include <fs-management/ram-nand.h>
 #include <fs-management/ramdisk.h>
-#include <lib/fzl/mapped-vmo.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <unittest/unittest.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/device.h>
@@ -223,23 +223,22 @@ class SkipBlockDevice {
 public:
     static bool Create(fbl::unique_ptr<SkipBlockDevice>* device) {
         BEGIN_HELPER;
-        fbl::unique_ptr<fzl::MappedVmo> mapped_vmo;
-        ASSERT_EQ(fzl::MappedVmo::Create((kPageSize + kOobSize) * kPagesPerBlock * kNumBlocks,
-                                         "Fake NAND Device", &mapped_vmo),
-                  ZX_OK);
-        memset(mapped_vmo->GetData(), 0xff, mapped_vmo->GetSize());
-        CreateBadBlockMap(mapped_vmo->GetData());
-        zx_vmo_op_range(mapped_vmo->GetVmo(), ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, 0,
-                        mapped_vmo->GetSize(), nullptr, 0);
-        zx_handle_t dup;
-        ASSERT_EQ(zx_handle_duplicate(mapped_vmo->GetVmo(), ZX_RIGHT_SAME_RIGHTS, &dup), ZX_OK);
+        fzl::VmoMapper mapper;
+        zx::vmo vmo;
+        ASSERT_EQ(ZX_OK, mapper.CreateAndMap((kPageSize + kOobSize) * kPagesPerBlock * kNumBlocks,
+                                             ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo));
+        memset(mapper.start(), 0xff, mapper.size());
+        CreateBadBlockMap(mapper.start());
+        vmo.op_range(ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, 0, mapper.size(), nullptr, 0);
+        zx::vmo dup;
+        ASSERT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup), ZX_OK);
 
         fbl::String path(PATH_MAX, '\0');
         zircon_nand_RamNandInfo info = kNandInfo;
-        info.vmo = dup;
+        info.vmo = dup.release();
         ASSERT_EQ(create_ram_nand(&info, const_cast<char*>(path.data())), ZX_OK);
         ASSERT_TRUE(InsertTestDevices(path.ToStringPiece(), true));
-        device->reset(new SkipBlockDevice(fbl::move(path), fbl::move(mapped_vmo)));
+        device->reset(new SkipBlockDevice(fbl::move(path), fbl::move(mapper)));
         END_HELPER;
     }
 
@@ -252,11 +251,11 @@ public:
     }
 
 private:
-    SkipBlockDevice(fbl::String path, fbl::unique_ptr<fzl::MappedVmo> mapped_vmo)
-        : path_(fbl::move(path)), mapped_vmo_(fbl::move(mapped_vmo)) {}
+    SkipBlockDevice(fbl::String path, fzl::VmoMapper mapper)
+        : path_(fbl::move(path)), mapper_(fbl::move(mapper)) {}
 
     fbl::String path_;
-    fbl::unique_ptr<fzl::MappedVmo> mapped_vmo_;
+    fzl::VmoMapper mapper_;
 };
 
 } // namespace

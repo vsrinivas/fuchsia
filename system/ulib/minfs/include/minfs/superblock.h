@@ -9,7 +9,8 @@
 #include <fs/block-txn.h>
 
 #ifdef __Fuchsia__
-#include <lib/fzl/mapped-vmo.h>
+#include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/zx/vmo.h>
 #endif
 
 #include <minfs/format.h>
@@ -38,7 +39,7 @@ public:
 
     const Superblock& Info() const {
 #ifdef __Fuchsia__
-        return *reinterpret_cast<const Superblock*>(info_vmo_->GetData());
+        return *reinterpret_cast<const Superblock*>(mapping_.start());
 #else
         return *reinterpret_cast<const Superblock*>(&info_blk_[0]);
 #endif
@@ -49,7 +50,7 @@ public:
     // the next time "Write" is invoked.
     Superblock* MutableInfo() {
 #ifdef __Fuchsia__
-        return reinterpret_cast<Superblock*>(info_vmo_->GetData());
+        return reinterpret_cast<Superblock*>(mapping_.start());
 #else
         return reinterpret_cast<Superblock*>(&info_blk_[0]);
 #endif
@@ -60,13 +61,13 @@ public:
 
 private:
 #ifdef __Fuchsia__
-    SuperblockManager(const Superblock* info, fbl::unique_ptr<fzl::MappedVmo> info_vmo_);
+    SuperblockManager(const Superblock* info, fzl::OwnedVmoMapper mapper);
 #else
     SuperblockManager(const Superblock* info);
 #endif
 
 #ifdef __Fuchsia__
-    fbl::unique_ptr<fzl::MappedVmo> info_vmo_;
+    fzl::OwnedVmoMapper mapping_;
 #else
     uint8_t info_blk_[kMinfsBlockSize];
 #endif

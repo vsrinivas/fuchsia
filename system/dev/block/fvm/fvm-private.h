@@ -18,12 +18,13 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
-#include <lib/fzl/mapped-vmo.h>
 #include <fbl/algorithm.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
+#include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/zx/vmo.h>
 
 namespace fvm {
 
@@ -161,7 +162,7 @@ private:
     zx_status_t FindFreeSliceLocked(size_t* out, size_t hint) const TA_REQ(lock_);
 
     fvm_t* GetFvmLocked() const TA_REQ(lock_) {
-        return reinterpret_cast<fvm_t*>(metadata_->GetData());
+        return reinterpret_cast<fvm_t*>(metadata_.start());
     }
 
     // Mark a slice as free in the metadata structure.
@@ -198,7 +199,7 @@ private:
     block_info_t info_; // Cached info from parent device
 
     fbl::Mutex lock_;
-    fbl::unique_ptr<fzl::MappedVmo> metadata_ TA_GUARDED(lock_);
+    fzl::OwnedVmoMapper metadata_ TA_GUARDED(lock_);
     bool first_metadata_is_primary_ TA_GUARDED(lock_);
     size_t metadata_size_;
     size_t slice_size_;

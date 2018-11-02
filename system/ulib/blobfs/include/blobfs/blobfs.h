@@ -33,7 +33,8 @@
 #include <fs/vnode.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/fzl/mapped-vmo.h>
+#include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/zx/event.h>
 #include <lib/zx/vmo.h>
 #include <trace/event.h>
@@ -266,13 +267,13 @@ private:
     BlobFlags flags_ = {};
     fbl::atomic_bool syncing_;
 
-    // The blob_ here consists of:
+    // The mapping here consists of:
     // 1) The Merkle Tree
     // 2) The Blob itself, aligned to the nearest kBlobfsBlockSize
-    fbl::unique_ptr<fzl::MappedVmo> blob_ = {};
+    fzl::OwnedVmoMapper mapping_;
     vmoid_t vmoid_ = {};
 
-    // Watches any clones of "blob_" provided to clients.
+    // Watches any clones of "vmo_" provided to clients.
     // Observes the ZX_VMO_ZERO_CHILDREN signal.
     async::WaitMethod<VnodeBlob, &VnodeBlob::HandleNoClones> clone_watcher_;
     // Keeps a reference to the blob alive (from within itself)
@@ -293,7 +294,7 @@ private:
     struct WritebackInfo {
         uint64_t bytes_written = {};
         Compressor compressor;
-        fbl::unique_ptr<fzl::MappedVmo> compressed_blob = {};
+        fzl::OwnedVmoMapper compressed_blob;
     };
 
     fbl::unique_ptr<WritebackInfo> write_info_ = {};
@@ -519,9 +520,6 @@ private:
 
     Blobfs(fbl::unique_fd fd, const Superblock* info);
     zx_status_t LoadBitmaps();
-    fbl::unique_ptr<WritebackQueue> writeback_;
-    fbl::unique_ptr<Journal> journal_;
-    Superblock info_;
 
     // Reloads metadata from disk. Useful when metadata on disk
     // may have changed due to journal playback.
@@ -606,6 +604,10 @@ private:
                                            VnodeBlob*,
                                            MerkleRootTraits,
                                            VnodeBlob::TypeWavlTraits>;
+    fbl::unique_ptr<WritebackQueue> writeback_;
+    fbl::unique_ptr<Journal> journal_;
+    Superblock info_;
+
     fbl::Mutex hash_lock_;
     WAVLTreeByMerkle open_hash_ __TA_GUARDED(hash_lock_){};   // All 'in use' blobs.
     WAVLTreeByMerkle closed_hash_ __TA_GUARDED(hash_lock_){}; // All 'closed' blobs.
@@ -617,9 +619,9 @@ private:
 
     RawBitmap block_map_ = {};
     vmoid_t block_map_vmoid_ = {};
-    fbl::unique_ptr<fzl::MappedVmo> node_map_ = {};
+    fzl::ResizeableVmoMapper node_map_;
     vmoid_t node_map_vmoid_ = {};
-    fbl::unique_ptr<fzl::MappedVmo> info_vmo_ = {};
+    fzl::ResizeableVmoMapper info_mapping_;
     vmoid_t info_vmoid_ = {};
 
     // The reserved_blocks_ and reserved_nodes_ bitmaps only hold in-flight reservations.

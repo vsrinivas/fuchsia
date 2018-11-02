@@ -7,7 +7,7 @@
 #ifdef __Fuchsia__
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <lib/fzl/mapped-vmo.h>
+#include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #endif
 
@@ -128,7 +128,7 @@ private:
 class WritebackBuffer {
 public:
     // Calls constructor, return an error if anything goes wrong.
-    static zx_status_t Create(Bcache* bc, fbl::unique_ptr<fzl::MappedVmo> buffer,
+    static zx_status_t Create(Bcache* bc, fzl::OwnedVmoMapper mapper,
                               fbl::unique_ptr<WritebackBuffer>* out);
     ~WritebackBuffer();
 
@@ -143,7 +143,7 @@ public:
     void Enqueue(fbl::unique_ptr<WritebackWork> work) __TA_EXCLUDES(writeback_lock_);
 
 private:
-    WritebackBuffer(Bcache* bc, fbl::unique_ptr<fzl::MappedVmo> buffer);
+    WritebackBuffer(Bcache* bc, fzl::OwnedVmoMapper mapper);
 
     // Blocks until |blocks| blocks of data are free for the caller.
     // Returns |ZX_OK| with the lock still held in this case.
@@ -191,7 +191,7 @@ private:
     // writeback buffer and are ready to be sent to disk.
     WorkQueue work_queue_ __TA_GUARDED(writeback_lock_){};
     bool unmounting_ __TA_GUARDED(writeback_lock_){false};
-    fbl::unique_ptr<fzl::MappedVmo> buffer_{};
+    fzl::OwnedVmoMapper mapper_;
     vmoid_t buffer_vmoid_ = VMOID_INVALID;
     // The units of all the following are "MinFS blocks".
     size_t start_ __TA_GUARDED(writeback_lock_){};

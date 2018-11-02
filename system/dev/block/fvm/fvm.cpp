@@ -14,13 +14,13 @@
 #include <fbl/auto_lock.h>
 #include <fbl/limits.h>
 #include <fbl/new.h>
-#include <lib/fzl/mapped-vmo.h>
+#include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 #include <zircon/thread_annotations.h>
-#include <lib/zx/vmo.h>
 
 #include "fvm-private.h"
 
@@ -70,7 +70,7 @@ bool SliceExtent::Merge(const SliceExtent& other) {
 
 VPartitionManager::VPartitionManager(zx_device_t* parent, const block_info_t& info,
                                      size_t block_op_size, const block_impl_protocol_t* bp)
-    : ManagerDeviceType(parent), info_(info), metadata_(nullptr), metadata_size_(0),
+    : ManagerDeviceType(parent), info_(info), metadata_size_(0),
       slice_size_(0), pslice_total_count_(0), pslice_allocated_count_(0),
       block_op_size_(block_op_size) {
     memcpy(&bp_, bp, sizeof(*bp));
@@ -265,47 +265,47 @@ zx_status_t VPartitionManager::Load() {
     pslice_total_count_ = UsableSlicesCount(DiskSize(), SliceSize());
 
     // Now that the slice size is known, read the rest of the metadata
-    auto make_metadata_vmo = [&](size_t offset, fbl::unique_ptr<fzl::MappedVmo>* out) {
-        fbl::unique_ptr<fzl::MappedVmo> mvmo;
-        zx_status_t status = fzl::MappedVmo::Create(MetadataSize(), "fvm-meta", &mvmo);
+    auto make_metadata_vmo = [&](size_t offset, fzl::OwnedVmoMapper* out_mapping) {
+        fzl::OwnedVmoMapper mapper;
+        zx_status_t status = mapper.CreateAndMap(MetadataSize(), "fvm-metadata");
         if (status != ZX_OK) {
             return status;
         }
 
         // Read both copies of metadata, ensure at least one is valid
-        if ((status = DoIoLocked(mvmo->GetVmo(), offset,
-                                 MetadataSize(), BLOCK_OP_READ)) != ZX_OK) {
+        if ((status = DoIoLocked(mapper.vmo().get(), offset, MetadataSize(), BLOCK_OP_READ))
+            != ZX_OK) {
             return status;
         }
 
-        *out = fbl::move(mvmo);
+        *out_mapping = fbl::move(mapper);
         return ZX_OK;
     };
 
-    fbl::unique_ptr<fzl::MappedVmo> mvmo;
-    if ((status = make_metadata_vmo(0, &mvmo)) != ZX_OK) {
+    fzl::OwnedVmoMapper mapper;
+    if ((status = make_metadata_vmo(0, &mapper)) != ZX_OK) {
         fprintf(stderr, "fvm: Failed to load metadata vmo: %d\n", status);
         return status;
     }
-    fbl::unique_ptr<fzl::MappedVmo> mvmo_backup;
-    if ((status = make_metadata_vmo(MetadataSize(), &mvmo_backup)) != ZX_OK) {
+    fzl::OwnedVmoMapper mapper_backup;
+    if ((status = make_metadata_vmo(MetadataSize(), &mapper_backup)) != ZX_OK) {
         fprintf(stderr, "fvm: Failed to load backup metadata vmo: %d\n", status);
         return status;
     }
 
     const void* metadata;
-    if ((status = fvm_validate_header(mvmo->GetData(), mvmo_backup->GetData(),
+    if ((status = fvm_validate_header(mapper.start(), mapper_backup.start(),
                                       MetadataSize(), &metadata)) != ZX_OK) {
         fprintf(stderr, "fvm: Header validation failure: %d\n", status);
         return status;
     }
 
-    if (metadata == mvmo->GetData()) {
+    if (metadata == mapper.start()) {
         first_metadata_is_primary_ = true;
-        metadata_ = fbl::move(mvmo);
+        metadata_ = fbl::move(mapper);
     } else {
         first_metadata_is_primary_ = false;
-        metadata_ = fbl::move(mvmo_backup);
+        metadata_ = fbl::move(mapper_backup);
     }
 
     // Begin initializing the underlying partitions
@@ -370,7 +370,7 @@ zx_status_t VPartitionManager::WriteFvmLocked() {
     fvm_update_hash(GetFvmLocked(), MetadataSize());
 
     // If we were reading from the primary, write to the backup.
-    status = DoIoLocked(metadata_->GetVmo(), BackupOffsetLocked(),
+    status = DoIoLocked(metadata_.vmo().get(), BackupOffsetLocked(),
                         MetadataSize(), BLOCK_OP_WRITE);
     if (status != ZX_OK) {
         fprintf(stderr, "FVM: Failed to write metadata\n");

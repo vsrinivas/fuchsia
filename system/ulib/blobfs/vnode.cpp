@@ -42,10 +42,10 @@ void VnodeBlob::fbl_recycle() {
 
 void VnodeBlob::TearDown() {
     ZX_ASSERT(clone_watcher_.object() == ZX_HANDLE_INVALID);
-    if (blob_ != nullptr) {
+    if (mapping_.vmo()) {
         blobfs_->DetachVmo(vmoid_);
     }
-    blob_ = nullptr;
+    mapping_.Reset();
 }
 
 VnodeBlob::~VnodeBlob() {

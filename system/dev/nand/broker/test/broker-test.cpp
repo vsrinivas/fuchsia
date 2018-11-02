@@ -6,11 +6,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 #include <fuchsia/nand/c/fidl.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
-#include <lib/fzl/mapped-vmo.h>
+#include <lib/fzl/vmo-mapper.h>
+#include <lib/zx/vmo.h>
 #include <unittest/unittest.h>
 #include <zircon/device/device.h>
 #include <zircon/syscalls.h>
@@ -63,9 +65,9 @@ public:
 
     // Wrappers for "queue" operations that take care of preserving the vmo's handle
     // and translating the request to the desired block range on the actual device.
-    bool Read(const fzl::MappedVmo& vmo, const fuchsia_nand_BrokerRequest& request,
+    bool Read(const zx::vmo& vmo, const fuchsia_nand_BrokerRequest& request,
               zx_status_t* response = nullptr);
-    bool Write(const fzl::MappedVmo& vmo, const fuchsia_nand_BrokerRequest& request,
+    bool Write(const zx::vmo& vmo, const fuchsia_nand_BrokerRequest& request,
                zx_status_t* response = nullptr);
     bool Erase(const fuchsia_nand_BrokerRequest& request, zx_status_t* response = nullptr);
 
@@ -116,7 +118,7 @@ NandDevice::NandDevice() {
     is_valid_ = ValidateNandDevice();
 }
 
-bool NandDevice::Read(const fzl::MappedVmo& vmo, const fuchsia_nand_BrokerRequest& request,
+bool NandDevice::Read(const zx::vmo& vmo, const fuchsia_nand_BrokerRequest& request,
                       zx_status_t* response) {
     BEGIN_TEST;
     fuchsia_nand_BrokerRequest request_copy = request;
@@ -128,7 +130,9 @@ bool NandDevice::Read(const fzl::MappedVmo& vmo, const fuchsia_nand_BrokerReques
 
     uint32_t bit_flips;
     zx_status_t status;
-    ASSERT_EQ(ZX_OK, zx_handle_duplicate(vmo.GetVmo(), ZX_RIGHT_SAME_RIGHTS, &request_copy.vmo));
+    zx::vmo dup;
+    ASSERT_EQ(ZX_OK, vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
+    request_copy.vmo = dup.release();
     ASSERT_EQ(ZX_OK, fuchsia_nand_BrokerRead(channel(), &request_copy, &status, &bit_flips));
     if (response) {
         *response = status;
@@ -139,7 +143,7 @@ bool NandDevice::Read(const fzl::MappedVmo& vmo, const fuchsia_nand_BrokerReques
     END_TEST;
 }
 
-bool NandDevice::Write(const fzl::MappedVmo& vmo, const fuchsia_nand_BrokerRequest& request,
+bool NandDevice::Write(const zx::vmo& vmo, const fuchsia_nand_BrokerRequest& request,
                        zx_status_t* response) {
     BEGIN_TEST;
     fuchsia_nand_BrokerRequest request_copy = request;
@@ -150,7 +154,9 @@ bool NandDevice::Write(const fzl::MappedVmo& vmo, const fuchsia_nand_BrokerReque
     }
 
     zx_status_t status;
-    ASSERT_EQ(ZX_OK, zx_handle_duplicate(vmo.GetVmo(), ZX_RIGHT_SAME_RIGHTS, &request_copy.vmo));
+    zx::vmo dup;
+    ASSERT_EQ(ZX_OK, vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
+    request_copy.vmo = dup.release();
     ASSERT_EQ(ZX_OK, fuchsia_nand_BrokerWrite(channel(), &request_copy, &status));
     if (response) {
         *response = status;
@@ -260,52 +266,54 @@ bool ReadWriteLimitsTest() {
     NandDevice device;
     ASSERT_TRUE(device.IsValid());
 
-    fbl::unique_ptr<fzl::MappedVmo> vmo;
-    ASSERT_EQ(ZX_OK, fzl::MappedVmo::Create(device.MaxBufferSize(), nullptr, &vmo));
+    fzl::VmoMapper mapper;
+    zx::vmo vmo;
+    ASSERT_EQ(ZX_OK, mapper.CreateAndMap(device.MaxBufferSize(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                         nullptr, &vmo));
 
     fuchsia_nand_BrokerRequest request = {};
     zx_status_t status;
-    ASSERT_TRUE(device.Read(*vmo, request, &status));
+    ASSERT_TRUE(device.Read(vmo, request, &status));
     EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, status);
 
-    ASSERT_TRUE(device.Write(*vmo, request, &status));
+    ASSERT_TRUE(device.Write(vmo, request, &status));
     EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, status);
 
     if (device.IsFullDevice()) {
         request.length = 1;
         request.offset_nand = device.NumPages();
 
-        ASSERT_TRUE(device.Read(*vmo, request, &status));
+        ASSERT_TRUE(device.Read(vmo, request, &status));
         EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, status);
 
-        ASSERT_TRUE(device.Write(*vmo, request, &status));
+        ASSERT_TRUE(device.Write(vmo, request, &status));
         EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, status);
 
         request.length = 2;
         request.offset_nand = device.NumPages() - 1;
 
-        ASSERT_TRUE(device.Read(*vmo, request, &status));
+        ASSERT_TRUE(device.Read(vmo, request, &status));
         EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, status);
 
-        ASSERT_TRUE(device.Write(*vmo, request, &status));
+        ASSERT_TRUE(device.Write(vmo, request, &status));
         EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, status);
     }
 
     request.length = 1;
     request.offset_nand = device.NumPages() - 1;
 
-    ASSERT_TRUE(device.Read(*vmo, request, &status));
+    ASSERT_TRUE(device.Read(vmo, request, &status));
     EXPECT_EQ(ZX_ERR_BAD_HANDLE, status);
 
-    ASSERT_TRUE(device.Write(*vmo, request, &status));
+    ASSERT_TRUE(device.Write(vmo, request, &status));
     EXPECT_EQ(ZX_ERR_BAD_HANDLE, status);
 
     request.data_vmo = true;
 
-    ASSERT_TRUE(device.Read(*vmo, request, &status));
+    ASSERT_TRUE(device.Read(vmo, request, &status));
     EXPECT_EQ(ZX_OK, status);
 
-    ASSERT_TRUE(device.Write(*vmo, request, &status));
+    ASSERT_TRUE(device.Write(vmo, request, &status));
     EXPECT_EQ(ZX_OK, status);
 
     END_TEST;
@@ -349,22 +357,23 @@ bool ReadWriteTest() {
     ASSERT_TRUE(device.IsValid());
     ASSERT_TRUE(device.EraseBlock(0));
 
-    fbl::unique_ptr<fzl::MappedVmo> vmo;
-    ASSERT_EQ(ZX_OK, fzl::MappedVmo::Create(device.MaxBufferSize(), nullptr, &vmo));
-
-    memset(vmo->GetData(), 0x55, vmo->GetSize());
+    fzl::VmoMapper mapper;
+    zx::vmo vmo;
+    ASSERT_EQ(ZX_OK, mapper.CreateAndMap(device.MaxBufferSize(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                         nullptr, &vmo));
+    memset(mapper.start(), 0x55, mapper.size());
 
     fuchsia_nand_BrokerRequest request = {};
     request.length = 4;
     request.offset_nand = 4;
     request.data_vmo = true;
 
-    ASSERT_TRUE(device.Write(*vmo, request));
+    ASSERT_TRUE(device.Write(vmo, request));
 
-    memset(vmo->GetData(), 0, vmo->GetSize());
+    memset(mapper.start(), 0, mapper.size());
 
-    ASSERT_TRUE(device.Read(*vmo, request));
-    ASSERT_TRUE(device.CheckPattern(0x55, 0, 4, vmo->GetData()));
+    ASSERT_TRUE(device.Read(vmo, request));
+    ASSERT_TRUE(device.CheckPattern(0x55, 0, 4, mapper.start()));
 
     END_TEST;
 }
@@ -375,28 +384,29 @@ bool ReadWriteOobTest() {
     ASSERT_TRUE(device.IsValid());
     ASSERT_TRUE(device.EraseBlock(0));
 
-    fbl::unique_ptr<fzl::MappedVmo> vmo;
-    ASSERT_EQ(ZX_OK, fzl::MappedVmo::Create(device.MaxBufferSize(), nullptr, &vmo));
-
+    fzl::VmoMapper mapper;
+    zx::vmo vmo;
+    ASSERT_EQ(ZX_OK, mapper.CreateAndMap(device.MaxBufferSize(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                         nullptr, &vmo));
     const char desired[] = {'a', 'b', 'c', 'd'};
-    memcpy(vmo->GetData(), desired, sizeof(desired));
+    memcpy(mapper.start(), desired, sizeof(desired));
 
     fuchsia_nand_BrokerRequest request = {};
     request.length = 1;
     request.offset_nand = 2;
     request.oob_vmo = true;
 
-    ASSERT_TRUE(device.Write(*vmo, request));
+    ASSERT_TRUE(device.Write(vmo, request));
 
     request.length = 2;
     request.offset_nand = 1;
-    memset(vmo->GetData(), 0, device.OobSize() * 2);
+    memset(mapper.start(), 0, device.OobSize() * 2);
 
-    ASSERT_TRUE(device.Read(*vmo, request));
+    ASSERT_TRUE(device.Read(vmo, request));
 
     // The "second page" has the data of interest.
     ASSERT_EQ(0,
-              memcmp(reinterpret_cast<char*>(vmo->GetData()) + device.OobSize(), desired,
+              memcmp(reinterpret_cast<char*>(mapper.start()) + device.OobSize(), desired,
                      sizeof(desired)));
 
     END_TEST;
@@ -408,10 +418,12 @@ bool ReadWriteDataAndOobTest() {
     ASSERT_TRUE(device.IsValid());
     ASSERT_TRUE(device.EraseBlock(0));
 
-    fbl::unique_ptr<fzl::MappedVmo> vmo;
-    ASSERT_EQ(ZX_OK, fzl::MappedVmo::Create(device.MaxBufferSize(), nullptr, &vmo));
+    fzl::VmoMapper mapper;
+    zx::vmo vmo;
+    ASSERT_EQ(ZX_OK, mapper.CreateAndMap(device.MaxBufferSize(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                         nullptr, &vmo));
 
-    char* buffer = reinterpret_cast<char*>(vmo->GetData());
+    char* buffer = reinterpret_cast<char*>(mapper.start());
     memset(buffer, 0x55, device.PageSize() * 2);
     memset(buffer + device.PageSize() * 2, 0xaa, device.OobSize() * 2);
 
@@ -422,11 +434,11 @@ bool ReadWriteDataAndOobTest() {
     request.data_vmo = true;
     request.oob_vmo = true;
 
-    ASSERT_TRUE(device.Write(*vmo, request));
+    ASSERT_TRUE(device.Write(vmo, request));
 
     memset(buffer, 0, device.PageSize() * 4);
 
-    ASSERT_TRUE(device.Read(*vmo, request));
+    ASSERT_TRUE(device.Read(vmo, request));
 
     // Verify data.
     ASSERT_TRUE(device.CheckPattern(0x55, 0, 2, buffer));
@@ -443,29 +455,31 @@ bool EraseTest() {
     NandDevice device;
     ASSERT_TRUE(device.IsValid());
 
-    fbl::unique_ptr<fzl::MappedVmo> vmo;
-    ASSERT_EQ(ZX_OK, fzl::MappedVmo::Create(device.MaxBufferSize(), nullptr, &vmo));
+    fzl::VmoMapper mapper;
+    zx::vmo vmo;
+    ASSERT_EQ(ZX_OK, mapper.CreateAndMap(device.MaxBufferSize(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                         nullptr, &vmo));
 
-    memset(vmo->GetData(), 0x55, vmo->GetSize());
+    memset(mapper.start(), 0x55, mapper.size());
 
     fuchsia_nand_BrokerRequest request = {};
     request.length = kMinBlockSize;
     request.data_vmo = true;
     request.offset_nand = device.BlockSize();
-    ASSERT_TRUE(device.Write(*vmo, request));
+    ASSERT_TRUE(device.Write(vmo, request));
 
     request.offset_nand = device.BlockSize() * 2;
-    ASSERT_TRUE(device.Write(*vmo, request));
+    ASSERT_TRUE(device.Write(vmo, request));
 
     ASSERT_TRUE(device.EraseBlock(1));
     ASSERT_TRUE(device.EraseBlock(2));
 
-    ASSERT_TRUE(device.Read(*vmo, request));
-    ASSERT_TRUE(device.CheckPattern(0xff, 0, kMinBlockSize, vmo->GetData()));
+    ASSERT_TRUE(device.Read(vmo, request));
+    ASSERT_TRUE(device.CheckPattern(0xff, 0, kMinBlockSize, mapper.start()));
 
     request.offset_nand = device.BlockSize();
-    ASSERT_TRUE(device.Read(*vmo, request));
-    ASSERT_TRUE(device.CheckPattern(0xff, 0, kMinBlockSize, vmo->GetData()));
+    ASSERT_TRUE(device.Read(vmo, request));
+    ASSERT_TRUE(device.CheckPattern(0xff, 0, kMinBlockSize, mapper.start()));
 
     END_TEST;
 }
