@@ -62,8 +62,8 @@ TEST(BufferUtils, Reader) {
     EXPECT_EQ(c1->data[0], 0u);
     EXPECT_EQ(c1->data[3], 3u);
 
-    auto c2 = r.Read<Container<2>>();
-    ASSERT_NE(c2, nullptr);
+    auto c2 = r.ReadValue<Container<2>>();
+    ASSERT_TRUE(c2);
     EXPECT_EQ(c2->data[0], 4u);
     EXPECT_EQ(c2->data[1], 5u);
 

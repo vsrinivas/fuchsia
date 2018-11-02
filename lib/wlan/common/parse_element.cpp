@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <wlan/common/buffer_reader.h>
 #include <wlan/common/from_bytes.h>
 #include <wlan/common/parse_element.h>
 
@@ -109,6 +110,50 @@ const VhtCapabilities* ParseVhtCapabilities(Span<const uint8_t> raw_body) {
 
 const VhtOperation* ParseVhtOperation(Span<const uint8_t> raw_body) {
     return ParseFixedSized<VhtOperation>(raw_body);
+}
+
+std::optional<ParsedMpmOpen> ParseMpmOpen(Span<const uint8_t> raw_body) {
+    auto r = BufferReader { raw_body };
+    auto header = r.ReadValue<MpmHeader>();
+    if (!header) { return {}; }
+
+    auto pmk = r.Read<MpmPmk>();
+    if (r.RemainingBytes() > 0) { return {}; }
+
+    return {{ *header, pmk }};
+}
+
+std::optional<ParsedMpmConfirm> ParseMpmConfirm(Span<const uint8_t> raw_body) {
+    auto r = BufferReader { raw_body };
+    auto header = r.ReadValue<MpmHeader>();
+    if (!header) { return {}; }
+
+    auto peer_link_id = r.ReadValue<uint16_t>();
+    if (!peer_link_id) { return {}; }
+
+    auto pmk = r.Read<MpmPmk>();
+    if (r.RemainingBytes() > 0) { return {}; }
+
+    return {{ *header, *peer_link_id, pmk }};
+}
+
+std::optional<ParsedMpmClose> ParseMpmClose(Span<const uint8_t> raw_body) {
+    auto r = BufferReader { raw_body };
+    auto header = r.ReadValue<MpmHeader>();
+    if (!header) { return {}; }
+
+    auto peer_link_id = std::optional<uint16_t> {};
+    if (r.RemainingBytes() % sizeof(MpmPmk) == 2 * sizeof(uint16_t)) {
+        peer_link_id = r.ReadValue<uint16_t>();
+    }
+
+    auto reason_code = r.ReadValue<uint16_t>();
+    if (!reason_code) { return {}; }
+
+    auto pmk = r.Read<MpmPmk>();
+    if (r.RemainingBytes() > 0) { return {}; }
+
+    return {{ *header, peer_link_id, *reason_code, pmk }};
 }
 
 } // namespace common

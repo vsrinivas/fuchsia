@@ -21,6 +21,24 @@ struct ParsedCountry {
     Span<const SubbandTriplet> triplets;
 };
 
+struct ParsedMpmOpen {
+    MpmHeader header;
+    const MpmPmk* pmk; // null if absent
+};
+
+struct ParsedMpmConfirm {
+    MpmHeader header;
+    uint16_t peer_link_id;
+    const MpmPmk* pmk; // null if absent
+};
+
+struct ParsedMpmClose {
+    MpmHeader header;
+    std::optional<uint16_t> peer_link_id;
+    uint16_t reason_code;
+    const MpmPmk* pmk; // null if absent
+};
+
 std::optional<Span<const uint8_t>> ParseSsid(Span<const uint8_t> raw_body);
 std::optional<Span<const SupportedRate>> ParseSupportedRates(Span<const uint8_t> raw_body);
 const DsssParamSet* ParseDsssParamSet(Span<const uint8_t> raw_body);
@@ -36,6 +54,13 @@ const HtCapabilities* ParseHtCapabilities(Span<const uint8_t> raw_body);
 const HtOperation* ParseHtOperation(Span<const uint8_t> raw_body);
 const VhtCapabilities* ParseVhtCapabilities(Span<const uint8_t> raw_body);
 const VhtOperation* ParseVhtOperation(Span<const uint8_t> raw_body);
+
+// It is impossible to parse the Mesh Peering Management element without knowing the context,
+// i.e. whether it belongs to Open, Confirm or Close action. The following three functions parse it
+// for each of the three contexts, respectively.
+std::optional<ParsedMpmOpen> ParseMpmOpen(Span<const uint8_t> raw_body);
+std::optional<ParsedMpmConfirm> ParseMpmConfirm(Span<const uint8_t> raw_body);
+std::optional<ParsedMpmClose> ParseMpmClose(Span<const uint8_t> raw_body);
 
 } // namespace common
 } // namespace wlan

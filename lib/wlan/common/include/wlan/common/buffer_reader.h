@@ -5,8 +5,8 @@
 #pragma once
 
 #include <fbl/unique_ptr.h>
+#include <optional>
 #include <wlan/common/span.h>
-#include <wlan/mlme/packet.h>
 #include <zircon/types.h>
 
 namespace wlan {
@@ -28,6 +28,14 @@ class BufferReader {
         auto data = reinterpret_cast<const T*>(buf_.data() + offset_);
         offset_ += sizeof(T);
         return data;
+    }
+
+    template <typename T> std::optional<T> ReadValue() {
+        if (auto t = Read<T>()) {
+            return {*t};
+        } else {
+            return {};
+        }
     }
 
     Span<const uint8_t> Read(size_t len) {

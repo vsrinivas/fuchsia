@@ -1316,6 +1316,26 @@ struct VhtOperation {
     }
 } __PACKED;
 
+
+// IEEE Std 802.11-2016, 9.4.2.102
+// The fixed part of the Mesh Peering Management header
+struct MpmHeader {
+    // IEEE Std 802.11-2016, table 9-222
+    enum Protocol : uint16_t {
+        MPM = 0,
+        AMPE = 1,
+    };
+
+    Protocol protocol;
+    uint16_t local_link_id;
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.4.2.102
+// The optional "PMK" part of the MPM element
+struct MpmPmk {
+    uint8_t data[16];
+} __PACKED;
+
 SupportedMcsSet IntersectMcs(const SupportedMcsSet& lhs, const SupportedMcsSet& rhs);
 HtCapabilities IntersectHtCap(const HtCapabilities& lhs, const HtCapabilities& rhs);
 VhtCapabilities IntersectVhtCap(const VhtCapabilities& lhs, const VhtCapabilities& rhs);

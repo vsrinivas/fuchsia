@@ -343,6 +343,149 @@ TEST(ParseElement, VhtOperationTooLong) {
     ASSERT_EQ(nullptr, v);
 }
 
+TEST(ParseElement, MpmOpenBad) {
+    {
+        const uint8_t too_short[3] = { 0x11, 0x22, 0x33 };
+        EXPECT_FALSE(ParseMpmOpen(too_short));
+    }
+    {
+        const uint8_t weird_length[5] = { 0x11, 0x22, 0x33, 0x44, 0x55 };
+        EXPECT_FALSE(ParseMpmOpen(weird_length));
+    }
+    {
+        const uint8_t too_long[21] = {};
+        EXPECT_FALSE(ParseMpmOpen(too_long));
+    }
+}
+
+TEST(ParseElement, MpmOpenGoodNoPmk) {
+    const uint8_t data[] = { 0x11, 0x22, 0x33, 0x44 };
+    auto mpm = ParseMpmOpen(data);
+    ASSERT_TRUE(mpm);
+    EXPECT_EQ(static_cast<uint16_t>(mpm->header.protocol), 0x2211u);
+    EXPECT_EQ(static_cast<uint16_t>(mpm->header.local_link_id), 0x4433u);
+    EXPECT_EQ(mpm->pmk, nullptr);
+}
+
+TEST(ParseElement, MpmOpenGoodWithPmk) {
+    const uint8_t data[20] = {
+        0x11, 0x22, 0x33, 0x44,
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+    };
+    auto mpm = ParseMpmOpen(data);
+    ASSERT_TRUE(mpm);
+    EXPECT_EQ(static_cast<uint16_t>(mpm->header.protocol), 0x2211u);
+    EXPECT_EQ(static_cast<uint16_t>(mpm->header.local_link_id), 0x4433u);
+    EXPECT_EQ(static_cast<const void*>(mpm->pmk), data + 4);
+}
+
+TEST(ParseElement, MpmConfirmBad) {
+    {
+        const uint8_t too_short[] = { 0x11, 0x22, 0x33, 0x44, 0x55 };
+        EXPECT_FALSE(ParseMpmConfirm(too_short));
+    }
+    {
+        const uint8_t weird_length[] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77 };
+        EXPECT_FALSE(ParseMpmConfirm(weird_length));
+    }
+    {
+        const uint8_t too_long[23] = {};
+        EXPECT_FALSE(ParseMpmConfirm(too_long));
+    }
+}
+
+TEST(ParseElement, MpmConfirmGoodNoPmk) {
+    const uint8_t data[] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66 };
+    auto mpm = ParseMpmConfirm(data);
+    ASSERT_TRUE(mpm);
+    EXPECT_EQ(static_cast<uint16_t>(mpm->header.protocol), 0x2211u);
+    EXPECT_EQ(static_cast<uint16_t>(mpm->header.local_link_id), 0x4433u);
+    EXPECT_EQ(static_cast<uint16_t>(mpm->peer_link_id), 0x6655u);
+    EXPECT_EQ(mpm->pmk, nullptr);
+}
+
+TEST(ParseElement, MpmConfirmGoodWithPmk) {
+    const uint8_t data[22] = {
+        0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+    };
+    auto mpm = ParseMpmConfirm(data);
+    ASSERT_TRUE(mpm);
+    EXPECT_EQ(static_cast<uint16_t>(mpm->header.protocol), 0x2211u);
+    EXPECT_EQ(static_cast<uint16_t>(mpm->header.local_link_id), 0x4433u);
+    EXPECT_EQ(static_cast<uint16_t>(mpm->peer_link_id), 0x6655u);
+    EXPECT_EQ(static_cast<const void*>(mpm->pmk), data + 6);
+}
+
+TEST(ParseElement, MpmCloseBad) {
+    {
+        const uint8_t too_short[5] = { 0x11, 0x22, 0x33, 0x44, 0x55 };
+        EXPECT_FALSE(ParseMpmClose(too_short));
+    }
+    {
+        const uint8_t weird_length[7] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77 };
+        EXPECT_FALSE(ParseMpmClose(weird_length));
+    }
+    {
+        const uint8_t weird_length[9] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99 };
+        EXPECT_FALSE(ParseMpmClose(weird_length));
+    }
+    {
+        const uint8_t too_long[25] = {};
+        EXPECT_FALSE(ParseMpmClose(too_long));
+    }
+}
+
+TEST(ParseElement, MpmCloseGoodNoLinkIdNoPmk) {
+    const uint8_t data[6] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66 };
+    auto mpm = ParseMpmClose(data);
+    ASSERT_TRUE(mpm);
+    EXPECT_EQ(static_cast<uint16_t>(mpm->header.protocol), 0x2211u);
+    EXPECT_EQ(static_cast<uint16_t>(mpm->header.local_link_id), 0x4433u);
+    EXPECT_EQ(mpm->peer_link_id, std::optional<uint16_t>{});
+    EXPECT_EQ(mpm->reason_code, 0x6655u);
+    EXPECT_EQ(mpm->pmk, nullptr);
+}
+
+TEST(ParseElement, MpmCloseGoodWithLinkIdNoPmk) {
+    const uint8_t data[8] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
+    auto mpm = ParseMpmClose(data);
+    ASSERT_TRUE(mpm);
+    EXPECT_EQ(static_cast<uint16_t>(mpm->header.protocol), 0x2211u);
+    EXPECT_EQ(static_cast<uint16_t>(mpm->header.local_link_id), 0x4433u);
+    EXPECT_EQ(mpm->peer_link_id, std::optional<uint16_t>{ 0x6655u });
+    EXPECT_EQ(mpm->reason_code, 0x8877u);
+    EXPECT_EQ(mpm->pmk, nullptr);
+}
+
+TEST(ParseElement, MpmCloseGoodNoLinkIdWithPmk) {
+    const uint8_t data[22] = {
+        0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+    };
+    auto mpm = ParseMpmClose(data);
+    ASSERT_TRUE(mpm);
+    EXPECT_EQ(static_cast<uint16_t>(mpm->header.protocol), 0x2211u);
+    EXPECT_EQ(static_cast<uint16_t>(mpm->header.local_link_id), 0x4433u);
+    EXPECT_EQ(mpm->peer_link_id, std::optional<uint16_t>{});
+    EXPECT_EQ(mpm->reason_code, 0x6655u);
+    EXPECT_EQ(static_cast<const void*>(mpm->pmk), data + 6);
+}
+
+TEST(ParseElement, MpmCloseGoodWithLinkIdWithPmk) {
+    const uint8_t data[24] = {
+        0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+    };
+    auto mpm = ParseMpmClose(data);
+    ASSERT_TRUE(mpm);
+    EXPECT_EQ(static_cast<uint16_t>(mpm->header.protocol), 0x2211u);
+    EXPECT_EQ(static_cast<uint16_t>(mpm->header.local_link_id), 0x4433u);
+    EXPECT_EQ(mpm->peer_link_id, std::optional<uint16_t>{ 0x6655u });
+    EXPECT_EQ(mpm->reason_code, 0x8877u);
+    EXPECT_EQ(static_cast<const void*>(mpm->pmk), data + 8);
+}
+
 } // namespace common
 } // namespace wlan
 
