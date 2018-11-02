@@ -61,7 +61,7 @@ enum PointerEventType {
   // A pointer device with a stylus that has been inverted.
   INVERTED_STYLUS = 2;
 
-  // A pointer device with a stylus.
+  // A pointer device without a stylus.
   MOUSE = 3;
 };
 

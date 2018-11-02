@@ -77,6 +77,12 @@ class InputCommandDispatcher : public CommandDispatcher {
   void DispatchCommand(
       const fuchsia::ui::input::SetParallelDispatchCmd command);
 
+  // Per-pointer-type dispatch logic.
+  void DispatchTouchCommand(
+      const fuchsia::ui::input::SendPointerInputCmd command);
+  void DispatchMouseCommand(
+      const fuchsia::ui::input::SendPointerInputCmd command);
+
   // Enqueue the focus event into the view's SessionListener.
   void EnqueueEventToView(GlobalId view_id, fuchsia::ui::input::FocusEvent focus);
 
@@ -100,12 +106,23 @@ class InputCommandDispatcher : public CommandDispatcher {
   // Tracks which View has focus.
   GlobalId focus_;
 
-  // Tracks the set of Views each pointer is delivered to; a map from pointer ID
-  // to a stack of GlobalIds. This is used to ensure consistent delivery of
-  // pointer events for a given finger to its original destination targets on
-  // their respective DOWN event. In particular, changes in focus from a new
-  // finger should *not* affect delivery of events for existing fingers.
-  std::unordered_map<uint32_t, ViewStack> pointer_targets_;
+  // Tracks the set of Views each touch event is delivered to; a map from
+  // pointer ID to a stack of GlobalIds. This is used to ensure consistent
+  // delivery of pointer events for a given finger to its original destination
+  // targets on their respective DOWN event. In particular, a focus change
+  // triggered by a new finger should *not* affect delivery of events to
+  // existing fingers.
+  //
+  // NOTE: We assume there is one touch screen, and hence unique pointer IDs.
+  std::unordered_map<uint32_t, ViewStack> touch_targets_;
+
+  // Tracks the View each mouse pointer is delivered to; a map from device ID to
+  // a GlobalId. This is used to ensure consistent delivery of mouse events for
+  // a given device. A focus change triggered by other pointer events should
+  // *not* affect delivery of events to existing mice.
+  //
+  // NOTE: We reuse the ViewStack here just for convenience.
+  std::unordered_map<uint32_t, ViewStack> mouse_targets_;
 
   // TODO(SCN-1047): Remove when gesture disambiguation is the default.
   bool parallel_dispatch_ = true;

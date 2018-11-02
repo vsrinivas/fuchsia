@@ -19,6 +19,7 @@ executable("unittests") {
     "focus_avoidance_test.cc",
     "hard_keyboard_delivery_test.cc",
     "import_node_test.cc",
+    "mouse_delivery_test.cc",
     "util.cc",
     "util.h",
   ]
