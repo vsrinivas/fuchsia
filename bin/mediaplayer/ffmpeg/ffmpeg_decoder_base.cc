@@ -226,8 +226,8 @@ int FfmpegDecoderBase::AllocateBufferForAvFrame(
   // decoding on multiple threads. Be sure to avoid using self->context() or
   // self->av_codec_context_.
 
-  // CODEC_CAP_DR1 is required in order to do allocation this way.
-  FXL_DCHECK(av_codec_context->codec->capabilities & CODEC_CAP_DR1);
+  // AV_CODEC_CAP_DR1 is required in order to do allocation this way.
+  FXL_DCHECK(av_codec_context->codec->capabilities & AV_CODEC_CAP_DR1);
 
   FfmpegDecoderBase* self =
       reinterpret_cast<FfmpegDecoderBase*>(av_codec_context->opaque);
