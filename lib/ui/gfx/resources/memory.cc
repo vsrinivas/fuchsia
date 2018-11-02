@@ -29,7 +29,10 @@ Memory::Memory(Session* session, ResourceId id,
       is_host_(args.memory_type == fuchsia::images::MemoryType::HOST_MEMORY),
       shared_vmo_(fxl::MakeRefCounted<fsl::SharedVmo>(std::move(args.vmo),
                                                       ZX_VM_PERM_READ)),
-      allocation_size_(args.allocation_size) {}
+      // TODO(nathanrogers): Force clients to explicitly provide an allocation
+      // size.
+      allocation_size_(args.allocation_size > 0 ? args.allocation_size
+                                                : shared_vmo_->vmo_size()) {}
 
 MemoryPtr Memory::New(Session* session, ResourceId id,
                       ::fuchsia::ui::gfx::MemoryArgs args) {
