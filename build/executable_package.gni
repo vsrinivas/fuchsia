@@ -27,6 +27,7 @@ template("executable_package") {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "deprecated_system_image",
                              "public_deps",
                              "testonly",
                              "meta",
@@ -42,6 +43,14 @@ template("executable_package") {
       ]
     }
 
-    binary = binary_name
+    if (!defined(deprecated_system_image) || !deprecated_system_image) {
+      binary = binary_name
+    } else {
+      binaries = [
+        {
+          name = binary_name
+        },
+      ]
+    }
   }
 }

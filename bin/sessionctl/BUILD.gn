@@ -5,6 +5,11 @@
 import("//peridot/build/executable_package.gni")
 
 executable_package("sessionctl") {
+  # We do this only to have `sessionctl` appear in the shell's
+  # PATH. When a solution to this is available, remove this line
+  # and uncomment the "meta =" stanza below.
+  deprecated_system_image = true
+
   sources = [
     "main.cc",
   ]
@@ -18,12 +23,12 @@ executable_package("sessionctl") {
     "//zircon/public/lib/fdio",
   ]
 
-  meta = [
-    {
-      path = "meta/sessionctl.cmx"
-      dest = "sessionctl.cmx"
-    },
-  ]
+  # meta = [
+  #   {
+  #     path = "meta/sessionctl.cmx"
+  #     dest = "sessionctl.cmx"
+  #   },
+  # ]
 }
 
 source_set("lib") {
