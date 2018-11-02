@@ -26,7 +26,7 @@ located in the package’s `meta/` directory with information that declares
 how to run the component and what resources it receives. In particular, the
 component manifest describes how the component is sandboxed.
 
-Here's a simple example:
+Here's a simple example of a cmx for an ELF binary component:
 
 ```
 {
@@ -37,6 +37,17 @@ Here's a simple example:
         "system": [ "data/sysmgr" ],
         "services": [ "fuchsia.sys.Launcher", "fuchsia.netstack.Netstack" ]
     }
+}
+```
+
+And one for a flutter/dart component:
+
+```
+{
+    "program": {
+        "data": "data/simple_flutter"
+    },
+    "runner": "flutter_jit_runner"
 }
 ```
 
@@ -63,6 +74,22 @@ binary to run the component.
 
 If [`runner`](#runner) is present, `program` is a freeform string-string JSON
 object interpreted as args to pass to the runner.
+
+For instance, for a flutter/dart component, its format is:
+
+```
+{
+    "type": "object",
+    "properties": {
+        "data": {
+            "type": "string"
+        }
+    }
+}
+```
+
+Where `data` should describe the location of the flutter/dart binaries. By
+default, it is under `data/<component-name>`.
 
 ### runner
 
