@@ -458,6 +458,7 @@ BUILDID ?=
 # Tool locations.
 TOOLS := $(BUILDDIR)/tools
 FIDL := $(TOOLS)/fidlc
+BANJO := $(TOOLS)/banjoc
 ABIGEN := $(TOOLS)/abigen
 ZBI := $(TOOLS)/zbi
 

@@ -221,9 +221,11 @@ ifeq ($(filter shared,$(MODULE_PACKAGE)),)
 # we apply the same . to - transform as in PKG_DEPS
 MODULE_PKG_SDEPS := $(subst .,-,$(foreach dep,$(MODULE_STATIC_LIBS),$(lastword $(subst /,$(SPACE),$(dep)))))
 MODULE_PKG_FDEPS := $(subst .,-,$(foreach dep,$(MODULE_FIDL_LIBS),$(lastword $(subst /,$(SPACE),$(dep)))))
+MODULE_PKG_BDEPS := $(subst .,-,$(foreach dep,$(MODULE_BANJO_LIBS),$(lastword $(subst /,$(SPACE),$(dep)))))
 else
 MODULE_PKG_SDEPS :=
 MODULE_PKG_FDEPS :=
+MODULE_PKG_BDEPS :=
 endif
 
 # libc is the "sysroot" package
@@ -258,6 +260,7 @@ MODULE_PKG_INCS += $(foreach inc,$(ZIRCON_HEADERS),$(patsubst system/ulib/zircon
 MODULE_PKG_DEPS :=
 MODULE_PKG_SDEPS :=
 MODULE_PKG_FDEPS :=
+MODULE_PKG_BDEPS :=
 endif
 
 $(MODULE_PKG_FILE): _NAME := $(MODULE_NAME)
@@ -267,6 +270,7 @@ $(MODULE_PKG_FILE): _SRCS := $(if $(MODULE_PKG_SRCS),$(MODULE_PKG_TAG) $(sort $(
 $(MODULE_PKG_FILE): _DEPS := $(if $(MODULE_PKG_DEPS),"[deps]" $(sort $(MODULE_PKG_DEPS)))
 $(MODULE_PKG_FILE): _SDEPS := $(if $(MODULE_PKG_SDEPS),"[static-deps]" $(sort $(MODULE_PKG_SDEPS)))
 $(MODULE_PKG_FILE): _FDEPS := $(if $(MODULE_PKG_FDEPS),"[fidl-deps]" $(sort $(MODULE_PKG_FDEPS)))
+$(MODULE_PKG_FILE): _BDEPS := $(if $(MODULE_PKG_BDEPS),"[banjo-deps]" $(sort $(MODULE_PKG_BDEPS)))
 $(MODULE_PKG_FILE): $(MODULE_RULESMK) make/module-userlib.mk
 	@$(call BUILDECHO,creating package $@ ;)\
 	$(MKDIR) ;\
@@ -278,6 +282,7 @@ $(MODULE_PKG_FILE): $(MODULE_RULESMK) make/module-userlib.mk
 	for i in $(_SRCS) ; do echo $$i >> $@ ; done ;\
 	for i in $(_SDEPS) ; do echo $$i >> $@ ; done ;\
 	for i in $(_FDEPS) ; do echo $$i >> $@ ; done ;\
+	for i in $(_BDEPS) ; do echo $$i >> $@ ; done ;\
 	for i in $(_DEPS) ; do echo $$i >> $@ ; done
 
 $(MODULE_EXP_FILE): $(MODULE_PKG_FILE)
