@@ -19,6 +19,7 @@ MODULE_HEADER_DEPS := \
     system/ulib/svc \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/backtrace-request \
     system/ulib/elf-search \
     system/ulib/inspector \
     system/ulib/async \
@@ -27,7 +28,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/fidl \
     system/ulib/pretty \
     system/ulib/runtime \
-    system/ulib/zircon-internal \
     system/ulib/zxcpp
 
 MODULE_LIBS := \

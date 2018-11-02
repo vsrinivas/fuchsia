@@ -16,7 +16,7 @@
 #include <lib/crashanalyzer/crashanalyzer.h>
 #include <lib/fdio/util.h>
 #include <lib/fidl/cpp/message_buffer.h>
-#include <lib/zircon-internal/crashlogger.h>
+#include <lib/backtrace-request/backtrace-request.h>
 #include <pretty/hexdump.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
@@ -76,13 +76,13 @@ static bool is_resumable_swbreak(uint32_t excp_type) {
 #if defined(__x86_64__)
 
 static int have_swbreak_magic(const zx_thread_state_general_regs_t* regs) {
-    return regs->rax == ZX_CRASHLOGGER_REQUEST_SELF_BT_MAGIC;
+    return regs->rax == BACKTRACE_REQUEST_MAGIC;
 }
 
 #elif defined(__aarch64__)
 
 static int have_swbreak_magic(const zx_thread_state_general_regs_t* regs) {
-    return regs->r[0] == ZX_CRASHLOGGER_REQUEST_SELF_BT_MAGIC;
+    return regs->r[0] == BACKTRACE_REQUEST_MAGIC;
 }
 
 #else
