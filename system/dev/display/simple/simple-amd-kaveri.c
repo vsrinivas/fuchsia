@@ -13,10 +13,11 @@
 #define AMD_GFX_VID (0x1002)
 #define AMD_KAVERI_R7_DID (0x130f)
 #define AMD_GFX_RAVEN (0x15dd)
+#define AMD_POLARIS_22_DID (0x694c)
 
 static zx_status_t kaveri_disp_bind(void* ctx, zx_device_t* dev) {
     // framebuffer bar seems to be 0
-    return bind_simple_pci_display_bootloader(dev, "kaveri", 0u);
+    return bind_simple_pci_display_bootloader(dev, "amd", 0u);
 }
 
 static zx_driver_ops_t kaveri_disp_driver_ops = {
@@ -25,9 +26,10 @@ static zx_driver_ops_t kaveri_disp_driver_ops = {
 };
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(kaveri_disp, kaveri_disp_driver_ops, "zircon", "0.1", 4)
+ZIRCON_DRIVER_BEGIN(kaveri_disp, kaveri_disp_driver_ops, "zircon", "0.1", 5)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, AMD_GFX_VID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, AMD_KAVERI_R7_DID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, AMD_GFX_RAVEN),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, AMD_POLARIS_22_DID),
 ZIRCON_DRIVER_END(kaveri_disp)
