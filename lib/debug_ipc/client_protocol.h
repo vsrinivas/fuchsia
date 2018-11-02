@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_DEBUG_IPC_CLIENT_PROTOCOL_H_
+#define GARNET_LIB_DEBUG_IPC_CLIENT_PROTOCOL_H_
 
 #include "garnet/lib/debug_ipc/protocol.h"
 
@@ -117,3 +118,5 @@ bool ReadNotifyException(MessageReader* reader, NotifyException* notify);
 bool ReadNotifyModules(MessageReader* reader, NotifyModules* notify);
 
 }  // namespace debug_ipc
+
+#endif  // GARNET_LIB_DEBUG_IPC_CLIENT_PROTOCOL_H_

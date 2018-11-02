@@ -24,9 +24,9 @@ SystemImpl::SystemImpl(Session* session)
   // bind |this| because the symbol index is owned by |this|.
   symbols_.build_id_index().set_information_callback(
       [this](const std::string& msg) {
-    for (auto& observer : observers())
-      observer.OnSymbolIndexingInformation(msg);
-  });
+        for (auto& observer : observers())
+          observer.OnSymbolIndexingInformation(msg);
+      });
 }
 
 SystemImpl::~SystemImpl() {

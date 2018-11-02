@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_ZXDB_CLIENT_REMOTE_API_IMPL_H_
+#define GARNET_BIN_ZXDB_CLIENT_REMOTE_API_IMPL_H_
 
 #include "garnet/bin/zxdb/client/remote_api.h"
 
@@ -89,3 +90,5 @@ class RemoteAPIImpl : public RemoteAPI {
 };
 
 }  // namespace zxdb
+
+#endif  // GARNET_BIN_ZXDB_CLIENT_REMOTE_API_IMPL_H_

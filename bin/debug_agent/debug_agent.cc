@@ -19,6 +19,7 @@
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
 #include "garnet/lib/debug_ipc/message_writer.h"
+#include "lib/fxl/files/file.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -104,6 +105,7 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
     DebuggedProcess* new_process = nullptr;
     if (process.is_valid()) {
       reply.name = NameForObject(process);
+      reply.koid = request.koid;
       new_process = AddDebuggedProcess(request.koid, std::move(process));
       if (new_process)
         reply.status = ZX_OK;
@@ -132,12 +134,41 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
     zx::job job = GetJobFromKoid(request.koid);
     if (job.is_valid()) {
       reply.name = NameForObject(job);
+      reply.koid = request.koid;
       auto new_job = AddDebuggedJob(request.koid, std::move(job));
       if (new_job) {
         reply.status = ZX_OK;
       }
     }
 
+    // Send the reply.
+    debug_ipc::MessageWriter writer;
+    debug_ipc::WriteReply(reply, transaction_id, &writer);
+    stream()->Write(writer.MessageComplete());
+  } else if (request.type == debug_ipc::AttachRequest::Type::kComponentRoot) {
+    std::string koid_str;
+    bool file_read = files::ReadFileToString("/hub/job-id", &koid_str);
+    if (!file_read) {
+      fprintf(stderr, "Not able to read job-id(%s).\n", strerror(errno));
+      reply.status = ZX_ERR_INTERNAL;
+    } else {
+      char* end = NULL;
+      uint64_t koid = strtoul(koid_str.c_str(), &end, 10);
+      if (*end) {
+        fprintf(stderr, "Invalid job-id: %s.\n", koid_str.c_str());
+        reply.status = ZX_ERR_INTERNAL;
+      } else {
+        zx::job job = GetJobFromKoid(koid);
+        if (job.is_valid()) {
+          reply.koid = koid;
+          reply.name = NameForObject(job);
+          auto new_job = AddDebuggedJob(koid, std::move(job));
+          if (new_job) {
+            reply.status = ZX_OK;
+          }
+        }
+      }
+    }
     // Send the reply.
     debug_ipc::MessageWriter writer;
     debug_ipc::WriteReply(reply, transaction_id, &writer);

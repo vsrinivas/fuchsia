@@ -6,6 +6,7 @@
 #define GARNET_BIN_ZXDB_CLIENT_JOB_CONTEXT_IMPL_H_
 
 #include "garnet/bin/zxdb/client/job_context.h"
+#include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"
 
@@ -39,6 +40,7 @@ class JobContextImpl : public JobContext {
   State GetState() const override;
   Job* GetJob() const override;
   void Attach(uint64_t koid, Callback callback) override;
+  void AttachToComponentRoot(Callback callback) override;
   void Detach(Callback callback) override;
 
  private:
@@ -50,6 +52,9 @@ class JobContextImpl : public JobContext {
   std::unique_ptr<JobImpl> job_;
 
   fxl::WeakPtrFactory<JobContextImpl> impl_weak_factory_;
+
+  void AttachInternal(debug_ipc::AttachRequest::Type type, uint64_t koid,
+                      Callback callback);
 
   static void OnAttachReplyThunk(fxl::WeakPtr<JobContextImpl> job_context,
                                  Callback callback, const Err& err,

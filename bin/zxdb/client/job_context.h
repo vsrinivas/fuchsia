@@ -65,6 +65,11 @@ class JobContext : public ClientObject {
   // executed when the attach is complete (or fails).
   virtual void Attach(uint64_t koid, Callback callback) = 0;
 
+  // Attaches to the component's root job., in which all the component's are
+  // created. The callback will be executed when the attach is complete (or
+  // fails).
+  virtual void AttachToComponentRoot(Callback callback) = 0;
+
   // Detaches from the job with the given koid. The callback will be
   // executed when the detach is complete (or fails).
   virtual void Detach(Callback callback) = 0;

@@ -203,6 +203,8 @@ bool ReadReply(MessageReader* reader, AttachReply* reply,
     return false;
   *transaction_id = header.transaction_id;
 
+  if (!reader->ReadUint64(&reply->koid))
+    return false;
   if (!reader->ReadUint32(&reply->status))
     return false;
   if (!reader->ReadString(&reply->name))

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_DEBUG_IPC_AGENT_PROTOCOL_H_
+#define GARNET_LIB_DEBUG_IPC_AGENT_PROTOCOL_H_
 
 #include "garnet/lib/debug_ipc/protocol.h"
 
@@ -118,3 +119,5 @@ void WriteNotifyException(const NotifyException& notify, MessageWriter* writer);
 void WriteNotifyModules(const NotifyModules& notify, MessageWriter* writer);
 
 }  // namespace debug_ipc
+
+#endif  // GARNET_LIB_DEBUG_IPC_AGENT_PROTOCOL_H_

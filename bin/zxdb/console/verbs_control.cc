@@ -213,7 +213,7 @@ Err DoConnect(ConsoleContext* context, const Command& cmd,
     return Err(ErrType::kInput, "Too many arguments.");
   }
 
-  context->session()->Connect(host, port, [callback](const Err& err) {
+  context->session()->Connect(host, port, [callback, cmd](const Err& err) {
     if (err.has_error()) {
       // Don't display error message if they canceled the connection.
       if (err.type() != ErrType::kCanceled)
@@ -221,6 +221,7 @@ Err DoConnect(ConsoleContext* context, const Command& cmd,
     } else {
       OutputBuffer msg;
       msg.Append("Connected successfully.\n");
+      cmd.job_context()->AttachToComponentRoot(nullptr);
 
       // Assume if there's a callback this is not being run interactively.
       // Otherwise, show the usage tip.
@@ -439,7 +440,8 @@ Examples
       List the values of settings at the system level.
   )";
 
-Err HandleSettingStore(const SettingStore& store, const std::string& setting_name) {
+Err HandleSettingStore(const SettingStore& store,
+                       const std::string& setting_name) {
   OutputBuffer out;
   Err err = FormatSettings(store, setting_name, &out);
   if (err.has_error())
@@ -674,7 +676,7 @@ Err DoSet(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
-} // namespace
+}  // namespace
 
 void AppendControlVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kHelp] = VerbRecord(&DoHelp, {"help", "h"}, kHelpShortHelp,
@@ -696,7 +698,7 @@ void AppendControlVerbs(std::map<Verb, VerbRecord>* verbs) {
   // get.
   SwitchRecord get_system(kGetSystemSwitch, false, "system", 's');
   VerbRecord get(&DoGet, {"get"}, kGetShortHelp, kGetHelp,
-                                    CommandGroup::kGeneral);
+                 CommandGroup::kGeneral);
   get.switches.push_back(std::move(get_system));
   (*verbs)[Verb::kGet] = std::move(get);
 

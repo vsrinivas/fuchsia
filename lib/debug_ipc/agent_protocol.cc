@@ -175,6 +175,7 @@ bool ReadRequest(MessageReader* reader, AttachRequest* request,
 void WriteReply(const AttachReply& reply, uint32_t transaction_id,
                 MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kAttach, transaction_id);
+  writer->WriteUint64(reply.koid);
   writer->WriteUint32(reply.status);
   writer->WriteString(reply.name);
 }

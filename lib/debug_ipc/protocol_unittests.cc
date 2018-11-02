@@ -135,6 +135,7 @@ TEST(Protocol, AttachRequest) {
 
 TEST(Protocol, AttachReply) {
   AttachReply initial;
+  initial.koid = 2312;
   initial.status = 67;
   initial.name = "virtual console";
 

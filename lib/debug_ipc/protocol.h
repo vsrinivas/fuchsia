@@ -98,13 +98,14 @@ struct KillReply {
 // The debug agent will follow a successful AttachReply with notifications for
 // all threads currently existing in the attached process.
 struct AttachRequest {
-  enum class Type : uint32_t { kProcess = 0, kJob, kLast };
+  enum class Type : uint32_t { kProcess = 0, kJob, kComponentRoot, kLast };
 
   Type type = Type::kProcess;
   uint64_t koid = 0;
 };
 
 struct AttachReply {
+  uint64_t koid = 0;
   uint32_t status = 0;  // zx_status_t value from attaching. ZX_OK on success.
   std::string name;
 };
