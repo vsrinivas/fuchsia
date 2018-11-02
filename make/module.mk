@@ -32,12 +32,14 @@
 # MODULE_STATIC_LIBS : static libraries for a userapp or userlib to depend on
 # MODULE_FIDL_LIBS : fidl libraries for a userapp or userlib to depend on the C bindings of
 # MODULE_FIDL_LIBRARY : the name of the FIDL library being built (for fidl modules)
+# MODULE_BANJO_LIBS : banjo libraries for a userapp or userlib to depend on the C bindings of
+# MODULE_BANJO_LIBRARY : the name of the BANJO library being built (for banjo modules)
 # MODULE_FIRMWARE : files under prebuilt/downloads/firmware/ to be installed under /boot/driver/firmware/
 # MODULE_SO_NAME : linkage name for the shared library
 # MODULE_HOST_LIBS: static libraries for a hostapp or hostlib to depend on
 # MODULE_HOST_SYSLIBS: system libraries for a hostapp or hostlib to depend on
 # MODULE_GROUP: tag for manifest file entry
-# MODULE_PACKAGE: package type (src, fidl, so, a) for module to export to SDK
+# MODULE_PACKAGE: package type (src, fidl, banjo, so, a) for module to export to SDK
 # MODULE_PACKAGE_SRCS: override automated package source file selection, or the special
 #                      value "none" for header-only libraries
 # MODULE_PACKAGE_INCS: override automated package include file selection
@@ -80,7 +82,8 @@ endif
 
 # all library deps go on the deps list
 _MODULE_DEPS := $(MODULE_DEPS) $(MODULE_LIBS) $(MODULE_STATIC_LIBS) \
-                $(MODULE_HOST_LIBS) $(MODULE_FIDL_LIBS) $(MODULE_FIDL_DEPS)
+                $(MODULE_HOST_LIBS) $(MODULE_FIDL_LIBS) $(MODULE_FIDL_DEPS) \
+                $(MODULE_BANJO_LIBS) $(MODULE_BANJO_DEPS)
 
 # Catch the depends on nonexistant module error case
 # here where we can tell you what module has the bad deps.
@@ -182,7 +185,7 @@ ifeq ($(call TOBOOL,$(ENABLE_ULIB_ONLY)),true)
 # sort of like an inside-out userlib (drivers need their devhost like
 # executables need their shared libraries).  Elide everything else.
 MODULE_ELIDED := \
-	$(call TOBOOL,$(filter-out userlib:% fidl:% userapp:system/core/devmgr.host,\
+	$(call TOBOOL,$(filter-out userlib:% fidl:% banjo:% userapp:system/core/devmgr.host,\
 			       $(MODULE_TYPE):$(MODULE)))
 else
 MODULE_ELIDED := false
@@ -214,7 +217,11 @@ else
 ifeq ($(MODULE_TYPE),fidl)
 include make/fcompile.mk
 else
+ifeq ($(MODULE_TYPE),banjo)
+include make/bcompile.mk
+else
 include make/ucompile.mk
+endif
 endif
 endif
 endif
@@ -244,8 +251,8 @@ USER_MANIFEST_LINES += \
 
 ifeq ($(MODULE_TYPE),)
 # modules with no type are kernel modules
-ifneq ($(MODULE_LIBS)$(MODULE_STATIC_LIBS)$(MODULE_FIDL_LIBS),)
-$(error $(MODULE) kernel modules may not use MODULE_LIBS, MODULE_STATIC_LIBS, or MODULE_FIDL_LIBS)
+ifneq ($(MODULE_LIBS)$(MODULE_STATIC_LIBS)$(MODULE_FIDL_LIBS)$(MODULE_BANJO_LIBS),)
+$(error $(MODULE) kernel modules may not use MODULE_LIBS, MODULE_STATIC_LIBS, MODULE_FIDL_LIBS, or MODULE_BANJO_LIBS)
 endif
 # make the rest of the build depend on our output
 ALLMODULE_OBJS += $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
@@ -285,6 +292,9 @@ MODULE_STATIC_LIBS :=
 MODULE_FIDL_DEPS :=
 MODULE_FIDL_LIBS :=
 MODULE_FIDL_LIBRARY :=
+MODULE_BANJO_DEPS :=
+MODULE_BANJO_LIBS :=
+MODULE_BANJO_LIBRARY :=
 MODULE_SO_NAME :=
 MODULE_INSTALL_PATH :=
 MODULE_SO_INSTALL_NAME :=
