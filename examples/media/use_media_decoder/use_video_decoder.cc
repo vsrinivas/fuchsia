@@ -436,33 +436,65 @@ static void use_video_decoder(
         if (!video_format.is_uncompressed()) {
           Exit("!video.is_uncompressed()");
         }
+
         raw = &video_format.uncompressed();
-        if (raw->fourcc != make_fourcc('N', 'V', '1', '2')) {
-          Exit("fourcc != NV12");
+        switch (raw->fourcc) {
+          case make_fourcc('N', 'V', '1', '2'): {
+            size_t y_size =
+                raw->primary_height_pixels * raw->primary_line_stride_bytes;
+            if (raw->secondary_start_offset < y_size) {
+              Exit("raw.secondary_start_offset < y_size");
+            }
+            // NV12 requires UV be same line stride as Y.
+            size_t total_size =
+                raw->secondary_start_offset +
+                raw->primary_height_pixels / 2 * raw->primary_line_stride_bytes;
+            if (packet.valid_length_bytes < total_size) {
+              Exit("packet.valid_length_bytes < total_size");
+            }
+            break;
+          }
+          case make_fourcc('Y', 'V', '1', '2'): {
+            size_t y_size =
+                raw->primary_height_pixels * raw->primary_line_stride_bytes;
+            size_t v_size =
+                raw->secondary_height_pixels * raw->secondary_line_stride_bytes;
+            size_t u_size = v_size;
+            size_t total_size = y_size + u_size + v_size;
+
+            if (packet.valid_length_bytes < total_size) {
+              Exit("packet.valid_length_bytes < total_size");
+            }
+
+            if (raw->secondary_start_offset < y_size) {
+              Exit("raw.secondary_start_offset < y_size");
+            }
+
+            if (raw->tertiary_start_offset < y_size + v_size) {
+              Exit("raw.tertiary_start_offset < y_size + v_size");
+            }
+            break;
+          }
+          default:
+            Exit("fourcc != NV12 && fourcc != YV12");
         }
-        size_t y_size =
-            raw->primary_height_pixels * raw->primary_line_stride_bytes;
-        if (raw->secondary_start_offset < y_size) {
-          Exit("raw.secondary_start_offset < y_size");
-        }
-        // NV12 requires UV be same line stride as Y.
-        size_t total_size =
-            raw->secondary_start_offset +
-            raw->primary_height_pixels / 2 * raw->primary_line_stride_bytes;
-        if (packet.valid_length_bytes < total_size) {
-          Exit("packet.valid_length_bytes < total_size");
-        }
-        if (!frame_sink) {
-          SHA256_Update_VideoParameters(&sha256_ctx, *raw);
-        }
+      }
+      if (!frame_sink) {
+        SHA256_Update_VideoParameters(&sha256_ctx, *raw);
       }
 
       if (!output_file.empty()) {
-        raw_video_writer.WriteNv12(
-            raw->primary_width_pixels, raw->primary_height_pixels,
-            raw->primary_line_stride_bytes,
-            buffer.base() + packet.start_offset + raw->primary_start_offset,
-            raw->secondary_start_offset - raw->primary_start_offset);
+        switch (raw->fourcc) {
+          case make_fourcc('N', 'V', '1', '2'):
+            raw_video_writer.WriteNv12(
+                raw->primary_width_pixels, raw->primary_height_pixels,
+                raw->primary_line_stride_bytes,
+                buffer.base() + packet.start_offset + raw->primary_start_offset,
+                raw->secondary_start_offset - raw->primary_start_offset);
+            break;
+          default:
+            Exit("write to file only implemented for NV12");
+        }
       }
 
       // PTS values are separately verified by use_h264_decoder_test since it'll
@@ -475,23 +507,57 @@ static void use_video_decoder(
       }
 
       if (!frame_sink) {
-        // Y
-        uint8_t* y_src =
-            buffer.base() + packet.start_offset + raw->primary_start_offset;
-        for (uint32_t y_iter = 0; y_iter < raw->primary_height_pixels;
-             y_iter++) {
-          SHA256_Update(&sha256_ctx, y_src, raw->primary_width_pixels);
-          y_src += raw->primary_line_stride_bytes;
-        }
-        // UV
-        uint8_t* uv_src =
-            buffer.base() + packet.start_offset + raw->secondary_start_offset;
-        for (uint32_t uv_iter = 0; uv_iter < raw->primary_height_pixels / 2;
-             uv_iter++) {
-          // NV12 requires eacy UV line be same width as a Y line, and same
-          // stride as a Y line.
-          SHA256_Update(&sha256_ctx, uv_src, raw->primary_width_pixels);
-          uv_src += raw->primary_line_stride_bytes;
+        switch (raw->fourcc) {
+          case make_fourcc('N', 'V', '1', '2'): {
+            // Y
+            uint8_t* y_src =
+                buffer.base() + packet.start_offset + raw->primary_start_offset;
+            for (uint32_t y_iter = 0; y_iter < raw->primary_height_pixels;
+                 y_iter++) {
+              SHA256_Update(&sha256_ctx, y_src, raw->primary_width_pixels);
+              y_src += raw->primary_line_stride_bytes;
+            }
+            // UV
+            uint8_t* uv_src = buffer.base() + packet.start_offset +
+                              raw->secondary_start_offset;
+            for (uint32_t uv_iter = 0; uv_iter < raw->primary_height_pixels / 2;
+                 uv_iter++) {
+              // NV12 requires eacy UV line be same width as a Y line, and
+              // same stride as a Y line.
+              SHA256_Update(&sha256_ctx, uv_src, raw->primary_width_pixels);
+              uv_src += raw->primary_line_stride_bytes;
+            }
+            break;
+          }
+          case make_fourcc('Y', 'V', '1', '2'): {
+            // Y
+            SHA256_Update_VideoPlane(
+                &sha256_ctx,
+                /*start=*/buffer.base() + packet.start_offset +
+                    raw->primary_start_offset,
+                raw->primary_width_pixels, raw->primary_line_stride_bytes,
+                raw->primary_height_pixels);
+
+            // V
+            SHA256_Update_VideoPlane(
+                &sha256_ctx,
+                /*start=*/buffer.base() + packet.start_offset +
+                    raw->secondary_start_offset,
+                raw->secondary_width_pixels, raw->secondary_line_stride_bytes,
+                raw->secondary_height_pixels);
+
+            // U
+            SHA256_Update_VideoPlane(
+                &sha256_ctx,
+                /*start=*/buffer.base() + packet.start_offset +
+                    raw->tertiary_start_offset,
+                raw->secondary_width_pixels, raw->secondary_line_stride_bytes,
+                raw->secondary_height_pixels);
+
+            break;
+          }
+          default:
+            Exit("SHA frame hashing only implemented for NV12 and YV12");
         }
       }
 

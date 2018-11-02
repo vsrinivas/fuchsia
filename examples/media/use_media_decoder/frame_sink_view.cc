@@ -122,6 +122,9 @@ void FrameSinkView::PutFrame(
     case make_fourcc('B', 'G', 'R', 'A'):
       pixel_format = fuchsia::images::PixelFormat::BGRA_8;
       break;
+    case make_fourcc('Y', 'V', '1', '2'):
+      pixel_format = fuchsia::images::PixelFormat::YV12;
+      break;
     default:
       FXL_CHECK(false) << "fourcc conversion not implemented - fourcc: "
                        << fourcc_to_string(fourcc) << " in hex: 0x" << std::hex

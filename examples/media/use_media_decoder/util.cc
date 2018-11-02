@@ -120,3 +120,13 @@ void SHA256_Update_VideoParameters(
   UpdateSha256(sha256_ctx, video.special_formats.is_temp_field_todo_remove());
   UpdateSha256(sha256_ctx, video.special_formats.temp_field_todo_remove());
 }
+
+void SHA256_Update_VideoPlane(SHA256_CTX* sha256_ctx, uint8_t* start,
+                              uint32_t width, uint32_t stride,
+                              uint32_t height) {
+  uint8_t* src = start;
+  for (uint32_t row = 0; row < height; ++row) {
+    SHA256_Update(sha256_ctx, src, width);
+    src += stride;
+  }
+}
