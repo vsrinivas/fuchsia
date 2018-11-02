@@ -71,6 +71,9 @@ func (sp *socketProviderImpl) OpenSocket(d net.SocketDomain, t net.SocketType, p
 }
 
 func netStringToString(ns *net.String) (string, net.AddrInfoStatus) {
+	if ns == nil {
+		return "", net.AddrInfoStatusOk
+	}
 	v := ns.Val[:]
 	if len(v) < int(ns.Len) {
 		return "", net.AddrInfoStatusBufferOverflow
@@ -79,21 +82,13 @@ func netStringToString(ns *net.String) (string, net.AddrInfoStatus) {
 }
 
 func (sp *socketProviderImpl) GetAddrInfo(n *net.String, s *net.String, hints *net.AddrInfoHints) (net.AddrInfoStatus, int32, *net.AddrInfo, *net.AddrInfo, *net.AddrInfo, *net.AddrInfo, error) {
-	var node *string
-	if n != nil {
-		str, status := netStringToString(n)
-		if status != net.AddrInfoStatusOk {
-			return status, 0, nil, nil, nil, nil, nil
-		}
-		node = &str
+	node, status := netStringToString(n)
+	if status != net.AddrInfoStatusOk {
+		return status, 0, nil, nil, nil, nil, nil
 	}
-	var service *string
-	if s != nil {
-		str, status := netStringToString(s)
-		if status != net.AddrInfoStatusOk {
-			return status, 0, nil, nil, nil, nil, nil
-		}
-		service = &str
+	service, status := netStringToString(s)
+	if status != net.AddrInfoStatusOk {
+		return status, 0, nil, nil, nil, nil, nil
 	}
 
 	if hints == nil {
@@ -119,9 +114,8 @@ func (sp *socketProviderImpl) GetAddrInfo(n *net.String, s *net.String, hints *n
 	}
 
 	var port uint16
-	if service != nil && *service != "" {
-		port, err = serviceLookup(*service, transProto)
-		if err != nil {
+	if service != "" {
+		if port, err = serviceLookup(service, transProto); err != nil {
 			if debug {
 				log.Printf("getaddrinfo: serviceLookup: %v", err)
 			}
@@ -130,9 +124,10 @@ func (sp *socketProviderImpl) GetAddrInfo(n *net.String, s *net.String, hints *n
 	}
 
 	var addrs []tcpip.Address
-	if node == nil {
+	switch {
+	case node == "":
 		addrs = append(addrs, "\x00\x00\x00\x00")
-	} else if *node == "localhost" || *node == sp.ns.getNodeName() {
+	case node == "localhost" || node == sp.ns.getNodeName():
 		switch hints.Family {
 		case AF_UNSPEC:
 			addrs = append(addrs, ipv4Loopback, ipv6Loopback)
@@ -143,16 +138,15 @@ func (sp *socketProviderImpl) GetAddrInfo(n *net.String, s *net.String, hints *n
 		default:
 			return net.AddrInfoStatusSystemError, 0, nil, nil, nil, nil, nil
 		}
-	} else {
-		addrs, err = sp.ns.dnsClient.LookupIP(*node)
-		if err != nil {
-			addrs = append(addrs, util.Parse(*node))
+	default:
+		if addrs, err = sp.ns.dnsClient.LookupIP(node); err != nil {
+			addrs = append(addrs, util.Parse(node))
 			if debug {
 				log.Printf("getaddrinfo: addr=%v, err=%v", addrs, err)
 			}
 		}
-
 	}
+
 	if len(addrs) == 0 || len(addrs[0]) == 0 {
 		return net.AddrInfoStatusNoName, 0, nil, nil, nil, nil, nil
 	}

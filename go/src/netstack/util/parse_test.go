@@ -14,7 +14,13 @@ func TestParse(t *testing.T) {
 		txt  string
 		addr tcpip.Address
 	}{
-		{"::", tcpip.Address(strings.Repeat("\x00", 16))},
+		{"1.2.3.4", tcpip.Address("\x01\x02\x03\x04")},
+		{"1.2.3.255", tcpip.Address("\x01\x02\x03\xff")},
+		{"1.2.333.1", tcpip.Address("")},
+		{"1.2.3", tcpip.Address("")},
+		{"1.2.3.4a", tcpip.Address("")},
+		{"a1.2.3.4", tcpip.Address("")},
+		{"::FFFF:1.2.3.4", tcpip.Address("\x01\x02\x03\x04")},
 		{"8::", tcpip.Address("\x00\x08" + strings.Repeat("\x00", 14))},
 		{"::8a", tcpip.Address(strings.Repeat("\x00", 14) + "\x00\x8a")},
 		{"fe80::1234:5678", "\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x12\x34\x56\x78"},
@@ -29,7 +35,7 @@ func TestParse(t *testing.T) {
 	for _, test := range tests {
 		got := util.Parse(test.txt)
 		if got != test.addr {
-			t.Errorf("got util.Parse(%v) = %v, want %v", test.txt, got, test.addr)
+			t.Errorf("got util.Parse(%q) = %q, want %q", test.txt, got, test.addr)
 		}
 	}
 }
@@ -55,7 +61,7 @@ func TestParseCIDR(t *testing.T) {
 		} else {
 			netmask := tcpip.AddressMask(util.Parse(tt.netmask))
 			if want, err := tcpip.NewSubnet(util.ApplyMask(want, netmask), netmask); err != nil {
-				t.Errorf("tcpip.NewSubnet('%s', '%s') failed: %v", want, tt.netmask, err)
+				t.Errorf("tcpip.NewSubnet('%v', '%v') failed: %v", want, tt.netmask, err)
 			} else if want != subnet {
 				t.Errorf("ParseCIDR('%s') = (_, %+v); want (_, %+v)", tt.in, subnet, want)
 			}

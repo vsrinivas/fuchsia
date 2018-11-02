@@ -72,6 +72,7 @@ package("netstack_gotests") {
     "netstack_service_test",
     "//garnet/go/src/netstack/ifconfig:netstack_ifconfig_test",
     "//garnet/go/src/netstack/netstat:netstack_netstat_test",
+    "//garnet/go/src/netstack/util:netstack_util_test",
   ]
 
   binaries = [
@@ -110,6 +111,9 @@ package("netstack_gotests") {
     },
     {
       name = "netstack_netstat_test"
+    },
+    {
+      name = "netstack_util_test"
     },
   ]
 }
