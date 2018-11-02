@@ -16,7 +16,7 @@ static_assert(false, "Fuchsia only header");
 #include <blobfs/writeback.h>
 
 namespace blobfs {
-class Journal;
+class JournalBase;
 class JournalProcessor;
 
 using ReadyCallback = blobfs::WritebackWork::ReadyCallback;
@@ -46,8 +46,8 @@ class JournalEntry : public fbl::SinglyLinkedListable<fbl::unique_ptr<JournalEnt
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(JournalEntry);
 
-    JournalEntry(Journal* journal, EntryStatus status, uint64_t header_index, uint64_t commit_index,
-                 fbl::unique_ptr<WritebackWork> work);
+    JournalEntry(JournalBase* journal, EntryStatus status, uint64_t header_index,
+                 uint64_t commit_index, fbl::unique_ptr<WritebackWork> work);
 
     // Forcibly resets the associated WritebackWork. This should only be called in the event of an
     // error; i.e. blobfs has transitioned to a readonly state. This reset should also resolve any
@@ -110,7 +110,7 @@ public:
     const CommitBlock& GetCommitBlock() const { return commit_block_; }
 
 private:
-    Journal* journal_; // Pointer to the journal containing this entry.
+    JournalBase* journal_; // Pointer to the journal containing this entry.
     fbl::atomic<uint32_t> status_; // Current EntryStatus. Accessed by multiple threads.
     uint32_t block_count_; // Number of blocks in the entry (not including header/commit).
 
@@ -127,6 +127,35 @@ private:
 };
 
 using EntryQueue = fs::Queue<fbl::unique_ptr<JournalEntry>>;
+
+// A Journal interface which other classes (i.e. JournalEntry, JournalProcessor) may use to
+// interact with a Journal.
+class JournalBase {
+public:
+    JournalBase() = default;
+    virtual ~JournalBase() = default;
+    virtual void SendSignal(zx_status_t status) = 0;
+
+    // Returns the capacity of the journal (in blobfs blocks).
+    virtual size_t GetCapacity() const = 0;
+
+    virtual bool IsReadOnly() const = 0;
+
+    // Writes out the header and commit blocks belonging to |entry| to the buffer.
+    // All data from |entry| should already be written to the buffer.
+    virtual void PrepareBuffer(JournalEntry* entry) = 0;
+
+    // Prepares |entry| for deletion by zeroing out the header and commit block in the buffer,
+    // and adds transactions for the deletions to |work|.
+    virtual void PrepareDelete(JournalEntry* entry, WritebackWork* work) = 0;
+
+    // Shortcut to create a WritebackWork with no associated VnodeBlob.
+    virtual fbl::unique_ptr<WritebackWork> CreateWork() = 0;
+
+    // Enqueues transactions from the entry buffer to the blobfs writeback queue.
+    // Verifies the transactions and sets the buffer if necessary.
+    virtual zx_status_t EnqueueEntryWork(fbl::unique_ptr<WritebackWork> work) = 0;
+};
 
 // Journal which manages the in-memory journal (and background thread, which handles writing
 // out entries to the on-disk journal, actual disk locations, and cleaning up old entries).
@@ -166,7 +195,7 @@ using EntryQueue = fs::Queue<fbl::unique_ptr<JournalEntry>>;
 // 8. The JournalThread will continue processing incoming entries until it receives the unmount
 //    signal, at which point it will ensure that no entries are still waiting to be processed
 //    before exiting.
-class Journal {
+class Journal : public JournalBase {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Journal);
 
@@ -193,7 +222,7 @@ public:
     zx_status_t Enqueue(fbl::unique_ptr<WritebackWork> work);
 
     // Signals the journal thread to process waiting entries.
-    void SendSignal(zx_status_t status) {
+    void SendSignal(zx_status_t status) final {
         fbl::AutoLock lock(&lock_);
         SendSignalLocked(status);
     }
@@ -201,14 +230,37 @@ public:
     // Asynchronously processes journal entries and updates journal state.
     void ProcessLoop();
 
+    // JournalBase interface
+
+    size_t GetCapacity() const final {
+        return entries_->capacity();
+    }
+
+    bool IsReadOnly() const final __TA_REQUIRES(lock_) {
+        return state_ == WritebackState::kReadOnly;
+    }
+
+    // Writes out the header and commit blocks belonging to |entry| to the buffer.
+    // All data from |entry| should already be written to the buffer.
+    void PrepareBuffer(JournalEntry* entry) final __TA_EXCLUDES(lock_);
+
+    // Prepares |entry| for deletion by zeroing out the header and commit block in the buffer,
+    // and adds transactions for the deletions to |work|.
+    void PrepareDelete(JournalEntry* entry, WritebackWork* work) final __TA_EXCLUDES(lock_);
+
+    // Shortcut to create a WritebackWork with no associated VnodeBlob.
+    fbl::unique_ptr<WritebackWork> CreateWork() final;
+
+    // Enqueues transactions from the entry buffer to the blobfs writeback queue.
+    // Verifies the transactions and sets the buffer if necessary.
+    zx_status_t EnqueueEntryWork(fbl::unique_ptr<WritebackWork> work) final;
+
 private:
     // The waiter struct may be used as a stack-allocated queue for producers.
     // It allows them to take turns putting data into the buffer when it is
     // mostly full.
     struct Waiter : public fbl::SinglyLinkedListable<Waiter*> {};
     using ProducerQueue = fs::Queue<Waiter*>;
-
-    friend class JournalProcessor;
 
     Journal(Blobfs* blobfs, fbl::unique_ptr<Buffer> info, fbl::unique_ptr<Buffer> entries,
             uint64_t start_block)
@@ -228,21 +280,6 @@ private:
     // into the actual journal. This will consist of at most 2 transactions (if we wrap around the
     // end of the circular buffer). The entry in the buffer itself may not be ready at this point.
     void PrepareWork(JournalEntry* entry, fbl::unique_ptr<WritebackWork>* work);
-
-    // Writes out the header and commit blocks belonging to |entry| to the buffer.
-    // All data from |entry| should already be written to the buffer.
-    void PrepareBuffer(JournalEntry* entry) __TA_EXCLUDES(lock_);
-
-    // Prepares |entry| for deletion by zeroing out the header and commit block in the buffer,
-    // and adds transactions for the deletions to |work|.
-    void PrepareDelete(JournalEntry* entry, WritebackWork* work) __TA_EXCLUDES(lock_);
-
-    // Shortcut to create a WritebackWork with no associated VnodeBlob.
-    fbl::unique_ptr<WritebackWork> CreateWork();
-
-    // Enqueues transactions from the entry buffer to the blobfs writeback queue.
-    // Verifies the transactions and sets the buffer if necessary.
-    zx_status_t EnqueueEntryWork(fbl::unique_ptr<WritebackWork> work);
 
     // Returns the block at |index| within the buffer as a journal entry header block.
     HeaderBlock* GetHeaderBlock(uint64_t index) {
@@ -290,8 +327,6 @@ private:
     // Generates a crc32 checksum for the entry with header block at |header_index|
     // and commit block at |commit_index|.
     uint32_t GenerateChecksum(uint64_t header_index, uint64_t commit_index);
-
-    bool IsReadOnly() const __TA_REQUIRES(lock_) { return state_ == WritebackState::kReadOnly; }
 
     // Removes and returns the next JournalEntry from the work queue.
     fbl::unique_ptr<JournalEntry> GetNextEntry() __TA_EXCLUDES(lock_);
@@ -373,10 +408,10 @@ public:
 
     JournalProcessor() = delete;
 
-    explicit JournalProcessor(Journal* journal) : journal_(journal),
-                                                  error_(journal->IsReadOnly()),
-                                                  blocks_processed_(0),
-                                                  context_(ProcessorContext::kDefault) {}
+    explicit JournalProcessor(JournalBase* journal) : journal_(journal),
+                                                      error_(journal->IsReadOnly()),
+                                                      blocks_processed_(0),
+                                                      context_(ProcessorContext::kDefault) {}
 
     ~JournalProcessor() {
         SetContext(ProcessorContext::kDefault);
@@ -438,7 +473,7 @@ private:
     // Action to take for an unsupported state.
     ProcessResult ProcessUnsupported();
 
-    Journal* journal_;
+    JournalBase* journal_;
     bool error_;
     fbl::unique_ptr<WritebackWork> work_;
     size_t blocks_processed_;

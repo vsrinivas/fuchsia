@@ -19,7 +19,7 @@ static int JournalThread(void* arg) {
     return 0;
 }
 
-JournalEntry::JournalEntry(Journal* journal, EntryStatus status, size_t header_index,
+JournalEntry::JournalEntry(JournalBase* journal, EntryStatus status, size_t header_index,
                            size_t commit_index, fbl::unique_ptr<WritebackWork> work)
         : journal_(journal), status_(static_cast<uint32_t>(status)), block_count_(0),
           header_index_(header_index), commit_index_(commit_index), work_(fbl::move(work)) {
@@ -998,8 +998,8 @@ ProcessResult JournalProcessor::ProcessSyncDefault(JournalEntry* entry) {
     // This is a sync request. Since there is no actual data to update,
     // we can just verify it and send it along to the next queue.
     ZX_DEBUG_ASSERT(entry->BlockCount() == 0);
-    ZX_DEBUG_ASSERT(entry->GetHeaderIndex() == journal_->entries_->capacity());
-    ZX_DEBUG_ASSERT(entry->GetCommitIndex() == journal_->entries_->capacity());
+    ZX_DEBUG_ASSERT(entry->GetHeaderIndex() == journal_->GetCapacity());
+    ZX_DEBUG_ASSERT(entry->GetCommitIndex() == journal_->GetCapacity());
 
     // Always push the sync entry into the output queue.
     return ProcessResult::kContinue;

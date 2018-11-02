@@ -20,7 +20,9 @@ MODULE_STATIC_LIBS := \
     system/ulib/async \
     system/ulib/async-loop.cpp \
     system/ulib/async-loop \
+    system/ulib/bitmap \
     system/ulib/blobfs \
+    system/ulib/block-client \
     system/ulib/digest \
     system/ulib/fbl \
     system/ulib/fvm \
@@ -31,6 +33,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/trace \
     system/ulib/zx \
     system/ulib/zxcpp \
+    third_party/ulib/cksum \
     third_party/ulib/lz4 \
     third_party/ulib/uboringssl \
 
