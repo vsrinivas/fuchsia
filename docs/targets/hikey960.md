@@ -37,7 +37,7 @@ fully working:
 
 Once the system is correctly configured, your development workflow should
 resemble a workflow on other hardware (repeated builds done with `fx build`,
-a persistent instance of `fx boot` to automatically update the hardware, and a
+a persistent instance of `fx pave` to automatically update the hardware, and a
 persistent instance of `fx log` to capture console output).
 
 

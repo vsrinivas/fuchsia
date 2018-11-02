@@ -21,7 +21,7 @@ alternately from the OS on the flash drive itself).
     timeout
   + Copies these zedboot.bin and CMDLINE files to the root of your USB drive
 + Use your host OS to safely remove the USB drive; insert it into your device
-+ On your host, run `fx build` (if you haven't already), then `fx boot`
++ On your host, run `fx build` (if you haven't already), then `fx pave`
 + Connect your device to your host via built-in ethernet, then power up the
   device
 

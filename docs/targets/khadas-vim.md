@@ -100,7 +100,7 @@ scripts/netboot-zircon ./build-arm64
 To netboot garnet, run the following under the fuchsia directory:
 
 ```
-fx set arm64 --netboot && fx full-build && fx boot --netboot -- -1
+fx set arm64 --netboot && fx full-build && fx netboot -1
 ```
 
 You should be able to see "Issued boot command to ..." message printed out if this step is successful.
@@ -110,7 +110,7 @@ You should be able to see "Issued boot command to ..." message printed out if th
 Paving is available from garnet layers and above. Run the following under the fuchsia directory:
 
 ```
-fx set arm64 && fx full-build && fx boot arm -1
+fx set arm64 && fx full-build && fx pave -1
 ```
 
 ### Fuchsia logo
