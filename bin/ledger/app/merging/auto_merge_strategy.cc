@@ -294,7 +294,7 @@ void AutoMergeStrategy::AutoMerger::Done(Status status) {
 
 AutoMergeStrategy::AutoMergeStrategy(ConflictResolverPtr conflict_resolver)
     : conflict_resolver_(std::move(conflict_resolver)) {
-  conflict_resolver_.set_error_handler([this]() {
+  conflict_resolver_.set_error_handler([this](zx_status_t status) {
     // If a merge is in progress, it must be terminated.
     if (in_progress_merge_) {
       // The actual cleanup of in_progress_merge_ will happen in its callback

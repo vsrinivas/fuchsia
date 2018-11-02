@@ -24,7 +24,7 @@ class LedgerMergeManager::ConflictResolverFactoryPtrContainer {
   explicit ConflictResolverFactoryPtrContainer(
       fidl::InterfaceHandle<ConflictResolverFactory> factory)
       : ptr_(factory.Bind()) {
-    ptr_.set_error_handler([this] { OnEmpty(); });
+    ptr_.set_error_handler([this](zx_status_t status) { OnEmpty(); });
   }
 
   void set_on_empty(fit::closure on_empty_callback) {
@@ -74,7 +74,7 @@ void LedgerMergeManager::ResetFactory() {
   current_conflict_resolver_factory_ =
       conflict_resolver_factories_.begin()->TakePtr();
   current_conflict_resolver_factory_.set_error_handler(
-      [this] { this->ResetFactory(); });
+      [this](zx_status_t status) { this->ResetFactory(); });
 
   for (const auto& item : resolvers_) {
     item.second->SetMergeStrategy(nullptr);

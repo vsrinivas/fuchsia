@@ -21,7 +21,7 @@ namespace util {
 template <class Interface>
 void WaitUntilIdle(fidl::InterfacePtr<Interface>* debug_interface_ptr,
                    async::Loop* loop) {
-  debug_interface_ptr->set_error_handler([loop] {
+  debug_interface_ptr->set_error_handler([loop](zx_status_t status) {
     loop->Quit();
     ADD_FAILURE() << Interface::Name_
                   << " disconnected (check app logs for crash)";

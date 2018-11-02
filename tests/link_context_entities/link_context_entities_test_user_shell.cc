@@ -49,7 +49,7 @@ class ContextListenerImpl : fuchsia::modular::ContextListener {
     modular::AddToContextQuery(&query, "all", std::move(selector));
 
     context_reader->Subscribe(std::move(query), binding_.NewBinding());
-    binding_.set_error_handler([] {
+    binding_.set_error_handler([](zx_status_t status) {
       FXL_LOG(ERROR) << "Lost fuchsia::modular::ContextListener connection to "
                         "fuchsia::modular::ContextReader.";
     });
@@ -100,7 +100,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
         intelligence_services.NewRequest());
     intelligence_services->GetContextReader(context_reader_.NewRequest());
     context_listener_.Listen(context_reader_.get());
-    context_reader_.set_error_handler([] {
+    context_reader_.set_error_handler([](zx_status_t status) {
       FXL_LOG(ERROR) << "Lost fuchsia::modular::ContextReader connection.";
     });
 

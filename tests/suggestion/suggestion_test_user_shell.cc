@@ -80,7 +80,7 @@ class TestApp : fuchsia::modular::NextListener,
 
   void StartStory() {
     story_provider_->GetController(kStoryName, story_controller_.NewRequest());
-    story_controller_.set_error_handler([] {
+    story_controller_.set_error_handler([](zx_status_t status) {
       FXL_LOG(ERROR) << "Story controller for story " << kStoryName
                      << " died. Does this story exist?";
     });

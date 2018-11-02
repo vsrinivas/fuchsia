@@ -90,7 +90,7 @@ PageCloudImpl::PageCloudImpl(
       binding_(this, std::move(request)),
       weak_ptr_factory_(this) {
   // The class shuts down when the client connection is disconnected.
-  binding_.set_error_handler([this] {
+  binding_.set_error_handler([this](zx_status_t status) {
     if (on_empty_) {
       on_empty_();
     }
@@ -314,7 +314,7 @@ void PageCloudImpl::SetWatcher(
   }
 
   watcher_ = watcher.Bind();
-  watcher_.set_error_handler([this] { ShutDownWatcher(); });
+  watcher_.set_error_handler([this](zx_status_t status) { ShutDownWatcher(); });
   watcher_timestamp_or_null_ = std::move(timestamp_or_null);
   set_watcher_callback_ = std::move(callback);
 

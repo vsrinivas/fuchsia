@@ -84,8 +84,8 @@ Proxy<I>::Proxy(ProxySet* const set, fidl::InterfacePtr<I> ptr,
     : ProxyBase(set),
       ptr_(std::move(ptr)),
       binding_(ptr_.get(), std::move(request)) {
-  ptr_.set_error_handler([this] { Drop(); });
-  binding_.set_error_handler([this] { Drop(); });
+  ptr_.set_error_handler([this](zx_status_t status) { Drop(); });
+  binding_.set_error_handler([this](zx_status_t status) { Drop(); });
 }
 
 template <typename I>

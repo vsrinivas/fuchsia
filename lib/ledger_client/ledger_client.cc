@@ -341,7 +341,7 @@ fuchsia::ledger::Page* LedgerClient::GetPage(
   entry->clients.push_back(page_client);
 
   entry->page = std::move(page);
-  entry->page.set_error_handler([context] {
+  entry->page.set_error_handler([context](zx_status_t status) {
     // TODO(mesch): If this happens, larger things are wrong. This should
     // probably be signalled up, or at least must be signalled to the page
     // client.

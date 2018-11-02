@@ -34,7 +34,7 @@ class TestComponentController : fuchsia::sys::ComponentController {
   void Connect(
       fidl::InterfaceRequest<fuchsia::sys::ComponentController> request) {
     binding_.Bind(std::move(request));
-    binding_.set_error_handler([this] { Kill(); });
+    binding_.set_error_handler([this](zx_status_t status) { Kill(); });
   }
 
   bool killed() { return killed_; }

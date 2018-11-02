@@ -319,7 +319,8 @@ void SessionmgrImpl::InitializeLedger(
 
   // If ledger state is erased from underneath us (happens when the cloud store
   // is cleared), ledger will close the connection to |ledger_repository_|.
-  ledger_repository_.set_error_handler([this] { Logout(); });
+  ledger_repository_.set_error_handler(
+      [this](zx_status_t status) { Logout(); });
   AtEnd(Reset(&ledger_repository_));
 
   ledger_client_ =

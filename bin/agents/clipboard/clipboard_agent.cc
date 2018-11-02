@@ -26,8 +26,9 @@ class ClipboardAgent {
             FXL_LOG(ERROR) << "Could not connect to Ledger.";
           }
         });
-    ledger.set_error_handler(
-        [] { FXL_LOG(ERROR) << "Ledger connection died."; });
+    ledger.set_error_handler([](zx_status_t status) {
+      FXL_LOG(ERROR) << "Ledger connection died.";
+    });
 
     ledger_client_ = std::make_unique<LedgerClient>(std::move(ledger));
 

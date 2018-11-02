@@ -206,7 +206,7 @@ void UserIntelligenceProviderImpl::StartSessionAgent(const std::string& url) {
   //
   // It is also because of this delay that we must queue any pending service
   // connection requests until we can restart.
-  agent_data->controller.set_error_handler([this, url] {
+  agent_data->controller.set_error_handler([this, url](zx_status_t status) {
     auto it = session_agents_.find(url);
     FXL_DCHECK(it != session_agents_.end())
         << "Controller and services not registered for " << url;

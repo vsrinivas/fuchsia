@@ -26,10 +26,11 @@ void GetPageEnsureInitialized(
           return;
         }
 
-        page->set_error_handler([error_handler = std::move(error_handler)] {
-          FXL_LOG(ERROR) << "The page connection was closed, quitting.";
-          error_handler();
-        });
+        page->set_error_handler(
+            [error_handler = std::move(error_handler)](zx_status_t status) {
+              FXL_LOG(ERROR) << "The page connection was closed, quitting.";
+              error_handler();
+            });
 
         auto page_ptr = (*page).get();
         page_ptr->GetId([page = std::move(page),

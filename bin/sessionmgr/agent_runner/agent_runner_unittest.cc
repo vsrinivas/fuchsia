@@ -204,7 +204,7 @@ TEST_F(AgentRunnerTest, AgentController) {
   // fuchsia::modular::Agent application died, so check that
   // fuchsia::modular::AgentController dies here.
   agent_controller.set_error_handler(
-      [&agent_controller] { agent_controller.Unbind(); });
+      [&agent_controller](zx_status_t status) { agent_controller.Unbind(); });
   RunLoopWithTimeoutOrUntil(
       [&agent_controller] { return !agent_controller.is_bound(); });
   EXPECT_FALSE(agent_controller.is_bound());

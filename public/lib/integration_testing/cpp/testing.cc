@@ -30,7 +30,7 @@ void Init(component::StartupContext* context, const std::string& identity) {
   FXL_CHECK(!g_test_runner_store.is_bound());
 
   g_test_runner = context->ConnectToEnvironmentService<TestRunner>();
-  g_test_runner.set_error_handler([] {
+  g_test_runner.set_error_handler([](zx_status_t status) {
     if (g_connected) {
       FXL_LOG(ERROR) << "Lost connection to TestRunner. This indicates that "
                         "there was an observed process that was terminated "

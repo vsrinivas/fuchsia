@@ -66,7 +66,8 @@ class SyncWatcherSet::SyncWatcherContainer
 
   void set_on_empty(fit::closure on_empty_callback) {
     if (on_empty_callback) {
-      watcher_.set_error_handler(std::move(on_empty_callback));
+      watcher_.set_error_handler([callback = std::move(on_empty_callback)](
+                                     zx_status_t status) { callback(); });
     }
   }
 

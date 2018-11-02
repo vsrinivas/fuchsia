@@ -90,7 +90,7 @@ class AppClient : public AppClientBase {
   void ServiceTerminate(const std::function<void()>& done) override {
     // The service is expected to acknowledge the Terminate() request by
     // closing its connection within the timeout set in Teardown().
-    service_.set_error_handler(done);
+    service_.set_error_handler([done](zx_status_t status) { done(); });
     service_->Terminate();
   }
 

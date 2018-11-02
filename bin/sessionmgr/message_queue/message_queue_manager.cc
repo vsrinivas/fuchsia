@@ -118,7 +118,7 @@ class MessageQueueStorage : fuchsia::modular::MessageSender {
 
     message_receiver_.Bind(std::move(receiver));
     message_receiver_.set_error_handler(
-        [this] {
+        [this](zx_status_t status) {
           if (receive_ack_pending_) {
             FXL_DLOG(WARNING)
                 << "MessageReceiver closed, but OnReceive acknowledgement still"
@@ -274,8 +274,9 @@ class MessageQueueManager::GetQueueTokenCall
   }
 
   void Cont(FlowToken flow) {
-    snapshot_.set_error_handler(
-        [] { FXL_LOG(WARNING) << "Error on snapshot connection"; });
+    snapshot_.set_error_handler([](zx_status_t status) {
+      FXL_LOG(WARNING) << "Error on snapshot connection";
+    });
 
     key_ = MakeMessageQueueTokenKey(component_namespace_,
                                     component_instance_id_, queue_name_);

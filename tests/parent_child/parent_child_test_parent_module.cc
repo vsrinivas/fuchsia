@@ -69,7 +69,8 @@ class TestApp {
   void StartChildModuleTwice() {
     StartModuleWithHandler(module_host_->module_context(),
                            child_module_.NewRequest(), kChildModuleUrl1);
-    child_module_.set_error_handler([this] { OnFirstChildModuleStopped(); });
+    child_module_.set_error_handler(
+        [this](zx_status_t status) { OnFirstChildModuleStopped(); });
 
     // Once the module starts, start the same module again with the same
     // Intent, and then again but with a different Intent.handler. The second
@@ -78,8 +79,9 @@ class TestApp {
       StartModuleWithHandler(module_host_->module_context(),
                              child_module_again_.NewRequest(),
                              kChildModuleUrl1);
-      child_module_again_.set_error_handler(
-          [this] { second_child_module_controller_closed_.Pass(); });
+      child_module_again_.set_error_handler([this](zx_status_t status) {
+        second_child_module_controller_closed_.Pass();
+      });
       StartModuleWithHandler(module_host_->module_context(),
                              child_module2_.NewRequest(), kChildModuleUrl2);
     });

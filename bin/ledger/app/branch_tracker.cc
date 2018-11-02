@@ -33,7 +33,7 @@ class BranchTracker::PageWatcherContainer {
         storage_(storage),
         interface_(std::move(watcher)),
         weak_factory_(this) {
-    interface_.set_error_handler([this] {
+    interface_.set_error_handler([this](zx_status_t status) {
       if (handler_) {
         handler_->Resume(coroutine::ContinuationStatus::INTERRUPTED);
       }

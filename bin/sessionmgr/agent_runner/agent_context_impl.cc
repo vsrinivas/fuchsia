@@ -104,7 +104,7 @@ class AgentContextImpl::InitializeCall : public Operation<> {
 
     // We only want to use fuchsia::modular::Lifecycle if it exists.
     agent_context_impl_->app_client_->primary_service().set_error_handler(
-        [agent_context_impl = agent_context_impl_] {
+        [agent_context_impl = agent_context_impl_](zx_status_t status) {
           agent_context_impl->app_client_->primary_service().Unbind();
         });
 

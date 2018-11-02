@@ -77,7 +77,7 @@ class ConflictResolverImpl : public ConflictResolver {
         disconnect_waiter_(loop_controller->NewWaiter()),
         resolve_waiter_(loop_controller->NewWaiter()),
         binding_(this, std::move(request)) {
-    binding_.set_error_handler([this] {
+    binding_.set_error_handler([this](zx_status_t status) {
       this->disconnected = true;
       disconnect_waiter_->GetCallback()();
     });
@@ -169,7 +169,10 @@ class ConflictResolverImpl : public ConflictResolver {
 
       Status status = Status::UNKNOWN_ERROR;
       auto waiter = loop_controller_->NewWaiter();
-      result_provider.set_error_handler(waiter->GetCallback());
+      result_provider.set_error_handler(
+          [callback = waiter->GetCallback()](zx_status_t status) {
+            callback();
+          });
       result_provider->Done(callback::Capture(waiter->GetCallback(), &status));
       if (!waiter->RunUntilCalled()) {
         return ::testing::AssertionFailure() << "|Done| failed to called back.";
@@ -185,7 +188,10 @@ class ConflictResolverImpl : public ConflictResolver {
     ::testing::AssertionResult MergeNonConflictingEntries() {
       Status status = Status::UNKNOWN_ERROR;
       auto waiter = loop_controller_->NewWaiter();
-      result_provider.set_error_handler(waiter->GetCallback());
+      result_provider.set_error_handler(
+          [callback = waiter->GetCallback()](zx_status_t status) {
+            callback();
+          });
       result_provider->MergeNonConflictingEntries(
           callback::Capture(waiter->GetCallback(), &status));
       if (!waiter->RunUntilCalled()) {
@@ -217,7 +223,10 @@ class ConflictResolverImpl : public ConflictResolver {
         fidl::VectorPtr<DiffEntry> new_entries;
         status = Status::UNKNOWN_ERROR;
         auto waiter = loop_controller_->NewWaiter();
-        result_provider.set_error_handler(waiter->GetCallback());
+        result_provider.set_error_handler(
+            [callback = waiter->GetCallback()](zx_status_t status) {
+              callback();
+            });
         get_diff(std::move(token),
                  callback::Capture(waiter->GetCallback(), &status, &new_entries,
                                    &token));
@@ -255,7 +264,10 @@ class ConflictResolverImpl : public ConflictResolver {
         fidl::VectorPtr<MergedValue> partial_result) {
       Status status = Status::UNKNOWN_ERROR;
       auto waiter = loop_controller_->NewWaiter();
-      result_provider.set_error_handler(waiter->GetCallback());
+      result_provider.set_error_handler(
+          [callback = waiter->GetCallback()](zx_status_t status) {
+            callback();
+          });
       result_provider->Merge(std::move(partial_result),
                              callback::Capture(waiter->GetCallback(), &status));
       if (!waiter->RunUntilCalled()) {

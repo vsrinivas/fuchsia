@@ -43,7 +43,7 @@ PageSyncImpl::PageSyncImpl(async_dispatcher_t* dispatcher,
   page_upload_ = std::make_unique<PageUpload>(&task_runner_, storage_,
                                               encryption_service_, &page_cloud_,
                                               this, std::move(upload_backoff));
-  page_cloud_.set_error_handler([this] {
+  page_cloud_.set_error_handler([this](zx_status_t status) {
     if (on_unrecoverable_error_ && !error_callback_already_called_) {
       error_callback_already_called_ = true;
       on_unrecoverable_error_();

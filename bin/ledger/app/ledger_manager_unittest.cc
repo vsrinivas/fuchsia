@@ -285,7 +285,8 @@ class StubConflictResolverFactory : public ConflictResolverFactory {
   explicit StubConflictResolverFactory(
       fidl::InterfaceRequest<ConflictResolverFactory> request)
       : binding_(this, std::move(request)) {
-    binding_.set_error_handler([this] { disconnected = true; });
+    binding_.set_error_handler(
+        [this](zx_status_t status) { disconnected = true; });
   }
 
   bool disconnected = false;
@@ -339,7 +340,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
 // LedgerImpl.
 TEST_F(LedgerManagerTest, DeletingLedgerManagerClosesConnections) {
   bool ledger_closed = false;
-  ledger_.set_error_handler([this, &ledger_closed] {
+  ledger_.set_error_handler([this, &ledger_closed](zx_status_t status) {
     ledger_closed = true;
     QuitLoop();
   });

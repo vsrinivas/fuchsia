@@ -71,7 +71,8 @@ CloudProviderImpl::CloudProviderImpl(
       binding_(this, std::move(request)),
       weak_ptr_factory_(this) {
   // The class shuts down when the client connection is disconnected.
-  binding_.set_error_handler([this] { ShutDownAndReportEmpty(); });
+  binding_.set_error_handler(
+      [this](zx_status_t status) { ShutDownAndReportEmpty(); });
   // The class also shuts down when the auth provider is disconnected.
   firebase_auth->set_error_handler([this] {
     FXL_LOG(ERROR) << "Lost connection to the token provider, "

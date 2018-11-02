@@ -83,7 +83,8 @@ void GetLedger(component::StartupContext* context,
                 return;
               }
               ledger->set_error_handler([error_handler =
-                                             std::move(error_handler)] {
+                                             std::move(error_handler)](
+                                            zx_status_t status) {
                 FXL_LOG(ERROR) << "The ledger connection was closed, quitting.";
                 error_handler();
               });

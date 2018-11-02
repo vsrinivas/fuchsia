@@ -62,7 +62,7 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
     startup_context()->launcher()->CreateComponent(
         std::move(launch_info), ledger_controller_.NewRequest());
 
-    ledger_controller_.set_error_handler([this] {
+    ledger_controller_.set_error_handler([this](zx_status_t status) {
       for (const auto& callback : ledger_shutdown_callbacks_) {
         callback();
       }
@@ -233,7 +233,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
 
   bool repo_disconnected = false;
   ledger_repository.set_error_handler(
-      [&repo_disconnected] { repo_disconnected = true; });
+      [&repo_disconnected](zx_status_t status) { repo_disconnected = true; });
 
   // Run the message loop until Ledger clears the repo directory and disconnects
   // the client.
@@ -287,7 +287,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
 
   bool repo_disconnected = false;
   ledger_repository.set_error_handler(
-      [&repo_disconnected] { repo_disconnected = true; });
+      [&repo_disconnected](zx_status_t status) { repo_disconnected = true; });
 
   // Run the message loop until Ledger clears the repo directory and disconnects
   // the client.

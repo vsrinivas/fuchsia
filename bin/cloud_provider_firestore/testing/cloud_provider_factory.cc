@@ -67,7 +67,8 @@ class CloudProviderFactory::TokenProviderContainer {
         binding_(&token_provider_, std::move(request)) {}
 
   void set_on_empty(fit::closure on_empty) {
-    binding_.set_error_handler(std::move(on_empty));
+    binding_.set_error_handler(
+        [on_empty = std::move(on_empty)](zx_status_t status) { on_empty(); });
   }
 
  private:

@@ -46,7 +46,7 @@ void ValidationTestsLauncher::Run(const std::vector<std::string>& arguments,
       [this](int32_t return_code, fuchsia::sys::TerminationReason reason) {
         callback_(return_code);
       };
-  validation_tests_controller_.set_error_handler([this] {
+  validation_tests_controller_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR) << "Lost connection to validation tests binary.";
     callback_(-1);
   });

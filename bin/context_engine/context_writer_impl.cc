@@ -209,7 +209,7 @@ ContextValueWriterImpl::ContextValueWriterImpl(
           "ContextValueWriterImpl.value_id_")),
       weak_factory_(this) {
   binding_.set_error_handler(
-      [this] { writer_->DestroyContextValueWriter(this); });
+      [this](zx_status_t status) { writer_->DestroyContextValueWriter(this); });
 
   // When |value_id_| completes, we want to remember it so that we know what
   // branch to execute in Set().

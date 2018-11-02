@@ -28,7 +28,7 @@ void NextProcessor::RegisterListener(
   // if connection drops.  This code is mostly borrowed from InterfacePtrSet
   fuchsia::modular::NextListenerPtr& nextPtr = listeners_.back().first;
   fuchsia::modular::NextListener* pointer = nextPtr.get();
-  nextPtr.set_error_handler([pointer, this]() {
+  nextPtr.set_error_handler([pointer, this](zx_status_t status) {
     auto it = std::find_if(
         listeners_.begin(), listeners_.end(),
         [pointer](const auto& p) { return (p.first.get() == pointer); });
@@ -61,7 +61,8 @@ void NextProcessor::AddProposal(const std::string& component_url,
   if (prototype->proposal.listener) {
     prototype->bound_listener = prototype->proposal.listener.Bind();
     prototype->bound_listener.set_error_handler(
-        [this, proposal_id = prototype->proposal.id, component_url] {
+        [this, proposal_id = prototype->proposal.id,
+         component_url](zx_status_t status) {
           RemoveProposal(component_url, proposal_id);
         });
   }

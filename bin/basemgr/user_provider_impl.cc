@@ -133,10 +133,11 @@ UserProviderImpl::UserProviderImpl(
   FXL_DCHECK(delegate);
   FXL_DCHECK(authentication_context_provider_);
 
-  authentication_context_provider_binding_.set_error_handler([this] {
-    FXL_LOG(WARNING) << "AuthenticationContextProvider disconnected.";
-    authentication_context_provider_binding_.Unbind();
-  });
+  authentication_context_provider_binding_.set_error_handler(
+      [this](zx_status_t status) {
+        FXL_LOG(WARNING) << "AuthenticationContextProvider disconnected.";
+        authentication_context_provider_binding_.Unbind();
+      });
 
   // There might not be a file of users persisted. If config file doesn't
   // exist, move forward with no previous users.
@@ -509,7 +510,7 @@ fuchsia::auth::TokenManagerPtr UserProviderImpl::CreateTokenManager(
       authentication_context_provider_binding_.NewBinding(),
       token_mgr.NewRequest());
 
-  token_mgr.set_error_handler([this, account_id] {
+  token_mgr.set_error_handler([this, account_id](zx_status_t status) {
     FXL_LOG(INFO) << "Token Manager for account:" << account_id
                   << " disconnected";
   });

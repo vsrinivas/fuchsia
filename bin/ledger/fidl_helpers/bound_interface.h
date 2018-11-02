@@ -30,7 +30,8 @@ class BoundInterface {
 
   void set_on_empty(fit::closure on_empty_callback) {
     binding_.set_error_handler(
-        [this, on_empty_callback = std::move(on_empty_callback)]() {
+        [this,
+         on_empty_callback = std::move(on_empty_callback)](zx_status_t status) {
           binding_.Unbind();
           if (on_empty_callback)
             on_empty_callback();

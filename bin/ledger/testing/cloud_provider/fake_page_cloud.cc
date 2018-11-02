@@ -83,7 +83,8 @@ class FakePageCloud::WatcherContainer {
   bool WaitingForWatcherAck() { return waiting_for_watcher_ack_; }
 
   void set_on_empty(fit::closure on_empty) {
-    watcher_.set_error_handler(std::move(on_empty));
+    watcher_.set_error_handler(
+        [on_empty = std::move(on_empty)](zx_status_t status) { on_empty(); });
   }
 
  private:

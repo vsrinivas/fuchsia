@@ -79,7 +79,7 @@ EntityProviderController::EntityProviderController(
   entity_provider_launcher->ConnectToEntityProvider(
       agent_url_, entity_provider_.NewRequest(),
       agent_controller_.NewRequest());
-  agent_controller_.set_error_handler([this] {
+  agent_controller_.set_error_handler([this](zx_status_t status) {
     entity_provider_runner_->OnEntityProviderFinished(agent_url_);
     // |this| no longer valid.
   });

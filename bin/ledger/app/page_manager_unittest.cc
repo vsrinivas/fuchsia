@@ -188,7 +188,8 @@ TEST_F(PageManagerTest, DeletingPageManagerClosesConnections) {
   ASSERT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
   bool page_closed;
-  page.set_error_handler(callback::SetWhenCalled(&page_closed));
+  page.set_error_handler([callback = callback::SetWhenCalled(&page_closed)](
+                             zx_status_t status) { callback(); });
 
   page_manager.reset();
   DrainLoop();

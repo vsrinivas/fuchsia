@@ -71,7 +71,8 @@ FirebaseAuthImpl::FirebaseAuthImpl(
       task_runner_(dispatcher) {}
 
 void FirebaseAuthImpl::set_error_handler(fit::closure on_error) {
-  token_provider_.set_error_handler(std::move(on_error));
+  token_provider_.set_error_handler(
+      [on_error = std::move(on_error)](zx_status_t status) { on_error(); });
 }
 
 fxl::RefPtr<callback::Cancellable> FirebaseAuthImpl::GetFirebaseToken(

@@ -92,7 +92,8 @@ class ConflictResolverImpl : public ConflictResolver {
       fit::closure quit_callback)
       : binding_(this, std::move(request)),
         quit_callback_(std::move(quit_callback)) {
-    binding_.set_error_handler([this] { this->disconnected = true; });
+    binding_.set_error_handler(
+        [this](zx_status_t status) { this->disconnected = true; });
   }
   ~ConflictResolverImpl() override {}
 
@@ -112,7 +113,7 @@ class ConflictResolverImpl : public ConflictResolver {
           common_version(std::move(common_version)),
           result_provider_ptr(result_provider.Bind()) {
       result_provider_ptr.set_error_handler(
-          [this] { result_provider_disconnected = true; });
+          [this](zx_status_t status) { result_provider_disconnected = true; });
     }
   };
 

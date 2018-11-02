@@ -56,8 +56,9 @@ LinkWatcherImpl::LinkWatcherImpl(
   // The fuchsia::modular::Link itself is not kept here, because otherwise it
   // never becomes inactive (i.e. loses all its fuchsia::modular::Link
   // connections).
-  link_watcher_binding_.set_error_handler(
-      [this] { owner_->DropLink(modular::MakeLinkKey(link_path_)); });
+  link_watcher_binding_.set_error_handler([this](zx_status_t status) {
+    owner_->DropLink(modular::MakeLinkKey(link_path_));
+  });
 }
 
 LinkWatcherImpl::~LinkWatcherImpl() = default;

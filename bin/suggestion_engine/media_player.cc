@@ -16,7 +16,7 @@ namespace modular {
 MediaPlayer::MediaPlayer(fuchsia::media::AudioPtr audio,
                          std::shared_ptr<SuggestionDebugImpl> debug)
     : audio_(std::move(audio)), debug_(debug) {
-  audio_.set_error_handler([this] {
+  audio_.set_error_handler([this](zx_status_t status) {
     // TODO(miguelfrde): better error handling. If we observe this message it
     // means that the underlying channel was closed.
     FXL_LOG(WARNING) << "Audio connection error";
@@ -42,7 +42,7 @@ void MediaPlayer::PlayAudioResponse(
   audio_renderer_binding_ =
       std::make_unique<fidl::Binding<fuchsia::media::AudioRenderer>>(
           audio_renderer_.get());
-  audio_renderer_binding_->set_error_handler([this] {
+  audio_renderer_binding_->set_error_handler([this](zx_status_t status) {
     speech_status_callback_(fuchsia::modular::SpeechStatus::IDLE);
   });
   audio_renderer_binding_->Bind(std::move(audio_response));

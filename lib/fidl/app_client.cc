@@ -71,7 +71,8 @@ void AppClientBase::ImplReset() {
 
 void AppClientBase::SetAppErrorHandler(
     const std::function<void()>& error_handler) {
-  app_.set_error_handler(error_handler);
+  app_.set_error_handler(
+      [error_handler](zx_status_t status) { error_handler(); });
 }
 
 void AppClientBase::ServiceTerminate(const std::function<void()>& /* done */) {}

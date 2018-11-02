@@ -28,12 +28,12 @@ StoryWatcherImpl::StoryWatcherImpl(
   story_provider->GetController(story_id, story_controller_.NewRequest());
 
   story_controller_.set_error_handler(
-      [this] { owner_->DropStoryWatcher(story_id_); });
+      [this](zx_status_t status) { owner_->DropStoryWatcher(story_id_); });
 
   story_controller_->Watch(story_watcher_binding_.NewBinding());
 
   story_watcher_binding_.set_error_handler(
-      [this] { owner_->DropStoryWatcher(story_id_); });
+      [this](zx_status_t status) { owner_->DropStoryWatcher(story_id_); });
 
   context_metadata_ = ContextMetadataBuilder()
                           .SetStoryId(story_id)

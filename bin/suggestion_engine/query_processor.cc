@@ -81,7 +81,7 @@ void QueryProcessor::RegisterQueryHandler(
   query_handlers_.emplace_back(std::move(query_handler), url);
 
   fuchsia::modular::QueryHandlerPtr& handler = query_handlers_.back().handler;
-  handler.set_error_handler([this, ptr = handler.get()] {
+  handler.set_error_handler([this, ptr = handler.get()](zx_status_t status) {
     auto it = std::find_if(query_handlers_.begin(), query_handlers_.end(),
                            [ptr](const QueryHandlerRecord& record) {
                              return record.handler.get() == ptr;

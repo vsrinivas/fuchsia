@@ -246,7 +246,7 @@ class BasemgrApp : fuchsia::modular::BaseShellContext,
 
     context_->ConnectToEnvironmentService(monitor_.NewRequest());
 
-    monitor_.set_error_handler([] {
+    monitor_.set_error_handler([](zx_status_t status) {
       FXL_LOG(ERROR) << "No basemgr monitor found.";
       exit(1);
     });

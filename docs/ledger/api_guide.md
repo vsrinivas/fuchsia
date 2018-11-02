@@ -28,7 +28,7 @@ component_context_->GetLedger(
     // Handle errors.
   }
 });
-ledger.set_error_handler([] {
+ledger.set_error_handler([](zx_status_t status) {
   // Handle connection errors.
 });
 ```
@@ -80,7 +80,7 @@ ledger->GetRootPage(page.NewRequest(),
     // Handle errors.
   }
 });
-page.set_error_handler([] {
+page.set_error_handler([] (zx_status_t status) {
   // Handle connection errors.
 });
 ```

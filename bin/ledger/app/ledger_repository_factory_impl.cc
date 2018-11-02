@@ -269,7 +269,7 @@ LedgerRepositoryFactoryImpl::CreateUserSync(
     fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
     SyncWatcherSet* watchers) {
   auto cloud_provider_ptr = cloud_provider.Bind();
-  cloud_provider_ptr.set_error_handler([] {
+  cloud_provider_ptr.set_error_handler([](zx_status_t status) {
     FXL_LOG(ERROR)
         << "Lost connection to cloud provider; cloud sync will no longer work.";
   });
