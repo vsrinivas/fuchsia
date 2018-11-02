@@ -36,9 +36,9 @@ template("assert_cmx") {
     }
   }
 
-  # TODO(CF-129): Turn on the assertions by removing this line.
-  found_cmx = true
-
   assert(found_cmx == true,
-      "No cmx found in package $target_name. Please add cmx to your component.")
+      "No cmx found in package $target_name. Please add cmx to your component. "
+      + "See https://fuchsia.googlesource.com/docs/+/master/the-book/"
+      + "package_metadata.md#Component-manifest. "
+      + "Also see go/cmx-everywhere for the migration design.")
 }
