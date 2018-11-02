@@ -19,9 +19,11 @@ MODULE_STATIC_LIBS := \
     system/ulib/fzl \
     system/ulib/zx \
 
-MODULE_LIBS := system/ulib/zircon system/ulib/fdio system/ulib/c
+MODULE_LIBS := system/ulib/fdio system/ulib/c system/ulib/zircon
 
 MODULE_FIDL_LIBS := \
-	system/fidl/fuchsia-minfs
+    system/fidl/fuchsia-io \
+    system/fidl/fuchsia-minfs 
+
 
 include make/module.mk
