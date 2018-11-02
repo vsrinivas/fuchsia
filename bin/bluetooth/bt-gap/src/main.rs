@@ -24,14 +24,17 @@ use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
 use fuchsia_bluetooth::util;
 use fuchsia_syslog::{self as syslog, fx_log, fx_log_info};
-use futures::TryFutureExt;
+use futures::{TryFutureExt, TryStreamExt};
 
 mod services;
 mod store;
 
+mod adapters;
 mod host_device;
 mod host_dispatcher;
 
+use crate::adapters::*;
+use crate::adapters::AdapterEvent::*;
 use crate::host_dispatcher::*;
 use crate::host_dispatcher::HostService::*;
 
@@ -45,14 +48,22 @@ fn main() -> Result<(), Error> {
     let stash = executor.run_singlethreaded(store::stash::init_stash(BT_GAP_COMPONENT_ID))?;
 
     let hd = HostDispatcher::new(stash);
-
-    let host_watcher = watch_hosts(hd.clone());
-
+    let watch_hd = hd.clone();
     let central_hd = hd.clone();
     let control_hd = hd.clone();
     let peripheral_hd = hd.clone();
     let profile_hd = hd.clone();
     let gatt_hd = hd.clone();
+
+    let host_watcher = watch_hosts().try_for_each(move |msg| {
+        let hd = watch_hd.clone();
+        async {
+            match msg {
+                AdapterAdded(device_path) => await!(hd.add_adapter(device_path)),
+                AdapterRemoved(device_path) => hd.rm_adapter(device_path),
+            }
+        }
+    });
 
     let server = ServicesServer::new()
         .add_service((ControlMarker::NAME, move |chan: fasync::Channel| {

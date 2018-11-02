@@ -33,25 +33,20 @@ use fuchsia_bluetooth::{
     util::clone_remote_device
 };
 use fuchsia_async::{self as fasync, TimeoutExt};
-use fuchsia_syslog::{fx_log, fx_log_err, fx_log_info, fx_log_warn};
-use fuchsia_vfs_watcher as vfs_watcher;
-use fuchsia_vfs_watcher::{WatchEvent, WatchMessage};
+use fuchsia_syslog::{fx_log, fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
 use fuchsia_zircon::Duration;
-use futures::TryStreamExt;
-use futures::{task::{LocalWaker, Waker}, Future, Poll, TryFutureExt};
+use futures::{task::{LocalWaker, Waker}, Future, Poll, FutureExt, TryFutureExt};
 use parking_lot::RwLock;
 use slab::Slab;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io;
 use std::marker::Unpin;
 use std::path::PathBuf;
 use std::sync::{Arc, Weak};
 
 pub static HOST_INIT_TIMEOUT: i64 = 5; // Seconds
 
-static BT_HOST_DIR: &'static str = "/dev/class/bt-host";
 static DEFAULT_NAME: &'static str = "fuchsia";
 
 /// Available FIDL services that can be provided by a particular Host
@@ -204,7 +199,17 @@ impl HostDispatcherState {
     }
 
     fn add_host(&mut self, id: String, host: Arc<RwLock<HostDevice>>) {
+        fx_log_info!("Host added: {:?}", host.read().get_info().identifier);
+        let info = clone_host_info(host.read().get_info());
         self.host_devices.insert(id, host);
+
+        // Notify Control interface clients about the new device.
+        self.notify_event_listeners(|l| {
+            let _res = l.send_on_adapter_updated(&mut clone_host_info(&info));
+        });
+
+        // Resolve pending adapter futures.
+        self.resolve_host_requests();
     }
 
     /// Updates the active adapter and sends a FIDL event.
@@ -222,7 +227,7 @@ impl HostDispatcherState {
         self.get_active_host().map(|host| util::clone_host_info(host.read().get_info()))
     }
 
-    pub fn notify_event_listeners<F>(&mut self, f: F) where F: FnMut(&ControlControlHandle) -> () {
+    pub fn notify_event_listeners<F>(&mut self, mut f: F) where F: FnMut(&ControlControlHandle) -> () {
         self.event_listeners.retain(|listener| {
             match listener.upgrade() {
                 Some(listener_) => {
@@ -505,6 +510,62 @@ impl HostDispatcher {
     pub fn get_remote_devices(&self) -> Vec<RemoteDevice> {
         self.state.read().remote_devices.values().map(|d| clone_remote_device(d)).collect()
     }
+
+    /// Adds an adapter to the host dispatcher. Called by the watch_hosts device
+    /// watcher
+    pub async fn add_adapter(self, host_path: PathBuf) -> Result<(), Error> {
+        fx_log_info!("Adding Adapter: {:?}", host_path);
+        let host_device = await!(init_host(host_path))?;
+
+        let address = host_device.read().get_info().address.clone();
+        await!(try_restore_bonds(host_device.clone(), self.clone(), &address))?;
+
+        // TODO(NET-1445): Only the active host should be made connectable and scanning in the background.
+        await!(host_device.read().set_connectable(true)).map_err(|_| BTError::new("failed to set connectable"))?;
+        host_device.read().enable_background_scan(true).map_err(|_| BTError::new("failed to enable background scan"))?;
+
+        // Initialize bt-gap as this host's pairing delegate.
+        start_pairing_delegate(self.clone(), host_device.clone())?;
+
+        let id = host_device.read().get_info().identifier.clone();
+        self.state.write().add_host(id, host_device.clone());
+
+        // Start listening to Host interface events.
+        fasync::spawn(host_device::run(self.clone(), host_device.clone()).map(|_| ()));
+        Ok(())
+    }
+
+    pub fn rm_adapter(self, host_path: PathBuf) -> Result<(), Error> {
+        fx_log_info!("Host removed: {:?}", host_path);
+
+        let mut hd = self.state.write();
+        let active_id = hd.active_id.clone();
+
+        // Get the host IDs that match `host_path`.
+        let ids: Vec<String> = hd
+            .host_devices
+            .iter()
+            .filter(|(_, ref host)| host.read().path == host_path)
+            .map(|(k, _)| k.clone())
+            .collect();
+        for id in &ids {
+            hd.host_devices.remove(id);
+        }
+
+        // Reset the active ID if it got removed.
+        if let Some(active_id) = active_id {
+            if ids.contains(&active_id) {
+                hd.active_id = None;
+            }
+        }
+
+        // Try to assign a new active adapter. This may send an "OnActiveAdapterChanged" event.
+        if hd.active_id.is_none() {
+            let _ = hd.get_active_id();
+        }
+
+        Ok(())
+    }
 }
 
 /// A future that completes when at least one adapter is available.
@@ -568,14 +629,11 @@ impl Future for OnAdaptersFound {
     }
 }
 
-/// Adds an adapter to the host dispatcher. Called by the watch_hosts device
-/// watcher
-async fn add_adapter(hd: HostDispatcher, host_path: PathBuf) -> Result<(), Error> {
-    fx_log_info!("Adding Adapter: {:?}", host_path);
-
+/// Initialize a HostDevice
+async fn init_host(host_path: PathBuf) -> Result<Arc<RwLock<HostDevice>>, Error> {
     // Connect to the host device.
-    let host =
-        File::open(host_path.clone()).map_err(|_| BTError::new("failed to open bt-host device"))?;
+    let host = File::open(host_path.clone())
+                .map_err(|_| BTError::new("failed to open bt-host device"))?;
     let handle = bt::host::open_host_channel(&host)?;
     let handle = fasync::Channel::from_channel(handle.into())?;
     let host = HostProxy::new(handle);
@@ -583,129 +641,36 @@ async fn add_adapter(hd: HostDispatcher, host_path: PathBuf) -> Result<(), Error
     // Obtain basic information and create and entry in the disptacher's map.
     let adapter_info = await!(host.get_info())
         .map_err(|_| BTError::new("failed to obtain bt-host information"))?;
-    let id = adapter_info.identifier.clone();
-    let address = adapter_info.address.clone();
-    let host_device = Arc::new(RwLock::new(HostDevice::new(host_path, host, adapter_info)));
+    Ok(Arc::new(RwLock::new(HostDevice::new(host_path, host, adapter_info))))
+}
 
+async fn try_restore_bonds(host_device: Arc<RwLock<HostDevice>>, hd: HostDispatcher, address: &str) -> Result<(), Error> {
     // Load bonding data that use this host's `address` as their "local identity address".
-    if let Some(iter) = hd.state.read().stash.list_bonds(&address) {
-        if let Err(e) = await!(
-            host_device
-                .read()
-                .restore_bonds(iter.map(|bd| util::clone_bonding_data(&bd)).collect())
-        ) {
-            fx_log_err!("failed to restore bonding data for host: {}", e);
-            return Err(e.into());
+    if let Some(iter) = hd.state.read().stash.list_bonds(address) {
+        let res = await!( host_device.read().restore_bonds(iter.map(|bd| util::clone_bonding_data(&bd)).collect()));
+        match res {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                fx_log_err!("failed to restore bonding data for host: {}", e);
+                Err(e.into())
+            }
         }
+    } else {
+        Ok(())
     }
+}
 
-    // TODO(NET-1445): Only the active host should be made connectable and scanning in the
-    // background.
-    await!(host_device.read().set_connectable(true))
-        .map_err(|_| BTError::new("failed to set connectable"))?;
-    host_device
-        .read()
-        .enable_background_scan(true)
-        .map_err(|_| BTError::new("failed to enable background scan"))?;
-
+fn start_pairing_delegate(hd: HostDispatcher, host_device: Arc<RwLock<HostDevice>>)-> Result<(),Error> {
     // Initialize bt-gap as this host's pairing delegate.
     // TODO(NET-1445): Do this only for the active host. This will make sure that non-active hosts
     // always reject pairing.
     let (delegate_local, delegate_remote) = zx::Channel::create()?;
     let delegate_local = fasync::Channel::from_channel(delegate_local)?;
     let delegate_ptr = fidl::endpoints::ClientEnd::<PairingDelegateMarker>::new(delegate_remote);
-    host_device
-        .read()
-        .set_host_pairing_delegate(hd.state.read().input, hd.state.read().output, delegate_ptr);
+    host_device.read().set_host_pairing_delegate(hd.state.read().input, hd.state.read().output, delegate_ptr);
     fasync::spawn(
         services::start_pairing_delegate(hd.clone(), delegate_local)
             .unwrap_or_else(|e| eprintln!("Failed to spawn {:?}", e)),
     );
-    fx_log_info!("Host added: {:?}", host_device.read().get_info().identifier);
-    hd.state.write().add_host(id, host_device.clone());
-
-    // Notify Control interface clients about the new device.
-    // TODO(armansito): This layering isn't quite right. It's better to do this in
-    // HostDispatcher::add_host instead.
-    hd.notify_event_listeners(|l| {
-        let _res = l.send_on_adapter_updated(&mut clone_host_info(host_device.read().get_info()));
-    });
-
-    // Resolve pending adapter futures.
-    hd.state.write().resolve_host_requests();
-
-    // Start listening to Host interface events.
-    await!(host_device::run(hd.clone(), host_device.clone()))
-        .map_err(|_| BTError::new("Host interface event stream error").into())
-}
-
-pub fn rm_adapter(hd: HostDispatcher, host_path: PathBuf) -> Result<(), Error> {
-    fx_log_info!("Host removed: {:?}", host_path);
-
-    let mut hd = hd.state.write();
-    let active_id = hd.active_id.clone();
-
-    // Get the host IDs that match `host_path`.
-    let ids: Vec<String> = hd
-        .host_devices
-        .iter()
-        .filter(|(_, ref host)| host.read().path == host_path)
-        .map(|(k, _)| k.clone())
-        .collect();
-    for id in &ids {
-        hd.host_devices.remove(id);
-    }
-
-    // Reset the active ID if it got removed.
-    if let Some(active_id) = active_id {
-        if ids.contains(&active_id) {
-            hd.active_id = None;
-        }
-    }
-
-    // Try to assign a new active adapter. This may send an "OnActiveAdapterChanged" event.
-    if hd.active_id.is_none() {
-        let _ = hd.get_active_id();
-    }
-
     Ok(())
-}
-
-fn bluetooth_device_path(msg: &WatchMessage) -> PathBuf {
-    PathBuf::from(format!(
-        "{}/{}",
-        BT_HOST_DIR,
-        msg.filename.to_string_lossy()
-    ))
-}
-
-pub async fn watch_hosts(hd: HostDispatcher) -> Result<(), Error> {
-    let dev = File::open(&BT_HOST_DIR);
-    let watcher = vfs_watcher::Watcher::new(&dev.unwrap()).unwrap();
-    await!(watcher.try_for_each(|msg| handle_device(hd.clone(), msg))).map_err(|e| e.into())
-}
-
-pub async fn handle_device(hd: HostDispatcher, msg: WatchMessage) -> Result<(), io::Error> {
-    let path = bluetooth_device_path(&msg);
-    match msg.event {
-        WatchEvent::EXISTING | WatchEvent::ADD_FILE => {
-            fx_log_info!("Adding device from {:?}", path);
-            await!(
-                add_adapter(hd, path)
-                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))
-            )
-        }
-        WatchEvent::REMOVE_FILE => {
-            fx_log_info!("Removing device from {:?}", path);
-            rm_adapter(hd, path).map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))
-        }
-        WatchEvent::IDLE => {
-            fx_log_info!("HostDispatcher is IDLE");
-            Ok(())
-        }
-        e => {
-            fx_log_warn!("Unrecognized host watch event: {:?}", e);
-            Ok(())
-        }
-    }
 }
