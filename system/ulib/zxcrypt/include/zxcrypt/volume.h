@@ -30,6 +30,11 @@
 //  - Wrap: Derived from the root keys and used to encrypt and decrypt the data key material.
 namespace zxcrypt {
 
+// Forward declaration of unit test framework.
+namespace testing{
+class TestDevice;
+}
+
 // TODO(aarongreen): ZX-1130 workaround: Until we have a means to pass the root key on binding, we
 // simply use a null key of a fixed length. Remove this constant when ZX-1130 is resolved.
 const size_t kZx1130KeyLen = 32;
@@ -55,6 +60,7 @@ public:
     explicit Volume(fbl::unique_fd&& fd);
     explicit Volume(zx_device_t* dev);
     ~Volume();
+    DISALLOW_COPY_ASSIGN_AND_MOVE(Volume);
 
     // Returns space reserved for metadata and keys
     size_t reserved_blocks() const { return reserved_blocks_; }
@@ -107,7 +113,7 @@ public:
     zx_status_t Shred();
 
 private:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Volume);
+    friend class testing::TestDevice;
 
     ////////////////
     // Configuration methods
@@ -117,6 +123,10 @@ private:
 
     // Maps the volume version to crypto algorithms.
     zx_status_t Configure(Version version);
+
+    // Returns via |out| the offset in bytes for the given key |slot|.  Returns an error if the
+    // volume hasn't been initialized, or if |slot| is out of range.
+    zx_status_t GetSlotOffset(key_slot_t slot, zx_off_t* out) const;
 
     // Derives intermediate keys for the given key |slot| from the given |key|.
     zx_status_t DeriveSlotKeys(const crypto::Secret& key, key_slot_t slot);
@@ -194,7 +204,6 @@ private:
 
     // The digest used by the HKDF.
     crypto::digest::Algorithm digest_;
-    size_t digest_len_;
 };
 
 } // namespace zxcrypt

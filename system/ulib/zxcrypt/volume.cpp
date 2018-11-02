@@ -27,8 +27,8 @@
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
 #include <lib/fdio/debug.h>
-#include <lib/zx/vmo.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/errors.h>
@@ -180,7 +180,6 @@ void Volume::Reset() {
     slot_len_ = 0;
     num_key_slots_ = 0;
     digest_ = crypto::digest::kUninitialized;
-    digest_len_ = 0;
 }
 
 zx_status_t Volume::Init(fbl::unique_fd fd, fbl::unique_ptr<Volume>* out) {
@@ -212,8 +211,8 @@ zx_status_t Volume::Create(fbl::unique_fd fd, const crypto::Secret& key,
 
     fbl::unique_ptr<Volume> volume;
     if ((rc = Volume::Init(fbl::move(fd), &volume)) != ZX_OK ||
-        (rc = volume->CreateBlock()) != ZX_OK ||
-        (rc = volume->SealBlock(key, 0)) != ZX_OK || (rc = volume->CommitBlock()) != ZX_OK) {
+        (rc = volume->CreateBlock()) != ZX_OK || (rc = volume->SealBlock(key, 0)) != ZX_OK ||
+        (rc = volume->CommitBlock()) != ZX_OK) {
         return rc;
     }
 
@@ -340,14 +339,6 @@ zx_status_t Volume::Enroll(const crypto::Secret& key, key_slot_t slot) {
     zx_status_t rc;
     ZX_DEBUG_ASSERT(!dev_); // Cannot enroll from driver
 
-    if (!block_.get()) {
-        xprintf("not initialized\n");
-        return ZX_ERR_BAD_STATE;
-    }
-    if (slot >= num_key_slots_) {
-        xprintf("bad parameter(s): slot=%" PRIu64 "\n", slot);
-        return ZX_ERR_INVALID_ARGS;
-    }
     if ((rc = SealBlock(key, slot)) != ZX_OK || (rc = CommitBlock()) != ZX_OK) {
         return rc;
     }
@@ -359,18 +350,10 @@ zx_status_t Volume::Revoke(key_slot_t slot) {
     zx_status_t rc;
     ZX_DEBUG_ASSERT(!dev_); // Cannot revoke from driver
 
-    if (!block_.get()) {
-        xprintf("not initialized\n");
-        return ZX_ERR_BAD_STATE;
-    }
-    if (slot >= num_key_slots_) {
-        xprintf("bad parameter(s): slot=%" PRIu64 "\n", slot);
-        return ZX_ERR_INVALID_ARGS;
-    }
-    zx_off_t off = kHeaderLen + (slot_len_ * slot);
+    zx_off_t off;
     crypto::Bytes invalid;
-    if ((rc = invalid.Randomize(slot_len_)) != ZX_OK || (rc = block_.Copy(invalid, off)) != ZX_OK ||
-        (rc = CommitBlock()) != ZX_OK) {
+    if ((rc = GetSlotOffset(slot, &off)) != ZX_OK || (rc = invalid.Randomize(slot_len_)) != ZX_OK ||
+        (rc = block_.Copy(invalid, off)) != ZX_OK || (rc = CommitBlock()) != ZX_OK) {
         return rc;
     }
 
@@ -399,6 +382,25 @@ zx_status_t Volume::Shred() {
 }
 
 // Configuration methods
+
+zx_status_t Volume::GetSlotOffset(key_slot_t slot, zx_off_t* out) const {
+    if (!block_.get()) {
+        xprintf("not initialized\n");
+        return ZX_ERR_BAD_STATE;
+    }
+
+    zx_off_t off;
+    if (mul_overflow(slot, slot_len_, &off) || add_overflow(kHeaderLen, off, &off) ||
+        off > block_.len() - slot_len_) {
+        xprintf("bad key slot: %" PRIu64 "\n", slot);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    if (out) {
+        *out = off;
+    }
+    return ZX_OK;
+}
 
 zx_status_t Volume::Init() {
     zx_status_t rc;
@@ -487,8 +489,7 @@ zx_status_t Volume::Configure(Volume::Version version) {
     size_t key_len, iv_len, tag_len;
     if ((rc = crypto::Cipher::GetKeyLen(cipher_, &key_len)) != ZX_OK ||
         (rc = crypto::Cipher::GetIVLen(cipher_, &iv_len)) != ZX_OK ||
-        (rc = crypto::AEAD::GetTagLen(aead_, &tag_len)) != ZX_OK ||
-        (rc = crypto::digest::GetDigestLen(digest_, &digest_len_)) != ZX_OK) {
+        (rc = crypto::AEAD::GetTagLen(aead_, &tag_len)) != ZX_OK) {
         return rc;
     }
 
@@ -605,8 +606,8 @@ zx_status_t Volume::CommitBlock() {
             continue;
         }
         if ((rc = block_.Copy(block)) != ZX_OK || (rc = Write()) != ZX_OK) {
-            xprintf("zxcrypt: CommitBlock Write failed for offset %" PRIu64 ": %s\n",
-                    offset_, zx_status_get_string(rc));
+            xprintf("zxcrypt: CommitBlock Write failed for offset %" PRIu64 ": %s\n", offset_,
+                    zx_status_get_string(rc));
         }
     }
     return ZX_OK;
@@ -615,19 +616,15 @@ zx_status_t Volume::CommitBlock() {
 zx_status_t Volume::SealBlock(const crypto::Secret& key, key_slot_t slot) {
     zx_status_t rc;
 
-    if (slot >= num_key_slots_) {
-        xprintf("bad key slot: %" PRIu64 "\n", slot);
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-
     // Encrypt the data key
     zx_off_t nonce;
     crypto::AEAD aead;
     crypto::Bytes ptext, ctext;
-    zx_off_t off = kHeaderLen + (slot_len_ * slot);
+    zx_off_t off;
     zx_off_t data_key_off = 0;
     zx_off_t data_iv_off = data_key_.len();
-    if ((rc = ptext.Copy(data_key_.get(), data_key_.len(), data_key_off)) != ZX_OK ||
+    if ((rc = GetSlotOffset(slot, &off)) != ZX_OK ||
+        (rc = ptext.Copy(data_key_.get(), data_key_.len(), data_key_off)) != ZX_OK ||
         (rc = ptext.Copy(data_iv_.get(), data_iv_.len(), data_iv_off)) != ZX_OK ||
         (rc = DeriveSlotKeys(key, slot)) != ZX_OK ||
         (rc = aead.InitSeal(aead_, wrap_key_, wrap_iv_)) != ZX_OK ||
@@ -665,44 +662,32 @@ zx_status_t Volume::UnsealBlock(const crypto::Secret& key, key_slot_t slot) {
     uint32_t version;
     memcpy(&version, in, sizeof(version));
     in += sizeof(version);
-    if ((rc != Configure(Version(ntohl(version)))) != ZX_OK) {
-        return rc;
-    }
-    if (slot >= num_key_slots_) {
-        xprintf("bad key slot: %" PRIu64 "\n", slot);
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-    if ((rc != DeriveSlotKeys(key, slot)) != ZX_OK) {
+
+    // Read in the data
+    zx_off_t off;
+    size_t key_len, iv_len;
+    uint8_t* key_buf;
+    crypto::AEAD aead;
+    crypto::Bytes ctext, ptext;
+    if ((rc = Configure(Version(ntohl(version)))) != ZX_OK ||
+        (rc = GetSlotOffset(slot, &off)) != ZX_OK || (rc = DeriveSlotKeys(key, slot)) != ZX_OK ||
+        (rc = crypto::Cipher::GetKeyLen(cipher_, &key_len)) != ZX_OK ||
+        (rc = crypto::Cipher::GetIVLen(cipher_, &iv_len)) != ZX_OK ||
+        (rc = data_key_.Allocate(key_len, &key_buf)) != ZX_OK ||
+        (rc = ctext.Copy(block_.get() + off, slot_len_)) != ZX_OK ||
+        (rc = aead.InitOpen(aead_, wrap_key_, wrap_iv_)) != ZX_OK ||
+        (rc = header_.Copy(block_.get(), kHeaderLen)) != ZX_OK) {
         return rc;
     }
 
     // Extract nonce from IV.
     zx_off_t nonce;
     memcpy(&nonce, wrap_iv_.get(), sizeof(nonce));
-
-    // Read in the data
-    crypto::AEAD aead;
-    crypto::Bytes ptext, ctext, data_key;
-    zx_off_t off = kHeaderLen + (slot_len_ * slot);
-
-    size_t key_off, key_len, iv_off, iv_len;
-    uint8_t* key_buf;
-    if ((rc = crypto::Cipher::GetKeyLen(cipher_, &key_len)) != ZX_OK ||
-        (rc = crypto::Cipher::GetIVLen(cipher_, &iv_len)) != ZX_OK ||
-        (rc = data_key_.Allocate(key_len, &key_buf)) != ZX_OK) {
+    if ((rc = aead.Open(nonce, ctext, header_, &ptext)) != ZX_OK ||
+        (rc = data_iv_.Copy(ptext.get() + key_len, iv_len)) != ZX_OK) {
         return rc;
     }
-
-    key_off = 0;
-    iv_off = data_key_.len();
-    if ((rc = ctext.Copy(block_.get() + off, slot_len_)) != ZX_OK ||
-        (rc = aead.InitOpen(aead_, wrap_key_, wrap_iv_)) != ZX_OK ||
-        (rc = header_.Copy(block_.get(), kHeaderLen)) != ZX_OK ||
-        (rc = aead.Open(nonce, ctext, header_, &ptext)) != ZX_OK ||
-        (rc = data_iv_.Copy(ptext.get() + iv_off, iv_len)) != ZX_OK) {
-        return rc;
-    }
-    memcpy(key_buf, ptext.get() + key_off, key_len);
+    memcpy(key_buf, ptext.get(), key_len);
 
     return ZX_OK;
 }
