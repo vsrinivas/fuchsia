@@ -3,11 +3,47 @@
 // found in the LICENSE file.
 
 library ddk.protocol.pciroot;
-
+// hopefully this includes ddk
+using zircon.hw.pci;
 using zx;
+
+// These may need to remain entirely in the kernel since platform_ctx
+// is an exposed pointer, and we will need a kernel shim for IRQ processing
+// anyway.
+struct MsiBlock {
+    uint64 reserved;
+};
+
+struct PciPlatformInfo {
+    uint64 reserved;
+};
+
+struct PciIrqInfo {
+    uint64 reserved;
+};
+
+enum PciAddressSpace : uint8 {
+    MMIO = 0;
+    IO = 0x1;
+};
 
 [Layout="ddk-protocol"]
 interface Pciroot {
+    // Legacy methods
     1: GetAuxdata(string args) -> (zx.status s, vector<void> data);
     2: GetBti(uint32 bdf, uint32 index) -> (zx.status s, handle<bti> bti);
+    3: GetPciPlatformInfo() -> (zx.status s, PciPlatformInfo info);
+    4: GetPciIrqInfo() -> (zx.status s, PciIrqInfo info);
+    5: DriverShouldProxyConfig() -> (zx.status s, bool use_proxy);
+    6: ConfigRead8(zircon.hw.pci.PciBdf address, uint16 offset) -> (zx.status s, uint8 value);
+    7: ConfigRead16(zircon.hw.pci.PciBdf address, uint16 offset) -> (zx.status s, uint16 value);
+    8: ConfigRead32(zircon.hw.pci.PciBdf address, uint16 offset) -> (zx.status s, uint32 value);
+    9: ConfigWrite8(zircon.hw.pci.PciBdf address, uint16 offset, uint8 value) -> (zx.status s);
+    10: ConfigWrite16(zircon.hw.pci.PciBdf address, uint16 offset, uint16 value) -> (zx.status s);
+    11: ConfigWrite32(zircon.hw.pci.PciBdf address, uint16 offset, uint32 value) -> (zx.status s);
+    12: MsiAllocBlock(uint64 requested_irqs, bool can_target_64bit) -> (zx.status s, MsiBlock block);
+    13: MsiFreeBlock(MsiBlock block) -> (zx.status s);
+    14: MsiMaskUnmask(uint64 msi_id, bool mask) -> (zx.status s);
+    15: GetAddressSpace(usize len, PciAddressSpace type, bool low) -> (zx.status s, zx.paddr base);
+    16: FreeAddressSpace(zx.paddr base, usize len, PciAddressSpace type) -> (zx.status s);
 };

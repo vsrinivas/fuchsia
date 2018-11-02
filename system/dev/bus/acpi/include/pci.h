@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BUS_ACPI_INCLUDE_PCI_H_
+#define ZIRCON_SYSTEM_DEV_BUS_ACPI_INCLUDE_PCI_H_
 
 #include <acpica/acpi.h>
 #include <acpica/actypes.h>
-#include <zircon/syscalls/pci.h>
 #include <zircon/compiler.h>
+#include <zircon/syscalls/pci.h>
 
 __BEGIN_CDECLS;
 
@@ -25,8 +26,11 @@ typedef struct pci_ecam_baas {
 
 zx_status_t pci_init(void);
 void register_pci_root(ACPI_HANDLE dev_obj);
+bool pci_platform_has_mcfg(void);
 
 zx_status_t get_pci_init_arg(zx_pci_init_arg_t** arg, uint32_t* size);
 zx_status_t pci_report_current_resources(zx_handle_t root_resource_handle);
 
 __END_CDECLS;
+
+#endif  // ZIRCON_SYSTEM_DEV_BUS_ACPI_INCLUDE_PCI_H_

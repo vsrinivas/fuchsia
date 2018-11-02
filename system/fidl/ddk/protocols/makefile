@@ -5,7 +5,7 @@
 .DEFAULT_GOAL := all
 
 LOCAL_DIR := $(patsubst %/,%,$(dir $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))))
-BUILD_DIR := ../../../../build-arm64
+BUILD_DIR := ../../../../build-x64
 BANJOC := $(BUILD_DIR)/tools/banjoc
 
 CLANG_FORMAT := clang-format --style="{Language: Cpp, ColumnLimit: 100, UseTab: Never, IndentWidth: 4, IndentCaseLabels: false, AlignAfterOpenBracket: Align, SpacesBeforeTrailingComments: 1, BreakBeforeBraces: Attach, AccessModifierOffset: -4, DerivePointerAlignment: false, PointerAlignment: Left, AllowShortFunctionsOnASingleLine: Inline, AllowShortIfStatementsOnASingleLine: false, KeepEmptyLinesAtTheStartOfBlocks: true, AlignEscapedNewlinesLeft: false, ForEachMacros: ['list_for_every_entry','list_for_every_entry_safe'], AlwaysBreakTemplateDeclarations: true}"
@@ -75,7 +75,7 @@ mailbox:
 pci: $(LOCAL_DIR)/libs/pci.banjo
 	$(run-banjo)
 
-pciroot:
+pciroot: $(LOCAL_DIR)/libs/hwpci.banjo
 	$(run-banjo)
 
 platform-bus:

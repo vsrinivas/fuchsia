@@ -5,12 +5,12 @@
 #include <acpica/acpi.h>
 #include <acpica/actypes.h>
 #include <acpica/acuuid.h>
+#include <bits/limits.h>
 #include <ddk/debug.h>
 #include <fbl/new.h>
 #include <fbl/vector.h>
-#include <stdio.h>
 #include <region-alloc/region-alloc.h>
-#include <bits/limits.h>
+#include <stdio.h>
 
 #include "methods.h"
 #include "pci.h"
@@ -131,9 +131,9 @@ static ACPI_STATUS report_current_resources_resource_cb_ex(ACPI_RESOURCE* res, v
     zxlogf(TRACE, "ACPI range modification: %sing %s %016lx %016lx\n",
            add_range ? "add" : "subtract", is_mmio ? "MMIO" : "PIO", base, len);
     if (add_range) {
-        status = alloc->AddRegion({ .base = base, .size = len }, true);
+        status = alloc->AddRegion({.base = base, .size = len}, true);
     } else {
-        status = alloc->SubtractRegion({ .base = base, .size = len }, true);
+        status = alloc->SubtractRegion({.base = base, .size = len}, true);
     }
 
     if (status != ZX_OK) {
@@ -148,7 +148,7 @@ static ACPI_STATUS report_current_resources_resource_cb_ex(ACPI_RESOURCE* res, v
 }
 
 static ACPI_STATUS report_current_resources_device_cb_ex(
-        ACPI_HANDLE object, uint32_t nesting_level, void* _ctx, void** ret) {
+    ACPI_HANDLE object, uint32_t nesting_level, void* _ctx, void** ret) {
 
     ACPI_DEVICE_INFO* info = NULL;
     ACPI_STATUS status = AcpiGetObjectInfo(object, &info);
@@ -207,7 +207,6 @@ zx_status_t pci_report_current_resources_ex(zx_handle_t root_resource_handle) {
         return ZX_ERR_INTERNAL;
     }
 
-
     return ZX_OK;
 }
 
@@ -245,6 +244,10 @@ static zx_status_t pci_read_mcfg_table(void) {
                entry->end_bus_num);
     }
     return ZX_OK;
+}
+
+bool pci_platform_has_mcfg(void) {
+    return (mcfg_allocations.size() != 0);
 }
 
 zx_status_t pci_init(void) {
