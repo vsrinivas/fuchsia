@@ -33,7 +33,7 @@
 static const uint8_t _ginput_color_format   = HDMI_COLOR_FORMAT_444;
 static const uint8_t _gcolor_depth          = HDMI_COLOR_DEPTH_24B;
 
-static const zx_pixel_format_t _gsupported_pixel_formats = { ZX_PIXEL_FORMAT_RGB_x888 };
+static const zx_pixel_format_t _gsupported_pixel_formats[] = { ZX_PIXEL_FORMAT_RGB_x888, ZX_PIXEL_FORMAT_NV12 };
 
 typedef struct image_info {
     zx_handle_t pmt;
@@ -47,7 +47,7 @@ void populate_added_display_args(vim2_display_t* display, added_display_args_t* 
     args->display_id = display->display_id;
     args->edid_present = true;
     args->panel.i2c_bus_id = 0;
-    args->pixel_formats = &_gsupported_pixel_formats;
+    args->pixel_formats = _gsupported_pixel_formats;
     args->pixel_format_count = sizeof(_gsupported_pixel_formats) / sizeof(zx_pixel_format_t);
     args->cursor_info_count = 0;
 }
