@@ -324,9 +324,13 @@ add_to_zbi() {
 
   # Copy fuzzers into Fuchsia
   mv "${image}" "${image}.orig"
-  zbi -o "${image}" "${image}.orig" "${fuzz_manifest}"
+  if ! ${ZIRCON_TOOLS_DIR}/zbi -o "${image}" "${image}.orig" "${fuzz_manifest}" ; then
+    mv "${image}.orig" "${image}"
+    fatal "Could not create ${image}"
+  fi
   popd
   echo "Zircon fuzzers added to ${image}"
+  rm -f "${image}.orig"
 }
 
 # Main
