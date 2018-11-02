@@ -10,12 +10,17 @@ executable("codec_runner_sw_ffmpeg") {
   ]
 
   sources = [
-    "local_codec_factory.cc",
-    "local_codec_factory.h",
+    "codec_adapter_ffmpeg_decoder.cc",
+    "codec_adapter_ffmpeg_decoder.h",
+    "codec_runner_app.cc",
+    "codec_runner_app.h",
+    "local_single_codec_factory.cc",
+    "local_single_codec_factory.h",
     "main.cc",
   ]
 
   deps = [
+    "//garnet/lib/media/codec_impl",
     "//garnet/public/fidl/fuchsia.mediacodec",
     "//garnet/public/lib/component/cpp",
     "//zircon/public/lib/async-loop-cpp",
