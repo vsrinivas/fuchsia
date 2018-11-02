@@ -6,7 +6,6 @@
 #include "devhost-shared.h"
 #include "devmgr.h"
 #include "fshost.h"
-#include "log.h"
 
 #include <zircon/fidl.h>
 #include <zircon/listnode.h>
@@ -17,7 +16,6 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
 #include <fuchsia/io/c/fidl.h>
-#include <lib/async/cpp/wait.h>
 #include <lib/fdio/remoteio.h>
 #include <lib/fdio/util.h>
 #include <lib/fidl/coding.h>
@@ -50,30 +48,7 @@ Watcher::Watcher(Devnode* dn, zx::channel ch, uint32_t mask)
 struct DcIostate {
     DcIostate() = default;
 
-    // Begins waiting in |dispatcher| on |ios->wait|.  This transfers ownership
-    // of |ios| to the dispatcher.  The dispatcher returns ownership when the
-    // handler is invoked.
-    static zx_status_t BeginWait(fbl::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher) {
-        zx_status_t status = ios->wait.Begin(dispatcher);
-        if (status == ZX_OK) {
-            __UNUSED auto ptr = ios.release();
-        }
-        return status;
-    }
-
-    // Entrypoint for the IPC handler that captures the pointer ownership
-    // semantics.
-    void HandleIpcEntry(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                        const zx_packet_signal_t* signal) {
-        fbl::unique_ptr<DcIostate> self(this);
-        HandleIpc(fbl::move(self), dispatcher, wait, status, signal);
-    }
-
-    static void HandleIpc(fbl::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher,
-                          async::WaitBase* wait, zx_status_t status,
-                          const zx_packet_signal_t* signal);
-
-     async::WaitMethod<DcIostate, &DcIostate::HandleIpcEntry> wait{this};
+    port_handler_t ph = {};
 
     // entry in our devnode's iostate list
     fbl::DoublyLinkedListNodeState<DcIostate*> node;
@@ -123,12 +98,15 @@ struct Devnode {
     uint32_t seqcount = 0;
 };
 
+extern port_t dc_port;
+
 static uint64_t next_ino = 2;
 
 static fbl::unique_ptr<Devnode> root_devnode;
 
 static fbl::unique_ptr<Devnode> class_devnode;
 
+static zx_status_t dc_fidl_handler(port_handler_t* ph, zx_signals_t signals, uint32_t evt);
 static fbl::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, const char* name);
 
 #define PNMAX 16
@@ -193,28 +171,30 @@ static zx_status_t iostate_create(Devnode* dn, zx_handle_t h) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    ios->wait.set_object(h);
-    ios->wait.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+    ios->ph.handle = h;
+    ios->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+    ios->ph.func = dc_fidl_handler;
     ios->devnode = dn;
     dn->iostate.push_back(ios.get());
 
     zx_status_t r;
-    if ((r = ios->wait.Begin(DcAsyncLoop()->dispatcher())) != ZX_OK) {
+    if ((r = port_wait(&dc_port, &ios->ph)) != ZX_OK) {
         dn->iostate.erase(*ios);
     } else {
-        // |ios->wait| now owns |ios|
+        // dc_port now owns |ios|
         __UNUSED auto ptr = ios.release();
     }
     return r;
 }
 
-static void iostate_destroy(fbl::unique_ptr<DcIostate> ios) {
+static void iostate_destroy(DcIostate* ios) {
     if (ios->devnode) {
         ios->devnode->iostate.erase(*ios);
         ios->devnode = nullptr;
     }
-    zx_handle_close(ios->wait.object());
-    // Let |ios| be deleted
+    zx_handle_close(ios->ph.handle);
+    ios->ph.handle = ZX_HANDLE_INVALID;
+    delete ios;
 }
 
 // A devnode is a directory (from stat's perspective) if
@@ -459,8 +439,8 @@ static void _devfs_remove(Devnode* dn) {
     // detach all connected iostates
     for (auto& ios : dn->iostate) {
         ios.devnode = nullptr;
-        zx_handle_close(ios.wait.object());
-        ios.wait.set_object(ZX_HANDLE_INVALID);
+        zx_handle_close(ios.ph.handle);
+        ios.ph.handle = ZX_HANDLE_INVALID;
     }
 
     // notify own file watcher
@@ -804,28 +784,24 @@ static zx_status_t devfs_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* co
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-void DcIostate::HandleIpc(fbl::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher,
-                          async::WaitBase* wait, zx_status_t status,
-                          const zx_packet_signal_t* signal) {
-    if (status != ZX_OK) {
-        log(ERROR, "devcoord: DcIostate::HandleIpc aborting, saw status %d\n", status);
-        return;
-    }
+static zx_status_t dc_fidl_handler(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
+    DcIostate* ios = containerof(ph, DcIostate, ph);
 
-    if (signal->observed & ZX_CHANNEL_READABLE) {
-        if (zxfidl_handler(wait->object(), devfs_fidl_handler, ios.get()) == ZX_OK) {
-            ios->BeginWait(fbl::move(ios), dispatcher);
-            return;
+    zx_status_t r;
+    if (signals & ZX_CHANNEL_READABLE) {
+        if ((r = zxfidl_handler(ph->handle, devfs_fidl_handler, ios)) == ZX_OK) {
+            return ZX_OK;
         }
-    } else if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-        zxfidl_handler(ZX_HANDLE_INVALID, devfs_fidl_handler, ios.get());
+    } else if (signals & ZX_CHANNEL_PEER_CLOSED) {
+        zxfidl_handler(ZX_HANDLE_INVALID, devfs_fidl_handler, ios);
+        r = ZX_ERR_STOP;
     } else {
-        log(ERROR, "devcoord: dc_fidl_handler: invalid signals %x\n", signal->observed);
+        printf("dc_fidl_handler: invalid signals %x\n", signals);
         exit(0);
     }
 
-    iostate_destroy(fbl::move(ios));
-    // Do not start waiting again
+    iostate_destroy(ios);
+    return r;
 }
 
 static zx::channel g_devfs_root;

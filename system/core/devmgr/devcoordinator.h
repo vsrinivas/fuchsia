@@ -16,22 +16,17 @@
 #include <fbl/new.h>
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
-#include <lib/async/cpp/wait.h>
-#include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/vmo.h>
+#include <port/port.h>
 
 namespace devmgr {
 
-struct Device;
 struct Devhost;
 struct Devnode;
 
 struct Work {
-    Work() : owner(nullptr) { }
-    explicit Work(Device* dev) : owner(dev) { }
-
     fbl::DoublyLinkedListNodeState<Work*> node;
     struct Node {
         static fbl::DoublyLinkedListNodeState<Work*>& node_state(
@@ -44,9 +39,9 @@ struct Work {
         kIdle = 0,
         kDeviceAdded = 1,
         kDriverAdded = 2,
-    } op = Op::kIdle;
-    uint32_t arg = 0;
-    Device* owner;
+    } op;
+    uint32_t arg;
+    void* ptr;
 };
 
 struct Pending {
@@ -123,35 +118,10 @@ struct Device {
     Device();
     ~Device();
 
-    // Begins waiting in |dispatcher| on |dev->wait|.  This transfers a
-    // reference of |dev| to the dispatcher.  The dispatcher returns ownership
-    // when the of that reference when the handler is invoked.
-    // TODO(teisenbe/kulakowski): Make this take a RefPtr
-    static zx_status_t BeginWait(Device* dev, async_dispatcher_t* dispatcher) {
-        // TODO(teisenbe/kulakowski): Once this takes a refptr, we should leak a
-        // ref in the success case (to present the ref owned by the dispatcher).
-        return dev->wait.Begin(dispatcher);
-    }
-
-    // Entrypoint for the IPC handler that captures the pointer ownership
-    // semantics.
-    void HandleIpcEntry(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                        const zx_packet_signal_t* signal) {
-        // TODO(teisenbe/kulakowski): Perform the appropriate dance to construct
-        // a RefPtr from |this| without a net-increase in refcount, to represent
-        // the dispatcher passing ownership of its reference to the handler
-        HandleIpc(this, dispatcher, wait, status, signal);
-    }
-
-    // TODO(teisenbe/kulakowski): Make this take a RefPtr
-    static void HandleIpc(Device* dev, async_dispatcher_t* dispatcher,
-                          async::WaitBase* wait, zx_status_t status,
-                          const zx_packet_signal_t* signal);
-
     zx_handle_t hrpc;
     uint32_t flags;
 
-    async::WaitMethod<Device, &Device::HandleIpcEntry> wait{this};
+    port_handler_t ph;
 
     Devhost* host;
     const char* name;
@@ -226,7 +196,7 @@ struct Device {
 struct Devhost {
     Devhost();
 
-    async::Wait wait;
+    port_handler_t ph;
     zx_handle_t hrpc;
     zx::process proc;
     zx_koid_t koid;
@@ -336,9 +306,6 @@ struct Driver {
 };
 
 #define DRIVER_NAME_LEN_MAX 64
-
-// Access the devcoordinator's async event loop
-async::Loop* DcAsyncLoop();
 
 zx_status_t devfs_publish(Device* parent, Device* dev);
 void devfs_unpublish(Device* dev);

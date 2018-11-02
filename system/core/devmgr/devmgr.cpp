@@ -31,6 +31,7 @@
 #include <lib/zx/resource.h>
 
 #include "bootfs.h"
+#include "devhost.h"
 #include "devmgr.h"
 #include "fshost.h"
 

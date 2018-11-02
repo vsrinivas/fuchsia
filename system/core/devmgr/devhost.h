@@ -5,6 +5,7 @@
 #pragma once
 
 #include "device-internal.h"
+#include "devcoordinator.h"
 
 #include <ddk/binding.h>
 #include <ddk/device.h>
@@ -13,9 +14,10 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
+
 #include <lib/fdio/remoteio.h>
 #include <lib/zx/channel.h>
-#include <port/port.h>
+
 #include <zircon/compiler.h>
 #include <zircon/fidl.h>
 #include <zircon/thread_annotations.h>
