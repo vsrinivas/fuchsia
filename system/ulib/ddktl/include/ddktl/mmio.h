@@ -199,11 +199,6 @@ public:
     }
 
     template <typename T>
-    void ModifyBits(T val, T start, T width, zx_off_t offs) const {
-        ModifyBits<T>(val << start, ((1 << width) - 1) << start, offs);
-    }
-
-    template <typename T>
     void SetBits(T bits, zx_off_t offs) const {
         ModifyBits<T>(bits, bits, offs);
     }
