@@ -136,8 +136,10 @@ StateObserver::Flags PortObserver::OnCancelByKey(const Handle* handle, const voi
 }
 
 void PortObserver::OnRemoved() {
-    if (port_->CanReap(this, &packet_))
-        delete this;
+    // If observer ends up being non-null, it is ourself, and thus our
+    // responsibility to delete ourself.
+    fbl::unique_ptr<PortObserver> observer =
+        port_->MaybeReap(fbl::unique_ptr<PortObserver>(this), &packet_);
 }
 
 StateObserver::Flags PortObserver::MaybeQueue(zx_signals_t new_state, uint64_t count) {
@@ -318,29 +320,30 @@ zx_status_t PortDispatcher::Dequeue(zx_time_t deadline, zx_port_packet_t* out_pa
 }
 
 void PortDispatcher::FreePacket(PortPacket* port_packet) {
-    PortObserver* observer = port_packet->observer;
+    // We need to move the observer pointer out, as it's potentially containing us.
+    fbl::unique_ptr<const PortObserver> observer = fbl::move(port_packet->observer);
 
     if (observer) {
         // Deleting the observer under the lock is fine because the
         // reference that holds to this PortDispatcher is by construction
         // not the last one. We need to do this under the lock because
-        // another thread can call CanReap().
-        delete observer;
+        // another thread can call MaybeReap().
     } else if (port_packet->is_ephemeral()) {
         port_packet->Free();
     }
 }
 
-bool PortDispatcher::CanReap(PortObserver* observer, PortPacket* port_packet) {
+fbl::unique_ptr<PortObserver> PortDispatcher::MaybeReap(fbl::unique_ptr<PortObserver> observer,
+                                                        PortPacket* port_packet) {
     canary_.Assert();
 
     Guard<fbl::Mutex> guard{get_lock()};
-    if (!port_packet->InContainer())
-        return true;
-    // The destruction will happen when the packet is dequeued or in CancelQueued()
-    DEBUG_ASSERT(port_packet->observer == nullptr);
-    port_packet->observer = observer;
-    return false;
+    if (port_packet->InContainer()) {
+        // The destruction will happen when the packet is dequeued or in CancelQueued()
+        DEBUG_ASSERT(port_packet->observer == nullptr);
+        port_packet->observer = fbl::move(observer);
+    }
+    return observer;
 }
 
 zx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint64_t key,
@@ -405,7 +408,9 @@ bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {
     for (auto it = packets_.begin(); it != packets_.end();) {
         if ((it->handle == handle) && (it->key() == key)) {
             auto to_remove = it++;
-            delete packets_.erase(to_remove)->observer;
+            // Destroyed as we go around the loop.
+            fbl::unique_ptr<const PortObserver> observer =
+                fbl::move(packets_.erase(to_remove)->observer);
             --num_packets_;
             packet_removed = true;
         } else {

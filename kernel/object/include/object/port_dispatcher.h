@@ -92,7 +92,7 @@ struct PortAllocator {
 struct PortPacket final : public fbl::DoublyLinkedListable<PortPacket*> {
     zx_port_packet_t packet;
     const void* const handle;
-    PortObserver* observer;
+    fbl::unique_ptr<const PortObserver> observer;
     PortAllocator* const allocator;
 
     PortPacket(const void* handle, PortAllocator* allocator);
@@ -180,9 +180,11 @@ public:
     zx_status_t Dequeue(zx_time_t deadline, zx_port_packet_t* packet);
     bool RemoveInterruptPacket(PortInterruptPacket* port_packet);
 
-    // Decides who is going to destroy the observer. If it returns |true| it
-    // is the duty of the caller. If it is false it is the duty of the port.
-    bool CanReap(PortObserver* observer, PortPacket* port_packet);
+    // Decides who is going to destroy the observer. If it returns the
+    // observer back if it is the duty of the caller. It returns
+    // nullptr if it is the duty of the port.
+    fbl::unique_ptr<PortObserver> MaybeReap(fbl::unique_ptr<PortObserver> observer,
+                                            PortPacket* port_packet);
 
     // Called under the handle table lock.
     zx_status_t MakeObserver(uint32_t options, Handle* handle, uint64_t key, zx_signals_t signals);
