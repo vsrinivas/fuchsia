@@ -34,6 +34,22 @@ package("account_manager") {
   ]
 }
 
+package("account_handler") {
+  deps = [
+    "//garnet/bin/auth/rust/account_handler:account_handler",
+  ]
+
+  binary = "rust_crates/account_handler"
+
+  meta = [
+    {
+      path = rebase_path("rust/meta/account_handler.cmx")
+      dest = "account_handler.cmx"
+    },
+  ]
+}
+
+
 package("rust_tests") {
   testonly = true
   package_name = "auth_rust_tests"

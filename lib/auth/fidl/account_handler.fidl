@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.auth.internal;
+library fuchsia.auth.account.internal;
 
 using fuchsia.auth;
 using fuchsia.auth.account;
@@ -46,7 +46,6 @@ interface AccountHandlerControl {
     // been initialized using CreateAccount or LoadAccount, otherwise the call
     // will fail with a status of NOT_FOUND.
     //
-    // |id| The account's local identifier
     // |context_provider| An |AuthenticationContextProvider| capable of
     //                    supplying UI contexts used for interactive
     //                    authentication on this account
@@ -55,7 +54,6 @@ interface AccountHandlerControl {
     // Returns: |status| A |Status| indicating whether the operation was
     //                   successful
     3: GetAccount(
-           fuchsia.auth.account.LocalAccountId id,
            fuchsia.auth.AuthenticationContextProvider auth_context_provider,
            request<fuchsia.auth.account.Account> account)
            -> (fuchsia.auth.account.Status status);
