@@ -21,6 +21,7 @@
 __BEGIN_CDECLS;
 
 typedef enum sdmmc_type {
+    SDMMC_TYPE_UNKNOWN,
     SDMMC_TYPE_SD,
     SDMMC_TYPE_MMC,
     SDMMC_TYPE_SDIO,
@@ -37,6 +38,7 @@ typedef struct sdmmc_device {
     trace_async_id_t async_id;
 
     zx_device_t* zxdev;
+    zx_device_t* child_zxdev;
 
     sdmmc_protocol_t host;
     sdmmc_host_info_t host_info;
@@ -59,6 +61,7 @@ typedef struct sdmmc_device {
 
     // sdio
     sdio_device_t sdio_dev;
+
     mtx_t lock;
 
     // blockio requests
@@ -69,7 +72,12 @@ typedef struct sdmmc_device {
 
     thrd_t worker_thread;
     zx_handle_t worker_event;
-    bool worker_thread_running;
+
+    //Requires lock to be acquired.
+    //TODO(ravoorir): When converting to c++ use
+    //clang thread annotations.
+    bool worker_thread_started;
+    bool dead;
 
 #if WITH_STATS
     size_t stat_concur;
