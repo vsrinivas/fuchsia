@@ -63,6 +63,8 @@ executable("tests") {
     "test/fakes/fake_audio.h",
     "test/fakes/fake_audio_renderer.cc",
     "test/fakes/fake_audio_renderer.h",
+    "test/fakes/fake_image_pipe.cc",
+    "test/fakes/fake_image_pipe.h",
     "test/fakes/fake_scenic.cc",
     "test/fakes/fake_scenic.h",
     "test/fakes/fake_session.cc",
@@ -101,7 +103,7 @@ executable("tests") {
   ]
 }
 
-test_package("tests_package") {
+test_package("mediaplayer_tests") {
   deps = [
     ":tests",
     "//garnet/bin/mediaplayer/core:tests",
@@ -124,6 +126,14 @@ test_package("tests_package") {
 
     {
       name = "mediaplayer_core_tests"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              "../../test_data/media/third_party/chromium_media_test_data/bear-1280x720.mp4")
+      dest = "media_test_data/bear.mp4"
     },
   ]
 }

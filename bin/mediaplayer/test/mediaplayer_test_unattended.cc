@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
+#include <fcntl.h>
+#include <fuchsia/mediaplayer/cpp/fidl.h>
 #include "garnet/bin/mediaplayer/test/fakes/fake_audio.h"
+#include "garnet/bin/mediaplayer/test/fakes/fake_scenic.h"
 #include "garnet/bin/mediaplayer/test/fakes/fake_wav_reader.h"
 #include "garnet/bin/mediaplayer/test/sink_feeder.h"
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
+#include "lib/fsl/io/fd.h"
 #include "lib/fxl/logging.h"
 
 namespace media_player {
@@ -18,6 +21,8 @@ static constexpr uint32_t kFramesPerSecond = 48000;  // 48kHz
 static constexpr size_t kSinkFeedSize = 65536;
 static constexpr uint32_t kSinkFeedMaxPacketSize = 4096;
 static constexpr uint32_t kSinkFeedMaxPacketCount = 10;
+
+constexpr char kBearFilePath[] = "/pkg/data/media_test_data/bear.mp4";
 
 // Base class for mediaplayer tests.
 class MediaPlayerTestUnattended
@@ -34,6 +39,8 @@ class MediaPlayerTestUnattended
     EXPECT_EQ(ZX_OK, status);
 
     services->AddService(fake_audio_.GetRequestHandler());
+    services->AddService(fake_scenic_.GetRequestHandler());
+    services->AddService(fake_scenic_.view_manager().GetRequestHandler());
 
     // Create the synthetic environment.
     environment_ =
@@ -56,6 +63,8 @@ class MediaPlayerTestUnattended
 
   FakeWavReader fake_reader_;
   FakeAudio fake_audio_;
+  FakeScenic fake_scenic_;
+  fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner_ptr_;
   std::unique_ptr<component::testing::EnclosingEnvironment> environment_;
   bool sink_connection_closed_ = false;
   SinkFeeder sink_feeder_;
@@ -72,24 +81,22 @@ TEST_F(MediaPlayerTestUnattended, PlayWav) {
         }
       };
 
-  fake_audio_.renderer().SetPtsUnits(kFramesPerSecond, 1);
-
   fake_audio_.renderer().ExpectPackets({{0, 4096, 0x20c39d1e31991800},
-                                      {1024, 4096, 0xeaf137125d313800},
-                                      {2048, 4096, 0x6162095671991800},
-                                      {3072, 4096, 0x36e551c7dd41f800},
-                                      {4096, 4096, 0x23dcbf6fb1991800},
-                                      {5120, 4096, 0xee0a5963dd313800},
-                                      {6144, 4096, 0x647b2ba7f1991800},
-                                      {7168, 4096, 0x39fe74195d41f800},
-                                      {8192, 4096, 0xb3de76b931991800},
-                                      {9216, 4096, 0x7e0c10ad5d313800},
-                                      {10240, 4096, 0xf47ce2f171991800},
-                                      {11264, 4096, 0xca002b62dd41f800},
-                                      {12288, 4096, 0xb6f7990ab1991800},
-                                      {13312, 4096, 0x812532fedd313800},
-                                      {14336, 4096, 0xf7960542f1991800},
-                                      {15360, 4052, 0x7308a9824acbd5ea}});
+                                        {1024, 4096, 0xeaf137125d313800},
+                                        {2048, 4096, 0x6162095671991800},
+                                        {3072, 4096, 0x36e551c7dd41f800},
+                                        {4096, 4096, 0x23dcbf6fb1991800},
+                                        {5120, 4096, 0xee0a5963dd313800},
+                                        {6144, 4096, 0x647b2ba7f1991800},
+                                        {7168, 4096, 0x39fe74195d41f800},
+                                        {8192, 4096, 0xb3de76b931991800},
+                                        {9216, 4096, 0x7e0c10ad5d313800},
+                                        {10240, 4096, 0xf47ce2f171991800},
+                                        {11264, 4096, 0xca002b62dd41f800},
+                                        {12288, 4096, 0xb6f7990ab1991800},
+                                        {13312, 4096, 0x812532fedd313800},
+                                        {14336, 4096, 0xf7960542f1991800},
+                                        {15360, 4052, 0x7308a9824acbd5ea}});
 
   fuchsia::mediaplayer::SeekingReaderPtr fake_reader_ptr;
   fidl::InterfaceRequest<fuchsia::mediaplayer::SeekingReader> reader_request =
@@ -102,7 +109,7 @@ TEST_F(MediaPlayerTestUnattended, PlayWav) {
 
   player_->Play();
 
-  EXPECT_FALSE(RunLoopWithTimeout(zx::duration(ZX_SEC(10))));
+  EXPECT_FALSE(RunLoopWithTimeout(zx::sec(10)));
 }
 
 // Play an LPCM elementary stream using |StreamSource|
@@ -116,24 +123,22 @@ TEST_F(MediaPlayerTestUnattended, StreamSource) {
         }
       };
 
-  fake_audio_.renderer().SetPtsUnits(kFramesPerSecond, 1);
-
   fake_audio_.renderer().ExpectPackets({{0, 4096, 0xd2fbd957e3bf0000},
-                                      {1024, 4096, 0xda25db3fa3bf0000},
-                                      {2048, 4096, 0xe227e0f6e3bf0000},
-                                      {3072, 4096, 0xe951e2dea3bf0000},
-                                      {4096, 4096, 0x37ebf7d3e3bf0000},
-                                      {5120, 4096, 0x3f15f9bba3bf0000},
-                                      {6144, 4096, 0x4717ff72e3bf0000},
-                                      {7168, 4096, 0x4e42015aa3bf0000},
-                                      {8192, 4096, 0xeabc5347e3bf0000},
-                                      {9216, 4096, 0xf1e6552fa3bf0000},
-                                      {10240, 4096, 0xf9e85ae6e3bf0000},
-                                      {11264, 4096, 0x01125ccea3bf0000},
-                                      {12288, 4096, 0x4fac71c3e3bf0000},
-                                      {13312, 4096, 0x56d673aba3bf0000},
-                                      {14336, 4096, 0x5ed87962e3bf0000},
-                                      {15360, 4096, 0x66027b4aa3bf0000}});
+                                        {1024, 4096, 0xda25db3fa3bf0000},
+                                        {2048, 4096, 0xe227e0f6e3bf0000},
+                                        {3072, 4096, 0xe951e2dea3bf0000},
+                                        {4096, 4096, 0x37ebf7d3e3bf0000},
+                                        {5120, 4096, 0x3f15f9bba3bf0000},
+                                        {6144, 4096, 0x4717ff72e3bf0000},
+                                        {7168, 4096, 0x4e42015aa3bf0000},
+                                        {8192, 4096, 0xeabc5347e3bf0000},
+                                        {9216, 4096, 0xf1e6552fa3bf0000},
+                                        {10240, 4096, 0xf9e85ae6e3bf0000},
+                                        {11264, 4096, 0x01125ccea3bf0000},
+                                        {12288, 4096, 0x4fac71c3e3bf0000},
+                                        {13312, 4096, 0x56d673aba3bf0000},
+                                        {14336, 4096, 0x5ed87962e3bf0000},
+                                        {15360, 4096, 0x66027b4aa3bf0000}});
 
   fuchsia::mediaplayer::StreamSourcePtr stream_source;
   player_->CreateStreamSource(0, false, false, nullptr,
@@ -172,8 +177,130 @@ TEST_F(MediaPlayerTestUnattended, StreamSource) {
 
   player_->Play();
 
-  EXPECT_FALSE(RunLoopWithTimeout(zx::duration(ZX_SEC(10))));
+  EXPECT_FALSE(RunLoopWithTimeout(zx::sec(10)));
   EXPECT_FALSE(sink_connection_closed_);
+}
+
+// Play a real A/V file from beginning to end.
+TEST_F(MediaPlayerTestUnattended, PlayBear) {
+  player_.events().OnStatusChanged =
+      [this](fuchsia::mediaplayer::PlayerStatus status) {
+        if (status.end_of_stream) {
+          EXPECT_TRUE(status.ready);
+          EXPECT_TRUE(fake_audio_.renderer().expected());
+          EXPECT_TRUE(fake_scenic_.session().expected());
+          QuitLoop();
+        }
+      };
+
+  // TODO(dalesat): Use ExpectPackets for audio.
+  // This doesn't currently work, because the decoder behaves differently on
+  // different targets.
+
+  fake_scenic_.session().SetExpectations(
+      {
+          .width = 1280,
+          .height = 768,
+          .stride = 1280,
+          .pixel_format = fuchsia::images::PixelFormat::YV12,
+      },
+      720,
+      {{0, 983040, 0x0864378c3655ba47},
+       {118811406, 983040, 0x2481a21b1e543c8e},
+       {152178073, 983040, 0xe4294049f22539bc},
+       {185544739, 983040, 0xde1058aba916ffad},
+       {218911406, 983040, 0xc3fc580b34dc0383},
+       {252278073, 983040, 0xff31322e5ccdebe0},
+       {285644739, 983040, 0x64d31206ece7417f},
+       {319011406, 983040, 0xf1c6bf7fe1be29be},
+       {352378073, 983040, 0x72f44e5249a05c15},
+       {385744739, 983040, 0x1ad7e92183fb3aa4},
+       {419111406, 983040, 0x24b78b95d8c8b73d},
+       {452478073, 983040, 0x25a798d9af5a1b7e},
+       {485844739, 983040, 0x3379288b1f4197a5},
+       {519211406, 983040, 0x15fb9c205590cbc9},
+       {552578073, 983040, 0xc04a1834aec8b399},
+       {585944739, 983040, 0x97eded0e3b6348d3},
+       {619311406, 983040, 0x09dba227982ba479},
+       {652678073, 983040, 0x4d2a1042babc479c},
+       {686044739, 983040, 0x379f96a35774dc2b},
+       {719411406, 983040, 0x2d95a4b5506bd4c3},
+       {752778073, 983040, 0xda99bf00cd971999},
+       {786144739, 983040, 0x20a21550eb717da2},
+       {819511406, 983040, 0x3733b96d2279460b},
+       {852878073, 983040, 0x8ea51ee0088cda67},
+       {886244739, 983040, 0x8d6af19e5d9629ae},
+       {919611406, 983040, 0xd9765bd28098f093},
+       {952978073, 983040, 0x9a747455b496c9d1},
+       {986344739, 983040, 0xfc8e90e73cc086f6},
+       {1019711406, 983040, 0xc3dec92946fc0005},
+       {1053078073, 983040, 0x215b196e790214c4},
+       {1086444739, 983040, 0x30b114015d719041},
+       {1119811406, 983040, 0x5ed6e582ac4022a1},
+       {1153178073, 983040, 0xbccb6f8ba8601507},
+       {1186544739, 983040, 0x34eab6666dc6c717},
+       {1219911406, 983040, 0x5e33bfc44650245f},
+       {1253278073, 983040, 0x736397b78e0850ff},
+       {1286644739, 983040, 0x620d7190a9e49a31},
+       {1320011406, 983040, 0x436e952327e311ea},
+       {1353378073, 983040, 0xf6fa16fc170a85f3},
+       {1386744739, 983040, 0x9f457e1a66323ead},
+       {1420111406, 983040, 0xb1747e31ea5358db},
+       {1453478073, 983040, 0x4da84ec1c5cb45de},
+       {1486844739, 983040, 0x5454f9007dc4de01},
+       {1520211406, 983040, 0x8e9777accf38e4f0},
+       {1553578073, 983040, 0x16a2ebade809e497},
+       {1586944739, 983040, 0x36d323606ebca2f4},
+       {1620311406, 983040, 0x17eaf1e84353dec9},
+       {1653678073, 983040, 0xdb1b344498520386},
+       {1687044739, 983040, 0xec53764065860e7f},
+       {1720411406, 983040, 0x110a7dddd4c45a54},
+       {1753778073, 983040, 0x6df1c973722f01c7},
+       {1787144739, 983040, 0x2e18f1e1544e002a},
+       {1820511406, 983040, 0x0de7b784dd8b0494},
+       {1853878073, 983040, 0x6e254cd1652be6a9},
+       {1887244739, 983040, 0x6353cb7c270b06c2},
+       {1920611406, 983040, 0x8d62a2ddb0350ab9},
+       {1953978073, 983040, 0xaf0ee1376ded95cd},
+       {1987344739, 983040, 0xf617917814de4169},
+       {2020711406, 983040, 0xf686efcec861909f},
+       {2054078073, 983040, 0x539f93afe6863cca},
+       {2087444739, 983040, 0x12c5c5e4eb5b2649},
+       {2120811406, 983040, 0x984cf8179effd823},
+       {2154178073, 983040, 0xfcb0cc2eb449ed16},
+       {2187544739, 983040, 0xf070b3572db477cc},
+       {2220911406, 983040, 0x5dd53f712ce8e1a6},
+       {2254278073, 983040, 0x02e0600528534bef},
+       {2287644739, 983040, 0x53120fbaca19e13b},
+       {2321011406, 983040, 0xd66e3cb3e70897eb},
+       {2354378073, 983040, 0x9f4138aa8e84cbf4},
+       {2387744739, 983040, 0xf350694d6a12ec39},
+       {2421111406, 983040, 0x08c986a97ab8fbb3},
+       {2454478073, 983040, 0x229d2b908659b728},
+       {2487844739, 983040, 0xf54cbe4582a3f8e1},
+       {2521211406, 983040, 0x8c8985c6649a3e1c},
+       {2554578073, 983040, 0x711e04eccc5e4527},
+       {2587944739, 983040, 0x78e2979034921e70},
+       {2621311406, 983040, 0x51c3524f5bf83a62},
+       {2654678073, 983040, 0x12b6f7b7591e7044},
+       {2688044739, 983040, 0xca8d7ac09b973a4b},
+       {2721411406, 983040, 0x3e666b376fcaa466},
+       {2754778073, 983040, 0x8f3657c9648b6dbb},
+       {2788144739, 983040, 0x19a30916a3375f4e}});
+
+  fuchsia::ui::viewsv1::ViewManagerPtr fake_view_manager_ptr;
+  fake_scenic_.view_manager().Bind(fake_view_manager_ptr.NewRequest());
+
+  player_->CreateView(std::move(fake_view_manager_ptr),
+                      view_owner_ptr_.NewRequest());
+
+  auto fd = fxl::UniqueFD(open(kBearFilePath, O_RDONLY));
+  EXPECT_TRUE(fd.is_valid());
+  player_->SetFileSource(fsl::CloneChannelFromFileDescriptor(fd.get()));
+
+  player_->Play();
+
+  EXPECT_FALSE(RunLoopWithTimeout(zx::sec(10)));
 }
 
 }  // namespace test

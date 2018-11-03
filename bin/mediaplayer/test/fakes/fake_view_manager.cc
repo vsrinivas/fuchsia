@@ -15,25 +15,19 @@ namespace test {
 
 FakeViewManager::FakeViewManager(FakeScenic* fake_scenic)
     : dispatcher_(async_get_default_dispatcher()),
-      binding_(this),
       fake_scenic_(fake_scenic) {}
 
 FakeViewManager::~FakeViewManager() {}
 
-void FakeViewManager::Bind(
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewManager> request) {
-  binding_.Bind(std::move(request));
-}
-
 void FakeViewManager::GetScenic(
-    fidl::InterfaceRequest<::fuchsia::ui::scenic::Scenic> request) {
+    fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> request) {
   fake_scenic_->Bind(std::move(request));
 }
 
 void FakeViewManager::CreateView(
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1::View> view,
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner> view_owner,
-    fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewListener> view_listener,
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1::View> view,
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
+    fidl::InterfaceHandle<fuchsia::ui::viewsv1::ViewListener> view_listener,
     zx::eventpair parent_export_token, fidl::StringPtr label) {
   // "Cast" the ViewOwner channel endpoint to an eventpair endpoint.  Should
   // work for the time being while this interface is being deprecated.
@@ -44,9 +38,9 @@ void FakeViewManager::CreateView(
 }
 
 void FakeViewManager::CreateView2(
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1::View> view,
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1::View> view,
     zx::eventpair view_token,
-    fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewListener> view_listener,
+    fidl::InterfaceHandle<fuchsia::ui::viewsv1::ViewListener> view_listener,
     zx::eventpair parent_export_token, fidl::StringPtr label) {
   fake_view_.Bind(std::move(view), std::move(view_token), view_listener.Bind(),
                   std::move(parent_export_token), label);
@@ -64,8 +58,8 @@ void FakeViewManager::CreateView2(
 }
 
 void FakeViewManager::CreateViewTree(
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewTree> view_tree,
-    fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewTreeListener>
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewTree> view_tree,
+    fidl::InterfaceHandle<fuchsia::ui::viewsv1::ViewTreeListener>
         view_tree_listener,
     fidl::StringPtr label) {
   FXL_NOTIMPLEMENTED();

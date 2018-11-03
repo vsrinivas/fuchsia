@@ -13,7 +13,7 @@ namespace test {
 
 class PacketInfo {
  public:
-  static uint64_t Hash(const void* data, size_t data_size);
+  static uint64_t Hash(const void* data, size_t data_size, uint64_t prev = 0);
 
   PacketInfo(int64_t pts, uint64_t size, uint64_t hash)
       : pts_(pts), size_(size), hash_(hash) {}

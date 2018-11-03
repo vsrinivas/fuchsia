@@ -11,7 +11,7 @@
 
 #include "garnet/bin/mediaplayer/test/fakes/fake_session.h"
 #include "garnet/bin/mediaplayer/test/fakes/fake_view_manager.h"
-#include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/binding_set.h"
 
 namespace media_player {
 namespace test {
@@ -27,8 +27,16 @@ class FakeScenic : public ::fuchsia::ui::scenic::Scenic {
 
   FakeViewManager& view_manager() { return fake_view_manager_; }
 
+  // Returns a request handler for binding to this fake service.
+  fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic>
+  GetRequestHandler() {
+    return bindings_.GetHandler(this);
+  }
+
   // Binds this scenic.
-  void Bind(fidl::InterfaceRequest<::fuchsia::ui::scenic::Scenic> request);
+  void Bind(fidl::InterfaceRequest<::fuchsia::ui::scenic::Scenic> request) {
+    bindings_.AddBinding(this, std::move(request));
+  }
 
   // Scenic implementation.
   void CreateSession(
@@ -45,7 +53,7 @@ class FakeScenic : public ::fuchsia::ui::scenic::Scenic {
 
  private:
   async_dispatcher_t* dispatcher_;
-  fidl::Binding<::fuchsia::ui::scenic::Scenic> binding_;
+  fidl::BindingSet<::fuchsia::ui::scenic::Scenic> bindings_;
   FakeSession fake_session_;
   FakeViewManager fake_view_manager_;
 };

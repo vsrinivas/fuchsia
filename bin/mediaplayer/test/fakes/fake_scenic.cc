@@ -14,15 +14,9 @@ namespace test {
 
 FakeScenic::FakeScenic()
     : dispatcher_(async_get_default_dispatcher()),
-      binding_(this),
       fake_view_manager_(this) {}
 
 FakeScenic::~FakeScenic() {}
-
-void FakeScenic::Bind(
-    fidl::InterfaceRequest<::fuchsia::ui::scenic::Scenic> request) {
-  binding_.Bind(std::move(request));
-}
 
 void FakeScenic::CreateSession(
     ::fidl::InterfaceRequest<::fuchsia::ui::scenic::Session> session,

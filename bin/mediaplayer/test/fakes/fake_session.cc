@@ -19,14 +19,16 @@ namespace test {
 namespace {
 
 constexpr uint64_t kPresentationRatePerSecond = 60;
-constexpr uint64_t kPresentationInterval =
-    ZX_SEC(1) / kPresentationRatePerSecond;
+constexpr zx::duration kPresentationInterval =
+    zx::duration(ZX_SEC(1) / kPresentationRatePerSecond);
 constexpr uint32_t kRootNodeId = 1;
 
 }  // namespace
 
 FakeSession::FakeSession()
-    : dispatcher_(async_get_default_dispatcher()), binding_(this) {
+    : dispatcher_(async_get_default_dispatcher()),
+      binding_(this),
+      weak_factory_(this) {
   fuchsia::ui::gfx::ResourceArgs root_resource;
   fuchsia::ui::gfx::ViewArgs view_args;
   root_resource.set_view(std::move(view_args));
@@ -40,10 +42,36 @@ void FakeSession::Bind(
     ::fuchsia::ui::scenic::SessionListenerPtr listener) {
   binding_.Bind(std::move(request));
   listener_ = std::move(listener);
+
+  PresentScene();
+}
+
+void FakeSession::DumpExpectations(uint32_t display_height) {
+  if (image_pipe_) {
+    image_pipe_->DumpExpectations(display_height);
+  } else {
+    dump_expectations_ = true;
+    expected_display_height_ = display_height;
+  }
+}
+
+void FakeSession::SetExpectations(
+    const fuchsia::images::ImageInfo& info, uint32_t display_height,
+    const std::vector<PacketInfo>&& expected_packets_info) {
+  if (image_pipe_) {
+    image_pipe_->SetExpectations(info, display_height,
+                                 std::move(expected_packets_info));
+  } else {
+    expected_packets_info_ = std::move(expected_packets_info);
+    expected_image_info_ = fidl::MakeOptional(info);
+    expected_display_height_ = display_height;
+  }
 }
 
 void FakeSession::Enqueue(
     fidl::VectorPtr<::fuchsia::ui::scenic::Command> cmds) {
+  FXL_DCHECK(cmds);
+
   for (auto& command : *cmds) {
     switch (command.Which()) {
       case fuchsia::ui::scenic::Command::Tag::kGfx:
@@ -90,156 +118,34 @@ void FakeSession::Present(uint64_t presentation_time,
                           fidl::VectorPtr<::zx::event> acquire_fences,
                           fidl::VectorPtr<::zx::event> release_fences,
                           PresentCallback callback) {
-  FXL_DCHECK(acquire_fences->empty());
-  FXL_DCHECK(release_fences->empty());
+  FXL_DCHECK(acquire_fences);
+  FXL_DCHECK(release_fences);
+  // The video renderer doesn't use these fences, so we don't support them in
+  // the fake.
+  FXL_CHECK(acquire_fences->empty())
+      << "Present: acquire_fences not supported.";
+  FXL_CHECK(release_fences->empty())
+      << "Present: release_fences not supported.";
 
-  if (initial_presentation_time_ == 0 && presentation_time != 0) {
-    initial_presentation_time_ = presentation_time;
-  }
-
-  // Find the video image.
-  fuchsia::ui::gfx::ImageArgs* image = FindVideoImage(kRootNodeId);
-  if (image != nullptr) {
-    if (expected_image_info_) {
-      if (image->info.transform != expected_image_info_->transform) {
-        FXL_LOG(ERROR) << "unexpected ImageInfo.transform value "
-                       << fidl::ToUnderlying(image->info.transform);
-        expected_ = false;
-      }
-
-      if (image->info.width != expected_image_info_->width) {
-        FXL_LOG(ERROR) << "unexpected ImageInfo.width value "
-                       << image->info.width;
-        expected_ = false;
-      }
-
-      if (image->info.height != expected_image_info_->height) {
-        FXL_LOG(ERROR) << "unexpected ImageInfo.height value "
-                       << image->info.height;
-        expected_ = false;
-      }
-
-      if (image->info.stride != expected_image_info_->stride) {
-        FXL_LOG(ERROR) << "unexpected ImageInfo.stride value "
-                       << image->info.stride;
-        expected_ = false;
-      }
-
-      if (image->info.pixel_format != expected_image_info_->pixel_format) {
-        FXL_LOG(ERROR) << "unexpected ImageInfo.pixel_format value "
-                       << fidl::ToUnderlying(image->info.pixel_format);
-        expected_ = false;
-      }
-
-      if (image->info.color_space != expected_image_info_->color_space) {
-        FXL_LOG(ERROR) << "unexpected ImageInfo.color_space value "
-                       << fidl::ToUnderlying(image->info.color_space);
-        expected_ = false;
-      }
-
-      if (image->info.tiling != expected_image_info_->tiling) {
-        FXL_LOG(ERROR) << "unexpected ImageInfo.tiling value "
-                       << fidl::ToUnderlying(image->info.tiling);
-        expected_ = false;
-      }
-
-      if (image->info.alpha_format != expected_image_info_->alpha_format) {
-        FXL_LOG(ERROR) << "unexpected ImageInfo.alpha_format value "
-                       << fidl::ToUnderlying(image->info.alpha_format);
-        expected_ = false;
-      }
+  async::PostTask(dispatcher_, [this, callback = std::move(callback),
+                                weak_this = GetWeakThis()]() {
+    if (!weak_this) {
+      return;
     }
 
-    Resource* memory = FindResource(image->memory_id);
-    if (memory != nullptr) {
-      if (memory->vmo_mapper_.start() == nullptr) {
-        FXL_CHECK(memory->args_.is_memory());
-        FXL_DCHECK(memory->args_.memory().vmo);
-        memory->vmo_mapper_.Map(std::move(memory->args_.memory().vmo), 0, 0,
-                                ZX_VM_PERM_READ);
-      }
-
-      uint64_t size = image->info.stride * image->info.height;
-
-      if (image->memory_offset + size >= memory->vmo_mapper_.size()) {
-        FXL_LOG(ERROR) << "image exceeds vmo limits";
-        FXL_LOG(ERROR) << "    vmo size     " << memory->vmo_mapper_.size();
-        FXL_LOG(ERROR) << "    image offset " << image->memory_offset;
-        FXL_LOG(ERROR) << "    image stride " << image->info.stride;
-        FXL_LOG(ERROR) << "    image height " << image->info.height;
-        expected_ = false;
-        return;
-      }
-
-      void* image_payload =
-          reinterpret_cast<uint8_t*>(memory->vmo_mapper_.start()) +
-          image->memory_offset;
-
-      if (dump_packets_) {
-        std::cerr << "{ " << presentation_time - initial_presentation_time_
-                  << ", " << size << ", 0x" << std::hex << std::setw(16)
-                  << std::setfill('0') << PacketInfo::Hash(image_payload, size)
-                  << std::dec << " },\n";
-      }
-
-      if (!expected_packets_info_.empty()) {
-        if (expected_packets_info_iter_ == expected_packets_info_.end()) {
-          FXL_LOG(ERROR) << "frame supplied after expected packets";
-          expected_ = false;
-        }
-
-        if (expected_packets_info_iter_->pts() !=
-                static_cast<int64_t>(presentation_time -
-                                     initial_presentation_time_) ||
-            expected_packets_info_iter_->size() != size ||
-            expected_packets_info_iter_->hash() !=
-                PacketInfo::Hash(image_payload, size)) {
-          FXL_LOG(ERROR) << "supplied frame doesn't match expected packet info";
-          FXL_LOG(ERROR) << "actual:   "
-                         << presentation_time - initial_presentation_time_
-                         << ", " << size << ", 0x" << std::hex << std::setw(16)
-                         << std::setfill('0')
-                         << PacketInfo::Hash(image_payload, size) << std::dec;
-          FXL_LOG(ERROR) << "expected: " << expected_packets_info_iter_->pts()
-                         << ", " << expected_packets_info_iter_->size()
-                         << ", 0x" << std::hex << std::setw(16)
-                         << std::setfill('0')
-                         << expected_packets_info_iter_->hash() << std::dec;
-          expected_ = false;
-        }
-
-        ++expected_packets_info_iter_;
-      }
-    }
-  }
-
-  uint64_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
-  if (presentation_time < now) {
-    presentation_time = now;
-  }
-
-  // Round up to the nearest kPresentationInterval.
-  presentation_time = (presentation_time + kPresentationInterval - 1);
-  presentation_time =
-      presentation_time - (presentation_time % kPresentationInterval);
-
-  async::PostTaskForTime(
-      dispatcher_,
-      [this, callback = std::move(callback), presentation_time]() {
-        fuchsia::images::PresentationInfo presentation_info;
-        presentation_info.presentation_time = presentation_time + ZX_MSEC(20);
-        presentation_info.presentation_interval = kPresentationInterval;
-        callback(presentation_info);
-      },
-      zx::time(presentation_time));
+    fuchsia::images::PresentationInfo presentation_info;
+    presentation_info.presentation_time = next_presentation_time_.get();
+    presentation_info.presentation_interval = kPresentationInterval.get();
+    callback(presentation_info);
+  });
 }
 
 void FakeSession::HitTest(uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
                           ::fuchsia::ui::gfx::vec3 ray_direction,
                           HitTestCallback callback) {
   FXL_LOG(INFO) << "HitTest (not implemented)";
+  // fit::function<void(fidl::VectorPtr<::fuchsia::ui::gfx::Hit>)>
 }
-// fit::function<void(fidl::VectorPtr<::fuchsia::ui::gfx::Hit>)>
 
 void FakeSession::HitTestDeviceRay(::fuchsia::ui::gfx::vec3 ray_origin,
                                    ::fuchsia::ui::gfx::vec3 ray_direction,
@@ -250,29 +156,45 @@ void FakeSession::HitTestDeviceRay(::fuchsia::ui::gfx::vec3 ray_origin,
 
 FakeSession::Resource* FakeSession::FindResource(uint32_t id) {
   auto iter = resources_by_id_.find(id);
-  if (iter == resources_by_id_.end()) {
-    FXL_LOG(WARNING) << "Can't find resource " << id;
-    expected_ = false;
-    return nullptr;
-  }
-
-  return &iter->second;
+  return (iter == resources_by_id_.end()) ? nullptr : &iter->second;
 }
 
 void FakeSession::HandleCreateResource(uint32_t resource_id,
                                        fuchsia::ui::gfx::ResourceArgs args) {
+  if (args.is_image_pipe()) {
+    FXL_CHECK(!image_pipe_) << "fake supports only one image pipe.";
+    FXL_DCHECK(args.image_pipe().image_pipe_request);
+    image_pipe_ = std::make_unique<FakeImagePipe>();
+    image_pipe_->Bind(std::move(args.image_pipe().image_pipe_request));
+    image_pipe_->OnPresentScene(zx::time(), next_presentation_time_,
+                                kPresentationInterval);
+
+    if (dump_expectations_) {
+      image_pipe_->DumpExpectations(expected_display_height_);
+    }
+
+    if (!expected_packets_info_.empty()) {
+      FXL_DCHECK(expected_image_info_);
+      image_pipe_->SetExpectations(*expected_image_info_,
+                                   expected_display_height_,
+                                   std::move(expected_packets_info_));
+    }
+  }
+
   resources_by_id_.emplace(resource_id, std::move(args));
 }
 
 void FakeSession::HandleReleaseResource(uint32_t resource_id) {
   if (resources_by_id_.erase(resource_id) != 1) {
-    FXL_LOG(WARNING) << "Asked to release unrecognized resource "
-                     << resource_id;
+    FXL_LOG(ERROR) << "Asked to release unrecognized resource " << resource_id
+                   << ", closing connection.";
     expected_ = false;
+    binding_.Unbind();
   }
 }
 
-fuchsia::ui::gfx::ImageArgs* FakeSession::FindVideoImage(uint32_t node_id) {
+fuchsia::ui::gfx::ImagePipeArgs* FakeSession::FindVideoImagePipe(
+    uint32_t node_id) {
   Resource* node = FindResource(node_id);
   if (node == nullptr) {
     return nullptr;
@@ -280,13 +202,16 @@ fuchsia::ui::gfx::ImageArgs* FakeSession::FindVideoImage(uint32_t node_id) {
 
   if (node->material_ != kNullResourceId) {
     Resource* material = FindResource(node->material_);
-    if (material != nullptr && material->image_texture_) {
-      return material->image_texture_.get();
+    if (material != nullptr && material->texture_ != kNullResourceId) {
+      Resource* texture = FindResource(material->texture_);
+      if (texture != nullptr && texture->args_.is_image_pipe()) {
+        return &texture->args_.image_pipe();
+      }
     }
   }
 
   for (uint32_t child_id : node->children_) {
-    fuchsia::ui::gfx::ImageArgs* result = FindVideoImage(child_id);
+    fuchsia::ui::gfx::ImagePipeArgs* result = FindVideoImagePipe(child_id);
     if (result != nullptr) {
       return result;
     }
@@ -299,7 +224,19 @@ void FakeSession::HandleAddChild(uint32_t parent_id, uint32_t child_id) {
   Resource* parent = FindResource(parent_id);
   Resource* child = FindResource(child_id);
 
-  if (parent == nullptr || child == nullptr) {
+  if (!parent) {
+    FXL_LOG(ERROR) << "Asked to add child, parent_id (" << parent_id
+                   << ") not recognized, closing connection.";
+    expected_ = false;
+    binding_.Unbind();
+    return;
+  }
+
+  if (!child) {
+    FXL_LOG(ERROR) << "Asked to add child, child_id (" << child_id
+                   << ") not recognized, closing connection.";
+    expected_ = false;
+    binding_.Unbind();
     return;
   }
 
@@ -318,7 +255,19 @@ void FakeSession::HandleSetMaterial(uint32_t node_id, uint32_t material_id) {
   Resource* node = FindResource(node_id);
   Resource* material = FindResource(material_id);
 
-  if (node == nullptr || material == nullptr) {
+  if (!node) {
+    FXL_LOG(ERROR) << "Asked to set material, node_id (" << node_id
+                   << ") not recognized, closing connection.";
+    expected_ = false;
+    binding_.Unbind();
+    return;
+  }
+
+  if (!material) {
+    FXL_LOG(ERROR) << "Asked to set material, material_id (" << material_id
+                   << ") not recognized, closing connection.";
+    expected_ = false;
+    binding_.Unbind();
     return;
   }
 
@@ -329,15 +278,44 @@ void FakeSession::HandleSetTexture(uint32_t material_id, uint32_t texture_id) {
   Resource* material = FindResource(material_id);
   Resource* texture = FindResource(texture_id);
 
-  if (material == nullptr || texture == nullptr) {
+  if (!material) {
+    FXL_LOG(ERROR) << "Asked to set texture, material_id (" << material_id
+                   << ") not recognized, closing connection.";
+    expected_ = false;
+    binding_.Unbind();
     return;
   }
 
-  // The texture is released before presentation, so we don't use the resource
-  // id.
-  if (texture->args_.is_image()) {
-    material->image_texture_ = fidl::MakeOptional(texture->args_.image());
+  if (!texture) {
+    FXL_LOG(ERROR) << "Asked to set texture, texture_id (" << texture_id
+                   << ") not recognized, closing connection.";
+    expected_ = false;
+    binding_.Unbind();
+    return;
   }
+
+  material->texture_ = texture_id;
+}
+
+void FakeSession::PresentScene() {
+  auto now = zx::time(zx_clock_get(ZX_CLOCK_MONOTONIC));
+
+  next_presentation_time_ = now + kPresentationInterval;
+
+  if (image_pipe_) {
+    image_pipe_->OnPresentScene(now, next_presentation_time_,
+                                kPresentationInterval);
+  }
+
+  async::PostTaskForTime(dispatcher_,
+                         [this, weak_this = GetWeakThis()]() {
+                           if (!weak_this) {
+                             return;
+                           }
+
+                           PresentScene();
+                         },
+                         next_presentation_time_);
 }
 
 }  // namespace test

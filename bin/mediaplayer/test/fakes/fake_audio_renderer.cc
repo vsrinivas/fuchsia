@@ -74,7 +74,7 @@ void FakeAudioRenderer::SendPacket(fuchsia::media::StreamPacket packet,
 
   if (!expected_packets_info_.empty()) {
     if (expected_packets_info_iter_ == expected_packets_info_.end()) {
-      FXL_DLOG(ERROR) << "packet supplied after expected packets";
+      FXL_LOG(ERROR) << "packet supplied after expected packets";
       expected_ = false;
     }
 
@@ -84,7 +84,7 @@ void FakeAudioRenderer::SendPacket(fuchsia::media::StreamPacket packet,
             PacketInfo::Hash(reinterpret_cast<uint8_t*>(vmo_mapper_.start()) +
                                  packet.payload_offset,
                              packet.payload_size)) {
-      FXL_DLOG(ERROR) << "supplied packet doesn't match expected packet info";
+      FXL_LOG(ERROR) << "supplied packet doesn't match expected packet info";
       expected_ = false;
     }
 

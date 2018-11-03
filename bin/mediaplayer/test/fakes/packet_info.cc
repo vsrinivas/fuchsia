@@ -8,9 +8,9 @@ namespace media_player {
 namespace test {
 
 // static
-uint64_t PacketInfo::Hash(const void* data, size_t data_size) {
+uint64_t PacketInfo::Hash(const void* data, size_t data_size, uint64_t prev) {
   const uint8_t* bytes = reinterpret_cast<const uint8_t*>(data);
-  uint64_t hash = 0;
+  uint64_t hash = prev;
 
   for (; data_size != 0; --data_size, ++bytes) {
     hash = *bytes + (hash << 6) + (hash << 16) - hash;
