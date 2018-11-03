@@ -39,7 +39,7 @@ pub struct Client {
 }
 
 impl Client {
-    /// Create a new Ethernet client for the device represented by the `dev` file.
+    /// Create a new Ethernet client for the device proxy `dev`.
     ///
     /// The `buf` is used to share memory between this process and the device driver, and must
     /// remain valid as long as this client is valid. The `name` is used by the driver for debug
@@ -48,21 +48,11 @@ impl Client {
     /// TODO(tkilbourn): handle the buffer size better. How does the user of this crate know what
     /// to pass, before the device is opened?
     pub async fn new(
-        dev: File, buf: zx::Vmo, buf_size: usize, name: &str,
+        dev: sys::DeviceProxy, buf: zx::Vmo, buf_size: usize, name: &str,
     ) -> Result<Self, failure::Error> {
-        let dev = dev.as_raw_fd();
-        let mut client = 0;
-        // Safe because we're passing a valid fd.
-        let () =
-            zx::Status::ok(unsafe { fdio::fdio_sys::fdio_get_service_handle(dev, &mut client) })?;
-        let dev = fidl::endpoints::ClientEnd::<sys::DeviceMarker>::new(
-            // Safe because we checked the return status above.
-            fuchsia_zircon::Channel::from(unsafe { fuchsia_zircon::Handle::from_raw(client) }),
-        )
-        .into_proxy()?;
-        let () = zx::Status::ok(await!(dev.set_client_name(name))?)?;
+        zx::Status::ok(await!(dev.set_client_name(name))?)?;
         let (status, fifos) = await!(dev.get_fifos())?;
-        let () = zx::Status::ok(status)?;
+        zx::Status::ok(status)?;
         // Safe because we checked the return status above.
         let fifos = *fifos.unwrap();
         {
@@ -73,6 +63,29 @@ impl Client {
         Ok(Client {
             inner: Arc::new(ClientInner::new(dev, pool, fifos)?),
         })
+    }
+
+    /// Create a new Ethernet client for the device represented by the `dev` file.
+    ///
+    /// The `buf` is used to share memory between this process and the device driver, and must
+    /// remain valid as long as this client is valid. The `name` is used by the driver for debug
+    /// logs.
+    ///
+    /// TODO(tkilbourn): handle the buffer size better. How does the user of this crate know what
+    /// to pass, before the device is opened?
+    pub async fn from_file(
+        dev: File, buf: zx::Vmo, buf_size: usize, name: &str,
+    ) -> Result<Self, failure::Error> {
+        let dev = dev.as_raw_fd();
+        let mut client = 0;
+        // Safe because we're passing a valid fd.
+        zx::Status::ok(unsafe { fdio::fdio_sys::fdio_get_service_handle(dev, &mut client) })?;
+        let dev = fidl::endpoints::ClientEnd::<sys::DeviceMarker>::new(
+            // Safe because we checked the return status above.
+            fuchsia_zircon::Channel::from(unsafe { fuchsia_zircon::Handle::from_raw(client) }),
+        )
+        .into_proxy()?;
+        await!(Client::new(dev, buf, buf_size, name))
     }
 
     /// Get a stream of events from the Ethernet device.

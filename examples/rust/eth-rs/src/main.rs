@@ -22,7 +22,7 @@ fn main() -> Result<(), Error> {
     let path = env::args().nth(1).expect("missing device argument");
     let dev = File::open(path)?;
     let fut = async {
-        let client = await!(ethernet::Client::new(
+        let client = await!(ethernet::Client::from_file(
             dev,
             vmo,
             ethernet::DEFAULT_BUFFER_SIZE,

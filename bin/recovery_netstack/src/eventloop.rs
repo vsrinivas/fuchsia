@@ -40,7 +40,7 @@ impl EventLoop {
 
         let dev = File::open(path)?;
 
-        let eth_client = await!(eth::Client::new(
+        let eth_client = await!(eth::Client::from_file(
             dev,
             vmo,
             eth::DEFAULT_BUFFER_SIZE,
