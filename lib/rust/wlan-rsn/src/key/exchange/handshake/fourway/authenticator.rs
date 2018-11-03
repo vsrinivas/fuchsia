@@ -55,7 +55,7 @@ impl State {
                     }
                 };
                 match initiate_internal(update_sink, &cfg, krc, &anonce[..]) {
-                    Ok(()) => State::AwaitingMsg2 {anonce: anonce, cfg, pmk, last_krc: krc + 1 },
+                    Ok(()) => State::AwaitingMsg2 {anonce, cfg, pmk, last_krc: krc + 1 },
                     Err(e) => {
                         error!("error: {}", e);
                         State::Idle { cfg, pmk }
@@ -134,9 +134,7 @@ fn process_message_2(
 ) -> Result<(Ptk, Gtk), failure::Error> {
     let ptk = handle_message_2(&pmk[..], &cfg, &anonce[..], last_krc, frame)?;
 
-    // TODO(hahnr): Actually compute GTK.
-    let rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
-    let gtk = Gtk::from_gtk(vec![42; 16], 1, rsne.group_data)?;
+    let gtk = cfg.gtk_provider.as_ref().expect("GtkProvider is missing").lock().unwrap().get_gtk()?;
     let rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
     let msg3 = create_message_3(&cfg, ptk.kck(), ptk.kek(), &gtk, &anonce[..], &rsne, next_krc)?;
 

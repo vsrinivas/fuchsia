@@ -35,10 +35,12 @@ use crate::key::exchange::{
 };
 use crate::rsna::esssa::EssSa;
 use crate::rsna::{UpdateSink, Role};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 pub use crate::crypto_utils::nonce as nonce;
 pub use crate::rsna::NegotiatedRsne as NegotiatedRsne;
+pub use crate::key::gtk::GtkProvider as GtkProvider;
+pub use crate::key::gtk as gtk;
 pub use crate::suite_selector::OUI as OUI;
 
 #[derive(Debug, PartialEq)]
@@ -66,7 +68,7 @@ impl Supplicant {
             negotiated_rsne,
             auth::Config::Psk(psk::Config::new(passphrase, ssid)?),
             exchange::Config::FourWayHandshake(fourway::Config::new(
-                Role::Supplicant, s_addr, s_rsne, a_addr, a_rsne, nonce_rdr
+                Role::Supplicant, s_addr, s_rsne, a_addr, a_rsne, nonce_rdr, None
             )?),
             Some(exchange::Config::GroupKeyHandshake(group_key::Config {
                 role: Role::Supplicant, akm, cipher: group_data
@@ -112,12 +114,13 @@ impl Authenticator {
     /// The Authenticator does not support GTK rotations.
     pub fn new_wpa2psk_ccmp128(
         nonce_rdr: Arc<nonce::NonceReader>,
+        gtk_provider: Arc<Mutex<gtk::GtkProvider>>,
         ssid: &[u8],
         passphrase: &[u8],
         s_addr: [u8; 6],
         s_rsne: rsne::Rsne,
         a_addr: [u8; 6],
-        a_rsne: rsne::Rsne
+        a_rsne: rsne::Rsne,
     ) -> Result<Authenticator, failure::Error> {
         let negotiated_rsne = NegotiatedRsne::from_rsne(&s_rsne)?;
         let esssa = EssSa::new(
@@ -125,7 +128,7 @@ impl Authenticator {
             negotiated_rsne,
             auth::Config::Psk(psk::Config::new(passphrase, ssid)?),
             exchange::Config::FourWayHandshake(fourway::Config::new(
-                Role::Authenticator, s_addr, s_rsne, a_addr, a_rsne, nonce_rdr
+                Role::Authenticator, s_addr, s_rsne, a_addr, a_rsne, nonce_rdr, Some(gtk_provider)
             )?),
             // Group-Key Handshake does not support Authenticator role yet.
             None,

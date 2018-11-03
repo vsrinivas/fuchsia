@@ -18,13 +18,6 @@ pub struct GtkProvider {
     cipher: Cipher,
 }
 
-// This implementation is a direct result of a test outside of this crate comparing an object which
-// transitively owns a GtkProvider to an expected value. As a result, many structs in this crate now
-// have to derive PartialEq. This should get fixed: NET-1677
-impl PartialEq for GtkProvider {
-    fn eq(&self, _other: &GtkProvider) -> bool { true }
-}
-
 fn generate_random_gtk(len: usize) -> Box<[u8]> {
     let mut key = vec![0; len];
     rand_bytes(&mut key[..]);

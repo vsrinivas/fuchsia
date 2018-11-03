@@ -13,10 +13,11 @@ use futures::channel::mpsc;
 use log::{debug, info, error, warn};
 use wlan_rsn::{
     Authenticator,
+    NegotiatedRsne,
     nonce::NonceReader,
+    gtk::GtkProvider,
     rsne::Rsne
 };
-
 use crate::ap::{
     aid::AssociationId,
     event::Event,
@@ -25,6 +26,7 @@ use crate::ap::{
 use crate::{DeviceInfo, MacAddr, MlmeRequest, Ssid};
 use crate::sink::MlmeSink;
 use crate::timer::{self, TimedEvent, Timer};
+use std::sync::{Arc, Mutex};
 
 const DEFAULT_BEACON_PERIOD: u16 = 100;
 const DEFAULT_DTIM_PERIOD: u8 = 1;
@@ -298,8 +300,12 @@ impl<T: Tokens> InfraBss<T> {
             warn!("failed to create NonceReader: {}", e);
             fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
         })?;
+        let gtk_provider = get_gtk_provider(&s_rsne).map_err(|e| {
+            warn!("failed to create GtkProvider: {}", e);
+            fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
+        })?;
         let authenticator =
-            Authenticator::new_wpa2psk_ccmp128(nonce_rdr,
+            Authenticator::new_wpa2psk_ccmp128(nonce_rdr, gtk_provider,
                                                &self.ssid, &a_rsn.password, client_addr.clone(),
                                                s_rsne, self.ctx.device_info.addr, a_rsn.rsne)
                 .map_err(|e| {
@@ -336,6 +342,12 @@ impl<T: Tokens> InfraBss<T> {
 fn validate_s_rsne(s_rsne: &Rsne, a_rsne: &Rsne) -> Result<(), failure::Error> {
     ensure!(is_valid_rsne_subset(s_rsne, a_rsne)?, "incompatible client RSNE");
     Ok(())
+}
+
+fn get_gtk_provider(s_rsne: &Rsne) -> Result<Arc<Mutex<GtkProvider>>, failure::Error> {
+    let negotiated_rsne = NegotiatedRsne::from_rsne(&s_rsne)?;
+    let gtk_provider = GtkProvider::new(negotiated_rsne.group_data)?;
+    Ok(Arc::new(Mutex::new(gtk_provider)))
 }
 
 fn create_rsn_cfg(password: Vec<u8>) -> Option<RsnCfg> {

@@ -5,7 +5,7 @@
 mod authenticator;
 mod supplicant;
 
-use crate::key::exchange;
+use crate::key::{exchange, gtk::GtkProvider};
 use crate::rsna::{NegotiatedRsne, Role, VerifiedKeyFrame, UpdateSink, KeyFrameState, KeyFrameKeyDataState, SecAssocUpdate};
 use crate::rsne::Rsne;
 use crate::state_machine::StateMachine;
@@ -13,7 +13,7 @@ use crate::Error;
 use crate::crypto_utils::nonce::NonceReader;
 use eapol;
 use failure::{self, bail, ensure};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, PartialEq)]
 pub enum MessageNumber {
@@ -73,7 +73,7 @@ impl<'a> FourwayHandshakeFrame<'a> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Config {
     pub role: Role,
     pub s_addr: [u8; 6],
@@ -81,6 +81,7 @@ pub struct Config {
     pub a_addr: [u8; 6],
     pub a_rsne: Rsne,
     pub nonce_rdr: Arc<NonceReader>,
+    pub gtk_provider: Option<Arc<Mutex<GtkProvider>>>,
 }
 
 impl Config {
@@ -91,8 +92,11 @@ impl Config {
         a_addr: [u8; 6],
         a_rsne: Rsne,
         nonce_rdr: Arc<NonceReader>,
+        gtk_provider: Option<Arc<Mutex<GtkProvider>>>,
     ) -> Result<Config, failure::Error> {
-        let _ = NegotiatedRsne::from_rsne(&s_rsne)?;
+        ensure!(role != Role::Authenticator || gtk_provider.is_some(), "GtkProvider is missing");
+        ensure!(NegotiatedRsne::from_rsne(&s_rsne).is_ok(), "invalid s_rsne");
+
         Ok(Config {
             role,
             s_addr,
@@ -100,7 +104,18 @@ impl Config {
             a_addr,
             a_rsne,
             nonce_rdr,
+            gtk_provider,
         })
+    }
+}
+
+impl PartialEq for Config {
+    fn eq(&self, other: &Config) -> bool {
+        self.role == other.role &&
+            self.s_addr == other.s_addr &&
+            self.s_rsne == other.s_rsne &&
+            self.a_addr == other.a_addr &&
+            self.a_rsne == other.a_rsne
     }
 }
 
@@ -124,6 +139,7 @@ impl Fourway {
         };
         Ok(fourway)
     }
+
     pub fn initiate(&mut self, update_sink: &mut Vec<SecAssocUpdate>, key_replay_counter: u64)
         -> Result<(), failure::Error>
     {
@@ -133,7 +149,7 @@ impl Fourway {
                     state.initiate(update_sink, key_replay_counter)
                 });
                 Ok(())
-            }
+            },
             // TODO(hahnr): Supplicant cannot initiate yet.
             _ => Ok(())
         }

@@ -10,7 +10,7 @@ use crate::crypto_utils::nonce::NonceReader;
 use crate::key::exchange::{
     handshake::fourway::{self, Fourway},
 };
-use crate::key::{ptk::Ptk, gtk::Gtk};
+use crate::key::{ptk::Ptk, gtk::{Gtk, GtkProvider}};
 use crate::key_data;
 use crate::key_data::kde;
 use crate::rsna::{
@@ -20,6 +20,7 @@ use crate::{Authenticator, Supplicant};
 use crate::rsne::Rsne;
 use crate::suite_selector::OUI;
 use hex::FromHex;
+use std::sync::{Arc, Mutex};
 
 pub const S_ADDR: [u8; 6] = [0x81, 0x76, 0x61, 0x14, 0xDF, 0xC9];
 pub const A_ADDR: [u8; 6] = [0x1D, 0xE3, 0xFD, 0xDF, 0xCB, 0xD3];
@@ -81,8 +82,13 @@ pub fn get_supplicant() -> Supplicant {
 }
 
 pub fn get_authenticator() -> Authenticator {
+    let gtk_provider = GtkProvider::new(Cipher {
+        oui: Bytes::from(&OUI[..]),
+        suite_type: cipher::CCMP_128,
+    }).expect("error creating GtkProvider");
     let nonce_rdr = NonceReader::new(&S_ADDR[..]).expect("error creating Reader");
     Authenticator::new_wpa2psk_ccmp128(nonce_rdr,
+                                       Arc::new(Mutex::new(gtk_provider)),
                                        "ThisIsASSID".as_bytes(),
                                        "ThisIsAPassword".as_bytes(),
                                        test_util::S_ADDR,
@@ -265,6 +271,10 @@ pub fn is_zero(slice: &[u8]) -> bool {
 }
 
 pub fn make_fourway_cfg(role: Role) -> fourway::Config {
+    let gtk_provider = GtkProvider::new(Cipher {
+        oui: Bytes::from(&OUI[..]),
+        suite_type: cipher::CCMP_128,
+    }).expect("error creating GtkProvider");
     let nonce_rdr = NonceReader::new(&S_ADDR[..]).expect("error creating Reader");
     fourway::Config::new(
         role,
@@ -273,6 +283,7 @@ pub fn make_fourway_cfg(role: Role) -> fourway::Config {
         test_util::A_ADDR,
         test_util::get_a_rsne(),
         nonce_rdr,
+        Some(Arc::new(Mutex::new(gtk_provider))),
     ).expect("could not construct PTK exchange method")
 }
 

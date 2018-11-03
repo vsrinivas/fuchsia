@@ -20,14 +20,6 @@ pub struct NonceReader {
     key_counter: Mutex<BigUint>,
 }
 
-// This implementation is a direct result of a test outside of this crate comparing an object which
-// owns a NonceReader to an expected value. As a result, many struct in this crate now have to
-// derive PartialEq. This should get fixed.
-// For now, assume NonceReaders always match as there should only ever be one created.
-impl PartialEq for NonceReader {
-    fn eq(&self, _other: &NonceReader) -> bool { true }
-}
-
 impl NonceReader {
     pub fn new(sta_addr: &[u8]) -> Result<Arc<NonceReader>, failure::Error> {
         // Write time and STA's address to buffer for PRF-256.
