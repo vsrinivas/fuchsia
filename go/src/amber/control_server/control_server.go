@@ -165,3 +165,7 @@ func (c *ControlServer) GetBlob(merkle string) error {
 func (c *ControlServer) Login(srcId string) (*amber.DeviceCode, error) {
 	return c.daemon.Login(srcId)
 }
+
+func (c *ControlServer) Gc() error {
+	return c.daemon.GC()
+}

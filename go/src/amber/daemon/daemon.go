@@ -22,6 +22,7 @@ import (
 const (
 	DefaultPkgInstallDir  = "/pkgfs/install/pkg"
 	DefaultBlobInstallDir = "/pkgfs/install/blob"
+	PackageGarbageDir     = "/pkgfs/garbage"
 )
 
 type Daemon struct {
@@ -385,4 +386,10 @@ func (d *Daemon) AddWatch(merkle string, f func(string, error)) {
 
 func (d *Daemon) Activated(merkle string) {
 	d.aw.update(merkle, nil)
+}
+
+func (d *Daemon) GC() error {
+	// Garbage collection is done by trying to unlink a particular control
+	// file exposed by pkgfs.
+	return os.Remove(PackageGarbageDir)
 }

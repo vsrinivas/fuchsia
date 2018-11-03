@@ -167,4 +167,7 @@ interface Control {
     11: Login(string sourceId) -> (DeviceCode? device);
 
     12: SetSrcEnabled(string id, bool enabled) -> (Status res);
+
+    // Trigger a garbage collection.
+    13: GC();
 };

@@ -71,6 +71,9 @@ class AmberControlMock : public fuchsia::amber::Control {
       fuchsia::amber::Control::SetSrcEnabledCallback callback) override {
     FXL_LOG(FATAL) << "not implemented";
   }
+  void GC() override {
+    FXL_LOG(FATAL) << "not implemented";
+  }
 
  private:
   fidl::BindingSet<fuchsia::amber::Control> bindings_;

@@ -71,6 +71,7 @@ func New(indexDir, blobDir string) (*Filesystem, error) {
 				unsupportedDirectory: unsupportedDirectory("/needs"),
 				fs:                   f,
 			},
+			"garbage": unsupportedDirectory("/garbage"),
 			"packages": &packagesRoot{
 				unsupportedDirectory: unsupportedDirectory("/packages"),
 				fs:                   f,

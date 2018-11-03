@@ -65,6 +65,8 @@ Commands
         -n: name of the update source
 
     system_update - check for, download, and apply any available system update
+
+    gc - trigger a garbage collection
 `
 
 var (
@@ -370,7 +372,15 @@ func do(proxy *amber.ControlInterface) int {
 			return 1
 		}
 		fmt.Printf("Source %q disabled\n", *name)
+	case "gc":
+		err := proxy.Gc()
+		if err != nil {
+			log.Printf("Error collecting garbage: %s", err)
+			return 1
+		}
+		log.Printf("Started garbage collection. See logs for details")
 	default:
+
 		log.Printf("Error, %q is not a recognized command\n%s",
 			os.Args[1], usage)
 		return -1
