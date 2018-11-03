@@ -19,6 +19,7 @@
 
 namespace wlan {
 
+namespace wlan_device = ::fuchsia::wlan::device;
 namespace wlantap = ::fuchsia::wlan::tap;
 
 namespace {
@@ -146,6 +147,7 @@ struct EventSender {
         out->phy = in.phy;
         out->cbw = in.cbw;
         out->mcs = in.mcs;
+        out->tx_vector_idx = in.tx_vector_idx;
     }
 
     fidl::Encoder encoder_;
@@ -230,7 +232,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
             user_channel_binding_.Unbind();
         }
         // Flush any remaining tasks in the event loop before destroying the interfaces
-        ::async::PostTask(loop_,[this] {
+        ::async::PostTask(loop_, [this] {
             {
                 std::lock_guard<std::mutex> guard(wlanmac_lock_);
                 wlanmac_devices_.ReleaseAll();
@@ -262,9 +264,10 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
         }
         std::lock_guard<std::mutex> guard(wlanmac_lock_);
         zx_status_t status = wlanmac_devices_.TryCreateNew(
-            [&] (uint16_t id, WlantapMac** out_dev) {
+            [&](uint16_t id, WlantapMac** out_dev) {
                 return CreateWlantapMac(device_, dev_role, phy_config_.get(), id, this, out_dev);
-            }, id);
+            },
+            id);
         if (status != ZX_OK) {
             zxlogf(ERROR,
                    "wlantap phy: CreateIface: maximum number of interfaces already reached\n");
@@ -302,6 +305,12 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
         std::lock_guard<std::mutex> guard(wlanmac_lock_);
         if (WlantapMac* wlanmac = wlanmac_devices_.Get(wlanmac_id)) { wlanmac->Status(st); }
         zxlogf(INFO, "wlantap phy: Status done\n");
+    }
+
+    virtual void ReportTxStatus(uint16_t wlanmac_id, wlantap::WlanTxStatus ts) override {
+        std::lock_guard<std::mutex> guard(wlanmac_lock_);
+        if (WlantapMac* wlanmac = wlanmac_devices_.Get(wlanmac_id)) { wlanmac->ReportTxStatus(ts); }
+        zxlogf(INFO, "wlantap phy: ReportTxStatus done\n");
     }
 
     // WlantapMac::Listener impl
@@ -359,15 +368,13 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
 
 #define DEV(c) static_cast<WlantapPhy*>(c)
 static wlanphy_impl_protocol_ops_t wlanphy_impl_ops = {
-    .query = [](void* ctx, wlanphy_info_t* info) -> zx_status_t {
-        return DEV(ctx)->Query(info);
-    },
+    .query = [](void* ctx, wlanphy_info_t* info) -> zx_status_t { return DEV(ctx)->Query(info); },
     .create_iface = [](void* ctx, uint16_t mac_role, uint16_t* id) -> zx_status_t {
         return DEV(ctx)->CreateIface(mac_role, id);
     },
     .destroy_iface = [](void* ctx, uint16_t id) -> zx_status_t {
         return DEV(ctx)->DestroyIface(id);
-    }
+    },
 };
 #undef DEV
 

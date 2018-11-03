@@ -12,7 +12,9 @@
 #include <wlan/common/element.h>
 #include <wlan/protocol/info.h>
 
+namespace wlan {
 namespace wlan_device = ::fuchsia::wlan::device;
+namespace wlan_tap = ::fuchsia::wlan::tap;
 
 uint16_t ConvertSupportedPhys(const ::fidl::VectorPtr<wlan_device::SupportedPhy>& phys) {
     uint16_t ret = 0;
@@ -149,3 +151,15 @@ zx_status_t ConvertPhyInfo(wlan_info_t* out, const wlan_device::PhyInfo& in) {
     }
     return ZX_OK;
 }
+
+wlan_tx_status_t ConvertTxStatus(const wlan_tap::WlanTxStatus& in) {
+    wlan_tx_status_t out;
+    std::copy(in.peer_addr.cbegin(), in.peer_addr.cend(), out.peer_addr);
+    for (size_t i = 0; i < in.tx_status_entries.size(); ++i) {
+        out.tx_status_entry[i].tx_vector_idx = in.tx_status_entries[i].tx_vec_idx;
+        out.tx_status_entry[i].attempts = in.tx_status_entries[i].attempts;
+    }
+    out.success = in.success;
+    return out;
+}
+}  // namespace wlan

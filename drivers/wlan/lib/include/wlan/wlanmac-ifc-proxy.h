@@ -22,6 +22,10 @@ class WlanmacIfcProxy {
         ifc_->recv(cookie_, flags, data, length, info);
     }
 
+    void ReportTxStatus(const wlan_tx_status_t* tx_status) {
+        ifc_->report_tx_status(cookie_, tx_status);
+    }
+
     void CompleteTx(wlan_tx_packet_t* packet, zx_status_t status) {
         ifc_->complete_tx(cookie_, packet, status);
     }

@@ -10,6 +10,7 @@
 #include <wlan/common/channel.h>
 #include <wlan/wlanmac-ifc-proxy.h>
 
+#include <mutex>
 #include "utils.h"
 
 namespace wlan {
@@ -138,6 +139,14 @@ struct WlantapMacImpl : WlantapMac {
         if (ifc_) { ifc_.Status(status); }
     }
 
+    virtual void ReportTxStatus(const wlantap::WlanTxStatus& ts) override {
+        std::lock_guard<std::mutex> guard(lock_);
+        if (ifc_) {
+            wlan_tx_status_t converted_tx_status = ConvertTxStatus(ts);
+            ifc_.ReportTxStatus(&converted_tx_status);
+        }
+    }
+
     virtual void RemoveDevice() override {
         {
             std::lock_guard<std::mutex> guard(lock_);
@@ -157,8 +166,7 @@ struct WlantapMacImpl : WlantapMac {
 
 }  // namespace
 
-zx_status_t CreateWlantapMac(zx_device_t* parent_phy,
-                             const wlan_device::MacRole role,
+zx_status_t CreateWlantapMac(zx_device_t* parent_phy, const wlan_device::MacRole role,
                              const wlantap::WlantapPhyConfig* phy_config, uint16_t id,
                              WlantapMac::Listener* listener, WlantapMac** ret) {
     char name[ZX_MAX_NAME_LEN + 1];

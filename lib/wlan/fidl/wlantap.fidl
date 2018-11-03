@@ -29,9 +29,9 @@ struct WlanRxInfo {
 struct WlanTxInfo {
     uint32 tx_flags;
     uint32 valid_fields;
+    uint16 tx_vector_idx;
     uint16 phy;
     uint8 cbw;
-    uint32 data_rate;
     uint8 mcs;
 };
 
@@ -58,17 +58,31 @@ struct WlanKeyConfig {
     vector<uint8>:32 key;
 };
 
+// See wlan_tx_status_entry
+struct WlanTxStatusEntry {
+    uint16 tx_vec_idx;
+    uint8 attempts;
+};
+
+// See wlan_tx_status
+struct WlanTxStatus {
+    array<uint8>:6 peer_addr;
+    array<WlanTxStatusEntry>:8 tx_status_entries;
+    bool success;
+};
+
 interface WlantapPhy {
     // wlanmac_ifc_t callbacks
-    1: Rx(uint16 wlanmac_id, vector<uint8> data, WlanRxInfo info);
-    2: Status(uint16 wlanmac_id, uint32 st);
+    0x01: Rx(uint16 wlanmac_id, vector<uint8> data, WlanRxInfo info);
+    0x02: Status(uint16 wlanmac_id, uint32 st);
+    0x03: ReportTxStatus(uint16 wlanmac_id, WlanTxStatus txs);
     // wlanmac_protocol_ops_t
-    3: -> Tx(TxArgs args);
-    4: -> SetChannel(SetChannelArgs args);
-    5: -> ConfigureBss(ConfigureBssArgs args);
+    0x11: -> Tx(TxArgs args);
+    0x12: -> SetChannel(SetChannelArgs args);
+    0x13: -> ConfigureBss(ConfigureBssArgs args);
     // TODO: ConfigureBeacon
-    7: -> SetKey(SetKeyArgs args);
-    8: -> WlanmacStart(WlanmacStartArgs args);
+    0x14: -> SetKey(SetKeyArgs args);
+    0x15: -> WlanmacStart(WlanmacStartArgs args);
 };
 
 struct TxArgs {
