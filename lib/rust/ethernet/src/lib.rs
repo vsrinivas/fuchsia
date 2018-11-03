@@ -4,13 +4,7 @@
 
 //! Fuchsia Ethernet client
 
-#![feature(
-    arbitrary_self_types,
-    async_await,
-    await_macro,
-    futures_api,
-    pin
-)]
+#![feature(arbitrary_self_types, async_await, await_macro, futures_api, pin)]
 #![deny(warnings)]
 #![deny(missing_docs)]
 
@@ -134,9 +128,10 @@ impl Client {
 
     /// Get the status of the Ethernet device.
     pub async fn get_status(&self) -> Result<EthernetStatus, fidl::Error> {
-        Ok(EthernetStatus::from_bits_truncate(await!(
-            self.inner.dev.get_status()
-        )?))
+        Ok(EthernetStatus::from_bits_truncate(await!(self
+            .inner
+            .dev
+            .get_status())?))
     }
 
     /// Send a buffer with the Ethernet device.

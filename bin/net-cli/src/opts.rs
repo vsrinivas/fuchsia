@@ -20,6 +20,22 @@ pub enum IfCmd {
     #[structopt(name = "list")]
     /// lists network interfaces
     List,
+    #[structopt(name = "add")]
+    /// adds a network interface by path
+    Add {
+        #[structopt(raw(required = "true"))]
+        // The path must yield a handle to a zircon.ethernet.Device interface.
+        // Currently this means paths under /dev/class/ethernet.
+        /// path to the device to add
+        path: String,
+    },
+    #[structopt(name = "del")]
+    /// removes a network interface
+    Del {
+        #[structopt(raw(required = "true"))]
+        /// id of the network interface to remove
+        id: u64,
+    },
     #[structopt(name = "get")]
     /// queries a network interface
     Get {

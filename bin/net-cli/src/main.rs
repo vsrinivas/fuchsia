@@ -2,21 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(
-    async_await,
-    await_macro,
-    futures_api,
-    pin,
-    arbitrary_self_types
-)]
+#![feature(async_await, await_macro, futures_api, pin, arbitrary_self_types)]
 #![deny(warnings)]
 
 use failure::{Error, ResultExt};
+use fdio;
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy};
 use fidl_fuchsia_net_stack_ext as pretty;
+use fidl_zircon_ethernet as zx_eth;
 use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
+use std::fs::File;
+use std::os::unix::io::AsRawFd;
 use structopt::StructOpt;
 
 mod opts;
@@ -43,6 +42,33 @@ async fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> Result<(), Error> {
             let response = await!(stack.list_interfaces()).context("error getting response")?;
             for info in response {
                 println!("{}", pretty::InterfaceInfo::from(info));
+            }
+        }
+        IfCmd::Add { path } => {
+            let dev = File::open(&path).context("failed to open device")?;
+            let topological_path =
+                fdio::device_get_topo_path(&dev).context("failed to get topological path")?;
+            let fd = dev.as_raw_fd();
+            let mut client = 0;
+            zx::Status::ok(unsafe { fdio::fdio_sys::fdio_get_service_handle(fd, &mut client) })
+                .context("failed to get fdio service handle")?;
+            let dev = fidl::endpoints::ClientEnd::<zx_eth::DeviceMarker>::new(
+                // Safe because we checked the return status above.
+                zx::Channel::from(unsafe { zx::Handle::from_raw(client) }),
+            );
+            let response = await!(stack.add_ethernet_interface(&topological_path, dev))
+                .context("error adding device")?;
+            if let Some(e) = response.0 {
+                println!("Error adding interface {}: {:?}", path, e)
+            } else {
+                println!("Added interface {}", response.1)
+            }
+        }
+        IfCmd::Del { id } => {
+            let response =
+                await!(stack.del_ethernet_interface(id)).context("error removing device")?;
+            if let Some(e) = response {
+                println!("Error removing interface {}: {:?}", id, e)
             }
         }
         IfCmd::Get { id } => {

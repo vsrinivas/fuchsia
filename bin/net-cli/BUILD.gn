@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
   name = "net_cli"
@@ -13,6 +13,7 @@ rustc_binary("bin") {
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
     "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
@@ -22,15 +23,21 @@ rustc_binary("bin") {
     "//third_party/rust-crates/rustc_deps:structopt",
     "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/public/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
+    "//zircon/public/fidl/zircon-ethernet:zircon-ethernet-rustc",
   ]
 }
 
 package("net-cli") {
-  deprecated_no_cmx = "//build"
-
   deps = [
     ":bin",
   ]
 
   binary = "net_cli"
+
+  meta = [
+    {
+      path = rebase_path("meta/net-cli.cmx")
+      dest = "net-cli.cmx"
+    },
+  ]
 }
