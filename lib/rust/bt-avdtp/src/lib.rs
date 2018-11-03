@@ -17,6 +17,7 @@ use futures::task::{LocalWaker, Poll, Waker};
 use parking_lot::Mutex;
 use slab::Slab;
 use std::collections::VecDeque;
+use std::fmt;
 use std::io::{Cursor, Write};
 use std::mem;
 use std::pin::{Pin, Unpin};
@@ -262,6 +263,12 @@ impl TryFrom<u8> for StreamEndpointId {
     }
 }
 
+impl fmt::Display for StreamEndpointId {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "{}", self.0)
+    }
+}
+
 /// All information related to a stream. Part of the Discovery Response.
 /// See Sec 8.6.2
 #[derive(Debug, PartialEq)]
@@ -284,6 +291,10 @@ impl StreamInformation {
             media_type: media_type,
             endpoint_type: endpoint_type,
         })
+    }
+
+    pub fn id(&self) -> &StreamEndpointId {
+        &self.id
     }
 }
 

@@ -12,10 +12,13 @@ use bt_avdtp as avdtp;
 use failure::{Error, ResultExt};
 use fidl_fuchsia_bluetooth_bredr::*;
 use fuchsia_async as fasync;
-use fuchsia_syslog::{fx_log, fx_log_info, fx_log_warn, fx_vlog};
+use fuchsia_syslog::{self, fx_log, fx_log_info, fx_log_warn, fx_vlog};
 use fuchsia_zircon as zx;
-use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
+use futures::{StreamExt, TryFutureExt};
 use std::collections::HashSet;
+use parking_lot::RwLock;
+use std::sync::Arc;
+use std::string::String;
 
 /// Make the SDP definidion for the A2DP sink service.
 fn make_profile_service_definition() -> ServiceDefinition {
@@ -59,6 +62,22 @@ fn get_available_stream_info() -> Result<Vec<avdtp::StreamInformation>, avdtp::E
         avdtp::EndpointType::Sink,
     )?;
     Ok(vec![s])
+}
+
+async fn discover_remote_streams(peer: Arc<avdtp::Peer>) {
+    let streams = await!(peer.discover()).expect("Failed to discover source streams");
+    fx_log_info!(tag: "a2dp-sink", "Discovered {} streams", streams.len());
+    for info in streams {
+        match await!(peer.get_all_capabilities(info.id())) {
+            Ok(capabilities) => {
+                fx_log_info!(tag: "a2dp-sink", "Stream {:?}", info);
+                for cap in capabilities {
+                    fx_log_info!(tag: "a2dp-sink", "  - {:?}", cap);
+                }
+            }
+            Err(e) => fx_log_info!(tag: "a2dp-sink", "Stream {} discovery failed: {:?}", info.id(), e),
+        };
+    }
 }
 
 // Defined in the Bluetooth Assigned Numbers for Audio/Video applications
@@ -140,6 +159,25 @@ fn handle_request(r: avdtp::Request) -> Result<(), avdtp::Error> {
     }
 }
 
+async fn handle_requests(peer: Arc<avdtp::Peer>, remotes: Arc<RwLock<HashSet<String>>>,
+                         device_id: String) {
+    let mut stream = peer.take_request_stream();
+    while let Some(r) = await!(stream.next()) {
+        match r {
+            Err(e) => {
+                fx_log_info!(tag: "a2dp-sink", "Request Error: {:?}", e);
+            },
+            Ok(request) => {
+                if let Err(e) = handle_request(request) {
+                    fx_log_warn!(tag: "a2dp-sink", "Error handling request: {:?}", e);
+                }
+            }
+        }
+    }
+    fx_log_info!(tag: "a2dp-sink", "Peer {} disconnected", device_id);
+    remotes.write().remove(&device_id);
+}
+
 async fn init() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["a2dp-sink"]).expect("Can't init logger");
     let profile_svc = fuchsia_app::client::connect_to_service::<ProfileMarker>()
@@ -158,7 +196,7 @@ async fn init() -> Result<(), Error> {
         return Err(format_err!("Couldn't add A2DP sink service: {:?}", e));
     }
 
-    let mut remotes: HashSet<String> = HashSet::new();
+    let remotes: Arc<RwLock<HashSet<String>>> = Arc::new(RwLock::new(HashSet::new()));
     let mut evt_stream = profile_svc.take_event_stream();
     while let Some(evt) = await!(evt_stream.next()) {
         if evt.is_err() {
@@ -172,35 +210,29 @@ async fn init() -> Result<(), Error> {
                 protocol,
             } => {
                 fx_log_info!(tag: "a2dp-sink", "Connection from {}: {:?} {:?}!", device_id, channel, protocol);
-                if remotes.contains(&device_id) {
+                if remotes.read().contains(&device_id) {
                     fx_log_info!(tag: "a2dp-sink", "{} already connected: connecting media channel", device_id);
                     let _ = start_media_stream(channel);
                     continue;
                 }
                 fx_vlog!(tag: "a2dp-sink", 1, "Adding new peer for {}", device_id);
                 let peer = match avdtp::Peer::new(channel) {
-                    Ok(peer) => peer,
+                    Ok(peer) => Arc::new(peer),
                     Err(e) => {
                         fx_log_warn!(tag: "a2dp-sink", "Error adding peer: {:?}", e);
                         continue;
                     }
                 };
-                // Start handling the requests
-                let stream = peer.take_request_stream();
-                fuchsia_async::spawn(
-                    async move {
-                        let x = await!(stream.try_for_each(|r| future::ready(handle_request(r))));
-                        fx_log_info!(tag: "a2dp-sink", "Peer Disconnected: {:?}", x);
-                    },
-                );
-                remotes.insert(device_id);
+                // Spawn threads to handle this peer
+                fuchsia_async::spawn(handle_requests(peer.clone(), remotes.clone(), device_id.clone()));
+                fuchsia_async::spawn(discover_remote_streams(peer.clone()));
+                remotes.write().insert(device_id);
             }
             ProfileEvent::OnDisconnected {
                 device_id,
                 service_id,
             } => {
                 fx_log_info!(tag: "a2dp-sink", "Device {} disconnected from {}", device_id, service_id);
-                remotes.remove(&device_id);
             }
         }
     }
