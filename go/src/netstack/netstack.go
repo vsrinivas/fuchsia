@@ -365,7 +365,9 @@ func (ns *Netstack) getNodeName() string {
 		default:
 			reportStatus = fmt.Sprintf("unknown status code: %d", status)
 		}
-		log.Printf("getNodeName: device settings error: %s", reportStatus)
+		if debug {
+			log.Printf("getNodeName: device settings error: %s", reportStatus)
+		}
 		return defaultNodename
 	}
 	return nodename
