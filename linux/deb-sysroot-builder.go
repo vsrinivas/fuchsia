@@ -492,8 +492,8 @@ func installSysroot(list []Lock, installDir, debsCache string) error {
 					return nil
 				}
 				patterns := []string{
-					"usr/lib/gcc/*-linux-gnu/*/*",
-					"usr/lib/*-linux-gnu/*",
+					"usr/lib/gcc/*-linux-gnu*/*/*",
+					"usr/lib/*-linux-gnu*/*",
 					"usr/lib/*",
 					"lib64/*",
 					"lib/*",
@@ -513,8 +513,8 @@ func installSysroot(list []Lock, installDir, debsCache string) error {
 
 	// Rewrite and relativize all linkerscripts.
 	linkerscripts := []string{
-		"usr/lib/*-linux-gnu/libpthread.so",
-		"usr/lib/*-linux-gnu/libc.so",
+		"usr/lib/*-linux-gnu*/libpthread.so",
+		"usr/lib/*-linux-gnu*/libc.so",
 	}
 	for _, l := range linkerscripts {
 		matches, err := filepath.Glob(filepath.Join(installDir, l))
@@ -526,7 +526,7 @@ func installSysroot(list []Lock, installDir, debsCache string) error {
 			if err != nil {
 				return err
 			}
-			sub := regexp.MustCompile(`(/usr)?/lib/[a-z0-9_]+-linux-gnu/`)
+			sub := regexp.MustCompile(`(/usr)?/lib/[a-z0-9_]+-linux-gnu[a-z0-9]*/`)
 			contents := sub.ReplaceAllString(string(read), "")
 			if err := ioutil.WriteFile(path, []byte(contents), 0644); err != nil {
 				return err
