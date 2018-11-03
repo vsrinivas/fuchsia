@@ -93,7 +93,11 @@ class Renderer : public Resource {
     Visitor(const escher::MaterialPtr& default_material, float opacity,
             bool disable_clipping);
 
+    // Visits a node and all it's children.
     void VisitNode(Node* r);
+    // Called by |VisitNode|. Determines if a node and its children are clipped,
+    // and generates clipped geometry if so.
+    void VisitAndMaybeClipNode(Node* r);
 
     std::vector<escher::Object> display_list_;
     escher::MaterialPtr default_material_;

@@ -110,6 +110,19 @@ void Renderer::Visitor::Visit(OpacityNode* r) {
 }
 
 void Renderer::Visitor::VisitNode(Node* r) {
+  size_t previous_display_size = display_list_.size();
+
+  VisitAndMaybeClipNode(r);
+
+  bool view_is_rendering_element = display_list_.size() > previous_display_size;
+  if (r->view() && view_is_rendering_element) {
+    // TODO(SCN-1099) Add a test to ensure this signal isn't triggered when this
+    // view is not rendering.
+    r->view()->SignalRender();
+  }
+}
+
+void Renderer::Visitor::VisitAndMaybeClipNode(Node* r) {
   // If not clipping, recursively visit all descendants in the normal fashion.
   if (!r->clip_to_self() || disable_clipping_) {
     ForEachDirectDescendantFrontToBack(
