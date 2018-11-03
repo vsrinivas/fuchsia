@@ -47,6 +47,7 @@ class TestDevice final {
 public:
     explicit TestDevice();
     ~TestDevice();
+    DISALLOW_COPY_ASSIGN_AND_MOVE(TestDevice);
 
     // ACCESSORS
 
@@ -149,14 +150,12 @@ public:
     bool ReadVmo(zx_off_t off, size_t len);
     bool WriteVmo(zx_off_t off, size_t len);
 
-    // Test helper that flips a (pseudo)random bit in the byte at the given |offset| on the block
-    // device.  The call to |srand| in main.c guarantees the same bit will be chosen for a given
+    // Test helper that flips a (pseudo)random bit in the key at the given |slot| in the given
+    // |block|. The call to |srand| in main.c guarantees the same bit will be chosen for a given
     // test iteration.
-    bool Corrupt(zx_off_t offset);
+    bool Corrupt(uint64_t block, key_slot_t slot);
 
 private:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(TestDevice);
-
     // Allocates a new ramdisk of at least |device_size| bytes arranged into blocks of |block_size|
     // bytes, and opens it.
     bool CreateRamdisk(size_t device_size, size_t block_size);

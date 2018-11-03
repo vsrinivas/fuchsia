@@ -265,21 +265,24 @@ bool TestDevice::WriteVmo(zx_off_t off, size_t len) {
     END_HELPER;
 }
 
-bool TestDevice::Corrupt(zx_off_t offset) {
+bool TestDevice::Corrupt(uint64_t blkno, key_slot_t slot) {
     BEGIN_HELPER;
     uint8_t block[block_size_];
-    zx_off_t block_off = offset % block_size_;
-    offset -= block_off;
 
-    ASSERT_OK(ToStatus(::lseek(ramdisk_.get(), offset, SEEK_SET)));
-    ASSERT_OK(ToStatus(::read(ramdisk_.get(), block, block_size_)));
+    fbl::unique_fd fd = parent();
+    ASSERT_OK(ToStatus(::lseek(fd.get(), blkno * block_size_, SEEK_SET)));
+    ASSERT_OK(ToStatus(::read(fd.get(), block, block_size_)));
 
-    int bit = rand() % 8;
-    uint8_t flip = static_cast<uint8_t>(1U << bit);
-    block[block_off] ^= flip;
+    fbl::unique_ptr<Volume> volume;
+    ASSERT_OK(Volume::Unlock(parent(), key_, 0, &volume));
 
-    ASSERT_OK(ToStatus(::lseek(ramdisk_.get(), offset, SEEK_SET)));
-    ASSERT_OK(ToStatus(::write(ramdisk_.get(), block, block_size_)));
+    zx_off_t off;
+    ASSERT_OK(volume->GetSlotOffset(slot, &off));
+    int flip = 1U << (rand() % 8);
+    block[off] ^= static_cast<uint8_t>(flip);
+
+    ASSERT_OK(ToStatus(::lseek(fd.get(), blkno * block_size_, SEEK_SET)));
+    ASSERT_OK(ToStatus(::write(fd.get(), block, block_size_)));
     END_HELPER;
 }
 

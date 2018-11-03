@@ -6,8 +6,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <crypto/secret.h>
 #include <crypto/cipher.h>
+#include <crypto/secret.h>
 #include <unittest/unittest.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -33,8 +33,9 @@ bool VolumeCreate(const fbl::unique_fd& fd, const crypto::Secret& key, bool fvm,
     if (fvm) {
         fvm_info_t fInfo;
         ASSERT_GE(ioctl_block_fvm_query(fd.get(), &fInfo), 0);
-        snprintf(err, sizeof(err), "details: block size=%" PRIu32 ", block count=%" PRIu64
-                                   ", slice size=%zu, slice count=%zu",
+        snprintf(err, sizeof(err),
+                 "details: block size=%" PRIu32 ", block count=%" PRIu64
+                 ", slice size=%zu, slice count=%zu",
                  bInfo.block_size, bInfo.block_count, fInfo.slice_size, fInfo.vslice_count);
     } else {
         snprintf(err, sizeof(err), "details: block size=%" PRIu32 ", block count=%" PRIu64,
@@ -111,7 +112,8 @@ bool TestUnlock(Volume::Version version, bool fvm) {
 
     crypto::Secret bad_key;
     ASSERT_OK(bad_key.Generate(device.key().len()));
-    EXPECT_ZX(Volume::Unlock(fbl::move(device.parent()), bad_key, 0, &volume), ZX_ERR_ACCESS_DENIED);
+    EXPECT_ZX(Volume::Unlock(fbl::move(device.parent()), bad_key, 0, &volume),
+              ZX_ERR_ACCESS_DENIED);
 
     // Bad slot
     EXPECT_ZX(Volume::Unlock(fbl::move(device.parent()), device.key(), -1, &volume),
@@ -122,12 +124,35 @@ bool TestUnlock(Volume::Version version, bool fvm) {
     // Valid
     EXPECT_OK(Volume::Unlock(fbl::move(device.parent()), device.key(), 0, &volume));
 
-    // Corrupt a byte in each block.  Volume will "self-heal" and continue to be usable.
-    size_t i, off;
-    for (i = 0; i < kBlockCount; ++i) {
-        off = (i * kBlockSize) + (rand() % kBlockSize);
-        ASSERT_TRUE(device.Corrupt(off));
-        EXPECT_OK(Volume::Unlock(fbl::move(device.parent()), device.key(), 0, &volume));
+    // Corrupt the key in each block.
+    fbl::unique_fd parent = device.parent();
+    off_t off = 0;
+    uint8_t before[kBlockSize];
+    uint8_t after[sizeof(before)];
+    const size_t num_blocks = volume->reserved_blocks();
+
+    for (size_t i = 0; i < num_blocks; ++i) {
+        // On FVM, the trailing reserved blocks may just be to pad to a slice, and not have any
+        // metdata.  Start from the end and iterate backward to ensure the last block corrupted has
+        // metadata.
+        ASSERT_TRUE(device.Corrupt(num_blocks - 1 - i, 0));
+        lseek(parent.get(), off, SEEK_SET);
+        read(parent.get(), before, sizeof(before));
+
+        if (i < num_blocks - 1) {
+            // Volume should still be unlockable as long as one copy of the key exists
+            EXPECT_OK(Volume::Unlock(fbl::move(device.parent()), device.key(), 0, &volume));
+        } else {
+            // Key should fail when last copy is corrupted.
+            EXPECT_ZX(Volume::Unlock(fbl::move(device.parent()), device.key(), 0, &volume),
+                      ZX_ERR_ACCESS_DENIED);
+        }
+
+        lseek(parent.get(), off, SEEK_SET);
+        read(parent.get(), after, sizeof(after));
+
+        // Unlock should not modify the parent
+        EXPECT_EQ(memcmp(before, after, sizeof(before)), 0);
     }
 
     END_TEST;
