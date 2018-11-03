@@ -46,7 +46,7 @@ public:
     // cache_policy : When non-zero, indicates the cache policy to apply to the
     //                created VMO.
     zx_status_t CreateAndMap(uint64_t size,
-                             uint32_t map_flags,
+                             zx_vm_option_t map_flags,
                              fbl::RefPtr<VmarManager> vmar_manager = nullptr,
                              zx::vmo* vmo_out = nullptr,
                              zx_rights_t vmo_rights = ZX_RIGHT_SAME_RIGHTS,
@@ -65,7 +65,7 @@ public:
     zx_status_t Map(const zx::vmo& vmo,
                     uint64_t offset,
                     uint64_t size,
-                    uint32_t map_flags,
+                    zx_vm_option_t map_flags,
                     fbl::RefPtr<VmarManager> vmar_manager = nullptr);
 
     // Unmap the VMO from whichever VMAR it was mapped into.
@@ -80,7 +80,7 @@ protected:
     zx_status_t InternalMap(const zx::vmo& vmo,
                             uint64_t offset,
                             uint64_t size,
-                            uint32_t map_flags,
+                            zx_vm_option_t map_flags,
                             fbl::RefPtr<VmarManager> vmar_manager);
 
     void MoveFromOther(VmoMapper* other) {
@@ -96,12 +96,6 @@ protected:
     fbl::RefPtr<VmarManager> vmar_manager_;
     uintptr_t start_ = 0;
     uint64_t size_ = 0;
-};
-
-class RefCountedVmoMapper : public VmoMapper,
-                            public fbl::RefCounted<VmoMapper> {
-public:
-    RefCountedVmoMapper() = default;
 };
 
 }  // namespace fzl

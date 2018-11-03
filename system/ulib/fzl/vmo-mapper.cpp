@@ -9,7 +9,7 @@
 namespace fzl {
 
 zx_status_t VmoMapper::CreateAndMap(uint64_t size,
-                                    uint32_t map_flags,
+                                    zx_vm_option_t map_flags,
                                     fbl::RefPtr<VmarManager> vmar_manager,
                                     zx::vmo* vmo_out,
                                     zx_rights_t vmo_rights,

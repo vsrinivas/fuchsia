@@ -6,6 +6,7 @@
 
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
+#include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/fzl/vmar-manager.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
@@ -15,7 +16,7 @@ namespace fzl {
 // ResizeableVmoMapper is an extension of the basic VmoMapper utility which
 // allows resizing of the mapping after it has been created.
 //
-class ResizeableVmoMapper : protected VmoMapper {
+class ResizeableVmoMapper : protected OwnedVmoMapper {
   public:
     static fbl::unique_ptr<ResizeableVmoMapper> Create(
             uint64_t size,
@@ -25,7 +26,7 @@ class ResizeableVmoMapper : protected VmoMapper {
             uint32_t cache_policy = 0);
 
     ResizeableVmoMapper() = default;
-    ~ResizeableVmoMapper() { Unmap(); }
+    ~ResizeableVmoMapper() { Reset(); }
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ResizeableVmoMapper);
 
     // Move support
@@ -34,7 +35,7 @@ class ResizeableVmoMapper : protected VmoMapper {
     }
 
     ResizeableVmoMapper& operator=(ResizeableVmoMapper&& other) {
-        Unmap();
+        Reset();
         MoveFromOther(&other);
         return *this;
     }
@@ -74,24 +75,18 @@ class ResizeableVmoMapper : protected VmoMapper {
     // Unlike shrinking, it's permissible to grow to a non-page-aligned |size|.
     zx_status_t Grow(size_t size);
 
-    // Unmap the VMO from whichever VMAR it was mapped into, then release.
-    void Unmap() {
-        vmo_.reset();
-        VmoMapper::Unmap();
-    }
-
-    const zx::vmo& vmo() const { return vmo_; }
     using VmoMapper::start;
     using VmoMapper::size;
     using VmoMapper::manager;
+    using OwnedVmoMapper::Reset;
+    using OwnedVmoMapper::vmo;
 
   private:
     void MoveFromOther(ResizeableVmoMapper* other) {
-        vmo_ = fbl::move(other->vmo_);
-        VmoMapper::MoveFromOther(other);
+        map_options_ = other->map_options_;
+        OwnedVmoMapper::MoveFromOther(other);
     }
 
-    zx::vmo vmo_;
     zx_vm_option_t map_options_ = 0;
 };
 
