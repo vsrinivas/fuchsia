@@ -32,6 +32,12 @@
 #define MT8167_I2C2_BASE                                    0x1100b000
 #define MT8167_I2C2_SIZE                                    0x8c
 
+#define MT8167_USB0_BASE                                    0x11100000
+#define MT8167_USB0_LENGTH                                  0x1000
+
+#define MT8167_USBPHY_BASE                                  0x11110800
+#define MT8167_USBPHY_LENGTH                                0x800
+
 #define MT8167_MSDC0_BASE                                   0x11120000
 #define MT8167_MSDC0_SIZE                                   0x22c
 

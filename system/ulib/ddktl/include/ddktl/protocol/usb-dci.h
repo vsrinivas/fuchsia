@@ -135,7 +135,7 @@ public:
         ops_.get_request_size = UsbDciGetRequestSize;
 
         // Can only inherit from one base_protocol implementation.
-        ZX_ASSERT(ddk_proto_id_ = 0);
+        ZX_ASSERT(ddk_proto_id_ == 0);
         ddk_proto_id_ = ZX_PROTOCOL_USB_DCI;
         ddk_proto_ops_ = &ops_;
     }

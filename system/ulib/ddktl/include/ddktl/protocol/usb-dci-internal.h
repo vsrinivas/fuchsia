@@ -53,6 +53,8 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_usb_dci_protocol_ep_clear_stall, UsbDci
                                      zx_status_t (C::*)(uint8_t ep_address));
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_usb_dci_protocol_get_bti, UsbDciGetBti,
                                      zx_status_t (C::*)(zx_handle_t* out_bti));
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_usb_dci_protocol_get_request_size, UsbDciGetRequestSize,
+                                     size_t (C::*)());
 
 template <typename D>
 constexpr void CheckUsbDciProtocolSubclass() {
@@ -78,6 +80,9 @@ constexpr void CheckUsbDciProtocolSubclass() {
     static_assert(internal::has_usb_dci_protocol_get_bti<D>::value,
                   "UsbDciProtocol subclasses must implement "
                   "zx_status_t UsbDciGetBti(zx_handle_t* out_bti");
+    static_assert(internal::has_usb_dci_protocol_get_request_size<D>::value,
+                  "UsbDciProtocol subclasses must implement "
+                  "size_t UsbDciGetRequestSize()");
 }
 
 } // namespace internal

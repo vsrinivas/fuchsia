@@ -56,6 +56,7 @@ int Mt8167::Thread() {
         zxlogf(ERROR, "SocInit() failed\n");
         return -1;
     }
+    // Load protocol implementation drivers first.
     if (GpioInit() != ZX_OK) {
         zxlogf(ERROR, "GpioInit() failed\n");
         return -1;
@@ -64,6 +65,8 @@ int Mt8167::Thread() {
         zxlogf(ERROR, "I2cInit() failed\n");
         return -1;
     }
+
+    // Then the platform device drivers.
     if (EmmcInit() != ZX_OK) {
         zxlogf(ERROR, "EmmcInit() failed\n");
         return -1;
@@ -88,6 +91,10 @@ int Mt8167::Thread() {
         zxlogf(ERROR, "ClkInit() failed\n");
         return -1;
     }
+    if (UsbInit() != ZX_OK) {
+        zxlogf(ERROR, "UsbInit() failed\n");
+        return -1;
+    }
 
     return 0;
 }
@@ -109,8 +116,22 @@ void Mt8167::DdkRelease() {
     delete this;
 }
 
-} // namespace board_mt8167
-
 zx_status_t mt8167_bind(void* ctx, zx_device_t* parent) {
     return board_mt8167::Mt8167::Create(parent);
 }
+
+static zx_driver_ops_t driver_ops = [](){
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = mt8167_bind;
+    return ops;
+}();
+
+} // namespace board_mt8167
+
+ZIRCON_DRIVER_BEGIN(mt8167, board_mt8167::driver_ops, "zircon", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_MEDIATEK_8167S_REF),
+ZIRCON_DRIVER_END(mt8167)
+

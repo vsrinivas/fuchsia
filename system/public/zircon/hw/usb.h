@@ -96,6 +96,7 @@ __BEGIN_CDECLS;
 #define USB_ENDPOINT_IN                    0x80
 #define USB_ENDPOINT_OUT                   0x00
 #define USB_ENDPOINT_DIR_MASK              0x80
+#define USB_ENDPOINT_NUM_MASK              0x1F
 
 /* Endpoint types (bmAttributes) */
 #define USB_ENDPOINT_CONTROL               0x00

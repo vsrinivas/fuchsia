@@ -17,9 +17,11 @@ namespace board_mt8167 {
 
 // BTI IDs for our devices
 enum {
+    BTI_BOARD,
     BTI_DISPLAY,
     BTI_EMMC,
     BTI_SDIO,
+    BTI_USB,
 };
 
 class Mt8167;
@@ -49,6 +51,7 @@ private:
     zx_status_t I2cInit();
     zx_status_t ButtonsInit();
     zx_status_t ClkInit();
+    zx_status_t UsbInit();
     int Thread();
 
     ddk::PBusProtocolProxy pbus_;
