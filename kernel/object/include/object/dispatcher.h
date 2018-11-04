@@ -179,7 +179,7 @@ public:
     };
 
     // Called whenever the object is bound to a new process. The |new_owner| is
-    // the koid of the new process. It is only overriden for objects where a single
+    // the koid of the new process. It is only overridden for objects where a single
     // owner makes sense.
     virtual void set_owner(zx_koid_t new_owner) {}
 
@@ -241,7 +241,7 @@ public:
     explicit SoloDispatcher(zx_signals_t signals = 0u)
         : Dispatcher(signals) {}
 
-    // Related koid is overidden by subclasses, like thread and process.
+    // Related koid is overridden by subclasses, like thread and process.
     zx_koid_t get_related_koid() const override TA_REQ(get_lock()) { return 0ULL; }
     bool is_waitable() const final { return default_rights() & ZX_RIGHT_WAIT; }
 
