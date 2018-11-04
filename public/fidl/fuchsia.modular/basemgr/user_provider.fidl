@@ -49,18 +49,23 @@ struct UserLoginParams {
     // can be NULL which means logging-in in an incognito mode.
     string? account_id;
 
-    // |view_owner| is the view given to the |UserShell| started for the newly
+    // |view_owner| is the view given to the |SessionShell| started for the newly
     // logged-in user.
     request<fuchsia.ui.viewsv1token.ViewOwner> view_owner;
 
     // Services provided by the |BaseShell| that can be offered to the
-    // |UserShell| that is being logged into.
+    // |SessionShell| that is being logged into.
     fuchsia.sys.ServiceProvider? services;
 
     // If login fails, |user_controller| is closed.
     request<UserController> user_controller;
 
-    // Configuration of the user shell to run. It can be NULL which means that
+    // Configuration of the session shell to run. It can be NULL which means that
+    // this configuration is picked up from command-line arguments to basemgr.
+    AppConfig? session_shell_config;
+
+    // DEPRECATED: Use session_shell_config instead.
+    // Configuration of the session shell to run. It can be NULL which means that
     // this configuration is picked up from command-line arguments to basemgr.
     AppConfig? user_shell_config;
 };
@@ -96,10 +101,16 @@ interface UserController {
     // Registers a watcher for the user's life cycle events.
     2: Watch(UserWatcher watcher);
 
+    // DEPRECATED: Use SwapSessionShell.
     // Stops the currently running user shell and starts the one specified by
     // |user_shell_config|. This operation stops all stories before starting the
     // new shell.
     3: SwapUserShell(AppConfig user_shell_config) -> ();
+
+    // Stops the currently running session shell and starts the one specified by
+    // |session_shell_config|. This operation stops all stories before starting
+    // the new shell.
+    4: SwapSessionShell(AppConfig session_shell_config) -> ();
 };
 
 // Implemented by a |BaseShell| implementation in order to receive

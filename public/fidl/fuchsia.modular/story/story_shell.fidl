@@ -15,7 +15,7 @@ using fuchsia.ui.viewsv1token;
 // The ViewOwner request is sent to the separate ViewProvider service. This way,
 // the story shell may be implemented as a flutter component.
 //
-// Teardown may be initiated by the user shell calling StoryController.Stop(),
+// Teardown may be initiated by the session shell calling StoryController.Stop(),
 // by the sessionmgr being terminated, or by the system shutting down.
 [Discoverable] // Created by story shell applications.
 interface StoryShell {
@@ -77,8 +77,8 @@ struct ContainerView {
 // know or be able to do about the Story. Not much right now, but we expect this
 // to increase.
 interface StoryShellContext {
-    // Requests a Presentation connection from the UserShell. See
-    // UserShellPresenationProvider in user_shell.fidl.
+    // Requests a Presentation connection from the SessionShell. See
+    // SessionShellPresenationProvider in session_shell.fidl.
     1: GetPresentation(request<fuchsia.ui.policy.Presentation> request);
 
     // Starts watching Story shell's visual state.

@@ -8,13 +8,11 @@ using fuchsia.modular.auth;
 using fuchsia.speech;
 using fuchsia.ui.policy;
 
-// DEPRECATED: Use session/session_shell.fidl instead.
-//
-// This interface allows a |UserShell| to request capabilities from its
+// This interface allows a |SessionShell| to request capabilities from its
 // creator in a way that is more explicit about the services that are
 // offered than a generic |ServiceProvider|.
 [Discoverable]
-interface UserShellContext {
+interface SessionShellContext {
     // The account associated with the currently logged-in user. It's NULL if
     // logged into GUEST mode.
     1: GetAccount() -> (fuchsia.modular.auth.Account? account);
@@ -36,15 +34,15 @@ interface UserShellContext {
     16: Logout();
 };
 
-// User shell provides this service to the framework which may plumb it to
+// Session shell provides this service to the framework which may plumb it to
 // different subscribers, such as story shell and intelligence provider.
 //
 // EXPERIMENTAL Service that allows consumers of a given story to get a
 // connection to a Presentation, and visual state services provided by the user
 // shell. This allows story shell implementations to coordinate event and focus
-// handling. An analog mechanism exists between BaseShell and UserShell.
-[Discoverable] // Created by user shell components.
-interface UserShellPresentationProvider {
+// handling. An analog mechanism exists between BaseShell and SessionShell.
+[Discoverable] // Created by session shell components.
+interface SessionShellPresentationProvider {
     // When a StoryShell calls StoryShellContext.GetPresentation(), this request
     // arrives here.
     1: GetPresentation(string story_id, request<fuchsia.ui.policy.Presentation> request);

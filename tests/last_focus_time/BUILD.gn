@@ -12,11 +12,11 @@ source_set("defs") {
   ]
 }
 
-executable_package("last_focus_time_test_user_shell") {
+executable_package("last_focus_time_test_session_shell") {
   testonly = true
 
   sources = [
-    "last_focus_time_test_user_shell.cc",
+    "last_focus_time_test_session_shell.cc",
   ]
 
   deps = [

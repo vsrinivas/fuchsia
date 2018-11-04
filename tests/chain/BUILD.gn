@@ -4,11 +4,11 @@
 
 import("//peridot/build/executable_package.gni")
 
-executable_package("chain_test_user_shell") {
+executable_package("chain_test_session_shell") {
   testonly = true
 
   sources = [
-    "chain_test_user_shell.cc",
+    "chain_test_session_shell.cc",
   ]
 
   deps = [

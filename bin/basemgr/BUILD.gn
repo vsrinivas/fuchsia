@@ -41,7 +41,7 @@ executable_package("basemgr") {
     "//peridot/lib/fidl:clone",
     "//peridot/lib/fidl:environment",
     "//peridot/lib/ledger_client:constants",
-    "//peridot/lib/user_shell_settings",
+    "//peridot/lib/session_shell_settings",
     "//peridot/lib/util:filesystem",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/fidl/fuchsia.modular.auth",

@@ -101,18 +101,18 @@ To run one story and watch it sync between devices, for example the
 1. Start a todo story on one side:
 
 ```
-basemgr --user_shell=dev_user_shell --user_shell_args=--root_module=example_todo_story
+basemgr --session_shell=dev_session_shell --session_shell_args=--root_module=example_todo_story
 
 ```
 
 2. Retrieve the story id from the log output, then start the same story on the other side:
 
 ```
-basemgr --user_shell=dev_user_shell --user_shell_args='--story_id=CmfpuRWuBo'
+basemgr --session_shell=dev_session_shell --session_shell_args='--story_id=CmfpuRWuBo'
 
 ```
 
-You can also just run the default user shell and restart stories from the timeline.
+You can also just run the default session shell and restart stories from the timeline.
 
 [qemu]: https://fuchsia.googlesource.com/zircon/+/master/docs/qemu.md "QEMU"
 [fuchsia]: https://fuchsia.googlesource.com/docs/+/HEAD/getting_started.md#Enabling-Network "Fuchsia Network"

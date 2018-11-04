@@ -78,7 +78,7 @@ struct SetLinkValue {
     fuchsia.mem.Buffer? value;
 };
 
-// Instructs the user shell to focus the mod under |mod_name|.
+// Instructs the session shell to focus the mod under |mod_name|.
 struct FocusMod {
     vector<string> mod_name;
 };

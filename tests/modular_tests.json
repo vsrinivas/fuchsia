@@ -2,72 +2,72 @@
   "tests": [
     {
       "name": "chain",
-      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --user_shell=chain_test_user_shell --story_shell=dev_story_shell"
+      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --session_shell=chain_test_session_shell --story_shell=dev_story_shell"
     },
     {
       "name": "clipboard",
-      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --user_shell=dev_user_shell --user_shell_args=--root_module=clipboard_test_module --story_shell=dev_story_shell"
+      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --session_shell=dev_session_shell --session_shell_args=--root_module=clipboard_test_module --story_shell=dev_story_shell"
     },
     {
       "name": "component_context",
-      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --user_shell=dev_user_shell --story_shell=dev_story_shell --user_shell_args=--root_module=component_context_test_module"
+      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --session_shell=dev_session_shell --story_shell=dev_story_shell --session_shell_args=--root_module=component_context_test_module"
     },
     {
       "name": "embed_shell",
-      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --user_shell=dev_user_shell --story_shell=embed_shell_test_story_shell --user_shell_args=--root_module=embed_shell_test_parent_module"
+      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --session_shell=dev_session_shell --story_shell=embed_shell_test_story_shell --session_shell_args=--root_module=embed_shell_test_parent_module"
     },
     {
       "name": "last_focus_time",
-      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --user_shell=last_focus_time_test_user_shell --story_shell=dev_story_shell"
+      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --session_shell=last_focus_time_test_session_shell --story_shell=dev_story_shell"
     },
     {
       "name": "link_context_entities",
-      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --user_shell=link_context_entities_test_user_shell --story_shell=dev_story_shell"
+      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --session_shell=link_context_entities_test_session_shell --story_shell=dev_story_shell"
     },
     {
       "name": "link_data",
-      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --user_shell=link_data_test_user_shell --story_shell=dev_story_shell",
+      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --session_shell=link_data_test_session_shell --story_shell=dev_story_shell",
       "disabled": true
     },
     {
       "name": "link_passing",
-      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --user_shell=dev_user_shell --story_shell=dev_story_shell --user_shell_args=--root_module=link_passing_test_module1"
+      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --session_shell=dev_session_shell --story_shell=dev_story_shell --session_shell_args=--root_module=link_passing_test_module1"
     },
     {
       "name": "parent_child",
-      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --user_shell=dev_user_shell --story_shell=dev_story_shell --user_shell_args=--root_module=parent_child_test_parent_module"
+      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --session_shell=dev_session_shell --story_shell=dev_story_shell --session_shell_args=--root_module=parent_child_test_parent_module"
     },
     {
       "name": "queue_persistence",
-      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --user_shell=dev_user_shell --user_shell_args=--root_module=queue_persistence_test_module --story_shell=dev_story_shell"
+      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --session_shell=dev_session_shell --session_shell_args=--root_module=queue_persistence_test_module --story_shell=dev_story_shell"
     },
     {
       "name": "story_shell",
-      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --user_shell=story_shell_test_user_shell --story_shell=story_shell_test_story_shell"
+      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --session_shell=story_shell_test_session_shell --story_shell=story_shell_test_story_shell"
     },
     {
       "name": "story_update",
-      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --user_shell=story_update_test_user_shell --story_shell=dev_story_shell"
+      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --session_shell=story_update_test_session_shell --story_shell=dev_story_shell"
     },
     {
       "name": "suggestion",
-      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --user_shell=suggestion_test_user_shell --story_shell=dev_story_shell"
+      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --session_shell=suggestion_test_session_shell --story_shell=dev_story_shell"
     },
     {
       "name": "trigger",
-      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --user_shell=trigger_test_user_shell --story_shell=dev_story_shell"
+      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --session_shell=trigger_test_session_shell --story_shell=dev_story_shell"
     },
     {
       "name": "module_context",
-      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --user_shell=module_context_test_user_shell --story_shell=dev_story_shell"
+      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --session_shell=module_context_test_session_shell --story_shell=dev_story_shell"
     },
     {
-      "name": "user_shell",
-      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --user_shell=user_shell_test_user_shell --story_shell=dev_story_shell"
+      "name": "session_shell",
+      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --session_shell=session_shell_test_session_shell --story_shell=dev_story_shell"
     },
     {
       "name": "intents",
-      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --user_shell=dev_user_shell --story_shell=dev_story_shell --user_shell_args=--root_module=intent_test_parent_module",
+      "exec": "basemgr --test --account_provider=dev_token_manager --base_shell=dev_base_shell --session_shell=dev_session_shell --story_shell=dev_story_shell --session_shell_args=--root_module=intent_test_parent_module",
       "disabled": true
     }
   ]

@@ -40,7 +40,7 @@ const char kStoryName2[] = "story2";
 
 // Cf. README.md for what this test does and how.
 class TestApp : public modular::testing::ComponentBase<void>,
-                fuchsia::modular::UserShellPresentationProvider {
+                fuchsia::modular::SessionShellPresentationProvider {
  public:
   explicit TestApp(component::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
@@ -49,15 +49,14 @@ class TestApp : public modular::testing::ComponentBase<void>,
     puppet_master_ =
         startup_context
             ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
-    user_shell_context_ =
-        startup_context
-            ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
-    user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
+    session_shell_context_ = startup_context->ConnectToEnvironmentService<
+        fuchsia::modular::SessionShellContext>();
+    session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
     startup_context->outgoing()
-        .AddPublicService<fuchsia::modular::UserShellPresentationProvider>(
+        .AddPublicService<fuchsia::modular::SessionShellPresentationProvider>(
             [this](fidl::InterfaceRequest<
-                   fuchsia::modular::UserShellPresentationProvider>
+                   fuchsia::modular::SessionShellPresentationProvider>
                        request) {
               presentation_provider_bindings_.AddBinding(this,
                                                          std::move(request));
@@ -75,7 +74,7 @@ class TestApp : public modular::testing::ComponentBase<void>,
   TestPoint story2_presentation_request_{"Story2 Presentation request"};
   bool story2_presentation_request_received_{};
 
-  // |fuchsia::modular::UserShellPresentationProvider|
+  // |fuchsia::modular::SessionShellPresentationProvider|
   void GetPresentation(fidl::StringPtr story_id,
                        fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                            request) override {
@@ -92,7 +91,7 @@ class TestApp : public modular::testing::ComponentBase<void>,
     MaybeLogout();
   }
 
-  // |fuchsia::modular::UserShellPresentationProvider|
+  // |fuchsia::modular::SessionShellPresentationProvider|
   void WatchVisualState(
       fidl::StringPtr story_id,
       fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher)
@@ -283,16 +282,16 @@ class TestApp : public modular::testing::ComponentBase<void>,
   void MaybeLogout() {
     if (story1_presentation_request_received_ &&
         story2_presentation_request_received_ && end_of_story2_) {
-      user_shell_context_->Logout();
+      session_shell_context_->Logout();
     }
   }
 
   fuchsia::modular::PuppetMasterPtr puppet_master_;
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
-  fuchsia::modular::UserShellContextPtr user_shell_context_;
+  fuchsia::modular::SessionShellContextPtr session_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;
   fuchsia::modular::StoryControllerPtr story_controller_;
-  fidl::BindingSet<fuchsia::modular::UserShellPresentationProvider>
+  fidl::BindingSet<fuchsia::modular::SessionShellPresentationProvider>
       presentation_provider_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
