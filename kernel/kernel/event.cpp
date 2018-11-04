@@ -49,8 +49,8 @@ void event_init(event_t* e, bool initial, uint flags) {
  * @brief  Destroy an event object.
  *
  * Event's resources are freed and it may no longer be
- * used until event_init() is called again.  Any threads
- * still waiting on the event will be resumed.
+ * used until event_init() is called again.
+ * Will panic if there are any threads still waiting.
  *
  * @param e        Event object to initialize
  */
