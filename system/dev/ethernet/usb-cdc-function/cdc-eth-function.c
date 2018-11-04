@@ -27,11 +27,10 @@
 #define BULK_REQ_SIZE   2048
 #define BULK_TX_COUNT   16
 #define BULK_RX_COUNT   16
+#define INTR_COUNT      8
 
 #define BULK_MAX_PACKET     512 // FIXME(voydanoff) USB 3.0 support
 #define INTR_MAX_PACKET     sizeof(usb_cdc_speed_change_notification_t)
-
-#define CDC_BITRATE         1000000000  // say we are gigabit
 
 typedef struct {
     zx_device_t* zxdev;
@@ -39,6 +38,7 @@ typedef struct {
 
     list_node_t bulk_out_reqs;      // list of usb_request_t
     list_node_t bulk_in_reqs;       // list of usb_request_t
+    list_node_t intr_reqs;          // list of usb_request_t
     list_node_t tx_pending_infos;   // list of ethmac_netbuf_t
     bool unbound;                   // set to true when device is going away. Guarded by tx_mutex
 
@@ -49,9 +49,11 @@ typedef struct {
     ethmac_ifc_t* ethmac_ifc;
     void* ethmac_cookie;
     bool online;
+    usb_speed_t speed;
 
     mtx_t tx_mutex;
     mtx_t rx_mutex;
+    mtx_t intr_mutex;
 
     uint8_t bulk_out_addr;
     uint8_t bulk_in_addr;
@@ -277,8 +279,13 @@ static ethmac_protocol_ops_t ethmac_ops = {
 };
 
 static void cdc_intr_complete(usb_request_t* req, void* cookie) {
-    zxlogf(TRACE, "%s %d %ld\n", __FUNCTION__, req->response.status, req->response.actual);
-    usb_request_release(req);
+    usb_cdc_t* cdc = cookie;
+
+    zxlogf(LTRACE, "%s %d %ld\n", __FUNCTION__, req->response.status, req->response.actual);
+
+    mtx_lock(&cdc->intr_mutex);
+    list_add_tail(&cdc->intr_reqs, &req->node);
+    mtx_unlock(&cdc->intr_mutex);
 }
 
 static zx_status_t cdc_alloc_interrupt_req(usb_cdc_t* cdc, usb_request_t** out_req) {
@@ -295,17 +302,13 @@ static zx_status_t cdc_alloc_interrupt_req(usb_cdc_t* cdc, usb_request_t** out_r
     return ZX_OK;
 }
 
-// sends network connection and speed change notifications on the interrupt endpoint
-// we only do this once per USB connect, so instead of pooling usb requests we just allocate
-// them here and release them when they complete.
-static zx_status_t cdc_send_notifications(usb_cdc_t* cdc) {
+static void cdc_send_notifications(usb_cdc_t* cdc) {
     usb_request_t* req;
-    zx_status_t status;
 
     usb_cdc_notification_t network_notification = {
         .bmRequestType = USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
         .bNotification = USB_CDC_NC_NETWORK_CONNECTION,
-        .wValue = 1, // online
+        .wValue = cdc->online,
         .wIndex = descriptors.cdc_intf_0.bInterfaceNumber,
         .wLength = 0,
     };
@@ -316,27 +319,45 @@ static zx_status_t cdc_send_notifications(usb_cdc_t* cdc) {
             .bNotification = USB_CDC_NC_CONNECTION_SPEED_CHANGE,
             .wValue = 0,
             .wIndex = descriptors.cdc_intf_0.bInterfaceNumber,
-            .wLength = 0,
+            .wLength = 2 * sizeof(uint32_t),
         },
-        .downlink_br = CDC_BITRATE,
-        .uplink_br = CDC_BITRATE,
     };
 
-    status = cdc_alloc_interrupt_req(cdc, &req);
-    if (status != ZX_OK) return status;
-    usb_request_copy_to(req, &network_notification,
-                             sizeof(network_notification), 0);
+    if (cdc->online) {
+        if (cdc->speed == USB_SPEED_SUPER) {
+            // Claim to be gigabit speed.
+            speed_notification.downlink_br = speed_notification.uplink_br = 1000 * 1000 * 1000;
+        } else {
+            // Claim to be 100 megabit speed.
+            speed_notification.downlink_br = speed_notification.uplink_br = 100 * 1000 * 1000;
+        }
+    } else {
+        speed_notification.downlink_br = speed_notification.uplink_br = 0;
+    }
+
+    mtx_lock(&cdc->intr_mutex);
+    req = list_remove_head_type(&cdc->intr_reqs, usb_request_t, node);
+    mtx_unlock(&cdc->intr_mutex);
+    if (!req) {
+        zxlogf(ERROR, "%s: no interrupt request available\n", __FUNCTION__);
+        return;
+    }
+
+    usb_request_copy_to(req, &network_notification, sizeof(network_notification), 0);
     req->header.length = sizeof(network_notification);
     usb_function_queue(&cdc->function, req);
 
-    status = cdc_alloc_interrupt_req(cdc, &req);
-    if (status != ZX_OK) return status;
-    usb_request_copy_to(req, &speed_notification,
-                             sizeof(speed_notification), 0);
+    mtx_lock(&cdc->intr_mutex);
+    req = list_remove_head_type(&cdc->intr_reqs, usb_request_t, node);
+    mtx_unlock(&cdc->intr_mutex);
+    if (!req) {
+        zxlogf(ERROR, "%s: no interrupt request available\n", __FUNCTION__);
+        return;
+    }
+
+    usb_request_copy_to(req, &speed_notification, sizeof(speed_notification), 0);
     req->header.length = sizeof(speed_notification);
     usb_function_queue(&cdc->function, req);
-
-    return ZX_OK;
 }
 
 static void cdc_rx_complete(usb_request_t* req, void* cookie) {
@@ -435,11 +456,15 @@ static zx_status_t cdc_set_configured(void* ctx, bool configured, usb_speed_t sp
             zxlogf(ERROR, "%s: usb_function_config_ep failed\n", __FUNCTION__);
             return status;
         }
+        cdc->speed = speed;
     } else {
         usb_function_disable_ep(&cdc->function, cdc->bulk_out_addr);
         usb_function_disable_ep(&cdc->function, cdc->bulk_in_addr);
         usb_function_disable_ep(&cdc->function, cdc->intr_addr);
+        cdc->speed = USB_SPEED_UNDEFINED;
     }
+
+    cdc_send_notifications(cdc);
 
     return ZX_OK;
 }
@@ -479,9 +504,6 @@ static zx_status_t cdc_set_interface(void* ctx, unsigned interface, unsigned alt
             usb_function_queue(&cdc->function, req);
         }
         mtx_unlock(&cdc->rx_mutex);
-
-        // send status notifications on interrupt endpoint
-        status = cdc_send_notifications(cdc);
     }
 
     mtx_lock(&cdc->ethmac_mutex);
@@ -490,6 +512,9 @@ static zx_status_t cdc_set_interface(void* ctx, unsigned interface, unsigned alt
         cdc->ethmac_ifc->status(cdc->ethmac_cookie, online ? ETHMAC_STATUS_ONLINE : 0);
     }
     mtx_unlock(&cdc->ethmac_mutex);
+
+    // send status notifications on interrupt endpoint
+    cdc_send_notifications(cdc);
 
     return status;
 }
@@ -530,9 +555,13 @@ static void usb_cdc_release(void* ctx) {
     while ((req = list_remove_head_type(&cdc->bulk_in_reqs, usb_request_t, node)) != NULL) {
         usb_request_release(req);
     }
+    while ((req = list_remove_head_type(&cdc->intr_reqs, usb_request_t, node)) != NULL) {
+        usb_request_release(req);
+    }
     mtx_destroy(&cdc->ethmac_mutex);
     mtx_destroy(&cdc->tx_mutex);
     mtx_destroy(&cdc->rx_mutex);
+    mtx_destroy(&cdc->intr_mutex);
     free(cdc);
 }
 
@@ -558,10 +587,12 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
 
     list_initialize(&cdc->bulk_out_reqs);
     list_initialize(&cdc->bulk_in_reqs);
+    list_initialize(&cdc->intr_reqs);
     list_initialize(&cdc->tx_pending_infos);
     mtx_init(&cdc->ethmac_mutex, mtx_plain);
     mtx_init(&cdc->tx_mutex, mtx_plain);
     mtx_init(&cdc->rx_mutex, mtx_plain);
+    mtx_init(&cdc->intr_mutex, mtx_plain);
 
     cdc->bulk_max_packet = BULK_MAX_PACKET; // FIXME(voydanoff) USB 3.0 support
     cdc->parent_req_size = usb_function_get_request_size(&cdc->function);
@@ -630,6 +661,18 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
         req->complete_cb = cdc_tx_complete;
         req->cookie = cdc;
         list_add_head(&cdc->bulk_in_reqs, &req->node);
+    }
+
+    // allocate interrupt requests
+    for (int i = 0; i < INTR_COUNT; i++) {
+        status = usb_request_alloc(&req, INTR_MAX_PACKET, cdc->intr_addr, sizeof(usb_request_t));
+        if (status != ZX_OK) {
+            goto fail;
+        }
+
+        req->complete_cb = cdc_intr_complete;
+        req->cookie = cdc;
+        list_add_head(&cdc->intr_reqs, &req->node);
     }
 
     device_add_args_t args = {
