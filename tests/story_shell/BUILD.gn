@@ -40,11 +40,11 @@ executable_package("story_shell_test_story_shell") {
   ]
 }
 
-executable_package("story_shell_test_user_shell") {
+executable_package("story_shell_test_session_shell") {
   testonly = true
 
   sources = [
-    "story_shell_test_user_shell.cc",
+    "story_shell_test_session_shell.cc",
   ]
 
   deps = [

@@ -25,7 +25,7 @@
 #include "peridot/public/lib/integration_testing/cpp/reporting.h"
 #include "peridot/public/lib/integration_testing/cpp/testing.h"
 #include "peridot/tests/common/defs.h"
-#include "peridot/tests/user_shell/defs.h"
+#include "peridot/tests/session_shell/defs.h"
 
 using modular::testing::Await;
 using modular::testing::Signal;
@@ -132,14 +132,13 @@ class TestApp : public modular::testing::ComponentBase<void> {
       : ComponentBase(startup_context) {
     TestInit(__FILE__);
 
-    user_shell_context_ =
-        startup_context
-            ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
+    session_shell_context_ = startup_context->ConnectToEnvironmentService<
+        fuchsia::modular::SessionShellContext>();
     puppet_master_ =
         startup_context
             ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
 
-    user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
+    session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
     story_provider_state_watcher_.Watch(&story_provider_);
 
     TestStoryProvider_GetStoryInfo_Null();
@@ -168,15 +167,15 @@ class TestApp : public modular::testing::ComponentBase<void> {
             get_story_info_null_.Pass();
           }
 
-          TestUserShellContext_GetLink();
+          TestSessionShellContext_GetLink();
         });
   }
 
-  TestPoint get_link_{"UserShellContext.GetLink()"};
+  TestPoint get_link_{"SessionShellContext.GetLink()"};
 
-  void TestUserShellContext_GetLink() {
-    user_shell_context_->GetLink(user_shell_link_.NewRequest());
-    user_shell_link_->Get(nullptr,
+  void TestSessionShellContext_GetLink() {
+    session_shell_context_->GetLink(session_shell_link_.NewRequest());
+    session_shell_link_->Get(nullptr,
                           [this](std::unique_ptr<fuchsia::mem::Buffer> value) {
                             get_link_.Pass();
                             TestStoryProvider_GetStories();
@@ -488,12 +487,12 @@ class TestApp : public modular::testing::ComponentBase<void> {
 
   StoryProviderStateWatcherImpl story_provider_state_watcher_;
 
-  fuchsia::modular::UserShellContextPtr user_shell_context_;
+  fuchsia::modular::SessionShellContextPtr session_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;
   fuchsia::modular::PuppetMasterPtr puppet_master_;
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
   fuchsia::modular::StoryControllerPtr story_controller_;
-  fuchsia::modular::LinkPtr user_shell_link_;
+  fuchsia::modular::LinkPtr session_shell_link_;
   fuchsia::modular::StoryInfo story_info_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);

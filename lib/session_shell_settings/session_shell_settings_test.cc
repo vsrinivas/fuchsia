@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/user_shell_settings/user_shell_settings.h"
+#include "peridot/lib/session_shell_settings/session_shell_settings.h"
 
 #include <cmath>
 
@@ -28,7 +28,7 @@ extern template fuchsia::ui::policy::DisplayUsage
 GetObjectValue<fuchsia::ui::policy::DisplayUsage>(
     const rapidjson::Value& object, const std::string& field_name);
 
-std::vector<UserShellSettings> ParseUserShellSettings(const std::string& json);
+std::vector<SessionShellSettings> ParseSessionShellSettings(const std::string& json);
 
 }  // namespace internal
 
@@ -36,7 +36,7 @@ namespace {
 
 using modular::internal::GetObjectValue;
 
-TEST(UserShellSettingsTest,
+TEST(SessionShellSettingsTest,
      GetObjectValue_String_ReturnsEmptyStringOnNonStringType) {
   rapidjson::Document doc;
   std::string s;
@@ -54,7 +54,7 @@ TEST(UserShellSettingsTest,
   EXPECT_EQ(s, "");
 }
 
-TEST(UserShellSettingsTest, GetObjectValue_String) {
+TEST(SessionShellSettingsTest, GetObjectValue_String) {
   rapidjson::Document doc;
   doc.Parse("{ \"foo\": \"bar\" }");
 
@@ -62,7 +62,7 @@ TEST(UserShellSettingsTest, GetObjectValue_String) {
   EXPECT_EQ(s, "bar");
 }
 
-TEST(UserShellSettingsTest, GetObjectValue_Float_FailedParse) {
+TEST(SessionShellSettingsTest, GetObjectValue_Float_FailedParse) {
   rapidjson::Document doc;
   doc.Parse("{ \"foo\": \"bar\" }");
 
@@ -70,7 +70,7 @@ TEST(UserShellSettingsTest, GetObjectValue_Float_FailedParse) {
   EXPECT_TRUE(std::isnan(f));
 }
 
-TEST(UserShellSettingsTest, GetObjectValue_Float_SuccessfulParse) {
+TEST(SessionShellSettingsTest, GetObjectValue_Float_SuccessfulParse) {
   rapidjson::Document doc;
   doc.Parse("{ \"foo\": \"3.141\" }");
 
@@ -78,7 +78,7 @@ TEST(UserShellSettingsTest, GetObjectValue_Float_SuccessfulParse) {
   EXPECT_FLOAT_EQ(f, 3.141f);
 }
 
-TEST(UserShellSettingsTest, GetObjectValue_DisplayUsage_FailedParse) {
+TEST(SessionShellSettingsTest, GetObjectValue_DisplayUsage_FailedParse) {
   using DisplayUsage = fuchsia::ui::policy::DisplayUsage;
 
   rapidjson::Document doc;
@@ -88,7 +88,7 @@ TEST(UserShellSettingsTest, GetObjectValue_DisplayUsage_FailedParse) {
   EXPECT_EQ(e, DisplayUsage::kUnknown);
 }
 
-TEST(UserShellSettingsTest, GetObjectValue_DisplayUsage_SuccessfulParse) {
+TEST(SessionShellSettingsTest, GetObjectValue_DisplayUsage_SuccessfulParse) {
   using DisplayUsage = fuchsia::ui::policy::DisplayUsage;
 
   rapidjson::Document doc;
@@ -98,23 +98,23 @@ TEST(UserShellSettingsTest, GetObjectValue_DisplayUsage_SuccessfulParse) {
   EXPECT_EQ(e, DisplayUsage::kMidrange);
 }
 
-TEST(UserShellSettingsTest, ParseUserShellSettings_ParseError) {
-  EXPECT_EQ(internal::ParseUserShellSettings("a"),
-            std::vector<UserShellSettings>());
-  EXPECT_EQ(internal::ParseUserShellSettings("{}"),
-            std::vector<UserShellSettings>());
+TEST(SessionShellSettingsTest, ParseSessionShellSettings_ParseError) {
+  EXPECT_EQ(internal::ParseSessionShellSettings("a"),
+            std::vector<SessionShellSettings>());
+  EXPECT_EQ(internal::ParseSessionShellSettings("{}"),
+            std::vector<SessionShellSettings>());
 }
 
-TEST(UserShellSettingsTest, ParseUserShellSettings_ParseEmptyList) {
-  EXPECT_EQ(internal::ParseUserShellSettings("[]"),
-            std::vector<UserShellSettings>());
+TEST(SessionShellSettingsTest, ParseSessionShellSettings_ParseEmptyList) {
+  EXPECT_EQ(internal::ParseSessionShellSettings("[]"),
+            std::vector<SessionShellSettings>());
 }
 
-TEST(UserShellSettingsTest, ParseUserShellSettings_ParseNameOnly) {
+TEST(SessionShellSettingsTest, ParseSessionShellSettings_ParseNameOnly) {
   using DisplayUsage = fuchsia::ui::policy::DisplayUsage;
 
   const auto& settings =
-      internal::ParseUserShellSettings(R"( [{ "name": "example_name" }] )")
+      internal::ParseSessionShellSettings(R"( [{ "name": "example_name" }] )")
           .at(0);
 
   EXPECT_EQ(settings.name, "example_name");
@@ -123,10 +123,10 @@ TEST(UserShellSettingsTest, ParseUserShellSettings_ParseNameOnly) {
   EXPECT_EQ(settings.display_usage, DisplayUsage::kUnknown);
 }
 
-TEST(UserShellSettingsTest, ParseUserShellSettings_ParseCompleteEntry) {
+TEST(SessionShellSettingsTest, ParseSessionShellSettings_ParseCompleteEntry) {
   using DisplayUsage = fuchsia::ui::policy::DisplayUsage;
 
-  const auto& settings = internal::ParseUserShellSettings(
+  const auto& settings = internal::ParseSessionShellSettings(
                              R"( [{ "name": "example_name",
                                     "screen_width": "3.14",
                                     "screen_height": "2.718",
@@ -139,8 +139,8 @@ TEST(UserShellSettingsTest, ParseUserShellSettings_ParseCompleteEntry) {
   EXPECT_EQ(settings.display_usage, DisplayUsage::kClose);
 }
 
-TEST(UserShellSettingsTest, ParseUserShellSettings_ParseThreeEntries) {
-  const auto& vector = internal::ParseUserShellSettings(
+TEST(SessionShellSettingsTest, ParseSessionShellSettings_ParseThreeEntries) {
+  const auto& vector = internal::ParseSessionShellSettings(
       R"( [{ "name": "example_name1" },
            { "name": "example_name2" },
            { "name": "example_name3" }] )");

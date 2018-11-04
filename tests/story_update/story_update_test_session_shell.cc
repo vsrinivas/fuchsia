@@ -35,10 +35,9 @@ class TestApp : public modular::testing::ComponentBase<void> {
     puppet_master_ =
         startup_context
             ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
-    user_shell_context_ =
-        startup_context
-            ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
-    user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
+    session_shell_context_ = startup_context->ConnectToEnvironmentService<
+        fuchsia::modular::SessionShellContext>();
+    session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
     CreateStory();
   }
@@ -213,11 +212,11 @@ class TestApp : public modular::testing::ComponentBase<void> {
         });
   }
 
-  void Logout() { user_shell_context_->Logout(); }
+  void Logout() { session_shell_context_->Logout(); }
 
   fuchsia::modular::PuppetMasterPtr puppet_master_;
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
-  fuchsia::modular::UserShellContextPtr user_shell_context_;
+  fuchsia::modular::SessionShellContextPtr session_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;
   fuchsia::modular::StoryControllerPtr story_controller_;
   fuchsia::modular::StoryInfoPtr story_info_;

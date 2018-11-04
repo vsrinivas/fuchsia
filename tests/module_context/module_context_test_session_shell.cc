@@ -76,17 +76,16 @@ class TestApp : public modular::testing::ComponentBase<void> {
     puppet_master_ =
         startup_context
             ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
-    user_shell_context_ =
-        startup_context
-            ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
+    session_shell_context_ = startup_context->ConnectToEnvironmentService<
+        fuchsia::modular::SessionShellContext>();
 
-    user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
+    session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
     CreateStory();
     async::PostDelayedTask(
         async_get_default_dispatcher(),
         callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
-                             [this] { user_shell_context_->Logout(); }),
+                             [this] { session_shell_context_->Logout(); }),
         zx::msec(modular::testing::kTestTimeoutMilliseconds));
   }
 
@@ -283,7 +282,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
               if (!is_running) {
                 story_stopped_.Pass();
               }
-              user_shell_context_->Logout();
+              session_shell_context_->Logout();
             });
           });
     });
@@ -331,7 +330,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
 
   fuchsia::modular::PuppetMasterPtr puppet_master_;
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
-  fuchsia::modular::UserShellContextPtr user_shell_context_;
+  fuchsia::modular::SessionShellContextPtr session_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;
   fuchsia::modular::StoryControllerPtr story_controller_;
   StoryActivityWatcherImpl story_activity_watcher_;

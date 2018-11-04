@@ -124,7 +124,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
       fidl::VectorPtr<fuchsia::modular::OngoingActivityType>
           ongoing_activities);
 
-  // Called by StoryControllerImpl. Sends request to fuchsia::modular::UserShell
+  // Called by StoryControllerImpl. Sends request to fuchsia::modular::SessionShell
   // through PresentationProvider.
   void GetPresentation(
       fidl::StringPtr story_id,

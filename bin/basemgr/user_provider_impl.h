@@ -35,22 +35,22 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
     // Called after UserProviderImpl successfully logs out a user.
     virtual void DidLogout() = 0;
 
-    // Enables the delegate to intercept the user shell's view owner, so that
+    // Enables the delegate to intercept the session shell's view owner, so that
     // e.g. the delegate can embed it in a parent view or present it.
     // |default_view_owner| is the view owner request that's passed to
     // UserProviderImpl from base shell. If you don't need to intercept the
     // view owner, return it without modifying it.
     virtual fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-    GetUserShellViewOwner(
+    GetSessionShellViewOwner(
         fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
             default_view_owner) = 0;
 
     // Enables the delegate to supply a different service provider to the user
     // shell. |default_service_provider| is the service provider passed to the
-    // user shell by the base shell. If you don't need to replace it, return
+    // session shell by the base shell. If you don't need to replace it, return
     // it without modifying it.
     virtual fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>
-    GetUserShellServiceProvider(
+    GetSessionShellServiceProvider(
         fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>
             default_service_provider) = 0;
   };
@@ -59,7 +59,7 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   UserProviderImpl(
       std::shared_ptr<component::StartupContext> context,
       const fuchsia::modular::AppConfig& sessionmgr,
-      const fuchsia::modular::AppConfig& default_user_shell,
+      const fuchsia::modular::AppConfig& default_session_shell,
       const fuchsia::modular::AppConfig& story_shell,
       fuchsia::modular::auth::AccountProvider* account_provider,
       fuchsia::auth::TokenManagerFactory* token_manager_factory,
@@ -70,10 +70,11 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
 
   void Teardown(const std::function<void()>& callback);
 
-  // Stops the active user shell, and starts the user shell specified in
-  // |user_shell_config|. This has no effect, and will return an
-  // immediately-completed future, if no user shells are running.
-  FuturePtr<> SwapUserShell(fuchsia::modular::AppConfig user_shell_config);
+  // Stops the active session shell, and starts the session shell specified in
+  // |session_shell_config|. This has no effect, and will return an
+  // immediately-completed future, if no session shells are running.
+  FuturePtr<> SwapSessionShell(
+      fuchsia::modular::AppConfig session_shell_config);
 
  private:
   // |fuchsia::modular::UserProvider|
@@ -131,7 +132,7 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   std::shared_ptr<component::StartupContext> context_;
   const fuchsia::modular::AppConfig& sessionmgr_;  // Neither owned nor copied.
   const fuchsia::modular::AppConfig&
-      default_user_shell_;                          // Neither owned nor copied.
+      default_session_shell_;                       // Neither owned nor copied.
   const fuchsia::modular::AppConfig& story_shell_;  // Neither owned nor copied.
   fuchsia::modular::auth::AccountProvider* const
       account_provider_;  // Neither owned nor copied.

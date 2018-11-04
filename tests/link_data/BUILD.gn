@@ -12,11 +12,11 @@ source_set("defs") {
   ]
 }
 
-executable_package("link_data_test_user_shell") {
+executable_package("link_data_test_session_shell") {
   testonly = true
 
   sources = [
-    "link_data_test_user_shell.cc",
+    "link_data_test_session_shell.cc",
   ]
 
   deps = [

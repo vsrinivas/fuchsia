@@ -8,7 +8,7 @@ using fuchsia.ledger;
 using fuchsia.modular;
 
 struct StoryData {
-    // Metadata available to the UserShell.
+    // Metadata available to the SessionShell.
     fuchsia.modular.StoryInfo story_info;
 
     // An optiona client-supplied name for this story.

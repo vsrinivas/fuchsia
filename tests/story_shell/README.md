@@ -1,7 +1,7 @@
 # story_shell test
 
 This test executes the story shell. Below is the sequence of actions and
-verifications. All actions and verifications are driven by the user shell. The
+verifications. All actions and verifications are driven by the session shell. The
 story shell just responds.
 
 * Create a story and start it.
@@ -24,5 +24,5 @@ above again, but use intents that specify handlers rather than actions to add
 the modules.
 
 For each event we would like to verify, the story shell writes to TestStore
-using Put(). The user shell uses Get() to register handlers for the keys it
+using Put(). The session shell uses Get() to register handlers for the keys it
 expects the story shell to Put(), and continues when it has seen all the keys.

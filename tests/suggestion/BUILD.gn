@@ -31,11 +31,11 @@ executable_package("suggestion_test_module") {
   ]
 }
 
-executable_package("suggestion_test_user_shell") {
+executable_package("suggestion_test_session_shell") {
   testonly = true
 
   sources = [
-    "suggestion_test_user_shell.cc",
+    "suggestion_test_session_shell.cc",
   ]
 
   deps = [

@@ -19,7 +19,7 @@ executable_package("modular_benchmark_story_module") {
   ]
 }
 
-executable_package("modular_benchmark_story_user_shell") {
+executable_package("modular_benchmark_story_session_shell") {
   testonly = true
 
   deps = [
@@ -37,7 +37,7 @@ executable_package("modular_benchmark_story_user_shell") {
   ]
 
   sources = [
-    "modular_benchmark_story_user_shell.cc",
+    "modular_benchmark_story_session_shell.cc",
   ]
 }
 
