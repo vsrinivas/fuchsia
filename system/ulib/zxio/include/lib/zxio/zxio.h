@@ -18,7 +18,7 @@ typedef fuchsia_io_SeekOrigin zxio_seek_origin_t;
 
 // A IO object.
 //
-// Provides an ergnomic C interface to the fuchsia.io family of protocols.
+// Provides an ergonomic C interface to the fuchsia.io family of protocols.
 // These protocols are optimized for efficiency at the cost of ergonomics. This
 // object provides a more ergonomic interface to the same underlying protocol
 // without sacrificing (much) performance.
@@ -40,7 +40,7 @@ typedef struct zxio zxio_t;
 // Create a |zxio_t| object from |node|.
 //
 // To free the resources allocated by this function, either call
-// |zxio_destroy| to retreive the |zx_handle_t| or |zxio_close| to
+// |zxio_destroy| to retrieve the |zx_handle_t| or |zxio_close| to
 // destroy the |zx_handle_t| as well.
 //
 // The |node| must be a channel whose remote endpoint implements the
@@ -52,7 +52,7 @@ zx_status_t zxio_acquire_node(zx_handle_t node, zxio_t** out_io);
 // Create a |zxio_t| object from |socket|.
 //
 // To free the resources allocated by this function, either call
-// |zxio_destroy| to retreive the |zx_handle_t| or |zxio_close| to
+// |zxio_destroy| to retrieve the |zx_handle_t| or |zxio_close| to
 // destroy the |zx_handle_t| as well.
 //
 // The |socket| must be a socket.

@@ -12,7 +12,7 @@ __BEGIN_CDECLS
 
 typedef uint32_t zxio_signals_t;
 
-// These values match the cooresponding values in zircon/types.h
+// These values match the corresponding values in zircon/types.h
 #define ZXIO_SIGNAL_NONE     ((zxio_signals_t)0u)
 #define ZXIO_READABLE        ((zxio_signals_t)1u << 0)
 #define ZXIO_WRITABLE        ((zxio_signals_t)1u << 1)
