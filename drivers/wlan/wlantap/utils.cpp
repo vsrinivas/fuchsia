@@ -53,7 +53,11 @@ uint32_t ConvertDriverFeatures(const ::fidl::VectorPtr<wlan_device::DriverFeatur
         case wlan_device::DriverFeature::SYNTH:
             ret |= WLAN_DRIVER_FEATURE_SYNTH;
             break;
+        case wlan_device::DriverFeature::TX_STATUS_REPORT:
+            ret |= WLAN_DRIVER_FEATURE_TX_STATUS_REPORT;
+            break;
         }
+
     }
     return ret;
 }

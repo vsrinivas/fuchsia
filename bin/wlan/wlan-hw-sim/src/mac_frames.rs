@@ -10,6 +10,7 @@ use {bitfield::{bitfield, bitfield_bitrange, bitfield_fields},
 #[derive(Clone, Copy, Debug)]
 pub enum FrameControlType {
     Mgmt = 0b00,
+    Data = 0b10,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -123,6 +124,7 @@ enum ElementId {
     Ssid = 0,
     SupportedRates = 1,
     DsssParameterSet = 3,
+    ExtendedSupportedRates = 50,
 }
 
 pub struct MacFrameWriter<W: io::Write> {
@@ -209,6 +211,11 @@ impl<W: io::Write> ElementWriter<W> {
         Ok(self)
     }
 
+    pub fn extended_supported_rates(mut self, rates: &[u8]) -> io::Result<Self> {
+        self.write_header(ElementId::ExtendedSupportedRates, rates.len() as u8)?;
+        self.w.write_all(rates)?;
+        Ok(self)
+    }
     #[cfg(test)]
     pub fn into_writer(self) -> W {
         self.w

@@ -109,7 +109,7 @@ fn create_2_4_ghz_band_info() -> wlan_device::BandInfo {
 }
 
 fn create_wlantap_config() -> wlantap::WlantapPhyConfig {
-    use fidl_fuchsia_wlan_device::SupportedPhy;
+    use fidl_fuchsia_wlan_device::{DriverFeature, SupportedPhy};
     wlantap::WlantapPhyConfig {
         phy_info: wlan_device::PhyInfo{
             id: 0,
@@ -118,7 +118,7 @@ fn create_wlantap_config() -> wlantap::WlantapPhyConfig {
             supported_phys: vec![
                 SupportedPhy::Dsss, SupportedPhy::Cck, SupportedPhy::Ofdm, SupportedPhy::Ht
             ],
-            driver_features: vec![],
+            driver_features: vec![DriverFeature::TxStatusReport],
             mac_roles: vec![wlan_device::MacRole::Client],
             caps: vec![],
             bands: vec![
@@ -133,6 +133,8 @@ struct State {
     current_channel: wlan_mlme::WlanChan,
     frame_buf: Vec<u8>,
     is_associated: bool,
+    majority_tx_vec_idx: u16,
+    majority_idx_count: u64,
 }
 
 impl State {
@@ -145,6 +147,8 @@ impl State {
             },
             frame_buf: vec![],
             is_associated: false,
+            majority_tx_vec_idx: 0,
+            majority_idx_count: 0,
         }
     }
 }
@@ -238,7 +242,9 @@ fn send_association_response(
             status_code: 0,    // Success
             association_id: 2, // Can be any
         },
-    )?;
+    )?
+    .supported_rates(&[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24])?
+    .extended_supported_rates(&[48, 72, 96, 108])?;
 
     let rx_info = &mut create_rx_info(channel);
     proxy.rx(0, &mut frame_buf.iter().cloned(), rx_info)?;
@@ -267,21 +273,78 @@ fn handle_tx(args: wlantap::TxArgs, state: &mut State, proxy: &wlantap::WlantapP
     let mut reader = Cursor::new(args.packet.data);
     let frame_ctrl = reader.read_u16::<LittleEndian>().unwrap();
     let frame_ctrl = mac_frames::FrameControl(frame_ctrl);
-    println!("Frame Control: type: {:?}, subtype: {:?}", frame_ctrl.typ(), frame_ctrl.subtype());
     if frame_ctrl.typ() == mac_frames::FrameControlType::Mgmt as u16 {
-        if frame_ctrl.subtype() == mac_frames::MgmtSubtype::Authentication as u16 {
-            println!("Authentication received.");
-            send_authentication(&mut state.frame_buf, &state.current_channel, &BSSID, proxy)
-                .expect("Error sending fake authentication frame.");
-            println!("Authentication sent.");
-        } else if frame_ctrl.subtype() == mac_frames::MgmtSubtype::AssociationRequest as u16 {
-            println!("Association Request received.");
-            send_association_response(&mut state.frame_buf, &state.current_channel, &BSSID, proxy)
-                .expect("Error sending fake association response frame.");
-            println!("Association Response sent.");
-            state.is_associated = true;
-        }
+        handle_mgmt_tx(frame_ctrl.subtype(), state, proxy);
+    } else if frame_ctrl.typ() == mac_frames::FrameControlType::Data as u16 {
+        let tx_vec_idx = args.packet.info.tx_vector_idx;
+        handle_data_tx(tx_vec_idx, state, fixed_threshold(tx_vec_idx), proxy);
     }
+}
+
+fn handle_mgmt_tx(subtype: u16, state: &mut State, proxy: &wlantap::WlantapPhyProxy) {
+    if subtype == mac_frames::MgmtSubtype::Authentication as u16 {
+        println!("Authentication received.");
+        send_authentication(&mut state.frame_buf, &state.current_channel, &BSSID, proxy)
+            .expect("Error sending fake authentication frame.");
+        println!("Authentication sent.");
+    } else if subtype == mac_frames::MgmtSubtype::AssociationRequest as u16 {
+        println!("Association Request received.");
+        send_association_response(&mut state.frame_buf, &state.current_channel, &BSSID, proxy)
+            .expect("Error sending fake association response frame.");
+        println!("Association Response sent.");
+        state.is_associated = true;
+    }
+}
+
+fn handle_data_tx(tx_vec_idx: u16, state: &mut State, is_successful: bool,
+                  proxy: &wlantap::WlantapPhyProxy) {
+    if tx_vec_idx == state.majority_tx_vec_idx {
+        state.majority_idx_count += 1;
+    } else if state.majority_idx_count == 0 {
+        println!("majority_tx_vec_idx updated {} -> {}", state.majority_tx_vec_idx, tx_vec_idx);
+        state.majority_tx_vec_idx = tx_vec_idx;
+        state.majority_idx_count = 1;
+    } else {
+        println!("non-majority tx_vec_idx(could indicate probing): {}", tx_vec_idx);
+        state.majority_idx_count -= 1;
+    }
+    send_tx_status_report(tx_vec_idx, is_successful, proxy)
+        .expect("Error sending tx status report");
+}
+
+
+fn fixed_threshold(tx_vec_idx: u16) -> bool {
+    const MAX_SUCCESS_TX_VEC_IDX : u16 = 130;
+    tx_vec_idx <= MAX_SUCCESS_TX_VEC_IDX
+}
+
+fn create_wlan_tx_status_entry(tx_vec_idx: u16) -> wlantap::WlanTxStatusEntry {
+    fidl_fuchsia_wlan_tap::WlanTxStatusEntry{
+        tx_vec_idx : tx_vec_idx,
+        attempts: 1,
+    }
+}
+
+fn send_tx_status_report(tx_vec_idx: u16, is_successful: bool, proxy: &wlantap::WlantapPhyProxy)
+    -> Result<(), failure::Error> {
+    use fidl_fuchsia_wlan_tap::WlanTxStatus;
+
+    let mut ts = WlanTxStatus {
+        peer_addr : BSSID,
+        success: is_successful,
+        tx_status_entries: [
+            create_wlan_tx_status_entry(tx_vec_idx),
+            create_wlan_tx_status_entry(0),
+            create_wlan_tx_status_entry(0),
+            create_wlan_tx_status_entry(0),
+            create_wlan_tx_status_entry(0),
+            create_wlan_tx_status_entry(0),
+            create_wlan_tx_status_entry(0),
+            create_wlan_tx_status_entry(0),
+        ],
+    };
+    proxy.report_tx_status(0, &mut ts)?;
+    Ok(())
 }
 
 async fn create_eth_client(mac: &[u8; 6]) -> Result<ethernet::Client, failure::Error> {
