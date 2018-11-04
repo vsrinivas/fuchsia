@@ -227,8 +227,11 @@ void GfxSystem::GetDisplayOwnershipEventImmediately(
                 "Bad constant");
 
   zx::event dup;
-  display->ownership_event().duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ, &dup);
-  callback(std::move(dup));
+  if (display->ownership_event().duplicate(ZX_RIGHTS_BASIC, &dup) != ZX_OK) {
+    FX_LOGS(ERROR) << "## Vulkan display event dup error";
+  } else {
+    callback(std::move(dup));
+  }
 }
 
 void GfxSystem::GetDisplayOwnershipEvent(
