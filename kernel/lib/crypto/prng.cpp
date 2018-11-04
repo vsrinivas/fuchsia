@@ -46,6 +46,7 @@ PRNG::PRNG(const void* data, size_t size, NonThreadSafeTag tag)
 PRNG::~PRNG() {
     mandatory_memset(key_, 0, sizeof(key_));
     nonce_ = 0;
+    event_destroy(&ready_);
 }
 
 void PRNG::AddEntropy(const void* data, size_t size) {
