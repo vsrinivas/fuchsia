@@ -74,6 +74,12 @@ def zip_archiver(outfile):
                 archive.writestr(name, contents())
 
 
+def format_archiver(outfile, format):
+    archiver = {'tgz': tgz_archiver, 'zip': zip_archiver}[format](outfile)
+    archiver.next()
+    return archiver
+
+
 def write_archive(outfile, format, images):
     # Synthesize a sanitized form of the input.
     packed_images = []
@@ -86,12 +92,14 @@ def write_archive(outfile, format, images):
 
     # Generate scripts that use the sanitized file names.
     packed_images += [
-        (lambda: generate_script([image for path, image in packed_images], 'bootserver_pave'), {
+        (lambda: generate_script([image for path, image in packed_images],
+                                 'bootserver_pave'), {
             'name': 'pave',
             'type': 'sh',
             'path': 'pave.sh'
         }),
-        (lambda: generate_script([image for path, image in packed_images], 'bootserver_netboot'), {
+        (lambda: generate_script([image for path, image in packed_images],
+                                 'bootserver_netboot'), {
             'name': 'netboot',
             'type': 'sh',
             'path': 'netboot.sh'
@@ -112,12 +120,40 @@ def write_archive(outfile, format, images):
     packed_images = sorted(packed_images, key=lambda packed: packed[1]['path'])
 
     # The archiver is a generator that we send the details about each image.
-    archiver = {'tgz': tgz_archiver, 'zip': zip_archiver}[format](outfile)
-    archiver.next()
+    archiver = format_archiver(outfile, format)
     for contents, image in packed_images:
         executable = image['type'] == 'sh' or image['type'].startswith('exe')
         archiver.send((contents, image['path'], executable))
     archiver.close()
+
+
+def write_symbol_archive(outfile, format, ids_file, files_read):
+    files_read.add(ids_file)
+    with open(ids_file, 'r') as f:
+        ids = [line.split() for line in f]
+    archiver = format_archiver(outfile, format)
+    out_ids = ''
+    for id, file in ids:
+        file = os.path.relpath(file)
+        files_read.add(file)
+        name = os.path.relpath(file, '../..')
+        archiver.send((file, name, False))
+        out_ids += '%s %s\n' % (id, name)
+    archiver.send((lambda: out_ids, 'ids.txt', False))
+    archiver.close()
+
+
+def archive_format(args, outfile):
+    if args.format:
+        return args.format
+    if outfile.endswith('.zip'):
+        return 'zip'
+    if outfile.endswith('.tgz') or outfile.endswith('.tar.gz'):
+        return 'tgz'
+    sys.stderr.write('''\
+Cannot guess archive format from file name %r; use --format.
+''' % outfile)
+    sys.exit(1)
 
 
 def main():
@@ -137,20 +173,12 @@ def main():
     parser.add_argument('--archive',
                         metavar='FILE',
                         help='Write archive to FILE')
+    parser.add_argument('--symbol-archive',
+                        metavar='FILE',
+                        help='Write symbol archive to FILE')
     parser.add_argument('--format', choices=['tgz', 'zip'],
                         help='Archive format (default: from FILE suffix)')
     args = parser.parse_args()
-
-    if args.archive and not args.format:
-        if args.archive.endswith('.zip'):
-            args.format = 'zip'
-        elif args.archive.endswith('.tgz') or args.archive.endswith('.tar.gz'):
-            args.format = 'tgz'
-        else:
-            sys.stderr.write('''\
-Cannot guess archive format from file name %r; use --format.
-''')
-            sys.exit(1)
 
     # Keep track of every input file for the depfile.
     files_read = set()
@@ -167,7 +195,8 @@ Cannot guess archive format from file name %r; use --format.
 
     # Write an executable script into outfile for the given bootserver mode.
     def write_script_for(outfile, mode):
-        with os.fdopen(os.open(outfile, os.O_CREAT | os.O_TRUNC | os.O_WRONLY, 0o777),
+        with os.fdopen(os.open(outfile, os.O_CREAT | os.O_TRUNC | os.O_WRONLY,
+                               0o777),
                        'w') as script_file:
             script_file.write(generate_script(images, mode))
 
@@ -179,7 +208,6 @@ Cannot guess archive format from file name %r; use --format.
         outfile = args.netboot
         write_script_for(args.netboot, 'bootserver_netboot')
 
-
     if args.archive:
         outfile = args.archive
         archive_images = [image for image in images
@@ -187,7 +215,14 @@ Cannot guess archive format from file name %r; use --format.
                               'bootserver_pave' in image or
                               'bootserver_netboot' in image)]
         files_read |= set(image['path'] for image in archive_images)
-        write_archive(outfile, args.format, archive_images)
+        write_archive(outfile, archive_format(args, outfile), archive_images)
+
+    if args.symbol_archive:
+        outfile = args.symbol_archive
+        [ids_file] = [image['path'] for image in images
+                      if image['name'] == 'build-id' and image['type'] == 'txt']
+        write_symbol_archive(outfile, archive_format(args, outfile),
+                             ids_file, files_read)
 
     if outfile and args.depfile:
         with open(args.depfile, 'w') as depfile:

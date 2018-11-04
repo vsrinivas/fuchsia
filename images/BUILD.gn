@@ -538,6 +538,7 @@ images += [
       type = "zbi"
 
       bootserver_pave = []
+
       # The empty string means "kernel", i.e. the primary ZBI. On arm64 systems
       # where `fx reboot -r` works, and users don't default into zedboot, we
       # prefer not to use mexec, but instead to reboot after paving. x64 will
@@ -548,7 +549,6 @@ images += [
       if (custom_signing_script == "") {
         bootserver_pave += [
           "--zircona",
-
           # TODO(ZX-2625): `dm reboot-recovery` boots from zircon-b instead of
           # zircon-r, so for now zedboot is being paved to this slot.
           # "--zirconb",
@@ -959,8 +959,8 @@ group("images") {
   testonly = true
   deps = [
     ":ids.txt",
-    ":paver-script",
     ":netboot-script",
+    ":paver-script",
     "zedboot",
   ]
 }
@@ -1020,6 +1020,17 @@ foreach(format,
         type = "$format"
       }
     },
+    {
+      name = "symbol-archive-$format"
+      outputs = [
+        "$root_build_dir/symbol-archive.$format",
+      ]
+      switch = "--symbol-archive="
+      json = {
+        name = "symbol-archive"
+        type = "$format"
+      }
+    },
   ]
 }
 
@@ -1054,13 +1065,6 @@ foreach(target, paver_targets) {
     ]
     args += rebase_path(sources, root_build_dir)
   }
-}
-
-write_images_manifest("images-manifest") {
-  outputs = [
-    "$root_build_dir/images.json",
-    "$root_build_dir/image_paths.sh",
-  ]
 }
 
 ###
@@ -1489,6 +1493,25 @@ action("vdso-ids.txt") {
     "--output=" + rebase_path(outputs[0], root_build_dir),
     "--include-source=*/libzircon.so",
     "--manifest=" + rebase_path(sources[0], root_build_dir),
+  ]
+}
+
+images += [
+  {
+    deps = [
+      ":ids.txt",
+    ]
+    json = {
+      name = "build-id"
+      type = "txt"
+    }
+  },
+]
+
+write_images_manifest("images-manifest") {
+  outputs = [
+    "$root_build_dir/images.json",
+    "$root_build_dir/image_paths.sh",
   ]
 }
 
