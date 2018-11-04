@@ -32,10 +32,10 @@ void print_usage(void) {
     printf("data is a sequence of hex values which each represent one byte\n");
     printf("of data to write to the target device.\n");
     printf("\n");
-    printf("transfer [segments]: Perform a tranfer to/from the i2c slave.\n");
+    printf("transfer [segments]: Perform a transfer to/from the i2c slave.\n");
     printf("segments is a series of segment descriptions which are a\n");
     printf("direction, a length, and then (for writes) a series of bytes\n");
-    printf("in hexidecimal.\n");
+    printf("in hexadecimal.\n");
     printf("\n");
     printf("The direction is specified as either \"w\" for writes, or\n");
     printf("\"r\" for reads.\n");
