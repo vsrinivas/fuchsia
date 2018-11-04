@@ -607,7 +607,7 @@ void __libc_extensions_init(uint32_t handle_count,
             LOG(1, "fdio: inherit fd=%d (log)\n", arg_fd);
             break;
         case PA_NS_DIR:
-            // we always contine here to not steal the
+            // we always continue here to not steal the
             // handles from higher level code that may
             // also need access to the namespace
             if (arg >= name_count) {

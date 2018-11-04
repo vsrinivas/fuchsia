@@ -33,7 +33,7 @@ zx_status_t fdio_wait_fd(int fd, uint32_t events, uint32_t* pending, zx_time_t d
 
 // create a fd that works with wait APIs (epoll, select, etc.) from a handle
 // and expected signals (signals_in/signals_out correspond to POLLIN/POLLOUT
-// events respectively). the handle will be closed when the fd is closed, unless
+// events respectively). The handle will be closed when the fd is closed, unless
 // shared_handle is true.
 int fdio_handle_fd(zx_handle_t h, zx_signals_t signals_in, zx_signals_t signals_out, bool shared_handle);
 

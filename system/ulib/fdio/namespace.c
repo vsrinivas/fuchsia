@@ -715,7 +715,7 @@ zx_status_t fdio_ns_export(fdio_ns_t* ns, fdio_flat_namespace_t** out) {
     }
     // We've allocated enough memory for the flat struct
     // followed by count handles, followed by count types,
-    // follewed by count path ptrs followed by enough bytes
+    // followed by count path ptrs followed by enough bytes
     // for all the path strings.  Point es.* at the right
     // slices of that memory:
     es.handle = (zx_handle_t*) (flat + 1);
