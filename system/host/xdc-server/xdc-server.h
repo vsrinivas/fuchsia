@@ -87,7 +87,7 @@ private:
     // Returns whether registration succeeded.
     bool RegisterStream(std::shared_ptr<Client> client);
 
-    // Returns the client registered to the given stream id, or nullptr if none was foumd.
+    // Returns the client registered to the given stream id, or nullptr if none was found.
     std::shared_ptr<Client> GetClient(uint32_t stream_id);
 
     void UsbReadComplete(std::unique_ptr<UsbHandler::Transfer> transfer);
