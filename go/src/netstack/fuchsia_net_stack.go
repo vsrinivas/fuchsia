@@ -95,6 +95,25 @@ func (ns *Netstack) getNetInterfaces() []stack.InterfaceInfo {
 	return out
 }
 
+func (ns *Netstack) addInterface(topologicalPath string, device ethernet.DeviceInterface) (*stack.Error, uint64) {
+	var interfaceConfig netstack.InterfaceConfig
+	ifs, err := ns.addEth(topologicalPath, interfaceConfig, &device)
+	if err != nil {
+		return &stack.Error{Type: stack.ErrorTypeInternal}, 0
+	}
+	return nil, uint64(ifs.nic.ID)
+}
+
+func (ns *Netstack) delInterface(id uint64) *stack.Error {
+	if ifs, ok := ns.ifStates[tcpip.NICID(id)]; ok {
+		// TODO(stijlist): propagate errors from Close
+		ifs.eth.Close()
+		return nil
+
+	}
+	return &stack.Error{Type: stack.ErrorTypeNotFound}
+}
+
 func (ns *Netstack) getInterface(id uint64) (*stack.InterfaceInfo, *stack.Error) {
 	ns.mu.Lock()
 	defer ns.mu.Unlock()
@@ -273,11 +292,12 @@ func (ns *Netstack) delForwardingEntry(subnet net.Subnet) *stack.Error {
 }
 
 func (ni *stackImpl) AddEthernetInterface(topologicalPath string, device ethernet.DeviceInterface) (*stack.Error, uint64, error) {
-	return &stack.Error{Type: stack.ErrorTypeNotSupported}, 0, nil
+	err, id := ni.ns.addInterface(topologicalPath, device)
+	return err, id, nil
 }
 
 func (ni *stackImpl) DelEthernetInterface(id uint64) (*stack.Error, error) {
-	return &stack.Error{Type: stack.ErrorTypeNotSupported}, nil
+	return ni.ns.delInterface(id), nil
 }
 
 func (ni *stackImpl) ListInterfaces() ([]stack.InterfaceInfo, error) {

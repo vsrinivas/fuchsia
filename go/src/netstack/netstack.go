@@ -494,6 +494,10 @@ func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceCon
 		ifs.nic.Name = config.Name
 		return eth.NewLinkEndpoint(client), nil
 	}, func(ifs *ifState) error {
+		if len(ifs.nic.Name) == 0 {
+			ifs.nic.Name = fmt.Sprintf("eth%d", ifs.nic.ID)
+		}
+
 		status, err := client.GetStatus()
 		if err != nil {
 			return fmt.Errorf("NIC %s: failed to get device status for MAC=%x: %v", ifs.nic.Name, client.Info.Mac, err)
