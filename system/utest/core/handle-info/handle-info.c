@@ -50,8 +50,7 @@ static bool handle_info_test(void) {
     status = zx_object_get_info(duped, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
     ASSERT_EQ(status, ZX_OK, "handle should be valid");
 
-    const zx_rights_t evr = ZX_RIGHTS_BASIC |
-                            ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL;
+    const zx_rights_t evr = ZX_RIGHTS_BASIC | ZX_RIGHT_SIGNAL;
 
     EXPECT_GT(info.koid, 0ULL, "object id should be positive");
     EXPECT_EQ(info.type, (uint32_t)ZX_OBJ_TYPE_EVENT, "handle should be an event");
@@ -132,23 +131,23 @@ static bool handle_rights_test(void) {
     zx_handle_t event;
     ASSERT_EQ(zx_event_create(0u, &event), 0, "");
     zx_handle_t duped_ro, duped_ro2;
-    ASSERT_EQ(zx_handle_duplicate(event, ZX_RIGHT_READ, &duped_ro), ZX_OK, "");
-    ASSERT_EQ(zx_handle_duplicate(event, ZX_RIGHT_READ, &duped_ro2), ZX_OK, "");
+    ASSERT_EQ(zx_handle_duplicate(event, ZX_RIGHT_WAIT, &duped_ro), ZX_OK, "");
+    ASSERT_EQ(zx_handle_duplicate(event, ZX_RIGHT_WAIT, &duped_ro2), ZX_OK, "");
 
     zx_info_handle_basic_t info = {};
     zx_status_t status = zx_object_get_info(duped_ro, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
     ASSERT_EQ(status, ZX_OK, "handle should be valid");
 
-    ASSERT_EQ(info.rights, ZX_RIGHT_READ, "wrong set of rights");
+    ASSERT_EQ(info.rights, ZX_RIGHT_WAIT, "wrong set of rights");
 
     zx_handle_t h;
     status = zx_handle_duplicate(duped_ro, ZX_RIGHT_SAME_RIGHTS, &h);
     ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED, "should fail rights check");
 
-    status = zx_handle_duplicate(event, ZX_RIGHT_EXECUTE | ZX_RIGHT_READ, &h);
+    status = zx_handle_duplicate(event, ZX_RIGHT_EXECUTE | ZX_RIGHT_WAIT, &h);
     ASSERT_EQ(status, ZX_ERR_INVALID_ARGS, "cannot upgrade rights");
 
-    ASSERT_EQ(zx_handle_replace(duped_ro, ZX_RIGHT_EXECUTE | ZX_RIGHT_READ, &h), ZX_ERR_INVALID_ARGS,
+    ASSERT_EQ(zx_handle_replace(duped_ro, ZX_RIGHT_SIGNAL | ZX_RIGHT_WAIT, &h), ZX_ERR_INVALID_ARGS,
               "cannot upgrade rights");
     // duped_ro1 should now be invalid.
     ASSERT_EQ(zx_handle_close(duped_ro), ZX_ERR_BAD_HANDLE, "replaced handle should be invalid on failure");

@@ -172,7 +172,7 @@ static ssize_t do_ioctl(const fbl::RefPtr<zx_device_t>& dev, uint32_t op, const 
         }
         auto raw_event = static_cast<zx_handle_t*>(out_buf);
         zx::eventpair event;
-        if ((r = dev->event.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ, &event)) != ZX_OK) {
+        if ((r = dev->event.duplicate(ZX_RIGHTS_BASIC, &event)) != ZX_OK) {
             return r;
         }
         *raw_event = event.release();

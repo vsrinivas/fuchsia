@@ -90,7 +90,7 @@ zx_status_t fidl_pwrsrc_get_power_info(void* ctx, fidl_txn_t* txn) {
 zx_status_t fidl_pwrsrc_get_state_change_event(void* ctx, fidl_txn_t* txn) {
     acpi_pwrsrc_device_t* dev = ctx;
     zx_handle_t out_handle;
-    zx_rights_t rights = ZX_RIGHT_READ | ZX_RIGHT_WAIT | ZX_RIGHT_TRANSFER;
+    zx_rights_t rights = ZX_RIGHT_WAIT | ZX_RIGHT_TRANSFER;
     zx_status_t status = zx_handle_duplicate(dev->event, rights, &out_handle);
 
     if (status == ZX_OK) {
