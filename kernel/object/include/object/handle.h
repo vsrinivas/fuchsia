@@ -79,6 +79,10 @@ private:
 // A Handle is how a specific process refers to a specific Dispatcher.
 class Handle final : public fbl::DoublyLinkedListable<Handle*> {
 public:
+    // The handle arena's mutex. This is public since it protects
+    // other things like |Dispatcher::handle_count_|.
+    DECLARE_SINGLETON_MUTEX(ArenaLock);
+
     // Returns the Dispatcher to which this instance points.
     const fbl::RefPtr<Dispatcher>& dispatcher() const { return dispatcher_; }
 
@@ -163,8 +167,7 @@ private:
     const zx_rights_t rights_;
     const uint32_t base_value_;
 
-    // The handle arena and its mutex; also guards Dispatcher::handle_count_.
-    DECLARE_SINGLETON_MUTEX(ArenaLock);
+    // The handle arena.
     static fbl::Arena TA_GUARDED(ArenaLock::Get()) arena_;
 
     // NOTE! This can return an invalid address.  It must be checked
