@@ -8,6 +8,8 @@
 
 #include <fbl/array.h>
 #include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
+#include <lib/zx/vmo.h>
 #include <tee-client-api/tee-client-types.h>
 #include <zircon/assert.h>
 
@@ -214,14 +216,47 @@ protected:
     using MessageBase::MessageBase; // inherit constructors
 
     bool TryInitializeParameters(size_t starting_param_index,
-                                 const zircon_tee_ParameterSet& parameter_set);
+                                 const zircon_tee_ParameterSet& parameter_set,
+                                 SharedMemoryManager::ClientMemoryPool* temp_memory_pool);
     bool TryInitializeValue(const zircon_tee_Value& value, MessageParam* out_param);
+    bool TryInitializeBuffer(const zircon_tee_Buffer& buffer,
+                             SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
+                             MessageParam* out_param);
 
     zx_status_t CreateOutputParameterSet(size_t starting_param_index,
                                          zircon_tee_ParameterSet* out_parameter_set);
 
 private:
+    // This nested class is just a container for pairing a vmo with a chunk of shared memory. It
+    // can be used to synchronize the user provided buffers with the TEE shared memory.
+    class TemporarySharedMemory {
+    public:
+        explicit TemporarySharedMemory(zx::vmo vmo, uint64_t vmo_offset, size_t size,
+                                       fbl::unique_ptr<SharedMemory>);
+
+        TemporarySharedMemory(TemporarySharedMemory&&) = default;
+        TemporarySharedMemory& operator=(TemporarySharedMemory&&) = default;
+
+        uint64_t vmo_offset() const { return vmo_offset_; }
+        bool is_valid() const { return vmo_.is_valid() && shared_memory_ != nullptr; }
+
+        zx_status_t SyncToSharedMemory();
+        zx_status_t SyncToVmo(size_t actual_size);
+
+        zx_handle_t ReleaseVmo();
+
+    private:
+        zx::vmo vmo_;
+        uint64_t vmo_offset_;
+        size_t size_;
+        fbl::unique_ptr<SharedMemory> shared_memory_;
+    };
+
     zircon_tee_Value CreateOutputValueParameter(const MessageParam& optee_param);
+    zx_status_t CreateOutputBufferParameter(const MessageParam& optee_param,
+                                            zircon_tee_Buffer* out_buffer);
+
+    fbl::Vector<TemporarySharedMemory> allocated_temp_memory_;
 };
 
 // OpenSessionMessage
@@ -230,6 +265,7 @@ private:
 class OpenSessionMessage : public Message {
 public:
     explicit OpenSessionMessage(SharedMemoryManager::DriverMemoryPool* message_pool,
+                                SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
                                 const Uuid& trusted_app,
                                 const zircon_tee_ParameterSet& parameter_set);
 
@@ -274,6 +310,7 @@ protected:
 class InvokeCommandMessage : public Message {
 public:
     explicit InvokeCommandMessage(SharedMemoryManager::DriverMemoryPool* message_pool,
+                                  SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
                                   uint32_t session_id,
                                   uint32_t command_id,
                                   const zircon_tee_ParameterSet& parameter_set);

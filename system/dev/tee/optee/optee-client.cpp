@@ -200,9 +200,8 @@ zx_status_t OpteeClient::OpenSession(const zircon_tee_Uuid* trusted_app,
 
     Uuid ta_uuid{*trusted_app};
 
-    OpenSessionMessage message{controller_->driver_pool(),
-                               ta_uuid,
-                               *parameter_set};
+    OpenSessionMessage message{controller_->driver_pool(), controller_->client_pool(),
+                               ta_uuid, *parameter_set};
 
     if (!message.is_valid()) {
         result.return_code = TEEC_ERROR_COMMUNICATION;
@@ -253,8 +252,8 @@ zx_status_t OpteeClient::InvokeCommand(uint32_t session_id,
         return zircon_tee_DeviceInvokeCommand_reply(txn, &result);
     }
 
-    InvokeCommandMessage message{controller_->driver_pool(), session_id,
-                                 command_id, *parameter_set};
+    InvokeCommandMessage message{controller_->driver_pool(), controller_->client_pool(),
+                                 session_id, command_id, *parameter_set};
 
     if (!message.is_valid()) {
         result.return_code = TEEC_ERROR_COMMUNICATION;

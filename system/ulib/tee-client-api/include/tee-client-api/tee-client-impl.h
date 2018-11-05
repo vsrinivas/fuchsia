@@ -26,6 +26,9 @@ typedef struct teec_session_impl {
 } teec_session_impl_t;
 
 typedef struct teec_shared_memory_impl {
+    zx_handle_t vmo;
+    zx_vaddr_t mapped_addr;
+    size_t mapped_size;
 } teec_shared_memory_impl_t;
 
 typedef struct teec_operation_impl {

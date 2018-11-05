@@ -43,8 +43,6 @@ namespace optee {
 // will recycle the region back to the RegionAllocator, eliminating the need for us to explicitly
 // free it.
 //
-// TODO(rjascani): Add ability to create vmo object from a shared memory object that was created
-// from the client pool.
 
 class SharedMemory : public fbl::DoublyLinkedListable<fbl::unique_ptr<SharedMemory>> {
 public:

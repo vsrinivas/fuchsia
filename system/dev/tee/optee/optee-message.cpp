@@ -39,7 +39,8 @@ constexpr bool IsParameterOutput(zircon_tee_Direction direction) {
 }; // namespace
 
 bool Message::TryInitializeParameters(size_t starting_param_index,
-                                      const zircon_tee_ParameterSet& parameter_set) {
+                                      const zircon_tee_ParameterSet& parameter_set,
+                                      SharedMemoryManager::ClientMemoryPool* temp_memory_pool) {
     // If we don't have any parameters to parse, then we can just skip this
     if (parameter_set.count == 0) {
         return true;
@@ -55,6 +56,8 @@ bool Message::TryInitializeParameters(size_t starting_param_index,
             is_valid = TryInitializeValue(zx_param.value, &optee_param);
             break;
         case zircon_tee_ParameterTag_buffer:
+            is_valid = TryInitializeBuffer(zx_param.buffer, temp_memory_pool, &optee_param);
+            break;
         default:
             return false;
         }
@@ -88,6 +91,81 @@ bool Message::TryInitializeValue(const zircon_tee_Value& value, MessageParam* ou
     out_param->payload.value.generic.b = value.b;
     out_param->payload.value.generic.c = value.c;
 
+    return true;
+}
+
+bool Message::TryInitializeBuffer(const zircon_tee_Buffer& buffer,
+                                  SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
+                                  MessageParam* out_param) {
+    ZX_DEBUG_ASSERT(temp_memory_pool != nullptr);
+    ZX_DEBUG_ASSERT(out_param != nullptr);
+
+    // Take ownership of the provided VMO. If we have to return early for any reason, this will
+    // take care of closing the VMO.
+    zx::vmo vmo(buffer.vmo);
+
+    MessageParam::AttributeType attribute;
+    switch (buffer.direction) {
+    case zircon_tee_Direction_INPUT:
+        attribute = MessageParam::kAttributeTypeTempMemInput;
+        break;
+    case zircon_tee_Direction_OUTPUT:
+        attribute = MessageParam::kAttributeTypeTempMemOutput;
+        break;
+    case zircon_tee_Direction_INOUT:
+        attribute = MessageParam::kAttributeTypeTempMemInOut;
+        break;
+    default:
+        return false;
+    }
+
+    // If an invalid VMO was provided, but the buffer is only an output, this is just a size check.
+    if (!vmo.is_valid()) {
+        if (IsParameterInput(buffer.direction)) {
+            return false;
+        } else {
+            // No need to allocate a temporary buffer from the shared memory pool,
+            out_param->attribute = attribute;
+            out_param->payload.temporary_memory.buffer = 0;
+            out_param->payload.temporary_memory.size = buffer.size;
+            out_param->payload.temporary_memory.shared_memory_reference = 0;
+            return true;
+        }
+    }
+
+    // For most buffer types, we must allocate a temporary shared memory buffer within the physical
+    // pool to share it with the TEE. We'll attach them to the Message object so that they can be
+    // looked up upon return from TEE and to tie the lifetimes of the Message and the temporary
+    // shared memory together.
+    SharedMemoryPtr shared_mem;
+    if (temp_memory_pool->Allocate(buffer.size, &shared_mem) != ZX_OK) {
+        zxlogf(ERROR, "optee: Failed to allocate temporary shared memory (%" PRIu64 ")\n",
+               buffer.size);
+        return false;
+    }
+
+    uint64_t paddr = static_cast<uint64_t>(shared_mem->paddr());
+
+    TemporarySharedMemory temp_shared_mem{std::move(vmo), buffer.offset, buffer.size,
+                                          std::move(shared_mem)};
+
+    // Input buffers should be copied into the shared memory buffer. Output only buffers can skip
+    // this step.
+    if (IsParameterInput(buffer.direction)) {
+        zx_status_t status = temp_shared_mem.SyncToSharedMemory();
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "optee: shared memory sync failed (%d)\n", status);
+            return false;
+        }
+    }
+
+    allocated_temp_memory_.push_back(std::move(temp_shared_mem));
+    uint64_t index = static_cast<uint64_t>(allocated_temp_memory_.size()) - 1;
+
+    out_param->attribute = attribute;
+    out_param->payload.temporary_memory.buffer = paddr;
+    out_param->payload.temporary_memory.size = buffer.size;
+    out_param->payload.temporary_memory.shared_memory_reference = index;
     return true;
 }
 
@@ -138,6 +216,13 @@ zx_status_t Message::CreateOutputParameterSet(size_t starting_param_index,
         case MessageParam::kAttributeTypeTempMemInput:
         case MessageParam::kAttributeTypeTempMemOutput:
         case MessageParam::kAttributeTypeTempMemInOut:
+            zx_param.tag = zircon_tee_ParameterTag_buffer;
+            if (zx_status_t status = CreateOutputBufferParameter(optee_param, &zx_param.buffer);
+                status != ZX_OK) {
+                return status;
+            }
+            out_param_index++;
+            break;
         case MessageParam::kAttributeTypeRegMemInput:
         case MessageParam::kAttributeTypeRegMemOutput:
         case MessageParam::kAttributeTypeRegMemInOut:
@@ -164,9 +249,7 @@ zircon_tee_Value Message::CreateOutputValueParameter(const MessageParam& optee_p
         zx_value.direction = zircon_tee_Direction_INOUT;
         break;
     default:
-        ZX_DEBUG_ASSERT(optee_param.attribute == MessageParam::kAttributeTypeValueInput ||
-                        optee_param.attribute == MessageParam::kAttributeTypeValueOutput ||
-                        optee_param.attribute == MessageParam::kAttributeTypeValueInOut);
+        ZX_PANIC("Invalid OP-TEE attribute specified\n");
     }
 
     const MessageParam::Value& optee_value = optee_param.payload.value;
@@ -179,7 +262,94 @@ zircon_tee_Value Message::CreateOutputValueParameter(const MessageParam& optee_p
     return zx_value;
 }
 
+zx_status_t Message::CreateOutputBufferParameter(const MessageParam& optee_param,
+                                                 zircon_tee_Buffer* out_buffer) {
+    ZX_DEBUG_ASSERT(out_buffer != nullptr);
+
+    // Use a temporary buffer to avoid populating the output until we're sure it's valid.
+    zircon_tee_Buffer zx_buffer = {};
+
+    switch (optee_param.attribute) {
+    case MessageParam::kAttributeTypeTempMemInput:
+        zx_buffer.direction = zircon_tee_Direction_INPUT;
+        break;
+    case MessageParam::kAttributeTypeTempMemOutput:
+        zx_buffer.direction = zircon_tee_Direction_OUTPUT;
+        break;
+    case MessageParam::kAttributeTypeTempMemInOut:
+        zx_buffer.direction = zircon_tee_Direction_INOUT;
+        break;
+    default:
+        ZX_PANIC("Invalid OP-TEE attribute specified\n");
+    }
+
+    const MessageParam::TemporaryMemory& optee_temp_mem = optee_param.payload.temporary_memory;
+
+    zx_buffer.size = optee_temp_mem.size;
+
+    if (optee_temp_mem.buffer == 0) {
+        // If there was no buffer and this was just a size check, just return the size.
+        *out_buffer = zx_buffer;
+        return ZX_OK;
+    }
+
+    if (optee_temp_mem.shared_memory_reference >= allocated_temp_memory_.size()) {
+        zxlogf(ERROR, "optee: TEE returned an invalid shared_memory_reference (%" PRIu64 ")\n",
+               optee_temp_mem.shared_memory_reference);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    auto& temp_shared_memory = allocated_temp_memory_[optee_temp_mem.shared_memory_reference];
+
+    if (!temp_shared_memory.is_valid()) {
+        zxlogf(ERROR, "optee: Invalid TemporarySharedMemory attempted to be used\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // For output buffers, we need to sync the shared memory buffer back to the VMO. It's possible
+    // that the returned size is smaller or larger than the originally provided buffer.
+    if (IsParameterOutput(zx_buffer.direction)) {
+        if (zx_status_t status = temp_shared_memory.SyncToVmo(zx_buffer.size); status != ZX_OK) {
+            zxlogf(ERROR, "optee: SharedMemory writeback to vmo failed (%d)\n", status);
+            return status;
+        }
+    }
+
+    zx_buffer.vmo = temp_shared_memory.ReleaseVmo();
+    zx_buffer.offset = temp_shared_memory.vmo_offset();
+
+    *out_buffer = zx_buffer;
+
+    return ZX_OK;
+}
+
+Message::TemporarySharedMemory::TemporarySharedMemory(zx::vmo vmo, uint64_t vmo_offset, size_t size,
+                                                      fbl::unique_ptr<SharedMemory> shared_memory)
+    : vmo_(std::move(vmo)), vmo_offset_(vmo_offset), size_(size),
+      shared_memory_(std::move(shared_memory)) {}
+
+zx_status_t Message::TemporarySharedMemory::SyncToSharedMemory() {
+    ZX_DEBUG_ASSERT(is_valid());
+    return vmo_.read(reinterpret_cast<void*>(shared_memory_->vaddr()), vmo_offset_, size_);
+}
+
+zx_status_t Message::TemporarySharedMemory::SyncToVmo(size_t actual_size) {
+    ZX_DEBUG_ASSERT(is_valid());
+    // If the actual size of the data is larger than the size of the vmo, then we should skip the
+    // actual write. This is a valid scenario and the Trusted World will be responsible for
+    // providing the short buffer error code in it's result.
+    if (actual_size > size_) {
+        return ZX_OK;
+    }
+    return vmo_.write(reinterpret_cast<void*>(shared_memory_->vaddr()), vmo_offset_, actual_size);
+}
+
+zx_handle_t Message::TemporarySharedMemory::ReleaseVmo() {
+    return vmo_.release();
+}
+
 OpenSessionMessage::OpenSessionMessage(SharedMemoryManager::DriverMemoryPool* message_pool,
+                                       SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
                                        const Uuid& trusted_app,
                                        const zircon_tee_ParameterSet& parameter_set) {
     ZX_DEBUG_ASSERT(message_pool != nullptr);
@@ -214,7 +384,7 @@ OpenSessionMessage::OpenSessionMessage(SharedMemoryManager::DriverMemoryPool* me
     client_app_param.payload.value.generic.c = TEEC_LOGIN_PUBLIC;
 
     // If we fail to initialize the parameters, then null out the message memory.
-    if (!TryInitializeParameters(kNumFixedOpenSessionParams, parameter_set)) {
+    if (!TryInitializeParameters(kNumFixedOpenSessionParams, parameter_set, temp_memory_pool)) {
         memory_ = nullptr;
     }
 }
@@ -236,6 +406,7 @@ CloseSessionMessage::CloseSessionMessage(SharedMemoryManager::DriverMemoryPool* 
 }
 
 InvokeCommandMessage::InvokeCommandMessage(SharedMemoryManager::DriverMemoryPool* message_pool,
+                                           SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
                                            uint32_t session_id,
                                            uint32_t command_id,
                                            const zircon_tee_ParameterSet& parameter_set) {
@@ -254,7 +425,7 @@ InvokeCommandMessage::InvokeCommandMessage(SharedMemoryManager::DriverMemoryPool
     header()->cancel_id = 0;
     header()->num_params = parameter_set.count;
 
-    if (!TryInitializeParameters(0, parameter_set)) {
+    if (!TryInitializeParameters(0, parameter_set, temp_memory_pool)) {
         memory_ = nullptr;
     }
 }
