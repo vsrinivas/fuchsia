@@ -4,6 +4,7 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 
 rustc_binary("bin") {
   name = "bt_gap"
@@ -53,11 +54,7 @@ package("bt-gap") {
   ]
 }
 
-package("tests") {
-  testonly = true
-
-  package_name = "bt-gap-tests"
-
+test_package("tests") {
   deps = [
     ":bin"
   ]

@@ -121,195 +121,69 @@ pub async fn init_stash(component_id: &str) -> Result<Stash, Error> {
     await!(Stash::new(proxy))
 }
 
-// TODO(armansito): The following tests exercise interactions with the stash storage by mocking
-// some of the fuchsia.stash FIDL library interfaces. It would be nicer if the stash service
-// were to provide similar functionality for testing.
+// These tests access stash in a hermetic envionment and thus it's ok for state to leak between
+// test runs, regardless of test failure. Each test clears out the state in stash before performing
+// its test logic.
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {fidl_fuchsia_stash::{GetIteratorRequest, GetIteratorRequestStream, KeyValue,
-                              StoreAccessorRequest, StoreAccessorRequestStream},
+    use {fuchsia_app::client::connect_to_service,
          fuchsia_async as fasync,
-         futures::{stream::StreamExt, Stream},
-         pin_utils::pin_mut,
-         std::task::Poll::{Pending, Ready}};
+         pin_utils::pin_mut};
 
-    fn create_stash_accessor() -> Result<(StoreAccessorProxy, StoreAccessorRequestStream), Error> {
-        let (proxy, server_end) = create_proxy::<StoreAccessorMarker>()?;
-        let request_stream = server_end.into_stream()?;
-        Ok((proxy, request_stream))
+    fn create_stash_accessor() -> Result<StoreAccessorProxy, Error> {
+        let stashserver = connect_to_service::<StoreMarker>()?;
+
+        // Identify
+        stashserver.identify(BONDING_DATA_PREFIX)?;
+
+        // Create an accessor
+        let (acc, server_end) = create_proxy()?;
+        stashserver.create_accessor(false, server_end)?;
+        Ok(acc)
     }
 
-    // Wait for the next FIDL message received from `server` and return its payload.
-    fn expect_msg<T, S>(exec: &mut fasync::Executor, server: &mut S) -> Option<T>
-    where
-        S: Stream<Item = Result<T, fidl::Error>> + std::marker::Unpin,
-    {
-        match exec.run_until_stalled(&mut server.next()) {
-            Ready(Some(Ok(req))) => Some(req),
-            _ => None,
-        }
-    }
-
-    // Emulators for StoreAccessor methods:
-    fn expect_get_prefix(
-        expected_prefix: &str, exec: &mut fasync::Executor, server: &mut StoreAccessorRequestStream,
-    ) -> Option<GetIteratorRequestStream> {
-        match expect_msg(exec, server) {
-            Some(StoreAccessorRequest::GetPrefix {
-                prefix,
-                it,
-                control_handle: _,
-            }) => {
-                // GetPrefix should be called for the requested `expected_prefix`.
-                assert_eq!(expected_prefix, prefix);
-                Some(it.into_stream().unwrap())
-            }
-            _ => None,
-        }
-    }
-
-    fn expect_set_value(
-        exec: &mut fasync::Executor, server: &mut StoreAccessorRequestStream,
-    ) -> Option<(String, Value)> {
-        match expect_msg(exec, server) {
-            Some(StoreAccessorRequest::SetValue {
-                key,
-                val,
-                control_handle: _,
-            }) => Some((key, val)),
-            _ => None,
-        }
-    }
-
-    fn expect_commit(
-        exec: &mut fasync::Executor, server: &mut StoreAccessorRequestStream,
-    ) -> Option<()> {
-        match expect_msg(exec, server) {
-            Some(StoreAccessorRequest::Commit { control_handle: _ }) => Some(()),
-            _ => None,
-        }
-    }
-
-    // Emulators for GetIterator methods:
-    fn expect_get_next(
-        mut retval: Vec<KeyValue>, exec: &mut fasync::Executor,
-        server: &mut GetIteratorRequestStream,
-    ) -> Option<()> {
-        match expect_msg(exec, server) {
-            Some(GetIteratorRequest::GetNext { responder }) => {
-                match responder.send(&mut retval.iter_mut()) {
-                    Err(e) => panic!("Failed to send FIDL response: {:?}", e),
-                    _ => Some(()),
-                }
-            }
-            _ => None,
-        }
-    }
-
-    // Replays the initial set of interactions to initialize a Stash object with the given bonding
-    // data contents.
-    fn initialize_stash(
-        bonding_data: Vec<KeyValue>, exec: &mut fasync::Executor,
-    ) -> Option<(Stash, StoreAccessorRequestStream)> {
-        let (accessor_proxy, mut fake_server) =
-            create_stash_accessor().expect("failed to create fake StashAccessor");
-        let stash_new_future = Stash::new(accessor_proxy);
-        pin_mut!(stash_new_future);
-
-        // Send the request and expect to receive a GetIterator server handle.
-        assert_eq!(
-            Pending,
-            exec.run_until_stalled(&mut stash_new_future).map(|_| ())
-        );
-        let mut get_iter_stream = expect_get_prefix(BONDING_DATA_PREFIX, exec, &mut fake_server)
-            .expect("GetPrefix not called");
-
-        let is_empty = bonding_data.is_empty();
-        expect_get_next(bonding_data, exec, &mut get_iter_stream).expect("GetNext not called");
-
-        // If `bonding_data` is non-empty then there will be one final request which we reply to
-        // with an empty vector.
-        if !is_empty {
-            assert_eq!(
-                Pending,
-                exec.run_until_stalled(&mut stash_new_future).map(|_| ())
-            );
-            expect_get_next(vec![], exec, &mut get_iter_stream).expect("GetNext not called");
-        }
-
-        match exec.run_until_stalled(&mut stash_new_future) {
-            Ready(Ok(stash)) => Some((stash, fake_server)),
-            _ => None,
-        }
+    fn clear_data_in_stash(acc: &StoreAccessorProxy) -> Result<(), Error> {
+        acc.delete_prefix("")?;
+        acc.commit()?;
+        Ok(())
     }
 
     #[test]
     fn new_stash_succeeds_with_empty_values() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
-        // Create a mock Stash service interface.
-        let (accessor_proxy, mut fake_server) =
-            create_stash_accessor().expect("failed to create fake StashAccessor");
+        // Create a Stash service interface.
+        let accessor_proxy =
+            create_stash_accessor().expect("failed to create StashAccessor");
+        clear_data_in_stash(&accessor_proxy).expect("failed to clear data in stash");
         let stash_new_future = Stash::new(accessor_proxy);
         pin_mut!(stash_new_future);
 
-        // Send the request and expect to receive a GetIterator server handle.
-        assert_eq!(
-            Pending,
-            exec.run_until_stalled(&mut stash_new_future).map(|_| ())
-        );
-        let mut get_iter_stream =
-            expect_get_prefix(BONDING_DATA_PREFIX, &mut exec, &mut fake_server)
-                .expect("GetPrefix not called");
-
-        // Reply with an empty vector.
-        expect_get_next(vec![], &mut exec, &mut get_iter_stream).expect("GetNext not called");
-
         // The stash should be initialized with no data.
-        match exec.run_until_stalled(&mut stash_new_future) {
-            Ready(result) => {
-                let stash = result.expect("Stash should have initialized successfully");
-                assert!(stash.bonding_data.is_empty());
-            }
-            _ => panic!("expected Stash to initialize"),
-        };
+        assert!(exec.run_singlethreaded(stash_new_future)
+                    .expect("expected Stash to initialize")
+                    .bonding_data.is_empty());
     }
 
     #[test]
     fn new_stash_fails_with_malformed_key_value_entry() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
-        // Create a mock Stash service interface.
-        let (accessor_proxy, mut fake_server) =
-            create_stash_accessor().expect("failed to create fake StashAccessor");
-        let stash_new_future = Stash::new(accessor_proxy);
-        pin_mut!(stash_new_future);
+        // Create a Stash service interface.
+        let accessor_proxy =
+            create_stash_accessor().expect("failed to create StashAccessor");
+        clear_data_in_stash(&accessor_proxy).expect("failed to clear data in stash");
 
-        // Send the request and expect to receive a GetIterator server handle.
-        assert_eq!(
-            Pending,
-            exec.run_until_stalled(&mut stash_new_future).map(|_| ())
-        );
-        let mut get_iter_stream =
-            expect_get_prefix(BONDING_DATA_PREFIX, &mut exec, &mut fake_server)
-                .expect("GetPrefix not called");
-
-        // Reply with a vector that contains a non-string value.
-        let malformed_result = vec![KeyValue {
-            key: "bonding-data:test1234".to_string(),
-            val: Value::Intval(5),
-        }];
-        expect_get_next(malformed_result, &mut exec, &mut get_iter_stream)
-            .expect("GetNext not called");
+        // Set a key/value that contains a non-string value.
+        accessor_proxy.set_value("bonding-data:test1234", &mut Value::Intval(5))
+            .expect("failed to set a bonding data value");
+        accessor_proxy.commit()
+            .expect("failed to commit a bonding data value");
 
         // The stash should fail to initialize.
-        match exec.run_until_stalled(&mut stash_new_future) {
-            Ready(result) => {
-                assert!(result.is_err());
-            }
-            _ => panic!("expected Stash to initialize"),
-        };
+        let stash_new_future = Stash::new(accessor_proxy);
+        assert!(exec.run_singlethreaded(stash_new_future).is_err());
     }
 
     #[test]
@@ -317,61 +191,33 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
         // Create a mock Stash service interface.
-        let (accessor_proxy, mut fake_server) =
-            create_stash_accessor().expect("failed to create fake StashAccessor");
-        let stash_new_future = Stash::new(accessor_proxy);
-        pin_mut!(stash_new_future);
+        let accessor_proxy =
+            create_stash_accessor().expect("failed to create StashAccessor");
+        clear_data_in_stash(&accessor_proxy).expect("failed to clear data in stash");
 
-        // Send the request and expect to receive a GetIterator server handle.
-        assert_eq!(
-            Pending,
-            exec.run_until_stalled(&mut stash_new_future).map(|_| ())
-        );
-        let mut get_iter_stream =
-            expect_get_prefix(BONDING_DATA_PREFIX, &mut exec, &mut fake_server)
-                .expect("GetPrefix not called");
-
-        // Reply with a vector that contains a malformed JSON value
-        let malformed_result = vec![KeyValue {
-            key: "bonding-data:test1234".to_string(),
-            val: Value::Stringval("{0}".to_string()),
-        }];
-        expect_get_next(malformed_result, &mut exec, &mut get_iter_stream)
-            .expect("GetNext not called");
+        // Set a vector that contains a malformed JSON value
+        accessor_proxy.set_value("bonding-data:test1234", &mut Value::Stringval("{0}".to_string()))
+            .expect("failed to set a bonding data value");
+        accessor_proxy.commit()
+            .expect("failed to commit a bonding data value");
 
         // The stash should fail to initialize.
-        match exec.run_until_stalled(&mut stash_new_future) {
-            Ready(result) => {
-                assert!(result.is_err());
-            }
-            _ => panic!("expected Stash to initialize"),
-        };
+        let stash_new_future = Stash::new(accessor_proxy);
+        assert!(exec.run_singlethreaded(stash_new_future).is_err());
     }
 
     #[test]
     fn new_stash_succeeds_with_values() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
-        // Create a mock Stash service interface.
-        let (accessor_proxy, mut fake_server) =
-            create_stash_accessor().expect("failed to create fake StashAccessor");
-        let stash_new_future = Stash::new(accessor_proxy);
-        pin_mut!(stash_new_future);
+        // Create a Stash service interface.
+        let accessor_proxy =
+            create_stash_accessor().expect("failed to create StashAccessor");
+        clear_data_in_stash(&accessor_proxy).expect("failed to clear data in stash");
 
-        // Send the request and expect to receive a GetIterator server handle.
-        assert_eq!(
-            Pending,
-            exec.run_until_stalled(&mut stash_new_future).map(|_| ())
-        );
-        let mut get_iter_stream =
-            expect_get_prefix(BONDING_DATA_PREFIX, &mut exec, &mut fake_server)
-                .expect("GetPrefix not called");
 
-        // Reply with a vector that contains bonding data for several devices.
-        let valid_result = vec![
-            KeyValue {
-                key: "bonding-data:id-1".to_string(),
-                val: Value::Stringval(
+        // Insert values into stash that contain bonding data for several devices.
+        accessor_proxy.set_value("bonding-data:id-1", &mut Value::Stringval(
                     r#"
                     {
                        "identifier": "id-1",
@@ -380,11 +226,8 @@ mod tests {
                        "le": null
                     }"#
                     .to_string(),
-                ),
-            },
-            KeyValue {
-                key: "bonding-data:id-2".to_string(),
-                val: Value::Stringval(
+                )).expect("failed to set value");
+        accessor_proxy.set_value("bonding-data:id-2", &mut Value::Stringval(
                     r#"
                     {
                        "identifier": "id-2",
@@ -393,11 +236,8 @@ mod tests {
                        "le": null
                     }"#
                     .to_string(),
-                ),
-            },
-            KeyValue {
-                key: "bonding-data:id-3".to_string(),
-                val: Value::Stringval(
+                )).expect("failed to set value");
+        accessor_proxy.set_value("bonding-data:id-3", &mut Value::Stringval(
                     r#"
                     {
                        "identifier": "id-3",
@@ -406,23 +246,13 @@ mod tests {
                        "le": null
                     }"#
                     .to_string(),
-                ),
-            },
-        ];
-        expect_get_next(valid_result, &mut exec, &mut get_iter_stream).expect("GetNext not called");
+                )).expect("failed to set value");
+        accessor_proxy.commit()
+            .expect("failed to commit bonding data values");
 
-        // The stash Future should remain pending until we send an empty vector.
-        assert_eq!(
-            Pending,
-            exec.run_until_stalled(&mut stash_new_future).map(|_| ())
-        );
-
-        // The stash should initialize with bonding data after receiving empty vector.
-        expect_get_next(vec![], &mut exec, &mut get_iter_stream).expect("GetNext not called");
-        let stash = match exec.run_until_stalled(&mut stash_new_future) {
-            Ready(result) => result.expect("expected stash to successfully initialize"),
-            _ => panic!("expected Stash to initialize"),
-        };
+        // The stash should initialize with bonding data stored in stash
+        let stash_new_future = Stash::new(accessor_proxy);
+        let stash = exec.run_singlethreaded(stash_new_future).expect("stash failed to initialize");
 
         // There should be devices registered for two local addresses.
         assert_eq!(2, stash.bonding_data.len());
@@ -472,8 +302,14 @@ mod tests {
     #[test]
     fn store_bond_commits_entry() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (mut stash, mut store_accessor_server) =
-            initialize_stash(vec![], &mut exec).expect("failed to initialize empty stash");
+        let accessor_proxy =
+            create_stash_accessor().expect("failed to create StashAccessor");
+        clear_data_in_stash(&accessor_proxy).expect("failed to clear data in stash");
+        let mut stash = exec.run_singlethreaded(Stash::new(accessor_proxy))
+            .expect("stash failed to initialize");
+
+        let accessor_proxy_2 =
+            create_stash_accessor().expect("failed to create StashAccessor");
 
         let bonding_data = BondingData {
             identifier: "id-1".to_string(),
@@ -482,20 +318,6 @@ mod tests {
             le: None,
         };
         assert!(stash.store_bond(bonding_data).is_ok());
-
-        // The data should be committed over FIDL.
-        let (key, value) =
-            expect_set_value(&mut exec, &mut store_accessor_server).expect("SetValue not called");
-        assert_eq!("bonding-data:id-1", &key);
-        assert_eq!(
-            Value::Stringval(
-                "{\"identifier\":\"id-1\",\"localAddress\":\"00:00:00:00:00:01\",\"name\":null,\
-                 \"le\":null}"
-                    .to_string()
-            ),
-            value
-        );
-        expect_commit(&mut exec, &mut store_accessor_server).expect("Commit not called");
 
         // Make sure that the in-memory cache has been updated.
         assert_eq!(1, stash.bonding_data.len());
@@ -513,14 +335,27 @@ mod tests {
                 .get("id-1")
                 .unwrap()
         );
+
+        // The new data should be accessible over FIDL.
+        assert_eq!(exec.run_singlethreaded(accessor_proxy_2.get_value("bonding-data:id-1"))
+                       .expect("failed to get value")
+                       .map(|x| *x),
+            Some(Value::Stringval(
+                "{\"identifier\":\"id-1\",\"localAddress\":\"00:00:00:00:00:01\",\"name\":null,\
+                 \"le\":null}"
+                    .to_string()
+            )));
     }
 
     #[test]
     fn list_bonds() {
-        let data = vec![
-            KeyValue {
-                key: "bonding-data:id-1".to_string(),
-                val: Value::Stringval(
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let accessor_proxy =
+            create_stash_accessor().expect("failed to create StashAccessor");
+        clear_data_in_stash(&accessor_proxy).expect("failed to clear data in stash");
+
+        // Insert values into stash that contain bonding data for several devices.
+        accessor_proxy.set_value("bonding-data:id-1", &mut Value::Stringval(
                     r#"
                     {
                        "identifier": "id-1",
@@ -529,11 +364,8 @@ mod tests {
                        "le": null
                     }"#
                     .to_string(),
-                ),
-            },
-            KeyValue {
-                key: "bonding-data:id-2".to_string(),
-                val: Value::Stringval(
+                )).expect("failed to set value");
+        accessor_proxy.set_value("bonding-data:id-2", &mut Value::Stringval(
                     r#"
                     {
                        "identifier": "id-2",
@@ -542,12 +374,12 @@ mod tests {
                        "le": null
                     }"#
                     .to_string(),
-                ),
-            },
-        ];
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (stash, _) =
-            initialize_stash(data, &mut exec).expect("failed to initialize empty stash");
+                )).expect("failed to set value");
+        accessor_proxy.commit()
+            .expect("failed to commit bonding data values");
+
+        let stash = exec.run_singlethreaded(Stash::new(accessor_proxy))
+            .expect("stash failed to initialize");
 
         // Should return None for unknown address.
         assert!(stash.list_bonds("00:00:00:00:00:00").is_none());
