@@ -15,14 +15,6 @@ as `system/bin/waterfall`.
 
 ## Building for Linux
 Escher can also build on Linux.  In order to do so, you need to:
-  * add the Jiri "escher_linux_dev" manifest, then Jiri update
-    ```
-    cd $FUCHSIA_DIR
-    jiri import escher_linux_dev https://fuchsia.googlesource.com/manifest
-    jiri update
-    ```
-    * as part of the jiri update, Escher will download a private copy of the
-      Vulkan SDK to $FUCHSIA_DIR/garnet/public/lib/escher/third_party/vulkansdk/
   * install build dependencies
     ```
     sudo apt install libxinerama-dev libxrandr-dev libxcursor-dev libx11-xcb-dev \
