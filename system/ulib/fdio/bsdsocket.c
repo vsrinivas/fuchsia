@@ -68,12 +68,6 @@ static zx_status_t get_service_with_retries(const char* path, zx_handle_t* saved
     return r;
 }
 
-static zx_status_t get_dns(zx_handle_t* out) {
-    static zx_handle_t saved = ZX_HANDLE_INVALID;
-    static mtx_t lock = MTX_INIT;
-    return get_service_with_retries("/svc/dns.DNS", &saved, &lock, out);
-}
-
 static zx_status_t get_socket_provider(zx_handle_t* out) {
     static zx_handle_t saved = ZX_HANDLE_INVALID;
     static mtx_t lock = MTX_INIT;
