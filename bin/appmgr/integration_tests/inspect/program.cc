@@ -64,6 +64,16 @@ int main(int argc, const char** argv) {
 
   t2.NewItem(4);
 
+  // It is not an error to use an invalid ObjectDir, but it will not have an
+  // effect.
+  component::ObjectDir invalid;
+  invalid.find({"test", "a"});
+  invalid.set_prop("test1", "...");
+  invalid.set_metric("test2", component::IntMetric(10));
+  invalid.set_child(fbl::MakeRefCounted<component::Object>("temp"));
+  invalid.set_children_callback(
+      [](std::vector<fbl::RefPtr<component::Object>>* out) {});
+
   loop.Run();
   return 0;
 }
