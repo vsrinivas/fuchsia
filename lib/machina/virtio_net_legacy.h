@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_VIRTIO_NET_H_
-#define GARNET_LIB_MACHINA_VIRTIO_NET_H_
+#ifndef GARNET_LIB_MACHINA_VIRTIO_NET_LEGACY_H_
+#define GARNET_LIB_MACHINA_VIRTIO_NET_LEGACY_H_
 
 #include <atomic>
 #include <vector>
@@ -31,12 +31,12 @@ static_assert(kVirtioNetRxQueueIndex != kVirtioNetTxQueueIndex,
               "RX and TX queues must be distinct");
 
 // Implements a Virtio Ethernet device.
-class VirtioNet
+class VirtioNetLegacy
     : public VirtioInprocessDevice<VIRTIO_ID_NET, kVirtioNetNumQueues,
                                    virtio_net_config_t> {
  public:
-  VirtioNet(const PhysMem& phys_mem, async_dispatcher_t* dispatcher);
-  ~VirtioNet() override;
+  VirtioNetLegacy(const PhysMem& phys_mem, async_dispatcher_t* dispatcher);
+  ~VirtioNetLegacy() override;
 
   // Starts the Virtio Ethernet device based on the path provided.
   zx_status_t Start(const char* path);
@@ -136,4 +136,4 @@ class VirtioNet
 
 }  // namespace machina
 
-#endif  // GARNET_LIB_MACHINA_VIRTIO_NET_H_
+#endif  // GARNET_LIB_MACHINA_VIRTIO_NET_LEGACY_H_

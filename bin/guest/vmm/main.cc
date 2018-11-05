@@ -46,7 +46,7 @@
 #include "garnet/lib/machina/virtio_console.h"
 #include "garnet/lib/machina/virtio_gpu.h"
 #include "garnet/lib/machina/virtio_input.h"
-#include "garnet/lib/machina/virtio_net.h"
+#include "garnet/lib/machina/virtio_net_legacy.h"
 #include "garnet/lib/machina/virtio_rng.h"
 #include "garnet/lib/machina/virtio_vsock.h"
 #include "garnet/lib/machina/virtio_wl.h"
@@ -300,7 +300,7 @@ int main(int argc, char** argv) {
   }
 
   // Setup net device.
-  machina::VirtioNet net(guest.phys_mem(), guest.device_dispatcher());
+  machina::VirtioNetLegacy net(guest.phys_mem(), guest.device_dispatcher());
   if (cfg.virtio_net()) {
     status = bus.Connect(net.pci_device());
     if (status != ZX_OK) {

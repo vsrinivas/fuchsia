@@ -5,7 +5,7 @@
 #include <zircon/ethernet/c/fidl.h>
 
 #include "garnet/lib/machina/phys_mem_fake.h"
-#include "garnet/lib/machina/virtio_net.h"
+#include "garnet/lib/machina/virtio_net_legacy.h"
 #include "garnet/lib/machina/virtio_queue_fake.h"
 #include "lib/gtest/test_loop_fixture.h"
 
@@ -14,10 +14,10 @@ namespace {
 
 static constexpr uint16_t kVirtioNetQueueSize = 8;
 
-class VirtioNetFake : public VirtioNet {
+class VirtioNetFake : public VirtioNetLegacy {
  public:
   VirtioNetFake(const PhysMem& phys_mem, async_dispatcher_t* dispatcher)
-      : VirtioNet(phys_mem, dispatcher) {}
+      : VirtioNetLegacy(phys_mem, dispatcher) {}
 
   void SetUp(const zircon_ethernet_Fifos& fifos) {
     ASSERT_EQ(InitIoBuffer(kVirtioNetQueueSize * 2, 2048), ZX_OK);
@@ -32,12 +32,14 @@ class VirtioNetTest : public ::gtest::TestLoopFixture {
         queue_(net_.rx_queue(), kVirtioNetQueueSize) {}
 
   void SetUp() override {
-    ASSERT_EQ(zx_fifo_create(kVirtioNetQueueSize, sizeof(zircon_ethernet_FifoEntry), 0,
-                             &fifos_.rx, &fifo_[0]),
-              ZX_OK);
-    ASSERT_EQ(zx_fifo_create(kVirtioNetQueueSize, sizeof(zircon_ethernet_FifoEntry), 0,
-                             &fifos_.tx, &fifo_[1]),
-              ZX_OK);
+    ASSERT_EQ(
+        zx_fifo_create(kVirtioNetQueueSize, sizeof(zircon_ethernet_FifoEntry),
+                       0, &fifos_.rx, &fifo_[0]),
+        ZX_OK);
+    ASSERT_EQ(
+        zx_fifo_create(kVirtioNetQueueSize, sizeof(zircon_ethernet_FifoEntry),
+                       0, &fifos_.tx, &fifo_[1]),
+        ZX_OK);
     fifos_.rx_depth = kVirtioNetQueueSize;
     fifos_.tx_depth = kVirtioNetQueueSize;
     net_.SetUp(fifos_);

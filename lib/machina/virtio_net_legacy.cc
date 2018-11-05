@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/machina/virtio_net.h"
+#include "garnet/lib/machina/virtio_net_legacy.h"
 
 #include <fcntl.h>
 #include <string.h>
@@ -21,20 +21,22 @@ namespace machina {
 
 constexpr size_t kMaxPacketSize = 2048;
 
-VirtioNet::Stream::Stream(const PhysMem& phys_mem,
-                          async_dispatcher_t* dispatcher, VirtioQueue* queue,
-                          std::atomic<trace_async_id_t>* trace_flow_id,
-                          IoBuffer* io_buf)
+VirtioNetLegacy::Stream::Stream(const PhysMem& phys_mem,
+                                async_dispatcher_t* dispatcher,
+                                VirtioQueue* queue,
+                                std::atomic<trace_async_id_t>* trace_flow_id,
+                                IoBuffer* io_buf)
     : phys_mem_(phys_mem),
       dispatcher_(dispatcher),
       queue_(queue),
       trace_flow_id_(trace_flow_id),
       io_buf_(io_buf),
-      queue_wait_(dispatcher, queue,
-                  fit::bind_member(this, &VirtioNet::Stream::OnQueueReady)) {}
+      queue_wait_(
+          dispatcher, queue,
+          fit::bind_member(this, &VirtioNetLegacy::Stream::OnQueueReady)) {}
 
-zx_status_t VirtioNet::Stream::Start(zx_handle_t fifo, size_t fifo_max_entries,
-                                     bool rx) {
+zx_status_t VirtioNetLegacy::Stream::Start(zx_handle_t fifo,
+                                           size_t fifo_max_entries, bool rx) {
   fifo_ = fifo;
   rx_ = rx;
   fifo_entries_.resize(fifo_max_entries);
@@ -55,11 +57,13 @@ zx_status_t VirtioNet::Stream::Start(zx_handle_t fifo, size_t fifo_max_entries,
   return status;
 }
 
-zx_status_t VirtioNet::Stream::WaitOnQueue() { return queue_wait_.Begin(); }
+zx_status_t VirtioNetLegacy::Stream::WaitOnQueue() {
+  return queue_wait_.Begin();
+}
 
-virtio_net_hdr_t* VirtioNet::Stream::ReadPacketInfo(uint16_t index,
-                                                    uintptr_t* offset,
-                                                    uintptr_t* length) {
+virtio_net_hdr_t* VirtioNetLegacy::Stream::ReadPacketInfo(uint16_t index,
+                                                          uintptr_t* offset,
+                                                          uintptr_t* length) {
   VirtioDescriptor desc;
 
   zx_status_t status = queue_->ReadDesc(index, &desc);
@@ -90,7 +94,7 @@ virtio_net_hdr_t* VirtioNet::Stream::ReadPacketInfo(uint16_t index,
   return header;
 }
 
-void VirtioNet::Stream::OnQueueReady(zx_status_t status, uint16_t index) {
+void VirtioNetLegacy::Stream::OnQueueReady(zx_status_t status, uint16_t index) {
   if (status != ZX_OK) {
     return;
   }
@@ -170,14 +174,14 @@ void VirtioNet::Stream::OnQueueReady(zx_status_t status, uint16_t index) {
   }
 }
 
-zx_status_t VirtioNet::Stream::WaitOnFifoWritable() {
+zx_status_t VirtioNetLegacy::Stream::WaitOnFifoWritable() {
   return fifo_writable_wait_.Begin(dispatcher_);
 }
 
-void VirtioNet::Stream::OnFifoWritable(async_dispatcher_t* dispatcher,
-                                       async::WaitBase* wait,
-                                       zx_status_t status,
-                                       const zx_packet_signal_t* signal) {
+void VirtioNetLegacy::Stream::OnFifoWritable(async_dispatcher_t* dispatcher,
+                                             async::WaitBase* wait,
+                                             zx_status_t status,
+                                             const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     FXL_LOG(INFO) << "Async wait failed on fifo writable: " << status;
     return;
@@ -214,14 +218,14 @@ void VirtioNet::Stream::OnFifoWritable(async_dispatcher_t* dispatcher,
   }
 }
 
-zx_status_t VirtioNet::Stream::WaitOnFifoReadable() {
+zx_status_t VirtioNetLegacy::Stream::WaitOnFifoReadable() {
   return fifo_readable_wait_.Begin(dispatcher_);
 }
 
-void VirtioNet::Stream::OnFifoReadable(async_dispatcher_t* dispatcher,
-                                       async::WaitBase* wait,
-                                       zx_status_t status,
-                                       const zx_packet_signal_t* signal) {
+void VirtioNetLegacy::Stream::OnFifoReadable(async_dispatcher_t* dispatcher,
+                                             async::WaitBase* wait,
+                                             zx_status_t status,
+                                             const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     FXL_LOG(INFO) << "Async wait failed on fifo readable: " << status;
     return;
@@ -292,7 +296,7 @@ void VirtioNet::Stream::OnFifoReadable(async_dispatcher_t* dispatcher,
   }
 }
 
-zx_status_t VirtioNet::IoBuffer::Init(size_t count, size_t elem_size) {
+zx_status_t VirtioNetLegacy::IoBuffer::Init(size_t count, size_t elem_size) {
   size_t vmo_size = count * elem_size;
   zx_status_t status = zx::vmo::create(vmo_size, ZX_VMO_NON_RESIZABLE, &vmo_);
   if (status != ZX_OK) {
@@ -312,7 +316,7 @@ zx_status_t VirtioNet::IoBuffer::Init(size_t count, size_t elem_size) {
   return ZX_OK;
 }
 
-zx_status_t VirtioNet::IoBuffer::Allocate(uintptr_t* offset) {
+zx_status_t VirtioNetLegacy::IoBuffer::Allocate(uintptr_t* offset) {
   if (free_list_.empty()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -322,11 +326,12 @@ zx_status_t VirtioNet::IoBuffer::Allocate(uintptr_t* offset) {
   return ZX_OK;
 }
 
-void VirtioNet::IoBuffer::Free(uintptr_t offset) {
+void VirtioNetLegacy::IoBuffer::Free(uintptr_t offset) {
   free_list_.push_back(offset / elem_size_);
 }
 
-VirtioNet::VirtioNet(const PhysMem& phys_mem, async_dispatcher_t* dispatcher)
+VirtioNetLegacy::VirtioNetLegacy(const PhysMem& phys_mem,
+                                 async_dispatcher_t* dispatcher)
     // TODO(abdulla): Support VIRTIO_NET_F_STATUS via GetStatus.
     : VirtioInprocessDevice(phys_mem, VIRTIO_NET_F_MAC),
       rx_stream_(phys_mem, dispatcher, rx_queue(), rx_trace_flow_id(),
@@ -337,16 +342,16 @@ VirtioNet::VirtioNet(const PhysMem& phys_mem, async_dispatcher_t* dispatcher)
   config_.max_virtqueue_pairs = 1;
 }
 
-VirtioNet::~VirtioNet() {
+VirtioNetLegacy::~VirtioNetLegacy() {
   zx_handle_close(fifos_.tx);
   zx_handle_close(fifos_.rx);
 }
 
-zx_status_t VirtioNet::InitIoBuffer(size_t count, size_t elem_size) {
+zx_status_t VirtioNetLegacy::InitIoBuffer(size_t count, size_t elem_size) {
   return io_buf_.Init(count, elem_size);
 }
 
-zx_status_t VirtioNet::Start(const char* path) {
+zx_status_t VirtioNetLegacy::Start(const char* path) {
   net_svc_.reset();
 
   {
@@ -355,8 +360,8 @@ zx_status_t VirtioNet::Start(const char* path) {
       return ZX_ERR_IO;
     }
 
-    zx_status_t status = fdio_get_service_handle(fd.release(),
-                                                 net_svc_.reset_and_get_address());
+    zx_status_t status =
+        fdio_get_service_handle(fd.release(), net_svc_.reset_and_get_address());
     if (status != ZX_OK) {
       return status;
     }
@@ -372,7 +377,8 @@ zx_status_t VirtioNet::Start(const char* path) {
   memcpy(config_.mac, info.mac.octets, sizeof(config_.mac));
 
   zx_status_t call_status = ZX_OK;
-  status = zircon_ethernet_DeviceGetFifos(net_svc_.get(), &call_status, &fifos_);
+  status =
+      zircon_ethernet_DeviceGetFifos(net_svc_.get(), &call_status, &fifos_);
   if (status != ZX_OK || call_status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to get FIFOs from Ethernet device";
     return status == ZX_OK ? call_status : status;
@@ -387,23 +393,27 @@ zx_status_t VirtioNet::Start(const char* path) {
   // the RX FIFO, tx_depth enqueued in the TX FIFO and tx_depth currently in
   // flight on the hardware. This yields the below calculation and with current
   // FIFO depths of 256 will yield a 1.5MiB vmo.
-  status = InitIoBuffer((fifos_.rx_depth + fifos_.tx_depth * 2), kMaxPacketSize);
+  status =
+      InitIoBuffer((fifos_.rx_depth + fifos_.tx_depth * 2), kMaxPacketSize);
   if (status != ZX_OK) {
     return status;
   }
   zx::vmo vmo_dup;
-  status = io_buf_.vmo().duplicate(ZX_RIGHTS_IO | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER, &vmo_dup);
+  status = io_buf_.vmo().duplicate(
+      ZX_RIGHTS_IO | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER, &vmo_dup);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to duplicate VMO for ethernet";
     return status;
   }
 
-  status = zircon_ethernet_DeviceSetIOBuffer(net_svc_.get(), vmo_dup.release(), &call_status);
+  status = zircon_ethernet_DeviceSetIOBuffer(net_svc_.get(), vmo_dup.release(),
+                                             &call_status);
   if (status != ZX_OK || call_status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to set VMO for Ethernet device";
     return status == ZX_OK ? call_status : status;
   }
-  status = zircon_ethernet_DeviceSetClientName(net_svc_.get(), "machina", 7, &call_status);
+  status = zircon_ethernet_DeviceSetClientName(net_svc_.get(), "machina", 7,
+                                               &call_status);
   if (status != ZX_OK || call_status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to set client name for Ethernet device";
     return status == ZX_OK ? call_status : status;
@@ -418,7 +428,7 @@ zx_status_t VirtioNet::Start(const char* path) {
   return WaitOnFifos(fifos_);
 }
 
-zx_status_t VirtioNet::WaitOnFifos(const zircon_ethernet_Fifos& fifos) {
+zx_status_t VirtioNetLegacy::WaitOnFifos(const zircon_ethernet_Fifos& fifos) {
   zx_status_t status = rx_stream_.Start(fifos.rx, fifos.rx_depth, true);
   if (status == ZX_OK) {
     status = tx_stream_.Start(fifos.tx, fifos.tx_depth, false);
