@@ -7,7 +7,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := usertest
-MODULE_GROUP := disktools
+MODULE_GROUP := test
 MODULE_NAME := chromeos-disk-setup-test
 
 MODULE_SRCS := \

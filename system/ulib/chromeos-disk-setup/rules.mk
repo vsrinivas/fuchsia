@@ -7,7 +7,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
-MODULE_GROUP := disktools
+MODULE_GROUP := core
 
 MODULE_COMPILEFLAGS += -fvisibility=hidden
 
