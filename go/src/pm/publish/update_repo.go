@@ -34,6 +34,10 @@ func NewAddErr(m string, e error) ErrFileAddFailed {
 	return ErrFileAddFailed(fmt.Sprintf("%s: %s", m, e))
 }
 
+type customTargetMetadata struct {
+	Merkle string `json:"merkle"`
+}
+
 type UpdateRepo struct {
 	repo *tuf.Repo
 	path string
@@ -100,7 +104,11 @@ func (u *UpdateRepo) AddPackage(name string, r io.Reader) error {
 	}
 
 	// add merkle root as custom JSON
-	jsonStr := fmt.Sprintf("{\"merkle\":\"%s\"}", root)
+	metadata := customTargetMetadata{Merkle: root}
+	jsonStr, err := json.Marshal(metadata)
+	if err != nil {
+		return NewAddErr(fmt.Sprintf("serializing %v", metadata), err)
+	}
 
 	// add file with custom JSON to repository
 	if err := u.repo.AddTarget(name, json.RawMessage(jsonStr)); err != nil {

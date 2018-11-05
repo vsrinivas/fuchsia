@@ -7,16 +7,30 @@ package publish
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
 	tuf "github.com/flynn/go-tuf"
 )
+
+type targetsFile struct {
+	Signed struct {
+		Targets map[string]struct {
+			Custom struct {
+				Merkle string `json:"merkle"`
+			} `json:"custom"`
+		} `json:"targets"`
+	} `json:"signed"`
+}
+
+var merklePat = regexp.MustCompile("^[0-9a-f]{64}$")
 
 func TestCopyFile(t *testing.T) {
 	fileSize := 8193
@@ -219,18 +233,22 @@ func TestAddTUFFile(t *testing.T) {
 		t.Fatalf("Couldn't open targets metadata %v", err)
 	}
 	defer targs.Close()
-	buf := make([]byte, 512*1024)
-	l, err := targs.Read(buf)
+
+	var targets targetsFile
+	decoder := json.NewDecoder(targs)
+	err = decoder.Decode(&targets)
 	if err != nil {
-		t.Fatalf("Couldn't read targets metadata %v", err)
-	}
-	if l == len(buf) {
-		t.Log("Metadata filed entire buffer")
+		t.Fatalf("Couldn't decode targets metadata %v", err)
 	}
 
-	bufStr := string(buf)
-	if !strings.Contains(bufStr, "{\"custom\":{\"merkle\"") {
-		t.Fatalf("Targets JSON doesn't contain merkle entry")
+	if len(targets.Signed.Targets) == 0 {
+		t.Fatalf("Targets file contains no targets")
+	}
+
+	for _, target := range targets.Signed.Targets {
+		if !merklePat.MatchString(target.Custom.Merkle) {
+			t.Fatalf("Targets JSON contains invalid merkle entry: %v", target.Custom.Merkle)
+		}
 	}
 }
 
