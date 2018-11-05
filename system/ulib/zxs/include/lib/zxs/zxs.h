@@ -72,6 +72,15 @@ zx_status_t zxs_socket(zx_handle_t socket_provider,
                        size_t options_count,
                        zxs_socket_t* out_socket);
 
+// Closes a |zxs_socket_t|.
+//
+// Gracefully closes the given socket. Closes the underlying |zx_handle_t| as
+// well, even if the socket provider returns an error.
+//
+// Returns the |zx_status_t| from the socket provider (rather than from the
+// kernel when closing the underlying |zx_handle_t|).
+zx_status_t zxs_close(const zxs_socket_t* socket);
+
 // Connect the given |socket| to the given |addr|.
 //
 // If |socket| is a datagram socket, then |addr| is the address to which

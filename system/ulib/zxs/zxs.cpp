@@ -170,6 +170,15 @@ zx_status_t zxs_socket(zx_handle_t socket_provider,
     return ZX_ERR_NOT_SUPPORTED;
 }
 
+zx_status_t zxs_close(const zxs_socket_t* socket) {
+    zxsio_msg_t msg;
+    memset(&msg, 0, sizeof(msg));
+    msg.op = ZXSIO_CLOSE;
+    zx_status_t status = zxsio_txn(socket->socket, &msg);
+    zx_handle_close(socket->socket);
+    return status;
+}
+
 zx_status_t zxs_connect(const zxs_socket_t* socket, const struct sockaddr* addr,
                         size_t addr_length) {
     zx_status_t status = zxsio_op(socket->socket, ZXSIO_CONNECT, 0, 0,

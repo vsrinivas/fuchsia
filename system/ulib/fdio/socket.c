@@ -495,18 +495,7 @@ static void zxsio_wait_end_dgram(fdio_t* io, zx_signals_t signals, uint32_t* _ev
 
 static zx_status_t zxsio_close(fdio_t* io) {
     zxsio_t* sio = (zxsio_t*)io;
-    zxsio_msg_t msg;
-    zx_status_t r;
-
-    memset(&msg, 0, ZXSIO_HDR_SZ);
-    msg.op = ZXSIO_CLOSE;
-    r = zxsio_txn(sio->s.socket, &msg);
-
-    zx_handle_t h = sio->s.socket;
-    sio->s.socket = 0;
-    zx_handle_close(h);
-
-    return r;
+    return zxs_close(&sio->s);
 }
 
 static ssize_t zxsio_ioctl(fdio_t* io, uint32_t op, const void* in_buf,

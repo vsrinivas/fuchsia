@@ -141,7 +141,10 @@ static zx_status_t handle_message(async_dispatcher_t* dispatcher,
         }
         break;
     }
-    case ZXSIO_CLOSE:
+    case ZXSIO_CLOSE: {
+        // No reply needed.
+        break;
+    }
     case ZXSIO_OPEN:
     case ZXSIO_IOCTL:
     default:
@@ -361,6 +364,22 @@ static bool listen_accept_test(void) {
     ASSERT_EQ('p', addr.sa_data[4]);
     ASSERT_NE(ZX_HANDLE_INVALID, accepted.socket);
     ASSERT_EQ(ZX_OK, zx_handle_close(accepted.socket));
+
+    TearDown(&fake);
+
+    END_TEST;
+}
+
+static bool close_test(void) {
+    BEGIN_TEST;
+
+    FakeNetstack fake;
+    if (!SetUp(&fake))
+        return false;
+    zxs_socket_t* socket = &fake.socket;
+
+    ASSERT_EQ(ZX_OK, zxs_close(socket));
+    fake.socket.socket = ZX_HANDLE_INVALID;
 
     TearDown(&fake);
 
