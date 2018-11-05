@@ -13,14 +13,11 @@
 
 #include <threads.h>
 
+namespace board_mt8167 {
+
 // BTI IDs for our devices
 enum {
     BTI_DISPLAY,
-};
-
-namespace board_mt8167 {
-
-enum {
     BTI_EMMC,
 };
 
