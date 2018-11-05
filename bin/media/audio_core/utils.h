@@ -5,7 +5,9 @@
 #ifndef GARNET_BIN_MEDIA_AUDIO_CORE_UTILS_H_
 #define GARNET_BIN_MEDIA_AUDIO_CORE_UTILS_H_
 
+#include <fbl/ref_counted.h>
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <stdint.h>
 #include <zircon/device/audio.h>
 #include <zircon/types.h>
@@ -57,6 +59,14 @@ zx_status_t SelectBestFormat(
     const std::vector<audio_stream_format_range_t>& fmts,
     uint32_t* frames_per_second_inout, uint32_t* channels_inout,
     fuchsia::media::AudioSampleFormat* sample_format_inout);
+
+// A simple extension to the libfzl VmoMapper which mixes in ref counting state
+// to allow for shared VmoMapper semantics.
+class RefCountedVmoMapper : public fzl::VmoMapper,
+                            public fbl::RefCounted<fzl::VmoMapper> {
+ public:
+  RefCountedVmoMapper() = default;
+};
 
 }  // namespace audio
 }  // namespace media

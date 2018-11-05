@@ -11,7 +11,7 @@ namespace media {
 namespace audio {
 
 AudioPacketRef::AudioPacketRef(
-    fbl::RefPtr<fzl::RefCountedVmoMapper> vmo_ref,
+    fbl::RefPtr<RefCountedVmoMapper> vmo_ref,
     fuchsia::media::AudioRenderer::SendPacketCallback callback,
     fuchsia::media::StreamPacket packet, AudioCoreImpl* service,
     uint32_t frac_frame_len, int64_t start_pts)

@@ -151,7 +151,7 @@ class AudioRendererImpl
       gain_control_bindings_;
   bool is_shutdown_ = false;
   bool gain_events_enabled_ = false;
-  fbl::RefPtr<fzl::RefCountedVmoMapper> payload_buffer_;
+  fbl::RefPtr<RefCountedVmoMapper> payload_buffer_;
   bool config_validated_ = false;
 
   // PTS interpolation state.

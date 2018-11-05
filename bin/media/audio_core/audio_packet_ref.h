@@ -10,9 +10,9 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
-#include <lib/fzl/vmo-mapper.h>
 #include <stdint.h>
 
+#include "garnet/bin/media/audio_core/utils.h"
 #include "lib/fxl/logging.h"
 
 namespace media {
@@ -29,7 +29,7 @@ class AudioPacketRef
       public fbl::Recyclable<AudioPacketRef>,
       public fbl::DoublyLinkedListable<fbl::unique_ptr<AudioPacketRef>> {
  public:
-  AudioPacketRef(fbl::RefPtr<fzl::RefCountedVmoMapper> vmo_ref,
+  AudioPacketRef(fbl::RefPtr<RefCountedVmoMapper> vmo_ref,
                  fuchsia::media::AudioRenderer::SendPacketCallback callback,
                  fuchsia::media::StreamPacket packet, AudioCoreImpl* server,
                  uint32_t frac_frame_len, int64_t start_pts);
@@ -79,7 +79,7 @@ class AudioPacketRef
   // service dispatcher thread.
   bool NeedsCleanup() { return callback_ != nullptr; }
 
-  fbl::RefPtr<fzl::RefCountedVmoMapper> vmo_ref_;
+  fbl::RefPtr<RefCountedVmoMapper> vmo_ref_;
   fuchsia::media::AudioRenderer::SendPacketCallback callback_;
   fuchsia::media::StreamPacket packet_;
 
