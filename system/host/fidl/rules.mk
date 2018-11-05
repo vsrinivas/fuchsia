@@ -33,7 +33,6 @@ MODULE_SRCS := \
 
 $(BUILDGEN_DIR)/lib/json_schema.cpp: $(LOCAL_DIR)/schema.json
 	@$(MKDIR)
-	$(call BUILDECHO, generating FIDL test example file)
 	$(NOECHO)rm -rf $@ && \
 	printf "\
 #include <string>\n\
