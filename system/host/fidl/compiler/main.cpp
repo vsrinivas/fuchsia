@@ -18,6 +18,7 @@
 #include <fidl/c_generator.h>
 #include <fidl/flat_ast.h>
 #include <fidl/json_generator.h>
+#include <fidl/json_schema.h>
 #include <fidl/lexer.h>
 #include <fidl/library_zx.h>
 #include <fidl/names.h>
@@ -53,8 +54,7 @@ void Usage() {
            "\n"
            " * `--json JSON_PATH`. If present, this flag instructs `fidlc` to output the\n"
            "   library's intermediate representation at the given path. The intermediate\n"
-           "   representation is JSON that conforms to a particular schema (located at\n"
-           "   https://fuchsia.googlesource.com/zircon/+/master/system/host/fidl/schema.json).\n"
+           "   representation is JSON that conforms to the schema available via --json-schema.\n"
            "   The intermediate representation is used as input to the various backends.\n"
            "\n"
            " * `--name LIBRARY_NAME`. If present, this flag instructs `fidlc` to validate\n"
@@ -68,6 +68,9 @@ void Usage() {
            "   libraries able to use declarations from preceding libraries but not vice versa.\n"
            "   Output is only generated for the final library, not for each of its dependencies.\n"
            "\n"
+           " * `--json-schema`. If present, this flag instructs `fidlc` to output the\n"
+           "   JSON schema of the intermediate representation.\n"
+           "\n"
            " * `--help`. Prints this help, and exit immediately.\n"
            "\n"
            "All of the arguments can also be provided via a response file, denoted as\n"
@@ -77,6 +80,11 @@ void Usage() {
            "\n"
            "See <https://fuchsia.googlesource.com/zircon/+/master/docs/fidl/compiler.md>\n"
            "for more information.\n";
+    std::cout.flush();
+}
+
+void PrintJsonSchema() {
+    std::cout << JsonSchema::schema() << "\n";
     std::cout.flush();
 }
 
@@ -282,6 +290,9 @@ int main(int argc, char* argv[]) {
         std::fstream output_file;
         if (behavior_argument == "--help") {
             Usage();
+            exit(0);
+        } else if (behavior_argument == "--json-schema") {
+            PrintJsonSchema();
             exit(0);
         } else if (behavior_argument == "--c-header") {
             outputs.emplace(Behavior::kCHeader, Open(args->Claim(), std::ios::out));
