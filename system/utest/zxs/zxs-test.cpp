@@ -105,6 +105,10 @@ static zx_status_t handle_message(async_dispatcher_t* dispatcher,
         // No reply needed.
         break;
     }
+    case ZXSIO_BIND: {
+        // No reply needed.
+        break;
+    }
     case ZXSIO_LISTEN: {
         int backlog = -1;
         memcpy(&backlog, msg->data, sizeof(backlog));
@@ -140,7 +144,6 @@ static zx_status_t handle_message(async_dispatcher_t* dispatcher,
     case ZXSIO_CLOSE:
     case ZXSIO_OPEN:
     case ZXSIO_IOCTL:
-    case ZXSIO_BIND:
     default:
         return ZX_ERR_STOP;
     }
@@ -249,6 +252,23 @@ static bool connect_test(void) {
     END_TEST;
 }
 
+static bool bind_test(void) {
+    BEGIN_TEST;
+
+    FakeNetstack fake;
+    if (!SetUp(&fake))
+        return false;
+    zxs_socket_t* socket = &fake.socket;
+
+    struct sockaddr addr;
+    memset(&addr, 0, sizeof(addr));
+    ASSERT_EQ(ZX_OK, zxs_bind(socket, &addr, sizeof(addr)));
+
+    TearDown(&fake);
+
+    END_TEST;
+}
+
 static bool getsockname_test(void) {
     BEGIN_TEST;
 
@@ -349,6 +369,7 @@ static bool listen_accept_test(void) {
 
 BEGIN_TEST_CASE(zxs_test)
 RUN_TEST(connect_test);
+RUN_TEST(bind_test);
 RUN_TEST(getsockname_test);
 RUN_TEST(getpeername_test);
 RUN_TEST(sockopts_test);

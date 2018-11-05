@@ -117,8 +117,8 @@ zx_status_t zxsio_txn(zx_handle_t socket, zxsio_msg_t* msg) {
     return msg->arg;
 }
 
-zx_status_t zxsio_op(zx_handle_t socket, uint32_t op, int64_t off,
-                     uint32_t maxreply, void* buffer, size_t length) {
+static zx_status_t zxsio_op(zx_handle_t socket, uint32_t op, int64_t off,
+                            uint32_t maxreply, void* buffer, size_t length) {
     if ((length > ZXSIO_PAYLOAD_SZ) || (maxreply > ZXSIO_PAYLOAD_SZ)) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -199,7 +199,8 @@ zx_status_t zxs_connect(const zxs_socket_t* socket, const struct sockaddr* addr,
 
 zx_status_t zxs_bind(const zxs_socket_t* socket, const struct sockaddr* addr,
                      size_t addr_length) {
-    return ZX_ERR_NOT_SUPPORTED;
+    return zxsio_op(socket->socket, ZXSIO_BIND, 0, 0,
+                    const_cast<struct sockaddr*>(addr), addr_length);
 }
 
 zx_status_t zxs_listen(const zxs_socket_t* socket, uint32_t backlog) {

@@ -493,12 +493,6 @@ static void zxsio_wait_end_dgram(fdio_t* io, zx_signals_t signals, uint32_t* _ev
     *_events = events;
 }
 
-static zx_status_t zxsio_misc(fdio_t* io, uint32_t op, int64_t off,
-                              uint32_t maxreply, void* ptr, size_t len) {
-    zxsio_t* sio = (zxsio_t*)io;
-    return zxsio_op(sio->s.socket, op, off, maxreply, ptr, len);
-}
-
 static zx_status_t zxsio_close(fdio_t* io) {
     zxsio_t* sio = (zxsio_t*)io;
     zxsio_msg_t msg;
@@ -581,7 +575,7 @@ static fdio_ops_t fdio_socket_stream_ops = {
     .write = zxsio_write_stream,
     .write_at = fdio_default_write_at,
     .seek = fdio_default_seek,
-    .misc = zxsio_misc,
+    .misc = fdio_default_misc,
     .close = zxsio_close,
     .open = fdio_default_open,
     .clone = zxsio_clone,
@@ -616,7 +610,7 @@ static fdio_ops_t fdio_socket_dgram_ops = {
     .write = zxsio_write_dgram,
     .write_at = fdio_default_write_at,
     .seek = fdio_default_seek,
-    .misc = zxsio_misc,
+    .misc = fdio_default_misc,
     .close = zxsio_close,
     .open = fdio_default_open,
     .clone = zxsio_clone,

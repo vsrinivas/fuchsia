@@ -22,7 +22,6 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/remoteio.h>
 #include <lib/fdio/util.h>
-#include <lib/zxs/protocol.h>
 #include <lib/zxs/zxs.h>
 
 #include "private.h"
@@ -146,15 +145,15 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
 
 __EXPORT
 int bind(int fd, const struct sockaddr* addr, socklen_t len) {
-    fdio_t* io = fd_to_io(fd);
+    const zxs_socket_t* socket;
+    fdio_t* io = fd_to_socket(fd, &socket);
     if (io == NULL) {
         return ERRNO(EBADF);
     }
 
-    zx_status_t r;
-    r = io->ops->misc(io, ZXSIO_BIND, 0, 0, (void*)addr, len);
+    zx_status_t status = zxs_bind(socket, addr, len);
     fdio_release(io);
-    return STATUS(r);
+    return STATUS(status);
 }
 
 __EXPORT
