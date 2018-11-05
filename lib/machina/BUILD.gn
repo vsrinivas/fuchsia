@@ -30,6 +30,8 @@ source_set("machina") {
     "virtio_input.h",
     "virtio_magma.cc",
     "virtio_magma.h",
+    "virtio_net.cc",
+    "virtio_net.h",
     "virtio_net_legacy.cc",
     "virtio_net_legacy.h",
     "virtio_pci.cc",

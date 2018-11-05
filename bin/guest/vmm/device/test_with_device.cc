@@ -8,10 +8,14 @@
 
 zx_status_t TestWithDevice::LaunchDevice(
     const std::string& url, size_t phys_mem_size,
-    fuchsia::guest::device::StartInfo* start_info) {
+    fuchsia::guest::device::StartInfo* start_info,
+    std::unique_ptr<component::testing::EnvironmentServices> env_services) {
+  if (!env_services) {
+    env_services = CreateServices();
+  }
   // Create test environment.
   enclosing_environment_ =
-      CreateNewEnclosingEnvironment(url + "-realm", CreateServices());
+      CreateNewEnclosingEnvironment(url + "-realm", std::move(env_services));
   bool started = WaitForEnclosingEnvToStart(enclosing_environment_.get());
   if (!started) {
     return ZX_ERR_TIMED_OUT;

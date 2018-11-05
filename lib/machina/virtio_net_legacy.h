@@ -21,18 +21,18 @@
 
 namespace machina {
 
-static constexpr uint16_t kVirtioNetNumQueues = 2;
-static_assert(kVirtioNetNumQueues % 2 == 0,
+static constexpr uint16_t kVirtioNetLegacyNumQueues = 2;
+static_assert(kVirtioNetLegacyNumQueues % 2 == 0,
               "There must be a queue for both RX and TX");
 
-static constexpr uint16_t kVirtioNetRxQueueIndex = 0;
-static constexpr uint16_t kVirtioNetTxQueueIndex = 1;
-static_assert(kVirtioNetRxQueueIndex != kVirtioNetTxQueueIndex,
+static constexpr uint16_t kVirtioNetLegacyRxQueueIndex = 0;
+static constexpr uint16_t kVirtioNetLegacyTxQueueIndex = 1;
+static_assert(kVirtioNetLegacyRxQueueIndex != kVirtioNetLegacyTxQueueIndex,
               "RX and TX queues must be distinct");
 
 // Implements a Virtio Ethernet device.
 class VirtioNetLegacy
-    : public VirtioInprocessDevice<VIRTIO_ID_NET, kVirtioNetNumQueues,
+    : public VirtioInprocessDevice<VIRTIO_ID_NET, kVirtioNetLegacyNumQueues,
                                    virtio_net_config_t> {
  public:
   VirtioNetLegacy(const PhysMem& phys_mem, async_dispatcher_t* dispatcher);
@@ -41,8 +41,8 @@ class VirtioNetLegacy
   // Starts the Virtio Ethernet device based on the path provided.
   zx_status_t Start(const char* path);
 
-  VirtioQueue* rx_queue() { return queue(kVirtioNetRxQueueIndex); }
-  VirtioQueue* tx_queue() { return queue(kVirtioNetTxQueueIndex); }
+  VirtioQueue* rx_queue() { return queue(kVirtioNetLegacyRxQueueIndex); }
+  VirtioQueue* tx_queue() { return queue(kVirtioNetLegacyTxQueueIndex); }
 
  protected:
   // Helper function to initialize the IO bufs structure that gets shared with
@@ -58,10 +58,10 @@ class VirtioNetLegacy
   zx::channel net_svc_;
 
   std::atomic<trace_async_id_t>* rx_trace_flow_id() {
-    return trace_flow_id(kVirtioNetRxQueueIndex);
+    return trace_flow_id(kVirtioNetLegacyRxQueueIndex);
   }
   std::atomic<trace_async_id_t>* tx_trace_flow_id() {
-    return trace_flow_id(kVirtioNetTxQueueIndex);
+    return trace_flow_id(kVirtioNetLegacyTxQueueIndex);
   }
 
   class IoBuffer {

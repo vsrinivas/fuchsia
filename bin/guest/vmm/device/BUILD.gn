@@ -171,6 +171,35 @@ package("virtio_gpu") {
   ]
 }
 
+executable("virtio_net_bin") {
+  visibility = [ ":*" ]
+
+  output_name = "virtio_net"
+  sources = [
+    "guest_ethernet.cc",
+    "guest_ethernet.h",
+    "virtio_net.cc",
+  ]
+  deps = [
+    ":device_lib",
+    "//garnet/public/fidl/fuchsia.netstack",
+    "//zircon/public/fidl/zircon-ethernet:zircon-ethernet",
+  ]
+}
+
+package("virtio_net") {
+  binary = "virtio_net"
+  deps = [
+    ":virtio_net_bin",
+  ]
+  meta = [
+    {
+      path = rebase_path("//garnet/bin/guest/vmm/meta/virtio_net.cmx")
+      dest = "virtio_net.cmx"
+    },
+  ]
+}
+
 executable("virtio_rng_bin") {
   visibility = [ ":*" ]
 
@@ -209,6 +238,7 @@ executable("device_tests") {
     "virtio_console_test.cc",
     "virtio_gpu_test.cc",
     "virtio_input_test.cc",
+    "virtio_net_test.cc",
     "virtio_queue_fake.cc",
     "virtio_queue_fake.h",
     "virtio_rng_test.cc",
@@ -217,10 +247,12 @@ executable("device_tests") {
   deps = [
     "//garnet/lib/machina/device",
     "//garnet/lib/machina/fidl:fuchsia.guest.device",
+    "//garnet/public/fidl/fuchsia.netstack",
     "//garnet/public/lib/component/cpp/testing",
     "//third_party/googletest:gtest",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
     "//zircon/public/lib/fzl",
+    "//zircon/public/lib/trace-provider",
     "//zircon/public/lib/virtio",
   ]
 

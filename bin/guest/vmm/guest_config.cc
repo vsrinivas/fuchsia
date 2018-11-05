@@ -29,6 +29,7 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "\t--dtb-overlay=[path]    Load a DTB overlay for a Linux kernel\n";
   std::cerr << "\t--host-memory           Directly map host memory into the guest\n";
   std::cerr << "\t--linux=[path]          Load a Linux kernel from 'path'\n";
+  std::cerr << "\t--legacy-net            Enable legacy virtio-net (uses host interface)\n";
   std::cerr << "\t--memory=[bytes]        Allocate 'bytes' of memory for the guest.\n";
   std::cerr << "\t                        The suffixes 'k', 'M', and 'G' are accepted\n";
   std::cerr << "\t--ramdisk=[path]        Load 'path' as an initial RAM disk\n";

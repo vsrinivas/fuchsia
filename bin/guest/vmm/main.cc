@@ -46,6 +46,7 @@
 #include "garnet/lib/machina/virtio_console.h"
 #include "garnet/lib/machina/virtio_gpu.h"
 #include "garnet/lib/machina/virtio_input.h"
+#include "garnet/lib/machina/virtio_net.h"
 #include "garnet/lib/machina/virtio_net_legacy.h"
 #include "garnet/lib/machina/virtio_rng.h"
 #include "garnet/lib/machina/virtio_vsock.h"
@@ -300,16 +301,31 @@ int main(int argc, char** argv) {
   }
 
   // Setup net device.
-  machina::VirtioNetLegacy net(guest.phys_mem(), guest.device_dispatcher());
+  machina::VirtioNetLegacy legacy_net(guest.phys_mem(),
+                                      guest.device_dispatcher());
+  machina::VirtioNet net(guest.phys_mem());
   if (cfg.virtio_net()) {
-    status = bus.Connect(net.pci_device());
-    if (status != ZX_OK) {
-      return status;
-    }
-    status = net.Start("/dev/class/ethernet/000");
-    if (status != ZX_OK) {
-      FXL_LOG(INFO) << "Could not open Ethernet device";
-      return status;
+    if (cfg.legacy_net()) {
+      status = bus.Connect(legacy_net.pci_device());
+      if (status != ZX_OK) {
+        return status;
+      }
+      status = legacy_net.Start("/dev/class/ethernet/000");
+      if (status != ZX_OK) {
+        FXL_LOG(INFO) << "Could not open Ethernet device";
+        return status;
+      }
+    } else {
+      status = bus.Connect(net.pci_device(), true);
+      if (status != ZX_OK) {
+        return status;
+      }
+      status =
+          net.Start(*guest.object(), launcher.get(), guest.device_dispatcher());
+      if (status != ZX_OK) {
+        FXL_LOG(INFO) << "Could not open Ethernet device";
+        return status;
+      }
     }
   }
 

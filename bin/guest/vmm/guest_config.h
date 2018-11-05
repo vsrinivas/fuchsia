@@ -37,6 +37,7 @@ class GuestConfig {
   size_t memory() const { return memory_; }
   size_t wl_memory() const { return wl_memory_; }
   bool host_memory() const { return host_memory_; }
+  bool legacy_net() const { return legacy_net_; }
   bool virtio_balloon() const { return virtio_balloon_; }
   bool virtio_console() const { return virtio_console_; }
   bool virtio_gpu() const { return virtio_gpu_; }
@@ -57,6 +58,7 @@ class GuestConfig {
   size_t memory_ = 1 << 30;
   size_t wl_memory_ = 1 << 30;
   bool host_memory_ = false;
+  bool legacy_net_ = true;
   bool virtio_balloon_ = true;
   bool virtio_console_ = true;
   bool virtio_gpu_ = true;
