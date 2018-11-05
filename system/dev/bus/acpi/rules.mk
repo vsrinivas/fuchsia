@@ -65,6 +65,9 @@ MODULE_LIBS := \
     system/ulib/driver \
     system/ulib/zircon \
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-acpi
+
 else # !ARCH=x86
 
 MODULE_NAME := bus-acpi

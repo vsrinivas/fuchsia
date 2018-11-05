@@ -23,9 +23,6 @@ cp -f $(BUILD_DIR)/ddktl/protocols/$@.formatted.h ../../../ulib/ddktl/include/dd
 cp -f $(BUILD_DIR)/ddktl/protocols/$@-internal.formatted.h ../../../ulib/ddktl/include/ddktl/protocol/$@-internal.h
 endef
 
-acpi:
-	$(run-banjo)
-
 amlogic-canvas:
 	$(run-banjo)
 
