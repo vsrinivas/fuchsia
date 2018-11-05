@@ -23,6 +23,7 @@
 #include "garnet/bin/zxdb/console/format_frame.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/format_value.h"
+#include "garnet/bin/zxdb/console/format_value_process_context_impl.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/string_util.h"
 #include "garnet/bin/zxdb/symbols/location.h"
@@ -103,7 +104,8 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   context->SetActiveTarget(cmd.target());
 
   // Schedule asynchronous output of the full frame description.
-  auto helper = fxl::MakeRefCounted<FormatValue>();
+  auto helper = fxl::MakeRefCounted<FormatValue>(
+      std::make_unique<FormatValueProcessContextImpl>(cmd.target()));
   FormatFrameLong(cmd.frame(), helper.get(), FormatValueOptions(),
                   context->GetActiveFrameIdForThread(cmd.thread()));
   helper->Complete(

@@ -13,6 +13,7 @@ static_library("symbols") {
   ]
 
   public = [
+    "arch.h",
     "array_type.h",
     "base_type.h",
     "code_block.h",
@@ -22,12 +23,14 @@ static_library("symbols") {
     "enumeration.h",
     "file_line.h",
     "function.h",
+    "function_type.h",
     "inherited_from.h",
     "input_location.h",
     "lazy_symbol.h",
     "line_details.h",
     "loaded_module_symbols.h",
     "location.h",
+    "member_ptr.h",
     "modified_type.h",
     "module_symbol_status.h",
     "module_symbols.h",
@@ -50,6 +53,7 @@ static_library("symbols") {
   ]
 
   sources = [
+    "arch.cc",
     "array_type.cc",
     "base_type.cc",
     "build_id_index.cc",
@@ -65,11 +69,13 @@ static_library("symbols") {
     "enumeration.cc",
     "file_line.cc",
     "function.cc",
+    "function_type.cc",
     "inherited_from.cc",
     "lazy_symbol.cc",
     "line_details.cc",
     "loaded_module_symbols.cc",
     "location.cc",
+    "member_ptr.cc",
     "modified_type.cc",
     "module_symbol_index.cc",
     "module_symbol_index.h",
@@ -153,6 +159,8 @@ source_set("tests") {
     "dwarf_symbol_factory_unittest.cc",
     "dwarf_test_util.cc",
     "dwarf_test_util.h",
+    "function_type_unittest.cc",
+    "member_ptr_unittest.cc",
     "mock_symbol_data_provider_unittest.cc",
     "modified_type_unittest.cc",
     "module_symbol_index_unittest.cc",

@@ -19,7 +19,9 @@ class Collection;
 class DataMember;
 class Enumeration;
 class Function;
+class FunctionType;
 class InheritedFrom;
+class MemberPtr;
 class ModifiedType;
 class Namespace;
 class Type;
@@ -231,7 +233,7 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   // This default implementation returns a reference to an empty string.
   // Derived classes will override as needed.
   //
-  // Most callers will want to use GetUserName().
+  // Most callers will want to use GetFullName().
   virtual const std::string& GetAssignedName() const;
 
   // Returns the fully-qualified user-visible name for this symbol. This will
@@ -248,7 +250,9 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   virtual const DataMember* AsDataMember() const;
   virtual const Enumeration* AsEnumeration() const;
   virtual const Function* AsFunction() const;
+  virtual const FunctionType* AsFunctionType() const;
   virtual const InheritedFrom* AsInheritedFrom() const;
+  virtual const MemberPtr* AsMemberPtr() const;
   virtual const ModifiedType* AsModifiedType() const;
   virtual const Namespace* AsNamespace() const;
   virtual const Collection* AsCollection() const;
@@ -279,9 +283,17 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   Function* AsFunction() {
     return const_cast<Function*>(const_cast<const Symbol*>(this)->AsFunction());
   }
+  FunctionType* AsFunctionType() {
+    return const_cast<FunctionType*>(
+        const_cast<const Symbol*>(this)->AsFunctionType());
+  }
   InheritedFrom* AsInheritedFrom() {
     return const_cast<InheritedFrom*>(
         const_cast<const Symbol*>(this)->AsInheritedFrom());
+  }
+  MemberPtr* AsMemberPtr() {
+    return const_cast<MemberPtr*>(
+        const_cast<const Symbol*>(this)->AsMemberPtr());
   }
   ModifiedType* AsModifiedType() {
     return const_cast<ModifiedType*>(

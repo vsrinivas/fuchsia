@@ -11,6 +11,7 @@
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/format_value.h"
+#include "garnet/bin/zxdb/console/format_value_process_context_impl.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/string_util.h"
 #include "garnet/bin/zxdb/symbols/function.h"
@@ -27,7 +28,8 @@ void ListCompletedFrames(Thread* thread, bool long_format) {
   Console* console = Console::get();
   int active_frame_id = console->context().GetActiveFrameIdForThread(thread);
 
-  auto helper = fxl::MakeRefCounted<FormatValue>();
+  auto helper = fxl::MakeRefCounted<FormatValue>(
+      std::make_unique<FormatValueProcessContextImpl>(thread->GetProcess()));
 
   // This doesn't use table output since the format of the stack frames is
   // usually so unpredictable.

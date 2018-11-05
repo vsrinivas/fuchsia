@@ -12,7 +12,8 @@
 
 namespace zxdb {
 
-// Represents a function (a "subprogram" in DWARF parlance).
+// Represents a function (a "subprogram" in DWARF parlance). This is different
+// than a "FunctionType" which is the type used to represent function pointers.
 //
 // Some functions in DWARF are "implementations" that have code ranges
 // associated with them, and some are "specifications" (akin to C forward
@@ -37,8 +38,6 @@ class Function final : public CodeBlock {
   const Function* AsFunction() const override;
   const std::string& GetAssignedName() const final { return assigned_name_; }
 
-  // TODO(brettw) this needs more stuff like DW_AT_frame_base.
-
   // Unmangled name. Does not include any class or namespace qualifications.
   // (see Symbol::GetAssignedName)
   void set_assigned_name(std::string n) { assigned_name_ = std::move(n); }
@@ -51,7 +50,8 @@ class Function final : public CodeBlock {
   const FileLine& decl_line() const { return decl_line_; }
   void set_decl_line(FileLine decl) { decl_line_ = std::move(decl); }
 
-  // The return value type. This should be some kind of Type object.
+  // The return value type. This should be some kind of Type object. Will be
+  // empty for void return types.
   const LazySymbol& return_type() const { return return_type_; }
   void set_return_type(const LazySymbol& rt) { return_type_ = rt; }
 

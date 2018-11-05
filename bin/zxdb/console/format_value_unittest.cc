@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/console/format_value.h"
 #include "garnet/bin/zxdb/common/test_with_loop.h"
+#include "garnet/bin/zxdb/console/mock_format_value_process_context.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/symbols/array_type.h"
@@ -11,9 +12,13 @@
 #include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
 #include "garnet/bin/zxdb/symbols/enumeration.h"
+#include "garnet/bin/zxdb/symbols/function.h"
+#include "garnet/bin/zxdb/symbols/function_type.h"
 #include "garnet/bin/zxdb/symbols/inherited_from.h"
+#include "garnet/bin/zxdb/symbols/member_ptr.h"
 #include "garnet/bin/zxdb/symbols/mock_symbol_data_provider.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
+#include "garnet/bin/zxdb/symbols/symbol_context.h"
 #include "garnet/bin/zxdb/symbols/type_test_support.h"
 #include "gtest/gtest.h"
 
@@ -40,6 +45,7 @@ class FormatValueTest : public TestWithLoop {
   FormatValueTest()
       : provider_(fxl::MakeRefCounted<MockSymbolDataProvider>()) {}
 
+  MockFormatValueProcessContext& process_context() { return process_context_; }
   MockSymbolDataProvider* provider() { return provider_.get(); }
 
   // Synchronously calls FormatExprValue, returning the result.
@@ -48,7 +54,10 @@ class FormatValueTest : public TestWithLoop {
     bool called = false;
     std::string output;
 
-    auto formatter = fxl::MakeRefCounted<FormatValue>();
+    // Makes a heap-allocated copy of the ProcessContext for the formatter to
+    // manage.
+    auto formatter = fxl::MakeRefCounted<FormatValue>(
+        std::make_unique<MockFormatValueProcessContext>(process_context_));
 
     formatter->AppendValue(provider_, value, opts);
     formatter->Complete([&called, &output](OutputBuffer out) {
@@ -67,6 +76,7 @@ class FormatValueTest : public TestWithLoop {
   }
 
  private:
+  MockFormatValueProcessContext process_context_;
   fxl::RefPtr<MockSymbolDataProvider> provider_;
 };
 
@@ -602,6 +612,103 @@ TEST_F(FormatValueTest, Enumeration) {
   EXPECT_EQ("(SignedEnum) -4",
             SyncFormatValue(ExprValue(signed_enum, {0xfc, 0xff, 0xff, 0xff}),
                             type_opts));
+}
+
+TEST_F(FormatValueTest, FunctionPtr) {
+  // This is a function type. There isn't a corresponding C/C++ type for a
+  // function type (without a pointer modifier) but we define it anyway in
+  // case it comes up (possibly another language).
+  auto func_type = fxl::MakeRefCounted<FunctionType>(
+      LazySymbol(), std::vector<LazySymbol>());
+
+  // This type is "void (*)()"
+  auto func_ptr_type = fxl::MakeRefCounted<ModifiedType>(
+      Symbol::kTagPointerType, LazySymbol(func_type));
+
+  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
+
+  auto function = fxl::MakeRefCounted<Function>();
+  function->set_assigned_name("MyFunc");
+
+  // Map the address to point to the function.
+  constexpr uint64_t kAddress = 0x1234;
+  process_context().AddResult(
+      kAddress, Location(kAddress, FileLine("file.cc", 21), 0, symbol_context,
+                         LazySymbol(function)));
+
+  // Function.
+  FormatValueOptions type_opts;
+  type_opts.always_show_types = true;
+  ExprValue null_func(func_type, {0, 0, 0, 0, 0, 0, 0, 0});
+  EXPECT_EQ("(void()) 0x0", SyncFormatValue(null_func, type_opts));
+
+  // Null function pointer.
+  FormatValueOptions opts;
+  ExprValue null_ptr(func_ptr_type, {0, 0, 0, 0, 0, 0, 0, 0});
+  EXPECT_EQ("0x0", SyncFormatValue(null_ptr, opts));
+
+  // Null function pointer with forced type info,
+  EXPECT_EQ("(void (*)()) 0x0", SyncFormatValue(null_ptr, type_opts));
+
+  // Function pointer to unknown memory is printed in hex by default.
+  EXPECT_EQ("0x5",
+            SyncFormatValue(ExprValue(func_ptr_type, {5, 0, 0, 0, 0, 0, 0, 0}),
+                            opts));
+
+  // Found symbol (matching kAddress) should be printed. The "()" looks weird
+  // here but this is what our function name outputs. GDB includes the () and
+  // includes the parameter types which can disambiguate overloaded functions,
+  // but also adds noise.
+  ExprValue good_ptr(func_ptr_type, {0x34, 0x12, 0, 0, 0, 0, 0, 0});
+  EXPECT_EQ("&MyFunc()", SyncFormatValue(good_ptr, opts));
+
+  // Force output as hex even when the function is matched.
+  FormatValueOptions hex_opts;
+  hex_opts.num_format = FormatValueOptions::NumFormat::kHex;
+  EXPECT_EQ("0x1234", SyncFormatValue(good_ptr, hex_opts));
+
+  // Member function pointer. The type naming of function pointers is tested by
+  // the MemberPtr class, and otherwise the code paths are the same, so here
+  // we only need to verify things are hooked up.
+  auto containing = fxl::MakeRefCounted<Collection>(Symbol::kTagClassType);
+  containing->set_assigned_name("MyClass");
+
+  auto member_func = fxl::MakeRefCounted<MemberPtr>(LazySymbol(containing),
+                                                    LazySymbol(func_type));
+  ExprValue null_member_func_ptr(member_func, {0, 0, 0, 0, 0, 0, 0, 0});
+  EXPECT_EQ("0x0", SyncFormatValue(null_member_func_ptr, opts));
+  EXPECT_EQ("(void (MyClass::*)()) 0x0",
+            SyncFormatValue(null_member_func_ptr, type_opts));
+
+  // Member function to a known symbol. This doesn't resolve to something that
+  // looks like a class member, but that's OK, wherever the address points to
+  // is what we print.
+  ExprValue good_member_func_ptr(member_func, {0x34, 0x12, 0, 0, 0, 0, 0, 0});
+  EXPECT_EQ("(void (MyClass::*)()) &MyFunc()",
+            SyncFormatValue(good_member_func_ptr, type_opts));
+}
+
+// This tests pointers to member data. Pointers to member functions were tested
+// by the FunctionPtr test.
+TEST_F(FormatValueTest, MemberPtr) {
+  auto containing = fxl::MakeRefCounted<Collection>(Symbol::kTagClassType);
+  containing->set_assigned_name("MyClass");
+
+  auto int32_type = GetInt32Type();
+  auto member_int32 = fxl::MakeRefCounted<MemberPtr>(LazySymbol(containing),
+                                                     LazySymbol(int32_type));
+
+  // Null pointer.
+  FormatValueOptions opts;
+  ExprValue null_member_ptr(member_int32, {0, 0, 0, 0, 0, 0, 0, 0});
+  EXPECT_EQ("(int32_t MyClass::*) 0x0", SyncFormatValue(null_member_ptr, opts));
+
+  // Regular pointer with types forced on.
+  FormatValueOptions type_opts;
+  type_opts.always_show_types = true;
+  ExprValue good_member_ptr(member_int32, {0x34, 0x12, 0, 0, 0, 0, 0, 0});
+  EXPECT_EQ("(int32_t MyClass::*) 0x1234",
+            SyncFormatValue(good_member_ptr, type_opts));
 }
 
 }  // namespace zxdb

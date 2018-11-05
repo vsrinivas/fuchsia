@@ -17,7 +17,11 @@
 #include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
 #include "garnet/bin/zxdb/symbols/enumeration.h"
+#include "garnet/bin/zxdb/symbols/function.h"
+#include "garnet/bin/zxdb/symbols/function_type.h"
 #include "garnet/bin/zxdb/symbols/inherited_from.h"
+#include "garnet/bin/zxdb/symbols/location.h"
+#include "garnet/bin/zxdb/symbols/member_ptr.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
 #include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
 #include "garnet/bin/zxdb/symbols/variable.h"
@@ -102,9 +106,17 @@ void AppendEscapedChar(uint8_t ch, std::string* dest) {
   }
 }
 
+// Returns true if the given type (assumed to be a pointer) is a pointer to
+// a function (but NOT a member function).
+bool IsPointerToFunction(const ModifiedType* pointer) {
+  FXL_DCHECK(pointer->tag() == Symbol::kTagPointerType);
+  return !!pointer->modified().Get()->AsFunctionType();
+}
+
 }  // namespace
 
-FormatValue::FormatValue() : weak_factory_(this) {}
+FormatValue::FormatValue(std::unique_ptr<ProcessContext> process_context)
+    : process_context_(std::move(process_context)), weak_factory_(this) {}
 FormatValue::~FormatValue() = default;
 
 void FormatValue::AppendValue(fxl::RefPtr<SymbolDataProvider> data_provider,
@@ -210,7 +222,11 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
     // Modified types (references were handled above).
     switch (modified_type->tag()) {
       case Symbol::kTagPointerType:
-        FormatPointer(value, options, &out);
+        // Function pointers need special handling.
+        if (IsPointerToFunction(modified_type))
+          FormatFunctionPointer(value, options, &out);
+        else
+          FormatPointer(value, options, &out);
         break;
       default:
         out.Append(Syntax::kComment,
@@ -219,6 +235,13 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
                        static_cast<unsigned>(modified_type->tag())));
         break;
     }
+  } else if (const MemberPtr* member_ptr = value.type()->AsMemberPtr()) {
+    // Pointers to class/struct members.
+    FormatMemberPtr(value, member_ptr, options, &out);
+  } else if (const FunctionType* func = value.type()->AsFunctionType()) {
+    // Functions. These don't have a direct C++ equivalent without being
+    // modified by a "pointer". Assume these act like pointers to functions.
+    FormatFunctionPointer(value, options, &out);
   } else if (const Enumeration* enum_type = value.type()->AsEnumeration()) {
     // Enumerations.
     FormatEnum(value, enum_type, options, &out);
@@ -680,6 +703,10 @@ void FormatValue::FormatChar(const ExprValue& value, OutputBuffer* out) {
 void FormatValue::FormatPointer(const ExprValue& value,
                                 const FormatValueOptions& options,
                                 OutputBuffer* out) {
+  // Don't make assumptions about the type of value.type() since it isn't
+  // necessarily a ModifiedType representing a pointer, but could be other
+  // things like a pointer to a member.
+
   // Always show types for pointers, so if type printing wasn't forced always
   // on (in which case it was added by our caller), we need to output it now.
   if (!options.always_show_types) {
@@ -742,6 +769,72 @@ void FormatValue::FormatReference(fxl::RefPtr<SymbolDataProvider> data_provider,
                                  output_key);
     }
   });
+}
+
+void FormatValue::FormatFunctionPointer(
+    const ExprValue& value,
+    const FormatValueOptions& options, OutputBuffer* out) {
+  // Unlike pointers, we don't print the type for function pointers. These
+  // are usually very long and not very informative. If explicitly requested,
+  // the types will be printed out by the calling function.
+
+  // Expect all pointers to be 8 bytes.
+  Err err = value.EnsureSizeIs(sizeof(uint64_t));
+  if (err.has_error()) {
+    out->Append(ErrToOutput(err));
+    return;
+  }
+
+  // Allow overrides for the number format. Normally one would expect to
+  // provide a hex override to get the address rather than the resolved
+  // function name.
+  if (options.num_format != FormatValueOptions::NumFormat::kDefault) {
+    FormatNumeric(value, options, out);
+    return;
+  }
+
+  uint64_t address = value.GetAs<uint64_t>();
+  if (address == 0) {
+    // Special-case null pointers. Don't bother trying to decode the address
+    // or show a type.
+    out->Append("0x0");
+    return;
+  }
+
+  // Try to symbolize the function being pointed to.
+  Location loc = process_context_->GetLocationForAddress(address);
+  std::string function_name;
+  if (loc.function()) {
+    if (const Function* func = loc.function().Get()->AsFunction())
+      function_name = func->GetFullName();
+  }
+  if (function_name.empty()) {
+    // No function name, just print out the address.
+    out->Append(fxl::StringPrintf("0x%" PRIx64, address));
+  } else {
+    out->Append("&" + function_name);
+  }
+}
+
+void FormatValue::FormatMemberPtr(const ExprValue& value,
+                                  const MemberPtr* type,
+                                  const FormatValueOptions& options,
+                                  OutputBuffer* out) {
+  const Type* container_type = type->container_type().Get()->AsType();
+  const Type* pointed_to_type = type->member_type().Get()->AsType();
+  if (!container_type || !pointed_to_type) {
+    out->Append("<missing symbol information>");
+    return;
+  }
+
+  if (const FunctionType* func = pointed_to_type->AsFunctionType()) {
+    // Pointers to member functions can be handled just like regular function
+    // pointers.
+    FormatFunctionPointer(value, options, out);
+  } else {
+    // Pointers to everything else can be handled like normal pointers.
+    FormatPointer(value, options, out);
+  }
 }
 
 FormatValue::OutputKey FormatValue::GetRootOutputKey() {

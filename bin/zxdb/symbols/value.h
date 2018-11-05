@@ -34,6 +34,7 @@ class Value : public Symbol {
 
  protected:
   explicit Value(int tag);
+  Value(int tag, const std::string& assigned_name, LazySymbol type);
   ~Value();
 
  private:

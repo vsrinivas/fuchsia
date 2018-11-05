@@ -6,6 +6,7 @@
 #include "garnet/bin/zxdb/client/mock_frame.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/console/format_value.h"
+#include "garnet/bin/zxdb/console/mock_format_value_process_context.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/symbols/location.h"
 #include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
@@ -21,7 +22,8 @@ std::string SyncFormatFrameLong(const Frame* frame,
   debug_ipc::PlatformMessageLoop loop;
   loop.Init();
 
-  auto helper = fxl::MakeRefCounted<FormatValue>();
+  auto helper = fxl::MakeRefCounted<FormatValue>(
+      std::make_unique<MockFormatValueProcessContext>());
   FormatFrameLong(frame, helper.get(), FormatValueOptions());
 
   std::string out_string;

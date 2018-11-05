@@ -26,9 +26,15 @@ struct Base2 {
 struct Struct : public Base1, private Base2 {
   int member_a;
   Struct* member_b;
+
+  int MyFunc(char p) { return 1; }
 };
 
 EXPORT Struct GetStruct() { return Struct(); }
+using StructMemberPtr = int (Struct::*)(char);
+StructMemberPtr GetStructMemberPtr() {
+  return &Struct::MyFunc;
+}
 
 EXPORT void PassRValueRef(int&& rval_ref) { }
 

@@ -4,6 +4,8 @@
 
 #include "garnet/bin/zxdb/symbols/modified_type.h"
 
+#include "garnet/bin/zxdb/symbols/function_type.h"
+
 namespace zxdb {
 
 namespace {
@@ -71,10 +73,19 @@ std::string ModifiedType::ComputeFullName() const {
     // No modified type means "void".
     modified_name = "void";
   } else {
-    if ((modified_type = modified().Get()->AsType()))
+    if (auto func_type = modified().Get()->AsFunctionType();
+        func_type && tag() == kTagPointerType) {
+      // Special-case pointer-to-funcion which has unusual syntax.
+      // TODO(DX-683) this doesn't handle pointers of references to
+      // pointers-to-member functions
+      return func_type->ComputeFullNameForFunctionPtr(std::string());
+    } else if ((modified_type = modified().Get()->AsType())) {
+      // All other types.
       modified_name = modified_type->GetFullName();
-    else
-      modified_name = kUnknown;  // Symbols likely corrupt.
+    } else {
+      // Symbols likely corrupt.
+      modified_name = kUnknown;
+    }
   }
 
   switch (tag()) {

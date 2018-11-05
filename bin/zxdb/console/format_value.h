@@ -21,6 +21,8 @@ class Collection;
 class Enumeration;
 class Err;
 class ExprValue;
+class Location;
+class MemberPtr;
 class OutputBuffer;
 class SymbolContext;
 class SymbolDataProvider;
@@ -70,6 +72,16 @@ struct FormatValueOptions {
 //   helper->Complete([helper](OutputBuffer out) { UseIt(out); });
 class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
  public:
+  // Abstruct interface for looking up information about a process.
+  class ProcessContext {
+   public:
+    virtual ~ProcessContext() = default;
+
+    // Given an address in the process, returns the (symbolized if possible)
+    // Location for that address.
+    virtual Location GetLocationForAddress(uint64_t address) const = 0;
+  };
+
   using Callback = std::function<void(OutputBuffer)>;
 
   // Construct with fxl::MakeRefCounted<FormatValue>().
@@ -141,7 +153,7 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   // keys (AppendToOutputKey, AsyncAppend, OutputKeyComplete).
   using OutputKey = intptr_t;
 
-  FormatValue();
+  explicit FormatValue(std::unique_ptr<ProcessContext> process_context);
   ~FormatValue();
 
   // Formats the given expression value to the output buffer. The variant that
@@ -212,6 +224,11 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   void FormatReference(fxl::RefPtr<SymbolDataProvider> data_provider,
                        const ExprValue& value,
                        const FormatValueOptions& options, OutputKey output_key);
+  void FormatFunctionPointer(const ExprValue& value,
+                             const FormatValueOptions& options,
+                             OutputBuffer* out);
+  void FormatMemberPtr(const ExprValue& value, const MemberPtr* type,
+                       const FormatValueOptions& options, OutputBuffer* out);
 
   OutputKey GetRootOutputKey();
 
@@ -240,6 +257,7 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   // destructive.
   void RecursiveCollectOutput(const OutputNode* node, OutputBuffer* out);
 
+  std::unique_ptr<ProcessContext> process_context_;
   Callback complete_callback_;
   std::vector<OutputBuffer> buffers_;
 

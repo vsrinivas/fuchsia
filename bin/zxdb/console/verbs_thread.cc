@@ -21,6 +21,7 @@
 #include "garnet/bin/zxdb/console/format_register.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/format_value.h"
+#include "garnet/bin/zxdb/console/format_value_process_context_impl.h"
 #include "garnet/bin/zxdb/console/input_location_parser.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/verbs.h"
@@ -299,7 +300,8 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
   }
 
   FormatValueOptions options = GetFormatValueOptions(cmd);
-  auto helper = fxl::MakeRefCounted<FormatValue>();
+  auto helper = fxl::MakeRefCounted<FormatValue>(
+      std::make_unique<FormatValueProcessContextImpl>(cmd.target()));
   for (const auto& pair : vars) {
     helper->AppendVariableWithName(location.symbol_context(),
                                    cmd.frame()->GetSymbolDataProvider(),
@@ -563,21 +565,23 @@ Err DoPrint(ConsoleContext* context, const Command& cmd) {
 
   FormatValueOptions options = GetFormatValueOptions(cmd);
   auto data_provider = cmd.frame()->GetSymbolDataProvider();
+  auto formatter = fxl::MakeRefCounted<FormatValue>(
+      std::make_unique<FormatValueProcessContextImpl>(cmd.target()));
 
-  EvalExpression(expr, cmd.frame()->GetExprEvalContext(),
-                 [options, data_provider](const Err& err, ExprValue value) {
-                   if (err.has_error()) {
-                     Console::get()->Output(err);
-                   } else {
-                     auto formatter = fxl::MakeRefCounted<FormatValue>();
-                     formatter->AppendValue(data_provider, value, options);
-                     // Bind the formatter to keep it in scope across this
-                     // async call.
-                     formatter->Complete([formatter](OutputBuffer out) {
-                       Console::get()->Output(std::move(out));
-                     });
-                   }
-                 });
+  EvalExpression(
+      expr, cmd.frame()->GetExprEvalContext(),
+      [formatter, options, data_provider](const Err& err, ExprValue value) {
+        if (err.has_error()) {
+          Console::get()->Output(err);
+        } else {
+          formatter->AppendValue(data_provider, value, options);
+          // Bind the formatter to keep it in scope across this
+          // async call.
+          formatter->Complete([formatter](OutputBuffer out) {
+            Console::get()->Output(std::move(out));
+          });
+        }
+      });
 
   return Err();
 }
@@ -773,7 +777,7 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
     if (cmd.args().size() > 1u) {
       return Err("Only one register regular expression filter expected.");
     }
-    regex_filter= cmd.args().front();
+    regex_filter = cmd.args().front();
   }
 
   // General purpose are the default.

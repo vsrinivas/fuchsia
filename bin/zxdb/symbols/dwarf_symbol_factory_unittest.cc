@@ -11,6 +11,7 @@
 #include "garnet/bin/zxdb/symbols/dwarf_test_util.h"
 #include "garnet/bin/zxdb/symbols/inherited_from.h"
 #include "garnet/bin/zxdb/symbols/function.h"
+#include "garnet/bin/zxdb/symbols/function_type.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
 #include "garnet/bin/zxdb/symbols/module_symbols_impl.h"
 #include "garnet/bin/zxdb/symbols/symbol.h"
@@ -24,6 +25,7 @@ namespace {
 
 const char kDoStructCallName[] = "DoStructCall";
 const char kGetIntPtrName[] = "GetIntPtr";
+const char kGetStructMemberPtrName[] = "GetStructMemberPtr";
 const char kPassRValueRefName[] = "PassRValueRef";
 
 // Returns the function symbol with the given name. The name is assumed to
@@ -60,7 +62,7 @@ fxl::RefPtr<const Function> GetFunctionWithName(ModuleSymbolsImpl& module,
 
 }  // namespace
 
-TEST(DwarfSymbolFactory, FunctionType) {
+TEST(DwarfSymbolFactory, Function) {
   ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
@@ -86,6 +88,28 @@ TEST(DwarfSymbolFactory, FunctionType) {
   EXPECT_EQ(10, function->decl_line().line());
 
   // Note: return type tested by ModifiedBaseType.
+}
+
+TEST(DwarfSymbolFactory, PtrToMemberFunction) {
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  Err err = module.Load();
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  // Find the GetIntPtr function.
+  fxl::RefPtr<const Function> get_function =
+      GetFunctionWithName(module, kGetStructMemberPtrName);
+  ASSERT_TRUE(get_function);
+
+  // Get the return type, this is a typedef (because functions can't return
+  // pointers to member functions).
+  auto return_typedef = get_function->return_type().Get()->AsModifiedType();
+  ASSERT_TRUE(return_typedef);
+
+  // The typedef references the member pointer. The type name encapsulates all
+  // return values and parameters so this tests everything at once.
+  const Symbol* member = return_typedef->modified().Get();
+  EXPECT_EQ("int (my_ns::Struct::*)(my_ns::Struct*, char)",
+            member->GetFullName());
 }
 
 TEST(DwarfSymbolFactory, ModifiedBaseType) {

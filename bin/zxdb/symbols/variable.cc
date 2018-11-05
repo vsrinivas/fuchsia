@@ -7,6 +7,10 @@
 namespace zxdb {
 
 Variable::Variable(int tag) : Value(tag) {}
+Variable::Variable(int tag, const std::string& assigned_name, LazySymbol type,
+                   VariableLocation location)
+    : Value(tag, assigned_name, std::move(type)),
+      location_(std::move(location)) {}
 Variable::~Variable() = default;
 
 const Variable* Variable::AsVariable() const { return this; }

@@ -14,7 +14,9 @@
 #include "garnet/bin/zxdb/symbols/dwarf_die_decoder.h"
 #include "garnet/bin/zxdb/symbols/enumeration.h"
 #include "garnet/bin/zxdb/symbols/function.h"
+#include "garnet/bin/zxdb/symbols/function_type.h"
 #include "garnet/bin/zxdb/symbols/inherited_from.h"
+#include "garnet/bin/zxdb/symbols/member_ptr.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
 #include "garnet/bin/zxdb/symbols/module_symbols_impl.h"
 #include "garnet/bin/zxdb/symbols/namespace.h"
@@ -191,6 +193,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeSymbol(
     case llvm::dwarf::DW_TAG_variable:
       symbol = DecodeVariable(die);
       break;
+    case llvm::dwarf::DW_TAG_subroutine_type:
+      symbol = DecodeFunctionType(die);
+      break;
     case llvm::dwarf::DW_TAG_inheritance:
       symbol = DecodeInheritedFrom(die);
       break;
@@ -202,6 +207,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeSymbol(
       break;
     case llvm::dwarf::DW_TAG_namespace:
       symbol = DecodeNamespace(die);
+      break;
+    case llvm::dwarf::DW_TAG_ptr_to_member_type:
+      symbol = DecodeMemberPtr(die);
       break;
     case llvm::dwarf::DW_TAG_subprogram:
       symbol = DecodeFunction(die);
@@ -248,8 +256,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
   llvm::Optional<const char*> linkage_name;
   decoder.AddCString(llvm::dwarf::DW_AT_linkage_name, &linkage_name);
 
-  llvm::DWARFDie type;
-  decoder.AddReference(llvm::dwarf::DW_AT_type, &type);
+  llvm::DWARFDie return_type;
+  decoder.AddReference(llvm::dwarf::DW_AT_type, &return_type);
 
   llvm::Optional<std::string> decl_file;
   decoder.AddFile(llvm::dwarf::DW_AT_decl_file, &decl_file);
@@ -293,8 +301,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
     function->set_linkage_name(*linkage_name);
   function->set_code_ranges(GetCodeRanges(die));
   function->set_decl_line(MakeFileLine(decl_file, decl_line));
-  if (type)
-    function->set_return_type(MakeLazy(type));
+  if (return_type)
+    function->set_return_type(MakeLazy(return_type));
   function->set_frame_base(std::move(frame_base));
   if (object_ptr)
     function->set_object_pointer(MakeLazy(object_ptr));
@@ -566,6 +574,39 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeEnum(const llvm::DWARFDie& die) {
                                           std::move(map));
 }
 
+fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunctionType(
+    const llvm::DWARFDie& die) {
+  DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
+
+  llvm::DWARFDie return_type;
+  decoder.AddReference(llvm::dwarf::DW_AT_type, &return_type);
+
+  if (!decoder.Decode(die))
+    return fxl::MakeRefCounted<Symbol>();
+
+  // Handle sub-DIEs (this only has parameters).
+  std::vector<LazySymbol> parameters;
+  for (const llvm::DWARFDie& child : die) {
+    switch (child.getTag()) {
+      case llvm::dwarf::DW_TAG_formal_parameter:
+        parameters.push_back(MakeLazy(child));
+        break;
+      default:
+        break;  // Skip everything else.
+    }
+  }
+
+  LazySymbol lazy_return_type;
+  if (return_type)
+    lazy_return_type = MakeLazy(return_type);
+
+  auto function = fxl::MakeRefCounted<FunctionType>(
+      lazy_return_type, std::move(parameters));
+  if (llvm::DWARFDie parent = die.getParent())
+    function->set_parent(MakeLazy(parent));
+  return function;
+}
+
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeInheritedFrom(
     const llvm::DWARFDie& die) {
   DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
@@ -621,6 +662,25 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeLexicalBlock(
   block->set_variables(std::move(variables));
 
   return block;
+}
+
+fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeMemberPtr(
+    const llvm::DWARFDie& die) {
+  DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
+
+  llvm::DWARFDie container_type;
+  decoder.AddReference(llvm::dwarf::DW_AT_containing_type, &container_type);
+  llvm::DWARFDie type;
+  decoder.AddReference(llvm::dwarf::DW_AT_type, &type);
+
+  if (!decoder.Decode(die) || !container_type || !type)
+    return fxl::MakeRefCounted<Symbol>();
+
+  auto member_ptr = fxl::MakeRefCounted<MemberPtr>(
+      MakeLazy(container_type), MakeLazy(type));
+  if (llvm::DWARFDie parent = die.getParent())
+    member_ptr->set_parent(MakeLazy(parent));
+  return member_ptr;
 }
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeModifiedType(
