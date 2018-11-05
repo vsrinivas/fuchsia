@@ -549,6 +549,9 @@ private:
     // Reserves space for a block in memory. Does not update disk.
     zx_status_t ReserveBlocks(size_t nblocks, size_t* blkno_out);
 
+    // Log information about blobfs' allocation when we run out of space.
+    void LogAllocationFailure(size_t num_blocks) const;
+
     // Unreserves space for blocks in memory. Does not update disk.
     void UnreserveBlocks(size_t nblocks, size_t blkno_start);
 

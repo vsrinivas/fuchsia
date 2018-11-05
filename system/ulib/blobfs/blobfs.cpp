@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -778,11 +779,13 @@ zx_status_t Blobfs::ReserveBlocks(size_t num_blocks, size_t* block_index_out) {
     zx_status_t status;
     if ((status = FindBlocks(0, num_blocks, block_index_out) != ZX_OK)) {
         // If we have run out of blocks, attempt to add block slices via FVM.
+        // The new 'hint' is the first location we could try to find blocks
+        // after merely extending the allocation maps.
         size_t hint = block_map_.size() - fbl::min(num_blocks, block_map_.size());
-        if (AddBlocks(num_blocks) != ZX_OK) {
-            return ZX_ERR_NO_SPACE;
-        }
-        if ((status = FindBlocks(hint, num_blocks, block_index_out)) != ZX_OK) {
+
+        if ((status = AddBlocks(num_blocks) != ZX_OK) ||
+            (status = FindBlocks(hint, num_blocks, block_index_out)) != ZX_OK) {
+            LogAllocationFailure(num_blocks);
             return ZX_ERR_NO_SPACE;
         }
     }
@@ -790,6 +793,27 @@ zx_status_t Blobfs::ReserveBlocks(size_t num_blocks, size_t* block_index_out) {
     status = reserved_blocks_.Set(*block_index_out, *block_index_out + num_blocks);
     ZX_DEBUG_ASSERT(status == ZX_OK);
     return ZX_OK;
+}
+
+void Blobfs::LogAllocationFailure(size_t num_blocks) const {
+    const uint64_t requested_bytes = num_blocks * info_.block_size;
+    const uint64_t total_bytes = info_.data_block_count * info_.block_size;
+    const uint64_t persisted_used_bytes = info_.alloc_block_count * info_.block_size;
+    const uint64_t pending_used_bytes = reserved_blocks_.num_bits() * info_.block_size;
+    const uint64_t used_bytes = persisted_used_bytes + pending_used_bytes;
+    ZX_ASSERT_MSG(used_bytes <= total_bytes,
+                  "blobfs using more bytes than available: %" PRIu64" > %" PRIu64"\n",
+                  used_bytes, total_bytes);
+    const uint64_t free_bytes = total_bytes - used_bytes;
+
+    fprintf(stderr, "Blobfs has run out of space on persistent storage.\n");
+    fprintf(stderr, "    Could not allocate %" PRIu64 " bytes\n", requested_bytes);
+    fprintf(stderr, "    Total data bytes  : %" PRIu64 "\n", total_bytes);
+    fprintf(stderr, "    Used data bytes   : %" PRIu64 "\n", persisted_used_bytes);
+    fprintf(stderr, "    Preallocated bytes: %" PRIu64 "\n", pending_used_bytes);
+    fprintf(stderr, "    Free data bytes   : %" PRIu64 "\n", free_bytes);
+    fprintf(stderr, "    This allocation failure is the result of %s.\n",
+            requested_bytes <= free_bytes ? "fragmentation" : "over-allocation");
 }
 
 void Blobfs::UnreserveBlocks(size_t num_blocks, size_t block_index) {
