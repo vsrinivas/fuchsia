@@ -234,6 +234,9 @@ void LowEnergyConnector::OnCreateConnectionComplete(Status status,
                                                     ConnectionPtr link) {
   ZX_DEBUG_ASSERT(pending_request_);
 
+  bt_log(TRACE, "hci-le", "connection complete - status: %s",
+         status.ToString().c_str());
+
   request_timeout_task_.Cancel();
 
   auto status_cb = std::move(pending_request_->status_callback);

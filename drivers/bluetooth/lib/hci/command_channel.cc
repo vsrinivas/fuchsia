@@ -65,6 +65,10 @@ CommandChannel::TransactionData::~TransactionData() {
   auto* header = event->mutable_view()->mutable_header();
   auto* params =
       event->mutable_view()->mutable_payload<CommandStatusEventParams>();
+
+  // TODO(armansito): Instead of lying about receiving a Command Status event,
+  // report this error in a different way. This can be highly misleading during
+  // debugging.
   header->event_code = kCommandStatusEventCode;
   header->parameter_total_size = sizeof(CommandStatusEventParams);
   params->status = kUnspecifiedError;
@@ -203,6 +207,9 @@ CommandChannel::TransactionId CommandChannel::SendCommand(
   ZX_DEBUG_ASSERT(command_packet);
 
   if (IsAsync(complete_event_code)) {
+    ZX_DEBUG_ASSERT_MSG(!IsLECommand(command_packet->opcode()),
+                        "Asynchronous handling of LE commands not supported");
+
     std::lock_guard<std::mutex> lock(event_handler_mutex_);
     auto it = event_code_handlers_.find(complete_event_code);
     // Cannot send an asynchronous command if there's an external event handler
@@ -299,6 +306,10 @@ void CommandChannel::RemoveEventHandlerInternal(EventHandlerId id) {
     auto* event_handlers = iter->second.is_le_meta_subevent
                                ? &subevent_code_handlers_
                                : &event_code_handlers_;
+
+    bt_log(SPEW, "hci", "removing handler for %sevent code %#.2x",
+           (iter->second.is_le_meta_subevent ? "LE " : ""),
+           iter->second.event_code);
 
     auto range = event_handlers->equal_range(iter->second.event_code);
     for (auto it = range.first; it != range.second; ++it) {
@@ -418,8 +429,8 @@ CommandChannel::EventHandlerId CommandChannel::NewEventHandler(
   data.dispatcher = dispatcher;
   data.is_le_meta_subevent = is_le_meta;
 
-  bt_log(SPEW, "hci", "adding event handler %zu for event code %#.2x", id,
-         event_code);
+  bt_log(SPEW, "hci", "adding event handler %zu for %sevent code %#.2x", id,
+         (is_le_meta ? "LE sub" : ""), event_code);
   ZX_DEBUG_ASSERT(event_handler_id_map_.find(id) ==
                   event_handler_id_map_.end());
   event_handler_id_map_[id] = std::move(data);
@@ -435,7 +446,11 @@ void CommandChannel::UpdateTransaction(std::unique_ptr<EventPacket> event) {
 
   OpCode matching_opcode;
 
-  bool async_failed = false;
+  // The HCI Command Status event with an error status might indicate that an
+  // async command failed. We use this to unregister async command handlers
+  // below.
+  bool unregister_async_handler = false;
+
   if (event->event_code() == kCommandCompleteEventCode) {
     const auto& params = event->view().payload<CommandCompleteEventParams>();
     matching_opcode = le16toh(params.command_opcode);
@@ -444,11 +459,11 @@ void CommandChannel::UpdateTransaction(std::unique_ptr<EventPacket> event) {
     const auto& params = event->view().payload<CommandStatusEventParams>();
     matching_opcode = le16toh(params.command_opcode);
     allowed_command_packets_ = params.num_hci_command_packets;
-    async_failed = params.status != StatusCode::kSuccess;
+    unregister_async_handler = params.status != StatusCode::kSuccess;
   }
   bt_log(DEBUG, "hci", "allowed packets update: %zu", allowed_command_packets_);
 
-  if (matching_opcode == 0) {
+  if (matching_opcode == kNoOp) {
     return;
   }
 
@@ -472,15 +487,18 @@ void CommandChannel::UpdateTransaction(std::unique_ptr<EventPacket> event) {
     return;
   }
 
+  ZX_DEBUG_ASSERT(!IsLECommand(pending->opcode()));
+
   // TODO(NET-770): Do not allow asynchronous commands to finish with Command
   // Complete.
   if (event_code == kCommandCompleteEventCode) {
     bt_log(WARN, "hci", "async command received CommandComplete");
-    async_failed = true;
+    unregister_async_handler = true;
   }
 
   // If an asyncronous command failed, then remove it's event handler.
-  if (async_failed) {
+  if (unregister_async_handler) {
+    bt_log(DEBUG, "hci", "async command failed; removing its handler");
     RemoveEventHandlerInternal(pending->handler_id());
     async_cmd_handlers_.erase(pending->complete_event_code());
   }
@@ -494,7 +512,9 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
   {
     std::lock_guard<std::mutex> lock(event_handler_mutex_);
 
+    bool is_le_event = false;
     if (event->event_code() == kLEMetaEventCode) {
+      is_le_event = true;
       event_code = event->view().payload<LEMetaEventParams>().subevent_code;
       event_handlers = &subevent_code_handlers_;
     } else {
@@ -503,8 +523,9 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
     }
 
     auto range = event_handlers->equal_range(event_code);
-    if (range.first == event_handlers->end()) {
-      bt_log(TRACE, "hci", "event %#.2x received with no handler", event_code);
+    if (range.first == range.second) {
+      bt_log(TRACE, "hci", "%sevent %#.2x received with no handler",
+             (is_le_event ? "LE " : ""), event_code);
       return;
     }
 
@@ -525,14 +546,23 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
       dispatcher = handler.dispatcher;
 
       ++iter;  // Advance so we don't point to an invalid iterator.
-      auto expired_it = async_cmd_handlers_.find(event_code);
-      if (expired_it != async_cmd_handlers_.end()) {
-        RemoveEventHandlerInternal(event_id);
-        async_cmd_handlers_.erase(expired_it);
+
+      // Async command handling is not supported for LE events.
+      if (!is_le_event) {
+        auto complete_it = async_cmd_handlers_.find(event_code);
+        if (complete_it != async_cmd_handlers_.end()) {
+          bt_log(DEBUG, "hci",
+                 "removing completed async handler (id %zu, event code: %#.2x)",
+                 event_id, event_code);
+          RemoveEventHandlerInternal(event_id);
+          async_cmd_handlers_.erase(complete_it);
+        }
       }
+
       pending_callbacks.emplace_back(std::move(callback), dispatcher);
     }
   }
+
   // Process queue so callbacks can't add a handler if another queued command
   // finishes on the same event.
   TrySendQueuedCommands();

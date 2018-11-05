@@ -143,12 +143,10 @@ TEST_F(HCI_CommandChannelTest, SingleAsynchronousRequest) {
     }
   };
 
-  constexpr size_t kPayloadSize = sizeof(::btlib::hci::InquiryCommandParams);
-  auto packet =
-      ::btlib::hci::CommandPacket::New(::btlib::hci::kInquiry, kPayloadSize);
-  auto params = packet->mutable_view()
-                    ->mutable_payload<::btlib::hci::InquiryCommandParams>();
-  params->lap = ::btlib::hci::kGIAC;
+  constexpr size_t kPayloadSize = sizeof(InquiryCommandParams);
+  auto packet = CommandPacket::New(kInquiry, kPayloadSize);
+  auto params = packet->mutable_view()->mutable_payload<InquiryCommandParams>();
+  params->lap = kGIAC;
   params->inquiry_length = 1;
   params->num_responses = 0;
   id = cmd_channel()->SendCommand(std::move(packet),
@@ -836,6 +834,93 @@ TEST_F(HCI_CommandChannelTest, EventHandlerRestrictions) {
                                        [](const auto&) {},
                                        dispatcher());
   EXPECT_EQ(0u, id0);
+}
+
+// Tests that an asynchronous command with a completion event code does not
+// remove an existing handler for colliding LE meta subevent code.
+TEST_F(HCI_CommandChannelTest,
+       AsyncEventHandlersAndLeMetaEventHandlersDoNotInterfere) {
+  // Set up expectations for the asynchronous command and its corresponding
+  // command status event.
+  // clang-format off
+  auto cmd = common::CreateStaticByteBuffer(
+      LowerBits(kInquiry), UpperBits(kInquiry),  // HCI_Inquiry opcode
+      0x00                                       // parameter_total_size
+  );
+  auto cmd_status = common::CreateStaticByteBuffer(
+      kCommandStatusEventCode,
+      0x04,  // parameter_total_size (4 byte payload)
+      StatusCode::kSuccess, 0x01, // status, num_hci_command_packets (1 can be sent)
+      LowerBits(kInquiry), UpperBits(kInquiry)  // HCI_Inquiry opcode
+  );
+  // clang-format on
+
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(cmd, {&cmd_status}));
+  StartTestDevice();
+
+  constexpr EventCode kTestEventCode = 0x01;
+
+  // Add LE event handler for kTestEventCode
+  int le_event_count = 0;
+  auto le_event_cb = [&](const EventPacket& event) {
+    EXPECT_EQ(kLEMetaEventCode, event.event_code());
+    EXPECT_EQ(kTestEventCode,
+              event.view().payload<LEMetaEventParams>().subevent_code);
+    le_event_count++;
+  };
+  cmd_channel()->AddLEMetaEventHandler(kLEConnectionCompleteSubeventCode,
+                                       std::move(le_event_cb), dispatcher());
+
+  // Initiate the async transaction with kTestEventCode as its completion code
+  // (we use kInquiry as a dummy opcode).
+  int async_cmd_cb_count = 0;
+  auto async_cmd_cb = [&](auto id, const EventPacket& event) {
+    if (async_cmd_cb_count == 0) {
+      EXPECT_EQ(kCommandStatusEventCode, event.event_code());
+    } else {
+      EXPECT_EQ(kTestEventCode, event.event_code());
+    }
+    async_cmd_cb_count++;
+  };
+  auto packet = CommandPacket::New(kInquiry, 0);
+  cmd_channel()->SendCommand(std::move(packet), dispatcher(),
+                             std::move(async_cmd_cb), kTestEventCode);
+
+  // clang-format off
+  auto event_bytes = common::CreateStaticByteBuffer(
+      kTestEventCode,
+      0x01,  // parameter_total_size
+      StatusCode::kSuccess);
+  auto le_event_bytes = common::CreateStaticByteBuffer(
+      kLEMetaEventCode,
+      0x01,  // parameter_total_size
+      kTestEventCode);
+  // clang-format on
+
+  // Send a spurious LE event before processing the Command Status event. This
+  // should get routed to the correct event handler.
+  test_device()->SendCommandChannelPacket(le_event_bytes);
+
+  // Process the async command expectation.
+  RunLoopUntilIdle();
+
+  // End the asynchronous transaction. This should NOT unregister the LE event
+  // handler.
+  test_device()->SendCommandChannelPacket(event_bytes);
+
+  // Send more LE events. These should get routed to the LE event handler.
+  test_device()->SendCommandChannelPacket(le_event_bytes);
+  test_device()->SendCommandChannelPacket(le_event_bytes);
+
+  RunLoopUntilIdle();
+
+  // Should have received 3 LE events.
+  EXPECT_EQ(3, le_event_count);
+
+  // The async command handler should have been called twice: once for Command
+  // Status and once for the completion event.
+  EXPECT_EQ(2, async_cmd_cb_count);
 }
 
 TEST_F(HCI_CommandChannelTest, TransportClosedCallback) {

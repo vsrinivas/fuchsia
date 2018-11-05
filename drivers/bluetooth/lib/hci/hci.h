@@ -1875,6 +1875,11 @@ constexpr OpCode LEControllerCommandOpCode(const uint16_t ocf) {
   return DefineOpCode(kLEControllerCommandsOGF, ocf);
 }
 
+// Returns true if the given |opcode| corresponds to a LE controller command.
+inline bool IsLECommand(OpCode opcode) {
+  return GetOGF(opcode) == kLEControllerCommandsOGF;
+}
+
 // =====================================
 // LE Set Event Mask Command (v4.0) (LE)
 constexpr OpCode kLESetEventMask = LEControllerCommandOpCode(0x0001);
