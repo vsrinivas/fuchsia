@@ -445,7 +445,7 @@ bool Fuzzer::CheckProcess(zx_handle_t task, bool kill) const {
     if (meta) {
         target = meta + strlen("#meta/");
     }
-    if (strcmp(name, target) != 0) {
+    if (strncmp(name, target, sizeof(name) - 1) != 0) {
         return false;
     }
     if (kill) {
