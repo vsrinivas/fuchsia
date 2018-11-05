@@ -140,11 +140,10 @@ zx_status_t CreateDeauthRequest(MlmeMsg<wlan_mlme::DeauthenticateRequest>* out_m
 }
 
 zx_status_t CreateAuthResponse(MlmeMsg<wlan_mlme::AuthenticateResponse>* out_msg,
+                               common::MacAddr client_addr,
                                wlan_mlme::AuthenticateResultCodes result_code) {
-    common::MacAddr client(kClientAddress);
-
     auto resp = wlan_mlme::AuthenticateResponse::New();
-    std::memcpy(resp->peer_sta_address.mutable_data(), client.byte, common::kMacAddrLen);
+    std::memcpy(resp->peer_sta_address.mutable_data(), client_addr.byte, common::kMacAddrLen);
     resp->result_code = result_code;
 
     return WriteServiceMessage(resp.get(), fuchsia_wlan_mlme_MLMEAuthenticateRespOrdinal, out_msg);
@@ -161,23 +160,22 @@ zx_status_t CreateAssocRequest(MlmeMsg<wlan_mlme::AssociateRequest>* out_msg) {
 }
 
 zx_status_t CreateAssocResponse(MlmeMsg<wlan_mlme::AssociateResponse>* out_msg,
-                                wlan_mlme::AssociateResultCodes result_code) {
-    common::MacAddr client(kClientAddress);
-
+                                common::MacAddr client_addr,
+                                wlan_mlme::AssociateResultCodes result_code, uint16_t aid) {
     auto resp = wlan_mlme::AssociateResponse::New();
-    std::memcpy(resp->peer_sta_address.mutable_data(), client.byte, common::kMacAddrLen);
+    std::memcpy(resp->peer_sta_address.mutable_data(), client_addr.byte, common::kMacAddrLen);
     resp->result_code = result_code;
-    resp->association_id = kAid;
+    resp->association_id = aid;
 
     return WriteServiceMessage(resp.get(), fuchsia_wlan_mlme_MLMEAssociateRespOrdinal, out_msg);
 }
 
-zx_status_t CreateEapolRequest(MlmeMsg<wlan_mlme::EapolRequest>* out_msg) {
+zx_status_t CreateEapolRequest(MlmeMsg<wlan_mlme::EapolRequest>* out_msg,
+                               common::MacAddr client_addr) {
     common::MacAddr bssid(kBssid1);
-    common::MacAddr client(kClientAddress);
 
     auto req = wlan_mlme::EapolRequest::New();
-    std::memcpy(req->dst_addr.mutable_data(), client.byte, common::kMacAddrLen);
+    std::memcpy(req->dst_addr.mutable_data(), client_addr.byte, common::kMacAddrLen);
     std::memcpy(req->src_addr.mutable_data(), bssid.byte, common::kMacAddrLen);
     std::vector<uint8_t> eapol_pdu(kEapolPdu, kEapolPdu + sizeof(kEapolPdu));
     req->data.reset(std::move(eapol_pdu));
@@ -186,12 +184,13 @@ zx_status_t CreateEapolRequest(MlmeMsg<wlan_mlme::EapolRequest>* out_msg) {
 }
 
 zx_status_t CreateSetKeysRequest(MlmeMsg<wlan_mlme::SetKeysRequest>* out_msg,
-                                 std::vector<uint8_t> key_data, wlan_mlme::KeyType key_type) {
+                                 common::MacAddr client_addr, std::vector<uint8_t> key_data,
+                                 wlan_mlme::KeyType key_type) {
     wlan_mlme::SetKeyDescriptor key;
     key.key.reset(key_data);
     key.key_id = 1;
     key.key_type = key_type;
-    std::memcpy(key.address.mutable_data(), kClientAddress, sizeof(kClientAddress));
+    std::memcpy(key.address.mutable_data(), client_addr.byte, sizeof(client_addr));
     std::memcpy(key.cipher_suite_oui.mutable_data(), kCipherOui, sizeof(kCipherOui));
     key.cipher_suite_type = kCipherSuiteType;
 
@@ -284,9 +283,8 @@ zx_status_t CreateProbeRequest(fbl::unique_ptr<Packet>* out_packet) {
     return ZX_OK;
 }
 
-zx_status_t CreateAuthReqFrame(fbl::unique_ptr<Packet>* out_packet) {
+zx_status_t CreateAuthReqFrame(fbl::unique_ptr<Packet>* out_packet, common::MacAddr client_addr) {
     common::MacAddr bssid(kBssid1);
-    common::MacAddr client(kClientAddress);
     constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + Authentication::max_len();
     auto packet = GetWlanPacket(max_frame_len);
     if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
@@ -296,7 +294,7 @@ zx_status_t CreateAuthReqFrame(fbl::unique_ptr<Packet>* out_packet) {
     mgmt_hdr->fc.set_type(FrameType::kManagement);
     mgmt_hdr->fc.set_subtype(ManagementSubtype::kAuthentication);
     mgmt_hdr->addr1 = bssid;
-    mgmt_hdr->addr2 = client;
+    mgmt_hdr->addr2 = client_addr;
     mgmt_hdr->addr3 = bssid;
 
     auto auth = w.Write<Authentication>();
@@ -345,9 +343,8 @@ zx_status_t CreateAuthRespFrame(fbl::unique_ptr<Packet>* out_packet) {
     return ZX_OK;
 }
 
-zx_status_t CreateDeauthFrame(fbl::unique_ptr<Packet>* out_packet) {
+zx_status_t CreateDeauthFrame(fbl::unique_ptr<Packet>* out_packet, common::MacAddr client_addr) {
     common::MacAddr bssid(kBssid1);
-    common::MacAddr client(kClientAddress);
 
     constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + Deauthentication::max_len();
     auto packet = GetWlanPacket(max_frame_len);
@@ -358,7 +355,7 @@ zx_status_t CreateDeauthFrame(fbl::unique_ptr<Packet>* out_packet) {
     mgmt_hdr->fc.set_type(FrameType::kManagement);
     mgmt_hdr->fc.set_subtype(ManagementSubtype::kDeauthentication);
     mgmt_hdr->addr1 = bssid;
-    mgmt_hdr->addr2 = client;
+    mgmt_hdr->addr2 = client_addr;
     mgmt_hdr->addr3 = bssid;
 
     w.Write<Deauthentication>()->reason_code = reason_code::ReasonCode::kLeavingNetworkDeauth;
@@ -373,10 +370,9 @@ zx_status_t CreateDeauthFrame(fbl::unique_ptr<Packet>* out_packet) {
     return ZX_OK;
 }
 
-zx_status_t CreateAssocReqFrame(fbl::unique_ptr<Packet>* out_packet, Span<const uint8_t> ssid,
-                                bool rsn) {
+zx_status_t CreateAssocReqFrame(fbl::unique_ptr<Packet>* out_packet, common::MacAddr client_addr,
+                                Span<const uint8_t> ssid, bool rsn) {
     common::MacAddr bssid(kBssid1);
-    common::MacAddr client(kClientAddress);
 
     // arbitrarily large reserved len; will shrink down later
     constexpr size_t ie_len = 1024;
@@ -390,7 +386,7 @@ zx_status_t CreateAssocReqFrame(fbl::unique_ptr<Packet>* out_packet, Span<const 
     mgmt_hdr->fc.set_type(FrameType::kManagement);
     mgmt_hdr->fc.set_subtype(ManagementSubtype::kAssociationRequest);
     mgmt_hdr->addr1 = bssid;
-    mgmt_hdr->addr2 = client;
+    mgmt_hdr->addr2 = client_addr;
     mgmt_hdr->addr3 = bssid;
 
     auto assoc = w.Write<AssociationRequest>();
@@ -448,9 +444,8 @@ zx_status_t CreateAssocRespFrame(fbl::unique_ptr<Packet>* out_packet) {
     return ZX_OK;
 }
 
-zx_status_t CreateDisassocFrame(fbl::unique_ptr<Packet>* out_packet) {
+zx_status_t CreateDisassocFrame(fbl::unique_ptr<Packet>* out_packet, common::MacAddr client_addr) {
     common::MacAddr bssid(kBssid1);
-    common::MacAddr client(kClientAddress);
 
     constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + Disassociation::max_len();
     auto packet = GetWlanPacket(max_frame_len);
@@ -461,7 +456,7 @@ zx_status_t CreateDisassocFrame(fbl::unique_ptr<Packet>* out_packet) {
     mgmt_hdr->fc.set_type(FrameType::kManagement);
     mgmt_hdr->fc.set_subtype(ManagementSubtype::kDisassociation);
     mgmt_hdr->addr1 = bssid;
-    mgmt_hdr->addr2 = client;
+    mgmt_hdr->addr2 = client_addr;
     mgmt_hdr->addr3 = bssid;
 
     w.Write<Disassociation>()->reason_code = reason_code::ReasonCode::kLeavingNetworkDisassoc;

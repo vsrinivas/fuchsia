@@ -63,24 +63,30 @@ zx_status_t CreateStartRequest(MlmeMsg<::fuchsia::wlan::mlme::StartRequest>*, bo
 zx_status_t CreateJoinRequest(MlmeMsg<::fuchsia::wlan::mlme::JoinRequest>*);
 zx_status_t CreateAuthRequest(MlmeMsg<::fuchsia::wlan::mlme::AuthenticateRequest>*);
 zx_status_t CreateAuthResponse(MlmeMsg<::fuchsia::wlan::mlme::AuthenticateResponse>*,
+                               common::MacAddr client_addr,
                                ::fuchsia::wlan::mlme::AuthenticateResultCodes result_code);
 zx_status_t CreateDeauthRequest(MlmeMsg<::fuchsia::wlan::mlme::DeauthenticateRequest>*,
                                 common::MacAddr, ::fuchsia::wlan::mlme::ReasonCode reason_code);
 zx_status_t CreateAssocRequest(MlmeMsg<::fuchsia::wlan::mlme::AssociateRequest>* out_msg);
 zx_status_t CreateAssocResponse(MlmeMsg<::fuchsia::wlan::mlme::AssociateResponse>*,
-                                ::fuchsia::wlan::mlme::AssociateResultCodes result_code);
-zx_status_t CreateEapolRequest(MlmeMsg<::fuchsia::wlan::mlme::EapolRequest>*);
+                                common::MacAddr client_addr,
+                                ::fuchsia::wlan::mlme::AssociateResultCodes result_code,
+                                uint16_t aid);
+zx_status_t CreateEapolRequest(MlmeMsg<::fuchsia::wlan::mlme::EapolRequest>*,
+                               common::MacAddr client_addr);
 zx_status_t CreateSetKeysRequest(MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest>*,
-                                 std::vector<uint8_t> key_data, ::fuchsia::wlan::mlme::KeyType);
-zx_status_t CreateAuthReqFrame(fbl::unique_ptr<Packet>*);
+                                 common::MacAddr client_addr, std::vector<uint8_t> key_data,
+                                 ::fuchsia::wlan::mlme::KeyType);
+zx_status_t CreateAuthReqFrame(fbl::unique_ptr<Packet>*, common::MacAddr client_addr);
 zx_status_t CreateAuthRespFrame(fbl::unique_ptr<Packet>*);
-zx_status_t CreateDeauthFrame(fbl::unique_ptr<Packet>*);
+zx_status_t CreateDeauthFrame(fbl::unique_ptr<Packet>*, common::MacAddr client_addr);
 zx_status_t CreateBeaconFrame(fbl::unique_ptr<Packet>*);
 zx_status_t CreateBeaconFrameWithBssid(fbl::unique_ptr<Packet>*, common::MacAddr);
 zx_status_t CreateProbeRequest(fbl::unique_ptr<Packet>*);
-zx_status_t CreateAssocReqFrame(fbl::unique_ptr<Packet>*, Span<const uint8_t> ssid, bool rsn);
+zx_status_t CreateAssocReqFrame(fbl::unique_ptr<Packet>*, common::MacAddr client_addr,
+                                Span<const uint8_t> ssid, bool rsn);
 zx_status_t CreateAssocRespFrame(fbl::unique_ptr<Packet>*);
-zx_status_t CreateDisassocFrame(fbl::unique_ptr<Packet>*);
+zx_status_t CreateDisassocFrame(fbl::unique_ptr<Packet>*, common::MacAddr client_addr);
 DataFrame<LlcHeader> CreateDataFrame(const uint8_t* payload, size_t len);
 DataFrame<> CreateNullDataFrame();
 EthFrame CreateEthFrame(const uint8_t* payload, size_t len);
