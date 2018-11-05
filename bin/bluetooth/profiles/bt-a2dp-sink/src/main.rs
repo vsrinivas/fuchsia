@@ -228,12 +228,6 @@ async fn init() -> Result<(), Error> {
                 fuchsia_async::spawn(discover_remote_streams(peer.clone()));
                 remotes.write().insert(device_id);
             }
-            ProfileEvent::OnDisconnected {
-                device_id,
-                service_id,
-            } => {
-                fx_log_info!(tag: "a2dp-sink", "Device {} disconnected from {}", device_id, service_id);
-            }
         }
     }
     Ok(())

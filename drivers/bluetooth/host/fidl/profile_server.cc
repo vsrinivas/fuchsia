@@ -340,11 +340,6 @@ void ProfileServer::AddService(fidlbredr::ServiceDefinition definition,
   callback(fidl_helpers::StatusToFidl(btlib::sdp::Status()), handle);
 }
 
-void ProfileServer::DisconnectClient(::fidl::StringPtr remote_device,
-                                     uint64_t service_id) {
-  // TODO: implement
-}
-
 void ProfileServer::RemoveService(uint64_t service_id) {
   auto it = registered_.find(service_id);
   if (it != registered_.end()) {

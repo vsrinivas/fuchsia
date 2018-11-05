@@ -30,8 +30,6 @@ class ProfileServer
   void AddService(fuchsia::bluetooth::bredr::ServiceDefinition definition,
                   fuchsia::bluetooth::bredr::SecurityLevel sec_level,
                   bool devices, AddServiceCallback callback) override;
-  void DisconnectClient(::fidl::StringPtr device_id,
-                        uint64_t service_id) override;
   void RemoveService(uint64_t service_id) override;
 
   // Callback for incoming connections

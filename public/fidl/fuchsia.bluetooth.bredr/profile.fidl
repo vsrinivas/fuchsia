@@ -30,12 +30,8 @@ interface Profile {
                 bool devices) ->
        (fuchsia.bluetooth.Status status, uint64 service_id);
 
-  // Disconnects all channels associated with |device_id| from a service
-  // specified by |service_id|.
-  2: DisconnectClient(string device_id, uint64 service_id);
-
   // Removes a previously-registered service, disconnecting all clients.
-  3: RemoveService(uint64 service_id);
+  2: RemoveService(uint64 service_id);
 
   // Produced when a protocol channel is connected for this profile.
   // |channel| contains the channel connected to, and information about the
@@ -44,8 +40,4 @@ interface Profile {
   // L2CAP socket if the services protocol descriptor includes it.
   101: -> OnConnected(string device_id, uint64 service_id,
                       handle<socket> channel, ProtocolDescriptor protocol);
-
-  // Produced when a remote device disconnects or is disconnected from a added
-  // service.
-  102: -> OnDisconnected(string device_id, uint64 service_id);
 };
