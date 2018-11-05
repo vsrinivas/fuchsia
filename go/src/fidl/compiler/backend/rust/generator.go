@@ -5,20 +5,40 @@
 package rust
 
 import (
-	"fidl/compiler/backend/rust/ir"
-	"fidl/compiler/backend/rust/templates"
-	"fidl/compiler/backend/types"
+	"io"
 	"os"
 	"path/filepath"
 	"text/template"
+
+	"fidl/compiler/backend/rust/ir"
+	"fidl/compiler/backend/rust/templates"
+	"fidl/compiler/backend/types"
 )
 
-type FidlGenerator struct{}
+type FidlGenerator struct {
+	tmpls *template.Template
+}
 
-func writeFile(outputFilename string,
-	templateName string,
-	tmpls *template.Template,
-	tree ir.Root) error {
+func NewFidlGenerator() *FidlGenerator {
+	tmpls := template.New("RustTemplates")
+	template.Must(tmpls.Parse(templates.SourceFile))
+	template.Must(tmpls.Parse(templates.Const))
+	template.Must(tmpls.Parse(templates.Enum))
+	template.Must(tmpls.Parse(templates.Interface))
+	template.Must(tmpls.Parse(templates.Struct))
+	template.Must(tmpls.Parse(templates.Union))
+	return &FidlGenerator{
+		tmpls: tmpls,
+	}
+}
+
+func (gen *FidlGenerator) GenerateImpl(wr io.Writer, tree ir.Root) error {
+	return gen.tmpls.ExecuteTemplate(wr, "GenerateSourceFile", tree)
+}
+
+func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error {
+	tree := ir.Compile(fidl)
+	outputFilename := config.OutputBase + ".rs"
 	if err := os.MkdirAll(filepath.Dir(outputFilename), os.ModePerm); err != nil {
 		return err
 	}
@@ -27,21 +47,5 @@ func writeFile(outputFilename string,
 		return err
 	}
 	defer f.Close()
-	return tmpls.ExecuteTemplate(f, templateName, tree)
-}
-
-func (_ FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error {
-	tree := ir.Compile(fidl)
-
-	srcPath := config.OutputBase + ".rs"
-
-	tmpls := template.New("RustTemplates")
-	template.Must(tmpls.Parse(templates.SourceFile))
-	template.Must(tmpls.Parse(templates.Const))
-	template.Must(tmpls.Parse(templates.Enum))
-	template.Must(tmpls.Parse(templates.Interface))
-	template.Must(tmpls.Parse(templates.Struct))
-	template.Must(tmpls.Parse(templates.Union))
-
-	return writeFile(srcPath, "GenerateSourceFile", tmpls, tree)
+	return gen.GenerateImpl(f, tree)
 }

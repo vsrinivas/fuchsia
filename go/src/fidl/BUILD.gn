@@ -55,3 +55,9 @@ go_test("fidlgen_golang_ir_test") {
 
   deps = [ ":fidl_lib" ]
 }
+
+go_test("fidlgen_rust_test") {
+  gopackage = "fidl/compiler/backend/rust"
+
+  deps = [ ":fidl_lib" ]
+}

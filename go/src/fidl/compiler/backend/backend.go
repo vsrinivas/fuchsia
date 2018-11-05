@@ -24,7 +24,7 @@ type GenerateFidl interface {
 var generators = map[string]GenerateFidl{
 	"cpp":       cpp.NewFidlGenerator(),
 	"go":        golang.NewFidlGenerator(),
-	"rust":      rust.FidlGenerator{},
+	"rust":      rust.NewFidlGenerator(),
 	"syzkaller": syzkaller.FidlGenerator{},
 }
 
