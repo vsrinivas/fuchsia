@@ -8,12 +8,18 @@
 #include <fbl/unique_fd.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
+#include <gmock/gmock.h>
 #include <lib/fdio/util.h>
 #include <lib/fxl/logging.h>
+#include <lib/fxl/strings/string_printf.h>
 #include <lib/zx/socket.h>
 #include <zircon/syscalls/hypervisor.h>
 
 #include "guest_test.h"
+
+using ::testing::HasSubstr;
+
+static constexpr char kVirtioRngUtilCmx[] = "meta/virtio_rng_test_util.cmx";
 
 class ZirconGuestTest : public GuestTest<ZirconGuestTest> {
  public:
@@ -23,12 +29,28 @@ class ZirconGuestTest : public GuestTest<ZirconGuestTest> {
     launch_info->args.push_back("--cpus=1");
     return true;
   }
+
+  static bool SetUpGuest() {
+    if (WaitForPkgfs() != ZX_OK) {
+      ADD_FAILURE() << "Failed to wait for pkgfs";
+      return false;
+    }
+    return true;
+  }
 };
 
 TEST_F(ZirconGuestTest, LaunchGuest) {
   std::string result;
   EXPECT_EQ(Execute("echo \"test\"", &result), ZX_OK);
   EXPECT_EQ(result, "test\n");
+}
+
+TEST_F(ZirconGuestTest, VirtioRng) {
+  std::string result;
+  std::string cmd =
+      fxl::StringPrintf("run %s#%s", kTestUtilsUrl, kVirtioRngUtilCmx);
+  EXPECT_EQ(Execute(cmd, &result), ZX_OK);
+  EXPECT_THAT(result, HasSubstr("PASS"));
 }
 
 class ZirconMultiprocessorGuestTest

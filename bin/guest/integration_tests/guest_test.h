@@ -9,6 +9,8 @@
 
 static constexpr char kZirconGuestUrl[] = "zircon_guest";
 static constexpr char kLinuxGuestUrl[] = "linux_guest";
+static constexpr char kTestUtilsUrl[] =
+    "fuchsia-pkg://fuchsia.com/guest_integration_tests_utils";
 
 template <class T>
 class GuestTest : public ::testing::Test {

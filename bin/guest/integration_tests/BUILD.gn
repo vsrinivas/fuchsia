@@ -61,7 +61,8 @@ test_package("guest_integration_tests") {
 
 package("guest_integration_tests_utils") {
   deps = [
-    "virtio_block_test_util:virtio_block_test_util",
+    "virtio_block_test_util",
+    "virtio_rng_test_util",
   ]
 
   meta = [
@@ -70,11 +71,18 @@ package("guest_integration_tests_utils") {
           rebase_path("virtio_block_test_util/meta/virtio_block_test_util.cmx")
       dest = "virtio_block_test_util.cmx"
     },
+    {
+      path = rebase_path("virtio_rng_test_util/meta/virtio_rng_test_util.cmx")
+      dest = "virtio_rng_test_util.cmx"
+    },
   ]
 
   binaries = [
     {
       name = "virtio_block_test_util"
+    },
+    {
+      name = "virtio_rng_test_util"
     },
   ]
 }

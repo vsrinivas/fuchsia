@@ -21,10 +21,7 @@ using namespace qcow_test_data;
 using ::machina::kBlockSectorSize;
 using ::testing::HasSubstr;
 
-static constexpr char kTestUtilsUrl[] =
-    "fuchsia-pkg://fuchsia.com/guest_integration_tests_utils";
 static constexpr char kVirtioBlockUtilCmx[] = "meta/virtio_block_test_util.cmx";
-
 static constexpr uint32_t kVirtioBlockCount = 32;
 static constexpr uint32_t kVirtioQcowBlockCount = 4 * 1024 * 1024 * 2;
 static constexpr uint32_t kVirtioTestStep = 8;
