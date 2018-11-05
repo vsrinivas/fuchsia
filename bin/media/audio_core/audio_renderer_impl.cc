@@ -46,7 +46,7 @@ AudioRendererImpl::~AudioRendererImpl() {
 
 void AudioRendererImpl::Shutdown() {
   // If we have already been shutdown, then we are just waiting for the service
-  // to destroy us.  Run some FXL_DCHECK sanity checks and get out.
+  // to destroy us. Run some FXL_DCHECK sanity checks and get out.
   if (is_shutdown_) {
     FXL_DCHECK(!audio_renderer_binding_.is_bound());
     return;
@@ -92,15 +92,15 @@ void AudioRendererImpl::SetThrottleOutput(
 void AudioRendererImpl::RecomputeMinClockLeadTime() {
   int64_t cur_lead_time = 0;
 
-  ForEachDestLink([throttle_ptr = throttle_output_link_.get(),
-                   &cur_lead_time](AudioLinkPacketSource* link) {
-    if (link->GetDest()->is_output() && link != throttle_ptr) {
-      const auto output = static_cast<AudioOutput*>(link->GetDest().get());
+  ForEachDestLink(
+      [throttle_ptr = throttle_output_link_.get(), &cur_lead_time](auto& link) {
+        if (link->GetDest()->is_output() && link.get() != throttle_ptr) {
+          const auto output = static_cast<AudioOutput*>(link->GetDest().get());
 
-      cur_lead_time =
-          std::max(cur_lead_time, output->min_clock_lead_time_nsec());
-    }
-  });
+          cur_lead_time =
+              std::max(cur_lead_time, output->min_clock_lead_time_nsec());
+        }
+      });
 
   if (min_clock_lead_nsec_ != cur_lead_time) {
     min_clock_lead_nsec_ = cur_lead_time;
@@ -108,17 +108,20 @@ void AudioRendererImpl::RecomputeMinClockLeadTime() {
   }
 }
 
-// IsOperating is true any time we have any packets in flight.  Most
+// IsOperating is true any time we have any packets in flight. Most
 // configuration functions cannot be called any time we are operational.
 bool AudioRendererImpl::IsOperating() {
   if (throttle_output_link_ && !throttle_output_link_->pending_queue_empty()) {
     return true;
   }
 
-  return ForAnyDestLink([](AudioLinkPacketSource* link) {
+  return ForAnyDestLink([](auto& link) {
+    // TODO(mpuryear): pull the below downcast into a function
+    FXL_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
+    auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
     // If pending queue empty: this link is NOT operating; ask other links.
     // Else: Link IS operating; final answer is YES; no need to ask others.
-    return (!link->pending_queue_empty());
+    return (!packet_link->pending_queue_empty());
   });
 }
 
@@ -139,7 +142,7 @@ bool AudioRendererImpl::ValidateConfig() {
 
   // Compute the PTS continuity threshold expressed in fractional input frames.
   if (pts_continuity_threshold_set_) {
-    // The user has not explicitly set a continuity threshold.  Default to 1/2
+    // The user has not explicitly set a continuity threshold. Default to 1/2
     // of a PTS tick expressed in fractional input frames, rounded up.
     pts_continuity_threshold_frac_frame_ =
         (frac_frames_per_pts_tick_.Scale(1) + 1) >> 1;
@@ -212,8 +215,8 @@ void AudioRendererImpl::SetPcmStreamType(
       (format.channels > fuchsia::media::MAX_PCM_CHANNEL_COUNT)) {
     FXL_LOG(ERROR)
         << "Invalid channel count (" << format.channels
-        << ") in fuchsia::media::AudioRendererImpl::SetPcmStreamType.  Must "
-           "be on the range ["
+        << ") in fuchsia::media::AudioRendererImpl::SetPcmStreamType. Must "
+           "be in the range ["
         << fuchsia::media::MIN_PCM_CHANNEL_COUNT << ", "
         << fuchsia::media::MAX_PCM_CHANNEL_COUNT << "]";
     return;
@@ -223,15 +226,15 @@ void AudioRendererImpl::SetPcmStreamType(
       (format.frames_per_second > fuchsia::media::MAX_PCM_FRAMES_PER_SECOND)) {
     FXL_LOG(ERROR)
         << "Invalid frame rate (" << format.frames_per_second
-        << ") in fuchsia::media::AudioRendererImpl::SetPcmStreamType.  Must "
-           "be on the range ["
+        << ") in fuchsia::media::AudioRendererImpl::SetPcmStreamType. Must "
+           "be in the range ["
         << fuchsia::media::MIN_PCM_FRAMES_PER_SECOND << ", "
         << fuchsia::media::MAX_PCM_FRAMES_PER_SECOND << "]";
     return;
   }
 
-  // Everything checks out.  Discard any existing links we hold (including
-  // throttle output).  New links need to be created with our new format.
+  // Everything checks out. Discard any existing links we hold (including
+  // throttle output). New links need to be created with our new format.
   Unlink();
   UnlinkThrottle();
 
@@ -244,24 +247,24 @@ void AudioRendererImpl::SetPcmStreamType(
   cfg.frames_per_second = format.frames_per_second;
   format_info_ = AudioRendererFormatInfo::Create(std::move(cfg));
 
-  // Have the audio output manager initialize our set of outputs.  Note; there
-  // is currently no need for a lock here.  Methods called from our user-facing
+  // Have the audio output manager initialize our set of outputs. Note; there
+  // is currently no need for a lock here. Methods called from our user-facing
   // interfaces are serialized by nature of the fidl framework, and none of the
-  // output manager's threads should ever need to manipulate the set.  Cleanup
+  // output manager's threads should ever need to manipulate the set. Cleanup
   // of outputs which have gone away is currently handled in a lazy fashion when
   // the audio out fails to promote its weak reference during an operation
   // involving its outputs.
   //
   // TODO(johngro): someday, we will need to deal with recalculating properties
   // which depend on a audio out's current set of outputs (for example, the
-  // minimum latency).  This will probably be done using a dirty flag in the
+  // minimum latency). This will probably be done using a dirty flag in the
   // audio out implementations, and scheduling a job to recalculate the
   // properties for the dirty audio outs and notify the users as appropriate.
 
   // If we cannot promote our own weak pointer, something is seriously wrong.
   owner_->GetDeviceManager().SelectOutputsForAudioRenderer(this);
 
-  // Things went well, cancel the cleanup hook.  If our config had been
+  // Things went well, cancel the cleanup hook. If our config had been
   // validated previously, it will have to be revalidated as we move into the
   // operational phase of our life.
   config_validated_ = false;
@@ -299,7 +302,7 @@ void AudioRendererImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
     return;
   }
 
-  // Things went well, cancel the cleanup hook.  If our config had been
+  // Things went well, cancel the cleanup hook. If our config had been
   // validated previously, it will have to be revalidated as we move into the
   // operational phase of our life.
   config_validated_ = false;
@@ -330,7 +333,7 @@ void AudioRendererImpl::SetPtsUnits(uint32_t tick_per_second_numerator,
   pts_ticks_per_second_ =
       TimelineRate(tick_per_second_numerator, tick_per_second_denominator);
 
-  // Things went well, cancel the cleanup hook.  If our config had been
+  // Things went well, cancel the cleanup hook. If our config had been
   // validated previously, it will have to be revalidated as we move into the
   // operational phase of our life.
   config_validated_ = false;
@@ -355,7 +358,7 @@ void AudioRendererImpl::SetPtsContinuityThreshold(float threshold_seconds) {
   pts_continuity_threshold_ = threshold_seconds;
   pts_continuity_threshold_set_ = true;
 
-  // Things went well, cancel the cleanup hook.  If our config had been
+  // Things went well, cancel the cleanup hook. If our config had been
   // validated previously, it will have to be revalidated as we move into the
   // operational phase of our life.
   config_validated_ = false;
@@ -379,7 +382,7 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
   auto cleanup = fit::defer([this]() { Shutdown(); });
 
   // It is an error to attempt to send a packet before we have established at
-  // least a minimum valid configuration.  IOW - the format must have been
+  // least a minimum valid configuration. IOW - the format must have been
   // configured, and we must have an established payload buffer.
   if (!ValidateConfig()) {
     FXL_LOG(ERROR) << "Failed to validate configuration during SendPacket";
@@ -387,7 +390,7 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
   }
 
   // Start by making sure that the region we are receiving is made from an
-  // integral number of audio frames.  Count the total number of frames in the
+  // integral number of audio frames. Count the total number of frames in the
   // process.
   uint32_t frame_size = format_info()->bytes_per_frame();
   FXL_DCHECK(frame_size != 0);
@@ -416,12 +419,12 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
   uint64_t pb_size = payload_buffer_->size();
   if ((start >= payload_buffer_->size()) || (end > payload_buffer_->size())) {
     FXL_LOG(ERROR) << "Bad packet range [" << start << ", " << end
-                   << ").  Payload buffer size is " << pb_size;
+                   << "). Payload buffer size is " << pb_size;
     return;
   }
 
   // Compute the PTS values for this packet applying our interpolation and
-  // continuity thresholds as we go.  Start by checking to see if this our PTS
+  // continuity thresholds as we go. Start by checking to see if this our PTS
   // to frames transformation needs to be computed (this should be needed after
   // startup, and after each flush operation).
   if (!pts_to_frac_frames_valid_) {
@@ -429,13 +432,13 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
         (packet.pts == fuchsia::media::NO_TIMESTAMP) ? 0 : packet.pts);
   }
 
-  // Now compute the starting PTS expressed in fractional input frames.  If no
+  // Now compute the starting PTS expressed in fractional input frames. If no
   // explicit PTS was provided, interpolate using the next expected PTS.
   int64_t start_pts;
   if (packet.pts == fuchsia::media::NO_TIMESTAMP) {
     start_pts = next_frac_frame_pts_;
   } else {
-    // Looks like we have an explicit PTS on this packet.  Boost it into the
+    // Looks like we have an explicit PTS on this packet. Boost it into the
     // fractional input frame domain, then apply our continuity threshold rules.
     int64_t packet_ffpts = pts_to_frac_frames_.Apply(packet.pts);
     int64_t delta = std::abs(packet_ffpts - next_frac_frame_pts_);
@@ -446,11 +449,11 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
 
   // Snap the starting pts to an input frame boundary.
   //
-  // TODO(johngro):  Don't do this.  If a user wants to write an explicit
+  // TODO(johngro): Don't do this. If a user wants to write an explicit
   // timestamp on an input packet which schedules the packet to start at a
   // fractional position on the input time line, we should probably permit this.
   // We need to make sure that the mixer cores are ready to handle this case
-  // before proceeding, however.  See MTWN-88
+  // before proceeding, however. See MTWN-88
   constexpr auto mask = ~((static_cast<int64_t>(1) << kPtsFractionalBits) - 1);
   start_pts &= mask;
 
@@ -464,8 +467,10 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
   next_frac_frame_pts_ = packet_ref->end_pts();
 
   // Distribute our packet to all our dest links
-  ForEachDestLink([packet_ref](AudioLinkPacketSource* link) {
-    link->PushToPendingQueue(packet_ref);
+  ForEachDestLink([packet_ref](auto& link) {
+    FXL_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
+    auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
+    packet_link->PushToPendingQueue(packet_ref);
   });
 
   // Things went well, cancel the cleanup hook.
@@ -491,8 +496,10 @@ void AudioRendererImpl::DiscardAllPackets(DiscardAllPacketsCallback callback) {
   // Tell each link to flush. If link is currently processing pending data, it
   // will take a reference to the flush token and ensure a callback is queued at
   // the proper time (after all pending packet-complete callbacks are queued).
-  ForEachDestLink([flush_token](AudioLinkPacketSource* link) {
-    link->FlushPendingQueue(flush_token);
+  ForEachDestLink([flush_token](auto& link) {
+    FXL_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
+    auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
+    packet_link->FlushPendingQueue(flush_token);
   });
 
   // Invalidate any internal state which gets reset after a flush.
@@ -516,20 +523,20 @@ void AudioRendererImpl::Play(int64_t reference_time, int64_t media_time,
 
   // TODO(johngro): What do we want to do here if we are already playing?
 
-  // Did the user supply a reference time?  If not, figure out a safe starting
+  // Did the user supply a reference time? If not, figure out a safe starting
   // time based on the outputs we are currently linked to.
   //
   // TODO(johngro): We need to use our reference clock here, and not just assume
   // clock monotonic is our reference clock.
   if (reference_time == fuchsia::media::NO_TIMESTAMP) {
     // TODO(johngro): How much more than the minimum clock lead time do we want
-    // to pad this by?  Also, if/when lead time requirements change, do we want
+    // to pad this by? Also, if/when lead time requirements change, do we want
     // to introduce a discontinuity?
     //
     // Perhaps we should consider an explicit mode (make it the default) where
-    // timing across outputs is considered to be loose.  In particular, make no
+    // timing across outputs is considered to be loose. In particular, make no
     // effort to take external latency into account, and no effort to
-    // synchronize streams across multiple parallel outputs.  In a world like
+    // synchronize streams across multiple parallel outputs. In a world like
     // this, we might need to update this lead time beacuse of a change in
     // internal interconnect requirements, but in general, the impact should
     // usually be pretty small since internal requirements for lead times tend
@@ -543,9 +550,9 @@ void AudioRendererImpl::Play(int64_t reference_time, int64_t media_time,
   // packet in the pending queue.
   //
   // Note: media times specified by the user are expressed in the PTS units they
-  // specified using SetPtsUnits (or nanosecond units by default).  Internally,
+  // specified using SetPtsUnits (or nanosecond units by default). Internally,
   // we stamp all of our payloads in fractional input frames on a timeline
-  // defined when we transition to our operational mode.  We need to remember to
+  // defined when we transition to our operational mode. We need to remember to
   // translate back and forth as appropriate.
   int64_t frac_frame_media_time;
   if (media_time == fuchsia::media::NO_TIMESTAMP) {
@@ -663,8 +670,8 @@ void AudioRendererImpl::SetGain(float gain_db) {
 
     // Set this gain with every link (except the link to throttle output)
     ForEachDestLink([throttle_ptr = throttle_output_link_.get(),
-                     effective_gain_db](AudioLinkPacketSource* link) {
-      if (link != throttle_ptr) {
+                     effective_gain_db](auto& link) {
+      if (link.get() != throttle_ptr) {
         link->bookkeeping()->gain.SetSourceGain(effective_gain_db);
       }
     });
@@ -684,8 +691,8 @@ void AudioRendererImpl::SetGainWithRamp(float gain_db,
   }
 
   ForEachDestLink([throttle_ptr = throttle_output_link_.get(), gain_db,
-                   duration_ns, rampType](AudioLinkPacketSource* link) {
-    if (link != throttle_ptr) {
+                   duration_ns, rampType](auto& link) {
+    if (link.get() != throttle_ptr) {
       link->bookkeeping()->gain.SetSourceGainWithRamp(gain_db, duration_ns,
                                                       rampType);
     }
@@ -705,8 +712,8 @@ void AudioRendererImpl::SetMute(bool mute) {
         mute_ ? fuchsia::media::MUTED_GAIN_DB : stream_gain_db_;
 
     ForEachDestLink([throttle_ptr = throttle_output_link_.get(),
-                     effective_gain_db](AudioLinkPacketSource* link) {
-      if (link != throttle_ptr) {
+                     effective_gain_db](auto& link) {
+      if (link.get() != throttle_ptr) {
         link->bookkeeping()->gain.SetSourceGain(effective_gain_db);
       }
     });

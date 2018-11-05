@@ -313,31 +313,28 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
 
   // Let our source links know about the format that we prefer.
   //
-  // TODO(johngro): Remove this. Audio sources do not care what we prefer to
-  // capture. If an AudioInput is going to be reconfigured because of our
-  // needs, it will happen at the policy level before we get linked up.
-  {
-    fbl::AutoLock links_lock(&links_lock_);
-    for (auto& link : source_links_) {
-      const auto& source = link->GetSource();
-      switch (source->type()) {
-        case AudioObject::Type::Output:
-        case AudioObject::Type::Input: {
-          auto device = static_cast<AudioDevice*>(source.get());
-          device->NotifyDestFormatPreference(format_);
-          break;
-        }
-
-        case AudioObject::Type::AudioRenderer:
-          // TODO(johngro): Support capturing from packet sources
-          break;
-
-        case AudioObject::Type::AudioCapturer:
-          FXL_DCHECK(false);
-          break;
+  // TODO(johngro): Remove this notification. Audio sources do not care what we
+  // prefer to capture. If an AudioInput is going to be reconfigured because of
+  // our needs, it will happen at the policy level before we get linked up.
+  ForEachSourceLink([this](auto& link) {
+    const auto& source = link->GetSource();
+    switch (source->type()) {
+      case AudioObject::Type::Output:
+      case AudioObject::Type::Input: {
+        auto device = static_cast<AudioDevice*>(source.get());
+        device->NotifyDestFormatPreference(format_);
+        break;
       }
+
+      case AudioObject::Type::AudioRenderer:
+        // TODO(johngro): Support capturing from packet sources
+        break;
+
+      case AudioObject::Type::AudioCapturer:
+        FXL_DCHECK(false);
+        break;
     }
-  }
+  });
 
   // Select a mixer for each active link here.
   //
@@ -348,14 +345,11 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   // would make it difficult to ever do a seamless format change (something
   // which already would be rather difficult to do).
   std::vector<std::shared_ptr<AudioLink>> cleanup_list;
-  {
-    fbl::AutoLock links_lock(&links_lock_);
-    for (const auto& link : source_links_) {
-      if (ChooseMixer(link) != ZX_OK) {
-        cleanup_list.push_back(link);
-      }
+  ForEachSourceLink([this, &cleanup_list](auto& link) {
+    if (ChooseMixer(link) != ZX_OK) {
+      cleanup_list.push_back(link);
     }
-  }
+  });
 
   for (const auto& link : cleanup_list) {
     AudioObject::RemoveLink(link);
@@ -808,12 +802,10 @@ void AudioCapturerImpl::SetGain(float gain_db) {
     stream_gain_db_.store(gain_db);
 
     float effective_gain_db = (mute_ ? fuchsia::media::MUTED_GAIN_DB : gain_db);
-    {
-      fbl::AutoLock links_lock(&links_lock_);
-      for (const auto& link : source_links_) {
-        link->bookkeeping()->gain.SetDestGain(effective_gain_db);
-      }
-    }
+
+    ForEachSourceLink([effective_gain_db](auto& link) {
+      link->bookkeeping()->gain.SetDestGain(effective_gain_db);
+    });
   }
 
   // Things went well, cancel the cleanup hook.
@@ -829,13 +821,12 @@ void AudioCapturerImpl::SetMute(bool mute) {
     float effective_gain_db =
         mute_ ? fuchsia::media::MUTED_GAIN_DB : stream_gain_db_.load();
 
-    fbl::AutoLock links_lock(&links_lock_);
-    for (const auto& link : source_links_) {
+    ForEachSourceLink([effective_gain_db](auto& link) {
       // The Gain object contains multiple stages. In capture, device (or
       // master) gain is "source" gain and stream gain is "dest" gain.
       link->bookkeeping()->gain.SetDestGain(effective_gain_db);
       // TODO(mpuryear): Implement true Mute in Gain; call SetDestMute here.
-    }
+    });
   }
 
   // Things went well, cancel the cleanup hook.
@@ -846,15 +837,12 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
   // Take a snapshot of our source link references; skip the packet based
   // sources, we don't know how to sample from them yet.
   FXL_DCHECK(source_link_refs_.size() == 0);
-  {
-    fbl::AutoLock links_lock(&links_lock_);
-    for (auto& link : source_links_) {
-      if (link->source_type() == AudioLink::SourceType::Packet) {
-        continue;
-      }
-      source_link_refs_.push_back(link);
+
+  ForEachSourceLink([src_link_refs = &source_link_refs_](auto& link) {
+    if (link->source_type() != AudioLink::SourceType::Packet) {
+      src_link_refs->push_back(link);
     }
-  }
+  });
 
   // No matter what happens here, make certain that we are not holding any link
   // references in our snapshot when we are done.

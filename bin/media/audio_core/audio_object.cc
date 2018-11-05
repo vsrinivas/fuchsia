@@ -103,19 +103,29 @@ void AudioObject::RemoveLink(const AudioLinkPtr& link) {
   }
 }
 
+// Call the provided function for each source link (passing the link as param).
+// This distributes calls such as SetGain to every AudioCapturer path.
+void AudioObject::ForEachSourceLink(const LinkFunction& source_task) {
+  fbl::AutoLock links_lock(&links_lock_);
+
+  // Callers (generally AudioCapturers) should never be linked to destinations.
+  FXL_DCHECK(dest_links_.empty());
+
+  for (const auto& link : source_links_) {
+    source_task(link);
+  }
+}
+
 // Call the provided function for each dest link (passing the link as a param).
 // This distributes calls such as SetGain to every AudioRenderer output path.
 void AudioObject::ForEachDestLink(const LinkFunction& dest_task) {
   fbl::AutoLock links_lock(&links_lock_);
 
-  // AudioRenderers should never be linked to sources.
+  // Callers (generally AudioRenderers) should never be linked to sources.
   FXL_DCHECK(source_links_.empty());
 
   for (const auto& link : dest_links_) {
-    FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
-    auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
-
-    dest_task(packet_link);
+    dest_task(link);
   }
 }
 
@@ -126,10 +136,7 @@ bool AudioObject::ForAnyDestLink(const LinkBoolFunction& dest_task) {
   FXL_DCHECK(source_links_.empty());
 
   for (const auto& link : dest_links_) {
-    FXL_DCHECK(link && link->source_type() == AudioLink::SourceType::Packet);
-    auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
-
-    if (dest_task(packet_link)) {
+    if (dest_task(link)) {
       return true;  // This link satisfied the need; we are done.
     }
     // Else, continue inquiring with the remaining links.

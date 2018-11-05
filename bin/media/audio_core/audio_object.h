@@ -11,7 +11,6 @@
 #include <fbl/ref_ptr.h>
 #include <lib/fit/function.h>
 
-#include "garnet/bin/media/audio_core/audio_link_packet_source.h"
 #include "garnet/bin/media/audio_core/fwd_decls.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
@@ -115,9 +114,9 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   // effectively, so use with care. ForEachDestLink and ForAnyDestLink each
   // obtain the links_lock_ and hold it while each LinkFunction or
   // LinkBoolFunction is invoked. For this reason,
-  //    1) Callers into the ForEachDestLink or ForAnyDestLink functions must not
-  //       already hold links_lock_; additionally,
-  //    2) LinkFunctions and LinkBoolFunctions themselves must not
+  //    1) Callers into the ForEachSourceLink, ForEachDestLink or ForAnyDestLink
+  //           functions must not already hold links_lock_; additionally,
+  //    2) A LinkFunction or LinkBoolFunction must not
   //        a) attempt to obtain links_lock_ directly, nor
   //        b) acquire any lock marked as acquired_before(links_lock_), nor
   //        c) call any function which excludes links_lock_.
@@ -126,18 +125,23 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   // The inline_functions below reserve stack space for up to four pointers.
   // This can be increased as needed (but should NOT be needed any time soon).
   //
-  // LinkFunction has no return value and is used with ForEachDestLink.
-  using LinkFunction = fit::inline_function<void(AudioLinkPacketSource* link),
-                                            sizeof(void*) * 4>;
-  // Same as LinkFunction, but returns bool for purposes of early termination.
-  // This return val is used by ForAnyDestLink (or future ForAllDestLinks).
+  // LinkFunction has no return value and is used with ForEach[Source|Dest]Link.
+  using LinkFunction =
+      fit::inline_function<void(const std::shared_ptr<AudioLink>& link),
+                           sizeof(void*) * 4>;
+  // Same as LinkFunction, but returns bool for early termination. This
+  // return val is used by ForAnyDestLink (or a future ForAllDestLinks).
   // Currently stack space for one ptr is provided (the one caller needs 0).
   using LinkBoolFunction =
-      fit::inline_function<bool(AudioLinkPacketSource* link),
+      fit::inline_function<bool(const std::shared_ptr<AudioLink>& link),
                            sizeof(void*) * 1>;
 
   // Link Iterators - these functions iterate upon LinkPacketSource types only.
   //
+  // Run this task on AudioLinks in source_links_. All links will be called.
+  void ForEachSourceLink(const LinkFunction& source_task)
+      FXL_LOCKS_EXCLUDED(links_lock_);
+
   // Run this task on every AudioLink in dest_links_. All links will be called.
   void ForEachDestLink(const LinkFunction& dest_task)
       FXL_LOCKS_EXCLUDED(links_lock_);
