@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
   name = "wlancfg"
@@ -46,11 +46,24 @@ package("wlancfg") {
       dest = "wlancfg.cmx"
     },
   ]
+}
 
+package("ap_config") {
+  deprecated_system_image = true
   resources = [
     {
-      path = rebase_path("config/default.json")
-      dest = "default.json"
+      path = rebase_path("config/ap.json")
+      dest = "wlan/default.json"
+    },
+  ]
+}
+
+package("client_config") {
+  deprecated_system_image = true
+  resources = [
+    {
+      path = rebase_path("config/client.json")
+      dest = "wlan/default.json"
     },
   ]
 }
