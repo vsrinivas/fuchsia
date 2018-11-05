@@ -640,18 +640,18 @@ zx_status_t AssociatedState::SendNextBu() {
 void AssociatedState::HandleActionFrame(MgmtFrame<ActionFrame>&& frame) {
     debugfn();
 
-    // TODO(porce): Handle AddBaResponses and keep the result of negotiation.
-
     auto action_frame = frame.View().NextFrame();
     if (auto action_ba_frame = action_frame.CheckBodyType<ActionFrameBlockAck>().CheckLength()) {
         auto ba_frame = action_ba_frame.NextFrame();
         if (auto add_ba_resp_frame = ba_frame.CheckBodyType<AddBaResponseFrame>().CheckLength()) {
             finspect("Inbound ADDBA Resp frame: len %zu\n", add_ba_resp_frame.body_len());
             finspect("  addba resp: %s\n", debug::Describe(*add_ba_resp_frame.body()).c_str());
+            // TODO(porce): Handle AddBaResponses and keep the result of negotiation.
         } else if (auto add_ba_req_frame =
                        ba_frame.CheckBodyType<AddBaRequestFrame>().CheckLength()) {
             finspect("Inbound ADDBA Req frame: len %zu\n", add_ba_req_frame.body_len());
             finspect("  addba req: %s\n", debug::Describe(*add_ba_req_frame.body()).c_str());
+            client_->SendAddBaResponse(*add_ba_req_frame.body());
         }
     }
 }
@@ -918,7 +918,7 @@ zx_status_t RemoteClient::SendAddBaRequest() {
     mgmt_hdr->sc.set_seq(bss_->NextSeq(*mgmt_hdr));
 
     w.Write<ActionFrame>()->category = action::Category::kBlockAck;
-    w.Write<ActionFrameBlockAck>()->action = action::BaAction::kAddBaResponse;
+    w.Write<ActionFrameBlockAck>()->action = action::BaAction::kAddBaRequest;
 
     auto addbareq_hdr = w.Write<AddBaRequestFrame>();
     // It appears there is no particular rule to choose the value for
