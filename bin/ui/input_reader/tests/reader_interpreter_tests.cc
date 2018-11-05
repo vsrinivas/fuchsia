@@ -21,25 +21,57 @@ namespace {
 using MockInputDevice = mozart::test::MockInputDevice;
 using MockInputDeviceRegistry = mozart::test::MockInputDeviceRegistry;
 
-fxl::WeakPtr<MockDeviceWatcher> StartInputReader(InputReader* input_reader) {
-  auto device_watcher = std::make_unique<MockDeviceWatcher>();
-  auto weak_device_watcher = device_watcher->GetWeakPtr();
-  input_reader->Start(std::move(device_watcher));
-  return weak_device_watcher;
-}
+// This fixture sets up a |MockDeviceWatcher| so that tests can add mock
+// devices.
+class ReaderInterpreterTest : public gtest::TestLoopFixture {
+ protected:
+  // Starts an |InputReader| with a |MockDeviceWatcher| and saves it locally so
+  // that |MockHidDecoder|s can be added to it.
+  void StartInputReader(InputReader* input_reader) {
+    auto device_watcher = std::make_unique<MockDeviceWatcher>();
+    device_watcher_ = device_watcher->GetWeakPtr();
+    input_reader->Start(std::move(device_watcher));
+  }
 
-template <class... Args>
-fxl::WeakPtr<MockHidDecoder> AddDevice(
-    fxl::WeakPtr<MockDeviceWatcher> device_watcher, Args&&... args) {
-  auto device = std::make_unique<MockHidDecoder>(std::forward<Args>(args)...);
-  auto weak_device = device->GetWeakPtr();
-  device_watcher->AddDevice(std::move(device));
-  return weak_device;
-}
+  // Creates a |MockHidDecoder| with the supplied |args| and adds it to the
+  // |MockDeviceWatcher|, returning an |fxl::WeakPtr| to the new
+  // |MockHidDecoder|.
+  template <class... Args>
+  fxl::WeakPtr<MockHidDecoder> AddDevice(Args&&... args) {
+    auto device = std::make_unique<MockHidDecoder>(std::forward<Args>(args)...);
+    auto weak_device = device->GetWeakPtr();
+    device_watcher_->AddDevice(std::move(device));
+    return weak_device;
+  }
+
+ private:
+  fxl::WeakPtr<MockDeviceWatcher> device_watcher_;
+};
+
+// This fixture sets up a |MockInputDeviceRegistry| and an |InputReader| in
+// addition to the |MockDeviceWatcher| provided by |ReaderInterpreterTest| so
+// that tests can additionally verify the reports seen by the registry.
+class ReaderInterpreterInputTest : public ReaderInterpreterTest {
+ protected:
+  ReaderInterpreterInputTest()
+      : registry_(nullptr,
+                  [this](fuchsia::ui::input::InputReport report) {
+                    ++report_count_;
+                    last_report_ = std::move(report);
+                  }),
+        input_reader_(&registry_) {}
+
+  int report_count_ = 0;
+  fuchsia::ui::input::InputReport last_report_;
+
+ private:
+  void SetUp() override { StartInputReader(&input_reader_); }
+
+  MockInputDeviceRegistry registry_;
+  InputReader input_reader_;
+};
 
 }  // namespace
-
-using ReaderInterpreterTest = ::gtest::TestLoopFixture;
 
 TEST_F(ReaderInterpreterTest, RegisterKeyboardTest) {
   int registration_count = 0;
@@ -52,11 +84,10 @@ TEST_F(ReaderInterpreterTest, RegisterKeyboardTest) {
       nullptr);
   InputReader input_reader(&registry);
 
-  fxl::WeakPtr<MockDeviceWatcher> device_watcher =
-      StartInputReader(&input_reader);
+  StartInputReader(&input_reader);
 
   bool did_init = false;
-  AddDevice(device_watcher, [&] {
+  AddDevice([&] {
     did_init = true;
     return std::make_pair<HidDecoder::Protocol, bool>(
         HidDecoder::Protocol::Keyboard, true);
@@ -65,60 +96,67 @@ TEST_F(ReaderInterpreterTest, RegisterKeyboardTest) {
   EXPECT_EQ(1, registration_count);
 }
 
-TEST_F(ReaderInterpreterTest, InputKeyboardTest) {
-  int report_count = 0;
-  fuchsia::ui::input::InputReport last_report;
-
-  MockInputDeviceRegistry registry(nullptr,
-                                   [&](fuchsia::ui::input::InputReport report) {
-                                     ++report_count;
-                                     last_report = std::move(report);
-                                   });
+TEST_F(ReaderInterpreterTest, RemoveKeyboardTest) {
+  MockInputDeviceRegistry registry(nullptr, nullptr);
   InputReader input_reader(&registry);
-
-  fxl::WeakPtr<MockDeviceWatcher> device_watcher =
-      StartInputReader(&input_reader);
+  StartInputReader(&input_reader);
 
   fxl::WeakPtr<MockHidDecoder> device =
-      AddDevice(device_watcher, HidDecoder::Protocol::Keyboard);
+      AddDevice(HidDecoder::Protocol::Keyboard);
+
+  device->Close();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(device);
+}
+
+TEST_F(ReaderInterpreterInputTest, KeyboardTest) {
+  fxl::WeakPtr<MockHidDecoder> device =
+      AddDevice(HidDecoder::Protocol::Keyboard);
 
   RunLoopUntilIdle();
-  EXPECT_EQ(0, report_count);
+  EXPECT_EQ(0, report_count_);
 
   // A keyboard report is 8 bytes long, with bytes 3-8 containing HID usage
   // codes.
   device->Send({0, 0, HID_USAGE_KEY_A, 0, 0, 0, 0, 0}, 8);
 
   RunLoopUntilIdle();
-  EXPECT_EQ(1, report_count);
-  ASSERT_TRUE(last_report.keyboard);
+  EXPECT_EQ(1, report_count_);
+  ASSERT_TRUE(last_report_.keyboard);
   EXPECT_EQ(std::vector<uint32_t>{HID_USAGE_KEY_A},
-            *last_report.keyboard->pressed_keys);
+            *last_report_.keyboard->pressed_keys);
 
   device->Send({0, 0, HID_USAGE_KEY_A, HID_USAGE_KEY_Z, 0, 0, 0, 0}, 8);
   RunLoopUntilIdle();
-  EXPECT_EQ(2, report_count);
-  EXPECT_EQ(std::multiset<uint32_t>({HID_USAGE_KEY_A, HID_USAGE_KEY_Z}),
-            std::multiset<uint32_t>(last_report.keyboard->pressed_keys->begin(),
-                                    last_report.keyboard->pressed_keys->end()));
+  EXPECT_EQ(2, report_count_);
+  EXPECT_EQ(
+      std::multiset<uint32_t>({HID_USAGE_KEY_A, HID_USAGE_KEY_Z}),
+      std::multiset<uint32_t>(last_report_.keyboard->pressed_keys->begin(),
+                              last_report_.keyboard->pressed_keys->end()));
 
   device->Send({0, 0, HID_USAGE_KEY_Z, 0, 0, 0, 0, 0}, 8);
   RunLoopUntilIdle();
   EXPECT_EQ(std::vector<uint32_t>{HID_USAGE_KEY_Z},
-            *last_report.keyboard->pressed_keys);
+            *last_report_.keyboard->pressed_keys);
 }
 
-TEST_F(ReaderInterpreterTest, RemoveKeyboardTest) {
-  MockInputDeviceRegistry registry(nullptr, nullptr);
-  InputReader input_reader(&registry);
-  fxl::WeakPtr<MockDeviceWatcher> device_watcher =
-      StartInputReader(&input_reader);
+TEST_F(ReaderInterpreterInputTest, LightSensorTest) {
   fxl::WeakPtr<MockHidDecoder> device =
-      AddDevice(device_watcher, HidDecoder::Protocol::Keyboard);
+      AddDevice(HidDecoder::Protocol::LightSensor);
 
-  device->Close();
   RunLoopUntilIdle();
-  EXPECT_FALSE(device);
+  EXPECT_EQ(0, report_count_);
+
+  {
+    HidDecoder::HidAmbientLightSimple light{/* int16_t illuminance */ 42};
+    device->Send(light);
+  }
+
+  RunLoopUntilIdle();
+  EXPECT_EQ(1, report_count_);
+  ASSERT_TRUE(last_report_.sensor);
+  EXPECT_TRUE(last_report_.sensor->is_scalar());
+  EXPECT_EQ(42, last_report_.sensor->scalar());
 }
 
 }  // namespace mozart
