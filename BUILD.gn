@@ -81,8 +81,6 @@ group("no_cmx_whitelist") {
       "//topaz/bin/flutter_screencap_test:*",
       "//topaz/bin/system_dashboard:*",
       "//topaz/bin/ui/benchmarks/image_grid_flutter:*",
-      "//topaz/bin/user_shell/capybara_user_shell:*",
-      "//topaz/bin/user_shell/ermine_user_shell:*",
       "//topaz/bin/xi/xi_embeddable:*",
       "//topaz/bin/xi/xi_mod:*",
       "//topaz/bin/xi/xi_session_agent:*",
