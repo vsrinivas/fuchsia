@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::Hash;
 
@@ -250,19 +251,19 @@ impl IpAddr for Ipv6Addr {
 
 impl Display for Ipv6Addr {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        // TODO(joshlf): Replace longest run of zeros with ::.
         let to_u16 = |idx| NetworkEndian::read_u16(&self.0[idx..idx + 2]);
-        write!(
+        Display::fmt(
+            &std::net::Ipv6Addr::new(
+                to_u16(0),
+                to_u16(2),
+                to_u16(4),
+                to_u16(6),
+                to_u16(8),
+                to_u16(10),
+                to_u16(12),
+                to_u16(14),
+            ),
             f,
-            "{:04x}:{:04x}:{:04x}:{:04x}:{:04x}:{:04x}:{:04x}:{:04x}",
-            to_u16(0),
-            to_u16(2),
-            to_u16(4),
-            to_u16(6),
-            to_u16(8),
-            to_u16(10),
-            to_u16(12),
-            to_u16(14)
         )
     }
 }
