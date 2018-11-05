@@ -12,6 +12,7 @@
 #include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
 #include "garnet/bin/zxdb/symbols/dwarf_die_decoder.h"
+#include "garnet/bin/zxdb/symbols/enumeration.h"
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/inherited_from.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
@@ -182,6 +183,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeSymbol(
       break;
     case llvm::dwarf::DW_TAG_base_type:
       symbol = DecodeBaseType(die);
+      break;
+    case llvm::dwarf::DW_TAG_enumeration_type:
+      symbol = DecodeEnum(die);
       break;
     case llvm::dwarf::DW_TAG_formal_parameter:
     case llvm::dwarf::DW_TAG_variable:
@@ -493,6 +497,73 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeDataMember(
   if (member_offset)
     result->set_member_location(static_cast<uint32_t>(*member_offset));
   return result;
+}
+
+fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeEnum(const llvm::DWARFDie& die) {
+  DwarfDieDecoder main_decoder(symbols_->context(), die.getDwarfUnit());
+
+  llvm::Optional<const char*> type_name;
+  main_decoder.AddCString(llvm::dwarf::DW_AT_name, &type_name);
+
+  llvm::Optional<uint64_t> byte_size;
+  main_decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_byte_size, &byte_size);
+
+  // The type is optional for an enumeration.
+  llvm::DWARFDie type;
+  main_decoder.AddReference(llvm::dwarf::DW_AT_type, &type);
+
+  // For decoding the individual enum values.
+  DwarfDieDecoder enumerator_decoder(symbols_->context(), die.getDwarfUnit());
+
+  llvm::Optional<const char*> enumerator_name;
+  enumerator_decoder.AddCString(llvm::dwarf::DW_AT_name, &enumerator_name);
+
+  // Enum values can be signed or unsigned. This is determined by looking at
+  // the form of the storage for the underlying types. Since there are many
+  // values, we set the "signed" flag if any of them were signed, since a
+  // small positive integer could be represented either way but a signed value
+  // must be encoded differently.
+  llvm::Optional<uint64_t> enumerator_value;
+  bool is_signed = false;
+  enumerator_decoder.AddCustom(
+      llvm::dwarf::DW_AT_const_value,
+      [&enumerator_value, &is_signed](const llvm::DWARFFormValue& value) {
+        if (value.getForm() == llvm::dwarf::DW_FORM_udata) {
+          enumerator_value = value.getAsUnsignedConstant();
+        } else if (value.getForm() == llvm::dwarf::DW_FORM_sdata) {
+          // Cast signed values to unsigned.
+          if (auto signed_value = value.getAsSignedConstant()) {
+            is_signed = true;
+            enumerator_value = static_cast<uint64_t>(*signed_value);
+          }
+          // Else case is corrupted symbols or an unsupported format, just
+          // ignore this one.
+        }
+      });
+
+  if (!main_decoder.Decode(die) || !type_name || !byte_size)
+    return fxl::MakeRefCounted<Symbol>();
+
+  Enumeration::Map map;
+  for (const llvm::DWARFDie& child : die) {
+    if (child.getTag() != llvm::dwarf::DW_TAG_enumerator)
+      continue;
+
+    enumerator_name.reset();
+    enumerator_value.reset();
+    if (!enumerator_decoder.Decode(child))
+      continue;
+    if (enumerator_name && enumerator_value)
+      map[*enumerator_value] = std::string(*enumerator_name);
+  }
+
+  LazySymbol lazy_type;
+  if (type)
+    lazy_type = MakeLazy(type);
+  const char* type_name_str = type_name ? *type_name : nullptr;
+  return fxl::MakeRefCounted<Enumeration>(type_name_str, std::move(lazy_type),
+                                          *byte_size, is_signed,
+                                          std::move(map));
 }
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeInheritedFrom(

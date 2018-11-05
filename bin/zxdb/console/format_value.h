@@ -18,6 +18,7 @@
 namespace zxdb {
 
 class Collection;
+class Enumeration;
 class Err;
 class ExprValue;
 class OutputBuffer;
@@ -193,8 +194,14 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
                    const ExprValue& value, int elt_count,
                    const FormatValueOptions& options, OutputKey output_key);
 
+  // Dispatcher for all numeric types. This handles formatting overrides.
+  void FormatNumeric(const ExprValue& value, const FormatValueOptions& options,
+                     OutputBuffer* out);
+
   // Simpler synchronous outputs.
   void FormatBoolean(const ExprValue& value, OutputBuffer* out);
+  void FormatEnum(const ExprValue& value, const Enumeration* enum_type,
+                  const FormatValueOptions& options, OutputBuffer* out);
   void FormatFloat(const ExprValue& value, OutputBuffer* out);
   void FormatSignedInt(const ExprValue& value, OutputBuffer* out);
   void FormatUnsignedInt(const ExprValue& value,

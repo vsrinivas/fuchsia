@@ -10,6 +10,7 @@
 #include "garnet/bin/zxdb/symbols/base_type.h"
 #include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
+#include "garnet/bin/zxdb/symbols/enumeration.h"
 #include "garnet/bin/zxdb/symbols/inherited_from.h"
 #include "garnet/bin/zxdb/symbols/mock_symbol_data_provider.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
@@ -399,7 +400,7 @@ TEST_F(FormatValueTest, Reference) {
 
   // Test an rvalue reference. This is treated the same as a regular reference
   // from an interpretation and printing perspective.
-  auto rvalue_ref_type =  fxl::MakeRefCounted<ModifiedType>(
+  auto rvalue_ref_type = fxl::MakeRefCounted<ModifiedType>(
       Symbol::kTagRvalueReferenceType, LazySymbol(base_type));
   value = ExprValue(rvalue_ref_type, data);
   opts.always_show_types = false;
@@ -453,10 +454,10 @@ TEST_F(FormatValueTest, Structs) {
   // Test an anonymous struct. Clang will generate structs with no names for
   // things like closures.
   auto anon_struct = fxl::MakeRefCounted<Collection>(Symbol::kTagStructureType);
-  auto anon_struct_ptr = fxl::MakeRefCounted<ModifiedType>(Symbol::kTagPointerType,
-      LazySymbol(anon_struct));
-  ExprValue anon_value(anon_struct_ptr, {
-             0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
+  auto anon_struct_ptr = fxl::MakeRefCounted<ModifiedType>(
+      Symbol::kTagPointerType, LazySymbol(anon_struct));
+  ExprValue anon_value(anon_struct_ptr,
+                       {0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
   EXPECT_EQ("((anon struct)*) 0x1100", SyncFormatValue(anon_value, opts));
 }
 
@@ -534,6 +535,73 @@ TEST_F(FormatValueTest, DerivedClasses) {
       "(Derived) {Base = {(int32_t) a = 1, (int32_t) b = 2}, (int32_t) c = 3, "
       "(int32_t) d = 4}",
       SyncFormatValue(value, opts));
+}
+
+TEST_F(FormatValueTest, Enumeration) {
+  // Unsigned 64-bit enum.
+  Enumeration::Map unsigned_map;
+  unsigned_map[0] = "kZero";
+  unsigned_map[1] = "kOne";
+  unsigned_map[std::numeric_limits<uint64_t>::max()] = "kMax";
+  auto unsigned_enum = fxl::MakeRefCounted<Enumeration>(
+      "UnsignedEnum", LazySymbol(), 8, false, unsigned_map);
+
+  // Found value
+  FormatValueOptions opts;
+  EXPECT_EQ("kZero",
+            SyncFormatValue(ExprValue(unsigned_enum, {0, 0, 0, 0, 0, 0, 0, 0}),
+                            opts));
+  EXPECT_EQ("kMax",
+            SyncFormatValue(ExprValue(unsigned_enum, {0xff, 0xff, 0xff, 0xff,
+                                                      0xff, 0xff, 0xff, 0xff}),
+                            opts));
+
+  // Found value forced to hex.
+  FormatValueOptions hex_opts;
+  hex_opts.num_format = FormatValueOptions::NumFormat::kHex;
+  EXPECT_EQ("0xffffffffffffffff",
+            SyncFormatValue(ExprValue(unsigned_enum, {0xff, 0xff, 0xff, 0xff,
+                                                      0xff, 0xff, 0xff, 0xff}),
+                            hex_opts));
+
+  // Not found value.
+  EXPECT_EQ("12",
+            SyncFormatValue(ExprValue(unsigned_enum, {12, 0, 0, 0, 0, 0, 0, 0}),
+                            opts));
+
+  // Signed 32-bit enum.
+  Enumeration::Map signed_map;
+  signed_map[0] = "kZero";
+  signed_map[static_cast<uint64_t>(-5)] = "kMinusFive";
+  signed_map[static_cast<uint64_t>(std::numeric_limits<int32_t>::max())] =
+      "kMax";
+  auto signed_enum = fxl::MakeRefCounted<Enumeration>(
+      "SignedEnum", LazySymbol(), 4, true, signed_map);
+
+  // Found values.
+  EXPECT_EQ("kZero",
+            SyncFormatValue(ExprValue(signed_enum, {0, 0, 0, 0}), opts));
+  EXPECT_EQ(
+      "kMinusFive",
+      SyncFormatValue(ExprValue(signed_enum, {0xfb, 0xff, 0xff, 0xff}), opts));
+
+  // Not-found value.
+  EXPECT_EQ("-4", SyncFormatValue(
+                      ExprValue(signed_enum, {0xfc, 0xff, 0xff, 0xff}), opts));
+
+  // Not-found signed value printed as hex should be unsigned.
+  EXPECT_EQ("0xffffffff",
+            SyncFormatValue(ExprValue(signed_enum, {0xff, 0xff, 0xff, 0xff}),
+                            hex_opts));
+
+  // Force type info.
+  FormatValueOptions type_opts;
+  type_opts.always_show_types = true;
+  EXPECT_EQ("(SignedEnum) kZero",
+            SyncFormatValue(ExprValue(signed_enum, {0, 0, 0, 0}), type_opts));
+  EXPECT_EQ("(SignedEnum) -4",
+            SyncFormatValue(ExprValue(signed_enum, {0xfc, 0xff, 0xff, 0xff}),
+                            type_opts));
 }
 
 }  // namespace zxdb

@@ -16,6 +16,7 @@
 #include "garnet/bin/zxdb/symbols/base_type.h"
 #include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
+#include "garnet/bin/zxdb/symbols/enumeration.h"
 #include "garnet/bin/zxdb/symbols/inherited_from.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
 #include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
@@ -218,26 +219,14 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
                        static_cast<unsigned>(modified_type->tag())));
         break;
     }
-  } else if (IsNumericBaseType(value.GetBaseType()) &&
-             options.num_format != FormatValueOptions::NumFormat::kDefault) {
-    // Numeric types with an overridden format option.
-    switch (options.num_format) {
-      case FormatValueOptions::NumFormat::kUnsigned:
-      case FormatValueOptions::NumFormat::kHex:
-        FormatUnsignedInt(value, options, &out);
-        break;
-      case FormatValueOptions::NumFormat::kSigned:
-        FormatSignedInt(value, &out);
-        break;
-      case FormatValueOptions::NumFormat::kChar:
-        FormatChar(value, &out);
-        break;
-      case FormatValueOptions::NumFormat::kDefault:
-        // Prevent warning for unused enum type.
-        break;
-    }
+  } else if (const Enumeration* enum_type = value.type()->AsEnumeration()) {
+    // Enumerations.
+    FormatEnum(value, enum_type, options, &out);
+  } else if (IsNumericBaseType(value.GetBaseType())) {
+    // Numeric types.
+    FormatNumeric(value, options, &out);
   } else {
-    // Default handling for base types based on the number.
+    // Non-numeric base types.
     switch (value.GetBaseType()) {
       case BaseType::kBaseTypeAddress: {
         // Always print addresses as unsigned hex.
@@ -246,23 +235,6 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
         FormatUnsignedInt(value, options, &out);
         break;
       }
-      case BaseType::kBaseTypeBoolean:
-        FormatBoolean(value, &out);
-        break;
-      case BaseType::kBaseTypeFloat:
-        FormatFloat(value, &out);
-        break;
-      case BaseType::kBaseTypeSigned:
-        FormatSignedInt(value, &out);
-        break;
-      case BaseType::kBaseTypeUnsigned:
-        FormatUnsignedInt(value, options, &out);
-        break;
-      case BaseType::kBaseTypeSignedChar:
-      case BaseType::kBaseTypeUnsignedChar:
-      case BaseType::kBaseTypeUTF:
-        FormatChar(value, &out);
-        break;
       default:
         if (value.data().empty()) {
           out.Append(ErrStringToOutput("no data"));
@@ -553,6 +525,50 @@ void FormatValue::FormatArray(fxl::RefPtr<SymbolDataProvider> data_provider,
   OutputKeyComplete(output_key);
 }
 
+void FormatValue::FormatNumeric(const ExprValue& value,
+                                const FormatValueOptions& options,
+                                OutputBuffer* out) {
+  if (options.num_format != FormatValueOptions::NumFormat::kDefault) {
+    // Overridden format option.
+    switch (options.num_format) {
+      case FormatValueOptions::NumFormat::kUnsigned:
+      case FormatValueOptions::NumFormat::kHex:
+        FormatUnsignedInt(value, options, out);
+        break;
+      case FormatValueOptions::NumFormat::kSigned:
+        FormatSignedInt(value, out);
+        break;
+      case FormatValueOptions::NumFormat::kChar:
+        FormatChar(value, out);
+        break;
+      case FormatValueOptions::NumFormat::kDefault:
+        // Prevent warning for unused enum type.
+        break;
+    }
+  } else {
+    // Default handling for base types based on the number.
+    switch (value.GetBaseType()) {
+      case BaseType::kBaseTypeBoolean:
+        FormatBoolean(value, out);
+        break;
+      case BaseType::kBaseTypeFloat:
+        FormatFloat(value, out);
+        break;
+      case BaseType::kBaseTypeSigned:
+        FormatSignedInt(value, out);
+        break;
+      case BaseType::kBaseTypeUnsigned:
+        FormatUnsignedInt(value, options, out);
+        break;
+      case BaseType::kBaseTypeSignedChar:
+      case BaseType::kBaseTypeUnsignedChar:
+      case BaseType::kBaseTypeUTF:
+        FormatChar(value, out);
+        break;
+    }
+  }
+}
+
 void FormatValue::FormatBoolean(const ExprValue& value, OutputBuffer* out) {
   uint64_t int_val = 0;
   Err err = value.PromoteToUint64(&int_val);
@@ -562,6 +578,52 @@ void FormatValue::FormatBoolean(const ExprValue& value, OutputBuffer* out) {
     out->Append("true");
   else
     out->Append("false");
+}
+
+void FormatValue::FormatEnum(const ExprValue& value,
+                             const Enumeration* enum_type,
+                             const FormatValueOptions& options,
+                             OutputBuffer* out) {
+  // Get the value out casted to a uint64.
+  Err err;
+  uint64_t numeric_value;
+  if (enum_type->is_signed()) {
+    int64_t signed_value;
+    err = value.PromoteToInt64(&signed_value);
+    if (!err.has_error())
+      numeric_value = static_cast<uint64_t>(signed_value);
+  } else {
+    err = value.PromoteToUint64(&numeric_value);
+  }
+  if (err.has_error()) {
+    out->Append(ErrToOutput(err));
+    return;
+  }
+
+  // When the output is marked for a specific numeric type, always skip name
+  // lookup and output the numeric value below instead.
+  if (options.num_format == FormatValueOptions::NumFormat::kDefault) {
+    const auto& map = enum_type->values();
+    auto found = map.find(numeric_value);
+    if (found != map.end()) {
+      // Got the enum value string.
+      out->Append(found->second);
+      return;
+    }
+    // Not found, fall through to numeric output.
+  }
+
+  // Invalid enum values of explicitly overridden numeric formatting gets
+  // printed as a number.
+  FormatValueOptions modified_opts = options;
+  if (modified_opts.num_format == FormatValueOptions::NumFormat::kDefault) {
+    // Compute the formatting for invalid enum values when there is no numeric
+    // override.
+    modified_opts.num_format = enum_type->is_signed()
+                                   ? FormatValueOptions::NumFormat::kSigned
+                                   : FormatValueOptions::NumFormat::kUnsigned;
+  }
+  FormatNumeric(value, modified_opts, out);
 }
 
 void FormatValue::FormatFloat(const ExprValue& value, OutputBuffer* out) {
