@@ -6,7 +6,9 @@
 #define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_ASSOC_CONTEXT_H_
 
 #include <wlan/common/element.h>
+#include <wlan/common/span.h>
 #include <wlan/mlme/mac_frame.h>
+#include <wlan/protocol/mac.h>
 
 #include <optional>
 #include <vector>
@@ -51,15 +53,24 @@ struct AssocContext {
     bool is_cbw40_tx = false;
 
     void set_aid(uint16_t aid) { aid = aid & kAidMask; }
+    PHY DerivePhy() const;
+    wlan_assoc_ctx_t ToDdk() const;
 };
 
-zx_status_t ParseAssocRespIe(const uint8_t* ie_chains, size_t ie_chains_len,
-                             AssocContext* assoc_ctx);
-AssocContext ToAssocContext(const wlan_info_t& ifc_info, const wlan_channel_t join_chan);
 std::optional<std::vector<SupportedRate>> BuildAssocReqSuppRates(
     const ::fidl::VectorPtr<uint8_t>& ap_basic_rate_set,
     const ::fidl::VectorPtr<uint8_t>& ap_op_rate_set,
     const std::vector<SupportedRate>& client_rates);
+
+// Visable only for unit testing.
+std::optional<AssocContext> ParseAssocRespIe(Span<const uint8_t> ie_chains);
+
+AssocContext MakeClientAssocCtx(const wlan_info_t& ifc_info, const wlan_channel_t join_chan);
+std::optional<AssocContext> MakeBssAssocCtx(const AssociationResponse& assoc_resp,
+                                            Span<const uint8_t> ie_chains,
+                                            const common::MacAddr& peer);
+
+AssocContext IntersectAssocCtx(const AssocContext& bss, const AssocContext& client);
 
 }  // namespace wlan
 #endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_ASSOC_CONTEXT_H_

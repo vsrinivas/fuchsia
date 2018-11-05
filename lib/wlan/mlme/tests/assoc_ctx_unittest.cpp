@@ -7,6 +7,14 @@
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/fidl/cpp/vector.h>
+#include <wlan/common/buffer_writer.h>
+#include <wlan/common/mac_frame.h>
+#include <wlan/common/macaddr.h>
+#include <wlan/common/span.h>
+#include <wlan/common/write_element.h>
+#include <wlan/mlme/assoc_context.h>
+#include <wlan/mlme/packet.h>
+#include <wlan/mlme/rates_elements.h>
 
 #include <gtest/gtest.h>
 
@@ -22,6 +30,8 @@ struct TestVector {
     std::vector<SupportedRate> client_rates;
     std::optional<std::vector<SupportedRate>> want_rates;
 };
+
+const common::MacAddr TestMac({0x11, 0x22, 0x33, 0x44, 0x55, 0x66});
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 using SR = SupportedRate;
@@ -44,6 +54,67 @@ void TestOnce(const TestVector& tv) {
     for (size_t i = 0; i < got_rates->size(); ++i) {
         EXPECT_EQ(tv.want_rates.value()[i].val(), got_rates.value()[i].val());
     }
+}
+
+AssocContext BuildSampleCtx() {
+    wlan_ht_caps_t ht_cap_ddk{
+        .ht_capability_info = 0x016e,
+        .ampdu_params = 0x17,
+        .mcs_set.rx_mcs_head = 0x00000001000000ff,
+        .mcs_set.rx_mcs_tail = 0x01000000,
+        .mcs_set.tx_mcs = 0x00000000,
+        .ht_ext_capabilities = 0x1234,
+        .tx_beamforming_capabilities = 0x12345678,
+        .asel_capabilities = 0xff,
+    };
+    wlan_ht_op_t ht_op_ddk{
+        .primary_chan = 123,
+        .head = 0x01020304,
+        .tail = 0x05,
+        .basic_mcs_set.rx_mcs_head = 0x00000001000000ff,
+        .basic_mcs_set.rx_mcs_tail = 0x01000000,
+        .basic_mcs_set.tx_mcs = 0x00000000,
+    };
+    wlan_vht_caps_t vht_cap_ddk{
+        .vht_capability_info = 0xaabbccdd,
+        .supported_vht_mcs_and_nss_set = 0x0011223344556677,
+    };
+
+    wlan_vht_op_t vht_op_ddk{
+        .vht_cbw = 0x01,
+        .center_freq_seg0 = 42,
+        .center_freq_seg1 = 106,
+        .basic_mcs = 0x1122,
+    };
+
+    AssocContext ctx{};
+    ctx.ht_cap = HtCapabilities::FromDdk(ht_cap_ddk);
+    ctx.ht_op = HtOperation::FromDdk(ht_op_ddk);
+    ctx.vht_cap = VhtCapabilities::FromDdk(vht_cap_ddk);
+    ctx.vht_op = VhtOperation::FromDdk(vht_op_ddk);
+
+    return ctx;
+}
+
+AssociationResponse* BuildSampleAssocResponse(std::vector<uint8_t>& buffer) {
+    BufferWriter w(buffer);
+    AssociationResponse* assoc_resp = w.Write<AssociationResponse>();
+    assoc_resp->aid = 1234;
+    assoc_resp->status_code = 2345;
+
+    HtCapabilities ht_cap{};
+    ht_cap.ht_cap_info.set_rx_stbc(1);
+    ht_cap.ht_cap_info.set_tx_stbc(1);
+    HtOperation ht_op{};
+    VhtCapabilities vht_cap{};
+
+    BufferWriter elem_w({assoc_resp->elements, buffer.capacity() - w.WrittenBytes()});
+    common::WriteHtCapabilities(&elem_w, ht_cap);
+    common::WriteHtOperation(&elem_w, ht_op);
+    common::WriteVhtCapabilities(&elem_w, vht_cap);
+
+    buffer.resize(w.WrittenBytes() + elem_w.WrittenBytes());
+    return assoc_resp;
 }
 
 TEST(AssociationRatesTest, Success) {
@@ -81,5 +152,201 @@ TEST(AssociationRatesTest, FailureApBasicRatesPartiallySupported) {
         .want_rates = {},
     });
 }
+
+TEST(ParseAssocRespIe, ParseToFail) {
+    const uint8_t expected[] = {
+        // clang-format off
+        // HT Capabilities IE
+        45, 26,
+        0xaa, 0xbb, 0x55, 0x0,  0x1,  0x2,  0x3,  0x4,
+        0x5,  0x6,  0x7,  0x8,  0x9,  0xa,  0xb,  0xc,
+        0xd,  0xe,  0xf,  0xdd, 0xee, 0x11, 0x22, 0x33,
+        0x44, 0x77,
+        // HT Operation IE
+        61, 20, // (61, 20) is a corrupted value pair. Valid pair is (61, 22)
+        36,  0x11, 0x22, 0x33, 0x44, 0x55, 0x0, 0x1,
+        0x2, 0x3,  0x4,  0x5,  0x6,  0x7,  0x8, 0x9,
+        0xa, 0xb,  0xc,  0xd,  0xe,  0xf,
+        // clang-format on
+    };
+
+    auto ctx = ParseAssocRespIe(expected);
+    EXPECT_FALSE(ctx.has_value());
+}
+
+TEST(ParseAssocRespIe, Parse) {
+    size_t kBufLen = 512;
+    std::vector<uint8_t> ie_chains(kBufLen);
+
+    SupportedRate rates[3] = {SupportedRate{10}, SupportedRate{20}, SupportedRate{30}};
+    HtCapabilities ht_cap{};
+    HtOperation ht_op{};
+    VhtCapabilities vht_cap{};
+    VhtOperation vht_op{};
+
+    ht_cap.ht_cap_info.set_rx_stbc(1);
+    ht_cap.ht_cap_info.set_tx_stbc(0);
+    ht_op.primary_chan = 199;
+    ht_op.head.set_center_freq_seg2(123);
+    vht_cap.vht_cap_info.set_num_sounding(5);
+    vht_op.center_freq_seg0 = 42;
+
+    BufferWriter elem_w(ie_chains);
+    common::WriteHtCapabilities(&elem_w, ht_cap);
+    common::WriteVhtOperation(&elem_w, vht_op);
+    common::WriteHtOperation(&elem_w, ht_op);
+    RatesWriter(rates).WriteSupportedRates(&elem_w);
+    common::WriteVhtCapabilities(&elem_w, vht_cap);
+
+    auto ctx = ParseAssocRespIe(elem_w.WrittenData());
+    ASSERT_TRUE(ctx.has_value());
+    EXPECT_EQ(rates[0], ctx->rates[0]);
+    EXPECT_EQ(rates[1], ctx->rates[1]);
+    EXPECT_EQ(rates[2], ctx->rates[2]);
+    EXPECT_EQ(1, ctx->ht_cap->ht_cap_info.rx_stbc());
+    EXPECT_EQ(0, ctx->ht_cap->ht_cap_info.tx_stbc());
+    EXPECT_EQ(199, ctx->ht_op->primary_chan);
+    EXPECT_EQ(123, ctx->ht_op->head.center_freq_seg2());
+    EXPECT_EQ(5, ctx->vht_cap->vht_cap_info.num_sounding());
+    EXPECT_EQ(42, ctx->vht_op->center_freq_seg0);
+}
+
+TEST(AssocContext, IntersectHtNoVht) {
+    // Constructing client and BSS sample association context without VHT.
+    auto bss_ctx = BuildSampleCtx();
+    bss_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
+    bss_ctx.ht_cap->ht_cap_info.set_rx_stbc(1);
+    bss_ctx.ht_cap->ht_cap_info.set_tx_stbc(0);
+    bss_ctx.vht_cap = {};
+    bss_ctx.vht_op = {};
+
+    auto client_ctx = BuildSampleCtx();
+    client_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
+    client_ctx.ht_cap->ht_cap_info.set_rx_stbc(1);
+    client_ctx.ht_cap->ht_cap_info.set_tx_stbc(0);
+    client_ctx.vht_cap = {};
+    client_ctx.vht_op = {};
+
+    auto ctx = IntersectAssocCtx(bss_ctx, client_ctx);
+    // Verify VHT is not part of resulting context.
+    EXPECT_EQ(std::nullopt, ctx.vht_cap);
+    EXPECT_EQ(std::nullopt, ctx.vht_op);
+    // Verify context's other fields contain expected value.
+    EXPECT_TRUE(ctx.ht_cap.has_value());
+    EXPECT_TRUE(ctx.ht_op.has_value());
+    EXPECT_EQ(0, ctx.ht_cap->ht_cap_info.tx_stbc());
+    EXPECT_EQ(0, ctx.ht_cap->ht_cap_info.rx_stbc());
+    EXPECT_TRUE(ctx.is_cbw40_rx);
+    EXPECT_FALSE(ctx.is_cbw40_tx);  // TODO(NET-1918): Revisit with rx/tx CBW40 capability
+}
+
+TEST(AssocContext, IntersectClientNoHT) {
+    auto bss_ctx = BuildSampleCtx();
+    bss_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
+
+    auto client_ctx = BuildSampleCtx();
+    client_ctx.ht_cap = {};
+    client_ctx.vht_cap = {};
+    client_ctx.vht_op = {};
+
+    auto ctx = IntersectAssocCtx(bss_ctx, client_ctx);
+    EXPECT_FALSE(ctx.ht_cap.has_value());
+    EXPECT_FALSE(ctx.vht_cap.has_value());
+    EXPECT_FALSE(ctx.vht_op.has_value());
+}
+
+TEST(AssocContext, IntersectHtVht) {
+    auto bss_ctx = BuildSampleCtx();
+    bss_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
+
+    auto client_ctx = BuildSampleCtx();
+    client_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
+
+    auto ctx = IntersectAssocCtx(bss_ctx, client_ctx);
+    EXPECT_TRUE(ctx.vht_cap.has_value());
+    EXPECT_TRUE(ctx.vht_op.has_value());
+}
+
+TEST(AssocContext, IntersectClientNoVht) {
+    auto bss_ctx = BuildSampleCtx();
+    bss_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
+
+    auto client_ctx = BuildSampleCtx();
+    client_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
+    client_ctx.vht_cap = {};
+
+    auto ctx = IntersectAssocCtx(bss_ctx, client_ctx);
+    EXPECT_TRUE(ctx.ht_cap.has_value());
+    EXPECT_TRUE(ctx.ht_op.has_value());
+    EXPECT_FALSE(ctx.vht_cap.has_value());
+    EXPECT_FALSE(ctx.vht_op.has_value());
+}
+
+TEST(AssocContext, IntersectBssNoHT) {
+    auto bss_ctx = BuildSampleCtx();
+    bss_ctx.ht_cap = {};
+    bss_ctx.ht_op = {};
+    bss_ctx.vht_cap = {};
+    bss_ctx.vht_op = {};
+
+    auto client_ctx = BuildSampleCtx();
+    client_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
+
+    auto ctx = IntersectAssocCtx(bss_ctx, client_ctx);
+    EXPECT_FALSE(ctx.ht_cap.has_value());
+    EXPECT_FALSE(ctx.ht_op.has_value());
+    EXPECT_FALSE(ctx.vht_cap.has_value());
+    EXPECT_FALSE(ctx.vht_op.has_value());
+}
+
+TEST(AssocContext, IntersectBssNoVht) {
+    auto bss_ctx = BuildSampleCtx();
+    bss_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
+    bss_ctx.vht_cap = {};
+    bss_ctx.vht_op = {};
+
+    auto client_ctx = BuildSampleCtx();
+    client_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
+
+    auto ctx = IntersectAssocCtx(bss_ctx, client_ctx);
+    EXPECT_TRUE(ctx.ht_cap.has_value());
+    EXPECT_TRUE(ctx.ht_op.has_value());
+    EXPECT_FALSE(ctx.vht_cap.has_value());
+    EXPECT_FALSE(ctx.vht_op.has_value());
+}
+
+TEST(AssocContext, MakeBssAssocCtx) {
+    constexpr size_t kBufLen = 512;
+    std::vector<uint8_t> buffer(kBufLen);
+
+    auto assoc_resp = BuildSampleAssocResponse(buffer);
+    ASSERT_TRUE(nullptr != assoc_resp);
+    size_t ie_chains_len = buffer.size() - assoc_resp->len();
+
+    EXPECT_EQ(1234, assoc_resp->aid);
+    EXPECT_EQ(2345, assoc_resp->status_code);
+
+    auto ctx = MakeBssAssocCtx(*assoc_resp, {assoc_resp->elements, ie_chains_len}, TestMac);
+    ASSERT_TRUE(ctx.has_value());
+    ASSERT_TRUE(ctx->ht_cap.has_value());
+    EXPECT_TRUE(ctx->ht_op.has_value());
+    EXPECT_TRUE(ctx->vht_cap.has_value());
+    EXPECT_FALSE(ctx->vht_op.has_value());
+    EXPECT_EQ(1, ctx->ht_cap->ht_cap_info.rx_stbc());
+    EXPECT_EQ(1, ctx->ht_cap->ht_cap_info.tx_stbc());
+}
+
+TEST(AssocContext, ToDdk) {
+    auto ctx = BuildSampleCtx();
+    ctx.vht_cap = {};
+    ctx.vht_op = {};
+
+    auto ddk = ctx.ToDdk();
+    EXPECT_TRUE(ddk.has_ht_cap);
+    EXPECT_TRUE(ddk.has_ht_op);
+    EXPECT_FALSE(ddk.has_vht_cap);
+    EXPECT_FALSE(ddk.has_vht_op);
+}
+
 }  // namespace
 }  // namespace wlan

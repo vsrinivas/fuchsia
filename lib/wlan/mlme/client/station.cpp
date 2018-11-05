@@ -275,7 +275,7 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
     SetSeqNo(mgmt_hdr, &seq_);
 
     auto ifc_info = device_->GetWlanInfo().ifc_info;
-    auto client_capability = ToAssocContext(ifc_info, join_ctx_->channel());
+    auto client_capability = MakeClientAssocCtx(ifc_info, join_ctx_->channel());
     auto assoc = w.Write<AssociationRequest>();
     assoc->cap = OverrideCapability(client_capability.cap);
     assoc->listen_interval = 0;
@@ -1197,7 +1197,7 @@ bool Station::IsCbw40Rx() const {
 
     const auto& join_chan = join_ctx_->channel();
     auto ifc_info = device_->GetWlanInfo().ifc_info;
-    auto client_assoc = ToAssocContext(ifc_info, join_chan);
+    auto client_assoc = MakeClientAssocCtx(ifc_info, join_chan);
 
     debugf(
         "IsCbw40Rx: join_chan.cbw:%u, bss.ht_cap:%s, bss.chan_width_set:%s "
@@ -1301,20 +1301,20 @@ zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& f
     assoc_ctx_.aid = frame.body()->aid & kAidMask;
     assoc_ctx_.listen_interval = join_ctx_->listen_interval();
 
-    AssocContext ap{};
-    ap.cap = frame.body()->cap;
-
     auto ie_chains = frame.body()->elements;
     size_t ie_chains_len = frame.body_len() - frame.body()->len();
-    auto status = ParseAssocRespIe(ie_chains, ie_chains_len, &ap);
-    if (status != ZX_OK) {
-        debugf("failed to parse AssocResp. status %d\n", status);
-        return status;
+    auto bss_assoc_ctx = ParseAssocRespIe({ie_chains, ie_chains_len});
+    if (!bss_assoc_ctx.has_value()) {
+        debugf("failed to parse AssocResp\n");
+        return ZX_ERR_INVALID_ARGS;
     }
+    auto ap = bss_assoc_ctx.value();
     debugjoin("rxed AssocResp:[%s]\n", debug::Describe(ap).c_str());
 
+    ap.cap = frame.body()->cap;
+
     auto ifc_info = device_->GetWlanInfo().ifc_info;
-    auto client = ToAssocContext(ifc_info, join_ctx_->channel());
+    auto client = MakeClientAssocCtx(ifc_info, join_ctx_->channel());
     debugjoin("from WlanInfo: [%s]\n", debug::Describe(client).c_str());
 
     assoc_ctx_.cap = IntersectCapInfo(ap.cap, client.cap);
@@ -1374,7 +1374,7 @@ zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& f
     assoc_ctx_.is_cbw40_rx =
         assoc_ctx_.ht_cap &&
         ap.ht_cap->ht_cap_info.chan_width_set() == HtCapabilityInfo::TWENTY_FORTY &&
-        client.ht_cap->ht_cap_info.chan_width_set() != HtCapabilityInfo::TWENTY_FORTY;
+        client.ht_cap->ht_cap_info.chan_width_set() == HtCapabilityInfo::TWENTY_FORTY;
 
     // TODO(porce): Test capabilities and configurations of the client and its BSS.
     // TODO(porce): Ralink dependency on BlockAck, AMPDU handling
@@ -1419,6 +1419,37 @@ wlan_stats::ClientMlmeStats Station::stats() const {
 
 void Station::ResetStats() {
     stats_.Reset();
+}
+
+// TODO(porce): replace SetAssocContext()
+std::optional<AssocContext> Station::BuildAssocCtx(const MgmtFrameView<AssociationResponse>& frame,
+                                                   const wlan_channel_t& join_chan, PHY join_phy) {
+    size_t ie_chains_len = frame.body_len() - frame.body()->len();
+    auto bssid = frame.hdr()->addr3;
+    auto bss = MakeBssAssocCtx(*frame.body(), {frame.body()->elements, ie_chains_len}, bssid);
+    if (!bss.has_value()) { return {}; }
+
+    auto client = MakeClientAssocCtx(device_->GetWlanInfo().ifc_info, join_chan);
+    auto ctx = IntersectAssocCtx(bss.value(), client);
+
+    // Add info that can't be derived by the intersection
+    ctx.ts_start = timer_mgr_.Now();
+    ctx.bssid = bss->bssid;
+    ctx.set_aid(bss->aid);
+    ctx.phy = ctx.DerivePhy();
+    ctx.chan = join_chan;
+
+    if (join_phy != ctx.phy) {
+        // This situation is out-of specification, and may happen
+        // when what the AP allowed in the Association Response
+        // differs from what the AP announced in its beacon.
+        // Use the outcome of the association negotiation as the AssocContext's phy.
+        // TODO(porce): How should this affect the radio's channel setting?
+        warnf("PHY for join (%u) and for association (%u) differ. AssocResp:[%s]", join_phy,
+              ctx.DerivePhy(), debug::Describe(bss.value()).c_str());
+    }
+
+    return ctx;
 }
 
 }  // namespace wlan
