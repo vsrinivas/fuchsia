@@ -2,11 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/assert_cmx.gni")
 import("//build/compiled_action.gni")
+import("//build/gn/packages.gni")
 import("//build/images/manifest.gni")
 import("//build/json/validate_json.gni")
-import("//build/gn/packages.gni")
-import("//build/assert_cmx.gni")
+import("//build/packages/package_internal.gni")
 import("//build/testing/test_spec.gni")
 
 declare_args() {
@@ -621,28 +622,20 @@ template("package") {
       }
     }
 
-    generate_response_file("${pkg_target_name}.system_index.rsp") {
-      if (pkg.deprecated_system_image) {
-        # A system_image package will be included directly in the system package.
-        response_file_contents = []
-      } else {
-        deps = [
-          ":${pkg_target_name}.meta",
-        ]
-        if (pkg.package_set == "") {
-          package_tags = ""
-        } else {
-          package_tags = "#${pkg.package_set}"
-        }
-        response_file_contents = [
-          "--entry=${pkg.package_name}/${pkg.package_version}${package_tags}=" +
-              rebase_path("${pkg_target_name}.meta/blobs.json",
-                          root_build_dir,
-                          target_out_dir),
-        ]
-      }
+    generate_system_index("${pkg_target_name}.system_index.rsp") {
+      deprecated_system_image = pkg.deprecated_system_image
+      meta_target = ":${pkg_target_name}.meta"
+      package_set = pkg.package_set
+      package_name = pkg.package_name
+      package_version = pkg.package_version
+      blobs_json = "${pkg_target_name}.meta/blobs.json"
     }
 
+    # A real package needs has a pkgsvr index entry mapping its package
+    # name and version to its meta.far file's merkleroot.
+    # The amber index is the same, but needs the meta.far filename
+    # in the build, rather than its merkleroot.
+    # TODO(mcgrathr): Make amber publish use pkgsvr index directly.
     foreach(index,
             [
               {
@@ -654,27 +647,20 @@ template("package") {
                 file = "meta.far"
               },
             ]) {
-      generate_response_file("${pkg_target_name}.${index.name}.rsp") {
-        if (pkg.deprecated_system_image) {
-          # A system_image package has no index entry.
-          response_file_contents = []
-        } else {
-          # A real package needs has a pkgsvr index entry mapping its package
-          # name and version to its meta.far file's merkleroot.
-          # The amber index is the same, but needs the meta.far filename
-          # in the build, rather than its merkleroot.
-          # TODO(mcgrathr): Make amber publish use pkgsvr index directly.
+      generate_index("${pkg_target_name}.${index.name}.rsp") {
+        deprecated_system_image = pkg.deprecated_system_image
+        if (!deprecated_system_image) {
           deps = [
             ":${pkg_target_name}.manifest",
             ":${pkg_target_name}.meta",
           ]
-          response_file_contents = [
-            "--entry-manifest=${pkg_label}",
-            "--entry=${pkg.package_name}/${pkg.package_version}=" +
-                rebase_path("${pkg_target_name}.meta/${index.file}",
-                            root_build_dir,
-                            target_out_dir),
-          ]
+        }
+        index_file = "${pkg_target_name}.meta/${index.file}"
+        package_name = pkg.package_name
+        package_version = pkg.package_version
+        pkg_label = pkg_label
+        if (defined(testonly)) {
+          testonly = testonly
         }
       }
     }
