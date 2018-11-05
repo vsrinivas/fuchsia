@@ -14,7 +14,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_zircon as zx,
     fuchsia_zircon::prelude::*,
-    futures::{prelude::*, channel::mpsc},
+    futures::{prelude::*, channel::mpsc, select},
     std::fs::{self, File},
     std::io::Cursor,
     std::sync::{Arc, Mutex},
@@ -22,6 +22,7 @@ use {
 };
 
 mod mac_frames;
+mod eth_frames;
 
 #[cfg(test)]
 mod test_utils;
@@ -305,7 +306,8 @@ fn handle_data_tx(tx_vec_idx: u16, state: &mut State, is_successful: bool,
         state.majority_tx_vec_idx = tx_vec_idx;
         state.majority_idx_count = 1;
     } else {
-        println!("non-majority tx_vec_idx(could indicate probing): {}", tx_vec_idx);
+        println!("non-majority tx_vec_idx (could indicate probing): {} against {} ({})",
+                tx_vec_idx, state.majority_tx_vec_idx, state.majority_idx_count);
         state.majority_idx_count -= 1;
     }
     send_tx_status_report(tx_vec_idx, is_successful, proxy)
@@ -361,7 +363,16 @@ async fn create_eth_client(mac: &[u8; 6]) -> Result<ethernet::Client, failure::E
         if let Ok(client) = await!(ethernet::Client::from_file(dev, vmo,
                                    ethernet::DEFAULT_BUFFER_SIZE, "wlan-hw-sim")) {
             if let Ok(info) = await!(client.info()) {
-                if &info.mac.octets == mac { return Ok(client); }
+                if &info.mac.octets == mac {
+                    println!("ethernet client created: {:?}", client);
+                    await!(client.start()).expect("error starting ethernet device");
+                    // must call get_status() after start() to clear zx::Signals::USER_0
+                    // otherwise there will be a stream of infinite StatusChanged events that blocks
+                    // fasync::Interval
+                    println!("info: {:?} status: {:?}", await!(client.info()).unwrap(),
+                             await!(client.get_status()).unwrap());
+                    return Ok(client);
+                }
             }
         }
     }
@@ -373,61 +384,89 @@ fn main() -> Result<(), failure::Error> {
     let wlantap = Wlantap::open()?;
     let state = Arc::new(Mutex::new(State::new()));
     let proxy = wlantap.create_phy(create_wlantap_config())?;
-    let (sender, mut receiver) = mpsc::channel(1);
+    let (mut sender, mut receiver) = mpsc::channel(1);
 
-    let event_listener = async {
-        let state = state.clone();
-        let mut events = proxy.take_event_stream();
-        while let Some(event) = await!(events.try_next()).unwrap() {
-            match event {
-                wlantap::WlantapPhyEvent::SetChannel { args } => {
-                    let mut state = state.lock().unwrap();
-                    state.current_channel = args.chan;
-                    println!("setting channel to {:?}", state.current_channel);
-                }
-                wlantap::WlantapPhyEvent::Tx { args } => {
-                    let mut state = state.lock().unwrap();
-                    let was_associated = state.is_associated;
-                    handle_tx(args, &mut state, &proxy);
-                    if !was_associated && state.is_associated {
-                        await!(sender.send(()));
-                    }
-                }
-                _ => {}
-            }
-        }
-    };
-
-    let beacon_timer = async {
-        let mut beacon_timer_stream = fasync::Interval::new(102_400_000.nanos());
-        while let Some(_) = await!(beacon_timer_stream.next()) {
-            let state = &mut *state.lock().unwrap();
-            if state.current_channel.primary == 6 {
-                if !state.is_associated { eprintln!("sending beacon!"); }
-                send_beacon(&mut state.frame_buf, &state.current_channel, &BSSID,
-                          "fakenet".as_bytes(), &proxy).unwrap();
-            }
-        }
-    };
-
-    let ethernet_sender = async {
-        match await!(receiver.next()) {
-            Some(()) => println !("associated signal received from mpsc channel"),
-            other => {
-                println!("mpsc channel returned {:?}", other);
-                return;
-            }
-        };
-
-        let client = await!(create_eth_client(&HW_MAC_ADDR))
-                     .expect("cannot create ethernet client");
-        println!("ethernet client created: {:?}", client);
-        println!("info: {:?} status: {:?}", await!(client.info()).unwrap(),
-                 await!(client.get_status()).unwrap());
-    };
-
+    let event_listener = event_listener(state.clone(), &mut sender, proxy.clone());
+    let beacon_timer = beacon_sender(state.clone(), proxy.clone());
+    let ethernet_sender = ethernet_sender(&mut receiver, state.clone());
     exec.run_singlethreaded(event_listener.join3(beacon_timer, ethernet_sender));
     Ok(())
+}
+
+async fn event_listener(state: Arc<Mutex<State>>, sender: &mut mpsc::Sender<()>,
+                               proxy: wlantap::WlantapPhyProxy) {
+    let mut events = proxy.take_event_stream();
+    while let Some(event) = await!(events.try_next()).unwrap() {
+        match event {
+            wlantap::WlantapPhyEvent::SetChannel { args } => {
+                let mut state = state.lock().unwrap();
+                state.current_channel = args.chan;
+                println!("setting channel to {:?}", state.current_channel);
+            }
+            wlantap::WlantapPhyEvent::Tx { args } => {
+                let mut state = state.lock().unwrap();
+                let was_associated = state.is_associated;
+                handle_tx(args, &mut state, &proxy);
+                if !was_associated && state.is_associated {
+                    await!(sender.send(()));
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+async fn beacon_sender(state: Arc<Mutex<State>>, proxy: wlantap::WlantapPhyProxy) {
+    let mut beacon_timer_stream = fasync::Interval::new(102_400_000.nanos());
+    while let Some(_) = await!(beacon_timer_stream.next()) {
+        let state = &mut *state.lock().unwrap();
+        if state.current_channel.primary == 6 {
+            if !state.is_associated { eprintln!("sending beacon!"); }
+            send_beacon(&mut state.frame_buf, &state.current_channel, &BSSID,
+                        "fakenet".as_bytes(), &proxy).unwrap();
+        }
+    }
+}
+
+async fn ethernet_sender(receiver: &mut mpsc::Receiver<()>, state: Arc<Mutex<State>>) {
+    match await!(receiver.next()) {
+        Some(()) => println !("associated signal received from mpsc channel"),
+        other => {
+            println!("mpsc channel returned {:?}", other);
+            return;
+        }
+    };
+
+    let mut client = await!(create_eth_client(&HW_MAC_ADDR))
+                     .expect("cannot create ethernet client");
+
+    let mut buf : Vec<u8> = vec![];
+    eth_frames::write_eth_header(&mut buf, &eth_frames::EthHeader{
+            dst : BSSID,
+            src : HW_MAC_ADDR,
+            eth_type : eth_frames::EtherType::Ipv4 as u16,
+        })
+        .expect("Error creating fake ethernet frame");
+
+    let mut eth_sender_timer_stream = fasync::Interval::new(100.millis());
+    let mut client_stream = client.get_stream();
+    const ETH_PACKETS_PER_INTERVAL : u16 = 160;
+    'eth_sender: loop {
+        let mut next_timer_event = eth_sender_timer_stream.next();
+        let mut next_eth_event = client_stream.next();
+
+        select! {
+            next_timer_event => {
+                for _ in 0..ETH_PACKETS_PER_INTERVAL { client.send(&buf); }
+                let state = state.lock().unwrap();
+                if !state.is_associated { break 'eth_sender; }
+            },
+            next_eth_event => {
+                await!(client.get_status()).expect("calling client.get_status() after an event");
+            },
+        }
+
+    }
 }
 
 #[cfg(test)]
