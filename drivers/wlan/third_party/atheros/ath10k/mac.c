@@ -2166,7 +2166,8 @@ static uint32_t ath10k_peer_assoc_h_listen_intval(struct ath10k* ar) {
         return 1;
     }
 
-    return 3;  // Original code is ar->hw->conf.listen_interval.
+    // Value should be derived from association context (NET-1816)
+    return 3;
 }
 
 static void ath10k_peer_assoc_h_basic(struct ath10k* ar,
@@ -2175,14 +2176,6 @@ static void ath10k_peer_assoc_h_basic(struct ath10k* ar,
     struct ath10k_vif* arvif = &ar->arvif;
 
     ASSERT_MTX_HELD(&ar->conf_mutex);
-
-#if 0  // NEEDS PORTING
-    if (vif->type == NL80211_IFTYPE_STATION) {
-        aid = vif->bss_conf.aid;
-    } else {
-        aid = sta->aid;
-    }
-#endif  // NEEDS PORTING
 
     memcpy(arg->addr, assoc->bssid, ETH_ALEN);
     arg->vdev_id = arvif->vdev_id;
@@ -2254,13 +2247,7 @@ static void ath10k_peer_assoc_h_rates(struct ath10k* ar,
 
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
-#if 0  // NEEDS PORTING
-    if (COND_WARN(ath10k_mac_vif_chan(vif, &def))) {
-        return;
-    }
-#endif  // NEEDS PORTING
-
-    size_t rates_size = sizeof(rateset->rates) / sizeof(rateset->rates[0]);
+    size_t rates_size = countof(rateset->rates);
     rateset->num_rates = MIN(assoc->rates_cnt, rates_size);
     for (i = 0; i < rateset->num_rates; i++) {
         rateset->rates[i] = ath10k_mac_supp_rate_to_rate(assoc->rates[i]);
@@ -2334,22 +2321,15 @@ static void ath10k_peer_assoc_h_ht(struct ath10k* ar,
         arg->peer_flags |= ar->wmi.peer_flags->ldbc;
     }
 
-#if 0  // NEEDS PORTING
-    if (sta->bandwidth >= IEEE80211_STA_RX_BW_40) {
+    if (ht_cap->ht_capability_info & IEEE80211_HT_CAPS_CHAN_WIDTH) {
         arg->peer_flags |= ar->wmi.peer_flags->bw40;
         arg->peer_rate_caps |= WMI_RC_CW40_FLAG;
     }
 
-    if (arvif->bitrate_mask.control[band].gi != NL80211_TXRATE_FORCE_LGI) {
-        if (ht_cap->cap & IEEE80211_HT_CAP_SGI_20) {
-            arg->peer_rate_caps |= WMI_RC_SGI_FLAG;
-        }
-
-        if (ht_cap->cap & IEEE80211_HT_CAP_SGI_40) {
-            arg->peer_rate_caps |= WMI_RC_SGI_FLAG;
-        }
+    if ((ht_cap->ht_capability_info & IEEE80211_HT_CAPS_SGI_20) ||
+        (ht_cap->ht_capability_info & IEEE80211_HT_CAPS_SGI_40)) {
+        arg->peer_rate_caps |= WMI_RC_SGI_FLAG;
     }
-#endif  // NEEDS PORTING
 
     if (ht_cap->ht_capability_info & IEEE80211_HT_CAPS_TX_STBC) {
         arg->peer_rate_caps |= WMI_RC_TX_STBC_FLAG;
@@ -2370,12 +2350,13 @@ static void ath10k_peer_assoc_h_ht(struct ath10k* ar,
         arg->peer_rate_caps |= WMI_RC_DS_FLAG;
     }
 
-    for (i = 0, n = 0, max_nss = 0; i < IEEE80211_HT_MCS_MASK_LEN * 8; i++)
+    for (i = 0, n = 0, max_nss = 0; i < IEEE80211_HT_MCS_MASK_LEN * 8; i++) {
         if ((ht_cap->supported_mcs_set[i / 8] & BIT(i % 8)) &&
                 (ht_mcs_mask[i / 8] & BIT(i % 8))) {
             max_nss = (i / 8) + 1;
             arg->peer_ht_rates.rates[n++] = i;
         }
+    }
 
     /*
      * This is a workaround for HT-enabled STAs which break the spec
@@ -2393,7 +2374,7 @@ static void ath10k_peer_assoc_h_ht(struct ath10k* ar,
         }
     } else {
         arg->peer_ht_rates.num_rates = n;
-        arg->peer_num_spatial_streams = 1;  // NEEDS PORTING: MIN(sta->rx_nss, max_nss);
+        arg->peer_num_spatial_streams = max_nss;
     }
 
     ath10k_dbg(ar, ATH10K_DBG_MAC, "mac ht peer %pM mcs cnt %d nss %d\n",
