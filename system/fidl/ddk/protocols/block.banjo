@@ -7,6 +7,9 @@ library ddk.protocol.block;
 using zircon.device.block;
 using zx;
 
+[repr="C"]
+struct BlockStats {};
+
 /// `BLOCK_OP_READ`, `BLOCK_OP_WRITE`
 struct BlockReadWrite {
     /// Command and flags.
@@ -75,11 +78,16 @@ interface BlockImpl {
   /// via queue() must have block_op_size_out - sizeof(block_op_t) bytes
   /// available at the end of the structure for the use of the driver.
   1: Query() -> (zircon.device.block.BlockInfo info, usize block_op_size);
+
   /// Submit an IO request for processing. Ownership of |op| is transferred to
   /// callee until |completion_cb| is invoked|. Success or failure will
   /// be reported via the |completion_cb|.  This / callback may be called
   /// before the queue() method returns.
   [Async]
   2: Queue(BlockOp? txn) -> (zx.status status, BlockOp? op);
-  3: GetStats(vector<void> cmd) -> (zx.status s, vector<void> reply);
+
+  /// Returns stats concerning IO operations on the device. Will return
+  /// ZX_ERR_NOT_SUPPORTED if stats are not enabled on this device. Clears the
+  /// metrics on the block device if clear is true.
+  3: GetStats(bool clear) -> (zx.status s, BlockStats stats);
 };

@@ -44,8 +44,7 @@
 //
 //     void BlockImplQueue(block_op_t* txn, block_impl_queue_callback callback, void* cookie);
 //
-//     zx_status_t BlockImplGetStats(const void* cmd_buffer, size_t cmd_size, void*
-//     out_reply_buffer, size_t reply_size, size_t* out_reply_actual);
+//     zx_status_t BlockImplGetStats(bool clear, block_stats_t* out_stats);
 //
 //     ...
 // };
@@ -78,18 +77,19 @@ private:
     static void BlockImplQuery(void* ctx, block_info_t* out_info, size_t* out_block_op_size) {
         static_cast<D*>(ctx)->BlockImplQuery(out_info, out_block_op_size);
     }
-    // Submit an IO request for processing.  Success or failure will
-    // be reported via the completion_cb() in the block_op_t.  This
-    // callback may be called before the queue() method returns.
+    // Submit an IO request for processing. Ownership of |op| is transferred to
+    // callee until |completion_cb| is invoked|. Success or failure will
+    // be reported via the |completion_cb|.  This / callback may be called
+    // before the queue() method returns.
     static void BlockImplQueue(void* ctx, block_op_t* txn, block_impl_queue_callback callback,
                                void* cookie) {
         static_cast<D*>(ctx)->BlockImplQueue(txn, callback, cookie);
     }
-    static zx_status_t BlockImplGetStats(void* ctx, const void* cmd_buffer, size_t cmd_size,
-                                         void* out_reply_buffer, size_t reply_size,
-                                         size_t* out_reply_actual) {
-        return static_cast<D*>(ctx)->BlockImplGetStats(cmd_buffer, cmd_size, out_reply_buffer,
-                                                       reply_size, out_reply_actual);
+    // Returns stats concerning IO operations on the device. Will return
+    // ZX_ERR_NOT_SUPPORTED if stats are not enabled on this device. Clears the
+    // metrics on the block device if clear is true.
+    static zx_status_t BlockImplGetStats(void* ctx, bool clear, block_stats_t* out_stats) {
+        return static_cast<D*>(ctx)->BlockImplGetStats(clear, out_stats);
     }
 };
 
@@ -115,16 +115,18 @@ public:
     void Query(block_info_t* out_info, size_t* out_block_op_size) {
         ops_->query(ctx_, out_info, out_block_op_size);
     }
-    // Submit an IO request for processing.  Success or failure will
-    // be reported via the completion_cb() in the block_op_t.  This
-    // callback may be called before the queue() method returns.
+    // Submit an IO request for processing. Ownership of |op| is transferred to
+    // callee until |completion_cb| is invoked|. Success or failure will
+    // be reported via the |completion_cb|.  This / callback may be called
+    // before the queue() method returns.
     void Queue(block_op_t* txn, block_impl_queue_callback callback, void* cookie) {
         ops_->queue(ctx_, txn, callback, cookie);
     }
-    zx_status_t GetStats(const void* cmd_buffer, size_t cmd_size, void* out_reply_buffer,
-                         size_t reply_size, size_t* out_reply_actual) {
-        return ops_->get_stats(ctx_, cmd_buffer, cmd_size, out_reply_buffer, reply_size,
-                               out_reply_actual);
+    // Returns stats concerning IO operations on the device. Will return
+    // ZX_ERR_NOT_SUPPORTED if stats are not enabled on this device. Clears the
+    // metrics on the block device if clear is true.
+    zx_status_t GetStats(bool clear, block_stats_t* out_stats) {
+        return ops_->get_stats(ctx_, clear, out_stats);
     }
 
 private:

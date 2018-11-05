@@ -227,8 +227,7 @@ public:
     // Block Protocol
     void BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out);
     void BlockImplQueue(block_op_t* txn, block_impl_queue_callback completion_cb, void* cookie);
-    zx_status_t BlockImplGetStats(const void* cmd_buffer, size_t cmd_size, void* out_reply_buffer,
-                                  size_t reply_size, size_t* out_reply_actual) {
+    zx_status_t BlockImplGetStats(bool clear, block_stats_t* stats) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
