@@ -149,9 +149,14 @@ private:
     bool InitializeInterrupts();
     void EnableInterrupts();
     void DisableInterrupts();
+    bool InitializeHardware();
     void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, bool enqueue_front = false);
     void SuspectedGpuHang();
     static void InitializeHardwareQuirks(GpuFeatures* features, magma::RegisterIo* registers);
+    bool IsProtectedModeSupported();
+    void EnterProtectedMode();
+    bool ResetDevice();
+    bool IsInProtectedMode();
 
     magma::Status ProcessDumpStatusToLog();
     magma::Status ProcessGpuInterrupt();
@@ -187,6 +192,9 @@ private:
     std::unique_ptr<magma::PlatformPort> device_port_;
     std::mutex device_request_mutex_;
     std::list<std::unique_ptr<DeviceRequest>> device_request_list_;
+
+    // Triggered on device reset.
+    std::unique_ptr<magma::PlatformSemaphore> reset_semaphore_;
 
     std::mutex schedule_mutex_;
     __TA_GUARDED(schedule_mutex_) std::vector<std::shared_ptr<MsdArmAtom>> atoms_to_schedule_;

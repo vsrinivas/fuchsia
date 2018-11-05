@@ -29,6 +29,9 @@ public:
 
     AddressManager(Owner* owner, uint32_t address_slot_count);
 
+    // Used to clear all address mappings if the hardware was reset.
+    void ClearAddressMappings(bool force_expire);
+
     bool AssignAddressSpace(MsdArmAtom* atom);
 
     void AtomFinished(MsdArmAtom* atom);

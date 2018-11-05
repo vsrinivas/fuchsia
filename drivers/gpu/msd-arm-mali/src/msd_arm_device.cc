@@ -188,11 +188,13 @@ bool MsdArmDevice::Init(void* device_handle)
     }
 #endif
 
+    reset_semaphore_ = magma::PlatformSemaphore::Create();
+
     device_request_semaphore_ = magma::PlatformSemaphore::Create();
     device_port_ = magma::PlatformPort::Create();
 
     power_manager_ = std::make_unique<PowerManager>(register_io_.get());
-
+    perf_counters_ = std::make_unique<PerformanceCounters>(this);
     scheduler_ = std::make_unique<JobScheduler>(this, 3);
     address_manager_ = std::make_unique<AddressManager>(this, gpu_features_.address_space_count);
 
@@ -203,6 +205,15 @@ bool MsdArmDevice::Init(void* device_handle)
     if (!InitializeInterrupts())
         return false;
 
+    return InitializeHardware();
+}
+
+bool MsdArmDevice::InitializeHardware()
+{
+    // force_expire is false because nothing should have been using an address space before.
+    address_manager_->ClearAddressMappings(false);
+    cycle_counter_refcount_ = 0;
+    DASSERT(registers::GpuStatus::Get().ReadFrom(register_io_.get()).cycle_count_active().get() == 0);
     EnableInterrupts();
     InitializeHardwareQuirks(&gpu_features_, register_io_.get());
 
@@ -211,7 +222,6 @@ bool MsdArmDevice::Init(void* device_handle)
     enabled_cores = gpu_features_.shader_present;
 #endif
     power_manager_->EnableCores(register_io_.get(), enabled_cores);
-    perf_counters_ = std::make_unique<PerformanceCounters>(this);
 
     return true;
 }
@@ -316,6 +326,12 @@ magma::Status MsdArmDevice::ProcessGpuInterrupt()
     DLOG("Got GPU interrupt status 0x%x\n", irq_status.reg_value());
     if (!irq_status.reg_value())
         magma::log(magma::LOG_WARNING, "Got unexpected GPU IRQ with no flags set\n");
+
+    if (irq_status.reset_completed().get()) {
+        DLOG("Received GPU reset completed");
+        reset_semaphore_->Signal();
+        irq_status.reset_completed().set(0);
+    }
 
     if (irq_status.power_changed_single().get() || irq_status.power_changed_all().get()) {
         irq_status.power_changed_single().set(0);
@@ -937,6 +953,38 @@ void MsdArmDevice::InitializeHardwareQuirks(GpuFeatures* features, magma::Regist
     }
 
     shader_config.WriteTo(reg);
+}
+
+bool MsdArmDevice::IsProtectedModeSupported()
+{
+    uint32_t gpu_product_id = gpu_features_.gpu_id.product_id().get();
+    // All Bifrost should support it. 0x6956 is Mali-t60x MP4 r0p0, so it doesn't count.
+    return gpu_product_id != 0x6956 && (gpu_product_id > 0x1000);
+}
+
+void MsdArmDevice::EnterProtectedMode()
+{
+    register_io_->Write32(registers::GpuCommand::kOffset,
+                          registers::GpuCommand::kCmdSetProtectedMode);
+}
+
+bool MsdArmDevice::ResetDevice()
+{
+    // Reset semaphore shouldn't already be signaled.
+    DASSERT(!reset_semaphore_->Wait(0));
+    register_io_->Write32(registers::GpuCommand::kOffset, registers::GpuCommand::kCmdSoftReset);
+
+    if (!reset_semaphore_->Wait(1000)) {
+        magma::log(magma::LOG_WARNING, "Hardware reset timed out");
+        return false;
+    }
+
+    return InitializeHardware();
+}
+
+bool MsdArmDevice::IsInProtectedMode()
+{
+    return registers::GpuStatus::Get().ReadFrom(register_io_.get()).protected_mode_active().get();
 }
 
 void MsdArmDevice::RequestPerfCounterOperation(uint32_t type)

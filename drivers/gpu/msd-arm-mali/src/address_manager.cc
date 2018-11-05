@@ -59,6 +59,19 @@ void AddressManager::AtomFinished(MsdArmAtom* atom)
     address_slot_free_.notify_one();
 }
 
+void AddressManager::ClearAddressMappings(bool force_expire)
+{
+    std::lock_guard<std::mutex> lock(address_slot_lock_);
+    for (auto& slot : address_slots_) {
+        if (force_expire) {
+            slot.mapping.reset();
+        } else {
+            DASSERT(slot.mapping.expired());
+        }
+        slot.address_space = nullptr;
+    }
+}
+
 std::shared_ptr<AddressSlotMapping> AddressManager::GetMappingForSlot(uint32_t slot_number)
 {
     std::lock_guard<std::mutex> lock(address_slot_lock_);

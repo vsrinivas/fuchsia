@@ -213,6 +213,24 @@ public:
         MsdArmDevice::InitializeHardwareQuirks(&features, reg_io.get());
         EXPECT_EQ(0u, reg_io->Read32(0xf04));
     }
+
+    void ProtectedMode()
+    {
+        // Use device thread so the test can wait for a reset interrupt.
+        std::unique_ptr<MsdArmDevice> device = MsdArmDevice::Create(GetTestDeviceHandle(), true);
+        ASSERT_NE(nullptr, device);
+        if (!device->IsProtectedModeSupported()) {
+            magma::log(magma::LOG_WARNING, "Protected mode not supported, skipping test");
+            return;
+        }
+
+        EXPECT_FALSE(device->IsInProtectedMode());
+
+        device->EnterProtectedMode();
+        EXPECT_TRUE(device->IsInProtectedMode());
+        EXPECT_TRUE(device->ResetDevice());
+        EXPECT_FALSE(device->IsInProtectedMode());
+    }
 };
 
 TEST(MsdArmDevice, CreateAndDestroy)
@@ -255,4 +273,10 @@ TEST(MsdArmDevice, MockInitializeQuirks)
 {
     TestMsdArmDevice test;
     test.MockInitializeQuirks();
+}
+
+TEST(MsdArmDevice, ProtectMode)
+{
+    TestMsdArmDevice test;
+    test.ProtectedMode();
 }

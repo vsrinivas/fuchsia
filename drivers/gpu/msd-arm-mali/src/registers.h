@@ -84,6 +84,8 @@ public:
     DEF_BIT(0, gpu_active);
     DEF_BIT(1, power_active);
     DEF_BIT(2, performance_counters_active);
+    DEF_BIT(6, cycle_count_active);
+    DEF_BIT(7, protected_mode_active);
 
     static auto Get() { return magma::RegisterAddr<GpuStatus>(0x34); }
 };
