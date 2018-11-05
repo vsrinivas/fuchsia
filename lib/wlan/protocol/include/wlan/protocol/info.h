@@ -244,6 +244,7 @@ typedef struct wlan_info {
 typedef struct wlan_assoc_ctx {
     uint8_t bssid[6];
     uint16_t aid;
+    uint16_t listen_interval;
 
     // Coincatenation of SupportedRates and ExtendedSupportedRates
     // IEEE Std 802.11-2016, 9.4.2.3 & 9.4.2.13

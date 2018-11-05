@@ -279,6 +279,7 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
     auto assoc = w.Write<AssociationRequest>();
     assoc->cap = OverrideCapability(client_capability.cap);
     assoc->listen_interval = 0;
+    join_ctx_->set_listen_interval(assoc->listen_interval);
 
     auto rates = BuildAssocReqSuppRates(join_ctx_->bss()->basic_rate_set,
                                         join_ctx_->bss()->op_rate_set, client_capability.rates);
@@ -1298,6 +1299,7 @@ zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& f
     assoc_ctx_.ts_start = timer_mgr_.Now();
     assoc_ctx_.bssid = join_ctx_->bssid();
     assoc_ctx_.aid = frame.body()->aid & kAidMask;
+    assoc_ctx_.listen_interval = join_ctx_->listen_interval();
 
     AssocContext ap{};
     ap.cap = frame.body()->cap;
@@ -1387,6 +1389,7 @@ zx_status_t Station::NotifyAssocContext() {
     wlan_assoc_ctx_t ddk{};
     assoc_ctx_.bssid.CopyTo(ddk.bssid);
     ddk.aid = assoc_ctx_.aid;
+    ddk.listen_interval = assoc_ctx_.listen_interval;
 
     auto& rates = assoc_ctx_.rates;
     ZX_DEBUG_ASSERT(rates.size() <= WLAN_MAC_MAX_RATES);

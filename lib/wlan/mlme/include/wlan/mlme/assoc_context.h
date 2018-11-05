@@ -29,6 +29,7 @@ struct AssocContext {
 
     CapabilityInfo cap;
     uint16_t aid = 0;
+    uint16_t listen_interval = 0;
 
     // Negotiated configurations
     // This is an outcome of intersection of capabilities and configurations.

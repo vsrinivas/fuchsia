@@ -22,6 +22,9 @@ class JoinContext {
     const common::MacAddr& bssid() const { return bssid_; }
     const wlan_channel_t& channel() const { return channel_; }
     const wlan_channel_t& bss_channel() const { return bss_channel_; }
+    uint16_t listen_interval() const { return listen_interval_; }
+    void set_listen_interval(uint16_t listen_interval) { listen_interval_ = listen_interval; }
+
     enum PHY phy() const { return phy_; }
     const ::fuchsia::wlan::mlme::BSSDescription* bss() const { return &bss_; }
 
@@ -39,6 +42,9 @@ class JoinContext {
     wlan_channel_t bss_channel_;
     enum PHY phy_;
     common::MacAddr bssid_;
+
+    // TODO(NET-1819): Redesign AssocContext and move this there.
+    uint16_t listen_interval_;
 };
 
 }  // namespace wlan
