@@ -58,6 +58,7 @@ typedef struct blkdev {
     block_op_t* iobop;
 
     bool enable_stats;
+    mtx_t stat_lock_;
     block_stats_t stats;
 } blkdev_t;
 
@@ -366,6 +367,7 @@ static void blkdev_queue(void* ctx, block_op_t* bop, block_impl_queue_callback c
                         void* cookie) {
     blkdev_t* bdev = ctx;
     uint64_t op = bop->command & BLOCK_OP_MASK;
+    mtx_lock(&bdev->stat_lock_);
     bdev->stats.total_ops++;
     if (op == BLOCK_OP_READ) {
         bdev->stats.total_reads++;
@@ -376,6 +378,7 @@ static void blkdev_queue(void* ctx, block_op_t* bop, block_impl_queue_callback c
         bdev->stats.total_blocks_written += bop->rw.length;
         bdev->stats.total_blocks += bop->rw.length;
     }
+    mtx_unlock(&bdev->stat_lock_);
     block_impl_queue(&bdev->parent_protocol, bop, completion_cb, cookie);
 }
 
