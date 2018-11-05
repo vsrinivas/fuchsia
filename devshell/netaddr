@@ -10,9 +10,4 @@ set -e
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
-# We want to give the user time to accept Darwin's firewall dialog.
-if [[ "$(uname -s)" = "Darwin" ]]; then
-  "${ZIRCON_TOOLS_DIR}/netaddr" "$@"
-else
-  "${ZIRCON_TOOLS_DIR}/netaddr" --nowait "$@"
-fi
+"${ZIRCON_TOOLS_DIR}/netaddr" --nowait "$@"
