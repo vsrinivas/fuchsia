@@ -15,9 +15,6 @@
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "rapidjson/document.h"
 
-// 32 hex characters + 4 hyphens.
-constexpr size_t kGuidStringLen = 36;
-
 static void print_usage(fxl::CommandLine& cl) {
   // clang-format off
   std::cerr << "usage: " << cl.argv0() << " [OPTIONS]\n";
@@ -50,10 +47,6 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "\n";
   std::cerr << " Block devices can be specified by path:\n";
   std::cerr << "    /pkg/data/disk.img\n";
-  std::cerr << " Or by GPT Partition GUID:\n";
-  std::cerr << "    guid:14db42cf-beb7-46a2-9ef8-89b13bb80528,rw\n";
-  std::cerr << " Or by GPT Partition Type GUID:\n";
-  std::cerr << "    type-guid:4F68BCE3-E8CD-4DB1-96E7-FBCAF984B709,rw\n";
   std::cerr << "\n";
   std::cerr << " Additional Options:\n";
   std::cerr << "    rw/ro: Create a read/write or read-only device.\n";
@@ -214,60 +207,25 @@ static GuestConfigParser::OptionHandler set_flag(bool* out,
   };
 }
 
-static zx_status_t parse_guid(const std::string& guid_str, Guid& guid) {
-  if (!guid.empty()) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (guid_str.size() != kGuidStringLen) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  int ret = sscanf(
-      guid_str.c_str(),
-      "%2hhx%2hhx%2hhx%2hhx-%2hhx%2hhx-%2hhx%2hhx-%2hhx%2hhx-%2hhx%2hhx%2hhx%"
-      "2hhx%2hhx%2hhx",
-      &guid.bytes[3], &guid.bytes[2], &guid.bytes[1], &guid.bytes[0],
-      &guid.bytes[5], &guid.bytes[4], &guid.bytes[7], &guid.bytes[6],
-      &guid.bytes[8], &guid.bytes[9], &guid.bytes[10], &guid.bytes[11],
-      &guid.bytes[12], &guid.bytes[13], &guid.bytes[14], &guid.bytes[15]);
-  return (ret == 16) ? ZX_OK : ZX_ERR_INVALID_ARGS;
-}
-
 static zx_status_t parse_block_spec(const std::string& spec, BlockSpec* out) {
   std::string token;
   std::istringstream tokenStream(spec);
   while (std::getline(tokenStream, token, ',')) {
     if (token == "fdio") {
-      out->format = fuchsia::guest::device::BlockFormat::RAW;
+      out->format = fuchsia::guest::BlockFormat::RAW;
     } else if (token == "qcow") {
-      out->format = fuchsia::guest::device::BlockFormat::QCOW;
+      out->format = fuchsia::guest::BlockFormat::QCOW;
     } else if (token == "rw") {
-      out->mode = fuchsia::guest::device::BlockMode::READ_WRITE;
+      out->mode = fuchsia::guest::BlockMode::READ_WRITE;
     } else if (token == "ro") {
-      out->mode = fuchsia::guest::device::BlockMode::READ_ONLY;
+      out->mode = fuchsia::guest::BlockMode::READ_ONLY;
     } else if (token == "volatile") {
-      out->mode = fuchsia::guest::device::BlockMode::VOLATILE_WRITE;
+      out->mode = fuchsia::guest::BlockMode::VOLATILE_WRITE;
     } else if (token.size() > 0 && token[0] == '/') {
       out->path = std::move(token);
-    } else if (token.compare(0, 5, "guid:") == 0) {
-      std::string guid_str = token.substr(5);
-      zx_status_t status = parse_guid(guid_str, out->guid);
-      if (status != ZX_OK) {
-        return status;
-      }
-      out->guid.type = Guid::Type::GPT_PARTITION;
-    } else if (token.compare(0, 10, "type-guid:") == 0) {
-      std::string guid_str = token.substr(10);
-      zx_status_t status = parse_guid(guid_str, out->guid);
-      if (status != ZX_OK) {
-        return status;
-      }
-      out->guid.type = Guid::Type::GPT_PARTITION_TYPE;
     }
   }
-
-  // Path and GUID are mutually exclusive, but one must be provided.
-  if (out->path.empty() == out->guid.empty()) {
+  if (out->path.empty()) {
     return ZX_ERR_INVALID_ARGS;
   }
   return ZX_OK;

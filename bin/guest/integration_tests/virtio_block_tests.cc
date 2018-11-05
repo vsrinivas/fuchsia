@@ -13,6 +13,7 @@
 #include <garnet/bin/guest/vmm/device/qcow_test_data.h>
 #include <garnet/lib/machina/device/block.h>
 #include <gmock/gmock.h>
+#include <lib/fdio/util.h>
 #include <lib/fxl/strings/string_printf.h>
 
 #include "guest_test.h"
@@ -26,16 +27,36 @@ static constexpr uint32_t kVirtioBlockCount = 32;
 static constexpr uint32_t kVirtioQcowBlockCount = 4 * 1024 * 1024 * 2;
 static constexpr uint32_t kVirtioTestStep = 8;
 
+static fidl::VectorPtr<fuchsia::guest::BlockDevice> ramdisk_device(
+    fuchsia::guest::BlockMode mode, char* ramdisk_path) {
+  zx_status_t status =
+      create_ramdisk(kBlockSectorSize, kVirtioBlockCount, ramdisk_path);
+  FXL_CHECK(status == ZX_OK) << "Failed to create ramdisk";
+  int fd = open(ramdisk_path, O_RDWR);
+  FXL_CHECK(fd >= 0) << "Failed to open ramdisk";
+  zx_handle_t handle;
+  status = fdio_get_service_handle(fd, &handle);
+  FXL_CHECK(status == ZX_OK) << "Failed to get ramdisk file handle";
+
+  fidl::VectorPtr<fuchsia::guest::BlockDevice> block_devices;
+  block_devices.push_back({
+      "test_device",
+      mode,
+      fuchsia::guest::BlockFormat::RAW,
+      fidl::InterfaceHandle<fuchsia::io::File>(zx::channel(handle)).Bind(),
+  });
+  return block_devices;
+}
+
 class ZirconReadOnlyRamdiskGuestTest
     : public GuestTest<ZirconReadOnlyRamdiskGuestTest> {
  public:
   static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
-    create_ramdisk(kBlockSectorSize, kVirtioBlockCount, ramdisk_path_);
     launch_info->url = kZirconGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
-    launch_info->args.push_back(
-        fxl::StringPrintf("--block=%s,ro", ramdisk_path_));
+    launch_info->block_devices =
+        ramdisk_device(fuchsia::guest::BlockMode::READ_ONLY, ramdisk_path_);
     return true;
   }
 
@@ -126,12 +147,11 @@ class ZirconReadWriteRamdiskGuestTest
     : public GuestTest<ZirconReadWriteRamdiskGuestTest> {
  public:
   static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
-    create_ramdisk(kBlockSectorSize, kVirtioBlockCount, ramdisk_path_);
     launch_info->url = kZirconGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
-    launch_info->args.push_back(
-        fxl::StringPrintf("--block=%s,rw", ramdisk_path_));
+    launch_info->block_devices =
+        ramdisk_device(fuchsia::guest::BlockMode::READ_WRITE, ramdisk_path_);
     return true;
   }
 
@@ -222,12 +242,11 @@ class ZirconVolatileRamdiskGuestTest
     : public GuestTest<ZirconVolatileRamdiskGuestTest> {
  public:
   static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
-    create_ramdisk(kBlockSectorSize, kVirtioBlockCount, ramdisk_path_);
     launch_info->url = kZirconGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
-    launch_info->args.push_back(
-        fxl::StringPrintf("--block=%s,volatile", ramdisk_path_));
+    launch_info->block_devices = ramdisk_device(
+        fuchsia::guest::BlockMode::VOLATILE_WRITE, ramdisk_path_);
     return true;
   }
 
@@ -380,21 +399,34 @@ static bool write_qcow_file(int fd) {
   return true;
 }
 
+static fidl::VectorPtr<fuchsia::guest::BlockDevice> qcow_device(
+    fuchsia::guest::BlockMode mode, char* qcow_path) {
+  fbl::unique_fd fd(mkstemp(qcow_path));
+  FXL_CHECK(fd) << "Failed to open qcow file";
+  FXL_CHECK(write_qcow_file(fd.get()));
+
+  zx_handle_t handle;
+  zx_status_t status = fdio_get_service_handle(fd.release(), &handle);
+  FXL_CHECK(status == ZX_OK) << "Failed to get qcow file handle";
+  fidl::VectorPtr<fuchsia::guest::BlockDevice> block_devices;
+  block_devices.push_back({
+      "qcow_device",
+      mode,
+      fuchsia::guest::BlockFormat::QCOW,
+      fidl::InterfaceHandle<fuchsia::io::File>(zx::channel(handle)).Bind(),
+  });
+  return block_devices;
+}
+
 class ZirconReadOnlyQcowGuestTest
     : public GuestTest<ZirconReadOnlyQcowGuestTest> {
  public:
   static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
-    fbl::unique_fd fd(mkstemp(&qcow_path_[0]));
-    bool qcow_success = write_qcow_file(fd.get());
-    if (!qcow_success) {
-      return false;
-    }
-
     launch_info->url = kZirconGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
-    launch_info->args.push_back(
-        fxl::StringPrintf("--block=%s,ro,qcow", qcow_path_));
+    launch_info->block_devices =
+        qcow_device(fuchsia::guest::BlockMode::READ_ONLY, qcow_path_);
     return true;
   }
 
@@ -471,17 +503,11 @@ class ZirconVolatileQcowGuestTest
     : public GuestTest<ZirconVolatileQcowGuestTest> {
  public:
   static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
-    fbl::unique_fd fd(mkstemp(&qcow_path_[0]));
-    bool qcow_success = write_qcow_file(fd.get());
-    if (!qcow_success) {
-      return false;
-    }
-
     launch_info->url = kZirconGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
-    launch_info->args.push_back(
-        fxl::StringPrintf("--block=%s,volatile,qcow", qcow_path_));
+    launch_info->block_devices =
+        qcow_device(fuchsia::guest::BlockMode::VOLATILE_WRITE, qcow_path_);
     return true;
   }
 

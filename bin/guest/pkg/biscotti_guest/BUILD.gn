@@ -4,39 +4,18 @@
 
 import("//garnet/bin/guest/pkg/guest_package.gni")
 
-data_image = "$target_out_dir/linux/data.img"
-
-action("data") {
-  visibility = [ ":*" ]
-  script = "mkdata.sh"
-  args = [ rebase_path(data_image) ]
-  outputs = [
-    data_image,
-  ]
-}
-
 guest_package("biscotti_guest") {
-  deps = [
-    ":data",
-  ]
-
   cmdline = "console=hvc0 root=/dev/vda rw"
   linux = "images/${target_cpu}/Image"
 
   rootfs_name = "rootfs.img"
-  data_name = "stateful.img"
   resources = [
     {
       path = rebase_path("images/${target_cpu}/disk.img")
       dest = "${rootfs_name}"
     },
-    {
-      path = rebase_path(data_image)
-      dest = "${data_name}"
-    },
   ]
   block_devices = [
     "/guest/data/${rootfs_name},ro,volatile",
-    "/guest/data/${data_name},ro,volatile",
   ]
 }

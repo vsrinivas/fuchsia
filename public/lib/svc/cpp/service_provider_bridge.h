@@ -56,6 +56,8 @@ class ServiceProviderBridge : public fuchsia::sys::ServiceProvider {
   }
 
   void AddBinding(fidl::InterfaceRequest<ServiceProvider> request);
+  fidl::InterfaceHandle<ServiceProvider> AddBinding();
+
   bool ServeDirectory(zx::channel channel);
 
   zx::channel OpenAsDirectory();

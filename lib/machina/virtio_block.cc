@@ -12,11 +12,11 @@ namespace machina {
 
 static constexpr char kVirtioBlockUrl[] = "virtio_block";
 
-static bool read_only(fuchsia::guest::device::BlockMode mode) {
-  return mode == fuchsia::guest::device::BlockMode::READ_ONLY;
+static bool read_only(fuchsia::guest::BlockMode mode) {
+  return mode == fuchsia::guest::BlockMode::READ_ONLY;
 }
 
-VirtioBlock::VirtioBlock(fuchsia::guest::device::BlockMode mode,
+VirtioBlock::VirtioBlock(fuchsia::guest::BlockMode mode,
                          const PhysMem& phys_mem)
     : VirtioComponentDevice(
           phys_mem,
@@ -31,7 +31,7 @@ VirtioBlock::VirtioBlock(fuchsia::guest::device::BlockMode mode,
       mode_(mode) {}
 
 zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id,
-                               fuchsia::guest::device::BlockFormat format,
+                               fuchsia::guest::BlockFormat format,
                                fuchsia::io::FilePtr file,
                                fuchsia::sys::Launcher* launcher,
                                async_dispatcher_t* dispatcher) {

@@ -4,7 +4,40 @@
 
 library fuchsia.guest;
 
+using fuchsia.io;
 using fuchsia.sys;
+
+// Mode of the file backing a block device.
+enum BlockMode {
+    // Reads and writes are allowed.
+    READ_WRITE = 0;
+    // Only reads are allowed.
+    READ_ONLY = 1;
+    // Writes are allowed, but are stored in memory, not to disk.
+    VOLATILE_WRITE = 2;
+};
+
+// Data format of the file backing a block device.
+enum BlockFormat {
+    // Raw IO. All reads and writes go directly to disk as a flat file.
+    RAW = 0;
+    // QCOW image. All reads and writes go to a QCOW image.
+    QCOW = 1;
+};
+
+const uint64 MAX_BLOCK_DEVICE_ID_SIZE = 20;
+
+// Properties describing a single block device in the system.
+struct BlockDevice {
+    // A label used to identify the block device.
+    string:MAX_BLOCK_DEVICE_ID_SIZE id;
+    // The access mode for the block backing file.
+    BlockMode mode;
+    // The data format of the backing file.
+    BlockFormat format;
+    // The underlying file that stores the the drive contents.
+    fuchsia.io.File file;
+};
 
 struct LaunchInfo {
     // The URL of the package to launch.
@@ -21,6 +54,9 @@ struct LaunchInfo {
     // A flat namespace to be appended to the default namespace for the VMM
     // process.
     fuchsia.sys.FlatNamespace? flat_namespace;
+
+    // A set of block devices to add to the virtual machine.
+    vector<BlockDevice>? block_devices;
 };
 
 interface EnvironmentController {
@@ -28,7 +64,7 @@ interface EnvironmentController {
     // instance is returned so that it can be uniquely identified.
     1: LaunchInstance(LaunchInfo launch_info,
                       request<InstanceController> controller)
-                        -> (uint32 cid);
+           -> (uint32 cid);
 
     // Query for guests running in this environment.
     2: ListInstances() -> (vector<InstanceInfo> instances);

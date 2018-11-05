@@ -9,10 +9,12 @@ namespace guestmgr {
 GuestComponent::GuestComponent(
     const std::string& label, std::unique_ptr<GuestVsockEndpoint> endpoint,
     component::Services services,
+    std::unique_ptr<GuestServices> guest_services,
     fuchsia::sys::ComponentControllerPtr component_controller)
     : label_(label),
       endpoint_(std::move(endpoint)),
       services_(std::move(services)),
+      guest_services_(std::move(guest_services)),
       component_controller_(std::move(component_controller)) {}
 
 void GuestComponent::ConnectToInstance(

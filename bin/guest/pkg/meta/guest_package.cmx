@@ -4,6 +4,8 @@
     },
     "runner": "guest_runner",
     "sandbox": {
-        "services": []
+        "services": [
+            "fuchsia.guest.vmm.LaunchInfoProvider"
+        ]
     }
 }

@@ -9,38 +9,15 @@
 #include <unordered_map>
 #include <vector>
 
-#include <fuchsia/guest/device/cpp/fidl.h>
+#include <fuchsia/guest/cpp/fidl.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-struct Guid {
-  enum class Type {
-    NONE,
-
-    // Each GPT partition has 2 GUIDs, one that is unique to that specific
-    // partition, and one that specifies the purpose of the partition.
-    //
-    // For a partial list of existing partition type GUIDs, see
-    // https://en.wikipedia.org/wiki/GUID_Partition_Table#Partition_type_GUIDs
-    GPT_PARTITION,
-    GPT_PARTITION_TYPE,
-  };
-
-  Type type = Type::NONE;
-  uint8_t bytes[GUID_LEN];
-
-  // If |false|, |bytes| contains a valid GUID.
-  bool empty() const { return type == Type::NONE; }
-};
-
 struct BlockSpec {
   std::string path;
-  Guid guid;
-  fuchsia::guest::device::BlockFormat format =
-      fuchsia::guest::device::BlockFormat::RAW;
-  fuchsia::guest::device::BlockMode mode =
-      fuchsia::guest::device::BlockMode::READ_WRITE;
+  fuchsia::guest::BlockFormat format = fuchsia::guest::BlockFormat::RAW;
+  fuchsia::guest::BlockMode mode = fuchsia::guest::BlockMode::READ_WRITE;
 };
 
 enum class Kernel {

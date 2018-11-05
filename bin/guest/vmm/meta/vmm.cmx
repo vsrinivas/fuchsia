@@ -4,14 +4,11 @@
     },
     "sandbox": {
         "dev": [
-            "class/block",
             "class/ethernet",
             "misc"
         ],
-        "features": [
-            "shell"
-        ],
         "services": [
+            "fuchsia.guest.vmm.LaunchInfoProvider",
             "fuchsia.sys.Environment",
             "fuchsia.tracelink.Registry"
         ]

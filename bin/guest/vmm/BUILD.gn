@@ -22,6 +22,7 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/bin/guest/third_party/fdt",
+    "//garnet/bin/guest/vmm/fidl:fuchsia.guest.vmm",
     "//garnet/lib/machina",
     "//garnet/lib/machina/device",
     "//garnet/public/fidl/fuchsia.guest",

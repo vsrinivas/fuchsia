@@ -4,9 +4,11 @@
 
 #include "garnet/bin/guest/runner/runner_impl.h"
 
+#include <fuchsia/guest/vmm/cpp/fidl.h>
 #include <memory>
 
 #include "lib/fxl/logging.h"
+#include "lib/svc/cpp/service_provider_bridge.h"
 
 namespace guest_runner {
 
@@ -24,21 +26,47 @@ void RunnerImpl::StartComponent(
   // Pass-through our arguments directly to the vmm package.
   launch_info.url = "vmm";
   launch_info.arguments = std::move(startup_info.launch_info.arguments);
-
-  // Expose the specific guest package under the /guest namespace.
+  launch_info.directory_request =
+      std::move(startup_info.launch_info.directory_request);
   launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
   for (size_t i = 0; i < startup_info.flat_namespace.paths->size(); ++i) {
     const auto& path = (*startup_info.flat_namespace.paths)[i];
     if (path == "/pkg") {
+      // Expose the specific guest package under the /guest namespace.
       launch_info.flat_namespace->paths.push_back("/guest");
       launch_info.flat_namespace->directories.push_back(
           std::move((*startup_info.flat_namespace.directories)[i]));
+    } else if (path == "/svc") {
+      // Hack: We've provided some 'additional_services' to the vmm, but those
+      // are loaded in the /svc in the provided flat_namespace here. Appmgr
+      // doesn't allow overriding the /svc namespace of the vmm, instead it
+      // initialized it to the set of services requested in the vmm.cmx.
+      //
+      // The solution here is to invert the dependency between guestmgr and the
+      // guest_runner. Apps that call the guestmgr directly can just embed the
+      // artifacts they need into their own package and don't need to use a
+      // companion guest package. Then the runner can be used for the
+      // standalone guest packages (ex: linux_guest/zircon_guest).
+      //
+      // Note: the leaking of the |ServiceProviderBridge| is intentional. We
+      // could wrap the ComponentController in one that we retain here so we can
+      // intercept the error event and cleanup, but since this is temporary we
+      // can live with this.
+      //
+      // See: MAC-181
+      auto bridge = new component::ServiceProviderBridge;
+      auto service_list = fuchsia::sys::ServiceList::New();
+      // This must list every service the vmm depends on. We don't provide
+      // any implementations here since the ServiceProviderBridge takes care
+      // of that for us via the backing_dir, which is the above /svc directory.
+      service_list->names.push_back(
+          fuchsia::guest::vmm::LaunchInfoProvider::Name_);
+      bridge->set_backing_dir(
+          std::move((*startup_info.flat_namespace.directories)[i]));
+      service_list->provider = bridge->AddBinding();
+      launch_info.additional_services = std::move(service_list);
     }
   }
-
-  // Pass-through our directory request.
-  launch_info.directory_request =
-      std::move(startup_info.launch_info.directory_request);
 
   launcher_->CreateComponent(std::move(launch_info), std::move(controller));
 }

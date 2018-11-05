@@ -16,11 +16,13 @@
 #include <vector>
 
 #include <fbl/unique_fd.h>
+#include <fuchsia/guest/vmm/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fdio/namespace.h>
+#include <lib/fdio/util.h>
 #include <lib/fxl/strings/string_printf.h>
 #include <lib/fzl/fdio.h>
 #include <trace-provider/provider.h>
@@ -62,8 +64,6 @@ static constexpr char kDsdtPath[] = "/pkg/data/dsdt.aml";
 static constexpr char kMcfgPath[] = "/pkg/data/mcfg.aml";
 #endif
 
-static constexpr char kBlockDirPath[] = "/dev/class/block";
-
 // For devices that can have their addresses anywhere we run a dynamic
 // allocator that starts fairly high in the guest physical address space.
 static constexpr zx_gpaddr_t kFirstDynamicDeviceAddr = 0xc00000000;
@@ -88,37 +88,29 @@ static zx_gpaddr_t alloc_device_addr(size_t device_size) {
   return ret;
 }
 
-static fbl::unique_fd open_guid(const Guid& guid, int flags) {
-  auto ioctl = guid.type == Guid::Type::GPT_PARTITION
-                   ? ioctl_block_get_partition_guid
-                   : ioctl_block_get_type_guid;
-  DIR* dir = opendir(kBlockDirPath);
-  for (dirent* ent; (ent = readdir(dir)) != nullptr;) {
-    fbl::unique_fd fd(open(ent->d_name, flags));
-    uint8_t device_guid[GUID_LEN];
-    ssize_t res = ioctl(fd.get(), device_guid, sizeof(device_guid));
-    if (res < 0 || res != sizeof(device_guid) ||
-        memcmp(guid.bytes, device_guid, sizeof(device_guid)) != 0) {
-      continue;
-    }
-    return fd;
-  }
-  return fbl::unique_fd();
-}
-
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProvider trace_provider(loop.dispatcher());
   std::unique_ptr<component::StartupContext> context =
       component::StartupContext::CreateFromStartupInfo();
-  InstanceControllerImpl instance_controller;
 
+  fuchsia::guest::LaunchInfo launch_info;
+  fuchsia::guest::vmm::LaunchInfoProviderSyncPtr launch_info_provider;
+  context->ConnectToEnvironmentService(launch_info_provider.NewRequest());
+  zx_status_t status = launch_info_provider->GetLaunchInfo(&launch_info);
+  // This isn't an error yet since only the guestmgr exposes the
+  // LaunchInfoProvider service. This will become an error once we invert the
+  // dependency between guest_runner and guestmgr.
+  if (status != ZX_OK) {
+    FXL_LOG(INFO) << "No launch info provided.";
+  }
+
+  InstanceControllerImpl instance_controller;
   fuchsia::sys::LauncherPtr launcher;
   context->environment()->GetLauncher(launcher.NewRequest());
 
   GuestConfig cfg;
-  zx_status_t status =
-      read_guest_cfg("/guest/data/guest.cfg", argc, argv, &cfg);
+  status = read_guest_cfg("/guest/data/guest.cfg", argc, argv, &cfg);
   if (status != ZX_OK) {
     return status;
   }
@@ -205,39 +197,56 @@ int main(int argc, char** argv) {
   }
 
   // Setup block device.
-  std::vector<std::unique_ptr<machina::VirtioBlock>> block_devices;
+  //
+  // We first add the devices specified in the package config file, followed by
+  // the devices in the launch_info.
+  std::vector<fuchsia::guest::BlockDevice> block_infos;
   for (size_t i = 0; i < cfg.block_devices().size(); i++) {
     const auto& block_spec = cfg.block_devices()[i];
-    int flags = block_spec.mode == fuchsia::guest::device::BlockMode::READ_WRITE
+    int flags = block_spec.mode == fuchsia::guest::BlockMode::READ_WRITE
                     ? O_RDWR
                     : O_RDONLY;
     fbl::unique_fd fd;
     if (!block_spec.path.empty()) {
       fd = fbl::unique_fd(open(block_spec.path.c_str(), flags));
-    } else if (!block_spec.guid.empty()) {
-      fd = open_guid(block_spec.guid, flags);
     } else {
-      FXL_LOG(ERROR) << "Block spec missing path or GUID attributes " << status;
+      FXL_LOG(ERROR) << "Block spec missing path attribute " << status;
       return ZX_ERR_INVALID_ARGS;
     }
     if (!fd) {
       FXL_LOG(ERROR) << "Failed to open file for block device";
       return status;
     }
-    fzl::FdioCaller fdio(std::move(fd));
-    fuchsia::io::FilePtr file;
-    file.Bind(zx::channel(fdio.borrow_channel()));
+    zx_handle_t handle;
+    status = fdio_get_service_handle(fd.release(), &handle);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Unabled to extract handle from FD: " << status;
+      return status;
+    }
+    std::string id = fxl::StringPrintf("block-%zu", i++);
+    auto file = fidl::InterfaceHandle<fuchsia::io::File>(zx::channel(handle));
+    block_infos.push_back(
+        {std::move(id), block_spec.mode, block_spec.format, std::move(file)});
+  }
+  if (launch_info.block_devices) {
+    block_infos.insert(
+        block_infos.end(),
+        std::make_move_iterator(launch_info.block_devices->begin()),
+        std::make_move_iterator(launch_info.block_devices->end()));
+  }
 
-    auto block = std::make_unique<machina::VirtioBlock>(block_spec.mode,
+  // Create a new VirtioBlock device for each device requested.
+  std::vector<std::unique_ptr<machina::VirtioBlock>> block_devices;
+  for (auto& block_device : block_infos) {
+    auto block = std::make_unique<machina::VirtioBlock>(block_device.mode,
                                                         guest.phys_mem());
     status = bus.Connect(block->pci_device(), true);
     if (status != ZX_OK) {
       return status;
     }
-    std::string id = fxl::StringPrintf("block-%zu", i);
-    status =
-        block->Start(*guest.object(), id, block_spec.format, std::move(file),
-                     launcher.get(), guest.device_dispatcher());
+    status = block->Start(*guest.object(), std::move(block_device.id),
+                          block_device.format, block_device.file.Bind(),
+                          launcher.get(), guest.device_dispatcher());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to start block device " << status;
       return status;

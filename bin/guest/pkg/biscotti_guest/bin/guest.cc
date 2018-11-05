@@ -13,7 +13,9 @@
 #include <grpc++/server_posix.h>
 #include <lib/async/default.h>
 #include <lib/fdio/util.h>
+#include <lib/fidl/cpp/vector.h>
 #include <lib/fxl/logging.h>
+#include <lib/fzl/fdio.h>
 #include <zircon/processargs.h>
 
 #include "garnet/bin/guest/pkg/biscotti_guest/third_party/protos/vm_guest.grpc.pb.h"
@@ -41,6 +43,43 @@ static constexpr const char* kContainerImageAlias = "debian/stretch";
 static constexpr const char* kContainerImageServer =
     "https://storage.googleapis.com/cros-containers";
 static constexpr const char* kDefaultContainerUser = "machina";
+
+// Minfs max file size is currently just under 4GB.
+static constexpr off_t kStatefulImageSize = 4000ul * 1024 * 1024;
+static constexpr const char* kStatefulImagePath = "/data/stateful.img";
+
+static fidl::InterfaceHandle<fuchsia::io::File> GetOrCreateStatefulPartition() {
+  int fd = open(kStatefulImagePath, O_RDWR | O_CREAT);
+  if (fd < 0) {
+    FXL_LOG(ERROR) << "Failed to open image: " << strerror(errno);
+    return nullptr;
+  }
+  if (ftruncate(fd, kStatefulImageSize) < 0) {
+    FXL_LOG(ERROR) << "Failed to truncate image: " << strerror(errno);
+    return nullptr;
+  }
+
+  zx_handle_t handle = ZX_HANDLE_INVALID;
+  zx_status_t status = fdio_get_service_handle(fd, &handle);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to get service handle: " << status;
+    return nullptr;
+  }
+  return fidl::InterfaceHandle<fuchsia::io::File>(zx::channel(handle));
+}
+
+static fidl::VectorPtr<fuchsia::guest::BlockDevice> GetBlockDevices() {
+  auto file_handle = GetOrCreateStatefulPartition();
+  FXL_CHECK(file_handle) << "Failed to open stateful file";
+  fidl::VectorPtr<fuchsia::guest::BlockDevice> devices;
+  devices.push_back({
+    "stateful",
+    fuchsia::guest::BlockMode::READ_WRITE,
+    fuchsia::guest::BlockFormat::RAW,
+    std::move(file_handle),
+  });
+  return devices;
+}
 
 static int convert_socket_to_fd(zx::socket socket) {
   int fd;
@@ -165,6 +204,7 @@ void Guest::StartGuest() {
   fuchsia::guest::LaunchInfo launch_info;
   launch_info.url = kLinuxGuestPackage;
   launch_info.args.push_back("--virtio-gpu=false");
+  launch_info.block_devices = GetBlockDevices();
   guest_env_->LaunchInstance(
       std::move(launch_info), guest_controller_.NewRequest(),
       [this](uint32_t cid) {

@@ -5,6 +5,7 @@
 #ifndef GARNET_BIN_GUEST_MGR_GUEST_COMPONENT_H_
 #define GARNET_BIN_GUEST_MGR_GUEST_COMPONENT_H_
 
+#include "garnet/bin/guest/mgr/guest_services.h"
 #include "garnet/bin/guest/mgr/guest_vsock_endpoint.h"
 
 #include <fuchsia/guest/cpp/fidl.h>
@@ -20,6 +21,7 @@ class GuestComponent {
   GuestComponent(const std::string& label,
                  std::unique_ptr<GuestVsockEndpoint> endpoint,
                  component::Services services,
+                 std::unique_ptr<GuestServices> guest_services,
                  fuchsia::sys::ComponentControllerPtr component_controller);
 
   const std::string& label() const { return label_; }
@@ -34,6 +36,7 @@ class GuestComponent {
   const std::string label_;
   std::unique_ptr<GuestVsockEndpoint> endpoint_;
   component::Services services_;
+  std::unique_ptr<GuestServices> guest_services_;
   fuchsia::sys::ComponentControllerPtr component_controller_;
 };
 

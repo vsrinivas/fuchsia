@@ -6,6 +6,8 @@
 
 #include <lib/fxl/logging.h>
 
+#include "garnet/bin/guest/mgr/guest_services.h"
+
 namespace guestmgr {
 
 EnvironmentControllerImpl::EnvironmentControllerImpl(
@@ -48,6 +50,10 @@ void EnvironmentControllerImpl::LaunchInstance(
   info.arguments = std::move(launch_info.args);
   info.directory_request = services.NewRequest();
   info.flat_namespace = std::move(launch_info.flat_namespace);
+  std::string label = launch_info.label ? launch_info.label : launch_info.url;
+  auto guest_services =
+      std::make_unique<GuestServices>(std::move(launch_info));
+  info.additional_services = guest_services->ServeDirectory();
   launcher_->CreateComponent(std::move(info),
                              component_controller.NewRequest());
   services.ConnectToService(std::move(controller));
@@ -59,12 +65,11 @@ void EnvironmentControllerImpl::LaunchInstance(
   auto endpoint = std::make_unique<GuestVsockEndpoint>(
       cid, std::move(guest_endpoint), &host_vsock_endpoint_);
 
-  auto& label = launch_info.label ? launch_info.label : launch_info.url;
   component_controller.set_error_handler(
       [this, cid](zx_status_t status) { guests_.erase(cid); });
   auto component = std::make_unique<GuestComponent>(
       label, std::move(endpoint), std::move(services),
-      std::move(component_controller));
+      std::move(guest_services), std::move(component_controller));
 
   bool inserted;
   std::tie(std::ignore, inserted) = guests_.insert({cid, std::move(component)});

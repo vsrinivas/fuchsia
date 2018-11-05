@@ -193,7 +193,7 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
   void NotifyQueue(uint16_t queue) override {
     switch (static_cast<Queue>(queue)) {
       case Queue::REQUEST:
-        request_stream_.DoRequest(negotiated_features_ & VIRTIO_BLK_F_RO);
+        request_stream_.DoRequest(read_only_);
         break;
       default:
         FXL_CHECK(false) << "Queue index " << queue << " out of range";
@@ -204,10 +204,10 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
  private:
   // |fuchsia::guest::device::VirtioBlock|
   void Start(fuchsia::guest::device::StartInfo start_info, fidl::StringPtr id,
-             fuchsia::guest::device::BlockMode mode,
-             fuchsia::guest::device::BlockFormat format,
+             fuchsia::guest::BlockMode mode, fuchsia::guest::BlockFormat format,
              fidl::InterfaceHandle<fuchsia::io::File> file,
              StartCallback callback) override {
+    read_only_ = mode == fuchsia::guest::BlockMode::READ_ONLY;
     PrepStart(std::move(start_info));
 
     NestedBlockDispatcherCallback nested =
@@ -219,7 +219,7 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
           callback(size);
         };
 
-    if (mode == fuchsia::guest::device::BlockMode::VOLATILE_WRITE) {
+    if (mode == fuchsia::guest::BlockMode::VOLATILE_WRITE) {
       nested = [nested = std::move(nested)](
                    size_t size, std::unique_ptr<BlockDispatcher> disp) mutable {
         CreateVolatileWriteBlockDispatcher(size, std::move(disp),
@@ -227,7 +227,7 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
       };
     }
 
-    if (format == fuchsia::guest::device::BlockFormat::QCOW) {
+    if (format == fuchsia::guest::BlockFormat::QCOW) {
       nested = [nested = std::move(nested)](
                    size_t size, std::unique_ptr<BlockDispatcher> disp) mutable {
         CreateQcowBlockDispatcher(std::move(disp), std::move(nested));
@@ -251,11 +251,9 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
   }
 
   // |fuchsia::guest::device::VirtioDevice|
-  void Ready(uint32_t negotiated_features) override {
-    negotiated_features_ = negotiated_features;
-  }
+  void Ready(uint32_t negotiated_features) override { }
 
-  uint32_t negotiated_features_;
+  bool read_only_;
   RequestStream request_stream_;
 };
 

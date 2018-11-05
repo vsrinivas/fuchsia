@@ -63,31 +63,13 @@ interface VirtioBalloon : VirtioDevice {
                         vector<fuchsia.guest.MemStat>? mem_stats);
 };
 
-const uint64 MAX_ID_SIZE = 20;
-
-// Mode of the file backing a block device.
-enum BlockMode {
-    // Reads and writes are allowed.
-    READ_WRITE = 0;
-    // Only reads are allowed.
-    READ_ONLY = 1;
-    // Writes are allowed, but are stored in memory, not to disk.
-    VOLATILE_WRITE = 2;
-};
-
-// Data format of the file backing a block device.
-enum BlockFormat {
-    // Raw IO. All reads and writes go directly to disk.
-    RAW = 0;
-    // QCOW image. All reads and writes go to a QCOW image.
-    QCOW = 1;
-};
-
 [Discoverable]
 interface VirtioBlock : VirtioDevice {
     // Start the block device.
-    0x81000001: Start(StartInfo start_info, string:MAX_ID_SIZE id,
-                      BlockMode mode, BlockFormat format, fuchsia.io.File file)
+    0x81000001: Start(StartInfo start_info, string:fuchsia.guest.MAX_BLOCK_DEVICE_ID_SIZE id,
+                      fuchsia.guest.BlockMode mode,
+                      fuchsia.guest.BlockFormat format,
+                      fuchsia.io.File file)
                     -> (uint64 size);
 };
 

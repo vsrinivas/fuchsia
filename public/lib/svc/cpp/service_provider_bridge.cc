@@ -27,6 +27,10 @@ void ServiceProviderBridge::AddBinding(
   bindings_.AddBinding(this, std::move(request));
 }
 
+fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> ServiceProviderBridge::AddBinding() {
+  return bindings_.AddBinding(this);
+}
+
 void ServiceProviderBridge::AddServiceForName(ServiceConnector connector,
                                               const std::string& service_name) {
   name_to_service_connector_[service_name] = std::move(connector);

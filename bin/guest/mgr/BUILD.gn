@@ -14,6 +14,8 @@ source_set("lib") {
     "environment_manager_impl.h",
     "guest_component.cc",
     "guest_component.h",
+    "guest_services.cc",
+    "guest_services.h",
     "guest_vsock_endpoint.cc",
     "guest_vsock_endpoint.h",
     "host_vsock_endpoint.cc",
@@ -21,6 +23,7 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//garnet/bin/guest/vmm/fidl:fuchsia.guest.vmm",
     "//garnet/public/fidl/fuchsia.guest",
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",

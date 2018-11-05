@@ -41,10 +41,10 @@ class VirtioBlockTest : public TestWithDevice {
     // Start device execution.
     services.ConnectToService(block_.NewRequest());
     uint64_t size;
-    status = block_->Start(std::move(start_info), kVirtioBlockId,
-                           fuchsia::guest::device::BlockMode::READ_WRITE,
-                           fuchsia::guest::device::BlockFormat::RAW,
-                           std::move(file), &size);
+    status =
+        block_->Start(std::move(start_info), kVirtioBlockId,
+                      fuchsia::guest::BlockMode::READ_WRITE,
+                      fuchsia::guest::BlockFormat::RAW, std::move(file), &size);
     ASSERT_EQ(ZX_OK, status);
     ASSERT_EQ(machina::kBlockSectorSize * kNumSectors, size);
 

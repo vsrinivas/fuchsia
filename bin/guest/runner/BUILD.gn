@@ -13,7 +13,9 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//garnet/bin/guest/vmm/fidl:fuchsia.guest.vmm",
     "//garnet/public/lib/component/cpp",
+    "//garnet/public/fidl/fuchsia.guest",
     "//garnet/public/fidl/fuchsia.sys",
     "//zircon/public/lib/async-loop-cpp",
   ]

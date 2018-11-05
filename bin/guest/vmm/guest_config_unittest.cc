@@ -12,16 +12,6 @@
 namespace guest {
 namespace {
 
-#define TEST_GUID_STRING "14db42cf-beb7-46a2-9ef8-89b13bb80528"
-static constexpr uint8_t TEST_GUID_VALUE[] = {
-    // clang-format off
-    0xcf, 0x42, 0xdb, 0x14,
-    0xb7, 0xbe,
-    0xa2, 0x46,
-    0x9e, 0xf8, 0x89, 0xb1, 0x3b, 0xb8, 0x05, 0x28
-    // clang-format on
-};
-
 TEST(GuestConfigParserTest, DefaultValues) {
   GuestConfig config;
   GuestConfigParser parser(&config);
@@ -116,38 +106,20 @@ TEST(GuestConfigParserTest, BlockSpecArg) {
   GuestConfigParser parser(&config);
 
   const char* argv[] = {"exe_name", "--block=/pkg/data/foo,ro,fdio",
-                        "--block=/dev/class/block/001,rw,fdio",
-                        "--block=guid:" TEST_GUID_STRING ",rw,fdio",
-                        "--block=type-guid:" TEST_GUID_STRING ",ro,fdio"};
+                        "--block=/dev/class/block/001,rw,fdio"};
   ASSERT_EQ(ZX_OK,
             parser.ParseArgcArgv(countof(argv), const_cast<char**>(argv)));
-  ASSERT_EQ(4, config.block_devices().size());
+  ASSERT_EQ(2, config.block_devices().size());
 
   const BlockSpec& spec0 = config.block_devices()[0];
-  ASSERT_EQ(fuchsia::guest::device::BlockMode::READ_ONLY, spec0.mode);
-  ASSERT_EQ(fuchsia::guest::device::BlockFormat::RAW, spec0.format);
+  ASSERT_EQ(fuchsia::guest::BlockMode::READ_ONLY, spec0.mode);
+  ASSERT_EQ(fuchsia::guest::BlockFormat::RAW, spec0.format);
   ASSERT_EQ("/pkg/data/foo", spec0.path);
-  ASSERT_TRUE(spec0.guid.empty());
 
   const BlockSpec& spec1 = config.block_devices()[1];
-  ASSERT_EQ(fuchsia::guest::device::BlockMode::READ_WRITE, spec1.mode);
-  ASSERT_EQ(fuchsia::guest::device::BlockFormat::RAW, spec1.format);
+  ASSERT_EQ(fuchsia::guest::BlockMode::READ_WRITE, spec1.mode);
+  ASSERT_EQ(fuchsia::guest::BlockFormat::RAW, spec1.format);
   ASSERT_EQ("/dev/class/block/001", spec1.path);
-  ASSERT_TRUE(spec1.guid.empty());
-
-  const BlockSpec& spec2 = config.block_devices()[2];
-  ASSERT_EQ(fuchsia::guest::device::BlockMode::READ_WRITE, spec2.mode);
-  ASSERT_EQ(fuchsia::guest::device::BlockFormat::RAW, spec2.format);
-  ASSERT_TRUE(spec2.path.empty());
-  ASSERT_EQ(Guid::Type::GPT_PARTITION, spec2.guid.type);
-  ASSERT_EQ(0, memcmp(spec2.guid.bytes, TEST_GUID_VALUE, GUID_LEN));
-
-  const BlockSpec& spec3 = config.block_devices()[3];
-  ASSERT_EQ(fuchsia::guest::device::BlockMode::READ_ONLY, spec3.mode);
-  ASSERT_EQ(fuchsia::guest::device::BlockFormat::RAW, spec3.format);
-  ASSERT_TRUE(spec3.path.empty());
-  ASSERT_EQ(Guid::Type::GPT_PARTITION_TYPE, spec3.guid.type);
-  ASSERT_EQ(0, memcmp(spec3.guid.bytes, TEST_GUID_VALUE, GUID_LEN));
 }
 
 TEST(GuestConfigParserTest, BlockSpecJson) {
@@ -158,64 +130,21 @@ TEST(GuestConfigParserTest, BlockSpecJson) {
                        R"JSON({
           "block": [
             "/pkg/data/foo,ro,fdio",
-            "/dev/class/block/001,rw,fdio",
-            "guid:)JSON" TEST_GUID_STRING R"JSON(,rw,fdio",
-            "type-guid:)JSON" TEST_GUID_STRING R"JSON(,ro,fdio"
+            "/dev/class/block/001,rw,fdio"
           ]
         })JSON"));
-  ASSERT_EQ(4, config.block_devices().size());
+  ASSERT_EQ(2, config.block_devices().size());
 
   const BlockSpec& spec0 = config.block_devices()[0];
-  ASSERT_EQ(fuchsia::guest::device::BlockMode::READ_ONLY, spec0.mode);
-  ASSERT_EQ(fuchsia::guest::device::BlockFormat::RAW, spec0.format);
+  ASSERT_EQ(fuchsia::guest::BlockMode::READ_ONLY, spec0.mode);
+  ASSERT_EQ(fuchsia::guest::BlockFormat::RAW, spec0.format);
   ASSERT_EQ("/pkg/data/foo", spec0.path);
 
   const BlockSpec& spec1 = config.block_devices()[1];
-  ASSERT_EQ(fuchsia::guest::device::BlockMode::READ_WRITE, spec1.mode);
-  ASSERT_EQ(fuchsia::guest::device::BlockFormat::RAW, spec1.format);
+  ASSERT_EQ(fuchsia::guest::BlockMode::READ_WRITE, spec1.mode);
+  ASSERT_EQ(fuchsia::guest::BlockFormat::RAW, spec1.format);
   ASSERT_EQ("/dev/class/block/001", spec1.path);
-
-  const BlockSpec& spec2 = config.block_devices()[2];
-  ASSERT_EQ(fuchsia::guest::device::BlockMode::READ_WRITE, spec2.mode);
-  ASSERT_EQ(fuchsia::guest::device::BlockFormat::RAW, spec2.format);
-  ASSERT_TRUE(spec2.path.empty());
-  ASSERT_EQ(Guid::Type::GPT_PARTITION, spec2.guid.type);
-  ASSERT_EQ(0, memcmp(spec2.guid.bytes, TEST_GUID_VALUE, GUID_LEN));
-
-  const BlockSpec& spec3 = config.block_devices()[3];
-  ASSERT_EQ(fuchsia::guest::device::BlockMode::READ_ONLY, spec3.mode);
-  ASSERT_EQ(fuchsia::guest::device::BlockFormat::RAW, spec3.format);
-  ASSERT_TRUE(spec3.path.empty());
-  ASSERT_EQ(Guid::Type::GPT_PARTITION_TYPE, spec3.guid.type);
-  ASSERT_EQ(0, memcmp(spec3.guid.bytes, TEST_GUID_VALUE, GUID_LEN));
 }
-
-#define TEST_PARSE_GUID(name, guid, result)                                   \
-  TEST(GuestConfigParserTest, GuidTest##name) {                               \
-    GuestConfig config;                                                       \
-    GuestConfigParser parser(&config);                                        \
-                                                                              \
-    const char* argv[] = {"exe_name", "--block=guid:" guid};                  \
-    ASSERT_EQ((result),                                                       \
-              parser.ParseArgcArgv(countof(argv), const_cast<char**>(argv))); \
-  }
-
-TEST_PARSE_GUID(LowerCase, "14db42cf-beb7-46a2-9ef8-89b13bb80528", ZX_OK);
-TEST_PARSE_GUID(UpperCase, "14DB42CF-BEB7-46A2-9EF8-89B13BB80528", ZX_OK);
-TEST_PARSE_GUID(MixedCase, "14DB42CF-BEB7-46A2-9ef8-89b13bb80528", ZX_OK);
-TEST_PARSE_GUID(MissingDelimeters, "14db42cfbeb746a29ef889b13bb80528",
-                ZX_ERR_INVALID_ARGS);
-TEST_PARSE_GUID(ExtraDelimeters, "14-db-42cf-beb7-46-a2-9ef8-89b13bb80528",
-                ZX_ERR_INVALID_ARGS);
-TEST_PARSE_GUID(
-    TooLong,
-    "14db42cf-beb7-46a2-9ef8-89b13bb80528-14db42cf-beb7-46a2-9ef8-"
-    "89b13bb80528-14db42cf-beb7-46a2-9ef8-89b13bb80528-14db42cf-beb7-"
-    "46a2-9ef8-89b13bb80528-14db42cf-beb7-46a2-9ef8-89b13bb80528",
-    ZX_ERR_INVALID_ARGS);
-TEST_PARSE_GUID(TooShort, "14db42cf", ZX_ERR_INVALID_ARGS);
-TEST_PARSE_GUID(IllegalCharacters, "abcdefgh-ijkl-mnop-qrst-uvwxyz!@#$%^",
-                ZX_ERR_INVALID_ARGS);
 
 #define TEST_PARSE_MEM_SIZE(string, result)                                   \
   TEST(GuestConfigParserTest, MemSizeTest_##string) {                         \
