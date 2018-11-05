@@ -23,9 +23,6 @@ cp -f $(BUILD_DIR)/ddktl/protocols/$@.formatted.h ../../../ulib/ddktl/include/dd
 cp -f $(BUILD_DIR)/ddktl/protocols/$@-internal.formatted.h ../../../ulib/ddktl/include/ddktl/protocol/$@-internal.h
 endef
 
-bad-block:
-	$(run-banjo)
-
 block: $(LOCAL_DIR)/libs/block.banjo
 	$(run-banjo)
 

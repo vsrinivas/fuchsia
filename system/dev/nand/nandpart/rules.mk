@@ -33,6 +33,9 @@ MODULE_LIBS := \
 MODULE_FIDL_LIBS := \
     system/fidl/zircon-nand \
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-bad-block
+
 include make/module.mk
 
 # Unit tests.
