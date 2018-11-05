@@ -33,7 +33,7 @@ struct OsInfo {
 // Communication with the TEE OS and Trusted Applications is performed using opaque parameters.
 // These parameters can be a mix of small values (Value type) or a buffer reference (Buffer type).
 // A parameter will be tagged as either an input, output or both (inout).
-enum Direction {
+enum Direction : uint32 {
     INPUT = 0;
     OUTPUT = 1;
     INOUT = 2;
@@ -41,7 +41,12 @@ enum Direction {
 
 struct Buffer {
     Direction direction;
-    handle<vmo> vmo;
+    // The VMO is allowed to be null for situations where the TEE allows for buffer size checks.
+    // For example, if the operation to be performed needs an output buffer, but the user cannot
+    // calculate how large that output buffer should be, they can attempt the operation with a
+    // null vmo and the Trusted Application will populate the size field so that the operation can
+    // be performed again with an appropriately sized buffer.
+    handle<vmo>? vmo;
     uint64 offset;
     uint64 size;
 };
@@ -66,7 +71,7 @@ struct ParameterSet {
 // Each operation must flow through the device driver and the trusted operating system before
 // reaching the trusted application (and back). The ReturnOrigin indicates which layer provided the
 // return code.
-enum ReturnOrigin {
+enum ReturnOrigin : uint32 {
     COMMUNICATION = 0;
     TRUSTED_OS = 1;
     TRUSTED_APPLICATION = 2;
