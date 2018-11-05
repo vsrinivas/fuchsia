@@ -61,18 +61,12 @@ zx_status_t PlatformBus::PBusRegisterProtocol(uint32_t proto_id, const void* pro
         return ZX_ERR_INVALID_ARGS;
     }
 
-    fbl::AllocChecker ac;
-
     switch (proto_id) {
     case ZX_PROTOCOL_GPIO_IMPL: {
         if (proxy_cb->callback != nullptr) {
             return ZX_ERR_INVALID_ARGS;
         }
-        gpio_.reset(new (&ac) ddk::GpioImplProtocolProxy(
-            static_cast<const gpio_impl_protocol_t*>(protocol)));
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
+        gpio_ = ddk::GpioImplProtocolProxy(static_cast<const gpio_impl_protocol_t*>(protocol));
         break;
     }
     case ZX_PROTOCOL_I2C_IMPL: {
@@ -85,30 +79,21 @@ zx_status_t PlatformBus::PBusRegisterProtocol(uint32_t proto_id, const void* pro
             return status;
         }
 
-        i2c_.reset(new (&ac) ddk::I2cImplProtocolProxy(proto));
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
+        i2c_ = ddk::I2cImplProtocolProxy(proto);
         break;
     }
     case ZX_PROTOCOL_CLK: {
         if (proxy_cb->callback != nullptr) {
             return ZX_ERR_INVALID_ARGS;
         }
-        clk_.reset(new (&ac) ddk::ClkProtocolProxy(static_cast<const clk_protocol_t*>(protocol)));
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
+        clk_ = ddk::ClkProtocolProxy(static_cast<const clk_protocol_t*>(protocol));
         break;
     }
     case ZX_PROTOCOL_IOMMU: {
         if (proxy_cb->callback != nullptr) {
             return ZX_ERR_INVALID_ARGS;
         }
-        iommu_.reset(new (&ac) ddk::IommuProtocolProxy(static_cast<const iommu_protocol_t*>(protocol)));
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
+        iommu_ = ddk::IommuProtocolProxy(static_cast<const iommu_protocol_t*>(protocol));
         break;
     }
     default: {
@@ -232,25 +217,25 @@ zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {
         return ZX_OK;
     }
     case ZX_PROTOCOL_GPIO_IMPL:
-        if (gpio_ != nullptr) {
+        if (gpio_) {
             gpio_->GetProto(static_cast<gpio_impl_protocol_t*>(out));
             return ZX_OK;
         }
         break;
     case ZX_PROTOCOL_I2C_IMPL:
-        if (i2c_ != nullptr) {
+        if (i2c_) {
             i2c_->GetProto(static_cast<i2c_impl_protocol_t*>(out));
             return ZX_OK;
         }
         break;
     case ZX_PROTOCOL_CLK:
-        if (clk_ != nullptr) {
+        if (clk_) {
             clk_->GetProto(static_cast<clk_protocol_t*>(out));
             return ZX_OK;
         }
         break;
     case ZX_PROTOCOL_IOMMU:
-        if (iommu_ != nullptr) {
+        if (iommu_) {
             iommu_->GetProto(static_cast<iommu_protocol_t*>(out));
         } else {
             // return default implementation

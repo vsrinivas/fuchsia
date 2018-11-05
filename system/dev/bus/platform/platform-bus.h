@@ -14,6 +14,7 @@
 #include <fbl/array.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
+#include <fbl/optional.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <lib/sync/completion.h>
@@ -76,9 +77,9 @@ public:
                                uint32_t* out_size);
 
     // Protocol accessors for PlatformDevice.
-    inline ddk::ClkProtocolProxy* clk() const { return clk_.get(); }
-    inline ddk::GpioImplProtocolProxy* gpio() const { return gpio_.get(); }
-    inline ddk::I2cImplProtocolProxy* i2c() const { return i2c_.get(); }
+    inline ddk::ClkProtocolProxy* clk() { return &*clk_; }
+    inline ddk::GpioImplProtocolProxy* gpio() { return &*gpio_; }
+    inline ddk::I2cImplProtocolProxy* i2c() { return &*i2c_; }
 
 private:
     // This class is a wrapper for a platform_proxy_cb_t added via pbus_register_protocol().
@@ -125,10 +126,10 @@ private:
     pdev_board_info_t board_info_;
 
     // Protocols that are optionally provided by the board driver.
-    fbl::unique_ptr<ddk::ClkProtocolProxy> clk_;
-    fbl::unique_ptr<ddk::GpioImplProtocolProxy> gpio_;
-    fbl::unique_ptr<ddk::IommuProtocolProxy> iommu_;
-    fbl::unique_ptr<ddk::I2cImplProtocolProxy> i2c_;
+    fbl::optional<ddk::ClkProtocolProxy> clk_;
+    fbl::optional<ddk::GpioImplProtocolProxy> gpio_;
+    fbl::optional<ddk::IommuProtocolProxy> iommu_;
+    fbl::optional<ddk::I2cImplProtocolProxy> i2c_;
 
     // Completion used by WaitProtocol().
     sync_completion_t proto_completion_ __TA_GUARDED(proto_completion_mutex_);
