@@ -8,16 +8,12 @@ package("netstack_tests") {
   testonly = true
 
   deps = [
-    "integration:netstack_launch_test",
     "//garnet/go/src/netstack/tests/automated/netstack_getaddrinfo_test",
     "//garnet/go/src/netstack/tests/automated/netstack_gonet_test",
     "//garnet/go/src/netstack/tests/automated/netstack_loopback_test",
   ]
 
   tests = [
-    {
-      name = "netstack_launch_test"
-    },
     {
       name = "netstack_loopback_test"
     },

@@ -3,10 +3,10 @@
         "garnet/packages/prod/netstack"
     ],
     "packages": [
+        "//garnet/bin/netstack_tests:netstack_integration_tests",
         "//garnet/go/src/netstack:netstack_gotests",
         "//garnet/go/src/netstack/tests:netstack_manual_tests",
-        "//garnet/go/src/netstack/tests:netstack_tests",
-        "//garnet/go/src/netstack/tests/integration:netstack_integration"
+        "//garnet/go/src/netstack/tests:netstack_tests"
     ],
     "host_tests": [
         "//garnet/go/src/netstack/dns/dnsmessage:netstack_dnsmessage_test",

@@ -1,8 +1,0 @@
-{
-    "program": {
-        "binary": "test/netstack_launch_test"
-    },
-    "sandbox": {
-        "services" : ["fuchsia.sys.Environment", "fuchsia.sys.Loader"]
-    }
-}
