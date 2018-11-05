@@ -382,7 +382,7 @@ typedef union {
 typedef struct {
     uint32_t started;
     uint32_t paramTypes;
-    TEEC_Parameter params[4];
+    TEEC_Parameter params[TEEC_NUM_PARAMS_MAX];
     teec_operation_impl_t imp;
 } TEEC_Operation;
 

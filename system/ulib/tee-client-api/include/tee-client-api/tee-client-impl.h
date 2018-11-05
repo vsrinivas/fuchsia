@@ -13,6 +13,9 @@
  * Client API.
  */
 
+/* Maximum number of parameters that can be specified in an TEEC_Operation. */
+#define TEEC_NUM_PARAMS_MAX 4
+
 typedef struct teec_context_impl {
     zx_handle_t tee_channel;
 } teec_context_impl_t;

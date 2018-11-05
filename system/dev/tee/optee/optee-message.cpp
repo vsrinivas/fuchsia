@@ -9,12 +9,14 @@
 #include <limits>
 #include <string.h>
 
+namespace optee {
+
 namespace {
 
 // Converts a big endian UUID from a MessageParam value to a host endian TEEC_UUID.
 // The fields of a UUID are stored in big endian in a MessageParam by the TEE and is thus why the
 // parameter value cannot be directly reinterpreted as a UUID.
-void ConvertMessageParamToUuid(const optee::MessageParam::Value& src, TEEC_UUID* dst) {
+void ConvertMessageParamToUuid(const MessageParam::Value& src, TEEC_UUID* dst) {
     // Convert TEEC_UUID fields from big endian to host endian
     dst->timeLow = betoh32(src.uuid_big_endian.timeLow);
     dst->timeMid = betoh16(src.uuid_big_endian.timeMid);
@@ -26,9 +28,156 @@ void ConvertMessageParamToUuid(const optee::MessageParam::Value& src, TEEC_UUID*
            sizeof(src.uuid_big_endian.clockSeqAndNode));
 }
 
+constexpr bool IsParameterInput(zircon_tee_Direction direction) {
+    return (direction == zircon_tee_Direction_INPUT) || (direction == zircon_tee_Direction_INOUT);
+}
+
+constexpr bool IsParameterOutput(zircon_tee_Direction direction) {
+    return (direction == zircon_tee_Direction_OUTPUT) || (direction == zircon_tee_Direction_INOUT);
+}
+
 }; // namespace
 
-namespace optee {
+bool Message::TryInitializeParameters(size_t starting_param_index,
+                                      const zircon_tee_ParameterSet& parameter_set) {
+    // If we don't have any parameters to parse, then we can just skip this
+    if (parameter_set.count == 0) {
+        return true;
+    }
+
+    bool is_valid = true;
+    for (size_t i = 0; i < parameter_set.count; i++) {
+        MessageParam& optee_param = params()[starting_param_index + i];
+        const zircon_tee_Parameter& zx_param = parameter_set.parameters[i];
+
+        switch (zx_param.tag) {
+        case zircon_tee_ParameterTag_value:
+            is_valid = TryInitializeValue(zx_param.value, &optee_param);
+            break;
+        case zircon_tee_ParameterTag_buffer:
+        default:
+            return false;
+        }
+
+        if (!is_valid) {
+            zxlogf(ERROR, "optee: failed to initialize parameters\n");
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool Message::TryInitializeValue(const zircon_tee_Value& value, MessageParam* out_param) {
+    ZX_DEBUG_ASSERT(out_param != nullptr);
+
+    switch (value.direction) {
+    case zircon_tee_Direction_INPUT:
+        out_param->attribute = MessageParam::kAttributeTypeValueInput;
+        break;
+    case zircon_tee_Direction_OUTPUT:
+        out_param->attribute = MessageParam::kAttributeTypeValueOutput;
+        break;
+    case zircon_tee_Direction_INOUT:
+        out_param->attribute = MessageParam::kAttributeTypeValueInOut;
+        break;
+    default:
+        return false;
+    }
+    out_param->payload.value.generic.a = value.a;
+    out_param->payload.value.generic.b = value.b;
+    out_param->payload.value.generic.c = value.c;
+
+    return true;
+}
+
+zx_status_t Message::CreateOutputParameterSet(size_t starting_param_index,
+                                              zircon_tee_ParameterSet* out_parameter_set) {
+    ZX_DEBUG_ASSERT(out_parameter_set != nullptr);
+
+    // Use a temporary parameter set to avoid populating the output until we're sure it's valid.
+    zircon_tee_ParameterSet parameter_set = {};
+
+    // Below code assumes that we can fit all of the parameters from optee into the FIDL parameter
+    // set. This static assert ensures that the FIDL parameter set can always fit the number of
+    // parameters into the count.
+    static_assert(fbl::count_of(parameter_set.parameters) <=
+                      std::numeric_limits<decltype(parameter_set.count)>::max(),
+                  "The size of the tee parameter set has outgrown the count");
+
+    if (header()->num_params < starting_param_index) {
+        zxlogf(ERROR, "optee: Message contained fewer parameters (%" PRIu32 ") than required %zd\n",
+               header()->num_params, starting_param_index);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // Ensure that the number of parameters returned by the TEE does not exceed the parameter set
+    // array of parameters.
+    const size_t count = header()->num_params - starting_param_index;
+    if (count > fbl::count_of(parameter_set.parameters)) {
+        zxlogf(ERROR, "optee: Message contained more parameters (%zd) than allowed\n", count);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    parameter_set.count = static_cast<uint16_t>(count);
+    size_t out_param_index = 0;
+    for (size_t i = starting_param_index; i < header()->num_params; i++) {
+        const MessageParam& optee_param = params()[i];
+        zircon_tee_Parameter& zx_param = parameter_set.parameters[out_param_index];
+
+        switch (optee_param.attribute) {
+        case MessageParam::kAttributeTypeNone:
+            break;
+        case MessageParam::kAttributeTypeValueInput:
+        case MessageParam::kAttributeTypeValueOutput:
+        case MessageParam::kAttributeTypeValueInOut:
+            zx_param.tag = zircon_tee_ParameterTag_value;
+            zx_param.value = CreateOutputValueParameter(optee_param);
+            out_param_index++;
+            break;
+        case MessageParam::kAttributeTypeTempMemInput:
+        case MessageParam::kAttributeTypeTempMemOutput:
+        case MessageParam::kAttributeTypeTempMemInOut:
+        case MessageParam::kAttributeTypeRegMemInput:
+        case MessageParam::kAttributeTypeRegMemOutput:
+        case MessageParam::kAttributeTypeRegMemInOut:
+        default:
+            break;
+        }
+    }
+
+    *out_parameter_set = parameter_set;
+    return ZX_OK;
+}
+
+zircon_tee_Value Message::CreateOutputValueParameter(const MessageParam& optee_param) {
+    zircon_tee_Value zx_value = {};
+
+    switch (optee_param.attribute) {
+    case MessageParam::kAttributeTypeValueInput:
+        zx_value.direction = zircon_tee_Direction_INPUT;
+        break;
+    case MessageParam::kAttributeTypeValueOutput:
+        zx_value.direction = zircon_tee_Direction_OUTPUT;
+        break;
+    case MessageParam::kAttributeTypeValueInOut:
+        zx_value.direction = zircon_tee_Direction_INOUT;
+        break;
+    default:
+        ZX_DEBUG_ASSERT(optee_param.attribute == MessageParam::kAttributeTypeValueInput ||
+                        optee_param.attribute == MessageParam::kAttributeTypeValueOutput ||
+                        optee_param.attribute == MessageParam::kAttributeTypeValueInOut);
+    }
+
+    const MessageParam::Value& optee_value = optee_param.payload.value;
+
+    if (IsParameterOutput(zx_value.direction)) {
+        zx_value.a = optee_value.generic.a;
+        zx_value.b = optee_value.generic.b;
+        zx_value.c = optee_value.generic.c;
+    }
+    return zx_value;
+}
 
 OpenSessionMessage::OpenSessionMessage(SharedMemoryManager::DriverMemoryPool* message_pool,
                                        const Uuid& trusted_app,
@@ -63,6 +212,11 @@ OpenSessionMessage::OpenSessionMessage(SharedMemoryManager::DriverMemoryPool* me
     client_app_param.payload.value.generic.a = 0;
     client_app_param.payload.value.generic.b = 0;
     client_app_param.payload.value.generic.c = TEEC_LOGIN_PUBLIC;
+
+    // If we fail to initialize the parameters, then null out the message memory.
+    if (!TryInitializeParameters(kNumFixedOpenSessionParams, parameter_set)) {
+        memory_ = nullptr;
+    }
 }
 
 CloseSessionMessage::CloseSessionMessage(SharedMemoryManager::DriverMemoryPool* message_pool,
@@ -99,6 +253,10 @@ InvokeCommandMessage::InvokeCommandMessage(SharedMemoryManager::DriverMemoryPool
     header()->app_function = command_id;
     header()->cancel_id = 0;
     header()->num_params = parameter_set.count;
+
+    if (!TryInitializeParameters(0, parameter_set)) {
+        memory_ = nullptr;
+    }
 }
 
 bool RpcMessage::TryInitializeMembers() {

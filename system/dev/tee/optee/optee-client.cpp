@@ -89,6 +89,37 @@ static fbl::StringBuffer<kTaPathLength> BuildTaPath(const TEEC_UUID& ta_uuid) {
 
     return buf;
 }
+
+static zx_status_t ConvertOpteeToZxResult(uint32_t optee_return_code,
+                                          uint32_t optee_return_origin,
+                                          zircon_tee_Result* zx_result) {
+    ZX_DEBUG_ASSERT(zx_result != nullptr);
+
+    // Do a quick check of the return origin to make sure we can map it to one
+    // of our FIDL values. If none match, return a communication error instead.
+    switch (optee_return_origin) {
+    case TEEC_ORIGIN_COMMS:
+        zx_result->return_code = optee_return_code;
+        zx_result->return_origin = zircon_tee_ReturnOrigin_COMMUNICATION;
+        break;
+    case TEEC_ORIGIN_TEE:
+        zx_result->return_code = optee_return_code;
+        zx_result->return_origin = zircon_tee_ReturnOrigin_TRUSTED_OS;
+        break;
+    case TEEC_ORIGIN_TRUSTED_APP:
+        zx_result->return_code = optee_return_code;
+        zx_result->return_origin = zircon_tee_ReturnOrigin_TRUSTED_APPLICATION;
+        break;
+    default:
+        zxlogf(ERROR, "optee: optee returned an invalid return origin (%" PRIu32 ")\n",
+               optee_return_origin);
+        zx_result->return_code = TEEC_ERROR_COMMUNICATION;
+        zx_result->return_origin = zircon_tee_ReturnOrigin_COMMUNICATION;
+        return ZX_ERR_INTERNAL;
+    }
+    return ZX_OK;
+}
+
 }; // namespace
 
 namespace optee {
@@ -190,10 +221,21 @@ zx_status_t OpteeClient::OpenSession(const zircon_tee_Uuid* trusted_app,
     zxlogf(SPEW, "optee: OpenSession returned 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32 "\n",
            call_code, message.return_code(), message.return_origin());
 
+    if (ConvertOpteeToZxResult(message.return_code(), message.return_origin(), &result) != ZX_OK) {
+        return zircon_tee_DeviceOpenSession_reply(txn, kInvalidSession, &result);
+    }
+
+    if (message.CreateOutputParameterSet(&result.parameter_set) != ZX_OK) {
+        // Since we failed to parse the output parameters, let's close the session and report error.
+        // It is okay that the session id is not in the session list.
+        CloseSession(message.session_id());
+        result.return_code = TEEC_ERROR_COMMUNICATION;
+        result.return_origin = zircon_tee_ReturnOrigin_COMMUNICATION;
+        return zircon_tee_DeviceOpenSession_reply(txn, kInvalidSession, &result);
+    }
+
     open_sessions_.insert(fbl::make_unique<OpteeSession>(message.session_id()));
 
-    result.return_code = message.return_code();
-    result.return_origin = message.return_origin();
     return zircon_tee_DeviceOpenSession_reply(txn, message.session_id(), &result);
 }
 
@@ -230,8 +272,17 @@ zx_status_t OpteeClient::InvokeCommand(uint32_t session_id,
 
     zxlogf(SPEW, "optee: InvokeCommand returned 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32 "\n",
            call_code, message.return_code(), message.return_origin());
-    result.return_code = message.return_code();
-    result.return_origin = message.return_origin();
+
+    if (ConvertOpteeToZxResult(message.return_code(), message.return_origin(), &result) != ZX_OK) {
+        return zircon_tee_DeviceInvokeCommand_reply(txn, &result);
+    }
+
+    if (message.CreateOutputParameterSet(&result.parameter_set) != ZX_OK) {
+        result.return_code = TEEC_ERROR_COMMUNICATION;
+        result.return_origin = zircon_tee_ReturnOrigin_COMMUNICATION;
+        return zircon_tee_DeviceInvokeCommand_reply(txn, &result);
+    }
+
     return zircon_tee_DeviceInvokeCommand_reply(txn, &result);
 }
 

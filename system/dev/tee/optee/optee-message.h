@@ -212,6 +212,16 @@ public:
 
 protected:
     using MessageBase::MessageBase; // inherit constructors
+
+    bool TryInitializeParameters(size_t starting_param_index,
+                                 const zircon_tee_ParameterSet& parameter_set);
+    bool TryInitializeValue(const zircon_tee_Value& value, MessageParam* out_param);
+
+    zx_status_t CreateOutputParameterSet(size_t starting_param_index,
+                                         zircon_tee_ParameterSet* out_parameter_set);
+
+private:
+    zircon_tee_Value CreateOutputValueParameter(const MessageParam& optee_param);
 };
 
 // OpenSessionMessage
@@ -227,6 +237,10 @@ public:
     uint32_t session_id() const { return header()->session_id; }
     uint32_t return_code() const { return header()->return_code; }
     uint32_t return_origin() const { return header()->return_origin; }
+
+    zx_status_t CreateOutputParameterSet(zircon_tee_ParameterSet* out_parameter_set) {
+        return Message::CreateOutputParameterSet(kNumFixedOpenSessionParams, out_parameter_set);
+    }
 
 protected:
     using Message::header; // make header() protected
@@ -267,6 +281,10 @@ public:
     // Outputs
     uint32_t return_code() const { return header()->return_code; }
     uint32_t return_origin() const { return header()->return_origin; }
+
+    zx_status_t CreateOutputParameterSet(zircon_tee_ParameterSet* out_parameter_set) {
+        return Message::CreateOutputParameterSet(0, out_parameter_set);
+    }
 };
 
 // RpcMessage
