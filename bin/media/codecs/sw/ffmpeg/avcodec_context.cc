@@ -11,6 +11,12 @@ namespace {
 static const std::map<std::string, AVCodecID> codec_ids = {
     {"video/h264", AV_CODEC_ID_H264}};
 
+static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c,
+                                             uint8_t d) {
+  return (static_cast<uint32_t>(d) << 24) | (static_cast<uint32_t>(c) << 16) |
+         (static_cast<uint32_t>(b) << 8) | static_cast<uint32_t>(a);
+}
+
 }  // namespace
 
 std::optional<std::unique_ptr<AvCodecContext>> AvCodecContext::CreateDecoder(
@@ -115,26 +121,62 @@ AvCodecContext::DecodedOutputInfo AvCodecContext::decoded_output_info(
   ZX_DEBUG_ASSERT(avcodec_context_);
   ZX_DEBUG_ASSERT(avcodec_is_open(avcodec_context_.get()));
   ZX_DEBUG_ASSERT(av_codec_is_decoder(avcodec_context_->codec));
+  // TODO(turnage): Accept 10 bit YUV formats.
+  ZX_DEBUG_ASSERT(frame->format == AV_PIX_FMT_YUV420P);
+  // We only implement right and bottom crops, not left or top crops.
+  ZX_ASSERT(frame->crop_left == 0);
+  ZX_ASSERT(frame->crop_top == 0);
 
-  AvCodecContext::DecodedOutputInfo decoded_output_info;
-  decoded_output_info.coded_width = frame->width;
-  decoded_output_info.coded_height = frame->height;
-  decoded_output_info.width =
-      frame->width - frame->crop_top - frame->crop_bottom;
-  decoded_output_info.height =
-      frame->height - frame->crop_left - frame->crop_right;
-  av_image_fill_linesizes(decoded_output_info.linesizes,
-                          static_cast<AVPixelFormat>(frame->format),
+  int linesizes[4];
+  av_image_fill_linesizes(linesizes, static_cast<AVPixelFormat>(frame->format),
                           frame->width);
-  decoded_output_info.buffer_bytes_needed = av_image_get_buffer_size(
-      static_cast<AVPixelFormat>(frame->format), frame->width, frame->height,
-      /*linesizes_alignment=*/1);
-  if (frame->sample_aspect_ratio.num) {
-    decoded_output_info.sample_aspect_ratio = std::make_pair(
-        frame->sample_aspect_ratio.num, frame->sample_aspect_ratio.den);
+
+  fuchsia::mediacodec::VideoUncompressedFormat uncompressed_format;
+  uncompressed_format.fourcc = make_fourcc('Y', 'V', '1', '2');
+
+  uncompressed_format.primary_start_offset = 0;
+  uncompressed_format.primary_pixel_stride = 1;
+  uncompressed_format.primary_line_stride_bytes = linesizes[0];
+  uncompressed_format.primary_width_pixels = frame->width;
+  uncompressed_format.primary_height_pixels = frame->height;
+  uncompressed_format.primary_display_width_pixels =
+      frame->width - frame->crop_right;
+  uncompressed_format.primary_display_height_pixels =
+      frame->height - frame->crop_bottom;
+
+  // TODO(dustingreen): remove this field from the VideoUncompressedFormat or
+  // specify separately for primary / secondary.
+  uncompressed_format.planar = true;
+  uncompressed_format.swizzled = false;
+
+  uncompressed_format.secondary_pixel_stride = 1;
+  uncompressed_format.secondary_width_pixels = frame->width / 2;
+  uncompressed_format.secondary_height_pixels = frame->height / 2;
+  uncompressed_format.secondary_line_stride_bytes = linesizes[1];
+  uncompressed_format.secondary_start_offset = linesizes[0] * frame->height;
+
+  uncompressed_format.tertiary_start_offset =
+      uncompressed_format.secondary_start_offset +
+      uncompressed_format.secondary_height_pixels * linesizes[1];
+
+  uncompressed_format.has_pixel_aspect_ratio = !!frame->sample_aspect_ratio.num;
+  if (uncompressed_format.has_pixel_aspect_ratio) {
+    uncompressed_format.pixel_aspect_ratio_width =
+        frame->sample_aspect_ratio.num;
+    uncompressed_format.pixel_aspect_ratio_height =
+        frame->sample_aspect_ratio.den;
   }
 
-  return decoded_output_info;
+  // TODO(dustingreen): Switching to FIDL table should make this not be
+  // required.
+  uncompressed_format.special_formats.set_temp_field_todo_remove(0);
+
+  size_t buffer_bytes_needed = av_image_get_buffer_size(
+      static_cast<AVPixelFormat>(frame->format), frame->width, frame->height,
+      /*linesizes_alignment=*/1);
+
+  return {.format = std::move(uncompressed_format),
+          .buffer_bytes_needed = buffer_bytes_needed};
 }
 
 // static
@@ -150,8 +192,6 @@ int AvCodecContext::GetBufferHandler(AVCodecContext* avcodec_context,
   ZX_DEBUG_ASSERT(avcodec_context_);
   ZX_DEBUG_ASSERT(get_buffer_callback_);
   ZX_DEBUG_ASSERT(frame->width);
-  // TODO(turnage): Accept 10 bit YUV formats.
-  ZX_DEBUG_ASSERT(frame->format == AV_PIX_FMT_YUV420P);
 
   return get_buffer_callback_(decoded_output_info(frame), avcodec_context,
                               frame, flags);

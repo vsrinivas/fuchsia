@@ -17,12 +17,7 @@ class AvCodecContext {
  public:
   // Describes uncompressed decoded output.
   struct DecodedOutputInfo {
-    int coded_width;
-    int coded_height;
-    int width;
-    int height;
-    int linesizes[4];
-    std::optional<std::pair<int, int>> sample_aspect_ratio;
+    fuchsia::mediacodec::VideoUncompressedFormat format;
     size_t buffer_bytes_needed;
   };
 
