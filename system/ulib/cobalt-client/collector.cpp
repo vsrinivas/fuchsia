@@ -84,7 +84,6 @@ Collector::~Collector() {
 };
 
 Histogram Collector::AddHistogram(const HistogramOptions& options) {
-    ZX_DEBUG_ASSERT_MSG(options.event_code > 0, "event_type_index 0 value is reserved.");
     ZX_DEBUG_ASSERT_MSG(remote_histograms_.size() < remote_histograms_.capacity(),
                         "Exceeded pre-allocated histogram capacity.");
     RemoteHistogram::EventBuffer buffer;
@@ -97,7 +96,6 @@ Histogram Collector::AddHistogram(const HistogramOptions& options) {
 }
 
 Counter Collector::AddCounter(const MetricOptions& options) {
-    ZX_DEBUG_ASSERT_MSG(options.event_code > 0, "event_type_index 0 value is reserved.");
     ZX_DEBUG_ASSERT_MSG(remote_counters_.size() < remote_counters_.capacity(),
                         "Exceeded pre-allocated counter capacity.");
     RemoteCounter::EventBuffer buffer;
