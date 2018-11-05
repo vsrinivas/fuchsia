@@ -288,6 +288,7 @@ static void vim_apply_configuration(void* ctx,
             init_hdmi_interface(display, display->p);
             configure_osd(display, 1);
             configure_vd(display, 0);
+            disable_osd(display, 0); // OSD1 is never used and if not disabled can cover up OSD2 and VD0.
         }
 
         // The only way a checked configuration could now be invalid is if display was
