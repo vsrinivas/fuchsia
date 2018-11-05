@@ -21,8 +21,10 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
+#include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
@@ -455,7 +457,7 @@ bool BlobfsTest::GetRamdiskCount(uint64_t* blk_count) const {
     END_HELPER;
 }
 
-bool BlobfsTest::CheckInfo(uint64_t* total_bytes) {
+bool BlobfsTest::CheckInfo(uint64_t* total_bytes, uint64_t* used_bytes) {
     fbl::unique_fd fd(open(MOUNT_PATH, O_RDONLY | O_DIRECTORY));
     ASSERT_TRUE(fd);
 
@@ -474,6 +476,9 @@ bool BlobfsTest::CheckInfo(uint64_t* total_bytes) {
 
     if (total_bytes != nullptr) {
         *total_bytes = info.total_bytes;
+    }
+    if (used_bytes != nullptr) {
+        *used_bytes = info.used_bytes;
     }
 
     return true;
@@ -2094,6 +2099,85 @@ static bool NoSpace(BlobfsTest* blobfsTest) {
     END_HELPER;
 }
 
+// The following test attempts to fragment the underlying blobfs partition
+// assuming a trivial linear allocator. A more intelligent allocator
+// may require modifications to this test.
+static bool TestFragmentation(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
+    // Keep generating blobs until we run out of space, in a pattern of
+    // large, small, large, small, large.
+    //
+    // At the end of  the test, we'll free the small blobs, and observe
+    // if it is possible to allocate a larger blob. With a simple allocator
+    // and no defragmentation, this would result in a NO_SPACE error.
+    constexpr size_t kSmallSize = (1 << 16);
+    constexpr size_t kLargeSize = (1 << 17);
+
+    fbl::Vector<fbl::String> small_blobs;
+
+    bool do_small_blob = true;
+    size_t count = 0;
+    while (true) {
+        fbl::unique_ptr<blob_info_t> info;
+        ASSERT_TRUE(GenerateRandomBlob(do_small_blob ? kSmallSize : kLargeSize, &info));
+        fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
+        ASSERT_TRUE(fd, "Failed to create blob");
+        int r = ftruncate(fd.get(), info->size_data);
+        if (r < 0) {
+            ASSERT_EQ(ENOSPC, errno, "Blobfs expected to run out of space");
+            break;
+        }
+        ASSERT_EQ(0, StreamAll(write, fd.get(), info->data.get(), info->size_data),
+                  "Failed to write Data");
+        ASSERT_EQ(0, close(fd.release()));
+        if (do_small_blob) {
+            small_blobs.push_back(fbl::String(info->path));
+        }
+
+        do_small_blob = !do_small_blob;
+
+        if (++count % 50 == 0) {
+            printf("Allocated %lu blobs\n", count);
+        }
+    }
+
+    // We have filled up the disk with both small and large blobs.
+    // Observe that we cannot add another large blob.
+    fbl::unique_ptr<blob_info_t> info;
+    ASSERT_TRUE(GenerateRandomBlob(kLargeSize, &info));
+    uint64_t total_bytes, used_bytes;
+
+    // We shouldn't have space (before we try allocating) ...
+    ASSERT_TRUE(blobfsTest->CheckInfo(&total_bytes, &used_bytes));
+    ASSERT_LT(total_bytes - used_bytes, kLargeSize);
+
+    // ... and we don't have space (as we try allocating).
+    fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
+    ASSERT_TRUE(fd);
+    ASSERT_EQ(-1, ftruncate(fd.get(), info->size_data));
+    ASSERT_EQ(ENOSPC, errno, "Blobfs expected to be out of space");
+
+    // Unlink all small blobs -- except for the last one, since
+    // we may have free trailing space at the end.
+    for (size_t i = 0; i < small_blobs.size() - 1; i++) {
+        ASSERT_EQ(0, unlink(small_blobs[i].c_str()), "Unlinking old blob");
+    }
+
+    // This asserts an assumption of our test: Freeing these blobs
+    // should provde enough space.
+    ASSERT_GT(kSmallSize * (small_blobs.size() - 1), kLargeSize);
+
+    // Validate the we have enough space (before we try allocating)...
+    ASSERT_TRUE(blobfsTest->CheckInfo(&total_bytes, &used_bytes));
+    ASSERT_GE(total_bytes - used_bytes, kLargeSize);
+
+    // ... Observe that we still cannot allocate the large blob.
+    ASSERT_EQ(-1, ftruncate(fd.get(), info->size_data));
+    ASSERT_EQ(ENOSPC, errno, "Blobfs expected to be out of space");
+
+    END_HELPER;
+}
+
 static bool QueryDevicePath(BlobfsTest* blobfsTest) {
     BEGIN_HELPER;
     fbl::unique_fd dirfd(open(MOUNT_PATH "/.", O_RDONLY | O_ADMIN));
@@ -2633,6 +2717,7 @@ RUN_TESTS(LARGE, TestHugeBlobCompressible)
 RUN_TESTS(LARGE, CreateUmountRemountLarge)
 RUN_TESTS(LARGE, CreateUmountRemountLargeMultithreaded)
 RUN_TESTS(LARGE, NoSpace)
+RUN_TESTS(LARGE, TestFragmentation)
 RUN_TESTS(MEDIUM, QueryDevicePath)
 RUN_TESTS(MEDIUM, TestReadOnly)
 RUN_TEST_FVM(MEDIUM, ResizePartition)

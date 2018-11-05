@@ -107,8 +107,11 @@ public:
     // Returns the current total transaction block count from the underlying ramdisk.
     bool GetRamdiskCount(uint64_t* blk_count) const;
 
-    // Checks info of mounted blobfs. Returns total number of bytes available as |total_bytes|.
-    bool CheckInfo(uint64_t* total_bytes = nullptr);
+    // Checks info of mounted blobfs.
+    //
+    // Returns total number of bytes available as |total_bytes|.
+    // Returns total number of used bytes as |used_bytes|.
+    bool CheckInfo(uint64_t* total_bytes = nullptr, uint64_t* used_bytes = nullptr);
 
 private:
     // Mounts the blobfs partition.
