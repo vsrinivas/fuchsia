@@ -10,16 +10,20 @@ use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_input::InputMethodEditorRequest as ImeReq;
 use fuchsia_syslog::{fx_log, fx_log_err, fx_log_warn};
 use futures::prelude::*;
+use lazy_static::lazy_static;
 use parking_lot::Mutex;
+use regex::Regex;
 use std::char;
 use std::ops::Range;
 use std::sync::{Arc, Weak};
+use unicode_segmentation::GraphemeCursor;
 
 // TODO(lard): move constants into common, centralized location?
 const HID_USAGE_KEY_BACKSPACE: u32 = 0x2a;
 const HID_USAGE_KEY_RIGHT: u32 = 0x4f;
 const HID_USAGE_KEY_LEFT: u32 = 0x50;
 const HID_USAGE_KEY_ENTER: u32 = 0x28;
+const HID_USAGE_KEY_DELETE: u32 = 0x2e;
 
 /// The internal state of the IME, usually held within the IME behind an Arc<Mutex>
 /// so it can be accessed from multiple places.
@@ -44,9 +48,9 @@ impl Ime {
         let state = ImeState {
             text_state: initial_state,
             client: Box::new(client),
-            keyboard_type: keyboard_type,
-            action: action,
-            ime_service: ime_service,
+            keyboard_type,
+            action,
+            ime_service,
         };
         Ime(Arc::new(Mutex::new(state)))
     }
@@ -127,6 +131,10 @@ impl Ime {
                         state.delete_backward();
                         state.did_update_state(keyboard_event);
                     }
+                    HID_USAGE_KEY_DELETE => {
+                        state.delete_forward();
+                        state.did_update_state(keyboard_event);
+                    }
                     HID_USAGE_KEY_LEFT => {
                         state.cursor_horizontal_move(keyboard_event.modifiers, false);
                         state.did_update_state(keyboard_event);
@@ -152,13 +160,41 @@ impl Ime {
     }
 }
 
+/// Horizontal motion type for the cursor.
+enum HorizontalMotion {
+    GraphemeLeft(GraphemeTraversal),
+    GraphemeRight,
+}
+
+/// How the cursor should traverse grapheme clusters.
+enum GraphemeTraversal {
+    /// Move by whole grapheme clusters at a time.
+    ///
+    /// This traversal mode should be used when using arrow keys, or when deleting forward (with the
+    /// <kbd>Delete</kbd> key).
+    WholeGrapheme,
+    /// Generally move by whole grapheme clusters, but allow moving through individual combining
+    /// characters, if present at the end of the grapheme cluster.
+    ///
+    /// This traversal mode should be used when deleting backward (<kbd>Backspace</kbd>), but not
+    /// when deleting forward or using arrow keys.
+    ///
+    /// This ensures that when a user is typing text and composes a character out of individual
+    /// combining diacritics, it should be possible to correct a mistake by pressing
+    /// <kbd>Backspace</kbd>. If we were to allow _moving the cursor_ left and right through
+    /// diacritics, that would only cause user confusion, as the blinking caret would not move
+    /// visibly while within a single grapheme cluster.
+    CombiningCharacters,
+}
+
 impl ImeState {
     pub fn did_update_state(&mut self, e: uii::KeyboardEvent) {
         self.client
             .did_update_state(
                 &mut self.text_state,
                 Some(OutOfLine(&mut uii::InputEvent::Keyboard(e))),
-            ).unwrap_or_else(|e| fx_log_warn!("error sending state update to ImeClient: {:?}", e));
+            )
+            .unwrap_or_else(|e| fx_log_warn!("error sending state update to ImeClient: {:?}", e));
     }
 
     // gets start and len, and sets base/extent to start of string if don't exist
@@ -188,6 +224,48 @@ impl ImeState {
         self.text_state.selection.extent = self.text_state.selection.base;
     }
 
+    /// Calculates an adjacent cursor position to left or right of the current position.
+    ///
+    /// * `start`: Starting position in the string, as a byte offset.
+    /// * `motion`: Whether to go right or left, and whether to allow entering grapheme clusters.
+    fn adjacent_cursor_position(&self, start: usize, motion: HorizontalMotion) -> usize {
+        let text_length = self.text_state.text.len();
+        let mut cursor = GraphemeCursor::new(start, text_length, true);
+        if let HorizontalMotion::GraphemeRight = motion {
+            let next_boundary = cursor.next_boundary(&self.text_state.text, 0);
+            match next_boundary {
+                Ok(Some(offset)) => return offset,
+                // Can't go right from the end of the string.
+                _ => return text_length,
+            }
+        }
+
+        let prev_boundary = cursor.prev_boundary(&self.text_state.text, 0);
+        if let Ok(Some(offset)) = prev_boundary {
+            if let HorizontalMotion::GraphemeLeft(GraphemeTraversal::CombiningCharacters) = motion {
+                let grapheme_str = &self.text_state.text[offset..start];
+                let last_char_str = match grapheme_str.char_indices().last() {
+                    Some((last_char_offset, c)) => Some(&grapheme_str[last_char_offset..]),
+                    None => None,
+                };
+                if let Some(last_char_str) = last_char_str {
+                    lazy_static! {
+                        /// A regex that matches combining characters, e.g. accents and other
+                        /// diacritics. Rust does not provide a way to check the Unicode categories
+                        /// of `char`s directly, so this is the simplest workaround for now.
+                        static ref COMBINING_REGEX: Regex = Regex::new(r"\p{M}$").unwrap();
+                    }
+                    if COMBINING_REGEX.is_match(last_char_str) {
+                        return start - last_char_str.len();
+                    }
+                }
+            }
+            return offset;
+        }
+        // Can't go left from the beginning of the string.
+        return 0;
+    }
+
     pub fn delete_backward(&mut self) {
         self.text_state.revision += 1;
 
@@ -195,21 +273,43 @@ impl ImeState {
         self.selection();
 
         if self.text_state.selection.base == self.text_state.selection.extent {
-            if self.text_state.selection.base > 0 {
-                // Change cursor to 1-char selection, so that it can be uniformly handled
-                // by the selection-deletion code below.
-                self.text_state.selection.base -= 1;
-            } else {
-                // Cursor is at beginning of text; there is nothing previous to delete.
-                return;
-            }
+            // Select one grapheme or character to the left, so that it can be uniformly handled by
+            // the selection-deletion code below.
+            self.text_state.selection.base = self.adjacent_cursor_position(
+                self.text_state.selection.base as usize,
+                HorizontalMotion::GraphemeLeft(GraphemeTraversal::CombiningCharacters),
+            ) as i64;
         }
+        self.delete_selection();
+    }
 
+    pub fn delete_forward(&mut self) {
+        self.text_state.revision += 1;
+
+        // Ensure valid selection/cursor.
+        self.selection();
+
+        if self.text_state.selection.base == self.text_state.selection.extent {
+            // Select one grapheme to the right so that it can be handled by the selection-deletion
+            // code below.
+            self.text_state.selection.extent = self.adjacent_cursor_position(
+                self.text_state.selection.base as usize,
+                HorizontalMotion::GraphemeRight,
+            ) as i64;
+        }
+        self.delete_selection();
+    }
+
+    /// Deletes the selected text if the selection isn't empty.
+    /// Does not increment revision number. Should only be called from methods that do.
+    fn delete_selection(&mut self) {
         // Delete the current selection.
         let selection = self.selection();
-        self.text_state.text.replace_range(selection.clone(), "");
-        self.text_state.selection.extent = selection.start as i64;
-        self.text_state.selection.base = self.text_state.selection.extent;
+        if selection.start != selection.end {
+            self.text_state.text.replace_range(selection.clone(), "");
+            self.text_state.selection.extent = selection.start as i64;
+            self.text_state.selection.base = self.text_state.selection.extent;
+        }
     }
 
     pub fn cursor_horizontal_move(&mut self, modifiers: u32, go_right: bool) {
@@ -229,12 +329,14 @@ impl ImeState {
             }
         } else {
             // new position based previous value of extent
-            if go_right {
-                new_position += 1
-            } else {
-                new_position -= 1
-            }
-            new_position = new_position.max(0).min(self.text_state.text.len() as i64);
+            new_position = self.adjacent_cursor_position(
+                new_position as usize,
+                if go_right {
+                    HorizontalMotion::GraphemeRight
+                } else {
+                    HorizontalMotion::GraphemeLeft(GraphemeTraversal::WholeGrapheme)
+                },
+            ) as i64;
         }
 
         self.text_state.selection.extent = new_position;
@@ -408,6 +510,24 @@ mod test {
     }
 
     #[test]
+    fn test_delete_forward_empty_string() {
+        let (mut ime, statechan, _actionchan) = set_up("", -1, -1);
+
+        simulate_keypress(&mut ime, HID_USAGE_KEY_DELETE, true, false);
+        let state = statechan.try_recv().unwrap();
+        assert_eq!(2, state.revision);
+        assert_eq!(0, state.selection.base);
+        assert_eq!(0, state.selection.extent);
+
+        // a second delete still does nothing, but increments revision
+        simulate_keypress(&mut ime, HID_USAGE_KEY_DELETE, true, false);
+        let state = statechan.try_recv().unwrap();
+        assert_eq!(3, state.revision);
+        assert_eq!(0, state.selection.base);
+        assert_eq!(0, state.selection.extent);
+    }
+
+    #[test]
     fn test_delete_backward_beginning_string() {
         let (mut ime, statechan, _actionchan) = set_up("abcdefghi", 0, 0);
 
@@ -420,7 +540,19 @@ mod test {
     }
 
     #[test]
-    fn test_delete_first_char_selected() {
+    fn test_delete_forward_beginning_string() {
+        let (mut ime, statechan, _actionchan) = set_up("abcdefghi", 0, 0);
+
+        simulate_keypress(&mut ime, HID_USAGE_KEY_DELETE, true, false);
+        let state = statechan.try_recv().unwrap();
+        assert_eq!(2, state.revision);
+        assert_eq!("bcdefghi", state.text);
+        assert_eq!(0, state.selection.base);
+        assert_eq!(0, state.selection.extent);
+    }
+
+    #[test]
+    fn test_delete_backward_first_char_selected() {
         let (mut ime, statechan, _actionchan) = set_up("abcdefghi", 0, 1);
 
         simulate_keypress(&mut ime, HID_USAGE_KEY_BACKSPACE, true, false);
@@ -429,6 +561,18 @@ mod test {
         assert_eq!("bcdefghi", state.text);
         assert_eq!(0, state.selection.base);
         assert_eq!(0, state.selection.extent);
+    }
+
+    #[test]
+    fn test_delete_forward_last_char_selected() {
+        let (mut ime, statechan, _actionchan) = set_up("abcdefghi", 8, 9);
+
+        simulate_keypress(&mut ime, HID_USAGE_KEY_DELETE, true, false);
+        let state = statechan.try_recv().unwrap();
+        assert_eq!(2, state.revision);
+        assert_eq!("abcdefgh", state.text);
+        assert_eq!(8, state.selection.base);
+        assert_eq!(8, state.selection.extent);
     }
 
     #[test]
@@ -441,6 +585,104 @@ mod test {
         assert_eq!("abcdefgh", state.text);
         assert_eq!(8, state.selection.base);
         assert_eq!(8, state.selection.extent);
+    }
+
+    #[test]
+    fn test_delete_forward_end_string() {
+        let (mut ime, statechan, _actionchan) = set_up("abcdefghi", 9, 9);
+
+        simulate_keypress(&mut ime, HID_USAGE_KEY_DELETE, true, false);
+        let state = statechan.try_recv().unwrap();
+        assert_eq!(2, state.revision);
+        assert_eq!("abcdefghi", state.text);
+        assert_eq!(9, state.selection.base);
+        assert_eq!(9, state.selection.extent);
+    }
+
+    #[test]
+    fn test_delete_backward_combining_diacritic() {
+        // U+0301: combining acute accent. 2 bytes.
+        let (mut ime, statechan, _actionchan) = set_up("abcdefghi\u{0301}", 11, 11);
+
+        simulate_keypress(&mut ime, HID_USAGE_KEY_BACKSPACE, true, false);
+        let state = statechan.try_recv().unwrap();
+        assert_eq!(2, state.revision);
+        assert_eq!("abcdefghi", state.text);
+        assert_eq!(9, state.selection.base);
+        assert_eq!(9, state.selection.extent);
+    }
+
+    #[test]
+    fn test_delete_forward_combining_diacritic() {
+        // U+0301: combining acute accent. 2 bytes.
+        let (mut ime, statechan, _actionchan) = set_up("abcdefghi\u{0301}jkl", 8, 8);
+
+        simulate_keypress(&mut ime, HID_USAGE_KEY_DELETE, true, false);
+        let state = statechan.try_recv().unwrap();
+        assert_eq!(2, state.revision);
+        assert_eq!("abcdefghjkl", state.text);
+        assert_eq!(8, state.selection.base);
+        assert_eq!(8, state.selection.extent);
+    }
+
+    #[test]
+    fn test_delete_backward_emoji() {
+        // Emoji with a color modifier.
+        let text = "abcdefghi👦🏻";
+        let len = text.len() as i64;
+        let (mut ime, statechan, _actionchan) = set_up(text, len, len);
+
+        simulate_keypress(&mut ime, HID_USAGE_KEY_BACKSPACE, true, false);
+        let state = statechan.try_recv().unwrap();
+        assert_eq!(2, state.revision);
+        assert_eq!("abcdefghi", state.text);
+        assert_eq!(9, state.selection.base);
+        assert_eq!(9, state.selection.extent);
+    }
+
+    #[test]
+    fn test_delete_forward_emoji() {
+        // Emoji with a color modifier.
+        let text = "abcdefghi👦🏻";
+        let (mut ime, statechan, _actionchan) = set_up(text, 9, 9);
+
+        simulate_keypress(&mut ime, HID_USAGE_KEY_DELETE, true, false);
+        let state = statechan.try_recv().unwrap();
+        assert_eq!(2, state.revision);
+        assert_eq!("abcdefghi", state.text);
+        assert_eq!(9, state.selection.base);
+        assert_eq!(9, state.selection.extent);
+    }
+
+    /// Flags are more complicated because they consist of two REGIONAL INDICATOR SYMBOL LETTERs.
+    #[test]
+    fn test_delete_backward_flag() {
+        // French flag
+        let text = "abcdefghi🇫🇷";
+        let len = text.len() as i64;
+        let (mut ime, statechan, _actionchan) = set_up(text, len, len);
+
+        simulate_keypress(&mut ime, HID_USAGE_KEY_BACKSPACE, true, false);
+        let state = statechan.try_recv().unwrap();
+        assert_eq!(2, state.revision);
+        assert_eq!("abcdefghi", state.text);
+        assert_eq!(9, state.selection.base);
+        assert_eq!(9, state.selection.extent);
+    }
+
+    #[test]
+    fn test_delete_forward_flag() {
+        // French flag
+        let text = "abcdefghi🇫🇷";
+        let len = text.len() as i64;
+        let (mut ime, statechan, _actionchan) = set_up(text, 9, 9);
+
+        simulate_keypress(&mut ime, HID_USAGE_KEY_DELETE, true, false);
+        let state = statechan.try_recv().unwrap();
+        assert_eq!(2, state.revision);
+        assert_eq!("abcdefghi", state.text);
+        assert_eq!(9, state.selection.base);
+        assert_eq!(9, state.selection.extent);
     }
 
     #[test]
@@ -684,9 +926,7 @@ mod test {
         assert!(actionchan.try_recv().is_ok()); // assert DID send action
     }
 
-    // TODO(lard): fix unicode support so this passes
-    // disabled: #[test]
-    #[allow(dead_code)]
+    #[test]
     fn test_unicode_selection() {
         let (mut ime, statechan, _actionchan) = set_up("m😸eow", 1, 1);
 
@@ -695,17 +935,16 @@ mod test {
 
         simulate_keypress(&mut ime, HID_USAGE_KEY_BACKSPACE, true, true);
         let state = statechan.try_recv().unwrap();
-        assert_eq!(2, state.revision);
+        assert_eq!(3, state.revision);
         assert_eq!("meow", state.text);
         assert_eq!(1, state.selection.base);
         assert_eq!(1, state.selection.extent);
     }
 
-    // TODO(lard): fix unicode support so this passes
-    // disabled: #[test]
-    #[allow(dead_code)]
+    #[test]
     fn test_unicode_backspace() {
-        let (mut ime, statechan, _actionchan) = set_up("m😸eow", 2, 2);
+        let base: i64 = "m😸".len() as i64;
+        let (mut ime, statechan, _actionchan) = set_up("m😸eow", base, base);
 
         simulate_keypress(&mut ime, HID_USAGE_KEY_BACKSPACE, true, true);
         let state = statechan.try_recv().unwrap();
