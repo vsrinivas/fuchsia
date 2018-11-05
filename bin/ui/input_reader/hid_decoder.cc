@@ -101,7 +101,6 @@ HidDecoder::Protocol ExtractProtocol(hid::Usage input) {
   using ::hid::usage::Consumer;
   using ::hid::usage::Page;
   using ::hid::usage::Sensor;
-  using ::hid::usage::Telephony;
   struct {
     hid::Usage usage;
     HidDecoder::Protocol protocol;
@@ -110,10 +109,7 @@ HidDecoder::Protocol ExtractProtocol(hid::Usage input) {
         static_cast<uint32_t>(Sensor::kAmbientLight)},
        HidDecoder::Protocol::LightSensor},
       {{static_cast<uint16_t>(Page::kConsumer),
-        static_cast<uint32_t>(Consumer::kVolume)},
-       HidDecoder::Protocol::Buttons},
-      {{static_cast<uint16_t>(Page::kTelephony),
-        static_cast<uint32_t>(Telephony::kPhoneMute)},
+        static_cast<uint32_t>(Consumer::kConsumerControl)},
        HidDecoder::Protocol::Buttons},
       // Add more sensors here
   };
@@ -291,7 +287,8 @@ bool HidDecoder::ParseProtocol(const fzl::FdioCaller& caller,
 }
 
 bool HidDecoder::use_legacy_mode() const {
-  return protocol_ != Protocol::Gamepad;
+  return protocol_ != Protocol::Gamepad && protocol_ != Protocol::Buttons &&
+         protocol_ != Protocol::LightSensor;
 }
 
 bool HidDecoder::ParseGamepadDescriptor(const hid::ReportField* fields,
