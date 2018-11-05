@@ -324,9 +324,9 @@ void PortDispatcher::FreePacket(PortPacket* port_packet) {
     fbl::unique_ptr<const PortObserver> observer = fbl::move(port_packet->observer);
 
     if (observer) {
-        // Deleting the observer under the lock is fine because the
+        // Deleting the observer under |get_lock()| is fine because the
         // reference that holds to this PortDispatcher is by construction
-        // not the last one. We need to do this under the lock because
+        // not the last one. We need to do this under |get_lock()| because
         // another thread can call MaybeReap().
     } else if (port_packet->is_ephemeral()) {
         port_packet->Free();
