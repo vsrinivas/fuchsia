@@ -688,31 +688,35 @@ void StoryProviderImpl::OnStoryStorageDeleted(fidl::StringPtr story_id) {
 
 // |fuchsia::modular::FocusWatcher|
 void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
-  if (info->device_id.get() != device_id_) {
-    return;
-  }
+  operation_queue_.Add(
+      new SyncCall(fxl::MakeCopyable([this, info = std::move(info)]() {
+        if (info->device_id.get() != device_id_) {
+          return;
+        }
 
-  if (info->focused_story_id.is_null()) {
-    return;
-  }
+        if (info->focused_story_id.is_null()) {
+          return;
+        }
 
-  auto i = story_controller_impls_.find(info->focused_story_id.get());
-  if (i == story_controller_impls_.end()) {
-    FXL_LOG(ERROR) << "Story controller not found for focused story "
-                   << info->focused_story_id;
-    return;
-  }
+        auto i = story_controller_impls_.find(info->focused_story_id.get());
+        if (i == story_controller_impls_.end()) {
+          FXL_LOG(ERROR) << "Story controller not found for focused story "
+                         << info->focused_story_id;
+          return;
+        }
 
-  // Last focus time is recorded in the ledger, and story provider watchers
-  // are notified through watching SessionStorage.
-  auto on_run = Future<>::Create("StoryProviderImpl.OnFocusChange.on_run");
-  auto done = on_run->AsyncMap([this, story_id = info->focused_story_id] {
-    return session_storage_->UpdateLastFocusedTimestamp(
-        story_id, zx_clock_get(ZX_CLOCK_UTC));
-  });
-  std::function<void()> callback = [] {};
-  operation_queue_.Add(WrapFutureAsOperation("StoryProviderImpl::OnFocusChange",
-                                             on_run, done, callback));
+        // Last focus time is recorded in the ledger, and story provider
+        // watchers are notified through watching SessionStorage.
+        auto on_run =
+            Future<>::Create("StoryProviderImpl.OnFocusChange.on_run");
+        auto done = on_run->AsyncMap([this, story_id = info->focused_story_id] {
+          return session_storage_->UpdateLastFocusedTimestamp(
+              story_id, zx_clock_get(ZX_CLOCK_UTC));
+        });
+        std::function<void()> callback = [] {};
+        operation_queue_.Add(WrapFutureAsOperation(
+            "StoryProviderImpl::OnFocusChange", on_run, done, callback));
+      })));
 }
 
 void StoryProviderImpl::NotifyStoryWatchers(
