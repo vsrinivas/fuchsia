@@ -6,7 +6,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <arch/x86/mp.h>
-#include <kernel/thread.h>
 
 #pragma once
 
