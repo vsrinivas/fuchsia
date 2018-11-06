@@ -12,9 +12,13 @@
 #include <region-alloc/region-alloc.h>
 #include <stdio.h>
 
+#include "acpi-private.h"
 #include "methods.h"
 #include "pci.h"
 #include "resources.h"
+
+// This file contains the implementation for the code supporting the in-progress userland
+// pci bus driver.
 
 static fbl::Vector<pci_mcfg_allocation_t*> mcfg_allocations;
 const char* kLogTag = "acpi-pci:";
@@ -250,24 +254,52 @@ bool pci_platform_has_mcfg(void) {
     return (mcfg_allocations.size() != 0);
 }
 
-zx_status_t pci_init(void) {
-    auto region_pool = RegionAllocator::RegionPool::Create(PAGE_SIZE);
-    if (region_pool == nullptr) {
-        return ZX_ERR_NO_MEMORY;
+zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* info, publish_acpi_device_ctx_t* ctx) {
+    static bool pci_bookkeeping_initialized = false;
+    zx_status_t status = ZX_OK;
+
+    zxlogf(TRACE, "pci_init: entry\n");
+    if (!pci_bookkeeping_initialized) {
+        auto region_pool = RegionAllocator::RegionPool::Create(PAGE_SIZE);
+        if (region_pool == nullptr) {
+            return ZX_ERR_NO_MEMORY;
+        }
+
+        zx_status_t status = kMmio32Alloc.SetRegionPool(region_pool);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        status = kMmio64Alloc.SetRegionPool(region_pool);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        status = kIoAlloc.SetRegionPool(region_pool);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        // MCFG table will only exist with PCIe so 'not found' is not a failure case.
+        status = pci_read_mcfg_table();
+        if (status != ZX_OK && status != ZX_ERR_NOT_FOUND) {
+            zxlogf(ERROR, "%s error attempting to read mcfg table %d\n", kLogTag, status);
+            return status;
+            ;
+        }
+
+        status = pci_report_current_resources_ex(get_root_resource());
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s error attempting to populate PCI allocators %d\n", kLogTag, status);
+            return status;
+        }
+        pci_bookkeeping_initialized = true;
     }
-    zx_status_t status = kMmio32Alloc.SetRegionPool(region_pool);
-    if (status != ZX_OK) {
-        return status;
-    }
-    status = kMmio64Alloc.SetRegionPool(region_pool);
-    if (status != ZX_OK) {
-        return status;
-    }
-    status = kIoAlloc.SetRegionPool(region_pool);
-    if (status != ZX_OK) {
-        return status;
-    }
-    return ZX_OK;
+
+    // TODO(cja): Publish pciroot node here for the pbd to bind to
+
+    zxlogf(TRACE, "pci_init: exit\n");
+    return status;
 }
 
 // Search the MCFG allocations found earlier for an entry matching a given segment a host bridge
@@ -281,26 +313,4 @@ zx_status_t pci_get_segment_mcfg_alloc(unsigned segment_group, pci_mcfg_allocati
         }
     }
     return ZX_ERR_NOT_FOUND;
-}
-
-void register_pci_root(ACPI_HANDLE dev_obj) {
-    // Initialize the PCI allocators
-    // MCFG will not exist on legacy PCI systems.
-    zx_status_t status = pci_read_mcfg_table();
-    if (status != ZX_OK && status != ZX_ERR_NOT_FOUND) {
-        zxlogf(ERROR, "%s error attempting to read mcfg table %d\n", kLogTag, status);
-        return;
-    }
-
-    status = pci_init();
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s failed to initialize PCI allocators %d\n", kLogTag, status);
-        return;
-    }
-
-    status = pci_report_current_resources_ex(get_root_resource());
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s error attempting to populate PCI allocators %d\n", kLogTag, status);
-        return;
-    }
 }

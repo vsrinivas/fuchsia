@@ -7,8 +7,11 @@
 
 #include <acpica/acpi.h>
 #include <acpica/actypes.h>
+#include <ddk/device.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/pci.h>
+
+#include "acpi-private.h"
 
 __BEGIN_CDECLS;
 
@@ -24,7 +27,7 @@ typedef struct pci_ecam_baas {
     uint32_t reserved0;
 } pci_mcfg_allocation_t;
 
-zx_status_t pci_init(void);
+zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* info, publish_acpi_device_ctx_t* ctx);
 void register_pci_root(ACPI_HANDLE dev_obj);
 bool pci_platform_has_mcfg(void);
 
@@ -33,4 +36,4 @@ zx_status_t pci_report_current_resources(zx_handle_t root_resource_handle);
 
 __END_CDECLS;
 
-#endif  // ZIRCON_SYSTEM_DEV_BUS_ACPI_INCLUDE_PCI_H_
+#endif // ZIRCON_SYSTEM_DEV_BUS_ACPI_INCLUDE_PCI_H_

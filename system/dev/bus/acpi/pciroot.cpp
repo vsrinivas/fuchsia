@@ -195,15 +195,16 @@ static zx_status_t pciroot_op_get_bti(void* context, uint32_t bdf, uint32_t inde
     return zx_bti_create(iommu_handle, 0, bdf, bti);
 }
 
-zx_status_t pciroot_op_get_pci_platform_info(void* ctx, pci_platform_info_t* info) {
+#ifdef ENABLE_USER_PCI
+static zx_status_t pciroot_op_get_pci_platform_info(void* ctx, pci_platform_info_t* info) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t pciroot_op_get_pci_irq_info(void* ctx, pci_irq_info_t* info) {
+static zx_status_t pciroot_op_get_pci_irq_info(void* ctx, pci_irq_info_t* info) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t pciroot_op_driver_should_proxy_config(void* ctx, bool* use_proxy) {
+static zx_status_t pciroot_op_driver_should_proxy_config(void* ctx, bool* use_proxy) {
     // If we have no mcfg then all config access will need to be through IOports which
     // are proxied over pciroot.
     *use_proxy = !pci_platform_has_mcfg();
@@ -212,80 +213,138 @@ zx_status_t pciroot_op_driver_should_proxy_config(void* ctx, bool* use_proxy) {
 
 // For ACPI systems we only intend to use PIO access if MMIO config is unavailable. In the event we
 // do use them though, we're restricted to the base 256 byte PCI config header.
-zx_status_t pciroot_op_config_read8(void* ctx, const pci_bdf_t* address, uint16_t offset, uint8_t* value) {
+static zx_status_t pciroot_op_config_read8(void* ctx, const pci_bdf_t* address, uint16_t offset, uint8_t* value) {
     return pci_pio_read8(*address, static_cast<uint8_t>(offset), value);
 }
 
-zx_status_t pciroot_op_config_read16(void* ctx,
-                                     const pci_bdf_t* address,
-                                     uint16_t offset,
-                                     uint16_t* value) {
+static zx_status_t pciroot_op_config_read16(void* ctx,
+                                            const pci_bdf_t* address,
+                                            uint16_t offset,
+                                            uint16_t* value) {
     return pci_pio_read16(*address, static_cast<uint8_t>(offset), value);
 }
 
-zx_status_t pciroot_op_config_read32(void* ctx,
-                                     const pci_bdf_t* address,
-                                     uint16_t offset,
-                                     uint32_t* value) {
+static zx_status_t pciroot_op_config_read32(void* ctx,
+                                            const pci_bdf_t* address,
+                                            uint16_t offset,
+                                            uint32_t* value) {
     return pci_pio_read32(*address, static_cast<uint8_t>(offset), value);
 }
 
-zx_status_t pciroot_op_config_write8(void* ctx,
-                                     const pci_bdf_t* address,
-                                     uint16_t offset,
-                                     uint8_t value) {
+static zx_status_t pciroot_op_config_write8(void* ctx,
+                                            const pci_bdf_t* address,
+                                            uint16_t offset,
+                                            uint8_t value) {
     return pci_pio_write8(*address, static_cast<uint8_t>(offset), value);
 }
 
-zx_status_t pciroot_op_config_write16(void* ctx,
-                                      const pci_bdf_t* address,
-                                      uint16_t offset,
-                                      uint16_t value) {
+static zx_status_t pciroot_op_config_write16(void* ctx,
+                                             const pci_bdf_t* address,
+                                             uint16_t offset,
+                                             uint16_t value) {
     return pci_pio_write16(*address, static_cast<uint8_t>(offset), value);
 }
 
-zx_status_t pciroot_op_config_write32(void* ctx,
-                                      const pci_bdf_t* address,
-                                      uint16_t offset,
-                                      uint32_t value) {
+static zx_status_t pciroot_op_config_write32(void* ctx,
+                                             const pci_bdf_t* address,
+                                             uint16_t offset,
+                                             uint32_t value) {
     return pci_pio_write32(*address, static_cast<uint8_t>(offset), value);
 }
 
 // These methods may not exist in usable implementations and are a prototyping side effect. It
 // likely will not make sense for MSI blocks to be dealt with in the PCI driver itself if we can
 // help it.
-zx_status_t pciroot_op_msi_alloc_block(void* ctx,
-                                       uint64_t requested_irqs,
-                                       bool can_target_64bit,
-                                       msi_block_t* out_block) {
+static zx_status_t pciroot_op_msi_alloc_block(void* ctx,
+                                              uint64_t requested_irqs,
+                                              bool can_target_64bit,
+                                              msi_block_t* out_block) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t pciroot_op_msi_free_block(void* ctx,
-                                      const msi_block_t* block) {
+static zx_status_t pciroot_op_msi_free_block(void* ctx,
+                                             const msi_block_t* block) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t pciroot_op_msi_mask_unmask(void* ctx,
-                                       uint64_t msi_id,
-                                       bool mask) {
+static zx_status_t pciroot_op_msi_mask_unmask(void* ctx,
+                                              uint64_t msi_id,
+                                              bool mask) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t pciroot_op_get_address_space(void* ctx,
-                                         size_t len,
-                                         pci_address_space_t type,
-                                         bool low,
-                                         uint64_t* out_base) {
+static zx_status_t pciroot_op_get_address_space(void* ctx,
+                                                size_t len,
+                                                pci_address_space_t type,
+                                                bool low,
+                                                uint64_t* out_base) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t pciroot_op_free_address_space(void* ctx,
-                                          uint64_t base,
-                                          size_t len,
-                                          pci_address_space_t type) {
+static zx_status_t pciroot_op_free_address_space(void* ctx,
+                                                 uint64_t base,
+                                                 size_t len,
+                                                 pci_address_space_t type) {
     return ZX_ERR_NOT_SUPPORTED;
 }
+
+#else  // TODO(cja): remove after the switch to userspace pci
+static zx_status_t pciroot_op_get_pci_platform_info(void*, pci_platform_info_t*) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t pciroot_op_get_pci_irq_info(void*, pci_irq_info_t*) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t pciroot_op_driver_should_proxy_config(void* ctx, bool*) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t pciroot_op_config_read8(void*, const pci_bdf_t*, uint16_t, uint8_t*) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t pciroot_op_config_read16(void*, const pci_bdf_t*, uint16_t, uint16_t*) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t pciroot_op_config_read32(void*, const pci_bdf_t*, uint16_t, uint32_t*) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t pciroot_op_config_write8(void*, const pci_bdf_t*, uint16_t, uint8_t) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t pciroot_op_config_write16(void*, const pci_bdf_t*, uint16_t, uint16_t) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t pciroot_op_config_write32(void*, const pci_bdf_t*, uint16_t, uint32_t) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t pciroot_op_msi_alloc_block(void*, uint64_t, bool, msi_block_t*) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t pciroot_op_msi_free_block(void*, const msi_block_t*) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t pciroot_op_msi_mask_unmask(void*, uint64_t, bool) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t pciroot_op_get_address_space(void*, size_t, pci_address_space_t, bool, uint64_t*) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t pciroot_op_free_address_space(void*, uint64_t, size_t, pci_address_space_t) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+#endif // ENABLE_USER_PCI
 
 static pciroot_protocol_ops_t pciroot_proto = {
     .get_auxdata = pciroot_op_get_auxdata,

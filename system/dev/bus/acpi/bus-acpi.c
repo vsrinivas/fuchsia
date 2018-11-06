@@ -40,10 +40,6 @@
 
 zx_handle_t root_resource_handle;
 
-static zx_device_t* publish_device(zx_device_t* parent, ACPI_HANDLE handle,
-                                   ACPI_DEVICE_INFO* info, const char* name,
-                                   uint32_t protocol_id, void* protocol_ops);
-
 static void acpi_device_release(void* ctx) {
     acpi_device_t* dev = (acpi_device_t*)ctx;
     free(dev);
@@ -347,12 +343,12 @@ static const char* hid_from_acpi_devinfo(ACPI_DEVICE_INFO* info) {
     return hid;
 }
 
-static zx_device_t* publish_device(zx_device_t* parent,
-                                   ACPI_HANDLE handle,
-                                   ACPI_DEVICE_INFO* info,
-                                   const char* name,
-                                   uint32_t protocol_id,
-                                   void* protocol_ops) {
+zx_device_t* publish_device(zx_device_t* parent,
+                            ACPI_HANDLE handle,
+                            ACPI_DEVICE_INFO* info,
+                            const char* name,
+                            uint32_t protocol_id,
+                            void* protocol_ops) {
     zx_device_prop_t props[4];
     int propcount = 0;
 
@@ -495,50 +491,7 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
 
     if ((!memcmp(hid, PCI_EXPRESS_ROOT_HID_STRING, HID_LENGTH) ||
          !memcmp(hid, PCI_ROOT_HID_STRING, HID_LENGTH))) {
-// TODO(cja): Stubbed out for userspace PCI development
-#ifdef ENABLE_USER_PCI
-        register_pci_root(object);
-#else
-        if (!ctx->found_pci) {
-            // Report current resources to kernel PCI driver
-            zx_status_t status = pci_report_current_resources(get_root_resource());
-            if (status != ZX_OK) {
-                zxlogf(ERROR, "acpi: WARNING: ACPI failed to report all current resources!\n");
-            }
-
-            // Initialize kernel PCI driver
-            zx_pci_init_arg_t* arg;
-            uint32_t arg_size;
-            status = get_pci_init_arg(&arg, &arg_size);
-            if (status != ZX_OK) {
-                zxlogf(ERROR, "acpi: erorr %d in get_pci_init_arg\n", status);
-                return AE_ERROR;
-            }
-
-            status = zx_pci_init(get_root_resource(), arg, arg_size);
-            if (status != ZX_OK) {
-                zxlogf(ERROR, "acpi: error %d in zx_pci_init\n", status);
-                return AE_ERROR;
-            }
-
-            free(arg);
-
-            // Publish PCI root as top level
-            // Only publish one PCI root device for all PCI roots
-            // TODO: store context for PCI root protocol
-            parent = device_get_parent(parent);
-            zx_device_t* pcidev = publish_device(parent, object, info, "pci",
-                    ZX_PROTOCOL_PCIROOT, get_pciroot_ops());
-            ctx->found_pci = (pcidev != NULL);
-        }
-        // Get the PCI base bus number
-        zx_status_t status = acpi_bbn_call(object, &ctx->last_pci);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "acpi: failed to get PCI base bus number for device '%s' "
-                          "(status %u)\n", (const char*)&info->Name, status);
-        }
-        zxlogf(TRACE, "acpi: found pci root #%u\n", ctx->last_pci);
-#endif
+        pci_init(parent, object, info, ctx);
     } else if (!memcmp(hid, BATTERY_HID_STRING, HID_LENGTH)) {
         battery_init(parent, object);
     } else if (!memcmp(hid, PWRSRC_HID_STRING, HID_LENGTH)) {

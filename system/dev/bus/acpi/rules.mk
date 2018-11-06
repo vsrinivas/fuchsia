@@ -19,9 +19,6 @@ MODULE_COMPILEFLAGS += -Wno-null-pointer-arithmetic
 endif
 MODULE_CFLAGS += -fno-strict-aliasing
 
-ifeq ($(call TOBOOL, $(ENABLE_USER_PCI)), true)
-MODULE_DEFINES := ENABLE_USER_PCI=1
-endif
 
 MODULE_COMPILEFLAGS += -Ithird_party/lib/acpica/source/include \
 					   -I$($LOCAL_DIR)/include
@@ -42,8 +39,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/iommu.c \
     $(LOCAL_DIR)/methods.cpp \
     $(LOCAL_DIR)/nhlt.c \
-    $(LOCAL_DIR)/pci.c \
-    $(LOCAL_DIR)/pci.cpp \
     $(LOCAL_DIR)/pciroot.cpp \
     $(LOCAL_DIR)/power.c \
     $(LOCAL_DIR)/resources.c \
@@ -64,6 +59,16 @@ MODULE_LIBS := \
     system/ulib/c \
     system/ulib/driver \
     system/ulib/zircon \
+
+# Userspace PCI feature flag. The scaffolding for the userspace pci bus driver is
+# in pci.cpp. If not enabled then the kernel pci bus driver initialization code
+# in ACPI (kpci.c)  will be built instead.
+ifeq ($(call TOBOOL, $(ENABLE_USER_PCI)), true)
+MODULE_DEFINES := ENABLE_USER_PCI=1
+MODULE_SRCS += $(LOCAL_DIR)/pci.cpp
+else
+MODULE_SRCS += $(LOCAL_DIR)/kpci.c
+endif
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-acpi

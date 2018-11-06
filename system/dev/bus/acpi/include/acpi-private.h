@@ -1,7 +1,8 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BUS_ACPI_INCLUDE_ACPI_PRIVATE_H_
+#define ZIRCON_SYSTEM_DEV_BUS_ACPI_INCLUDE_ACPI_PRIVATE_H_
 #include <ddk/device.h>
 #include <ddk/protocol/auxdata.h>
 #include <ddk/protocol/pciroot.h>
@@ -17,15 +18,15 @@ typedef struct acpi_device_resource {
 
 typedef struct acpi_device_irq {
     uint8_t trigger;
-#define ACPI_IRQ_TRIGGER_LEVEL  0
-#define ACPI_IRQ_TRIGGER_EDGE   1
+#define ACPI_IRQ_TRIGGER_LEVEL 0
+#define ACPI_IRQ_TRIGGER_EDGE 1
     uint8_t polarity;
-#define ACPI_IRQ_ACTIVE_HIGH    0
-#define ACPI_IRQ_ACTIVE_LOW     1
-#define ACPI_IRQ_ACTIVE_BOTH    2
+#define ACPI_IRQ_ACTIVE_HIGH 0
+#define ACPI_IRQ_ACTIVE_LOW 1
+#define ACPI_IRQ_ACTIVE_BOTH 2
     uint8_t sharable;
-#define ACPI_IRQ_EXCLUSIVE      0
-#define ACPI_IRQ_SHARED         1
+#define ACPI_IRQ_EXCLUSIVE 0
+#define ACPI_IRQ_SHARED 1
     uint8_t wake_capable;
     uint8_t pin;
 } acpi_device_irq_t;
@@ -61,3 +62,8 @@ typedef struct {
     auxdata_i2c_device_t* data;
 } pci_child_auxdata_ctx_t;
 
+zx_device_t* publish_device(zx_device_t* parent, ACPI_HANDLE handle,
+                            ACPI_DEVICE_INFO* info, const char* name,
+                            uint32_t protocol_id, void* protocol_ops);
+
+#endif  // ZIRCON_SYSTEM_DEV_BUS_ACPI_INCLUDE_ACPI_PRIVATE_H_

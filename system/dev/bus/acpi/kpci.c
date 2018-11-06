@@ -10,7 +10,10 @@
 #include <acpica/acpi.h>
 #include <ddk/debug.h>
 
+#include "methods.h"
+#include "pciroot.h"
 #include "resources.h"
+#include "acpi-private.h"
 
 #define xprintf(fmt...) zxlogf(SPEW, fmt)
 
@@ -498,7 +501,7 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
     return AE_OK;
 }
 
-static ACPI_STATUS report_current_resources_device_cb(
+static ACPI_STATUS pci_report_current_resources_device_cb(
         ACPI_HANDLE object, uint32_t nesting_level, void* _ctx, void** ret) {
 
     ACPI_DEVICE_INFO* info = NULL;
@@ -542,7 +545,7 @@ zx_status_t pci_report_current_resources(zx_handle_t root_resource_handle) {
         .device_is_root_bridge = false,
         .add_pass = true,
     };
-    ACPI_STATUS status = AcpiGetDevices(NULL, report_current_resources_device_cb, &ctx, NULL);
+    ACPI_STATUS status = AcpiGetDevices(NULL, pci_report_current_resources_device_cb, &ctx, NULL);
     if (status != AE_OK) {
         return ZX_ERR_INTERNAL;
     }
@@ -553,11 +556,57 @@ zx_status_t pci_report_current_resources(zx_handle_t root_resource_handle) {
         .device_is_root_bridge = false,
         .add_pass = false,
     };
-    status = AcpiGetDevices(NULL, report_current_resources_device_cb, &ctx, NULL);
+    status = AcpiGetDevices(NULL, pci_report_current_resources_device_cb, &ctx, NULL);
     if (status != AE_OK) {
         return ZX_ERR_INTERNAL;
     }
 
 
+    return ZX_OK;
+}
+
+// This pci_init initializes the kernel pci driver and is not compiled in at the same time as the
+// userspace pci driver under development.
+zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* info,  publish_acpi_device_ctx_t* ctx) {
+    if (!ctx->found_pci) {
+        // Report current resources to kernel PCI driver
+        zx_status_t status = pci_report_current_resources(get_root_resource());
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "acpi: WARNING: ACPI failed to report all current resources!\n");
+        }
+
+        // Initialize kernel PCI driver
+        zx_pci_init_arg_t* arg;
+        uint32_t arg_size;
+        status = get_pci_init_arg(&arg, &arg_size);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "acpi: erorr %d in get_pci_init_arg\n", status);
+            return AE_ERROR;
+        }
+
+        status = zx_pci_init(get_root_resource(), arg, arg_size);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "acpi: error %d in zx_pci_init\n", status);
+            return AE_ERROR;
+        }
+
+        free(arg);
+
+        // Publish PCI root as top level
+        // Only publish one PCI root device for all PCI roots
+        // TODO: store context for PCI root protocol
+        parent = device_get_parent(parent);
+        zx_device_t* pcidev = publish_device(parent, object, info, "pci",
+                ZX_PROTOCOL_PCIROOT, get_pciroot_ops());
+        ctx->found_pci = (pcidev != NULL);
+    }
+    // Get the PCI base bus number
+    zx_status_t status = acpi_bbn_call(object, &ctx->last_pci);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "acpi: failed to get PCI base bus number for device '%s' "
+                "(status %u)\n", (const char*)&info->Name, status);
+    }
+
+    zxlogf(TRACE, "acpi: found pci root #%u\n", ctx->last_pci);
     return ZX_OK;
 }
