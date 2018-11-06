@@ -26,9 +26,6 @@ endef
 clk:
 	$(run-banjo)
 
-pciroot: $(LOCAL_DIR)/libs/hwpci.banjo
-	$(run-banjo)
-
 platform-bus: $(LOCAL_DIR)/libs/driver.banjo $(LOCAL_DIR)/platform-device.banjo
 	$(run-banjo)
 
