@@ -18,9 +18,8 @@ namespace storage {
 
 // A factory for LevelDb instances.
 //
-// When creating new LevelDb instances, using either |CreateDb| or |GetDb|, the
-// caller should make sure that there is no live LevelDb instance for the same
-// path.
+// When creating new LevelDb instances, using |GetOrCreateDb|, the caller should
+// make sure that there is no live LevelDb instance for the same path.
 class LevelDbFactory : public DbFactory {
  public:
   LevelDbFactory(ledger::Environment* environment,
@@ -28,11 +27,7 @@ class LevelDbFactory : public DbFactory {
 
   // TODO(LE-617): Update implementation to return pre-cached, LevelDb
   // instances.
-  void CreateDb(
-      ledger::DetachedPath db_path,
-      fit::function<void(Status, std::unique_ptr<Db>)> callback) override;
-
-  void GetDb(
+  void GetOrCreateDb(
       ledger::DetachedPath db_path,
       fit::function<void(Status, std::unique_ptr<Db>)> callback) override;
 

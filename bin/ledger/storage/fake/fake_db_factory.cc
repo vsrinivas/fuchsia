@@ -11,7 +11,7 @@
 namespace storage {
 namespace fake {
 
-void FakeDbFactory::CreateDb(
+void FakeDbFactory::GetOrCreateDb(
     ledger::DetachedPath db_path,
     fit::function<void(Status, std::unique_ptr<Db>)> callback) {
   // Create the path to fake the creation of the Db at the expected destination.
@@ -21,17 +21,6 @@ void FakeDbFactory::CreateDb(
     callback(Status::INTERNAL_IO_ERROR, nullptr);
     return;
   }
-  CreateInitializedDb(std::move(callback));
-}
-
-void FakeDbFactory::GetDb(
-    ledger::DetachedPath /*db_path*/,
-    fit::function<void(Status, std::unique_ptr<Db>)> callback) {
-  CreateInitializedDb(std::move(callback));
-}
-
-void FakeDbFactory::CreateInitializedDb(
-    fit::function<void(Status, std::unique_ptr<Db>)> callback) {
   callback(Status::OK, std::make_unique<FakeDb>(dispatcher_));
 }
 

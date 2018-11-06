@@ -16,11 +16,7 @@ class FakeDbFactory : public DbFactory {
   explicit FakeDbFactory(async_dispatcher_t* dispatcher)
       : dispatcher_(dispatcher) {}
 
-  void CreateDb(
-      ledger::DetachedPath db_path,
-      fit::function<void(Status, std::unique_ptr<Db>)> callback) override;
-
-  void GetDb(
+  void GetOrCreateDb(
       ledger::DetachedPath db_path,
       fit::function<void(Status, std::unique_ptr<Db>)> callback) override;
 

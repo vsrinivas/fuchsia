@@ -58,17 +58,9 @@ LevelDbFactory::LevelDbFactory(ledger::Environment* environment,
       staging_path_(cache_path.SubPath(kStagingPath)),
       coroutine_manager_(environment->coroutine_service()) {}
 
-void LevelDbFactory::CreateDb(
+void LevelDbFactory::GetOrCreateDb(
     ledger::DetachedPath db_path,
     fit::function<void(Status, std::unique_ptr<Db>)> callback) {
-  CreateInitializedDb(std::move(db_path), CreateInStagingPath::YES,
-                      std::move(callback));
-}
-
-void LevelDbFactory::GetDb(
-    ledger::DetachedPath db_path,
-    fit::function<void(Status, std::unique_ptr<Db>)> callback) {
-  // TODO(nellyv): Merge GetDb and CreateDb to GetOrCreateDb.
   CreateInStagingPath create_in_staging_path =
       files::IsDirectoryAt(db_path.root_fd(), db_path.path())
           ? CreateInStagingPath::NO

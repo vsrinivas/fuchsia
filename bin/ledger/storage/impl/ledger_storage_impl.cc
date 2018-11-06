@@ -77,20 +77,8 @@ void LedgerStorageImpl::CreatePageStorage(
   }
 
   ledger::DetachedPath actual_path = GetDeprecatedPathFor(page_id);
-  db_factory_->CreateDb(
-      std::move(actual_path),
-      callback::MakeScoped(weak_factory_.GetWeakPtr(),
-                           [this, page_id = std::move(page_id),
-                            callback = std::move(timed_callback)](
-                               Status status, std::unique_ptr<Db> db) mutable {
-                             if (status != Status::OK) {
-                               callback(status, nullptr);
-                               return;
-                             }
-                             InitializePageStorage(std::move(page_id),
-                                                   std::move(db),
-                                                   std::move(callback));
-                           }));
+  GetOrCreateDb(std::move(actual_path), std::move(page_id),
+                std::move(timed_callback));
 }
 
 void LedgerStorageImpl::GetPageStorage(
@@ -104,20 +92,8 @@ void LedgerStorageImpl::GetPageStorage(
     return;
   }
 
-  db_factory_->GetDb(
-      std::move(path),
-      callback::MakeScoped(weak_factory_.GetWeakPtr(),
-                           [this, page_id = std::move(page_id),
-                            callback = std::move(timed_callback)](
-                               Status status, std::unique_ptr<Db> db) mutable {
-                             if (status != Status::OK) {
-                               callback(status, nullptr);
-                               return;
-                             }
-                             InitializePageStorage(std::move(page_id),
-                                                   std::move(db),
-                                                   std::move(callback));
-                           }));
+  GetOrCreateDb(std::move(path), std::move(page_id),
+                std::move(timed_callback));
 }
 
 void LedgerStorageImpl::DeletePageStorage(
@@ -191,6 +167,24 @@ void LedgerStorageImpl::InitializePageStorage(
     }
     callback(Status::OK, std::move(storage));
   });
+}
+
+void LedgerStorageImpl::GetOrCreateDb(
+    ledger::DetachedPath path, PageId page_id,
+    fit::function<void(Status, std::unique_ptr<PageStorage>)> callback) {
+  db_factory_->GetOrCreateDb(
+      std::move(path),
+      callback::MakeScoped(
+          weak_factory_.GetWeakPtr(),
+          [this, page_id = std::move(page_id), callback = std::move(callback)](
+              Status status, std::unique_ptr<Db> db) mutable {
+            if (status != Status::OK) {
+              callback(status, nullptr);
+              return;
+            }
+            InitializePageStorage(std::move(page_id), std::move(db),
+                                  std::move(callback));
+          }));
 }
 
 ledger::DetachedPath LedgerStorageImpl::GetPathFor(PageIdView page_id) {

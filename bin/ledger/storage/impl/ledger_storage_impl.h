@@ -52,6 +52,12 @@ class LedgerStorageImpl : public LedgerStorage {
       PageId page_id, std::unique_ptr<Db> db,
       fit::function<void(Status, std::unique_ptr<PageStorage>)> callback);
 
+  // Gets or creates a new PageStorage at the given |path| for the page with the
+  // given |page_id|.
+  void GetOrCreateDb(
+      ledger::DetachedPath path, PageId page_id,
+      fit::function<void(Status, std::unique_ptr<PageStorage>)> callback);
+
   ledger::DetachedPath GetPathFor(PageIdView page_id);
   ledger::DetachedPath GetDeprecatedPathFor(PageIdView page_id);
 

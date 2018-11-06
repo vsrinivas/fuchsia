@@ -18,15 +18,9 @@ class DbFactory {
   DbFactory() {}
   virtual ~DbFactory() {}
 
-  // Creates and returns through the callback a new, initialized instance of
-  // LevelDb in the given |db_path|.
-  virtual void CreateDb(
-      ledger::DetachedPath db_path,
-      fit::function<void(Status, std::unique_ptr<Db>)> callback) = 0;
-
-  // Opens and returns an initialized, existing instance of Db in the given
-  // |db_path|.
-  virtual void GetDb(
+  // Opens and returns an initialized instance of Db in the given |db_path|. If
+  // the Db doesn't already exist, it creates it.
+  virtual void GetOrCreateDb(
       ledger::DetachedPath db_path,
       fit::function<void(Status, std::unique_ptr<Db>)> callback) = 0;
 };

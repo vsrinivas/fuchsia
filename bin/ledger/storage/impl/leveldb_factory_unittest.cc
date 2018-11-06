@@ -50,12 +50,12 @@ class LevelDbFactoryTest : public ledger::TestWithEnvironment {
   FXL_DISALLOW_COPY_AND_ASSIGN(LevelDbFactoryTest);
 };
 
-TEST_F(LevelDbFactoryTest, CreateGetDb) {
+TEST_F(LevelDbFactoryTest, GetOrCreateDb) {
   // Create a new instance.
   Status status;
   std::unique_ptr<Db> db;
   bool called;
-  db_factory_.CreateDb(
+  db_factory_.GetOrCreateDb(
       db_path_.SubPath("db"),
       callback::Capture(callback::SetWhenCalled(&called), &status, &db));
   RunLoopUntilIdle();
@@ -70,9 +70,9 @@ TEST_F(LevelDbFactoryTest, CreateGetDb) {
     EXPECT_EQ(Status::OK, batch->Execute(handler));
   });
 
-  // Close the previous instance and open it again using |GetDb|.
+  // Close the previous instance and open it again.
   db.reset();
-  db_factory_.GetDb(
+  db_factory_.GetOrCreateDb(
       db_path_.SubPath("db"),
       callback::Capture(callback::SetWhenCalled(&called), &status, &db));
   RunLoopUntilIdle();
