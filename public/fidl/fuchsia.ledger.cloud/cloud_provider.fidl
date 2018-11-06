@@ -83,11 +83,10 @@ interface DeviceSetWatcher {
     2: OnNetworkError();
 };
 
+// TODO(ppi): switch to a format defined in a FIDL table, so that the protocol
+// is fully described by the FIDL file.
 /// Contains an ordered list of commits serialized using the SerializedCommits
 /// schema defined in serialized_commits.fbs.
-///
-/// TODO(ppi): switch to a format defined in a FIDL table, so that the protocol
-/// is fully described by the FIDL file.
 struct CommitPack {
     fuchsia.mem.Buffer buffer;
 };

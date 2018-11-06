@@ -105,9 +105,9 @@ interface Page {
     2: GetSnapshot(request<PageSnapshot> snapshot_request,
                    vector<uint8>:256 key_prefix, PageWatcher? watcher) -> (Status status);
 
-    /// Mutation operations.
+    // Mutation operations.
 
-    /// Key level operations.
+    // Key level operations.
     /// Mutations are bundled together into atomic commits. If a transaction is in
     /// progress, the list of mutations bundled together is tied to the current
     /// transaction. If no transaction is in progress, mutations will be bundled
@@ -132,7 +132,7 @@ interface Page {
            -> (Status status);
     6: Delete(vector<uint8>:256 key) -> (Status status);
 
-    /// Page level operations.
+    // Page level operations.
 
     /// Deletes all entries in the page.
     /// Outside of a transaction, this operation is equivalent to deleting every
@@ -142,7 +142,7 @@ interface Page {
     /// since the transaction started.
     7: Clear() -> (Status status);
 
-    /// References.
+    // References.
     /// Creates a new reference. The object is not part of any commit. It must be
     /// associated with a key using |PutReference()|. The content of the reference
     /// will be the content of the socket. The content size must be equal to
@@ -155,8 +155,8 @@ interface Page {
     9: CreateReferenceFromBuffer(fuchsia.mem.Buffer buffer)
            -> (Status status, Reference? reference);
 
-    /// Transactions.
-    ///
+    // Transactions.
+
     /// Transactions allow the client to ensures changes are seen atomically by
     /// observers of this page. Once a transaction is started with
     /// |StartTransaction()|, every call to |Put(...)| and |Delete(...)| will not
@@ -193,8 +193,8 @@ interface Page {
     /// called.
     13: SetSyncStateWatcher(SyncWatcher watcher) -> (Status status);
 
-    /// Conflict resolution.
-    ///
+    // Conflict resolution.
+
     /// Waits until all conflicts are resolved before calling the callback.
     /// The client can call this method multiple times, even before the previous
     /// calls are completed. Callbacks will be executed in the order they were
