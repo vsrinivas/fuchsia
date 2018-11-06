@@ -56,8 +56,8 @@ int main(int argc, const char** argv) {
   auto context = component::StartupContext::CreateFromStartupInfo();
 
   Table t1("t1"), t2("t2");
-  t1.set_parent(context->outgoing().object_dir());
-  t2.set_parent(context->outgoing().object_dir());
+  t1.set_parent(*context->outgoing().object_dir());
+  t2.set_parent(*context->outgoing().object_dir());
 
   t1.NewItem(10);
   t1.NewItem(100);
@@ -79,6 +79,12 @@ int main(int argc, const char** argv) {
   subtable.set_parent(t1.object_dir());
   subtable.NewItem(10)->add_value(10);
   subtable.set_parent(t2.object_dir());
+
+  // Remove a child to unlink it from its parent.
+  Table subtable2("subtable2");
+  subtable2.set_parent(t1.object_dir());
+  subtable2.remove_from_parent();
+  subtable2.remove_from_parent();  // Repeated remove has no effect.
 
   loop.Run();
   return 0;

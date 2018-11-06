@@ -27,8 +27,7 @@ class Cell : public component::ExposedObject {
 // A row in the table, contains cells.
 class Row : public component::ExposedObject {
  public:
-  Row() : ExposedObject(UniqueName("row")) {
-  }
+  Row() : ExposedObject(UniqueName("row")) {}
 
   Row(Row&&) = default;
   Row& operator=(Row&&) = default;
@@ -55,7 +54,7 @@ class Table : public component::ExposedObject {
     // the Inspect output.
     rows_.push_back(Row());
     auto ret = rows_.rbegin();
-    add_child(*ret);
+    ret->set_parent(object_dir());
     return &(*ret);
   }
 
@@ -110,7 +109,7 @@ int main(int argc, char** argv) {
 
   // Finally, expose the table itself as an object in the top-level directory.
   // This appears under out/objects/ in the hub for this component.
-  table.set_parent(startup_context->outgoing().object_dir());
+  table.set_parent(*startup_context->outgoing().object_dir());
 
   loop.Run();
 

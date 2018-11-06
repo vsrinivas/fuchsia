@@ -17,28 +17,25 @@ ExposedObject::ExposedObject(const std::string& name)
 
 ExposedObject::~ExposedObject() { remove_from_parent(); }
 
-void ExposedObject::set_parent(ObjectDir parent) { move_parents(&parent); }
-
-void ExposedObject::set_parent(const ObjectDir* parent) {
+void ExposedObject::set_parent(const ObjectDir& parent) {
   move_parents(parent);
 }
 
-void ExposedObject::add_child(ExposedObject& child) { add_child(&child); }
-
 void ExposedObject::add_child(ExposedObject* child) {
-  child->set_parent(&object_dir_);
+  child->set_parent(object_dir_);
 }
 
-void ExposedObject::remove_from_parent() { move_parents(nullptr); }
-
-void ExposedObject::move_parents(const ObjectDir* new_parent) {
+void ExposedObject::remove_from_parent() {
   if (parent_) {
     parent_.object()->TakeChild(object_dir_.object()->name());
+    parent_ = ObjectDir();
   }
-  if (new_parent != nullptr) {
-    new_parent->object()->SetChild(object_dir_.object());
-    parent_ = *new_parent;
-  }
+}
+
+void ExposedObject::move_parents(const ObjectDir& new_parent) {
+  remove_from_parent();
+  new_parent.object()->SetChild(object_dir_.object());
+  parent_ = new_parent;
 }
 
 std::string ExposedObject::UniqueName(const std::string& prefix) {

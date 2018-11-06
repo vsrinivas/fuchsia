@@ -35,8 +35,10 @@ class ExposedObject {
 
   // Explicitly set the parent of this object. This method handles removing the
   // object from its current parent, if any, and attaching it to the new parent.
-  void set_parent(ObjectDir parent);
-  void set_parent(const ObjectDir* parent);
+  void set_parent(const ObjectDir& parent);
+
+  // Remove this object from its parent.
+  void remove_from_parent();
 
   // Gets the |ObjectDir| representation of this object.
   ObjectDir object_dir() { return object_dir_; }
@@ -46,16 +48,11 @@ class ExposedObject {
 
  protected:
   // Adds a child to this object.
-  void add_child(ExposedObject& child);
   void add_child(ExposedObject* child);
 
  private:
-  // Helper to remove this object from its parent.
-  void remove_from_parent();
-
   // Helper to move this object to a different parent.
-  // If new_parent is null, the object becomes parentless.
-  void move_parents(const ObjectDir* new_parent);
+  void move_parents(const ObjectDir& new_parent);
 
   // The object's current parent, if any.
   ObjectDir parent_;
