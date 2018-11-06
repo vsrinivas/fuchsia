@@ -25,6 +25,7 @@ MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-pci \
+    system/banjo/ddk-protocol-serial \
 
 include make/module.mk
 

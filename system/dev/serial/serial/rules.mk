@@ -20,4 +20,7 @@ MODULE_LIBS := \
     system/ulib/c \
     system/ulib/zircon \
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-serial \
+
 include make/module.mk

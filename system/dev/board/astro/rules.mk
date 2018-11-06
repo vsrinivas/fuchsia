@@ -45,5 +45,6 @@ MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-platform-bus \
     system/banjo/ddk-protocol-platform-device \
     system/banjo/ddk-protocol-scpi \
+    system/banjo/ddk-protocol-serial \
 
 include make/module.mk

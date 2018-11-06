@@ -1,19 +1,20 @@
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := driver
+MODULE_TYPE := banjo
 
-MODULE_SRCS := $(LOCAL_DIR)/ftdi.c
+MODULE_PACKAGE := banjo
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/dev/lib/usb
+MODULE_BANJO_LIBRARY := ddk.protocol.serial
 
-MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+MODULE_BANJO_NAME := serial
 
-MODULE_BANJO_LIBS := \
-    system/banjo/ddk-protocol-serial \
+MODULE_SRCS += $(LOCAL_DIR)/serial.banjo
 
 include make/module.mk
+

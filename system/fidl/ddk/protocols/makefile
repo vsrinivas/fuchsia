@@ -29,9 +29,6 @@ clk:
 serial-impl: $(LOCAL_DIR)/serial.banjo
 	$(run-banjo)
 
-serial:
-	$(run-banjo)
-
 test:
 	$(run-banjo)
 
