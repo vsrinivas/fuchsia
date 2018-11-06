@@ -44,6 +44,7 @@ def generate_devhost_config(args):
       ('ratePeriod', 0),
       ('rootKeys', rootKeys),
       ('statusConfig', status_config),
+      ('auto', True),
   ))
 
   return config
