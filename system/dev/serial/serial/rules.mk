@@ -22,5 +22,6 @@ MODULE_LIBS := \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-serial \
+    system/banjo/ddk-protocol-serial-impl \
 
 include make/module.mk

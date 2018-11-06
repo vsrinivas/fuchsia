@@ -26,9 +26,6 @@ endef
 clk:
 	$(run-banjo)
 
-serial-impl: $(LOCAL_DIR)/serial.banjo
-	$(run-banjo)
-
 test:
 	$(run-banjo)
 
