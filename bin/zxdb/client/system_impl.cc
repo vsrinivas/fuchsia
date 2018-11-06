@@ -9,7 +9,9 @@
 #include "garnet/bin/zxdb/client/process_impl.h"
 #include "garnet/bin/zxdb/client/remote_api.h"
 #include "garnet/bin/zxdb/client/session.h"
+#include "garnet/bin/zxdb/client/setting_schema_definition.h"
 #include "garnet/bin/zxdb/client/system_observer.h"
+#include "garnet/bin/zxdb/common/string_util.h"
 #include "garnet/bin/zxdb/client/target_impl.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 
@@ -27,6 +29,13 @@ SystemImpl::SystemImpl(Session* session)
         for (auto& observer : observers())
           observer.OnSymbolIndexingInformation(msg);
       });
+
+  // The system is the one holding the system symbols and is the one who
+  // will be updating the symbols once we get a symbol change, so the
+  // System will be listening to its own options.
+  // We don't use SystemSymbols because they live in the symbols library
+  // and we don't want it to have a client dependency.
+  settings_.AddObserver(ClientSettings::kSymbolPaths, this);
 }
 
 SystemImpl::~SystemImpl() {
@@ -212,6 +221,25 @@ void SystemImpl::AddNewJobContext(std::unique_ptr<JobContextImpl> job_context) {
   job_contexts_.push_back(std::move(job_context));
   for (auto& observer : observers())
     observer.DidCreateJobContext(for_observers);
+}
+
+void SystemImpl::OnSettingChanged(const SettingStore& store,
+                                  const std::string& setting_name) {
+  if (setting_name == ClientSettings::kSymbolPaths) {
+    // TODO(donosoc): Eventually we should consider some way of unloading
+    //                symbols if on-host memory usage starts being a concern.
+    auto paths = store.GetList(ClientSettings::kSymbolPaths);
+    BuildIDIndex& build_id_index = GetSymbols()->build_id_index();
+    for (const std::string& path : paths) {
+      if (StringEndsWith(path, ".txt")) {
+        build_id_index.AddBuildIDMappingFile(path);
+      } else {
+        build_id_index.AddSymbolSource(path);
+      }
+    }
+  } else {
+    FXL_LOG(WARNING) << "Unhandled setting change: " << setting_name;
+  }
 }
 
 }  // namespace zxdb

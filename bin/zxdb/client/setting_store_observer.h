@@ -23,8 +23,8 @@ class SettingStoreObserver {
   // The store is given because an observer could be listening to two stores at
   // the same time. It's the observer's job to correctly identify the setting
   // and call the correct getter/setter functions.
-  virtual void SettingChanged(const SettingStore&,
-                              const std::string& setting_name) = 0;
+  virtual void OnSettingChanged(const SettingStore&,
+                                const std::string& setting_name) = 0;
 };
 
 }  // namespace zxdb

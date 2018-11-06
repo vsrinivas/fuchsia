@@ -41,6 +41,7 @@ class BuildIDIndex {
                          const std::string& file_name);
 
   // Adds an "ids.txt" file that maps build ID to file paths.
+  // Will verify that the path is already there and ignore it if so.
   void AddBuildIDMappingFile(const std::string& id_file_name);
 
   // Adds a file or directory to the symbol search index. If the path is a
@@ -48,6 +49,8 @@ class BuildIDIndex {
   // index if it is.
   //
   // If the path is a directory, all files in that directory will be indexed.
+  //
+  // Will ignore the path if it's already loaded.
   void AddSymbolSource(const std::string& path);
 
   // Returns the status of the symbols. This will force the cache to be fresh

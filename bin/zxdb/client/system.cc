@@ -35,6 +35,7 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
 
 System::System(Session* session)
     : ClientObject(session), settings_(GetSchema(), nullptr) {}
+
 System::~System() = default;
 
 void System::AddObserver(SystemObserver* observer) {

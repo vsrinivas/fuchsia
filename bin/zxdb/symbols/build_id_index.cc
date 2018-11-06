@@ -35,11 +35,20 @@ void BuildIDIndex::AddBuildIDMapping(const std::string& build_id,
 }
 
 void BuildIDIndex::AddBuildIDMappingFile(const std::string& id_file_name) {
+  // If the file is already loaded, ignore it.
+  if (std::find(build_id_files_.begin(), build_id_files_.end(), id_file_name) !=
+      build_id_files_.end())
+    return;
+
   build_id_files_.emplace_back(id_file_name);
   ClearCache();
 }
 
 void BuildIDIndex::AddSymbolSource(const std::string& path) {
+  // If the file is already loaded, ignore it.
+  if (std::find(sources_.begin(), sources_.end(), path) != sources_.end())
+    return;
+
   sources_.emplace_back(path);
   ClearCache();
 }

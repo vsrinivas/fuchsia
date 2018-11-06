@@ -11,6 +11,7 @@
 #include "garnet/bin/zxdb/client/client_object.h"
 #include "garnet/bin/zxdb/client/job_context.h"
 #include "garnet/bin/zxdb/client/setting_store.h"
+#include "garnet/bin/zxdb/client/setting_store_observer.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/lib/debug_ipc/protocol.h"
 #include "lib/fxl/macros.h"

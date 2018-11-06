@@ -104,28 +104,25 @@ int ConsoleMain(int argc, const char* argv[]) {
 
     Console console(&session);
 
-    // Save command-line switches.
+    // Save command-line switches ----------------------------------------------
+
+    // Symbol paths
+    std::vector<std::string> paths;
+    // At this moment, the build index has all the "default" paths.
     BuildIDIndex& build_id_index =
         session.system().GetSymbols()->build_id_index();
-    for (const auto& path : options.symbol_paths) {
-      if (StringEndsWith(path, ".txt")) {
-        build_id_index.AddBuildIDMappingFile(path);
-      } else {
-        build_id_index.AddSymbolSource(path);
-      }
-    }
-
-    // At this moment, the build index has all the "default" paths.
-    auto paths =
-        session.system().settings().GetList(ClientSettings::kSymbolPaths);
     for (const auto& build_id_file : build_id_index.build_id_files())
       paths.push_back(build_id_file);
     for (const auto& source : build_id_index.sources())
       paths.push_back(source);
+
+    // We add the options paths given paths.
+    paths.insert(paths.end(), options.symbol_paths.begin(),
+                 options.symbol_paths.end());
+    // Adding it to the settings will trigger the loading of the symbols.
+    // Redundant adds are ignored.
     session.system().settings().SetList(ClientSettings::kSymbolPaths,
                                         std::move(paths));
-    // TODO(donosoc): Hook-up the build ID index to use observe the symbol paths
-    //                setting.
 
     if (!actions.empty()) {
       ScheduleActions(session, console, std::move(actions));

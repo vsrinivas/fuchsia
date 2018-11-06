@@ -51,8 +51,8 @@ class SettingObserver : public SettingStoreObserver {
     SettingValue new_value;
   };
 
-  void SettingChanged(const SettingStore& store,
-                      const std::string& setting_name) override {
+  void OnSettingChanged(const SettingStore& store,
+                        const std::string& setting_name) override {
     SettingNotificationRecord record = {};
     record.store = &store;
     record.setting_name = setting_name;

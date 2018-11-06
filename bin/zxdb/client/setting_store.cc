@@ -42,7 +42,7 @@ void SettingStore::NotifySettingChanged(const std::string& setting_name) const {
       continue;
 
     for (auto& observer : observers)
-      observer.SettingChanged(*this, setting_name);
+      observer.OnSettingChanged(*this, setting_name);
   }
 }
 

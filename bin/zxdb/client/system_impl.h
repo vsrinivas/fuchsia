@@ -22,7 +22,7 @@ class SystemSymbolsProxy;
 class TargetImpl;
 class JobContextImpl;
 
-class SystemImpl final : public System {
+class SystemImpl final : public System, public SettingStoreObserver {
  public:
   explicit SystemImpl(Session* session);
   ~SystemImpl() override;
@@ -59,6 +59,11 @@ class SystemImpl final : public System {
   // ID was not found in the map. This will include both internal and regular
   // breakpoints (it is used for notification dispatch).
   BreakpointImpl* BreakpointImplForId(uint32_t id);
+
+  // SettingStoreObserver implementation.
+
+  void OnSettingChanged(const SettingStore&,
+                        const std::string& setting_name) override;
 
  private:
   void AddNewTarget(std::unique_ptr<TargetImpl> target);
