@@ -6,11 +6,17 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <threads.h>
-#include <pthread.h>
 
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/intrusive_hash_table.h>
+#include <fbl/intrusive_single_list.h>
+#include <fbl/unique_ptr.h>
 #include <hw/inout.h>
 #include <pci/pio.h>
 #include <zircon/assert.h>
@@ -18,12 +24,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/thread_annotations.h>
 #include <zxcpp/new.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/auto_lock.h>
-#include <fbl/intrusive_hash_table.h>
-#include <fbl/intrusive_double_list.h>
-#include <fbl/intrusive_single_list.h>
-#include <fbl/unique_ptr.h>
 
 #if !defined(__x86_64__) && !defined(__x86__)
 #error "Unsupported architecture"
@@ -33,23 +33,31 @@
 
 __WEAK zx_handle_t root_resource_handle;
 
-#define _COMPONENT          ACPI_OS_SERVICES
-ACPI_MODULE_NAME    ("oszircon")
+#define _COMPONENT ACPI_OS_SERVICES
+ACPI_MODULE_NAME("oszircon")
 
 #define LOCAL_TRACE 0
 
-#define TRACEF(str, x...) do { printf("%s:%d: " str, __FUNCTION__, __LINE__, ## x); } while (0)
-#define LTRACEF(x...) do { if (LOCAL_TRACE) { TRACEF(x); } } while (0)
+#define TRACEF(str, x...)                                   \
+    do {                                                    \
+        printf("%s:%d: " str, __FUNCTION__, __LINE__, ##x); \
+    } while (0)
+#define LTRACEF(x...)      \
+    do {                   \
+        if (LOCAL_TRACE) { \
+            TRACEF(x);     \
+        }                  \
+    } while (0)
 
 /* Structures used for implementing AcpiOsExecute and
  * AcpiOsWaitEventsComplete */
 struct AcpiOsTaskCtx : public fbl::DoublyLinkedListable<fbl::unique_ptr<AcpiOsTaskCtx>> {
     ACPI_OSD_EXEC_CALLBACK func;
-    void *ctx;
+    void* ctx;
 };
 
 /* Thread function for implementing AcpiOsExecute */
-static int AcpiOsExecuteTask(void *arg);
+static int AcpiOsExecuteTask(void* arg);
 /* Tear down the OsExecuteTask thread */
 static void ShutdownOsExecuteTask();
 
@@ -66,8 +74,7 @@ static struct {
     fbl::DoublyLinkedList<fbl::unique_ptr<AcpiOsTaskCtx>> tasks;
 } os_execute_state;
 
-class AcpiOsMappingNode :
-      public fbl::SinglyLinkedListable<fbl::unique_ptr<AcpiOsMappingNode>> {
+class AcpiOsMappingNode : public fbl::SinglyLinkedListable<fbl::unique_ptr<AcpiOsMappingNode>> {
 public:
     using HashTable =
         fbl::HashTable<uintptr_t, fbl::unique_ptr<AcpiOsMappingNode>>;
@@ -138,10 +145,14 @@ static zx_status_t mmap_physical(zx_paddr_t phys, size_t size, uint32_t cache_po
 
 static ACPI_STATUS thrd_status_to_acpi_status(int status) {
     switch (status) {
-        case thrd_success: return AE_OK;
-        case thrd_nomem: return AE_NO_MEMORY;
-        case thrd_timedout: return AE_TIME;
-        default: return AE_ERROR;
+    case thrd_success:
+        return AE_OK;
+    case thrd_nomem:
+        return AE_NO_MEMORY;
+    case thrd_timedout:
+        return AE_TIME;
+    default:
+        return AE_ERROR;
     }
 }
 
@@ -200,7 +211,7 @@ void acpica_disable_noncontested_mode() {
  */
 ACPI_STATUS AcpiOsInitialize() {
     ACPI_STATUS status = thrd_status_to_acpi_status(
-            cnd_init(&os_execute_state.cond));
+        cnd_init(&os_execute_state.cond));
     if (status != AE_OK) {
         return status;
     }
@@ -268,8 +279,8 @@ ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer() {
  * @return Exception code that indicates success or reason for failure.
  */
 ACPI_STATUS AcpiOsPredefinedOverride(
-        const ACPI_PREDEFINED_NAMES *PredefinedObject,
-        ACPI_STRING *NewValue) {
+    const ACPI_PREDEFINED_NAMES* PredefinedObject,
+    ACPI_STRING* NewValue) {
     *NewValue = NULL;
     return AE_OK;
 }
@@ -285,8 +296,8 @@ ACPI_STATUS AcpiOsPredefinedOverride(
  * @return Exception code that indicates success or reason for failure.
  */
 ACPI_STATUS AcpiOsTableOverride(
-        ACPI_TABLE_HEADER *ExistingTable,
-        ACPI_TABLE_HEADER **NewTable) {
+    ACPI_TABLE_HEADER* ExistingTable,
+    ACPI_TABLE_HEADER** NewTable) {
     *NewTable = NULL;
     return AE_OK;
 }
@@ -303,9 +314,9 @@ ACPI_STATUS AcpiOsTableOverride(
  * @return Exception code that indicates success or reason for failure.
  */
 ACPI_STATUS AcpiOsPhysicalTableOverride(
-        ACPI_TABLE_HEADER *ExistingTable,
-        ACPI_PHYSICAL_ADDRESS *NewAddress,
-        UINT32 *NewTableLength) {
+    ACPI_TABLE_HEADER* ExistingTable,
+    ACPI_PHYSICAL_ADDRESS* NewAddress,
+    UINT32* NewTableLength) {
     *NewAddress = 0;
     return AE_OK;
 }
@@ -400,9 +411,9 @@ ACPI_STATUS AcpiOsReleaseObject(ACPI_CACHE_T *Cache, void *Object) {
  *
  * @return Logical pointer to the mapped memory. A NULL pointer indicated failures.
  */
-void *AcpiOsMapMemory(
-        ACPI_PHYSICAL_ADDRESS PhysicalAddress,
-        ACPI_SIZE Length) {
+void* AcpiOsMapMemory(
+    ACPI_PHYSICAL_ADDRESS PhysicalAddress,
+    ACPI_SIZE Length) {
 
     fbl::AutoLock lock(&os_mapping_lock);
 
@@ -423,8 +434,8 @@ void *AcpiOsMapMemory(
 
     void* out_addr = (void*)(vaddr + (PhysicalAddress - aligned_address));
     fbl::unique_ptr<AcpiOsMappingNode> mn(
-            new AcpiOsMappingNode(reinterpret_cast<uintptr_t>(out_addr),
-                                  vaddr, length, vmo));
+        new AcpiOsMappingNode(reinterpret_cast<uintptr_t>(out_addr),
+                              vaddr, length, vmo));
     os_mapping_tbl.insert(fbl::move(mn));
 
     return out_addr;
@@ -438,7 +449,7 @@ void *AcpiOsMapMemory(
  * @param Length The amount of memory that was mapped. This value must be
  *        identical to the value used in the call to AcpiOsMapMemory.
  */
-void AcpiOsUnmapMemory(void *LogicalAddress, ACPI_SIZE Length) {
+void AcpiOsUnmapMemory(void* LogicalAddress, ACPI_SIZE Length) {
     fbl::AutoLock lock(&os_mapping_lock);
     fbl::unique_ptr<AcpiOsMappingNode> mn = os_mapping_tbl.erase((uintptr_t)LogicalAddress);
     if (mn == NULL) {
@@ -454,7 +465,7 @@ void AcpiOsUnmapMemory(void *LogicalAddress, ACPI_SIZE Length) {
  * @return A pointer to the allocated memory. A NULL pointer is returned on
  *         error.
  */
-void *AcpiOsAllocate(ACPI_SIZE Size) {
+void* AcpiOsAllocate(ACPI_SIZE Size) {
     return malloc(Size);
 }
 
@@ -463,7 +474,7 @@ void *AcpiOsAllocate(ACPI_SIZE Size) {
  *
  * @param Memory A pointer to the memory to be freed.
  */
-void AcpiOsFree(void *Memory) {
+void AcpiOsFree(void* Memory) {
     free(Memory);
 }
 
@@ -479,8 +490,8 @@ ACPI_THREAD_ID AcpiOsGetThreadId() {
     return (uintptr_t)thrd_current();
 }
 
-static int AcpiOsExecuteTask(void *arg) {
-    while (1)  {
+static int AcpiOsExecuteTask(void* arg) {
+    while (1) {
         fbl::unique_ptr<AcpiOsTaskCtx> task;
 
         mtx_lock(&os_execute_state.lock);
@@ -526,23 +537,25 @@ static void ShutdownOsExecuteTask() {
  *         is NULL.
  */
 ACPI_STATUS AcpiOsExecute(
-        ACPI_EXECUTE_TYPE Type,
-        ACPI_OSD_EXEC_CALLBACK Function,
-        void *Context) {
+    ACPI_EXECUTE_TYPE Type,
+    ACPI_OSD_EXEC_CALLBACK Function,
+    void* Context) {
 
     if (Function == NULL) {
         return AE_BAD_PARAMETER;
     }
 
     switch (Type) {
-        case OSL_GLOBAL_LOCK_HANDLER:
-        case OSL_NOTIFY_HANDLER:
-        case OSL_GPE_HANDLER:
-        case OSL_DEBUGGER_MAIN_THREAD:
-        case OSL_DEBUGGER_EXEC_THREAD:
-        case OSL_EC_POLL_HANDLER:
-        case OSL_EC_BURST_HANDLER: break;
-        default: return AE_BAD_PARAMETER;
+    case OSL_GLOBAL_LOCK_HANDLER:
+    case OSL_NOTIFY_HANDLER:
+    case OSL_GPE_HANDLER:
+    case OSL_DEBUGGER_MAIN_THREAD:
+    case OSL_DEBUGGER_EXEC_THREAD:
+    case OSL_EC_POLL_HANDLER:
+    case OSL_EC_BURST_HANDLER:
+        break;
+    default:
+        return AE_BAD_PARAMETER;
     }
 
     fbl::AllocChecker ac;
@@ -615,10 +628,10 @@ void AcpiOsStall(UINT32 Microseconds) {
  * @return AE_NO_MEMORY Insufficient memory to create the semaphore.
  */
 ACPI_STATUS AcpiOsCreateSemaphore(
-        UINT32 MaxUnits,
-        UINT32 InitialUnits,
-        ACPI_SEMAPHORE *OutHandle) {
-    sem_t *sem = (sem_t*)malloc(sizeof(sem_t));
+    UINT32 MaxUnits,
+    UINT32 InitialUnits,
+    ACPI_SEMAPHORE* OutHandle) {
+    sem_t* sem = (sem_t*)malloc(sizeof(sem_t));
     if (!sem) {
         return AE_NO_MEMORY;
     }
@@ -658,9 +671,9 @@ ACPI_STATUS AcpiOsDeleteSemaphore(ACPI_SEMAPHORE Handle) {
  * @return AE_TIME The units could not be acquired within the specified time.
  */
 ACPI_STATUS AcpiOsWaitSemaphore(
-        ACPI_SEMAPHORE Handle,
-        UINT32 Units,
-        UINT16 Timeout) {
+    ACPI_SEMAPHORE Handle,
+    UINT32 Units,
+    UINT16 Timeout) {
 
     if (Timeout == UINT16_MAX) {
         if (sem_wait(Handle) < 0) {
@@ -689,8 +702,8 @@ ACPI_STATUS AcpiOsWaitSemaphore(
  * @return AE_BAD_PARAMETER The Handle is invalid.
  */
 ACPI_STATUS AcpiOsSignalSemaphore(
-        ACPI_SEMAPHORE Handle,
-        UINT32 Units) {
+    ACPI_SEMAPHORE Handle,
+    UINT32 Units) {
     // TODO: Implement support for Units > 1
     assert(Units == 1);
 
@@ -708,14 +721,14 @@ ACPI_STATUS AcpiOsSignalSemaphore(
  * @return AE_BAD_PARAMETER The OutHandle pointer is NULL.
  * @return AE_NO_MEMORY Insufficient memory to create the mutex.
  */
-ACPI_STATUS AcpiOsCreateMutex(ACPI_MUTEX *OutHandle) {
+ACPI_STATUS AcpiOsCreateMutex(ACPI_MUTEX* OutHandle) {
     mtx_t* lock = (mtx_t*)malloc(sizeof(mtx_t));
     if (!lock) {
         return AE_NO_MEMORY;
     }
 
     ACPI_STATUS status = thrd_status_to_acpi_status(
-            mtx_init(lock, mtx_plain));
+        mtx_init(lock, mtx_plain));
     if (status != AE_OK) {
         return status;
     }
@@ -748,8 +761,8 @@ void AcpiOsDeleteMutex(ACPI_MUTEX Handle) {
  * @return AE_TIME The mutex could not be acquired within the specified time.
  */
 ACPI_STATUS AcpiOsAcquireMutex(
-        ACPI_MUTEX Handle,
-        UINT16 Timeout) TA_TRY_ACQ(AE_OK, Handle) TA_NO_THREAD_SAFETY_ANALYSIS {
+    ACPI_MUTEX Handle,
+    UINT16 Timeout) TA_TRY_ACQ(AE_OK, Handle) TA_NO_THREAD_SAFETY_ANALYSIS {
     if (Timeout == UINT16_MAX) {
         if (acpi_spinlocks_held == 0) {
             int ret = pthread_rwlock_rdlock(&acpi_spinlock_lock);
@@ -810,7 +823,7 @@ void AcpiOsReleaseMutex(ACPI_MUTEX Handle) TA_REL(Handle) {
  * @return AE_BAD_PARAMETER The OutHandle pointer is NULL.
  * @return AE_NO_MEMORY Insufficient memory to create the lock.
  */
-ACPI_STATUS AcpiOsCreateLock(ACPI_SPINLOCK *OutHandle) {
+ACPI_STATUS AcpiOsCreateLock(ACPI_SPINLOCK* OutHandle) {
     // Since we don't have a notion of interrupt contex in usermode, just make
     // these mutexes.
     return AcpiOsCreateMutex(OutHandle);
@@ -858,7 +871,7 @@ struct AcpiIrqThread {
     thrd_t thread;
     ACPI_OSD_HANDLER handler;
     zx_handle_t irq_handle;
-    void *context;
+    void* context;
 };
 static int acpi_irq_thread(void* arg) {
     auto real_arg = static_cast<AcpiIrqThread*>(arg);
@@ -890,9 +903,9 @@ static fbl::unique_ptr<AcpiIrqThread> sci_irq;
  *         installed.
  */
 ACPI_STATUS AcpiOsInstallInterruptHandler(
-        UINT32 InterruptLevel,
-        ACPI_OSD_HANDLER Handler,
-        void *Context) {
+    UINT32 InterruptLevel,
+    ACPI_OSD_HANDLER Handler,
+    void* Context) {
     // Note that InterruptLevel here is ISA IRQs (or global of the legacy PIC
     // does't exist), not system exceptions.
 
@@ -917,7 +930,7 @@ ACPI_STATUS AcpiOsInstallInterruptHandler(
 
     zx_handle_t handle;
     zx_status_t status = zx_interrupt_create(root_resource_handle, InterruptLevel,
-                        ZX_INTERRUPT_REMAP_IRQ, &handle);
+                                             ZX_INTERRUPT_REMAP_IRQ, &handle);
     if (status != ZX_OK) {
         return AE_ERROR;
     }
@@ -948,8 +961,8 @@ ACPI_STATUS AcpiOsInstallInterruptHandler(
  * @return AE_NOT_EXIST There is no handler installed for this interrupt level.
  */
 ACPI_STATUS AcpiOsRemoveInterruptHandler(
-        UINT32 InterruptNumber,
-        ACPI_OSD_HANDLER Handler) {
+    UINT32 InterruptNumber,
+    ACPI_OSD_HANDLER Handler) {
     assert(InterruptNumber == 0x9); // SCI
     assert(sci_irq);
     zx_interrupt_destroy(sci_irq->irq_handle);
@@ -968,9 +981,9 @@ ACPI_STATUS AcpiOsRemoveInterruptHandler(
  * @return Exception code that indicates success or reason for failure.
  */
 ACPI_STATUS AcpiOsReadMemory(
-        ACPI_PHYSICAL_ADDRESS Address,
-        UINT64 *Value,
-        UINT32 Width) {
+    ACPI_PHYSICAL_ADDRESS Address,
+    UINT64* Value,
+    UINT32 Width) {
     assert(false);
     return AE_OK;
 }
@@ -985,9 +998,9 @@ ACPI_STATUS AcpiOsReadMemory(
  * @return Exception code that indicates success or reason for failure.
  */
 ACPI_STATUS AcpiOsWriteMemory(
-        ACPI_PHYSICAL_ADDRESS Address,
-        UINT64 Value,
-        UINT32 Width) {
+    ACPI_PHYSICAL_ADDRESS Address,
+    UINT64 Value,
+    UINT32 Width) {
     assert(false);
     return AE_OK;
 }
@@ -1002,25 +1015,25 @@ ACPI_STATUS AcpiOsWriteMemory(
  * @return Exception code that indicates success or reason for failure.
  */
 ACPI_STATUS AcpiOsReadPort(
-        ACPI_IO_ADDRESS Address,
-        UINT32 *Value,
-        UINT32 Width) {
+    ACPI_IO_ADDRESS Address,
+    UINT32* Value,
+    UINT32 Width) {
     if (Address > 0xffff) {
         return AE_BAD_PARAMETER;
     }
 
     switch (Width) {
-        case 8:
-            *Value = inp((uint16_t)Address);
-            break;
-        case 16:
-            *Value = inpw((uint16_t)Address);
-            break;
-        case 32:
-            *Value = inpd((uint16_t)Address);
-            break;
-        default:
-            return AE_BAD_PARAMETER;
+    case 8:
+        *Value = inp((uint16_t)Address);
+        break;
+    case 16:
+        *Value = inpw((uint16_t)Address);
+        break;
+    case 32:
+        *Value = inpd((uint16_t)Address);
+        break;
+    default:
+        return AE_BAD_PARAMETER;
     }
     return AE_OK;
 }
@@ -1035,25 +1048,25 @@ ACPI_STATUS AcpiOsReadPort(
  * @return Exception code that indicates success or reason for failure.
  */
 ACPI_STATUS AcpiOsWritePort(
-        ACPI_IO_ADDRESS Address,
-        UINT32 Value,
-        UINT32 Width) {
+    ACPI_IO_ADDRESS Address,
+    UINT32 Value,
+    UINT32 Width) {
     if (Address > 0xffff) {
         return AE_BAD_PARAMETER;
     }
 
     switch (Width) {
-        case 8:
-            outp((uint16_t)Address, (uint8_t)Value);
-            break;
-        case 16:
-            outpw((uint16_t)Address, (uint16_t)Value);
-            break;
-        case 32:
-            outpd((uint16_t)Address, (uint32_t)Value);
-            break;
-        default:
-            return AE_BAD_PARAMETER;
+    case 8:
+        outp((uint16_t)Address, (uint8_t)Value);
+        break;
+    case 16:
+        outpw((uint16_t)Address, (uint16_t)Value);
+        break;
+    case 32:
+        outpd((uint16_t)Address, (uint32_t)Value);
+        break;
+    default:
+        return AE_BAD_PARAMETER;
     }
     return AE_OK;
 }
@@ -1071,15 +1084,15 @@ ACPI_STATUS AcpiOsWritePort(
  * @return Exception code that indicates success or reason for failure.
  */
 static ACPI_STATUS AcpiOsReadWritePciConfiguration(
-        ACPI_PCI_ID *PciId,
-        UINT32 Register,
-        UINT64 *Value,
-        UINT32 Width,
-        bool Write) {
+    ACPI_PCI_ID* PciId,
+    UINT32 Register,
+    UINT64* Value,
+    UINT32 Width,
+    bool Write) {
 
     if (LOCAL_TRACE) {
         printf("ACPIOS: %s PCI Config %x:%x:%x:%x register %#x width %u\n",
-            Write ? "write" : "read" ,PciId->Segment, PciId->Bus, PciId->Device, PciId->Function, Register, Width);
+               Write ? "write" : "read", PciId->Segment, PciId->Bus, PciId->Device, PciId->Function, Register, Width);
     }
 
     // Only segment 0 is supported for now
@@ -1089,8 +1102,7 @@ static ACPI_STATUS AcpiOsReadWritePciConfiguration(
     }
 
     // Check bounds of device and function offsets
-    if (PciId->Device >= PCIE_MAX_DEVICES_PER_BUS
-            || PciId->Function >= PCIE_MAX_FUNCTIONS_PER_DEVICE) {
+    if (PciId->Device >= PCIE_MAX_DEVICES_PER_BUS || PciId->Function >= PCIE_MAX_FUNCTIONS_PER_DEVICE) {
         printf("ACPIOS: device out of reasonable bounds.\n");
         return AE_ERROR;
     }
@@ -1112,8 +1124,8 @@ static ACPI_STATUS AcpiOsReadWritePciConfiguration(
     uint8_t offset = static_cast<uint8_t>(Register);
     zx_status_t st;
 #ifdef ENABLE_USER_PCI
-    switch(Width) {
-    case 8u: 
+    switch (Width) {
+    case 8u:
         (Write) ? st = pci_pio_write8(bus, dev, func, offset, static_cast<uint8_t>(*Value))
                 : st = pci_pio_read8(bus, dev, func, offset, reinterpret_cast<uint8_t*>(Value));
         break;
@@ -1153,10 +1165,10 @@ static ACPI_STATUS AcpiOsReadWritePciConfiguration(
  * @return Exception code that indicates success or reason for failure.
  */
 ACPI_STATUS AcpiOsReadPciConfiguration(
-        ACPI_PCI_ID *PciId,
-        UINT32 Register,
-        UINT64 *Value,
-        UINT32 Width) {
+    ACPI_PCI_ID* PciId,
+    UINT32 Register,
+    UINT64* Value,
+    UINT32 Width) {
 
     return AcpiOsReadWritePciConfiguration(PciId, Register, Value, Width, false);
 }
@@ -1173,10 +1185,10 @@ ACPI_STATUS AcpiOsReadPciConfiguration(
  * @return Exception code that indicates success or reason for failure.
  */
 ACPI_STATUS AcpiOsWritePciConfiguration(
-        ACPI_PCI_ID *PciId,
-        UINT32 Register,
-        UINT64 Value,
-        UINT32 Width) {
+    ACPI_PCI_ID* PciId,
+    UINT32 Register,
+    UINT64 Value,
+    UINT32 Width) {
 
     return AcpiOsReadWritePciConfiguration(PciId, Register, &Value, Width, true);
 }
@@ -1187,7 +1199,7 @@ ACPI_STATUS AcpiOsWritePciConfiguration(
  * @param Format A standard print format string.
  * @param ...
  */
-void ACPI_INTERNAL_VAR_XFACE AcpiOsPrintf(const char *Format, ...) {
+void ACPI_INTERNAL_VAR_XFACE AcpiOsPrintf(const char* Format, ...) {
     va_list argp;
     va_start(argp, Format);
     AcpiOsVprintf(Format, argp);
@@ -1200,7 +1212,7 @@ void ACPI_INTERNAL_VAR_XFACE AcpiOsPrintf(const char *Format, ...) {
  * @param Format A standard print format string.
  * @param Args A variable parameter list
  */
-void AcpiOsVprintf(const char *Format, va_list Args) {
+void AcpiOsVprintf(const char* Format, va_list Args) {
     // Only implement if ACPI_DEBUG_OUTPUT is defined, otherwise this causes
     // excess boot spew.
 #ifdef ACPI_DEBUG_OUTPUT
@@ -1228,8 +1240,8 @@ UINT64 AcpiOsGetTimer() {
  * @return Exception code that indicates success or reason for failure.
  */
 ACPI_STATUS AcpiOsSignal(
-        UINT32 Function,
-        void *Info) {
+    UINT32 Function,
+    void* Info) {
     assert(false);
     return AE_OK;
 }
@@ -1242,9 +1254,8 @@ ACPI_STATUS AcpiOsSignal(
  *
  * @return True if the lock was successfully acquired
  */
-bool _acpica_acquire_global_lock(void *FacsPtr)
-{
-    ACPI_TABLE_FACS *table = (ACPI_TABLE_FACS*)FacsPtr;
+bool _acpica_acquire_global_lock(void* FacsPtr) {
+    ACPI_TABLE_FACS* table = (ACPI_TABLE_FACS*)FacsPtr;
     uint32_t old_val, new_val, test_val;
     do {
         old_val = test_val = table->GlobalLock;
@@ -1262,7 +1273,6 @@ bool _acpica_acquire_global_lock(void *FacsPtr)
     return !(new_val & ACPI_GLOCK_PENDING);
 }
 
-
 /* @brief Release the ACPI global lock
  *
  * Implementation for ACPI_RELEASE_GLOBAL_LOCK
@@ -1271,9 +1281,8 @@ bool _acpica_acquire_global_lock(void *FacsPtr)
  *
  * @return True if there is someone waiting to acquire the lock
  */
-bool _acpica_release_global_lock(void *FacsPtr)
-{
-    ACPI_TABLE_FACS *table = (ACPI_TABLE_FACS*)FacsPtr;
+bool _acpica_release_global_lock(void* FacsPtr) {
+    ACPI_TABLE_FACS* table = (ACPI_TABLE_FACS*)FacsPtr;
     uint32_t old_val, new_val, test_val;
     do {
         old_val = test_val = table->GlobalLock;
