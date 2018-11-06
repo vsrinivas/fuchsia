@@ -41,7 +41,7 @@ class DebuggedThread {
   // it won't in in this state. The |starting| flag indicates that this is
   // a thread discoverd via a debug notification.
   DebuggedThread(DebuggedProcess* process, zx::thread thread,
-                 zx_koid_t thread_koid, bool starting);
+                 zx_koid_t thread_koid, bool resume);
   virtual ~DebuggedThread();
 
   zx::thread& thread() { return thread_; }

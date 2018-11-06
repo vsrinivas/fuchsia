@@ -231,6 +231,18 @@ void TargetImpl::OnLaunchOrAttachReply(Callback callback, const Err& err,
   }
 }
 
+void TargetImpl::AttachToProcess(uint64_t koid,
+                                 const std::string& process_name) {
+  FXL_DCHECK(state_ == State::kNone);
+  FXL_DCHECK(!process_.get());  // Shouldn't have a process.
+
+  state_ = State::kRunning;
+  process_ = std::make_unique<ProcessImpl>(this, koid, process_name);
+  system_->NotifyDidCreateProcess(process_.get());
+  for (auto& observer : observers())
+    observer.DidCreateProcess(this, process_.get());
+}
+
 void TargetImpl::OnKillOrDetachReply(const Err& err, uint32_t status,
                                      Callback callback) {
   FXL_DCHECK(process_.get());  // Should have a process.

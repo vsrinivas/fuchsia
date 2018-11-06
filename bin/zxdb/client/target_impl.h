@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_ZXDB_CLIENT_TARGET_IMPL_H_
+#define GARNET_BIN_ZXDB_CLIENT_TARGET_IMPL_H_
 
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/symbols/target_symbols_impl.h"
@@ -49,6 +50,7 @@ class TargetImpl : public Target {
   void Launch(Callback callback) override;
   void Kill(Callback callback) override;
   void Attach(uint64_t koid, Callback callback) override;
+  void AttachToProcess(uint64_t koid, const std::string& process_name) override;
   void Detach(Callback callback) override;
   void OnProcessExiting(int return_code) override;
 
@@ -79,3 +81,5 @@ class TargetImpl : public Target {
 };
 
 }  // namespace zxdb
+
+#endif  // GARNET_BIN_ZXDB_CLIENT_TARGET_IMPL_H_

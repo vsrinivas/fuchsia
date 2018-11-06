@@ -107,6 +107,7 @@ void RemoteAPIAdapter::OnStreamReadable() {
       case debug_ipc::MsgHeader::Type::kNone:
       case debug_ipc::MsgHeader::Type::kNumMessages:
       case debug_ipc::MsgHeader::Type::kNotifyProcessExiting:
+      case debug_ipc::MsgHeader::Type::kNotifyProcessStarting:
       case debug_ipc::MsgHeader::Type::kNotifyThreadStarting:
       case debug_ipc::MsgHeader::Type::kNotifyThreadExiting:
       case debug_ipc::MsgHeader::Type::kNotifyException:

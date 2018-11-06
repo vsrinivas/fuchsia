@@ -453,6 +453,18 @@ bool ReadNotifyProcess(MessageReader* reader, NotifyProcess* process) {
   return true;
 }
 
+bool ReadNotifyProcessStarting(MessageReader* reader,
+                               NotifyProcessStarting* process) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  if (!reader->ReadUint64(&process->koid))
+    return false;
+  if (!reader->ReadString(&process->name))
+    return false;
+  return true;
+}
+
 bool ReadNotifyThread(MessageReader* reader, NotifyThread* notify) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))

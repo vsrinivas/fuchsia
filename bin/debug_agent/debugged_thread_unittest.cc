@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/debug_agent/debugged_thread.h"
 #include "garnet/bin/debug_agent/arch.h"
 #include "garnet/bin/debug_agent/debugged_process.h"
-#include "garnet/bin/debug_agent/debugged_thread.h"
 #include "gtest/gtest.h"
-
 
 namespace debug_agent {
 
@@ -39,7 +38,6 @@ class FakeArchProvider : public arch::ArchProvider {
 
  private:
   std::map<RegisterCategory::Type, RegisterCategory> categories_;
-
 };
 
 class ScopedFakeArchProvider {
@@ -60,7 +58,8 @@ class ScopedFakeArchProvider {
 
 class FakeProcess : public DebuggedProcess {
  public:
-  FakeProcess(zx_koid_t koid) : DebuggedProcess(nullptr, koid, zx::process()) {}
+  FakeProcess(zx_koid_t koid)
+      : DebuggedProcess(nullptr, koid, zx::process(), true) {}
   ~FakeProcess() = default;
 
   DebuggedThread* CreateThread(zx_koid_t tid) {
@@ -94,7 +93,6 @@ TEST(DebuggedThread, GetsRegisters) {
   auto& cat = categories.front();
   EXPECT_EQ(cat.type, RegisterCategory::Type::kGeneral);
   EXPECT_EQ(cat.registers.size(), kGeneralCount);
-
 }
 
 TEST(DebuggedThread, GettingErrorShouldStillReturnTheRest) {

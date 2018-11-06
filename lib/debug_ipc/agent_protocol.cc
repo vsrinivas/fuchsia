@@ -416,6 +416,13 @@ void WriteNotifyProcess(const NotifyProcess& notify, MessageWriter* writer) {
   writer->WriteInt64(notify.return_code);
 }
 
+void WriteNotifyProcessStarting(const NotifyProcessStarting& notify,
+                                MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kNotifyProcessStarting, 0);
+  writer->WriteUint64(notify.koid);
+  writer->WriteString(notify.name);
+}
+
 void WriteNotifyThread(MsgHeader::Type type, const NotifyThread& notify,
                        MessageWriter* writer) {
   writer->WriteHeader(type, 0);

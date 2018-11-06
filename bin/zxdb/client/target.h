@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_ZXDB_CLIENT_TARGET_H_
+#define GARNET_BIN_ZXDB_CLIENT_TARGET_H_
 
 #include <functional>
 #include <map>
@@ -90,6 +91,10 @@ class Target : public ClientObject {
   // executed when the attach is complete (or fails).
   virtual void Attach(uint64_t koid, Callback callback) = 0;
 
+  // Attaches to new process which was already attached on server side.
+  virtual void AttachToProcess(uint64_t koid,
+                               const std::string& process_name) = 0;
+
   // Detaches from the process with the given koid. The callback will be
   // executed when the detach is complete (or fails).
   virtual void Detach(Callback callback) = 0;
@@ -117,3 +122,5 @@ class Target : public ClientObject {
 };
 
 }  // namespace zxdb
+
+#endif  // GARNET_BIN_ZXDB_CLIENT_TARGET_H_

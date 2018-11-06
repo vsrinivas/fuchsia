@@ -23,8 +23,12 @@
 namespace debug_agent {
 
 DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, zx_koid_t koid,
-                                 zx::process proc)
-    : debug_agent_(debug_agent), koid_(koid), process_(std::move(proc)) {}
+                                 zx::process proc, bool resume_inital_thread)
+    : debug_agent_(debug_agent),
+      koid_(koid),
+      process_(std::move(proc)),
+      resume_initial_thread_(resume_inital_thread),
+      waiting_for_initial_thread_(true) {}
 DebuggedProcess::~DebuggedProcess() = default;
 
 bool DebuggedProcess::Init() {
@@ -201,9 +205,14 @@ void DebuggedProcess::OnThreadStarting(zx_koid_t process_koid,
   zx::thread thread = ThreadForKoid(process_.get(), thread_koid);
 
   FXL_DCHECK(threads_.find(thread_koid) == threads_.end());
+  bool resume = true;
+  if (waiting_for_initial_thread_) {
+    waiting_for_initial_thread_ = false;
+    resume = resume_initial_thread_;
+  }
   auto added = threads_.emplace(
       thread_koid, std::make_unique<DebuggedThread>(this, std::move(thread),
-                                                    thread_koid, true));
+                                                    thread_koid, resume));
 
   // Notify the client.
   added.first->second->SendThreadNotification();

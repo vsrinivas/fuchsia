@@ -31,7 +31,7 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
   // Caller must call Init immediately after construction and delete the
   // object if that fails.
   DebuggedProcess(DebugAgent* debug_agent, zx_koid_t process_koid,
-                  zx::process proc);
+                  zx::process proc, bool resume_inital_thread);
   virtual ~DebuggedProcess();
 
   zx_koid_t koid() const { return koid_; }
@@ -114,6 +114,10 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
   // Maps addresses to the ProcessBreakpoint at a location. The
   // ProcessBreakpoint can hold multiple Breakpoint objects.
   std::map<uint64_t, std::unique_ptr<ProcessBreakpoint>> breakpoints_;
+
+  // TODO(donosoc): Allow options to stop none, initial or all threads.
+  bool resume_initial_thread_;
+  bool waiting_for_initial_thread_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DebuggedProcess);
 };

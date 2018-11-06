@@ -38,9 +38,7 @@ class DebugAgent : public RemoteAPI,
 
   void RemoveBreakpoint(uint32_t breakpoint_id);
 
-  void OnProcessStart(zx::process process) override {
-    // TODO(anmital): Implement
-  }
+  void OnProcessStart(zx::process process) override;
 
  private:
   // RemoteAPI implementation.
@@ -92,7 +90,8 @@ class DebugAgent : public RemoteAPI,
 
   // Returns a pointer to the newly created object.
   DebuggedProcess* AddDebuggedProcess(zx_koid_t process_koid,
-                                      zx::process zx_proc);
+                                      zx::process zx_proc,
+                                      bool resume_inital_thread);
 
   DebuggedJob* AddDebuggedJob(zx_koid_t job_koid, zx::job zx_job);
 

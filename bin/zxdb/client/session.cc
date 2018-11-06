@@ -147,9 +147,8 @@ void Session::PendingConnection::Initiate(
 
   // Create the background thread, and run the background function. The
   // context will keep a ref to this class.
-  thread_ =
-      std::make_unique<std::thread>([owner = fxl::RefPtr<PendingConnection>(
-                                         this)]() {
+  thread_ = std::make_unique<std::thread>(
+      [owner = fxl::RefPtr<PendingConnection>(this)]() {
         owner->ConnectBackgroundThread(owner);
       });
 }
@@ -157,7 +156,7 @@ void Session::PendingConnection::Initiate(
 void Session::PendingConnection::ConnectBackgroundThread(
     fxl::RefPtr<PendingConnection> owner) {
   Err err = DoConnectBackgroundThread();
-  main_loop_->PostTask([ owner = std::move(owner), err ]() {
+  main_loop_->PostTask([owner = std::move(owner), err]() {
     owner->ConnectCompleteMainThread(owner, err);
   });
 }
@@ -559,6 +558,14 @@ void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
       Process* process = system_.ProcessFromKoid(notify.process_koid);
       if (process)
         process->GetTarget()->OnProcessExiting(notify.return_code);
+      break;
+    }
+    case debug_ipc::MsgHeader::Type::kNotifyProcessStarting: {
+      debug_ipc::NotifyProcessStarting notify;
+      if (!debug_ipc::ReadNotifyProcessStarting(&reader, &notify))
+        return;
+      Target* new_target = system_.CreateNewTarget(nullptr);
+      new_target->AttachToProcess(notify.koid, notify.name);
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyThreadStarting:

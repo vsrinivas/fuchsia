@@ -25,12 +25,12 @@
 namespace debug_agent {
 
 DebuggedThread::DebuggedThread(DebuggedProcess* process, zx::thread thread,
-                               zx_koid_t koid, bool starting)
+                               zx_koid_t koid, bool resume)
     : debug_agent_(process->debug_agent()),
       process_(process),
       thread_(std::move(thread)),
       koid_(koid) {
-  if (starting)
+  if (resume)
     debug_ipc::MessageLoopZircon::Current()->ResumeFromException(thread_, 0);
 }
 

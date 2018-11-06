@@ -92,7 +92,8 @@ class BreakpointFakeMemory {
 
 class FakeProcess : public DebuggedProcess {
  public:
-  FakeProcess(zx_koid_t koid) : DebuggedProcess(nullptr, koid, zx::process()) {}
+  FakeProcess(zx_koid_t koid)
+      : DebuggedProcess(nullptr, koid, zx::process(), true) {}
   ~FakeProcess() = default;
 
   void AddThread(zx_koid_t koid) {

@@ -113,6 +113,8 @@ void WriteReply(const AddressSpaceReply& reply, uint32_t transaction_id,
 // (These don't have a "request"/"reply".)
 
 void WriteNotifyProcess(const NotifyProcess& notify, MessageWriter* writer);
+void WriteNotifyProcessStarting(const NotifyProcessStarting& notify,
+                                MessageWriter* writer);
 void WriteNotifyThread(MsgHeader::Type type, const NotifyThread& notify,
                        MessageWriter* writer);
 void WriteNotifyException(const NotifyException& notify, MessageWriter* writer);

@@ -31,6 +31,22 @@ DebugAgent::DebugAgent(debug_ipc::StreamBuffer* stream,
 
 DebugAgent::~DebugAgent() {}
 
+void DebugAgent::OnProcessStart(zx::process process) {
+  auto koid = KoidForObject(process);
+  auto name = NameForObject(process);
+  DebuggedProcess* new_process =
+      AddDebuggedProcess(koid, std::move(process), false);
+  if (!new_process) {
+    return;
+  }
+  debug_ipc::NotifyProcessStarting notify;
+  notify.koid = koid;
+  notify.name = name;
+  debug_ipc::MessageWriter writer;
+  debug_ipc::WriteNotifyProcessStarting(notify, &writer);
+  stream()->Write(writer.MessageComplete());
+}
+
 void DebugAgent::RemoveDebuggedProcess(zx_koid_t process_koid) {
   auto found = procs_.find(process_koid);
   if (found == procs_.end())
@@ -61,8 +77,9 @@ void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request,
   zx::process process = launcher.GetProcess();
   zx_koid_t process_koid = KoidForObject(process);
 
+  // TODO(donosoc): change resume thread setting once we have global settings.
   DebuggedProcess* debugged_process =
-      AddDebuggedProcess(process_koid, std::move(process));
+      AddDebuggedProcess(process_koid, std::move(process), true);
   if (!debugged_process)
     return;
 
@@ -106,7 +123,9 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
     if (process.is_valid()) {
       reply.name = NameForObject(process);
       reply.koid = request.koid;
-      new_process = AddDebuggedProcess(request.koid, std::move(process));
+      // TODO(donosoc): change resume thread setting once we have global
+      // settings.
+      new_process = AddDebuggedProcess(request.koid, std::move(process), true);
       if (new_process)
         reply.status = ZX_OK;
     }
@@ -347,9 +366,10 @@ DebuggedJob* DebugAgent::AddDebuggedJob(zx_koid_t job_koid, zx::job zx_job) {
 }
 
 DebuggedProcess* DebugAgent::AddDebuggedProcess(zx_koid_t process_koid,
-                                                zx::process zx_proc) {
-  auto proc =
-      std::make_unique<DebuggedProcess>(this, process_koid, std::move(zx_proc));
+                                                zx::process zx_proc,
+                                                bool resume_inital_thread) {
+  auto proc = std::make_unique<DebuggedProcess>(
+      this, process_koid, std::move(zx_proc), resume_inital_thread);
   if (!proc->Init())
     return nullptr;
 

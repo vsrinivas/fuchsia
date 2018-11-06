@@ -41,6 +41,7 @@ struct MsgHeader {
 
     // The "notify" messages are sent unrequested from the agent to the client.
     kNotifyProcessExiting,
+    kNotifyProcessStarting,
     kNotifyThreadStarting,
     kNotifyThreadExiting,
     kNotifyException,
@@ -243,6 +244,12 @@ struct RegistersReply {
 struct NotifyProcess {
   uint64_t process_koid = 0;
   int64_t return_code = 0;
+};
+
+// Notify that a new process was created in debugged job.
+struct NotifyProcessStarting {
+  uint64_t koid = 0;
+  std::string name = "";
 };
 
 // Data for thread created and destroyed messages.
