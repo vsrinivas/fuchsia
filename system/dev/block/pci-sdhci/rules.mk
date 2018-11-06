@@ -18,5 +18,6 @@ MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-block \
     system/banjo/ddk-protocol-pci \
+    system/banjo/ddk-protocol-sdhci \
 
 include make/module.mk
