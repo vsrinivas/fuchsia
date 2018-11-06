@@ -90,7 +90,8 @@ class App : public ledger_internal::LedgerController {
             app_params_.disable_statistics ? "" : "ledger_p2p");
 
     factory_impl_ = std::make_unique<LedgerRepositoryFactoryImpl>(
-        environment_.get(), std::move(user_communicator_factory));
+        environment_.get(), std::move(user_communicator_factory),
+        *startup_context_->outgoing().object_dir());
 
     startup_context_->outgoing()
         .AddPublicService<ledger_internal::LedgerRepositoryFactory>(
@@ -104,6 +105,9 @@ class App : public ledger_internal::LedgerController {
         [this](fidl::InterfaceRequest<LedgerController> request) {
           controller_bindings_.AddBinding(this, std::move(request));
         });
+
+    startup_context_->outgoing().object_dir()->set_prop(
+        "statistic_gathering", app_params_.disable_statistics ? "off" : "on");
 
     loop_.Run();
 

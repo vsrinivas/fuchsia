@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include <lib/backoff/exponential_backoff.h>
+#include <lib/component/cpp/object_dir.h>
 #include <lib/fdio/util.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/io/fd.h>
@@ -73,6 +74,8 @@ constexpr fxl::StringView kCachePath = "cache";
 constexpr fxl::StringView kPageUsageDbPath = "page_usage_db";
 constexpr fxl::StringView kStagingPath = "staging";
 constexpr fxl::StringView kNamePath = "name";
+
+constexpr char kRepositoriesPath[] = "repositories";
 
 bool GetRepositoryName(rng::Random* random, const DetachedPath& content_path,
                        std::string* name) {
@@ -218,10 +221,13 @@ struct LedgerRepositoryFactoryImpl::RepositoryInformation {
 };
 
 LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
-    Environment* environment, std::unique_ptr<p2p_sync::UserCommunicatorFactory>
-                                  user_communicator_factory)
+    Environment* environment,
+    std::unique_ptr<p2p_sync::UserCommunicatorFactory>
+        user_communicator_factory,
+    component::ObjectDir inspect_object_dir)
     : environment_(environment),
-      user_communicator_factory_(std::move(user_communicator_factory)) {}
+      user_communicator_factory_(std::move(user_communicator_factory)),
+      inspect_object_dir_(std::move(inspect_object_dir)) {}
 
 LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() {}
 
@@ -291,10 +297,14 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
   auto db_factory = std::make_unique<storage::LevelDbFactory>(
       environment_, repository_information.cache_path);
   db_factory->Init();
+  component::ExposedObject repository_exposed_object(
+      convert::ToHex(repository_information.name));
+  repository_exposed_object.set_parent(inspect_object_dir_.find({kRepositoriesPath}));
   auto repository = std::make_unique<LedgerRepositoryImpl>(
-      repository_information.content_path, environment_, std::move(db_factory),
-      std::move(watchers), std::move(user_sync),
-      std::move(disk_cleanup_manager), disk_cleanup_manager_ptr);
+      std::move(repository_exposed_object), repository_information.content_path,
+      environment_, std::move(db_factory), std::move(watchers),
+      std::move(user_sync), std::move(disk_cleanup_manager),
+      disk_cleanup_manager_ptr);
   disk_cleanup_manager_ptr->SetPageEvictionDelegate(repository.get());
   container->SetRepository(Status::OK, std::move(repository));
 }

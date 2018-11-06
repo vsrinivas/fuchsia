@@ -60,7 +60,8 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
     disk_cleanup_manager_ = fake_page_eviction_manager.get();
 
     repository_ = std::make_unique<LedgerRepositoryImpl>(
-        DetachedPath(tmpfs_.root_fd()), &environment_,
+        component::ExposedObject("test"), DetachedPath(tmpfs_.root_fd()),
+        &environment_,
         std::make_unique<storage::fake::FakeDbFactory>(dispatcher()), nullptr,
         nullptr, std::move(fake_page_eviction_manager), disk_cleanup_manager_);
   }

@@ -36,7 +36,8 @@ class LedgerRepositoryFactoryImpl
   explicit LedgerRepositoryFactoryImpl(
       Environment* environment,
       std::unique_ptr<p2p_sync::UserCommunicatorFactory>
-          user_communicator_factory);
+          user_communicator_factory,
+      component::ObjectDir inspect_object_dir);
   ~LedgerRepositoryFactoryImpl() override;
 
  private:
@@ -76,6 +77,8 @@ class LedgerRepositoryFactoryImpl
 
   callback::AutoCleanableMap<std::string, LedgerRepositoryContainer>
       repositories_;
+
+  component::ObjectDir inspect_object_dir_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryImpl);
 };

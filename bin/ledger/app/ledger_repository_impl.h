@@ -7,6 +7,7 @@
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
+#include <garnet/public/lib/component/cpp/exposed_object.h>
 #include <lib/callback/auto_cleanable.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fit/function.h>
@@ -35,7 +36,8 @@ class LedgerRepositoryImpl
       public ledger_internal::LedgerRepositoryDebug,
       public PageEvictionManager::Delegate {
  public:
-  LedgerRepositoryImpl(DetachedPath content_path, Environment* environment,
+  LedgerRepositoryImpl(component::ExposedObject exposed_object,
+                       DetachedPath content_path, Environment* environment,
                        std::unique_ptr<storage::DbFactory> db_factory,
                        std::unique_ptr<SyncWatcherSet> watchers,
                        std::unique_ptr<sync_coordinator::UserSync> user_sync,
@@ -94,6 +96,7 @@ class LedgerRepositoryImpl
       fidl::InterfaceRequest<ledger_internal::LedgerDebug> request,
       GetLedgerDebugCallback callback) override;
 
+  component::ExposedObject exposed_object_;
   const DetachedPath content_path_;
   Environment* const environment_;
   std::unique_ptr<storage::DbFactory> db_factory_;

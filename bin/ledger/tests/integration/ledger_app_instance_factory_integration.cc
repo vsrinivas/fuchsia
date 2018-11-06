@@ -110,7 +110,7 @@ class LedgerAppInstanceImpl final
             user_communicator_factory)
         : environment_(
               BuildEnvironment(loop, dispatcher, io_dispatcher, random)),
-          factory_impl_(&environment_, std::move(user_communicator_factory)),
+          factory_impl_(&environment_, std::move(user_communicator_factory), component::ObjectDir()),
           proxy_(&factory_impl_, std::move(request)) {}
     ~LedgerRepositoryFactoryContainer() {}
 

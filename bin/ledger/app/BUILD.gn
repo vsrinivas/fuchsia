@@ -128,6 +128,10 @@ source_set("lib") {
     "//zircon/public/lib/trace",
   ]
 
+  public_deps = [
+    "//garnet/public/lib/component/cpp",
+  ]
+
   configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 

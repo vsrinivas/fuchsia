@@ -15,13 +15,14 @@
 namespace ledger {
 
 LedgerRepositoryImpl::LedgerRepositoryImpl(
-    DetachedPath content_path, Environment* environment,
-    std::unique_ptr<storage::DbFactory> db_factory,
+    component::ExposedObject exposed_object, DetachedPath content_path,
+    Environment* environment, std::unique_ptr<storage::DbFactory> db_factory,
     std::unique_ptr<SyncWatcherSet> watchers,
     std::unique_ptr<sync_coordinator::UserSync> user_sync,
     std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
     PageUsageListener* page_usage_listener)
-    : content_path_(std::move(content_path)),
+    : exposed_object_(std::move(exposed_object)),
+      content_path_(std::move(content_path)),
       environment_(environment),
       db_factory_(std::move(db_factory)),
       encryption_service_factory_(environment),
@@ -34,6 +35,7 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
   ledger_repository_debug_bindings_.set_empty_set_handler(
       [this] { CheckEmpty(); });
   disk_cleanup_manager_->set_on_empty([this] { CheckEmpty(); });
+  exposed_object_.object_dir().set_metric("requests", component::UIntMetric(0));
 }
 
 LedgerRepositoryImpl::~LedgerRepositoryImpl() {}
@@ -41,6 +43,7 @@ LedgerRepositoryImpl::~LedgerRepositoryImpl() {}
 void LedgerRepositoryImpl::BindRepository(
     fidl::InterfaceRequest<ledger_internal::LedgerRepository>
         repository_request) {
+  exposed_object_.object_dir().add_metric("requests", 1);
   bindings_.emplace(this, std::move(repository_request));
 }
 
