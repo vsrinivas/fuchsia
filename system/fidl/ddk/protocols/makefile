@@ -26,9 +26,6 @@ endef
 clk:
 	$(run-banjo)
 
-intel-gpu-core:
-	$(run-banjo)
-
 intel-hda-codec:
 	$(run-banjo)
 
