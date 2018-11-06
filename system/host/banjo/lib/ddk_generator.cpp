@@ -147,7 +147,8 @@ void EmitMemberDecl(std::ostream* file, const DdkGenerator::Member& member, bool
                   << kIndent << "size_t " << NameCount(member) << ";\n"
                   << kIndent << "size_t" << member_name << "_actual";
         } else {
-            *file << "const " << member.element_type << (output ? "** " : "* ")
+            const auto prefix = member.nullability == types::Nullability::kNullable ? "" : "const ";
+            *file << prefix << member.element_type << (output ? "** " : "* ")
                   << NameBuffer(member) << ";\n" << kIndent << "size_t " << NameCount(member);
         }
         break;

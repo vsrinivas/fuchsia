@@ -44,11 +44,6 @@ struct BtGattStatus {
     BtGattErr att_ecode;
 };
 
-//inline bool bt_gatt_status_is_success(bt_gatt_status_t* status) {
-//    return (status->status == ZX_OK) &&
-//           (status->att_ecode == BT_GATT_ERR_NO_ERROR);
-//}
-
 /// Possible values for the characteristic properties bitfield.
 enum BtGattChrPropr : uint8 {
     BROADCAST = 0x01;
@@ -85,7 +80,7 @@ struct BtGattChr {
     uint8 properties;
     uint16 extended_properties;
 
-    vector<BtGattDescriptor> descriptor;
+    vector<BtGattDescriptor>? descriptor;
 };
 
 /// Value change notification callback of the |EnableNotifications| function.
