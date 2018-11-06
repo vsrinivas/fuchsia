@@ -38,17 +38,17 @@ static bool pmm_smoke_test() {
     END_TEST;
 }
 
-// Allocates a bunch of pages then frees them.
-static bool pmm_large_alloc_test() {
+// Allocates more than one page and frees them
+static bool pmm_multi_alloc_test() {
     BEGIN_TEST;
     list_node list = LIST_INITIAL_VALUE(list);
 
-    static const size_t alloc_count = 1024;
+    static const size_t alloc_count = 16;
 
-    auto count = pmm_alloc_pages(alloc_count, 0, &list);
-    EXPECT_EQ(alloc_count, count, "pmm_alloc_pages a bunch of pages count");
+    zx_status_t status = pmm_alloc_pages(alloc_count, 0, &list);
+    EXPECT_EQ(ZX_OK, status, "pmm_alloc_pages a few pages");
     EXPECT_EQ(alloc_count, list_length(&list),
-              "pmm_alloc_pages a bunch of pages list count");
+              "pmm_alloc_pages a few pages list count");
 
     pmm_free(&list);
     END_TEST;
@@ -1044,11 +1044,6 @@ static bool arch_noncontiguous_map() {
 #define VM_UNITTEST(fname) UNITTEST(#fname, fname)
 
 UNITTEST_START_TESTCASE(vm_tests)
-VM_UNITTEST(pmm_smoke_test)
-// runs the system out of memory, uncomment for debugging
-//VM_UNITTEST(pmm_large_alloc_test)
-//VM_UNITTEST(pmm_oversized_alloc_test)
-VM_UNITTEST(pmm_alloc_contiguous_one_test)
 VM_UNITTEST(vmm_alloc_smoke_test)
 VM_UNITTEST(vmm_alloc_contiguous_smoke_test)
 VM_UNITTEST(multiple_regions_test)
@@ -1077,4 +1072,12 @@ VM_UNITTEST(vmo_lookup_test)
 VM_UNITTEST(arch_noncontiguous_map)
 // Uncomment for debugging
 // VM_UNITTEST(dump_all_aspaces)  // Run last
-UNITTEST_END_TESTCASE(vm_tests, "vmtests", "Virtual memory tests");
+UNITTEST_END_TESTCASE(vm_tests, "vm", "Virtual memory tests");
+
+UNITTEST_START_TESTCASE(pmm_tests)
+VM_UNITTEST(pmm_smoke_test)
+VM_UNITTEST(pmm_alloc_contiguous_one_test)
+VM_UNITTEST(pmm_multi_alloc_test)
+// runs the system out of memory, uncomment for debugging
+//VM_UNITTEST(pmm_oversized_alloc_test)
+UNITTEST_END_TESTCASE(pmm_tests, "pmm", "Physical memory manager tests");
