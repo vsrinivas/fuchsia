@@ -1,0 +1,49 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/sdk/sdk_atom.gni")
+
+# Declares a set of documents to be added to an SDK.
+#
+# Parameters
+#
+#   category (required)
+#     Publication level of the document set in SDKs.
+#     See //build/sdk/sdk_atom.gni.
+#
+#   name (required)
+#     Name of the document set in the SDK.
+#
+#   files (required)
+#     List of scopes describing the documents to add to SDKs.
+#     See "File scopes" in //build/sdk/sdk_atom.gni for a description of the
+#     scope format.
+
+template("sdk_documentation") {
+  assert(defined(invoker.category), "Must define an SDK category")
+  assert(defined(invoker.name), "Must define an SDK name")
+  assert(defined(invoker.files), "Must add documentation files")
+
+  sdk_files = []
+  foreach(file, invoker.files) {
+    sdk_files += [ file.dest ]
+  }
+
+  sdk_atom(target_name) {
+    forward_variables_from(invoker, ["category", "files"])
+
+    id = "sdk://docs/${invoker.name}"
+
+    meta = {
+      schema = "documentation"
+      dest = "docs/${invoker.name}.json"
+      value = {
+        type = "documentation"
+        name = invoker.name
+        docs = sdk_files
+        root = "docs"
+      }
+    }
+  }
+}

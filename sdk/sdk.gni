@@ -68,6 +68,11 @@ template("sdk") {
   sdk_molecule(generation_target_name) {
     forward_variables_from(invoker, "*", [ "export" ])
 
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ "//build/sdk:schemas" ]
+
     category = invoker.category
   }
 
@@ -161,27 +166,6 @@ template("sdk") {
       dest = "meta/manifest.json"
     },
   ]
-  schema_files = [
-    "//build/sdk/meta/cc_prebuilt_library.json",
-    "//build/sdk/meta/cc_source_library.json",
-    "//build/sdk/meta/common.json",
-    "//build/sdk/meta/dart_library.json",
-    "//build/sdk/meta/fidl_library.json",
-    "//build/sdk/meta/host_tool.json",
-    "//build/sdk/meta/image.json",
-    "//build/sdk/meta/loadable_module.json",
-    "//build/sdk/meta/manifest.json",
-    "//build/sdk/meta/sysroot.json",
-  ]
-  foreach(schema, schema_files) {
-    name = get_path_info(schema, "file")
-    additional_archive_files += [
-      {
-        source = schema
-        dest = "meta/schemas/$name"
-      },
-    ]
-  }
 
   # From the manifest file representing the SDK, generates a list of the files
   # going into the final archive.
