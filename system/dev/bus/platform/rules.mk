@@ -35,6 +35,7 @@ MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-sysinfo \
 
 MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-clk \
     system/banjo/ddk-protocol-gpio \
     system/banjo/ddk-protocol-gpio-impl \
     system/banjo/ddk-protocol-i2c \
@@ -72,6 +73,7 @@ MODULE_LIBS := \
     system/ulib/c \
 
 MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-clk \
     system/banjo/ddk-protocol-gpio \
     system/banjo/ddk-protocol-gpio-impl \
     system/banjo/ddk-protocol-i2c \

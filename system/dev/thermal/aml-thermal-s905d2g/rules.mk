@@ -33,6 +33,7 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-clk \
     system/banjo/ddk-protocol-platform-device \
     system/banjo/ddk-protocol-scpi \
 
