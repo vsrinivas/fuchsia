@@ -26,9 +26,6 @@ endef
 clk:
 	$(run-banjo)
 
-sdio:
-	$(run-banjo)
-
 sdmmc: $(LOCAL_DIR)/libs/listnode.banjo $(LOCAL_DIR)/libs/block.banjo $(LOCAL_DIR)/block.banjo
 	$(run-banjo)
 

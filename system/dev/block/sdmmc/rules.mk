@@ -29,6 +29,7 @@ MODULE_LIBS := system/ulib/driver \
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-block \
     system/banjo/ddk-protocol-platform-device \
+    system/banjo/ddk-protocol-sdio \
 
 ifeq ($(call TOBOOL,$(ENABLE_DRIVER_TRACING)),true)
 MODULE_STATIC_LIBS += system/ulib/trace.driver
