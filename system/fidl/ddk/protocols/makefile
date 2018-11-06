@@ -26,9 +26,6 @@ endef
 clk:
 	$(run-banjo)
 
-iommu:
-	$(run-banjo)
-
 mailbox:
 	$(run-banjo)
 

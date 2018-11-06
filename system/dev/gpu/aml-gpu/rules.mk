@@ -17,7 +17,8 @@ MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync system/dev/lib/amlogic
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
 
 MODULE_BANJO_LIBS := \
-    system/banjo/ddk-protocol-gpio
+    system/banjo/ddk-protocol-gpio \
+    system/banjo/ddk-protocol-iommu \
 
 MODULE_HEADER_DEPS := \
     system/dev/lib/amlogic
