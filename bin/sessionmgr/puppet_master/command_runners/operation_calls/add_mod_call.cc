@@ -45,6 +45,10 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
   void Run() override {
     FlowToken flow{this, &result_, &module_data_};
 
+    if (!surface_parent_mod_name_) {
+      surface_parent_mod_name_.resize(0);
+    }
+
     // Success status by default, it will be update it if an error state is
     // found.
     result_.status = fuchsia::modular::ExecuteStatus::OK;

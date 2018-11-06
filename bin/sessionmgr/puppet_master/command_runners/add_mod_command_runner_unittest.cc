@@ -142,7 +142,9 @@ class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
       float surface_emphasis, const fuchsia::modular::Intent& intent) {
     fuchsia::modular::AddMod add_mod;
     add_mod.mod_name.reset({mod_name});
-    add_mod.surface_parent_mod_name.reset({parent_mod_name});
+    if (!parent_mod_name.empty()) {
+      add_mod.surface_parent_mod_name.reset({parent_mod_name});
+    }
     add_mod.surface_relation.emphasis = surface_emphasis;
     intent.Clone(&add_mod.intent);
     fuchsia::modular::StoryCommand command;
@@ -297,6 +299,63 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler) {
 
   done = false;
   fidl::VectorPtr<fidl::StringPtr> full_path{{"parent_mod", "mod"}};
+  story_storage_->ReadModuleData(std::move(full_path))
+      ->Then([&](fuchsia::modular::ModuleDataPtr module_data) {
+        EXPECT_EQ("mod_url", module_data->module_url);
+        EXPECT_EQ(full_path, module_data->module_path);
+        EXPECT_FALSE(module_data->module_stopped);
+        EXPECT_EQ(fuchsia::modular::ModuleSource::EXTERNAL,
+                  module_data->module_source);
+        EXPECT_EQ(0.5, module_data->surface_relation->emphasis);
+        EXPECT_TRUE(AreIntentsEqual(intent, *module_data->intent));
+        EXPECT_EQ(*manifest, *module_data->module_manifest);
+        EXPECT_EQ(0u, module_data->parameter_map.entries->size());
+        done = true;
+      });
+
+  RunLoopUntil([&] { return done; });
+}
+
+// Explicitly leave surface_parent_mod_name as null when providing the Intent.
+// We should tolerate this, and initialize it to a zero-length vector internally.
+TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler_NoParent) {
+  auto intent = CreateEmptyIntent("intent_action", "mod_url");
+  intent.parameters.resize(0);
+  auto command =
+      MakeAddModCommand("mod", "" /* parent mod is null */, 0.5, intent);
+
+  auto manifest = fuchsia::modular::ModuleManifest::New();
+  manifest->intent_filters.push_back(MakeIntentFilter("intent_action", {}));
+  manifest->binary = "mod_url";
+
+  // Set up fake module resolver and set validation of GetModuleManifest call.
+  fuchsia::modular::ModuleManifestPtr manifest_out;
+  fuchsia::modular::ModuleManifestPtr manifest_to_add;
+  fidl::Clone(manifest, &manifest_out);
+  fidl::Clone(manifest, &manifest_to_add);
+  fake_module_resolver_->SetManifest(std::move(manifest_out));
+  fake_module_resolver_->SetGetModuleManifestValidation(
+      [&](const fidl::StringPtr& module_id) {
+        EXPECT_EQ(intent.handler, module_id);
+      });
+
+  fuchsia::modular::FindModulesResult res;
+  res.module_id = "mod_url";
+  res.manifest = std::move(manifest_to_add);
+  fake_module_resolver_->AddFindModulesResult(std::move(res));
+
+  // Run the command and assert results.
+  bool done = false;
+  runner_->Execute(story_id_, story_storage_.get(), std::move(command),
+                   [&](fuchsia::modular::ExecuteResult result) {
+                     ASSERT_EQ(fuchsia::modular::ExecuteStatus::OK,
+                               result.status);
+                     done = true;
+                   });
+  RunLoopUntil([&] { return done; });
+
+  done = false;
+  fidl::VectorPtr<fidl::StringPtr> full_path{{"mod"}};
   story_storage_->ReadModuleData(std::move(full_path))
       ->Then([&](fuchsia::modular::ModuleDataPtr module_data) {
         EXPECT_EQ("mod_url", module_data->module_url);

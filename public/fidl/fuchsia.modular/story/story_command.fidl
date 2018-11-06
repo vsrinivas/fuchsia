@@ -55,7 +55,7 @@ struct AddMod {
     // |surface_relation| defines the visual relationship between this mod and the
     // mod at |surface_parent_mod_name|.
     SurfaceRelation surface_relation;
-    vector<string> surface_parent_mod_name;
+    vector<string>? surface_parent_mod_name;
 };
 
 // Updates a mod link values through its parameters.
