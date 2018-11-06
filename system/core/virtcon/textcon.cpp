@@ -8,6 +8,8 @@
 #include <string.h>
 #include <zircon/compiler.h>
 
+#include <fbl/algorithm.h>
+
 static inline void invalidate(textcon_t* tc, int x, int y, int w, int h) {
     tc->invalidate(tc->cookie, x, y, w, h);
 }
@@ -29,9 +31,12 @@ static inline vc_char_t make_vc_char(textcon_t* tc, uint8_t ch) {
                        (((vc_char_t)tc->bg & 15) << 12));
 }
 
+// Note that x coordinates are allowed to be one-past-the-end, as
+// described in textcon.h.
 static vc_char_t* dataxy(textcon_t* tc, int x, int y) {
     assert(x >= 0);
-    assert(x < tc->w);
+    // In particular, this assertion is <= to allow the one-past-the-end.
+    assert(x <= tc->w);
     assert(y >= 0);
     assert(y < tc->h);
     return tc->data + y * tc->w + x;
@@ -116,13 +121,11 @@ static void erase_chars(textcon_t* tc, int arg) {
     if (arg < 0) {
         arg = 0;
     }
-    if (arg > tc->w) {
-        arg = tc->w;
-    }
+    int x_erase_end = fbl::min(tc->x + arg, tc->w);
 
     vc_char_t* dst = dataxy(tc, tc->x, tc->y);
-    vc_char_t* src = dataxy(tc, tc->x + arg, tc->y);
-    vc_char_t* end = dataxy(tc, tc->x + tc->w, tc->y);
+    vc_char_t* src = dataxy(tc, x_erase_end, tc->y);
+    vc_char_t* end = dataxy(tc, tc->w, tc->y);
 
     while (src < end) {
         *dst++ = *src++;

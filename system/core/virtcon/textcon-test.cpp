@@ -312,6 +312,43 @@ bool test_backspace_at_start_of_line() {
     END_TEST;
 }
 
+bool test_delete_chars() {
+    BEGIN_TEST;
+
+    TextconHelper tc(20, 10);
+
+    tc.PutString("123456");
+    // Move the cursor to be over the "3".
+    tc.PutString("\b\b\b\b");
+    // Delete 2 characters to the right of the cursor, using the "DCH"
+    // escape sequence.  Any characters beyond that, on the right, are
+    // moved to the left by 2 characters.  This escape sequence is a
+    // reduced test from a fuzzer-discovered example (see ZX-2936).  This
+    // used to trigger an assertion failure.
+    tc.PutString("\x1b[2P");
+    tc.AssertLineContains(0, "1256");
+
+    END_TEST;
+}
+
+bool test_delete_chars_overflow() {
+    BEGIN_TEST;
+
+    TextconHelper tc(6, 10);
+
+    // Fill the width of the console, leaving the cursor on the next line.
+    tc.PutString("123456");
+    // Move the cursor to be over the "3", to position (y+1,x+1) = (1,3).
+    tc.PutString("\x1b[1;3H");
+    // Request deleting 5 characters to the right of the cursor, using
+    // the "DCH" escape sequence.  This tests an overflow case,
+    // because there are only 4 characters to the right of the cursor.
+    tc.PutString("\x1b[5P");
+    tc.AssertLineContains(0, "12");
+
+    END_TEST;
+}
+
 bool test_scroll_up() {
     BEGIN_TEST;
 
@@ -686,6 +723,8 @@ RUN_TEST(test_wrapping)
 RUN_TEST(test_tabs)
 RUN_TEST(test_backspace_moves_cursor)
 RUN_TEST(test_backspace_at_start_of_line)
+RUN_TEST(test_delete_chars)
+RUN_TEST(test_delete_chars_overflow)
 RUN_TEST(test_scroll_up)
 RUN_TEST(test_scroll_up_nel)
 RUN_TEST(test_insert_lines)
