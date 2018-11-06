@@ -20,7 +20,6 @@ namespace cobalt_client {
 namespace {
 
 using internal::Logger;
-using internal::Metadata;
 using internal::RemoteCounter;
 using internal::RemoteHistogram;
 

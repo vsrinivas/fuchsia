@@ -6,11 +6,9 @@
 
 #include <stdint.h>
 
+#include <cobalt-client/cpp/counter-internal.h>
+
 namespace cobalt_client {
-namespace internal {
-// Forward declaration.
-class RemoteCounter;
-} // namespace internal
 
 // Thin wrapper for an atomic counter with a fixed memory order. The counter handles
 // a remote count and a local count. The remote count is periodically flushed, while
@@ -25,7 +23,7 @@ public:
 
     Counter() = delete;
     Counter(internal::RemoteCounter* remote_counter);
-    Counter(const Counter& other) : remote_counter_(other.remote_counter_){};
+    Counter(const Counter& other) : remote_counter_(other.remote_counter_) {}
     Counter(Counter&&) = default;
     ~Counter() = default;
 

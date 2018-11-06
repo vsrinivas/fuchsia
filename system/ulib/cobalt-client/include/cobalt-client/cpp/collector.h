@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <unistd.h>
 
+#include <cobalt-client/cpp/collector-internal.h>
 #include <cobalt-client/cpp/counter.h>
 #include <cobalt-client/cpp/histogram.h>
 #include <cobalt-client/cpp/metric-options.h>
@@ -20,13 +21,6 @@
 #include <lib/zx/vmo.h>
 
 namespace cobalt_client {
-namespace internal {
-// Forward Declarations.
-class RemoteHistogram;
-class RemoteCounter;
-struct Metadata;
-class Logger;
-} // namespace internal
 
 // Defines the options for initializing the Collector.
 struct CollectorOptions {

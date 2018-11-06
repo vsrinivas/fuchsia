@@ -4,14 +4,12 @@
 
 #pragma once
 
-#include <cobalt-client/cpp/metric-options.h>
 #include <stdint.h>
 
+#include <cobalt-client/cpp/histogram-internal.h>
+#include <cobalt-client/cpp/metric-options.h>
+
 namespace cobalt_client {
-namespace internal {
-// Forward Declaration
-class RemoteHistogram;
-} // namespace internal
 
 // Thin wrapper for a histogram. This class does not own the data, but acts as a proxy.
 //
