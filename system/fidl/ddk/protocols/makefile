@@ -26,9 +26,6 @@ endef
 clk:
 	$(run-banjo)
 
-mailbox:
-	$(run-banjo)
-
 pci: $(LOCAL_DIR)/libs/pci.banjo
 	$(run-banjo)
 

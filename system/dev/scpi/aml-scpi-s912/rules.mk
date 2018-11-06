@@ -15,6 +15,9 @@ MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-mailbox \
+
 include make/module.mk
 
 MODULE := $(LOCAL_DIR).scpi
@@ -29,5 +32,8 @@ MODULE_SRCS := \
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-mailbox \
 
 include make/module.mk
