@@ -4,7 +4,6 @@
 
 load("@fuchsia_sdk//build_defs:flutter_app.bzl", "flutter_app")
 load("@fuchsia_sdk//build_defs:package.bzl", "fuchsia_package")
-load("@fuchsia_sdk//build_defs:package_files.bzl", "package_files")
 
 flutter_app(
     name = "app",

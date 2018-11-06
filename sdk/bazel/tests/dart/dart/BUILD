@@ -4,7 +4,6 @@
 
 load("@fuchsia_sdk//build_defs:dart_app.bzl", "dart_app")
 load("@fuchsia_sdk//build_defs:package.bzl", "fuchsia_package")
-load("@fuchsia_sdk//build_defs:package_files.bzl", "package_files")
 
 dart_app(
     name = "dart",
