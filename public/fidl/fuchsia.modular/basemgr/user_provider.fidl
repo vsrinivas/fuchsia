@@ -63,11 +63,6 @@ struct UserLoginParams {
     // Configuration of the session shell to run. It can be NULL which means that
     // this configuration is picked up from command-line arguments to basemgr.
     AppConfig? session_shell_config;
-
-    // DEPRECATED: Use session_shell_config instead.
-    // Configuration of the session shell to run. It can be NULL which means that
-    // this configuration is picked up from command-line arguments to basemgr.
-    AppConfig? user_shell_config;
 };
 
 // Provided by the |Basemgr| to the |BaseShell| when it authenticates a
@@ -101,16 +96,10 @@ interface UserController {
     // Registers a watcher for the user's life cycle events.
     2: Watch(UserWatcher watcher);
 
-    // DEPRECATED: Use SwapSessionShell.
-    // Stops the currently running user shell and starts the one specified by
-    // |user_shell_config|. This operation stops all stories before starting the
-    // new shell.
-    3: SwapUserShell(AppConfig user_shell_config) -> ();
-
     // Stops the currently running session shell and starts the one specified by
     // |session_shell_config|. This operation stops all stories before starting
     // the new shell.
-    4: SwapSessionShell(AppConfig session_shell_config) -> ();
+    3: SwapSessionShell(AppConfig session_shell_config) -> ();
 };
 
 // Implemented by a |BaseShell| implementation in order to receive

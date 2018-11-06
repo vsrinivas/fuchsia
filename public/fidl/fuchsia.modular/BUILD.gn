@@ -67,7 +67,6 @@ fidl("fuchsia.modular") {
     "suggestion/user_input.fidl",
     "surface/container.fidl",
     "surface/surface.fidl",
-    "user/user_shell.fidl",
     "user_intelligence/intelligence_services.fidl",
     "user_intelligence/scope.fidl",
     "user_intelligence/user_intelligence_provider.fidl",

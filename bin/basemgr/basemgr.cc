@@ -53,17 +53,8 @@ class Settings {
         command_line.GetOptionValueWithDefault("story_shell", "mondrian");
     sessionmgr.url =
         command_line.GetOptionValueWithDefault("sessionmgr", "sessionmgr");
-    // TODO(alexmin): Remove user_shell argument after migration is complete.
-    if (command_line.HasOption("user_shell")) {
-      session_shell.url = command_line.GetOptionValueWithDefault(
-          "user_shell", "ermine_session_shell");
-      if (session_shell.url == "dev_user_shell") {
-        session_shell.url = "dev_session_shell";
-      }
-    } else {
-      session_shell.url = command_line.GetOptionValueWithDefault(
-          "session_shell", "ermine_session_shell");
-    }
+    session_shell.url = command_line.GetOptionValueWithDefault(
+        "session_shell", "ermine_session_shell");
     account_provider.url = command_line.GetOptionValueWithDefault(
         "account_provider", "oauth_token_manager");
 
@@ -92,16 +83,9 @@ class Settings {
         command_line.GetOptionValueWithDefault("sessionmgr_args", ""),
         &sessionmgr.args);
 
-    // TODO(alexmin): Remove user_shell_args after migration is complete.
-    if (command_line.HasOption("user_shell_args")) {
-      ParseShellArgs(
-          command_line.GetOptionValueWithDefault("user_shell_args", ""),
-          &session_shell.args);
-    } else {
-      ParseShellArgs(
-          command_line.GetOptionValueWithDefault("session_shell_args", ""),
-          &session_shell.args);
-    }
+    ParseShellArgs(
+        command_line.GetOptionValueWithDefault("session_shell_args", ""),
+        &session_shell.args);
 
     if (test) {
       base_shell.args.push_back("--test");

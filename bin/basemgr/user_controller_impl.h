@@ -69,11 +69,6 @@ class UserControllerImpl : fuchsia::modular::UserController,
   void SwapSessionShell(fuchsia::modular::AppConfig session_shell_config,
                         SwapSessionShellCallback callback) override;
 
-  // DEPRECATED: Use SwapSessionShell().
-  // |fuchsia::modular::UserController|
-  void SwapUserShell(fuchsia::modular::AppConfig user_shell_config,
-                     SwapUserShellCallback callback) override;
-
   // |fuchsia::modular::UserController|
   void Watch(
       fidl::InterfaceHandle<fuchsia::modular::UserWatcher> watcher) override;

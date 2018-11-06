@@ -54,7 +54,6 @@ class VisibleStoriesHandler;
 
 class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
                        fuchsia::modular::SessionShellContext,
-                       fuchsia::modular::UserShellContext,
                        EntityProviderLauncher {
  public:
   struct Options {
@@ -95,11 +94,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
           user_context,
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request) override;
-
-  // DEPRECATED: Use SwapSessionShell instead.
-  // |Sessionmgr|
-  void SwapUserShell(fuchsia::modular::AppConfig user_shell_config,
-                     SwapUserShellCallback callback) override;
 
   // |Sessionmgr|
   void SwapSessionShell(fuchsia::modular::AppConfig session_shell_config,
@@ -214,8 +208,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   component::ServiceProviderImpl session_shell_services_;
   fidl::BindingSet<fuchsia::modular::SessionShellContext>
       session_shell_context_bindings_;
-  fidl::BindingSet<fuchsia::modular::UserShellContext>
-      user_shell_context_bindings_;
 
   fuchsia::modular::auth::TokenProviderFactoryPtr token_provider_factory_;
   fuchsia::auth::TokenManagerPtr agent_token_manager_;

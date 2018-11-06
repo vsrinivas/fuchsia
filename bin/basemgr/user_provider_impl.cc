@@ -575,9 +575,7 @@ void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
 
   auto session_shell = params.session_shell_config
                            ? std::move(*params.session_shell_config)
-                           : params.user_shell_config
-                                 ? std::move(*params.user_shell_config)
-                                 : CloneStruct(default_session_shell_);
+                           : CloneStruct(default_session_shell_);
 
   auto view_owner =
       delegate_->GetSessionShellViewOwner(std::move(params.view_owner));

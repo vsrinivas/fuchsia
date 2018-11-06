@@ -706,11 +706,6 @@ void SessionmgrImpl::RunSessionShell(
                  request) {
         session_shell_context_bindings_.AddBinding(this, std::move(request));
       });
-  session_shell_services_.AddService<fuchsia::modular::UserShellContext>(
-      [this](
-          fidl::InterfaceRequest<fuchsia::modular::UserShellContext> request) {
-        user_shell_context_bindings_.AddBinding(this, std::move(request));
-      });
   session_shell_services_.AddService<fuchsia::modular::PuppetMaster>(
       [this](fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request) {
         puppet_master_impl_->Connect(std::move(request));
@@ -725,7 +720,6 @@ void SessionmgrImpl::RunSessionShell(
   // component from which ServiceProvicer. There is a lot of indirection here.
   auto service_list = fuchsia::sys::ServiceList::New();
   service_list->names.push_back(fuchsia::modular::SessionShellContext::Name_);
-  service_list->names.push_back(fuchsia::modular::UserShellContext::Name_);
   service_list->names.push_back(fuchsia::modular::PuppetMaster::Name_);
   service_list->provider = std::move(session_shell_service_provider_ptr_);
 
@@ -778,13 +772,6 @@ class SessionmgrImpl::SwapSessionShellOperation : public Operation<> {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SwapSessionShellOperation);
 };
-
-void SessionmgrImpl::SwapUserShell(
-    fuchsia::modular::AppConfig user_shell_config,
-    SwapUserShellCallback callback) {
-  operation_queue_.Add(new SwapSessionShellOperation(
-      this, std::move(user_shell_config), callback));
-}
 
 void SessionmgrImpl::SwapSessionShell(
     fuchsia::modular::AppConfig session_shell_config,

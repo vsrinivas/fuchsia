@@ -28,10 +28,7 @@ interface Sessionmgr {
                   UserContext user_context,
                   request<fuchsia.ui.viewsv1token.ViewOwner>? view_owner);
 
-    // DEPRECATED: Use SwapSessionShell instead.
-    2: SwapUserShell(fuchsia.modular.AppConfig user_shell) -> ();
-
-    3: SwapSessionShell(fuchsia.modular.AppConfig session_shell) -> ();
+    2: SwapSessionShell(fuchsia.modular.AppConfig session_shell) -> ();
 };
 
 // This interface is provided by basemgr to |Sessionmgr|.

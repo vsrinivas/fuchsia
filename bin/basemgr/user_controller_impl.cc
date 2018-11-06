@@ -127,13 +127,6 @@ void UserControllerImpl::SwapSessionShell(
 }
 
 // |fuchsia::modular::UserController|
-void UserControllerImpl::SwapUserShell(
-    fuchsia::modular::AppConfig user_shell_config,
-    SwapUserShellCallback callback) {
-  sessionmgr_->SwapUserShell(std::move(user_shell_config), callback);
-}
-
-// |fuchsia::modular::UserController|
 void UserControllerImpl::Watch(
     fidl::InterfaceHandle<fuchsia::modular::UserWatcher> watcher) {
   user_watchers_.AddInterfacePtr(watcher.Bind());
