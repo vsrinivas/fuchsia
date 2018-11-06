@@ -280,7 +280,13 @@ template("fuzz_package") {
     # Build the actual package
     package(target_name) {
       testonly = true
-      forward_variables_from(fuzz, "*", [ "omit_binaries" ])
+      forward_variables_from(fuzz,
+                             "*",
+                             [
+                               "targets",
+                               "sanitizers",
+                               "omit_binaries",
+                             ])
     }
   } else {
     not_needed(invoker, "*")
