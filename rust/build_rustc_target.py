@@ -9,6 +9,9 @@ import os
 import subprocess
 import sys
 
+TERM_COLOR_RED = '\033[91m'
+TERM_COLOR_END = '\033[0m'
+
 # Updates the path of the main target in the depfile to the relative path
 # from base_path build_output_path
 def fix_depfile(depfile_path, base_path, build_output_path):
@@ -180,6 +183,12 @@ def main():
     # Collect externs
     if args.dep_data:
         for data_path in args.dep_data:
+            if not os.path.isfile(data_path):
+                print TERM_COLOR_RED
+                print "Missing Rust target data for dependency " + data_path
+                print "Did you accidentally depend on a non-Rust target?"
+                print TERM_COLOR_END
+                return -1
             dep_data = json.load(open(data_path))
             if dep_data["third_party"]:
                 package_name = dep_data["package_name"]

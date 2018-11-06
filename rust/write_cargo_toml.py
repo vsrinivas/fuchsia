@@ -10,6 +10,9 @@ import os
 import subprocess
 import sys
 
+TERM_COLOR_RED = '\033[91m'
+TERM_COLOR_END = '\033[0m'
+
 ROOT_PATH = os.path.abspath(__file__ + "/../../..")
 sys.path += [os.path.join(ROOT_PATH, "third_party", "pytoml")]
 import pytoml
@@ -92,6 +95,12 @@ def main():
     deps = {}
     if args.dep_data:
         for data_path in args.dep_data:
+            if not os.path.isfile(data_path):
+                print TERM_COLOR_RED
+                print "Missing Rust target data for dependency " + data_path
+                print "Did you accidentally depend on a non-Rust target?"
+                print TERM_COLOR_END
+                return -1
             dep_data = json.load(open(data_path))
             if dep_data["third_party"]:
                 crate = dep_data["package_name"]
