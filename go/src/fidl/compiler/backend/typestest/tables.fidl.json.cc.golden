@@ -43,19 +43,24 @@ OlderSimpleTable& OlderSimpleTable::operator=(OlderSimpleTable&& other) {
 }
 
 void OlderSimpleTable::Encode(::fidl::Encoder* encoder, size_t offset) {
-  ::fidl::EncodeVectorPointer(encoder, 1, offset);
-  size_t base = encoder->Alloc(1 * sizeof(uint64_t));
+  size_t max_ordinal = 0;
+  if (has_x_) max_ordinal = 1;
+  ::fidl::EncodeVectorPointer(encoder, max_ordinal, offset);
+  if (max_ordinal == 0) return;
+  size_t base = encoder->Alloc(max_ordinal * 2 * sizeof(uint64_t));
   if (has_x_) {
     const size_t length_before = encoder->CurrentLength();
     const size_t handles_before = encoder->CurrentHandleCount();
     ::fidl::Encode(
         encoder,
         &x_.value,
-        encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
-    uint64_t presence =
-        ((encoder->CurrentLength() - length_before) << 32) |
-        (encoder->CurrentHandleCount() - handles_before);
-    ::fidl::Encode(encoder, &presence, base + (1 - 1) * sizeof(uint64_t));
+        encoder->Alloc(CodingTraits<int64_t>::encoded_size));
+    size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
+    uint64_t num_bytes_then_num_handles =
+        (encoder->CurrentLength() - length_before) |
+        ((encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(encoder, &num_bytes_then_num_handles, envelope_base);
+    *encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
   }
 }
 
@@ -70,8 +75,9 @@ void OlderSimpleTable::Decode(::fidl::Decoder* decoder, OlderSimpleTable* value,
   base = decoder->GetOffset(encoded->data);
   count = encoded->count;
   if (count >= 1) {
+    size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
     uint64_t presence;
-    ::fidl::Decode(decoder, &presence, base + (1 - 1) * sizeof(uint64_t));
+    ::fidl::Decode(decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
       ::fidl::Decode(decoder, value->mutable_x(), decoder->GetOffset(presence));
     } else {
@@ -191,19 +197,26 @@ NewerSimpleTable& NewerSimpleTable::operator=(NewerSimpleTable&& other) {
 }
 
 void NewerSimpleTable::Encode(::fidl::Encoder* encoder, size_t offset) {
-  ::fidl::EncodeVectorPointer(encoder, 6, offset);
-  size_t base = encoder->Alloc(6 * sizeof(uint64_t));
+  size_t max_ordinal = 0;
+  if (has_x_) max_ordinal = 1;
+  if (has_y_) max_ordinal = 5;
+  if (has_z_) max_ordinal = 6;
+  ::fidl::EncodeVectorPointer(encoder, max_ordinal, offset);
+  if (max_ordinal == 0) return;
+  size_t base = encoder->Alloc(max_ordinal * 2 * sizeof(uint64_t));
   if (has_x_) {
     const size_t length_before = encoder->CurrentLength();
     const size_t handles_before = encoder->CurrentHandleCount();
     ::fidl::Encode(
         encoder,
         &x_.value,
-        encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
-    uint64_t presence =
-        ((encoder->CurrentLength() - length_before) << 32) |
-        (encoder->CurrentHandleCount() - handles_before);
-    ::fidl::Encode(encoder, &presence, base + (1 - 1) * sizeof(uint64_t));
+        encoder->Alloc(CodingTraits<int64_t>::encoded_size));
+    size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
+    uint64_t num_bytes_then_num_handles =
+        (encoder->CurrentLength() - length_before) |
+        ((encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(encoder, &num_bytes_then_num_handles, envelope_base);
+    *encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
   }
   if (has_y_) {
     const size_t length_before = encoder->CurrentLength();
@@ -211,11 +224,13 @@ void NewerSimpleTable::Encode(::fidl::Encoder* encoder, size_t offset) {
     ::fidl::Encode(
         encoder,
         &y_.value,
-        encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
-    uint64_t presence =
-        ((encoder->CurrentLength() - length_before) << 32) |
-        (encoder->CurrentHandleCount() - handles_before);
-    ::fidl::Encode(encoder, &presence, base + (5 - 1) * sizeof(uint64_t));
+        encoder->Alloc(CodingTraits<int64_t>::encoded_size));
+    size_t envelope_base = base + (5 - 1) * 2 * sizeof(uint64_t);
+    uint64_t num_bytes_then_num_handles =
+        (encoder->CurrentLength() - length_before) |
+        ((encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(encoder, &num_bytes_then_num_handles, envelope_base);
+    *encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
   }
   if (has_z_) {
     const size_t length_before = encoder->CurrentLength();
@@ -223,11 +238,13 @@ void NewerSimpleTable::Encode(::fidl::Encoder* encoder, size_t offset) {
     ::fidl::Encode(
         encoder,
         &z_.value,
-        encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
-    uint64_t presence =
-        ((encoder->CurrentLength() - length_before) << 32) |
-        (encoder->CurrentHandleCount() - handles_before);
-    ::fidl::Encode(encoder, &presence, base + (6 - 1) * sizeof(uint64_t));
+        encoder->Alloc(CodingTraits<int64_t>::encoded_size));
+    size_t envelope_base = base + (6 - 1) * 2 * sizeof(uint64_t);
+    uint64_t num_bytes_then_num_handles =
+        (encoder->CurrentLength() - length_before) |
+        ((encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(encoder, &num_bytes_then_num_handles, envelope_base);
+    *encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
   }
 }
 
@@ -242,8 +259,9 @@ void NewerSimpleTable::Decode(::fidl::Decoder* decoder, NewerSimpleTable* value,
   base = decoder->GetOffset(encoded->data);
   count = encoded->count;
   if (count >= 1) {
+    size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
     uint64_t presence;
-    ::fidl::Decode(decoder, &presence, base + (1 - 1) * sizeof(uint64_t));
+    ::fidl::Decode(decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
       ::fidl::Decode(decoder, value->mutable_x(), decoder->GetOffset(presence));
     } else {
@@ -253,8 +271,9 @@ void NewerSimpleTable::Decode(::fidl::Decoder* decoder, NewerSimpleTable* value,
     goto done_1;
   }
   if (count >= 5) {
+    size_t envelope_base = base + (5 - 1) * 2 * sizeof(uint64_t);
     uint64_t presence;
-    ::fidl::Decode(decoder, &presence, base + (5 - 1) * sizeof(uint64_t));
+    ::fidl::Decode(decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
       ::fidl::Decode(decoder, value->mutable_y(), decoder->GetOffset(presence));
     } else {
@@ -264,8 +283,9 @@ void NewerSimpleTable::Decode(::fidl::Decoder* decoder, NewerSimpleTable* value,
     goto done_5;
   }
   if (count >= 6) {
+    size_t envelope_base = base + (6 - 1) * 2 * sizeof(uint64_t);
     uint64_t presence;
-    ::fidl::Decode(decoder, &presence, base + (6 - 1) * sizeof(uint64_t));
+    ::fidl::Decode(decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
       ::fidl::Decode(decoder, value->mutable_z(), decoder->GetOffset(presence));
     } else {
@@ -403,19 +423,25 @@ SimpleTable& SimpleTable::operator=(SimpleTable&& other) {
 }
 
 void SimpleTable::Encode(::fidl::Encoder* encoder, size_t offset) {
-  ::fidl::EncodeVectorPointer(encoder, 5, offset);
-  size_t base = encoder->Alloc(5 * sizeof(uint64_t));
+  size_t max_ordinal = 0;
+  if (has_x_) max_ordinal = 1;
+  if (has_y_) max_ordinal = 5;
+  ::fidl::EncodeVectorPointer(encoder, max_ordinal, offset);
+  if (max_ordinal == 0) return;
+  size_t base = encoder->Alloc(max_ordinal * 2 * sizeof(uint64_t));
   if (has_x_) {
     const size_t length_before = encoder->CurrentLength();
     const size_t handles_before = encoder->CurrentHandleCount();
     ::fidl::Encode(
         encoder,
         &x_.value,
-        encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
-    uint64_t presence =
-        ((encoder->CurrentLength() - length_before) << 32) |
-        (encoder->CurrentHandleCount() - handles_before);
-    ::fidl::Encode(encoder, &presence, base + (1 - 1) * sizeof(uint64_t));
+        encoder->Alloc(CodingTraits<int64_t>::encoded_size));
+    size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
+    uint64_t num_bytes_then_num_handles =
+        (encoder->CurrentLength() - length_before) |
+        ((encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(encoder, &num_bytes_then_num_handles, envelope_base);
+    *encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
   }
   if (has_y_) {
     const size_t length_before = encoder->CurrentLength();
@@ -423,11 +449,13 @@ void SimpleTable::Encode(::fidl::Encoder* encoder, size_t offset) {
     ::fidl::Encode(
         encoder,
         &y_.value,
-        encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
-    uint64_t presence =
-        ((encoder->CurrentLength() - length_before) << 32) |
-        (encoder->CurrentHandleCount() - handles_before);
-    ::fidl::Encode(encoder, &presence, base + (5 - 1) * sizeof(uint64_t));
+        encoder->Alloc(CodingTraits<int64_t>::encoded_size));
+    size_t envelope_base = base + (5 - 1) * 2 * sizeof(uint64_t);
+    uint64_t num_bytes_then_num_handles =
+        (encoder->CurrentLength() - length_before) |
+        ((encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(encoder, &num_bytes_then_num_handles, envelope_base);
+    *encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
   }
 }
 
@@ -442,8 +470,9 @@ void SimpleTable::Decode(::fidl::Decoder* decoder, SimpleTable* value, size_t of
   base = decoder->GetOffset(encoded->data);
   count = encoded->count;
   if (count >= 1) {
+    size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
     uint64_t presence;
-    ::fidl::Decode(decoder, &presence, base + (1 - 1) * sizeof(uint64_t));
+    ::fidl::Decode(decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
       ::fidl::Decode(decoder, value->mutable_x(), decoder->GetOffset(presence));
     } else {
@@ -453,8 +482,9 @@ void SimpleTable::Decode(::fidl::Decoder* decoder, SimpleTable* value, size_t of
     goto done_1;
   }
   if (count >= 5) {
+    size_t envelope_base = base + (5 - 1) * 2 * sizeof(uint64_t);
     uint64_t presence;
-    ::fidl::Decode(decoder, &presence, base + (5 - 1) * sizeof(uint64_t));
+    ::fidl::Decode(decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
       ::fidl::Decode(decoder, value->mutable_y(), decoder->GetOffset(presence));
     } else {

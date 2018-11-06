@@ -144,8 +144,13 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
 }
 
 void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
-  ::fidl::EncodeVectorPointer(encoder, {{ .BiggestOrdinal }}, offset);
-  size_t base = encoder->Alloc({{ .BiggestOrdinal }} * sizeof(uint64_t));
+  size_t max_ordinal = 0;
+  {{- range .Members }}
+  if ({{ .FieldPresenceName }}) max_ordinal = {{ .Ordinal }};
+  {{- end }}
+  ::fidl::EncodeVectorPointer(encoder, max_ordinal, offset);
+  if (max_ordinal == 0) return;
+  size_t base = encoder->Alloc(max_ordinal * 2 * sizeof(uint64_t));
   {{- range .Members }}
   if ({{ .FieldPresenceName }}) {
     const size_t length_before = encoder->CurrentLength();
@@ -153,11 +158,13 @@ void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
     ::fidl::Encode(
         encoder,
         &{{ .FieldDataName }}.value,
-        encoder->Alloc(::fidl::CodingTraits<{{ .Type.Decl }}>::encoded_size));
-    uint64_t presence =
-        ((encoder->CurrentLength() - length_before) << 32) |
-        (encoder->CurrentHandleCount() - handles_before);
-    ::fidl::Encode(encoder, &presence, base + ({{ .Ordinal }} - 1) * sizeof(uint64_t));
+        encoder->Alloc(CodingTraits<{{ .Type.Decl }}>::encoded_size));
+    size_t envelope_base = base + ({{ .Ordinal }} - 1) * 2 * sizeof(uint64_t);
+    uint64_t num_bytes_then_num_handles =
+        (encoder->CurrentLength() - length_before) |
+        ((encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(encoder, &num_bytes_then_num_handles, envelope_base);
+    *encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
   }
   {{- end }}
 }
@@ -175,8 +182,9 @@ void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t of
 
   {{- range .Members }}
   if (count >= {{ .Ordinal }}) {
+    size_t envelope_base = base + ({{ .Ordinal }} - 1) * 2 * sizeof(uint64_t);
     uint64_t presence;
-    ::fidl::Decode(decoder, &presence, base + ({{ .Ordinal }} - 1) * sizeof(uint64_t));
+    ::fidl::Decode(decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
       ::fidl::Decode(decoder, value->mutable_{{ .Name }}(), decoder->GetOffset(presence));
     } else {
