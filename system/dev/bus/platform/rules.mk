@@ -35,7 +35,8 @@ MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-sysinfo \
 
 MODULE_BANJO_LIBS := \
-    system/banjo/ddk-protocol-gpio
+    system/banjo/ddk-protocol-gpio \
+    system/banjo/ddk-protocol-gpio-impl
 
 include make/module.mk
 
@@ -65,6 +66,7 @@ MODULE_LIBS := \
     system/ulib/c \
 
 MODULE_BANJO_LIBS := \
-    system/banjo/ddk-protocol-gpio
+    system/banjo/ddk-protocol-gpio \
+    system/banjo/ddk-protocol-gpio-impl
 
 include make/module.mk

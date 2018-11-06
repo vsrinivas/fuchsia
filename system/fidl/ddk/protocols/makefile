@@ -26,9 +26,6 @@ endef
 clk:
 	$(run-banjo)
 
-gpio-impl: $(LOCAL_DIR)/gpio.banjo
-	$(run-banjo)
-
 hidbus:
 	$(run-banjo)
 

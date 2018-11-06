@@ -23,7 +23,8 @@ MODULE_STATIC_LIBS := \
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
 
 MODULE_BANJO_LIBS := \
-    system/banjo/ddk-protocol-gpio
+    system/banjo/ddk-protocol-gpio \
+    system/banjo/ddk-protocol-gpio-impl
 
 include make/module.mk
 

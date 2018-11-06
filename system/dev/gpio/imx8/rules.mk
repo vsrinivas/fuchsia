@@ -24,7 +24,8 @@ MODULE_LIBS := \
 MODULE_HEADER_DEPS := system/dev/lib/imx8m
 
 MODULE_BANJO_LIBS := \
-    system/banjo/ddk-protocol-gpio
+    system/banjo/ddk-protocol-gpio \
+    system/banjo/ddk-protocol-gpio-impl
 
 include make/module.mk
 
@@ -45,7 +46,8 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_BANJO_LIBS := \
-    system/banjo/ddk-protocol-gpio
+    system/banjo/ddk-protocol-gpio \
+    system/banjo/ddk-protocol-gpio-impl
 
 MODULE_HEADER_DEPS := system/dev/lib/imx8m
 
