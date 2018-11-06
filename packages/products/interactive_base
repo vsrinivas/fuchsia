@@ -11,6 +11,7 @@
         "garnet/packages/prod/device_settings",
         "garnet/packages/prod/display_manager",
         "garnet/packages/prod/fonts",
+        "garnet/packages/prod/kernel_crash_checker",
         "garnet/packages/prod/logger",
         "garnet/packages/prod/log_listener",
         "garnet/packages/prod/mdns",
