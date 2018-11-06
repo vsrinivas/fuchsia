@@ -178,7 +178,7 @@ void Object::SetChild(fbl::RefPtr<Object> child) {
 
 fbl::RefPtr<Object> Object::TakeChild(fbl::String name) {
   fbl::AutoLock lock(&mutex_);
-  auto it = children_.find(name.data());
+  auto it = children_.find(name.c_str());
   if (it == children_.end()) {
     return fbl::RefPtr<Object>();
   }

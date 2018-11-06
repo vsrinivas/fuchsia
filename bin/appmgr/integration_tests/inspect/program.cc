@@ -74,6 +74,12 @@ int main(int argc, const char** argv) {
   invalid.set_children_callback(
       [](std::vector<fbl::RefPtr<component::Object>>* out) {});
 
+  // Check that setting and moving parents works correctly.
+  Table subtable("subtable");
+  subtable.set_parent(t1.object_dir());
+  subtable.NewItem(10)->add_value(10);
+  subtable.set_parent(t2.object_dir());
+
   loop.Run();
   return 0;
 }

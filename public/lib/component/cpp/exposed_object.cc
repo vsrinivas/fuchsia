@@ -17,9 +17,13 @@ ExposedObject::ExposedObject(const std::string& name)
 
 ExposedObject::~ExposedObject() { remove_from_parent(); }
 
+void ExposedObject::set_parent(ObjectDir parent) { move_parents(&parent); }
+
 void ExposedObject::set_parent(const ObjectDir* parent) {
   move_parents(parent);
 }
+
+void ExposedObject::add_child(ExposedObject& child) { add_child(&child); }
 
 void ExposedObject::add_child(ExposedObject* child) {
   child->set_parent(&object_dir_);
@@ -33,6 +37,7 @@ void ExposedObject::move_parents(const ObjectDir* new_parent) {
   }
   if (new_parent != nullptr) {
     new_parent->object()->SetChild(object_dir_.object());
+    parent_ = *new_parent;
   }
 }
 

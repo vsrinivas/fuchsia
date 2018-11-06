@@ -27,12 +27,17 @@ class Cell : public component::ExposedObject {
 // A row in the table, contains cells.
 class Row : public component::ExposedObject {
  public:
-  Row() : ExposedObject(UniqueName("row")) {}
+  Row() : ExposedObject(UniqueName("row")) {
+  }
+
+  Row(Row&&) = default;
+  Row& operator=(Row&&) = default;
+
   Cell* AddCell(const std::string& name, int64_t value, double double_value) {
     // Construct a new cell in-place, and expose it as a child of this object in
     // the Inspect output.
-    auto it = cells_.emplace(cells_.end(), name, value, double_value);
-    auto ret = &(*it);
+    cells_.push_back(Cell(name, value, double_value));
+    auto ret = &(*cells_.rbegin());
     add_child(ret);
     return ret;
   }
@@ -48,10 +53,10 @@ class Table : public component::ExposedObject {
   Row* AddRow() {
     // Construct a new row in-place, and expose it as a child of this object in
     // the Inspect output.
-    auto it = rows_.emplace(rows_.end());
-    auto ret = &(*it);
-    add_child(ret);
-    return ret;
+    rows_.push_back(Row());
+    auto ret = rows_.rbegin();
+    add_child(*ret);
+    return &(*ret);
   }
 
  private:
