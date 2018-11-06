@@ -15,11 +15,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../use_aac_decoder.h"
+#include "garnet/examples/media/use_media_decoder/use_aac_decoder.h"
 
+#include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/util.h>
-#include "garnet/bin/appmgr/appmgr.h"
+#include "gtest/gtest.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fxl/logging.h"
@@ -32,9 +33,7 @@ namespace {
 // "Copyright 2018 The Fuchsia Authors. All rights reserved. Use of this audio
 // file is governed by a BSD-style license that can be found in the LICENSE
 // file."
-constexpr char kInputFilePath[] =
-    "/pkgfs/packages/media_examples_tests/0/data/media_test_data/"
-    "test_audio.adts";
+constexpr char kInputFilePath[] = "/pkg/data/media_test_data/test_audio.adts";
 
 // Both of these outputs sound "correct".  When compared with "cmp -l" (octal
 // byte values), most bytes are the same, and those that differ are different by
@@ -51,77 +50,14 @@ constexpr char kGoldenSha256_x64[SHA256_DIGEST_LENGTH * 2 + 1] =
 constexpr char kGoldenSha256_arm64[SHA256_DIGEST_LENGTH * 2 + 1] =
     "f0b7fadd99727a57e5529efb9eefd2dc1beee592d87766a5d9a0d9ae5593bb50";
 
-}  // namespace
-
-int main(int argc, char* argv[]) {
-  // Run an appmgr instance locally, which will start a sysmgr process as a
-  // separate process.  That sysmgr process will start a codec_factory process
-  // when a request for pa_directory/svc/fuchsia.mediacodec.CodecFactory
-  // arrives.
+TEST(DecoderTest, AacDecoder) {
   async::Loop main_loop(&kAsyncLoopConfigAttachToThread);
-  auto context = component::StartupContext::CreateFromStartupInfoNotChecked();
-  zx::channel appmgr_pa_directory_client, appmgr_pa_directory_server;
-  zx_status_t zx_result = zx::channel::create(0, &appmgr_pa_directory_client,
-                                              &appmgr_pa_directory_server);
-  if (zx_result != ZX_OK) {
-    printf("zx::channel::create() failed\n");
-    exit(-1);
-  }
-  fidl::VectorPtr<fidl::StringPtr> sysmgr_args;
-  sysmgr_args.push_back(
-      "--config={\"services\": { \"fuchsia.mediacodec.CodecFactory\": "
-      "\"codec_factory\" } }");
-  sysmgr_args.push_back("--test");
-  std::unique_ptr<component::Appmgr> appmgr =
-      std::make_unique<component::Appmgr>(
-          main_loop.dispatcher(),
-          component::AppmgrArgs{
-              .pa_directory_request = appmgr_pa_directory_server.release(),
-              .environment_services = context->incoming_services(),
-              .sysmgr_url = "sysmgr",
-              .sysmgr_args = std::move(sysmgr_args),
-              .run_virtual_console = false,
-              .retry_sysmgr_crash = false,
-          });
   main_loop.StartThread("main_loop");
-  zx::channel appmgr_svc_dir_client, appmgr_svc_dir_server;
-  zx_result =
-      zx::channel::create(0, &appmgr_svc_dir_client, &appmgr_svc_dir_server);
-  if (zx_result != ZX_OK) {
-    printf("zx::channel::create() failed (2)\n");
-    exit(-1);
-  }
-  zx_result = fdio_service_connect_at(appmgr_pa_directory_client.get(), "svc",
-                                      appmgr_svc_dir_server.release());
-  if (zx_result != ZX_OK) {
-    printf("fdio_service_connect_at() failed\n");
-    exit(-1);
-  }
-
-  // The svcmgr started by appmgr will handle requests for
-  // pa_directory/svc/fuchsia.mediacodec.CodecFactory by creating a
-  // codec_factory process, but that doesn't mean that code running in this
-  // integration test can call
-  // startup_context->ConnectToEnvironmentService<fuchsia::mediacodec::CodecFactory>();
-  // Instead, we connect to the CodecFactory here, and pass that into
-  // use_aac_decoder().
-
-  // This gets sysmgr code to start CodecFactory the same way it would in a real
-  // system, but this doesn't let this test ask for the CodecFactory based on
-  // the test's process-local /svc directory.
+  auto startup_context =
+      component::StartupContext::CreateFromStartupInfo();
   fuchsia::mediacodec::CodecFactoryPtr codec_factory;
-  zx_result = fdio_service_connect_at(
-      appmgr_svc_dir_client.get(), ::fuchsia::mediacodec::CodecFactory::Name_,
-      codec_factory.NewRequest(main_loop.dispatcher()).TakeChannel().release());
-  if (zx_result != ZX_OK) {
-    printf("fdio_service_connect_at() failed (2)\n");
-    exit(-1);
-  }
-
-  printf("The test file is: %s\n", kInputFilePath);
-  printf("The expected sha256 on x64 is: %s\n", kGoldenSha256_x64);
-  printf("The expected sha256 on arm64 is: %s\n", kGoldenSha256_arm64);
-  printf("Decoding test file and computing sha256...\n");
+  startup_context->ConnectToEnvironmentService(
+      codec_factory.NewRequest(main_loop.dispatcher()));
 
   uint8_t md[SHA256_DIGEST_LENGTH];
   use_aac_decoder(&main_loop, std::move(codec_factory), kInputFilePath, "", md);
@@ -132,24 +68,16 @@ int main(int argc, char* argv[]) {
     // Writes the terminating 0 each time, returns 2 each time.
     actual_sha256_ptr += snprintf(actual_sha256_ptr, 3, "%02x", byte);
   }
-  assert(actual_sha256_ptr == actual_sha256 + SHA256_DIGEST_LENGTH * 2);
-  printf("Done decoding - computed sha256 is: %s\n", actual_sha256);
-  if (strcmp(actual_sha256, kGoldenSha256_x64) &&
-      strcmp(actual_sha256, kGoldenSha256_arm64)) {
-    printf(
-        "The sha256 doesn't match - expected: %s (x64) or %s (arm64) actual: "
-        "%s\n",
-        kGoldenSha256_x64, kGoldenSha256_arm64, actual_sha256);
-    exit(-1);
-  }
-  printf(
-      "The computed sha256 matches kGoldenSha256_x64 or kGoldenSha256_arm64.  "
-      "Yay!\nPASS\n");
+  EXPECT_EQ(actual_sha256_ptr, actual_sha256 + SHA256_DIGEST_LENGTH * 2);
+  EXPECT_TRUE(!strcmp(actual_sha256, kGoldenSha256_x64) ||
+              !strcmp(actual_sha256, kGoldenSha256_arm64))
+      << "The sha256 doesn't match - expected: " << kGoldenSha256_x64
+      << " (x64) or " << kGoldenSha256_arm64
+      << " (arm64) actual: " << actual_sha256;
 
   main_loop.Quit();
   main_loop.JoinThreads();
-  appmgr.reset();
   main_loop.Shutdown();
-
-  return 0;
 }
+
+}  // namespace

@@ -66,6 +66,13 @@ package("tests") {
       dest = "media_test_data/test_audio.adts"
     },
   ]
+
+  meta = [
+    {
+      path = rebase_path("use_media_decoder/meta/use_aac_decoder_test.cmx")
+      dest = "use_aac_decoder_test.cmx"
+    },
+  ]
 }
 
 # Tests that don't run on CQ

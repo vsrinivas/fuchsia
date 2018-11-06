@@ -11,6 +11,7 @@
 #include <lib/svc/cpp/services.h>
 #include <trace-provider/provider.h>
 #include <zircon/device/media-codec.h>
+#include <zircon/status.h>
 
 #include <fcntl.h>
 
@@ -44,6 +45,7 @@ CodecFactoryApp::CodecFactoryApp(async::Loop* loop) : loop_(loop) {
   if (run_result != ZX_OK) {
     // ignore/skip the driver that failed the channel already
     // The ~codec_factory takes care of un-binding.
+    FXL_LOG(ERROR) << "loop failed: " << zx_status_get_string(run_result);
     return;
   }
   FXL_LOG(INFO)
