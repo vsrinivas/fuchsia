@@ -4,20 +4,25 @@
 
 import("//build/package.gni")
 
-package("tool") {
-  deprecated_no_cmx = "//build"
-
+package("util") {
   deps = [
     ":bin",
   ]
 
-  binary = "mdns"
+  binary = "mdns_util"
 
-  package_name = "mdns"
+  package_name = "mdns_util"
+
+  meta = [
+    {
+      path = rebase_path("meta/mdns_util.cmx")
+      dest = "mdns_util.cmx"
+    },
+  ]
 }
 
 executable("bin") {
-  output_name = "mdns"
+  output_name = "mdns_util"
 
   sources = [
     "formatting.cc",
