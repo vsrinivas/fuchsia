@@ -26,6 +26,8 @@ import (
 
 	"fidl/fuchsia/amber"
 
+	"fuchsia.googlesource.com/sse"
+
 	tuf "github.com/flynn/go-tuf/client"
 	tuf_data "github.com/flynn/go-tuf/data"
 	"github.com/rjw57/oauth2device"
@@ -250,6 +252,9 @@ func LoadSourceFromPath(dir string) (*Source, error) {
 }
 
 func (f *Source) Enabled() bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
 	return *f.cfg.Status.Enabled
 }
 
@@ -257,10 +262,10 @@ func (f *Source) Enabled() bool {
 // data to create the derived fields, like the TUFClient.
 func (f *Source) initSource() error {
 	f.mu.Lock()
-	defer f.mu.Unlock()
 
 	keys, err := newTUFKeys(f.cfg.Config.RootKeys)
 	if err != nil {
+		f.mu.Unlock()
 		return err
 	}
 	f.keys = keys
@@ -269,14 +274,18 @@ func (f *Source) initSource() error {
 	// it's own directory.
 	localStore, err := NewFileStore(filepath.Join(f.dir, "tuf.json"))
 	if err != nil {
+		f.mu.Unlock()
 		return IOError{fmt.Errorf("couldn't open datastore: %s", err)}
 	}
 	f.localStore = localStore
 
 	if err := f.updateTUFClientLocked(); err != nil {
+		f.mu.Unlock()
 		return err
 	}
+	f.mu.Unlock()
 
+	f.AutoWatch()
 	return nil
 }
 
@@ -450,7 +459,12 @@ func (f *Source) GetConfig() *amber.SourceConfig {
 }
 
 func (f *Source) SetEnabled(enabled bool) {
+	f.mu.Lock()
 	f.cfg.Status.Enabled = &enabled
+	f.mu.Unlock()
+	if enabled {
+		f.AutoWatch()
+	}
 }
 
 func (f *Source) GetHttpClient() (*http.Client, error) {
@@ -553,6 +567,10 @@ func (f *Source) waitForDeviceAuthorization(config *oauth2device.Config, code *o
 func (f *Source) Update() error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+
+	if !*f.cfg.Status.Enabled {
+		return nil
+	}
 
 	if err := f.initLocalStoreLocked(); err != nil {
 		return fmt.Errorf("tuf_source: source could not be initialized: %s", err)
@@ -762,4 +780,52 @@ func (f *Source) FetchInto(blob string, length int64, outputDir string) error {
 	}
 
 	return nil
+}
+
+func (f *Source) AutoWatch() {
+	if !f.Enabled() || !f.cfg.Config.Auto {
+		return
+	}
+	go func() {
+		for {
+			if !f.Enabled() {
+				return
+			}
+
+			req, err := http.NewRequest("GET", f.cfg.Config.RepoUrl+"/auto", nil)
+			if err != nil {
+				log.Printf("autowatch terminal error: %q: %s", f.cfg.Config.RepoUrl, err)
+				return
+			}
+			req.Header.Add("Accept", "text/event-stream")
+			cli, err := f.GetHttpClient()
+			if err != nil {
+				log.Printf("autowatch error for %q: %s", f.cfg.Config.RepoUrl, err)
+				time.Sleep(time.Minute)
+				continue
+			}
+			r, err := cli.Do(req)
+			if err != nil {
+				log.Printf("autowatch error for %q: %s", f.cfg.Config.RepoUrl, err)
+				time.Sleep(time.Minute)
+				continue
+			}
+			c, err := sse.New(r)
+			if err != nil {
+				log.Printf("autowatch error for %q: %s", f.cfg.Config.RepoUrl, err)
+				time.Sleep(time.Minute)
+				continue
+			}
+			for {
+				_, err := c.ReadEvent()
+				if err != nil {
+					break
+				}
+				if !f.Enabled() {
+					return
+				}
+				f.Update()
+			}
+		}
+	}()
 }

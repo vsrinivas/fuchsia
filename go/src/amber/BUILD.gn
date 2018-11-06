@@ -13,6 +13,7 @@ go_library("amber_lib") {
   name = "amber"
   deps = [
     "//garnet/go/src/merkle",
+    "//garnet/go/src/sse",
     "//garnet/public/fidl/fuchsia.amber($go_toolchain)",
     "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/go/third_party:github.com/flynn/go-tuf",
