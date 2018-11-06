@@ -143,7 +143,7 @@ zx_status_t zxs_send(const zxs_socket_t* socket, const void* buffer,
                      size_t capacity, size_t* out_actual);
 
 // Receive data from |socket| into the given |buffer|.
-zx_status_t zxs_recv(const zxs_socket_t* socket, int flag, void* buffer,
+zx_status_t zxs_recv(const zxs_socket_t* socket, void* buffer,
                      size_t capacity, size_t* out_actual);
 
 // Send the data in the given |buffer| to |addr| over |socket|.
