@@ -14,4 +14,7 @@ MODULE_STATIC_LIBS := system/ulib/ddk system/dev/lib/usb system/ulib/sync
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-bt-hci
+
 include make/module.mk

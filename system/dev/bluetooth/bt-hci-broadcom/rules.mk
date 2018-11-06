@@ -14,6 +14,9 @@ MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-bt-hci
+
 ifeq ($(call TOBOOL,$(INTERNAL_ACCESS)),true)
 MODULE_FIRMWARE := bluetooth/bcm4345c4/BCM4345C5.hcd
 endif
