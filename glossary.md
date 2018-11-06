@@ -33,13 +33,13 @@ in which those components run. It is the first process started in the `fuchsia` 
 
 #### **Armadillo**
 
-An implementation of a user shell.
+An implementation of a session shell.
 - [Source](https://fuchsia.googlesource.com/topaz/+/master/shell/armadillo/)
 
 #### **Base shell**
 
 The platform-guaranteed set of software functionality which provides a basic user-facing interface
-for boot, first-use, authentication, escape from and selection of user shells, and device recovery.
+for boot, first-use, authentication, escape from and selection of session shells, and device recovery.
 
 #### **Component**
 
@@ -301,10 +301,9 @@ Topaz is one of the four layers of the Fuchsia codebase.
 - [The Fuchsia layer cake](development/source_code/layers.md)
 - [Source](https://fuchsia.googlesource.com/topaz/+/master)
 
-#### **User Shell**
+#### **Session Shell**
 
-The user-specific and replaceable set of software functionality that works in conjunction with
-devices to create an environment in which people can interact with modules.
+The replaceable set of software functionality that works in conjunction with devices to create an environment in which people can interact with mods, agents and suggestions.
 
 #### **VDSO**
 

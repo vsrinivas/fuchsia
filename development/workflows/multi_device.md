@@ -71,15 +71,15 @@ $ netruncmd <nodename> cloud_sync clean
 Use the `basemgr` to start a story on one device:
 
 ```
-$ netruncmd <first-node-name> "basemgr --user_shell=dev_user_shell \
-  --user_shell_args=--root_module=example_todo_story"
+$ netruncmd <first-node-name> "basemgr --session_shell=dev_session_shell \
+  --session_shell_args=--root_module=example_todo_story"
 ```
 
 Using `loglistener <first-node-name>` take note of the story ID from a line the
 following:
 
 ```
-... DevUserShell Starting story with id: IM7U9hBcCt
+... DevSessionShell Starting story with id: IM7U9hBcCt
 ```
 
 ### Open The Same Story On The Second Device.
@@ -87,7 +87,7 @@ following:
 The story can be started on the second device either through the system UI or by
 specifying the story ID.
 
-#### System UI, aka User Shell, aka Armadillo
+#### System UI, aka Session Shell, aka Armadillo
 Launch the system UI using `basemgr`:
 
 ```
@@ -103,6 +103,6 @@ With the story ID noted above from launch the story from a shell:
 
 ```
 $ netruncmd <second-node-name> "basemgr \
-  --user_shell=dev_user_shell \
-  --user_shell_args=--story_id=<story_id>
+  --session_shell=dev_session_shell \
+  --session_shell_args=--story_id=<story_id>
 ```

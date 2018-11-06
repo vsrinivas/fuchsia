@@ -16,17 +16,17 @@ on the screen.
 
 ## Running the Examples on Fuchsia
 
-You can run an example module without going through the full-blown user shell.
+You can run an example module without going through the full-blown session shell.
 The available URLs for for flutter module examples are:
 
 *   `hello_mod`
 
 After a successful build of fuchsia, type the following command from the zx
-console to run the basemgr with the dev user shell:
+console to run the basemgr with the dev session shell:
 
 ```
 killall scenic  # Kills all other mods.
-basemgr --user_shell=dev_user_shell --user_shell_args=--root_module=hello_mod
+basemgr --session_shell=dev_session_shell --session_shell_args=--root_module=hello_mod
 ```
 
 # Basics
