@@ -17,6 +17,7 @@ MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-mailbox \
+    system/banjo/ddk-protocol-platform-device \
 
 include make/module.mk
 
@@ -35,5 +36,6 @@ MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-mailbox \
+    system/banjo/ddk-protocol-platform-device \
 
 include make/module.mk

@@ -31,5 +31,6 @@ MODULE_HEADER_DEPS := system/dev/lib/mt8167
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-i2c \
     system/banjo/ddk-protocol-i2c-impl \
+    system/banjo/ddk-protocol-platform-device \
 
 include make/module.mk

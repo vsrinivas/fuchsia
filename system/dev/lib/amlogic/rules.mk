@@ -25,10 +25,12 @@ MODULE_STATIC_LIBS := \
     system/ulib/sync \
     system/ulib/zx \
 
-
 MODULE_LIBS := \
     system/ulib/driver \
     system/ulib/c \
     system/ulib/zircon \
+
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-platform-device \
 
 include make/module.mk

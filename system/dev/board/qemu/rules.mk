@@ -17,6 +17,9 @@ MODULE_STATIC_LIBS := system/ulib/ddk
 
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-platform-device \
+
 include make/module.mk
 
 # Below we have rules for four test drivers for testing platform bus features
@@ -34,6 +37,9 @@ MODULE_STATIC_LIBS := system/ulib/ddk
 
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-platform-device \
+
 include make/module.mk
 
 MODULE := $(LOCAL_DIR).test-child-1
@@ -48,6 +54,9 @@ MODULE_SRCS := \
 MODULE_STATIC_LIBS := system/ulib/ddk
 
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
+
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-platform-device \
 
 include make/module.mk
 
@@ -64,6 +73,9 @@ MODULE_STATIC_LIBS := system/ulib/ddk
 
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-platform-device \
+
 include make/module.mk
 
 MODULE := $(LOCAL_DIR).test-child-3
@@ -78,5 +90,8 @@ MODULE_SRCS := \
 MODULE_STATIC_LIBS := system/ulib/ddk
 
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
+
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-platform-device \
 
 include make/module.mk

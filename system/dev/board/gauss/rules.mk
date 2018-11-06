@@ -35,6 +35,7 @@ MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-gpio \
     system/banjo/ddk-protocol-gpio-impl \
     system/banjo/ddk-protocol-iommu \
+    system/banjo/ddk-protocol-platform-device \
 
 include make/module.mk
 
@@ -56,6 +57,7 @@ MODULE_LIBS := \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-i2c \
+    system/banjo/ddk-protocol-platform-device \
 
 include make/module.mk
 

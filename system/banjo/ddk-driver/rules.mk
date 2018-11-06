@@ -6,16 +6,15 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := driver
+MODULE_TYPE := banjo
 
-MODULE_SRCS += \
-    $(LOCAL_DIR)/machina.c \
+MODULE_PACKAGE := banjo
 
-MODULE_STATIC_LIBS := system/ulib/ddk
+MODULE_BANJO_LIBRARY := ddk.driver
 
-MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
+MODULE_BANJO_NAME := driver
 
-MODULE_BANJO_LIBS := \
-    system/banjo/ddk-protocol-platform-device \
+MODULE_SRCS += $(LOCAL_DIR)/driver.banjo
 
 include make/module.mk
+

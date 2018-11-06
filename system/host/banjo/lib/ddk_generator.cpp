@@ -285,18 +285,9 @@ void EmitMethodOutParamDecl(std::ostream* file, const DdkGenerator::Member& memb
             break;
         case flat::Decl::Kind::kEnum:
         case flat::Decl::Kind::kInterface:
-            *file << member.type << "*" << member_name;
-            break;
         case flat::Decl::Kind::kStruct:
         case flat::Decl::Kind::kUnion:
-            switch (member.nullability) {
-            case types::Nullability::kNullable:
-                *file << member.type << member_name;
-                break;
-            case types::Nullability::kNonnullable:
-                *file << member.type << "*" << member_name;
-                break;
-            }
+            *file << member.type << "*" << member_name;
             break;
         }
         break;

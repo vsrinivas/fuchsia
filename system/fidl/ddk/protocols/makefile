@@ -29,9 +29,6 @@ clk:
 platform-bus: $(LOCAL_DIR)/libs/driver.banjo $(LOCAL_DIR)/platform-device.banjo
 	$(run-banjo)
 
-platform-device: $(LOCAL_DIR)/libs/driver.banjo
-	$(run-banjo)
-
 platform-proxy:
 	$(run-banjo)
 

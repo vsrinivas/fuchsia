@@ -31,6 +31,7 @@ MODULE_STATIC_LIBS := \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-i2c \
+    system/banjo/ddk-protocol-platform-device \
 
 MODULE_HEADER_DEPS := system/dev/lib/amlogic
 

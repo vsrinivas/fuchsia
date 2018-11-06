@@ -79,6 +79,7 @@ MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-hidbus \
     system/banjo/ddk-protocol-intel-hda-dsp \
     system/banjo/ddk-protocol-pciroot \
+    system/banjo/ddk-protocol-platform-device \
 
 else # !ARCH=x86
 

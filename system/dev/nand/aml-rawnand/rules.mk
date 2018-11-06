@@ -26,4 +26,7 @@ MODULE_FIDL_LIBS := \
 
 MODULE_HEADER_DEPS := $(LOCAL_DIR) system/dev/lib/amlogic
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-platform-device \
+
 include make/module.mk
