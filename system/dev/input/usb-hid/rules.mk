@@ -15,4 +15,7 @@ MODULE_STATIC_LIBS := system/ulib/ddk system/dev/lib/usb \
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-hidbus \
+
 include make/module.mk

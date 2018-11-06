@@ -26,9 +26,6 @@ endef
 clk:
 	$(run-banjo)
 
-hidbus:
-	$(run-banjo)
-
 i2c:
 	$(run-banjo)
 

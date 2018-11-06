@@ -75,7 +75,8 @@ MODULE_SRCS += $(LOCAL_DIR)/kpci.c
 endif
 
 MODULE_BANJO_LIBS := \
-    system/banjo/ddk-protocol-acpi
+    system/banjo/ddk-protocol-acpi \
+    system/banjo/ddk-protocol-hidbus \
 
 else # !ARCH=x86
 
