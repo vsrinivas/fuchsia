@@ -28,5 +28,6 @@ MODULE_LIBS := \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-i2c \
+    system/banjo/ddk-protocol-i2c-impl \
 
 include make/module.mk

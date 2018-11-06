@@ -40,7 +40,8 @@ MODULE_LIBS := system/ulib/driver \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-amlogic-canvas \
-    system/banjo/ddk-protocol-gpio
+    system/banjo/ddk-protocol-gpio \
+    system/banjo/ddk-protocol-i2c-impl \
 
 MODULE_HEADER_DEPS := \
     system/dev/lib/amlogic

@@ -37,6 +37,9 @@ MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
 MODULE_FIDL_LIBS := system/fidl/zircon-backlight
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-i2c-impl \
+
 include make/module.mk
 
 endif
