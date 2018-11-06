@@ -114,14 +114,8 @@ void DebuggedThread::OnException(uint32_t type) {
   }
 
   notify.process_koid = process_->koid();
-  FillThreadRecord(thread_, &notify.thread);
-
-  // Send the top 2 stack frames so the caller has the current location and
-  // its return address.
-  UnwindStack(process_->process(), process_->dl_debug_addr(), thread_,
-              *arch::ArchProvider::Get().IPInRegs(&regs),
-              *arch::ArchProvider::Get().SPInRegs(&regs),
-              *arch::ArchProvider::Get().BPInRegs(&regs), 2, &notify.frames);
+  FillThreadRecord(process_->process(), process_->dl_debug_addr(), thread_,
+                   &regs, &notify.thread);
 
   // Send notification.
   debug_ipc::MessageWriter writer;
@@ -187,7 +181,8 @@ void DebuggedThread::GetRegisters(
 
 void DebuggedThread::SendThreadNotification() const {
   debug_ipc::ThreadRecord record;
-  FillThreadRecord(thread_, &record);
+  FillThreadRecord(process_->process(), process_->dl_debug_addr(), thread_,
+                   nullptr, &record);
 
   debug_ipc::NotifyThread notify;
   notify.process_koid = process_->koid();

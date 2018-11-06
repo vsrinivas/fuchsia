@@ -24,7 +24,7 @@ TEST(ProcessInfo, GetProcessThreads) {
   EXPECT_EQ(thread_name, NameForObject(current_thread));
 
   std::vector<debug_ipc::ThreadRecord> threads;
-  status = GetProcessThreads(zx_process_self(), &threads);
+  status = GetProcessThreads(*zx::process::self(), 0, &threads);
   EXPECT_EQ(ZX_OK, status);
   EXPECT_LT(0u, threads.size());
 

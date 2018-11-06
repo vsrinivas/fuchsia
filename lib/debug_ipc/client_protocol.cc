@@ -34,6 +34,9 @@ bool Deserialize(MessageReader* reader, ThreadRecord* record) {
   if (state >= static_cast<uint32_t>(ThreadRecord::State::kLast))
     return false;
   record->state = static_cast<ThreadRecord::State>(state);
+
+  if (!Deserialize(reader, &record->frames))
+    return false;
   return true;
 }
 
@@ -474,8 +477,6 @@ bool ReadNotifyException(MessageReader* reader, NotifyException* notify) {
     return false;
   notify->type = static_cast<NotifyException::Type>(type);
 
-  if (!Deserialize(reader, &notify->frames))
-    return false;
   return Deserialize(reader, &notify->hit_breakpoints);
 }
 

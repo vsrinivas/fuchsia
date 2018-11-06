@@ -30,8 +30,8 @@ class FinishThreadControllerTest : public ThreadControllerTest {
     n.type = debug_ipc::NotifyException::Type::kSoftware;
     n.thread.koid = thread()->GetKoid();
     n.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-    n.frames.emplace_back(kInitialAddress, kInitialBase, kInitialBase);
-    n.frames.emplace_back(kReturnAddress, kReturnBase, kReturnBase);
+    n.thread.frames.emplace_back(kInitialAddress, kInitialBase, kInitialBase);
+    n.thread.frames.emplace_back(kReturnAddress, kReturnBase, kReturnBase);
 
     return n;
   }
@@ -49,7 +49,8 @@ TEST_F(FinishThreadControllerTest, Finish) {
   // fingerprint of the one to return to can be computed). This stack value
   // should be larger than above (stack grows downward).
   debug_ipc::BacktraceReply expected_reply;
-  expected_reply.frames = break_notification.frames;  // Copy previous ones.
+  // Copy previous frames and add to it.
+  expected_reply.frames = break_notification.thread.frames;
   expected_reply.frames.emplace_back(kReturnAddress, kReturnBase, kReturnBase);
   mock_remote_api()->set_backtrace_reply(expected_reply);
 
@@ -77,9 +78,9 @@ TEST_F(FinishThreadControllerTest, Finish) {
 
   // Simulate a hit of the breakpoint. This stack pointer is too small
   // (indicating a recursive call) so it should not trigger.
-  break_notification.frames.clear();
-  break_notification.frames.emplace_back(kReturnAddress, kInitialBase - 0x100,
-                                         kInitialBase - 0x100);
+  break_notification.thread.frames.clear();
+  break_notification.thread.frames.emplace_back(
+      kReturnAddress, kInitialBase - 0x100, kInitialBase - 0x100);
   break_notification.hit_breakpoints.emplace_back();
   break_notification.hit_breakpoints[0].breakpoint_id =
       mock_remote_api()->last_breakpoint_id();
@@ -88,8 +89,8 @@ TEST_F(FinishThreadControllerTest, Finish) {
 
   // Simulate a breakpoint hit with a lower BP. This should trigger a thread
   // stop.
-  break_notification.frames[0].sp = kReturnBase;
-  break_notification.frames[0].bp = kReturnBase;
+  break_notification.thread.frames[0].sp = kReturnBase;
+  break_notification.thread.frames[0].bp = kReturnBase;
   InjectException(break_notification);
   EXPECT_TRUE(thread_observer.got_stopped());
   EXPECT_EQ(1, mock_remote_api()->breakpoint_remove_count());
@@ -101,13 +102,13 @@ TEST_F(FinishThreadControllerTest, BottomStackFrame) {
   // Notify of thread stop. Here we have the 0th frame of the current
   // location, and a null frame.
   auto break_notification = MakeBreakNotification();
-  break_notification.frames[1] = debug_ipc::StackFrame(0, 0, 0);
+  break_notification.thread.frames[1] = debug_ipc::StackFrame(0, 0, 0);
   InjectException(break_notification);
 
   // The backtrace reply gives the same two frames since that's all there is
   // (the Thread doesn't know until it requests them).
   debug_ipc::BacktraceReply expected_reply;
-  expected_reply.frames = break_notification.frames;
+  expected_reply.frames = break_notification.thread.frames;
   mock_remote_api()->set_backtrace_reply(expected_reply);
 
   auto frames = thread()->GetFrames();

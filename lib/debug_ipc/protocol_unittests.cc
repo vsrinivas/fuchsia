@@ -588,10 +588,10 @@ TEST(Protocol, NotifyException) {
   NotifyException initial;
   initial.process_koid = 23;
   initial.thread.name = "foo";
+  initial.thread.frames.resize(1);
+  initial.thread.frames[0].ip = 0x7647342634;
+  initial.thread.frames[0].sp = 0x9861238251;
   initial.type = NotifyException::Type::kHardware;
-  initial.frames.resize(1);
-  initial.frames[0].ip = 0x7647342634;
-  initial.frames[0].sp = 0x9861238251;
 
   initial.hit_breakpoints.emplace_back();
   initial.hit_breakpoints[0].breakpoint_id = 45;
@@ -609,9 +609,9 @@ TEST(Protocol, NotifyException) {
 
   EXPECT_EQ(initial.process_koid, second.process_koid);
   EXPECT_EQ(initial.thread.name, second.thread.name);
+  EXPECT_EQ(initial.thread.frames[0].ip, second.thread.frames[0].ip);
+  EXPECT_EQ(initial.thread.frames[0].sp, second.thread.frames[0].sp);
   EXPECT_EQ(initial.type, second.type);
-  EXPECT_EQ(initial.frames[0].ip, second.frames[0].ip);
-  EXPECT_EQ(initial.frames[0].sp, second.frames[0].sp);
   ASSERT_EQ(initial.hit_breakpoints.size(), second.hit_breakpoints.size());
 
   EXPECT_EQ(initial.hit_breakpoints[0].breakpoint_id,

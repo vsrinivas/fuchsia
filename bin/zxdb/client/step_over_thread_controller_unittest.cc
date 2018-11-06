@@ -33,13 +33,13 @@ TEST_F(StepOverThreadControllerTest, InOutFinish) {
   exception.type = debug_ipc::NotifyException::Type::kSingleStep;
   exception.thread.koid = thread()->GetKoid();
   exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-  exception.frames.resize(2);
-  exception.frames[0].ip = kBeginAddr;
-  exception.frames[0].sp = kInitialSP;
-  exception.frames[0].bp = kInitialBP;
-  exception.frames[1].ip = kBeginAddr - 0x100;
-  exception.frames[1].sp = kPrevSP;
-  exception.frames[1].bp = kPrevBP;
+  exception.thread.frames.resize(2);
+  exception.thread.frames[0].ip = kBeginAddr;
+  exception.thread.frames[0].sp = kInitialSP;
+  exception.thread.frames[0].bp = kInitialBP;
+  exception.thread.frames[1].ip = kBeginAddr - 0x100;
+  exception.thread.frames[1].sp = kPrevSP;
+  exception.thread.frames[1].bp = kPrevBP;
   InjectException(exception);
 
   // Continue the thread with the controller stepping in range.
@@ -58,7 +58,7 @@ TEST_F(StepOverThreadControllerTest, InOutFinish) {
   // Issue a stop in the range. This should get transparently resumed. In
   // general the backend won't issue this since it will continue stepping in
   // the given range, but it could, and we should resume anyway.
-  exception.frames[0].ip += 4;
+  exception.thread.frames[0].ip += 4;
   InjectException(exception);
   EXPECT_EQ(2, mock_remote_api()->resume_count());
 
@@ -66,22 +66,23 @@ TEST_F(StepOverThreadControllerTest, InOutFinish) {
   // the outer function since the prologue hasn't executed yet. The previous
   // frame's IP will be the return address.
   constexpr uint64_t kInnerSP = kInitialSP - 8;
-  exception.frames.emplace(exception.frames.begin());
-  exception.frames[0].ip = 0x3000;
-  exception.frames[0].sp = kInnerSP;
-  exception.frames[0].bp = kInitialSP;
-  exception.frames[1].ip += 4;
+  exception.thread.frames.emplace(exception.thread.frames.begin());
+  exception.thread.frames[0].ip = 0x3000;
+  exception.thread.frames[0].sp = kInnerSP;
+  exception.thread.frames[0].bp = kInitialSP;
+  exception.thread.frames[1].ip += 4;
   InjectException(exception);
 
   // That should have sent a resume + a breakpoint set at the frame 1 IP (this
   // breakpoint is implementing the "finish" to step out of the function call).
   EXPECT_EQ(3, mock_remote_api()->resume_count());
   EXPECT_EQ(0, mock_remote_api()->breakpoint_remove_count());
-  EXPECT_EQ(exception.frames[1].ip,
+  EXPECT_EQ(exception.thread.frames[1].ip,
             mock_remote_api()->last_breakpoint_address());
 
   // Send a breakpoint completion notification at the previous stack frame.
-  exception.frames.erase(exception.frames.begin());  // Erase topmost.
+  exception.thread.frames.erase(
+      exception.thread.frames.begin());  // Erase topmost.
   // Breakpoint exceptions are "software".
   exception.type = debug_ipc::NotifyException::Type::kSoftware;
   exception.hit_breakpoints.resize(1);
@@ -96,7 +97,7 @@ TEST_F(StepOverThreadControllerTest, InOutFinish) {
 
   // Last exception is outside the range (the end is non-inclusive).
   exception.hit_breakpoints.clear();
-  exception.frames[0].ip = kEndAddr;
+  exception.thread.frames[0].ip = kEndAddr;
   InjectException(exception);
 
   // Should have stopped.

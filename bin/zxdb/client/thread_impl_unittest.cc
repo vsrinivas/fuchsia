@@ -63,9 +63,9 @@ TEST_F(ThreadImplTest, Frames) {
   break_notification.type = debug_ipc::NotifyException::Type::kSoftware;
   break_notification.thread.koid = kThreadKoid;
   break_notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-  break_notification.frames.resize(1);
-  break_notification.frames[0].ip = kAddress1;
-  break_notification.frames[0].sp = kStack1;
+  break_notification.thread.frames.resize(1);
+  break_notification.thread.frames[0].ip = kAddress1;
+  break_notification.thread.frames[0].sp = kStack1;
   InjectException(break_notification);
 
   // There should be one frame with the address of the stop.
@@ -154,9 +154,9 @@ TEST_F(ThreadImplTest, ControllersWithGeneralException) {
   notification.type = debug_ipc::NotifyException::Type::kSoftware;
   notification.thread.koid = kThreadKoid;
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-  notification.frames.resize(1);
-  notification.frames[0].ip = kAddress1;
-  notification.frames[0].sp = kStack1;
+  notification.thread.frames.resize(1);
+  notification.thread.frames[0].ip = kAddress1;
+  notification.thread.frames[0].sp = kStack1;
   InjectException(notification);
 
   // Set a controller that always says to continue.

@@ -236,7 +236,8 @@ void DebugAgent::OnThreads(const debug_ipc::ThreadsRequest& request,
   auto found = procs_.find(request.process_koid);
   if (found == procs_.end())
     return;
-  GetProcessThreads(found->second->process().get(), &reply->threads);
+  GetProcessThreads(found->second->process(), found->second->dl_debug_addr(),
+                    &reply->threads);
 }
 
 void DebugAgent::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,

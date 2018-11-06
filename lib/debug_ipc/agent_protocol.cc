@@ -56,6 +56,7 @@ void Serialize(const ThreadRecord& record, MessageWriter* writer) {
   writer->WriteUint64(record.koid);
   writer->WriteString(record.name);
   writer->WriteUint32(static_cast<uint32_t>(record.state));
+  Serialize(record.frames, writer);
 }
 
 void Serialize(const MemoryBlock& block, MessageWriter* writer) {
@@ -428,7 +429,6 @@ void WriteNotifyException(const NotifyException& notify,
   writer->WriteUint64(notify.process_koid);
   Serialize(notify.thread, writer);
   writer->WriteUint32(static_cast<uint32_t>(notify.type));
-  Serialize(notify.frames, writer);
   Serialize(notify.hit_breakpoints, writer);
 }
 

@@ -206,29 +206,20 @@ void ThreadImpl::GetRegisters(
 void ThreadImpl::SetMetadata(const debug_ipc::ThreadRecord& record) {
   FXL_DCHECK(koid_ == record.koid);
 
-  // Any stack frames need clearing when we transition to running. Do the
-  // notification after updating the state so code handling the notification
-  // will see the latest values.
-  bool frames_need_clearing =
-      state_ != debug_ipc::ThreadRecord::State::kRunning &&
-      record.state == debug_ipc::ThreadRecord::State::kRunning;
-
   name_ = record.name;
   state_ = record.state;
 
-  if (frames_need_clearing)
-    ClearFrames();
+  SaveFrames(record.frames, false);
 }
 
 void ThreadImpl::SetMetadataFromException(
     const debug_ipc::NotifyException& notify) {
   SetMetadata(notify.thread);
 
-  // After an exception the thread should be blocked.
+  // After an exception the thread should be blocked and we should have
+  // at least one stack entry.
   FXL_DCHECK(state_ == debug_ipc::ThreadRecord::State::kBlocked);
-
-  FXL_DCHECK(!notify.frames.empty());
-  SaveFrames(notify.frames, false);
+  FXL_DCHECK(!notify.thread.frames.empty());
 }
 
 void ThreadImpl::OnException(

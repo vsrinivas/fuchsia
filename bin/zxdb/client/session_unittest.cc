@@ -184,8 +184,9 @@ TEST_F(SessionTest, MultiBreakpointStop) {
   notify.type = debug_ipc::NotifyException::Type::kSoftware;
   notify.thread.koid = kThreadKoid;
   notify.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-  notify.frames.resize(1);
-  notify.frames[0].ip = kAddress;  // Don't need stack pointers for this test.
+  notify.thread.frames.resize(1);
+  // Don't need stack pointers for this test.
+  notify.thread.frames[0].ip = kAddress;
   sink()->PopulateNotificationWithBreakpoints(&notify);
   InjectException(notify);
 
@@ -230,8 +231,9 @@ TEST_F(SessionTest, OneShotBreakpointDelete) {
   notify.type = debug_ipc::NotifyException::Type::kSoftware;
   notify.thread.koid = kThreadKoid;
   notify.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-  notify.frames.resize(1);
-  notify.frames[0].ip = kAddress;  // Don't need stack pointers for this test.
+  notify.thread.frames.resize(1);
+  // Don't need stack pointers for this test.
+  notify.thread.frames[0].ip = kAddress;
   sink()->PopulateNotificationWithBreakpoints(&notify);
 
   // There should have been one breakpoint populated, mark deleted.

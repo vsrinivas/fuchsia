@@ -12,7 +12,9 @@
 
 #include <algorithm>
 
+#include "garnet/bin/debug_agent/arch.h"
 #include "garnet/bin/debug_agent/object_util.h"
+#include "garnet/bin/debug_agent/unwind.h"
 #include "garnet/lib/debug_ipc/helper/elf.h"
 #include "lib/fxl/logging.h"
 
@@ -85,23 +87,27 @@ zx_status_t GetProcessInfo(zx_handle_t process, zx_info_process* info) {
                             sizeof(zx_info_process), nullptr, nullptr);
 }
 
-zx_status_t GetProcessThreads(zx_handle_t process,
+zx_status_t GetProcessThreads(const zx::process& process,
+                              uint64_t dl_debug_addr,
                               std::vector<debug_ipc::ThreadRecord>* threads) {
-  auto koids = GetChildKoids(process, ZX_INFO_PROCESS_THREADS);
+  auto koids = GetChildKoids(process.get(), ZX_INFO_PROCESS_THREADS);
   threads->resize(koids.size());
   for (size_t i = 0; i < koids.size(); i++) {
     (*threads)[i].koid = koids[i];
 
     zx_handle_t handle;
-    if (zx_object_get_child(process, koids[i], ZX_RIGHT_SAME_RIGHTS, &handle) ==
-        ZX_OK) {
-      FillThreadRecord(zx::thread(handle), &(*threads)[i]);
+    if (zx_object_get_child(process.get(), koids[i], ZX_RIGHT_SAME_RIGHTS,
+                            &handle) == ZX_OK) {
+      FillThreadRecord(process, dl_debug_addr, zx::thread(handle), nullptr,
+                       &(*threads)[i]);
     }
   }
   return ZX_OK;
 }
 
-void FillThreadRecord(const zx::thread& thread,
+void FillThreadRecord(const zx::process& process, uint64_t dl_debug_addr,
+                      const zx::thread& thread,
+                      const zx_thread_state_general_regs* optional_regs,
                       debug_ipc::ThreadRecord* record) {
   record->koid = KoidForObject(thread);
   record->name = NameForObject(thread);
@@ -113,6 +119,30 @@ void FillThreadRecord(const zx::thread& thread,
   } else {
     FXL_NOTREACHED();
     record->state = debug_ipc::ThreadRecord::State::kDead;
+  }
+
+  if (record->state == debug_ipc::ThreadRecord::State::kSuspended ||
+      record->state == debug_ipc::ThreadRecord::State::kBlocked) {
+    // Send the top 2 stack frames so the caller has the current location and
+    // its return address.
+
+    // The registers are required, fetch them if the caller didn't provide.
+    zx_thread_state_general_regs queried_regs;  // Storage for fetched regs.
+    zx_thread_state_general_regs* regs;
+    if (!optional_regs) {
+      thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &queried_regs,
+                        sizeof(queried_regs));
+      regs = &queried_regs;
+    } else {
+      // We don't change the values here but *InRegs below returns mutable
+      // references so we need a mutable pointer.
+      regs = const_cast<zx_thread_state_general_regs*>(optional_regs);
+    }
+
+    UnwindStack(process, dl_debug_addr, thread,
+                *arch::ArchProvider::Get().IPInRegs(regs),
+                *arch::ArchProvider::Get().SPInRegs(regs),
+                *arch::ArchProvider::Get().BPInRegs(regs), 2, &record->frames);
   }
 }
 

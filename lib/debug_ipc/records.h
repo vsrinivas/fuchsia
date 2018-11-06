@@ -28,6 +28,21 @@ struct ProcessTreeRecord {
   std::vector<ProcessTreeRecord> children;
 };
 
+struct StackFrame {
+  StackFrame() = default;
+  StackFrame(uint64_t ip, uint64_t bp, uint64_t sp) : ip(ip), bp(bp), sp(sp) {}
+
+  // Instruction pointer.
+  uint64_t ip = 0;
+
+  // Frame base pointer. This may be invalid if the code was compiled without
+  // frame pointers.
+  uint64_t bp = 0;
+
+  // Stack pointer.
+  uint64_t sp = 0;
+};
+
 struct ThreadRecord {
   enum class State : uint32_t {
     kNew = 0,
@@ -44,6 +59,12 @@ struct ThreadRecord {
   uint64_t koid = 0;
   std::string name;
   State state = State::kNew;
+
+  // The frames of the top of the stack when the thread is suspended. This will
+  // contain the top 2 frames (the current one and the caller) if they are
+  // available. It will always contain at least one frame when suspended which
+  // contains the current IP.
+  std::vector<StackFrame> frames;
 };
 
 struct MemoryBlock {
@@ -129,21 +150,6 @@ struct Module {
   std::string name;
   uint64_t base = 0;  // Load address of this file.
   std::string build_id;
-};
-
-struct StackFrame {
-  StackFrame() = default;
-  StackFrame(uint64_t ip, uint64_t bp, uint64_t sp) : ip(ip), bp(bp), sp(sp) {}
-
-  // Instruction pointer.
-  uint64_t ip = 0;
-
-  // Frame base pointer. This may be invalid if the code was compiled without
-  // frame pointers.
-  uint64_t bp = 0;
-
-  // Stack pointer.
-  uint64_t sp = 0;
 };
 
 struct AddressRegion {

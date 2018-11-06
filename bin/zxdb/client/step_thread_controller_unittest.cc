@@ -41,10 +41,10 @@ TEST_F(StepThreadControllerTest, SofwareException) {
   exception.type = debug_ipc::NotifyException::Type::kSingleStep;
   exception.thread.koid = thread()->GetKoid();
   exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-  exception.frames.resize(2);
-  exception.frames[0].ip = kBeginAddr;
-  exception.frames[0].sp = 0x5000;
-  exception.frames[0].bp = 0x5000;
+  exception.thread.frames.resize(2);
+  exception.thread.frames[0].ip = kBeginAddr;
+  exception.thread.frames[0].sp = 0x5000;
+  exception.thread.frames[0].bp = 0x5000;
   InjectException(exception);
 
   // Continue the thread with the controller stepping in range.
@@ -62,7 +62,7 @@ TEST_F(StepThreadControllerTest, SofwareException) {
 
   // Issue a software exception in the range.
   exception.type = debug_ipc::NotifyException::Type::kSoftware;
-  exception.frames[0].ip += 4;
+  exception.thread.frames[0].ip += 4;
   InjectException(exception);
 
   // It should have stayed stopped despite being in range.
@@ -109,10 +109,10 @@ TEST_F(StepThreadControllerTest, Line0) {
   exception.type = debug_ipc::NotifyException::Type::kSingleStep;
   exception.thread.koid = thread()->GetKoid();
   exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-  exception.frames.resize(2);
-  exception.frames[0].ip = kAddr1;
-  exception.frames[0].sp = 0x5000;
-  exception.frames[0].bp = 0x5000;
+  exception.thread.frames.resize(2);
+  exception.thread.frames[0].ip = kAddr1;
+  exception.thread.frames[0].sp = 0x5000;
+  exception.thread.frames[0].bp = 0x5000;
   InjectException(exception);
 
   // Continue the thread with the controller stepping in range.
@@ -129,18 +129,18 @@ TEST_F(StepThreadControllerTest, Line0) {
   EXPECT_EQ(1, mock_remote_api()->resume_count());
 
   // Stop on 2nd instruction (line 0). This should be automatically resumed.
-  exception.frames[0].ip = kAddr2;
+  exception.thread.frames[0].ip = kAddr2;
   InjectException(exception);
   EXPECT_EQ(2, mock_remote_api()->resume_count());
 
   // Stop on 3rd instruction (line 10). Since this matches the original line,
   // it should be automatically resumed.
-  exception.frames[0].ip = kAddr3;
+  exception.thread.frames[0].ip = kAddr3;
   InjectException(exception);
   EXPECT_EQ(3, mock_remote_api()->resume_count());
 
   // Stop on 4th instruction. Since this is line 11, we should stay stopped.
-  exception.frames[0].ip = kAddr4;
+  exception.thread.frames[0].ip = kAddr4;
   InjectException(exception);
   EXPECT_EQ(3, mock_remote_api()->resume_count());  // Same count as above.
   EXPECT_EQ(debug_ipc::ThreadRecord::State::kBlocked, thread()->GetState());
@@ -181,10 +181,10 @@ void StepThreadControllerTest::DoSharedLibThunkTest(bool stop_on_no_symbols) {
   exception.type = debug_ipc::NotifyException::Type::kSingleStep;
   exception.thread.koid = thread()->GetKoid();
   exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-  exception.frames.resize(2);
-  exception.frames[0].ip = kAddrSrc;
-  exception.frames[0].sp = 0x5000;
-  exception.frames[0].bp = 0x5000;
+  exception.thread.frames.resize(2);
+  exception.thread.frames[0].ip = kAddrSrc;
+  exception.thread.frames[0].sp = 0x5000;
+  exception.thread.frames[0].bp = 0x5000;
   InjectException(exception);
 
   // Continue the thread with the controller stepping in range.
@@ -203,10 +203,10 @@ void StepThreadControllerTest::DoSharedLibThunkTest(bool stop_on_no_symbols) {
 
   // Stop on the thunk instruction with no line info. This is a separate
   // function so we push an entry on the stack.
-  exception.frames.emplace(exception.frames.begin());
-  exception.frames[0].ip = kAddrThunk;
-  exception.frames[0].sp = 0x4ff0;
-  exception.frames[0].bp = 0x5000;
+  exception.thread.frames.emplace(exception.thread.frames.begin());
+  exception.thread.frames[0].ip = kAddrThunk;
+  exception.thread.frames[0].sp = 0x4ff0;
+  exception.thread.frames[0].bp = 0x5000;
   InjectException(exception);
   if (stop_on_no_symbols) {
     // For this variant of the test, the unsymbolized thunk should have stopped
@@ -221,7 +221,7 @@ void StepThreadControllerTest::DoSharedLibThunkTest(bool stop_on_no_symbols) {
   EXPECT_EQ(2, mock_remote_api()->resume_count());
 
   // Stop on dest instruction. Since it's a different line, we should now stop.
-  exception.frames[0].ip = kAddrDest;
+  exception.thread.frames[0].ip = kAddrDest;
   InjectException(exception);
   EXPECT_EQ(2, mock_remote_api()->resume_count());  // Unchanged from previous.
   EXPECT_EQ(debug_ipc::ThreadRecord::State::kBlocked, thread()->GetState());
@@ -255,13 +255,13 @@ void StepThreadControllerTest::DoUnsymbolizedFunctionTest(
   src_exception.type = debug_ipc::NotifyException::Type::kSingleStep;
   src_exception.thread.koid = thread()->GetKoid();
   src_exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-  src_exception.frames.resize(2);
-  src_exception.frames[0].ip = kAddrSrc;
-  src_exception.frames[0].sp = 0x5000;
-  src_exception.frames[0].bp = 0x5000;
-  src_exception.frames[1].ip = 0x10;
-  src_exception.frames[1].sp = 0x5008;
-  src_exception.frames[1].bp = 0x5008;
+  src_exception.thread.frames.resize(2);
+  src_exception.thread.frames[0].ip = kAddrSrc;
+  src_exception.thread.frames[0].sp = 0x5000;
+  src_exception.thread.frames[0].bp = 0x5000;
+  src_exception.thread.frames[1].ip = 0x10;
+  src_exception.thread.frames[1].sp = 0x5008;
+  src_exception.thread.frames[1].bp = 0x5008;
   InjectException(src_exception);
 
   // Continue the thread with the controller stepping in range.
@@ -280,13 +280,13 @@ void StepThreadControllerTest::DoUnsymbolizedFunctionTest(
 
   // Stop on the destination unsymbolized address.
   debug_ipc::NotifyException dest_exception(src_exception);
-  dest_exception.frames.resize(2);
-  dest_exception.frames[0].ip = kAddrDest;
-  dest_exception.frames[0].sp = 0x4ff0;
-  dest_exception.frames[0].bp = 0x4ff0;
-  dest_exception.frames[1].ip = kAddrReturn;
-  dest_exception.frames[1].sp = 0x5000;
-  dest_exception.frames[1].bp = 0x5000;
+  dest_exception.thread.frames.resize(2);
+  dest_exception.thread.frames[0].ip = kAddrDest;
+  dest_exception.thread.frames[0].sp = 0x4ff0;
+  dest_exception.thread.frames[0].bp = 0x4ff0;
+  dest_exception.thread.frames[1].ip = kAddrReturn;
+  dest_exception.thread.frames[1].sp = 0x5000;
+  dest_exception.thread.frames[1].bp = 0x5000;
   InjectException(dest_exception);
   if (stop_on_no_symbols) {
     // For this variant of the test, the unsymbolized thunk should have stopped
@@ -307,7 +307,7 @@ void StepThreadControllerTest::DoUnsymbolizedFunctionTest(
   src_exception.hit_breakpoints[0].breakpoint_id =
       mock_remote_api()->last_breakpoint_id();
   src_exception.hit_breakpoints[0].hit_count = 1;
-  src_exception.frames[0].ip = kAddrReturn;
+  src_exception.thread.frames[0].ip = kAddrReturn;
   InjectException(src_exception);
 
   // This should have continued since the return address is still in the
@@ -315,7 +315,7 @@ void StepThreadControllerTest::DoUnsymbolizedFunctionTest(
   EXPECT_EQ(3, mock_remote_api()->resume_count());
 
   // Stop on dest instruction, this is still in range so we should continue.
-  src_exception.frames[0].ip = kAddrOutOfRange;
+  src_exception.thread.frames[0].ip = kAddrOutOfRange;
   InjectException(src_exception);
   EXPECT_EQ(3, mock_remote_api()->resume_count());  // Unchanged from previous.
   EXPECT_EQ(debug_ipc::ThreadRecord::State::kBlocked, thread()->GetState());

@@ -8,6 +8,7 @@
 
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
+#include <zircon/syscalls/debug.h>
 #include <zircon/types.h>
 
 #include "garnet/lib/debug_ipc/records.h"
@@ -19,11 +20,19 @@ namespace debug_agent {
 zx_status_t GetProcessInfo(zx_handle_t process, zx_info_process* info);
 
 // Fills the given vector with the threads of the given process.
-zx_status_t GetProcessThreads(zx_handle_t process,
+zx_status_t GetProcessThreads(const zx::process& process,
+                              uint64_t dl_debug_addr,
                               std::vector<debug_ipc::ThreadRecord>* threads);
 
 // Populates the given ThreadRecord with the information from the given thread.
-void FillThreadRecord(const zx::thread& thread,
+//
+// If optional_regs is non-null, it should point to the current registers of
+// the thread. If null, these will be fetched by this function automatically
+// when the thread is in a suspended state (passing this prevents querying the
+// registers multiple times in common cases).
+void FillThreadRecord(const zx::process& process, uint64_t dl_debug_addr,
+                      const zx::thread& thread,
+                      const zx_thread_state_general_regs* optional_regs,
                       debug_ipc::ThreadRecord* record);
 
 // Fills the given vector with the module information for the process.
