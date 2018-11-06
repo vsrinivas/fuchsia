@@ -26,9 +26,6 @@ endef
 clk:
 	$(run-banjo)
 
-platform-proxy:
-	$(run-banjo)
-
 rawnand: $(LOCAL_DIR)/libs/nand.banjo
 	$(run-banjo)
 

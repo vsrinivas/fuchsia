@@ -21,6 +21,7 @@ MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-amlogic-canvas \
     system/banjo/ddk-protocol-platform-bus \
     system/banjo/ddk-protocol-platform-device \
+    system/banjo/ddk-protocol-platform-proxy \
 
 include make/module.mk
 
@@ -41,5 +42,6 @@ MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-amlogic-canvas \
     system/banjo/ddk-protocol-platform-bus \
     system/banjo/ddk-protocol-platform-device \
+    system/banjo/ddk-protocol-platform-proxy \
 
 include make/module.mk
