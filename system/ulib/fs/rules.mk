@@ -22,6 +22,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/handler.c \
     $(LOCAL_DIR)/lazy-dir.cpp \
     $(LOCAL_DIR)/managed-vfs.cpp \
+    $(LOCAL_DIR)/metrics.cpp \
     $(LOCAL_DIR)/mount.cpp \
     $(LOCAL_DIR)/pseudo-dir.cpp \
     $(LOCAL_DIR)/pseudo-file.cpp \
@@ -33,12 +34,16 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/watcher.cpp \
 
 MODULE_FIDL_LIBS := \
-    system/fidl/fuchsia-io
+    system/fidl/fuchsia-cobalt\
+    system/fidl/fuchsia-io \
+    system/fidl/fuchsia-mem \
 
 MODULE_STATIC_LIBS := \
     system/ulib/async \
     system/ulib/async.cpp \
+    system/ulib/cobalt-client \
     system/ulib/fbl \
+    system/ulib/fzl \
     system/ulib/sync \
     system/ulib/trace \
     system/ulib/zx \

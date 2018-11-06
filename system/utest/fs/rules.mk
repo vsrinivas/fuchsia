@@ -15,6 +15,7 @@ MODULE_NAME := fs-test
 MODULE_SRCS := \
     $(LOCAL_DIR)/filesystems.cpp \
     $(LOCAL_DIR)/main.cpp \
+    $(LOCAL_DIR)/metrics_test.cpp \
     $(LOCAL_DIR)/misc.c \
     $(LOCAL_DIR)/wrap.c \
     $(LOCAL_DIR)/test-access.cpp \
@@ -55,9 +56,11 @@ MODULE_STATIC_LIBS := \
     system/ulib/async \
     system/ulib/async-loop.cpp \
     system/ulib/async-loop \
+    system/ulib/cobalt-client \
     system/ulib/digest \
     system/ulib/gpt \
     system/ulib/fbl \
+    system/ulib/fidl \
     system/ulib/fvm \
     system/ulib/fs \
     system/ulib/fzl \
@@ -80,7 +83,9 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-cobalt \
     system/fidl/fuchsia-io \
+    system/fidl/fuchsia-mem \
     system/fidl/fuchsia-minfs \
 
 MODULE_COMPILEFLAGS := \
