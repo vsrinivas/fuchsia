@@ -12,14 +12,15 @@ readonly PREBUILTS_DIR="$(cd "${ZIRCON_ROOT}/prebuilt" && pwd)"
 readonly DOWNLOAD_DIR="${PREBUILTS_DIR}/downloads"
 readonly ENSURE_FILE="${PREBUILTS_DIR}/zircon.ensure"
 readonly VERSIONS_FILE="${PREBUILTS_DIR}/zircon.versions"
-readonly URL_PREFIX="https://storage.googleapis.com/fuchsia"
+readonly URL_PREFIX="https://chrome-infra-packages.appspot.com/dl/fuchsia"
 
 # This script assumes that ENSURE_FILE and VERSIONS_FILE match up.
-# The update-prebuilt-versions script ensures that they do.  When a
-# cipd binary is available, ENSURE_FILE controls the downloads.
-# Otherwise, VERSIONS_FILE controls the downloads.  In both cases we
-# write $DOWNLOAD_DIR/$PACKAGE.stamp files with the versions from
-# VERSIONS_FILE on faith that that's what we just unpacked.
+# `cipd ensure` checks this and `cips ensure-file-resolve` ensures it.
+# When a `cipd` binary is available, ENSURE_FILE controls the downloads
+# and points `cipd` at VERSIONS_FILE for resolved pinned versions.
+# Otherwise, VERSIONS_FILE controls the downloads directly.  In both
+# cases we write $DOWNLOAD_DIR/$PACKAGE.stamp files with the versions
+# from VERSIONS_FILE on faith that that's what we just unpacked.
 
 set -o pipefail
 
@@ -33,6 +34,9 @@ case "$#:$1" in
   ;;
 1:--list)
   mode=list
+  ;;
+1:--resolve)
+  mode=resolve
   ;;
 1:--no-cipd)
   mode=update
@@ -129,7 +133,7 @@ EOF
 download_package() {
   local -r package="$1" version="$2" download_file="$3" single_file="$4"
   local -r package_suffix="$5"
-  local -r url="${URL_PREFIX}/${package}${package_suffix}/${version}"
+  local -r url="${URL_PREFIX}/${package}${package_suffix}/+/${version}"
   local -r download_file_with_dir="${DOWNLOAD_DIR}/${download_file}"
 
   # If the stamp file says it's already in place, do nothing more.
@@ -163,12 +167,38 @@ download_package() {
 }
 
 for_each_package() {
-  local package version download_file single_file package_suffix status=0
-  while read package version; do
-    case "$package" in
+  local package tag version download_file single_file package_suffix status=0
+  local line next=package
+  while read line; do
+    case "$line" in
     ''|\#*)
       continue
       ;;
+    esac
+    eval $next=\$line
+    case $next in
+    package)
+      next=tag
+      continue
+      ;;
+    tag)
+      next=version
+      continue
+      ;;
+    version)
+      next=package
+      ;;
+    esac
+    # Now we've seen all three lines: package, tag, version.
+    case "$package" in
+    fuchsia/*)
+      package="${package#fuchsia/}"
+      ;;
+    *)
+      continue
+      ;;
+    esac
+    case "$package" in
     tools/*/${PLATFORM})
       # These are standalone executables contained in a .zip file.
       package="${package%/*}"
@@ -190,7 +220,7 @@ for_each_package() {
       package_suffix=''
       ;;
     *)
-      # Skip lines for other platforms.
+      # Skip packages for other platforms.
       continue
       ;;
     esac
@@ -207,26 +237,32 @@ find_cipd() {
   type -p "${ZIRCON_ROOT}/../buildtools/cipd" || type -p cipd
 }
 
-update_via_cipd() {
-  local -r CIPD="$1" internal_access="$2"
+run_cipd() {
+  local -r CIPD="$1" internal_access="$2" command="$3"
+  shift 3
+  local -r cipd_args=("$@")
 
   local -a ensure_files=("${PREBUILTS_DIR}/zircon.ensure")
   if $internal_access; then
     ensure_files+=("${PREBUILTS_DIR}/zircon_internal.ensure")
   fi
 
+  # The $ResolvedVersions file name is taken to be relative to the directory
+  # containing the -ensure-file argument.  But since that's - to pipe in the
+  # combined file, make sure CIPD runs with its current directory being the
+  # one where $VERSIONS_FILE is found.
   (sed '/^\$/!d' "${ensure_files[@]}" && sed '/^\$/d' "${ensure_files[@]}") |
-    "$CIPD" ensure -ensure-file - -root "$DOWNLOAD_DIR" -log-level warning
+    (cd "$PREBUILTS_DIR" &&
+     "$CIPD" "$command" -ensure-file - -log-level warning "${cipd_args[@]}")
   rc=$?
   if [[ $rc -ne 0 ]]; then
     echo >&2 "$0: $CIPD failed.  For direct downloads, remove cipd from PATH."
     return $rc
   fi
+}
 
-  "$(dirname $0)/update-prebuilt-versions" --verify || {
-    echo >&2 "$0: update-prebuilt-versions not run after ensure file changed!"
-    return 2
-  }
+update_via_cipd() {
+  run_cipd "$1" "$2" ensure -root "$DOWNLOAD_DIR"
 
   # Now update the .stamp files so that --verify will be happy.
   for_each_package update_stamp < "$VERSIONS_FILE"
@@ -284,6 +320,10 @@ verify() {
 
 list() {
   for_each_package list_package < "$VERSIONS_FILE"
+}
+
+resolve() {
+  run_cipd "$(find_cipd)" true ensure-file-resolve
 }
 
 $mode

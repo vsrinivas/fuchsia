@@ -55,7 +55,7 @@ use the firmware in the name.
 
 After this step, the package is uploaded to CIPD. Check the
 [CIPD browser here](https://chrome-infra-packages.appspot.com/#/?path=fuchsia/firmware)
-for packages under fuchsia/firmware.
+for packages under `fuchsia/firmware`.
 
 ## Adding the Firmware Package to the Build
 
@@ -74,26 +74,11 @@ the path specified by `@Subdir` under `prebuilt`, i.e.
 Next, update `prebuilt/zircon.versions` with the following command:
 
 ```
-scripts/download-prebuilt && scripts/update-prebuilt-versions
+scripts/download-prebuilt --resolve
 ```
 
-Upload this change to Gerrit, but do not send it to CQ yet.
-
-Now file an infra ticket with the URL to the Gerrit change.
-(TODO: insert link here) A member of the infra team will check out
-your change and upload the package for you.
-
-When the ticket is resolved, the Gerrit change is ready to be sent
-to CQ. The firmware package will be downloaded by
-`scripts/download-prebuilt` along with the toolchain and QEMU.
-
-Optional: Verify locally the package has been mirrored to Google Storage by
-the infra team before sending the patch to CQ:
-
-```
-rm -rf prebuilt/downloads
-scripts/download-prebuilt --no-cipd
-```
+Upload this change to Gerrit and send it to the CQ.  The firmware package will
+be downloaded by `scripts/download-prebuilt` along with the toolchain and QEMU.
 
 ## Using the Firmware Package in the Driver
 
