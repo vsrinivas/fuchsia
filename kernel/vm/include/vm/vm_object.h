@@ -113,12 +113,6 @@ public:
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    // translate a range of the vmo to physical addresses and store in the buffer
-    virtual zx_status_t LookupUser(uint64_t offset, uint64_t len, user_inout_ptr<paddr_t> buffer,
-                                   size_t buffer_size) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
     // The assocaited VmObjectDispatcher will set an observer to notify user mode.
     void SetChildObserver(VmObjectChildObserver* child_observer);
 

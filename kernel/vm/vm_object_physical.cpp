@@ -91,54 +91,6 @@ zx_status_t VmObjectPhysical::GetPageLocked(uint64_t offset, uint pf_flags, list
     return ZX_OK;
 }
 
-zx_status_t VmObjectPhysical::LookupUser(uint64_t offset, uint64_t len, user_inout_ptr<paddr_t> buffer,
-                                         size_t buffer_size) {
-    canary_.Assert();
-
-    if (unlikely(len == 0)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    Guard<fbl::Mutex> guard{&lock_};
-
-    // verify that the range is within the object
-    if (unlikely(!InRange(offset, len, size_))) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-
-    uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
-    uint64_t end = offset + len;
-    uint64_t end_page_offset = ROUNDUP(end, PAGE_SIZE);
-
-    // compute the size of the table we'll need and make sure it fits in the user buffer
-    uint64_t table_size = ((end_page_offset - start_page_offset) / PAGE_SIZE) * sizeof(paddr_t);
-    if (unlikely(table_size > buffer_size)) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    }
-
-    size_t index = 0;
-    for (uint64_t off = start_page_offset; off != end_page_offset; off += PAGE_SIZE, index++) {
-        // find the physical address
-        uint64_t tmp = base_ + off;
-        if (tmp > UINTPTR_MAX) {
-            return ZX_ERR_OUT_OF_RANGE;
-        }
-
-        paddr_t pa = (paddr_t)tmp;
-
-        // check that we didn't wrap
-        DEBUG_ASSERT(pa >= base_);
-
-        // copy it out into user space
-        auto status = buffer.element_offset(index).copy_to_user(pa);
-        if (unlikely(status != ZX_OK)) {
-            return status;
-        }
-    }
-
-    return ZX_OK;
-}
-
 zx_status_t VmObjectPhysical::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
                                      vmo_lookup_fn_t lookup_fn, void* context) {
     canary_.Assert();

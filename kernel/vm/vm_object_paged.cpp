@@ -1064,26 +1064,6 @@ zx_status_t VmObjectPaged::WriteUser(user_in_ptr<const void> ptr, uint64_t offse
     return ReadWriteInternal(offset, len, true, write_routine);
 }
 
-zx_status_t VmObjectPaged::LookupUser(uint64_t offset, uint64_t len, user_inout_ptr<paddr_t> buffer,
-                                      size_t buffer_size) {
-    canary_.Assert();
-
-    uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
-    uint64_t end_page_offset = ROUNDUP(offset + len, PAGE_SIZE);
-    // compute the size of the table we'll need and make sure it fits in the user buffer
-    uint64_t table_size = ((end_page_offset - start_page_offset) / PAGE_SIZE) * sizeof(paddr_t);
-    if (unlikely(table_size > buffer_size)) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    }
-
-    auto copy_to_user = [](void* context, size_t offset, size_t index, paddr_t pa) -> zx_status_t {
-        user_inout_ptr<paddr_t>* buffer = static_cast<user_inout_ptr<paddr_t>*>(context);
-        return buffer->element_offset(index).copy_to_user(pa);
-    };
-    // only lookup pages that are already present
-    return Lookup(offset, len, 0, copy_to_user, &buffer);
-}
-
 zx_status_t VmObjectPaged::InvalidateCache(const uint64_t offset, const uint64_t len) {
     return CacheOp(offset, len, CacheOpType::Invalidate);
 }

@@ -31,8 +31,6 @@ public:
 
     uint64_t size() const override { return size_; }
 
-    zx_status_t LookupUser(uint64_t offset, uint64_t len, user_inout_ptr<paddr_t> buffer,
-                           size_t buffer_size) override;
     zx_status_t Lookup(uint64_t offset, uint64_t len, uint pf_flags,
                        vmo_lookup_fn_t lookup_fn, void* context) override;
 

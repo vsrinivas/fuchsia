@@ -71,9 +71,6 @@ public:
     zx_status_t ReadUser(user_out_ptr<void> ptr, uint64_t offset, size_t len) override;
     zx_status_t WriteUser(user_in_ptr<const void> ptr, uint64_t offset, size_t len) override;
 
-    zx_status_t LookupUser(uint64_t offset, uint64_t len, user_inout_ptr<paddr_t> buffer,
-                           size_t buffer_size) override;
-
     void Dump(uint depth, bool verbose) override;
 
     zx_status_t InvalidateCache(const uint64_t offset, const uint64_t len) override;
