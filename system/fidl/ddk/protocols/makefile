@@ -26,9 +26,6 @@ endef
 clk:
 	$(run-banjo)
 
-test:
-	$(run-banjo)
-
 mipicsi:
 	$(run-banjo)
 
