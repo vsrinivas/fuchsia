@@ -11,6 +11,11 @@ import("//build/go/go_build.gni")
 #   sdk_category (optional)
 #     Publication level of the library in SDKs.
 #     See //build/sdk/sdk_atom.gni.
+#
+#   sdk_deps (optional)
+#     List of labels representing elements that should be added to SDKs
+#     alongside the present binary.
+#     Labels in the list must represent SDK-ready targets.
 
 template("go_binary") {
   go_build(target_name) {

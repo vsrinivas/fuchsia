@@ -166,6 +166,10 @@ template("go_build") {
         },
       ]
 
+      if (defined(invoker.sdk_deps)) {
+        deps = invoker.sdk_deps
+      }
+
       non_sdk_deps = [ ":$main_target_name" ]
     }
   }

@@ -12,6 +12,11 @@ import("//build/sdk/sdk_atom.gni")
 #   category (required)
 #     Publication level of the library in SDKs.
 #     See //build/sdk/sdk_atom.gni.
+#
+#   sdk_deps (optional)
+#     List of labels representing elements that should be added to SDKs
+#     alongside the present binary.
+#     Labels in the list must represent SDK-ready targets.
 
 template("sdk_executable") {
   assert(defined(invoker.category), "Must define an SDK category")
@@ -52,6 +57,10 @@ template("sdk_executable") {
           dest = file_base
         },
       ]
+
+      if (defined(invoker.sdk_deps)) {
+        deps = invoker.sdk_deps
+      }
 
       non_sdk_deps = [ ":$main_target_name" ]
     }
