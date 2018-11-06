@@ -201,6 +201,7 @@ executable("device_tests") {
   testonly = true
 
   sources = [
+    "test_main.cc",
     "test_with_device.cc",
     "test_with_device.h",
     "virtio_balloon_test.cc",
@@ -217,7 +218,8 @@ executable("device_tests") {
     "//garnet/lib/machina/device",
     "//garnet/lib/machina/fidl:fuchsia.guest.device",
     "//garnet/public/lib/component/cpp/testing",
-    "//third_party/googletest:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/virtio",
   ]

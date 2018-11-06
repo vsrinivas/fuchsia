@@ -3,6 +3,7 @@
         "binary": "test/device_tests"
     },
     "sandbox": {
+        "dev": ["misc"],
         "features": ["system-temp"],
         "services": [
             "fuchsia.sys.Environment",
