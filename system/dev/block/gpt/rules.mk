@@ -14,4 +14,7 @@ MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync third_party/ulib/cksum
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-block
+
 include make/module.mk
