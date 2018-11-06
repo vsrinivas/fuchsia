@@ -12,6 +12,7 @@
 #include "garnet/bin/zxdb/client/system_impl.h"
 #include "garnet/bin/zxdb/client/target_observer.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
+#include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
@@ -215,7 +216,14 @@ void TargetImpl::OnLaunchOrAttachReply(Callback callback, const Err& err,
   } else if (status != 0) {
     // Error from launching.
     state_ = State::kNone;
-    issue_err = Err(fxl::StringPrintf("Error launching, status = %d.", status));
+    if (status == debug_ipc::kZxErrIO) {
+      issue_err = Err("Error launching: Binary not found [%s]",
+                      debug_ipc::ZxStatusToString(status).data());
+    } else {
+      issue_err =
+          Err(fxl::StringPrintf("Error launching, status = %s.",
+                                debug_ipc::ZxStatusToString(status).data()));
+    }
   } else {
     state_ = State::kRunning;
     process_ = std::make_unique<ProcessImpl>(this, koid, process_name);

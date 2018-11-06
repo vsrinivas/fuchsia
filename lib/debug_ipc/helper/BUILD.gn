@@ -18,6 +18,9 @@ static_library("helper") {
     "stream_buffer.h",
     "test_stream_buffer.cc",
     "test_stream_buffer.h",
+    "zx_status.cc",
+    "zx_status.h",
+    "zx_status_definitions.h",
   ]
 
   public_deps = [
