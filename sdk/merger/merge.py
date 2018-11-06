@@ -108,6 +108,8 @@ def _get_files(element_meta):
             contents.update(version['dist_libs'])
             contents.update(version['debug_libs'])
             arch_files[arch] = contents
+    elif type == 'documentation':
+        common_files.update(element_meta['docs'])
     else:
         raise Exception('Unknown element type: ' + type)
     return (common_files, arch_files)
@@ -186,7 +188,8 @@ def _write_meta(element, source_dir_one, source_dir_two, dest_dir):
         meta = meta_one
         meta['versions'].update(meta_two['versions'])
     elif (type == 'cc_source_library' or type == 'dart_library' or
-          type == 'fidl_library' or type == 'host_tool'):
+          type == 'fidl_library' or type == 'host_tool' or
+          type == 'documentation'):
         # These elements are arch-independent, the metadata does not need any
         # update.
         meta = meta_one
