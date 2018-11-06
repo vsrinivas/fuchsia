@@ -22,6 +22,11 @@ runbench_read_arguments "$@"
 #    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/DISABLED_add_many_pages.tspec \
 #    --benchmark-results-file="${OUT_DIR}/ledger.add_many_pages.json"
 
+runbench_exec "${OUT_DIR}/ledger.add_new_page_precached.json" \
+    trace record \
+    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/add_new_page_precached.tspec \
+    --benchmark-results-file="${OUT_DIR}/ledger.add_new_page_precached.json"
+
 runbench_exec "${OUT_DIR}/ledger.add_new_page.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/add_new_page.tspec \

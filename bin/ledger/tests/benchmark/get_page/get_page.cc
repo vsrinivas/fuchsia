@@ -33,13 +33,17 @@ constexpr fxl::StringView kBinaryPath =
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/get_page";
 constexpr fxl::StringView kPageCountFlag = "requests-count";
 constexpr fxl::StringView kReuseFlag = "reuse";
+constexpr fxl::StringView kWaitForCachedPageFlag = "wait-for-cached-page";
+
+constexpr zx::duration kDuration = zx::msec(500);
 
 void PrintUsage() {
   std::cout << "Usage: trace record "
             << kBinaryPath
             // Comment to make clang format not break formatting.
             << " --" << kPageCountFlag << "=<int>"
-            << " [--" << kReuseFlag << "]" << std::endl;
+            << " [--" << kReuseFlag << "]"
+            << " [--" << kWaitForCachedPageFlag << "]" << std::endl;
 }
 
 // Benchmark that measures the time taken to get a page.
@@ -48,11 +52,15 @@ void PrintUsage() {
 //   --requests-count=<int> number of requests made.
 //   --reuse - if this flag is specified, the same id will be used. Otherwise, a
 //   new page with a random id is requested every time.
+//   --wait_for_cached_page - if this flag is specified, the benchmark will wait
+//   for a sufficient amount of time before each page request, to allow Ledger
+//   to precache an empty new page.
 class GetPageBenchmark {
  public:
   GetPageBenchmark(async::Loop* loop,
                    std::unique_ptr<component::StartupContext> startup_context,
-                   size_t requests_count, bool reuse);
+                   size_t requests_count, bool reuse,
+                   bool wait_for_cached_page);
 
   void Run();
 
@@ -68,6 +76,7 @@ class GetPageBenchmark {
   std::unique_ptr<component::StartupContext> startup_context_;
   const size_t requests_count_;
   const bool reuse_;
+  const bool wait_for_cached_page_;
   fuchsia::sys::ComponentControllerPtr component_controller_;
   LedgerPtr ledger_;
   PageIdPtr page_id_;
@@ -81,14 +90,15 @@ class GetPageBenchmark {
 GetPageBenchmark::GetPageBenchmark(
     async::Loop* loop,
     std::unique_ptr<component::StartupContext> startup_context,
-    size_t requests_count, bool reuse)
+    size_t requests_count, bool reuse, bool wait_for_cached_page)
     : loop_(loop),
       random_(0),
       tmp_dir_(kStoragePath),
       generator_(&random_),
       startup_context_(std::move(startup_context)),
       requests_count_(requests_count),
-      reuse_(reuse) {
+      reuse_(reuse),
+      wait_for_cached_page_(wait_for_cached_page) {
   FXL_DCHECK(loop_);
   FXL_DCHECK(requests_count_ > 0);
 }
@@ -112,7 +122,10 @@ void GetPageBenchmark::RunSingle(size_t request_number) {
     ShutDown();
     return;
   }
-
+  if (wait_for_cached_page_) {
+    // Wait before each page request, so that a pre-cached page is ready.
+    zx_nanosleep(zx_deadline_after(kDuration.get()));
+  }
   TRACE_ASYNC_BEGIN("benchmark", "get page", requests_count_ - request_number);
   PagePtr page;
 
@@ -173,9 +186,10 @@ int Main(int argc, const char** argv) {
     return EXIT_FAILURE;
   }
   bool reuse = command_line.HasOption(kReuseFlag);
+  bool wait_for_cached_page = command_line.HasOption(kWaitForCachedPageFlag);
 
-  GetPageBenchmark app(&loop, std::move(startup_context), requests_count,
-                       reuse);
+  GetPageBenchmark app(&loop, std::move(startup_context), requests_count, reuse,
+                       wait_for_cached_page);
 
   return RunWithTracing(&loop, [&app] { app.Run(); });
 }

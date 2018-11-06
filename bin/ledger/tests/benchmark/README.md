@@ -86,8 +86,11 @@ page.
 * __Get page__: How long does it take to establish a new page connection?
     * `add_new_page.tspec`: connection to the new page with previously unused
       ID.
-    * `add_many_pages.tspec`: same as above, but with a bigger number of requests.
-    * `get_same_page.tspec`: several connection to the same page
+    * `add_new_page_precached.tspec`: same as above, but waits for a precached
+      Ledger Page to be ready before each request.
+    * `add_many_pages.tspec`: same as `add_new_page`, but with a bigger number
+      of requests.
+    * `get_same_page.tspec`: several connections to the same page
     * `get_page_id.tspec`: how long does the GetId() call takes on a newly
       created page?
 * __Put__: How long does it take to write data to a page? And how long before the

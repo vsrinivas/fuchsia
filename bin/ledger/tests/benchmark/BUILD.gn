@@ -110,6 +110,12 @@ package("ledger_benchmarks") {
       dest = "DISABLED_add_many_pages.tspec"
     },
 
+
+    {
+      path = rebase_path("get_page/add_new_page_precached.tspec")
+      dest = "add_new_page_precached.tspec"
+    },
+
     {
       path = rebase_path("backlog/backlog.tspec")
       dest = "backlog.tspec"
