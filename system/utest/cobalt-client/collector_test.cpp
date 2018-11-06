@@ -35,8 +35,7 @@ constexpr uint32_t kEventCode = 1;
 constexpr char kComponent[] = "SomeRandomCollectorComponent";
 
 // Fake storage used by our FakeLogger.
-template <typename T>
-class FakeStorage {
+template <typename T> class FakeStorage {
 public:
     T* GetOrNull(const RemoteMetricInfo& metric_info) {
         size_t index = 0;
@@ -139,7 +138,7 @@ RemoteMetricInfo MakeRemoteMetricInfo(uint32_t metric_id = kMetricId,
 }
 
 CollectorOptions MakeCollectorOptions(size_t max_histograms, size_t max_counters) {
-    CollectorOptions options;
+    CollectorOptions options = CollectorOptions::Debug();
     options.max_counters = max_counters;
     options.max_histograms = max_histograms;
     // Just create a dummy vmo.
@@ -186,48 +185,39 @@ HistogramOptions MakeHistogramOptions(uint32_t metric_id = kMetricId,
 }
 
 // Sanity check for this codepath.
-bool DebugTest() {
+bool TestDebug() {
     BEGIN_TEST;
-    Collector collector = Collector::Debug(MakeCollectorOptions(1, 1));
-    auto histogram = collector.AddHistogram(MakeHistogramOptions());
-    auto counter = collector.AddCounter(MakeMetricOptions());
-
-    histogram.Add(1);
-    counter.Increment();
-
-    collector.Flush();
+    CollectorOptions options = CollectorOptions::Debug();
+    ASSERT_EQ(options.release_stage, static_cast<uint32_t>(ReleaseStage::kDebug));
     END_TEST;
 }
 
-bool FishfoodTest() {
+bool TestFishfood() {
     BEGIN_TEST;
-    Collector collector = Collector::Fishfood(MakeCollectorOptions(1, 1));
-    auto histogram = collector.AddHistogram(MakeHistogramOptions());
-    auto counter = collector.AddCounter(MakeMetricOptions());
-
-    histogram.Add(1);
-    counter.Increment();
-
-    collector.Flush();
+    CollectorOptions options = CollectorOptions::Fishfood();
+    ASSERT_EQ(options.release_stage, static_cast<uint32_t>(ReleaseStage::kFishfood));
     END_TEST;
 }
 
-bool DogfoodTest() {
+bool TestDogfood() {
     BEGIN_TEST;
-    Collector collector = Collector::Dogfood(MakeCollectorOptions(1, 1));
-    auto histogram = collector.AddHistogram(MakeHistogramOptions());
-    auto counter = collector.AddCounter(MakeMetricOptions());
-
-    histogram.Add(1);
-    counter.Increment();
-
-    collector.Flush();
+    CollectorOptions options = CollectorOptions::Dogfood();
+    ASSERT_EQ(options.release_stage, static_cast<uint32_t>(ReleaseStage::kDogfood));
     END_TEST;
 }
 
-bool GeneralAvailabilityTest() {
+bool TestGeneralAvailability() {
     BEGIN_TEST;
-    Collector collector = Collector::GeneralAvailability(MakeCollectorOptions(1, 1));
+    CollectorOptions options = CollectorOptions::GeneralAvailability();
+    ASSERT_EQ(options.release_stage, static_cast<uint32_t>(ReleaseStage::kGa));
+    END_TEST;
+}
+
+bool CreateTest() {
+    BEGIN_TEST;
+    CollectorOptions options = MakeCollectorOptions(1, 1);
+    Collector collector = Collector::Create(fbl::move(options));
+    // Sanity check nothing crashes.
     auto histogram = collector.AddHistogram(MakeHistogramOptions());
     auto counter = collector.AddCounter(MakeMetricOptions());
 
@@ -466,8 +456,7 @@ int FlushFn(void* vargs) {
 // Verify that if we flush while the histograms and counters are being updated,
 // no data is lost, meaning that the sum of the persisted data and the local data
 // is equal to the expected value.
-template <bool should_fail>
-bool FlushMultithreadTest() {
+template <bool should_fail> bool FlushMultithreadTest() {
     BEGIN_TEST;
     FakeStorage<BaseHistogram> histograms;
     FakeStorage<BaseCounter> counters;
@@ -546,7 +535,15 @@ bool FlushMultithreadTest() {
     END_TEST;
 }
 
+BEGIN_TEST_CASE(CollectorOptionsTest)
+RUN_TEST(TestDebug)
+RUN_TEST(TestFishfood)
+RUN_TEST(TestDogfood)
+RUN_TEST(TestGeneralAvailability)
+END_TEST_CASE(CollectorOptionsTest)
+
 BEGIN_TEST_CASE(CollectorTest)
+RUN_TEST(CreateTest)
 RUN_TEST(AddCounterTest)
 RUN_TEST(AddCounterMultipleTest)
 RUN_TEST(AddHistogramTest)
@@ -556,10 +553,6 @@ RUN_TEST(FlushFailTest)
 RUN_TEST(FlushFailTest)
 RUN_TEST(FlushMultithreadTest<false>)
 RUN_TEST(FlushMultithreadTest<true>)
-RUN_TEST(GeneralAvailabilityTest)
-RUN_TEST(DogfoodTest)
-RUN_TEST(FishfoodTest)
-RUN_TEST(DebugTest)
 END_TEST_CASE(CollectorTest)
 
 } // namespace
