@@ -1124,19 +1124,20 @@ static ACPI_STATUS AcpiOsReadWritePciConfiguration(
     uint8_t offset = static_cast<uint8_t>(Register);
     zx_status_t st;
 #ifdef ENABLE_USER_PCI
+    pci_bdf_t addr = {bus, dev, func};
     switch (Width) {
     case 8u:
-        (Write) ? st = pci_pio_write8(bus, dev, func, offset, static_cast<uint8_t>(*Value))
-                : st = pci_pio_read8(bus, dev, func, offset, reinterpret_cast<uint8_t*>(Value));
+        (Write) ? st = pci_pio_write8(addr, offset, static_cast<uint8_t>(*Value))
+                : st = pci_pio_read8(addr, offset, reinterpret_cast<uint8_t*>(Value));
         break;
     case 16u:
-        (Write) ? st = pci_pio_write16(bus, dev, func, offset, static_cast<uint16_t>(*Value))
-                : st = pci_pio_read16(bus, dev, func, offset, reinterpret_cast<uint16_t*>(Value));
+        (Write) ? st = pci_pio_write16(addr, offset, static_cast<uint16_t>(*Value))
+                : st = pci_pio_read16(addr, offset, reinterpret_cast<uint16_t*>(Value));
         break;
     // assume 32bit by default since 64 bit reads on IO ports are not a thing supported by the spec
     default:
-        (Write) ? st = pci_pio_write32(bus, dev, func, offset, static_cast<uint32_t>(*Value))
-                : st = pci_pio_read32(bus, dev, func, offset, reinterpret_cast<uint32_t*>(Value));
+        (Write) ? st = pci_pio_write32(addr, offset, static_cast<uint32_t>(*Value))
+                : st = pci_pio_read32(addr, offset, reinterpret_cast<uint32_t*>(Value));
     }
 #else
     st = zx_pci_cfg_pio_rw(root_resource_handle, bus, dev, func, offset,
