@@ -46,9 +46,10 @@ interface Presentation {
   7: SetDisplaySizeInMm(float32 width_in_mm, float32 height_in_mm);
 
   // This call exists so that base shell can capture hotkeys and do special
-  // things with it (e.g., switch a user shell). Only the codepoint, phase and
-  // modifiers are matched. The full KeyboardEvent is supplied to |listener|'s
-  // OnEvent.
+  // things with it (e.g., switch a user shell). Phase and modifiers are always
+  // matched, and valid (non-zero) code points are matched. If there is no
+  // valid code point, the filter will match against the hid usage value.
+  // The full KeyboardEvent is supplied to |listener|'s OnEvent.
   // TODO: Figure out the feasibility of this feature and the best place to put
   // it.
   6: CaptureKeyboardEventHACK(fuchsia.ui.input.KeyboardEvent event_to_capture,

@@ -721,11 +721,14 @@ void Presentation1::OnEvent(fuchsia::ui::input::InputEvent event) {
 
       for (size_t i = 0; i < captured_keybindings_.size(); i++) {
         const auto& event = captured_keybindings_[i].event;
-        if ((kbd.modifiers & event.modifiers) && (event.phase == kbd.phase) &&
-            (event.code_point == kbd.code_point)) {
-          fuchsia::ui::input::KeyboardEvent clone;
-          fidl::Clone(kbd, &clone);
-          captured_keybindings_[i].listener->OnEvent(std::move(clone));
+        if (event.modifiers == kbd.modifiers && event.phase == kbd.phase) {
+          if ((event.code_point > 0 && event.code_point == kbd.code_point) ||
+              // match on hid_usage when there's no codepoint:
+              event.hid_usage == kbd.hid_usage) {
+            fuchsia::ui::input::KeyboardEvent clone;
+            fidl::Clone(kbd, &clone);
+            captured_keybindings_[i].listener->OnEvent(std::move(clone));
+          }
         }
       }
     }
