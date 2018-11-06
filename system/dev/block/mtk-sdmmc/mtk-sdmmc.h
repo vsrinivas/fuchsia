@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddk/phys-iter.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddktl/device.h>
@@ -12,6 +13,8 @@
 #include <ddktl/protocol/sdmmc.h>
 
 namespace sdmmc {
+
+constexpr uint32_t kPageMask = PAGE_SIZE - 1;
 
 struct RequestStatus {
     RequestStatus()
@@ -59,6 +62,8 @@ private:
 
     // Prepares the VMO and the DMA engine for receiving data.
     RequestStatus RequestPrepareDma(sdmmc_req_t* req);
+    // Creates the GPDMA and BDMA descriptors.
+    RequestStatus SetupDmaDescriptors(phys_iter_buffer_t* phys_iter_buf);
     // Waits for the DMA engine to finish and unpins the VMO pages.
     RequestStatus RequestFinishDma(sdmmc_req_t* req);
 
@@ -79,7 +84,8 @@ private:
     ddk::MmioBuffer mmio_;
     zx::bti bti_;
     const sdmmc_host_info_t info_;
-    zx::pmt pmt_;
+    io_buffer_t gpdma_buf_;
+    io_buffer_t bdma_buf_;
 };
 
 // TuneWindow keeps track of the results of a series of tuning tests. It is expected that either

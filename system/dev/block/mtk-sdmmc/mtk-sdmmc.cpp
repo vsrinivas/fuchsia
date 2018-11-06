@@ -3,20 +3,23 @@
 // found in the LICENSE file.
 
 #include "mtk-sdmmc.h"
-#include "mtk-sdmmc-reg.h"
 
 #include <ddk/debug.h>
+#include <ddk/io-buffer.h>
 #include <ddk/metadata.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
 #include <hw/sdio.h>
 #include <hw/sdmmc.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <zircon/device/block.h>
+
+#include "dma_descriptors.h"
 
 namespace {
 
-constexpr uint32_t kPageMask = PAGE_SIZE - 1;
 constexpr uint32_t kMsdcSrcCkFreq = 188000000;
 constexpr uint32_t kIdentificationModeBusFreq = 400000;
 constexpr int kTuningDelayIterations = 4;
@@ -116,8 +119,7 @@ zx_status_t MtkSdmmc::Create(zx_device_t* parent) {
 
     sdmmc_host_info_t info = {
         .caps = SDMMC_HOST_CAP_BUS_WIDTH_8 | SDMMC_HOST_CAP_AUTO_CMD12 | SDMMC_HOST_CAP_ADMA2,
-        // TODO(bradenkell): Support descriptor DMA for reading/writing multiple pages.
-        .max_transfer_size = PAGE_SIZE,
+        .max_transfer_size = BLOCK_MAX_TRANSFER_UNBOUNDED,
         .max_transfer_size_non_dma = fifo_depth,
         // TODO(bradenkell): Remove this once HS400 has been tested.
         .prefs = SDMMC_HOST_PREFS_DISABLE_HS400
@@ -149,6 +151,15 @@ void MtkSdmmc::Init() {
     SdmmcSetBusFreq(kIdentificationModeBusFreq);
 
     SdcCfg::Get().ReadFrom(&mmio_).set_bus_width(SdcCfg::kBusWidth1).WriteTo(&mmio_);
+
+    // Initialize the io_buffer_t's so they can safely be passed to io_buffer_release().
+    gpdma_buf_.vmo_handle = ZX_HANDLE_INVALID;
+    gpdma_buf_.pmt_handle = ZX_HANDLE_INVALID;
+    gpdma_buf_.phys_list = nullptr;
+
+    bdma_buf_.vmo_handle = ZX_HANDLE_INVALID;
+    bdma_buf_.pmt_handle = ZX_HANDLE_INVALID;
+    bdma_buf_.phys_list = nullptr;
 }
 
 zx_status_t MtkSdmmc::SdmmcHostInfo(sdmmc_host_info_t* info) {
@@ -335,8 +346,7 @@ zx_status_t MtkSdmmc::SdmmcPerformTuning(uint32_t cmd_idx) {
     zx::vmo vmo;
     fzl::VmoMapper vmo_mapper;
     zx_status_t status = vmo_mapper.CreateAndMap(sizeof(kTuningBlockPattern8Bit),
-                                                 ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                                                 nullptr, &vmo);
+                                                 ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to create and map VMO\n", __FILE__);
         return status;
@@ -397,46 +407,171 @@ zx_status_t MtkSdmmc::SdmmcPerformTuning(uint32_t cmd_idx) {
     return ZX_OK;
 }
 
+RequestStatus MtkSdmmc::SetupDmaDescriptors(phys_iter_buffer_t* phys_iter_buf) {
+    const uint64_t bd_size = phys_iter_buf->phys_count * sizeof(BDmaDescriptor);
+    zx_status_t status = io_buffer_init(&bdma_buf_, bti_.get(), bd_size,
+                                        IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: Failed to create BDMA buffer\n", __FILE__);
+        return RequestStatus(status);
+    }
+
+    auto bdma_buf_ac = fbl::MakeAutoCall([this]() { io_buffer_release(&bdma_buf_); });
+
+    phys_iter_t phys_iter;
+    phys_iter_init(&phys_iter, phys_iter_buf, BDmaDescriptor::kMaxBufferSize);
+
+    zx_paddr_t buf_addr;
+    uint64_t desc_count = 0;
+    for (size_t buf_size = phys_iter_next(&phys_iter, &buf_addr); buf_size != 0; desc_count++) {
+        if (desc_count >= phys_iter_buf->phys_count) {
+            zxlogf(ERROR, "%s: Page count mismatch\n", __FILE__);
+            return RequestStatus(ZX_ERR_INTERNAL);
+        }
+
+        BDmaDescriptor desc;
+        desc.SetBuffer(buf_addr);
+        desc.size = static_cast<uint32_t>(buf_size);
+
+        // Get the next physical region here so we can check if this is the last descriptor.
+        buf_size = phys_iter_next(&phys_iter, &buf_addr);
+
+        desc.SetNext(buf_size == 0 ? 0 : bdma_buf_.phys + ((desc_count + 1) * sizeof(desc)));
+        desc.info = BDmaDescriptorInfo()
+                        .set_reg_value(desc.info)
+                        .set_last(buf_size == 0 ? 1 : 0)
+                        .reg_value();
+        desc.SetChecksum();
+
+        status = zx_vmo_write(bdma_buf_.vmo_handle, &desc, desc_count * sizeof(desc), sizeof(desc));
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: Failed to write to BDMA buffer\n", __FILE__);
+            return RequestStatus(status);
+        }
+    }
+
+    if (desc_count == 0) {
+        zxlogf(ERROR, "%s: No pages provided for DMA buffer\n", __FILE__);
+        return RequestStatus(ZX_ERR_INTERNAL);
+    }
+
+    const uint64_t gp_size = 2 * sizeof(GpDmaDescriptor);
+    status = io_buffer_init(&gpdma_buf_, bti_.get(), gp_size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: Failed to create GPDMA buffer\n", __FILE__);
+        return RequestStatus(status);
+    }
+
+    auto gpdma_buf_ac = fbl::MakeAutoCall([this]() { io_buffer_release(&gpdma_buf_); });
+
+    GpDmaDescriptor gp_desc;
+    gp_desc.info = GpDmaDescriptorInfo()
+                       .set_reg_value(0)
+                       .set_hwo(1)
+                       .set_bdp(1)
+                       .reg_value();
+    gp_desc.SetNext(gpdma_buf_.phys + sizeof(gp_desc));
+    gp_desc.SetBDmaDesc(bdma_buf_.phys);
+    gp_desc.SetChecksum();
+
+    if ((status = zx_vmo_write(gpdma_buf_.vmo_handle, &gp_desc, 0, sizeof(gp_desc))) != ZX_OK) {
+        zxlogf(ERROR, "%s: Failed to write to GPDMA buffer\n", __FILE__);
+        return RequestStatus(status);
+    }
+
+    GpDmaDescriptor gp_null_desc;
+    status = zx_vmo_write(gpdma_buf_.vmo_handle, &gp_null_desc, sizeof(gp_null_desc),
+                          sizeof(gp_null_desc));
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: Failed to write to GPDMA buffer\n", __FILE__);
+        return RequestStatus(status);
+    }
+
+    if ((status = io_buffer_cache_op(&bdma_buf_, ZX_VMO_OP_CACHE_CLEAN, 0, bd_size)) != ZX_OK) {
+        zxlogf(ERROR, "%s: BDMA descriptors cache clean failed\n", __FILE__);
+        return RequestStatus(status);
+    }
+
+    if ((status = io_buffer_cache_op(&gpdma_buf_, ZX_VMO_OP_CACHE_CLEAN, 0, gp_size)) != ZX_OK) {
+        zxlogf(ERROR, "%s: GPDMA descriptors cache clean failed\n", __FILE__);
+        return RequestStatus(status);
+    }
+
+    bdma_buf_ac.cancel();
+    gpdma_buf_ac.cancel();
+
+    return RequestStatus();
+}
+
 RequestStatus MtkSdmmc::RequestPrepareDma(sdmmc_req_t* req) {
     const uint64_t req_len = req->blockcount * req->blocksize;
     const bool is_read = req->cmd_flags & SDMMC_CMD_READ;
+    const uint64_t pagecount = ((req->buf_offset & kPageMask) + req_len + kPageMask) / PAGE_SIZE;
 
-    // TODO(bradenkell): Support descriptor DMA for reading/writing multiple pages.
+    if (pagecount > SDMMC_PAGES_COUNT) {
+        return ZX_ERR_INVALID_ARGS;
+    }
 
-    RequestStatus status;
-
-    zx_paddr_t phys;
+    zx_paddr_t phys[SDMMC_PAGES_COUNT];
     uint32_t options = is_read ? ZX_BTI_PERM_WRITE : ZX_BTI_PERM_READ;
-    status.cmd_status = zx_bti_pin(bti_.get(), options, req->dma_vmo, req->buf_offset & ~kPageMask,
-                                   PAGE_SIZE, &phys, 1, pmt_.reset_and_get_address());
-    if (status.Get() != ZX_OK) {
+    zx_status_t status = zx_bti_pin(bti_.get(), options, req->dma_vmo, req->buf_offset & ~kPageMask,
+                                    PAGE_SIZE * pagecount, phys, pagecount, &req->pmt);
+    if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to pin DMA buffer\n", __FILE__);
-        return status;
+        return RequestStatus(status);
+    }
+
+    auto pmt_ac = fbl::MakeAutoCall([&req]() { zx_pmt_unpin(req->pmt); });
+
+    if (pagecount > 1) {
+        phys_iter_buffer_t phys_iter_buf = {
+            .phys = phys,
+            .phys_count = pagecount,
+            .length = req_len,
+            .vmo_offset = req->buf_offset
+        };
+
+        if ((status = SetupDmaDescriptors(&phys_iter_buf).Get()) != ZX_OK) {
+            return RequestStatus(status);
+        }
+
+        DmaCtrl::Get().ReadFrom(&mmio_).set_dma_mode(DmaCtrl::kDmaModeDescriptor).WriteTo(&mmio_);
+        DmaCfg::Get().ReadFrom(&mmio_).set_checksum_enable(1).WriteTo(&mmio_);
+        DmaStartAddr::Get().FromValue(0).set(gpdma_buf_.phys).WriteTo(&mmio_);
+        DmaStartAddrHigh4Bits::Get().FromValue(0).set(gpdma_buf_.phys).WriteTo(&mmio_);
+    } else {
+        DmaCtrl::Get().ReadFrom(&mmio_).set_dma_mode(DmaCtrl::kDmaModeBasic).WriteTo(&mmio_);
+        DmaLength::Get().FromValue(static_cast<uint32_t>(req_len)).WriteTo(&mmio_);
+        DmaStartAddr::Get().FromValue(0).set(phys[0]).WriteTo(&mmio_);
+        DmaStartAddrHigh4Bits::Get().FromValue(0).set(phys[0]).WriteTo(&mmio_);
     }
 
     if (is_read) {
-        status.cmd_status = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN_INVALIDATE,
-                                            req->buf_offset, req_len, nullptr, 0);
+        status = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, req->buf_offset,
+                                 req_len, nullptr, 0);
     } else {
-        status.cmd_status = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN, req->buf_offset,
-                                            req_len, nullptr, 0);
+        status = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN, req->buf_offset, req_len,
+                                 nullptr, 0);
     }
 
-    if (status.Get() != ZX_OK) {
-        zxlogf(ERROR, "%s: Cache invalidate failed\n", __FILE__);
-        pmt_.unpin();
-    } else {
-        MsdcCfg::Get().ReadFrom(&mmio_).set_pio_mode(0).WriteTo(&mmio_);
-
-        DmaLength::Get().FromValue(static_cast<uint32_t>(req_len)).WriteTo(&mmio_);
-        DmaStartAddr::Get().FromValue(0).set(phys).WriteTo(&mmio_);
-        DmaStartAddrHigh4Bits::Get().FromValue(0).set(phys).WriteTo(&mmio_);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: DMA buffer cache clean failed\n", __FILE__);
+        return RequestStatus(status);
     }
 
-    return status;
+    MsdcCfg::Get().ReadFrom(&mmio_).set_pio_mode(0).WriteTo(&mmio_);
+
+    pmt_ac.cancel();
+    return RequestStatus(status);
 }
 
 RequestStatus MtkSdmmc::RequestFinishDma(sdmmc_req_t* req) {
+    auto dma_buf_ac = fbl::MakeAutoCall([&req, this]() {
+        zx_pmt_unpin(req->pmt);
+        io_buffer_release(&gpdma_buf_);
+        io_buffer_release(&bdma_buf_);
+    });
+
     auto msdc_int = MsdcInt::Get().ReadFrom(&mmio_);
 
     while (!msdc_int.ReadFrom(&mmio_).CmdInterrupt()) {}
@@ -455,7 +590,10 @@ RequestStatus MtkSdmmc::RequestFinishDma(sdmmc_req_t* req) {
     while (!msdc_int.ReadFrom(&mmio_).DataInterrupt()) {}
 
     RequestStatus status;
-    if (msdc_int.data_crc_err()) {
+    if (msdc_int.gpd_checksum_err() || msdc_int.bd_checksum_err()) {
+        zxlogf(ERROR, "%s: DMA descriptor checksum error\n", __FILE__);
+        status.data_status = ZX_ERR_INTERNAL;
+    } else if (msdc_int.data_crc_err()) {
         status.data_status = ZX_ERR_IO_DATA_INTEGRITY;
     } else if (msdc_int.data_timeout()) {
         status.data_status = ZX_ERR_TIMED_OUT;
@@ -475,14 +613,9 @@ RequestStatus MtkSdmmc::RequestFinishDma(sdmmc_req_t* req) {
                                        req->buf_offset, req_len, nullptr, 0);
     }
 
-    zx_status_t unpin_status = pmt_.unpin();
-
     if (cache_status != ZX_OK) {
-        zxlogf(ERROR, "%s: Cache invalidate failed\n", __FILE__);
+        zxlogf(ERROR, "%s: DMA buffer cache invalidate failed\n", __FILE__);
         status.data_status = cache_status;
-    } else if (unpin_status != ZX_OK) {
-        zxlogf(ERROR, "%s Failed to unpin DMA buffer\n", __FILE__);
-        status.data_status = unpin_status;
     }
 
     return status;
@@ -536,8 +669,6 @@ RequestStatus MtkSdmmc::SdmmcRequestWithStatus(sdmmc_req_t* req) {
     if (is_data_request) {
         status = req->use_dma ? RequestPrepareDma(req) : RequestPreparePolled(req);
         if (status.Get() != ZX_OK) {
-            zxlogf(ERROR, "%s: %s request prepare failed\n", __FILE__,
-                   req->use_dma ? "DMA" : "PIO");
             return status;
         }
     }

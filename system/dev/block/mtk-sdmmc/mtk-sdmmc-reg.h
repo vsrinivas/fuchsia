@@ -49,9 +49,12 @@ public:
     }
 
     bool DataInterrupt() {
-        return transfer_complete() || data_timeout() || data_crc_err();
+        return transfer_complete() || data_timeout() || data_crc_err() || bd_checksum_err() ||
+               gpd_checksum_err();
     }
 
+    DEF_BIT(18, gpd_checksum_err);
+    DEF_BIT(17, bd_checksum_err);
     DEF_BIT(15, data_crc_err);
     DEF_BIT(14, data_timeout);
     DEF_BIT(12, transfer_complete);
@@ -214,9 +217,13 @@ private:
 
 class DmaCtrl : public hwreg::RegisterBase<DmaCtrl, uint32_t> {
 public:
+    static constexpr uint32_t kDmaModeBasic = 0;
+    static constexpr uint32_t kDmaModeDescriptor = 1;
+
     static auto Get() { return hwreg::RegisterAddr<DmaCtrl>(0x98); }
 
     DEF_BIT(10, last_buffer);
+    DEF_BIT(8, dma_mode);
     DEF_BIT(1, dma_stop);
     DEF_BIT(0, dma_start);
 };
@@ -225,6 +232,7 @@ class DmaCfg : public hwreg::RegisterBase<DmaCfg, uint32_t> {
 public:
     static auto Get() { return hwreg::RegisterAddr<DmaCfg>(0x9c); }
 
+    DEF_BIT(1, checksum_enable);
     DEF_BIT(0, dma_active);
 };
 
@@ -243,6 +251,49 @@ public:
     DEF_FIELD(20, 16, cmd_delay);
     DEF_BIT(13, data_delay_sel);
     DEF_FIELD(12, 8, data_delay);
+};
+
+class GpDmaDescriptorInfo : public hwreg::RegisterBase<GpDmaDescriptorInfo, uint32_t> {
+public:
+    DEF_FIELD(31, 28, bdma_desc_addr_high_4_bits);
+    DEF_FIELD(27, 24, next_addr_high_4_bits);
+    DEF_FIELD(15, 8, checksum);
+    DEF_BIT(1, bdp);
+    DEF_BIT(0, hwo);
+
+    GpDmaDescriptorInfo& set_bdma_desc_addr(uint64_t addr) {
+        set_bdma_desc_addr_high_4_bits((addr & kAddressMask) >> 32);
+        return *this;
+    }
+
+    GpDmaDescriptorInfo& set_next_addr(uint64_t addr) {
+        set_next_addr_high_4_bits((addr & kAddressMask) >> 32);
+        return *this;
+    }
+
+private:
+    static constexpr uint64_t kAddressMask = 0xf00000000;
+};
+
+class BDmaDescriptorInfo : public hwreg::RegisterBase<BDmaDescriptorInfo, uint32_t> {
+public:
+    DEF_FIELD(31, 28, buffer_addr_high_4_bits);
+    DEF_FIELD(27, 24, next_addr_high_4_bits);
+    DEF_FIELD(15, 8, checksum);
+    DEF_BIT(0, last);
+
+    BDmaDescriptorInfo& set_buffer_addr(uint64_t addr) {
+        set_buffer_addr_high_4_bits((addr & kAddressMask) >> 32);
+        return *this;
+    }
+
+    BDmaDescriptorInfo& set_next_addr(uint64_t addr) {
+        set_next_addr_high_4_bits((addr & kAddressMask) >> 32);
+        return *this;
+    }
+
+private:
+    static constexpr uint64_t kAddressMask = 0xf00000000;
 };
 
 }  // namespace sdmmc
