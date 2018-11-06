@@ -24,4 +24,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/zx \
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-intel-hda-codec \
+
 include make/module.mk

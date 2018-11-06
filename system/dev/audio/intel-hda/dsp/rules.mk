@@ -39,4 +39,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/zx \
     system/ulib/zxcpp \
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-intel-hda-codec \
+
 include make/module.mk
