@@ -28,4 +28,7 @@ MODULE_LIBS := \
 MODULE_HEADER_DEPS := \
     system/dev/lib/amlogic
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-gpio
+
 include make/module.mk

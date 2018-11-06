@@ -23,6 +23,9 @@ MODULE_LIBS := \
 
 MODULE_HEADER_DEPS := system/dev/lib/imx8m
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-gpio
+
 include make/module.mk
 
 MODULE := $(LOCAL_DIR).m-mini
@@ -40,6 +43,9 @@ MODULE_LIBS := \
     system/ulib/driver \
     system/ulib/c \
     system/ulib/zircon \
+
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-gpio
 
 MODULE_HEADER_DEPS := system/dev/lib/imx8m
 

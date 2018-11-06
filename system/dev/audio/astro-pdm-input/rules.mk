@@ -30,6 +30,9 @@ MODULE_STATIC_LIBS := \
   system/ulib/zx \
   system/ulib/zxcpp \
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-gpio
+
 MODULE_HEADER_DEPS := system/dev/lib/amlogic
 
 include make/module.mk

@@ -20,6 +20,9 @@ MODULE_LIBS := \
     system/ulib/c \
     system/ulib/zircon \
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-gpio
+
 MODULE_HEADER_DEPS := system/dev/lib/amlogic
 
 include make/module.mk

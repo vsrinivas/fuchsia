@@ -6,15 +6,15 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := driver
+MODULE_TYPE := banjo
 
-MODULE_SRCS += $(LOCAL_DIR)/gpio-test.c
+MODULE_PACKAGE := banjo
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
+MODULE_BANJO_LIBRARY := ddk.protocol.gpio
 
-MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
+MODULE_BANJO_NAME := gpio
 
-MODULE_BANJO_LIBS := \
-    system/banjo/ddk-protocol-gpio
+MODULE_SRCS += $(LOCAL_DIR)/gpio.banjo
 
 include make/module.mk
+

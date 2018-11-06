@@ -34,6 +34,9 @@ MODULE_LIBS := \
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-sysinfo \
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-gpio
+
 include make/module.mk
 
 MODULE := $(LOCAL_DIR).proxy
@@ -60,5 +63,8 @@ MODULE_LIBS := \
     system/ulib/driver \
     system/ulib/zircon \
     system/ulib/c \
+
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-gpio
 
 include make/module.mk

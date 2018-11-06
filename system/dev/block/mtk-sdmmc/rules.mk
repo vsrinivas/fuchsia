@@ -28,6 +28,7 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_BANJO_LIBS := \
-    system/banjo/ddk-protocol-block
+    system/banjo/ddk-protocol-block \
+    system/banjo/ddk-protocol-gpio
 
 include make/module.mk

@@ -32,5 +32,8 @@ MODULE_LIBS := \
 MODULE_FIDL_LIBS := \
     system/fidl/zircon-camera \
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-gpio
+
 include make/module.mk
 

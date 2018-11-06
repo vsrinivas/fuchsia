@@ -22,6 +22,9 @@ MODULE_STATIC_LIBS := \
     system/ulib/zxcpp \
     system/ulib/fbl \
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-gpio
+
 include make/module.mk
 
 #
