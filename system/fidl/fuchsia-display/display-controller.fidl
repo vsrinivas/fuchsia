@@ -130,23 +130,24 @@ struct Frame {
 enum ClientCompositionOpcode : uint8 {
     // The client should convert the corresponding layer to a primary layer.
     CLIENT_USE_PRIMARY = 0;
-    // The client should compose all layers with MERGE_BASE and MERGE_SRC into a new,
-    // single primary layer at the MERGE_BASE layer's z-order. The driver must accept
-    // a fullscreen layer with the default pixel format, but may accept other layer
-    // parameters.
+    // The client should compose all layers with CLIENT_MERGE_BASE and CLIENT_MERGE_SRC
+    // into a new, single primary layer at the CLIENT_MERGE_BASE layer's z-order. The
+    // driver must accept a fullscreen layer with the default pixel format, but may
+    // accept other layer parameters.
     //
-    // MERGE_BASE will only be set on one layer per display.
+    // CLIENT_MERGE_BASE will only be set on one layer per display.
     CLIENT_MERGE_BASE = 1;
-    // The client should pre-scale the image so that src_frame's dimensions are equal
-    // to dest_frame's dimensions.
+    // See CLIENT_MERGE_BASE.
     CLIENT_MERGE_SRC = 2;
-    // The client should pre-clip the image so that src_frame's dimensions are equal to
-    // the image's dimensions.
+    // The client should provide a new image produced by scaling the source image
+    // such that the dimensions of the new image's src_frame and dest_frame are
+    // equal to the dimensions of the current image's dest_frame.
     CLIENT_FRAME_SCALE = 3;
-    // The client should pre-clip the image so that src_frame's dimensions are equal to
-    // the image's dimensions.
+    // The client should provide a new image produced by clipping the source image
+    // to the region specified by src_frame.
     CLIENT_SRC_FRAME = 4;
-    // The client should pre-apply the transformation so TRANSFORM_IDENTITY can be used.
+    // The client should provide a new image produced by applying the desired
+    // transformation, so that TRANSFORM_IDENTITY can be specified.
     CLIENT_TRANSFORM = 5;
     // The client should apply the color conversion itself.
     CLIENT_COLOR_CONVERSION = 6;
