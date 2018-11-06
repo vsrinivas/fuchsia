@@ -36,8 +36,8 @@ type Config struct {
 }
 
 func (c *Config) Vars(fs *flag.FlagSet) {
-	fs.StringVar(&c.RepoDir, "-repo", "", "path to repostory directory")
-	fs.StringVar(&c.RepoDir, "-keys", "", "path to keys directory")
+	fs.StringVar(&c.RepoDir, "repo", "", "path to repostory directory")
+	fs.StringVar(&c.RepoDir, "keys", "", "path to keys directory")
 }
 
 func (c *Config) ApplyDefaults() {
