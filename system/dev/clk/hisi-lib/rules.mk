@@ -21,6 +21,7 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-platform-bus \
     system/banjo/ddk-protocol-platform-device \
 
 MODULE_PACKAGE := static

@@ -41,6 +41,7 @@ MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-i2c-impl \
     system/banjo/ddk-protocol-iommu \
     system/banjo/ddk-protocol-platform-device \
+    system/banjo/ddk-protocol-platform-bus \
 
 include make/module.mk
 
@@ -75,5 +76,6 @@ MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-i2c \
     system/banjo/ddk-protocol-i2c-impl \
     system/banjo/ddk-protocol-platform-device \
+    system/banjo/ddk-protocol-platform-bus \
 
 include make/module.mk
