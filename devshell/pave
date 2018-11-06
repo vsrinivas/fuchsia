@@ -18,4 +18,4 @@ if [[ -n "$name" ]]; then
   name_args+=("-n" "${name}")
 fi
 
-exec "${FUCHSIA_BUILD_DIR}/pave.sh" "${name_args[@]}" "$@"
+exec "${FUCHSIA_BUILD_DIR}/pave.sh" "${name_args[@]}" --authorized-keys "${FUCHSIA_DIR}/.ssh/authorized_keys" "$@"
