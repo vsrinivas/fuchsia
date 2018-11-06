@@ -80,7 +80,7 @@ Those command buffers as well as other resources are shared with the magma syste
 
 ### Hardware required
 
-Fuchsia supported devices with the following gpus:
+Fuchsia supports devices with the following gpus:
 
 * Intel Gen 9 - Intel HD Graphics
 * ARM Mali - Bifrost
@@ -91,6 +91,6 @@ GPUs are complex pieces of hardware with flaws that may trigger misbehavior infr
 ## Performance Tests
 
 * [Gfxbench](https://gfxbench.com)
-    * A large and complex performance benchmark
+    * A large and complex performance benchmark.
     * Fuchsia details, forthcoming.
 
