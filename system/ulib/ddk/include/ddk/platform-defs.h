@@ -67,6 +67,7 @@ __BEGIN_CDECLS;
 // Khadas
 #define PDEV_VID_KHADAS             4
 #define PDEV_PID_VIM2               2
+#define PDEV_PID_VIM2_MACHINA       1002
 
 #define PDEV_DID_VIM_DISPLAY        1
 
