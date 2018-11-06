@@ -13,7 +13,7 @@
         "garnet/packages/prod/fonts",
         "garnet/packages/prod/logger",
         "garnet/packages/prod/log_listener",
-        "garnet/packages/prod/mdns",
+        "garnet/packages/prod/mdns_service",
         "garnet/packages/prod/media_audio",
         "garnet/packages/prod/media_codec",
         "garnet/packages/prod/mediaplayer",

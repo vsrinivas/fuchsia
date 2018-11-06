@@ -9,7 +9,7 @@
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 
-#include "garnet/bin/mdns/util/mdns_params.h"
+#include "garnet/bin/mdns/tool/mdns_params.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/macros.h"

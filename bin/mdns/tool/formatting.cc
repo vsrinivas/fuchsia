@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include "garnet/bin/mdns/util/formatting.h"
+#include "garnet/bin/mdns/tool/formatting.h"
 #include "lib/fxl/logging.h"
 
 namespace mdns {
