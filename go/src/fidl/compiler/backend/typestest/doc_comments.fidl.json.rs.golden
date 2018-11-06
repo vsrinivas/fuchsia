@@ -14,6 +14,9 @@ use futures::{Future, Stream, StreamExt};
 use std::ops::Deref;
 
 
+/// const comment #1
+///
+/// const comment #3
 pub const C: i32 = 4;
 
 fidl_union! {
@@ -29,21 +32,13 @@ fidl_union! {
 }
 
 #[derive(Debug, PartialEq)]
-  
-  ///  struct comment #1
-  
-  
-  
-  ///  struct comment #3
-  
+/// struct comment #1
+///
+/// struct comment #3
 pub struct Struct {
-  
-  ///  struct member comment #1
-  
-  
-  
-  ///  struct member comment #3
-  
+  /// struct member comment #1
+  ///
+  /// struct member comment #3
   pub field: i32,
 }
 
@@ -87,13 +82,9 @@ impl InterfaceSynchronousProxy {
 	pub fn into_channel(self) -> zx::Channel {
 		self.client.into_channel()
 	}
-          
-          /// interface comment #1
-          
-          
-          
-          /// interface comment #3
-          
+	/// method comment #1
+	///
+	/// method comment #3
 	pub fn method(&mut self,) -> Result<(), fidl::Error> {self.client.send(&mut (),
 				1,
 			)}
@@ -140,13 +131,9 @@ impl InterfaceProxy {
 			event_receiver: self.client.take_event_receiver(),
 		}
 	}
-          
-          /// interface comment #1
-          
-          
-          
-          /// interface comment #3
-          
+	/// method comment #1
+	///
+	/// method comment #3
 	pub fn method(&self,
 	)-> Result<(), fidl::Error> {
 		InterfaceProxyInterface::method(self,
@@ -394,21 +381,13 @@ impl Stream for InterfaceRequestStream {
 		futures::Poll::Ready(Some(Ok(res)))
 	}
 }
-
-///  interface comment #1
-
-
-
-///  interface comment #3
-
+/// interface comment #1
+///
+/// interface comment #3
 pub enum InterfaceRequest {
-          
-          ///  interface comment #1
-          
-          
-          
-          ///  interface comment #3
-          
+	/// method comment #1
+	///
+	/// method comment #3
 	Method {
 		control_handle: InterfaceControlHandle,},
 }

@@ -20,73 +20,73 @@ type Type struct {
 }
 
 type Const struct {
-	Name       string
-	Type       string
-	Value      string
-	DocStrings []string
+	types.Attributes
+	Name  string
+	Type  string
+	Value string
 }
 
 type Enum struct {
-	Name       string
-	Type       string
-	Members    []EnumMember
-	DocStrings []string
+	types.Attributes
+	Name    string
+	Type    string
+	Members []EnumMember
 }
 
 type EnumMember struct {
-	Name       string
-	ConstName  string
-	Value      string
-	DocStrings []string
+	types.Attributes
+	Name      string
+	ConstName string
+	Value     string
 }
 
 type Union struct {
-	Name       string
-	Members    []UnionMember
-	Size       int
-	Alignment  int
-	DocStrings []string
+	types.Attributes
+	Name      string
+	Members   []UnionMember
+	Size      int
+	Alignment int
 }
 
 type UnionMember struct {
-	Type       string
-	Name       string
-	Offset     int
-	DocStrings []string
+	types.Attributes
+	Type   string
+	Name   string
+	Offset int
 }
 
 type Struct struct {
+	types.Attributes
 	Name        string
 	Members     []StructMember
 	Size        int
 	Alignment   int
 	LargeArrays bool
-	DocStrings  []string
 }
 
 type StructMember struct {
+	types.Attributes
 	Type         string
 	Name         string
 	Offset       int
 	HasDefault   bool
 	DefaultValue string
 	LargeArray   bool
-	DocStrings   []string
 }
 
 type Interface struct {
+	types.Attributes
 	Name        string
 	Methods     []Method
 	ServiceName string
-	DocStrings  []string
 }
 
 type Method struct {
+	types.Attributes
 	Ordinal      types.Ordinal
 	OrdinalName  string
 	Name         string
 	CamelName    string
-	DocStrings   []string
 	HasRequest   bool
 	Request      []Parameter
 	HasResponse  bool
@@ -361,17 +361,17 @@ func (c *compiler) compileConst(val types.Const) Const {
 	var r Const
 	if val.Type.Kind == types.StringType {
 		r = Const{
+			Attributes: val.Attributes,
 			Type:       "&str",
 			Name:       name,
 			Value:      c.compileConstant(val.Value),
-			DocStrings: val.DocComments(),
 		}
 	} else {
 		r = Const{
+			Attributes: val.Attributes,
 			Type:       c.compileType(val.Type, false).Decl,
 			Name:       name,
 			Value:      c.compileConstant(val.Value),
-			DocStrings: val.DocComments(),
 		}
 	}
 	return r
@@ -499,17 +499,17 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 
 func (c *compiler) compileEnum(val types.Enum) Enum {
 	e := Enum{
+		val.Attributes,
 		c.compileCamelCompoundIdentifier(val.Name),
 		compilePrimitiveSubtype(val.Type),
 		[]EnumMember{},
-		val.DocComments(),
 	}
 	for _, v := range val.Members {
 		e.Members = append(e.Members, EnumMember{
+			Attributes: v.Attributes,
 			Name:       compileCamelIdentifier(v.Name),
 			ConstName:  compileScreamingSnakeIdentifier(v.Name),
 			Value:      c.compileConstant(v.Value),
-			DocStrings: val.DocComments(),
 		})
 	}
 	return e
@@ -533,10 +533,10 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 
 func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
+		val.Attributes,
 		c.compileCamelCompoundIdentifier(val.Name),
 		[]Method{},
 		strings.Trim(val.GetServiceName(), "\""),
-		val.DocComments(),
 	}
 
 	for _, v := range val.Methods {
@@ -544,9 +544,9 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 		camelName := compileCamelIdentifier(v.Name)
 		request := c.compileParameterArray(v.Request)
 		response := c.compileParameterArray(v.Response)
-		doc_string := val.DocComments()
 
 		m := Method{
+			Attributes:  v.Attributes,
 			Ordinal:     v.Ordinal,
 			Name:        name,
 			CamelName:   camelName,
@@ -554,7 +554,6 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			Request:     request,
 			HasResponse: v.HasResponse,
 			Response:    response,
-			DocStrings:  doc_string,
 		}
 		r.Methods = append(r.Methods, m)
 	}
@@ -565,25 +564,25 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	memberType := c.compileType(val.Type, false)
 	return StructMember{
+		Attributes:   val.Attributes,
 		Type:         memberType.Decl,
 		Name:         compileSnakeIdentifier(val.Name),
 		Offset:       val.Offset,
 		HasDefault:   false,
 		DefaultValue: "", // TODO(cramertj) support defaults
 		LargeArray:   memberType.LargeArray,
-		DocStrings:   val.DocComments(),
 	}
 }
 
 func (c *compiler) compileStruct(val types.Struct) Struct {
 	name := c.compileCamelCompoundIdentifier(val.Name)
 	r := Struct{
+		Attributes:  val.Attributes,
 		Name:        name,
 		Members:     []StructMember{},
 		Size:        val.Size,
 		Alignment:   val.Alignment,
 		LargeArrays: false,
-		DocStrings:  val.DocComments(),
 	}
 
 	for _, v := range val.Members {
@@ -597,18 +596,20 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 
 func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 	return UnionMember{
-		Type:   c.compileType(val.Type, false).Decl,
-		Name:   compileCamelIdentifier(val.Name),
-		Offset: val.Offset,
+		Attributes: val.Attributes,
+		Type:       c.compileType(val.Type, false).Decl,
+		Name:       compileCamelIdentifier(val.Name),
+		Offset:     val.Offset,
 	}
 }
 
 func (c *compiler) compileUnion(val types.Union) Union {
 	r := Union{
-		Name:      c.compileCamelCompoundIdentifier(val.Name),
-		Members:   []UnionMember{},
-		Size:      val.Size,
-		Alignment: val.Alignment,
+		Attributes: val.Attributes,
+		Name:       c.compileCamelCompoundIdentifier(val.Name),
+		Members:    []UnionMember{},
+		Size:       val.Size,
+		Alignment:  val.Alignment,
 	}
 
 	for _, v := range val.Members {

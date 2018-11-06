@@ -6,6 +6,9 @@ package templates
 
 const Const = `
 {{- define "ConstDeclaration" }}
+{{- range .DocComments}}
+///{{ . }}
+{{- end}}
 pub const {{ .Name }}: {{ .Type }} = {{ .Value }};
 {{- end }}
 `

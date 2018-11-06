@@ -78,11 +78,9 @@ impl {{ $interface.Name }}SynchronousProxy {
 
 	{{- range $method := $interface.Methods }}
 	{{- if $method.HasRequest }}
-        {{- range $index, $line := $method.DocStrings }}
-          {{if ne "" $line }}
-          ///{{ $line }}
-          {{ end }}
-        {{- end }}
+	{{- range .DocComments}}
+	///{{ . }}
+	{{- end}}
 	pub fn {{ $method.Name }}(&mut self,
 		{{- range $request := $method.Request }}
 		mut {{ $request.Name }}: {{ $request.BorrowedType }},
@@ -165,11 +163,9 @@ impl {{ $interface.Name }}Proxy {
 
 	{{- range $method := $interface.Methods }}
 	{{- if $method.HasRequest }}
-        {{- range $index, $line := $method.DocStrings }}
-          {{if ne "" $line }}
-          ///{{ $line }}
-          {{ end }}
-        {{- end }}
+	{{- range .DocComments}}
+	///{{ . }}
+	{{- end}}
 	pub fn {{ $method.Name }}(&self,
 		{{- range $request := $method.Request }}
 		mut {{ $request.Name }}: {{ $request.BorrowedType }},
@@ -576,19 +572,15 @@ impl Stream for {{ $interface.Name }}RequestStream {
 	}
 }
 
-{{- range $index, $line := $interface.DocStrings }}
-{{if ne "" $line }}
-/// {{ $line }}
-{{ end }}
-{{- end }}
+{{- range .DocComments}}
+///{{ . }}
+{{- end}}
 pub enum {{ $interface.Name }}Request {
 	{{- range $method := $interface.Methods }}
         {{- if $method.HasRequest }}
-        {{- range $index, $line := $method.DocStrings }}
-          {{if ne "" $line }}
-          /// {{ $line }}
-          {{ end }}
-        {{- end }}
+	{{- range .DocComments}}
+	///{{ . }}
+	{{- end}}
 	{{ $method.CamelName }} {
 		{{ range $index, $param := $method.Request }}
 		{{ $param.Name }}: {{ $param.Type }},
