@@ -305,18 +305,19 @@ zx_status_t sys_task_suspend(zx_handle_t task_handle, user_out_handle* token) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    // TODO(ZX-1840): Add support for tasks other than threads
-    fbl::RefPtr<ThreadDispatcher> thread;
-    zx_status_t status = up->GetDispatcherWithRights(task_handle, ZX_RIGHT_WRITE,
-                                                     &thread);
+    // TODO(ZX-858): Add support for jobs
+    fbl::RefPtr<Dispatcher> task;
+    zx_status_t status = up->GetDispatcherWithRights(task_handle, ZX_RIGHT_WRITE, &task);
     if (status != ZX_OK)
         return status;
 
-    fbl::RefPtr<Dispatcher> suspend_token;
+    fbl::RefPtr<SuspendTokenDispatcher> suspend_token;
     zx_rights_t rights;
-    status = SuspendTokenDispatcher::Create(ktl::move(thread), &suspend_token, &rights);
+    status = SuspendTokenDispatcher::Create(ktl::move(task), &suspend_token, &rights);
+
     if (status == ZX_OK)
         status = token->make(ktl::move(suspend_token), rights);
+
     return status;
 }
 

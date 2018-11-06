@@ -89,11 +89,17 @@ public:
     void Exit() __NO_RETURN;
     void Kill();
 
+    // Suspends the thread.
+    // Returns ZX_OK on success, or ZX_ERR_BAD_STATE iff the thread is dying or dead.
     zx_status_t Suspend();
     void Resume();
 
     // accessors
     ProcessDispatcher* process() const { return process_.get(); }
+
+    // Returns true if the thread is dying or dead. Threads never return to a previous state
+    // from dying/dead so once this is true it will never flip back to false.
+    bool IsDyingOrDead() const;
 
     zx_status_t set_name(const char* name, size_t len) final __NONNULL((2));
     void get_name(char out_name[ZX_MAX_NAME_LEN]) const final __NONNULL((2));
@@ -245,7 +251,7 @@ private:
 
     // Tracks the number of times Suspend() has been called. Resume() will resume this thread
     // only when this reference count reaches 0.
-    int suspend_count_ = 0;
+    int suspend_count_ TA_GUARDED(get_lock()) = 0;
 
     // Used to protect thread name read/writes
     mutable DECLARE_SPINLOCK(ThreadDispatcher) name_lock_;

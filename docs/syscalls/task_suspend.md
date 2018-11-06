@@ -4,7 +4,7 @@
 
 <!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
 
-task_suspend - suspend the given task. Currently only thread handles may be suspended.
+task_suspend - suspend the given task. Currently only thread or process handles may be suspended.
 
 ## SYNOPSIS
 
@@ -23,6 +23,11 @@ be suspended before the call returns. The task will be suspended soon
 after **task_suspend**() is invoked, unless it is currently blocked in
 the kernel, in which case it will suspend after being unblocked.
 
+Tasks can be suspended and/or resumed before they are started. If a task is
+started while suspended, it will enter suspension before executing any code.
+Similarly, starting a new thread on a suspended process will suspend the thread
+before it executes any code.
+
 Invoking **task_kill**() on a task that is suspended will successfully kill
 the task.
 
@@ -34,11 +39,27 @@ resuming is asynchronous so the thread may not be in a running state when the
 [handle_close](handle_close.md) call returns, even if no other suspend tokens
 are open.
 
+## SIGNALS AND EXCEPTIONS
+
+There are two relevant signals that a thread can assert:
+
+- **ZX_THREAD_RUNNING**
+- **ZX_THREAD_SUSPENDED**
+
+Neither of these will be asserted until the thread is started via
+[process_start](process_start.md) or [thread_start](thread_start.md). When
+a thread starts, it will assert **ZX_THREAD_RUNNING** whether it is suspended
+or not, but if it is suspended will then switch to **ZX_THREAD_SUSPENDED**
+before executing any code.
+
+The **ZX_EXCP_PROCESS_STARTING** and **ZX_EXCP_THREAD_STARTING** debug
+exceptions will also be sent on start whether the task is suspended or not.
+
 ## RIGHTS
 
 <!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
 
-*handle* must be of type **ZX_OBJ_TYPE_THREAD** and have **ZX_RIGHT_WRITE**.
+*handle* must be of type **ZX_OBJ_TYPE_THREAD** or **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_WRITE**.
 
 ## RETURN VALUE
 
@@ -49,12 +70,14 @@ In the event of failure, a negative error value is returned.
 
 **ZX_ERR_BAD_HANDLE** *handle* is not a valid handle.
 
-**ZX_ERR_WRONG_TYPE** *handle* is not a thread handle.
+**ZX_ERR_WRONG_TYPE** *handle* is not a thread or process handle.
 
 **ZX_ERR_INVALID_ARGS**  *suspend_token*  was an invalid pointer.
 
-**ZX_ERR_BAD_STATE**  The task is not in a state where suspending is possible.
+**ZX_ERR_BAD_STATE**  The task is already dying or dead and cannot be suspended.
+
+**ZX_ERR_NO_MEMORY**  Failed to allocate memory.
 
 ## LIMITATIONS
 
-Currently only thread handles are supported.
+Currently only thread and process handles are supported.

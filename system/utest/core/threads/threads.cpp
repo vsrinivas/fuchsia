@@ -116,32 +116,56 @@ static bool wait_thread_excp_type(zx_handle_t thread, zx_handle_t eport, uint32_
     return true;
 }
 
+namespace {
+
+// Class to encapsulate the various handles and calculations required to start a thread.
+//
+// This is only necessary to use directly if you need to do something between creating
+// and starting the thread - otherwise just use start_thread() for simplicity.
+class ThreadStarter {
+public:
+    bool CreateThread(zxr_thread_t* thread_out, zx_handle_t* thread_h) {
+        // TODO: Don't leak these when the thread dies.
+        zx_handle_t thread_stack_vmo = ZX_HANDLE_INVALID;
+        ASSERT_EQ(zx_vmo_create(kStackSize, 0, &thread_stack_vmo), ZX_OK);
+        ASSERT_NE(thread_stack_vmo, ZX_HANDLE_INVALID);
+
+        ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                              0, thread_stack_vmo, 0, kStackSize, &stack_),
+                  ZX_OK);
+        ASSERT_EQ(zx_handle_close(thread_stack_vmo), ZX_OK);
+
+        ASSERT_EQ(zxr_thread_create(zx_process_self(), "test_thread", false,
+                                    thread_out),
+                  ZX_OK);
+        thread_ = thread_out;
+
+        if (thread_h) {
+            ASSERT_EQ(zx_handle_duplicate(zxr_thread_get_handle(thread_out), ZX_RIGHT_SAME_RIGHTS,
+                                          thread_h),
+                      ZX_OK);
+        }
+
+        return true;
+    }
+
+    bool StartThread(zxr_thread_entry_t entry, void* arg) {
+        return zxr_thread_start(thread_, stack_, kStackSize, entry, arg) == ZX_OK;
+    }
+
+private:
+    static constexpr size_t kStackSize = 256u << 10;
+
+    uintptr_t stack_ = 0u;
+    zxr_thread_t* thread_;
+};
+
+} // namespace
+
 static bool start_thread(zxr_thread_entry_t entry, void* arg,
                          zxr_thread_t* thread_out, zx_handle_t* thread_h) {
-    // TODO: Don't leak these when the thread dies.
-    const size_t stack_size = 256u << 10;
-    zx_handle_t thread_stack_vmo = ZX_HANDLE_INVALID;
-    ASSERT_EQ(zx_vmo_create(stack_size, 0, &thread_stack_vmo), ZX_OK);
-    ASSERT_NE(thread_stack_vmo, ZX_HANDLE_INVALID);
-
-    uintptr_t stack = 0u;
-    ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                          0, thread_stack_vmo, 0, stack_size, &stack),
-              ZX_OK);
-    ASSERT_EQ(zx_handle_close(thread_stack_vmo), ZX_OK);
-
-    ASSERT_EQ(zxr_thread_create(zx_process_self(), "test_thread", false,
-                                thread_out),
-              ZX_OK);
-
-    if (thread_h) {
-        ASSERT_EQ(zx_handle_duplicate(zxr_thread_get_handle(thread_out), ZX_RIGHT_SAME_RIGHTS,
-                                      thread_h),
-                  ZX_OK);
-    }
-    ASSERT_EQ(zxr_thread_start(thread_out, stack, stack_size, entry, arg),
-              ZX_OK);
-    return true;
+    ThreadStarter starter;
+    return starter.CreateThread(thread_out, thread_h) && starter.StartThread(entry, arg);
 }
 
 static bool start_and_kill_thread(zxr_thread_entry_t entry, void* arg) {
@@ -340,25 +364,15 @@ static bool TestKillWaitThread() {
     END_TEST;
 }
 
-static bool TestBadStateNonstartedThread() {
+static bool TestNonstartedThread() {
     BEGIN_TEST;
 
-    // Perform a bunch of apis against non started threads (in the INITIAL STATE).
+    // Perform apis against non started threads (in the INITIAL STATE).
     zx_handle_t thread;
 
     ASSERT_EQ(zx_thread_create(zx_process_self(), "thread", 5, 0, &thread), ZX_OK);
-    zx_handle_t suspend_token = ZX_HANDLE_INVALID;
-    ASSERT_EQ(zx_task_suspend_token(thread, &suspend_token), ZX_ERR_BAD_STATE);
-    ASSERT_EQ(zx_handle_close(thread), ZX_OK);
-
-    ASSERT_EQ(zx_thread_create(zx_process_self(), "thread", 5, 0, &thread), ZX_OK);
     ASSERT_EQ(zx_task_kill(thread), ZX_OK);
     ASSERT_EQ(zx_task_kill(thread), ZX_OK);
-    ASSERT_EQ(zx_handle_close(thread), ZX_OK);
-
-    ASSERT_EQ(zx_thread_create(zx_process_self(), "thread", 5, 0, &thread), ZX_OK);
-    ASSERT_EQ(zx_task_kill(thread), ZX_OK);
-    ASSERT_EQ(zx_task_suspend_token(thread, &suspend_token), ZX_ERR_BAD_STATE);
     ASSERT_EQ(zx_handle_close(thread), ZX_OK);
 
     END_TEST;
@@ -785,6 +799,71 @@ static bool TestKillSuspendedThread() {
     clear_debugger_exception_port();
     ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
     ASSERT_EQ(zx_handle_close(eport), ZX_OK);
+    ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
+
+    END_TEST;
+}
+
+// Suspend a thread before starting and make sure it starts into suspended state.
+static bool TestStartSuspendedThread() {
+    BEGIN_TEST;
+
+    zxr_thread_t thread;
+    zx_handle_t thread_h;
+    ThreadStarter starter;
+    ASSERT_TRUE(starter.CreateThread(&thread, &thread_h));
+
+    // Suspend first, then start the thread.
+    zx_handle_t suspend_token = ZX_HANDLE_INVALID;
+    ASSERT_EQ(zx_task_suspend(thread_h, &suspend_token), ZX_OK);
+
+    TestWritingThreadArg arg = {.v = 0};
+    ASSERT_TRUE(starter.StartThread(TestWritingThreadFn, &arg));
+
+    // Make sure the thread goes directly to suspended state without executing at all.
+    ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_SUSPENDED, ZX_TIME_INFINITE, NULL), ZX_OK);
+    EXPECT_EQ(arg.v, 0);
+
+    // Make sure the thread still resumes properly.
+    ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
+    ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_RUNNING, ZX_TIME_INFINITE, NULL), ZX_OK);
+    while (arg.v != 1) {
+        zx_nanosleep(0);
+    }
+
+    // Clean up.
+    ASSERT_EQ(zx_task_kill(thread_h), ZX_OK);
+    ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK);
+    ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
+
+    END_TEST;
+}
+
+// Suspend and resume a thread before starting, it should start as normal.
+static bool TestStartSuspendedAndResumedThread() {
+    BEGIN_TEST;
+
+    zxr_thread_t thread;
+    zx_handle_t thread_h;
+    ThreadStarter starter;
+    ASSERT_TRUE(starter.CreateThread(&thread, &thread_h));
+
+    // Suspend and resume.
+    zx_handle_t suspend_token = ZX_HANDLE_INVALID;
+    ASSERT_EQ(zx_task_suspend(thread_h, &suspend_token), ZX_OK);
+    ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
+
+    // Start the thread, it should behave normally.
+    TestWritingThreadArg arg = {.v = 0};
+    ASSERT_TRUE(starter.StartThread(TestWritingThreadFn, &arg));
+    ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_RUNNING, ZX_TIME_INFINITE, NULL), ZX_OK);
+    while (arg.v != 1) {
+        zx_nanosleep(0);
+    }
+
+    // Clean up.
+    ASSERT_EQ(zx_task_kill(thread_h), ZX_OK);
+    ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK);
     ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
 
     END_TEST;
@@ -1554,7 +1633,7 @@ RUN_TEST_ENABLE_CRASH_HANDLER(TestThreadStartWithZeroInstructionPointer)
 RUN_TEST(TestKillBusyThread)
 RUN_TEST(TestKillSleepThread)
 RUN_TEST(TestKillWaitThread)
-RUN_TEST(TestBadStateNonstartedThread)
+RUN_TEST(TestNonstartedThread)
 RUN_TEST(TestThreadKillsItself)
 RUN_TEST(TestInfoTaskStatsFails)
 RUN_TEST(TestResumeSuspended)
@@ -1564,6 +1643,8 @@ RUN_TEST(TestSuspendPortCall)
 RUN_TEST(TestSuspendStopsThread)
 RUN_TEST(TestSuspendMultiple)
 RUN_TEST(TestKillSuspendedThread)
+RUN_TEST(TestStartSuspendedThread)
+RUN_TEST(TestStartSuspendedAndResumedThread)
 RUN_TEST(TestSuspendSingleWaitAsyncSignalDelivery)
 RUN_TEST(TestSuspendRepeatingWaitAsyncSignalDelivery)
 RUN_TEST(TestReadingGeneralRegisterState)

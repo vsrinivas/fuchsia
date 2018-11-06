@@ -89,6 +89,10 @@ def match_sentence_form(sentence, arg_names):
             '.'
         ],
         [
+            'ARG', 'must', 'be', 'of', 'type', 'TYPE1', 'or', 'TYPE2', 'and', 'have', 'RIGHT',
+            '.'
+        ],
+        [
             'If', 'ARG1', 'is', 'VALUE', ',', 'ARG2', 'must', 'have', 'RIGHT',
             '.'
         ],

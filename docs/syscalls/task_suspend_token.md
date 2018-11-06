@@ -8,7 +8,7 @@ updated, **task_suspend** will be deleted and this function will be renamed
 
 <!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
 
-task_suspend_token - suspend the given task. Currently only thread handles may be suspended.
+task_suspend_token - suspend the given task. Currently only thread or process handles may be suspended.
 
 ## SYNOPSIS
 
@@ -42,7 +42,7 @@ are open.
 
 <!-- Updated by scripts/update-docs-from-abigen, do not edit this section manually. -->
 
-*handle* must be of type **ZX_OBJ_TYPE_THREAD** and have **ZX_RIGHT_WRITE**.
+*handle* must be of type **ZX_OBJ_TYPE_THREAD** or **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_WRITE**.
 
 ## RETURN VALUE
 

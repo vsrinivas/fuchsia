@@ -445,14 +445,14 @@ syscall task_bind_exception_port
     (handle: zx_handle_t, port: zx_handle_t, key: uint64_t, options: uint32_t)
     returns (zx_status_t);
 
-#^ suspend the given task. Currently only thread handles may be suspended.
-#! handle must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_WRITE.
+#^ suspend the given task. Currently only thread or process handles may be suspended.
+#! handle must be of type ZX_OBJ_TYPE_THREAD or ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.
 syscall task_suspend
     (handle: zx_handle_t)
     returns (zx_status_t, token: zx_handle_t handle_acquire);
 
-#^ suspend the given task. Currently only thread handles may be suspended.
-#! handle must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_WRITE.
+#^ suspend the given task. Currently only thread or process handles may be suspended.
+#! handle must be of type ZX_OBJ_TYPE_THREAD or ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.
 syscall task_suspend_token
     (handle: zx_handle_t)
     returns (zx_status_t, token: zx_handle_t handle_acquire);

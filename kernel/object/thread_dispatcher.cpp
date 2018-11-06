@@ -180,19 +180,32 @@ zx_status_t ThreadDispatcher::Start(uintptr_t entry, uintptr_t sp,
     user_arg2_ = arg2;
 
     // add ourselves to the process, which may fail if the process is in a dead state
-    auto ret = process_->AddThread(this, initial_thread);
+    bool suspended;
+    auto ret = process_->AddThread(this, initial_thread, &suspended);
     if (ret < 0)
         return ret;
 
+    // update our suspend count to account for our parent state
+    if (suspended)
+        suspend_count_++;
+
     // bump the ref on this object that the LK thread state will now own until the lk thread has exited
     AddRef();
-
-    // mark ourselves as running and resume the kernel thread
-    SetStateLocked(ThreadState::Lifecycle::RUNNING);
-
     thread_.user_tid = get_koid();
     thread_.user_pid = process_->get_koid();
-    thread_resume(&thread_);
+
+    // start the thread in RUNNING state, if we're starting suspended it will transition to
+    // SUSPENDED when it checks thread signals before executing any user code
+    SetStateLocked(ThreadState::Lifecycle::RUNNING);
+
+    if (suspend_count_ == 0) {
+        thread_resume(&thread_);
+    } else {
+        // thread_suspend() only fails if the underlying thread is already dead, which we should
+        // ignore here to match the behavior of thread_resume(); our Exiting() callback will run
+        // shortly to clean us up
+        thread_suspend(&thread_);
+    }
 
     return ZX_OK;
 }
@@ -255,17 +268,33 @@ zx_status_t ThreadDispatcher::Suspend() {
 
     LTRACEF("%p: state %s\n", this, ThreadLifecycleToString(state_.lifecycle()));
 
-    if (state_.lifecycle() != ThreadState::Lifecycle::RUNNING &&
-        state_.lifecycle() != ThreadState::Lifecycle::SUSPENDED)
-        return ZX_ERR_BAD_STATE;
-
+    // Update |suspend_count_| in all cases so that we can always verify a sane value - it's
+    // possible both Suspend() and Resume() get called while the thread is DYING.
     DEBUG_ASSERT(suspend_count_ >= 0);
     suspend_count_++;
-    if (suspend_count_ == 1)
-        return thread_suspend(&thread_);
 
-    // It was already suspended.
-    return ZX_OK;
+    switch (state_.lifecycle()) {
+    case ThreadState::Lifecycle::INITIAL:
+        // Unreachable, thread leaves INITIAL state before Create() returns.
+        DEBUG_ASSERT(false);
+        __UNREACHABLE;
+    case ThreadState::Lifecycle::INITIALIZED:
+        // If the thread hasn't started yet, don't actually try to suspend it. We need to let
+        // Start() run first to set up userspace entry data, which will then suspend if the count
+        // is still >0 at that time.
+        return ZX_OK;
+    case ThreadState::Lifecycle::RUNNING:
+    case ThreadState::Lifecycle::SUSPENDED:
+        if (suspend_count_ == 1)
+            return thread_suspend(&thread_);
+        return ZX_OK;
+    case ThreadState::Lifecycle::DYING:
+    case ThreadState::Lifecycle::DEAD:
+        return ZX_ERR_BAD_STATE;
+    }
+
+    DEBUG_ASSERT(false);
+    return ZX_ERR_BAD_STATE;
 }
 
 void ThreadDispatcher::Resume() {
@@ -277,18 +306,33 @@ void ThreadDispatcher::Resume() {
 
     LTRACEF("%p: state %s\n", this, ThreadLifecycleToString(state_.lifecycle()));
 
-    // It's possible the thread never transitioned from RUNNING -> SUSPENDED.
-    // But if it's dying or dead then bail.
-    if (state_.lifecycle() != ThreadState::Lifecycle::RUNNING &&
-        state_.lifecycle() != ThreadState::Lifecycle::SUSPENDED) {
-        return;
-    }
-
     DEBUG_ASSERT(suspend_count_ > 0);
     suspend_count_--;
-    if (suspend_count_ == 0)
-        thread_resume(&thread_);
-    // Otherwise there's still an out-standing Suspend() call so keep it suspended.
+
+    switch (state_.lifecycle()) {
+    case ThreadState::Lifecycle::INITIAL:
+        // Unreachable, thread leaves INITIAL state before Create() returns.
+        DEBUG_ASSERT(false);
+        __UNREACHABLE;
+    case ThreadState::Lifecycle::INITIALIZED:
+        break;
+    case ThreadState::Lifecycle::RUNNING:
+    case ThreadState::Lifecycle::SUSPENDED:
+        // It's possible the thread never transitioned from RUNNING -> SUSPENDED.
+        if (suspend_count_ == 0)
+            thread_resume(&thread_);
+        break;
+    case ThreadState::Lifecycle::DYING:
+    case ThreadState::Lifecycle::DEAD:
+        // If it's dying or dead then bail.
+        break;
+    }
+}
+
+bool ThreadDispatcher::IsDyingOrDead() const {
+    Guard<fbl::Mutex> guard{get_lock()};
+    return state_.lifecycle() == ThreadState::Lifecycle::DYING ||
+           state_.lifecycle() == ThreadState::Lifecycle::DEAD;
 }
 
 static void ThreadCleanupDpc(dpc_t* d) {

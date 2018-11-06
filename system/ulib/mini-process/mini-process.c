@@ -40,10 +40,8 @@ static zx_status_t write_ctx_message(
     return zx_channel_write(channel, 0u, &ctx, sizeof(ctx), &transferred_handle, 1u);
 }
 
-zx_status_t start_mini_process_etc(zx_handle_t process, zx_handle_t thread,
-                                   zx_handle_t vmar,
-                                   zx_handle_t transferred_handle,
-                                   zx_handle_t* control_channel) {
+// Sets up a VMO on the given VMAR which contains the mini process code and space for a stack.
+static zx_status_t prepare_stack_vmo(zx_handle_t vmar, zx_vaddr_t* stack_base, zx_vaddr_t* sp) {
     // Allocate a single VMO for the child. It doubles as the stack on the top and
     // as the executable code (minipr_thread_loop()) at the bottom. In theory, actual
     // stack usage is minimal, like 160 bytes or less.
@@ -63,14 +61,31 @@ zx_status_t start_mini_process_etc(zx_handle_t process, zx_handle_t thread,
     if (status != ZX_OK)
         goto exit;
 
-    zx_vaddr_t stack_base;
     zx_vm_option_t perms = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE;
-    status = zx_vmar_map(vmar, perms, 0, stack_vmo, 0, stack_size, &stack_base);
+    status = zx_vmar_map(vmar, perms, 0, stack_vmo, 0, stack_size, stack_base);
     if (status != ZX_OK)
         goto exit;
 
     // Compute a valid starting SP for the machine's ABI.
-    uintptr_t sp = compute_initial_stack_pointer(stack_base, stack_size);
+    *sp = compute_initial_stack_pointer(*stack_base, stack_size);
+
+exit:
+    // Close the VMO handle no matter what; if we failed we want to release it, and if
+    // we succeeded the VMAR retains a reference to it so we don't need a handle.
+    zx_handle_close(stack_vmo);
+    return status;
+}
+
+zx_status_t start_mini_process_etc(zx_handle_t process, zx_handle_t thread,
+                                   zx_handle_t vmar,
+                                   zx_handle_t transferred_handle,
+                                   zx_handle_t* control_channel) {
+    zx_vaddr_t stack_base = 0;
+    zx_vaddr_t sp = 0;
+    zx_status_t status = prepare_stack_vmo(vmar, &stack_base, &sp);
+    if (status != ZX_OK)
+        return status;
+
     zx_handle_t chn[2] = { ZX_HANDLE_INVALID, ZX_HANDLE_INVALID };
 
 
@@ -159,8 +174,6 @@ zx_status_t start_mini_process_etc(zx_handle_t process, zx_handle_t thread,
 exit:
     if (transferred_handle != ZX_HANDLE_INVALID)
         zx_handle_close(transferred_handle);
-    if (stack_vmo != ZX_HANDLE_INVALID)
-        zx_handle_close(stack_vmo);
     if (chn[0] != ZX_HANDLE_INVALID)
         zx_handle_close(chn[0]);
     if (chn[1] != ZX_HANDLE_INVALID)
@@ -234,4 +247,14 @@ exit:
         zx_handle_close(channel);
 
     return status;
+}
+
+zx_status_t start_mini_process_thread(zx_handle_t thread, zx_handle_t vmar) {
+    zx_vaddr_t stack_base = 0;
+    zx_vaddr_t sp = 0;
+    zx_status_t status = prepare_stack_vmo(vmar, &stack_base, &sp);
+    if (status != ZX_OK)
+        return status;
+
+    return zx_thread_start(thread, stack_base, sp, 0, 0);
 }

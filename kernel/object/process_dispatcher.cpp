@@ -231,6 +231,52 @@ void ProcessDispatcher::Kill() {
         FinishDeadTransition();
 }
 
+zx_status_t ProcessDispatcher::Suspend() {
+    canary_.Assert();
+
+    LTRACE_ENTRY_OBJ;
+
+    Guard<fbl::Mutex> guard{get_lock()};
+
+    // If we're dying don't try to suspend.
+    if (state_ == State::DYING || state_ == State::DEAD)
+        return ZX_ERR_BAD_STATE;
+
+    DEBUG_ASSERT(suspend_count_ >= 0);
+    suspend_count_++;
+    if (suspend_count_ == 1) {
+        for (auto& thread : thread_list_) {
+            // Thread suspend can only fail if the thread is already dying, which is fine here
+            // since it will be removed from this process shortly, so continue to suspend whether
+            // the thread suspend succeeds or fails.
+            zx_status_t status = thread.Suspend();
+            DEBUG_ASSERT(status == ZX_OK || thread.IsDyingOrDead());
+        }
+    }
+
+    return ZX_OK;
+}
+
+void ProcessDispatcher::Resume() {
+    canary_.Assert();
+
+    LTRACE_ENTRY_OBJ;
+
+    Guard<fbl::Mutex> guard{get_lock()};
+
+    // If we're in the process of dying don't try to resume, just let it continue to clean up.
+    if (state_ == State::DYING || state_ == State::DEAD)
+        return;
+
+    DEBUG_ASSERT(suspend_count_ > 0);
+    suspend_count_--;
+    if (suspend_count_ == 0) {
+        for (auto& thread : thread_list_) {
+            thread.Resume();
+        }
+    }
+}
+
 void ProcessDispatcher::KillAllThreadsLocked() {
     LTRACE_ENTRY_OBJ;
 
@@ -240,7 +286,9 @@ void ProcessDispatcher::KillAllThreadsLocked() {
     }
 }
 
-zx_status_t ProcessDispatcher::AddThread(ThreadDispatcher* t, bool initial_thread) {
+zx_status_t ProcessDispatcher::AddThread(ThreadDispatcher* t,
+                                         bool initial_thread,
+                                         bool* suspended) {
     LTRACE_ENTRY_OBJ;
 
     Guard<fbl::Mutex> guard{get_lock()};
@@ -260,6 +308,9 @@ zx_status_t ProcessDispatcher::AddThread(ThreadDispatcher* t, bool initial_threa
     thread_list_.push_back(t);
 
     DEBUG_ASSERT(t->process() == this);
+
+    // If we're suspended, start this thread in suspended state as well.
+    *suspended = (suspend_count_ > 0);
 
     if (initial_thread)
         SetStateLocked(State::RUNNING);

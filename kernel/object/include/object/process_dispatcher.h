@@ -195,6 +195,16 @@ public:
     void Exit(int64_t retcode) __NO_RETURN;
     void Kill();
 
+    // Suspends the process.
+    //
+    // Suspending a process causes all child threads to suspend as well as any new children
+    // that are added until the process is resumed. Suspend() is cumulative, so the process
+    // will only resume once Resume() has been called an equal number of times.
+    //
+    // Returns ZX_OK on success, or ZX_ERR_BAD_STATE iff the process is dying or dead.
+    zx_status_t Suspend();
+    void Resume();
+
     // Syscall helpers
     zx_status_t GetInfo(zx_info_process_t* info);
     zx_status_t GetStats(zx_info_task_stats_t* stats);
@@ -283,9 +293,12 @@ private:
 
     void OnProcessStartForJobDebugger(ThreadDispatcher *t);
 
-    // Thread lifecycle support
+    // Thread lifecycle support.
+    //
+    // |suspended| indicates whether the parent process is currently suspended or not. If true,
+    // the child thread must increment its own suspend count by one and transition to suspend.
     friend class ThreadDispatcher;
-    zx_status_t AddThread(ThreadDispatcher* t, bool initial_thread);
+    zx_status_t AddThread(ThreadDispatcher* t, bool initial_thread, bool* suspended);
     void RemoveThread(ThreadDispatcher* t);
 
     void SetStateLocked(State) TA_REQ(get_lock());
@@ -324,6 +337,9 @@ private:
 
     // our state
     State state_ TA_GUARDED(get_lock()) = State::INITIAL;
+
+    // Suspend count; incremented on Suspend(), decremented on Resume().
+    int suspend_count_ TA_GUARDED(get_lock()) = 0;
 
     // True if FinishDeadTransition has been called.
     // This is used as a sanity check only.

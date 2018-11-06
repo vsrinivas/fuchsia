@@ -314,11 +314,11 @@ zx_status_t thread_detach_and_resume(thread_t* t) {
 }
 
 /**
- * @brief  Suspend a ready/running thread
+ * @brief  Suspend an initialized/ready/running thread
  *
  * @param t  Thread to suspend
  *
- * @return ZX_OK on success.
+ * @return ZX_OK on success, ZX_ERR_BAD_STATE if the thread is dead
  */
 zx_status_t thread_suspend(thread_t* t) {
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
@@ -326,7 +326,7 @@ zx_status_t thread_suspend(thread_t* t) {
 
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
-    if (t->state == THREAD_INITIAL || t->state == THREAD_DEATH) {
+    if (t->state == THREAD_DEATH) {
         return ZX_ERR_BAD_STATE;
     }
 
@@ -334,11 +334,20 @@ zx_status_t thread_suspend(thread_t* t) {
 
     bool local_resched = false;
     switch (t->state) {
-    case THREAD_INITIAL:
     case THREAD_DEATH:
-        // This should be unreachable because these two states were handled
-        // above.
+        // This should be unreachable because this state was handled above.
         panic("Unexpected thread state");
+    case THREAD_INITIAL:
+        // Thread hasn't been started yet, add it to the run queue to transition
+        // properly through the INITIAL -> READY state machine first, then it
+        // will see the signal and go to SUSPEND before running user code.
+        //
+        // Though the state here is still INITIAL, the higher-level code has
+        // already executed ThreadDispatcher::Start() so all the userspace
+        // entry data has been initialized and will be ready to go as soon as
+        // the thread is unsuspended.
+        local_resched = sched_unblock(t);
+        break;
     case THREAD_READY:
         // thread is ready to run and not blocked or suspended.
         // will wake up and deal with the signal soon.
