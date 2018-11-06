@@ -58,11 +58,18 @@ template("fidl_dart") {
       rebase_path(bindings_dir, root_build_dir),
       "--include-base",
       rebase_path(root_gen_dir, root_build_dir),
-      "--dartfmt",
-      rebase_path("$dart_sdk/bin/dartfmt"),
     ]
 
-    deps = dart_sdk_deps + [ ":$main_target_name($fidl_toolchain)" ]
+    # Don't run the formatter if we are using a custom-built Dart SDK in a
+    # cross-build.
+    deps = [ ":$main_target_name($fidl_toolchain)" ]
+    if (use_prebuilt_dart_sdk || (host_cpu == target_cpu)) {
+      args += [
+        "--dartfmt",
+        rebase_path("$dart_sdk/bin/dartfmt"),
+      ]
+      deps += dart_sdk_deps
+    }
   }
 
   copy_pubspec_target_name = "${target_name}_dart_pubspec"

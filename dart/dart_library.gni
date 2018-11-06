@@ -178,8 +178,11 @@ if (current_toolchain == dart_toolchain) {
              ] + rebase_path(package_files)
     }
 
+    # Don't run the analyzer if it is explicitly disabled or if we are using
+    # a custom-built Dart SDK in a cross-build.
     with_analysis =
-        !defined(invoker.disable_analysis) || !invoker.disable_analysis
+        (!defined(invoker.disable_analysis) || !invoker.disable_analysis) &&
+        (use_prebuilt_dart_sdk || (host_cpu == target_cpu))
     if (with_analysis) {
       options_file = "$package_root/analysis_options.yaml"
       invocation_file = "$target_gen_dir/$target_name.analyzer.sh"

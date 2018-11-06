@@ -31,6 +31,10 @@ import("//build/dart/toolchain.gni")
 #
 #   disable_analysis (optional)
 #     Prevents analysis from being run on this target.
+#
+#   force_prebuilt_dart (optional)
+#     Forces using the prebuilt Dart binary even when use_prebuilt_dart_sdk is
+#     false. Defaults to true in a cross-build, and false otherwise.
 template("dart_tool") {
   assert(defined(invoker.main_dart), "Must specify main_dart file")
 
@@ -95,7 +99,20 @@ template("dart_tool") {
     sources += [ rebase_path(invoker.main_dart, source_base) ]
   }
 
-  dart_binary = "$dart_sdk/bin/dart"
+  # Avoid using a custom-built Dart VM in a cross-build. The Dart VM would run
+  # the Dart code and front-end in a simulator, and it would be prohibitively
+  # slow.
+  force_prebuilt_dart = host_cpu != target_cpu
+  if (defined(invoker.force_prebuilt_dart)) {
+    force_prebuilt_dart = invoker.force_prebuilt_dart
+  }
+  if (force_prebuilt_dart) {
+    dart_binary = prebuilt_dart
+    sdk_deps = []
+  } else {
+    dart_binary = "$dart_sdk/bin/dart"
+    sdk_deps = dart_sdk_deps
+  }
 
   snapshot_path = "$target_gen_dir/${target_name}.snapshot"
   depfile_path = "${snapshot_path}.d"
@@ -142,7 +159,7 @@ template("dart_tool") {
       main_uri,
     ]
 
-    deps = dart_sdk_deps + [ ":$dart_library_target_name" ]
+    deps = sdk_deps + [ ":$dart_library_target_name" ]
   }
 
   if (defined(invoker.output_name)) {
@@ -174,7 +191,7 @@ template("dart_tool") {
       rebase_path(snapshot_path),
     ]
 
-    deps = dart_sdk_deps + [ ":$snapshot_target_name" ]
+    deps = sdk_deps + [ ":$snapshot_target_name" ]
     if (defined(invoker.non_dart_deps)) {
       deps += invoker.non_dart_deps
     }
