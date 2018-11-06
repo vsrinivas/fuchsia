@@ -7,12 +7,15 @@ package serve
 import (
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"fuchsia.googlesource.com/pm/build"
+	"fuchsia.googlesource.com/sse"
 )
 
 type loggingWriter struct {
@@ -25,14 +28,25 @@ func (lw *loggingWriter) WriteHeader(status int) {
 	lw.ResponseWriter.WriteHeader(status)
 }
 
+func (lw *loggingWriter) Flush() {
+	lw.ResponseWriter.(http.Flusher).Flush()
+}
+
+var (
+	mu          sync.Mutex
+	autoClients = map[http.ResponseWriter]struct{}{}
+)
+
 func Run(cfg *build.Config, args []string) error {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
 	repoDir := fs.String("d", "", "The path to the file repository to serve.")
 	listen := fs.String("l", ":8083", "HTTP listen address")
+	auto := fs.Bool("a", true, "Host auto endpoint for realtime client updates")
+	autoRate := fs.Duration("auto-rate", time.Second, "rate at which to poll filesystem if realtime watch is not available")
 	quiet := fs.Bool("q", false, "Don't print out information about requests")
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "usage: %s serve -d=<directory_path>", filepath.Base(os.Args[0]))
+		fmt.Fprintf(os.Stderr, "usage: %s serve", filepath.Base(os.Args[0]))
 		fmt.Fprintln(os.Stderr)
 		fs.PrintDefaults()
 	}
@@ -56,6 +70,53 @@ func Run(cfg *build.Config, args []string) error {
 
 	if !fi.IsDir() {
 		return fmt.Errorf("repository path %q is not a directory", *repoDir)
+	}
+
+	if *auto {
+		// TODO(raggi): move to fsnotify
+		go func() {
+			timestampPath := filepath.Join(*repoDir, "timestamp.json")
+			lastUpdateTime := time.Now()
+			t := time.NewTicker(*autoRate)
+			for range t.C {
+				fi, err := os.Stat(timestampPath)
+				if err != nil {
+					continue
+				}
+
+				if fi.ModTime().After(lastUpdateTime) {
+					lastUpdateTime = fi.ModTime()
+					mu.Lock()
+					for w := range autoClients {
+						// errors are ignored, as close notifier in the handler
+						// ultimately handles cleanup
+						sse.Write(w, &sse.Event{
+							Event: "timestamp.json",
+							Data:  []byte(lastUpdateTime.Format(http.TimeFormat)),
+						})
+					}
+					mu.Unlock()
+				}
+			}
+		}()
+
+		http.HandleFunc("/auto", func(w http.ResponseWriter, r *http.Request) {
+			err := sse.Start(w, r)
+			if err != nil {
+				log.Printf("SSE request failure: %s", err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			mu.Lock()
+			autoClients[w] = struct{}{}
+			defer func() {
+				mu.Lock()
+				delete(autoClients, w)
+				mu.Unlock()
+			}()
+			mu.Unlock()
+			<-r.Context().Done()
+		})
 	}
 
 	http.Handle("/", http.FileServer(http.Dir(*repoDir)))
