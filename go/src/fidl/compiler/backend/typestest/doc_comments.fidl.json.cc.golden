@@ -252,8 +252,11 @@ Table& Table::operator=(Table&& other) {
 }
 
 void Table::Encode(::fidl::Encoder* encoder, size_t offset) {
-  ::fidl::EncodeVectorPointer(encoder, 1, offset);
-  size_t base = encoder->Alloc(1 * sizeof(uint64_t));
+  size_t max_ordinal = 0;
+  if (has_Field_) max_ordinal = 1;
+  ::fidl::EncodeVectorPointer(encoder, max_ordinal, offset);
+  if (max_ordinal == 0) return;
+  size_t base = encoder->Alloc(max_ordinal * 2 * sizeof(uint64_t));
   if (has_Field_) {
     const size_t length_before = encoder->CurrentLength();
     const size_t handles_before = encoder->CurrentHandleCount();
@@ -261,10 +264,12 @@ void Table::Encode(::fidl::Encoder* encoder, size_t offset) {
         encoder,
         &Field_.value,
         encoder->Alloc(::fidl::CodingTraits<int32_t>::encoded_size));
-    uint64_t presence =
-        ((encoder->CurrentLength() - length_before) << 32) |
-        (encoder->CurrentHandleCount() - handles_before);
-    ::fidl::Encode(encoder, &presence, base + (1 - 1) * sizeof(uint64_t));
+    size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
+    uint64_t num_bytes_then_num_handles =
+        (encoder->CurrentLength() - length_before) |
+        ((encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(encoder, &num_bytes_then_num_handles, envelope_base);
+    *encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
   }
 }
 
@@ -279,8 +284,9 @@ void Table::Decode(::fidl::Decoder* decoder, Table* value, size_t offset) {
   base = decoder->GetOffset(encoded->data);
   count = encoded->count;
   if (count >= 1) {
+    size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
     uint64_t presence;
-    ::fidl::Decode(decoder, &presence, base + (1 - 1) * sizeof(uint64_t));
+    ::fidl::Decode(decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
       ::fidl::Decode(decoder, value->mutable_Field(), decoder->GetOffset(presence));
     } else {
