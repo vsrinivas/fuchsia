@@ -22,35 +22,33 @@ use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fuchsia_auth_account::{AccountManagerMarker, AccountManagerRequestStream};
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
-use futures::prelude::*;
 use log::{error, info};
-use std::sync::{Arc, Mutex};
-
-fn spawn_from_channel(account_manager: Arc<Mutex<AccountManager>>, chan: fasync::Channel) {
-    fasync::spawn(
-        AccountManagerRequestStream::from_channel(chan)
-            .try_for_each(move |req| account_manager.lock().unwrap().handle_request(req))
-            .unwrap_or_else(|e| error!("Error handling AccountManager channel {:?}", e)),
-    );
-}
+use std::sync::Arc;
 
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
     info!("Starting account manager");
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
-    let account_manager = Arc::new(Mutex::new(AccountManager::new()));
+    let account_manager = Arc::new(AccountManager::new());
 
     let fut = ServicesServer::new()
         .add_service((AccountManagerMarker::NAME, move |chan| {
-            spawn_from_channel(account_manager.clone(), chan)
+            let account_manager_clone = Arc::clone(&account_manager);
+            fasync::spawn(
+                async move {
+                    let stream = AccountManagerRequestStream::from_channel(chan);
+                    await!(account_manager_clone.handle_requests_from_stream(stream))
+                        .unwrap_or_else(|e| error!("Error handling AccountManager channel {:?}", e))
+                },
+            );
         }))
         .start()
-        .context("Error starting Auth AccountManager server")?;
+        .context("Error starting AccountManager server")?;
 
     executor
         .run_singlethreaded(fut)
-        .context("Failed to execute Auth AccountManager future")?;
+        .context("Failed to execute AccountManager future")?;
     info!("Stopping account manager");
     Ok(())
 }
