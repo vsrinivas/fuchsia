@@ -26,9 +26,6 @@ endef
 clk:
 	$(run-banjo)
 
-scpi:
-	$(run-banjo)
-
 sdhci:
 	$(run-banjo)
 

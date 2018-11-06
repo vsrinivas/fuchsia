@@ -34,5 +34,6 @@ MODULE_LIBS := \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-platform-device \
+    system/banjo/ddk-protocol-scpi \
 
 include make/module.mk
