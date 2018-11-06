@@ -129,6 +129,7 @@ fn create_wlantap_config() -> wlantap::WlantapPhyConfig {
 struct State {
     current_channel: wlan_mlme::WlanChan,
     frame_buf: Vec<u8>,
+    is_associated: bool,
 }
 
 impl State {
@@ -139,7 +140,8 @@ impl State {
                 cbw: wlan_mlme::Cbw::Cbw20,
                 secondary80: 0
             },
-            frame_buf: vec![]
+            frame_buf: vec![],
+            is_associated: false,
         }
     }
 }
@@ -307,12 +309,13 @@ fn main() -> Result<(), failure::Error> {
         while let Some(_) = await!(beacon_timer_stream.next()) {
             let state = &mut *state.lock().unwrap();
             if state.current_channel.primary == 6 {
-                eprintln!("sending beacon!");
-                send_beacon(&mut state.frame_buf, &state.current_channel,
-                         &BSSID, "fakenet".as_bytes(), &proxy).unwrap();
+                if !state.is_associated { eprintln!("sending beacon!"); }
+                send_beacon(&mut state.frame_buf, &state.current_channel, &BSSID,
+                          "fakenet".as_bytes(), &proxy).unwrap();
             }
-            }
+        }
     };
+
     exec.run_singlethreaded(event_listener.join(beacon_timer));
     Ok(())
 }
