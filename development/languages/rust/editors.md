@@ -20,7 +20,7 @@ The VIM plugin uses the RLS (Rust language server) so you'll need to first
 install [this VSCode plugin](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust).
 
 Next open File -> Preferences -> Settings (or type Ctrl+Comma). Add the setting
-`"rust.target": "x86_64-unknown-fuchsia"`.
+`"rust.target": "x86_64-fuchsia"`.
 
 Finally, run `fx gen-cargo //garnet/foo/path/to/target:label` for the GN target that you want to work on and
 open the corresponding directory in VSCode.
