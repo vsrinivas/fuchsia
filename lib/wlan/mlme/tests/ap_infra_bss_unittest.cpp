@@ -15,6 +15,7 @@
 
 #include "mock_device.h"
 #include "test_bss.h"
+#include "test_utils.h"
 
 #include <gtest/gtest.h>
 
@@ -605,7 +606,7 @@ TEST_F(ApInfraBssTest, Exchange_Eapol_Frames) {
     auto llc_eapol_frame = type_checked_frame.CheckLength();
     ASSERT_TRUE(llc_eapol_frame);
     EXPECT_EQ(llc_eapol_frame.body_len(), static_cast<size_t>(5));
-    EXPECT_EQ(std::memcmp(llc_eapol_frame.body_data(), kEapolPdu, sizeof(kEapolPdu)), 0);
+    EXPECT_RANGES_EQ(llc_eapol_frame.body_data(), kEapolPdu);
 }
 
 TEST_F(ApInfraBssTest, SendFrameAfterAssociation) {

@@ -117,7 +117,13 @@ impl<T: Tokens> super::Station for MeshSme<T> {
                 },
                 _ => State::Joining { token },
             },
-            State::Joined => State::Joined,
+            State::Joined => match event {
+                MlmeEvent::IncomingMpOpenAction { action } => {
+                    println!("received an MPM Open action: {:?}", action);
+                    State::Joined
+                },
+                _ => State::Joined,
+            },
         });
     }
 

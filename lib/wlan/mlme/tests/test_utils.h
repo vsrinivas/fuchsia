@@ -7,6 +7,7 @@
 
 #include <gtest/gtest.h>
 #include <algorithm>
+#include <lib/fidl/cpp/array.h>
 
 namespace wlan {
 namespace test_utils {
@@ -17,6 +18,11 @@ template <typename T> struct IteratorTypes {
 };
 
 template <typename T, size_t N> struct IteratorTypes<T[N]> {
+    typedef T* iterator;
+    typedef const T* const_iterator;
+};
+
+template <typename T, size_t N> struct IteratorTypes<fidl::Array<T, N>> {
     typedef T* iterator;
     typedef const T* const_iterator;
 };

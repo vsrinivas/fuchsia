@@ -77,6 +77,17 @@ enum BaAction : uint8_t {
     // 3 - 255 Reserved
 };
 
+// IEEE Std 802.11-2016, Table 9-364
+enum SelfProtectedAction : uint8_t {
+    // 0 Reserved
+    kMeshPeeringOpen = 1,
+    kMeshPeeringConfirm = 2,
+    kMeshPeeringClose = 3,
+    kMeshGroupKeyInform = 4,
+    kMeshGroupKeyAck = 5,
+    // 6 - 255 Reserved
+};
+
 }  // namespace action
 
 // TODO(hahnr): The structs declared in this file are not frames, but headers,
@@ -152,6 +163,16 @@ struct ActionFrameBlockAck {
     static constexpr size_t max_len() { return sizeof(ActionFrameBlockAck); }
 
     action::BaAction action;
+
+    constexpr size_t len() const { return sizeof(*this); }
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.6.16
+struct SelfProtectedActionHeader {
+    static constexpr action::Category ActionCategory() { return action::Category::kSelfProtected; }
+    static constexpr size_t max_len() { return sizeof(SelfProtectedActionHeader); }
+
+    action::SelfProtectedAction self_prot_action;
 
     constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;

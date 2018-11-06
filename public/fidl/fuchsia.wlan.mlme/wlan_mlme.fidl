@@ -805,6 +805,36 @@ struct EapolConfirm {
     EapolResultCodes result_code;
 };
 
+// IEEE Std 802.11-2016, 9.4.2.98
+struct MeshConfiguration {
+    uint8 active_path_sel_proto_id;
+    uint8 active_path_sel_metric_id;
+    uint8 congest_ctrl_method_id;
+    uint8 sync_method_id;
+    uint8 auth_proto_id;
+    uint8 mesh_formation_info;
+    uint8 mesh_capability;
+};
+
+// Fields that are common between the MPM Open and Confirm actions
+struct MeshPeeringCommon {
+    array<uint8>:6 peer_sta_address;
+    uint16 protocol_id;
+    uint16 local_link_id;
+    vector<uint8>:32 mesh_id;
+    vector<uint8> rates;
+    MeshConfiguration mesh_config;
+    HtCapabilities? ht_cap;
+    HtOperation? ht_op;
+    VhtCapabilities? vht_cap;
+    VhtOperation? vht_op;
+};
+
+// IEEE Std 802.11-2016, 9.6.16.2.2
+struct MeshPeeringOpenAction {
+    MeshPeeringCommon common;
+};
+
 // Because these methods rely on an external entity to provide a response, events are used instead
 // of return values.
 interface MLME {
@@ -875,6 +905,9 @@ interface MLME {
 
     26: EapolReq(EapolRequest req);
     27: -> EapolConf(EapolConfirm resp);
+
+    // ==== 90xxxx: Mesh ===
+    900000: -> IncomingMpOpenAction(MeshPeeringOpenAction action);
 
     // The following are extensions to the 802.11 MLME SAP interface.
 

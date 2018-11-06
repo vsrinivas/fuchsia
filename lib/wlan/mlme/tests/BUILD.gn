@@ -16,6 +16,7 @@ group("tests") {
     ":client_tests",
     ":common_tests",
     ":mac_tests",
+    ":mesh_tests",
     ":scanner_tests",
     ":service_tests",
     ":timer_manager_tests",
@@ -123,6 +124,27 @@ executable("mac_tests") {
   ]
 
   configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
+}
+
+executable("mesh_tests") {
+  output_name = "wlan_mesh_unittest"
+
+  testonly = true
+
+  sources = [
+    "parse_mp_action_unittest.cpp",
+    "mesh_mlme_unittest.cpp",
+  ]
+
+  deps = [
+    ":test_main",
+    "//garnet/lib/wlan/common",
+    "//garnet/lib/wlan/mlme",
+    "//third_party/googletest:gtest",
+  ]
+
+  configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
 executable("scanner_tests") {
@@ -256,6 +278,10 @@ package("wlan_tests") {
 
     {
       name = "wlan_mac_unittest"
+    },
+
+    {
+      name = "wlan_mesh_unittest"
     },
 
     {

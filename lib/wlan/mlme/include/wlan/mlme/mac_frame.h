@@ -105,12 +105,12 @@ template <typename Header, typename Body = UnknownBody> class FrameView {
         return pkt_->data();
     }
 
-    const uint8_t* body_data() const {
+    Span<const uint8_t> body_data() const {
         ZX_DEBUG_ASSERT(pkt_ != nullptr);
 
         auto body = pkt_->field<uint8_t>(body_offset());
         ZX_DEBUG_ASSERT(body != nullptr);
-        return body;
+        return { body, body_len() };
     }
 
     const Header* hdr() const {

@@ -139,6 +139,18 @@ struct MeshConfiguration {
         WLAN_BIT_FIELD(connected_to_as, 7, 1);
     } __PACKED;
 
+    ::fuchsia::wlan::mlme::MeshConfiguration ToFidl() const {
+        ::fuchsia::wlan::mlme::MeshConfiguration ret;
+        ret.active_path_sel_proto_id = static_cast<uint8_t>(active_path_sel_proto_id);
+        ret.active_path_sel_metric_id = static_cast<uint8_t>(active_path_sel_metric_id);
+        ret.congest_ctrl_method_id = static_cast<uint8_t>(congest_ctrl_method_id);
+        ret.sync_method_id = static_cast<uint8_t>(sync_method_id);
+        ret.auth_proto_id = static_cast<uint8_t>(auth_proto_id);
+        ret.mesh_formation_info = mesh_formation_info.val();
+        ret.mesh_capability = mesh_capability.val();
+        return ret;
+    }
+
     struct MeshCapability : public common::BitField<uint8_t> {
         MeshCapability() = default;
         explicit MeshCapability(uint8_t raw) : BitField(raw) {}

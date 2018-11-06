@@ -64,6 +64,7 @@ source_set("mlme") {
     "mac_frame.cpp",
     "mcs.cpp",
     "mesh/mesh_mlme.cpp",
+    "mesh/parse_mp_action.cpp",
     "packet.cpp",
     "parse_beacon.cpp",
     "rates_elements.cpp",

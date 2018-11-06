@@ -19,6 +19,7 @@ class Span {
     typedef T* pointer;
     typedef T& reference;
     typedef T* iterator;
+    typedef const T* const_iterator;
 
     constexpr Span() : ptr_(nullptr), size_(0) {}
 

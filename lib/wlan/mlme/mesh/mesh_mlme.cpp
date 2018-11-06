@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <wlan/mlme/mesh/mesh_mlme.h>
+
+#include <fuchsia/wlan/mlme/c/fidl.h>
 #include <wlan/common/channel.h>
 #include <wlan/mlme/beacon.h>
 #include <wlan/mlme/device_caps.h>
-#include <wlan/mlme/mesh/mesh_mlme.h>
+#include <wlan/mlme/mesh/parse_mp_action.h>
 #include <wlan/mlme/service.h>
 #include <zircon/status.h>
 
@@ -114,7 +117,74 @@ wlan_mlme::StartResultCodes MeshMlme::Start(const MlmeMsg<wlan_mlme::StartReques
 }
 
 zx_status_t MeshMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {
+    switch (pkt->peer()) {
+    case Packet::Peer::kEthernet:
+        break;
+    case Packet::Peer::kWlan:
+        return HandleAnyWlanFrame(fbl::move(pkt));
+    default:
+        errorf("unknown Packet peer: %u\n", pkt->peer());
+        break;
+    }
     return ZX_OK;
+}
+
+zx_status_t MeshMlme::HandleAnyWlanFrame(fbl::unique_ptr<Packet> pkt) {
+    if (auto possible_mgmt_frame = MgmtFrameView<>::CheckType(pkt.get())) {
+        if (auto mgmt_frame = possible_mgmt_frame.CheckLength()) {
+            return HandleAnyMgmtFrame(mgmt_frame.IntoOwned(fbl::move(pkt)));
+        }
+    }
+    return ZX_OK;
+}
+
+zx_status_t MeshMlme::HandleAnyMgmtFrame(MgmtFrame<>&& frame) {
+    auto body = BufferReader(frame.View().body_data());
+
+    switch (frame.hdr()->fc.subtype()) {
+    case kAction:
+        return HandleActionFrame(frame.hdr()->addr2, &body);
+    default:
+        return ZX_OK;
+    }
+}
+
+zx_status_t MeshMlme::HandleActionFrame(common::MacAddr src_addr, BufferReader* r) {
+    auto action_header = r->Read<ActionFrame>();
+    if (action_header == nullptr) {
+        return ZX_OK;
+    }
+
+    switch (action_header->category) {
+    case to_enum_type(action::kSelfProtected):
+        return HandleSelfProtectedAction(src_addr, r);
+    default:
+        return ZX_OK;
+    }
+}
+
+zx_status_t MeshMlme::HandleSelfProtectedAction(common::MacAddr src_addr, BufferReader* r) {
+    auto self_prot_header = r->Read<SelfProtectedActionHeader>();
+    if (self_prot_header == nullptr) {
+        return ZX_OK;
+    }
+
+    switch (self_prot_header->self_prot_action) {
+    case action::kMeshPeeringOpen:
+        return HandleMpmOpenAction(src_addr, r);
+    default:
+        return ZX_OK;
+    }
+}
+
+zx_status_t MeshMlme::HandleMpmOpenAction(common::MacAddr src_addr, BufferReader* r) {
+    wlan_mlme::MeshPeeringOpenAction action;
+    if (!ParseMpOpenAction(r, &action)) {
+        return ZX_OK;
+    }
+
+    src_addr.CopyTo(action.common.peer_sta_address.data());
+    return SendServiceMsg(device_, &action, fuchsia_wlan_mlme_MLMEIncomingMpOpenActionOrdinal);
 }
 
 zx_status_t MeshMlme::HandleTimeout(const ObjectId id) {

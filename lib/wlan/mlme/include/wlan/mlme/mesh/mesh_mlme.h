@@ -5,6 +5,7 @@
 #ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_MESH_MESH_MLME_H_
 #define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_MESH_MESH_MLME_H_
 
+#include <wlan/common/buffer_reader.h>
 #include <wlan/mlme/mlme.h>
 
 namespace wlan {
@@ -24,6 +25,11 @@ class MeshMlme : public Mlme {
    private:
     ::fuchsia::wlan::mlme::StartResultCodes Start(
         const MlmeMsg<::fuchsia::wlan::mlme::StartRequest>& req);
+    zx_status_t HandleAnyWlanFrame(fbl::unique_ptr<Packet> pkt);
+    zx_status_t HandleAnyMgmtFrame(MgmtFrame<>&& frame);
+    zx_status_t HandleActionFrame(common::MacAddr src_addr, BufferReader* r);
+    zx_status_t HandleSelfProtectedAction(common::MacAddr src_addr, BufferReader* r);
+    zx_status_t HandleMpmOpenAction(common::MacAddr src_addr, BufferReader* r);
 
     DeviceInterface* const device_;
     bool joined_ = false;
