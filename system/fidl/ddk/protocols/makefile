@@ -26,9 +26,6 @@ endef
 clk:
 	$(run-banjo)
 
-pci: $(LOCAL_DIR)/libs/pci.banjo
-	$(run-banjo)
-
 pciroot: $(LOCAL_DIR)/libs/hwpci.banjo
 	$(run-banjo)
 

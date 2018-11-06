@@ -23,6 +23,7 @@ MODULE_NAME := bus-pci
 MODULE_SRCS := $(LOCAL_DIR)/kpci.c
 MODULE_STATIC_LIBS := system/ulib/ddk
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+MODULE_BANJO_LIBS := system/banjo/ddk-protocol-pci
 include make/module.mk
 
 MODULE := $(LOCAL_DIR).proxy
@@ -31,5 +32,6 @@ MODULE_NAME := bus-pci.proxy
 MODULE_SRCS := $(LOCAL_DIR)/proxy.c
 MODULE_STATIC_LIBS := system/ulib/ddk
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+MODULE_BANJO_LIBS := system/banjo/ddk-protocol-pci
 include make/module.mk
 endif

@@ -39,4 +39,7 @@ MODULE_LIBS := \
 
 MODULE_FIDL_LIBS := system/fidl/fuchsia-usb-debug
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-pci \
+
 include make/module.mk

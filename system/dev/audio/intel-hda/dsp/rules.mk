@@ -42,5 +42,6 @@ MODULE_STATIC_LIBS := \
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-intel-hda-codec \
     system/banjo/ddk-protocol-intel-hda-dsp \
+    system/banjo/ddk-protocol-pci \
 
 include make/module.mk
