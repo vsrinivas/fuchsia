@@ -215,12 +215,12 @@ interface File : Node {
 };
 
 // Dirent type information associated with the results of ReadDirents.
-const uint32 DIRENT_TYPE_UNKNOWN = 0;
-const uint32 DIRENT_TYPE_DIRECTORY = 4;
-const uint32 DIRENT_TYPE_BLOCK_DEVICE = 6;
-const uint32 DIRENT_TYPE_FILE = 8;
-const uint32 DIRENT_TYPE_SOCKET = 12;
-const uint32 DIRENT_TYPE_SERVICE = 16;
+const uint8 DIRENT_TYPE_UNKNOWN = 0;
+const uint8 DIRENT_TYPE_DIRECTORY = 4;
+const uint8 DIRENT_TYPE_BLOCK_DEVICE = 6;
+const uint8 DIRENT_TYPE_FILE = 8;
+const uint8 DIRENT_TYPE_SOCKET = 12;
+const uint8 DIRENT_TYPE_SERVICE = 16;
 
 // Nodes which do not have ino values should return this value
 // from Readdir and GetAttr.
@@ -285,12 +285,12 @@ interface Directory : Node {
     // These dirents are of the form:
     // struct dirent {
     //   // Describes the inode of the entry.
-    //   uint64_t ino;
+    //   uint64 ino;
     //   // Describes the length of the dirent name.
-    //   uint8_t size;
+    //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   // POSIX d_type values.
-    //   uint8_t type;
+    //   // POSIX d_type values. Use DIRENT_TYPE_* constants.
+    //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
     // }
