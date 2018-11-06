@@ -134,7 +134,7 @@ TEST_F(MinidumpTest, AttachDetach) {
   debug_ipc::DetachRequest detach_request;
   debug_ipc::DetachReply detach_reply;
 
-  detach_request.process_koid = kTestExampleMinidumpKOID;
+  detach_request.koid = kTestExampleMinidumpKOID;
   DoRequest(detach_request, detach_reply, err, &RemoteAPI::Detach);
   ASSERT_ZXDB_SUCCESS(err);
 

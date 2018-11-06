@@ -55,6 +55,14 @@ void DebugAgent::RemoveDebuggedProcess(zx_koid_t process_koid) {
     procs_.erase(found);
 }
 
+void DebugAgent::RemoveDebuggedJob(zx_koid_t job_koid) {
+  auto found = jobs_.find(job_koid);
+  if (found == jobs_.end())
+    FXL_NOTREACHED();
+  else
+    jobs_.erase(found);
+}
+
 void DebugAgent::RemoveBreakpoint(uint32_t breakpoint_id) {
   auto found = breakpoints_.find(breakpoint_id);
   if (found != breakpoints_.end())
@@ -200,13 +208,29 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
 
 void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request,
                           debug_ipc::DetachReply* reply) {
-  auto debug_process = GetDebuggedProcess(request.process_koid);
-
-  if (debug_process->process().is_valid()) {
-    RemoveDebuggedProcess(request.process_koid);
-    reply->status = ZX_OK;
-  } else {
-    reply->status = ZX_ERR_NOT_FOUND;
+  switch (request.type) {
+    case debug_ipc::DetachRequest::Type::kJob: {
+      auto debug_job = GetDebuggedJob(request.koid);
+      if (debug_job && debug_job->job().is_valid()) {
+        RemoveDebuggedJob(request.koid);
+        reply->status = ZX_OK;
+      } else {
+        reply->status = ZX_ERR_NOT_FOUND;
+      }
+      break;
+    }
+    case debug_ipc::DetachRequest::Type::kProcess: {
+      auto debug_process = GetDebuggedProcess(request.koid);
+      if (debug_process && debug_process->process().is_valid()) {
+        RemoveDebuggedProcess(request.koid);
+        reply->status = ZX_OK;
+      } else {
+        reply->status = ZX_ERR_NOT_FOUND;
+      }
+      break;
+    }
+    default:
+      reply->status = ZX_ERR_INVALID_ARGS;
   }
 }
 

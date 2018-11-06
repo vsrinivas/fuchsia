@@ -112,7 +112,10 @@ struct AttachReply {
 };
 
 struct DetachRequest {
-  uint64_t process_koid = 0;
+  enum class Type : uint32_t { kProcess = 0, kJob, kLast };
+
+  Type type = Type::kProcess;
+  uint64_t koid = 0;
 };
 struct DetachReply {
   uint32_t status = 0;

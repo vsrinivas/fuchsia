@@ -386,8 +386,7 @@ void MinidumpRemoteAPI::Detach(
 
   debug_ipc::DetachReply reply;
 
-  if (static_cast<pid_t>(request.process_koid) == minidump_->ProcessID() &&
-      attached_) {
+  if (static_cast<pid_t>(request.koid) == minidump_->ProcessID() && attached_) {
     reply.status = kAttachOk;
     attached_ = false;
   } else {

@@ -62,6 +62,7 @@ class JobContextImpl : public JobContext {
                                  const std::string& job_name);
   void OnAttachReply(Callback callback, const Err& err, uint64_t koid,
                      uint32_t status, const std::string& job_name);
+  void OnDetachReply(const Err& err, uint32_t status, Callback callback);
 
   FXL_DISALLOW_COPY_AND_ASSIGN(JobContextImpl);
 };

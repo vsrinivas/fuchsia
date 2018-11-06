@@ -149,7 +149,7 @@ void TargetImpl::Detach(Callback callback) {
   }
 
   debug_ipc::DetachRequest request;
-  request.process_koid = process_->GetKoid();
+  request.koid = process_->GetKoid();
   session()->remote_api()->Detach(
       request, [callback, weak_target = impl_weak_factory_.GetWeakPtr()](
                    const Err& err, debug_ipc::DetachReply reply) {

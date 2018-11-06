@@ -189,7 +189,13 @@ bool ReadRequest(MessageReader* reader, DetachRequest* request,
   if (!reader->ReadHeader(&header))
     return false;
   *transaction_id = header.transaction_id;
-  return reader->ReadUint64(&request->process_koid);
+  uint32_t type;
+  if (!reader->ReadUint32(&type))
+    return false;
+  if (type >= static_cast<uint32_t>(DetachRequest::Type::kLast))
+    return false;
+  request->type = static_cast<DetachRequest::Type>(type);
+  return reader->ReadUint64(&request->koid);
 }
 
 void WriteReply(const DetachReply& reply, uint32_t transaction_id,

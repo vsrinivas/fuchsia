@@ -353,21 +353,29 @@ Examples
 Err DoDetach(ConsoleContext* context, const Command& cmd,
              CommandCallback callback = nullptr) {
   // Only a process can be detached.
-  Err err = cmd.ValidateNouns({Noun::kProcess});
+  Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kJob});
   if (err.has_error())
     return err;
 
   if (!cmd.args().empty())
     return Err(ErrType::kInput, "\"detach\" takes no parameters.");
 
-  // Only print something when there was an error detaching. The console
-  // context will watch for Process destruction and print messages for each one
-  // in the success case.
-  cmd.target()->Detach([callback](fxl::WeakPtr<Target> target, const Err& err) {
-    // The ConsoleContext displays messages for stopped processes, so don't
-    // display messages when successfully detaching.
-    ProcessCommandCallback("detach", target, false, err, callback);
-  });
+  if (cmd.HasNoun(Noun::kJob)) {
+    cmd.job_context()->Detach(
+        [callback](fxl::WeakPtr<JobContext> job_context, const Err& err) {
+          JobCommandCallback("detach", job_context, false, err, callback);
+        });
+  } else {
+    // Only print something when there was an error detaching. The console
+    // context will watch for Process destruction and print messages for each
+    // one in the success case.
+    cmd.target()->Detach(
+        [callback](fxl::WeakPtr<Target> target, const Err& err) {
+          // The ConsoleContext displays messages for stopped processes, so
+          // don't display messages when successfully detaching.
+          ProcessCommandCallback("detach", target, false, err, callback);
+        });
+  }
   return Err();
 }
 

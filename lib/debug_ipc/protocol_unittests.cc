@@ -149,11 +149,13 @@ TEST(Protocol, AttachReply) {
 
 TEST(Protocol, DetachRequest) {
   DetachRequest initial;
-  initial.process_koid = 5678;
+  initial.koid = 5678;
+  initial.type = DetachRequest::Type::kJob;
 
   DetachRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
-  EXPECT_EQ(initial.process_koid, second.process_koid);
+  EXPECT_EQ(initial.koid, second.koid);
+  EXPECT_EQ(initial.type, second.type);
 }
 
 TEST(Protocol, DetachReply) {

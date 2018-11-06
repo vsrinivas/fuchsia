@@ -33,7 +33,8 @@ std::unique_ptr<JobContextImpl> JobContextImpl::Clone(SystemImpl* system) {
 }
 
 void JobContextImpl::ImplicitlyDetach() {
-  // TODO(DX-322): detach
+  if (GetJob())
+    OnDetachReply(Err(), 0, nullptr);
 }
 
 JobContext::State JobContextImpl::GetState() const { return state_; }
@@ -126,7 +127,44 @@ void JobContextImpl::Detach(Callback callback) {
     return;
   }
 
-  // TODO(DX-322): detach
+  debug_ipc::DetachRequest request;
+  request.koid = job_->GetKoid();
+  request.type = debug_ipc::DetachRequest::Type::kJob;
+  session()->remote_api()->Detach(
+      request, [callback, weak_job_context = impl_weak_factory_.GetWeakPtr()](
+                   const Err& err, debug_ipc::DetachReply reply) {
+        if (weak_job_context) {
+          weak_job_context->OnDetachReply(err, reply.status,
+                                          std::move(callback));
+        } else {
+          // The reply that the process was launched came after the local
+          // objects were destroyed. We're still OK to dispatch either way.
+          callback(weak_job_context, err);
+        }
+      });
+}
+
+void JobContextImpl::OnDetachReply(const Err& err, uint32_t status,
+                                   Callback callback) {
+  FXL_DCHECK(job_.get());  // Should have a job.
+
+  Err issue_err;  // Error to send in callback.
+  if (err.has_error()) {
+    // Error from transport.
+    state_ = State::kNone;
+    issue_err = err;
+  } else if (status != 0) {
+    // Error from detaching.
+    // TODO(donosoc): Print error using ZxStatusToString
+    issue_err = Err(fxl::StringPrintf("Error detaching, status = %d.", status));
+  } else {
+    // Successfully detached.
+    state_ = State::kNone;
+    job_.release();
+  }
+
+  if (callback)
+    callback(GetWeakPtr(), issue_err);
 }
 
 }  // namespace zxdb

@@ -36,6 +36,8 @@ class DebugAgent : public RemoteAPI,
 
   void RemoveDebuggedProcess(zx_koid_t process_koid);
 
+  void RemoveDebuggedJob(zx_koid_t job_koid);
+
   void RemoveBreakpoint(uint32_t breakpoint_id);
 
   void OnProcessStart(zx::process process) override;
