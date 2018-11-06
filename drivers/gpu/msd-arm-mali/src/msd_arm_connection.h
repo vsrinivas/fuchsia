@@ -38,6 +38,7 @@ public:
             return kArmMaliCacheCoherencyNone;
         }
         virtual magma::PlatformBusMapper* GetBusMapper() = 0;
+        virtual bool IsProtectedModeSupported() { return false; }
     };
 
     static std::shared_ptr<MsdArmConnection> Create(msd_client_id_t client_id, Owner* owner);

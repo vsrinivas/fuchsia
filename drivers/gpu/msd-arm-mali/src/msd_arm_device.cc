@@ -449,15 +449,14 @@ magma::Status MsdArmDevice::ProcessJobInterrupt()
         while (failed) {
             uint32_t slot = __builtin_ffs(failed) - 1;
             registers::JobSlotRegisters regs(slot);
-            uint32_t result = regs.Status().ReadFrom(register_io_.get()).reg_value();
-
-            if (!IsHardwareResultCode(result))
-                result = kArmMaliResultUnknownFault;
+            uint32_t raw_result = regs.Status().ReadFrom(register_io_.get()).reg_value();
+            uint32_t result =
+                IsHardwareResultCode(raw_result) ? raw_result : kArmMaliResultUnknownFault;
 
             // Soft stopping isn't counted as an actual failure.
             if (result != kArmMaliResultSoftStopped && !dumped_on_failure) {
-                magma::log(magma::LOG_WARNING, "Got unexpected failed slots %x\n",
-                           irq_status.failed_slots().get());
+                magma::log(magma::LOG_WARNING, "Got failed slot bitmask %x with result code %x\n",
+                           irq_status.failed_slots().get(), raw_result);
                 ProcessDumpStatusToLog();
                 dumped_on_failure = true;
             }
@@ -813,6 +812,12 @@ void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* regi
         }
     }
 
+    if (atom->is_protected()) {
+        DASSERT(IsInProtectedMode());
+    } else {
+        DASSERT(!IsInProtectedMode());
+    }
+
     // Ensure the client's writes/cache flushes to the job chain are complete
     // before scheduling. Unlikely to be an issue since several thread and
     // process hops already happened.
@@ -828,6 +833,11 @@ void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* regi
     config.thread_priority().set(8);
     config.end_flush_clean().set(true);
     config.end_flush_invalidate().set(true);
+    // Atoms are in unprotected memory, so don't attempt to write to them when
+    // executing in protected mode.
+    if (atom->is_protected()) {
+        config.disable_descriptor_write_back().set(true);
+    }
     config.WriteTo(register_io);
 
     // Execute on every powered-on core.
@@ -945,6 +955,10 @@ magma_status_t MsdArmDevice::QueryInfo(uint64_t id, uint64_t* value_out)
             *value_out = cache_coherency_status_;
             return MAGMA_STATUS_OK;
 
+        case kMsdArmVendorQuerySupportsProtectedMode:
+            *value_out = IsProtectedModeSupported();
+            return MAGMA_STATUS_OK;
+
         default:
             return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
     }
@@ -1008,6 +1022,7 @@ bool MsdArmDevice::ExitProtectedMode()
 
 bool MsdArmDevice::ResetDevice()
 {
+    DLOG("Resetting device protected mode\n");
     // Reset semaphore shouldn't already be signaled.
     DASSERT(!reset_semaphore_->Wait(0));
 

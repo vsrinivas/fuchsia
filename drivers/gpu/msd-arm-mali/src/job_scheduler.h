@@ -24,6 +24,9 @@ public:
         virtual void ReleaseMappingsForAtom(MsdArmAtom* atom) {}
         virtual magma::PlatformPort* GetPlatformPort() { return nullptr; }
         virtual void UpdateGpuActive(bool active) {}
+        virtual bool IsInProtectedMode() = 0;
+        virtual void EnterProtectedMode() = 0;
+        virtual bool ExitProtectedMode() = 0;
     };
     using Clock = std::chrono::steady_clock;
 
@@ -56,6 +59,17 @@ private:
     void UpdatePowerManager();
     void MoveAtomsToRunnable();
     void ScheduleRunnableAtoms();
+    uint32_t num_executing_atoms()
+    {
+        uint32_t count = 0;
+        for (auto& atom : executing_atoms_) {
+            if (atom) {
+                count++;
+            }
+        }
+        return count;
+    }
+    void ValidateCanSwitchProtected();
 
     void set_timeout_duration(uint64_t timeout_duration_ms)
     {
@@ -74,6 +88,11 @@ private:
     // Semaphore timeout is longer because one semaphore may need to wait for a
     // lot of atoms to complete.
     uint64_t semaphore_timeout_duration_ms_ = 5000;
+
+    // If we want to switch to a mode, then hold off submitting atoms in the
+    // other mode until that switch is complete.
+    bool want_to_switch_to_protected_ = false;
+    bool want_to_switch_to_nonprotected_ = false;
 
     std::vector<std::shared_ptr<MsdArmSoftAtom>> waiting_atoms_;
     std::vector<std::shared_ptr<MsdArmAtom>> executing_atoms_;

@@ -13,6 +13,7 @@
 #include "magma_arm_mali_types.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
+#include "magma_vendor_queries.h"
 #include "gtest/gtest.h"
 
 namespace {
@@ -61,9 +62,18 @@ public:
             magma_release_connection(connection_);
     }
 
+    bool SupportsProtectedMode()
+    {
+        uint64_t value_out;
+        EXPECT_EQ(MAGMA_STATUS_OK,
+                  magma_query(fd(), kMsdArmVendorQuerySupportsProtectedMode, &value_out));
+        return !!value_out;
+    }
+
     enum How { NORMAL, NORMAL_ORDER, NORMAL_DATA, JOB_FAULT, MMU_FAULT };
 
-    void SubmitCommandBuffer(How how, uint8_t atom_number, uint8_t atom_dependency)
+    void SubmitCommandBuffer(How how, uint8_t atom_number, uint8_t atom_dependency,
+                             bool protected_mode)
     {
         ASSERT_NE(connection_, nullptr);
 
@@ -76,8 +86,8 @@ public:
 
         std::vector<uint8_t> vaddr(sizeof(magma_arm_mali_atom));
 
-        ASSERT_TRUE(
-            InitBatchBuffer(vaddr.data(), vaddr.size(), job_va, atom_number, atom_dependency, how));
+        ASSERT_TRUE(InitBatchBuffer(vaddr.data(), vaddr.size(), job_va, atom_number,
+                                    atom_dependency, how, protected_mode));
 
         magma_system_inline_command_buffer command_buffer;
         command_buffer.data = vaddr.data();
@@ -111,7 +121,11 @@ public:
                 break;
 
             case MMU_FAULT:
-                EXPECT_EQ(kArmMaliResultReadFault, status.result_code);
+                if (protected_mode) {
+                    EXPECT_EQ(kArmMaliResultUnknownFault, status.result_code);
+                } else {
+                    EXPECT_EQ(kArmMaliResultReadFault, status.result_code);
+                }
                 break;
         }
 
@@ -119,7 +133,7 @@ public:
     }
 
     bool InitBatchBuffer(void* vaddr, uint64_t size, uint64_t job_va, uint8_t atom_number,
-                         uint8_t atom_dependency, How how)
+                         uint8_t atom_dependency, How how, bool protected_mode)
     {
         memset(vaddr, 0, size);
 
@@ -136,6 +150,9 @@ public:
         atom->dependencies[0].atom_number = atom_dependency;
         atom->dependencies[0].type =
             how == NORMAL_DATA ? kArmMaliDependencyData : kArmMaliDependencyOrder;
+        if (protected_mode) {
+            atom->flags |= kAtomFlagProtected;
+        }
 
         return true;
     }
@@ -176,38 +193,55 @@ TEST(FaultRecovery, Test)
 {
     std::unique_ptr<TestConnection> test;
     test.reset(new TestConnection());
-    test->SubmitCommandBuffer(TestConnection::NORMAL, 1, 0);
+    test->SubmitCommandBuffer(TestConnection::NORMAL, 1, 0, false);
     test.reset(new TestConnection());
-    test->SubmitCommandBuffer(TestConnection::JOB_FAULT, 1, 0);
+    test->SubmitCommandBuffer(TestConnection::JOB_FAULT, 1, 0, false);
     test.reset(new TestConnection());
-    test->SubmitCommandBuffer(TestConnection::NORMAL, 1, 0);
+    test->SubmitCommandBuffer(TestConnection::NORMAL, 1, 0, false);
 }
 
 TEST(FaultRecovery, TestOrderDependency)
 {
     std::unique_ptr<TestConnection> test;
     test.reset(new TestConnection());
-    test->SubmitCommandBuffer(TestConnection::NORMAL, 1, 0);
-    test->SubmitCommandBuffer(TestConnection::JOB_FAULT, 2, 1);
-    test->SubmitCommandBuffer(TestConnection::NORMAL_ORDER, 3, 2);
+    test->SubmitCommandBuffer(TestConnection::NORMAL, 1, 0, false);
+    test->SubmitCommandBuffer(TestConnection::JOB_FAULT, 2, 1, false);
+    test->SubmitCommandBuffer(TestConnection::NORMAL_ORDER, 3, 2, false);
 }
 
 TEST(FaultRecovery, TestDataDependency)
 {
     std::unique_ptr<TestConnection> test;
     test.reset(new TestConnection());
-    test->SubmitCommandBuffer(TestConnection::NORMAL, 1, 0);
-    test->SubmitCommandBuffer(TestConnection::JOB_FAULT, 2, 1);
-    test->SubmitCommandBuffer(TestConnection::NORMAL_DATA, 3, 2);
+    test->SubmitCommandBuffer(TestConnection::NORMAL, 1, 0, false);
+    test->SubmitCommandBuffer(TestConnection::JOB_FAULT, 2, 1, false);
+    test->SubmitCommandBuffer(TestConnection::NORMAL_DATA, 3, 2, false);
 }
 
 TEST(FaultRecovery, TestMmu)
 {
     std::unique_ptr<TestConnection> test;
     test.reset(new TestConnection());
-    test->SubmitCommandBuffer(TestConnection::NORMAL, 1, 0);
+    test->SubmitCommandBuffer(TestConnection::NORMAL, 1, 0, false);
     test.reset(new TestConnection());
-    test->SubmitCommandBuffer(TestConnection::MMU_FAULT, 1, 0);
+    test->SubmitCommandBuffer(TestConnection::MMU_FAULT, 1, 0, false);
     test.reset(new TestConnection());
-    test->SubmitCommandBuffer(TestConnection::NORMAL, 1, 0);
+    test->SubmitCommandBuffer(TestConnection::NORMAL, 1, 0, false);
+}
+
+TEST(FaultRecovery, TestProtected)
+{
+    std::unique_ptr<TestConnection> test;
+    test.reset(new TestConnection());
+    if (!test->SupportsProtectedMode()) {
+        magma::log(magma::LOG_INFO, "Protected mode not supported, skipping\n");
+        return;
+    }
+    test->SubmitCommandBuffer(TestConnection::NORMAL, 1, 0, false);
+    test.reset(new TestConnection());
+    test->SubmitCommandBuffer(TestConnection::NORMAL, 1, 0, true);
+    test.reset(new TestConnection());
+    test->SubmitCommandBuffer(TestConnection::MMU_FAULT, 1, 0, true);
+    test.reset(new TestConnection());
+    test->SubmitCommandBuffer(TestConnection::NORMAL, 1, 0, false);
 }

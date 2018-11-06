@@ -25,6 +25,7 @@ enum AtomFlags {
     kAtomFlagRequireComputeShader = (1 << 1),
     kAtomFlagRequireTiler = (1 << 2),
     kAtomFlagRequireCycleCounter = (1 << 3),
+    kAtomFlagProtected = (1 << 4), // Executes in protected mode.
 
     // Atoms with this flag set are processed completely in the MSD and aren't
     // sent to hardware.

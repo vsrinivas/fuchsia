@@ -101,6 +101,7 @@ public:
         return cache_coherency_status_;
     }
     magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_.get(); }
+    bool IsProtectedModeSupported() override;
 
     magma_status_t QueryInfo(uint64_t id, uint64_t* value_out);
 
@@ -154,11 +155,7 @@ private:
     void SuspectedGpuHang();
     static void InitializeHardwareQuirks(GpuFeatures* features, magma::RegisterIo* registers);
     bool PowerDownL2();
-    bool IsProtectedModeSupported();
-    bool ExitProtectedMode();
-    void EnterProtectedMode();
     bool ResetDevice();
-    bool IsInProtectedMode();
 
     magma::Status ProcessDumpStatusToLog();
     magma::Status ProcessGpuInterrupt();
@@ -178,6 +175,9 @@ private:
     void ReleaseMappingsForAtom(MsdArmAtom* atom) override;
     magma::PlatformPort* GetPlatformPort() override;
     void UpdateGpuActive(bool active) override;
+    void EnterProtectedMode() override;
+    bool ExitProtectedMode() override;
+    bool IsInProtectedMode() override;
 
     static const uint32_t kMagic = 0x64657669; //"devi"
 

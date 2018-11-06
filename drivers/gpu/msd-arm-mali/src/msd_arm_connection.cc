@@ -89,8 +89,16 @@ bool MsdArmConnection::ExecuteAtom(
                        client_id_, flags);
             return false;
         }
+        if ((flags & kAtomFlagProtected) && !owner_->IsProtectedModeSupported()) {
+            magma::log(magma::LOG_WARNING,
+                       "Client %" PRIu64 ": Attempting to use protected mode when not supported\n",
+                       client_id_);
+            return false;
+        }
+
         msd_atom = std::make_shared<MsdArmAtom>(shared_from_this(), atom->job_chain_addr, slot,
-                                                atom_number, user_data, atom->priority);
+                                                atom_number, user_data, atom->priority,
+                                                static_cast<AtomFlags>(flags));
 
         if (flags & kAtomFlagRequireCycleCounter)
             msd_atom->set_require_cycle_counter();

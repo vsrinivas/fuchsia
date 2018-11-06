@@ -30,6 +30,13 @@ public:
     void SoftStopAtom(MsdArmAtom* atom) override { soft_stopped_atoms_.push_back(atom); }
     magma::PlatformPort* GetPlatformPort() override { return platform_port_.get(); }
     void UpdateGpuActive(bool active) override { gpu_active_ = active; }
+    bool IsInProtectedMode() override { return in_protected_mode_; }
+    void EnterProtectedMode() override { in_protected_mode_ = true; }
+    bool ExitProtectedMode() override
+    {
+        in_protected_mode_ = false;
+        return true;
+    }
 
     std::vector<MsdArmAtom*>& run_list() { return run_list_; }
     std::vector<ResultPair>& completed_list() { return completed_list_; }
@@ -44,6 +51,7 @@ private:
     std::vector<MsdArmAtom*> soft_stopped_atoms_;
     std::unique_ptr<magma::PlatformPort> platform_port_;
     bool gpu_active_ = false;
+    bool in_protected_mode_ = false;
 };
 
 class TestAddressSpaceObserver : public AddressSpaceObserver {
@@ -636,6 +644,89 @@ public:
             EXPECT_EQ(100u, atom1->gpu_address());
         }
     }
+
+    void TestProtectedMode()
+    {
+        TestOwner owner;
+        TestConnectionOwner connection_owner;
+        std::shared_ptr<MsdArmConnection> connection =
+            MsdArmConnection::Create(0, &connection_owner);
+
+        std::shared_ptr<MsdArmConnection> connection2 =
+            MsdArmConnection::Create(0, &connection_owner);
+        JobScheduler scheduler(&owner, 2);
+        auto atom1 =
+            std::make_shared<MsdArmAtom>(connection, 1u, 0, 0, magma_arm_mali_user_data(), 0);
+        scheduler.EnqueueAtom(atom1);
+        auto atom2 = std::make_shared<MsdArmAtom>(connection, 1u, 1, 0, magma_arm_mali_user_data(),
+                                                  0, kAtomFlagProtected);
+        scheduler.EnqueueAtom(atom2);
+
+        auto atom3 =
+            std::make_shared<MsdArmAtom>(connection, 1u, 0, 0, magma_arm_mali_user_data(), 0);
+        scheduler.EnqueueAtom(atom3);
+
+        auto atom4 = std::make_shared<MsdArmAtom>(connection, 1u, 1, 0, magma_arm_mali_user_data(),
+                                                  0, kAtomFlagProtected);
+        scheduler.EnqueueAtom(atom4);
+
+        auto atom5 = std::make_shared<MsdArmAtom>(connection, 1u, 0, 0, magma_arm_mali_user_data(),
+                                                  0, kAtomFlagProtected);
+        scheduler.EnqueueAtom(atom5);
+
+        // This atom should be canceled (its connection going away) right before
+        // it's run.
+        auto atom6 =
+            std::make_shared<MsdArmAtom>(connection2, 1u, 0, 0, magma_arm_mali_user_data(), 0);
+        scheduler.EnqueueAtom(atom6);
+        auto atom7 = std::make_shared<MsdArmAtom>(connection, 1u, 1, 0, magma_arm_mali_user_data(),
+                                                  0, kAtomFlagProtected);
+        scheduler.EnqueueAtom(atom7);
+
+        scheduler.TryToSchedule();
+        scheduler.TryToSchedule();
+        EXPECT_EQ(1u, owner.run_list().size());
+        EXPECT_EQ(atom1.get(), owner.run_list().back());
+        EXPECT_FALSE(owner.IsInProtectedMode());
+
+        // Scheduler should try to alternate between protected and non-protected
+        // modes.
+
+        scheduler.JobCompleted(0, kArmMaliResultSuccess, 0u);
+        scheduler.TryToSchedule();
+        EXPECT_EQ(2u, owner.run_list().size());
+        EXPECT_EQ(atom2.get(), owner.run_list().back());
+        EXPECT_TRUE(owner.IsInProtectedMode());
+
+        scheduler.JobCompleted(1, kArmMaliResultSuccess, 0u);
+        scheduler.TryToSchedule();
+        EXPECT_EQ(3u, owner.run_list().size());
+        EXPECT_EQ(atom3.get(), owner.run_list().back());
+        EXPECT_FALSE(owner.IsInProtectedMode());
+
+        scheduler.JobCompleted(0, kArmMaliResultSuccess, 0u);
+        scheduler.TryToSchedule();
+
+        // atom4 and atom5 should both be able to run at the same time.
+        EXPECT_EQ(5u, owner.run_list().size());
+        EXPECT_EQ(atom4.get(), owner.run_list().back());
+        EXPECT_TRUE(owner.IsInProtectedMode());
+
+        scheduler.JobCompleted(0, kArmMaliResultSuccess, 0u);
+        scheduler.TryToSchedule();
+
+        EXPECT_EQ(5u, owner.run_list().size());
+        scheduler.CancelAtomsForConnection(connection2);
+
+        scheduler.JobCompleted(1, kArmMaliResultSuccess, 0u);
+        scheduler.TryToSchedule();
+
+        // Check that the canceled atom5 doesn't cause atom6 to wait for a
+        // transition to happen, because that would hang forever.
+        EXPECT_EQ(6u, owner.run_list().size());
+        EXPECT_EQ(atom7.get(), owner.run_list().back());
+        EXPECT_TRUE(owner.IsInProtectedMode());
+    }
 };
 
 TEST(JobScheduler, RunBasic) { TestJobScheduler().TestRunBasic(); }
@@ -661,3 +752,5 @@ TEST(JobScheduler, Priorities) { TestJobScheduler().TestPriorities(); }
 TEST(JobScheduler, Preemption) { TestJobScheduler().TestPreemption(false); }
 
 TEST(JobScheduler, PreemptionNormalCompletion) { TestJobScheduler().TestPreemption(true); }
+
+TEST(JobScheduler, ProtectedMode) { TestJobScheduler().TestProtectedMode(); }

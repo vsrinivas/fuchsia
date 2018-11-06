@@ -27,7 +27,8 @@ public:
 
     virtual ~MsdArmAtom() {}
     MsdArmAtom(std::weak_ptr<MsdArmConnection> connection, uint64_t gpu_address, uint32_t slot,
-               uint8_t atom_number, magma_arm_mali_user_data user_data, int8_t priority);
+               uint8_t atom_number, magma_arm_mali_user_data user_data, int8_t priority,
+               AtomFlags flags = static_cast<AtomFlags>(0));
 
     uint64_t trace_nonce() const { return trace_nonce_; }
     std::weak_ptr<MsdArmConnection> connection() const { return connection_; }
@@ -46,6 +47,8 @@ public:
     bool using_cycle_counter() const { return using_cycle_counter_; }
 
     int8_t priority() const { return priority_; }
+    AtomFlags flags() const { return flags_; }
+    bool is_protected() const { return flags_ & kAtomFlagProtected; }
     bool IsDependencyOnly() const { return !gpu_address_; }
 
     void set_dependencies(const DependencyList& dependencies);
@@ -90,6 +93,7 @@ private:
     uint64_t gpu_address_;
     const uint32_t slot_;
     const int8_t priority_;
+    const AtomFlags flags_{};
     bool require_cycle_counter_ = false;
     DependencyList dependencies_;
     // Assigned by client.
@@ -118,12 +122,12 @@ public:
     MsdArmSoftAtom(std::weak_ptr<MsdArmConnection> connection, AtomFlags soft_flags,
                    std::shared_ptr<magma::PlatformSemaphore> platform_semaphore,
                    uint8_t atom_number, magma_arm_mali_user_data user_data)
-        : MsdArmAtom(connection, kInvalidGpuAddress, 0, atom_number, user_data, 0),
-          soft_flags_(soft_flags), platform_semaphore_(platform_semaphore)
+        : MsdArmAtom(connection, kInvalidGpuAddress, 0, atom_number, user_data, 0, soft_flags),
+          platform_semaphore_(platform_semaphore)
     {
     }
 
-    AtomFlags soft_flags() const { return soft_flags_; }
+    AtomFlags soft_flags() const { return flags(); }
     std::shared_ptr<magma::PlatformSemaphore> platform_semaphore() const
     {
         return platform_semaphore_;
@@ -133,7 +137,6 @@ public:
 
 private:
     // Immutable after construction.
-    const AtomFlags soft_flags_{};
     const std::shared_ptr<magma::PlatformSemaphore> platform_semaphore_;
 };
 
