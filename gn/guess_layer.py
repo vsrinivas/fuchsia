@@ -56,8 +56,10 @@ def main():
         if check_import(project.attrib.get('name', '')):
           return 0
 
-    sys.stderr.write('ERROR: Could not guess cake layer from %s\n' %
-                     args.manifest.name)
+    sys.stderr.write("ERROR: Could not guess petal from %s. "
+                     "Ensure 'boards' and either 'products' or 'packages' is set.\n"
+                     % args.manifest.name)
+
     return 2
 
 
