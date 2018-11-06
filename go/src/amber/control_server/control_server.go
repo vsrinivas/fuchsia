@@ -94,7 +94,7 @@ func (c *ControlServer) GetUpdateComplete(name string, ver, mer *string) (zx.Cha
 	log.Printf("control_server: get update: %s", filepath.Join(name, version, merkle))
 
 	go func() {
-		c.daemon.Update()
+		c.daemon.UpdateIfStale()
 
 		root, length, err := c.daemon.MerkleFor(name, version, merkle)
 		if err != nil {

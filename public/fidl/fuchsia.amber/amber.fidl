@@ -105,8 +105,8 @@ struct SourceConfig {
     // limit.
     uint64 rateLimit;
 
-    // How frequently to poll the TUF server.
-    int32 ratePeriod;
+    // The TUF metadata will be refreshed after it is ratePeriod seconds stale.
+    int32 ratePeriod = 3600;
 
     // A vector of public keys. These keys must match one of the trusted keys
     // known to the system.

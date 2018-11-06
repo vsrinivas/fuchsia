@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"amber/atonce"
 	"fidl/fuchsia/amber"
 
 	"fuchsia.googlesource.com/sse"
@@ -158,6 +159,10 @@ type Source struct {
 
 	keys      []*tuf_data.Key
 	tufClient *tuf.Client
+
+	// TODO(raggi): can optimize startup by persisting this information, or by
+	// loading the tuf metadata and inspecting the timestamp metadata.
+	lastUpdate time.Time
 }
 
 type custom struct {
@@ -562,29 +567,45 @@ func (f *Source) waitForDeviceAuthorization(config *oauth2device.Config, code *o
 	log.Printf("remote store updated: %s", f.cfg.Config.Id)
 }
 
+// UpdateIfStale updates this source if the source has not recently updated.
+func (f *Source) UpdateIfStale() error {
+	f.mu.Lock()
+	maxAge := time.Duration(f.cfg.Config.RatePeriod) * time.Second
+	needsUpdate := time.Since(f.lastUpdate) > maxAge
+	f.mu.Unlock()
+	if needsUpdate {
+		return f.Update()
+	}
+	return nil
+}
+
 // Update requests updated metadata from this source, returning any error that
 // ocurred during the process.
 func (f *Source) Update() error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
+	return atonce.Do("source", f.cfg.Config.Id, func() error {
+		f.mu.Lock()
+		defer f.mu.Unlock()
 
-	if !*f.cfg.Status.Enabled {
-		return nil
-	}
+		if !*f.cfg.Status.Enabled {
+			return nil
+		}
 
-	if err := f.initLocalStoreLocked(); err != nil {
-		return fmt.Errorf("tuf_source: source could not be initialized: %s", err)
-	}
+		if err := f.initLocalStoreLocked(); err != nil {
+			return fmt.Errorf("tuf_source: source could not be initialized: %s", err)
+		}
 
-	if err := f.refreshOauth2TokenLocked(); err != nil {
-		return fmt.Errorf("tuf_source: failed to refresh oauth2 token: %s", err)
-	}
+		if err := f.refreshOauth2TokenLocked(); err != nil {
+			return fmt.Errorf("tuf_source: failed to refresh oauth2 token: %s", err)
+		}
 
-	_, err := f.tufClient.Update()
-	if tuf.IsLatestSnapshot(err) {
-		err = nil
-	}
-	return err
+		_, err := f.tufClient.Update()
+		if tuf.IsLatestSnapshot(err) || err == nil {
+			f.lastUpdate = time.Now()
+			err = nil
+		}
+		return err
+
+	})
 }
 
 func (f *Source) MerkleFor(name, version string) (string, int64, error) {

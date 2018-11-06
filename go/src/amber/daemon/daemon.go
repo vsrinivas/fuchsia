@@ -302,9 +302,20 @@ func (d *Daemon) GetSources() map[string]*source.Source {
 }
 
 func (d *Daemon) Update() {
-	atonce.Do("UpdateSources", "", func() error {
+	atonce.Do("daemon.Update", "", func() error {
 		for id, src := range d.GetActiveSources() {
 			if err := src.Update(); err != nil {
+				log.Printf("daemon: error updating source %s: %s", id, err)
+			}
+		}
+		return nil
+	})
+}
+
+func (d *Daemon) UpdateIfStale() {
+	atonce.Do("daemon.UpdateIfStale", "", func() error {
+		for id, src := range d.GetActiveSources() {
+			if err := src.UpdateIfStale(); err != nil {
 				log.Printf("daemon: error updating source %s: %s", id, err)
 			}
 		}
