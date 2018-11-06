@@ -32,6 +32,7 @@ template("fidl_dart") {
   bindings_dir = "$root_dir/lib"
   bindings_file = "$bindings_dir/fidl.dart"
   async_bindings_file = "$bindings_dir/fidl_async.dart"
+  test_bindings_file = "$bindings_dir/fidl_test.dart"
 
   fidl_target_gen_dir =
       get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
@@ -49,6 +50,7 @@ template("fidl_dart") {
     outputs = [
       bindings_file,
       async_bindings_file,
+      test_bindings_file,
     ]
 
     args = [
@@ -109,6 +111,7 @@ template("fidl_dart") {
     sources = [
       rebase_path(bindings_file, bindings_dir),
       rebase_path(async_bindings_file, bindings_dir),
+      rebase_path(test_bindings_file, bindings_dir),
     ]
 
     deps = [
