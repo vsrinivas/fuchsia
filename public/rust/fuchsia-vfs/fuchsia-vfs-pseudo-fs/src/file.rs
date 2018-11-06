@@ -40,8 +40,9 @@ use {
     fidl::endpoints::RequestStream,
     fidl_fuchsia_io::{
         FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo, SeekOrigin,
-        INO_UNKNOWN, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_STATUS,
-        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        INO_UNKNOWN, MODE_PROTECTION_MASK, MODE_TYPE_FILE, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE,
+        OPEN_FLAG_DIRECTORY, OPEN_FLAG_STATUS, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_WRITABLE,
     },
     fuchsia_async::Channel,
     fuchsia_zircon::{
@@ -54,6 +55,7 @@ use {
         task::LocalWaker,
         Future, Poll,
     },
+    libc::{S_IRUSR, S_IWUSR},
     std::{
         io::Write,
         iter::ExactSizeIterator,
@@ -66,6 +68,9 @@ use {
 // trait OnReadHandler = FnMut() -> Result<Vec<u8>, Status>;
 // trait OnWriteHandler = FnMut(Vec<u8>) -> Result<(), Status>;
 
+/// POSIX emulation layer access attributes set by default for files created with read_only().
+pub const DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES: u32 = S_IRUSR;
+
 /// Creates a new read-only `PseudoFile` backed by the specified read handler.
 ///
 /// The handler is called every time a read operation is performed on the file.  It is only allowed
@@ -76,7 +81,7 @@ pub fn read_only<OnRead>(on_read: OnRead) -> impl PseudoFile
 where
     OnRead: FnMut() -> Result<Vec<u8>, Status>,
 {
-    PseudoFileImpl::<_, fn(Vec<u8>) -> Result<(), Status>>::new(Some(on_read), 0, None)
+    read_only_attr(on_read, DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES)
 }
 
 /// See [`read_only()`].  Wraps the callback, allowing it to return a String instead of a Vec<u8>,
@@ -89,8 +94,27 @@ where
         Some(move || on_read().map(|content| content.into_bytes())),
         0,
         None,
+        DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES,
     )
 }
+
+/// Same as [`read_only()`] but also allows to select custom attributes for the POSIX emulation
+/// layer.  Note that only the MODE_PROTECTION_MASK part of the protection_attributes argument will
+/// be stored.
+pub fn read_only_attr<OnRead>(on_read: OnRead, protection_attributes: u32) -> impl PseudoFile
+where
+    OnRead: FnMut() -> Result<Vec<u8>, Status>,
+{
+    PseudoFileImpl::<_, fn(Vec<u8>) -> Result<(), Status>>::new(
+        Some(on_read),
+        0,
+        None,
+        protection_attributes & MODE_PROTECTION_MASK,
+    )
+}
+
+/// POSIX emulation layer access attributes set by default for files created with write_only().
+pub const DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES: u32 = S_IWUSR;
 
 /// Creates a new write-only `PseudoFile` backed by the specified write handler.
 ///
@@ -102,7 +126,7 @@ pub fn write_only<OnWrite>(capacity: u64, on_write: OnWrite) -> impl PseudoFile
 where
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
 {
-    PseudoFileImpl::<fn() -> Result<Vec<u8>, Status>, _>::new(None, capacity, Some(on_write))
+    write_only_attr(capacity, on_write, DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES)
 }
 
 /// See [`write_only()`].  Only allows valid UTF-8 content to be written into the file.  Written
@@ -119,8 +143,30 @@ where
             Ok(content) => on_write(content),
             Err(_) => Err(Status::INVALID_ARGS),
         }),
+        DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES,
     )
 }
+
+/// Same as [`write_only()`] but also allows to select custom attributes for the POSIX emulation
+/// layer.  Note that only the MODE_PROTECTION_MASK part of the protection_attributes argument will
+/// be stored.
+pub fn write_only_attr<OnWrite>(
+    capacity: u64, on_write: OnWrite, protection_attributes: u32,
+) -> impl PseudoFile
+where
+    OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
+{
+    PseudoFileImpl::<fn() -> Result<Vec<u8>, Status>, _>::new(
+        None,
+        capacity,
+        Some(on_write),
+        protection_attributes & MODE_PROTECTION_MASK,
+    )
+}
+
+/// POSIX emulation layer access attributes set by default for files created with read_write().
+pub const DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES: u32 =
+    DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES | DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES;
 
 /// Creates new `PseudoFile` backed by the specified read and write handlers.
 ///
@@ -140,7 +186,12 @@ where
     OnRead: FnMut() -> Result<Vec<u8>, Status>,
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
 {
-    PseudoFileImpl::new(Some(on_read), capacity, Some(on_write))
+    read_write_attr(
+        on_read,
+        capacity,
+        on_write,
+        DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES,
+    )
 }
 
 /// See [`read_write()`].  Wraps the read callback, allowing it to return a [`String`] instead of a
@@ -162,6 +213,25 @@ where
             Ok(content) => on_write(content),
             Err(_) => Err(Status::INVALID_ARGS),
         }),
+        DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES,
+    )
+}
+
+/// Same as [`read_write()`] but also allows to select custom attributes for the POSIX emulation
+/// layer.  Note that only the MODE_PROTECTION_MASK part of the protection_attributes argument will
+/// be stored.
+pub fn read_write_attr<OnRead, OnWrite>(
+    on_read: OnRead, capacity: u64, on_write: OnWrite, protection_attributes: u32,
+) -> impl PseudoFile
+where
+    OnRead: FnMut() -> Result<Vec<u8>, Status>,
+    OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
+{
+    PseudoFileImpl::new(
+        Some(on_read),
+        capacity,
+        Some(on_write),
+        protection_attributes & MODE_PROTECTION_MASK,
     )
 }
 
@@ -236,6 +306,12 @@ where
     /// connection lifetime.
     on_write: Option<OnWrite>,
 
+    /// MODE_PROTECTION_MASK attributes returned by this file through io.fild:Node::GetAttr.  They
+    /// have no meaning for the file operation itself, but may have consequences to the POSIX
+    /// emulation layer - for example, it makes sense to remove the read flags from a read-only
+    /// file.  This filed should only have bits in the MODE_PROTECTION_MASK part set.
+    protection_attributes: u32,
+
     /// All the currently open connections for this file.
     connections: FuturesUnordered<StreamFuture<FileConnection>>,
 }
@@ -263,11 +339,15 @@ where
     OnRead: FnMut() -> Result<Vec<u8>, Status>,
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
 {
-    fn new(on_read: Option<OnRead>, capacity: u64, on_write: Option<OnWrite>) -> Self {
+    fn new(
+        on_read: Option<OnRead>, capacity: u64, on_write: Option<OnWrite>,
+        protection_attributes: u32,
+    ) -> Self {
         PseudoFileImpl {
             on_read,
             capacity,
             on_write,
+            protection_attributes,
             connections: FuturesUnordered::new(),
         }
     }
@@ -391,15 +471,15 @@ where
             }
             FileRequest::GetAttr { responder } => {
                 let mut attrs = NodeAttributes {
-                    mode: 0,
+                    mode: MODE_TYPE_FILE | self.protection_attributes,
                     id: INO_UNKNOWN,
                     content_size: 0,
                     storage_size: 0,
-                    link_count: 0,
+                    link_count: 1,
                     creation_time: 0,
                     modification_time: 0,
                 };
-                responder.send(ZX_ERR_NOT_SUPPORTED, &mut attrs)?;
+                responder.send(ZX_OK, &mut attrs)?;
             }
             FileRequest::SetAttr {
                 flags: _,
@@ -767,11 +847,12 @@ mod tests {
 
     use {
         fidl::endpoints::{create_endpoints, ServerEnd},
-        fidl_fuchsia_io::{FileEvent, FileMarker, FileProxy},
+        fidl_fuchsia_io::{FileEvent, FileMarker, FileProxy, INO_UNKNOWN, MODE_TYPE_FILE},
         fuchsia_async as fasync,
         fuchsia_zircon::sys::ZX_ERR_ACCESS_DENIED,
         futures::channel::{mpsc, oneshot},
         futures::{select, Future, FutureExt, SinkExt},
+        libc::{S_IRGRP, S_IROTH, S_IRUSR, S_IWGRP, S_IWOTH, S_IWUSR, S_IXGRP, S_IXOTH, S_IXUSR},
         pin_utils::pin_mut,
         std::cell::RefCell,
     };
@@ -970,6 +1051,16 @@ mod tests {
             let status = await!($client.truncate($length)).expect("Truncate failed");
 
             assert_eq!(Status::from_raw(status), $expected_status);
+        };
+    }
+
+    // See comment above assert_read above for why this is a macro.
+    macro_rules! assert_get_attr {
+        ($client:expr, $expected:expr) => {
+            let (status, attrs) = await!($client.get_attr()).expect("get_attr failed");
+
+            assert_eq!(Status::from_raw(status), Status::OK);
+            assert_eq!(attrs, $expected);
         };
     }
 
@@ -1686,6 +1777,178 @@ mod tests {
 
                 assert_close!(first_proxy);
                 assert_close!(second_proxy);
+            },
+        );
+    }
+
+    #[test]
+    fn get_attr_read_only() {
+        run_server_client(
+            OPEN_RIGHT_READABLE,
+            read_only(|| Ok(b"Content".to_vec())),
+            async move |proxy| {
+                assert_get_attr!(
+                    proxy,
+                    NodeAttributes {
+                        mode: MODE_TYPE_FILE | S_IRUSR,
+                        id: INO_UNKNOWN,
+                        content_size: 0,
+                        storage_size: 0,
+                        link_count: 1,
+                        creation_time: 0,
+                        modification_time: 0,
+                    }
+                );
+                assert_close!(proxy);
+            },
+        );
+    }
+
+    #[test]
+    fn get_attr_write_only() {
+        run_server_client(
+            OPEN_RIGHT_WRITABLE,
+            write_only(10, |_content| panic!("No changes")),
+            async move |proxy| {
+                assert_get_attr!(
+                    proxy,
+                    NodeAttributes {
+                        mode: MODE_TYPE_FILE | S_IWUSR,
+                        id: INO_UNKNOWN,
+                        content_size: 0,
+                        storage_size: 0,
+                        link_count: 1,
+                        creation_time: 0,
+                        modification_time: 0,
+                    }
+                );
+                assert_close!(proxy);
+            },
+        );
+    }
+
+    #[test]
+    fn get_attr_read_write() {
+        run_server_client(
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            read_write(
+                || Ok(b"Content".to_vec()),
+                10,
+                |_content| panic!("No changes"),
+            ),
+            async move |proxy| {
+                assert_get_attr!(
+                    proxy,
+                    NodeAttributes {
+                        mode: MODE_TYPE_FILE | S_IWUSR | S_IRUSR,
+                        id: INO_UNKNOWN,
+                        content_size: 0,
+                        storage_size: 0,
+                        link_count: 1,
+                        creation_time: 0,
+                        modification_time: 0,
+                    }
+                );
+                assert_close!(proxy);
+            },
+        );
+    }
+
+    #[test]
+    fn get_attr_read_only_attr() {
+        run_server_client(
+            OPEN_RIGHT_READABLE,
+            read_only_attr(
+                || Ok(b"Content".to_vec()),
+                S_IXOTH | S_IROTH | S_IXGRP | S_IRGRP | S_IXUSR | S_IRUSR,
+            ),
+            async move |proxy| {
+                assert_get_attr!(
+                    proxy,
+                    NodeAttributes {
+                        mode: MODE_TYPE_FILE
+                            | (S_IXOTH | S_IROTH | S_IXGRP | S_IRGRP | S_IXUSR | S_IRUSR),
+                        id: INO_UNKNOWN,
+                        content_size: 0,
+                        storage_size: 0,
+                        link_count: 1,
+                        creation_time: 0,
+                        modification_time: 0,
+                    }
+                );
+                assert_close!(proxy);
+            },
+        );
+    }
+
+    #[test]
+    fn get_attr_write_only_attr() {
+        run_server_client(
+            OPEN_RIGHT_WRITABLE,
+            write_only_attr(
+                10,
+                |_content| panic!("No changes"),
+                S_IWOTH | S_IWGRP | S_IWUSR,
+            ),
+            async move |proxy| {
+                assert_get_attr!(
+                    proxy,
+                    NodeAttributes {
+                        mode: MODE_TYPE_FILE | S_IWOTH | S_IWGRP | S_IWUSR,
+                        id: INO_UNKNOWN,
+                        content_size: 0,
+                        storage_size: 0,
+                        link_count: 1,
+                        creation_time: 0,
+                        modification_time: 0,
+                    }
+                );
+                assert_close!(proxy);
+            },
+        );
+    }
+
+    #[test]
+    fn get_attr_read_write_attr() {
+        run_server_client(
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            read_write_attr(
+                || Ok(b"Content".to_vec()),
+                10,
+                |_content| panic!("No changes"),
+                S_IXOTH
+                    | S_IROTH
+                    | S_IWOTH
+                    | S_IXGRP
+                    | S_IRGRP
+                    | S_IWGRP
+                    | S_IXUSR
+                    | S_IRUSR
+                    | S_IWUSR,
+            ),
+            async move |proxy| {
+                assert_get_attr!(
+                    proxy,
+                    NodeAttributes {
+                        mode: MODE_TYPE_FILE
+                            | (S_IXOTH
+                                | S_IROTH
+                                | S_IWOTH
+                                | S_IXGRP
+                                | S_IRGRP
+                                | S_IWGRP
+                                | S_IXUSR
+                                | S_IRUSR
+                                | S_IWUSR),
+                        id: INO_UNKNOWN,
+                        content_size: 0,
+                        storage_size: 0,
+                        link_count: 1,
+                        creation_time: 0,
+                        modification_time: 0,
+                    }
+                );
+                assert_close!(proxy);
             },
         );
     }
