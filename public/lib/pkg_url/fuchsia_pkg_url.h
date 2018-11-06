@@ -14,7 +14,10 @@ namespace component {
 class FuchsiaPkgUrl {
  public:
   FuchsiaPkgUrl() = default;
+  FuchsiaPkgUrl(FuchsiaPkgUrl&) = default;
+  FuchsiaPkgUrl& operator=(FuchsiaPkgUrl&) = default;
   FuchsiaPkgUrl(FuchsiaPkgUrl&&) = default;
+  FuchsiaPkgUrl& operator=(FuchsiaPkgUrl&&) = default;
 
   static bool IsFuchsiaPkgScheme(const std::string& url);
 
@@ -37,8 +40,6 @@ class FuchsiaPkgUrl {
   std::string url_;
   std::string package_name_;
   std::string resource_path_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FuchsiaPkgUrl);
 };
 
 }  // namespace component

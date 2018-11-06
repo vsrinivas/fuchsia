@@ -87,11 +87,7 @@ package("hello_scenic") {
   ]
 }
 
-# TODO(SCN-794): move out of system image (not sure how to do this for multiple
-# binaries).
 package("hello_views") {
-  deprecated_system_image = true
-
   deps = [
     "hello_views",
     "hello_views:hello_subview",
@@ -103,6 +99,17 @@ package("hello_views") {
     },
     {
       name = "hello_subview"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("hello_views/meta/hello_views.cmx")
+      dest = "hello_views.cmx"
+    },
+    {
+      path = rebase_path("hello_views/meta/hello_subview.cmx")
+      dest = "hello_subview.cmx"
     },
   ]
 }

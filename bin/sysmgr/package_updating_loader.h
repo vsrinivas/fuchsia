@@ -23,7 +23,8 @@ class PackageUpdatingLoader final : public component::ComponentLoader {
  public:
   typedef fit::function<void(std::string)> DoneCallback;
 
-  PackageUpdatingLoader(fuchsia::amber::ControlPtr amber_ctl,
+  PackageUpdatingLoader(std::string amber_url,
+                        fuchsia::amber::ControlPtr amber_ctl,
                         async_dispatcher_t* dispatcher);
   ~PackageUpdatingLoader() override;
 
@@ -44,6 +45,7 @@ class PackageUpdatingLoader final : public component::ComponentLoader {
   bool LoadComponentFromPkgfs(component::FuchsiaPkgUrl component_url,
                               LoadComponentCallback callback) override;
 
+  const std::string amber_url_;
   fuchsia::amber::ControlPtr amber_ctl_;
   async_dispatcher_t* const dispatcher_;  // Not owned.
 

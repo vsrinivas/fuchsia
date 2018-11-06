@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/service_startup_test"
+    },
+    "sandbox": {
+        "services": [ "fuchsia.process.Launcher" ],
+        "pkgfs": [ "packages" ],
+        "system": [ "data/appmgr" ]
+    }
+}

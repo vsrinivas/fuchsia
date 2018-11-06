@@ -26,7 +26,7 @@ DelegatingLoader::MakeWithParentFallback(
     Config::ServiceMap delegates, fuchsia::sys::Launcher* delegate_launcher,
     fuchsia::sys::LoaderPtr fallback) {
   return std::unique_ptr<DelegatingLoader>(new DelegatingLoader(
-      std::move(delegates), delegate_launcher, std::move(fallback),
+      std::move(delegates), delegate_launcher, std::move(fallback), "",
       nullptr));
 }
 
@@ -34,14 +34,16 @@ DelegatingLoader::MakeWithParentFallback(
 std::unique_ptr<DelegatingLoader>
 DelegatingLoader::MakeWithPackageUpdatingFallback(
     Config::ServiceMap delegates, fuchsia::sys::Launcher* delegate_launcher,
-    fuchsia::amber::ControlPtr amber_ctl) {
-  return std::unique_ptr<DelegatingLoader>(new DelegatingLoader(
-      std::move(delegates), delegate_launcher, nullptr, std::move(amber_ctl)));
+    std::string amber_url, fuchsia::amber::ControlPtr amber_ctl) {
+  return std::unique_ptr<DelegatingLoader>(
+      new DelegatingLoader(std::move(delegates), delegate_launcher, nullptr,
+                           std::move(amber_url), std::move(amber_ctl)));
 }
 
 DelegatingLoader::DelegatingLoader(Config::ServiceMap delegates,
                                    fuchsia::sys::Launcher* delegate_launcher,
                                    fuchsia::sys::LoaderPtr fallback,
+                                   std::string amber_url,
                                    fuchsia::amber::ControlPtr amber_ctl)
     : delegate_launcher_(delegate_launcher),
       parent_fallback_(std::move(fallback)) {
@@ -52,7 +54,8 @@ DelegatingLoader::DelegatingLoader(Config::ServiceMap delegates,
   }
   if (amber_ctl) {
     package_updating_fallback_ = std::make_unique<PackageUpdatingLoader>(
-        std::move(amber_ctl), async_get_default_dispatcher());
+        std::move(amber_url), std::move(amber_ctl),
+        async_get_default_dispatcher());
   }
 }
 

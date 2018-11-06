@@ -5,7 +5,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/channel.h>
 #include <test/sysmgr/cpp/fidl.h>
-
 #include "lib/component/cpp/startup_context.h"
 
 namespace sysmgr {

@@ -82,45 +82,8 @@ class RealmTest : public TestWithEnvironment {
   int outf_;
 };
 
-const char kRealm[] = "realmintegrationtest";
+constexpr char kRealm[] = "realmintegrationtest";
 const auto kTimeout = zx::sec(5);
-
-TEST_F(RealmTest, RunBinaryAsComponent) {
-  auto enclosing_environment =
-      CreateNewEnclosingEnvironment(kRealm, CreateServices());
-
-  // Absolute path.
-  {
-    OpenNewOutFile();
-    auto controller = RunComponent(enclosing_environment.get(),
-                                   "/system/bin/echo", {"-n", "Hello world"});
-    bool wait = false;
-    controller.events().OnTerminated =
-        [&wait](int64_t return_code, fuchsia::sys::TerminationReason reason) {
-          wait = true;
-          EXPECT_EQ(reason, fuchsia::sys::TerminationReason::EXITED);
-          EXPECT_EQ(return_code, 0);
-        };
-    EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, kTimeout));
-    EXPECT_EQ(ReadOutFile(), "Hello world");
-  }
-
-  // Relative path.
-  {
-    OpenNewOutFile();
-    auto controller =
-        RunComponent(enclosing_environment.get(), "echo", {"-n", "Bye world"});
-    bool wait = false;
-    controller.events().OnTerminated =
-        [&wait](int64_t return_code, fuchsia::sys::TerminationReason reason) {
-          wait = true;
-          EXPECT_EQ(reason, fuchsia::sys::TerminationReason::EXITED);
-          EXPECT_EQ(return_code, 0);
-        };
-    EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, kTimeout));
-    EXPECT_EQ(ReadOutFile(), "Bye world");
-  }
-}
 
 TEST_F(RealmTest, Resolve) {
   auto enclosing_environment =
@@ -172,7 +135,8 @@ TEST_F(RealmTest, CreateTwoKillOne) {
       CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
   ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_environment.get()));
   // launch component normally
-  auto controller1 = RunComponent(enclosing_environment.get(), "/boot/bin/sh");
+  auto controller1 = RunComponent(enclosing_environment.get(),
+                                  "echo2_server_cpp");
 
   // make sure echo service is running.
   fidl::examples::echo::EchoPtr echo;

@@ -87,8 +87,8 @@ class PackageUpdatingLoaderTest
   void Init(AmberControlMock* amber_service) {
     fuchsia::amber::ControlPtr amber_ctl;
     amber_service->AddBinding(amber_ctl.NewRequest(dispatcher()));
-    loader_ = std::make_unique<PackageUpdatingLoader>(std::move(amber_ctl),
-                                                      dispatcher());
+    loader_ = std::make_unique<PackageUpdatingLoader>(
+        "my_amber", std::move(amber_ctl), dispatcher());
     loader_service_ =
         fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
           loader_->AddBinding(

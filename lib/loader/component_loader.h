@@ -44,10 +44,7 @@ class ComponentLoader : public fuchsia::sys::Loader {
   virtual bool LoadComponentFromPkgfs(FuchsiaPkgUrl resolved_url,
                                       LoadComponentCallback callback) = 0;
 
-
   bool LoadComponentFromPackage(const std::string& package_name,
-                                LoadComponentCallback callback);
-  bool LoadComponentWithProcess(fxl::UniqueFD fd, const std::string& path,
                                 LoadComponentCallback callback);
 
   fidl::BindingSet<fuchsia::sys::Loader> bindings_;

@@ -39,8 +39,8 @@ class App {
   void RegisterSingleton(std::string service_name,
                          fuchsia::sys::LaunchInfoPtr launch_info);
   void RegisterDefaultServiceConnector();
-  void RegisterAppLoaders(Config::ServiceMap app_loaders,
-                          fuchsia::amber::ControlPtr amber_ctl = nullptr);
+  void RegisterAppLoaders(Config::ServiceMap app_loaders, std::string amber_url,
+                          fuchsia::amber::ControlPtr amber_ctl);
   void LaunchApplication(fuchsia::sys::LaunchInfo launch_info);
 
   std::unique_ptr<component::StartupContext> startup_context_;

@@ -12,21 +12,38 @@ fidl("interface") {
   ]
 }
 
-executable("service") {
+executable("test_sysmgr_service") {
   testonly = true
-  output_name = "test_sysmgr_service_startup"
 
   sources = [
-    "service.cc",
+    "test_sysmgr_service.cc",
   ]
 
   deps = [
     ":interface",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
-    "//garnet/public/lib/fxl",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("mock_amber") {
+  testonly = true
+
+  sources = [
+    "mock_amber.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/fidl/fuchsia.amber",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/zx",
   ]
 }
 
@@ -73,14 +90,18 @@ package("integration_tests") {
   package_name = "sysmgr_integration_tests"
 
   deps = [
-    ":service",
+    ":mock_amber",
+    ":test_sysmgr_service",
     ":service_startup_test",
     ":package_updating_loader_test",
   ]
 
   binaries = [
     {
-      name = "test_sysmgr_service_startup"
+      name = "mock_amber"
+    },
+    {
+      name = "test_sysmgr_service"
     },
   ]
 
@@ -90,6 +111,25 @@ package("integration_tests") {
     },
     {
       name = "package_updating_loader_test"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/test_sysmgr_service.cmx")
+      dest = "test_sysmgr_service.cmx"
+    },
+    {
+      path = rebase_path("meta/mock_amber.cmx")
+      dest = "mock_amber.cmx"
+    },
+    {
+      path = rebase_path("meta/service_startup_test.cmx")
+      dest = "service_startup_test.cmx"
+    },
+    {
+      path = rebase_path("meta/package_updating_loader_test.cmx")
+      dest = "package_updating_loader_test.cmx"
     },
   ]
 }

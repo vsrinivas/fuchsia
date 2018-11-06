@@ -69,7 +69,8 @@ App::App(async::Loop* loop, AppType type)
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.out = CloneFileDescriptor(STDOUT_FILENO);
     launch_info.err = CloneFileDescriptor(STDERR_FILENO);
-    launch_info.url = "hello_subview";
+    launch_info.url =
+        "fuchsia-pkg://fuchsia.com/hello_views#meta/hello_subview.cmx";
     launch_info.directory_request = subview_services.NewRequest();
     startup_context_->launcher()->CreateComponent(
         std::move(launch_info), s_subview_controller.NewRequest());

@@ -1,6 +1,6 @@
 {
   "test_suite_name": "fuchsia.benchmark_example",
-  "app": "/pkgfs/packages/benchmark/0/bin/benchmark_example",
+  "app": "fuchsia-pkg://fuchsia.com/benchmark#meta/benchmark_example.cmx",
   "args": [],
   "categories": ["benchmark"],
   "measure": [

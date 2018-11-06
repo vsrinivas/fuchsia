@@ -24,6 +24,7 @@ ComponentLoader::~ComponentLoader() = default;
 void ComponentLoader::LoadComponent(fidl::StringPtr url,
                                     LoadComponentCallback callback) {
   TRACE_DURATION("appmgr", "RootLoader::LoadComponent", "url", url.get());
+
   // 1. If the URL is a fuchsia-pkg:// scheme, we are launching a .cmx.
   if (FuchsiaPkgUrl::IsFuchsiaPkgScheme(url)) {
     FuchsiaPkgUrl fp;
@@ -51,40 +52,8 @@ void ComponentLoader::LoadComponent(fidl::StringPtr url,
     return;
   }
 
-  // 2. Try to load the URL directly, if the path is valid. If the path is valid
-  // but we cannot load the component, exit immediately.
-  fxl::UniqueFD fd(open(path.c_str(), O_RDONLY));
-  if (fd.is_valid() && path[0] == '/') {
-    if (!LoadComponentWithProcess(std::move(fd), path, callback)) {
-      FXL_LOG(ERROR) << "Could not load url: " << url
-                     << "; resource located at path, but it could not be "
-                        "launched as a component.";
-      callback(nullptr);
-    }
-    return;
-  }
-
-  // 3. Try to load the URL from /pkgfs.
-  if (path.find('/') == std::string::npos &&
-      LoadComponentFromPackage(path, callback)) {
-    return;
-  }
-
-  // 4. Try to load the URL from /system, if we cannot from /pkgfs.
-  for (const auto& entry : {"/system/bin", "/system/pkgs"}) {
-    const std::string qualified_path =
-        fxl::Substitute("$0/$1", fxl::StringView(entry), path);
-    fd.reset(open(qualified_path.c_str(), O_RDONLY));
-    if (fd.is_valid()) {
-      path = qualified_path;
-      break;
-    }
-  }
-  if (!fd.is_valid() ||
-      !LoadComponentWithProcess(std::move(fd), path, callback)) {
-    FXL_LOG(ERROR) << "Could not load url: " << url;
-    callback(nullptr);
-  }
+  // 2. Try to load the URL from /pkgfs.
+  LoadComponentFromPackage(path, callback);
 }
 
 void ComponentLoader::AddBinding(
@@ -107,22 +76,6 @@ bool ComponentLoader::LoadComponentFromPackage(const std::string& package_name,
     return false;
   }
   return LoadComponentFromPkgfs(std::move(package_url), callback);
-}
-
-bool ComponentLoader::LoadComponentWithProcess(fxl::UniqueFD fd,
-                                               const std::string& path,
-                                               LoadComponentCallback callback) {
-  TRACE_DURATION("appmgr", "ComponentLoader::LoadComponentWithProcess", "path",
-                 path);
-  fsl::SizedVmo data;
-  if (fsl::VmoFromFd(std::move(fd), &data)) {
-    fuchsia::sys::Package package;
-    package.data = fidl::MakeOptional(std::move(data).ToTransport());
-    package.resolved_url = fxl::Substitute("file://$0", path);
-    callback(fidl::MakeOptional(std::move(package)));
-    return true;
-  }
-  return false;
 }
 
 // static

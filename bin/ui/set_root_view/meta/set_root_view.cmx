@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "bin/set_root_view"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.ui.viewsv1.ViewProvider",
+            "fuchsia.ui.policy.Presenter"
+        ]
+    }
+}

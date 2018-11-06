@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/hello_views"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.ui.scenic.Scenic"
+        ]
+    }
+}

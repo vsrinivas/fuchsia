@@ -490,12 +490,7 @@ void Realm::CreateComponent(
                            callback = fbl::move(callback)](
                               fuchsia::sys::PackagePtr package) mutable {
           if (package) {
-            if (package->data) {
-              // TODO(CP-25): Deprecate and remove CreateComponentWithProcess.
-              CreateComponentWithProcess(
-                  std::move(package), std::move(launch_info),
-                  std::move(component_request), fbl::move(callback));
-            } else if (package->directory) {
+            if (package->directory) {
               CreateComponentFromPackage(
                   std::move(package), std::move(launch_info),
                   std::move(component_request), fbl::move(callback));
@@ -573,77 +568,6 @@ std::unique_ptr<ComponentControllerImpl> Realm::ExtractComponent(
 void Realm::AddBinding(
     fidl::InterfaceRequest<fuchsia::sys::Environment> environment) {
   default_namespace_->AddBinding(std::move(environment));
-}
-
-void Realm::CreateComponentWithProcess(
-    fuchsia::sys::PackagePtr package, fuchsia::sys::LaunchInfo launch_info,
-    ComponentRequestWrapper component_request,
-    ComponentObjectCreatedCallback callback) {
-  TRACE_DURATION("appmgr", "Realm::CreateComponentWithProcess", "package",
-                 package->resolved_url.get(), "launch_info.url",
-                 launch_info.url.get());
-  fxl::RefPtr<Namespace> ns = fxl::MakeRefCounted<Namespace>(
-      default_namespace_, this, std::move(launch_info.additional_services),
-      nullptr);
-  ns->set_component_url(launch_info.url);
-
-  zx::channel svc = ns->OpenServicesAsDirectory();
-  if (!svc) {
-    component_request.SetReturnValues(kComponentCreationFailed,
-                                      TerminationReason::INTERNAL_ERROR);
-    return;
-  }
-
-  NamespaceBuilder builder;
-  builder.AddServices(std::move(svc));
-
-  // Add the custom namespace.
-  // Note that this must be the last |builder| step adding entries to the
-  // namespace so that we can filter out entries already added in previous
-  // steps.
-  // HACK(alhaad): We add deprecated default directories after this.
-  builder.AddFlatNamespace(std::move(launch_info.flat_namespace));
-  // TODO(abarth): Remove this call to AddDeprecatedDefaultDirectories once
-  // every application has a proper sandbox configuration.
-  builder.AddDeprecatedDefaultDirectories();
-
-  fsl::SizedVmo executable;
-  if (!fsl::SizedVmo::FromTransport(std::move(*package->data), &executable)) {
-    component_request.SetReturnValues(kComponentCreationFailed,
-                                      TerminationReason::INTERNAL_ERROR);
-    return;
-  }
-
-  zx::job child_job;
-  zx_status_t status = zx::job::create(job_, 0u, &child_job);
-  if (status != ZX_OK)
-    return;
-
-  const std::string args = Util::GetArgsString(launch_info.arguments);
-  const std::string url = launch_info.url;  // Keep a copy before moving it.
-  auto channels = Util::BindDirectory(&launch_info);
-  zx::process process =
-      CreateProcess(child_job, std::move(executable), url,
-                    std::move(launch_info), zx::channel(), builder.Build());
-
-  if (process) {
-    fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller;
-    TerminationCallback termination_callback;
-    component_request.Extract(&controller, &termination_callback);
-    auto application = std::make_unique<ComponentControllerImpl>(
-        std::move(controller), this, std::move(child_job), std::move(process),
-        url, std::move(args), Util::GetLabelFromURL(url), std::move(ns),
-        ExportedDirType::kPublicDebugCtrlLayout,
-        std::move(channels.exported_dir), std::move(channels.client_request),
-        std::move(termination_callback));
-    // update hub
-    hub_.AddComponent(application->HubInfo());
-    ComponentControllerImpl* key = application.get();
-    applications_.emplace(key, std::move(application));
-  } else {
-    component_request.SetReturnValues(
-        kComponentCreationFailed, TerminationReason::PROCESS_CREATION_ERROR);
-  }
 }
 
 void Realm::CreateComponentWithRunnerForScheme(

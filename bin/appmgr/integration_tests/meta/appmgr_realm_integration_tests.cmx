@@ -4,9 +4,9 @@
     },
     "sandbox": {
         "features": [ "shell" ],
-	"services": [
-	    "fuchsia.sys.Environment",
-	    "fuchsia.sys.Loader"
-	]
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
+        ]
     }
 }

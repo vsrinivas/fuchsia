@@ -217,3 +217,41 @@ package("scenic_tools") {
     },
   ]
 }
+
+package("set_renderer_params") {
+  deps = [
+    "set_renderer_params_HACK:set_renderer_params",
+  ]
+
+  binaries = [
+    {
+      name = "set_renderer_params"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("set_renderer_params_HACK/meta/set_renderer_params.cmx")
+      dest = "set_renderer_params.cmx"
+    },
+  ]
+}
+
+package("set_root_view") {
+  deps = [
+    "set_root_view",
+  ]
+
+  binaries = [
+    {
+      name = "set_root_view"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("set_root_view/meta/set_root_view.cmx")
+      dest = "set_root_view.cmx"
+    },
+  ]
+}

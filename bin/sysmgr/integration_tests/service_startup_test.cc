@@ -5,7 +5,6 @@
 #include <lib/fdio/util.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <test/sysmgr/cpp/fidl.h>
-
 #include "garnet/bin/appmgr/appmgr.h"
 #include "gtest/gtest.h"
 #include "lib/component/cpp/startup_context.h"
@@ -16,19 +15,29 @@ namespace sysmgr {
 namespace test {
 namespace {
 
-using TestSysmgr = gtest::RealLoopFixture;
+using TestSysmgr = ::gtest::RealLoopFixture;
 
 TEST_F(TestSysmgr, ServiceStartup) {
   zx::channel h1, h2;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
 
   fidl::VectorPtr<fidl::StringPtr> sysmgr_args;
-  sysmgr_args.push_back(
-      "--config={\"services\": { \"test.sysmgr.Interface\": "
-      "\"/pkgfs/packages/sysmgr_integration_tests/0/bin/"
-      "test_sysmgr_service_startup\" } }");
+  // When auto_update_packages=true, this tests that the presence of amber
+  // in the sys environment allows component loading to succeed. It should work
+  // with a mocked amber.
+  constexpr char kSysmgrConfig[] = R"(--config=
+{
+  "services": {
+    "test.sysmgr.Interface": "fuchsia-pkg://fuchsia.com/sysmgr_integration_tests#meta/test_sysmgr_service.cmx",
+    "fuchsia.amber.Control": "fuchsia-pkg://fuchsia.com/sysmgr_integration_tests#meta/mock_amber.cmx"
+  },
+  "startup_services": [
+    "fuchsia.amber.Control"
+  ]
+})";
+  sysmgr_args.push_back(kSysmgrConfig);
 
-  auto context = component::StartupContext::CreateFromStartupInfoNotChecked();
+  auto context = component::StartupContext::CreateFromStartupInfo();
 
   component::AppmgrArgs args{
       .pa_directory_request = h2.release(),

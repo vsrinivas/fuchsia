@@ -18,17 +18,27 @@ executable("benchmark_example") {
 }
 
 package("benchmark") {
-  deprecated_no_cmx = "//build"
-
   deps = [
     ":benchmark_example",
   ]
 
-  binaries = [ {
-        name = "benchmark_example"
-      } ]
-  resources = [ {
-        path = rebase_path("benchmark_example.tspec")
-        dest = "benchmark_example.tspec"
-      } ]
+  binaries = [
+    {
+      name = "benchmark_example"
+    }
+  ]
+
+  resources = [
+    {
+      path = rebase_path("benchmark_example.tspec")
+      dest = "benchmark_example.tspec"
+    }
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/benchmark_example.cmx")
+      dest = "benchmark_example.cmx"
+    }
+  ]
 }

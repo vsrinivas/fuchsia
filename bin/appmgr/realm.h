@@ -125,11 +125,6 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
       ComponentRequestWrapper component_request,
       ComponentObjectCreatedCallback callback);
 
-  void CreateComponentWithProcess(fuchsia::sys::PackagePtr package,
-                                  fuchsia::sys::LaunchInfo launch_info,
-                                  ComponentRequestWrapper component_request,
-                                  ComponentObjectCreatedCallback callback);
-
   void CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
                                   fuchsia::sys::LaunchInfo launch_info,
                                   ComponentRequestWrapper component_request,

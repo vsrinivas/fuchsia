@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "bin/benchmark_example"
+    },
+    "sandbox": {
+        "services": [ "fuchsia.tracelink.Registry" ]
+    }
+}

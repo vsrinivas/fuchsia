@@ -34,7 +34,12 @@ App::App(Config config)
   FXL_DCHECK(startup_context_);
 
   // Register services.
+  static const char* const kAmberName = fuchsia::amber::Control::Name_;
+  std::string amber_url;
   for (auto& pair : config.TakeServices()) {
+    if (pair.first == kAmberName) {
+      amber_url = *pair.second->url;
+    }
     RegisterSingleton(pair.first, std::move(pair.second));
   }
 
@@ -45,14 +50,22 @@ App::App(Config config)
   auto env_request = env_.NewRequest();
   env_->GetLauncher(env_launcher_.NewRequest());
   env_->GetServices(env_services_.NewRequest());
+
+  // Register the app loaders. First initialize and pass the amber client if
+  // auto_update_packages is enabled. Note that we have to do this after
+  // |env_services_| is initialized.
+  fuchsia::amber::ControlPtr amber_ctl;
   if (kAutoUpdatePackages) {
-    fuchsia::amber::ControlPtr amber_ctl;
-    env_services_->ConnectToService(fuchsia::amber::Control::Name_,
-                                    amber_ctl.NewRequest().TakeChannel());
-    RegisterAppLoaders(config.TakeAppLoaders(), std::move(amber_ctl));
-  } else {
-    RegisterAppLoaders(config.TakeAppLoaders());
+    if (amber_url.empty()) {
+      FXL_LOG(WARNING) << "auto_update_packages = true but amber is not "
+                       << "in sys environment. Disabling auto-updates.";
+    } else {
+      env_services_->ConnectToService(kAmberName,
+                                      amber_ctl.NewRequest().TakeChannel());
+    }
   }
+  RegisterAppLoaders(config.TakeAppLoaders(), std::move(amber_url),
+                     std::move(amber_ctl));
 
   // Set up environment for the programs we will run.
   fuchsia::sys::ServiceListPtr service_list(new fuchsia::sys::ServiceList);
@@ -135,10 +148,12 @@ void App::RegisterSingleton(std::string service_name,
 }
 
 void App::RegisterAppLoaders(Config::ServiceMap app_loaders,
+                             std::string amber_url,
                              fuchsia::amber::ControlPtr amber_ctl) {
   if (amber_ctl) {
     app_loader_ = DelegatingLoader::MakeWithPackageUpdatingFallback(
-        std::move(app_loaders), env_launcher_.get(), std::move(amber_ctl));
+        std::move(app_loaders), env_launcher_.get(), std::move(amber_url),
+        std::move(amber_ctl));
   } else {
     app_loader_ = DelegatingLoader::MakeWithParentFallback(
         std::move(app_loaders), env_launcher_.get(),

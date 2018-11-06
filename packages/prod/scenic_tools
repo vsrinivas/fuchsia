@@ -3,6 +3,9 @@
         "garnet/packages/prod/scenic"
     ],
     "packages": [
-        "//garnet/bin/ui:scenic_tools"
+        "//garnet/bin/ui:scenic_tools",
+        "//garnet/bin/ui:screencap",
+        "//garnet/bin/ui:set_renderer_params",
+        "//garnet/bin/ui:set_root_view"
     ]
 }

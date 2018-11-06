@@ -24,15 +24,17 @@
 namespace sysmgr {
 
 PackageUpdatingLoader::PackageUpdatingLoader(
-    fuchsia::amber::ControlPtr amber_ctl, async_dispatcher_t* dispatcher)
-    : amber_ctl_(std::move(amber_ctl)), dispatcher_(dispatcher) {}
+    std::string amber_url, fuchsia::amber::ControlPtr amber_ctl,
+    async_dispatcher_t* dispatcher)
+    : amber_url_(std::move(amber_url)),
+      amber_ctl_(std::move(amber_ctl)),
+      dispatcher_(dispatcher) {}
 
 PackageUpdatingLoader::~PackageUpdatingLoader() = default;
 
 bool PackageUpdatingLoader::LoadComponentFromPkgfs(
     component::FuchsiaPkgUrl component_url, LoadComponentCallback callback) {
-  const std::string package_name = component_url.package_name();
-  auto done_cb = [this, component_url = std::move(component_url),
+  auto done_cb = [this, component_url,
                   callback = std::move(callback)](std::string error) mutable {
     const std::string& pkg_path = component_url.pkgfs_dir_path();
     if (!error.empty()) {
@@ -41,21 +43,21 @@ bool PackageUpdatingLoader::LoadComponentFromPkgfs(
       callback(nullptr);
       return;
     }
-    if (!LoadPackage(std::move(component_url), callback)) {
+    if (!LoadPackage(component_url, callback)) {
       FXL_LOG(ERROR) << "Package failed to load after package update: "
                      << pkg_path;
       callback(nullptr);
       return;
     }
   };
-  if (package_name == "amber") {
-    // Avoid infinite regression: Don't attempt to update the amber package.
-    // Contacting the amber service may require starting its component, which
-    // would end up back here.
+  if (component_url.ToString() == amber_url_) {
+    // Avoid infinite reentry: Don't attempt to update the amber package
+    // when starting amber. Contacting the amber service may require starting
+    // its component, which would end up back here.
     done_cb("");
     return true;
   }
-  StartUpdatePackage(package_name, std::move(done_cb));
+  StartUpdatePackage(component_url.package_name(), std::move(done_cb));
   return true;
 }
 
@@ -148,8 +150,8 @@ void PackageUpdatingLoader::FinishWaitForUpdate(
       // If the package daemon reported an error (for example, maybe it could
       // not access the remote server), log a warning but allow the stale
       // package to be loaded.
-      FXL_LOG(WARNING) << "Package update failed. Loading package without "
-                       << "update. Error: " << bytes;
+      FXL_VLOG(1) << "Package update failed. Loading package without "
+                  << "update. Error: " << bytes;
     }
     done_cb("");
   } else if (status == ZX_OK && (signal->observed & ZX_CHANNEL_PEER_CLOSED)) {
