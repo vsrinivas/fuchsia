@@ -153,7 +153,7 @@ bool mmap_PROT_EXEC_test() {
     // Allocate a page that will later be made executable.
     size_t page_size = getpagesize();
     void* addr = mmap(NULL, page_size, PROT_READ|PROT_WRITE,
-                      MAP_PRIVATE|MAP_ANON, -1, 0);
+                      MAP_PRIVATE|MAP_ANON|MAP_JIT, -1, 0);
     EXPECT_NE(MAP_FAILED, addr,
               "mmap should have succeeded for PROT_READ|PROT_WRITE");
 
