@@ -438,7 +438,7 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
             status = RpcGetDeviceInfo(dr, &resp->device_info);
             break;
         case PDEV_GET_BOARD_INFO:
-            status = bus_->GetBoardInfo(&resp->board_info);
+            status = bus_->PBusGetBoardInfo(&resp->board_info);
             break;
         case PDEV_DEVICE_ADD:
             status = RpcDeviceAdd(dr, req->index, &resp->device_id);

@@ -4,6 +4,7 @@
 
 library ddk.protocol.platform_bus;
 
+using ddk.protocol.platform_device;
 using zx;
 
 struct PbusMmio {
@@ -117,9 +118,9 @@ interface PBus {
     /// with the platform bus.
     3: RegisterProtocol(uint32 proto_id, vector<void> protocol, PlatformProxyCb proxy_cb)
            -> (zx.status s);
-    /// Returns the board name for the underlying hardware.
-    /// Board drivers may use this to differentiate between multiple boards that they support.
-    4: GetBoardName() -> (string name);
+    /// Board drivers may use this to get information about the board, and to
+    /// differentiate between multiple boards that they support.
+    4: GetBoardInfo() -> (zx.status s, ddk.protocol.platform_device.PdevBoardInfo info);
     /// Board drivers may use this to set information about the board
     /// (like the board revision number).
     /// Platform device drivers can access this via `pdev_get_board_info()`.

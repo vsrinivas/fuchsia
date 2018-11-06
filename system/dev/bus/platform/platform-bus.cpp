@@ -194,17 +194,13 @@ zx_status_t PlatformBus::PBusProtocolDeviceAdd(uint32_t proto_id, const pbus_dev
     return ZX_OK;
 }
 
-const char* PlatformBus::PBusGetBoardName() {
-    return board_info_.board_name;
+zx_status_t PlatformBus::PBusGetBoardInfo(pdev_board_info_t* out_info) {
+    memcpy(out_info, &board_info_, sizeof(board_info_));
+    return ZX_OK;
 }
 
 zx_status_t PlatformBus::PBusSetBoardInfo(const pbus_board_info_t* info) {
     board_info_.board_revision = info->board_revision;
-    return ZX_OK;
-}
-
-zx_status_t PlatformBus::GetBoardInfo(pdev_board_info_t* out_info) {
-    memcpy(out_info, &board_info_, sizeof(board_info_));
     return ZX_OK;
 }
 

@@ -22,8 +22,8 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pbus_protocol_register_protocol, PBusRe
                                                         const void* protocol_buffer,
                                                         size_t protocol_size,
                                                         const platform_proxy_cb_t* proxy_cb));
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pbus_protocol_get_board_name, PBusGetBoardName,
-                                     const char* (C::*)());
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pbus_protocol_get_board_info, PBusGetBoardInfo,
+                                     zx_status_t (C::*)(pdev_board_info_t* out_info));
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_pbus_protocol_set_board_info, PBusSetBoardInfo,
                                      zx_status_t (C::*)(const pbus_board_info_t* info));
 
@@ -39,9 +39,9 @@ constexpr void CheckPBusProtocolSubclass() {
                   "PBusProtocol subclasses must implement "
                   "zx_status_t PBusRegisterProtocol(uint32_t proto_id, const void* "
                   "protocol_buffer, size_t protocol_size, const platform_proxy_cb_t* proxy_cb");
-    static_assert(internal::has_pbus_protocol_get_board_name<D>::value,
+    static_assert(internal::has_pbus_protocol_get_board_info<D>::value,
                   "PBusProtocol subclasses must implement "
-                  "const char* PBusGetBoardName(");
+                  "zx_status_t PBusGetBoardInfo(pdev_board_info_t* out_info");
     static_assert(internal::has_pbus_protocol_set_board_info<D>::value,
                   "PBusProtocol subclasses must implement "
                   "zx_status_t PBusSetBoardInfo(const pbus_board_info_t* info");

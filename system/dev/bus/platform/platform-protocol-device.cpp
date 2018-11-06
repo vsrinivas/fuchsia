@@ -232,7 +232,7 @@ zx_status_t ProtocolDevice::PDevGetDeviceInfo(pdev_device_info_t* out_info) {
 }
 
 zx_status_t ProtocolDevice::PDevGetBoardInfo(pdev_board_info_t* out_info) {
-    return bus_->GetBoardInfo(out_info);
+    return bus_->PBusGetBoardInfo(out_info);
 }
 
 zx_status_t ProtocolDevice::PDevDeviceAdd(uint32_t index, const device_add_args_t* args,

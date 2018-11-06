@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <ddk/protocol/platform-device.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -136,7 +137,7 @@ typedef struct pbus_protocol_ops {
     zx_status_t (*protocol_device_add)(void* ctx, uint32_t proto_id, const pbus_dev_t* dev);
     zx_status_t (*register_protocol)(void* ctx, uint32_t proto_id, const void* protocol_buffer,
                                      size_t protocol_size, const platform_proxy_cb_t* proxy_cb);
-    const char* (*get_board_name)(void* ctx);
+    zx_status_t (*get_board_info)(void* ctx, pdev_board_info_t* out_info);
     zx_status_t (*set_board_info)(void* ctx, const pbus_board_info_t* info);
 } pbus_protocol_ops_t;
 
@@ -168,10 +169,11 @@ static inline zx_status_t pbus_register_protocol(const pbus_protocol_t* proto, u
     return proto->ops->register_protocol(proto->ctx, proto_id, protocol_buffer, protocol_size,
                                          proxy_cb);
 }
-// Returns the board name for the underlying hardware.
-// Board drivers may use this to differentiate between multiple boards that they support.
-static inline const char* pbus_get_board_name(const pbus_protocol_t* proto) {
-    return proto->ops->get_board_name(proto->ctx);
+// Board drivers may use this to get information about the board, and to
+// differentiate between multiple boards that they support.
+static inline zx_status_t pbus_get_board_info(const pbus_protocol_t* proto,
+                                              pdev_board_info_t* out_info) {
+    return proto->ops->get_board_info(proto->ctx, out_info);
 }
 // Board drivers may use this to set information about the board
 // (like the board revision number).

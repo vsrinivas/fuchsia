@@ -78,7 +78,7 @@ pci: $(LOCAL_DIR)/libs/pci.banjo
 pciroot: $(LOCAL_DIR)/libs/hwpci.banjo
 	$(run-banjo)
 
-platform-bus:
+platform-bus: $(LOCAL_DIR)/libs/driver.banjo $(LOCAL_DIR)/platform-device.banjo
 	$(run-banjo)
 
 platform-device: $(LOCAL_DIR)/libs/driver.banjo

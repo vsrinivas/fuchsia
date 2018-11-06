@@ -8,6 +8,7 @@
 #pragma once
 
 #include <ddk/protocol/platform-bus.h>
+#include <ddk/protocol/platform-device.h>
 #include <ddktl/device-internal.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
@@ -46,7 +47,7 @@
 //     zx_status_t PBusRegisterProtocol(uint32_t proto_id, const void* protocol_buffer, size_t
 //     protocol_size, const platform_proxy_cb_t* proxy_cb);
 //
-//     const char* PBusGetBoardName();
+//     zx_status_t PBusGetBoardInfo(pdev_board_info_t* out_info);
 //
 //     zx_status_t PBusSetBoardInfo(const pbus_board_info_t* info);
 //
@@ -63,7 +64,7 @@ public:
         ops_.device_add = PBusDeviceAdd;
         ops_.protocol_device_add = PBusProtocolDeviceAdd;
         ops_.register_protocol = PBusRegisterProtocol;
-        ops_.get_board_name = PBusGetBoardName;
+        ops_.get_board_info = PBusGetBoardInfo;
         ops_.set_board_info = PBusSetBoardInfo;
 
         // Can only inherit from one base_protocol implementation.
@@ -98,10 +99,10 @@ private:
         return static_cast<D*>(ctx)->PBusRegisterProtocol(proto_id, protocol_buffer, protocol_size,
                                                           proxy_cb);
     }
-    // Returns the board name for the underlying hardware.
-    // Board drivers may use this to differentiate between multiple boards that they support.
-    static const char* PBusGetBoardName(void* ctx) {
-        return static_cast<D*>(ctx)->PBusGetBoardName();
+    // Board drivers may use this to get information about the board, and to
+    // differentiate between multiple boards that they support.
+    static zx_status_t PBusGetBoardInfo(void* ctx, pdev_board_info_t* out_info) {
+        return static_cast<D*>(ctx)->PBusGetBoardInfo(out_info);
     }
     // Board drivers may use this to set information about the board
     // (like the board revision number).
@@ -143,9 +144,11 @@ public:
                                  size_t protocol_size, const platform_proxy_cb_t* proxy_cb) {
         return ops_->register_protocol(ctx_, proto_id, protocol_buffer, protocol_size, proxy_cb);
     }
-    // Returns the board name for the underlying hardware.
-    // Board drivers may use this to differentiate between multiple boards that they support.
-    const char* GetBoardName() { return ops_->get_board_name(ctx_); }
+    // Board drivers may use this to get information about the board, and to
+    // differentiate between multiple boards that they support.
+    zx_status_t GetBoardInfo(pdev_board_info_t* out_info) {
+        return ops_->get_board_info(ctx_, out_info);
+    }
     // Board drivers may use this to set information about the board
     // (like the board revision number).
     // Platform device drivers can access this via `pdev_get_board_info()`.

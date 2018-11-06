@@ -55,7 +55,7 @@ public:
     zx_status_t PBusProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* dev);
     zx_status_t PBusRegisterProtocol(uint32_t proto_id, const void* protocol, size_t protocol_size,
                                      const platform_proxy_cb_t* proxy_cb);
-    const char* PBusGetBoardName();
+    zx_status_t PBusGetBoardInfo(pdev_board_info_t* out_info);
     zx_status_t PBusSetBoardInfo(const pbus_board_info_t* info);
 
     // IOMMU protocol implementation.
@@ -69,9 +69,6 @@ public:
     // Used by PlatformDevice to queue I2C transactions on an I2C bus.
     zx_status_t I2cTransact(uint32_t txid, rpc_i2c_req_t* req, const pbus_i2c_channel_t* channel,
                             zx_handle_t channel_handle);
-
-    // Helper for PlatformDevice.
-    zx_status_t GetBoardInfo(pdev_board_info_t* out_info);
 
     zx_status_t GetZbiMetadata(uint32_t type, uint32_t extra, const void** out_metadata,
                                uint32_t* out_size);
