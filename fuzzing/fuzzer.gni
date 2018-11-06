@@ -7,7 +7,7 @@ import("//build/package.gni")
 # Declare a fuzzed executable target.
 #
 # Creates an instrumented executable file for fuzzing with a sanitizer.  Do not
-# use directly; instead, use 'fuzz-target' with an associated 'fuzz-package'
+# use directly; instead, use `fuzz_target` with an associated `fuzz_package`
 # specifying the supported sanitizers.
 #
 # Takes all the same parameters as executable().
@@ -24,6 +24,53 @@ template("_fuzzed_executable") {
                              "visibility",
                              "_target_type",
                            ])
+  }
+}
+
+# Declares a resource needed by the fuzzer.
+#
+# Creates a (potentially empty) resource file for use by a `fuzz_target`.  Do
+# not use directly; instead, use `fuzz_target` with an associated
+# `fuzz_package` specifying the supported sanitizers.
+#
+# Parameters:
+#
+#   fuzz_name (required)
+#      [string] Name of the associated `fuzz_target`.
+#
+#   resource (required)
+#      [string] Base file name of the resource to produce.
+#
+#   script (optional)
+#      [file] Script that produces the resources.  Defaults to
+#      //build/fuzzing/gen_fuzzer_resource.py
+#
+#   args (optional)
+#      [list of strings] Additional arguments to append to the script command
+#      line.
+#
+template("_fuzz_resource") {
+  assert(defined(invoker.fuzz_name),
+         "`fuzz_name` must be defined for $target_name")
+  assert(defined(invoker.resource),
+         "`resource` must be defined for $target_name")
+  action(target_name) {
+    if (defined(invoker.script)) {
+      script = invoker.script
+    } else {
+      script = "//build/fuzzing/gen_fuzzer_resource.py"
+    }
+    output = "${target_gen_dir}/${invoker.fuzz_name}/${invoker.resource}"
+    outputs = [
+      output,
+    ]
+    args = [
+      "--out",
+      rebase_path(output),
+    ]
+    if (defined(invoker.args)) {
+      args += invoker.args
+    }
   }
 }
 
@@ -57,7 +104,6 @@ template("_fuzzed_executable") {
 template("fuzz_target") {
   assert(defined(invoker.sources), "`sources` must be defined for $target_name")
   _fuzzed_executable(target_name) {
-    public_deps = []
     forward_variables_from(invoker,
                            "*",
                            [
@@ -66,7 +112,6 @@ template("fuzz_target") {
                              "options",
                              "output_name",
                            ])
-    public_deps += [ ":${target_name}_cmx(${toolchain_variant.base})" ]
     testonly = true
   }
 
@@ -75,38 +120,37 @@ template("fuzz_target") {
   # knowing the original file names when building the package manifest.  These
   # files only need to be written once, so only do it in the base toolchain.
   if (current_toolchain == toolchain_variant.base) {
+    fuzz_name = target_name
+
     # Copy the corpora available for the fuzzer
-    data = []
-    if (defined(invoker.corpora)) {
-      data += invoker.corpora
+    _fuzz_resource("${fuzz_name}_corpora") {
+      resource = "corpora"
+      if (defined(invoker.corpora)) {
+        args = invoker.corpora
+      }
     }
-    write_file("${target_gen_dir}/${target_name}/corpora", data)
 
     # Copy the fuzzer dictionary
-    data = []
-    if (defined(invoker.dictionary)) {
-      data = read_file(invoker.dictionary, "list lines")
+    _fuzz_resource("${fuzz_name}_dictionary") {
+      resource = "dictionary"
+      if (defined(invoker.dictionary)) {
+        args = read_file(invoker.dictionary, "list lines")
+      }
     }
-    write_file("${target_gen_dir}/${target_name}/dictionary", data)
 
     # Copy the options the fuzzer should be invoked with
-    data = []
-    if (defined(invoker.options)) {
-      data += invoker.options
+    _fuzz_resource("${fuzz_name}_options") {
+      resource = "options"
+      if (defined(invoker.options)) {
+        args = invoker.options
+      }
     }
-    write_file("${target_gen_dir}/${target_name}/options", data)
 
     # Create a component manifest
-    fuzz_name = target_name
-    action("${fuzz_name}_cmx") {
-      visibility = [ ":${fuzz_name}" ]
-      script = "//build/fuzzing/gen_fuzzer_cmx.py"
-      outputs = [
-        "${target_gen_dir}/${fuzz_name}/${fuzz_name}.cmx",
-      ]
+    _fuzz_resource("${fuzz_name}_cmx") {
+      script = "//build/fuzzing/gen_fuzzer_manifest.py"
+      resource = "${fuzz_name}.cmx"
       args = [
-        "--out",
-        rebase_path("${target_gen_dir}/${fuzz_name}/${fuzz_name}.cmx"),
         "--bin",
         "${fuzz_name}",
       ]
@@ -237,8 +281,8 @@ template("fuzz_package") {
             get_label_info(fuzz_target, "target_gen_dir") + "/${fuzz_name}"
 
         if (!fuzz.omit_binaries) {
+          fuzz.deps += [ sanitized_target ]
           fuzz_out_dir = get_label_info(sanitized_target, "root_out_dir")
-
           fuzz.binaries += [
             {
               name = fuzz_name
@@ -247,8 +291,7 @@ template("fuzz_package") {
             },
           ]
 
-          fuzz.deps += [ sanitized_target ]
-
+          fuzz.deps += [ ":${fuzz_name}_cmx(${toolchain_variant.base})" ]
           fuzz.meta += [
             {
               path = "${fuzz_gen_dir}/${fuzz_name}.cmx"
@@ -257,6 +300,11 @@ template("fuzz_package") {
           ]
         }
 
+        fuzz.deps += [
+          ":${fuzz_name}_corpora(${toolchain_variant.base})",
+          ":${fuzz_name}_dictionary(${toolchain_variant.base})",
+          ":${fuzz_name}_options(${toolchain_variant.base})",
+        ]
         fuzz.resources += [
           {
             path = "${fuzz_gen_dir}/corpora"
