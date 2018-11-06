@@ -6,6 +6,6 @@
     "packages": [
         "//peridot/tests/benchmarks:modular_benchmarks",
         "//peridot/tests/benchmarks/story:modular_benchmark_story_module",
-        "//peridot/tests/benchmarks/story:modular_benchmark_story_session_shell"
+        "//peridot/tests/benchmarks/story:modular_benchmark_story_user_shell"
     ]
 }

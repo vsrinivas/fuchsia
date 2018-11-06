@@ -37,7 +37,7 @@
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/clone.h"
-#include "peridot/lib/session_shell_settings/session_shell_settings.h"
+#include "peridot/lib/user_shell_settings/user_shell_settings.h"
 #include "peridot/lib/util/filesystem.h"
 
 namespace modular {
@@ -53,14 +53,8 @@ class Settings {
         command_line.GetOptionValueWithDefault("story_shell", "mondrian");
     sessionmgr.url =
         command_line.GetOptionValueWithDefault("sessionmgr", "sessionmgr");
-    // TODO(alexmin): Remove user_shell argument after migration is complete.
-    if (command_line.HasOption("user_shell")) {
-      session_shell.url = command_line.GetOptionValueWithDefault(
-          "user_shell", "ermine_session_shell");
-    } else {
-      session_shell.url = command_line.GetOptionValueWithDefault(
-          "session_shell", "ermine_session_shell");
-    }
+    user_shell.url = command_line.GetOptionValueWithDefault(
+        "user_shell", "ermine_user_shell");
     account_provider.url = command_line.GetOptionValueWithDefault(
         "account_provider", "oauth_token_manager");
 
@@ -85,27 +79,27 @@ class Settings {
         command_line.GetOptionValueWithDefault("story_shell_args", ""),
         &story_shell.args);
 
-    ParseShellArgs(
-        command_line.GetOptionValueWithDefault("sessionmgr_args", ""),
-        &sessionmgr.args);
-
-    // TODO(alexmin): Remove user_shell_args after migration is complete.
-    if (command_line.HasOption("user_shell_args")) {
+    // TODO(alexmin): Remove user_runner_args after migration is complete.
+    if (command_line.HasOption("user_runner_args")) {
       ParseShellArgs(
-          command_line.GetOptionValueWithDefault("user_shell_args", ""),
-          &session_shell.args);
+          command_line.GetOptionValueWithDefault("user_runner_args", ""),
+          &sessionmgr.args);
     } else {
       ParseShellArgs(
-          command_line.GetOptionValueWithDefault("session_shell_args", ""),
-          &session_shell.args);
+          command_line.GetOptionValueWithDefault("sessionmgr_args", ""),
+          &sessionmgr.args);
     }
+
+    ParseShellArgs(
+        command_line.GetOptionValueWithDefault("user_shell_args", ""),
+        &user_shell.args);
 
     if (test) {
       base_shell.args.push_back("--test");
       story_shell.args.push_back("--test");
       sessionmgr.args.push_back("--test");
-      session_shell.args.push_back("--test");
-      test_name = FindTestName(session_shell.url, session_shell.args);
+      user_shell.args.push_back("--test");
+      test_name = FindTestName(user_shell.url, user_shell.args);
       disable_statistics = true;
       ignore_monitor = true;
       no_minfs = true;
@@ -116,8 +110,8 @@ class Settings {
     return R"USAGE(basemgr
       --base_shell=BASE_SHELL
       --base_shell_args=SHELL_ARGS
-      --session_shell=SESSION_SHELL
-      --session_shell_args=SHELL_ARGS
+      --user_shell=USER_SHELL
+      --user_shell_args=SHELL_ARGS
       --story_shell=STORY_SHELL
       --story_shell_args=SHELL_ARGS
       --account_provider=ACCOUNT_PROVIDER
@@ -127,15 +121,15 @@ class Settings {
       --test
       --enable_presenter
       --enable_garnet_token_manager
-    DEVICE_NAME: Name which session shell uses to identify this device.
+    DEVICE_NAME: Name which user shell uses to identify this device.
     BASE_SHELL:  URL of the base shell to run.
                 Defaults to "userpicker_base_shell".
                 For integration testing use "dev_base_shell".
     SESSIONMGR: URL of the sessionmgr to run.
                 Defaults to "sessionmgr".
-    SESSION_SHELL: URL of the session shell to run.
-                Defaults to "ermine_session_shell".
-                For integration testing use "dev_session_shell".
+    USER_SHELL: URL of the user shell to run.
+                Defaults to "ermine_user_shell".
+                For integration testing use "dev_user_shell".
     STORY_SHELL: URL of the story shell to run.
                 Defaults to "mondrian".
                 For integration testing use "dev_story_shell".
@@ -148,7 +142,7 @@ class Settings {
   fuchsia::modular::AppConfig base_shell;
   fuchsia::modular::AppConfig story_shell;
   fuchsia::modular::AppConfig sessionmgr;
-  fuchsia::modular::AppConfig session_shell;
+  fuchsia::modular::AppConfig user_shell;
   fuchsia::modular::AppConfig account_provider;
 
   std::string test_name;
@@ -193,13 +187,13 @@ class Settings {
   // Extract the test name using knowledge of how Modular structures its
   // command lines for testing.
   static std::string FindTestName(
-      const fidl::StringPtr& session_shell,
-      const fidl::VectorPtr<fidl::StringPtr>& session_shell_args) {
+      const fidl::StringPtr& user_shell,
+      const fidl::VectorPtr<fidl::StringPtr>& user_shell_args) {
     const std::string kRootModule = "--root_module";
-    std::string result = session_shell;
+    std::string result = user_shell;
 
-    for (const auto& session_shell_arg : *session_shell_args) {
-      const auto& arg = session_shell_arg.get();
+    for (const auto& user_shell_arg : *user_shell_args) {
+      const auto& arg = user_shell_arg.get();
       if (arg.substr(0, kRootModule.size()) == kRootModule) {
         result = arg.substr(kRootModule.size());
       }
@@ -424,7 +418,7 @@ class BasemgrApp : fuchsia::modular::BaseShellContext,
         account_provider_context_binding_.NewBinding());
 
     user_provider_impl_.reset(new UserProviderImpl(
-        context_, settings_.sessionmgr, settings_.session_shell,
+        context_, settings_.sessionmgr, settings_.user_shell,
         settings_.story_shell, account_provider_->primary_service().get(),
         token_manager_factory_.get(),
         authentication_context_provider_binding_.NewBinding().Bind(),
@@ -498,7 +492,7 @@ class BasemgrApp : fuchsia::modular::BaseShellContext,
   // |UserProviderImpl::Delegate|
   void DidLogin() override {
     // Continues if `enable_presenter` is set to true during testing, as
-    // ownership of the Presenter should still be moved to the session shell.
+    // ownership of the Presenter should still be moved to the user shell.
     if (settings_.test && !settings_.enable_presenter) {
       // TODO(MI4-1117): Integration tests currently expect base shell to
       // always be running. So, if we're running under a test, do not shut down
@@ -512,17 +506,17 @@ class BasemgrApp : fuchsia::modular::BaseShellContext,
       StopBaseShell();
     }
 
-    InitializePresentation(session_shell_view_owner_);
+    InitializePresentation(user_shell_view_owner_);
 
-    const auto& settings_vector = SessionShellSettings::GetSystemSettings();
-    if (active_session_shell_index_ >= settings_vector.size()) {
-      FXL_LOG(ERROR) << "Active session shell index is "
-                     << active_session_shell_index_ << ", but only "
-                     << settings_vector.size() << " session shells exist.";
+    const auto& settings_vector = UserShellSettings::GetSystemSettings();
+    if (active_user_shell_index_ >= settings_vector.size()) {
+      FXL_LOG(ERROR) << "Active user shell index is "
+                     << active_user_shell_index_ << ", but only "
+                     << settings_vector.size() << " user shells exist.";
       return;
     }
 
-    UpdatePresentation(settings_vector[active_session_shell_index_]);
+    UpdatePresentation(settings_vector[active_user_shell_index_]);
   }
 
   // |UserProviderImpl::Delegate|
@@ -542,16 +536,16 @@ class BasemgrApp : fuchsia::modular::BaseShellContext,
 
   // |UserProviderImpl::Delegate|
   fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-  GetSessionShellViewOwner(
+  GetUserShellViewOwner(
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>) override {
-    return session_shell_view_owner_.is_bound()
-               ? session_shell_view_owner_.Unbind().NewRequest()
-               : session_shell_view_owner_.NewRequest();
+    return user_shell_view_owner_.is_bound()
+               ? user_shell_view_owner_.Unbind().NewRequest()
+               : user_shell_view_owner_.NewRequest();
   }
 
   // |UserProviderImpl::Delegate|
   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>
-  GetSessionShellServiceProvider(
+  GetUserShellServiceProvider(
       fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>) override {
     fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> handle;
     service_namespace_.AddBinding(handle.NewRequest());
@@ -562,7 +556,7 @@ class BasemgrApp : fuchsia::modular::BaseShellContext,
   void OnEvent(fuchsia::ui::input::KeyboardEvent event) override {
     switch (event.code_point) {
       case ' ': {
-        SwapSessionShell();
+        SwapUserShell();
         break;
       }
       case 's': {
@@ -601,7 +595,7 @@ class BasemgrApp : fuchsia::modular::BaseShellContext,
         keyboard_capture_listener_bindings_.AddBinding(this));
   }
 
-  void UpdatePresentation(const SessionShellSettings& settings) {
+  void UpdatePresentation(const UserShellSettings& settings) {
     if (settings.display_usage != fuchsia::ui::policy::DisplayUsage::kUnknown) {
       FXL_DLOG(INFO) << "Setting display usage: "
                      << fidl::ToUnderlying(settings.display_usage);
@@ -617,23 +611,23 @@ class BasemgrApp : fuchsia::modular::BaseShellContext,
     }
   }
 
-  void SwapSessionShell() {
-    if (SessionShellSettings::GetSystemSettings().empty()) {
-      FXL_DLOG(INFO) << "No session shells has been defined";
+  void SwapUserShell() {
+    if (UserShellSettings::GetSystemSettings().empty()) {
+      FXL_DLOG(INFO) << "No user shells has been defined";
       return;
     }
 
-    active_session_shell_index_ =
-        (active_session_shell_index_ + 1) %
-        SessionShellSettings::GetSystemSettings().size();
-    const auto& settings = SessionShellSettings::GetSystemSettings().at(
-        active_session_shell_index_);
+    active_user_shell_index_ = (active_user_shell_index_ + 1) %
+                               UserShellSettings::GetSystemSettings().size();
+    const auto& settings =
+        UserShellSettings::GetSystemSettings().at(active_user_shell_index_);
 
-    auto session_shell_config = fuchsia::modular::AppConfig::New();
-    session_shell_config->url = settings.name;
+    auto user_shell_config = fuchsia::modular::AppConfig::New();
+    user_shell_config->url = settings.name;
 
-    user_provider_impl_->SwapSessionShell(std::move(*session_shell_config))
-        ->Then([] { FXL_DLOG(INFO) << "Swapped session shell"; });
+    user_provider_impl_->SwapUserShell(std::move(*user_shell_config))->Then([] {
+      FXL_DLOG(INFO) << "Swapped user shell";
+    });
   }
 
   void SetNextShadowTechnique() {
@@ -719,7 +713,7 @@ class BasemgrApp : fuchsia::modular::BaseShellContext,
   fidl::BindingSet<fuchsia::ui::policy::KeyboardCaptureListenerHACK>
       keyboard_capture_listener_bindings_;
 
-  fuchsia::ui::viewsv1token::ViewOwnerPtr session_shell_view_owner_;
+  fuchsia::ui::viewsv1token::ViewOwnerPtr user_shell_view_owner_;
 
   struct {
     fuchsia::ui::policy::PresentationPtr presentation;
@@ -732,7 +726,7 @@ class BasemgrApp : fuchsia::modular::BaseShellContext,
 
   component::ServiceNamespace service_namespace_;
 
-  std::vector<SessionShellSettings>::size_type active_session_shell_index_{};
+  std::vector<UserShellSettings>::size_type active_user_shell_index_{};
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BasemgrApp);
 };

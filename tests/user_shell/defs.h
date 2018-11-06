@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_TESTS_SESSION_SHELL_DEFS_H_
-#define PERIDOT_TESTS_SESSION_SHELL_DEFS_H_
+#ifndef PERIDOT_TESTS_USER_SHELL_DEFS_H_
+#define PERIDOT_TESTS_USER_SHELL_DEFS_H_
 
 namespace {
 
@@ -11,4 +11,4 @@ namespace {
 
 }  // namespace
 
-#endif  // PERIDOT_TESTS_SESSION_SHELL_DEFS_H_
+#endif  // PERIDOT_TESTS_USER_SHELL_DEFS_H_

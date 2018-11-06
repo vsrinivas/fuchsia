@@ -8,7 +8,7 @@ library fuchsia.modular;
 // that is currently in focus and (2) stories that are visible to the
 // user. Names of interfaces follow the usual patterns:
 //
-// {Focus,VisibleStories}Controller is used by session shell to update
+// {Focus,VisibleStories}Controller is used by user shell to update
 // information whenever changes take place.
 //
 // {Focus,VisibleStories}Provider is used by maxwell and usershell to
@@ -19,21 +19,21 @@ library fuchsia.modular;
 // sessionmgr to stop / pause stories that are not visible to the
 // user.
 
-// Implemented by sessionmgr. Given to session shell through its namespace.
+// Implemented by sessionmgr. Given to user shell through its namespace.
 interface FocusController {
     // Sets the focus on this device.
     1: Set(string? focused_story_id);
     2: WatchRequest(FocusRequestWatcher watcher);
 };
 
-// Implemented by session shell. OnFocusRequest() gets called whenever there
+// Implemented by user shell. OnFocusRequest() gets called whenever there
 // is a new request to change focus on this device. Requests can be
 // made via FocusProvider.Request().
 interface FocusRequestWatcher {
     1: OnFocusRequest(string story_id);
 };
 
-// Implemented by sessionmgr. Given to session shell and session agents through
+// Implemented by sessionmgr. Given to user shell and session agents through
 // their namespace. Focus is persisted on the ledger.
 [Discoverable]
 interface FocusProvider {
@@ -43,7 +43,7 @@ interface FocusProvider {
     // Watches for change in focus on any of the user's devices.
     2: Watch(FocusWatcher watcher);
 
-    // Requests session shell to change focus on this device. If session shell
+    // Requests user shell to change focus on this device. If user shell
     // responds to this request, focus shall be taken away from
     // previously focused story and an update will be sent on
     // FocusWatcher.OnFocusChange(). If |story_id| is NULL, the timeline
@@ -73,7 +73,7 @@ struct FocusInfo {
     uint64 last_focus_change_timestamp;
 };
 
-// Implemented by sessionmgr. Given to session shell through its namespace.
+// Implemented by sessionmgr. Given to user shell through its namespace.
 interface VisibleStoriesController {
     1: Set(vector<string>? visible_story_ids);
 };

@@ -19,7 +19,7 @@ namespace modular {
 UserControllerImpl::UserControllerImpl(
     fuchsia::sys::Launcher* const launcher,
     fuchsia::modular::AppConfig sessionmgr,
-    fuchsia::modular::AppConfig session_shell,
+    fuchsia::modular::AppConfig user_shell,
     fuchsia::modular::AppConfig story_shell,
     fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
         token_provider_factory,
@@ -60,7 +60,7 @@ UserControllerImpl::UserControllerImpl(
   // 2. Initialize the Sessionmgr service.
   sessionmgr_app_->services().ConnectToService(sessionmgr_.NewRequest());
   sessionmgr_->Initialize(
-      std::move(account), std::move(session_shell), std::move(story_shell),
+      std::move(account), std::move(user_shell), std::move(story_shell),
       std::move(token_provider_factory), std::move(ledger_token_manager),
       std::move(agent_token_manager), user_context_binding_.NewBinding(),
       std::move(view_owner_request));
@@ -112,18 +112,11 @@ void UserControllerImpl::GetPresentation(
   }
 }
 
-FuturePtr<> UserControllerImpl::SwapSessionShell(
-    fuchsia::modular::AppConfig session_shell_config) {
-  auto future = Future<>::Create("SwapSessionShell");
-  SwapSessionShell(std::move(session_shell_config), future->Completer());
+FuturePtr<> UserControllerImpl::SwapUserShell(
+    fuchsia::modular::AppConfig user_shell_config) {
+  auto future = Future<>::Create("SwapUserShell");
+  SwapUserShell(std::move(user_shell_config), future->Completer());
   return future;
-}
-
-// |fuchsia::modular::UserController|
-void UserControllerImpl::SwapSessionShell(
-    fuchsia::modular::AppConfig session_shell_config,
-    SwapSessionShellCallback callback) {
-  sessionmgr_->SwapSessionShell(std::move(session_shell_config), callback);
 }
 
 // |fuchsia::modular::UserController|

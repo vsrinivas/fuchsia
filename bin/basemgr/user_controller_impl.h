@@ -41,7 +41,7 @@ class UserControllerImpl : fuchsia::modular::UserController,
 
   UserControllerImpl(
       fuchsia::sys::Launcher* launcher, fuchsia::modular::AppConfig sessionmgr,
-      fuchsia::modular::AppConfig session_shell,
+      fuchsia::modular::AppConfig user_shell,
       fuchsia::modular::AppConfig story_shell,
       fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
           token_provider_factory,
@@ -59,17 +59,11 @@ class UserControllerImpl : fuchsia::modular::UserController,
   // |fuchsia::modular::UserController|
   void Logout(LogoutCallback done) override;
 
-  // Stops the active session shell, and starts the session shell specified in
-  // |session_shell_config|.
-  FuturePtr<> SwapSessionShell(
-      fuchsia::modular::AppConfig session_shell_config);
+  // Stops the active user shell, and starts the user shell specified in
+  // |user_shell_config|.
+  FuturePtr<> SwapUserShell(fuchsia::modular::AppConfig user_shell_config);
 
  private:
-  // |fuchsia::modular::UserController|
-  void SwapSessionShell(fuchsia::modular::AppConfig session_shell_config,
-                        SwapSessionShellCallback callback) override;
-
-  // DEPRECATED: Use SwapSessionShell().
   // |fuchsia::modular::UserController|
   void SwapUserShell(fuchsia::modular::AppConfig user_shell_config,
                      SwapUserShellCallback callback) override;

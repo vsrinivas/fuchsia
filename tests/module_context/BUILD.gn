@@ -4,11 +4,11 @@
 
 import("//peridot/build/executable_package.gni")
 
-executable_package("module_context_test_session_shell") {
+executable_package("module_context_test_user_shell") {
   testonly = true
 
   sources = [
-    "module_context_test_session_shell.cc",
+    "module_context_test_user_shell.cc",
   ]
 
   deps = [

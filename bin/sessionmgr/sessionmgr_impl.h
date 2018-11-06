@@ -53,7 +53,6 @@ class StoryStorage;
 class VisibleStoriesHandler;
 
 class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
-                       fuchsia::modular::SessionShellContext,
                        fuchsia::modular::UserShellContext,
                        EntityProviderLauncher {
  public:
@@ -85,7 +84,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // |Sessionmgr|
   void Initialize(
       fuchsia::modular::auth::AccountPtr account,
-      fuchsia::modular::AppConfig session_shell,
+      fuchsia::modular::AppConfig user_shell,
       fuchsia::modular::AppConfig story_shell,
       fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
           token_provider_factory,
@@ -96,14 +95,9 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request) override;
 
-  // DEPRECATED: Use SwapSessionShell instead.
   // |Sessionmgr|
   void SwapUserShell(fuchsia::modular::AppConfig user_shell_config,
                      SwapUserShellCallback callback) override;
-
-  // |Sessionmgr|
-  void SwapSessionShell(fuchsia::modular::AppConfig session_shell_config,
-                        SwapSessionShellCallback callback) override;
 
   // Sequence of Initialize() broken up into steps for clarity.
   void InitializeUser(
@@ -119,32 +113,30 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void InitializeDeviceMap();
   void InitializeClipboard();
   void InitializeMessageQueueManager();
-  void InitializeMaxwellAndModular(const fidl::StringPtr& session_shell_url,
+  void InitializeMaxwellAndModular(const fidl::StringPtr& user_shell_url,
                                    fuchsia::modular::AppConfig story_shell);
-  void InitializeSessionShell(
-      fuchsia::modular::AppConfig session_shell,
+  void InitializeUserShell(
+      fuchsia::modular::AppConfig user_shell,
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request);
 
-  void RunSessionShell(fuchsia::modular::AppConfig session_shell);
+  void RunUserShell(fuchsia::modular::AppConfig user_shell);
   // This is a termination sequence that may be used with |AtEnd()|, but also
-  // may be executed to terminate the currently running session shell.
-  void TerminateSessionShell(const std::function<void()>& done);
+  // may be executed to terminate the currently running user shell.
+  void TerminateUserShell(const std::function<void()>& done);
 
   // Returns the file descriptor that backs the ledger repository directory for
   // the user.
   zx::channel GetLedgerRepositoryDirectory();
 
-  // |fuchsia::modular::SessionShellContext|
-  void GetAccount(
-      std::function<void(::std::unique_ptr<::fuchsia::modular::auth::Account>)>
-          callback) override;
+  // |fuchsia::modular::UserShellContext|
+  void GetAccount(GetAccountCallback callback) override;
   void GetAgentProvider(
       fidl::InterfaceRequest<fuchsia::modular::AgentProvider> request) override;
   void GetComponentContext(
       fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request)
       override;
-  void GetDeviceName(std::function<void(::fidl::StringPtr)> callback) override;
+  void GetDeviceName(GetDeviceNameCallback callback) override;
   void GetFocusController(
       fidl::InterfaceRequest<fuchsia::modular::FocusController> request)
       override;
@@ -211,9 +203,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   std::unique_ptr<scoped_tmpfs::ScopedTmpFS> memfs_for_ledger_;
 
   fidl::BindingSet<fuchsia::modular::internal::Sessionmgr> bindings_;
-  component::ServiceProviderImpl session_shell_services_;
-  fidl::BindingSet<fuchsia::modular::SessionShellContext>
-      session_shell_context_bindings_;
+  component::ServiceProviderImpl user_shell_services_;
   fidl::BindingSet<fuchsia::modular::UserShellContext>
       user_shell_context_bindings_;
 
@@ -237,8 +227,8 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> context_engine_app_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> module_resolver_app_;
-  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> session_shell_app_;
-  std::unique_ptr<ViewHost> session_shell_view_host_;
+  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> user_shell_app_;
+  std::unique_ptr<ViewHost> user_shell_view_host_;
 
   std::unique_ptr<EntityProviderRunner> entity_provider_runner_;
 
@@ -280,16 +270,16 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   std::unique_ptr<FocusHandler> focus_handler_;
   std::unique_ptr<VisibleStoriesHandler> visible_stories_handler_;
 
-  // Component context given to session shell so that it can run agents and
+  // Component context given to user shell so that it can run agents and
   // create message queues.
-  std::unique_ptr<ComponentContextImpl> session_shell_component_context_impl_;
+  std::unique_ptr<ComponentContextImpl> user_shell_component_context_impl_;
 
-  // Given to the session shell so it can store its own data. These data are
-  // shared between all session shells (so it's not private to the session shell
+  // Given to the user shell so it can store its own data. These data are
+  // shared between all user shells (so it's not private to the user shell
   // *app*).
-  std::unique_ptr<StoryStorage> session_shell_storage_;
+  std::unique_ptr<StoryStorage> user_shell_storage_;
   fidl::BindingSet<fuchsia::modular::Link, std::unique_ptr<LinkImpl>>
-      session_shell_link_bindings_;
+      user_shell_link_bindings_;
 
   // For the Ledger Debug Dashboard
   std::unique_ptr<Environment> ledger_dashboard_environment_;
@@ -310,7 +300,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // The agent controller used to control the clipboard agent.
   fuchsia::modular::AgentControllerPtr clipboard_agent_controller_;
 
-  class SwapSessionShellOperation;
+  class SwapUserShellOperation;
 
   OperationQueue operation_queue_;
 

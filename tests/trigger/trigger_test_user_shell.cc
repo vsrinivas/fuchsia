@@ -35,9 +35,10 @@ class TestApp : public modular::testing::ComponentBase<void> {
     puppet_master_ =
         startup_context
             ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
-    session_shell_context_ = startup_context->ConnectToEnvironmentService<
-        fuchsia::modular::SessionShellContext>();
-    session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
+    user_shell_context_ =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
+    user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
     CreateStory();
   }
@@ -71,7 +72,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
     async::PostDelayedTask(
         async_get_default_dispatcher(),
         callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
-                             [this] { session_shell_context_->Logout(); }),
+                             [this] { user_shell_context_->Logout(); }),
         zx::msec(kTimeoutMilliseconds));
   }
 
@@ -107,7 +108,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
               // test store.
               Await(value, [this] {
                 agent_executed_delete_task_.Pass();
-                session_shell_context_->Logout();
+                user_shell_context_->Logout();
               });
             });
           });
@@ -116,7 +117,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
 
   fuchsia::modular::PuppetMasterPtr puppet_master_;
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
-  fuchsia::modular::SessionShellContextPtr session_shell_context_;
+  fuchsia::modular::UserShellContextPtr user_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;
   fuchsia::modular::StoryControllerPtr story_controller_;
 

@@ -22,7 +22,7 @@ namespace testing {
 // and calling TestRunner::Done().
 //
 // Component is fuchsia::modular::Module, fuchsia::modular::Agent,
-// fuchsia::modular::SessionShell, etc.
+// fuchsia::modular::UserShell, etc.
 template <typename Component>
 class ComponentBase : protected SingleServiceApp<Component> {
  public:

@@ -65,7 +65,7 @@ class NullModule : fuchsia::modular::LinkWatcher {
     // Corresponding TRACE_ASYNC_END() is in Notify().
     TRACE_ASYNC_BEGIN("benchmark", "link/set", count_);
 
-    // Corresponding TRACE_FLOW_END() is in the session shell.
+    // Corresponding TRACE_FLOW_END() is in the user shell.
     TRACE_FLOW_BEGIN("benchmark", "link/trans", count_);
 
     fsl::SizedVmo vmo;

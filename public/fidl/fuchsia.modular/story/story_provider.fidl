@@ -4,7 +4,7 @@
 
 library fuchsia.modular;
 
-// Sessionmgr passes a connection to this service to the SessionShell so it can
+// Sessionmgr passes a connection to this service to the UserShell so it can
 // operate on stories for the user. It is also passed to other services that
 // monitor or manipulate stories, specifically the maxwell services.
 //

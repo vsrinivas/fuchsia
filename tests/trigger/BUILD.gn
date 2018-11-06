@@ -13,11 +13,11 @@ source_set("defs") {
   ]
 }
 
-executable_package("trigger_test_session_shell") {
+executable_package("trigger_test_user_shell") {
   testonly = true
 
   sources = [
-    "trigger_test_session_shell.cc",
+    "trigger_test_user_shell.cc",
   ]
 
   deps = [

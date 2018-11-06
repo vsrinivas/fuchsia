@@ -12,11 +12,11 @@ source_set("defs") {
   ]
 }
 
-executable_package("session_shell_test_session_shell") {
+executable_package("user_shell_test_user_shell") {
   testonly = true
 
   sources = [
-    "session_shell_test_session_shell.cc",
+    "user_shell_test_user_shell.cc",
   ]
 
   deps = [

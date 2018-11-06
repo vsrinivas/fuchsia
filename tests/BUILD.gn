@@ -29,7 +29,7 @@
 #
 #    - _module -- Module
 #    - _agent -- Agent
-#    - _session_shell -- SessionShell
+#    - _user_shell -- UserShell
 #    - _base_shell -- BaseShell
 #    - _story_shell -- StoryShell
 #    - _service -- FIDL interfaces
@@ -39,7 +39,7 @@
 #
 # HOW TO ADD A NEW INTEGRATION TEST
 #
-# 1. Add a new subdirectory with rules for the test components (session shells,
+# 1. Add a new subdirectory with rules for the test components (user shells,
 #    modules, agents). Define all test components as executable_package()s.
 #
 # 2. Add the newly defined packages for all test components to

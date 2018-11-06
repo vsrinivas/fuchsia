@@ -132,17 +132,18 @@ class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(LinkWatcherImpl);
 };
 
-// Measures timing the machinery available to a session shell implementation.
-// This is invoked as a session shell from basemgr and executes a predefined
+// Measures timing the machinery available to a user shell implementation. This
+// is invoked as a user shell from basemgr and executes a predefined
 // sequence of steps, rather than to expose a UI to be driven by user
-// interaction, as a session shell normally would.
+// interaction, as a user shell normally would.
 class TestApp : public modular::ViewApp {
  public:
   TestApp(component::StartupContext* const startup_context, Settings settings)
       : ViewApp(startup_context), settings_(std::move(settings)) {
-    session_shell_context_ = startup_context->ConnectToEnvironmentService<
-        fuchsia::modular::SessionShellContext>();
-    session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
+    user_shell_context_ =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
+    user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
     puppet_master_ =
         startup_context
             ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
@@ -170,7 +171,7 @@ class TestApp : public modular::ViewApp {
 
     } else {
       TRACE_ASYNC_BEGIN("benchmark", "user/logout", 0);
-      session_shell_context_->Logout();
+      user_shell_context_->Logout();
     }
   }
 
@@ -288,7 +289,7 @@ class TestApp : public modular::ViewApp {
   fuchsia::modular::PuppetMasterPtr puppet_master_;
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
 
-  fuchsia::modular::SessionShellContextPtr session_shell_context_;
+  fuchsia::modular::UserShellContextPtr user_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;
   fuchsia::modular::StoryControllerPtr story_controller_;
   fuchsia::modular::LinkPtr link_;

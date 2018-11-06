@@ -8,8 +8,6 @@ using fuchsia.modular.auth;
 using fuchsia.speech;
 using fuchsia.ui.policy;
 
-// DEPRECATED: Use session/session_shell.fidl instead.
-//
 // This interface allows a |UserShell| to request capabilities from its
 // creator in a way that is more explicit about the services that are
 // offered than a generic |ServiceProvider|.

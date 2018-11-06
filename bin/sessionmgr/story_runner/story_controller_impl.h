@@ -216,7 +216,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 
   bool IsExternalModule(const fidl::VectorPtr<fidl::StringPtr>& module_path);
 
-  // Handles SessionShell OnModuleFocused event that indicates whether or not a
+  // Handles UserShell OnModuleFocused event that indicates whether or not a
   // view was focused.
   void OnViewFocused(fidl::StringPtr view_id);
 

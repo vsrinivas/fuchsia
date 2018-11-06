@@ -3,11 +3,11 @@
 Tests the machinery that allows modules to coordinate through shared link data,
 and that these link data are persisted across story stop and resume.
 
-This test is invoked as a session shell from basemgr and executes a
+This test is invoked as a user shell from basemgr and executes a
 predefined sequence of steps, rather than to expose a UI to be driven by user
-interaction, as a session shell normally would.
+interaction, as a user shell normally would.
 
-The session shell creates a story with Module0. Module0 in turn starts Module1 and
+The user shell creates a story with Module0. Module0 in turn starts Module1 and
 Module2 and sets them up such that they can exchage data. Module1 and Module2
 alternate in incrementing a counter.
 

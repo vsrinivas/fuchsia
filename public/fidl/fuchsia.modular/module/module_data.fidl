@@ -55,7 +55,7 @@ enum ModuleSource {
     /// ModuleContext.StartModule() and ModuleContext.EmbedModule().
     INTERNAL = 0;
 
-    /// Module that was started from outside the story by Maxwell / SessionShell via
+    /// Module that was started from outside the story by Maxwell / UserShell via
     /// StoryController.AddModule() or StoryProvider.CreateStory() as first
     /// module.
     EXTERNAL = 1;

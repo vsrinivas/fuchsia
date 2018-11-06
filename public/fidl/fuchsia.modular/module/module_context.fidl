@@ -74,13 +74,13 @@ interface ModuleContext {
     9: GetStoryId() -> (string story_id);
 
     /// Requests that the current story and module gain focus. It's up to the story
-    /// shell and session shell to honor that request.
+    /// shell and user shell to honor that request.
     10: RequestFocus();
 
     /// DEPRECATED in favor of using StartOngoingActivity().
     ///
     /// Declares that activity is ongoing in this module. This information is
-    /// forwarded to the session shell (cf. StoryProvider.WatchActivity()
+    /// forwarded to the user shell (cf. StoryProvider.WatchActivity()
     /// and StoryProviderWatcher), which may use it and the frequency at which it
     /// receives these calls to determine to keep the story of this module in
     /// focus. The module should call this method regularly while activity is
@@ -94,8 +94,8 @@ interface ModuleContext {
     16: RemoveSelfFromStory();
 
     /// Requests to update the visibility state of the current story within the
-    /// session shell. The framework will decide whether to honor this request, then
-    /// forward it to the session shell.
+    /// user shell. The framework will decide whether to honor this request, then
+    /// forward it to the user shell.
     ///
     /// Modules should not have any knowledge of the story's visibility state, nor
     /// should it ever operate with any assumption of the visibility state.
@@ -108,11 +108,11 @@ interface ModuleContext {
     13: RequestStoryVisibilityState(StoryVisibilityState visibility_state);
 
     /// Declares that activity of the given [type] is ongoing in this module.
-    /// This information is forwarded to the session shell
+    /// This information is forwarded to the user shell
     /// (cf. StoryProvider.WatchActivity() and StoryActivityWatcher).
     ///
     /// Modules should close [request] when the ongoing activity has stopped, and
-    /// this will also signal to the session shell that the ongoing activity has
+    /// this will also signal to the user shell that the ongoing activity has
     /// stopped. For now, pausing media should count as a stopped ongoing activity,
     /// and when it is resumed it should be started as a new ongoing activity.
     /// Conversely, media playing in a continuous playlist (i.e playing the next

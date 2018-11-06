@@ -235,8 +235,8 @@ void SuggestionEngineImpl::NotifyInteraction(
     case fuchsia::modular::InteractionType::EXPIRED:
     case fuchsia::modular::InteractionType::SNOOZED: {
       // No need to remove since it was either expired by a timeout in
-      // session shell or snoozed by the user, however we should still refresh
-      // the next processor (if not in ask) given that `interrupting=false` set
+      // user shell or snoozed by the user, however we should still refresh the
+      // next processor (if not in ask) given that `interrupting=false` set
       // above.
       if (!suggestion_in_ask) {
         next_processor_.UpdateRanking();

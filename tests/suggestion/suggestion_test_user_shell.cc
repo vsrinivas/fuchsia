@@ -35,11 +35,12 @@ class TestApp : fuchsia::modular::NextListener,
     puppet_master_ =
         startup_context
             ->ConnectToEnvironmentService<fuchsia::modular::PuppetMaster>();
-    session_shell_context_ = startup_context->ConnectToEnvironmentService<
-        fuchsia::modular::SessionShellContext>();
+    user_shell_context_ =
+        startup_context
+            ->ConnectToEnvironmentService<fuchsia::modular::UserShellContext>();
 
-    session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
-    session_shell_context_->GetSuggestionProvider(
+    user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
+    user_shell_context_->GetSuggestionProvider(
         suggestion_provider_.NewRequest());
 
     suggestion_provider_->SubscribeToNext(
@@ -86,8 +87,7 @@ class TestApp : fuchsia::modular::NextListener,
     story_controller_->Start(view_owner_.NewRequest());
   }
 
-  TestPoint received_suggestion_{
-      "SuggestionTestSessionShell received suggestion"};
+  TestPoint received_suggestion_{"SuggestionTestUserShell received suggestion"};
 
   // |fuchsia::modular::NextListener|
   void OnNextResults(
@@ -113,7 +113,7 @@ class TestApp : fuchsia::modular::NextListener,
   fuchsia::modular::PuppetMasterPtr puppet_master_;
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
   fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner_;
-  fuchsia::modular::SessionShellContextPtr session_shell_context_;
+  fuchsia::modular::UserShellContextPtr user_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;
   fuchsia::modular::StoryControllerPtr story_controller_;
   fuchsia::modular::SuggestionProviderPtr suggestion_provider_;

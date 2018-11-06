@@ -61,9 +61,9 @@ class TestApp {
 
   void Start() {
     // Read kModule0Link link data, and send its value back to the test user
-    // shell to verify its expected value. Nb. the session shell does this only
-    // for the first invocation. Therefore, it would be wrong to verify this
-    // with a TestPoint.
+    // shell to verify its expected value. Nb. the user shell does this only for
+    // the first invocation. Therefore, it would be wrong to verify this with a
+    // TestPoint.
     module_context_->GetLink(kModule0Link, link_.NewRequest());
     link_->Get(nullptr, [this](std::unique_ptr<fuchsia::mem::Buffer> content) {
       std::string content_string;

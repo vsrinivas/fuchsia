@@ -24,7 +24,7 @@ import("//build/package.gni")
 #
 # HOW TO ADD A NEW BENCHMARK
 #
-# 1. Add a new subdirectory with rules for the test components (session shells,
+# 1. Add a new subdirectory with rules for the test components (user shells,
 #    modules, agents). Define all test components as executable_package()s.
 #
 # 2. Add the newly defined packages for all test components to

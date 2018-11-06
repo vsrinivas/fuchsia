@@ -4,8 +4,8 @@
 
 library fuchsia.modular;
 
-// Visibility state of a Story within the session shell.
-// This state describes how a story should be displayed within the session shell,
+// Visibility state of a Story within the user shell.
+// This state describes how a story should be displayed within the user shell,
 // regardless of whether the story is in focus or not. Focus state and
 // visibility state are orthogonal concepts.
 // E.g A story can be out-of-focus and be in IMMERSIVE state at the same time

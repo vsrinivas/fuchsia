@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/session_shell_settings/session_shell_settings.h"
+#include "peridot/lib/user_shell_settings/user_shell_settings.h"
 
 #include <cmath>
 
@@ -17,7 +17,7 @@ namespace {
 
 constexpr char kBaseShellConfigJsonPath[] =
     "/system/data/sysui/base_shell_config.json";
-std::vector<SessionShellSettings>* g_system_settings;
+std::vector<UserShellSettings>* g_system_settings;
 
 }  // namespace
 
@@ -80,7 +80,7 @@ fuchsia::ui::policy::DisplayUsage GetObjectValue(const rapidjson::Value& object,
   }
 
   // Keep in sync with
-  // <https://fuchsia.googlesource.com/topaz/+/master/lib/base_shell/lib/session_shell_chooser.dart#64>.
+  // <https://fuchsia.googlesource.com/topaz/+/master/lib/base_shell/lib/user_shell_chooser.dart#64>.
   if (str == "handheld") {
     return fuchsia::ui::policy::DisplayUsage::kHandheld;
   } else if (str == "close") {
@@ -97,30 +97,29 @@ fuchsia::ui::policy::DisplayUsage GetObjectValue(const rapidjson::Value& object,
   }
 };
 
-// Given a |json| string, parses it into list of session shell settings.
-std::vector<SessionShellSettings> ParseSessionShellSettings(
-    const std::string& json) {
-  // TODO(MI4-1166): topaz/lib/base_shell/lib/session_shell_chooser.dart is a
+// Given a |json| string, parses it into list of user shell settings.
+std::vector<UserShellSettings> ParseUserShellSettings(const std::string& json) {
+  // TODO(MI4-1166): topaz/lib/base_shell/lib/user_shell_chooser.dart is a
   // similar implementation of this in Dart. One of the two implementations
   // could probably be removed now.
 
-  std::vector<SessionShellSettings> settings;
+  std::vector<UserShellSettings> settings;
 
   rapidjson::Document document;
   document.Parse(json.c_str());
   if (document.HasParseError()) {
-    FXL_LOG(ERROR) << "ParseSessionShellSettings(): parse error "
+    FXL_LOG(ERROR) << "ParseUserShellSettings(): parse error "
                    << document.GetParseError();
     return settings;
   }
 
   if (!document.IsArray()) {
-    FXL_LOG(ERROR) << "ParseSessionShellSettings(): root item isn't an array";
+    FXL_LOG(ERROR) << "ParseUserShellSettings(): root item isn't an array";
     return settings;
   }
 
   if (document.Empty()) {
-    FXL_LOG(ERROR) << "ParseSessionShellSettings(): root array is empty";
+    FXL_LOG(ERROR) << "ParseUserShellSettings(): root array is empty";
     return settings;
   }
 
@@ -129,18 +128,18 @@ std::vector<SessionShellSettings> ParseSessionShellSettings(
   for (rapidjson::SizeType i = 0; i < document.Size(); i++) {
     using modular::internal::GetObjectValue;
 
-    const auto& session_shell = document[i];
+    const auto& user_shell = document[i];
 
-    const auto& name = GetObjectValue<std::string>(session_shell, "name");
+    const auto& name = GetObjectValue<std::string>(user_shell, "name");
     if (name.empty())
       continue;
 
     settings.push_back({
-        .name = GetObjectValue<std::string>(session_shell, "name"),
-        .screen_width = GetObjectValue<float>(session_shell, "screen_width"),
-        .screen_height = GetObjectValue<float>(session_shell, "screen_height"),
+        .name = GetObjectValue<std::string>(user_shell, "name"),
+        .screen_width = GetObjectValue<float>(user_shell, "screen_width"),
+        .screen_height = GetObjectValue<float>(user_shell, "screen_height"),
         .display_usage = GetObjectValue<fuchsia::ui::policy::DisplayUsage>(
-            session_shell, "display_usage"),
+            user_shell, "display_usage"),
     });
   }
 
@@ -149,8 +148,7 @@ std::vector<SessionShellSettings> ParseSessionShellSettings(
 
 }  // namespace internal
 
-const std::vector<SessionShellSettings>&
-SessionShellSettings::GetSystemSettings() {
+const std::vector<UserShellSettings>& UserShellSettings::GetSystemSettings() {
   // This method is intentionally thread-hostile to keep things simple, and
   // needs modification to be thread-safe or thread-compatible.
 
@@ -158,7 +156,7 @@ SessionShellSettings::GetSystemSettings() {
     return *g_system_settings;
   }
 
-  g_system_settings = new std::vector<SessionShellSettings>;
+  g_system_settings = new std::vector<UserShellSettings>;
 
   std::string json;
   if (!files::ReadFileToString(kBaseShellConfigJsonPath, &json)) {
@@ -167,12 +165,11 @@ SessionShellSettings::GetSystemSettings() {
     return *g_system_settings;
   }
 
-  *g_system_settings = internal::ParseSessionShellSettings(json);
+  *g_system_settings = internal::ParseUserShellSettings(json);
   return *g_system_settings;
 }
 
-bool operator==(const SessionShellSettings& lhs,
-                const SessionShellSettings& rhs) {
+bool operator==(const UserShellSettings& lhs, const UserShellSettings& rhs) {
   if (lhs.name != rhs.name)
     return false;
 

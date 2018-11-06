@@ -48,7 +48,7 @@ class TestApp {
     component_context_->ObtainMessageQueue("explicit_test",
                                            explicit_msg_queue_.NewRequest());
     // The message queue that is used to verify deletion triggers from deletes
-    // when the module's namespace is torn down. The test session shell will
+    // when the module's namespace is torn down. The test user shell will
     // verify that the agent is notified of this queues deletion.
     component_context_->ObtainMessageQueue("implicit_test",
                                            implicit_msg_queue_.NewRequest());

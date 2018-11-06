@@ -10,7 +10,7 @@
 
 To be able to run modules from the Fuchsia command line, you need to select a
 Fuchsia build configuration that does not start `basemgr` and shows a
-graphical session shell right at boot time. You can use for example the
+graphical user shell right at boot time. You can use for example the
 `test_modular` configuration in `fx set` and build as follows:
 
 ``` sh
@@ -23,24 +23,24 @@ If `fx` is not in your `PATH`, you should add `.jiri_root/bin` to your
 
 ## Running
 
-An application can be run as a module in a story using `dev_session_shell`. For
+An application can be run as a module in a story using `dev_user_shell`. For
 example (from [test runner invocation]):
 
 ```
 basemgr --test --account_provider=dev_token_manager \
-  --base_shell=dev_base_shell --session_shell=dev_session_shell \
+  --base_shell=dev_base_shell --user_shell=dev_user_shell \
   --story_shell=dev_story_shell \
-  --session_shell_args=--root_module=parent_child_test_parent_module
+  --user_shell_args=--root_module=parent_child_test_parent_module
 ```
 
 `dev_base_shell` is used to log in a dummy user directly without going through
-an authentication dialog. `dev_session_shell` runs the module given to it in
-`--session_shell_args` in a story.
+an authentication dialog. `dev_user_shell` runs the module given to it in
+`--user_shell_args` in a story.
 
-The flags `--session_shell` and `--session_shell_args` are read by `basemgr`.
-The value of `--session_shell` is the application that is run as the session shell.
-The value of `--session_shell_args` is a comma separated list of arguments passed
-to the session shell application. In this example, these arguments are in turn more
+The flags `--user_shell` and `--user_shell_args` are read by `basemgr`.
+The value of `--user_shell` is the application that is run as the user shell.
+The value of `--user_shell_args` is a comma separated list of arguments passed
+to the user shell application. In this example, these arguments are in turn more
 flags. Commas inside the value of such arguments are escaped by backslashes. The
 value of `--root_module` selects the module to run. The value of `--root_link`
 is a JSON representation of the initial data the module is started with.

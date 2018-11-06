@@ -12,11 +12,11 @@ source_set("defs") {
   ]
 }
 
-executable_package("link_context_entities_test_session_shell") {
+executable_package("link_context_entities_test_user_shell") {
   testonly = true
 
   sources = [
-    "link_context_entities_test_session_shell.cc",
+    "link_context_entities_test_user_shell.cc",
   ]
 
   deps = [

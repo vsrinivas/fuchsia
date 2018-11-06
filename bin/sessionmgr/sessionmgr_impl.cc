@@ -60,8 +60,8 @@ constexpr char kContextEngineComponentNamespace[] = "context_engine";
 constexpr char kModuleResolverUrl[] = "module_resolver";
 constexpr char kUserEnvironmentLabelPrefix[] = "user-";
 constexpr char kMessageQueuePath[] = "/data/MESSAGE_QUEUES/v1/";
-constexpr char kSessionShellComponentNamespace[] = "user-shell-namespace";
-constexpr char kSessionShellLinkName[] = "user-shell-link";
+constexpr char kUserShellComponentNamespace[] = "user-shell-namespace";
+constexpr char kUserShellLinkName[] = "user-shell-link";
 constexpr char kLedgerDashboardUrl[] = "ledger_dashboard";
 constexpr char kLedgerDashboardEnvLabel[] = "ledger-dashboard";
 constexpr char kClipboardAgentUrl[] = "clipboard_agent";
@@ -133,9 +133,9 @@ class SessionmgrImpl::PresentationProviderImpl : public PresentationProvider {
   void GetPresentation(fidl::StringPtr story_id,
                        fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                            request) override {
-    if (impl_->session_shell_app_) {
-      fuchsia::modular::SessionShellPresentationProviderPtr provider;
-      impl_->session_shell_app_->services().ConnectToService(
+    if (impl_->user_shell_app_) {
+      fuchsia::modular::UserShellPresentationProviderPtr provider;
+      impl_->user_shell_app_->services().ConnectToService(
           provider.NewRequest());
       provider->GetPresentation(std::move(story_id), std::move(request));
     }
@@ -145,9 +145,9 @@ class SessionmgrImpl::PresentationProviderImpl : public PresentationProvider {
       fidl::StringPtr story_id,
       fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher)
       override {
-    if (impl_->session_shell_app_) {
-      fuchsia::modular::SessionShellPresentationProviderPtr provider;
-      impl_->session_shell_app_->services().ConnectToService(
+    if (impl_->user_shell_app_) {
+      fuchsia::modular::UserShellPresentationProviderPtr provider;
+      impl_->user_shell_app_->services().ConnectToService(
           provider.NewRequest());
       provider->WatchVisualState(std::move(story_id), std::move(watcher));
     }
@@ -174,7 +174,7 @@ SessionmgrImpl::~SessionmgrImpl() = default;
 
 void SessionmgrImpl::Initialize(
     fuchsia::modular::auth::AccountPtr account,
-    fuchsia::modular::AppConfig session_shell,
+    fuchsia::modular::AppConfig user_shell,
     fuchsia::modular::AppConfig story_shell,
     fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
         token_provider_factory,
@@ -189,10 +189,9 @@ void SessionmgrImpl::Initialize(
   InitializeLedgerDashboard();
   InitializeDeviceMap();
   InitializeMessageQueueManager();
-  InitializeMaxwellAndModular(session_shell.url, std::move(story_shell));
+  InitializeMaxwellAndModular(user_shell.url, std::move(story_shell));
   InitializeClipboard();
-  InitializeSessionShell(std::move(session_shell),
-                         std::move(view_owner_request));
+  InitializeUserShell(std::move(user_shell), std::move(view_owner_request));
 
   ReportEvent(ModularEvent::BOOTED_TO_SESSIONMGR);
 }
@@ -419,7 +418,7 @@ void SessionmgrImpl::InitializeMessageQueueManager() {
 }
 
 void SessionmgrImpl::InitializeMaxwellAndModular(
-    const fidl::StringPtr& session_shell_url,
+    const fidl::StringPtr& user_shell_url,
     fuchsia::modular::AppConfig story_shell) {
   // NOTE: There is an awkward service exchange here between
   // AgentRunner, StoryProviderImpl, FocusHandler, VisibleStoriesHandler.
@@ -587,12 +586,11 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
   AtEnd(Reset(&module_resolver_service_));
   // End kModuleResolverUrl
 
-  session_shell_component_context_impl_ =
-      std::make_unique<ComponentContextImpl>(
-          component_context_info, kSessionShellComponentNamespace,
-          session_shell_url, session_shell_url);
+  user_shell_component_context_impl_ = std::make_unique<ComponentContextImpl>(
+      component_context_info, kUserShellComponentNamespace, user_shell_url,
+      user_shell_url);
 
-  AtEnd(Reset(&session_shell_component_context_impl_));
+  AtEnd(Reset(&user_shell_component_context_impl_));
 
   fidl::InterfacePtr<fuchsia::modular::FocusProvider>
       focus_provider_story_provider;
@@ -683,114 +681,100 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
   AtEnd(Reset(&visible_stories_handler_));
 }
 
-void SessionmgrImpl::InitializeSessionShell(
-    fuchsia::modular::AppConfig session_shell,
+void SessionmgrImpl::InitializeUserShell(
+    fuchsia::modular::AppConfig user_shell,
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request) {
-  // We setup our own view and make the fuchsia::modular::SessionShell a child
-  // of it.
-  session_shell_view_host_ = std::make_unique<ViewHost>(
+  // We setup our own view and make the fuchsia::modular::UserShell a child of
+  // it.
+  user_shell_view_host_ = std::make_unique<ViewHost>(
       startup_context_
           ->ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewManager>(),
       std::move(view_owner_request));
-  RunSessionShell(std::move(session_shell));
-  AtEnd([this](std::function<void()> cont) { TerminateSessionShell(cont); });
+  RunUserShell(std::move(user_shell));
+  AtEnd([this](std::function<void()> cont) { TerminateUserShell(cont); });
 }
 
-void SessionmgrImpl::RunSessionShell(
-    fuchsia::modular::AppConfig session_shell) {
-  // |session_shell_services_| is a ServiceProvider (aka a Directory) that will
-  // be used to augment the session shell's namespace.
-  session_shell_services_.AddService<fuchsia::modular::SessionShellContext>(
-      [this](fidl::InterfaceRequest<fuchsia::modular::SessionShellContext>
-                 request) {
-        session_shell_context_bindings_.AddBinding(this, std::move(request));
-      });
-  session_shell_services_.AddService<fuchsia::modular::UserShellContext>(
+void SessionmgrImpl::RunUserShell(fuchsia::modular::AppConfig user_shell) {
+  // |user_shell_services_| is a ServiceProvider (aka a Directory) that will
+  // be used to augment the user shell's namespace.
+  user_shell_services_.AddService<fuchsia::modular::UserShellContext>(
       [this](
           fidl::InterfaceRequest<fuchsia::modular::UserShellContext> request) {
         user_shell_context_bindings_.AddBinding(this, std::move(request));
       });
-  session_shell_services_.AddService<fuchsia::modular::PuppetMaster>(
+  user_shell_services_.AddService<fuchsia::modular::PuppetMaster>(
       [this](fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request) {
         puppet_master_impl_->Connect(std::move(request));
       });
-  // |session_shell_service_provider_| is an InterfacePtr impl for
-  // ServiceProvider that binds to |session_shell_services_|.
-  fuchsia::sys::ServiceProviderPtr session_shell_service_provider_ptr_;
-  session_shell_services_.AddBinding(
-      session_shell_service_provider_ptr_.NewRequest());
+  // |user_shell_service_provider_| is an InterfacePtr impl for ServiceProvider
+  // that binds to |user_shell_services_|.
+  fuchsia::sys::ServiceProviderPtr user_shell_service_provider_ptr_;
+  user_shell_services_.AddBinding(
+      user_shell_service_provider_ptr_.NewRequest());
 
   // |service_list| specifies which services are available to the child
   // component from which ServiceProvicer. There is a lot of indirection here.
   auto service_list = fuchsia::sys::ServiceList::New();
-  service_list->names.push_back(fuchsia::modular::SessionShellContext::Name_);
   service_list->names.push_back(fuchsia::modular::UserShellContext::Name_);
   service_list->names.push_back(fuchsia::modular::PuppetMaster::Name_);
-  service_list->provider = std::move(session_shell_service_provider_ptr_);
+  service_list->provider = std::move(user_shell_service_provider_ptr_);
 
-  session_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      user_environment_->GetLauncher(), std::move(session_shell),
+  user_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
+      user_environment_->GetLauncher(), std::move(user_shell),
       /* data_origin = */ "", std::move(service_list));
 
-  session_shell_app_->SetAppErrorHandler([this] {
-    FXL_LOG(ERROR) << "Session Shell seems to have crashed unexpectedly."
+  user_shell_app_->SetAppErrorHandler([this] {
+    FXL_LOG(ERROR) << "User Shell seems to have crashed unexpectedly."
                    << "Logging out.";
     Logout();
   });
 
   fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner;
   fuchsia::ui::viewsv1::ViewProviderPtr view_provider;
-  session_shell_app_->services().ConnectToService(view_provider.NewRequest());
+  user_shell_app_->services().ConnectToService(view_provider.NewRequest());
   view_provider->CreateView(view_owner.NewRequest(), nullptr);
-  session_shell_view_host_->ConnectView(std::move(view_owner));
+  user_shell_view_host_->ConnectView(std::move(view_owner));
 }
 
-void SessionmgrImpl::TerminateSessionShell(const std::function<void()>& done) {
-  session_shell_app_->Teardown(kBasicTimeout, [this, done] {
-    session_shell_app_.reset();
+void SessionmgrImpl::TerminateUserShell(const std::function<void()>& done) {
+  user_shell_app_->Teardown(kBasicTimeout, [this, done] {
+    user_shell_app_.reset();
     done();
   });
 }
 
-class SessionmgrImpl::SwapSessionShellOperation : public Operation<> {
+class SessionmgrImpl::SwapUserShellOperation : public Operation<> {
  public:
-  SwapSessionShellOperation(SessionmgrImpl* const sessionmgr_impl,
-                            fuchsia::modular::AppConfig session_shell_config,
-                            ResultCall result_call)
-      : Operation("SessionmgrImpl::SwapSessionShellOperation",
+  SwapUserShellOperation(SessionmgrImpl* const sessionmgr_impl,
+                         fuchsia::modular::AppConfig user_shell_config,
+                         ResultCall result_call)
+      : Operation("SessionmgrImpl::SwapUserShellOperation",
                   std::move(result_call)),
         sessionmgr_impl_(sessionmgr_impl),
-        session_shell_config_(std::move(session_shell_config)) {}
+        user_shell_config_(std::move(user_shell_config)) {}
 
  private:
   void Run() override {
     FlowToken flow{this};
     sessionmgr_impl_->story_provider_impl_->StopAllStories([this, flow] {
-      sessionmgr_impl_->TerminateSessionShell([this, flow] {
-        sessionmgr_impl_->RunSessionShell(std::move(session_shell_config_));
+      sessionmgr_impl_->TerminateUserShell([this, flow] {
+        sessionmgr_impl_->RunUserShell(std::move(user_shell_config_));
       });
     });
   }
 
   SessionmgrImpl* const sessionmgr_impl_;
-  fuchsia::modular::AppConfig session_shell_config_;
+  fuchsia::modular::AppConfig user_shell_config_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(SwapSessionShellOperation);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SwapUserShellOperation);
 };
 
 void SessionmgrImpl::SwapUserShell(
     fuchsia::modular::AppConfig user_shell_config,
     SwapUserShellCallback callback) {
-  operation_queue_.Add(new SwapSessionShellOperation(
-      this, std::move(user_shell_config), callback));
-}
-
-void SessionmgrImpl::SwapSessionShell(
-    fuchsia::modular::AppConfig session_shell_config,
-    SwapSessionShellCallback callback) {
-  operation_queue_.Add(new SwapSessionShellOperation(
-      this, std::move(session_shell_config), callback));
+  operation_queue_.Add(
+      new SwapUserShellOperation(this, std::move(user_shell_config), callback));
 }
 
 void SessionmgrImpl::Terminate(std::function<void()> done) {
@@ -800,9 +784,7 @@ void SessionmgrImpl::Terminate(std::function<void()> done) {
   TerminateRecurse(at_end_.size() - 1);
 }
 
-void SessionmgrImpl::GetAccount(
-    std::function<void(::std::unique_ptr<::fuchsia::modular::auth::Account>)>
-        callback) {
+void SessionmgrImpl::GetAccount(GetAccountCallback callback) {
   callback(fidl::Clone(account_));
 }
 
@@ -813,11 +795,10 @@ void SessionmgrImpl::GetAgentProvider(
 
 void SessionmgrImpl::GetComponentContext(
     fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
-  session_shell_component_context_impl_->Connect(std::move(request));
+  user_shell_component_context_impl_->Connect(std::move(request));
 }
 
-void SessionmgrImpl::GetDeviceName(
-    std::function<void(::fidl::StringPtr)> callback) {
+void SessionmgrImpl::GetDeviceName(GetDeviceNameCallback callback) {
   callback(device_name_);
 }
 
@@ -841,17 +822,17 @@ void SessionmgrImpl::GetIntelligenceServices(
 
 void SessionmgrImpl::GetLink(
     fidl::InterfaceRequest<fuchsia::modular::Link> request) {
-  if (!session_shell_storage_) {
-    session_shell_storage_ = std::make_unique<StoryStorage>(
+  if (!user_shell_storage_) {
+    user_shell_storage_ = std::make_unique<StoryStorage>(
         ledger_client_.get(), fuchsia::ledger::PageId());
   }
 
   fuchsia::modular::LinkPath link_path;
   link_path.module_path.resize(0);
-  link_path.link_name = kSessionShellLinkName;
-  auto impl = std::make_unique<LinkImpl>(session_shell_storage_.get(),
+  link_path.link_name = kUserShellLinkName;
+  auto impl = std::make_unique<LinkImpl>(user_shell_storage_.get(),
                                          std::move(link_path));
-  session_shell_link_bindings_.AddBinding(std::move(impl), std::move(request));
+  user_shell_link_bindings_.AddBinding(std::move(impl), std::move(request));
 }
 
 void SessionmgrImpl::GetPresentation(
