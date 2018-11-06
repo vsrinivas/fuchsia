@@ -31,7 +31,7 @@ function main {
       # reaosnable value to prevent catastrophic load (i.e. user can not kill
       # the build, can not lock the screen, etc).
       local cpus="$(fx-cpu-count)"
-      args+=("-l" $(($cpus * 20)))
+      args=("-l" $(($cpus * 20)) "${args[@]}")
     fi
   fi
 
@@ -46,7 +46,7 @@ function main {
     if [[ $(ulimit -n) -lt "${min_limit}" ]]; then
       ulimit -n "${min_limit}"
     fi
-    args+=("-j" "${concurrency}")
+    args=("-j" "${concurrency}" "${args[@]}")
   fi
 
 
