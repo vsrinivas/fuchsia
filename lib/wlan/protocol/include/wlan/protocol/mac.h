@@ -98,8 +98,6 @@ typedef struct wlan_tx_info {
     // must be zero. Values for fields not indicated by a flag may be chosen at the discretion of
     // the wlanmac driver.
     uint32_t valid_fields;
-    // The data rate to be used to transmit this packet, measured in units of 0.5 Mb/s.
-    uint32_t data_rate;
     // Will be sent back in wlan_tx_status_t if Minstrel is enabled for the device, indicated by
     // WLAN_TX_INFO_VALID_TX_VECTOR_IDX.
     tx_vec_idx_t tx_vector_idx;

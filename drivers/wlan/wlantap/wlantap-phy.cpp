@@ -145,7 +145,6 @@ struct EventSender {
         out->valid_fields = in.valid_fields;
         out->phy = in.phy;
         out->cbw = in.cbw;
-        out->data_rate = in.data_rate;
         out->mcs = in.mcs;
     }
 

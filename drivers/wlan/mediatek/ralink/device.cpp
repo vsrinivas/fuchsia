@@ -4049,8 +4049,8 @@ size_t Device::WriteBulkout(uint8_t* dest, const wlan_tx_packet_t& wlan_pkt) {
 }
 
 void DumpWlanTxInfo(const wlan_tx_info_t& txinfo) {
-    debugf("txinfo: tx_flags 0x%04x valid_fields 0x%04x phy %u cbw %u data_rate %u mcs %u\n",
-           txinfo.tx_flags, txinfo.valid_fields, txinfo.phy, txinfo.cbw, txinfo.data_rate,
+    debugf("txinfo: tx_flags 0x%04x valid_fields 0x%04x phy %u cbw %u tx_vector_idx %u mcs %u\n",
+           txinfo.tx_flags, txinfo.valid_fields, txinfo.phy, txinfo.cbw, txinfo.tx_vector_idx,
            txinfo.mcs);
 }
 
@@ -4920,7 +4920,7 @@ zx_status_t Device::WlanmacClearAssoc(uint32_t options, const uint8_t* bssid) {
     }
 
     // Set bssid to zeroes to force disassociation
-    uint8_t null_bssid[ETH_MAC_SIZE] = { 0 };
+    uint8_t null_bssid[ETH_MAC_SIZE] = {0};
     zx_status_t status = SetBss(null_bssid);
     if (status == ZX_OK) {
         last_disconnect_time_ = zx::clock::get_monotonic();
