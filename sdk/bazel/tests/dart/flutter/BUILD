@@ -18,9 +18,24 @@ flutter_app(
     ],
 )
 
+# Tests the legacy fuchsia_package_name parameter.
+flutter_app(
+    name = "legacy_fuchsia_package_name",
+    main = "main.dart",
+    assets = [
+        "assets/logo.png",
+    ],
+    package_name = "tests.flutter_legacy_fuchsia_package_name",
+    fuchsia_package_name = "package",
+    deps = [
+        "@vendor_flutter//:flutter",
+    ],
+)
+
 fuchsia_package(
     name = "package",
     deps = [
         ":app",
+        ":legacy_fuchsia_package_name",
     ],
 )

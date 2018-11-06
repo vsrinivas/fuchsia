@@ -13,9 +13,10 @@ dart_app(
     srcs = glob(["lib/*.dart"]),
 )
 
+# Tests the legacy fuchsia_package_name parameter.
 dart_app(
-    name = "dart2",
-    package_name = "tests.dart_app2",
+    name = "legacy_fuchsia_package_name",
+    package_name = "tests.dart_legacy_fuchsia_package_name",
     fuchsia_package_name = "hello_dart_package",
     main = "lib/main.dart",
     srcs = glob(["lib/*.dart"]),
@@ -25,7 +26,7 @@ fuchsia_package(
     name = "hello_dart_package",
     deps = [
         ":dart",
-        ":dart2",
+        ":legacy_fuchsia_package_name",
     ],
 )
 

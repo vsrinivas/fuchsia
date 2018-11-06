@@ -24,6 +24,7 @@ def _flutter_app_impl(context):
     kernel_snapshot_file = context.outputs.kernel_snapshot
     manifest_file = context.outputs.manifest
     # TODO(CF-170): Make cmx mandatory.
+    component_name = ""
     if context.files.component_manifest:
         component_name = context.files.component_manifest[0].basename.split(".")[0]
     mappings = compile_kernel_action(
