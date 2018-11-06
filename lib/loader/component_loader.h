@@ -9,7 +9,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/zx/vmo.h>
-#include "garnet/lib/pkg_url/fuchsia_pkg_url.h"
+#include "lib/pkg_url/fuchsia_pkg_url.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/io/fd.h"
 #include "lib/fxl/macros.h"

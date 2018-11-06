@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_PKG_URL_FUCHSIA_PKG_URL_H_
-#define GARNET_LIB_PKG_URL_FUCHSIA_PKG_URL_H_
+#ifndef LIB_PKG_URL_FUCHSIA_PKG_URL_H_
+#define LIB_PKG_URL_FUCHSIA_PKG_URL_H_
 
 #include <string>
 
@@ -17,6 +17,13 @@ class FuchsiaPkgUrl {
   FuchsiaPkgUrl(FuchsiaPkgUrl&&) = default;
 
   static bool IsFuchsiaPkgScheme(const std::string& url);
+
+  // Returns the default component's .cmx path of this package, i.e.
+  // meta/<package_name>.cmx
+  std::string GetDefaultComponentCmxPath() const;
+
+  // Returns the default component's name.
+  std::string GetDefaultComponentName() const;
 
   bool Parse(const std::string& url);
 
@@ -36,4 +43,4 @@ class FuchsiaPkgUrl {
 
 }  // namespace component
 
-#endif  // GARNET_LIB_PKG_URL_FUCHSIA_PKG_URL_H_
+#endif  // LIB_PKG_URL_FUCHSIA_PKG_URL_H_

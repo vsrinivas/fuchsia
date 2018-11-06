@@ -8,12 +8,12 @@
 #include <regex>
 #include <string>
 
-#include "garnet/lib/cmx/facets.h"
 #include "garnet/lib/cmx/program.h"
 #include "garnet/lib/cmx/runtime.h"
 #include "garnet/lib/cmx/sandbox.h"
-#include "garnet/lib/json/json_parser.h"
-#include "garnet/lib/pkg_url/fuchsia_pkg_url.h"
+#include "lib/cmx_facet_parser/cmx_facet_parser.h"
+#include "lib/json/json_parser.h"
+#include "lib/pkg_url/fuchsia_pkg_url.h"
 #include "rapidjson/document.h"
 
 namespace component {
@@ -33,20 +33,12 @@ class CmxMetadata {
   bool ParseFromDeprecatedRuntimeFileAt(int dirfd, const std::string& file,
                                         json::JSONParser* json_parser);
 
-  // Takes a package's parsed resolved_url and returns the default component's
-  // .cmx path, i.e. meta/<package_name>.cmx.
-  static std::string GetDefaultComponentCmxPath(
-      const FuchsiaPkgUrl& package_resolved_url);
-
-  // Takes a package's parsed resolved_url and returns the default component's
-  // .cmx path, i.e. <package_name>.cmx.
-  static std::string GetDefaultComponentName(
-      const FuchsiaPkgUrl& package_resolved_url);
+  // Returns the Facet section value if found, else returns null value.
+  const rapidjson::Value& GetFacet(const std::string& key);
 
   const SandboxMetadata& sandbox_meta() { return sandbox_meta_; }
   const RuntimeMetadata& runtime_meta() { return runtime_meta_; }
   const ProgramMetadata& program_meta() { return program_meta_; }
-  const FacetsMetadata& facets_meta() { return facets_meta_; }
 
  private:
   static std::string GetCmxPathFromPath(const std::regex& regex,
@@ -55,13 +47,11 @@ class CmxMetadata {
                             json::JSONParser* json_parser);
   void ParseProgramMetadata(const rapidjson::Document& document,
                             json::JSONParser* json_parser);
-  void ParseFacetsMetadata(const rapidjson::Document& document,
-                           json::JSONParser* json_parser);
 
   SandboxMetadata sandbox_meta_;
   RuntimeMetadata runtime_meta_;
   ProgramMetadata program_meta_;
-  FacetsMetadata facets_meta_;
+  CmxFacetParser facet_parser_;
 };
 
 }  // namespace component

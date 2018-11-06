@@ -7,12 +7,12 @@
 #include <fcntl.h>
 #include <string>
 
-#include "garnet/lib/json/json_parser.h"
-#include "garnet/lib/pkg_url/fuchsia_pkg_url.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/json/json_parser.h"
+#include "lib/pkg_url/fuchsia_pkg_url.h"
 #include "rapidjson/document.h"
 
 namespace component {
@@ -55,12 +55,6 @@ class CmxMetadataTest : public ::testing::Test {
                                                  json_parser);
   }
 
-  static FuchsiaPkgUrl ParseFuchsiaPkgUrl(const std::string& s) {
-    FuchsiaPkgUrl url;
-    EXPECT_TRUE(url.Parse(s));
-    return url;
-  }
-
  private:
   files::ScopedTempDir tmp_dir_;
 };
@@ -95,11 +89,10 @@ TEST_F(CmxMetadataTest, ParseMetadata) {
   EXPECT_FALSE(cmx.runtime_meta().IsNull());
   EXPECT_EQ(cmx.runtime_meta().runner(), "dart_runner");
 
-  const auto& facets = cmx.facets_meta();
-  const auto& some_value = facets.GetSection("some_key");
+  const auto& some_value = cmx.GetFacet("some_key");
   ASSERT_TRUE(some_value.IsString());
   EXPECT_EQ("some_value", std::string(some_value.GetString()));
-  const auto& null_value = facets.GetSection("invalid");
+  const auto& null_value = cmx.GetFacet("invalid");
   EXPECT_TRUE(null_value.IsNull());
 }
 
@@ -155,21 +148,6 @@ TEST_F(CmxMetadataTest, ParseWithErrors) {
   ExpectFailedParse(R"JSON({ "runner" : 3 })JSON", "'runner' is not a string.");
   ExpectFailedParse(R"JSON({ "program" : { "binary": 3 } })JSON",
                     "'binary' in program is not a string.");
-}
-
-TEST_F(CmxMetadataTest, GetComponentDefaults) {
-  EXPECT_EQ("meta/sysmgr.cmx",
-            CmxMetadata::GetDefaultComponentCmxPath(
-                ParseFuchsiaPkgUrl("fuchsia-pkg://fuchsia.com/sysmgr")));
-  EXPECT_EQ("meta/sysmgr.cmx",
-            CmxMetadata::GetDefaultComponentCmxPath(ParseFuchsiaPkgUrl(
-                "fuchsia-pkg://fuchsia.com/sysmgr#meta/blah.cmx")));
-  EXPECT_EQ("sysmgr",
-            CmxMetadata::GetDefaultComponentName(
-                ParseFuchsiaPkgUrl("fuchsia-pkg://fuchsia.com/sysmgr")));
-  EXPECT_EQ("sysmgr",
-            CmxMetadata::GetDefaultComponentName(ParseFuchsiaPkgUrl(
-                "fuchsia-pkg://fuchsia.com/sysmgr#meta/blah.cmx")));
 }
 
 }  // namespace

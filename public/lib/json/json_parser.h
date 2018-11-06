@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_JSON_JSON_PARSER_H_
-#define GARNET_LIB_JSON_JSON_PARSER_H_
+#ifndef LIB_JSON_JSON_PARSER_H_
+#define LIB_JSON_JSON_PARSER_H_
 
 #include <stdlib.h>
 #include <string>
@@ -75,4 +75,4 @@ class JSONParser {
 
 }  // namespace json
 
-#endif  // GARNET_LIB_JSON_JSON_PARSER_H_
+#endif  // LIB_JSON_JSON_PARSER_H_

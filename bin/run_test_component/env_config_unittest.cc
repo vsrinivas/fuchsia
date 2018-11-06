@@ -6,7 +6,6 @@
 
 #include <string>
 
-#include "garnet/lib/json/json_parser.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/files/directory.h"
@@ -14,6 +13,7 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/substitute.h"
+#include "lib/json/json_parser.h"
 
 namespace run {
 namespace {
@@ -86,8 +86,9 @@ TEST_F(EnvironmentConfigTest, InvalidSection) {
     })JSON";
     EnvironmentConfig config;
     EXPECT_FALSE(ParseFrom(&config, json));
-    EXPECT_THAT(config.error_str(), ::testing::HasSubstr(
-        "'root' section should be a string array."));
+    EXPECT_THAT(
+        config.error_str(),
+        ::testing::HasSubstr("'root' section should be a string array."));
   }
 }
 

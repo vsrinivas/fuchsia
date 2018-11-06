@@ -11,8 +11,8 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 
-#include "garnet/lib/json/json_parser.h"
 #include "lib/fxl/macros.h"
+#include "lib/json/json_parser.h"
 #include "rapidjson/document.h"
 
 namespace run {

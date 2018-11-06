@@ -4,23 +4,16 @@
 
 import("//build/package.gni")
 
-source_set("cmx") {
+source_set("cmx_facet_parser") {
   sources = [
-    "cmx.cc",
-    "cmx.h",
-    "program.cc",
-    "program.h",
-    "runtime.cc",
-    "runtime.h",
-    "sandbox.cc",
-    "sandbox.h",
+    "cmx_facet_parser.cc",
+    "cmx_facet_parser.h",
   ]
 
   deps = [
-    "//garnet/public/lib/cmx_facet_parser",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/json",
     "//garnet/public/lib/pkg_url",
+    "//garnet/public/lib/fxl",
     "//third_party/rapidjson",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/trace",
@@ -30,17 +23,14 @@ source_set("cmx") {
 executable("tests") {
   testonly = true
 
-  output_name = "cmx_unittests"
+  output_name = "cmx_facet_parser_unittest_bin"
 
   sources = [
-    "cmx_unittest.cc",
-    "program_unittest.cc",
-    "runtime_unittest.cc",
-    "sandbox_unittest.cc",
+    "cmx_facet_parser_unittest.cc",
   ]
 
   deps = [
-    ":cmx",
+    ":cmx_facet_parser",
     "//garnet/public/lib/json",
     "//garnet/public/lib/pkg_url",
     "//garnet/public/lib/fxl/test:gtest_main",
@@ -50,7 +40,7 @@ executable("tests") {
   ]
 }
 
-package("cmx_unittests") {
+package("cmx_facet_parser_unittests") {
   testonly = true
 
   deps = [
@@ -58,7 +48,7 @@ package("cmx_unittests") {
   ]
   tests = [
     {
-      name = "cmx_unittests"
+      name = "cmx_facet_parser_unittest_bin"
     },
   ]
 }

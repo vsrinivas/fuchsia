@@ -4,8 +4,8 @@
 
 #include "garnet/bin/run_test_component/env_config.h"
 
-#include "garnet/lib/json/json_parser.h"
 #include "lib/fxl/strings/substitute.h"
+#include "lib/json/json_parser.h"
 #include "rapidjson/document.h"
 
 namespace run {

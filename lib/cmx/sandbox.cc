@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <map>
 
-#include "garnet/lib/json/json_parser.h"
+#include "lib/json/json_parser.h"
 #include "lib/fxl/strings/substitute.h"
 #include "rapidjson/document.h"
 

@@ -10,15 +10,14 @@
 #include <sstream>
 #include <string>
 
-#include "garnet/lib/pkg_url/fuchsia_pkg_url.h"
 #include "lib/fxl/strings/substitute.h"
+#include "lib/pkg_url/fuchsia_pkg_url.h"
 #include "rapidjson/document.h"
 
 namespace component {
 
 constexpr char kSandbox[] = "sandbox";
 constexpr char kProgram[] = "program";
-constexpr char kFacets[] = "facets";
 
 CmxMetadata::CmxMetadata() = default;
 CmxMetadata::~CmxMetadata() = default;
@@ -37,7 +36,7 @@ bool CmxMetadata::ParseFromFileAt(int dirfd, const std::string& file,
   ParseSandboxMetadata(document, json_parser);
   runtime_meta_.ParseFromDocument(document, json_parser);
   ParseProgramMetadata(document, json_parser);
-  ParseFacetsMetadata(document, json_parser);
+  facet_parser_.Parse(document, json_parser);
   return !json_parser->HasError();
 }
 
@@ -55,16 +54,8 @@ bool CmxMetadata::ParseFromDeprecatedRuntimeFileAt(
   return !json_parser->HasError();
 }
 
-// static
-std::string CmxMetadata::GetDefaultComponentCmxPath(
-    const FuchsiaPkgUrl& package_resolved_url) {
-  return fxl::Substitute("meta/$0.cmx", package_resolved_url.package_name());
-}
-
-// static
-std::string CmxMetadata::GetDefaultComponentName(
-    const FuchsiaPkgUrl& package_resolved_url) {
-  return package_resolved_url.package_name();
+const rapidjson::Value& CmxMetadata::GetFacet(const std::string& key) {
+  return facet_parser_.GetSection(key);
 }
 
 void CmxMetadata::ParseSandboxMetadata(const rapidjson::Document& document,
@@ -94,16 +85,6 @@ void CmxMetadata::ParseProgramMetadata(const rapidjson::Document& document,
     return;
   }
   program_meta_.Parse(program->value, json_parser);
-}
-
-void CmxMetadata::ParseFacetsMetadata(const rapidjson::Document& document,
-                                      json::JSONParser* json_parser) {
-  auto facets = document.FindMember(kFacets);
-  if (facets == document.MemberEnd()) {
-    // Valid syntax, but no value.
-    return;
-  }
-  facets_meta_.Parse(facets->value, json_parser);
 }
 
 }  // namespace component

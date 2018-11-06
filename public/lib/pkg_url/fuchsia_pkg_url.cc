@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/pkg_url/fuchsia_pkg_url.h"
+#include "lib/pkg_url/fuchsia_pkg_url.h"
 #include "lib/fxl/strings/concatenate.h"
+#include "lib/fxl/strings/substitute.h"
 
 #include <regex>
 #include <string>
@@ -18,8 +19,17 @@ static const std::regex* const kPackageName = new std::regex("([^/]+)(?=#|$)");
 static const std::regex* const kHasResource = new std::regex("#");
 static const std::regex* const kResourcePath = new std::regex("([^#]+)$");
 
+// static
 bool FuchsiaPkgUrl::IsFuchsiaPkgScheme(const std::string& url) {
   return url.find(kFuchsiaPkgPrefix) == 0;
+}
+
+std::string FuchsiaPkgUrl::GetDefaultComponentCmxPath() const {
+  return fxl::Substitute("meta/$0.cmx", package_name());
+}
+
+std::string FuchsiaPkgUrl::GetDefaultComponentName() const {
+  return package_name();
 }
 
 bool FuchsiaPkgUrl::Parse(const std::string& url) {
@@ -51,8 +61,6 @@ std::string FuchsiaPkgUrl::pkgfs_dir_path() const {
   return fxl::Concatenate({"/pkgfs/packages/", package_name(), "/0"});
 }
 
-const std::string& FuchsiaPkgUrl::ToString() const {
-  return url_;
-}
+const std::string& FuchsiaPkgUrl::ToString() const { return url_; }
 
 }  // namespace component

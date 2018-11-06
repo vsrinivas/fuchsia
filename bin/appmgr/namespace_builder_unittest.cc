@@ -9,8 +9,8 @@
 #include <string>
 #include <vector>
 
-#include "garnet/lib/json/json_parser.h"
 #include "gtest/gtest.h"
+#include "lib/json/json_parser.h"
 #include "rapidjson/document.h"
 
 namespace component {

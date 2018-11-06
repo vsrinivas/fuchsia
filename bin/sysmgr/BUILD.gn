@@ -22,9 +22,9 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/lib/json",
+    "//garnet/public/lib/json",
     "//garnet/lib/loader",
-    "//garnet/lib/pkg_url",
+    "//garnet/public/lib/pkg_url",
     "//garnet/public/fidl/fuchsia.amber",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",

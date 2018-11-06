@@ -61,7 +61,7 @@ bool TestMetadata::ParseFromFile(const std::string& cmx_file_path) {
   if (json_parser_.HasError()) {
     return false;
   }
-  auto& fuchisa_test = cmx.facets_meta().GetSection(kFuchsiaTest);
+  auto& fuchisa_test = cmx.GetFacet(kFuchsiaTest);
   if (!fuchisa_test.IsNull()) {
     null_ = false;
     if (!fuchisa_test.IsObject()) {

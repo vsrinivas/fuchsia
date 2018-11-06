@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include <string>
 
-#include "garnet/lib/json/json_parser.h"
+#include "lib/json/json_parser.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/files/path.h"

@@ -9,7 +9,7 @@ source_set("loader") {
   ]
 
   public_deps = [
-    "//garnet/lib/pkg_url",
+    "//garnet/public/lib/pkg_url",
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",

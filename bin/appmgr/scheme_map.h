@@ -9,7 +9,7 @@
 #include <unordered_map>
 
 #include <lib/fxl/macros.h>
-#include "garnet/lib/json/json_parser.h"
+#include "lib/json/json_parser.h"
 
 namespace component {
 

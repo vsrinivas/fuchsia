@@ -1,6 +1,6 @@
 {
     "packages": [
-        "//garnet/lib/json:json_unittests"
+        "//garnet/public/lib/json:json_unittests"
     ],
     "host_tests": [
         "//build/tools/json_merge:json_merge_test"

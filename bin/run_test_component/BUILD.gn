@@ -19,10 +19,10 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/lib/cmx",
-    "//garnet/lib/json",
-    "//garnet/lib/pkg_url",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/json",
+    "//garnet/public/lib/pkg_url",
     "//third_party/rapidjson",
   ]
 }

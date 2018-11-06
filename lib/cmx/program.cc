@@ -6,7 +6,7 @@
 
 #include <algorithm>
 
-#include "garnet/lib/json/json_parser.h"
+#include "lib/json/json_parser.h"
 #include "rapidjson/document.h"
 
 namespace component {

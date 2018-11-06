@@ -27,9 +27,6 @@
 #include "garnet/lib/cmx/program.h"
 #include "garnet/lib/cmx/runtime.h"
 #include "garnet/lib/cmx/sandbox.h"
-#include "garnet/lib/json/json_parser.h"
-#include "garnet/lib/pkg_url/fuchsia_pkg_url.h"
-#include "garnet/lib/pkg_url/url_resolver.h"
 #include "lib/component/cpp/connect.h"
 #include "lib/fsl/handles/object_info.h"
 #include "lib/fsl/io/fd.h"
@@ -41,6 +38,9 @@
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/substitute.h"
+#include "lib/json/json_parser.h"
+#include "lib/pkg_url/fuchsia_pkg_url.h"
+#include "lib/pkg_url/url_resolver.h"
 #include "lib/svc/cpp/services.h"
 
 namespace component {
@@ -631,7 +631,7 @@ void Realm::CreateComponentFromPackage(
     } else {
       // It's possible the url does not have a resource, in which case either
       // the cmx exists at meta/<package_name.cmx> or it does not exist.
-      cmx_path = CmxMetadata::GetDefaultComponentCmxPath(fp);
+      cmx_path = fp.GetDefaultComponentCmxPath();
     }
   } else {
     FXL_LOG(ERROR) << "invalid component url: " << package->resolved_url.get();
@@ -702,10 +702,9 @@ void Realm::CreateComponentFromPackage(
     }
   } else {
     // Read 'data' path from cmx, or assume to be /pkg/data/<component-name>.
-    std::string data_path =
-        program.IsDataNull()
-            ? kDataPathPrefix + CmxMetadata::GetDefaultComponentName(fp)
-            : program.data();
+    std::string data_path = program.IsDataNull()
+                                ? kDataPathPrefix + fp.GetDefaultComponentName()
+                                : program.data();
     // Pass a {"data", "data/<component-name>"} pair through StartupInfo, so
     // components can identify their directory under /pkg/data.
     program_metadata = fidl::VectorPtr<fuchsia::sys::ProgramMetadata>::New(1);

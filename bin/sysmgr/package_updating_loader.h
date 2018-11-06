@@ -12,7 +12,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 #include "garnet/lib/loader/component_loader.h"
-#include "garnet/lib/pkg_url/fuchsia_pkg_url.h"
+#include "lib/pkg_url/fuchsia_pkg_url.h"
 #include "lib/fxl/macros.h"
 
 namespace sysmgr {
