@@ -33,7 +33,7 @@ MODULE_LIBS := \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-gpio \
-    system/banjo/ddk-protocol-gpio-impl
+    system/banjo/ddk-protocol-gpio-impl \
 
 include make/module.mk
 
@@ -52,6 +52,9 @@ MODULE_LIBS := \
     system/ulib/driver \
     system/ulib/c \
     system/ulib/zircon
+
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-i2c \
 
 include make/module.mk
 

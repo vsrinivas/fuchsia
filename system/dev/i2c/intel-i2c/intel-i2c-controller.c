@@ -76,7 +76,7 @@ static void intel_i2c_transact(void* ctx, const i2c_op_t ops[], size_t cnt,
                 return;
             }
         } else {
-            segs[i].buf = ops[i].data_buffer;
+            segs[i].buf = (void*)ops[i].data_buffer;
             segs[i].type = I2C_SEGMENT_TYPE_WRITE;
         }
         segs[i].len = ops[i].data_size;

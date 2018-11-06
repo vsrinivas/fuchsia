@@ -29,7 +29,8 @@ MODULE_LIBS := \
     system/ulib/c
 
 MODULE_BANJO_LIBS := \
-    system/banjo/ddk-protocol-gpio
+    system/banjo/ddk-protocol-gpio \
+    system/banjo/ddk-protocol-i2c \
 
 include make/module.mk
 

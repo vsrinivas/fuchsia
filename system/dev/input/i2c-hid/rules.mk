@@ -16,5 +16,6 @@ MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-hidbus \
+    system/banjo/ddk-protocol-i2c \
 
 include make/module.mk

@@ -21,4 +21,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/sync \
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-i2c \
+
 include make/module.mk

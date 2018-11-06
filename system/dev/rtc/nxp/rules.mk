@@ -26,4 +26,7 @@ MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/rtc system/ulib/sync system/ul
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 MODULE_FIDL_LIBS := system/fidl/zircon-rtc
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-i2c \
+
 include make/module.mk
