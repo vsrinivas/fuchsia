@@ -151,7 +151,7 @@ int main(int argc, char** argv) {
   // Setup interrupt controller.
   machina::InterruptController interrupt_controller;
 #if __aarch64__
-  status = interrupt_controller.Init(&guest, cfg.num_cpus());
+  status = interrupt_controller.Init(&guest, cfg.cpus());
 #elif __x86_64__
   status = interrupt_controller.Init(&guest);
 #endif
@@ -258,7 +258,7 @@ int main(int argc, char** argv) {
 
   machina::VirtioGpu gpu(guest.phys_mem());
   machina::VirtioInput input(guest.phys_mem());
-  if (cfg.display() == GuestDisplay::SCENIC) {
+  if (cfg.virtio_gpu()) {
     // Setup input device.
     status = bus.Connect(input.pci_device(), true);
     if (status != ZX_OK) {
@@ -288,7 +288,7 @@ int main(int argc, char** argv) {
 
   // Setup net device.
   machina::VirtioNet net(guest.phys_mem(), guest.device_dispatcher());
-  if (cfg.network()) {
+  if (cfg.virtio_net()) {
     status = net.Start("/dev/class/ethernet/000");
     if (status == ZX_OK) {
       // If we started the net device, then connect to the PCI bus.
@@ -362,7 +362,7 @@ int main(int argc, char** argv) {
       .dsdt_path = kDsdtPath,
       .mcfg_path = kMcfgPath,
       .io_apic_addr = machina::IoApic::kPhysBase,
-      .num_cpus = cfg.num_cpus(),
+      .cpus = cfg.cpus(),
   };
   status = machina::create_acpi_table(acpi_cfg, guest.phys_mem());
   if (status != ZX_OK) {

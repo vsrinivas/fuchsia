@@ -164,7 +164,7 @@ void Guest::StartGuest() {
 
   fuchsia::guest::LaunchInfo launch_info;
   launch_info.url = kLinuxGuestPackage;
-  launch_info.args.push_back("--display=none");
+  launch_info.args.push_back("--virtio-gpu=false");
   guest_env_->LaunchInstance(
       std::move(launch_info), guest_controller_.NewRequest(),
       [this](uint32_t cid) {

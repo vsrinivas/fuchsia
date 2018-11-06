@@ -25,7 +25,7 @@ class ZirconGuestTest : public GuestTest<ZirconGuestTest> {
  public:
   static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
     launch_info->url = kZirconGuestUrl;
-    launch_info->args.push_back("--display=none");
+    launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
     return true;
   }
@@ -58,7 +58,7 @@ class ZirconMultiprocessorGuestTest
  public:
   static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
     launch_info->url = kZirconGuestUrl;
-    launch_info->args.push_back("--display=none");
+    launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=4");
     return true;
   }
@@ -74,7 +74,7 @@ class LinuxGuestTest : public GuestTest<LinuxGuestTest> {
  public:
   static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
     launch_info->url = kLinuxGuestUrl;
-    launch_info->args.push_back("--display=none");
+    launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cmdline-append=loglevel=0 console=hvc0");
     return true;
   }
@@ -91,7 +91,7 @@ class LinuxMultiprocessorGuestTest
  public:
   static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
     launch_info->url = kLinuxGuestUrl;
-    launch_info->args.push_back("--display=none");
+    launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cmdline-append=loglevel=0 console=hvc0");
     return true;
   }

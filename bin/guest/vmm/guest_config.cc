@@ -23,27 +23,24 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "usage: " << cl.argv0() << " [OPTIONS]\n";
   std::cerr << "\n";
   std::cerr << "OPTIONS:\n";
-  std::cerr << "\t--zircon=[kernel.bin]        Load a Zircon kernel from 'kernel.bin'\n";
-  std::cerr << "\t--linux=[kernel.bin]         Load a Linux kernel from 'kernel.bin'\n";
-  std::cerr << "\t--ramdisk=[ramdisk.bin]      Use file 'ramdisk.bin' as an initial RAM disk\n";
-  std::cerr << "\t--cmdline=[cmdline]          Use string 'cmdline' as the kernel command line.\n";
+  std::cerr << "\t--balloon-demand-page        Demand-page balloon deflate requests\n";
+  std::cerr << "\t--block=[block_spec]         Adds a block device with the given parameters\n";
+  std::cerr << "\t--cmdline-append=[cmdline]   Appends string 'cmdline' to the existing kernel\n";
   std::cerr << "\t                             This will overwrite any existing command line\n";
   std::cerr << "\t                             created using --cmdline or --cmdline-append\n";
-  std::cerr << "\t--cmdline-append=[cmdline]   Appends string 'cmdline' to the existing kernel\n";
+  std::cerr << "\t--cmdline=[cmdline]          Use string 'cmdline' as the kernel command line.\n";
   std::cerr << "\t                             command line\n";
-  std::cerr << "\t--dtb_overlay=[overlay.dtb]  Load a DTB overlay for a Linux kernel\n";
-  std::cerr << "\t--block=[block_spec]         Adds a block device with the given parameters\n";
-  std::cerr << "\t--block-wait                 Wait for block devices (specified by GUID) to\n";
-  std::cerr << "\t                             become available instead of failing\n";
   std::cerr << "\t--cpus=[cpus]                Number of virtual CPUs available to the guest\n";
+  std::cerr << "\t--dtb_overlay=[overlay.dtb]  Load a DTB overlay for a Linux kernel\n";
+  std::cerr << "\t--linux=[kernel.bin]         Load a Linux kernel from 'kernel.bin'\n";
   std::cerr << "\t--memory=[bytes]             Allocate 'bytes' of physical memory for the guest.\n";
   std::cerr << "\t                             The suffixes 'k', 'M', and 'G' are accepted\n";
-  std::cerr << "\t--balloon-demand-page        Demand-page balloon deflate requests\n";
-  std::cerr << "\t--display={scenic,           Specify the display backend to use for the guest.\n";
-  std::cerr << "\t           none}             'scenic' (default) will render to a scenic view.\n";
-  std::cerr << "\t                             'none' disables graphical output\n";
+  std::cerr << "\t--ramdisk=[ramdisk.bin]      Use file 'ramdisk.bin' as an initial RAM disk\n";
+  std::cerr << "\t--virtio-gpu                 Enable virtio-gpu (default).\n";
+  std::cerr << "\t--virtio-net                 Enable virtio-net (default).\n";
   std::cerr << "\t--wayland-memory=[bytes]     Reserve 'bytes' of device memory for Wayland buffers.\n";
   std::cerr << "\t                             The suffixes 'k', 'M', and 'G' are accepted\n";
+  std::cerr << "\t--zircon=[kernel.bin]        Load a Zircon kernel from 'kernel.bin'\n";
   std::cerr << "\n";
   std::cerr << "BLOCK SPEC\n";
   std::cerr << "\n";
@@ -285,45 +282,22 @@ static GuestConfigParser::OptionHandler save_kernel(std::string* out,
   };
 }
 
-static GuestConfigParser::OptionHandler parse_display(GuestDisplay* out) {
-  return [out](const std::string& key, const std::string& value) {
-    if (value.empty()) {
-      FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key
-                     << "=<value>)";
-      return ZX_ERR_INVALID_ARGS;
-    }
-    if (value == "scenic") {
-      *out = GuestDisplay::SCENIC;
-    } else if (value == "none") {
-      *out = GuestDisplay::NONE;
-    } else {
-      FXL_LOG(ERROR) << "Invalid display value: " << value;
-      return ZX_ERR_INVALID_ARGS;
-    }
-    return ZX_OK;
-  };
-}
-
 GuestConfigParser::GuestConfigParser(GuestConfig* cfg)
     : cfg_(cfg),
       opts_{
-          {"zircon",
-           save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::ZIRCON)},
-          {"linux",
-           save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::LINUX)},
-          {"ramdisk", save_option(&cfg_->ramdisk_path_)},
-          {"cmdline", save_option(&cfg_->cmdline_)},
-          {"cmdline-append", append_string(&cfg_->cmdline_, " ")},
-          {"dtb_overlay", save_option(&cfg_->dtb_overlay_path_)},
-          {"block",
-           append_option<BlockSpec>(&cfg_->block_specs_, parse_block_spec)},
-          {"cpus", parse_number(&cfg_->num_cpus_)},
-          {"memory", parse_mem_size(&cfg_->memory_)},
           {"balloon-demand-page", set_flag(&cfg_->balloon_demand_page_, true)},
-          {"display", parse_display(&cfg_->display_)},
-          {"network", set_flag(&cfg_->network_, true)},
-          {"block-wait", set_flag(&cfg_->block_wait_, true)},
+          {"block", append_option<BlockSpec>(&cfg_->block_specs_, parse_block_spec)},
+          {"cmdline-append", append_string(&cfg_->cmdline_, " ")},
+          {"cmdline", save_option(&cfg_->cmdline_)},
+          {"cpus", parse_number(&cfg_->cpus_)},
+          {"dtb_overlay", save_option(&cfg_->dtb_overlay_path_)},
+          {"linux", save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::LINUX)},
+          {"memory", parse_mem_size(&cfg_->memory_)},
+          {"ramdisk", save_option(&cfg_->ramdisk_path_)},
+          {"virtio-gpu", set_flag(&cfg_->virtio_gpu_, true)},
+          {"virtio-net", set_flag(&cfg_->virtio_net_, true)},
           {"wayland-memory", parse_mem_size(&cfg_->wayland_memory_)},
+          {"zircon", save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::ZIRCON)},
       } {}
 
 GuestConfigParser::~GuestConfigParser() = default;

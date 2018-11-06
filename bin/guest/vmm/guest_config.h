@@ -48,11 +48,6 @@ enum class Kernel {
   LINUX,
 };
 
-enum class GuestDisplay {
-  SCENIC,
-  NONE,
-};
-
 class GuestConfig {
  public:
   Kernel kernel() const { return kernel_; }
@@ -61,12 +56,11 @@ class GuestConfig {
   const std::string& cmdline() const { return cmdline_; }
   const std::string& dtb_overlay_path() const { return dtb_overlay_path_; }
   const std::vector<BlockSpec>& block_devices() const { return block_specs_; }
-  bool block_wait() const { return block_wait_; }
-  uint8_t num_cpus() const { return num_cpus_; }
+  uint8_t cpus() const { return cpus_; }
   size_t memory() const { return memory_; }
   bool balloon_demand_page() const { return balloon_demand_page_; }
-  GuestDisplay display() const { return display_; }
-  bool network() const { return network_; }
+  bool virtio_gpu() const { return virtio_gpu_; }
+  bool virtio_net() const { return virtio_net_; }
   size_t wayland_memory() const { return wayland_memory_; }
 
  private:
@@ -77,13 +71,12 @@ class GuestConfig {
   std::string cmdline_;
   std::string dtb_overlay_path_;
   std::vector<BlockSpec> block_specs_;
-  bool block_wait_ = false;
-  uint8_t num_cpus_ = zx_system_get_num_cpus();
+  uint8_t cpus_ = zx_system_get_num_cpus();
   size_t memory_ = 1 << 30;
-  bool balloon_demand_page_ = false;
-  GuestDisplay display_ = GuestDisplay::SCENIC;
-  bool network_ = true;
   size_t wayland_memory_ = 1 << 30;
+  bool balloon_demand_page_ = false;
+  bool virtio_gpu_ = true;
+  bool virtio_net_ = true;
 };
 
 class GuestConfigParser {

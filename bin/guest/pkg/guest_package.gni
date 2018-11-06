@@ -84,17 +84,7 @@ template("guest_package") {
         invoker.memory,
       ]
     }
-    if (defined(invoker.gic)) {
-      args += [
-        "--gic",
-        invoker.gic,
-      ]
-    }
-    args += [
-      "--display",
-      "scenic",
-      rebase_path("$guest_config_file"),
-    ]
+    args += [rebase_path("$guest_config_file")]
   }
 
   package(target_name) {

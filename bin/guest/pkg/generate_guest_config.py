@@ -10,16 +10,14 @@ import sys
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--zircon', help='Path to Zircon kernel')
-    parser.add_argument('--linux', help='Path to Linux kernel')
-    parser.add_argument('--ramdisk', help='Path to initial RAM disk')
-    parser.add_argument('--cmdline', help='Kernel cmdline string')
-    parser.add_argument('--dtb_overlay', help='Path to DTB overlay')
     parser.add_argument('--block', action='append', help='Block device spec')
-    parser.add_argument('--display', help='Display backend to use')
+    parser.add_argument('--cmdline', help='Kernel cmdline string')
     parser.add_argument('--cpus', help='Number of VCPUs to create')
+    parser.add_argument('--dtb_overlay', help='Path to DTB overlay')
+    parser.add_argument('--linux', help='Path to Linux kernel')
     parser.add_argument('--memory', help='Ammount of system memory')
-    parser.add_argument('--gic', help='ARM GIC version')
+    parser.add_argument('--ramdisk', help='Path to initial RAM disk')
+    parser.add_argument('--zircon', help='Path to Zircon kernel')
     parser.add_argument('filename', help='Path to output filename')
     args = parser.parse_args()
 

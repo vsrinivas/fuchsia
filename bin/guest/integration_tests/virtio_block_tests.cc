@@ -32,7 +32,7 @@ class ZirconReadOnlyRamdiskGuestTest
   static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
     create_ramdisk(kBlockSectorSize, kVirtioBlockCount, ramdisk_path_);
     launch_info->url = kZirconGuestUrl;
-    launch_info->args.push_back("--display=none");
+    launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
     launch_info->args.push_back(
         fxl::StringPrintf("--block=%s,ro", ramdisk_path_));
@@ -128,7 +128,7 @@ class ZirconReadWriteRamdiskGuestTest
   static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
     create_ramdisk(kBlockSectorSize, kVirtioBlockCount, ramdisk_path_);
     launch_info->url = kZirconGuestUrl;
-    launch_info->args.push_back("--display=none");
+    launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
     launch_info->args.push_back(
         fxl::StringPrintf("--block=%s,rw", ramdisk_path_));
@@ -224,7 +224,7 @@ class ZirconVolatileRamdiskGuestTest
   static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
     create_ramdisk(kBlockSectorSize, kVirtioBlockCount, ramdisk_path_);
     launch_info->url = kZirconGuestUrl;
-    launch_info->args.push_back("--display=none");
+    launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
     launch_info->args.push_back(
         fxl::StringPrintf("--block=%s,volatile", ramdisk_path_));
@@ -391,7 +391,7 @@ class ZirconReadOnlyQcowGuestTest
     }
 
     launch_info->url = kZirconGuestUrl;
-    launch_info->args.push_back("--display=none");
+    launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
     launch_info->args.push_back(
         fxl::StringPrintf("--block=%s,ro,qcow", qcow_path_));
@@ -478,7 +478,7 @@ class ZirconVolatileQcowGuestTest
     }
 
     launch_info->url = kZirconGuestUrl;
-    launch_info->args.push_back("--display=none");
+    launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
     launch_info->args.push_back(
         fxl::StringPrintf("--block=%s,volatile,qcow", qcow_path_));

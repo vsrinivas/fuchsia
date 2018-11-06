@@ -142,7 +142,7 @@ zx_status_t create_acpi_table(const AcpiConfig& cfg, const PhysMem& phys_mem) {
   // MADT.
   const uint32_t madt_off = dsdt_off + actual;
   status = create_madt(phys_mem.as<ACPI_TABLE_MADT>(madt_off), cfg.io_apic_addr,
-                       cfg.num_cpus, &actual);
+                       cfg.cpus, &actual);
   if (status != ZX_OK) {
     return status;
   }

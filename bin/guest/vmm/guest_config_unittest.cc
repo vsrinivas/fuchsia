@@ -30,11 +30,10 @@ TEST(GuestConfigParserTest, DefaultValues) {
   ASSERT_EQ(Kernel::ZIRCON, config.kernel());
   ASSERT_TRUE(config.kernel_path().empty());
   ASSERT_TRUE(config.ramdisk_path().empty());
-  ASSERT_EQ(zx_system_get_num_cpus(), config.num_cpus());
+  ASSERT_EQ(zx_system_get_num_cpus(), config.cpus());
   ASSERT_TRUE(config.block_devices().empty());
   ASSERT_TRUE(config.cmdline().empty());
   ASSERT_FALSE(config.balloon_demand_page());
-  ASSERT_FALSE(config.block_wait());
 }
 
 TEST(GuestConfigParserTest, ParseConfig) {
@@ -48,18 +47,16 @@ TEST(GuestConfigParserTest, ParseConfig) {
           "cpus": "4",
           "block": "/pkg/data/block_path",
           "cmdline": "kernel cmdline",
-          "balloon-demand-page": "true",
-          "block-wait": "true"
+          "balloon-demand-page": "true"
         })JSON"));
   ASSERT_EQ(Kernel::ZIRCON, config.kernel());
   ASSERT_EQ("zircon_path", config.kernel_path());
   ASSERT_EQ("ramdisk_path", config.ramdisk_path());
-  ASSERT_EQ(4, config.num_cpus());
+  ASSERT_EQ(4, config.cpus());
   ASSERT_EQ(1, config.block_devices().size());
   ASSERT_EQ("/pkg/data/block_path", config.block_devices()[0].path);
   ASSERT_EQ("kernel cmdline", config.cmdline());
   ASSERT_TRUE(config.balloon_demand_page());
-  ASSERT_TRUE(config.block_wait());
 }
 
 TEST(GuestConfigParserTest, ParseArgs) {
@@ -72,19 +69,17 @@ TEST(GuestConfigParserTest, ParseArgs) {
                         "--cpus=4",
                         "--block=/pkg/data/block_path",
                         "--cmdline=kernel_cmdline",
-                        "--balloon-demand-page",
-                        "--block-wait"};
+                        "--balloon-demand-page"};
   ASSERT_EQ(ZX_OK,
             parser.ParseArgcArgv(countof(argv), const_cast<char**>(argv)));
   ASSERT_EQ(Kernel::LINUX, config.kernel());
   ASSERT_EQ("linux_path", config.kernel_path());
   ASSERT_EQ("ramdisk_path", config.ramdisk_path());
-  ASSERT_EQ(4, config.num_cpus());
+  ASSERT_EQ(4, config.cpus());
   ASSERT_EQ(1, config.block_devices().size());
   ASSERT_EQ("/pkg/data/block_path", config.block_devices()[0].path);
   ASSERT_EQ("kernel_cmdline", config.cmdline());
   ASSERT_TRUE(config.balloon_demand_page());
-  ASSERT_TRUE(config.block_wait());
 }
 
 TEST(GuestConfigParserTest, UnknownArgument) {
@@ -257,20 +252,21 @@ TEST_PARSE_MEM_SIZE_ERROR(TooSmall, 1024);
 TEST_PARSE_MEM_SIZE_ERROR(IllegalModifier, 5l);
 TEST_PARSE_MEM_SIZE_ERROR(NonNumber, abc);
 
-TEST(GuestConfigParserTest, DisplayType) {
+TEST(GuestConfigParserTest, VirtioGpu) {
   GuestConfig config;
   GuestConfigParser parser(&config);
 
-  const char* display_scenic_argv[] = {"exe_name", "--display=scenic"};
+  const char* virtio_gpu_true_argv[] = {"exe_name", "--virtio-gpu=true"};
   ASSERT_EQ(ZX_OK,
-            parser.ParseArgcArgv(countof(display_scenic_argv),
-                                 const_cast<char**>(display_scenic_argv)));
-  ASSERT_EQ(GuestDisplay::SCENIC, config.display());
+            parser.ParseArgcArgv(countof(virtio_gpu_true_argv),
+                                 const_cast<char**>(virtio_gpu_true_argv)));
+  ASSERT_TRUE(config.virtio_gpu());
 
-  const char* display_none_argv[] = {"exe_name", "--display=none"};
-  ASSERT_EQ(ZX_OK, parser.ParseArgcArgv(countof(display_none_argv),
-                                        const_cast<char**>(display_none_argv)));
-  ASSERT_EQ(GuestDisplay::NONE, config.display());
+  const char* virtio_gpu_false_argv[] = {"exe_name", "--virtio-gpu=false"};
+  ASSERT_EQ(ZX_OK,
+            parser.ParseArgcArgv(countof(virtio_gpu_false_argv),
+                                 const_cast<char**>(virtio_gpu_false_argv)));
+  ASSERT_FALSE(config.virtio_gpu());
 }
 
 }  // namespace

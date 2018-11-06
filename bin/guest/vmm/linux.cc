@@ -411,7 +411,7 @@ static zx_status_t load_device_tree(
     FXL_LOG(ERROR) << "Failed to find \"/cpus\" in device tree";
     return ZX_ERR_BAD_STATE;
   }
-  for (uint8_t cpu = 0; cpu != cfg.num_cpus(); ++cpu) {
+  for (uint8_t cpu = 0; cpu != cfg.cpus(); ++cpu) {
     char subnode_name[10];
     sprintf(subnode_name, "cpu@%u", cpu);
     int cpu_off = fdt_add_subnode(dtb, cpus_off, subnode_name);

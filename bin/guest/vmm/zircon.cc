@@ -189,7 +189,7 @@ static zx_status_t build_data_zbi(const GuestConfig& cfg,
   uint8_t cpu_buffer[sizeof(zbi_cpu_config_t) + sizeof(zbi_cpu_cluster_t)] = {};
   auto cpu_config = reinterpret_cast<zbi_cpu_config_t*>(cpu_buffer);
   cpu_config->cluster_count = 1;
-  cpu_config->clusters[0].cpu_count = cfg.num_cpus();
+  cpu_config->clusters[0].cpu_count = cfg.cpus();
   res = zbi_append_section(container_hdr, zbi_max, sizeof(cpu_buffer),
                            ZBI_TYPE_CPU_CONFIG, 0, 0, cpu_buffer);
   if (res != ZBI_RESULT_OK) {
