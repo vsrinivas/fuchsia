@@ -5,6 +5,7 @@
 
 import StringIO
 import argparse
+import functools
 import json
 import operator
 import os
@@ -41,64 +42,84 @@ set -x
     return script
 
 
-def tgz_archiver(outfile):
-    with tarfile.open(outfile, 'w:gz', dereference=True) as archive:
-        while True:
-            contents, name, executable = (yield)
-            def sanitize_tarinfo(info):
-                assert info.isfile()
-                info.mode = 0o555 if executable else 0o444
-                info.uid = 0
-                info.gid = 0
-                info.uname = ''
-                info.gname = ''
-                return info
-            if type(contents) in (str, unicode):
-                archive.add(contents, name, filter=sanitize_tarinfo)
-            else:
-                info = sanitize_tarinfo(tarfile.TarInfo(name))
-                contents = contents()
-                info.size = len(contents)
-                info.mtime = time.time()
-                archive.addfile(info, StringIO.StringIO(contents))
+class TGZArchiver(object):
+    """Public interface needs to match ZipArchiver."""
+
+    def __init__(self, outfile):
+        self._archive = tarfile.open(outfile, 'w:gz', dereference=True)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, unused_type, unused_value, unused_traceback):
+        self._archive.close()
+
+    @staticmethod
+    def _sanitize_tarinfo(executable, info):
+        assert info.isfile()
+        info.mode = 0o555 if executable else 0o444
+        info.uid = 0
+        info.gid = 0
+        info.uname = ''
+        info.gname = ''
+        return info
+
+    def add_path(self, path, name, executable):
+        self._archive.add(
+            path,
+            name,
+            filter=functools.partial(self._sanitize_tarinfo, executable))
+
+    def add_contents(self, contents, name, executable):
+        info = self._sanitize_tarinfo(executable, tarfile.TarInfo(name))
+        info.size = len(contents)
+        info.mtime = time.time()
+        self._archive.addfile(info, StringIO.StringIO(contents))
 
 
-def zip_archiver(outfile):
-    with zipfile.ZipFile(outfile, 'w', zipfile.ZIP_DEFLATED) as archive:
-        archive.comment = 'Fuchsia build archive'
-        while True:
-            contents, name, executable = (yield)
-            if type(contents) in (str, unicode):
-                archive.write(contents, name)
-            else:
-                archive.writestr(name, contents())
+class ZipArchiver(object):
+    """Public interface needs to match TGZArchiver."""
+
+    def __init__(self, outfile):
+        self._archive = zipfile.ZipFile(outfile, 'w', zipfile.ZIP_DEFLATED)
+        self._archive.comment = 'Fuchsia build archive'
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, unused_type, unused_value, unused_traceback):
+        self._archive.close()
+
+    def add_path(self, path, name, unused_executable):
+        self._archive.write(path, name)
+
+    def add_contents(self, contents, name, unused_executable):
+        self._archive.writestr(name, contents)
 
 
 def format_archiver(outfile, format):
-    archiver = {'tgz': tgz_archiver, 'zip': zip_archiver}[format](outfile)
-    archiver.next()
-    return archiver
+    return {'tgz': TGZArchiver, 'zip': ZipArchiver}[format](outfile)
 
 
 def write_archive(outfile, format, images):
     # Synthesize a sanitized form of the input.
-    packed_images = []
+    path_images = []
     for image in images:
         path = image['path']
         if 'archive' in image:
             del image['archive']
         image['path'] = image['name'] + '.' + image['type']
-        packed_images.append((path, image))
+        path_images.append((path, image))
 
     # Generate scripts that use the sanitized file names.
-    packed_images += [
-        (lambda: generate_script([image for path, image in packed_images],
+    content_images = [
+        (generate_script([image for path, image in path_images],
                                  'bootserver_pave'), {
             'name': 'pave',
             'type': 'sh',
             'path': 'pave.sh'
         }),
-        (lambda: generate_script([image for path, image in packed_images],
+        (generate_script([image for path, image in path_images],
                                  'bootserver_netboot'), {
             'name': 'netboot',
             'type': 'sh',
@@ -107,8 +128,8 @@ def write_archive(outfile, format, images):
     ]
 
     # Self-reference.
-    packed_images.append(
-        (lambda: json.dumps([image for contents, image in packed_images],
+    content_images.append(
+        (json.dumps([image for _, image in (path_images + content_images)],
                             indent=2, sort_keys=True),
          {
              'name': 'images',
@@ -117,30 +138,33 @@ def write_archive(outfile, format, images):
          }))
 
     # Canonicalize the order of the files in the archive.
-    packed_images = sorted(packed_images, key=lambda packed: packed[1]['path'])
+    path_images = sorted(path_images, key=lambda pair: pair[1]['path'])
+    content_images = sorted(content_images, key=lambda pair: pair[1]['path'])
 
-    # The archiver is a generator that we send the details about each image.
-    archiver = format_archiver(outfile, format)
-    for contents, image in packed_images:
-        executable = image['type'] == 'sh' or image['type'].startswith('exe')
-        archiver.send((contents, image['path'], executable))
-    archiver.close()
+    def is_executable(image):
+        return image['type'] == 'sh' or image['type'].startswith('exe')
+
+    with format_archiver(outfile, format) as archiver:
+        for path, image in path_images:
+            archiver.add_path(path, image['path'], is_executable(image))
+        for contents, image in content_images:
+            archiver.add_contents(contents, image['path'], is_executable(image))
+
 
 
 def write_symbol_archive(outfile, format, ids_file, files_read):
     files_read.add(ids_file)
     with open(ids_file, 'r') as f:
         ids = [line.split() for line in f]
-    archiver = format_archiver(outfile, format)
     out_ids = ''
-    for id, file in ids:
-        file = os.path.relpath(file)
-        files_read.add(file)
-        name = os.path.relpath(file, '../..')
-        archiver.send((file, name, False))
-        out_ids += '%s %s\n' % (id, name)
-    archiver.send((lambda: out_ids, 'ids.txt', False))
-    archiver.close()
+    with format_archiver(outfile, format) as archiver:
+        for id, file in ids:
+            file = os.path.relpath(file)
+            files_read.add(file)
+            name = os.path.relpath(file, '../..')
+            archiver.add_path(file, name, False)
+            out_ids += '%s %s\n' % (id, name)
+        archiver.add_contents(out_ids, 'ids.txt', False)
 
 
 def archive_format(args, outfile):
