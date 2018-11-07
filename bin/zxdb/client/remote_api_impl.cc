@@ -103,9 +103,9 @@ void RemoteAPIImpl::RemoveBreakpoint(
   Send(request, std::move(cb));
 }
 
-void RemoteAPIImpl::Backtrace(
-    const debug_ipc::BacktraceRequest& request,
-    std::function<void(const Err&, debug_ipc::BacktraceReply)> cb) {
+void RemoteAPIImpl::ThreadStatus(
+    const debug_ipc::ThreadStatusRequest& request,
+    std::function<void(const Err&, debug_ipc::ThreadStatusReply)> cb) {
   Send(request, std::move(cb));
 }
 
@@ -142,31 +142,31 @@ void RemoteAPIImpl::Send(
 
   // This is the reply callback that unpacks the data in a vector, converts it
   // to the requested RecvMsgType struct, and issues the callback.
-  Session::Callback dispatch_callback =
-      [callback = std::move(callback)](const Err& err, std::vector<char> data) {
-        RecvMsgType reply;
-        if (err.has_error()) {
-          // Forward the error and ignore all data.
-          if (callback)
-            callback(err, std::move(reply));
-          return;
-        }
+  Session::Callback dispatch_callback = [callback = std::move(callback)](
+      const Err& err, std::vector<char> data) {
+    RecvMsgType reply;
+    if (err.has_error()) {
+      // Forward the error and ignore all data.
+      if (callback)
+        callback(err, std::move(reply));
+      return;
+    }
 
-        debug_ipc::MessageReader reader(std::move(data));
+    debug_ipc::MessageReader reader(std::move(data));
 
-        uint32_t transaction_id = 0;
-        Err deserialization_err;
-        if (!debug_ipc::ReadReply(&reader, &reply, &transaction_id)) {
-          reply = RecvMsgType();  // Could be in a half-read state.
-          deserialization_err =
-              Err(ErrType::kCorruptMessage,
-                  fxl::StringPrintf("Corrupt reply message for transaction %u.",
-                                    transaction_id));
-        }
+    uint32_t transaction_id = 0;
+    Err deserialization_err;
+    if (!debug_ipc::ReadReply(&reader, &reply, &transaction_id)) {
+      reply = RecvMsgType();  // Could be in a half-read state.
+      deserialization_err =
+          Err(ErrType::kCorruptMessage,
+              fxl::StringPrintf("Corrupt reply message for transaction %u.",
+                                transaction_id));
+    }
 
-        if (callback)
-          callback(deserialization_err, std::move(reply));
-      };
+    if (callback)
+      callback(deserialization_err, std::move(reply));
+  };
 
   session_->pending_.emplace(
       std::piecewise_construct, std::forward_as_tuple(transaction_id),

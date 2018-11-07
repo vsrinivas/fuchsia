@@ -90,10 +90,10 @@ void WriteRequest(const RemoveBreakpointRequest& request,
 bool ReadReply(MessageReader* reader, RemoveBreakpointReply* reply,
                uint32_t* transaction_id);
 
-// Backtrace.
-void WriteRequest(const BacktraceRequest& request, uint32_t transaction_id,
+// ThreadStatus.
+void WriteRequest(const ThreadStatusRequest& request, uint32_t transaction_id,
                   MessageWriter* writer);
-bool ReadReply(MessageReader* reader, BacktraceReply* reply,
+bool ReadReply(MessageReader* reader, ThreadStatusReply* reply,
                uint32_t* transaction_id);
 
 // Modules.

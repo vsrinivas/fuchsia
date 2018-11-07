@@ -30,6 +30,7 @@ class FinishThreadControllerTest : public ThreadControllerTest {
     n.type = debug_ipc::NotifyException::Type::kSoftware;
     n.thread.koid = thread()->GetKoid();
     n.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
+    n.thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
     n.thread.frames.emplace_back(kInitialAddress, kInitialBase, kInitialBase);
     n.thread.frames.emplace_back(kReturnAddress, kReturnBase, kReturnBase);
 
@@ -48,11 +49,14 @@ TEST_F(FinishThreadControllerTest, Finish) {
   // stop above), the one we'll return to, and the one before that (so the
   // fingerprint of the one to return to can be computed). This stack value
   // should be larger than above (stack grows downward).
-  debug_ipc::BacktraceReply expected_reply;
+  debug_ipc::ThreadStatusReply expected_reply;
   // Copy previous frames and add to it.
-  expected_reply.frames = break_notification.thread.frames;
-  expected_reply.frames.emplace_back(kReturnAddress, kReturnBase, kReturnBase);
-  mock_remote_api()->set_backtrace_reply(expected_reply);
+  expected_reply.record = break_notification.thread;
+  expected_reply.record.stack_amount =
+      debug_ipc::ThreadRecord::StackAmount::kFull;
+  expected_reply.record.frames.emplace_back(kReturnAddress, kReturnBase,
+                                            kReturnBase);
+  mock_remote_api()->set_thread_status_reply(expected_reply);
 
   auto frames = thread()->GetFrames();
 
@@ -107,9 +111,11 @@ TEST_F(FinishThreadControllerTest, BottomStackFrame) {
 
   // The backtrace reply gives the same two frames since that's all there is
   // (the Thread doesn't know until it requests them).
-  debug_ipc::BacktraceReply expected_reply;
-  expected_reply.frames = break_notification.thread.frames;
-  mock_remote_api()->set_backtrace_reply(expected_reply);
+  debug_ipc::ThreadStatusReply expected_reply;
+  expected_reply.record = break_notification.thread;
+  expected_reply.record.stack_amount =
+      debug_ipc::ThreadRecord::StackAmount::kFull;
+  mock_remote_api()->set_thread_status_reply(expected_reply);
 
   auto frames = thread()->GetFrames();
 

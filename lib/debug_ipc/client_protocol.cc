@@ -35,6 +35,13 @@ bool Deserialize(MessageReader* reader, ThreadRecord* record) {
     return false;
   record->state = static_cast<ThreadRecord::State>(state);
 
+  uint32_t stack_amount;
+  if (!reader->ReadUint32(&stack_amount))
+    return false;
+  if (stack_amount >= static_cast<uint32_t>(ThreadRecord::StackAmount::kLast))
+    return false;
+  record->stack_amount = static_cast<ThreadRecord::StackAmount>(stack_amount);
+
   if (!Deserialize(reader, &record->frames))
     return false;
   return true;
@@ -384,22 +391,22 @@ bool ReadReply(MessageReader* reader, RemoveBreakpointReply* reply,
   return true;
 }
 
-// Backtrace -------------------------------------------------------------------
+// ThreadStatus ----------------------------------------------------------------
 
-void WriteRequest(const BacktraceRequest& request, uint32_t transaction_id,
+void WriteRequest(const ThreadStatusRequest& request, uint32_t transaction_id,
                   MessageWriter* writer) {
-  writer->WriteHeader(MsgHeader::Type::kBacktrace, transaction_id);
-  writer->WriteBytes(&request, sizeof(BacktraceRequest));
+  writer->WriteHeader(MsgHeader::Type::kThreadStatus, transaction_id);
+  writer->WriteBytes(&request, sizeof(ThreadStatusRequest));
 }
 
-bool ReadReply(MessageReader* reader, BacktraceReply* reply,
+bool ReadReply(MessageReader* reader, ThreadStatusReply* reply,
                uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
   *transaction_id = header.transaction_id;
 
-  Deserialize(reader, &reply->frames);
+  Deserialize(reader, &reply->record);
   return true;
 }
 

@@ -545,9 +545,9 @@ void MinidumpRemoteAPI::RemoveBreakpoint(
   ErrNoLive(cb);
 }
 
-void MinidumpRemoteAPI::Backtrace(
-    const debug_ipc::BacktraceRequest& request,
-    std::function<void(const Err&, debug_ipc::BacktraceReply)> cb) {
+void MinidumpRemoteAPI::ThreadStatus(
+    const debug_ipc::ThreadStatusRequest& request,
+    std::function<void(const Err&, debug_ipc::ThreadStatusReply)> cb) {
   // TODO
   ErrNoImpl(cb);
 }

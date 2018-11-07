@@ -114,8 +114,8 @@ void DebuggedThread::OnException(uint32_t type) {
   }
 
   notify.process_koid = process_->koid();
-  FillThreadRecord(process_->process(), process_->dl_debug_addr(), thread_,
-                   &regs, &notify.thread);
+  FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal, &regs,
+                   &notify.thread);
 
   // Send notification.
   debug_ipc::MessageWriter writer;
@@ -146,21 +146,12 @@ void DebuggedThread::Resume(const debug_ipc::ResumeRequest& request) {
   ResumeForRunMode();
 }
 
-void DebuggedThread::GetBacktrace(
-    std::vector<debug_ipc::StackFrame>* frames) const {
-  // This call will fail if the thread isn't in a state to get its backtrace.
-  zx_thread_state_general_regs regs;
-  zx_status_t status =
-      thread_.read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
-  if (status != ZX_OK)
-    return;
-
-  constexpr size_t kMaxStackDepth = 256;
-  UnwindStack(process_->process(), process_->dl_debug_addr(), thread_,
-              *arch::ArchProvider::Get().IPInRegs(&regs),
-              *arch::ArchProvider::Get().SPInRegs(&regs),
-              *arch::ArchProvider::Get().BPInRegs(&regs), kMaxStackDepth,
-              frames);
+void DebuggedThread::FillThreadRecord(
+    debug_ipc::ThreadRecord::StackAmount stack_amount,
+    const zx_thread_state_general_regs* optional_regs,
+    debug_ipc::ThreadRecord* record) const {
+  debug_agent::FillThreadRecord(process_->process(), process_->dl_debug_addr(),
+                                thread_, stack_amount, optional_regs, record);
 }
 
 void DebuggedThread::GetRegisters(
@@ -181,8 +172,8 @@ void DebuggedThread::GetRegisters(
 
 void DebuggedThread::SendThreadNotification() const {
   debug_ipc::ThreadRecord record;
-  FillThreadRecord(process_->process(), process_->dl_debug_addr(), thread_,
-                   nullptr, &record);
+  FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal, nullptr,
+                   &record);
 
   debug_ipc::NotifyThread notify;
   notify.process_koid = process_->koid();

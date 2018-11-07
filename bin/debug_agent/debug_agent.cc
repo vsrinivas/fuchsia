@@ -322,12 +322,18 @@ void DebugAgent::OnRemoveBreakpoint(
   RemoveBreakpoint(request.breakpoint_id);
 }
 
-void DebugAgent::OnBacktrace(const debug_ipc::BacktraceRequest& request,
-                             debug_ipc::BacktraceReply* reply) {
+void DebugAgent::OnThreadStatus(const debug_ipc::ThreadStatusRequest& request,
+                                debug_ipc::ThreadStatusReply* reply) {
   DebuggedThread* thread =
       GetDebuggedThread(request.process_koid, request.thread_koid);
-  if (thread)
-    thread->GetBacktrace(&reply->frames);
+  if (thread) {
+    thread->FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kFull, nullptr,
+                             &reply->record);
+  } else {
+    // When the thread is not found the thread record is set to "dead".
+    reply->record.koid = request.thread_koid;
+    reply->record.state = debug_ipc::ThreadRecord::State::kDead;
+  }
 }
 
 zx_status_t DebugAgent::RegisterBreakpoint(Breakpoint* bp,

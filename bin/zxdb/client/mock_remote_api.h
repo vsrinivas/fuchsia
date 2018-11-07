@@ -23,9 +23,9 @@ class MockRemoteAPI : public RemoteAPI {
   // Resume.
   int resume_count() const { return resume_count_; }
 
-  // Backtrace.
-  void set_backtrace_reply(const debug_ipc::BacktraceReply& reply) {
-    backtrace_reply_ = reply;
+  // Thread status.
+  void set_thread_status_reply(const debug_ipc::ThreadStatusReply& reply) {
+    thread_status_reply_ = reply;
   }
 
   // Breakpoints.
@@ -52,15 +52,16 @@ class MockRemoteAPI : public RemoteAPI {
       const debug_ipc::RemoveBreakpointRequest& request,
       std::function<void(const Err&, debug_ipc::RemoveBreakpointReply)> cb)
       override;
-  void Backtrace(
-      const debug_ipc::BacktraceRequest& request,
-      std::function<void(const Err&, debug_ipc::BacktraceReply)> cb) override;
+  void ThreadStatus(
+      const debug_ipc::ThreadStatusRequest& request,
+      std::function<void(const Err&, debug_ipc::ThreadStatusReply)> cb)
+      override;
   void Resume(
       const debug_ipc::ResumeRequest& request,
       std::function<void(const Err&, debug_ipc::ResumeReply)> cb) override;
 
  private:
-  debug_ipc::BacktraceReply backtrace_reply_;
+  debug_ipc::ThreadStatusReply thread_status_reply_;
 
   int resume_count_ = 0;
   int breakpoint_add_count_ = 0;

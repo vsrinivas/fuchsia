@@ -29,12 +29,12 @@ void MockRemoteAPI::RemoveBreakpoint(
       [cb]() { cb(Err(), debug_ipc::RemoveBreakpointReply()); });
 }
 
-void MockRemoteAPI::Backtrace(
-    const debug_ipc::BacktraceRequest& request,
-    std::function<void(const Err&, debug_ipc::BacktraceReply)> cb) {
+void MockRemoteAPI::ThreadStatus(
+    const debug_ipc::ThreadStatusRequest& request,
+    std::function<void(const Err&, debug_ipc::ThreadStatusReply)> cb) {
   // Returns the canned response.
   debug_ipc::MessageLoop::Current()->PostTask([
-    cb, response = backtrace_reply_
+    cb, response = thread_status_reply_
   ]() { cb(Err(), std::move(response)); });
 }
 

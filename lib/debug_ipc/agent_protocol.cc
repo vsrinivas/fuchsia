@@ -56,6 +56,7 @@ void Serialize(const ThreadRecord& record, MessageWriter* writer) {
   writer->WriteUint64(record.koid);
   writer->WriteString(record.name);
   writer->WriteUint32(static_cast<uint32_t>(record.state));
+  writer->WriteUint32(static_cast<uint32_t>(record.stack_amount));
   Serialize(record.frames, writer);
 }
 
@@ -341,21 +342,21 @@ void WriteReply(const RemoveBreakpointReply& reply, uint32_t transaction_id,
   writer->WriteHeader(MsgHeader::Type::kRemoveBreakpoint, transaction_id);
 }
 
-// Backtrace -------------------------------------------------------------------
+// ThreadStatus ----------------------------------------------------------------
 
-bool ReadRequest(MessageReader* reader, BacktraceRequest* request,
+bool ReadRequest(MessageReader* reader, ThreadStatusRequest* request,
                  uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
   *transaction_id = header.transaction_id;
-  return reader->ReadBytes(sizeof(BacktraceRequest), request);
+  return reader->ReadBytes(sizeof(ThreadStatusRequest), request);
 }
 
-void WriteReply(const BacktraceReply& reply, uint32_t transaction_id,
+void WriteReply(const ThreadStatusReply& reply, uint32_t transaction_id,
                 MessageWriter* writer) {
-  writer->WriteHeader(MsgHeader::Type::kBacktrace, transaction_id);
-  Serialize(reply.frames, writer);
+  writer->WriteHeader(MsgHeader::Type::kThreadStatus, transaction_id);
+  Serialize(reply.record, writer);
 }
 
 // Modules ---------------------------------------------------------------------

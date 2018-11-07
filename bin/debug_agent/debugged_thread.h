@@ -60,8 +60,15 @@ class DebuggedThread {
   // stopped state. If it's not stopped, this will be ignored.
   void Resume(const debug_ipc::ResumeRequest& request);
 
-  // Fills in the backtrace if available. Otherwise fills in nothing.
-  void GetBacktrace(std::vector<debug_ipc::StackFrame>* frames) const;
+  // Fills the thread status record. If full_stack is set, a full backtrace
+  // will be generated, otherwise a minimal one will be generated.
+  //
+  // If optional_regs is non-null, it should point to the current registers of
+  // the thread. If null, these will be fetched automatically. See the global
+  // FillThreadRecord() for more.
+  void FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack_amount,
+                        const zx_thread_state_general_regs* optional_regs,
+                        debug_ipc::ThreadRecord* record) const;
 
   // Fills in the information for the registers of the thread
   void GetRegisters(

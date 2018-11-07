@@ -33,7 +33,18 @@ void ListCompletedFrames(Thread* thread, bool long_format) {
   // usually so unpredictable.
   const auto& frames = thread->GetFrames();
   if (frames.empty()) {
-    helper->Append("No stack frames.\n");
+    // TODO(DX-662) only "blocked in exception" (rather than all "blocked")
+    // allows frame listing.
+    if (thread->GetState() != debug_ipc::ThreadRecord::State::kSuspended ||
+        thread->GetState() != debug_ipc::ThreadRecord::State::kBlocked) {
+      // Make a nicer error message for the common case of requesting stack
+      // frames when the thread is in the wrong state.
+      helper->Append(
+          "Stack frames are only available when the thread is either suspended "
+          "or blocked\nin an exception. Use \"pause\" to suspend it.");
+    } else {
+      helper->Append("No stack frames.\n");
+    }
   } else {
     for (int i = 0; i < static_cast<int>(frames.size()); i++) {
       if (i == active_frame_id)

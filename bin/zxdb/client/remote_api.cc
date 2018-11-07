@@ -92,9 +92,9 @@ void RemoteAPI::RemoveBreakpoint(
   FXL_NOTREACHED();
 }
 
-void RemoteAPI::Backtrace(
-    const debug_ipc::BacktraceRequest& request,
-    std::function<void(const Err&, debug_ipc::BacktraceReply)> cb) {
+void RemoteAPI::ThreadStatus(
+    const debug_ipc::ThreadStatusRequest& request,
+    std::function<void(const Err&, debug_ipc::ThreadStatusReply)> cb) {
   FXL_NOTREACHED();
 }
 

@@ -9,7 +9,7 @@
 
 namespace debug_ipc {
 
-constexpr uint32_t kProtocolVersion = 2;
+constexpr uint32_t kProtocolVersion = 3;
 
 enum class Arch { kUnknown = 0, kX64, kArm64 };
 
@@ -36,7 +36,7 @@ struct MsgHeader {
     kRegisters,
     kAddOrChangeBreakpoint,
     kRemoveBreakpoint,
-    kBacktrace,
+    kThreadStatus,
     kAddressSpace,
 
     // The "notify" messages are sent unrequested from the agent to the client.
@@ -200,13 +200,15 @@ struct RemoveBreakpointRequest {
 };
 struct RemoveBreakpointReply {};
 
-struct BacktraceRequest {
+// The thread state request asks for the current thread status with a full
+// backtrace if it is suspended. If the thread with the given KOID doesn't
+// exist, the ThreadRecord will report a "kDead" status.
+struct ThreadStatusRequest {
   uint64_t process_koid = 0;
   uint32_t thread_koid = 0;
 };
-struct BacktraceReply {
-  // Will be empty if the thread doesn't exist or isn't stopped.
-  std::vector<StackFrame> frames;
+struct ThreadStatusReply {
+  ThreadRecord record;
 };
 
 struct AddressSpaceRequest {

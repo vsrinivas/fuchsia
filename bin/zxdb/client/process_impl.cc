@@ -23,8 +23,7 @@ ProcessImpl::ProcessImpl(TargetImpl* target, uint64_t koid,
       koid_(koid),
       name_(name),
       symbols_(this, target->symbols()),
-      weak_factory_(this) {
-}
+      weak_factory_(this) {}
 
 ProcessImpl::~ProcessImpl() {
   // Send notifications for all destroyed threads.
@@ -196,7 +195,8 @@ void ProcessImpl::UpdateThreads(
       // New thread added.
       OnThreadStarting(record);
     } else {
-      // Existing one, update everything.
+      // Existing one, update everything. Thread list updates don't include
+      // full stack frames for performance reasons.
       found_existing->second->SetMetadata(record);
     }
   }

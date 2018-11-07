@@ -84,15 +84,14 @@ TEST_F(ThreadImplTest, Frames) {
   // element should match the one already there.
   constexpr uint64_t kAddress2 = 0x34567890;
   constexpr uint64_t kStack2 = 0x7800;
-  debug_ipc::BacktraceReply expected_reply;
-  expected_reply.frames.resize(2);
-  expected_reply.frames[0].ip = kAddress1;
-  expected_reply.frames[0].sp = kStack1;
-  expected_reply.frames[1].ip = kAddress2;
-  expected_reply.frames[1].sp = kStack2;
-  mock_remote_api().set_backtrace_reply(expected_reply);
+  debug_ipc::ThreadStatusReply expected_reply;
+  expected_reply.record = break_notification.thread;  // Copies existing frame.
+  expected_reply.record.stack_amount =
+      debug_ipc::ThreadRecord::StackAmount::kFull;
+  expected_reply.record.frames.emplace_back(kAddress2, 0, kStack2);
+  mock_remote_api().set_thread_status_reply(expected_reply);
 
-  // Asynchronously request the frames. The
+  // Asynchronously request the frames.
   thread->SyncFrames([]() { debug_ipc::MessageLoop::Current()->QuitNow(); });
   loop().Run();
 

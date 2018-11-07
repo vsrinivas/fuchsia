@@ -496,7 +496,7 @@ void Session::DispatchNotifyException(
 
   // First update the thread state so the breakpoint code can query it.
   // This should not issue any notifications.
-  thread->SetMetadataFromException(notify);
+  thread->SetMetadata(notify.thread);
 
   // The breakpoints that were hit to pass to the thread stop handler.
   std::vector<fxl::WeakPtr<Breakpoint>> hit_breakpoints;

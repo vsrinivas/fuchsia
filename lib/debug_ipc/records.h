@@ -56,14 +56,37 @@ struct ThreadRecord {
     kLast  // Not an actual thread state, for range checking.
   };
 
+  // Indicates how much of the stack was attempted to be retrieved in this
+  // call. This doesn't indicate how many stack frames were actually retrieved.
+  // For example, there could be no stack frames because they weren't
+  // requested, or there could be no stack frames due to an error.
+  enum class StackAmount : uint32_t {
+    // A backtrace was not attempted. This will always be the case if the
+    // thread is neither suspended nor blocked in an exception.
+    kNone = 0,
+
+    // The frames vector contains a minimal stack only (if available) which
+    // is defined as the top two frames. This is used when the stack frames
+    // have not been specifically requested since retrieving the full stack
+    // can be slow. The frames can still be less than 2 if there was an error
+    // or if there is only one stack frame.
+    kMinimal,
+
+    // The frames are the full stack trace (up to some maximum).
+    kFull,
+
+    kLast  // Not an actual state, for range checking.
+  };
+
   uint64_t koid = 0;
   std::string name;
   State state = State::kNew;
+  StackAmount stack_amount = StackAmount::kNone;
 
-  // The frames of the top of the stack when the thread is suspended. This will
-  // contain the top 2 frames (the current one and the caller) if they are
-  // available. It will always contain at least one frame when suspended which
-  // contains the current IP.
+  // The frames of the top of the stack when the thread is in suspended or
+  // blocked in an exception. See stack_amnount for how to interpret this.
+  // Note that this could still be empty in the "kMinimal" or "kFull" cases
+  // if retrieval failed.
   std::vector<StackFrame> frames;
 };
 

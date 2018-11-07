@@ -32,6 +32,7 @@ zx_status_t GetProcessThreads(const zx::process& process,
 // registers multiple times in common cases).
 void FillThreadRecord(const zx::process& process, uint64_t dl_debug_addr,
                       const zx::thread& thread,
+                      debug_ipc::ThreadRecord::StackAmount stack_amount,
                       const zx_thread_state_general_regs* optional_regs,
                       debug_ipc::ThreadRecord* record);
 

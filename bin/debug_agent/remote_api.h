@@ -62,8 +62,8 @@ class RemoteAPI {
       const debug_ipc::RemoveBreakpointRequest& request,
       debug_ipc::RemoveBreakpointReply* reply) = 0;
 
-  virtual void OnBacktrace(const debug_ipc::BacktraceRequest& request,
-                           debug_ipc::BacktraceReply* reply) = 0;
+  virtual void OnThreadStatus(const debug_ipc::ThreadStatusRequest& request,
+                              debug_ipc::ThreadStatusReply* reply) = 0;
 
   virtual void OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,
                               debug_ipc::AddressSpaceReply* reply) = 0;

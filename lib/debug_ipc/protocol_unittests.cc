@@ -362,40 +362,48 @@ TEST(Protocol, RemoveBreakpointReply) {
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
 }
 
-// Backtrace -------------------------------------------------------------------
+// ThreadStatus ----------------------------------------------------------------
 
-TEST(Protocol, BacktraceRequest) {
-  BacktraceRequest initial;
+TEST(Protocol, ThreadStatusRequest) {
+  ThreadStatusRequest initial;
   initial.process_koid = 1234;
   initial.thread_koid = 8976;
 
-  BacktraceRequest second;
+  ThreadStatusRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
 
   EXPECT_EQ(initial.process_koid, second.process_koid);
   EXPECT_EQ(initial.thread_koid, second.thread_koid);
 }
 
-TEST(Protocol, BacktraceReply) {
-  BacktraceReply initial;
-  initial.frames.resize(2);
-  initial.frames[0].ip = 1234;
-  initial.frames[0].sp = 9875;
-  initial.frames[0].bp = 6666;
-  initial.frames[1].ip = 71562341;
-  initial.frames[1].sp = 89236413;
-  initial.frames[1].bp = 777;
+TEST(Protocol, ThreadStatusReply) {
+  ThreadStatusReply initial;
+  initial.record.koid = 1234;
+  initial.record.name = "Spartacus";
+  initial.record.state = ThreadRecord::State::kRunning;
+  initial.record.stack_amount = ThreadRecord::StackAmount::kFull;
+  initial.record.frames.resize(2);
+  initial.record.frames[0].ip = 1234;
+  initial.record.frames[0].sp = 9875;
+  initial.record.frames[0].bp = 6666;
+  initial.record.frames[1].ip = 71562341;
+  initial.record.frames[1].sp = 89236413;
+  initial.record.frames[1].bp = 777;
 
-  BacktraceReply second;
+  ThreadStatusReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
 
-  EXPECT_EQ(2u, second.frames.size());
-  EXPECT_EQ(initial.frames[0].ip, second.frames[0].ip);
-  EXPECT_EQ(initial.frames[0].sp, second.frames[0].sp);
-  EXPECT_EQ(initial.frames[0].bp, second.frames[0].bp);
-  EXPECT_EQ(initial.frames[1].ip, second.frames[1].ip);
-  EXPECT_EQ(initial.frames[1].sp, second.frames[1].sp);
-  EXPECT_EQ(initial.frames[1].bp, second.frames[1].bp);
+  EXPECT_EQ(2u, second.record.frames.size());
+  EXPECT_EQ(initial.record.koid, second.record.koid);
+  EXPECT_EQ(initial.record.name, second.record.name);
+  EXPECT_EQ(initial.record.state, second.record.state);
+  EXPECT_EQ(initial.record.stack_amount, second.record.stack_amount);
+  EXPECT_EQ(initial.record.frames[0].ip, second.record.frames[0].ip);
+  EXPECT_EQ(initial.record.frames[0].sp, second.record.frames[0].sp);
+  EXPECT_EQ(initial.record.frames[0].bp, second.record.frames[0].bp);
+  EXPECT_EQ(initial.record.frames[1].ip, second.record.frames[1].ip);
+  EXPECT_EQ(initial.record.frames[1].sp, second.record.frames[1].sp);
+  EXPECT_EQ(initial.record.frames[1].bp, second.record.frames[1].bp);
 }
 
 // Modules ---------------------------------------------------------------------
@@ -572,6 +580,7 @@ TEST(Protocol, NotifyThread) {
   initial.record.koid = 1234;
   initial.record.name = "Wolfgang";
   initial.record.state = ThreadRecord::State::kDying;
+  initial.record.stack_amount = ThreadRecord::StackAmount::kNone;
 
   MessageWriter writer;
   WriteNotifyThread(MsgHeader::Type::kNotifyThreadStarting, initial, &writer);
@@ -584,12 +593,14 @@ TEST(Protocol, NotifyThread) {
   EXPECT_EQ(initial.record.koid, second.record.koid);
   EXPECT_EQ(initial.record.name, second.record.name);
   EXPECT_EQ(initial.record.state, second.record.state);
+  EXPECT_EQ(initial.record.stack_amount, second.record.stack_amount);
 }
 
 TEST(Protocol, NotifyException) {
   NotifyException initial;
   initial.process_koid = 23;
   initial.thread.name = "foo";
+  initial.thread.stack_amount = ThreadRecord::StackAmount::kMinimal;
   initial.thread.frames.resize(1);
   initial.thread.frames[0].ip = 0x7647342634;
   initial.thread.frames[0].sp = 0x9861238251;
@@ -611,6 +622,7 @@ TEST(Protocol, NotifyException) {
 
   EXPECT_EQ(initial.process_koid, second.process_koid);
   EXPECT_EQ(initial.thread.name, second.thread.name);
+  EXPECT_EQ(initial.thread.stack_amount, second.thread.stack_amount);
   EXPECT_EQ(initial.thread.frames[0].ip, second.thread.frames[0].ip);
   EXPECT_EQ(initial.thread.frames[0].sp, second.thread.frames[0].sp);
   EXPECT_EQ(initial.type, second.type);

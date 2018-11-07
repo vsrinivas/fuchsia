@@ -41,6 +41,12 @@ const std::string& ThreadImpl::GetName() const { return name_; }
 debug_ipc::ThreadRecord::State ThreadImpl::GetState() const { return state_; }
 
 void ThreadImpl::Pause() {
+  // The frames may have been requested when the thread was running which
+  // will have marked them "empty but complete." When a pause happens the
+  // frames will become available so we want subsequent requests to request
+  // them.
+  ClearFrames();
+
   debug_ipc::PauseRequest request;
   request.process_koid = process_->GetKoid();
   request.thread_koid = koid_;
@@ -145,16 +151,16 @@ std::vector<Frame*> ThreadImpl::GetFrames() const {
 bool ThreadImpl::HasAllFrames() const { return has_all_frames_; }
 
 void ThreadImpl::SyncFrames(std::function<void()> callback) {
-  debug_ipc::BacktraceRequest request;
+  debug_ipc::ThreadStatusRequest request;
   request.process_koid = process_->GetKoid();
   request.thread_koid = koid_;
 
-  session()->remote_api()->Backtrace(
+  session()->remote_api()->ThreadStatus(
       request, [ callback, thread = weak_factory_.GetWeakPtr() ](
-                   const Err& err, debug_ipc::BacktraceReply reply) {
+                   const Err& err, debug_ipc::ThreadStatusReply reply) {
         if (!thread)
           return;
-        thread->SaveFrames(reply.frames, true);
+        thread->SetMetadata(reply.record);
         if (callback)
           callback();
       });
@@ -209,17 +215,33 @@ void ThreadImpl::SetMetadata(const debug_ipc::ThreadRecord& record) {
   name_ = record.name;
   state_ = record.state;
 
-  SaveFrames(record.frames, false);
-}
+  // The goal is to preserve pointer identity for frames. If a frame is the
+  // same, weak pointers to it should remain valid.
+  using IpSp = std::pair<uint64_t, uint64_t>;
+  std::map<IpSp, std::unique_ptr<FrameImpl>> existing;
+  for (auto& cur : frames_) {
+    IpSp key(cur->GetAddress(), cur->GetStackPointer());
+    existing[key] = std::move(cur);
+  }
 
-void ThreadImpl::SetMetadataFromException(
-    const debug_ipc::NotifyException& notify) {
-  SetMetadata(notify.thread);
+  frames_.clear();
+  for (size_t i = 0; i < record.frames.size(); i++) {
+    IpSp key(record.frames[i].ip, record.frames[i].sp);
+    auto found = existing.find(key);
+    if (found == existing.end()) {
+      // New frame we haven't seen.
+      frames_.push_back(std::make_unique<FrameImpl>(
+          this, record.frames[i],
+          Location(Location::State::kAddress, record.frames[i].ip)));
+    } else {
+      // Can re-use existing pointer.
+      frames_.push_back(std::move(found->second));
+      existing.erase(found);
+    }
+  }
 
-  // After an exception the thread should be blocked and we should have
-  // at least one stack entry.
-  FXL_DCHECK(state_ == debug_ipc::ThreadRecord::State::kBlocked);
-  FXL_DCHECK(!notify.thread.frames.empty());
+  has_all_frames_ =
+      record.stack_amount == debug_ipc::ThreadRecord::StackAmount::kFull;
 }
 
 void ThreadImpl::OnException(
@@ -227,7 +249,7 @@ void ThreadImpl::OnException(
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
 #if defined(DEBUG_THREAD_CONTROLLERS)
   ThreadController::LogRaw("----------\r\nGot exception @ 0x%" PRIx64,
-  frames_[0]->GetAddress());
+                           frames_[0]->GetAddress());
 #endif
   bool should_stop;
   if (controllers_.empty()) {
@@ -295,35 +317,6 @@ void ThreadImpl::OnException(
     // Controllers all say to continue.
     Continue();
   }
-}
-
-void ThreadImpl::SaveFrames(const std::vector<debug_ipc::StackFrame>& frames,
-                            bool have_all) {
-  // The goal is to preserve pointer identity for frames. If a frame is the
-  // same, weak pointers to it should remain valid.
-  using IpSp = std::pair<uint64_t, uint64_t>;
-  std::map<IpSp, std::unique_ptr<FrameImpl>> existing;
-  for (auto& cur : frames_) {
-    IpSp key(cur->GetAddress(), cur->GetStackPointer());
-    existing[key] = std::move(cur);
-  }
-
-  frames_.clear();
-  for (size_t i = 0; i < frames.size(); i++) {
-    IpSp key(frames[i].ip, frames[i].sp);
-    auto found = existing.find(key);
-    if (found == existing.end()) {
-      // New frame we haven't seen.
-      frames_.push_back(std::make_unique<FrameImpl>(
-          this, frames[i], Location(Location::State::kAddress, frames[i].ip)));
-    } else {
-      // Can re-use existing pointer.
-      frames_.push_back(std::move(found->second));
-      existing.erase(found);
-    }
-  }
-
-  has_all_frames_ = have_all;
 }
 
 void ThreadImpl::ClearFrames() {

@@ -35,12 +35,8 @@ debug_ipc::ThreadRecord::State ThreadStateToEnum(uint32_t state) {
       {ZX_THREAD_STATE_DYING, debug_ipc::ThreadRecord::State::kDying},
       {ZX_THREAD_STATE_DEAD, debug_ipc::ThreadRecord::State::kDead}};
 
-// TODO(ZX-1843): This #ifdef is temporary to handle the transition.
-// It can be deleted once the new version of zircon rolls out that has
-// this macro.
-#ifdef ZX_THREAD_STATE_BASIC
+  // TODO(DX-662) save the blocked reason.
   state = ZX_THREAD_STATE_BASIC(state);
-#endif
 
   for (const Mapping& mapping : mappings) {
     if (mapping.int_state == state)
@@ -98,7 +94,8 @@ zx_status_t GetProcessThreads(const zx::process& process,
     zx_handle_t handle;
     if (zx_object_get_child(process.get(), koids[i], ZX_RIGHT_SAME_RIGHTS,
                             &handle) == ZX_OK) {
-      FillThreadRecord(process, dl_debug_addr, zx::thread(handle), nullptr,
+      FillThreadRecord(process, dl_debug_addr, zx::thread(handle),
+                       debug_ipc::ThreadRecord::StackAmount::kMinimal, nullptr,
                        &(*threads)[i]);
     }
   }
@@ -107,6 +104,7 @@ zx_status_t GetProcessThreads(const zx::process& process,
 
 void FillThreadRecord(const zx::process& process, uint64_t dl_debug_addr,
                       const zx::thread& thread,
+                      debug_ipc::ThreadRecord::StackAmount stack_amount,
                       const zx_thread_state_general_regs* optional_regs,
                       debug_ipc::ThreadRecord* record) {
   record->koid = KoidForObject(thread);
@@ -121,28 +119,42 @@ void FillThreadRecord(const zx::process& process, uint64_t dl_debug_addr,
     record->state = debug_ipc::ThreadRecord::State::kDead;
   }
 
-  if (record->state == debug_ipc::ThreadRecord::State::kSuspended ||
-      record->state == debug_ipc::ThreadRecord::State::kBlocked) {
-    // Send the top 2 stack frames so the caller has the current location and
-    // its return address.
+  // The registers are available when suspended or blocked in an exception.
+  if ((info.state == ZX_THREAD_STATE_SUSPENDED ||
+       info.state == ZX_THREAD_STATE_BLOCKED_EXCEPTION) &&
+      stack_amount != debug_ipc::ThreadRecord::StackAmount::kNone) {
+    // Only record this when we actually attempt to query the stack.
+    record->stack_amount = stack_amount;
 
     // The registers are required, fetch them if the caller didn't provide.
     zx_thread_state_general_regs queried_regs;  // Storage for fetched regs.
-    zx_thread_state_general_regs* regs;
+    zx_thread_state_general_regs* regs = nullptr;
     if (!optional_regs) {
-      thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &queried_regs,
-                        sizeof(queried_regs));
-      regs = &queried_regs;
+      if (thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &queried_regs,
+                            sizeof(queried_regs)) == ZX_OK)
+        regs = &queried_regs;
     } else {
       // We don't change the values here but *InRegs below returns mutable
       // references so we need a mutable pointer.
       regs = const_cast<zx_thread_state_general_regs*>(optional_regs);
     }
 
-    UnwindStack(process, dl_debug_addr, thread,
-                *arch::ArchProvider::Get().IPInRegs(regs),
-                *arch::ArchProvider::Get().SPInRegs(regs),
-                *arch::ArchProvider::Get().BPInRegs(regs), 2, &record->frames);
+    if (regs) {
+      // Minimal stacks are 2 (current frame and calling one). Full stacks max
+      // out at 256 to prevent edge cases, especially around corrupted stacks.
+      uint32_t max_stack_depth =
+          stack_amount == debug_ipc::ThreadRecord::StackAmount::kMinimal ? 2
+                                                                         : 256;
+
+      UnwindStack(process, dl_debug_addr, thread,
+                  *arch::ArchProvider::Get().IPInRegs(regs),
+                  *arch::ArchProvider::Get().SPInRegs(regs),
+                  *arch::ArchProvider::Get().BPInRegs(regs), max_stack_depth,
+                  &record->frames);
+    }
+  } else {
+    // Didn't bother querying the stack.
+    record->stack_amount = debug_ipc::ThreadRecord::StackAmount::kNone;
   }
 }
 

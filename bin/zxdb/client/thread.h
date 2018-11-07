@@ -48,7 +48,8 @@ class Thread : public ClientObject {
 
   // The state of the thread isn't necessarily up-to-date. There are no
   // system messages for a thread transitioning to suspended, for example.
-  // To make sure this is up-to-date, call Process::SyncThreads().
+  // To make sure this is up-to-date, call Process::SyncThreads() or
+  // Thread::SyncFrames().
   virtual debug_ipc::ThreadRecord::State GetState() const = 0;
 
   virtual void Pause() = 0;
@@ -76,24 +77,27 @@ class Thread : public ClientObject {
 
   virtual void StepInstruction() = 0;
 
-  // Access to the stack frames for this thread at its current stopped
-  // position. If a thread is running, the stack frames are not available.
+  // Access to the stack frames for this thread at its current suspended
+  // or blocked-in-exception position. If a thread is running, blocked (not in
+  // an exception), or in any other state, the stack frames are not available.
   //
-  // When a thread is stopped, it will have its 0th frame available (the
-  // current IP and stack position) and the 1st (the calling frame) if
-  // possible. So stopped threads will always have at least one result in the
-  // vector returned by GetFrames(), and normally two.
+  // When a thread is suspended or blocked in an exception, it will have its
+  // 0th frame available (the current IP and stack position) and the 1st (the
+  // calling frame) if possible. So such threads will always have at least one
+  // result in the vector returned by GetFrames(), and normally two.
   //
   // If the full backtrace is needed, SyncFrames() can be called which will
   // compute the full backtrace and issue the callback when complete. This
-  // backtrace will be cached until the thread is resumed. HasAllFrames()
-  // will return true if the full backtrace is currently available (= true) or
-  // if only the current position is available (= false).
+  // backtrace will be cached until the thread is resumed. It has the side
+  // effect of updating other thread status information.
   //
-  // Since the running/stopped state of a thread isn't available synchronously
-  // in a non-racy manner, you can always request a Sync of the frames if the
-  // frames are not all available. If the thread is destroyed before the
-  // backtrace can be issued, the callback will not be executed.
+  // HasAllFrames() will return true if the full backtrace is currently
+  // available (= true) or if only the current position is available (= false).
+  //
+  // Since the state of a thread isn't available synchronously in a non-racy
+  // manner, you can always request a Sync of the frames if the frames are not
+  // all available. If the thread is destroyed before the backtrace can be
+  // issued, the callback will not be executed.
   //
   // If the thread is running when the request is processed, the callback will
   // be issued but a subsequent call to GetFrames() will return an empty vector
