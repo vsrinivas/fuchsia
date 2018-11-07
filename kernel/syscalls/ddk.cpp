@@ -90,7 +90,7 @@ zx_status_t sys_vmo_create_contiguous(zx_handle_t bti, size_t size, uint32_t ali
 }
 
 // zx_status_t zx_vmo_create_physical
-zx_status_t sys_vmo_create_physical(zx_handle_t hrsrc, uintptr_t paddr, size_t size,
+zx_status_t sys_vmo_create_physical(zx_handle_t hrsrc, zx_paddr_t paddr, size_t size,
                                     user_out_handle* out) {
     LTRACEF("size 0x%zu\n", size);
 
