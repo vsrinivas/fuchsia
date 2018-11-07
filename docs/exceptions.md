@@ -348,13 +348,14 @@ Zircon                       Posix/Linux
 Exception/Signal             Signal
 ZX_EXCP_*                    SIG*
 task_bind_exception_port()   ptrace(ATTACH,DETACH)
-task_resume()                kill(SIGCONT),ptrace(CONT)
 task_suspend()               kill(SIGSTOP),ptrace(KILL(SIGSTOP))
+handle_close(suspend_token)  kill(SIGCONT),ptrace(CONT)
+task_resume_from_exception   kill(SIGCONT),ptrace(CONT)
 N/A                          kill(everything_other_than_SIGKILL)
 task_kill()                  kill(SIGKILL)
 TBD                          signal()/sigaction()
 port_wait()                  wait*()
-TBD                          W*() macros from sys/wait.h
+various                      W*() macros from sys/wait.h
 zx_packet_exception_t        siginfo_t
 zx_exception_context_t       siginfo_t
 thread_read_state            ptrace(GETREGS,GETREGSET)
