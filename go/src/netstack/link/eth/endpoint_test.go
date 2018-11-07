@@ -13,6 +13,7 @@ import (
 	"netstack/link/eth"
 
 	"fidl/zircon/ethernet"
+	ethernetext "fidlext/zircon/ethernet"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
@@ -33,21 +34,21 @@ func TestEndpoint_WritePacket(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	d := device{
+	d := ethernetext.Device{
 		TB: t,
-		getInfo: func() (ethernet.Info, error) {
+		GetInfoImpl: func() (ethernet.Info, error) {
 			return ethernet.Info{}, nil
 		},
-		setIoBuffer: func(zx.VMO) (int32, error) {
+		SetIoBufferImpl: func(zx.VMO) (int32, error) {
 			return int32(zx.ErrOk), nil
 		},
-		start: func() (int32, error) {
+		StartImpl: func() (int32, error) {
 			return int32(zx.ErrOk), nil
 		},
-		setClientName: func(string) (int32, error) {
+		SetClientNameImpl: func(string) (int32, error) {
 			return int32(zx.ErrOk), nil
 		},
-		getFifos: func() (int32, *ethernet.Fifos, error) {
+		GetFifosImpl: func() (int32, *ethernet.Fifos, error) {
 			return int32(zx.ErrOk), &ethernet.Fifos{}, nil
 		},
 	}
