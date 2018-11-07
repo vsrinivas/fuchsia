@@ -143,16 +143,17 @@ zx_status_t TestFuzzer::Execute() {
         // PkgFS path
         // fuchsia-pkg://fuchsia.com/<package>#meta/<target>.cmx
         s = args_.next();
-        manifest_.Set(s);
         s += strlen("fuchsia-pkg://fuchsia.com/");
         const char* t = strchr(s, '#');
         package.Set(s, t - s);
         s = t + strlen("#meta/");
         t = strrchr(s, '.');
         target.Set(s, t - s);
-        dictionary_ = fixture_.path("pkgfs/packages/%s/%s/data/%s/dictionary", package.c_str(),
-                                    fixture_.max_version(package.c_str()), target.c_str());
     }
+    manifest_ = fbl::StringPrintf("fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx", package.c_str(),
+                                  target.c_str());
+    dictionary_ = fixture_.path("pkgfs/packages/%s/%s/data/%s/dictionary", package.c_str(),
+                                fixture_.max_version(package.c_str()), target.c_str());
     data_path_.Reset();
     if ((rc = data_path_.Push(fixture_.path("data/fuzzing"))) != ZX_OK ||
         (rc = data_path_.Push(package)) != ZX_OK || (rc = data_path_.Push(target)) != ZX_OK) {

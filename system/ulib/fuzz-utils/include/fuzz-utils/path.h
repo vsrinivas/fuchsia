@@ -33,6 +33,10 @@ public:
     fbl::String Join(const char* relpath) const;
     fbl::String Join(const fbl::String& relpath) const { return Join(relpath.c_str()); }
 
+    // Returns whether the given |relpath| is present and is a regular file.
+    bool IsFile(const char *relpath) const { return GetSize(relpath, nullptr) == ZX_OK; }
+    bool IsFile(const fbl::String &relpath) const { return IsFile(relpath.c_str()); }
+
     // Returns the size of the file in |out|, if it exists. |out| is unchanged on error.
     zx_status_t GetSize(const char* relpath, size_t* out) const;
     zx_status_t GetSize(const fbl::String& relpath, size_t* out) const {

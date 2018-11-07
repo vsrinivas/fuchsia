@@ -34,9 +34,8 @@ bool FuzzerFixture::CreateFuchsia() {
     BEGIN_HELPER;
     ASSERT_TRUE(Fixture::Create());
 
-    // Zircon binaries
-    ASSERT_TRUE(CreateFile("system/test/fuzz/target1"));
-    ASSERT_TRUE(CreateFile("system/test/fuzz/target2"));
+    // Zircon binaries without packages
+    ASSERT_TRUE(CreateFile("boot/test/fuzz/target1"));
 
     // Fuchsia packages
     ASSERT_TRUE(CreatePackage("zircon_fuzzers", 0, "target2"));
@@ -56,6 +55,11 @@ bool FuzzerFixture::CreateFuchsia() {
     END_HELPER;
 }
 
+const char* FuzzerFixture::max_version(const char* package) const {
+    const char* max = max_versions_.get(package);
+    return max ? max : "0";
+}
+
 // Protected methods
 
 void FuzzerFixture::Reset() {
@@ -67,29 +71,28 @@ void FuzzerFixture::Reset() {
 
 bool FuzzerFixture::CreatePackage(const char* package, long int version, const char* target) {
     BEGIN_HELPER;
-
+    auto base = fbl::StringPrintf("pkgfs/packages/%s/%ld", package, version);
     const char* max = max_version(package);
     if (!max || strtol(max, nullptr, 0) < version) {
         max_versions_.set(package, fbl::StringPrintf("%ld", version));
     }
 
-    if (strcmp(package, "zircon_fuzzers") != 0) {
-        ASSERT_TRUE(CreateFile(path("pkgfs/packages/%s/%ld/bin/%s", package, version, target)));
+    if (strcmp(package, "zircon_fuzzers") == 0) {
+        ASSERT_TRUE(CreateFile(path("boot/test/fuzz/%s", target)));
+    } else {
+        ASSERT_TRUE(CreateFile(path("%s/bin/%s", base.c_str(), target)));
+        ASSERT_TRUE(CreateFile(path("%s/meta/%s.cmx", base.c_str(), target)));
     }
 
-    ASSERT_TRUE(CreateFile(path("pkgfs/packages/%s/%ld/meta/%s.cmx", package, version, target)));
-
-    ASSERT_TRUE(CreateFile(path("pkgfs/packages/%s/%ld/data/%s/corpora", package, version, target),
+    ASSERT_TRUE(CreateFile(path("%s/data/%s/corpora", base.c_str(), target),
                            "//path/to/seed/corpus\n "
                            "//path/to/cipd/ensure/file\n"
                            "https://gcs/url\n"));
-    ASSERT_TRUE(CreateFile(
-        path("pkgfs/packages/%s/%ld/data/%s/dictionary", package, version, target), "foo\n"
-                                                                                    "bar\n"
-                                                                                    "baz\n"));
-    ASSERT_TRUE(CreateFile(path("pkgfs/packages/%s/%ld/data/%s/options", package, version, target),
-                           "foo = bar\n"
-                           "baz = qux\n"));
+    ASSERT_TRUE(CreateFile(path("%s/data/%s/dictionary", base.c_str(), target), "foo\n"
+                                                                                "bar\n"
+                                                                                "baz\n"));
+    ASSERT_TRUE(CreateFile(path("%s/data/%s/options", base.c_str(), target), "foo = bar\n"
+                                                                             "baz = qux\n"));
 
     END_HELPER;
 }

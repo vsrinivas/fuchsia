@@ -27,8 +27,8 @@ public:
     bool CreateFuchsia();
 
     // Returns the maximum version of the given |Package| in the fixture as a C-style string, or
-    // null if the package wasn't created by the fixture.
-    const char* max_version(const char* package) const { return max_versions_.get(package); }
+    // "0" if the package wasn't created by the fixture.
+    const char* max_version(const char* package) const;
 
 protected:
     // Resets the object to a pristine state.

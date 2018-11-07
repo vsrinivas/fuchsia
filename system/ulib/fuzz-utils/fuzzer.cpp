@@ -278,21 +278,16 @@ void Fuzzer::FindFuchsiaFuzzers(const fbl::String& package, const fbl::String& t
         }
         auto targets = path.List();
         targets->keep_if(target);
-        fbl::String abspath;
+        path.Pop();
         for (const char* t = targets->first(); t; t = targets->next()) {
-            if (path.Push(t) != ZX_OK) {
-                continue;
-            }
-            size_t tmp;
-            if (path.GetSize("corpora", &tmp) == ZX_OK &&
-                path.GetSize("dictionary", &tmp) == ZX_OK &&
-                path.GetSize("options", &tmp) == ZX_OK) {
+            if (path.IsFile(fbl::StringPrintf("data/%s/corpora", t)) &&
+                path.IsFile(fbl::StringPrintf("data/%s/dictionary", t)) &&
+                path.IsFile(fbl::StringPrintf("data/%s/options", t)) &&
+                path.IsFile(fbl::StringPrintf("meta/%s.cmx", t))) {
                 out->set(fbl::StringPrintf("%s/%s", p, t),
                          fbl::StringPrintf("fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx", p, t));
             }
-            path.Pop();
         }
-        path.Pop();
     }
 }
 
@@ -699,8 +694,6 @@ zx_status_t Fuzzer::Start() {
 }
 
 zx_status_t Fuzzer::Check() {
-    zx_status_t rc;
-
     // Report fuzzer execution status
     Walker walker(this, false /* !kill */);
     if (walker.WalkRootJobTree() != ZX_ERR_STOP) {
@@ -712,19 +705,20 @@ zx_status_t Fuzzer::Check() {
     fprintf(out_, "    Output path:  %s\n", data_path_.c_str());
 
     // Report corpus details, if present
-    if ((rc = data_path_.Push("corpus")) != ZX_OK) {
+    if (data_path_.Push("corpus") != ZX_OK) {
         fprintf(out_, "    Corpus size:  0 inputs / 0 bytes\n");
     } else {
         auto corpus = data_path_.List();
+        size_t corpus_len = 0;
         size_t corpus_size = 0;
         for (const char* input = corpus->first(); input; input = corpus->next()) {
             size_t input_size;
-            if ((rc = data_path_.GetSize(input, &input_size)) != ZX_OK) {
-                return rc;
+            if (data_path_.GetSize(input, &input_size) == ZX_OK) {
+                ++corpus_len;
+                corpus_size += input_size;
             }
-            corpus_size += input_size;
         }
-        fprintf(out_, "    Corpus size:  %zu inputs / %zu bytes\n", corpus->length(), corpus_size);
+        fprintf(out_, "    Corpus size:  %zu inputs / %zu bytes\n", corpus_len, corpus_size);
         data_path_.Pop();
     }
 

@@ -196,8 +196,8 @@ bool TestFindFuchsiaFuzzers() {
 
     // Empty matches all
     test.FindFuchsiaFuzzers("", "", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 5);
-    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target2"));
+    EXPECT_EQ(fuzzers.size(), 4);
+    EXPECT_NULL(fuzzers.get("zircon_fuzzers/target2"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target1"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target2"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target3"));
@@ -205,8 +205,8 @@ bool TestFindFuchsiaFuzzers() {
 
     // Idempotent
     test.FindFuchsiaFuzzers("", "", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 5);
-    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target2"));
+    EXPECT_EQ(fuzzers.size(), 4);
+    EXPECT_NULL(fuzzers.get("zircon_fuzzers/target2"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target1"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target2"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target3"));
@@ -223,8 +223,8 @@ bool TestFindFuchsiaFuzzers() {
 
     fuzzers.clear();
     test.FindFuchsiaFuzzers("", "target", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 5);
-    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target2"));
+    EXPECT_EQ(fuzzers.size(), 4);
+    EXPECT_NULL(fuzzers.get("zircon_fuzzers/target2"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target1"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target2"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target3"));
@@ -593,18 +593,22 @@ bool TestStart() {
     ASSERT_TRUE(test.Eval("start zircon/target2"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
+    EXPECT_GT(0, test.FindArg(test.manifest()));
     EXPECT_LT(0, test.FindArg("-jobs=1"));
     EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
+    EXPECT_GT(0, test.FindArg("-baz=qux"));
+    EXPECT_GT(0, test.FindArg("-dict=%s", test.dictionary()));
+    EXPECT_GT(0, test.FindArg("-foo=bar"));
     EXPECT_LT(0, test.FindArg(test.data_path("corpus")));
 
-    // // // Fuchsia tests
+    // Fuchsia tests
     ASSERT_TRUE(test.InitFuchsia());
 
     // Zircon fuzzer within Fuchsia
     ASSERT_TRUE(test.Eval("start zircon/target2"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg(test.manifest()));
+    EXPECT_GT(0, test.FindArg(test.manifest()));
     EXPECT_LT(0, test.FindArg("-jobs=1"));
     EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-baz=qux"));
@@ -785,7 +789,7 @@ bool TestRepro() {
     ASSERT_TRUE(test.Eval("repro zircon/target2 fa"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg(test.manifest()));
+    EXPECT_GT(0, test.FindArg(test.manifest()));
     EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-baz=qux"));
     EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));
@@ -840,6 +844,7 @@ bool TestMerge() {
     ASSERT_TRUE(test.Eval("merge zircon/target2"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
+    EXPECT_GT(0, test.FindArg(test.manifest()));
     EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-merge=1"));
     EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile")));
@@ -856,7 +861,7 @@ bool TestMerge() {
     ASSERT_TRUE(test.Eval("merge zircon/target2"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg(test.manifest()));
+    EXPECT_GT(0, test.FindArg(test.manifest()));
     EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-merge=1"));
     EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile")));

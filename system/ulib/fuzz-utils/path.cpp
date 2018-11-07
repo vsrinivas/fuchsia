@@ -69,7 +69,13 @@ zx_status_t Path::GetSize(const char* relpath, size_t* out) const {
         xprintf("Failed to get status for '%s': %s\n", abspath.c_str(), strerror(errno));
         return ZX_ERR_IO;
     }
-    *out = buf.st_size;
+    if (!S_ISREG(buf.st_mode)) {
+        xprintf("Not a regular file (%08x): %s\n", buf.st_mode, abspath.c_str());
+        return ZX_ERR_NOT_FILE;
+    }
+    if (out) {
+        *out = buf.st_size;
+    }
     return ZX_OK;
 }
 
