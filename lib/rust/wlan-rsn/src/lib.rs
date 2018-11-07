@@ -27,7 +27,6 @@ pub mod rsne;
 mod state_machine;
 pub mod suite_selector;
 
-use crate::auth::psk;
 use crate::key::exchange::{
     self,
     handshake::fourway::{self, MessageNumber},
@@ -42,6 +41,7 @@ pub use crate::rsna::NegotiatedRsne as NegotiatedRsne;
 pub use crate::key::gtk::GtkProvider as GtkProvider;
 pub use crate::key::gtk as gtk;
 pub use crate::suite_selector::OUI as OUI;
+pub use crate::auth::psk as psk;
 
 #[derive(Debug, PartialEq)]
 pub struct Supplicant {
@@ -52,8 +52,7 @@ impl Supplicant {
     /// WPA2-PSK CCMP-128 Supplicant which supports 4-Way- and Group-Key Handshakes.
     pub fn new_wpa2psk_ccmp128(
         nonce_rdr: Arc<nonce::NonceReader>,
-        ssid: &[u8],
-        passphrase: &[u8],
+        psk: psk::Psk,
         s_addr: [u8; 6],
         s_rsne: rsne::Rsne,
         a_addr: [u8; 6],
@@ -66,7 +65,7 @@ impl Supplicant {
         let esssa = EssSa::new(
             Role::Supplicant,
             negotiated_rsne,
-            auth::Config::Psk(psk::Config::new(passphrase, ssid)?),
+            auth::Config::ComputedPsk(psk),
             exchange::Config::FourWayHandshake(fourway::Config::new(
                 Role::Supplicant, s_addr, s_rsne, a_addr, a_rsne, nonce_rdr, None
             )?),
@@ -115,8 +114,7 @@ impl Authenticator {
     pub fn new_wpa2psk_ccmp128(
         nonce_rdr: Arc<nonce::NonceReader>,
         gtk_provider: Arc<Mutex<gtk::GtkProvider>>,
-        ssid: &[u8],
-        passphrase: &[u8],
+        psk: psk::Psk,
         s_addr: [u8; 6],
         s_rsne: rsne::Rsne,
         a_addr: [u8; 6],
@@ -126,7 +124,7 @@ impl Authenticator {
         let esssa = EssSa::new(
             Role::Authenticator,
             negotiated_rsne,
-            auth::Config::Psk(psk::Config::new(passphrase, ssid)?),
+            auth::Config::ComputedPsk(psk),
             exchange::Config::FourWayHandshake(fourway::Config::new(
                 Role::Authenticator, s_addr, s_rsne, a_addr, a_rsne, nonce_rdr, Some(gtk_provider)
             )?),

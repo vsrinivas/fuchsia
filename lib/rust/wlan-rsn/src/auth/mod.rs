@@ -4,7 +4,6 @@
 
 pub mod psk;
 
-use self::psk::Psk;
 use crate::rsna::{UpdateSink, VerifiedKeyFrame};
 use failure;
 
@@ -16,7 +15,7 @@ pub enum Method {
 impl Method {
     pub fn from_config(cfg: Config) -> Result<Method, failure::Error> {
         match cfg {
-            Config::Psk(c) => Ok(Method::Psk(Psk { config: c })),
+            Config::ComputedPsk(psk) => Ok(Method::Psk(psk)),
         }
     }
 
@@ -30,5 +29,5 @@ impl Method {
 
 #[derive(Debug, PartialEq)]
 pub enum Config {
-    Psk(psk::Config),
+    ComputedPsk(psk::Psk),
 }

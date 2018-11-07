@@ -1,7 +1,16 @@
 use bytes::Bytes;
 use failure::{bail, ensure, format_err};
 use fidl_fuchsia_wlan_mlme::BssDescription;
-use wlan_rsn::{akm, cipher, NegotiatedRsne, nonce::NonceReader, rsne::{self, Rsne}, Supplicant, OUI};
+use wlan_rsn::{
+    akm,
+    cipher,
+    NegotiatedRsne,
+    nonce::NonceReader,
+    psk,
+    rsne::{self, Rsne},
+    Supplicant,
+    OUI
+};
 
 use crate::DeviceInfo;
 
@@ -49,7 +58,7 @@ pub fn get_rsna(device_info: &DeviceInfo, password: &[u8], bss: &BssDescription)
             // Note: There should be one Reader per device, not per SME.
             // Follow-up with improving on this.
             NonceReader::new(&device_info.addr[..])?,
-            &bss.ssid[..], &password[..],
+            psk::compute(&password[..], &bss.ssid[..])?,
             device_info.addr, s_rsne,
             bss.bssid, a_rsne)
         .map_err(|e| format_err!("failed to create ESS-SA: {:?}", e))?;

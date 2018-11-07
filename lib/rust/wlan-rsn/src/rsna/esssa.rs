@@ -189,7 +189,7 @@ impl EssSa {
         // PSK allows deriving the PMK without exchanging
         let pmk = match &self.pmksa.state() {
             Pmksa::Initialized { method } => match method {
-                auth::Method::Psk(psk) => psk.compute()
+                auth::Method::Psk(psk) => psk.to_vec()
             },
             _ => bail!("cannot initiate PMK more than once"),
         };
@@ -391,7 +391,7 @@ impl EssSa {
                         method.on_eapol_key_frame(update_sink, self.key_replay_counter, verified_frame)
                     },
                     None => {
-                        eprintln!("received group key EAPOL Key frame with GTK re-keying disabled");
+                        error!("received group key EAPOL Key frame with GTK re-keying disabled");
                         Ok(())
                     },
                 },

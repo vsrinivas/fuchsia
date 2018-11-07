@@ -17,6 +17,7 @@ use crate::rsna::{
     SecAssocUpdate, NegotiatedRsne, VerifiedKeyFrame
 };
 use crate::{Authenticator, Supplicant};
+use crate::psk;
 use crate::rsne::Rsne;
 use crate::suite_selector::OUI;
 use hex::FromHex;
@@ -71,9 +72,10 @@ pub fn get_s_rsne() -> Rsne {
 
 pub fn get_supplicant() -> Supplicant {
     let nonce_rdr = NonceReader::new(&S_ADDR[..]).expect("error creating Reader");
+    let psk = psk::compute("ThisIsAPassword".as_bytes(), "ThisIsASSID".as_bytes())
+        .expect("error computing PSK");
     Supplicant::new_wpa2psk_ccmp128(nonce_rdr,
-                                    "ThisIsASSID".as_bytes(),
-                                    "ThisIsAPassword".as_bytes(),
+                                    psk,
                                     test_util::S_ADDR,
                                     test_util::get_s_rsne(),
                                     test_util::A_ADDR,
@@ -87,10 +89,11 @@ pub fn get_authenticator() -> Authenticator {
         suite_type: cipher::CCMP_128,
     }).expect("error creating GtkProvider");
     let nonce_rdr = NonceReader::new(&S_ADDR[..]).expect("error creating Reader");
+    let psk = psk::compute("ThisIsAPassword".as_bytes(), "ThisIsASSID".as_bytes())
+        .expect("error computing PSK");
     Authenticator::new_wpa2psk_ccmp128(nonce_rdr,
                                        Arc::new(Mutex::new(gtk_provider)),
-                                       "ThisIsASSID".as_bytes(),
-                                       "ThisIsAPassword".as_bytes(),
+                                       psk,
                                        test_util::S_ADDR,
                                        test_util::get_s_rsne(),
                                        test_util::A_ADDR,

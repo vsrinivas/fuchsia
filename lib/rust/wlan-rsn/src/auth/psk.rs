@@ -11,48 +11,28 @@ use failure::{self, ensure};
 /// Keys derived from a passphrase provide comparably low levels of security.
 /// Passphrases should have a minimum length of 20 characters since shorter passphrases
 /// are unlikely to prevent attacks.
-#[derive(Debug, PartialEq)]
-pub struct Psk {
-    pub config: Config,
-}
+pub type Psk = Box<[u8]>;
 
-#[derive(Debug, PartialEq)]
-pub struct Config {
-    ssid: Vec<u8>,
-    passphrase: Vec<u8>,
-}
+pub fn compute(passphrase: &[u8], ssid: &[u8]) -> Result<Psk, failure::Error> {
+    // IEEE Std 802.11-2016, 9.4.2.2
+    ensure!(ssid.len() <= 32, Error::InvalidSsidLen(ssid.len()));
 
-impl Config {
-    pub fn new(passphrase: &[u8], ssid: &[u8]) -> Result<Config, failure::Error> {
-        // IEEE Std 802.11-2016, 9.4.2.2
-        ensure!(ssid.len() <= 32, Error::InvalidSsidLen(ssid.len()));
+    // IEEE Std 802.11-2016, J.4.1
+    ensure!(
+        passphrase.len() >= 8 && passphrase.len() <= 63,
+        Error::InvalidPassphraseLen(passphrase.len())
+    );
 
-        // IEEE Std 802.11-2016, J.4.1
-        ensure!(
-            passphrase.len() >= 8 && passphrase.len() <= 63,
-            Error::InvalidPassphraseLen(passphrase.len())
-        );
-
-        for c in passphrase {
-            ensure!(*c >= 32 && *c <= 126, Error::InvalidPassphraseChar(*c));
-        }
-
-        Ok(Config {
-            ssid: ssid.to_vec(),
-            passphrase: passphrase.to_vec(),
-        })
+    for c in passphrase {
+        ensure!(*c >= 32 && *c <= 126, Error::InvalidPassphraseChar(*c));
     }
-}
 
-impl Psk {
-    pub fn compute(&self) -> Vec<u8> {
-        // IEEE Std 802.11-2016, J.4.1
-        let size: usize = 256 / 8;
-        let mut out_key: Vec<u8> = vec![0; size];
-        let mut hmac = Hmac::new(Sha1::new(), &self.config.passphrase[..]);
-        pbkdf2::pbkdf2(&mut hmac, &self.config.ssid[..], 4096, &mut out_key[..]);
-        out_key
-    }
+    // Compute PSK: IEEE Std 802.11-2016, J.4.1
+    let size: usize = 256 / 8;
+    let mut psk: Vec<u8> = vec![0; size];
+    let mut hmac = Hmac::new(Sha1::new(), &passphrase[..]);
+    pbkdf2::pbkdf2(&mut hmac, &ssid[..], 4096, &mut psk[..]);
+    Ok(psk.into_boxed_slice())
 }
 
 #[cfg(test)]
@@ -61,15 +41,10 @@ mod tests {
     use hex::FromHex;
 
     fn assert_psk(password: &str, ssid: &str, expected: &str) {
-        let cfg_result = Config::new(password.as_bytes(), ssid.as_bytes());
-        assert_eq!(cfg_result.is_ok(), true);
-
-        let psk = Psk {
-            config: cfg_result.unwrap(),
-        };
-        let actual = psk.compute();
+        let psk = compute(password.as_bytes(), ssid.as_bytes())
+            .expect("computing PSK failed");
         let expected = Vec::from_hex(expected).unwrap();
-        assert_eq!(actual, expected);
+        assert_eq!(&psk[..], &expected[..]);
     }
 
     // IEEE Std 802.11-2016, J.4.2, Test case 1
@@ -104,59 +79,59 @@ mod tests {
 
     #[test]
     fn test_psk_too_short_password() {
-        let result = Config::new("short".as_bytes(), "Some SSID".as_bytes());
-        assert_eq!(result.is_err(), true);
+        let result = compute("short".as_bytes(), "Some SSID".as_bytes());
+        assert!(result.is_err());
     }
 
     #[test]
     fn test_psk_too_long_password() {
-        let result = Config::new(
+        let result = compute(
             "1234567890123456789012345678901234567890123456789012345678901234".as_bytes(),
             "Some SSID".as_bytes(),
         );
-        assert_eq!(result.is_err(), true);
+        assert!(result.is_err());
     }
 
     #[test]
     fn test_psk_invalid_char_password() {
-        let result = Config::new("Invalid Char \x1F".as_bytes(), "Some SSID".as_bytes());
-        assert_eq!(result.is_err(), true);
+        let result = compute("Invalid Char \x1F".as_bytes(), "Some SSID".as_bytes());
+        assert!(result.is_err());
     }
 
     #[test]
     fn test_psk_ascii_bounds_password() {
-        let result = Config::new(
+        let result = compute(
             "\x20ASCII Bound Test \x7E".as_bytes(),
             "Some SSID".as_bytes(),
         );
-        assert_eq!(result.is_ok(), true);
+        assert!(result.is_ok());
     }
 
     #[test]
     fn test_psk_invalid_unicode_char_password() {
-        let result = Config::new(
+        let result = compute(
             "refuse unicode \u{00DF} chars".as_bytes(),
             "Some SSID".as_bytes(),
         );
-        assert_eq!(result.is_err(), true);
+        assert!(result.is_err());
     }
 
     #[test]
     fn test_psk_unicode_valid_length_password() {
         // Five characters but 10 bytes.
-        let result = Config::new(
+        let result = compute(
             "\u{00DF}\u{00DF}\u{00DF}\u{00DF}\u{00DF}".as_bytes(),
             "Some SSID".as_bytes(),
         );
-        assert_eq!(result.is_err(), true);
+        assert!(result.is_err());
     }
 
     #[test]
     fn test_psk_too_long_ssid() {
-        let result = Config::new(
+        let result = compute(
             "ThisIsAPassword".as_bytes(),
             "123456789012345678901234567890123".as_bytes(),
         );
-        assert_eq!(result.is_err(), true);
+        assert!(result.is_err());
     }
 }

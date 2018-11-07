@@ -16,6 +16,7 @@ use wlan_rsn::{
     NegotiatedRsne,
     nonce::NonceReader,
     gtk::GtkProvider,
+    psk,
     rsne::Rsne
 };
 use crate::ap::{
@@ -68,7 +69,7 @@ enum State<T: Tokens> {
 
 #[derive(Clone)]
 struct RsnCfg {
-    password: Vec<u8>,
+    psk: psk::Psk,
     rsne: Rsne,
 }
 
@@ -128,29 +129,41 @@ impl<T: Tokens> ApSme<T> {
     pub fn on_start_command(&mut self, config: Config, token: T::StartToken) {
         self.state = self.state.take().map(|mut state| match state {
             State::Idle { device_info, mlme_sink, user_sink, timer } => {
-                let rsn_cfg = create_rsn_cfg(config.password.clone());
-                let req = create_start_request(&config, rsn_cfg.as_ref());
-                mlme_sink.send(MlmeRequest::Start(req));
-                // Currently, MLME doesn't send any response back. We simply assume
-                // that the start request succeeded immediately
-                user_sink.send(UserEvent::StartComplete {
-                    token,
-                    result: StartResult::Success,
-                });
-                State::Started {
-                    bss: InfraBss {
-                        ssid: config.ssid,
-                        rsn_cfg,
-                        client_map: Default::default(),
-                        ctx: Context {
-                            device_info,
-                            mlme_sink,
-                            user_sink,
-                            timer,
+                let rsn_cfg_result = create_rsn_cfg(&config.ssid[..], &config.password[..]);
+                match rsn_cfg_result {
+                    Err(e) => {
+                        error!("error configuring RSN: {}", e);
+                        user_sink.send(UserEvent::StartComplete {
+                            token,
+                            result: StartResult::InternalError,
+                        });
+                        State::Idle { device_info, mlme_sink, user_sink, timer }
+                    },
+                    Ok(rsn_cfg) => {
+                        let req = create_start_request(&config, rsn_cfg.as_ref());
+                        mlme_sink.send(MlmeRequest::Start(req));
+                        // Currently, MLME doesn't send any response back. We simply assume
+                        // that the start request succeeded immediately
+                        user_sink.send(UserEvent::StartComplete {
+                            token,
+                            result: StartResult::Success,
+                        });
+                        State::Started {
+                            bss: InfraBss {
+                                ssid: config.ssid,
+                                rsn_cfg,
+                                client_map: Default::default(),
+                                ctx: Context {
+                                    device_info,
+                                    mlme_sink,
+                                    user_sink,
+                                    timer,
+                                }
+                            }
                         }
                     }
                 }
-            }
+            },
             State::Started { bss: InfraBss { ref mut ctx, .. } } => {
                 let result = StartResult::AlreadyStarted;
                 ctx.user_sink.send(UserEvent::StartComplete { token, result });
@@ -306,7 +319,7 @@ impl<T: Tokens> InfraBss<T> {
         })?;
         let authenticator =
             Authenticator::new_wpa2psk_ccmp128(nonce_rdr, gtk_provider,
-                                               &self.ssid, &a_rsn.password, client_addr.clone(),
+                                               a_rsn.psk.clone(), client_addr.clone(),
                                                s_rsne, self.ctx.device_info.addr, a_rsn.rsne)
                 .map_err(|e| {
                     warn!("failed to create authenticator: {}", e);
@@ -350,11 +363,12 @@ fn get_gtk_provider(s_rsne: &Rsne) -> Result<Arc<Mutex<GtkProvider>>, failure::E
     Ok(Arc::new(Mutex::new(gtk_provider)))
 }
 
-fn create_rsn_cfg(password: Vec<u8>) -> Option<RsnCfg> {
+fn create_rsn_cfg(ssid: &[u8], password: &[u8]) -> Result<Option<RsnCfg>, failure::Error> {
     if password.is_empty() {
-        None
+        Ok(None)
     } else {
-        Some(RsnCfg { password, rsne: create_wpa2_psk_rsne() })
+        let psk = psk::compute(password, ssid)?;
+        Ok(Some(RsnCfg { psk, rsne: create_wpa2_psk_rsne() }))
     }
 }
 
