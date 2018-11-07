@@ -16,6 +16,7 @@ package("scenic_tests") {
   testonly = true
 
   deps = [
+    "input/tests",
     "input_reader/tests",
     "presentation_mode/tests",
     "view_manager/tests",
@@ -40,6 +41,9 @@ package("scenic_tests") {
     },
     {
       name = "input_unittests"
+    },
+    {
+      name = "input_tool_unittests"
     },
     {
       name = "presentation_mode_unittests"
@@ -231,7 +235,8 @@ package("set_renderer_params") {
 
   meta = [
     {
-      path = rebase_path("set_renderer_params_HACK/meta/set_renderer_params.cmx")
+      path =
+          rebase_path("set_renderer_params_HACK/meta/set_renderer_params.cmx")
       dest = "set_renderer_params.cmx"
     },
   ]

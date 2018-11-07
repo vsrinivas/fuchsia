@@ -12,6 +12,7 @@
 #include <lib/async/default.h>
 #include <zx/time.h>
 
+#include "garnet/bin/ui/input/inverse_keymap.h"
 #include "lib/component/cpp/connect.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
@@ -100,6 +101,8 @@ class InputApp {
       }
     } else if (positional_args[0] == "keyevent") {
       KeyEventCommand(positional_args, duration);
+    } else if (positional_args[0] == "text") {
+      TextCommand(positional_args, duration);
     } else {
       Usage();
     }
@@ -107,37 +110,54 @@ class InputApp {
 
  private:
   void Usage() {
-    std::cout << "input keyevent|tap|swipe" << std::endl;
-    std::cout << "  keyevent hid_usage (int)" << std::endl;
-    std::cout << "  tap x y" << std::endl;
-    std::cout << "  swipe x0 y0 x1 y1" << std::endl;
-    std::cout << std::endl;
+    // Keep this up to date with README.md.
+    // Until we have standardized usage doc formatting, let's do 100 cols.
+    std::cout << R"END(usage: input [<options>] text|keyevent|tap|swipe <args>
+  input text <text>
+  input keyevent <hid_usage (int)>
+  input tap <x> <y>
+  input swipe <x0> <y0> <x1> <y1>
 
-    std::cout << "Options:" << std::endl;
-    std::cout
-        << "\t--duration=ms to specify the duration of the event (default: 0)."
-        << std::endl;
+global options:
+  --duration=<ms>                 the duration of the event, in milliseconds (default: 0)
 
-    std::cout << std::endl;
-    std::cout << "Swipe and Tap Options:" << std::endl;
-    std::cout << std::endl;
-    std::cout << "Coordinates will be proportionally converted to the actual "
-                 "screen size, but you can specify a virtual range for the "
-                 "input."
-              << std::endl;
-    std::cout
-        << "\t--width=w specifies the width of the display (default: 1000)."
-        << std::endl;
-    std::cout
-        << "\t--height=h specifies the height of the display (default: 1000)."
-        << std::endl;
+commands:
+  text                            Text is injected by translating to keystrokes using a QWERTY
+                                  keymap. Only simple strings are supported; see README.md for
+                                  details.
 
-    std::cout << std::endl;
-    std::cout << "Swipe Options:" << std::endl;
-    std::cout
-        << "\t--move_event_count=count specifies the amount of move events to "
-           "send in between the up and down events of the swipe (default: 100)"
-        << std::endl;
+                                  The --duration option is divided over the key events. Care should
+                                  be taken not to provide so long a duration that key repeat kicks
+                                  in.
+
+                                  Note: when using through fx shell with quotes, you may need to
+                                  surround the invocation in strong quotes, e.g.:
+                                  fx shell 'input text "Hello, world!"'
+
+  keyevent                        Common usage codes:
+
+                                  key       | code (dec)
+                                  ----------|-----
+                                  enter     | 40
+                                  escape    | 41
+                                  backspace | 42
+                                  tab       | 43
+
+  tap/swipe                       By default, the x and y coordinates are in the range 0 to 1000
+                                  and will be proportionally transformed to the current display,
+                                  but you can specify a virtual range for the input with the
+                                  --width and --height options.
+
+    options:
+      --width=<w>                 the width of the display (default: 1000)
+      --height=<h>                the height of the display (default: 1000)
+
+    swipe options:
+      --move_event_count=<count>  the number of move events to send in between the down and up
+                                  events of the swipe (default: 100)
+
+For further details, see README.md.
+)END";
 
     loop_->Quit();
   }
@@ -162,6 +182,23 @@ class InputApp {
     fuchsia::ui::input::DeviceDescriptor descriptor;
     descriptor.touchscreen = std::move(touchscreen);
 
+    FXL_VLOG(1) << "Registering " << descriptor;
+    registry_->RegisterDevice(std::move(descriptor), input_device.NewRequest());
+    return input_device;
+  }
+
+  fuchsia::ui::input::InputDevicePtr RegisterKeyboard() {
+    fuchsia::ui::input::KeyboardDescriptorPtr keyboard =
+        fuchsia::ui::input::KeyboardDescriptor::New();
+    keyboard->keys->reserve(HID_USAGE_KEY_RIGHT_GUI - HID_USAGE_KEY_A);
+    for (uint32_t usage = HID_USAGE_KEY_A; usage < HID_USAGE_KEY_RIGHT_GUI;
+         ++usage) {
+      keyboard->keys->push_back(usage);
+    }
+    fuchsia::ui::input::DeviceDescriptor descriptor;
+    descriptor.keyboard = std::move(keyboard);
+
+    fuchsia::ui::input::InputDevicePtr input_device;
     FXL_VLOG(1) << "Registering " << descriptor;
     registry_->RegisterDevice(std::move(descriptor), input_device.NewRequest());
     return input_device;
@@ -213,21 +250,33 @@ class InputApp {
 
     FXL_VLOG(1) << "KeyEvent " << usage;
 
-    fuchsia::ui::input::KeyboardDescriptorPtr keyboard =
-        fuchsia::ui::input::KeyboardDescriptor::New();
-    keyboard->keys.resize(HID_USAGE_KEY_RIGHT_GUI - HID_USAGE_KEY_A);
-    for (size_t index = HID_USAGE_KEY_A; index < HID_USAGE_KEY_RIGHT_GUI;
-         ++index) {
-      keyboard->keys->at(index - HID_USAGE_KEY_A) = index;
-    }
-    fuchsia::ui::input::DeviceDescriptor descriptor;
-    descriptor.keyboard = std::move(keyboard);
-
-    fuchsia::ui::input::InputDevicePtr input_device;
-    FXL_VLOG(1) << "Registering " << descriptor;
-    registry_->RegisterDevice(std::move(descriptor), input_device.NewRequest());
-
+    fuchsia::ui::input::InputDevicePtr input_device = RegisterKeyboard();
     SendKeyPress(std::move(input_device), usage, duration);
+  }
+
+  void TextCommand(const std::vector<std::string>& args,
+                   zx::duration duration) {
+    if (args.size() != 2) {
+      Usage();
+      return;
+    }
+
+    // TODO(SCN-1068): Default to IME-based input, and have the curent mode
+    // available as an option.
+    // TODO(SCN-1068): Pull default keymap from environment if possible.
+    KeySequence key_sequence;
+    bool ok;
+    std::tie(key_sequence, ok) =
+        DeriveKeySequence(InvertKeymap(qwerty_map), args[1]);
+    if (!ok) {
+      Error("Cannot translate text to key sequence");
+      return;
+    }
+
+    FXL_VLOG(1) << "Text " << args[1];
+
+    fuchsia::ui::input::InputDevicePtr input_device = RegisterKeyboard();
+    SendText(std::move(input_device), std::move(key_sequence), duration);
   }
 
   void SwipeEventCommand(const std::vector<std::string>& args, uint32_t width,
@@ -316,21 +365,55 @@ class InputApp {
     FXL_VLOG(1) << "SendKeyPress " << report;
     input_device->DispatchReport(std::move(report));
 
-    async::PostDelayedTask(async_get_default_dispatcher(),
-                           [this, device = std::move(input_device)] {
-                             // RELEASED
-                             fuchsia::ui::input::KeyboardReportPtr keyboard =
-                                 fuchsia::ui::input::KeyboardReport::New();
-                             keyboard->pressed_keys.resize(0);
+    async::PostDelayedTask(
+        async_get_default_dispatcher(),
+        [this, device = std::move(input_device)] {
+          // RELEASED
+          fuchsia::ui::input::KeyboardReportPtr keyboard =
+              fuchsia::ui::input::KeyboardReport::New();
+          keyboard->pressed_keys.resize(0);
 
-                             fuchsia::ui::input::InputReport report;
-                             report.event_time = InputEventTimestampNow();
-                             report.keyboard = std::move(keyboard);
-                             FXL_VLOG(1) << "SendKeyPress " << report;
-                             device->DispatchReport(std::move(report));
-                             loop_->Quit();
-                           },
-                           duration);
+          fuchsia::ui::input::InputReport report;
+          report.event_time = InputEventTimestampNow();
+          report.keyboard = std::move(keyboard);
+          FXL_VLOG(1) << "SendKeyPress " << report;
+          device->DispatchReport(std::move(report));
+          loop_->Quit();
+        },
+        duration);
+  }
+
+  void SendText(fuchsia::ui::input::InputDevicePtr input_device,
+                std::vector<fuchsia::ui::input::KeyboardReportPtr> key_sequence,
+                zx::duration duration, size_t at = 0) {
+    if (at >= key_sequence.size()) {
+      loop_->Quit();
+      return;
+    }
+    fuchsia::ui::input::KeyboardReportPtr keyboard =
+        std::move(key_sequence[at]);
+
+    fuchsia::ui::input::InputReport report;
+    report.event_time = InputEventTimestampNow();
+    report.keyboard = std::move(keyboard);
+    FXL_VLOG(1) << "SendText " << report;
+    input_device->DispatchReport(std::move(report));
+
+    zx::duration stroke_duration;
+    if (key_sequence.size() > 1) {
+      stroke_duration = duration / (key_sequence.size() - 1);
+    }
+
+    async::PostDelayedTask(
+        async_get_default_dispatcher(),
+        [this, device = std::move(input_device),
+         key_sequence = std::move(key_sequence), duration, at]() mutable {
+          SendText(std::move(device), std::move(key_sequence), duration,
+                   at + 1);
+        },
+        stroke_duration);
+    // If the sequence is empty at this point, the next iteration (Quit) is
+    // scheduled asap.
   }
 
   void SendSwipe(fuchsia::ui::input::InputDevicePtr input_device, uint32_t x0,

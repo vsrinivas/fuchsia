@@ -10,6 +10,15 @@
       }
     },
     {
+      "name":"input_tool_unittests",
+      "exec":"/system/test/input_tool_unittests",
+      "copy":{
+        "/system/test":[
+          "input_tool_unittests"
+        ]
+      }
+    },
+    {
       "name":"view_manager_apptests",
       "exec":"/system/test/view_manager_apptests",
       "copy":{
