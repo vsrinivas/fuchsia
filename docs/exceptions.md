@@ -152,28 +152,91 @@ may not yet have. The handle is obtained with the
 The pid,tid necessary to look up the thread are contained in the
 exception report. See the above trivial exception handler example.
 
-## Exception search order
+## Types of exceptions
 
-Exception ports are searched in the following order:
+At a high level there are two types of exceptions: architectural and
+synthetic.
+Architectural exceptions are things like a segment fault (e.g., dereferencing
+the NULL pointer) or executing an undefined instruction. Synthetic exceptions
+are things like thread start and exit notifications. Synthetic
+exceptions are further distinguished as being debugger-specific or not.
 
-- *Debugger* - The debugger exception port is associated with processes, and
-is for things like zxdb and gdb. To bind to the debugger exception port
-pass **ZX_EXCEPTION_PORT_DEBUGGER** in *options* when binding an
-exception port to the process.
-There is only one debugger exception port per process.
+We use the term "general exceptions" to describe non-debugger-specific
+exceptions, and we use the term "debugger-specific exceptions" to describe
+exceptions that are only sent to debuggers.
+
+Exception types are enumerated in the *zx_excp_type_t* enum defined
+in [`<zircon/syscalls/exception.h>`](../system/public/zircon/syscalls/exception.h).
+
+## Exception ports
+
+Exception ports are where exception packets get sent to.
+A zircon port is bound to the exception port of a task object
+(thread, process, job) and then exception packets are sent to that
+port in a manner described below.
+
+Zircon supports the following general exception ports:
+
+- *Thread*
+- *Process*
+- *Job*
+
+Zircon also supports the following debugger-specific exception ports:
+
+- *Process Debugger*
+- *Job Debugger*
+
+There is only one of each kind of these per associated object.
+Note that processes and jobs have two distinct exception ports:
+the general one and a debugger-specific one.
+
+To bind to the debugger exception port pass
+**ZX_EXCEPTION_PORT_DEBUGGER** in *options* when binding an
+exception port to the process or job.
+
+## Exception delivery
+
+### Debugger only exceptions
+
+Debugger-only exceptions are only sent to one potential handler
+if it is present: a debugger.
+
+The job debugger exception port receives the following synthetic
+exception:
+
+- **ZX_EXCP_PROCESS_STARTING**
+
+The process debugger exception port receives the following synthetic
+exceptions:
+
+- **ZX_EXCP_THREAD_STARTING**
+- **ZX_EXCP_THREAD_EXITING**
+
+Note that there is no **ZX_EXCP_PROCESS_EXITING** exception.
+Also note that the process debugger exception port also receives
+all general exceptions: We want the debugger to be notified if, for
+example, a thread being debugged segfaults.
+
+### General exceptions
+
+Exceptions that are not debugger specific are all architectural
+exceptions and all synthetic exceptions not previously listed as
+debugger-specific, e.g., **ZX_EXCP_POLICY_ERROR**.
+
+General exceptions are sent to exception ports in the following order:
+
+- *Process Debugger* - The process debugger exception port is for
+things like zxdb and gdb.
 
 - *Thread* - This is for exception ports bound directly to the thread.
-There is only one thread exception port per thread.
 
 - *Process* - This is for exception ports bound directly to the process.
-There is only one process exception port per process.
 
 - *Job* - This is for exception ports bound to the process's job. Note that
 jobs have a hierarchy. First the process's job is searched. If it has a bound
 exception port then the exception is delivered to that port. If it does not
 have a bound exception port, or if the handler returns **ZX_RESUME_TRY_NEXT**,
 then that job's parent job is searched, and so on right up to the root job.
-There is only one job exception port per job.
 
 If no exception port handles the exception then the kernel finishes
 exception processing by killing the process.
@@ -188,23 +251,6 @@ This is useful for at least a few reasons:
       the debugger user can fix the segfault and resume the thread before the
       thread even knows it got a segfault.
     - Makes debugger breakpoints easier to reason about.
-
-## Types of exceptions
-
-At a high level there are two types of exceptions: architectural and
-synthetic.
-Architectural exceptions are things like a segment fault (e.g., dereferencing
-the NULL pointer) or executing an undefined instruction. Synthetic exceptions
-are things like thread start and exit notifications.
-
-Exception types are enumerated in the *zx_excp_type_t* enum defined
-in [`<zircon/syscalls/exception.h>`](../system/public/zircon/syscalls/exception.h).
-
-Some exceptions are debugger specific, and are only sent to the
-debugger exception port. These exceptions are:
-
-- **ZX_EXCP_THREAD_STARTING**
-- **ZX_EXCP_THREAD_EXITING**
 
 ## Interaction with thread suspension
 
