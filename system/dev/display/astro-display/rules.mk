@@ -35,4 +35,7 @@ MODULE_LIBS := \
     system/ulib/zircon \
     system/ulib/c \
 
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-amlogic-canvas
+
 include make/module.mk
