@@ -40,31 +40,31 @@ namespace devmgr {
 #define CAN_READ(ios) (ios->flags & ZX_FS_RIGHT_READABLE)
 
 void describe_error(zx::channel h, zx_status_t status) {
-    zxrio_describe_t msg;
+    fuchsia_io_NodeOnOpenEvent msg;
     memset(&msg, 0, sizeof(msg));
     msg.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
-    msg.status = status;
-    h.write(0, &msg, ZXRIO_DESCRIBE_HDR_SZ, nullptr, 0);
+    msg.s = status;
+    h.write(0, &msg, sizeof(msg), nullptr, 0);
 }
 
-static zx_status_t create_description(zx_device_t* dev, zxrio_describe_t* msg,
+static zx_status_t create_description(zx_device_t* dev, zxfidl_on_open_t* msg,
                                       zx_handle_t* handle) {
     memset(msg, 0, sizeof(*msg));
-    msg->hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
+    msg->primary.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
     msg->extra.tag = fuchsia_io_NodeInfoTag_device;
-    msg->status = ZX_OK;
-    msg->extra_ptr = (zxrio_node_info_t*)FIDL_ALLOC_PRESENT;
+    msg->primary.s = ZX_OK;
+    msg->primary.info = (fuchsia_io_NodeInfo*)FIDL_ALLOC_PRESENT;
     *handle = ZX_HANDLE_INVALID;
     if (dev->event != ZX_HANDLE_INVALID) {
         zx_status_t r;
         if ((r = zx_handle_duplicate(dev->event, ZX_RIGHTS_BASIC,
                                      handle)) != ZX_OK) {
-            msg->status = r;
+            msg->primary.s = r;
             return r;
         }
-        msg->extra.device.e = FIDL_HANDLE_PRESENT;
+        msg->extra.device.event = FIDL_HANDLE_PRESENT;
     } else {
-        msg->extra.device.e = FIDL_HANDLE_ABSENT;
+        msg->extra.device.event = FIDL_HANDLE_ABSENT;
     }
 
     return ZX_OK;
@@ -97,7 +97,7 @@ static zx_status_t devhost_get_handles(zx::channel rh, zx_device_t* dev,
     newios->dev = dev;
 
     if (describe) {
-        zxrio_describe_t info;
+        zxfidl_on_open_t info;
         zx_handle_t handle;
         if ((r = create_description(dev, &info, &handle)) != ZX_OK) {
             goto fail_open;

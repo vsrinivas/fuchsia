@@ -157,11 +157,11 @@ static void prepopulate_protocol_dirs() {
 }
 
 void describe_error(zx_handle_t h, zx_status_t status) {
-    zxrio_describe_t msg;
+    fuchsia_io_NodeOnOpenEvent msg;
     memset(&msg, 0, sizeof(msg));
     msg.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
-    msg.status = status;
-    zx_channel_write(h, 0, &msg, ZXRIO_DESCRIBE_HDR_SZ, nullptr, 0);
+    msg.s = status;
+    zx_channel_write(h, 0, &msg, sizeof(msg), nullptr, 0);
     zx_handle_close(h);
 }
 
@@ -578,13 +578,13 @@ fail:
             goto fail;
         }
         if (describe) {
-            zxrio_describe_t msg;
+            zxfidl_on_open_t msg;
             memset(&msg, 0, sizeof(msg));
-            msg.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
-            msg.status = ZX_OK;
-            msg.extra_ptr = (zxrio_node_info_t*)FIDL_ALLOC_PRESENT;
+            msg.primary.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
+            msg.primary.s = ZX_OK;
+            msg.primary.info = (fuchsia_io_NodeInfo*)FIDL_ALLOC_PRESENT;
             msg.extra.tag = fuchsia_io_NodeInfoTag_directory;
-            zx_channel_write(h, 0, &msg, sizeof(zxrio_describe_t), nullptr, 0);
+            zx_channel_write(h, 0, &msg, sizeof(zxfidl_on_open_t), nullptr, 0);
         }
         return;
     }

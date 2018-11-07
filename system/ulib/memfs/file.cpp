@@ -141,9 +141,8 @@ zx_status_t VnodeFile::Getattr(vnattr_t* attr) {
     return ZX_OK;
 }
 
-zx_status_t VnodeFile::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
-                                  zxrio_node_info_t* extra) {
-    *type = fuchsia_io_NodeInfoTag_file;
+zx_status_t VnodeFile::GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info) {
+    info->tag = fuchsia_io_NodeInfoTag_file;
     return ZX_OK;
 }
 

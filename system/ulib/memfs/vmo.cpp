@@ -58,10 +58,7 @@ zx_status_t VnodeVmo::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
     return ZX_OK;
 }
 
-zx_status_t VnodeVmo::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
-                                 zxrio_node_info_t* extra) {
-    zx_off_t* off = &extra->vmofile.offset;
-    zx_off_t* len = &extra->vmofile.length;
+zx_status_t VnodeVmo::GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info) {
     zx_status_t status;
     if (!have_local_clone_ && !WindowMatchesVMO(vmo_, offset_, length_)) {
         status = zx_vmo_clone(vmo_, ZX_VMO_CLONE_COPY_ON_WRITE, offset_, length_, &vmo_);
@@ -71,9 +68,9 @@ zx_status_t VnodeVmo::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* typ
         have_local_clone_ = true;
     }
 
-    zx_info_handle_basic_t info;
+    zx_info_handle_basic_t handle_info;
     status = zx_object_get_info(vmo_, ZX_INFO_HANDLE_BASIC,
-                                &info, sizeof(info), NULL, NULL);
+                                &handle_info, sizeof(handle_info), NULL, NULL);
     if (status != ZX_OK)
         return status;
 
@@ -83,15 +80,15 @@ zx_status_t VnodeVmo::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* typ
         vmo_,
         ZX_RIGHT_READ | ZX_RIGHT_MAP |
         ZX_RIGHTS_BASIC | ZX_RIGHT_GET_PROPERTY |
-        (info.rights & ZX_RIGHT_EXECUTE), // Preserve exec if present.
+        (handle_info.rights & ZX_RIGHT_EXECUTE), // Preserve exec if present.
         &vmo);
     if (status < 0)
         return status;
 
-    *off = offset_;
-    *len = length_;
-    *hnd = vmo;
-    *type = fuchsia_io_NodeInfoTag_vmofile;
+    info->tag = fuchsia_io_NodeInfoTag_vmofile;
+    info->vmofile.vmo = vmo;
+    info->vmofile.offset = offset_;
+    info->vmofile.length = length_;
     return ZX_OK;
 }
 

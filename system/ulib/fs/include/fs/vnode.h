@@ -18,7 +18,6 @@
 #include <fs/ref_counted.h>
 #include <fs/vfs.h>
 #include <lib/fdio/io.h>
-#include <lib/fdio/remoteio.h>
 #include <lib/fdio/vfs.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
@@ -26,6 +25,7 @@
 
 #ifdef __Fuchsia__
 #include <fuchsia/io/c/fidl.h>
+#include <lib/fdio/remoteio.h>
 #include <lib/zx/channel.h>
 #endif // __Fuchsia__
 
@@ -90,17 +90,7 @@ public:
     virtual zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags);
 
     // Extract handle, type, and extra info from a vnode.
-    //
-    // On success, the following output parameters are set:
-    //
-    // |hnd| is an optional output extra handle representing the Vnode.
-    // |type| is an output FDIO_PROTOCOL type indicating how the
-    // handle should be interpreted.
-    // |extra| is an output buffer holding a union of extra data which
-    // may be returned by this vnode.
-    // The usage of this field is dependent on the |type|.
-    virtual zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
-                                   zxrio_node_info_t* extra);
+    virtual zx_status_t GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info);
 
     virtual zx_status_t WatchDir(Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher);
 #endif

@@ -4,15 +4,19 @@
 
 #pragma once
 
-#include <zircon/compiler.h>
-#include <zircon/fidl.h>
-#include <zircon/types.h>
-
-#include <lib/fdio/limits.h>
+#ifndef __Fuchsia__
+#error "Fuchsia-only header"
+#endif
 
 #include <assert.h>
 #include <limits.h>
 #include <stdint.h>
+
+#include <fuchsia/io/c/fidl.h>
+#include <lib/fdio/limits.h>
+#include <zircon/compiler.h>
+#include <zircon/fidl.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -68,42 +72,12 @@ inline zxfidl_connection_t zxfidl_txn_copy(fidl_txn_t* txn) {
 // A fdio_dispatcher_handler suitable for use with a fdio_dispatcher.
 zx_status_t zxfidl_handler(zx_handle_t h, zxfidl_cb_t cb, void* cookie);
 
-// OPEN and CLONE ops do not return a reply
-// Instead they receive a channel handle that they write their status
-// and (if successful) type, extra data, and handles to.
-
-typedef struct {
-    uint32_t tag;
-    uint32_t reserved;
-    union {
-        zx_handle_t handle;
-        struct {
-            zx_handle_t e;
-        } file;
-        struct {
-            zx_handle_t s;
-        } pipe;
-        struct {
-            zx_handle_t v;
-            uint64_t offset;
-            uint64_t length;
-        } vmofile;
-        struct {
-            zx_handle_t e;
-        } device;
-    };
-} zxrio_node_info_t;
-
-#define ZXRIO_DESCRIBE_HDR_SZ       (__builtin_offsetof(zxrio_describe_t, extra))
-
 // A one-way message which may be emitted by the server without an
 // accompanying request. Optionally used as a part of the Open handshake.
 typedef struct {
-    fidl_message_header_t hdr;
-    zx_status_t status;
-    zxrio_node_info_t* extra_ptr;
-    zxrio_node_info_t extra;
-} zxrio_describe_t;
+    fuchsia_io_NodeOnOpenEvent primary;
+    fuchsia_io_NodeInfo extra;
+} zxfidl_on_open_t;
 
 #define FDIO_MMAP_FLAG_READ    (1u << 0)
 #define FDIO_MMAP_FLAG_WRITE   (1u << 1)

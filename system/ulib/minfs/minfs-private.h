@@ -627,8 +627,7 @@ private:
     void Purge(WritebackWork* wb);
 
 #ifdef __Fuchsia__
-    zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
-                           zxrio_node_info_t* extra) final;
+    zx_status_t GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info) final;
     void Sync(SyncCallback closure) final;
     zx_status_t AttachRemote(fs::MountChannel h) final;
     zx_status_t InitVmo();

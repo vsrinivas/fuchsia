@@ -20,9 +20,8 @@ zx_status_t Vnode::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
         vfs, fbl::WrapRefPtr(this), fbl::move(channel), flags));
 }
 
-zx_status_t Vnode::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
-                              zxrio_node_info_t* extra) {
-    *type = fuchsia_io_NodeInfoTag_service;
+zx_status_t Vnode::GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info) {
+    info->tag = fuchsia_io_NodeInfoTag_service;
     return ZX_OK;
 }
 

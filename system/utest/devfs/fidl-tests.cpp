@@ -2,38 +2,138 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fbl/algorithm.h>
 #include <fbl/type_support.h>
 #include <fuchsia/io/c/fidl.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/namespace.h>
+#include <lib/fdio/remoteio.h>
 #include <lib/fdio/util.h>
 #include <lib/zx/channel.h>
 #include <unittest/unittest.h>
+#include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
 namespace {
 
+bool OpenHelper(const zx::channel& directory, const char* path, zx::channel* response_channel) {
+    BEGIN_HELPER;
+
+    // Open the requested path from the provded directory, and wait for the open
+    // response on the accompanying channel.
+    zx::channel client, server;
+    ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
+    ASSERT_EQ(fuchsia_io_DirectoryOpen(directory.get(), ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DESCRIBE,
+                                       0, path, strlen(path), server.release()), ZX_OK);
+    zx_signals_t pending;
+    ASSERT_EQ(client.wait_one(ZX_CHANNEL_PEER_CLOSED | ZX_CHANNEL_READABLE,
+                              zx::deadline_after(zx::sec(1)), &pending), ZX_OK);
+    ASSERT_EQ(pending & ZX_CHANNEL_READABLE, ZX_CHANNEL_READABLE);
+    *response_channel = fbl::move(client);
+
+    END_HELPER;
+}
+
+// Validate some size information and expected fields without fully decoding the
+// FIDL message, for opening a path from a directory where we expect to open successfully.
+bool FidlOpenValidator(const zx::channel& directory, const char* path,
+                       fidl_union_tag_t expected_tag, size_t expected_handles) {
+    BEGIN_HELPER;
+
+    zx::channel client;
+    ASSERT_TRUE(OpenHelper(directory, path, &client));
+
+    char buf[8192];
+    zx_handle_t handles[4];
+    uint32_t actual_bytes;
+    uint32_t actual_handles;
+    ASSERT_EQ(client.read(0, buf, sizeof(buf), &actual_bytes, handles, fbl::count_of(handles),
+                          &actual_handles), ZX_OK);
+    ASSERT_EQ(actual_bytes, sizeof(zxfidl_on_open_t));
+    ASSERT_EQ(actual_handles, expected_handles);
+    auto response = reinterpret_cast<zxfidl_on_open_t*>(buf);
+    ASSERT_EQ(response->primary.hdr.ordinal, fuchsia_io_NodeOnOpenOrdinal);
+    ASSERT_EQ(response->primary.s, ZX_OK);
+    ASSERT_EQ(response->extra.tag, expected_tag);
+    zx_handle_close_many(handles, actual_handles);
+
+    END_HELPER;
+}
+
+// Validate some size information and expected fields without fully decoding the
+// FIDL message, for opening a path from a directory where we expect to fail.
+bool FidlOpenErrorValidator(const zx::channel& directory) {
+    BEGIN_HELPER;
+
+    const char* path = "this-path-better-not-actually-exist";
+    zx::channel client;
+    ASSERT_TRUE(OpenHelper(directory, path, &client));
+
+    char buf[8192];
+    zx_handle_t handles[4];
+    uint32_t actual_bytes;
+    uint32_t actual_handles;
+    ASSERT_EQ(client.read(0, buf, sizeof(buf), &actual_bytes, handles, fbl::count_of(handles),
+                          &actual_handles), ZX_OK);
+    ASSERT_EQ(actual_bytes, sizeof(fuchsia_io_NodeOnOpenEvent));
+    ASSERT_EQ(actual_handles, 0);
+    auto response = reinterpret_cast<fuchsia_io_NodeOnOpenEvent*>(buf);
+    ASSERT_EQ(response->hdr.ordinal, fuchsia_io_NodeOnOpenOrdinal);
+    ASSERT_EQ(response->s, ZX_ERR_NOT_FOUND);
+
+    END_HELPER;
+}
+
+// Ensure that our hand-rolled FIDL messages within devfs and memfs are acting correctly
+// for open event messages (on both success and error).
+bool TestFidlOpen() {
+    BEGIN_TEST;
+
+    {
+        zx::channel dev_client, dev_server;
+        ASSERT_EQ(zx::channel::create(0, &dev_client, &dev_server), ZX_OK);
+        fdio_ns_t* ns;
+        ASSERT_EQ(fdio_ns_get_installed(&ns), ZX_OK);
+        ASSERT_EQ(fdio_ns_connect(ns, "/dev", ZX_FS_RIGHT_READABLE, dev_server.release()), ZX_OK);
+        ASSERT_TRUE(FidlOpenValidator(dev_client, "zero", fuchsia_io_NodeInfoTag_device, 1));
+        ASSERT_TRUE(FidlOpenErrorValidator(dev_client));
+    }
+
+    {
+        zx::channel dev_client, dev_server;
+        ASSERT_EQ(zx::channel::create(0, &dev_client, &dev_server), ZX_OK);
+        fdio_ns_t* ns;
+        ASSERT_EQ(fdio_ns_get_installed(&ns), ZX_OK);
+        ASSERT_EQ(fdio_ns_connect(ns, "/boot", ZX_FS_RIGHT_READABLE, dev_server.release()), ZX_OK);
+        ASSERT_TRUE(FidlOpenValidator(dev_client, "lib", fuchsia_io_NodeInfoTag_directory, 0));
+        ASSERT_TRUE(FidlOpenErrorValidator(dev_client));
+    }
+
+    END_TEST;
+}
+
 bool TestFidlBasic() {
     BEGIN_TEST;
 
-    zx_handle_t h = ZX_HANDLE_INVALID;
-    zx_handle_t request = ZX_HANDLE_INVALID;
     fuchsia_io_NodeInfo info = {};
+    {
+        zx::channel client, server;
+        ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
+        ASSERT_EQ(fdio_service_connect("/dev/class", server.release()), ZX_OK);
+        memset(&info, 0, sizeof(info));
+        ASSERT_EQ(fuchsia_io_FileDescribe(client.get(), &info), ZX_OK);
+        ASSERT_EQ(info.tag, fuchsia_io_NodeInfoTag_directory);
+    }
 
-    ASSERT_EQ(zx_channel_create(0, &h, &request), ZX_OK);
-    ASSERT_EQ(fdio_service_connect("/dev/class", request), ZX_OK);
-    memset(&info, 0, sizeof(info));
-    ASSERT_EQ(fuchsia_io_FileDescribe(h, &info), ZX_OK);
-    ASSERT_EQ(info.tag, fuchsia_io_NodeInfoTag_directory);
-    zx_handle_close(h);
-
-    ASSERT_EQ(zx_channel_create(0, &h, &request), ZX_OK);
-    ASSERT_EQ(fdio_service_connect("/dev/zero", request), ZX_OK);
-    memset(&info, 0, sizeof(info));
-    ASSERT_EQ(fuchsia_io_FileDescribe(h, &info), ZX_OK);
-    ASSERT_EQ(info.tag, fuchsia_io_NodeInfoTag_device);
-    ASSERT_NE(info.device.event, ZX_HANDLE_INVALID);
-    zx_handle_close(info.device.event);
-    zx_handle_close(h);
+    {
+        zx::channel client, server;
+        ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
+        ASSERT_EQ(fdio_service_connect("/dev/zero", server.release()), ZX_OK);
+        memset(&info, 0, sizeof(info));
+        ASSERT_EQ(fuchsia_io_FileDescribe(client.get(), &info), ZX_OK);
+        ASSERT_EQ(info.tag, fuchsia_io_NodeInfoTag_device);
+        ASSERT_NE(info.device.event, ZX_HANDLE_INVALID);
+        zx_handle_close(info.device.event);
+    }
 
     END_TEST;
 }
@@ -156,6 +256,7 @@ bool TestDirectoryWatcherWithClosedHalf() {
 } // namespace
 
 BEGIN_TEST_CASE(fidl_tests)
+RUN_TEST(TestFidlOpen)
 RUN_TEST(TestFidlBasic)
 RUN_TEST(TestDirectoryWatcherWithClosedHalf)
 RUN_TEST(TestDirectoryWatcherExisting)

@@ -108,8 +108,7 @@ zx_status_t VmoFile::Write(const void* data, size_t length, size_t offset, size_
     return status;
 }
 
-zx_status_t VmoFile::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
-                                zxrio_node_info_t* extra) {
+zx_status_t VmoFile::GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info) {
     ZX_DEBUG_ASSERT(!IsWritable(flags) || writable_); // checked by the VFS
 
     zx::vmo vmo;
@@ -119,10 +118,10 @@ zx_status_t VmoFile::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type
         return status;
     }
 
-    *hnd = vmo.release();
-    *type = fuchsia_io_NodeInfoTag_vmofile;
-    extra->vmofile.offset = offset;
-    extra->vmofile.length = length_;
+    info->tag = fuchsia_io_NodeInfoTag_vmofile;
+    info->vmofile.vmo = vmo.release();
+    info->vmofile.offset = offset;
+    info->vmofile.length = length_;
     return ZX_OK;
 }
 

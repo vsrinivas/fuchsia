@@ -2,28 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/auto_call.h>
-#include <lib/fdio/remoteio.h>
-#include <lib/fdio/watcher.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <fbl/auto_call.h>
+#include <fs/trace.h>
+#include <fs/vfs.h>
+#include <fs/vnode.h>
+#include <lib/fdio/watcher.h>
+
 #ifdef __Fuchsia__
+#include <threads.h>
+
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 #include <fs/connection.h>
 #include <fs/remote.h>
-#include <threads.h>
-#include <zircon/assert.h>
+#include <lib/fdio/remoteio.h>
 #include <lib/zx/event.h>
 #include <lib/zx/process.h>
+#include <zircon/assert.h>
 #endif
-
-#include <fs/trace.h>
-#include <fs/vfs.h>
-#include <fs/vnode.h>
 
 // #define DEBUG_PRINTF
 #ifdef DEBUG_PRINTF

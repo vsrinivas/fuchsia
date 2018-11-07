@@ -27,41 +27,65 @@ namespace fs {
 namespace {
 
 void WriteDescribeError(zx::channel channel, zx_status_t status) {
-    zxrio_describe_t msg;
+    fuchsia_io_NodeOnOpenEvent msg;
     memset(&msg, 0, sizeof(msg));
     msg.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
-    msg.status = status;
-    channel.write(0, &msg, ZXRIO_DESCRIBE_HDR_SZ, nullptr, 0);
+    msg.s = status;
+    channel.write(0, &msg, sizeof(msg), nullptr, 0);
 }
 
 zx_status_t GetNodeInfo(const fbl::RefPtr<Vnode>& vn, uint32_t flags,
-                        zxrio_node_info_t* info) {
+                        fuchsia_io_NodeInfo* info) {
     if (IsPathOnly(flags)) {
-        return vn->Vnode::GetHandles(flags, &info->handle, &info->tag, info);
+        return vn->Vnode::GetHandles(flags, info);
     } else {
-        return vn->GetHandles(flags, &info->handle, &info->tag, info);
+        return vn->GetHandles(flags, info);
     }
 }
 
 void Describe(const fbl::RefPtr<Vnode>& vn, uint32_t flags,
-              zxrio_describe_t* response, zx_handle_t* handle) {
-    response->hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
-    response->extra.handle = ZX_HANDLE_INVALID;
+              zxfidl_on_open_t* response, zx_handle_t* handle) {
+    response->primary.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
+    response->extra.file.event = ZX_HANDLE_INVALID;
     zx_status_t r = GetNodeInfo(vn, flags, &response->extra);
-    *handle = response->extra.handle;
 
-    // If a handle was returned, encode it.
-    if (*handle != ZX_HANDLE_INVALID) {
-        response->extra.handle = FIDL_HANDLE_PRESENT;
-    } else {
-        response->extra.handle = FIDL_HANDLE_ABSENT;
+    // We unfortunately encode this message by hand because FIDL events
+    // are not yet supported by the C bindings.
+    auto encode_handle = [](zx_handle_t* encode_location, zx_handle_t* out) {
+        // If a handle was returned, transfer it to the output location, and
+        // encode it in-place.
+        *out = *encode_location;
+        if (*encode_location != ZX_HANDLE_INVALID) {
+            *encode_location = FIDL_HANDLE_PRESENT;
+        } else {
+            *encode_location = FIDL_HANDLE_ABSENT;
+        }
+    };
+    switch (response->extra.tag) {
+    case fuchsia_io_NodeInfoTag_service:
+    case fuchsia_io_NodeInfoTag_directory:
+        break;
+    case fuchsia_io_NodeInfoTag_file:
+        encode_handle(&response->extra.file.event, handle);
+        break;
+    case fuchsia_io_NodeInfoTag_pipe:
+        encode_handle(&response->extra.pipe.socket, handle);
+        break;
+    case fuchsia_io_NodeInfoTag_vmofile:
+        encode_handle(&response->extra.vmofile.vmo, handle);
+        break;
+    case fuchsia_io_NodeInfoTag_device:
+        encode_handle(&response->extra.device.event, handle);
+        break;
+    default:
+        ZX_DEBUG_ASSERT_MSG(false, "Unsupported NodeInfoTag: %d\n", response->extra.tag);
     }
 
     // If a valid response was returned, encode it.
-    response->status = r;
-    response->extra_ptr = reinterpret_cast<zxrio_node_info_t*>(r == ZX_OK ?
-                                                                 FIDL_ALLOC_PRESENT :
-                                                                 FIDL_ALLOC_ABSENT);
+    response->primary.s = r;
+    response->primary.info = reinterpret_cast<fuchsia_io_NodeInfo*>(r == ZX_OK ?
+                                                                    FIDL_ALLOC_PRESENT :
+                                                                    FIDL_ALLOC_ABSENT);
 }
 
 void FilterFlags(uint32_t flags, uint32_t* out_flags, bool* out_describe) {
@@ -109,12 +133,12 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent, zx::channel channel,
             return;
         }
 
-        zxrio_describe_t response;
+        zxfidl_on_open_t response;
         memset(&response, 0, sizeof(response));
         zx_handle_t extra = ZX_HANDLE_INVALID;
         Describe(vnode, flags, &response, &extra);
         uint32_t hcount = (extra != ZX_HANDLE_INVALID) ? 1 : 0;
-        channel.write(0, &response, sizeof(zxrio_describe_t), &extra, hcount);
+        channel.write(0, &response, sizeof(zxfidl_on_open_t), &extra, hcount);
     } else if (r != ZX_OK) {
         return;
     }
@@ -387,15 +411,15 @@ zx_status_t Connection::NodeClone(uint32_t flags, zx_handle_t object) {
         status = OpenVnode(open_flags, &vn);
     }
     if (describe) {
-        zxrio_describe_t response;
+        zxfidl_on_open_t response;
         memset(&response, 0, sizeof(response));
-        response.status = status;
+        response.primary.s = status;
         zx_handle_t extra = ZX_HANDLE_INVALID;
         if (status == ZX_OK) {
             Describe(vnode_, open_flags, &response, &extra);
         }
         uint32_t hcount = (extra != ZX_HANDLE_INVALID) ? 1 : 0;
-        channel.write(0, &response, sizeof(zxrio_describe_t), &extra, hcount);
+        channel.write(0, &response, sizeof(zxfidl_on_open_t), &extra, hcount);
     }
 
     if (status == ZX_OK) {
@@ -417,16 +441,13 @@ zx_status_t Connection::NodeClose(fidl_txn_t* txn) {
 }
 
 zx_status_t Connection::NodeDescribe(fidl_txn_t* txn) {
-    zxrio_node_info_t info;
+    fuchsia_io_NodeInfo info;
     memset(&info, 0, sizeof(info));
     zx_status_t status = GetNodeInfo(vnode_, flags_, &info);
     if (status != ZX_OK) {
         return status;
     }
-    // See static_asserts in zxrio_process_open_response which ensure that this
-    // cast makes sense.
-    auto fidl_info = reinterpret_cast<fuchsia_io_NodeInfo*>(&info);
-    return fuchsia_io_NodeDescribe_reply(txn, fidl_info);
+    return fuchsia_io_NodeDescribe_reply(txn, &info);
 }
 
 zx_status_t Connection::NodeSync(fidl_txn_t* txn) {

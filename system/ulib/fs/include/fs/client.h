@@ -4,16 +4,18 @@
 
 #pragma once
 
-#include <lib/fdio/remoteio.h>
+#ifndef __Fuchsia__
+#error "Fuchsia-only header"
+#endif
 
 #include <stdlib.h>
 #include <stdint.h>
 #include <sys/types.h>
 
+#include <lib/fdio/remoteio.h>
+#include <lib/fdio/vfs.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
-
-#include <lib/fdio/vfs.h>
 
 __BEGIN_CDECLS
 

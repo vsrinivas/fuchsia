@@ -9,9 +9,7 @@
 #include <string.h>
 #include <sys/types.h>
 
-#include <lib/fdio/remoteio.h>
 #include <lib/fdio/vfs.h>
-#include <fs/client.h>
 #include <fs/locking.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
@@ -21,10 +19,12 @@
 #ifdef __Fuchsia__
 #include <lib/async/dispatcher.h>
 #include <lib/fdio/io.h>
+#include <lib/fdio/remoteio.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/vmo.h>
 #include <fbl/mutex.h>
+#include <fs/client.h>
 #endif // __Fuchsia__
 
 #include <fbl/function.h>

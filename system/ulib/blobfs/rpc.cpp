@@ -21,14 +21,13 @@
 
 namespace blobfs {
 
-zx_status_t VnodeBlob::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
-                                  zxrio_node_info_t* extra) {
+zx_status_t VnodeBlob::GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info) {
     if (IsDirectory()) {
-        *type = fuchsia_io_NodeInfoTag_directory;
+        info->tag = fuchsia_io_NodeInfoTag_directory;
         return ZX_OK;
     }
-    *type = fuchsia_io_NodeInfoTag_file;
-    zx_status_t r = GetReadableEvent(hnd);
+    info->tag = fuchsia_io_NodeInfoTag_file;
+    zx_status_t r = GetReadableEvent(&info->file.event);
     if (r < 0) {
         return r;
     }
