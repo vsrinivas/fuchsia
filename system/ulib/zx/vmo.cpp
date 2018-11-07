@@ -12,4 +12,9 @@ zx_status_t vmo::create(uint64_t size, uint32_t options, vmo* result) {
     return zx_vmo_create(size, options, result->reset_and_get_address());
 }
 
+zx_status_t vmo::create_physical(
+    const resource& resource, zx_paddr_t paddr, size_t size, vmo* result) {
+    return zx_vmo_create_physical(resource.get(), paddr, size, result->reset_and_get_address());
+}
+
 } // namespace zx

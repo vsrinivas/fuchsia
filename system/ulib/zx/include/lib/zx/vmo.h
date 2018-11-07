@@ -6,6 +6,7 @@
 
 #include <lib/zx/handle.h>
 #include <lib/zx/object.h>
+#include <lib/zx/resource.h>
 
 namespace zx {
 
@@ -27,6 +28,8 @@ public:
     }
 
     static zx_status_t create(uint64_t size, uint32_t options, vmo* result);
+    static zx_status_t create_physical(
+        const resource& resource, zx_paddr_t paddr, size_t size, vmo* result);
 
     zx_status_t read(void* data, uint64_t offset, size_t len) const {
         return zx_vmo_read(get(), data, offset, len);
