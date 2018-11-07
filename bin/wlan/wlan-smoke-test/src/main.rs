@@ -243,10 +243,7 @@ impl WlanIface {
 }
 
 fn report_results(test_results: &TestResults) {
-    println!(
-        "Test Results: {}",
-        serde_json::to_string_pretty(&test_results).unwrap()
-    );
+    println!("{}", serde_json::to_string_pretty(&test_results).unwrap());
 }
 
 fn is_connect_to_target_network_needed<T: AsRef<[u8]>>(

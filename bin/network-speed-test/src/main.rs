@@ -88,7 +88,7 @@ struct IndividualDownload {
 }
 
 fn report_results(test_results: &TestResults) {
-    println!("Test Results: {}", serde_json::to_string_pretty(&test_results).unwrap());
+    println!("{}", serde_json::to_string_pretty(&test_results).unwrap());
 }
 
 fn create_url_request<T: Into<String>>(url_string: T) -> http::UrlRequest {
