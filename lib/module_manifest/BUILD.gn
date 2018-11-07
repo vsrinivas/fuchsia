@@ -13,6 +13,55 @@ group("unittests") {
 
   deps = [
     ":module_manifest_xdr_unittest",
+    ":module_facet_reader_impl_unittest",
+  ]
+}
+
+source_set("module_facet_reader") {
+  sources = [
+    "module_facet_reader.h",
+  ]
+
+  deps = [
+    "//peridot/public/fidl/fuchsia.modular",
+  ]
+}
+
+source_set("module_facet_reader_impl") {
+  sources = [
+    "module_facet_reader_impl.cc",
+    "module_facet_reader_impl.h",
+  ]
+
+  deps = [
+    ":module_facet_reader",
+    ":json_xdr",
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/lib/cmx_facet_parser",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/json",
+    "//garnet/public/lib/pkg_url",
+    "//peridot/lib/fidl:json_xdr",
+    "//peridot/public/fidl/fuchsia.modular",
+  ]
+}
+
+source_set("module_facet_reader_impl_unittest") {
+  testonly = true
+
+  sources = [
+    "module_facet_reader_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":module_facet_reader_impl",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/gtest",
+    "//peridot/lib/scoped_tmpfs",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//third_party/googletest:gtest",
   ]
 }
 
