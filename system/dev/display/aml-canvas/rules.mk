@@ -17,9 +17,6 @@ MODULE_STATIC_LIBS := system/ulib/ddk
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
-MODULE_BANJO_LIBS := \
-    system/banjo/ddk-protocol-amlogic-canvas
-
 include make/module.mk
 
 # Build canvas proxy client driver.
@@ -34,8 +31,5 @@ MODULE_SRCS += \
 MODULE_STATIC_LIBS := system/ulib/ddk
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
-
-MODULE_BANJO_LIBS := \
-    system/banjo/ddk-protocol-amlogic-canvas
 
 include make/module.mk
