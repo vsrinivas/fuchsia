@@ -7,6 +7,7 @@
 #include <lib/fdio/util.h>
 #include <lib/logger/provider.h>
 #include <lib/process-launcher/launcher.h>
+#include <lib/profile/profile.h>
 #include <lib/svc/outgoing.h>
 #include <lib/sysmem/sysmem.h>
 #include <lib/zx/job.h>
@@ -160,9 +161,19 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    zx_handle_t profile_root_job_copy;
+    status = zx_handle_duplicate(root_job, ZX_RIGHT_SAME_RIGHTS, &profile_root_job_copy);
+    if (status != ZX_OK) {
+        fprintf(stderr, "svchost: failed to duplicate root job: %d (%s).\n", status,
+                zx_status_get_string(status));
+        return 1;
+    }
+
     zx_service_provider_instance_t service_providers[] = {
         {.provider = launcher_get_service_provider(), .ctx = nullptr},
         {.provider = sysmem_get_service_provider(), .ctx = nullptr},
+        {.provider = profile_get_service_provider(),
+         .ctx = reinterpret_cast<void*>(static_cast<uintptr_t>(profile_root_job_copy))},
     };
 
     for (size_t i = 0; i < fbl::count_of(service_providers); ++i) {
@@ -174,8 +185,10 @@ int main(int argc, char** argv) {
         }
     }
 
+
     // if full system is not required drop simple logger service.
-    zx_service_provider_instance_t logger_service{.provider = logger_get_service_provider(), .ctx = nullptr};
+    zx_service_provider_instance_t logger_service{.provider = logger_get_service_provider(),
+                                                  .ctx = nullptr};
     if(!require_system) {
       status = provider_load(&logger_service, dispatcher, outgoing.public_dir());
       if (status != ZX_OK) {

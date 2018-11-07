@@ -19,7 +19,8 @@ MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-logger \
     system/fidl/fuchsia-mem \
     system/fidl/fuchsia-process \
-    system/fidl/fuchsia-sysmem
+    system/fidl/fuchsia-profile \
+    system/fidl/fuchsia-sysmem \
 
 MODULE_STATIC_LIBS := \
     system/ulib/elf-search \
@@ -38,6 +39,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fidl \
     system/ulib/fidl-async \
     system/ulib/pretty \
+    system/ulib/profile \
     system/ulib/zxcpp \
     system/ulib/zx
 

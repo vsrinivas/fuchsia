@@ -28,14 +28,15 @@ KCOUNTER(profile_set,    "kernel.profile.set");
 zx_status_t sys_profile_create(zx_handle_t root_job,
                                user_in_ptr<const zx_profile_info_t> user_profile_info,
                                user_out_handle* out) {
-    // TODO(cpu): check job policy.
+    // TODO(ZX-3352): check job policy.
 
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<JobDispatcher> job;
     auto status = up->GetDispatcherWithRights(root_job, ZX_RIGHT_MANAGE_PROCESS, &job);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return status;
+    }
 
     // Validate that the job is in fact the first usermode job (aka root job).
     if (GetRootJobDispatcher() != job->parent()) {
@@ -45,14 +46,16 @@ zx_status_t sys_profile_create(zx_handle_t root_job,
 
     zx_profile_info_t profile_info;
     status = user_profile_info.copy_from_user(&profile_info);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return status;
+    }
 
     fbl::RefPtr<Dispatcher> dispatcher;
     zx_rights_t rights;
     status = ProfileDispatcher::Create(profile_info, &dispatcher, &rights);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return status;
+    }
 
     kcounter_add(profile_create, 1);
 

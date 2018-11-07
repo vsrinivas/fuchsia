@@ -1,0 +1,13 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.scheduler;
+
+using zx;
+
+[Discoverable, Layout = "Simple"]
+interface ProfileProvider {
+    // Obtain a profile handle.
+    GetProfile(uint32 priority, string:64 name) -> (zx.status status, handle<profile>? profile);
+};

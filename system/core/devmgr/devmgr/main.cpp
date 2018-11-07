@@ -387,8 +387,9 @@ zx_status_t svchost_start(bool require_system) {
     }
 
     zx::job root_job_copy;
-    status = g_handles.root_job->duplicate(
-        ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHTS_PROPERTY | ZX_RIGHT_ENUMERATE, &root_job_copy);
+    status = g_handles.root_job->duplicate(ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHTS_PROPERTY |
+                                               ZX_RIGHT_ENUMERATE | ZX_RIGHT_MANAGE_PROCESS,
+                                           &root_job_copy);
     if (status != ZX_OK) {
         return status;
     }

@@ -13,7 +13,7 @@ namespace zx {
 
 class profile : public object<profile> {
 public:
-    static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_LOG;
+    static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_PROFILE;
 
     constexpr profile() = default;
 
