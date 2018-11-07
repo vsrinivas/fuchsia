@@ -192,8 +192,6 @@ func (f *installFile) open() error {
 	// permission errors from blobfs are returned when the blob already exists and
 	// is no longer writable
 	if os.IsPermission(err) || os.IsExist(err) {
-		f.blob.Close()
-
 		// "Fulfill" any needs against the blob that was attempted to be written.
 		f.fs.index.Fulfill(f.name)
 
@@ -206,9 +204,6 @@ func (f *installFile) open() error {
 		}
 
 		return fs.ErrAlreadyExists
-	}
-	if err != nil {
-		f.blob.Close()
 	}
 	return goErrToFSErr(err)
 }
@@ -241,6 +236,10 @@ func (f *installFile) Write(p []byte, off int64, whence int) (int, error) {
 }
 
 func (f *installFile) Close() error {
+	if f.blob == nil {
+		return nil
+	}
+
 	if err := f.blob.Close(); err != nil {
 		log.Printf("error closing file: %s\n", err)
 		return goErrToFSErr(err)
