@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "devhost-lock.h"
 #include "device-internal.h"
 #include "devcoordinator.h"
 
@@ -97,13 +98,13 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>,
         return ops_->init(&ctx_);
     }
 
-    zx_status_t BindOp(zx_device_t* device) const {
-        return ops_->bind(ctx_, device);
+    zx_status_t BindOp(const fbl::RefPtr<zx_device_t>& device) const {
+        return ops_->bind(ctx_, device.get());
     }
 
-    zx_status_t CreateOp(zx_device_t* parent, const char* name, const char* args,
+    zx_status_t CreateOp(const fbl::RefPtr<zx_device_t>& parent, const char* name, const char* args,
                          zx_handle_t rpc_channel) const {
-        return ops_->create(ctx_, parent, name, args, rpc_channel);
+        return ops_->create(ctx_, parent.get(), name, args, rpc_channel);
     }
 
     void ReleaseOp() const {
@@ -127,58 +128,47 @@ namespace devmgr {
 
 extern zx_protocol_device_t device_default_ops;
 
-// locking and lock debugging
-
-namespace internal {
-extern mtx_t devhost_api_lock;
-} // namespace internal
-
-#define REQ_DM_LOCK TA_REQ(&internal::devhost_api_lock)
-#define USE_DM_LOCK TA_GUARDED(&internal::devhost_api_lock)
-
-static inline void DM_LOCK() TA_ACQ(&internal::devhost_api_lock) {
-    mtx_lock(&internal::devhost_api_lock);
-}
-
-static inline void DM_UNLOCK() TA_REL(&internal::devhost_api_lock) {
-    mtx_unlock(&internal::devhost_api_lock);
-}
-
-zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
+zx_status_t devhost_device_add(const fbl::RefPtr<zx_device_t>& dev,
+                               const fbl::RefPtr<zx_device_t>& parent,
                                const zx_device_prop_t* props, uint32_t prop_count,
                                const char* proxy_args) REQ_DM_LOCK;
-zx_status_t devhost_device_remove(zx_device_t* dev) REQ_DM_LOCK;
-zx_status_t devhost_device_bind(zx_device_t* dev, const char* drv_libname) REQ_DM_LOCK;
-zx_status_t devhost_device_rebind(zx_device_t* dev) REQ_DM_LOCK;
-zx_status_t devhost_device_unbind(zx_device_t* dev) REQ_DM_LOCK;
-zx_status_t devhost_device_create(zx_driver_t* drv, zx_device_t* parent,
+// Note that devhost_device_remove() takes a RefPtr rather than a const RefPtr&.
+// It intends to consume a reference.
+zx_status_t devhost_device_remove(fbl::RefPtr<zx_device_t> dev) REQ_DM_LOCK;
+zx_status_t devhost_device_bind(const fbl::RefPtr<zx_device_t>& dev, const char* drv_libname) REQ_DM_LOCK;
+zx_status_t devhost_device_rebind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
+zx_status_t devhost_device_unbind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
+zx_status_t devhost_device_create(zx_driver_t* drv, const fbl::RefPtr<zx_device_t>& parent,
                                   const char* name, void* ctx,
-                                  zx_protocol_device_t* ops, zx_device_t** out) REQ_DM_LOCK;
-zx_status_t devhost_device_open_at(zx_device_t* dev, zx_device_t** out,
-                                 const char* path, uint32_t flags) REQ_DM_LOCK;
-zx_status_t devhost_device_close(zx_device_t* dev, uint32_t flags) REQ_DM_LOCK;
-zx_status_t devhost_device_suspend(zx_device_t* dev, uint32_t flags) REQ_DM_LOCK;
+                                  zx_protocol_device_t* ops,
+                                  fbl::RefPtr<zx_device_t>* out) REQ_DM_LOCK;
+zx_status_t devhost_device_open_at(const fbl::RefPtr<zx_device_t>& dev,
+                                   fbl::RefPtr<zx_device_t>* out,
+                                   const char* path, uint32_t flags) REQ_DM_LOCK;
+zx_status_t devhost_device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags) REQ_DM_LOCK;
+zx_status_t devhost_device_suspend(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags) REQ_DM_LOCK;
 void devhost_device_destroy(zx_device_t* dev) REQ_DM_LOCK;
 
-zx_status_t devhost_load_firmware(zx_device_t* dev, const char* path,
+zx_status_t devhost_load_firmware(const fbl::RefPtr<zx_device_t>& dev, const char* path,
                                   zx_handle_t* fw, size_t* size) REQ_DM_LOCK;
 
-zx_status_t devhost_get_topo_path(zx_device_t* dev, char* path,
+zx_status_t devhost_get_topo_path(const fbl::RefPtr<zx_device_t>& dev, char* path,
                                   size_t max, size_t* actual);
 
-zx_status_t devhost_get_metadata(zx_device_t* dev, uint32_t type, void* buf, size_t buflen,
-                                 size_t* actual);
+zx_status_t devhost_get_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type, void* buf,
+                                 size_t buflen, size_t* actual);
 
-zx_status_t devhost_add_metadata(zx_device_t* dev, uint32_t type, const void* data, size_t length);
+zx_status_t devhost_add_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type,
+                                 const void* data, size_t length);
 
-zx_status_t devhost_publish_metadata(zx_device_t* dev, const char* path, uint32_t type,
-                                     const void* data, size_t length);
+zx_status_t devhost_publish_metadata(const fbl::RefPtr<zx_device_t>& dev, const char* path,
+                                     uint32_t type, const void* data, size_t length);
 
 // shared between devhost.c and rpc-device.c
 struct DevhostIostate {
     DevhostIostate() = default;
 
-    zx_device_t* dev = nullptr;
+    fbl::RefPtr<zx_device_t> dev;
     size_t io_off = 0;
     uint32_t flags = 0;
     bool dead = false;
@@ -190,26 +180,26 @@ zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie)
 zx_status_t devhost_start_iostate(fbl::unique_ptr<DevhostIostate> ios, zx::channel h);
 
 // routines devhost uses to talk to dev coordinator
-zx_status_t devhost_add(zx_device_t* dev, zx_device_t* child, const char* proxy_args,
+zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& dev,
+                        const fbl::RefPtr<zx_device_t>& child, const char* proxy_args,
                         const zx_device_prop_t* props, uint32_t prop_count);
-zx_status_t devhost_remove(zx_device_t* dev);
-void devhost_make_visible(zx_device_t* dev);
+zx_status_t devhost_remove(const fbl::RefPtr<zx_device_t>& dev);
+void devhost_make_visible(const fbl::RefPtr<zx_device_t>& dev);
 
-
-// device refcounts
-void dev_ref_release(zx_device_t* dev);
-static inline void dev_ref_acquire(zx_device_t* dev) {
-    dev->refcount++;
-}
 
 zx_handle_t get_root_resource();
 
 struct CreationContext {
-    zx_device_t* parent;
-    zx_device_t* child;
+    fbl::RefPtr<zx_device_t> parent;
+    fbl::RefPtr<zx_device_t> child;
     zx_handle_t rpc;
 };
 
 void devhost_set_creation_context(CreationContext* ctx);
+
+// State that is shared between the zx_device implementation and devhost-core.cpp
+void devhost_finalize() REQ_DM_LOCK;
+extern fbl::DoublyLinkedList<zx_device*, zx_device::DeferNode> defer_device_list USE_DM_LOCK;
+extern int devhost_enumerators USE_DM_LOCK;
 
 } // namespace devmgr

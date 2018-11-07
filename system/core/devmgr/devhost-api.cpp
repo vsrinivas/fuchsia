@@ -28,11 +28,14 @@ using namespace devmgr;
 __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* parent,
                                             device_add_args_t* args, zx_device_t** out) {
     zx_status_t r;
-    zx_device_t* dev = nullptr;
+    fbl::RefPtr<zx_device_t> dev;
 
     if (!parent) {
         return ZX_ERR_INVALID_ARGS;
     }
+
+    fbl::RefPtr<zx_device> parent_ref(parent);
+
     if (!args || args->version != DEVICE_ADD_ARGS_VERSION) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -48,7 +51,7 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     }
 
     DM_LOCK();
-    r = devhost_device_create(drv, parent, args->name, args->ctx, args->ops, &dev);
+    r = devhost_device_create(drv, parent_ref, args->name, args->ctx, args->ops, &dev);
     if (r != ZX_OK) {
         DM_UNLOCK();
         return r;
@@ -67,24 +70,29 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     // out must be set before calling devhost_device_add().
     // devhost_device_add() may result in child devices being created before it returns,
     // and those children may call ops on the device before device_add() returns.
+    // This leaked-ref will be accounted below.
     if (out) {
-        *out = dev;
+        *out = dev.get();
     }
 
     if (args->flags & DEVICE_ADD_MUST_ISOLATE) {
-        r = devhost_device_add(dev, parent, args->props, args->prop_count, args->proxy_args);
+        r = devhost_device_add(dev, parent_ref, args->props, args->prop_count, args->proxy_args);
     } else if (args->flags & DEVICE_ADD_INSTANCE) {
         dev->flags |= DEV_FLAG_INSTANCE | DEV_FLAG_UNBINDABLE;
-        r = devhost_device_add(dev, parent, nullptr, 0, nullptr);
+        r = devhost_device_add(dev, parent_ref, nullptr, 0, nullptr);
     } else {
-        r = devhost_device_add(dev, parent, args->props, args->prop_count, nullptr);
+        r = devhost_device_add(dev, parent_ref, args->props, args->prop_count, nullptr);
     }
     if (r != ZX_OK) {
         if (out) {
             *out = nullptr;
         }
-        devhost_device_destroy(dev);
+        dev.reset();
     }
+
+    // Leak the reference that was written to |out|, it will be recovered in
+    // device_remove().
+    __UNUSED auto ptr = dev.leak_ref();
 
     DM_UNLOCK();
     return r;
@@ -93,7 +101,10 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
 __EXPORT zx_status_t device_remove(zx_device_t* dev) {
     zx_status_t r;
     DM_LOCK();
-    r = devhost_device_remove(dev);
+    // This recovers the leaked reference that happened in
+    // device_add_from_driver() above.
+    auto dev_ref = fbl::internal::MakeRefPtrNoAdopt(dev);
+    r = devhost_device_remove(fbl::move(dev_ref));
     DM_UNLOCK();
     return r;
 }
@@ -101,14 +112,16 @@ __EXPORT zx_status_t device_remove(zx_device_t* dev) {
 __EXPORT zx_status_t device_rebind(zx_device_t* dev) {
     zx_status_t r;
     DM_LOCK();
-    r = devhost_device_rebind(dev);
+    fbl::RefPtr<zx_device_t> dev_ref(dev);
+    r = devhost_device_rebind(dev_ref);
     DM_UNLOCK();
     return r;
 }
 
 __EXPORT void device_make_visible(zx_device_t* dev) {
     DM_LOCK();
-    devhost_make_visible(dev);
+    fbl::RefPtr<zx_device_t> dev_ref(dev);
+    devhost_make_visible(dev_ref);
     DM_UNLOCK();
 }
 
@@ -118,7 +131,8 @@ __EXPORT const char* device_get_name(zx_device_t* dev) {
 }
 
 __EXPORT zx_device_t* device_get_parent(zx_device_t* dev) {
-    return dev->parent;
+    // The caller should not hold on to this past the lifetime of |dev|.
+    return dev->parent.get();
 }
 
 struct GenericProtocol {
@@ -179,14 +193,15 @@ __EXPORT zx_status_t load_firmware(zx_device_t* dev, const char* path,
                                    zx_handle_t* fw, size_t* size) {
     zx_status_t r;
     DM_LOCK();
-    r = devhost_load_firmware(dev, path, fw, size);
+    fbl::RefPtr<zx_device_t> dev_ref(dev);
+    r = devhost_load_firmware(dev_ref, path, fw, size);
     DM_UNLOCK();
     return r;
 }
 
 // Interface Used by DevHost RPC Layer
 
-zx_status_t device_bind(zx_device_t* dev, const char* drv_libname) {
+zx_status_t device_bind(const fbl::RefPtr<zx_device_t>& dev, const char* drv_libname) {
     zx_status_t r;
     DM_LOCK();
     r = devhost_device_bind(dev, drv_libname);
@@ -194,14 +209,15 @@ zx_status_t device_bind(zx_device_t* dev, const char* drv_libname) {
     return r;
 }
 
-zx_status_t device_unbind(zx_device_t* dev) {
+zx_status_t device_unbind(const fbl::RefPtr<zx_device_t>& dev) {
     DM_LOCK();
     zx_status_t r = devhost_device_unbind(dev);
     DM_UNLOCK();
     return r;
 }
 
-zx_status_t device_open_at(zx_device_t* dev, zx_device_t** out, const char* path, uint32_t flags) {
+zx_status_t device_open_at(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr<zx_device_t>* out,
+                           const char* path, uint32_t flags) {
     zx_status_t r;
     DM_LOCK();
     r = devhost_device_open_at(dev, out, path, flags);
@@ -209,37 +225,42 @@ zx_status_t device_open_at(zx_device_t* dev, zx_device_t** out, const char* path
     return r;
 }
 
-zx_status_t device_close(zx_device_t* dev, uint32_t flags) {
+// This function is intended to consume the reference produced by
+// device_open_at()
+zx_status_t device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags) {
     zx_status_t r;
     DM_LOCK();
-    r = devhost_device_close(dev, flags);
+    r = devhost_device_close(fbl::move(dev), flags);
     DM_UNLOCK();
     return r;
 }
 
-__EXPORT zx_status_t device_get_metadata(zx_device_t* dev, uint32_t type, void* buf, size_t buflen,
-                                         size_t* actual) {
+__EXPORT zx_status_t device_get_metadata(zx_device_t* dev, uint32_t type,
+                                         void* buf, size_t buflen, size_t* actual) {
     zx_status_t r;
     DM_LOCK();
-    r = devhost_get_metadata(dev, type, buf, buflen, actual);
+    auto dev_ref = fbl::WrapRefPtr(dev);
+    r = devhost_get_metadata(dev_ref, type, buf, buflen, actual);
     DM_UNLOCK();
     return r;
 }
 
-__EXPORT zx_status_t device_add_metadata(zx_device_t* dev, uint32_t type, const void* data,
-                                         size_t length) {
+__EXPORT zx_status_t device_add_metadata(zx_device_t* dev, uint32_t type,
+                                         const void* data, size_t length) {
     zx_status_t r;
     DM_LOCK();
-    r = devhost_add_metadata(dev, type, data, length);
+    auto dev_ref = fbl::WrapRefPtr(dev);
+    r = devhost_add_metadata(dev_ref, type, data, length);
     DM_UNLOCK();
     return r;
 }
 
-__EXPORT zx_status_t device_publish_metadata(zx_device_t* dev, const char* path, uint32_t type,
-                                             const void* data, size_t length) {
+__EXPORT zx_status_t device_publish_metadata(zx_device_t* dev, const char* path,
+                                             uint32_t type, const void* data, size_t length) {
     zx_status_t r;
     DM_LOCK();
-    r = devhost_publish_metadata(dev, path, type, data, length);
+    auto dev_ref = fbl::WrapRefPtr(dev);
+    r = devhost_publish_metadata(dev_ref, path, type, data, length);
     DM_UNLOCK();
     return r;
 }

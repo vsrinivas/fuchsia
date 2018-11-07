@@ -50,11 +50,11 @@ uint32_t log_flags = LOG_ERROR | LOG_INFO;
 struct ProxyIostate {
     ProxyIostate() = default;
 
-    zx_device_t* dev = nullptr;
+    fbl::RefPtr<zx_device_t> dev;
     port_handler_t ph = {};
 };
-static void proxy_ios_create(zx_device_t* dev, zx_handle_t h);
-static void proxy_ios_destroy(zx_device_t* dev);
+static void proxy_ios_create(const fbl::RefPtr<zx_device_t>& dev, zx_handle_t h);
+static void proxy_ios_destroy(const fbl::RefPtr<zx_device_t>& dev);
 
 #define proxy_ios_from_ph(ph) containerof(ph, ProxyIostate, ph)
 
@@ -73,7 +73,7 @@ static DevhostIostate root_ios = []() {
 
 static fbl::DoublyLinkedList<fbl::RefPtr<zx_driver>> dh_drivers;
 
-static const char* mkdevpath(zx_device_t* dev, char* path, size_t max) {
+static const char* mkdevpath(const fbl::RefPtr<zx_device_t>& dev, char* path, size_t max) {
     if (dev == nullptr) {
         return "";
     }
@@ -83,17 +83,18 @@ static const char* mkdevpath(zx_device_t* dev, char* path, size_t max) {
     char* end = path + max;
     char sep = 0;
 
-    while (dev) {
+    fbl::RefPtr<zx_device> itr_dev(dev);
+    while (itr_dev) {
         *(--end) = sep;
 
-        size_t len = strlen(dev->name);
+        size_t len = strlen(itr_dev->name);
         if (len > (size_t)(end - path)) {
             break;
         }
         end -= len;
-        memcpy(end, dev->name, len);
+        memcpy(end, itr_dev->name, len);
         sep = '/';
-        dev = dev->parent;
+        itr_dev = itr_dev->parent;
     }
     return end;
 }
@@ -298,19 +299,17 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
             break;
         }
 
-        auto dev = fbl::make_unique<zx_device>();
         //TODO: dev->ops and other lifecycle bits
         // no name means a dummy proxy device
-        if (dev == nullptr) {
-            r = ZX_ERR_NO_MEMORY;
+        fbl::RefPtr<zx_device> dev;
+        if ((r = zx_device::Create(&dev)) != ZX_OK) {
             break;
         }
         strcpy(dev->name, "proxy");
         dev->protocol_id = msg.protocol_id;
         dev->ops = &device_default_ops;
         dev->rpc.reset(hin[0]);
-        dev->refcount = 1;
-        newios->dev = dev.get();
+        newios->dev = dev;
 
         newios->ph.handle = hin[0];
         newios->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
@@ -321,8 +320,6 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
         log(RPC_IN, "devhost[%s] created '%s' ios=%p\n", path, name, newios.get());
         // dh_port has now taken ownership of newios.
         __UNUSED auto ptr = newios.release();
-        // TODO(teisenbe): This can go away once zx_device uses RefPtr.
-        __UNUSED auto ptr2 = dev.release();
         return ZX_OK;
     }
 
@@ -355,25 +352,35 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
             break;
         }
         if (drv->has_create_op()) {
+            // Create a dummy parent device for use in this call to Create
+            fbl::RefPtr<zx_device> parent;
+            if ((r = zx_device::Create(&parent)) != ZX_OK) {
+                break;
+            }
             // magic cookie for device create handshake
-            zx_device_t parent = {};
-            char dummy_name[sizeof(parent.name)] = "device_create dummy";
-            memcpy(&parent.name, &dummy_name, sizeof(parent.name));
+            char dummy_name[sizeof(parent->name)] = "device_create dummy";
+            memcpy(&parent->name, &dummy_name, sizeof(parent->name));
 
             CreationContext ctx = {
-                .parent = &parent,
+                .parent = fbl::move(parent),
                 .child = nullptr,
                 .rpc = hin[0],
             };
             devhost_set_creation_context(&ctx);
-            r = drv->CreateOp(&parent, "proxy", args, hin[2]);
+            r = drv->CreateOp(ctx.parent, "proxy", args, hin[2]);
             devhost_set_creation_context(nullptr);
+
+            // Suppress a warning about dummy device being in a bad state.  The
+            // message is spurious in this case, since the dummy parent never
+            // actually begins its device lifecycle.  This flag is ordinarily
+            // set by device_remove().
+            ctx.parent->flags |= DEV_FLAG_VERY_DEAD;
 
             if (r < 0) {
                 log(ERROR, "devhost[%s] driver create() failed: %d\n", path, r);
                 break;
             }
-            newios->dev = ctx.child;
+            newios->dev = fbl::move(ctx.child);
             if (newios->dev == nullptr) {
                 log(ERROR, "devhost[%s] driver create() failed to create a device!", path);
                 r = ZX_ERR_BAD_STATE;
@@ -458,7 +465,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
             break;
         }
         // call suspend on the device this devhost is rooted on
-        zx_device_t* device = ios->dev;
+        fbl::RefPtr<zx_device_t> device = ios->dev;
         while (device->parent != nullptr) {
             device = device->parent;
         }
@@ -474,7 +481,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
             r = ZX_ERR_INVALID_ARGS;
             break;
         }
-        device_remove(ios->dev);
+        device_remove(ios->dev.get());
         return ZX_OK;
 
     default:
@@ -573,11 +580,11 @@ static zx_status_t dh_handle_proxy_rpc(port_handler_t* ph, zx_signals_t signals,
         return ZX_ERR_STOP;
     }
     if (signals & ZX_CHANNEL_READABLE) {
-        log(RPC_SDW, "proxy-rpc: rpc readable (ios=%p,dev=%p)\n", ios, ios->dev);
+        log(RPC_SDW, "proxy-rpc: rpc readable (ios=%p,dev=%p)\n", ios, ios->dev.get());
         zx_status_t r;
         r = ios->dev->ops->rxrpc(ios->dev->ctx, ph->handle);
         if (r != ZX_OK) {
-            log(RPC_SDW, "proxy-rpc: rpc cb error %d (ios=%p,dev=%p)\n", r, ios, ios->dev);
+            log(RPC_SDW, "proxy-rpc: rpc cb error %d (ios=%p,dev=%p)\n", r, ios, ios->dev.get());
 destroy:
             ios->dev->proxy_ios = nullptr;
             zx_handle_close(ios->ph.handle);
@@ -587,14 +594,14 @@ destroy:
         return ZX_OK;
     }
     if (signals & ZX_CHANNEL_PEER_CLOSED) {
-        log(RPC_SDW, "proxy-rpc: peer closed (ios=%p,dev=%p)\n", ios, ios->dev);
+        log(RPC_SDW, "proxy-rpc: peer closed (ios=%p,dev=%p)\n", ios, ios->dev.get());
         goto destroy;
     }
     log(ERROR, "devhost: no work? %08x\n", signals);
     return ZX_OK;
 }
 
-static void proxy_ios_create(zx_device_t* dev, zx_handle_t h) {
+static void proxy_ios_create(const fbl::RefPtr<zx_device_t>& dev, zx_handle_t h) {
     if (dev->proxy_ios) {
         proxy_ios_destroy(dev);
     }
@@ -618,7 +625,7 @@ static void proxy_ios_create(zx_device_t* dev, zx_handle_t h) {
     dev->proxy_ios = ios.release();
 }
 
-static void proxy_ios_destroy(zx_device_t* dev) {
+static void proxy_ios_destroy(const fbl::RefPtr<zx_device_t>& dev) {
     ProxyIostate* ios = dev->proxy_ios;
     if (ios) {
         dev->proxy_ios = nullptr;
@@ -721,7 +728,8 @@ static void devhost_io_init() {
 
 // Send message to devcoordinator asking to add child device to
 // parent device.  Called under devhost api lock.
-zx_status_t devhost_add(zx_device_t* parent, zx_device_t* child, const char* proxy_args,
+zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
+                        const fbl::RefPtr<zx_device_t>& child, const char* proxy_args,
                         const zx_device_prop_t* props, uint32_t prop_count) {
     char buffer[512];
     const char* path = mkdevpath(parent, buffer, sizeof(buffer));
@@ -775,7 +783,7 @@ zx_status_t devhost_add(zx_device_t* parent, zx_device_t* child, const char* pro
     return r;
 }
 
-static zx_status_t devhost_rpc_etc(zx_device_t* dev, Message::Op op,
+static zx_status_t devhost_rpc_etc(const fbl::RefPtr<zx_device_t>& dev, Message::Op op,
                                    const char* args, const char* opname,
                                    uint32_t value, const void* data, size_t datalen,
                                    Status* rsp, size_t rsp_len, size_t* actual,
@@ -800,14 +808,14 @@ static zx_status_t devhost_rpc_etc(zx_device_t* dev, Message::Op op,
     return r;
 }
 
-static zx_status_t devhost_rpc(zx_device_t* dev, Message::Op op,
+static zx_status_t devhost_rpc(const fbl::RefPtr<zx_device_t>& dev, Message::Op op,
                                const char* args, const char* opname,
                                Status* rsp, size_t rsp_len,
                                zx_handle_t* outhandle) {
     return devhost_rpc_etc(dev, op, args, opname, 0, nullptr, 0, rsp, rsp_len, nullptr, outhandle);
 }
 
-void devhost_make_visible(zx_device_t* dev) {
+void devhost_make_visible(const fbl::RefPtr<zx_device_t>& dev) {
     Status rsp;
     devhost_rpc(dev, Message::Op::kMakeVisible, nullptr, "make-visible", &rsp,
                 sizeof(rsp), nullptr);
@@ -815,14 +823,14 @@ void devhost_make_visible(zx_device_t* dev) {
 
 // Send message to devcoordinator informing it that this device
 // is being removed.  Called under devhost api lock.
-zx_status_t devhost_remove(zx_device_t* dev) {
+zx_status_t devhost_remove(const fbl::RefPtr<zx_device_t>& dev) {
     DevhostIostate* ios = static_cast<DevhostIostate*>(dev->ios);
     if (ios == nullptr) {
-        log(ERROR, "removing device %p, ios is nullptr\n", dev);
+        log(ERROR, "removing device %p, ios is nullptr\n", dev.get());
         return ZX_ERR_INTERNAL;
     }
 
-    log(DEVLC, "removing device %p, ios %p\n", dev, ios);
+    log(DEVLC, "removing device %p, ios %p\n", dev.get(), ios);
 
     // Make this iostate inactive (stop accepting RPCs for it)
     //
@@ -854,8 +862,9 @@ zx_status_t devhost_remove(zx_device_t* dev) {
     return ZX_OK;
 }
 
-zx_status_t devhost_get_topo_path(zx_device_t* dev, char* path, size_t max, size_t* actual) {
-    zx_device_t* remote_dev = dev;
+zx_status_t devhost_get_topo_path(const fbl::RefPtr<zx_device_t>& dev, char* path, size_t max,
+                                  size_t* actual) {
+    fbl::RefPtr<zx_device_t> remote_dev = dev;
     if (dev->flags & DEV_FLAG_INSTANCE) {
         // Instances cannot be opened a second time. If dev represents an instance, return the path
         // to its parent, prefixed with an '@'.
@@ -889,13 +898,13 @@ zx_status_t devhost_get_topo_path(zx_device_t* dev, char* path, size_t max, size
     return ZX_OK;
 }
 
-zx_status_t devhost_device_bind(zx_device_t* dev, const char* drv_libname) {
+zx_status_t devhost_device_bind(const fbl::RefPtr<zx_device_t>& dev, const char* drv_libname) {
     Status rsp;
     return devhost_rpc(dev, Message::Op::kBindDevice, drv_libname,
                        "bind-device", &rsp, sizeof(rsp), nullptr);
 }
 
-zx_status_t devhost_load_firmware(zx_device_t* dev, const char* path,
+zx_status_t devhost_load_firmware(const fbl::RefPtr<zx_device_t>& dev, const char* path,
                                   zx_handle_t* vmo, size_t* size) {
     if ((vmo == nullptr) || (size == nullptr)) {
         return ZX_ERR_INVALID_ARGS;
@@ -917,8 +926,8 @@ zx_status_t devhost_load_firmware(zx_device_t* dev, const char* path,
     return ZX_OK;
 }
 
-zx_status_t devhost_get_metadata(zx_device_t* dev, uint32_t type, void* buf, size_t buflen,
-                                 size_t* actual) {
+zx_status_t devhost_get_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type, void* buf,
+                                 size_t buflen, size_t* actual) {
     if (!buf) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -948,8 +957,8 @@ zx_status_t devhost_get_metadata(zx_device_t* dev, uint32_t type, void* buf, siz
     return ZX_OK;
 }
 
-zx_status_t devhost_add_metadata(zx_device_t* dev, uint32_t type, const void* data,
-                                 size_t length) {
+zx_status_t devhost_add_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type,
+                                 const void* data, size_t length) {
     Status rsp;
 
     if (!data && length) {
@@ -959,7 +968,8 @@ zx_status_t devhost_add_metadata(zx_device_t* dev, uint32_t type, const void* da
                            length, &rsp, sizeof(rsp), nullptr, nullptr);
 }
 
-zx_status_t devhost_publish_metadata(zx_device_t* dev, const char* path, uint32_t type,
+zx_status_t devhost_publish_metadata(const fbl::RefPtr<zx_device_t>& dev,
+                                     const char* path, uint32_t type,
                                      const void* data, size_t length) {
     Status rsp;
 

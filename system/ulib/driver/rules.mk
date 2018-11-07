@@ -23,6 +23,7 @@ MODULE_SRCS := \
 	$(DEVMGR_SRCS)/devhost-core.cpp \
 	$(DEVMGR_SRCS)/devhost-rpc-server.cpp \
 	$(DEVMGR_SRCS)/devhost-shared.cpp \
+	$(DEVMGR_SRCS)/zx-device.cpp \
 
 ifeq ($(call TOBOOL,$(ENABLE_DRIVER_TRACING)),true)
 MODULE_SRCS += \

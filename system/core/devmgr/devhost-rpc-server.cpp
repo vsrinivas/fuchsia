@@ -47,7 +47,7 @@ void describe_error(zx::channel h, zx_status_t status) {
     h.write(0, &msg, sizeof(msg), nullptr, 0);
 }
 
-static zx_status_t create_description(zx_device_t* dev, zxfidl_on_open_t* msg,
+static zx_status_t create_description(const fbl::RefPtr<zx_device_t>& dev, zxfidl_on_open_t* msg,
                                       zx_handle_t* handle) {
     memset(msg, 0, sizeof(*msg));
     msg->primary.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
@@ -70,7 +70,7 @@ static zx_status_t create_description(zx_device_t* dev, zxfidl_on_open_t* msg,
     return ZX_OK;
 }
 
-static zx_status_t devhost_get_handles(zx::channel rh, zx_device_t* dev,
+static zx_status_t devhost_get_handles(zx::channel rh, const fbl::RefPtr<zx_device_t>& dev,
                                        const char* path, uint32_t flags) {
     zx_status_t r;
     // detect response directives and discard all other
@@ -89,17 +89,19 @@ static zx_status_t devhost_get_handles(zx::channel rh, zx_device_t* dev,
 
     newios->flags = flags;
 
-    if ((r = device_open_at(dev, &dev, path, flags)) < 0) {
+    fbl::RefPtr<zx_device_t> new_dev;
+    r = device_open_at(dev, &new_dev, path, flags);
+    if (r != ZX_OK) {
         fprintf(stderr, "devhost_get_handles(%p:%s) open path='%s', r=%d\n",
-                dev, dev->name, path ? path : "", r);
+                dev.get(), dev->name, path ? path : "", r);
         goto fail;
     }
-    newios->dev = dev;
+    newios->dev = new_dev;
 
     if (describe) {
         zxfidl_on_open_t info;
         zx_handle_t handle;
-        if ((r = create_description(dev, &info, &handle)) != ZX_OK) {
+        if ((r = create_description(new_dev, &info, &handle)) != ZX_OK) {
             goto fail_open;
         }
         uint32_t hcount = (handle != ZX_HANDLE_INVALID) ? 1 : 0;
@@ -119,7 +121,7 @@ static zx_status_t devhost_get_handles(zx::channel rh, zx_device_t* dev,
     return ZX_OK;
 
 fail_open:
-    device_close(dev, flags);
+    device_close(fbl::move(new_dev), flags);
 fail:
     if (describe) {
         describe_error(fbl::move(rh), r);
@@ -130,13 +132,14 @@ fail:
 #define DO_READ 0
 #define DO_WRITE 1
 
-static ssize_t do_sync_io(zx_device_t* dev, uint32_t opcode, void* buf, size_t count, zx_off_t off) {
+static ssize_t do_sync_io(const fbl::RefPtr<zx_device_t>& dev, uint32_t opcode, void* buf,
+                          size_t count, zx_off_t off) {
     size_t actual;
     zx_status_t r;
     if (opcode == DO_READ) {
-        r = dev->Read(buf, count, off, &actual);
+        r = dev->ReadOp(buf, count, off, &actual);
     } else {
-        r = dev->Write(buf, count, off, &actual);
+        r = dev->WriteOp(buf, count, off, &actual);
     }
     if (r < 0) {
         return r;
@@ -145,8 +148,8 @@ static ssize_t do_sync_io(zx_device_t* dev, uint32_t opcode, void* buf, size_t c
     }
 }
 
-static ssize_t do_ioctl(zx_device_t* dev, uint32_t op, const void* in_buf, size_t in_len,
-                        void* out_buf, size_t out_len, size_t* out_actual) {
+static ssize_t do_ioctl(const fbl::RefPtr<zx_device_t>& dev, uint32_t op, const void* in_buf,
+                        size_t in_len, void* out_buf, size_t out_len, size_t* out_actual) {
     zx_status_t r;
     switch (op) {
     case IOCTL_DEVICE_BIND: {
@@ -208,10 +211,10 @@ static ssize_t do_ioctl(zx_device_t* dev, uint32_t op, const void* in_buf, size_
         return ZX_OK;
     }
     case IOCTL_DEVICE_DEBUG_SUSPEND: {
-        return dev->Suspend(0);
+        return dev->SuspendOp(0);
     }
     case IOCTL_DEVICE_DEBUG_RESUME: {
-        return dev->Resume(0);
+        return dev->ResumeOp(0);
     }
     case IOCTL_DEVICE_GET_DRIVER_LOG_FLAGS: {
         if (!dev->driver) {
@@ -241,7 +244,7 @@ static ssize_t do_ioctl(zx_device_t* dev, uint32_t op, const void* in_buf, size_
         return device_unbind(dev);
     }
     default: {
-        return dev->Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
+        return dev->IoctlOp(op, in_buf, in_len, out_buf, out_len, out_actual);
     }
     }
 }
@@ -256,18 +259,17 @@ static zx_status_t fidl_node_clone(void* ctx, uint32_t flags, zx_handle_t object
 
 static zx_status_t fidl_node_close(void* ctx, fidl_txn_t* txn) {
     auto ios = static_cast<DevhostIostate*>(ctx);
-    device_close(ios->dev, ios->flags);
-    // The ios released its reference to this device by calling
-    // device_close() Put an invalid pointer in its dev field to ensure any
-    // use-after-release attempts explode.
-    ios->dev = reinterpret_cast<zx_device_t*>(0xdead);
+    // Call device_close to let the driver execute its close hook.  This may
+    // be the last reference to the device, causing it to be destroyed.
+    device_close(fbl::move(ios->dev), ios->flags);
+
     fuchsia_io_NodeClose_reply(txn, ZX_OK);
     return ERR_DISPATCHER_DONE;
 }
 
 static zx_status_t fidl_node_describe(void* ctx, fidl_txn_t* txn) {
     auto ios = static_cast<DevhostIostate*>(ctx);
-    zx_device_t* dev = ios->dev;
+    const auto& dev = ios->dev;
     fuchsia_io_NodeInfo info;
     memset(&info, 0, sizeof(info));
     info.tag = fuchsia_io_NodeInfoTag_device;
@@ -286,7 +288,7 @@ static zx_status_t fidl_directory_open(void* ctx, uint32_t flags, uint32_t mode,
                                        zx_handle_t object) {
     zx::channel c(object);
     auto ios = static_cast<DevhostIostate*>(ctx);
-    zx_device_t* dev = ios->dev;
+    const auto& dev = ios->dev;
     if ((path_size < 1) || (path_size > 1024)) {
         return ZX_OK;
     }
@@ -401,7 +403,7 @@ static const fuchsia_io_DirectoryAdmin_ops_t kDirectoryAdminOps = []() {
 
 static zx_status_t fidl_file_read(void* ctx, uint64_t count, fidl_txn_t* txn) {
     auto ios = static_cast<DevhostIostate*>(ctx);
-    zx_device_t* dev = ios->dev;
+    const auto& dev = ios->dev;
     if (!CAN_READ(ios)) {
         return fuchsia_io_FileRead_reply(txn, ZX_ERR_ACCESS_DENIED, nullptr, 0);
     } else if (count > ZXFIDL_MAX_MSG_BYTES) {
@@ -480,7 +482,7 @@ static zx_status_t fidl_file_seek(void* ctx, int64_t offset, fuchsia_io_SeekOrig
                                   fidl_txn_t* txn) {
     auto ios = static_cast<DevhostIostate*>(ctx);
     size_t end, n;
-    end = ios->dev->GetSize();
+    end = ios->dev->GetSizeOp();
     switch (start) {
     case fuchsia_io_SeekOrigin_START:
         if ((offset < 0) || ((size_t)offset > end)) {
@@ -578,7 +580,7 @@ static zx_status_t fidl_node_getattr(void* ctx, fidl_txn_t* txn) {
     fuchsia_io_NodeAttributes attributes;
     memset(&attributes, 0, sizeof(attributes));
     attributes.mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
-    attributes.content_size = ios->dev->GetSize();
+    attributes.content_size = ios->dev->GetSizeOp();
     attributes.link_count = 1;
     return fuchsia_io_NodeGetAttr_reply(txn, ZX_OK, &attributes);
 }
@@ -656,7 +658,7 @@ zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie)
         return fuchsia_io_DirectoryAdmin_dispatch(cookie, txn, msg, &kDirectoryAdminOps);
     } else {
         auto ios = static_cast<DevhostIostate*>(cookie);
-        return ios->dev->Message(msg, txn);
+        return ios->dev->MessageOp(msg, txn);
     }
 }
 
