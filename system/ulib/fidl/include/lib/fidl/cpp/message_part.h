@@ -24,6 +24,9 @@ namespace fidl {
 template<typename T>
 class MessagePart {
 public:
+    using value_type = T;
+    using const_iterator = const T*;
+
     // A message part with no storage.
     MessagePart() : data_(nullptr), capacity_(0u), actual_(0u) {}
 

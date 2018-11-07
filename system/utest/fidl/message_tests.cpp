@@ -91,9 +91,22 @@ bool message_builder_test() {
     END_TEST;
 }
 
+bool message_part_is_stl_container_test() {
+    BEGIN_TEST;
+
+    EXPECT_EQ(sizeof(uint8_t), sizeof(fidl::BytePart::value_type));
+    EXPECT_EQ(sizeof(zx_handle_t), sizeof(fidl::HandlePart::value_type));
+
+    EXPECT_EQ(sizeof(const uint8_t*), sizeof(fidl::BytePart::const_iterator));
+    EXPECT_EQ(sizeof(const zx_handle_t*), sizeof(fidl::HandlePart::const_iterator));
+
+    END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(message_tests)
 RUN_NAMED_TEST("Message test", message_test)
 RUN_NAMED_TEST("MessageBuilder test", message_builder_test)
+RUN_NAMED_TEST("MessagePart friendly with STL test", message_part_is_stl_container_test)
 END_TEST_CASE(message_tests);
