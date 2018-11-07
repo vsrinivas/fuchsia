@@ -57,6 +57,7 @@ source_set("sources") {
     "//garnet/public/fidl/fuchsia.bluetooth.control",
     "//garnet/public/fidl/fuchsia.bluetooth.gatt",
     "//garnet/public/fidl/fuchsia.bluetooth.le",
+    "//zircon/public/banjo/ddk-protocol-bt-gatt-svc",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
