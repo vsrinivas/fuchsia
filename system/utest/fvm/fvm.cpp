@@ -2810,7 +2810,7 @@ bool TestRandomOpMultithreaded() {
     char fvm_driver[PATH_MAX];
     const size_t kBlockSize = use_real_disk ? test_block_size : 512;
     const size_t kBlockCount = use_real_disk ? test_block_count : 1 << 20;
-    const size_t kBlocksPerSlice = 256;
+    const size_t kBlocksPerSlice = 32;
     const size_t kSliceSize = kBlocksPerSlice * kBlockSize;
     ASSERT_EQ(StartFVMTest(kBlockSize, kBlockCount, kSliceSize, ramdisk_path,
                            fvm_driver),
