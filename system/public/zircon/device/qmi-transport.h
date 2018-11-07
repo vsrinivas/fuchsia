@@ -21,4 +21,12 @@ __BEGIN_CDECLS
 
 IOCTL_WRAPPER_OUT(ioctl_qmi_get_channel, IOCTL_QMI_GET_CHANNEL, zx_handle_t);
 
+// Set the online status of the modem.
+//   in: bool (connected or not)
+//   out: none
+#define IOCTL_QMI_SET_NETWORK \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_QMI, 1)
+
+IOCTL_WRAPPER_IN(ioctl_qmi_set_network, IOCTL_QMI_SET_NETWORK, bool);
+
 __END_CDECLS
