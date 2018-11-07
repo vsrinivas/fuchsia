@@ -61,6 +61,11 @@ transform reserved words into non-reserved identifiers, but these transforms
 reduce usability in those languages.  Avoiding commonly reserved words reduces
 the frequency with which these transformations are applied.
 
+While some FIDL keywords are also commonly reserved words in target languages,
+(such as `struct` in C and C++), and should thus be avoided, other FIDL keywords,
+particularly `request` and `handle`, are generally descriptive and can be
+used as appropriate.
+
 Names must not contain leading or trailing underscores.  Leading or trailing
 underscores have semantic meaning in some languages (e.g., leading underscores
 control visibility in Dart) and conventional meaning in other languages (e.g.,
@@ -219,7 +224,7 @@ Enums must be named in `UpperCamelCase` and must be noun phrases.  For example,
 `PixelFormat` is an enum that defines how colors are encoded into bits in an
 image.
 
-### Enums members
+### Enum members
 
 Enum members must be named in `ALL_CAPS_SNAKE_CASE`.
 
@@ -267,6 +272,34 @@ in a row) or the `[Doc = "this is a comment"]` attribute:
 /// this is a comment that flows through to the target
 
 [Doc = "and so is this"]
+```
+
+#### Flow-through vs. regular comment guidelines
+
+For flow through comments, the `///` form is preferred over the `[Doc = ]`
+form; the latter is intended as an internal implementation hook.
+
+When deciding what should be a regular "`//`" comment versus a flow-through
+comment, keep in mind the following.
+
+Regular comments:
+
+ * internal "todo" comments
+ * copyright notices
+ * implementation details
+
+Flow-through comments:
+
+ * descriptions of parameters, arguments, function
+ * usage notes
+
+For example:
+
+```fidl
+// TODO -- this function needs additional error checks
+/// WatchedEvent describes events returned from a DirectoryWatcher.
+struct WatchedEvent {
+...
 ```
 
 ### Files
