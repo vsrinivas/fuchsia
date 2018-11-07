@@ -27,7 +27,6 @@ source_set("simple_camera_lib") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/timeline:timeline",
     "//garnet/public/lib/ui/scenic/cpp",
-    "//garnet/public/lib/ui/view_framework:view_provider",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
@@ -42,7 +41,6 @@ source_set("simple_camera_lib") {
     "//lib",
   ]
 }
-
 
 group("tests") {
   testonly = true

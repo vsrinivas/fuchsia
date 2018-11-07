@@ -27,8 +27,8 @@ source_set("lib") {
     "view_manager_impl.h",
     "view_registry.cc",
     "view_registry.h",
-    "view_snapshot_impl.h",
     "view_snapshot_impl.cc",
+    "view_snapshot_impl.h",
     "view_state.cc",
     "view_state.h",
     "view_stub.cc",
@@ -53,12 +53,10 @@ source_set("lib") {
     "//garnet/public/lib/ui/geometry/cpp",
     "//garnet/public/lib/ui/input/cpp",
     "//garnet/public/lib/ui/scenic/cpp",
-    "//garnet/public/lib/ui/view_framework",
-    "//garnet/public/lib/ui/views/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 
   deps = [
-    "//garnet/lib/ui/gfx:object_linker"
+    "//garnet/lib/ui/gfx:object_linker",
   ]
 }

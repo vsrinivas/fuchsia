@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <zx/eventpair.h>
+
 #include "gtest/gtest.h"
 #include "lib/component/cpp/connect.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fxl/time/time_point.h"
-
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include "lib/ui/tests/mocks/mock_view_container_listener.h"
 #include "lib/ui/tests/mocks/mock_view_listener.h"
 #include "lib/ui/tests/mocks/mock_view_tree_listener.h"
@@ -46,9 +47,11 @@ TEST_F(ViewManagerTest, CreateAView) {
 
   // Create a view
   ::fuchsia::ui::viewsv1::ViewPtr view;
-  ::fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner;
-  view_manager_->CreateView(view.NewRequest(), view_owner.NewRequest(),
-                            std::move(view_listener), "test_view");
+  zx::eventpair view_owner_token, view_token;
+  if (zx::eventpair::create(0u, &view_owner_token, &view_token) != ZX_OK)
+    FXL_NOTREACHED() << "failed to create tokens.";
+  view_manager_->CreateView2(view.NewRequest(), std::move(view_token),
+                             std::move(view_listener), "test_view");
 }
 
 TEST_F(ViewManagerTest, CreateAChildView) {
@@ -61,9 +64,12 @@ TEST_F(ViewManagerTest, CreateAChildView) {
 
   // Create a parent view
   ::fuchsia::ui::viewsv1::ViewPtr parent_view;
-  ::fuchsia::ui::viewsv1token::ViewOwnerPtr parent_view_owner;
-  view_manager_->CreateView(
-      parent_view.NewRequest(), parent_view_owner.NewRequest(),
+  zx::eventpair parent_view_owner_token, parent_view_token;
+  if (zx::eventpair::create(0u, &parent_view_owner_token, &parent_view_token) !=
+      ZX_OK)
+    FXL_NOTREACHED() << "failed to create tokens.";
+  view_manager_->CreateView2(
+      parent_view.NewRequest(), std::move(parent_view_token),
       std::move(parent_view_listener), "parent_test_view");
 
   ::fuchsia::ui::viewsv1::ViewContainerPtr parent_view_container;
@@ -78,17 +84,23 @@ TEST_F(ViewManagerTest, CreateAChildView) {
 
   // Create a child view
   ::fuchsia::ui::viewsv1::ViewPtr child_view;
-  ::fuchsia::ui::viewsv1token::ViewOwnerPtr child_view_owner;
-  view_manager_->CreateView(child_view.NewRequest(),
-                            child_view_owner.NewRequest(),
-                            std::move(child_view_listener), "test_view");
+  zx::eventpair child_view_owner_token, child_view_token;
+  if (zx::eventpair::create(0u, &child_view_owner_token, &child_view_token) !=
+      ZX_OK)
+    FXL_NOTREACHED() << "failed to create tokens.";
+  view_manager_->CreateView2(child_view.NewRequest(),
+                             std::move(child_view_token),
+                             std::move(child_view_listener), "test_view");
 
   // Add the view to the parent
-  parent_view_container->AddChild(0, std::move(child_view_owner));
+  parent_view_container->AddChild2(0, std::move(child_view_owner_token));
 
   // Remove the view from the parent
-  ::fuchsia::ui::viewsv1token::ViewOwnerPtr new_child_view_owner;
-  parent_view_container->RemoveChild(0, new_child_view_owner.NewRequest());
+  zx::eventpair new_child_view_owner_token, new_child_view_token;
+  if (zx::eventpair::create(0u, &new_child_view_owner_token,
+                            &new_child_view_token) != ZX_OK)
+    FXL_NOTREACHED() << "failed to create tokens.";
+  parent_view_container->RemoveChild2(0, new_child_view_token.NewRequest());
 
   // If we had a ViewContainerListener, we would still not get a OnViewAttached
   // since the view hasn't had enough time to be resolved
@@ -133,13 +145,16 @@ TEST_F(ViewManagerTest, SetChildProperties) {
 
   // Create a parent view
   ::fuchsia::ui::viewsv1::ViewPtr parent_view;
-  ::fuchsia::ui::viewsv1token::ViewOwnerPtr parent_view_owner;
-  view_manager_->CreateView(
-      parent_view.NewRequest(), parent_view_owner.NewRequest(),
+  zx::eventpair parent_view_owner_token, parent_view_token;
+  if (zx::eventpair::create(0u, &parent_view_owner_token, &parent_view_token) !=
+      ZX_OK)
+    FXL_NOTREACHED() << "failed to create tokens.";
+  view_manager_->CreateView2(
+      parent_view.NewRequest(), std::move(parent_view_token),
       std::move(parent_view_listener), "parent_test_view");
 
   // Add root view to tree
-  tree_container->AddChild(parent_key, std::move(parent_view_owner));
+  tree_container->AddChild2(parent_key, std::move(parent_view_owner_token));
 
   auto parent_view_properties = ::fuchsia::ui::viewsv1::ViewProperties::New();
   parent_view_properties->view_layout =
@@ -172,13 +187,17 @@ TEST_F(ViewManagerTest, SetChildProperties) {
 
   // Create a child view
   ::fuchsia::ui::viewsv1::ViewPtr child_view;
-  ::fuchsia::ui::viewsv1token::ViewOwnerPtr child_view_owner;
-  view_manager_->CreateView(child_view.NewRequest(),
-                            child_view_owner.NewRequest(),
-                            std::move(child_view_listener), "test_view");
+  zx::eventpair child_view_owner_token, child_view_token;
+  if (zx::eventpair::create(0u, &child_view_owner_token, &child_view_token) !=
+      ZX_OK)
+    FXL_NOTREACHED() << "failed to create tokens.";
+  view_manager_->CreateView2(child_view.NewRequest(),
+                             std::move(child_view_token),
+                             std::move(child_view_listener), "test_view");
 
   // Add the view to the parent
-  parent_view_container->AddChild(child_key, std::move(child_view_owner));
+  parent_view_container->AddChild2(child_key,
+                                   std::move(child_view_owner_token));
 
   auto view_properties = ::fuchsia::ui::viewsv1::ViewProperties::New();
   view_properties->view_layout = ::fuchsia::ui::viewsv1::ViewLayout::New();

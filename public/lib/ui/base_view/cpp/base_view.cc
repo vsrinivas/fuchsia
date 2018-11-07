@@ -12,6 +12,8 @@ namespace scenic {
 
 BaseView::BaseView(ViewContext context, const std::string& debug_name)
     : startup_context_(context.startup_context),
+      incoming_services_(context.outgoing_services.Bind()),
+      outgoing_services_(std::move(context.incoming_services)),
       listener_binding_(this,
                         std::move(context.session_and_listener_request.second)),
       session_(std::move(context.session_and_listener_request.first)),

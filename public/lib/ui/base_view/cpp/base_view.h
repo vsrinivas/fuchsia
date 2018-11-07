@@ -169,6 +169,15 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
   // The default implementation does nothing.
   virtual void OnScenicEvent(fuchsia::ui::scenic::Event) {}
 
+ protected:
+  fuchsia::sys::ServiceProviderPtr& incoming_services() {
+    return incoming_services_;
+  }
+
+  component::ServiceNamespace& outgoing_services() {
+    return outgoing_services_;
+  }
+
  private:
   // |scenic::SessionListener|
   //
@@ -184,18 +193,19 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
   void PresentScene(zx_time_t presentation_time);
 
   component::StartupContext* const startup_context_;
+  fuchsia::sys::ServiceProviderPtr incoming_services_;
+  component::ServiceNamespace outgoing_services_;
+
   fidl::Binding<fuchsia::ui::scenic::SessionListener> listener_binding_;
   Session session_;
   View view_;
 
   fuchsia::ui::gfx::vec3 logical_size_;
-
   fuchsia::ui::gfx::ViewProperties view_properties_;
 
+  zx_time_t last_presentation_time_ = 0;
   bool invalidate_pending_ = false;
   bool present_pending_ = false;
-
-  zx_time_t last_presentation_time_ = 0;
 };
 
 }  // namespace scenic

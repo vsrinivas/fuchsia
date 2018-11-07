@@ -14,7 +14,7 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
-#include <lib/svc/cpp/services.h>
+#include <lib/svc/cpp/service_namespace.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/zx/eventpair.h>
@@ -167,6 +167,15 @@ class V1BaseView : private ::fuchsia::ui::viewsv1::ViewListener,
   // The default implementation does nothing.
   virtual void OnChildUnavailable(uint32_t child_key);
 
+ protected:
+  fuchsia::sys::ServiceProviderPtr& incoming_services() {
+    return incoming_services_;
+  }
+
+  component::ServiceNamespace& outgoing_services() {
+    return outgoing_services_;
+  }
+
  private:
   // |ViewListener|:
   void OnPropertiesChanged(::fuchsia::ui::viewsv1::ViewProperties properties,
@@ -194,6 +203,8 @@ class V1BaseView : private ::fuchsia::ui::viewsv1::ViewListener,
   fidl::Binding<::fuchsia::ui::viewsv1::ViewContainerListener>
       view_container_listener_binding_;
   fidl::Binding<fuchsia::ui::input::InputListener> input_listener_binding_;
+  fuchsia::sys::ServiceProviderPtr incoming_services_;
+  component::ServiceNamespace outgoing_services_;
 
   ::fuchsia::ui::viewsv1::ViewPtr view_;
   fuchsia::sys::ServiceProviderPtr view_service_provider_;
