@@ -113,7 +113,7 @@ cp "${OVMF_VARS}" $OVMF_VARS_TMP
 
 "${QEMU_DIR}/qemu-system-x86_64" \
   -enable-kvm \
-  -m 512 \
+  -m 1024 \
   -nographic \
   -drive "if=pflash,format=raw,readonly,file=${OVMF_CODE}" \
   -drive "if=pflash,format=raw,file=${OVMF_VARS_TMP}" \
