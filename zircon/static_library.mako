@@ -40,6 +40,9 @@ group("${data.name}") {
     % for dep in sorted(data.fidl_deps):
     "../../fidl/${dep}:${dep}_c",
     % endfor
+    % for dep in sorted(data.banjo_deps):
+    "../../banjo/${dep}:${dep}",
+    % endfor
   ]
 
   public_configs = [

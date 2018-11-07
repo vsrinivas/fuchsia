@@ -147,6 +147,7 @@ class SourceLibrary(object):
         self.sources = {}
         self.deps = []
         self.fidl_deps = []
+        self.banjo_deps = []
         self.libs = set()
 
 
@@ -172,6 +173,7 @@ def generate_source_library(package, context):
     data.deps += filter_deps(package.get('deps', []))
     data.deps += filter_deps(package.get('static-deps', []))
     data.fidl_deps = filter_deps(package.get('fidl-deps', []))
+    data.banjo_deps = filter_deps(package.get('banjo-deps', []))
 
     # Libraries.
     if 'zircon' in package.get('deps', []):
@@ -193,6 +195,7 @@ class CompiledLibrary(object):
         self.include_dirs = set()
         self.deps = []
         self.fidl_deps = []
+        self.banjo_deps = []
         self.lib_name = ''
         self.has_impl_prebuilt = False
         self.impl_prebuilt = ''
@@ -244,6 +247,7 @@ def generate_compiled_library(package, context):
     data.deps += filter_deps(package.get('deps', []))
     data.deps += filter_deps(package.get('static-deps', []))
     data.fidl_deps = filter_deps(package.get('fidl-deps', []))
+    data.banjo_deps = filter_deps(package.get('banjo-deps', []))
 
     # Generate the build file.
     template = 'shared_library.mako' if is_shared else 'static_library.mako'
@@ -358,6 +362,56 @@ def generate_fidl_library(package, context):
     generate_build_file(build_path, 'fidl.mako', data, context)
 
 
+class BanjoLibrary(object):
+    '''Represents a Banjo library.
+
+       Convenience storage object to be consumed by Mako templates.'''
+
+    def __init__(self, name, library):
+        self.name = name
+        self.library = library
+        self.sources = []
+        self.banjo_deps = []
+
+
+def generate_banjo_dummy_library(package, context):
+    '''Generates the build glue for a dummy Banjo library.'''
+    pkg_name = package['package']['name']
+
+    data  = BanjoLibrary(pkg_name, package['package']['library'])
+
+    for name, path in package.get('banjo', {}).iteritems():
+        (file, _) = extract_file(name, path, context)
+        data.sources.append('//%s' % file)
+
+    # Generate the build file.
+    build_path = os.path.join(context.out_dir, 'banjo', pkg_name, 'BUILD.gn')
+    generate_build_file(build_path, 'banjo_dummy.mako', data, context)
+
+def generate_banjo_library(package, context):
+    '''Generates the build glue for a Banjo library.'''
+    pkg_name = package['package']['name']
+
+    if "ddk-protocol" not in pkg_name:
+        generate_banjo_dummy_library(package, context)
+        return
+
+    data  = BanjoLibrary(pkg_name, package['package']['library'])
+
+    for name, path in package.get('banjo', {}).iteritems():
+        (file, _) = extract_file(name, path, context)
+        data.sources.append('//%s' % file)
+    data.banjo_deps = filter_deps(package.get('banjo-deps', []))
+    data.deps = [
+        '//zircon/public/lib/ddk',
+        '//zircon/public/lib/ddktl',
+    ]
+
+    # Generate the build file.
+    build_path = os.path.join(context.out_dir, 'banjo', pkg_name, 'BUILD.gn')
+    generate_build_file(build_path, 'banjo.mako', data, context)
+
+
 def generate_board_list(package, context):
     '''Generates a configuration file with the list of target boards.'''
     build_path = os.path.join(context.out_dir, 'config', 'boards.gni')
@@ -400,6 +454,7 @@ def main():
     out_dir = os.path.abspath(args.out)
     shutil.rmtree(os.path.join(out_dir, 'config'), True)
     shutil.rmtree(os.path.join(out_dir, 'fidl'), True)
+    shutil.rmtree(os.path.join(out_dir, 'banjo'), True)
     shutil.rmtree(os.path.join(out_dir, 'lib'), True)
     shutil.rmtree(os.path.join(out_dir, 'sysroot'), True)
     shutil.rmtree(os.path.join(out_dir, 'tool'), True)
@@ -464,6 +519,8 @@ def main():
                 generate_compiled_library(package, context)
         elif type == 'fidl':
             generate_fidl_library(package, context)
+        elif type == 'banjo':
+            generate_banjo_library(package, context)
         else:
             print('(%s) Unsupported package type: %s/%s, skipping'
                   % (name, type, arch))

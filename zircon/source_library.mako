@@ -31,6 +31,9 @@ source_set("${data.name}") {
     % for dep in sorted(data.fidl_deps):
     "../../fidl/${dep}:${dep}_c",
     % endfor
+    % for dep in sorted(data.banjo_deps):
+    "../../banjo/${dep}:${dep}",
+    % endfor
   ]
 
   libs = [
@@ -67,6 +70,7 @@ metadata = {
   % endfor
 
   fidl_deps = []
+  banjo_deps = []
 
   files = sources + headers
 }
