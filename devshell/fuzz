@@ -84,6 +84,7 @@ fx-config-read
 
 # Constants
 CIPD="${FUCHSIA_DIR}/buildtools/cipd"
+CIPD_PREFIX="fuchsia/test_data/fuzzing"
 
 # Global variables
 device=""
@@ -140,7 +141,7 @@ query() {
   [[ $? -eq 0 ]] || fatal "failed to query fuzzer"
   tmp="$(echo "${tmp}" | tr -d ':' | cut -d' ' -f1,2,8,11)"
   read fuzzer status data_path corpus_size <<< "${tmp}"
-  cipd_path="fuchsia/test_data/fuzzing/${fuzzer}"
+  cipd_path="${CIPD_PREFIX}/${fuzzer}"
 }
 
 record() {
@@ -226,9 +227,10 @@ fetch() {
   mkdir -p "${corpus}"
   [[ $? -eq 0 ]] || fatal "failed to create local directory: ${corpus}"
 
-  ${CIPD} install ${cipd_path} ${version} --root ${corpus}
-  if [[ $? -ne 0 ]] && [[ "${version}" != "latest" ]] ; then
-    fatal "unable to find ${cipd_path}:${version}"
+  # Get corpus from CIPD
+  if ${CIPD} ls -r "${CIPD_PREFIX}" | grep -q "${fuzzer}" ; then
+    ${CIPD} install "${cipd_path}" ${version} --root "${corpus}"
+    [[ $? -ne 0 ]] || fatal "failed to retrieve corpus"
   fi
 
   # Add any upstream third-party corpora
@@ -317,10 +319,23 @@ add_to_zbi() {
   pushd "${FUCHSIA_DIR}/zircon"
   USE_ASAN=1 USE_SANCOV=1 scripts/build-zircon-${FUCHSIA_ARCH} -C
 
-  # Determine parts relevant for fuzzing
+  # Find the lines in the bootfs manifest that are relevant to fuzzing, and create a new fuzz
+  # manifest that we can use to inject this objects into a ZBI.
   local bootfs_manifest="build-${FUCHSIA_ARCH}-asan/bootfs.manifest"
   local fuzz_manifest="build-${FUCHSIA_ARCH}-asan/fuzz.manifest"
-  egrep '({core}|{libs}|{test})(lib/asan/|test/fuzz/)' "${bootfs_manifest}" > "${fuzz_manifest}"
+  grep '{core}lib.*asan.*=' "${bootfs_manifest}" > "${fuzz_manifest}"
+  grep '^{libs}lib/asan' "${bootfs_manifest}" >> "${fuzz_manifest}"
+  grep '^{test}test/fuzz' "${bootfs_manifest}" >> "${fuzz_manifest}"
+
+  # Check that all fuzzers listed in the zircon_fuzzers package are present in the build
+  # The `targets` regex looks at the resources under the data/ directory to find the fuzz target
+  # name, i.e. "data/some_fuzz_target/corpora" => "some_fuzz_target".
+  local zircon_manifest="${FUCHSIA_BUILD_DIR}/obj/garnet/tests/zircon/zircon_fuzzers.manifest"
+  local targets="$(sed -n 's/^data\/\([^\/]*\)\/.*/\1/p' "${zircon_manifest}" | sort | uniq )"
+  for target in $targets ; do
+    grep -q "$target" "${fuzz_manifest}" || \
+      fatal "target not found in ${fuzz_manifest}: ${target}"
+  done
 
   # Copy fuzzers into Fuchsia
   mv "${image}" "${image}.orig"
