@@ -3,31 +3,32 @@
 # found in the LICENSE file.
 
 declare_args() {
-  # List of product definition files describing the packages to build, and
-  # where they are to be installed in images and updates.
-  #
-  # A product definition file is a JSON file containing:
-  # monolith:
-  #   a list of packages included in OTA images, base system images, and the
-  #   distribution repository.
-  # preinstall:
-  #   a list of packages pre-installed on the system (also added to the
-  #   distribution repository)
-  # available:
-  #   a list of packages only added to the distribution repository)
-  #
+  # These arguments should be set by the product definition gni file.
+
   # If a package is referenced in monolith and in preinstall, monolith takes
   # priority, and the package will be added to OTA images as part of the
   # verified boot set of static packages.
-  #
-  # If unset, layer will be guessed using //.jiri_manifest and
-  # //{layer}/products/default will be used.
-  fuchsia_products = []
+
+  # a list of packages included in OTA images, base system images, and the
+  # distribution repository.
+  monolith = []
+
+  # a list of packages pre-installed on the system (also added to the
+  # distribution repository)
+  preinstall = []
+
+  # a list of packages only added to the distribution repository)
+  available = []
 
   # List of packages (a GN list of strings).
   # This list of packages is added to the set of "available" packages, see
   # `products` for more information.
+  # If unset, layer will be guessed using //.jiri_manifest and
+  # //{layer}/products/default.gni will be used.
   fuchsia_packages = []
+
+  # Legacy product definitions.
+  fuchsia_products = []
 
   # List of extra packages to synthesize on the fly.  This is only for
   # things that do not appear normally in the source tree.  Synthesized
@@ -43,14 +44,23 @@ declare_args() {
   synthesize_packages = []
 }
 
-if (fuchsia_products == [] && fuchsia_packages == []) {
+# Print a warning message if the legacy fuchsia_products field is set.
+# Only print in the default toolchain so the warning only shows up once.
+if (fuchsia_products != [] && current_toolchain == default_toolchain) {
+  print("WARNING! Deprecated fuchsia product specification detected")
+  print("Please re-run 'fx set' to update your build configuration")
+  print("See https://fuchsia.googlesource.com/docs/+/master/development/build/")
+  print("or BLD-240 for more details")
+}
+
+if (monolith == [] && preinstall == [] && available == [] && fuchsia_packages == []) {
   _jiri_manifest = "//.jiri_manifest"
   _layers = exec_script("//build/gn/guess_layer.py",
                         [ rebase_path(_jiri_manifest) ],
                         "list lines",
                         [ _jiri_manifest ])
   foreach(layer, _layers) {
-    fuchsia_products += [ "$layer/products/default" ]
+    import("$layer/products/default.gni")
   }
 }
 
@@ -65,8 +75,11 @@ _preprocessed_products = exec_script("preprocess_products.py",
                                      [
                                        # A list of strings in GN syntax is
                                        # valid JSON too.
-                                       "--products=$fuchsia_products",
+                                       "--monolith=$monolith",
+                                       "--preinstall=$preinstall",
+                                       "--available=$available",
                                        "--packages=$fuchsia_packages",
+                                       "--legacy-products=$fuchsia_products",
                                      ],
                                      "json")
 

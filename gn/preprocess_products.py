@@ -31,6 +31,7 @@ def parse_product(product, build_packages):
                 continue
             sys.stderr.write("Invalid product key in %s: %s\n" % (product, k))
 
+
 def preprocess_packages(packages):
     observer = PackageLabelObserver()
     imports_resolver = PackageImportsResolver(observer)
@@ -44,8 +45,9 @@ def preprocess_packages(packages):
 
     return observer.json_result
 
+
 def main():
-    parser = argparse.ArgumentParser(description='''
+    parser = argparse.ArgumentParser(description="""
 Merge a list of product definitions to unique lists of GN labels:
 
 monolith   - the list of packages included in the base system images
@@ -54,12 +56,21 @@ available  - the list of packages installable and updatable
 host_tests - host tests collected from all above package sets
 data_deps  - additional labels to build, such as host tools
 files_read - a list of files used to compute all of the above
-''')
-    parser.add_argument('--products',
-                        help='JSON list of products',
+""")
+    parser.add_argument("--monolith",
+                        help="List of package definitions for the monolith",
                         required=True)
-    parser.add_argument('--packages',
-                        help='JSON list of additional packages',
+    parser.add_argument("--preinstall",
+                        help="List of package definitions for preinstalled packages",
+                        required=True)
+    parser.add_argument("--available",
+                        help="List of package definitions for available packages",
+                        required=True)
+    parser.add_argument("--packages",
+                        help="JSON list of additional packages",
+                        required=False)
+    parser.add_argument("--legacy-products",
+                        help="List of legacy product definitions",
                         required=False)
     args = parser.parse_args()
 
@@ -70,8 +81,15 @@ files_read - a list of files used to compute all of the above
         "files_read": set(),
     }
 
-    # First load and merge the root package lists for each of the given products
-    [parse_product(product, build_packages) for product in json.loads(args.products)]
+
+    # Parse monolith, preinstall, and available sets.
+    build_packages["monolith"].update(json.loads(args.monolith))
+    build_packages["preinstall"].update(json.loads(args.preinstall))
+    build_packages["available"].update(json.loads(args.available))
+
+    # Merge in the legacy product configurations, if set
+    [parse_product(product, build_packages) for product in
+            json.loads(args.legacy_products)]
 
     # Merge the extra packages into the monolith set (these will move to preinstall in the future):
     if args.packages:
