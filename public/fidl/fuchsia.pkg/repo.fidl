@@ -1,0 +1,165 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found
+// in the LICENSE file.
+
+library fuchsia.pkg;
+
+using fuchsia.io;
+using zx;
+
+/// Manages package repositories.
+///
+/// This interface is intended to be implemented by package resolver components, and used by
+/// repository administration tools.
+[Discoverable]
+interface RepositoryManager {
+    /// Add a repository. This will overwrite the repository if it already exists.
+    ///
+    /// Arguments:
+    /// * |repo| is repository to add to the resolver.
+    ///
+    /// Return Values:
+    /// * |ZX_OK| if the repository was added.
+    /// * |ZX_ERR_ALREADY_EXISTS| if the repository already exists.
+    /// * |ZX_ERR_INVALID_ARGS| if the repository is malformed.
+    1: Add(RepositoryConfig repo) -> (zx.status status);
+
+    /// Remove a repository.
+    ///
+    /// Removing a repository will prevent future packages from being cached from this repository,
+    /// but in-flight downloads may not be interrupted.
+    ///
+    /// Arguments:
+    /// * |repo_url| is the URL of the repository we want to remove.
+    ///
+    /// Return Values:
+    /// * Returns |ZX_OK| if the repository was removed.
+    /// * Returns |ZX_ERR_INVALID_ARGS| if the |repo_url| is malformed.
+    /// * Returns |ZX_ERR_NOT_FOUND| if the repository does not exist.
+    2: Remove(string repo_url) -> (zx.status status);
+
+    /// Add a mirror to a repository. This will overwrite the mirror if it already exists.
+    ///
+    /// Arguments:
+    /// * |repo_url| is repository that corresponds with this mirror.
+    /// * |mirror_url| is mirror URL to add to the resolver.
+    ///
+    /// Return Values:
+    /// * |ZX_OK| if the mirror was removed.
+    /// * |ZX_ERR_ALREADY_EXISTS| if the mirror for this repository already exists.
+    /// * |ZX_ERR_INVALID_ARGS| if the |repo_url| or the |mirror| is malformed.
+    /// * |ZX_ERR_NOT_FOUND| if the repository does not exist.
+    3: AddMirror(string repo_url, MirrorConfig mirror) -> (zx.status status);
+
+    /// Remove a mirror from a repository.
+    ///
+    /// Removing a mirror will prevent future packages from being cached from that mirror, but
+    /// in-flight downloads may not be interrupted.
+    ///
+    /// Arguments:
+    /// * |repo_url| the URL of the mirror's repository.
+    /// * |mirror_url| the URL of the mirror we want to remove.
+    ///
+    /// Return Values:
+    /// * |ZX_OK| if the mirror was removed.
+    /// * |ZX_ERR_INVALID_ARGS| if the |repo_url| or the |mirror_url| is malformed.
+    /// * |ZX_ERR_NOT_FOUND| if the repository or mirror does not exist.
+    4: RemoveMirror(string repo_url, string mirror_url) -> (zx.status status);
+
+    /// Return an iterator over all repositories.
+    ///
+    /// Arguments:
+    /// |iterator| is a request for an iterator.
+    5: List(request<RepositoryIterator> iterator);
+
+    /// Log into the mirror specified by the mirror url.
+    ///
+    /// Arguments:
+    /// * |repo_url| is the repository that contains the mirror to log into.
+    /// * |mirror_url| is the mirror URL to log into.
+    ///
+    /// Return Values:
+    /// * |ZX_OK| and a |code| if the if mirror is configured for authentication, or null if not.
+    /// * |ZX_ERR_INVALID_ARGS| if the |repo_url| or the |mirror_url| is malformed.
+    /// * |ZX_ERR_NOT_FOUND| if the repository or mirror does not exist.
+    6: Login(string repo_url, string mirror_url) -> (zx.status status, OAuth2DeviceCode? code);
+};
+
+/// Describes the configuration necessary to connect to a repository and it's mirrors.
+struct RepositoryConfig {
+    /// The url that hosts the repository.
+    string repo_url;
+
+    /// A vector of public keys. These keys must match one of the trusted keys known to the system.
+    vector<RepositoryKeyConfig> root_keys;
+
+    /// The repository mirrors that serve the package contents.
+    vector<MirrorConfig> mirrors;
+};
+
+/// Describes the keys used by the repository to authenticate it's packages.
+struct RepositoryKeyConfig {
+    /// The type of the key value. The only supported algorithm at the moment is ed25519.
+    string type;
+
+    /// The value of the key.
+    vector<uint8> value;
+};
+
+/// Descibes the configuration necessary to connect to a mirror.
+struct MirrorConfig {
+    /// The url that hosts the mirror.
+    string mirror_url;
+
+    /// Whether or not to automatically monitor the mirror for updates.
+    bool subscribe;
+
+    /// Optionally configure if the repository requires OAuth2 authentication for access.
+    OAuth2Config? oauth2;
+};
+
+/// Describes the configuration for communicating with an OAuth 2.0 protected server.
+struct OAuth2Config {
+    /// The OAuth2 application's ID.
+    string client_id;
+
+    /// The OAuth2 application's secret.
+    string client_secret;
+
+    /// The OAuth2 provider's authorization endpoint.
+    string auth_url;
+
+    /// The OAuth2 provider's token endpoint.
+    string token_url;
+
+    /// The optional requested permissions.
+    vector<string> scopes;
+
+    /// The OAuth2 provider's device code endpoint.
+    string device_code_url;
+};
+
+/// Describes the state needed to complete the Oauth2 device flow.
+///
+/// TODO(PKG-199): This will eventually be replaced once the packaging system integrates with the
+/// new account manager.
+struct OAuth2DeviceCode {
+    /// The OAuth2 provider's device code verification endpoint.
+    string verification_url;
+
+    /// The code the user must pass to the verification endpoint.
+    string user_code;
+
+    /// The time in nanoseconds before the verification code expires.
+    zx.duration expires_in;
+};
+
+/// The iterator over all the repositories defined in a |PackageResolver|.
+interface RepositoryIterator {
+    /// Advance the iterator and return the next batch of repositories.
+    ///
+    /// Return Values:
+    /// * a vector of |RepositoryConfig| repositories. Will return an empty vector when there are
+    ///   no more repositories.
+    1: Next() -> (vector<RepositoryConfig> repos);
+};
