@@ -595,6 +595,9 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, SourceLocation lo
         }
         auto primitive_type = LookupTypeAlias(name);
         if (primitive_type != nullptr) {
+            if (identifier_type->nullability != types::Nullability::kNonnullable) {
+                return Fail(raw_type->location(), "primitives cannot be nullable");
+            }
             *out_type = std::make_unique<PrimitiveType>(*primitive_type);
         } else {
             *out_type = std::make_unique<IdentifierType>(std::move(name), identifier_type->nullability);
