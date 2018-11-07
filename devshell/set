@@ -39,7 +39,7 @@
 ##                         variable as well as deal with variable re-definition.
 ##   --products            Include the listed products (separated by commas) in
 ##                         the build. Defaults to the default product for the
-##                         current layer (e.g., "garnet/packages/default" for
+##                         current layer (e.g., "garnet/packages/default.gni" for
 ##                         the Garnet layer). If the --products argument is
 ##                         given multiple times, the products configurations
 ##                         are merged.
@@ -275,7 +275,7 @@ function main {
     readonly layers
     local layer
     for layer in $layers; do
-      products+="${products:+,}$layer/products/default"
+      products+="${products:+,}$layer/products/default.gni"
     done
   fi
 
@@ -350,11 +350,9 @@ function main {
     gn_args+=" use_ccache=true"
   fi
 
-  gn_args+=" fuchsia_products=["
   for product in ${products[@]}; do
-    gn_args+="\"${product}\","
+    gn_args+=" import(\"${product}\")"
   done
-  gn_args+="]"
 
   if [[ -z "${boards}" ]]; then
     gn_args+=" fuchsia_packages=["
