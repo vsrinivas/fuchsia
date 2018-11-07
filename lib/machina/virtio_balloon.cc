@@ -22,7 +22,7 @@ zx_status_t VirtioBalloon::AddPublicService(
   return context->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 
-zx_status_t VirtioBalloon::Start(const zx::guest& guest, bool demand_page,
+zx_status_t VirtioBalloon::Start(const zx::guest& guest,
                                  fuchsia::sys::Launcher* launcher,
                                  async_dispatcher_t* dispatcher) {
   component::Services services;
@@ -39,7 +39,7 @@ zx_status_t VirtioBalloon::Start(const zx::guest& guest, bool demand_page,
   if (status != ZX_OK) {
     return status;
   }
-  return balloon_->Start(std::move(start_info), demand_page);
+  return balloon_->Start(std::move(start_info));
 }
 
 zx_status_t VirtioBalloon::ConfigureQueue(uint16_t queue, uint16_t size,

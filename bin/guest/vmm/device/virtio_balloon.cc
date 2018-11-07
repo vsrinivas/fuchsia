@@ -152,11 +152,7 @@ class VirtioBalloonImpl : public DeviceBase<VirtioBalloonImpl>,
         inflate_stream_.DoBalloon(phys_mem_.vmo(), ZX_VMO_OP_DECOMMIT);
         break;
       case Queue::DEFLATE:
-        // If demand paging is preferred, ignore the deflate queue when
-        // processing notifications.
-        if (!demand_page_) {
-          deflate_stream_.DoBalloon(phys_mem_.vmo(), ZX_VMO_OP_COMMIT);
-        }
+        deflate_stream_.DoBalloon(phys_mem_.vmo(), ZX_VMO_OP_COMMIT);
         break;
       case Queue::STATS:
         stats_stream_.DoStats();
@@ -169,10 +165,8 @@ class VirtioBalloonImpl : public DeviceBase<VirtioBalloonImpl>,
 
  private:
   // |fuchsia::guest::device::VirtioBalloon|
-  void Start(fuchsia::guest::device::StartInfo start_info,
-             bool demand_page) override {
+  void Start(fuchsia::guest::device::StartInfo start_info) override {
     PrepStart(std::move(start_info));
-    demand_page_ = demand_page;
     inflate_stream_.Init(phys_mem_, fit::bind_member<zx_status_t, DeviceBase>(
                                         this, &VirtioBalloonImpl::Interrupt));
     deflate_stream_.Init(phys_mem_, fit::bind_member<zx_status_t, DeviceBase>(
@@ -215,7 +209,6 @@ class VirtioBalloonImpl : public DeviceBase<VirtioBalloonImpl>,
     negotiated_features_ = negotiated_features;
   }
 
-  bool demand_page_;
   uint32_t negotiated_features_;
   BalloonStream inflate_stream_;
   BalloonStream deflate_stream_;

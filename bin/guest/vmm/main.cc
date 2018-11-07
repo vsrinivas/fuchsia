@@ -195,8 +195,8 @@ int main(int argc, char** argv) {
   if (status != ZX_OK) {
     return status;
   }
-  status = balloon.Start(*guest.object(), cfg.balloon_demand_page(),
-                         launcher.get(), guest.device_dispatcher());
+  status =
+      balloon.Start(*guest.object(), launcher.get(), guest.device_dispatcher());
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to start console device " << status;
     return status;

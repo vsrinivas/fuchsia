@@ -86,16 +86,7 @@ package:
         },
         "cmdline": {
             "type": "string"
-        },
-        "balloon-demand-page": {
-            "type": "string"
-        },
-        "balloon-interval": {
-            "type": "string"
-        },
-        "balloon-threshold": {
-            "type": "string"
-        },
+        }
     }
 }
 ```

@@ -33,7 +33,6 @@ TEST(GuestConfigParserTest, DefaultValues) {
   ASSERT_EQ(zx_system_get_num_cpus(), config.cpus());
   ASSERT_TRUE(config.block_devices().empty());
   ASSERT_TRUE(config.cmdline().empty());
-  ASSERT_FALSE(config.balloon_demand_page());
 }
 
 TEST(GuestConfigParserTest, ParseConfig) {
@@ -46,8 +45,7 @@ TEST(GuestConfigParserTest, ParseConfig) {
           "ramdisk": "ramdisk_path",
           "cpus": "4",
           "block": "/pkg/data/block_path",
-          "cmdline": "kernel cmdline",
-          "balloon-demand-page": "true"
+          "cmdline": "kernel cmdline"
         })JSON"));
   ASSERT_EQ(Kernel::ZIRCON, config.kernel());
   ASSERT_EQ("zircon_path", config.kernel_path());
@@ -56,7 +54,6 @@ TEST(GuestConfigParserTest, ParseConfig) {
   ASSERT_EQ(1, config.block_devices().size());
   ASSERT_EQ("/pkg/data/block_path", config.block_devices()[0].path);
   ASSERT_EQ("kernel cmdline", config.cmdline());
-  ASSERT_TRUE(config.balloon_demand_page());
 }
 
 TEST(GuestConfigParserTest, ParseArgs) {
@@ -68,8 +65,7 @@ TEST(GuestConfigParserTest, ParseArgs) {
                         "--ramdisk=ramdisk_path",
                         "--cpus=4",
                         "--block=/pkg/data/block_path",
-                        "--cmdline=kernel_cmdline",
-                        "--balloon-demand-page"};
+                        "--cmdline=kernel_cmdline"};
   ASSERT_EQ(ZX_OK,
             parser.ParseArgcArgv(countof(argv), const_cast<char**>(argv)));
   ASSERT_EQ(Kernel::LINUX, config.kernel());
@@ -79,7 +75,6 @@ TEST(GuestConfigParserTest, ParseArgs) {
   ASSERT_EQ(1, config.block_devices().size());
   ASSERT_EQ("/pkg/data/block_path", config.block_devices()[0].path);
   ASSERT_EQ("kernel_cmdline", config.cmdline());
-  ASSERT_TRUE(config.balloon_demand_page());
 }
 
 TEST(GuestConfigParserTest, UnknownArgument) {
@@ -95,15 +90,15 @@ TEST(GuestConfigParserTest, BooleanFlag) {
   GuestConfig config;
   GuestConfigParser parser(&config);
 
-  const char* argv_false[] = {"exe_name", "--balloon-demand-page=false"};
+  const char* argv_false[] = {"exe_name", "--virtio-net=false"};
   ASSERT_EQ(ZX_OK, parser.ParseArgcArgv(countof(argv_false),
                                         const_cast<char**>(argv_false)));
-  ASSERT_FALSE(config.balloon_demand_page());
+  ASSERT_FALSE(config.virtio_net());
 
-  const char* argv_true[] = {"exe_name", "--balloon-demand-page=true"};
+  const char* argv_true[] = {"exe_name", "--virtio-net=true"};
   ASSERT_EQ(ZX_OK, parser.ParseArgcArgv(countof(argv_true),
                                         const_cast<char**>(argv_true)));
-  ASSERT_TRUE(config.balloon_demand_page());
+  ASSERT_TRUE(config.virtio_net());
 }
 
 TEST(GuestConfigParserTest, CommandLineAppend) {

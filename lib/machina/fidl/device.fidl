@@ -54,9 +54,8 @@ interface VirtioDevice {
 
 [Discoverable]
 interface VirtioBalloon : VirtioDevice {
-    // Start the balloon device. Set |demand_page| to true, if demand paging is
-    // preferred over the deflate queue.
-    0x81000001: Start(StartInfo start_info, bool demand_page);
+    // Start the balloon device.
+    0x81000001: Start(StartInfo start_info);
 
     // Get memory statistics from the balloon device.
     0x81000002: GetMemStats()

@@ -27,10 +27,7 @@ class VirtioBalloon
 
   zx_status_t AddPublicService(component::StartupContext* context);
 
-  // If |demand_page| is true, then deflate requests will be treated as a no-op.
-  // Memory will instead be provided via demand paging.
-  zx_status_t Start(const zx::guest& guest, bool demand_page,
-                    fuchsia::sys::Launcher* launcher,
+  zx_status_t Start(const zx::guest& guest, fuchsia::sys::Launcher* launcher,
                     async_dispatcher_t* dispatcher);
 
  private:

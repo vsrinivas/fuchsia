@@ -58,10 +58,9 @@ class GuestConfig {
   const std::vector<BlockSpec>& block_devices() const { return block_specs_; }
   uint8_t cpus() const { return cpus_; }
   size_t memory() const { return memory_; }
-  bool balloon_demand_page() const { return balloon_demand_page_; }
+  size_t wayland_memory() const { return wayland_memory_; }
   bool virtio_gpu() const { return virtio_gpu_; }
   bool virtio_net() const { return virtio_net_; }
-  size_t wayland_memory() const { return wayland_memory_; }
 
  private:
   friend class GuestConfigParser;
@@ -74,7 +73,6 @@ class GuestConfig {
   uint8_t cpus_ = zx_system_get_num_cpus();
   size_t memory_ = 1 << 30;
   size_t wayland_memory_ = 1 << 30;
-  bool balloon_demand_page_ = false;
   bool virtio_gpu_ = true;
   bool virtio_net_ = true;
 };

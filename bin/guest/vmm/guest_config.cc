@@ -23,7 +23,6 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "usage: " << cl.argv0() << " [OPTIONS]\n";
   std::cerr << "\n";
   std::cerr << "OPTIONS:\n";
-  std::cerr << "\t--balloon-demand-page        Demand-page balloon deflate requests\n";
   std::cerr << "\t--block=[block_spec]         Adds a block device with the given parameters\n";
   std::cerr << "\t--cmdline-append=[cmdline]   Appends string 'cmdline' to the existing kernel\n";
   std::cerr << "\t                             This will overwrite any existing command line\n";
@@ -285,7 +284,6 @@ static GuestConfigParser::OptionHandler save_kernel(std::string* out,
 GuestConfigParser::GuestConfigParser(GuestConfig* cfg)
     : cfg_(cfg),
       opts_{
-          {"balloon-demand-page", set_flag(&cfg_->balloon_demand_page_, true)},
           {"block", append_option<BlockSpec>(&cfg_->block_specs_, parse_block_spec)},
           {"cmdline-append", append_string(&cfg_->cmdline_, " ")},
           {"cmdline", save_option(&cfg_->cmdline_)},
