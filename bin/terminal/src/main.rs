@@ -9,25 +9,25 @@ mod canvas;
 
 use crate::canvas::{Canvas, Color, FontDescription, FontFace, Paint, Point, Size};
 use failure::{Error, ResultExt};
-use fidl::endpoints::{create_proxy, create_endpoints, RequestStream, ServerEnd, ServiceMarker};
+use fidl::endpoints::{create_endpoints, create_proxy, RequestStream, ServerEnd, ServiceMarker};
 use fidl_fuchsia_images as images;
 use fidl_fuchsia_math::SizeF;
+use fidl_fuchsia_ui_app as viewsv2;
+use fidl_fuchsia_ui_gfx as gfx;
 use fidl_fuchsia_ui_scenic::{self as scenic, ScenicProxy, SessionListenerRequest};
 use fidl_fuchsia_ui_viewsv1::ViewProviderRequest::CreateView;
-use fidl_fuchsia_ui_viewsv1::{ViewListenerMarker, ViewListenerRequest, ViewManagerMarker,
-                              ViewManagerProxy, ViewProperties, ViewProviderMarker,
-                              ViewProviderRequestStream, ViewProxy};
-use fidl_fuchsia_ui_viewsv1token::ViewOwnerMarker;
-use fidl_fuchsia_ui_gfx as gfx;
+use fidl_fuchsia_ui_viewsv1::{
+    ViewListenerMarker, ViewListenerRequest, ViewManagerMarker, ViewManagerProxy, ViewProperties,
+    ViewProviderMarker, ViewProviderRequestStream, ViewProxy,
+};
 use fuchsia_app::client::connect_to_service;
 use fuchsia_app::server::ServiceFactory;
 use fuchsia_async as fasync;
 use fuchsia_scenic::{HostImageCycler, ImportNode, Session, SessionPtr};
-use fuchsia_zircon::EventPair;
+use fuchsia_zircon::{EventPair, Handle};
 use futures::{FutureExt, TryFutureExt, TryStreamExt};
-use parking_lot::Mutex;
 use std::env;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 static FONT_DATA: &'static [u8] =
     include_bytes!("../../fonts/third_party/robotomono/RobotoMono-Regular.ttf");
@@ -70,34 +70,48 @@ impl ViewController {
         let view_controller = Arc::new(Mutex::new(view_controller));
         {
             let view_controller = view_controller.clone();
-            fasync::spawn(async move {
-                let mut stream = session_listener_request.into_stream()?;
-                while let Some(request) = await!(stream.try_next())? {
-                    match request {
-                        SessionListenerRequest::OnScenicEvent {
-                            events,
-                            control_handle: _,
-                        } => view_controller.lock().handle_session_events(events),
-                        _ => (),
+            fasync::spawn(
+                async move {
+                    let mut stream = session_listener_request.into_stream()?;
+                    while let Some(request) = await!(stream.try_next())? {
+                        match request {
+                            SessionListenerRequest::OnScenicEvent {
+                                events,
+                                control_handle: _,
+                            } => view_controller
+                                .lock()
+                                .unwrap()
+                                .handle_session_events(events),
+                            _ => (),
+                        }
                     }
+                    Ok(())
                 }
-                Ok(())
-            }.unwrap_or_else(|e: failure::Error| eprintln!("view listener error: {:?}", e)));
+                    .unwrap_or_else(|e: failure::Error| eprintln!("view listener error: {:?}", e)),
+            );
         }
         {
             let view_controller = view_controller.clone();
-            fasync::spawn(async move {
-                let mut stream = view_listener_request.into_stream()?;
-                while let Some(req) = await!(stream.try_next())? {
-                    let ViewListenerRequest::OnPropertiesChanged {
-                        properties,
-                        responder,
-                    } = req;
-                    view_controller.lock().handle_properies_changed(properties);
-                    responder.send().unwrap_or_else(|e| eprintln!("view listener error: {:?}", e))
+            fasync::spawn(
+                async move {
+                    let mut stream = view_listener_request.into_stream()?;
+                    while let Some(req) = await!(stream.try_next())? {
+                        let ViewListenerRequest::OnPropertiesChanged {
+                            properties,
+                            responder,
+                        } = req;
+                        view_controller
+                            .lock()
+                            .unwrap()
+                            .handle_properies_changed(properties);
+                        responder
+                            .send()
+                            .unwrap_or_else(|e| eprintln!("view listener error: {:?}", e))
+                    }
+                    Ok(())
                 }
-                Ok(())
-            }.unwrap_or_else(|e: failure::Error| eprintln!("view listener error: {:?}", e)));
+                    .unwrap_or_else(|e: failure::Error| eprintln!("view listener error: {:?}", e)),
+            );
         }
         Ok(view_controller)
     }
@@ -136,7 +150,7 @@ impl ViewController {
                 .image_cycler
                 .acquire(info)
                 .expect("failed to allocate buffer");
-            let mut face = self.face.lock();
+            let mut face = self.face.lock().unwrap();
             let mut canvas = Canvas::new(guard.image().buffer(), stride);
             let paint = Paint {
                 fg: Color {
@@ -153,7 +167,10 @@ impl ViewController {
                 },
             };
             let point = Point { x: 0, y: 0 };
-            let size = Size { width: 14, height: 22 };
+            let size = Size {
+                width: 14,
+                height: 22,
+            };
             let mut font = FontDescription {
                 face: &mut face,
                 size: 20,
@@ -169,11 +186,7 @@ impl ViewController {
     }
 
     fn present(&self) {
-        fasync::spawn(self.session
-            .lock()
-            .present(0)
-            .map(|_| ())
-        );
+        fasync::spawn(self.session.lock().present(0).map(|_| ()));
     }
 
     fn handle_session_events(&mut self, events: Vec<scenic::Event>) {
@@ -212,29 +225,44 @@ impl App {
         })))
     }
 
-    pub fn spawn_view_provider_server(app: &AppPtr, channel: fasync::Channel) {
+    pub fn spawn_v1_view_provider_server(app: &AppPtr, chan: fasync::Channel) {
         let app = app.clone();
-        fasync::spawn(async move {
-            let mut stream = ViewProviderRequestStream::from_channel(channel);
-            while let Some(request) = await!(stream.try_next())? {
-                let CreateView { view_owner, .. } = request;
-                app.lock()
-                    .create_view(view_owner)
-                    .expect("failed to create view");
-            }
-            Ok(())
-        }.unwrap_or_else(|e: failure::Error| eprintln!("error running view_provider server: {:?}", e)));
+        fasync::spawn(
+            ViewProviderRequestStream::from_channel(chan)
+                .try_for_each(move |req| {
+                    let CreateView { view_owner, .. } = req;
+                    let token: EventPair = EventPair::from(Handle::from(view_owner.into_channel()));
+                    App::app_create_view(app.clone(), token).unwrap();
+                    futures::future::ready(Ok(()))
+                })
+                .unwrap_or_else(|e| eprintln!("error running V1 view_provider server: {:?}", e)),
+        )
     }
 
-    pub fn create_view(
-        &mut self, view_owner_request: ServerEnd<ViewOwnerMarker>,
-    ) -> Result<(), Error> {
+    pub fn spawn_v2_view_provider_server(app: &AppPtr, chan: fasync::Channel) {
+        let app = app.clone();
+        fasync::spawn(
+            viewsv2::ViewProviderRequestStream::from_channel(chan)
+                .try_for_each(move |req| {
+                    let viewsv2::ViewProviderRequest::CreateView { token, .. } = req;
+                    App::app_create_view(app.clone(), token).unwrap();
+                    futures::future::ready(Ok(()))
+                })
+                .unwrap_or_else(|e| eprintln!("error running V2 view_provider server: {:?}", e)),
+        )
+    }
+
+    pub fn app_create_view(app: AppPtr, view_token: EventPair) -> Result<(), Error> {
+        app.lock().unwrap().create_view(view_token)
+    }
+
+    pub fn create_view(&mut self, view_token: EventPair) -> Result<(), Error> {
         let (view, view_request) = create_proxy()?;
         let (view_listener, view_listener_request) = create_endpoints()?;
         let (mine, theirs) = EventPair::create()?;
-        self.view_manager.create_view(
+        self.view_manager.create_view2(
             view_request,
-            view_owner_request,
+            view_token,
             view_listener,
             theirs,
             Some("Terminal"),
@@ -252,17 +280,31 @@ impl App {
     }
 }
 
-struct ViewProvider {
+struct V1ViewProvider {
     app: AppPtr,
 }
 
-impl ServiceFactory for ViewProvider {
+impl ServiceFactory for V1ViewProvider {
     fn service_name(&self) -> &str {
         ViewProviderMarker::NAME
     }
 
     fn spawn_service(&mut self, channel: fasync::Channel) {
-        App::spawn_view_provider_server(&self.app, channel);
+        App::spawn_v1_view_provider_server(&self.app, channel);
+    }
+}
+
+struct V2ViewProvider {
+    app: AppPtr,
+}
+
+impl ServiceFactory for V2ViewProvider {
+    fn service_name(&self) -> &str {
+        viewsv2::ViewProviderMarker::NAME
+    }
+
+    fn spawn_service(&mut self, channel: fasync::Channel) {
+        App::spawn_v2_view_provider_server(&self.app, channel);
     }
 }
 
@@ -273,7 +315,8 @@ fn main() -> Result<(), Error> {
     let app = App::new()?;
 
     let fut = fuchsia_app::server::ServicesServer::new()
-        .add_service(ViewProvider { app: app.clone() })
+        .add_service(V1ViewProvider { app: app.clone() })
+        .add_service(V2ViewProvider { app: app.clone() })
         .start()
         .context("Error starting view provider server")?;
 

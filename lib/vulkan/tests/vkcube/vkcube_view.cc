@@ -3,16 +3,13 @@
 // found in the LICENSE file.
 
 #include "vkcube_view.h"
+
 #include "lib/ui/geometry/cpp/geometry_util.h"
 #include "lib/ui/scenic/cpp/commands.h"
 
-VkCubeView::VkCubeView(
-    ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-        view_owner_request,
-    ResizeCallback resize_callback)
-    : BaseView(std::move(view_manager), std::move(view_owner_request),
-               "vkcube"),
+VkCubeView::VkCubeView(scenic::ViewContext context,
+                       ResizeCallback resize_callback)
+    : scenic::V1BaseView(std::move(context), "vkcube"),
       pane_node_(session()),
       pane_material_(session()),
       resize_callback_(std::move(resize_callback)) {
@@ -50,6 +47,5 @@ void VkCubeView::OnSceneInvalidated(
 
   // No need to Present on session; base_view will present after calling
   // OnSceneInvalidated.
-
   resize_callback_(physical_size().width, physical_size().height);
 }

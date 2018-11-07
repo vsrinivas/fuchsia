@@ -19,12 +19,8 @@ constexpr float kSpeed = 0.25f;
 constexpr float kSecondsPerNanosecond = .000'000'001f;
 }  // namespace
 
-SpinningSquareView::SpinningSquareView(
-    ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-        view_owner_request)
-    : BaseView(std::move(view_manager), std::move(view_owner_request),
-               "Spinning Square"),
+SpinningSquareView::SpinningSquareView(scenic::ViewContext context)
+    : V1BaseView(std::move(context), "Spinning Square"),
       background_node_(session()),
       square_node_(session()) {
   scenic::Material background_material(session());

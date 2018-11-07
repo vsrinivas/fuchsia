@@ -194,14 +194,10 @@ void ViewImpl::QuitLoop() {
   async_loop_quit(async_loop_from_dispatcher(async_get_default_dispatcher()));
 }
 
-OldView::OldView(component::StartupContext* startup_context,
-                 ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-                 fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-                     view_owner_request)
-    : mozart::BaseView(std::move(view_manager), std::move(view_owner_request),
-                       "Shadertoy Example"),
+OldView::OldView(scenic::ViewContext context, const std::string& debug_name)
+    : scenic::V1BaseView(std::move(context), debug_name),
       root_node_(session()),
-      impl_(startup_context, session(), &root_node_) {
+      impl_(startup_context(), session(), &root_node_) {
   parent_node().AddChild(root_node_);
 }
 

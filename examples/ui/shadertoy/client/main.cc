@@ -8,43 +8,39 @@
 #include "garnet/examples/ui/shadertoy/client/view.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
-#include "lib/ui/base_view/cpp/view_provider_service.h"
-#include "lib/ui/view_framework/view_provider_app.h"
+#include "lib/ui/base_view/cpp/view_provider_component.h"
 
 int main(int argc, const char** argv) {
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  trace::TraceProvider trace_provider(loop.dispatcher());
+
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  trace::TraceProvider trace_provider(loop.dispatcher());
+  const bool use_old_view = command_line.HasOption("use_old_view");
 
-  auto startup_context = component::StartupContext::CreateFromStartupInfo();
+  // Export |fuchsia.ui.viewsv1.ViewProvider| or |fuchsia.ui.app.ViewProvider|
+  // service, so that this component can be attached to the Scenic scene graph.
+  if (!use_old_view) {
+    scenic::ViewProviderComponent component(
+        [](scenic::ViewContext context) {
+          return std::make_unique<shadertoy_client::NewView>(
+              std::move(context), "Shadertoy Client Example (V2View)");
+        },
+        &loop);
 
-  // Export deprecated |fuchsia.ui.viewsv1.ViewProvider| service.
-  mozart::ViewProviderApp mozart_app(
-      startup_context.get(), [](mozart::ViewContext view_context) {
-        return std::make_unique<shadertoy_client::OldView>(
-            view_context.startup_context, std::move(view_context.view_manager),
-            std::move(view_context.view_owner_request));
-      });
+    loop.Run();
+  } else {
+    scenic::ViewProviderComponent component(
+        [](scenic::ViewContext context) {
+          return std::make_unique<shadertoy_client::OldView>(
+              std::move(context), "Shadertoy Client Example (V1View)");
+        },
+        &loop);
 
-  auto scenic =
-      startup_context
-          ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
-  scenic.set_error_handler([&loop](zx_status_t status) {
-    FXL_LOG(INFO) << "Lost connection to Scenic.";
-    loop.Quit();
-  });
+    loop.Run();
+  }
 
-  // Export |fuchsia.ui.app.ViewProvider| service, so that this app can be
-  // attached to the Scenic view tree.
-  auto view_provider = std::make_unique<scenic::ViewProviderService>(
-      startup_context.get(), scenic.get(), [](scenic::ViewContext context) {
-        return std::make_unique<shadertoy_client::NewView>(
-            std::move(context), "Shadertoy Client Example");
-      });
-
-  loop.Run();
   return 0;
 }
