@@ -391,24 +391,6 @@ debuggers are privileged processes. Thus we need a way to obtain handles
 with sufficient rights for debugging.
 This is tracked as ZX-509, ZX-911, and ZX-923.
 
-- strace?
-
-There is currently no way to trace syscalls like there is in Linux.
-The typical way this would be implemented is with syscall start/end
-synthetic exceptions.
-It's a nice feature, but it's not necessary. Plus while useful,
-strace operates at the syscall layer and thus is confusing when
-trying to trace things like fork, which is no longer implemented
-as a syscall. Since every syscall in Zircon is via the vdso, it
-makes more sense to implement this by having breakpoints on all
-the relevant vdso entry points.
-This is tracked as ZX-567.
-
-- restrictions on **zx_task_resume**()
-
-This is tracked as ZX-562. The basic discussion is about only allowing
-appropriate processes to resume a thread in an exception.
-
 - no way to obtain currently bound port or to chain handlers
 
 Currently, there's no way to get the currently bound exception port.
