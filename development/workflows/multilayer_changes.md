@@ -65,19 +65,6 @@ For some changes, creating a soft transition can be difficult or impossible. For
 those changes, you can make a *hard transition*. In a hard transition, you make
 a breaking change to `D` and update `P` manually.
 
-Use the following steps to land a hard transition:
-
-1. Prepare the change in `D` that breaks the interface used by `P`, and the
-   change in `P` that uses the new interface.  Upload both patchsets to Gerrit.
-1. Prepare a single change to the integration repository that uses both of the
-   new revisions of `P` and `D`.  Perform a dry run of global integration.
-1. Submit both changes to `P` and `D`.  At this point, changes to `P` will start
-   failing to roll into the integration repository.
-1. Update the change you created to global integration to use the new revisions
-   for `P` and `D`, since Gerrit probably rebased the change and created new
-   ones.
-1. Land the change to the integration repository.
-
 Note that to prevent accidental clobbering of the manifest contents, Gerrit is
 configured to not automatically rebase changes that edit a manifest file. You
 must manually rebase before merging so that your submit is a pure fast-forward.
@@ -85,6 +72,9 @@ must manually rebase before merging so that your submit is a pure fast-forward.
 Making a hard transition is more stressful than making a soft transition because
 your change will be preventing other changes in 'D' from becoming available in
 dependent projects between steps 1 and 2.
+
+Only Google developers can make hard transitions.  See internal documentation for
+instructions.
 
 [getting-source]: /development/source_code/README.md "Getting source"
 [layers]: /development/source_code/layers.md "Layers"
