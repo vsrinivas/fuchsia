@@ -40,7 +40,7 @@ fi
 # Test storage performance.
 # TODO(ZX-2466): Enable these tests for ARM64 hardware bots once they exist
 # and have storage devices attached.
-if [ "${benchmarks_bot_name}" = garnet-x64-perf-swift_canyon ]; then
+if [ "${benchmarks_bot_name}" = garnet-x64-perf-dawson_canyon ]; then
   block_device=/dev/sys/pci/00:17.0/ahci/sata2/block
   waitfor class=block topo=${block_device} timeout=30000
 
