@@ -30,6 +30,7 @@ sdk("garnet") {
   testonly = true
 
   deps = [
+    "docs",
     "//build/images:images_sdk",
     "//garnet/bin/far:bin_sdk($host_toolchain)",
     "//garnet/bin/zxdb:zxdb_sdk($host_toolchain)",
