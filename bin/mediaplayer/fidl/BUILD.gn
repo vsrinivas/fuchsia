@@ -35,7 +35,8 @@ source_set("fidl") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/timeline",
-    "//garnet/public/lib/ui/view_framework",
+    "//garnet/public/lib/ui/base_view/cpp",
     "//zircon/public/lib/fzl",
+    "//zircon/public/lib/zx",
   ]
 }

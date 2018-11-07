@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <hid/usages.h>
+#include <zx/eventpair.h>
 
 #include "garnet/bin/mediaplayer/test/mediaplayer_test_params.h"
 #include "lib/fidl/cpp/clone.h"
@@ -47,15 +48,10 @@ int64_t rand_less_than(int64_t limit) {
 
 }  // namespace
 
-MediaPlayerTestView::MediaPlayerTestView(
-    fit::function<void(int)> quit_callback,
-    ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-        view_owner_request,
-    component::StartupContext* startup_context,
-    const MediaPlayerTestParams& params)
-    : mozart::BaseView(std::move(view_manager), std::move(view_owner_request),
-                       "Media Player"),
+MediaPlayerTestView::MediaPlayerTestView(scenic::ViewContext view_context,
+                                         fit::function<void(int)> quit_callback,
+                                         const MediaPlayerTestParams& params)
+    : scenic::V1BaseView(std::move(view_context), "Media Player"),
       quit_callback_(std::move(quit_callback)),
       params_(params),
       background_node_(session()),
@@ -89,7 +85,7 @@ MediaPlayerTestView::MediaPlayerTestView(
 
   // Create a player from all that stuff.
   media_player_ =
-      startup_context
+      startup_context()
           ->ConnectToEnvironmentService<fuchsia::mediaplayer::Player>();
 
   media_player_.events().OnStatusChanged =
@@ -97,19 +93,17 @@ MediaPlayerTestView::MediaPlayerTestView(
         HandleStatusChanged(status);
       };
 
-  ::fuchsia::ui::viewsv1token::ViewOwnerPtr video_view_owner;
-  media_player_->CreateView(
-      startup_context
-          ->ConnectToEnvironmentService<::fuchsia::ui::viewsv1::ViewManager>()
-          .Unbind(),
-      video_view_owner.NewRequest());
+  zx::eventpair view_owner_token, view_token;
+  if (zx::eventpair::create(0u, &view_owner_token, &view_token) != ZX_OK)
+    FXL_NOTREACHED() << "failed to create tokens.";
+  media_player_->CreateView2(std::move(view_token));
 
   zx::eventpair video_host_import_token;
   video_host_node_.reset(new scenic::EntityNode(session()));
   video_host_node_->ExportAsRequest(&video_host_import_token);
   parent_node().AddChild(*video_host_node_);
-  GetViewContainer()->AddChild(kVideoChildKey, std::move(video_view_owner),
-                               std::move(video_host_import_token));
+  GetViewContainer()->AddChild2(kVideoChildKey, std::move(view_owner_token),
+                                std::move(video_host_import_token));
 
   SetUrl(params_.urls().front());
 }
@@ -307,7 +301,7 @@ void MediaPlayerTestView::OnChildUnavailable(uint32_t child_key) {
   video_host_node_->Detach();
   video_host_node_.reset();
 
-  GetViewContainer()->RemoveChild(child_key, nullptr);
+  GetViewContainer()->RemoveChild2(child_key, zx::eventpair());
   Layout();
 }
 
