@@ -11,23 +11,9 @@
 
 namespace snapshot {
 
-View::View(
-    async::Loop* loop, component::StartupContext* startup_context,
-    ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-        view_owner_request,
-    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> outgoing_services)
-    : BaseView(std::move(view_manager), std::move(view_owner_request),
-               "Snapshot View") {
-  // This is to preserve backwards compatibility with how user shell loads
-  // snapshots.
-  if (outgoing_services) {
-    service_namespace_.AddService(loader_bindings_.GetHandler(this));
-    service_namespace_.AddBinding(std::move(outgoing_services));
-  } else {
-    startup_context->outgoing().AddPublicService(
-        loader_bindings_.GetHandler(this));
-  }
+View::View(scenic::ViewContext view_context)
+    : V1BaseView(std::move(view_context), "Snapshot View") {
+  outgoing_services().AddService(loader_bindings_.GetHandler(this));
 }
 
 void View::Load(::fuchsia::mem::Buffer payload) {
