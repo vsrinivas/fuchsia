@@ -48,6 +48,9 @@ static void usb_request_release_static(usb_request_t* req) {
     free(req->phys_list);
     req->phys_list = NULL;
     req->phys_count = 0;
+    free(req->sg_list);
+    req->sg_list = NULL;
+    req->sg_count = 0;
 }
 
 // Frees any resources allocated by the usb request, as well as the usb request itself.
@@ -185,6 +188,34 @@ __EXPORT zx_status_t usb_request_init(usb_request_t* req, zx_handle_t vmo_handle
     req->header.ep_address = ep_address;
     req->header.length = length;
     req->release_cb = usb_request_release_static;
+    return ZX_OK;
+}
+
+__EXPORT zx_status_t usb_request_set_sg_list(usb_request_t* req,
+                                             usb_sg_entry_t* sg_list, size_t sg_count) {
+    if (req->sg_list) {
+        free(req->sg_list);
+        req->sg_list = NULL;
+        req->sg_count = 0;
+    }
+    size_t total_length = 0;
+    // TODO(jocelyndang): disallow overlapping entries?
+    for (size_t i = 0; i < sg_count; ++i) {
+        usb_sg_entry_t* entry = &sg_list[i];
+        if (entry->length == 0 || (req_buffer_size(req, entry->offset) < entry->length)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        total_length += entry->length;
+    }
+    size_t num_bytes = sg_count * sizeof(usb_sg_entry_t);
+    req->sg_list = malloc(num_bytes);
+    if (req->sg_list == NULL) {
+        zxlogf(ERROR, "usb_request_set_sg_list: out of memory\n");
+        return ZX_ERR_NO_MEMORY;
+    }
+    memcpy(req->sg_list, sg_list, num_bytes);
+    req->sg_count = sg_count;
+    req->header.length = total_length;
     return ZX_OK;
 }
 

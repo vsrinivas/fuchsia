@@ -104,11 +104,60 @@ static bool test_pool(void) {
     END_TEST;
 }
 
+static bool test_set_sg_list(void) {
+    BEGIN_TEST;
+    usb_request_t* req;
+    ASSERT_EQ(usb_request_alloc(&req, 3 * PAGE_SIZE, 1, sizeof(usb_request_t)), ZX_OK, "");
+    // Wrap around the end of the request.
+    usb_sg_entry_t wrapped[2] = {
+        { .length = 10, .offset = (3 * PAGE_SIZE) - 10 },
+        { .length = 50, .offset = 0 }
+    };
+    ASSERT_EQ(usb_request_set_sg_list(req, wrapped, 2), ZX_OK, "");
+    ASSERT_EQ(req->header.length, 60u, "");
+
+    usb_sg_entry_t unordered[3] = {
+        { .length = 100, .offset = 2 * PAGE_SIZE },
+        { .length = 50, .offset = 500 },
+        { .length = 10, .offset = 2000 }
+    };
+    ASSERT_EQ(usb_request_set_sg_list(req, unordered, 3), ZX_OK, "");
+    ASSERT_EQ(req->header.length, 160u, "");
+
+    usb_request_release(req);
+    END_TEST;
+}
+
+static bool test_invalid_sg_list(void) {
+    BEGIN_TEST;
+    zx_handle_t vmo;
+    ASSERT_EQ(zx_vmo_create(PAGE_SIZE * 4, 0, &vmo), ZX_OK, "");
+
+    usb_request_t* req;
+    ASSERT_EQ(usb_request_alloc_vmo(&req, vmo, PAGE_SIZE, PAGE_SIZE * 3,
+                                    0, sizeof(usb_request_t)), ZX_OK, "");
+
+    usb_sg_entry_t out_of_bounds[1] = {
+        { .length = 10, .offset = PAGE_SIZE * 3 }
+    };
+    ASSERT_NE(usb_request_set_sg_list(req, out_of_bounds, 1), ZX_OK, "entry ends past end of vmo");
+
+    usb_sg_entry_t empty[1] = {
+        { .length = 0, .offset = 0 }
+    };
+    ASSERT_NE(usb_request_set_sg_list(req, empty, 1), ZX_OK, "empty entry");
+
+    usb_request_release(req);
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(usb_request_tests)
 RUN_TEST(test_alloc_zero_size_request)
 RUN_TEST(test_alloc_simple)
 RUN_TEST(test_alloc_vmo)
 RUN_TEST(test_pool)
+RUN_TEST(test_set_sg_list)
+RUN_TEST(test_invalid_sg_list)
 END_TEST_CASE(usb_request_tests)
 
 struct test_case_element* test_case_ddk_usb_request = TEST_CASE_ELEMENT(usb_request_tests);

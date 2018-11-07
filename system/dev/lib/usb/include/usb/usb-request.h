@@ -35,6 +35,12 @@ zx_status_t usb_request_alloc_vmo(usb_request_t** out, zx_handle_t vmo_handle, u
 zx_status_t usb_request_init(usb_request_t* req, zx_handle_t vmo_handle,
                              uint64_t vmo_offset, uint64_t length, uint8_t ep_address);
 
+// usb_request_set_sg_list() copies the scatter gather list to the request.
+// Future transfers using this request will determine where in the VMO to store read / write data
+// using the scatter gather list.
+// This will free any existing scatter gather list stored in the request.
+zx_status_t usb_request_set_sg_list(usb_request_t* req, usb_sg_entry_t* sg_list, size_t sg_count);
+
 // usb_request_copy_from() copies data from the usb_request's vm object.
 // Out of range operations are ignored.
 ssize_t usb_request_copy_from(usb_request_t* req, void* data, size_t length, size_t offset);
