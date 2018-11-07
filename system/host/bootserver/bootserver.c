@@ -202,7 +202,7 @@ void usage(void) {
             "  --zircona <file>         use the supplied file as a ZIRCON-A ZBI\n"
             "  --zirconb <file>         use the supplied file as a ZIRCON-B ZBI\n"
             "  --zirconr <file>         use the supplied file as a ZIRCON-R ZBI\n"
-            "  --authorized_keys <file> use the supplied file as an authorized_keys file\n"
+            "  --authorized-keys <file> use the supplied file as an authorized_keys file\n"
             "  --netboot    use the netboot protocol\n"
             "  --tftp       use the tftp protocol (default)\n"
             "  --nocolor    disable ANSI color (false)\n",
@@ -378,12 +378,12 @@ int main(int argc, char** argv) {
                 return -1;
             }
             zirconr_image = argv[1];
-        } else if (!strcmp(argv[1], "--authorized_keys")) {
+        } else if (!strcmp(argv[1], "--authorized-keys")) {
             argc--;
             argv++;
             if (argc <= 1) {
                 fprintf(stderr,
-                        "'--authorized_keys' option requires an argument (authorized_keys)\n");
+                        "'--authorized-keys' option requires an argument (authorized_keys)\n");
                 return -1;
             }
             authorized_keys = argv[1];
