@@ -185,9 +185,11 @@ about the ordinal number, the name of the method, whether it has a request
 component and a response component, and indicates the sizes and alignments of
 those componenets).
 
-Since both strings (the input `request` and the output `response`) are optional,
-the JSON output has two `bool`s (`has_request` and `has_response`, respectively)
-that indicate if the corresponding string is present.
+The JSON output has two `bool`s, `has_request` and `has_response`,
+that indicate if the interface defines a request and a response, respectively.
+
+Since the string parameters within the request and response are both optional,
+the parameter description specifies `"nullable": true` (line `[25]` and `[40]`).
 
 ### What about the sizes?
 
