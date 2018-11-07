@@ -40,4 +40,13 @@ DetachedPath DetachedPath::SubPath(
   return DetachedPath(root_fd_, std::move(end_path));
 }
 
+fxl::UniqueFD DetachedPath::OpenFD(DetachedPath* detatched_path) const {
+  fxl::UniqueFD fd(
+      openat(root_fd_, path_.c_str(), O_RDONLY | O_PATH | O_DIRECTORY));
+  if (fd.is_valid()) {
+    *detatched_path = ledger::DetachedPath(fd.get());
+  }
+  return fd;
+}
+
 }  // namespace ledger

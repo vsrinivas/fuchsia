@@ -189,12 +189,22 @@ Status LevelDb::Init() {
     FXL_LOG(ERROR) << "Failed to create directory under " << db_path_.path();
     return Status::INTERNAL_IO_ERROR;
   }
-  env_ = leveldb::MakeFuchsiaEnv(db_path_.root_fd());
+  ledger::DetachedPath db_path = db_path_;
+  if (db_path_.path() != ".") {
+    // Open a UniqueFD at the db path.
+    unique_fd_ = db_path_.OpenFD(&db_path);
+    if (!unique_fd_.is_valid()) {
+      FXL_LOG(ERROR) << "Unable to open directory at " << db_path_.path()
+                     << ". errno: " << errno;
+      return Status::INTERNAL_IO_ERROR;
+    }
+  }
+  env_ = leveldb::MakeFuchsiaEnv(db_path.root_fd());
   leveldb::Options options;
   options.env = env_.get();
   options.create_if_missing = true;
   leveldb::DB* db = nullptr;
-  leveldb::Status status = leveldb::DB::Open(options, db_path_.path(), &db);
+  leveldb::Status status = leveldb::DB::Open(options, db_path.path(), &db);
   if (status.IsCorruption()) {
     FXL_LOG(ERROR) << "Ledger state corrupted at " << db_path_.path()
                    << " with leveldb status: " << status.ToString();
@@ -208,7 +218,7 @@ Status LevelDb::Init() {
                      << db_path_.path();
       return Status::INTERNAL_IO_ERROR;
     }
-    leveldb::Status status = leveldb::DB::Open(options, db_path_.path(), &db);
+    leveldb::Status status = leveldb::DB::Open(options, db_path.path(), &db);
     if (!status.ok()) {
       FXL_LOG(ERROR) << "Failed to create a new LevelDB at " << db_path_.path()
                      << " with leveldb status: " << status.ToString();

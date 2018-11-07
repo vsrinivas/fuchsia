@@ -8,6 +8,7 @@
 #include <utility>
 
 #include <lib/async/dispatcher.h>
+#include <lib/fxl/files/unique_fd.h>
 
 #include "leveldb/db.h"
 #include "leveldb/write_batch.h"
@@ -53,6 +54,7 @@ class LevelDb : public Db {
   const ledger::DetachedPath db_path_;
   std::unique_ptr<leveldb::Env> env_;
   std::unique_ptr<leveldb::DB> db_;
+  fxl::UniqueFD unique_fd_;
 
   const leveldb::WriteOptions write_options_;
   const leveldb::ReadOptions read_options_;

@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <string>
 
+#include <lib/fxl/files/unique_fd.h>
 #include <lib/fxl/strings/string_view.h>
 
 namespace ledger {
@@ -41,6 +42,10 @@ class DetachedPath {
   // A |DetachedPath| representing all the |path| in |components| appended to
   // the current path.
   DetachedPath SubPath(std::initializer_list<fxl::StringView> components) const;
+
+  // Opens a UniqueFD at the current path. If the operation fails, the returned
+  // UniqueFd will be invalid.
+  fxl::UniqueFD OpenFD(DetachedPath* detatched_path) const;
 
  private:
   int root_fd_;
