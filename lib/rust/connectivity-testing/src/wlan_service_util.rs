@@ -12,6 +12,8 @@ use futures::stream::TryStreamExt;
 
 type WlanService = DeviceServiceProxy;
 
+const SCAN_TIMEOUT_SECONDS: u8 = 20;
+
 // Helper methods for calling wlan_service fidl methods
 pub async fn get_iface_list(wlan_svc: &DeviceServiceProxy) -> Result<Vec<u16>, Error> {
     let response = await!(wlan_svc.list_ifaces()).context("Error getting iface list")?;
@@ -83,18 +85,19 @@ pub async fn connect_to_network(
         let rsp =
             await!(iface_sme_proxy.status()).context("failed to check status from sme_proxy")?;
 
-        connected = connected && match rsp.connected_to {
-            Some(ref bss) if bss.ssid.as_slice().to_vec() == target_ssid_clone => true,
-            Some(ref bss) => {
-                fx_log_err!(
-                    "Connected to wrong network: {:?}. Expected: {:?}.",
-                    bss.ssid.as_slice(),
-                    target_ssid_clone
-                );
-                false
-            }
-            _ => false,
-        };
+        connected = connected
+            && match rsp.connected_to {
+                Some(ref bss) if bss.ssid.as_slice().to_vec() == target_ssid_clone => true,
+                Some(ref bss) => {
+                    fx_log_err!(
+                        "Connected to wrong network: {:?}. Expected: {:?}.",
+                        bss.ssid.as_slice(),
+                        target_ssid_clone
+                    );
+                    false
+                }
+                _ => false,
+            };
     }
 
     Ok(connected)
@@ -136,6 +139,47 @@ pub async fn disconnect_from_network(
         );
     }
     Ok(())
+}
+
+pub async fn perform_scan(
+    iface_sme_proxy: &fidl_sme::ClientSmeProxy,
+) -> Result<Vec<fidl_sme::EssInfo>, Error> {
+    let scan_transaction = start_scan_transaction(&iface_sme_proxy)?;
+
+    await!(get_scan_results(scan_transaction)).map_err(Into::into)
+}
+
+fn start_scan_transaction(
+    iface_sme_proxy: &fidl_sme::ClientSmeProxy,
+) -> Result<fidl_sme::ScanTransactionProxy, Error> {
+    let (scan_txn, remote) = endpoints::create_proxy()?;
+    let mut req = fidl_sme::ScanRequest {
+        timeout: SCAN_TIMEOUT_SECONDS,
+    };
+    iface_sme_proxy.scan(&mut req, remote)?;
+    Ok(scan_txn)
+}
+
+async fn get_scan_results(
+    scan_txn: fidl_sme::ScanTransactionProxy,
+) -> Result<Vec<fidl_sme::EssInfo>, Error> {
+    let mut stream = scan_txn.take_event_stream();
+    let mut scan_results = vec![];
+
+    while let Some(event) = await!(stream.try_next())
+        .context("failed to receive scan result before the channel was closed")?
+    {
+        match event {
+            fidl_sme::ScanTransactionEvent::OnResult { aps } => scan_results.extend(aps),
+            fidl_sme::ScanTransactionEvent::OnFinished {} => return Ok(scan_results),
+            fidl_sme::ScanTransactionEvent::OnError { error } => {
+                // error while waiting for scan results
+                bail!("error when retrieving scan results {:?}", error);
+            }
+        }
+    }
+
+    bail!("ScanTransaction channel closed before scan finished");
 }
 
 #[cfg(test)]
@@ -546,5 +590,135 @@ mod tests {
 
         rsp.send(&mut response)
             .expect("Failed to send StatusResponse.");
+    }
+
+    #[test]
+    fn scan_success_returns_empty_results() {
+        let scan_results_for_response = Vec::new();
+        let scan_results = test_perform_scan(scan_results_for_response);
+
+        assert_eq!(scan_results, Vec::new());
+    }
+
+    #[test]
+    fn scan_success_returns_results() {
+        let mut scan_results_for_response = Vec::new();
+        // due to restrictions for cloning fidl objects, forced to make a copy of the vector here
+        let entry1 = create_bss_info([0, 1, 2, 3, 4, 5], b"foo".to_vec(), -30, 1, true, true);
+        let entry1_copy = fidl_sme::BssInfo { ssid: entry1.ssid.clone(), ..entry1 };
+        let entry2 = create_bss_info([1, 2, 3, 4, 5, 6], b"hello".to_vec(), -60, 2, true, false);
+        let entry2_copy = fidl_sme::BssInfo { ssid: entry2.ssid.clone(), ..entry2 };
+        scan_results_for_response.push(fidl_sme::EssInfo { best_bss: entry1 });
+        scan_results_for_response.push(fidl_sme::EssInfo { best_bss: entry2 });
+        let mut expected_response = Vec::new();
+        expected_response.push(fidl_sme::EssInfo { best_bss: entry1_copy });
+        expected_response.push(fidl_sme::EssInfo { best_bss: entry2_copy });
+
+        let scan_results = test_perform_scan(scan_results_for_response);
+
+        assert_eq!(scan_results, expected_response);
+    }
+
+    #[test]
+    fn scan_error_correctly_handled() {
+        // need to expect an error
+        assert!(test_perform_scan_error().is_err())
+    }
+
+    fn test_perform_scan(mut scan_results: Vec<fidl_sme::EssInfo>) -> Vec<fidl_sme::EssInfo> {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (client_sme, server) = create_client_sme_proxy();
+        let mut client_sme_req = server.into_future();
+
+        let fut = perform_scan(&client_sme);
+        pin_mut!(fut);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        send_scan_result_response(&mut exec, &mut client_sme_req, &mut scan_results);
+
+        let complete = exec.run_until_stalled(&mut fut);
+        let request_result = match complete {
+            Poll::Ready(result) => result,
+            _ => panic!("Expected a scan request result"),
+        };
+        let returned_scan_results = request_result.expect("failed to get scan results");
+
+        returned_scan_results
+    }
+
+    fn send_scan_result_response(
+        exec: &mut fasync::Executor,
+        server: &mut StreamFuture<fidl_sme::ClientSmeRequestStream>,
+        scan_results: &mut Vec<fidl_sme::EssInfo>,
+    ) {
+        let transaction = match poll_client_sme_request(exec, server) {
+            Poll::Ready(fidl_sme::ClientSmeRequest::Scan { txn, .. }) => txn,
+            Poll::Pending => panic!("expected a request to be available"),
+            _ => panic!("expected a scan request"),
+        };
+
+        // now send the response back
+        let transaction = transaction
+            .into_stream()
+            .expect("failed to create a scan transaction stream")
+            .control_handle();
+        transaction
+            .send_on_result(&mut scan_results.into_iter())
+            .expect("failed to send scan results");
+        transaction
+            .send_on_finished()
+            .expect("failed to send OnFinished to ScanTransaction");
+    }
+
+    fn test_perform_scan_error() -> Result<(), Error> {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (client_sme, server) = create_client_sme_proxy();
+        let mut client_sme_req = server.into_future();
+
+        let fut = perform_scan(&client_sme);
+        pin_mut!(fut);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        send_scan_error_response(&mut exec, &mut client_sme_req);
+        exec.run_until_stalled(&mut fut)?;
+        Ok(())
+    }
+
+    fn send_scan_error_response(
+        exec: &mut fasync::Executor, server: &mut StreamFuture<fidl_sme::ClientSmeRequestStream>,
+    ) {
+        let transaction = match poll_client_sme_request(exec, server) {
+            Poll::Ready(fidl_sme::ClientSmeRequest::Scan { txn, .. }) => txn,
+            Poll::Pending => panic!("expected a request to be available"),
+            _ => panic!("expected a scan request"),
+        };
+
+        // create error to send back
+        let mut scan_error = fidl_sme::ScanError {
+            code: fidl_sme::ScanErrorCode::InternalError,
+            message: "Scan error".to_string(),
+        };
+
+        // now send the response back
+        let transaction = transaction
+            .into_stream()
+            .expect("failed to create a scan transaction stream")
+            .control_handle();
+        transaction
+            .send_on_error(&mut scan_error)
+            .expect("failed to send ScanError");
+    }
+
+    fn create_bss_info(
+        bssid: [u8; 6], ssid: Vec<u8>, rx_dbm: i8, channel: u8, protected: bool, compatible: bool,
+    ) -> fidl_sme::BssInfo {
+        fidl_sme::BssInfo {
+            bssid,
+            ssid,
+            rx_dbm,
+            channel,
+            protected,
+            compatible,
+        }
     }
 }
