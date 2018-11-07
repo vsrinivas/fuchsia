@@ -5,6 +5,7 @@
 #include <fuchsia/developer/tiles/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl_test_base.h>
 #include <gtest/gtest.h>
+#include <zx/eventpair.h>
 
 #include "garnet/bin/developer/tiles/tiles.h"
 #include "lib/component/cpp/startup_context.h"
@@ -13,7 +14,8 @@
 
 namespace {
 
-class FakeViewManager : public fuchsia::ui::viewsv1::testing::ViewManager_TestBase {
+class FakeViewManager
+    : public fuchsia::ui::viewsv1::testing::ViewManager_TestBase {
  public:
   FakeViewManager() : binding_(this) {}
 
@@ -38,11 +40,13 @@ class TilesTest : public gtest::TestLoopFixture {
   void SetUp() final {
     fuchsia::ui::viewsv1::ViewManagerPtr view_manager_ptr;
     view_manager_.Bind(view_manager_ptr.NewRequest());
-    fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner;
 
-    tiles_impl_ = std::make_unique<tiles::Tiles>(std::move(view_manager_ptr),
-                                                 view_owner.NewRequest(),
-                                                 context_.get(), 10);
+    zx::eventpair view_token;
+    if (zx::eventpair::create(0u, &view_owner_token_, &view_token) != ZX_OK)
+      FXL_NOTREACHED() << "failed to create tokens.";
+
+    tiles_impl_ = std::make_unique<tiles::Tiles>(
+        std::move(view_manager_ptr), std::move(view_token), context_.get(), 10);
     tiles_ = tiles_impl_.get();
   }
 
@@ -58,6 +62,7 @@ class TilesTest : public gtest::TestLoopFixture {
   std::unique_ptr<component::testing::StartupContextForTest> context_;
   std::unique_ptr<tiles::Tiles> tiles_impl_;
   fuchsia::developer::tiles::Controller* tiles_;
+  zx::eventpair view_owner_token_;
 };
 
 TEST_F(TilesTest, Trivial) {}
