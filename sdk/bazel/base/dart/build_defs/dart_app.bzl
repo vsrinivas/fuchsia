@@ -15,22 +15,13 @@ load(":package_info.bzl", "PackageLocalInfo")
 #   deps
 #     List of libraries to link to this application.
 
-_DART_JIT_RUNNER_CONTENT = """{
-    "runner": "dart_jit_runner"
-}
-"""
-
 def _dart_app_impl(context):
     kernel_snapshot_file = context.outputs.kernel_snapshot
     manifest_file = context.outputs.manifest
-    # TODO(CF-170): Make cmx mandatory.
-    component_name = ""
-    if context.files.component_manifest:
-        component_name = context.files.component_manifest[0].basename.split(".")[0]
+    component_name = context.files.component_manifest[0].basename.split(".")[0]
     mappings = compile_kernel_action(
         context = context,
         package_name = context.attr.package_name,
-        fuchsia_package_name = context.attr.fuchsia_package_name,
         component_name = component_name,
         dart_exec = context.executable._dart,
         kernel_compiler = context.files._kernel_compiler[0],
@@ -42,16 +33,7 @@ def _dart_app_impl(context):
         main_dilp_file = context.outputs.main_dilp,
         dilp_list_file = context.outputs.dilp_list,
     )
-    dart_jit_runner = context.actions.declare_file("runtime")
-    # TODO(CF-80): Remove meta/deprecated_runtime
-    context.actions.write(
-        output = dart_jit_runner,
-        content = _DART_JIT_RUNNER_CONTENT,
-    )
-    mappings["meta/deprecated_runtime"] = dart_jit_runner
-    # TODO(CF-170): Make cmx mandatory.
-    if context.files.component_manifest:
-        mappings["meta/%s.cmx" % component_name] = context.files.component_manifest[0]
+    mappings["meta/%s.cmx" % component_name] = context.files.component_manifest[0]
     outs = [kernel_snapshot_file, manifest_file]
     return [
         DefaultInfo(files = depset(outs), runfiles = context.runfiles(files = outs)),
@@ -63,7 +45,7 @@ dart_app = rule(
     attrs = dict({
         "component_manifest": attr.label(
             doc = "The dart component's cmx",
-            mandatory = False, # TODO(CF-170): Make cmx mandatory.
+            mandatory = True,
             allow_files = True,
             single_file = True,
         ),
