@@ -191,15 +191,17 @@ int main(int argc, char** argv) {
 
   // Setup balloon device.
   machina::VirtioBalloon balloon(guest.phys_mem());
-  status = bus.Connect(balloon.pci_device(), true);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status =
-      balloon.Start(*guest.object(), launcher.get(), guest.device_dispatcher());
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to start console device " << status;
-    return status;
+  if (cfg.virtio_balloon()) {
+    status = bus.Connect(balloon.pci_device(), true);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = balloon.Start(*guest.object(), launcher.get(),
+                           guest.device_dispatcher());
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to start console device " << status;
+      return status;
+    }
   }
 
   // Setup block device.
@@ -245,15 +247,17 @@ int main(int argc, char** argv) {
 
   // Setup console device.
   machina::VirtioConsole console(guest.phys_mem());
-  status = bus.Connect(console.pci_device(), true);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = console.Start(*guest.object(), instance_controller.TakeSocket(),
-                         launcher.get(), guest.device_dispatcher());
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to start console device " << status;
-    return status;
+  if (cfg.virtio_console()) {
+    status = bus.Connect(console.pci_device(), true);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = console.Start(*guest.object(), instance_controller.TakeSocket(),
+                           launcher.get(), guest.device_dispatcher());
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to start console device " << status;
+      return status;
+    }
   }
 
   machina::VirtioGpu gpu(guest.phys_mem());
@@ -289,43 +293,46 @@ int main(int argc, char** argv) {
   // Setup net device.
   machina::VirtioNet net(guest.phys_mem(), guest.device_dispatcher());
   if (cfg.virtio_net()) {
+    status = bus.Connect(net.pci_device());
+    if (status != ZX_OK) {
+      return status;
+    }
     status = net.Start("/dev/class/ethernet/000");
-    if (status == ZX_OK) {
-      // If we started the net device, then connect to the PCI bus.
-      status = bus.Connect(net.pci_device());
-      if (status != ZX_OK) {
-        return status;
-      }
-    } else {
+    if (status != ZX_OK) {
       FXL_LOG(INFO) << "Could not open Ethernet device";
+      return status;
     }
   }
 
   // Setup RNG device.
   machina::VirtioRng rng(guest.phys_mem());
-  status = bus.Connect(rng.pci_device(), true);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status =
-      rng.Start(*guest.object(), launcher.get(), guest.device_dispatcher());
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to start RNG device" << status;
-    return status;
+  if (cfg.virtio_rng()) {
+    status = bus.Connect(rng.pci_device(), true);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status =
+        rng.Start(*guest.object(), launcher.get(), guest.device_dispatcher());
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to start RNG device" << status;
+      return status;
+    }
   }
 
   // Setup vsock device.
   machina::VirtioVsock vsock(context.get(), guest.phys_mem(),
                              guest.device_dispatcher());
-  status = bus.Connect(vsock.pci_device());
-  if (status != ZX_OK) {
-    return status;
+  if (cfg.virtio_vsock()) {
+    status = bus.Connect(vsock.pci_device());
+    if (status != ZX_OK) {
+      return status;
+    }
   }
 
   machina::DevMem dev_mem;
 
   // Setup wayland device.
-  size_t wl_dev_mem_size = cfg.wayland_memory();
+  size_t wl_dev_mem_size = cfg.wl_memory();
   zx_gpaddr_t wl_dev_mem_offset = alloc_device_addr(wl_dev_mem_size);
   if (!dev_mem.AddRange(wl_dev_mem_offset, wl_dev_mem_size)) {
     FXL_LOG(INFO) << "Could not reserve device memory range for wayland device";
@@ -340,15 +347,17 @@ int main(int argc, char** argv) {
   WaylandDispatcherImpl wl_dispatcher(launcher.get());
   machina::VirtioWl wl(guest.phys_mem(), std::move(wl_vmar),
                        guest.device_dispatcher(), &wl_dispatcher);
-  status = wl.Init();
-  if (status != ZX_OK) {
-    FXL_LOG(INFO) << "Could not init wayland device";
-    return status;
-  }
-  status = bus.Connect(wl.pci_device());
-  if (status != ZX_OK) {
-    FXL_LOG(INFO) << "Could not connect wayland device";
-    return status;
+  if (cfg.virtio_wl()) {
+    status = wl.Init();
+    if (status != ZX_OK) {
+      FXL_LOG(INFO) << "Could not init wayland device";
+      return status;
+    }
+    status = bus.Connect(wl.pci_device());
+    if (status != ZX_OK) {
+      FXL_LOG(INFO) << "Could not connect wayland device";
+      return status;
+    }
   }
 
 #if __x86_64__

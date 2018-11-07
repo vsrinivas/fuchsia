@@ -23,23 +23,27 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "usage: " << cl.argv0() << " [OPTIONS]\n";
   std::cerr << "\n";
   std::cerr << "OPTIONS:\n";
-  std::cerr << "\t--block=[block_spec]         Adds a block device with the given parameters\n";
-  std::cerr << "\t--cmdline-append=[cmdline]   Appends string 'cmdline' to the existing kernel\n";
-  std::cerr << "\t                             This will overwrite any existing command line\n";
-  std::cerr << "\t                             created using --cmdline or --cmdline-append\n";
-  std::cerr << "\t--cmdline=[cmdline]          Use string 'cmdline' as the kernel command line.\n";
-  std::cerr << "\t                             command line\n";
-  std::cerr << "\t--cpus=[cpus]                Number of virtual CPUs available to the guest\n";
-  std::cerr << "\t--dtb_overlay=[overlay.dtb]  Load a DTB overlay for a Linux kernel\n";
-  std::cerr << "\t--linux=[kernel.bin]         Load a Linux kernel from 'kernel.bin'\n";
-  std::cerr << "\t--memory=[bytes]             Allocate 'bytes' of physical memory for the guest.\n";
-  std::cerr << "\t                             The suffixes 'k', 'M', and 'G' are accepted\n";
-  std::cerr << "\t--ramdisk=[ramdisk.bin]      Use file 'ramdisk.bin' as an initial RAM disk\n";
-  std::cerr << "\t--virtio-gpu                 Enable virtio-gpu (default).\n";
-  std::cerr << "\t--virtio-net                 Enable virtio-net (default).\n";
-  std::cerr << "\t--wayland-memory=[bytes]     Reserve 'bytes' of device memory for Wayland buffers.\n";
-  std::cerr << "\t                             The suffixes 'k', 'M', and 'G' are accepted\n";
-  std::cerr << "\t--zircon=[kernel.bin]        Load a Zircon kernel from 'kernel.bin'\n";
+  std::cerr << "\t--block=[block_spec]      Adds a block device with the given parameters\n";
+  std::cerr << "\t--cmdline-append=[string] Appends 'string' to the existing kernel command\n";
+  std::cerr << "\t                          line. This will overwrite any existing command line\n";
+  std::cerr << "\t                          created using --cmdline or --cmdline-append\n";
+  std::cerr << "\t--cmdline=[string]        Use 'string' as the kernel command line\n";
+  std::cerr << "\t--cpus=[number]           Number of virtual CPUs available to the guest\n";
+  std::cerr << "\t--dtb_overlay=[path]      Load a DTB overlay for a Linux kernel\n";
+  std::cerr << "\t--linux=[path]            Load a Linux kernel from 'path'\n";
+  std::cerr << "\t--memory=[bytes]          Allocate 'bytes' of physical memory for the guest.\n";
+  std::cerr << "\t                          The suffixes 'k', 'M', and 'G' are accepted\n";
+  std::cerr << "\t--ramdisk=[path]          Load 'path' as an initial RAM disk\n";
+  std::cerr << "\t--virtio-balloon          Enable virtio-balloon (default)\n";
+  std::cerr << "\t--virtio-console          Enable virtio-console (default)\n";
+  std::cerr << "\t--virtio-gpu              Enable virtio-gpu and virtio-input (default)\n";
+  std::cerr << "\t--virtio-net              Enable virtio-net (default)\n";
+  std::cerr << "\t--virtio-rng              Enable virtio-rng (default)\n";
+  std::cerr << "\t--virtio-vsock            Enable virtio-vsock (default)\n";
+  std::cerr << "\t--virtio-wl               Enable virtio-wl (default)\n";
+  std::cerr << "\t--wl-memory=[bytes]       Reserve 'bytes' of device memory for Wayland buffers.\n";
+  std::cerr << "\t                          The suffixes 'k', 'M', and 'G' are accepted\n";
+  std::cerr << "\t--zircon=[path]           Load a Zircon kernel from 'path'\n";
   std::cerr << "\n";
   std::cerr << "BLOCK SPEC\n";
   std::cerr << "\n";
@@ -292,9 +296,14 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg)
           {"linux", save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::LINUX)},
           {"memory", parse_mem_size(&cfg_->memory_)},
           {"ramdisk", save_option(&cfg_->ramdisk_path_)},
+          {"virtio-balloon", set_flag(&cfg_->virtio_balloon_, true)},
+          {"virtio-console", set_flag(&cfg_->virtio_console_, true)},
           {"virtio-gpu", set_flag(&cfg_->virtio_gpu_, true)},
           {"virtio-net", set_flag(&cfg_->virtio_net_, true)},
-          {"wayland-memory", parse_mem_size(&cfg_->wayland_memory_)},
+          {"virtio-rng", set_flag(&cfg_->virtio_rng_, true)},
+          {"virtio-vsock", set_flag(&cfg_->virtio_vsock_, true)},
+          {"virtio-wl", set_flag(&cfg_->virtio_wl_, true)},
+          {"wl-memory", parse_mem_size(&cfg_->wl_memory_)},
           {"zircon", save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::ZIRCON)},
       } {}
 
