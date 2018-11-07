@@ -86,21 +86,15 @@ void ReaderCache::MaybeStartLoadForPosition(size_t position) {
     return;
   }
 
-  std::vector<SparseByteBuffer::Hole> holes_in_cache =
-      buffer_.FindOrCreateHolesInRange(cache_range.first, cache_range.second);
-
-  if (holes_in_cache.empty()) {
+  size_t bytes_needed =
+      buffer_.BytesMissingInRange(cache_range.first, cache_range.second);
+  if (bytes_needed == 0) {
     return;
   }
-
   load_in_progress_ = true;
-  size_t bytes_needed = 0;
-  for (auto& hole : holes_in_cache) {
-    bytes_needed += hole.size();
-  }
 
   buffer_.CleanUpExcept(bytes_needed, cache_range.first, cache_range.second);
-  holes_in_cache =
+  auto holes_in_cache =
       buffer_.FindOrCreateHolesInRange(cache_range.first, cache_range.second);
 
   FillHoles(holes_in_cache, cache_range.first, [this, cache_range]() {

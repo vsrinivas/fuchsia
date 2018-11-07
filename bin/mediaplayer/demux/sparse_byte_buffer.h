@@ -86,6 +86,10 @@ class SparseByteBuffer {
   // range.
   std::vector<Hole> FindOrCreateHolesInRange(size_t start, size_t size);
 
+  // Counts the number of bytes missing in the buffer from |start| to
+  // |start+size|.
+  size_t BytesMissingInRange(size_t start, size_t size);
+
   // Creates a region that starts at hole.position(). The new region must not
   // overlap other existing regions and cannot extend beyond the size of this
   // sparse buffer. Holes are updated to accommodate the region. Fill returns

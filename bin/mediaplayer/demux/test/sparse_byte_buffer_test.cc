@@ -389,6 +389,38 @@ TEST(SparseByteBufferTest, FindOrCreateHolesInRange) {
   }
 }
 
+TEST(SparseByteBufferTest, BytesMissingInRange) {
+  {
+    // Test buffer diagram:
+    //       | Selected Range |
+    // [   =   ==== ===      ==== ....]
+    // Regions (corresponding to diagram):
+    SparseByteBuffer under_test =
+        BufferWithRegions({{3, 1}, {7, 4}, {12, 3}, {21, 4}});
+
+    size_t bytes_missing = under_test.BytesMissingInRange(5, 17);
+
+    // Expected bytes missing in range (corresponding to diagram):
+    EXPECT_EQ(bytes_missing, 9u) << "Number of missing bytes vs Expected";
+  }
+
+  {
+    // Find missing bytes in end of range.
+    SparseByteBuffer under_test = BufferWithRegions({{0, 100}});
+    size_t bytes_missing = under_test.BytesMissingInRange(50, 100);
+
+    EXPECT_EQ(bytes_missing, 50u);
+  }
+
+  {
+    // Find missing bytes in empty buffer.
+    SparseByteBuffer under_test = BufferWithRegions({});
+    size_t bytes_missing = under_test.BytesMissingInRange(100, 100);
+
+    EXPECT_EQ(bytes_missing, 100u);
+  }
+}
+
 TEST(SparseByteBufferTest, FreeRegion) {
   {
     // Free a region with a hole before and after it.

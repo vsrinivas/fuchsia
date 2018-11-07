@@ -204,6 +204,40 @@ std::vector<SparseByteBuffer::Hole> SparseByteBuffer::FindOrCreateHolesInRange(
   return holes_in_range;
 }
 
+size_t SparseByteBuffer::BytesMissingInRange(size_t start, size_t size) {
+  FXL_DCHECK(start < size_);
+
+  size_t bytes_missing = 0;
+
+  size_t end = start + size;
+  HolesIter iter = holes_.lower_bound(start);
+  if (iter != holes_.begin()) {
+    --iter;
+  }
+
+  while (iter != holes_.end() && iter->first < end) {
+    size_t hole_start = iter->first;
+    size_t hole_end = iter->first + iter->second;
+    if (hole_end > start) {
+      size_t extraneous = 0;
+      if (hole_end > end) {
+        size_t trailing = hole_end - end;
+        extraneous += trailing;
+      }
+
+      if (hole_start < start) {
+        size_t preceding = start - hole_start;
+        extraneous += preceding;
+      }
+
+      bytes_missing += iter->second - extraneous;
+    }
+    ++iter;
+  }
+
+  return bytes_missing;
+}
+
 SparseByteBuffer::Hole SparseByteBuffer::Fill(Hole hole,
                                               std::vector<uint8_t>&& buffer) {
   FXL_DCHECK(size_ > 0u);
