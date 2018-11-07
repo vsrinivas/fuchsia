@@ -151,10 +151,12 @@ TEST_F(ResourceLinkerTest, CanImportWithDeadSourceHandle) {
   scenic_impl::gfx::ResourcePtr resource;
   ImportPtr import;
   bool expiry_cb_called = false;
+  bool did_resolve = false;
 
   async::PostTask(
       dispatcher(),
       fxl::MakeCopyable([this, &import, &resource, linker, &expiry_cb_called,
+                         &did_resolve,
                          destination = std::move(destination)]() mutable {
         // Set an expiry callback that checks the resource expired for the right
         // reason and signal the latch.
@@ -168,7 +170,6 @@ TEST_F(ResourceLinkerTest, CanImportWithDeadSourceHandle) {
               expiry_cb_called = true;
             });
 
-        bool did_resolve = false;
         linker->SetOnImportResolvedCallback(
             [&did_resolve](Import* import, Resource* resource,
                            ImportResolutionResult cause) -> void {
