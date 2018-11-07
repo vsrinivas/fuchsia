@@ -154,7 +154,7 @@ executable("virtio_gpu_bin") {
   deps = [
     ":device_lib",
     "//garnet/public/fidl/fuchsia.ui.policy",
-    "//garnet/public/lib/ui/view_framework",
+    "//garnet/public/lib/ui/base_view/cpp",
   ]
 }
 

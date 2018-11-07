@@ -3,9 +3,12 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ui/policy/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
 #include <virtio/gpu.h>
+
+#include "lib/ui/scenic/cpp/session.h"
 
 #include "garnet/bin/guest/vmm/device/device_base.h"
 #include "garnet/bin/guest/vmm/device/gpu_resource.h"
@@ -341,21 +344,30 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
     PrepStart(std::move(start_info));
 
     if (input_listener && view_listener) {
+      zx::eventpair view_owner_token, view_token;
+      if (zx::eventpair::create(0u, &view_owner_token, &view_token) != ZX_OK)
+        FXL_NOTREACHED() << "failed to create tokens.";
+
       // Create view.
-      fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner;
-      auto view_manager =
-          context_
-              .ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewManager>();
-      view_ = std::make_unique<GuestView>(
-          &scanout_, std::move(input_listener), std::move(view_listener),
-          std::move(view_manager), view_owner.NewRequest());
+      auto scenic =
+          context_.ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+      scenic::ViewContext view_context = {
+          .session_and_listener_request =
+              scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
+          .view_token = std::move(view_token),
+          .startup_context = &context_,
+      };
+
+      view_ = std::make_unique<GuestView>(std::move(view_context),
+                                          std::move(view_listener),
+                                          std::move(input_listener), &scanout_);
       view_->SetReleaseHandler([this](zx_status_t status) { view_.reset(); });
 
       // Present view.
       auto presenter =
           context_
               .ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
-      presenter->Present(std::move(view_owner), nullptr);
+      presenter->Present2(std::move(view_owner_token), nullptr);
     }
 
     // Initialize streams.
