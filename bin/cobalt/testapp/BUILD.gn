@@ -14,7 +14,6 @@ cobalt_config("generate_legacy_testapp_metrics") {
 cobalt_config("generate_testapp_metrics") {
   project_name = "test_app2"
   output_name = "cobalt_metrics"
-  add_extensions = true
 
   namespace = "cobalt.testapp.metrics"
   generate_cc = true
