@@ -8,23 +8,27 @@
 #[macro_use]
 extern crate failure;
 
-use fuchsia_async as fasync;
-use fuchsia_syslog::{fx_log_info, fx_log_warn, fx_vlog};
-use fuchsia_zircon::{self as zx, Duration, Time};
-use futures::future::FusedFuture;
-use futures::ready;
-use futures::select;
-use futures::stream::Stream;
-use futures::task::{LocalWaker, Poll, Waker};
-use futures::FutureExt;
-use parking_lot::Mutex;
-use slab::Slab;
-use std::collections::VecDeque;
-use std::fmt;
-use std::io::{Cursor, Write};
-use std::mem;
-use std::pin::{Pin, Unpin};
-use std::sync::Arc;
+use {
+    fuchsia_async as fasync,
+    fuchsia_syslog::{fx_log_info, fx_log_warn, fx_vlog},
+    fuchsia_zircon::{self as zx, Duration, Time},
+    futures::{
+        future::FusedFuture,
+        ready, select,
+        stream::Stream,
+        task::{LocalWaker, Poll, Waker},
+        FutureExt,
+    },
+    parking_lot::Mutex,
+    slab::Slab,
+    std::{
+        collections::VecDeque,
+        mem,
+        pin::{Pin, Unpin},
+        result,
+        sync::Arc,
+    },
+};
 
 #[cfg(test)]
 mod tests;
@@ -36,7 +40,10 @@ use crate::types::{
     TryFrom, TxLabel,
 };
 
-pub use crate::types::{EndpointType, Error, MediaType};
+pub use crate::types::{
+    ContentProtectionType, EndpointType, Error, MediaCodecType, MediaType, Result,
+    ServiceCapability, StreamEndpointId,
+};
 
 /// An AVDTP signaling peer can send commands to another peer, receive requests and send responses.
 /// Media transport is not handled by this peer.
@@ -54,7 +61,7 @@ pub struct Peer {
 
 impl Peer {
     /// Create a new peer from a signaling channel socket.
-    pub fn new(signaling: zx::Socket) -> Result<Peer, zx::Status> {
+    pub fn new(signaling: zx::Socket) -> result::Result<Peer, zx::Status> {
         Ok(Peer {
             inner: Arc::new(PeerInner {
                 signaling: fasync::Socket::from_socket(signaling)?,
@@ -85,8 +92,8 @@ impl Peer {
     /// Asynchronously returns a the reply in a vector of endpoint information.
     /// Error will be RemoteRejected with the error code returned by the remote
     /// if the remote peer rejected the command.
-    pub async fn discover(&self) -> Result<Vec<StreamInformation>, Error> {
-        let response: Result<DiscoverResponse, Error> =
+    pub async fn discover(&self) -> Result<Vec<StreamInformation>> {
+        let response: Result<DiscoverResponse> =
             await!(self.send_command(SignalIdentifier::Discover, &[]));
         match response {
             Ok(response) => Ok(response.endpoints),
@@ -103,9 +110,9 @@ impl Peer {
     /// if the remote peer rejects the command.
     pub async fn get_capabilities<'a>(
         &'a self, stream_id: &'a StreamEndpointId,
-    ) -> Result<Vec<ServiceCapability>, Error> {
+    ) -> Result<Vec<ServiceCapability>> {
         let stream_params = &[stream_id.to_msg()];
-        let response: Result<GetCapabilitiesResponse, Error> =
+        let response: Result<GetCapabilitiesResponse> =
             await!(self.send_command(SignalIdentifier::GetCapabilities, stream_params));
         match response {
             Ok(response) => Ok(response.capabilities),
@@ -121,9 +128,9 @@ impl Peer {
     /// if the remote peer rejects the command.
     pub async fn get_all_capabilities<'a>(
         &'a self, stream_id: &'a StreamEndpointId,
-    ) -> Result<Vec<ServiceCapability>, Error> {
+    ) -> Result<Vec<ServiceCapability>> {
         let stream_params = &[stream_id.to_msg()];
-        let response: Result<GetCapabilitiesResponse, Error> =
+        let response: Result<GetCapabilitiesResponse> =
             await!(self.send_command(SignalIdentifier::GetAllCapabilities, stream_params));
         match response {
             Ok(response) => Ok(response.capabilities),
@@ -135,9 +142,9 @@ impl Peer {
     /// `stream_id`.
     /// Returns Ok(()) if the command is accepted, and RemoteRejected if the
     /// remote peer rejects the command with the code returned by the remote.
-    pub async fn open<'a>(&'a self, stream_id: &'a StreamEndpointId) -> Result<(), Error> {
+    pub async fn open<'a>(&'a self, stream_id: &'a StreamEndpointId) -> Result<()> {
         let stream_params = &[stream_id.to_msg()];
-        let response: Result<SimpleResponse, Error> =
+        let response: Result<SimpleResponse> =
             await!(self.send_command(SignalIdentifier::Open, stream_params));
         response?;
         Ok(())
@@ -148,12 +155,12 @@ impl Peer {
     /// Returns Ok(()) if the command is accepted, and RemoteStreamRejected
     /// with the stream endpoint id and error code reported by the remote if
     /// the remote signals a failure.
-    pub async fn start<'a>(&'a self, stream_ids: &'a [StreamEndpointId]) -> Result<(), Error> {
+    pub async fn start<'a>(&'a self, stream_ids: &'a [StreamEndpointId]) -> Result<()> {
         let mut stream_params = Vec::with_capacity(stream_ids.len());
         for stream_id in stream_ids {
             stream_params.push(stream_id.to_msg());
         }
-        let response: Result<SimpleResponse, Error> =
+        let response: Result<SimpleResponse> =
             await!(self.send_command(SignalIdentifier::Start, &stream_params));
         response?;
         Ok(())
@@ -163,9 +170,9 @@ impl Peer {
     /// `stream_id`.
     /// Returns Ok(()) if the command is accepted, and RemoteRejected if the
     /// remote peer rejects the command with the code returned by the remote.
-    pub async fn close<'a>(&'a self, stream_id: &'a StreamEndpointId) -> Result<(), Error> {
+    pub async fn close<'a>(&'a self, stream_id: &'a StreamEndpointId) -> Result<()> {
         let stream_params = &[stream_id.to_msg()];
-        let response: Result<SimpleResponse, Error> =
+        let response: Result<SimpleResponse> =
             await!(self.send_command(SignalIdentifier::Close, stream_params));
         response?;
         Ok(())
@@ -176,12 +183,12 @@ impl Peer {
     /// Returns Ok(()) if the command is accepted, and RemoteStreamRejected
     /// with the stream endpoint id and error code reported by the remote if
     /// the remote signals a failure.
-    pub async fn suspend<'a>(&'a self, stream_ids: &'a [StreamEndpointId]) -> Result<(), Error> {
+    pub async fn suspend<'a>(&'a self, stream_ids: &'a [StreamEndpointId]) -> Result<()> {
         let mut stream_params = Vec::with_capacity(stream_ids.len());
         for stream_id in stream_ids {
             stream_params.push(stream_id.to_msg());
         }
-        let response: Result<SimpleResponse, Error> =
+        let response: Result<SimpleResponse> =
             await!(self.send_command(SignalIdentifier::Suspend, &stream_params));
         response?;
         Ok(())
@@ -191,9 +198,9 @@ impl Peer {
     /// `stream_id`.
     /// Returns Ok(()) if the command is accepted, and RemoteRejected if the
     /// remote peer rejects the command with the code returned by the remote.
-    pub async fn abort<'a>(&'a self, stream_id: &'a StreamEndpointId) -> Result<(), Error> {
+    pub async fn abort<'a>(&'a self, stream_id: &'a StreamEndpointId) -> Result<()> {
         let stream_params = &[stream_id.to_msg()];
-        let response: Result<SimpleResponse, Error> =
+        let response: Result<SimpleResponse> =
             await!(self.send_command(SignalIdentifier::Abort, stream_params));
         response?;
         Ok(())
@@ -209,7 +216,7 @@ impl Peer {
     /// when we get the expected reponse.
     async fn send_command<'a, D: Decodable>(
         &'a self, signal: SignalIdentifier, payload: &'a [u8],
-    ) -> Result<D, Error> {
+    ) -> Result<D> {
         let id = self.inner.add_response_waiter()?;
         let header = SignalingHeader::new(id, signal, SignalingMessageType::Command);
 
@@ -308,14 +315,14 @@ macro_rules! parse_one_seid {
 }
 
 impl Request {
-    fn get_req_seids(body: &[u8]) -> Result<Vec<StreamEndpointId>, Error> {
+    fn get_req_seids(body: &[u8]) -> Result<Vec<StreamEndpointId>> {
         if body.len() < 1 {
             return Err(Error::RequestInvalid(ErrorCode::BadLength));
         }
         Ok(body.iter().map(&StreamEndpointId::from_msg).collect())
     }
 
-    fn get_req_capabilities(encoded: &[u8]) -> Result<Vec<ServiceCapability>, Error> {
+    fn get_req_capabilities(encoded: &[u8]) -> Result<Vec<ServiceCapability>> {
         if encoded.len() < 2 {
             return Err(Error::RequestInvalid(ErrorCode::BadLength));
         }
@@ -337,7 +344,7 @@ impl Request {
 
     fn parse(
         peer: Arc<PeerInner>, id: TxLabel, signal: SignalIdentifier, body: &[u8],
-    ) -> Result<Request, Error> {
+    ) -> Result<Request> {
         match signal {
             SignalIdentifier::Discover => {
                 // Discover Request has no body (Sec 8.6.1)
@@ -433,7 +440,7 @@ pub struct RequestStream {
 impl Unpin for RequestStream {}
 
 impl Stream for RequestStream {
-    type Item = Result<Request, Error>;
+    type Item = Result<Request>;
 
     fn poll_next(self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
         Poll::Ready(match ready!(self.inner.poll_recv_request(lw)) {
@@ -469,42 +476,6 @@ impl Drop for RequestStream {
     }
 }
 
-/// A Stream Endpoint Identifier, aka SEID, INT SEID, ACP SEID - Sec 8.20.1
-/// Valid values are 0x01 - 0x3E
-#[derive(Debug, PartialEq)]
-pub struct StreamEndpointId(u8);
-
-impl StreamEndpointId {
-    /// Interpret a StreamEndpointId from the upper six bits of a byte, which
-    /// is often how it's transmitted in a message.
-    fn from_msg(byte: &u8) -> Self {
-        StreamEndpointId(byte >> 2)
-    }
-
-    /// Produce a byte where the SEID value is placed in the upper six bits,
-    /// which is often how it is placed in a mesage.
-    fn to_msg(&self) -> u8 {
-        self.0 << 2
-    }
-}
-
-impl TryFrom<u8> for StreamEndpointId {
-    type Error = Error;
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        if value == 0 || value > 0x3E {
-            Err(Error::OutOfRange)
-        } else {
-            Ok(StreamEndpointId(value))
-        }
-    }
-}
-
-impl fmt::Display for StreamEndpointId {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "{}", self.0)
-    }
-}
-
 /// All information related to a stream. Part of the Discovery Response.
 /// See Sec 8.6.2
 #[derive(Debug, PartialEq)]
@@ -520,7 +491,7 @@ impl StreamInformation {
     /// This will only fail if the ID given is out of the range of valid SEIDs (0x01 - 0x3E)
     pub fn new(
         id: u8, in_use: bool, media_type: MediaType, endpoint_type: EndpointType,
-    ) -> Result<StreamInformation, Error> {
+    ) -> Result<StreamInformation> {
         Ok(StreamInformation {
             id: StreamEndpointId::try_from(id)?,
             in_use: in_use,
@@ -535,7 +506,7 @@ impl StreamInformation {
 }
 
 impl Decodable for StreamInformation {
-    fn decode(from: &[u8]) -> Result<Self, Error> {
+    fn decode(from: &[u8]) -> Result<Self> {
         if from.len() < 2 {
             return Err(Error::InvalidMessage);
         }
@@ -557,7 +528,7 @@ impl Encodable for StreamInformation {
         2
     }
 
-    fn encode(&self, into: &mut [u8]) -> Result<(), Error> {
+    fn encode(&self, into: &mut [u8]) -> Result<()> {
         if into.len() < self.encoded_len() {
             return Err(Error::Encoding);
         }
@@ -572,7 +543,7 @@ impl Encodable for StreamInformation {
 pub struct SimpleResponse {}
 
 impl Decodable for SimpleResponse {
-    fn decode(from: &[u8]) -> Result<Self, Error> {
+    fn decode(from: &[u8]) -> Result<Self> {
         if from.len() > 0 {
             return Err(Error::InvalidMessage);
         }
@@ -586,7 +557,7 @@ struct DiscoverResponse {
 }
 
 impl Decodable for DiscoverResponse {
-    fn decode(from: &[u8]) -> Result<Self, Error> {
+    fn decode(from: &[u8]) -> Result<Self> {
         let mut endpoints = Vec::<StreamInformation>::new();
         let mut idx = 0;
         while idx < from.len() {
@@ -610,7 +581,7 @@ impl DiscoverResponder {
     /// Sends the response to a discovery request.
     /// At least one endpoint must be present.
     /// Will result in a Error::PeerWrite if the distant peer is disconnected.
-    pub fn send(self, endpoints: &[StreamInformation]) -> Result<(), Error> {
+    pub fn send(self, endpoints: &[StreamInformation]) -> Result<()> {
         if endpoints.len() == 0 {
             // There shall be at least one SEP in a response (Sec 8.6.2)
             return Err(Error::Encoding);
@@ -625,7 +596,7 @@ impl DiscoverResponder {
             .send_response(self.id, SignalIdentifier::Discover, &params)
     }
 
-    pub fn reject(self, error_code: ErrorCode) -> Result<(), Error> {
+    pub fn reject(self, error_code: ErrorCode) -> Result<()> {
         self.peer
             .send_reject(self.id, SignalIdentifier::Discover, error_code)
     }
@@ -639,7 +610,7 @@ pub struct GetCapabilitiesResponder {
 }
 
 impl GetCapabilitiesResponder {
-    pub fn send(self, capabilities: &[ServiceCapability]) -> Result<(), Error> {
+    pub fn send(self, capabilities: &[ServiceCapability]) -> Result<()> {
         let included_iter = capabilities.iter().filter(|x| x.in_response(self.signal));
         let reply_len = included_iter.clone().fold(0, |a, b| a + b.encoded_len());
         let mut reply = vec![0 as u8; reply_len];
@@ -652,7 +623,7 @@ impl GetCapabilitiesResponder {
         self.peer.send_response(self.id, self.signal, &reply)
     }
 
-    pub fn reject(self, error_code: ErrorCode) -> Result<(), Error> {
+    pub fn reject(self, error_code: ErrorCode) -> Result<()> {
         self.peer.send_reject(self.id, self.signal, error_code)
     }
 }
@@ -663,7 +634,7 @@ struct GetCapabilitiesResponse {
 }
 
 impl Decodable for GetCapabilitiesResponse {
-    fn decode(from: &[u8]) -> Result<Self, Error> {
+    fn decode(from: &[u8]) -> Result<Self> {
         let mut capabilities = Vec::<ServiceCapability>::new();
         let mut idx = 0;
         while idx < from.len() {
@@ -677,283 +648,6 @@ impl Decodable for GetCapabilitiesResponse {
     }
 }
 
-/// The type of the codec in the MediaCodec Service Capability
-/// Valid values are defined in the Bluetooth Assigned Numbers and are
-/// interpreted differently for different Media Types, so we do not interpret
-/// them here.
-/// See https://www.bluetooth.com/specifications/assigned-numbers/audio-video
-#[derive(Debug, PartialEq)]
-pub struct MediaCodecType(u8);
-
-impl MediaCodecType {
-    pub fn new(num: u8) -> MediaCodecType {
-        MediaCodecType(num)
-    }
-}
-
-/// The type of content protection used in the Content Protection Service Capability.
-/// Defined in the Bluetooth Assigned Numbers
-/// https://www.bluetooth.com/specifications/assigned-numbers/audio-video
-#[derive(Debug, PartialEq)]
-pub enum ContentProtectionType {
-    DigitalTransmissionContentProtection, // DTCP, 0x0001
-    SerialCopyManagementSystem,           // SCMS-T, 0x0002
-}
-
-impl ContentProtectionType {
-    fn to_le_bytes(&self) -> [u8; 2] {
-        match self {
-            ContentProtectionType::DigitalTransmissionContentProtection => [0x01, 0x00],
-            ContentProtectionType::SerialCopyManagementSystem => [0x02, 0x00],
-        }
-    }
-}
-
-impl TryFrom<u16> for ContentProtectionType {
-    type Error = Error;
-
-    fn try_from(val: u16) -> Result<Self, Self::Error> {
-        match val {
-            1 => Ok(ContentProtectionType::DigitalTransmissionContentProtection),
-            2 => Ok(ContentProtectionType::SerialCopyManagementSystem),
-            _ => Err(Error::OutOfRange),
-        }
-    }
-}
-
-/// Service Capabilities indicate possible services that can be provided by
-/// each stream endpoint.  See AVDTP Spec section 8.21.
-#[derive(Debug, PartialEq)]
-pub enum ServiceCapability {
-    /// Indicates that the end point can provide at least basic media transport
-    /// service as defined by RFC 3550 and outlined in section 7.2.
-    /// Defined in section 8.21.2
-    MediaTransport,
-    /// Indicates that the end point can provide reporting service as outlined in section 7.3
-    /// Defined in section 8.21.3
-    Reporting,
-    /// Indicates the end point can provide recovery service as outlined in section 7.4
-    /// Defined in section 8.21.4
-    Recovery {
-        recovery_type: u8,
-        max_recovery_window_size: u8,
-        max_number_media_packets: u8,
-    },
-    /// Indicates the codec which is supported by this end point. |codec_extra| is defined within
-    /// the relevant profiles (A2DP for Audio, etc).
-    /// Defined in section 8.21.5
-    MediaCodec {
-        media_type: MediaType,
-        codec_type: MediaCodecType,
-        codec_extra: Vec<u8>, // TODO: Media codec specific information elements
-    },
-    /// Present when the device has content protection capability.
-    /// |extra| is defined elsewhere.
-    /// Defined in section 8.21.6
-    ContentProtection {
-        protection_type: ContentProtectionType,
-        extra: Vec<u8>, // Protection speciifc parameters
-    },
-    /// Indicates that delay reporting is offered by this end point.
-    /// Defined in section 8.21.9
-    DelayReporting,
-}
-
-impl ServiceCapability {
-    fn to_category_byte(&self) -> u8 {
-        match self {
-            ServiceCapability::MediaTransport => 1,
-            ServiceCapability::Reporting => 2,
-            ServiceCapability::Recovery { .. } => 3,
-            ServiceCapability::ContentProtection { .. } => 4,
-            ServiceCapability::MediaCodec { .. } => 7,
-            ServiceCapability::DelayReporting => 8,
-        }
-    }
-
-    fn length_of_service_capabilities(&self) -> u8 {
-        match self {
-            ServiceCapability::MediaTransport => 0,
-            ServiceCapability::Reporting => 0,
-            ServiceCapability::Recovery { .. } => 3,
-            ServiceCapability::MediaCodec { codec_extra, .. } => 2 + codec_extra.len() as u8,
-            ServiceCapability::ContentProtection { extra, .. } => 2 + extra.len() as u8,
-            ServiceCapability::DelayReporting => 0,
-        }
-    }
-
-    /// True when this ServiceCapability is a "basic" capability.
-    /// See Table 8.47 in Section 8.21.1
-    fn is_basic(&self) -> bool {
-        match self {
-            ServiceCapability::DelayReporting => false,
-            _ => true,
-        }
-    }
-
-    /// True when this capability should be included in the response to a |sig| command.
-    fn in_response(&self, sig: SignalIdentifier) -> bool {
-        sig == SignalIdentifier::GetAllCapabilities || self.is_basic()
-    }
-
-    /// True when this capability is classified as an "Application Service Capability"
-    fn is_application(&self) -> bool {
-        match self {
-            ServiceCapability::MediaCodec { .. } | ServiceCapability::ContentProtection { .. } => {
-                true
-            }
-            _ => false,
-        }
-    }
-}
-
-impl Decodable for ServiceCapability {
-    fn decode(from: &[u8]) -> Result<Self, Error> {
-        if from.len() < 2 {
-            return Err(Error::Encoding);
-        }
-        let length_of_capability = from[1] as usize;
-        let d = match from[0] {
-            1 => match length_of_capability {
-                0 => ServiceCapability::MediaTransport,
-                _ => return Err(Error::RequestInvalid(ErrorCode::BadMediaTransportFormat)),
-            },
-            2 => match length_of_capability {
-                0 => ServiceCapability::Reporting,
-                _ => return Err(Error::RequestInvalid(ErrorCode::BadPayloadFormat)),
-            },
-            3 => {
-                if from.len() < 5 || length_of_capability != 3 {
-                    return Err(Error::RequestInvalid(ErrorCode::BadRecoveryFormat));
-                }
-                let recovery_type = from[2];
-                let mrws = from[3];
-                let mnmp = from[4];
-                // Check format of parameters. See Section 8.21.4, Table 8.51
-                // The only recovery type is RFC2733 (0x01)
-                if recovery_type != 0x01 {
-                    return Err(Error::RequestInvalid(ErrorCode::BadRecoveryType));
-                }
-                // The MRWS and MNMP must be 0x01 - 0x18
-                if mrws < 0x01 || mrws > 0x18 || mnmp < 0x01 || mnmp > 0x18 {
-                    return Err(Error::RequestInvalid(ErrorCode::BadRecoveryFormat));
-                }
-                ServiceCapability::Recovery {
-                    recovery_type,
-                    max_recovery_window_size: mrws,
-                    max_number_media_packets: mnmp,
-                }
-            }
-            4 => {
-                let cp_format_err = Err(Error::RequestInvalid(ErrorCode::BadCpFormat));
-                if from.len() < 4
-                    || length_of_capability < 2
-                    || from.len() < length_of_capability + 2
-                {
-                    return cp_format_err;
-                }
-                let cp_type: u16 = ((from[3] as u16) << 8) + from[2] as u16;
-                let protection_type = match ContentProtectionType::try_from(cp_type) {
-                    Ok(val) => val,
-                    Err(_) => return cp_format_err,
-                };
-                let extra_len = length_of_capability - 2;
-                let mut extra = vec![0; extra_len];
-                extra.copy_from_slice(&from[4..4 + extra_len]);
-                ServiceCapability::ContentProtection {
-                    protection_type,
-                    extra,
-                }
-            }
-            7 => {
-                let format_err = Err(Error::RequestInvalid(ErrorCode::BadPayloadFormat));
-                if from.len() < 4
-                    || length_of_capability < 2
-                    || from.len() < length_of_capability + 2
-                {
-                    return format_err;
-                }
-                let media_type = match MediaType::try_from(from[2] >> 4) {
-                    Ok(media) => media,
-                    Err(_) => return format_err,
-                };
-                let codec_type = MediaCodecType::new(from[3]);
-                let extra_len = length_of_capability - 2;
-                let mut codec_extra = vec![0; extra_len];
-                codec_extra.copy_from_slice(&from[4..4 + extra_len]);
-                ServiceCapability::MediaCodec {
-                    media_type,
-                    codec_type,
-                    codec_extra,
-                }
-            }
-            8 => match length_of_capability {
-                0 => ServiceCapability::DelayReporting,
-                _ => return Err(Error::RequestInvalid(ErrorCode::BadPayloadFormat)),
-            },
-            _ => {
-                return Err(Error::RequestInvalid(ErrorCode::BadServiceCategory));
-            }
-        };
-        Ok(d)
-    }
-}
-
-impl Encodable for ServiceCapability {
-    fn encoded_len(&self) -> usize {
-        2 + self.length_of_service_capabilities() as usize
-    }
-
-    fn encode(&self, buf: &mut [u8]) -> Result<(), Error> {
-        if buf.len() < self.encoded_len() {
-            return Err(Error::Encoding);
-        }
-        let mut cursor = Cursor::new(buf);
-        cursor
-            .write(&[
-                self.to_category_byte(),
-                self.length_of_service_capabilities(),
-            ])
-            .map_err(|_| Error::Encoding)?;
-        match self {
-            ServiceCapability::Recovery {
-                recovery_type: t,
-                max_recovery_window_size: max_size,
-                max_number_media_packets: max_packets,
-            } => {
-                cursor
-                    .write(&[*t, *max_size, *max_packets])
-                    .map_err(|_| Error::Encoding)?;
-            }
-            ServiceCapability::MediaCodec {
-                media_type,
-                codec_type,
-                codec_extra,
-            } => {
-                cursor
-                    .write(&[u8::from(media_type) << 4, codec_type.0])
-                    .map_err(|_| Error::Encoding)?;
-                cursor
-                    .write(codec_extra.as_slice())
-                    .map_err(|_| Error::Encoding)?;
-            }
-            ServiceCapability::ContentProtection {
-                protection_type,
-                extra,
-            } => {
-                cursor
-                    .write(&protection_type.to_le_bytes())
-                    .map_err(|_| Error::Encoding)?;
-                cursor
-                    .write(extra.as_slice())
-                    .map_err(|_| Error::Encoding)?;
-            }
-            _ => {}
-        }
-        Ok(())
-    }
-}
-
 #[derive(Debug)]
 pub struct SimpleResponder {
     peer: Arc<PeerInner>,
@@ -962,11 +656,11 @@ pub struct SimpleResponder {
 }
 
 impl SimpleResponder {
-    pub fn send(self) -> Result<(), Error> {
+    pub fn send(self) -> Result<()> {
         self.peer.send_response(self.id, self.signal, &[])
     }
 
-    pub fn reject(self, error_code: ErrorCode) -> Result<(), Error> {
+    pub fn reject(self, error_code: ErrorCode) -> Result<()> {
         self.peer.send_reject(self.id, self.signal, error_code)
     }
 }
@@ -979,11 +673,11 @@ pub struct StreamResponder {
 }
 
 impl StreamResponder {
-    pub fn send(self) -> Result<(), Error> {
+    pub fn send(self) -> Result<()> {
         self.peer.send_response(self.id, self.signal, &[])
     }
 
-    pub fn reject(self, stream_id: &StreamEndpointId, error_code: ErrorCode) -> Result<(), Error> {
+    pub fn reject(self, stream_id: &StreamEndpointId, error_code: ErrorCode) -> Result<()> {
         self.peer.send_reject_params(
             self.id,
             self.signal,
@@ -1000,13 +694,13 @@ pub struct ConfigureResponder {
 }
 
 impl ConfigureResponder {
-    pub fn send(self) -> Result<(), Error> {
+    pub fn send(self) -> Result<()> {
         self.peer.send_response(self.id, self.signal, &[])
     }
 
     pub fn reject(
         self, capability: Option<&ServiceCapability>, error_code: ErrorCode,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         let service_byte: u8 = match capability {
             None => 0x0, // If no service category applies, see notes in Sec 8.11.3 or 8.9.3
             Some(cap) => cap.to_category_byte(),
@@ -1083,7 +777,7 @@ impl ResponseWaiter {
 
 fn decode_signaling_response<D: Decodable>(
     expected_signal: SignalIdentifier, buf: Vec<u8>,
-) -> Result<D, Error> {
+) -> Result<D> {
     let header = SignalingHeader::decode(buf.as_slice())?;
     if header.signal() != expected_signal {
         return Err(Error::InvalidHeader);
@@ -1113,7 +807,7 @@ pub struct CommandResponse {
 impl Unpin for CommandResponse {}
 
 impl futures::Future for CommandResponse {
-    type Output = Result<Vec<u8>, Error>;
+    type Output = Result<Vec<u8>>;
     fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
         let this = &mut *self;
         let res;
@@ -1170,7 +864,7 @@ struct PeerInner {
 impl PeerInner {
     /// Add a response waiter, and return a id that can be used to send the
     /// transaction.  Responses then can be received using poll_recv_response
-    fn add_response_waiter(&self) -> Result<TxLabel, Error> {
+    fn add_response_waiter(&self) -> Result<TxLabel> {
         let key = self
             .response_waiters
             .lock()
@@ -1199,7 +893,7 @@ impl PeerInner {
     // Resolves to an unprocessed request (header, body) if one was received.
     // Resolves to an error if there was an error reading from the socket or if the peer
     // disconnected.
-    fn poll_recv_request(&self, lw: &LocalWaker) -> Poll<Result<UnparsedRequest, Error>> {
+    fn poll_recv_request(&self, lw: &LocalWaker) -> Poll<Result<UnparsedRequest>> {
         let is_closed = self.recv_all(lw)?;
 
         let mut lock = self.incoming_requests.lock();
@@ -1220,7 +914,7 @@ impl PeerInner {
     // Resolves to the bytes in the response body if one was received.
     // Resolves to an error if there was an error reading from the socket, if the peer
     // disconnected, or if the |label| is not being waited on.
-    fn poll_recv_response(&self, label: &TxLabel, lw: &LocalWaker) -> Poll<Result<Vec<u8>, Error>> {
+    fn poll_recv_response(&self, label: &TxLabel, lw: &LocalWaker) -> Poll<Result<Vec<u8>>> {
         let is_closed = self.recv_all(lw)?;
 
         let mut waiters = self.response_waiters.lock();
@@ -1251,7 +945,7 @@ impl PeerInner {
     /// Poll for any packets on the signaling socket
     /// Returns whether the channel was closed, or an Error::PeerRead or Error::PeerWrite
     /// if there was a problem communicating on the socket.
-    fn recv_all(&self, lw: &LocalWaker) -> Result<bool, Error> {
+    fn recv_all(&self, lw: &LocalWaker) -> Result<bool> {
         let mut buf = Vec::<u8>::new();
         loop {
             let packet_size = match self.signaling.poll_datagram(&mut buf, lw) {
@@ -1340,16 +1034,14 @@ impl PeerInner {
     }
 
     // Build and send a General Reject message (Section 8.18)
-    fn send_general_reject(&self, label: TxLabel, invalid_signal_id: u8) -> Result<(), Error> {
+    fn send_general_reject(&self, label: TxLabel, invalid_signal_id: u8) -> Result<()> {
         // Build the packet ourselves rather than make SignalingHeader build an packet with an
         // invalid signal id.
         let packet: &[u8; 2] = &[u8::from(&label) << 4 | 0x01, invalid_signal_id & 0x3F];
         self.send_signal(packet)
     }
 
-    fn send_response(
-        &self, label: TxLabel, signal: SignalIdentifier, params: &[u8],
-    ) -> Result<(), Error> {
+    fn send_response(&self, label: TxLabel, signal: SignalIdentifier, params: &[u8]) -> Result<()> {
         let header = SignalingHeader::new(label, signal, SignalingMessageType::ResponseAccept);
         let mut packet = vec![0 as u8; header.encoded_len() + params.len()];
         header.encode(packet.as_mut_slice())?;
@@ -1359,13 +1051,13 @@ impl PeerInner {
 
     fn send_reject(
         &self, label: TxLabel, signal: SignalIdentifier, error_code: ErrorCode,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         self.send_reject_params(label, signal, &[u8::from(&error_code)])
     }
 
     fn send_reject_params(
         &self, label: TxLabel, signal: SignalIdentifier, params: &[u8],
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         let header = SignalingHeader::new(label, signal, SignalingMessageType::ResponseReject);
         let mut packet = vec![0 as u8; header.encoded_len() + params.len()];
         header.encode(packet.as_mut_slice())?;
@@ -1373,7 +1065,7 @@ impl PeerInner {
         self.send_signal(&packet)
     }
 
-    fn send_signal(&self, data: &[u8]) -> Result<(), Error> {
+    fn send_signal(&self, data: &[u8]) -> Result<()> {
         self.signaling
             .as_ref()
             .write(data)

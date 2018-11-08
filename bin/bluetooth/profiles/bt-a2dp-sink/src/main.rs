@@ -20,7 +20,7 @@ use std::collections::HashSet;
 use std::string::String;
 use std::sync::Arc;
 
-/// Make the SDP definidion for the A2DP sink service.
+/// Make the SDP definition for the A2DP sink service.
 fn make_profile_service_definition() -> ServiceDefinition {
     ServiceDefinition {
         service_class_uuids: vec![String::from("110B")], // Audio Sink UUID
@@ -53,7 +53,7 @@ fn make_profile_service_definition() -> ServiceDefinition {
     }
 }
 
-fn get_available_stream_info() -> Result<Vec<avdtp::StreamInformation>, avdtp::Error> {
+fn get_available_stream_info() -> avdtp::Result<Vec<avdtp::StreamInformation>> {
     // TODO(jamuraa): retrieve available streams from Media
     let s = avdtp::StreamInformation::new(
         1,
@@ -88,7 +88,7 @@ const AUDIO_CODEC_SBC: u8 = 0;
 
 fn get_stream_capabilities(
     _: avdtp::StreamEndpointId,
-) -> Result<Vec<avdtp::ServiceCapability>, avdtp::Error> {
+) -> avdtp::Result<Vec<avdtp::ServiceCapability>> {
     // TODO(jamuraa): get the capabilities of the available stream from the Media Framework
     // This is SBC with minimal requirements for a sink.
     Ok(vec![
@@ -140,7 +140,7 @@ fn start_media_stream(sock: zx::Socket) -> Result<(), zx::Status> {
     Ok(())
 }
 
-fn handle_request(r: avdtp::Request) -> Result<(), avdtp::Error> {
+fn handle_request(r: avdtp::Request) -> avdtp::Result<()> {
     fx_vlog!(tag: "a2dp-sink", 1, "Handling {:?} from peer..", r);
     match r {
         avdtp::Request::Discover { responder } => {
