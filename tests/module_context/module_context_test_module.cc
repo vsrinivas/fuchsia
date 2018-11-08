@@ -24,13 +24,13 @@ using ::test::peridot::tests::trigger::TriggerTestServicePtr;
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp {
+class TestModule {
  public:
   TestPoint initialized_{"Root module initialized"};
 
-  TestApp(modular::ModuleHost* const module_host,
-          fidl::InterfaceRequest<
-              fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/) {
+  TestModule(modular::ModuleHost* const module_host,
+             fidl::InterfaceRequest<
+                 fuchsia::ui::app::ViewProvider> /*view_provider_request*/) {
     modular::testing::Init(module_host->startup_context(), __FILE__);
     fuchsia::modular::ModuleContext* module_context =
         module_host->module_context();
@@ -69,8 +69,15 @@ class TestApp {
     });
   }
 
-  TestPoint stopped_{"Root module stopped"};
+  TestModule(modular::ModuleHost* const module_host,
+             fidl::InterfaceRequest<
+                 fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
+      : TestModule(
+            module_host,
+            fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>(nullptr)) {}
+
   // Called by ModuleDriver.
+  TestPoint stopped_{"Root module stopped"};
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
     std::string terminated = module_name_ == kFirstModuleName
@@ -85,7 +92,7 @@ class TestApp {
   std::string module_name_ = "";
   fuchsia::modular::OngoingActivityPtr ongoing_activity_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestModule);
 };
 
 }  // namespace
@@ -93,8 +100,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = component::StartupContext::CreateFromStartupInfo();
-  modular::ModuleDriver<TestApp> driver(context.get(),
-                                        [&loop] { loop.Quit(); });
+  modular::ModuleDriver<TestModule> driver(context.get(),
+                                           [&loop] { loop.Quit(); });
   loop.Run();
   return 0;
 }

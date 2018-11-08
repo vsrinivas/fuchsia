@@ -19,15 +19,15 @@ using modular::testing::TestPoint;
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp {
+class TestModule {
  public:
   TestPoint initialized_{"fuchsia::modular::Clipboard module initialized"};
   TestPoint successful_peek_{
       "fuchsia::modular::Clipboard pushed and peeked value"};
 
-  TestApp(modular::ModuleHost* const module_host,
-          fidl::InterfaceRequest<
-              fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
+  TestModule(modular::ModuleHost* const module_host,
+             fidl::InterfaceRequest<
+                 fuchsia::ui::app::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host) {
     modular::testing::Init(module_host->startup_context(), __FILE__);
     initialized_.Pass();
@@ -44,8 +44,14 @@ class TestApp {
     });
   }
 
-  TestPoint stopped_{"fuchsia::modular::Clipboard module stopped"};
+  TestModule(modular::ModuleHost* const module_host,
+             fidl::InterfaceRequest<
+                 fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
+      : TestModule(
+            module_host,
+            fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>(nullptr)) {}
 
+  TestPoint stopped_{"fuchsia::modular::Clipboard module stopped"};
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
     modular::testing::Done(done);
@@ -68,7 +74,7 @@ class TestApp {
   fuchsia::modular::ClipboardPtr clipboard_;
   fuchsia::modular::ComponentContextPtr component_context_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestModule);
 };
 
 }  // namespace
@@ -76,8 +82,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = component::StartupContext::CreateFromStartupInfo();
-  modular::ModuleDriver<TestApp> driver(context.get(),
-                                        [&loop] { loop.Quit(); });
+  modular::ModuleDriver<TestModule> driver(context.get(),
+                                           [&loop] { loop.Quit(); });
   loop.Run();
   return 0;
 }

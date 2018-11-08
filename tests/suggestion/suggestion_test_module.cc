@@ -22,15 +22,15 @@ using modular::testing::TestPoint;
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp : fuchsia::modular::ProposalListener {
+class TestModule : fuchsia::modular::ProposalListener {
  public:
   TestPoint initialized_{"Root module initialized"};
   TestPoint received_story_id_{"Root module received story id"};
   TestPoint proposal_was_accepted_{"fuchsia::modular::Proposal was accepted"};
 
-  TestApp(modular::ModuleHost* module_host,
-          fidl::InterfaceRequest<
-              fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
+  TestModule(modular::ModuleHost* module_host,
+             fidl::InterfaceRequest<
+                 fuchsia::ui::app::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host) {
     modular::testing::Init(module_host_->startup_context(), __FILE__);
     initialized_.Pass();
@@ -78,9 +78,15 @@ class TestApp : fuchsia::modular::ProposalListener {
         });
   }
 
-  TestPoint stopped_{"Root module stopped"};
+  TestModule(modular::ModuleHost* const module_host,
+             fidl::InterfaceRequest<
+                 fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
+      : TestModule(
+            module_host,
+            fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>(nullptr)) {}
 
   // Called by ModuleDriver.
+  TestPoint stopped_{"Root module stopped"};
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
     modular::testing::Done(done);
@@ -98,7 +104,7 @@ class TestApp : fuchsia::modular::ProposalListener {
   fuchsia::modular::ProposalPublisherPtr proposal_publisher_;
   fidl::BindingSet<fuchsia::modular::ProposalListener>
       proposal_listener_bindings_;
-  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestModule);
 };
 
 }  // namespace
@@ -106,8 +112,8 @@ class TestApp : fuchsia::modular::ProposalListener {
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = component::StartupContext::CreateFromStartupInfo();
-  modular::ModuleDriver<TestApp> driver(context.get(),
-                                        [&loop] { loop.Quit(); });
+  modular::ModuleDriver<TestModule> driver(context.get(),
+                                           [&loop] { loop.Quit(); });
   loop.Run();
   return 0;
 }

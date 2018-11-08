@@ -22,16 +22,22 @@ class NullModule {
 
   NullModule(modular::ModuleHost* const module_host,
              fidl::InterfaceRequest<
-                 fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
+                 fuchsia::ui::app::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host) {
     modular::testing::Init(module_host_->startup_context(), __FILE__);
     initialized_.Pass();
     Signal(kCommonNullModuleStarted);
   }
 
-  TestPoint stopped_{"Null module stopped"};
+  NullModule(modular::ModuleHost* const module_host,
+             fidl::InterfaceRequest<
+                 fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
+      : NullModule(
+            module_host,
+            fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>(nullptr)) {}
 
   // Called by ModuleDriver.
+  TestPoint stopped_{"Null module stopped"};
   void Terminate(const std::function<void()>& done) {
     Signal(kCommonNullModuleStopped);
     stopped_.Pass();

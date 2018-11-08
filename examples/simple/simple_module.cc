@@ -15,14 +15,11 @@ using ::fuchsia::modular::examples::simple::SimplePtr;
 
 namespace simple {
 
-class SimpleModule : fuchsia::ui::viewsv1::ViewProvider {
+class SimpleModule : public fuchsia::ui::app::ViewProvider,
+                     public fuchsia::ui::viewsv1::ViewProvider {
  public:
-  SimpleModule(modular::ModuleHost* const module_host,
-               fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider>
-                   view_provider_request)
-      : view_provider_binding_(this) {
-    view_provider_binding_.Bind(std::move(view_provider_request));
-
+  SimpleModule(modular::ModuleHost* const module_host)
+      : old_view_provider_binding_(this), view_provider_binding_(this) {
     // Get the component context from the module context.
     fuchsia::modular::ComponentContextPtr component_context;
     module_host->module_context()->GetComponentContext(
@@ -59,17 +56,39 @@ class SimpleModule : fuchsia::ui::viewsv1::ViewProvider {
     FXL_LOG(INFO) << "Initialized Simple Module.";
   }
 
+  SimpleModule(modular::ModuleHost* const module_host,
+               fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>
+                   view_provider_request)
+      : SimpleModule(module_host) {
+    view_provider_binding_.Bind(std::move(view_provider_request));
+  }
+
+  SimpleModule(modular::ModuleHost* const module_host,
+               fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider>
+                   view_provider_request)
+      : SimpleModule(module_host) {
+    old_view_provider_binding_.Bind(std::move(view_provider_request));
+  }
+
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) { done(); }
 
  private:
+  // |fuchsia::ui::app::ViewProvider|
+  void CreateView(
+      zx::eventpair view_token,
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
+      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services)
+      override {}
+
   // |fuchsia::ui::viewsv1::ViewProvider|
   void CreateView(
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services) override {
   }
 
-  fidl::Binding<fuchsia::ui::viewsv1::ViewProvider> view_provider_binding_;
+  fidl::Binding<fuchsia::ui::viewsv1::ViewProvider> old_view_provider_binding_;
+  fidl::Binding<fuchsia::ui::app::ViewProvider> view_provider_binding_;
 
   modular::MessageQueueClient message_queue_;
 };

@@ -21,20 +21,26 @@ using modular::testing::TestPoint;
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp {
+class TestModule {
  public:
-  TestApp(modular::ModuleHost* module_host,
-          fidl::InterfaceRequest<
-              fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/) {
+  TestModule(modular::ModuleHost* module_host,
+             fidl::InterfaceRequest<
+                 fuchsia::ui::app::ViewProvider> /*view_provider_request*/) {
     modular::testing::Init(module_host->startup_context(), __FILE__);
 
     FXL_LOG(INFO) << "Child module 1 initialized";
     Signal(std::string("child_module_1_init"));
   }
 
-  TestPoint stopped_{"Child module 1 stopped"};
+  TestModule(modular::ModuleHost* const module_host,
+             fidl::InterfaceRequest<
+                 fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
+      : TestModule(
+            module_host,
+            fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>(nullptr)) {}
 
   // Called from ModuleDriver.
+  TestPoint stopped_{"Child module 1 stopped"};
   void Terminate(const std::function<void()>& done) {
     FXL_LOG(INFO) << "Child module 1 exiting.";
     stopped_.Pass();
@@ -44,7 +50,7 @@ class TestApp {
   }
 
  private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestModule);
 };
 
 }  // namespace
@@ -52,8 +58,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = component::StartupContext::CreateFromStartupInfo();
-  modular::ModuleDriver<TestApp> driver(context.get(),
-                                        [&loop] { loop.Quit(); });
+  modular::ModuleDriver<TestModule> driver(context.get(),
+                                           [&loop] { loop.Quit(); });
   loop.Run();
   return 0;
 }

@@ -49,6 +49,7 @@ source_set("module_driver") {
   ]
 
   public_deps = [
+    "//garnet/public/fidl/fuchsia.ui.app",
     "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",

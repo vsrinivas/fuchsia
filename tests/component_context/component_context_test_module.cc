@@ -65,14 +65,14 @@ class CounterTrigger {
 };
 
 // Cf. README.md for what this test does and how.
-class TestApp {
+class TestModule {
  public:
   TestPoint initialized_{"Root module initialized"};
   TestPoint one_agent_connected_{"One agent accepted connection"};
 
-  TestApp(modular::ModuleHost* module_host,
-          fidl::InterfaceRequest<
-              fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
+  TestModule(modular::ModuleHost* module_host,
+             fidl::InterfaceRequest<
+                 fuchsia::ui::app::ViewProvider> /*view_provider_request*/)
       : steps_(
             kTotalSimultaneousTests,
             [this, module_host] { Signal(modular::testing::kTestShutdown); }),
@@ -101,9 +101,15 @@ class TestApp {
     TestUnstoppableAgent([this] { steps_.Step(); });
   }
 
-  TestPoint stopped_{"Root module stopped"};
+  TestModule(modular::ModuleHost* const module_host,
+             fidl::InterfaceRequest<
+                 fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
+      : TestModule(
+            module_host,
+            fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>(nullptr)) {}
 
   // Called by ModuleDriver.
+  TestPoint stopped_{"Root module stopped"};
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
     modular::testing::Done(done);
@@ -184,9 +190,9 @@ class TestApp {
 
   fuchsia::modular::AgentControllerPtr unstoppable_agent_controller_;
 
-  fxl::WeakPtrFactory<TestApp> weak_ptr_factory_;
+  fxl::WeakPtrFactory<TestModule> weak_ptr_factory_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestModule);
 };
 
 }  // namespace
@@ -194,8 +200,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = component::StartupContext::CreateFromStartupInfo();
-  modular::ModuleDriver<TestApp> driver(context.get(),
-                                        [&loop] { loop.Quit(); });
+  modular::ModuleDriver<TestModule> driver(context.get(),
+                                           [&loop] { loop.Quit(); });
   loop.Run();
   return 0;
 }

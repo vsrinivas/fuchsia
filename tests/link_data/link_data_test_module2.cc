@@ -16,16 +16,23 @@
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp : fuchsia::modular::LinkWatcher {
+class TestModule : fuchsia::modular::LinkWatcher {
  public:
-  TestApp(modular::ModuleHost* const module_host,
-          fidl::InterfaceRequest<
-              fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
+  TestModule(modular::ModuleHost* const module_host,
+             fidl::InterfaceRequest<
+                 fuchsia::ui::app::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host), link_watcher_binding_(this) {
     modular::testing::Init(module_host->startup_context(), __FILE__);
     modular::testing::GetStore()->Put("module2_init", "", [] {});
     Start();
   }
+
+  TestModule(modular::ModuleHost* const module_host,
+             fidl::InterfaceRequest<
+                 fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
+      : TestModule(
+            module_host,
+            fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>(nullptr)) {}
 
   void Start() {
     module_host_->module_context()->GetLink(kModule2Link, link_.NewRequest());
@@ -50,7 +57,7 @@ class TestApp : fuchsia::modular::LinkWatcher {
   fuchsia::modular::LinkPtr link_;
   fidl::Binding<fuchsia::modular::LinkWatcher> link_watcher_binding_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestModule);
 };
 
 }  // namespace
@@ -58,8 +65,8 @@ class TestApp : fuchsia::modular::LinkWatcher {
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = component::StartupContext::CreateFromStartupInfo();
-  modular::ModuleDriver<TestApp> driver(context.get(),
-                                        [&loop] { loop.Quit(); });
+  modular::ModuleDriver<TestModule> driver(context.get(),
+                                           [&loop] { loop.Quit(); });
   loop.Run();
   return 0;
 }

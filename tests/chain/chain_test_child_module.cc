@@ -22,13 +22,13 @@ using modular::testing::TestPoint;
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp {
+class TestModule {
  public:
   TestPoint initialized_{"Child module initialized"};
 
-  TestApp(modular::ModuleHost* module_host,
-          fidl::InterfaceRequest<
-              fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
+  TestModule(modular::ModuleHost* module_host,
+             fidl::InterfaceRequest<
+                 fuchsia::ui::app::ViewProvider> /*view_provider_request*/)
       : module_context_(module_host->module_context()) {
     module_context_->GetComponentContext(component_context_.NewRequest());
     component_context_->GetEntityResolver(entity_resolver_.NewRequest());
@@ -40,6 +40,13 @@ class TestApp {
     // in Links we have access to, and that their contents are correct.
     VerifyLinkOne();
   }
+
+  TestModule(modular::ModuleHost* const module_host,
+             fidl::InterfaceRequest<
+                 fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
+      : TestModule(
+            module_host,
+            fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>(nullptr)) {}
 
   TestPoint stopped_{"Child module stopped"};
 
@@ -140,7 +147,7 @@ class TestApp {
 
   fidl::StringPtr entity_one_reference_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestModule);
 };
 
 }  // namespace
@@ -148,8 +155,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = component::StartupContext::CreateFromStartupInfo();
-  modular::ModuleDriver<TestApp> driver(context.get(),
-                                        [&loop] { loop.Quit(); });
+  modular::ModuleDriver<TestModule> driver(context.get(),
+                                           [&loop] { loop.Quit(); });
   loop.Run();
   return 0;
 }

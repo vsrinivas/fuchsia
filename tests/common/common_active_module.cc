@@ -24,10 +24,9 @@ class ActiveModule {
  public:
   TestPoint initialized_{"Active module initialized"};
 
-  ActiveModule(
-      modular::ModuleHost* const module_host,
-      fidl::InterfaceRequest<
-          fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
+  ActiveModule(modular::ModuleHost* const module_host,
+               fidl::InterfaceRequest<
+                   fuchsia::ui::app::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host), weak_ptr_factory_(this) {
     modular::testing::Init(module_host_->startup_context(), __FILE__);
     initialized_.Pass();
@@ -35,6 +34,14 @@ class ActiveModule {
 
     ScheduleActive();
   }
+
+  ActiveModule(
+      modular::ModuleHost* const module_host,
+      fidl::InterfaceRequest<
+          fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
+      : ActiveModule(
+            module_host,
+            fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>(nullptr)) {}
 
   void ScheduleActive() {
     async::PostDelayedTask(async_get_default_dispatcher(),
@@ -49,9 +56,8 @@ class ActiveModule {
                            zx::duration(ZX_SEC(1)));
   }
 
-  TestPoint stopped_{"Active module stopped"};
-
   // Called by ModuleDriver.
+  TestPoint stopped_{"Active module stopped"};
   void Terminate(const std::function<void()>& done) {
     Signal(kCommonActiveModuleStopped);
     stopped_.Pass();

@@ -56,21 +56,28 @@ void StartModuleWithJsonParameter(
 }
 
 // Cf. README.md for what this test does and how.
-class TestApp {
+class TestModule {
  public:
   TestPoint initialized_{"Parent module initialized"};
-  TestApp(modular::ModuleHost* module_host,
-          fidl::InterfaceRequest<
-              fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
+  TestModule(modular::ModuleHost* module_host,
+             fidl::InterfaceRequest<
+                 fuchsia::ui::app::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host) {
     modular::testing::Init(module_host->startup_context(), __FILE__);
     initialized_.Pass();
     TestStartWithModuleControllerRequest();
   }
 
-  TestPoint intent_was_handled_{"First intent was handled"};
+  TestModule(modular::ModuleHost* const module_host,
+             fidl::InterfaceRequest<
+                 fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
+      : TestModule(
+            module_host,
+            fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>(nullptr)) {}
+
   // Tests that a module which is started with an intent and exposes an intent
   // handler gets notified of the intent by the framework.
+  TestPoint intent_was_handled_{"First intent was handled"};
   void TestStartWithModuleControllerRequest() {
     std::string json = "\"first\"";
     StartModuleWithJsonParameter(module_host_->module_context(),
@@ -82,10 +89,10 @@ class TestApp {
     });
   }
 
-  TestPoint second_intent_was_handled_{"Second intent was handled"};
   // Tests that a second intent sent to an already running module with the same
   // parameters but different data notifies the intent handler of the new
   // intent.
+  TestPoint second_intent_was_handled_{"Second intent was handled"};
   void TestStartSecondIntentSameParameter() {
     std::string json = "\"second\"";
     StartModuleWithJsonParameter(module_host_->module_context(),
@@ -97,9 +104,9 @@ class TestApp {
     });
   }
 
-  TestPoint third_intent_was_handled_{"Third intent was handled"};
   // Tests that a third intent with different parameters is delivered to the
   // already running intent handler.
+  TestPoint third_intent_was_handled_{"Third intent was handled"};
   void TestStartThirdIntentDifferentParameter() {
     std::string json = "\"third\"";
     StartModuleWithJsonParameter(
@@ -111,10 +118,10 @@ class TestApp {
     });
   }
 
-  TestPoint fourth_intent_was_handled_{"Fourth intent was handled"};
   // Tests that a link_name parameter and a link_path parameter both get
   // modified by the framework to point to the appropriate link name when given
   // to the intent handler.
+  TestPoint fourth_intent_was_handled_{"Fourth intent was handled"};
   void TestStartIntentWithLinkNameAndPath() {
     fuchsia::modular::Intent intent;
     intent.handler = kChildModuleUrl;
@@ -165,8 +172,8 @@ class TestApp {
           });
   }
 
-  TestPoint stopped_{"Parent module stopped"};
   // Called by ModuleDriver.
+  TestPoint stopped_{"Parent module stopped"};
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
     modular::testing::Done(done);
@@ -177,7 +184,7 @@ class TestApp {
   fuchsia::modular::ModuleControllerPtr child_module_;
   fuchsia::modular::ModuleControllerPtr child_module_second_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestModule);
 };
 
 }  // namespace
@@ -185,8 +192,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = component::StartupContext::CreateFromStartupInfo();
-  modular::ModuleDriver<TestApp> driver(context.get(),
-                                        [&loop] { loop.Quit(); });
+  modular::ModuleDriver<TestModule> driver(context.get(),
+                                           [&loop] { loop.Quit(); });
   loop.Run();
   return 0;
 }

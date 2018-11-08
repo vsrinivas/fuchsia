@@ -24,7 +24,7 @@ class NullModule : fuchsia::modular::LinkWatcher {
  public:
   NullModule(modular::ModuleHost* const module_host,
              fidl::InterfaceRequest<
-                 fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
+                 fuchsia::ui::app::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host), link_watcher_binding_(this) {
     FXL_LOG(INFO) << "NullModule()";
     module_host_->module_context()->GetLink(nullptr, link_.NewRequest());
@@ -32,6 +32,13 @@ class NullModule : fuchsia::modular::LinkWatcher {
     // Will call Notify() with current value.
     link_->WatchAll(link_watcher_binding_.NewBinding());
   }
+
+  NullModule(modular::ModuleHost* const module_host,
+             fidl::InterfaceRequest<
+                 fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
+      : NullModule(
+            module_host,
+            fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>(nullptr)) {}
 
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) { done(); }
