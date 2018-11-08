@@ -37,8 +37,7 @@ constexpr char kUsage[] =
     ("Usage:\n  FIDL_COMPATIBILITY_TEST_SERVERS=foo_server,bar_server "
      "fidl_compatibility_test\n"
      "You must set the environment variable FIDL_COMPATIBILITY_TEST_SERVERS to "
-     "a"
-     "comma-separated list of server URLs when running this test.");
+     "a comma-separated list of server URLs when running this test.");
 
 zx::handle Handle() {
   zx_handle_t raw_event;
