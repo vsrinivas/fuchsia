@@ -37,12 +37,19 @@ zx_status_t TestWithDevice::LaunchDevice(
   }
 
   // Setup guest physical memory.
-  status = phys_mem_.Init(phys_mem_size);
+  zx::vmo vmo;
+  status = zx::vmo::create(phys_mem_size, ZX_VMO_NON_RESIZABLE, &vmo);
   if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to create VMO " << status;
     return status;
   }
-  return phys_mem_.vmo().duplicate(
-      ZX_RIGHT_TRANSFER | ZX_RIGHTS_IO | ZX_RIGHT_MAP, &start_info->vmo);
+  status = vmo.duplicate(ZX_RIGHT_TRANSFER | ZX_RIGHTS_IO | ZX_RIGHT_MAP,
+                         &start_info->vmo);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to duplicate VMO " << status;
+    return status;
+  }
+  return phys_mem_.Init(std::move(vmo));
 }
 
 zx_status_t TestWithDevice::WaitOnInterrupt() {

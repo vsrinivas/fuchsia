@@ -30,6 +30,7 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "\t--cmdline=[string]      Use 'string' as the kernel command line\n";
   std::cerr << "\t--cpus=[number]         Number of virtual CPUs available to the guest\n";
   std::cerr << "\t--dtb-overlay=[path]    Load a DTB overlay for a Linux kernel\n";
+  std::cerr << "\t--host-address=[addr]   Map host memory into the guest from (hex) 'addr'\n";
   std::cerr << "\t--linux=[path]          Load a Linux kernel from 'path'\n";
   std::cerr << "\t--memory=[bytes]        Allocate 'bytes' of memory for the guest.\n";
   std::cerr << "\t                        The suffixes 'k', 'M', and 'G' are accepted\n";
@@ -294,6 +295,7 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg)
           {"cmdline", save_option(&cfg_->cmdline_)},
           {"cpus", parse_number(&cfg_->cpus_, fxl::Base::k10)},
           {"dtb-overlay", save_option(&cfg_->dtb_overlay_path_)},
+          {"host-address", parse_number(&cfg_->host_address_, fxl::Base::k16)},
           {"linux",
            save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::LINUX)},
           {"memory", parse_mem_size(&cfg_->memory_)},

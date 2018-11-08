@@ -31,7 +31,8 @@ static constexpr uint32_t kMapFlags =
 static constexpr uint32_t kAllocateFlags =
     ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_SPECIFIC;
 
-static zx_status_t guest_get_resource(zx::resource* resource) {
+template <zx_status_t (*GetResource)(zx_handle_t, zx_status_t*, zx_handle_t*)>
+static zx_status_t get_resource(zx::resource* resource) {
   fbl::unique_fd fd(open(kSysInfoPath, O_RDWR));
   if (!fd) {
     return ZX_ERR_IO;
@@ -44,8 +45,8 @@ static zx_status_t guest_get_resource(zx::resource* resource) {
     return status;
   }
 
-  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetHypervisorResource(
-      channel.get(), &status, resource->reset_and_get_address());
+  zx_status_t fidl_status =
+      GetResource(channel.get(), &status, resource->reset_and_get_address());
   if (fidl_status != ZX_OK) {
     return fidl_status;
   }
@@ -68,15 +69,42 @@ static constexpr uint32_t trap_kind(machina::TrapType type) {
 
 namespace machina {
 
-zx_status_t Guest::Init(size_t mem_size) {
-  zx_status_t status = phys_mem_.Init(mem_size);
+zx_status_t Guest::Init(size_t mem_size, uintptr_t host_addr) {
+  zx::vmo vmo;
+  if (host_addr == SIZE_MAX) {
+    zx_status_t status = zx::vmo::create(mem_size, ZX_VMO_NON_RESIZABLE, &vmo);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to create VMO " << status;
+      return status;
+    }
+  } else {
+    zx::resource resource;
+    zx_status_t status =
+        get_resource<fuchsia_sysinfo_DeviceGetRootResource>(&resource);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to get root resource " << status;
+      return status;
+    }
+    status = zx::vmo::create_physical(resource, host_addr, mem_size, &vmo);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to create physical VMO " << status;
+      return status;
+    }
+    status = vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to set cache policy on VMO " << status;
+      return status;
+    }
+  }
+
+  zx_status_t status = phys_mem_.Init(std::move(vmo));
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create guest physical memory " << status;
+    FXL_LOG(ERROR) << "Failed to initialize guest physical memory " << status;
     return status;
   }
 
   zx::resource resource;
-  status = guest_get_resource(&resource);
+  status = get_resource<fuchsia_sysinfo_DeviceGetHypervisorResource>(&resource);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to get hypervisor resource " << status;
     return status;

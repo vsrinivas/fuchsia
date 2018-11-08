@@ -35,7 +35,7 @@ class Guest {
                                                 uint64_t id, Vcpu* vcpu)>;
   using IoMappingList = std::forward_list<IoMapping>;
 
-  zx_status_t Init(size_t mem_size);
+  zx_status_t Init(size_t mem_size, uintptr_t host_addr);
 
   const PhysMem& phys_mem() const { return phys_mem_; }
   zx::guest* object() { return &guest_; }

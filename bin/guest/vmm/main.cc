@@ -133,7 +133,7 @@ int main(int argc, char** argv) {
   }
 
   machina::Guest guest;
-  status = guest.Init(cfg.memory());
+  status = guest.Init(cfg.memory(), cfg.host_address());
   if (status != ZX_OK) {
     return status;
   }

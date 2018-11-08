@@ -21,15 +21,6 @@ zx_status_t PhysMem::Init(zx::vmo vmo) {
   return zx::vmar::root_self()->map(0, vmo_, 0, vmo_size_, kMapFlags, &addr_);
 }
 
-zx_status_t PhysMem::Init(size_t size) {
-  zx::vmo vmo;
-  zx_status_t status = zx::vmo::create(size, ZX_VMO_NON_RESIZABLE, &vmo);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return Init(std::move(vmo));
-}
-
 PhysMem::~PhysMem() {
   if (addr_ != 0) {
     zx::vmar::root_self()->unmap(addr_, vmo_size_);
