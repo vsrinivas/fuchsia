@@ -1753,12 +1753,44 @@ dl_start_return_t __dls2(
     return __dls3(start_arg);
 }
 
+#define LIBS_VAR "LD_DEBUG="
+#define TRACE_VAR "LD_TRACE="
+
+__NO_SAFESTACK static void scan_env_strings(const char* strings,
+                                            const char* limit,
+                                            uint32_t count) {
+    while (count-- > 0) {
+        char* end = memchr(strings, '\0', limit - strings);
+        if (end == NULL) {
+            break;
+        }
+        if (end - strings >= sizeof(LIBS_VAR) - 1 &&
+            !memcmp(strings, LIBS_VAR, sizeof(LIBS_VAR) - 1)) {
+            if (strings[sizeof(LIBS_VAR) - 1] != '\0') {
+                log_libs = true;
+            }
+        } else if (end - strings >= sizeof(TRACE_VAR) - 1 &&
+                   !memcmp(strings, TRACE_VAR, sizeof(TRACE_VAR) - 1)) {
+            // Features like Intel Processor Trace require specific output in a
+            // specific format. Thus this output has its own env var.
+            if (strings[sizeof(TRACE_VAR) - 1] != '\0') {
+                trace_maps = true;
+            }
+        }
+        strings = end + 1;
+    }
+}
+
 /* Stage 3 of the dynamic linker is called with the dynamic linker/libc
  * fully functional. Its job is to load (if not already loaded) and
  * process dependencies and relocations for the main application and
  * transfer control to its entry point. */
 
-__NO_SAFESTACK static void* dls3(zx_handle_t exec_vmo, int argc, char** argv) {
+__NO_SAFESTACK static void* dls3(zx_handle_t exec_vmo,
+                                 const char* argv0,
+                                 const char* env_strings,
+                                 const char* env_strings_limit,
+                                 uint32_t env_strings_count) {
     // First load our own dependencies.  Usually this will be just the
     // vDSO, which is already loaded, so there will be nothing to do.
     // In a sanitized build, we'll depend on the sanitizer runtime DSO
@@ -1777,34 +1809,19 @@ __NO_SAFESTACK static void* dls3(zx_handle_t exec_vmo, int argc, char** argv) {
 
     static struct dso app;
 
-    if (argc < 1 || argv[0] == NULL) {
-        static const char* dummy_argv0 = "";
-        argv = (char**)&dummy_argv0;
-    }
-
     libc.page_size = PAGE_SIZE;
 
-    const char* ld_debug = getenv("LD_DEBUG");
-    if (ld_debug != NULL && ld_debug[0] != '\0')
-        log_libs = true;
-
-    {
-        // Features like Intel Processor Trace require specific output in a
-        // specific format. Thus this output has its own env var.
-        const char* ld_trace = getenv("LD_TRACE");
-        if (ld_trace != NULL && ld_trace[0] != '\0')
-            trace_maps = true;
-    }
+    scan_env_strings(env_strings, env_strings_limit, env_strings_count);
 
     zx_status_t status = map_library(exec_vmo, &app);
     _zx_handle_close(exec_vmo);
     if (status != ZX_OK) {
         debugmsg("%s: %s: Not a valid dynamic program (%s)\n",
-                 ldso.l_map.l_name, argv[0], _zx_status_get_string(status));
+                 ldso.l_map.l_name, argv0, _zx_status_get_string(status));
         _exit(1);
     }
 
-    app.l_map.l_name = argv[0];
+    app.l_map.l_name = (char*)argv0;
 
     if (app.tls.size) {
         libc.tls_head = tls_tail = &app.tls;
@@ -1921,7 +1938,7 @@ __NO_SAFESTACK static void* dls3(zx_handle_t exec_vmo, int argc, char** argv) {
         }
     }
 
-    // Reset from the argv[0] value so we don't save a dangling pointer
+    // Reset from the argv0 value so we don't save a dangling pointer
     // into the caller's stack frame.
     app.l_map.l_name = (char*)"";
 
@@ -2025,23 +2042,15 @@ __NO_SAFESTACK NO_ASAN static dl_start_return_t __dls3(void* start_arg) {
     if (__zircon_vmar_root_self == ZX_HANDLE_INVALID)
         error("bootstrap message bad no root vmar");
 
-    // Unpack the environment strings so dls3 can use getenv.
-    char* argv[procargs->args_num + 1];
-    char* envp[procargs->environ_num + 1];
-    status = zxr_processargs_strings(buffer, nbytes, argv, envp, NULL);
-    if (status == ZX_OK)
-        __environ = envp;
-
     // At this point we can make system calls and have our essential
     // handles, so things are somewhat normal.
     early_init();
 
-    void* entry = dls3(exec_vmo, procargs->args_num, argv);
-
-    // Reset it so there's no dangling pointer to this stack frame.
-    // Presumably the parent will send the same strings in the main
-    // bootstrap message, but that's for __libc_start_main to see.
-    __environ = NULL;
+    void* entry = dls3(exec_vmo,
+                       (char*)&buffer[procargs->args_off],
+                       (char*)&buffer[procargs->environ_off],
+                       (char*)&buffer[nbytes],
+                       procargs->environ_num);
 
     if (vdso.global <= 0) {
         // Nothing linked against the vDSO.  Ideally we would unmap the
