@@ -125,16 +125,24 @@ zx_status_t MtkSdmmc::Create(zx_device_t* parent) {
         .prefs = SDMMC_HOST_PREFS_DISABLE_HS400
     };
 
+    zx::interrupt irq;
+    if ((status = pdev_map_interrupt(&pdev, 0, irq.reset_and_get_address())) != ZX_OK) {
+        zxlogf(ERROR, "%s: Failed to map interrupt\n", __FILE__);
+        return status;
+    }
+
     fbl::AllocChecker ac;
     fbl::unique_ptr<MtkSdmmc> device(new (&ac) MtkSdmmc(parent, fbl::move(mmio_obj), fbl::move(bti),
-                                                        info));
+                                                        info, fbl::move(irq)));
 
     if (!ac.check()) {
         zxlogf(ERROR, "%s: MtkSdmmc alloc failed\n", __FILE__);
         return ZX_ERR_NO_MEMORY;
     }
 
-    device->Init();
+    if ((status = device->Init()) != ZX_OK) {
+        return status;
+    }
 
     if ((status = device->DdkAdd("mtk-sdmmc")) != ZX_OK) {
         zxlogf(ERROR, "%s: DdkAdd failed\n", __FILE__);
@@ -146,11 +154,13 @@ zx_status_t MtkSdmmc::Create(zx_device_t* parent) {
     return ZX_OK;
 }
 
-void MtkSdmmc::Init() {
+zx_status_t MtkSdmmc::Init() {
     // Set bus clock to f_OD (400 kHZ) for identification mode.
     SdmmcSetBusFreq(kIdentificationModeBusFreq);
 
     SdcCfg::Get().ReadFrom(&mmio_).set_bus_width(SdcCfg::kBusWidth1).WriteTo(&mmio_);
+
+    DmaCtrl::Get().ReadFrom(&mmio_).set_last_buffer(1).WriteTo(&mmio_);
 
     // Initialize the io_buffer_t's so they can safely be passed to io_buffer_release().
     gpdma_buf_.vmo_handle = ZX_HANDLE_INVALID;
@@ -160,6 +170,15 @@ void MtkSdmmc::Init() {
     bdma_buf_.vmo_handle = ZX_HANDLE_INVALID;
     bdma_buf_.pmt_handle = ZX_HANDLE_INVALID;
     bdma_buf_.phys_list = nullptr;
+
+    auto cb = [](void* arg) -> int { return reinterpret_cast<MtkSdmmc*>(arg)->IrqThread(); };
+    int status = thrd_create_with_name(&irq_thread_, cb, this, "mt8167-emmc-thread");
+    if (status != thrd_success) {
+        zxlogf(ERROR, "%s: Failed to create IRQ thread\n", __FILE__);
+        return ZX_ERR_INTERNAL;
+    }
+
+    return ZX_OK;
 }
 
 zx_status_t MtkSdmmc::SdmmcHostInfo(sdmmc_host_info_t* info) {
@@ -407,13 +426,13 @@ zx_status_t MtkSdmmc::SdmmcPerformTuning(uint32_t cmd_idx) {
     return ZX_OK;
 }
 
-RequestStatus MtkSdmmc::SetupDmaDescriptors(phys_iter_buffer_t* phys_iter_buf) {
+zx_status_t MtkSdmmc::SetupDmaDescriptors(phys_iter_buffer_t* phys_iter_buf) {
     const uint64_t bd_size = phys_iter_buf->phys_count * sizeof(BDmaDescriptor);
     zx_status_t status = io_buffer_init(&bdma_buf_, bti_.get(), bd_size,
                                         IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to create BDMA buffer\n", __FILE__);
-        return RequestStatus(status);
+        return status;
     }
 
     auto bdma_buf_ac = fbl::MakeAutoCall([this]() { io_buffer_release(&bdma_buf_); });
@@ -426,7 +445,7 @@ RequestStatus MtkSdmmc::SetupDmaDescriptors(phys_iter_buffer_t* phys_iter_buf) {
     for (size_t buf_size = phys_iter_next(&phys_iter, &buf_addr); buf_size != 0; desc_count++) {
         if (desc_count >= phys_iter_buf->phys_count) {
             zxlogf(ERROR, "%s: Page count mismatch\n", __FILE__);
-            return RequestStatus(ZX_ERR_INTERNAL);
+            return ZX_ERR_INTERNAL;
         }
 
         BDmaDescriptor desc;
@@ -446,20 +465,20 @@ RequestStatus MtkSdmmc::SetupDmaDescriptors(phys_iter_buffer_t* phys_iter_buf) {
         status = zx_vmo_write(bdma_buf_.vmo_handle, &desc, desc_count * sizeof(desc), sizeof(desc));
         if (status != ZX_OK) {
             zxlogf(ERROR, "%s: Failed to write to BDMA buffer\n", __FILE__);
-            return RequestStatus(status);
+            return status;
         }
     }
 
     if (desc_count == 0) {
         zxlogf(ERROR, "%s: No pages provided for DMA buffer\n", __FILE__);
-        return RequestStatus(ZX_ERR_INTERNAL);
+        return ZX_ERR_INTERNAL;
     }
 
     const uint64_t gp_size = 2 * sizeof(GpDmaDescriptor);
     status = io_buffer_init(&gpdma_buf_, bti_.get(), gp_size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to create GPDMA buffer\n", __FILE__);
-        return RequestStatus(status);
+        return status;
     }
 
     auto gpdma_buf_ac = fbl::MakeAutoCall([this]() { io_buffer_release(&gpdma_buf_); });
@@ -476,7 +495,7 @@ RequestStatus MtkSdmmc::SetupDmaDescriptors(phys_iter_buffer_t* phys_iter_buf) {
 
     if ((status = zx_vmo_write(gpdma_buf_.vmo_handle, &gp_desc, 0, sizeof(gp_desc))) != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to write to GPDMA buffer\n", __FILE__);
-        return RequestStatus(status);
+        return status;
     }
 
     GpDmaDescriptor gp_null_desc;
@@ -484,26 +503,26 @@ RequestStatus MtkSdmmc::SetupDmaDescriptors(phys_iter_buffer_t* phys_iter_buf) {
                           sizeof(gp_null_desc));
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to write to GPDMA buffer\n", __FILE__);
-        return RequestStatus(status);
+        return status;
     }
 
     if ((status = io_buffer_cache_op(&bdma_buf_, ZX_VMO_OP_CACHE_CLEAN, 0, bd_size)) != ZX_OK) {
         zxlogf(ERROR, "%s: BDMA descriptors cache clean failed\n", __FILE__);
-        return RequestStatus(status);
+        return status;
     }
 
     if ((status = io_buffer_cache_op(&gpdma_buf_, ZX_VMO_OP_CACHE_CLEAN, 0, gp_size)) != ZX_OK) {
         zxlogf(ERROR, "%s: GPDMA descriptors cache clean failed\n", __FILE__);
-        return RequestStatus(status);
+        return status;
     }
 
     bdma_buf_ac.cancel();
     gpdma_buf_ac.cancel();
 
-    return RequestStatus();
+    return ZX_OK;
 }
 
-RequestStatus MtkSdmmc::RequestPrepareDma(sdmmc_req_t* req) {
+zx_status_t MtkSdmmc::RequestPrepareDma(sdmmc_req_t* req) {
     const uint64_t req_len = req->blockcount * req->blocksize;
     const bool is_read = req->cmd_flags & SDMMC_CMD_READ;
     const uint64_t pagecount = ((req->buf_offset & kPageMask) + req_len + kPageMask) / PAGE_SIZE;
@@ -518,7 +537,7 @@ RequestStatus MtkSdmmc::RequestPrepareDma(sdmmc_req_t* req) {
                                     PAGE_SIZE * pagecount, phys, pagecount, &req->pmt);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to pin DMA buffer\n", __FILE__);
-        return RequestStatus(status);
+        return status;
     }
 
     auto pmt_ac = fbl::MakeAutoCall([&req]() { zx_pmt_unpin(req->pmt); });
@@ -531,8 +550,8 @@ RequestStatus MtkSdmmc::RequestPrepareDma(sdmmc_req_t* req) {
             .vmo_offset = req->buf_offset
         };
 
-        if ((status = SetupDmaDescriptors(&phys_iter_buf).Get()) != ZX_OK) {
-            return RequestStatus(status);
+        if ((status = SetupDmaDescriptors(&phys_iter_buf)) != ZX_OK) {
+            return status;
         }
 
         DmaCtrl::Get().ReadFrom(&mmio_).set_dma_mode(DmaCtrl::kDmaModeDescriptor).WriteTo(&mmio_);
@@ -556,89 +575,51 @@ RequestStatus MtkSdmmc::RequestPrepareDma(sdmmc_req_t* req) {
 
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: DMA buffer cache clean failed\n", __FILE__);
-        return RequestStatus(status);
+        return status;
     }
 
     MsdcCfg::Get().ReadFrom(&mmio_).set_pio_mode(0).WriteTo(&mmio_);
 
     pmt_ac.cancel();
-    return RequestStatus(status);
+    return status;
 }
 
-RequestStatus MtkSdmmc::RequestFinishDma(sdmmc_req_t* req) {
-    auto dma_buf_ac = fbl::MakeAutoCall([&req, this]() {
-        zx_pmt_unpin(req->pmt);
-        io_buffer_release(&gpdma_buf_);
-        io_buffer_release(&bdma_buf_);
-    });
-
-    auto msdc_int = MsdcInt::Get().ReadFrom(&mmio_);
-
-    while (!msdc_int.ReadFrom(&mmio_).CmdInterrupt()) {}
-    if (msdc_int.cmd_crc_err()) {
-        return RequestStatus(ZX_ERR_IO_DATA_INTEGRITY);
-    } else if (msdc_int.cmd_timeout()) {
-        return RequestStatus(ZX_ERR_TIMED_OUT);
-    }
-
-    DmaCtrl::Get()
-        .ReadFrom(&mmio_)
-        .set_last_buffer(1)
-        .set_dma_start(1)
-        .WriteTo(&mmio_);
-
-    while (!msdc_int.ReadFrom(&mmio_).DataInterrupt()) {}
-
-    RequestStatus status;
-    if (msdc_int.gpd_checksum_err() || msdc_int.bd_checksum_err()) {
-        zxlogf(ERROR, "%s: DMA descriptor checksum error\n", __FILE__);
-        status.data_status = ZX_ERR_INTERNAL;
-    } else if (msdc_int.data_crc_err()) {
-        status.data_status = ZX_ERR_IO_DATA_INTEGRITY;
-    } else if (msdc_int.data_timeout()) {
-        status.data_status = ZX_ERR_TIMED_OUT;
-    }
-
+zx_status_t MtkSdmmc::RequestFinishDma(sdmmc_req_t* req) {
     DmaCtrl::Get().ReadFrom(&mmio_).set_dma_stop(1).WriteTo(&mmio_);
     while (DmaCfg::Get().ReadFrom(&mmio_).dma_active()) {}
-
-    if (status.Get() != ZX_OK) {
-        return status;
-    }
 
     zx_status_t cache_status = ZX_OK;
     if (req->cmd_flags & SDMMC_CMD_READ) {
         const uint64_t req_len = req->blockcount * req->blocksize;
         cache_status = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN_INVALIDATE,
                                        req->buf_offset, req_len, nullptr, 0);
+        if (cache_status != ZX_OK) {
+            zxlogf(ERROR, "%s: DMA buffer cache invalidate failed\n", __FILE__);
+        }
     }
 
-    if (cache_status != ZX_OK) {
-        zxlogf(ERROR, "%s: DMA buffer cache invalidate failed\n", __FILE__);
-        status.data_status = cache_status;
+    io_buffer_release(&gpdma_buf_);
+    io_buffer_release(&bdma_buf_);
+
+    zx_status_t unpin_status = zx_pmt_unpin(req->pmt);
+    if (unpin_status != ZX_OK) {
+        zxlogf(ERROR, "%s: Failed to unpin DMA buffer\n", __FILE__);
     }
 
-    return status;
+    return cache_status != ZX_OK ? cache_status : unpin_status;
 }
 
-RequestStatus MtkSdmmc::RequestPreparePolled(sdmmc_req_t* req) {
+zx_status_t MtkSdmmc::RequestPreparePolled(sdmmc_req_t* req) {
     MsdcCfg::Get().ReadFrom(&mmio_).set_pio_mode(1).WriteTo(&mmio_);
 
     // Clear the FIFO.
     MsdcFifoCs::Get().ReadFrom(&mmio_).set_fifo_clear(1).WriteTo(&mmio_);
     while (MsdcFifoCs::Get().ReadFrom(&mmio_).fifo_clear()) {}
 
-    return RequestStatus();
+    return ZX_OK;
 }
 
-RequestStatus MtkSdmmc::RequestFinishPolled(sdmmc_req_t* req) {
-    while (SdcStatus::Get().ReadFrom(&mmio_).cmd_busy()) {}
-    if (MsdcInt::Get().ReadFrom(&mmio_).cmd_crc_err()) {
-        return RequestStatus(ZX_ERR_IO_DATA_INTEGRITY);
-    } else if (MsdcInt::Get().ReadFrom(&mmio_).cmd_timeout()) {
-        return RequestStatus(ZX_ERR_TIMED_OUT);
-    }
-
+zx_status_t MtkSdmmc::RequestFinishPolled(sdmmc_req_t* req) {
     uint32_t bytes_remaining = req->blockcount * req->blocksize;
     uint8_t* data_ptr = reinterpret_cast<uint8_t*>(req->virt_buffer) + req->buf_offset;
     while (bytes_remaining > 0) {
@@ -651,7 +632,7 @@ RequestStatus MtkSdmmc::RequestFinishPolled(sdmmc_req_t* req) {
         bytes_remaining -= fifo_count;
     }
 
-    return RequestStatus();
+    return ZX_OK;
 }
 
 zx_status_t MtkSdmmc::SdmmcRequest(sdmmc_req_t* req) {
@@ -665,48 +646,146 @@ RequestStatus MtkSdmmc::SdmmcRequestWithStatus(sdmmc_req_t* req) {
         return RequestStatus(ZX_ERR_NOT_SUPPORTED);
     }
 
-    RequestStatus status;
+    zx_status_t status = ZX_OK;
+
+    {
+        fbl::AutoLock mutex_al(&mutex_);
+
+        while (SdcStatus::Get().ReadFrom(&mmio_).busy()) {}
+
+        SdcBlockNum::Get().FromValue(req->blockcount < 1 ? 1 : req->blockcount).WriteTo(&mmio_);
+        SdcArg::Get().FromValue(req->arg).WriteTo(&mmio_);
+
+        if (is_data_request) {
+            status = req->use_dma ? RequestPrepareDma(req) : RequestPreparePolled(req);
+            if (status != ZX_OK) {
+                return RequestStatus(status);
+            }
+        }
+
+        req_ = req;
+
+        req->status = ZX_ERR_INTERNAL;
+        cmd_status_ = ZX_ERR_INTERNAL;
+
+        MsdcIntEn::Get()
+            .FromValue(0)
+            .set_cmd_crc_err_enable(1)
+            .set_cmd_timeout_enable(1)
+            .set_cmd_ready_enable(1)
+            .WriteTo(&mmio_);
+
+        SdcCmd::FromRequest(req).WriteTo(&mmio_);
+    }
+
+    sync_completion_wait(&req_completion_, ZX_TIME_INFINITE);
+    sync_completion_reset(&req_completion_);
+
+    fbl::AutoLock mutex_al(&mutex_);
+
     if (is_data_request) {
-        status = req->use_dma ? RequestPrepareDma(req) : RequestPreparePolled(req);
-        if (status.Get() != ZX_OK) {
-            return status;
+        if (req->use_dma) {
+            (req->status == ZX_OK ? req->status : status) = RequestFinishDma(req);
+        } else if (cmd_status_ == ZX_OK) {
+            req->status = RequestFinishPolled(req);
         }
     }
 
-    SdcBlockNum::Get().FromValue(req->blockcount < 1 ? 1 : req->blockcount).WriteTo(&mmio_);
-
-    // Clear all interrupt bits.
-    MsdcInt::Get().FromValue(MsdcInt::kAllInterruptBits).WriteTo(&mmio_);
-
-    SdcArg::Get().FromValue(req->arg).WriteTo(&mmio_);
-    SdcCmd::FromRequest(req).WriteTo(&mmio_);
-
-    if (is_data_request) {
-        status = req->use_dma ? RequestFinishDma(req) : RequestFinishPolled(req);
-    } else {
-        while (SdcStatus::Get().ReadFrom(&mmio_).cmd_busy()) {}
-        if (MsdcInt::Get().ReadFrom(&mmio_).cmd_crc_err()) {
-            status.cmd_status = ZX_ERR_IO_DATA_INTEGRITY;
-        } else if (MsdcInt::Get().ReadFrom(&mmio_).cmd_timeout()) {
-            status.cmd_status = ZX_ERR_TIMED_OUT;
-        }
-    }
-
-    if (status.Get() == ZX_OK) {
-        if (req->cmd_flags & SDMMC_RESP_LEN_136) {
-            req->response[0] = SdcResponse::Get(0).ReadFrom(&mmio_).response();
-            req->response[1] = SdcResponse::Get(1).ReadFrom(&mmio_).response();
-            req->response[2] = SdcResponse::Get(2).ReadFrom(&mmio_).response();
-            req->response[3] = SdcResponse::Get(3).ReadFrom(&mmio_).response();
-        } else if (req->cmd_flags & (SDMMC_RESP_LEN_48 | SDMMC_RESP_LEN_48B)) {
-            req->response[0] = SdcResponse::Get(0).ReadFrom(&mmio_).response();
-        }
-    } else {
+    RequestStatus req_status(cmd_status_, req->status);
+    if (req_status.Get() != ZX_OK) {
+        // An error occurred, reset the controller.
         MsdcCfg::Get().ReadFrom(&mmio_).set_reset(1).WriteTo(&mmio_);
         while (MsdcCfg::Get().ReadFrom(&mmio_).reset()) {}
     }
 
-    return status;
+    return req_status;
+}
+
+bool MtkSdmmc::CmdDone(const MsdcInt& msdc_int) {
+    if (req_->cmd_flags & SDMMC_RESP_LEN_136) {
+        req_->response[0] = SdcResponse::Get(0).ReadFrom(&mmio_).response();
+        req_->response[1] = SdcResponse::Get(1).ReadFrom(&mmio_).response();
+        req_->response[2] = SdcResponse::Get(2).ReadFrom(&mmio_).response();
+        req_->response[3] = SdcResponse::Get(3).ReadFrom(&mmio_).response();
+    } else if (req_->cmd_flags & (SDMMC_RESP_LEN_48 | SDMMC_RESP_LEN_48B)) {
+        req_->response[0] = SdcResponse::Get(0).ReadFrom(&mmio_).response();
+    }
+
+    if (req_->cmd_flags & SDMMC_RESP_DATA_PRESENT) {
+        if (req_->use_dma) {
+            if (msdc_int.data_crc_err()) {
+                // During tuning it is possible for a data CRC error to be detected before the DMA
+                // transaction has been started.
+                req_->status = ZX_ERR_IO_DATA_INTEGRITY;
+            } else {
+                MsdcIntEn::Get()
+                    .FromValue(0)
+                    .set_gpd_checksum_err_enable(1)
+                    .set_bd_checksum_err_enable(1)
+                    .set_data_crc_err_enable(1)
+                    .set_data_timeout_enable(1)
+                    .set_transfer_complete_enable(1)
+                    .WriteTo(&mmio_);
+                DmaCtrl::Get().ReadFrom(&mmio_).set_dma_start(1).WriteTo(&mmio_);
+                return false;
+            }
+        }
+    } else {
+        req_->status = ZX_OK;
+    }
+
+    return true;
+}
+
+int MtkSdmmc::IrqThread() {
+    while (1) {
+        zx::time timestamp;
+        if (irq_.wait(&timestamp) != ZX_OK) {
+            zxlogf(ERROR, "%s: IRQ wait failed\n", __FILE__);
+            return thrd_error;
+        }
+
+        // Read and clear the interrupt flags.
+        auto msdc_int = MsdcInt::Get().ReadFrom(&mmio_).WriteTo(&mmio_);
+
+        fbl::AutoLock mutex_al(&mutex_);
+
+        if (req_ == nullptr) {
+            zxlogf(ERROR, "%s: Received interrupt with no request, MSDC_INT=%08x\n", __FILE__,
+                   msdc_int.reg_value());
+
+            // TODO(bradenkell): Interrupts should only be enabled when req_ is valid. Figure out
+            // what could cause this state and how to attempt recovery.
+            continue;
+        }
+
+        if (msdc_int.cmd_crc_err()) {
+            cmd_status_ = req_->status = ZX_ERR_IO_DATA_INTEGRITY;
+        } else if (msdc_int.cmd_timeout()) {
+            cmd_status_ = req_->status = ZX_ERR_TIMED_OUT;
+        } else if (msdc_int.cmd_ready()) {
+            cmd_status_ = ZX_OK;
+            if (!CmdDone(msdc_int)) {
+                continue;
+            }
+        } else if (msdc_int.gpd_checksum_err() || msdc_int.bd_checksum_err()) {
+            req_->status = ZX_ERR_INTERNAL;
+        } else if (msdc_int.data_crc_err()) {
+            req_->status = ZX_ERR_IO_DATA_INTEGRITY;
+        } else if (msdc_int.data_timeout()) {
+            req_->status = ZX_ERR_TIMED_OUT;
+        } else if (msdc_int.transfer_complete()) {
+            req_->status = ZX_OK;
+        } else {
+            zxlogf(WARN, "%s: Received unexpected interrupt, MSDC_INT=%08x\n", __FILE__,
+                   msdc_int.reg_value());
+            continue;
+        }
+
+        MsdcIntEn::Get().FromValue(0).WriteTo(&mmio_);
+        req_ = nullptr;
+        sync_completion_signal(&req_completion_);
+    }
 }
 
 }  // namespace sdmmc

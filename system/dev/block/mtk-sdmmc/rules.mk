@@ -18,6 +18,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/fzl \
     system/ulib/hwreg \
+    system/ulib/sync \
     system/ulib/zx \
     system/ulib/zxcpp \
 

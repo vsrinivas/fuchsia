@@ -63,6 +63,20 @@ public:
     DEF_BIT(8, cmd_ready);
 };
 
+class MsdcIntEn : public hwreg::RegisterBase<MsdcIntEn, uint32_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<MsdcIntEn>(0x10); }
+
+    DEF_BIT(18, gpd_checksum_err_enable);
+    DEF_BIT(17, bd_checksum_err_enable);
+    DEF_BIT(15, data_crc_err_enable);
+    DEF_BIT(14, data_timeout_enable);
+    DEF_BIT(12, transfer_complete_enable);
+    DEF_BIT(10, cmd_crc_err_enable);
+    DEF_BIT(9, cmd_timeout_enable);
+    DEF_BIT(8, cmd_ready_enable);
+};
+
 class MsdcFifoCs : public hwreg::RegisterBase<MsdcFifoCs, uint32_t> {
 public:
     static auto Get() { return hwreg::RegisterAddr<MsdcFifoCs>(0x14); }

@@ -58,6 +58,7 @@
 #define MT8167_IRQ_DISP_PWM                                 105
 #define MT8167_IRQ_PWM                                      108
 #define MT8167_IRQ_PTP_THERM                                109
+#define MT8167_IRQ_MSDC0                                    110
 #define MT8167_IRQ_I2C0                                     112
 #define MT8167_IRQ_I2C1                                     113
 #define MT8167_IRQ_I2C2                                     114

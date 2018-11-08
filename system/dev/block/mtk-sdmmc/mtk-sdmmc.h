@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <threads.h>
+
 #include <ddk/phys-iter.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform-device.h>
@@ -11,6 +13,12 @@
 #include <ddktl/mmio.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/sdmmc.h>
+#include <fbl/auto_lock.h>
+#include <lib/sync/completion.h>
+#include <lib/zx/interrupt.h>
+#include <zircon/thread_annotations.h>
+
+#include "mtk-sdmmc-reg.h"
 
 namespace sdmmc {
 
@@ -22,6 +30,9 @@ struct RequestStatus {
 
     RequestStatus(zx_status_t status)
         : cmd_status(status), data_status(ZX_OK) {}
+
+    RequestStatus(zx_status_t cmd, zx_status_t data)
+        : cmd_status(cmd), data_status(data) {}
 
     zx_status_t Get() const {
         return cmd_status == ZX_OK ? data_status : cmd_status;
@@ -53,24 +64,26 @@ public:
     zx_status_t SdmmcRequest(sdmmc_req_t* req);
 
 private:
-    MtkSdmmc(zx_device_t* parent, ddk::MmioBuffer mmio, zx::bti bti, const sdmmc_host_info_t& info)
-        : DeviceType(parent), mmio_(fbl::move(mmio)), bti_(fbl::move(bti)), info_(info) {}
+    MtkSdmmc(zx_device_t* parent, ddk::MmioBuffer mmio, zx::bti bti, const sdmmc_host_info_t& info,
+             zx::interrupt irq)
+        : DeviceType(parent), mmio_(fbl::move(mmio)), bti_(fbl::move(bti)), info_(info),
+                     irq_(fbl::move(irq)), req_(nullptr), cmd_status_(ZX_OK) {}
 
-    void Init();
+    zx_status_t Init();
 
     RequestStatus SdmmcRequestWithStatus(sdmmc_req_t* req);
 
     // Prepares the VMO and the DMA engine for receiving data.
-    RequestStatus RequestPrepareDma(sdmmc_req_t* req);
+    zx_status_t RequestPrepareDma(sdmmc_req_t* req) TA_REQ(mutex_);
     // Creates the GPDMA and BDMA descriptors.
-    RequestStatus SetupDmaDescriptors(phys_iter_buffer_t* phys_iter_buf);
+    zx_status_t SetupDmaDescriptors(phys_iter_buffer_t* phys_iter_buf);
     // Waits for the DMA engine to finish and unpins the VMO pages.
-    RequestStatus RequestFinishDma(sdmmc_req_t* req);
+    zx_status_t RequestFinishDma(sdmmc_req_t* req) TA_REQ(mutex_);
 
     // Clears the FIFO in preparation for receiving data.
-    RequestStatus RequestPreparePolled(sdmmc_req_t* req);
+    zx_status_t RequestPreparePolled(sdmmc_req_t* req) TA_REQ(mutex_);
     // Polls the FIFO register for received data.
-    RequestStatus RequestFinishPolled(sdmmc_req_t* req);
+    zx_status_t RequestFinishPolled(sdmmc_req_t* req) TA_REQ(mutex_);
 
     RequestStatus SendTuningBlock(uint32_t cmd_idx, zx_handle_t vmo);
 
@@ -81,11 +94,24 @@ private:
     void TestDelaySettings(DelayCallback&& set_delay, RequestCallback&& do_request,
                            TuneWindow* window);
 
+    int IrqThread();
+
+    // Finish the command portion of the request. Returns true if control should be passed back to
+    // the main thread or false if more interrupts are expected. This should be called from the IRQ
+    // thread with mutex_ held.
+    bool CmdDone(const MsdcInt& msdc_int) TA_REQ(mutex_);
+
     ddk::MmioBuffer mmio_;
     zx::bti bti_;
     const sdmmc_host_info_t info_;
+    zx::interrupt irq_;
+    thrd_t irq_thread_;
     io_buffer_t gpdma_buf_;
     io_buffer_t bdma_buf_;
+    sync_completion_t req_completion_;
+    fbl::Mutex mutex_;
+    sdmmc_req_t* req_ TA_GUARDED(mutex_);
+    zx_status_t cmd_status_ TA_GUARDED(mutex_);
 };
 
 // TuneWindow keeps track of the results of a series of tuning tests. It is expected that either

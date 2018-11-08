@@ -5,7 +5,6 @@
 #pragma once
 
 #include "mtk-sdmmc.h"
-#include "mtk-sdmmc-reg.h"
 
 namespace {
 
