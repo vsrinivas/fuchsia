@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
 
 executable("fidl_compatibility_test") {
@@ -39,6 +40,21 @@ executable("compatibility_test_server_cpp_bin") {
   ]
 }
 
+rustc_binary("compatibility_test_server_rust_bin") {
+  name = "compatibility_test_server_rust"
+  edition = "2018"
+  source_root = "compatibility_test_server_rust.rs"
+
+  deps = [
+    "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+  ]
+}
+
 copy("run_fidl_compatibility_test_garnet_sh") {
   sources = [ "run_fidl_compatibility_test_garnet.sh" ]
   outputs = [ "${root_build_dir}/run_fidl_compatibility_test_garnet.sh" ]
@@ -52,6 +68,16 @@ package("fidl_compatibility_test_server_cpp") {
   testonly = true
 
   binary = "compatibility_test_server_cpp"
+}
+
+package("fidl_compatibility_test_server_rust") {
+  deps = [
+    ":compatibility_test_server_rust_bin",
+  ]
+
+  testonly = true
+
+  binary = "rust_crates/compatibility_test_server_rust"
 }
 
 # The test binary that gets invoked by shell scripts.
