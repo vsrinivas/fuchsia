@@ -64,6 +64,7 @@ executable("unittests") {
     "hittest_global_unittest.cc",
     "image_pipe_unittest.cc",
     "import_unittest.cc",
+    "memory_unittest.cc",
     "node_unittest.cc",
     "object_linker_unittest.cc",
     "pose_buffer_unit_test.cc",

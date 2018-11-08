@@ -29,13 +29,35 @@ Memory::Memory(Session* session, ResourceId id,
       is_host_(args.memory_type == fuchsia::images::MemoryType::HOST_MEMORY),
       shared_vmo_(fxl::MakeRefCounted<fsl::SharedVmo>(std::move(args.vmo),
                                                       ZX_VM_PERM_READ)),
-      // TODO(nathanrogers): Force clients to explicitly provide an allocation
-      // size.
-      allocation_size_(args.allocation_size > 0 ? args.allocation_size
-                                                : shared_vmo_->vmo_size()) {}
+      allocation_size_(args.allocation_size) {
+  FXL_DCHECK(args.allocation_size > 0);
+}
 
 MemoryPtr Memory::New(Session* session, ResourceId id,
-                      ::fuchsia::ui::gfx::MemoryArgs args) {
+                      ::fuchsia::ui::gfx::MemoryArgs args,
+                      ErrorReporter* error_reporter) {
+  if (args.allocation_size == 0) {
+    error_reporter->ERROR() << "Memory::New(): allocation_size argument ("
+                            << args.allocation_size << ") is not valid.";
+    return nullptr;
+  }
+
+  uint64_t size;
+  auto status = args.vmo.get_size(&size);
+
+  if (status != ZX_OK) {
+    error_reporter->ERROR()
+        << "Memory::New(): zx_vmo_get_size failed (err=" << status << ").";
+    return nullptr;
+  }
+
+  if (args.allocation_size > size) {
+    error_reporter->ERROR()
+        << "Memory::New(): allocation_size (" << args.allocation_size
+        << ") is larger than the size of the corresponding vmo (" << size
+        << ").";
+    return nullptr;
+  }
   return fxl::AdoptRef(new Memory(session, id, std::move(args)));
 }
 

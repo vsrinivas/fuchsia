@@ -201,6 +201,43 @@ TEST_F(ImagePipeTest, PresentImagesInOrder) {
   EXPECT_ERROR_COUNT(0);
 }
 
+// Call Present with in-order presentation times, and expect no error.
+TEST_F(ImagePipeTest, PresentImagesWithOffset) {
+  ImagePipePtr image_pipe =
+      fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(session_.get(),
+                                                           this);
+
+  uint32_t imageId1 = 1;
+  // Create a checkerboard image and copy it into a vmo.
+  {
+    size_t w = 100;
+    size_t h = 100;
+    size_t offset_bytes = 10;
+    size_t pixels_size;
+    auto pixels =
+        escher::image_utils::NewCheckerboardPixels(w, h, &pixels_size);
+    auto shared_vmo = CreateSharedVmo(pixels_size + offset_bytes);
+    memcpy(shared_vmo->Map(), pixels.get() + offset_bytes, pixels_size);
+
+    auto image_info = CreateImageInfoForBgra8Image(w, h);
+
+    // Add the image to the image pipe with ImagePipe.AddImage().
+    image_pipe->AddImage(
+        imageId1, std::move(image_info), CopyVmo(shared_vmo->vmo()),
+        fuchsia::images::MemoryType::HOST_MEMORY, offset_bytes);
+  }
+  fuchsia::images::ImagePipe::PresentImageCallback callback = [](auto) {};
+
+  image_pipe->PresentImage(imageId1, 1, CopyEventIntoFidlArray(CreateEvent()),
+                           CopyEventIntoFidlArray(CreateEvent()),
+                           std::move(callback));
+  image_pipe->PresentImage(imageId1, 1, CopyEventIntoFidlArray(CreateEvent()),
+                           CopyEventIntoFidlArray(CreateEvent()),
+                           std::move(callback));
+
+  EXPECT_ERROR_COUNT(0);
+}
+
 // Present two frames on the ImagePipe, making sure that acquire fence is
 // being listened to and release fences are signalled.
 TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {

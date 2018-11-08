@@ -39,10 +39,22 @@ void ImagePipe::AddImage(uint32_t image_id,
     CloseConnectionAndCleanUp();
     return;
   }
+  uint64_t vmo_size;
+  auto status = vmo.get_size(&vmo_size);
+
+  if (status != ZX_OK) {
+    session()->error_reporter()->ERROR()
+        << "ImagePipe::AddImage(): zx_vmo_get_size failed (err=" << status
+        << ").";
+    CloseConnectionAndCleanUp();
+    return;
+  }
   ::fuchsia::ui::gfx::MemoryArgs memory_args;
   memory_args.memory_type = memory_type;
   memory_args.vmo = std::move(vmo);
-  MemoryPtr memory = Memory::New(session(), 0u, std::move(memory_args));
+  memory_args.allocation_size = vmo_size;
+  MemoryPtr memory = Memory::New(session(), 0u, std::move(memory_args),
+                                 session()->error_reporter());
   if (!memory) {
     session()->error_reporter()->ERROR()
         << "ImagePipe::AddImage: Unable to create a memory object.";

@@ -30,7 +30,8 @@ class Memory : public Resource {
   static const ResourceTypeInfo kTypeInfo;
 
   static MemoryPtr New(Session* session, ResourceId id,
-                       ::fuchsia::ui::gfx::MemoryArgs args);
+                       ::fuchsia::ui::gfx::MemoryArgs args,
+                       ErrorReporter* error_reporter);
 
   // TODO(SCN-1012): Temporary solution to determine which image class to use.
   // If image classes can depend on MemoryArgs, then this can become a real

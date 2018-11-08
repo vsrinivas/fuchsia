@@ -1123,7 +1123,7 @@ bool Session::ApplyCreateVariable(ResourceId id,
 
 ResourcePtr Session::CreateMemory(ResourceId id,
                                   ::fuchsia::ui::gfx::MemoryArgs args) {
-  return Memory::New(this, id, std::move(args));
+  return Memory::New(this, id, std::move(args), error_reporter_);
 }
 
 ResourcePtr Session::CreateImage(ResourceId id, MemoryPtr memory,
