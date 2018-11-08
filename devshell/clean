@@ -15,3 +15,8 @@ fx-config-read
 set -ex
 
 "${FUCHSIA_DIR}/buildtools/gn" clean "$FUCHSIA_BUILD_DIR"
+
+# Also clean zircon, it's not yet gn-ized, but we shouldn't care.
+# "fx build-zircon -c" interprets "clean" as rm -rf $ZIRCON_BUILDROOT,
+# so we do too.
+rm -rf -- "$ZIRCON_BUILDROOT"
