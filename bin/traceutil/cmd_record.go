@@ -16,6 +16,7 @@ type cmdRecord struct {
 	flags *flag.FlagSet
 
 	targetHostname string
+	keyFile        string
 	filePrefix     string
 	reportType     string
 	stdout         bool
@@ -37,6 +38,7 @@ func NewCmdRecord() *cmdRecord {
 	cmd := &cmdRecord{
 		flags: flag.NewFlagSet("record", flag.ExitOnError),
 	}
+	cmd.flags.StringVar(&cmd.keyFile, "key-file", "", "SSH key file to use. The default is $FUCHSIA_DIR/.ssh/pkey.")
 	cmd.flags.StringVar(&cmd.filePrefix, "file-prefix", "",
 		"Prefix for trace file names.  Defaults to 'trace-<timestamp>'.")
 	cmd.flags.StringVar(&cmd.targetHostname, "target", "", "Target hostname.")
@@ -90,7 +92,7 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 		return subcommands.ExitFailure
 	}
 
-	conn, err := NewTargetConnection(cmd.targetHostname)
+	conn, err := NewTargetConnection(cmd.targetHostname, cmd.keyFile)
 	if err != nil {
 		fmt.Println(err.Error())
 		return subcommands.ExitFailure

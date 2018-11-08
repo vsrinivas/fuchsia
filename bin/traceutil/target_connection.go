@@ -18,8 +18,11 @@ type TargetConnection struct {
 	client *ssh.Client
 }
 
-func newSigner() (ssh.Signer, error) {
-	keyFile := path.Join(buildRoot, "ssh-keys", "id_ed25519")
+func newSigner(keyFile string) (ssh.Signer, error) {
+	if keyFile == "" {
+		// The default key lives here.
+		keyFile = path.Join(fuchsiaRoot, ".ssh", "pkey")
+	}
 	key, err := ioutil.ReadFile(keyFile)
 	if err != nil {
 		return nil, err
@@ -37,7 +40,7 @@ func findDefaultTarget() (string, error) {
 	return "[" + output + "]", nil
 }
 
-func NewTargetConnection(hostname string) (*TargetConnection, error) {
+func NewTargetConnection(hostname, keyFile string) (*TargetConnection, error) {
 	if hostname == "" {
 		defaultHostname, err := findDefaultTarget()
 		if err != nil {
@@ -47,7 +50,7 @@ func NewTargetConnection(hostname string) (*TargetConnection, error) {
 		hostname = defaultHostname
 	}
 
-	signer, err := newSigner()
+	signer, err := newSigner(keyFile)
 	if err != nil {
 		return nil, err
 	}
