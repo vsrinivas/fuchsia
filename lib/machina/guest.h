@@ -6,6 +6,7 @@
 #define GARNET_LIB_MACHINA_GUEST_H_
 
 #include <forward_list>
+#include <shared_mutex>
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
@@ -73,8 +74,6 @@ class Guest {
   // TODO(alexlegg): Consolidate this constant with other definitions in Garnet.
   static constexpr size_t kMaxVcpus = 16u;
 
-  std::mutex mutex_;
-
   zx::guest guest_;
   zx::vmar vmar_;
   PhysMem phys_mem_;
@@ -82,6 +81,7 @@ class Guest {
 
   VcpuFactory vcpu_factory_ = [](Guest* guest, uintptr_t entry, uint64_t id,
                                  Vcpu* vcpu) { return ZX_ERR_BAD_STATE; };
+  std::shared_mutex mutex_;
   std::unique_ptr<Vcpu> vcpus_[kMaxVcpus] = {};
 
   async::Loop device_loop_{&kAsyncLoopConfigNoAttachToThread};

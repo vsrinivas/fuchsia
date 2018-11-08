@@ -124,10 +124,11 @@ void Guest::RegisterVcpuFactory(VcpuFactory factory) {
 }
 
 zx_status_t Guest::StartVcpu(uintptr_t entry, uint64_t id) {
-  std::lock_guard<std::mutex> lock(mutex_);
   if (id >= kMaxVcpus) {
     return ZX_ERR_INVALID_ARGS;
   }
+
+  std::lock_guard<std::shared_mutex> lock(mutex_);
   if (vcpus_[0] == nullptr && id != 0) {
     FXL_LOG(ERROR) << "VCPU-0 must be started before other VCPUs";
     return ZX_ERR_BAD_STATE;
@@ -138,17 +139,18 @@ zx_status_t Guest::StartVcpu(uintptr_t entry, uint64_t id) {
     // on the first. So, we ignore subsequent requests.
     return ZX_OK;
   }
+
   auto vcpu = std::make_unique<Vcpu>();
   zx_status_t status = vcpu_factory_(this, entry, id, vcpu.get());
   if (status != ZX_OK) {
     return status;
   }
   vcpus_[id] = std::move(vcpu);
-
   return ZX_OK;
 }
 
 zx_status_t Guest::Interrupt(uint64_t mask, uint8_t vector) {
+  std::shared_lock<std::shared_mutex> lock(mutex_);
   for (size_t id = 0; id != kMaxVcpus; ++id) {
     if (vcpus_[id] == nullptr || !((1u << id) & mask)) {
       continue;
@@ -162,6 +164,7 @@ zx_status_t Guest::Interrupt(uint64_t mask, uint8_t vector) {
 }
 
 zx_status_t Guest::Join() {
+  std::shared_lock<std::shared_mutex> lock(mutex_);
   // We assume that the VCPU-0 thread will be started first, and that no
   // additional VCPUs will be brought up after it terminates.
   zx_status_t status = vcpus_[0]->Join();
