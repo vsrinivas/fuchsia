@@ -102,7 +102,6 @@ cipd_path=""
 # Utility functions
 fatal() {
   echo "Fatal error: $@"
-  echo "Try 'fx help fuzz'"
   exit 1
 }
 
@@ -138,6 +137,7 @@ trap cleanup EXIT
 query() {
   local tmp
   tmp="$(fx-command-run ssh "${device}" fuzz check "$1" | tr -s '\n' ' ')"
+  [[ -n "${tmp}" ]] || fatal "Use 'fx fuzz list' to see available fuzzers."
   [[ $? -eq 0 ]] || fatal "failed to query fuzzer"
   tmp="$(echo "${tmp}" | tr -d ':' | cut -d' ' -f1,2,8,11)"
   read fuzzer status data_path corpus_size <<< "${tmp}"
@@ -408,7 +408,6 @@ main() {
       echo "NOTE: This command is subject to change. Check the documentation at"
       echo "//docs/development/workflows/libfuzzer.md for the currently supported way of"
       echo "running Zircon fuzzers in a Fuchsia environment."
-      echo
       add_to_zbi
       ;;
     *)
@@ -416,6 +415,8 @@ main() {
       fuzzer="${command}"
       args="${@:2}"
       echo "Command omitted; starting fuzzer '${fuzzer}' in automatic mode."
+      echo "If this isn't what you intended, try 'fx fuzz help'."
+      echo
       set_staging
       query "${fuzzer}"
       if [[ ${corpus_size} == "0" ]] ; then
