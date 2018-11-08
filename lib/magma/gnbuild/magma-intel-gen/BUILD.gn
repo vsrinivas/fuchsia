@@ -105,7 +105,9 @@ package("tests") {
     # Target environments with an Intel GPU.
     intel_gpu_envs = [
       {
-        device = [{type = "Intel NUC Kit NUC7i5DNHE"}]
+        device = {
+          type = "Intel NUC Kit NUC7i5DNHE"
+        }
       },
     ]
 
