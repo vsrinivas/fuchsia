@@ -53,7 +53,7 @@ int64_t NowInNs() {
   return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
 }
 
-// Helper for Dispatch[Touch|Mouse]Command.
+// Helper for Dispatch[Touch|Mouse]Command and PerformGlobalHitTest.
 escher::ray4 CreateScreenPerpendicularRay(float x, float y) {
   // We set the elevation for the origin point, and Z value for the direction,
   // such that we start above the scene and point into the scene.
@@ -113,6 +113,41 @@ glm::mat4 FindGlobalTransform(gfx::ResourcePtr view) {
     }
   }
   return global_transform;
+}
+
+// The x and y values are in device (screen) coordinates.
+// The initial dispatch logic guarantees a valid compositor and layer stack.
+// NOTE: The returned gfx::Hit struct contains a raw Node*, so callers:
+//   - must not retain it, or extends its lifetime via Refptr,
+//   - must not write into it,
+//   - may call const functions against it.
+std::vector<gfx::Hit> PerformGlobalHitTest(gfx::GfxSystem* gfx_system,
+                                           uint32_t compositor_id, float x,
+                                           float y) {
+  FXL_DCHECK(gfx_system);
+
+  escher::ray4 ray = CreateScreenPerpendicularRay(x, y);
+  FXL_VLOG(1) << "HitTest: device point (" << ray.origin.x << ", "
+              << ray.origin.y << ")";
+
+  gfx::Compositor* compositor = gfx_system->GetCompositor(compositor_id);
+  FXL_DCHECK(compositor) << "No compositor, violated invariant.";
+
+  gfx::LayerStackPtr layer_stack = compositor->layer_stack();
+  FXL_DCHECK(layer_stack.get()) << "No layer stack, violated invariant.";
+
+  auto hit_tester = std::make_unique<gfx::GlobalHitTester>();
+  std::vector<gfx::Hit> hits = layer_stack->HitTest(ray, hit_tester.get());
+
+  FXL_VLOG(1) << "Hits acquired, count: " << hits.size();
+
+  if (FXL_VLOG_IS_ON(2)) {
+    for (size_t i = 0; i < hits.size(); ++i) {
+      FXL_VLOG(2) << "\tHit[" << i << "]: " << hits[i].node->global_id();
+    }
+  }
+
+  return hits;
 }
 
 // Helper for DispatchCommand.
@@ -263,30 +298,16 @@ void InputCommandDispatcher::DispatchTouchCommand(
     const SendPointerInputCmd command) {
   const uint32_t pointer_id = command.pointer_event.pointer_id;
   const Phase pointer_phase = command.pointer_event.phase;
+  const float pointer_x = command.pointer_event.x;
+  const float pointer_y = command.pointer_event.y;
 
   FXL_DCHECK(command.pointer_event.type == PointerEventType::TOUCH);
   FXL_DCHECK(pointer_phase != Phase::HOVER)
       << "Oops, touch device had unexpected HOVER event.";
 
   if (pointer_phase == Phase::ADD) {
-    escher::ray4 ray = CreateScreenPerpendicularRay(command.pointer_event.x,
-                                                    command.pointer_event.y);
-    FXL_VLOG(1) << "HitTest: device point (" << ray.origin.x << ", "
-                << ray.origin.y << ")";
-
-    std::vector<gfx::Hit> hits;
-    {
-      gfx::Compositor* compositor =
-          gfx_system_->GetCompositor(command.compositor_id);
-      FXL_DCHECK(compositor) << "No compositor, violated invariant.";
-
-      gfx::LayerStackPtr layer_stack = compositor->layer_stack();
-      FXL_DCHECK(layer_stack.get()) << "No layer stack, violated invariant.";
-
-      auto hit_tester = std::make_unique<gfx::GlobalHitTester>();
-      hits = layer_stack->HitTest(ray, hit_tester.get());
-    }
-    FXL_VLOG(1) << "Hits acquired, count: " << hits.size();
+    const std::vector<gfx::Hit> hits = PerformGlobalHitTest(
+        gfx_system_, command.compositor_id, pointer_x, pointer_y);
 
     // Find input targets.  Honor the "input masking" view property.
     ViewStack hit_views;
@@ -303,8 +324,8 @@ void InputCommandDispatcher::DispatchTouchCommand(
       // Find the global transform for each hit, fill out hit_views.
       for (size_t i = 0; i < hits.size(); ++i) {
         if (gfx::ResourcePtr view = views[i]) {
-          glm::mat4 global_transform = FindGlobalTransform(view);
-          hit_views.stack.push_back({view->global_id(), global_transform});
+          hit_views.stack.push_back(
+              {view->global_id(), FindGlobalTransform(view)});
           if (/*TODO(SCN-919): view_id may mask input */ false) {
             break;
           }
@@ -359,8 +380,8 @@ void InputCommandDispatcher::DispatchTouchCommand(
 
   // Input delivery must be parallel; needed for gesture disambiguation.
   for (const auto& entry : touch_targets_[pointer_id].stack) {
-    escher::ray4 screen_ray = CreateScreenPerpendicularRay(
-        command.pointer_event.x, command.pointer_event.y);
+    escher::ray4 screen_ray =
+        CreateScreenPerpendicularRay(pointer_x, pointer_y);
     escher::vec2 hit =
         TransformPointerEvent(screen_ray, entry.global_transform);
 
@@ -385,13 +406,19 @@ void InputCommandDispatcher::DispatchTouchCommand(
 //    gestures, so there is no parallel dispatch.
 //  - Mouse DOWN triggers a focus change, but honors the no-focus property.
 //  - Mouse UP drops the association between event stream and client.
-//  - Unassociated MOVE events are dropped by the dispatcher; they are not sent
-//    to any client.
+//  - For an unassociated MOVE event, we perform a hit test, and send the top-most
+//    client this MOVE event. Focus does not change for unassociated MOVEs.
+//  - The hit test must account for the mouse cursor itself, which today is
+//    owned by the root presenter. The nodes associated with visible mouse
+//    cursors(!) do not roll up to any View (as expected), but may appear in the
+//    hit test; our dispatch needs to account for such behavior.
 // TODO(SCN-1078): Enhance trackpad support.
 void InputCommandDispatcher::DispatchMouseCommand(
     const SendPointerInputCmd command) {
   const uint32_t device_id = command.pointer_event.device_id;
   const Phase pointer_phase = command.pointer_event.phase;
+  const float pointer_x = command.pointer_event.x;
+  const float pointer_y = command.pointer_event.y;
 
   FXL_DCHECK(command.pointer_event.type == PointerEventType::MOUSE);
   FXL_DCHECK(pointer_phase != Phase::ADD && pointer_phase != Phase::REMOVE &&
@@ -400,33 +427,20 @@ void InputCommandDispatcher::DispatchMouseCommand(
       << ") had an unexpected event: " << pointer_phase;
 
   if (pointer_phase == Phase::DOWN) {
-    escher::ray4 ray = CreateScreenPerpendicularRay(command.pointer_event.x,
-                                                    command.pointer_event.y);
-    FXL_VLOG(1) << "HitTest: device point (" << ray.origin.x << ", "
-                << ray.origin.y << ")";
-
-    std::vector<gfx::Hit> hits;
-    {
-      gfx::Compositor* compositor =
-          gfx_system_->GetCompositor(command.compositor_id);
-      FXL_DCHECK(compositor) << "No compositor, violated invariant.";
-
-      gfx::LayerStackPtr layer_stack = compositor->layer_stack();
-      FXL_DCHECK(layer_stack.get()) << "No layer stack, violated invariant.";
-
-      auto hit_tester = std::make_unique<gfx::GlobalHitTester>();
-      hits = layer_stack->HitTest(ray, hit_tester.get());
-    }
-    FXL_VLOG(1) << "Hits acquired, count: " << hits.size();
+    const std::vector<gfx::Hit> hits = PerformGlobalHitTest(
+        gfx_system_, command.compositor_id, pointer_x, pointer_y);
 
     // Find top-hit target and associated properties.
+    // NOTE: We may hit various mouse cursors (owned by root presenter), so keep
+    // going until we find a hit with a valid owning View.
     ViewStack hit_view;
-    if (!hits.empty()) {
-      FXL_DCHECK(hits[0].node);  // Raw ptr, use it and let go.
-      if (gfx::ResourcePtr view = hits[0].node->FindOwningView()) {
-        glm::mat4 global_transform = FindGlobalTransform(view);
-        hit_view.stack.push_back({view->global_id(), global_transform});
+    for (gfx::Hit hit : hits) {
+      FXL_DCHECK(hit.node);  // Raw ptr, use it and let go.
+      if (gfx::ResourcePtr view = hit.node->FindOwningView()) {
+        hit_view.stack.push_back(
+            {view->global_id(), FindGlobalTransform(view)});
         hit_view.focus_change = IsFocusChange(view);
+        break;  // Just need the first one.
       }
     }
     FXL_VLOG(1) << "View hit: " << hit_view;
@@ -471,8 +485,8 @@ void InputCommandDispatcher::DispatchMouseCommand(
       mouse_targets_[device_id].stack.size() > 0) {  // target view exists.
     const auto& entry = mouse_targets_[device_id].stack[0];
 
-    escher::ray4 screen_ray = CreateScreenPerpendicularRay(
-        command.pointer_event.x, command.pointer_event.y);
+    escher::ray4 screen_ray =
+        CreateScreenPerpendicularRay(pointer_x, pointer_y);
     escher::vec2 hit =
         TransformPointerEvent(screen_ray, entry.global_transform);
 
@@ -482,6 +496,34 @@ void InputCommandDispatcher::DispatchMouseCommand(
 
   if (pointer_phase == Phase::UP || pointer_phase == Phase::CANCEL) {
     mouse_targets_.erase(device_id);
+  }
+
+  // Deal with unassociated MOVE events.
+  if (pointer_phase == Phase::MOVE && mouse_targets_.count(device_id) == 0) {
+    const std::vector<gfx::Hit> hits = PerformGlobalHitTest(
+        gfx_system_, command.compositor_id, pointer_x, pointer_y);
+    // Find top-hit target and send it this move event.
+    // NOTE: We may hit various mouse cursors (owned by root presenter), so keep
+    // going until we find a hit with a valid owning View.
+    GlobalId view_id;
+    for (gfx::Hit hit : hits) {
+      FXL_DCHECK(hit.node);  // Raw ptr, use it and let go.
+      if (gfx::ResourcePtr view = hit.node->FindOwningView()) {
+        view_id = view->global_id();
+
+        escher::ray4 screen_ray =
+            CreateScreenPerpendicularRay(pointer_x, pointer_y);
+        glm::mat4 global_transform = FindGlobalTransform(view);
+        escher::vec2 hit = TransformPointerEvent(screen_ray, global_transform);
+
+        auto clone =
+            ClonePointerWithCoords(command.pointer_event, hit.x, hit.y);
+        EnqueueEventToView(view_id, std::move(clone));
+        break;  // Just need the first one.
+      }
+    }
+
+    FXL_VLOG(2) << "View hit: " << view_id;
   }
 }
 

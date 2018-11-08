@@ -19,7 +19,7 @@ struct Hit {
 
   // Raw pointer to the node. Valid only in the context of Scenic itself.
   // NOTE: The consumer (input subsystem) must not retain these pointers!
-  Node* node;
+  const Node* node;
 
   // The ray that was used to perform the hit test, in the hit node's coordinate
   // system.

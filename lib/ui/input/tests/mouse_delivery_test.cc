@@ -18,13 +18,20 @@
 #include "lib/ui/scenic/cpp/session.h"
 
 // This test exercises the event delivery logic for mouse and touchpad events.
-// The mouse moves from the bottom left corner to the upper right corner.
-// Only the "down-move-up" sequence should be delivered to the focused client;
-// the prefix and suffix "move" events are not delivered to any client.
+// The mouse moves from the bottom left corner to the upper right corner.  While
+// the "down-move-up" sequence should be delivered to the focused client, the
+// prefix and suffix "move" events are delivered to the top-level client without
+// triggering a focus change.
 //
-// The geometry of the display and layer are contrained to a 7x7 square. Two
-// 5x5 views are overlayed on top; client 1 is higher than client 2 and receives
-// the "down-move-up" sequence. Client 2 receives nothing.
+// The geometry of the display and layer are contrained to a 7x7 square. Two 5x5
+// views are overlayed on top; client 1 is higher than client 2 and receives the
+// three prefix "move" events and "down-move-up" sequence. Client 2 receives the
+// single suffix "move" event.
+//
+// We also have the presenter client add three ShapeNodes on top to emulate
+// mouse cursor placement. To save the hassle of moving the cursor around, we
+// simply make the ShapeNodes cover the entire screen. The expected behavior is
+// to ignore these mouse cursors, because they do not have an owning View.
 //
 //     - - y 2 2 2 M
 //     - - 2 2 2 U 2
@@ -41,13 +48,13 @@
 // We have the following correspondence of coordinates:
 //
 // Event   Mark  Device  View-1  View-2
-// Move-1  M     (0,6)   n/a     n/a
-// Move-2  M     (1,5)   n/a     n/a
-// Move-3  M     (2,4)   n/a     n/a
+// Move-1  M     (0,6)   (0, 4)  n/a
+// Move-2  M     (1,5)   (1, 3)  n/a
+// Move-3  M     (2,4)   (2, 2)  n/a
 // Down    D     (3,3)   (3, 1)  n/a
 // Move-4  M     (4,2)   (4, 0)  n/a
 // Up      U     (5,1)   (5,-1)  n/a
-// Move-5  M     (6,0)   n/a     n/a
+// Move-5  M     (6,0)   n/a     (4,0)
 //
 // NOTE: This test is carefully constructed to avoid Vulkan functionality.
 
@@ -134,6 +141,20 @@ TEST_F(MouseDeliveryTest, StandardTest) {
         translate_2.SetTranslation(2, 0, 1);
         translate_2.Attach(holder_2);
 
+        // Add three "mouse cursors" to the scene.
+        for (int i = 0; i < 3; ++i) {
+          scenic::ShapeNode cursor(session);
+          cursor.SetTranslation(3, 3, 100);
+          cursor.SetLabel("mouse cursor");
+          scene.AddChild(cursor);
+
+          scenic::Rectangle rec(session, 7, 7);
+          cursor.SetShape(rec);
+
+          scenic::Material material(session);
+          cursor.SetMaterial(material);
+        }
+
         RequestToPresent(session);
       });
 
@@ -176,31 +197,51 @@ TEST_F(MouseDeliveryTest, StandardTest) {
 
   // Verify client 1's inputs have mouse events.
   client_1.ExamineEvents([this](const std::vector<InputEvent>& events) {
-    EXPECT_EQ(events.size(), 4u) << "Should receive exactly 4 input events.";
+    EXPECT_EQ(events.size(), 7u) << "Should receive exactly 7 input events.";
 
-    // FOCUS
-    EXPECT_TRUE(events[0].is_focus());
-    EXPECT_TRUE(events[0].focus().focused);
+    // MOVE
+    EXPECT_TRUE(events[0].is_pointer());
+    EXPECT_TRUE(
+        PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 0, 4));
 
-    // DOWN
+    // MOVE
     EXPECT_TRUE(events[1].is_pointer());
     EXPECT_TRUE(
-        PointerMatches(events[1].pointer(), 1u, PointerEventPhase::DOWN, 3, 1));
+        PointerMatches(events[1].pointer(), 1u, PointerEventPhase::MOVE, 1, 3));
 
     // MOVE
     EXPECT_TRUE(events[2].is_pointer());
     EXPECT_TRUE(
-        PointerMatches(events[2].pointer(), 1u, PointerEventPhase::MOVE, 4, 0));
+        PointerMatches(events[2].pointer(), 1u, PointerEventPhase::MOVE, 2, 2));
+
+    // FOCUS
+    EXPECT_TRUE(events[3].is_focus());
+    EXPECT_TRUE(events[3].focus().focused);
+
+    // DOWN
+    EXPECT_TRUE(events[4].is_pointer());
+    EXPECT_TRUE(
+        PointerMatches(events[4].pointer(), 1u, PointerEventPhase::DOWN, 3, 1));
+
+    // MOVE
+    EXPECT_TRUE(events[5].is_pointer());
+    EXPECT_TRUE(
+        PointerMatches(events[5].pointer(), 1u, PointerEventPhase::MOVE, 4, 0));
 
     // UP
-    EXPECT_TRUE(events[3].is_pointer());
+    EXPECT_TRUE(events[6].is_pointer());
     EXPECT_TRUE(
-        PointerMatches(events[3].pointer(), 1u, PointerEventPhase::UP, 5, -1));
+        PointerMatches(events[6].pointer(), 1u, PointerEventPhase::UP, 5, -1));
   });
 
-  // Verify client 2 has no inputs.
+  // Verify client 2's input has one mouse event.
   client_2.ExamineEvents([this](const std::vector<InputEvent>& events) {
-    EXPECT_EQ(events.size(), 0u) << "Should receive no events.";
+    EXPECT_EQ(events.size(), 1u) << "Should receive exactly 1 event.";
+
+    // MOVE
+    EXPECT_TRUE(events[0].is_pointer());
+    EXPECT_TRUE(
+        PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 4, 0));
   });
 }
 
@@ -258,6 +299,20 @@ TEST_F(MouseDeliveryTest, NoFocusTest) {
         translate_2.SetTranslation(2, 0, 1);
         translate_2.Attach(holder_2);
 
+        // Add three "mouse cursors" to the scene.
+        for (int i = 0; i < 3; ++i) {
+          scenic::ShapeNode cursor(session);
+          cursor.SetTranslation(3, 3, 100);
+          cursor.SetLabel("mouse cursor");
+          scene.AddChild(cursor);
+
+          scenic::Rectangle rec(session, 7, 7);
+          cursor.SetShape(rec);
+
+          scenic::Material material(session);
+          cursor.SetMaterial(material);
+        }
+
         RequestToPresent(session);
       });
 
@@ -300,27 +355,47 @@ TEST_F(MouseDeliveryTest, NoFocusTest) {
 
   // Verify client 1's inputs have mouse events.
   client_1.ExamineEvents([this](const std::vector<InputEvent>& events) {
-    EXPECT_EQ(events.size(), 3u) << "Should receive exactly 3 input events.";
+    EXPECT_EQ(events.size(), 6u) << "Should receive exactly 6 input events.";
 
-    // DOWN
+    // MOVE
     EXPECT_TRUE(events[0].is_pointer());
     EXPECT_TRUE(
-        PointerMatches(events[0].pointer(), 1u, PointerEventPhase::DOWN, 3, 1));
+        PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 0, 4));
 
     // MOVE
     EXPECT_TRUE(events[1].is_pointer());
     EXPECT_TRUE(
-        PointerMatches(events[1].pointer(), 1u, PointerEventPhase::MOVE, 4, 0));
+        PointerMatches(events[1].pointer(), 1u, PointerEventPhase::MOVE, 1, 3));
 
-    // UP
+    // MOVE
     EXPECT_TRUE(events[2].is_pointer());
     EXPECT_TRUE(
-        PointerMatches(events[2].pointer(), 1u, PointerEventPhase::UP, 5, -1));
+        PointerMatches(events[2].pointer(), 1u, PointerEventPhase::MOVE, 2, 2));
+
+    // DOWN
+    EXPECT_TRUE(events[3].is_pointer());
+    EXPECT_TRUE(
+        PointerMatches(events[3].pointer(), 1u, PointerEventPhase::DOWN, 3, 1));
+
+    // MOVE
+    EXPECT_TRUE(events[4].is_pointer());
+    EXPECT_TRUE(
+        PointerMatches(events[4].pointer(), 1u, PointerEventPhase::MOVE, 4, 0));
+
+    // UP
+    EXPECT_TRUE(events[5].is_pointer());
+    EXPECT_TRUE(
+        PointerMatches(events[5].pointer(), 1u, PointerEventPhase::UP, 5, -1));
   });
 
-  // Verify client 2 has no inputs.
+  // Verify client 2's input has one mouse event.
   client_2.ExamineEvents([this](const std::vector<InputEvent>& events) {
-    EXPECT_EQ(events.size(), 0u) << "Should receive no events.";
+    EXPECT_EQ(events.size(), 1u) << "Should receive exactly 1 event.";
+
+    // MOVE
+    EXPECT_TRUE(events[0].is_pointer());
+    EXPECT_TRUE(
+        PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 4, 0));
   });
 }
 
