@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Specific implementation of a pseudo file trait backed by read and/or write callbacks and a
-//! buffer.
+//! Implementation of a pseudo file trait backed by read and/or write callbacks and a buffer.
 //!
 //! Read callback, if any, is called when the connection to the file is first opened and
 //! pre-populates a buffer that will be used to when serving this file content over this particular
@@ -34,17 +33,17 @@
 #![warn(missing_docs)]
 
 use {
-    crate::PseudoFile,
+    crate::common::send_on_open_with_error,
+    crate::directory_entry::{DirectoryEntry, EntryInfo},
     failure::Error,
     fidl::encoding::OutOfLine,
-    fidl::endpoints::RequestStream,
+    fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo, SeekOrigin,
-        INO_UNKNOWN, MODE_PROTECTION_MASK, MODE_TYPE_FILE, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_DIRECTORY, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE,
+        FileMarker, FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo,
+        NodeMarker, SeekOrigin, DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_PROTECTION_MASK,
+        MODE_TYPE_FILE, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
+        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
-    fuchsia_async::Channel,
     fuchsia_zircon::{
         sys::{ZX_ERR_NOT_SUPPORTED, ZX_OK},
         Status,
@@ -56,14 +55,12 @@ use {
         Future, Poll,
     },
     libc::{S_IRUSR, S_IWUSR},
-    std::{
-        io::Write,
-        iter::ExactSizeIterator,
-        marker::Unpin,
-        mem,
-        pin::Pin,
-    },
+    std::{io::Write, iter, iter::ExactSizeIterator, marker::Unpin, mem, pin::Pin},
 };
+
+/// A base trait for all the pseudo files.  Most clients will probably just use the DirectoryEntry
+/// trait to deal with the pseudo files uniformly.
+pub trait PseudoFile: DirectoryEntry {}
 
 // TODO: When trait aliases are implemented (rust-lang/rfcs#1733)
 // trait OnReadHandler = FnMut() -> Result<Vec<u8>, Status>;
@@ -238,8 +235,8 @@ where
 
 struct FileConnection {
     requests: FileRequestStream,
-    /// Either the "flags" value passed into [`PseudoFile::add_request_stream()`], or the "flags"
-    /// value passed into FileRequest::Clone().
+    /// Either the "flags" value passed into [`DirectoryEntry::open()`], or the "flags" value
+    /// passed into FileRequest::Clone().
     flags: u32,
     /// Seek position.  Next byte to be read or written within the buffer.  This might be beyond
     /// the current size of buffer, matching POSIX:
@@ -401,21 +398,38 @@ where
         Ok(())
     }
 
-    fn add_request_stream_clone(
-        &mut self, parent: &FileConnection, flags: u32, request_stream: FileRequestStream,
-    ) -> Status {
-        if let Err(status) = self.validate_flags(parent.flags, flags) {
-            return status;
+    fn add_connection(
+        &mut self, parent_flags: u32, flags: u32, mode: u32, server_end: ServerEnd<NodeMarker>,
+    ) -> Result<(), fidl::Error> {
+        // There should be no MODE_TYPE_* flags set, except for, possibly, MODE_TYPE_FILE when the
+        // target is a pseudo file.
+        if (mode & !MODE_PROTECTION_MASK) & !MODE_TYPE_FILE != 0 {
+            return send_on_open_with_error(flags, server_end, Status::INVALID_ARGS);
+        }
+
+        if let Err(status) = self.validate_flags(parent_flags, flags) {
+            return send_on_open_with_error(flags, server_end, status);
         }
 
         match self.init_buffer(flags) {
             Ok((buffer, was_written)) => {
+                let (request_stream, control_handle) =
+                    ServerEnd::<FileMarker>::new(server_end.into_channel())
+                        .into_stream_and_control_handle()?;
+
                 let conn =
                     FileConnection::as_stream_future(request_stream, flags, buffer, was_written);
                 self.connections.push(conn);
-                Status::OK
+
+                if flags & OPEN_FLAG_DESCRIBE != 0 {
+                    let mut info = NodeInfo::File(FileObject { event: None });
+                    control_handle
+                        .send_on_open_(Status::OK.into_raw(), Some(OutOfLine(&mut info)))?;
+                }
+
+                Ok(())
             }
-            Err(status) => status,
+            Err(status) => send_on_open_with_error(flags, server_end, status),
         }
     }
 
@@ -428,35 +442,7 @@ where
                 object,
                 control_handle: _,
             } => {
-                // TODO: I would like to do this:
-                //
-                // let (clone_stream, clone_control_handle) =
-                // object.into_stream_and_control_handle()?;
-                //
-                // But it does not work, as the clone_stream is an instance of the
-                // NodeRequestStream instead of the FileRequestStream, due to the fact that
-                // "object" is a fidl::endpoints::ServerEnd<NodeMarker>, not a
-                // fidl::endpoints::ServerEnd<FileMarker>.  Seems like the issues goes deep into
-                // FIDL language itself, as it does not seem to support override information for
-                // derived interfaces.  This is already a FileRequest::Clone, but the argument is a
-                // NodeMarker.
-                let clone_stream =
-                    FileRequestStream::from_channel(Channel::from_channel(object.into_channel())?);
-                // Need to hold a reference to the underlying channel in case addition fails - we
-                // still send OnOpen() if it was initially requested.
-                let clone_control_handle = clone_stream.control_handle();
-                let status = self.add_request_stream_clone(connection, flags, clone_stream);
-                if flags & OPEN_FLAG_DESCRIBE != 0 {
-                    let mut info = NodeInfo::File(FileObject { event: None });
-                    clone_control_handle.send_on_open_(
-                        status.into_raw(),
-                        if status == Status::OK {
-                            Some(OutOfLine(&mut info))
-                        } else {
-                            None
-                        },
-                    )?;
-                }
+                self.add_connection(connection.flags, flags, 0, object)?;
             }
             FileRequest::Close { responder } => {
                 self.handle_close(connection, |status| responder.send(status.into_raw()))?;
@@ -498,11 +484,7 @@ where
                 in_: _,
                 responder,
             } => {
-                responder.send(
-                    ZX_ERR_NOT_SUPPORTED,
-                    &mut std::iter::empty(),
-                    &mut std::iter::empty(),
-                )?;
+                responder.send(ZX_ERR_NOT_SUPPORTED, &mut iter::empty(), &mut iter::empty())?;
             }
             FileRequest::Read { count, responder } => {
                 let actual =
@@ -603,13 +585,13 @@ where
         R: FnOnce(Status, &mut ExactSizeIterator<Item = u8>) -> Result<(), fidl::Error>,
     {
         if connection.flags & OPEN_RIGHT_READABLE == 0 {
-            responder(Status::ACCESS_DENIED, &mut std::iter::empty())?;
+            responder(Status::ACCESS_DENIED, &mut iter::empty())?;
             return Ok(0);
         }
 
         match self.on_read {
             None => {
-                responder(Status::NOT_SUPPORTED, &mut std::iter::empty())?;
+                responder(Status::NOT_SUPPORTED, &mut iter::empty())?;
                 Ok(0)
             }
             Some(_) => {
@@ -618,7 +600,7 @@ where
                 let len = connection.buffer.len() as u64;
 
                 if offset >= len {
-                    responder(Status::OUT_OF_RANGE, &mut std::iter::empty())?;
+                    responder(Status::OUT_OF_RANGE, &mut iter::empty())?;
                     return Ok(0);
                 }
 
@@ -769,20 +751,32 @@ where
     }
 }
 
+impl<OnRead, OnWrite> DirectoryEntry for PseudoFileImpl<OnRead, OnWrite>
+where
+    OnRead: FnMut() -> Result<Vec<u8>, Status>,
+    OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
+{
+    fn open(
+        &mut self, flags: u32, mode: u32, path: &mut Iterator<Item = &str>,
+        server_end: ServerEnd<NodeMarker>,
+    ) -> Result<(), fidl::Error> {
+        if let Some(_) = path.next() {
+            return send_on_open_with_error(flags, server_end, Status::NOT_DIR);
+        }
+
+        self.add_connection(!0, flags, mode, server_end)
+    }
+
+    fn entry_info(&self) -> EntryInfo {
+        EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)
+    }
+}
+
 impl<OnRead, OnWrite> PseudoFile for PseudoFileImpl<OnRead, OnWrite>
 where
     OnRead: FnMut() -> Result<Vec<u8>, Status>,
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
 {
-    fn add_request_stream(
-        &mut self, flags: u32, request_stream: FileRequestStream,
-    ) -> Result<(), Status> {
-        self.validate_flags(!0, flags)?;
-        let (buffer, was_written) = self.init_buffer(flags)?;
-        let conn = FileConnection::as_stream_future(request_stream, flags, buffer, was_written);
-        self.connections.push(conn);
-        Ok(())
-    }
 }
 
 impl<OnRead, OnWrite> Unpin for PseudoFileImpl<OnRead, OnWrite>
@@ -846,32 +840,45 @@ mod tests {
     use super::*;
 
     use {
-        fidl::endpoints::{create_endpoints, ServerEnd},
+        fidl::endpoints::{create_proxy, ServerEnd},
         fidl_fuchsia_io::{FileEvent, FileMarker, FileProxy, INO_UNKNOWN, MODE_TYPE_FILE},
         fuchsia_async as fasync,
-        fuchsia_zircon::sys::ZX_ERR_ACCESS_DENIED,
+        fuchsia_zircon::sys::{ZX_ERR_ACCESS_DENIED, ZX_ERR_SHOULD_WAIT},
         futures::channel::{mpsc, oneshot},
-        futures::{select, Future, FutureExt, SinkExt},
+        futures::{future::LocalFutureObj, select, Future, FutureExt, SinkExt},
         libc::{S_IRGRP, S_IROTH, S_IRUSR, S_IWGRP, S_IWOTH, S_IWUSR, S_IXGRP, S_IXOTH, S_IXUSR},
         pin_utils::pin_mut,
         std::cell::RefCell,
     };
 
     fn run_server_client<GetClientRes>(
-        flags: u32, mut server: impl PseudoFile, get_client: impl FnOnce(FileProxy) -> GetClientRes,
+        flags: u32, server: impl PseudoFile, get_client: impl FnOnce(FileProxy) -> GetClientRes,
+    ) where
+        GetClientRes: Future<Output = ()>,
+    {
+        run_server_client_with_mode(flags, 0, server, get_client)
+    }
+
+    fn run_server_client_with_mode<GetClientRes>(
+        flags: u32, mode: u32, mut server: impl PseudoFile,
+        get_client: impl FnOnce(FileProxy) -> GetClientRes,
     ) where
         GetClientRes: Future<Output = ()>,
     {
         let mut exec = fasync::Executor::new().expect("Executor creation failed");
 
-        let (client_end, server_end) =
-            create_endpoints::<FileMarker>().expect("Failed to create connection endpoints");
+        let (client_proxy, server_end) =
+            create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
 
         server
-            .add_request_stream(flags, server_end.into_stream().unwrap())
-            .expect("add_request_stream() failed");
+            .open(
+                flags,
+                mode,
+                &mut iter::empty(),
+                ServerEnd::new(server_end.into_channel()),
+            )
+            .expect("open() failed");
 
-        let client_proxy = client_end.into_proxy().unwrap();
         let client = get_client(client_proxy);
 
         let future = server.join(client);
@@ -891,6 +898,63 @@ mod tests {
         }
     }
 
+    fn run_server_client_with_open_requests_channel_and_executor<GetClientRes>(
+        mut exec: fasync::Executor, mut server: impl PseudoFile,
+        get_client: impl FnOnce(mpsc::Sender<(u32, u32, ServerEnd<FileMarker>)>) -> GetClientRes,
+        executor: impl FnOnce(&mut FnMut() -> Poll<((), ())>),
+    ) where
+        GetClientRes: Future<Output = ()>,
+    {
+        let (open_requests_tx, open_requests_rx) =
+            mpsc::channel::<(u32, u32, ServerEnd<FileMarker>)>(0);
+
+        let server_wrapper = async move {
+            let mut open_requests_rx = open_requests_rx.fuse();
+            loop {
+                select! {
+                    _ = server => panic!("file should never complete"),
+                    open_req = open_requests_rx.next() => {
+                        if let Some((flags, mode, server_end)) = open_req {
+                            server
+                                .open(flags, mode, &mut iter::empty(),
+                                      ServerEnd::new(server_end.into_channel()))
+                                .expect("open() failed");
+                        }
+                    },
+                    complete => return,
+                }
+            }
+        };
+
+        let client = get_client(open_requests_tx);
+
+        let future = server_wrapper.join(client);
+
+        // As our clients are async generators, we need to pin this future explicitly.
+        // All async generators are !Unpin by default.
+        pin_mut!(future);
+        let mut obj = LocalFutureObj::new(future);
+        executor(&mut || exec.run_until_stalled(&mut obj));
+    }
+
+    fn run_server_client_with_open_requests_channel<GetClientRes>(
+        server: impl PseudoFile,
+        get_client: impl FnOnce(mpsc::Sender<(u32, u32, ServerEnd<FileMarker>)>) -> GetClientRes,
+    ) where
+        GetClientRes: Future<Output = ()>,
+    {
+        let exec = fasync::Executor::new().expect("Executor creation failed");
+
+        run_server_client_with_open_requests_channel_and_executor(
+            exec,
+            server,
+            get_client,
+            |run_until_stalled| {
+                run_until_stalled();
+            },
+        );
+    }
+
     #[test]
     fn read_only_read() {
         run_server_client(
@@ -899,6 +963,42 @@ mod tests {
             async move |proxy| {
                 assert_read!(proxy, "Read only test");
                 assert_close!(proxy);
+            },
+        );
+    }
+
+    #[test]
+    fn read_only_read_no_status() {
+        run_server_client_with_open_requests_channel(
+            read_only(|| Ok(b"Read only test".to_vec())),
+            async move |mut open_sender| {
+                let (proxy, server_end) =
+                    create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
+
+                let flags = OPEN_RIGHT_READABLE;
+                await!(open_sender.send((flags, 0, server_end))).unwrap();
+                assert_no_event!(proxy);
+            },
+        );
+    }
+
+    #[test]
+    fn read_only_read_with_describe() {
+        run_server_client_with_open_requests_channel(
+            read_only(|| Ok(b"Read only test".to_vec())),
+            async move |mut open_sender| {
+                let (proxy, server_end) =
+                    create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
+
+                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                await!(open_sender.send((flags, 0, server_end))).unwrap();
+                assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
+                    assert_eq!(s, ZX_OK);
+                    assert_eq!(
+                        info,
+                        Some(Box::new(NodeInfo::File(FileObject { event: None })))
+                    );
+                });
             },
         );
     }
@@ -1039,8 +1139,8 @@ mod tests {
     fn read_error() {
         let mut read_attempt = 0;
 
-        let flags = OPEN_RIGHT_READABLE;
-        let mut server = read_only(|| {
+        let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+        let server = read_only(|| {
             read_attempt += 1;
             match read_attempt {
                 1 => Err(Status::SHOULD_WAIT),
@@ -1049,22 +1149,34 @@ mod tests {
             }
         });
 
-        {
-            // Need an executor to create connection endpoints.
-            let _exec = fasync::Executor::new().expect("Executor creation failed");
+        run_server_client_with_open_requests_channel(server, async move |mut open_sender| {
+            {
+                let (proxy, server_end) =
+                    create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
 
-            let (_, server_end) =
-                create_endpoints::<FileMarker>().expect("Failed to create connection endpoints");
+                await!(open_sender.send((flags, 0, server_end))).unwrap();
+                assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
+                    assert_eq!(s, ZX_ERR_SHOULD_WAIT);
+                    assert_eq!(info, None);
+                });
+            }
 
-            let first_connection_error = server
-                .add_request_stream(flags, server_end.into_stream().unwrap())
-                .expect_err("add_request_stream() should fail for the first time");
-            assert_eq!(first_connection_error, Status::SHOULD_WAIT);
-        }
+            {
+                let (proxy, server_end) =
+                    create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
 
-        run_server_client(flags, server, async move |proxy| {
-            assert_read!(proxy, "Have value");
-            assert_close!(proxy);
+                await!(open_sender.send((flags, 0, server_end))).unwrap();
+                assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
+                    assert_eq!(s, ZX_OK);
+                    assert_eq!(
+                        info,
+                        Some(Box::new(NodeInfo::File(FileObject { event: None })))
+                    );
+                });
+
+                assert_read!(proxy, "Have value");
+                assert_close!(proxy);
+            }
         });
     }
 
@@ -1555,19 +1667,16 @@ mod tests {
                 assert_seek!(first_proxy, 0, Start);
                 assert_write!(first_proxy, "As updated");
 
-                let (second_client_end, second_server_end) =
-                    create_endpoints::<FileMarker>().unwrap();
+                let (second_proxy, second_server_end) = create_proxy::<FileMarker>().unwrap();
 
-                // TODO second_server_end is ServerEnd<FileMarker> but we need
-                // ServerEnd<NodeMarker> :(
                 first_proxy
                     .clone(
                         OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                        // second_server_end is a ServerEnd<FileMarker> while we need a
+                        // ServerEnd<NodeMarker> :(
                         ServerEnd::new(second_server_end.into_channel()),
                     )
                     .unwrap();
-
-                let second_proxy = second_client_end.into_proxy().unwrap();
 
                 let event_stream = second_proxy.take_event_stream();
                 match await!(event_stream.into_future()) {
@@ -1778,20 +1887,17 @@ mod tests {
                 assert_read!(first_proxy, "Initial content");
                 assert_write_err!(first_proxy, "Write attempt", Status::ACCESS_DENIED);
 
-                let (second_client_end, second_server_end) =
-                    create_endpoints::<FileMarker>().unwrap();
+                let (second_proxy, second_server_end) = create_proxy::<FileMarker>().unwrap();
 
-                // TODO second_server_end is ServerEnd<FileMarker> but we need
-                // ServerEnd<NodeMarker> :(  Should we add an implementation of From<> to the FIDL
-                // compiler output?
                 first_proxy
                     .clone(
                         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE,
+                        // TODO second_server_end is ServerEnd<FileMarker> but we need
+                        // ServerEnd<NodeMarker> :(  Should we add an implementation of From<> to
+                        // the FIDL compiler output?
                         ServerEnd::new(second_server_end.into_channel()),
                     )
                     .unwrap();
-
-                let second_proxy = second_client_end.into_proxy().unwrap();
 
                 let event_stream = second_proxy.take_event_stream();
                 match await!(event_stream.into_future()) {
@@ -1816,56 +1922,8 @@ mod tests {
         );
     }
 
-    /// A helper to create a "mock" directory holding the specified pseudo file.  The only
-    /// interface the "directory" provides is the ability to open new connections to the pseudo
-    /// file.  Otherwise the directory is running the file and the "new connections" stream.
-    fn mock_single_file_directory(
-        flags: u32, mut file: impl PseudoFile,
-    ) -> (
-        mpsc::Sender<ServerEnd<FileMarker>>,
-        impl Future<Output = ()>,
-    ) {
-        let (open_requests_tx, open_requests_rx) = mpsc::channel::<ServerEnd<FileMarker>>(0);
-        // Remember whether or not the `open_requests_rx` stream was closed between loop
-        // iterations.
-        let mut open_requests_rx = open_requests_rx.fuse();
-        (
-            open_requests_tx,
-            async move {
-                loop {
-                    select! {
-                        _ = file => panic!("file should never complete"),
-                        open_req = open_requests_rx.next() => {
-                            // open_requests stream should not be closed while the directory is
-                            // still running.  It will be closed by the destructor, but at that
-                            // time the directory should not be running any more.
-                            let server_end = open_req.expect(
-                                "open_requests stream closed while the directory still running");
-                            file
-                                .add_request_stream(flags, server_end.into_stream().unwrap())
-                                .expect("add_request_stream() failed");
-                        },
-                    }
-                }
-            },
-        )
-    }
-
     #[test]
     fn mock_directory_with_one_file_and_two_connections() {
-        let mut exec = fasync::Executor::new().expect("Executor creation failed");
-
-        let read_count = RefCell::new(0);
-
-        let (open_requests_sender, directory) = mock_single_file_directory(
-            OPEN_RIGHT_READABLE,
-            read_only_str(|| {
-                let mut count = read_count.borrow_mut();
-                *count += 1;
-                Ok(format!("Content {}", *count))
-            }),
-        );
-
         // If futures::join would provide a way to "unpack" an incomplete (or complete) Join
         // future, this test could have been written a bit easier.  Without the unpack
         // functionality as soon as the pseudo_file is combined the client into a joined future,
@@ -1893,9 +1951,9 @@ mod tests {
         //     _ => panic!("Unepxected join state"),
         // };
         //
-        // let (second_client, second_client_stream) = ...
+        // let (second_client, second_client_server_end) = ...
         //
-        // server.add_request_stream(flags, second_client_stream).unwrap();
+        // server.open(flags, 0, &mut iter::empty(), second_client_server_end).unwrap();
         //
         // let future = server.join3(first_client);
         // pin_mut!(future);
@@ -1903,22 +1961,21 @@ mod tests {
         //     panic!("Server failed: {:?}", e);
         // }
 
-        let create_client =
-            move |expected_content: &'static str,
-                  mut open_requests_sender: mpsc::Sender<ServerEnd<FileMarker>>| {
-                let (client_end, server_end) = create_endpoints::<FileMarker>()
-                    .expect("Failed to create connection endpoints");
+        let exec = fasync::Executor::new().expect("Executor creation failed");
 
-                let proxy = client_end.into_proxy().unwrap();
+        let create_client = move |expected_content: &'static str| {
+            let (proxy, server_end) =
+                create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
 
-                let (start_sender, start_receiver) = oneshot::channel::<()>();
-                let (read_and_close_sender, read_and_close_receiver) = oneshot::channel::<()>();
+            let (start_sender, start_receiver) = oneshot::channel::<()>();
+            let (read_and_close_sender, read_and_close_receiver) = oneshot::channel::<()>();
 
-                (
+            (
+                move |mut open_sender: mpsc::Sender<(u32, u32, ServerEnd<FileMarker>)>| {
                     async move {
                         await!(start_receiver).unwrap();
 
-                        await!(open_requests_sender.send(server_end)).unwrap();
+                        await!(open_sender.send((OPEN_RIGHT_READABLE, 0, server_end))).unwrap();
 
                         assert_read!(proxy, expected_content);
 
@@ -1927,48 +1984,66 @@ mod tests {
                         assert_seek!(proxy, 0, Start);
                         assert_read!(proxy, expected_content);
                         assert_close!(proxy);
-                    },
-                    || {
-                        start_sender.send(()).unwrap();
-                    },
-                    || {
-                        read_and_close_sender.send(()).unwrap();
-                    },
-                )
-            };
-
-        let (client1, client1_start, client1_read_and_close) =
-            create_client("Content 1", open_requests_sender.clone());
-
-        let (client2, client2_start, client2_read_and_close) =
-            create_client("Content 2", open_requests_sender.clone());
-
-        let future = directory.join3(client1, client2);
-        pin_mut!(future);
-
-        let mut run_and_check_read_count = |expected_count| {
-            if let Poll::Ready(((), (), ())) = exec.run_until_stalled(&mut future) {
-                panic!("Future should not complete");
-            }
-            assert_eq!(*read_count.borrow(), expected_count);
+                    }
+                },
+                || {
+                    start_sender.send(()).unwrap();
+                },
+                || {
+                    read_and_close_sender.send(()).unwrap();
+                },
+            )
         };
 
-        run_and_check_read_count(0);
+        let read_count = RefCell::new(0);
+        let (get_client1, client1_start, client1_read_and_close) = create_client("Content 1");
+        let (get_client2, client2_start, client2_read_and_close) = create_client("Content 2");
 
-        client1_start();
+        run_server_client_with_open_requests_channel_and_executor(
+            exec,
+            read_only_str(|| {
+                let mut count = read_count.borrow_mut();
+                *count += 1;
+                Ok(format!("Content {}", *count))
+            }),
+            async move |open_sender| {
+                let client1 = get_client1(open_sender.clone());
+                let client2 = get_client2(open_sender.clone());
 
-        run_and_check_read_count(1);
+                await!(client1.join(client2));
+            },
+            |run_until_stalled| {
+                let mut run_and_check_read_count = |expected_count, should_complete: bool| {
+                    if !should_complete {
+                        if let Poll::Ready(((), ())) = run_until_stalled() {
+                            panic!("Future should not complete");
+                        }
+                    } else {
+                        if let Poll::Pending = run_until_stalled() {
+                            panic!("Future did not complete as expected");
+                        }
+                    }
+                    assert_eq!(*read_count.borrow(), expected_count);
+                };
 
-        client2_start();
+                run_and_check_read_count(0, false);
 
-        run_and_check_read_count(2);
+                client1_start();
 
-        client1_read_and_close();
+                run_and_check_read_count(1, false);
 
-        run_and_check_read_count(2);
+                client2_start();
 
-        client2_read_and_close();
+                run_and_check_read_count(2, false);
 
-        run_and_check_read_count(2)
+                client1_read_and_close();
+
+                run_and_check_read_count(2, false);
+
+                client2_read_and_close();
+
+                run_and_check_read_count(2, true)
+            },
+        );
     }
 }

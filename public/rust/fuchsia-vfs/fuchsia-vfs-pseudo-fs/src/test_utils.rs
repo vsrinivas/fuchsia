@@ -192,3 +192,39 @@ macro_rules! assert_close_err {
         assert_eq!(Status::from_raw(status), $expected_status);
     };
 }
+
+// PartialEq is not defined for FileEvent for the moment.
+// Because of that I can not write a macro that would just accept a FileEvent instance to
+// compare against:
+//
+//     assert_event!(proxy, FileEvent::OnOpen_ {
+//         s: Status::SHOULD_WAIT.into_raw(),
+//         info: None,
+//     });
+//
+// Instead, I need to split the assertion into a pattern and then additional assertions on what
+// the pattern have matched.
+macro_rules! assert_event {
+    ($proxy:expr, $expected_pattern:pat, $expected_assertion:block) => {
+        let event_stream = $proxy.take_event_stream();
+        match await!(event_stream.into_future()) {
+            (Some(Ok($expected_pattern)), _) => $expected_assertion,
+            (unexpected, _) => {
+                panic!("Unexpected event: {:?}", unexpected);
+            }
+        }
+    };
+}
+
+// See comment above assert_read above for why this is a macro.
+macro_rules! assert_no_event {
+    ($proxy:expr) => {
+        let event_stream = $proxy.take_event_stream();
+        match await!(event_stream.into_future()) {
+            (None, _) => (),
+            (unexpected, _) => {
+                panic!("Unexpected event: {:?}", unexpected);
+            }
+        }
+    };
+}
