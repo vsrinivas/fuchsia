@@ -35,7 +35,7 @@ App::App(const fxl::CommandLine& command_line)
       input_receiver_bindings_.GetHandler(this));
 
   HACK_legacy_input_path_ =
-      command_line.GetOptionValueWithDefault("input_path", "new") != "new";
+      command_line.GetOptionValueWithDefault("input_path", "old") != "new";
 }
 
 App::~App() {}
