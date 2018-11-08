@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/input_reader/fdio_hid_decoder.h"
+#include "garnet/bin/ui/input_reader/hid_decoder.h"
 
+#include <fcntl.h>
 #include <unistd.h>
 
 #include <hid-parser/parser.h>
@@ -20,7 +21,6 @@
 #include <zircon/input/c/fidl.h>
 
 namespace {
-
 bool log_err(ssize_t rc, const std::string& what, const std::string& name) {
   FXL_LOG(ERROR) << "hid: could not get " << what << " from " << name
                  << " (status=" << rc << ")";
@@ -67,24 +67,23 @@ static int32_t extract_int8_ext(const std::vector<uint8_t>& v, uint32_t begin,
 
 namespace mozart {
 
-FdioHidDecoder::FdioHidDecoder(const std::string& name, fbl::unique_fd fd)
-    : fd_(std::move(fd)), name_(name), protocol_(Protocol::Other) {}
+HidDecoder::HidDecoder(const std::string& name, int fd)
+    : fd_(fd), name_(name), protocol_(Protocol::Other) {}
 
-FdioHidDecoder::~FdioHidDecoder() = default;
-
-bool FdioHidDecoder::Init() {
-  fzl::FdioCaller caller(fbl::move(fd_));
+bool HidDecoder::Init() {
+  fzl::FdioCaller caller(fbl::move(fbl::unique_fd(fd_)));
 
   bool success = ParseProtocol(caller, &protocol_);
   if (!success) {
-    // |fd_| will also be closed as |caller| goes out of scope.
+    // Do not close the fd we were given
+    caller.release().release();
     return false;
   }
 
   uint16_t max_len = 0;
   zx_status_t status = zircon_input_DeviceGetMaxInputReportSize(
       caller.borrow_channel(), &max_len);
-  fd_ = caller.release();
+  caller.release().release();
   if (status != ZX_OK) {
     return false;
   }
@@ -93,26 +92,18 @@ bool FdioHidDecoder::Init() {
   return true;
 }
 
-zx::event FdioHidDecoder::GetEvent() {
-  zx::event event;
-
-  ssize_t rc =
-      ioctl_device_get_event_handle(fd_.get(), event.reset_and_get_address());
-  if (rc < 0) {
-    log_err(rc, "event handle", name_);
-    return {};
-  } else {
-    return event;
-  }
+bool HidDecoder::GetEvent(zx_handle_t* handle) {
+  ssize_t rc = ioctl_device_get_event_handle(fd_, handle);
+  return (rc < 0) ? log_err(rc, "event handle", name_) : true;
 }
 
-FdioHidDecoder::Protocol ExtractProtocol(hid::Usage input) {
+HidDecoder::Protocol ExtractProtocol(hid::Usage input) {
   using ::hid::usage::Consumer;
   using ::hid::usage::Page;
   using ::hid::usage::Sensor;
   struct {
     hid::Usage usage;
-    FdioHidDecoder::Protocol protocol;
+    HidDecoder::Protocol protocol;
   } usage_to_protocol[] = {
       {{static_cast<uint16_t>(Page::kSensor),
         static_cast<uint32_t>(Sensor::kAmbientLight)},
@@ -127,11 +118,11 @@ FdioHidDecoder::Protocol ExtractProtocol(hid::Usage input) {
       return j.protocol;
     }
   }
-  return FdioHidDecoder::Protocol::Other;
+  return HidDecoder::Protocol::Other;
 }
 
-bool FdioHidDecoder::ParseProtocol(const fzl::FdioCaller& caller,
-                                   Protocol* protocol) {
+bool HidDecoder::ParseProtocol(const fzl::FdioCaller& caller,
+                               Protocol* protocol) {
   zx_handle_t svc = caller.borrow_channel();
 
   zircon_input_BootProtocol boot_protocol;
@@ -173,7 +164,7 @@ bool FdioHidDecoder::ParseProtocol(const fzl::FdioCaller& caller,
     return true;
   }
   if (is_samsung_touch_report_desc(desc.data(), desc.size())) {
-    setup_samsung_touch(fd_.get());
+    setup_samsung_touch(fd_);
     *protocol = Protocol::SamsungTouch;
     return true;
   }
@@ -206,14 +197,14 @@ bool FdioHidDecoder::ParseProtocol(const fzl::FdioCaller& caller,
     return true;
   }
   if (is_eyoyo_touch_report_desc(desc.data(), desc.size())) {
-    setup_eyoyo_touch(fd_.get());
+    setup_eyoyo_touch(fd_);
     *protocol = Protocol::EyoyoTouch;
     return true;
   }
   // TODO(SCN-867) Use HID parsing for all touch devices
   // will remove the need for this
   if (is_ft3x27_touch_report_desc(desc.data(), desc.size())) {
-    setup_ft3x27_touch(fd_.get());
+    setup_ft3x27_touch(fd_);
     *protocol = Protocol::Ft3x27Touch;
     return true;
   }
@@ -295,8 +286,13 @@ bool FdioHidDecoder::ParseProtocol(const fzl::FdioCaller& caller,
   return true;
 }
 
-bool FdioHidDecoder::ParseGamepadDescriptor(const hid::ReportField* fields,
-                                            size_t count) {
+bool HidDecoder::use_legacy_mode() const {
+  return protocol_ != Protocol::Gamepad && protocol_ != Protocol::Buttons &&
+         protocol_ != Protocol::LightSensor;
+}
+
+bool HidDecoder::ParseGamepadDescriptor(const hid::ReportField* fields,
+                                        size_t count) {
   // Need to recover the five fields as seen in HidGamepadSimple and put
   // them into the decoder_ in the same order.
   if (count < 5u)
@@ -348,8 +344,8 @@ bool FdioHidDecoder::ParseGamepadDescriptor(const hid::ReportField* fields,
   return true;
 }
 
-bool FdioHidDecoder::ParseAmbientLightDescriptor(const hid::ReportField* fields,
-                                                 size_t count) {
+bool HidDecoder::ParseAmbientLightDescriptor(const hid::ReportField* fields,
+                                             size_t count) {
   if (count == 0u)
     return false;
 
@@ -384,8 +380,8 @@ bool FdioHidDecoder::ParseAmbientLightDescriptor(const hid::ReportField* fields,
   return false;
 }
 
-bool FdioHidDecoder::ParseButtonsDescriptor(const hid::ReportField* fields,
-                                            size_t count) {
+bool HidDecoder::ParseButtonsDescriptor(const hid::ReportField* fields,
+                                        size_t count) {
   if (count == 0u)
     return false;
 
@@ -430,12 +426,12 @@ bool FdioHidDecoder::ParseButtonsDescriptor(const hid::ReportField* fields,
   return true;
 }
 
-const std::vector<uint8_t>& FdioHidDecoder::Read(int* bytes_read) {
-  *bytes_read = read(fd_.get(), report_.data(), report_.size());
+const std::vector<uint8_t>& HidDecoder::Read(int* bytes_read) {
+  *bytes_read = read(fd_, report_.data(), report_.size());
   return report_;
 }
 
-bool FdioHidDecoder::Read(HidGamepadSimple* gamepad) {
+bool HidDecoder::Read(HidGamepadSimple* gamepad) {
   if (protocol_ != Protocol::Gamepad)
     return false;
 
@@ -470,7 +466,7 @@ bool FdioHidDecoder::Read(HidGamepadSimple* gamepad) {
   return true;
 }
 
-bool FdioHidDecoder::Read(HidAmbientLightSimple* data) {
+bool HidDecoder::Read(HidAmbientLightSimple* data) {
   if (protocol_ != Protocol::LightSensor)
     return false;
 
@@ -501,7 +497,7 @@ bool FdioHidDecoder::Read(HidAmbientLightSimple* data) {
   return true;
 }
 
-bool FdioHidDecoder::Read(HidButtons* data) {
+bool HidDecoder::Read(HidButtons* data) {
   if (protocol_ != Protocol::Buttons)
     return false;
 

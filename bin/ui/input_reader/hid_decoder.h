@@ -2,17 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_UI_INPUT_READER_HID_DECODER_H_
-#define GARNET_BIN_UI_INPUT_READER_HID_DECODER_H_
-
 #include <string>
 #include <vector>
 
-#include <zx/event.h>
+#include <lib/fzl/fdio.h>
+#include <zircon/types.h>
+
+namespace hid {
+struct ReportField;
+}
 
 namespace mozart {
 
-// This interface wraps the file descriptor associated with a HID input
+// This class wraps the file descriptor associated with a HID input
 // device and presents a simpler Read() interface. This is a transitional
 // step towards fully wrapping the HID protocol.
 class HidDecoder {
@@ -57,37 +59,56 @@ class HidDecoder {
     bool mic_mute;
   };
 
-  HidDecoder();
-  virtual ~HidDecoder();
+  // The decoder does not take ownership of the |fd|. InputReader takes
+  // care of that.
+  HidDecoder(const std::string& name, int fd);
+  ~HidDecoder() = default;
 
-  virtual const std::string& name() const = 0;
+  const std::string& name() const { return name_; }
 
   // Inits the internal state. Returns false if any underlying ioctl
-  // fails. If so the decoder is not usable. Upon success |protocol()|
+  // fails. If so the decoder is not usable. Upon success |out_proto|
   // contains the best guess on the device protocol.
-  virtual bool Init() = 0;
+  bool Init();
 
-  // Returns the event that signals when the device is ready to be read.
-  virtual zx::event GetEvent() = 0;
+  // Returns the event that signals when the |fd| is ready to be read.
+  bool GetEvent(zx_handle_t* handle);
 
   // Specifies if clients should use Read(int*) or the new mode which
   // is dependent on the device retuned by protocol().
   bool use_legacy_mode() const;
 
-  // Returns a best guess on the device protocol. Only valid after |Init()|.
-  virtual Protocol protocol() const = 0;
+  // Returns the deviced attached to the |fd|. Only valid after Init()
+  Protocol protocol() const { return protocol_; }
 
-  // Reads data from the device. Used when decoding happens on the
-  // input interpreter (|use_legacy_mode()|).
-  virtual const std::vector<uint8_t>& Read(int* bytes_read) = 0;
+  // Reads data from the |fd|. Used when decoding happens on the
+  // input interpreter.
+  const std::vector<uint8_t>& Read(int* bytes_read);
 
-  // Reads data from the device and decodes it into the specified struct.
-  // Only valid if |Init()| is successful.
-  virtual bool Read(HidGamepadSimple* gamepad) = 0;
-  virtual bool Read(HidAmbientLightSimple* light) = 0;
-  virtual bool Read(HidButtons* data) = 0;
+  // Read data from the |fd| and decodes it into the specified struct.
+  // Only valid if Init() out_proto is valid.
+  bool Read(HidGamepadSimple* gamepad);
+  bool Read(HidAmbientLightSimple* light);
+  bool Read(HidButtons* data);
+
+ private:
+  struct DataLocator {
+    uint32_t begin;
+    uint32_t count;
+    uint32_t match;
+  };
+
+  bool ParseProtocol(const fzl::FdioCaller& caller, Protocol* protocol);
+  bool ParseGamepadDescriptor(const hid::ReportField* fields, size_t count);
+  bool ParseAmbientLightDescriptor(const hid::ReportField* fields,
+                                   size_t count);
+  bool ParseButtonsDescriptor(const hid::ReportField* fields, size_t count);
+
+  const int fd_;
+  const std::string name_;
+  Protocol protocol_;
+  std::vector<uint8_t> report_;
+  std::vector<DataLocator> decoder_;
 };
 
 }  // namespace mozart
-
-#endif  // GARNET_BIN_UI_INPUT_READER_HID_DECODER_H_

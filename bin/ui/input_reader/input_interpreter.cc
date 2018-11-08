@@ -4,6 +4,7 @@
 
 #include "garnet/bin/ui/input_reader/input_interpreter.h"
 
+#include <fcntl.h>
 #include <hid/acer12.h>
 #include <hid/ambient-light.h>
 #include <hid/boot.h>
@@ -17,6 +18,8 @@
 
 #include <sys/types.h>
 #include <sys/uio.h>
+#include <unistd.h>
+#include <zircon/assert.h>
 #include <zircon/device/device.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -24,7 +27,6 @@
 #include <trace/event.h>
 
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include "garnet/bin/ui/input_reader/fdio_hid_decoder.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_point.h"
@@ -51,21 +53,37 @@ const size_t kAmbientLight = 2;
 
 namespace mozart {
 
+std::unique_ptr<InputInterpreter> InputInterpreter::Open(
+    int dirfd, std::string filename,
+    fuchsia::ui::input::InputDeviceRegistry* registry) {
+  int fd = openat(dirfd, filename.c_str(), O_RDONLY);
+  if (fd < 0) {
+    FXL_LOG(ERROR) << "Failed to open device " << filename;
+    return nullptr;
+  }
+
+  std::unique_ptr<InputInterpreter> device(
+      new InputInterpreter(filename, fd, registry));
+  if (!device->Initialize()) {
+    return nullptr;
+  }
+
+  return device;
+}
+
 InputInterpreter::InputInterpreter(
-    std::unique_ptr<HidDecoder> hid_decoder,
-    fuchsia::ui::input::InputDeviceRegistry* registry)
-    : registry_(registry), hid_decoder_(std::move(hid_decoder)) {
+    std::string name, int fd, fuchsia::ui::input::InputDeviceRegistry* registry)
+    : registry_(registry), hid_decoder_(std::move(name), fd) {
   memset(acer12_touch_reports_, 0, 2 * sizeof(acer12_touch_t));
-  FXL_DCHECK(hid_decoder_);
 }
 
 InputInterpreter::~InputInterpreter() {}
 
 bool InputInterpreter::Initialize() {
-  if (!hid_decoder_->Init())
+  if (!hid_decoder_.Init())
     return false;
 
-  auto protocol = hid_decoder_->protocol();
+  auto protocol = hid_decoder_.protocol();
 
   if (protocol == HidDecoder::Protocol::Keyboard) {
     FXL_VLOG(2) << "Device " << name() << " has keyboard";
@@ -432,10 +450,11 @@ bool InputInterpreter::Initialize() {
     return false;
   }
 
-  event_ = hid_decoder_->GetEvent();
-  if (!event_)
+  zx_handle_t handle;
+  if (!hid_decoder_.GetEvent(&handle))
     return false;
 
+  event_.reset(handle);
   NotifyRegistry();
   return true;
 }
@@ -479,8 +498,8 @@ bool InputInterpreter::Read(bool discard) {
   // If positive |rc| is the number of bytes read. If negative the error
   // while reading.
   int rc = 1;
-  auto report = hid_decoder_->use_legacy_mode() ? hid_decoder_->Read(&rc)
-                                                : std::vector<uint8_t>(1, 1);
+  auto report = hid_decoder_.use_legacy_mode() ? hid_decoder_.Read(&rc)
+                                               : std::vector<uint8_t>(1, 1);
 
   // TODO(cpu): remove legacy mode, so no raw HidDecoder::Read(int*) is
   // issued from this code.
@@ -532,7 +551,7 @@ bool InputInterpreter::Read(bool discard) {
     case MouseDeviceType::GAMEPAD:
       // TODO(cpu): remove this once we have a good way to test gamepad.
       HidDecoder::HidGamepadSimple gamepad;
-      if (!hid_decoder_->Read(&gamepad)) {
+      if (!hid_decoder_.Read(&gamepad)) {
         FXL_LOG(ERROR) << " failed reading from gamepad ";
         return false;
       }
@@ -681,9 +700,13 @@ void InputInterpreter::ParseKeyboardReport(uint8_t* report, size_t len) {
   hid_kbd_parse_report(report, &key_state);
   keyboard_report_->event_time = InputEventTimestampNow();
 
-  auto& pressed_keys = keyboard_report_->keyboard->pressed_keys;
-  pressed_keys.resize(0);
-  hid_for_every_key(&key_state, keycode) { pressed_keys.push_back(keycode); }
+  size_t index = 0;
+  keyboard_report_->keyboard->pressed_keys.resize(index);
+  hid_for_every_key(&key_state, keycode) {
+    keyboard_report_->keyboard->pressed_keys.resize(index + 1);
+    keyboard_report_->keyboard->pressed_keys->at(index) = keycode;
+    index++;
+  }
   FXL_VLOG(2) << name() << " parsed: " << *keyboard_report_;
 }
 
@@ -987,7 +1010,7 @@ bool InputInterpreter::ParseParadiseStylusReport(uint8_t* r, size_t len) {
 // Writes out result to sensor_report_ and sensor_idx_.
 bool InputInterpreter::ParseAmbientLightSensorReport() {
   HidDecoder::HidAmbientLightSimple data;
-  if (!hid_decoder_->Read(&data)) {
+  if (!hid_decoder_.Read(&data)) {
     FXL_LOG(ERROR) << " failed reading from ambient light sensor";
     return false;
   }
@@ -1003,7 +1026,7 @@ bool InputInterpreter::ParseAmbientLightSensorReport() {
 
 bool InputInterpreter::ParseButtonsReport() {
   HidDecoder::HidButtons data;
-  if (!hid_decoder_->Read(&data)) {
+  if (!hid_decoder_.Read(&data)) {
     FXL_LOG(ERROR) << " failed reading from buttons";
     return false;
   }

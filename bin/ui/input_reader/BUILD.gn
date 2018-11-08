@@ -4,6 +4,8 @@
 
 source_set("input_reader") {
   sources = [
+    "fdio_hid_decoder.cc",
+    "hid_decoder.h",
     "input_interpreter.cc",
     "input_interpreter.h",
     "input_reader.cc",
@@ -11,58 +13,23 @@ source_set("input_reader") {
   ]
 
   deps = [
-    ":fdio",
     "//garnet/public/fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/ui/input/cpp",
     "//zircon/public/fidl/zircon-input:zircon-input_c",
     "//zircon/public/lib/async-default",
+    "//zircon/public/lib/hid-parser",
     "//zircon/public/lib/trace",
   ]
 
   configs += [ "//garnet/lib/ui/gfx:swapchain" ]
 
   public_deps = [
-    ":device",
     "//garnet/public/fidl/fuchsia.ui.input",
-    "//garnet/public/lib/fxl",
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/hid",
-    "//zircon/public/lib/zx",
-  ]
-}
-
-source_set("fdio") {
-  visibility = [ ":*" ]
-
-  sources = [
-    "fdio_device_watcher.cc",
-    "fdio_device_watcher.h",
-    "fdio_hid_decoder.cc",
-    "fdio_hid_decoder.h",
-  ]
-
-  deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/fzl",
+    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/hid",
-    "//zircon/public/lib/hid-parser",
-  ]
-
-  public_deps = [
-    ":device",
-  ]
-}
-
-source_set("device") {
-  sources = [
-    "device_watcher.h",
-    "hid_decoder.cc",
-    "hid_decoder.h",
-  ]
-
-  public_deps = [
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
 }

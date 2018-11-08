@@ -38,15 +38,12 @@ class InputInterpreter {
   static std::unique_ptr<InputInterpreter> Open(
       int dirfd, std::string filename,
       fuchsia::ui::input::InputDeviceRegistry* registry);
-
-  InputInterpreter(std::unique_ptr<HidDecoder> hid_decoder,
-                   fuchsia::ui::input::InputDeviceRegistry* registry);
   ~InputInterpreter();
 
   bool Initialize();
   bool Read(bool discard);
 
-  const std::string& name() const { return hid_decoder_->name(); }
+  const std::string& name() const { return hid_decoder_.name(); }
   zx_handle_t handle() { return event_.get(); }
 
  private:
@@ -72,6 +69,9 @@ class InputInterpreter {
     PARADISE,
     AMBIENT_LIGHT,
   };
+
+  InputInterpreter(std::string name, int fd,
+                   fuchsia::ui::input::InputDeviceRegistry* registry);
 
   void NotifyRegistry();
 
@@ -139,7 +139,7 @@ class InputInterpreter {
 
   fuchsia::ui::input::InputDevicePtr input_device_;
 
-  std::unique_ptr<HidDecoder> hid_decoder_;
+  HidDecoder hid_decoder_;
 };
 
 }  // namespace mozart

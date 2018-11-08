@@ -4,20 +4,15 @@
 
 #include "garnet/bin/ui/input_reader/input_reader.h"
 
+#include <fcntl.h>
+#include <unistd.h>
+
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/default.h>
 
-#include "garnet/bin/ui/input_reader/fdio_device_watcher.h"
-#include "garnet/bin/ui/input_reader/input_interpreter.h"
-#include "lib/fxl/logging.h"
-
 namespace mozart {
 
-namespace {
-
 constexpr char kInputDevPath[] = "/dev/class/input";
-
-}
 
 struct InputReader::DeviceInfo {
   std::unique_ptr<InputInterpreter> interpreter;
@@ -32,21 +27,13 @@ InputReader::InputReader(fuchsia::ui::input::InputDeviceRegistry* registry,
   FXL_CHECK(registry_);
 }
 
-InputReader::~InputReader() = default;
+InputReader::~InputReader() {}
 
 void InputReader::Start() {
-  Start(std::make_unique<FdioDeviceWatcher>(kInputDevPath));
-}
-
-void InputReader::Start(std::unique_ptr<DeviceWatcher> device_watcher) {
-  device_watcher_ = std::move(device_watcher);
-  device_watcher_->Watch([this](std::unique_ptr<HidDecoder> hid_decoder) {
-    auto interpreter =
-        std::make_unique<InputInterpreter>(std::move(hid_decoder), registry_);
-    if (interpreter->Initialize()) {
-      DeviceAdded(std::move(interpreter));
-    }
-  });
+  device_watcher_ = fsl::DeviceWatcher::Create(
+      kInputDevPath, [this](int dir_fd, std::string filename) {
+        DeviceAdded(InputInterpreter::Open(dir_fd, filename, registry_));
+      });
 }
 
 // Register to receive notifications that display ownership has changed
@@ -70,7 +57,8 @@ void InputReader::DeviceRemoved(zx_handle_t handle) {
 }
 
 void InputReader::DeviceAdded(std::unique_ptr<InputInterpreter> interpreter) {
-  FXL_DCHECK(interpreter);
+  if (!interpreter)
+    return;
 
   FXL_VLOG(1) << "Input device " << interpreter->name() << " added ";
   zx_handle_t handle = interpreter->handle();
