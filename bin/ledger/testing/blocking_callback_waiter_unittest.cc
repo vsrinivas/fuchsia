@@ -173,5 +173,27 @@ TEST(BlockingCallbackWaiterTest, NotCalledYet) {
   EXPECT_TRUE(waiter->NotCalledYet());
 }
 
+TEST(BlockingCallbackWaiterTest, FailedWhenNoCallbackIsAlive) {
+  std::unique_ptr<fit::closure> on_run_callback;
+  FakeLoopController loop_controller(
+      [&] {
+        if (on_run_callback) {
+          (*on_run_callback)();
+        }
+      },
+      [] {});
+  auto waiter = loop_controller.NewWaiter();
+
+  EXPECT_FALSE(waiter->RunUntilCalled());
+
+  fit::closure callback = waiter->GetCallback();
+  callback = nullptr;
+  EXPECT_FALSE(waiter->RunUntilCalled());
+
+  callback = waiter->GetCallback();
+  on_run_callback = std::make_unique<fit::closure>([&] { callback = nullptr; });
+  EXPECT_FALSE(waiter->RunUntilCalled());
+}
+
 }  // namespace
 }  // namespace ledger

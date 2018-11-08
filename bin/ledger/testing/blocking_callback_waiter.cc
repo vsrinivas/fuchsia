@@ -14,19 +14,33 @@ BlockingCallbackWaiter::BlockingCallbackWaiter(LoopController* loop_controller)
 BlockingCallbackWaiter::~BlockingCallbackWaiter() {}
 
 fit::function<void()> BlockingCallbackWaiter::GetCallback() {
-  return [this] {
+  live_callbacks_count_++;
+  auto on_callback_deletion = fit::defer([this] {
+    live_callbacks_count_--;
+    if (live_callbacks_count_ == 0 && running_) {
+      // All callbacks have went out of scope while |RunUntilCalled|: no other
+      // callback can stop the loop, exit immediately.
+      loop_controller_->StopLoop();
+    }
+  });
+  return [this, on_callback_deletion = std::move(on_callback_deletion)] {
     ++callback_called_count_;
-    if (waiting_) {
+    if (running_) {
+      // Called during |RunUntilCalled|: exit from the loop.
       loop_controller_->StopLoop();
     }
   };
 }
 
 bool BlockingCallbackWaiter::RunUntilCalled() {
-  FXL_DCHECK(!waiting_);
-  waiting_ = true;
-  auto cleanup = fit::defer([this] { waiting_ = false; });
+  FXL_DCHECK(!running_);
+  running_ = true;
+  auto cleanup = fit::defer([this] { running_ = false; });
   while (NotCalledYet()) {
+    if (live_callbacks_count_ == 0) {
+      // Do not start the loop if no callback is available to stop it.
+      return false;
+    }
     loop_controller_->RunLoop();
   }
   ++run_until_called_count_;

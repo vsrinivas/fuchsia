@@ -26,7 +26,9 @@ class BlockingCallbackWaiter : public CallbackWaiter {
   LoopController* loop_controller_;
   size_t callback_called_count_ = 0;
   size_t run_until_called_count_ = 0;
-  bool waiting_ = false;
+  size_t live_callbacks_count_ = 0;
+  // Whether the waiter is currently in the |RunUntilCalled| method.
+  bool running_ = false;
 };
 
 }  // namespace ledger

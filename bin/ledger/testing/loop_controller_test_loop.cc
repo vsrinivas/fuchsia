@@ -43,16 +43,16 @@ class CallbackWaiterImpl : public CallbackWaiter {
   fit::function<void()> GetCallback() override {
     return [this] {
       ++callback_called_count_;
-      if (waiting_) {
+      if (running_) {
         loop_->StopLoop();
       }
     };
   }
 
   bool RunUntilCalled() override {
-    FXL_DCHECK(!waiting_);
-    waiting_ = true;
-    auto cleanup = fit::defer([this] { waiting_ = false; });
+    FXL_DCHECK(!running_);
+    running_ = true;
+    auto cleanup = fit::defer([this] { running_ = false; });
     bool called = loop_->RunLoopUntil([this] { return !NotCalledYet(); });
     if (called) {
       ++run_until_called_count_;
@@ -68,7 +68,8 @@ class CallbackWaiterImpl : public CallbackWaiter {
   LoopController* loop_;
   size_t callback_called_count_ = 0;
   size_t run_until_called_count_ = 0;
-  bool waiting_ = false;
+  // Whether the waiter is currently in the |RunUntilCalled| method.
+  bool running_ = false;
 };
 
 }  // namespace
