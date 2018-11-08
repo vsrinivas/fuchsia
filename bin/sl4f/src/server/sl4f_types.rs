@@ -121,6 +121,7 @@ impl AsyncResponse {
 pub enum FacadeType {
     BleAdvertiseFacade,
     Bluetooth,
+    GattClientFacade,
     Wlan,
     Undefined,
 }
@@ -130,6 +131,7 @@ impl FacadeType {
         match facade.as_ref() {
             "ble_advertise_facade" => FacadeType::BleAdvertiseFacade,
             "bluetooth" => FacadeType::Bluetooth,
+            "gatt_client_facade" => FacadeType::GattClientFacade,
             "wlan" => FacadeType::Wlan,
             _ => FacadeType::Undefined,
         }

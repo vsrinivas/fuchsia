@@ -6,4 +6,5 @@ pub mod ble_advertise_facade;
 pub mod commands;
 pub mod constants;
 pub mod facade;
+pub mod gatt_client_facade;
 pub mod types;

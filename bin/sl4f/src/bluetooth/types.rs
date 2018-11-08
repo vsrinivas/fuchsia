@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use failure::{bail, Error};
-use fidl_fuchsia_bluetooth_gatt::{ServiceInfo, Characteristic, Descriptor, AttributePermissions, SecurityRequirements};
+use fidl_fuchsia_bluetooth_gatt::{
+    AttributePermissions, Characteristic, Descriptor, SecurityRequirements, ServiceInfo,
+};
 use serde_derive::{Deserialize, Serialize};
 
 /// Enum for supported FIDL commands, to extend support for new commands, add to this
@@ -13,7 +15,7 @@ pub enum BluetoothMethod {
     BleConnectPeripheral,
     BleDisconnectPeripheral,
     BleGetDiscoveredDevices,
-    BleListServices,
+    GattcListServices,
     BlePublishService,
     BleStartScan,
     BleStopScan,
@@ -38,7 +40,6 @@ impl BluetoothMethod {
             "BleAdvertise" => BluetoothMethod::BleAdvertise,
             "BleConnectPeripheral" => BluetoothMethod::BleConnectPeripheral,
             "BleDisconnectPeripheral" => BluetoothMethod::BleDisconnectPeripheral,
-            "BleListServices" => BluetoothMethod::BleListServices,
             "BlePublishService" => BluetoothMethod::BlePublishService,
             "BleStartScan" => BluetoothMethod::BleStartScan,
             "BleStopScan" => BluetoothMethod::BleStopScan,
@@ -46,10 +47,15 @@ impl BluetoothMethod {
             "BleStopAdvertise" => BluetoothMethod::BleStopAdvertise,
             "GattcConnectToService" => BluetoothMethod::GattcConnectToService,
             "GattcDiscoverCharacteristics" => BluetoothMethod::GattcDiscoverCharacteristics,
+            "GattcListServices" => BluetoothMethod::GattcListServices,
             "GattcWriteCharacteristicById" => BluetoothMethod::GattcWriteCharacteristicById,
-            "GattcWriteCharacteristicByIdWithoutResponse" => BluetoothMethod::GattcWriteCharacteristicByIdWithoutResponse,
+            "GattcWriteCharacteristicByIdWithoutResponse" => {
+                BluetoothMethod::GattcWriteCharacteristicByIdWithoutResponse
+            }
             "GattcEnableNotifyCharactertistic" => BluetoothMethod::GattcEnableNotifyCharactertistic,
-            "GattcDisableNotifyCharactertistic" => BluetoothMethod::GattcDisableNotifyCharactertistic,
+            "GattcDisableNotifyCharactertistic" => {
+                BluetoothMethod::GattcDisableNotifyCharactertistic
+            }
             "GattcReadCharacteristicById" => BluetoothMethod::GattcReadCharacteristicById,
             "GattcReadLongCharacteristicById" => BluetoothMethod::GattcReadLongCharacteristicById,
             "GattcReadLongDescriptorById" => BluetoothMethod::GattcReadLongDescriptorById,
@@ -101,23 +107,21 @@ pub struct SecurityRequirementsContainer {
 }
 
 impl SecurityRequirementsContainer {
-    pub fn new (info: Option<Box<SecurityRequirements>>) -> SecurityRequirementsContainer {
+    pub fn new(info: Option<Box<SecurityRequirements>>) -> SecurityRequirementsContainer {
         match info {
             Some(s) => {
                 let sec = *s;
                 SecurityRequirementsContainer {
                     encryption_required: sec.encryption_required,
                     authentication_required: sec.authentication_required,
-                    authorization_required: sec.authorization_required
+                    authorization_required: sec.authorization_required,
                 }
             }
-            None => {
-                SecurityRequirementsContainer {
-                    encryption_required: false,
-                    authentication_required: false,
-                    authorization_required: false
-                }
-            }
+            None => SecurityRequirementsContainer {
+                encryption_required: false,
+                authentication_required: false,
+                authorization_required: false,
+            },
         }
     }
 }
@@ -126,26 +130,26 @@ impl SecurityRequirementsContainer {
 pub struct AttributePermissionsContainer {
     pub read: SecurityRequirementsContainer,
     pub write: SecurityRequirementsContainer,
-    pub update: SecurityRequirementsContainer
+    pub update: SecurityRequirementsContainer,
 }
 
 impl AttributePermissionsContainer {
-    pub fn new(info: Option<Box<AttributePermissions>>) -> Result<AttributePermissionsContainer, Error> {
-
+    pub fn new(
+        info: Option<Box<AttributePermissions>>,
+    ) -> Result<AttributePermissionsContainer, Error> {
         match info {
             Some(p) => {
                 let perm = *p;
                 Ok(AttributePermissionsContainer {
                     read: SecurityRequirementsContainer::new(perm.read),
                     write: SecurityRequirementsContainer::new(perm.write),
-                    update: SecurityRequirementsContainer::new(perm.update)
+                    update: SecurityRequirementsContainer::new(perm.update),
                 })
             }
-            None => {bail!("Unable to get information of AttributePermissions.")}
+            None => bail!("Unable to get information of AttributePermissions."),
         }
     }
 }
-
 
 // Discover Characteristic response to hold characteristic info
 // as Characteristics are not serializable.
@@ -164,7 +168,7 @@ impl GattcDiscoverDescriptorResponse {
                 id: v.id,
                 permissions: match AttributePermissionsContainer::new(v.permissions) {
                     Ok(n) => Some(n),
-                    Err(_) => None
+                    Err(_) => None,
                 },
                 uuid_type: v.type_,
             };
@@ -182,9 +186,8 @@ pub struct GattcDiscoverCharacteristicResponse {
     pub properties: u32,
     pub permissions: Option<AttributePermissionsContainer>,
     pub uuid_type: String,
-    pub descriptors: Vec<GattcDiscoverDescriptorResponse>
+    pub descriptors: Vec<GattcDiscoverDescriptorResponse>,
 }
-
 
 impl GattcDiscoverCharacteristicResponse {
     pub fn new(info: Vec<Characteristic>) -> Vec<GattcDiscoverCharacteristicResponse> {
@@ -195,19 +198,15 @@ impl GattcDiscoverCharacteristicResponse {
                 properties: v.properties,
                 permissions: match AttributePermissionsContainer::new(v.permissions) {
                     Ok(n) => Some(n),
-                    Err(_) => None
+                    Err(_) => None,
                 },
                 uuid_type: v.type_,
                 descriptors: {
                     match v.descriptors {
-                        Some(d) => {
-                            GattcDiscoverDescriptorResponse::new(d)
-                        }
-                        None => {
-                            Vec::new()
-                        }
+                        Some(d) => GattcDiscoverDescriptorResponse::new(d),
+                        None => Vec::new(),
                     }
-                }
+                },
             };
             res.push(copy)
         }

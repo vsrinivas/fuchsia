@@ -21,6 +21,7 @@ use crate::server::sl4f_types::{AsyncRequest, AsyncResponse, FacadeType};
 // Translation layers go here (i.e wlan_method_to_fidl)
 use crate::bluetooth::commands::ble_advertise_method_to_fidl;
 use crate::bluetooth::commands::ble_method_to_fidl;
+use crate::bluetooth::commands::gatt_client_method_to_fidl;
 
 pub fn run_fidl_loop(
     executor: &mut fasync::Executor,
@@ -67,7 +68,7 @@ pub fn run_fidl_loop(
 fn method_to_fidl(
     method_type: String, method_name: String, args: Value, sl4f_session: Arc<RwLock<Sl4f>>,
 ) -> impl Future<Output = Result<Value, Error>> {
-    unsafe_many_futures!(MethodType, [BleAdvertiseFacade, Bluetooth, Wlan, Error]);
+    unsafe_many_futures!(MethodType, [BleAdvertiseFacade, Bluetooth, GattClientFacade, Wlan, Error]);
     match FacadeType::from_str(&method_type) {
         FacadeType::BleAdvertiseFacade => MethodType::BleAdvertiseFacade(ble_advertise_method_to_fidl(
                 method_name,
@@ -78,6 +79,11 @@ fn method_to_fidl(
             method_name,
             args,
             sl4f_session.write().get_bt_facade(),
+        )),
+        FacadeType::GattClientFacade => MethodType::GattClientFacade(gatt_client_method_to_fidl(
+                method_name,
+                args,
+                sl4f_session.write().get_gatt_client_facade(),
         )),
         FacadeType::Wlan => MethodType::Wlan(fready(Err(BTError::new(
             "Nice try. WLAN not implemented yet",
