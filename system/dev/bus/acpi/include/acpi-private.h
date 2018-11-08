@@ -62,8 +62,15 @@ typedef struct {
     auxdata_i2c_device_t* data;
 } pci_child_auxdata_ctx_t;
 
-zx_device_t* publish_device(zx_device_t* parent, ACPI_HANDLE handle,
-                            ACPI_DEVICE_INFO* info, const char* name,
-                            uint32_t protocol_id, void* protocol_ops);
+// TODO(cja): this is here because of kpci.c and can be removed once
+// kernel pci is out of the tree.
+zx_device_t* publish_device(zx_device_t* parent,
+                            ACPI_HANDLE handle,
+                            ACPI_DEVICE_INFO* info,
+                            const char* name,
+                            uint32_t protocol_id,
+                            void* protocol_ops);
 
-#endif  // ZIRCON_SYSTEM_DEV_BUS_ACPI_INCLUDE_ACPI_PRIVATE_H_
+zx_protocol_device_t* get_acpi_root_device_proto(void);
+
+#endif // ZIRCON_SYSTEM_DEV_BUS_ACPI_INCLUDE_ACPI_PRIVATE_H_

@@ -14,14 +14,33 @@ struct MsiBlock {
     uint64 reserved;
 };
 
-struct PciPlatformInfo {
-    uint64 reserved;
+/// This structure corresponds to the ECAM allocation structure defined
+/// in table 4-3 of the PCI Firmware Specification, rev 3.2 (page 42).
+/// base_address corresponds to the physical address of bus 0.
+struct PciEcam {
+    uint64 base_address;
+    uint16 segment_group;
+    uint8 start_bus_num;
+    uint8 end_bus_num;
 };
 
+/// This structure is the primary means of passing PCI platform information
+/// from the platform bus implementation to the PCI bus driver. In the event
+/// that |has_ecam| is false the bus driver will never look at fields in |ecam|.
+struct PciPlatformInfo {
+    string:32 name;
+    uint8 base_bus_number;
+    uint8 segment_group;
+    PciEcam ecam;
+    bool has_ecam;
+};
+
+/// TODO(cja): Fill this in for IRQ metadata
 struct PciIrqInfo {
     uint64 reserved;
 };
 
+/// TODO(cja): possibly necessary now that IO config access is proxied to pciroot.
 enum PciAddressSpace : uint8 {
     MMIO = 0;
     IO = 0x1;
@@ -29,21 +48,37 @@ enum PciAddressSpace : uint8 {
 
 [Layout="ddk-protocol"]
 interface Pciroot {
-    // Legacy methods
+    /// Legacy methods
     1: GetAuxdata(string args) -> (zx.status s, vector<void> data);
     2: GetBti(uint32 bdf, uint32 index) -> (zx.status s, handle<bti> bti);
+    /// Get the platform information structure from the pciroot protocol to be used for bus init.
     3: GetPciPlatformInfo() -> (zx.status s, PciPlatformInfo info);
+    /// Get IRQ information, including the swizzle table.
     4: GetPciIrqInfo() -> (zx.status s, PciIrqInfo info);
+    /// Returns true if the bus driver should proxy all device config access to pciroot. This is
+    /// necessary in cases of IO config on x86, or for controllers that require configuration to
+    /// map in device config headers.
     5: DriverShouldProxyConfig() -> (zx.status s, bool use_proxy);
+    /// Read 8 bytes from config space for device at bdf address |address|, offset |offset|.
     6: ConfigRead8(zircon.hw.pci.PciBdf address, uint16 offset) -> (zx.status s, uint8 value);
+    /// Read 16 bytes from config space for device at bdf address |address|, offset |offset|.
     7: ConfigRead16(zircon.hw.pci.PciBdf address, uint16 offset) -> (zx.status s, uint16 value);
+    /// Read 32 bytes from config space for device at bdf address |address|, offset |offset|.
     8: ConfigRead32(zircon.hw.pci.PciBdf address, uint16 offset) -> (zx.status s, uint32 value);
+    /// Write 8 bytes to config space for device at bdf |address| offset |offset|.
     9: ConfigWrite8(zircon.hw.pci.PciBdf address, uint16 offset, uint8 value) -> (zx.status s);
+    /// Write 16 bytes to config space for device at bdf |address| offset |offset|.
     10: ConfigWrite16(zircon.hw.pci.PciBdf address, uint16 offset, uint16 value) -> (zx.status s);
+    /// Write 32 bytes to config space for device at bdf |address| offset |offset|.
     11: ConfigWrite32(zircon.hw.pci.PciBdf address, uint16 offset, uint32 value) -> (zx.status s);
+    /// Placeholder methods for MSI configuration. May be removed.
     12: MsiAllocBlock(uint64 requested_irqs, bool can_target_64bit) -> (zx.status s, MsiBlock block);
     13: MsiFreeBlock(MsiBlock block) -> (zx.status s);
     14: MsiMaskUnmask(uint64 msi_id, bool mask) -> (zx.status s);
+    /// Request address space reservations from platform bus to use for mapping bars / bridges
+    /// TODO(cja): parameters/return are not finalized.
     15: GetAddressSpace(usize len, PciAddressSpace type, bool low) -> (zx.status s, zx.paddr base);
+    /// Free address space reserved via GetAddressSpace from platform bus to use for mapping bars / bridges
+    /// TODO(cja): parameters/return are not finalized.
     16: FreeAddressSpace(zx.paddr base, usize len, PciAddressSpace type) -> (zx.status s);
 };

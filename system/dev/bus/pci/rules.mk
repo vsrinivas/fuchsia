@@ -13,6 +13,7 @@ MODULE_NAME := bus-pci
 MODULE_SRCS := $(LOCAL_DIR)/upci.c
 MODULE_STATIC_LIBS := system/ulib/ddk
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+MODULE_BANJO_LIBS := system/banjo/ddk-protocol-pci system/banjo/ddk-protocol-pciroot
 include make/module.mk
 
 else

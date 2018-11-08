@@ -8,6 +8,7 @@
 #include <acpica/acpi.h>
 #include <acpica/actypes.h>
 #include <ddk/device.h>
+#include <ddk/protocol/pciroot.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/pci.h>
 
@@ -26,6 +27,14 @@ typedef struct pci_ecam_baas {
     uint8_t end_bus_num;
     uint32_t reserved0;
 } pci_mcfg_allocation_t;
+
+typedef struct pciroot_ctx {
+    char name[5];
+    ACPI_HANDLE acpi_object;
+    ACPI_DEVICE_INFO acpi_device_info;
+    struct pci_platform_info info;
+    zx_device_t* zxdev;
+} pciroot_ctx_t;
 
 zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* info, publish_acpi_device_ctx_t* ctx);
 void register_pci_root(ACPI_HANDLE dev_obj);
