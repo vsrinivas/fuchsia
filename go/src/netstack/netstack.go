@@ -446,7 +446,9 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 			panic("NIC known by netstack not in interface table")
 		}
 		if err := nic.eth.SetPromiscuousMode(true); err != nil {
-			return nil, err
+			fmt.Printf("Failed to set promiscuous mode on %s. But ignore for now.\n", nic.nic.Name)
+			// TODO(NET-1808): Ignore the error for now. Need better error handling for the adapter
+			//                 requiring promiscuous mode working (e.g. Ethernet adapter).
 		}
 		links = append(links, &nic.statsEP)
 	}
