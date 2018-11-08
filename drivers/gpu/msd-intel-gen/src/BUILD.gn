@@ -76,6 +76,10 @@ source_set("src") {
     "../include",
   ]
 
+  public_deps = [
+    "//zircon/public/banjo/ddk-protocol-intel-gpu-core",
+  ]
+
   defines = []
   if (msd_intel_enable_mapping_cache) {
     defines += [ "MSD_INTEL_ENABLE_MAPPING_CACHE" ]
