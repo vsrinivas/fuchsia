@@ -63,7 +63,8 @@ The first step is to build Zircon which uses its own build system:
 $ scripts/build-zircon.sh
 ```
 
-This is what gets run under the hood by `fx build-zircon`.
+This is what gets run under the hood by `fx build-zircon`, which is run by `fx
+full-build`.
 
 For a list of all options, run `build-zircon.sh -h`. See Zircon's
 [Getting started][zircon-getting-started] and
@@ -74,14 +75,17 @@ For a list of all options, run `build-zircon.sh -h`. See Zircon's
 Then configure the content of the generated image by choosing the top level
 product to build:
 ```
-# fuchsia_base is typically "default".
-# my_stuff is a possibly-empty list of extra packages to preinstall.
-
-$ buildtools/gn gen out/x64 --args='fuchsia_products=["garnet/products/fuchsia_base"] fuchsia_packages=["build/gn/my_stuff"]'
+# --products and --packages can be omitted to use the defaults, which are
+# $layer/products/default.gni and empty, respectively.
+$ buildtools/gn gen out/x64 --args='import("//garnet/products/product_name.gni") fuchsia_packages=["garnet/packages/my_stuff"]'
 ```
+
 This will create an `out/x64` directory containing Ninja files.
 
-This is what gets run under the hood by `fx set`.
+The equivalent fx set command is:
+```
+$ scripts/fx set x64 --products garnet/products/base.gni --packages garnet/packages/my_stuff
+```
 
 For a list of all GN build arguments, run `buildtools/gn args out/x64 --list`.
 For documentation on the `select_variant` argument, see [Variants](variants.md).
