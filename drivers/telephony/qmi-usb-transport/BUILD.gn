@@ -26,6 +26,7 @@ driver_module("qmi_driver") {
   ]
 
   deps = [
+    "//zircon/public/banjo/ddk-protocol-ethernet",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/zx",
