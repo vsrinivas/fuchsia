@@ -1,4 +1,4 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -31,17 +31,15 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"
 
-// Only commands & args in this whitelist may be launched (see CP-72)
-const std::vector<std::vector<std::string>> kCommandWhitelist = {
-    {"/system/bin/sshd", "-ire"},
-};
-
 constexpr zx_rights_t kChildJobRights =
     ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_DESTROY | ZX_RIGHT_MANAGE_JOB;
 
+const auto kSshdPath = "/pkg/bin/sshd";
+const char* kSshdArgv[] = {kSshdPath, "-ie", "-f", "/pkg/data/ssh/sshd_config", NULL};
+
 class Service {
  public:
-  Service(int port, const char** argv) : port_(port), argv_(argv) {
+  explicit Service(int port) : port_(port) {
     sock_ = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
     if (sock_ < 0) {
       FXL_LOG(ERROR) << "Failed to create socket: " << strerror(errno);
@@ -136,7 +134,7 @@ class Service {
     zx::process process;
     std::string error;
     zx_status_t status = chrealm::SpawnBinaryInRealmAsync(
-        "/hub", argv_, child_job.get(),
+        "/hub", kSshdArgv, child_job.get(),
         FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_CLONE_LDSVC, actions,
         process.reset_and_get_address(), &error);
     if (status < 0) {
@@ -175,7 +173,6 @@ class Service {
   }
 
   int port_;
-  const char** argv_;
   int sock_;
   fsl::FDWaiter waiter_;
   zx::job job_;
@@ -183,22 +180,8 @@ class Service {
   std::vector<std::unique_ptr<async::Wait>> process_waiters_;
 };
 
-bool is_whitelisted(int argc, const char** argv) {
-  std::vector<std::string> args(argv, argv + argc);
-  auto it = std::find(kCommandWhitelist.begin(), kCommandWhitelist.end(), args);
-  if (it == kCommandWhitelist.end()) {
-    std::cerr << "Command not whitelisted: ";
-    for (auto it2 = args.begin(); it2 != args.end(); it2++) {
-      std::cerr << " " << *it2;
-    }
-    std::cerr << std::endl;
-    return false;
-  }
-  return true;
-}
-
 void usage(const char* command) {
-  std::cerr << command << " <port> <command> [<args>...]" << std::endl;
+  std::cerr << command << " <port>" << std::endl;
 }
 
 int main(int argc, const char** argv) {
@@ -213,23 +196,28 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
   async_set_default_dispatcher(loop.dispatcher());
 
-  if (argc < 3) {
+  if (argc > 2) {
     usage(argv[0]);
     return 1;
   }
 
   char* end;
-  int port = strtod(argv[1], &end);
-  if (port == 0 || end == argv[1] || *end != '\0') {
-    usage(argv[0]);
-    return 1;
+  int port = 22;
+  
+  if (argc == 2) {
+    strtod(argv[1], &end);
+    if (port == 0 || end == argv[1] || *end != '\0') {
+      usage(argv[0]);
+      return 1;
+    }
   }
 
-  if (!is_whitelisted(argc - 2, argv + 2)) {
-    return 1;
-  }
+  zx_handle_t process;
+  const char* keygenargs[] = {"/pkg/bin/hostkeygen", NULL};
+  fdio_spawn(0, FDIO_SPAWN_CLONE_ALL, keygenargs[0], keygenargs, &process);
+  zx_object_wait_one(process, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, nullptr);
 
-  Service service(port, argv + 2);
+  Service service(port);
 
   loop.Run();
   async_set_default_dispatcher(NULL);
