@@ -73,6 +73,9 @@ def main():
     parser.add_argument("--clang_prefix",
                         help="Path to the clang prefix",
                         required=True)
+    parser.add_argument("--clang-resource-dir",
+                        help="Path to the clang resource dir",
+                        required=True)
     parser.add_argument("--mmacosx-version-min",
                         help="Select macosx framework version",
                         required=False)
@@ -94,29 +97,39 @@ def main():
 
     clang_c_compiler = os.path.join(args.clang_prefix, "clang")
 
-    env["CARGO_TARGET_LINKER"] = clang_c_compiler
-    env["CARGO_TARGET_X86_64_APPLE_DARWIN_LINKER"] = clang_c_compiler
-    env["CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER"] = clang_c_compiler
-    env["CARGO_TARGET_%s_LINKER" % args.target.replace("-", "_").upper()] = clang_c_compiler
-
     rustflags = [
         "-Copt-level=" + args.opt_level,
         "-Cdebuginfo=" + args.symbol_level,
-        "-Clink-arg=--target=" + args.target,
     ]
-    if args.target.startswith("aarch64"):
-        rustflags += ["-Clink-arg=-Wl,--fix-cortex-a53-843419"]
+
     if args.target.endswith("fuchsia"):
-        rustflags += ["-Clink-arg=-Wl,--pack-dyn-relocs=relr"]
-    if not args.target.endswith("darwin"):
-        rustflags += ["-Clink-arg=-Wl,--threads"]
+        if args.target.startswith("aarch64"):
+            rustflags += ["-Clink-arg=--fix-cortex-a53-843419"]
+        rustflags += [
+            "-L", os.path.join(args.sysroot, "lib"),
+            "-Clink-arg=--pack-dyn-relocs=relr",
+            "-Clink-arg=--threads",
+            "-Clink-arg=-L%s" % os.path.join(args.sysroot, "lib"),
+            "-Clink-arg=-L%s" % os.path.join(args.clang_resource_dir, args.target, "lib"),
+        ]
+        if args.sysroot and args.shared_libs_root:
+            rustflags += [
+                "-Clink-arg=--sysroot=" + args.sysroot,
+                "-Lnative=" + args.shared_libs_root,
+            ]
+    else:
+        if args.target.startswith("aarch64"):
+            rustflags += ["-Clink-arg=-Wl,--fix-cortex-a53-843419"]
+        if not args.target.endswith("darwin"):
+            rustflags += ["-Clink-arg=-Wl,--threads"]
+        env["CARGO_TARGET_LINKER"] = clang_c_compiler
+        env["CARGO_TARGET_X86_64_APPLE_DARWIN_LINKER"] = clang_c_compiler
+        env["CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER"] = clang_c_compiler
+        env["CARGO_TARGET_%s_LINKER" % args.target.replace("-", "_").upper()] = clang_c_compiler
+        rustflags += ["-Clink-arg=--target=" + args.target]
+
     if args.mmacosx_version_min:
         rustflags += ["-Clink-arg=-mmacosx-version-min=%s" % args.mmacosx_version_min]
-    if args.sysroot and args.shared_libs_root:
-        rustflags += [
-            "-Clink-arg=--sysroot=" + args.sysroot,
-            "-Lnative=" + args.shared_libs_root,
-        ]
     env["CARGO_TARGET_%s_RUSTFLAGS" % args.target.replace("-", "_").upper()] = (
         ' '.join(rustflags)
     )

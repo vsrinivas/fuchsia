@@ -77,6 +77,16 @@ if (is_debug) {
   _rust_opt_level = "z"
 }
 
+clang_prefix_rebased = rebase_path(clang_prefix, "", root_build_dir)
+
+clang_resource_dir =
+  exec_script(
+    rebase_path("$clang_prefix_rebased/clang"),
+    ["--target=$_target", "-print-resource-dir"],
+    "trim string",
+    []
+  )
+
 # rust_config collects common arguments and dependencies for rustc builds
 rust_build_args = [
                     "--rustc",
@@ -91,7 +101,9 @@ rust_build_args = [
                     "--sysroot",
                     _sysroot,
                     "--clang_prefix",
-                    rebase_path(clang_prefix, "", root_build_dir),
+                    rebase_path(clang_prefix_rebased, "", root_build_dir),
+                    "--clang-resource-dir",
+                    clang_resource_dir,
                     "--opt-level",
                     _rust_opt_level,
                     "--symbol-level",

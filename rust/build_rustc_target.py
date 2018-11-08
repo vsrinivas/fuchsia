@@ -103,6 +103,9 @@ def main():
     parser.add_argument("--clang_prefix",
                         help="Path to the clang prefix",
                         required=True)
+    parser.add_argument("--clang-resource-dir",
+                        help="Path to the clang resource dir",
+                        required=True)
     parser.add_argument("--sysroot",
                         help="Path to the sysroot",
                         required=True)
@@ -161,20 +164,33 @@ def main():
         "--crate-type=%s" % args.crate_type,
         "--crate-name=%s" % args.crate_name,
         "--target=%s" % args.target,
-        "-Clinker=%s" % os.path.join(args.clang_prefix, "clang"),
-        "-Clink-arg=--target=%s" % args.target,
-        "-Clink-arg=--sysroot=%s" % args.sysroot,
         "-Copt-level=%s" % args.opt_level,
         "-Cdebuginfo=%s" % args.symbol_level,
         "-Lnative=%s" % args.shared_libs_root,
         "--color=always",
     ]
-    if args.target.startswith("aarch64"):
-        call_args += ["-Clink-arg=-Wl,--fix-cortex-a53-843419"]
-    if not args.target.endswith("darwin"):
-        call_args += ["-Clink-arg=-Wl,--threads"]
+
     if args.target.endswith("fuchsia"):
-        call_args += ["-Clink-arg=-Wl,--pack-dyn-relocs=relr"]
+        call_args += [
+            "-L", os.path.join(args.sysroot, "lib"),
+            "-Clink-arg=--pack-dyn-relocs=relr",
+            "-Clink-arg=--sysroot=%s" % args.sysroot,
+            "-Clink-arg=-L%s" % os.path.join(args.sysroot, "lib"),
+            "-Clink-arg=-L%s" % os.path.join(args.clang_resource_dir, args.target, "lib"),
+            "-Clink-arg=--threads",
+            "-Clink-arg=-dynamic-linker=ld.so.1",
+        ]
+        if args.target.startswith("aarch64"):
+            call_args += ["-Clink-arg=--fix-cortex-a53-843419"]
+    else:
+        call_args += [
+            "-Clinker=%s" % os.path.join(args.clang_prefix, "clang"),
+        ]
+        if not args.target.endswith("darwin"):
+            call_args += ["-Clink-arg=-Wl,--threads"]
+        if args.target.startswith("aarch64"):
+            call_args += ["-Clink-arg=-Wl,--fix-cortex-a53-843419"]
+
     if args.mmacosx_version_min:
         call_args += [
             "-Clink-arg=-mmacosx-version-min=%s" % args.mmacosx_version_min,
