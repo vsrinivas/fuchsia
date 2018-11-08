@@ -246,6 +246,23 @@ static fidl_txn_t dh_null_txn = {
     .reply = dh_null_reply,
 };
 
+// Handler for when open() is called on a device
+// This may look like duplicate code from devhost-rpc-server, but in a followup
+// patch, the DevhostIostate type will be split in two.
+static zx_status_t fidl_devhost_iostate_directory_open(void* ctx, uint32_t flags, uint32_t mode,
+                                                       const char* path_data, size_t path_size,
+                                                       zx_handle_t object) {
+    auto ios = static_cast<DevhostIostate*>(ctx);
+    zx::channel c(object);
+    return devhost_device_connect(ios->dev, flags, path_data, path_size, fbl::move(c));
+}
+
+static const fuchsia_io_Directory_ops_t kDevhostIostateDirectoryOps = []() {
+    fuchsia_io_Directory_ops_t ops;
+    ops.Open = fidl_devhost_iostate_directory_open;
+    return ops;
+}();
+
 static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
     Message msg;
     zx_handle_t hin[3];
@@ -272,7 +289,9 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
             .num_handles = hcount,
         };
 
-        if ((r = devhost_fidl_handler(&fidl_msg, &dh_null_txn, ios)) != ZX_OK) {
+        r = fuchsia_io_Directory_dispatch(ios, &dh_null_txn, &fidl_msg,
+                                          &kDevhostIostateDirectoryOps);
+        if (r != ZX_OK) {
             log(ERROR, "devhost: OPEN failed: %d\n", r);
             return r;
         }

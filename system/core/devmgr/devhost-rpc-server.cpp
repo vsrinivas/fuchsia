@@ -283,12 +283,8 @@ static zx_status_t fidl_node_describe(void* ctx, fidl_txn_t* txn) {
     return fuchsia_io_NodeDescribe_reply(txn, &info);
 }
 
-static zx_status_t fidl_directory_open(void* ctx, uint32_t flags, uint32_t mode,
-                                       const char* path_data, size_t path_size,
-                                       zx_handle_t object) {
-    zx::channel c(object);
-    auto ios = static_cast<DevhostIostate*>(ctx);
-    const auto& dev = ios->dev;
+zx_status_t devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags,
+                                   const char* path_data, size_t path_size, zx::channel c) {
     if ((path_size < 1) || (path_size > 1024)) {
         return ZX_OK;
     }
@@ -302,6 +298,14 @@ static zx_status_t fidl_directory_open(void* ctx, uint32_t flags, uint32_t mode,
     }
     devhost_get_handles(fbl::move(c), dev, path_data, flags);
     return ZX_OK;
+}
+
+static zx_status_t fidl_directory_open(void* ctx, uint32_t flags, uint32_t mode,
+                                       const char* path_data, size_t path_size,
+                                       zx_handle_t object) {
+    auto ios = static_cast<DevhostIostate*>(ctx);
+    zx::channel c(object);
+    return devhost_device_connect(ios->dev, flags, path_data, path_size, fbl::move(c));
 }
 
 static zx_status_t fidl_directory_unlink(void* ctx, const char* path_data,
