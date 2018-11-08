@@ -37,9 +37,11 @@ class MdnsInterfaceTransceiver {
 
   virtual ~MdnsInterfaceTransceiver();
 
+  const inet::IpAddress& address() const { return address_; }
+
   const std::string& name() const { return name_; }
 
-  const inet::IpAddress& address() const { return address_; }
+  uint32_t index() const { return index_; }
 
   // Starts the interface transceiver.
   bool Start(InboundMessageCallback callback);
@@ -73,8 +75,6 @@ class MdnsInterfaceTransceiver {
 
   MdnsInterfaceTransceiver(inet::IpAddress address, const std::string& name,
                            uint32_t index);
-
-  uint32_t index() const { return index_; }
 
   const fxl::UniqueFD& socket_fd() const { return socket_fd_; }
 

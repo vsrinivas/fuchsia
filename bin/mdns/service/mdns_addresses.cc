@@ -24,9 +24,9 @@ const inet::SocketAddress MdnsAddresses::kV6Bind(in6addr_any, kMdnsPort);
 
 // static
 const ReplyAddress MdnsAddresses::kV4MulticastReply(MdnsAddresses::kV4Multicast,
-                                                    0);
+                                                    inet::IpAddress());
 
 // static
 const ReplyAddress MdnsAddresses::kV6MulticastReply(MdnsAddresses::kV6Multicast,
-                                                    0);
+                                                    inet::IpAddress());
 }  // namespace mdns

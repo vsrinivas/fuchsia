@@ -5,13 +5,12 @@
 #ifndef GARNET_BIN_MDNS_SERVICE_MDNS_TRANSCEIVER_H_
 #define GARNET_BIN_MDNS_SERVICE_MDNS_TRANSCEIVER_H_
 
-#include <memory>
-#include <vector>
-
+#include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <netinet/in.h>
-
-#include "garnet/bin/mdns/service/interface_monitor.h"
+#include <memory>
+#include <unordered_map>
+#include <vector>
 #include "garnet/bin/mdns/service/mdns_interface_transceiver.h"
 #include "lib/fxl/macros.h"
 
@@ -20,7 +19,6 @@ namespace mdns {
 // Sends and receives mDNS messages on any number of interfaces.
 class MdnsTransceiver {
  public:
-  using LinkChangeCallback = fit::closure;
   using InboundMessageCallback =
       fit::function<void(std::unique_ptr<DnsMessage>, const ReplyAddress&)>;
 
@@ -28,14 +26,8 @@ class MdnsTransceiver {
 
   ~MdnsTransceiver();
 
-  // Enables the specified interface and family. Should be called before calling
-  // |Start|. If |EnableInterface| isn't called prior to |Start|, the
-  // transceiver will use all available interfaces. Otherwise it uses just the
-  // interfaces that have been enabled.
-  void EnableInterface(const std::string& name, sa_family_t family);
-
   // Starts the transceiver.
-  void Start(std::unique_ptr<InterfaceMonitor> interface_monitor,
+  void Start(fuchsia::netstack::NetstackPtr netstack,
              fit::closure link_change_callback,
              InboundMessageCallback inbound_message_callback);
 
@@ -43,7 +35,7 @@ class MdnsTransceiver {
   void Stop();
 
   // Determines if this transceiver has interfaces.
-  bool has_interfaces() { return !interface_transceivers_.empty(); }
+  bool has_interfaces() { return !interface_transceivers_by_address_.empty(); }
 
   // Sends a messaage to the specified address. A V6 interface will send to
   // |MdnsAddresses::kV6Multicast| if |reply_address.socket_address()| is
@@ -54,53 +46,29 @@ class MdnsTransceiver {
   void LogTraffic();
 
  private:
-  struct InterfaceId {
-    InterfaceId(const std::string& name, sa_family_t family)
-        : name_(name), family_(family) {}
+  // Returns the interface transceiver with address |address| if it exists,
+  // nullptr if not.
+  MdnsInterfaceTransceiver* GetInterfaceTransceiver(
+      const inet::IpAddress& address);
 
-    std::string name_;
-    sa_family_t family_;
-  };
+  // Handles |OnInterfaceChanged| events from |Netstack|.
+  void InterfacesChanged(
+      fidl::VectorPtr<fuchsia::netstack::NetInterface> interfaces);
 
-  // Returns the interface transceiver at |index| if it exists, nullptr if not.
-  MdnsInterfaceTransceiver* GetInterfaceTransceiver(size_t index);
+  // Ensures that an interface transciever exists for |address| if |address|
+  // is valid. Returns true if a change was made, false otherwise.
+  bool EnsureInterfaceTransceiver(
+      const inet::IpAddress& address, const inet::IpAddress& alternate_address,
+      uint32_t id, const std::string& name,
+      std::unordered_map<inet::IpAddress,
+                         std::unique_ptr<MdnsInterfaceTransceiver>>* prev);
 
-  // Sets the interface transceiver at |index|. |interface_transceiver| may be
-  // null.
-  void SetInterfaceTransceiver(
-      size_t index,
-      std::unique_ptr<MdnsInterfaceTransceiver> interface_transceiver);
-
-  // Determines if the interface is enabled.
-  bool InterfaceEnabled(const InterfaceDescriptor& interface_descr);
-
-  // Ensures that the collection of |MdnsInterfaceTransceiver|s is up-to-date
-  // with respect to the current set of interfaces.
-  void OnLinkChange();
-
-  // Adds an interface transceiver for the described interface at the given
-  // index. The interface transceiver must not exist already. Returns true if
-  // the interface transceiver was added successfully, false if it couldn't be
-  // started.
-  bool AddInterfaceTransceiver(size_t index,
-                               const InterfaceDescriptor& interface_descr);
-
-  // Replace an interface transceiver for the described interface at the given
-  // index. The interface transceiver must exist.
-  void ReplaceInterfaceTransceiver(size_t index,
-                                   const InterfaceDescriptor& interface_descr);
-
-  // Remove the interface transceiver with the given index. The interface
-  // transceiver must exist.
-  void RemoveInterfaceTransceiver(size_t index);
-
-  std::unique_ptr<InterfaceMonitor> interface_monitor_;
-  std::vector<InterfaceId> enabled_interfaces_;
-  LinkChangeCallback link_change_callback_;
+  fuchsia::netstack::NetstackPtr netstack_;
+  fit::closure link_change_callback_;
   InboundMessageCallback inbound_message_callback_;
   std::string host_full_name_;
-  std::vector<std::unique_ptr<MdnsInterfaceTransceiver>>
-      interface_transceivers_;
+  std::unordered_map<inet::IpAddress, std::unique_ptr<MdnsInterfaceTransceiver>>
+      interface_transceivers_by_address_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MdnsTransceiver);
 };

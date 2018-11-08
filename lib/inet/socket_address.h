@@ -115,4 +115,12 @@ std::ostream& operator<<(std::ostream& os, const SocketAddress& value);
 
 }  // namespace inet
 
+template <>
+struct std::hash<inet::SocketAddress> {
+  std::size_t operator()(const inet::SocketAddress& address) const noexcept {
+    return std::hash<inet::IpAddress>{}(address.address()) ^
+           (std::hash<uint16_t>{}(address.port().as_uint16_t()) << 1);
+  }
+};
+
 #endif  // GARNET_LIB_INET_SOCKET_ADDRESS_H_

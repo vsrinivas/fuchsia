@@ -4,10 +4,9 @@
 
 #include "garnet/bin/mdns/service/mdns_service_impl.h"
 
+#include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-
-#include "garnet/bin/mdns/service/fidl_interface_monitor.h"
 #include "garnet/bin/mdns/service/host_name.h"
 #include "garnet/bin/mdns/service/mdns_fidl_util.h"
 #include "garnet/bin/mdns/service/mdns_names.h"
@@ -35,7 +34,9 @@ void MdnsServiceImpl::Start() {
     return;
   }
 
-  mdns_.Start(FidlInterfaceMonitor::Create(startup_context_), GetHostName());
+  mdns_.Start(startup_context_
+                  ->ConnectToEnvironmentService<fuchsia::netstack::Netstack>(),
+              GetHostName());
 }
 
 void MdnsServiceImpl::ResolveHostName(fidl::StringPtr host_name,

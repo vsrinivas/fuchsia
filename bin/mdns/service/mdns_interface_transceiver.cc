@@ -57,7 +57,7 @@ bool MdnsInterfaceTransceiver::Start(InboundMessageCallback callback) {
   FXL_DCHECK(callback);
   FXL_DCHECK(!socket_fd_.is_valid()) << "Start called when already started.";
 
-  std::cerr << "Starting mDNS on interface " << name_ << ", IPv4 " << address_
+  std::cerr << "Starting mDNS on interface " << name_ << " " << address_
             << "\n";
 
   socket_fd_ = fxl::UniqueFD(socket(address_.family(), SOCK_DGRAM, 0));
@@ -155,6 +155,15 @@ int MdnsInterfaceTransceiver::SetOptionSharePort() {
   if (result < 0) {
     FXL_LOG(ERROR) << "Failed to set socket option SO_REUSEADDR, errno "
                    << errno;
+    return result;
+  }
+
+  param = 1;
+  result = setsockopt(socket_fd_.get(), SOL_SOCKET, SO_REUSEPORT, &param,
+                      sizeof(param));
+  if (result < 0) {
+    FXL_LOG(ERROR) << "Failed to set socket option SO_REUSEPORT, errno "
+                   << errno;
   }
 
   return result;
@@ -186,7 +195,7 @@ void MdnsInterfaceTransceiver::InboundReady(zx_status_t status,
   ++messages_received_;
   bytes_received_ += result;
 
-  ReplyAddress reply_address(source_address_storage, index_);
+  ReplyAddress reply_address(source_address_storage, address_);
 
   if (reply_address.socket_address().address() == address_) {
     // This is an outgoing message that's bounced back to us. Drop it.

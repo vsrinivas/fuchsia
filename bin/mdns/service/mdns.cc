@@ -7,10 +7,8 @@
 #include <iostream>
 #include <limits>
 #include <unordered_set>
-
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-
 #include "garnet/bin/mdns/service/address_prober.h"
 #include "garnet/bin/mdns/service/address_responder.h"
 #include "garnet/bin/mdns/service/dns_formatting.h"
@@ -30,17 +28,13 @@ Mdns::Mdns() : dispatcher_(async_get_default_dispatcher()) {}
 
 Mdns::~Mdns() {}
 
-void Mdns::EnableInterface(const std::string& name, sa_family_t family) {
-  transceiver_.EnableInterface(name, family);
-}
-
 void Mdns::SetVerbose(bool verbose) {
 #ifndef NDEBUG
   verbose_ = verbose;
 #endif // ifndef NDEBUG
 }
 
-void Mdns::Start(std::unique_ptr<InterfaceMonitor> interface_monitor,
+void Mdns::Start(fuchsia::netstack::NetstackPtr netstack,
                  const std::string& host_name) {
   FXL_DCHECK(!host_name.empty());
   FXL_DCHECK(state_ == State::kNotStarted);
@@ -56,7 +50,7 @@ void Mdns::Start(std::unique_ptr<InterfaceMonitor> interface_monitor,
   AddAgent(std::make_shared<AddressResponder>(this));
 
   transceiver_.Start(
-      std::move(interface_monitor),
+      std::move(netstack),
       [this]() {
         // TODO(dalesat): Link changes that create host name conflicts.
         // Once we have a NIC and we've decided on a unique host name, we

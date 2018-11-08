@@ -118,4 +118,19 @@ std::ostream& operator<<(std::ostream& os, const IpAddress& value);
 
 }  // namespace inet
 
+template <>
+struct std::hash<inet::IpAddress> {
+  std::size_t operator()(const inet::IpAddress& address) const noexcept {
+    size_t hash = 0;
+
+    auto byte_ptr = address.as_bytes();
+    for (size_t i = 0; i < address.byte_count(); ++i) {
+      hash = (hash << 1) ^ *byte_ptr;
+      ++byte_ptr;
+    }
+
+    return hash;
+  }
+};
+
 #endif  // GARNET_LIB_INET_IP_ADDRESS_H_

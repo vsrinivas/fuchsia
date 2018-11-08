@@ -5,15 +5,14 @@
 #ifndef GARNET_BIN_MDNS_SERVICE_MDNS_H_
 #define GARNET_BIN_MDNS_SERVICE_MDNS_H_
 
+#include <fuchsia/netstack/cpp/fidl.h>
+#include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 #include <memory>
 #include <queue>
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-#include <lib/async/dispatcher.h>
-#include <lib/fit/function.h>
-
 #include "garnet/bin/mdns/service/dns_message.h"
 #include "garnet/bin/mdns/service/mdns_agent.h"
 #include "garnet/bin/mdns/service/mdns_transceiver.h"
@@ -137,18 +136,11 @@ class Mdns : public MdnsAgent::Host {
 
   virtual ~Mdns() override;
 
-  // Enables the specified interface and family. Should be called before calling
-  // |Start|. If |EnableInterface| isn't called prior to |Start|, |Mdns| will
-  // use all available interfaces. Otherwise it uses just the interfaces that
-  // have been enabled.
-  void EnableInterface(const std::string& name, sa_family_t family);
-
   // Determines whether message traffic will be logged.
   void SetVerbose(bool verbose);
 
   // Starts the transceiver.
-  void Start(std::unique_ptr<InterfaceMonitor> interface_monitor,
-             const std::string& host_name);
+  void Start(fuchsia::netstack::NetstackPtr, const std::string& host_name);
 
   // Stops the transceiver.
   void Stop();
@@ -203,17 +195,9 @@ class Mdns : public MdnsAgent::Host {
 
   struct ReplyAddressHash {
     std::size_t operator()(const ReplyAddress& reply_address) const noexcept {
-      size_t hash = reply_address.interface_index();
-
-      const uint8_t* byte_ptr = reinterpret_cast<const uint8_t*>(
-          reply_address.socket_address().as_sockaddr());
-
-      for (socklen_t i = 0; i < reply_address.socket_address().socklen(); ++i) {
-        hash = (hash << 1) ^ *byte_ptr;
-        ++byte_ptr;
-      }
-
-      return hash;
+      return std::hash<inet::SocketAddress>{}(reply_address.socket_address()) ^
+             (std::hash<inet::IpAddress>{}(reply_address.interface_address())
+              << 1);
     }
   };
 
@@ -290,7 +274,7 @@ class Mdns : public MdnsAgent::Host {
   std::shared_ptr<DnsResource> address_placeholder_;
 #ifndef NDEBUG
   bool verbose_ = false;
-#endif // ifndef NDEBUG
+#endif  // ifndef NDEBUG
   std::shared_ptr<ResourceRenewer> resource_renewer_;
   bool prohibit_agent_removal_ = false;
 

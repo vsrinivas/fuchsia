@@ -100,6 +100,10 @@ int MdnsInterfaceTransceiverV6::Bind() {
                     MdnsAddresses::kV6Bind.socklen());
   if (result < 0) {
     FXL_LOG(ERROR) << "Failed to bind socket to V6 address, errno " << errno;
+    // TODO(dalesat): Remove the following once NET-1809 is fixed.
+    if (errno == EADDRINUSE) {
+      FXL_LOG(ERROR) << "(EADDRINUSE) This is probably due to NET-1809.";
+    }
   }
 
   return result;

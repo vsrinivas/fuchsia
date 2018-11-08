@@ -8,33 +8,6 @@ executable("bin") {
   output_name = "mdns"
 
   sources = [
-    "fidl_interface_monitor.cc",
-    "fidl_interface_monitor.h",
-    "host_name.cc",
-    "host_name.h",
-    "main.cc",
-    "mdns_fidl_util.cc",
-    "mdns_fidl_util.h",
-    "mdns_service_impl.cc",
-    "mdns_service_impl.h",
-  ]
-
-  deps = [
-    ":lib",
-    "//garnet/bin/media/util",
-    "//garnet/public/lib/component/cpp",
-    "//garnet/public/fidl/fuchsia.sys",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/fidl/fuchsia.mdns",
-    "//garnet/public/fidl/fuchsia.netstack",
-    "//garnet/public/lib/svc/cpp",
-    "//zircon/public/lib/async-loop-cpp",
-  ]
-}
-
-source_set("lib") {
-  sources = [
     "address_prober.cc",
     "address_prober.h",
     "address_responder.cc",
@@ -47,6 +20,8 @@ source_set("lib") {
     "dns_reading.h",
     "dns_writing.cc",
     "dns_writing.h",
+    "host_name.cc",
+    "host_name.h",
     "host_name_resolver.cc",
     "host_name_resolver.h",
     "instance_prober.cc",
@@ -55,12 +30,14 @@ source_set("lib") {
     "instance_requestor.h",
     "instance_responder.cc",
     "instance_responder.h",
-    "interface_monitor.h",
+    "main.cc",
     "mdns.cc",
     "mdns.h",
     "mdns_addresses.cc",
     "mdns_addresses.h",
     "mdns_agent.h",
+    "mdns_fidl_util.cc",
+    "mdns_fidl_util.h",
     "mdns_interface_transceiver.cc",
     "mdns_interface_transceiver.h",
     "mdns_interface_transceiver_v4.cc",
@@ -69,6 +46,8 @@ source_set("lib") {
     "mdns_interface_transceiver_v6.h",
     "mdns_names.cc",
     "mdns_names.h",
+    "mdns_service_impl.cc",
+    "mdns_service_impl.h",
     "mdns_transceiver.cc",
     "mdns_transceiver.h",
     "packet_reader.cc",
@@ -84,14 +63,20 @@ source_set("lib") {
   ]
 
   deps = [
+    "//garnet/bin/media/util",
+    "//garnet/lib/inet",
+    "//garnet/public/fidl/fuchsia.mdns",
+    "//garnet/public/fidl/fuchsia.netstack",
+    "//garnet/public/fidl/fuchsia.netstack",
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fostr",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/fidl/fuchsia.netstack",
-  ]
-
-  public_deps = [
-    "//garnet/lib/inet",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/svc/cpp",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
   ]
 }

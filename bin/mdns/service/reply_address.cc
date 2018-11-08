@@ -9,12 +9,12 @@
 namespace mdns {
 
 ReplyAddress::ReplyAddress(const inet::SocketAddress& socket_address,
-                           uint32_t interface_index)
-    : socket_address_(socket_address), interface_index_(interface_index) {}
+                           const inet::IpAddress& interface_address)
+    : socket_address_(socket_address), interface_address_(interface_address) {}
 
 ReplyAddress::ReplyAddress(const sockaddr_storage& socket_address,
-                           uint32_t interface_index)
-    : socket_address_(socket_address), interface_index_(interface_index) {}
+                           const inet::IpAddress& interface_address)
+    : socket_address_(socket_address), interface_address_(interface_address) {}
 
 std::ostream& operator<<(std::ostream& os, const ReplyAddress& value) {
   if (!value.socket_address().is_valid()) {
@@ -22,7 +22,7 @@ std::ostream& operator<<(std::ostream& os, const ReplyAddress& value) {
   }
 
   return os << value.socket_address() << " interface "
-            << value.interface_index();
+            << value.interface_address();
 }
 
 }  // namespace mdns
