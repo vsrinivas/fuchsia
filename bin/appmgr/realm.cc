@@ -651,6 +651,12 @@ void Realm::CreateComponentFromPackage(
       return;
     }
   } else {
+    FXL_LOG(WARNING)
+        << "Component " << package->resolved_url.get()
+        << " does not have a component manifest (a.k.a. cmx file)! Cmx files "
+        << "will soon be required. Please add a cmx file to your component. "
+        << "https://fuchsia.googlesource.com/docs/+/master/the-book/"
+        << "package_metadata.md#Component-manifest.";
     TRACE_DURATION_END("appmgr", "Realm::CreateComponentFromPackage:IsFileAt");
   }
 
@@ -677,7 +683,7 @@ void Realm::CreateComponentFromPackage(
         program.IsBinaryNull() ? kAppPath : program.binary();
 
     launch_info.arguments->insert(launch_info.arguments->begin(),
-        program.args().begin(), program.args().end());
+                                  program.args().begin(), program.args().end());
 
     app_argv0 = fxl::Concatenate({kAppArgv0Prefix, bin_path});
     TRACE_DURATION_BEGIN("appmgr",
