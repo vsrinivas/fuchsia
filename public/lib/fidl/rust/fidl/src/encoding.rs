@@ -1022,24 +1022,30 @@ type ZxChannel = zx::Channel;
 type ZxEvent = zx::Event;
 type ZxEventPair = zx::EventPair;
 type ZxFifo = zx::Fifo;
+type ZxInterrupt = zx::Interrupt;
 type ZxJob = zx::Job;
+type ZxLog = zx::Log;
 type ZxProcess = zx::Process;
 type ZxSocket = zx::Socket;
 type ZxThread = zx::Thread;
 type ZxTimer = zx::Timer;
 type ZxPort = zx::Port;
+type ZxVmar = zx::Vmar;
 type ZxVmo = zx::Vmo;
 handle_based_codable![
     ZxChannel,
     ZxEvent,
     ZxEventPair,
     ZxFifo,
+    ZxInterrupt,
     ZxJob,
+    ZxLog,
     ZxProcess,
     ZxSocket,
     ZxThread,
     ZxTimer,
     ZxPort,
+    ZxVmar,
     ZxVmo,
 ];
 
