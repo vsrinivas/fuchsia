@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![deny(warnings)]
+
 use rand::Rng;
 use rand::distributions::{Distribution, Standard};
 use std::fmt;
@@ -71,15 +73,15 @@ impl fmt::Display for RollResult {
             ],
         };
 
-        writeln!(f, "{}{}{}{}{}", CORNER, HORIZ, HORIZ, HORIZ, CORNER);
+        writeln!(f, "{}{}{}{}{}", CORNER, HORIZ, HORIZ, HORIZ, CORNER)?;
         for row in &pips {
-            write!(f, "{}", VERT);
+            write!(f, "{}", VERT)?;
             for c in row {
-                write!(f, "{}", c);
+                write!(f, "{}", c)?;
             }
-            writeln!(f, "{}", VERT);
+            writeln!(f, "{}", VERT)?;
         }
-        write!(f, "{}{}{}{}{}", CORNER, HORIZ, HORIZ, HORIZ, CORNER);
+        write!(f, "{}{}{}{}{}", CORNER, HORIZ, HORIZ, HORIZ, CORNER)?;
 
         Ok(())
     }

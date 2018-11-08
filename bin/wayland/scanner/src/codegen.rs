@@ -111,7 +111,7 @@ use fuchsia_wayland_core::{{ArgKind, Arg, Enum, FromArgs, IntoMessage, Message,
         &mut self, name: &str, interface: &ast::Interface, messages: &Vec<ast::Message>,
         arg_formatter: F,
     ) -> Result {
-        writeln!(self.w, "#[derive(Debug)]");
+        writeln!(self.w, "#[derive(Debug)]")?;
         writeln!(self.w, "pub enum {enum_name} {{", enum_name = name)?;
         for message in messages.iter() {
             if let Some(ref d) = message.description {
@@ -466,7 +466,7 @@ impl FromArgs for Request {{
     }
 
     fn codegen_description(&mut self, d: &ast::Description, prefix: &str) -> Result {
-        writeln!(self.w, "");
+        writeln!(self.w, "")?;
         writeln!(self.w, "{}/// {}", prefix, d.summary.as_str().trim())?;
         writeln!(self.w, "{}///", prefix)?;
         for s in d.description.trim().lines() {

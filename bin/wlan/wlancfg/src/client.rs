@@ -237,7 +237,7 @@ fn go_to_auto_connect_state(services: Services, next_req: NextReqFut) -> State
     auto_connect_state(services, next_req).into_state()
 }
 
-async fn connected_state(services: Services, next_req: NextReqFut) -> Result<State, failure::Error>
+async fn connected_state(services: Services, mut next_req: NextReqFut) -> Result<State, failure::Error>
 {
     let disconnected = wait_for_disconnection(services.clone());
     pin_mut!(disconnected);

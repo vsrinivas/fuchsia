@@ -203,7 +203,8 @@ async fn do_ap(cmd: opts::ApCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
         },
         opts::ApCmd::Stop { iface_id } => {
             let sme = await!(get_ap_sme(wlan_svc, iface_id))?;
-            await!(sme.stop());
+            let r = await!(sme.stop());
+            println!("{:?}", r);
         }
     }
     Ok(())

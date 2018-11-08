@@ -318,7 +318,7 @@ pub fn report_neighbor_networks_count(
     );
 }
 
-pub fn report_standards(sender: &mut CobaltSender, num_bss_by_standard: HashMap<Standard, usize>) {
+pub fn report_standards(sender: &mut CobaltSender, mut num_bss_by_standard: HashMap<Standard, usize>) {
     const ALL_STANDARDS: [(Standard, StandardLabel); 5] = [
         (Standard::B, StandardLabel::B),
         (Standard::G, StandardLabel::G),

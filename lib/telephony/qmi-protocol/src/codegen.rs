@@ -445,7 +445,7 @@ impl<'a, W: io::Write> Codegen<'a, W> {
                 )?;
             }
         }
-        writeln!(self.w, ") -> Self {{");
+        writeln!(self.w, ") -> Self {{")?;
         indent!(self);
         writeln_indent!(self, "{}Req {{", msg.name);
         indent!(self);
@@ -499,7 +499,7 @@ impl<'a, W: io::Write> Codegen<'a, W> {
     }
 
     pub fn codegen_service(&mut self, svc: &Service, structure: &Structure) -> Result<(), Error> {
-        writeln!(self.w, "pub mod {} {{", svc.name);
+        writeln!(self.w, "pub mod {} {{", svc.name)?;
         indent!(self);
         writeln_indent!(self, "use crate::{{Decodable, Encodable}};");
         writeln_indent!(self, "use crate::QmiError;");
@@ -512,7 +512,7 @@ impl<'a, W: io::Write> Codegen<'a, W> {
         }
         dedent!(self);
 
-        writeln!(self.w, "}}");
+        writeln!(self.w, "}}")?;
         Ok(())
     }
 
