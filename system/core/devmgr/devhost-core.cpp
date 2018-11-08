@@ -195,11 +195,11 @@ void devhost_device_destroy(zx_device_t* dev) REQ_DM_LOCK {
     dev->local_event = 0xffffffff;
 
     // ensure all pointers are invalid
-    dev->ctx = 0;
-    dev->driver = 0;
-    dev->parent = 0;
-    dev->ios = 0;
-    dev->proxy_ios = 0;
+    dev->ctx = nullptr;
+    dev->driver = nullptr;
+    dev->parent.reset();
+    dev->conn = nullptr;
+    dev->proxy_ios = nullptr;
 
     // Defer destruction to help catch use-after-free and also
     // so the compiler can't (easily) optimize away the poisoning

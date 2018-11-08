@@ -58,17 +58,18 @@ static void proxy_ios_destroy(const fbl::RefPtr<zx_device_t>& dev);
 
 #define proxy_ios_from_ph(ph) containerof(ph, ProxyIostate, ph)
 
-#define ios_from_ph(ph) containerof(ph, DevhostIostate, ph)
+#define conn_from_ph(ph) containerof(ph, DevcoordinatorConnection, ph)
+#define devfs_conn_from_ph(ph) containerof(ph, DevfsConnection, ph)
 
 static zx_status_t dh_handle_dc_rpc(port_handler_t* ph, zx_signals_t signals, uint32_t evt);
 
 static port_t dh_port;
 
-static DevhostIostate root_ios = []() {
-    DevhostIostate ios;
-    ios.ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-    ios.ph.func = dh_handle_dc_rpc;
-    return ios;
+static DevcoordinatorConnection root_dc_conn = []() {
+    DevcoordinatorConnection conn;
+    conn.ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+    conn.ph.func = dh_handle_dc_rpc;
+    return conn;
 }();
 
 static fbl::DoublyLinkedList<fbl::RefPtr<zx_driver>> dh_drivers;
@@ -247,23 +248,21 @@ static fidl_txn_t dh_null_txn = {
 };
 
 // Handler for when open() is called on a device
-// This may look like duplicate code from devhost-rpc-server, but in a followup
-// patch, the DevhostIostate type will be split in two.
-static zx_status_t fidl_devhost_iostate_directory_open(void* ctx, uint32_t flags, uint32_t mode,
-                                                       const char* path_data, size_t path_size,
-                                                       zx_handle_t object) {
-    auto ios = static_cast<DevhostIostate*>(ctx);
+static zx_status_t fidl_devcoord_connection_directory_open(void* ctx, uint32_t flags, uint32_t mode,
+                                                           const char* path_data, size_t path_size,
+                                                           zx_handle_t object) {
+    auto conn = static_cast<DevcoordinatorConnection*>(ctx);
     zx::channel c(object);
-    return devhost_device_connect(ios->dev, flags, path_data, path_size, fbl::move(c));
+    return devhost_device_connect(conn->dev, flags, path_data, path_size, fbl::move(c));
 }
 
-static const fuchsia_io_Directory_ops_t kDevhostIostateDirectoryOps = []() {
+static const fuchsia_io_Directory_ops_t kDevcoordinatorConnectionDirectoryOps = []() {
     fuchsia_io_Directory_ops_t ops;
-    ops.Open = fidl_devhost_iostate_directory_open;
+    ops.Open = fidl_devcoord_connection_directory_open;
     return ops;
 }();
 
-static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
+static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevcoordinatorConnection* conn) {
     Message msg;
     zx_handle_t hin[3];
     uint32_t msize = sizeof(msg);
@@ -276,7 +275,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
     }
 
     char buffer[512];
-    const char* path = mkdevpath(ios->dev, buffer, sizeof(buffer));
+    const char* path = mkdevpath(conn->dev, buffer, sizeof(buffer));
 
     if (msize >= sizeof(fidl_message_header_t) &&
         static_cast<uint32_t>(msg.op) == fuchsia_io_DirectoryOpenOrdinal) {
@@ -289,8 +288,8 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
             .num_handles = hcount,
         };
 
-        r = fuchsia_io_Directory_dispatch(ios, &dh_null_txn, &fidl_msg,
-                                          &kDevhostIostateDirectoryOps);
+        r = fuchsia_io_Directory_dispatch(conn, &dh_null_txn, &fidl_msg,
+                                          &kDevcoordinatorConnectionDirectoryOps);
         if (r != ZX_OK) {
             log(ERROR, "devhost: OPEN failed: %d\n", r);
             return r;
@@ -312,8 +311,8 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
             r = ZX_ERR_INVALID_ARGS;
             goto fail;
         }
-        auto newios = fbl::make_unique<DevhostIostate>();
-        if (!newios) {
+        auto newconn = fbl::make_unique<DevcoordinatorConnection>();
+        if (!newconn) {
             r = ZX_ERR_NO_MEMORY;
             break;
         }
@@ -328,17 +327,17 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
         dev->protocol_id = msg.protocol_id;
         dev->ops = &device_default_ops;
         dev->rpc.reset(hin[0]);
-        newios->dev = dev;
+        newconn->dev = dev;
 
-        newios->ph.handle = hin[0];
-        newios->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-        newios->ph.func = dh_handle_dc_rpc;
-        if ((r = port_wait(&dh_port, &newios->ph)) < 0) {
+        newconn->ph.handle = hin[0];
+        newconn->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+        newconn->ph.func = dh_handle_dc_rpc;
+        if ((r = port_wait(&dh_port, &newconn->ph)) < 0) {
             break;
         }
-        log(RPC_IN, "devhost[%s] created '%s' ios=%p\n", path, name, newios.get());
-        // dh_port has now taken ownership of newios.
-        __UNUSED auto ptr = newios.release();
+        log(RPC_IN, "devhost[%s] created '%s' conn=%p\n", path, name, newconn.get());
+        // dh_port has now taken ownership of newconn.
+        __UNUSED auto ptr = newconn.release();
         return ZX_OK;
     }
 
@@ -356,8 +355,8 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
             r = ZX_ERR_INVALID_ARGS;
             break;
         }
-        auto newios = fbl::make_unique<DevhostIostate>();
-        if (!newios) {
+        auto newconn = fbl::make_unique<DevcoordinatorConnection>();
+        if (!newconn) {
             r = ZX_ERR_NO_MEMORY;
             break;
         }
@@ -399,8 +398,8 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
                 log(ERROR, "devhost[%s] driver create() failed: %d\n", path, r);
                 break;
             }
-            newios->dev = fbl::move(ctx.child);
-            if (newios->dev == nullptr) {
+            newconn->dev = fbl::move(ctx.child);
+            if (newconn->dev == nullptr) {
                 log(ERROR, "devhost[%s] driver create() failed to create a device!", path);
                 r = ZX_ERR_BAD_STATE;
                 break;
@@ -412,15 +411,15 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
         }
         //TODO: inform devcoord
 
-        newios->ph.handle = hin[0];
-        newios->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-        newios->ph.func = dh_handle_dc_rpc;
-        if ((r = port_wait(&dh_port, &newios->ph)) < 0) {
+        newconn->ph.handle = hin[0];
+        newconn->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+        newconn->ph.func = dh_handle_dc_rpc;
+        if ((r = port_wait(&dh_port, &newconn->ph)) < 0) {
             break;
         }
-        log(RPC_IN, "devhost[%s] created '%s' ios=%p\n", path, name, newios.get());
-        // dh_port has now taken ownership of newios
-        __UNUSED auto ptr = newios.release();
+        log(RPC_IN, "devhost[%s] created '%s' conn=%p\n", path, name, newconn.get());
+        // dh_port has now taken ownership of newconn
+        __UNUSED auto ptr = newconn.release();
         return ZX_OK;
     }
 
@@ -432,7 +431,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
         //TODO: api lock integration
         log(RPC_IN, "devhost[%s] bind driver '%s'\n", path, name);
         fbl::RefPtr<zx_driver> drv;
-        if (ios->dev->flags & DEV_FLAG_DEAD) {
+        if (conn->dev->flags & DEV_FLAG_DEAD) {
             log(ERROR, "devhost[%s] bind to removed device disallowed\n", path);
             r = ZX_ERR_IO_NOT_PRESENT;
         } else {
@@ -442,12 +441,12 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
                 log(ERROR, "devhost[%s] driver load failed: %d\n", path, r);
             } else if (drv->has_bind_op()) {
                 CreationContext ctx = {
-                    .parent = ios->dev,
+                    .parent = conn->dev,
                     .child = nullptr,
                     .rpc = ZX_HANDLE_INVALID,
                 };
                 devhost_set_creation_context(&ctx);
-                r = drv->BindOp(ios->dev);
+                r = drv->BindOp(conn->dev);
                 devhost_set_creation_context(nullptr);
 
                 if ((r == ZX_OK) && (ctx.child == nullptr)) {
@@ -474,8 +473,8 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
             break;
         }
         log(RPC_SDW, "devhost[%s] connect proxy rpc\n", path);
-        ios->dev->ops->rxrpc(ios->dev->ctx, ZX_HANDLE_INVALID);
-        proxy_ios_create(ios->dev, hin[0]);
+        conn->dev->ops->rxrpc(conn->dev->ctx, ZX_HANDLE_INVALID);
+        proxy_ios_create(conn->dev, hin[0]);
         return ZX_OK;
 
     case Message::Op::kSuspend: {
@@ -484,7 +483,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
             break;
         }
         // call suspend on the device this devhost is rooted on
-        fbl::RefPtr<zx_device_t> device = ios->dev;
+        fbl::RefPtr<zx_device_t> device = conn->dev;
         while (device->parent != nullptr) {
             device = device->parent;
         }
@@ -500,7 +499,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevhostIostate* ios) {
             r = ZX_ERR_INVALID_ARGS;
             break;
         }
-        device_remove(ios->dev.get());
+        device_remove(conn->dev.get());
         return ZX_OK;
 
     default:
@@ -517,31 +516,31 @@ fail:
 
 // handles devcoordinator rpc
 static zx_status_t dh_handle_dc_rpc(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
-    DevhostIostate* ios = ios_from_ph(ph);
+    DevcoordinatorConnection* conn = conn_from_ph(ph);
 
     if (evt != 0) {
         // we send an event to request the destruction
-        // of an iostate, to ensure that's the *last*
-        // packet about the iostate that we get
-        delete ios;
+        // of a connection, to ensure that's the *last*
+        // packet about the connection that we get
+        delete conn;
         return ZX_ERR_STOP;
     }
-    if (ios->dead) {
+    if (conn->dead) {
         // ports does not let us cancel packets that are
         // already in the queue, so the dead flag enables us
         // to ignore them
         return ZX_ERR_STOP;
     }
     if (signals & ZX_CHANNEL_READABLE) {
-        zx_status_t r = dh_handle_rpc_read(ph->handle, ios);
+        zx_status_t r = dh_handle_rpc_read(ph->handle, conn);
         if (r != ZX_OK) {
-            log(ERROR, "devhost: devmgr rpc unhandleable ios=%p r=%d. fatal.\n", ios, r);
+            log(ERROR, "devhost: devmgr rpc unhandleable conn=%p r=%d. fatal.\n", conn, r);
             exit(0);
         }
         return r;
     }
     if (signals & ZX_CHANNEL_PEER_CLOSED) {
-        log(ERROR, "devhost: devmgr disconnected! fatal. (ios=%p)\n", ios);
+        log(ERROR, "devhost: devmgr disconnected! fatal. (conn=%p)\n", conn);
         exit(0);
     }
     log(ERROR, "devhost: no work? %08x\n", signals);
@@ -550,15 +549,15 @@ static zx_status_t dh_handle_dc_rpc(port_handler_t* ph, zx_signals_t signals, ui
 
 // handles remoteio rpc
 static zx_status_t dh_handle_fidl_rpc(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
-    DevhostIostate* ios = ios_from_ph(ph);
+    DevfsConnection* conn = devfs_conn_from_ph(ph);
 
     zx_status_t r;
     if (signals & ZX_CHANNEL_READABLE) {
-        if ((r = zxfidl_handler(ph->handle, devhost_fidl_handler, ios)) == ZX_OK) {
+        if ((r = zxfidl_handler(ph->handle, devhost_fidl_handler, conn)) == ZX_OK) {
             return ZX_OK;
         }
     } else if (signals & ZX_CHANNEL_PEER_CLOSED) {
-        zxfidl_handler(ZX_HANDLE_INVALID, devhost_fidl_handler, ios);
+        zxfidl_handler(ZX_HANDLE_INVALID, devhost_fidl_handler, conn);
         r = ZX_ERR_STOP;
     } else {
         printf("dh_handle_fidl_rpc: invalid signals %x\n", signals);
@@ -567,11 +566,11 @@ static zx_status_t dh_handle_fidl_rpc(port_handler_t* ph, zx_signals_t signals, 
 
     // We arrive here if handle_rpc was a clean close (ERR_DISPATCHER_DONE),
     // or close-due-to-error (non-ZX_OK), or if the channel was closed
-    // out from under us (ZX_ERR_STOP).  In all cases, the ios's reference to
+    // out from under us (ZX_ERR_STOP).  In all cases, the conn's reference to
     // the device was released, and will no longer be used, so we will free
     // it before returning.
-    zx_handle_close(ios->ph.handle);
-    delete ios;
+    zx_handle_close(conn->ph.handle);
+    delete conn;
     return r;
 }
 
@@ -759,8 +758,8 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
     char name[namelen];
     snprintf(name, namelen, "%s,%s", libname, child->name);
 
-    auto ios = fbl::make_unique<DevhostIostate>();
-    if (!ios) {
+    auto conn = fbl::make_unique<DevcoordinatorConnection>();
+    if (!conn) {
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -787,13 +786,13 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
                         nullptr)) < 0) {
         log(ERROR, "devhost[%s] add '%s': rpc failed: %d\n", path, child->name, r);
     } else {
-        ios->dev = child;
-        ios->ph.handle = hrpc;
-        ios->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-        ios->ph.func = dh_handle_dc_rpc;
-        if ((r = port_wait(&dh_port, &ios->ph)) == ZX_OK) {
+        conn->dev = child;
+        conn->ph.handle = hrpc;
+        conn->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+        conn->ph.func = dh_handle_dc_rpc;
+        if ((r = port_wait(&dh_port, &conn->ph)) == ZX_OK) {
             child->rpc.reset(hrpc);
-            child->ios = ios.release();
+            child->conn = conn.release();
             return ZX_OK;
         }
 
@@ -843,27 +842,27 @@ void devhost_make_visible(const fbl::RefPtr<zx_device_t>& dev) {
 // Send message to devcoordinator informing it that this device
 // is being removed.  Called under devhost api lock.
 zx_status_t devhost_remove(const fbl::RefPtr<zx_device_t>& dev) {
-    DevhostIostate* ios = static_cast<DevhostIostate*>(dev->ios);
-    if (ios == nullptr) {
-        log(ERROR, "removing device %p, ios is nullptr\n", dev.get());
+    DevcoordinatorConnection* conn = static_cast<DevcoordinatorConnection*>(dev->conn);
+    if (conn == nullptr) {
+        log(ERROR, "removing device %p, conn is nullptr\n", dev.get());
         return ZX_ERR_INTERNAL;
     }
 
-    log(DEVLC, "removing device %p, ios %p\n", dev.get(), ios);
+    log(DEVLC, "removing device %p, conn %p\n", dev.get(), conn);
 
-    // Make this iostate inactive (stop accepting RPCs for it)
+    // Make this connection inactive (stop accepting RPCs for it)
     //
     // If the remove is happening on a different thread than
     // the rpc handler, the handler might observe the peer
     // before devhost_simple_rpc() returns.
-    ios->dev = nullptr;
-    ios->dead = true;
+    conn->dev = nullptr;
+    conn->dead = true;
 
     // ensure we get no further events
     //TODO: this does not work yet, ports limitation
-    port_cancel(&dh_port, &ios->ph);
-    ios->ph.handle = ZX_HANDLE_INVALID;
-    dev->ios = nullptr;
+    port_cancel(&dh_port, &conn->ph);
+    conn->ph.handle = ZX_HANDLE_INVALID;
+    dev->conn = nullptr;
 
     Status rsp;
     devhost_rpc(dev, Message::Op::kRemoveDevice, nullptr, "remove-device", &rsp,
@@ -872,8 +871,8 @@ zx_status_t devhost_remove(const fbl::RefPtr<zx_device_t>& dev) {
     // shut down our rpc channel
     dev->rpc.reset();
 
-    // queue an event to destroy the iostate
-    port_queue(&dh_port, &ios->ph, 1);
+    // queue an event to destroy the connection
+    port_queue(&dh_port, &conn->ph, 1);
 
     // shut down our proxy rpc channel if it exists
     proxy_ios_destroy(dev);
@@ -1002,14 +1001,14 @@ zx_status_t devhost_publish_metadata(const fbl::RefPtr<zx_device_t>& dev,
 zx_handle_t root_resource_handle;
 
 
-zx_status_t devhost_start_iostate(fbl::unique_ptr<DevhostIostate> ios, zx::channel h) {
-    ios->ph.handle = h.get();
-    ios->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-    ios->ph.func = dh_handle_fidl_rpc;
-    zx_status_t status = port_wait(&dh_port, &ios->ph);
+zx_status_t devhost_start_connection(fbl::unique_ptr<DevfsConnection> conn, zx::channel h) {
+    conn->ph.handle = h.get();
+    conn->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+    conn->ph.func = dh_handle_fidl_rpc;
+    zx_status_t status = port_wait(&dh_port, &conn->ph);
     if (status == ZX_OK) {
-        // dh_port now owns the iostate and handle
-        __UNUSED auto ptr = ios.release();
+        // dh_port now owns the connection and handle
+        __UNUSED auto ptr = conn.release();
         __UNUSED auto channel = h.release();
     }
     return status;
@@ -1020,8 +1019,8 @@ __EXPORT int device_host_main(int argc, char** argv) {
 
     log(TRACE, "devhost: main()\n");
 
-    root_ios.ph.handle = zx_take_startup_handle(PA_HND(PA_USER0, 0));
-    if (root_ios.ph.handle == ZX_HANDLE_INVALID) {
+    root_dc_conn.ph.handle = zx_take_startup_handle(PA_HND(PA_USER0, 0));
+    if (root_dc_conn.ph.handle == ZX_HANDLE_INVALID) {
         log(ERROR, "devhost: rpc handle invalid\n");
         return -1;
     }
@@ -1050,7 +1049,7 @@ __EXPORT int device_host_main(int argc, char** argv) {
         log(ERROR, "devhost: could not create port: %d\n", r);
         return -1;
     }
-    if ((r = port_wait(&dh_port, &root_ios.ph)) < 0) {
+    if ((r = port_wait(&dh_port, &root_dc_conn.ph)) < 0) {
         log(ERROR, "devhost: could not watch rpc channel: %d\n", r);
         return -1;
     }

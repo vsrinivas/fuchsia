@@ -14,6 +14,7 @@
 
 namespace devmgr {
 
+struct DevcoordinatorConnection;
 struct ProxyIostate;
 
 } // namespace devmgr
@@ -126,7 +127,7 @@ struct zx_device : fbl::RefCounted<zx_device>, fbl::Recyclable<zx_device>  {
     };
 
     // iostate
-    void* ios = nullptr;
+    devmgr::DevcoordinatorConnection* conn = nullptr;
     devmgr::ProxyIostate* proxy_ios = nullptr;
 
     char name[ZX_DEVICE_NAME_MAX + 1] = {};

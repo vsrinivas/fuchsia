@@ -36,8 +36,8 @@ namespace devmgr {
 
 #define ZXDEBUG 0
 
-#define CAN_WRITE(ios) (ios->flags & ZX_FS_RIGHT_WRITABLE)
-#define CAN_READ(ios) (ios->flags & ZX_FS_RIGHT_READABLE)
+#define CAN_WRITE(conn) (conn->flags & ZX_FS_RIGHT_WRITABLE)
+#define CAN_READ(conn) (conn->flags & ZX_FS_RIGHT_READABLE)
 
 void describe_error(zx::channel h, zx_status_t status) {
     fuchsia_io_NodeOnOpenEvent msg;
@@ -78,8 +78,8 @@ static zx_status_t devhost_get_handles(zx::channel rh, const fbl::RefPtr<zx_devi
     bool describe = flags & ZX_FS_FLAG_DESCRIBE;
     flags &= (~ZX_FS_FLAG_DESCRIBE);
 
-    auto newios = fbl::make_unique<DevhostIostate>();
-    if (!newios) {
+    auto newconn = fbl::make_unique<DevfsConnection>();
+    if (!newconn) {
         r = ZX_ERR_NO_MEMORY;
         if (describe) {
             describe_error(fbl::move(rh), r);
@@ -87,7 +87,7 @@ static zx_status_t devhost_get_handles(zx::channel rh, const fbl::RefPtr<zx_devi
         return r;
     }
 
-    newios->flags = flags;
+    newconn->flags = flags;
 
     fbl::RefPtr<zx_device_t> new_dev;
     r = device_open_at(dev, &new_dev, path, flags);
@@ -96,7 +96,7 @@ static zx_status_t devhost_get_handles(zx::channel rh, const fbl::RefPtr<zx_devi
                 dev.get(), dev->name, path ? path : "", r);
         goto fail;
     }
-    newios->dev = new_dev;
+    newconn->dev = new_dev;
 
     if (describe) {
         zxfidl_on_open_t info;
@@ -111,9 +111,9 @@ static zx_status_t devhost_get_handles(zx::channel rh, const fbl::RefPtr<zx_devi
         }
     }
 
-    // If we can't add the new ios and handle to the dispatcher our only option
+    // If we can't add the new conn and handle to the dispatcher our only option
     // is to give up and tear down.  In practice, this should never happen.
-    if ((r = devhost_start_iostate(fbl::move(newios), fbl::move(rh))) != ZX_OK) {
+    if ((r = devhost_start_connection(fbl::move(newconn), fbl::move(rh))) != ZX_OK) {
         fprintf(stderr, "devhost_get_handles: failed to start iostate\n");
         // TODO(teisenbe/kulakowski): Should this be goto fail_open?
         goto fail;
@@ -250,26 +250,26 @@ static ssize_t do_ioctl(const fbl::RefPtr<zx_device_t>& dev, uint32_t op, const 
 }
 
 static zx_status_t fidl_node_clone(void* ctx, uint32_t flags, zx_handle_t object) {
-    auto ios = static_cast<DevhostIostate*>(ctx);
+    auto conn = static_cast<DevfsConnection*>(ctx);
     zx::channel c(object);
-    flags = ios->flags | (flags & ZX_FS_FLAG_DESCRIBE);
-    devhost_get_handles(fbl::move(c), ios->dev, nullptr, flags);
+    flags = conn->flags | (flags & ZX_FS_FLAG_DESCRIBE);
+    devhost_get_handles(fbl::move(c), conn->dev, nullptr, flags);
     return ZX_OK;
 }
 
 static zx_status_t fidl_node_close(void* ctx, fidl_txn_t* txn) {
-    auto ios = static_cast<DevhostIostate*>(ctx);
+    auto conn = static_cast<DevfsConnection*>(ctx);
     // Call device_close to let the driver execute its close hook.  This may
     // be the last reference to the device, causing it to be destroyed.
-    device_close(fbl::move(ios->dev), ios->flags);
+    device_close(fbl::move(conn->dev), conn->flags);
 
     fuchsia_io_NodeClose_reply(txn, ZX_OK);
     return ERR_DISPATCHER_DONE;
 }
 
 static zx_status_t fidl_node_describe(void* ctx, fidl_txn_t* txn) {
-    auto ios = static_cast<DevhostIostate*>(ctx);
-    const auto& dev = ios->dev;
+    auto conn = static_cast<DevfsConnection*>(ctx);
+    const auto& dev = conn->dev;
     fuchsia_io_NodeInfo info;
     memset(&info, 0, sizeof(info));
     info.tag = fuchsia_io_NodeInfoTag_device;
@@ -303,9 +303,9 @@ zx_status_t devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t
 static zx_status_t fidl_directory_open(void* ctx, uint32_t flags, uint32_t mode,
                                        const char* path_data, size_t path_size,
                                        zx_handle_t object) {
-    auto ios = static_cast<DevhostIostate*>(ctx);
+    auto conn = static_cast<DevfsConnection*>(ctx);
     zx::channel c(object);
-    return devhost_device_connect(ios->dev, flags, path_data, path_size, fbl::move(c));
+    return devhost_device_connect(conn->dev, flags, path_data, path_size, fbl::move(c));
 }
 
 static zx_status_t fidl_directory_unlink(void* ctx, const char* path_data,
@@ -406,9 +406,9 @@ static const fuchsia_io_DirectoryAdmin_ops_t kDirectoryAdminOps = []() {
 }();
 
 static zx_status_t fidl_file_read(void* ctx, uint64_t count, fidl_txn_t* txn) {
-    auto ios = static_cast<DevhostIostate*>(ctx);
-    const auto& dev = ios->dev;
-    if (!CAN_READ(ios)) {
+    auto conn = static_cast<DevfsConnection*>(ctx);
+    const auto& dev = conn->dev;
+    if (!CAN_READ(conn)) {
         return fuchsia_io_FileRead_reply(txn, ZX_ERR_ACCESS_DENIED, nullptr, 0);
     } else if (count > ZXFIDL_MAX_MSG_BYTES) {
         return fuchsia_io_FileRead_reply(txn, ZX_ERR_INVALID_ARGS, nullptr, 0);
@@ -417,9 +417,9 @@ static zx_status_t fidl_file_read(void* ctx, uint64_t count, fidl_txn_t* txn) {
     uint8_t data[count];
     size_t actual = 0;
     zx_status_t status = ZX_OK;
-    ssize_t r = do_sync_io(dev, DO_READ, data, count, ios->io_off);
+    ssize_t r = do_sync_io(dev, DO_READ, data, count, conn->io_off);
     if (r >= 0) {
-        ios->io_off += r;
+        conn->io_off += r;
         actual = r;
     } else {
         status = static_cast<zx_status_t>(r);
@@ -428,8 +428,8 @@ static zx_status_t fidl_file_read(void* ctx, uint64_t count, fidl_txn_t* txn) {
 }
 
 static zx_status_t fidl_file_readat(void* ctx, uint64_t count, uint64_t offset, fidl_txn_t* txn) {
-    auto ios = static_cast<DevhostIostate*>(ctx);
-    if (!CAN_READ(ios)) {
+    auto conn = static_cast<DevfsConnection*>(ctx);
+    if (!CAN_READ(conn)) {
         return fuchsia_io_FileReadAt_reply(txn, ZX_ERR_ACCESS_DENIED, nullptr, 0);
     } else if (count > ZXFIDL_MAX_MSG_BYTES) {
         return fuchsia_io_FileReadAt_reply(txn, ZX_ERR_INVALID_ARGS, nullptr, 0);
@@ -438,7 +438,7 @@ static zx_status_t fidl_file_readat(void* ctx, uint64_t count, uint64_t offset, 
     uint8_t data[count];
     size_t actual = 0;
     zx_status_t status = ZX_OK;
-    ssize_t r = do_sync_io(ios->dev, DO_READ, data, count, offset);
+    ssize_t r = do_sync_io(conn->dev, DO_READ, data, count, offset);
     if (r >= 0) {
         actual = r;
     } else {
@@ -448,15 +448,15 @@ static zx_status_t fidl_file_readat(void* ctx, uint64_t count, uint64_t offset, 
 }
 
 static zx_status_t fidl_file_write(void* ctx, const uint8_t* data, size_t count, fidl_txn_t* txn) {
-    auto ios = static_cast<DevhostIostate*>(ctx);
-    if (!CAN_WRITE(ios)) {
+    auto conn = static_cast<DevfsConnection*>(ctx);
+    if (!CAN_WRITE(conn)) {
         return fuchsia_io_FileWrite_reply(txn, ZX_ERR_ACCESS_DENIED, 0);
     }
     size_t actual = 0;
     zx_status_t status = ZX_OK;
-    ssize_t r = do_sync_io(ios->dev, DO_WRITE, (uint8_t*) data, count, ios->io_off);
+    ssize_t r = do_sync_io(conn->dev, DO_WRITE, (uint8_t*) data, count, conn->io_off);
     if (r >= 0) {
-        ios->io_off += r;
+        conn->io_off += r;
         actual = r;
     } else {
         status = static_cast<zx_status_t>(r);
@@ -466,14 +466,14 @@ static zx_status_t fidl_file_write(void* ctx, const uint8_t* data, size_t count,
 
 static zx_status_t fidl_file_writeat(void* ctx, const uint8_t* data, size_t count,
                                      uint64_t offset, fidl_txn_t* txn) {
-    auto ios = static_cast<DevhostIostate*>(ctx);
-    if (!CAN_WRITE(ios)) {
+    auto conn = static_cast<DevfsConnection*>(ctx);
+    if (!CAN_WRITE(conn)) {
         return fuchsia_io_FileWriteAt_reply(txn, ZX_ERR_ACCESS_DENIED, 0);
     }
 
     size_t actual = 0;
     zx_status_t status = ZX_OK;
-    ssize_t r = do_sync_io(ios->dev, DO_WRITE, (uint8_t*) data, count, offset);
+    ssize_t r = do_sync_io(conn->dev, DO_WRITE, (uint8_t*) data, count, offset);
     if (r >= 0) {
         actual = r;
     } else {
@@ -484,9 +484,9 @@ static zx_status_t fidl_file_writeat(void* ctx, const uint8_t* data, size_t coun
 
 static zx_status_t fidl_file_seek(void* ctx, int64_t offset, fuchsia_io_SeekOrigin start,
                                   fidl_txn_t* txn) {
-    auto ios = static_cast<DevhostIostate*>(ctx);
+    auto conn = static_cast<DevfsConnection*>(ctx);
     size_t end, n;
-    end = ios->dev->GetSizeOp();
+    end = conn->dev->GetSizeOp();
     switch (start) {
     case fuchsia_io_SeekOrigin_START:
         if ((offset < 0) || ((size_t)offset > end)) {
@@ -497,16 +497,16 @@ static zx_status_t fidl_file_seek(void* ctx, int64_t offset, fuchsia_io_SeekOrig
     case fuchsia_io_SeekOrigin_CURRENT:
         // TODO: track seekability with flag, don't update off
         // at all on read/write if not seekable
-        n = ios->io_off + offset;
+        n = conn->io_off + offset;
         if (offset < 0) {
             // if negative seek
-            if (n > ios->io_off) {
+            if (n > conn->io_off) {
                 // wrapped around
                 goto bad_args;
             }
         } else {
             // positive seek
-            if (n < ios->io_off) {
+            if (n < conn->io_off) {
                 // wrapped around
                 goto bad_args;
             }
@@ -534,8 +534,8 @@ static zx_status_t fidl_file_seek(void* ctx, int64_t offset, fuchsia_io_SeekOrig
         // devices may not seek past the end
         goto bad_args;
     }
-    ios->io_off = n;
-    return fuchsia_io_FileSeek_reply(txn, ZX_OK, ios->io_off);
+    conn->io_off = n;
+    return fuchsia_io_FileSeek_reply(txn, ZX_OK, conn->io_off);
 
 bad_args:
     return fuchsia_io_FileSeek_reply(txn, ZX_ERR_INVALID_ARGS, 0);
@@ -572,19 +572,19 @@ static const fuchsia_io_File_ops_t kFileOps = []() {
 }();
 
 static zx_status_t fidl_node_sync(void* ctx, fidl_txn_t* txn) {
-    auto ios = static_cast<DevhostIostate*>(ctx);
+    auto conn = static_cast<DevfsConnection*>(ctx);
     size_t actual;
-    ssize_t r = do_ioctl(ios->dev, IOCTL_DEVICE_SYNC, nullptr, 0, nullptr, 0, &actual);
+    ssize_t r = do_ioctl(conn->dev, IOCTL_DEVICE_SYNC, nullptr, 0, nullptr, 0, &actual);
     auto status = static_cast<zx_status_t>(r);
     return fuchsia_io_NodeSync_reply(txn, status);
 }
 
 static zx_status_t fidl_node_getattr(void* ctx, fidl_txn_t* txn) {
-    auto ios = static_cast<DevhostIostate*>(ctx);
+    auto conn = static_cast<DevfsConnection*>(ctx);
     fuchsia_io_NodeAttributes attributes;
     memset(&attributes, 0, sizeof(attributes));
     attributes.mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
-    attributes.content_size = ios->dev->GetSizeOp();
+    attributes.content_size = conn->dev->GetSizeOp();
     attributes.link_count = 1;
     return fuchsia_io_NodeGetAttr_reply(txn, ZX_OK, &attributes);
 }
@@ -599,7 +599,7 @@ static zx_status_t fidl_node_ioctl(void* ctx, uint32_t opcode, uint64_t max_out,
                                    const zx_handle_t* handles_data, size_t handles_count,
                                    const uint8_t* in_data, size_t in_count,
                                    fidl_txn_t* txn) {
-    auto ios = static_cast<DevhostIostate*>(ctx);
+    auto conn = static_cast<DevfsConnection*>(ctx);
     char in_buf[FDIO_IOCTL_MAX_INPUT];
     size_t hsize = handles_count * sizeof(zx_handle_t);
     if ((in_count > FDIO_IOCTL_MAX_INPUT) || (max_out > ZXFIDL_MAX_MSG_BYTES)) {
@@ -613,7 +613,7 @@ static zx_status_t fidl_node_ioctl(void* ctx, uint32_t opcode, uint64_t max_out,
     uint8_t out[max_out];
     zx_handle_t* out_handles = (zx_handle_t*) out;
     size_t out_count = 0;
-    ssize_t r = do_ioctl(ios->dev, opcode, in_buf, in_count, out, max_out, &out_count);
+    ssize_t r = do_ioctl(conn->dev, opcode, in_buf, in_count, out, max_out, &out_count);
     size_t out_hcount = 0;
     if (r >= 0) {
         switch (IOCTL_KIND(opcode)) {
@@ -661,8 +661,8 @@ zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie)
                hdr->ordinal <= fuchsia_io_DirectoryAdminGetDevicePathOrdinal) {
         return fuchsia_io_DirectoryAdmin_dispatch(cookie, txn, msg, &kDirectoryAdminOps);
     } else {
-        auto ios = static_cast<DevhostIostate*>(cookie);
-        return ios->dev->MessageOp(msg, txn);
+        auto conn = static_cast<DevfsConnection*>(cookie);
+        return conn->dev->MessageOp(msg, txn);
     }
 }
 
