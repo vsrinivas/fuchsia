@@ -105,8 +105,7 @@ TEST(GuestConfigParserTest, CommandLineAppend) {
   GuestConfig config;
   GuestConfigParser parser(&config);
 
-  const char* argv[] = {"exe_name", "--cmdline=foo bar",
-                        "--cmdline-append=baz"};
+  const char* argv[] = {"exe_name", "--cmdline=foo bar", "--cmdline-add=baz"};
   ASSERT_EQ(ZX_OK,
             parser.ParseArgcArgv(countof(argv), const_cast<char**>(argv)));
   ASSERT_EQ("foo bar baz", config.cmdline());

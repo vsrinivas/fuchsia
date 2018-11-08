@@ -60,7 +60,7 @@ template("guest_package") {
     }
     if (defined(invoker.dtb_overlay)) {
       args += [
-        "--dtb_overlay",
+        "--dtb-overlay",
         "/guest/data/dtb_overlay",
       ]
     }

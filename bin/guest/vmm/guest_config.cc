@@ -23,27 +23,27 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "usage: " << cl.argv0() << " [OPTIONS]\n";
   std::cerr << "\n";
   std::cerr << "OPTIONS:\n";
-  std::cerr << "\t--block=[block_spec]      Adds a block device with the given parameters\n";
-  std::cerr << "\t--cmdline-append=[string] Appends 'string' to the existing kernel command\n";
-  std::cerr << "\t                          line. This will overwrite any existing command line\n";
-  std::cerr << "\t                          created using --cmdline or --cmdline-append\n";
-  std::cerr << "\t--cmdline=[string]        Use 'string' as the kernel command line\n";
-  std::cerr << "\t--cpus=[number]           Number of virtual CPUs available to the guest\n";
-  std::cerr << "\t--dtb_overlay=[path]      Load a DTB overlay for a Linux kernel\n";
-  std::cerr << "\t--linux=[path]            Load a Linux kernel from 'path'\n";
-  std::cerr << "\t--memory=[bytes]          Allocate 'bytes' of physical memory for the guest.\n";
-  std::cerr << "\t                          The suffixes 'k', 'M', and 'G' are accepted\n";
-  std::cerr << "\t--ramdisk=[path]          Load 'path' as an initial RAM disk\n";
-  std::cerr << "\t--virtio-balloon          Enable virtio-balloon (default)\n";
-  std::cerr << "\t--virtio-console          Enable virtio-console (default)\n";
-  std::cerr << "\t--virtio-gpu              Enable virtio-gpu and virtio-input (default)\n";
-  std::cerr << "\t--virtio-net              Enable virtio-net (default)\n";
-  std::cerr << "\t--virtio-rng              Enable virtio-rng (default)\n";
-  std::cerr << "\t--virtio-vsock            Enable virtio-vsock (default)\n";
-  std::cerr << "\t--virtio-wl               Enable virtio-wl (default)\n";
-  std::cerr << "\t--wl-memory=[bytes]       Reserve 'bytes' of device memory for Wayland buffers.\n";
-  std::cerr << "\t                          The suffixes 'k', 'M', and 'G' are accepted\n";
-  std::cerr << "\t--zircon=[path]           Load a Zircon kernel from 'path'\n";
+  std::cerr << "\t--block=[block_spec]    Adds a block device with the given parameters\n";
+  std::cerr << "\t--cmdline-add=[string]  Adds 'string' to the existing kernel command line.\n";
+  std::cerr << "\t                        This will overwrite any existing command line created\n";
+  std::cerr << "\t                        using --cmdline or --cmdline-add\n";
+  std::cerr << "\t--cmdline=[string]      Use 'string' as the kernel command line\n";
+  std::cerr << "\t--cpus=[number]         Number of virtual CPUs available to the guest\n";
+  std::cerr << "\t--dtb-overlay=[path]    Load a DTB overlay for a Linux kernel\n";
+  std::cerr << "\t--linux=[path]          Load a Linux kernel from 'path'\n";
+  std::cerr << "\t--memory=[bytes]        Allocate 'bytes' of memory for the guest.\n";
+  std::cerr << "\t                        The suffixes 'k', 'M', and 'G' are accepted\n";
+  std::cerr << "\t--ramdisk=[path]        Load 'path' as an initial RAM disk\n";
+  std::cerr << "\t--virtio-balloon        Enable virtio-balloon (default)\n";
+  std::cerr << "\t--virtio-console        Enable virtio-console (default)\n";
+  std::cerr << "\t--virtio-gpu            Enable virtio-gpu and virtio-input (default)\n";
+  std::cerr << "\t--virtio-net            Enable virtio-net (default)\n";
+  std::cerr << "\t--virtio-rng            Enable virtio-rng (default)\n";
+  std::cerr << "\t--virtio-vsock          Enable virtio-vsock (default)\n";
+  std::cerr << "\t--virtio-wl             Enable virtio-wl (default)\n";
+  std::cerr << "\t--wl-memory=[bytes]     Reserve 'bytes' of memory for Wayland buffers.\n";
+  std::cerr << "\t                        The suffixes 'k', 'M', and 'G' are accepted\n";
+  std::cerr << "\t--zircon=[path]         Load a Zircon kernel from 'path'\n";
   std::cerr << "\n";
   std::cerr << "BLOCK SPEC\n";
   std::cerr << "\n";
@@ -91,10 +91,9 @@ template <typename T>
 using OptionTransform =
     std::function<zx_status_t(const std::string& arg, T* out)>;
 
-// Handles and option by transforming the value and appending it to the
-// given vector.
+// Handles an option by transforming the value and adding it to the vector.
 template <typename T>
-static GuestConfigParser::OptionHandler append_option(
+static GuestConfigParser::OptionHandler add_option(
     std::vector<T>* out, OptionTransform<T> transform) {
   return [out, transform](const std::string& key, const std::string& value) {
     if (value.empty()) {
@@ -172,14 +171,15 @@ static GuestConfigParser::OptionHandler parse_mem_size(size_t* out) {
 }
 
 template <typename NumberType>
-static GuestConfigParser::OptionHandler parse_number(NumberType* out) {
-  return [out](const std::string& key, const std::string& value) {
+static GuestConfigParser::OptionHandler parse_number(NumberType* out,
+                                                     fxl::Base base) {
+  return [out, base](const std::string& key, const std::string& value) {
     if (value.empty()) {
       FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key
                      << "=<value>)";
       return ZX_ERR_INVALID_ARGS;
     }
-    if (!fxl::StringToNumberWithError(value, out)) {
+    if (!fxl::StringToNumberWithError(value, out, base)) {
       FXL_LOG(ERROR) << "Unable to convert '" << value << "' into a number";
       return ZX_ERR_INVALID_ARGS;
     }
@@ -288,12 +288,14 @@ static GuestConfigParser::OptionHandler save_kernel(std::string* out,
 GuestConfigParser::GuestConfigParser(GuestConfig* cfg)
     : cfg_(cfg),
       opts_{
-          {"block", append_option<BlockSpec>(&cfg_->block_specs_, parse_block_spec)},
-          {"cmdline-append", append_string(&cfg_->cmdline_, " ")},
+          {"block",
+           add_option<BlockSpec>(&cfg_->block_specs_, parse_block_spec)},
+          {"cmdline-add", append_string(&cfg_->cmdline_, " ")},
           {"cmdline", save_option(&cfg_->cmdline_)},
-          {"cpus", parse_number(&cfg_->cpus_)},
-          {"dtb_overlay", save_option(&cfg_->dtb_overlay_path_)},
-          {"linux", save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::LINUX)},
+          {"cpus", parse_number(&cfg_->cpus_, fxl::Base::k10)},
+          {"dtb-overlay", save_option(&cfg_->dtb_overlay_path_)},
+          {"linux",
+           save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::LINUX)},
           {"memory", parse_mem_size(&cfg_->memory_)},
           {"ramdisk", save_option(&cfg_->ramdisk_path_)},
           {"virtio-balloon", set_flag(&cfg_->virtio_balloon_, true)},
@@ -304,7 +306,8 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg)
           {"virtio-vsock", set_flag(&cfg_->virtio_vsock_, true)},
           {"virtio-wl", set_flag(&cfg_->virtio_wl_, true)},
           {"wl-memory", parse_mem_size(&cfg_->wl_memory_)},
-          {"zircon", save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::ZIRCON)},
+          {"zircon",
+           save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::ZIRCON)},
       } {}
 
 GuestConfigParser::~GuestConfigParser() = default;

@@ -75,7 +75,7 @@ class LinuxGuestTest : public GuestTest<LinuxGuestTest> {
   static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
     launch_info->url = kLinuxGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
-    launch_info->args.push_back("--cmdline-append=loglevel=0 console=hvc0");
+    launch_info->args.push_back("--cmdline-add=loglevel=0 console=hvc0");
     return true;
   }
 };
@@ -92,7 +92,7 @@ class LinuxMultiprocessorGuestTest
   static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
     launch_info->url = kLinuxGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
-    launch_info->args.push_back("--cmdline-append=loglevel=0 console=hvc0");
+    launch_info->args.push_back("--cmdline-add=loglevel=0 console=hvc0");
     return true;
   }
 };
