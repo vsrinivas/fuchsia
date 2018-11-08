@@ -116,12 +116,9 @@ bool AudioRendererImpl::IsOperating() {
   }
 
   return ForAnyDestLink([](auto& link) {
-    // TODO(mpuryear): pull the below downcast into a function
-    FXL_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
-    auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
     // If pending queue empty: this link is NOT operating; ask other links.
     // Else: Link IS operating; final answer is YES; no need to ask others.
-    return (!packet_link->pending_queue_empty());
+    return !(AsPacketSource(link)->pending_queue_empty());
   });
 }
 
@@ -468,9 +465,7 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
 
   // Distribute our packet to all our dest links
   ForEachDestLink([packet_ref](auto& link) {
-    FXL_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
-    auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
-    packet_link->PushToPendingQueue(packet_ref);
+    AsPacketSource(link)->PushToPendingQueue(packet_ref);
   });
 
   // Things went well, cancel the cleanup hook.
@@ -497,9 +492,7 @@ void AudioRendererImpl::DiscardAllPackets(DiscardAllPacketsCallback callback) {
   // will take a reference to the flush token and ensure a callback is queued at
   // the proper time (after all pending packet-complete callbacks are queued).
   ForEachDestLink([flush_token](auto& link) {
-    FXL_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
-    auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
-    packet_link->FlushPendingQueue(flush_token);
+    AsPacketSource(link)->FlushPendingQueue(flush_token);
   });
 
   // Invalidate any internal state which gets reset after a flush.

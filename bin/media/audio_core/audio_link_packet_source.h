@@ -29,11 +29,11 @@ class AudioLinkPacketSource : public AudioLink {
 
   // Accessor for the format info assigned to this link.
   //
-  // TODO(johngro): Eliminate this.  Format information belongs at the generic
-  // AudioLink level.  Additionally, all sources should be able to to change or
+  // TODO(johngro): Eliminate this. Format information belongs at the generic
+  // AudioLink level. Additionally, all sources should be able to to change or
   // invalidate their format info without needing to destroy and re-create any
-  // links.  Ideally, they should be able to do so without needing to obtain any
-  // locks.  A lock-less single writer, single reader, triple-buffer object
+  // links. Ideally, they should be able to do so without needing to obtain any
+  // locks. A lock-less single writer, single reader, triple-buffer object
   // would be perfect for this (I have one of these lying around from a previous
   // project, I just need to see if I am allowed to use it or not).
   const AudioRendererFormatInfo& format_info() const { return *format_info_; }
@@ -44,14 +44,14 @@ class AudioLinkPacketSource : public AudioLink {
     return pending_packet_queue_.empty();
   }
 
-  // PendingQueue operations used by the packet source.  Never call these from
+  // PendingQueue operations used by the packet source. Never call these from
   // the destination.
   void PushToPendingQueue(const fbl::RefPtr<AudioPacketRef>& pkt);
   void FlushPendingQueue(
       const fbl::RefPtr<PendingFlushToken>& flush_token = nullptr);
   void CopyPendingQueue(const std::shared_ptr<AudioLinkPacketSource>& other);
 
-  // PendingQueue operations used by the destination.  Never call these from the
+  // PendingQueue operations used by the destination. Never call these from the
   // source.
   //
   // When consuming audio, destinations must always pair their calls to
@@ -61,7 +61,7 @@ class AudioLinkPacketSource : public AudioLink {
   //
   // Doing so ensures that sources which are attempting to flush the pending
   // queue are forced to wait if the front of the queue is involved in a mixing
-  // operation.  This, in turn, guarantees that audio packets are always
+  // operation. This, in turn, guarantees that audio packets are always
   // returned to the user in the order which they were queued in without forcing
   // AudioRenderers to wait to queue new data if a mix operation is in progress.
   fbl::RefPtr<AudioPacketRef> LockPendingQueueFront(bool* was_flushed);
@@ -86,6 +86,14 @@ class AudioLinkPacketSource : public AudioLink {
   bool flushed_ FXL_GUARDED_BY(pending_mutex_) = true;
   bool processing_in_progress_ FXL_GUARDED_BY(pending_mutex_) = false;
 };
+
+//
+// Utility function used by packet-oriented AudioObjects (e.g. AudioRenderer)
+inline AudioLinkPacketSource* AsPacketSource(
+    const std::shared_ptr<AudioLink>& link) {
+  FXL_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
+  return static_cast<AudioLinkPacketSource*>(link.get());
+}
 
 }  // namespace audio
 }  // namespace media
