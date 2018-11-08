@@ -40,8 +40,10 @@ class ComponentContextFake : public fuchsia::modular::ComponentContext {
 
  private:
   // |fuchsia::modular::ComponentContext|
+  void GetLedgerNew(
+      fidl::InterfaceRequest<fuchsia::ledger::Ledger> request) override;
   void GetLedger(fidl::InterfaceRequest<fuchsia::ledger::Ledger> request,
-                 GetLedgerCallback result) override;
+                 GetLedgerCallback callback) override;
 
   // |fuchsia::modular::ComponentContext|
   void ConnectToAgent(fidl::StringPtr url,

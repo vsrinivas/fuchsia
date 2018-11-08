@@ -47,6 +47,14 @@ Key MakeKey() {
   return ToArray(fxl::StringPrintf("%120ld-%u", time(nullptr), rand()));
 }
 
+std::function<void(zx_status_t)> NewErrorHandler(fit::closure quit_callback,
+                                                 std::string description) {
+  return [description, &quit_callback](zx_status_t status) {
+    FXL_LOG(ERROR) << description << " diconnected: " << status;
+    quit_callback();
+  };
+}
+
 std::function<void(fuchsia::ledger::Status)> HandleResponse(
     fit::closure quit_callback, std::string description) {
   return [description, &quit_callback](fuchsia::ledger::Status status) {
@@ -107,9 +115,9 @@ TodoApp::TodoApp(async::Loop* loop)
       page_watcher_binding_(this) {
   context_->ConnectToEnvironmentService(module_context_.NewRequest());
   module_context_->GetComponentContext(component_context_.NewRequest());
-  component_context_->GetLedger(
-      ledger_.NewRequest(),
-      HandleResponse([this] { loop_->Quit(); }, "GetLedger"));
+  ledger_.set_error_handler(
+      NewErrorHandler([this] { loop_->Quit(); }, "Ledger"));
+  component_context_->GetLedgerNew(ledger_.NewRequest());
   ledger_->GetRootPage(
       page_.NewRequest(),
       HandleResponse([this] { loop_->Quit(); }, "GetRootPage"));

@@ -21,16 +21,10 @@ each user on behalf of which it runs.
 module_context->GetComponentContext(
     component_context_.NewRequest());
 fuchsia::ledger::LedgerPtr ledger;
-component_context_->GetLedger(
-    ledger.NewRequest(),
-    [] (fuchsia::ledger::Status status) {
-  if (status != fuchsia::ledger::Status::OK) {
-    // Handle errors.
-  }
-});
 ledger.set_error_handler([](zx_status_t status) {
-  // Handle connection errors.
+  // Handle ledger and connection errors.
 });
+component_context_->GetLedger(ledger.NewRequest());
 ```
 
 #### Dart
@@ -39,22 +33,16 @@ ledger.set_error_handler([](zx_status_t status) {
 moduleContext.getComponentContext(
     componentContext.ctrl.request());
 final LedgerProxy ledger = new LedgerProxy();
-componentContext.getLedger(
-    ledger.ctrl.request(), (Status status) {
-  if (status != Status.ok) {
-    // Handle errors.
-  }
-});
 ledger.ctrl.error.then((ProxyError error) {
-  // Handle connection errors.
-}
+  // Handle ledger and connection errors.
+});
+componentContext.getLedger(ledger.ctrl.request());
 ```
 |||---|||
 
 *** aside
 Note that the Ledger connection is provided through a FIDL *interface request*,
-so it can be immediately used to make requests, even before the callback is
-called.
+so it can be immediately used to make requests.
 ***
 
 ## Working with pages

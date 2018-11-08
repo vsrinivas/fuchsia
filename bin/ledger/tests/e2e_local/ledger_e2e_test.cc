@@ -86,57 +86,6 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
     ledger_shutdown_callbacks_.push_back(std::move(callback));
   }
 
-  ::testing::AssertionResult GetRootPage(
-      ledger_internal::LedgerRepositoryPtr* ledger_repository,
-      fidl::VectorPtr<uint8_t> ledger_name, ledger::PagePtr* page) {
-    ledger::Status status;
-    ledger::LedgerPtr ledger;
-    (*ledger_repository)
-        ->GetLedger(std::move(ledger_name), ledger.NewRequest(),
-                    callback::Capture(QuitLoopClosure(), &status));
-    RunLoop();
-    if (status != ledger::Status::OK) {
-      return ::testing::AssertionFailure()
-             << "GetLedger failed with status " << fidl::ToUnderlying(status);
-    }
-
-    ledger->GetRootPage(page->NewRequest(),
-                        callback::Capture(QuitLoopClosure(), &status));
-    RunLoop();
-    if (status != ledger::Status::OK) {
-      return ::testing::AssertionFailure()
-             << "GetRootPage failed with status " << fidl::ToUnderlying(status);
-    }
-    return ::testing::AssertionSuccess();
-  }
-
-  ::testing::AssertionResult GetPageEntryCount(ledger::PagePtr* page,
-                                               size_t* entry_count) {
-    ledger::Status status;
-    ledger::PageSnapshotPtr snapshot;
-    (*page)->GetSnapshot(snapshot.NewRequest(),
-                         fidl::VectorPtr<uint8_t>::New(0), nullptr,
-                         callback::Capture(QuitLoopClosure(), &status));
-    RunLoop();
-    if (status != ledger::Status::OK) {
-      return ::testing::AssertionFailure()
-             << "GetSnapshot failed with status " << fidl::ToUnderlying(status);
-    }
-    fidl::VectorPtr<ledger::InlinedEntry> entries;
-    std::unique_ptr<ledger::Token> next_token;
-    snapshot->GetEntriesInline(
-        fidl::VectorPtr<uint8_t>::New(0), nullptr,
-        callback::Capture(QuitLoopClosure(), &status, &entries, &next_token));
-    RunLoop();
-    if (status != ledger::Status::OK) {
-      return ::testing::AssertionFailure()
-             << "GetEntriesInline failed with status "
-             << fidl::ToUnderlying(status);
-    }
-    *entry_count = entries->size();
-    return ::testing::AssertionSuccess();
-  }
-
   component::StartupContext* startup_context() {
     return startup_context_.get();
   }
@@ -162,8 +111,8 @@ TEST_F(LedgerEndToEndTest, PutAndGet) {
       fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()), nullptr,
       ledger_repository.NewRequest());
 
-  ledger_repository->GetLedger(TestArray(), ledger_.NewRequest(), &status);
-  ASSERT_EQ(ledger::Status::OK, status);
+  ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
+  ASSERT_EQ(ZX_OK, ledger_repository->Sync());
 
   fidl::SynchronousInterfacePtr<ledger::Page> page;
   ledger_->GetRootPage(page.NewRequest(), &status);
@@ -335,8 +284,8 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
       fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
       std::move(cloud_provider_ptr), ledger_repository.NewRequest());
 
-  ledger_repository->GetLedger(TestArray(), ledger_.NewRequest(), &status);
-  ASSERT_EQ(ledger::Status::OK, status);
+  ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
+  ASSERT_EQ(ZX_OK, ledger_repository->Sync());
 
   // Close the cloud provider channel.
   cloud_provider_binding.Unbind();
@@ -385,8 +334,8 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
       fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
       std::move(cloud_provider_ptr), ledger_repository.NewRequest());
 
-  ledger_repository->GetLedger(TestArray(), ledger_.NewRequest(), &status);
-  ASSERT_EQ(ledger::Status::OK, status);
+  ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
+  ASSERT_EQ(ZX_OK, ledger_repository->Sync());
 
   // Write some data.
   fidl::SynchronousInterfacePtr<ledger::Page> page;

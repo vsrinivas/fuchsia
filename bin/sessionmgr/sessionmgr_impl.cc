@@ -318,8 +318,12 @@ void SessionmgrImpl::InitializeLedger(
 
   // If ledger state is erased from underneath us (happens when the cloud store
   // is cleared), ledger will close the connection to |ledger_repository_|.
-  ledger_repository_.set_error_handler(
-      [this](zx_status_t status) { Logout(); });
+  ledger_repository_.set_error_handler([this](zx_status_t status) {
+    FXL_LOG(ERROR) << "LedgerRepository disconnected with epitaph: "
+                   << LedgerEpitaphToString(status) << std::endl
+                   << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
+    Logout();
+  });
   AtEnd(Reset(&ledger_repository_));
 
   ledger_client_ =
@@ -340,22 +344,15 @@ void SessionmgrImpl::InitializeLedgerDashboard() {
       *kEnvServices, /* kill_on_oom = */ false);
   AtEnd(Reset(&ledger_dashboard_environment_));
 
-  ledger_dashboard_environment_->AddService<
-      fuchsia::ledger::internal::LedgerRepositoryDebug>(
-      [this](fidl::InterfaceRequest<
-             fuchsia::ledger::internal::LedgerRepositoryDebug>
-                 request) {
-        if (ledger_repository_) {
-          ledger_repository_->GetLedgerRepositoryDebug(
-              std::move(request), [](fuchsia::ledger::Status status) {
-                if (status != fuchsia::ledger::Status::OK) {
-                  FXL_LOG(ERROR)
-                      << "LedgerRepository.GetLedgerRepositoryDebug() failed: "
-                      << LedgerStatusToString(status);
-                }
-              });
-        }
-      });
+  ledger_dashboard_environment_
+      ->AddService<fuchsia::ledger::internal::LedgerRepositoryDebug>(
+          [this](fidl::InterfaceRequest<
+                 fuchsia::ledger::internal::LedgerRepositoryDebug>
+                     request) {
+            if (ledger_repository_) {
+              ledger_repository_->GetLedgerRepositoryDebug(std::move(request));
+            }
+          });
 
   fuchsia::modular::AppConfig ledger_dashboard_config;
   ledger_dashboard_config.url = kLedgerDashboardUrl;

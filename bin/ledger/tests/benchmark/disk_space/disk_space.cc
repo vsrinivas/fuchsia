@@ -135,39 +135,35 @@ DiskSpaceBenchmark::DiskSpaceBenchmark(
 }
 
 void DiskSpaceBenchmark::Run() {
-  GetLedger(
+  Status status = GetLedger(
       startup_context_.get(), component_controller_.NewRequest(), nullptr,
-      "disk_space", DetachedPath(tmp_dir_.path()), QuitLoopClosure(),
-      [this](Status status, LedgerPtr ledger) {
-        if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
-          return;
-        }
-        ledger_ = std::move(ledger);
+      "disk_space", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_);
+  if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
+    return;
+  }
 
-        auto waiter =
-            fxl::MakeRefCounted<callback::Waiter<Status, PagePtr>>(Status::OK);
+  auto waiter =
+      fxl::MakeRefCounted<callback::Waiter<Status, PagePtr>>(Status::OK);
 
-        for (size_t page_number = 0; page_number < page_count_; page_number++) {
-          GetPageEnsureInitialized(&ledger_, nullptr, QuitLoopClosure(),
-                                   [callback = waiter->NewCallback()](
-                                       Status status, PagePtr page, PageId id) {
-                                     callback(status, std::move(page));
-                                   });
-        }
+  for (size_t page_number = 0; page_number < page_count_; page_number++) {
+    GetPageEnsureInitialized(&ledger_, nullptr, QuitLoopClosure(),
+                             [callback = waiter->NewCallback()](
+                                 Status status, PagePtr page, PageId id) {
+                               callback(status, std::move(page));
+                             });
+  }
 
-        waiter->Finalize([this](Status status, std::vector<PagePtr> pages) {
-          if (QuitOnError(QuitLoopClosure(), status,
-                          "GetPageEnsureInitialized")) {
-            return;
-          }
-          pages_ = std::move(pages);
-          if (commit_count_ == 0) {
-            ShutDownAndRecord();
-            return;
-          }
-          Populate();
-        });
-      });
+  waiter->Finalize([this](Status status, std::vector<PagePtr> pages) {
+    if (QuitOnError(QuitLoopClosure(), status, "GetPageEnsureInitialized")) {
+      return;
+    }
+    pages_ = std::move(pages);
+    if (commit_count_ == 0) {
+      ShutDownAndRecord();
+      return;
+    }
+    Populate();
+  });
 }
 
 void DiskSpaceBenchmark::Populate() {

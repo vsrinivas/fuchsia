@@ -165,55 +165,44 @@ void SyncBenchmark::Run() {
   cloud_provider::CloudProviderPtr cloud_provider_alpha;
   cloud_provider_factory_.MakeCloudProvider(user_id_,
                                             cloud_provider_alpha.NewRequest());
-  GetLedger(
+  Status status = GetLedger(
       startup_context_.get(), alpha_controller_.NewRequest(),
       std::move(cloud_provider_alpha), "sync",
-      DetachedPath(std::move(alpha_path)), QuitLoopClosure(),
-      [this, beta_path = std::move(beta_path)](Status status,
-                                               LedgerPtr ledger) mutable {
-        if (QuitOnError(QuitLoopClosure(), status, "alpha ledger")) {
+      DetachedPath(std::move(alpha_path)), QuitLoopClosure(), &alpha_);
+  if (QuitOnError(QuitLoopClosure(), status, "alpha ledger")) {
+    return;
+  };
+
+  cloud_provider::CloudProviderPtr cloud_provider_beta;
+  cloud_provider_factory_.MakeCloudProvider(user_id_,
+                                            cloud_provider_beta.NewRequest());
+
+  status = GetLedger(startup_context_.get(), beta_controller_.NewRequest(),
+                     std::move(cloud_provider_beta), "sync",
+                     DetachedPath(beta_path), QuitLoopClosure(), &beta_);
+  if (QuitOnError(QuitLoopClosure(), status, "beta ledger")) {
+    return;
+  }
+  GetPageEnsureInitialized(
+      &alpha_, nullptr, QuitLoopClosure(),
+      [this](Status status, PagePtr page, PageId id) {
+        if (QuitOnError(QuitLoopClosure(), status,
+                        "alpha page initialization")) {
           return;
-        };
-        alpha_ = std::move(ledger);
+        }
+        alpha_page_ = std::move(page);
+        page_id_ = id;
+        beta_->GetPage(fidl::MakeOptional(id), beta_page_.NewRequest(),
+                       QuitOnErrorCallback(QuitLoopClosure(), "GetPage"));
 
-        cloud_provider::CloudProviderPtr cloud_provider_beta;
-        cloud_provider_factory_.MakeCloudProvider(
-            user_id_, cloud_provider_beta.NewRequest());
-
-        GetLedger(
-            startup_context_.get(), beta_controller_.NewRequest(),
-            std::move(cloud_provider_beta), "sync", DetachedPath(beta_path),
-            QuitLoopClosure(),
-            [this, beta_path](Status status, LedgerPtr ledger) {
-              if (QuitOnError(QuitLoopClosure(), status, "beta ledger")) {
+        PageSnapshotPtr snapshot;
+        beta_page_->GetSnapshot(
+            snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+            page_watcher_binding_.NewBinding(), [this](Status status) {
+              if (QuitOnError(QuitLoopClosure(), status, "GetSnapshot")) {
                 return;
               }
-              beta_ = std::move(ledger);
-              GetPageEnsureInitialized(
-                  &alpha_, nullptr, QuitLoopClosure(),
-                  [this](Status status, PagePtr page, PageId id) {
-                    if (QuitOnError(QuitLoopClosure(), status,
-                                    "alpha page initialization")) {
-                      return;
-                    }
-                    alpha_page_ = std::move(page);
-                    page_id_ = id;
-                    beta_->GetPage(
-                        fidl::MakeOptional(id), beta_page_.NewRequest(),
-                        QuitOnErrorCallback(QuitLoopClosure(), "GetPage"));
-
-                    PageSnapshotPtr snapshot;
-                    beta_page_->GetSnapshot(
-                        snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                        page_watcher_binding_.NewBinding(),
-                        [this](Status status) {
-                          if (QuitOnError(QuitLoopClosure(), status,
-                                          "GetSnapshot")) {
-                            return;
-                          }
-                          RunSingleChange(0);
-                        });
-                  });
+              RunSingleChange(0);
             });
       });
 }

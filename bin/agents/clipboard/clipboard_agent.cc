@@ -20,15 +20,10 @@ class ClipboardAgent {
         component_context.NewRequest());
 
     fuchsia::ledger::LedgerPtr ledger;
-    component_context->GetLedger(
-        ledger.NewRequest(), [](fuchsia::ledger::Status status) {
-          if (status != fuchsia::ledger::Status::OK) {
-            FXL_LOG(ERROR) << "Could not connect to Ledger.";
-          }
-        });
     ledger.set_error_handler([](zx_status_t status) {
-      FXL_LOG(ERROR) << "Ledger connection died.";
+      FXL_LOG(ERROR) << "Ledger connection died: " << status;
     });
+    component_context->GetLedgerNew(ledger.NewRequest());
 
     ledger_client_ = std::make_unique<LedgerClient>(std::move(ledger));
 

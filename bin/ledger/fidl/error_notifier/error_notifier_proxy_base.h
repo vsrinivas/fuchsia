@@ -24,7 +24,8 @@ namespace ledger {
 // (also automatically generated).
 //
 // This base class handles the following features:
-// - Implement the |Sync| method
+// - Implement the |Sync| method.
+// - Implement an |Unbind| method similar to |Bindings::Unbind|.
 // - Implement the |set_on_empty| method to be usable with AutoCleanableSet
 // - Provides a factory for passing a callback to the companion implementation
 //   that will handle reporting the error and closing the connection.
@@ -39,19 +40,16 @@ class ErrorNotifierProxyBase : public I {
       : delegate_(delegate),
         interface_name_(interface_name),
         binding_(this, std::move(request)) {
-    binding_.set_error_handler([this](zx_status_t /* status */) {
-      CheckEmpty();
-    });
-    sync_helper_.set_on_empty([this] {
-      CheckEmpty();
-    });
+    binding_.set_error_handler(
+        [this](zx_status_t /* status */) { CheckEmpty(); });
+    sync_helper_.set_on_empty([this] { CheckEmpty(); });
   }
 
  public:
   void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
-  bool empty() {
-    return !binding_.is_bound() && sync_helper_.empty();
-  }
+  bool empty() { return !binding_.is_bound() && sync_helper_.empty(); }
+
+  fidl::InterfaceRequest<I> Unbind() { return binding_.Unbind(); }
 
  protected:
   void Sync(fit::function<void()> callback) override {
@@ -90,9 +88,9 @@ class ErrorNotifierProxyBase : public I {
 
  private:
   void CheckEmpty() {
-      if (empty() && on_empty_) {
-        on_empty_();
-      }
+    if (empty() && on_empty_) {
+      on_empty_();
+    }
   }
 
   const char* const interface_name_;

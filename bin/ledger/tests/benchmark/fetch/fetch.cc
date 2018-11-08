@@ -160,28 +160,25 @@ void FetchBenchmark::Run() {
   cloud_provider::CloudProviderPtr cloud_provider_writer;
   cloud_provider_factory_.MakeCloudProvider(user_id_,
                                             cloud_provider_writer.NewRequest());
-  GetLedger(startup_context_.get(), writer_controller_.NewRequest(),
-            std::move(cloud_provider_writer), "fetch",
-            DetachedPath(std::move(writer_path)), QuitLoopClosure(),
-            [this](Status status, LedgerPtr ledger) {
-              if (QuitOnError(QuitLoopClosure(), status, "Get writer ledger")) {
-                return;
-              }
-              writer_ = std::move(ledger);
+  Status status = GetLedger(
+      startup_context_.get(), writer_controller_.NewRequest(),
+      std::move(cloud_provider_writer), "fetch",
+      DetachedPath(std::move(writer_path)), QuitLoopClosure(), &writer_);
+  if (QuitOnError(QuitLoopClosure(), status, "Get writer ledger")) {
+    return;
+  }
 
-              GetPageEnsureInitialized(
-                  &writer_, nullptr, QuitLoopClosure(),
-                  [this](Status status, PagePtr page, PageId id) {
-                    if (QuitOnError(QuitLoopClosure(), status,
-                                    "Writer page initialization")) {
-                      return;
-                    }
-                    writer_page_ = std::move(page);
-                    page_id_ = id;
+  GetPageEnsureInitialized(&writer_, nullptr, QuitLoopClosure(),
+                           [this](Status status, PagePtr page, PageId id) {
+                             if (QuitOnError(QuitLoopClosure(), status,
+                                             "Writer page initialization")) {
+                               return;
+                             }
+                             writer_page_ = std::move(page);
+                             page_id_ = id;
 
-                    Populate();
-                  });
-            });
+                             Populate();
+                           });
 }
 
 void FetchBenchmark::Populate() {
@@ -224,25 +221,21 @@ void FetchBenchmark::ConnectReader() {
   cloud_provider::CloudProviderPtr cloud_provider_reader;
   cloud_provider_factory_.MakeCloudProvider(user_id_,
                                             cloud_provider_reader.NewRequest());
-  GetLedger(startup_context_.get(), reader_controller_.NewRequest(),
-            std::move(cloud_provider_reader), "fetch",
-            DetachedPath(std::move(reader_path)), QuitLoopClosure(),
-            [this](Status status, LedgerPtr ledger) {
-              if (QuitOnError(QuitLoopClosure(), status, "ConnectReader")) {
-                return;
-              }
+  Status status = GetLedger(
+      startup_context_.get(), reader_controller_.NewRequest(),
+      std::move(cloud_provider_reader), "fetch",
+      DetachedPath(std::move(reader_path)), QuitLoopClosure(), &reader_);
+  if (QuitOnError(QuitLoopClosure(), status, "ConnectReader")) {
+    return;
+  }
 
-              reader_ = std::move(ledger);
-
-              reader_->GetPage(
-                  fidl::MakeOptional(page_id_), reader_page_.NewRequest(),
-                  [this](Status status) {
-                    if (QuitOnError(QuitLoopClosure(), status, "GetPage")) {
-                      return;
-                    }
-                    WaitForReaderDownload();
-                  });
-            });
+  reader_->GetPage(fidl::MakeOptional(page_id_), reader_page_.NewRequest(),
+                   [this](Status status) {
+                     if (QuitOnError(QuitLoopClosure(), status, "GetPage")) {
+                       return;
+                     }
+                     WaitForReaderDownload();
+                   });
 }
 
 void FetchBenchmark::WaitForReaderDownload() {

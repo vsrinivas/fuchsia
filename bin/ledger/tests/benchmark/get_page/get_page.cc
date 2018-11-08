@@ -104,17 +104,16 @@ GetPageBenchmark::GetPageBenchmark(
 }
 
 void GetPageBenchmark::Run() {
-  GetLedger(startup_context_.get(), component_controller_.NewRequest(), nullptr,
-            "get_page", DetachedPath(tmp_dir_.path()), QuitLoopClosure(),
-            [this](Status status, LedgerPtr ledger) {
-              if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
-                return;
-              }
-              ledger_ = std::move(ledger);
+  Status status = GetLedger(
+      startup_context_.get(), component_controller_.NewRequest(), nullptr,
+      "get_page", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_);
 
-              page_id_ = fidl::MakeOptional(generator_.MakePageId());
-              RunSingle(requests_count_);
-            });
+  if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
+    return;
+  }
+
+  page_id_ = fidl::MakeOptional(generator_.MakePageId());
+  RunSingle(requests_count_);
 }
 
 void GetPageBenchmark::RunSingle(size_t request_number) {

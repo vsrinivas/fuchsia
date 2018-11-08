@@ -276,27 +276,12 @@ LedgerClient::LedgerClient(fuchsia::ledger::LedgerPtr ledger)
 
 LedgerClient::LedgerClient(
     fuchsia::ledger::internal::LedgerRepository* const ledger_repository,
-    const std::string& name, std::function<void()> error)
-    : ledger_name_(name) {
-  ledger_repository->Duplicate(
-      ledger_repository_.NewRequest(), [error](fuchsia::ledger::Status status) {
-        if (status != fuchsia::ledger::Status::OK) {
-          FXL_LOG(ERROR) << "LedgerRepository::Duplicate() failed: "
-                         << LedgerStatusToString(status);
-          error();
-        }
-      });
-
+    const std::string& name, std::function<void()> error) {
+  ledger_.set_error_handler([](zx_status_t status) {
+    FXL_LOG(ERROR) << "Ledger error: " << LedgerEpitaphToString(status);
+  });
   // Open Ledger.
-  ledger_repository->GetLedger(
-      to_array(name), ledger_.NewRequest(),
-      [error](fuchsia::ledger::Status status) {
-        if (status != fuchsia::ledger::Status::OK) {
-          FXL_LOG(ERROR) << "LedgerRepository.GetLedger() failed: "
-                         << LedgerStatusToString(status);
-          error();
-        }
-      });
+  ledger_repository->GetLedger(to_array(name), ledger_.NewRequest());
 
   // This must be the first call after GetLedger, otherwise the Ledger
   // starts with one reconciliation strategy, then switches to another.

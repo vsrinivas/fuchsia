@@ -115,38 +115,36 @@ UpdateEntryBenchmark::UpdateEntryBenchmark(
 void UpdateEntryBenchmark::Run() {
   FXL_LOG(INFO) << "--entry-count=" << entry_count_
                 << " --transaction-size=" << transaction_size_;
-  GetLedger(startup_context_.get(), component_controller_.NewRequest(), nullptr,
-            "update_entry", DetachedPath(tmp_dir_.path()), QuitLoopClosure(),
-            [this](Status status, LedgerPtr ledger) {
-              if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
-                return;
-              }
-              ledger_ = std::move(ledger);
-              GetPageEnsureInitialized(
-                  &ledger_, nullptr, QuitLoopClosure(),
-                  [this](Status status, PagePtr page, PageId id) {
-                    if (QuitOnError(QuitLoopClosure(), status,
-                                    "GetPageEnsureInitialized")) {
-                      return;
-                    }
-                    page_ = std::move(page);
-                    fidl::VectorPtr<uint8_t> key =
-                        generator_.MakeKey(0, key_size_);
-                    if (transaction_size_ > 0) {
-                      page_->StartTransaction(
-                          [this, key = std::move(key)](Status status) mutable {
-                            if (QuitOnError(QuitLoopClosure(), status,
-                                            "Page::StartTransaction")) {
-                              return;
-                            }
-                            TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
-                            RunSingle(0, std::move(key));
-                          });
-                    } else {
-                      RunSingle(0, std::move(key));
-                    }
-                  });
-            });
+  Status status =
+      GetLedger(startup_context_.get(), component_controller_.NewRequest(),
+                nullptr, "update_entry", DetachedPath(tmp_dir_.path()),
+                QuitLoopClosure(), &ledger_);
+  if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
+    return;
+  }
+  GetPageEnsureInitialized(
+      &ledger_, nullptr, QuitLoopClosure(),
+      [this](Status status, PagePtr page, PageId id) {
+        if (QuitOnError(QuitLoopClosure(), status,
+                        "GetPageEnsureInitialized")) {
+          return;
+        }
+        page_ = std::move(page);
+        fidl::VectorPtr<uint8_t> key = generator_.MakeKey(0, key_size_);
+        if (transaction_size_ > 0) {
+          page_->StartTransaction(
+              [this, key = std::move(key)](Status status) mutable {
+                if (QuitOnError(QuitLoopClosure(), status,
+                                "Page::StartTransaction")) {
+                  return;
+                }
+                TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
+                RunSingle(0, std::move(key));
+              });
+        } else {
+          RunSingle(0, std::move(key));
+        }
+      });
 }
 
 void UpdateEntryBenchmark::RunSingle(int i, fidl::VectorPtr<uint8_t> key) {

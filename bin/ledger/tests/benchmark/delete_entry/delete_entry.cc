@@ -117,26 +117,23 @@ DeleteEntryBenchmark::DeleteEntryBenchmark(
 }
 
 void DeleteEntryBenchmark::Run() {
-  LedgerPtr ledger;
-  GetLedger(startup_context_.get(), component_controller_.NewRequest(), nullptr,
-            "delete_entry", DetachedPath(tmp_dir_.path()), QuitLoopClosure(),
-            [this](Status status, LedgerPtr ledger) {
-              if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
-                return;
-              }
-              ledger_ = std::move(ledger);
+  Status status =
+      GetLedger(startup_context_.get(), component_controller_.NewRequest(),
+                nullptr, "delete_entry", DetachedPath(tmp_dir_.path()),
+                QuitLoopClosure(), &ledger_);
+  if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
+    return;
+  }
 
-              GetPageEnsureInitialized(
-                  &ledger_, nullptr, QuitLoopClosure(),
-                  [this](Status status, PagePtr page, PageId id) {
-                    if (QuitOnError(QuitLoopClosure(), status,
-                                    "Page initialization")) {
-                      return;
-                    }
-                    page_ = std::move(page);
-                    Populate();
-                  });
-            });
+  GetPageEnsureInitialized(
+      &ledger_, nullptr, QuitLoopClosure(),
+      [this](Status status, PagePtr page, PageId id) {
+        if (QuitOnError(QuitLoopClosure(), status, "Page initialization")) {
+          return;
+        }
+        page_ = std::move(page);
+        Populate();
+      });
 }
 
 void DeleteEntryBenchmark::Populate() {

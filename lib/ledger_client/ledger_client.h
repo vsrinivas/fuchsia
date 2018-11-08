@@ -66,10 +66,6 @@ class LedgerClient : fuchsia::ledger::ConflictResolverFactory {
 
   void ClearConflictResolver(const LedgerPageId& page_id);
 
-  // Supports GetLedgerClientPeer().
-  fuchsia::ledger::internal::LedgerRepositoryPtr ledger_repository_;
-  const std::string ledger_name_;
-
   // The ledger this is a client of.
   fuchsia::ledger::LedgerPtr ledger_;
 

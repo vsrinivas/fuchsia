@@ -37,6 +37,11 @@ LedgerAppInstanceFactory::LedgerAppInstance::ledger_repository_factory() {
 ledger_internal::LedgerRepositoryPtr
 LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedgerRepository() {
   ledger_internal::LedgerRepositoryPtr repository;
+  repository.set_error_handler([](zx_status_t status) {
+    if (status != ZX_ERR_PEER_CLOSED) {
+      ADD_FAILURE() << "|LedgerRepository| failed with an error: " << status;
+    }
+  });
   ledger_repository_factory_->GetRepository(
       fsl::CloneChannelFromFileDescriptor(tmpfs_.root_fd()),
       MakeCloudProvider(), repository.NewRequest());
@@ -45,17 +50,20 @@ LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedgerRepository() {
 
 LedgerPtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedger() {
   LedgerPtr ledger;
+  ledger.set_error_handler([](zx_status_t status) {
+    if (status != ZX_ERR_PEER_CLOSED) {
+      ADD_FAILURE() << "|Ledger| failed with an error: " << status;
+    }
+  });
 
-  ledger_internal::LedgerRepositoryPtr repository = GetTestLedgerRepository();
-  Status status;
+  auto repository = GetTestLedgerRepository();
+  repository->GetLedger(fidl::Clone(test_ledger_name_), ledger.NewRequest());
   auto waiter = loop_controller_->NewWaiter();
-  repository->GetLedger(fidl::Clone(test_ledger_name_), ledger.NewRequest(),
-                        callback::Capture(waiter->GetCallback(), &status));
+  repository->Sync(waiter->GetCallback());
   if (!waiter->RunUntilCalled()) {
     ADD_FAILURE() << "|GetLedger| failed to call back.";
     return nullptr;
   }
-  EXPECT_EQ(Status::OK, status);
   return ledger;
 }
 

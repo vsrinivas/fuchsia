@@ -38,27 +38,23 @@ interface LedgerController {
     1: Terminate();
 };
 
-interface LedgerRepository {
+interface LedgerRepository : fuchsia.ledger.ErrorNotifier {
     // Creates a new Ledger for the given |ledger_name| if it doesn't already
     // exist.
-    1: GetLedger(vector<uint8> ledger_name, request<fuchsia.ledger.Ledger> ledger)
-           -> (fuchsia.ledger.Status status);
+    1: GetLedger(vector<uint8> ledger_name, request<fuchsia.ledger.Ledger> ledger);
 
     // Binds a new LedgerRepository handle to this repository.
-    2: Duplicate(request<LedgerRepository> ledger_repository)
-           -> (fuchsia.ledger.Status status);
+    2: Duplicate(request<LedgerRepository> ledger_repository);
 
     // Sets a watcher to track the synchronization state of a user's Ledger. The
     // current state is immediately sent to the watcher when this method is
     // called.
-    3: SetSyncStateWatcher(fuchsia.ledger.SyncWatcher watcher)
-           -> (fuchsia.ledger.Status status);
+    3: SetSyncStateWatcher(fuchsia.ledger.SyncWatcher watcher);
 
     // Returns the debugging interface for this LedgerRepository
-    4: GetLedgerRepositoryDebug(request<LedgerRepositoryDebug> ledgerRepositoryDebug)
-           -> (fuchsia.ledger.Status status);
+    4: GetLedgerRepositoryDebug(request<LedgerRepositoryDebug> ledgerRepositoryDebug);
 
     // Tries to clean up disk space on the device by removing unused data that are
     // already backed up in the cloud.
-    5: DiskCleanUp() -> (fuchsia.ledger.Status status);
+    5: DiskCleanUp();
 };

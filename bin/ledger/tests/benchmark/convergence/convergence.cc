@@ -161,27 +161,22 @@ void ConvergenceBenchmark::Run() {
     cloud_provider_factory_.MakeCloudProvider(user_id_,
                                               cloud_provider.NewRequest());
 
-    GetLedger(startup_context_.get(), device_context->controller.NewRequest(),
-              std::move(cloud_provider), "convergence",
-              DetachedPath(synced_dir_path), QuitLoopClosure(),
-              [this, device_context = device_context.get(),
-               callback = waiter->NewCallback()](Status status,
-                                                 LedgerPtr ledger) mutable {
-                if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
-                  return;
-                }
-                device_context->ledger = std::move(ledger);
-                device_context->ledger->GetPage(
-                    fidl::MakeOptional(page_id_),
-                    device_context->page_connection.NewRequest(),
-                    QuitOnErrorCallback(QuitLoopClosure(), "GetPage"));
-                PageSnapshotPtr snapshot;
-                // Register a watcher; we don't really need the snapshot.
-                device_context->page_connection->GetSnapshot(
-                    snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    device_context->page_watcher->NewBinding(),
-                    std::move(callback));
-              });
+    Status status = GetLedger(
+        startup_context_.get(), device_context->controller.NewRequest(),
+        std::move(cloud_provider), "convergence", DetachedPath(synced_dir_path),
+        QuitLoopClosure(), &device_context->ledger);
+    if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
+      return;
+    }
+    device_context->ledger->GetPage(
+        fidl::MakeOptional(page_id_),
+        device_context->page_connection.NewRequest(),
+        QuitOnErrorCallback(QuitLoopClosure(), "GetPage"));
+    PageSnapshotPtr snapshot;
+    // Register a watcher; we don't really need the snapshot.
+    device_context->page_connection->GetSnapshot(
+        snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+        device_context->page_watcher->NewBinding(), waiter->NewCallback());
   }
   waiter->Finalize([this](Status status) {
     if (QuitOnError(QuitLoopClosure(), status, "GetSnapshot")) {

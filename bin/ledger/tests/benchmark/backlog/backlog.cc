@@ -200,31 +200,29 @@ void BacklogBenchmark::ConnectWriter() {
   bool ret = files::CreateDirectory(writer_path);
   FXL_DCHECK(ret);
 
-  GetLedger(startup_context_.get(), writer_controller_.NewRequest(), nullptr,
-            "backlog", DetachedPath(std::move(writer_path)),
-            []() { FXL_LOG(INFO) << "Writer closed."; },
-            [this](Status status, LedgerPtr writer) {
-              if (QuitOnError(QuitLoopClosure(), status, "Get writer ledger")) {
-                return;
-              }
-              writer_ = std::move(writer);
+  Status status =
+      GetLedger(startup_context_.get(), writer_controller_.NewRequest(),
+                nullptr, "backlog", DetachedPath(std::move(writer_path)),
 
-              GetPageEnsureInitialized(
-                  &writer_, nullptr,
-                  []() { FXL_LOG(INFO) << "Writer page closed."; },
-                  [this](Status status, PagePtr writer_page, PageId page_id) {
-                    if (QuitOnError(QuitLoopClosure(), status,
-                                    "Writer page initialization")) {
-                      return;
-                    }
+                []() { FXL_LOG(INFO) << "Writer closed."; }, &writer_);
+  if (QuitOnError(QuitLoopClosure(), status, "Get writer ledger")) {
+    return;
+  }
 
-                    writer_page_ = std::move(writer_page);
-                    page_id_ = page_id;
+  GetPageEnsureInitialized(
+      &writer_, nullptr, []() { FXL_LOG(INFO) << "Writer page closed."; },
+      [this](Status status, PagePtr writer_page, PageId page_id) {
+        if (QuitOnError(QuitLoopClosure(), status,
+                        "Writer page initialization")) {
+          return;
+        }
 
-                    TRACE_ASYNC_BEGIN("benchmark", "populate", 0);
-                    Populate();
-                  });
-            });
+        writer_page_ = std::move(writer_page);
+        page_id_ = page_id;
+
+        TRACE_ASYNC_BEGIN("benchmark", "populate", 0);
+        Populate();
+      });
 }
 
 void BacklogBenchmark::Populate() {
@@ -263,28 +261,24 @@ void BacklogBenchmark::ConnectUploader() {
   cloud_provider::CloudProviderPtr cloud_provider_uploader;
   cloud_provider_factory_.MakeCloudProvider(
       user_id_, cloud_provider_uploader.NewRequest());
-  GetLedger(
+  Status status = GetLedger(
       startup_context_.get(), uploader_controller_.NewRequest(),
       std::move(cloud_provider_uploader), "backlog",
-      DetachedPath(std::move(uploader_path)), QuitLoopClosure(),
-      [this](Status status, LedgerPtr uploader) {
-        if (QuitOnError(QuitLoopClosure(), status, "Get uploader ledger")) {
-          return;
-        }
-        uploader_ = std::move(uploader);
+      DetachedPath(std::move(uploader_path)), QuitLoopClosure(), &uploader_);
+  if (QuitOnError(QuitLoopClosure(), status, "Get uploader ledger")) {
+    return;
+  }
 
-        TRACE_ASYNC_BEGIN("benchmark", "get_uploader_page", 0);
-        TRACE_ASYNC_BEGIN("benchmark", "upload", 0);
-        uploader_->GetPage(
-            fidl::MakeOptional(page_id_), uploader_page_.NewRequest(),
-            [this](Status status) {
-              if (QuitOnError(QuitLoopClosure(), status, "GetPage")) {
-                return;
-              }
-              TRACE_ASYNC_END("benchmark", "get_uploader_page", 0);
-              WaitForUploaderUpload();
-            });
-      });
+  TRACE_ASYNC_BEGIN("benchmark", "get_uploader_page", 0);
+  TRACE_ASYNC_BEGIN("benchmark", "upload", 0);
+  uploader_->GetPage(fidl::MakeOptional(page_id_), uploader_page_.NewRequest(),
+                     [this](Status status) {
+                       if (QuitOnError(QuitLoopClosure(), status, "GetPage")) {
+                         return;
+                       }
+                       TRACE_ASYNC_END("benchmark", "get_uploader_page", 0);
+                       WaitForUploaderUpload();
+                     });
 }
 
 void BacklogBenchmark::WaitForUploaderUpload() {
@@ -311,27 +305,24 @@ void BacklogBenchmark::ConnectReader() {
   cloud_provider::CloudProviderPtr cloud_provider_reader;
   cloud_provider_factory_.MakeCloudProvider(user_id_,
                                             cloud_provider_reader.NewRequest());
-  GetLedger(startup_context_.get(), reader_controller_.NewRequest(),
-            std::move(cloud_provider_reader), "backlog",
-            DetachedPath(std::move(reader_path)), QuitLoopClosure(),
-            [this](Status status, LedgerPtr reader) {
-              if (QuitOnError(QuitLoopClosure(), status, "ConnectReader")) {
-                return;
-              }
-              reader_ = std::move(reader);
+  Status status = GetLedger(
+      startup_context_.get(), reader_controller_.NewRequest(),
+      std::move(cloud_provider_reader), "backlog",
+      DetachedPath(std::move(reader_path)), QuitLoopClosure(), &reader_);
+  if (QuitOnError(QuitLoopClosure(), status, "ConnectReader")) {
+    return;
+  }
 
-              TRACE_ASYNC_BEGIN("benchmark", "download", 0);
-              TRACE_ASYNC_BEGIN("benchmark", "get_reader_page", 0);
-              reader_->GetPage(
-                  fidl::MakeOptional(page_id_), reader_page_.NewRequest(),
-                  [this](Status status) {
-                    if (QuitOnError(QuitLoopClosure(), status, "GetPage")) {
-                      return;
-                    }
-                    TRACE_ASYNC_END("benchmark", "get_reader_page", 0);
-                    WaitForReaderDownload();
-                  });
-            });
+  TRACE_ASYNC_BEGIN("benchmark", "download", 0);
+  TRACE_ASYNC_BEGIN("benchmark", "get_reader_page", 0);
+  reader_->GetPage(fidl::MakeOptional(page_id_), reader_page_.NewRequest(),
+                   [this](Status status) {
+                     if (QuitOnError(QuitLoopClosure(), status, "GetPage")) {
+                       return;
+                     }
+                     TRACE_ASYNC_END("benchmark", "get_reader_page", 0);
+                     WaitForReaderDownload();
+                   });
 }
 
 void BacklogBenchmark::WaitForReaderDownload() {

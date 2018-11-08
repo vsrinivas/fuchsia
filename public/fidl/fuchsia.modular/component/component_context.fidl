@@ -14,6 +14,11 @@ using fuchsia.sys;
 interface ComponentContext {
     // Gets the Ledger associated with this component. This ledger instance is
     // unique to this component (nb. not the component instance) under this user.
+    // TODO: Rename this to GetLedger when the change has reached Global Integration.
+    1000: GetLedgerNew(request<fuchsia.ledger.Ledger> request);
+
+    // Gets the Ledger associated with this component. This ledger instance is
+    // unique to this component (nb. not the component instance) under this user.
     1: GetLedger(request<fuchsia.ledger.Ledger> request)
            -> (fuchsia.ledger.Status status);
 

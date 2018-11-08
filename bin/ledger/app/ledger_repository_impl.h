@@ -8,7 +8,6 @@
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <lib/callback/auto_cleanable.h>
-#include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/files/unique_fd.h>
@@ -21,6 +20,7 @@
 #include "peridot/bin/ledger/app/types.h"
 #include "peridot/bin/ledger/encryption/impl/encryption_service_factory_impl.h"
 #include "peridot/bin/ledger/environment/environment.h"
+#include "peridot/bin/ledger/fidl/error_notifier.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"
 #include "peridot/bin/ledger/p2p_sync/public/user_communicator.h"
@@ -30,9 +30,10 @@
 
 namespace ledger {
 
-class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
-                             public ledger_internal::LedgerRepositoryDebug,
-                             public PageEvictionManager::Delegate {
+class LedgerRepositoryImpl
+    : public fuchsia::ledger::internal::LedgerRepositoryErrorNotifierDelegate,
+      public ledger_internal::LedgerRepositoryDebug,
+      public PageEvictionManager::Delegate {
  public:
   LedgerRepositoryImpl(DetachedPath content_path, Environment* environment,
                        std::unique_ptr<storage::DbFactory> db_factory,
@@ -50,7 +51,8 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
                           repository_request);
 
   // Releases all handles bound to this repository impl.
-  std::vector<fidl::InterfaceRequest<LedgerRepository>> Unbind();
+  std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>>
+  Unbind();
 
   // PageEvictionManagerImpl::Delegate:
   void PageIsClosedAndSynced(
@@ -66,16 +68,16 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
   // LedgerRepository:
   void GetLedger(fidl::VectorPtr<uint8_t> ledger_name,
                  fidl::InterfaceRequest<Ledger> ledger_request,
-                 GetLedgerCallback callback) override;
+                 fit::function<void(Status)> callback) override;
   void Duplicate(
       fidl::InterfaceRequest<ledger_internal::LedgerRepository> request,
-      DuplicateCallback callback) override;
+      fit::function<void(Status)> callback) override;
   void SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher> watcher,
-                           SetSyncStateWatcherCallback callback) override;
+                           fit::function<void(Status)> callback) override;
   void GetLedgerRepositoryDebug(
       fidl::InterfaceRequest<ledger_internal::LedgerRepositoryDebug> request,
-      GetLedgerRepositoryDebugCallback callback) override;
-  void DiskCleanUp(DiskCleanUpCallback callback) override;
+      fit::function<void(Status)> callback) override;
+  void DiskCleanUp(fit::function<void(Status)> callback) override;
 
  private:
   // Retrieves the existing, or creates a new LedgerManager object with the
@@ -103,13 +105,15 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
   callback::AutoCleanableMap<std::string, LedgerManager,
                              convert::StringViewComparator>
       ledger_managers_;
-  fidl::BindingSet<ledger_internal::LedgerRepository> bindings_;
+  callback::AutoCleanableSet<
+      fuchsia::ledger::internal::LedgerRepositoryErrorNotifierProxy>
+      bindings_;
   fit::closure on_empty_callback_;
 
   fidl::BindingSet<ledger_internal::LedgerRepositoryDebug>
       ledger_repository_debug_bindings_;
 
-  std::vector<DiskCleanUpCallback> cleanup_callbacks_;
+  std::vector<fit::function<void(Status)>> cleanup_callbacks_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryImpl);
 };

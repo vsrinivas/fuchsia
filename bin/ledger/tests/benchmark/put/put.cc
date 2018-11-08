@@ -146,41 +146,37 @@ void PutBenchmark::Run() {
                         ? "off"
                         : "on")
                 << (update_ ? " --update" : "");
-  GetLedger(
+  Status status = GetLedger(
       startup_context_.get(), component_controller_.NewRequest(), nullptr,
-      "put", DetachedPath(tmp_dir_.path()), QuitLoopClosure(),
-      [this](Status status, LedgerPtr ledger) {
-        if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
+      "put", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_);
+  if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
+    return;
+  }
+
+  GetPageEnsureInitialized(
+      &ledger_, nullptr, QuitLoopClosure(),
+      [this](Status status, PagePtr page, PageId id) mutable {
+        if (QuitOnError(QuitLoopClosure(), status,
+                        "GetPageEnsureInitialized")) {
           return;
         }
+        page_ = std::move(page);
 
-        ledger_ = std::move(ledger);
-
-        GetPageEnsureInitialized(
-            &ledger_, nullptr, QuitLoopClosure(),
-            [this](Status status, PagePtr page, PageId id) mutable {
-              if (QuitOnError(QuitLoopClosure(), status,
-                              "GetPageEnsureInitialized")) {
-                return;
-              }
-              page_ = std::move(page);
-
-              InitializeKeys(
-                  [this](std::vector<fidl::VectorPtr<uint8_t>> keys) mutable {
-                    if (transaction_size_ > 0) {
-                      page_->StartTransaction([this, keys = std::move(keys)](
-                                                  Status status) mutable {
-                        if (QuitOnError(QuitLoopClosure(), status,
-                                        "Page::StartTransaction")) {
-                          return;
-                        }
-                        TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
-                        BindWatcher(std::move(keys));
-                      });
-                    } else {
+        InitializeKeys(
+            [this](std::vector<fidl::VectorPtr<uint8_t>> keys) mutable {
+              if (transaction_size_ > 0) {
+                page_->StartTransaction(
+                    [this, keys = std::move(keys)](Status status) mutable {
+                      if (QuitOnError(QuitLoopClosure(), status,
+                                      "Page::StartTransaction")) {
+                        return;
+                      }
+                      TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
                       BindWatcher(std::move(keys));
-                    }
-                  });
+                    });
+              } else {
+                BindWatcher(std::move(keys));
+              }
             });
       });
 }

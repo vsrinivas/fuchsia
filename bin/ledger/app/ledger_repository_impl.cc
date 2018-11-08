@@ -29,7 +29,7 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
       user_sync_(std::move(user_sync)),
       disk_cleanup_manager_(std::move(disk_cleanup_manager)),
       page_usage_listener_(page_usage_listener) {
-  bindings_.set_empty_set_handler([this] { CheckEmpty(); });
+  bindings_.set_on_empty([this] { CheckEmpty(); });
   ledger_managers_.set_on_empty([this] { CheckEmpty(); });
   ledger_repository_debug_bindings_.set_empty_set_handler(
       [this] { CheckEmpty(); });
@@ -41,7 +41,7 @@ LedgerRepositoryImpl::~LedgerRepositoryImpl() {}
 void LedgerRepositoryImpl::BindRepository(
     fidl::InterfaceRequest<ledger_internal::LedgerRepository>
         repository_request) {
-  bindings_.AddBinding(this, std::move(repository_request));
+  bindings_.emplace(this, std::move(repository_request));
 }
 
 void LedgerRepositoryImpl::PageIsClosedAndSynced(
@@ -74,10 +74,10 @@ std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>>
 LedgerRepositoryImpl::Unbind() {
   std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>>
       handles;
-  for (auto& binding : bindings_.bindings()) {
-    handles.push_back(binding->Unbind());
+  for (auto& binding : bindings_) {
+    handles.push_back(binding.Unbind());
   }
-  bindings_.CloseAll();
+  bindings_.clear();
   return handles;
 }
 
@@ -114,7 +114,8 @@ LedgerManager* LedgerRepositoryImpl::GetLedgerManager(
 
 void LedgerRepositoryImpl::GetLedger(
     fidl::VectorPtr<uint8_t> ledger_name,
-    fidl::InterfaceRequest<Ledger> ledger_request, GetLedgerCallback callback) {
+    fidl::InterfaceRequest<Ledger> ledger_request,
+    fit::function<void(Status)> callback) {
   TRACE_DURATION("ledger", "repository_get_ledger");
   if (ledger_name->empty()) {
     callback(Status::INVALID_ARGUMENT);
@@ -129,14 +130,14 @@ void LedgerRepositoryImpl::GetLedger(
 
 void LedgerRepositoryImpl::Duplicate(
     fidl::InterfaceRequest<ledger_internal::LedgerRepository> request,
-    DuplicateCallback callback) {
+    fit::function<void(Status)> callback) {
   BindRepository(std::move(request));
   callback(Status::OK);
 }
 
 void LedgerRepositoryImpl::SetSyncStateWatcher(
     fidl::InterfaceHandle<SyncWatcher> watcher,
-    SetSyncStateWatcherCallback callback) {
+    fit::function<void(Status)> callback) {
   watchers_->AddSyncWatcher(std::move(watcher));
   callback(Status::OK);
 }
@@ -144,7 +145,7 @@ void LedgerRepositoryImpl::SetSyncStateWatcher(
 void LedgerRepositoryImpl::CheckEmpty() {
   if (!on_empty_callback_)
     return;
-  if (ledger_managers_.empty() && bindings_.size() == 0 &&
+  if (ledger_managers_.empty() && bindings_.empty() &&
       ledger_repository_debug_bindings_.size() == 0 &&
       disk_cleanup_manager_->IsEmpty()) {
     on_empty_callback_();
@@ -153,12 +154,12 @@ void LedgerRepositoryImpl::CheckEmpty() {
 
 void LedgerRepositoryImpl::GetLedgerRepositoryDebug(
     fidl::InterfaceRequest<ledger_internal::LedgerRepositoryDebug> request,
-    GetLedgerRepositoryDebugCallback callback) {
+    fit::function<void(Status)> callback) {
   ledger_repository_debug_bindings_.AddBinding(this, std::move(request));
   callback(Status::OK);
 }
 
-void LedgerRepositoryImpl::DiskCleanUp(DiskCleanUpCallback callback) {
+void LedgerRepositoryImpl::DiskCleanUp(fit::function<void(Status)> callback) {
   cleanup_callbacks_.push_back(std::move(callback));
   if (cleanup_callbacks_.size() > 1) {
     return;

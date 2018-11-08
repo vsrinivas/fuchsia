@@ -18,15 +18,15 @@
 namespace ledger {
 
 // Creates a new Ledger application instance and returns a LedgerPtr connection
-// to it.
-void GetLedger(component::StartupContext* context,
-               fidl::InterfaceRequest<fuchsia::sys::ComponentController>
-                   controller_request,
-               cloud_provider::CloudProviderPtr cloud_provider,
-               std::string ledger_name,
-               const DetachedPath& ledger_repository_path,
-               fit::function<void()> error_handler,
-               fit::function<void(Status, LedgerPtr)> callback);
+// to it. This method will call |Sync| on the Repository to ensure that the
+// Ledger is ready to be used for performance benchmark.
+Status GetLedger(component::StartupContext* context,
+                 fidl::InterfaceRequest<fuchsia::sys::ComponentController>
+                     controller_request,
+                 cloud_provider::CloudProviderPtr cloud_provider,
+                 std::string ledger_name,
+                 const DetachedPath& ledger_repository_path,
+                 fit::function<void()> error_handler, LedgerPtr* ledger);
 
 // Kills the remote ledger process controlled by |controller|.
 void KillLedgerProcess(fuchsia::sys::ComponentControllerPtr* controller);

@@ -21,14 +21,12 @@ TEST(GetLedgerTest, CreateAndDeleteLedger) {
   auto startup_context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::sys::ComponentControllerPtr controller;
 
-  Status status = Status::UNKNOWN_ERROR;
   LedgerPtr ledger;
+  Status status = GetLedger(
+      startup_context.get(), controller.NewRequest(), nullptr, "ledger_name",
+      DetachedPath(tmpfs.root_fd()), [&] { loop.Quit(); }, &ledger);
 
-  GetLedger(startup_context.get(), controller.NewRequest(), nullptr,
-            "ledger_name", DetachedPath(tmpfs.root_fd()), [&] { loop.Quit(); },
-            callback::Capture([&] { loop.Quit(); }, &status, &ledger));
-  loop.Run();
-
+  // No need to |Sync| as |GetLedger| handles it.
   EXPECT_EQ(Status::OK, status);
 
   KillLedgerProcess(&controller);
@@ -41,14 +39,10 @@ TEST(GetLedgerTest, GetPageEnsureInitialized) {
   auto startup_context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::sys::ComponentControllerPtr controller;
 
-  Status status = Status::UNKNOWN_ERROR;
   LedgerPtr ledger;
-
-  GetLedger(startup_context.get(), controller.NewRequest(), nullptr,
-            "ledger_name", DetachedPath(tmpfs.root_fd()), [&] { loop.Quit(); },
-            callback::Capture([&] { loop.Quit(); }, &status, &ledger));
-  loop.Run();
-  loop.ResetQuit();
+  Status status = GetLedger(
+      startup_context.get(), controller.NewRequest(), nullptr, "ledger_name",
+      DetachedPath(tmpfs.root_fd()), [&] { loop.Quit(); }, &ledger);
 
   ASSERT_EQ(Status::OK, status);
 
