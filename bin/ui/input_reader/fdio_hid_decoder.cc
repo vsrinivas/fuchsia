@@ -67,18 +67,25 @@ static int32_t extract_int8_ext(const std::vector<uint8_t>& v, uint32_t begin,
 
 namespace mozart {
 
-FdioHidDecoder::FdioHidDecoder(const std::string& name, int fd)
-    : fd_(fd), name_(name), protocol_(Protocol::Other) {}
+FdioHidDecoder::FdioHidDecoder(const std::string& name, fbl::unique_fd fd)
+    : fd_(std::move(fd)), name_(name), protocol_(Protocol::Other) {}
 
 FdioHidDecoder::~FdioHidDecoder() = default;
 
 bool FdioHidDecoder::Init() {
-  fzl::FdioCaller caller{fbl::unique_fd(fd_)};
+  // |fzl::FdioCaller| expects full temporary ownership of the the file
+  // descriptor, but it doesn't actually require it. We still need the file
+  // descriptor to set up some devices in |ParseProtocol| using C setup
+  // functions. They do the same thing as |fzl::FdioCaller|, in particular
+  // |fzl::FdioCaller::borrow_channel()|. They do both take references to the
+  // corresponding |fdio_t|, but that is refcounted.
+  //
+  // Since this is really unsafe wrt. |fd_|, we need to be sure to relinquish
+  // ownership by |caller| when we're done.
+  fzl::FdioCaller caller(fbl::unique_fd(fd_.get()));
 
   bool success = ParseProtocol(caller, &protocol_);
   if (!success) {
-    // Do not close the fd we were given
-    // TODO(ES-169): Figure out why
     caller.release().release();
     return false;
   }
@@ -99,7 +106,7 @@ zx::event FdioHidDecoder::GetEvent() {
   zx::event event;
 
   ssize_t rc =
-      ioctl_device_get_event_handle(fd_, event.reset_and_get_address());
+      ioctl_device_get_event_handle(fd_.get(), event.reset_and_get_address());
   if (rc < 0) {
     log_err(rc, "event handle", name_);
     return {};
@@ -175,7 +182,7 @@ bool FdioHidDecoder::ParseProtocol(const fzl::FdioCaller& caller,
     return true;
   }
   if (is_samsung_touch_report_desc(desc.data(), desc.size())) {
-    setup_samsung_touch(fd_);
+    setup_samsung_touch(fd_.get());
     *protocol = Protocol::SamsungTouch;
     return true;
   }
@@ -208,14 +215,14 @@ bool FdioHidDecoder::ParseProtocol(const fzl::FdioCaller& caller,
     return true;
   }
   if (is_eyoyo_touch_report_desc(desc.data(), desc.size())) {
-    setup_eyoyo_touch(fd_);
+    setup_eyoyo_touch(fd_.get());
     *protocol = Protocol::EyoyoTouch;
     return true;
   }
   // TODO(SCN-867) Use HID parsing for all touch devices
   // will remove the need for this
   if (is_ft3x27_touch_report_desc(desc.data(), desc.size())) {
-    setup_ft3x27_touch(fd_);
+    setup_ft3x27_touch(fd_.get());
     *protocol = Protocol::Ft3x27Touch;
     return true;
   }
@@ -433,7 +440,7 @@ bool FdioHidDecoder::ParseButtonsDescriptor(const hid::ReportField* fields,
 }
 
 const std::vector<uint8_t>& FdioHidDecoder::Read(int* bytes_read) {
-  *bytes_read = read(fd_, report_.data(), report_.size());
+  *bytes_read = read(fd_.get(), report_.data(), report_.size());
   return report_;
 }
 

@@ -25,10 +25,7 @@ namespace mozart {
 // This is the "real" FDIO implementation of |HidDecoder|.
 class FdioHidDecoder : public HidDecoder {
  public:
-  // The decoder does not take ownership of the |fd|. InputReader takes
-  // care of that.
-  // TODO(ES-169): How?
-  FdioHidDecoder(const std::string& name, int fd);
+  FdioHidDecoder(const std::string& name, fbl::unique_fd fd);
   ~FdioHidDecoder() override;
 
   // |HidDecoder|
@@ -64,7 +61,7 @@ class FdioHidDecoder : public HidDecoder {
                                    size_t count);
   bool ParseButtonsDescriptor(const hid::ReportField* fields, size_t count);
 
-  int fd_;
+  fbl::unique_fd fd_;
   const std::string name_;
   Protocol protocol_;
   std::vector<uint8_t> report_;
