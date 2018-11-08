@@ -11,7 +11,8 @@
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/fxl/macros.h>
-#include <lib/ui/view_framework/base_view.h>
+#include <lib/ui/base_view/cpp/v1_base_view.h>
+#include <zx/eventpair.h>
 
 namespace modular {
 
@@ -20,11 +21,9 @@ namespace modular {
 // that play the role of a view controller (aka quarterback, recipe).
 // It supports to embed views of *multiple* children, which are laid
 // out horizontally.
-class ViewHost : public mozart::BaseView {
+class ViewHost : public scenic::V1BaseView {
  public:
-  explicit ViewHost(fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-                    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-                        view_owner_request);
+  explicit ViewHost(scenic::ViewContext view_context);
   ~ViewHost() override;
 
   // Connects one more view. Calling this method multiple times adds
@@ -37,7 +36,7 @@ class ViewHost : public mozart::BaseView {
  private:
   struct ViewData;
 
-  // |BaseView|:
+  // |scenic::V1BaseView|
   void OnPropertiesChanged(
       fuchsia::ui::viewsv1::ViewProperties old_properties) override;
   void OnChildUnavailable(uint32_t child_key) override;

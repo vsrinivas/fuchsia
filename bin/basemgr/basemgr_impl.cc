@@ -92,7 +92,8 @@ void BasemgrImpl::InitializePresentation(
           : presentation_state_.presentation.NewRequest();
 
   context_->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>()
-      ->Present(std::move(view_owner), std::move(presentation_request));
+      ->Present2(zx::eventpair(view_owner.TakeChannel().release()),
+                 std::move(presentation_request));
 
   AddGlobalKeyboardShortcuts(presentation_state_.presentation);
 

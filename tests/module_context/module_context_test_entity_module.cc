@@ -34,7 +34,7 @@ class TestApp {
       "Entity data correct after entity resolution"};
   TestApp(modular::ModuleHost* const module_host,
           fidl::InterfaceRequest<
-              fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
+              fuchsia::ui::app::ViewProvider> /*view_provider_request*/)
       : module_context_(module_host->module_context()) {
     modular::testing::Init(module_host->startup_context(), __FILE__);
     initialized_.Pass();
@@ -99,6 +99,13 @@ class TestApp {
               }));
         }));
   }
+
+  TestApp(modular::ModuleHost* const module_host,
+          fidl::InterfaceRequest<
+              fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
+      : TestApp(
+            module_host,
+            fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>(nullptr)) {}
 
   TestPoint stopped_{"Entity module stopped"};
   void Terminate(const std::function<void()>& done) {
