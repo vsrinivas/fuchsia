@@ -24,7 +24,11 @@ impl Decodable for TestResp {
                     total_len -= tlv_len;
                     blah = String::from_utf8(dst).unwrap();
                 }
-                _ => panic!("unknown id for this message type")
+                0 => { eprintln!("Found a type of 0, modem gave a bad TLV, trying to recover"); break; }
+                e_code => {
+                    eprintln!("Unknown id for this message type: {}, removing {} of len", e_code, tlv_len);
+                    total_len -= tlv_len;
+                }
             }
         }
         Ok(TestResp {

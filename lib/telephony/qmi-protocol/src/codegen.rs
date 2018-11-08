@@ -282,7 +282,13 @@ impl<'a, W: io::Write> Codegen<'a, W> {
             dedent!(self);
             writeln_indent!(self, "}}");
         }
-        writeln_indent!(self, "_ => panic!(\"unknown id for this message type\")");
+        writeln_indent!(self, "0 => {{ eprintln!(\"Found a type of 0, modem gave a bad TLV, trying to recover\"); break; }}");
+        writeln_indent!(self, "e_code => {{");
+        indent!(self);
+        writeln_indent!(self, "eprintln!(\"Unknown id for this message type: {{}}, removing {{}} of len\", e_code, tlv_len);");
+        writeln_indent!(self, "total_len -= tlv_len;");
+        dedent!(self);
+        writeln_indent!(self, "}}");
         dedent!(self);
         writeln_indent!(self, "}}");
         dedent!(self);
