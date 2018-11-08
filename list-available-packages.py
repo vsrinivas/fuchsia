@@ -9,15 +9,15 @@ import sys
 import json
 
 def main():
-    parser = argparse.ArgumentParser(description=("List all targets in the given update repository"))
-    parser.add_argument('--repo', action='store', required=True)
+    parser = argparse.ArgumentParser(description=("List all targets in the available set"))
+    parser.add_argument('--build-dir', action='store', required=True)
 
     args = parser.parse_args()
-    with open(os.path.join(args.repo, "targets.json")) as f:
+    with open(os.path.join(args.build_dir, "packages.json")) as f:
       data = json.load(f)
 
-    for tgt in list(data["signed"]["targets"]):
-      print(tgt.split("/")[1])
+    for tgt in list(data["available"]):
+      print(tgt)
 
 if __name__ == '__main__':
     sys.exit(main())
