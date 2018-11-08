@@ -7,6 +7,7 @@
 #include <stdint.h>
 
 #include <cobalt-client/cpp/counter-internal.h>
+#include <cobalt-client/cpp/types-internal.h>
 
 namespace cobalt_client {
 
@@ -22,7 +23,7 @@ public:
     using Count = uint64_t;
 
     Counter() = delete;
-    Counter(internal::RemoteCounter* remote_counter);
+    Counter(internal::ElementView<internal::RemoteCounter> remote_counter);
     Counter(const Counter& other) : remote_counter_(other.remote_counter_) {}
     Counter(Counter&&) = default;
     ~Counter() = default;
@@ -36,9 +37,7 @@ public:
     Count GetRemoteCount() const;
 
 private:
-    // Implementation of the flushable counter. The value
-    // of this counter is flushed by the collector.
-    internal::RemoteCounter* remote_counter_;
+    internal::ElementView<internal::RemoteCounter> remote_counter_;
 };
 
 } // namespace cobalt_client

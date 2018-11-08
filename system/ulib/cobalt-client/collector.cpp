@@ -52,16 +52,7 @@ bool MetricOptions::IsRemote() const {
 Collector::Collector(const CollectorOptions& options, fbl::unique_ptr<internal::Logger> logger)
     : logger_(fbl::move(logger)) {
     flushing_.store(false);
-    remote_counters_.reserve(options.max_counters);
-    remote_histograms_.reserve(options.max_histograms);
-    histogram_options_.reserve(options.max_histograms);
 }
-
-Collector::Collector(Collector&& other)
-    : histogram_options_(fbl::move(other.histogram_options_)),
-      remote_histograms_(fbl::move(other.remote_histograms_)),
-      remote_counters_(fbl::move(other.remote_counters_)), logger_(fbl::move(other.logger_)),
-      flushing_(other.flushing_.load()) {}
 
 Collector::~Collector() {
     if (logger_ != nullptr) {
@@ -70,25 +61,21 @@ Collector::~Collector() {
 };
 
 Histogram Collector::AddHistogram(const HistogramOptions& options) {
-    ZX_DEBUG_ASSERT_MSG(remote_histograms_.size() < remote_histograms_.capacity(),
-                        "Exceeded pre-allocated histogram capacity.");
     RemoteHistogram::EventBuffer buffer;
     // RemoteMetricInfo metric_info
     remote_histograms_.push_back(RemoteHistogram(
         options.bucket_count + 2, internal::RemoteMetricInfo::From(options), fbl::move(buffer)));
     histogram_options_.push_back(options);
     size_t index = remote_histograms_.size() - 1;
-    return Histogram(&histogram_options_[index], &remote_histograms_[index]);
+    return Histogram({&histogram_options_, index}, {&remote_histograms_, index});
 }
 
 Counter Collector::AddCounter(const MetricOptions& options) {
-    ZX_DEBUG_ASSERT_MSG(remote_counters_.size() < remote_counters_.capacity(),
-                        "Exceeded pre-allocated counter capacity.");
     RemoteCounter::EventBuffer buffer;
     remote_counters_.push_back(
         RemoteCounter(internal::RemoteMetricInfo::From(options), fbl::move(buffer)));
     size_t index = remote_counters_.size() - 1;
-    return Counter(&(remote_counters_[index]));
+    return Counter({&remote_counters_, index});
 }
 
 void Collector::Flush() {
@@ -146,7 +133,7 @@ void Collector::LogCounter(RemoteCounter* counter) {
     });
 }
 
-Collector Collector::Create(CollectorOptions options) {
+fbl::unique_ptr<Collector> Collector::Create(CollectorOptions options) {
     ZX_DEBUG_ASSERT_MSG(options.load_config, "Must define a load_config function.");
     internal::CobaltOptions cobalt_options;
     cobalt_options.logger_deadline_first_attempt = options.initial_response_deadline;
@@ -158,7 +145,8 @@ Collector Collector::Create(CollectorOptions options) {
     };
     cobalt_options.service_path.AppendPrintf("/svc/%s", fuchsia_cobalt_LoggerFactory_Name);
     cobalt_options.release_stage = static_cast<internal::ReleaseStage>(options.release_stage);
-    return Collector(options, fbl::make_unique<internal::CobaltLogger>(fbl::move(cobalt_options)));
+    return fbl::make_unique<Collector>(
+        options, fbl::make_unique<internal::CobaltLogger>(fbl::move(cobalt_options)));
 }
 
 CollectorOptions CollectorOptions::GeneralAvailability() {

@@ -338,11 +338,13 @@ bool TestFlushMultithread() {
 bool TestAdd() {
     BEGIN_TEST;
     // Buckets 2^i + offset.
-    HistogramOptions options = HistogramOptions::Exponential(/*bucket_count=*/kBuckets, /*base=*/2,
-                                                             /*scalar=*/1, /*offset=*/-10);
-    RemoteHistogram remote_histogram(kBuckets + 2, MakeRemoteMetricInfo(), MakeEventBuffer());
-    ASSERT_TRUE(options.IsValid());
-    Histogram histogram(&options, &remote_histogram);
+    fbl::Vector<RemoteHistogram> histograms;
+    histograms.push_back({kBuckets + 2, MakeRemoteMetricInfo(), MakeEventBuffer()});
+    fbl::Vector<HistogramOptions> options = {
+        HistogramOptions::Exponential(/*bucket_count=*/kBuckets, /*base=*/2,
+                                      /*scalar=*/1, /*offset=*/-10)};
+    ASSERT_TRUE(options[0].IsValid());
+    Histogram histogram({&options, 0}, {&histograms, 0});
 
     histogram.Add(25);
     ASSERT_EQ(histogram.GetRemoteCount(25), 1);
@@ -360,13 +362,15 @@ bool TestAdd() {
 // Note: The two extra buckets, are for underflow and overflow buckets.
 bool TestAddMultiple() {
     BEGIN_TEST;
-    // Buckets 2^i + offset.
-    HistogramOptions options = HistogramOptions::Exponential(/*bucket_count=*/kBuckets, /*base=*/2,
-                                                             /*scalar=*/1, /*offset=*/-10);
-    RemoteHistogram remote_histogram(kBuckets + 2, MakeRemoteMetricInfo(), MakeEventBuffer());
-    BaseHistogram expected_hist(kBuckets + 2);
+    fbl::Vector<RemoteHistogram> histograms;
+    histograms.push_back({kBuckets + 2, MakeRemoteMetricInfo(), MakeEventBuffer()});
+    fbl::Vector<HistogramOptions> options_vector = {
+        HistogramOptions::Exponential(/*bucket_count=*/kBuckets, /*base=*/2,
+                                      /*scalar=*/1, /*offset=*/-10)};
+    HistogramOptions& options = options_vector[0];
     ASSERT_TRUE(options.IsValid());
-    Histogram histogram(&options, &remote_histogram);
+    Histogram histogram({&options_vector, 0}, {&histograms, 0});
+    BaseHistogram expected_hist(kBuckets + 2);
 
     struct ValueBucket {
         double value;
@@ -403,7 +407,7 @@ bool TestAddMultiple() {
 
     // Sanity-Check that the internal representation also matches the expected values.
     for (uint32_t bucket = 0; bucket < kBuckets + 2; ++bucket) {
-        EXPECT_EQ(remote_histogram.GetCount(bucket), remote_histogram.GetCount(bucket));
+        EXPECT_EQ(histograms[0].GetCount(bucket), expected_hist.GetCount(bucket));
     }
 
     END_TEST;
@@ -413,12 +417,16 @@ bool TestAddMultiple() {
 bool TestAddAfterFlush() {
     BEGIN_TEST;
     // Buckets 2^i + offset.
-    HistogramOptions options = HistogramOptions::Exponential(/*bucket_count=*/kBuckets, /*base=*/2,
-                                                             /*scalar=*/1, /*offset=*/-10);
-    RemoteHistogram remote_histogram(kBuckets + 2, MakeRemoteMetricInfo(), MakeEventBuffer());
-    BaseHistogram expected_hist(kBuckets + 2);
+    fbl::Vector<RemoteHistogram> histograms;
+    histograms.push_back({kBuckets + 2, MakeRemoteMetricInfo(), MakeEventBuffer()});
+    fbl::Vector<HistogramOptions> options_vector = {
+        HistogramOptions::Exponential(/*bucket_count=*/kBuckets, /*base=*/2,
+                                      /*scalar=*/1, /*offset=*/-10)};
+    HistogramOptions& options = options_vector[0];
+    auto& remote_histogram = histograms[0];
     ASSERT_TRUE(options.IsValid());
-    Histogram histogram(&options, &remote_histogram);
+    Histogram histogram({&options_vector, 0}, {&histograms, 0});
+    BaseHistogram expected_hist(kBuckets + 2);
 
     histogram.Add(25, 4);
     ASSERT_EQ(histogram.GetRemoteCount(25), 4);
@@ -441,7 +449,7 @@ struct Observation {
 
 struct HistogramFnArgs {
     // Public histogram which is used to add observations.
-    Histogram histogram = Histogram(nullptr, nullptr);
+    Histogram histogram = Histogram();
 
     // When we are flushing we act as the collector, so we need
     // a pointer to the underlying histogram.
@@ -489,12 +497,15 @@ int HistogramFn(void* v_args) {
 bool TestAddMultiThread() {
     BEGIN_TEST;
     // Buckets 2^i + offset.
-    HistogramOptions options = HistogramOptions::Linear(/*bucket_count=*/kBuckets,
-                                                        /*scalar=*/2, /*offset=*/0);
-    RemoteHistogram remote_histogram(kBuckets + 2, MakeRemoteMetricInfo(), MakeEventBuffer());
-    BaseHistogram expected_hist(kBuckets + 2);
+    fbl::Vector<RemoteHistogram> histograms;
+    histograms.push_back({kBuckets + 2, MakeRemoteMetricInfo(), MakeEventBuffer()});
+    fbl::Vector<HistogramOptions> options_vector = {
+        HistogramOptions::Linear(/*bucket_count=*/kBuckets,
+                                 /*scalar=*/2, /*offset=*/0)};
+    HistogramOptions& options = options_vector[0];
     ASSERT_TRUE(options.IsValid());
-    Histogram histogram(&options, &remote_histogram);
+    Histogram histogram({&options_vector, 0}, {&histograms, 0});
+    BaseHistogram expected_hist(kBuckets + 2);
     fbl::Vector<Observation> observations;
 
     // 1500 random observation.
@@ -552,14 +563,19 @@ bool TestAddMultiThread() {
 bool TestAddAndFlushMultiThread() {
     BEGIN_TEST;
     // Buckets 2^i + offset.
-    HistogramOptions options = HistogramOptions::Linear(/*bucket_count=*/kBuckets,
-                                                        /*scalar=*/2, /*offset=*/0);
-    RemoteHistogram remote_histogram(kBuckets + 2, MakeRemoteMetricInfo(), MakeEventBuffer());
+    fbl::Vector<RemoteHistogram> histograms;
+    histograms.push_back({kBuckets + 2, MakeRemoteMetricInfo(), MakeEventBuffer()});
+    fbl::Vector<HistogramOptions> options_vector = {
+        HistogramOptions::Linear(/*bucket_count=*/kBuckets,
+                                 /*scalar=*/2, /*offset=*/0)};
+    HistogramOptions& options = options_vector[0];
+    auto& remote_histogram = histograms[0];
+    ASSERT_TRUE(options.IsValid());
+    Histogram histogram({&options_vector, 0}, {&histograms, 0});
+    fbl::Vector<Observation> observations;
     BaseHistogram expected_hist(kBuckets + 2);
     BaseHistogram flushed_hist(kBuckets + 2);
     ASSERT_TRUE(options.IsValid());
-    Histogram histogram(&options, &remote_histogram);
-    fbl::Vector<Observation> observations;
 
     // 1500 random observation.
     unsigned int seed = static_cast<unsigned int>(zx::ticks::now().get());

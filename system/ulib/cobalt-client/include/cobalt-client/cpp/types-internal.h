@@ -116,5 +116,39 @@ private:
     fbl::atomic<bool> flushing_;
 };
 
+// Helper class for providing a reference to an element within a vector.
+// Note: This is not affected by vector reallocation on growth, unlike
+// a pointer to the element within the vector. Though, it is up to the
+// user to guarantee that the objects lifetime does not exceeds the
+// vector's lifetime.
+template <typename ElementType>
+class ElementView {
+public:
+    ElementView() = default;
+    ElementView(fbl::Vector<ElementType>* container, size_t index)
+        : container_(container), index_(index) {
+        ZX_DEBUG_ASSERT(IsValid());
+    }
+    ElementView(const ElementView&) = default;
+    ElementView(ElementView&&) = default;
+    ElementView& operator=(const ElementView&) = default;
+    ElementView& operator=(ElementView&&) = default;
+    ~ElementView() = default;
+
+    const ElementType* get() const { return &(*container_)[index_]; }
+    ElementType* get() { return &(*container_)[index_]; }
+
+    const ElementType& operator*() const { return *get(); }
+    const ElementType* operator->() const { return get(); }
+    ElementType& operator*() { return *get(); }
+    ElementType* operator->() { return get(); }
+
+    bool IsValid() { return container_ != nullptr && index_ < container_->size(); }
+
+private:
+    fbl::Vector<ElementType>* container_ = nullptr;
+    size_t index_ = 0;
+};
+
 } // namespace internal
 } // namespace cobalt_client

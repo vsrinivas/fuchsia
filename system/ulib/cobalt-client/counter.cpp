@@ -33,7 +33,8 @@ bool RemoteCounter::Flush(const RemoteCounter::FlushFn& flush_handler) {
 }
 } // namespace internal
 
-Counter::Counter(internal::RemoteCounter* remote_counter) : remote_counter_(remote_counter) {}
+Counter::Counter(internal::ElementView<internal::RemoteCounter> remote_counter)
+    : remote_counter_(remote_counter) {}
 
 void Counter::Increment(Counter::Count value) {
     remote_counter_->Increment(value);

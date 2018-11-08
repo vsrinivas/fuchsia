@@ -52,18 +52,6 @@ struct CollectorOptions {
     // time we need to wait for a response.
     zx::duration initial_response_deadline = zx::duration(0);
 
-    // We need this information for pre-allocating storage
-    // and guaranteeing no dangling pointers, plus contiguous
-    // memory for cache friendliness.
-
-    // This allows to allocated memory appropiately.
-
-    // Number of histograms to be used.
-    size_t max_histograms = 0;
-
-    // Number of counters to be used.
-    size_t max_counters = 0;
-
     // This is set internally by factory functions.
     uint32_t release_stage = 0;
 };
@@ -76,16 +64,16 @@ struct CollectorOptions {
 // The Sink provides an API for persisting the supported data types. This is
 // exposed to simplify testing.
 //
-// This class is moveable, but not copyable or assignable.
+// This class is not moveable, copyable or assignable.
 // This class is thread-compatible.
 class Collector {
 public:
     // Returns a |Collector|
-    static Collector Create(CollectorOptions options);
+    static fbl::unique_ptr<Collector> Create(CollectorOptions options);
 
     Collector(const CollectorOptions& options, fbl::unique_ptr<internal::Logger> logger);
     Collector(const Collector&) = delete;
-    Collector(Collector&&);
+    Collector(Collector&&) = delete;
     Collector& operator=(const Collector&) = delete;
     Collector& operator=(Collector&&) = delete;
     ~Collector();
@@ -105,7 +93,7 @@ public:
     // TODO(gevalentino): remove the warning when Cobalt adds the required support.
     Counter AddCounter(const MetricOptions& options);
 
-    // Flushes the content of all flushable metrics into |sink_|. The |sink_| is
+    // Flushes the content of all flushable metrics into |logger_|. The |logger_| is
     // in charge of persisting the data.
     void Flush();
 

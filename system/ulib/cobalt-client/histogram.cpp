@@ -155,8 +155,9 @@ HistogramOptions HistogramOptions::Linear(uint32_t bucket_count, uint32_t scalar
     return options;
 }
 
-Histogram::Histogram(HistogramOptions* options, internal::RemoteHistogram* remote_histogram)
-    : options_(options), remote_histogram_(remote_histogram) {}
+Histogram::Histogram(internal::ElementView<HistogramOptions> options,
+                     internal::ElementView<internal::RemoteHistogram> remote_histogram)
+    : remote_histogram_(remote_histogram), options_(options) {}
 
 Histogram::Histogram(const Histogram&) = default;
 Histogram::Histogram(Histogram&&) = default;

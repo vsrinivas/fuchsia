@@ -8,6 +8,7 @@
 
 #include <cobalt-client/cpp/histogram-internal.h>
 #include <cobalt-client/cpp/metric-options.h>
+#include <cobalt-client/cpp/types-internal.h>
 
 namespace cobalt_client {
 
@@ -20,8 +21,9 @@ public:
     // Underlying type used for representing bucket count.
     using Count = uint64_t;
 
-    Histogram() = delete;
-    Histogram(HistogramOptions* options, internal::RemoteHistogram* remote_histogram);
+    Histogram() = default;
+    Histogram(internal::ElementView<HistogramOptions> options,
+              internal::ElementView<internal::RemoteHistogram> remote_histogram);
     Histogram(const Histogram&);
     Histogram(Histogram&&);
     Histogram& operator=(const Histogram&);
@@ -40,11 +42,7 @@ public:
     Count GetRemoteCount(ValueType value) const;
 
 private:
-    // Set of options that define this histogram.
-    HistogramOptions* options_;
-
-    // Implementation of the flushable histogram. The value
-    // of this histogram is flushed by the collector.
-    internal::RemoteHistogram* remote_histogram_;
+    internal::ElementView<internal::RemoteHistogram> remote_histogram_;
+    internal::ElementView<HistogramOptions> options_;
 };
 } // namespace cobalt_client

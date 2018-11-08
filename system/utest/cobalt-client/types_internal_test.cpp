@@ -204,6 +204,55 @@ bool TestFromMetricOptionsNoComponent() {
     END_TEST;
 }
 
+bool TestInvalidDefault() {
+    BEGIN_TEST;
+    ElementView<int> view;
+    ASSERT_FALSE(view.IsValid());
+    END_TEST;
+}
+
+bool TestInvalidatedIfOutOfRange() {
+    BEGIN_TEST;
+    fbl::Vector<int> elements = {1, 2, 3};
+    ElementView<int> element = {&elements, 2};
+    elements.erase(2);
+    ASSERT_FALSE(element.IsValid());
+    END_TEST;
+}
+
+bool TestGet() {
+    BEGIN_TEST;
+    fbl::Vector<int> elements = {1, 2, 3};
+    ElementView<int> element = {&elements, 2};
+    ASSERT_EQ(element.get(), &elements[2]);
+    ASSERT_EQ(element.operator->(), &elements[2]);
+    ASSERT_EQ(*element, elements[2]);
+    END_TEST;
+}
+
+// Sanity check that is possible to mutate the viewed element.
+bool TestUpdate() {
+    BEGIN_TEST;
+    fbl::Vector<int> elements = {1, 2, 3};
+    ElementView<int> element = {&elements, 2};
+    *element = -25;
+    ASSERT_EQ(elements[2], -25);
+    END_TEST;
+}
+
+// Sanity check that is possible to mutate the viewed element.
+bool TestUpdateReallocates() {
+    BEGIN_TEST;
+    fbl::Vector<int> elements = {1, 2, 3};
+    fbl::Vector<int> elements_2 = {4, 5, 6};
+
+    ElementView<int> element = {&elements, 2};
+    // Emulate reallocation of internal data.
+    elements = fbl::move(elements_2);
+    ASSERT_EQ(*element, 6);
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(LocalMetricInfo)
 RUN_TEST(TestFromMetricOptions)
 RUN_TEST(TestFromMetricOptionsNoComponent)
@@ -216,6 +265,14 @@ RUN_TEST(TestMetricUpdatePersisted)
 RUN_TEST(TestFlushDoNotOverlap)
 RUN_TEST(TestSingleFlushWithMultipleThreads)
 END_TEST_CASE(EventBufferTest)
+
+BEGIN_TEST_CASE(ElementView)
+RUN_TEST(TestInvalidDefault)
+RUN_TEST(TestInvalidatedIfOutOfRange)
+RUN_TEST(TestGet)
+RUN_TEST(TestUpdate)
+RUN_TEST(TestUpdateReallocates)
+END_TEST_CASE(ElementView)
 
 } // namespace
 } // namespace internal

@@ -363,8 +363,9 @@ namespace {
 
 bool TestIncrement() {
     BEGIN_TEST;
-    internal::RemoteCounter remote_counter = internal::MakeRemoteCounter();
-    Counter counter(&remote_counter);
+    fbl::Vector<internal::RemoteCounter> remote_counters;
+    remote_counters.push_back(internal::MakeRemoteCounter());
+    Counter counter({&remote_counters, 0});
 
     ASSERT_EQ(counter.GetRemoteCount(), 0);
     counter.Increment();
@@ -398,8 +399,9 @@ int IncrementFn(void* args) {
 bool TestIncrementMultiThread() {
     BEGIN_TEST;
     sync_completion_t start;
-    internal::RemoteCounter remote_counter = internal::MakeRemoteCounter();
-    Counter counter(&remote_counter);
+    fbl::Vector<internal::RemoteCounter> remote_counters;
+    remote_counters.push_back(internal::MakeRemoteCounter());
+    Counter counter({&remote_counters, 0});
     fbl::Vector<thrd_t> thread_ids;
     IncrementArgs args[kThreads];
 
