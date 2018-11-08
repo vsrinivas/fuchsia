@@ -314,37 +314,11 @@ static zx_status_t zxsio_close(fdio_t* io) {
 
 static ssize_t zxsio_ioctl(fdio_t* io, uint32_t op, const void* in_buf,
                            size_t in_len, void* out_buf, size_t out_len) {
-    zxsio_t* sio = (zxsio_t*)io;
-    const uint8_t* data = in_buf;
-    zx_status_t r = 0;
-    zxsio_msg_t msg;
-
-    if (in_len > ZXSIO_PAYLOAD_SZ || out_len > ZXSIO_PAYLOAD_SZ) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    if (IOCTL_KIND(op) != IOCTL_KIND_DEFAULT) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    memset(&msg, 0, ZXSIO_HDR_SZ);
-    msg.op = ZXSIO_IOCTL;
-    msg.datalen = in_len;
-    msg.arg = out_len;
-    msg.arg2.op = op;
-    memcpy(msg.data, data, in_len);
-
-    if ((r = zxsio_txn(sio->s.socket, &msg)) < 0) {
-        return r;
-    }
-
-    size_t copy_len = msg.datalen;
-    if (msg.datalen > out_len) {
-        copy_len = out_len;
-    }
-
-    memcpy(out_buf, msg.data, copy_len);
-    return r;
+    zxsio_t* sio = (void*)io;
+    size_t actual = 0u;
+    zx_status_t status = zxs_ioctl(&sio->s, op, in_buf, in_len, out_buf,
+                                   out_len, &actual);
+    return status != ZX_OK ? status : (ssize_t)actual;
 }
 
 static zx_status_t fdio_socket_shutdown(fdio_t* io, int how) {

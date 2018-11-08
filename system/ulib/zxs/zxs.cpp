@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/assert.h>
+#include <zircon/device/ioctl.h>
 #include <zircon/syscalls.h>
 
 static bool is_rio_message_valid(zxsio_msg_t* msg) {
@@ -97,7 +98,7 @@ static ssize_t zxsio_read_control(zx_handle_t socket, void* data, size_t len) {
     }
 }
 
-zx_status_t zxsio_txn(zx_handle_t socket, zxsio_msg_t* msg) {
+static zx_status_t zxsio_txn(zx_handle_t socket, zxsio_msg_t* msg) {
     if (!is_rio_message_valid(msg)) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -174,7 +175,7 @@ zx_status_t zxs_socket(zx_handle_t socket_provider,
 
 zx_status_t zxs_close(const zxs_socket_t* socket) {
     zxsio_msg_t msg;
-    memset(&msg, 0, sizeof(msg));
+    memset(&msg, 0, ZXSIO_HDR_SZ);
     msg.op = ZXSIO_CLOSE;
     zx_status_t status = zxsio_txn(socket->socket, &msg);
     zx_handle_close(socket->socket);
@@ -645,4 +646,39 @@ zx_status_t zxs_recvmsg(const zxs_socket_t* socket, struct msghdr* msg,
     } else {
         return zxs_recvmsg_stream(socket, msg, out_actual);
     }
+}
+
+zx_status_t zxs_ioctl(const zxs_socket_t* socket, uint32_t op,
+                      const void* in_buffer, size_t in_capacity,
+                      void* out_buffer, size_t out_capacity,
+                      size_t* out_actual) {
+    if (in_capacity > ZXSIO_PAYLOAD_SZ || out_capacity > ZXSIO_PAYLOAD_SZ) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    if (IOCTL_KIND(op) != IOCTL_KIND_DEFAULT) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    zxsio_msg_t msg;
+    memset(&msg, 0, ZXSIO_HDR_SZ);
+    msg.op = ZXSIO_IOCTL;
+    msg.datalen = static_cast<uint32_t>(in_capacity);
+    msg.arg = static_cast<uint32_t>(out_capacity);
+    msg.arg2.op = op;
+    memcpy(msg.data, in_buffer, in_capacity);
+
+    zx_status_t status = zxsio_txn(socket->socket, &msg);
+    if (status < 0) {
+        return status;
+    }
+
+    size_t copy_length = msg.datalen;
+    if (msg.datalen > out_capacity) {
+        copy_length = out_capacity;
+    }
+
+    memcpy(out_buffer, msg.data, copy_length);
+    *out_actual = copy_length;
+    return status;
 }

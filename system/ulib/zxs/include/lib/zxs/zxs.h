@@ -173,6 +173,14 @@ zx_status_t zxs_sendmsg(const zxs_socket_t* socket, const struct msghdr* msg,
 zx_status_t zxs_recvmsg(const zxs_socket_t* socket, struct msghdr* msg,
                         size_t* out_actual);
 
+// Send an IO control message to the socket provider.
+//
+// The amount of data written to |out_buffer| is returned through |out_actual|.
+zx_status_t zxs_ioctl(const zxs_socket_t* socket, uint32_t op,
+                      const void* in_buffer, size_t in_capacity,
+                      void* out_buffer, size_t out_capacity,
+                      size_t* out_actual);
+
 __END_CDECLS
 
 #endif // LIB_ZXS_ZXS_H_

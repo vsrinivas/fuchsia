@@ -44,8 +44,6 @@ struct zxsio_msg {
 
 #define ZXSIO_HDR_SZ       (__builtin_offsetof(zxsio_msg_t, data))
 
-zx_status_t zxsio_txn(zx_handle_t socket, zxsio_msg_t* msg);
-
 __END_CDECLS
 
 #endif // LIB_ZXS_INCEPTION_H_

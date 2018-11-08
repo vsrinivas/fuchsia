@@ -15,6 +15,9 @@
 
 #include <unittest/unittest.h>
 
+#define IOCTL_ZXS_TEST \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_TEST, 1)
+
 static void destroy_wait(async::Wait* wait) {
     zx_handle_close(wait->object());
     delete wait;
@@ -145,8 +148,16 @@ static zx_status_t handle_message(async_dispatcher_t* dispatcher,
         // No reply needed.
         break;
     }
+    case ZXSIO_IOCTL: {
+        if (msg->arg2.op != IOCTL_ZXS_TEST) {
+            printf("ZXSIO_IOCTL received the wrong op: %x\n", msg->arg2.op);
+            return ZX_ERR_STOP;
+        }
+        reply.datalen = 4u;
+        memcpy(reply.data, "abcd", reply.datalen);
+        break;
+    }
     case ZXSIO_OPEN:
-    case ZXSIO_IOCTL:
     default:
         return ZX_ERR_STOP;
     }
@@ -386,6 +397,29 @@ static bool close_test(void) {
     END_TEST;
 }
 
+static bool ioctl_test(void) {
+    BEGIN_TEST;
+
+    FakeNetstack fake;
+    if (!SetUp(&fake))
+        return false;
+    zxs_socket_t* socket = &fake.socket;
+    socket->flags = ZXS_FLAG_BLOCKING;
+
+    const char* in_buffer = "xyz";
+    char out_buffer[16];
+    memset(out_buffer, 0, sizeof(out_buffer));
+
+    size_t actual = 0u;
+    ASSERT_EQ(ZX_OK, zxs_ioctl(socket, IOCTL_ZXS_TEST, in_buffer, 3, out_buffer,
+                               sizeof(out_buffer), &actual));
+    ASSERT_EQ(4, actual);
+
+    TearDown(&fake);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(zxs_test)
 RUN_TEST(connect_test);
 RUN_TEST(bind_test);
@@ -393,4 +427,6 @@ RUN_TEST(getsockname_test);
 RUN_TEST(getpeername_test);
 RUN_TEST(sockopts_test);
 RUN_TEST(listen_accept_test);
+RUN_TEST(close_test);
+RUN_TEST(ioctl_test);
 END_TEST_CASE(zxs_test)
