@@ -44,7 +44,7 @@ The first two arguments to most macros are the "category" and the
 event name. Here they are "example:example1" and "DoSomething" respectively.
 
 Trace categories are how the tracing system lets the user specify
-what data to collect. If a category is not requested be the user
+what data to collect. If a category is not requested by the user
 then the data is not collected.
 
 Categories don't need to be unique across the driver.
@@ -70,8 +70,8 @@ disable tracing. `NTRACE` is currently defined by default unless
 
 ### Makefile additions
 
-The following additions to your driver's `rules.mk` file is needed to
-pick up tracing support.
+The following addition to your driver's `rules.mk` file is needed to
+pick up tracing support:
 
 ```make
 ifeq ($(call TOBOOL,$(ENABLE_DRIVER_TRACING)),true)

@@ -73,7 +73,7 @@ together with userspace trace data.
 ### Trace Client
 
 The `trace` program offers command-line access to tracing functionality
-for developers.  It also support converting Fuchsia trace archives into
+for developers.  It also supports converting Fuchsia trace archives into
 other formats, such as Catapult JSON records which can be visualized
 using Catapult (aka. chrome:://tracing).
 
