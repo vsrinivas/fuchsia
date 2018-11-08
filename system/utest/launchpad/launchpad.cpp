@@ -86,7 +86,7 @@ static bool run_one_argument_size_test(size_t size) {
     ASSERT_EQ(launchpad_create(ZX_HANDLE_INVALID, "argument size test", &lp),
               ZX_OK, "");
 
-    char* big = malloc(size + 3);
+    char* big = static_cast<char*>(malloc(size + 3));
     big[0] = ':';
     big[1] = ' ';
     memset(&big[2], 'x', size);
