@@ -98,6 +98,7 @@ pub mod client {
     }
 
     /// Launcher launches Fuchsia applications.
+    #[derive(Clone)]
     pub struct Launcher {
         launcher: LauncherProxy,
     }
@@ -139,7 +140,6 @@ pub mod client {
                 additional_services: None,
             };
 
-
             self.launcher
                 .create_component(&mut launch_info, Some(controller_server_end.into()))
                 .context("Failed to start a new Fuchsia application.")?;
@@ -152,11 +152,14 @@ pub mod client {
     }
 
     /// `App` represents a launched application.
+    ///
+    /// When `App` is dropped, launched application will be terminated.
+    #[must_use = "Dropping `App` will cause the application to be terminated."]
     pub struct App {
         // directory_request is a directory protocol channel
         directory_request: zx::Channel,
 
-        // TODO: use somehow?
+        // Keeps the component alive until `App` is dropped.
         #[allow(dead_code)]
         controller: ComponentControllerProxy,
     }
