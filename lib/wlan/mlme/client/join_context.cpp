@@ -17,7 +17,7 @@ JoinContext::JoinContext(::fuchsia::wlan::mlme::BSSDescription bss, ::fuchsia::w
 
     // Discern join configuration from BSS announcement
     // Note primary channel can't be different.
-    phy_ = static_cast<enum PHY>(phy);
+    phy_ = common::FromFidl(phy);
     channel_ = bss_channel_;
     channel_.cbw = static_cast<uint8_t>(cbw);
     channel_ = SanitizeChannel(channel_);

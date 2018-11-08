@@ -212,7 +212,7 @@ uint8_t GetValidCbw(const wlan_channel_t& chan) {
     return CBW20;  // Fallback to the minimum bandwidth
 }
 
-std::string GetPhyStr(enum PHY phy) {
+std::string GetPhyStr(PHY phy) {
     switch (phy) {
     case WLAN_PHY_DSSS:
         return "802.11 DSSS";
@@ -226,6 +226,46 @@ std::string GetPhyStr(enum PHY phy) {
         return "802.11ac VHT";
     default:
         return "UNKNOWN_PHY";
+    }
+}
+
+PHY FromFidl(::fuchsia::wlan::mlme::PHY phy) {
+    // TODO(NET-1845): Streamline the enum values
+    switch (phy) {
+    case wlan_mlme::PHY::HR:
+        return WLAN_PHY_CCK;
+    case wlan_mlme::PHY::ERP:
+        return WLAN_PHY_OFDM;
+    case wlan_mlme::PHY::HT:
+        return WLAN_PHY_HT;
+    case wlan_mlme::PHY::VHT:
+        return WLAN_PHY_VHT;
+    case wlan_mlme::PHY::HEW:
+        return WLAN_PHY_HEW;
+    default:
+        errorf("Unknown phy value: %d\n", phy);
+        ZX_DEBUG_ASSERT(false);
+        return WLAN_PHY_HEW;
+    }
+}
+
+::fuchsia::wlan::mlme::PHY ToFidl(PHY phy) {
+    // TODO(NET-1845): Streamline the enum values
+    switch (phy) {
+    case WLAN_PHY_CCK:
+        return wlan_mlme::PHY::HR;
+    case WLAN_PHY_OFDM:
+        return wlan_mlme::PHY::ERP;
+    case WLAN_PHY_HT:
+        return wlan_mlme::PHY::HT;
+    case WLAN_PHY_VHT:
+        return wlan_mlme::PHY::VHT;
+    case WLAN_PHY_HEW:
+        return wlan_mlme::PHY::HEW;
+    default:
+        errorf("Unknown phy value: %d\n", phy);
+        ZX_DEBUG_ASSERT(false);
+        return wlan_mlme::PHY::HEW;
     }
 }
 

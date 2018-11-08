@@ -56,12 +56,13 @@ enum {
 // PHY values may be used in a bitfield (e.g., device capabilities) or as a value (e.g., rx or tx
 // info).
 enum PHY {
-    WLAN_PHY_DSSS = (1 << 0),
-    WLAN_PHY_CCK = (1 << 1),
-    WLAN_PHY_ERP = (1 << 2),
-    WLAN_PHY_OFDM = (1 << 2),
-    WLAN_PHY_HT = (1 << 3),
-    WLAN_PHY_VHT = (1 << 4),
+    WLAN_PHY_DSSS = (1 << 0),  // IEEE 802.11 for 1, 2 Mbps
+    WLAN_PHY_CCK = (1 << 1),   // IEEE 802.11 for 5.5, 11 Mbps. ERP-CCK.
+    WLAN_PHY_ERP = (1 << 2),   // IEEE 802.11g, 1, 2, 5,5, 11, 12, 24 Mbps + [6, 54] Mbps
+    WLAN_PHY_OFDM = (1 << 2),  // IEEE 802.11a/g
+    WLAN_PHY_HT = (1 << 3),    // IEEE 802.11n
+    WLAN_PHY_VHT = (1 << 4),   // IEEE 802.11ac
+    WLAN_PHY_HEW = (1 << 5),   // IEEE 802.11ax
 };
 
 // Guard Interval

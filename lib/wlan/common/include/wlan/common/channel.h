@@ -57,6 +57,9 @@ wlan_channel_t FromFidl(const ::fuchsia::wlan::mlme::WlanChan& fidl_chan);
 
 extern const char* kCbwStr[];
 
+PHY FromFidl(::fuchsia::wlan::mlme::PHY phy);
+::fuchsia::wlan::mlme::PHY ToFidl(PHY phy);
+
 }  // namespace common
 }  // namespace wlan
 
