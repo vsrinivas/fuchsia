@@ -75,6 +75,7 @@ enum class Verb {
   kPause,
   kPrint,
   kQuit,
+  kQuitAgent,
   kRegs,
   kRun,
   kSet,

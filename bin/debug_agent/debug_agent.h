@@ -42,6 +42,8 @@ class DebugAgent : public RemoteAPI,
 
   void OnProcessStart(zx::process process) override;
 
+  bool should_quit() const { return should_quit_; }
+
  private:
   // RemoteAPI implementation.
   void OnHello(const debug_ipc::HelloRequest& request,
@@ -55,6 +57,8 @@ class DebugAgent : public RemoteAPI,
                 debug_ipc::DetachReply* reply) override;
   void OnPause(const debug_ipc::PauseRequest& request,
                debug_ipc::PauseReply* reply) override;
+  void OnQuitAgent(const debug_ipc::QuitAgentRequest& request,
+                   debug_ipc::QuitAgentReply* reply) override;
   void OnResume(const debug_ipc::ResumeRequest& request,
                 debug_ipc::ResumeReply* reply) override;
   void OnModules(const debug_ipc::ModulesRequest& request,
@@ -108,6 +112,10 @@ class DebugAgent : public RemoteAPI,
   std::map<zx_koid_t, std::unique_ptr<DebuggedJob>> jobs_;
 
   std::map<uint32_t, Breakpoint> breakpoints_;
+
+  // Whether the debug agent should exit.
+  // The main reason for this is receiving a QuitNow message.
+  bool should_quit_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DebugAgent);
 };

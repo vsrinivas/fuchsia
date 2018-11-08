@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include "garnet/bin/zxdb/client/process.h"
+#include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/common/err.h"
@@ -21,7 +22,8 @@ namespace zxdb {
 
 Console* Console::singleton_ = nullptr;
 
-Console::Console(Session* session) : context_(session), line_input_("[zxdb] ") {
+Console::Console(Session* session)
+    : context_(session), line_input_("[zxdb] "), weak_factory_(this) {
   FXL_DCHECK(!singleton_);
   singleton_ = this;
 
@@ -119,7 +121,30 @@ Console::Result Console::ProcessInputLine(const std::string& line,
                                           CommandCallback callback) {
   Result result = DispatchInputLine(line, callback);
   if (result == Result::kQuit) {
-    debug_ipc::MessageLoop::Current()->QuitNow();
+    // If we're not connected, quit immediatelly.
+    if (!quit_agent_on_quit() || !context().session()->IsConnected()) {
+      debug_ipc::MessageLoop::Current()->QuitNow();
+      return result;
+    }
+
+    // At this point we know that we're connected and we want to quit the agent
+    // at exit. We post an exit command and wait for the result.
+    Output("Stopping debug agent. Will exit on success.");
+    context().session()->QuitAgent([console = GetWeakPtr()](const Err& err) {
+      FXL_DCHECK(console);
+      if (!console)
+        return;
+
+      // If there was an error quitting the debug agent, let the user
+      // know and react to it.
+      if (err.has_error()) {
+        console->Output(err);
+        return;
+      }
+
+      // Here we have successfully exited.
+      debug_ipc::MessageLoop::Current()->QuitNow();
+    });
   }
   return result;
 }
@@ -134,6 +159,10 @@ void Console::OnFDReadable(int fd) {
       line_input_.BeginReadLine();
     }
   }
+}
+
+fxl::WeakPtr<Console> Console::GetWeakPtr() {
+  return weak_factory_.GetWeakPtr();
 }
 
 }  // namespace zxdb

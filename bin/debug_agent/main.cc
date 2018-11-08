@@ -35,6 +35,8 @@ class SocketConnection {
 
   bool Accept(int server_fd);
 
+  const debug_agent::DebugAgent* agent() const { return agent_.get(); }
+
  private:
   std::shared_ptr<component::Services> services_;
   debug_ipc::BufferedFD buffer_;
@@ -53,16 +55,16 @@ bool SocketConnection::Accept(int server_fd) {
   fxl::UniqueFD client(
       accept(server_fd, reinterpret_cast<sockaddr*>(&addr), &addrlen));
   if (!client.is_valid()) {
-    fprintf(stderr, "Couldn't accept connection.\n");
+    FXL_LOG(ERROR) << "Couldn't accept connection.";
     return false;
   }
   if (fcntl(client.get(), F_SETFL, O_NONBLOCK) < 0) {
-    fprintf(stderr, "Couldn't make port nonblocking.\n");
+    FXL_LOG(ERROR) << "Couldn't make port nonblocking.";
     return false;
   }
 
   if (!buffer_.Init(std::move(client))) {
-    fprintf(stderr, "Error waiting for data.\n");
+    FXL_LOG(ERROR) << "Error waiting for data.";
     return false;
   }
 
@@ -78,7 +80,7 @@ bool SocketConnection::Accept(int server_fd) {
   buffer_.set_error_callback(
       []() { debug_ipc::MessageLoop::Current()->QuitNow(); });
 
-  printf("Accepted connection.\n");
+  FXL_LOG(INFO) << "Accepted connection.";
   return true;
 }
 
@@ -89,10 +91,9 @@ bool SocketConnection::Accept(int server_fd) {
 // message loop on that connection.
 class SocketServer {
  public:
-  SocketServer();
-  ~SocketServer();
-
-  bool Run(int port, std::shared_ptr<component::Services> services);
+  SocketServer() = default;
+  bool Run(debug_ipc::MessageLoop*, int port,
+           std::shared_ptr<component::Services> services);
 
  private:
   bool AcceptNextConnection();
@@ -100,20 +101,14 @@ class SocketServer {
   fxl::UniqueFD server_socket_;
   std::unique_ptr<SocketConnection> connection_;
 
-  debug_ipc::MessageLoopZircon message_loop_;
-
   FXL_DISALLOW_COPY_AND_ASSIGN(SocketServer);
 };
 
-SocketServer::SocketServer() { message_loop_.Init(); }
-
-SocketServer::~SocketServer() { message_loop_.Cleanup(); }
-
-bool SocketServer::Run(int port,
+bool SocketServer::Run(debug_ipc::MessageLoop* message_loop, int port,
                        std::shared_ptr<component::Services> services) {
   server_socket_.reset(socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP));
   if (!server_socket_.is_valid()) {
-    fprintf(stderr, "Could not create socket.\n");
+    FXL_LOG(ERROR) << "Could not create socket.";
     return false;
   }
 
@@ -125,7 +120,7 @@ bool SocketServer::Run(int port,
   addr.sin6_port = htons(port);
   if (bind(server_socket_.get(), reinterpret_cast<sockaddr*>(&addr),
            sizeof(addr)) < 0) {
-    fprintf(stderr, "Could not bind socket.\n");
+    FXL_LOG(ERROR) << "Could not bind socket.";
     return false;
   }
 
@@ -134,17 +129,18 @@ bool SocketServer::Run(int port,
 
   while (true) {
     // Wait for one connection.
-    printf("Waiting on port %d for zxdb connection...\n", port);
+    FXL_LOG(INFO) << "Waiting on port " << port << " for zxdb connection...";
     connection_ = std::make_unique<SocketConnection>(services);
     if (!connection_->Accept(server_socket_.get()))
       return false;
 
-    printf("Connection established.\n");
+    FXL_LOG(INFO) << "Connection established.";
 
     // Run the debug agent for this connection.
-    message_loop_.Run();
+    message_loop->Run();
 
-    printf("Connection closed.\n");
+    if (connection_->agent()->should_quit())
+      break;
   }
 
   return true;
@@ -188,9 +184,18 @@ int main(int argc, char* argv[]) {
 
     auto environment_services = component::GetEnvironmentServices();
 
-    debug_agent::SocketServer server;
-    if (!server.Run(port, environment_services))
-      return 1;
+
+    debug_ipc::MessageLoopZircon message_loop;
+    message_loop.Init();
+
+    // The scope ensures the objects are destroyed before calling Cleanup on the
+    // MessageLoop.
+    {
+      debug_agent::SocketServer server;
+      if (!server.Run(&message_loop, port, environment_services))
+        return 1;
+    }
+    message_loop.Cleanup();
   } else {
     fprintf(stderr, "ERROR: Port number required.\n\n");
     debug_agent::PrintUsage();

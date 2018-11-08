@@ -29,6 +29,7 @@ struct MsgHeader {
     kDetach,
     kModules,
     kPause,
+    kQuitAgent,
     kResume,
     kProcessTree,
     kThreads,
@@ -130,6 +131,9 @@ struct PauseRequest {
   uint64_t thread_koid = 0;
 };
 struct PauseReply {};
+
+struct QuitAgentRequest {};
+struct QuitAgentReply {};
 
 struct ResumeRequest {
   enum class How : uint32_t {

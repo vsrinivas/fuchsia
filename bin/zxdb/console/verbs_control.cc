@@ -164,6 +164,26 @@ Err DoQuit(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
+// quit-agent ------------------------------------------------------------------
+
+const char kQuitAgentShortHelp[] = R"(quit-agent: Quits the debug agent.)";
+const char kQuitAgentHelp[] =
+    R"(quit-agent
+
+  Quits the connected debug agent running on the target.)";
+
+Err DoQuitAgent(ConsoleContext* context, const Command& cmd) {
+  context->session()->QuitAgent([](const Err& err) {
+    if (err.has_error()) {
+      Console::get()->Output(err);
+    } else {
+      Console::get()->Output("Successfully stopped the debug agent.");
+    }
+  });
+
+  return Err();
+}
+
 // connect ---------------------------------------------------------------------
 
 const char kConnectShortHelp[] =
@@ -736,12 +756,15 @@ void AppendControlVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kConnect] =
       VerbRecord(&DoConnect, {"connect"}, kConnectShortHelp, kConnectHelp,
                  CommandGroup::kGeneral);
-  (*verbs)[Verb::kOpenDump] =
-      VerbRecord(&DoOpenDump, {"opendump"}, kOpenDumpShortHelp, kOpenDumpHelp,
-                 CommandGroup::kGeneral);
   (*verbs)[Verb::kDisconnect] =
       VerbRecord(&DoDisconnect, {"disconnect"}, kDisconnectShortHelp,
                  kDisconnectHelp, CommandGroup::kGeneral);
+  (*verbs)[Verb::kQuitAgent] =
+      VerbRecord(&DoQuitAgent, {"quit-agent"}, kQuitAgentShortHelp,
+                 kQuitAgentHelp, CommandGroup::kGeneral);
+  (*verbs)[Verb::kOpenDump] =
+      VerbRecord(&DoOpenDump, {"opendump"}, kOpenDumpShortHelp, kOpenDumpHelp,
+                 CommandGroup::kGeneral);
   (*verbs)[Verb::kCls] = VerbRecord(&DoCls, {"cls"}, kClsShortHelp, kClsHelp,
                                     CommandGroup::kGeneral);
 

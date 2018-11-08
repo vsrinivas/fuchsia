@@ -84,6 +84,7 @@ void RemoteAPIAdapter::OnStreamReadable() {
       DISPATCH(Launch);
       DISPATCH(Kill);
       DISPATCH(Pause);
+      DISPATCH(QuitAgent);
       DISPATCH(ProcessTree);
       DISPATCH(Threads);
       DISPATCH(Modules);

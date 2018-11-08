@@ -48,6 +48,12 @@ void WriteRequest(const PauseRequest& request, uint32_t transaction_id,
 bool ReadReply(MessageReader* reader, PauseReply* reply,
                uint32_t* transaction_id);
 
+// QuitAgent.
+void WriteRequest(const QuitAgentRequest& request, uint32_t transaction_id,
+                  MessageWriter* writer);
+bool ReadReply(MessageReader* reader, QuitAgentReply* reply,
+               uint32_t* transaction_id);
+
 // Resume.
 void WriteRequest(const ResumeRequest& request, uint32_t transaction_id,
                   MessageWriter* writer);

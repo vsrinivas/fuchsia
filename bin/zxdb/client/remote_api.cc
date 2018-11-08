@@ -50,6 +50,12 @@ void RemoteAPI::Pause(
   FXL_NOTREACHED();
 }
 
+void RemoteAPI::QuitAgent(
+    const debug_ipc::QuitAgentRequest& request,
+    std::function<void(const Err&, debug_ipc::QuitAgentReply)> cb) {
+  FXL_NOTREACHED();
+}
+
 void RemoteAPI::Resume(
     const debug_ipc::ResumeRequest& request,
     std::function<void(const Err&, debug_ipc::ResumeReply)> cb) {

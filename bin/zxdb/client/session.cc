@@ -307,7 +307,8 @@ void Session::OnStreamReadable() {
     return;  // Notification could have raced with detaching the stream.
 
   while (true) {
-    if (!stream_->IsAvailable(debug_ipc::MsgHeader::kSerializedHeaderSize))
+    if (!stream_ ||
+        !stream_->IsAvailable(debug_ipc::MsgHeader::kSerializedHeaderSize))
       return;
 
     std::vector<char> serialized_header;
@@ -393,6 +394,8 @@ bool Session::ConnectCanProceed(std::function<void(const Err&)> callback) {
   return true;
 }
 
+bool Session::IsConnected() const { return stream_ != nullptr; }
+
 void Session::Connect(const std::string& host, uint16_t port,
                       std::function<void(const Err&)> callback) {
   if (!ConnectCanProceed(callback)) {
@@ -457,6 +460,35 @@ void Session::Disconnect(std::function<void(const Err&)> callback) {
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [callback]() { callback(Err()); });
   }
+}
+
+void Session::QuitAgent(std::function<void(const Err&)> cb) {
+  bool is_connected = IsConnected();
+
+  // We call disconnect even when is_connected if false, just in case there is a
+  // pending connection going on.
+  if (!is_connected) {
+    Disconnect(nullptr);
+    if (cb) {
+      debug_ipc::MessageLoop::Current()->PostTask(
+          FROM_HERE, [cb = std::move(cb)]() {
+            cb(Err("Not connected to a debug agent."));
+          });
+    }
+    return;
+  }
+
+  debug_ipc::QuitAgentRequest request;
+  remote_api()->QuitAgent(request,
+                          [session = GetWeakPtr(), cb = std::move(cb)](
+                              const Err& err, debug_ipc::QuitAgentReply) {
+                            // If we received a response, there is a connection
+                            // to receive it, so the session should be around.
+                            FXL_DCHECK(session && session->stream_);
+                            session->Disconnect(nullptr);
+                            if (cb)
+                              cb(err);
+                          });
 }
 
 void Session::ClearConnectionData() {
@@ -654,6 +686,10 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending,
   system_.DidConnect();
   if (callback)
     callback(Err());
+}
+
+fxl::WeakPtr<Session> Session::GetWeakPtr() {
+  return weak_factory_.GetWeakPtr();
 }
 
 }  // namespace zxdb

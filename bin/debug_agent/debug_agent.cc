@@ -29,7 +29,7 @@ DebugAgent::DebugAgent(debug_ipc::StreamBuffer* stream,
                        std::shared_ptr<component::Services> services)
     : stream_(stream), services_(services) {}
 
-DebugAgent::~DebugAgent() {}
+DebugAgent::~DebugAgent() = default;
 
 void DebugAgent::OnProcessStart(zx::process process) {
   auto koid = KoidForObject(process);
@@ -247,6 +247,12 @@ void DebugAgent::OnPause(const debug_ipc::PauseRequest& request,
       pair.second->OnPause(request);
   }
 }
+
+void DebugAgent::OnQuitAgent(const debug_ipc::QuitAgentRequest& request,
+                             debug_ipc::QuitAgentReply* reply) {
+  should_quit_ = true;
+  debug_ipc::MessageLoop::Current()->QuitNow();
+};
 
 void DebugAgent::OnResume(const debug_ipc::ResumeRequest& request,
                           debug_ipc::ResumeReply* reply) {

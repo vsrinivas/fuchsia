@@ -39,6 +39,9 @@ class RemoteAPI {
   virtual void OnPause(const debug_ipc::PauseRequest& request,
                        debug_ipc::PauseReply* reply) = 0;
 
+  virtual void OnQuitAgent(const debug_ipc::QuitAgentRequest& request,
+                       debug_ipc::QuitAgentReply* reply) = 0;
+
   virtual void OnResume(const debug_ipc::ResumeRequest& request,
                         debug_ipc::ResumeReply* reply) = 0;
 

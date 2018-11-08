@@ -42,8 +42,9 @@ class Session {
   // Creates with a previously-allocated connection. The pointer must outlive
   // this class. In this mode, the stream can not be disconnected.
   explicit Session(debug_ipc::StreamBuffer* stream);
-
   ~Session();
+
+  fxl::WeakPtr<Session> GetWeakPtr();
 
   // The RempteAPI for sending messages to the debug_agent.
   RemoteAPI* remote_api() { return remote_api_.get(); }
@@ -60,12 +61,6 @@ class Session {
   void Connect(const std::string& host, uint16_t port,
                std::function<void(const Err&)> callback);
 
-  // Open a minidump instead of connectiong to a running system. The callback
-  // will be issued with an error if the file cannot be opened or if there is
-  // already a connection.
-  void OpenMinidump(const std::string& path,
-                    std::function<void(const Err&)> callback);
-
   // Disconnects from the remote system. Calling when there is no connection
   // connection will issue the callback with an error.
   //
@@ -74,6 +69,16 @@ class Session {
   // pending connection. The Connect() callback will still be issued but
   // will indicate failure.
   void Disconnect(std::function<void(const Err&)> callback);
+
+  // Quits the connected debug agent.
+  // Will issue an error if the agent is not connected.
+  void QuitAgent(std::function<void(const Err&)> callback);
+
+  // Open a minidump instead of connectiong to a running system. The callback
+  // will be issued with an error if the file cannot be opened or if there is
+  // already a connection.
+  void OpenMinidump(const std::string& path,
+                    std::function<void(const Err&)> callback);
 
   // Frees all connection-related data. A helper for different modes of
   // cleanup.

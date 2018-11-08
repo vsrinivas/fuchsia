@@ -40,6 +40,9 @@ class RemoteAPIImpl : public RemoteAPI {
   void Pause(
       const debug_ipc::PauseRequest& request,
       std::function<void(const Err&, debug_ipc::PauseReply)> cb) override;
+  void QuitAgent(
+      const debug_ipc::QuitAgentRequest& request,
+      std::function<void(const Err&, debug_ipc::QuitAgentReply)> cb) override;
   void Resume(
       const debug_ipc::ResumeRequest& request,
       std::function<void(const Err&, debug_ipc::ResumeReply)> cb) override;

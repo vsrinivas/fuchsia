@@ -106,6 +106,7 @@ int ConsoleMain(int argc, const char* argv[]) {
         [&session]() { session.OnStreamReadable(); });
 
     Console console(&session);
+    console.set_quit_agent_on_quit(options.quit_agent_on_quit);
 
     // Save command-line switches ----------------------------------------------
 
@@ -148,6 +149,7 @@ int ConsoleMain(int argc, const char* argv[]) {
   }
 
   loop.Cleanup();
+
   return 0;
 }
 

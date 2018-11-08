@@ -37,6 +37,11 @@ const char kRunHelp[] = R"(  --run=<program>
       Attemps to run a binary in the target system. The debugger must be
       already connected to the debug_agent (use with -c).)";
 
+const char kQuitAgentOnExit[] = R"(  --quit-agent-on-exit
+      Will send a quit message to a connected debug agent in order for it to
+      shutdown. This is so that zxdb doesn't leak unwanted debug agents on
+      "on-the-fly" debugging sessions.)";
+
 const char kScriptFileHelp[] = R"(  --script-file=<file>
   -S <file>
       Reads a script file from a file. The file must contains valid zxdb
@@ -61,6 +66,8 @@ Err ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
   parser.AddSwitch("connect", 'c', kConnectHelp, &CommandLineOptions::connect);
   parser.AddSwitch("debug-info", 'd', kDebugInfoHelp,
                    &CommandLineOptions::debug_info);
+  parser.AddSwitch("quit-agent-on-exit", 0, kQuitAgentOnExit,
+                   &CommandLineOptions::quit_agent_on_quit);
   parser.AddSwitch("run", 'r', kRunHelp, &CommandLineOptions::run);
   parser.AddSwitch("script-file", 'S', kScriptFileHelp,
                    &CommandLineOptions::script_file);

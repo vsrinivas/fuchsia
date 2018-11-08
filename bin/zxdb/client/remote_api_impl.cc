@@ -61,6 +61,12 @@ void RemoteAPIImpl::Pause(
   Send(request, std::move(cb));
 }
 
+void RemoteAPIImpl::QuitAgent(
+    const debug_ipc::QuitAgentRequest& request,
+    std::function<void(const Err&, debug_ipc::QuitAgentReply)> cb) {
+  Send(request, std::move(cb));
+}
+
 void RemoteAPIImpl::Resume(
     const debug_ipc::ResumeRequest& request,
     std::function<void(const Err&, debug_ipc::ResumeReply)> cb) {

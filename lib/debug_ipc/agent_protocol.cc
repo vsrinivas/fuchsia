@@ -225,6 +225,22 @@ void WriteReply(const PauseReply& reply, uint32_t transaction_id,
   writer->WriteHeader(MsgHeader::Type::kPause, transaction_id);
 }
 
+// QuitAgent -------------------------------------------------------------------
+
+bool ReadRequest(MessageReader* reader, QuitAgentRequest* request,
+                 uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+  return true;
+}
+
+void WriteReply(const QuitAgentReply& reply, uint32_t transaction_id,
+                MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kQuitAgent, transaction_id);
+}
+
 // Resume ----------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, ResumeRequest* request,
