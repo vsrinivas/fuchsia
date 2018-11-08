@@ -5,7 +5,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
 
-#include "garnet/bin/memusage/memusage.h"
+#include "garnet/bin/memory_monitor/monitor.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
@@ -18,9 +18,12 @@ int main(int argc, const char** argv) {
   FXL_VLOG(2) << argv[0] << ": starting";
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  trace::TraceProvider trace_provider(loop.dispatcher(), "memusage");
+  trace::TraceProvider trace_provider(
+      loop.dispatcher(), memory::Monitor::kTraceName);
 
-  memusage::App app(command_line, loop.dispatcher());
+  memory::Monitor app(component::StartupContext::CreateFromStartupInfo(),
+                      command_line,
+                      loop.dispatcher());
   loop.Run();
 
   FXL_VLOG(2) << argv[0] << ": exiting";

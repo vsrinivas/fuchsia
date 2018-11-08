@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/memusage/memusage.h"
+#include "garnet/bin/memory_monitor/monitor.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -20,7 +20,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 
-namespace memusage {
+namespace memory {
 
 namespace {
 
@@ -57,12 +57,20 @@ zx_status_t get_root_resource(zx_handle_t* root_resource) {
 
 }  // namespace
 
-App::App(const fxl::CommandLine& command_line, async_dispatcher_t* dispatcher)
+const char Monitor::kTraceName[] = "memory_monitor";
+
+Monitor::Monitor(std::unique_ptr<component::StartupContext> context,
+                 const fxl::CommandLine& command_line,
+                 async_dispatcher_t* dispatcher)
     : prealloc_size_(0),
       logging_(command_line.HasOption("log")),
       tracing_(false),
       delay_(zx::sec(1)),
-      startup_context_(component::StartupContext::CreateFromStartupInfo()) {
+      dispatcher_(dispatcher),
+      startup_context_(std::move(context)) {
+  startup_context_->outgoing().AddPublicService(
+      bindings_.GetHandler(this));
+
   auto status = get_root_resource(&root_);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Error getting root_resource: " << status;
@@ -75,10 +83,12 @@ App::App(const fxl::CommandLine& command_line, async_dispatcher_t* dispatcher)
   std::string delay_as_string;
   if (command_line.GetOptionValue("delay", &delay_as_string)) {
     unsigned delay_as_int;
-    if (!fxl::StringToNumberWithError<unsigned>(delay_as_string, &delay_as_int)) {
+    if (!fxl::StringToNumberWithError<unsigned>(
+        delay_as_string, &delay_as_int)) {
       FXL_LOG(ERROR) << "Invalid value for delay: " << delay_as_string;
       exit(-1);
     }
+    printf("setting delay to %d\n", delay_as_int);
     delay_ = zx::msec(delay_as_int);
   }
   std::string prealloc_as_string;
@@ -116,7 +126,7 @@ App::App(const fxl::CommandLine& command_line, async_dispatcher_t* dispatcher)
     }
   }
 
-  trace_observer_.Start(dispatcher, [this] { UpdateState(); });
+  trace_observer_.Start(dispatcher_, [this] { UpdateState(); });
   if (logging_) {
     zx_info_kmem_stats_t stats;
     zx_status_t err = zx_object_get_info(
@@ -133,18 +143,55 @@ App::App(const fxl::CommandLine& command_line, async_dispatcher_t* dispatcher)
   SampleAndPost();
 }
 
-App::~App() {}
+Monitor::~Monitor() {}
 
-void App::PrintHelp() {
-  std::cout << "memusage [options]" << std::endl;
+void Monitor::Watch(
+    fidl::InterfaceHandle<fuchsia::memory::Watcher> watcher) {
+  fuchsia::memory::WatcherPtr watcher_proxy = watcher.Bind();
+  fuchsia::memory::Watcher* proxy_raw_ptr = watcher_proxy.get();
+  watcher_proxy.set_error_handler([this, proxy_raw_ptr](zx_status_t status) {
+    ReleaseWatcher(proxy_raw_ptr);
+  });
+  watchers_.push_back(std::move(watcher_proxy));
+  SampleAndPost();
+}
+
+void Monitor::ReleaseWatcher(fuchsia::memory::Watcher* watcher) {
+  auto predicate = [watcher](const auto& target) {
+    return target.get() == watcher;
+  };
+  watchers_.erase(
+      std::remove_if(watchers_.begin(), watchers_.end(), predicate));
+}
+
+void Monitor::NotifyWatchers(zx_info_kmem_stats_t kmem_stats) {
+  fuchsia::memory::Stats stats{
+    .total_bytes = kmem_stats.total_bytes,
+    .free_bytes = kmem_stats.free_bytes,
+    .wired_bytes = kmem_stats.wired_bytes,
+    .total_heap_bytes = kmem_stats.total_heap_bytes,
+    .free_heap_bytes = kmem_stats.free_heap_bytes,
+    .vmo_bytes = kmem_stats.vmo_bytes,
+    .mmu_overhead_bytes = kmem_stats.mmu_overhead_bytes,
+    .ipc_bytes = kmem_stats.ipc_bytes,
+    .other_bytes = kmem_stats.other_bytes,
+  };
+
+  for (auto& watcher : watchers_) {
+    watcher->OnChange(stats);
+  }
+}
+
+void Monitor::PrintHelp() {
+  std::cout << "memento [options]" << std::endl;
   std::cout << "Options:" << std::endl;
   std::cout << "  --log" << std::endl;
   std::cout << "  --prealloc=kbytes" << std::endl;
   std::cout << "  --delay=msecs" << std::endl;
 }
 
-void App::SampleAndPost() {
-  if (logging_ || tracing_) {
+void Monitor::SampleAndPost() {
+  if (logging_ || tracing_ || watchers_.size() > 0) {
     zx_info_kmem_stats_t stats;
     zx_status_t err = zx_object_get_info(
         root_, ZX_INFO_KMEM_STATS, &stats, sizeof(stats), NULL, NULL);
@@ -161,22 +208,22 @@ void App::SampleAndPost() {
                     << " IPC: " << stats.ipc_bytes;
     }
     if (tracing_) {
-      TRACE_COUNTER("memusage", "allocated", 0,
+      TRACE_COUNTER(kTraceName, "allocated", 0,
                     "vmo", stats.vmo_bytes,
                     "mmu_overhead", stats.mmu_overhead_bytes,
                     "ipc", stats.ipc_bytes);
-      TRACE_COUNTER("memusage", "free", 0,
+      TRACE_COUNTER(kTraceName, "free", 0,
                     "free", stats.free_bytes,
                     "free_heap", stats.free_heap_bytes);
     }
-    async::PostDelayedTask(async_get_default_dispatcher(),
-        [this] { SampleAndPost(); }, delay_);
+    NotifyWatchers(stats);
+    async::PostDelayedTask(dispatcher_, [this] { SampleAndPost(); }, delay_);
   }
 }
 
-void App::UpdateState() {
+void Monitor::UpdateState() {
   if (trace_state() == TRACE_STARTED) {
-    if (trace_is_category_enabled("memusage")) {
+    if (trace_is_category_enabled(kTraceName)) {
       FXL_LOG(INFO) << "Tracing started";
       if (!tracing_) {
         zx_info_kmem_stats_t stats;
@@ -187,7 +234,7 @@ void App::UpdateState() {
                           << zx_status_get_string(err);
             return;
         }
-        TRACE_COUNTER("memusage", "fixed", 0,
+        TRACE_COUNTER(kTraceName, "fixed", 0,
                       "total", stats.total_bytes,
                       "wired", stats.wired_bytes,
                       "total_heap", stats.total_heap_bytes);
@@ -205,4 +252,4 @@ void App::UpdateState() {
   }
 }
 
-}  // namespace memusage
+}  // namespace memory

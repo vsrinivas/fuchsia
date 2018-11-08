@@ -42,6 +42,7 @@
         "garnet/packages/prod/media_audio",
         "garnet/packages/prod/media_codec",
         "garnet/packages/prod/mediaplayer",
+        "garnet/packages/prod/memory_monitor",
         "garnet/packages/prod/net-cli",
         "garnet/packages/prod/netcfg",
         "garnet/packages/prod/netconnector",

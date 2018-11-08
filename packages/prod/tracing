@@ -7,7 +7,7 @@
         "//garnet/bin/trace",
         "//garnet/bin/cpuperf_provider",
         "//garnet/bin/ktrace_provider",
-        "//garnet/bin/memusage",
+        "//garnet/bin/memory_monitor",
         "//garnet/bin/trace_manager"
     ]
 }
