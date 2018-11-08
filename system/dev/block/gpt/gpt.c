@@ -204,9 +204,7 @@ static void gpt_release(void* ctx) {
 
 static zx_off_t gpt_get_size(void* ctx) {
     gptpart_device_t* dev = ctx;
-    //TODO: use query() results, *but* fvm returns different query and getsize
-    // results, and the latter are dynamic...
-    return device_get_size(dev->parent);
+    return dev->info.block_count * dev->info.block_size;
 }
 
 static zx_protocol_device_t gpt_proto = {
