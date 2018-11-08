@@ -43,7 +43,7 @@ template("prebuilt_package") {
 
     script = "//build/packages/prebuilt_package.py"
 
-    blob_rsp = "$target_out_dir/$pkg_name.blob.rsp"
+    blobs_rsp = "$target_out_dir/$pkg_name.blobs.rsp"
     manifest = "$target_out_dir/$pkg_name.manifest"
     system_rsp = "$target_out_dir/$pkg_name.system.rsp"
     ids_txt = "$target_out_dir/$pkg_name.manifest.ids.txt"
@@ -61,8 +61,8 @@ template("prebuilt_package") {
       rebase_path(meta_dir, root_build_dir),
       "--manifest",
       rebase_path(manifest, root_build_dir),
-      "--blob-rsp",
-      rebase_path(blob_rsp, root_build_dir),
+      "--blobs-rsp",
+      rebase_path(blobs_rsp, root_build_dir),
       "--system-rsp",
       rebase_path(system_rsp, root_build_dir),
       "--ids-txt",
@@ -74,7 +74,7 @@ template("prebuilt_package") {
       archive,
     ]
     outputs = [
-      blob_rsp,
+      blobs_rsp,
       manifest,
       ids_txt,
       system_rsp,
@@ -92,7 +92,7 @@ template("prebuilt_package") {
     ]
   }
 
-  group(target_name + ".blob.rsp") {
+  group(target_name + ".blobs.rsp") {
     public_deps = [
       ":$pkg_target_name",
     ]

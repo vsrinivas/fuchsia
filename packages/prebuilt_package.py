@@ -36,7 +36,7 @@ def main():
     parser.add_argument('--archive', help='Path to archive containing prebuilt package')
     parser.add_argument('--workdir', help='Path to working directory')
     parser.add_argument('--manifest', help='Manifest file to generate')
-    parser.add_argument('--blob-rsp', help='Blob response file to generate')
+    parser.add_argument('--blobs-rsp', help='Blobs response file to generate')
     parser.add_argument('--system-rsp', help='System response file to generate')
     parser.add_argument('--ids-txt', help='ids.txt file to generate')
     parser.add_argument('--blobs-json', help='blobs.json file to generate')
@@ -60,10 +60,6 @@ def main():
             f.write('%s=%s/blobs/%s\n' % (blob['name'], args.workdir,
                 blob['name']))
 
-    with open(args.blob_rsp, 'w') as f:
-        f.write('--manifest=%s ' % args.manifest)
-        f.write('--entry=%s/meta.far=%s\n' % (args.name, meta_far))
-
     with open(args.system_rsp, 'w') as f:
         f.truncate(0)
 
@@ -82,6 +78,9 @@ def main():
                           "merkle": merkle,
                           "size": size})
         json.dump(blobs, f)
+
+    with open(args.blobs_rsp, 'w') as f:
+        f.write('--input=%s\n' % args.blobs_json)
 
     return 0
 

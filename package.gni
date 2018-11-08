@@ -577,6 +577,29 @@ template("package") {
       response_file_contents = manifest_args
     }
 
+    # TODO(raggi): once /system is removed, the blobs rsp's can be removed, as
+    # all packages would produce a blobs.json.
+    generate_response_file("${pkg_target_name}.blobs.rsp") {
+      if (pkg.deprecated_system_image) {
+        # A system_image package has no blobs of its own.
+        response_file_contents = []
+      } else {
+        # A real package needs blobs for all its contents and for its
+        # synthesized meta.far file.
+        deps = [
+          ":${pkg_target_name}.meta",
+        ]
+        response_file_contents = [
+          "--input",
+          rebase_path("${pkg_target_name}.meta/blobs.json",
+                      root_build_dir,
+                      target_out_dir),
+        ]
+      }
+    }
+
+    # TODO(raggi): this target can be removed after some cleanup changes in the
+    # //build/images/guest rules.
     generate_response_file("${pkg_target_name}.blob.rsp") {
       if (pkg.deprecated_system_image) {
         # A system_image package has no blobs of its own.
