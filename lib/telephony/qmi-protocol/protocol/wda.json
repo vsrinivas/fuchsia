@@ -1,0 +1,43 @@
+{
+  "services": [{
+    "name": "WDA",
+    "type": "0x1A",
+    "message_structure": "standard",
+    "result_structure": "standard",
+    "messages": [
+      {
+        "name": "SetDataFormat",
+        "type": "0x0020",
+        "version": "1.0",
+        "request": [
+          {
+            "param": "qos_format",
+            "id": "0x10",
+            "size": 1,
+            "optional": true
+          },
+          {
+            "param": "link_layer_prot",
+            "id": "0x11",
+            "size": 4,
+            "optional": true
+          }
+        ],
+        "response": [
+          {
+            "param": "qos_format",
+            "id": "0x10",
+            "size": 1,
+            "optional": true
+          },
+          {
+            "param": "link_layer_prot",
+            "id": "0x11",
+            "size": 4,
+            "optional": true
+          }
+        ]
+      }
+    ]
+  }]
+}

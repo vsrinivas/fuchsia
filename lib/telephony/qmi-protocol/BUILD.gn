@@ -14,7 +14,9 @@ compiled_action("gen_qmi_protocol_source") {
   sources = [
     "protocol/common.json",
     "protocol/ctl.json",
-    "protocol/dms.json"
+    "protocol/dms.json",
+    "protocol/wds.json",
+    "protocol/wda.json"
   ]
   outputs = [ output ]
   args = ["-i"] + rebase_path(sources) + ["-o"] + [rebase_path(output)]
