@@ -4,8 +4,7 @@
 
 import("//build/rust/rustc_binary.gni")
 
-rustc_binary("token_manager_rust") {
-  name = "token_manager_rust"
+rustc_binary("token_manager_factory") {
   edition = "2018"
 
   deps = [
