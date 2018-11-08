@@ -225,6 +225,35 @@ package("virtio_rng") {
   ]
 }
 
+executable("virtio_wl_bin") {
+  visibility = [ ":*" ]
+
+  output_name = "virtio_wl"
+  sources = [
+    "virtio_magma.cc",
+    "virtio_magma.h",
+    "virtio_wl.cc",
+    "virtio_wl.h",
+  ]
+  deps = [
+    ":device_lib",
+    "//garnet/lib/magma/src/libmagma",
+  ]
+}
+
+package("virtio_wl") {
+  binary = "virtio_wl"
+  deps = [
+    ":virtio_wl_bin",
+  ]
+  meta = [
+    {
+      path = rebase_path("//garnet/bin/guest/vmm/meta/virtio_wl.cmx")
+      dest = "virtio_wl.cmx"
+    },
+  ]
+}
+
 executable("device_tests") {
   visibility = [ "//garnet/bin/guest/vmm:*" ]
   testonly = true
@@ -241,6 +270,7 @@ executable("device_tests") {
     "virtio_queue_fake.cc",
     "virtio_queue_fake.h",
     "virtio_rng_test.cc",
+    "virtio_wl_unittest.cc",
   ]
 
   deps = [

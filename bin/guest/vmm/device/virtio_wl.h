@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MACHINA_VIRTIO_WL_H_
-#define GARNET_LIB_MACHINA_VIRTIO_WL_H_
+#ifndef GARNET_BIN_GUEST_VMM_DEVICE_VIRTIO_WL_H_
+#define GARNET_BIN_GUEST_VMM_DEVICE_VIRTIO_WL_H_
 
 #include <unordered_map>
 
@@ -15,9 +15,9 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#include "garnet/lib/machina/virtio_device.h"
-#include "garnet/lib/machina/virtio_magma.h"
-#include "garnet/lib/machina/virtio_queue_waiter.h"
+#include "garnet/bin/guest/vmm/device/device_base.h"
+#include "garnet/bin/guest/vmm/device/virtio_magma.h"
+#include "garnet/lib/machina/device/virtio_queue.h"
 
 #define VIRTWL_VQ_IN 0
 #define VIRTWL_VQ_OUT 1
@@ -27,11 +27,9 @@
 #define VIRTWL_NEXT_VFD_ID_BASE (1 << 31)
 #define VIRTWL_VFD_ID_HOST_MASK VIRTWL_NEXT_VFD_ID_BASE
 
-namespace machina {
-
 // Virtio wayland device.
-class VirtioWl : public VirtioInprocessDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
-                                              virtio_wl_config_t> {
+class VirtioWl : public DeviceBase<VirtioWl>,
+                 public fuchsia::guest::device::VirtioWayland {
  public:
   class Vfd {
    public:
@@ -40,9 +38,7 @@ class VirtioWl : public VirtioInprocessDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
 
     // Begin waiting on data to read from VFD. Returns ZX_ERR_NOT_SUPPORTED
     // if VFD type doesn't support reading.
-    virtual zx_status_t BeginWaitOnData(async_dispatcher_t* dispatcher) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
+    virtual zx_status_t BeginWaitOnData() { return ZX_ERR_NOT_SUPPORTED; }
 
     // Returns the number of |bytes| and |handles| that are available for
     // reading.
@@ -65,9 +61,7 @@ class VirtioWl : public VirtioInprocessDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
 
     // Begin waiting on VFD to become ready for writing. Returns
     // ZX_ERR_NOT_SUPPORTED if VFD type doesn't support writing.
-    virtual zx_status_t BeginWaitOnWritable(async_dispatcher_t* dispatcher) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
+    virtual zx_status_t BeginWaitOnWritable() { return ZX_ERR_NOT_SUPPORTED; }
 
     // Write |bytes| and |handles| to local end-point of VFD. If VFD has
     // insufficient space for |bytes|, it writes nothing and returns
@@ -88,22 +82,35 @@ class VirtioWl : public VirtioInprocessDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
     }
   };
 
-  VirtioWl(const PhysMem& phys_mem, zx::vmar vmar,
-           async_dispatcher_t* dispatcher,
-           fuchsia::guest::WaylandDispatcher* wl_dispatcher);
+  VirtioWl(component::StartupContext* context);
   ~VirtioWl() override = default;
   zx_status_t OnDeviceReady(uint32_t negotiated_features);
 
-  VirtioQueue* in_queue() { return queue(VIRTWL_VQ_IN); }
-  VirtioQueue* out_queue() { return queue(VIRTWL_VQ_OUT); }
+  machina::VirtioQueue* in_queue() { return &queues_[VIRTWL_VQ_IN]; }
+  machina::VirtioQueue* out_queue() { return &queues_[VIRTWL_VQ_OUT]; }
+  machina::VirtioQueue* magma_in_queue() {
+    return &queues_[VIRTWL_VQ_MAGMA_IN];
+  }
+  machina::VirtioQueue* magma_out_queue() {
+    return &queues_[VIRTWL_VQ_MAGMA_OUT];
+  }
 
   zx::vmar* vmar() { return &vmar_; }
 
-  // Begins processing any descriptors that become available in the queues.
-  zx_status_t Init();
+  // |fuchsia::guest::device::VirtioDevice|
+  void Ready(uint32_t negotiated_features, ReadyCallback callback) override;
+  void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
+                      zx_gpaddr_t avail, zx_gpaddr_t used,
+                      ConfigureQueueCallback callback) override;
+  void NotifyQueue(uint16_t queue) override;
+
+  // |fuchsia::guest::device::VirtioWayland|
+  void Start(fuchsia::guest::device::StartInfo start_info, zx::vmar vmar,
+             fidl::InterfaceHandle<fuchsia::guest::WaylandDispatcher>
+                 dispatcher) override;
 
  private:
-  void HandleCommand(uint16_t head);
+  void HandleCommand(machina::VirtioChain* chain);
   void HandleNew(const virtio_wl_ctrl_vfd_new_t* request,
                  virtio_wl_ctrl_vfd_new_t* response);
   void HandleClose(const virtio_wl_ctrl_vfd_t* request,
@@ -119,28 +126,25 @@ class VirtioWl : public VirtioInprocessDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
   void HandleDmabufSync(const virtio_wl_ctrl_vfd_dmabuf_sync_t* request,
                         virtio_wl_ctrl_hdr_t* response);
 
-  void OnCommandAvailable(async_dispatcher_t* dispatcher, async::Wait* wait,
-                          zx_status_t status, const zx_packet_signal_t* signal);
+  void OnCommandAvailable();
   void OnDataAvailable(uint32_t vfd_id, async::Wait* wait, zx_status_t status,
                        const zx_packet_signal_t* signal);
   void OnCanWrite(async_dispatcher_t* dispatcher, async::Wait* wait,
                   zx_status_t status, const zx_packet_signal_t* signal);
-  void BeginWaitOnQueue();
-  void OnQueueReady(zx_status_t status, uint16_t index);
+  void DispatchPendingEvents();
+  bool AcquireWritableDescriptor(machina::VirtioQueue* queue,
+                                 machina::VirtioChain* chain,
+                                 machina::VirtioDescriptor* desc);
 
+  std::array<machina::VirtioQueue, VIRTWL_QUEUE_COUNT> queues_;
   zx::vmar vmar_;
-  async_dispatcher_t* const dispatcher_;
-  fuchsia::guest::WaylandDispatcher* wl_dispatcher_;
-  async::Wait out_queue_wait_;
-  uint16_t out_queue_index_ = 0;
+  fuchsia::guest::WaylandDispatcherPtr dispatcher_;
+  machina::VirtioChain out_chain_;
   size_t bytes_written_for_send_request_ = 0;
-  VirtioQueueWaiter in_queue_wait_;
   std::unordered_map<uint32_t, std::unique_ptr<Vfd>> vfds_;
   std::unordered_map<uint32_t, zx_signals_t> ready_vfds_;
   uint32_t next_vfd_id_ = VIRTWL_NEXT_VFD_ID_BASE;
   std::unique_ptr<VirtioMagma> magma_;
 };
 
-}  // namespace machina
-
-#endif  // GARNET_LIB_MACHINA_VIRTIO_WL_H_
+#endif  // GARNET_BIN_GUEST_VMM_DEVICE_VIRTIO_WL_H_

@@ -2,20 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/machina/virtio_wl.h"
-
-#include <lib/zx/socket.h>
 #include <string.h>
 
-#include "garnet/lib/machina/phys_mem_fake.h"
-#include "garnet/lib/machina/virtio_queue_fake.h"
-#include "lib/fxl/arraysize.h"
-#include "lib/gtest/test_loop_fixture.h"
+#include <fuchsia/guest/cpp/fidl.h>
+#include <fuchsia/guest/device/cpp/fidl.h>
+#include <virtio/wl.h>
+
+#include <lib/fxl/arraysize.h>
+#include <lib/zx/socket.h>
+
+#include "garnet/bin/guest/vmm/device/test_with_device.h"
+#include "garnet/bin/guest/vmm/device/virtio_queue_fake.h"
 
 namespace machina {
 namespace {
 
-static constexpr uint16_t kVirtioWlQueueSize = 32;
+#define VIRTWL_VQ_IN 0
+#define VIRTWL_VQ_OUT 1
+#define VIRTWL_VQ_MAGMA_IN 2
+#define VIRTWL_VQ_MAGMA_OUT 3
+#define VIRTWL_NEXT_VFD_ID_BASE (1 << 31)
+
+static constexpr char kVirtioWlUrl[] = "virtio_wl";
+static constexpr uint16_t kNumQueues = 2;
+static constexpr uint16_t kQueueSize = 32;
 static constexpr uint32_t kVirtioWlVmarSize = 1 << 16;
 static constexpr uint32_t kAllocateFlags =
     ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE;
@@ -23,33 +33,53 @@ static constexpr uint32_t kAllocateFlags =
 class TestWaylandDispatcher : public fuchsia::guest::WaylandDispatcher {
  public:
   TestWaylandDispatcher(fit::function<void(zx::channel)> callback)
-    : callback_(std::move(callback)) {}
+      : callback_(std::move(callback)) {}
 
- private:
-  void OnNewConnection(zx::channel channel) {
-    callback_(std::move(channel));
+  fidl::InterfaceHandle<fuchsia::guest::WaylandDispatcher> Bind() {
+    return binding_.NewBinding();
   }
 
+ private:
+  void OnNewConnection(zx::channel channel) { callback_(std::move(channel)); }
+
   fit::function<void(zx::channel)> callback_;
+  fidl::Binding<fuchsia::guest::WaylandDispatcher> binding_{this};
 };
 
-class VirtioWlTest : public ::gtest::TestLoopFixture {
+class VirtioWlTest : public TestWithDevice {
  public:
   VirtioWlTest()
       : wl_dispatcher_([this](zx::channel channel) {
           channels_.emplace_back(std::move(channel));
-          }),
-        wl_(phys_mem_, zx::vmar(), dispatcher(), &wl_dispatcher_),
-        in_queue_(wl_.in_queue(), kVirtioWlQueueSize),
-        out_queue_(wl_.out_queue(), kVirtioWlQueueSize) {}
+        }),
+        in_queue_(phys_mem_, PAGE_SIZE * kNumQueues, kQueueSize),
+        out_queue_(phys_mem_, in_queue_.end(), kQueueSize) {}
 
   void SetUp() override {
     uintptr_t vmar_addr;
-    ASSERT_EQ(
-        zx::vmar::root_self()->allocate(0u, kVirtioWlVmarSize, kAllocateFlags,
-                                        wl_.vmar(), &vmar_addr),
-        ZX_OK);
-    ASSERT_EQ(ZX_OK, wl_.Init());
+    zx::vmar vmar;
+    ASSERT_EQ(zx::vmar::root_self()->allocate(
+                  0u, kVirtioWlVmarSize, kAllocateFlags, &vmar, &vmar_addr),
+              ZX_OK);
+    fuchsia::guest::device::StartInfo start_info;
+    zx_status_t status =
+        LaunchDevice(kVirtioWlUrl, out_queue_.end(), &start_info);
+    ASSERT_EQ(ZX_OK, status);
+
+    // Start device execution.
+    services.ConnectToService(wl_.NewRequest());
+    wl_->Start(std::move(start_info), std::move(vmar), wl_dispatcher_.Bind());
+    ASSERT_EQ(ZX_OK, status);
+
+    // Configure device queues.
+    VirtioQueueFake* queues[kNumQueues] = {&in_queue_, &out_queue_};
+    for (size_t i = 0; i < kNumQueues; i++) {
+      auto q = queues[i];
+      q->Configure(PAGE_SIZE * i, PAGE_SIZE);
+      status =
+          wl_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used());
+      ASSERT_EQ(ZX_OK, status);
+    }
   }
 
   zx_status_t CreateNew(uint32_t vfd_id, uint8_t byte) {
@@ -57,24 +87,34 @@ class VirtioWlTest : public ::gtest::TestLoopFixture {
     request.hdr.type = VIRTIO_WL_CMD_VFD_NEW;
     request.vfd_id = vfd_id;
     request.size = PAGE_SIZE;
-    virtio_wl_ctrl_vfd_new_t response = {};
-    zx_status_t status = out_queue_.BuildDescriptor()
-                             .AppendReadable(&request, sizeof(request))
-                             .AppendWritable(&response, sizeof(response))
-                             .Build();
+    virtio_wl_ctrl_vfd_new_t* response;
+    uint16_t descriptor_id;
+    zx_status_t status =
+        DescriptorChainBuilder(out_queue_)
+            .AppendReadableDescriptor(&request, sizeof(request))
+            .AppendWritableDescriptor(&response, sizeof(*response))
+            .Build(&descriptor_id);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = wl_->NotifyQueue(VIRTWL_VQ_OUT);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = WaitOnInterrupt();
     if (status != ZX_OK) {
       return status;
     }
 
-    RunLoopUntilIdle();
-    if (!out_queue_.HasUsed() ||
-        out_queue_.NextUsed().len != sizeof(response) ||
-        response.hdr.type != VIRTIO_WL_RESP_VFD_NEW || !response.pfn ||
-        response.size != PAGE_SIZE) {
+    auto used_elem = out_queue_.NextUsed();
+    if (!used_elem || used_elem->id != descriptor_id ||
+        used_elem->len != sizeof(*response) ||
+        response->hdr.type != VIRTIO_WL_RESP_VFD_NEW || !response->pfn ||
+        response->size != PAGE_SIZE) {
       return ZX_ERR_INTERNAL;
     }
 
-    memset(reinterpret_cast<void*>(response.pfn * PAGE_SIZE), byte, PAGE_SIZE);
+    memset(reinterpret_cast<void*>(response->pfn * PAGE_SIZE), byte, PAGE_SIZE);
     return ZX_OK;
   }
 
@@ -82,19 +122,29 @@ class VirtioWlTest : public ::gtest::TestLoopFixture {
     virtio_wl_ctrl_vfd_new_t request = {};
     request.hdr.type = VIRTIO_WL_CMD_VFD_NEW_CTX;
     request.vfd_id = vfd_id;
-    virtio_wl_ctrl_vfd_new_t response = {};
-    zx_status_t status = out_queue_.BuildDescriptor()
-                             .AppendReadable(&request, sizeof(request))
-                             .AppendWritable(&response, sizeof(response))
-                             .Build();
+    virtio_wl_ctrl_vfd_new_t* response;
+    uint16_t descriptor_id;
+    zx_status_t status =
+        DescriptorChainBuilder(out_queue_)
+            .AppendReadableDescriptor(&request, sizeof(request))
+            .AppendWritableDescriptor(&response, sizeof(*response))
+            .Build(&descriptor_id);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = wl_->NotifyQueue(VIRTWL_VQ_OUT);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = WaitOnInterrupt();
     if (status != ZX_OK) {
       return status;
     }
 
-    RunLoopUntilIdle();
-    return (out_queue_.HasUsed() &&
-            out_queue_.NextUsed().len == sizeof(response) &&
-            response.hdr.type == VIRTIO_WL_RESP_VFD_NEW)
+    auto used_elem = out_queue_.NextUsed();
+    return (used_elem && used_elem->id == descriptor_id &&
+            used_elem->len == sizeof(*response) &&
+            response->hdr.type == VIRTIO_WL_RESP_VFD_NEW)
                ? ZX_OK
                : ZX_ERR_INTERNAL;
   }
@@ -104,27 +154,36 @@ class VirtioWlTest : public ::gtest::TestLoopFixture {
     request.hdr.type = VIRTIO_WL_CMD_VFD_NEW_PIPE;
     request.vfd_id = vfd_id;
     request.flags = VIRTIO_WL_VFD_READ;
-    virtio_wl_ctrl_vfd_new_t response = {};
-    zx_status_t status = out_queue_.BuildDescriptor()
-                             .AppendReadable(&request, sizeof(request))
-                             .AppendWritable(&response, sizeof(response))
-                             .Build();
+    virtio_wl_ctrl_vfd_new_t* response;
+    uint16_t descriptor_id;
+    zx_status_t status =
+        DescriptorChainBuilder(out_queue_)
+            .AppendReadableDescriptor(&request, sizeof(request))
+            .AppendWritableDescriptor(&response, sizeof(*response))
+            .Build(&descriptor_id);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = wl_->NotifyQueue(VIRTWL_VQ_OUT);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = WaitOnInterrupt();
     if (status != ZX_OK) {
       return status;
     }
 
-    RunLoopUntilIdle();
-    return (out_queue_.HasUsed() &&
-            out_queue_.NextUsed().len == sizeof(response) &&
-            response.hdr.type == VIRTIO_WL_RESP_VFD_NEW)
+    auto used_elem = out_queue_.NextUsed();
+    return (used_elem && used_elem->id == descriptor_id &&
+            used_elem->len == sizeof(*response) &&
+            response->hdr.type == VIRTIO_WL_RESP_VFD_NEW)
                ? ZX_OK
                : ZX_ERR_INTERNAL;
   }
 
  protected:
-  PhysMemFake phys_mem_;
   TestWaylandDispatcher wl_dispatcher_;
-  VirtioWl wl_;
+  fuchsia::guest::device::VirtioWaylandSyncPtr wl_;
   VirtioQueueFake in_queue_;
   VirtioQueueFake out_queue_;
   std::vector<zx::channel> channels_;
@@ -135,24 +194,29 @@ TEST_F(VirtioWlTest, HandleNew) {
   request.hdr.type = VIRTIO_WL_CMD_VFD_NEW;
   request.vfd_id = 1u;
   request.size = 4000u;
-  virtio_wl_ctrl_vfd_new_t response = {};
-  ASSERT_EQ(out_queue_.BuildDescriptor()
-                .AppendReadable(&request, sizeof(request))
-                .AppendWritable(&response, sizeof(response))
-                .Build(),
+  virtio_wl_ctrl_vfd_new_t* response;
+  uint16_t descriptor_id;
+  ASSERT_EQ(DescriptorChainBuilder(out_queue_)
+                .AppendReadableDescriptor(&request, sizeof(request))
+                .AppendWritableDescriptor(&response, sizeof(*response))
+                .Build(&descriptor_id),
             ZX_OK);
 
-  RunLoopUntilIdle();
-  EXPECT_TRUE(out_queue_.HasUsed());
-  EXPECT_EQ(sizeof(response), out_queue_.NextUsed().len);
-  EXPECT_EQ(response.hdr.type, VIRTIO_WL_RESP_VFD_NEW);
-  EXPECT_EQ(response.hdr.flags, 0u);
-  EXPECT_EQ(response.vfd_id, 1u);
-  EXPECT_EQ(response.flags,
+  ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_OUT), ZX_OK);
+  ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
+
+  auto used_elem = out_queue_.NextUsed();
+  EXPECT_TRUE(used_elem);
+  EXPECT_EQ(used_elem->id, descriptor_id);
+  EXPECT_EQ(used_elem->len, sizeof(*response));
+  EXPECT_EQ(response->hdr.type, VIRTIO_WL_RESP_VFD_NEW);
+  EXPECT_EQ(response->hdr.flags, 0u);
+  EXPECT_EQ(response->vfd_id, 1u);
+  EXPECT_EQ(response->flags,
             static_cast<uint32_t>(VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE));
-  EXPECT_GT(response.pfn, 0u);
-  EXPECT_EQ(response.size, static_cast<uint32_t>(PAGE_SIZE));
-  memset(reinterpret_cast<void*>(response.pfn * PAGE_SIZE), 0xff, 4000u);
+  EXPECT_GT(response->pfn, 0u);
+  EXPECT_EQ(response->size, static_cast<uint32_t>(PAGE_SIZE));
+  memset(reinterpret_cast<void*>(response->pfn * PAGE_SIZE), 0xff, 4000u);
 }
 
 TEST_F(VirtioWlTest, HandleClose) {
@@ -161,38 +225,48 @@ TEST_F(VirtioWlTest, HandleClose) {
   virtio_wl_ctrl_vfd_t request = {};
   request.hdr.type = VIRTIO_WL_CMD_VFD_CLOSE;
   request.vfd_id = 1u;
-  virtio_wl_ctrl_hdr_t response = {};
-  ASSERT_EQ(out_queue_.BuildDescriptor()
-                .AppendReadable(&request, sizeof(request))
-                .AppendWritable(&response, sizeof(response))
-                .Build(),
+  virtio_wl_ctrl_hdr_t* response;
+  uint16_t descriptor_id;
+  ASSERT_EQ(DescriptorChainBuilder(out_queue_)
+                .AppendReadableDescriptor(&request, sizeof(request))
+                .AppendWritableDescriptor(&response, sizeof(*response))
+                .Build(&descriptor_id),
             ZX_OK);
 
-  RunLoopUntilIdle();
-  EXPECT_TRUE(out_queue_.HasUsed());
-  EXPECT_EQ(sizeof(response), out_queue_.NextUsed().len);
-  EXPECT_EQ(response.type, VIRTIO_WL_RESP_OK);
+  ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_OUT), ZX_OK);
+  ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
+  auto used_elem = out_queue_.NextUsed();
+  EXPECT_TRUE(used_elem);
+  EXPECT_EQ(used_elem->id, descriptor_id);
+  EXPECT_EQ(used_elem->len, sizeof(*response));
+  EXPECT_EQ(response->type, VIRTIO_WL_RESP_OK);
 }
 
 TEST_F(VirtioWlTest, HandleNewCtx) {
   virtio_wl_ctrl_vfd_new_t request = {};
   request.hdr.type = VIRTIO_WL_CMD_VFD_NEW_CTX;
   request.vfd_id = 1u;
-  virtio_wl_ctrl_vfd_new_t response = {};
-  ASSERT_EQ(out_queue_.BuildDescriptor()
-                .AppendReadable(&request, sizeof(request))
-                .AppendWritable(&response, sizeof(response))
-                .Build(),
+  virtio_wl_ctrl_vfd_new_t* response;
+  uint16_t descriptor_id;
+  ASSERT_EQ(DescriptorChainBuilder(out_queue_)
+                .AppendReadableDescriptor(&request, sizeof(request))
+                .AppendWritableDescriptor(&response, sizeof(*response))
+                .Build(&descriptor_id),
             ZX_OK);
 
-  RunLoopUntilIdle();
-  EXPECT_TRUE(out_queue_.HasUsed());
-  EXPECT_EQ(sizeof(response), out_queue_.NextUsed().len);
-  EXPECT_EQ(response.hdr.type, VIRTIO_WL_RESP_VFD_NEW);
-  EXPECT_EQ(response.hdr.flags, 0u);
-  EXPECT_EQ(response.vfd_id, 1u);
-  EXPECT_EQ(response.flags,
+  ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_OUT), ZX_OK);
+  ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
+  auto used_elem = out_queue_.NextUsed();
+  EXPECT_TRUE(used_elem);
+  EXPECT_EQ(used_elem->id, descriptor_id);
+  EXPECT_EQ(used_elem->len, sizeof(*response));
+  EXPECT_EQ(response->hdr.type, VIRTIO_WL_RESP_VFD_NEW);
+  EXPECT_EQ(response->hdr.flags, 0u);
+  EXPECT_EQ(response->vfd_id, 1u);
+  EXPECT_EQ(response->flags,
             static_cast<uint32_t>(VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE));
+
+  RunLoopUntilIdle();
   EXPECT_EQ(channels_.size(), 1u);
   channels_.clear();
 }
@@ -202,26 +276,32 @@ TEST_F(VirtioWlTest, HandleNewPipe) {
   request.hdr.type = VIRTIO_WL_CMD_VFD_NEW_PIPE;
   request.vfd_id = 1u;
   request.flags = VIRTIO_WL_VFD_READ;
-  virtio_wl_ctrl_vfd_new_t response = {};
-  ASSERT_EQ(out_queue_.BuildDescriptor()
-                .AppendReadable(&request, sizeof(request))
-                .AppendWritable(&response, sizeof(response))
-                .Build(),
+  virtio_wl_ctrl_vfd_new_t* response;
+  uint16_t descriptor_id;
+  ASSERT_EQ(DescriptorChainBuilder(out_queue_)
+                .AppendReadableDescriptor(&request, sizeof(request))
+                .AppendWritableDescriptor(&response, sizeof(*response))
+                .Build(&descriptor_id),
             ZX_OK);
 
-  RunLoopUntilIdle();
-  EXPECT_TRUE(out_queue_.HasUsed());
-  EXPECT_EQ(sizeof(response), out_queue_.NextUsed().len);
-  EXPECT_EQ(response.hdr.type, VIRTIO_WL_RESP_VFD_NEW);
-  EXPECT_EQ(response.hdr.flags, 0u);
-  EXPECT_EQ(response.vfd_id, 1u);
-  EXPECT_EQ(response.flags, static_cast<uint32_t>(VIRTIO_WL_VFD_READ));
+  ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_OUT), ZX_OK);
+  ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
+  auto used_elem = out_queue_.NextUsed();
+  EXPECT_TRUE(used_elem);
+  EXPECT_EQ(used_elem->id, descriptor_id);
+  EXPECT_EQ(used_elem->len, sizeof(*response));
+  EXPECT_EQ(response->hdr.type, VIRTIO_WL_RESP_VFD_NEW);
+  EXPECT_EQ(response->hdr.flags, 0u);
+  EXPECT_EQ(response->vfd_id, 1u);
+  EXPECT_EQ(response->flags, static_cast<uint32_t>(VIRTIO_WL_VFD_READ));
 }
 
 TEST_F(VirtioWlTest, HandleSend) {
   ASSERT_EQ(CreateNew(1u, 0xaa), ZX_OK);
   ASSERT_EQ(CreatePipe(2u), ZX_OK);
   ASSERT_EQ(CreateConnection(3u), ZX_OK);
+
+  RunLoopUntilIdle();
   ASSERT_EQ(channels_.size(), 1u);
 
   uint8_t request[sizeof(virtio_wl_ctrl_vfd_send_t) + sizeof(uint32_t) * 3];
@@ -234,17 +314,21 @@ TEST_F(VirtioWlTest, HandleSend) {
   vfds[0] = 1u;
   vfds[1] = 2u;
   vfds[2] = 1234u;  // payload
-  virtio_wl_ctrl_hdr_t response = {};
-  ASSERT_EQ(out_queue_.BuildDescriptor()
-                .AppendReadable(&request, sizeof(request))
-                .AppendWritable(&response, sizeof(response))
-                .Build(),
+  virtio_wl_ctrl_hdr_t* response;
+  uint16_t descriptor_id;
+  ASSERT_EQ(DescriptorChainBuilder(out_queue_)
+                .AppendReadableDescriptor(&request, sizeof(request))
+                .AppendWritableDescriptor(&response, sizeof(*response))
+                .Build(&descriptor_id),
             ZX_OK);
 
-  RunLoopUntilIdle();
-  EXPECT_TRUE(out_queue_.HasUsed());
-  EXPECT_EQ(sizeof(response), out_queue_.NextUsed().len);
-  EXPECT_EQ(response.type, VIRTIO_WL_RESP_OK);
+  ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_OUT), ZX_OK);
+  ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
+  auto used_elem = out_queue_.NextUsed();
+  EXPECT_TRUE(used_elem);
+  EXPECT_EQ(used_elem->id, descriptor_id);
+  EXPECT_EQ(used_elem->len, sizeof(*response));
+  EXPECT_EQ(response->type, VIRTIO_WL_RESP_OK);
 
   uint32_t data;
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
@@ -274,16 +358,21 @@ TEST_F(VirtioWlTest, HandleSend) {
   EXPECT_EQ(actual_size, sizeof(data));
   RunLoopUntilIdle();
 
-  uint8_t buffer[sizeof(virtio_wl_ctrl_vfd_recv_t) + sizeof(data)];
+  size_t buffer_size = sizeof(virtio_wl_ctrl_vfd_recv_t) + sizeof(data);
+  uint8_t* buffer;
+  ASSERT_EQ(DescriptorChainBuilder(in_queue_)
+                .AppendWritableDescriptor(&buffer, buffer_size)
+                .Build(&descriptor_id),
+            ZX_OK);
   virtio_wl_ctrl_vfd_recv_t* recv_header =
       reinterpret_cast<virtio_wl_ctrl_vfd_recv_t*>(buffer);
-  ASSERT_EQ(in_queue_.BuildDescriptor()
-                .AppendWritable(buffer, sizeof(buffer))
-                .Build(),
-            ZX_OK);
-  RunLoopUntilIdle();
-  EXPECT_TRUE(in_queue_.HasUsed());
-  EXPECT_EQ(sizeof(buffer), in_queue_.NextUsed().len);
+
+  ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_IN), ZX_OK);
+  ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
+  used_elem = in_queue_.NextUsed();
+  EXPECT_TRUE(used_elem);
+  EXPECT_EQ(used_elem->id, descriptor_id);
+  EXPECT_EQ(used_elem->len, buffer_size);
   EXPECT_EQ(recv_header->hdr.type, VIRTIO_WL_CMD_VFD_RECV);
   EXPECT_EQ(recv_header->hdr.flags, 0u);
   EXPECT_EQ(recv_header->vfd_id, 2u);
@@ -295,6 +384,7 @@ TEST_F(VirtioWlTest, HandleSend) {
 
 TEST_F(VirtioWlTest, Recv) {
   ASSERT_EQ(CreateConnection(1u), ZX_OK);
+  RunLoopUntilIdle();
   ASSERT_EQ(channels_.size(), 1u);
 
   zx::vmo vmo;
@@ -317,23 +407,29 @@ TEST_F(VirtioWlTest, Recv) {
             ZX_OK);
   RunLoopUntilIdle();
 
-  uint8_t buffer[sizeof(virtio_wl_ctrl_vfd_new_t) * fbl::count_of(handles) +
-                 sizeof(virtio_wl_ctrl_vfd_recv_t) +
-                 sizeof(uint32_t) * fbl::count_of(handles) + sizeof(data)];
+  size_t buffer_size =
+      sizeof(virtio_wl_ctrl_vfd_new_t) * fbl::count_of(handles) +
+      sizeof(virtio_wl_ctrl_vfd_recv_t) +
+      sizeof(uint32_t) * fbl::count_of(handles) + sizeof(data);
+  uint8_t* buffer;
+  uint16_t descriptor_id;
+  ASSERT_EQ(DescriptorChainBuilder(in_queue_)
+                .AppendWritableDescriptor(&buffer, buffer_size)
+                .Build(&descriptor_id),
+            ZX_OK);
   virtio_wl_ctrl_vfd_new_t* new_vfd_cmd =
       reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(buffer);
   virtio_wl_ctrl_vfd_recv_t* header =
       reinterpret_cast<virtio_wl_ctrl_vfd_recv_t*>(new_vfd_cmd +
                                                    fbl::count_of(handles));
   uint32_t* vfds = reinterpret_cast<uint32_t*>(header + 1);
-  ASSERT_EQ(in_queue_.BuildDescriptor()
-                .AppendWritable(buffer, sizeof(buffer))
-                .Build(),
-            ZX_OK);
 
-  RunLoopUntilIdle();
-  EXPECT_TRUE(in_queue_.HasUsed());
-  EXPECT_EQ(sizeof(buffer), in_queue_.NextUsed().len);
+  ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_IN), ZX_OK);
+  ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
+  auto used_elem = in_queue_.NextUsed();
+  EXPECT_TRUE(used_elem);
+  EXPECT_EQ(used_elem->id, descriptor_id);
+  EXPECT_EQ(used_elem->len, buffer_size);
 
   EXPECT_EQ(new_vfd_cmd[0].hdr.type, VIRTIO_WL_CMD_VFD_NEW);
   EXPECT_EQ(new_vfd_cmd[0].hdr.flags, 0u);
@@ -364,17 +460,20 @@ TEST_F(VirtioWlTest, Recv) {
   virtio_wl_ctrl_vfd_t request = {};
   request.hdr.type = VIRTIO_WL_CMD_VFD_CLOSE;
   request.vfd_id = VIRTWL_NEXT_VFD_ID_BASE;
-  virtio_wl_ctrl_hdr_t response = {};
-  ASSERT_EQ(out_queue_.BuildDescriptor()
-                .AppendReadable(&request, sizeof(request))
-                .AppendWritable(&response, sizeof(response))
-                .Build(),
+  virtio_wl_ctrl_hdr_t* response;
+  ASSERT_EQ(DescriptorChainBuilder(out_queue_)
+                .AppendReadableDescriptor(&request, sizeof(request))
+                .AppendWritableDescriptor(&response, sizeof(*response))
+                .Build(&descriptor_id),
             ZX_OK);
 
-  RunLoopUntilIdle();
-  EXPECT_TRUE(out_queue_.HasUsed());
-  EXPECT_EQ(sizeof(response), out_queue_.NextUsed().len);
-  EXPECT_EQ(response.type, VIRTIO_WL_RESP_OK);
+  ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_OUT), ZX_OK);
+  ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
+  used_elem = out_queue_.NextUsed();
+  EXPECT_TRUE(used_elem);
+  EXPECT_EQ(used_elem->id, descriptor_id);
+  EXPECT_EQ(used_elem->len, sizeof(*response));
+  EXPECT_EQ(response->type, VIRTIO_WL_RESP_OK);
 
   // Check that writing to pipe works as expected.
   uint8_t send_request[sizeof(virtio_wl_ctrl_vfd_send_t) + sizeof(uint32_t)];
@@ -384,17 +483,21 @@ TEST_F(VirtioWlTest, Recv) {
   send_header->vfd_id = VIRTWL_NEXT_VFD_ID_BASE + 1;
   send_header->vfd_count = 0;
   *reinterpret_cast<uint32_t*>(send_header + 1) = 1234u;  // payload
-  virtio_wl_ctrl_hdr_t send_response = {};
-  ASSERT_EQ(out_queue_.BuildDescriptor()
-                .AppendReadable(&send_request, sizeof(send_request))
-                .AppendWritable(&send_response, sizeof(send_response))
-                .Build(),
-            ZX_OK);
+  virtio_wl_ctrl_hdr_t* send_response;
+  ASSERT_EQ(
+      DescriptorChainBuilder(out_queue_)
+          .AppendReadableDescriptor(&send_request, sizeof(send_request))
+          .AppendWritableDescriptor(&send_response, sizeof(*send_response))
+          .Build(&descriptor_id),
+      ZX_OK);
 
-  RunLoopUntilIdle();
-  EXPECT_TRUE(out_queue_.HasUsed());
-  EXPECT_EQ(sizeof(send_response), out_queue_.NextUsed().len);
-  EXPECT_EQ(send_response.type, VIRTIO_WL_RESP_OK);
+  ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_OUT), ZX_OK);
+  ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
+  used_elem = out_queue_.NextUsed();
+  EXPECT_TRUE(used_elem);
+  EXPECT_EQ(used_elem->id, descriptor_id);
+  EXPECT_EQ(used_elem->len, sizeof(*send_response));
+  EXPECT_EQ(send_response->type, VIRTIO_WL_RESP_OK);
 
   uint32_t pipe_data;
   size_t actual_bytes;
@@ -408,24 +511,29 @@ TEST_F(VirtioWlTest, Recv) {
 
 TEST_F(VirtioWlTest, Hup) {
   ASSERT_EQ(CreateConnection(1u), ZX_OK);
+  RunLoopUntilIdle();
   ASSERT_EQ(channels_.size(), 1u);
 
   // Close remote side of channel.
   channels_.clear();
   RunLoopUntilIdle();
 
-  virtio_wl_ctrl_vfd_t header = {};
-  ASSERT_EQ(in_queue_.BuildDescriptor()
-                .AppendWritable(&header, sizeof(header))
-                .Build(),
+  virtio_wl_ctrl_vfd_t* header;
+  uint16_t descriptor_id;
+  ASSERT_EQ(DescriptorChainBuilder(in_queue_)
+                .AppendWritableDescriptor(&header, sizeof(*header))
+                .Build(&descriptor_id),
             ZX_OK);
 
-  RunLoopUntilIdle();
-  EXPECT_TRUE(in_queue_.HasUsed());
-  EXPECT_EQ(sizeof(header), in_queue_.NextUsed().len);
-  EXPECT_EQ(header.hdr.type, VIRTIO_WL_CMD_VFD_HUP);
-  EXPECT_EQ(header.hdr.flags, 0u);
-  EXPECT_EQ(header.vfd_id, 1u);
+  ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_IN), ZX_OK);
+  ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
+  auto used_elem = in_queue_.NextUsed();
+  EXPECT_TRUE(used_elem);
+  EXPECT_EQ(used_elem->id, descriptor_id);
+  EXPECT_EQ(used_elem->len, sizeof(*header));
+  EXPECT_EQ(header->hdr.type, VIRTIO_WL_CMD_VFD_HUP);
+  EXPECT_EQ(header->hdr.flags, 0u);
+  EXPECT_EQ(header->vfd_id, 1u);
 }
 
 }  // namespace

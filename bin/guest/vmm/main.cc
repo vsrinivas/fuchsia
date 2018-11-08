@@ -370,17 +370,19 @@ int main(int argc, char** argv) {
     return status;
   }
   WaylandDispatcherImpl wl_dispatcher(launcher.get());
-  machina::VirtioWl wl(guest.phys_mem(), std::move(wl_vmar),
-                       guest.device_dispatcher(), &wl_dispatcher);
+  machina::VirtioWl wl(guest.phys_mem());
   if (cfg.virtio_wl()) {
-    status = wl.Init();
-    if (status != ZX_OK) {
-      FXL_LOG(INFO) << "Could not init wayland device";
-      return status;
-    }
-    status = bus.Connect(wl.pci_device());
+    status = bus.Connect(wl.pci_device(), true);
     if (status != ZX_OK) {
       FXL_LOG(INFO) << "Could not connect wayland device";
+      return status;
+    }
+    status = wl.Start(*guest.object(), std::move(wl_vmar),
+                      wl_dispatcher.NewBinding(),
+                      launcher.get(),
+                      guest.device_dispatcher());
+    if (status != ZX_OK) {
+      FXL_LOG(INFO) << "Could not start wayland device";
       return status;
     }
   }

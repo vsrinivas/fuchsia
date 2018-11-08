@@ -24,11 +24,16 @@ class WaylandDispatcherImpl : public fuchsia::guest::WaylandDispatcher {
   // |fuchsia::guest::WaylandDispatcher|
   void OnNewConnection(zx::channel channel);
 
+  fidl::InterfaceHandle<fuchsia::guest::WaylandDispatcher> NewBinding() {
+    return bindings_.AddBinding(this);
+  }
+
  private:
   fuchsia::guest::WaylandDispatcher* GetOrStartBridgeLocked()
       __TA_REQUIRES(mutex_);
 
   std::mutex mutex_;
+  fidl::BindingSet<fuchsia::guest::WaylandDispatcher> bindings_;
   fuchsia::sys::Launcher* launcher_;
   fuchsia::sys::ComponentControllerPtr bridge_ __TA_GUARDED(mutex_);
   fuchsia::guest::WaylandDispatcherPtr dispatcher_ __TA_GUARDED(mutex_);

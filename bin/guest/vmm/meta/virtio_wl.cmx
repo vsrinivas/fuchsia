@@ -3,13 +3,10 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "dev": [
-            "class/ethernet",
-            "misc"
+        "features": [
+            "vulkan"
         ],
         "services": [
-            "fuchsia.guest.vmm.LaunchInfoProvider",
-            "fuchsia.sys.Environment",
             "fuchsia.tracelink.Registry"
         ]
     }

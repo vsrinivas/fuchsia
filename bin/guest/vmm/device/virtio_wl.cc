@@ -2,19 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/machina/virtio_wl.h"
+#include "garnet/bin/guest/vmm/device/virtio_wl.h"
 
 #include <vector>
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/fxl/logging.h>
 #include <lib/zx/socket.h>
-
-#include "garnet/lib/machina/dev_mem.h"
-#include "lib/fxl/logging.h"
+#include <trace-provider/provider.h>
+#include <trace/event.h>
 
 static constexpr uint32_t kMapFlags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
-
-namespace machina {
-namespace {
 
 // Vfd type that holds a region of memory that is mapped into the guest's
 // physical address space. The memory region is unmapped when instance is
@@ -73,11 +71,12 @@ class Connection : public VirtioWl::Vfd {
   ~Connection() override { wait_.Cancel(); }
 
   // |VirtioWl::Vfd|
-  zx_status_t BeginWaitOnData(async_dispatcher_t* dispatcher) override {
-    return wait_.Begin(dispatcher);
+  zx_status_t BeginWaitOnData() override {
+    return wait_.Begin(async_get_default_dispatcher());
   }
   zx_status_t AvailableForRead(uint32_t* bytes, uint32_t* handles) override {
-    zx_status_t status = channel_.read(0, nullptr, 0u, bytes, nullptr, 0u, handles);
+    zx_status_t status =
+        channel_.read(0, nullptr, 0u, bytes, nullptr, 0u, handles);
     return status == ZX_ERR_BUFFER_TOO_SMALL ? ZX_OK : status;
   }
   zx_status_t Read(void* bytes, zx_handle_info_t* handles, uint32_t num_bytes,
@@ -118,14 +117,14 @@ class Pipe : public VirtioWl::Vfd {
   }
 
   // |VirtioWl::Vfd|
-  zx_status_t BeginWaitOnData(async_dispatcher_t* dispatcher) override {
-    return rx_wait_.Begin(dispatcher);
+  zx_status_t BeginWaitOnData() override {
+    return rx_wait_.Begin(async_get_default_dispatcher());
   }
 
   zx_status_t AvailableForRead(uint32_t* bytes, uint32_t* handles) override {
     zx_info_socket_t info = {};
-    zx_status_t status = socket_.get_info(ZX_INFO_SOCKET, &info, sizeof(info),
-                                          nullptr, nullptr);
+    zx_status_t status =
+        socket_.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
     if (status != ZX_OK) {
       return status;
     }
@@ -154,8 +153,8 @@ class Pipe : public VirtioWl::Vfd {
     }
     return ZX_OK;
   }
-  zx_status_t BeginWaitOnWritable(async_dispatcher_t* dispatcher) override {
-    return tx_wait_.Begin(dispatcher);
+  zx_status_t BeginWaitOnWritable() override {
+    return tx_wait_.Begin(async_get_default_dispatcher());
   }
   zx_status_t Write(const void* bytes, uint32_t num_bytes,
                     const zx_handle_t* handles, uint32_t num_handles,
@@ -184,45 +183,76 @@ class Pipe : public VirtioWl::Vfd {
   async::Wait tx_wait_;
 };
 
-}  // namespace
-
 #define VIRTIO_WL_F_MAGMA (1u << 2)
 
-VirtioWl::VirtioWl(const PhysMem& phys_mem, zx::vmar vmar,
-                   async_dispatcher_t* dispatcher,
-                   fuchsia::guest::WaylandDispatcher* wl_dispatcher)
-    : VirtioInprocessDevice(
-          phys_mem, VIRTIO_WL_F_TRANS_FLAGS | VIRTIO_WL_F_MAGMA,
-          noop_config_device, fit::bind_member(this, &VirtioWl::OnDeviceReady)),
-      vmar_(std::move(vmar)),
-      dispatcher_(dispatcher),
-      wl_dispatcher_(wl_dispatcher),
-      in_queue_wait_(dispatcher_, in_queue(),
-                     fit::bind_member(this, &VirtioWl::OnQueueReady)) {}
+VirtioWl::VirtioWl(component::StartupContext* context) : DeviceBase(context) {}
 
-zx_status_t VirtioWl::OnDeviceReady(uint32_t negotiated_features) {
-  if (negotiated_features & VIRTIO_WL_F_MAGMA) {
-    FXL_LOG(INFO) << "driver advertised magma support";
-    magma_ = std::make_unique<VirtioMagma>(&vmar_, dispatcher_,
-                                           queue(VIRTWL_VQ_MAGMA_IN),
-                                           queue(VIRTWL_VQ_MAGMA_OUT));
-    return magma_->Init("/dev/class/gpu/000");
+void VirtioWl::Start(
+    fuchsia::guest::device::StartInfo start_info, zx::vmar vmar,
+    fidl::InterfaceHandle<fuchsia::guest::WaylandDispatcher> dispatcher) {
+  PrepStart(std::move(start_info));
+  vmar_ = std::move(vmar);
+  dispatcher_ = dispatcher.Bind();
+
+  // Configure device queues.
+  for (auto& queue : queues_) {
+    queue.set_phys_mem(&phys_mem_);
+    queue.set_interrupt(
+        fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioWl::Interrupt));
   }
-  return ZX_OK;
 }
 
-zx_status_t VirtioWl::Init() {
-  out_queue_wait_.set_object(out_queue()->event());
-  out_queue_wait_.set_trigger(VirtioQueue::SIGNAL_QUEUE_AVAIL);
-  out_queue_wait_.set_handler(
-      fit::bind_member(this, &VirtioWl::OnCommandAvailable));
-  return out_queue_wait_.Begin(dispatcher_);
+void VirtioWl::Ready(uint32_t negotiated_features, ReadyCallback callback) {
+  if (negotiated_features & VIRTIO_WL_F_MAGMA) {
+    magma_ = std::make_unique<VirtioMagma>(&vmar_, magma_in_queue(),
+                                           magma_out_queue());
+  }
+  callback();
 }
 
-void VirtioWl::HandleCommand(uint16_t head) {
-  VirtioDescriptor request_desc;
-  zx_status_t status = out_queue()->ReadDesc(head, &request_desc);
-  if (status != ZX_OK) {
+void VirtioWl::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
+                              zx_gpaddr_t avail, zx_gpaddr_t used,
+                              ConfigureQueueCallback callback) {
+  switch (queue) {
+    case VIRTWL_VQ_IN:
+    case VIRTWL_VQ_OUT:
+    case VIRTWL_VQ_MAGMA_IN:
+    case VIRTWL_VQ_MAGMA_OUT:
+      queues_[queue].Configure(size, desc, avail, used);
+      break;
+    default:
+      FXL_LOG(ERROR) << "ConfigureQueue on non-existent queue " << queue;
+      break;
+  }
+  callback();
+}
+
+void VirtioWl::NotifyQueue(uint16_t queue) {
+  switch (queue) {
+    case VIRTWL_VQ_IN:
+      DispatchPendingEvents();
+      break;
+    case VIRTWL_VQ_OUT:
+      OnCommandAvailable();
+      break;
+    case VIRTWL_VQ_MAGMA_IN:
+      if (magma_) {
+        magma_->OnQueueReady();
+      }
+      break;
+    case VIRTWL_VQ_MAGMA_OUT:
+      if (magma_) {
+        magma_->OnCommandAvailable();
+      }
+      break;
+    default:
+      break;
+  }
+}
+
+void VirtioWl::HandleCommand(machina::VirtioChain* chain) {
+  machina::VirtioDescriptor request_desc;
+  if (!chain->NextDescriptor(&request_desc)) {
     FXL_LOG(ERROR) << "Failed to read descriptor";
     return;
   }
@@ -231,21 +261,19 @@ void VirtioWl::HandleCommand(uint16_t head) {
   const uint32_t command_type = request_header->type;
 
   TRACE_DURATION("machina", "virtio_wl_command", "type", command_type);
-  if (!request_desc.has_next) {
+  if (!chain->HasDescriptor()) {
     FXL_LOG(ERROR) << "WL command "
                    << "(" << command_type << ") "
                    << "does not contain a response descriptor";
     return;
   }
 
-  VirtioDescriptor response_desc;
-  status = out_queue()->ReadDesc(request_desc.next, &response_desc);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to read descriptor";
+  machina::VirtioDescriptor response_desc;
+  if (!chain->NextDescriptor(&response_desc)) {
+    FXL_LOG(ERROR) << "Failed to read response descriptor";
     return;
   }
 
-  uint32_t used = 0;
   switch (command_type) {
     case VIRTIO_WL_CMD_VFD_NEW: {
       auto request =
@@ -253,21 +281,21 @@ void VirtioWl::HandleCommand(uint16_t head) {
       auto response =
           reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(response_desc.addr);
       HandleNew(request, response);
-      used = sizeof(*response);
+      *chain->Used() = sizeof(*response);
     } break;
     case VIRTIO_WL_CMD_VFD_CLOSE: {
       auto request = reinterpret_cast<virtio_wl_ctrl_vfd_t*>(request_desc.addr);
       auto response =
           reinterpret_cast<virtio_wl_ctrl_hdr_t*>(response_desc.addr);
       HandleClose(request, response);
-      used = sizeof(*response);
+      *chain->Used() = sizeof(*response);
     } break;
     case VIRTIO_WL_CMD_VFD_SEND: {
       auto request =
           reinterpret_cast<virtio_wl_ctrl_vfd_send_t*>(request_desc.addr);
       auto response =
           reinterpret_cast<virtio_wl_ctrl_hdr_t*>(response_desc.addr);
-      status = HandleSend(request, request_desc.len, response);
+      zx_status_t status = HandleSend(request, request_desc.len, response);
       // HandleSend returns ZX_ERR_SHOULD_WAIT if asynchronous wait is needed
       // to complete. Return early here instead of writing response to guest.
       // HandleCommand will be called again by OnCanWrite() when send command
@@ -277,7 +305,7 @@ void VirtioWl::HandleCommand(uint16_t head) {
       }
       // Reset |bytes_written_for_send_request_| after send command completes.
       bytes_written_for_send_request_ = 0;
-      used = sizeof(*response);
+      *chain->Used() = sizeof(*response);
     } break;
     case VIRTIO_WL_CMD_VFD_NEW_CTX: {
       auto request =
@@ -285,7 +313,7 @@ void VirtioWl::HandleCommand(uint16_t head) {
       auto response =
           reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(response_desc.addr);
       HandleNewCtx(request, response);
-      used = sizeof(*response);
+      *chain->Used() = sizeof(*response);
     } break;
     case VIRTIO_WL_CMD_VFD_NEW_PIPE: {
       auto request =
@@ -293,7 +321,7 @@ void VirtioWl::HandleCommand(uint16_t head) {
       auto response =
           reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(response_desc.addr);
       HandleNewPipe(request, response);
-      used = sizeof(*response);
+      *chain->Used() = sizeof(*response);
     } break;
     case VIRTIO_WL_CMD_VFD_NEW_DMABUF: {
       auto request =
@@ -301,7 +329,7 @@ void VirtioWl::HandleCommand(uint16_t head) {
       auto response =
           reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(response_desc.addr);
       HandleNewDmabuf(request, response);
-      used = sizeof(*response);
+      *chain->Used() = sizeof(*response);
     } break;
     case VIRTIO_WL_CMD_VFD_DMABUF_SYNC: {
       auto request = reinterpret_cast<virtio_wl_ctrl_vfd_dmabuf_sync_t*>(
@@ -309,7 +337,7 @@ void VirtioWl::HandleCommand(uint16_t head) {
       auto response =
           reinterpret_cast<virtio_wl_ctrl_hdr_t*>(response_desc.addr);
       HandleDmabufSync(request, response);
-      used = sizeof(*response);
+      *chain->Used() = sizeof(*response);
     } break;
     default: {
       FXL_LOG(ERROR) << "Unsupported WL command "
@@ -317,22 +345,12 @@ void VirtioWl::HandleCommand(uint16_t head) {
       auto response =
           reinterpret_cast<virtio_wl_ctrl_hdr_t*>(response_desc.addr);
       response->type = VIRTIO_WL_RESP_INVALID_CMD;
-      used = sizeof(*response);
+      *chain->Used() = sizeof(*response);
       break;
     }
   }
 
-  status = out_queue()->Return(head, used);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to return descriptor to queue " << status;
-    return;
-  }
-
-  // Begin waiting on next command.
-  status = out_queue_wait_.Begin(dispatcher_);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to begin waiting for commands";
-  }
+  chain->Return();
 }
 
 void VirtioWl::HandleNew(const virtio_wl_ctrl_vfd_new_t* request,
@@ -456,7 +474,7 @@ zx_status_t VirtioWl::HandleSend(const virtio_wl_ctrl_vfd_send_t* request,
       // one SEND request at a time.
       bytes_written_for_send_request_ += actual_bytes;
     } else if (status == ZX_ERR_SHOULD_WAIT) {
-      it->second->BeginWaitOnWritable(dispatcher_);
+      it->second->BeginWaitOnWritable();
       return ZX_ERR_SHOULD_WAIT;
     } else {
       if (status != ZX_ERR_PEER_CLOSED) {
@@ -503,7 +521,7 @@ void VirtioWl::HandleNewCtx(const virtio_wl_ctrl_vfd_new_t* request,
     return;
   }
 
-  status = vfd->BeginWaitOnData(dispatcher_);
+  status = vfd->BeginWaitOnData();
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to begin waiting on connection: " << status;
     response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
@@ -517,7 +535,7 @@ void VirtioWl::HandleNewCtx(const virtio_wl_ctrl_vfd_new_t* request,
     return;
   }
 
-  wl_dispatcher_->OnNewConnection(std::move(remote_channel));
+  dispatcher_->OnNewConnection(std::move(remote_channel));
 
   response->hdr.type = VIRTIO_WL_RESP_VFD_NEW;
   response->hdr.flags = 0;
@@ -558,7 +576,7 @@ void VirtioWl::HandleNewPipe(const virtio_wl_ctrl_vfd_new_t* request,
     return;
   }
 
-  status = vfd->BeginWaitOnData(dispatcher_);
+  status = vfd->BeginWaitOnData();
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to begin waiting on pipe: " << status;
     response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
@@ -607,21 +625,10 @@ void VirtioWl::HandleDmabufSync(const virtio_wl_ctrl_vfd_dmabuf_sync_t* request,
   response->type = VIRTIO_WL_RESP_OK;
 }
 
-void VirtioWl::OnCommandAvailable(async_dispatcher_t* dispatcher,
-                                  async::Wait* wait, zx_status_t status,
-                                  const zx_packet_signal_t* signal) {
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed while waiting on commands: " << status;
-    return;
+void VirtioWl::OnCommandAvailable() {
+  while (out_queue()->NextChain(&out_chain_)) {
+    HandleCommand(&out_chain_);
   }
-
-  status = out_queue()->NextAvail(&out_queue_index_);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to get next available queue index";
-    return;
-  }
-
-  HandleCommand(out_queue_index_);
 }
 
 void VirtioWl::OnDataAvailable(uint32_t vfd_id, async::Wait* wait,
@@ -639,7 +646,7 @@ void VirtioWl::OnDataAvailable(uint32_t vfd_id, async::Wait* wait,
     wait->set_trigger(wait->trigger() & ~__ZX_OBJECT_PEER_CLOSED);
   }
 
-  BeginWaitOnQueue();
+  DispatchPendingEvents();
 }
 
 void VirtioWl::OnCanWrite(async_dispatcher_t* dispatcher, async::Wait* wait,
@@ -652,46 +659,14 @@ void VirtioWl::OnCanWrite(async_dispatcher_t* dispatcher, async::Wait* wait,
     return;
   }
 
-  HandleCommand(out_queue_index_);
+  HandleCommand(&out_chain_);
 }
 
-void VirtioWl::BeginWaitOnQueue() {
-  TRACE_DURATION("machina", "virtio_wl_begin_wait_on_queue");
+void VirtioWl::DispatchPendingEvents() {
+  TRACE_DURATION("machina", "virtio_wl_dispatch_pending_events");
 
-  zx_status_t status = in_queue_wait_.Begin();
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to begin waiting on queue: " << status;
-  }
-}
-
-void VirtioWl::OnQueueReady(zx_status_t status, uint16_t index) {
-  TRACE_DURATION("machina", "virtio_wl_on_queue_ready");
-
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed while waiting on queue: " << status;
-    return;
-  }
-
-  bool index_valid = true;
-  VirtioDescriptor desc;
-  while (!ready_vfds_.empty()) {
-    if (!index_valid) {
-      status = in_queue()->NextAvail(&index);
-      if (status != ZX_OK) {
-        break;
-      }
-    }
-
-    status = in_queue()->ReadDesc(index, &desc);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to read descriptor from queue " << status;
-      break;
-    }
-    if (!desc.writable) {
-      FXL_LOG(ERROR) << "Descriptor is not writable";
-      break;
-    }
-
+  zx_status_t status;
+  while (!ready_vfds_.empty() && in_queue()->HasAvail()) {
     auto it = ready_vfds_.begin();
     auto vfd_it = vfds_.find(it->first);
     if (vfd_it == vfds_.end()) {
@@ -702,6 +677,11 @@ void VirtioWl::OnQueueReady(zx_status_t status, uint16_t index) {
 
     // Handle the case where the only signal left is PEER_CLOSED.
     if (it->second == __ZX_OBJECT_PEER_CLOSED) {
+      machina::VirtioChain chain;
+      machina::VirtioDescriptor desc;
+      if (!AcquireWritableDescriptor(in_queue(), &chain, &desc)) {
+        break;
+      }
       if (desc.len < sizeof(virtio_wl_ctrl_vfd_t)) {
         FXL_LOG(ERROR) << "Descriptor is too small for HUP message";
         return;
@@ -710,8 +690,8 @@ void VirtioWl::OnQueueReady(zx_status_t status, uint16_t index) {
       header->hdr.type = VIRTIO_WL_CMD_VFD_HUP;
       header->hdr.flags = 0;
       header->vfd_id = it->first;
-      in_queue()->Return(index, sizeof(*header));
-      index_valid = false;
+      *chain.Used() = sizeof(*header);
+      chain.Return();
       ready_vfds_.erase(it);
       continue;
     }
@@ -733,6 +713,11 @@ void VirtioWl::OnQueueReady(zx_status_t status, uint16_t index) {
     }
 
     if (it->second & __ZX_OBJECT_READABLE) {
+      machina::VirtioChain chain;
+      machina::VirtioDescriptor desc;
+      if (!AcquireWritableDescriptor(in_queue(), &chain, &desc)) {
+        break;
+      }
       // Total message size is NEW commands for each handle, the RECV header,
       // the ID of each VFD and the data.
       size_t message_size = sizeof(virtio_wl_ctrl_vfd_new_t) * actual_handles +
@@ -808,7 +793,7 @@ void VirtioWl::OnQueueReady(zx_status_t status, uint16_t index) {
               FXL_LOG(ERROR) << "Failed to create pipe instance for socket";
               break;
             }
-            status = vfd->BeginWaitOnData(dispatcher_);
+            status = vfd->BeginWaitOnData();
             if (status != ZX_OK) {
               FXL_LOG(ERROR) << "Failed to begin waiting on pipe: " << status;
               break;
@@ -834,9 +819,8 @@ void VirtioWl::OnQueueReady(zx_status_t status, uint16_t index) {
         vfds_[vfd_ids[i]] = std::move(vfds[i]);
       }
 
-      in_queue()->Return(index, message_size);
-      index_valid = false;
-
+      *chain.Used() = message_size;
+      chain.Return();
       it->second &= ~__ZX_OBJECT_READABLE;
     }
 
@@ -844,23 +828,27 @@ void VirtioWl::OnQueueReady(zx_status_t status, uint16_t index) {
     // been handled.
     if (!it->second) {
       ready_vfds_.erase(it);
-      status = vfd_it->second->BeginWaitOnData(dispatcher_);
+      status = vfd_it->second->BeginWaitOnData();
       if (status != ZX_OK) {
         FXL_LOG(ERROR) << "Failed to begin waiting on VFD: " << status;
       }
     }
   }
-
-  // Return descriptor to avoid a leak.
-  if (index_valid) {
-    FXL_LOG(WARNING) << "No readable VFDs. Descriptor returned with 0 length";
-    in_queue()->Return(index, 0);
-  }
-
-  // Begin another wait if we still have VFDs that are ready.
-  if (!ready_vfds_.empty()) {
-    BeginWaitOnQueue();
-  }
 }
 
-}  // namespace machina
+bool VirtioWl::AcquireWritableDescriptor(
+    machina::VirtioQueue* queue, machina::VirtioChain* chain,
+    machina::VirtioDescriptor* descriptor) {
+  return queue->NextChain(chain) && chain->NextDescriptor(descriptor) &&
+         descriptor->writable;
+}
+
+int main(int argc, char** argv) {
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  trace::TraceProvider trace_provider(loop.dispatcher());
+  std::unique_ptr<component::StartupContext> context =
+      component::StartupContext::CreateFromStartupInfo();
+
+  VirtioWl virtio_wl(context.get());
+  return loop.Run();
+}

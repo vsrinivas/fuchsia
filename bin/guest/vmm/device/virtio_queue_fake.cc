@@ -4,8 +4,6 @@
 
 #include "garnet/bin/guest/vmm/device/virtio_queue_fake.h"
 
-#include <virtio/virtio_ring.h>
-
 static size_t desc_size(uint16_t queue_size) {
   return sizeof(*machina::VirtioRing::desc) * queue_size;
 }
@@ -91,6 +89,15 @@ zx_status_t VirtioQueueFake::SetNext(uint16_t desc_idx, uint16_t next_idx) {
   return ZX_OK;
 }
 
+std::optional<VirtioQueueFake::UsedElement> VirtioQueueFake::NextUsed() {
+  if (ring_.used->idx != used_index_) {
+    const auto& elem = ring_.used->ring[used_index_++ % ring_.size];
+    return VirtioQueueFake::UsedElement{elem.id, elem.len};
+  } else {
+    return std::nullopt;
+  }
+}
+
 DescriptorChainBuilder::DescriptorChainBuilder(VirtioQueueFake& queue_fake)
     : queue_fake_(queue_fake) {}
 
@@ -123,11 +130,14 @@ DescriptorChainBuilder& DescriptorChainBuilder::AppendWritableDescriptor(
   return AppendDescriptor(buf, len, VRING_DESC_F_WRITE);
 }
 
-zx_status_t DescriptorChainBuilder::Build() {
+zx_status_t DescriptorChainBuilder::Build(uint16_t* out_index) {
   if (status_ != ZX_OK) {
     return status_;
   }
   queue_fake_.WriteAvail(head_idx_);
+  if (out_index) {
+    *out_index = head_idx_;
+  }
   status_ = ZX_ERR_BAD_STATE;
   return ZX_OK;
 }

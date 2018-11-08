@@ -5,6 +5,10 @@
 #ifndef GARNET_BIN_GUEST_VMM_DEVICE_VIRTIO_QUEUE_FAKE_H_
 #define GARNET_BIN_GUEST_VMM_DEVICE_VIRTIO_QUEUE_FAKE_H_
 
+#include <optional>
+
+#include <virtio/virtio_ring.h>
+
 #include "garnet/lib/machina/device/virtio_queue.h"
 
 // Fake Virtio queue for out-of-process devices.
@@ -21,6 +25,20 @@ class VirtioQueueFake {
 
   void Configure(zx_gpaddr_t data_addr, size_t data_len);
 
+  // Returns the used element structure for the next used descriptor.
+  //
+  // If there are no elements in the used ring, |std::nullopt| is returned.
+  // Otherwise a pair with the first element holding the descriptor id and the
+  // second element holding the 'len' field is returned.
+  struct UsedElement {
+    // The ID of the descriptor written to the used ring.
+    uint32_t id;
+    // The number of bytes written to the descriptor chain, as specified in
+    // the used ring.
+    size_t len;
+  };
+  std::optional<UsedElement> NextUsed();
+
  private:
   const machina::PhysMem& phys_mem_;
   const zx_gpaddr_t desc_;
@@ -32,6 +50,7 @@ class VirtioQueueFake {
   zx_gpaddr_t data_begin_ = 0;
   zx_gpaddr_t data_end_ = 0;
   uint16_t next_desc_ = 0;
+  uint16_t used_index_ = 0;
 
   zx_status_t WriteDesc(void** buf, uint32_t len, uint16_t flags,
                         uint16_t* desc_idx);
@@ -55,7 +74,11 @@ class DescriptorChainBuilder {
     return AppendWritableDescriptor(reinterpret_cast<void**>(ptr), len);
   }
 
-  zx_status_t Build();
+  // Builds the descritpor chain and writes the head index into the avail ring.
+  //
+  // The index of the head descriptor of the chain is written to |index| if it's
+  // non-null.
+  zx_status_t Build(uint16_t* index = nullptr);
 
  private:
   VirtioQueueFake& queue_fake_;
