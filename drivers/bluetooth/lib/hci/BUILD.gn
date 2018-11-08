@@ -59,6 +59,7 @@ static_library("hci") {
 
   public_deps = [
     ":definitions",
+    "//zircon/public/banjo/ddk-protocol-bt-hci",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/ddk",
