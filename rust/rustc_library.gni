@@ -37,9 +37,6 @@ import("//build/rust/rustc_artifact.gni")
 #     and should only be changed when absolutely necessary
 #     (such as in the case of generated code).
 #
-#   output_name (optional)
-#     Name of the output file.
-#
 # Example of usage:
 #
 #   rustc_library("foo") {
@@ -61,7 +58,6 @@ template("rustc_library") {
                              "deps",
                              "non_rust_deps",
                              "with_unit_tests",
-                             "output_name",
                              "source_root",
                              "testonly",
                            ])

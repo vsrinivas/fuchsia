@@ -37,9 +37,6 @@ import("//build/rust/rustc_artifact.gni")
 #     and should only be changed when absolutely necessary
 #     (such as in the case of generated code).
 #
-#   output_name (optional)
-#     Name of the output file.
-#
 #   with_lto (optional)
 #     Force LTO to be enabled/disabled for the binary. Values are "none", "thin" and
 #     "fat". This value takes precedence over GN args or the default value for the
@@ -66,7 +63,6 @@ template("rustc_binary") {
                              "deps",
                              "non_rust_deps",
                              "with_unit_tests",
-                             "output_name",
                              "source_root",
                              "testonly",
                              "with_lto",
