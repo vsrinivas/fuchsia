@@ -55,9 +55,9 @@ struct is_nullable<void> : public std::false_type {};
 //
 // For example:
 // - sizeof(fit::nullable<void*>) == sizeof(void*)
-// - sizeof(fit::nullable<int) == sizeof(struct { bool; int; })
-// - sizeof(std::nullable<void*>) == sizeof(struct { bool; void*; })
-// - sizeof(fit::nullable<int) == sizeof(struct { bool; int; })
+// - sizeof(std::optional<void*>) == sizeof(struct { bool; void*; })
+// - sizeof(fit::nullable<int>) == sizeof(struct { bool; int; })
+// - sizeof(std::optional<int>) == sizeof(struct { bool; int; })
 template <typename T, bool = (is_nullable<T>::value &&
                               std::is_constructible<T, T&&>::value &&
                               std::is_assignable<T&, T&&>::value)>
