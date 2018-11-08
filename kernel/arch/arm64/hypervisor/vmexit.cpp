@@ -348,7 +348,7 @@ zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gi
         break;
     }
     if (status != ZX_OK && status != ZX_ERR_NEXT && status != ZX_ERR_CANCELED) {
-        dprintf(CRITICAL, "VM exit handler for %u (%s) to EL%u at %lx returned %d\n",
+        dprintf(CRITICAL, "VM exit handler for %u (%s) in EL%u at %#lx returned %d\n",
                 static_cast<uint32_t>(syndrome.ec),
                 exception_class_name(syndrome.ec),
                 BITS_SHIFT(guest_state->system_state.spsr_el2, 3, 2),

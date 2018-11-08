@@ -1116,7 +1116,7 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
         break;
     }
     if (status != ZX_OK && status != ZX_ERR_NEXT && status != ZX_ERR_CANCELED) {
-        dprintf(CRITICAL, "VM exit handler for %u (%s) at RIP %lx returned %d\n",
+        dprintf(CRITICAL, "VM exit handler for %u (%s) at RIP %#lx returned %d\n",
                 static_cast<uint32_t>(exit_info.exit_reason),
                 exit_reason_name(exit_info.exit_reason),
                 exit_info.guest_rip,
