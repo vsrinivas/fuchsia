@@ -62,7 +62,7 @@ executable("unittests") {
     "event_timestamper_unittest.cc",
     "hittest_unittest.cc",
     "hittest_global_unittest.cc",
-    "imagepipe_unittest.cc",
+    "image_pipe_unittest.cc",
     "import_unittest.cc",
     "node_unittest.cc",
     "object_linker_unittest.cc",
