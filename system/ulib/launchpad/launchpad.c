@@ -1063,10 +1063,10 @@ static zx_status_t prepare_start(launchpad_t* lp, launchpad_start_data_t* result
     bool allocate_stack = !lp->set_stack_size || lp->stack_size > 0;
 
     size_t size;
-
     if (build_message(lp, lp->handle_count + (allocate_stack ? 1 : 0),
                       &msg, &size, true) != ZX_OK) {
-        lp_error(lp, ZX_ERR_NO_MEMORY, "out of memory assembling procargs message");
+        lp_error(lp, ZX_ERR_NO_MEMORY,
+                 "out of memory assembling procargs message");
         goto cleanup;
     }
     zx_proc_args_t* header = msg;
@@ -1081,14 +1081,18 @@ static zx_status_t prepare_start(launchpad_t* lp, launchpad_start_data_t* result
     size_t stack_size;
     if (sent_loader_message && !lp->set_stack_size) {
         // The initial stack will be used just for startup work and to
-        // contain the bootstrap messages.  Make it only as big as needed.
+        // contain the bootstrap message.  Make it only as big as needed:
+        // the message itself and its array of handles, plus some slop.
+        stack_size = size + (lp->handle_count * sizeof(zx_handle_t));
+
         // This constant is defined by the C library in <limits.h>.  It's
         // tuned to be enough to cover the dynamic linker and C library
         // startup code's stack usage (up until the point it switches to
         // its own stack in __libc_start_main), but leave a little space so
         // for small bootstrap message sizes the stack needs only one page.
-        stack_size = size + PTHREAD_STACK_MIN;
+        stack_size += PTHREAD_STACK_MIN;
         stack_size = (stack_size + PAGE_SIZE - 1) & -PAGE_SIZE;
+
         snprintf(stack_vmo_name, sizeof(stack_vmo_name),
                  "stack: msg of %#zx", size);
     } else {
@@ -1104,7 +1108,8 @@ static zx_status_t prepare_start(launchpad_t* lp, launchpad_start_data_t* result
         // large size for the message (presumably arguments and
         // environment strings that are unreasonably large).
         if (stack_size > 0 && size > stack_size / 2) {
-            lp_error(lp, ZX_ERR_BUFFER_TOO_SMALL, "procargs message is too large");
+            lp_error(lp, ZX_ERR_BUFFER_TOO_SMALL,
+                     "procargs message is too large");
             goto cleanup;
         }
     }
