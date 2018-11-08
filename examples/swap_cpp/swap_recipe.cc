@@ -11,7 +11,9 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/ui/view_framework/base_view.h>
+#include <lib/ui/base_view/cpp/v1_base_view.h>
+#include <trace-provider/provider.h>
+#include <zx/eventpair.h>
 
 #include "peridot/lib/fidl/single_service_app.h"
 
@@ -22,38 +24,34 @@ constexpr int kSwapSeconds = 5;
 constexpr std::array<const char*, 2> kModuleQueries{
     {"swap_module1", "swap_module2"}};
 
-class RecipeView : public mozart::BaseView {
+class RecipeView : public scenic::V1BaseView {
  public:
-  explicit RecipeView(
-      fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-          view_owner_request)
-      : BaseView(std::move(view_manager), std::move(view_owner_request),
-                 "RecipeView") {}
+  explicit RecipeView(scenic::ViewContext view_context)
+      : V1BaseView(std::move(view_context), "RecipeView") {}
 
   ~RecipeView() override = default;
 
-  void SetChild(fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner) {
+  void SetChild(zx::eventpair view_token) {
     if (host_node_) {
-      GetViewContainer()->RemoveChild(kChildKey, nullptr);
+      GetViewContainer()->RemoveChild2(kChildKey, zx::eventpair());
       host_node_->Detach();
       host_node_.reset();
     }
 
-    if (view_owner) {
+    if (view_token) {
       host_node_ = std::make_unique<scenic::EntityNode>(session());
 
       zx::eventpair host_import_token;
       host_node_->ExportAsRequest(&host_import_token);
       parent_node().AddChild(*host_node_);
 
-      GetViewContainer()->AddChild(kChildKey, std::move(view_owner),
-                                   std::move(host_import_token));
+      GetViewContainer()->AddChild2(kChildKey, std::move(view_token),
+                                    std::move(host_import_token));
     }
   }
 
  private:
-  // |BaseView|:
+  // |scenic::V1BaseView|
   void OnPropertiesChanged(fuchsia::ui::viewsv1::ViewProperties) override {
     if (host_node_) {
       auto child_properties = fuchsia::ui::viewsv1::ViewProperties::New();
@@ -77,16 +75,24 @@ class RecipeApp : public modular::ViewApp {
   ~RecipeApp() override = default;
 
  private:
-  // |SingleServiceApp|
+  // |ViewApp|
   void CreateView(
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-          view_owner_request,
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
+      zx::eventpair view_token,
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
+      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services)
       override {
-    view_ = std::make_unique<RecipeView>(
+    auto scenic =
         startup_context()
-            ->ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewManager>(),
-        std::move(view_owner_request));
+            ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+    scenic::ViewContext view_context = {
+        .session_and_listener_request =
+            scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
+        .view_token = std::move(view_token),
+        .incoming_services = std::move(incoming_services),
+        .outgoing_services = std::move(outgoing_services),
+        .startup_context = startup_context(),
+    };
+    view_ = std::make_unique<RecipeView>(std::move(view_context));
     SetChild();
   }
 
@@ -119,7 +125,8 @@ class RecipeApp : public modular::ViewApp {
 
   void SetChild() {
     if (view_ && module_view_) {
-      view_->SetChild(std::move(module_view_));
+      view_->SetChild(
+          zx::eventpair(module_view_.Unbind().TakeChannel().release()));
     }
   }
 
@@ -135,6 +142,7 @@ class RecipeApp : public modular::ViewApp {
 
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  trace::TraceProvider trace_provider(loop.dispatcher());
 
   auto context = component::StartupContext::CreateFromStartupInfo();
   modular::AppDriver<RecipeApp> driver(

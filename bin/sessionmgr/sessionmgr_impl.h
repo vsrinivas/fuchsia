@@ -22,6 +22,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fxl/macros.h>
+#include <zx/eventpair.h>
 
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner_storage_impl.h"
 #include "peridot/bin/sessionmgr/entity_provider_runner/entity_provider_launcher.h"
@@ -115,10 +116,8 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void InitializeMessageQueueManager();
   void InitializeMaxwellAndModular(const fidl::StringPtr& session_shell_url,
                                    fuchsia::modular::AppConfig story_shell);
-  void InitializeSessionShell(
-      fuchsia::modular::AppConfig session_shell,
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-          view_owner_request);
+  void InitializeSessionShell(fuchsia::modular::AppConfig session_shell,
+                              zx::eventpair view_token);
 
   void RunSessionShell(fuchsia::modular::AppConfig session_shell);
   // This is a termination sequence that may be used with |AtEnd()|, but also

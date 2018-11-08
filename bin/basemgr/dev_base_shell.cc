@@ -99,11 +99,14 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell>,
  private:
   // |SingleServiceApp|
   void CreateView(
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-          view_owner_request,
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
-      override {
-    view_owner_request_ = std::move(view_owner_request);
+      zx::eventpair view_token,
+      fidl::InterfaceRequest<
+          fuchsia::sys::ServiceProvider> /*incoming_services*/,
+      fidl::InterfaceHandle<
+          fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {
+    view_owner_request_ =
+        fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>(
+            zx::channel(view_token.release()));
     Connect();
   }
 
