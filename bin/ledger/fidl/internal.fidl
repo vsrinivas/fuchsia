@@ -59,7 +59,6 @@ interface LedgerRepository {
            -> (fuchsia.ledger.Status status);
 
     // Tries to clean up disk space on the device by removing unused data that are
-    // already backed up in the cloud. If called while a previous execution of
-    // |DisckCleanUp| is in progress |ILLEGAL_STATE| is returned.
+    // already backed up in the cloud.
     5: DiskCleanUp() -> (fuchsia.ledger.Status status);
 };

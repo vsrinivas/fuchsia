@@ -76,7 +76,7 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryImplTest);
 };
 
-TEST_F(LedgerRepositoryImplTest, DiskCleanUpError) {
+TEST_F(LedgerRepositoryImplTest, ConcurrentCalls) {
   // Make a first call to DiskCleanUp.
   bool callback_called1 = false;
   Status status1;
@@ -92,16 +92,18 @@ TEST_F(LedgerRepositoryImplTest, DiskCleanUpError) {
   // Make sure both of them start running.
   RunLoopUntilIdle();
 
-  // Only the second one should terminate with ILLEGAL_STATE status.
+  // Both calls must wait for the cleanup manager.
   EXPECT_FALSE(callback_called1);
-  EXPECT_TRUE(callback_called2);
-  EXPECT_EQ(Status::ILLEGAL_STATE, status2);
+  EXPECT_FALSE(callback_called2);
 
-  // Call the callback and expect to see an ok status for the first one.
+  // Call the cleanup manager callback and expect to see an ok status for both
+  // pending callbacks.
   disk_cleanup_manager_->cleanup_callback(Status::OK);
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called1);
+  EXPECT_TRUE(callback_called2);
   EXPECT_EQ(Status::OK, status1);
+  EXPECT_EQ(Status::OK, status2);
 }
 
 }  // namespace

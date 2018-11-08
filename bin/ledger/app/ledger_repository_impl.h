@@ -113,7 +113,7 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
   fidl::BindingSet<ledger_internal::LedgerRepositoryDebug>
       ledger_repository_debug_bindings_;
 
-  bool clean_up_in_progress_ = false;
+  std::vector<DiskCleanUpCallback> cleanup_callbacks_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryImpl);
 };

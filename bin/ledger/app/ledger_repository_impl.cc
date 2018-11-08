@@ -168,18 +168,19 @@ void LedgerRepositoryImpl::GetLedgerRepositoryDebug(
 }
 
 void LedgerRepositoryImpl::DiskCleanUp(DiskCleanUpCallback callback) {
-  if (clean_up_in_progress_) {
-    callback(Status::ILLEGAL_STATE);
+  cleanup_callbacks_.push_back(std::move(callback));
+  if (cleanup_callbacks_.size() > 1) {
     return;
   }
-  clean_up_in_progress_ = true;
-  disk_cleanup_manager_->TryCleanUp(
-      [this, callback = std::move(callback)](Status status) {
-        FXL_DCHECK(clean_up_in_progress_);
+  disk_cleanup_manager_->TryCleanUp([this](Status status) {
+    FXL_DCHECK(!cleanup_callbacks_.empty());
 
-        clean_up_in_progress_ = false;
-        callback(status);
-      });
+    auto callbacks = std::move(cleanup_callbacks_);
+    cleanup_callbacks_.clear();
+    for (auto& callback : callbacks) {
+      callback(status);
+    }
+  });
 }
 
 void LedgerRepositoryImpl::GetInstancesList(GetInstancesListCallback callback) {
