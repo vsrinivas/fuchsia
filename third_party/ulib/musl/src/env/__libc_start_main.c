@@ -13,13 +13,13 @@
 #include <runtime/thread.h>
 
 struct start_params {
-    uint32_t argc, nhandles, namec;
-    char** argv;
-    char** names;
-    zx_handle_t* handles;
-    uint32_t* handle_info;
     int (*main)(int, char**, char**);
     thrd_t td;
+    uint8_t* buffer;
+    zx_proc_args_t* procargs;
+    zx_handle_t* handles;
+    uint32_t* handle_info;
+    uint32_t nbytes, nhandles;
 };
 
 // This gets called via inline assembly below, after switching onto
@@ -27,15 +27,41 @@ struct start_params {
 static _Noreturn void start_main(const struct start_params*)
     __asm__("start_main") __attribute__((used));
 static void start_main(const struct start_params* p) {
-    __sanitizer_startup_hook(p->argc, p->argv, __environ,
+    uint32_t argc = p->procargs->args_num;
+    uint32_t envc = p->procargs->environ_num;
+    uint32_t namec = p->procargs->names_num;
+
+    // Use a single contiguous buffer for argv and envp, with two
+    // extra words of terminator on the end.  In traditional Unix
+    // process startup, the stack contains argv followed immediately
+    // by envp and that's followed immediately by the auxiliary vector
+    // (auxv), which is in two-word pairs and terminated by zero
+    // words.  Some crufty programs might assume some of that layout,
+    // and it costs us nothing to stay consistent with it here.
+    char* args_and_environ[argc + 1 + envc + 1 + 2];
+    char** argv = &args_and_environ[0];
+    __environ = &args_and_environ[argc + 1];
+    char** dummy_auxv = &args_and_environ[argc + 1 + envc + 1];
+    dummy_auxv[0] = dummy_auxv[1] = 0;
+
+    char* names[namec + 1];
+    zx_status_t status = zxr_processargs_strings(p->buffer, p->nbytes,
+                                                 argv, __environ, names);
+    if (status != ZX_OK) {
+        argc = namec = 0;
+        argv = __environ = NULL;
+    }
+
+    __sanitizer_startup_hook(argc, argv, __environ,
                              p->td->safe_stack.iov_base,
                              p->td->safe_stack.iov_len);
 
     // Allow companion libraries a chance to claim handles, zeroing out
     // handles[i] and handle_info[i] for handles they claim.
-    if (&__libc_extensions_init != NULL)
+    if (&__libc_extensions_init != NULL) {
         __libc_extensions_init(p->nhandles, p->handles, p->handle_info,
-                               p->namec, p->names);
+                               namec, names);
+    }
 
     // Give any unclaimed handles to zx_take_startup_handle(). This function
     // takes ownership of the data, but not the memory: it assumes that the
@@ -46,7 +72,7 @@ static void start_main(const struct start_params* p) {
     __libc_start_init();
 
     // Pass control to the application.
-    exit((*p->main)(p->argc, p->argv, __environ));
+    exit((*p->main)(argc, argv, __environ));
 }
 
 __NO_SAFESTACK _Noreturn void __libc_start_main(
@@ -74,49 +100,18 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(
     zx_handle_t bootstrap = (uintptr_t)arg;
 
     struct start_params p = { .main = main };
-    uint32_t nbytes;
-    zx_status_t status = zxr_message_size(bootstrap, &nbytes, &p.nhandles);
-    if (status != ZX_OK)
-        nbytes = p.nhandles = 0;
-
-    ZXR_PROCESSARGS_BUFFER(buffer, nbytes);
-    zx_handle_t handles[p.nhandles];
-    p.handles = handles;
-    zx_proc_args_t* procargs = NULL;
-    if (status == ZX_OK)
-        status = zxr_processargs_read(bootstrap, buffer, nbytes,
-                                      handles, p.nhandles,
-                                      &procargs, &p.handle_info);
-
-    uint32_t envc = 0;
-    if (status == ZX_OK) {
-        p.argc = procargs->args_num;
-        envc = procargs->environ_num;
-        p.namec = procargs->names_num;
-    }
-
-    // Use a single contiguous buffer for argv and envp, with two
-    // extra words of terminator on the end.  In traditional Unix
-    // process startup, the stack contains argv followed immediately
-    // by envp and that's followed immediately by the auxiliary vector
-    // (auxv), which is in two-word pairs and terminated by zero
-    // words.  Some crufty programs might assume some of that layout,
-    // and it costs us nothing to stay consistent with it here.
-    char* args_and_environ[p.argc + 1 + envc + 1 + 2];
-    p.argv = &args_and_environ[0];
-    __environ = &args_and_environ[p.argc + 1];
-    char** dummy_auxv = &args_and_environ[p.argc + 1 + envc + 1];
-    dummy_auxv[0] = dummy_auxv[1] = 0;
-
-    char* names[p.namec + 1];
-    p.names = names;
-
-    if (status == ZX_OK)
-        status = zxr_processargs_strings(buffer, nbytes, p.argv, __environ, p.names);
+    zx_status_t status = zxr_message_size(bootstrap, &p.nbytes, &p.nhandles);
     if (status != ZX_OK) {
-        p.argc = 0;
-        p.argv = __environ = NULL;
-        p.namec = 0;
+        p.nbytes = p.nhandles = 0;
+    }
+    ZXR_PROCESSARGS_BUFFER(buffer, p.nbytes);
+    zx_handle_t handles[p.nhandles];
+    p.buffer = buffer;
+    p.handles = handles;
+    if (status == ZX_OK) {
+        status = zxr_processargs_read(bootstrap, buffer, p.nbytes,
+                                      handles, p.nhandles,
+                                      &p.procargs, &p.handle_info);
     }
 
     // Find the handles we're interested in among what we were given.
@@ -169,9 +164,9 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(
     // This consumes the thread handle and sets up the thread pointer.
     p.td = __init_main_thread(main_thread_handle);
 
-    // Switch to the allocated stack and call start_main(&p) there.
-    // The original stack stays around just to hold argv et al.
-    // The new stack is whole pages, so it's sufficiently aligned.
+    // Switch to the allocated stack and call start_main(&p) there.  The
+    // original stack stays around just to hold the message buffer and handles
+    // array.  The new stack is whole pages, so it's sufficiently aligned.
 
 #ifdef __x86_64__
     // The x86-64 ABI requires %rsp % 16 = 8 on entry.  The zero word

@@ -16,7 +16,7 @@ static uintptr_t page_of(const void* ptr) {
     return (uintptr_t)ptr & -PAGE_SIZE;
 }
 
-static bool do_stack_tests(bool one_page_stack) {
+static bool do_stack_tests(bool is_main_thread) {
     BEGIN_TEST;
 
     const void* safe_stack = __builtin_frame_address(0);
@@ -38,11 +38,17 @@ static bool do_stack_tests(bool one_page_stack) {
     EXPECT_NONNULL(tls_buf, "thread_local's taken address is null");
     EXPECT_NONNULL(tp, "thread pointer is null");
 
-    EXPECT_NE(page_of(safe_stack), page_of(environ),
-              "safe stack collides with environ");
+    if (__has_feature(safe_stack) || !is_main_thread) {
+        EXPECT_NE(page_of(safe_stack), page_of(environ),
+                  "safe stack collides with environ");
+    }
 
-    EXPECT_NE(page_of(unsafe_stack), page_of(environ),
-              "unsafe stack collides with environ");
+    // The environ array sits on the main thread's unsafe stack.  But we can't
+    // verify that it does since it might not be on the same page.
+    if (!is_main_thread) {
+        EXPECT_NE(page_of(unsafe_stack), page_of(environ),
+                  "unsafe stack collides with environ");
+    }
 
     EXPECT_NE(page_of(tls_buf), page_of(environ),
               "TLS collides with environ");
@@ -67,7 +73,7 @@ static bool do_stack_tests(bool one_page_stack) {
     const void* unsafe_start = __builtin___get_unsafe_stack_start();
     const void* unsafe_ptr = __builtin___get_unsafe_stack_ptr();
 
-    if (one_page_stack) {
+    if (!is_main_thread) {
         EXPECT_EQ(page_of(unsafe_start), page_of(unsafe_ptr),
                   "reported unsafe start and ptr not nearby");
     }
@@ -88,11 +94,11 @@ static bool do_stack_tests(bool one_page_stack) {
 // get the main thread's stack down to a single page because
 // the unittest machinery needs more than that.
 static bool main_thread_stack_tests(void) {
-    return do_stack_tests(false);
+    return do_stack_tests(true);
 }
 
 static void* thread_stack_tests(void* arg) {
-    return (void*)(uintptr_t)do_stack_tests(true);
+    return (void*)(uintptr_t)do_stack_tests(false);
 }
 
 // Spawn a thread with a one-page stack.
