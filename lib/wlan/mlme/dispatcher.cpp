@@ -180,6 +180,11 @@ zx_status_t Dispatcher::HandleSvcPacket(fbl::unique_ptr<Packet> packet) {
         return HandleMlmeMessage<wlan_mlme::EapolRequest>(fbl::move(packet), hdr->ordinal);
     case fuchsia_wlan_mlme_MLMESetKeysReqOrdinal:
         return HandleMlmeMessage<wlan_mlme::SetKeysRequest>(fbl::move(packet), hdr->ordinal);
+    case fuchsia_wlan_mlme_MLMESendMpOpenActionOrdinal:
+        return HandleMlmeMessage<wlan_mlme::MeshPeeringOpenAction>(fbl::move(packet), hdr->ordinal);
+    case fuchsia_wlan_mlme_MLMESendMpConfirmActionOrdinal:
+        return HandleMlmeMessage<wlan_mlme::MeshPeeringConfirmAction>(fbl::move(packet),
+                                                                      hdr->ordinal);
     default:
         warnf("unknown MLME method %u\n", hdr->ordinal);
         return ZX_ERR_NOT_SUPPORTED;

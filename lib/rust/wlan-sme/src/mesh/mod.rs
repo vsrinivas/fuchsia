@@ -7,6 +7,7 @@ use {
     futures::channel::mpsc,
     log::{error},
     crate::{
+        clone_utils,
         MlmeRequest,
         sink::MlmeSink,
         timer::TimedEvent,
@@ -35,8 +36,11 @@ enum State<T: Tokens> {
     Idle,
     Joining {
         token: T::JoinToken,
+        config: Config,
     },
-    Joined
+    Joined {
+        config: Config,
+    }
 }
 
 pub struct MeshSme<T: Tokens> {
@@ -47,7 +51,7 @@ pub struct MeshSme<T: Tokens> {
 
 pub type MeshId = Vec<u8>;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Config {
     pub mesh_id: MeshId,
     pub channel: u8,
@@ -73,9 +77,9 @@ impl<T: Tokens> MeshSme<T> {
         self.state = Some(match self.state.take().unwrap() {
             State::Idle => {
                 self.mlme_sink.send(MlmeRequest::Start(create_start_request(&config)));
-                State::Joining { token }
+                State::Joining { token, config }
             },
-            s@ State::Joining { .. } | s@ State::Joined => {
+            s@ State::Joining { .. } | s@ State::Joined { .. } => {
                 // TODO(gbonik): Leave then re-join
                 error!("cannot join mesh because already joined or joining");
                 report_join_finished(&self.user_sink, token, JoinMeshResult::Error);
@@ -103,11 +107,11 @@ impl<T: Tokens> super::Station for MeshSme<T> {
     fn on_mlme_event(&mut self, event: MlmeEvent) {
         self.state = Some(match self.state.take().unwrap() {
             State::Idle => State::Idle,
-            State::Joining { token } => match event {
+            State::Joining { token, config } => match event {
                 MlmeEvent::StartConf { resp } => match resp.result_code {
                     fidl_mlme::StartResultCodes::Success => {
                         report_join_finished(&self.user_sink, token, JoinMeshResult::Success);
-                        State::Joined
+                        State::Joined { config }
                     },
                     other => {
                         error!("failed to join mesh: {:?}", other);
@@ -115,14 +119,36 @@ impl<T: Tokens> super::Station for MeshSme<T> {
                         State::Idle
                     }
                 },
-                _ => State::Joining { token },
+                _ => State::Joining { token, config },
             },
-            State::Joined => match event {
+            State::Joined { config } => match event {
                 MlmeEvent::IncomingMpOpenAction { action } => {
+                    // TODO(gbonik): implement a proper MPM state machine
                     println!("received an MPM Open action: {:?}", action);
-                    State::Joined
+                    if mesh_profile_matches(&config.mesh_id, &get_mesh_config(),
+                                            &action.common.mesh_id, &action.common.mesh_config) {
+                        // TODO(gbonik): actually fill out the data correctly
+                        // instead of being a copycat
+                        let open = fidl_mlme::MeshPeeringOpenAction {
+                            common: fidl_mlme::MeshPeeringCommon {
+                                local_link_id: 0,
+                                .. clone_utils::clone_mesh_peering_common(&action.common)
+                            },
+                        };
+                        self.mlme_sink.send(MlmeRequest::SendMpOpenAction(open));
+                        let conf = fidl_mlme::MeshPeeringConfirmAction {
+                            common: fidl_mlme::MeshPeeringCommon {
+                                local_link_id: 0,
+                                .. action.common
+                            },
+                            peer_link_id: action.common.local_link_id,
+                            aid: 0,
+                        };
+                        self.mlme_sink.send(MlmeRequest::SendMpConfirmAction(conf));
+                    }
+                    State::Joined { config }
                 },
-                _ => State::Joined,
+                _ => State::Joined { config },
             },
         });
     }
@@ -148,5 +174,30 @@ impl<T: Tokens> MeshSme<T> {
             state: Some(State::Idle),
         };
         (sme, mlme_stream, user_stream)
+    }
+}
+
+fn mesh_profile_matches(our_mesh_id: &[u8],
+                        ours: &fidl_mlme::MeshConfiguration,
+                        their_mesh_id: &[u8],
+                        theirs: &fidl_mlme::MeshConfiguration) -> bool {
+    // IEEE Std 802.11-2016, 14.2.3
+    their_mesh_id == our_mesh_id
+        && theirs.active_path_sel_proto_id == ours.active_path_sel_proto_id
+        && theirs.active_path_sel_metric_id == ours.active_path_sel_metric_id
+        && theirs.congest_ctrl_method_id == ours.congest_ctrl_method_id
+        && theirs.sync_method_id == ours.sync_method_id
+        && theirs.auth_proto_id == ours.auth_proto_id
+}
+
+fn get_mesh_config() -> fidl_mlme::MeshConfiguration {
+    fidl_mlme::MeshConfiguration {
+        active_path_sel_proto_id: 1, // HWMP
+        active_path_sel_metric_id: 1, // Airtime
+        congest_ctrl_method_id: 0, // Inactive
+        sync_method_id: 1, // Neighbor offset sync
+        auth_proto_id: 0, // No auth
+        mesh_formation_info: 0,
+        mesh_capability: 0x9, // accept additional peerings (0x1) + forwarding (0x8)
     }
 }

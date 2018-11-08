@@ -151,6 +151,18 @@ struct MeshConfiguration {
         return ret;
     }
 
+    static MeshConfiguration FromFidl(const ::fuchsia::wlan::mlme::MeshConfiguration& f) {
+        return MeshConfiguration {
+            .active_path_sel_proto_id = static_cast<PathSelProtoId>(f.active_path_sel_proto_id),
+            .active_path_sel_metric_id = static_cast<PathSelMetricId>(f.active_path_sel_metric_id),
+            .congest_ctrl_method_id = static_cast<CongestCtrlModeId>(f.congest_ctrl_method_id),
+            .sync_method_id = static_cast<SyncMethodId>(f.sync_method_id),
+            .auth_proto_id = static_cast<AuthProtoId>(f.auth_proto_id),
+            .mesh_formation_info = MeshFormationInfo(f.mesh_formation_info),
+            .mesh_capability = MeshCapability(f.mesh_capability),
+        };
+    }
+
     struct MeshCapability : public common::BitField<uint8_t> {
         MeshCapability() = default;
         explicit MeshCapability(uint8_t raw) : BitField(raw) {}

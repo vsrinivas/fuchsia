@@ -39,6 +39,8 @@ pub enum MlmeRequest {
     SetKeys(fidl_mlme::SetKeysRequest),
     Start(fidl_mlme::StartRequest),
     Stop(fidl_mlme::StopRequest),
+    SendMpOpenAction(fidl_mlme::MeshPeeringOpenAction),
+    SendMpConfirmAction(fidl_mlme::MeshPeeringConfirmAction),
 }
 
 pub trait Station {

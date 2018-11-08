@@ -54,6 +54,8 @@ class Device : public wlan_mlme::MLME {
     void ListMinstrelPeers(ListMinstrelPeersCallback cb) override;
     void GetMinstrelStats(wlan_mlme::MinstrelStatsRequest req,
                           GetMinstrelStatsCallback cb) override;
+    void SendMpOpenAction(wlan_mlme::MeshPeeringOpenAction req) override;
+    void SendMpConfirmAction(wlan_mlme::MeshPeeringConfirmAction req) override;
 
     // wlanif_impl_ifc (wlanif-impl -> ::fuchsia::wlan::mlme)
     void OnScanResult(wlanif_scan_result_t* result);

@@ -600,6 +600,14 @@ void Device::GetMinstrelStats(wlan_mlme::MinstrelStatsRequest req, GetMinstrelSt
     cb(wlan_mlme::MinstrelStatsResponse{});
 }
 
+void Device::SendMpOpenAction(wlan_mlme::MeshPeeringOpenAction req) {
+    errorf("SendMpConfirmAction is not implemented\n");
+}
+
+void Device::SendMpConfirmAction(wlan_mlme::MeshPeeringConfirmAction req) {
+    errorf("SendMpConfirmAction is not implemented\n");
+}
+
 void Device::OnScanResult(wlanif_scan_result_t* result) {
     std::lock_guard<std::mutex> lock(lock_);
     if (!binding_.is_bound()) {

@@ -835,6 +835,13 @@ struct MeshPeeringOpenAction {
     MeshPeeringCommon common;
 };
 
+// IEEE Std 802.11-2016, 9.6.16.3.2
+struct MeshPeeringConfirmAction {
+    MeshPeeringCommon common;
+    uint16 aid;
+    uint16 peer_link_id;
+};
+
 // Because these methods rely on an external entity to provide a response, events are used instead
 // of return values.
 interface MLME {
@@ -908,6 +915,8 @@ interface MLME {
 
     // ==== 90xxxx: Mesh ===
     900000: -> IncomingMpOpenAction(MeshPeeringOpenAction action);
+    900100: SendMpOpenAction(MeshPeeringOpenAction action);
+    900300: SendMpConfirmAction(MeshPeeringConfirmAction action);
 
     // The following are extensions to the 802.11 MLME SAP interface.
 

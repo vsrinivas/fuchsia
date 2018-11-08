@@ -112,3 +112,22 @@ pub fn clone_band_cap(b: &BandCapabilities) -> BandCapabilities {
 pub fn clone_bands(bv: &Vec<BandCapabilities>) -> Vec<BandCapabilities> {
     bv.iter().map(clone_band_cap).collect()
 }
+
+pub fn clone_mesh_configuration(c: &fidl_mlme::MeshConfiguration) -> fidl_mlme::MeshConfiguration {
+    fidl_mlme::MeshConfiguration {
+        .. *c
+    }
+}
+
+pub fn clone_mesh_peering_common(c: &fidl_mlme::MeshPeeringCommon) -> fidl_mlme::MeshPeeringCommon {
+    fidl_mlme::MeshPeeringCommon {
+        mesh_id: c.mesh_id.clone(),
+        mesh_config: clone_mesh_configuration(&c.mesh_config),
+        rates: c.rates.clone(),
+        ht_cap: c.ht_cap.as_ref().map(|x| Box::new(clone_ht_capabilities(x))),
+        ht_op: c.ht_op.as_ref().map(|x| Box::new(clone_ht_operation(x))),
+        vht_cap: c.vht_cap.as_ref().map(|x| Box::new(clone_vht_capabilities(x))),
+        vht_op: c.vht_op.as_ref().map(|x| Box::new(clone_vht_operation(x))),
+        .. *c
+    }
+}

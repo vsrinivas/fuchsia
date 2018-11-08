@@ -26,6 +26,9 @@ void WriteHtCapabilities(BufferWriter* w, const HtCapabilities& ht_caps);
 void WriteHtOperation(BufferWriter* w, const HtOperation& ht_op);
 void WriteVhtCapabilities(BufferWriter* w, const VhtCapabilities& vht_caps);
 void WriteVhtOperation(BufferWriter* w, const VhtOperation& vht_op);
+void WriteMpmOpen(BufferWriter* w, MpmHeader mpm_header, const MpmPmk* pmk);
+void WriteMpmConfirm(BufferWriter* w, MpmHeader mpm_header, uint16_t peer_link_id,
+                     const MpmPmk* pmk);
 
 } // namespace common
 } // namespace wlan

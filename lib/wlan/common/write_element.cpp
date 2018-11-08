@@ -116,5 +116,16 @@ void WriteVhtOperation(BufferWriter* w, const VhtOperation& vht_op) {
     Write(w, element_id::kVhtOperation, vht_op);
 }
 
+void WriteMpmOpen(BufferWriter* w, MpmHeader mpm_header, const MpmPmk* pmk) {
+    auto pmk_bytes = pmk == nullptr ? Span<const uint8_t>{} : Span<const uint8_t>{pmk->data};
+    Write(w, element_id::kMeshPeeringManagement, mpm_header, pmk_bytes);
+}
+
+void WriteMpmConfirm(BufferWriter* w, MpmHeader mpm_header, uint16_t peer_link_id,
+                     const MpmPmk* pmk) {
+    auto pmk_bytes = pmk == nullptr ? Span<const uint8_t>{} : Span<const uint8_t>{pmk->data};
+    Write(w, element_id::kMeshPeeringManagement, mpm_header, peer_link_id, pmk_bytes);
+}
+
 } // namespace common
 } // namespace wlan

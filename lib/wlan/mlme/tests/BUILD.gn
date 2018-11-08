@@ -134,6 +134,7 @@ executable("mesh_tests") {
   sources = [
     "parse_mp_action_unittest.cpp",
     "mesh_mlme_unittest.cpp",
+    "write_mp_action_unittest.cpp",
   ]
 
   deps = [

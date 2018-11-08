@@ -23,6 +23,10 @@ class BufferWriter {
         offset_ += 1;
     }
 
+    template <typename T> void WriteValue(const T& value) {
+        Write(as_bytes(Span<const T>(&value, 1)));
+    }
+
     template <typename T> T* Write() {
         ZX_ASSERT(buf_.size() >= offset_ + sizeof(T));
 

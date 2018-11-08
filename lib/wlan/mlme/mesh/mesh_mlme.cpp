@@ -9,10 +9,13 @@
 #include <wlan/mlme/beacon.h>
 #include <wlan/mlme/device_caps.h>
 #include <wlan/mlme/mesh/parse_mp_action.h>
+#include <wlan/mlme/mesh/write_mp_action.h>
 #include <wlan/mlme/service.h>
 #include <zircon/status.h>
 
 namespace wlan {
+
+static constexpr size_t kMaxMeshMgmtFrameSize = 1024;
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
@@ -78,6 +81,12 @@ zx_status_t MeshMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     if (auto start_req = msg.As<wlan_mlme::StartRequest>()) {
         auto code = Start(*start_req);
         return service::SendStartConfirm(device_, code);
+    } else if (auto mp_open = msg.As<wlan_mlme::MeshPeeringOpenAction>()) {
+        SendPeeringOpen(*mp_open);
+        return ZX_OK;
+    } else if (auto mp_confirm = msg.As<wlan_mlme::MeshPeeringConfirmAction>()) {
+        SendPeeringConfirm(*mp_confirm);
+        return ZX_OK;
     } else {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -114,6 +123,31 @@ wlan_mlme::StartResultCodes MeshMlme::Start(const MlmeMsg<wlan_mlme::StartReques
 
     joined_ = true;
     return wlan_mlme::StartResultCodes::SUCCESS;
+}
+
+void MeshMlme::SendPeeringOpen(const MlmeMsg<wlan_mlme::MeshPeeringOpenAction>& req) {
+    auto packet = GetWlanPacket(kMaxMeshMgmtFrameSize);
+    if (packet == nullptr) { return; }
+
+    BufferWriter w(*packet);
+    WriteMpOpenActionFrame(&w, MacHeaderWriter { self_addr(), &seq_ }, *req.body());
+    SendMgmtFrame(fbl::move(packet));
+}
+
+void MeshMlme::SendPeeringConfirm(const MlmeMsg<wlan_mlme::MeshPeeringConfirmAction>& req) {
+    auto packet = GetWlanPacket(kMaxMeshMgmtFrameSize);
+    if (packet == nullptr) { return; }
+
+    BufferWriter w(*packet);
+    WriteMpConfirmActionFrame(&w, MacHeaderWriter { self_addr(), &seq_ }, *req.body());
+    SendMgmtFrame(fbl::move(packet));
+}
+
+void MeshMlme::SendMgmtFrame(fbl::unique_ptr<Packet> packet) {
+    zx_status_t status = device_->SendWlan(fbl::move(packet), CBW20, WLAN_PHY_OFDM);
+    if (status != ZX_OK) {
+        errorf("[mesh-mlme] failed to send a mgmt frame: %s\n", zx_status_get_string(status));
+    }
 }
 
 zx_status_t MeshMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {

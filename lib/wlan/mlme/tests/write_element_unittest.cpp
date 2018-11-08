@@ -6,6 +6,8 @@
 #include <wlan/mlme/wlan.h>
 #include <gtest/gtest.h>
 
+#include "test_utils.h"
+
 namespace wlan {
 namespace common {
 
@@ -190,6 +192,52 @@ TEST(WriteElement, VhtOperation) {
     };
     WriteVhtOperation(&buf.w, vhtop);
     EXPECT_TRUE(equal(expected, buf.w.WrittenData()));
+}
+
+TEST(WriteElement, MpmOpenNoPmk) {
+    Buf buf;
+    WriteMpmOpen(&buf.w, MpmHeader { MpmHeader::AMPE, 0x4433u }, nullptr);
+
+    const uint8_t expected[6] = { 117, 4, 0x01, 0x00, 0x33, 0x44 };
+    EXPECT_RANGES_EQ(expected, buf.w.WrittenData());
+}
+
+TEST(WriteElement, MpmOpenWithPmk) {
+    Buf buf;
+    const MpmPmk pmk = {
+        .data = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 },
+    };
+    WriteMpmOpen(&buf.w, MpmHeader { MpmHeader::AMPE, 0x4433u }, &pmk);
+
+    const uint8_t expected[22] = {
+        117, 20,
+        0x01, 0x00, 0x33, 0x44,
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+    };
+    EXPECT_RANGES_EQ(expected, buf.w.WrittenData());
+}
+
+TEST(WriteElement, MpmConfirmNoPmk) {
+    Buf buf;
+    WriteMpmConfirm(&buf.w, MpmHeader { MpmHeader::AMPE, 0x4433u }, 0x6655u, nullptr);
+
+    const uint8_t expected[8] = { 117, 6, 0x01, 0x00, 0x33, 0x44, 0x55, 0x66 };
+    EXPECT_RANGES_EQ(expected, buf.w.WrittenData());
+}
+
+TEST(WriteElement, MpmConfirmWithPmk) {
+    Buf buf;
+    const MpmPmk pmk = {
+        .data = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 },
+    };
+    WriteMpmConfirm(&buf.w, MpmHeader { MpmHeader::AMPE, 0x4433u }, 0x6655u, &pmk);
+
+    const uint8_t expected[24] = {
+        117, 22,
+        0x01, 0x00, 0x33, 0x44, 0x55, 0x66,
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+    };
+    EXPECT_RANGES_EQ(expected, buf.w.WrittenData());
 }
 
 } // namespace common
