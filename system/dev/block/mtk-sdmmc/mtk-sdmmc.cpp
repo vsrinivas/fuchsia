@@ -4,6 +4,8 @@
 
 #include "mtk-sdmmc.h"
 
+#include <unistd.h>
+
 #include <ddk/debug.h>
 #include <ddk/io-buffer.h>
 #include <ddk/metadata.h>
@@ -131,9 +133,26 @@ zx_status_t MtkSdmmc::Create(zx_device_t* parent) {
         return status;
     }
 
+    pdev_device_info_t dev_info;
+    if ((status = pdev_get_device_info(&pdev, &dev_info)) != ZX_OK) {
+        zxlogf(ERROR, "%s: Failed to get device info\n", __FILE__);
+        return status;
+    }
+
+    ddk::GpioProtocolProxy reset_gpio;
+    if (dev_info.gpio_count > 0) {
+        gpio_protocol_t proto;
+        if ((status = device_get_protocol(parent, ZX_PROTOCOL_GPIO, &proto)) != ZX_OK) {
+            zxlogf(ERROR, "%s: Failed to get reset GPIO\n", __FILE__);
+            return status;
+        }
+
+        reset_gpio = ddk::GpioProtocolProxy(&proto);
+    }
+
     fbl::AllocChecker ac;
     fbl::unique_ptr<MtkSdmmc> device(new (&ac) MtkSdmmc(parent, fbl::move(mmio_obj), fbl::move(bti),
-                                                        info, fbl::move(irq)));
+                                                        info, fbl::move(irq), reset_gpio));
 
     if (!ac.check()) {
         zxlogf(ERROR, "%s: MtkSdmmc alloc failed\n", __FILE__);
@@ -290,9 +309,14 @@ zx_status_t MtkSdmmc::SdmmcSetTiming(sdmmc_timing_t timing) {
 }
 
 void MtkSdmmc::SdmmcHwReset() {
-    // TODO(bradenkell): Use MSDC0_RTSB (GPIO 114) to reset the eMMC chip.
     MsdcCfg::Get().ReadFrom(&mmio_).set_reset(1).WriteTo(&mmio_);
     while (MsdcCfg::Get().ReadFrom(&mmio_).reset()) {}
+
+    if (reset_gpio_.is_valid()) {
+        reset_gpio_.ConfigOut(0);
+        usleep(10);
+        reset_gpio_.ConfigOut(1);
+    }
 }
 
 RequestStatus MtkSdmmc::SendTuningBlock(uint32_t cmd_idx, zx_handle_t vmo) {

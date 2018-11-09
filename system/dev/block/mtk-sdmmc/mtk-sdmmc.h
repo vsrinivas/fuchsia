@@ -65,9 +65,10 @@ public:
 
 private:
     MtkSdmmc(zx_device_t* parent, ddk::MmioBuffer mmio, zx::bti bti, const sdmmc_host_info_t& info,
-             zx::interrupt irq)
+             zx::interrupt irq, const ddk::GpioProtocolProxy& reset_gpio)
         : DeviceType(parent), mmio_(fbl::move(mmio)), bti_(fbl::move(bti)), info_(info),
-                     irq_(fbl::move(irq)), req_(nullptr), cmd_status_(ZX_OK) {}
+                     irq_(fbl::move(irq)), req_(nullptr), cmd_status_(ZX_OK),
+                     reset_gpio_(reset_gpio) {}
 
     zx_status_t Init();
 
@@ -112,6 +113,7 @@ private:
     fbl::Mutex mutex_;
     sdmmc_req_t* req_ TA_GUARDED(mutex_);
     zx_status_t cmd_status_ TA_GUARDED(mutex_);
+    ddk::GpioProtocolProxy reset_gpio_;
 };
 
 // TuneWindow keeps track of the results of a series of tuning tests. It is expected that either

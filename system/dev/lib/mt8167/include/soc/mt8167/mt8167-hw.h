@@ -78,3 +78,5 @@
 
 #define MT8167_I2C_CNT                                      3
 #define MT8167_GPIO_EINT_MAX                                131
+
+#define MT8167_GPIO_MSDC0_RST                               114

@@ -59,6 +59,12 @@ zx_status_t Mt8167::EmmcInit() {
         }
     };
 
+    static const pbus_gpio_t emmc_gpios[] = {
+        {
+            .gpio = MT8167_GPIO_MSDC0_RST
+        }
+    };
+
     pbus_dev_t emmc_dev = {};
     emmc_dev.name = "emmc";
     emmc_dev.vid = PDEV_VID_MEDIATEK;
@@ -72,6 +78,8 @@ zx_status_t Mt8167::EmmcInit() {
     emmc_dev.metadata_count = countof(emmc_metadata);
     emmc_dev.irq_list = emmc_irqs;
     emmc_dev.irq_count = countof(emmc_irqs);
+    emmc_dev.gpio_list = emmc_gpios;
+    emmc_dev.gpio_count = countof(emmc_gpios);
 
     zx_status_t status = pbus_.DeviceAdd(&emmc_dev);
     if (status != ZX_OK) {
