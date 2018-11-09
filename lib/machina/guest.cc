@@ -69,15 +69,9 @@ static constexpr uint32_t trap_kind(machina::TrapType type) {
 
 namespace machina {
 
-zx_status_t Guest::Init(size_t mem_size, uintptr_t host_addr) {
+zx_status_t Guest::Init(size_t mem_size, bool host_memory) {
   zx::vmo vmo;
-  if (host_addr == SIZE_MAX) {
-    zx_status_t status = zx::vmo::create(mem_size, ZX_VMO_NON_RESIZABLE, &vmo);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create VMO " << status;
-      return status;
-    }
-  } else {
+  if (host_memory) {
     zx::resource resource;
     zx_status_t status =
         get_resource<fuchsia_sysinfo_DeviceGetRootResource>(&resource);
@@ -85,7 +79,7 @@ zx_status_t Guest::Init(size_t mem_size, uintptr_t host_addr) {
       FXL_LOG(ERROR) << "Failed to get root resource " << status;
       return status;
     }
-    status = zx::vmo::create_physical(resource, host_addr, mem_size, &vmo);
+    status = zx::vmo::create_physical(resource, 0, mem_size, &vmo);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to create physical VMO " << status;
       return status;
@@ -93,6 +87,12 @@ zx_status_t Guest::Init(size_t mem_size, uintptr_t host_addr) {
     status = vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to set cache policy on VMO " << status;
+      return status;
+    }
+  } else {
+    zx_status_t status = zx::vmo::create(mem_size, ZX_VMO_NON_RESIZABLE, &vmo);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to create VMO " << status;
       return status;
     }
   }

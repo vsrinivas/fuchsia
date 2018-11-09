@@ -22,10 +22,10 @@
 #include "garnet/lib/machina/dev_mem.h"
 #include "garnet/lib/machina/guest.h"
 
-static constexpr uintptr_t kRamdiskOffset = 0x4000000;
-
 #if __aarch64__
-static constexpr uintptr_t kKernelOffset = 0;
+// This address works for direct-mapping of host memory. This address is chosen
+// to ensure that we do not collide with the mapping of the host kernel.
+static constexpr uintptr_t kKernelOffset = 0x2080000;
 
 static constexpr zbi_platform_id_t kPlatformId = {
     .vid = 3,  // PDEV_VID_GOOGLE
@@ -46,6 +46,8 @@ static constexpr uintptr_t kKernelOffset = 0x100000;
 #include "garnet/lib/machina/arch/x86/acpi.h"
 #include "garnet/lib/machina/arch/x86/e820.h"
 #endif
+
+static constexpr uintptr_t kRamdiskOffset = 0x4000000;
 
 static inline bool is_within(uintptr_t x, uintptr_t addr, uintptr_t size) {
   return x >= addr && x < addr + size;

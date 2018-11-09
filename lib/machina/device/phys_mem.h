@@ -20,15 +20,15 @@ class PhysMem {
   size_t size() const { return vmo_size_; }
 
   template <typename T>
-  T* as(uintptr_t off, size_t len = sizeof(T)) const {
+  T* as(zx_vaddr_t off, size_t len = sizeof(T)) const {
     FXL_CHECK(off + len >= off && off + len <= vmo_size_)
         << "Region is outside of guest physical memory";
     return reinterpret_cast<T*>(addr_ + off);
   }
 
   template <typename T>
-  uintptr_t offset(T* ptr, size_t len = sizeof(T)) const {
-    uintptr_t off = reinterpret_cast<uintptr_t>(ptr);
+  zx_vaddr_t offset(T* ptr, size_t len = sizeof(T)) const {
+    zx_vaddr_t off = reinterpret_cast<zx_vaddr_t>(ptr);
     FXL_CHECK(off + len >= off && off + len >= addr_ &&
               (off + len - addr_ <= vmo_size_))
         << "Pointer is not contained within guest physical memory";
@@ -38,7 +38,7 @@ class PhysMem {
  protected:
   zx::vmo vmo_;
   size_t vmo_size_ = 0;
-  uintptr_t addr_ = 0;
+  zx_vaddr_t addr_ = 0;
 };
 
 }  // namespace machina

@@ -59,7 +59,7 @@ class GuestConfig {
   uint8_t cpus() const { return cpus_; }
   size_t memory() const { return memory_; }
   size_t wl_memory() const { return wl_memory_; }
-  uintptr_t host_address() const { return host_address_; }
+  bool host_memory() const { return host_memory_; }
   bool virtio_balloon() const { return virtio_balloon_; }
   bool virtio_console() const { return virtio_console_; }
   bool virtio_gpu() const { return virtio_gpu_; }
@@ -79,7 +79,7 @@ class GuestConfig {
   uint8_t cpus_ = zx_system_get_num_cpus();
   size_t memory_ = 1 << 30;
   size_t wl_memory_ = 1 << 30;
-  uintptr_t host_address_ = SIZE_MAX;
+  bool host_memory_ = false;
   bool virtio_balloon_ = true;
   bool virtio_console_ = true;
   bool virtio_gpu_ = true;

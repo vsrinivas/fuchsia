@@ -27,7 +27,9 @@ __BEGIN_CDECLS;
 __END_CDECLS;
 
 #if __aarch64__
-static constexpr uintptr_t kKernelOffset = 0x80000;
+// This address works for direct-mapping of host memory. This address is chosen
+// to ensure that we do not collide with the mapping of the host kernel.
+static constexpr uintptr_t kKernelOffset = 0x2080000;
 #elif __x86_64__
 static constexpr uintptr_t kKernelOffset = 0x200000;
 #include "garnet/lib/machina/arch/x86/acpi.h"
@@ -447,8 +449,7 @@ static zx_status_t load_device_tree(
     FXL_LOG(ERROR) << "Failed to find root node in device tree";
     return ZX_ERR_BAD_STATE;
   }
-  status = ZX_OK;
-  dev_mem.YieldInverseRange(0, phys_mem.size(), [&status, dtb, root_off](auto range) {
+  auto yield = [&status, dtb, root_off](auto range) {
     if (status != ZX_OK) {
       return;
     }
@@ -465,7 +466,8 @@ static zx_status_t load_device_tree(
       return;
     }
     status = add_memory_entry(dtb, memory_off, range.addr, range.size);
-  });
+  };
+  dev_mem.YieldInverseRange(0, phys_mem.size(), yield);
   if (status != ZX_OK) {
     return status;
   }

@@ -133,7 +133,7 @@ int main(int argc, char** argv) {
   }
 
   machina::Guest guest;
-  status = guest.Init(cfg.memory(), cfg.host_address());
+  status = guest.Init(cfg.memory(), cfg.host_memory());
   if (status != ZX_OK) {
     return status;
   }
@@ -418,7 +418,7 @@ int main(int argc, char** argv) {
                              uint64_t id, machina::Vcpu* vcpu) {
     zx_status_t status = vcpu->Create(guest, guest_ip, id);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create VCPU " << status;
+      FXL_LOG(ERROR) << "Failed to create VCPU " << id << " " << status;
       return status;
     }
     // Register VCPU with interrupt controller.
