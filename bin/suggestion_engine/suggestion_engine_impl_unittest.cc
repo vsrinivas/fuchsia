@@ -9,8 +9,8 @@
 #include <lib/fsl/vmo/strings.h>
 
 #include "gtest/gtest.h"
-#include "peridot/bin/suggestion_engine/proposal_publisher_impl.h"
 #include "peridot/bin/sessionmgr/puppet_master/puppet_master_impl.h"
+#include "peridot/bin/suggestion_engine/proposal_publisher_impl.h"
 #include "peridot/lib/testing/test_story_command_executor.h"
 #include "peridot/lib/testing/test_with_session_storage.h"
 
@@ -167,9 +167,7 @@ class SuggestionEngineTest : public testing::TestWithSessionStorage {
     fuchsia::modular::AddMod add_mod;
     add_mod.mod_name.push_back(mod_name);
     add_mod.intent = std::move(intent);
-    if (parent_mod.empty()) {
-      add_mod.surface_parent_mod_name.resize(0);
-    } else {
+    if (!parent_mod.empty()) {
       add_mod.surface_parent_mod_name.push_back(parent_mod);
     }
     add_mod.surface_relation.arrangement = arrangement;

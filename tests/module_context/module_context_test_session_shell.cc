@@ -101,7 +101,6 @@ class TestApp : public modular::testing::ComponentBase<void> {
       fuchsia::modular::AddMod add_mod;
       add_mod.mod_name.push_back(kFirstModuleName);
       add_mod.intent = IntentWithParameterString(kFirstModuleName);
-      add_mod.surface_parent_mod_name.resize(0);
 
       fuchsia::modular::StoryCommand command;
       command.set_add_mod(std::move(add_mod));
@@ -111,7 +110,6 @@ class TestApp : public modular::testing::ComponentBase<void> {
       fuchsia::modular::AddMod add_mod;
       add_mod.mod_name.push_back(kSecondModuleName);
       add_mod.intent = IntentWithParameterString(kSecondModuleName);
-      add_mod.surface_parent_mod_name.resize(0);
 
       fuchsia::modular::StoryCommand command;
       command.set_add_mod(std::move(add_mod));

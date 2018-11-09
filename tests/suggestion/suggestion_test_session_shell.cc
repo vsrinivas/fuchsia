@@ -58,7 +58,6 @@ class TestApp : fuchsia::modular::NextListener,
     add_mod.mod_name.push_back("root");
     add_mod.intent.action = kSuggestionTestAction;
     add_mod.intent.handler = kSuggestionTestModule;
-    add_mod.surface_parent_mod_name.resize(0);
 
     fuchsia::modular::StoryCommand command;
     command.set_add_mod(std::move(add_mod));

@@ -115,7 +115,6 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
     add_mod.intent.handler = settings_.root_module;
     add_mod.intent.action = "action";
     add_mod.intent.parameters = CreateIntentParameters();
-    add_mod.surface_parent_mod_name.resize(0);
 
     fuchsia::modular::StoryCommand command;
     command.set_add_mod(std::move(add_mod));

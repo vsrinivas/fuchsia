@@ -882,7 +882,6 @@ TEST_F(SuggestionFilteringTest, Baseline) {
   fuchsia::modular::AddMod add_mod;
   add_mod.mod_name.push_back("foo");
   add_mod.intent = std::move(intent);
-  add_mod.surface_parent_mod_name.resize(0);
 
   fuchsia::modular::StoryCommand command;
   command.set_add_mod(std::move(add_mod));
@@ -913,7 +912,6 @@ TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
   fuchsia::modular::AddMod add_mod;
   add_mod.intent = std::move(intent);
   add_mod.mod_name.push_back("foo");
-  add_mod.surface_parent_mod_name.resize(0);
 
   fuchsia::modular::StoryCommand command;
   command.set_add_mod(std::move(add_mod));

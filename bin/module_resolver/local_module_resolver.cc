@@ -54,15 +54,16 @@ void LocalModuleResolver::AddSource(
   auto ptr = repo.get();
   sources_.emplace(source_name, std::move(repo));
 
-  ptr->Watch(async_get_default_dispatcher(),
-             [this, source_name]() { OnSourceIdle(source_name); },
-             [this, source_name](std::string module_uri,
-                                 fuchsia::modular::ModuleManifest manifest) {
-               OnNewManifestEntry(source_name, module_uri, std::move(manifest));
-             },
-             [this, source_name](std::string module_uri) {
-               OnRemoveManifestEntry(source_name, std::move(module_uri));
-             });
+  ptr->Watch(
+      async_get_default_dispatcher(),
+      [this, source_name]() { OnSourceIdle(source_name); },
+      [this, source_name](std::string module_uri,
+                          fuchsia::modular::ModuleManifest manifest) {
+        OnNewManifestEntry(source_name, module_uri, std::move(manifest));
+      },
+      [this, source_name](std::string module_uri) {
+        OnRemoveManifestEntry(source_name, std::move(module_uri));
+      });
 }
 
 void LocalModuleResolver::Connect(
@@ -527,7 +528,6 @@ void LocalModuleResolver::OnQuery(fuchsia::modular::UserInput query,
         fuchsia::modular::AddMod add_mod;
         add_mod.intent.handler = manifest.binary;
         add_mod.mod_name.push_back("root");
-        add_mod.surface_parent_mod_name.resize(0);
 
         fuchsia::modular::StoryCommand command;
         command.set_add_mod(std::move(add_mod));
@@ -635,8 +635,7 @@ void LocalModuleResolver::PeriodicCheckIfSourcesAreReady() {
       }
     }
 
-    if (already_checking_if_sources_are_ready_)
-      return;
+    if (already_checking_if_sources_are_ready_) return;
     already_checking_if_sources_are_ready_ = true;
     async::PostDelayedTask(
         async_get_default_dispatcher(),

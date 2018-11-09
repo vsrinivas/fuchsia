@@ -155,7 +155,7 @@ SessionCtlApp::MakeAddModCommands(const std::string& mod_url,
   add_mod.mod_name.push_back(mod_name);
   intent.Clone(&add_mod.intent);
   // TODO(MI4-953): Sessionctl takes in inital intent and other fields.
-  add_mod.surface_parent_mod_name.resize(0);
+
   command.set_add_mod(std::move(add_mod));
   commands.push_back(std::move(command));
 

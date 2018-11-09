@@ -51,7 +51,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
     fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
     fuchsia::modular::AddMod add_mod;
     add_mod.mod_name.push_back("root");
-    add_mod.surface_parent_mod_name.resize(0);
+
     add_mod.intent.action = kCommonNullAction;
     add_mod.intent.handler = kCommonNullModule;
 

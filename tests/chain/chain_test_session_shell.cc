@@ -71,7 +71,6 @@ class TestApp : public modular::testing::ComponentBase<void> {
     intent_parameter.name = "rootModuleParam1";
     intent_parameter.data = std::move(data);
     add_mod.intent.parameters.push_back(std::move(intent_parameter));
-    add_mod.surface_parent_mod_name.resize(0);
 
     fuchsia::modular::StoryCommand command;
     command.set_add_mod(std::move(add_mod));

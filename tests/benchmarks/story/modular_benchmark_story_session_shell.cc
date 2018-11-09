@@ -184,7 +184,6 @@ class TestApp : public modular::ViewApp {
     add_mod.mod_name.push_back("root");
     add_mod.intent.handler = settings_.module_url;
     add_mod.intent.action = "action";
-    add_mod.surface_parent_mod_name.resize(0);
 
     fuchsia::modular::StoryCommand command;
     command.set_add_mod(std::move(add_mod));

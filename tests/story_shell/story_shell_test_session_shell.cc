@@ -118,7 +118,7 @@ class TestApp : public modular::testing::ComponentBase<void>,
       add_mod.mod_name.push_back(name);
       add_mod.intent.action = kCommonNullAction;
       add_mod.intent.handler = kCommonNullModule;
-      add_mod.surface_parent_mod_name.resize(0);
+
       for (auto i : parent) {
         add_mod.surface_parent_mod_name.push_back(i);
       }
@@ -205,7 +205,7 @@ class TestApp : public modular::testing::ComponentBase<void>,
       add_mod.mod_name.push_back(name);
       add_mod.intent.action = kCommonNullAction;
       add_mod.intent.handler = kCommonNullModule;
-      add_mod.surface_parent_mod_name.resize(0);
+
       for (auto i : parent) {
         add_mod.surface_parent_mod_name.push_back(i);
       }
