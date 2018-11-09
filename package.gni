@@ -598,34 +598,6 @@ template("package") {
       }
     }
 
-    # TODO(raggi): this target can be removed after some cleanup changes in the
-    # //build/images/guest rules.
-    generate_response_file("${pkg_target_name}.blob.rsp") {
-      if (pkg.deprecated_system_image) {
-        # A system_image package has no blobs of its own.
-        response_file_contents = []
-      } else {
-        # A real package needs blobs for all its contents and for its
-        # synthesized meta.far file.
-        deps = [
-          ":${pkg_target_name}.manifest",
-          ":${pkg_target_name}.meta",
-        ]
-        response_file_contents = [
-          "--exclude=meta/*",
-          "--manifest=" + rebase_path("${pkg_target_name}.manifest",
-                                      root_build_dir,
-                                      target_out_dir),
-          "--reset-exclude",
-          "--entry-manifest=${pkg_label}",
-          "--entry=${pkg.package_name}/meta.far=" +
-              rebase_path("${pkg_target_name}.meta/meta.far",
-                          root_build_dir,
-                          target_out_dir),
-        ]
-      }
-    }
-
     # Determine why this package is being built.
     if (!pkg.deprecated_system_image) {
       foreach(name, available_packages) {
