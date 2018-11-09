@@ -35,6 +35,11 @@ public:
     std::ostringstream ProduceClient();
     std::ostringstream ProduceServer();
 
+    enum class Transport {
+        Channel,
+        SocketControl,
+    };
+
     struct Member {
         flat::Type::Kind kind;
         flat::Decl::Kind decl_kind;
@@ -78,6 +83,7 @@ private:
     struct NamedInterface {
         std::string c_name;
         std::string discoverable_name;
+        Transport transport;
         std::vector<NamedMethod> methods;
     };
 

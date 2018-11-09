@@ -18,6 +18,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/message_buffer.cpp \
     $(LOCAL_DIR)/message_builder.cpp \
     $(LOCAL_DIR)/message.cpp \
+    $(LOCAL_DIR)/transport.cpp \
     $(LOCAL_DIR)/validating.cpp \
 
 MODULE_LIBS := \

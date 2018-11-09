@@ -19,6 +19,20 @@ MODULE_SRCS += $(LOCAL_DIR)/spaceship.fidl
 include make/module.mk
 
 #
+# fidl.test.fakesocket
+#
+
+MODULE := $(LOCAL_DIR).fakesocket
+
+MODULE_TYPE := fidl
+
+MODULE_FIDL_LIBRARY := fidl.test.fakesocket
+
+MODULE_SRCS += $(LOCAL_DIR)/fakesocket.fidl
+
+include make/module.mk
+
+#
 # fidl-simple-test
 #
 
@@ -28,6 +42,7 @@ MODULE_TYPE := usertest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/client_tests.c \
+    $(LOCAL_DIR)/fakesocket_tests.cpp \
     $(LOCAL_DIR)/ldsvc_tests.c \
     $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/server_tests.c \
@@ -40,6 +55,7 @@ MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-crash \
     system/fidl/fuchsia-ldsvc \
     system/fidl/fuchsia-mem \
+    system/utest/fidl-simple.fakesocket \
     system/utest/fidl-simple.spaceship \
 
 MODULE_STATIC_LIBS := \

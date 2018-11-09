@@ -33,14 +33,15 @@ private:
         enum Kind {
             kOk,
             kDuplicate,
-            kTypo,
+            kInvalidValue,
+            kTypoOnKey,
         };
 
-        InsertResult(Kind kind, std::string likely_name)
-            : kind(kind), likely_name(likely_name) {}
+        InsertResult(Kind kind, std::string message_fragment)
+            : kind(kind), message_fragment(message_fragment) {}
 
         Kind kind;
-        std::string likely_name;
+        std::string message_fragment;
     };
 
     InsertResult InsertHelper(std::unique_ptr<raw::Attribute> attribute);

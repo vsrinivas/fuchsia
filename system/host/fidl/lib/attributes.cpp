@@ -32,11 +32,11 @@ size_t EditDistance(const std::string& sequence1, const std::string& sequence2) 
     return last_row[s1_length];
 }
 
-#define CHECK_TOO_CLOSE(ExpectedName, ActualName)                    \
-    {                                                                \
-        auto edit_distance = EditDistance(ExpectedName, ActualName); \
-        if (0 < edit_distance && edit_distance < 2)                  \
-            return InsertResult(InsertResult::kTypo, ExpectedName);  \
+#define CHECK_TOO_CLOSE(ExpectedName, ActualName)                        \
+    {                                                                    \
+        auto edit_distance = EditDistance(ExpectedName, ActualName);     \
+        if (0 < edit_distance && edit_distance < 2)                      \
+            return InsertResult(InsertResult::kTypoOnKey, ExpectedName); \
     }
 
 bool AttributesBuilder::Insert(std::unique_ptr<raw::Attribute> attribute) {
@@ -51,11 +51,17 @@ bool AttributesBuilder::Insert(std::unique_ptr<raw::Attribute> attribute) {
         error_reporter_->ReportError(attribute_location, message);
         return false;
     }
-    case InsertResult::Kind::kTypo: {
+    case InsertResult::kInvalidValue: {
+        std::string message("invalid attribute value: ");
+        message.append(result.message_fragment);
+        error_reporter_->ReportError(attribute_location, message);
+        return false;
+    }
+    case InsertResult::Kind::kTypoOnKey: {
         std::string message("suspect attribute with name '");
         message.append(attribute_name);
         message.append("'; did you mean '");
-        message.append(result.likely_name);
+        message.append(result.message_fragment);
         message.append("'?");
         error_reporter_->ReportWarning(attribute_location, message);
         return true;
@@ -74,12 +80,21 @@ AttributesBuilder::InsertResult AttributesBuilder::InsertHelper(std::unique_ptr<
         return InsertResult(InsertResult::kDuplicate, "");
     }
     auto attribute_name = attribute->name;
+    auto attribute_value = attribute->value;
     attributes_.push_back(std::move(attribute));
     CHECK_TOO_CLOSE("Discoverable", attribute_name);
     CHECK_TOO_CLOSE("Doc", attribute_name);
     CHECK_TOO_CLOSE("FragileBase", attribute_name);
     CHECK_TOO_CLOSE("Internal", attribute_name);
     CHECK_TOO_CLOSE("Simple", attribute_name);
+    CHECK_TOO_CLOSE("Transport", attribute_name);
+    if (attribute_name == "Transport") {
+        if (!attribute_value.empty() && attribute_value != "SocketControl"
+            && attribute_value != "Channel") {
+            return InsertResult(InsertResult::kInvalidValue,
+                "transport must be either SocketControl or Channel.");
+        }
+    }
     return InsertResult(InsertResult::kOk, "");
 }
 
