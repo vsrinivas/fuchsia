@@ -76,30 +76,25 @@ static zx_status_t get_socket_provider(zx_handle_t* out) {
 __EXPORT
 int socket(int domain, int type, int protocol) {
     fdio_t* io = NULL;
-    zx_status_t r;
 
-    zx_handle_t sp;
-    r = get_socket_provider(&sp);
-    if (r != ZX_OK) {
+    zx_handle_t socket_provider;
+    zx_status_t status = get_socket_provider(&socket_provider);
+    if (status != ZX_OK) {
         return ERRNO(EIO);
     }
 
-    zx_handle_t s = ZX_HANDLE_INVALID;
-    int32_t rr = 0;
-    r = fuchsia_net_LegacySocketProviderOpenSocket(
-        sp, domain, type & ~(SOCK_NONBLOCK | SOCK_CLOEXEC), protocol, &s, &rr);
-
-    if (r != ZX_OK) {
-        return ERRNO(EIO);
-    }
-    if (rr != ZX_OK) {
-        return STATUS(rr);
+    zxs_socket_t socket = {};
+    status = zxs_socket(socket_provider, domain,
+                        type & ~(SOCK_NONBLOCK | SOCK_CLOEXEC), protocol, NULL,
+                        0u, &socket);
+    if (status != ZX_OK) {
+        return STATUS(status);
     }
 
-    if (type & SOCK_DGRAM) {
-        io = fdio_socket_create_datagram(s, 0);
+    if (socket.flags & ZXS_FLAG_DATAGRAM) {
+        io = fdio_socket_create_datagram(socket.socket, 0);
     } else {
-        io = fdio_socket_create_stream(s, 0);
+        io = fdio_socket_create_stream(socket.socket, 0);
     }
 
     if (io == NULL) {

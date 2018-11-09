@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/net/c/fidl.h>
 #include <lib/zx/socket.h>
 #include <lib/zxs/inception.h>
 #include <lib/zxs/protocol.h>
@@ -170,7 +171,32 @@ zx_status_t zxs_socket(zx_handle_t socket_provider,
                        const zxs_option_t* options,
                        size_t options_count,
                        zxs_socket_t* out_socket) {
-    return ZX_ERR_NOT_SUPPORTED;
+    zxs_socket_t socket = {};
+
+    zx_status_t io_status, status;
+    io_status = fuchsia_net_LegacySocketProviderOpenSocket(
+        socket_provider, domain, type, protocol, &socket.socket, &status);
+
+    if (io_status != ZX_OK) {
+        return ZX_ERR_IO;
+    }
+
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    if (type == fuchsia_net_SocketType_dgram) {
+        socket.flags |= ZXS_FLAG_DATAGRAM;
+    }
+
+    status = zxs_setsockopts(&socket, options, options_count);
+    if (status != ZX_OK) {
+        zxs_close(&socket);
+        return status;
+    }
+
+    *out_socket = socket;
+    return ZX_OK;
 }
 
 zx_status_t zxs_close(const zxs_socket_t* socket) {
