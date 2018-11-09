@@ -737,6 +737,7 @@ void Presentation2::PresentScene() {
     if (state.visible) {
       if (!state.created) {
         state.node = std::make_unique<scenic::ShapeNode>(session_);
+        state.node->SetLabel("mouse cursor");
         state.node->SetShape(cursor_shape_);
         state.node->SetMaterial(cursor_material_);
         scene_.AddChild(*state.node);

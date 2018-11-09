@@ -966,7 +966,7 @@ bool InputInterpreter::ParseParadiseSensorReport(uint8_t* r, size_t len) {
       return false;
   }
 
-  FXL_VLOG(2) << name()
+  FXL_VLOG(3) << name()
               << " parsed (sensor=" << static_cast<uint16_t>(sensor_idx_)
               << "): " << *sensor_report_;
   return true;

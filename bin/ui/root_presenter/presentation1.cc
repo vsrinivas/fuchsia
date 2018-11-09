@@ -560,7 +560,7 @@ void Presentation1::OnDeviceRemoved(uint32_t device_id) {
 
 void Presentation1::OnReport(uint32_t device_id,
                              fuchsia::ui::input::InputReport input_report) {
-  FXL_VLOG(2) << "OnReport device=" << device_id
+  FXL_VLOG(3) << "OnReport device=" << device_id
               << ", count=" << device_states_by_id_.count(device_id)
               << ", report=" << input_report;
 
@@ -761,7 +761,7 @@ void Presentation1::OnEvent(fuchsia::ui::input::InputEvent event) {
 
 void Presentation1::OnSensorEvent(uint32_t device_id,
                                   fuchsia::ui::input::InputReport event) {
-  FXL_VLOG(2) << "OnSensorEvent(device_id=" << device_id << "): " << event;
+  FXL_VLOG(3) << "OnSensorEvent(device_id=" << device_id << "): " << event;
 
   FXL_DCHECK(device_states_by_id_.count(device_id) > 0);
   FXL_DCHECK(device_states_by_id_[device_id].first);
@@ -881,6 +881,7 @@ void Presentation1::PresentScene() {
     if (state.visible) {
       if (!state.created) {
         state.node = std::make_unique<scenic::ShapeNode>(session_);
+        state.node->SetLabel("mouse cursor");
         state.node->SetShape(cursor_shape_);
         state.node->SetMaterial(cursor_material_);
         scene_.AddChild(*state.node);

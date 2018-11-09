@@ -63,7 +63,7 @@ std::pair<bool, fuchsia::ui::policy::PresentationMode> Detector::Update(
   }
 
   if (result.first)
-    FXL_VLOG(2) << "Presentation mode detected: "
+    FXL_VLOG(3) << "Presentation mode detected: "
                 << fidl::ToUnderlying(result.second);
 
   return result;

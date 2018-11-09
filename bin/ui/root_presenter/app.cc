@@ -249,13 +249,13 @@ void App::OnDeviceDisconnected(mozart::InputDeviceImpl* input_device) {
 
 void App::OnReport(mozart::InputDeviceImpl* input_device,
                    fuchsia::ui::input::InputReport report) {
-  FXL_VLOG(2) << "OnReport from " << input_device->id() << " " << report;
+  FXL_VLOG(3) << "OnReport from " << input_device->id() << " " << report;
   if (devices_by_id_.count(input_device->id()) == 0 ||
       presentations_.size() == 0)
     return;
 
   FXL_DCHECK(active_presentation_idx_ < presentations_.size());
-  FXL_VLOG(2) << "OnReport to " << active_presentation_idx_;
+  FXL_VLOG(3) << "OnReport to " << active_presentation_idx_;
 
   // Input events are only reported to the active presentation.
   presentations_[active_presentation_idx_]->OnReport(input_device->id(),
