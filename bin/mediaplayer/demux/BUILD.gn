@@ -6,6 +6,8 @@ import("//build/test.gni")
 
 source_set("demux") {
   sources = [
+    "byte_rate_estimator.cc",
+    "byte_rate_estimator.h",
     "demux.h",
     "file_reader.cc",
     "file_reader.h",
@@ -36,6 +38,7 @@ test("tests") {
   output_name = "mediaplayer_demux_tests"
 
   sources = [
+    "test/byte_rate_estimator_test.cc",
     "test/sparse_byte_buffer_test.cc",
   ]
 
