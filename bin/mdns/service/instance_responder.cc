@@ -152,7 +152,7 @@ void InstanceResponder::SendPublication(
   auto txt_resource =
       std::make_shared<DnsResource>(instance_full_name_, DnsType::kTxt);
   txt_resource->time_to_live_ = publication.txt_ttl_seconds;
-  txt_resource->txt_.strings_.clear();
+  txt_resource->txt_.strings_ = publication.text_;
   SendResource(txt_resource, MdnsResourceSection::kAdditional, reply_address);
 
   SendAddresses(MdnsResourceSection::kAdditional, reply_address);
