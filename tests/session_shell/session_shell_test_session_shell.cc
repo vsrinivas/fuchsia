@@ -71,6 +71,9 @@ class StoryProviderStateWatcherImpl : fuchsia::modular::StoryProviderWatcher {
   TestPoint on_running_called_once_{"OnChange() RUNNING Called"};
   int on_running_called_{};
 
+  TestPoint on_stopping_called_once_{"OnChange() STOPPING Called"};
+  int on_stopping_called_{};
+
   TestPoint on_stopped_called_once_{"OnChange() STOPPED Called"};
   int on_stopped_called_{};
 
@@ -104,6 +107,11 @@ class StoryProviderStateWatcherImpl : fuchsia::modular::StoryProviderWatcher {
       case fuchsia::modular::StoryState::RUNNING:
         if (++on_running_called_ == 1) {
           on_running_called_once_.Pass();
+        }
+        break;
+      case fuchsia::modular::StoryState::STOPPING:
+        if (++on_stopping_called_ == 1) {
+          on_stopping_called_once_.Pass();
         }
         break;
       case fuchsia::modular::StoryState::STOPPED:
@@ -175,11 +183,11 @@ class TestApp : public modular::testing::ComponentBase<void> {
 
   void TestSessionShellContext_GetLink() {
     session_shell_context_->GetLink(session_shell_link_.NewRequest());
-    session_shell_link_->Get(nullptr,
-                          [this](std::unique_ptr<fuchsia::mem::Buffer> value) {
-                            get_link_.Pass();
-                            TestStoryProvider_GetStories();
-                          });
+    session_shell_link_->Get(
+        nullptr, [this](std::unique_ptr<fuchsia::mem::Buffer> value) {
+          get_link_.Pass();
+          TestStoryProvider_GetStories();
+        });
   }
 
   TestPoint previous_stories_{"StoryProvider.GetStories()"};

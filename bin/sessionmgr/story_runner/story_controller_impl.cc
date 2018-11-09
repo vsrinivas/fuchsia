@@ -460,8 +460,8 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
     surface_info.surface_relation = std::move(module_data_.surface_relation);
     surface_info.module_manifest = std::move(module_data_.module_manifest);
     surface_info.module_source = std::move(module_data_.module_source);
-    story_controller_impl_->story_shell_->AddSurface(
-        std::move(view_connection), std::move(surface_info));
+    story_controller_impl_->story_shell_->AddSurface(std::move(view_connection),
+                                                     std::move(surface_info));
 
     story_controller_impl_->connected_views_.emplace(view_id);
     story_controller_impl_->ProcessPendingViews();
@@ -490,8 +490,13 @@ class StoryControllerImpl::StopCall : public Operation<> {
         notify_watchers_(notify_watchers) {}
 
  private:
-  // StopCall may be run even on a story impl that is not running.
   void Run() override {
+    if (!story_controller_impl_->IsRunning()) {
+      Done();
+      return;
+    }
+    story_controller_impl_->SetState(fuchsia::modular::StoryState::STOPPING);
+
     std::vector<FuturePtr<>> did_teardowns;
     did_teardowns.reserve(story_controller_impl_->running_mod_infos_.size());
 
@@ -651,14 +656,20 @@ class StoryControllerImpl::StopModuleAndStoryIfEmptyCall : public Operation<> {
  private:
   void Run() override {
     FlowToken flow{this};
-    operation_queue_.Add(new StopModuleCall(
-        story_controller_impl_, story_controller_impl_->story_storage_,
-        module_path_, [this, flow] {
-          if (story_controller_impl_->running_mod_infos_.empty()) {
-            operation_queue_.Add(new StopCall(
-                story_controller_impl_, true /* notify watchers */, [flow] {}));
-          }
-        }));
+    // If this is the last module in the story, stop the whole story instead
+    // (which will cause this mod to be stopped also).
+    auto* const running_mod_info =
+        story_controller_impl_->FindRunningModInfo(module_path_);
+    if (running_mod_info &&
+        story_controller_impl_->running_mod_infos_.size() == 1) {
+      operation_queue_.Add(new StopCall(story_controller_impl_,
+                                        true /* notify watchers */, [flow] {}));
+    } else {
+      // Otherwise, stop this one module.
+      operation_queue_.Add(new StopModuleCall(
+          story_controller_impl_, story_controller_impl_->story_storage_,
+          module_path_, [flow] {}));
+    }
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
@@ -755,7 +766,8 @@ class StoryControllerImpl::FocusCall : public Operation<> {
       return;
     }
 
-    story_controller_impl_->story_shell_->FocusSurface(PathString(module_path_));
+    story_controller_impl_->story_shell_->FocusSurface(
+        PathString(module_path_));
   }
 
   OperationQueue operation_queue_;
@@ -783,8 +795,8 @@ class StoryControllerImpl::DefocusCall : public Operation<> {
 
     // NOTE(mesch): We don't wait for defocus to return. TODO(mesch): What is
     // the return callback good for anyway?
-    story_controller_impl_->story_shell_->DefocusSurface(PathString(module_path_),
-                                                         [] {});
+    story_controller_impl_->story_shell_->DefocusSurface(
+        PathString(module_path_), [] {});
   }
 
   OperationQueue operation_queue_;
@@ -1205,6 +1217,7 @@ bool StoryControllerImpl::IsRunning() {
   switch (state_) {
     case fuchsia::modular::StoryState::RUNNING:
       return true;
+    case fuchsia::modular::StoryState::STOPPING:
     case fuchsia::modular::StoryState::STOPPED:
       return false;
   }
@@ -1416,7 +1429,7 @@ void StoryControllerImpl::ProcessPendingViews() {
     surface_info.module_manifest = std::move(kv.second.module_manifest);
     surface_info.module_source = std::move(kv.second.module_source);
     story_shell_->AddSurface(std::move(view_connection),
-                          std::move(surface_info));
+                             std::move(surface_info));
     connected_views_.emplace(view_id);
 
     added_keys.push_back(kv.first);
