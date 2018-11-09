@@ -106,7 +106,10 @@ zx_status_t VPartitionManager::Bind(zx_device_t* dev) {
     int rc = thrd_create_with_name(&vpm->initialization_thread_, FvmLoadThread, vpm.get(),
                                    "fvm-init");
     if (rc < 0) {
-        vpm->DdkRemove();
+        // See comment in Load()
+        if (!vpm->device_remove_.exchange(true)) {
+            vpm->DdkRemove();
+        }
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -208,20 +211,20 @@ zx_status_t VPartitionManager::Load() {
     fbl::AutoLock lock(&lock_);
 
     auto auto_detach = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
-        fprintf(stderr, "fvm: Aborting Driver Load\n");
-        DdkRemove();
-        // "Load" is running in a background thread called by bind.
-        // This thread will be joined when the fvm_device is released,
-        // but it must be added to be released.
-        //
-        // If we fail to initialize anything before it is added,
-        // detach the thread and clean up gracefully.
-        thrd_detach(initialization_thread_);
-        // Clang's thread analyzer doesn't think we're holding this lock, but
-        // we clearly are, and need to release it before deleting the
-        // VPartitionManager.
+        // Need to release the lock before calling DdkRemove(), since it will
+        // free |this|.  Need to disable thread safety analysis since it doesn't
+        // recognize that we were holding lock_.
         lock.release();
-        delete this;
+
+        fprintf(stderr, "fvm: Aborting Driver Load\n");
+        // DdkRemove will cause the Release() hook to be called, cleaning up our
+        // state.  The exchange below is sufficient to protect against a
+        // use-after-free, since if DdkRemove() has already been called by
+        // another thread (via DdkUnbind()), the release hook will block on thread_join()
+        // until this method returns.
+        if (!device_remove_.exchange(true)) {
+            DdkRemove();
+        }
     });
 
     zx::vmo vmo;
@@ -691,7 +694,9 @@ zx_status_t VPartitionManager::DdkIoctl(uint32_t op, const void* cmd,
 }
 
 void VPartitionManager::DdkUnbind() {
-    DdkRemove();
+    if (!device_remove_.exchange(true)) {
+        DdkRemove();
+    }
 }
 
 void VPartitionManager::DdkRelease() {

@@ -211,6 +211,9 @@ private:
     // Block Protocol
     const size_t block_op_size_;
     block_impl_protocol_t bp_;
+
+    // Lock used to prevent multiple device remove calls.
+    fbl::atomic<bool> device_remove_ = false;
 };
 
 class VPartition : public PartitionDeviceType, public ddk::BlockImplProtocol<VPartition> {
