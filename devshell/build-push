@@ -5,16 +5,13 @@
 
 ### build Fuchsia and push to device
 
-## usage: fx build-push [ninja option,...] [--device|-d device] [target,...]
+## usage: fx build-push [ninja option,...] [target,...]
 ##
 ## Build ALL targets. After building all the targets, push the ones that were
 ## supplied to this command. If no targets were specified push all of them.
 ## The packages are pushed to the device specified. If no device is supplied
 ## explictly this will push to the single connected device. If multiple devices
 ## are connected and no device is specified, pushing will fail.
-
-# XXX TODO(US-415): after US-415 is closed, this command can pass a specific
-# build target to ninja rather than running the default build target.
 
 set -e
 
@@ -23,9 +20,7 @@ fx-config-read
 
 function main {
   local args=()
-  local push=1
   local targets=()
-  local device_args=()
   while (($#)); do
     case "$1" in
       -C|-f|-j|-k|-l|-t|-w)
@@ -36,21 +31,6 @@ function main {
       -n|-v)
         args+=("$1")
         ;;
-      --device)
-        shift
-        device_args+=("-d" "$1")
-        ;;
-      --no-push)
-        push=0
-        ;;
-      -d)
-        shift
-        if [[ "$1" == *"-"* ]]; then
-          device_args+=("-d" "$1")
-        else
-          args+=("-d" $1)
-        fi
-        ;;
       *)
         targets+=("$1")
     esac
@@ -59,18 +39,6 @@ function main {
 
   fx-command-run build "${args[@]}"
 
-  if [[ "${push}" -eq 0 ]]; then
-    return
-  fi
-
-  if [[ "${#targets[@]}" -eq 0 ]]; then
-    echo "No packages names provided, all packages will be pushed."
-    echo "Consider using \"fx build && fx ota\" for better performance when"
-    echo "pushing all packages."
-    # give a window for that to sink in
-    sleep 1
-  fi
-
   if [[ -z "$(pgrep -f "amber-files/repository")" ]]; then
     echo
     echo "WARNING: It looks like serve-updates is not running."
@@ -78,9 +46,7 @@ function main {
     echo
   fi
 
-  fx-command-run push-package "${device_args[@]}" "${targets[@]}"
+  fx-command-run push-package "${targets[@]}"
 }
 
-
 main "$@"
-# See kill_background_jobs trap for cleanup of backgrounded processes.

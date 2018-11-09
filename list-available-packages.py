@@ -17,6 +17,7 @@ def main():
       data = json.load(f)
 
     available_build_packages = set(data["available"])
+
     with open(os.path.join(args.build_dir, "amber-files", "repository", "targets.json")) as f:
       data = json.load(f)
 
