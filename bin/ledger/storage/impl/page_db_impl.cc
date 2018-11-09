@@ -194,7 +194,8 @@ Status PageDbImpl::ReadObject(CoroutineHandler* handler,
 }
 
 Status PageDbImpl::HasObject(CoroutineHandler* handler,
-                             ObjectDigestView object_digest, bool* has_object) {
+                             const ObjectDigest& object_digest,
+                             bool* has_object) {
   return db_->HasKey(handler, ObjectRow::GetKeyFor(object_digest), has_object);
 }
 

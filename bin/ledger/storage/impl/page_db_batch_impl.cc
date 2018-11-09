@@ -185,7 +185,7 @@ Status PageDbBatchImpl::Execute(CoroutineHandler* handler) {
 }
 
 Status PageDbBatchImpl::DCheckHasObject(CoroutineHandler* handler,
-                                        convert::ExtendedStringView key) {
+                                        const ObjectDigest& key) {
 #ifdef NDEBUG
   return Status::OK;
 #else

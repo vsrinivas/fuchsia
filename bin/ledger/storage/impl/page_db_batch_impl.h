@@ -78,7 +78,7 @@ class PageDbBatchImpl : public PageDb::Batch {
 
  private:
   Status DCheckHasObject(coroutine::CoroutineHandler* handler,
-                         convert::ExtendedStringView key);
+                         const ObjectDigest& key);
 
   rng::Random* const random_;
   std::unique_ptr<Db::Batch> batch_;

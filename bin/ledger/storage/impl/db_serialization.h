@@ -31,7 +31,7 @@ class ObjectRow {
  public:
   static constexpr fxl::StringView kPrefix = "objects/";
 
-  static std::string GetKeyFor(ObjectDigestView object_digest);
+  static std::string GetKeyFor(const ObjectDigest& object_digest);
 };
 
 class UnsyncedCommitRow {

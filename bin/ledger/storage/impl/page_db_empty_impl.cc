@@ -42,7 +42,7 @@ Status PageDbEmptyImpl::ReadObject(CoroutineHandler* /*handler*/,
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::HasObject(CoroutineHandler* /*handler*/,
-                                  ObjectDigestView /*object_digest*/,
+                                  const ObjectDigest& /*object_digest*/,
                                   bool* /*has_object*/) {
   return Status::NOT_IMPLEMENTED;
 }

@@ -214,7 +214,7 @@ class PageDb : public PageDbMutator {
   // Checks whether the object with the given |object_digest| is stored in the
   // database.
   FXL_WARN_UNUSED_RESULT virtual Status HasObject(
-      coroutine::CoroutineHandler* handler, ObjectDigestView object_digest,
+      coroutine::CoroutineHandler* handler, const ObjectDigest& object_digest,
       bool* has_object) = 0;
 
   // Returns the status of the object with the given id.

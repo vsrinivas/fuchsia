@@ -29,7 +29,7 @@ std::string AddPrefix(char c, convert::ExtendedStringView data) {
 
 }  // namespace
 
-bool IsDigestValid(ObjectDigestView object_digest) {
+bool IsDigestValid(const ObjectDigest& object_digest) {
   if (object_digest.size() <= kStorageHashSize) {
     // |object_digest| is of type inline.
     return true;
@@ -48,7 +48,7 @@ bool IsDigestValid(ObjectDigestView object_digest) {
   return false;
 }
 
-ObjectDigestType GetObjectDigestType(ObjectDigestView object_digest) {
+ObjectDigestType GetObjectDigestType(const ObjectDigest& object_digest) {
   FXL_DCHECK(IsDigestValid(object_digest));
 
   if (object_digest.size() <= kStorageHashSize) {
@@ -77,7 +77,7 @@ ObjectType GetObjectType(ObjectDigestType digest_type) {
   }
 }
 
-fxl::StringView ExtractObjectDigestData(ObjectDigestView object_digest) {
+fxl::StringView ExtractObjectDigestData(const ObjectDigest& object_digest) {
   FXL_DCHECK(IsDigestValid(object_digest));
 
   if (object_digest.size() <= kStorageHashSize) {

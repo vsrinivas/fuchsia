@@ -9,7 +9,6 @@
 #include "peridot/bin/ledger/storage/impl/object_digest.h"
 
 namespace storage {
-
 ObjectIdentifier ToObjectIdentifier(
     const ObjectIdentifierStorage* object_identifier_storage) {
   return {object_identifier_storage->key_index(),
@@ -42,10 +41,12 @@ bool DecodeObjectIdentifier(fxl::StringView data,
   }
   const ObjectIdentifierStorage* storage = GetObjectIdentifierStorage(
       reinterpret_cast<const unsigned char*>(data.data()));
-  if (!IsDigestValid(storage->object_digest())) {
+  ObjectDigest object_digest = convert::ToString(storage->object_digest());
+  if (!IsDigestValid(object_digest)) {
     return false;
   }
-  *object_identifier = ToObjectIdentifier(storage);
+  *object_identifier = {storage->key_index(), storage->deletion_scope_id(),
+                        std::move(object_digest)};
   return true;
 }
 

@@ -19,7 +19,6 @@ using PageIdView = convert::ExtendedStringView;
 using CommitId = std::string;
 using CommitIdView = convert::ExtendedStringView;
 using ObjectDigest = std::string;
-using ObjectDigestView = convert::ExtendedStringView;
 using JournalId = std::string;
 using JournalIdView = convert::ExtendedStringView;
 

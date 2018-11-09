@@ -24,10 +24,10 @@ enum class ObjectDigestType {
 };
 
 // Returns whether the given digest is valid.
-bool IsDigestValid(ObjectDigestView object_digest);
+bool IsDigestValid(const ObjectDigest& object_digest);
 
 // Returns the type of |object_digest|.
-ObjectDigestType GetObjectDigestType(ObjectDigestView object_digest);
+ObjectDigestType GetObjectDigestType(const ObjectDigest& object_digest);
 
 // Returns the object type associated to an object id type.
 ObjectType GetObjectType(ObjectDigestType digest_type);
@@ -35,7 +35,7 @@ ObjectType GetObjectType(ObjectDigestType digest_type);
 // Extracts the data from |object_digest|. If |object_digest| type is |INLINE|,
 // the returned data is the content of the object, otherwise, it is the hash of
 // the object.
-fxl::StringView ExtractObjectDigestData(ObjectDigestView object_digest);
+fxl::StringView ExtractObjectDigestData(const ObjectDigest& object_digest);
 
 // Computes the id of the object of the given |type| with the given |content|.
 ObjectDigest ComputeObjectDigest(ObjectType type,

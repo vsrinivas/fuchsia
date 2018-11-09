@@ -762,10 +762,10 @@ Status PageStorageImpl::MarkAllPiecesLocal(
       object_identifiers.reserve(object_identifiers.size() +
                                  file_index->children()->size());
       for (const auto* child : *file_index->children()) {
-        if (GetObjectDigestType(child->object_identifier()->object_digest()) !=
+        ObjectIdentifier new_object_identifier =
+            ToObjectIdentifier(child->object_identifier());
+        if (GetObjectDigestType(new_object_identifier.object_digest()) !=
             ObjectDigestType::INLINE) {
-          ObjectIdentifier new_object_identifier =
-              ToObjectIdentifier(child->object_identifier());
           if (!seen_identifiers.count(new_object_identifier)) {
             object_identifiers.push_back(std::move(new_object_identifier));
           }
