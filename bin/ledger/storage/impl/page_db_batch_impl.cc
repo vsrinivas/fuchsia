@@ -119,9 +119,9 @@ Status PageDbBatchImpl::WriteObject(
     PageDbObjectStatus object_status) {
   FXL_DCHECK(object_status > PageDbObjectStatus::UNKNOWN);
 
-  auto object_key = ObjectRow::GetKeyFor(object_identifier.object_digest());
   bool has_key;
-  RETURN_ON_ERROR(db_->HasObject(handler, object_key, &has_key));
+  RETURN_ON_ERROR(
+      db_->HasObject(handler, object_identifier.object_digest(), &has_key));
   if (has_key) {
     if (object_status == PageDbObjectStatus::TRANSIENT) {
       return Status::OK;
@@ -130,7 +130,9 @@ Status PageDbBatchImpl::WriteObject(
                            object_status);
   }
 
-  RETURN_ON_ERROR(batch_->Put(handler, object_key, content->Get()));
+  RETURN_ON_ERROR(batch_->Put(
+      handler, ObjectRow::GetKeyFor(object_identifier.object_digest()),
+      content->Get()));
   return batch_->Put(
       handler, ObjectStatusRow::GetKeyFor(object_status, object_identifier),
       "");

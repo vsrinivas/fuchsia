@@ -317,6 +317,17 @@ TEST_F(PageDbTest, ObjectStorage) {
     fxl::StringView object_content;
     EXPECT_EQ(Status::OK, object->GetData(&object_content));
     EXPECT_EQ(content, object_content);
+    // Update the object to LOCAL. The new content should be ignored.
+    std::string new_content = RandomString(environment_.random(), 32 * 1024);
+    ASSERT_EQ(Status::OK,
+              page_db_.WriteObject(handler, object_identifier,
+                                   DataSource::DataChunk::Create(new_content),
+                                   PageDbObjectStatus::LOCAL));
+    page_db_.GetObjectStatus(handler, object_identifier, &object_status);
+    EXPECT_EQ(PageDbObjectStatus::LOCAL, object_status);
+    EXPECT_EQ(Status::OK, object->GetData(&object_content));
+    EXPECT_EQ(content, object_content);
+    EXPECT_NE(new_content, object_content);
   });
 }
 
