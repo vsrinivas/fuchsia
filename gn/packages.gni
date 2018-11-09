@@ -60,7 +60,7 @@ if (monolith == [] && preinstall == [] && available == [] && fuchsia_packages ==
                         "list lines",
                         [ _jiri_manifest ])
   foreach(layer, _layers) {
-    import("$layer/products/default.gni")
+    import("//$layer/products/default.gni")
   }
 }
 
