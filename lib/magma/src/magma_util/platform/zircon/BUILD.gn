@@ -89,6 +89,7 @@ source_set("device") {
     "$zircon_build_root/public/lib/driver",
     "$zircon_build_root/public/lib/zx",
     "//zircon/public/banjo/ddk-protocol-pci",
+    "//zircon/public/banjo/ddk-protocol-platform-device",
   ]
 }
 
