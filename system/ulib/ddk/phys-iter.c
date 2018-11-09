@@ -10,6 +10,7 @@
 
 void phys_iter_init(phys_iter_t* iter, phys_iter_buffer_t* buf, size_t max_length) {
     memcpy(&iter->buf, buf, sizeof(phys_iter_buffer_t));
+    iter->total_iterated = 0;
     iter->offset = 0;
     ZX_DEBUG_ASSERT(max_length % PAGE_SIZE == 0);
     if (max_length == 0) {
@@ -25,6 +26,11 @@ void phys_iter_init(phys_iter_t* iter, phys_iter_buffer_t* buf, size_t max_lengt
     } else {
         iter->last_page = 0;
     }
+}
+
+static inline void phys_iter_increment(phys_iter_t* iter, size_t len) {
+    iter->total_iterated += len;
+    iter->offset += len;
 }
 
 size_t phys_iter_next(phys_iter_t* iter, zx_paddr_t* out_paddr) {
@@ -49,7 +55,7 @@ size_t phys_iter_next(phys_iter_t* iter, zx_paddr_t* out_paddr) {
             // end on a page boundary
             return_length = max_length - align_adjust;
         }
-        iter->offset += return_length;
+        phys_iter_increment(iter, return_length);
         return return_length;
     }
 
@@ -64,7 +70,7 @@ size_t phys_iter_next(phys_iter_t* iter, zx_paddr_t* out_paddr) {
         iter->page = 1;
 
         if (iter->page > iter->last_page || phys + PAGE_SIZE != phys_addrs[iter->page]) {
-            iter->offset += return_length;
+            phys_iter_increment(iter, return_length);
             return return_length;
         }
         phys = phys_addrs[iter->page];
@@ -99,6 +105,6 @@ size_t phys_iter_next(phys_iter_t* iter, zx_paddr_t* out_paddr) {
     if (return_length > max_length) {
         return_length = max_length;
     }
-    iter->offset += return_length;
+    phys_iter_increment(iter, return_length);
     return return_length;
 }

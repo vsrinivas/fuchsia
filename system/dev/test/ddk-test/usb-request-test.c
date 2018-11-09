@@ -130,16 +130,26 @@ static bool test_phys_iter(void) {
     // simple discontiguous case
     max_length = req->header.length + PAGE_SIZE;
     usb_request_phys_iter_init(&iter, req, max_length);
+    ASSERT_EQ(iter.total_iterated, 0u, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
     length = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(paddr, req->phys_list[0], "usb_request_phys_iter_next returned wrong paddr");
     ASSERT_EQ(length, (size_t)(PAGE_SIZE * 2), "usb_request_phys_iter_next returned wrong length");
+    ASSERT_EQ(iter.total_iterated, 2u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
     length = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(paddr, req->phys_list[2], "usb_request_phys_iter_next returned wrong paddr");
     ASSERT_EQ(length, (size_t)PAGE_SIZE, "usb_request_phys_iter_next returned wrong length");
+    ASSERT_EQ(iter.total_iterated, 3u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
     length = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(paddr, req->phys_list[3], "usb_request_phys_iter_next returned wrong paddr");
     ASSERT_EQ(length, (size_t)PAGE_SIZE, "usb_request_phys_iter_next returned wrong length");
+    ASSERT_EQ(iter.total_iterated, 4u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
     ASSERT_EQ(usb_request_phys_iter_next(&iter, &paddr), 0u, "");
+    ASSERT_EQ(iter.total_iterated, 4u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     // discontiguous case with max_length < req->length
     max_length = PAGE_SIZE;
@@ -148,6 +158,9 @@ static bool test_phys_iter(void) {
         length = usb_request_phys_iter_next(&iter, &paddr);
         ASSERT_EQ(paddr, req->phys_list[i], "usb_request_phys_iter_next returned wrong paddr");
         ASSERT_EQ(length, max_length, "usb_request_phys_iter_next returned wrong length");
+        ASSERT_EQ(iter.total_iterated, max_length * (i + 1), "");
+        ASSERT_EQ(iter.offset, iter.total_iterated,
+                  "offset == total_iterated for non scatter gather");
     }
     ASSERT_EQ(usb_request_phys_iter_next(&iter, &paddr), 0u, "");
 
@@ -161,16 +174,26 @@ static bool test_phys_iter(void) {
     ASSERT_EQ(paddr, req->phys_list[0] + req->offset, "");
     ASSERT_EQ(length, (size_t)(PAGE_SIZE * 2) - req->offset,
               "usb_request_phys_iter_next returned wrong length");
+    ASSERT_EQ(iter.total_iterated, PAGE_SIZE * 2 - req->offset, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
+
     total_length += length;
     length = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(paddr, req->phys_list[2], "");
     ASSERT_EQ(length, (size_t)PAGE_SIZE, "");
+    ASSERT_EQ(iter.total_iterated, (PAGE_SIZE * 3) - req->offset, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
+
     total_length += length;
     length = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(paddr, req->phys_list[3], "");
     total_length += length;
     ASSERT_EQ(total_length, req->header.length, "");
+    ASSERT_EQ(iter.total_iterated, req->header.length, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
     ASSERT_EQ(usb_request_phys_iter_next(&iter, &paddr), 0u, "");
+    ASSERT_EQ(iter.total_iterated, req->header.length, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     usb_request_release(req);
 
@@ -212,46 +235,68 @@ static bool test_phys_iter_merge(void) {
     size_t size = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, 3u * PAGE_SIZE, "");
     ASSERT_EQ(paddr, req->phys_list[0], "");
+    ASSERT_EQ(iter.total_iterated, 3u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     size = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, (size_t)PAGE_SIZE, "");
     ASSERT_EQ(paddr, req->phys_list[3], "");
+    ASSERT_EQ(iter.total_iterated, 4u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     size = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, (size_t)PAGE_SIZE, "");
     ASSERT_EQ(paddr, req->phys_list[4], "");
+    ASSERT_EQ(iter.total_iterated, 5u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     size = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, 3u * PAGE_SIZE, "");
     ASSERT_EQ(paddr, req->phys_list[5], "");
+    ASSERT_EQ(iter.total_iterated, 8u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     size = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, (size_t)PAGE_SIZE, "");
     ASSERT_EQ(paddr, req->phys_list[8], "");
+    ASSERT_EQ(iter.total_iterated, 9u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     size = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, 0u, "");
+    ASSERT_EQ(iter.total_iterated, 9u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     // Now try iterating with no cap
     usb_request_phys_iter_init(&iter, req, 0);
     size = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, 3u * PAGE_SIZE, "");
     ASSERT_EQ(paddr, req->phys_list[0], "");
+    ASSERT_EQ(iter.total_iterated, 3u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     size = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, (size_t)PAGE_SIZE, "");
     ASSERT_EQ(paddr, req->phys_list[3], "");
+    ASSERT_EQ(iter.total_iterated, 4u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     size = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, (size_t)PAGE_SIZE, "");
     ASSERT_EQ(paddr, req->phys_list[4], "");
+    ASSERT_EQ(iter.total_iterated, 5u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     size = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, 4u * PAGE_SIZE, "");
     ASSERT_EQ(paddr, req->phys_list[5], "");
+    ASSERT_EQ(iter.total_iterated, 9u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     size = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, 0u, "");
+    ASSERT_EQ(iter.total_iterated, 9u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     free(req->phys_list);
 
@@ -286,22 +331,32 @@ static bool test_phys_iter_unaligned_contig(void) {
     size_t size = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, 3u * PAGE_SIZE - 128, "");
     ASSERT_EQ(paddr, req->phys_list[0] + 128, "");
+    ASSERT_EQ(iter.total_iterated, 3u * PAGE_SIZE - 128, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     size = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, PAGE_SIZE + 128u, "");
     ASSERT_EQ(paddr, req->phys_list[3], "");
+    ASSERT_EQ(iter.total_iterated, 4u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     size = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, 0u, "");
+    ASSERT_EQ(iter.total_iterated, 4u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     // Now try iterating with no cap
     usb_request_phys_iter_init(&iter, req, 0);
     size = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, 4u * PAGE_SIZE, "");
     ASSERT_EQ(paddr, req->phys_list[0] + 128, "");
+    ASSERT_EQ(iter.total_iterated, 4u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     size = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, 0u, "");
+    ASSERT_EQ(iter.total_iterated, 4u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     free(req->phys_list);
 
@@ -334,17 +389,25 @@ static bool test_phys_iter_unaligned_noncontig(void) {
     size_t size = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, PAGE_SIZE - 128u, "");
     ASSERT_EQ(paddr, req->phys_list[0] + 128, "");
+    ASSERT_EQ(iter.total_iterated, PAGE_SIZE - 128u, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     size = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, (size_t)PAGE_SIZE, "");
     ASSERT_EQ(paddr, req->phys_list[1], "");
+    ASSERT_EQ(iter.total_iterated, (2 * PAGE_SIZE) - 128u, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     size = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, 128u, "");
     ASSERT_EQ(paddr, req->phys_list[2], "");
+    ASSERT_EQ(iter.total_iterated, 2u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     size = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, 0u, "");
+    ASSERT_EQ(iter.total_iterated, 2u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     free(req->phys_list);
 
@@ -374,9 +437,13 @@ static bool test_phys_iter_tiny_aligned(void) {
     size_t size = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, 128u, "");
     ASSERT_EQ(paddr, req->phys_list[0], "");
+    ASSERT_EQ(iter.total_iterated, 128u, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     size = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, 0u, "");
+    ASSERT_EQ(iter.total_iterated, 128u, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     free(req->phys_list);
 
@@ -406,9 +473,13 @@ static bool test_phys_iter_tiny_unaligned(void) {
     size_t size = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, 128u, "");
     ASSERT_EQ(paddr, req->phys_list[0] + 128, "");
+    ASSERT_EQ(iter.total_iterated, 128u, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     size = usb_request_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, 0u, "");
+    ASSERT_EQ(iter.total_iterated, 128u, "");
+    ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     free(req->phys_list);
 

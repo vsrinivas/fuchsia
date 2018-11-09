@@ -55,7 +55,7 @@ zx_status_t xhci_queue_data_trbs(xhci_transfer_ring_t* ring, xhci_transfer_state
 
     zx_paddr_t paddr;
     size_t transfer_size = 0;
-    bool first_packet = (state->phys_iter.offset == 0);
+    bool first_packet = (state->phys_iter.total_iterated == 0);
     while (free_trbs > 0 && (((transfer_size = usb_request_phys_iter_next(&state->phys_iter, &paddr)) > 0) ||
                              state->needs_transfer_trb || state->needs_zlp)) {
         xhci_trb_t* trb = ring->current;
@@ -105,7 +105,7 @@ zx_status_t xhci_queue_data_trbs(xhci_transfer_ring_t* ring, xhci_transfer_state
         }
     }
 
-    if (state->phys_iter.offset < header->length) {
+    if (state->phys_iter.total_iterated < header->length) {
         // still more data to queue, but we are out of TRBs.
         // come back and finish later.
         return ZX_ERR_SHOULD_WAIT;

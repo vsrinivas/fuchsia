@@ -21,10 +21,13 @@ typedef struct {
 typedef struct {
     phys_iter_buffer_t buf;
 
-    zx_off_t    offset;     // current offset in the txn (relative to buffer vmo_offset)
-    size_t      max_length; // max length to be returned by phys_iter_next()
-    uint64_t    page;       // index of page in buf->phys that contains offset
-    uint64_t    last_page;  // last valid page index in buf->phys
+    size_t      total_iterated;  // total bytes iterated across all calls for this iterator
+    zx_off_t    offset;          // current offset in the txn (relative to buffer vmo_offset)
+                                 // for the current segment being iterated, either a scatter gather
+                                 // entry, or the buffer starting at vmo_offset
+    size_t      max_length;      // max length to be returned by phys_iter_next()
+    uint64_t    page;            // index of page in buf->phys that contains offset
+    uint64_t    last_page;       // last valid page index in buf->phys
 } phys_iter_t;
 
 // Initializes a phys_iter_t for iterating over physical memory.
