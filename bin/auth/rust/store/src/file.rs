@@ -7,16 +7,22 @@ use crate::{AuthDb, AuthDbError, CredentialKey, CredentialValue};
 
 use log::warn;
 use std::collections::BTreeMap;
+use std::ffi::OsString;
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 use std::result;
 
 pub type Result<T> = result::Result<T, AuthDbError>;
 
+/// An extension added to the database filename to name the temporary staging file.
+const TMP_EXT: &str = ".tmp";
+
 /// A file-based implementation of the AuthDb trait.
 pub struct AuthDbFile<S: Serializer> {
     /// The path of the database file.
     file_path: PathBuf,
+    /// The path of the temporary database staging file.
+    tmp_file_path: PathBuf,
     /// The database contents, stored as a BTreeMap to retain a consistent
     /// order.
     credentials: BTreeMap<CredentialKey, CredentialValue>,
@@ -51,21 +57,25 @@ impl<S: Serializer> AuthDbFile<S> {
             BTreeMap::new()
         };
 
+        let mut tmp_file: OsString = credentials_path.into();
+        tmp_file.push(TMP_EXT);
+
         Ok(AuthDbFile {
             file_path: credentials_path.to_path_buf(),
+            tmp_file_path: tmp_file.into(),
             credentials,
             serializer,
         })
     }
 
-    /// Saves the credentials currently in memory to the file supplied at
-    /// creation.
+    /// Saves the credentials currently in memory to the file supplied at creation.
     fn save(&self) -> Result<()> {
-        // TODO(jsankey): Reduce the chances that any errors will delete the credential
-        // db by first saving into a tempfile and then replacing the previous file with
-        // the tempfile.
-        let f = Self::truncate_file(&self.file_path)?;
+        // Note that we first write into a temporary staging file then rename to provide atomicity.
+        // We use a fixed tempfile rather than dynamically generating filenames to ensure we
+        // never accumulate multiple tempfiles.
+        let f = Self::truncate_file(&self.tmp_file_path)?;
         self.serializer.serialize(f, self.credentials.values())?;
+        Self::rename_file(&self.tmp_file_path, &self.file_path)?;
         Ok(())
     }
 
@@ -85,9 +95,21 @@ impl<S: Serializer> AuthDbFile<S> {
         })
     }
 
-    /// Attempts to create the directory containing the supplied path. Returns
-    /// OK if the directory already exists or the creation succeeds. Returns an
-    /// error if the directory could not be calculated or the creation fails.
+    /// Attempts to rename the file at `source` to `dest`, overwriting any existing file with that
+    /// name.
+    fn rename_file(source: &Path, dest: &Path) -> Result<()> {
+        fs::rename(source, dest).map_err(|err| {
+            warn!(
+                "AuthDbFile failed to rename temporary credential file: {:?}",
+                err
+            );
+            AuthDbError::IoError(err)
+        })
+    }
+
+    /// Attempts to create the directory containing the supplied path. Returns OK if the directory
+    /// already exists or the creation succeeds. Returns an error if the directory could not be
+    /// calculated or the creation fails.
     fn create_directory(path: &Path) -> Result<()> {
         match Path::new(path).parent() {
             Some(dir_path) if dir_path.is_dir() => Ok(()),
@@ -136,9 +158,9 @@ mod test {
     use tempfile::TempDir;
 
     struct TempLocation {
-        // A fresh temp directory that will be deleted when this object is dropped.
+        /// A fresh temp directory that will be deleted when this object is dropped.
         _dir: TempDir,
-        // A path within the temp dir to use for writing the db.
+        /// A path within the temp dir to use for writing the db.
         path: PathBuf,
     }
 
@@ -199,6 +221,40 @@ mod test {
     }
 
     #[test]
+    fn test_modify_and_get() -> Result<()> {
+        let temp_location = create_temp_location();
+        let cred_1 = build_test_creds("user1", "iuhaiedwufh");
+        let cred_2 = build_test_creds("user2", "feouihefiuh");
+
+        {
+            // Load a database and insert one credential.
+            let mut db = AuthDbFile::new(&temp_location.path)?;
+            db.add_credential(cred_1.clone())?;
+        }
+
+        {
+            // Load a seperate instance of the database and insert the second credential.
+            let mut db = AuthDbFile::new(&temp_location.path)?;
+            db.add_credential(cred_2.clone())?;
+        }
+
+        {
+            // Load another separate instance of the database and checks both credentials are
+            // present.
+            let db = AuthDbFile::new(&temp_location.path)?;
+            assert_eq!(
+                db.get_refresh_token(&cred_1.credential_key)?,
+                &cred_1.refresh_token
+            );
+            assert_eq!(
+                db.get_refresh_token(&cred_2.credential_key)?,
+                &cred_2.refresh_token
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
     fn test_delete() -> Result<()> {
         let temp_location = create_temp_location();
         let cred_1 = build_test_creds("user1", "iuhaiedwufh");
@@ -216,8 +272,7 @@ mod test {
         }
 
         {
-            // Loading the database again should work even though we deleted all the
-            // entries.
+            // Loading the database again should work even though we deleted all the entries.
             AuthDbFile::new(&temp_location.path)?;
         }
         Ok(())
