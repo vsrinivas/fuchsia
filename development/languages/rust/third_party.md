@@ -25,7 +25,7 @@ the following steps:
 1. `git add` the `Cargo.toml`, `Cargo.lock` and `vendor` directory.
 1. Merge the change into [third_party/rust-crates][3p-crates].
 1. Update the git revision of `third_party/rust-crates` in
-   [garnet/manifest/third_party][3p-manifest]:
+   [integration/fuchsia/garnet/third_party][3p-manifest]:
 
 ```
 <project name="rust-crates"
@@ -50,7 +50,7 @@ Linking to a native library is not currently supported.
 
 [3p-crates]: https://fuchsia.googlesource.com/third_party/rust-crates/
 [3p-cargo-toml]: https://fuchsia.googlesource.com/third_party/rust-crates/+/master/rustc_deps/Cargo.toml
-[3p-manifest]: https://fuchsia.googlesource.com/garnet/+/master/manifest/third_party#190
+[3p-manifest]: https://fuchsia.googlesource.com/integration/+/master/garnet/third_party
 [3p-vendor]: https://fuchsia.googlesource.com/third_party/rust-crates/+/master/rustc_deps/vendor/
 [osrb-process]: https://docs.google.com/document/d/1X3eNvc4keQxOpbkGUiyYBMtr3ueEnVQCPW61FT96o_E/edit#heading=h.7mb7m2qs89th
 [jiri-manifest]: https://fuchsia.googlesource.com/manifest/+/master/runtimes/rust "Jiri manifest"
