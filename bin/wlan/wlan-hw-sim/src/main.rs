@@ -270,10 +270,14 @@ fn create_rx_info(channel: &wlan_mlme::WlanChan) -> wlantap::WlanRxInfo {
     }
 }
 
-fn handle_tx(args: wlantap::TxArgs, state: &mut State, proxy: &wlantap::WlantapPhyProxy) {
-    let mut reader = Cursor::new(args.packet.data);
+fn get_frame_ctrl(packet_data: Vec<u8>) -> mac_frames::FrameControl {
+    let mut reader = Cursor::new(packet_data);
     let frame_ctrl = reader.read_u16::<LittleEndian>().unwrap();
-    let frame_ctrl = mac_frames::FrameControl(frame_ctrl);
+    mac_frames::FrameControl(frame_ctrl)
+}
+
+fn handle_tx(args: wlantap::TxArgs, state: &mut State, proxy: &wlantap::WlantapPhyProxy) {
+    let frame_ctrl = get_frame_ctrl(args.packet.data);
     if frame_ctrl.typ() == mac_frames::FrameControlType::Mgmt as u16 {
         handle_mgmt_tx(frame_ctrl.subtype(), state, proxy);
     } else if frame_ctrl.typ() == mac_frames::FrameControlType::Data as u16 {
@@ -475,6 +479,7 @@ mod tests {
     use {
         fidl_fuchsia_wlan_service as fidl_wlan_service,
         fuchsia_app as app,
+        std::panic,
     };
 
     const BSS_FOO: [u8; 6] = [0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f];
@@ -484,7 +489,23 @@ mod tests {
     const BSS_BAZ: [u8; 6] = [0x62, 0x73, 0x73, 0x62, 0x61, 0x7a];
     const SSID_BAZ: &[u8] = b"baz";
 
+    const CHANNEL: wlan_mlme::WlanChan = wlan_mlme::WlanChan {
+        primary: 6,
+        secondary80: 0,
+        cbw: wlan_mlme::Cbw::Cbw20,
+    };
+
+    // Temporary workaround to run tests synchronously. This is because wlan service only works with
+    // one PHY, so having tests with multiple PHYs running in parallel make them flaky.
     #[test]
+    fn all_tests() {
+        let mut ok = true;
+        ok = run_test("simulate_scan", simulate_scan) && ok;
+        ok = run_test("connecting_to_ap", connecting_to_ap) && ok;
+        assert!(ok);
+    }
+
+    // test
     fn simulate_scan() {
         let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let mut helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
@@ -507,6 +528,51 @@ mod tests {
         ];
         expected_aps.sort();
         assert_eq!(&expected_aps, &aps[..]);
+    }
+
+    // test
+    fn connecting_to_ap() {
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
+
+        let wlan_service = app::client::connect_to_service::<fidl_wlan_service::WlanMarker>()
+            .expect("Failed to connect to wlan service");
+        let proxy = helper.proxy();
+        loop_until_iface_is_found(&mut exec, &wlan_service, &mut helper);
+
+        connect(&mut exec, &wlan_service, &proxy, &mut helper);
+
+        let status = status(&mut exec, &wlan_service, &mut helper);
+        assert_eq!(status.error.code, fidl_wlan_service::ErrCode::Ok);
+        assert_eq!(status.state, fidl_wlan_service::State::Associated);
+        let ap = status.current_ap.expect("expect to be associated to an AP");
+        assert_eq!(ap.bssid, BSS_FOO.to_vec());
+        assert_eq!(ap.ssid, String::from_utf8_lossy(SSID_FOO).to_string());
+        assert_eq!(ap.chan, CHANNEL);
+        assert!(ap.is_compatible);
+        assert!(!ap.is_secure);
+    }
+
+    fn loop_until_iface_is_found(exec: &mut fasync::Executor,
+                                 wlan_service: &fidl_wlan_service::WlanProxy,
+                                 helper: &mut test_utils::TestHelper) {
+        let mut retry = test_utils::RetryWithBackoff::new(5.seconds());
+        loop {
+            let status = status(exec, wlan_service, helper);
+            if status.error.code != fidl_wlan_service::ErrCode::Ok {
+                let slept = retry.sleep_unless_timed_out();
+                assert!(slept, "Wlanstack did not recognize the interface in time");
+            } else {
+                return
+            }
+        }
+    }
+
+    fn status(exec: &mut fasync::Executor, wlan_service: &fidl_wlan_service::WlanProxy,
+              helper: &mut test_utils::TestHelper)
+              -> fidl_wlan_service::WlanStatus {
+        helper.run(exec, 1.seconds(), "status request", |_| {}, wlan_service.status())
+            .expect("expect wlan status")
     }
 
     fn scan(exec: &mut fasync::Executor,
@@ -540,6 +606,62 @@ mod tests {
                 assert!(slept, "Wlanstack did not recognize the interface in time");
             } else {
                 return scan_result;
+            }
+        }
+    }
+
+    fn connect(exec: &mut fasync::Executor,
+               wlan_service: &fidl_wlan_service::WlanProxy,
+               phy: &wlantap::WlantapPhyProxy,
+               helper: &mut test_utils::TestHelper) {
+        let mut connect_config = fidl_wlan_service::ConnectConfig {
+            ssid: String::from_utf8_lossy(SSID_FOO).to_string(),
+            pass_phrase: "".to_string(),
+            scan_interval: 5,
+            bssid: String::from_utf8_lossy(&BSS_FOO).to_string(),
+        };
+        let connect_fut = wlan_service.connect(&mut connect_config);
+        let error = helper.run(exec, 10.seconds(), "receive a scan response",
+            |event| {
+                match event {
+                    wlantap::WlantapPhyEvent::SetChannel { args } => {
+                        println!("channel: {:?}", args.chan);
+                        if args.chan.primary == CHANNEL.primary {
+                            send_beacon(&mut vec![], &args.chan, &BSS_FOO, SSID_FOO, &phy).unwrap();
+                        }
+                    }
+                    wlantap::WlantapPhyEvent::Tx { args } => {
+                        let frame_ctrl = get_frame_ctrl(args.packet.data);
+                        if frame_ctrl.typ() == mac_frames::FrameControlType::Mgmt as u16 {
+                            let subtyp = frame_ctrl.subtype();
+                            if subtyp == mac_frames::MgmtSubtype::Authentication as u16 {
+                                send_authentication(&mut vec![], &CHANNEL, &BSS_FOO, &phy)
+                                    .expect("Error sending fake authentication frame.");
+                            } else if subtyp == mac_frames::MgmtSubtype::AssociationRequest as u16 {
+                                send_association_response(&mut vec![], &CHANNEL, &BSS_FOO, &phy)
+                                    .expect("Error sending fake association response frame.");
+                            }
+                        }
+                    },
+                    _ => {},
+                }
+            },
+            connect_fut).unwrap();
+        assert_eq!(error.code, fidl_wlan_service::ErrCode::Ok, "connect failed: {:?}", error);
+    }
+
+    fn run_test<F>(name: &str, f: F) -> bool
+        where F: FnOnce() + panic::UnwindSafe
+    {
+        let result = panic::catch_unwind(f);
+        match result {
+            Ok(_) => {
+                println!("Test `{}` passed\n", name);
+                true
+            },
+            Err(_) => {
+                println!("Test `{}` failed\n", name);
+                false
             }
         }
     }
