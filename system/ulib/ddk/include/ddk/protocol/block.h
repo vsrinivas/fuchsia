@@ -38,7 +38,6 @@ typedef void (*block_impl_queue_callback)(void* ctx, zx_status_t status, block_o
 // medium (write), and that reads should bypass any on-device caches.
 #define BLOCK_FL_FORCE_ACCESS UINT32_C(0x00001000)
 
-// `BLOCK_OP_READ`, `BLOCK_OP_WRITE`
 struct block_read_write {
     // Command and flags.
     uint32_t command;
@@ -64,11 +63,16 @@ struct block_read_write {
 
 #define BLOCK_OP_TRIM UINT32_C(0x00000004)
 
+// Read and Write ops use rw for parameters.
+// If rw.pages is not NULL, the VMO is already appropriately pinned
+// for IO and pages is an array of the physical addresses covering
+// offset_vmo * block_size through (offset_vmo + length + 1U) * block_size.
+// The number of entries in this array is always
+// ((rw.length + 1U * block_size + PAGE_SIZE - 1) / PAGE_SIZE)
 #define BLOCK_OP_READ UINT32_C(0x00000001)
 
 #define BLOCK_OP_MASK UINT32_C(0x000000FF)
 
-// `BLOCK_OP_TRIM`
 struct block_trim {
     // Command and flags.
     uint32_t command;
@@ -77,15 +81,17 @@ struct block_trim {
 union block_op {
     // All Commands
     uint32_t command;
-    // Read and Write ops use rw for parameters.
+    // `BLOCK_OP_READ`, `BLOCK_OP_WRITE`
     block_read_write_t rw;
+    // `BLOCK_OP_TRIM`
     block_trim_t trim;
 };
 
 typedef struct block_impl_protocol_ops {
     void (*query)(void* ctx, block_info_t* out_info, size_t* out_block_op_size);
     void (*queue)(void* ctx, block_op_t* txn, block_impl_queue_callback callback, void* cookie);
-    zx_status_t (*get_stats)(void* ctx, bool clear, block_stats_t* out_stats);
+    zx_status_t (*get_stats)(void* ctx, const void* cmd_buffer, size_t cmd_size,
+                             void* out_reply_buffer, size_t reply_size, size_t* out_reply_actual);
 } block_impl_protocol_ops_t;
 
 struct block_impl_protocol {
@@ -101,20 +107,19 @@ static inline void block_impl_query(const block_impl_protocol_t* proto, block_in
                                     size_t* out_block_op_size) {
     proto->ops->query(proto->ctx, out_info, out_block_op_size);
 }
-// Submit an IO request for processing. Ownership of |op| is transferred to
-// callee until |completion_cb| is invoked|. Success or failure will
-// be reported via the |completion_cb|.  This / callback may be called
-// before the queue() method returns.
+// Submit an IO request for processing.  Success or failure will
+// be reported via the completion_cb() in the block_op_t.  This
+// callback may be called before the queue() method returns.
 static inline void block_impl_queue(const block_impl_protocol_t* proto, block_op_t* txn,
                                     block_impl_queue_callback callback, void* cookie) {
     proto->ops->queue(proto->ctx, txn, callback, cookie);
 }
-// Returns stats concerning IO operations on the device. Will return
-// ZX_ERR_NOT_SUPPORTED if stats are not enabled on this device. Clears the
-// metrics on the block device if clear is true.
-static inline zx_status_t block_impl_get_stats(const block_impl_protocol_t* proto, bool clear,
-                                               block_stats_t* out_stats) {
-    return proto->ops->get_stats(proto->ctx, clear, out_stats);
+static inline zx_status_t block_impl_get_stats(const block_impl_protocol_t* proto,
+                                               const void* cmd_buffer, size_t cmd_size,
+                                               void* out_reply_buffer, size_t reply_size,
+                                               size_t* out_reply_actual) {
+    return proto->ops->get_stats(proto->ctx, cmd_buffer, cmd_size, out_reply_buffer, reply_size,
+                                 out_reply_actual);
 }
 
 __END_CDECLS;

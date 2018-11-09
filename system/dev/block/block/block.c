@@ -222,15 +222,7 @@ static zx_status_t blkdev_ioctl(void* ctx, uint32_t op, const void* cmd,
         return status;
     }
     case IOCTL_BLOCK_GET_STATS: {
-        if (cmdlen != sizeof(bool)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        if (max < sizeof(block_stats_t)) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-        *out_actual = sizeof(block_stats_t);
-        bool clear = *(bool*) cmd;
-        return blkdev->self_protocol.ops->get_stats(blkdev, clear, reply);
+        return blkdev->self_protocol.ops->get_stats(blkdev, cmd, cmdlen, reply, max, out_actual);
     }
     default:
         // TODO: this may no longer be necessary now that we handle IOCTL_BLOCK_GET_INFO here
@@ -390,16 +382,25 @@ static void blkdev_queue(void* ctx, block_op_t* bop, block_impl_queue_callback c
     block_impl_queue(&bdev->parent_protocol, bop, completion_cb, cookie);
 }
 
-static zx_status_t handle_stats(void* ctx, bool clear, block_stats_t* reply) {
+static zx_status_t handle_stats(void* ctx, const void* cmd,
+                                size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
     blkdev_t* blkdev = ctx;
     if (blkdev->enable_stats) {
+        if (cmdlen != sizeof(bool)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        block_stats_t* out = reply;
+        if (max < sizeof(*out)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
         mtx_lock(&blkdev->lock);
-        reply->total_ops = blkdev->stats.total_ops;
-        reply->total_blocks = blkdev->stats.total_blocks;
-        reply->total_reads = blkdev->stats.total_reads;
-        reply->total_blocks_read = blkdev->stats.total_blocks_read;
-        reply->total_writes = blkdev->stats.total_writes;
-        reply->total_blocks_written = blkdev->stats.total_blocks_written;
+        out->total_ops = blkdev->stats.total_ops;
+        out->total_blocks = blkdev->stats.total_blocks;
+        out->total_reads = blkdev->stats.total_reads;
+        out->total_blocks_read = blkdev->stats.total_blocks_read;
+        out->total_writes = blkdev->stats.total_writes;
+        out->total_blocks_written = blkdev->stats.total_blocks_written;
+        bool clear = *(bool*)cmd;
         if (clear) {
             blkdev->stats.total_ops = 0;
             blkdev->stats.total_blocks = 0;
@@ -409,6 +410,7 @@ static zx_status_t handle_stats(void* ctx, bool clear, block_stats_t* reply) {
             blkdev->stats.total_blocks_written = 0;
         }
         mtx_unlock(&blkdev->lock);
+        *out_actual = sizeof(*out);
         return ZX_OK;
     } else {
         return ZX_ERR_NOT_SUPPORTED;

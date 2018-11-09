@@ -20,7 +20,9 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_block_impl_protocol_queue, BlockImplQue
                                      void (C::*)(block_op_t* txn,
                                                  block_impl_queue_callback callback, void* cookie));
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_block_impl_protocol_get_stats, BlockImplGetStats,
-                                     zx_status_t (C::*)(bool clear, block_stats_t* out_stats));
+                                     zx_status_t (C::*)(const void* cmd_buffer, size_t cmd_size,
+                                                        void* out_reply_buffer, size_t reply_size,
+                                                        size_t* out_reply_actual));
 
 template <typename D>
 constexpr void CheckBlockImplProtocolSubclass() {
@@ -33,7 +35,8 @@ constexpr void CheckBlockImplProtocolSubclass() {
         "void BlockImplQueue(block_op_t* txn, block_impl_queue_callback callback, void* cookie");
     static_assert(internal::has_block_impl_protocol_get_stats<D>::value,
                   "BlockImplProtocol subclasses must implement "
-                  "zx_status_t BlockImplGetStats(bool clear, block_stats_t* out_stats");
+                  "zx_status_t BlockImplGetStats(const void* cmd_buffer, size_t cmd_size, void* "
+                  "out_reply_buffer, size_t reply_size, size_t* out_reply_actual");
 }
 
 } // namespace internal
