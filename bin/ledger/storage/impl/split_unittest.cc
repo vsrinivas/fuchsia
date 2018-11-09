@@ -129,9 +129,9 @@ void DoSplit(DataSource* source, fit::function<void(SplitResult)> callback) {
       auto content = data.at(digest)->Get();
       const FileIndex* file_index = GetFileIndex(content.data());
       for (const auto* child : *file_index->children()) {
-        auto r = ReadFile(
-            convert::ToString(child->object_identifier()->object_digest()),
-            data, result, child->size());
+        auto r =
+            ReadFile(ObjectDigest(child->object_identifier()->object_digest()),
+                     data, result, child->size());
         if (!r) {
           return r;
         }

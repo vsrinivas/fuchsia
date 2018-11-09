@@ -21,7 +21,7 @@ InlinedObject::~InlinedObject() {}
 ObjectIdentifier InlinedObject::GetIdentifier() const { return identifier_; }
 
 Status InlinedObject::GetData(fxl::StringView* data) const {
-  *data = identifier_.object_digest();
+  *data = identifier_.object_digest().Serialize();
   return Status::OK;
 }
 

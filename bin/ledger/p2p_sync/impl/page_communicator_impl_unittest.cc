@@ -31,6 +31,14 @@ using testing::IsEmpty;
 namespace p2p_sync {
 namespace {
 
+// Creates a dummy object identifier.
+// |object_digest| need not be valid (wrt. internal storage constraints) as it
+// is only used as an opaque identifier for p2p.
+storage::ObjectIdentifier MakeObjectIdentifier(std::string object_digest) {
+  return storage::ObjectIdentifier(
+      0, 0, storage::ObjectDigest(std::move(object_digest)));
+}
+
 class FakeCommit : public storage::CommitEmptyImpl {
  public:
   FakeCommit(std::string id, std::string data,
@@ -229,7 +237,8 @@ void BuildObjectRequestBuffer(
   for (const storage::ObjectIdentifier& object_id : object_ids) {
     fb_object_ids.emplace_back(CreateObjectId(
         *buffer, object_id.key_index(), object_id.deletion_scope_id(),
-        convert::ToFlatBufferVector(buffer, object_id.object_digest())));
+        convert::ToFlatBufferVector(buffer,
+                                    object_id.object_digest().Serialize())));
   }
   flatbuffers::Offset<ObjectRequest> object_request =
       CreateObjectRequest(*buffer, buffer->CreateVector(fb_object_ids));
@@ -260,7 +269,8 @@ void BuildObjectResponseBuffer(
     flatbuffers::Offset<ObjectId> fb_object_id = CreateObjectId(
         *buffer, object_identifier.key_index(),
         object_identifier.deletion_scope_id(),
-        convert::ToFlatBufferVector(buffer, object_identifier.object_digest()));
+        convert::ToFlatBufferVector(
+            buffer, object_identifier.object_digest().Serialize()));
     if (!data.empty()) {
       flatbuffers::Offset<Data> fb_data =
           CreateData(*buffer, convert::ToFlatBufferVector(buffer, data));
@@ -410,7 +420,7 @@ TEST_F(PageCommunicatorImplTest, GetObject) {
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
   page_communicator.GetObject(
-      storage::ObjectIdentifier{0, 0, "foo"},
+      MakeObjectIdentifier("foo"),
       callback::Capture(callback::SetWhenCalled(&called), &status, &source,
                         &is_object_synced, &data));
   RunLoopUntilIdle();
@@ -467,7 +477,7 @@ TEST_F(PageCommunicatorImplTest, DontGetObjectsIfMarkPageSyncedToPeerFailed) {
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
   page_communicator.GetObject(
-      storage::ObjectIdentifier{0, 0, "foo"},
+      MakeObjectIdentifier("foo"),
       callback::Capture(callback::SetWhenCalled(&called), &status, &source,
                         &is_object_synced, &data));
   RunLoopUntilIdle();
@@ -478,8 +488,7 @@ TEST_F(PageCommunicatorImplTest, DontGetObjectsIfMarkPageSyncedToPeerFailed) {
 TEST_F(PageCommunicatorImplTest, ObjectRequest) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  storage.SetPiece(storage::ObjectIdentifier{0, 0, "object_digest"},
-                   "some data");
+  storage.SetPiece(MakeObjectIdentifier("object_digest"), "some data");
   PageCommunicatorImpl page_communicator(&coroutine_service_, &storage,
                                          &storage, "ledger", "page", &mesh);
   page_communicator.Start();
@@ -488,8 +497,8 @@ TEST_F(PageCommunicatorImplTest, ObjectRequest) {
   // and |object_digest2|. Only |object_digest| will be present in storage.
   flatbuffers::FlatBufferBuilder request_buffer;
   BuildObjectRequestBuffer(&request_buffer, "ledger", "page",
-                           {storage::ObjectIdentifier{0, 0, "object_digest"},
-                            storage::ObjectIdentifier{0, 0, "object_digest2"}});
+                           {MakeObjectIdentifier("object_digest"),
+                            MakeObjectIdentifier("object_digest2")});
   MessageHolder<Message> request_message(convert::ToStringView(request_buffer),
                                          &GetMessage);
   page_communicator.OnNewRequest(
@@ -536,8 +545,7 @@ TEST_F(PageCommunicatorImplTest, ObjectRequest) {
 TEST_F(PageCommunicatorImplTest, ObjectRequestSynced) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  storage.SetPiece(storage::ObjectIdentifier{0, 0, "object_digest"},
-                   "some data", true);
+  storage.SetPiece(MakeObjectIdentifier("object_digest"), "some data", true);
   PageCommunicatorImpl page_communicator(&coroutine_service_, &storage,
                                          &storage, "ledger", "page", &mesh);
   page_communicator.Start();
@@ -546,7 +554,7 @@ TEST_F(PageCommunicatorImplTest, ObjectRequestSynced) {
   // and |object_digest2|. Only |object_digest| will be present in storage.
   flatbuffers::FlatBufferBuilder request_buffer;
   BuildObjectRequestBuffer(&request_buffer, "ledger", "page",
-                           {storage::ObjectIdentifier{0, 0, "object_digest"}});
+                           {MakeObjectIdentifier("object_digest")});
   MessageHolder<Message> request_message(convert::ToStringView(request_buffer),
                                          &GetMessage);
   page_communicator.OnNewRequest(
@@ -610,7 +618,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
   page_communicator.GetObject(
-      storage::ObjectIdentifier{0, 0, "foo"},
+      MakeObjectIdentifier("foo"),
       callback::Capture(callback::SetWhenCalled(&called), &status, &source,
                         &is_object_synced, &data));
   RunLoopUntilIdle();
@@ -622,10 +630,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
   flatbuffers::FlatBufferBuilder response_buffer;
   BuildObjectResponseBuffer(
       &response_buffer, "ledger", "page",
-      {std::make_tuple(storage::ObjectIdentifier{0, 0, "foo"}, "foo_data",
-                       false),
-       std::make_tuple(storage::ObjectIdentifier{0, 0, "bar"}, "bar_data",
-                       false)});
+      {std::make_tuple(MakeObjectIdentifier("foo"), "foo_data", false),
+       std::make_tuple(MakeObjectIdentifier("bar"), "bar_data", false)});
   MessageHolder<Message> response_message(
       convert::ToStringView(response_buffer), &GetMessage);
   page_communicator.OnNewResponse(
@@ -663,7 +669,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSynced) {
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
   page_communicator.GetObject(
-      storage::ObjectIdentifier{0, 0, "foo"},
+      MakeObjectIdentifier("foo"),
       callback::Capture(callback::SetWhenCalled(&called), &status, &source,
                         &is_object_synced, &data));
   RunLoopUntilIdle();
@@ -675,8 +681,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSynced) {
   flatbuffers::FlatBufferBuilder response_buffer;
   BuildObjectResponseBuffer(
       &response_buffer, "ledger", "page",
-      {std::make_tuple(storage::ObjectIdentifier{0, 0, "foo"}, "foo_data",
-                       true)});
+      {std::make_tuple(MakeObjectIdentifier("foo"), "foo_data", true)});
   MessageHolder<Message> response_message(
       convert::ToStringView(response_buffer), &GetMessage);
   page_communicator.OnNewResponse(
@@ -713,7 +718,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
   page_communicator.GetObject(
-      storage::ObjectIdentifier{0, 0, "foo"},
+      MakeObjectIdentifier("foo"),
       callback::Capture(callback::SetWhenCalled(&called), &status, &source,
                         &is_object_synced, &data));
   RunLoopUntilIdle();
@@ -725,7 +730,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
   flatbuffers::FlatBufferBuilder response_buffer;
   BuildObjectResponseBuffer(
       &response_buffer, "ledger", "page",
-      {std::make_tuple(storage::ObjectIdentifier{0, 0, "foo"}, "", false)});
+      {std::make_tuple(MakeObjectIdentifier("foo"), "", false)});
   MessageHolder<Message> response_message(
       convert::ToStringView(response_buffer), &GetMessage);
   page_communicator.OnNewResponse(
@@ -767,7 +772,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
   page_communicator.GetObject(
-      storage::ObjectIdentifier{0, 0, "foo"},
+      MakeObjectIdentifier("foo"),
       callback::Capture(callback::SetWhenCalled(&called), &status, &source,
                         &is_object_synced, &data));
   RunLoopUntilIdle();
@@ -777,7 +782,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
   flatbuffers::FlatBufferBuilder response_buffer_1;
   BuildObjectResponseBuffer(
       &response_buffer_1, "ledger", "page",
-      {std::make_tuple(storage::ObjectIdentifier{0, 0, "foo"}, "", false)});
+      {std::make_tuple(MakeObjectIdentifier("foo"), "", false)});
   MessageHolder<Message> message_1(convert::ToStringView(response_buffer_1),
                                    &GetMessage);
   page_communicator.OnNewResponse(
@@ -790,8 +795,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
   flatbuffers::FlatBufferBuilder response_buffer_2;
   BuildObjectResponseBuffer(
       &response_buffer_2, "ledger", "page",
-      {std::make_tuple(storage::ObjectIdentifier{0, 0, "foo"}, "foo_data",
-                       false)});
+      {std::make_tuple(MakeObjectIdentifier("foo"), "foo_data", false)});
   MessageHolder<Message> message_2(convert::ToStringView(response_buffer_2),
                                    &GetMessage);
   page_communicator.OnNewResponse(
@@ -835,7 +839,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
   page_communicator.GetObject(
-      storage::ObjectIdentifier{0, 0, "foo"},
+      MakeObjectIdentifier("foo"),
       callback::Capture(callback::SetWhenCalled(&called), &status, &source,
                         &is_object_synced, &data));
   RunLoopUntilIdle();
@@ -845,7 +849,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
   flatbuffers::FlatBufferBuilder response_buffer_1;
   BuildObjectResponseBuffer(
       &response_buffer_1, "ledger", "page",
-      {std::make_tuple(storage::ObjectIdentifier{0, 0, "foo"}, "", false)});
+      {std::make_tuple(MakeObjectIdentifier("foo"), "", false)});
   MessageHolder<Message> message_1(convert::ToStringView(response_buffer_1),
                                    &GetMessage);
   page_communicator.OnNewResponse(
@@ -858,7 +862,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
   flatbuffers::FlatBufferBuilder response_buffer_2;
   BuildObjectResponseBuffer(
       &response_buffer_2, "ledger", "page",
-      {std::make_tuple(storage::ObjectIdentifier{0, 0, "foo"}, "", false)});
+      {std::make_tuple(MakeObjectIdentifier("foo"), "", false)});
   MessageHolder<Message> message_2(convert::ToStringView(response_buffer_2),
                                    &GetMessage);
   page_communicator.OnNewResponse(
@@ -976,19 +980,19 @@ TEST_F(PageCommunicatorImplTest, GetObjectDisconnect) {
       is_object_synced3, is_object_synced4;
   std::unique_ptr<storage::DataSource::DataChunk> data1, data2, data3, data4;
   page_communicator.GetObject(
-      storage::ObjectIdentifier{0, 0, "foo1"},
+      MakeObjectIdentifier("foo1"),
       callback::Capture(callback::SetWhenCalled(&called1), &status1, &source1,
                         &is_object_synced1, &data1));
   page_communicator.GetObject(
-      storage::ObjectIdentifier{0, 0, "foo2"},
+      MakeObjectIdentifier("foo2"),
       callback::Capture(callback::SetWhenCalled(&called2), &status2, &source2,
                         &is_object_synced2, &data2));
   page_communicator.GetObject(
-      storage::ObjectIdentifier{0, 0, "foo3"},
+      MakeObjectIdentifier("foo3"),
       callback::Capture(callback::SetWhenCalled(&called3), &status3, &source3,
                         &is_object_synced3, &data3));
   page_communicator.GetObject(
-      storage::ObjectIdentifier{0, 0, "foo4"},
+      MakeObjectIdentifier("foo4"),
       callback::Capture(callback::SetWhenCalled(&called4), &status4, &source4,
                         &is_object_synced4, &data4));
   RunLoopUntilIdle();

@@ -16,6 +16,8 @@ namespace storage {
 // Its key_index and deletion_scoped_id are ignored.
 testing::Matcher<ObjectIdentifier> MatchesDigest(
     testing::Matcher<std::string> matcher);
+testing::Matcher<ObjectIdentifier> MatchesDigest(
+    testing::Matcher<ObjectDigest> matcher);
 
 // Matcher that matches a Ledger entry against a pair of matchers on the entry's
 // key and object_identifier. The entry's priority is not considered in this

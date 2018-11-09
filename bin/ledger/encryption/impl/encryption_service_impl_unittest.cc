@@ -95,7 +95,8 @@ TEST_F(EncryptionServiceTest, EncryptDecryptCommit) {
 }
 
 TEST_F(EncryptionServiceTest, GetName) {
-  storage::ObjectIdentifier identifier{42u, 42u, std::string(33u, '\0')};
+  storage::ObjectIdentifier identifier{
+      42u, 42u, storage::ObjectDigest(std::string(33u, '\0'))};
   Status status;
   std::string name;
   GetObjectName(identifier, &status, &name);
@@ -104,7 +105,8 @@ TEST_F(EncryptionServiceTest, GetName) {
 }
 
 TEST_F(EncryptionServiceTest, EncryptDecryptObject) {
-  storage::ObjectIdentifier identifier{42u, 42u, std::string(33u, '\0')};
+  storage::ObjectIdentifier identifier{
+      42u, 42u, storage::ObjectDigest(std::string(33u, '\0'))};
   std::string content(256u, '\0');
   auto object =
       std::make_unique<storage::fake::FakeObject>(identifier, content);

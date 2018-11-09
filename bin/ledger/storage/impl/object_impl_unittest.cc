@@ -17,7 +17,7 @@
 namespace storage {
 namespace {
 
-ObjectIdentifier CreateObjectIdentifier(std::string digest) {
+ObjectIdentifier CreateObjectIdentifier(ObjectDigest digest) {
   return {1u, 2u, std::move(digest)};
 }
 

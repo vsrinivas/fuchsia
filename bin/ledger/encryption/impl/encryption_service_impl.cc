@@ -178,7 +178,8 @@ void EncryptionServiceImpl::GetObjectName(
                                          const std::string& reference_key) {
     callback(Status::OK,
              HMAC256KDF(fxl::Concatenate(
-                            {reference_key, object_identifier.object_digest()}),
+                            {reference_key,
+                             object_identifier.object_digest().Serialize()}),
                         kDerivedKeySize));
   });
 }
@@ -210,7 +211,7 @@ void EncryptionServiceImpl::GetReferenceKey(
     fit::function<void(const std::string&)> callback) {
   std::string deletion_scope_seed;
   if (object_identifier.deletion_scope_id() == kPerObjectDeletionScopedId) {
-    deletion_scope_seed = object_identifier.object_digest();
+    deletion_scope_seed = object_identifier.object_digest().Serialize();
   } else {
     const uint32_t deletion_scope_id = object_identifier.deletion_scope_id();
     deletion_scope_seed =

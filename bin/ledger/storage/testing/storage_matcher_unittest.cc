@@ -10,22 +10,26 @@ namespace storage {
 namespace {
 
 TEST(StorageMatcher, MatchesDigest) {
-  ObjectIdentifier id = {0, 1, "hello"};
-
+  ObjectIdentifier id = {0, 1, ObjectDigest("hello")};
   EXPECT_THAT(id, MatchesDigest("hello"));
   EXPECT_THAT(id, Not(MatchesDigest("hexllo")));
+
+  ObjectDigest digest = ObjectDigest("hello");
+  EXPECT_THAT(id, MatchesDigest(digest));
 }
 
 TEST(StorageMatcher, MatchesEntry2Parameters) {
-  Entry entry = {"key", {0, 1, "hello"}, KeyPriority::EAGER};
+  ObjectIdentifier id = {0, 1, ObjectDigest("hello")};
+  Entry entry = {"key", id, KeyPriority::EAGER};
 
   EXPECT_THAT(entry, MatchesEntry({"key", MatchesDigest("hello")}));
+  EXPECT_THAT(entry, MatchesEntry({"key", id}));
   EXPECT_THAT(entry, Not(MatchesEntry({"key", MatchesDigest("helo")})));
   EXPECT_THAT(entry, Not(MatchesEntry({"ky", MatchesDigest("hello")})));
 }
 
 TEST(StorageMatcher, MatchesEntry3Parameters) {
-  Entry entry = {"key", {0, 1, "hello"}, KeyPriority::EAGER};
+  Entry entry = {"key", {0, 1, ObjectDigest("hello")}, KeyPriority::EAGER};
 
   EXPECT_THAT(
       entry, MatchesEntry({"key", MatchesDigest("hello"), KeyPriority::EAGER}));

@@ -43,7 +43,7 @@ std::string ResizeForBehavior(std::string value,
 }
 
 ObjectIdentifier GetObjectIdentifier(std::string value) {
-  std::string result;
+  ObjectDigest result = ObjectDigest();
   auto data_source = DataSource::Create(std::move(value));
   SplitDataSource(data_source.get(),
                   [&result](IterationStatus status, ObjectDigest object_digest,

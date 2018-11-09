@@ -37,7 +37,7 @@ ObjectType GetObjectType(ObjectDigestType digest_type);
 
 // Extracts the data from |object_digest|. If |object_digest| type is |INLINE|,
 // the returned data is the content of the object, otherwise, it is the hash of
-// the object.
+// the object. The returned view is valid for as long as |object digest|.
 fxl::StringView ExtractObjectDigestData(const ObjectDigest& object_digest);
 
 // Computes the id of the object of the given |type| with the given |content|.

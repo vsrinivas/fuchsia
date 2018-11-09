@@ -205,6 +205,14 @@ class BaseBatchUploadTest : public gtest::TestLoopFixture {
         max_concurrent_uploads);
   }
 
+  // Returns an object identifier for the provided fake |object_digest|.
+  // |object_digest| need not be valid (wrt. internal storage constraints) as it
+  // is only used as an opaque identifier for cloud_sync.
+  storage::ObjectIdentifier MakeObjectIdentifier(std::string object_digest) {
+    return encryption_service_.MakeObjectIdentifier(
+        storage::ObjectDigest(std::move(object_digest)));
+  }
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(BaseBatchUploadTest);
 };
@@ -268,8 +276,8 @@ TEST_F(BatchUploadTest, MultipleCommits) {
 TEST_F(BatchUploadTest, SingleCommitWithObjects) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
-  auto id1 = encryption_service_.MakeObjectIdentifier("obj_digest1");
-  auto id2 = encryption_service_.MakeObjectIdentifier("obj_digest2");
+  auto id1 = MakeObjectIdentifier("obj_digest1");
+  auto id2 = MakeObjectIdentifier("obj_digest2");
 
   storage_.unsynced_objects_to_return[id1] =
       std::make_unique<TestObject>(id1, "obj_data1");
@@ -313,12 +321,9 @@ TEST_F(BatchUploadTest, SingleCommitWithObjects) {
 TEST_F(BatchUploadTest, ThrottleConcurrentUploads) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
-  storage::ObjectIdentifier id0 =
-      encryption_service_.MakeObjectIdentifier("obj_digest0");
-  storage::ObjectIdentifier id1 =
-      encryption_service_.MakeObjectIdentifier("obj_digest1");
-  storage::ObjectIdentifier id2 =
-      encryption_service_.MakeObjectIdentifier("obj_digest2");
+  storage::ObjectIdentifier id0 = MakeObjectIdentifier("obj_digest0");
+  storage::ObjectIdentifier id1 = MakeObjectIdentifier("obj_digest1");
+  storage::ObjectIdentifier id2 = MakeObjectIdentifier("obj_digest2");
 
   storage_.unsynced_objects_to_return[id0] =
       std::make_unique<TestObject>(id0, "obj_data0");
@@ -371,10 +376,8 @@ TEST_F(BatchUploadTest, FailedObjectUpload) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
-  storage::ObjectIdentifier id1 =
-      encryption_service_.MakeObjectIdentifier("obj_digest1");
-  storage::ObjectIdentifier id2 =
-      encryption_service_.MakeObjectIdentifier("obj_digest2");
+  storage::ObjectIdentifier id1 = MakeObjectIdentifier("obj_digest1");
+  storage::ObjectIdentifier id2 = MakeObjectIdentifier("obj_digest2");
 
   storage_.unsynced_objects_to_return[id1] =
       std::make_unique<TestObject>(id1, "obj_data1");
@@ -403,10 +406,8 @@ TEST_F(BatchUploadTest, FailedCommitUpload) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
-  storage::ObjectIdentifier id1 =
-      encryption_service_.MakeObjectIdentifier("obj_digest1");
-  storage::ObjectIdentifier id2 =
-      encryption_service_.MakeObjectIdentifier("obj_digest2");
+  storage::ObjectIdentifier id1 = MakeObjectIdentifier("obj_digest1");
+  storage::ObjectIdentifier id2 = MakeObjectIdentifier("obj_digest2");
 
   storage_.unsynced_objects_to_return[id1] =
       std::make_unique<TestObject>(id1, "obj_data1");
@@ -448,10 +449,8 @@ TEST_F(BatchUploadTest, ErrorAndRetry) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
-  storage::ObjectIdentifier id1 =
-      encryption_service_.MakeObjectIdentifier("obj_digest1");
-  storage::ObjectIdentifier id2 =
-      encryption_service_.MakeObjectIdentifier("obj_digest2");
+  storage::ObjectIdentifier id1 = MakeObjectIdentifier("obj_digest1");
+  storage::ObjectIdentifier id2 = MakeObjectIdentifier("obj_digest2");
 
   storage_.unsynced_objects_to_return[id1] =
       std::make_unique<TestObject>(id1, "obj_data1");
@@ -530,10 +529,8 @@ TEST_F(BatchUploadTest, FailedObjectUploadWitStorageError) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
-  storage::ObjectIdentifier id1 =
-      encryption_service_.MakeObjectIdentifier("obj_digest1");
-  storage::ObjectIdentifier id2 =
-      encryption_service_.MakeObjectIdentifier("obj_digest2");
+  storage::ObjectIdentifier id1 = MakeObjectIdentifier("obj_digest1");
+  storage::ObjectIdentifier id2 = MakeObjectIdentifier("obj_digest2");
 
   test_storage.unsynced_objects_to_return[id1] =
       std::make_unique<TestObject>(id1, "obj_data1");
@@ -560,12 +557,9 @@ TEST_F(BatchUploadTest, ErrorOneOfMultipleObject) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
-  storage::ObjectIdentifier id0 =
-      encryption_service_.MakeObjectIdentifier("obj_digest0");
-  storage::ObjectIdentifier id1 =
-      encryption_service_.MakeObjectIdentifier("obj_digest1");
-  storage::ObjectIdentifier id2 =
-      encryption_service_.MakeObjectIdentifier("obj_digest2");
+  storage::ObjectIdentifier id0 = MakeObjectIdentifier("obj_digest0");
+  storage::ObjectIdentifier id1 = MakeObjectIdentifier("obj_digest1");
+  storage::ObjectIdentifier id2 = MakeObjectIdentifier("obj_digest2");
 
   storage_.unsynced_objects_to_return[id0] =
       std::make_unique<TestObject>(id0, "obj_data0");
@@ -715,8 +709,8 @@ TYPED_TEST_CASE(FailingBatchUploadTest, FailingEncryptionServices);
 TYPED_TEST(FailingBatchUploadTest, Fail) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(this->storage_.NewCommit("id", "content"));
-  auto id1 = this->encryption_service_.MakeObjectIdentifier("obj_digest1");
-  auto id2 = this->encryption_service_.MakeObjectIdentifier("obj_digest2");
+  auto id1 = this->MakeObjectIdentifier("obj_digest1");
+  auto id2 = this->MakeObjectIdentifier("obj_digest2");
 
   this->storage_.unsynced_objects_to_return[id1] =
       std::make_unique<TestObject>(id1, "obj_data1");

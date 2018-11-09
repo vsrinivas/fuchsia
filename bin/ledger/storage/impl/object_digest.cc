@@ -49,17 +49,19 @@ bool IsDigestValid(convert::ExtendedStringView object_digest) {
 }
 
 bool IsDigestValid(const ObjectDigest& object_digest) {
-  return IsDigestValid(convert::ExtendedStringView(object_digest));
+  return IsDigestValid(object_digest.Serialize());
 }
 
 ObjectDigestType GetObjectDigestType(const ObjectDigest& object_digest) {
   FXL_DCHECK(IsDigestValid(object_digest));
 
-  if (object_digest.size() <= kStorageHashSize) {
+  const std::string& digest = object_digest.Serialize();
+
+  if (digest.size() <= kStorageHashSize) {
     return ObjectDigestType::INLINE;
   }
 
-  switch (object_digest[0]) {
+  switch (digest[0]) {
     case kValueHashPrefix:
       return ObjectDigestType::CHUNK_HASH;
     case kIndexHashPrefix:
@@ -67,7 +69,7 @@ ObjectDigestType GetObjectDigestType(const ObjectDigest& object_digest) {
   }
 
   FXL_NOTREACHED() << "Unknown digest prefix: "
-                   << static_cast<uint32_t>(object_digest[0]);
+                   << static_cast<uint32_t>(digest[0]);
   return ObjectDigestType::CHUNK_HASH;
 }
 
@@ -84,14 +86,15 @@ ObjectType GetObjectType(ObjectDigestType digest_type) {
 fxl::StringView ExtractObjectDigestData(const ObjectDigest& object_digest) {
   FXL_DCHECK(IsDigestValid(object_digest));
 
-  if (object_digest.size() <= kStorageHashSize) {
-    return object_digest;
+  fxl::StringView digest = object_digest.Serialize();
+
+  if (digest.size() <= kStorageHashSize) {
+    return digest;
   }
 
-  FXL_DCHECK(object_digest[0] == kValueHashPrefix ||
-             object_digest[0] == kIndexHashPrefix);
+  FXL_DCHECK(digest[0] == kValueHashPrefix || digest[0] == kIndexHashPrefix);
 
-  return object_digest.substr(1);
+  return digest.substr(1);
 }
 
 ObjectDigest ComputeObjectDigest(ObjectType type,
@@ -99,13 +102,13 @@ ObjectDigest ComputeObjectDigest(ObjectType type,
   switch (type) {
     case ObjectType::CHUNK:
       if (content.size() <= kStorageHashSize) {
-        return content.ToString();
+        return ObjectDigest(content.ToString());
       }
-      return AddPrefix(kValueHashPrefix,
-                       encryption::SHA256WithLengthHash(content));
+      return ObjectDigest(AddPrefix(kValueHashPrefix,
+                                    encryption::SHA256WithLengthHash(content)));
     case ObjectType::INDEX:
-      return AddPrefix(kIndexHashPrefix,
-                       encryption::SHA256WithLengthHash(content));
+      return ObjectDigest(AddPrefix(kIndexHashPrefix,
+                                    encryption::SHA256WithLengthHash(content)));
   }
 }
 

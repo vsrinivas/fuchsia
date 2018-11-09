@@ -1146,7 +1146,8 @@ TEST_F(PageStorageTest, AddSmallObjectFromLocal) {
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
     EXPECT_EQ(data.object_identifier, object_identifier);
-    EXPECT_EQ(data.value, object_identifier.object_digest());
+    EXPECT_EQ(data.value,
+              ExtractObjectDigestData(object_identifier.object_digest()));
 
     std::unique_ptr<const Object> object;
     EXPECT_EQ(Status::NOT_FOUND,
@@ -1180,7 +1181,6 @@ TEST_F(PageStorageTest, AddObjectFromLocalError) {
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::IO_ERROR, status);
-  EXPECT_TRUE(ObjectIsUntracked(object_identifier, false));
 }
 
 TEST_F(PageStorageTest, AddLocalPiece) {

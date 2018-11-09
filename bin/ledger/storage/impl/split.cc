@@ -72,7 +72,7 @@ class SplitContext {
   void AddChunk(std::unique_ptr<DataSource::DataChunk> chunk,
                 DataSource::Status status) {
     if (status == DataSource::Status::ERROR) {
-      callback_(IterationStatus::ERROR, "", nullptr);
+      callback_(IterationStatus::ERROR, ObjectDigest(), nullptr);
       return;
     }
 

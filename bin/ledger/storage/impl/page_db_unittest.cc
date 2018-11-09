@@ -75,6 +75,14 @@ class PageDbTest : public ledger::TestWithEnvironment {
     ASSERT_EQ(Status::OK, status);
   }
 
+  // Returns an object identifier for the provided fake |object_digest|.
+  // |object_digest| need not be valid as it is only used as an opaque
+  // identifier by PageDB.
+  ObjectIdentifier MakeObjectIdentifier(std::string object_digest) {
+    return encryption_service_.MakeObjectIdentifier(
+        ObjectDigest(std::move(object_digest)));
+  }
+
  protected:
   scoped_tmpfs::ScopedTmpFS tmpfs_;
   encryption::FakeEncryptionService encryption_service_;
@@ -215,20 +223,17 @@ TEST_F(PageDbTest, JournalEntries) {
               page_db_.CreateJournalId(handler, JournalType::IMPLICIT,
                                        commit_id, &journal_id));
     EXPECT_EQ(Status::OK,
-              page_db_.AddJournalEntry(
-                  handler, journal_id, "add-key-1",
-                  encryption_service_.MakeObjectIdentifier("value1"),
-                  KeyPriority::LAZY));
+              page_db_.AddJournalEntry(handler, journal_id, "add-key-1",
+                                       MakeObjectIdentifier("value1"),
+                                       KeyPriority::LAZY));
     EXPECT_EQ(Status::OK,
-              page_db_.AddJournalEntry(
-                  handler, journal_id, "add-key-2",
-                  encryption_service_.MakeObjectIdentifier("value2"),
-                  KeyPriority::EAGER));
+              page_db_.AddJournalEntry(handler, journal_id, "add-key-2",
+                                       MakeObjectIdentifier("value2"),
+                                       KeyPriority::EAGER));
     EXPECT_EQ(Status::OK,
-              page_db_.AddJournalEntry(
-                  handler, journal_id, "add-key-1",
-                  encryption_service_.MakeObjectIdentifier("value3"),
-                  KeyPriority::LAZY));
+              page_db_.AddJournalEntry(handler, journal_id, "add-key-1",
+                                       MakeObjectIdentifier("value3"),
+                                       KeyPriority::LAZY));
     EXPECT_EQ(Status::OK,
               page_db_.RemoveJournalEntry(handler, journal_id, "remove-key"));
 
@@ -262,17 +267,15 @@ TEST_F(PageDbTest, JournalEntriesWithClear) {
               page_db_.CreateJournalId(handler, JournalType::IMPLICIT,
                                        commit_id, &journal_id));
     EXPECT_EQ(Status::OK,
-              page_db_.AddJournalEntry(
-                  handler, journal_id, "add-key-1",
-                  encryption_service_.MakeObjectIdentifier("value1"),
-                  KeyPriority::LAZY));
+              page_db_.AddJournalEntry(handler, journal_id, "add-key-1",
+                                       MakeObjectIdentifier("value1"),
+                                       KeyPriority::LAZY));
     EXPECT_EQ(Status::OK, page_db_.EmptyJournalAndMarkContainsClearOperation(
                               handler, journal_id));
     EXPECT_EQ(Status::OK,
-              page_db_.AddJournalEntry(
-                  handler, journal_id, "add-key-2",
-                  encryption_service_.MakeObjectIdentifier("value2"),
-                  KeyPriority::EAGER));
+              page_db_.AddJournalEntry(handler, journal_id, "add-key-2",
+                                       MakeObjectIdentifier("value2"),
+                                       KeyPriority::EAGER));
     EXPECT_EQ(Status::OK,
               page_db_.RemoveJournalEntry(handler, journal_id, "remove-key"));
 

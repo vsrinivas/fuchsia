@@ -39,6 +39,14 @@ cloud_provider::Token MakeToken(convert::ExtendedStringView token_id) {
   return token;
 }
 
+// Creates a dummy object identifier.
+storage::ObjectIdentifier MakeObjectIdentifier() {
+  // Need not be valid (wrt. internal storage constraints) as it is only used as
+  // an opaque identifier for cloud_sync.
+  return storage::ObjectIdentifier(1u, 1u,
+                                   storage::ObjectDigest("object_digest"));
+}
+
 constexpr zx::duration kTestBackoffInterval = zx::msec(50);
 std::unique_ptr<backoff::TestBackoff> NewTestBackoff() {
   auto result = std::make_unique<backoff::TestBackoff>(kTestBackoffInterval);
@@ -347,7 +355,7 @@ TEST_F(PageDownloadTest, DownloadIdleCallback) {
 
 // Verifies that sync correctly fetches objects from the cloud provider.
 TEST_F(PageDownloadTest, GetObject) {
-  storage::ObjectIdentifier object_identifier{1u, 1u, "object_digest"};
+  storage::ObjectIdentifier object_identifier = MakeObjectIdentifier();
   std::string object_name =
       encryption_service_.GetObjectNameSynchronous(object_identifier);
   page_cloud_.objects_to_return[object_name] =
@@ -379,7 +387,7 @@ TEST_F(PageDownloadTest, GetObject) {
 
 // Verifies that sync retries GetObject() attempts upon connection error.
 TEST_F(PageDownloadTest, RetryGetObject) {
-  storage::ObjectIdentifier object_identifier{1u, 1u, "object_digest"};
+  storage::ObjectIdentifier object_identifier = MakeObjectIdentifier();
   std::string object_name =
       encryption_service_.GetObjectNameSynchronous(object_identifier);
 
@@ -484,7 +492,7 @@ using FailingEncryptionServices =
 TYPED_TEST_CASE(FailingPageDownloadTest, FailingEncryptionServices);
 
 TYPED_TEST(FailingPageDownloadTest, Fail) {
-  storage::ObjectIdentifier object_identifier{1u, 1u, "object_digest"};
+  storage::ObjectIdentifier object_identifier = MakeObjectIdentifier();
   std::string object_name =
       this->encryption_service_.GetObjectNameSynchronous(object_identifier);
   this->page_cloud_.objects_to_return[object_name] =

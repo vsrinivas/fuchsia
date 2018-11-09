@@ -13,7 +13,7 @@ ObjectIdentifier ToObjectIdentifier(
     const ObjectIdentifierStorage* object_identifier_storage) {
   return {object_identifier_storage->key_index(),
           object_identifier_storage->deletion_scope_id(),
-          convert::ToString(object_identifier_storage->object_digest())};
+          ObjectDigest(object_identifier_storage->object_digest())};
 }
 
 flatbuffers::Offset<ObjectIdentifierStorage> ToObjectIdentifierStorage(
@@ -22,7 +22,8 @@ flatbuffers::Offset<ObjectIdentifierStorage> ToObjectIdentifierStorage(
   return CreateObjectIdentifierStorage(
       *builder, object_identifier.key_index(),
       object_identifier.deletion_scope_id(),
-      convert::ToFlatBufferVector(builder, object_identifier.object_digest()));
+      convert::ToFlatBufferVector(
+          builder, object_identifier.object_digest().Serialize()));
 }
 
 std::string EncodeObjectIdentifier(const ObjectIdentifier& object_identifier) {
@@ -44,8 +45,7 @@ bool DecodeObjectIdentifier(fxl::StringView data,
   if (!IsObjectIdentifierStorageValid(storage)) {
     return false;
   }
-  *object_identifier = {storage->key_index(), storage->deletion_scope_id(),
-                        convert::ToString(storage->object_digest())};
+  *object_identifier = ToObjectIdentifier(storage);
   return true;
 }
 

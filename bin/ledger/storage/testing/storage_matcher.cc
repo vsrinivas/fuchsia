@@ -12,6 +12,12 @@ namespace storage {
 
 testing::Matcher<ObjectIdentifier> MatchesDigest(
     testing::Matcher<std::string> matcher) {
+  return Property(&ObjectIdentifier::object_digest,
+                  Property(&ObjectDigest::Serialize, matcher));
+}
+
+testing::Matcher<ObjectIdentifier> MatchesDigest(
+    testing::Matcher<ObjectDigest> matcher) {
   return Property(&ObjectIdentifier::object_digest, matcher);
 }
 

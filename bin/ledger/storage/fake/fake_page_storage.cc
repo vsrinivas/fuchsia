@@ -26,8 +26,12 @@ namespace fake {
 
 namespace {
 
+// Builds a fake ObjectDigest by computing the hash of |value|. This is
+// incompatible with real object digests that carry additional information, but
+// is enough for a fake because this information is needed only internally by
+// the real storage, not by external clients of the fake.
 storage::ObjectDigest ComputeDigest(fxl::StringView value) {
-  return encryption::SHA256WithLengthHash(value);
+  return ObjectDigest(encryption::SHA256WithLengthHash(value));
 }
 
 }  // namespace

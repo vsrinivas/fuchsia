@@ -4,6 +4,7 @@
 
 #include "peridot/bin/ledger/storage/public/types.h"
 
+#include "peridot/lib/convert/convert.h"
 #include "peridot/lib/util/ptr.h"
 
 namespace storage {
@@ -17,7 +18,38 @@ std::ostream& operator<<(std::ostream& os, const std::unique_ptr<T>& ptr) {
 }
 }  // namespace
 
-ObjectIdentifier::ObjectIdentifier() = default;
+ObjectDigest::ObjectDigest() = default;
+ObjectDigest::ObjectDigest(std::string digest) : digest_(std::move(digest)) {}
+ObjectDigest::ObjectDigest(const flatbuffers::Vector<uint8_t>* digest)
+    : ObjectDigest::ObjectDigest(convert::ToString(digest)) {}
+
+ObjectDigest::ObjectDigest(const ObjectDigest&) = default;
+ObjectDigest& ObjectDigest::operator=(const ObjectDigest&) = default;
+ObjectDigest::ObjectDigest(ObjectDigest&&) = default;
+ObjectDigest& ObjectDigest::operator=(ObjectDigest&&) = default;
+
+bool ObjectDigest::IsValid() const { return digest_.has_value(); }
+const std::string& ObjectDigest::Serialize() const {
+  FXL_DCHECK(IsValid());
+  return digest_.value();
+}
+
+bool operator==(const ObjectDigest& lhs, const ObjectDigest& rhs) {
+  return lhs.digest_ == rhs.digest_;
+}
+bool operator!=(const ObjectDigest& lhs, const ObjectDigest& rhs) {
+  return !(lhs == rhs);
+}
+bool operator<(const ObjectDigest& lhs, const ObjectDigest& rhs) {
+  return lhs.digest_ < rhs.digest_;
+}
+
+std::ostream& operator<<(std::ostream& os, const ObjectDigest& e) {
+  return os << (e.IsValid() ? convert::ToHex(e.Serialize()) : "invalid-digest");
+}
+
+ObjectIdentifier::ObjectIdentifier()
+    : key_index_(0), deletion_scope_id_(0), object_digest_(ObjectDigest()) {}
 
 ObjectIdentifier::ObjectIdentifier(uint32_t key_index,
                                    uint32_t deletion_scope_id,
@@ -49,7 +81,7 @@ bool operator<(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs) {
 std::ostream& operator<<(std::ostream& os, const ObjectIdentifier& e) {
   return os << "ObjectIdentifier{key_index: " << e.key_index()
             << ", deletion_scope_id: " << e.deletion_scope_id()
-            << ", object_digest: " << convert::ToHex(e.object_digest()) << "}";
+            << ", object_digest: " << e.object_digest() << "}";
 }
 
 bool operator==(const Entry& lhs, const Entry& rhs) {

@@ -18,9 +18,47 @@ using PageId = std::string;
 using PageIdView = convert::ExtendedStringView;
 using CommitId = std::string;
 using CommitIdView = convert::ExtendedStringView;
-using ObjectDigest = std::string;
 using JournalId = std::string;
 using JournalIdView = convert::ExtendedStringView;
+
+// The digest of an object.
+// This class is a container for an object digest, treated as an opaque blob. It
+// is not responsible for computing or validating the digest; see
+// storage/impl/object_digest.h for such functions.
+class ObjectDigest {
+ public:
+  // Builds an invalid object digest. Useful, eg., when returning a default
+  // object upon error (with a failed status).
+  ObjectDigest();
+
+  // Builds a valid object digest whose value is equal to |digest|.
+  explicit ObjectDigest(std::string digest);
+  explicit ObjectDigest(const flatbuffers::Vector<uint8_t>* digest);
+
+  ObjectDigest(const ObjectDigest&);
+  ObjectDigest& operator=(const ObjectDigest&);
+  ObjectDigest(ObjectDigest&&);
+  ObjectDigest& operator=(ObjectDigest&&);
+
+  // Returns whether this object represents a valid object digest.
+  bool IsValid() const;
+
+  // Returns the content of the object digest.
+  // The reference is valid as long as this object. Must only be called if the
+  // object is valid.
+  const std::string& Serialize() const;
+
+ private:
+  friend bool operator==(const ObjectDigest& lhs, const ObjectDigest& rhs);
+  friend bool operator<(const ObjectDigest& lhs, const ObjectDigest& rhs);
+
+  std::optional<std::string> digest_;
+};
+
+bool operator==(const ObjectDigest& lhs, const ObjectDigest& rhs);
+bool operator!=(const ObjectDigest& lhs, const ObjectDigest& rhs);
+bool operator<(const ObjectDigest& lhs, const ObjectDigest& rhs);
+std::ostream& operator<<(std::ostream& os, const ObjectDigest& e);
 
 // The priority at which the key value is downloaded, and the cache policy.
 enum class KeyPriority {

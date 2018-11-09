@@ -33,7 +33,7 @@ std::string CommitRow::GetKeyFor(CommitIdView commit_id) {
 constexpr fxl::StringView ObjectRow::kPrefix;
 
 std::string ObjectRow::GetKeyFor(const ObjectDigest& object_digest) {
-  return fxl::Concatenate({kPrefix, object_digest});
+  return fxl::Concatenate({kPrefix, object_digest.Serialize()});
 }
 
 // UnsyncedCommitRow.

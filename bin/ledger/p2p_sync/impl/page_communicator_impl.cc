@@ -19,8 +19,9 @@ namespace {
 storage::ObjectIdentifier ToObjectIdentifier(const ObjectId* fb_object_id) {
   uint32_t key_index = fb_object_id->key_index();
   uint32_t deletion_scope_id = fb_object_id->deletion_scope_id();
-  return storage::ObjectIdentifier{key_index, deletion_scope_id,
-                                   convert::ToString(fb_object_id->digest())};
+  return storage::ObjectIdentifier{
+      key_index, deletion_scope_id,
+      storage::ObjectDigest(fb_object_id->digest())};
 }
 }  // namespace
 
@@ -427,7 +428,8 @@ void PageCommunicatorImpl::BuildObjectRequestBuffer(
   flatbuffers::Offset<ObjectId> object_id = CreateObjectId(
       *buffer, object_identifier.key_index(),
       object_identifier.deletion_scope_id(),
-      convert::ToFlatBufferVector(buffer, object_identifier.object_digest()));
+      convert::ToFlatBufferVector(
+          buffer, object_identifier.object_digest().Serialize()));
   flatbuffers::Offset<ObjectRequest> object_request = CreateObjectRequest(
       *buffer, buffer->CreateVector(
                    std::vector<flatbuffers::Offset<ObjectId>>({object_id})));
@@ -562,7 +564,7 @@ void PageCommunicatorImpl::ProcessObjectRequest(
         for (const ObjectId* object_id : *request->object_ids()) {
           storage::ObjectIdentifier identifier{
               object_id->key_index(), object_id->deletion_scope_id(),
-              convert::ExtendedStringView(object_id->digest()).ToString()};
+              storage::ObjectDigest(object_id->digest())};
           object_responses.emplace_back(identifier);
           auto& response = object_responses.back();
           storage_->GetPiece(
@@ -623,11 +625,11 @@ void PageCommunicatorImpl::BuildObjectResponseBuffer(
                             convert::ToFlatBufferVector(buffer, page_id_));
   std::vector<flatbuffers::Offset<Object>> fb_objects;
   for (const ObjectResponseHolder& object_response : object_responses) {
-    flatbuffers::Offset<ObjectId> fb_object_id =
-        CreateObjectId(*buffer, object_response.identifier.key_index(),
-                       object_response.identifier.deletion_scope_id(),
-                       convert::ToFlatBufferVector(
-                           buffer, object_response.identifier.object_digest()));
+    flatbuffers::Offset<ObjectId> fb_object_id = CreateObjectId(
+        *buffer, object_response.identifier.key_index(),
+        object_response.identifier.deletion_scope_id(),
+        convert::ToFlatBufferVector(
+            buffer, object_response.identifier.object_digest().Serialize()));
     if (object_response.object) {
       fxl::StringView data;
       storage::Status status = object_response.object->GetData(&data);
