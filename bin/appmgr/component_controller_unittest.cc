@@ -286,7 +286,7 @@ TEST_F(ComponentControllerTest, ControllerScope) {
     ASSERT_EQ(realm_.ComponentCount(), 1u);
   }
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [this]() { return realm_.ComponentCount() == 0; }));
+      [this]() { return realm_.ComponentCount() == 0; }, zx::sec(5)));
 }
 
 TEST_F(ComponentControllerTest, DetachController) {
