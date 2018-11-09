@@ -6,7 +6,6 @@
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/socket.h>
-#include <lib/zxs/inception.h>
 #include <lib/zxs/protocol.h>
 #include <lib/zxs/zxs.h>
 #include <string.h>
@@ -157,7 +156,6 @@ static zx_status_t handle_message(async_dispatcher_t* dispatcher,
         memcpy(reply.data, "abcd", reply.datalen);
         break;
     }
-    case ZXSIO_OPEN:
     default:
         return ZX_ERR_STOP;
     }
