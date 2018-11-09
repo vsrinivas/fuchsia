@@ -15,7 +15,10 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := \
     system/ulib/elfload \
-    system/ulib/runtime
+    system/ulib/fbl \
+    system/ulib/runtime \
+    system/ulib/zx \
+    system/ulib/zxcpp
 
 MODULE_LIBS := \
     system/ulib/unittest \

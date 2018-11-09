@@ -17,7 +17,12 @@
 #include <zircon/syscalls/object.h>
 #include <limits.h>
 
+#include <fbl/array.h>
+#include <fbl/auto_call.h>
+
 #include <lib/fdio/util.h>
+#include <lib/zx/handle.h>
+#include <lib/zx/vmo.h>
 
 #include <unittest/unittest.h>
 
@@ -125,9 +130,85 @@ static bool argument_size_test(void) {
     return ok;
 }
 
+static bool run_with_args_env_handles(unsigned int num_args,
+                                      unsigned int num_env,
+                                      unsigned int num_handles) {
+    BEGIN_TEST;
+
+    launchpad_t* lp;
+    ASSERT_EQ(launchpad_create(ZX_HANDLE_INVALID, "limits test", &lp), ZX_OK, "");
+    auto destroy_launchpad = fbl::MakeAutoCall([&]() {
+        launchpad_destroy(lp);
+    });
+
+    // Set the args.
+    const unsigned int argc = 3 + num_args;
+    fbl::Array<const char*> argv(new const char*[argc], argc);
+    argv[0] = "/boot/bin/sh";
+    argv[1] = "-c";
+    argv[2] = ":";
+    for (unsigned int i = 3; i < argc; ++i) {
+        argv[i] = "-v";
+    }
+    ASSERT_EQ(launchpad_set_args(lp, argc, argv.get()), ZX_OK, launchpad_error_message(lp));
+    ASSERT_EQ(launchpad_load_from_file(lp, argv[0]), ZX_OK, launchpad_error_message(lp));
+
+    // Set the env.
+    //
+    // Be sure to save room for a terminating null pointer.
+    num_env++;
+    fbl::Array<const char*> envp(new const char*[num_env], num_env);
+    for (unsigned int i = 0; i < num_env; ++i) {
+        envp[i] = "A=B";
+    }
+    envp[num_env - 1] = NULL;
+    ASSERT_EQ(launchpad_set_environ(lp, envp.get()), ZX_OK, launchpad_error_message(lp));
+
+    // Set some handles.
+    zx::vmo vmo;
+    zx_status_t status = zx::vmo::create(0, 0, &vmo);
+    ASSERT_EQ(status, ZX_OK, "");
+    for (unsigned int i = 0; i < num_handles; ++i) {
+        zx::vmo vmo_dup;
+        zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dup);
+        ASSERT_EQ(status, ZX_OK, "");
+        ASSERT_EQ(launchpad_add_handle(lp, vmo_dup.release(), PA_HND(PA_USER0, i)),
+                  ZX_OK, launchpad_error_message(lp));
+    }
+
+    // Run it.
+    zx::handle proc;
+    const char* err = "unknown error";
+    destroy_launchpad.cancel();
+    ASSERT_EQ(launchpad_go(lp, proc.reset_and_get_address(), &err), ZX_OK, err);
+
+    // See that it completed successfully.
+    ASSERT_EQ(zx_object_wait_one(proc.get(), ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, NULL),
+              ZX_OK, "");
+    zx_info_process_t info;
+    ASSERT_EQ(zx_object_get_info(proc.get(), ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL),
+              ZX_OK, "");
+    ASSERT_EQ(info.return_code, 0, "shell exit status");
+
+    END_TEST;
+}
+
+static bool launchpad_limits_test(void) {
+    BEGIN_TEST;
+    EXPECT_TRUE(run_with_args_env_handles(1, 1, 1), "");
+    EXPECT_TRUE(run_with_args_env_handles(10000, 1, 1), "");
+    EXPECT_TRUE(run_with_args_env_handles(1, 10000, 1), "");
+    EXPECT_TRUE(run_with_args_env_handles(58, 58, 58), "");
+    EXPECT_TRUE(run_with_args_env_handles(1, 1, 58), "");
+    EXPECT_TRUE(run_with_args_env_handles(5000, 10000, 0), "");
+    EXPECT_TRUE(run_with_args_env_handles(5000, 10000, 58), "");
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(launchpad_tests)
 RUN_TEST(launchpad_test);
 RUN_TEST(argument_size_test);
+RUN_TEST(launchpad_limits_test);
 END_TEST_CASE(launchpad_tests)
 
 int main(int argc, char **argv)
