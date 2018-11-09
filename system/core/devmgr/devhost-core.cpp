@@ -22,6 +22,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <fbl/auto_lock.h>
 #include <lib/fdio/remoteio.h>
 #include <zxcpp/new.h>
 
@@ -199,7 +200,10 @@ void devhost_device_destroy(zx_device_t* dev) REQ_DM_LOCK {
     dev->driver = nullptr;
     dev->parent.reset();
     dev->conn.store(nullptr);
-    dev->proxy_ios = nullptr;
+    {
+        fbl::AutoLock guard(&dev->proxy_ios_lock);
+        dev->proxy_ios = nullptr;
+    }
 
     // Defer destruction to help catch use-after-free and also
     // so the compiler can't (easily) optimize away the poisoning

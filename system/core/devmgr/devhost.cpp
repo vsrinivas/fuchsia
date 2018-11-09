@@ -21,6 +21,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 
+#include <fbl/auto_lock.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/remoteio.h>
@@ -49,11 +50,19 @@ uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 struct ProxyIostate {
     ProxyIostate() = default;
+    ~ProxyIostate();
+
+    // Creates a ProxyIostate and points |dev| at it.  The ProxyIostate is owned
+    // by the async loop, and its destruction may be requested by calling
+    // Cancel().
+    static zx_status_t Create(const fbl::RefPtr<zx_device_t>& dev, zx::channel rpc);
+
+    // Request the destruction of the proxy connection
+    void Cancel();
 
     fbl::RefPtr<zx_device_t> dev;
     port_handler_t ph = {};
 };
-static void proxy_ios_create(const fbl::RefPtr<zx_device_t>& dev, zx_handle_t h);
 static void proxy_ios_destroy(const fbl::RefPtr<zx_device_t>& dev);
 
 #define proxy_ios_from_ph(ph) containerof(ph, ProxyIostate, ph)
@@ -467,15 +476,20 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevcoordinatorConnection* c
         return ZX_OK;
     }
 
-    case Message::Op::kConnectProxy:
+    case Message::Op::kConnectProxy: {
         if (hcount != 1) {
             r = ZX_ERR_INVALID_ARGS;
             break;
         }
         log(RPC_SDW, "devhost[%s] connect proxy rpc\n", path);
         conn->dev->ops->rxrpc(conn->dev->ctx, ZX_HANDLE_INVALID);
-        proxy_ios_create(conn->dev, hin[0]);
+        zx::channel rpc(hin[0]);
+        hin[0] = ZX_HANDLE_INVALID;
+        // Ignore any errors in the creation for now?
+        // TODO(teisenbe/kulakowski): Investigate if this is the right thing
+        ProxyIostate::Create(conn->dev, fbl::move(rpc));
         return ZX_OK;
+    }
 
     case Message::Op::kSuspend: {
         if (hcount != 0) {
@@ -580,16 +594,30 @@ static zx_status_t dh_handle_fidl_rpc(port_handler_t* ph, zx_signals_t signals, 
     return r;
 }
 
+ProxyIostate::~ProxyIostate() {
+    // cancel any pending waits
+    port_cancel(&dh_port, &this->ph);
+
+    // close the proxy channel
+    zx_handle_close(this->ph.handle);
+}
+
 
 // Handling RPC From Proxy Devices to BusDevs
 
 static zx_status_t dh_handle_proxy_rpc(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
     ProxyIostate* ios = proxy_ios_from_ph(ph);
 
+    auto destroy = [&ios]() -> zx_status_t {
+        fbl::AutoLock guard(&ios->dev->proxy_ios_lock);
+        ios->dev->proxy_ios = nullptr;
+        delete ios;
+        return ZX_ERR_STOP;
+    };
+
     if (evt != 0) {
-        // TODO(kulakowski/teisenbe): Can |ios->dev| still have a reference to
-        // |ios| here?
         log(RPC_SDW, "proxy-rpc: destroy (ios=%p)\n", ios);
+
         // we send an event to request the destruction
         // of an iostate, to ensure that's the *last*
         // packet about the iostate that we get
@@ -609,63 +637,64 @@ static zx_status_t dh_handle_proxy_rpc(port_handler_t* ph, zx_signals_t signals,
         r = ios->dev->ops->rxrpc(ios->dev->ctx, ph->handle);
         if (r != ZX_OK) {
             log(RPC_SDW, "proxy-rpc: rpc cb error %d (ios=%p,dev=%p)\n", r, ios, ios->dev.get());
-destroy:
-            ios->dev->proxy_ios = nullptr;
-            zx_handle_close(ios->ph.handle);
-            delete ios;
-            return ZX_ERR_STOP;
+            return destroy();
         }
         return ZX_OK;
     }
     if (signals & ZX_CHANNEL_PEER_CLOSED) {
         log(RPC_SDW, "proxy-rpc: peer closed (ios=%p,dev=%p)\n", ios, ios->dev.get());
-        goto destroy;
+        return destroy();
     }
     log(ERROR, "devhost: no work? %08x\n", signals);
     return ZX_OK;
 }
 
-static void proxy_ios_create(const fbl::RefPtr<zx_device_t>& dev, zx_handle_t h) {
+zx_status_t ProxyIostate::Create(const fbl::RefPtr<zx_device_t>& dev, zx::channel rpc) {
+    // This must be held for the adding of the channel to the port, since the
+    // async loop may run immediately after that point.
+    fbl::AutoLock guard(&dev->proxy_ios_lock);
+
     if (dev->proxy_ios) {
-        proxy_ios_destroy(dev);
+        dev->proxy_ios->Cancel();
+        dev->proxy_ios = nullptr;
     }
 
     auto ios = fbl::make_unique<ProxyIostate>();
     if (ios == nullptr) {
-        zx_handle_close(h);
-        return;
+        return ZX_ERR_NO_MEMORY;
     }
 
     ios->dev = dev;
-    ios->ph.handle = h;
+    ios->ph.handle = rpc.get();
     ios->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
     ios->ph.func = dh_handle_proxy_rpc;
-    if (port_wait(&dh_port, &ios->ph) != ZX_OK) {
-        zx_handle_close(h);
-        return;
+    zx_status_t status = port_wait(&dh_port, &ios->ph);
+    if (status != ZX_OK) {
+        return status;
     }
+    // |rpc| is now owned by |ios|
+    __UNUSED auto h = rpc.release();
 
-    // TODO(kulakowski/teisenbe): Is |ios| owned by |dev| here or by |dh_port|?
+    // |ios| is now owned by |dh_port|.  |dev| holds a reference that will be
+    // cleared prior to destruction.
     dev->proxy_ios = ios.release();
+    return ZX_OK;
+}
+
+// The device for which ProxyIostate is currently attached to should have
+// its proxy_ios_lock held across Cancel().
+void ProxyIostate::Cancel() {
+    // queue an event to destroy the iostate if we saw it was still around.
+    port_queue(&dh_port, &this->ph, 1);
 }
 
 static void proxy_ios_destroy(const fbl::RefPtr<zx_device_t>& dev) {
-    ProxyIostate* ios = dev->proxy_ios;
-    if (ios) {
-        dev->proxy_ios = nullptr;
+    fbl::AutoLock guard(&dev->proxy_ios_lock);
 
-        // mark iostate detached
-        ios->dev = nullptr;
-
-        // cancel any pending waits
-        port_cancel(&dh_port, &ios->ph);
-
-        zx_handle_close(ios->ph.handle);
-        ios->ph.handle = ZX_HANDLE_INVALID;
-
-        // queue an event to destroy the iostate
-        port_queue(&dh_port, &ios->ph, 1);
+    if (dev->proxy_ios) {
+        dev->proxy_ios->Cancel();
     }
+    dev->proxy_ios = nullptr;
 }
 
 

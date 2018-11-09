@@ -6,11 +6,13 @@
 
 #include <ddk/device.h>
 #include <fbl/intrusive_double_list.h>
+#include <fbl/mutex.h>
 #include <fbl/recycler.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <lib/zx/channel.h>
 #include <zircon/compiler.h>
+#include <zircon/thread_annotations.h>
 
 namespace devmgr {
 
@@ -131,7 +133,9 @@ struct zx_device : fbl::RefCounted<zx_device>, fbl::Recyclable<zx_device>  {
     // value to determine if an expected shutdown is happening.  See comments in
     // devhost_remove().
     fbl::atomic<devmgr::DevcoordinatorConnection*> conn = nullptr;
-    devmgr::ProxyIostate* proxy_ios = nullptr;
+
+    fbl::Mutex proxy_ios_lock;
+    devmgr::ProxyIostate* proxy_ios TA_GUARDED(proxy_ios_lock) = nullptr;
 
     char name[ZX_DEVICE_NAME_MAX + 1] = {};
 private:
