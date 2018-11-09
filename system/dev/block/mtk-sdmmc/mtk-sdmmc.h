@@ -55,7 +55,11 @@ class MtkSdmmc : public DeviceType, public ddk::SdmmcProtocol<MtkSdmmc> {
 public:
     static zx_status_t Create(zx_device_t* parent);
 
+    virtual ~MtkSdmmc() = default;
+
     void DdkRelease() { delete this; }
+
+    zx_status_t Bind();
 
     zx_status_t SdmmcHostInfo(sdmmc_host_info_t* info);
     zx_status_t SdmmcSetSignalVoltage(sdmmc_voltage_t voltage);
@@ -66,16 +70,29 @@ public:
     zx_status_t SdmmcPerformTuning(uint32_t cmd_idx);
     zx_status_t SdmmcRequest(sdmmc_req_t* req);
 
-private:
+    // Visible for testing.
     MtkSdmmc(zx_device_t* parent, ddk::MmioBuffer mmio, zx::bti bti, const sdmmc_host_info_t& info,
              zx::interrupt irq, const ddk::GpioProtocolProxy& reset_gpio,
              const pdev_device_info_t& dev_info, const board_mt8167::MtkSdmmcConfig& config)
-        : DeviceType(parent), mmio_(std::move(mmio)), bti_(std::move(bti)), info_(info),
-          irq_(std::move(irq)), req_(nullptr), cmd_status_(ZX_OK), reset_gpio_(reset_gpio),
+        : DeviceType(parent), req_(nullptr), mmio_(std::move(mmio)), bti_(std::move(bti)),
+          info_(info), irq_(std::move(irq)), cmd_status_(ZX_OK), reset_gpio_(reset_gpio),
           dev_info_(dev_info), config_(config) {}
 
+    // Visible for testing.
     zx_status_t Init();
 
+    // Visible for testing.
+protected:
+    virtual zx_status_t WaitForInterrupt();
+
+    int JoinIrqThread() {
+        return thrd_join(irq_thread_, nullptr);
+    }
+
+    fbl::Mutex mutex_;
+    sdmmc_req_t* req_ TA_GUARDED(mutex_);
+
+private:
     RequestStatus SdmmcRequestWithStatus(sdmmc_req_t* req);
 
     // Prepares the VMO and the DMA engine for receiving data.
@@ -114,8 +131,6 @@ private:
     io_buffer_t gpdma_buf_;
     io_buffer_t bdma_buf_;
     sync_completion_t req_completion_;
-    fbl::Mutex mutex_;
-    sdmmc_req_t* req_ TA_GUARDED(mutex_);
     zx_status_t cmd_status_ TA_GUARDED(mutex_);
     ddk::GpioProtocolProxy reset_gpio_;
     const pdev_device_info_t dev_info_;

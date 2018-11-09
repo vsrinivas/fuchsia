@@ -167,14 +167,22 @@ zx_status_t MtkSdmmc::Create(zx_device_t* parent) {
         return status;
     }
 
-    if ((status = device->DdkAdd("mtk-sdmmc")) != ZX_OK) {
-        zxlogf(ERROR, "%s: DdkAdd failed\n", __FILE__);
+    if ((status = device->Bind()) != ZX_OK) {
         return status;
     }
 
     __UNUSED auto* dummy = device.release();
 
     return ZX_OK;
+}
+
+zx_status_t MtkSdmmc::Bind() {
+    zx_status_t status = DdkAdd("mtk-sdmmc");
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: DdkAdd failed\n", __FILE__);
+    }
+
+    return status;
 }
 
 zx_status_t MtkSdmmc::Init() {
@@ -583,7 +591,7 @@ zx_status_t MtkSdmmc::RequestPrepareDma(sdmmc_req_t* req) {
             .phys_count = pagecount,
             .length = req_len,
             .vmo_offset = req->buf_offset,
-            .sg_list = NULL,
+            .sg_list = nullptr,
             .sg_count = 0
         };
 
@@ -776,8 +784,7 @@ bool MtkSdmmc::CmdDone(const MsdcInt& msdc_int) {
 
 int MtkSdmmc::IrqThread() {
     while (1) {
-        zx::time timestamp;
-        if (irq_.wait(&timestamp) != ZX_OK) {
+        if (WaitForInterrupt() != ZX_OK) {
             zxlogf(ERROR, "%s: IRQ wait failed\n", __FILE__);
             return thrd_error;
         }
@@ -823,6 +830,11 @@ int MtkSdmmc::IrqThread() {
         req_ = nullptr;
         sync_completion_signal(&req_completion_);
     }
+}
+
+zx_status_t MtkSdmmc::WaitForInterrupt() {
+    zx::time timestamp;
+    return irq_.wait(&timestamp);
 }
 
 }  // namespace sdmmc
