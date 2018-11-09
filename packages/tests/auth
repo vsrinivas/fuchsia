@@ -4,6 +4,7 @@
     ],
     "packages": [
         "//garnet/bin/auth:tests",
-        "//garnet/bin/auth:rust_tests"
+        "//garnet/bin/auth:rust_tests",
+        "//garnet/bin/auth/testing/account_manager_integration:account_manager_integration_test_pkg"
     ]
 }
