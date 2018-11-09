@@ -33,25 +33,20 @@ executable("common_null_module_bin") {
   ]
 }
 
-verify_module_manifest("common_null_module_manifest_verified") {
-  module_manifest = "common_null_module_manifest.json"
-  original_target_name = "common_null_module_manifest.json"
-}
-
 package("common_null_module") {
   testonly = true
 
   deps = [
     ":common_null_module_bin",
-    ":common_null_module_manifest_verified",
   ]
 
   binary = "common_null_module"
 
   meta = [
     {
-      path = "common_null_module_manifest.json"
-      dest = "module.json"
+
+      path = "common_null_module.cmx"
+      dest = "common_null_module.cmx"
     },
   ]
 }
@@ -75,25 +70,19 @@ executable("common_active_module_bin") {
   ]
 }
 
-verify_module_manifest("common_active_module_manifest_verified") {
-  module_manifest = "common_active_module_manifest.json"
-  original_target_name = "common_active_module_manifest.json"
-}
-
 package("common_active_module") {
   testonly = true
 
   deps = [
     ":common_active_module_bin",
-    ":common_active_module_manifest_verified",
   ]
 
   binary = "common_active_module"
 
   meta = [
     {
-      path = "common_active_module_manifest.json"
-      dest = "module.json"
+      path = "common_active_module.cmx"
+      dest = "common_active_module.cmx"
     },
   ]
 }

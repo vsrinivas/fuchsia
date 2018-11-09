@@ -616,8 +616,7 @@ class StoryControllerImpl::StopModuleAndStoryIfEmptyCall : public Operation<> {
     } else {
       // Otherwise, stop this one module.
       operation_queue_.Add(new StopModuleCall(
-          story_controller_impl_->story_storage_,
-          module_path_, [flow] {}));
+          story_controller_impl_->story_storage_, module_path_, [flow] {}));
     }
   }
 
@@ -789,6 +788,7 @@ class StoryControllerImpl::AddIntentCall
         &operation_queue_, story_controller_impl_->story_storage_,
         story_controller_impl_->story_provider_impl_->module_resolver(),
         story_controller_impl_->story_provider_impl_->entity_resolver(),
+        story_controller_impl_->story_provider_impl_->module_facet_reader(),
         fidl::VectorPtr<fidl::StringPtr>({module_name_}), std::move(*intent_),
         std::move(surface_relation_), std::move(requesting_module_path_),
         module_source_,

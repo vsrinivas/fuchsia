@@ -47,6 +47,7 @@
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/ledger_client/status.h"
+#include "peridot/lib/module_manifest/module_facet_reader_impl.h"
 
 namespace modular {
 
@@ -607,12 +608,17 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
   // agents.
   session_storage_ = std::make_unique<SessionStorage>(
       ledger_client_.get(), fuchsia::ledger::PageId());
+
+  module_facet_reader_.reset(new ModuleFacetReaderImpl(
+      startup_context_->ConnectToEnvironmentService<fuchsia::sys::Loader>()));
+
   story_provider_impl_.reset(new StoryProviderImpl(
       user_environment_.get(), device_map_impl_->current_device_id(),
       session_storage_.get(), std::move(story_shell), component_context_info,
       std::move(focus_provider_story_provider),
       user_intelligence_provider_impl_.get(), module_resolver_service_.get(),
-      entity_provider_runner_.get(), presentation_provider_impl_.get(),
+      entity_provider_runner_.get(), module_facet_reader_.get(),
+      presentation_provider_impl_.get(),
       startup_context_
           ->ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewSnapshot>(),
       options_.test));
@@ -648,6 +654,7 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
   story_command_executor_ = MakeProductionStoryCommandExecutor(
       session_storage_.get(), std::move(focus_provider_puppet_master),
       module_resolver_service_.get(), entity_provider_runner_.get(),
+      static_cast<modular::ModuleFacetReader*>(module_facet_reader_.get()),
       std::move(module_focuser));
   story_provider_impl_->Connect(
       std::move(story_provider_puppet_master_request));

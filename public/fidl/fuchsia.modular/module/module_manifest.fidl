@@ -8,6 +8,8 @@ library fuchsia.modular;
 struct ModuleManifest {
     /// The relative path from the root of the package where the Module executable
     /// file can be found.
+    /// TODO(MF-94): Extract a module's URL from its cmx manifest instead of
+    /// here.
     string binary;
 
     /// A human-readable string that can be used when suggesting this Module.

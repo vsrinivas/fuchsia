@@ -28,9 +28,10 @@ std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
     fuchsia::modular::FocusProviderPtr focus_provider,
     fuchsia::modular::ModuleResolver* const module_resolver,
     fuchsia::modular::EntityResolver* const entity_resolver,
-    // TODO(miguelfrde): we shouldn't create this dependency here. Instead an
-    // interface similar to StoryStorage should be created for Runtime use
-    // cases.
+    modular::ModuleFacetReader* const module_facet_reader,
+    // TODO(miguelfrde): we shouldn't create this dependency here. Instead
+    // an interface similar to StoryStorage should be created for Runtime
+    // use cases.
     fit::function<void(fidl::StringPtr, fidl::VectorPtr<fidl::StringPtr>)>
         module_focuser) {
   std::map<fuchsia::modular::StoryCommand::Tag, std::unique_ptr<CommandRunner>>
@@ -40,7 +41,8 @@ std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
       new SetFocusStateCommandRunner(std::move(focus_provider)));
   command_runners.emplace(
       fuchsia::modular::StoryCommand::Tag::kAddMod,
-      new AddModCommandRunner(module_resolver, entity_resolver));
+      new AddModCommandRunner(module_resolver, entity_resolver,
+                              module_facet_reader));
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kFocusMod,
                           new FocusModCommandRunner(std::move(module_focuser)));
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kUpdateMod,

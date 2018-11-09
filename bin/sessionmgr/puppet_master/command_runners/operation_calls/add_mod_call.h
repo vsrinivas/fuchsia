@@ -9,6 +9,7 @@
 #include <lib/async/cpp/operation.h>
 
 #include "peridot/bin/sessionmgr/storage/story_storage.h"
+#include "peridot/lib/module_manifest/module_facet_reader.h"
 
 namespace modular {
 
@@ -16,6 +17,7 @@ void AddAddModOperation(
     OperationContainer* container, StoryStorage* story_storage,
     fuchsia::modular::ModuleResolver* module_resolver,
     fuchsia::modular::EntityResolver* entity_resolver,
+    modular::ModuleFacetReader* module_facet_reader,
     fidl::VectorPtr<fidl::StringPtr> mod_name, fuchsia::modular::Intent intent,
     fuchsia::modular::SurfaceRelationPtr surface_relation,
     fidl::VectorPtr<fidl::StringPtr> surface_parent_mod_name,

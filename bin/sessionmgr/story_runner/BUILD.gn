@@ -59,6 +59,7 @@ source_set("story_runner") {
     "//peridot/lib/ledger_client:operations",
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/ledger_client:types",
+    "//peridot/lib/module_manifest:module_facet_reader",
     "//peridot/lib/rapidjson",
     "//peridot/lib/util",
     "//peridot/lib/util:debug",

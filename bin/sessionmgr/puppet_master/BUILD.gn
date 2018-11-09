@@ -121,6 +121,7 @@ source_set("make_production_impl") {
   deps = [
     ":dispatch_story_command_executor",
     ":puppet_master_impl",
+    "//peridot/lib/module_manifest:module_facet_reader",
     "//peridot/bin/sessionmgr/puppet_master/command_runners:add_mod_command_runner",
     "//peridot/bin/sessionmgr/puppet_master/command_runners:focus_mod_command_runner",
     "//peridot/bin/sessionmgr/puppet_master/command_runners:remove_mod_command_runner",

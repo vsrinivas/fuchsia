@@ -99,14 +99,6 @@ class FindModulesCall
               std::move(resolver_query_),
               [this, flow](fuchsia::modular::FindModulesResponse response) {
                 response_ = std::move(response);
-                if (response_.status ==
-                    fuchsia::modular::FindModulesStatus::UNKNOWN_HANDLER) {
-                  FXL_LOG(WARNING) << "Could not resolve to a known module "
-                                      "with a manifest using handler=`"
-                                   << intent_->handler << "` with action=`"
-                                   << intent_->action
-                                   << "`. Going to try launching it anyway!";
-                }
                 // At this point, the only remaining |flow| is the one captured
                 // in this lambda. This operation should end once |flow| goes
                 // out of scope here.

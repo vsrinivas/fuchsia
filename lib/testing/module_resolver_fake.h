@@ -33,6 +33,9 @@ class ModuleResolverFake : fuchsia::modular::ModuleResolver {
   // Sets the manifest for GetModuleManifest.
   void SetManifest(fuchsia::modular::ModuleManifestPtr manifest);
 
+  // Sets the status for FindModules response.
+  void SetStatus(fuchsia::modular::FindModulesStatus status);
+
   // Adds a result to the FindModules response.
   void AddFindModulesResult(fuchsia::modular::FindModulesResult result);
 

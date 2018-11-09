@@ -12,6 +12,10 @@ ModuleResolverFake::ModuleResolverFake() {
 
 ModuleResolverFake::~ModuleResolverFake() = default;
 
+void ModuleResolverFake::SetStatus(fuchsia::modular::FindModulesStatus status) {
+  find_modules_response_.status = status;
+}
+
 void ModuleResolverFake::FindModules(fuchsia::modular::FindModulesQuery query,
                                      FindModulesCallback callback) {
   if (find_modules_validate_fn_) {

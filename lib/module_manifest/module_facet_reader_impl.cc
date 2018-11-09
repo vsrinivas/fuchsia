@@ -33,9 +33,7 @@ ModuleFacetReaderImpl::ModuleFacetReaderImpl(fuchsia::sys::LoaderPtr loader)
 ModuleFacetReaderImpl::~ModuleFacetReaderImpl() {}
 
 void ModuleFacetReaderImpl::GetModuleManifest(
-    const std::string& module_url,
-    std::function<void(fuchsia::modular::ModuleManifestPtr manifest)>
-        callback) {
+    const std::string& module_url, GetModuleManifestCallback callback) {
   auto canonical_url = CanonicalizeURL(module_url);
   loader_->LoadComponent(canonical_url, [canonical_url, callback](
                                             fuchsia::sys::PackagePtr package) {
@@ -81,7 +79,9 @@ void ModuleFacetReaderImpl::GetModuleManifest(
       callback({});
       return;
     }
-
+    // TODO(MF-94): Deprecate ModuleManfiest.binary in favour of getting it from
+    // the cmx manifest.
+    module_manifest->binary = canonical_url;
     callback(std::move(module_manifest));
   });
 }

@@ -8,6 +8,7 @@
             "fuchsia.net.LegacySocketProvider",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader",
             "fuchsia.tracelink.Registry",
             "fuchsia.ui.viewsv1.ViewManager",
             "fuchsia.ui.viewsv1.ViewSnapshot"

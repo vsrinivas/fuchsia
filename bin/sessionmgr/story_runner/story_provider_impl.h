@@ -34,6 +34,7 @@
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
+#include "peridot/lib/module_manifest/module_facet_reader.h"
 
 namespace modular {
 
@@ -54,6 +55,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
       fuchsia::modular::UserIntelligenceProvider* user_intelligence_provider,
       fuchsia::modular::ModuleResolver* module_resolver,
       fuchsia::modular::EntityResolver* entity_resolver,
+      modular::ModuleFacetReader* module_facet_reader,
       PresentationProvider* presentation_provider,
       fuchsia::ui::viewsv1::ViewSnapshotPtr view_snapshot, bool test);
 
@@ -90,6 +92,10 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
 
   fuchsia::modular::EntityResolver* entity_resolver() {
     return entity_resolver_;
+  }
+
+  modular::ModuleFacetReader* module_facet_reader() {
+    return module_facet_reader_;
   }
 
   // Called by StoryControllerImpl.
@@ -255,6 +261,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
       user_intelligence_provider_;                           // Not owned.
   fuchsia::modular::ModuleResolver* const module_resolver_;  // Not owned.
   fuchsia::modular::EntityResolver* const entity_resolver_;  // Not owned.
+  modular::ModuleFacetReader* const module_facet_reader_;  // Not owned.
   PresentationProvider* const presentation_provider_;        // Not owned.
 
   // When a story gets created, or when it gets focused on this device, we write

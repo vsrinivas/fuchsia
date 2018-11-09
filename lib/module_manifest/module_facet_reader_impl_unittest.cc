@@ -140,7 +140,7 @@ class ModuleFacetReaderImplTest : public gtest::RealLoopFixture {
   )";
 
   modular::ModuleFacetReader* module_facet_reader() {
-    return static_cast<modular::ModuleFacetReader*>(&module_facet_reader_impl_);
+    return &module_facet_reader_impl_;
   }
 
   // Populates a one-shot answer for ModuleFacetReader::GetModuleFacet()
@@ -169,7 +169,7 @@ TEST_F(ModuleFacetReaderImplTest, ModFacetExists) {
   module_facet_reader()->GetModuleManifest(
       kModName, [&done](fuchsia::modular::ModuleManifestPtr manifest) {
         EXPECT_TRUE(manifest);
-        EXPECT_EQ("binary", manifest->binary);
+        EXPECT_EQ("file://my_mod_url", manifest->binary);
         EXPECT_EQ("suggestion_headline", manifest->suggestion_headline);
         EXPECT_EQ(1u, manifest->intent_filters->size());
         done = true;

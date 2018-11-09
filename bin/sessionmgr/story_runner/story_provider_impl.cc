@@ -332,6 +332,7 @@ StoryProviderImpl::StoryProviderImpl(
         user_intelligence_provider,
     fuchsia::modular::ModuleResolver* const module_resolver,
     fuchsia::modular::EntityResolver* const entity_resolver,
+    modular::ModuleFacetReader* const module_facet_reader,
     PresentationProvider* const presentation_provider,
     fuchsia::ui::viewsv1::ViewSnapshotPtr view_snapshot, const bool test)
     : user_environment_(user_environment),
@@ -343,6 +344,7 @@ StoryProviderImpl::StoryProviderImpl(
       user_intelligence_provider_(user_intelligence_provider),
       module_resolver_(module_resolver),
       entity_resolver_(entity_resolver),
+      module_facet_reader_(module_facet_reader),
       presentation_provider_(presentation_provider),
       focus_provider_(std::move(focus_provider)),
       focus_watcher_binding_(this),

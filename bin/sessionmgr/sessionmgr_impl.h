@@ -32,6 +32,7 @@
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/environment.h"
 #include "peridot/lib/fidl/view_host.h"
+#include "peridot/lib/module_manifest/module_facet_reader.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
@@ -234,6 +235,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   std::unique_ptr<ViewHost> session_shell_view_host_;
 
   std::unique_ptr<EntityProviderRunner> entity_provider_runner_;
+  std::unique_ptr<ModuleFacetReader> module_facet_reader_;
 
   std::unique_ptr<SessionStorage> session_storage_;
   AsyncHolder<StoryProviderImpl> story_provider_impl_;

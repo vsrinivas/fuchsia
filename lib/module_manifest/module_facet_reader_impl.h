@@ -20,10 +20,8 @@ class ModuleFacetReaderImpl : public ModuleFacetReader {
   ~ModuleFacetReaderImpl() override;
 
  private:
-  void GetModuleManifest(
-      const std::string& module_url,
-      std::function<void(fuchsia::modular::ModuleManifestPtr manifest)>)
-      override;
+  void GetModuleManifest(const std::string& module_url,
+                         GetModuleManifestCallback callback) override;
 
   fuchsia::sys::LoaderPtr loader_;
 
