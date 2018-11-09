@@ -975,6 +975,10 @@ static zx_status_t usb_dev_set_default_config(usb_device_t* dev) {
         function_desc.interface_class = USB_CLASS_MSC;
         function_desc.interface_subclass = USB_SUBCLASS_MSC_SCSI;
         function_desc.interface_protocol = USB_PROTOCOL_MSC_BULK_ONLY;
+    } else if (strcasecmp(USB_DEVICE_FUNCTIONS, "test") == 0) {
+        function_desc.interface_class = USB_CLASS_VENDOR;
+        function_desc.interface_subclass = 0;
+        function_desc.interface_protocol = 0;
     } else {
         zxlogf(ERROR, "usb_dev_set_default_config: unknown function %s\n", USB_DEVICE_FUNCTIONS);
         return ZX_ERR_INVALID_ARGS;

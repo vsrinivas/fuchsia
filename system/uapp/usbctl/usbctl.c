@@ -21,13 +21,10 @@
 
 #define DEV_USB_PERIPHERAL_DIR  "/dev/class/usb-peripheral"
 
-#define GOOGLE_VID      0x18D1
-#define GOOGLE_CDC_PID  0xA020
-#define GOOGLE_UMS_PID  0xA021
-
 #define MANUFACTURER_STRING "Zircon"
 #define CDC_PRODUCT_STRING  "CDC Ethernet"
 #define UMS_PRODUCT_STRING  "USB Mass Storage"
+#define TEST_PRODUCT_STRING  "USB Function Test"
 #define SERIAL_STRING       "12345678"
 
 typedef zircon_usb_peripheral_FunctionDescriptor usb_function_descriptor_t;
@@ -44,6 +41,13 @@ const usb_function_descriptor_t ums_function_desc = {
     .interface_protocol = USB_PROTOCOL_MSC_BULK_ONLY,
 };
 
+const usb_function_descriptor_t test_function_desc = {
+    .interface_class = USB_CLASS_VENDOR,
+    .interface_subclass = 0,
+    .interface_protocol = 0,
+};
+
+
 typedef struct {
     const usb_function_descriptor_t* desc;
     const char* product_string;
@@ -54,15 +58,22 @@ typedef struct {
 static const usb_function_t cdc_function = {
     .desc = &cdc_function_desc,
     .product_string = CDC_PRODUCT_STRING,
-    .vid = GOOGLE_VID,
-    .pid = GOOGLE_CDC_PID,
+    .vid = GOOGLE_USB_VID,
+    .pid = GOOGLE_USB_CDC_PID,
 };
 
 static const usb_function_t ums_function = {
     .desc = &ums_function_desc,
     .product_string = UMS_PRODUCT_STRING,
-    .vid = GOOGLE_VID,
-    .pid = GOOGLE_UMS_PID,
+    .vid = GOOGLE_USB_VID,
+    .pid = GOOGLE_USB_UMS_PID,
+};
+
+static const usb_function_t test_function = {
+    .desc = &test_function_desc,
+    .product_string = TEST_PRODUCT_STRING,
+    .vid = GOOGLE_USB_VID,
+    .pid = GOOGLE_USB_PERIPHERAL_TEST_PID,
 };
 
 static zircon_usb_peripheral_DeviceDescriptor device_desc = {
@@ -173,6 +184,8 @@ static int peripheral_command(zx_handle_t svc, int argc, const char* argv[]) {
         status = device_init(svc, &cdc_function);
     } else if (!strcmp(command, "init-ums")) {
         status = device_init(svc, &ums_function);
+    } else if (!strcmp(command, "init-test")) {
+        status = device_init(svc, &test_function);
      } else {
         goto usage;
     }
@@ -180,7 +193,7 @@ static int peripheral_command(zx_handle_t svc, int argc, const char* argv[]) {
     return status == ZX_OK ? 0 : -1;
 
 usage:
-    fprintf(stderr, "usage: usbctl device [reset|init-ums]\n");
+    fprintf(stderr, "usage: usbctl device [reset|init-ums|init-cdc|init-test]\n");
     return -1;
 }
 
@@ -251,7 +264,7 @@ static usbctl_command_t commands[] = {
     {
         "peripheral",
         peripheral_command,
-        "peripheral [reset|init-cdc|init-ums] resets the peripheral or "
+        "peripheral [reset|init-cdc|init-ums|init-test] resets the peripheral or "
         "initializes the UMS function"
     },
     {
