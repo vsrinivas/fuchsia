@@ -91,6 +91,7 @@ source_set("brcmfmac_srcs") {
 
   deps = [
     "//garnet/lib/wlan/protocol",
+    "//zircon/public/banjo/ddk-protocol-gpio",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/broadcom",
     "//zircon/public/lib/ddk",
