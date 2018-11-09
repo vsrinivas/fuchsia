@@ -556,7 +556,7 @@ TEST(SparseByteBufferTest, ShrinkRegionBack) {
     SparseByteBuffer::Region result = under_test.ShrinkRegionBack(
         under_test.FindRegionContaining(0, under_test.null_region()), 1);
     ExpectRegion(&under_test, 0, 3, result);
-    ExpectHole(&under_test, 3, kSize - 3, under_test.FindHoleContaining(0));
+    ExpectHole(&under_test, 3, kSize - 3, under_test.FindHoleContaining(3));
   }
 
   {

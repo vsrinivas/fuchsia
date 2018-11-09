@@ -162,6 +162,11 @@ SparseByteBuffer::Hole SparseByteBuffer::FindHoleContaining(size_t position) {
     }
   }
 
+  if (iter == holes_.end() || iter->first + iter->second <= position ||
+      iter->first > position) {
+    return null_hole();
+  }
+
   return Hole(iter);
 }
 
