@@ -197,21 +197,23 @@ void MediaApp::DisplayConfigurationSettings() {
   } else if (set_stream_gain_) {
     printf(", at stream gain %.3f dB", stream_gain_db_);
   }
+  if (set_stream_mute_) {
+    printf(", after setting stream Mute to %s",
+           stream_mute_ ? "TRUE" : "FALSE");
+  }
 
   printf(".\nSignal will play for %.3f seconds, using %u buffers of %u frames",
          duration_secs_, payloads_per_total_mapping_, frames_per_payload_);
 
-  if (set_system_gain_ || set_system_mute_ || set_system_unmute_) {
+  if (set_system_gain_ || set_system_mute_) {
     printf(", after setting ");
   }
   if (set_system_gain_) {
-    printf("System Gain to %.3fdB", system_gain_db_);
-    if (set_system_mute_ || set_system_unmute_) {
-      printf(" and ");
-    }
+    printf("System Gain to %.3fdB%s", system_gain_db_,
+           set_system_mute_ ? " and " : "");
   }
-  if (set_system_mute_ || set_system_unmute_) {
-    printf("System Mute to %s", set_system_mute_ ? "TRUE" : "FALSE");
+  if (set_system_mute_) {
+    printf("System Mute to %s", system_mute_ ? "TRUE" : "FALSE");
   }
   printf(".\n\n");
 }
@@ -229,9 +231,7 @@ void MediaApp::AcquireAudioRenderer(component::StartupContext* app_context) {
   }
 
   if (set_system_mute_) {
-    audio->SetSystemMute(true);
-  } else if (set_system_unmute_) {
-    audio->SetSystemMute(false);
+    audio->SetSystemMute(system_mute_);
   }
 
   if (set_policy_) {
@@ -268,15 +268,16 @@ void MediaApp::SetStreamType() {
 
   audio_renderer_->SetPcmStreamType(std::move(format));
 
-  if (set_stream_gain_ || ramp_stream_gain_) {
-    // Set stream gain, and clear the mute status.
+  // Set stream gain and mute, if specified.
+  if (set_stream_mute_) {
+    gain_control_->SetMute(stream_mute_);
+  }
+  if (set_stream_gain_) {
     gain_control_->SetGain(stream_gain_db_);
-    gain_control_->SetMute(false);
-
-    if (ramp_stream_gain_) {
-      gain_control_->SetGainWithRamp(ramp_target_gain_db_, ramp_duration_nsec_,
-                                     fuchsia::media::AudioRamp::SCALE_LINEAR);
-    }
+  }
+  if (ramp_stream_gain_) {
+    gain_control_->SetGainWithRamp(ramp_target_gain_db_, ramp_duration_nsec_,
+                                   fuchsia::media::AudioRamp::SCALE_LINEAR);
   }
 }
 

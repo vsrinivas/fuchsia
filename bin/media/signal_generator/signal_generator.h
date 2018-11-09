@@ -49,8 +49,15 @@ class MediaApp {
   void set_save_to_file(bool save_to_file) { save_to_file_ = save_to_file; }
   void set_save_file_name(std::string file_name) { file_name_ = file_name; }
 
-  void set_will_set_stream_gain(bool set_gain) { set_stream_gain_ = set_gain; }
-  void set_stream_gain(float gain_db) { stream_gain_db_ = gain_db; }
+  void set_stream_gain(float gain_db) {
+    set_stream_gain_ = true;
+    stream_gain_db_ = gain_db;
+  }
+  void set_stream_mute(bool mute) {
+    set_stream_mute_ = true;
+    stream_mute_ = mute;
+  }
+
   void set_will_ramp_stream_gain() { ramp_stream_gain_ = true; }
   void set_ramp_duration_nsec(zx_duration_t duration_nsec) {
     ramp_duration_nsec_ = duration_nsec;
@@ -59,13 +66,17 @@ class MediaApp {
     ramp_target_gain_db_ = gain_db;
   }
 
-  void set_will_set_system_gain() { set_system_gain_ = true; }
-  void set_system_gain(float gain_db) { system_gain_db_ = gain_db; }
-  void set_system_mute() { set_system_mute_ = true; }
-  void set_system_unmute() { set_system_unmute_ = true; }
+  void set_system_gain(float gain_db) {
+    set_system_gain_ = true;
+    system_gain_db_ = gain_db;
+  }
+  void set_system_mute(bool system_mute) {
+    set_system_mute_ = true;
+    system_mute_ = system_mute;
+  }
 
-  void set_will_set_audio_policy(bool set_policy) { set_policy_ = set_policy; }
   void set_audio_policy(fuchsia::media::AudioOutputRoutingPolicy policy) {
+    set_policy_ = true;
     audio_policy_ = policy;
   }
 
@@ -137,6 +148,9 @@ class MediaApp {
 
   bool set_stream_gain_ = false;
   float stream_gain_db_ = 0.0;
+  bool set_stream_mute_ = false;
+  bool stream_mute_ = false;
+
   bool ramp_stream_gain_ = false;
   float ramp_target_gain_db_ = 0.0;
   zx_duration_t ramp_duration_nsec_;
@@ -144,7 +158,7 @@ class MediaApp {
   bool set_system_gain_ = false;
   float system_gain_db_;
   bool set_system_mute_ = false;
-  bool set_system_unmute_ = false;
+  bool system_mute_ = false;
 
   bool set_policy_ = false;
   fuchsia::media::AudioOutputRoutingPolicy audio_policy_;
