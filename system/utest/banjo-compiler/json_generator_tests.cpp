@@ -236,8 +236,8 @@ union PizzaOrPasta {
     }
   ],
   "declaration_order": [
-    "banjo.test.json/Pizza",
     "banjo.test.json/Pasta",
+    "banjo.test.json/Pizza",
     "banjo.test.json/PizzaOrPasta"
   ],
   "declarations": {

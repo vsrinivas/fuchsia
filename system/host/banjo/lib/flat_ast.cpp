@@ -9,6 +9,7 @@
 #include <stdio.h>
 
 #include <algorithm>
+#include <deque>
 #include <regex>
 #include <sstream>
 
@@ -1086,9 +1087,8 @@ Decl* Library::LookupDeclByType(const Type* type, LookupOption option) const {
         case flat::Type::Kind::kPrimitive:
             return nullptr;
         case flat::Type::Kind::kVector: {
-            return nullptr;
-            //type = static_cast<const flat::VectorType*>(type)->element_type.get();
-            //continue;
+            type = static_cast<const flat::VectorType*>(type)->element_type.get();
+            continue;
         }
         case flat::Type::Kind::kArray: {
             type = static_cast<const flat::ArrayType*>(type)->element_type.get();
@@ -1229,14 +1229,16 @@ bool Library::SortDeclarations() {
         std::set<Decl*> deps;
         if (!DeclDependencies(decl, &deps))
             return false;
-        degrees[decl] += deps.size();
         for (Decl* dep : deps) {
-            inverse_dependencies[dep].push_back(decl);
+            if (dep != decl) {
+                degrees[decl] +=1;
+                inverse_dependencies[dep].push_back(decl);
+            }
         }
     }
 
     // Start with all decls that have no incoming edges.
-    std::vector<Decl*> decls_without_deps;
+    std::deque<Decl*> decls_without_deps;
     for (const auto& decl_and_degree : degrees) {
         if (decl_and_degree.second == 0u) {
             decls_without_deps.push_back(decl_and_degree.first);
@@ -1245,8 +1247,8 @@ bool Library::SortDeclarations() {
 
     while (!decls_without_deps.empty()) {
         // Pull one out of the queue.
-        auto decl = decls_without_deps.back();
-        decls_without_deps.pop_back();
+        auto decl = decls_without_deps.front();
+        decls_without_deps.pop_front();
         assert(degrees[decl] == 0u);
         declaration_order_.push_back(decl);
 
@@ -1257,8 +1259,9 @@ bool Library::SortDeclarations() {
             uint32_t& degree = degrees[inverse_dep];
             assert(degree != 0u);
             degree -= 1;
-            if (degree == 0u)
+            if (degree == 0u) {
                 decls_without_deps.push_back(inverse_dep);
+            }
         }
     }
 
