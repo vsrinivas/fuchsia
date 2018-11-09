@@ -9,6 +9,7 @@
 #include "bus.h"
 
 zx_status_t rtl88xx_bind_wlan_phy(void* ctx, zx_device_t* device) {
+    // Forward to the actual implementation in C++.
     return ::wlan::rtl88xx::WlanPhy::Create(device);
 }
 
@@ -43,6 +44,7 @@ zx_status_t WlanPhy::Create(zx_device_t* bus_device) {
     if (status != ZX_OK) { return status; }
 
     static zx_protocol_device_t device_ops = {
+        .version = DEVICE_OPS_VERSION,
         .unbind = [](void* ctx) { reinterpret_cast<WlanPhy*>(ctx)->Unbind(); },
         .release = [](void* ctx) { reinterpret_cast<WlanPhy*>(ctx)->Release(); },
     };

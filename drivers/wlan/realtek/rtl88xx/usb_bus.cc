@@ -14,6 +14,8 @@
 #include <zircon/hw/usb.h>
 #include <zircon/status.h>
 
+#include "rtl88xx_registers.h"
+
 namespace wlan {
 namespace rtl88xx {
 namespace {
@@ -74,6 +76,8 @@ UsbBus::~UsbBus() {}
 zx_status_t UsbBus::Create(usb_protocol_t* usb_protocol,
                            const usb_interface_descriptor_t& usb_iface_desc,
                            std::unique_ptr<Bus>* bus) {
+    zx_status_t status = ZX_OK;
+
 #if 0   // TODO(sheu): re-enable when Zircon control endpoint stalls are fixed.
     status = usb_set_interface(usb_protocol, usb_iface_desc.bInterfaceNumber,
                                usb_iface_desc.bAlternateSetting);
@@ -88,6 +92,37 @@ zx_status_t UsbBus::Create(usb_protocol_t* usb_protocol,
 
     std::unique_ptr<UsbBus> usb_bus(new UsbBus());
     usb_bus->usb_protocol_ = *usb_protocol;
+
+    // Downcast UsbBus to Bus, so the template versions of {Read,Write}Register are resolved below.
+    Bus* const bus_interface = usb_bus.get();
+
+    reg::RXDMA_MODE rxdma_mode;
+    rxdma_mode.set_dma_mode(1);
+    rxdma_mode.set_burst_cnt(3);
+
+    // Configure the USB bus for USB 1/2/3.
+    reg::SYS_CFG2 cfg2;
+    if ((status = bus_interface->ReadRegister(&cfg2)) != ZX_OK) { return status; }
+    if (cfg2.u3_term_detect()) {
+        // USB 3.0 mode.
+        rxdma_mode.set_burst_size(reg::BURST_SIZE_3_0);
+    } else {
+        reg::USB_USBSTAT usb_usbstat;
+        if ((status = bus_interface->ReadRegister(&usb_usbstat)) != ZX_OK) { return status; }
+        if (usb_usbstat.burst_size() == reg::BURST_SIZE_2_0_HS) {
+            // USB 2.0 mode.
+            rxdma_mode.set_burst_size(reg::BURST_SIZE_2_0_HS);
+        } else {
+            // USB 1.1 mode.
+            rxdma_mode.set_burst_size(reg::BURST_SIZE_2_0_FS);
+        }
+    }
+    if ((status = bus_interface->WriteRegister(rxdma_mode)) != ZX_OK) { return status; }
+
+    reg::TXDMA_OFFSET_CHK txdma_offset_chk;
+    if ((status = bus_interface->ReadRegister(&txdma_offset_chk)) != ZX_OK) { return status; }
+    txdma_offset_chk.set_drop_data_en(1);
+    if ((status = bus_interface->WriteRegister(txdma_offset_chk)) != ZX_OK) { return status; }
 
     *bus = std::move(usb_bus);
     return ZX_OK;

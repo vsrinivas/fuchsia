@@ -10,7 +10,8 @@
 extern "C" {
 #endif  // __cplusplus
 
-// This implements zx_driver_ops.bind, creating a WlanPhy to manage the Realtek instance.
+// This implements zx_driver_ops.bind, creating a WlanPhy to manage the Realtek instance. This is
+// declared with C linkage to interface with the DDK.
 zx_status_t rtl88xx_bind_wlan_phy(void* ctx, zx_device_t* device);
 
 #ifdef __cplusplus
@@ -32,7 +33,6 @@ namespace rtl88xx {
 // This class provides a zx_device_t implementing the ZX_PROTOCOL_WLANPHY_IMPL protocol for the
 // Realtek driver. It owns the Device that implements chipset-specific logic, as well as managing
 // the WlanMac instances that present the MAC interface.
-
 class WlanPhy {
    public:
     // Factory function for WlanPhy instances. This factory returns an error code, rather than the
