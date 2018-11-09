@@ -321,6 +321,7 @@ bool BlobfsTest::ForceRemount(zx_status_t* fsck_result) {
     }
 
     ASSERT_TRUE(Mount());
+
     // In the event of success, set state to kRunning, regardless of whether the state was kMinimal
     // before. Since the partition is now mounted, we will need to umount/fsck on Teardown.
     state_ = FsTestState::kRunning;
@@ -1440,19 +1441,27 @@ static bool WaitForRead(BlobfsTest* blobfsTest) {
     int dupfd = dup(fd.get());
     thrd_t waiter_thread;
     thrd_create(&waiter_thread, wait_until_readable, &dupfd);
+    int result;
+    int success;
 
-    ASSERT_TRUE(check_not_readable(fd.get()), "Should not be readable after open");
-    ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
-    ASSERT_TRUE(check_not_readable(fd.get()), "Should not be readable after alloc");
-    ASSERT_EQ(StreamAll(write, fd.get(), info->data.get(), info->size_data), 0,
-              "Failed to write Data");
+    {
+        // In case the test fails, join the thread before returning from the test.
+        auto join_thread = fbl::MakeAutoCall([&]() {
+            success = thrd_join(waiter_thread, &result);
+        });
 
-    // Cool, everything is readable. What if we try accessing the blob status now?
-    EXPECT_TRUE(check_readable(fd.get()));
+        ASSERT_TRUE(check_not_readable(fd.get()), "Should not be readable after open");
+        ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
+        ASSERT_TRUE(check_not_readable(fd.get()), "Should not be readable after alloc");
+        ASSERT_EQ(StreamAll(write, fd.get(), info->data.get(), info->size_data), 0,
+                "Failed to write Data");
+
+        // Cool, everything is readable. What if we try accessing the blob status now?
+        EXPECT_TRUE(check_readable(fd.get()));
+    }
 
     // Our background thread should have also completed successfully...
-    int result;
-    ASSERT_EQ(thrd_join(waiter_thread, &result), 0, "thrd_join failed");
+    ASSERT_EQ(success, thrd_success, "thrd_join failed");
     ASSERT_EQ(result, 0, "Unexpected result from background thread");
 
     // Double check that attempting to read early didn't cause problems...
@@ -2031,7 +2040,8 @@ static bool CreateUmountRemountLargeMultithreaded(BlobfsTest* blobfsTest) {
                   thrd_success);
     }
 
-    // Wait for all threads to complete
+    // Wait for all threads to complete.
+    // Currently, threads will always return a successful status.
     for (size_t i = 0; i < num_threads; i++) {
         int res;
         ASSERT_EQ(thrd_join(threads[i], &res), thrd_success);
@@ -2418,17 +2428,25 @@ static bool CreateWriteReopen(BlobfsTest* blobfsTest) {
         ASSERT_TRUE(MakeBlobUnverified(anchor_info.get(), &anchor_fd));
         ASSERT_EQ(close(fd.release()), 0);
 
+        int result;
+        int success;
         thrd_t thread;
         ASSERT_EQ(thrd_create(&thread, reopen_thread, &dat), thrd_success);
 
-        // Sleep while the thread continually opens and closes the blob
-        usleep(1000000);
-        ASSERT_EQ(syncfs(anchor_fd.get()), 0);
-        atomic_store(&dat.complete, true);
+        {
+            // In case the test fails, always join the thread before returning from the test.
+            auto join_thread = fbl::MakeAutoCall([&]() {
+                atomic_store(&dat.complete, true);
+                success = thrd_join(thread, &result);
+            });
 
-        int res;
-        ASSERT_EQ(thrd_join(thread, &res), thrd_success);
-        ASSERT_EQ(res, 0);
+            // Sleep while the thread continually opens and closes the blob
+            usleep(1000000);
+            ASSERT_EQ(syncfs(anchor_fd.get()), 0);
+        }
+
+        ASSERT_EQ(success, thrd_success);
+        ASSERT_EQ(result, 0);
 
         ASSERT_EQ(close(anchor_fd.release()), 0);
         ASSERT_EQ(unlink(info->path), 0);
