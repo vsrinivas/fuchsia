@@ -130,6 +130,41 @@ TEST(SparseByteBufferTest, InitialState) {
              under_test.FindOrCreateHole(0, under_test.null_hole()));
 }
 
+TEST(SparseByteBufferTest, BytesStored) {
+  {
+    SparseByteBuffer under_test =
+        BufferWithRegions({{0, 10}, {30, 2}, {780, 2}});
+    EXPECT_EQ(under_test.BytesStored(), 14u);
+  }
+  {
+    SparseByteBuffer under_test = BufferWithRegions({});
+    EXPECT_EQ(under_test.BytesStored(), 0u);
+  }
+}
+
+TEST(SparseByteBufferTest, NextMissingByte) {
+  {
+    SparseByteBuffer under_test =
+        BufferWithRegions({{0, 10}, {30, 2}, {780, 2}});
+    ASSERT_TRUE(under_test.NextMissingByte(30).has_value());
+    EXPECT_EQ(*under_test.NextMissingByte(30), 32u);
+
+    ASSERT_TRUE(under_test.NextMissingByte(0).has_value());
+    EXPECT_EQ(*under_test.NextMissingByte(0), 10u);
+
+    ASSERT_TRUE(under_test.NextMissingByte(100).has_value());
+    EXPECT_EQ(*under_test.NextMissingByte(100), 100u);
+  }
+  {
+    SparseByteBuffer under_test = BufferWithRegions({});
+    EXPECT_EQ(under_test.NextMissingByte(0), std::make_optional(0u));
+  }
+  {
+    SparseByteBuffer under_test = BufferWithRegions({{0, kSize}});
+    EXPECT_EQ(under_test.NextMissingByte(0), std::nullopt);
+  }
+}
+
 TEST(SparseByteBufferTest, ReadRange) {
   {
     // Read range filled with regions.

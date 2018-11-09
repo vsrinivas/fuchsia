@@ -111,6 +111,27 @@ SparseByteBuffer::Region SparseByteBuffer::FindRegionContaining(size_t position,
   return Region(iter);
 }
 
+size_t SparseByteBuffer::BytesStored() {
+  size_t bytes_stored = 0;
+  for (auto& region : regions_) {
+    bytes_stored += region.second.size();
+  }
+  return bytes_stored;
+}
+
+std::optional<size_t> SparseByteBuffer::NextMissingByte(size_t start) {
+  if (FindHoleContaining(start) != null_hole()) {
+    return start;
+  }
+
+  HolesIter iter = holes_.lower_bound(start);
+  if (iter == holes_.end()) {
+    return std::nullopt;
+  }
+
+  return std::max(iter->first, start);
+}
+
 SparseByteBuffer::Hole SparseByteBuffer::FindOrCreateHole(size_t position,
                                                           Hole hint) {
   FXL_DCHECK(size_ > 0u);

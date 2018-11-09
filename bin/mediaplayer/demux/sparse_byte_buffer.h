@@ -6,6 +6,7 @@
 #define GARNET_BIN_MEDIAPLAYER_DEMUX_SPARSE_BYTE_BUFFER_H_
 
 #include <map>
+#include <optional>
 #include <vector>
 
 namespace media_player {
@@ -74,6 +75,13 @@ class SparseByteBuffer {
   // Finds a region containing the specified position. This method will check
   // hint and its successor, if they're valid, before doing a search.
   Region FindRegionContaining(size_t position, Region hint);
+
+  // Returns the number of bytes stored in the buffer across all regions.
+  size_t BytesStored();
+
+  // Returns the next missing byte in the buffer. If no bytes are missing ahead
+  // of |start|, |std::nullopt| is returned.
+  std::optional<size_t> NextMissingByte(size_t start);
 
   // Finds or creates a hole at the specified position. This method will check
   // hint, if it's valid, before doing a search.
