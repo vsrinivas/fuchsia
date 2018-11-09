@@ -14,12 +14,7 @@ namespace audio {
 namespace test {
 
 //
-// AudioRenderer tests
-//
-//
-// TODO(mpuryear): Remaining test coverage work within AudioRenderer:
-// SetPtsUnits, SetPtsContinuityThreshold, SetReferenceClock;
-// Also, positive coverage for Play, PlayNoReply, Pause, PauseNoReply,
+// AudioRendererTest
 //
 // This set of tests verifies asynchronous usage of AudioRenderer.
 class AudioRendererTest : public gtest::RealLoopFixture {
@@ -31,7 +26,7 @@ class AudioRendererTest : public gtest::RealLoopFixture {
     environment_services_->ConnectToService(audio_.NewRequest());
     ASSERT_TRUE(audio_);
 
-    audio_.set_error_handler([this](zx_status_t status) {
+    audio_.set_error_handler([this]() {
       error_occurred_ = true;
       QuitLoop();
     });
@@ -39,7 +34,7 @@ class AudioRendererTest : public gtest::RealLoopFixture {
     audio_->CreateAudioRenderer(audio_renderer_.NewRequest());
     ASSERT_TRUE(audio_renderer_);
 
-    audio_renderer_.set_error_handler([this](zx_status_t status) {
+    audio_renderer_.set_error_handler([this]() {
       error_occurred_ = true;
       QuitLoop();
     });
@@ -62,16 +57,29 @@ class AudioRendererTest : public gtest::RealLoopFixture {
   bool error_occurred_ = false;
 };
 
-// Slight specialization, for test cases that expect the binding to disconnect.
+//
+// AudioRendererTestNegative
+//
+// A slight specialization of AudioRendererTest, to validate scenarios in which
+// we expect the AudioRenderer binding to disconnect.
 class AudioRendererTest_Negative : public AudioRendererTest {
  protected:
   void TearDown() override {
-    EXPECT_TRUE(error_occurred_);
     EXPECT_FALSE(audio_renderer_);
+    EXPECT_TRUE(error_occurred_);
 
     ::gtest::RealLoopFixture::TearDown();
   }
 };
+
+//
+// AudioRenderer validation
+//
+//
+// TODO(mpuryear): Remaining test coverage work within AudioRenderer:
+// SetPtsUnits, SetPtsContinuityThreshold, SetReferenceClock;
+// Also, positive coverage for Play, PlayNoReply, Pause, PauseNoReply,
+//
 
 // AudioRenderer contains an internal state machine. To enter the "configured"
 // state, it must receive and successfully execute both SetPcmStreamType and
@@ -122,9 +130,119 @@ TEST_F(AudioRendererTest, SetPcmStreamType) {
   audio_renderer_->SetPcmStreamType(std::move(format2));
 
   // Allow an error Disconnect callback, but we expect a timeout instead.
-  EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
+  EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected)) << kConnectionErr;
 }
 
+// TODO(mpuryear): test SetPtsUnits(uint32 tick_per_sec_num,uint32 denom);
+
+// TODO(mpuryear): test SetPtsContinuityThreshold(float32 threshold_sec);
+
+// TODO(mpuryear): test SetReferenceClock(handle reference_clock);
+
+// TODO(mpuryear): test Play(int64 ref_time, int64 med)->(int64 ref, int64 med);
+// Verify success after setting format and submitting buffers.
+
+// TODO(mpuryear): test PlayNoReply(int64 reference_time, int64 media_time);
+// Verify success after setting format and submitting buffers.
+
+// TODO(mpuryear): test Pause()->(int64 reference_time, int64 media_time);
+// Verify success after setting format and submitting buffers.
+
+// TODO(mpuryear): test PauseNoReply();
+// Verify success after setting format and submitting buffers.
+
+// Validate MinLeadTime events, when enabled.
+TEST_F(AudioRendererTest, EnableMinLeadTimeEvents) {
+  int64_t min_lead_time = -1;
+  audio_renderer_.events().OnMinLeadTimeChanged =
+      [this, &min_lead_time](int64_t min_lead_time_nsec) {
+        min_lead_time = min_lead_time_nsec;
+        QuitLoop();
+      };
+
+  audio_renderer_->EnableMinLeadTimeEvents(true);
+
+  // After enabling MinLeadTime events, we expect an initial notification.
+  // Because we have not yet set the format, we expect MinLeadTime to be 0.
+  EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected))
+      << "No MinLeadTime update event received";
+  EXPECT_EQ(min_lead_time, 0);
+
+  // FYI: after setting format, MinLeadTime should change to be greater than 0
+  // IF the target has AudioOutput devices, or remain 0 (no callback) if it has
+  // none. Both are valid possibilities, so we don't test that aspect here.
+}
+
+// Validate MinLeadTime events, when disabled.
+TEST_F(AudioRendererTest, DisableMinLeadTimeEvents) {
+  int64_t min_lead_time = -1;
+  audio_renderer_.events().OnMinLeadTimeChanged =
+      [this, &min_lead_time](int64_t min_lead_time_nsec) {
+        min_lead_time = min_lead_time_nsec;
+        QuitLoop();
+      };
+
+  audio_renderer_->EnableMinLeadTimeEvents(false);
+
+  // Callback should not be received (expect loop to timeout? TRUE).
+  // If we did, either way it is an error: MinLeadTime event or disconnect.
+  EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
+  EXPECT_FALSE(error_occurred_) << kConnectionErr;
+  EXPECT_EQ(min_lead_time, -1)
+      << "Received MinLeadTime update while events were disabled";
+}
+
+//
+// Basic validation of GetMinLeadTime() for the asynchronous AudioRenderer.
+// Before SetPcmStreamType is called, MinLeadTime should equal zero.
+TEST_F(AudioRendererTest, GetMinLeadTime) {
+  int64_t min_lead_time = -1;
+  audio_renderer_->GetMinLeadTime(
+      [this, &min_lead_time](int64_t min_lead_time_nsec) {
+        min_lead_time = min_lead_time_nsec;
+        QuitLoop();
+      });
+
+  // Wait to receive Lead time callback (will loop timeout? EXPECT_FALSE)
+  EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
+  EXPECT_EQ(min_lead_time, 0);
+}
+
+// Test creation and interface independence of GainControl.
+TEST_F(AudioRendererTest, BindGainControl) {
+  // Validate AudioRenderer can create GainControl interface.
+  audio_renderer_->BindGainControl(gain_control_.NewRequest());
+  // Give AudioRenderer interface a chance to disconnect if it must.
+  ASSERT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected)) << kConnectionErr;
+  EXPECT_TRUE(gain_control_);
+  EXPECT_TRUE(audio_renderer_);
+
+  // Validate that AudioRenderer persists without GainControl.
+  gain_control_.Unbind();
+  EXPECT_FALSE(gain_control_);
+  // Give AudioRenderer interface a chance to disconnect if it must.
+  EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected)) << kConnectionErr;
+  EXPECT_TRUE(audio_renderer_);
+
+  // Validate GainControl persists after AudioRenderer is unbound.
+  audio_renderer_->BindGainControl(gain_control_.NewRequest());
+  audio_renderer_.Unbind();
+  EXPECT_FALSE(audio_renderer_);
+  // At this point, the GainControl may still exist, but...
+  EXPECT_TRUE(gain_control_);
+
+  // ...give GainControl interface a chance to disconnect if it must...
+  EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected)) << kConnectionErr;
+  // ... and by now, it should be gone.
+  EXPECT_FALSE(gain_control_);
+}
+
+//
+// AudioRendererTest_Negative
+//
+// Separate test class for cases in which we expect the AudioRenderer binding to
+// disconnect -- and our AudioRenderer interface ptr to be reset.
+//
 // SetStreamType is not yet implemented and expected to cause a Disconnect.
 TEST_F(AudioRendererTest_Negative, SetStreamType) {
   fuchsia::media::AudioStreamType stream_format;
@@ -142,14 +260,10 @@ TEST_F(AudioRendererTest_Negative, SetStreamType) {
   EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
 }
 
-// TODO(mpuryear): test SetPtsUnits(uint32 tick_per_sec_num,uint32 denom);
-
-// TODO(mpuryear): test SetPtsContinuityThreshold(float32 threshold_sec);
-
-// TODO(mpuryear): test SetReferenceClock(handle reference_clock);
-
-// TODO(mpuryear): test Play(int64 ref_time, int64 med)->(int64 ref, int64 med);
-// Verify success after setting format and submitting buffers.
+// TODO(mpuryear): negative tests for the following:
+//    SetPtsUnits(uint32 tick_per_sec_num,uint32 denom)
+//    SetPtsContinuityThreshold(float32 threshold_sec)
+//    SetReferenceClock(handle reference_clock)
 
 // Before setting format, Play should not succeed.
 TEST_F(AudioRendererTest_Negative, PlayWithoutFormat) {
@@ -197,9 +311,6 @@ TEST_F(AudioRendererTest_Negative, PlayWithoutBuffers) {
   EXPECT_EQ(media_time_received, -1);
 }
 
-// TODO(mpuryear): test PlayNoReply(int64 reference_time, int64 media_time);
-// Verify success after setting format and submitting buffers.
-
 // Before setting format, PlayNoReply should cause a Disconnect.
 TEST_F(AudioRendererTest_Negative, PlayNoReplyWithoutFormat) {
   audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
@@ -227,9 +338,6 @@ TEST_F(AudioRendererTest_Negative, PauseWithoutFormat) {
   EXPECT_EQ(media_time_received, -1);
 }
 
-// TODO(mpuryear): test Pause()->(int64 reference_time, int64 media_time);
-// Verify success after setting format and submitting buffers.
-
 // After setting format but before submitting buffers, Pause should not succeed.
 TEST_F(AudioRendererTest_Negative, PauseWithoutBuffers) {
   fuchsia::media::AudioStreamType format;
@@ -254,96 +362,12 @@ TEST_F(AudioRendererTest_Negative, PauseWithoutBuffers) {
   EXPECT_EQ(media_time_received, -1);
 }
 
-// TODO(mpuryear): test PauseNoReply();
-// Verify success after setting format and submitting buffers.
-
 // Before setting format, PauseNoReply should cause a Disconnect.
 TEST_F(AudioRendererTest_Negative, PauseNoReplyWithoutFormat) {
   audio_renderer_->PauseNoReply();
 
   // Disconnect callback should be received.
   EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
-}
-
-// Validate MinLeadTime events, when enabled.
-TEST_F(AudioRendererTest, EnableMinLeadTimeEvents) {
-  int64_t min_lead_time = -1;
-  audio_renderer_.events().OnMinLeadTimeChanged =
-      [this, &min_lead_time](int64_t min_lead_time_nsec) {
-        min_lead_time = min_lead_time_nsec;
-        QuitLoop();
-      };
-
-  audio_renderer_->EnableMinLeadTimeEvents(true);
-
-  // We expect to receive the event (no timeout) with value 0.
-  EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
-  EXPECT_EQ(min_lead_time, 0);
-
-  // FYI: after setting format, MinLeadTime > 0 IF we have devices. Otherwise
-  // it remains 0 (no callback). Both are valid, so we don't test that aspect
-  // here.
-}
-
-// Validate MinLeadTime events, when disabled.
-TEST_F(AudioRendererTest, DisableMinLeadTimeEvents) {
-  int64_t min_lead_time = -1;
-  audio_renderer_.events().OnMinLeadTimeChanged =
-      [this, &min_lead_time](int64_t min_lead_time_nsec) {
-        min_lead_time = min_lead_time_nsec;
-        QuitLoop();
-      };
-
-  audio_renderer_->EnableMinLeadTimeEvents(false);
-
-  // Callback should not be received (expect loop to timeout? TRUE)
-  EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
-  EXPECT_EQ(min_lead_time, -1);
-}
-
-//
-// Basic validation of GetMinLeadTime() for the asynchronous AudioRenderer.
-// Before SetPcmStreamType is called, MinLeadTime should equal zero.
-TEST_F(AudioRendererTest, GetMinLeadTime) {
-  int64_t min_lead_time = -1;
-  audio_renderer_->GetMinLeadTime(
-      [this, &min_lead_time](int64_t min_lead_time_nsec) {
-        min_lead_time = min_lead_time_nsec;
-        QuitLoop();
-      });
-
-  // Wait to receive Lead time callback (will loop timeout? EXPECT_FALSE)
-  EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
-  EXPECT_EQ(min_lead_time, 0);
-}
-
-// Test creation and interface independence of GainControl.
-TEST_F(AudioRendererTest, BindGainControl) {
-  // Validate AudioRenderer can create GainControl interface.
-  audio_renderer_->BindGainControl(gain_control_.NewRequest());
-  // Give AudioRenderer interface a chance to disconnect if it must.
-  ASSERT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected)) << kConnectionErr;
-  EXPECT_TRUE(gain_control_);
-  EXPECT_TRUE(audio_renderer_);
-
-  // Validate that AudioRenderer persists without GainControl.
-  gain_control_.Unbind();
-  EXPECT_FALSE(gain_control_);
-  // Give AudioRenderer interface a chance to disconnect if it must.
-  EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
-  EXPECT_TRUE(audio_renderer_);
-
-  // Validate GainControl persists after AudioRenderer is unbound.
-  audio_renderer_->BindGainControl(gain_control_.NewRequest());
-  audio_renderer_.Unbind();
-  EXPECT_FALSE(audio_renderer_);
-  // At this point, the GainControl may still exist, but...
-  EXPECT_TRUE(gain_control_);
-
-  // ...give GainControl interface a chance to disconnect if it must...
-  EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
-  // ... and by now, it should be gone.
-  EXPECT_FALSE(gain_control_);
 }
 
 }  // namespace test

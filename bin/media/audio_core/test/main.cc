@@ -6,6 +6,10 @@
 
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
+
+  // TODO(mpuryear): create a '--stress' switch here, to execute a set of
+  // longhaul resource-exhaustion-focused tests on these interfaces.
+
   int result = RUN_ALL_TESTS();
 
   return result;

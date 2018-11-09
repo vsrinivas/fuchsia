@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef GARNET_BIN_MEDIA_AUDIO_CORE_TEST_AUDIO_CORE_TESTS_SHARED_H_
+#define GARNET_BIN_MEDIA_AUDIO_CORE_TEST_AUDIO_CORE_TESTS_SHARED_H_
+
 namespace media {
 namespace audio {
 namespace test {
@@ -21,8 +24,10 @@ constexpr zx::duration kDurationResponseExpected = zx::sec(5);
 constexpr zx::duration kDurationTimeoutExpected = zx::msec(50);
 
 constexpr char kConnectionErr[] =
-    "Connection to fuchsia.media.Audio svc was lost!\n";
+    "Connection to fuchsia.media FIDL interface was lost!\n";
 
 }  // namespace test
 }  // namespace audio
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_CORE_TEST_AUDIO_CORE_TESTS_SHARED_H_
