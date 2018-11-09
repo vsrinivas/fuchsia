@@ -105,7 +105,7 @@ also provides core drivers and Fuchsia's libc implementation.
 [telephony]: https://fuchsia.googlesource.com/garnet/+/HEAD/bin/telephony/README.md
 [magma]: https://fuchsia.googlesource.com/garnet/+/master/lib/magma/
 [escher]: https://fuchsia.googlesource.com/garnet/+/master/public/lib/escher/
-[scenic]: https://fuchsia.googlesource.com/garnet/+/master/docs/ui_scenic.md
+[scenic]: https://fuchsia.googlesource.com/garnet/+/master/docs/ui/scenic.md
 [input-manager]: https://fuchsia.googlesource.com/garnet/+/master/docs/ui_input.md
 [view-manager]: https://fuchsia.googlesource.com/garnet/+/master/bin/ui/view_manager/
 [flutter]: https://flutter.io/
