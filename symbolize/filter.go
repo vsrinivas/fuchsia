@@ -40,10 +40,11 @@ type sysLogHeader struct {
 	process uint64
 	thread  uint64
 	tags    string
+	typ     string
 }
 
 func (s sysLogHeader) Present() string {
-	return fmt.Sprintf("[%012.6f][%d][%d][%s]", s.time, s.process, s.thread, s.tags)
+	return fmt.Sprintf("[%012.6f][%d][%d][%s] %s:", s.time, s.process, s.thread, s.tags, s.typ)
 }
 
 type LogLine struct {
@@ -111,6 +112,10 @@ type Filter struct {
 // FindInfoForAddress takes a process an in memory address and converts it to a source location.
 func (s *Filter) findInfoForAddress(vaddr uint64) (addressInfo, error) {
 	info := addressInfo{addr: vaddr}
+	// Sometimes zero will be requested as an address. We should not warn in this case.
+	if vaddr == 0 {
+		return info, nil
+	}
 	seg := s.symContext.find(vaddr)
 	if seg == nil {
 		return info, fmt.Errorf("could not find segment that covers 0x%x", vaddr)
@@ -158,12 +163,12 @@ func (s *Filter) reset() {
 // AddModule updates the filter state to inform it of a new module
 func (s *Filter) addModule(m Module) error {
 	var err error
-	// Flag odd build IDs.
-	if modName, ok := s.modNamesByBuildID[m.Build]; ok {
-		if modName != m.Name {
-			err = fmt.Errorf("found two modules named %s and %s with the same build ID of %s", modName, m.Name, m.Build)
-		}
-	}
+	// TODO(jakehehrlich): Add check to see if two modules with the same
+	// build IDs but different names are added and emit a warning if they
+	// are. Keep in mind that the notion of "same name" has to be carefully
+	// defined so that cases like <VMO#87378=ld.so.l> and <VMO#87393=ld.so.l>
+	// do not trigger the warning.
+
 	// Keep track of modules by build ID.
 	s.modNamesByBuildID[m.Build] = m.Name
 	s.modules[m.Id] = m

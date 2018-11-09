@@ -105,7 +105,7 @@ func TestDumpfile(t *testing.T) {
 }
 
 func TestSyslog(t *testing.T) {
-	msg := "[123.456][1234][05678][klog] Blarg\n"
+	msg := "[123.456][1234][05678][klog] INFO: Blarg\n"
 	symbo := newMockSymbolizer([]mockModule{})
 	repo := NewRepo()
 	demuxer := NewDemuxer(repo, symbo)
@@ -114,7 +114,7 @@ func TestSyslog(t *testing.T) {
 	out := demuxer.Start(ctx, in)
 	buf := new(bytes.Buffer)
 	Consume(ComposePostProcessors(ctx, out, &FilterContextElements{}, &OptimizeColor{}, NewBasicPresenter(buf, true)))
-	expected := "[00123.456000][1234][5678][klog] Blarg\n"
+	expected := "[00123.456000][1234][5678][klog] INFO: Blarg\n"
 	actual := buf.String()
 	if actual != expected {
 		t.Error("expected", expected, "got", actual)

@@ -139,17 +139,18 @@ func StartParsing(ctx context.Context, reader io.Reader) <-chan InputLine {
 		line.msg = args[4]
 		out <- line
 	})
-	b.addRule(fmt.Sprintf(`\[(%s)\]\[(%s)\]\[(%s)\]\[(%s)\]%s(.*)$`, float, dec, dec, tags, space), func(args ...string) {
+	b.addRule(fmt.Sprintf(`\[(%s)\]\[(%s)\]\[(%s)\]\[(%s)\] ([A-Z]+):?%s(.*)$`, float, dec, dec, tags, space), func(args ...string) {
 		var hdr sysLogHeader
 		var line InputLine
 		hdr.time = str2float(args[1])
 		hdr.process = str2dec(args[2])
 		hdr.thread = str2dec(args[3])
 		hdr.tags = args[4]
+		hdr.typ = args[5]
 		line.header = hdr
 		line.source = Process(hdr.process)
 		line.lineno = lineno
-		line.msg = args[5]
+		line.msg = args[6]
 		out <- line
 	})
 	tokenizer, err := b.compile(func(text string) {
