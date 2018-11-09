@@ -71,6 +71,8 @@ zx_status_t Device::Bind() {
                zx_status_get_string(rc));
         return rc;
     }
+    // This call to |DdkRemove| only occurs if the thread below fails to start.  Any calls to
+    // |DdkUnbind| will be a no-op as |active_| is false.
     auto cleanup = fbl::MakeAutoCall([this] { DdkRemove(); });
 
     // Launch the init thread.
@@ -87,8 +89,11 @@ zx_status_t Device::Init() {
     LOG_ENTRY();
     ZX_DEBUG_ASSERT(!info_);
     zx_status_t rc;
+    fbl::AutoLock lock(&mtx_);
 
     zxlogf(TRACE, "zxcrypt device %p initializing\n", this);
+    // This call to |DdkRemove| only occurs if the thread starts but encounters an error.  Any calls
+    // to |DdkUnbind| will be a no-op as |active_| is false.
     auto cleanup = fbl::MakeAutoCall([this]() {
         zxlogf(ERROR, "zxcrypt device %p failed to initialize\n", this);
         DdkRemove();
@@ -149,11 +154,7 @@ zx_status_t Device::Init() {
     info->base = reinterpret_cast<uint8_t*>(address);
 
     // Set up allocation bitmap
-    {
-        fbl::AutoLock lock(&mtx_);
-        rc = map_.Reset(Volume::kBufferSize / info->block_size);
-    }
-    if (rc != ZX_OK) {
+    if ((rc = map_.Reset(Volume::kBufferSize / info->block_size)) != ZX_OK) {
         zxlogf(ERROR, "bitmap allocation failed: %s\n", zx_status_get_string(rc));
         return rc;
     }
@@ -177,7 +178,8 @@ zx_status_t Device::Init() {
     // |info_| now holds the pointer; it is reclaimed in |DdkRelease|.
     DeviceInfo* released __attribute__((unused)) = info.release();
 
-    // Enable the device
+    // Enable the device.  Holding the lock at function scope guarantees that |active_| becomes true
+    // if and only if |cleanup| is canceled.
     active_.store(true);
     DdkMakeVisible();
     zxlogf(TRACE, "zxcrypt device %p initialized\n", this);
@@ -271,8 +273,13 @@ zx_off_t Device::DdkGetSize() {
 // this on demand.
 void Device::DdkUnbind() {
     LOG_ENTRY();
-    active_.store(false);
-    DdkRemove();
+    // We call |DdkRemove| exactly once after |Init| completes successfully, which is the only place
+    // |active_| becaomes true.  The lock is required to prevent |DdkUnbind| from being called
+    // during a call to |Init|.
+    fbl::AutoLock lock(&mtx_);
+    if (active_.exchange(false)) {
+        DdkRemove();
+    }
 }
 
 void Device::DdkRelease() {
