@@ -19,6 +19,7 @@ import("//build/package.gni")
   }
 
   deps = [
+    "//zircon/public/banjo/ddk-protocol-scpi",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-default",
