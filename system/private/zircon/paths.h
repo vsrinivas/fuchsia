@@ -4,4 +4,4 @@
 
 #pragma once
 
-#define ZX_SHELL_ENV_PATH "PATH=/system/apps:/system/bin:/boot/bin"
+#define ZX_SHELL_ENV_PATH "PATH=/pkg/bin:/system/bin:/boot/bin"
