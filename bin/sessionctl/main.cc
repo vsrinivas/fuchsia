@@ -32,36 +32,36 @@ struct ActiveSession {
   std::string service_path;
 };
 
-// Returns a list of all running sessions.
-std::vector<ActiveSession> FindAllSessions() {
-  // All sessionmgr processes contain the control interfaces for sessions.
-  constexpr char kSessionmgrPrefix[] = "/hub/c/sessionmgr";
-  constexpr char kOutDebugPath[] = "out/debug";
-  // See peridot/bin/sessionmgr/sessionmgr_impl.cc's definition of
-  // kSessionCtlDir.
-  constexpr char kSessionCtlDir[] = "sessionctl";
-  auto glob_str = fxl::StringPrintf("%s/*/%s/%s", kSessionmgrPrefix,
-                                    kOutDebugPath, kSessionCtlDir);
-
-  std::regex name_regex(fxl::StringPrintf("%s/([^/]+)/%s/%s", kSessionmgrPrefix,
-                                          kOutDebugPath, kSessionCtlDir));
-
+void FindSessionsForPath(const char* glob_str, const char* regex_str,
+                         std::vector<ActiveSession>* sessions) {
   glob_t globbuf;
-  std::vector<ActiveSession> sessions;
-
-  bool sessionmgr_exists = glob(glob_str.data(), 0, nullptr, &globbuf) == 0;
+  bool sessionmgr_exists = glob(glob_str, 0, nullptr, &globbuf) == 0;
+  std::regex name_regex(regex_str);
   if (sessionmgr_exists) {
     for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
       ActiveSession s;
       s.service_path = globbuf.gl_pathv[i];
       std::smatch match;
-      FXL_CHECK(std::regex_match(s.service_path, match, name_regex))
+      FXL_CHECK(std::regex_search(s.service_path, match, name_regex))
           << s.service_path;
       s.name = match[1];
-      sessions.push_back(std::move(s));
+      sessions->push_back(std::move(s));
     }
     globfree(&globbuf);
   }
+}
+
+// Returns a list of all running sessions.
+std::vector<ActiveSession> FindAllSessions() {
+  const char kRegex[] = "/sessionmgr/(\\d+)";
+  // See peridot/bin/sessionmgr/sessionmgr_impl.cc's definition of
+  // kSessionCtlDir for "sessionctl". These must match.
+  std::vector<ActiveSession> sessions;
+  FindSessionsForPath("/hub/c/sessionmgr/*/out/debug/sessionctl", kRegex,
+                      &sessions);
+
+  FindSessionsForPath("/hub/r/sys/*/c/sessionmgr/*/out/debug/sessionctl",
+                      kRegex, &sessions);
   return sessions;
 }
 
@@ -127,6 +127,7 @@ int main(int argc, const char** argv) {
       std::cout << "\t" << session.name << ": " << session.service_path
                 << std::endl;
     }
+    std::cout << std::endl;
   }
 
   // To get a PuppetMaster service for a session, use the following code:
