@@ -118,7 +118,7 @@ public:
         return error_reporter_.warnings();
     }
 
-private:
+protected:
     fidl::SourceFile source_file_;
     fidl::ErrorReporter error_reporter_;
     fidl::Lexer lexer_;

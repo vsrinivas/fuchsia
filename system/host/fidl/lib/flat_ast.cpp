@@ -313,7 +313,8 @@ bool IsSimple(const Type* type, const FieldShape& fieldshape) {
     switch (type->kind) {
     case Type::Kind::kVector: {
         auto vector_type = static_cast<const VectorType*>(type);
-        if (vector_type->element_count.Value() == Size::Max().Value())
+        auto element_count = static_cast<const Size&>(vector_type->element_count->Value());
+        if (element_count == Size::Max())
             return false;
         switch (vector_type->element_type->kind) {
         case Type::Kind::kHandle:
@@ -329,7 +330,8 @@ bool IsSimple(const Type* type, const FieldShape& fieldshape) {
     }
     case Type::Kind::kString: {
         auto string_type = static_cast<const StringType*>(type);
-        return string_type->max_size.Value() < Size::Max().Value();
+        auto max_size = static_cast<const Size&>(string_type->max_size->Value());
+        return max_size < Size::Max();
     }
     case Type::Kind::kArray:
     case Type::Kind::kHandle:
@@ -483,16 +485,6 @@ bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_
     return true;
 }
 
-bool Library::ParseSize(std::unique_ptr<Constant> constant, Size* out_size) {
-    uint32_t value;
-    if (!ParseIntegerConstant(constant.get(), &value)) {
-        *out_size = Size();
-        return false;
-    }
-    *out_size = Size(std::move(constant), value);
-    return true;
-}
-
 void Library::RegisterConst(Const* decl) {
     const Name* name = &decl->name;
     constants_.emplace(name, decl);
@@ -538,14 +530,11 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, SourceLocation lo
         std::unique_ptr<Type> element_type;
         if (!ConsumeType(std::move(array_type->element_type), location, &element_type))
             return false;
-        std::unique_ptr<Constant> constant;
-        if (!ConsumeConstant(std::move(array_type->element_count), location, &constant))
+        std::unique_ptr<Constant> element_count;
+        if (!ConsumeConstant(std::move(array_type->element_count), location, &element_count))
             return false;
-        Size element_count;
-        if (!ParseSize(std::move(constant), &element_count))
-            return Fail(location, "Unable to parse array element count");
-        *out_type =
-            std::make_unique<ArrayType>(std::move(element_type), std::move(element_count));
+        *out_type = std::make_unique<ArrayType>(location, std::move(element_type),
+                                                std::move(element_count));
         break;
     }
     case raw::Type::Kind::kVector: {
@@ -553,30 +542,32 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, SourceLocation lo
         std::unique_ptr<Type> element_type;
         if (!ConsumeType(std::move(vector_type->element_type), location, &element_type))
             return false;
-        Size element_count = Size::Max();
+        std::unique_ptr<Constant> element_count = std::make_unique<SynthesizedConstant>(
+            std::make_unique<Size>(Size::Max()));
         if (vector_type->maybe_element_count) {
-            std::unique_ptr<Constant> constant;
-            if (!ConsumeConstant(std::move(vector_type->maybe_element_count), location, &constant))
+            if (!ConsumeConstant(std::move(vector_type->maybe_element_count),
+                                 location,
+                                 &element_count))
                 return false;
-            if (!ParseSize(std::move(constant), &element_count))
-                return Fail(location, "Unable to parse vector size bound");
         }
-        *out_type = std::make_unique<VectorType>(std::move(element_type), std::move(element_count),
+        *out_type = std::make_unique<VectorType>(location, std::move(element_type),
+                                                 std::move(element_count),
                                                  vector_type->nullability);
         break;
     }
     case raw::Type::Kind::kString: {
         auto string_type = static_cast<raw::StringType*>(raw_type.get());
-        Size element_count = Size::Max();
+        std::unique_ptr<Constant> element_count = std::make_unique<SynthesizedConstant>(
+            std::make_unique<Size>(Size::Max()));
         if (string_type->maybe_element_count) {
-            std::unique_ptr<Constant> constant;
-            if (!ConsumeConstant(std::move(string_type->maybe_element_count), location, &constant))
+            if (!ConsumeConstant(std::move(string_type->maybe_element_count),
+                                 location,
+                                 &element_count))
                 return false;
-            if (!ParseSize(std::move(constant), &element_count))
-                return Fail(location, "Unable to parse string size bound");
         }
         *out_type =
-            std::make_unique<StringType>(std::move(element_count), string_type->nullability);
+            std::make_unique<StringType>(location, std::move(element_count),
+                                         string_type->nullability);
         break;
     }
     case raw::Type::Kind::kHandle: {
@@ -952,66 +943,272 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
     return true;
 }
 
+bool Library::ResolveConstant(Constant* constant, const Type* type) {
+    assert(constant != nullptr);
+    if (constant->IsResolved())
+        return true;
+
+    switch (constant->kind) {
+    case Constant::Kind::kIdentifier: {
+        auto identifier_constant = static_cast<IdentifierConstant*>(constant);
+        return ResolveIdentifierConstant(identifier_constant, type);
+    }
+    case Constant::Kind::kLiteral: {
+        auto literal_constant = static_cast<LiteralConstant*>(constant);
+        return ResolveLiteralConstant(literal_constant, type);
+    }
+    case Constant::Kind::kSynthesized: {
+        assert(false && "Compiler bug: synthesized constant does not have a resolved value!");
+    }
+    }
+}
+
+bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant, const Type* type) {
+    assert(TypeCanBeConst(type) &&
+           "Compiler bug: resolving indentifier constant to non-const-able type!");
+
+    auto decl = LookupDeclByName(identifier_constant->name);
+    if (!decl || decl->kind != Decl::Kind::kConst)
+        return false;
+
+    // Recursively resolve constants
+    auto const_decl = static_cast<Const*>(decl);
+    if (!CompileConst(const_decl))
+        return false;
+    assert(const_decl->value->IsResolved());
+
+    const ConstantValue& const_val = const_decl->value->Value();
+    std::unique_ptr<ConstantValue> resolved_val;
+    switch (type->kind) {
+    case Type::Kind::kString: {
+        if (!TypeIsConvertibleTo(const_decl->type.get(), type))
+            goto fail_cannot_convert;
+
+        if (!const_val.Convert(ConstantValue::Kind::kString, &resolved_val))
+            goto fail_cannot_convert;
+        break;
+    }
+    case Type::Kind::kPrimitive: {
+        auto primitive_type = static_cast<const PrimitiveType*>(type);
+        switch (primitive_type->subtype) {
+        case types::PrimitiveSubtype::kBool:
+            if (!const_val.Convert(ConstantValue::Kind::kBool, &resolved_val))
+                goto fail_cannot_convert;
+            break;
+        case types::PrimitiveSubtype::kInt8:
+            if (!const_val.Convert(ConstantValue::Kind::kInt8, &resolved_val))
+                goto fail_cannot_convert;
+            break;
+        case types::PrimitiveSubtype::kInt16:
+            if (!const_val.Convert(ConstantValue::Kind::kInt16, &resolved_val))
+                goto fail_cannot_convert;
+            break;
+        case types::PrimitiveSubtype::kInt32:
+            if (!const_val.Convert(ConstantValue::Kind::kInt32, &resolved_val))
+                goto fail_cannot_convert;
+            break;
+        case types::PrimitiveSubtype::kInt64:
+            if (!const_val.Convert(ConstantValue::Kind::kInt64, &resolved_val))
+                goto fail_cannot_convert;
+            break;
+        case types::PrimitiveSubtype::kUint8:
+            if (!const_val.Convert(ConstantValue::Kind::kUint8, &resolved_val))
+                goto fail_cannot_convert;
+            break;
+        case types::PrimitiveSubtype::kUint16:
+            if (!const_val.Convert(ConstantValue::Kind::kUint16, &resolved_val))
+                goto fail_cannot_convert;
+            break;
+        case types::PrimitiveSubtype::kUint32:
+            if (!const_val.Convert(ConstantValue::Kind::kUint32, &resolved_val))
+                goto fail_cannot_convert;
+            break;
+        case types::PrimitiveSubtype::kUint64:
+            if (!const_val.Convert(ConstantValue::Kind::kUint64, &resolved_val))
+                goto fail_cannot_convert;
+            break;
+        case types::PrimitiveSubtype::kFloat32:
+            if (!const_val.Convert(ConstantValue::Kind::kFloat32, &resolved_val))
+                goto fail_cannot_convert;
+            break;
+        case types::PrimitiveSubtype::kFloat64:
+            if (!const_val.Convert(ConstantValue::Kind::kFloat64, &resolved_val))
+                goto fail_cannot_convert;
+            break;
+        }
+        break;
+    }
+    default: {
+        assert(false &&
+               "Compiler bug: const-able type not handled during identifier constant resolution!");
+    }
+    }
+
+    identifier_constant->ResolveTo(std::move(resolved_val));
+    return true;
+
+fail_cannot_convert:
+    std::ostringstream msg_stream;
+    msg_stream << NameFlatConstant(identifier_constant) << ", of type ";
+    msg_stream << NameFlatType(const_decl->type.get());
+    msg_stream << ", cannot be converted to type " << NameFlatType(type);
+    return Fail(msg_stream.str());
+}
+
+bool Library::ResolveLiteralConstant(LiteralConstant* literal_constant, const Type* type) {
+    switch (literal_constant->literal->kind) {
+    case raw::Literal::Kind::kString: {
+        if (type->kind != Type::Kind::kString)
+            goto return_fail;
+        auto string_type = static_cast<const StringType*>(type);
+        auto string_literal = static_cast<raw::StringLiteral*>(literal_constant->literal.get());
+        auto string_data = string_literal->location().data();
+
+        if (!ResolveConstant(string_type->max_size.get(), &kSizeType))
+            return false;
+
+        auto max_size = static_cast<const Size&>(string_type->max_size->Value());
+        // TODO(pascallouis): because data() contains the raw content,
+        // with the two " to identify strings, we need to take this
+        // into account. Whe should expose the actual size of string
+        // literals properly, and take into account escaping.
+        uint64_t string_size = string_data.size() - 2;
+        if (max_size.value < string_size) {
+            std::ostringstream msg_stream;
+            msg_stream << NameFlatConstant(literal_constant) << " (string:" << string_size;
+            msg_stream << ") exceeds the size bound of type " << NameFlatType(type);
+            return Fail(literal_constant->literal->location(), msg_stream.str());
+        }
+
+        literal_constant->ResolveTo(
+            std::make_unique<StringConstantValue>(string_literal->location().data()));
+        return true;
+    }
+    case raw::Literal::Kind::kTrue: {
+        if (type->kind != Type::Kind::kPrimitive)
+            goto return_fail;
+        if (static_cast<const PrimitiveType*>(type)->subtype != types::PrimitiveSubtype::kBool)
+            goto return_fail;
+        literal_constant->ResolveTo(std::make_unique<BoolConstantValue>(true));
+        return true;
+    }
+    case raw::Literal::Kind::kFalse: {
+        if (type->kind != Type::Kind::kPrimitive)
+            goto return_fail;
+        if (static_cast<const PrimitiveType*>(type)->subtype != types::PrimitiveSubtype::kBool)
+            goto return_fail;
+        literal_constant->ResolveTo(std::make_unique<BoolConstantValue>(false));
+        return true;
+    }
+    case raw::Literal::Kind::kNumeric: {
+        if (type->kind != Type::Kind::kPrimitive)
+            goto return_fail;
+
+        // These must be initialized out of line to allow for goto statement
+        const raw::NumericLiteral* numeric_literal;
+        const PrimitiveType* primitive_type;
+        numeric_literal =
+            static_cast<const raw::NumericLiteral*>(literal_constant->literal.get());
+        primitive_type = static_cast<const PrimitiveType*>(type);
+        switch (primitive_type->subtype) {
+        case types::PrimitiveSubtype::kInt8: {
+            int8_t value;
+            if (!ParseNumericLiteral<int8_t>(numeric_literal, &value))
+                goto return_fail;
+            literal_constant->ResolveTo(std::make_unique<NumericConstantValue<int8_t>>(value));
+            return true;
+        }
+        case types::PrimitiveSubtype::kInt16: {
+            int16_t value;
+            if (!ParseNumericLiteral<int16_t>(numeric_literal, &value))
+                goto return_fail;
+
+            literal_constant->ResolveTo(std::make_unique<NumericConstantValue<int16_t>>(value));
+            return true;
+        }
+        case types::PrimitiveSubtype::kInt32: {
+            int32_t value;
+            if (!ParseNumericLiteral<int32_t>(numeric_literal, &value))
+                goto return_fail;
+
+            literal_constant->ResolveTo(std::make_unique<NumericConstantValue<int32_t>>(value));
+            return true;
+        }
+        case types::PrimitiveSubtype::kInt64: {
+            int64_t value;
+            if (!ParseNumericLiteral<int64_t>(numeric_literal, &value))
+                goto return_fail;
+
+            literal_constant->ResolveTo(std::make_unique<NumericConstantValue<int64_t>>(value));
+            return true;
+        }
+        case types::PrimitiveSubtype::kUint8: {
+            uint8_t value;
+            if (!ParseNumericLiteral<uint8_t>(numeric_literal, &value))
+                goto return_fail;
+
+            literal_constant->ResolveTo(std::make_unique<NumericConstantValue<uint8_t>>(value));
+            return true;
+        }
+        case types::PrimitiveSubtype::kUint16: {
+            uint16_t value;
+            if (!ParseNumericLiteral<uint16_t>(numeric_literal, &value))
+                goto return_fail;
+
+            literal_constant->ResolveTo(std::make_unique<NumericConstantValue<uint16_t>>(value));
+            return true;
+        }
+        case types::PrimitiveSubtype::kUint32: {
+            uint32_t value;
+            if (!ParseNumericLiteral<uint32_t>(numeric_literal, &value))
+                goto return_fail;
+
+            literal_constant->ResolveTo(std::make_unique<NumericConstantValue<uint32_t>>(value));
+            return true;
+        }
+        case types::PrimitiveSubtype::kUint64: {
+            uint64_t value;
+            if (!ParseNumericLiteral<uint64_t>(numeric_literal, &value))
+                goto return_fail;
+
+            literal_constant->ResolveTo(std::make_unique<NumericConstantValue<uint64_t>>(value));
+            return true;
+        }
+        case types::PrimitiveSubtype::kFloat32: {
+            float value;
+            if (!ParseNumericLiteral<float>(numeric_literal, &value))
+                goto return_fail;
+
+            literal_constant->ResolveTo(std::make_unique<NumericConstantValue<float>>(value));
+            return true;
+        }
+        case types::PrimitiveSubtype::kFloat64: {
+            double value;
+            if (!ParseNumericLiteral<double>(numeric_literal, &value))
+                goto return_fail;
+
+            literal_constant->ResolveTo(std::make_unique<NumericConstantValue<double>>(value));
+            return true;
+        }
+        default:
+            goto return_fail;
+        }
+
+    return_fail:
+        std::ostringstream msg_stream;
+        msg_stream << NameFlatConstant(literal_constant) << " cannot be interpreted as type ";
+        msg_stream << NameFlatType(type);
+        return Fail(literal_constant->literal->location(), msg_stream.str());
+    }
+    }
+}
+
 bool Library::TypeCanBeConst(const Type* type) {
     switch (type->kind) {
     case flat::Type::Kind::kString:
         return type->nullability != types::Nullability::kNullable;
     case flat::Type::Kind::kPrimitive:
         return true;
-    default:
-        return false;
-    } // switch
-}
-
-bool Library::TypeInferConstantType(const Constant* constant,
-                                    std::unique_ptr<Type>* out_type) {
-    switch (constant->kind) {
-    case Constant::Kind::kLiteral: {
-        auto literal_constant = static_cast<const LiteralConstant*>(constant);
-        switch (literal_constant->literal->kind) {
-            case raw::Literal::Kind::kString: {
-                auto string_literal = static_cast<const raw::StringLiteral*>(literal_constant->literal.get());
-                // TODO(pascallouis): because data() contains the raw content,
-                // with the two " to identify strings, we need to take this
-                // into account. Whe should expose the actual size of string
-                // literals properly, and take into account escaping.
-                auto max_size = Size(string_literal->location().data().size() - 2);
-                *out_type = std::make_unique<flat::StringType>(
-                    std::move(max_size),
-                    types::Nullability::kNonnullable);
-                return true;
-            }
-
-            case raw::Literal::Kind::kNumeric: {
-                // TODO(pascallouis): depending on the numeric literal, we
-                // should properly infer the most restrictive type fitting
-                // that value, e.g. 255 would be uint8, -128 would be int8.
-                // Then we can express conversion flexibility in
-                // TypeIsConvertibleTo, e.g. uint8 to uint16, uint32, etc.
-                *out_type = std::make_unique<flat::PrimitiveType>(types::PrimitiveSubtype::kInt64);
-                return true;
-            }
-
-            case raw::Literal::Kind::kTrue:
-                // fallthrough
-            case raw::Literal::Kind::kFalse:
-                *out_type = std::make_unique<flat::PrimitiveType>(types::PrimitiveSubtype::kBool);
-                return true;
-        }
-    }
-    case Constant::Kind::kIdentifier: {
-        auto identifier_constant = static_cast<const IdentifierConstant*>(constant);
-        auto iter = constants_.find(&identifier_constant->name);
-        if (iter == constants_.end()) {
-            return false;
-        }
-        // TODO(pascallouis): this is not exactly correct, we should use the
-        // const declaration's type, rather than infer from the constant. This
-        // could yield a less restrictive type, and we want to make sure
-        // this is honored. In practice though, for the use of inference we
-        // make today, this is not key, beyond getting precise error messages.
-        return TypeInferConstantType(iter->second->value.get(), out_type);
-    }
     default:
         return false;
     } // switch
@@ -1055,7 +1252,9 @@ bool Library::TypeIsConvertibleTo(const Type* from_type, const Type* to_type) {
             return false;
         }
 
-        if (to_string_type->max_size.Value() < from_string_type->max_size.Value()) {
+        auto to_string_size = static_cast<const Size&>(to_string_type->max_size->Value());
+        auto from_string_size = static_cast<const Size&>(from_string_type->max_size->Value());
+        if (to_string_size < from_string_size) {
             return false;
         }
 
@@ -1081,37 +1280,6 @@ bool Library::TypeIsConvertibleTo(const Type* from_type, const Type* to_type) {
     default:
         return false;
     } // switch
-}
-
-bool Library::TypecheckConst(const Const* const_declaration) {
-    auto type = const_declaration->type.get();
-    if (!TypeCanBeConst(type)) {
-        std::string msg("invalid constant type ");
-        msg.append(NameFlatType(type));
-        return Fail(msg);
-    }
-
-    auto constant = const_declaration->value.get();
-    std::unique_ptr<flat::Type> constant_type_ptr(nullptr);
-    if (!TypeInferConstantType(constant, &constant_type_ptr)) {
-        std::string msg("unable to infer type for ");
-        msg.append(NameFlatConstant(constant));
-        Fail(msg);
-        return false;
-    }
-
-    auto constant_type = constant_type_ptr.get();
-    if (!TypeIsConvertibleTo(constant_type, type)) {
-        std::string msg("cannot convert ");
-        msg.append(NameFlatConstant(constant));
-        msg.append(" (type ");
-        msg.append(NameFlatType(constant_type));
-        msg.append(") to type ");
-        msg.append(NameFlatType(type));
-        return Fail(msg);
-    }
-
-    return true;
 }
 
 Decl* Library::LookupConstant(const Type* type, const Name& name) {
@@ -1218,8 +1386,9 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
             edges.insert(decl);
             break;
         }
-        case Constant::Kind::kLiteral: {
-            // Literals have no dependencies on other declarations.
+        case Constant::Kind::kLiteral:
+        case Constant::Kind::kSynthesized: {
+            // Literal and synthesized constants have no dependencies on other declarations.
             break;
         }
         }
@@ -1356,14 +1525,23 @@ bool Library::SortDeclarations() {
 }
 
 bool Library::CompileConst(Const* const_declaration) {
+    if (const_declaration->compiled)
+        return true;
+
     Compiling guard(const_declaration);
     TypeShape typeshape;
     if (!CompileType(const_declaration->type.get(), &typeshape)) {
         return false;
     }
-    if (!TypecheckConst(const_declaration)) {
-        return false;
+    const auto* const_type = const_declaration->type.get();
+    if (!TypeCanBeConst(const_type)) {
+        std::ostringstream msg_stream;
+        msg_stream << "invalid constant type " << NameFlatType(const_type);
+        return Fail(*const_declaration, msg_stream.str());
     }
+    if (!ResolveConstant(const_declaration->value.get(), const_type))
+        return Fail(*const_declaration, "unable to resolve constant value");
+
     return true;
 }
 
@@ -1708,7 +1886,13 @@ bool Library::CompileArrayType(flat::ArrayType* array_type, TypeShape* out_types
     if (!CompileType(array_type->element_type.get(), &element_typeshape))
         return false;
 
-    TypeShape typeshape = ArrayTypeShape(element_typeshape, array_type->element_count.Value());
+    // Resolve element count bound now that all constant identifiers have been consumed
+    if (!ResolveConstant(array_type->element_count.get(), &kSizeType))
+        return Fail(array_type->name, "unable to parse size bound for array");
+
+    assert(array_type->element_count->Value().kind == ConstantValue::Kind::kUint32);
+    auto element_count = static_cast<const Size&>(array_type->element_count->Value());
+    TypeShape typeshape = ArrayTypeShape(element_typeshape, element_count.value);
 
     // Now that the array element type is compiled and the size is resolved, set the array size.
     array_type->size = typeshape.Size();
@@ -1721,17 +1905,26 @@ bool Library::CompileVectorType(flat::VectorType* vector_type, TypeShape* out_ty
     TypeShape element_typeshape;
     if (!CompileType(vector_type->element_type.get(), &element_typeshape))
         return false;
-    uint32_t max_element_count = vector_type->element_count.Value();
-    if (max_element_count == Size::Max().Value()) {
-        // No upper bound specified on vector.
-        max_element_count = std::numeric_limits<uint32_t>::max();
-    }
-    *out_typeshape = VectorTypeShape(element_typeshape, max_element_count);
+
+    // Resolve element count bound now that all constant identifiers have been consumed
+    if (!ResolveConstant(vector_type->element_count.get(), &kSizeType))
+        return Fail(vector_type->name, "unable to parse size bound for vector");
+
+    assert(vector_type->element_count->Value().kind == ConstantValue::Kind::kUint32);
+    auto element_count = static_cast<const Size&>(vector_type->element_count->Value());
+    *out_typeshape = VectorTypeShape(element_typeshape, element_count.value);
+
     return true;
 }
 
 bool Library::CompileStringType(flat::StringType* string_type, TypeShape* out_typeshape) {
-    *out_typeshape = StringTypeShape(string_type->max_size.Value());
+    // Resolve max size bound now that all constant identifiers have been consumed
+    if (!ResolveConstant(string_type->max_size.get(), &kSizeType))
+        return Fail(string_type->name, "unable to parse size bound for string");
+
+    assert(string_type->max_size->Value().kind == ConstantValue::Kind::kUint32);
+    auto max_size = static_cast<const Size&>(string_type->max_size->Value());
+    *out_typeshape = StringTypeShape(max_size.value);
     return true;
 }
 
@@ -1839,7 +2032,9 @@ bool Library::CompileIdentifierType(flat::IdentifierType* identifier_type,
             typeshape = PointerTypeShape(typeshape);
         break;
     }
-    default: { abort(); }
+    default: {
+        abort();
+    }
     }
 
     identifier_type->size = typeshape.Size();
