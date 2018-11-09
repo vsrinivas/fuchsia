@@ -20,6 +20,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
+#include <lib/zx/socket.h>
 #include <lib/zx/vmo.h>
 
 #include "metadata.h"
@@ -29,6 +30,7 @@ namespace devmgr {
 struct Device;
 struct Devhost;
 struct Devnode;
+class SuspendContext;
 
 struct Work {
     Work() : owner(nullptr) { }
@@ -51,22 +53,30 @@ struct Work {
     Device* owner;
 };
 
-struct Pending {
-    Pending();
-
-    fbl::DoublyLinkedListNodeState<Pending*> node;
-    struct Node {
-        static fbl::DoublyLinkedListNodeState<Pending*>& node_state(
-            Pending& obj) {
-            return obj.node;
-        }
-    };
-
-    void* ctx;
+class PendingOperation {
+public:
     enum struct Op : uint32_t {
         kBind = 1,
         kSuspend = 2,
-    } op;
+    };
+
+    PendingOperation(Op op, SuspendContext* context) : op_(op), context_(context) {}
+
+    struct Node {
+        static fbl::DoublyLinkedListNodeState<fbl::unique_ptr<PendingOperation>>& node_state(
+            PendingOperation& obj) {
+            return obj.node_;
+        }
+    };
+
+    Op op() const { return op_; }
+    SuspendContext* context() const { return context_; }
+
+private:
+    fbl::DoublyLinkedListNodeState<fbl::unique_ptr<PendingOperation>> node_;
+
+    Op op_;
+    SuspendContext* context_;
 };
 
 #define DEV_HOST_DYING 1
@@ -144,7 +154,7 @@ struct Device {
 
     // list of outstanding requests from the devcoord
     // to this device's devhost, awaiting a response
-    fbl::DoublyLinkedList<Pending*, Pending::Node> pending;
+    fbl::DoublyLinkedList<fbl::unique_ptr<PendingOperation>, PendingOperation::Node> pending;
 
     // listnode for this device in the all devices list
     fbl::DoublyLinkedListNodeState<Device*> anode;
@@ -231,6 +241,83 @@ struct Devhost {
         --refcount_;
         return rc == 1;
     }
+};
+
+class SuspendContext {
+public:
+    enum struct Flags : uint32_t {
+        kRunning = 0u,
+        kSuspend = 1u,
+    };
+
+    SuspendContext() {
+    }
+
+    SuspendContext(Flags flags, uint32_t sflags, zx::socket socket,
+                   zx_handle_t kernel = ZX_HANDLE_INVALID,
+                   zx_handle_t bootdata = ZX_HANDLE_INVALID) :
+        flags_(flags), sflags_(sflags), socket_(fbl::move(socket)),
+        kernel_(kernel), bootdata_(bootdata) {
+    }
+
+    ~SuspendContext() {
+        devhosts_.clear();
+    }
+
+    SuspendContext(SuspendContext&&) = default;
+    SuspendContext& operator=(SuspendContext&&) = default;
+
+    zx_status_t status() const { return status_; }
+    void set_status(zx_status_t status) { status_ = status; }
+    Flags flags() const { return flags_; }
+    void set_flags(Flags flags) { flags_ = flags; }
+    uint32_t sflags() const { return sflags_; }
+
+    Devhost* dh() const { return dh_; }
+    void set_dh(Devhost* dh) { dh_ = dh; }
+
+    using DevhostList = fbl::DoublyLinkedList<Devhost*, Devhost::SuspendNode>;
+    DevhostList& devhosts() { return devhosts_; }
+    const DevhostList& devhosts() const { return devhosts_; }
+
+    zx_handle_t kernel() const { return kernel_; }
+    zx_handle_t bootdata() const { return bootdata_; }
+
+    // Close the socket whose ownership was handed to this SuspendContext.
+    void CloseSocket() {
+        socket_.reset();
+    }
+
+    // The AddRef and Release functions follow the contract for fbl::RefPtr.
+    void AddRef() const {
+        ++count_;
+    }
+
+    // Returns true when the last message reference has been released.
+    bool Release() const {
+        const int32_t rc = count_;
+        --count_;
+        return rc == 1;
+    }
+
+private:
+    zx_status_t status_ = ZX_OK;
+    Flags flags_ = Flags::kRunning;
+
+    // suspend flags
+    uint32_t sflags_ = 0u;
+    // outstanding msgs
+    mutable uint32_t count_ = 0u;
+    // next devhost to process
+    Devhost* dh_ = nullptr;
+    fbl::DoublyLinkedList<Devhost*, Devhost::SuspendNode> devhosts_;
+
+    // socket to notify on for 'dm reboot' and 'dm poweroff'
+    zx::socket socket_;
+
+    // mexec arguments
+    zx_handle_t kernel_ = ZX_HANDLE_INVALID;
+    zx_handle_t bootdata_ = ZX_HANDLE_INVALID;
 };
 
 // This device is never destroyed

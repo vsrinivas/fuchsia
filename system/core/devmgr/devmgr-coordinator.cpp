@@ -68,43 +68,12 @@ async::Loop* DcAsyncLoop() {
     return &loop;
 }
 
-struct SuspendContext {
-    SuspendContext() = default;
-    ~SuspendContext() {
-        devhosts.clear();
-    }
-
-    SuspendContext(SuspendContext&&) = default;
-    SuspendContext& operator=(SuspendContext&&) = default;
-
-    zx_status_t status;
-    enum struct Flags : uint32_t {
-        kRunning = 0u,
-        kSuspend = 1u,
-    } flags = Flags::kRunning;;
-
-    // suspend flags
-    uint32_t sflags = 0u;
-    // outstanding msgs
-    uint32_t count = 0u;
-    // next devhost to process
-    Devhost* dh = nullptr;
-    fbl::DoublyLinkedList<Devhost*, Devhost::SuspendNode> devhosts;
-
-    // socket to notify on for 'dm reboot' and 'dm poweroff'
-    zx::socket socket;
-
-    // mexec arguments
-    zx_handle_t kernel = ZX_HANDLE_INVALID;
-    zx_handle_t bootdata = ZX_HANDLE_INVALID;
-};
-
 static SuspendContext suspend_ctx;
 
 static fbl::DoublyLinkedList<fbl::unique_ptr<Metadata>, Metadata::Node> published_metadata;
 
 static bool dc_in_suspend() {
-    return suspend_ctx.flags == SuspendContext::Flags::kSuspend;
+    return suspend_ctx.flags() == SuspendContext::Flags::kSuspend;
 }
 static void dc_suspend(uint32_t flags);
 static void dc_mexec(zx_handle_t* h);
@@ -1404,13 +1373,13 @@ static zx_status_t dc_handle_device_read(Device* dev) {
         }
         // all of these return directly and do not write a
         // reply, since this message is a reply itself
-        Pending* pending = dev->pending.pop_front();
+        fbl::unique_ptr<PendingOperation> pending = dev->pending.pop_front();
         if (pending == nullptr) {
             log(ERROR, "devcoord: rpc: spurious status message\n");
             return ZX_OK;
         }
-        switch (pending->op) {
-        case Pending::Op::kBind:
+        switch (pending->op()) {
+        case PendingOperation::Op::kBind:
             if (msg.status != ZX_OK) {
                 log(ERROR, "devcoord: rpc: bind-driver '%s' status %d\n",
                     dev->name, msg.status);
@@ -1419,18 +1388,17 @@ static zx_status_t dc_handle_device_read(Device* dev) {
             }
             //TODO: try next driver, clear BOUND flag
             break;
-        case Pending::Op::kSuspend: {
+        case PendingOperation::Op::kSuspend: {
             if (msg.status != ZX_OK) {
                 log(ERROR, "devcoord: rpc: suspend '%s' status %d\n",
                     dev->name, msg.status);
             }
-            auto ctx = static_cast<SuspendContext*>(pending->ctx);
-            ctx->status = msg.status;
-            dc_continue_suspend(ctx);
+            SuspendContext* context = pending->context();
+            context->set_status(msg.status);
+            dc_continue_suspend(context);
             break;
         }
         }
-        delete pending;
         return ZX_OK;
     }
     case Message::Op::kGetMetadata: {
@@ -1643,17 +1611,10 @@ static zx_status_t dc_create_proxy(Device* parent) {
     return ZX_OK;
 }
 
-Pending::Pending() = default;
-
 // send message to devhost, requesting the binding of a driver to a device
 static zx_status_t dh_bind_driver(Device* dev, const char* libname) {
     Message msg;
     uint32_t mlen;
-
-    auto pending = fbl::make_unique<Pending>();
-    if (pending == nullptr) {
-        return ZX_ERR_NO_MEMORY;
-    }
 
     zx_status_t r;
     if ((r = dc_msg_pack(&msg, &mlen, nullptr, 0, libname, nullptr)) < 0) {
@@ -1674,9 +1635,12 @@ static zx_status_t dh_bind_driver(Device* dev, const char* libname) {
     }
 
     dev->flags |= DEV_CTX_BOUND;
-    pending->op = Pending::Op::kBind;
-    pending->ctx = nullptr;
-    dev->pending.push_back(pending.release());
+
+    auto pending = fbl::make_unique<PendingOperation>(PendingOperation::Op::kBind, nullptr);
+    if (pending == nullptr) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    dev->pending.push_back(fbl::move(pending));
     return ZX_OK;
 }
 
@@ -1827,11 +1791,6 @@ static zx_status_t dc_suspend_devhost(Devhost* dh, SuspendContext* ctx) {
     log(DEVLC, "devcoord: suspend devhost %p device '%s' (%p)\n",
         dh, dev->name, dev);
 
-    auto pending = fbl::make_unique<Pending>();
-    if (pending == nullptr) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
     Message msg;
     uint32_t mlen;
     zx_status_t r;
@@ -1840,17 +1799,21 @@ static zx_status_t dc_suspend_devhost(Devhost* dh, SuspendContext* ctx) {
     }
     msg.txid = 0;
     msg.op = Message::Op::kSuspend;
-    msg.value = ctx->sflags;
+    msg.value = ctx->sflags();
     if ((r = zx_channel_write(dev->hrpc, 0, &msg, mlen, nullptr, 0)) != ZX_OK) {
         return r;
     }
 
     dh->flags |= DEV_HOST_SUSPEND;
-    pending->op = Pending::Op::kSuspend;
-    pending->ctx = ctx;
-    dev->pending.push_back(pending.release());
 
-    ctx->count += 1;
+    auto pending = fbl::make_unique<PendingOperation>(PendingOperation::Op::kSuspend, ctx);
+    if (pending == nullptr) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    dev->pending.push_back(fbl::move(pending));
+
+    // TODO(teisenbe/kulakowski) Make SuspendContext automatically refcounted.
+    ctx->AddRef();
 
     return ZX_OK;
 }
@@ -1858,7 +1821,7 @@ static zx_status_t dc_suspend_devhost(Devhost* dh, SuspendContext* ctx) {
 static void append_suspend_list(SuspendContext* ctx, Devhost* dh) {
     // suspend order is children first
     for (auto& child : dh->children) {
-        ctx->devhosts.push_front(&child);
+        ctx->devhosts().push_front(&child);
     }
     for (auto& child : dh->children) {
         append_suspend_list(ctx, &child);
@@ -1869,22 +1832,22 @@ static void append_suspend_list(SuspendContext* ctx, Devhost* dh) {
 static Devhost* build_suspend_list(SuspendContext* ctx) {
     // sys_device must suspend last as on x86 it invokes
     // ACPI S-state transition
-    ctx->devhosts.push_front(sys_device.proxy->host);
+    ctx->devhosts().push_front(sys_device.proxy->host);
     append_suspend_list(ctx, sys_device.proxy->host);
 
-    ctx->devhosts.push_front(root_device.proxy->host);
+    ctx->devhosts().push_front(root_device.proxy->host);
     append_suspend_list(ctx, root_device.proxy->host);
 
-    ctx->devhosts.push_front(misc_device.proxy->host);
+    ctx->devhosts().push_front(misc_device.proxy->host);
     append_suspend_list(ctx, misc_device.proxy->host);
 
     // test devices do not (yet) participate in suspend
 
-    return &ctx->devhosts.front();
+    return &ctx->devhosts().front();
 }
 
 static void process_suspend_list(SuspendContext* ctx) {
-    auto dh = ctx->devhosts.make_iterator(*ctx->dh);
+    auto dh = ctx->devhosts().make_iterator(*ctx->dh());
     Devhost* parent = nullptr;
     do {
         if (!parent || (dh->parent == parent)) {
@@ -1900,18 +1863,18 @@ static void process_suspend_list(SuspendContext* ctx) {
             parent = nullptr;
             break;
         }
-    } while (++dh != ctx->devhosts.end());
+    } while (++dh != ctx->devhosts().end());
     // next devhost to process once all the outstanding suspends are done
     if (dh.IsValid()) {
-        ctx->dh = dh.CopyPointer();
+        ctx->set_dh(dh.CopyPointer());
     } else {
-        ctx->dh = nullptr;
-        ctx->devhosts.clear();
+        ctx->set_dh(nullptr);
+        ctx->devhosts().clear();
     }
 }
 
 static bool check_pending(const Device* dev) {
-    const Pending* pending = nullptr;
+    const PendingOperation* pending = nullptr;
     if (dev->proxy) {
         if (!dev->proxy->pending.is_empty()) {
             pending = &dev->proxy->pending.back();
@@ -1921,7 +1884,7 @@ static bool check_pending(const Device* dev) {
             pending = &dev->pending.back();
         }
     }
-    if ((pending == nullptr) || (pending->op != Pending::Op::kSuspend)) {
+    if ((pending == nullptr) || (pending->op() != PendingOperation::Op::kSuspend)) {
         return false;
     } else {
         log(ERROR, "  devhost with device '%s' timed out\n", dev->name);
@@ -1935,11 +1898,11 @@ static int suspend_timeout_thread(void* arg) {
 
     auto ctx = static_cast<SuspendContext*>(arg);
     if (suspend_debug) {
-        if (ctx->flags == SuspendContext::Flags::kRunning) {
+        if (ctx->flags() == SuspendContext::Flags::kRunning) {
             return 0; // success
         }
         log(ERROR, "devcoord: suspend time out\n");
-        log(ERROR, "  sflags: 0x%08x\n", ctx->sflags);
+        log(ERROR, "  sflags: 0x%08x\n", ctx->sflags());
         for (const auto& dev : list_devices) {
             check_pending(&dev);
         }
@@ -1948,7 +1911,7 @@ static int suspend_timeout_thread(void* arg) {
         check_pending(&sys_device);
     }
     if (suspend_fallback) {
-        dc_suspend_fallback(ctx->sflags);
+        dc_suspend_fallback(ctx->sflags());
     }
     return 0;
 }
@@ -1962,16 +1925,13 @@ static void dc_suspend(uint32_t flags) {
     }
 
     SuspendContext* ctx = &suspend_ctx;
-    if (ctx->flags == SuspendContext::Flags::kSuspend) {
+    if (ctx->flags() == SuspendContext::Flags::kSuspend) {
         return;
     }
-    *ctx = SuspendContext();
-    ctx->status = ZX_OK;
-    ctx->flags = SuspendContext::Flags::kSuspend;
-    ctx->sflags = flags;
-    ctx->socket = fbl::move(dmctl_socket); // to prevent the rpc handler from closing this handle
+    // Move the socket in to prevent the rpc handler from closing the handle.
+    *ctx = SuspendContext(SuspendContext::Flags::kSuspend, flags, fbl::move(dmctl_socket));
 
-    ctx->dh = build_suspend_list(ctx);
+    ctx->set_dh(build_suspend_list(ctx));
 
     if (suspend_fallback || suspend_debug) {
         thrd_t t;
@@ -1993,18 +1953,15 @@ static void dc_mexec(zx_handle_t* h) {
     }
 
     SuspendContext* ctx = &suspend_ctx;
-    if (ctx->flags == SuspendContext::Flags::kSuspend) {
+    if (ctx->flags() == SuspendContext::Flags::kSuspend) {
         return;
     }
-    *ctx = {};
-    ctx->status = ZX_OK;
-    ctx->flags = SuspendContext::Flags::kSuspend;
-    ctx->sflags = DEVICE_SUSPEND_FLAG_MEXEC;
+    zx_handle_t kernel = h[0];
+    zx_handle_t bootdata = h[1];
+    *ctx = SuspendContext(SuspendContext::Flags::kSuspend, DEVICE_SUSPEND_FLAG_MEXEC,
+                          zx::socket(), kernel, bootdata);
 
-    ctx->kernel = *h;
-    ctx->bootdata = *(h + 1);
-
-    ctx->dh = build_suspend_list(ctx);
+    ctx->set_dh(build_suspend_list(ctx));
 
     if (suspend_fallback || suspend_debug) {
         thrd_t t;
@@ -2019,35 +1976,34 @@ static void dc_mexec(zx_handle_t* h) {
 }
 
 static void dc_continue_suspend(SuspendContext* ctx) {
-    if (ctx->status != ZX_OK) {
+    if (ctx->status() != ZX_OK) {
         // TODO: unroll suspend
         // do not continue to suspend as this indicates a driver suspend
         // problem and should show as a bug
         log(ERROR, "devcoord: failed to suspend\n");
         // notify dmctl
-        ctx->socket.reset();
-        if (ctx->sflags == DEVICE_SUSPEND_FLAG_MEXEC) {
-            zx_object_signal(ctx->kernel, 0, ZX_USER_SIGNAL_0);
+        ctx->CloseSocket();
+        if (ctx->sflags() == DEVICE_SUSPEND_FLAG_MEXEC) {
+            zx_object_signal(ctx->kernel(), 0, ZX_USER_SIGNAL_0);
         }
-        ctx->flags = SuspendContext::Flags::kRunning;
+        ctx->set_flags(SuspendContext::Flags::kRunning);
         return;
     }
 
-    ctx->count -= 1;
-    if (ctx->count == 0) {
-        if (ctx->dh != nullptr) {
+    if (ctx->Release()) {
+        if (ctx->dh() != nullptr) {
             process_suspend_list(ctx);
-        } else if (ctx->sflags == DEVICE_SUSPEND_FLAG_MEXEC) {
-            zx_system_mexec(get_root_resource(), ctx->kernel, ctx->bootdata);
+        } else if (ctx->sflags() == DEVICE_SUSPEND_FLAG_MEXEC) {
+            zx_system_mexec(get_root_resource(), ctx->kernel(), ctx->bootdata());
         } else {
             // should never get here on x86
             // on arm, if the platform driver does not implement
             // suspend go to the kernel fallback
-            dc_suspend_fallback(ctx->sflags);
+            dc_suspend_fallback(ctx->sflags());
             // this handle is leaked on the shutdown path for x86
-            ctx->socket.reset();
+            ctx->CloseSocket();
             // if we get here the system did not suspend successfully
-            ctx->flags = SuspendContext::Flags::kRunning;
+            ctx->set_flags(SuspendContext::Flags::kRunning);
         }
     }
 }
