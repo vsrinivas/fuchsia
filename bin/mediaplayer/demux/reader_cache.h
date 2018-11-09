@@ -6,7 +6,9 @@
 #define GARNET_BIN_MEDIAPLAYER_DEMUX_READER_CACHE_H_
 
 #include <memory>
+#include <optional>
 
+#include "garnet/bin/mediaplayer/demux/byte_rate_estimator.h"
 #include "garnet/bin/mediaplayer/demux/reader.h"
 #include "garnet/bin/mediaplayer/demux/sparse_byte_buffer.h"
 #include "garnet/bin/mediaplayer/util/incident.h"
@@ -59,10 +61,15 @@ class ReaderCache : public Reader,
   // reload.
   void MaybeStartLoadForPosition(size_t position);
 
+  // Calculates the range of bytes we should load ahead of the current requested
+  // position based on our capacity and current estimations of the input and
+  // output byte rates.
+  std::optional<std::pair<size_t, size_t>> CalculateLoadRange(size_t position);
+
   // Makes async calls to the upstream Reader to fill the given holes in our
   // underlying buffer. Calls callback on completion.
   void FillHoles(std::vector<SparseByteBuffer::Hole> holes,
-                 size_t load_position, fit::closure callback);
+                 fit::closure callback);
 
   // Calculates the desired cache range according to our cache options around
   // the requested read position.
@@ -81,13 +88,17 @@ class ReaderCache : public Reader,
   // TODO(turnage): Respect can_seek_ == false in upstream reader.
   bool upstream_can_seek_;
 
-  size_t capacity_ = 16 * 1024 * 1024;
-  size_t max_backtrack_ = 0;
-
   async_dispatcher_t* dispatcher_;
 
+  size_t capacity_ = 1 * 1024 * 1024;
+  size_t max_backtrack_ = 0;
+
+  ByteRateEstimator demux_byte_rate_;
+  std::optional<ByteRateEstimator::ByteRateSampler> demux_sampler_;
+  ByteRateEstimator upstream_reader_byte_rate_;
+  std::optional<ByteRateEstimator::ByteRateSampler> upstream_reader_sampler_;
+
   bool load_in_progress_ = false;
-  size_t load_position_;
 };
 
 }  // namespace media_player
