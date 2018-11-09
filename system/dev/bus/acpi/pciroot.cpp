@@ -204,11 +204,10 @@ static zx_status_t pciroot_op_get_pci_irq_info(void* ctx, pci_irq_info_t* info) 
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t pciroot_op_driver_should_proxy_config(void* ctx, bool* use_proxy) {
+static bool pciroot_op_driver_should_proxy_config(void* ctx) {
     // If we have no mcfg then all config access will need to be through IOports which
     // are proxied over pciroot.
-    *use_proxy = !pci_platform_has_mcfg();
-    return ZX_OK;
+    return !pci_platform_has_mcfg();
 }
 
 // For ACPI systems we only intend to use PIO access if MMIO config is unavailable. In the event we
@@ -297,8 +296,8 @@ static zx_status_t pciroot_op_get_pci_irq_info(void*, pci_irq_info_t*) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t pciroot_op_driver_should_proxy_config(void* ctx, bool*) {
-    return ZX_ERR_NOT_SUPPORTED;
+static bool pciroot_op_driver_should_proxy_config(void* ctx) {
+    return false;
 }
 
 static zx_status_t pciroot_op_config_read8(void*, const pci_bdf_t*, uint16_t, uint8_t*) {

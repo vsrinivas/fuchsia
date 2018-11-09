@@ -58,7 +58,7 @@ interface Pciroot {
     /// Returns true if the bus driver should proxy all device config access to pciroot. This is
     /// necessary in cases of IO config on x86, or for controllers that require configuration to
     /// map in device config headers.
-    5: DriverShouldProxyConfig() -> (zx.status s, bool use_proxy);
+    5: DriverShouldProxyConfig() -> (bool use_proxy);
     /// Read 8 bytes from config space for device at bdf address |address|, offset |offset|.
     6: ConfigRead8(zircon.hw.pci.PciBdf address, uint16 offset) -> (zx.status s, uint8 value);
     /// Read 16 bytes from config space for device at bdf address |address|, offset |offset|.
