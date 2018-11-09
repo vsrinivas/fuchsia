@@ -9,13 +9,11 @@
 ##
 ## Push packages to a device. One or more package names may be supplied. If no
 ## package name is suppled all packages in the build output will be pushed. The
-## target must be reachable from the host and most already know the host's IP
-## address.
+## target must be reachable from the host and must already know how to reach
+## the host package server (e.g. fx serve must be running).
 ##
 ## See https://fuchsia.googlesource.com/docs/+/master/development/workflows/package_update.md
 ## for more information about using this workflow.
-
-set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
@@ -33,9 +31,41 @@ function main {
     exit 0
   fi
 
-  fx-command-run publish "$@"
+  local all_pkgs=($("${FUCHSIA_DIR}/scripts/list-available-packages.py" --build-dir "${FUCHSIA_BUILD_DIR}"))
 
-  fx-command-run push-package-no-publish "$@"
+  # pkgs is the last argument
+  local pkgs=()
+
+  if [[ $# -eq 0 ]]; then
+    pkgs=("${all_pkgs[@]}")
+  else
+    for pkg in "$@"; do
+      for p in "${all_pkgs[@]}"; do
+        if [[ "$p" == "$pkg" ]]; then
+          pkgs+=("$p")
+          continue 2
+        fi
+      done
+      echo >&2 "Package $pkg will not be pushed. It is not part of the current build."
+      exit 1
+    done
+  fi
+
+  # The target doesn't support expansions, and a local expansion makes a command
+  # too long to spawn, so sending a loop makes things work ok.
+  local cmd="
+    code=0;
+    for c in ${pkgs[@]}; do
+      amber_ctl get_up -n \"\${c}\" -v 0 || code=\$((\$code + \$?));
+      manifest_path=\"/pkgfs/packages/\${c}/0/meta/module.json\";
+      if [ -s \"\$manifest_path\" ]; then
+        run module_package_indexer \"\${c}\" 0;
+      fi
+    done;
+    exit \$code
+  "
+
+  fx-command-run shell "${cmd}"
 }
 
 main "$@"

@@ -78,7 +78,7 @@ function main {
     echo
   fi
 
-  fx-command-run push-package-no-publish "${device_args[@]}" "${targets[@]}"
+  fx-command-run push-package "${device_args[@]}" "${targets[@]}"
 }
 
 
