@@ -39,7 +39,10 @@ ReaderCache::ReaderCache(std::shared_ptr<Reader> upstream_reader)
         last_result_ = result;
         buffer_.Initialize(upstream_size_);
 
-    async::PostTask(dispatcher_, [this]() { MaybeStartLoadForPosition(0); });
+        MaybeStartLoadForPosition(0);
+        load_is_complete_.When([this] {
+          MaybeStartLoadForPosition(upstream_size_ - kDefaultChunkSize);
+        });
 
         describe_is_complete_.Occur();
       });
