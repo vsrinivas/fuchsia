@@ -648,27 +648,31 @@ void AudioRendererImpl::PauseNoReply() { Pause(nullptr); }
 // contains multiple stages. In playback, renderer gain is pre-mix and hence is
 // "source" gain; the Output device (or master) gain is "dest" gain.
 void AudioRendererImpl::SetGain(float gain_db) {
-  if (stream_gain_db_ != gain_db) {
-    // Anywhere we set stream_gain_db_, we should perform this range check.
-    if (gain_db > fuchsia::media::MAX_GAIN_DB ||
-        gain_db < fuchsia::media::MUTED_GAIN_DB) {
-      FXL_LOG(ERROR) << "Stream gain value (" << gain_db << ") out of range.";
-      Shutdown();  // Use fit::defer() pattern if more than 1 error return case.
-      return;
-    }
-
-    stream_gain_db_ = gain_db;
-    float effective_gain_db =
-        mute_ ? fuchsia::media::MUTED_GAIN_DB : stream_gain_db_;
-
-    // Set this gain with every link (except the link to throttle output)
-    ForEachDestLink([throttle_ptr = throttle_output_link_.get(),
-                     effective_gain_db](auto& link) {
-      if (link.get() != throttle_ptr) {
-        link->bookkeeping()->gain.SetSourceGain(effective_gain_db);
-      }
-    });
+  // Anywhere we set stream_gain_db_, we should perform this range check.
+  if (gain_db > fuchsia::media::MAX_GAIN_DB ||
+      gain_db < fuchsia::media::MUTED_GAIN_DB) {
+    FXL_LOG(ERROR) << "SetGain(" << gain_db << " dB) out of range.";
+    Shutdown();  // Use fit::defer() pattern if more than 1 error return case.
+    return;
   }
+
+  if (stream_gain_db_ == gain_db) {
+    return;
+  }
+
+  stream_gain_db_ = gain_db;
+  float effective_gain_db =
+      mute_ ? fuchsia::media::MUTED_GAIN_DB : stream_gain_db_;
+
+  // Set this gain with every link (except the link to throttle output)
+  ForEachDestLink([throttle_ptr = throttle_output_link_.get(),
+                   effective_gain_db](auto& link) {
+    if (link.get() != throttle_ptr) {
+      link->bookkeeping()->gain.SetSourceGain(effective_gain_db);
+    }
+  });
+
+  NotifyGainMuteChanged();
 }
 
 // Set a stream gain ramp, in each Renderer -> Output audio path. Renderer gain
@@ -690,6 +694,8 @@ void AudioRendererImpl::SetGainWithRamp(float gain_db,
                                                       rampType);
     }
   });
+
+  // TODO(mpuryear): implement notifications for gain ramps.
 }
 
 // Set a stream mute, in each Renderer -> Output audio path. For now, mute is
@@ -698,19 +704,23 @@ void AudioRendererImpl::SetGainWithRamp(float gain_db,
 // hence is the Source component in the Gain object.
 void AudioRendererImpl::SetMute(bool mute) {
   // Only do the work if the request represents a change in state.
-  if (mute_ != mute) {
-    mute_ = mute;
-
-    float effective_gain_db =
-        mute_ ? fuchsia::media::MUTED_GAIN_DB : stream_gain_db_;
-
-    ForEachDestLink([throttle_ptr = throttle_output_link_.get(),
-                     effective_gain_db](auto& link) {
-      if (link.get() != throttle_ptr) {
-        link->bookkeeping()->gain.SetSourceGain(effective_gain_db);
-      }
-    });
+  if (mute_ == mute) {
+    return;
   }
+
+  mute_ = mute;
+
+  float effective_gain_db =
+      mute_ ? fuchsia::media::MUTED_GAIN_DB : stream_gain_db_;
+
+  ForEachDestLink([throttle_ptr = throttle_output_link_.get(),
+                   effective_gain_db](auto& link) {
+    if (link.get() != throttle_ptr) {
+      link->bookkeeping()->gain.SetSourceGain(effective_gain_db);
+    }
+  });
+
+  NotifyGainMuteChanged();
 }
 
 void AudioRendererImpl::BindGainControl(
@@ -730,8 +740,16 @@ void AudioRendererImpl::GetMinLeadTime(GetMinLeadTimeCallback callback) {
 
 void AudioRendererImpl::ReportNewMinClockLeadTime() {
   if (min_clock_lead_time_events_enabled_) {
-    auto& evt = audio_renderer_binding_.events();
-    evt.OnMinLeadTimeChanged(min_clock_lead_nsec_);
+    auto& lead_time_event = audio_renderer_binding_.events();
+    lead_time_event.OnMinLeadTimeChanged(min_clock_lead_nsec_);
+  }
+}
+
+void AudioRendererImpl::NotifyGainMuteChanged() {
+  // TODO(mpuryear): consider whether GainControl events should be disable-able,
+  // not unlike MinLeadTime events.
+  for (auto& gain_binding : gain_control_bindings_.bindings()) {
+    gain_binding->events().OnGainMuteChanged(stream_gain_db_, mute_);
   }
 }
 

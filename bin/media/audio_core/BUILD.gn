@@ -107,6 +107,7 @@ executable("test_bin") {
     "test/audio_core_tests_shared.h",
     "test/audio_renderer_sync_test.cc",
     "test/audio_renderer_test.cc",
+    "test/gain_control_test.cc",
     "test/main.cc",
   ]
 

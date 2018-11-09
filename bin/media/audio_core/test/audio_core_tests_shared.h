@@ -5,6 +5,8 @@
 #ifndef GARNET_BIN_MEDIA_AUDIO_CORE_TEST_AUDIO_CORE_TESTS_SHARED_H_
 #define GARNET_BIN_MEDIA_AUDIO_CORE_TEST_AUDIO_CORE_TESTS_SHARED_H_
 
+#include <fuchsia/media/cpp/fidl.h>
+
 namespace media {
 namespace audio {
 namespace test {
@@ -25,6 +27,9 @@ constexpr zx::duration kDurationTimeoutExpected = zx::msec(50);
 
 constexpr char kConnectionErr[] =
     "Connection to fuchsia.media FIDL interface was lost!\n";
+
+constexpr float kTooLowGainDb = fuchsia::media::MUTED_GAIN_DB - 0.1f;
+constexpr float kTooHighGainDb = fuchsia::media::MAX_GAIN_DB + 0.1f;
 
 }  // namespace test
 }  // namespace audio

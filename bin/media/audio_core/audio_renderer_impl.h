@@ -87,6 +87,9 @@ class AudioRendererImpl
   void SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
                        fuchsia::media::AudioRamp rampType) final;
   void SetMute(bool muted) final;
+  void NotifyGainMuteChanged();
+  // TODO(mpuryear): Notify on SetGainWithRamp.
+  // TODO(mpuryear): consider EnableGainChangeEvents(bool), like MinLeadTime.
 
  protected:
   // Hook called when the minimum clock lead time requirement changes.
@@ -108,14 +111,11 @@ class AudioRendererImpl
       return fbl::unique_ptr<GainControlBinding>(new GainControlBinding(owner));
     }
 
-    bool gain_events_enabled() const { return gain_events_enabled_; }
-
     // GainControl interface.
     void SetGain(float gain_db) final;
     void SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
                          fuchsia::media::AudioRamp rampType) final;
     void SetMute(bool muted) final;
-    // TODO(mpuryear): Need to implement OnGainMuteChanged event.
 
    private:
     friend class fbl::unique_ptr<GainControlBinding>;
@@ -124,7 +124,6 @@ class AudioRendererImpl
     ~GainControlBinding() override {}
 
     AudioRendererImpl* owner_;
-    bool gain_events_enabled_ = false;
   };
 
   friend class fbl::RefPtr<AudioRendererImpl>;
@@ -147,7 +146,6 @@ class AudioRendererImpl
                    fbl::unique_ptr<GainControlBinding>>
       gain_control_bindings_;
   bool is_shutdown_ = false;
-  bool gain_events_enabled_ = false;
   fbl::RefPtr<RefCountedVmoMapper> payload_buffer_;
   bool config_validated_ = false;
 
