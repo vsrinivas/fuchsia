@@ -6,14 +6,18 @@ import("//build/package.gni")
 import("//third_party/cobalt_config/cobalt_config.gni")
 import("//third_party/protobuf/proto_library.gni")
 
-cobalt_config("generate_testapp_config") {
+cobalt_config("generate_legacy_testapp_metrics") {
   project_id = 2
+  output_name = "legacy_cobalt_metrics"
 }
 
-cobalt_config("generate_testapp2_config") {
+cobalt_config("generate_testapp_metrics") {
   project_name = "test_app2"
-  output_name = "cobalt_config2"
+  output_name = "cobalt_metrics"
   add_extensions = true
+
+  namespace = "cobalt.testapp.metrics"
+  generate_cc = true
 }
 
 executable("cobalt_testapp") {
@@ -29,6 +33,7 @@ executable("cobalt_testapp") {
   ]
 
   deps = [
+    ":generate_testapp_metrics_cc",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",

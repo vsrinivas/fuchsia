@@ -37,10 +37,10 @@ namespace testapp {
 // This app is not launched through appmgr as part of a package so we need the
 // full path
 constexpr char kLegacyConfigBinProtoPath[] =
-    "/pkgfs/packages/cobalt_tests/0/data/cobalt_config.pb";
+    "/pkgfs/packages/cobalt_tests/0/data/legacy_cobalt_metrics.pb";
 
 constexpr char kConfigBinProtoPath[] =
-    "/pkgfs/packages/cobalt_tests/0/data/cobalt_config2.pb";
+    "/pkgfs/packages/cobalt_tests/0/data/cobalt_metrics.pb";
 
 fuchsia::cobalt::ProjectProfile CobaltTestApp::LoadCobaltConfig(
     CobaltConfigType type) {

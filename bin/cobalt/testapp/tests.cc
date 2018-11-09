@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/cobalt/testapp/tests.h"
+#include "garnet/bin/cobalt/testapp/cobalt_metrics.cb.h"
 #include "garnet/bin/cobalt/testapp/test_constants.h"
-
-#include "third_party/cobalt/config/id.h"
 
 namespace cobalt {
 namespace testapp {
@@ -165,13 +164,13 @@ bool TestLogEvent(CobaltTestAppLogger* logger_) {
   FXL_LOG(INFO) << "TestLogEvent";
   bool use_request_send_soon = true;
   for (uint32_t index : kErrorOccurredIndicesToUse) {
-    if (!logger_->LogEventAndSend(config::IdFromName("error_occurred"), index,
+    if (!logger_->LogEventAndSend(metrics::kErrorOccurredMetricId, index,
                                   use_request_send_soon)) {
       FXL_LOG(INFO) << "TestLogEvent: FAIL";
       return false;
     }
   }
-  if (logger_->LogEventAndSend(config::IdFromName("error_occurred"),
+  if (logger_->LogEventAndSend(metrics::kErrorOccurredMetricId,
                                kErrorOccurredInvalidIndex,
                                use_request_send_soon)) {
     FXL_LOG(INFO) << "TestLogEvent: FAIL";
@@ -186,7 +185,7 @@ bool TestLogCustomEvent(CobaltTestAppLogger* logger_) {
   FXL_LOG(INFO) << "TestLogCustomEvent";
   bool use_request_send_soon = true;
   bool success = logger_->LogStringPairAndSend(
-      config::IdFromName("query_response"), kExistingModulePartName, "ModA",
+      metrics::kQueryResponseMetricId, kExistingModulePartName, "ModA",
       kAddedModulePartName, "ModB", use_request_send_soon);
   FXL_LOG(INFO) << "TestLogCustomEvent : " << (success ? "PASS" : "FAIL");
   return success;
