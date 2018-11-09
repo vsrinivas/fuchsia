@@ -1,0 +1,8 @@
+Name: libusbhost
+URL: https://curl.haxx.se/
+License: Apache 2
+License File: LICENSE.txt
+Upstream Git: https://android.googlesource.com/platform/system/core/+/master/libusbhost
+Description:
+
+libusbhost is a simple library for userspace USB support on Linux.
