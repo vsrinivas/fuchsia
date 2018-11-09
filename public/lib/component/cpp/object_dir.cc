@@ -32,33 +32,25 @@ ObjectDir ObjectDir::find(ObjectPath path, bool initialize) const {
 bool ObjectDir::inner_set_prop(ObjectPath path, std::string name,
                                Property property) const {
   auto dir = find(path);
-  if (!dir) {
-    return false;
-  }
-  return dir.object()->SetProperty(name, std::move(property));
+  return dir ? dir.object()->SetProperty(name, std::move(property)) : false;
 }
 
 bool ObjectDir::set_metric(ObjectPath path, std::string name,
                            Metric metric) const {
-  if (!object_) {
-    return false;
-  }
-  return find(path).object()->SetMetric(name, std::move(metric));
+  return object_ ? find(path).object()->SetMetric(name, std::move(metric)) : false;
 }
 
 void ObjectDir::set_child(ObjectPath path, fbl::RefPtr<Object> obj) const {
-  if (!object_) {
-    return;
+  if (object_) {
+    find(path).object()->SetChild(obj);
   }
-  find(path).object()->SetChild(obj);
 }
 
 void ObjectDir::set_children_callback(ObjectPath path,
                                       Object::ChildrenCallback callback) const {
-  if (!object_) {
-    return;
+  if (object_) {
+    find(path).object()->SetChildrenCallback(std::move(callback));
   }
-  find(path).object()->SetChildrenCallback(std::move(callback));
 }
 
 }  // namespace component

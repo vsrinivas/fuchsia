@@ -73,6 +73,8 @@ int main(int argc, const char** argv) {
   invalid.set_child(fbl::MakeRefCounted<component::Object>("temp"));
   invalid.set_children_callback(
       [](std::vector<fbl::RefPtr<component::Object>>* out) {});
+  invalid.add_metric("test2", 2);
+  invalid.sub_metric("test2", 2);
 
   // Check that setting and moving parents works correctly.
   Table subtable("subtable");

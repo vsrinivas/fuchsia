@@ -104,14 +104,14 @@ class ObjectDir {
   // All objects along the path that do not exist will be initialized.
   template <typename T>
   bool add_metric(ObjectPath path, std::string name, T amount) const {
-    return find(path).object()->AddMetric(name, amount);
+    return object_ ? find(path).object()->AddMetric(name, amount) : false;
   }
 
   // Subtracts from a metric on a child specified by path.
   // All objects along the path that do not exist will be initialized.
   template <typename T>
   bool sub_metric(ObjectPath path, std::string name, T amount) const {
-    return find(path).object()->SubMetric(name, amount);
+    return object_ ? find(path).object()->SubMetric(name, amount) : false;
   }
 
   // Sets a child on this object to the given object.
