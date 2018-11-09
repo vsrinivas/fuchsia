@@ -198,7 +198,7 @@ void devhost_device_destroy(zx_device_t* dev) REQ_DM_LOCK {
     dev->ctx = nullptr;
     dev->driver = nullptr;
     dev->parent.reset();
-    dev->conn = nullptr;
+    dev->conn.store(nullptr);
     dev->proxy_ios = nullptr;
 
     // Defer destruction to help catch use-after-free and also
@@ -443,7 +443,7 @@ zx_status_t devhost_device_add(const fbl::RefPtr<zx_device_t>& dev,
         }
         dev->flags |= DEV_FLAG_ADDED;
         dev->flags &= (~DEV_FLAG_BUSY);
-        dev->rpc.reset(ctx->rpc);
+        dev->rpc = zx::unowned_channel(ctx->rpc);
         ctx->child = dev;
         return ZX_OK;
     }

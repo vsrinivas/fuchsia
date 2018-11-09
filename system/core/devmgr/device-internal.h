@@ -92,7 +92,8 @@ struct zx_device : fbl::RefCounted<zx_device>, fbl::Recyclable<zx_device>  {
 
     zx_handle_t event = ZX_HANDLE_INVALID;
     zx_handle_t local_event = ZX_HANDLE_INVALID;
-    zx::channel rpc;
+    // The RPC channel is owned by |conn|
+    zx::unowned_channel rpc;
 
     // most devices implement a single
     // protocol beyond the base device protocol
@@ -126,8 +127,10 @@ struct zx_device : fbl::RefCounted<zx_device>, fbl::Recyclable<zx_device>  {
         }
     };
 
-    // iostate
-    devmgr::DevcoordinatorConnection* conn = nullptr;
+    // This is an atomic so that the connection's async loop can inspect this
+    // value to determine if an expected shutdown is happening.  See comments in
+    // devhost_remove().
+    fbl::atomic<devmgr::DevcoordinatorConnection*> conn = nullptr;
     devmgr::ProxyIostate* proxy_ios = nullptr;
 
     char name[ZX_DEVICE_NAME_MAX + 1] = {};

@@ -117,7 +117,11 @@ zx_status_t Dmctl::Command(Message::Op op, const char* cmd, size_t cmdlen,
     }
     msg.op = op;
     Status rsp;
-    return dc_msg_rpc(zxdev()->rpc.get(), &msg, msglen, h, hcount, &rsp, sizeof(rsp), nullptr,
+    const zx::channel& rpc = *zxdev()->rpc;
+    // dmctl should never be removed, so the RPC channel should never become
+    // invalid
+    ZX_ASSERT(rpc.is_valid());
+    return dc_msg_rpc(rpc.get(), &msg, msglen, h, hcount, &rsp, sizeof(rsp), nullptr,
                       nullptr);
 }
 

@@ -156,20 +156,19 @@ zx_status_t devhost_get_topo_path(const fbl::RefPtr<zx_device_t>& dev, char* pat
                                   size_t max, size_t* actual);
 
 zx_status_t devhost_get_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type, void* buf,
-                                 size_t buflen, size_t* actual);
+                                 size_t buflen, size_t* actual) REQ_DM_LOCK;
 
 zx_status_t devhost_add_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type,
-                                 const void* data, size_t length);
+                                 const void* data, size_t length) REQ_DM_LOCK;
 
 zx_status_t devhost_publish_metadata(const fbl::RefPtr<zx_device_t>& dev, const char* path,
-                                     uint32_t type, const void* data, size_t length);
+                                     uint32_t type, const void* data, size_t length) REQ_DM_LOCK;
 
 // shared between devhost.c and rpc-device.c
 struct DevcoordinatorConnection {
     DevcoordinatorConnection() = default;
 
     fbl::RefPtr<zx_device_t> dev;
-    bool dead = false;
     port_handler_t ph = {};
 };
 

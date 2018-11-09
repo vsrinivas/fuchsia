@@ -326,7 +326,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevcoordinatorConnection* c
         strcpy(dev->name, "proxy");
         dev->protocol_id = msg.protocol_id;
         dev->ops = &device_default_ops;
-        dev->rpc.reset(hin[0]);
+        dev->rpc = zx::unowned_channel(hin[0]);
         newconn->dev = dev;
 
         newconn->ph.handle = hin[0];
@@ -519,16 +519,14 @@ static zx_status_t dh_handle_dc_rpc(port_handler_t* ph, zx_signals_t signals, ui
     DevcoordinatorConnection* conn = conn_from_ph(ph);
 
     if (evt != 0) {
+        // ensure we get no further events
+        port_cancel(&dh_port, &conn->ph);
+        zx_handle_close(conn->ph.handle);
+
         // we send an event to request the destruction
         // of a connection, to ensure that's the *last*
         // packet about the connection that we get
         delete conn;
-        return ZX_ERR_STOP;
-    }
-    if (conn->dead) {
-        // ports does not let us cancel packets that are
-        // already in the queue, so the dead flag enables us
-        // to ignore them
         return ZX_ERR_STOP;
     }
     if (signals & ZX_CHANNEL_READABLE) {
@@ -540,6 +538,14 @@ static zx_status_t dh_handle_dc_rpc(port_handler_t* ph, zx_signals_t signals, ui
         return r;
     }
     if (signals & ZX_CHANNEL_PEER_CLOSED) {
+        // Check if we were expecting this peer close.  If not, this could be a
+        // serious bug.
+        if (conn->dev->conn.load() == nullptr) {
+            // We're in the middle of shutting down, so just stop processing
+            // signals and wait for the queued shutdown packet.
+            return ZX_ERR_STOP;
+        }
+
         log(ERROR, "devhost: devmgr disconnected! fatal. (conn=%p)\n", conn);
         exit(0);
     }
@@ -782,7 +788,11 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
     }
 
     Status rsp;
-    if ((r = dc_msg_rpc(parent->rpc.get(), &msg, msglen, &hsend, 1, &rsp, sizeof(rsp), nullptr,
+    const zx::channel& rpc = *parent->rpc;
+    if (!rpc.is_valid()) {
+        return ZX_ERR_IO_REFUSED;
+    }
+    if ((r = dc_msg_rpc(rpc.get(), &msg, msglen, &hsend, 1, &rsp, sizeof(rsp), nullptr,
                         nullptr)) < 0) {
         log(ERROR, "devhost[%s] add '%s': rpc failed: %d\n", path, child->name, r);
     } else {
@@ -791,8 +801,8 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
         conn->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
         conn->ph.func = dh_handle_dc_rpc;
         if ((r = port_wait(&dh_port, &conn->ph)) == ZX_OK) {
-            child->rpc.reset(hrpc);
-            child->conn = conn.release();
+            child->rpc = zx::unowned_channel(hrpc);
+            child->conn.store(conn.release());
             return ZX_OK;
         }
 
@@ -817,7 +827,12 @@ static zx_status_t devhost_rpc_etc(const fbl::RefPtr<zx_device_t>& dev, Message:
     }
     msg.op = op;
     msg.value = value;
-    if ((r = dc_msg_rpc(dev->rpc.get(), &msg, msglen, nullptr, 0, rsp, rsp_len, actual,
+
+    const zx::channel& rpc = *dev->rpc;
+    if (!rpc.is_valid()) {
+        return ZX_ERR_IO_REFUSED;
+    }
+    if ((r = dc_msg_rpc(rpc.get(), &msg, msglen, nullptr, 0, rsp, rsp_len, actual,
                         outhandle)) < 0) {
         if (!(op == Message::Op::kGetMetadata && r == ZX_ERR_NOT_FOUND)) {
             log(ERROR, "devhost: rpc:%s failed: %d\n", opname, r);
@@ -842,34 +857,28 @@ void devhost_make_visible(const fbl::RefPtr<zx_device_t>& dev) {
 // Send message to devcoordinator informing it that this device
 // is being removed.  Called under devhost api lock.
 zx_status_t devhost_remove(const fbl::RefPtr<zx_device_t>& dev) {
-    DevcoordinatorConnection* conn = static_cast<DevcoordinatorConnection*>(dev->conn);
+    DevcoordinatorConnection* conn = dev->conn.load();
     if (conn == nullptr) {
         log(ERROR, "removing device %p, conn is nullptr\n", dev.get());
         return ZX_ERR_INTERNAL;
     }
 
+    // This must be done before the RemoveDevice message is sent to
+    // devcoordinator, since devcoordinator will close the channel in response.
+    // The async loop may see the channel close before it sees the queued
+    // shutdown packet, so it needs to check if dev->conn has been nulled to
+    // handle that gracefully.
+    dev->conn.store(nullptr);
+
     log(DEVLC, "removing device %p, conn %p\n", dev.get(), conn);
-
-    // Make this connection inactive (stop accepting RPCs for it)
-    //
-    // If the remove is happening on a different thread than
-    // the rpc handler, the handler might observe the peer
-    // before devhost_simple_rpc() returns.
-    conn->dev = nullptr;
-    conn->dead = true;
-
-    // ensure we get no further events
-    //TODO: this does not work yet, ports limitation
-    port_cancel(&dh_port, &conn->ph);
-    conn->ph.handle = ZX_HANDLE_INVALID;
-    dev->conn = nullptr;
 
     Status rsp;
     devhost_rpc(dev, Message::Op::kRemoveDevice, nullptr, "remove-device", &rsp,
                 sizeof(rsp), nullptr);
 
-    // shut down our rpc channel
-    dev->rpc.reset();
+    // Forget about our rpc channel since after the port_queue below it may be
+    // closed.
+    dev->rpc = zx::unowned_channel();
 
     // queue an event to destroy the connection
     port_queue(&dh_port, &conn->ph, 1);
