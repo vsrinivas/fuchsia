@@ -31,6 +31,9 @@ void SyncHelper::CallSynchronizationCallbacks() {
       sync_callback_per_sync_points_.erase(sync_point_it);
     }
   }
+  if (empty() && on_empty_callback_) {
+    on_empty_callback_();
+  }
 }
 
 }  // namespace ledger

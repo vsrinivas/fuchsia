@@ -29,6 +29,15 @@ class SyncHelper {
   SyncHelper(const SyncHelper&) = delete;
   SyncHelper& operator=(const SyncHelper&) = delete;
 
+  // Sets the callback to be called every time the SyncHelper is empty.
+  // SyncHelper is empty when no operation is currently in progress.
+  void set_on_empty(fit::closure on_empty_callback) {
+    on_empty_callback_ = std::move(on_empty_callback);
+  }
+
+  // Returns whether there is currently no running operation.
+  bool empty() { return in_flight_operation_counts_per_sync_point_.empty(); }
+
   // Registers a synchronization callback. |callback| will be called when all
   // operation wrapped by |WrapOperation| before the call to
   // |RegisterSynchronizationCallback| have finished.
@@ -41,27 +50,26 @@ class SyncHelper {
   auto WrapOperation(A callback) {
     auto sync_point = current_sync_point_;
     in_flight_operation_counts_per_sync_point_[sync_point]++;
-    return callback::MakeScoped(
-        weak_ptr_factory_.GetWeakPtr(),
-        // The lambda is not marked mutable, because the original callback might
-        // have a const operator, and this should not force the receiver to use
-        // only non-const operator.
-        // Because of this:
-        // - |called| must be wrap into a Mutable because the operation count
-        //   for the synchronization must be decremented only the first time the
-        //   operation callback is called.
-        // - |callback| must be wrap into a Mutable because it might not have a
-        //   const operator().
-        [this, called = Mutable(false), sync_point,
-         callback = Mutable(std::move(callback))](auto&&... params) {
-          (*callback)(std::forward<decltype(params)>(params)...);
-          if (!*called) {
-            *called = true;
-            if (--in_flight_operation_counts_per_sync_point_[sync_point] == 0) {
-              CallSynchronizationCallbacks();
-            }
+    auto on_first_call = fit::defer(callback::MakeScoped(
+        weak_ptr_factory_.GetWeakPtr(), [this, sync_point] {
+          if (--in_flight_operation_counts_per_sync_point_[sync_point] == 0) {
+            CallSynchronizationCallbacks();
           }
-        });
+        }));
+    // The lambda is not marked mutable, because the original callback might
+    // have a const operator, and this should not force the receiver to use
+    // only non-const operator.
+    // Because of this:
+    // - on_first_callcallback| must be wrap into a Mutable because calling it
+    //   is not a const operation.
+    // - |callback| must be wrap into a Mutable because it might not have a
+    //   const operator().
+    return
+        [callback = Mutable(std::move(callback)),
+         on_first_call = Mutable(std::move(on_first_call))](auto&&... params) {
+          (*callback)(std::forward<decltype(params)>(params)...);
+          on_first_call->call();
+        };
   }
 
  private:
@@ -86,6 +94,8 @@ class SyncHelper {
   std::map<int64_t, fit::function<void()>> sync_callback_per_sync_points_;
   // The number of operation in progress for each timestamp.
   std::map<int64_t, int64_t> in_flight_operation_counts_per_sync_point_;
+
+  fit::closure on_empty_callback_;
 
   // This must be the last member.
   fxl::WeakPtrFactory<SyncHelper> weak_ptr_factory_;
