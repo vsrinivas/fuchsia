@@ -67,13 +67,20 @@ std::vector<ActiveSession> FindAllSessions() {
 
 std::string GetUsage() {
   return R"(sessionctl <flags> <command>
+    Example:
+    sessionctl --mod_url=slider_mod --mod_name=mod1 --story_name=story1
+               --focus_mod --focus_story add_mod
+
+    sessionctl --mod_name=mod1 --story_name=story1 remove_mod
+
     <flags>
     --story_name=STORY_NAME
     --mod_name=MOD_NAME
     --mod_url=MOD_URL
         mods have a unique "mod_url".
-        "mod_url" is the binary field on mod manifest.json
-        intent.handler = mod_url means launch this specific mod.
+        It is the mod package's name.
+        In BUILD.gn fuchsia_package_name = "mod_url" or mod_url comes from
+        flutter_app("mod_url") when there is no fuchsia_package_name set.
     --focus_mod
         If flag is set then the mod is focused.
     --focus_story
@@ -85,7 +92,7 @@ std::string GetUsage() {
     add_mod
       Add new mod or update an existing mod if found.
         required: --story_name, --mod_name, --mod_url
-        optional: --focus_mod, --focus_story
+        optional: --focus_mod, --focus_story, --json_out
 
     remove_mod
       Remove the mod.
@@ -132,20 +139,21 @@ int main(int argc, const char** argv) {
 
   // To get a PuppetMaster service for a session, use the following code:
   PuppetMasterPtr puppet_master = ConnectToPuppetMaster(sessions[0]);
-  modular::SessionCtlApp app(puppet_master.get(), command_line, &loop, logger);
+  modular::SessionCtlApp app(puppet_master.get(), command_line, logger,
+                             loop.dispatcher(), [&loop] { loop.Quit(); });
 
-  std::string error;
+  std::string parsing_error;
   if (cmd == "add_mod") {
-    error = app.ExecuteAddModCommand();
+    parsing_error = app.ExecuteAddModCommand();
   } else if (cmd == "remove_mod") {
-    error = app.ExecuteRemoveModCommand();
+    parsing_error = app.ExecuteRemoveModCommand();
   } else {
     // Print help if command doesn't match a valid command.
     std::cout << GetUsage() << std::endl;
     return 1;
   }
 
-  if (!error.empty()) {
+  if (!parsing_error.empty()) {
     return 1;
   }
 

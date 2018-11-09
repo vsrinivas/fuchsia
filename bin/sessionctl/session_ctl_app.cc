@@ -4,12 +4,14 @@ namespace modular {
 
 SessionCtlApp::SessionCtlApp(
     fuchsia::modular::PuppetMaster* const puppet_master,
-    const fxl::CommandLine& command_line, async::Loop* const loop,
-    const modular::Logger& logger)
+    const fxl::CommandLine& command_line, const modular::Logger& logger,
+    async_dispatcher_t* const dispatcher,
+    const std::function<void()>& on_command_executed)
     : puppet_master_(puppet_master),
       command_line_(command_line),
-      loop_(loop),
-      logger_(logger) {}
+      logger_(logger),
+      dispatcher_(dispatcher),
+      on_command_executed_(on_command_executed) {}
 
 std::string SessionCtlApp::ExecuteRemoveModCommand() {
   std::string story_name;
@@ -28,10 +30,10 @@ std::string SessionCtlApp::ExecuteRemoveModCommand() {
     missing_flags.push_back("mod_name");
   }
 
-  std::string error = GenerateMissingFlagString(missing_flags);
-  if (!error.empty()) {
-    logger_.LogError("add_mod", error);
-    return error;
+  std::string parsing_error = GenerateMissingFlagString(missing_flags);
+  if (!parsing_error.empty()) {
+    logger_.LogError("remove_mod", parsing_error);
+    return parsing_error;
   }
 
   auto commands = MakeRemoveModCommands(mod_name);
@@ -40,23 +42,9 @@ std::string SessionCtlApp::ExecuteRemoveModCommand() {
                                                {"story_name", story_name}};
 
   puppet_master_->ControlStory(story_name, story_puppet_master_.NewRequest());
+  PostTaskExecuteStoryCommand("remove_mod", std::move(commands), params);
 
-  // Get input
-  async::PostTask(loop_->dispatcher(), [this, commands = std::move(commands),
-                                        params]() mutable {
-    ExecuteAction(std::move(commands), params.at("story_name"))
-        ->Then([this, params](bool has_error, std::string result) {
-          if (has_error) {
-            logger_.LogError("remove_mod", result);
-          } else {
-            auto params_copy = params;
-            params_copy.emplace("story_id", result);
-            logger_.Log("remove_mod", params_copy);
-          }
-          loop_->Quit();
-        });
-  });
-  return error;
+  return parsing_error;
 }
 
 std::string SessionCtlApp::ExecuteAddModCommand() {
@@ -84,10 +72,10 @@ std::string SessionCtlApp::ExecuteAddModCommand() {
     missing_flags.emplace_back("mod_name");
   }
 
-  std::string error = GenerateMissingFlagString(missing_flags);
-  if (!error.empty()) {
-    logger_.LogError("add_mod", error);
-    return error;
+  std::string parsing_error = GenerateMissingFlagString(missing_flags);
+  if (!parsing_error.empty()) {
+    logger_.LogError("add_mod", parsing_error);
+    return parsing_error;
   }
 
   auto commands = MakeAddModCommands(mod_url, mod_name);
@@ -104,23 +92,9 @@ std::string SessionCtlApp::ExecuteAddModCommand() {
       {"mod_url", mod_url}, {"mod_name", mod_name}, {"story_name", story_name}};
 
   puppet_master_->ControlStory(story_name, story_puppet_master_.NewRequest());
+  PostTaskExecuteStoryCommand("add_mod", std::move(commands), params);
 
-  // Get input
-  async::PostTask(loop_->dispatcher(), [this, commands = std::move(commands),
-                                        params]() mutable {
-    ExecuteAction(std::move(commands), params.at("story_name"))
-        ->Then([this, params](bool has_error, std::string result) {
-          if (has_error) {
-            logger_.LogError("add_mod", result);
-          } else {
-            auto params_copy = params;
-            params_copy.emplace("story_id", result);
-            logger_.Log("add_mod", params_copy);
-          }
-          loop_->Quit();
-        });
-  });
-  return error;
+  return parsing_error;
 }
 
 fuchsia::modular::StoryCommand SessionCtlApp::MakeFocusStoryCommand() {
@@ -174,7 +148,29 @@ SessionCtlApp::MakeRemoveModCommands(const std::string& mod_name) {
   return commands;
 }
 
-modular::FuturePtr<bool, std::string> SessionCtlApp::ExecuteAction(
+void SessionCtlApp::PostTaskExecuteStoryCommand(
+    const std::string command_name,
+    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands,
+    std::map<std::string, std::string> params) {
+  async::PostTask(
+      dispatcher_,
+      [this, command_name, commands = std::move(commands), params]() mutable {
+        ExecuteStoryCommand(std::move(commands), params.at("story_name"))
+            ->Then([this, command_name, params](bool has_error,
+                                                std::string result) {
+              if (has_error) {
+                logger_.LogError(command_name, result);
+              } else {
+                auto params_copy = params;
+                params_copy.emplace("story_id", result);
+                logger_.Log(command_name, params_copy);
+              }
+              on_command_executed_();
+            });
+      });
+}
+
+modular::FuturePtr<bool, std::string> SessionCtlApp::ExecuteStoryCommand(
     fidl::VectorPtr<fuchsia::modular::StoryCommand> commands,
     const std::string& story_name) {
   story_puppet_master_->Enqueue(std::move(commands));

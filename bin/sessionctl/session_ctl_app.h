@@ -19,10 +19,18 @@ using ::fuchsia::modular::PuppetMasterPtr;
 namespace modular {
 class SessionCtlApp {
  public:
+  // Constructs a SessionCtlApp which can read and execute session commands.
+  // |puppet_master| The interface used to execute commands.
+  // |command_line| The command line used to read commands and arguments.
+  // |logger| The logger used to log the results of commands.
+  // |dispatcher| The dispatcher which is used to post the command tasks.
+  // |on_command_executed| A callback which is called whenever a command has
+  // finished executing.
   explicit SessionCtlApp(fuchsia::modular::PuppetMaster* const puppet_master,
                          const fxl::CommandLine& command_line,
-                         async::Loop* const loop,
-                         const modular::Logger& logger);
+                         const modular::Logger& logger,
+                         async_dispatcher_t* const dispatcher,
+                         const std::function<void()>& on_command_executed);
 
   std::string ExecuteAddModCommand();
   std::string ExecuteRemoveModCommand();
@@ -43,7 +51,18 @@ class SessionCtlApp {
   fidl::VectorPtr<fuchsia::modular::StoryCommand> MakeRemoveModCommands(
       const std::string& mod_name);
 
-  modular::FuturePtr<bool, std::string> ExecuteAction(
+  // Does a PostTask to Execute the commands on StoryPuppetMaster.
+  // When the commands are executed do logging and then call
+  // on_command_executed_() callback.
+  // |command_name| the string command name.
+  // |commands| the StoryCommands to execute on StoryPuppetMaster.
+  // |params| map of {command_line arg : command_line value}. Used for logging.
+  void PostTaskExecuteStoryCommand(
+      const std::string command_name,
+      fidl::VectorPtr<fuchsia::modular::StoryCommand> commands,
+      std::map<std::string, std::string> params);
+
+  modular::FuturePtr<bool, std::string> ExecuteStoryCommand(
       fidl::VectorPtr<fuchsia::modular::StoryCommand> commands,
       const std::string& story_name);
 
@@ -53,8 +72,9 @@ class SessionCtlApp {
   fuchsia::modular::PuppetMaster* const puppet_master_;
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
   const fxl::CommandLine command_line_;
-  async::Loop* const loop_;
   const modular::Logger logger_;
+  async_dispatcher_t* const dispatcher_;
+  const std::function<void()> on_command_executed_;
 };
 
 }  // namespace modular
