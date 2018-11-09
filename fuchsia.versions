@@ -98,9 +98,9 @@ infra/tools/luci/logdog/logdog/mac-amd64
 	41ba570004b9a245b29c61db94600cbdd7050bae
 
 infra/tools/luci/vpython/linux-amd64
-	git_revision:9a931a5307c46b16b1c12e01e8239d4a73830b89
-	uCjugbKg6wMIF6_H_BHECZQdcGRebhnZ6LzSodPHQ7AC
+	git_revision:00e2d8b49a4e7505d1c71f19d15c9e7c5b9245a5
+	OP2507IwZIopK7NdnT4NDNeQUVuVpzqQ58G4qt4TVCYC
 
 infra/tools/luci/vpython/mac-amd64
-	git_revision:9a931a5307c46b16b1c12e01e8239d4a73830b89
-	yAdok-mh5vfwq1vCAHprmejM9iE7R1t9Wn6RxrWmAAEC
+	git_revision:00e2d8b49a4e7505d1c71f19d15c9e7c5b9245a5
+	O9ghE-k-PjOZVuFHtTclGS4xgcKqs7CnXmDZycB5T0kC

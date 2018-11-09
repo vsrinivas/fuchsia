@@ -16,7 +16,7 @@ $ResolvedVersions fuchsia.versions
 gn/gn/${platform} git_revision:bdb0fd02324b120cacde634a9235405061c8ea06
 
 # vpython
-infra/tools/luci/vpython/${platform} git_revision:9a931a5307c46b16b1c12e01e8239d4a73830b89
+infra/tools/luci/vpython/${platform} git_revision:00e2d8b49a4e7505d1c71f19d15c9e7c5b9245a5
 
 # LUCI editor
 infra/tools/luci/led/${platform} git_revision:364409bad34a43aaaeab8d3d92d8f890fb96d572
