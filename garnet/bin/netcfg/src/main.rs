@@ -70,11 +70,8 @@ static DEVICE_NAME_KEY: &str = "DeviceName";
 fn main() -> Result<(), failure::Error> {
     fuchsia_syslog::init_with_tags(&["netcfg"])?;
     fx_log_info!("Started");
-    let Config {
-        device_name,
-        dns_config: DnsConfig { servers },
-        rules: default_config_rules,
-    } = Config::load("/pkg/data/default.json")?;
+    let Config { device_name, dns_config: DnsConfig { servers }, rules: default_config_rules } =
+        Config::load("/pkg/data/default.json")?;
     let mut persisted_interface_config =
         interface::FileBackedConfig::load(&"/data/net_interfaces.cfg.json")?;
     let mut executor = fuchsia_async::Executor::new().context("could not create executor")?;
@@ -94,9 +91,8 @@ fn main() -> Result<(), failure::Error> {
         .map(Into::into)
         .collect::<Vec<fidl_fuchsia_net::IpAddress>>();
 
-    let () = netstack
-        .set_name_servers(&mut servers.iter_mut())
-        .context("could not set name servers")?;
+    let () =
+        netstack.set_name_servers(&mut servers.iter_mut()).context("could not set name servers")?;
 
     let default_device_name = device_name.as_ref().map(Cow::Borrowed).map(Ok);
 
@@ -117,9 +113,9 @@ fn main() -> Result<(), failure::Error> {
                     await!(device_settings_manager.set_string(DEVICE_NAME_KEY, &device_name))?;
                 Ok(success)
             }
-            None => Err(failure::err_msg(
-                "netstack event stream ended before providing interfaces",
-            )),
+            None => {
+                Err(failure::err_msg("netstack event stream ended before providing interfaces"))
+            }
         }
     };
 
@@ -208,6 +204,21 @@ fn main() -> Result<(), failure::Error> {
                                 filename.display()
                             )
                         })?;
+
+                        await!(match derived_interface_config.ip_address_config {
+                            fidl_fuchsia_netstack::IpAddressConfig::Dhcp(_) => {
+                                netstack.set_dhcp_client_status(nic_id as u32, true)
+                            }
+                            fidl_fuchsia_netstack::IpAddressConfig::StaticIp(
+                                fidl_fuchsia_net::Subnet { addr: mut address, prefix_len },
+                            ) => netstack.set_interface_address(
+                                nic_id as u32,
+                                &mut address,
+                                prefix_len
+                            ),
+                        })?;
+                        let () = netstack.set_interface_status(nic_id as u32, true)?;
+
                         // TODO(chunyingw): when netcfg switches to stack.add_ethernet_interface,
                         // remove casting nic_id to u64.
                         await!(interface_ids.lock())

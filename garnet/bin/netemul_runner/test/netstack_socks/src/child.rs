@@ -5,8 +5,9 @@
 use {
     crate::common::{BusConnection, SERVER_READY},
     failure::{format_err, Error, ResultExt},
+    fidl_fuchsia_net,
     fidl_fuchsia_netemul_network::{EndpointManagerMarker, NetworkContextMarker},
-    fidl_fuchsia_netstack::{InterfaceConfig, NetstackMarker},
+    fidl_fuchsia_netstack::{InterfaceConfig, IpAddressConfig, NetstackMarker},
     fuchsia_app::client,
     futures::TryStreamExt,
     std::io::{Read, Write},
@@ -17,6 +18,7 @@ use {
 const PORT: i32 = 8080;
 const HELLO_MSG_REQ: &str = "Hello World from Client!";
 const HELLO_MSG_RSP: &str = "Hello World from Server!";
+const IGNORED_IP_ADDRESS_CONFIG: IpAddressConfig = IpAddressConfig::Dhcp(true);
 
 pub struct ChildOptions {
     pub endpoint: String,
@@ -30,8 +32,8 @@ fn publish_server_ready() -> Result<(), Error> {
 }
 
 fn run_server(ip: &str) -> Result<(), Error> {
-    let listener =
-        TcpListener::bind(&format!("{}:{}", ip, PORT)).context("Can't bind to address")?;
+    let addr = format!("{}:{}", ip, PORT);
+    let listener = TcpListener::bind(&addr).context(format!("Can't bind to address: {}", addr))?;
     println!("Waiting for connections...");
     let () = publish_server_ready()?;
     let (mut stream, remote) = listener.accept().context("Accept failed")?;
@@ -94,10 +96,8 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
         None => opt.ip,
     };
 
-    let mut cfg = InterfaceConfig {
-        name: if_name.to_string(),
-        ip_address_config: fidl_fuchsia_netstack_ext::IpAddressConfig::StaticIp(static_ip).into(),
-    };
+    let mut cfg =
+        InterfaceConfig { name: if_name.to_string(), ip_address_config: IGNORED_IP_ADDRESS_CONFIG };
 
     let mut if_changed = netstack.take_event_stream().try_filter_map(
         |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
@@ -108,9 +108,12 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
             }
         },
     );
-    let _nicid =
+    let nicid =
         await!(netstack.add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, eth))
             .context("can't add ethernet device")?;
+    let () = netstack.set_interface_status(nicid as u32, true)?;
+    let fidl_fuchsia_net::Subnet { mut addr, prefix_len } = static_ip.clone().into();
+    let _ = await!(netstack.set_interface_address(nicid as u32, &mut addr, prefix_len))?;
 
     let (if_id, hwaddr) = await!(if_changed.try_next())
         .context("wait for interfaces")?

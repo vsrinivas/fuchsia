@@ -242,10 +242,27 @@ TEST_F(NetstackLaunchTest, DHCPRequestSent) {
 
   tap->SetPacketCallback(f);
 
+  uint32_t nicid = 0;
   // TODO(NET-1864): migrate to fuchsia.net.stack.AddEthernetInterface when we
   // migrate netcfg to use AddEthernetInterface.
   netstack->AddEthernetDevice(std::move(topo_path), std::move(config),
-                              eth->device(), [&](uint32_t id) {});
+                              eth->device(),
+                              [&nicid](uint32_t id) { nicid = id; });
+
+  ASSERT_TRUE(
+      RunLoopWithTimeoutOrUntil([&] { return nicid != 0; }, zx::sec(5)));
+
+  netstack->SetInterfaceStatus(nicid, true);
+  fuchsia::netstack::Status net_status =
+      fuchsia::netstack::Status::UNKNOWN_ERROR;
+  netstack->SetDhcpClientStatus(
+      nicid, true, [&net_status](fuchsia::netstack::NetErr result) {
+        net_status = result.status;
+      });
+
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&] { return net_status == fuchsia::netstack::Status::OK; }, zx::sec(5)));
+
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
       [&data_callback_run] { return data_callback_run; }, zx::sec(5)));
 }

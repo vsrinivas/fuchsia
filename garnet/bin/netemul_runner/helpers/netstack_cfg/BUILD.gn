@@ -11,15 +11,16 @@ rustc_binary("netstack_cfg") {
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_net_ext",
     "//garnet/lib/rust/fidl_fuchsia_netstack_ext",
-    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/lib/netemul/fidl:network-rustc",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:structopt",
+    "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }

@@ -301,7 +301,7 @@ func (ifs *ifState) stateChange(s link.State) {
 
 		ifs.mu.nic.Routes = nil
 		ifs.mu.nic.Netmask = "\xff\xff\xff\xff"
-		ifs.mu.nic.Addr = "\x00\x00\x00\x00"
+		ifs.mu.nic.Addr = header.IPv4Any
 		ifs.mu.nic.DNSServers = nil
 
 	case link.StateStarted:
@@ -495,61 +495,38 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 	ns.mu.Unlock()
 
 	return ns.addEndpoint(func(ifs *ifState) (stack.LinkEndpoint, error) {
-		b := bridge.New(links)
-		ifs.eth = b
-		return b, nil
-	}, func(ifs *ifState) error {
 		if len(ifs.mu.nic.Name) == 0 {
 			ifs.mu.nic.Name = fmt.Sprintf("br%d", ifs.mu.nic.ID)
 		}
-		return ifs.eth.Up()
+		b := bridge.New(links)
+		ifs.eth = b
+		return b, nil
 	})
 }
 
 func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceConfig, device ethernet.Device) (*ifState, error) {
-	var client *eth.Client
 	return ns.addEndpoint(func(ifs *ifState) (stack.LinkEndpoint, error) {
-		var err error
-		client, err = eth.NewClient("netstack", topological_path, device, ns.arena)
+		client, err := eth.NewClient("netstack", topological_path, device, ns.arena)
 		if err != nil {
 			return nil, err
 		}
 		ifs.eth = client
 		ifs.mu.nic.Features = client.Info.Features
 		ifs.mu.nic.Name = config.Name
-		return eth.NewLinkEndpoint(client), nil
-	}, func(ifs *ifState) error {
 		if len(ifs.mu.nic.Name) == 0 {
 			ifs.mu.nic.Name = fmt.Sprintf("eth%d", ifs.mu.nic.ID)
 		}
-
-		switch config.IpAddressConfig.Which() {
-		case netstack.IpAddressConfigDhcp:
-			ifs.mu.Lock()
-			ifs.setDHCPStatusLocked(true)
-			ifs.mu.Unlock()
-		case netstack.IpAddressConfigStaticIp:
-			ifs.mu.Lock()
-			ifs.setDHCPStatusLocked(false)
-			ifs.mu.Unlock()
-			subnet := config.IpAddressConfig.StaticIp
-			protocol, tcpipAddr, retval := ns.validateInterfaceAddress(subnet.Addr, subnet.PrefixLen)
-			if retval.Status != netstack.StatusOk {
-				return fmt.Errorf("NIC %s: received static IpAddressConfig with an invalid IP specified: [%+v]", ifs.mu.nic.Name, subnet)
-			}
-			ns.setInterfaceAddress(ifs.mu.nic.ID, protocol, tcpipAddr, subnet.PrefixLen)
-		}
-		return ifs.eth.Up()
+		return eth.NewLinkEndpoint(client), nil
 	})
 }
 
-func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint, error), finalize func(*ifState) error) (*ifState, error) {
+func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint, error)) (*ifState, error) {
 	ifs := &ifState{
 		ns: ns,
 	}
 	ifs.mu.state = link.StateUnknown
 	ifs.mu.nic = &netiface.NIC{
-		Addr:    "\x00\x00\x00\x00",
+		Addr:    header.IPv4Any,
 		Netmask: "\xff\xff\xff\xff",
 	}
 	ifs.mu.dhcp.running = func() bool { return false }
@@ -615,7 +592,7 @@ func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint,
 	ns.mu.stack.SetRouteTable(ns.flattenRouteTablesLocked())
 	ns.mu.Unlock()
 
-	return ifs, finalize(ifs)
+	return ifs, nil
 }
 
 func (ns *Netstack) validateInterfaceAddress(address net.IpAddress, prefixLen uint8) (tcpip.NetworkProtocolNumber, tcpip.Address, netstack.NetErr) {

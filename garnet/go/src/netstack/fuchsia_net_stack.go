@@ -17,6 +17,7 @@ import (
 	"fidl/fuchsia/netstack"
 
 	"github.com/google/netstack/tcpip"
+	"github.com/google/netstack/tcpip/header"
 	"github.com/google/netstack/tcpip/network/ipv4"
 )
 
@@ -167,7 +168,7 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) *
 	var protocol tcpip.NetworkProtocolNumber
 	switch ifAddr.IpAddress.Which() {
 	case net.IpAddressIpv4:
-		if len(addr) > 0 {
+		if addr != header.IPv4Any {
 			return &stack.Error{Type: stack.ErrorTypeAlreadyExists}
 		}
 		protocol = ipv4.ProtocolNumber

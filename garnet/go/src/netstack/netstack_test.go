@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"fidl/fuchsia/hardware/ethernet"
-	"fidl/fuchsia/net"
+	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
 	ethernetext "fidlext/fuchsia/hardware/ethernet"
 
@@ -20,7 +20,7 @@ import (
 	"github.com/google/netstack/tcpip/network/arp"
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/network/ipv6"
-	"github.com/google/netstack/tcpip/stack"
+	tcpipstack "github.com/google/netstack/tcpip/stack"
 )
 
 const (
@@ -51,7 +51,6 @@ func TestNicName(t *testing.T) {
 			return int32(zx.ErrOk), nil
 		},
 	})
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,8 +76,8 @@ func TestNicStartedByDefault(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !startCalled {
-		t.Errorf("expected ethernet.Device.Start to be called from addEth")
+	if startCalled {
+		t.Error("expected no calls to ethernet.Device.Start by addEth")
 	}
 }
 
@@ -90,21 +89,35 @@ func TestDhcpConfiguration(t *testing.T) {
 
 	d := deviceForAddEth(ethernet.Info{}, t)
 	ifs, err := ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{Name: testDeviceName, IpAddressConfig: ipAddressConfig}, &d)
-
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	ifs.mu.Lock()
 	if ifs.mu.dhcp.Client == nil {
-		t.Errorf("no dhcp client")
+		t.Error("no dhcp client")
 	}
+
+	if ifs.mu.dhcp.enabled {
+		t.Error("expected dhcp to be disabled")
+	}
+
+	if ifs.mu.dhcp.running() {
+		t.Error("expected dhcp client to be stopped initially")
+	}
+
+	ifs.setDHCPStatusLocked(true)
+	ifs.mu.Unlock()
+
+	ifs.eth.Up()
+
+	ifs.mu.Lock()
 	if !ifs.mu.dhcp.enabled {
-		t.Errorf("expected dhcp to be configured to run initially")
+		t.Error("expected dhcp to be enabled")
 	}
 
 	if !ifs.mu.dhcp.running() {
-		t.Errorf("expected dhcp client to be running initially")
+		t.Error("expected dhcp client to be running")
 	}
 	ifs.mu.Unlock()
 
@@ -112,10 +125,10 @@ func TestDhcpConfiguration(t *testing.T) {
 
 	ifs.mu.Lock()
 	if ifs.mu.dhcp.running() {
-		t.Errorf("expected dhcp client to be stopped on eth down")
+		t.Error("expected dhcp client to be stopped on eth down")
 	}
 	if !ifs.mu.dhcp.enabled {
-		t.Errorf("expected dhcp configuration to be preserved on eth down")
+		t.Error("expected dhcp configuration to be preserved on eth down")
 	}
 	ifs.mu.Unlock()
 
@@ -123,10 +136,10 @@ func TestDhcpConfiguration(t *testing.T) {
 
 	ifs.mu.Lock()
 	if !ifs.mu.dhcp.running() {
-		t.Errorf("expected dhcp client to be running on eth restart")
+		t.Error("expected dhcp client to be running on eth restart")
 	}
 	if !ifs.mu.dhcp.enabled {
-		t.Errorf("expected dhcp configuration to be preserved on eth restart")
+		t.Error("expected dhcp configuration to be preserved on eth restart")
 	}
 	ifs.mu.Unlock()
 }
@@ -134,42 +147,51 @@ func TestDhcpConfiguration(t *testing.T) {
 func TestStaticIPConfiguration(t *testing.T) {
 	ns := newNetstack(t)
 
-	ipAddressConfig := netstack.IpAddressConfig{}
 	addr := fidlconv.ToNetIpAddress(testIpAddress)
-	subnet := net.Subnet{Addr: addr, PrefixLen: 32}
-	ipAddressConfig.SetStaticIp(subnet)
+	ifAddr := stack.InterfaceAddress{IpAddress: addr, PrefixLen: 32}
 	d := deviceForAddEth(ethernet.Info{}, t)
-	ifs, err := ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{Name: testDeviceName, IpAddressConfig: ipAddressConfig}, &d)
+	ifs, err := ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{Name: testDeviceName}, &d)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	if err := ns.addInterfaceAddr(uint64(ifs.mu.nic.ID), ifAddr); err != nil {
+		t.Fatal(err)
+	}
+
+	ifs.mu.Lock()
 	if ifs.mu.nic.Addr != testIpAddress {
-		t.Errorf("expected static IP to be set when configured")
+		t.Error("expected static IP to be set when configured")
 	}
 	if ifs.mu.dhcp.enabled {
-		t.Errorf("expected dhcp state to be disabled initially")
+		t.Error("expected dhcp state to be disabled initially")
 	}
+	ifs.mu.Unlock()
 
 	ifs.eth.Down()
 
+	ifs.mu.Lock()
 	if ifs.mu.dhcp.enabled {
-		t.Errorf("expected dhcp state to remain disabled after bringing interface down")
+		t.Error("expected dhcp state to remain disabled after bringing interface down")
 	}
+	if ifs.mu.dhcp.running() {
+		t.Error("expected dhcp state to remain stopped after bringing interface down")
+	}
+	ifs.mu.Unlock()
 
 	ifs.eth.Up()
 
 	ifs.mu.Lock()
 	if ifs.mu.dhcp.enabled {
-		t.Errorf("expected dhcp state to remain disabled after restarting interface")
+		t.Error("expected dhcp state to remain disabled after restarting interface")
 	}
 
 	ifs.setDHCPStatusLocked(true)
 	if !ifs.mu.dhcp.enabled {
-		t.Errorf("expected dhcp state to become enabled after manually enabling it")
+		t.Error("expected dhcp state to become enabled after manually enabling it")
 	}
 	if !ifs.mu.dhcp.running() {
-		t.Errorf("expected dhcp state running")
+		t.Error("expected dhcp state running")
 	}
 	ifs.mu.Unlock()
 }
@@ -183,26 +205,28 @@ func TestWLANStaticIPConfiguration(t *testing.T) {
 		arena: arena,
 	}
 	ns.mu.ifStates = make(map[tcpip.NICID]*ifState)
-	ns.mu.stack = stack.New(
+	ns.mu.stack = tcpipstack.New(
 		[]string{
 			ipv4.ProtocolName,
 			ipv6.ProtocolName,
 			arp.ProtocolName,
-		}, nil, stack.Options{})
+		}, nil, tcpipstack.Options{})
 
 	ns.OnInterfacesChanged = func([]netstack.NetInterface) {}
-	ipAddressConfig := netstack.IpAddressConfig{}
 	addr := fidlconv.ToNetIpAddress(testIpAddress)
-	subnet := net.Subnet{Addr: addr, PrefixLen: 32}
-	ipAddressConfig.SetStaticIp(subnet)
+	ifAddr := stack.InterfaceAddress{IpAddress: addr, PrefixLen: 32}
 	d := deviceForAddEth(ethernet.Info{Features: ethernet.InfoFeatureWlan}, t)
-	ifs, err := ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{Name: testDeviceName, IpAddressConfig: ipAddressConfig}, &d)
+	ifs, err := ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{Name: testDeviceName}, &d)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	if err := ns.addInterfaceAddr(uint64(ifs.mu.nic.ID), ifAddr); err != nil {
+		t.Fatal(err)
+	}
+
 	if ifs.mu.nic.Addr != testIpAddress {
-		t.Errorf("expected static IP to be set when configured")
+		t.Error("expected static IP to be set when configured")
 	}
 }
 
@@ -215,12 +239,12 @@ func newNetstack(t *testing.T) *Netstack {
 		arena: arena,
 	}
 	ns.mu.ifStates = make(map[tcpip.NICID]*ifState)
-	ns.mu.stack = stack.New(
+	ns.mu.stack = tcpipstack.New(
 		[]string{
 			ipv4.ProtocolName,
 			ipv6.ProtocolName,
 			arp.ProtocolName,
-		}, nil, stack.Options{})
+		}, nil, tcpipstack.Options{})
 
 	ns.OnInterfacesChanged = func([]netstack.NetInterface) {}
 	return ns
