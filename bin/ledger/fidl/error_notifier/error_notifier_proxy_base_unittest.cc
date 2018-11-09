@@ -263,5 +263,30 @@ TEST_F(ErrorNotifierTest, NotEmptyResponseSync) {
   EXPECT_TRUE(sync_called);
 }
 
+TEST_F(ErrorNotifierTest, OnEmpty) {
+  bool called;
+  proxy_.set_on_empty(callback::SetWhenCalled(&called));
+  RunLoopUntilIdle();
+  EXPECT_FALSE(called);
+  ptr_.Close(ZX_OK);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+}
+
+TEST_F(ErrorNotifierTest, OnEmptyWithRunningOperation) {
+  impl_.delay_callback() = true;
+  bool called;
+  proxy_.set_on_empty(callback::SetWhenCalled(&called));
+  ptr_->NoResponse();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(called);
+  ptr_.Close(ZX_OK);
+  RunLoopUntilIdle();
+  EXPECT_FALSE(called);
+  impl_.RunDelayedCallback();
+  EXPECT_TRUE(called);
+}
+
+
 }  // namespace
 }  // namespace ledger

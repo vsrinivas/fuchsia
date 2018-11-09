@@ -40,14 +40,18 @@ class ErrorNotifierProxyBase : public I {
         interface_name_(interface_name),
         binding_(this, std::move(request)) {
     binding_.set_error_handler([this](zx_status_t /* status */) {
-      if (on_empty_) {
-        on_empty_();
-      }
+      CheckEmpty();
+    });
+    sync_helper_.set_on_empty([this] {
+      CheckEmpty();
     });
   }
 
  public:
   void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
+  bool empty() {
+    return !binding_.is_bound() && sync_helper_.empty();
+  }
 
  protected:
   void Sync(fit::function<void()> callback) override {
@@ -72,9 +76,6 @@ class ErrorNotifierProxyBase : public I {
                         << ". Sending the epitaph and closing the connection.";
           binding_.Close(static_cast<zx_status_t>(status));
           binding_.Unbind();
-          if (on_empty_) {
-            on_empty_();
-          }
         });
   }
 
@@ -88,6 +89,12 @@ class ErrorNotifierProxyBase : public I {
   D* const delegate_;
 
  private:
+  void CheckEmpty() {
+      if (empty() && on_empty_) {
+        on_empty_();
+      }
+  }
+
   const char* const interface_name_;
   fidl::Binding<I> binding_;
   fit::closure on_empty_;
