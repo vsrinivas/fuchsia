@@ -277,6 +277,8 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(LaunchModuleCall);
 };
 
+// KillModuleCall tears down the module by the given module_data. It is enqueued
+// when ledger confirms that the module was stopped, see OnModuleDataUpdated().
 class StoryControllerImpl::KillModuleCall : public Operation<> {
  public:
   KillModuleCall(StoryControllerImpl* const story_controller_impl,
@@ -294,7 +296,6 @@ class StoryControllerImpl::KillModuleCall : public Operation<> {
     // away. An internal module is stopped by its parent module, and it's up to
     // the parent module to defocus it first. TODO(mesch): Why not always
     // defocus?
-
     auto future =
         Future<>::Create("StoryControllerImpl.KillModuleCall.Run.future");
     if (story_controller_impl_->story_shell_ &&
@@ -307,16 +308,11 @@ class StoryControllerImpl::KillModuleCall : public Operation<> {
     }
 
     future->Then([this, flow] {
-      // Teardown the module, which discards the module controller. A parent
-      // module can call fuchsia::modular::ModuleController.Stop() multiple
-      // times before the fuchsia::modular::ModuleController connection gets
-      // disconnected by Teardown(). Therefore, this StopModuleCall Operation
-      // will cause the calls to be queued. The first Stop() will cause the
-      // fuchsia::modular::ModuleController to be closed, and so subsequent
-      // Stop() attempts will not find a controller and will return.
+      // Teardown the module, which discards the module controller. Since
+      // multiple KillModuleCall operations can be queued by module data
+      // updates, we must check whether the module has already been killed.
       auto* const running_mod_info =
           story_controller_impl_->FindRunningModInfo(module_data_.module_path);
-
       if (!running_mod_info) {
         FXL_LOG(INFO) << "No ModuleController for Module"
                       << " " << PathString(module_data_.module_path) << ". "
@@ -335,8 +331,7 @@ class StoryControllerImpl::KillModuleCall : public Operation<> {
       // deleted, and any FIDL connections that have invoked methods on it are
       // closed.
       //
-      // See comment in StopModuleCall before making changes here. Be aware that
-      // done_ is NOT the Done() callback of the Operation.
+      // Be aware that done_ is NOT the Done() callback of the Operation.
       running_mod_info->module_controller_impl->Teardown([this, flow] {
         for (auto& i : story_controller_impl_->modules_watchers_.ptrs()) {
           fuchsia::modular::ModuleData module_data;
@@ -567,78 +562,30 @@ class StoryControllerImpl::StopCall : public Operation<> {
 
 class StoryControllerImpl::StopModuleCall : public Operation<> {
  public:
-  StopModuleCall(StoryControllerImpl* const story_controller_impl,
-                 StoryStorage* const storage,
+  StopModuleCall(StoryStorage* const story_storage,
                  const fidl::VectorPtr<fidl::StringPtr>& module_path,
                  const std::function<void()>& done)
       : Operation("StoryControllerImpl::StopModuleCall", done),
-        story_controller_impl_(story_controller_impl),
-        storage_(storage),
+        story_storage_(story_storage),
         module_path_(module_path.Clone()) {}
 
  private:
   void Run() override {
-    // NOTE(alhaad): We don't use flow tokens here. See NOTE below to know
-    // why.
+    FlowToken flow{this};
 
     // Mark this module as stopped, which is a global state shared between
-    // machines to track when the module is explicitly stopped. Then, run
-    // KillModuleCall, which will tear down the running instance.
-    storage_
-        ->UpdateModuleData(
-            module_path_,
-            [this](fuchsia::modular::ModuleDataPtr* module_data_ptr) {
-              FXL_DCHECK(*module_data_ptr);
-              (*module_data_ptr)->module_stopped = true;
-              (*module_data_ptr)->Clone(&cached_module_data_);
-            })
-        ->WeakAsyncMap(
-            GetWeakPtr(),
-            [this] {
-              auto did_kill_module = Future<>::Create(
-                  "StoryControllerImpl.StopModuleCall.Run.did_kill_module");
-              operation_queue_.Add(new KillModuleCall(
-                  story_controller_impl_, std::move(cached_module_data_),
-                  did_kill_module->Completer()));
-              return did_kill_module;
-            })
-        ->Then([this] {
-          // NOTE(alhaad): An interesting flow of control to keep in mind:
-          //
-          // 1. From fuchsia::modular::ModuleController.Stop() which can only be
-          // called from FIDL, we call StoryControllerImpl.StopModule().
-          //
-          // 2.  StoryControllerImpl.StopModule() pushes StopModuleCall onto the
-          // operation queue.
-          //
-          // 3. When operation becomes current, we write to ledger, block and
-          // continue on receiving OnPageChange from ledger.
-          //
-          // 4. We then call KillModuleCall on a sub operation queue.
-          //
-          // 5. KillModuleCall will call Teardown() on the same
-          // ModuleControllerImpl that had started
-          // fuchsia::modular::ModuleController.Stop(). In the callback from
-          // Teardown(), it calls done_() (and NOT Done()).
-          //
-          // 6. done_() in KillModuleCall leads to the next line here, which
-          // calls Done() which would call the FIDL callback from
-          // fuchsia::modular::ModuleController.Stop().
-          //
-          // 7. Done() on the next line also deletes this which deletes the
-          // still running KillModuleCall, but this is okay because the only
-          // thing that was left to do in KillModuleCall was FlowToken going out
-          // of scope.
-          Done();
+    // machines to track when the module is explicitly stopped. The module will
+    // stop when ledger notifies us back about the module state change,
+    // see OnModuleDataUpdated().
+    story_storage_->UpdateModuleData(
+        module_path_, [flow](fuchsia::modular::ModuleDataPtr* module_data_ptr) {
+          FXL_DCHECK(*module_data_ptr);
+          (*module_data_ptr)->module_stopped = true;
         });
   }
 
-  StoryControllerImpl* const story_controller_impl_;  // not owned
-  StoryStorage* const storage_;                       // not owned
+  StoryStorage* const story_storage_;  // not owned
   const fidl::VectorPtr<fidl::StringPtr> module_path_;
-  fuchsia::modular::ModuleData cached_module_data_;
-
-  OperationQueue operation_queue_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StopModuleCall);
 };
@@ -667,7 +614,7 @@ class StoryControllerImpl::StopModuleAndStoryIfEmptyCall : public Operation<> {
     } else {
       // Otherwise, stop this one module.
       operation_queue_.Add(new StopModuleCall(
-          story_controller_impl_, story_controller_impl_->story_storage_,
+          story_controller_impl_->story_storage_,
           module_path_, [flow] {}));
     }
   }
@@ -1268,8 +1215,7 @@ void StoryControllerImpl::DefocusModule(
 void StoryControllerImpl::StopModule(
     const fidl::VectorPtr<fidl::StringPtr>& module_path,
     const std::function<void()>& done) {
-  operation_queue_.Add(
-      new StopModuleCall(this, story_storage_, module_path, done));
+  operation_queue_.Add(new StopModuleCall(story_storage_, module_path, done));
 }
 
 void StoryControllerImpl::ReleaseModule(

@@ -65,9 +65,9 @@ TEST_F(StoryStorageTest, WriteReadModuleData) {
   // back.
   auto storage = CreateStorage("page");
 
-  bool got_notification{};
+  int notification_count{0};
   storage->set_on_module_data_updated(
-      [&](ModuleData) { got_notification = true; });
+      [&](ModuleData) { notification_count++; });
 
   ModuleData module_data1;
   module_data1.module_url = "url1";
@@ -114,9 +114,8 @@ TEST_F(StoryStorageTest, WriteReadModuleData) {
   EXPECT_EQ(module_data1, all_module_data->at(0));
   EXPECT_EQ(module_data2, all_module_data->at(1));
 
-  // At no time should we have gotten a notification about ModuleData records
-  // from this storage instance.
-  EXPECT_FALSE(got_notification);
+  // We should get a notification every time module data is updated.
+  EXPECT_EQ(2, notification_count);
 }
 
 TEST_F(StoryStorageTest, UpdateModuleData) {

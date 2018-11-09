@@ -781,6 +781,7 @@ void StoryStorage::OnPageChange(const std::string& key,
   // If there are any operations waiting on this particular write
   // having happened, tell them to continue.
   auto it = pending_writes_.find({key, value_string});
+  bool notify_link_listeners = true;
   if (it != pending_writes_.end()) {
     auto local_futures = std::move(it->second);
     for (auto fut : local_futures) {
@@ -788,12 +789,14 @@ void StoryStorage::OnPageChange(const std::string& key,
     }
 
     // Since the above write originated from this StoryStorage instance,
-    // we do not notify any listeners.
-    return;
+    // we do not notify any link listeners.
+    notify_link_listeners = false;
   }
 
   if (StartsWith(key, kLinkKeyPrefix)) {
-    NotifyLinkWatchers(key, value_string, nullptr /* context */);
+    if (notify_link_listeners) {
+      NotifyLinkWatchers(key, value_string, nullptr /* context */);
+    }
   } else if (StartsWith(key, kModuleKeyPrefix)) {
     if (on_module_data_updated_) {
       auto module_data = ModuleData::New();
