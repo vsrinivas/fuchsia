@@ -122,7 +122,7 @@ class Device : public DeviceInterface {
     zx_status_t GetChannel(zx::channel* out) __TA_EXCLUDES(lock_);
 
     void SetStatusLocked(uint32_t status);
-    zx_status_t CreateMinstrel();
+    zx_status_t CreateMinstrel(uint32_t features);
     void AddMinstrelPeer(const wlan_assoc_ctx_t& assoc_ctx);
 
     zx_device_t* parent_;

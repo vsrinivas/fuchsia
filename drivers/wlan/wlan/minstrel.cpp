@@ -169,11 +169,11 @@ void AddSupportedHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map, CBW
               debug::Describe(gi).c_str());
 }
 
-MinstrelRateSelector::MinstrelRateSelector(TimerManager&& timer_mgr, ProbeSequence&& probe_sequence)
-    : timer_mgr_(fbl::move(timer_mgr)), probe_sequence_(std::move(probe_sequence)) {
-    // Temporarily suppress compiler complaint about unused variable
-    (void)probe_sequence_;
-}
+MinstrelRateSelector::MinstrelRateSelector(TimerManager&& timer_mgr, ProbeSequence&& probe_sequence,
+                                           zx::duration update_interval)
+    : timer_mgr_(fbl::move(timer_mgr)),
+      probe_sequence_(std::move(probe_sequence)),
+      update_interval_(update_interval) {}
 
 std::unordered_set<tx_vec_idx_t> AddErp(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map,
                                         const wlan_assoc_ctx_t& assoc_ctx) {
@@ -257,7 +257,7 @@ void MinstrelRateSelector::AddPeer(const wlan_assoc_ctx_t& assoc_ctx) {
     debugmstl("Minstrel peer added: %s\n", addr.ToString().c_str());
     if (peer_map_.empty()) {
         ZX_DEBUG_ASSERT(!next_update_event_.IsActive());
-        timer_mgr_.Schedule(timer_mgr_.Now() + kMinstrelUpdateInterval, &next_update_event_);
+        timer_mgr_.Schedule(timer_mgr_.Now() + update_interval_, &next_update_event_);
     } else if (GetPeer(addr) != nullptr) {
         warnf("Peer %s already exists. Forgot to clean up?\n", addr.ToString().c_str());
     }
@@ -376,7 +376,7 @@ void UpdateStatsPeer(Peer* peer) {
 bool MinstrelRateSelector::HandleTimeout() {
     zx::time now = timer_mgr_.HandleTimeout();
     if (next_update_event_.Triggered(now)) {
-        timer_mgr_.Schedule(now + kMinstrelUpdateInterval, &next_update_event_);
+        timer_mgr_.Schedule(now + update_interval_, &next_update_event_);
         UpdateStats();
         return true;
     } else {

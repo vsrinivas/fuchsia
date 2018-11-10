@@ -163,7 +163,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
     dispatcher_.reset(new Dispatcher(this, std::move(mlme)));
     if ((wlanmac_info_.ifc_info.driver_features & WLAN_DRIVER_FEATURE_TX_STATUS_REPORT) &&
         !(wlanmac_info_.ifc_info.driver_features & WLAN_DRIVER_FEATURE_RATE_SELECTION)) {
-        zx_status_t status = CreateMinstrel();
+        zx_status_t status = CreateMinstrel(wlanmac_info_.ifc_info.driver_features);
         if (ZX_OK == status) { debugmstl("Minstrel Manager created successfully.\n"); }
     }
 
@@ -829,7 +829,7 @@ zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info) {
     return ZX_OK;
 }
 
-zx_status_t Device::CreateMinstrel() {
+zx_status_t Device::CreateMinstrel(uint32_t features) {
     debugfn();
     fbl::unique_ptr<Timer> timer;
     ObjectId timer_id;
@@ -840,8 +840,10 @@ zx_status_t Device::CreateMinstrel() {
         errorf("could not create minstrel timer: %d\n", status);
         return status;
     }
-    minstrel_.reset(
-        new MinstrelRateSelector(TimerManager(fbl::move(timer)), ProbeSequence::RandomSequence()));
+    const zx::duration minstrel_update_interval =
+        (features & WLAN_DRIVER_FEATURE_SYNTH) != 0 ? zx::msec(20) : zx::msec(100);
+    minstrel_.reset(new MinstrelRateSelector(
+        TimerManager(fbl::move(timer)), ProbeSequence::RandomSequence(), minstrel_update_interval));
     return ZX_OK;
 }
 

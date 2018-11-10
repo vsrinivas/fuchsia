@@ -119,7 +119,7 @@ fn create_wlantap_config() -> wlantap::WlantapPhyConfig {
             supported_phys: vec![
                 SupportedPhy::Dsss, SupportedPhy::Cck, SupportedPhy::Ofdm, SupportedPhy::Ht
             ],
-            driver_features: vec![DriverFeature::TxStatusReport],
+            driver_features: vec![DriverFeature::Synth, DriverFeature::TxStatusReport],
             mac_roles: vec![wlan_device::MacRole::Client],
             caps: vec![],
             bands: vec![
@@ -394,6 +394,9 @@ fn main() -> Result<(), failure::Error> {
     let event_listener = event_listener(state.clone(), &mut sender, proxy.clone());
     let beacon_timer = beacon_sender(state.clone(), proxy.clone());
     let ethernet_sender = ethernet_sender(&mut receiver, state.clone());
+
+    println!("Hardware simlulator started. Try to scan or connect to \"fakenet\"");
+
     exec.run_singlethreaded(event_listener.join3(beacon_timer, ethernet_sender));
     Ok(())
 }
@@ -453,16 +456,23 @@ async fn ethernet_sender(receiver: &mut mpsc::Receiver<()>, state: Arc<Mutex<Sta
         })
         .expect("Error creating fake ethernet frame");
 
-    let mut eth_sender_timer_stream = fasync::Interval::new(100.millis());
+    // matches kMinstrelUpdateIntervalTest in minstrel.cpp
+    let minstrel_update_interval_test = 20.millis();
+    let mut eth_sender_timer_stream =
+        fasync::Interval::new(minstrel_update_interval_test);
     let mut client_stream = client.get_stream();
     const ETH_PACKETS_PER_INTERVAL : u16 = 160;
+    let mut num_cycles = 15;
     'eth_sender: loop {
         let mut next_timer_event = eth_sender_timer_stream.next();
         let mut next_eth_event = client_stream.next();
 
         select! {
             next_timer_event => {
-                for _ in 0..ETH_PACKETS_PER_INTERVAL { client.send(&buf); }
+                if num_cycles > 0 {
+                    num_cycles -= 1;
+                    for _ in 0..ETH_PACKETS_PER_INTERVAL { client.send(&buf); }
+                }
                 let state = state.lock().unwrap();
                 if !state.is_associated { break 'eth_sender; }
             },

@@ -26,7 +26,6 @@
 namespace wlan {
 
 static constexpr uint16_t kMinstrelFrameLength = 1400;  // bytes
-static constexpr zx::duration kMinstrelUpdateInterval = zx::msec(100);
 static constexpr float kMinstrelExpWeight = 0.75;  // Used to calculate moving average throughput
 static constexpr float kMinstrelProbabilityThreshold =
     0.9;  // If probability is past this level, only consider throughput
@@ -71,7 +70,8 @@ struct Peer {
 
 class MinstrelRateSelector {
    public:
-    MinstrelRateSelector(TimerManager&& timer_mgr, ProbeSequence&& probe_sequence);
+    MinstrelRateSelector(TimerManager&& timer_mgr, ProbeSequence&& probe_sequence,
+                         zx::duration update_interval);
     void AddPeer(const wlan_assoc_ctx_t& assoc_ctx);
     void RemovePeer(const common::MacAddr& addr);
     // Called after every tx packet.
@@ -99,6 +99,7 @@ class MinstrelRateSelector {
     TimedEvent next_update_event_;
 
     const ProbeSequence probe_sequence_;
+    const zx::duration update_interval_;
 };
 
 ProbeSequence RandomProbeSequence();
