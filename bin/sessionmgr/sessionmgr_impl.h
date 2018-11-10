@@ -145,9 +145,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
       override;
   void GetFocusProvider(
       fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) override;
-  void GetIntelligenceServices(
-      fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request)
-      override;
   void GetLink(fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
   void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                            request) override;

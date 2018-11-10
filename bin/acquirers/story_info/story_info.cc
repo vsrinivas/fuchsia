@@ -20,7 +20,7 @@ StoryInfoAcquirer::StoryInfoAcquirer(modular::AgentHost* const agent_host)
       focus_watcher_binding_(this) {
   // Initialize fuchsia::modular::IntelligenceServices.
   fuchsia::modular::IntelligenceServicesPtr intelligence_services;
-  agent_host->agent_context()->GetIntelligenceServices(
+  agent_host->startup_context()->ConnectToEnvironmentService(
       intelligence_services.NewRequest());
   intelligence_services->GetContextWriter(context_writer_.NewRequest());
   intelligence_services->GetContextReader(context_reader_.NewRequest());

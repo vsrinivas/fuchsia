@@ -422,11 +422,10 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
   // NOTE: There is an awkward service exchange here between
   // AgentRunner, StoryProviderImpl, FocusHandler, VisibleStoriesHandler.
   //
-  // AgentRunner needs a UserIntelligenceProvider to expose services from
-  // Maxwell through its GetIntelligenceServices() method.  Initializing the
-  // Maxwell process (through UserIntelligenceProviderFactory) requires a
-  // ComponentContext. ComponentContext requires an AgentRunner, which creates
-  // a circular dependency.
+  // AgentRunner needs a UserIntelligenceProvider. Initializing the
+  // Maxwell process UserIntelligenceProvider requires a ComponentContext.
+  // ComponentContext requires an AgentRunner, which creates a circular
+  // dependency.
   //
   // Because of FIDL late bindings, we can get around this by creating a new
   // InterfaceRequest here (|intelligence_provider_request|), making the
@@ -716,7 +715,12 @@ void SessionmgrImpl::RunSessionShell(
       });
   session_shell_services_.AddService<fuchsia::modular::IntelligenceServices>(
       [this](fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices>
-                 request) { GetIntelligenceServices(std::move(request)); });
+                 request) {
+        fuchsia::modular::ComponentScope component_scope;
+        component_scope.set_global_scope(fuchsia::modular::GlobalScope());
+        user_intelligence_provider_impl_->GetComponentIntelligenceServices(
+            std::move(component_scope), std::move(request));
+      });
   // |session_shell_service_provider_| is an InterfacePtr impl for
   // ServiceProvider that binds to |session_shell_services_|.
   fuchsia::sys::ServiceProviderPtr session_shell_service_provider_ptr_;
@@ -728,6 +732,7 @@ void SessionmgrImpl::RunSessionShell(
   auto service_list = fuchsia::sys::ServiceList::New();
   service_list->names.push_back(fuchsia::modular::SessionShellContext::Name_);
   service_list->names.push_back(fuchsia::modular::PuppetMaster::Name_);
+  service_list->names.push_back(fuchsia::modular::IntelligenceServices::Name_);
   service_list->provider = std::move(session_shell_service_provider_ptr_);
 
   session_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
@@ -823,14 +828,6 @@ void SessionmgrImpl::GetFocusController(
 void SessionmgrImpl::GetFocusProvider(
     fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) {
   focus_handler_->AddProviderBinding(std::move(request));
-}
-
-void SessionmgrImpl::GetIntelligenceServices(
-    fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request) {
-  fuchsia::modular::ComponentScope component_scope;
-  component_scope.set_global_scope(fuchsia::modular::GlobalScope());
-  user_intelligence_provider_impl_->GetComponentIntelligenceServices(
-      std::move(component_scope), std::move(request));
 }
 
 void SessionmgrImpl::GetLink(

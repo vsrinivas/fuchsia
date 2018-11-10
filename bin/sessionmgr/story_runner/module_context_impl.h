@@ -80,11 +80,6 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
           context_request) override;
 
   // |fuchsia::modular::ModuleContext|
-  void GetIntelligenceServices(
-      fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request)
-      override;
-
-  // |fuchsia::modular::ModuleContext|
   void GetStoryId(GetStoryIdCallback callback) override;
 
   // |fuchsia::modular::ModuleContext|

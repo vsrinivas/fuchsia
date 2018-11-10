@@ -20,9 +20,6 @@ interface AgentContext {
     /// @Deprecated
     2: GetTokenProvider(request<fuchsia.modular.auth.TokenProvider> request);
 
-    /// Connects to the IntelligenceServices for this Agent.
-    3: GetIntelligenceServices(request<IntelligenceServices> request);
-
     /// Connects to an EntityReferenceFactory for this Agent. Entity references
     /// obtained from this EntityReferenceFactory will be resolved back to this
     /// Agent.

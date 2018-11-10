@@ -95,10 +95,6 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   // |fuchsia::modular::AgentContext|
   void DeleteTask(fidl::StringPtr task_id) override;
   // |fuchsia::modular::AgentContext|
-  void GetIntelligenceServices(
-      fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request)
-      override;
-  // |fuchsia::modular::AgentContext|
   void GetEntityReferenceFactory(
       fidl::InterfaceRequest<fuchsia::modular::EntityReferenceFactory> request)
       override;

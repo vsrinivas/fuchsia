@@ -95,7 +95,7 @@ class TestApp : public modular::testing::ComponentBase<void> {
     session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
     fuchsia::modular::IntelligenceServicesPtr intelligence_services;
-    session_shell_context_->GetIntelligenceServices(
+    startup_context->ConnectToEnvironmentService(
         intelligence_services.NewRequest());
     intelligence_services->GetContextReader(context_reader_.NewRequest());
     context_listener_.Listen(context_reader_.get());

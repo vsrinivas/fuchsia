@@ -298,16 +298,6 @@ void AgentContextImpl::GetTokenManager(
   token_manager_bindings_.AddBinding(this, std::move(request));
 }
 
-void AgentContextImpl::GetIntelligenceServices(
-    fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request) {
-  fuchsia::modular::AgentScope agent_scope;
-  agent_scope.url = url_;
-  fuchsia::modular::ComponentScope scope;
-  scope.set_agent_scope(std::move(agent_scope));
-  user_intelligence_provider_->GetComponentIntelligenceServices(
-      std::move(scope), std::move(request));
-}
-
 void AgentContextImpl::GetEntityReferenceFactory(
     fidl::InterfaceRequest<fuchsia::modular::EntityReferenceFactory> request) {
   entity_provider_runner_->ConnectEntityReferenceFactory(url_,

@@ -36,7 +36,8 @@ class TestModule : fuchsia::modular::ProposalListener {
     initialized_.Pass();
 
     fuchsia::modular::IntelligenceServicesPtr intelligence_services;
-    module_host_->module_context()->GetIntelligenceServices(
+
+    module_host_->startup_context()->ConnectToEnvironmentService(
         intelligence_services.NewRequest());
     intelligence_services->GetProposalPublisher(
         proposal_publisher_.NewRequest());

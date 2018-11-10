@@ -65,11 +65,6 @@ interface ModuleContext {
     /// instance.
     7: GetComponentContext(request<ComponentContext> request);
 
-    /// Gets the IntelligenceServices service vendor associated with this Module
-    /// instance.
-    /// DEPRECATED
-    8: GetIntelligenceServices(request<IntelligenceServices> request);
-
     /// Gets the id for this story which may be used to create a suggestion
     /// proposal to resume this story, especially by agents.
     9: GetStoryId() -> (string story_id);
