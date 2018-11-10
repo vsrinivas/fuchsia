@@ -55,7 +55,7 @@ func getInterfaces(ns *Netstack) (out []netstack.NetInterface) {
 		if ifs.state == eth.StateStarted {
 			flags |= netstack.NetInterfaceFlagUp
 		}
-		if ifs.dhcpState.configured {
+		if ifs.dhcpState.enabled {
 			flags |= netstack.NetInterfaceFlagDhcp
 		}
 

@@ -9,16 +9,14 @@ import (
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/network/ipv6"
 	"github.com/google/netstack/tcpip/stack"
-	"netstack/fidlconv"
 	"netstack/link/eth"
 	"syscall/zx"
 	"testing"
 )
 
 const (
-	testDeviceName string        = "testdevice"
-	testTopoPath   string        = "/fake/ethernet/device"
-	testIpAddress  tcpip.Address = tcpip.Address("\xc0\xa8\x2a\x10")
+	testDeviceName string = "testdevice"
+	testTopoPath   string = "/fake/ethernet/device"
 )
 
 func TestNicName(t *testing.T) {
@@ -52,7 +50,7 @@ func TestNicName(t *testing.T) {
 	}
 }
 
-func TestDhcpConfiguration(t *testing.T) {
+func TestInitialDhcpConfiguration(t *testing.T) {
 	ns := newNetstack(t)
 
 	ipAddressConfig := netstack.IpAddressConfig{}
@@ -64,105 +62,11 @@ func TestDhcpConfiguration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	if !ifs.dhcpState.configured {
-		t.Errorf("expected dhcp to be configured initially")
+	if ifs.dhcpState.client == nil {
+		t.Errorf("no dhcp client")
 	}
-	if !ifs.dhcpState.Running() {
-		t.Errorf("expected dhcp client to be running initially")
-	}
-
-	ifs.eth.Down()
-	if ifs.dhcpState.Running() {
-		t.Errorf("expected dhcp client to be stopped on eth down")
-	}
-	if !ifs.dhcpState.configured {
-		t.Errorf("expected dhcp configuration to be preserved on eth down")
-	}
-
-	ifs.eth.Up()
-	if !ifs.dhcpState.Running() {
-		t.Errorf("expected dhcp client to be running on eth restart")
-	}
-	if !ifs.dhcpState.configured {
-		t.Errorf("expected dhcp configuration to be preserved on eth restart")
-	}
-}
-
-func TestStaticIPConfiguration(t *testing.T) {
-	ns := newNetstack(t)
-
-	ipAddressConfig := netstack.IpAddressConfig{}
-	addr := fidlconv.ToNetAddress(testIpAddress)
-	subnet := netstack.Subnet{Addr: addr, PrefixLen: 32}
-	ipAddressConfig.SetStaticIp(subnet)
-	d := deviceForAddEth(ethernet.Info{}, t)
-	ifs, err := ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{Name: testDeviceName, IpAddressConfig: ipAddressConfig}, &d)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if ifs.nic.Addr != testIpAddress {
-		t.Errorf("expected static IP to be set when configured")
-	}
-	if ifs.dhcpState.configured {
-		t.Errorf("expected dhcp state to be disabled initially")
-	}
-
-	ifs.eth.Down()
-
-	if ifs.dhcpState.configured {
-		t.Errorf("expected dhcp state to remain disabled after bringing interface down")
-	}
-
-	ifs.eth.Up()
-
-	if ifs.dhcpState.configured {
-		t.Errorf("expected dhcp state to remain disabled after restarting interface")
-	}
-
-	ifs.setDHCPStatus(true)
-
-	if !ifs.dhcpState.configured {
-		t.Errorf("expected dhcp state to become configured after manually enabling it")
-	}
-	if !ifs.dhcpState.Running() {
-		t.Errorf("expected dhcp state running")
-	}
-}
-
-// Regression test.
-func TestWLANStaticIPConfiguration(t *testing.T) {
-	arena, err := eth.NewArena()
-	if err != nil {
-		t.Fatal(err)
-	}
-	ns := &Netstack{
-		arena:    arena,
-		ifStates: make(map[tcpip.NICID]*ifState),
-	}
-	ns.mu.stack = stack.New(
-		[]string{
-			ipv4.ProtocolName,
-			ipv6.ProtocolName,
-			arp.ProtocolName,
-		}, nil, stack.Options{})
-
-	OnInterfacesChanged = func() {}
-
-	ipAddressConfig := netstack.IpAddressConfig{}
-	addr := fidlconv.ToNetAddress(testIpAddress)
-	subnet := netstack.Subnet{Addr: addr, PrefixLen: 32}
-	ipAddressConfig.SetStaticIp(subnet)
-	d := deviceForAddEth(ethernet.Info{Features: ethernet.InfoFeatureWlan}, t)
-	ifs, err := ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{Name: testDeviceName, IpAddressConfig: ipAddressConfig}, &d)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if ifs.nic.Addr != testIpAddress {
-		t.Errorf("expected static IP to be set when configured")
+	if ifs.dhcpState.enabled == false {
+		t.Errorf("dhcp disabled")
 	}
 }
 

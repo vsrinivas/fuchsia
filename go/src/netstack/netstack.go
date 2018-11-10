@@ -66,14 +66,10 @@ type Netstack struct {
 }
 
 type dhcpState struct {
-	client *dhcp.Client
-	ctx    context.Context
-	// Invariant: if cancel is non-nil, the client is running.
-	cancel context.CancelFunc
-	// `configured` records the intended state of the DHCP client.
-	// e.g. if the client should be running, configured is true.
-	// TODO: move this to a method on *dhcp.Client and delegate to it.
-	configured bool
+	client  *dhcp.Client
+	ctx     context.Context
+	cancel  context.CancelFunc
+	enabled bool
 }
 
 // Each ifState tracks the state of a network interface.
@@ -227,38 +223,20 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Con
 	OnInterfacesChanged()
 }
 
-func (ifs *ifState) setDHCPStatus(shouldRun bool) {
+func (ifs *ifState) setDHCPStatus(enabled bool) {
 	ifs.ns.mu.Lock()
 	defer ifs.ns.mu.Unlock()
 	d := &ifs.dhcpState
-	d.configured = shouldRun
-	if shouldRun {
-		d.Run(ifs.ctx)
-	} else {
-		d.Cancel()
+	if enabled == d.enabled {
+		return
 	}
-}
-
-// TODO: delegate to github.com/google/netstack/dhcp/client.go
-func (d *dhcpState) Running() bool {
-	return d.cancel != nil
-}
-
-func (d *dhcpState) Run(ctx context.Context) {
-	// TODO: should we account for the case where
-	// the dhcp context is different from the context
-	// passed to Run?
-	if !d.Running() {
-		d.ctx, d.cancel = context.WithCancel(ctx)
+	if enabled {
+		d.ctx, d.cancel = context.WithCancel(ifs.ctx)
 		d.client.Run(d.ctx)
-	}
-}
-
-func (d *dhcpState) Cancel() {
-	if d.Running() {
+	} else if d.cancel != nil {
 		d.cancel()
-		d.cancel = nil
 	}
+	d.enabled = enabled
 }
 
 func (ifs *ifState) stateChange(s eth.State) {
@@ -273,8 +251,9 @@ func (ifs *ifState) stateChange(s eth.State) {
 		if ifs.cancel != nil {
 			ifs.cancel()
 		}
-		if ifs.dhcpState.Running() {
-			ifs.dhcpState.Cancel()
+		if ifs.dhcpState.cancel != nil {
+			// TODO: consider remembering DHCP status
+			ifs.setDHCPStatus(false)
 		}
 
 		// TODO(crawshaw): more cleanup to be done here:
@@ -300,7 +279,7 @@ func (ifs *ifState) stateChange(s eth.State) {
 			ifs.ns.mu.Unlock()
 
 			ifs.ns.mu.stack.SetRouteTable(ifs.ns.flattenRouteTables())
-			ifs.setDHCPStatus(ifs.dhcpState.configured)
+			ifs.setDHCPStatus(true)
 		}
 	}
 	ifs.state = s
@@ -496,6 +475,13 @@ func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceCon
 	}, func(ifs *ifState) error {
 		if len(ifs.nic.Name) == 0 {
 			ifs.nic.Name = fmt.Sprintf("eth%d", ifs.nic.ID)
+    }
+		// TODO(NET-298): Delete this condition after enabling multiple concurrent DHCP clients
+		// in third_party/netstack.
+		if client.Info.Features&ethernet.InfoFeatureWlan != 0 {
+			// WLAN: Upon 802.1X port open, the state change will ensue, which
+			// will invoke the DHCP Client.
+			return nil
 		}
 
 		status, err := client.GetStatus()
@@ -509,7 +495,6 @@ func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceCon
 				ifs.setDHCPStatus(true)
 			}
 		case netstack.IpAddressConfigStaticIp:
-			ifs.setDHCPStatus(false)
 			subnet := config.IpAddressConfig.StaticIp
 			protocol, tcpipAddr, retval := ns.validateInterfaceAddress(subnet.Addr, subnet.PrefixLen)
 			if retval.Status != netstack.StatusOk {
