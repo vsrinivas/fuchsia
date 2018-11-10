@@ -101,7 +101,7 @@ zx_status_t Device::UsbRequest(usb_request_t* req) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  result = usb_request_alloc(&req, DFU_PACKET_LEN, bulk_out_addr, parent_req_size_);
+  result = usb_request_alloc(&req, DFU_PACKET_LEN, bulk_out_addr, sizeof(usb_request_t));
   req->complete_cb = interrupt_complete;
   req->cookie = &completion_;
   return result;
@@ -230,7 +230,6 @@ zx_status_t Device::LoadFirmware() {
     return result;
   }
 
-  parent_req_size_ = usb_get_request_size(&usb_);
   uint8_t status;
   result = usb_control(&usb_, USB_TYPE_VENDOR | USB_DIR_IN, GET_STATUS, 0, 0,
                        &status, sizeof(status), ZX_TIME_INFINITE, NULL);
