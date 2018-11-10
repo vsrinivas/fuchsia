@@ -277,6 +277,7 @@ template("fuzz_package") {
 
       # If enabled, add fuzz target to package
       if (sanitized_target != "") {
+        fuzz_label = get_label_info(sanitized_target, "label_no_toolchain")
         fuzz_gen_dir =
             get_label_info(fuzz_target, "target_gen_dir") + "/${fuzz_name}"
 
@@ -291,7 +292,7 @@ template("fuzz_package") {
             },
           ]
 
-          fuzz.deps += [ ":${fuzz_name}_cmx(${toolchain_variant.base})" ]
+          fuzz.deps += [ "${fuzz_label}_cmx(${toolchain_variant.base})" ]
           fuzz.meta += [
             {
               path = "${fuzz_gen_dir}/${fuzz_name}.cmx"
@@ -301,9 +302,9 @@ template("fuzz_package") {
         }
 
         fuzz.deps += [
-          ":${fuzz_name}_corpora(${toolchain_variant.base})",
-          ":${fuzz_name}_dictionary(${toolchain_variant.base})",
-          ":${fuzz_name}_options(${toolchain_variant.base})",
+          "${fuzz_label}_corpora(${toolchain_variant.base})",
+          "${fuzz_label}_dictionary(${toolchain_variant.base})",
+          "${fuzz_label}_options(${toolchain_variant.base})",
         ]
         fuzz.resources += [
           {
