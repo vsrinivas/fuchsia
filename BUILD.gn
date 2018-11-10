@@ -4,42 +4,88 @@
 
 import("//build/package.gni")
 
-jiri_snapshot_file = "//.jiri_root/update_history/latest"
-last_update_file = "$target_gen_dir/last-update.txt"
+declare_args() {
+  # Product configuration of the current build
+  build_info_product = ""
+
+  # Board configuration of the current build
+  build_info_board = ""
+
+  # Logical version of the current build. If not set, defaults to the timestamp
+  # of the most recent update.
+  build_info_version = ""
+}
+
+build_info_files = {
+  product = "$target_gen_dir/product.txt"
+  board = "$target_gen_dir/board.txt"
+  version = "$target_gen_dir/version.txt"
+  jiri_snapshot = "//.jiri_root/update_history/latest"
+  last_update = "$target_gen_dir/last-update.txt"
+}
+
+write_file(build_info_files.product, build_info_product)
+write_file(build_info_files.board, build_info_board)
+
+if (build_info_version != "") {
+  write_file(build_info_files.version, build_info_version)
+} else {
+  build_info_files.version = build_info_files.last_update
+}
 
 package("deprecated_build_info") {
   deprecated_system_image = true
-  deps = [ ":last-update.txt" ]
+  deps = [
+    ":last-update.txt",
+  ]
   resources = [
     {
+      dest = "build/product"
+      path = build_info_files.product
+    },
+    {
+      dest = "build/board"
+      path = build_info_files.board
+    },
+    {
+      dest = "build/version"
+      path = build_info_files.version
+    },
+    {
       dest = "build/last-update"
-      path = last_update_file
+      path = build_info_files.last_update
     },
     {
       dest = "build/snapshot"
-      path = jiri_snapshot_file
+      path = build_info_files.jiri_snapshot
     },
   ]
 }
 
 package("build-info") {
-  deps = [ ":last-update.txt" ]
+  deps = [
+    ":last-update.txt",
+  ]
   resources = [
     {
       dest = "last-update"
-      path = last_update_file
+      path = build_info_files.last_update
     },
     {
       dest = "snapshot"
-      path = jiri_snapshot_file
+      path = build_info_files.jiri_snapshot
     },
   ]
 }
 
 action("last-update.txt") {
   visibility = [ ":*" ]
-  sources = [ jiri_snapshot_file ]
-  outputs = [ last_update_file ]
+  sources = [
+    build_info_files.jiri_snapshot,
+  ]
+  outputs = [
+    build_info_files.last_update,
+  ]
   script = "tools/gen-last-update"
   args = rebase_path(sources + outputs, root_build_dir)
 }
