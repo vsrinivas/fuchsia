@@ -1,13 +1,15 @@
 #!/bin/bash
-# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### symbolize call stacks provided as input
+### Symbolize backtraces and program locations provided as input on stdin
+
+## This tool takes in log output from either zx_log or syslog and processes
+## the results to make the symbolizer markup in them human readable.
+## Anything that is not valid marked up is left alone. This is similar
+## to how c++filt works for demangling C++ symbols.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
-
-# TODO(jeffbrown): Fix symbolize to support arch other than x64
-exec "${FUCHSIA_DIR}/zircon/scripts/symbolize" \
-      --build-dir "${FUCHSIA_BUILD_DIR}" "$@"
+fx-symbolize

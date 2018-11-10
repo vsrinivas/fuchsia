@@ -194,8 +194,8 @@ record() {
       rm -f .loglistener.pid
     fi
     if [[ -f zircon.log ]] ; then
-      ${FUCHSIA_DIR}/zircon/scripts/symbolize-filter \
-        ${FUCHSIA_BUILD_DIR}/ids.txt <zircon.log >symbolized.log
+      ${FUCHSIA_DIR}/zircon/scripts/symbolize \
+        -i ${FUCHSIA_BUILD_DIR}/ids.txt <zircon.log >symbolized.log
     fi
 
     # Transfer the fuzz logs

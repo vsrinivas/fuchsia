@@ -10,8 +10,14 @@
 ## one of the devices on the link-local network.
 
 set -e
+set -o pipefail
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
-exec "${ZIRCON_TOOLS_DIR}/loglistener" "$(get-device-name)"
+if [[ $# > 0 && $1 = "--raw" ]]; then
+  shift
+  exec "${ZIRCON_TOOLS_DIR}/loglistener" "$(get-device-name)"
+else
+  "${ZIRCON_TOOLS_DIR}/loglistener" "$(get-device-name)" | fx-symbolize
+fi

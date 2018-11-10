@@ -5,10 +5,13 @@
 
 ### Listen for logs
 
-## usage: fx syslog [log-listener flags]
+## usage: fx syslog [--raw] [flags]
 ##
 ## Creates an SSH connection with a device and starts listening for logs.
 ## Pass -h to get help with log-listener flags.
+## pass --raw as the first argument to get the raw, unsymbolized logs.
+
+set -o pipefail
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 
@@ -27,4 +30,9 @@ function listen {
 }
 
 echo "Looking for device"
-listen $@
+if [[ $# > 0 && "$1" = "--raw" ]]; then
+  shift
+  listen "$@"
+else
+  listen "$@" | fx-symbolize
+fi

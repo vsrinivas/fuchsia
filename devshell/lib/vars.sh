@@ -19,6 +19,19 @@ if [[ "${FUCHSIA_DEVSHELL_VERBOSITY}" -eq 1 ]]; then
   set -x
 fi
 
+function fx-symbolize {
+  if [[ -z "$FUCHSIA_BUILD_DIR" ]]; then
+    fx-config-read
+  fi
+  if [[ -z "$BUILDTOOLS_CLANG_DIR" ]]; then
+    source "${FUCHSIA_DIR}/buildtools/vars.sh"
+  fi
+  local idstxt="${FUCHSIA_BUILD_DIR}/ids.txt"
+  local prebuilt_dir="${FUCHSIA_DIR}/zircon/prebuilt/downloads"
+  local llvm_symbolizer="${BUILDTOOLS_CLANG_DIR}/bin/llvm-symbolizer"
+  "${prebuilt_dir}/symbolize" -ids "$idstxt" -llvm-symbolizer "$llvm_symbolizer"
+}
+
 function fx-config-read-if-present {
   if [[ "${FUCHSIA_CONFIG}" = "-" && -n "${FUCHSIA_BUILD_DIR}" ]]; then
     if [[ -f "${FUCHSIA_BUILD_DIR}/fx.config" ]]; then
