@@ -15,16 +15,9 @@
 #include "resources.h"
 #include "acpi-private.h"
 
-#define xprintf(fmt...) zxlogf(SPEW, fmt)
-
-#define PCIE_MAX_LEGACY_IRQ_PINS 4
-#define PCIE_MAX_DEVICES_PER_BUS 32
-#define PCIE_MAX_FUNCTIONS_PER_DEVICE 8
-#define PCI_CONFIG_SIZE 256
-#define PCIE_EXTENDED_CONFIG_SIZE 4096
-#define PCI_HID  ((char*)"PNP0A03")
+#define PCI_HID ((char*)"PNP0A03")
 #define PCIE_HID ((char*)"PNP0A08")
-
+#define xprintf(fmt...) zxlogf(SPEW, fmt)
 #define PANIC_UNIMPLEMENTED __builtin_trap()
 
 /* Helper routine for translating IRQ routing tables into usable form
@@ -67,10 +60,10 @@ static ACPI_STATUS handle_prt(
         if (entry_addr > (uintptr_t)buffer.Pointer + buffer.Length) {
             return AE_ERROR;
         }
-        if (entry->Pin >= PCIE_MAX_LEGACY_IRQ_PINS) {
+        if (entry->Pin >= PCI_MAX_LEGACY_IRQ_PINS) {
             return AE_ERROR;
         }
-        uint8_t dev_id = (entry->Address >> 16) & (PCIE_MAX_DEVICES_PER_BUS - 1);
+        uint8_t dev_id = (entry->Address >> 16) & (PCI_MAX_DEVICES_PER_BUS - 1);
         // Either we're handling the root complex (port_dev_id == UINT8_MAX), or
         // we're handling a root port, and if it's a root port, dev_id should
         // be 0.
@@ -160,7 +153,7 @@ static ACPI_STATUS handle_prt(
         }
 
         if (port_dev_id == UINT8_MAX) {
-            for (unsigned int i = 0; i < PCIE_MAX_FUNCTIONS_PER_DEVICE; ++i) {
+            for (unsigned int i = 0; i < PCI_MAX_FUNCTIONS_PER_DEVICE; ++i) {
                 arg->dev_pin_to_global_irq[dev_id][i][entry->Pin] =
                     global_irq;
             }
@@ -210,7 +203,7 @@ static zx_status_t find_pcie_config(zx_pci_init_arg_t* arg) {
     }
 
     size_t size_per_bus = PCIE_EXTENDED_CONFIG_SIZE *
-                          PCIE_MAX_DEVICES_PER_BUS * PCIE_MAX_FUNCTIONS_PER_DEVICE;
+                          PCI_MAX_DEVICES_PER_BUS * PCI_MAX_FUNCTIONS_PER_DEVICE;
     int num_buses = table_start->EndBusNumber - table_start->StartBusNumber + 1;
 
     if (table_start->PciSegment != 0) {
@@ -279,8 +272,8 @@ static ACPI_STATUS get_pcie_devices_irq(
             continue;
         }
         UINT64 data = object.Integer.Value;
-        uint8_t port_dev_id = (data >> 16) & (PCIE_MAX_DEVICES_PER_BUS - 1);
-        uint8_t port_func_id = data & (PCIE_MAX_FUNCTIONS_PER_DEVICE - 1);
+        uint8_t port_dev_id = (data >> 16) & (PCI_MAX_DEVICES_PER_BUS - 1);
+        uint8_t port_func_id = data & (PCI_MAX_FUNCTIONS_PER_DEVICE - 1);
         // Ignore the return value of this, since if child is not a
         // root port, it will fail and we don't care.
         handle_prt(
@@ -321,8 +314,8 @@ static ACPI_STATUS find_pci_configs_cb(
         ACPI_HANDLE object, uint32_t nesting_level, void* _ctx, void** ret) {
     ACPI_DEVICE_INFO* info;
 
-    size_t size_per_bus = PCI_CONFIG_SIZE *
-                          PCIE_MAX_DEVICES_PER_BUS * PCIE_MAX_FUNCTIONS_PER_DEVICE;
+    size_t size_per_bus = PCI_BASE_CONFIG_SIZE *
+                          PCI_MAX_DEVICES_PER_BUS * PCI_MAX_FUNCTIONS_PER_DEVICE;
     zx_pci_init_arg_t* arg = (zx_pci_init_arg_t*)_ctx;
 
     // TODO(cja): This is essentially a hacky solution to deal with

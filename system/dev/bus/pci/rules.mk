@@ -10,10 +10,27 @@ $(warning Building with userspace pci!)
 MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 MODULE_NAME := bus-pci
-MODULE_SRCS := $(LOCAL_DIR)/upci.c
-MODULE_STATIC_LIBS := system/ulib/ddk
-MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
-MODULE_BANJO_LIBS := system/banjo/ddk-protocol-pci system/banjo/ddk-protocol-pciroot
+MODULE_SRCS := \
+    $(LOCAL_DIR)/binding.c \
+    $(LOCAL_DIR)/bus.cpp \
+    $(LOCAL_DIR)/config.cpp
+
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-pci \
+    system/banjo/ddk-protocol-pciroot
+
+MODULE_STATIC_LIBS := \
+    system/ulib/fbl \
+    system/ulib/ddk \
+    system/ulib/ddktl \
+    system/ulib/zxcpp \
+    system/ulib/pretty
+
+MODULE_LIBS := \
+    system/ulib/driver \
+    system/ulib/zircon \
+    system/ulib/c
+
 include make/module.mk
 
 else
