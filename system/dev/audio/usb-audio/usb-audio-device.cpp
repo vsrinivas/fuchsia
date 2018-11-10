@@ -88,8 +88,6 @@ zx_status_t UsbAudioDevice::Bind() {
         serial_num_ = FetchStringDescriptor(usb_proto_, usb_dev_desc_.iSerialNumber);
     }
 
-    parent_req_size_ = usb_get_request_size(&usb_proto_);
-
     // Our top level binding script has only claimed audio interfaces with a
     // subclass of control.  Go ahead and claim anything which has a top level
     // class of of "audio"; this is where we will find our Audio and MIDI
@@ -255,8 +253,7 @@ void UsbAudioDevice::Probe() {
                                      &usb_proto_,
                                      midi_sink_index_++,
                                      info.ifc,
-                                     info.out_ep,
-                                     parent_req_size_);
+                                     info.out_ep);
             }
 
             if (info.in_ep != nullptr) {
@@ -266,8 +263,7 @@ void UsbAudioDevice::Probe() {
                                      &usb_proto_,
                                      midi_source_index_++,
                                      info.ifc,
-                                     info.in_ep,
-                                     parent_req_size_);
+                                     info.in_ep);
             }
 
             break;

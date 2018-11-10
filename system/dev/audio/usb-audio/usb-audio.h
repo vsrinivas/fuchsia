@@ -18,13 +18,11 @@ __BEGIN_CDECLS
 
 zx_status_t usb_midi_sink_create(zx_device_t* device, usb_protocol_t* usb, int index,
                                  const usb_interface_descriptor_t* intf,
-                                 const usb_endpoint_descriptor_t* ep,
-                                 const size_t req_size);
+                                 const usb_endpoint_descriptor_t* ep);
 
 zx_status_t usb_midi_source_create(zx_device_t* device, usb_protocol_t* usb, int index,
                                    const usb_interface_descriptor_t* intf,
-                                   const usb_endpoint_descriptor_t* ep,
-                                   const size_t req_size);
+                                   const usb_endpoint_descriptor_t* ep);
 
 __END_CDECLS
 

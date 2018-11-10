@@ -89,7 +89,6 @@ typedef struct {
 
     uint8_t bulk_out_addr;
     uint8_t bulk_in_addr;
-    size_t parent_req_size;
 } usb_ums_t;
 
 static void ums_function_queue_data(usb_ums_t* ums, usb_request_t* req) {
@@ -512,7 +511,6 @@ zx_status_t usb_ums_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    ums->parent_req_size = usb_function_get_request_size(&ums->function);
     status = usb_function_alloc_interface(&ums->function, &descriptors.intf.bInterfaceNumber);
     if (status != ZX_OK) {
         zxlogf(ERROR, "usb_ums_bind: usb_function_alloc_interface failed\n");
@@ -533,18 +531,18 @@ zx_status_t usb_ums_bind(void* ctx, zx_device_t* parent) {
     descriptors.in_ep.bEndpointAddress = ums->bulk_in_addr;
 
     status = usb_request_alloc(&ums->cbw_req, BULK_MAX_PACKET,
-                                    ums->bulk_out_addr, ums->parent_req_size);
+                                    ums->bulk_out_addr, sizeof(usb_request_t));
     if (status != ZX_OK) {
         goto fail;
     }
     // Endpoint for data_req depends on current_cbw.bmCBWFlags,
     // and will be set in ums_function_queue_data.
-    status = usb_request_alloc(&ums->data_req, DATA_REQ_SIZE, 0, ums->parent_req_size);
+    status = usb_request_alloc(&ums->data_req, DATA_REQ_SIZE, 0, sizeof(usb_request_t));
     if (status != ZX_OK) {
         goto fail;
     }
     status = usb_request_alloc(&ums->csw_req, BULK_MAX_PACKET,
-                                    ums->bulk_in_addr, ums->parent_req_size);
+                                    ums->bulk_in_addr, sizeof(usb_request_t));
     if (status != ZX_OK) {
         goto fail;
     }

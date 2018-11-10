@@ -43,7 +43,6 @@ public:
     const fbl::Array<uint8_t>& mfr_name() const { return mfr_name_; }
     const fbl::Array<uint8_t>& prod_name() const { return prod_name_; }
     const fbl::Array<uint8_t>& serial_num() const { return serial_num_; }
-    size_t parent_req_size() const { return parent_req_size_; }
 
 private:
     explicit UsbAudioDevice(zx_device_t* parent);
@@ -77,7 +76,6 @@ private:
     fbl::Array<uint8_t> serial_num_;
     fbl::RefPtr<DescriptorListMemory> desc_list_;
     fbl::DoublyLinkedList<fbl::RefPtr<UsbAudioStream>> streams_ TA_GUARDED(lock_);
-    size_t parent_req_size_ = 0;
 
     int midi_sink_index_ = 0;
     int midi_source_index_ = 0;
