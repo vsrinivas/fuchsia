@@ -56,6 +56,7 @@ group("no_cmx_whitelist") {
       "//garnet/lib/root_ssl_certificates:*",
       "//garnet/lib/ui/gfx/tests:*",
       "//garnet/testing/syzkaller:*",
+      "//garnet:*",
       "//peridot/bin/agents/clipboard:*",
       "//peridot/bin/basemgr:*",
       "//peridot/bin/context_engine:*",
