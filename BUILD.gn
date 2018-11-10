@@ -7,7 +7,7 @@ import("//build/package.gni")
 jiri_snapshot_file = "//.jiri_root/update_history/latest"
 last_update_file = "$target_gen_dir/last-update.txt"
 
-package("build_info") {
+package("deprecated_build_info") {
   deprecated_system_image = true
   deps = [ ":last-update.txt" ]
   resources = [
@@ -17,6 +17,21 @@ package("build_info") {
     },
     {
       dest = "build/snapshot"
+      path = jiri_snapshot_file
+    },
+  ]
+}
+
+package("build-info") {
+  deprecated_no_cmx = "//build"
+  deps = [ ":last-update.txt" ]
+  resources = [
+    {
+      dest = "last-update"
+      path = last_update_file
+    },
+    {
+      dest = "snapshot"
       path = jiri_snapshot_file
     },
   ]

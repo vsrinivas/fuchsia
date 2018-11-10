@@ -63,6 +63,7 @@
             "type": "string",
             "title": "Specific environment features",
             "enum": [
+              "build-info",
               "persistent-storage",
               "shell",
               "root-ssl-certificates",

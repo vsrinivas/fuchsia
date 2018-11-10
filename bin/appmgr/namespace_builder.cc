@@ -66,6 +66,9 @@ void NamespaceBuilder::AddSandbox(
     if (feature == "persistent-storage") {
       // TODO(flowerhack): Make this feature more fine-grained.
       PushDirectoryFromPath("/data");
+    } else if (feature == "build-info") {
+      PushDirectoryFromPathAs("/pkgfs/packages/build-info/0/data",
+                              "/config/build-info");
     } else if (feature == "root-ssl-certificates" || feature == "shell") {
       // "shell" implies "root-ssl-certificates"
       PushDirectoryFromPathAs("/pkgfs/packages/root_ssl_certificates/0/data",
