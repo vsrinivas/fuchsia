@@ -10,6 +10,7 @@ use std::io;
 #[derive(Clone, Copy, Debug)]
 pub enum FrameControlType {
     Mgmt = 0b00,
+    #[cfg(test)]
     Data = 0b10,
 }
 

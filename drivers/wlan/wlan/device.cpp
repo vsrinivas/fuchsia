@@ -861,7 +861,7 @@ zx_status_t Device::CreateMinstrel(uint32_t features) {
         return status;
     }
     const zx::duration minstrel_update_interval =
-        (features & WLAN_DRIVER_FEATURE_SYNTH) != 0 ? zx::msec(20) : zx::msec(100);
+        (features & WLAN_DRIVER_FEATURE_SYNTH) != 0 ? zx::msec(10) : zx::msec(100);
     minstrel_.reset(new MinstrelRateSelector(
         TimerManager(std::move(timer)), ProbeSequence::RandomSequence(), minstrel_update_interval));
     return ZX_OK;

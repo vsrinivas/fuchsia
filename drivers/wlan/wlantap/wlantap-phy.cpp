@@ -64,9 +64,7 @@ template <typename T, size_t N>::fidl::Array<T, N> ToFidlArray(const T (&c_array
 struct EventSender {
     explicit EventSender(const zx::channel& channel) : encoder_(0), channel_(channel.get()) {}
 
-    void Shutdown() {
-        channel_ = ZX_HANDLE_INVALID;
-    }
+    void Shutdown() { channel_ = ZX_HANDLE_INVALID; }
 
     void SendTxEvent(uint16_t wlanmac_id, wlan_tx_packet_t* pkt) {
         tx_args_.wlanmac_id = wlanmac_id;
@@ -131,9 +129,7 @@ struct EventSender {
     };
 
     template <typename T> void Send(EventOrdinal ordinal, T* message) {
-        if (channel_ == ZX_HANDLE_INVALID) {
-            return;
-        }
+        if (channel_ == ZX_HANDLE_INVALID) { return; }
         zx_status_t status = SendFidlMessage(static_cast<uint32_t>(ordinal), message, &encoder_,
                                              *zx::unowned<zx::channel>(channel_));
         if (status != ZX_OK) {
@@ -202,6 +198,10 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
           event_sender_(user_channel_binding_.channel()) {
         user_channel_binding_.set_error_handler([this](zx_status_t status) {
             zxlogf(INFO, "wlantap phy: unbinding device because the channel was closed\n");
+            if (report_tx_status_count_) {
+                zxlogf(INFO, "Tx Status Reports sent druing device lifetime: %zu\n",
+                       report_tx_status_count_);
+            }
             {
                 std::lock_guard<std::mutex> guard(user_channel_lock_);
                 user_channel_binding_.set_error_handler(nullptr);
@@ -215,6 +215,10 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     static void DdkUnbind(void* ctx) {
         zxlogf(INFO, "wlantap phy: unbinding device per request from DDK\n");
         auto self = static_cast<WlantapPhy*>(ctx);
+        if (self->report_tx_status_count_) {
+            zxlogf(INFO, "Tx Status Reports sent druing device lifetime: %zu\n",
+                   self->report_tx_status_count_);
+        }
         self->Unbind();
         zxlogf(INFO, "wlantap phy: done unbinding\n");
     }
@@ -309,7 +313,10 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
 
     virtual void ReportTxStatus(uint16_t wlanmac_id, wlantap::WlanTxStatus ts) override {
         std::lock_guard<std::mutex> guard(wlanmac_lock_);
-        if (WlantapMac* wlanmac = wlanmac_devices_.Get(wlanmac_id)) { wlanmac->ReportTxStatus(ts); }
+        if (WlantapMac* wlanmac = wlanmac_devices_.Get(wlanmac_id)) {
+            ++report_tx_status_count_;
+            wlanmac->ReportTxStatus(ts);
+        }
         if (!phy_config_->quiet) { zxlogf(INFO, "wlantap phy: ReportTxStatus done\n"); }
     }
 
@@ -364,6 +371,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     std::mutex user_channel_lock_;
     fidl::Binding<wlantap::WlantapPhy> user_channel_binding_ __TA_GUARDED(user_channel_lock_);
     EventSender event_sender_ __TA_GUARDED(user_channel_lock_);
+    size_t report_tx_status_count_ = 0;
 };
 
 }  // namespace

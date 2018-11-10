@@ -11,20 +11,17 @@ use {
     fidl_fuchsia_wlan_mlme as wlan_mlme,
     fidl_fuchsia_wlan_tap as wlantap,
     fuchsia_async as fasync,
-    fuchsia_zircon as zx,
     fuchsia_zircon::prelude::*,
-    futures::{prelude::*, channel::mpsc, select},
-    std::fs::{self, File},
+    futures::{prelude::*},
     std::io::Cursor,
     std::sync::{Arc, Mutex},
     wlantap_client::Wlantap,
 };
 
 mod mac_frames;
+
+#[cfg(test)]
 mod eth_frames;
-
-const ETH_PATH : &str = "/dev/class/ethernet";
-
 #[cfg(test)]
 mod test_utils;
 
@@ -136,8 +133,6 @@ struct State {
     current_channel: wlan_mlme::WlanChan,
     frame_buf: Vec<u8>,
     is_associated: bool,
-    majority_tx_vec_idx: u16,
-    majority_idx_count: u64,
 }
 
 impl State {
@@ -150,8 +145,6 @@ impl State {
             },
             frame_buf: vec![],
             is_associated: false,
-            majority_tx_vec_idx: 0,
-            majority_idx_count: 0,
         }
     }
 }
@@ -282,9 +275,6 @@ fn handle_tx(args: wlantap::TxArgs, state: &mut State, proxy: &wlantap::WlantapP
     let frame_ctrl = get_frame_ctrl(args.packet.data);
     if frame_ctrl.typ() == mac_frames::FrameControlType::Mgmt as u16 {
         handle_mgmt_tx(frame_ctrl.subtype(), state, proxy);
-    } else if frame_ctrl.typ() == mac_frames::FrameControlType::Data as u16 {
-        let tx_vec_idx = args.packet.info.tx_vector_idx;
-        handle_data_tx(tx_vec_idx, state, fixed_threshold(tx_vec_idx), proxy);
     }
 }
 
@@ -303,107 +293,21 @@ fn handle_mgmt_tx(subtype: u16, state: &mut State, proxy: &wlantap::WlantapPhyPr
     }
 }
 
-fn handle_data_tx(tx_vec_idx: u16, state: &mut State, is_successful: bool,
-                  proxy: &wlantap::WlantapPhyProxy) {
-    if tx_vec_idx == state.majority_tx_vec_idx {
-        state.majority_idx_count += 1;
-    } else if state.majority_idx_count == 0 {
-        println!("majority_tx_vec_idx updated {} -> {}", state.majority_tx_vec_idx, tx_vec_idx);
-        state.majority_tx_vec_idx = tx_vec_idx;
-        state.majority_idx_count = 1;
-    } else {
-        println!("non-majority tx_vec_idx (could indicate probing): {} against {} ({})",
-                tx_vec_idx, state.majority_tx_vec_idx, state.majority_idx_count);
-        state.majority_idx_count -= 1;
-    }
-    send_tx_status_report(tx_vec_idx, is_successful, proxy)
-        .expect("Error sending tx status report");
-}
-
-
-fn fixed_threshold(tx_vec_idx: u16) -> bool {
-    const MAX_SUCCESS_TX_VEC_IDX : u16 = 130;
-    tx_vec_idx <= MAX_SUCCESS_TX_VEC_IDX
-}
-
-fn create_wlan_tx_status_entry(tx_vec_idx: u16) -> wlantap::WlanTxStatusEntry {
-    fidl_fuchsia_wlan_tap::WlanTxStatusEntry{
-        tx_vec_idx : tx_vec_idx,
-        attempts: 1,
-    }
-}
-
-fn send_tx_status_report(tx_vec_idx: u16, is_successful: bool, proxy: &wlantap::WlantapPhyProxy)
-    -> Result<(), failure::Error> {
-    use fidl_fuchsia_wlan_tap::WlanTxStatus;
-
-    let mut ts = WlanTxStatus {
-        peer_addr : BSSID,
-        success: is_successful,
-        tx_status_entries: [
-            create_wlan_tx_status_entry(tx_vec_idx),
-            create_wlan_tx_status_entry(0),
-            create_wlan_tx_status_entry(0),
-            create_wlan_tx_status_entry(0),
-            create_wlan_tx_status_entry(0),
-            create_wlan_tx_status_entry(0),
-            create_wlan_tx_status_entry(0),
-            create_wlan_tx_status_entry(0),
-        ],
-    };
-    proxy.report_tx_status(0, &mut ts)?;
-    Ok(())
-}
-
-async fn create_eth_client(mac: &[u8; 6]) -> Result<Option<ethernet::Client>, failure::Error> {
-    let files = fs::read_dir(ETH_PATH)?;
-    for file in files {
-        let vmo = zx::Vmo::create_with_opts(
-            zx::VmoOptions::NON_RESIZABLE,
-            256 * ethernet::DEFAULT_BUFFER_SIZE as u64,
-        )?;
-
-        let path = file?.path();
-        let dev = File::open(path)?;
-        if let Ok(client) = await!(ethernet::Client::from_file(dev, vmo,
-                                   ethernet::DEFAULT_BUFFER_SIZE, "wlan-hw-sim")) {
-            if let Ok(info) = await!(client.info()) {
-                if &info.mac.octets == mac {
-                    println!("ethernet client created: {:?}", client);
-                    await!(client.start()).expect("error starting ethernet device");
-                    // must call get_status() after start() to clear zx::Signals::USER_0
-                    // otherwise there will be a stream of infinite StatusChanged events that blocks
-                    // fasync::Interval
-                    println!("info: {:?} status: {:?}",
-                             await!(client.info()).expect("calling client.info()"),
-                             await!(client.get_status()).expect("calling client.get_status()"));
-                    return Ok(Some(client));
-                }
-            }
-        }
-    }
-    Ok(None)
-}
-
 fn main() -> Result<(), failure::Error> {
-    let mut exec = fasync::Executor::new()?;
-    let wlantap = Wlantap::open()?;
+    let mut exec = fasync::Executor::new().expect("error creating executor");
+    let wlantap = Wlantap::open().expect("error with Wlantap::open()");
     let state = Arc::new(Mutex::new(State::new()));
-    let proxy = wlantap.create_phy(create_wlantap_config())?;
-    let (mut sender, mut receiver) = mpsc::channel(1);
+    let proxy = wlantap.create_phy(create_wlantap_config()).expect("error creating wlantap config");
 
-    let event_listener = event_listener(state.clone(), &mut sender, proxy.clone());
+    let event_listener = event_listener(state.clone(), proxy.clone());
     let beacon_timer = beacon_sender(state.clone(), proxy.clone());
-    let ethernet_sender = ethernet_sender(&mut receiver, state.clone());
-
     println!("Hardware simlulator started. Try to scan or connect to \"fakenet\"");
 
-    exec.run_singlethreaded(event_listener.join3(beacon_timer, ethernet_sender));
+    exec.run_singlethreaded(event_listener.join(beacon_timer));
     Ok(())
 }
 
-async fn event_listener(state: Arc<Mutex<State>>, sender: &mut mpsc::Sender<()>,
-                               proxy: wlantap::WlantapPhyProxy) {
+async fn event_listener(state: Arc<Mutex<State>>, proxy: wlantap::WlantapPhyProxy) {
     let mut events = proxy.take_event_stream();
     while let Some(event) = await!(events.try_next()).unwrap() {
         match event {
@@ -414,11 +318,7 @@ async fn event_listener(state: Arc<Mutex<State>>, sender: &mut mpsc::Sender<()>,
             }
             wlantap::WlantapPhyEvent::Tx { args } => {
                 let mut state = state.lock().unwrap();
-                let was_associated = state.is_associated;
                 handle_tx(args, &mut state, &proxy);
-                if !was_associated && state.is_associated {
-                    await!(sender.send(()));
-                }
             }
             _ => {}
         }
@@ -437,59 +337,17 @@ async fn beacon_sender(state: Arc<Mutex<State>>, proxy: wlantap::WlantapPhyProxy
     }
 }
 
-async fn ethernet_sender(receiver: &mut mpsc::Receiver<()>, state: Arc<Mutex<State>>) {
-    match await!(receiver.next()) {
-        Some(()) => println !("associated signal received from mpsc channel"),
-        other => {
-            println!("mpsc channel returned {:?}", other);
-            return;
-        }
-    };
-
-    let mut client = await!(create_eth_client(&HW_MAC_ADDR))
-                     .expect("cannot create ethernet client")
-                     .expect(&format!("cannot create client with mac address: {:?}", &HW_MAC_ADDR));
-
-    let mut buf : Vec<u8> = vec![];
-    eth_frames::write_eth_header(&mut buf, &eth_frames::EthHeader{
-            dst : BSSID,
-            src : HW_MAC_ADDR,
-            eth_type : eth_frames::EtherType::Ipv4 as u16,
-        })
-        .expect("Error creating fake ethernet frame");
-
-    // matches kMinstrelUpdateIntervalTest in minstrel.cpp
-    let minstrel_update_interval_test = 20.millis();
-    let mut eth_sender_timer_stream =
-        fasync::Interval::new(minstrel_update_interval_test);
-    let mut client_stream = client.get_stream().fuse();
-    const ETH_PACKETS_PER_INTERVAL : u16 = 160;
-    let mut num_cycles = 15;
-    'eth_sender: loop {
-        select! {
-            () = eth_sender_timer_stream.select_next_some() => {
-                if num_cycles > 0 {
-                    num_cycles -= 1;
-                    for _ in 0..ETH_PACKETS_PER_INTERVAL { client.send(&buf); }
-                }
-                let state = state.lock().unwrap();
-                if !state.is_associated { break 'eth_sender; }
-            },
-            _ = client_stream.next() => {
-                await!(client.get_status()).expect("calling client.get_status() after an event");
-            },
-        }
-
-    }
-}
-
 #[cfg(test)]
 mod simulation_tests {
     use super::*;
     use {
         fidl_fuchsia_wlan_service as fidl_wlan_service,
+        failure::format_err,
         fuchsia_app as app,
-        std::panic,
+        fuchsia_zircon as zx,
+        futures::{channel::mpsc, poll, select},
+        pin_utils::pin_mut,
+        std::{collections::HashMap, fs::{self, File}, panic},
     };
 
     const BSS_FOO: [u8; 6] = [0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f];
@@ -510,13 +368,13 @@ mod simulation_tests {
     // Temporary workaround to run tests synchronously. This is because wlan service only works with
     // one PHY, so having tests with multiple PHYs running in parallel make them flaky.
     #[test]
-    fn ethernet_scan() {
+    fn ethernet_and_scan_and_minstrel() {
         let mut ok = true;
         ok = run_test("verify_ethernet", verify_ethernet) && ok;
-        ensure_iface_gone();
         ok = run_test("simulate_scan", simulate_scan) && ok;
         // TODO(NET-1885) - commenting out due to flake
         // ok = run_test("connecting_to_ap", connecting_to_ap) && ok;
+        ok = run_test("verify_rate_selection", verify_rate_selection) && ok;
         assert!(ok);
     }
 
@@ -542,11 +400,13 @@ mod simulation_tests {
         loop_until_iface_is_found(&mut exec, &wlan_service, &mut helper);
     }
 
-    fn ensure_iface_gone() {
+    fn clear_ssid_and_ensure_iface_gone() {
         let mut exec = fasync::Executor::new().expect("Failed to create an executor");
-        let mut retry = test_utils::RetryWithBackoff::new(5.seconds());
         let wlan_service = app::client::connect_to_service::<fidl_wlan_service::WlanMarker>()
             .expect("Failed to connect to wlan service");
+        exec.run_singlethreaded(wlan_service.clear_saved_networks()).expect("Clearing SSID");
+
+        let mut retry = test_utils::RetryWithBackoff::new(5.seconds());
         loop {
             let status = exec.run_singlethreaded(wlan_service.status())
                 .expect("error getting status() from wlan_service");
@@ -559,7 +419,8 @@ mod simulation_tests {
     // test
     fn simulate_scan() {
         let mut exec = fasync::Executor::new().expect("Failed to create an executor");
-        let mut helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
+        let mut helper =
+            test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
 
         let wlan_service = app::client::connect_to_service::<fidl_wlan_service::WlanMarker>()
             .expect("Failed to connect to wlan service");
@@ -593,7 +454,7 @@ mod simulation_tests {
         let proxy = helper.proxy();
         loop_until_iface_is_found(&mut exec, &wlan_service, &mut helper);
 
-        connect(&mut exec, &wlan_service, &proxy, &mut helper);
+        connect(&mut exec, &wlan_service, &proxy, &mut helper, SSID_FOO, &BSS_FOO);
 
         let status = status(&mut exec, &wlan_service, &mut helper);
         assert_eq!(status.error.code, fidl_wlan_service::ErrCode::Ok);
@@ -663,50 +524,244 @@ mod simulation_tests {
         }
     }
 
+    fn create_connect_config(ssid: &[u8], bssid: &[u8; 6]) -> fidl_wlan_service::ConnectConfig {
+        fidl_wlan_service::ConnectConfig {
+            ssid: String::from_utf8_lossy(ssid).to_string(),
+            pass_phrase: "".to_string(),
+            scan_interval: 5,
+            bssid: String::from_utf8_lossy(bssid).to_string(),
+        }
+    }
+
     fn connect(exec: &mut fasync::Executor,
                wlan_service: &fidl_wlan_service::WlanProxy,
                phy: &wlantap::WlantapPhyProxy,
-               helper: &mut test_utils::TestHelper) {
-        let mut connect_config = fidl_wlan_service::ConnectConfig {
-            ssid: String::from_utf8_lossy(SSID_FOO).to_string(),
-            pass_phrase: "".to_string(),
-            scan_interval: 5,
-            bssid: String::from_utf8_lossy(&BSS_FOO).to_string(),
-        };
+               helper: &mut test_utils::TestHelper, ssid: &[u8], bssid: &[u8;6]) {
+        let mut connect_config = create_connect_config(ssid, bssid);
         let connect_fut = wlan_service.connect(&mut connect_config);
-        let error = helper.run(exec, 10.seconds(), "receive a scan response",
-            |event| {
-                match event {
-                    wlantap::WlantapPhyEvent::SetChannel { args } => {
-                        println!("channel: {:?}", args.chan);
-                        if args.chan.primary == CHANNEL.primary {
-                            send_beacon(&mut vec![], &args.chan, &BSS_FOO, SSID_FOO, &phy).unwrap();
-                        }
+        let error = helper.run(exec, 10.seconds(),
+                           &format!("connect to {}({:2x?})", String::from_utf8_lossy(ssid), bssid),
+                           |event| { handle_connect_events(event, &phy, ssid, bssid); },
+                           connect_fut).unwrap();
+        assert_eq!(error.code, fidl_wlan_service::ErrCode::Ok, "connect failed: {:?}", error);
+    }
+
+    fn handle_connect_events(event: wlantap::WlantapPhyEvent, phy: &wlantap::WlantapPhyProxy,
+                             ssid: &[u8], bssid: &[u8; 6]) {
+        match event {
+            wlantap::WlantapPhyEvent::SetChannel { args } => {
+                println!("channel: {:?}", args.chan);
+                if args.chan.primary == CHANNEL.primary {
+                    send_beacon(&mut vec![], &args.chan, bssid, ssid, &phy).unwrap();
+                }
+            }
+            wlantap::WlantapPhyEvent::Tx { args } => {
+                let frame_ctrl = get_frame_ctrl(args.packet.data);
+                if frame_ctrl.typ() == mac_frames::FrameControlType::Mgmt as u16 {
+                    let subtyp = frame_ctrl.subtype();
+                    if subtyp == mac_frames::MgmtSubtype::Authentication as u16 {
+                        send_authentication(&mut vec![], &CHANNEL, bssid, &phy)
+                            .expect("Error sending fake authentication frame.");
+                    } else if subtyp == mac_frames::MgmtSubtype::AssociationRequest as u16 {
+                        send_association_response(&mut vec![], &CHANNEL, bssid, &phy)
+                            .expect("Error sending fake association response frame.");
                     }
-                    wlantap::WlantapPhyEvent::Tx { args } => {
-                        let frame_ctrl = get_frame_ctrl(args.packet.data);
-                        if frame_ctrl.typ() == mac_frames::FrameControlType::Mgmt as u16 {
-                            let subtyp = frame_ctrl.subtype();
-                            if subtyp == mac_frames::MgmtSubtype::Authentication as u16 {
-                                send_authentication(&mut vec![], &CHANNEL, &BSS_FOO, &phy)
-                                    .expect("Error sending fake authentication frame.");
-                            } else if subtyp == mac_frames::MgmtSubtype::AssociationRequest as u16 {
-                                send_association_response(&mut vec![], &CHANNEL, &BSS_FOO, &phy)
-                                    .expect("Error sending fake association response frame.");
-                            }
-                        }
-                    },
-                    _ => {},
                 }
             },
-            connect_fut).unwrap();
-        assert_eq!(error.code, fidl_wlan_service::ErrCode::Ok, "connect failed: {:?}", error);
+            _ => {},
+        }
+    }
+
+    const BSS_MINSTL : [u8; 6] = [0x6d, 0x69, 0x6e, 0x73, 0x74, 0x0a];
+    const SSID_MINSTREL : &[u8] = b"minstrel";
+    // test
+    fn verify_rate_selection() {
+        let mut exec = fasync::Executor::new().expect("error creating executor");
+        let wlan_service = app::client::connect_to_service::<fidl_wlan_service::WlanMarker>()
+            .expect("Error connecting to wlan service");
+        let mut helper =
+            test_utils::TestHelper::begin_test(&mut exec, wlantap::WlantapPhyConfig{
+                quiet: true,
+                ..create_wlantap_config()
+            });
+
+        loop_until_iface_is_found(&mut exec, &wlan_service, &mut helper);
+
+        let phy = helper.proxy();
+        connect(&mut exec, &wlan_service, &phy, &mut helper, SSID_MINSTREL, &BSS_MINSTL);
+
+        let beacon_sender_fut = beacon_sender(&BSS_MINSTL, SSID_MINSTREL, &phy).fuse();
+        pin_mut!(beacon_sender_fut);
+
+        let (sender, mut receiver) = mpsc::channel(1);
+        let eth_sender_fut = eth_sender(&mut receiver).fuse();
+        pin_mut!(eth_sender_fut);
+
+        let test_fut = async {
+            select! {
+                _ = eth_sender_fut => Ok(()),
+                _ = beacon_sender_fut => Err(format_err!("beacon sender should not have exited")),
+            }
+        };
+        pin_mut!(test_fut);
+
+        let threshold = 130;
+        let will_succeed = |idx| {129 <= idx && idx <= threshold};
+        let is_done = |hm: &HashMap<u16, u64>| {
+            let second_largest = hm.iter().map(|(k, v)| if k == &threshold {0} else {*v}).max()
+                .unwrap_or(0);
+            let expected = hm.get(&threshold).unwrap_or(&0);
+            second_largest > 0 && *expected >= 25 * second_largest
+        };
+        let mut hm = HashMap::new();
+        let () = helper.run(&mut exec, 30.seconds(), "verify rate selection is working",
+                               |event| {
+                                   handle_rate_selection_event(event, &phy, &BSS_MINSTL, &mut hm,
+                                                               will_succeed, is_done,
+                                                               sender.clone());
+                               },
+                               test_fut).expect("running main future");
+
+        let total = hm.values().sum::<u64>();
+        let others = total - hm[&threshold];
+        println!("{:#?}\ntotal: {}, others: {}", hm, total, others);
+        // Minstrel has tried all options
+        assert_eq!(7, hm.keys().count());
+        let max = hm.keys().max_by_key(|k| {hm[&k]}).unwrap();
+        // The dominant one is indeed the optimal.
+        assert_eq!(max, &threshold);
+    }
+
+    fn handle_rate_selection_event<F, G>(event: wlantap::WlantapPhyEvent,
+                                         phy: &wlantap::WlantapPhyProxy, bssid: &[u8; 6],
+                                         hm: &mut HashMap<u16, u64>, should_succeed: F, is_done: G,
+                                         mut sender: mpsc::Sender<()>)
+    where F: Fn(u16) -> bool, G: Fn(&HashMap<u16, u64>) -> bool {
+        match event {
+            wlantap::WlantapPhyEvent::Tx { args } => {
+                let frame_ctrl = get_frame_ctrl(args.packet.data);
+                if frame_ctrl.typ() == mac_frames::FrameControlType::Data as u16 {
+                    let tx_vec_idx = args.packet.info.tx_vector_idx;
+                    send_tx_status_report(*bssid, tx_vec_idx, should_succeed(tx_vec_idx), phy)
+                        .expect("Error sending tx_status report");
+                    let count = hm.entry(tx_vec_idx).or_insert(0);
+                    *count += 1;
+                    if is_done(hm) { sender.try_send(()).expect("Indicating test successful"); }
+                }
+            },
+            _ => {},
+        }
+    }
+
+    async fn eth_sender(receiver: &mut mpsc::Receiver<()>) -> Result<(), failure::Error> {
+        let mut client = await!(create_eth_client(&HW_MAC_ADDR))
+            .expect("cannot create ethernet client")
+            .expect(&format!("ethernet client not found {:?}", &HW_MAC_ADDR));
+
+        let mut buf : Vec<u8> = vec![];
+        eth_frames::write_eth_header(&mut buf, &eth_frames::EthHeader{
+            dst : BSSID,
+            src : HW_MAC_ADDR,
+            eth_type : eth_frames::EtherType::Ipv4 as u16,
+        }).expect("Error creating fake ethernet frame");
+
+        const ETH_PACKETS_PER_INTERVAL : u64 = 8;
+
+        let mut timer_stream = fasync::Interval::new(7.millis())
+        .map(|()| stream::repeat(()).take(ETH_PACKETS_PER_INTERVAL))
+        .flatten();
+        let mut client_stream = client.get_stream().fuse();
+        'eth_sender: loop {
+            select! {
+                event = client_stream.next() => {
+                    if let Some(Ok(ethernet::Event::StatusChanged)) = event {
+                        println!("status changed to: {:?}", await!(client.get_status()).unwrap());
+                    }
+                },
+                () = timer_stream.select_next_some() => { client.send(&buf); },
+            }
+            if let Ok(Some(())) = receiver.try_next() { break 'eth_sender; }
+        }
+        // Send any packets that are still in the buffer
+        poll!(client_stream.next());
+        Ok(())
+    }
+
+    fn create_wlan_tx_status_entry(tx_vec_idx: u16) -> wlantap::WlanTxStatusEntry {
+        fidl_fuchsia_wlan_tap::WlanTxStatusEntry{
+            tx_vec_idx : tx_vec_idx,
+            attempts: 1,
+        }
+    }
+
+    fn send_tx_status_report(bssid: [u8; 6], tx_vec_idx: u16, is_successful: bool,
+                             proxy: &wlantap::WlantapPhyProxy) -> Result<(), failure::Error> {
+        use fidl_fuchsia_wlan_tap::WlanTxStatus;
+
+        let mut ts = WlanTxStatus {
+            peer_addr : bssid,
+            success: is_successful,
+            tx_status_entries: [
+                create_wlan_tx_status_entry(tx_vec_idx),
+                create_wlan_tx_status_entry(0),
+                create_wlan_tx_status_entry(0),
+                create_wlan_tx_status_entry(0),
+                create_wlan_tx_status_entry(0),
+                create_wlan_tx_status_entry(0),
+                create_wlan_tx_status_entry(0),
+                create_wlan_tx_status_entry(0),
+            ],
+        };
+        proxy.report_tx_status(0, &mut ts)?;
+        Ok(())
+    }
+
+    async fn create_eth_client(mac: &[u8; 6]) -> Result<Option<ethernet::Client>, failure::Error> {
+        const ETH_PATH : &str = "/dev/class/ethernet";
+        let files = fs::read_dir(ETH_PATH)?;
+        for file in files {
+            let vmo = zx::Vmo::create_with_opts(
+                zx::VmoOptions::NON_RESIZABLE,
+                256 * ethernet::DEFAULT_BUFFER_SIZE as u64)?;
+
+            let path = file?.path();
+            let dev = File::open(path)?;
+            if let Ok(client) = await !(ethernet::Client::from_file(dev, vmo,
+            ethernet::DEFAULT_BUFFER_SIZE, "wlan-hw-sim")) {
+                if let Ok(info) = await !(client.info()) {
+                    if &info.mac.octets == mac {
+                        println!("ethernet client created: {:?}", client);
+                        await!(client.start()).expect("error starting ethernet device");
+                        // must call get_status() after start() to clear
+                        // zx::Signals::USER_0 otherwise there will be a stream
+                        // of infinite StatusChanged events that blocks
+                        // fasync::Interval
+                        println!("info: {:?} status: {:?}",
+                                  await!(client.info()).expect("calling client.info()"),
+                                  await!(client.get_status()).expect("getting client status()"));
+                        return Ok(Some(client));
+                      }
+                  }
+              }
+        }
+        Ok(None)
+    }
+
+    async fn beacon_sender<'a>(bssid: &'a[u8; 6], ssid: &'a[u8], phy: &'a wlantap::WlantapPhyProxy)
+        ->Result<(), failure::Error> {
+        let mut beacon_timer_stream = fasync::Interval::new (102_400_000.nanos());
+        while let Some(_) = await !(beacon_timer_stream.next()) {
+            send_beacon(&mut vec ![], &CHANNEL, bssid, ssid, &phy).unwrap();
+        }
+        Ok(())
     }
 
     fn run_test<F>(name: &str, f: F) -> bool
         where F: FnOnce() + panic::UnwindSafe
     {
+        println!("\nTest `{}` started\n", name);
         let result = panic::catch_unwind(f);
+        clear_ssid_and_ensure_iface_gone();
         match result {
             Ok(_) => {
                 println!("Test `{}` passed\n", name);

@@ -19,7 +19,6 @@ pub struct EthHeader {
     pub src: [u8; 6],
     pub eth_type: u16,
 }
-
 pub fn write_eth_header<W: io::Write>(w: &mut W, header: &EthHeader) -> io::Result<()> {
     w.write_all(&header.dst)?;
     w.write_all(&header.src)?;
