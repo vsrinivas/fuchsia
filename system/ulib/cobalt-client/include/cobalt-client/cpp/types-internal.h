@@ -89,10 +89,11 @@ class EventBuffer {
 public:
     EventBuffer() : flushing_(false) {}
     EventBuffer(const EventBuffer&) = delete;
-    EventBuffer(EventBuffer&&);
+    EventBuffer(EventBuffer&& other)
+        : buffer_(fbl::move(other.buffer_)), flushing_(other.flushing_.load()) {}
     EventBuffer& operator=(const EventBuffer&) = delete;
     EventBuffer& operator=(EventBuffer&&) = delete;
-    ~EventBuffer();
+    ~EventBuffer() {}
 
     const BufferType& event_data() const { return buffer_; }
 
@@ -106,6 +107,8 @@ public:
     // the started flush is completed.
     bool TryBeginFlush() { return !flushing_.exchange(true); }
 
+    bool IsFlushing() { return flushing_.load(); }
+
     // Makes the buffer writable again, by marking the flushing operation as complete.
     void CompleteFlush() { flushing_.exchange(false); };
 
@@ -116,38 +119,42 @@ private:
     fbl::atomic<bool> flushing_;
 };
 
-// Helper class for providing a reference to an element within a vector.
-// Note: This is not affected by vector reallocation on growth, unlike
-// a pointer to the element within the vector. Though, it is up to the
-// user to guarantee that the objects lifetime does not exceeds the
-// vector's lifetime.
-template <typename ElementType>
-class ElementView {
+// Interface for Logger class. There is no requirement on what to do with the data
+// in the logging buffer, that is up to the implementation.
+// The default implementation is |CobaltLogger|.
+class Logger {
 public:
-    ElementView() = default;
-    ElementView(fbl::Vector<ElementType>* container, size_t index)
-        : container_(container), index_(index) {
-        ZX_DEBUG_ASSERT(IsValid());
-    }
-    ElementView(const ElementView&) = default;
-    ElementView(ElementView&&) = default;
-    ElementView& operator=(const ElementView&) = default;
-    ElementView& operator=(ElementView&&) = default;
-    ~ElementView() = default;
+    virtual ~Logger() = default;
 
-    const ElementType* get() const { return &(*container_)[index_]; }
-    ElementType* get() { return &(*container_)[index_]; }
+    // Adds the contents of buckets and the required info to a buffer.
+    virtual bool Log(const RemoteMetricInfo& remote_info, const HistogramBucket* buckets,
+                     size_t num_buckets) = 0;
 
-    const ElementType& operator*() const { return *get(); }
-    const ElementType* operator->() const { return get(); }
-    ElementType& operator*() { return *get(); }
-    ElementType* operator->() { return get(); }
+    // Adds the count and the required info to a buffer.
+    virtual bool Log(const RemoteMetricInfo& remote_info, int64_t count) = 0;
+};
 
-    bool IsValid() { return container_ != nullptr && index_ < container_->size(); }
+// Enum for listing possible outcomes of calling |FlushInterface::Flush|.
+enum class FlushResult {
+    kFailed,
+    kIgnored,
+    kSucess,
+};
 
-private:
-    fbl::Vector<ElementType>* container_ = nullptr;
-    size_t index_ = 0;
+// Flush Interface for the |Collector| to flush.
+class FlushInterface {
+public:
+    virtual ~FlushInterface() = default;
+
+    // Returns true if the data was added to the logger succesfully and starts a flushing process.
+    // Returns false if failed to flush(e.g. a flush process is already started).
+    virtual FlushResult Flush(Logger* logger) = 0;
+
+    // Undo's the effect of the on going flush.
+    virtual void UndoFlush() = 0;
+
+    // Marks the flush process as complete.
+    virtual void CompleteFlush() = 0;
 };
 
 } // namespace internal

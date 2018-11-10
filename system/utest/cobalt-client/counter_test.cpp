@@ -18,6 +18,8 @@
 #include <lib/zx/time.h>
 #include <unittest/unittest.h>
 
+#include "fake_logger.h"
+
 namespace cobalt_client {
 namespace {
 
@@ -36,27 +38,28 @@ constexpr uint32_t kEventCode = 2;
 namespace internal {
 namespace {
 
-RemoteCounter::EventBuffer MakeBuffer() {
-    return RemoteCounter::EventBuffer();
+MetricOptions MakeMetricOptions() {
+    MetricOptions options;
+    options.SetType(MetricOptions::kRemote);
+    options.metric_id = kMetricId;
+    options.component = kComponent;
+    options.event_code = kEventCode;
+    return options;
 }
 
 RemoteMetricInfo MakeRemoteMetricInfo() {
-    RemoteMetricInfo metric_info;
-    metric_info.metric_id = kMetricId;
-    metric_info.component = kComponent;
-    metric_info.event_code = kEventCode;
-    return metric_info;
+    return RemoteMetricInfo::From(MakeMetricOptions());
 }
 
 RemoteCounter MakeRemoteCounter() {
-    return RemoteCounter(MakeRemoteMetricInfo(), MakeBuffer());
+    return RemoteCounter(MakeRemoteMetricInfo());
 }
 
 // Verify that increments increases the underlying count by 1.
 // This is veryfying the default behaviour.
 bool TestIncrement() {
     BEGIN_TEST;
-    BaseCounter counter;
+    BaseCounter<uint64_t> counter;
 
     ASSERT_EQ(counter.Load(), 0);
     counter.Increment();
@@ -69,7 +72,7 @@ bool TestIncrement() {
 // Verify that increments increases the underlying count by val.
 bool TestIncrementByVal() {
     BEGIN_TEST;
-    BaseCounter counter;
+    BaseCounter<uint64_t> counter;
 
     ASSERT_EQ(counter.Load(), 0);
     counter.Increment(23);
@@ -81,7 +84,7 @@ bool TestIncrementByVal() {
 // This is veryfying the default behaviour.
 bool TestExchange() {
     BEGIN_TEST;
-    BaseCounter counter;
+    BaseCounter<uint64_t> counter;
 
     counter.Increment(24);
     ASSERT_EQ(counter.Load(), 24);
@@ -94,7 +97,7 @@ bool TestExchange() {
 // This is veryfying the default behaviour.
 bool TestExchangeByVal() {
     BEGIN_TEST;
-    BaseCounter counter;
+    BaseCounter<uint64_t> counter;
 
     counter.Increment(4);
     ASSERT_EQ(counter.Load(), 4);
@@ -107,13 +110,13 @@ bool TestExchangeByVal() {
 
 struct IncrementArgs {
     // Counter to be operated on.
-    BaseCounter* counter;
+    BaseCounter<uint64_t>* counter;
 
     // Wait for main thread to signal before we start.
     sync_completion_t* start;
 
     // Amount to increment the counter with.
-    BaseCounter::Type value;
+    BaseCounter<uint64_t>::Type value;
 };
 
 int IncrementFn(void* args) {
@@ -128,7 +131,7 @@ int IncrementFn(void* args) {
 bool TestIncrementMultiThread() {
     BEGIN_TEST;
     sync_completion_t start;
-    BaseCounter counter;
+    BaseCounter<uint64_t> counter;
     fbl::Vector<thrd_t> thread_ids;
     IncrementArgs args[kThreads];
 
@@ -140,7 +143,7 @@ bool TestIncrementMultiThread() {
     for (uint64_t i = 0; i < kThreads; ++i) {
         auto& thread_id = thread_ids[i];
         args[i].counter = &counter;
-        args[i].value = static_cast<BaseCounter::Type>(i + 1);
+        args[i].value = static_cast<BaseCounter<uint64_t>::Type>(i + 1);
         args[i].start = &start;
         ASSERT_EQ(thrd_create(&thread_id, IncrementFn, &args[i]), thrd_success);
     }
@@ -161,16 +164,16 @@ bool TestIncrementMultiThread() {
 
 struct ExchangeArgs {
     // Counter to be operated on.
-    BaseCounter* counter;
+    BaseCounter<uint64_t>* counter;
 
     // Accumulated value of exchanged values in the counter.
-    fbl::atomic<BaseCounter::Type>* accumulated;
+    fbl::atomic<BaseCounter<uint64_t>::Type>* accumulated;
 
     // Wait for main thread to signal before we start.
     sync_completion_t* start;
 
     // Amount to increment the counter with.
-    BaseCounter::Type value;
+    BaseCounter<uint64_t>::Type value;
 };
 
 // After all threads exit, all but one value has been added to the accumulated var,
@@ -179,7 +182,7 @@ struct ExchangeArgs {
 int ExchangeFn(void* args) {
     ExchangeArgs* exchange_args = static_cast<ExchangeArgs*>(args);
     sync_completion_wait(exchange_args->start, zx::sec(20).get());
-    BaseCounter::Type value = exchange_args->counter->Exchange(exchange_args->value);
+    BaseCounter<uint64_t>::Type value = exchange_args->counter->Exchange(exchange_args->value);
     exchange_args->accumulated->fetch_add(value, fbl::memory_order_relaxed);
     return thrd_success;
 }
@@ -191,8 +194,8 @@ int ExchangeFn(void* args) {
 bool TestExchangeMultiThread() {
     BEGIN_TEST;
     sync_completion_t start;
-    BaseCounter counter;
-    fbl::atomic<BaseCounter::Type> accumulated(0);
+    BaseCounter<uint64_t> counter;
+    fbl::atomic<BaseCounter<uint64_t>::Type> accumulated(0);
     fbl::Vector<thrd_t> thread_ids;
     ExchangeArgs args[kThreads];
 
@@ -204,7 +207,7 @@ bool TestExchangeMultiThread() {
     for (uint64_t i = 0; i < kThreads; ++i) {
         auto& thread_id = thread_ids[i];
         args[i].counter = &counter;
-        args[i].value = static_cast<BaseCounter::Type>(i + 1);
+        args[i].value = static_cast<BaseCounter<uint64_t>::Type>(i + 1);
         args[i].start = &start;
         args[i].accumulated = &accumulated;
         ASSERT_EQ(thrd_create(&thread_id, ExchangeFn, &args[i]), thrd_success);
@@ -225,40 +228,63 @@ bool TestExchangeMultiThread() {
     END_TEST;
 }
 
-// Verify that the metadata used to create the counter is part of the flushes observation
-// and that the current value of the counter is correct, plus resets to 0 after flush.
+// Verify flushed values match and the delta is set to 0.
 bool TestFlush() {
     BEGIN_TEST;
     RemoteCounter counter = MakeRemoteCounter();
-    RemoteCounter::FlushCompleteFn mark_complete;
     counter.Increment(20);
     RemoteMetricInfo actual_metric_info;
     RemoteMetricInfo expected_metric_info = MakeRemoteMetricInfo();
-    uint32_t actual_count;
+    FakeLogger logger;
+    logger.set_should_fail(false);
+    int64_t actual_count;
 
     // Check that all data is present, we abuse some implementation details which guarantee
     // that metadata is first in the flushed values, and the last element is the event_data we
     // are measuring, which adds some restrictions to the internal implementation, but makes the
     // test cleaner and readable.
-    ASSERT_TRUE(
-        counter.Flush([&](const RemoteMetricInfo& metric_info, const EventBuffer<uint32_t>& buffer,
-                          RemoteCounter::FlushCompleteFn complete_fn) {
-            actual_metric_info = metric_info;
-            actual_count = buffer.event_data();
-            mark_complete = fbl::move(complete_fn);
-        }));
+    ASSERT_EQ(counter.Flush(&logger), FlushResult::kSucess);
+
+    actual_metric_info = logger.logged_counts()[0].metric_info;
+    actual_count = logger.logged_counts()[0].count;
+
     // We capture the values and then verify outside to avoid having to pass flag around,
     // and have more descriptive messages on errors.
     ASSERT_TRUE(actual_metric_info == expected_metric_info);
     ASSERT_EQ(actual_count, 20);
-
-    // We haven't 'completed' the flush, so another call should return false.
-    ASSERT_FALSE(counter.Flush(RemoteCounter::FlushFn()));
-    mark_complete();
     ASSERT_EQ(counter.Load(), 0);
-    ASSERT_TRUE(
-        counter.Flush([](const RemoteMetricInfo& metric_info, const EventBuffer<uint32_t>& val,
-                         RemoteCounter::FlushCompleteFn flush) {}));
+    END_TEST;
+}
+
+// Verify that the metadata used to create the counter is part of the flushes observation
+// and that the current value of the counter is correct, plus resets to 0 after flush.
+bool TestUndoFlush() {
+    BEGIN_TEST;
+    RemoteCounter counter = MakeRemoteCounter();
+    FakeLogger logger;
+    logger.set_should_fail(false);
+
+    counter.Increment(20);
+    ASSERT_NE(counter.Flush(&logger), FlushResult::kIgnored);
+    ASSERT_EQ(counter.Load(), 0);
+    counter.UndoFlush();
+    ASSERT_EQ(counter.Load(), 20);
+    END_TEST;
+}
+
+// Verify that once Flush is called, future calls to Flush will return false until CompleteFlush is
+// called.
+bool TestCompleteFlush() {
+    BEGIN_TEST;
+    RemoteCounter counter = MakeRemoteCounter();
+    FakeLogger logger;
+    logger.set_should_fail(false);
+
+    counter.Increment(20);
+    ASSERT_EQ(counter.Flush(&logger), FlushResult::kSucess);
+    ASSERT_EQ(counter.Flush(&logger), FlushResult::kIgnored);
+    counter.CompleteFlush();
+    ASSERT_EQ(counter.Flush(&logger), FlushResult::kSucess);
     END_TEST;
 }
 
@@ -282,16 +308,19 @@ struct FlushArgs {
 int FlushFn(void* args) {
     FlushArgs* flush_args = static_cast<FlushArgs*>(args);
     sync_completion_wait(flush_args->start, zx::sec(20).get());
+    FakeLogger logger;
     for (size_t i = 0; i < flush_args->operation_count; ++i) {
         if (flush_args->flush) {
-            flush_args->counter->Flush([&flush_args](const RemoteMetricInfo& metric_info,
-                                                     const EventBuffer<uint32_t>& buffer,
-                                                     RemoteCounter::FlushCompleteFn complete_fn) {
-                flush_args->accumulated->fetch_add(buffer.event_data(), fbl::memory_order_relaxed);
-                complete_fn();
-            });
+            flush_args->counter->Flush(&logger);
+            flush_args->counter->CompleteFlush();
         } else {
             flush_args->counter->Increment();
+        }
+    }
+
+    if (flush_args->flush) {
+        for (auto count_entry : logger.logged_counts()) {
+            flush_args->accumulated->fetch_add(count_entry.count, fbl::memory_order_relaxed);
         }
     }
     return thrd_success;
@@ -304,7 +333,7 @@ bool TestFlushMultithread() {
     BEGIN_TEST;
     sync_completion_t start;
     RemoteCounter counter = MakeRemoteCounter();
-    fbl::atomic<BaseCounter::Type> accumulated(0);
+    fbl::atomic<BaseCounter<int64_t>::Type> accumulated(0);
     fbl::Vector<thrd_t> thread_ids;
     FlushArgs args[kThreads];
 
@@ -316,7 +345,7 @@ bool TestFlushMultithread() {
     for (uint64_t i = 0; i < kThreads; ++i) {
         auto& thread_id = thread_ids[i];
         args[i].counter = &counter;
-        args[i].operation_count = static_cast<BaseCounter::Type>(i + 1);
+        args[i].operation_count = static_cast<BaseCounter<uint64_t>::Type>(i + 1);
         args[i].start = &start;
         args[i].accumulated = &accumulated;
         args[i].flush = i % 2;
@@ -353,6 +382,8 @@ END_TEST_CASE(BaseCounterTest)
 
 BEGIN_TEST_CASE(RemoteCounterTest)
 RUN_TEST(TestFlush)
+RUN_TEST(TestUndoFlush)
+RUN_TEST(TestCompleteFlush)
 RUN_TEST(TestFlushMultithread)
 END_TEST_CASE(RemoteCounterTest)
 
@@ -363,9 +394,7 @@ namespace {
 
 bool TestIncrement() {
     BEGIN_TEST;
-    fbl::Vector<internal::RemoteCounter> remote_counters;
-    remote_counters.push_back(internal::MakeRemoteCounter());
-    Counter counter({&remote_counters, 0});
+    Counter counter(internal::MakeMetricOptions());
 
     ASSERT_EQ(counter.GetRemoteCount(), 0);
     counter.Increment();
@@ -399,9 +428,7 @@ int IncrementFn(void* args) {
 bool TestIncrementMultiThread() {
     BEGIN_TEST;
     sync_completion_t start;
-    fbl::Vector<internal::RemoteCounter> remote_counters;
-    remote_counters.push_back(internal::MakeRemoteCounter());
-    Counter counter({&remote_counters, 0});
+    Counter counter(internal::MakeMetricOptions());
     fbl::Vector<thrd_t> thread_ids;
     IncrementArgs args[kThreads];
 

@@ -11,10 +11,8 @@
 namespace cobalt_client {
 namespace internal {
 
-BaseCounter::BaseCounter(BaseCounter&& other) : counter_(other.Exchange(0)) {}
-
-RemoteCounter::RemoteCounter(const RemoteMetricInfo& metric_info, EventBuffer buffer)
-    : BaseCounter(), buffer_(fbl::move(buffer)), metric_info_(metric_info) {
+RemoteCounter::RemoteCounter(const RemoteMetricInfo& metric_info)
+    : BaseCounter(), metric_info_(metric_info) {
     *buffer_.mutable_event_data() = 0;
 }
 
@@ -22,26 +20,32 @@ RemoteCounter::RemoteCounter(RemoteCounter&& other)
     : BaseCounter(fbl::move(other)), buffer_(fbl::move(other.buffer_)),
       metric_info_(other.metric_info_) {}
 
-bool RemoteCounter::Flush(const RemoteCounter::FlushFn& flush_handler) {
+FlushResult RemoteCounter::Flush(Logger* logger) {
     if (!buffer_.TryBeginFlush()) {
-        return false;
+        return FlushResult::kIgnored;
     }
     // Write the current value of the counter to the buffer, and reset it to 0.
     *buffer_.mutable_event_data() = static_cast<uint32_t>(this->Exchange());
-    flush_handler(metric_info_, buffer_, fbl::BindMember(&buffer_, &EventBuffer::CompleteFlush));
-    return true;
+    return logger->Log(metric_info_, *buffer_.mutable_event_data()) ? FlushResult::kSucess
+                                                                    : FlushResult::kFailed;
 }
+
+void RemoteCounter::UndoFlush() {
+    this->Increment(*buffer_.mutable_event_data());
+}
+
+void RemoteCounter::CompleteFlush() {
+    buffer_.CompleteFlush();
+}
+
 } // namespace internal
 
-Counter::Counter(internal::ElementView<internal::RemoteCounter> remote_counter)
-    : remote_counter_(remote_counter) {}
-
 void Counter::Increment(Counter::Count value) {
-    remote_counter_->Increment(value);
+    remote_counter_.Increment(value);
 }
 
 Counter::Count Counter::GetRemoteCount() const {
-    return remote_counter_->Load();
+    return remote_counter_.Load();
 }
 
 } // namespace cobalt_client

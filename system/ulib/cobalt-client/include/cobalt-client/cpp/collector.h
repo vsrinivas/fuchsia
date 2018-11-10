@@ -8,9 +8,8 @@
 #include <unistd.h>
 
 #include <cobalt-client/cpp/collector-internal.h>
-#include <cobalt-client/cpp/counter.h>
-#include <cobalt-client/cpp/histogram.h>
 #include <cobalt-client/cpp/metric-options.h>
+#include <cobalt-client/cpp/types-internal.h>
 
 #include <fbl/atomic.h>
 #include <fbl/function.h>
@@ -78,32 +77,19 @@ public:
     Collector& operator=(Collector&&) = delete;
     ~Collector();
 
-    // Returns a histogram to log events for a given |metric_id| and |event_type_index|
-    // on a histogram described by |options|.
-    // Preconditions:
-    //     |metric_id| must be greater than 0.
-    //     |event_type_index| must be greater than 0.
-    Histogram AddHistogram(const HistogramOptions& histogram_options);
+    // Allows classes implementing |internal::FlushInterface| to subscribe for Flush events.
+    void Subscribe(internal::FlushInterface* flushable) { flushables_.push_back(flushable); }
 
-    // Returns a counter to log events for a given |metric_id|, |event_type_index| and |component|
-    // as a raw counter.
-    // Preconditions:
-    //     |metric_id| must be greater than 0.
-    //     |event_type_index| must be greater than 0.
-    // TODO(gevalentino): remove the warning when Cobalt adds the required support.
-    Counter AddCounter(const MetricOptions& options);
+    // Allows classes implementing |internal::FlushInterface| to UnSubscribe for Flush events.
+    void UnSubscribe(internal::FlushInterface* flushable);
 
     // Flushes the content of all flushable metrics into |logger_|. The |logger_| is
     // in charge of persisting the data.
     void Flush();
 
 private:
-    void LogHistogram(internal::RemoteHistogram* histogram);
-    void LogCounter(internal::RemoteCounter* counter);
-
-    fbl::Vector<HistogramOptions> histogram_options_;
-    fbl::Vector<internal::RemoteHistogram> remote_histograms_;
-    fbl::Vector<internal::RemoteCounter> remote_counters_;
+    // Convert this into a HashTable.
+    fbl::Vector<internal::FlushInterface*> flushables_;
 
     fbl::unique_ptr<internal::Logger> logger_ = nullptr;
     fbl::atomic<bool> flushing_ = false;

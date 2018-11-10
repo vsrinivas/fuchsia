@@ -184,9 +184,8 @@ public:
         BEGIN_TEST;
         Context context;
         context.return_values.service_connect = ZX_ERR_NOT_DIR;
-        SetEventBuffer(&context);
         fbl::unique_ptr<CobaltLogger> logger = context.MakeLogger();
-        ASSERT_FALSE(logger->Log(MakeRemoteMetricInfo(), context.event_buffer));
+        ASSERT_FALSE(Log(MakeRemoteMetricInfo(), logger.get()));
         ASSERT_FALSE(logger->IsListeningForReply());
         END_TEST;
     }
@@ -196,9 +195,8 @@ public:
         BEGIN_TEST;
         Context context;
         context.return_values.config_reader = false;
-        SetEventBuffer(&context);
         fbl::unique_ptr<CobaltLogger> logger = context.MakeLogger();
-        ASSERT_FALSE(logger->Log(MakeRemoteMetricInfo(), context.event_buffer));
+        ASSERT_FALSE(Log(MakeRemoteMetricInfo(), logger.get()));
         ASSERT_FALSE(logger->IsListeningForReply());
         END_TEST;
     }
@@ -208,11 +206,10 @@ public:
     static bool ServiceConnectedWaitsForReply() {
         BEGIN_TEST;
         Context context;
-        SetEventBuffer(&context);
         fbl::unique_ptr<CobaltLogger> logger = context.MakeLogger();
         // In order to capture the other endpoint of the channel, we need to attempt to
         // connect first. This will set |Context::channels::factory| to the other endpoint.
-        ASSERT_FALSE(logger->Log(MakeRemoteMetricInfo(), context.event_buffer));
+        ASSERT_FALSE(Log(MakeRemoteMetricInfo(), logger.get()));
         // service_connect returned |ZX_OK|, so we should be waiting for a reply, meaning
         // each call to Log, will assert the channel for a reply.
         ASSERT_TRUE(logger->IsListeningForReply());
@@ -224,11 +221,10 @@ public:
     static bool ServiceReplied() {
         BEGIN_TEST;
         Context context;
-        SetEventBuffer(&context);
         fbl::unique_ptr<CobaltLogger> logger = context.MakeLogger();
         // In order to capture the other endpoint of the channel, we need to attempt to
         // connect first. This will set |Context::channels::factory| to the other endpoint.
-        ASSERT_FALSE(logger->Log(MakeRemoteMetricInfo(), context.event_buffer));
+        ASSERT_FALSE(Log(MakeRemoteMetricInfo(), logger.get()));
         // We set a bad status, so the reply is handled, but we are not able to log.
         context.services.factory.set_logger_create_status(fuchsia_cobalt_Status_INVALID_ARGUMENTS);
         // Now we can start servicing factory requests.
@@ -238,7 +234,7 @@ public:
         // Now that the service has started, but no bound SimpleLoggerService exists,
         // the log will still fail, BUT we will not longer be waiting for a reply.
         ASSERT_EQ(logger->WaitForReply(), ZX_OK);
-        ASSERT_FALSE(logger->Log(MakeRemoteMetricInfo(), context.event_buffer));
+        ASSERT_FALSE(Log(MakeRemoteMetricInfo(), logger.get()));
         ASSERT_FALSE(logger->IsListeningForReply());
         END_TEST;
     }
@@ -246,11 +242,10 @@ public:
     static bool RetryOnFactoryPeerClosed() {
         BEGIN_TEST;
         Context context;
-        SetEventBuffer(&context);
         fbl::unique_ptr<CobaltLogger> logger = context.MakeLogger();
         // In order to capture the other endpoint of the channel, we need to attempt to
         // connect first. This will set |Context::channels::factory| to the other endpoint.
-        ASSERT_FALSE(logger->Log(MakeRemoteMetricInfo(), context.event_buffer));
+        ASSERT_FALSE(Log(MakeRemoteMetricInfo(), logger.get()));
         ASSERT_TRUE(logger->IsListeningForReply());
 
         // Close the channel instead of binding it. After we attempt to connect again,
@@ -263,7 +258,7 @@ public:
         ASSERT_NE(observed & ZX_CHANNEL_PEER_CLOSED, 0);
 
         // Restablish the channel with the Factory service.
-        ASSERT_FALSE(logger->Log(MakeRemoteMetricInfo(), context.event_buffer));
+        ASSERT_FALSE(Log(MakeRemoteMetricInfo(), logger.get()));
         ASSERT_TRUE(logger->IsListeningForReply());
 
         ASSERT_TRUE(context.channels.factory.is_valid());
@@ -273,7 +268,6 @@ public:
     static bool RetryOnLoggerPeerClosed() {
         BEGIN_TEST;
         Context context;
-        SetEventBuffer(&context);
         fbl::unique_ptr<CobaltLogger> logger = context.MakeLogger();
         // Return OK, and the closing channel can be interpreted as something going
         // wrong after we set up the connection.
@@ -284,12 +278,12 @@ public:
 
         // In order to capture the other endpoint of the channel, we need to attempt to
         // connect first. This will set |Context::channels::factory| to the other endpoint.
-        ASSERT_FALSE(logger->Log(MakeRemoteMetricInfo(), context.event_buffer));
+        ASSERT_FALSE(Log(MakeRemoteMetricInfo(), logger.get()));
         // Now we can start servicing factory requests.
         ASSERT_TRUE(context.StartFactoryService());
         ASSERT_TRUE(context.services.ProcessAllMessages());
         ASSERT_EQ(logger->WaitForReply(), ZX_OK);
-        ASSERT_FALSE(logger->Log(MakeRemoteMetricInfo(), context.event_buffer));
+        ASSERT_FALSE(Log(MakeRemoteMetricInfo(), logger.get()));
         ASSERT_FALSE(logger->IsListeningForReply());
         END_TEST;
     }
@@ -299,7 +293,6 @@ public:
     static bool LogSuccessfully() {
         BEGIN_TEST;
         Context context;
-        SetEventBuffer(&context);
         fbl::unique_ptr<CobaltLogger> logger = context.MakeLogger();
         // When requesting a LoggerSimple from the factory, bind it to the channel.
         context.EnableLoggerService();
@@ -308,14 +301,16 @@ public:
 
         // In order to capture the other endpoint of the channel, we need to attempt to
         // connect first. This will set |Context::channels::factory| to the other endpoint.
-        ASSERT_FALSE(logger->Log(MakeRemoteMetricInfo(), context.event_buffer));
+        ASSERT_FALSE(Log(MakeRemoteMetricInfo(), logger.get()));
         // Now we can start servicing factory requests.
         ASSERT_TRUE(context.StartFactoryService());
         ASSERT_TRUE(context.services.ProcessAllMessages());
         ASSERT_EQ(logger->WaitForReply(), ZX_OK);
-        ASSERT_TRUE(logger->Log(MakeRemoteMetricInfo(), context.event_buffer));
+        ASSERT_TRUE(Log(MakeRemoteMetricInfo(), logger.get()));
         END_TEST;
     }
+
+    static bool Log(const RemoteMetricInfo& info, Logger* logger) { return false; }
 
 private:
     // Collection of data for setting up the environment for requests,
@@ -393,43 +388,31 @@ private:
         // Set of channels extracted to allow communication with with other in process
         // services.
         Channels channels;
-
-        // Memory for the internal buffer.
-        BufferType internal_buffer;
-
-        // Event buffer sent to the SimpleLogger service.
-        typename MetricType::EventBuffer event_buffer = typename MetricType::EventBuffer();
     };
-
-    // Sets the data of the event buffer for the context.
-    static void SetEventBuffer(Context* context);
 };
 
 template <>
-void CobaltLoggerTestBase<RemoteCounter, uint32_t>::SetEventBuffer(
-    CobaltLoggerTestBase<RemoteCounter, uint32_t>::Context* context) {
-    *context->event_buffer.mutable_event_data() = kCounterValue;
+bool CobaltLoggerTestBase<RemoteCounter, uint32_t>::Log(const RemoteMetricInfo& info,
+                                                        Logger* logger) {
+    return logger->Log(info, kCounterValue);
 }
 
 template <>
-void CobaltLoggerTestBase<RemoteHistogram, fbl::Vector<HistogramBucket>>::SetEventBuffer(
-    CobaltLoggerTestBase<RemoteHistogram, fbl::Vector<HistogramBucket>>::Context* context) {
-    auto& buffer = context->event_buffer;
-    auto* buckets = &context->internal_buffer;
+bool CobaltLoggerTestBase<RemoteHistogram<kNumBuckets>, fbl::Vector<HistogramBucket>>::Log(
+    const RemoteMetricInfo& info, Logger* logger) {
+    HistogramBucket buckets[kNumBuckets];
 
     for (uint32_t bucket_index = 0; bucket_index < kNumBuckets; ++bucket_index) {
-        HistogramBucket bucket;
-        bucket.count = bucket_index;
-        bucket.index = bucket_index;
-        buckets->push_back(bucket);
+        buckets[bucket_index].count = bucket_index;
+        buckets[bucket_index].index = bucket_index;
     }
 
-    buffer.mutable_event_data()->set_data(buckets->get());
-    buffer.mutable_event_data()->set_count(kNumBuckets);
+    return logger->Log(info, buckets, kNumBuckets);
 }
 
 // Test instance for logging Histograms.
-using LogHistogramTest = CobaltLoggerTestBase<RemoteHistogram, fbl::Vector<HistogramBucket>>;
+using LogHistogramTest =
+    CobaltLoggerTestBase<RemoteHistogram<kNumBuckets>, fbl::Vector<HistogramBucket>>;
 // Test instance for logging Counters.
 using LogCounterTest = CobaltLoggerTestBase<RemoteCounter, uint32_t>;
 

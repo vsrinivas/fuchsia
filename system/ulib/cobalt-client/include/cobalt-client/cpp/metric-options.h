@@ -14,22 +14,25 @@ namespace cobalt_client {
 
 // Defines basic set of options for instantiating a metric.
 struct MetricOptions {
-    // Set option to generate a local only metric.
-    void Local();
 
-    // Set option to generate a remote only metric.
-    void Remote();
+    enum Mode : uint8_t {
+        // Metric is aggregated locally and published
+        // via collector interface.
+        kLocal = 1,
+        // Metric deltas are aggregated locally, and sent
+        // for global agreggation to a remote service.
+        kRemote = 2,
+    };
 
-    // Set options that will have a local and remote version.
-    void Both();
+    void SetType(uint8_t type) { this->type = type; }
 
     // Returns true if the metrics supports remote collection.
     // This is values collected by another service, such as Cobalt.
-    bool IsRemote() const;
+    bool IsRemote() const { return type & kRemote; }
 
     // Returns true if the metric supports in process collection.
     // This is values tied to the process life-time.
-    bool IsLocal() const;
+    bool IsLocal() const { return type & kLocal; }
 
     // Required for local metrics. If not set, and metric is both Local and Remote,
     // this will be generated from the |metric_id|, |event_code|(if not 0) and |component|(if not
@@ -110,7 +113,7 @@ struct HistogramOptions : public MetricOptions {
             }
             __FALLTHROUGH;
         case Type::kLinear:
-            if (scalar == 0 || bucket_count == 0) {
+            if (scalar == 0) {
                 return false;
             }
             break;
@@ -122,10 +125,10 @@ struct HistogramOptions : public MetricOptions {
     // This parameters should not be set manually.
 
     // Function used for mapping a value to a given bucket.
-    uint32_t (*map_fn)(double, const HistogramOptions&) = nullptr;
+    uint32_t (*map_fn)(double, uint32_t, const HistogramOptions&) = nullptr;
 
     // Function used for mapping a bucket to its lowerbound.
-    double (*reverse_map_fn)(uint32_t, const HistogramOptions&) = nullptr;
+    double (*reverse_map_fn)(uint32_t, uint32_t, const HistogramOptions&) = nullptr;
 
     // Base to describe the width of each step, in |kExponentialWidth|.
     double base = 1;
@@ -135,9 +138,6 @@ struct HistogramOptions : public MetricOptions {
 
     // This matchest offset', which is calculated depending on the histogram type.
     double offset = 0;
-
-    // Number of buckets needed.
-    uint32_t bucket_count = 1;
 
     // Cached upper bound for the histogram.
     double max_value = 0;

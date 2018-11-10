@@ -168,7 +168,7 @@ MetricOptions MakeMetricOptions() {
 bool TestFromMetricOptions() {
     BEGIN_TEST;
     MetricOptions options = MakeMetricOptions();
-    options.Both();
+    options.SetType(MetricOptions::kLocal | MetricOptions::kRemote);
     LocalMetricInfo info = LocalMetricInfo::From(options);
     ASSERT_STR_EQ(info.name.c_str(), "MetricName.SomeRandomComponent.EventName");
     END_TEST;
@@ -177,7 +177,7 @@ bool TestFromMetricOptions() {
 bool TestFromMetricOptionsNoGetMetricName() {
     BEGIN_TEST;
     MetricOptions options = MakeMetricOptions();
-    options.Both();
+    options.SetType(MetricOptions::kLocal | MetricOptions::kRemote);
     options.get_metric_name = nullptr;
     LocalMetricInfo info = LocalMetricInfo::From(options);
     ASSERT_STR_EQ(info.name.c_str(), "1.SomeRandomComponent.EventName");
@@ -187,7 +187,7 @@ bool TestFromMetricOptionsNoGetMetricName() {
 bool TestFromMetricOptionsNoGetEventName() {
     BEGIN_TEST;
     MetricOptions options = MakeMetricOptions();
-    options.Both();
+    options.SetType(MetricOptions::kLocal | MetricOptions::kRemote);
     options.get_event_name = nullptr;
     LocalMetricInfo info = LocalMetricInfo::From(options);
     ASSERT_STR_EQ(info.name.c_str(), "MetricName.SomeRandomComponent.2");
@@ -197,59 +197,10 @@ bool TestFromMetricOptionsNoGetEventName() {
 bool TestFromMetricOptionsNoComponent() {
     BEGIN_TEST;
     MetricOptions options = MakeMetricOptions();
-    options.Both();
+    options.SetType(MetricOptions::kRemote | MetricOptions::kLocal);
     options.component.clear();
     LocalMetricInfo info = LocalMetricInfo::From(options);
     ASSERT_STR_EQ(info.name.c_str(), "MetricName.EventName");
-    END_TEST;
-}
-
-bool TestInvalidDefault() {
-    BEGIN_TEST;
-    ElementView<int> view;
-    ASSERT_FALSE(view.IsValid());
-    END_TEST;
-}
-
-bool TestInvalidatedIfOutOfRange() {
-    BEGIN_TEST;
-    fbl::Vector<int> elements = {1, 2, 3};
-    ElementView<int> element = {&elements, 2};
-    elements.erase(2);
-    ASSERT_FALSE(element.IsValid());
-    END_TEST;
-}
-
-bool TestGet() {
-    BEGIN_TEST;
-    fbl::Vector<int> elements = {1, 2, 3};
-    ElementView<int> element = {&elements, 2};
-    ASSERT_EQ(element.get(), &elements[2]);
-    ASSERT_EQ(element.operator->(), &elements[2]);
-    ASSERT_EQ(*element, elements[2]);
-    END_TEST;
-}
-
-// Sanity check that is possible to mutate the viewed element.
-bool TestUpdate() {
-    BEGIN_TEST;
-    fbl::Vector<int> elements = {1, 2, 3};
-    ElementView<int> element = {&elements, 2};
-    *element = -25;
-    ASSERT_EQ(elements[2], -25);
-    END_TEST;
-}
-
-// Sanity check that is possible to mutate the viewed element.
-bool TestUpdateReallocates() {
-    BEGIN_TEST;
-    fbl::Vector<int> elements = {1, 2, 3};
-    fbl::Vector<int> elements_2 = {4, 5, 6};
-
-    ElementView<int> element = {&elements, 2};
-    // Emulate reallocation of internal data.
-    elements = fbl::move(elements_2);
-    ASSERT_EQ(*element, 6);
     END_TEST;
 }
 
@@ -265,14 +216,6 @@ RUN_TEST(TestMetricUpdatePersisted)
 RUN_TEST(TestFlushDoNotOverlap)
 RUN_TEST(TestSingleFlushWithMultipleThreads)
 END_TEST_CASE(EventBufferTest)
-
-BEGIN_TEST_CASE(ElementView)
-RUN_TEST(TestInvalidDefault)
-RUN_TEST(TestInvalidatedIfOutOfRange)
-RUN_TEST(TestGet)
-RUN_TEST(TestUpdate)
-RUN_TEST(TestUpdateReallocates)
-END_TEST_CASE(ElementView)
 
 } // namespace
 } // namespace internal

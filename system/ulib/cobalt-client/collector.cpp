@@ -23,31 +23,7 @@ using internal::Logger;
 using internal::RemoteCounter;
 using internal::RemoteHistogram;
 
-// Types for metrics
-constexpr uint8_t kLocal = 0x1;
-constexpr uint8_t kRemote = 0x2;
-
 } // namespace
-
-void MetricOptions::Local() {
-    type = kLocal;
-}
-
-void MetricOptions::Remote() {
-    type = kRemote;
-}
-
-void MetricOptions::Both() {
-    type = kLocal | kRemote;
-}
-
-bool MetricOptions::IsLocal() const {
-    return (type & kLocal) != 0;
-}
-
-bool MetricOptions::IsRemote() const {
-    return (type & kRemote) != 0;
-}
 
 Collector::Collector(const CollectorOptions& options, fbl::unique_ptr<internal::Logger> logger)
     : logger_(fbl::move(logger)) {
@@ -60,24 +36,6 @@ Collector::~Collector() {
     }
 };
 
-Histogram Collector::AddHistogram(const HistogramOptions& options) {
-    RemoteHistogram::EventBuffer buffer;
-    // RemoteMetricInfo metric_info
-    remote_histograms_.push_back(RemoteHistogram(
-        options.bucket_count + 2, internal::RemoteMetricInfo::From(options), fbl::move(buffer)));
-    histogram_options_.push_back(options);
-    size_t index = remote_histograms_.size() - 1;
-    return Histogram({&histogram_options_, index}, {&remote_histograms_, index});
-}
-
-Counter Collector::AddCounter(const MetricOptions& options) {
-    RemoteCounter::EventBuffer buffer;
-    remote_counters_.push_back(
-        RemoteCounter(internal::RemoteMetricInfo::From(options), fbl::move(buffer)));
-    size_t index = remote_counters_.size() - 1;
-    return Counter({&remote_counters_, index});
-}
-
 void Collector::Flush() {
     // If we are already flushing we just return and do nothing.
     // First come first serve.
@@ -85,52 +43,25 @@ void Collector::Flush() {
         return;
     }
 
-    for (auto& histogram : remote_histograms_) {
-        LogHistogram(&histogram);
-    }
-
-    for (auto& counter : remote_counters_) {
-        LogCounter(&counter);
+    for (internal::FlushInterface* flushable : flushables_) {
+        if (flushable->Flush(logger_.get()) == internal::FlushResult::kFailed) {
+            flushable->UndoFlush();
+        }
+        flushable->CompleteFlush();
     }
 
     // Once we are finished we allow flushing again.
     flushing_.store(false);
 }
 
-void Collector::LogHistogram(RemoteHistogram* histogram) {
-    histogram->Flush([this, histogram](const internal::RemoteMetricInfo& metric_info,
-                                       const internal::RemoteHistogram::EventBuffer& buffer,
-                                       RemoteHistogram::FlushCompleteFn complete_fn) {
-        if (!logger_->Log(metric_info, buffer)) {
-            // If we failed to log the data, then add the values again to the histogram, so they may
-            // be flushed in the future, and we don't need to keep a buffer around for retrying or
-            // anything.
-            for (auto& bucket : buffer.event_data()) {
-                if (bucket.count > 0) {
-                    histogram->IncrementCount(bucket.index, bucket.count);
-                }
-            }
+void Collector::UnSubscribe(internal::FlushInterface* flushable) {
+    // TODO(gevalentino): Replace the vector for an unordered_map/hash_map.
+    for (size_t i = 0; i < flushables_.size(); ++i) {
+        if (flushable == flushables_[i]) {
+            flushables_.erase(i);
+            break;
         }
-
-        // Make the buffer writeable again.
-        complete_fn();
-    });
-}
-
-void Collector::LogCounter(RemoteCounter* counter) {
-    counter->Flush([this, counter](const internal::RemoteMetricInfo& metric_info,
-                                   const internal::RemoteCounter::EventBuffer& buffer,
-                                   RemoteCounter::FlushCompleteFn complete_fn) {
-        // Attempt to log data, if we fail, we increase the in process counter by the amount
-        // flushed.
-        if (!logger_->Log(metric_info, buffer)) {
-            if (buffer.event_data() > 0) {
-                counter->Increment(buffer.event_data());
-            }
-        }
-        // Make the buffer writeable again.
-        complete_fn();
-    });
+    }
 }
 
 fbl::unique_ptr<Collector> Collector::Create(CollectorOptions options) {

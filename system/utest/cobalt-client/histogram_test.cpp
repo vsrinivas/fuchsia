@@ -21,6 +21,8 @@
 #include <lib/zx/time.h>
 #include <unittest/unittest.h>
 
+#include "fake_logger.h"
+
 namespace cobalt_client {
 namespace internal {
 namespace {
@@ -39,10 +41,6 @@ constexpr char kComponent[] = "SomeRandomHistogramComponent";
 
 constexpr uint32_t kEventCode = 2;
 
-RemoteHistogram::EventBuffer MakeEventBuffer() {
-    return RemoteHistogram::EventBuffer();
-}
-
 RemoteMetricInfo MakeRemoteMetricInfo() {
     RemoteMetricInfo metric_info;
     metric_info.metric_id = kMetricId;
@@ -51,18 +49,27 @@ RemoteMetricInfo MakeRemoteMetricInfo() {
     return metric_info;
 }
 
-RemoteHistogram MakeRemoteHistogram() {
-    return RemoteHistogram(kBuckets, MakeRemoteMetricInfo(), MakeEventBuffer());
+HistogramOptions MakeHistogramOptions() {
+    HistogramOptions options = HistogramOptions::Exponential(kBuckets, 2, 1, 0);
+    options.SetType(MetricOptions::kRemote);
+    options.metric_id = kMetricId;
+    options.component = kComponent;
+    options.event_code = kEventCode;
+    return options;
 }
 
-bool HistEventValuesEq(fidl::VectorView<HistogramBucket> actual,
-                       fidl::VectorView<HistogramBucket> expected) {
+RemoteHistogram<kBuckets> MakeRemoteHistogram() {
+    return RemoteHistogram<kBuckets>(MakeRemoteMetricInfo());
+}
+
+bool HistEventValuesEq(const fbl::Vector<HistogramBucket>& actual,
+                       const fbl::Vector<HistogramBucket>& expected) {
     BEGIN_HELPER;
-    ASSERT_EQ(actual.count(), expected.count());
-    for (size_t i = 0; i < actual.count(); ++i) {
+    ASSERT_EQ(actual.size(), expected.size());
+    for (size_t i = 0; i < actual.size(); ++i) {
         HistogramBucket& actual_bucket = actual[i];
         bool found = false;
-        for (size_t j = 0; j < expected.count(); ++j) {
+        for (size_t j = 0; j < expected.size(); ++j) {
             HistogramBucket& expected_bucket = expected[j];
             if (actual_bucket.index != expected_bucket.index) {
                 continue;
@@ -79,7 +86,7 @@ bool HistEventValuesEq(fidl::VectorView<HistogramBucket> actual,
 // Verify the count of the appropiate bucket is updated on increment.
 bool TestIncrement() {
     BEGIN_TEST;
-    BaseHistogram histogram(kBuckets);
+    BaseHistogram<kBuckets> histogram;
 
     // Increase the count of each bucket bucket_index times.
     for (uint32_t bucket_index = 0; bucket_index < kBuckets; ++bucket_index) {
@@ -101,7 +108,7 @@ bool TestIncrement() {
 // verifies the behaviour for weighted histograms, where the weight is limited to an integer.
 bool TestIncrementByVal() {
     BEGIN_TEST;
-    BaseHistogram histogram(kBuckets);
+    BaseHistogram<kBuckets> histogram;
 
     // Increase the count of each bucket bucket_index times.
     for (uint32_t bucket_index = 0; bucket_index < kBuckets; ++bucket_index) {
@@ -119,7 +126,7 @@ bool TestIncrementByVal() {
 
 struct IncrementArgs {
     // Target histogram.
-    BaseHistogram* histogram;
+    BaseHistogram<kBuckets>* histogram;
 
     // Used for signaling the worker thread to start incrementing.
     sync_completion_t* start;
@@ -128,7 +135,7 @@ struct IncrementArgs {
     size_t operations = 0;
 };
 
-// Increment each bucket by 2* operations * bucket_index.
+// Increment each bucket by 2 * operations * bucket_index.
 int IncrementFn(void* args) {
     IncrementArgs* increment_args = static_cast<IncrementArgs*>(args);
     sync_completion_wait(increment_args->start, zx::sec(20).get());
@@ -143,13 +150,13 @@ int IncrementFn(void* args) {
     return thrd_success;
 }
 
-// Verifies that calling increment from multiple threads, yields consistent results.
-// Multiple threads will call Increment a known number of times, then the total count
-// per bucket should be sum of the times each thread called Increment one each bucket.
+// Verifies that calling increment from multiple threads, yields consistent results. Multiple
+// threads will call Increment a known number of times, then the total count per bucket should be
+// the sum of the times each thread called Increment one each bucket.
 bool TestIncrementMultiThread() {
     BEGIN_TEST;
     sync_completion_t start;
-    BaseHistogram histogram(kBuckets);
+    BaseHistogram<kBuckets> histogram;
     fbl::Vector<thrd_t> thread_ids;
     IncrementArgs args[kThreads];
 
@@ -174,87 +181,82 @@ bool TestIncrementMultiThread() {
         thrd_join(thread_id, nullptr);
     }
 
-    // Each thread increses each bucket by 2 * bucket_index, so the expected amount for each bucket
-    // is: 2 * bucket_index * Sum(i=0, kThreads -1) i = 2 * bucket_index * kThreads* (kThreads - 1)
-    // / 2;
+    // Each thread increses each bucket by 2 * bucket_index, so the expected amount for
+    // each bucket is: 2 * bucket_index * Sum(i=0, kThreads -1) i = 2 * bucket_index *
+    // kThreads * (kThreads - 1) / 2;
     constexpr size_t amount = (kThreads - 1) * (kThreads);
     for (uint32_t i = 0; i < kBuckets; ++i) {
-        // We take the sum of the accumulated and what is left, because the last increment may have
-        // been scheduled after the last flush.
+        // We take the sum of the accumulated and what is left, because the last
+        // increment may have been scheduled after the last flush.
         EXPECT_EQ(histogram.GetCount(i), i * amount);
     }
     END_TEST;
 }
 
-// Verifies that when flushing an histogram, all the flushed data matches that of the
-// count in the histogram.
+// Verifies that when flushing an histogram, all the flushed data matches that of
+// the count in the histogram.
 bool TestFlush() {
     BEGIN_TEST;
+    FakeLogger logger;
     RemoteHistogram histogram = MakeRemoteHistogram();
-    fidl::VectorView<HistogramBucket> actual_event_data;
-    RemoteHistogram::FlushCompleteFn complete_fn;
-    RemoteMetricInfo actual_metric_info;
-    fbl::String actual_component;
+    fbl::Vector<HistogramBucket> expected_buckets;
+    expected_buckets.reserve(kBuckets);
 
     // Increase the count of each bucket bucket_index times.
     for (uint32_t bucket_index = 0; bucket_index < kBuckets; ++bucket_index) {
         ASSERT_EQ(histogram.GetCount(bucket_index), 0);
         histogram.IncrementCount(bucket_index, bucket_index);
         ASSERT_EQ(histogram.GetCount(bucket_index), bucket_index);
+        expected_buckets.push_back(
+            {.index = static_cast<uint32_t>(bucket_index), .count = bucket_index});
     }
 
-    ASSERT_TRUE(histogram.Flush([&actual_event_data, &actual_metric_info, &complete_fn](
-                                    const RemoteMetricInfo& metric_info,
-                                    const EventBuffer<fidl::VectorView<HistogramBucket>>& buffer,
-                                    RemoteHistogram::FlushCompleteFn comp_fn) {
-        actual_event_data = buffer.event_data();
-        actual_metric_info = metric_info;
-        complete_fn = fbl::move(comp_fn);
-    }));
+    ASSERT_EQ(histogram.Flush(&logger), FlushResult::kSucess);
+
+    ASSERT_FALSE(logger.logged_histograms().is_empty());
 
     // Check that flushed data is actually what we expect:
     // The metadata is the same, and each bucket contains bucket_index count.
-    EXPECT_TRUE(actual_metric_info == MakeRemoteMetricInfo());
+    auto& hist_entry = logger.logged_histograms()[0];
 
-    fbl::Vector<HistogramBucket> buckets;
-    buckets.reserve(kBuckets);
-    for (size_t i = 0; i < kBuckets; ++i) {
-        buckets.push_back({.index = static_cast<uint32_t>(i), .count = i});
-    }
-    fidl::VectorView<HistogramBucket> expected_buckets;
-    expected_buckets.set_data(buckets.get());
-    expected_buckets.set_count(buckets.size());
+    EXPECT_TRUE(hist_entry.metric_info == MakeRemoteMetricInfo());
 
     // Verify there is a bucket event_data.
-    EXPECT_TRUE(HistEventValuesEq(actual_event_data, expected_buckets));
-
-    // Until complete_fn is called this should be false.
-    ASSERT_FALSE(histogram.Flush(RemoteHistogram::FlushFn()));
-
-    complete_fn();
+    EXPECT_TRUE(HistEventValuesEq(hist_entry.buckets, expected_buckets));
 
     // Verify all buckets are 0.
     for (uint32_t bucket_index = 0; bucket_index < kBuckets; ++bucket_index) {
-        ASSERT_EQ(histogram.GetCount(bucket_index), 0);
+        EXPECT_EQ(histogram.GetCount(bucket_index), 0);
     }
+    END_TEST;
+}
 
-    // Check that after calling complete_fn we can call flush again.
-    ASSERT_TRUE(histogram.Flush([](const RemoteMetricInfo& metric_info,
-                                   const EventBuffer<fidl::VectorView<HistogramBucket>>& values,
-                                   RemoteHistogram::FlushCompleteFn comp_fn) {}));
+// Verifies that after Flush is called, and before CompletedFlush is called,
+// all calls to Flush returns false.
+bool TestOneFlushAllowed() {
+    BEGIN_TEST;
+    FakeLogger logger;
+    RemoteHistogram histogram = MakeRemoteHistogram();
+
+    ASSERT_EQ(histogram.Flush(&logger), FlushResult::kSucess);
+    ASSERT_EQ(histogram.Flush(&logger), FlushResult::kIgnored);
+    histogram.CompleteFlush();
+    ASSERT_EQ(histogram.Flush(&logger), FlushResult::kSucess);
 
     END_TEST;
 }
 
 struct FlushArgs {
-    // Pointer to the histogram which is flushing incremental snapshot to a 'remote' histogram.
-    RemoteHistogram* histogram;
+    // Pointer to the histogram which is flushing incremental snapshot to a
+    // 'remote' histogram.
+    RemoteHistogram<kBuckets>* histogram;
 
-    // Pointer to the 'Remote' histogram that is accumulating the data of each flush.
-    BaseHistogram* accumulated_histogram;
+    // Pointer to the 'Remote' histogram that is accumulating the data of each
+    // flush.
+    BaseHistogram<kBuckets>* accumulated_histogram;
 
-    // Used to enforce the threads start together. The main thread will signal after
-    // all threads have been started.
+    // Used to enforce the threads start together. The main thread will signal
+    // after all threads have been started.
     sync_completion_t* start;
 
     // Number of times to perform the given operation.
@@ -268,37 +270,38 @@ int FlushFn(void* args) {
     FlushArgs* flush_args = static_cast<FlushArgs*>(args);
 
     sync_completion_wait(flush_args->start, zx::sec(20).get());
+    FakeLogger logger;
 
     for (size_t i = 0; i < flush_args->operations; ++i) {
         if (flush_args->flush) {
-            flush_args->histogram->Flush(
-                [&flush_args](const RemoteMetricInfo& metric_info,
-                              const EventBuffer<fidl::VectorView<HistogramBucket>>& buffer,
-                              RemoteHistogram::FlushCompleteFn complete_fn) {
-                    uint64_t count = buffer.event_data().count();
-                    for (uint32_t i = 0; i < count; ++i) {
-                        flush_args->accumulated_histogram->IncrementCount(
-                            buffer.event_data()[i].index, buffer.event_data()[i].count);
-                    }
-                });
+            flush_args->histogram->Flush(&logger);
         } else {
             for (uint32_t j = 0; j < kBuckets; ++j) {
                 flush_args->histogram->IncrementCount(j, j);
             }
         }
     }
+
+    for (auto& hist_entry : logger.logged_histograms()) {
+        for (auto& bucket_entry : hist_entry.buckets) {
+            flush_args->accumulated_histogram->IncrementCount(bucket_entry.index,
+                                                              bucket_entry.count);
+        }
+    }
+
     return thrd_success;
 }
 
-// Verify that under concurrent environment the final results are consistent. This test
-// will have |kThreads|/2 threads increment bucket counts, and |kThreads|/2 Flush them
-// a certain amount of times, and collect into a BaseHistogram the final results. At the end,
-// each bucket of the BaseHistogram should be the expected value.
+// Verify that under concurrent environment the final results are consistent. This
+// test will have |kThreads|/2 threads increment bucket counts, and |kThreads|/2
+// Flush them a certain amount of times, and collect into a BaseHistogram the final
+// results. At the end, each bucket of the BaseHistogram should be the expected
+// value.
 bool TestFlushMultithread() {
     BEGIN_TEST;
     sync_completion_t start;
-    BaseHistogram accumulated(kBuckets);
-    RemoteHistogram histogram = MakeRemoteHistogram();
+    BaseHistogram<kBuckets> accumulated;
+    RemoteHistogram<kBuckets> histogram = MakeRemoteHistogram();
     fbl::Vector<thrd_t> thread_ids;
     FlushArgs args[kThreads];
 
@@ -325,11 +328,12 @@ bool TestFlushMultithread() {
         thrd_join(thread_id, nullptr);
     }
 
-    // Each thread at an even position, increases the the count of a bucket by bucket_index.
+    // Each thread at an even position, increases the the count of a bucket by
+    // bucket_index.
     constexpr size_t ceil_threads = ((kThreads - 1) / 2 * ((kThreads - 1) / 2 + 1));
     for (uint32_t i = 0; i < kBuckets; ++i) {
-        // We take the sum of the accumulated and what is left, because the last increment may have
-        // been scheduled after the last flush.
+        // We take the sum of the accumulated and what is left, because the last
+        // increment may have been scheduled after the last flush.
         EXPECT_EQ(accumulated.GetCount(i) + histogram.GetCount(i), i * ceil_threads);
     }
     END_TEST;
@@ -338,13 +342,7 @@ bool TestFlushMultithread() {
 bool TestAdd() {
     BEGIN_TEST;
     // Buckets 2^i + offset.
-    fbl::Vector<RemoteHistogram> histograms;
-    histograms.push_back({kBuckets + 2, MakeRemoteMetricInfo(), MakeEventBuffer()});
-    fbl::Vector<HistogramOptions> options = {
-        HistogramOptions::Exponential(/*bucket_count=*/kBuckets, /*base=*/2,
-                                      /*scalar=*/1, /*offset=*/-10)};
-    ASSERT_TRUE(options[0].IsValid());
-    Histogram histogram({&options, 0}, {&histograms, 0});
+    Histogram<kBuckets> histogram(MakeHistogramOptions());
 
     histogram.Add(25);
     ASSERT_EQ(histogram.GetRemoteCount(25), 1);
@@ -357,20 +355,16 @@ bool TestAdd() {
     END_TEST;
 }
 
-// Verify that from the public point of view, changes are reflected accurately, while internally
-// the buckets are accessed correctly.
+// Verify that from the public point of view, changes are reflected accurately,
+// while internally the buckets are accessed correctly.
+//
 // Note: The two extra buckets, are for underflow and overflow buckets.
 bool TestAddMultiple() {
     BEGIN_TEST;
-    fbl::Vector<RemoteHistogram> histograms;
-    histograms.push_back({kBuckets + 2, MakeRemoteMetricInfo(), MakeEventBuffer()});
-    fbl::Vector<HistogramOptions> options_vector = {
-        HistogramOptions::Exponential(/*bucket_count=*/kBuckets, /*base=*/2,
-                                      /*scalar=*/1, /*offset=*/-10)};
-    HistogramOptions& options = options_vector[0];
-    ASSERT_TRUE(options.IsValid());
-    Histogram histogram({&options_vector, 0}, {&histograms, 0});
-    BaseHistogram expected_hist(kBuckets + 2);
+    HistogramOptions options = MakeHistogramOptions();
+    Histogram<kBuckets> histogram(options);
+    // Histogram internally allocates an overflow and underflow bucket.
+    BaseHistogram<kBuckets + 2> expected_hist;
 
     struct ValueBucket {
         double value;
@@ -382,19 +376,19 @@ bool TestAddMultiple() {
     // 500 random observation.
     for (int i = 0; i < 500; ++i) {
         ValueBucket curr;
-        curr.bucket = rand_r(&seed) % (kBuckets + 2);
+        curr.bucket = rand_r(&seed) % (histogram.size());
         double min;
         double max;
         if (curr.bucket == 0) {
             min = -DBL_MAX;
         } else {
-            min = options.reverse_map_fn(curr.bucket, options);
+            min = options.reverse_map_fn(curr.bucket, histogram.size(), options);
         }
-        max = nextafter(options.reverse_map_fn(curr.bucket + 1, options), min);
+        max = nextafter(options.reverse_map_fn(curr.bucket + 1, histogram.size(), options), min);
         curr.value = min + (max - min) * (static_cast<double>(rand_r(&seed)) / RAND_MAX);
-        ASSERT_EQ(options.map_fn(curr.value, options), curr.bucket);
+        ASSERT_EQ(options.map_fn(curr.value, histogram.size(), options), curr.bucket);
 
-        Histogram::Count count = 1 + rand_r(&seed) % 20;
+        Histogram<kBuckets>::Count count = 1 + rand_r(&seed) % 20;
         expected_hist.IncrementCount(curr.bucket, count);
         histogram.Add(curr.value, count);
     }
@@ -405,11 +399,6 @@ bool TestAddMultiple() {
                   expected_hist.GetCount(val_bucket.bucket));
     }
 
-    // Sanity-Check that the internal representation also matches the expected values.
-    for (uint32_t bucket = 0; bucket < kBuckets + 2; ++bucket) {
-        EXPECT_EQ(histograms[0].GetCount(bucket), expected_hist.GetCount(bucket));
-    }
-
     END_TEST;
 }
 
@@ -417,22 +406,18 @@ bool TestAddMultiple() {
 bool TestAddAfterFlush() {
     BEGIN_TEST;
     // Buckets 2^i + offset.
-    fbl::Vector<RemoteHistogram> histograms;
-    histograms.push_back({kBuckets + 2, MakeRemoteMetricInfo(), MakeEventBuffer()});
-    fbl::Vector<HistogramOptions> options_vector = {
-        HistogramOptions::Exponential(/*bucket_count=*/kBuckets, /*base=*/2,
-                                      /*scalar=*/1, /*offset=*/-10)};
-    HistogramOptions& options = options_vector[0];
-    auto& remote_histogram = histograms[0];
-    ASSERT_TRUE(options.IsValid());
-    Histogram histogram({&options_vector, 0}, {&histograms, 0});
-    BaseHistogram expected_hist(kBuckets + 2);
+    HistogramOptions options = HistogramOptions::Exponential(/*bucket_count=*/kBuckets,
+                                                             /*base=*/2,
+                                                             /*scalar=*/1, /*offset=*/-10);
+    internal::FlushInterface* remote_histogram;
+    FakeLogger logger;
+    Histogram<kBuckets> histogram(options, &remote_histogram);
+    BaseHistogram<kBuckets + 2> expected_hist;
 
     histogram.Add(25, 4);
     ASSERT_EQ(histogram.GetRemoteCount(25), 4);
-    remote_histogram.Flush([](const RemoteMetricInfo& metric_info,
-                              const EventBuffer<fidl::VectorView<HistogramBucket>>&,
-                              RemoteHistogram::FlushCompleteFn complete) { complete(); });
+    remote_histogram->Flush(&logger);
+    remote_histogram->CompleteFlush();
     histogram.Add(25, 4);
     histogram.Add(1500, 2);
 
@@ -444,19 +429,19 @@ bool TestAddAfterFlush() {
 
 struct Observation {
     double value;
-    Histogram::Count count;
+    Histogram<kBuckets>::Count count;
 };
 
 struct HistogramFnArgs {
     // Public histogram which is used to add observations.
-    Histogram histogram = Histogram();
+    Histogram<kBuckets>* histogram;
 
     // When we are flushing we act as the collector, so we need
     // a pointer to the underlying histogram.
-    RemoteHistogram* remote_histogram = nullptr;
+    FlushInterface* remote_histogram = nullptr;
 
     // We flush the contents at each step into this histogram.
-    BaseHistogram* flushed_histogram = nullptr;
+    BaseHistogram<kBuckets + 2>* flushed_histogram = nullptr;
 
     // Synchronize thread start.
     sync_completion_t* start = nullptr;
@@ -468,44 +453,39 @@ struct HistogramFnArgs {
     bool flush = false;
 };
 
-// Wait until all threads are started, then start adding observations or flushing, depending
-// on the thread parameters.
+// Wait until all threads are started, then start adding observations or
+// flushing, depending  on the thread parameters.
 int HistogramFn(void* v_args) {
     HistogramFnArgs* args = reinterpret_cast<HistogramFnArgs*>(v_args);
+    FakeLogger logger;
     sync_completion_wait(args->start, zx::sec(20).get());
     for (auto& obs : *args->observed_values) {
         if (!args->flush) {
-            args->histogram.Add(obs.value, obs.count);
+            args->histogram->Add(obs.value, obs.count);
         } else {
-            args->remote_histogram->Flush(
-                [args](const RemoteMetricInfo& metric_info,
-                       const EventBuffer<fidl::VectorView<HistogramBucket>>& buffer,
-                       RemoteHistogram::FlushCompleteFn complete_fn) {
-                    for (auto& hist_bucket : buffer.event_data()) {
-                        args->flushed_histogram->IncrementCount(hist_bucket.index,
-                                                                hist_bucket.count);
-                    }
-                });
+            args->remote_histogram->Flush(&logger);
         }
     }
+
+    for (auto& hist_entry : logger.logged_histograms()) {
+        for (auto& bucket_entry : hist_entry.buckets) {
+            args->flushed_histogram->IncrementCount(bucket_entry.index, bucket_entry.count);
+        }
+    }
+
     return thrd_success;
 }
 
-// Verify that when multiple threads call Add the result is eventually consistent,
-// meaning that the total count in each bucket should match the count in an histogram
-// that is being kept manually(BaseHistogram).
+// Verify that when multiple threads call Add the result is eventually consistent, meaning that the
+// total count in each bucket should match the count in an histogram that is being kept
+// manually(BaseHistogram)
 bool TestAddMultiThread() {
     BEGIN_TEST;
     // Buckets 2^i + offset.
-    fbl::Vector<RemoteHistogram> histograms;
-    histograms.push_back({kBuckets + 2, MakeRemoteMetricInfo(), MakeEventBuffer()});
-    fbl::Vector<HistogramOptions> options_vector = {
-        HistogramOptions::Linear(/*bucket_count=*/kBuckets,
-                                 /*scalar=*/2, /*offset=*/0)};
-    HistogramOptions& options = options_vector[0];
-    ASSERT_TRUE(options.IsValid());
-    Histogram histogram({&options_vector, 0}, {&histograms, 0});
-    BaseHistogram expected_hist(kBuckets + 2);
+    FlushInterface* remote_histogram;
+    HistogramOptions options = MakeHistogramOptions();
+    Histogram<kBuckets> histogram(options, &remote_histogram);
+    BaseHistogram<kBuckets + 2> expected_hist;
     fbl::Vector<Observation> observations;
 
     // 1500 random observation.
@@ -518,11 +498,11 @@ bool TestAddMultiThread() {
         if (bucket == 0) {
             min = -DBL_MAX;
         } else {
-            min = options.reverse_map_fn(bucket, options);
+            min = options.reverse_map_fn(bucket, histogram.size(), options);
         }
-        max = nextafter(options.reverse_map_fn(bucket + 1, options), min);
+        max = nextafter(options.reverse_map_fn(bucket + 1, histogram.size(), options), min);
         obs.value = min + (max - min) * (static_cast<double>(rand_r(&seed)) / RAND_MAX);
-        ASSERT_EQ(options.map_fn(obs.value, options), bucket);
+        ASSERT_EQ(options.map_fn(obs.value, histogram.size(), options), bucket);
         obs.count = 1 + rand_r(&seed) % 20;
         expected_hist.IncrementCount(bucket, kThreads * obs.count);
         observations.push_back(obs);
@@ -532,7 +512,7 @@ bool TestAddMultiThread() {
     HistogramFnArgs args;
     sync_completion_t start;
     fbl::Vector<thrd_t> thread_ids;
-    args.histogram = histogram;
+    args.histogram = &histogram;
     args.start = &start;
     args.observed_values = &observations;
 
@@ -550,32 +530,24 @@ bool TestAddMultiThread() {
     // Verify each bucket has the exact value as the expected histogram,
     for (uint32_t bucket = 0; bucket < kBuckets + 2; ++bucket) {
         double value;
-        value = options.reverse_map_fn(bucket, options);
+        value = options.reverse_map_fn(bucket, histogram.size(), options);
         EXPECT_EQ(histogram.GetRemoteCount(value), expected_hist.GetCount(bucket));
     }
     END_TEST;
 }
 
-// Verify that when multiple threads call Add and Flush consistently, the result
-// is eventually consistent, meaning that for each bucket, the amount in expected_hist
-// is equal to what remains in the remote histogram plus the amount in the flushed hist.
-// Essentially a sanity check that data is not lost.
+// Verify that when multiple threads call Add and Flush consistently, the result is eventually
+// consistent, meaning that for each bucket, the amount in expected_hist is equal to what remains
+// in the remote histogram plus the amount in the flushed hist. Essentially a sanity check that
+// data is not lost.
 bool TestAddAndFlushMultiThread() {
     BEGIN_TEST;
     // Buckets 2^i + offset.
-    fbl::Vector<RemoteHistogram> histograms;
-    histograms.push_back({kBuckets + 2, MakeRemoteMetricInfo(), MakeEventBuffer()});
-    fbl::Vector<HistogramOptions> options_vector = {
-        HistogramOptions::Linear(/*bucket_count=*/kBuckets,
-                                 /*scalar=*/2, /*offset=*/0)};
-    HistogramOptions& options = options_vector[0];
-    auto& remote_histogram = histograms[0];
-    ASSERT_TRUE(options.IsValid());
-    Histogram histogram({&options_vector, 0}, {&histograms, 0});
+    HistogramOptions options = MakeHistogramOptions();
+    FlushInterface* remote_histogram;
+    Histogram<kBuckets> histogram(options, &remote_histogram);
     fbl::Vector<Observation> observations;
-    BaseHistogram expected_hist(kBuckets + 2);
-    BaseHistogram flushed_hist(kBuckets + 2);
-    ASSERT_TRUE(options.IsValid());
+    BaseHistogram<kBuckets + 2> expected_hist, flushed_hist;
 
     // 1500 random observation.
     unsigned int seed = static_cast<unsigned int>(zx::ticks::now().get());
@@ -587,11 +559,11 @@ bool TestAddAndFlushMultiThread() {
         if (bucket == 0) {
             min = -DBL_MAX;
         } else {
-            min = options.reverse_map_fn(bucket, options);
+            min = options.reverse_map_fn(bucket, histogram.size(), options);
         }
-        max = nextafter(options.reverse_map_fn(bucket + 1, options), min);
+        max = nextafter(options.reverse_map_fn(bucket + 1, histogram.size(), options), min);
         obs.value = min + (max - min) * (static_cast<double>(rand_r(&seed)) / RAND_MAX);
-        ASSERT_EQ(options.map_fn(obs.value, options), bucket);
+        ASSERT_EQ(options.map_fn(obs.value, histogram.size(), options), bucket);
         obs.count = 1 + rand_r(&seed) % 20;
         expected_hist.IncrementCount(bucket, (kThreads / 2 + kThreads % 2) * obs.count);
         observations.push_back(obs);
@@ -601,13 +573,13 @@ bool TestAddAndFlushMultiThread() {
     HistogramFnArgs add_args;
     fbl::Vector<thrd_t> thread_ids;
     add_args.start = &start;
-    add_args.histogram = histogram;
+    add_args.histogram = &histogram;
     add_args.observed_values = &observations;
 
     HistogramFnArgs flush_args = add_args;
     flush_args.flush = true;
     flush_args.flushed_histogram = &flushed_hist;
-    flush_args.remote_histogram = &remote_histogram;
+    flush_args.remote_histogram = remote_histogram;
 
     for (size_t thread = 0; thread < kThreads; ++thread) {
         thread_ids.push_back({});
@@ -625,13 +597,13 @@ bool TestAddAndFlushMultiThread() {
         thrd_join(thread_id, nullptr);
     }
 
-    // Verify each bucket has the exact value as the expected histogram.
-    // The addition here, is just because we have no guarantee that the last flush
-    // happened after the last add. Essentially what we have not yet flushed,
-    // plus what we flushed, should be equal to the expected value if we didnt flush at all.
-    for (uint32_t bucket = 0; bucket < kBuckets + 2; ++bucket) {
+    // Verify each bucket has the exact value as the expected histogram. The addition here, is just
+    // because we have no guarantee that the last flush happened after the last add. Essentially
+    // what we have not yet flushed, plus what we flushed, should be equal to the expected value if
+    // we didnt flush at all.
+    for (uint32_t bucket = 0; bucket < histogram.size(); ++bucket) {
         double value;
-        value = options.reverse_map_fn(bucket, options);
+        value = options.reverse_map_fn(bucket, histogram.size(), options);
         EXPECT_EQ(histogram.GetRemoteCount(value) + flushed_hist.GetCount(bucket),
                   expected_hist.GetCount(bucket));
     }
@@ -646,6 +618,7 @@ END_TEST_CASE(BaseHistogramTest)
 
 BEGIN_TEST_CASE(RemoteHistogramTest)
 RUN_TEST(TestFlush)
+RUN_TEST(TestOneFlushAllowed)
 RUN_TEST(TestFlushMultithread)
 END_TEST_CASE(RemoteHistogramTest)
 

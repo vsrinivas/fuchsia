@@ -11,12 +11,11 @@ MODULE_TYPE := userlib
 MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/cobalt_logger.cpp \
-    $(LOCAL_DIR)/collector.cpp \
     $(LOCAL_DIR)/counter.cpp \
-    $(LOCAL_DIR)/histogram.cpp \
-    $(LOCAL_DIR)/event_buffer.cpp \
     $(LOCAL_DIR)/metric_info.cpp \
+    $(LOCAL_DIR)/histogram.cpp \
+    $(LOCAL_DIR)/collector.cpp \
+    $(LOCAL_DIR)/cobalt_logger.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/fbl \

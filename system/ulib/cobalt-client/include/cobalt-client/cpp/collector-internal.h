@@ -20,27 +20,6 @@
 namespace cobalt_client {
 namespace internal {
 
-// Interface for persisting collected data.
-class Logger {
-public:
-    Logger(const Logger&) = delete;
-    Logger(Logger&&) = delete;
-    Logger& operator=(const Logger&) = delete;
-    Logger& operator=(Logger&&) = delete;
-    virtual ~Logger() = default;
-
-    // Returns true if the histogram was persisted.
-    virtual bool Log(const RemoteMetricInfo& metric_info,
-                     const RemoteHistogram::EventBuffer& histogram) = 0;
-
-    // Returns true if the counter was persisted.
-    virtual bool Log(const RemoteMetricInfo& metric_info,
-                     const RemoteCounter::EventBuffer& counter) = 0;
-
-protected:
-    Logger() = default;
-};
-
 struct CobaltOptions {
     // Service path to LoggerFactory interface.
     fbl::StringBuffer<PATH_MAX> service_path;
@@ -75,12 +54,11 @@ public:
     ~CobaltLogger() override{};
 
     // Returns true if the histogram was persisted.
-    bool Log(const RemoteMetricInfo& metric_info,
-             const RemoteHistogram::EventBuffer& histogram) override;
+    bool Log(const RemoteMetricInfo& metric_info, const HistogramBucket* buckets,
+             size_t bucket_count) override;
 
     // Returns true if the counter was persisted.
-    bool Log(const RemoteMetricInfo& metric_info,
-             const RemoteCounter::EventBuffer& counter) override;
+    bool Log(const RemoteMetricInfo& metric_info, int64_t count) override;
 
     bool IsListeningForReply() const { return logger_factory_.is_valid(); }
 

@@ -24,17 +24,19 @@ namespace internal {
 // data for a full fledged metric.
 //
 // Thin wrapper on top of an atomic, which provides a fixed memory ordering for all calls.
-// Calls are inlined to reduce overhead.
+// Calls are inlined to reduce overhead.A
+template <typename T>
 class BaseCounter {
 public:
-    using Type = uint64_t;
+    // Alias for the underlying counter type.
+    using Type = T;
 
     // All atomic operations use this memory order.
     static constexpr fbl::memory_order kMemoryOrder = fbl::memory_order::memory_order_relaxed;
 
     BaseCounter() : counter_(0) {}
     BaseCounter(const BaseCounter&) = delete;
-    BaseCounter(BaseCounter&&);
+    BaseCounter(BaseCounter&& other) : counter_(other.Exchange(0)) {}
     BaseCounter& operator=(const BaseCounter&) = delete;
     BaseCounter& operator=(BaseCounter&&) = delete;
     ~BaseCounter() = default;
@@ -49,6 +51,8 @@ public:
     Type Load() const { return counter_.load(kMemoryOrder); }
 
 protected:
+    static_assert(fbl::is_integral<Type>::value, "Can only count integral types");
+
     fbl::atomic<Type> counter_;
 };
 
@@ -58,36 +62,30 @@ protected:
 // This class is moveable and move-assignable.
 // This class is not copy or copy-assignable.
 // This class is thread-safe.
-class RemoteCounter : public BaseCounter {
+class RemoteCounter : public BaseCounter<int64_t>, public FlushInterface {
 public:
-    // Callback to notify that Flush has been completed, and that the observation buffer is
-    // writeable again(this is buffer where the counter and its metadata are flushed).
-    using FlushCompleteFn = fbl::Function<void()>;
-
-    // Alias for the specific buffer instantiation.
-    using EventBuffer = internal::EventBuffer<uint32_t>;
-
-    // Function in charge persisting or processing the ObservationValue buffer.
-    using FlushFn = fbl::Function<void(const RemoteMetricInfo& metric_info, const EventBuffer&,
-                                       FlushCompleteFn complete)>;
+    using Type = BaseCounter<int64_t>::Type;
 
     RemoteCounter() = delete;
-    RemoteCounter(const RemoteMetricInfo& metric_info, EventBuffer buffer);
+    RemoteCounter(const RemoteMetricInfo& metric_info);
     RemoteCounter(const RemoteCounter&) = delete;
     RemoteCounter(RemoteCounter&&);
     RemoteCounter& operator=(const RemoteCounter&) = delete;
     RemoteCounter& operator=(RemoteCounter&&) = delete;
-    ~RemoteCounter() = default;
+    virtual ~RemoteCounter() = default;
 
-    // Returns true if the contests were flushed.
-    bool Flush(const FlushFn& flush_handler);
+    FlushResult Flush(Logger* logger) override;
+
+    void UndoFlush() override;
+
+    void CompleteFlush() override;
 
     // Returns the metric_id associated with this remote metric.
     const RemoteMetricInfo& metric_info() const { return metric_info_; }
 
 private:
     // The buffer containing the data to be flushed.
-    EventBuffer buffer_;
+    EventBuffer<Type> buffer_;
 
     // Unique-Id representing this metric in the backend.
     RemoteMetricInfo metric_info_;

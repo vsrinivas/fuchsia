@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 
+#include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/counter-internal.h>
 #include <cobalt-client/cpp/types-internal.h>
 
@@ -23,10 +24,25 @@ public:
     using Count = uint64_t;
 
     Counter() = delete;
-    Counter(internal::ElementView<internal::RemoteCounter> remote_counter);
-    Counter(const Counter& other) : remote_counter_(other.remote_counter_) {}
-    Counter(Counter&&) = default;
-    ~Counter() = default;
+    Counter(const MetricOptions& options)
+        : remote_counter_(internal::RemoteMetricInfo::From(options)) {}
+    Counter(const MetricOptions& options, Collector* collector)
+        : remote_counter_(internal::RemoteMetricInfo::From(options)) {
+        collector_ = collector;
+        collector_->Subscribe(&remote_counter_);
+    };
+    // Constructor for internal use only.
+    Counter(const MetricOptions& options, internal::FlushInterface** flush_interface)
+        : remote_counter_(internal::RemoteMetricInfo::From(options)) {
+        *flush_interface = &remote_counter_;
+    };
+    Counter(const Counter& other) = delete;
+    Counter(Counter&&) = delete;
+    ~Counter() {
+        if (collector_ != nullptr) {
+            collector_->UnSubscribe(&remote_counter_);
+        }
+    }
 
     // Increments the counter value by |value|. This applies to local and remote
     // values of the counter.
@@ -37,7 +53,8 @@ public:
     Count GetRemoteCount() const;
 
 private:
-    internal::ElementView<internal::RemoteCounter> remote_counter_;
+    internal::RemoteCounter remote_counter_;
+    Collector* collector_ = nullptr;
 };
 
 } // namespace cobalt_client
