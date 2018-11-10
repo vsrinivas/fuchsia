@@ -2,6 +2,7 @@
   "imports": [
     "garnet/packages/config/amber",
     "garnet/packages/config/kernel_crash_checker",
+    "garnet/packages/config/mdns",
     "garnet/packages/config/network",
     "garnet/packages/config/openssh_keys",
     "garnet/packages/config/thermd",
@@ -13,6 +14,7 @@
     "garnet/packages/prod/device_settings",
     "garnet/packages/prod/log_listener",
     "garnet/packages/prod/logger",
+    "garnet/packages/prod/mdns",
     "garnet/packages/prod/netstack",
     "garnet/packages/prod/network",
     "garnet/packages/prod/network_time",
