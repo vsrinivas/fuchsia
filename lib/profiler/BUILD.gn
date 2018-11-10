@@ -22,7 +22,7 @@ source_set("profiler_headers") {
   public_configs = [ ":headers_config" ]
 }
 
-static_library("profiler") {
+source_set("profiler_lib") {
   public_configs = [ ":headers_config" ]
 
   gperftools_sources = [
@@ -54,7 +54,6 @@ static_library("profiler") {
     "fuchsia/profiler_log_listener.h",
     "fuchsia/profiler_log_listener.cc",
     "fuchsia/thread_interrupter.cc",
-    "fuchsia/thread_interrupter_fuchsia.cc",
     "fuchsia/thread_interrupter.h",
   ]
 
@@ -70,5 +69,17 @@ static_library("profiler") {
     "//zircon/public/fidl/fuchsia-logger",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/syslog",
+  ]
+}
+
+static_library("profiler_static") {
+  public_deps = [
+    ":profiler_lib",
+  ]
+}
+
+shared_library("profiler") {
+  public_deps = [
+    ":profiler_lib",
   ]
 }

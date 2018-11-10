@@ -272,7 +272,7 @@
    functions/classes. It's safe to define this here because config.h is only
    used internally, to compile the DLL, and every DLL source file #includes
    "config.h" before anything else. */
-#define PERFTOOLS_DLL_DECL /**/
+#define PERFTOOLS_DLL_DECL __attribute__((visibility("default")))
 
 /* printf format code for printing a size_t and ssize_t */
 #define PRIdS "ld"

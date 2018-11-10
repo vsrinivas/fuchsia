@@ -24,4 +24,11 @@ package("profiler_example") {
   ]
 
   binary = "bin"
+
+  meta = [
+    {
+      path = rebase_path("meta/profiler_example.cmx")
+      dest = "profiler_example.cmx"
+    },
+  ]
 }

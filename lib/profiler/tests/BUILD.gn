@@ -13,8 +13,8 @@ executable("stacktrace_unittest") {
     rebase_path("stacktrace_unittest.cc", ".", gperftools_src_root),
   ]
 
-  public_deps = [
-    "//garnet/lib/profiler",
+  deps = [
+    "//garnet/lib/profiler:profiler_static",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
   ]
@@ -24,8 +24,8 @@ source_set("testutil") {
   sources = [
     rebase_path("testutil.cc", ".", gperftools_src_root),
   ]
-  public_deps = [
-    "//garnet/lib/profiler",
+  deps = [
+    "//garnet/lib/profiler:profiler_static",
   ]
 }
 
@@ -36,9 +36,9 @@ executable("profiler_unittest") {
     rebase_path("profiler_unittest.cc", ".", gperftools_src_root),
   ]
 
-  public_deps = [
+  deps = [
     ":testutil",
-    "//garnet/lib/profiler",
+    "//garnet/lib/profiler:profiler_static",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
   ]
@@ -51,9 +51,9 @@ executable("profiledata_unittest") {
     rebase_path("profiledata_unittest.cc", ".", gperftools_src_root),
   ]
 
-  public_deps = [
+  deps = [
     ":testutil",
-    "//garnet/lib/profiler",
+    "//garnet/lib/profiler:profiler_static",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
   ]

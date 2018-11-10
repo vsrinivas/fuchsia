@@ -8,5 +8,10 @@
 
 int main(int argc, char** argv) {
   printf("Hello profiler\n");
+
+  ProfilerStart("/tmp/profiler_example.ppf");
+
+  ProfilerStop();
+
   return 0;
 }

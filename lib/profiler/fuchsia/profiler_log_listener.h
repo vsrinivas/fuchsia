@@ -17,24 +17,37 @@
 
 class ProfilerLogListener : public fuchsia::logger::LogListener {
  public:
-  ProfilerLogListener();
+  ProfilerLogListener(fit::function<void()> all_done);
 
   void LogMany(::fidl::VectorPtr<fuchsia::logger::LogMessage> Log) override;
   void Log(fuchsia::logger::LogMessage Log) override;
   void Done() override;
   ~ProfilerLogListener() override;
 
-  const std::vector<fuchsia::logger::LogMessage>& GetLogs() {
-    return log_messages_;
-  }
   void CollectLogs(size_t expected_logs);
   bool ConnectToLogger(component::StartupContext* startup_context,
                        zx_koid_t pid);
+  std::string Log() { return log_buffer_.str(); }
 
  private:
+  enum log_entry_kind {
+    RESET,
+    MODULE,
+    MMAP,
+    DSO,
+    SKIP,
+    DONE,
+    ERROR
+  };
+
+  log_entry_kind parse_log_entry(const std::string& log_line);
+
+  fit::function<void()> all_done_;
   ::fidl::Binding<fuchsia::logger::LogListener> binding_;
   fuchsia::logger::LogListenerPtr log_listener_;
-  std::vector<fuchsia::logger::LogMessage> log_messages_;
+  std::stringbuf log_buffer_;
+  std::ostream log_os_;
+  std::vector<std::vector<std::string>> mmap_entry_;
 };
 
 std::string CollectProfilerLog();
