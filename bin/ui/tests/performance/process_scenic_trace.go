@@ -219,19 +219,17 @@ func reportScenicFps(model benchmarking.Model, testSuite string, testResultsFile
 	fps, fpsPerTimeWindow := calculateFps(model, "gfx", "FramePresented")
 	fmt.Printf("%.4gfps\nfps per one-second window: %v\n", fps, fpsPerTimeWindow)
 
-	unitName := benchmarking.Milliseconds
-
 	testResultsFile.Add(&benchmarking.TestCaseResults{
 		Label:     "fps",
 		TestSuite: testSuite,
-		Unit:      benchmarking.Unit(unitName),
+		Unit:      benchmarking.FramesPerSecond,
 		Values:    []float64{jsonFloat(fps)},
 	})
 
 	testResultsFile.Add(&benchmarking.TestCaseResults{
 		Label:     "minimum_fps_per_one_second_time_window",
 		TestSuite: testSuite,
-		Unit:      benchmarking.Unit(unitName),
+		Unit:      benchmarking.FramesPerSecond,
 		Values:    []float64{jsonFloat(computeMin(fpsPerTimeWindow))},
 	})
 
@@ -262,7 +260,7 @@ func reportScenicFps(model benchmarking.Model, testSuite string, testResultsFile
 		testResultsFile.Add(&benchmarking.TestCaseResults{
 			Label:     e.Label,
 			TestSuite: testSuite,
-			Unit:      benchmarking.Unit(unitName),
+			Unit:      benchmarking.Milliseconds,
 			Values:    []float64{avgDuration},
 		})
 	}

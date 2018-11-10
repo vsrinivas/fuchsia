@@ -29,6 +29,9 @@ const (
 	// Size-based units.
 	Bytes          = "bytes"
 	BytesPerSecond = "bytes/second"
+
+	// Frequency-based units.
+	FramesPerSecond = "frames/second"
 )
 
 // TestCaseResults represents the results for a single test case.

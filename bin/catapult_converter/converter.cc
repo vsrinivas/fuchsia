@@ -143,6 +143,8 @@ std::string ConvertUnits(const char* input_unit, std::vector<double>* vals) {
     return "unitless_biggerIsBetter";
   } else if (strcmp(input_unit, "bytes") == 0) {
     return "sizeInBytes";
+  } else if (strcmp(input_unit, "frames/second") == 0) {
+    return "Hz_biggerIsBetter";
   } else {
     fprintf(stderr, "Units not recognized: %s\n", input_unit);
     exit(1);
@@ -195,7 +197,7 @@ const char* TypeToString(rapidjson::Type type) {
     case rapidjson::kNumberType:
       return "number";
   }
-  FXL_NOTREACHED() << "Unexpected raipdjson type " << static_cast<int>(type);
+  FXL_NOTREACHED() << "Unexpected rapidjson type " << static_cast<int>(type);
   return "";
 }
 
