@@ -108,7 +108,6 @@ static constexpr const char* deprecated_services[] = {
     "fuchsia.devicesettings.DeviceSettingsManager",
     "fuchsia.logger.Log",
     "fuchsia.logger.LogSink",
-    "fuchsia.media.Audio",
     "fuchsia.net.LegacySocketProvider",
     // Legacy interface for netstack, defined in //garnet
     "fuchsia.netstack.Netstack",
