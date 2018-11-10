@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <endian.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -110,20 +111,13 @@ struct ndp_n_hdr {
 #define NDP_N_MTU 5
 
 #ifndef ntohs
-#define ntohs(n) _swap16(n)
-#define htons(n) _swap16(n)
-static inline uint16_t _swap16(uint16_t n) {
-    return (n >> 8) | (n << 8);
-}
+#define ntohs(n) be16toh(n)
+#define htons(n) htobe16(n)
 #endif
 
 #ifndef ntohl
-#define ntohl(n) _swap32(n)
-#define htonl(n) _swap32(n)
-static inline uint32_t _swap32(uint32_t n) {
-    return (n >> 24) | ((n >> 8) & 0xFF00) |
-           ((n & 0xFF00) << 8) | (n << 24);
-}
+#define ntohl(n) be32toh(n)
+#define htonl(n) htobe32(n)
 #endif
 
 // Formats an IP6 address into the provided buffer (which must be

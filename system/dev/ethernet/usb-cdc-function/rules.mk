@@ -9,12 +9,19 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/cdc-eth-function.c \
+    $(LOCAL_DIR)/cdc-eth-function.cpp \
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync system/dev/lib/usb
+MODULE_STATIC_LIBS := \
+    system/ulib/ddk \
+    system/ulib/sync \
+    system/dev/lib/usb \
 
-MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+MODULE_LIBS := \
+    system/ulib/driver \
+    system/ulib/zircon \
+    system/ulib/c \
 
-MODULE_HEADER_DEPS := system/ulib/inet6
+MODULE_HEADER_DEPS := \
+    system/ulib/inet6 \
 
 include make/module.mk
