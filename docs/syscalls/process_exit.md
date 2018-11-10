@@ -9,7 +9,7 @@ process_exit - Exits the currently running process.
 ```
 #include <zircon/syscalls.h>
 
-void zx_process_exit(int ret_code);
+void zx_process_exit(int64_t ret_code);
 
 ```
 
