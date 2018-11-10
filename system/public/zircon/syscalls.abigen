@@ -244,6 +244,10 @@ syscall socket_accept
     (handle: zx_handle_t)
     returns (zx_status_t, out_socket: zx_handle_t handle_acquire);
 
+syscall socket_shutdown
+    (handle: zx_handle_t, options: uint32_t)
+    returns (zx_status_t);
+
 # Threads
 
 syscall thread_exit noreturn ();

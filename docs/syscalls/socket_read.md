@@ -11,7 +11,7 @@ socket_read - read data from a socket
 
 zx_status_t zx_socket_read(zx_handle_t handle, uint32_t options,
                            void* buffer, size_t buffer_size,
-                           size_t* actual) {
+                           size_t* actual);
 ```
 
 ## DESCRIPTION
@@ -73,5 +73,8 @@ readable.
 
 ## SEE ALSO
 
+[socket_accept](socket_accept.md),
 [socket_create](socket_create.md),
+[socket_share](socket_share.md),
+[socket_shutdown](socket_shutdown.md),
 [socket_write](socket_write.md).

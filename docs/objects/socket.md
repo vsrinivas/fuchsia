@@ -16,7 +16,7 @@ read from the opposing end via *zx_socket_read*.
 
 Upon creation, both ends of the socket are writable and readable. Via the
 **ZX_SOCKET_SHUTDOWN_READ** and **ZX_SOCKET_SHUTDOWN_WRITE** options to
-*zx_socket_write*, one end of the socket can be closed for reading and/or
+*zx_socket_shutdown*, one end of the socket can be closed for reading and/or
 writing.
 
 ## PROPERTIES
@@ -96,4 +96,5 @@ the write threshold.
 + [socket_create](../syscalls/socket_create.md) - create a new socket
 + [socket_read](../syscalls/socket_read.md) - read data from a socket
 + [socket_share](../syscalls/socket_share.md) - share a socket via a socket
++ [socket_shutdown](../syscalls/socket_shutdown.md) - prevent reading or writing
 + [socket_write](../syscalls/socket_write.md) - write data to a socket

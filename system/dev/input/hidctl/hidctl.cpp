@@ -244,7 +244,7 @@ void HidDevice::Shutdown() {
     fbl::AutoLock lock(&lock_);
     if (data_.is_valid()) {
         // Prevent further writes to the socket
-        zx_status_t status = data_.write(ZX_SOCKET_SHUTDOWN_READ, nullptr, 0, nullptr);
+        zx_status_t status = data_.shutdown(ZX_SOCKET_SHUTDOWN_READ);
         ZX_DEBUG_ASSERT(status == ZX_OK);
         // Signal the thread to shutdown
         status = data_.signal(0, HID_SHUTDOWN);

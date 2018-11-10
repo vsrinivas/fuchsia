@@ -50,4 +50,5 @@ The socket accept queue is only one element deep.
 [socket_create](socket_create.md),
 [socket_read](socket_read.md),
 [socket_share](socket_share.md),
+[socket_shutdown](socket_shutdown.md),
 [socket_write](socket_write.md).

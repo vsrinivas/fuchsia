@@ -601,7 +601,7 @@ static zx_status_t fdio_zxio_pipe_shutdown(fdio_t* io, int how) {
         break;
     }
     zxio_pipe_t* pipe = fdio_get_zxio_pipe(io);
-    return zx_socket_write(pipe->socket, options, NULL, 0, NULL);
+    return zx_socket_shutdown(pipe->socket, options);
 }
 
 static fdio_ops_t fdio_zxio_pipe_ops = {

@@ -58,4 +58,5 @@ The maximum capacity is not currently set-able.
 [socket_accept](socket_accept.md),
 [socket_read](socket_read.md),
 [socket_share](socket_share.md),
+[socket_shutdown](socket_shutdown.md),
 [socket_write](socket_write.md).

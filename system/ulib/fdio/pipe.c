@@ -220,7 +220,7 @@ static zx_status_t zx_pipe_shutdown(fdio_t* io, int how) {
         break;
     }
     zx_pipe_t* p = (zx_pipe_t*)io;
-    return zx_socket_write(p->h, options, NULL, 0, NULL);
+    return zx_socket_shutdown(p->h, options);
 }
 
 static ssize_t zx_pipe_recvmsg(fdio_t* io, struct msghdr* msg, int flags) {

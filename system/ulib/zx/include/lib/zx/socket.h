@@ -26,17 +26,34 @@ public:
         return *this;
     }
 
-    static zx_status_t create(uint32_t flags, socket* endpoint0,
+    static zx_status_t create(uint32_t options, socket* endpoint0,
                               socket* endpoint1);
 
-    zx_status_t write(uint32_t flags, const void* buffer, size_t len,
+    zx_status_t write(uint32_t options, const void* buffer, size_t len,
                       size_t* actual) const {
-        return zx_socket_write(get(), flags, buffer, len, actual);
+        return zx_socket_write(get(), options, buffer, len, actual);
     }
 
-    zx_status_t read(uint32_t flags, void* buffer, size_t len,
+    zx_status_t read(uint32_t options, void* buffer, size_t len,
                      size_t* actual) const {
-        return zx_socket_read(get(), flags, buffer, len, actual);
+        return zx_socket_read(get(), options, buffer, len, actual);
+    }
+
+    zx_status_t share(socket socket_to_share) const {
+        return zx_socket_share(get(), socket_to_share.release());
+    }
+
+    zx_status_t accept(socket* out_socket) const {
+        // We use a temporary to handle the case where |this| and |out_socket|
+        // are aliased.
+        socket result;
+        zx_status_t status = zx_socket_accept(get(), result.reset_and_get_address());
+        out_socket->reset(result.release());
+        return status;
+    }
+
+    zx_status_t shutdown(uint32_t options) const {
+        return zx_socket_shutdown(get(), options);
     }
 };
 

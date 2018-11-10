@@ -71,6 +71,7 @@ zx_status_t sys_socket_write(zx_handle_t handle, uint32_t options,
         if (status == ZX_OK)
             nwritten = size;
         break;
+    // TODO(ZX-2994): Remove this cases once the transition is complete.
     case ZX_SOCKET_SHUTDOWN_WRITE:
     case ZX_SOCKET_SHUTDOWN_READ:
     case ZX_SOCKET_SHUTDOWN_READ | ZX_SOCKET_SHUTDOWN_WRITE:
@@ -172,4 +173,19 @@ zx_status_t sys_socket_accept(zx_handle_t handle, user_out_handle* out) {
         return status;
 
     return out->transfer(fbl::move(outhandle));
+}
+
+// zx_status_t zx_socket_shutdown
+zx_status_t sys_socket_shutdown(zx_handle_t handle, uint32_t options) {
+    if (options & ~ZX_SOCKET_SHUTDOWN_MASK)
+        return ZX_ERR_INVALID_ARGS;
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    fbl::RefPtr<SocketDispatcher> socket;
+    zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &socket);
+    if (status != ZX_OK)
+        return status;
+
+    return socket->Shutdown(options & ZX_SOCKET_SHUTDOWN_MASK);
 }

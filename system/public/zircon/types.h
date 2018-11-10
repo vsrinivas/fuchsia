@@ -320,7 +320,7 @@ typedef uint64_t zx_off_t;
 #define ZX_CHANNEL_MAX_MSG_HANDLES          ((uint32_t)64u)
 
 // Socket options and limits.
-// These options can be passed to zx_socket_write()
+// These options can be passed to zx_socket_shutdown()
 #define ZX_SOCKET_SHUTDOWN_WRITE            ((uint32_t)1u << 0)
 #define ZX_SOCKET_SHUTDOWN_READ             ((uint32_t)1u << 1)
 #define ZX_SOCKET_SHUTDOWN_MASK             (ZX_SOCKET_SHUTDOWN_WRITE | ZX_SOCKET_SHUTDOWN_READ)

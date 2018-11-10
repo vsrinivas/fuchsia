@@ -427,7 +427,7 @@ static bool socket_shutdown_write(void) {
     EXPECT_EQ(status, ZX_OK, "");
     EXPECT_EQ(count, 5u, "");
 
-    status = zx_socket_write(h1, ZX_SOCKET_SHUTDOWN_WRITE, NULL, 0u, NULL);
+    status = zx_socket_shutdown(h1, ZX_SOCKET_SHUTDOWN_WRITE);
     EXPECT_EQ(status, ZX_OK, "");
 
     signals0 = get_satisfied_signals(h0);
@@ -469,7 +469,7 @@ static bool socket_shutdown_write(void) {
     zx_handle_close(h0);
 
     // Calling shutdown after the peer is closed is completely valid.
-    status = zx_socket_write(h1, ZX_SOCKET_SHUTDOWN_READ, NULL, 0u, NULL);
+    status = zx_socket_shutdown(h1, ZX_SOCKET_SHUTDOWN_READ);
     EXPECT_EQ(status, ZX_OK, "");
 
     signals1 = get_satisfied_signals(h1);
@@ -501,7 +501,7 @@ static bool socket_shutdown_read(void) {
     EXPECT_EQ(status, ZX_OK, "");
     EXPECT_EQ(count, 5u, "");
 
-    status = zx_socket_write(h0, ZX_SOCKET_SHUTDOWN_READ, NULL, 0u, NULL);
+    status = zx_socket_shutdown(h0, ZX_SOCKET_SHUTDOWN_READ);
     EXPECT_EQ(status, ZX_OK, "");
 
     signals0 = get_satisfied_signals(h0);
@@ -610,7 +610,7 @@ static bool socket_bytes_outstanding_shutdown_write(void) {
     EXPECT_EQ(status, ZX_OK, "");
     EXPECT_EQ(count, 5u, "");
 
-    status = zx_socket_write(h1, ZX_SOCKET_SHUTDOWN_WRITE, NULL, 0u, NULL);
+    status = zx_socket_shutdown(h1, ZX_SOCKET_SHUTDOWN_WRITE);
     EXPECT_EQ(status, ZX_OK, "");
 
     signals0 = get_satisfied_signals(h0);
@@ -682,7 +682,7 @@ static bool socket_bytes_outstanding_shutdown_read(void) {
     EXPECT_EQ(status, ZX_OK, "");
     EXPECT_EQ(count, 5u, "");
 
-    status = zx_socket_write(h0, ZX_SOCKET_SHUTDOWN_READ, NULL, 0u, NULL);
+    status = zx_socket_shutdown(h0, ZX_SOCKET_SHUTDOWN_READ);
     EXPECT_EQ(status, ZX_OK, "");
 
     signals0 = get_satisfied_signals(h0);
@@ -985,7 +985,7 @@ static bool socket_control_plane_shutdown(void) {
     EXPECT_EQ(status, ZX_OK, "");
     EXPECT_EQ(count, 5u, "");
 
-    status = zx_socket_write(h1, ZX_SOCKET_SHUTDOWN_WRITE, NULL, 0u, NULL);
+    status = zx_socket_shutdown(h1, ZX_SOCKET_SHUTDOWN_WRITE);
     EXPECT_EQ(status, ZX_OK, "");
 
     signals0 = get_satisfied_signals(h0);

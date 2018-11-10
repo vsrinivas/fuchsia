@@ -52,9 +52,12 @@
 + [channel_write](syscalls/channel_write.md) - write a message to a channel
 
 ## Sockets
-+ [socket_create](syscalls/socket_create.md) - create a new socket
-+ [socket_read](syscalls/socket_read.md) - read data from a socket
-+ [socket_write](syscalls/socket_write.md) - write data to a socket
++ [socket_accept](../syscalls/socket_accept.md) - receive a socket via a socket
++ [socket_create](../syscalls/socket_create.md) - create a new socket
++ [socket_read](../syscalls/socket_read.md) - read data from a socket
++ [socket_share](../syscalls/socket_share.md) - share a socket via a socket
++ [socket_shutdown](../syscalls/socket_shutdown.md) - prevent reading or writing
++ [socket_write](../syscalls/socket_write.md) - write data to a socket
 
 ## Fifos
 + [fifo_create](syscalls/fifo_create.md) - create a new fifo

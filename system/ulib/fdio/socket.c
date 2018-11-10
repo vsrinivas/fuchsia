@@ -343,7 +343,7 @@ static zx_status_t fdio_socket_shutdown(fdio_t* io, int how) {
         options = ZX_SOCKET_SHUTDOWN_READ | ZX_SOCKET_SHUTDOWN_WRITE;
         break;
     }
-    return zx_socket_write(sio->s.socket, options, NULL, 0, NULL);
+    return zx_socket_shutdown(sio->s.socket, options);
 }
 
 static fdio_ops_t fdio_socket_stream_ops = {
