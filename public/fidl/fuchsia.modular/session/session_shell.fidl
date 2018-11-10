@@ -21,6 +21,8 @@ interface SessionShellContext {
     4: GetDeviceName() -> (string device_name);
     5: GetFocusController(request<FocusController> request);
     6: GetFocusProvider(request<FocusProvider> request);
+    // DEPRECATED DO NOT USE. Instead connect to the IntelligenceServices
+    // available in the session shell environment.
     7: GetIntelligenceServices(request<IntelligenceServices> request);
     8: GetLink(request<Link> request);
     9: GetPresentation(request<fuchsia.ui.policy.Presentation> request);

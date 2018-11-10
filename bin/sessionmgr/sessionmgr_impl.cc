@@ -708,6 +708,9 @@ void SessionmgrImpl::RunSessionShell(
       [this](fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request) {
         puppet_master_impl_->Connect(std::move(request));
       });
+  session_shell_services_.AddService<fuchsia::modular::IntelligenceServices>(
+      [this](fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices>
+                 request) { GetIntelligenceServices(std::move(request)); });
   // |session_shell_service_provider_| is an InterfacePtr impl for
   // ServiceProvider that binds to |session_shell_services_|.
   fuchsia::sys::ServiceProviderPtr session_shell_service_provider_ptr_;
