@@ -22,9 +22,6 @@
 #include <zircon/syscalls/system.h>
 #include <zircon/device/dmctl.h>
 #include <zircon/boot/bootdata.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async/cpp/receiver.h>
-#include <lib/async/cpp/wait.h>
 #include <lib/fdio/io.h>
 #include <lib/zircon-internal/ktrace.h>
 #include <lib/zx/job.h>
@@ -58,15 +55,6 @@ static zx::vmo bootdata_vmo;
 static void dc_dump_state();
 static void dc_dump_devprops();
 static void dc_dump_drivers();
-
-// Access the devcoordinator's async event loop
-async::Loop* DcAsyncLoop() {
-    // The constructor of this asserts that the loop allocation succeeds.  This
-    // is fine, since if we can't successfully heap alloc during process
-    // startup, the devcoordinator is not going to make it very far.
-    static async::Loop loop(&kAsyncLoopConfigAttachToThread);
-    return &loop;
-}
 
 struct SuspendContext {
     SuspendContext() = default;
@@ -297,6 +285,7 @@ static zx_status_t handle_dmctl_write(size_t len, const char* cmd) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
+static zx_status_t dc_handle_device(port_handler_t* ph, zx_signals_t signals, uint32_t evt);
 static zx_status_t dc_attempt_bind(const Driver* drv, Device* dev);
 
 static bool dc_running;
@@ -304,6 +293,8 @@ static bool dc_running;
 static zx::channel dc_watch_channel;
 
 static zx::job devhost_job;
+
+port_t dc_port;
 
 // All Drivers
 static fbl::DoublyLinkedList<Driver*, Driver::Node> list_drivers;
@@ -520,7 +511,7 @@ static void process_work(Work* work) {
 
     switch (op) {
     case Work::Op::kDeviceAdded: {
-        Device* dev = work->owner;
+        Device* dev = containerof(work, Device, work);
         dc_handle_new_device(dev);
         break;
     }
@@ -699,7 +690,7 @@ static zx_status_t dc_launch_devhost(Devhost* host,
 }
 
 Devhost::Devhost()
-    : hrpc(ZX_HANDLE_INVALID), proc(ZX_HANDLE_INVALID), koid(0), refcount_(0),
+    : ph({}), hrpc(ZX_HANDLE_INVALID), proc(ZX_HANDLE_INVALID), koid(0), refcount_(0),
       flags(0), parent(nullptr), anode({}), snode({}), node({}) {
 }
 
@@ -771,7 +762,7 @@ static void dc_release_device(Device* dev) {
     if (dev->hrpc != ZX_HANDLE_INVALID) {
         zx_handle_close(dev->hrpc);
         dev->hrpc = ZX_HANDLE_INVALID;
-        dev->wait.set_object(ZX_HANDLE_INVALID);
+        dev->ph.handle = ZX_HANDLE_INVALID;
     }
     dev->host = nullptr;
 
@@ -793,8 +784,8 @@ static void dc_release_device(Device* dev) {
 }
 
 Device::Device()
-    : hrpc(ZX_HANDLE_INVALID), flags(0), host(nullptr),
-      name(nullptr), libname(nullptr), work(this), refcount_(0), protocol_id(0), prop_count(0),
+    : hrpc(ZX_HANDLE_INVALID), flags(0), ph({}), host(nullptr),
+      name(nullptr), libname(nullptr), work({}), refcount_(0), protocol_id(0), prop_count(0),
       self(nullptr), link(nullptr), parent(nullptr), proxy(nullptr), node({}), dhnode({}),
       anode({}) {
 }
@@ -885,9 +876,10 @@ static zx_status_t dc_add_device(Device* parent, zx_handle_t hrpc,
         return r;
     }
 
-    dev->wait.set_object(hrpc);
-    dev->wait.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-    if ((r = dev->wait.Begin(DcAsyncLoop()->dispatcher())) != ZX_OK) {
+    dev->ph.handle = hrpc;
+    dev->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+    dev->ph.func = dc_handle_device;
+    if ((r = port_wait(&dc_port, &dev->ph)) < 0) {
         devfs_unpublish(dev.get());
         return r;
     }
@@ -1489,16 +1481,13 @@ fail_close_handles:
     goto done;
 }
 
-// handle inbound messages from devhost to devices
-void Device::HandleRpc(Device* dev, async_dispatcher_t* dispatcher,
-                      async::WaitBase* wait, zx_status_t status,
-                      const zx_packet_signal_t* signal) {
-    if (status != ZX_OK) {
-        log(ERROR, "devcoord: Device::HandleRpc aborting, saw status %d\n", status);
-        return;
-    }
+#define dev_from_ph(ph) containerof(ph, Device, ph)
 
-    if (signal->observed & ZX_CHANNEL_READABLE) {
+// handle inbound RPCs from devhost to devices
+static zx_status_t dc_handle_device(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
+    Device* dev = dev_from_ph(ph);
+
+    if (signals & ZX_CHANNEL_READABLE) {
         zx_status_t r;
         if ((r = dc_handle_device_read(dev)) < 0) {
             if (r != ZX_ERR_STOP) {
@@ -1506,20 +1495,17 @@ void Device::HandleRpc(Device* dev, async_dispatcher_t* dispatcher,
                     dev, dev->name, r);
             }
             dc_remove_device(dev, true);
-            // Do not start waiting again on this device's channel again
-            return;
+            return ZX_ERR_STOP;
         }
-        Device::BeginWait(dev, dispatcher);
-        return;
+        return ZX_OK;
     }
-    if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
+    if (signals & ZX_CHANNEL_PEER_CLOSED) {
         log(ERROR, "devcoord: device %p name='%s' disconnected!\n", dev, dev->name);
         dc_remove_device(dev, true);
-        // Do not start waiting again on this device's channel again
-        return;
+        return ZX_ERR_STOP;
     }
-    log(ERROR, "devcoord: no work? %08x\n", signal->observed);
-    Device::BeginWait(dev, dispatcher);
+    log(ERROR, "devcoord: no work? %08x\n", signals);
+    return ZX_OK;
 }
 
 // send message to devhost, requesting the creation of a device
@@ -1564,9 +1550,10 @@ static zx_status_t dh_create_device(Device* dev, Devhost* dh,
     }
 
     dev->hrpc = hrpc;
-    dev->wait.set_object(hrpc);
-    dev->wait.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-    if ((r = dev->wait.Begin(DcAsyncLoop()->dispatcher())) != ZX_OK) {
+    dev->ph.handle = hrpc;
+    dev->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+    dev->ph.func = dc_handle_device;
+    if ((r = port_wait(&dc_port, &dev->ph)) < 0) {
         goto fail_after_write;
     }
     dev->host = dh;
@@ -2130,6 +2117,8 @@ Device* coordinator_init(const zx::job& root_job) {
     }
     devhost_job.set_property(ZX_PROP_NAME, "zircon-drivers", 15);
 
+    port_init(&dc_port);
+
     return &root_device;
 }
 
@@ -2183,27 +2172,17 @@ static fbl::DoublyLinkedList<Driver*, Driver::Node> list_drivers_system;
 
 static int system_driver_loader(void* arg);
 
-static void dc_scan_system() {
-    if (!system_loaded) {
-        system_loaded = true;
-        // Fire up a thread to scan/load system drivers
-        // This avoids deadlocks between the devhosts hosting the block devices
-        // that these drivers may be served from and the devcoordinator loading them.
-        thrd_t t;
-        thrd_create_with_name(&t, system_driver_loader, nullptr, "system-driver-loader");
-    }
-}
-
-static void dc_control_event(async_dispatcher_t* dispatcher, async::Receiver* receiver,
-                             zx_status_t status, const zx_packet_user_t* data) {
-    if (status != ZX_OK) {
-        log(ERROR, "devcoord: dc_control_event aborting, saw status %d\n", status);
-        return;
-    }
-
-    switch (data->u32[0]) {
+static zx_status_t dc_control_event(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
+    switch (evt) {
     case CTL_SCAN_SYSTEM:
-        dc_scan_system();
+        if (!system_loaded) {
+            system_loaded = true;
+            // Fire up a thread to scan/load system drivers
+            // This avoids deadlocks between the devhosts hosting the block devices
+            // that these drivers may be served from and the devcoordinator loading them.
+            thrd_t t;
+            thrd_create_with_name(&t, system_driver_loader, nullptr, "system-driver-loader");
+        }
         break;
     case CTL_ADD_SYSTEM: {
         Driver* drv;
@@ -2223,9 +2202,14 @@ static void dc_control_event(async_dispatcher_t* dispatcher, async::Receiver* re
         break;
     }
     }
+    return ZX_OK;
 }
 
-static async::Receiver control_handler(dc_control_event);
+static port_handler_t control_handler = []() {
+    port_handler_t handler;
+    handler.func = dc_control_event;
+    return handler;
+}();
 
 // Drivers added during system scan (from the dedicated thread)
 // are added to list_drivers_system for bulk processing once
@@ -2250,19 +2234,13 @@ static void dc_driver_added_sys(Driver* drv, const char* version) {
 static int system_driver_loader(void* arg) {
     find_loadable_drivers("/system/driver", dc_driver_added_sys);
     find_loadable_drivers("/system/lib/driver", dc_driver_added_sys);
-
-    zx_packet_user_t pkt = {};
-    pkt.u32[0] = CTL_ADD_SYSTEM;
-    control_handler.QueuePacket(DcAsyncLoop()->dispatcher(), &pkt);
+    port_queue(&dc_port, &control_handler, CTL_ADD_SYSTEM);
     return 0;
 }
 
 void load_system_drivers() {
     system_available = true;
-
-    zx_packet_user_t pkt = {};
-    pkt.u32[0] = CTL_ADD_SYSTEM;
-    control_handler.QueuePacket(DcAsyncLoop()->dispatcher(), &pkt);
+    port_queue(&dc_port, &control_handler, CTL_SCAN_SYSTEM);
 }
 
 void coordinator() {
@@ -2297,7 +2275,7 @@ void coordinator() {
     // can be removed once the real driver priority system
     // exists.
     if (system_available) {
-        dc_scan_system();
+        dc_control_event(&control_handler, 0, CTL_SCAN_SYSTEM);
     }
 
     // x86 platforms use acpi as the system device
@@ -2329,9 +2307,9 @@ void coordinator() {
     for (;;) {
         zx_status_t status;
         if (list_pending_work.is_empty()) {
-            status = DcAsyncLoop()->Run(zx::time::infinite(), true /* once */);
+            status = port_dispatch(&dc_port, ZX_TIME_INFINITE, true);
         } else {
-            status = DcAsyncLoop()->Run(zx::time(), true /* once */);
+            status = port_dispatch(&dc_port, 0, true);
             if (status == ZX_ERR_TIMED_OUT) {
                 auto work = list_pending_work.pop_front();
                 process_work(work);
