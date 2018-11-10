@@ -4,7 +4,7 @@
 
 //! Testing-related utilities.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::time::{Duration, Instant};
 
 use byteorder::{ByteOrder, NativeEndian};
@@ -77,28 +77,26 @@ pub fn set_logger_for_test() {
 /// Returns true if a timer was triggered, false if there were no timers waiting to be
 /// triggered.
 pub fn trigger_next_timer(ctx: &mut Context<DummyEventDispatcher>) -> bool {
-    let event = ctx.dispatcher.timer_events.iter().min_by_key(|e| e.0);
-    if let Some(event) = event {
-        let (t, id) = ctx.dispatcher.timer_events.remove(
-            ctx.dispatcher
-                .timer_events
-                .iter()
-                .position(|x| x == event)
-                .unwrap(),
-        );
-        ctx.dispatcher.current_time = t;
-        handle_timeout(ctx, id);
-        true
-    } else {
-        false
+    match ctx
+        .dispatcher
+        .timer_events
+        .keys()
+        .next()
+        .map(|t| *t)
+        .and_then(|t| ctx.dispatcher.timer_events.remove(&t).map(|id| (t, id)))
+    {
+        Some((t, id)) => {
+            ctx.dispatcher.current_time = t;
+            handle_timeout(ctx, id);
+            true
+        }
+        None => false,
     }
 }
 
 pub struct DummyEventDispatcher {
     frames_sent: Vec<(DeviceId, Vec<u8>)>,
-    // Currently, this list is unordered, and we scan through the entire list whenever we use it.
-    // TODO(wesleyac) Maybe use a btree?
-    timer_events: Vec<(Instant, TimerId)>,
+    timer_events: BTreeMap<Instant, TimerId>,
     current_time: Instant,
 }
 
@@ -107,9 +105,9 @@ impl DummyEventDispatcher {
         &self.frames_sent
     }
 
-    /// Get an unordered list of all scheduled timer events
-    pub fn timer_events(&self) -> &[(Instant, TimerId)] {
-        &self.timer_events
+    /// Get an ordered list of all scheduled timer events
+    pub fn timer_events<'a>(&'a self) -> impl Iterator<Item = (&'a Instant, &'a TimerId)> {
+        self.timer_events.iter()
     }
 
     /// Get the current (fake) time
@@ -122,7 +120,7 @@ impl Default for DummyEventDispatcher {
     fn default() -> DummyEventDispatcher {
         DummyEventDispatcher {
             frames_sent: vec![],
-            timer_events: vec![],
+            timer_events: BTreeMap::new(),
             current_time: Instant::now(),
         }
     }
@@ -148,17 +146,29 @@ impl EventDispatcher for DummyEventDispatcher {
 
     fn schedule_timeout_instant(&mut self, time: Instant, id: TimerId) -> Option<Instant> {
         let ret = self.cancel_timeout(id);
-        self.timer_events.push((time, id));
+        self.timer_events.insert(time, id);
         ret
     }
 
     fn cancel_timeout(&mut self, id: TimerId) -> Option<Instant> {
         // There is the invariant that there can only be one timer event per TimerId, so we only
         // need to remove at most one element from timer_events.
-        Some(
-            self.timer_events
-                .remove(self.timer_events.iter().position(|x| x.1 == id)?)
-                .0,
-        )
+
+        match self
+            .timer_events
+            .iter()
+            .find_map(|(instant, event_timer_id)| {
+                if *event_timer_id == id {
+                    Some(*instant)
+                } else {
+                    None
+                }
+            }) {
+            Some(instant) => {
+                self.timer_events.remove(&instant);
+                Some(instant)
+            }
+            None => None,
+        }
     }
 }
