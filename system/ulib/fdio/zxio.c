@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fdio/util.h>
 #include <lib/zxio/inception.h>
 #include <lib/zxio/zxio.h>
 #include <poll.h>
@@ -639,7 +640,7 @@ static fdio_ops_t fdio_zxio_pipe_ops = {
     .shutdown = fdio_zxio_pipe_shutdown,
 };
 
-fdio_t* fdio_zxio_create_pipe(zx_handle_t socket) {
+fdio_t* fdio_pipe_create(zx_handle_t socket) {
     fdio_zxio_pipe_t* fv = fdio_alloc(sizeof(fdio_zxio_pipe_t));
     if (fv == NULL) {
         zx_handle_close(socket);
@@ -653,4 +654,55 @@ fdio_t* fdio_zxio_create_pipe(zx_handle_t socket) {
         return NULL;
     }
     return &fv->io;
+}
+
+fdio_t* fdio_socketpair_create(zx_handle_t h) {
+    return fdio_pipe_create(h);
+}
+
+int fdio_pipe_pair(fdio_t** _a, fdio_t** _b) {
+    zx_handle_t h0, h1;
+    fdio_t *a, *b;
+    zx_status_t r;
+    if ((r = zx_socket_create(0, &h0, &h1)) < 0) {
+        return r;
+    }
+    if ((a = fdio_pipe_create(h0)) == NULL) {
+        zx_handle_close(h1);
+        return ZX_ERR_NO_MEMORY;
+    }
+    if ((b = fdio_pipe_create(h1)) == NULL) {
+        fdio_zxio_close(a);
+        return ZX_ERR_NO_MEMORY;
+    }
+    *_a = a;
+    *_b = b;
+    return 0;
+}
+
+__EXPORT
+zx_status_t fdio_pipe_half(zx_handle_t* handle, uint32_t* type) {
+    zx_handle_t h0, h1;
+    zx_status_t r;
+    fdio_t* io;
+    int fd;
+    if ((r = zx_socket_create(0, &h0, &h1)) < 0) {
+        return r;
+    }
+    if ((io = fdio_pipe_create(h0)) == NULL) {
+        r = ZX_ERR_NO_MEMORY;
+        goto fail;
+    }
+    if ((fd = fdio_bind_to_fd(io, -1, 0)) < 0) {
+        fdio_release(io);
+        r = ZX_ERR_NO_RESOURCES;
+        goto fail;
+    }
+    *handle = h1;
+    *type = PA_FDIO_SOCKET;
+    return fd;
+
+fail:
+    zx_handle_close(h1);
+    return r;
 }

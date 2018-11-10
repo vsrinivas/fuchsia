@@ -124,15 +124,10 @@ zx_status_t fdio_close(fdio_t* io);
 zx_status_t fdio_wait(fdio_t* io, uint32_t events, zx_time_t deadline,
                       uint32_t* out_pending);
 
-// Wraps a socket with an fdio_t using simple io.
-// Takes ownership of h.
-fdio_t* fdio_pipe_create(zx_handle_t h);
-
 // Creates a pipe backed by a socket.
 //
-// Uses zxio to implement the pipe. If |FDIO_USE_ZXIO_PIPE| is defined to 1,
-// then |fdio_pipe_create| uses this function to create a pipe backed by zxio.
-fdio_t* fdio_zxio_create_pipe(zx_handle_t socket);
+// Takes ownership of |socket|.
+fdio_t* fdio_pipe_create(zx_handle_t socket);
 
 // Wraps a socket with an fdio_t using socketpair io.
 fdio_t* fdio_socketpair_create(zx_handle_t h);
