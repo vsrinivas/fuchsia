@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <fs/synchronous-vfs.h>
+#include <fuchsia/process/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include "garnet/bin/appmgr/job_provider_impl.h"
 #include "garnet/bin/appmgr/service_provider_dir_impl.h"
@@ -24,6 +25,7 @@ class Realm;
 
 class Namespace : public fuchsia::sys::Environment,
                   public fuchsia::sys::Launcher,
+                  public fuchsia::process::Resolver,
                   public fxl::RefCountedThreadSafe<Namespace> {
  public:
   const fbl::RefPtr<ServiceProviderDirImpl>& services() { return services_; }
@@ -37,16 +39,20 @@ class Namespace : public fuchsia::sys::Environment,
   zx::channel OpenServicesAsDirectory();
 
   //
+  // fuchsia::process::Resolver implementation:
+  //
+  void Resolve(fidl::StringPtr name,
+               fuchsia::process::Resolver::ResolveCallback callback) override;
+
+  //
   // fuchsia::sys::Environment implementation:
   //
 
   void CreateNestedEnvironment(
       fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
       fidl::InterfaceRequest<fuchsia::sys::EnvironmentController> controller,
-      fidl::StringPtr label,
-      fuchsia::sys::ServiceListPtr additional_services,
+      fidl::StringPtr label, fuchsia::sys::ServiceListPtr additional_services,
       fuchsia::sys::EnvironmentOptions options) override;
-
 
   void GetLauncher(
       fidl::InterfaceRequest<fuchsia::sys::Launcher> launcher) override;
@@ -70,7 +76,6 @@ class Namespace : public fuchsia::sys::Environment,
                        fidl::InterfaceRequest<fuchsia::sys::ComponentController>
                            controller) override;
 
-
  private:
   FRIEND_MAKE_REF_COUNTED(Namespace);
   Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
@@ -82,6 +87,7 @@ class Namespace : public fuchsia::sys::Environment,
 
   fidl::BindingSet<fuchsia::sys::Environment> environment_bindings_;
   fidl::BindingSet<fuchsia::sys::Launcher> launcher_bindings_;
+  fidl::BindingSet<fuchsia::process::Resolver> resolver_bindings_;
 
   fs::SynchronousVfs vfs_;
   fbl::RefPtr<ServiceProviderDirImpl> services_;

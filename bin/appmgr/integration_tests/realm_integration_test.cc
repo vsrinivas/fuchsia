@@ -122,6 +122,43 @@ TEST_F(RealmTest, RunBinaryAsComponent) {
   }
 }
 
+TEST_F(RealmTest, Resolve) {
+  auto enclosing_environment =
+      CreateNewEnclosingEnvironment(kRealm, CreateServices());
+
+  fidl::InterfacePtr<fuchsia::process::Resolver> resolver;
+  enclosing_environment->ConnectToService(resolver.NewRequest());
+
+  bool wait = false;
+  resolver->Resolve(
+      fidl::StringPtr("fuchsia-pkg://fuchsia.com/appmgr_integration_tests#test/"
+                      "appmgr_realm_integration_tests"),
+      [&wait](zx_status_t status, zx::vmo binary,
+              fidl::InterfaceHandle<fuchsia::ldsvc::Loader> loader) {
+        wait = true;
+
+        ASSERT_EQ(ZX_OK, status);
+
+        std::string expect;
+        // One day, when this test is not run in the shell realm, it should
+        // read:
+        // files::ReadFileToString("/pkg/test/appmgr_realm_integration_tests",
+        // &expect);
+        files::ReadFileToString(
+            "/pkgfs/packages/appmgr_integration_tests/0/test/"
+            "appmgr_realm_integration_tests",
+            &expect);
+        ASSERT_FALSE(expect.empty());
+
+        std::vector<char> buf(expect.length());
+        ASSERT_EQ(ZX_OK, binary.read(buf.data(), 0, buf.size()));
+        std::string actual(buf.begin(), buf.end());
+
+        ASSERT_EQ(expect, actual);
+      });
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, kTimeout));
+}
+
 // This test exercises the fact that two components should be in separate jobs,
 // and thus when one component controller kills its job due to a .Kill() call
 // the other component should run uninterrupted.

@@ -46,6 +46,14 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
                 std::move(channel)));
         return ZX_OK;
       })));
+  services_->AddService(
+      fuchsia::process::Resolver::Name_,
+      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+        resolver_bindings_.AddBinding(
+            this, fidl::InterfaceRequest<fuchsia::process::Resolver>(
+                      std::move(channel)));
+        return ZX_OK;
+      })));
 
   if (additional_services) {
     auto& names = additional_services->names;
@@ -116,6 +124,11 @@ void Namespace::CreateComponent(
 
 zx::channel Namespace::OpenServicesAsDirectory() {
   return Util::OpenAsDirectory(&vfs_, services_);
+}
+
+void Namespace::Resolve(fidl::StringPtr name,
+                        fuchsia::process::Resolver::ResolveCallback callback) {
+  realm_->Resolve(name, std::move(callback));
 }
 
 }  // namespace component

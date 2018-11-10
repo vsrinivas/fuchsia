@@ -111,6 +111,9 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   zx_status_t BindSvc(zx::channel channel);
   void CreateShell(const std::string& path, zx::channel svc);
 
+  void Resolve(fidl::StringPtr name,
+               fuchsia::process::Resolver::ResolveCallback callback);
+
  private:
   static uint32_t next_numbered_label_;
 

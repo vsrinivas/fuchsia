@@ -359,6 +359,87 @@ void Realm::CreateNestedEnvironment(
   }
 }
 
+void Realm::Resolve(fidl::StringPtr name,
+                    fuchsia::process::Resolver::ResolveCallback callback) {
+  TRACE_DURATION("appmgr", "Realm::ResolveLoader", "name", name.get());
+
+  zx::vmo binary;
+  fidl::InterfaceHandle<fuchsia::ldsvc::Loader> loader;
+
+  if (name->empty()) {
+    FXL_LOG(ERROR) << "Cannot resolve loader because requested name is empty";
+    callback(ZX_ERR_NOT_FOUND, std::move(binary), std::move(loader));
+    return;
+  }
+
+  // XXX(raggi): canonicalize url doesn't clean out invalid url chars or fail on
+  // them (e.g. \n)
+  const std::string canon_url = CanonicalizeURL(name);
+  if (canon_url.empty()) {
+    FXL_LOG(ERROR) << "Cannot resolve " << name
+                   << " because the url could not be canonicalized";
+    callback(ZX_ERR_INVALID_ARGS, std::move(binary), std::move(loader));
+    return;
+  }
+  std::string scheme = GetSchemeFromURL(canon_url);
+
+  const std::string launcher_type = scheme_map_.LookUp(scheme);
+  if (launcher_type != "package") {
+    FXL_LOG(ERROR) << "Cannot resolve non-packages";
+    callback(ZX_ERR_NOT_FOUND, std::move(binary), std::move(loader));
+    return;
+  }
+
+  loader_->LoadComponent(
+      canon_url,
+      fxl::MakeCopyable([this, callback = fbl::move(callback)](
+                            fuchsia::sys::PackagePtr package) mutable {
+        zx::vmo binary;
+        fidl::InterfaceHandle<fuchsia::ldsvc::Loader> loader;
+        if (!package) {
+          callback(ZX_ERR_NOT_FOUND, std::move(binary), std::move(loader));
+          return;
+        }
+        if (!package->directory) {
+          callback(ZX_ERR_NOT_FOUND, std::move(binary), std::move(loader));
+          return;
+        }
+
+        fxl::UniqueFD dirfd =
+            fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
+
+        component::FuchsiaPkgUrl pkgurl;
+        if (!pkgurl.Parse(package->resolved_url)) {
+          FXL_LOG(ERROR) << "Could not parse package url: "
+                         << package->resolved_url;
+          callback(ZX_ERR_INTERNAL, std::move(binary), std::move(loader));
+          return;
+        }
+
+        zx_status_t status;
+        fxl::UniqueFD fd(
+            openat(dirfd.get(), pkgurl.resource_path().c_str(), O_RDONLY));
+        if (fd.is_valid()) {
+          status = fdio_get_vmo_clone(fd.get(), binary.reset_and_get_address());
+        } else {
+          status = ZX_ERR_NOT_FOUND;
+        }
+
+        if (status != ZX_OK) {
+          callback(status, std::move(binary), std::move(loader));
+          return;
+        }
+
+        zx::channel chan;
+        if (DynamicLibraryLoader::Start(std::move(dirfd), &chan) != ZX_OK) {
+          callback(ZX_ERR_INTERNAL, std::move(binary), std::move(loader));
+          return;
+        }
+        loader.set_channel(std::move(chan));
+        callback(ZX_OK, std::move(binary), std::move(loader));
+      }));
+}
+
 void Realm::CreateComponent(
     fuchsia::sys::LaunchInfo launch_info,
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
