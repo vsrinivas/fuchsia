@@ -671,7 +671,7 @@ static cpuperf_record_header_t* x86_perfmon_write_pc_record(
     return reinterpret_cast<cpuperf_record_header_t*>(rec);
 }
 
-zx_status_t x86_perfmon_get_properties(zx_x86_pmu_properties_t* props) {
+zx_status_t arch_perfmon_get_properties(zx_x86_pmu_properties_t* props) {
     fbl::AutoLock al(&perfmon_lock);
 
     if (!supports_perfmon)
@@ -688,7 +688,7 @@ zx_status_t x86_perfmon_get_properties(zx_x86_pmu_properties_t* props) {
     return ZX_OK;
 }
 
-zx_status_t x86_perfmon_init() {
+zx_status_t arch_perfmon_init() {
     fbl::AutoLock al(&perfmon_lock);
 
     if (!supports_perfmon)
@@ -707,7 +707,7 @@ zx_status_t x86_perfmon_init() {
     return ZX_OK;
 }
 
-zx_status_t x86_perfmon_assign_buffer(uint32_t cpu, fbl::RefPtr<VmObject> vmo) {
+zx_status_t arch_perfmon_assign_buffer(uint32_t cpu, fbl::RefPtr<VmObject> vmo) {
     fbl::AutoLock al(&perfmon_lock);
 
     if (!supports_perfmon)
@@ -1083,7 +1083,7 @@ static void x86_perfmon_stage_misc_config(const zx_x86_pmu_config_t* config,
 // Stage the configuration for later activation by START.
 // One of the main goals of this function is to verify the provided config
 // is ok, e.g., it won't cause us to crash.
-zx_status_t x86_perfmon_stage_config(zx_x86_pmu_config_t* config) {
+zx_status_t arch_perfmon_stage_config(zx_x86_pmu_config_t* config) {
     fbl::AutoLock al(&perfmon_lock);
 
     if (!supports_perfmon)
@@ -1599,7 +1599,7 @@ static void x86_perfmon_start_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_AN
 
 // Begin collecting data.
 
-zx_status_t x86_perfmon_start() {
+zx_status_t arch_perfmon_start() {
     fbl::AutoLock al(&perfmon_lock);
 
     if (!supports_perfmon)
@@ -1763,7 +1763,7 @@ static void x86_perfmon_stop_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANA
 // Stop collecting data.
 // It's ok to call this multiple times.
 // Returns an error if called before ALLOC or after FREE.
-zx_status_t x86_perfmon_stop() {
+zx_status_t arch_perfmon_stop() {
     fbl::AutoLock al(&perfmon_lock);
 
     if (!supports_perfmon)
@@ -1819,7 +1819,7 @@ static void x86_perfmon_reset_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYS
 // everything x86_perfmon_init did.
 // Must be called while tracing is stopped.
 // It's ok to call this multiple times.
-zx_status_t x86_perfmon_fini() {
+zx_status_t arch_perfmon_fini() {
     fbl::AutoLock al(&perfmon_lock);
 
     if (!supports_perfmon)

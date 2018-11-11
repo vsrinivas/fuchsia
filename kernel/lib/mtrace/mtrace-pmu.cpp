@@ -18,25 +18,28 @@
 #include <lib/zircon-internal/mtrace.h>
 
 #include "arch/x86/perf_mon.h"
+using zx_arch_pmu_properties_t = zx_x86_pmu_properties_t;
+using zx_arch_pmu_config_t = zx_x86_pmu_config_t;
+using zx_arch_pmu_buffer_t = zx_x86_pmu_buffer_t;
 
 #define LOCAL_TRACE 0
 
 zx_status_t mtrace_cpuperf_control(uint32_t action, uint32_t options,
                                    user_inout_ptr<void> arg, size_t size) {
-    TRACEF("action %u, options 0x%x, arg %p, size 0x%zx\n",
-           action, options, arg.get(), size);
+    LTRACEF("action %u, options 0x%x, arg %p, size 0x%zx\n",
+            action, options, arg.get(), size);
 
     switch (action) {
     case MTRACE_CPUPERF_GET_PROPERTIES: {
-        zx_x86_pmu_properties_t props;
+        zx_arch_pmu_properties_t props;
         if (size != sizeof(props))
             return ZX_ERR_INVALID_ARGS;
         if (options != 0)
             return ZX_ERR_INVALID_ARGS;
-        auto status = x86_perfmon_get_properties(&props);
+        auto status = arch_perfmon_get_properties(&props);
         if (status != ZX_OK)
             return status;
-        status = arg.reinterpret<zx_x86_pmu_properties_t>().copy_to_user(props);
+        status = arg.reinterpret<zx_arch_pmu_properties_t>().copy_to_user(props);
         if (status != ZX_OK)
             return status;
         return ZX_OK;
@@ -45,13 +48,13 @@ zx_status_t mtrace_cpuperf_control(uint32_t action, uint32_t options,
     case MTRACE_CPUPERF_INIT:
         if (options != 0 || size != 0)
             return ZX_ERR_INVALID_ARGS;
-        return x86_perfmon_init();
+        return arch_perfmon_init();
 
     case MTRACE_CPUPERF_ASSIGN_BUFFER: {
-        zx_x86_pmu_buffer_t buffer;
+        zx_arch_pmu_buffer_t buffer;
         if (size != sizeof(buffer))
             return ZX_ERR_INVALID_ARGS;
-        zx_status_t status = arg.reinterpret<zx_x86_pmu_buffer_t>().copy_from_user(&buffer);
+        zx_status_t status = arg.reinterpret<zx_arch_pmu_buffer_t>().copy_from_user(&buffer);
         if (status != ZX_OK)
             return status;
 
@@ -76,35 +79,35 @@ zx_status_t mtrace_cpuperf_control(uint32_t action, uint32_t options,
         if (status != ZX_OK)
             return status;
 
-        return x86_perfmon_assign_buffer(cpu, fbl::move(vmo->vmo()));
+        return arch_perfmon_assign_buffer(cpu, fbl::move(vmo->vmo()));
     }
 
     case MTRACE_CPUPERF_STAGE_CONFIG: {
-        zx_x86_pmu_config_t config;
+        zx_arch_pmu_config_t config;
         if (size != sizeof(config))
             return ZX_ERR_INVALID_ARGS;
-        zx_status_t status = arg.reinterpret<zx_x86_pmu_config_t>().copy_from_user(&config);
+        zx_status_t status = arg.reinterpret<zx_arch_pmu_config_t>().copy_from_user(&config);
         if (status != ZX_OK)
             return status;
         if (options != 0)
             return ZX_ERR_INVALID_ARGS;
-        return x86_perfmon_stage_config(&config);
+        return arch_perfmon_stage_config(&config);
     }
 
     case MTRACE_CPUPERF_START:
         if (options != 0 || size != 0)
             return ZX_ERR_INVALID_ARGS;
-        return x86_perfmon_start();
+        return arch_perfmon_start();
 
     case MTRACE_CPUPERF_STOP:
         if (options != 0 || size != 0)
             return ZX_ERR_INVALID_ARGS;
-        return x86_perfmon_stop();
+        return arch_perfmon_stop();
 
     case MTRACE_CPUPERF_FINI:
         if (options != 0 || size != 0)
             return ZX_ERR_INVALID_ARGS;
-        return x86_perfmon_fini();
+        return arch_perfmon_fini();
 
     default:
         return ZX_ERR_INVALID_ARGS;
