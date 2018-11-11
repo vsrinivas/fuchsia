@@ -18,7 +18,6 @@
 #include <arch/x86/mmu.h>
 #include <arch/x86/mmu_mem_types.h>
 #include <arch/x86/mp.h>
-#include <arch/x86/perf_mon.h>
 #include <arch/x86/proc_trace.h>
 #include <arch/x86/tsc.h>
 #include <assert.h>
@@ -63,7 +62,6 @@ void arch_init(void) {
     gdt_setup();
     idt_setup_readonly();
 
-    x86_perfmon_init_once();
     x86_processor_trace_init();
 }
 

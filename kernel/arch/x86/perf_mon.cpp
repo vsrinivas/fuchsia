@@ -53,6 +53,7 @@
 #include <kernel/mutex.h>
 #include <kernel/stats.h>
 #include <kernel/thread.h>
+#include <lk/init.h>
 #include <platform.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
@@ -470,7 +471,7 @@ static void x86_perfmon_init_lbr(uint32_t lbr_stack_size) {
     perfmon_lbr_stack_size = lbr_stack_size;
 }
 
-void x86_perfmon_init_once(void)
+static void x86_perfmon_init_once(uint level)
 {
     struct cpuid_leaf leaf;
     if (!x86_get_cpuid_subleaf(X86_CPUID_PERFORMANCE_MONITORING, 0, &leaf)) {
@@ -568,6 +569,8 @@ void x86_perfmon_init_once(void)
 
     printf("PMU: version %u\n", perfmon_version);
 }
+
+LK_INIT_HOOK(x86_perfmon, x86_perfmon_init_once, LK_INIT_LEVEL_ARCH);
 
 static void x86_perfmon_clear_overflow_indicators() {
     uint64_t value = (IA32_PERF_GLOBAL_OVF_CTRL_CLR_COND_CHGD_MASK |

@@ -16,8 +16,6 @@
 
 #include <lib/zircon-internal/device/cpu-trace/intel-pm.h>
 
-void x86_perfmon_init_once(void);
-
 zx_status_t x86_perfmon_get_properties(zx_x86_pmu_properties_t* state);
 
 zx_status_t x86_perfmon_init();
