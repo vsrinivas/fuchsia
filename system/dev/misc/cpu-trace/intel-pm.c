@@ -731,11 +731,6 @@ static zx_status_t ipm_stage_config(cpuperf_device_t* dev,
             return ZX_ERR_INVALID_ARGS;
         }
 
-        if (icfg->flags[ii] & ~CPUPERF_CONFIG_FLAG_MASK) {
-            zxlogf(ERROR, "%s: reserved flag bits set [%u]\n", __func__, ii);
-            return ZX_ERR_INVALID_ARGS;
-        }
-
         switch (group) {
         case CPUPERF_GROUP_FIXED:
             status = ipm_stage_fixed_config(icfg, ss, ii, ocfg);
