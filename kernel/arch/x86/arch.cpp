@@ -63,7 +63,7 @@ void arch_init(void) {
     gdt_setup();
     idt_setup_readonly();
 
-    x86_perfmon_init();
+    x86_perfmon_init_once();
     x86_processor_trace_init();
 }
 

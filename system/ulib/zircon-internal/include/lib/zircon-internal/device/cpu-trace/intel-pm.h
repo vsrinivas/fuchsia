@@ -356,14 +356,14 @@ typedef struct {
     // LBR is supported by the chip because the device is not recognized as
     // supporting it.
     uint32_t lbr_stack_size;
-} zx_x86_ipm_properties_t;
+} zx_x86_pmu_properties_t;
 
 // This is for passing buffer specs to the kernel.
 typedef struct {
     zx_handle_t vmo;
-} zx_x86_ipm_buffer_t;
+} zx_x86_pmu_buffer_t;
 
-// IPM configuration.
+// PMU configuration.
 typedef struct {
     // IA32_PERF_GLOBAL_CTRL
     uint64_t global_ctrl;
@@ -417,7 +417,7 @@ typedef struct {
 
     // IA32_PERFEVTSEL_*
     uint64_t programmable_events[IPM_MAX_PROGRAMMABLE_COUNTERS];
-} zx_x86_ipm_config_t;
+} zx_x86_pmu_config_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 

@@ -28,15 +28,15 @@ zx_status_t mtrace_cpuperf_control(uint32_t action, uint32_t options,
 
     switch (action) {
     case MTRACE_CPUPERF_GET_PROPERTIES: {
-        zx_x86_ipm_properties_t props;
+        zx_x86_pmu_properties_t props;
         if (size != sizeof(props))
             return ZX_ERR_INVALID_ARGS;
         if (options != 0)
             return ZX_ERR_INVALID_ARGS;
-        auto status = x86_ipm_get_properties(&props);
+        auto status = x86_perfmon_get_properties(&props);
         if (status != ZX_OK)
             return status;
-        status = arg.reinterpret<zx_x86_ipm_properties_t>().copy_to_user(props);
+        status = arg.reinterpret<zx_x86_pmu_properties_t>().copy_to_user(props);
         if (status != ZX_OK)
             return status;
         return ZX_OK;
@@ -45,13 +45,13 @@ zx_status_t mtrace_cpuperf_control(uint32_t action, uint32_t options,
     case MTRACE_CPUPERF_INIT:
         if (options != 0 || size != 0)
             return ZX_ERR_INVALID_ARGS;
-        return x86_ipm_init();
+        return x86_perfmon_init();
 
     case MTRACE_CPUPERF_ASSIGN_BUFFER: {
-        zx_x86_ipm_buffer_t buffer;
+        zx_x86_pmu_buffer_t buffer;
         if (size != sizeof(buffer))
             return ZX_ERR_INVALID_ARGS;
-        zx_status_t status = arg.reinterpret<zx_x86_ipm_buffer_t>().copy_from_user(&buffer);
+        zx_status_t status = arg.reinterpret<zx_x86_pmu_buffer_t>().copy_from_user(&buffer);
         if (status != ZX_OK)
             return status;
 
@@ -76,35 +76,35 @@ zx_status_t mtrace_cpuperf_control(uint32_t action, uint32_t options,
         if (status != ZX_OK)
             return status;
 
-        return x86_ipm_assign_buffer(cpu, fbl::move(vmo->vmo()));
+        return x86_perfmon_assign_buffer(cpu, fbl::move(vmo->vmo()));
     }
 
     case MTRACE_CPUPERF_STAGE_CONFIG: {
-        zx_x86_ipm_config_t config;
+        zx_x86_pmu_config_t config;
         if (size != sizeof(config))
             return ZX_ERR_INVALID_ARGS;
-        zx_status_t status = arg.reinterpret<zx_x86_ipm_config_t>().copy_from_user(&config);
+        zx_status_t status = arg.reinterpret<zx_x86_pmu_config_t>().copy_from_user(&config);
         if (status != ZX_OK)
             return status;
         if (options != 0)
             return ZX_ERR_INVALID_ARGS;
-        return x86_ipm_stage_config(&config);
+        return x86_perfmon_stage_config(&config);
     }
 
     case MTRACE_CPUPERF_START:
         if (options != 0 || size != 0)
             return ZX_ERR_INVALID_ARGS;
-        return x86_ipm_start();
+        return x86_perfmon_start();
 
     case MTRACE_CPUPERF_STOP:
         if (options != 0 || size != 0)
             return ZX_ERR_INVALID_ARGS;
-        return x86_ipm_stop();
+        return x86_perfmon_stop();
 
     case MTRACE_CPUPERF_FINI:
         if (options != 0 || size != 0)
             return ZX_ERR_INVALID_ARGS;
-        return x86_ipm_fini();
+        return x86_perfmon_fini();
 
     default:
         return ZX_ERR_INVALID_ARGS;
