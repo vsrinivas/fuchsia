@@ -46,9 +46,10 @@ __BEGIN_CDECLS
 
 // Spawn a process in the given job.
 //
-// The binary for the process is loaded from the given |path| and passed |argv|.
+// The program for the process is loaded from the given |path| and passed |argv|.
 // The aspects of this process' environment indicated by |flags| are shared with
-// the process.
+// the process. If the target program begins with |#!resolve | then the binary is
+// resolved by url via |fuchsia.process.Resolver|.
 //
 // The |argv| array must be terminated with a null pointer.
 //
