@@ -9,7 +9,8 @@
         "services": [
             "fuchsia.vulkan.loader.Loader",
             "fuchsia.tracelink.Registry",
-            "fuchsia.ui.viewsv1.ViewManager"
+            "fuchsia.ui.viewsv1.ViewManager",
+            "fuchsia.ui.scenic.Scenic"
         ]
     }
 }
