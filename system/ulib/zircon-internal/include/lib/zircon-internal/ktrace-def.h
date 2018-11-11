@@ -72,12 +72,6 @@ KTRACE_DEF(0x200,32B,IPT_START,ARCH) // MSR_PLATFORM_INFO[15:8], kernel cr3
 KTRACE_DEF(0x201,32B,IPT_CPU_INFO,ARCH) // family, model, stepping
 KTRACE_DEF(0x202,32B,IPT_STOP,ARCH)
 KTRACE_DEF(0x203,32B,IPT_PROCESS_CREATE,ARCH) // pid, cr3
-
-// These are used for Intel Performance Monitor support.
-// The start/stop records currently don't have any data, but may include info for debugging
-// purposes. Let's keep the record size constant - these are infrequently used.
-KTRACE_DEF(0x204,32B,IPM_START,ARCH)
-KTRACE_DEF(0x205,32B,IPM_STOP,ARCH)
 #endif
 
 #undef KTRACE_DEF

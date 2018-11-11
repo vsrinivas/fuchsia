@@ -1634,7 +1634,6 @@ zx_status_t x86_ipm_start() {
         }
     }
 
-    ktrace(TAG_IPM_START, 0, 0, 0, 0);
     mp_sync_exec(MP_IPI_TARGET_ALL, 0, x86_ipm_start_cpu_task, state);
     atomic_store(&perfmon_active, true);
 
@@ -1780,7 +1779,6 @@ zx_status_t x86_ipm_stop() {
 
     auto state = perfmon_state.get();
     mp_sync_exec(MP_IPI_TARGET_ALL, 0, x86_ipm_stop_cpu_task, state);
-    ktrace(TAG_IPM_STOP, 0, 0, 0, 0);
 
     // x86_ipm_start currently maps the buffers in, so we unmap them here.
     // Make sure to do this after we've turned everything off so that we
