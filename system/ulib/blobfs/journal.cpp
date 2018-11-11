@@ -296,8 +296,7 @@ zx_status_t Journal::Enqueue(fbl::unique_ptr<WritebackWork> work) {
 
         if (IsReadOnly()) {
             // The Journal is in a bad state and is no longer accepting new entries.
-            ZX_ASSERT_MSG(status == ZX_ERR_BAD_STATE,
-                          "Requested txn (%zu blocks) larger than journal buffer", blocks);
+            status = ZX_ERR_BAD_STATE;
         } else {
             // Assign header index of journal entry to the next available value before we attempt to
             // copy the meat of the entry to the buffer.
