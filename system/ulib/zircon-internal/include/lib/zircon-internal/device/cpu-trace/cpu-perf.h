@@ -136,7 +136,7 @@ typedef struct {
     // The |ticks_per_second| field in the buffer header provides the
     // conversion factor from this value to ticks per second.
     // For x86 this is the TSC value.
-    zx_time_t time;
+    zx_ticks_t time;
 } CPUPERF_ALIGN_RECORD cpuperf_time_record_t;
 
 // Verify our alignment assumptions.
