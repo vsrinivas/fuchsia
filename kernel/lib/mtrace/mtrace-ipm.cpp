@@ -88,8 +88,6 @@ zx_status_t mtrace_cpuperf_control(uint32_t action, uint32_t options,
             return status;
         if (options != 0)
             return ZX_ERR_INVALID_ARGS;
-        TRACEF("action %u, global_ctrl 0x%" PRIx64 "\n",
-               action, config.global_ctrl);
         return x86_ipm_stage_config(&config);
     }
 

@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// These definitions are used for communication between the cpu-trace
+// device driver and the kernel only.
+
 #pragma once
 
 #include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>

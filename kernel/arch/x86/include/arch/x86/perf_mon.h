@@ -9,8 +9,6 @@
 #include <err.h>
 #include <stdint.h>
 
-#include <zircon/compiler.h>
-
 #include <fbl/ref_ptr.h>
 #include <vm/vm_object.h>
 
@@ -18,13 +16,7 @@
 
 #include <lib/zircon-internal/device/cpu-trace/intel-pm.h>
 
-__BEGIN_CDECLS
-
 void x86_perfmon_init(void);
-
-__END_CDECLS
-
-#ifdef __cplusplus
 
 zx_status_t x86_ipm_get_properties(zx_x86_ipm_properties_t* state);
 
@@ -41,5 +33,3 @@ zx_status_t x86_ipm_stop();
 zx_status_t x86_ipm_fini();
 
 void apic_pmi_interrupt_handler(x86_iframe_t *frame);
-
-#endif // __cplusplus

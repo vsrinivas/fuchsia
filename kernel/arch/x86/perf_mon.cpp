@@ -16,9 +16,6 @@
 // "event", but some events are not counters. Internally, we use the
 // term "counter" when we know the event is a counter.
 
-// TODO(dje): wip
-// The thought is to use resources (as in ResourceDispatcher), at which point
-// this will all get rewritten. Until such time, the goal here is KISS.
 // This file contains the lower part of Intel Performance Monitor support that
 // must be done in the kernel (so that we can read/write msrs).
 // The userspace driver is in system/dev/misc/cpu-trace/intel-pm.c.
@@ -568,6 +565,8 @@ void x86_perfmon_init(void)
         }
         x86_perfmon_init_lbr(lbr_stack_size);
     }
+
+    printf("PMU: version %u\n", perfmon_version);
 }
 
 static void x86_perfmon_clear_overflow_indicators() {
@@ -674,6 +673,7 @@ zx_status_t x86_ipm_get_properties(zx_x86_ipm_properties_t* props) {
 
     if (!supports_perfmon)
         return ZX_ERR_NOT_SUPPORTED;
+    memset(props, 0, sizeof(*props));
     props->pm_version = perfmon_version;
     props->num_fixed_events = perfmon_num_fixed_counters;
     props->num_programmable_events = perfmon_num_programmable_counters;
@@ -773,6 +773,10 @@ static zx_status_t x86_ipm_verify_fixed_config(
             TRACEF("Active fixed events not front-filled\n");
             return ZX_ERR_INVALID_ARGS;
         }
+        // As a rule this file is agnostic to event ids, it's the device
+        // driver's job to map them to values we use. Thus we don't
+        // validate the ID here. We are given it so that we can include
+        // this ID in the trace output.
         if (id == 0) {
             if (!seen_last)
                 num_used = i;
@@ -829,6 +833,10 @@ static zx_status_t x86_ipm_verify_programmable_config(
             TRACEF("Active programmable events not front-filled\n");
             return ZX_ERR_INVALID_ARGS;
         }
+        // As a rule this file is agnostic to event ids, it's the device
+        // driver's job to map them to the hw values we use. Thus we don't
+        // validate the ID here. We are given it so that we can include
+        // this ID in the trace output.
         if (id == 0) {
             if (!seen_last)
                 num_used = i;
@@ -1083,6 +1091,8 @@ zx_status_t x86_ipm_stage_config(zx_x86_ipm_config_t* config) {
         return ZX_ERR_BAD_STATE;
 
     auto state = perfmon_state.get();
+
+    LTRACEF("global_ctrl 0x%" PRIx64 "\n", config->global_ctrl);
 
     // Note: The verification pass may also alter |config| to make things
     // simpler for the implementation.
@@ -1423,6 +1433,8 @@ static void x86_ipm_unmap_buffers_locked(PerfmonState* state) {
     }
     state->mchbar_data.mapping.reset();
     state->mchbar_data.stats_addr = nullptr;
+
+    LTRACEF("buffers unmapped");
 }
 
 static zx_status_t x86_map_mchbar_stat_registers(PerfmonState* state) {
@@ -1486,8 +1498,8 @@ static zx_status_t x86_map_mchbar_stat_registers(PerfmonState* state) {
     INIT_MC_COUNT(active_gt_engine_cycles);
 #undef INIT_MC_COUNT
 
-    TRACEF("memory stats mapped: begin 0x%lx, %zu bytes\n",
-           mapping->base(), num_bytes_to_map);
+    LTRACEF("memory stats mapped: begin 0x%lx, %zu bytes\n",
+            mapping->base(), num_bytes_to_map);
 
     return ZX_OK;
 }
@@ -1525,8 +1537,8 @@ static zx_status_t x86_ipm_map_buffers_locked(PerfmonState* state) {
         data->buffer_start = reinterpret_cast<cpuperf_buffer_header_t*>(
             data->buffer_mapping->base() + vmo_offset);
         data->buffer_end = reinterpret_cast<char*>(data->buffer_start) + size;
-        TRACEF("buffer mapped: cpu %u, start %p, end %p\n",
-               cpu, data->buffer_start, data->buffer_end);
+        LTRACEF("buffer mapped: cpu %u, start %p, end %p\n",
+                cpu, data->buffer_start, data->buffer_end);
 
         auto hdr = data->buffer_start;
         hdr->version = CPUPERF_BUFFER_VERSION;
@@ -1625,6 +1637,7 @@ zx_status_t x86_ipm_start() {
     ktrace(TAG_IPM_START, 0, 0, 0, 0);
     mp_sync_exec(MP_IPI_TARGET_ALL, 0, x86_ipm_start_cpu_task, state);
     atomic_store(&perfmon_active, true);
+
     return ZX_OK;
 }
 
