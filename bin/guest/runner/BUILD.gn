@@ -32,10 +32,16 @@ executable("bin") {
 }
 
 package("guest_runner") {
-  deprecated_no_cmx = "//build"
+  binary = "guest_runner"
 
   deps = [
     ":bin",
   ]
-  binary = "guest_runner"
+
+  meta = [
+    {
+      path = rebase_path("//garnet/bin/guest/runner/meta/guest_runner.cmx")
+      dest = "guest_runner.cmx"
+    },
+  ]
 }
