@@ -6,10 +6,11 @@ import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
 import("//third_party/cobalt_config/cobalt_config.gni")
 
-cobalt_config("generate_wlan_config") {
+cobalt_config("wlan_metrics_registry") {
   # This ID must match the Cobalt config from
   # //third_party/cobalt_config/projects.yaml
   project_id = 106
+  use_target_name = true
 }
 
 rustc_binary("bin") {
@@ -50,7 +51,7 @@ rustc_binary("bin") {
 package("wlanstack2") {
   deps = [
     ":bin",
-    ":generate_wlan_config",
+    ":wlan_metrics_registry",
   ]
 
   binary = "rust_crates/wlanstack2"
@@ -66,10 +67,10 @@ package("wlanstack2") {
     {
       path = rebase_path(
               get_label_info(
-                             ":generate_wlan_config",
+                             ":wlan_metrics_registry",
                              "target_gen_dir")
-              + "/cobalt_config.pb")
-      dest = "cobalt_config.pb"
+              + "/wlan_metrics_registry.pb")
+      dest = "wlan_metrics_registry.pb"
     }
   ]
 }

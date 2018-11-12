@@ -26,7 +26,7 @@ use {
     },
 };
 
-const COBALT_CONFIG_PATH: &'static str = "/pkg/data/cobalt_config.pb";
+const COBALT_CONFIG_PATH: &'static str = "/pkg/data/wlan_metrics_registry.pb";
 
 const COBALT_BUFFER_SIZE: usize = 100;
 

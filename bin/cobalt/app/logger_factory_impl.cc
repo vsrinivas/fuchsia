@@ -11,7 +11,7 @@
 namespace cobalt {
 
 constexpr char kInternalMetricsProtoPath[] =
-    "/pkgfs/packages/cobalt/0/data/cobalt_config.pb";
+    "/pkgfs/packages/cobalt/0/data/cobalt_internal_metrics_registry.pb";
 
 using cobalt::TimerManager;
 using config::ClientConfig;

@@ -22,13 +22,14 @@ executable("system-metrics") {
   ]
 }
 
-cobalt_config("generate_system_metrics_config") {
+cobalt_config("cobalt_system_metrics_registry") {
   project_id = 102
+  use_target_name = true
 }
 
 package("cobalt_system_metrics") {
   deps = [
-    ":generate_system_metrics_config",
+    ":cobalt_system_metrics_registry",
     ":system-metrics",
   ]
 
@@ -42,9 +43,9 @@ package("cobalt_system_metrics") {
   resources = [
     {
       path = rebase_path(
-              get_label_info(":generate_system_metrics_config",
-                             "target_gen_dir") + "/cobalt_config.pb")
-      dest = "cobalt_config.pb"
+              get_label_info(":cobalt_system_metrics_registry",
+                             "target_gen_dir") + "/cobalt_system_metrics_registry.pb")
+      dest = "cobalt_system_metrics_registry.pb"
     },
   ]
 
