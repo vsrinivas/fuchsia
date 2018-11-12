@@ -6,12 +6,18 @@ import("//build/package.gni")
 import("//third_party/cobalt_config/metrics_registry.gni")
 import("//third_party/protobuf/proto_library.gni")
 
-# Generate the cobalt_internal_metrics_registry.pb file to be used in constructing Cobalt's
-# internal metric logging system.
+# Generate the cobalt_internal_metrics_registry.pb file to be used in
+# constructing Cobalt's internal metric logging system.
 metrics_registry("cobalt_internal_metrics_registry") {
   # cobalt_internal customer
   customer_id = 2147483647
   project_name = "metrics"
+}
+
+# Generate the global_metrics_registry.pb file to be used in constructing
+# loggers when the user doesn't provide their own config.
+metrics_registry("global_metrics_registry") {
+  global = true
 }
 
 source_set("lib") {
@@ -70,6 +76,7 @@ package("cobalt") {
   deps = [
     ":app",
     ":cobalt_internal_metrics_registry",
+    ":global_metrics_registry",
   ]
 
   binary = "cobalt"
@@ -94,8 +101,15 @@ package("cobalt") {
     },
     {
       path = rebase_path(get_label_info(":cobalt_internal_metrics_registry",
-                                        "target_gen_dir") + "/cobalt_internal_metrics_registry.pb")
+                                        "target_gen_dir") +
+                         "/cobalt_internal_metrics_registry.pb")
       dest = "cobalt_internal_metrics_registry.pb"
+    },
+    {
+      path = rebase_path(
+              get_label_info(":global_metrics_registry", "target_gen_dir") +
+              "/global_metrics_registry.pb")
+      dest = "global_metrics_registry.pb"
     },
   ]
 }

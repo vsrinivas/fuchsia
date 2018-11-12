@@ -16,6 +16,8 @@ namespace cobalt {
 namespace http = ::fuchsia::net::oldhttp;
 
 using clearcut::ClearcutUploader;
+using config::ClientConfig;
+using config::ProjectConfigs;
 using encoder::ClearcutV1ShippingManager;
 using encoder::ClientSecret;
 using encoder::FileObservationStore;
@@ -39,6 +41,7 @@ constexpr char kAnalyzerPublicKeyPemPath[] =
     "/pkg/data/certs/cobaltv0.1/analyzer_public.pem";
 constexpr char kShufflerPublicKeyPemPath[] =
     "/pkg/data/certs/cobaltv0.1/shuffler_public.pem";
+constexpr char kMetricsRegistryPath[] = "/pkg/data/global_metrics_registry.pb";
 
 constexpr char kLegacyObservationStorePath[] =
     "/data/cobalt_legacy_observation_store";
@@ -89,10 +92,40 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
           new CobaltControllerImpl(dispatcher, &shipping_manager_)) {
   shipping_manager_.Start();
 
+  // Load the global metrics registry.
+  std::ifstream registry_file_stream;
+  registry_file_stream.open(kMetricsRegistryPath);
+  FXL_CHECK(registry_file_stream && registry_file_stream.good())
+      << "Could not open the Cobalt global metrics registry: "
+      << kMetricsRegistryPath;
+  std::string metrics_registry_bytes;
+  metrics_registry_bytes.assign(
+      (std::istreambuf_iterator<char>(registry_file_stream)),
+      std::istreambuf_iterator<char>());
+  FXL_CHECK(!metrics_registry_bytes.empty())
+      << "Could not read the Cobalt global metrics registry: "
+      << kMetricsRegistryPath;
+
+  // Parse the data as a ClientConfig
+  client_config_.reset(
+      ClientConfig::CreateFromCobaltConfigBytes(metrics_registry_bytes)
+          .release());
+  FXL_CHECK(client_config_)
+      << "Could not parse the Cobalt global metrics registry: "
+      << kMetricsRegistryPath;
+
+  // Parse the data as a ProjectConfigs
+  project_configs_.reset(
+      ProjectConfigs::CreateFromCobaltConfigBytes(metrics_registry_bytes)
+          .release());
+  FXL_CHECK(project_configs_)
+      << "Could not parse the Cobalt global metrics registry: "
+      << kMetricsRegistryPath;
+
   logger_factory_impl_.reset(new LoggerFactoryImpl(
       getClientSecret(), &legacy_observation_store_, &encrypt_to_analyzer_,
       &shipping_manager_, &system_data_, &timer_manager_, &logger_encoder_,
-      &observation_writer_));
+      &observation_writer_, client_config_, project_configs_));
 
   context_->outgoing().AddPublicService(
       logger_factory_bindings_.GetHandler(logger_factory_impl_.get()));

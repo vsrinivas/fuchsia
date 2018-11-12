@@ -5,6 +5,7 @@
 #include "garnet/bin/cobalt/app/logger_factory_impl.h"
 
 #include "garnet/bin/cobalt/app/legacy_logger_impl.h"
+#include "garnet/bin/cobalt/app/utils.h"
 #include "lib/fsl/vmo/file.h"
 #include "lib/fsl/vmo/strings.h"
 
@@ -15,10 +16,12 @@ constexpr char kInternalMetricsProtoPath[] =
 
 using cobalt::TimerManager;
 using config::ClientConfig;
+using config::ProjectConfigs;
 using fuchsia::cobalt::ProjectProfile;
 using fuchsia::cobalt::Status;
 
 const int32_t kFuchsiaCustomerId = 1;
+constexpr char kFuchsiaCustomerName[] = "fuchsia";
 
 namespace {
 std::pair<std::unique_ptr<ClientConfig>, uint32_t> GetClientConfig(
@@ -41,6 +44,21 @@ std::pair<std::unique_ptr<ClientConfig>, uint32_t> GetClientConfig(
   return ClientConfig::CreateFromCobaltProjectConfigBytes(config_bytes);
 }
 
+ReleaseStage ToReleaseStageProto(fuchsia::cobalt::ReleaseStage stage) {
+  switch (stage) {
+    case fuchsia::cobalt::ReleaseStage::GA:
+      return ReleaseStage::GA;
+    case fuchsia::cobalt::ReleaseStage::DOGFOOD:
+      return ReleaseStage::DOGFOOD;
+    case fuchsia::cobalt::ReleaseStage::FISHFOOD:
+      return ReleaseStage::FISHFOOD;
+    case fuchsia::cobalt::ReleaseStage::DEBUG:
+      return ReleaseStage::DEBUG;
+    default:
+      FXL_LOG(ERROR) << "Unknown ReleaseStage provided. Defaulting to DEBUG.";
+      return ReleaseStage::DEBUG;
+  }
+}
 std::pair<std::unique_ptr<encoder::ProjectContext>,
           std::unique_ptr<logger::ProjectContext>>
 CreateProjectContexts(ProjectProfile profile) {
@@ -64,29 +82,11 @@ CreateProjectContexts(ProjectProfile profile) {
     auto project_cfg = customer_cfg->mutable_projects(0);
     auto metrics = std::make_unique<MetricDefinitions>();
     metrics->mutable_metric()->Swap(project_cfg->mutable_metrics());
-    ReleaseStage cobalt_release_stage;
-    switch (release_stage) {
-      case fuchsia::cobalt::ReleaseStage::GA:
-        cobalt_release_stage = ReleaseStage::GA;
-        break;
-      case fuchsia::cobalt::ReleaseStage::DOGFOOD:
-        cobalt_release_stage = ReleaseStage::DOGFOOD;
-        break;
-      case fuchsia::cobalt::ReleaseStage::FISHFOOD:
-        cobalt_release_stage = ReleaseStage::FISHFOOD;
-        break;
-      case fuchsia::cobalt::ReleaseStage::DEBUG:
-        cobalt_release_stage = ReleaseStage::DEBUG;
-        break;
-      default:
-        FXL_LOG(ERROR) << "Unknown ReleaseStage provided";
-        return std::pair(nullptr, nullptr);
-    }
     return std::pair(
         nullptr, std::make_unique<logger::ProjectContext>(
                      customer_cfg->customer_id(), project_cfg->project_id(),
                      customer_cfg->customer_name(), project_cfg->project_name(),
-                     std::move(metrics), cobalt_release_stage));
+                     std::move(metrics), ToReleaseStageProto(release_stage)));
   }
 }
 }  // namespace
@@ -98,7 +98,9 @@ LoggerFactoryImpl::LoggerFactoryImpl(
     encoder::ShippingManager* shipping_manager,
     const encoder::SystemData* system_data, TimerManager* timer_manager,
     logger::Encoder* logger_encoder,
-    logger::ObservationWriter* observation_writer)
+    logger::ObservationWriter* observation_writer,
+    std::shared_ptr<config::ClientConfig> client_config,
+    std::shared_ptr<ProjectConfigs> project_configs)
     : client_secret_(std::move(client_secret)),
       observation_store_(observation_store),
       encrypt_to_analyzer_(encrypt_to_analyzer),
@@ -106,7 +108,9 @@ LoggerFactoryImpl::LoggerFactoryImpl(
       system_data_(system_data),
       timer_manager_(timer_manager),
       logger_encoder_(logger_encoder),
-      observation_writer_(observation_writer) {
+      observation_writer_(observation_writer),
+      client_config_(client_config),
+      project_configs_(project_configs) {
   ProjectProfile profile;
   fsl::SizedVmo config_vmo;
   fsl::VmoFromFilename(kInternalMetricsProtoPath, &config_vmo);
@@ -171,6 +175,86 @@ void LoggerFactoryImpl::CreateLoggerSimple(
   } else {
     callback(Status::INVALID_ARGUMENTS);
   }
+}
+
+void LoggerFactoryImpl::CreateLoggerFromProjectName(
+    fidl::StringPtr project_name, fuchsia::cobalt::ReleaseStage release_stage,
+    fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
+    CreateLoggerFromProjectNameCallback callback) {
+  auto project_context_or = logger::ProjectContext::ConstructWithProjectConfigs(
+      kFuchsiaCustomerName, project_name.get(), project_configs_,
+      ToReleaseStageProto(release_stage));
+
+  if (!project_context_or.ok()) {
+    FXL_LOG(ERROR) << "Failed to construct ProjectContext from ProjectConfigs: "
+                   << project_context_or.status().error_message();
+    callback(ToCobaltStatus(project_context_or.status()));
+    return;
+  }
+
+  logger_bindings_.AddBinding(
+      std::make_unique<LoggerImpl>(project_context_or.ConsumeValueOrDie(),
+                                   logger_encoder_, observation_writer_,
+                                   timer_manager_, internal_logger_.get()),
+      std::move(request));
+  callback(Status::OK);
+}
+
+void LoggerFactoryImpl::CreateLoggerSimpleFromProjectName(
+    fidl::StringPtr project_name, fuchsia::cobalt::ReleaseStage release_stage,
+    fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
+    CreateLoggerSimpleFromProjectNameCallback callback) {
+  auto project_context_or = logger::ProjectContext::ConstructWithProjectConfigs(
+      kFuchsiaCustomerName, project_name.get(), project_configs_,
+      ToReleaseStageProto(release_stage));
+
+  if (!project_context_or.ok()) {
+    FXL_LOG(ERROR) << "Failed to construct ProjectContext from ProjectConfigs: "
+                   << project_context_or.status().error_message();
+    callback(ToCobaltStatus(project_context_or.status()));
+    return;
+  }
+
+  logger_simple_bindings_.AddBinding(
+      std::make_unique<LoggerImpl>(project_context_or.ConsumeValueOrDie(),
+                                   logger_encoder_, observation_writer_,
+                                   timer_manager_, internal_logger_.get()),
+      std::move(request));
+  callback(Status::OK);
+}
+
+void LoggerFactoryImpl::CreateLoggerFromProjectId(
+    uint32_t project_id, fuchsia::cobalt::ReleaseStage release_stage,
+    fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
+    CreateLoggerFromProjectIdCallback callback) {
+  auto project_context = std::make_unique<encoder::ProjectContext>(
+      kFuchsiaCustomerId, project_id, client_config_);
+
+  logger_bindings_.AddBinding(
+      std::make_unique<LegacyLoggerImpl>(
+          std::move(project_context), client_secret_, observation_store_,
+          encrypt_to_analyzer_, shipping_manager_, system_data_,
+          timer_manager_),
+      std::move(request));
+
+  callback(Status::OK);
+}
+
+void LoggerFactoryImpl::CreateLoggerSimpleFromProjectId(
+    uint32_t project_id, fuchsia::cobalt::ReleaseStage release_stage,
+    fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
+    CreateLoggerSimpleFromProjectIdCallback callback) {
+  auto project_context = std::make_unique<encoder::ProjectContext>(
+      kFuchsiaCustomerId, project_id, client_config_);
+
+  logger_simple_bindings_.AddBinding(
+      std::make_unique<LegacyLoggerImpl>(
+          std::move(project_context), client_secret_, observation_store_,
+          encrypt_to_analyzer_, shipping_manager_, system_data_,
+          timer_manager_),
+      std::move(request));
+
+  callback(Status::OK);
 }
 
 }  // namespace cobalt

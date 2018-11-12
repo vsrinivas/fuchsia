@@ -21,6 +21,7 @@
 #include "lib/component/cpp/startup_context.h"
 #include "lib/network_wrapper/network_wrapper_impl.h"
 #include "third_party/cobalt/config/client_config.h"
+#include "third_party/cobalt/config/project_configs.h"
 #include "third_party/cobalt/encoder/client_secret.h"
 #include "third_party/cobalt/encoder/file_observation_store.h"
 #include "third_party/cobalt/encoder/send_retryer.h"
@@ -73,6 +74,7 @@ class CobaltApp {
   logger::ObservationWriter observation_writer_;
 
   std::shared_ptr<config::ClientConfig> client_config_;
+  std::shared_ptr<config::ProjectConfigs> project_configs_;
 
   std::unique_ptr<fuchsia::cobalt::Controller> controller_impl_;
   fidl::BindingSet<fuchsia::cobalt::Controller> controller_bindings_;

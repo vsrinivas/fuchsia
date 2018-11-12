@@ -255,11 +255,9 @@ class FakeLoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
  public:
   FakeLoggerFactoryImpl() {}
 
-  // TODO(zmbush): Restore override once zircon change has been submitted.
-
   void CreateLogger(fuchsia::cobalt::ProjectProfile profile,
                     fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
-                    CreateLoggerCallback callback) /* override */ {
+                    CreateLoggerCallback callback) override {
     logger_.reset(new FakeLoggerImpl());
     logger_bindings_.AddBinding(logger_.get(), std::move(request));
     callback(fuchsia::cobalt::Status::OK);
@@ -268,29 +266,29 @@ class FakeLoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   void CreateLoggerSimple(
       fuchsia::cobalt::ProjectProfile profile,
       fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
-      CreateLoggerSimpleCallback callback) /* override */ {
+      CreateLoggerSimpleCallback callback) override {
     callback(fuchsia::cobalt::Status::OK);
   }
 
   void CreateLoggerFromProjectName(
       fidl::StringPtr project_name, fuchsia::cobalt::ReleaseStage stage,
       fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
-      CreateLoggerFromProjectNameCallback callback) /* override */ {}
+      CreateLoggerFromProjectNameCallback callback) override {}
 
   void CreateLoggerSimpleFromProjectName(
       fidl::StringPtr project_name, fuchsia::cobalt::ReleaseStage stage,
       fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
-      CreateLoggerSimpleFromProjectNameCallback callback) /* override */ {}
+      CreateLoggerSimpleFromProjectNameCallback callback) override {}
 
   void CreateLoggerFromProjectId(
       uint32_t project_id, fuchsia::cobalt::ReleaseStage stage,
       fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
-      CreateLoggerFromProjectNameCallback callback) /* override */ {}
+      CreateLoggerFromProjectIdCallback callback) override {}
 
   void CreateLoggerSimpleFromProjectId(
       uint32_t project_id, fuchsia::cobalt::ReleaseStage stage,
       fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
-      CreateLoggerSimpleFromProjectNameCallback callback) /* override */ {}
+      CreateLoggerSimpleFromProjectIdCallback callback) override {}
 
   FakeLoggerImpl* logger() { return logger_.get(); }
 

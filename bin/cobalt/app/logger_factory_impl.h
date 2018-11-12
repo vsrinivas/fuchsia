@@ -12,6 +12,8 @@
 #include "garnet/bin/cobalt/app/logger_impl.h"
 #include "garnet/bin/cobalt/app/timer_manager.h"
 #include "lib/fidl/cpp/binding_set.h"
+#include "third_party/cobalt/config/client_config.h"
+#include "third_party/cobalt/config/project_configs.h"
 #include "third_party/cobalt/encoder/observation_store.h"
 #include "third_party/cobalt/encoder/shipping_manager.h"
 #include "third_party/cobalt/logger/encoder.h"
@@ -29,7 +31,9 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
                     const encoder::SystemData* system_data,
                     TimerManager* timer_manager,
                     logger::Encoder* logger_encoder,
-                    logger::ObservationWriter* observation_writer);
+                    logger::ObservationWriter* observation_writer,
+                    std::shared_ptr<config::ClientConfig> client_config,
+                    std::shared_ptr<config::ProjectConfigs> project_configs);
 
  private:
   void CreateLogger(fuchsia::cobalt::ProjectProfile profile,
@@ -44,22 +48,22 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   void CreateLoggerFromProjectName(
       fidl::StringPtr project_name, fuchsia::cobalt::ReleaseStage stage,
       fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
-      CreateLoggerCallback callback) {}
+      CreateLoggerFromProjectNameCallback callback);
 
   void CreateLoggerSimpleFromProjectName(
       fidl::StringPtr project_name, fuchsia::cobalt::ReleaseStage stage,
       fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
-      CreateLoggerCallback callback) {}
+      CreateLoggerSimpleFromProjectNameCallback callback);
 
   void CreateLoggerFromProjectId(
       uint32_t project_id, fuchsia::cobalt::ReleaseStage stage,
       fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
-      CreateLoggerFromProjectNameCallback callback) {}
+      CreateLoggerFromProjectIdCallback callback);
 
   void CreateLoggerSimpleFromProjectId(
       uint32_t project_id, fuchsia::cobalt::ReleaseStage stage,
       fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
-      CreateLoggerSimpleFromProjectNameCallback callback) {}
+      CreateLoggerSimpleFromProjectIdCallback callback);
 
   encoder::ClientSecret client_secret_;
   fidl::BindingSet<fuchsia::cobalt::Logger,
@@ -83,6 +87,12 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   TimerManager* timer_manager_;                       // not owned
   logger::Encoder* logger_encoder_;                   // not owned
   logger::ObservationWriter* observation_writer_;     // not owned
+
+  // Used for cobalt v0.1 clients.
+  std::shared_ptr<config::ClientConfig> client_config_;
+
+  // Used for cobalt v1.0 clients.
+  std::shared_ptr<config::ProjectConfigs> project_configs_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LoggerFactoryImpl);
 };

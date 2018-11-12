@@ -47,6 +47,33 @@ Status ToCobaltStatus(logger::Status s) {
   }
 }
 
+Status ToCobaltStatus(util::Status s) {
+  switch (s.error_code()) {
+    case util::StatusCode::OK:
+      return Status::OK;
+    case util::StatusCode::INVALID_ARGUMENT:
+      return Status::INVALID_ARGUMENTS;
+    case util::StatusCode::RESOURCE_EXHAUSTED:
+      return Status::BUFFER_FULL;
+    case util::StatusCode::CANCELLED:
+    case util::StatusCode::UNKNOWN:
+    case util::StatusCode::DEADLINE_EXCEEDED:
+    case util::StatusCode::NOT_FOUND:
+    case util::StatusCode::ALREADY_EXISTS:
+    case util::StatusCode::PERMISSION_DENIED:
+    case util::StatusCode::FAILED_PRECONDITION:
+    case util::StatusCode::ABORTED:
+    case util::StatusCode::OUT_OF_RANGE:
+    case util::StatusCode::UNIMPLEMENTED:
+    case util::StatusCode::INTERNAL:
+    case util::StatusCode::UNAVAILABLE:
+    case util::StatusCode::DATA_LOSS:
+    case util::StatusCode::UNAUTHENTICATED:
+    default:
+      return Status::INTERNAL_ERROR;
+  }
+}
+
 std::string ReadPublicKeyPem(const std::string& pem_file_path) {
   VLOG(2) << "Reading PEM file at " << pem_file_path;
   std::string pem_out;
