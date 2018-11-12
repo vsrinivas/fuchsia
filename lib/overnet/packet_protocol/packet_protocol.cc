@@ -289,6 +289,8 @@ StatusOr<PacketProtocol::AckActions> PacketProtocol::HandleAck(
           return Status(StatusCode::INVALID_ARGUMENT,
                         "Previously acked packet becomes nacked");
       }
+    } else {
+      OVERNET_TRACE(DEBUG) << "NACK: " << nack_seq << " has empty request";
     }
   }
   // Clear out outstanding packet references, propagating acks.
@@ -296,6 +298,8 @@ StatusOr<PacketProtocol::AckActions> PacketProtocol::HandleAck(
     OutstandingPacket& pkt = outstanding_.front();
     auto request = std::move(pkt.request);
     if (!pkt.bbr_sent_packet.has_value()) {
+      OVERNET_TRACE(DEBUG) << "Ack unsent sequence: synthetic=" << is_synthetic
+                           << " seq=" << send_tip_;
       return Status(StatusCode::INVALID_ARGUMENT, "Ack unsent sequence");
     }
     assert(pkt.bbr_sent_packet->outgoing.sequence == send_tip_);
@@ -756,9 +760,9 @@ void PacketProtocol::ScheduleRTO() {
               return;
             }
             if (now >= self->RetransmissionDeadline()) {
-              self->rto_scheduler_.Reset();
               self->NackBefore(self->last_keepalive_event_,
                                Status::Unavailable());
+              self->rto_scheduler_.Reset();
               if (self->LastRTOableSequence(
                       TimeStamp::AfterEpoch(TimeDelta::PositiveInf()))) {
                 self->KeepAlive();
@@ -806,7 +810,10 @@ void PacketProtocol::NackBefore(TimeStamp epoch, const Status& nack_status) {
     f.AddNack(i);
   }
   auto r = HandleAck(f, true);
-  assert(r.is_ok());
+  if (r.is_error()) {
+    OVERNET_TRACE(ERROR) << "NackBefore fails: " << r.AsStatus();
+    abort();
+  }
   RunAckActions(r.get(), nack_status);
 }
 

@@ -225,7 +225,12 @@ void BBR::QueuedPacketReady() {
   // This prevents accidental floods of messages getting queued in lower
   // layers.
   bytes_in_flight_ += mss_;
-  queued_packet_timeout_.Reset(timer_, last_send_time_, queued_packet_.Take());
+  auto cb = queued_packet_.Take();
+  if (timer_->Now() >= last_send_time_) {
+    cb(Status::Ok());
+  } else {
+    queued_packet_timeout_.Reset(timer_, last_send_time_, std::move(cb));
+  }
 }
 
 void BBR::CancelRequestTransmit() {

@@ -27,6 +27,7 @@ class FuchsiaTimer final : public overnet::Timer {
                           zx_status_t status) {
     FireTimeout(static_cast<Task*>(task)->timeout, overnet::Status::FromZx(status));
   }
+
   void InitTimeout(overnet::Timeout* timeout,
                    overnet::TimeStamp when) override {
     auto* async_timeout = TimeoutStorage<Task>(timeout);

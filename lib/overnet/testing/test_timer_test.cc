@@ -38,8 +38,9 @@ TEST(TestTimer, TriggerPastTimeout) {
   TimeStamp start = t.Now();
   t.Step(10);
 
-  EXPECT_CALL(cb, Done(Property(&Status::is_ok, true)));
   Timeout timeout(&t, start, cb.New());
+  EXPECT_CALL(cb, Done(Property(&Status::is_ok, true)));
+  t.Step(1);
 }
 
 TEST(TestTimer, TriggerNowTimeout) {
@@ -48,8 +49,9 @@ TEST(TestTimer, TriggerNowTimeout) {
   TestTimer t;
   TimeStamp start = t.Now();
 
-  EXPECT_CALL(cb, Done(Property(&Status::is_ok, true)));
   Timeout timeout(&t, start, cb.New());
+  EXPECT_CALL(cb, Done(Property(&Status::is_ok, true)));
+  t.Step(1);
 }
 
 TEST(TestTimer, TriggerFutureTimeout) {
@@ -100,8 +102,9 @@ TEST(TestTimer, CancelFiredTimeout) {
   TestTimer t;
   TimeStamp start = t.Now();
 
-  EXPECT_CALL(cb, Done(Property(&Status::is_ok, true)));
   Timeout timeout(&t, start, cb.New());
+  EXPECT_CALL(cb, Done(Property(&Status::is_ok, true)));
+  t.Step(1);
 
   // can cancel after execution
   timeout.Cancel();

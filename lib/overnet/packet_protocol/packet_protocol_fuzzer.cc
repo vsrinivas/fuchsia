@@ -2,70 +2,89 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "packet_protocol_fuzzer_helpers.h"
+#include "packet_protocol_fuzzer.h"
 
-using namespace overnet;
+namespace overnet {
 
-namespace {
-class InputStream {
- public:
-  InputStream(const uint8_t* data, size_t size)
-      : cur_(data), end_(data + size) {}
+bool PacketProtocolFuzzer::BeginSend(uint8_t sender_idx, Slice data) {
+  return packet_protocol(sender_idx).Then([this, data](PacketProtocol* pp) {
+    pp->Send([data](auto arg) { return data; },
+             [this](const Status& status) {
+               if (done_)
+                 return;
+               switch (status.code()) {
+                 case StatusCode::OK:
+                 case StatusCode::UNAVAILABLE:
+                 case StatusCode::CANCELLED:
+                   break;
+                 default:
+                   std::cerr << "Expected each send to be ok, cancelled, or "
+                                "unavailable, got: "
+                             << status << "\n";
+                   abort();
+               }
+             });
+    return true;
+  });
+}
 
-  uint64_t Next64() {
-    uint64_t out;
-    if (!varint::Read(&cur_, end_, &out))
-      out = 0;
-    return out;
-  }
-
-  uint8_t NextByte() {
-    if (cur_ == end_)
-      return 0;
-    return *cur_++;
-  }
-
-  Slice NextSlice() {
-    auto len = NextByte();
-    auto prefix = NextByte();
-    return Slice::WithInitializerAndBorders(
-        len, Border::Prefix(prefix), [this, len](uint8_t* p) {
-          for (uint8_t i = 0; i < len; i++) {
-            *p++ = NextByte();
-          }
-        });
-  }
-
- private:
-  const uint8_t* cur_;
-  const uint8_t* end_;
-};
-}  // namespace
-
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-  InputStream input(data, size);
-  PacketProtocolFuzzer fuzzer(PacketProtocol::NullCodec(), false);
-  for (;;) {
-    switch (input.NextByte()) {
-      default:
-        // input exhausted, or unknown op-code
-        return 0;
-      case 1: {
-        auto sender = input.NextByte();
-        auto slice = input.NextSlice();
-        if (!fuzzer.BeginSend(sender, slice))
-          return 0;
-      } break;
-      case 2: {
-        auto sender = input.NextByte();
-        auto status = input.NextByte();
-        if (!fuzzer.CompleteSend(sender, status))
-          return 0;
-      } break;
-      case 3:
-        if (!fuzzer.StepTime(input.Next64()))
-          return 0;
-        break;
+bool PacketProtocolFuzzer::CompleteSend(uint8_t sender_idx, uint8_t status) {
+  Optional<Sender::PendingSend> send =
+      sender(sender_idx).Then([](Sender* sender) {
+        return sender->CompleteSend();
+      });
+  if (!send)
+    return false;
+  auto slice = send->data(LazySliceArgs{
+      Border::None(), std::numeric_limits<uint32_t>::max(), false});
+  if (status == 0 && slice.length() > 0) {
+    auto process_status = (*packet_protocol(3 - sender_idx))
+                              ->Process(timer_.Now(), send->seq, slice);
+    if (process_status.status.is_error()) {
+      std::cerr << "Expected Process() to return ok, got: "
+                << process_status.status.AsStatus() << "\n";
+      abort();
     }
   }
+  return true;
 }
+
+Optional<PacketProtocolFuzzer::Sender*> PacketProtocolFuzzer::sender(
+    uint8_t idx) {
+  switch (idx) {
+    case 1:
+      return &sender1_;
+    case 2:
+      return &sender2_;
+    default:
+      return Nothing;
+  }
+}
+
+Optional<PacketProtocol*> PacketProtocolFuzzer::packet_protocol(uint8_t idx) {
+  switch (idx) {
+    case 1:
+      return pp1_.get();
+    case 2:
+      return pp2_.get();
+    default:
+      return Nothing;
+  }
+}
+
+void PacketProtocolFuzzer::Sender::SendPacket(SeqNum seq, LazySlice data,
+                                              Callback<void> done) {
+  pending_sends_.emplace(next_send_id_++, PendingSend{seq, std::move(data)});
+}
+
+Optional<PacketProtocolFuzzer::Sender::PendingSend>
+PacketProtocolFuzzer::Sender::CompleteSend() {
+  auto it = pending_sends_.begin();
+  if (it == pending_sends_.end())
+    return Nothing;
+  auto ps = std::move(it->second);
+  pending_sends_.erase(it);
+  return std::move(ps);
+}
+
+}  // namespace overnet

@@ -11,7 +11,7 @@
 #include "garnet/lib/overnet/vocabulary/closed_ptr.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "packet_protocol_fuzzer_helpers.h"
+#include "packet_protocol_fuzzer.h"
 
 using testing::_;
 using testing::Mock;
@@ -64,11 +64,13 @@ class DummyCodec final : public PacketProtocol::Codec {
   }
   StatusOr<Slice> Decode(uint64_t seq_idx, Slice slice) const {
     const uint8_t* p = slice.begin();
+    EXPECT_LT(p, slice.end());
     EXPECT_EQ(*p, '[');
     p++;
     uint64_t seq1;
     EXPECT_TRUE(ParseLE64(&p, slice.end(), &seq1));
     EXPECT_EQ(seq_idx, seq1);
+    EXPECT_GE(slice.length(), 9ull);
     p = slice.end() - 9;
     uint64_t seq2;
     EXPECT_TRUE(ParseLE64(&p, slice.end(), &seq2));
@@ -103,8 +105,8 @@ TEST_P(PacketProtocolTest, NoOp) {
 
   StrictMock<MockPacketSender> ps(&timer);
   std::mt19937 rng{123};
-  MakeClosedPtr<PacketProtocol>(&timer, [&rng] { return rng(); }, &ps,
-                                GetParam(), kMSS);
+  MakeClosedPtr<PacketProtocol>(
+      &timer, [&rng] { return rng(); }, &ps, GetParam(), kMSS);
 }
 
 TEST_P(PacketProtocolTest, SendOnePacket) {
@@ -3900,6 +3902,1368 @@ TEST_P(PacketProtocolTest, _9bfa77589cb379397dafc6661fee887af34c03de) {
     return;
   }
   if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+}
+
+TEST_P(PacketProtocolTest, _cd8ef3987ba3f1dd092946a8e7047ad4552d0fac) {
+  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  static const uint8_t block0[] = {0x01, 0xe9};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               2, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block0, 2); }))) {
+    return;
+  }
+  if (!fuzzer.StepTime(8388607ull)) {
+    return;
+  }
+}
+
+TEST_P(PacketProtocolTest, _0c1d445350ec75aadc7a14929adc41e65ebba2f6) {
+  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  static const uint8_t block0[] = {0x00};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               1, Border::Prefix(4),
+                               [](uint8_t* p) { memcpy(p, block0, 1); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 1)) {
+    return;
+  }
+  static const uint8_t block1[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block1, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+}
+
+TEST_P(PacketProtocolTest, _868e9a3a3d4cea4addc390fff43898840efd7507) {
+  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  static const uint8_t block0[] = {0x0b};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               1, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block0, 1); }))) {
+    return;
+  }
+  static const uint8_t block1[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(3),
+                               [](uint8_t* p) { memcpy(p, block1, 0); }))) {
+    return;
+  }
+  static const uint8_t block2[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(3),
+                               [](uint8_t* p) { memcpy(p, block2, 0); }))) {
+    return;
+  }
+  static const uint8_t block3[] = {0xb2};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               1, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block3, 1); }))) {
+    return;
+  }
+  if (!fuzzer.StepTime(9223372036854775807ull)) {
+    return;
+  }
+}
+
+TEST_P(PacketProtocolTest, _85d2d9a48ade0bf3055dd43b6b5ecbb468346c07) {
+  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  static const uint8_t block0[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block0, 0); }))) {
+    return;
+  }
+  if (!fuzzer.StepTime(0ull)) {
+    return;
+  }
+  static const uint8_t block1[] = {0x00};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               1, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block1, 1); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block2[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(2),
+                               [](uint8_t* p) { memcpy(p, block2, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 222)) {
+    return;
+  }
+}
+
+TEST_P(PacketProtocolTest, _12fa5c35c19ac2ff4b0f31b24c18d62458579194) {
+  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  static const uint8_t block0[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(42),
+                               [](uint8_t* p) { memcpy(p, block0, 0); }))) {
+    return;
+  }
+  if (!fuzzer.StepTime(0ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block1[] = {0x00, 0x01};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               2, Border::Prefix(247),
+                               [](uint8_t* p) { memcpy(p, block1, 2); }))) {
+    return;
+  }
+  static const uint8_t block2[] = {0x00};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               1, Border::Prefix(2),
+                               [](uint8_t* p) { memcpy(p, block2, 1); }))) {
+    return;
+  }
+  static const uint8_t block3[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block3, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block4[] = {
+      0x9c, 0x3d, 0xff, 0x01, 0x02, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00};
+  if (!fuzzer.BeginSend(3, Slice::WithInitializerAndBorders(
+                               193, Border::Prefix(156),
+                               [](uint8_t* p) { memcpy(p, block4, 193); }))) {
+    return;
+  }
+}
+
+TEST_P(PacketProtocolTest, _193597a52cff3e80bc937c4e9635ca5724d2ba17) {
+  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  static const uint8_t block0[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block0, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  if (!fuzzer.StepTime(0ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block1[] = {0x02, 0x01};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               2, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block1, 2); }))) {
+    return;
+  }
+  static const uint8_t block2[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block2, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+}
+
+TEST_P(PacketProtocolTest, _3a406a2356275258a2c479209b9aa2af30d4f6ac) {
+  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  static const uint8_t block0[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block0, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  if (!fuzzer.StepTime(0ull)) {
+    return;
+  }
+  static const uint8_t block1[] = {0x01, 0x02};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               2, Border::Prefix(3),
+                               [](uint8_t* p) { memcpy(p, block1, 2); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block2[] = {0x00, 0x01};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               2, Border::Prefix(247),
+                               [](uint8_t* p) { memcpy(p, block2, 2); }))) {
+    return;
+  }
+  static const uint8_t block3[] = {0x02, 0x02, 0x64};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               3, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block3, 3); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+}
+
+TEST_P(PacketProtocolTest, _58c60d38ea46f0dc5f7eb88d1a0c81264bafd6f6) {
+  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  static const uint8_t block0[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block0, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  if (!fuzzer.StepTime(0ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block1[] = {0x08, 0x01};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               2, Border::Prefix(247),
+                               [](uint8_t* p) { memcpy(p, block1, 2); }))) {
+    return;
+  }
+  static const uint8_t block2[] = {0x02, 0x02, 0x64};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               3, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block2, 3); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+}
+
+TEST_P(PacketProtocolTest, _5263d304763e36809560f5f03fb2b64ce3290d23) {
+  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  static const uint8_t block0[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block0, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  if (!fuzzer.StepTime(9223372036854775807ull)) {
+    return;
+  }
+  static const uint8_t block1[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(255),
+                               [](uint8_t* p) { memcpy(p, block1, 0); }))) {
+    return;
+  }
+  static const uint8_t block2[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(255),
+                               [](uint8_t* p) { memcpy(p, block2, 0); }))) {
+    return;
+  }
+  static const uint8_t block3[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block3, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+}
+
+TEST_P(PacketProtocolTest, _9dd4fd20942043cf94a266a540cad36aad4bd189) {
+  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  static const uint8_t block0[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block0, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  if (!fuzzer.StepTime(0ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block1[] = {0x00, 0x01};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               2, Border::Prefix(247),
+                               [](uint8_t* p) { memcpy(p, block1, 2); }))) {
+    return;
+  }
+  static const uint8_t block2[] = {0x02, 0x02, 0x64};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               3, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block2, 3); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+}
+
+TEST_P(PacketProtocolTest, _1840c624d144d5ae1888b38d0d124981da9bfc3b) {
+  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  static const uint8_t block0[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block0, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  static const uint8_t block1[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block1, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 23)) {
+    return;
+  }
+  if (!fuzzer.StepTime(69642597ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block2[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block2, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  static const uint8_t block3[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block3, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70166885ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block4[] = {0x00};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               1, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block4, 1); }))) {
+    return;
+  }
+  static const uint8_t block5[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block5, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70166885ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 8)) {
+    return;
+  }
+  static const uint8_t block6[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block6, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+}
+
+TEST_P(PacketProtocolTest, _29fbbe04441869d515efa7eb1fc5131055d27c1e) {
+  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  static const uint8_t block0[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block0, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  static const uint8_t block1[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block1, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 23)) {
+    return;
+  }
+  if (!fuzzer.StepTime(69642597ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block2[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block2, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  static const uint8_t block3[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block3, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70166885ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block4[] = {0x00};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               1, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block4, 1); }))) {
+    return;
+  }
+  static const uint8_t block5[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block5, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  if (!fuzzer.StepTime(4282ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 64)) {
+    return;
+  }
+  static const uint8_t block6[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block6, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+}
+
+TEST_P(PacketProtocolTest, _493f492251d242ff611a272b088ce943f5b4b061) {
+  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  static const uint8_t block0[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block0, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  static const uint8_t block1[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block1, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 23)) {
+    return;
+  }
+  if (!fuzzer.StepTime(69642597ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block2[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block2, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  static const uint8_t block3[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block3, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70166885ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block4[] = {0x00};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               1, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block4, 1); }))) {
+    return;
+  }
+  static const uint8_t block5[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block5, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70166885ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 128)) {
+    return;
+  }
+  static const uint8_t block6[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block6, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+}
+
+TEST_P(PacketProtocolTest, _46855031ec6fd0b8ca2e6d7a291a510e8c4a0d23) {
+  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  static const uint8_t block0[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block0, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  static const uint8_t block1[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block1, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 23)) {
+    return;
+  }
+  if (!fuzzer.StepTime(69642597ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block2[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block2, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  static const uint8_t block3[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block3, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70166885ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block4[] = {0x00};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               1, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block4, 1); }))) {
+    return;
+  }
+  static const uint8_t block5[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block5, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  if (!fuzzer.StepTime(960869ull)) {
+    return;
+  }
+  static const uint8_t block6[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block6, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+}
+
+TEST_P(PacketProtocolTest, _5266b27f820a72a53d7f46cb40653677bb9c7987) {
+  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  static const uint8_t block0[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block0, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  static const uint8_t block1[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block1, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 23)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70166885ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block2[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block2, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  static const uint8_t block3[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block3, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 3)) {
+    return;
+  }
+  if (!fuzzer.StepTime(1099476662921573ull)) {
+    return;
+  }
+  static const uint8_t block4[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block4, 0); }))) {
+    return;
+  }
+  static const uint8_t block5[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block5, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70166885ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block6[] = {0x01};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               1, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block6, 1); }))) {
+    return;
+  }
+  static const uint8_t block7[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block7, 0); }))) {
+    return;
+  }
+}
+
+TEST_P(PacketProtocolTest, _5758e2bf55e70a6f49d3d8b4b603acd897866283) {
+  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  static const uint8_t block0[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block0, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  static const uint8_t block1[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block1, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 23)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70166885ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block2[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block2, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  static const uint8_t block3[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block3, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 3)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70166885ull)) {
+    return;
+  }
+  static const uint8_t block4[] = {0x00};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               1, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block4, 1); }))) {
+    return;
+  }
+  static const uint8_t block5[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block5, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70166885ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block6[] = {0x01};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               1, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block6, 1); }))) {
+    return;
+  }
+  static const uint8_t block7[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block7, 0); }))) {
+    return;
+  }
+}
+
+TEST_P(PacketProtocolTest, _6d6a08cd1d3617f7fa8a43f00b3f465566430461) {
+  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  static const uint8_t block0[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block0, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  static const uint8_t block1[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block1, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 23)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70166885ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block2[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block2, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  static const uint8_t block3[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block3, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70166885ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block4[] = {0x00};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               1, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block4, 1); }))) {
+    return;
+  }
+  static const uint8_t block5[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block5, 0); }))) {
+    return;
+  }
+  static const uint8_t block6[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block6, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 74)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70164837ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block7[] = {0x00, 0x00};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               2, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block7, 2); }))) {
+    return;
+  }
+}
+
+TEST_P(PacketProtocolTest, _6fccc5426a7b80d3a8cd3919680cb98175367857) {
+  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  static const uint8_t block0[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block0, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  static const uint8_t block1[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block1, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 23)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70166885ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block2[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block2, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  static const uint8_t block3[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block3, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70166885ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block4[] = {0x00};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               1, Border::Prefix(36),
+                               [](uint8_t* p) { memcpy(p, block4, 1); }))) {
+    return;
+  }
+  static const uint8_t block5[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block5, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  if (!fuzzer.StepTime(551269ull)) {
+    return;
+  }
+  static const uint8_t block6[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(186),
+                               [](uint8_t* p) { memcpy(p, block6, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 1)) {
+    return;
+  }
+}
+
+TEST_P(PacketProtocolTest, _65daa8c3754fcbb66567d583378341f142d3fa84) {
+  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  static const uint8_t block0[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block0, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  static const uint8_t block1[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block1, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 23)) {
+    return;
+  }
+  if (!fuzzer.StepTime(69642597ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block2[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block2, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  static const uint8_t block3[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block3, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70166885ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block4[] = {0x00};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               1, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block4, 1); }))) {
+    return;
+  }
+  static const uint8_t block5[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block5, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70166885ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 2)) {
+    return;
+  }
+  static const uint8_t block6[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block6, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+}
+
+TEST_P(PacketProtocolTest, _616e48475addb69c08c6a3b570fbbd3ffb890c68) {
+  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  static const uint8_t block0[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block0, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  static const uint8_t block1[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block1, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 23)) {
+    return;
+  }
+  if (!fuzzer.StepTime(69642597ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block2[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block2, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  static const uint8_t block3[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block3, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70166885ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block4[] = {0x00};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               1, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block4, 1); }))) {
+    return;
+  }
+  static const uint8_t block5[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block5, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70166885ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 16)) {
+    return;
+  }
+  static const uint8_t block6[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block6, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+}
+
+TEST_P(PacketProtocolTest, _7e09301e2b1644abb1cbc0d7433aa8a8452288e2) {
+  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  static const uint8_t block0[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block0, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  static const uint8_t block1[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block1, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 23)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70166885ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block2[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block2, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  static const uint8_t block3[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block3, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 3)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70166885ull)) {
+    return;
+  }
+  static const uint8_t block4[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block4, 0); }))) {
+    return;
+  }
+  static const uint8_t block5[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block5, 0); }))) {
+    return;
+  }
+  static const uint8_t block6[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block6, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70166885ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block7[] = {0x01};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               1, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block7, 1); }))) {
+    return;
+  }
+  static const uint8_t block8[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block8, 0); }))) {
+    return;
+  }
+}
+
+TEST_P(PacketProtocolTest, _9a9d0c4f2766121be0657c11a5fa3d354b7cf63e) {
+  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  static const uint8_t block0[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block0, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  static const uint8_t block1[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block1, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 23)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70166885ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block2[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block2, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(2, 0)) {
+    return;
+  }
+  static const uint8_t block3[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block3, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 3)) {
+    return;
+  }
+  if (!fuzzer.StepTime(3058021ull)) {
+    return;
+  }
+  static const uint8_t block4[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block4, 0); }))) {
+    return;
+  }
+  static const uint8_t block5[] = {};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(1),
+                               [](uint8_t* p) { memcpy(p, block5, 0); }))) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  if (!fuzzer.StepTime(70166885ull)) {
+    return;
+  }
+  if (!fuzzer.CompleteSend(1, 0)) {
+    return;
+  }
+  static const uint8_t block6[] = {0x01};
+  if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
+                               1, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block6, 1); }))) {
+    return;
+  }
+  static const uint8_t block7[] = {};
+  if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
+                               0, Border::Prefix(0),
+                               [](uint8_t* p) { memcpy(p, block7, 0); }))) {
     return;
   }
 }

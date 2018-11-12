@@ -67,3 +67,4 @@ fuzz_package("overnet_fuzzers") {
   sanitizers = [ "asan" ]
   fuzz_host = true
 }
+

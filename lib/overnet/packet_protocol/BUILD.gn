@@ -101,10 +101,11 @@ source_set("packet_protocol") {
   ]
 }
 
-source_set("packet_protocol_fuzzer_helpers") {
+source_set("packet_protocol_fuzzer_lib") {
   testonly = true
   sources = [
-    "packet_protocol_fuzzer_helpers.h",
+    "packet_protocol_fuzzer.h",
+    "packet_protocol_fuzzer.cc",
   ]
   deps = [
     ":packet_protocol",
@@ -122,7 +123,7 @@ source_set("packet_protocol_test") {
   deps = [
     ":aead_codec",
     ":packet_protocol",
-    ":packet_protocol_fuzzer_helpers",
+    ":packet_protocol_fuzzer_lib",
     "//garnet/lib/overnet/protocol:serialization_helpers",
     "//garnet/lib/overnet/testing:test_timer",
     "//garnet/lib/overnet/testing:trace_cout",
@@ -135,10 +136,10 @@ source_set("packet_protocol_test") {
 fuzz_target("packet_protocol_fuzzer") {
   testonly = true
   sources = [
-    "packet_protocol_fuzzer.cc",
+    "packet_protocol_fuzzer_main.cc",
   ]
   deps = [
-    ":packet_protocol_fuzzer_helpers",
+    ":packet_protocol_fuzzer_lib",
   ]
 }
 

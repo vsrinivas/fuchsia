@@ -45,8 +45,8 @@ def next_block(length):
     return x
 
 
-print 'TEST(PacketProtocolFuzzed, _%s) {' % hashlib.sha1(inp).hexdigest()
-print '  PacketProtocolFuzzer fuzzer;'
+print 'TEST_P(PacketProtocolTest, _%s) {' % hashlib.sha1(inp).hexdigest()
+print '  PacketProtocolFuzzer fuzzer(GetParam(), true);'
 block_idx = 0
 while True:
     op = next_byte()
@@ -57,15 +57,14 @@ while True:
         data = next_block(data_len)
         print '  static const uint8_t block%d[] = {%s};' % (
             block_idx, ','.join('0x%02x' % b for b in data))
-        print '  if (!fuzzer.BeginSend(%d, Slice::WithInitializerAndPrefix(%d, %d, [](uint8_t* p) { memcpy(p, block%d, %d); }))) {return;}' % (
+        print '  if (!fuzzer.BeginSend(%d, Slice::WithInitializerAndBorders(%d, Border::Prefix(%d), [](uint8_t* p) { memcpy(p, block%d, %d); }))) {return;}' % (
             sender, data_len, data_pfx, block_idx, data_len)
         block_idx += 1
     elif op == 2:
         sender = next_byte()
-        send = next_64()
         status = next_byte()
-        print '  if (!fuzzer.CompleteSend(%d, %dull, %d)) {return;}' % (
-            sender, send, status)
+        print '  if (!fuzzer.CompleteSend(%d, %d)) {return;}' % (
+            sender, status)
     elif op == 3:
         print '  if (!fuzzer.StepTime(%dull)) {return;}' % next_64()
     else:

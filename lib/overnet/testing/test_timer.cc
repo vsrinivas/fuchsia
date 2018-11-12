@@ -68,11 +68,6 @@ void TestTimer::InitTimeout(Timeout* timeout, TimeStamp when) {
     FireTimeout(timeout, Status::Cancelled());
     return;
   }
-  if (when.after_epoch().as_us() <=
-      (std::lock_guard<std::mutex>(mu), static_cast<int64_t>(now_))) {
-    FireTimeout(timeout, Status::Ok());
-    return;
-  }
 
   *TimeoutStorage<uint64_t>(timeout) = when.after_epoch().as_us();
   pending_timeouts_.emplace(when.after_epoch().as_us(), timeout);
