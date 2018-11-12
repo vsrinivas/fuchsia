@@ -60,6 +60,7 @@ package("overnet_tests") {
 
 fuzz_package("overnet_fuzzers") {
   targets = [ 
+    "vocabulary:internal_list_fuzzer",
     "protocol:routable_message_fuzzer",
     "packet_protocol:packet_protocol_fuzzer",
   ]
