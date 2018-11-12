@@ -7,12 +7,20 @@ move more waiters to another wait queue.
 
 ## SYNOPSIS
 
-```
+```C
 #include <zircon/syscalls.h>
 
-zx_status_t zx_futex_requeue(const zx_futex_t* value_ptr, uint32_t wake_count,
-                             int current_value, const zx_futex_t* requeue_ptr,
-                             uint32_t requeue_count);
+zx_status_t zx_futex_requeue(const zx_futex_t* value_ptr,
+                             uint32_t wake_count,
+                             int current_value,
+                             const zx_futex_t* requeue_ptr,
+                             uint32_t requeue_count,
+                             zx_handle_t new_requeue_owner);
+zx_status_t zx_futex_requeue_single_owner(const zx_futex_t* value_ptr,
+                                          int current_value,
+                                          const zx_futex_t* requeue_ptr,
+                                          uint32_t requeue_count,
+                                          zx_handle_t new_requeue_owner);
 ```
 
 ## DESCRIPTION
@@ -26,9 +34,37 @@ futex.
 
 This requeueing behavior may be used to avoid thundering herds on wake.
 
+## OWNERSHIP
+
+A requeue operation targets two futexes, the _wake futex_ and the _requeue
+futex_.  The ownership implications for each are discussed separately.
+Generally, if the call fails for any reason, no changes to ownership for either
+futex are made.
+
+See *Ownership and Priority Inheritance* in [futex](../objects/futex.md) for
+details.
+
+### Effects on the _wake futex_ target
+
+A successful call to **futex_requeue**() results in the owner of the futex being
+set to nothing, regardless of the wake count.  In order to transfer ownership of
+a futex, use the **futex_requeue_single_owner**() variant instead.
+**futex_requeue_single_owner**() will attempt to wake exactly one thread from the
+futex wait queue.  If there is at least one thread to wake, the owner of the futex will be
+set to the thread which was woken.  Otherwise, the futex
+will have no owner.
+
+### Effects on the _requeue futex_ target
+
+A successful call to **futex_requeue**() or **futex_requeue_single_owner**()
+results in the owner of the futex being set to the thread referenced by the
+`new_requeue_owner` handle, or to nothing if `new_requeue_owner` is
+**ZX_HANDLE_INVALID**.
+
 ## RIGHTS
 
-TODO(ZX-2399)
+Futexes have no rights associated with them.  See *Rights* in [futex
+objects](../objects/futex.md) for details.
 
 ## RETURN VALUE
 
@@ -36,14 +72,18 @@ TODO(ZX-2399)
 
 ## ERRORS
 
-**ZX_ERR_INVALID_ARGS**  *value_ptr* isn't a valid userspace pointer, or
-*value_ptr* is the same futex as *requeue_ptr*, or
-*value_ptr* or *requeue_ptr* is not aligned, or
-*requeue_ptr* is NULL but *requeue_count* is positive.
+**ZX_ERR_INVALID_ARGS**  One of the following is true:
++ Either `value_ptr` or `requeue_ptr` is not a valid userspace pointer
++ Either `value_ptr` or `requeue_ptr` is not aligned to a sizeof(zx_futex_t) boundary.
++ `value_ptr` is the same futex as `requeue_ptr`
++ `new_requeue_owner` is currently a member of the waiters for either value_ptr or requeue_ptr
 
-**ZX_ERR_BAD_STATE**  *current_value* does not match the value at *value_ptr*.
+**ZX_ERR_BAD_HANDLE**  `new_requeue_owner` is not **ZX_HANDLE_INVALID**, and not a valid handle.
+**ZX_ERR_WRONG_TYPE**  `new_requeue_owner` is a valid handle, but is not a handle to a thread.
+**ZX_ERR_BAD_STATE**  `current_value` does not match the value at `value_ptr`.
 
 ## SEE ALSO
 
+[futex objects](../objects/futex.md),
 [futex_wait](futex_wait.md),
 [futex_wake](futex_wake.md).

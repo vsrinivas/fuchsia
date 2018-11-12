@@ -30,7 +30,7 @@ zx_status_t sync_completion_wait_deadline(sync_completion_t* completion, zx_time
         if (current_value == SIGNALED) {
             return ZX_OK;
         }
-        switch (zx_futex_wait(futex, current_value, deadline)) {
+        switch (_zx_futex_wait(futex, current_value, ZX_HANDLE_INVALID, deadline)) {
         case ZX_OK:
             continue;
         case ZX_ERR_BAD_STATE:
@@ -64,7 +64,7 @@ void sync_completion_signal_requeue(sync_completion_t* completion, zx_futex_t* f
     // However, if this theoretical scenario actually occurs, we can still safely
     // ignore the error: there is no point in waking up the waiters since they
     // would find an UNSIGNALED value and go back to sleep.
-    _zx_futex_requeue(&completion->futex, 0, SIGNALED, futex, UINT32_MAX);
+    _zx_futex_requeue(&completion->futex, 0, SIGNALED, futex, UINT32_MAX, ZX_HANDLE_INVALID);
 }
 
 void sync_completion_reset(sync_completion_t* completion) {

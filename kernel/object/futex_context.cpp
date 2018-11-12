@@ -26,12 +26,19 @@ FutexContext::~FutexContext() {
     DEBUG_ASSERT(futex_table_.is_empty());
 }
 
-zx_status_t FutexContext::FutexWait(user_in_ptr<const int> value_ptr, int current_value, zx_time_t deadline) {
+zx_status_t FutexContext::FutexWait(user_in_ptr<const zx_futex_t> value_ptr, int current_value,
+                                    zx_handle_t new_futex_owner, zx_time_t deadline) {
     LTRACE_ENTRY;
 
     uintptr_t futex_key = reinterpret_cast<uintptr_t>(value_ptr.get());
     if (futex_key % sizeof(int))
         return ZX_ERR_INVALID_ARGS;
+
+    // TODO(johngro): When we actually support PI, look up the thread referenced
+    // by this handle, if any.
+    if (new_futex_owner != ZX_HANDLE_INVALID) {
+        return ZX_ERR_INVALID_ARGS;
+    }
 
     // FutexWait() checks that the address value_ptr still contains
     // current_value, and if so it sleeps awaiting a FutexWake() on value_ptr.
@@ -96,11 +103,14 @@ zx_status_t FutexContext::FutexWait(user_in_ptr<const int> value_ptr, int curren
     return ZX_OK;
 }
 
-zx_status_t FutexContext::FutexWake(user_in_ptr<const int> value_ptr,
-                                    uint32_t count) {
+zx_status_t FutexContext::FutexWake(user_in_ptr<const zx_futex_t> value_ptr,
+                                    uint32_t wake_count,
+                                    OwnerAction owner_action) {
     LTRACE_ENTRY;
 
-    if (count == 0) return ZX_OK;
+    DEBUG_ASSERT((owner_action != OwnerAction::ASSIGN_WOKEN) || (wake_count == 1));
+
+    if (wake_count == 0) return ZX_OK;
 
     uintptr_t futex_key = reinterpret_cast<uintptr_t>(value_ptr.get());
     if (futex_key % sizeof(int))
@@ -118,7 +128,7 @@ zx_status_t FutexContext::FutexWake(user_in_ptr<const int> value_ptr,
     DEBUG_ASSERT(node->GetKey() == futex_key);
 
     FutexNode* remaining_waiters =
-        FutexNode::WakeThreads(node, count, futex_key);
+        FutexNode::WakeThreads(node, wake_count, futex_key);
 
     if (remaining_waiters) {
         DEBUG_ASSERT(remaining_waiters->GetKey() == futex_key);
@@ -128,12 +138,25 @@ zx_status_t FutexContext::FutexWake(user_in_ptr<const int> value_ptr,
     return ZX_OK;
 }
 
-zx_status_t FutexContext::FutexRequeue(user_in_ptr<const int> wake_ptr, uint32_t wake_count, int current_value,
-                                       user_in_ptr<const int> requeue_ptr, uint32_t requeue_count) {
+zx_status_t FutexContext::FutexRequeue(user_in_ptr<const zx_futex_t> wake_ptr,
+                                       uint32_t wake_count,
+                                       int current_value,
+                                       OwnerAction owner_action,
+                                       user_in_ptr<const zx_futex_t> requeue_ptr,
+                                       uint32_t requeue_count,
+                                       zx_handle_t new_requeue_owner) {
     LTRACE_ENTRY;
+
+    DEBUG_ASSERT((owner_action != OwnerAction::ASSIGN_WOKEN) || (wake_count == 1));
 
     if ((requeue_ptr.get() == nullptr) && requeue_count)
         return ZX_ERR_INVALID_ARGS;
+
+    // TODO(johngro): When we actually support PI, look up the thread referenced
+    // by this handle, if any.
+    if (new_requeue_owner != ZX_HANDLE_INVALID) {
+        return ZX_ERR_INVALID_ARGS;
+    }
 
     AutoReschedDisable resched_disable; // Must come before the Guard.
     Guard<fbl::Mutex> guard{&lock_};
@@ -187,6 +210,11 @@ zx_status_t FutexContext::FutexRequeue(user_in_ptr<const int> wake_ptr, uint32_t
     }
 
     return ZX_OK;
+}
+
+zx_status_t FutexContext::FutexGetOwner(user_in_ptr<const zx_futex_t> wake_ptr,
+                                        user_out_ptr<zx_koid_t> koid) {
+    return koid.copy_to_user(ZX_KOID_INVALID);
 }
 
 void FutexContext::QueueNodesLocked(FutexNode* head) {

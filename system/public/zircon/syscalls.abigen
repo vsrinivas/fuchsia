@@ -343,7 +343,8 @@ syscall eventpair_create
         out0: zx_handle_t handle_acquire, out1: zx_handle_t handle_acquire);
 
 syscall futex_wait blocking
-    (value_ptr: zx_futex_t[1] IN, current_value: int32_t, deadline: zx_time_t)
+    (value_ptr: zx_futex_t[1] IN, current_value: zx_futex_t, new_futex_owner: zx_handle_t,
+        deadline: zx_time_t)
     returns (zx_status_t);
 
 syscall futex_wake
@@ -351,8 +352,21 @@ syscall futex_wake
     returns (zx_status_t);
 
 syscall futex_requeue
-    (wake_ptr: zx_futex_t[1] IN, wake_count: uint32_t, current_value: int32_t,
-        requeue_ptr: zx_futex_t[1] IN, requeue_count: uint32_t)
+    (wake_ptr: zx_futex_t[1] IN, wake_count: uint32_t, current_value: zx_futex_t,
+        requeue_ptr: zx_futex_t[1] IN, requeue_count: uint32_t, new_requeue_owner: zx_handle_t)
+    returns (zx_status_t);
+
+syscall futex_wake_single_owner
+    (value_ptr: zx_futex_t[1] IN)
+    returns (zx_status_t);
+
+syscall futex_requeue_single_owner
+    (wake_ptr: zx_futex_t[1] IN, current_value: zx_futex_t,
+        requeue_ptr: zx_futex_t[1] IN, requeue_count: uint32_t, new_requeue_owner: zx_handle_t)
+    returns (zx_status_t);
+
+syscall futex_get_owner
+    (value_ptr: zx_futex_t[1] IN, koid: zx_koid_t[1] OUT)
     returns (zx_status_t);
 
 syscall futex_wait_deprecated blocking

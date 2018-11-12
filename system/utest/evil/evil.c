@@ -43,7 +43,7 @@ static void _unlock(atomic_int* lock) {
 
 static void _ftxlock(atomic_int* lock) {
     while (atomic_exchange(lock, 1) != 0) {
-        zx_futex_wait(lock, 1, ZX_TIME_INFINITE);
+        zx_futex_wait(lock, 1, ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
     }
 }
 static void _ftxunlock(atomic_int* lock) {

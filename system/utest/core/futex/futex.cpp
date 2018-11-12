@@ -21,7 +21,7 @@ static bool TestFutexWaitValueMismatch() {
     BEGIN_TEST;
     int32_t futex_value = 123;
     zx_status_t rc = zx_futex_wait(&futex_value, futex_value + 1,
-                                         ZX_TIME_INFINITE);
+                                         ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
     ASSERT_EQ(rc, ZX_ERR_BAD_STATE, "Futex wait should have reurned bad state");
     END_TEST;
 }
@@ -29,7 +29,7 @@ static bool TestFutexWaitValueMismatch() {
 static bool TestFutexWaitTimeout() {
     BEGIN_TEST;
     int32_t futex_value = 123;
-    zx_status_t rc = zx_futex_wait(&futex_value, futex_value, 0);
+    zx_status_t rc = zx_futex_wait(&futex_value, futex_value, ZX_HANDLE_INVALID, 0);
     ASSERT_EQ(rc, ZX_ERR_TIMED_OUT, "Futex wait should have reurned timeout");
     END_TEST;
 }
@@ -41,7 +41,8 @@ static bool TestFutexWaitTimeoutElapsed() {
     constexpr zx_duration_t kRelativeDeadline = ZX_MSEC(500);
     for (int i = 0; i < 5; ++i) {
         zx_time_t now = zx_clock_get_monotonic();
-        zx_status_t rc = zx_futex_wait(&futex_value, 0, zx_deadline_after(kRelativeDeadline));
+        zx_status_t rc = zx_futex_wait(&futex_value, 0, ZX_HANDLE_INVALID,
+                                       zx_deadline_after(kRelativeDeadline));
         ASSERT_EQ(rc, ZX_ERR_TIMED_OUT, "wait should time out");
         zx_duration_t elapsed = zx_time_sub_time(zx_clock_get_monotonic(), now);
         if (elapsed < kRelativeDeadline) {
@@ -58,7 +59,7 @@ static bool TestFutexWaitTimeoutElapsed() {
 static bool TestFutexWaitBadAddress() {
     BEGIN_TEST;
     // Check that the wait address is checked for validity.
-    zx_status_t rc = zx_futex_wait(nullptr, 123, ZX_TIME_INFINITE);
+    zx_status_t rc = zx_futex_wait(nullptr, 123, ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
     ASSERT_EQ(rc, ZX_ERR_INVALID_ARGS, "Futex wait should have reurned invalid_arg");
     END_TEST;
 }
@@ -162,7 +163,7 @@ private:
         zx_time_t deadline = thread->timeout_in_ns_ == ZX_TIME_INFINITE ? ZX_TIME_INFINITE :
                 zx_deadline_after(thread->timeout_in_ns_);
         zx_status_t rc = zx_futex_wait(const_cast<int32_t*>(thread->futex_addr_),
-                                       *thread->futex_addr_, deadline);
+                                       *thread->futex_addr_, ZX_HANDLE_INVALID, deadline);
         if (thread->timeout_in_ns_ == ZX_TIME_INFINITE) {
             EXPECT_EQ(rc, ZX_OK, "Error while wait");
         } else {
@@ -255,7 +256,7 @@ bool TestFutexUnqueuedOnTimeout() {
     BEGIN_TEST;
     volatile int32_t futex_value = 1;
     zx_status_t rc = zx_futex_wait(const_cast<int32_t*>(&futex_value),
-                                   futex_value, zx_deadline_after(1));
+                                   futex_value, ZX_HANDLE_INVALID, zx_deadline_after(1));
     ASSERT_EQ(rc, ZX_ERR_TIMED_OUT, "wait should have timedout");
     TestThread thread(&futex_value);
     // If the earlier futex_wait() did not remove itself from the wait
@@ -311,7 +312,7 @@ bool TestFutexRequeueValueMismatch() {
     int32_t futex_value1 = 100;
     int32_t futex_value2 = 200;
     zx_status_t rc = zx_futex_requeue(&futex_value1, 1, futex_value1 + 1,
-                                            &futex_value2, 1);
+                                            &futex_value2, 1, ZX_HANDLE_INVALID);
     ASSERT_EQ(rc, ZX_ERR_BAD_STATE, "requeue should have returned bad state");
     END_TEST;
 }
@@ -320,7 +321,7 @@ bool TestFutexRequeueSameAddr() {
     BEGIN_TEST;
     int32_t futex_value = 100;
     zx_status_t rc = zx_futex_requeue(&futex_value, 1, futex_value,
-                                            &futex_value, 1);
+                                            &futex_value, 1, ZX_HANDLE_INVALID);
     ASSERT_EQ(rc, ZX_ERR_INVALID_ARGS, "requeue should have returned invalid args");
     END_TEST;
 }
@@ -339,7 +340,7 @@ bool TestFutexRequeue() {
 
     zx_status_t rc = zx_futex_requeue(
         const_cast<int32_t*>(&futex_value1), 3, futex_value1,
-        const_cast<int32_t*>(&futex_value2), 2);
+        const_cast<int32_t*>(&futex_value2), 2, ZX_HANDLE_INVALID);
     ASSERT_EQ(rc, ZX_OK, "Error in requeue");
     // 3 of the threads should have been woken.
     thread1.assert_thread_woken();
@@ -373,7 +374,7 @@ bool TestFutexRequeueUnqueuedOnTimeout() {
     TestThread thread1(&futex_value1, timeout_in_ns);
     zx_status_t rc = zx_futex_requeue(
         const_cast<int32_t*>(&futex_value1), 0, futex_value1,
-        const_cast<int32_t*>(&futex_value2), INT_MAX);
+        const_cast<int32_t*>(&futex_value2), INT_MAX, ZX_HANDLE_INVALID);
     ASSERT_EQ(rc, ZX_OK, "Error in requeue");
     TestThread thread2(&futex_value2);
     // thread1 and thread2 should now both be waiting on futex_value2.
@@ -458,9 +459,9 @@ static bool TestFutexMisaligned() {
     // look at uninitialized stack space!)
     memset(&buffer, 0, sizeof(buffer));
 
-    ASSERT_EQ(zx_futex_wait(futex, 0, ZX_TIME_INFINITE), ZX_ERR_INVALID_ARGS);
+    ASSERT_EQ(zx_futex_wait(futex, 0, ZX_HANDLE_INVALID, ZX_TIME_INFINITE), ZX_ERR_INVALID_ARGS);
     ASSERT_EQ(zx_futex_wake(futex, 1), ZX_ERR_INVALID_ARGS);
-    ASSERT_EQ(zx_futex_requeue(futex, 1, 0, futex_2, 1), ZX_ERR_INVALID_ARGS);
+    ASSERT_EQ(zx_futex_requeue(futex, 1, 0, futex_2, 1, ZX_HANDLE_INVALID), ZX_ERR_INVALID_ARGS);
 
     END_TEST;
 }
@@ -478,7 +479,7 @@ public:
 
     void wait() {
         if (signaled_ == 0) {
-            zx_futex_wait(&signaled_, signaled_, ZX_TIME_INFINITE);
+            zx_futex_wait(&signaled_, signaled_, ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
         }
     }
 

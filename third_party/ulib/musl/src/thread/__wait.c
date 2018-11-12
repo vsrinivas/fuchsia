@@ -12,7 +12,7 @@ void __wait(atomic_int* futex, atomic_int* waiters, int current_value) {
     if (waiters)
         atomic_fetch_add(waiters, 1);
     while (atomic_load(futex) == current_value) {
-        _zx_futex_wait(futex, current_value, ZX_TIME_INFINITE);
+        _zx_futex_wait(futex, current_value, ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
     }
     if (waiters)
         atomic_fetch_sub(waiters, 1);

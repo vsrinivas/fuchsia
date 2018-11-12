@@ -32,7 +32,7 @@ static zx_status_t lock_slow_path(sync_mutex_t* mutex, zx_time_t deadline,
              atomic_compare_exchange_strong(&mutex->futex, &old_state,
                                             LOCKED_WITH_WAITERS))) {
             zx_status_t status = _zx_futex_wait(
-                    &mutex->futex, LOCKED_WITH_WAITERS, deadline);
+                    &mutex->futex, LOCKED_WITH_WAITERS, ZX_HANDLE_INVALID, deadline);
             if (status == ZX_ERR_TIMED_OUT)
                 return ZX_ERR_TIMED_OUT;
         }

@@ -6,10 +6,12 @@ futex_wait - Wait on a futex.
 
 ## SYNOPSIS
 
-```
+```C
 #include <zircon/syscalls.h>
 
-zx_status_t zx_futex_wait(const zx_futex_t* value_ptr, int32_t current_value,
+zx_status_t zx_futex_wait(const zx_futex_t* value_ptr,
+                          int32_t current_value,
+                          zx_handle_t new_futex_owner,
                           zx_time_t deadline);
 ```
 
@@ -34,9 +36,19 @@ usual implementation of `mutex_unlock` can potentially produce a
 **futex_wake**() call on a memory location after the location has been
 freed and reused for unrelated purposes.
 
+## OWNERSHIP
+
+A successful call to **futex_wait**() results in the owner of the futex being
+set to the thread referenced by the `new_futex_owner` handle, or to nothing if
+`new_futex_owner` is **ZX_HANDLE_INVALID**.
+
+See *Ownership and Priority Inheritance* in [futex](../objects/futex.md) for
+details.
+
 ## RIGHTS
 
-TODO(ZX-2399)
+Futexes have no rights associated with them.  See *Rights* in [futex
+objects](../objects/futex.md) for details.
 
 ## RETURN VALUE
 
@@ -44,14 +56,18 @@ TODO(ZX-2399)
 
 ## ERRORS
 
-**ZX_ERR_INVALID_ARGS**  *value_ptr* is not a valid userspace pointer, or
-*value_ptr* is not aligned.
+**ZX_ERR_INVALID_ARGS**  One of the following is true:
++ `value_ptr` is not a valid userspace pointer
++ `value_ptr` is not aligned to a sizeof(zx_futex_t) boundary.
++ `new_futex_owner` is currently a member of the waiters for value_ptr.
 
-**ZX_ERR_BAD_STATE**  *current_value* does not match the value at *value_ptr*.
-
-**ZX_ERR_TIMED_OUT**  The thread was not woken before *deadline* passed.
+**ZX_ERR_BAD_HANDLE**  `new_futex_owner` is not **ZX_HANDLE_INVALID**, and not a valid handle.
+**ZX_ERR_WRONG_TYPE**  `new_futex_owner` is a valid handle, but is not a handle to a thread.
+**ZX_ERR_BAD_STATE**  `current_value` does not match the value at `value_ptr`.
+**ZX_ERR_TIMED_OUT**  The thread was not woken before `deadline` passed.
 
 ## SEE ALSO
 
+[futex objects](../objects/futex.md),
 [futex_requeue](futex_requeue.md),
 [futex_wake](futex_wake.md).

@@ -73,7 +73,7 @@ static inline void wait(int* futex, int current_value) {
         }
     }
     while (__atomic_load_n(futex, __ATOMIC_SEQ_CST) == current_value) {
-        _zx_futex_wait(futex, current_value, ZX_TIME_INFINITE);
+        _zx_futex_wait(futex, current_value, ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
     }
 }
 

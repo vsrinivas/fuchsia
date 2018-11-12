@@ -172,7 +172,7 @@ zx_status_t zxr_thread_start(zxr_thread_t* thread, uintptr_t stack_addr, size_t 
 
 static void wait_for_done(zxr_internal_thread_t* thread, int32_t old_state) {
     do {
-        switch (_zx_futex_wait(&thread->state, old_state, ZX_TIME_INFINITE)) {
+        switch (_zx_futex_wait(&thread->state, old_state, ZX_HANDLE_INVALID, ZX_TIME_INFINITE)) {
             case ZX_ERR_BAD_STATE:   // Never blocked because it had changed.
             case ZX_OK:              // Woke up because it might have changed.
                 old_state = atomic_load_explicit(&thread->state,

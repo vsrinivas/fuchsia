@@ -31,7 +31,8 @@ If any of the operations fail, then the thread takes a trap (as if by `__builtin
 
 ## RIGHTS
 
-TODO(ZX-2399)
+Futexes have no rights associated with them.  See *Rights* in [futex
+objects](../objects/futex.md) for details.
 
 ## RETURN VALUE
 
@@ -57,6 +58,7 @@ is used for detached threads.
 
 ## SEE ALSO
 
+[futex objects](../objects/futex.md),
 [futex_wake](futex_wake.md),
 [handle_close](handle_close.md),
 [thread_exit](thread_exit.md),

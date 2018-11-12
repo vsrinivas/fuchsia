@@ -29,24 +29,51 @@ public:
     FutexContext();
     ~FutexContext();
 
+    enum class OwnerAction {
+        RELEASE,
+        ASSIGN_WOKEN,
+    };
+
     // FutexWait first verifies that the integer pointed to by |value_ptr|
-    // still equals |current_value|. If the test fails, FutexWait returns FAILED_PRECONDITION.
+    // still equals |current_value|. If the test fails, FutexWait returns ZX_ERR_BAD_STATE.
     // Otherwise it will block the current thread until the |deadline| passes,
     // or until the thread is woken by a FutexWake or FutexRequeue operation
     // on the same |value_ptr| futex.
-    zx_status_t FutexWait(user_in_ptr<const int> value_ptr, int current_value, zx_time_t deadline);
+    zx_status_t FutexWait(user_in_ptr<const zx_futex_t> value_ptr, zx_futex_t current_value,
+                          zx_handle_t new_futex_owner, zx_time_t deadline);
 
-    // FutexWake will wake up to |count| number of threads blocked on the |value_ptr| futex.
-    zx_status_t FutexWake(user_in_ptr<const int> value_ptr, uint32_t count);
+    // FutexWake will wake up to |wake_count| number of threads blocked on the |value_ptr| futex.
+    //
+    // If owner_action is set to RELEASE, then the futex's owner will be set to nullptr in the
+    // process.  If the owner_action is set to ASSIGN_WOKEN, then the wake_count *must* be 1, and
+    // the futex's owner will be set to the thread which was woken during the operation, or nullptr
+    // if no thread was woken.
+    zx_status_t FutexWake(user_in_ptr<const zx_futex_t> value_ptr, uint32_t wake_count,
+                          OwnerAction owner_action);
 
     // FutexWait first verifies that the integer pointed to by |wake_ptr|
-    // still equals |current_value|. If the test fails, FutexWait returns FAILED_PRECONDITION.
+    // still equals |current_value|. If the test fails, FutexWait returns ZX_ERR_BAD_STATE.
     // Otherwise it will wake up to |wake_count| number of threads blocked on the |wake_ptr| futex.
     // If any other threads remain blocked on on the |wake_ptr| futex, up to |requeue_count|
     // of them will then be requeued to the tail of the list of threads
     // blocked on the |requeue_ptr| futex.
-    zx_status_t FutexRequeue(user_in_ptr<const int> wake_ptr, uint32_t wake_count, int current_value,
-                             user_in_ptr<const int> requeue_ptr, uint32_t requeue_count);
+    //
+    // If owner_action is set to RELEASE, then the futex's owner will be set to nullptr in the
+    // process.  If the owner_action is set to ASSIGN_WOKEN, then the wake_count *must* be 1, and
+    // the futex's owner will be set to the thread which was woken during the operation, or nullptr
+    // if no thread was woken.
+    zx_status_t FutexRequeue(user_in_ptr<const zx_futex_t> wake_ptr,
+                             uint32_t wake_count,
+                             zx_futex_t current_value,
+                             OwnerAction owner_action,
+                             user_in_ptr<const zx_futex_t> requeue_ptr,
+                             uint32_t requeue_count,
+                             zx_handle_t new_requeue_owner);
+
+    // Get the KOID of the current owner of the specified futex, if any, or ZX_KOID_INVALID if there
+    // is no known owner.
+    zx_status_t FutexGetOwner(user_in_ptr<const zx_futex_t> wake_ptr,
+                              user_out_ptr<zx_koid_t> koid);
 
 private:
     FutexContext(const FutexContext&) = delete;

@@ -15,15 +15,28 @@ resources in the uncontested case.
 
 ## DESCRIPTION
 
-The zircon futex implementation currently supports three operations:
+The zircon futex implementation currently supports three operations distributed
+over 6 syscalls:
 
 ```C
-    zx_status_t zx_futex_wait(const zx_futex_t* value_ptr, int current_value,
+    zx_status_t zx_futex_wait(const zx_futex_t* value_ptr,
+                              int current_value,
+                              zx_handle_t new_futex_owner,
                               zx_time_t deadline);
     zx_status_t zx_futex_wake(const zx_futex_t* value_ptr, uint32_t wake_count);
-    zx_status_t zx_futex_requeue(const zx_futex_t* value_ptr, uint32_t wake_count,
-                                 int current_value, const zx_futex_t* requeue_ptr,
-                                 uint32_t requeue_count);
+    zx_status_t zx_futex_wake_single_owner(const zx_futex_t* value_ptr);
+    zx_status_t zx_futex_requeue(const zx_futex_t* value_ptr,
+                                 uint32_t wake_count,
+                                 int current_value,
+                                 const zx_futex_t* requeue_ptr,
+                                 uint32_t requeue_count,
+                                 zx_handle_t new_requeue_owner);
+    zx_status_t zx_futex_requeue_single_owner(const zx_futex_t* value_ptr,
+                                              int current_value,
+                                              const zx_futex_t* requeue_ptr,
+                                              uint32_t requeue_count,
+                                              zx_handle_t new_requeue_owner);
+    zx_status_t zx_futex_get_owner(const zx_futex_t* value_ptr, uint64_t* koid);
 ```
 
 All of these share a `value_ptr` parameter, which is the virtual
@@ -35,8 +48,23 @@ so). It is up to userspace code to correctly atomically modify this
 value across threads in order to build mutexes and so on.
 
 See the [futex_wait](../syscalls/futex_wait.md),
-[futex_wake](../syscalls/futex_wake.md), and
-[futex_requeue](../syscalls/futex_requeue.md) man pages for more details.
+[futex_wake](../syscalls/futex_wake.md),
+[futex_requeue](../syscalls/futex_requeue.md), and
+[futex_get_owner](../syscalls/futex_get_owner.md) man pages for more details.
+
+## RIGHTS
+
+Futex objects do not have any rights associated with them.
+
+There are only 2 primitive operations which userspace code can perform on a
+futex: waiting and waking (requeue is a combination of the two).  Because
+futexes are strictly a process local concept, revoking access to either of these
+operations would make the futex functionally worthless.
+
+Additionally, from the kernel's perspective, futexes are ephemeral objects whose
+state only exists while the futex has waiters.  Without a more durable state
+present in the kernel, it is more or less impossible to have a persisted concept
+of rights for a futex.
 
 ### Differences from Linux futexes
 
@@ -50,6 +78,67 @@ As noted above, all of our futex operations leave the value of the
 futex unmodified from the kernel. Other potential operations, such as
 Linux's `FUTEX_WAKE_OP`, requires atomic manipulation of the value
 from the kernel, which our current implementation does not require.
+
+### Ownership and Priority Inheritance
+
+#### Overview
+
+Some runtimes may need to implement synchronization primitives based on futexes
+which exhibit priority inheritance behavior.  In order to support these users,
+zircon futexes have a concept of 'ownership' which can be used to implement such
+primitives.  Use of this feature is optional.
+
+At any point in time, a futex may be either unowned, or owned by a single
+thread.  When a thread owns one or more futexes, its effective priority becomes
+the maximum of its base priority, and the priorities of all of the current
+waiters of all of the futexes currently owned by it.  As soon a thread no longer
+owns a futex, the pressure of the priorities of the futex's waiters disappears
+from the relationship above.  Once the thread no longer owns any futexes, its
+priority will relax back to its base priority.
+
+Signaling of the owner of a futex is the responsibility of the userspace code,
+as is applying the ownership concept properly when constructing a specific type
+of synchronization object which needs priority inheritance behavior.
+
+Zircon futexes have at most a single owner.  Multiple ownership of futexes for
+the purpose of priority inheritance is not supported.  The owner of a futex may
+never simultaneously be a waiter for the same futex.
+
+#### Assigning Ownership
+
+Ownership of a futex is assigned via each 'wait' or 'requeue' operation.  In the
+case of a requeue operation, the target futex is the requeue futex, not the
+wake_futex.  Users pass a handle to a thread indicating who the current owner of
+the futex should be, or **ZX_HANDLE_INVALID** if there should be no owner.
+
++ Passing a valid handle to a thread to indicate the futex owner is the
+  responsibility of the userspace code.  Passing an invalid handle, or a handle
+  to a non-thread object will result in the wait/requeue operation failing.
++ If the wait/requeue operation succeeds, the owner of the target futex will
+  _always_ be set to either the thread specified, or nothing if
+  **ZX_HANDLE_INVALID** is passed.
++ In particular, if the wait/requeue operation fails because of a mismatch
+  between the expected futex value and the actual futex value, the owner of the
+  futex will remain unchanged.
+
+#### Transferring Ownership
+
+Ownership of a futex may be transferred by the kernel on behalf of the user
+during a wake operation or a requeue operation.  In the case of a requeue
+operation, the target of the transfer is the wake_futex, not the requeue_futex.
+Ownership transfer only takes place when using the zx_futex_wake_single_owner or
+zx_futex_requeue_single_owner variants of the wake/requeue operations.  The
+single_owner variants of these operations will release exactly one waiter, and
+assign ownership of the futex to the released thread.
+
++ If there are _no_ waiters during the wake operation, then there is already no
+  owner.  This will remain unchanged.
++ If a requeue operation fails because of a mismatch between the expected futex
+  value and the actual futex value, the owner of the futex will remain
+  unchanged.
++ A successful call to either of the non-single_owner variants of the
+  wake/requeue operation will cause the target futex's owner to be set to
+  nothing.
 
 ### Papers about futexes
 
@@ -84,3 +173,4 @@ from the kernel, which our current implementation does not require.
 + [futex_wait](../syscalls/futex_wait.md)
 + [futex_wake](../syscalls/futex_wake.md)
 + [futex_requeue](../syscalls/futex_requeue.md)
++ [futex_get_owner](../syscalls/futex_get_owner.md)
