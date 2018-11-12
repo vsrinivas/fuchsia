@@ -103,6 +103,7 @@ class ConflictResolverImpl : public ConflictResolver {
     fidl::InterfaceHandle<PageSnapshot> common_version;
     MergeResultProviderPtr result_provider_ptr;
     bool result_provider_disconnected = false;
+    zx_status_t result_provider_status = ZX_OK;
 
     ResolveRequest(fidl::InterfaceHandle<PageSnapshot> left_version,
                    fidl::InterfaceHandle<PageSnapshot> right_version,
@@ -112,8 +113,9 @@ class ConflictResolverImpl : public ConflictResolver {
           right_version(std::move(right_version)),
           common_version(std::move(common_version)),
           result_provider_ptr(result_provider.Bind()) {
-      result_provider_ptr.set_error_handler(
-          [this](zx_status_t status) { result_provider_disconnected = true; });
+      result_provider_ptr.set_error_handler(callback::Capture(
+          callback::SetWhenCalled(&result_provider_disconnected),
+          &result_provider_status));
     }
   };
 
@@ -181,15 +183,13 @@ TEST_F(ConflictResolverClientTest, Error) {
     merged_values.push_back(std::move(merged_value));
   }
 
-  Status merge_status;
-  conflict_resolver_impl.requests[0]->result_provider_ptr->Merge(
-      std::move(merged_values),
-      callback::Capture(callback::SetWhenCalled(&called), &merge_status));
+  conflict_resolver_impl.requests[0]->result_provider_ptr->MergeNew(
+      std::move(merged_values));
   RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(Status::KEY_NOT_FOUND, merge_status);
 
-  EXPECT_TRUE(conflict_resolver_impl.requests[0]->result_provider_disconnected);
+  EXPECT_EQ(Status::KEY_NOT_FOUND,
+            static_cast<Status>(
+                conflict_resolver_impl.requests[0]->result_provider_status));
   EXPECT_EQ(2u, conflict_resolver_impl.requests.size());
 }
 
@@ -214,21 +214,14 @@ TEST_F(ConflictResolverClientTest, MergeNonConflicting) {
   EXPECT_FALSE(merge_resolver_->IsEmpty());
   EXPECT_EQ(1u, conflict_resolver_impl.requests.size());
 
-  bool called;
-  Status status;
   conflict_resolver_impl.requests[0]
-      ->result_provider_ptr->MergeNonConflictingEntries(
-          callback::Capture(callback::SetWhenCalled(&called), &status));
+      ->result_provider_ptr->MergeNonConflictingEntriesNew();
+  conflict_resolver_impl.requests[0]->result_provider_ptr->DoneNew();
   RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  ASSERT_TRUE(conflict_resolver_impl.requests[0]->result_provider_disconnected);
+  EXPECT_EQ(ZX_OK, conflict_resolver_impl.requests[0]->result_provider_status);
 
-  conflict_resolver_impl.requests[0]->result_provider_ptr->Done(
-      callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
-
+  bool called;
   storage::Status storage_status;
   std::vector<storage::CommitId> ids;
   page_storage_->GetHeadCommitIds(callback::Capture(
@@ -293,7 +286,6 @@ TEST_F(ConflictResolverClientTest, MergeNonConflictingOrdering) {
   EXPECT_FALSE(merge_resolver_->IsEmpty());
   EXPECT_EQ(1u, conflict_resolver_impl.requests.size());
 
-  Status status;
   fidl::VectorPtr<MergedValue> merged_values =
       fidl::VectorPtr<MergedValue>::New(0);
   {
@@ -303,27 +295,16 @@ TEST_F(ConflictResolverClientTest, MergeNonConflictingOrdering) {
     merged_values.push_back(std::move(merged_value));
   }
 
-  bool called;
-  conflict_resolver_impl.requests[0]->result_provider_ptr->Merge(
-      std::move(merged_values),
-      callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
-
+  conflict_resolver_impl.requests[0]->result_provider_ptr->MergeNew(
+      std::move(merged_values));
   conflict_resolver_impl.requests[0]
-      ->result_provider_ptr->MergeNonConflictingEntries(
-          callback::Capture(callback::SetWhenCalled(&called), &status));
+      ->result_provider_ptr->MergeNonConflictingEntriesNew();
+  conflict_resolver_impl.requests[0]->result_provider_ptr->DoneNew();
   RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  ASSERT_TRUE(conflict_resolver_impl.requests[0]->result_provider_disconnected);
+  EXPECT_EQ(ZX_OK, conflict_resolver_impl.requests[0]->result_provider_status);
 
-  conflict_resolver_impl.requests[0]->result_provider_ptr->Done(
-      callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
-
+  bool called;
   storage::Status storage_status;
   std::vector<storage::CommitId> ids;
   page_storage_->GetHeadCommitIds(callback::Capture(

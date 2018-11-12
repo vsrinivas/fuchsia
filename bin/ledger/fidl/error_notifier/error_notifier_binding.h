@@ -9,6 +9,7 @@
 #include <utility>
 
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/enum.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/logging.h>
 
@@ -60,6 +61,10 @@ class ErrorNotifierBinding {
     return binding_.NewBinding(dispatcher);
   }
 
+  void Close(zx_status_t status) { binding_.Close(status); }
+
+  void Close(ledger::Status status) { Close(static_cast<zx_status_t>(status)); }
+
  private:
   friend typename D::Impl;
 
@@ -80,11 +85,10 @@ class ErrorNotifierBinding {
             return;
           }
           FXL_LOG(INFO) << "FIDL call " << D::Impl::kInterfaceName
-                        << "::" << function_name << " failed with status: "
-                        << static_cast<zx_status_t>(status)
+                        << "::" << function_name
+                        << " failed with status: " << fidl::ToUnderlying(status)
                         << ". Sending the epitaph and closing the connection.";
-          binding_.Close(static_cast<zx_status_t>(status));
-          binding_.Unbind();
+          Close(status);
         });
   }
 

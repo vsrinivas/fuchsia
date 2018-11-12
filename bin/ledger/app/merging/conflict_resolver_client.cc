@@ -150,30 +150,80 @@ void ConflictResolverClient::OnNextMergeResult(
 }
 
 void ConflictResolverClient::Finalize(Status status) {
+  FXL_DCHECK(callback_) << "Finalize must only be called once.";
   if (journal_) {
     storage_->RollbackJournal(std::move(journal_),
                               [](storage::Status /*rollback_status*/) {});
     journal_.reset();
   }
+  merge_result_provider_binding_.Close(status);
   auto callback = std::move(callback_);
   callback_ = nullptr;
   callback(status);
 }
 
-void ConflictResolverClient::GetFullDiff(std::unique_ptr<Token> token,
-                                         GetFullDiffCallback callback) {
+void ConflictResolverClient::GetFullDiffNew(
+    std::unique_ptr<Token> token,
+    fit::function<void(Status, IterationStatus, fidl::VectorPtr<DiffEntry>,
+                       std::unique_ptr<Token>)>
+        callback) {
   GetDiff(diff_utils::DiffType::FULL, std::move(token), std::move(callback));
 }
 
-void ConflictResolverClient::GetConflictingDiff(
-    std::unique_ptr<Token> token, GetConflictingDiffCallback callback) {
+void ConflictResolverClient::GetFullDiff(
+    std::unique_ptr<Token> token,
+    fit::function<void(Status, Status, fidl::VectorPtr<DiffEntry>,
+                       std::unique_ptr<Token>)>
+        callback) {
+  GetFullDiffNew(
+      std::move(token),
+      [callback = std::move(callback)](
+          Status status, IterationStatus diff_status,
+          fidl::VectorPtr<DiffEntry> entries, std::unique_ptr<Token> token) {
+        if (status != Status::OK && status != Status::PARTIAL_RESULT) {
+          callback(status, status, std::move(entries), std::move(token));
+          return;
+        }
+        callback(Status::OK,
+                 diff_status == IterationStatus::OK ? Status::OK
+                                                    : Status::PARTIAL_RESULT,
+                 std::move(entries), std::move(token));
+      });
+}
+
+void ConflictResolverClient::GetConflictingDiffNew(
+    std::unique_ptr<Token> token,
+    fit::function<void(Status, IterationStatus, fidl::VectorPtr<DiffEntry>,
+                       std::unique_ptr<Token>)>
+        callback) {
   GetDiff(diff_utils::DiffType::CONFLICTING, std::move(token),
           std::move(callback));
 }
 
+void ConflictResolverClient::GetConflictingDiff(
+    std::unique_ptr<Token> token,
+    fit::function<void(Status, Status, fidl::VectorPtr<DiffEntry>,
+                       std::unique_ptr<Token>)>
+        callback) {
+  GetConflictingDiffNew(
+      std::move(token),
+      [callback = std::move(callback)](
+          Status status, IterationStatus diff_status,
+          fidl::VectorPtr<DiffEntry> entries, std::unique_ptr<Token> token) {
+        if (status != Status::OK && status != Status::PARTIAL_RESULT) {
+          callback(status, status, std::move(entries), std::move(token));
+          return;
+        }
+        callback(Status::OK,
+                 diff_status == IterationStatus::OK ? Status::OK
+                                                    : Status::PARTIAL_RESULT,
+                 std::move(entries), std::move(token));
+      });
+}
+
 void ConflictResolverClient::GetDiff(
     diff_utils::DiffType type, std::unique_ptr<Token> token,
-    fit::function<void(Status, fidl::VectorPtr<DiffEntry>,
+    fit::function<void(Status, IterationStatus, fidl::VectorPtr<DiffEntry>,
                        std::unique_ptr<Token>)>
         callback) {
   diff_utils::ComputeThreeWayDiff(
@@ -185,7 +235,7 @@ void ConflictResolverClient::GetDiff(
               Status status,
               std::pair<fidl::VectorPtr<DiffEntry>, std::string> page_change) {
             if (cancelled_) {
-              callback(Status::INTERNAL_ERROR,
+              callback(Status::INTERNAL_ERROR, IterationStatus::OK,
                        fidl::VectorPtr<DiffEntry>::New(0), nullptr);
               Finalize(Status::INTERNAL_ERROR);
               return;
@@ -193,52 +243,50 @@ void ConflictResolverClient::GetDiff(
             if (status != Status::OK) {
               FXL_LOG(ERROR) << "Unable to compute diff due to error "
                              << fidl::ToUnderlying(status) << ", aborting.";
-              callback(status, fidl::VectorPtr<DiffEntry>::New(0), nullptr);
+              callback(status, IterationStatus::OK,
+                       fidl::VectorPtr<DiffEntry>::New(0), nullptr);
               Finalize(status);
               return;
             }
 
             const std::string& next_token = page_change.second;
-            status = next_token.empty() ? Status::OK : Status::PARTIAL_RESULT;
+            IterationStatus diff_status = next_token.empty()
+                                              ? IterationStatus::OK
+                                              : IterationStatus::PARTIAL_RESULT;
             std::unique_ptr<Token> token;
             if (!next_token.empty()) {
               token = std::make_unique<Token>();
               token->opaque_id = convert::ToArray(next_token);
             }
-            callback(status, std::move(page_change.first), std::move(token));
+            callback(Status::OK, diff_status, std::move(page_change.first),
+                     std::move(token));
           }));
 }
 
-void ConflictResolverClient::Merge(fidl::VectorPtr<MergedValue> merged_values,
-                                   MergeCallback callback) {
+void ConflictResolverClient::MergeNew(
+    fidl::VectorPtr<MergedValue> merged_values,
+    fit::function<void(Status)> callback) {
   has_merged_values_ = true;
   operation_serializer_.Serialize<Status>(
-      std::move(callback), [weak_this = weak_factory_.GetWeakPtr(),
+      std::move(callback), [this, weak_this = weak_factory_.GetWeakPtr(),
                             merged_values = std::move(merged_values)](
-                               MergeCallback callback) mutable {
-        if (!weak_this) {
-          callback(Status::INTERNAL_ERROR);
-          return;
-        }
-        if (!weak_this->IsInValidStateAndNotify(callback)) {
+                               fit::function<void(Status)> callback) mutable {
+        if (!IsInValidStateAndNotify(weak_this, callback)) {
           return;
         }
         auto waiter = fxl::MakeRefCounted<
             callback::Waiter<storage::Status, storage::ObjectIdentifier>>(
             storage::Status::OK);
         for (const MergedValue& merged_value : *merged_values) {
-          weak_this->OnNextMergeResult(merged_value, waiter);
+          OnNextMergeResult(merged_value, waiter);
         }
-        waiter->Finalize([weak_this, merged_values = std::move(merged_values),
+        waiter->Finalize([this, weak_this,
+                          merged_values = std::move(merged_values),
                           callback = std::move(callback)](
                              storage::Status status,
                              std::vector<storage::ObjectIdentifier>
                                  object_identifiers) mutable {
-          if (!weak_this) {
-            callback(Status::INTERNAL_ERROR);
-            return;
-          }
-          if (!weak_this->IsInValidStateAndNotify(callback, status)) {
+          if (!IsInValidStateAndNotify(weak_this, callback, status)) {
             return;
           }
 
@@ -250,12 +298,11 @@ void ConflictResolverClient::Merge(fidl::VectorPtr<MergedValue> merged_values,
             if (!object_identifiers[i].object_digest().IsValid()) {
               continue;
             }
-            weak_this->journal_->Put(
-                merged_values->at(i).key, object_identifiers[i],
-                merged_values->at(i).priority == Priority::EAGER
-                    ? storage::KeyPriority::EAGER
-                    : storage::KeyPriority::LAZY,
-                waiter->NewCallback());
+            journal_->Put(merged_values->at(i).key, object_identifiers[i],
+                          merged_values->at(i).priority == Priority::EAGER
+                              ? storage::KeyPriority::EAGER
+                              : storage::KeyPriority::LAZY,
+                          waiter->NewCallback());
           }
           waiter->Finalize(
               [callback = std::move(callback)](storage::Status status) {
@@ -265,84 +312,137 @@ void ConflictResolverClient::Merge(fidl::VectorPtr<MergedValue> merged_values,
       });
 }
 
-void ConflictResolverClient::MergeNonConflictingEntries(
-    MergeNonConflictingEntriesCallback callback) {
-  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<storage::Status>>(
-      storage::Status::OK);
-
-  auto on_next = [this, waiter](storage::ThreeWayChange change) {
-    // When |MergeNonConflictingEntries| is called first, we know that the base
-    // state of |journal_| is equal to the left version. In that case, we only
-    // want to merge diffs where the change is only on the right side: no change
-    // means no diff, 3 different versions means conflict (so we skip), and
-    // left-only changes are already taken into account.
-    if (util::EqualPtr(change.base, change.left)) {
-      if (change.right) {
-        this->journal_->Put(change.right->key, change.right->object_identifier,
-                            change.right->priority, waiter->NewCallback());
-      } else {
-        this->journal_->Delete(change.base->key, waiter->NewCallback());
-      }
-    } else if (util::EqualPtr(change.base, change.right) &&
-               has_merged_values_) {
-      if (change.left) {
-        this->journal_->Put(change.left->key, change.left->object_identifier,
-                            change.left->priority, waiter->NewCallback());
-      } else {
-        this->journal_->Delete(change.base->key, waiter->NewCallback());
-      }
-    }
-    return true;
-  };
-  auto on_done = [waiter, callback = std::move(callback)](
-                     storage::Status status) mutable {
-    if (status != storage::Status::OK) {
-      callback(PageUtils::ConvertStatus(status));
-      return;
-    }
-    waiter->Finalize([callback = std::move(callback)](storage::Status status) {
-      callback(PageUtils::ConvertStatus(status));
-    });
-  };
-  storage_->GetThreeWayContentsDiff(*ancestor_, *left_, *right_, "",
-                                    std::move(on_next), std::move(on_done));
+void ConflictResolverClient::Merge(
+    fidl::VectorPtr<MergedValue> merged_values,
+    fit::function<void(Status, Status)> callback) {
+  MergeNew(std::move(merged_values),
+           [callback = std::move(callback)](Status status) {
+             callback(status, status);
+           });
 }
 
-void ConflictResolverClient::Done(DoneCallback callback) {
-  in_client_request_ = false;
-  FXL_DCHECK(!cancelled_);
-  FXL_DCHECK(journal_);
+void ConflictResolverClient::MergeNonConflictingEntriesNew(
+    fit::function<void(Status)> callback) {
+  operation_serializer_.Serialize<Status>(
+      std::move(callback), [this, weak_this = weak_factory_.GetWeakPtr()](
+                               fit::function<void(Status)> callback) mutable {
+        if (!IsInValidStateAndNotify(weak_this, callback)) {
+          return;
+        }
+        auto waiter =
+            fxl::MakeRefCounted<callback::StatusWaiter<storage::Status>>(
+                storage::Status::OK);
 
-  storage_->CommitJournal(
-      std::move(journal_),
-      callback::MakeScoped(
-          weak_factory_.GetWeakPtr(),
-          [this, callback = std::move(callback)](
-              storage::Status status, std::unique_ptr<const storage::Commit>) {
-            if (!IsInValidStateAndNotify(callback, status)) {
-              return;
+        auto on_next = [this, weak_this,
+                        waiter](storage::ThreeWayChange change) {
+          if (!weak_this) {
+            return false;
+          }
+          // When |MergeNonConflictingEntries| is called first, we know that the
+          // base state of |journal_| is equal to the left version. In that
+          // case, we only want to merge diffs where the change is only on the
+          // right side: no change means no diff, 3 different versions means
+          // conflict (so we skip), and left-only changes are already taken into
+          // account.
+          if (util::EqualPtr(change.base, change.left)) {
+            if (change.right) {
+              journal_->Put(change.right->key, change.right->object_identifier,
+                            change.right->priority, waiter->NewCallback());
+            } else {
+              journal_->Delete(change.base->key, waiter->NewCallback());
             }
-            callback(Status::OK);
-            Finalize(Status::OK);
-          }));
+          } else if (util::EqualPtr(change.base, change.right) &&
+                     has_merged_values_) {
+            if (change.left) {
+              journal_->Put(change.left->key, change.left->object_identifier,
+                            change.left->priority, waiter->NewCallback());
+            } else {
+              journal_->Delete(change.base->key, waiter->NewCallback());
+            }
+          }
+          return true;
+        };
+        auto on_done = [waiter, callback = std::move(callback)](
+                           storage::Status status) mutable {
+          if (status != storage::Status::OK) {
+            callback(PageUtils::ConvertStatus(status));
+            return;
+          }
+          waiter->Finalize(
+              [callback = std::move(callback)](storage::Status status) {
+                callback(PageUtils::ConvertStatus(status));
+              });
+        };
+        storage_->GetThreeWayContentsDiff(*ancestor_, *left_, *right_, "",
+                                          std::move(on_next),
+                                          std::move(on_done));
+      });
+}
+
+void ConflictResolverClient::MergeNonConflictingEntries(
+    fit::function<void(Status, Status)> callback) {
+  MergeNonConflictingEntriesNew(
+      [callback = std::move(callback)](Status status) {
+        callback(status, status);
+      });
+}
+
+void ConflictResolverClient::DoneNew(fit::function<void(Status)> callback) {
+  operation_serializer_.Serialize<Status>(
+      std::move(callback), [this, weak_this = weak_factory_.GetWeakPtr()](
+                               fit::function<void(Status)> callback) mutable {
+        if (!IsInValidStateAndNotify(weak_this, callback)) {
+          return;
+        }
+        in_client_request_ = false;
+        FXL_DCHECK(!cancelled_);
+        FXL_DCHECK(journal_);
+
+        storage_->CommitJournal(
+            std::move(journal_),
+            callback::MakeScoped(
+                weak_factory_.GetWeakPtr(),
+                [this, weak_this, callback = std::move(callback)](
+                    storage::Status status,
+                    std::unique_ptr<const storage::Commit>) {
+                  if (!IsInValidStateAndNotify(weak_this, callback, status)) {
+                    return;
+                  }
+                  callback(Status::OK);
+                  Finalize(Status::OK);
+                }));
+      });
+}
+
+void ConflictResolverClient::Done(
+    fit::function<void(Status, Status)> callback) {
+  DoneNew([callback = std::move(callback)](Status status) {
+    callback(status, status);
+  });
 }
 
 bool ConflictResolverClient::IsInValidStateAndNotify(
-    const MergeCallback& callback, storage::Status status) {
-  if (!cancelled_ && status == storage::Status::OK) {
+    const fxl::WeakPtr<ConflictResolverClient>& weak_this,
+    const fit::function<void(Status)>& callback, storage::Status status) {
+  if (!weak_this) {
+    callback(Status::INTERNAL_ERROR);
+    return false;
+  }
+  if (!weak_this->cancelled_ && status == storage::Status::OK) {
     return true;
   }
   Status ledger_status =
-      cancelled_ ? Status::INTERNAL_ERROR
-                 // The only not found error that can occur is a key not
-                 // found when processing a MergedValue with
-                 // ValueSource::RIGHT.
-                 : PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND);
+      weak_this->cancelled_
+          ? Status::INTERNAL_ERROR
+          // The only not found error that can occur is a key not
+          // found when processing a MergedValue with
+          // ValueSource::RIGHT.
+          : PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND);
   // An eventual error was logged before, no need to do it again here.
   callback(ledger_status);
   // Finalize destroys this object; we need to do it after executing
   // the callback.
-  Finalize(ledger_status);
+  weak_this->Finalize(ledger_status);
   return false;
 }
 

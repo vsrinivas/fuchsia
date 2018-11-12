@@ -55,41 +55,35 @@ PageClient::Conflict ToConflict(const fuchsia::ledger::DiffEntry* entry) {
   return conflict;
 }
 
-void GetDiffRecursive(fuchsia::ledger::MergeResultProvider* const result,
-                      std::map<std::string, PageClient::Conflict>* conflicts,
-                      LedgerToken token,
-                      std::function<void(fuchsia::ledger::Status)> callback) {
-  auto cont = fxl::MakeCopyable(
-      [result, conflicts, callback = std::move(callback)](
-          fuchsia::ledger::Status status,
-          fidl::VectorPtr<fuchsia::ledger::DiffEntry> change_delta,
-          LedgerToken token) mutable {
-        if (status != fuchsia::ledger::Status::OK &&
-            status != fuchsia::ledger::Status::PARTIAL_RESULT) {
-          callback(status);
-          return;
-        }
+void GetDiffRecursive(
+    fuchsia::ledger::MergeResultProvider* const result_provider,
+    std::map<std::string, PageClient::Conflict>* conflicts, LedgerToken token,
+    fit::closure callback) {
+  auto cont = [result_provider, conflicts, callback = std::move(callback)](
+                  fuchsia::ledger::IterationStatus status,
+                  fidl::VectorPtr<fuchsia::ledger::DiffEntry> change_delta,
+                  LedgerToken token) mutable {
+    for (auto& diff_entry : *change_delta) {
+      (*conflicts)[to_string(diff_entry.key)] = ToConflict(&diff_entry);
+    }
 
-        for (auto& diff_entry : *change_delta) {
-          (*conflicts)[to_string(diff_entry.key)] = ToConflict(&diff_entry);
-        }
+    if (status == fuchsia::ledger::IterationStatus::OK) {
+      callback();
+      return;
+    }
 
-        if (status == fuchsia::ledger::Status::OK) {
-          callback(fuchsia::ledger::Status::OK);
-          return;
-        }
+    GetDiffRecursive(result_provider, conflicts, std::move(token),
+                     std::move(callback));
+  };
 
-        GetDiffRecursive(result, conflicts, std::move(token),
-                         std::move(callback));
-      });
-
-  result->GetConflictingDiff(std::move(token), cont);
+  result_provider->GetConflictingDiffNew(std::move(token), std::move(cont));
 }
 
-void GetDiff(fuchsia::ledger::MergeResultProvider* const result,
+void GetDiff(fuchsia::ledger::MergeResultProvider* const result_provider,
              std::map<std::string, PageClient::Conflict>* conflicts,
-             std::function<void(fuchsia::ledger::Status)> callback) {
-  GetDiffRecursive(result, conflicts, nullptr /* token */, std::move(callback));
+             fit::closure callback) {
+  GetDiffRecursive(result_provider, conflicts, nullptr /* token */,
+                   std::move(callback));
 }
 
 bool HasPrefix(const std::string& value, const std::string& prefix) {
@@ -120,23 +114,26 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : public Operation<> {
         result_provider_(std::move(result_provider)),
         left_version_(std::move(left_version)),
         right_version_(std::move(right_version)),
-        common_version_(std::move(common_version)) {}
+        common_version_(std::move(common_version)) {
+    result_provider_.set_error_handler([](zx_status_t status) {
+      if (status != ZX_OK && status != ZX_ERR_PEER_CLOSED) {
+        FXL_LOG(ERROR) << "ResultProvider error: "
+                       << LedgerEpitaphToString(status);
+      } else {
+        FXL_LOG(INFO) << "ResultProvider disconnected: "
+                      << LedgerEpitaphToString(status);
+      }
+    });
+  }
 
  private:
   void Run() override {
     FlowToken flow{this};
 
-    GetDiff(result_provider_.get(), &conflicts_,
-            [this, flow](fuchsia::ledger::Status status) {
-              has_diff_ = true;
-              Cont(flow);
-            });
+    result_provider_->MergeNonConflictingEntriesNew();
 
-    result_provider_->MergeNonConflictingEntries(
-        [this, flow](fuchsia::ledger::Status status) {
-          merged_non_conflict_ = true;
-          Cont(flow);
-        });
+    GetDiff(result_provider_.get(), &conflicts_,
+            [this, flow] { WithDiff(flow); });
 
     GetEntries(left_version_.get(), &left_entries_,
                [this, flow](fuchsia::ledger::Status) {
@@ -154,11 +151,7 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : public Operation<> {
                });
   }
 
-  void Cont(FlowToken flow) {
-    if (!has_diff_ || !merged_non_conflict_) {
-      return;
-    }
-
+  void WithDiff(FlowToken flow) {
     std::vector<PageClient*> page_clients;
     impl_->GetPageClients(&page_clients);
 
@@ -206,32 +199,12 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : public Operation<> {
       }
 
       if (!merge_changes->empty()) {
-        merge_count_++;
-        result_provider_->Merge(std::move(merge_changes),
-                                [this, flow](fuchsia::ledger::Status status) {
-                                  if (status != fuchsia::ledger::Status::OK) {
-                                    FXL_LOG(ERROR)
-                                        << "ResultProvider.Merge() "
-                                        << fidl::ToUnderlying(status);
-                                  }
-                                  MergeDone(flow);
-                                });
+        result_provider_->MergeNew(std::move(merge_changes));
       }
     }
 
-    MergeDone(flow);
-  }
-
-  void MergeDone(FlowToken flow) {
-    if (--merge_count_ == 0) {
-      result_provider_->Done([this, flow](fuchsia::ledger::Status status) {
-        if (status != fuchsia::ledger::Status::OK) {
-          FXL_LOG(ERROR) << "ResultProvider.Done() "
-                         << fidl::ToUnderlying(status);
-        }
-        impl_->NotifyWatchers();
-      });
-    }
+    result_provider_->DoneNew();
+    result_provider_->Sync([this, flow] { impl_->NotifyWatchers(); });
   }
 
   void LogEntries(const std::string& headline,
@@ -253,12 +226,7 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : public Operation<> {
   std::vector<fuchsia::ledger::Entry> right_entries_;
   std::vector<fuchsia::ledger::Entry> common_entries_;
 
-  bool has_diff_{};
-  bool merged_non_conflict_{};
-
   std::map<std::string, PageClient::Conflict> conflicts_;
-
-  int merge_count_{1};  // One extra for the call at the end.
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ResolveCall);
 };
@@ -278,7 +246,12 @@ LedgerClient::LedgerClient(
     fuchsia::ledger::internal::LedgerRepository* const ledger_repository,
     const std::string& name, std::function<void()> error) {
   ledger_.set_error_handler([](zx_status_t status) {
-    FXL_LOG(ERROR) << "Ledger error: " << LedgerEpitaphToString(status);
+    if (status != ZX_OK && status != ZX_ERR_PEER_CLOSED) {
+      FXL_LOG(ERROR) << "Ledger error: " << LedgerEpitaphToString(status);
+    } else {
+      FXL_LOG(INFO) << "Ledger disconnected: "
+                       << LedgerEpitaphToString(status);
+    }
   });
   // Open Ledger.
   ledger_repository->GetLedger(to_array(name), ledger_.NewRequest());

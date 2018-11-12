@@ -143,13 +143,15 @@ class NonAssociativeConflictResolverImpl : public ConflictResolver {
       fidl::InterfaceHandle<MergeResultProvider> result_provider) override {
     auto merge_result_provider =
         std::make_unique<MergeResultProviderPtr>(result_provider.Bind());
+    merge_result_provider->set_error_handler(
+        [](zx_status_t status) { EXPECT_EQ(ZX_OK, status); });
     MergeResultProvider* merge_result_provider_ptr =
         merge_result_provider->get();
-    merge_result_provider_ptr->GetFullDiff(
+    merge_result_provider_ptr->GetFullDiffNew(
         nullptr, [merge_result_provider = std::move(merge_result_provider)](
-                     Status status, fidl::VectorPtr<DiffEntry> changes,
+                     IterationStatus status, fidl::VectorPtr<DiffEntry> changes,
                      std::unique_ptr<Token> next_token) mutable {
-          ASSERT_EQ(Status::OK, status);
+          ASSERT_EQ(IterationStatus::OK, status);
           ASSERT_EQ(1u, changes->size());
 
           double d1, d2;
@@ -163,16 +165,8 @@ class NonAssociativeConflictResolverImpl : public ConflictResolver {
           merged_value.new_value->set_bytes(DoubleToArray(new_value));
           fidl::VectorPtr<MergedValue> merged_values;
           merged_values.push_back(std::move(merged_value));
-          (*merge_result_provider)
-              ->Merge(
-                  std::move(merged_values),
-                  [merge_result_provider = std::move(merge_result_provider)](
-                      Status merge_status) mutable {
-                    ASSERT_EQ(Status::OK, merge_status);
-                    (*merge_result_provider)->Done([](Status merge_status) {
-                      ASSERT_EQ(Status::OK, merge_status);
-                    });
-                  });
+          (*merge_result_provider)->MergeNew(std::move(merged_values));
+          (*merge_result_provider)->DoneNew();
         });
   }
 

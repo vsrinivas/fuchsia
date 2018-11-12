@@ -448,11 +448,20 @@ struct Value {
     Priority priority;
 };
 
+/// Status for methods that return a sequence of values.
+enum IterationStatus : int8 {
+    /// The iteration has finished.
+    OK = 0;
+    /// The iteration has not finished. The method must be called again to
+    /// retrieve the next batch of responses.
+    PARTIAL_RESULT = 1;
+};
+
 /// A merge result provider, obtained from |ConflictResolver.Resolve()|. Can be
 /// used to retrieve data about the conflict, and provide the merge result. When
 /// all changes have been sent, |Done()| should be called to mark the end of
 /// incoming merge changes.
-interface MergeResultProvider {
+interface MergeResultProvider : ErrorNotifier {
     /// |GetFullDiff| returns the set of all key/value pairs (entries) that
     /// have been modified between the common ancestor (see
     /// |ConflictResolver.Resolve()|) and the left and right branches.
@@ -471,6 +480,8 @@ interface MergeResultProvider {
     /// with that token.
     1: GetFullDiff(Token? token)
            -> (Status status, vector<DiffEntry> changes, Token? next_token);
+    1001: GetFullDiffNew(Token? token)
+              -> (IterationStatus status, vector<DiffEntry> changes, Token? next_token);
 
     /// |GetConflictingDiff| returns the set of all key/value pairs that were
     /// modified on both sides to different values, or deleted on one side and
@@ -479,6 +490,8 @@ interface MergeResultProvider {
     /// It behaves like |GetFullDiff| otherwise.
     2: GetConflictingDiff(Token? token)
            -> (Status status, vector<DiffEntry> changes, Token? next_token);
+    1002: GetConflictingDiffNew(Token? token)
+              -> (IterationStatus status, vector<DiffEntry> changes, Token? next_token);
 
     /// Once the result of the merge has been computed |Merge()| can be called with
     /// all changes that resolve this conflict. If the result does not fit in a
@@ -491,6 +504,7 @@ interface MergeResultProvider {
     /// used. It is thus not necessary to send a MergedValue with a |LEFT| value
     /// source, unless to overwrite a previous MergedValue.
     3: Merge(vector<MergedValue> merge_changes) -> (Status status);
+    1003: MergeNew(vector<MergedValue> merge_changes);
 
     /// Automatically merges all non conflicting entries (entries that are
     /// modified on one side only or identical on both sides). This is equivalent
@@ -498,10 +512,12 @@ interface MergeResultProvider {
     /// for all non-conflicting keys modified on the right side. Conflicting
     /// entries can still be merged using the |Merge()| method.
     4: MergeNonConflictingEntries() -> (Status status);
+    1004: MergeNonConflictingEntriesNew();
 
     /// Marks the end of merge changes to resolve this conflict. After |Done()| is
     /// called |MergeResultProvider| interface cannot be used any more.
     5: Done() -> (Status status);
+    1005: DoneNew();
 };
 
 /// Custom conflict resolver. If a |ConflictResolverFactory| is registered, and

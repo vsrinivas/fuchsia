@@ -74,13 +74,9 @@ class ConflictResolverImpl : public ConflictResolver {
       LoopController* loop_controller,
       fidl::InterfaceRequest<ConflictResolver> request)
       : loop_controller_(loop_controller),
-        disconnect_waiter_(loop_controller->NewWaiter()),
         resolve_waiter_(loop_controller->NewWaiter()),
         binding_(this, std::move(request)) {
-    binding_.set_error_handler([this](zx_status_t status) {
-      this->disconnected = true;
-      disconnect_waiter_->GetCallback()();
-    });
+    binding_.set_error_handler(callback::Capture([] {}, &disconnected));
   }
   ~ConflictResolverImpl() override {}
 
@@ -89,6 +85,7 @@ class ConflictResolverImpl : public ConflictResolver {
     fidl::InterfaceHandle<PageSnapshot> right_version;
     fidl::InterfaceHandle<PageSnapshot> common_version;
     MergeResultProviderPtr result_provider;
+    zx_status_t result_provider_status = ZX_OK;
 
     ResolveRequest(LoopController* loop_controller,
                    fidl::InterfaceHandle<PageSnapshot> left_version,
@@ -99,7 +96,11 @@ class ConflictResolverImpl : public ConflictResolver {
           right_version(std::move(right_version)),
           common_version(std::move(common_version)),
           result_provider(result_provider.Bind()),
-          loop_controller_(loop_controller) {}
+          disconnect_waiter_(loop_controller->NewWaiter()),
+          loop_controller_(loop_controller) {
+      this->result_provider.set_error_handler(callback::Capture(
+          disconnect_waiter_->GetCallback(), &result_provider_status));
+    }
 
     // Returns the full list of changes.
     // Returns the full list of changes between branches and makes sure that at
@@ -109,10 +110,11 @@ class ConflictResolverImpl : public ConflictResolver {
                                            size_t min_queries = 0) {
       return GetDiff(
           [this](std::unique_ptr<Token> token,
-                 fit::function<void(Status, fidl::VectorPtr<DiffEntry>,
+                 fit::function<void(IterationStatus, fidl::VectorPtr<DiffEntry>,
                                     std::unique_ptr<Token>)>
                      callback) mutable {
-            result_provider->GetFullDiff(std::move(token), std::move(callback));
+            result_provider->GetFullDiffNew(std::move(token),
+                                            std::move(callback));
           },
           entries, min_queries);
     }
@@ -121,11 +123,11 @@ class ConflictResolverImpl : public ConflictResolver {
         std::vector<DiffEntry>* entries, size_t min_queries = 0) {
       return GetDiff(
           [this](std::unique_ptr<Token> token,
-                 fit::function<void(Status, fidl::VectorPtr<DiffEntry>,
+                 fit::function<void(IterationStatus, fidl::VectorPtr<DiffEntry>,
                                     std::unique_ptr<Token>)>
                      callback) mutable {
-            result_provider->GetConflictingDiff(std::move(token),
-                                                std::move(callback));
+            result_provider->GetConflictingDiffNew(std::move(token),
+                                                   std::move(callback));
           },
           entries, min_queries);
     }
@@ -167,66 +169,52 @@ class ConflictResolverImpl : public ConflictResolver {
         }
       }
 
-      Status status = Status::UNKNOWN_ERROR;
-      auto waiter = loop_controller_->NewWaiter();
-      result_provider.set_error_handler(
-          [callback = waiter->GetCallback()](zx_status_t status) {
-            callback();
-          });
-      result_provider->Done(callback::Capture(waiter->GetCallback(), &status));
-      if (!waiter->RunUntilCalled()) {
-        return ::testing::AssertionFailure() << "|Done| failed to called back.";
-      }
-      result_provider.set_error_handler(nullptr);
-      if (status != Status::OK) {
-        return ::testing::AssertionFailure()
-               << "Done failed with status " << fidl::ToUnderlying(status);
-      }
-      return ::testing::AssertionSuccess();
+      result_provider->DoneNew();
+      return RunUntilDisconnected();
     }
 
     ::testing::AssertionResult MergeNonConflictingEntries() {
-      Status status = Status::UNKNOWN_ERROR;
+      result_provider->MergeNonConflictingEntriesNew();
+      return Sync();
+    }
+
+   private:
+    ::testing::AssertionResult Sync() {
       auto waiter = loop_controller_->NewWaiter();
-      result_provider.set_error_handler(
-          [callback = waiter->GetCallback()](zx_status_t status) {
-            callback();
-          });
-      result_provider->MergeNonConflictingEntries(
-          callback::Capture(waiter->GetCallback(), &status));
+      result_provider->Sync(waiter->GetCallback());
       if (!waiter->RunUntilCalled()) {
+        // Printing the |result_provider_status| in case the issue is that the
+        // object has been disconnected.
         return ::testing::AssertionFailure()
-               << "|MergeNonConflictingEntries| failed to called back.";
-      }
-      result_provider.set_error_handler(nullptr);
-      if (status != Status::OK) {
-        return ::testing::AssertionFailure()
-               << "MergeNonConflictingEntries failed with status "
-               << fidl::ToUnderlying(status) << ".";
+               << "|Sync| failed to called back. Error provider status: "
+               << result_provider_status;
       }
       return ::testing::AssertionSuccess();
     }
 
-   private:
+    ::testing::AssertionResult RunUntilDisconnected() {
+      if (!disconnect_waiter_->RunUntilCalled()) {
+        return ::testing::AssertionFailure()
+               << "Timeout while waiting for the ConflictResolver to be "
+                  "disconnected from the ResultProvider.";
+      }
+      return ::testing::AssertionSuccess();
+    }
+
     ::testing::AssertionResult GetDiff(
         fit::function<
             void(std::unique_ptr<Token>,
-                 fit::function<void(Status, fidl::VectorPtr<DiffEntry>,
+                 fit::function<void(IterationStatus, fidl::VectorPtr<DiffEntry>,
                                     std::unique_ptr<Token>)>)>
             get_diff,
         std::vector<DiffEntry>* entries, size_t min_queries) {
       entries->resize(0);
       size_t num_queries = 0u;
-      Status status;
       std::unique_ptr<Token> token;
       do {
         fidl::VectorPtr<DiffEntry> new_entries;
-        status = Status::UNKNOWN_ERROR;
+        IterationStatus status;
         auto waiter = loop_controller_->NewWaiter();
-        result_provider.set_error_handler(
-            [callback = waiter->GetCallback()](zx_status_t status) {
-              callback();
-            });
         get_diff(std::move(token),
                  callback::Capture(waiter->GetCallback(), &status, &new_entries,
                                    &token));
@@ -234,12 +222,7 @@ class ConflictResolverImpl : public ConflictResolver {
           return ::testing::AssertionFailure()
                  << "|get_diff| failed to called back.";
         }
-        result_provider.set_error_handler(nullptr);
-        if (status != Status::OK && status != Status::PARTIAL_RESULT) {
-          return ::testing::AssertionFailure()
-                 << "GetDiff failed with status " << fidl::ToUnderlying(status);
-        }
-        if (!token != (status == Status::OK)) {
+        if (!token != (status == IterationStatus::OK)) {
           return ::testing::AssertionFailure()
                  << "token is "
                  << (token ? convert::ToString(token->opaque_id) : "null")
@@ -262,32 +245,14 @@ class ConflictResolverImpl : public ConflictResolver {
 
     ::testing::AssertionResult PartialMerge(
         fidl::VectorPtr<MergedValue> partial_result) {
-      Status status = Status::UNKNOWN_ERROR;
-      auto waiter = loop_controller_->NewWaiter();
-      result_provider.set_error_handler(
-          [callback = waiter->GetCallback()](zx_status_t status) {
-            callback();
-          });
-      result_provider->Merge(std::move(partial_result),
-                             callback::Capture(waiter->GetCallback(), &status));
-      if (!waiter->RunUntilCalled()) {
-        return ::testing::AssertionFailure()
-               << "|Merge| failed to called back.";
-      }
-      result_provider.set_error_handler(nullptr);
-      if (status != Status::OK) {
-        return ::testing::AssertionFailure()
-               << "Merge failed with status " << fidl::ToUnderlying(status);
-      }
-      return ::testing::AssertionSuccess();
+      result_provider->MergeNew(std::move(partial_result));
+      return Sync();
     }
 
+    std::unique_ptr<CallbackWaiter> disconnect_waiter_;
     LoopController* loop_controller_;
   };
 
-  void RunUntilDisconnected() {
-    ASSERT_TRUE(disconnect_waiter_->RunUntilCalled());
-  }
 
   void RunUntilResolveCalled() {
     ASSERT_TRUE(resolve_waiter_->RunUntilCalled());
@@ -310,7 +275,6 @@ class ConflictResolverImpl : public ConflictResolver {
   }
 
   LoopController* loop_controller_;
-  std::unique_ptr<CallbackWaiter> disconnect_waiter_;
   std::unique_ptr<CallbackWaiter> resolve_waiter_;
   fidl::Binding<ConflictResolver> binding_;
 };
