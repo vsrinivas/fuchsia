@@ -1,0 +1,8 @@
+{
+    "imports": [
+        "garnet/packages/prod/netstack"
+    ],
+    "packages": [
+        "//garnet/public/lib/netemul/network:netemul_network_test"
+    ]
+}
