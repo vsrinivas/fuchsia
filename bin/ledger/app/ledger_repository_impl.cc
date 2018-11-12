@@ -6,6 +6,7 @@
 
 #include <trace/event.h>
 
+#include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"
 #include "peridot/bin/ledger/p2p_sync/public/ledger_communicator.h"
 #include "peridot/bin/ledger/storage/impl/ledger_storage_impl.h"
@@ -50,25 +51,39 @@ void LedgerRepositoryImpl::BindRepository(
 void LedgerRepositoryImpl::PageIsClosedAndSynced(
     fxl::StringView ledger_name, storage::PageIdView page_id,
     fit::function<void(Status, PagePredicateResult)> callback) {
-  LedgerManager* ledger_manager = GetLedgerManager(ledger_name);
-  FXL_DCHECK(ledger_manager);
+  LedgerManager* ledger_manager;
+  Status status = GetLedgerManager(ledger_name, &ledger_manager);
+  if (status != Status::OK) {
+    callback(status, PagePredicateResult::PAGE_OPENED);
+    return;
+  }
 
+  FXL_DCHECK(ledger_manager);
   ledger_manager->PageIsClosedAndSynced(page_id, std::move(callback));
 }
 
 void LedgerRepositoryImpl::PageIsClosedOfflineAndEmpty(
     fxl::StringView ledger_name, storage::PageIdView page_id,
     fit::function<void(Status, PagePredicateResult)> callback) {
-  LedgerManager* ledger_manager = GetLedgerManager(ledger_name);
+  LedgerManager* ledger_manager;
+  Status status = GetLedgerManager(ledger_name, &ledger_manager);
+  if (status != Status::OK) {
+    callback(status, PagePredicateResult::PAGE_OPENED);
+    return;
+  }
   FXL_DCHECK(ledger_manager);
-
   ledger_manager->PageIsClosedOfflineAndEmpty(page_id, std::move(callback));
 }
 
 void LedgerRepositoryImpl::DeletePageStorage(
     fxl::StringView ledger_name, storage::PageIdView page_id,
     fit::function<void(Status)> callback) {
-  LedgerManager* ledger_manager = GetLedgerManager(ledger_name);
+  LedgerManager* ledger_manager;
+  Status status = GetLedgerManager(ledger_name, &ledger_manager);
+  if (status != Status::OK) {
+    callback(status);
+    return;
+  }
   FXL_DCHECK(ledger_manager);
   return ledger_manager->DeletePageStorage(page_id, std::move(callback));
 }
@@ -84,14 +99,15 @@ LedgerRepositoryImpl::Unbind() {
   return handles;
 }
 
-LedgerManager* LedgerRepositoryImpl::GetLedgerManager(
-    convert::ExtendedStringView ledger_name) {
+Status LedgerRepositoryImpl::GetLedgerManager(
+    convert::ExtendedStringView ledger_name, LedgerManager** ledger_manager) {
   FXL_DCHECK(!ledger_name.empty());
 
   // If the Ledger instance is already open return it directly.
   auto it = ledger_managers_.find(ledger_name);
   if (it != ledger_managers_.end()) {
-    return &(it->second);
+    *ledger_manager = &(it->second);
+    return Status::OK;
   }
 
   std::string name_as_string = convert::ToString(ledger_name);
@@ -100,6 +116,10 @@ LedgerManager* LedgerRepositoryImpl::GetLedgerManager(
   auto ledger_storage = std::make_unique<storage::LedgerStorageImpl>(
       environment_, encryption_service.get(), db_factory_.get(), content_path_,
       name_as_string);
+  storage::Status status = ledger_storage->Init();
+  if (status != storage::Status::OK) {
+    return PageUtils::ConvertStatus(status);
+  }
   std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync;
   if (user_sync_) {
     ledger_sync =
@@ -112,7 +132,8 @@ LedgerManager* LedgerRepositoryImpl::GetLedgerManager(
                             std::move(ledger_storage), std::move(ledger_sync),
                             page_usage_listener_));
   FXL_DCHECK(result.second);
-  return &(result.first->second);
+  *ledger_manager = &(result.first->second);
+  return Status::OK;
 }
 
 void LedgerRepositoryImpl::GetLedger(
@@ -125,7 +146,12 @@ void LedgerRepositoryImpl::GetLedger(
     return;
   }
 
-  LedgerManager* ledger_manager = GetLedgerManager(ledger_name);
+  LedgerManager* ledger_manager;
+  Status status = GetLedgerManager(ledger_name, &ledger_manager);
+  if (status != Status::OK) {
+    callback(status);
+    return;
+  }
   FXL_DCHECK(ledger_manager);
   ledger_manager->BindLedger(std::move(ledger_request));
   callback(Status::OK);

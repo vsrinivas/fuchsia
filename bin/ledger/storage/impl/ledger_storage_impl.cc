@@ -28,7 +28,6 @@ namespace storage {
 
 namespace {
 
-constexpr fxl::StringView kLevelDbDir = "leveldb";
 constexpr fxl::StringView kStagingPathPrefix = "staging";
 
 // Encodes opaque bytes in a way that is usable as a directory name.
@@ -60,24 +59,21 @@ LedgerStorageImpl::LedgerStorageImpl(
 
 LedgerStorageImpl::~LedgerStorageImpl() {}
 
+Status LedgerStorageImpl::Init() {
+  if (!files::CreateDirectoryAt(storage_dir_.root_fd(), storage_dir_.path())) {
+    FXL_LOG(ERROR) << "Failed to create the storage directory in "
+                   << storage_dir_.path();
+    return Status::INTERNAL_IO_ERROR;
+  }
+  return Status::OK;
+}
+
 void LedgerStorageImpl::CreatePageStorage(
     PageId page_id,
     fit::function<void(Status, std::unique_ptr<PageStorage>)> callback) {
   auto timed_callback = TRACE_CALLBACK(std::move(callback), "ledger",
                                        "ledger_storage_create_page_storage");
-  // Create the path up to one level before the db path.
-  // TODO(nellyv): Remove the directory creation when no intermediary directory
-  // is needed.
-  ledger::DetachedPath path = GetPathFor(page_id);
-  if (!files::CreateDirectoryAt(path.root_fd(), path.path())) {
-    FXL_LOG(ERROR) << "Failed to create the storage directory in "
-                   << path.path();
-    timed_callback(Status::INTERNAL_IO_ERROR, nullptr);
-    return;
-  }
-
-  ledger::DetachedPath actual_path = GetDeprecatedPathFor(page_id);
-  GetOrCreateDb(std::move(actual_path), std::move(page_id),
+  GetOrCreateDb(GetPathFor(page_id), std::move(page_id),
                 std::move(timed_callback));
 }
 
@@ -86,7 +82,7 @@ void LedgerStorageImpl::GetPageStorage(
     fit::function<void(Status, std::unique_ptr<PageStorage>)> callback) {
   auto timed_callback = TRACE_CALLBACK(std::move(callback), "ledger",
                                        "ledger_storage_get_page_storage");
-  ledger::DetachedPath path = GetDeprecatedPathFor(page_id);
+  ledger::DetachedPath path = GetPathFor(page_id);
   if (!files::IsDirectoryAt(path.root_fd(), path.path())) {
     timed_callback(Status::NOT_FOUND, nullptr);
     return;
@@ -189,13 +185,6 @@ void LedgerStorageImpl::GetOrCreateDb(
 ledger::DetachedPath LedgerStorageImpl::GetPathFor(PageIdView page_id) {
   FXL_DCHECK(!page_id.empty());
   return storage_dir_.SubPath(GetDirectoryName(page_id));
-}
-
-// TODO(nellyv): Remove "/leveldb" altogether from the page path.
-ledger::DetachedPath LedgerStorageImpl::GetDeprecatedPathFor(
-    PageIdView page_id) {
-  FXL_DCHECK(!page_id.empty());
-  return storage_dir_.SubPath({GetDirectoryName(page_id), kLevelDbDir});
 }
 
 ledger::DetachedPath LedgerStorageImpl::GetStagingPathFor(PageIdView page_id) {

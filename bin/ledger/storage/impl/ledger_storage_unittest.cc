@@ -31,6 +31,13 @@ class LedgerStorageTest : public ledger::TestWithEnvironment {
 
   ~LedgerStorageTest() override {}
 
+  // ledger::TestWithEnvironment:
+  void SetUp() override {
+    ledger::TestWithEnvironment::SetUp();
+
+    ASSERT_EQ(Status::OK, storage_.Init());
+  }
+
  private:
   scoped_tmpfs::ScopedTmpFS tmpfs_;
   encryption::FakeEncryptionService encryption_service_;

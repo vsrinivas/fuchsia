@@ -56,7 +56,7 @@ class LedgerRepositoryImpl
   std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>>
   Unbind();
 
-  // PageEvictionManagerImpl::Delegate:
+  // PageEvictionManager::Delegate:
   void PageIsClosedAndSynced(
       fxl::StringView ledger_name, storage::PageIdView page_id,
       fit::function<void(Status, PagePredicateResult)> callback) override;
@@ -83,8 +83,9 @@ class LedgerRepositoryImpl
 
  private:
   // Retrieves the existing, or creates a new LedgerManager object with the
-  // given |ledger_name|. Returns a pointer to the LedgerManager instance.
-  LedgerManager* GetLedgerManager(convert::ExtendedStringView ledger_name);
+  // given |ledger_name|.
+  Status GetLedgerManager(convert::ExtendedStringView ledger_name,
+                          LedgerManager** ledger_manager);
 
   void CheckEmpty();
 

@@ -30,6 +30,11 @@ class LedgerStorageImpl : public LedgerStorage {
                     const std::string& ledger_name);
   ~LedgerStorageImpl() override;
 
+  // Initializes this LedgerStorageImpl by creating the |content_dir| directory
+  // given in the constructor.
+  Status Init();
+
+  // LedgerStorage:
   void CreatePageStorage(
       PageId page_id,
       fit::function<void(Status, std::unique_ptr<PageStorage>)> callback)
