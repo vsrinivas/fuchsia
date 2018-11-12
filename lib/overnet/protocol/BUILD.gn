@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fuzzing/fuzzer.gni")
+
 ###############################################################################
 # AGGREGATE LIBRARIES
 
@@ -123,6 +125,16 @@ source_set("routable_message_test") {
   deps = [
     ":routable_message",
     "//third_party/googletest:gtest",
+  ]
+}
+
+fuzz_target("routable_message_fuzzer") {
+  testonly = true
+  sources = [
+    "routable_message_fuzzer.cc",
+  ]
+  deps = [
+    ":routable_message",
   ]
 }
 

@@ -64,15 +64,6 @@ source_set("bbr") {
   ]
 }
 
-source_set("bbr_fuzzer_helpers") {
-  sources = [
-    "bbr_fuzzer_helpers.h",
-  ]
-  deps = [
-    ":bbr",
-  ]
-}
-
 source_set("bbr_test") {
   testonly = true
   sources = [
@@ -80,7 +71,6 @@ source_set("bbr_test") {
   ]
   deps = [
     ":bbr",
-    ":bbr_fuzzer_helpers",
     "//garnet/lib/overnet/testing:csv_writer",
     "//garnet/lib/overnet/testing:test_timer",
     "//garnet/lib/overnet/testing:trace_cout",

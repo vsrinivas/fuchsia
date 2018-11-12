@@ -59,7 +59,10 @@ package("overnet_tests") {
 }
 
 fuzz_package("overnet_fuzzers") {
-  targets = [ "packet_protocol:packet_protocol_fuzzer" ]
+  targets = [ 
+    "protocol:routable_message_fuzzer",
+    "packet_protocol:packet_protocol_fuzzer",
+  ]
   sanitizers = [ "asan" ]
   fuzz_host = true
 }
