@@ -62,6 +62,9 @@ zx_status_t UsbAudioDevice::Bind() {
         return status;
     }
 
+    parent_req_size_ = usb_get_request_size(&usb_proto_);
+    ZX_DEBUG_ASSERT(parent_req_size_ != 0);
+
     usb_composite_protocol_t usb_composite_proto;
     status = device_get_protocol(parent(), ZX_PROTOCOL_USB_COMPOSITE, &usb_composite_proto);
     if (status != ZX_OK) {
@@ -253,7 +256,8 @@ void UsbAudioDevice::Probe() {
                                      &usb_proto_,
                                      midi_sink_index_++,
                                      info.ifc,
-                                     info.out_ep);
+                                     info.out_ep,
+                                     parent_req_size_);
             }
 
             if (info.in_ep != nullptr) {
@@ -263,7 +267,8 @@ void UsbAudioDevice::Probe() {
                                      &usb_proto_,
                                      midi_source_index_++,
                                      info.ifc,
-                                     info.in_ep);
+                                     info.in_ep,
+                                     parent_req_size_);
             }
 
             break;
