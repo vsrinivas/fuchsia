@@ -11,7 +11,7 @@ visibility = [ "//peridot/*" ]
 package("ledger") {
   deps = [
     "app",
-    "cobalt:generate_ledger_config",
+    "cobalt:ledger_metrics_registry",
   ]
 
   binary = "ledger"
@@ -25,13 +25,15 @@ package("ledger") {
 
   resources = [
     {
-      path = rebase_path(get_label_info("cobalt:generate_ledger_config",
-                                        "target_gen_dir") + "/cobalt_config.pb")
+      path = rebase_path(
+              get_label_info("cobalt:ledger_metrics_registry",
+                             "target_gen_dir") + "/ledger_metrics_registry.pb")
       dest = "ledger_cobalt_config.pb"
     },
     {
-      path = rebase_path(get_label_info("cobalt:generate_ledger_config",
-                                        "target_gen_dir") + "/cobalt_config.pb")
+      path = rebase_path(
+              get_label_info("cobalt:ledger_metrics_registry",
+                             "target_gen_dir") + "/ledger_metrics_registry.pb")
       dest = "firebase_auth_cobalt_config.pb"
     },
   ]

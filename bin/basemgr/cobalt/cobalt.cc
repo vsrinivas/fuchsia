@@ -9,7 +9,7 @@
 
 namespace modular {
 namespace {
-constexpr char kConfigBinProtoPath[] = "/pkg/data/cobalt_config.pb";
+constexpr char kConfigBinProtoPath[] = "/pkg/data/basemgr_metrics_registry.pb";
 
 cobalt::CobaltLogger* g_cobalt_logger = nullptr;
 

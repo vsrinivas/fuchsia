@@ -9,8 +9,9 @@ visibility = [
   "//peridot/bin/sessionmgr/*",
 ]
 
-cobalt_config("generate_basemgr_config") {
+cobalt_config("basemgr_metrics_registry") {
   project_id = 101
+  use_target_name = true
 }
 
 source_set("cobalt") {
@@ -20,7 +21,7 @@ source_set("cobalt") {
   ]
 
   public_deps = [
-    ":generate_basemgr_config",
+    ":basemgr_metrics_registry",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
   ]

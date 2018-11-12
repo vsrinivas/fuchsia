@@ -76,16 +76,16 @@ executable_package("sessionmgr") {
   ]
 
   public_deps = [
-    "//peridot/bin/basemgr/cobalt:generate_basemgr_config",
+    "//peridot/bin/basemgr/cobalt:basemgr_metrics_registry",
   ]
 
   resources = [
     {
       path = rebase_path(
               get_label_info(
-                  "//peridot/bin/basemgr/cobalt:generate_basemgr_config",
-                  "target_gen_dir") + "/cobalt_config.pb")
-      dest = "cobalt_config.pb"
+                  "//peridot/bin/basemgr/cobalt:basemgr_metrics_registry",
+                  "target_gen_dir") + "/basemgr_metrics_registry.pb")
+      dest = "basemgr_metrics_registry.pb"
     },
   ]
 }

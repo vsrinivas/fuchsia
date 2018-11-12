@@ -6,8 +6,9 @@ import("//third_party/cobalt_config/cobalt_config.gni")
 
 visibility = [ "//peridot/bin/ledger/*" ]
 
-cobalt_config("generate_ledger_config") {
+cobalt_config("ledger_metrics_registry") {
   project_id = 100
+  use_target_name = true
 }
 
 source_set("cobalt") {

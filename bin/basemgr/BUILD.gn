@@ -51,16 +51,16 @@ executable_package("basemgr") {
   ]
 
   public_deps = [
-    "//peridot/bin/basemgr/cobalt:generate_basemgr_config",
+    "//peridot/bin/basemgr/cobalt:basemgr_metrics_registry",
   ]
 
   resources = [
     {
       path = rebase_path(
               get_label_info(
-                  "//peridot/bin/basemgr/cobalt:generate_basemgr_config",
-                  "target_gen_dir") + "/cobalt_config.pb")
-      dest = "cobalt_config.pb"
+                  "//peridot/bin/basemgr/cobalt:basemgr_metrics_registry",
+                  "target_gen_dir") + "/basemgr_metrics_registry.pb")
+      dest = "basemgr_metrics_registry.pb"
     },
   ]
 }
@@ -117,9 +117,9 @@ executable_package("dev_base_shell") {
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:single_service_app",
-    "//peridot/public/lib/integration_testing/cpp",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
+    "//peridot/public/lib/integration_testing/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

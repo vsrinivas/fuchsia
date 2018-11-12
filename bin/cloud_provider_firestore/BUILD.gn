@@ -7,16 +7,16 @@ import("//build/package.gni")
 package("cloud_provider_firestore") {
   deps = [
     "app",
-    "//peridot/bin/ledger/cobalt:generate_ledger_config",
+    "//peridot/bin/ledger/cobalt:ledger_metrics_registry",
   ]
 
   resources = [
     {
       path =
           rebase_path(get_label_info(
-                          "//peridot/bin/ledger/cobalt:generate_ledger_config",
-                          "target_gen_dir") + "/cobalt_config.pb")
-      dest = "firebase_auth_cobalt_config.pb"
+                          "//peridot/bin/ledger/cobalt:ledger_metrics_registry",
+                          "target_gen_dir") + "/ledger_metrics_registry.pb")
+      dest = "firebase_auth_ledger_metrics_config.pb"
     },
   ]
 
