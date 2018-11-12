@@ -334,6 +334,7 @@ extern {
     pub fn zx_futex_wait(
         value_ptr: *mut zx_futex_t,
         current_value: isize,
+        current_futex_owner: zx_handle_t,
         deadline: zx_time_t
         ) -> zx_status_t;
 
@@ -347,21 +348,20 @@ extern {
         wake_count: u32,
         current_value: isize,
         requeue_ptr: *mut zx_futex_t,
-        requeue_count: u32
+        requeue_count: u32,
+        requeue_owner: zx_handle_t
         ) -> zx_status_t;
 
-    pub fn zx_futex_wait_deprecated(
-        value_ptr: *mut zx_futex_t,
-        current_value: isize,
-        deadline: zx_time_t
+    pub fn zx_futex_wake_single_owner(
+        value_ptr: *const zx_futex_t
         ) -> zx_status_t;
 
-    pub fn zx_futex_requeue_deprecated(
+    pub fn zx_futex_requeue_single_owner(
         wake_ptr: *mut zx_futex_t,
-        wake_count: u32,
         current_value: isize,
         requeue_ptr: *mut zx_futex_t,
-        requeue_count: u32
+        requeue_count: u32,
+        requeue_owner: zx_handle_t
         ) -> zx_status_t;
 
     pub fn zx_port_create(

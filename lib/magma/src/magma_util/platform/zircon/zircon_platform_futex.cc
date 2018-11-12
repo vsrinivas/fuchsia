@@ -22,8 +22,8 @@ bool PlatformFutex::Wait(uint32_t* value_ptr, int32_t current_value, uint64_t ti
 {
     const zx_time_t deadline =
         (timeout_ns == UINT64_MAX) ? ZX_TIME_INFINITE : zx_deadline_after(timeout_ns);
-    zx_status_t status =
-        zx_futex_wait_deprecated(reinterpret_cast<zx_futex_t*>(value_ptr), current_value, deadline);
+    zx_status_t status = zx_futex_wait(reinterpret_cast<zx_futex_t*>(value_ptr), current_value,
+                                       ZX_HANDLE_INVALID, deadline);
     switch (status) {
         case ZX_OK:
             *result_out = AWOKE;
