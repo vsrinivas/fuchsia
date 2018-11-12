@@ -4,10 +4,13 @@
 
 //! Type-safe bindings for Zircon handles.
 //!
-use crate::{Port, Rights, Signals, Status, Time, WaitAsyncOpts, ok};
+use crate::{
+    object_get_info, ok, ObjectQuery, Port, Rights, Signals, Status, Time, Topic, WaitAsyncOpts,
+};
 use fuchsia_zircon_sys as sys;
 use std::marker::PhantomData;
 use std::mem::{self, ManuallyDrop};
+use std::ops::Deref;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
@@ -144,15 +147,14 @@ impl<'a, T: HandleBased> Unowned<'a, T> {
         ok(status)
     }
 
+    pub fn basic_info(&self) -> Result<HandleBasicInfo, Status> {
+        let mut info = HandleBasicInfo::default();
+        object_get_info::<HandleBasicInfo>(self.as_handle_ref(), std::slice::from_mut(&mut info))
+            .map(|_| info)
+    }
+
     pub fn get_koid(&self) -> Result<Koid, Status> {
-        let mut info: sys::zx_info_handle_basic_t = Default::default();
-        let status = unsafe {
-            sys::zx_object_get_info(self.raw_handle(), sys::ZX_INFO_HANDLE_BASIC,
-                                    &mut info as *mut sys::zx_info_handle_basic_t as *mut u8,
-                                    mem::size_of::<sys::zx_info_handle_basic_t>(),
-                                    std::ptr::null_mut::<usize>(), std::ptr::null_mut::<usize>())
-        };
-        ok(status).map(|()| Koid(info.koid))
+        self.basic_info().map(|info| Koid(info.koid))
     }
 }
 
@@ -301,4 +303,21 @@ pub trait Cookied: HandleBased {
         };
         ok(status)
     }
+}
+
+#[derive(Copy, Clone, Default)]
+#[repr(transparent)]
+pub struct HandleBasicInfo(sys::zx_info_handle_basic_t);
+
+impl Deref for HandleBasicInfo {
+    type Target = sys::zx_info_handle_basic_t;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+unsafe impl ObjectQuery for HandleBasicInfo {
+    const TOPIC: Topic = Topic::HANDLE_BASIC;
+    type InfoTy = HandleBasicInfo;
 }

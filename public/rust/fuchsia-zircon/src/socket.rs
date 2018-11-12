@@ -5,8 +5,10 @@
 //! Type-safe bindings for Zircon sockets.
 
 use bitflags::bitflags;
-use crate::{AsHandleRef, HandleBased, Handle, HandleRef, Peered};
-use crate::{Status, ok};
+use crate::object_get_info;
+use crate::{ok, Status};
+use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Peered};
+use crate::{ObjectQuery, Topic};
 use fuchsia_zircon_sys as sys;
 
 use std::ptr;
@@ -30,6 +32,45 @@ bitflags! {
         const FLAG_CONTROL = 1 << 1;
         const FLAG_ACCEPT = 1 << 2;
     }
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct SocketInfo {
+    pub options: SocketOpts,
+    pub rx_buf_max: usize,
+    pub rx_buf_size: usize,
+    pub tx_buf_max: usize,
+    pub tx_buf_size: usize,
+}
+
+impl Default for SocketInfo {
+    fn default() -> SocketInfo {
+        SocketInfo {
+            options: SocketOpts::STREAM,
+            rx_buf_max: 0,
+            rx_buf_size: 0,
+            tx_buf_max: 0,
+            tx_buf_size: 0,
+        }
+    }
+}
+
+impl From<sys::zx_info_socket_t> for SocketInfo {
+    fn from(socket: sys::zx_info_socket_t) -> SocketInfo {
+        SocketInfo {
+            options: SocketOpts::from_bits_truncate(socket.options),
+            rx_buf_max: socket.rx_buf_max,
+            rx_buf_size: socket.rx_buf_size,
+            tx_buf_max: socket.tx_buf_max,
+            tx_buf_size: socket.tx_buf_size,
+        }
+    }
+}
+
+unsafe impl ObjectQuery for SocketInfo {
+    const TOPIC: Topic = Topic::SOCKET;
+    type InfoTy = SocketInfo;
 }
 
 impl Socket {
@@ -121,6 +162,12 @@ impl Socket {
             sys::zx_socket_read(self.raw_handle(), 0, ptr::null_mut(), 0, &mut outstanding)
         };
         ok(status).map(|()| outstanding)
+    }
+
+    pub fn info(&self) -> Result<SocketInfo, Status> {
+        let mut info = SocketInfo::default();
+        object_get_info::<SocketInfo>(self.as_handle_ref(), std::slice::from_mut(&mut info))
+            .map(|_| info)
     }
 }
 

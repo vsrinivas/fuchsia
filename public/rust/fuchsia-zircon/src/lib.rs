@@ -80,6 +80,7 @@ mod event;
 mod eventpair;
 mod fifo;
 mod handle;
+mod info;
 mod interrupt;
 mod job;
 mod log;
@@ -100,6 +101,7 @@ pub use self::event::*;
 pub use self::eventpair::*;
 pub use self::fifo::*;
 pub use self::handle::*;
+pub use self::info::*;
 pub use self::interrupt::*;
 pub use self::job::*;
 pub use self::log::*;
@@ -182,6 +184,26 @@ pub fn object_wait_many(items: &mut [WaitItem], deadline: Time) -> Result<bool, 
         return Ok(true)
     }
     ok(status).map(|()| false)
+}
+
+/// Query information about a zircon object.
+/// Returns `(num_returned, num_remaining)` on success.
+pub fn object_get_info<Q: ObjectQuery>(handle: HandleRef, out: &mut [Q::InfoTy])
+    -> Result<(usize, usize), Status>
+{
+        let mut actual = 0;
+        let mut avail = 0;
+        let status = unsafe {
+            sys::zx_object_get_info(
+                handle.raw_handle(),
+                *Q::TOPIC,
+                out.as_mut_ptr() as *mut u8,
+                std::mem::size_of_val(out),
+                &mut actual as *mut usize,
+                &mut avail as *mut usize,
+            )
+        };
+        ok(status).map(|_| (actual, avail - actual))
 }
 
 #[cfg(test)]
