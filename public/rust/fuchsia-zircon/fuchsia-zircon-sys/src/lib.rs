@@ -201,9 +201,17 @@ multiconst!(zx_signals_t, [
     ZX_CHANNEL_PEER_CLOSED      = ZX_OBJECT_SIGNAL_2;
 
     // Socket
-    ZX_SOCKET_READABLE          = ZX_OBJECT_SIGNAL_0;
-    ZX_SOCKET_WRITABLE          = ZX_OBJECT_SIGNAL_1;
-    ZX_SOCKET_PEER_CLOSED       = ZX_OBJECT_SIGNAL_2;
+    ZX_SOCKET_READABLE            = ZX_OBJECT_READABLE;
+    ZX_SOCKET_WRITABLE            = ZX_OBJECT_WRITABLE;
+    ZX_SOCKET_PEER_CLOSED         = ZX_OBJECT_PEER_CLOSED;
+    ZX_SOCKET_PEER_WRITE_DISABLED = ZX_OBJECT_SIGNAL_4;
+    ZX_SOCKET_WRITE_DISABLED      = ZX_OBJECT_SIGNAL_5;
+    ZX_SOCKET_CONTROL_READABLE    = ZX_OBJECT_SIGNAL_6;
+    ZX_SOCKET_CONTROL_WRITABLE    = ZX_OBJECT_SIGNAL_7;
+    ZX_SOCKET_ACCEPT              = ZX_OBJECT_SIGNAL_8;
+    ZX_SOCKET_SHARE               = ZX_OBJECT_SIGNAL_9;
+    ZX_SOCKET_READ_THRESHOLD      = ZX_OBJECT_SIGNAL_10;
+    ZX_SOCKET_WRITE_THRESHOLD     = ZX_OBJECT_SIGNAL_11;
 
     // Resource
     ZX_RESOURCE_DESTROYED       = ZX_OBJECT_SIGNAL_3;
@@ -527,6 +535,7 @@ multiconst!(zx_object_info_topic_t, [
     ZX_INFO_HANDLE_COUNT               = 19; // zx_info_handle_count_t[1]
     ZX_INFO_BTI                        = 20; // zx_info_bti_t[1]
     ZX_INFO_PROCESS_HANDLE_STATS       = 21; // zx_info_process_handle_stats_t[1]
+    ZX_INFO_SOCKET                     = 22; // zx_info_socket_t[1]
 ]);
 
 #[repr(C)]
@@ -537,6 +546,16 @@ pub struct zx_info_handle_basic_t {
     pub type_: u32,
     pub related_koid: zx_koid_t,
     pub props: u32,
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Default, Eq, PartialEq)]
+pub struct zx_info_socket_t {
+    pub options: u32,
+    pub rx_buf_max: usize,
+    pub rx_buf_size: usize,
+    pub tx_buf_max: usize,
+    pub tx_buf_size: usize,
 }
 
 #[cfg(target_arch = "x86_64")]
