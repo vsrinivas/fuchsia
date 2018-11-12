@@ -191,9 +191,8 @@ void SessionmgrImpl::Initialize(
   InitializeMessageQueueManager();
   InitializeMaxwellAndModular(session_shell.url, std::move(story_shell));
   InitializeClipboard();
-  InitializeSessionShell(
-      std::move(session_shell),
-      zx::eventpair(view_owner_request.TakeChannel().release()));
+  InitializeSessionShell(std::move(session_shell),
+                         std::move(view_owner_request));
 
   ReportEvent(ModularEvent::BOOTED_TO_SESSIONMGR);
 }
@@ -683,20 +682,15 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
 }
 
 void SessionmgrImpl::InitializeSessionShell(
-    fuchsia::modular::AppConfig session_shell, zx::eventpair view_token) {
+    fuchsia::modular::AppConfig session_shell,
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
+        view_owner_request) {
   // We setup our own view and make the fuchsia::modular::SessionShell a child
   // of it.
-  auto scenic =
+  session_shell_view_host_ = std::make_unique<ViewHost>(
       startup_context_
-          ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
-  scenic::ViewContext view_context = {
-      .session_and_listener_request =
-          scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-      .view_token = std::move(view_token),
-      .startup_context = startup_context_,
-  };
-  session_shell_view_host_ =
-      std::make_unique<ViewHost>(std::move(view_context));
+          ->ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewManager>(),
+      std::move(view_owner_request));
   RunSessionShell(std::move(session_shell));
   AtEnd([this](std::function<void()> cont) { TerminateSessionShell(cont); });
 }

@@ -34,14 +34,11 @@ class DevStoryShellApp
  private:
   // |SingleServiceApp|
   void CreateView(
-      zx::eventpair view_token,
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
+          view_owner_request,
       fidl::InterfaceRequest<
-          fuchsia::sys::ServiceProvider> /*incoming_services*/,
-      fidl::InterfaceHandle<
-          fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {
-    view_owner_request_ =
-        fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>(
-            zx::channel(view_token.release()));
+          fuchsia::sys::ServiceProvider> /*services_request*/) override {
+    view_owner_request_ = std::move(view_owner_request);
     Connect();
   }
 
@@ -93,17 +90,11 @@ class DevStoryShellApp
 
   void Connect() {
     if (story_shell_context_.is_bound() && view_owner_request_) {
-      auto scenic =
+      view_ = std::make_unique<modular::ViewHost>(
           startup_context()
-              ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
-      scenic::ViewContext view_context = {
-          .session_and_listener_request =
-              scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-          .view_token =
-              zx::eventpair(view_owner_request_.TakeChannel().release()),
-          .startup_context = startup_context(),
-      };
-      view_ = std::make_unique<modular::ViewHost>(std::move(view_context));
+              ->ConnectToEnvironmentService<
+                  fuchsia::ui::viewsv1::ViewManager>(),
+          std::move(view_owner_request_));
 
       for (auto& view_owner : child_views_) {
         view_->ConnectView(std::move(view_owner));

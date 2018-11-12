@@ -76,12 +76,6 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleHost {
         on_terminated_(std::move(on_terminated)) {
     context_->ConnectToEnvironmentService(module_context_.NewRequest());
 
-    context_->outgoing().AddPublicService<fuchsia::ui::app::ViewProvider>(
-        [this](fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
-          impl_ = std::make_unique<Impl>(static_cast<ModuleHost*>(this),
-                                         std::move(request));
-        });
-
     context_->outgoing().AddPublicService<fuchsia::ui::viewsv1::ViewProvider>(
         [this](fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider>
                    request) {

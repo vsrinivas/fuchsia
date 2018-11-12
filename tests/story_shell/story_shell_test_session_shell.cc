@@ -101,11 +101,10 @@ class TestApp : public modular::testing::ComponentBase<void>,
 
   // |SingleServiceApp|
   void CreateView(
-      zx::eventpair /*view_token*/,
       fidl::InterfaceRequest<
-          fuchsia::sys::ServiceProvider> /*incoming_services*/,
-      fidl::InterfaceHandle<
-          fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {
+          fuchsia::ui::viewsv1token::ViewOwner> /*view_owner_request*/,
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
+      override {
     create_view_.Pass();
   }
 

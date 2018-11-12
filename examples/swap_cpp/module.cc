@@ -4,13 +4,17 @@
 
 #include "peridot/examples/swap_cpp/module.h"
 
-#include <lib/component/cpp/startup_context.h>
 #include <utility>
 
 namespace modular_example {
 
-ModuleView::ModuleView(scenic::ViewContext view_context, uint32_t color)
-    : V1BaseView(std::move(view_context), "ModuleView"),
+ModuleView::ModuleView(
+    fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
+        view_owner_request,
+    uint32_t color)
+    : BaseView(std::move(view_manager), std::move(view_owner_request),
+               "ModuleView"),
       background_node_(session()) {
   scenic::Material background_material(session());
   background_material.SetColor((color >> 16) & 0xff, (color >> 8) & 0xff,
@@ -33,22 +37,13 @@ ModuleApp::ModuleApp(component::StartupContext* const startup_context,
     : ViewApp(startup_context), create_(std::move(create)) {}
 
 void ModuleApp::CreateView(
-    zx::eventpair view_token,
-    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
-    fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) {
-  auto scenic =
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
+        view_owner_request,
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/) {
+  view_.reset(create_(
       startup_context()
-          ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
-  scenic::ViewContext context = {
-      .session_and_listener_request =
-          scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-      .view_token = std::move(view_token),
-      .incoming_services = std::move(incoming_services),
-      .outgoing_services = std::move(outgoing_services),
-      .startup_context = startup_context(),
-  };
-
-  view_.reset(create_(std::move(context)));
+          ->ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewManager>(),
+      std::move(view_owner_request)));
 }
 
 }  // namespace modular_example

@@ -6,6 +6,7 @@
 
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
+#include <lib/ui/view_framework/base_view.h>
 
 namespace modular {
 
@@ -15,8 +16,11 @@ struct ViewHost::ViewData {
   scenic::EntityNode host_node;
 };
 
-ViewHost::ViewHost(scenic::ViewContext view_context)
-    : V1BaseView(std::move(view_context), "ViewHost"),
+ViewHost::ViewHost(fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+                   fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
+                       view_owner_request)
+    : BaseView(std::move(view_manager), std::move(view_owner_request),
+               "ViewHost"),
       container_node_(session()) {
   parent_node().AddChild(container_node_);
 }
@@ -34,9 +38,8 @@ void ViewHost::ConnectView(
   container_node_.AddChild(view_data->host_node);
   views_.emplace(child_key, std::move(view_data));
 
-  GetViewContainer()->AddChild2(
-      child_key, zx::eventpair(view_owner.TakeChannel().release()),
-      std::move(host_import_token));
+  GetViewContainer()->AddChild(child_key, std::move(view_owner),
+                               std::move(host_import_token));
   UpdateScene();
 }
 
@@ -54,7 +57,7 @@ void ViewHost::OnChildUnavailable(uint32_t child_key) {
   it->second->host_node.Detach();
   views_.erase(it);
 
-  GetViewContainer()->RemoveChild2(child_key, zx::eventpair());
+  GetViewContainer()->RemoveChild(child_key, nullptr);
   UpdateScene();
 }
 

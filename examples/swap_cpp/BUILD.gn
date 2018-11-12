@@ -14,7 +14,6 @@ executable_package("swap_module1") {
     ":module",
     "//peridot/public/lib/app_driver/cpp:app_driver",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/trace-provider",
   ]
 }
 
@@ -28,7 +27,6 @@ executable_package("swap_module2") {
     ":module",
     "//peridot/public/lib/app_driver/cpp:app_driver",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/trace-provider",
   ]
 }
 
@@ -43,7 +41,7 @@ source_set("module") {
   ]
 
   deps = [
-    "//garnet/public/lib/ui/base_view/cpp",
+    "//garnet/public/lib/ui/view_framework",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
   ]
@@ -56,11 +54,10 @@ executable_package("swap_recipe") {
     "swap_recipe.cc",
   ]
   deps = [
-    "//garnet/public/lib/ui/base_view/cpp",
+    "//garnet/public/lib/ui/view_framework",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/trace-provider",
   ]
 }

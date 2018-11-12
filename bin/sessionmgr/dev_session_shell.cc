@@ -23,7 +23,6 @@
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
-#include <zx/eventpair.h>
 
 #include "peridot/lib/common/names.h"
 #include "peridot/lib/fidl/single_service_app.h"
@@ -86,34 +85,26 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
  private:
   // |ViewApp|
   void CreateView(
-      zx::eventpair view_token,
-      fidl::InterfaceRequest<
-          fuchsia::sys::ServiceProvider> /*incoming_services*/,
-      fidl::InterfaceHandle<
-          fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {
-    view_token_ = std::move(view_token);
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
+          view_owner_request,
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
+      override {
+    view_owner_request_ = std::move(view_owner_request);
 
     Connect();
   }
 
   void Connect() {
-    FXL_CHECK(!!view_token_);
+    FXL_CHECK(!!view_owner_request_);
     FXL_CHECK(!!story_provider_);
     FXL_CHECK(!!puppet_master_);
     FXL_LOG(INFO) << "DevSessionShell START " << settings_.root_module << " "
                   << settings_.root_link;
 
-    auto scenic =
+    view_ = std::make_unique<modular::ViewHost>(
         startup_context()
-            ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
-    scenic::ViewContext context = {
-        .session_and_listener_request =
-            scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-        .view_token = std::move(view_token_),
-        .startup_context = startup_context(),
-    };
-
-    view_ = std::make_unique<modular::ViewHost>(std::move(context));
+            ->ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewManager>(),
+        std::move(view_owner_request_));
 
     puppet_master_->ControlStory(settings_.story_id,
                                  story_puppet_master_.NewRequest());
@@ -245,7 +236,8 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
 
   const Settings settings_;
 
-  zx::eventpair view_token_;
+  fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
+      view_owner_request_;
   std::unique_ptr<modular::ViewHost> view_;
 
   fuchsia::modular::SessionShellContextPtr session_shell_context_;
