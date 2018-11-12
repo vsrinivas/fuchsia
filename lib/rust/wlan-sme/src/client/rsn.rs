@@ -30,6 +30,7 @@ pub fn is_rsn_compatible(a_rsne: &Rsne) -> bool {
         // TKIP is considered broken and should never be used in a PTKSA or IGTKSA.
         c.has_known_usage() && (c.suite_type == cipher::CCMP_128 || c.suite_type == cipher::TKIP)
     });
+
     let pairwise_supported = a_rsne.pairwise_cipher_suites.iter()
         .any(|c| c.has_known_usage() && c.suite_type == cipher::CCMP_128);
     let akm_supported = a_rsne.akm_suites.iter()
@@ -89,8 +90,10 @@ fn derive_s_rsne(a_rsne: &Rsne) -> Result<Rsne, failure::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::client::test_utils::{fake_protected_bss_description, fake_unprotected_bss_description};
-    use crate::client::test_utils::{make_rsne, rsne_as_bytes, wpa2_psk_ccmp_rsne_with_caps};
+    use crate::{
+        client::test_utils::{fake_protected_bss_description, fake_unprotected_bss_description},
+        test_utils::{make_rsne, rsne_as_bytes, wpa2_psk_ccmp_rsne_with_caps},
+    };
     use wlan_rsn::rsne::RsnCapabilities;
 
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];

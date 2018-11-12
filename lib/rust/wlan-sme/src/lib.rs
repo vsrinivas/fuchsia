@@ -10,6 +10,8 @@ pub mod mesh;
 pub mod phy_selection;
 pub mod clone_utils;
 mod sink;
+#[cfg(test)]
+pub mod test_utils;
 pub mod timer;
 
 use fidl_fuchsia_wlan_mlme as fidl_mlme;

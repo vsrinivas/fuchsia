@@ -5,9 +5,9 @@
 use failure::{bail, ensure};
 use fidl_fuchsia_wlan_mlme as fidl_mlme;
 use log::error;
+use std::boxed::Box;
 use std::collections::HashMap;
 use wlan_rsn::{
-    Authenticator,
     key::exchange::Key,
     rsna::{UpdateSink, SecAssocStatus, SecAssocUpdate},
 };
@@ -17,6 +17,7 @@ use crate::{
     ap::{
         Context, Tokens,
         aid::{self, AssociationId},
+        authenticator::Authenticator,
         event::{self, ClientEvent, Event},
     },
     timer::EventId,
@@ -26,12 +27,13 @@ use crate::{
 pub struct RemoteClient {
     pub addr: MacAddr,
     pub aid: AssociationId,
-    pub authenticator: Option<Authenticator>,
+    pub authenticator: Option<Box<Authenticator>>,
     key_exchange_timeout: Option<EventId>,
 }
 
 impl RemoteClient {
-    fn new(addr: MacAddr, aid: AssociationId, authenticator: Option<Authenticator>) -> Self {
+    fn new(addr: MacAddr, aid: AssociationId, authenticator: Option<Box<Authenticator>>)
+           -> Self {
         RemoteClient {
             addr,
             aid,
@@ -181,7 +183,7 @@ pub struct Map {
 }
 
 impl Map {
-    pub fn add_client(&mut self, addr: MacAddr, authenticator: Option<Authenticator>)
+    pub fn add_client(&mut self, addr: MacAddr, authenticator: Option<Box<Authenticator>>)
                       -> Result<AssociationId, failure::Error> {
         ensure!(self.get_client(&addr).is_none(), "client already exists in map");
 
@@ -209,6 +211,189 @@ impl Map {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use {
+        bytes::Bytes,
+        eapol,
+        futures::channel::mpsc,
+        std::{
+            error::Error,
+            sync::{Arc, Mutex},
+        },
+        wlan_rsn::{
+            akm::{self, Akm},
+            cipher::{self, Cipher},
+            key::{ptk::Ptk, gtk::Gtk},
+            suite_selector::OUI,
+        },
+    };
+    use crate::{
+        ap::{
+            event::Event,
+            test_utils::MockAuthenticator,
+            TimeStream,
+            UserSink,
+            UserStream,
+        },
+        DeviceInfo,
+        MacAddr,
+        MlmeStream,
+        sink::MlmeSink,
+        timer,
+    };
+
+    const AP_ADDR: MacAddr = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66];
+    const CLIENT_ADDR: MacAddr = [0x01, 0x07, 0x77, 0x77, 0x70, 0x10];
+    const AID: AssociationId = 1;
+
+    #[test]
+    fn test_remote_client_key_handshake() {
+        let (mut remote_client, mock_auth) = remote_client();
+        let (mut ctx, mut mlme_stream, _, _) = make_env();
+
+        // Return EAPOL key frame when Authenticator is initiated.
+        let update = SecAssocUpdate::TxEapolKeyFrame(eapol_key_frame());
+        mock_auth.set_initiate_results(vec![update]);
+        remote_client.initiate_key_exchange(&mut ctx, 1);
+
+        // Verify that remote client sent out an EAPOL.request for the EAPOL frame returned by the
+        // Authenticator
+        match mlme_stream.try_next().unwrap().expect("expect mlme message") {
+            MlmeRequest::Eapol(eapol_req) => {
+                assert_eq!(eapol_req.src_addr, AP_ADDR);
+                assert_eq!(eapol_req.dst_addr, CLIENT_ADDR);
+                assert_eq!(eapol_req.data, eapol_key_frame_bytes());
+            },
+            _ => panic!("expect eapol response sent to MLME"),
+        }
+
+        // On handling EAPOL indication, authenticator derives some keys
+        let ptk_update = SecAssocUpdate::Key(Key::Ptk(ptk()));
+        let gtk_update = SecAssocUpdate::Key(Key::Gtk(gtk()));
+        mock_auth.set_on_eapol_frame_results(vec![ptk_update, gtk_update]);
+        let eapol_ind = fidl_mlme::EapolIndication {
+            src_addr: CLIENT_ADDR,
+            dst_addr: AP_ADDR,
+            data: eapol_key_frame_bytes(),
+        };
+        remote_client.handle_eapol_ind(eapol_ind, &mut ctx)
+            .expect("expect handle_eapol_ind to succeed");
+
+        // Verify that remote client then send out request to set those keys
+        match mlme_stream.try_next().unwrap().expect("expect mlme message") {
+            MlmeRequest::SetKeys(set_keys_req) => {
+                assert_eq!(set_keys_req.keylist.len(), 1);
+                let key_descriptor = set_keys_req.keylist.get(0).expect("expect key descriptor");
+                assert_eq!(key_descriptor.key, vec![0xCCu8; cipher().tk_bytes().unwrap()]);
+                assert_eq!(key_descriptor.key_id, 0);
+                assert_eq!(key_descriptor.key_type, fidl_mlme::KeyType::Pairwise);
+                assert_eq!(key_descriptor.address, CLIENT_ADDR);
+                assert_eq!(key_descriptor.rsc, [0u8; 8]);
+                assert_eq!(key_descriptor.cipher_suite_oui, [0x00, 0x0F, 0xAC]);
+                assert_eq!(key_descriptor.cipher_suite_type, 4);
+            },
+            _ => panic!("expect set keys req to MLME"),
+        }
+
+        match mlme_stream.try_next().unwrap().expect("expect mlme message") {
+            MlmeRequest::SetKeys(set_keys_req) => {
+                assert_eq!(set_keys_req.keylist.len(), 1);
+                let key_descriptor = set_keys_req.keylist.get(0).expect("expect key descriptor");
+                assert_eq!(key_descriptor.key, gtk_bytes());
+                assert_eq!(key_descriptor.key_id, 2);
+                assert_eq!(key_descriptor.key_type, fidl_mlme::KeyType::Group);
+                assert_eq!(key_descriptor.address, [0xFFu8; 6]);
+                assert_eq!(key_descriptor.rsc, [0u8; 8]);
+                assert_eq!(key_descriptor.cipher_suite_oui, [0x00, 0x0F, 0xAC]);
+                assert_eq!(key_descriptor.cipher_suite_type, 4);
+            },
+            _ => panic!("expect set keys req to MLME"),
+        }
+    }
+
+    #[test]
+    fn test_remote_client_key_handshake_timeout() {
+        let (mut remote_client, mock_auth) = remote_client();
+        let (mut ctx, mut mlme_stream, _, mut time_stream) = make_env();
+
+        let update = SecAssocUpdate::TxEapolKeyFrame(eapol_key_frame());
+        mock_auth.set_initiate_results(vec![update]);
+        remote_client.initiate_key_exchange(&mut ctx, 1);
+
+        for i in 1..=4 {
+            match mlme_stream.try_next().unwrap().expect("expect mlme message") {
+                MlmeRequest::Eapol(eapol_req) => {
+                    assert_eq!(eapol_req.src_addr, AP_ADDR);
+                    assert_eq!(eapol_req.dst_addr, CLIENT_ADDR);
+                    assert_eq!(eapol_req.data, eapol_key_frame_bytes());
+                },
+                _ => panic!("expect eapol response sent to MLME - attempt {}", i),
+            }
+
+            // Verify timed event was scheduled and use it to trigger timeout
+            let (_, timed_event) = time_stream.try_next().unwrap().expect("expect timed event");
+            match timed_event.event {
+                Event::Client { addr, event } => {
+                    assert_eq!(addr, CLIENT_ADDR);
+                    let update = SecAssocUpdate::TxEapolKeyFrame(eapol_key_frame());
+                    mock_auth.set_initiate_results(vec![update]);
+                    remote_client.handle_timeout(timed_event.id, event, &mut ctx);
+                }
+                _ => panic!("expect client timed event"),
+            }
+        }
+
+        // On the 4th timeout, remote client sends out a deauth request instead
+        match mlme_stream.try_next().unwrap().expect("expect mlme message") {
+            MlmeRequest::Deauthenticate(deauth_req) => {
+                assert_eq!(deauth_req.peer_sta_address, CLIENT_ADDR);
+                assert_eq!(deauth_req.reason_code, fidl_mlme::ReasonCode::FourwayHandshakeTimeout);
+            },
+            _ => panic!("expect deauth req to MLME"),
+        }
+    }
+
+    #[test]
+    fn test_remote_client_ignore_timeout_if_key_handshake_succeeds() {
+        let (mut remote_client, mock_auth) = remote_client();
+        let (mut ctx, mut mlme_stream, _, mut time_stream) = make_env();
+
+        let update = SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished);
+        mock_auth.set_initiate_results(vec![update]);
+        remote_client.initiate_key_exchange(&mut ctx, 1);
+
+        // Verify timed event was scheduled and use it to try to trigger timeout
+        let (_, timed_event) = time_stream.try_next().unwrap().expect("expect timed event");
+        match timed_event.event {
+            Event::Client { event, .. } => {
+                let update = SecAssocUpdate::TxEapolKeyFrame(eapol_key_frame());
+                mock_auth.set_initiate_results(vec![update]);
+                remote_client.handle_timeout(timed_event.id, event, &mut ctx);
+            }
+            _ => panic!("expect client timed event"),
+        }
+
+        // Since EssSa was already established, timeout did not trigger.
+        match mlme_stream.try_next() {
+            Err(e) => assert_eq!(e.description(), "receiver channel is empty"),
+            _ => panic!("unexpected event in mlme stream"),
+        }
+    }
+
+    #[test]
+    fn test_remote_client_handle_eapol_ind_invalid() {
+        let (mut remote_client, _) = remote_client();
+        let (mut ctx, _, _, _) = make_env();
+
+        let eapol_ind = fidl_mlme::EapolIndication {
+            src_addr: CLIENT_ADDR,
+            dst_addr: AP_ADDR,
+            data: vec![0x66u8, 20],
+        };
+        match remote_client.handle_eapol_ind(eapol_ind, &mut ctx) {
+            Err(e) => assert_eq!(format!("{}", e), "error parsing EAPoL key frame"),
+            _ => panic!("expect handle_eapol_ind to fail"),
+        }
+    }
 
     #[test]
     fn test_remote_client_map() {
@@ -242,5 +427,103 @@ mod tests {
         use std::mem;
         let mac_addr: [u8; 4] = unsafe { mem::transmute(id) };
         [mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], 0, 0]
+    }
+
+    fn eapol_key_frame_bytes() -> Vec<u8> {
+        // Content doesn't matter; we just need a valid EAPOL key frame to test our code path
+        vec![
+            0x01, 0x03, 0x00, 0x5f, 0x02, 0x00, 0x8a, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x01, 0x39, 0x5c, 0xc7, 0x6e, 0x1a, 0xe9, 0x9f, 0xa0, 0xb1, 0x22, 0x79,
+            0xfe, 0xc3, 0xb9, 0xa9, 0x9e, 0x1d, 0x9a, 0x21, 0xb8, 0x47, 0x51, 0x38, 0x98, 0x25,
+            0xf8, 0xc7, 0xca, 0x55, 0x86, 0xbc, 0xda, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x03, 0x01, 0x02, 0x03,
+        ]
+    }
+
+    fn eapol_key_frame() -> eapol::KeyFrame {
+        eapol::key_frame_from_bytes(&eapol_key_frame_bytes(), 16)
+            .to_full_result()
+            .expect("expect valid eapol key frame")
+    }
+
+    fn ptk() -> Ptk {
+        let mut ptk_bytes = vec![];
+        // Using different values for KCK, KEK,, and TK to detect potential mistakes. This ensures
+        // that if our code, for example, mistakenly uses KCK instead of TK, test would fail.
+        ptk_bytes.extend(vec![0xAAu8; akm().kck_bytes().unwrap() as usize]);
+        ptk_bytes.extend(vec![0xBBu8; akm().kek_bytes().unwrap() as usize]);
+        ptk_bytes.extend(vec![0xCCu8; cipher().tk_bytes().unwrap()]);
+        Ptk::from_ptk(ptk_bytes, &akm(), cipher()).expect("expect valid ptk")
+    }
+
+    fn gtk_bytes() -> Vec<u8> {
+        vec![0xDD; 16]
+    }
+
+    fn gtk() -> Gtk {
+        Gtk::from_gtk(gtk_bytes(), 2, cipher()).expect("failed creating GTK")
+    }
+
+    fn akm() -> Akm {
+        Akm {
+            oui: Bytes::from(&OUI[..]),
+            suite_type: akm::PSK,
+        }
+    }
+
+    fn cipher() -> Cipher {
+        Cipher {
+            oui: Bytes::from(&OUI[..]),
+            suite_type: cipher::CCMP_128,
+        }
+    }
+
+    fn remote_client() -> (RemoteClient, MockAuthenticatorController) {
+        let mock_initiate = Arc::new(Mutex::new(UpdateSink::default()));
+        let mock_on_eapol_frame = Arc::new(Mutex::new(UpdateSink::default()));
+        let authenticator = MockAuthenticator::new(mock_initiate.clone(),
+                                                   mock_on_eapol_frame.clone());
+        let remote_client = RemoteClient::new(CLIENT_ADDR, AID, Some(Box::new(authenticator)));
+        (remote_client, MockAuthenticatorController { mock_initiate, mock_on_eapol_frame })
+    }
+
+    fn make_env() -> (Context<FakeTokens>, MlmeStream, UserStream<FakeTokens>, TimeStream) {
+        let device_info = DeviceInfo {
+            addr: AP_ADDR,
+            bands: vec![],
+        };
+        let (mlme_sink, mlme_stream) = mpsc::unbounded();
+        let (user_sink, user_stream) = mpsc::unbounded();
+        let (timer, time_stream) = timer::create_timer();
+        let ctx = Context::<FakeTokens> {
+            device_info,
+            mlme_sink: MlmeSink::new(mlme_sink),
+            user_sink: UserSink::new(user_sink),
+            timer,
+        };
+        (ctx, mlme_stream, user_stream, time_stream)
+    }
+
+    struct FakeTokens;
+    impl Tokens for FakeTokens {
+        type StartToken = i32;
+        type StopToken = i32;
+    }
+
+    struct MockAuthenticatorController {
+        mock_initiate: Arc<Mutex<UpdateSink>>,
+        mock_on_eapol_frame: Arc<Mutex<UpdateSink>>,
+    }
+
+    impl MockAuthenticatorController {
+        fn set_initiate_results(&self, updates: UpdateSink) {
+            *self.mock_initiate.lock().unwrap() = updates;
+        }
+        fn set_on_eapol_frame_results(&self, updates: UpdateSink) {
+            *self.mock_on_eapol_frame.lock().unwrap() = updates;
+        }
     }
 }

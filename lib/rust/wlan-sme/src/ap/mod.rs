@@ -3,30 +3,35 @@
 // found in the LICENSE file.
 
 mod aid;
+mod authenticator;
 mod event;
 mod remote_client;
 mod rsn;
+#[cfg(test)]
+mod test_utils;
 
 use failure::{bail, ensure};
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent};
 use futures::channel::mpsc;
 use log::{debug, info, error, warn};
 use wlan_rsn::{
-    Authenticator,
+    self,
     NegotiatedRsne,
     nonce::NonceReader,
     gtk::GtkProvider,
     psk,
-    rsne::Rsne
+    rsne::Rsne,
 };
 use crate::ap::{
     aid::AssociationId,
+    authenticator::Authenticator,
     event::{Event, SmeEvent},
     rsn::{create_wpa2_psk_rsne, is_valid_rsne_subset},
 };
 use crate::{DeviceInfo, MacAddr, MlmeRequest, Ssid};
 use crate::sink::MlmeSink;
 use crate::timer::{self, EventId, TimedEvent, Timer};
+use std::boxed::Box;
 use std::sync::{Arc, Mutex};
 
 const DEFAULT_BEACON_PERIOD: u16 = 100;
@@ -130,7 +135,7 @@ impl<T: Tokens> ApSme<T> {
                     user_sink: UserSink::new(user_sink),
                     timer,
                 }
-            })
+            }),
         };
         (sme, mlme_stream, user_stream, time_stream)
     }
@@ -389,17 +394,18 @@ impl<T: Tokens> InfraBss<T> {
             fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
         })?;
         let authenticator =
-            Authenticator::new_wpa2psk_ccmp128(nonce_rdr, gtk_provider,
-                                               a_rsn.psk.clone(), client_addr.clone(),
-                                               s_rsne, self.ctx.device_info.addr, a_rsn.rsne)
+            wlan_rsn::Authenticator::new_wpa2psk_ccmp128(nonce_rdr, gtk_provider,
+                                                         a_rsn.psk.clone(), client_addr.clone(),
+                                                         s_rsne, self.ctx.device_info.addr,
+                                                         a_rsn.rsne)
                 .map_err(|e| {
                     warn!("failed to create authenticator: {}", e);
                     fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
                 })?;
-        self.add_client(client_addr.clone(), Some(authenticator))
+        self.add_client(client_addr.clone(), Some(Box::new(authenticator)))
     }
 
-    fn add_client(&mut self, addr: MacAddr, auth: Option<Authenticator>)
+    fn add_client(&mut self, addr: MacAddr, auth: Option<Box<Authenticator>>)
                   -> Result<AssociationId, fidl_mlme::AssociateResultCodes> {
         self.client_map.add_client(addr, auth).map_err(|e| {
             warn!("unable to add user to client map: {}", e);
@@ -528,8 +534,8 @@ mod tests {
         if let MlmeRequest::Start(start_req) = msg {
             assert_eq!(start_req.ssid, SSID.to_vec());
             assert_eq!(start_req.bss_type, fidl_mlme::BssTypes::Infrastructure);
-            assert!(start_req.beacon_period != 0);
-            assert!(start_req.dtim_period != 0);
+            assert_ne!(start_req.beacon_period, 0);
+            assert_ne!(start_req.dtim_period, 0);
             assert_eq!(start_req.channel, unprotected_config().channel);
             assert!(start_req.rsne.is_none());
         } else {

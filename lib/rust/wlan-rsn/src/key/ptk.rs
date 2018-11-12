@@ -23,6 +23,21 @@ pub struct Ptk {
 }
 
 impl Ptk {
+    pub fn from_ptk(ptk: Vec<u8>, akm: &Akm, cipher: Cipher)
+                    -> Result<Self, failure::Error> {
+        let kck_len = akm.kck_bytes().ok_or(Error::PtkHierarchyUnsupportedAkmError)? as usize;
+        let kek_len = akm.kek_bytes().ok_or(Error::PtkHierarchyUnsupportedAkmError)? as usize;
+        let tk_len = cipher.tk_bytes().ok_or(Error::PtkHierarchyUnsupportedCipherError)?;
+        ensure!(kck_len + kek_len + tk_len == ptk.len(), "invalid ptk length");
+        Ok(Ptk {
+            ptk,
+            kck_len,
+            kek_len,
+            tk_len,
+            cipher,
+        })
+    }
+
     // IEEE 802.11-2016, 12.7.1.3
     pub fn new(
         pmk: &[u8],
