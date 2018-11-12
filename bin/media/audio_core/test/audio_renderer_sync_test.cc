@@ -94,7 +94,7 @@ TEST_F(AudioRendererSyncTest, SetPcmFormat) {
 //
 // Before setting format, PlayNoReply should cause a Disconnect.
 // GetMinLeadTime is our way of verifying whether the connection survived.
-TEST_F(AudioRendererSyncTest_Negative, PlayNoReplyWithoutFormat) {
+TEST_F(AudioRendererSyncTest_Negative, PlayNoReplyNoFormatCausesDisconnect) {
   EXPECT_EQ(ZX_OK,
             audio_renderer_sync_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
                                               fuchsia::media::NO_TIMESTAMP));

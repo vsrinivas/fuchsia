@@ -27,7 +27,10 @@ constexpr zx::duration kDurationTimeoutExpected = zx::msec(50);
 
 constexpr char kConnectionErr[] =
     "Connection to fuchsia.media FIDL interface was lost!\n";
+constexpr char kTimeoutErr[] = "Timeout -- no callback received!\n";
+constexpr char kNoTimeoutErr[] = "Unexpected callback received!\n";
 
+constexpr float kUnityGainDb = 0.0f;
 constexpr float kTooLowGainDb = fuchsia::media::MUTED_GAIN_DB - 0.1f;
 constexpr float kTooHighGainDb = fuchsia::media::MAX_GAIN_DB + 0.1f;
 

@@ -19,35 +19,8 @@ namespace test {
 // This set of tests verifies asynchronous usage of AudioRenderer.
 class AudioRendererTest : public gtest::RealLoopFixture {
  protected:
-  void SetUp() override {
-    ::gtest::RealLoopFixture::SetUp();
-
-    environment_services_ = component::GetEnvironmentServices();
-    environment_services_->ConnectToService(audio_.NewRequest());
-    ASSERT_TRUE(audio_);
-
-    audio_.set_error_handler([this](zx_status_t status) {
-      error_occurred_ = true;
-      QuitLoop();
-    });
-
-    audio_->CreateAudioRenderer(audio_renderer_.NewRequest());
-    ASSERT_TRUE(audio_renderer_);
-
-    audio_renderer_.set_error_handler([this](zx_status_t status) {
-      error_occurred_ = true;
-      QuitLoop();
-    });
-  }
-
-  void TearDown() override {
-    EXPECT_FALSE(error_occurred_);
-
-    audio_renderer_.Unbind();
-    audio_.Unbind();
-
-    ::gtest::RealLoopFixture::TearDown();
-  }
+  virtual void SetUp() override;
+  void TearDown() override;
 
   std::shared_ptr<component::Services> environment_services_;
   fuchsia::media::AudioPtr audio_;
@@ -55,22 +28,60 @@ class AudioRendererTest : public gtest::RealLoopFixture {
   fuchsia::media::GainControlPtr gain_control_;
 
   bool error_occurred_ = false;
+  bool expect_error_ = false;
+  bool expect_renderer_ = true;
 };
 
 //
 // AudioRendererTestNegative
 //
-// A slight specialization of AudioRendererTest, to validate scenarios in which
-// we expect the AudioRenderer binding to disconnect.
+// A specialization of AudioRendererTest to validate scenarios where we expect
+// AudioRenderer bindings to disconnect (Audio bindings should be OK).
 class AudioRendererTest_Negative : public AudioRendererTest {
  protected:
-  void TearDown() override {
-    EXPECT_FALSE(audio_renderer_);
-    EXPECT_TRUE(error_occurred_);
-
-    ::gtest::RealLoopFixture::TearDown();
-  }
+  void SetUp() override;
 };
+
+//
+// AudioRendererTest implementation
+//
+void AudioRendererTest::SetUp() {
+  ::gtest::RealLoopFixture::SetUp();
+
+  environment_services_ = component::GetEnvironmentServices();
+  environment_services_->ConnectToService(audio_.NewRequest());
+  ASSERT_TRUE(audio_);
+
+  auto err_handler = [this](zx_status_t error) {
+    error_occurred_ = true;
+    QuitLoop();
+  };
+
+  audio_.set_error_handler(err_handler);
+
+  audio_->CreateAudioRenderer(audio_renderer_.NewRequest());
+  ASSERT_TRUE(audio_renderer_);
+
+  audio_renderer_.set_error_handler(err_handler);
+}
+
+void AudioRendererTest::TearDown() {
+  EXPECT_EQ(expect_error_, error_occurred_);
+  EXPECT_EQ(expect_renderer_, static_cast<bool>(audio_renderer_));
+  EXPECT_TRUE(audio_);
+
+  ::gtest::RealLoopFixture::TearDown();
+}
+
+//
+// AudioRendererTest_Negative implementation
+//
+void AudioRendererTest_Negative::SetUp() {
+  AudioRendererTest::SetUp();
+
+  expect_error_ = true;
+  expect_renderer_ = false;
+}
 
 //
 // AudioRenderer validation
@@ -164,8 +175,7 @@ TEST_F(AudioRendererTest, EnableMinLeadTimeEvents) {
 
   // After enabling MinLeadTime events, we expect an initial notification.
   // Because we have not yet set the format, we expect MinLeadTime to be 0.
-  EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected))
-      << "No MinLeadTime update event received";
+  EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected)) << kTimeoutErr;
   EXPECT_EQ(min_lead_time, 0);
 
   // FYI: after setting format, MinLeadTime should change to be greater than 0
@@ -188,8 +198,7 @@ TEST_F(AudioRendererTest, DisableMinLeadTimeEvents) {
   // If we did, either way it is an error: MinLeadTime event or disconnect.
   EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected));
   EXPECT_FALSE(error_occurred_) << kConnectionErr;
-  EXPECT_EQ(min_lead_time, -1)
-      << "Received MinLeadTime update while events were disabled";
+  EXPECT_EQ(min_lead_time, -1) << "Received unexpected MinLeadTime update";
 }
 
 //
@@ -204,15 +213,16 @@ TEST_F(AudioRendererTest, GetMinLeadTime) {
       });
 
   // Wait to receive Lead time callback (will loop timeout? EXPECT_FALSE)
-  EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
+  EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected)) << kTimeoutErr;
   EXPECT_EQ(min_lead_time, 0);
 }
 
 // Test creation and interface independence of GainControl.
+// In a number of tests below, we run the message loop to give the AudioRenderer
+// or GainControl binding a chance to disconnect, if an error occurred.
 TEST_F(AudioRendererTest, BindGainControl) {
   // Validate AudioRenderer can create GainControl interface.
   audio_renderer_->BindGainControl(gain_control_.NewRequest());
-  // Give AudioRenderer interface a chance to disconnect if it must.
   ASSERT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected)) << kConnectionErr;
   EXPECT_TRUE(gain_control_);
   EXPECT_TRUE(audio_renderer_);
@@ -220,18 +230,17 @@ TEST_F(AudioRendererTest, BindGainControl) {
   // Validate that AudioRenderer persists without GainControl.
   gain_control_.Unbind();
   EXPECT_FALSE(gain_control_);
-  // Give AudioRenderer interface a chance to disconnect if it must.
   EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected)) << kConnectionErr;
   EXPECT_TRUE(audio_renderer_);
 
   // Validate GainControl persists after AudioRenderer is unbound.
   audio_renderer_->BindGainControl(gain_control_.NewRequest());
+  expect_renderer_ = false;
   audio_renderer_.Unbind();
   EXPECT_FALSE(audio_renderer_);
-  // At this point, the GainControl may still exist, but...
   EXPECT_TRUE(gain_control_);
 
-  // ...give GainControl interface a chance to disconnect if it must...
+  // ...give GainControl interface a chance to disconnect...
   EXPECT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected)) << kConnectionErr;
   // ... and by now, it should be gone.
   EXPECT_FALSE(gain_control_);
@@ -241,7 +250,7 @@ TEST_F(AudioRendererTest, BindGainControl) {
 // AudioRendererTest_Negative
 //
 // Separate test class for cases in which we expect the AudioRenderer binding to
-// disconnect -- and our AudioRenderer interface ptr to be reset.
+// disconnect, and our AudioRenderer interface ptr to be reset.
 //
 // SetStreamType is not yet implemented and expected to cause a Disconnect.
 TEST_F(AudioRendererTest_Negative, SetStreamType) {
@@ -257,7 +266,7 @@ TEST_F(AudioRendererTest_Negative, SetStreamType) {
   audio_renderer_->SetStreamType(std::move(stream_type));
 
   // Binding should Disconnect (EXPECT loop to NOT timeout)
-  EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
+  EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected)) << kTimeoutErr;
 }
 
 // TODO(mpuryear): negative tests for the following:
@@ -280,7 +289,7 @@ TEST_F(AudioRendererTest_Negative, PlayWithoutFormat) {
                         });
 
   // Disconnect callback should be received
-  EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
+  EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected)) << kTimeoutErr;
   EXPECT_EQ(ref_time_received, -1);
   EXPECT_EQ(media_time_received, -1);
 }
@@ -306,7 +315,7 @@ TEST_F(AudioRendererTest_Negative, PlayWithoutBuffers) {
                         });
 
   // Disconnect callback should be received
-  EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
+  EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected)) << kTimeoutErr;
   EXPECT_EQ(ref_time_received, -1);
   EXPECT_EQ(media_time_received, -1);
 }
@@ -317,7 +326,7 @@ TEST_F(AudioRendererTest_Negative, PlayNoReplyWithoutFormat) {
                                fuchsia::media::NO_TIMESTAMP);
 
   // Disconnect callback should be received.
-  EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
+  EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected)) << kTimeoutErr;
 }
 
 // Before setting format, Pause should not succeed.
@@ -333,7 +342,7 @@ TEST_F(AudioRendererTest_Negative, PauseWithoutFormat) {
   });
 
   // Disconnect callback should be received
-  EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
+  EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected)) << kTimeoutErr;
   EXPECT_EQ(ref_time_received, -1);
   EXPECT_EQ(media_time_received, -1);
 }
@@ -357,7 +366,7 @@ TEST_F(AudioRendererTest_Negative, PauseWithoutBuffers) {
   });
 
   // Disconnect callback should be received
-  EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
+  EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected)) << kTimeoutErr;
   EXPECT_EQ(ref_time_received, -1);
   EXPECT_EQ(media_time_received, -1);
 }
@@ -367,7 +376,7 @@ TEST_F(AudioRendererTest_Negative, PauseNoReplyWithoutFormat) {
   audio_renderer_->PauseNoReply();
 
   // Disconnect callback should be received.
-  EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected));
+  EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected)) << kTimeoutErr;
 }
 
 }  // namespace test
