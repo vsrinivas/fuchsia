@@ -47,8 +47,7 @@ void LedgerRepositoryImpl::BindRepository(
 void LedgerRepositoryImpl::PageIsClosedAndSynced(
     fxl::StringView ledger_name, storage::PageIdView page_id,
     fit::function<void(Status, PagePredicateResult)> callback) {
-  LedgerManager* ledger_manager =
-      GetLedgerManager(ledger_name, CreateIfMissing::YES);
+  LedgerManager* ledger_manager = GetLedgerManager(ledger_name);
   FXL_DCHECK(ledger_manager);
 
   ledger_manager->PageIsClosedAndSynced(page_id, std::move(callback));
@@ -57,8 +56,7 @@ void LedgerRepositoryImpl::PageIsClosedAndSynced(
 void LedgerRepositoryImpl::PageIsClosedOfflineAndEmpty(
     fxl::StringView ledger_name, storage::PageIdView page_id,
     fit::function<void(Status, PagePredicateResult)> callback) {
-  LedgerManager* ledger_manager =
-      GetLedgerManager(ledger_name, CreateIfMissing::YES);
+  LedgerManager* ledger_manager = GetLedgerManager(ledger_name);
   FXL_DCHECK(ledger_manager);
 
   ledger_manager->PageIsClosedOfflineAndEmpty(page_id, std::move(callback));
@@ -67,8 +65,7 @@ void LedgerRepositoryImpl::PageIsClosedOfflineAndEmpty(
 void LedgerRepositoryImpl::DeletePageStorage(
     fxl::StringView ledger_name, storage::PageIdView page_id,
     fit::function<void(Status)> callback) {
-  LedgerManager* ledger_manager =
-      GetLedgerManager(ledger_name, CreateIfMissing::YES);
+  LedgerManager* ledger_manager = GetLedgerManager(ledger_name);
   FXL_DCHECK(ledger_manager);
   return ledger_manager->DeletePageStorage(page_id, std::move(callback));
 }
@@ -85,18 +82,13 @@ LedgerRepositoryImpl::Unbind() {
 }
 
 LedgerManager* LedgerRepositoryImpl::GetLedgerManager(
-    convert::ExtendedStringView ledger_name,
-    CreateIfMissing create_if_missing) {
+    convert::ExtendedStringView ledger_name) {
   FXL_DCHECK(!ledger_name.empty());
 
   // If the Ledger instance is already open return it directly.
   auto it = ledger_managers_.find(ledger_name);
   if (it != ledger_managers_.end()) {
     return &(it->second);
-  }
-
-  if (create_if_missing == CreateIfMissing::NO) {
-    return nullptr;
   }
 
   std::string name_as_string = convert::ToString(ledger_name);
@@ -129,8 +121,7 @@ void LedgerRepositoryImpl::GetLedger(
     return;
   }
 
-  LedgerManager* ledger_manager =
-      GetLedgerManager(ledger_name, CreateIfMissing::YES);
+  LedgerManager* ledger_manager = GetLedgerManager(ledger_name);
   FXL_DCHECK(ledger_manager);
   ledger_manager->BindLedger(std::move(ledger_request));
   callback(Status::OK);

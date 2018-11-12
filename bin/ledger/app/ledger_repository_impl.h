@@ -78,13 +78,9 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
   void DiskCleanUp(DiskCleanUpCallback callback) override;
 
  private:
-  enum CreateIfMissing { YES, NO };
-
   // Retrieves the existing, or creates a new LedgerManager object with the
-  // given |ledger_name|. Returns a pointer to the LedgerManager instance, or
-  // nullptr if it is not found and |create_if_missing| is |NO|.
-  LedgerManager* GetLedgerManager(convert::ExtendedStringView ledger_name,
-                                  CreateIfMissing create_if_missing);
+  // given |ledger_name|. Returns a pointer to the LedgerManager instance.
+  LedgerManager* GetLedgerManager(convert::ExtendedStringView ledger_name);
 
   void CheckEmpty();
 
