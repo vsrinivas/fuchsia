@@ -6,7 +6,7 @@
 
 use {
     bt_avdtp as avdtp,
-    failure::{Error, format_err, ResultExt},
+    failure::{format_err, Error, ResultExt},
     fidl_fuchsia_bluetooth_bredr::*,
     fuchsia_async as fasync,
     fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog},
@@ -46,27 +46,25 @@ fn make_profile_service_definition() -> ServiceDefinition {
             minor_version: 3,
         }],
         additional_protocol_descriptors: None,
-        information: vec![
-            Information {
-                language: "en".to_string(),
-                name: Some("A2DP".to_string()),
-                description: Some("Advanced Audio Distribution Profile".to_string()),
-                provider: Some("Fuchsia".to_string()),
-            }
-        ],
+        information: vec![Information {
+            language: "en".to_string(),
+            name: Some("A2DP".to_string()),
+            description: Some("Advanced Audio Distribution Profile".to_string()),
+            provider: Some("Fuchsia".to_string()),
+        }],
         additional_attributes: None,
     }
 }
 
 fn get_available_stream_info() -> avdtp::Result<Vec<avdtp::StreamInformation>> {
     // TODO(jamuraa): retrieve available streams from Media
-    let s = avdtp::StreamInformation::new(
+    let s = avdtp::StreamEndpoint::new(
         1,
-        false,
         avdtp::MediaType::Audio,
         avdtp::EndpointType::Sink,
+        vec![],
     )?;
-    Ok(vec![s])
+    Ok(vec![s.information()])
 }
 
 async fn discover_remote_streams(peer: Arc<avdtp::Peer>) {

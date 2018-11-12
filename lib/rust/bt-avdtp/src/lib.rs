@@ -17,29 +17,25 @@ use {
     },
     parking_lot::Mutex,
     slab::Slab,
-    std::{
-        collections::VecDeque,
-        marker::Unpin,
-        mem,
-        pin::Pin,
-        result,
-        sync::Arc,
-    },
-};
-
-use crate::types::{
-    Decodable, Encodable, ErrorCode, SignalIdentifier, SignalingHeader, SignalingMessageType,
-    TryFrom, TxLabel,
+    std::{collections::VecDeque, marker::Unpin, mem, pin::Pin, result, sync::Arc},
 };
 
 #[cfg(test)]
 mod tests;
 
+mod stream_endpoint;
 mod types;
 
-pub use crate::types::{
-    ContentProtectionType, EndpointType, Error, MediaCodecType, MediaType, Result,
-    ServiceCapability, StreamEndpointId,
+use crate::types::{
+    Decodable, Encodable, SignalIdentifier, SignalingHeader, SignalingMessageType, TryFrom, TxLabel,
+};
+
+pub use crate::{
+    stream_endpoint::{MediaStream, StreamEndpoint},
+    types::{
+        ContentProtectionType, EndpointType, Error, ErrorCode, MediaCodecType, MediaType, Result,
+        ServiceCapability, StreamEndpointId, StreamInformation,
+    },
 };
 
 /// An AVDTP signaling peer can send commands to another peer, receive requests and send responses.
@@ -240,10 +236,10 @@ impl Peer {
         response.and(Ok(()))
     }
 
-    /// Send a Close Stream Command (Sec 8.14) to the remote peer for the given
-    /// `stream_id`.
-    /// Returns Ok(()) if the command is accepted, and RemoteRejected if the
-    /// remote peer rejects the command with the code returned by the remote.
+    /// Send an Abort (Sec 8.16) to the remote peer for the given `stream_id`.
+    /// Returns Ok(()) if the command is accepted, and Err(Timeout) if the remote
+    /// timed out.  The remote peer is not allowed to reject this command, and
+    /// commands that have invalid `stream_id` will timeout instead.
     pub async fn abort<'a>(&'a self, stream_id: &'a StreamEndpointId) -> Result<()> {
         let stream_params = &[stream_id.to_msg()];
         let response: Result<SimpleResponse> =
@@ -518,68 +514,6 @@ impl Drop for RequestStream {
     fn drop(&mut self) {
         self.inner.incoming_requests.lock().listener = RequestListener::None;
         self.inner.wake_any();
-    }
-}
-
-/// All information related to a stream. Part of the Discovery Response.
-/// See Sec 8.6.2
-#[derive(Debug, PartialEq)]
-pub struct StreamInformation {
-    id: StreamEndpointId,
-    in_use: bool,
-    media_type: MediaType,
-    endpoint_type: EndpointType,
-}
-
-impl StreamInformation {
-    /// Create a new StreamInformation from an ID.
-    /// This will only fail if the ID given is out of the range of valid SEIDs (0x01 - 0x3E)
-    pub fn new(
-        id: u8, in_use: bool, media_type: MediaType, endpoint_type: EndpointType,
-    ) -> Result<StreamInformation> {
-        Ok(StreamInformation {
-            id: StreamEndpointId::try_from(id)?,
-            in_use: in_use,
-            media_type: media_type,
-            endpoint_type: endpoint_type,
-        })
-    }
-
-    pub fn id(&self) -> &StreamEndpointId {
-        &self.id
-    }
-}
-
-impl Decodable for StreamInformation {
-    fn decode(from: &[u8]) -> Result<Self> {
-        if from.len() < 2 {
-            return Err(Error::InvalidMessage);
-        }
-        let id = StreamEndpointId::from_msg(&from[0]);
-        let in_use: bool = from[0] & 0x02 != 0;
-        let media_type = MediaType::try_from(from[1] >> 4)?;
-        let endpoint_type = EndpointType::try_from((from[1] >> 3) & 0x1)?;
-        Ok(StreamInformation {
-            id: id,
-            in_use: in_use,
-            media_type: media_type,
-            endpoint_type: endpoint_type,
-        })
-    }
-}
-
-impl Encodable for StreamInformation {
-    fn encoded_len(&self) -> usize {
-        2
-    }
-
-    fn encode(&self, into: &mut [u8]) -> Result<()> {
-        if into.len() < self.encoded_len() {
-            return Err(Error::Encoding);
-        }
-        into[0] = self.id.to_msg() | if self.in_use { 0x02 } else { 0x00 };
-        into[1] = u8::from(&self.media_type) << 4 | u8::from(&self.endpoint_type) << 3;
-        Ok(())
     }
 }
 

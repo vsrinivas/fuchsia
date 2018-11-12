@@ -98,6 +98,10 @@ pub enum Error {
     #[fail(display = "Invalid request detected: {:?} (extra: {:?})", _0, _1)]
     RequestInvalidExtra(ErrorCode, u8),
 
+    /// An operation was attempted in an Invalid State
+    #[fail(display = "Invalid State")]
+    InvalidState,
+
     #[doc(hidden)]
     #[fail(display = "__Nonexhaustive error should never be created.")]
     __Nonexhaustive,
@@ -265,6 +269,7 @@ pub_decodable_enum! {
     /// Part of the StreamInformation in Discovery Response.
     /// Defined in the Bluetooth Assigned Numbers
     /// https://www.bluetooth.com/specifications/assigned-numbers/audio-video
+    #[derive(Clone)]
     MediaType<u8> {
         Audio => 0x00,
         Video => 0x01,
@@ -276,6 +281,7 @@ pub_decodable_enum! {
     /// Type of endpoint (source or sync)
     /// Part of the StreamInformation in Discovery Response.
     /// See Section 8.20.3
+    #[derive(Clone)]
     EndpointType<u8> {
         Source => 0x00,
         Sink => 0x01,
@@ -419,7 +425,7 @@ impl Encodable for SignalingHeader {
 
 /// A Stream Endpoint Identifier, aka SEID, INT SEID, ACP SEID - Sec 8.20.1
 /// Valid values are 0x01 - 0x3E
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct StreamEndpointId(pub(crate) u8);
 
 impl StreamEndpointId {
@@ -740,6 +746,72 @@ impl Encodable for ServiceCapability {
             }
             _ => {}
         }
+        Ok(())
+    }
+}
+
+/// All information related to a stream. Part of the Discovery Response.
+/// See Sec 8.6.2
+#[derive(Debug, PartialEq)]
+pub struct StreamInformation {
+    id: StreamEndpointId,
+    in_use: bool,
+    media_type: MediaType,
+    endpoint_type: EndpointType,
+}
+
+impl StreamInformation {
+    /// Create a new StreamInformation from an ID.
+    /// This will only fail if the ID given is out of the range of valid SEIDs (0x01 - 0x3E)
+    pub fn new(
+        id: StreamEndpointId, in_use: bool, media_type: MediaType, endpoint_type: EndpointType,
+    ) -> StreamInformation {
+        StreamInformation {
+            id: id,
+            in_use: in_use,
+            media_type: media_type,
+            endpoint_type: endpoint_type,
+        }
+    }
+
+    pub fn id(&self) -> &StreamEndpointId {
+        &self.id
+    }
+
+    pub fn in_use(&self) -> &bool {
+        &self.in_use
+    }
+}
+
+impl Decodable for StreamInformation {
+    fn decode(from: &[u8]) -> Result<Self> {
+        if from.len() < 2 {
+            return Err(Error::InvalidMessage);
+        }
+        let id = StreamEndpointId::from_msg(&from[0]);
+        let in_use: bool = from[0] & 0x02 != 0;
+        let media_type = MediaType::try_from(from[1] >> 4)?;
+        let endpoint_type = EndpointType::try_from((from[1] >> 3) & 0x1)?;
+        Ok(StreamInformation {
+            id: id,
+            in_use: in_use,
+            media_type: media_type,
+            endpoint_type: endpoint_type,
+        })
+    }
+}
+
+impl Encodable for StreamInformation {
+    fn encoded_len(&self) -> usize {
+        2
+    }
+
+    fn encode(&self, into: &mut [u8]) -> Result<()> {
+        if into.len() < self.encoded_len() {
+            return Err(Error::Encoding);
+        }
+        into[0] = self.id.to_msg() | if self.in_use { 0x02 } else { 0x00 };
+        into[1] = u8::from(&self.media_type) << 4 | u8::from(&self.endpoint_type) << 3;
         Ok(())
     }
 }

@@ -12,7 +12,7 @@ use crate::*;
 
 // Helper functions
 
-fn setup_peer() -> (Peer, zx::Socket) {
+pub(crate) fn setup_peer() -> (Peer, zx::Socket) {
     let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
 
     let peer = Peer::new(signaling);
@@ -37,7 +37,7 @@ fn next_request(stream: &mut RequestStream, exec: &mut fasync::Executor) -> Requ
     }
 }
 
-fn recv_remote(remote: &zx::Socket) -> result::Result<Vec<u8>, zx::Status> {
+pub(crate) fn recv_remote(remote: &zx::Socket) -> result::Result<Vec<u8>, zx::Status> {
     let waiting = remote.outstanding_read_bytes();
     assert!(waiting.is_ok());
     let mut response: Vec<u8> = vec![0; waiting.unwrap()];
@@ -46,7 +46,7 @@ fn recv_remote(remote: &zx::Socket) -> result::Result<Vec<u8>, zx::Status> {
     Ok(response)
 }
 
-fn expect_remote_recv(expected: &[u8], remote: &zx::Socket) {
+pub(crate) fn expect_remote_recv(expected: &[u8], remote: &zx::Socket) {
     let r = recv_remote(&remote);
     assert!(r.is_ok());
     let response = r.unwrap();
@@ -71,9 +71,7 @@ fn stream_request_response(
     // We shouldn't have received anything on the stream.
     assert!(complete.is_pending());
 
-    // The peer should have responded with:
-    // Response Reject message with the same TxLabel
-    // with the MediaTransport code and BAD_MEDIA_TRANSPORT_FORMAT (0x23)
+    // The peer should have responded with the expected data.
     expect_remote_recv(expect, &remote);
 }
 
@@ -164,12 +162,11 @@ fn responds_with_same_tx_id() {
     let respond_res = match next_request(&mut stream, &mut exec) {
         Request::Discover { responder } => {
             let s = StreamInformation::new(
-                0x0A, // SEID from CMD_DISCOVER
+                StreamEndpointId(0x0A), // from CMD_DISCOVER
                 false,
                 MediaType::Video,
                 EndpointType::Source,
-            )
-            .unwrap();
+            );
             responder.send(&[s])
         }
         _ => panic!("should have received a Discover"),
@@ -322,9 +319,13 @@ fn discover_event_responder_send_works() {
 
     let respond_res = match next_request(&mut stream, &mut exec) {
         Request::Discover { responder } => {
-            let s = StreamInformation::new(0x0A, false, MediaType::Video, EndpointType::Source);
-            assert!(s.is_ok());
-            responder.send(&[s.unwrap()])
+            let s = StreamInformation::new(
+                StreamEndpointId(0x0A),
+                false,
+                MediaType::Video,
+                EndpointType::Source,
+            );
+            responder.send(&[s])
         }
         _ => panic!("should have received a Discover"),
     };
@@ -389,12 +390,26 @@ fn discover_command_works() {
     };
 
     assert_eq!(3, endpoints.len());
-    let e1 = StreamInformation::new(0x3E, false, MediaType::Audio, EndpointType::Sink).unwrap();
+    let e1 = StreamInformation::new(
+        StreamEndpointId(0x3E),
+        false,
+        MediaType::Audio,
+        EndpointType::Sink,
+    );
     assert_eq!(e1, endpoints[0]);
-    let e2 = StreamInformation::new(0x01, true, MediaType::Video, EndpointType::Source).unwrap();
+    let e2 = StreamInformation::new(
+        StreamEndpointId(0x01),
+        true,
+        MediaType::Video,
+        EndpointType::Source,
+    );
     assert_eq!(e2, endpoints[1]);
-    let e3 =
-        StreamInformation::new(0x17, false, MediaType::Multimedia, EndpointType::Sink).unwrap();
+    let e3 = StreamInformation::new(
+        StreamEndpointId(0x17),
+        false,
+        MediaType::Multimedia,
+        EndpointType::Sink,
+    );
     assert_eq!(e3, endpoints[2]);
 }
 
