@@ -46,7 +46,7 @@ function main {
           continue 2
         fi
       done
-      echo >&2 "Package $pkg will not be pushed. It is not part of the current build."
+      echo >&2 "Package $pkg will not be pushed. It is not part of the current build, is not a package, or has 'deprecated_system_image=true'."
       exit 1
     done
   fi
