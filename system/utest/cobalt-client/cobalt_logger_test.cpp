@@ -107,7 +107,8 @@ private:
 // Handles RPC calls to LoggerFactory.
 class FakeLoggerFactory {
 public:
-    FakeLoggerFactory() : logger_binder_(nullptr) {}
+    FakeLoggerFactory()
+        : logger_binder_(nullptr) {}
 
     zx_status_t CreateLogger(const fuchsia_cobalt_ProjectProfile* profile, zx_handle_t logger,
                              fidl_txn_t* txn) {
@@ -138,6 +139,8 @@ public:
         static constexpr fuchsia_cobalt_LoggerFactory_ops_t kOps = {
             .CreateLogger = Binder::BindMember<&FakeLoggerFactory::CreateLogger>,
             .CreateLoggerSimple = Binder::BindMember<&FakeLoggerFactory::CreateLoggerSimple>,
+            .CreateLoggerFromProjectName = nullptr,
+            .CreateLoggerSimpleFromProjectName = nullptr,
         };
         return Binder::BindOps<fuchsia_cobalt_LoggerFactory_dispatch>(
             dispatcher, fbl::move(channel), this, &kOps);
@@ -328,7 +331,8 @@ private:
         };
 
         struct Services {
-            Services() : loop(nullptr), factory() {}
+            Services()
+                : loop(nullptr), factory() {}
 
             bool ProcessAllMessages() {
                 BEGIN_HELPER;
