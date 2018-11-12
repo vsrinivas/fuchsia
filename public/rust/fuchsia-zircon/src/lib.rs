@@ -36,6 +36,69 @@ macro_rules! impl_handle_based {
     }
 }
 
+/// Convenience macro for creating get/set property functions on an object.
+///
+/// This is for use whenthe underlying property type is a simple raw type.
+/// It creates an empty 'tag' struct to implement the relevant PropertyQuery*
+/// traits against. One, or both, of a getting and setter may be defined
+/// depending upon what the property supports. Example usage is
+/// unsafe_handle_propertyes!(ObjectType[get_foo_prop,set_foo_prop:FooPropTag,FOO,u32;]);
+/// unsafe_handle_properties!(object: Foo,
+///     props: [
+///         {query_ty: FOO_BAR, tag: FooBarTag, prop_ty: usize, get:get_bar},
+///         {query_ty: FOO_BAX, tag: FooBazTag, prop_ty: u32, set:set_baz},
+///     ]
+/// );
+/// And will create
+/// Foo::get_bar(&self) -> Result<usize, Status>
+/// Foo::set_baz(&self, val: &u32) -> Result<(), Status>
+/// Using Property::FOO as the underlying property.
+///
+///  # Safety
+///
+/// This macro will implement unsafe traits on your behalf and any combination
+/// of query_ty and prop_ty must respect the Safety requirements detailed on the
+/// PropertyQuery trait.
+macro_rules! unsafe_handle_properties {
+    (
+        object: $object_ty:ty,
+        props: [$( {
+            query_ty: $query_ty:ident,
+            tag: $query_tag:ident,
+            prop_ty: $prop_ty:ty
+            $(,get: $get:ident)*
+            $(,set: $set:ident)*
+            $(,)*
+        }),*$(,)*]
+    ) => {
+        $(
+            struct $query_tag {}
+            unsafe impl PropertyQuery for $query_tag {
+                const PROPERTY: Property = Property::$query_ty;
+                type PropTy = $prop_ty;
+            }
+
+            $(
+                unsafe impl PropertyQueryGet for $query_tag {}
+                impl $object_ty {
+                    pub fn $get(&self) -> Result<$prop_ty, Status> {
+                        object_get_property::<$query_tag>(self.as_handle_ref())
+                    }
+                }
+            )*
+
+            $(
+                unsafe impl PropertyQuerySet for $query_tag {}
+                impl $object_ty {
+                    pub fn $set(&self, val: &$prop_ty) -> Result<(), Status> {
+                        object_set_property::<$query_tag>(self.as_handle_ref(), val)
+                    }
+                }
+            )*
+        )*
+    }
+}
+
 // Creates associated constants of TypeName of the form
 // `pub const NAME: TypeName = TypeName(path::to::value);`
 // and provides a private `assoc_const_name` method and a `Debug` implementation
@@ -54,6 +117,7 @@ macro_rules! assoc_values {
             fn assoc_const_name(&self) -> Option<&'static str> {
                 match self.0 {
                     $(
+                        $(#[$attr])*
                         $value => Some(stringify!($name)),
                     )*
                     _ => None,
@@ -86,6 +150,7 @@ mod job;
 mod log;
 mod port;
 mod process;
+mod property;
 mod rights;
 mod socket;
 mod signals;
@@ -107,6 +172,7 @@ pub use self::job::*;
 pub use self::log::*;
 pub use self::port::*;
 pub use self::process::*;
+pub use self::property::*;
 pub use self::rights::*;
 pub use self::socket::*;
 pub use self::signals::*;
@@ -204,6 +270,34 @@ pub fn object_get_info<Q: ObjectQuery>(handle: HandleRef, out: &mut [Q::InfoTy])
             )
         };
         ok(status).map(|_| (actual, avail - actual))
+}
+
+/// Get a property on a zircon object
+pub fn object_get_property<P: PropertyQueryGet>(handle: HandleRef) -> Result<P::PropTy, Status> {
+    // this is safe due to the contract on the P::PropTy type in the ObjectProperty trait.
+    let mut out: P::PropTy = unsafe{std::mem::uninitialized()};
+    let status = unsafe {
+        sys::zx_object_get_property(
+            handle.raw_handle(),
+            *P::PROPERTY,
+            &mut out as *mut P::PropTy as *mut u8,
+            std::mem::size_of::<P::PropTy>()
+        )
+    };
+    ok(status).map(|_| out)
+}
+
+/// Set a property on a zircon object
+pub fn object_set_property<P: PropertyQuerySet>(handle: HandleRef, val: &P::PropTy) -> Result<(), Status> {
+    let status = unsafe {
+        sys::zx_object_set_property(
+            handle.raw_handle(),
+            *P::PROPERTY,
+            val as *const P::PropTy as *const u8,
+            std::mem::size_of::<P::PropTy>()
+        )
+    };
+    ok(status)
 }
 
 #[cfg(test)]

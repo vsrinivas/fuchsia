@@ -5,10 +5,11 @@
 //! Type-safe bindings for Zircon sockets.
 
 use bitflags::bitflags;
-use crate::object_get_info;
+use crate::{object_get_info, object_get_property, object_set_property};
 use crate::{ok, Status};
 use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Peered};
 use crate::{ObjectQuery, Topic};
+use crate::{Property, PropertyQuery, PropertyQueryGet, PropertyQuerySet};
 use fuchsia_zircon_sys as sys;
 
 use std::ptr;
@@ -167,6 +168,17 @@ impl Socket {
             .map(|_| info)
     }
 }
+
+unsafe_handle_properties!(object: Socket,
+    props: [
+        {query_ty: SOCKET_RX_BUF_MAX, tag: SocketRxBufMaxTag, prop_ty: usize, get:get_rx_buf_max},
+        {query_ty: SOCKET_RX_BUF_SIZE, tag: SocketRxBufSizeTag, prop_ty: usize, get:get_rx_buf_size},
+        {query_ty: SOCKET_TX_BUF_MAX, tag: SocketTxBufMaxTag, prop_ty: usize, get:get_tx_buf_max},
+        {query_ty: SOCKET_TX_BUF_SIZE, tag: SocketTxBufSizeTag, prop_ty: usize, get:get_tx_buf_size},
+        {query_ty: SOCKET_RX_THRESHOLD, tag: SocketRxThresholdTag, prop_ty: usize, get:get_rx_threshold, set: set_rx_threshold},
+        {query_ty: SOCKET_TX_THRESHOLD, tag: SocketTxThresholdTag, prop_ty: usize, get:get_tx_threshold, set: set_tx_threshold},
+    ]
+);
 
 #[cfg(test)]
 mod tests {

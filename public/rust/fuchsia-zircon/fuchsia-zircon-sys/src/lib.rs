@@ -22,6 +22,7 @@ pub type zx_time_t = i64;
 pub type zx_vaddr_t = usize;
 pub type zx_vm_option_t = u32;
 pub type zx_obj_type_t = i32;
+pub type zx_obj_props_t = u32;
 pub type zx_koid_t = u64;
 pub type zx_object_info_topic_t = u32;
 
@@ -33,8 +34,9 @@ pub type zx_object_info_topic_t = u32;
 // Note that the actual name of the inner macro (e.g. `bitflags`) can't be a variable.
 // It'll just have to be matched on manually
 macro_rules! multiconst {
-    ($typename:ident, [$($rawname:ident = $value:expr;)*]) => {
+    ($typename:ident, [$($(#[$attr:meta])* $rawname:ident = $value:expr;)*]) => {
         $(
+            $(#[$attr])*
             pub const $rawname: $typename = $value;
         )*
     }
@@ -264,6 +266,46 @@ multiconst!(zx_obj_type_t, [
     ZX_OBJ_TYPE_TIMER               = 22;
     ZX_OBJ_TYPE_IOMMU               = 23;
 ]);
+
+multiconst!(zx_obj_props_t, [
+    ZX_OBJ_PROP_NONE                  = 0;
+    ZX_OBJ_PROP_WAITABLE              = 1;
+
+    // Argument is a char[ZX_MAX_NAME_LEN].
+    ZX_PROP_NAME                      = 3;
+
+    // Argument is a uintptr_t.
+    #[cfg(target_arch = "x86_64")]
+    ZX_PROP_REGISTER_GS               = 2;
+    #[cfg(target_arch = "x86_64")]
+    ZX_PROP_REGISTER_FS               = 4;
+
+    // Argument is the value of ld.so's _dl_debug_addr, a uintptr_t. If the
+    // property is set to the magic value of ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET
+    // on process startup, ld.so will trigger a debug breakpoint immediately after
+    // setting the property to the correct value.
+    ZX_PROP_PROCESS_DEBUG_ADDR        = 5;
+
+    // Argument is the base address of the vDSO mapping (or zero), a uintptr_t.
+    ZX_PROP_PROCESS_VDSO_BASE_ADDRESS = 6;
+
+    // Argument is a size_t.
+    ZX_PROP_SOCKET_RX_BUF_MAX         = 8;
+    ZX_PROP_SOCKET_RX_BUF_SIZE        = 9;
+    ZX_PROP_SOCKET_TX_BUF_MAX         = 10;
+    ZX_PROP_SOCKET_TX_BUF_SIZE        = 11;
+    ZX_PROP_SOCKET_RX_THRESHOLD       = 12;
+    ZX_PROP_SOCKET_TX_THRESHOLD       = 13;
+
+    // Argument is a size_t, describing the number of packets a channel
+    // endpoint can have pending in its tx direction.
+    ZX_PROP_CHANNEL_TX_MSG_MAX        = 14;
+
+    // Terminate this job if the system is low on memory.
+    ZX_PROP_JOB_KILL_ON_OOM           = 15;
+]);
+
+pub const ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET: usize = 1;
 
 // clock ids
 pub const ZX_CLOCK_MONOTONIC: u32 = 0;
