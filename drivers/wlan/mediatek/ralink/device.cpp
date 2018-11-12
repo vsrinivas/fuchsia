@@ -177,8 +177,9 @@ static wlanmac_protocol_ops_t wlanmac_ops = {
 constexpr zx::duration Device::kDefaultBusyWait;
 
 Device::Device(zx_device_t* device, usb_protocol_t usb, uint8_t bulk_in,
-               std::vector<uint8_t>&& bulk_out)
-    : parent_(device), usb_(usb), rx_endpt_(bulk_in), tx_endpts_(std::move(bulk_out)) {
+               std::vector<uint8_t>&& bulk_out, size_t parent_req_size)
+    : parent_(device), usb_(usb), parent_req_size_(parent_req_size), rx_endpt_(bulk_in),
+      tx_endpts_(std::move(bulk_out)) {
     debugf("Device dev=%p bulk_in=%u\n", parent_, rx_endpt_);
     used_wcid_bitmap_.Reset(kMaxValidWcid);
 }
@@ -3645,7 +3646,7 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, void* cookie) {
     for (size_t i = 0; i < kReadReqCount; i++) {
         usb_request_t* req;
         zx_status_t status =
-            usb_request_alloc(&req, kReadBufSize, rx_endpt_, sizeof(usb_request_t));
+            usb_request_alloc(&req, kReadBufSize, rx_endpt_, parent_req_size_);
         if (status != ZX_OK) {
             errorf("failed to allocate rx usb request\n");
             return status;
@@ -3659,7 +3660,7 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, void* cookie) {
     for (size_t i = 0; i < kWriteReqCount; i++) {
         usb_request_t* req;
         zx_status_t status =
-            usb_request_alloc(&req, kWriteBufSize, tx_endpt, sizeof(usb_request_t));
+            usb_request_alloc(&req, kWriteBufSize, tx_endpt, parent_req_size_);
         if (status != ZX_OK) {
             errorf("failed to allocate tx usb request\n");
             return status;

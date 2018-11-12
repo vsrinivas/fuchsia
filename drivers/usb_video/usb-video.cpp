@@ -77,6 +77,9 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device,
     return status;
   }
 
+  size_t parent_req_size = usb_get_request_size(&usb);
+  ZX_DEBUG_ASSERT(parent_req_size != 0);
+
   // Grab the device information, so we can use it when creating the
   // UsbVideoStream.
   auto device_info = GetDeviceInfo(usb);
@@ -131,7 +134,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device,
                 status = video::usb::UsbVideoStream::Create(
                     device, &usb, video_source_index++, intf, control_header,
                     input_header, std::move(formats), &streaming_settings,
-                    std::move(device_info));
+                    std::move(device_info), parent_req_size);
                 if (status != ZX_OK) {
                   zxlogf(ERROR, "UsbVideoStream::Create failed: %d\n", status);
                   goto error_return;
@@ -317,7 +320,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device,
   if (formats.Size() > 0) {
     status = video::usb::UsbVideoStream::Create(
         device, &usb, video_source_index++, intf, control_header, input_header,
-        std::move(formats), &streaming_settings, std::move(device_info));
+        std::move(formats), &streaming_settings, std::move(device_info), parent_req_size);
     if (status != ZX_OK) {
       zxlogf(ERROR, "UsbVideoStream::Create failed: %d\n", status);
     }

@@ -36,12 +36,13 @@ fbl::unique_ptr<async::Loop> UsbVideoStream::fidl_dispatch_loop_ = nullptr;
 UsbVideoStream::UsbVideoStream(zx_device_t* parent, usb_protocol_t* usb,
                                UvcFormatList format_list,
                                fbl::Vector<UsbVideoStreamingSetting>* settings,
-                               UsbDeviceInfo device_info)
+                               UsbDeviceInfo device_info, size_t parent_req_size)
     : UsbVideoStreamBase(parent),
       usb_(*usb),
       format_list_(std::move(format_list)),
       // TODO(CAM-13): Cleanup passing of settings
       streaming_settings_(std::move(*settings)),
+      parent_req_size_(parent_req_size),
       device_info_(std::move(device_info)) {
   if (fidl_dispatch_loop_ == nullptr) {
     fidl_dispatch_loop_ =
@@ -65,14 +66,14 @@ zx_status_t UsbVideoStream::Create(
     usb_interface_descriptor_t* intf, usb_video_vc_header_desc* control_header,
     usb_video_vs_input_header_desc* input_header, UvcFormatList format_list,
     fbl::Vector<UsbVideoStreamingSetting>* settings,
-    UsbDeviceInfo device_info) {
+    UsbDeviceInfo device_info, size_t parent_req_size) {
   if (!usb || !intf || !control_header || !input_header || !settings ||
       settings->size() == 0) {
     return ZX_ERR_INVALID_ARGS;
   }
 
   auto dev = fbl::unique_ptr<UsbVideoStream>(new UsbVideoStream(
-      device, usb, std::move(format_list), settings, std::move(device_info)));
+      device, usb, std::move(format_list), settings, std::move(device_info), parent_req_size));
 
   char name[ZX_DEVICE_NAME_MAX];
   snprintf(name, sizeof(name), "usb-video-source-%d", index);
@@ -159,7 +160,7 @@ zx_status_t UsbVideoStream::AllocUsbRequestsLocked(uint64_t size) {
 
   for (uint32_t i = 0; i < MAX_OUTSTANDING_REQS; i++) {
     usb_request_t* req;
-    zx_status_t status = usb_request_alloc(&req, size, usb_ep_addr_, sizeof(usb_request_t));
+    zx_status_t status = usb_request_alloc(&req, size, usb_ep_addr_, parent_req_size_);
     if (status != ZX_OK) {
       zxlogf(ERROR, "usb_request_alloc failed: %d\n", status);
       return status;

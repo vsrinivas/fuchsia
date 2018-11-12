@@ -72,7 +72,7 @@ class WlanmacIfcProxy {
 class Device {
    public:
     Device(zx_device_t* device, usb_protocol_t usb, uint8_t bulk_in,
-           std::vector<uint8_t>&& bulk_out);
+           std::vector<uint8_t>&& bulk_out, size_t parent_req_size);
     ~Device();
 
     zx_status_t Bind();
@@ -278,6 +278,7 @@ class Device {
     zx_device_t* zxdev_ = nullptr;
     zx_device_t* wlanmac_dev_ __TA_GUARDED(lock_) = nullptr;
     usb_protocol_t usb_;
+    size_t parent_req_size_ = 0;
 
     uint8_t rx_endpt_ = 0;
     std::vector<uint8_t> tx_endpts_;

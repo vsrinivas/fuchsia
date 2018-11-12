@@ -101,7 +101,7 @@ zx_status_t Device::UsbRequest(usb_request_t* req) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  result = usb_request_alloc(&req, DFU_PACKET_LEN, bulk_out_addr, sizeof(usb_request_t));
+  result = usb_request_alloc(&req, DFU_PACKET_LEN, bulk_out_addr, parent_req_size_);
   req->complete_cb = interrupt_complete;
   req->cookie = &completion_;
   return result;
@@ -219,6 +219,10 @@ zx_status_t Device::LoadRAM(const qca_version& version) {
 zx_status_t Device::LoadFirmware() {
   zx_status_t result;
   usb_device_descriptor_t dev_desc;
+
+  parent_req_size_ = usb_get_request_size(&usb_);
+  ZX_DEBUG_ASSERT(parent_req_size_ != 0);
+
   usb_get_device_descriptor(&usb_, &dev_desc);
 
   struct qca_version ver;

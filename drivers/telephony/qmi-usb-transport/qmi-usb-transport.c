@@ -39,6 +39,7 @@ typedef struct qmi_ctx {
   usb_protocol_t usb;
   zx_device_t* usb_device;
   zx_device_t* zxdev;
+  size_t parent_req_size;
 } qmi_ctx_t;
 
 static zx_status_t get_channel(void* ctx, zx_handle_t* out_channel) {
@@ -266,6 +267,9 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
   qmi_ctx->usb_device = device;
   memcpy(&qmi_ctx->usb, &usb, sizeof(qmi_ctx->usb));
 
+  qmi_ctx->parent_req_size = usb_get_request_size(&usb);
+  ZX_DEBUG_ASSERT(qmi_ctx->parent_req_size != 0);
+
   // find our endpoints
   usb_desc_iter_t iter;
   zx_status_t result = usb_desc_iter_init(&usb, &iter);
@@ -331,7 +335,7 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
   }
 
   // set up interrupt
-  status = usb_request_alloc(&int_buf, intr_max_packet, intr_addr, sizeof(usb_request_t));
+  status = usb_request_alloc(&int_buf, intr_max_packet, intr_addr, qmi_ctx->parent_req_size);
   qmi_ctx->max_packet_size = bulk_max_packet;
   if (status != ZX_OK) {
     zxlogf(ERROR, "qmi-usb-transport: failed to allocate for usb request: %s\n",
