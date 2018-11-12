@@ -14,6 +14,7 @@ import (
 	"fidl/fuchsia/amber"
 
 	"amber/daemon"
+	"amber/metrics"
 	"amber/sys_update"
 
 	"syscall/zx"
@@ -48,7 +49,7 @@ func (c *ControlServer) AddSrc(cfg amber.SourceConfig) (bool, error) {
 }
 
 func (c *ControlServer) CheckForSystemUpdate() (bool, error) {
-	go c.sysUpdate.Check()
+	go c.sysUpdate.Check(metrics.InitiatorManual)
 	return true, nil
 }
 

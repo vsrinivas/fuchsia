@@ -19,6 +19,7 @@ import (
 
 	"amber/control_server"
 	"amber/daemon"
+	"amber/metrics"
 	"amber/source"
 	"amber/sys_update"
 
@@ -47,6 +48,8 @@ func main() {
 
 	ctx := context.CreateFromStartupInfo()
 	registerLogger(ctx)
+
+	metrics.Register(ctx)
 
 	readExtraFlags()
 

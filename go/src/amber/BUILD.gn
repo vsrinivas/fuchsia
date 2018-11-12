@@ -8,6 +8,7 @@ import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/host.gni")
 import("//build/package.gni")
+import("//third_party/cobalt_config/cobalt_config.gni")
 
 go_library("amber_lib") {
   name = "amber"
@@ -16,6 +17,8 @@ go_library("amber_lib") {
     "//garnet/go/src/sse",
     "//garnet/public/fidl/fuchsia.amber($go_toolchain)",
     "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
+    "//zircon/public/fidl/fuchsia-cobalt($go_toolchain)",
+    "//zircon/public/fidl/fuchsia-mem($go_toolchain)",
     "//garnet/public/go/third_party:github.com/flynn/go-tuf",
     "//garnet/public/go/third_party:github.com/rjw57/oauth2device",
     "//garnet/public/go/third_party:golang.org/x/oauth2",
@@ -50,9 +53,15 @@ foreach(tgt, amber_target_binaries) {
   }
 }
 
+cobalt_config("cobalt_sw_delivery_registry") {
+  project_id = 108
+  use_target_name = true
+}
+
 package("amber") {
   deps = [
     ":amber_bin",
+    ":cobalt_sw_delivery_registry",
   ]
 
   binary = "amber"
@@ -61,6 +70,12 @@ package("amber") {
     {
       path = rebase_path("keys/root_sig.json")
       dest = "keys"
+    },
+    {
+      path = rebase_path(
+              get_label_info(":cobalt_sw_delivery_registry",
+                             "target_gen_dir") + "/cobalt_sw_delivery_registry.pb")
+      dest = "cobalt_config.pb"
     },
   ]
 

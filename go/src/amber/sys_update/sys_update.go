@@ -21,6 +21,7 @@ import (
 
 	"amber/atonce"
 	"amber/daemon"
+	"amber/metrics"
 
 	"app/context"
 	"fidl/fuchsia/sys"
@@ -42,11 +43,12 @@ var (
 )
 
 type SystemUpdateMonitor struct {
-	d                 *daemon.Daemon
-	updateMerkle      string
-	systemImageMerkle string
-	auto              bool
-	ticker            *time.Ticker
+	d                       *daemon.Daemon
+	updateMerkle            string
+	systemImageMerkle       string
+	latestSystemImageMerkle string
+	auto                    bool
+	ticker                  *time.Ticker
 }
 
 type ErrNoPackage struct {
@@ -69,8 +71,10 @@ func NewSystemUpdateMonitor(a bool, d *daemon.Daemon) *SystemUpdateMonitor {
 	}
 }
 
-func (upMon *SystemUpdateMonitor) Check() error {
+func (upMon *SystemUpdateMonitor) Check(initiator metrics.Initiator) error {
 	return atonce.Do("system-update-monitor", "", func() error {
+		start := time.Now()
+
 		// If we haven't computed the initial "update" package's
 		// "meta/contents" merkle, do it now.
 		if upMon.updateMerkle == "" {
@@ -135,12 +139,25 @@ func (upMon *SystemUpdateMonitor) Check() error {
 		if upMon.needsUpdate(latestUpdateMerkle) {
 			log.Println("System update starting...")
 
+			metrics.Log(metrics.OtaStart{
+				Initiator: initiator,
+				Source:    upMon.systemImageMerkle,
+				Target:    upMon.latestSystemImageMerkle,
+				When:      start,
+			})
+
 			launchDesc := sys.LaunchInfo{Url: "system_updater"}
 			if err := runProgram(launchDesc); err != nil {
 				log.Printf("sys_upd_mon: updater failed to start: %s", err)
 			}
 		} else {
 			log.Println("sys_upd_mon: no newer system version available")
+
+			metrics.Log(metrics.SystemUpToDate{
+				Initiator: initiator,
+				Version:   upMon.systemImageMerkle,
+				When:      start,
+			})
 		}
 
 		upMon.updateMerkle = latestUpdateMerkle
@@ -156,7 +173,7 @@ func (upMon *SystemUpdateMonitor) Start() {
 	log.Printf("sys_upd_mon: monitoring for updates every %s", timerDur)
 	go func() {
 		for range upMon.ticker.C {
-			upMon.Check()
+			upMon.Check(metrics.InitiatorAutomatic)
 		}
 	}()
 }
@@ -232,6 +249,7 @@ func (upMon *SystemUpdateMonitor) needsUpdate(latestUpdateMerkle string) bool {
 			log.Printf("sys_upd_mon: no current \"system_image\" package merkle, skipping check")
 		} else if upMon.systemImageMerkle != latestSystemImageMerkle {
 			log.Printf("sys_upd_mon: \"system_image\" merkle changed, triggering update")
+			upMon.latestSystemImageMerkle = latestSystemImageMerkle
 			return true
 		} else {
 			log.Printf("sys_upd_mon: \"system_image\" merkle has not changed")
