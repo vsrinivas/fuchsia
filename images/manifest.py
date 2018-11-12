@@ -33,14 +33,14 @@ def format_manifest_file(manifest):
 def read_manifest_lines(sep, lines, title, manifest_cwd, result_cwd):
     for line in lines:
         # Remove the trailing newline.
-        assert line.endswith('\n'), "Unterminated manifest line: %r" % line
+        assert line.endswith('\n'), 'Unterminated manifest line: %r' % line
         line = line[:-1]
 
         # Grok {group}... syntax.
         group = None
         if line.startswith('{'):
             end = line.find('}')
-            assert end > 0, "Unterminated { in manifest line: %r" % line
+            assert end > 0, 'Unterminated { in manifest line: %r' % line
             group = line[1:end]
             line = line[end + 1:]
 
@@ -211,6 +211,8 @@ class input_entry_action(input_action_base):
 
 
 def common_parse_args(parser):
+    parser.fromfile_prefix_chars='@'
+    parser.convert_arg_line_to_args = shlex.split
     parser.add_argument('--output', action='append', required=True,
                         metavar='FILE',
                         help='Output file')
@@ -253,16 +255,7 @@ def common_parse_args(parser):
     parser.add_argument('--separator', default='=',
                         metavar='SEP',
                         help='Use SEP between TARGET and SOURCE in entries')
-    # Replace each `@rspfile` with the arguments from the file, and iterate.
-    args = sys.argv[1:]
-    i = 0
-    while i < len(args):
-        if args[i][0] == '@':
-            with open(args[i][1:]) as rsp_file:
-                args[i:i + 1] = shlex.split(rsp_file)
-        else:
-            i += 1
-    return parser.parse_args(args)
+    return parser.parse_args()
 
 
 def parse_args():
@@ -333,7 +326,8 @@ def main():
     if args.stamp:
         with open(args.stamp, 'w') as file:
             os.utime(file.name, None)
+    return 0
 
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    sys.exit(main())
