@@ -88,6 +88,11 @@ int main(int argc, const char** argv) {
   subtable2.remove_from_parent();
   subtable2.remove_from_parent();  // Repeated remove has no effect.
 
+  // Set parent to invalid, which will unlink from parent.
+  Table subtable3("subtable3");
+  subtable2.set_parent(t1.object_dir());
+  subtable2.set_parent(invalid);
+
   loop.Run();
   return 0;
 }

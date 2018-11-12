@@ -34,7 +34,9 @@ void ExposedObject::remove_from_parent() {
 
 void ExposedObject::move_parents(const ObjectDir& new_parent) {
   remove_from_parent();
-  new_parent.object()->SetChild(object_dir_.object());
+  if (new_parent) {
+    new_parent.object()->SetChild(object_dir_.object());
+  }
   parent_ = new_parent;
 }
 
