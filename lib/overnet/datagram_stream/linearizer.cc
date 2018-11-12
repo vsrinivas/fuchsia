@@ -83,6 +83,15 @@ void Linearizer::Close(const Status& status, Callback<void> quiesced) {
     Close(Status(StatusCode::CANCELLED, "Gaps existed at close time"));
     return;
   }
+  if (status.is_ok() && !length_) {
+    Close(Status(StatusCode::CANCELLED, "Closed before end of message seen"));
+    return;
+  }
+  if (status.is_ok() && offset_ != *length_) {
+    Close(
+        Status(StatusCode::CANCELLED, "Closed before end of message reached"));
+    return;
+  }
   switch (read_mode_) {
     case ReadMode::Closed:
       break;
@@ -152,6 +161,7 @@ bool Linearizer::Push(Chunk chunk) {
                      "Already received bytes past end of message"));
       }
     }
+    length_ = chunk_end;
     if (offset_ == chunk_end) {
       Close(Status::Ok());
     }
@@ -162,9 +172,8 @@ bool Linearizer::Push(Chunk chunk) {
     return false;
   }
 
-  if (chunk.end_of_message && !length_) {
-    OVERNET_TRACE(DEBUG) << "Push: record length";
-    length_ = chunk_end;
+  if (chunk_end == chunk_start) {
+    return true;
   }
 
   // Fast path: already a pending read ready, this chunk is at the head of what

@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fuzzing/fuzzer.gni")
+
 ###############################################################################
 # AGGREGATE LIBRARIES
 
@@ -69,13 +71,17 @@ source_set("linearizer") {
   ]
 }
 
-source_set("linearizer_fuzzer_helpers") {
+source_set("linearizer_fuzzer_lib") {
+  testonly = true
   sources = [
-    "linearizer_fuzzer_helpers.h",
+    "linearizer_fuzzer.h",
+    "linearizer_fuzzer.cc",
   ]
   deps = [
     ":linearizer",
     "//garnet/lib/overnet/vocabulary:optional",
+    "//garnet/lib/overnet/testing:test_timer",
+    "//garnet/lib/overnet/testing:trace_cout",
   ]
 }
 
@@ -86,9 +92,19 @@ source_set("linearizer_test") {
   ]
   deps = [
     ":linearizer",
-    ":linearizer_fuzzer_helpers",
+    ":linearizer_fuzzer_lib",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+  ]
+}
+
+fuzz_target("linearizer_fuzzer") {
+  testonly = true
+  sources = [
+    "linearizer_fuzzer_main.cc",
+  ]
+  deps = [
+    ":linearizer_fuzzer_lib",
   ]
 }
 
@@ -130,5 +146,16 @@ source_set("receive_mode_test") {
     ":receive_mode",
     ":receive_mode_fuzzer_helpers",
     "//third_party/googletest:gtest",
+  ]
+}
+
+fuzz_target("receive_mode_fuzzer") {
+  testonly = true
+  sources = [
+    "receive_mode_fuzzer.cc",
+  ]
+  deps = [
+    ":receive_mode_fuzzer_helpers",
+    "//garnet/lib/overnet/protocol:varint",
   ]
 }

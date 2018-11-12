@@ -38,7 +38,7 @@ def next_block(length):
 
 
 print 'TEST(LinearizerFuzzed, _%s) {' % hashlib.sha1(inp).hexdigest()
-print '  linearizer_fuzzer::LinearizerFuzzer m;'
+print '  linearizer_fuzzer::LinearizerFuzzer m(true);'
 block_idx = 0
 while True:
     op = next_byte()

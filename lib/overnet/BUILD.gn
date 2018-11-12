@@ -60,9 +60,11 @@ package("overnet_tests") {
 
 fuzz_package("overnet_fuzzers") {
   targets = [ 
-    "vocabulary:internal_list_fuzzer",
+    "datagram_stream:linearizer_fuzzer",
+    "datagram_stream:receive_mode_fuzzer",
     "protocol:routable_message_fuzzer",
     "packet_protocol:packet_protocol_fuzzer",
+    "vocabulary:internal_list_fuzzer",
   ]
   sanitizers = [ "asan" ]
   fuzz_host = true

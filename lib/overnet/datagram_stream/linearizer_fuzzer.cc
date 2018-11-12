@@ -2,69 +2,100 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <vector>
-#include "linearizer_fuzzer_helpers.h"
+#include "linearizer_fuzzer.h"
 
-using namespace overnet;
+namespace overnet {
+namespace linearizer_fuzzer {
 
-namespace {
-class InputStream {
- public:
-  InputStream(const uint8_t* data, size_t size)
-      : cur_(data), end_(data + size) {}
-
-  uint8_t NextByte() {
-    if (cur_ == end_)
-      return 0;
-    return *cur_++;
-  }
-
-  uint16_t NextShort() {
-    uint16_t x = NextByte();
-    x <<= 8;
-    x |= NextByte();
-    return x;
-  }
-
-  const uint8_t* Block(size_t bytes) {
-    if (bytes > end_ - cur_) {
-      tail_.clear();
-      tail_.resize(bytes, 0);
-      memcpy(tail_.data(), cur_, end_ - cur_);
-      cur_ = end_;
-      return tail_.data();
-    }
-    const uint8_t* out = cur_;
-    cur_ += bytes;
-    return out;
-  }
-
- private:
-  const uint8_t* cur_;
-  const uint8_t* end_;
-  std::vector<uint8_t> tail_;
-};
-}  // namespace
-
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-  InputStream input(data, size);
-  linearizer_fuzzer::LinearizerFuzzer fuzzer;
-
-  for (;;) {
-    uint8_t op = input.NextByte();
-    if (op == 0) {
-      return 0;
-    } else if (op == 1) {
-      fuzzer.Close(input.NextByte());
-    } else if (op == 2) {
-      fuzzer.Pull();
+// Close the linearizer with some status code.
+void LinearizerFuzzer::Close(uint8_t status_code) {
+  if (status_code == 0) {
+    if (!length_.has_value()) {
+      status_code = 1;
+    } else if (offset_ != *length_) {
+      status_code = 1;
     } else {
-      uint8_t len = op - 2;
-      assert(len >= 1);
-      bool eom = (len & 1) != 0;
-      len >>= 1;
-      uint16_t offset = input.NextShort();
-      fuzzer.Push(offset, len, eom, input.Block(len));
+      for (uint64_t i = 0; i < *length_; i++) {
+        if (!bytes_[i].present) {
+          status_code = 1;
+        }
+      }
     }
   }
+  SetClosed(static_cast<StatusCode>(status_code));
+  linearizer_.Close(static_cast<StatusCode>(status_code));
 }
+
+// Push a new block onto the linearizer at offset 'offset', with length
+// 'length', an end_of_message flag, and data bytes in 'data'.
+void LinearizerFuzzer::Push(uint16_t offset, uint8_t length,
+                            bool end_of_message, const uint8_t* data) {
+  uint64_t last_byte = static_cast<uint64_t>(offset) + length;
+  const bool resource_exhausted = last_byte > offset_ + kBuffer;
+  if (!resource_exhausted) {
+    if (length_) {
+      if (last_byte > *length_) {
+        SetClosed(StatusCode::INVALID_ARGUMENT);
+      } else if (end_of_message && *length_ != last_byte) {
+        SetClosed(StatusCode::INVALID_ARGUMENT);
+      }
+    } else if (end_of_message) {
+      if (offset_ > last_byte)
+        SetClosed(StatusCode::INVALID_ARGUMENT);
+      for (unsigned i = last_byte; i < sizeof(bytes_) / sizeof(*bytes_); i++) {
+        if (bytes_[i].present)
+          SetClosed(StatusCode::INVALID_ARGUMENT);
+      }
+      if (offset_ == last_byte)
+        SetClosed(StatusCode::OK);
+      length_ = last_byte;
+    }
+    for (unsigned i = 0; i < length; i++) {
+      unsigned idx = i + offset;
+      ByteState& st = bytes_[idx];
+      if (st.present) {
+        if (st.byte != data[i] && idx >= offset_) {
+          SetClosed(StatusCode::DATA_LOSS);
+        }
+      } else {
+        st.byte = data[i];
+        st.present = true;
+      }
+    }
+  }
+  auto ignore = [](bool) {};
+  ignore(linearizer_.Push(
+      Chunk{offset, end_of_message, Slice::FromCopiedBuffer(data, length)}));
+}
+
+// Execute a pull op on the linearizer, and verify that it's as expected.
+void LinearizerFuzzer::Pull() {
+  if (waiting_for_pull_)
+    return;
+  waiting_for_pull_ = true;
+  linearizer_.Pull(StatusOrCallback<Optional<Slice>>(
+      [this](const StatusOr<Optional<Slice>>& status) {
+        assert(waiting_for_pull_);
+        waiting_for_pull_ = false;
+#ifndef NDEBUG
+        if (is_closed_) {
+          assert(status.code() == closed_status_);
+        } else {
+          assert(status.is_ok());
+          if (*status) {
+            for (auto b : **status) {
+              ByteState st = bytes_[offset_++];
+              assert(st.present);
+              assert(b == st.byte);
+            }
+          }
+          if (length_ && *length_ == offset_) {
+            SetClosed(StatusCode::OK);
+          }
+        }
+#endif
+      }));
+}
+
+}  // namespace linearizer_fuzzer
+}  // namespace overnet
