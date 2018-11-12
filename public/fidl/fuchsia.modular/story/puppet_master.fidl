@@ -60,6 +60,8 @@ interface PuppetMaster {
     // Events on the session will be sent to |watcher| as long as |watcher| is
     // alive. |options| specifies filters and policy about which events are sent
     // to |watcher|.
+    //
+    // NOTE: Not implemented yet, pending MF-85.
     2: WatchSession(SessionWatcher watcher, WatchSessionOptions? options) -> ();
 
     // Deletes a story associated to |story_name|.
