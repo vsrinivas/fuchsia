@@ -33,16 +33,10 @@
 ## optional arguments:
 ##   --build-dir OUTDIR    Using this option is deprecated.  It's the same
 ##                         as just giving OUTDIR as a non-option argument.
-##   --boards              Use the listed board target definition (seperated by
-##                         comas) in the build, each board results in an import
-##                         statement and MUST define the `fuchsia_packages`
-##                         variable as well as deal with variable re-definition.
-##   --products            Include the listed products (separated by commas) in
-##                         the build. Defaults to the default product for the
-##                         current layer (e.g., "garnet/packages/default.gni" for
-##                         the Garnet layer). If the --products argument is
-##                         given multiple times, the products configurations
-##                         are merged.
+##   --board               Use the listed board target definition.
+##   --product             Include the listed product in the build. Defaults to
+##                         the default product for the current layer (e.g.,
+##                         "garnet/packages/default.gni" for the Garnet layer).
 ##   --packages            Additional packages to be built and made available.
 ##                         If the --packages argument is given multiple times,
 ##                         all the specified packages are included in the build.
@@ -87,6 +81,23 @@
 ##   --release             an alias for "--args=is_debug=false"
 ##   --zircon-arg ARG      Additional arguments to pass to Zircon make. Can be given
 ##                         multiple times.
+##
+##  Deprecated flags:
+##
+##   --boards              Use the listed board target definition (seperated by
+##                         comas) in the build, each board results in an import
+##                         statement and MUST define the `fuchsia_packages`
+##                         variable as well as deal with variable re-definition.
+##                         This flag is deprecated, please use --board instead.
+##   --products            Include the listed products (separated by commas) in
+##                         the build. Defaults to the default product for the
+##                         current layer (e.g., "garnet/packages/default.gni" for
+##                         the Garnet layer). If the --products argument is
+##                         given multiple times, the products configurations
+##                         are merged.
+##                         This flag is deprecated, please use exactly one
+##                         --product and specify packages to add in addition to
+##                         the product with --packages.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 
@@ -132,6 +143,22 @@ function main {
   local ccache
   while [[ $# -ne 0 ]]; do
     case "$1" in
+      --board)
+        if [[ $# -lt 2 ]]; then
+          fx-command-help
+          return 1
+        fi
+        boards+=("$2")
+        shift
+        ;;
+      --product)
+        if [[ $# -lt 2 ]]; then
+          fx-command-help
+          return 1
+        fi
+        products+=("$2")
+        shift
+        ;;
       --boards)
         if [[ $# -lt 2 ]]; then
           fx-command-help
