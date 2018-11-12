@@ -1,108 +1,113 @@
 # Intel Hardware Performance Monitor Data Collection
 
-See Chapters 18,19 of the Intel Architecture Software Developer's Manual.
+See chapters 18,19 of the Intel Architecture Software Developer's Manual.
 
 ## IOCTLs
 
 Several ioctls are provided to control performance data collection.
 
-### *ioctl_ipm_get_state*
+### *ioctl_cpuperf_get_properties*
 
 ```
-ssize_t ioctl_ipm_get_state(int fd, mx_x86_ipm_state_t* state);
+ssize_t ioctl_cpuperf_get_properties(int fd, cpuperf_properties_t* props);
 ```
 
-Return various aspects of IPM state in |state|.
+Return various aspects of PMU properties in |*props|.
 
 Returns 0 on success or a negative error code.
 
-### *ioctl_ipm_init*
+### *ioctl_cpuperf_alloc_trace*
 
 ```
-ssize_t ioctl_ipm_init(int fd);
+ssize_t ioctl_cpuperf_alloc_trace(int fd, const ioctl_cpuperf_alloc_t* alloc);
 ```
 
-Allocate various resources needed. This must be called before configuring
-the hardware and collecting data.
+Allocate various resources needed to perform a trace.
+This must be called before staging a configuration and starting a trace.
+This must be called while tracing is stopped.
 
 Returns 0 on success or a negative error code.
 
-### *ioctl_ipm_stage_simple_config*
+### *ioctl_cpuperf_free_trace*
 
 ```
-ssize_t ioctl_ipm_stage_simple_config(int fd,
-                                      ioctl_ipm_simple_config_t* config);
+ssize_t ioctl_cpuperf_free_trace(int fd);
 ```
 
-Configure data collection by specifying a mask of what data to collect.
-The device driver will convert this to the needed configuration data.
+Free all resources allocated by a preceding all to
+*ioctl_cpuperf_alloc_trace()*.
+This must be called while tracing is stopped.
 
 Returns 0 on success or a negative error code.
 
-### *ioctl_ipm_stage_cpu_config*
+### *ioctl_cpuperf_get_alloc*
 
 ```
-ssize_t ioctl_ipm_stage_cpu_config(int fd,
-                                   ioctl_ipm_cpu_config_t* config);
+ssize_t ioctl_cpuperf_get_alloc(int fd, cpuperf_alloc_t* alloc);
 ```
 
-Configure data collection by specifying the raw values for the hardware
-configuration registers.
+Fetch the trace configuration passed in to a preceding call to
+*ioctl_cpuperf_alloc_trace()*.
 
 Returns 0 on success or a negative error code.
 
-### *ioctl_ipm_get_cpu_config*
+### *ioctl_cpuperf_stage_config*
 
 ```
-ssize_t ioctl_ipm_get_cpu_config(int fd,
-                                 uint32_t *cpu,
-                                 const mx_x86_ipm_config_t* config);
+ssize_t ioctl_cpuperf_stage_config(int fd, const cpuperf_config_t* config);
 ```
 
-Fetch the configuration for |cpu|.
+Configure data collection. |*config| specifies the events to collect
+and the rate at which to collect them.
+This must be called while tracing is stopped.
 
 Returns 0 on success or a negative error code.
 
-### *ioctl_ipm_get_cpu_data*
+### *ioctl_cpuperf_get_config*
 
 ```
-ssize_t ioctl_ipm_get_cpu_data(int fd,
-                               uint32_t *cpu,
-                               const mx_x86_ipm_counters_t* config);
+ssize_t ioctl_cpuperf_get_config(int fd, cpuperf_config_t* config);
 ```
 
-Fetch the collected data for |cpu|.
+Fetch the configuration passed in to a preceding call to
+*ioctl_cpuperf_stage_config()*.
 
 Returns 0 on success or a negative error code.
 
-### *ioctl_ipm_start*
+### *ioctl_pmu_get_buffer_handle*
 
 ```
-ssize_t ioctl_ipm_start(int fd);
+ssize_t ioctl_cpuperf_get_buffer_handle(
+    int fd, const ioctl_cpuperf_buffer_handle_req_t* rqst,
+    zx_handle_t* handle);
+```
+
+Fetch the handle of the VMO for the given descriptor.
+Each CPU is given a separate VMO and the descriptor is the cpu's number.
+This must be called while tracing is stopped.
+
+Returns 0 on success or a negative error code.
+
+### *ioctl_cpuperf_start*
+
+```
+ssize_t ioctl_cpuperf_start(int fd);
 ```
 
 Start data collection.
+This must be called while tracing is stopped.
 
 Returns 0 on success or a negative error code.
 
 
-### *ioctl_ipm_stop*
+### *ioctl_cpuperf_stop*
 
 ```
-ssize_t ioctl_ipm_stop(int fd);
+ssize_t ioctl_cpuperf_stop(int fd);
 ```
 
-Stop tracing and collect current data from each cpu.
-
-Returns 0 on success or a negative error code.
-
-### *ioctl_ipm_free*
-
-```
-ssize_t ioctl_ipm_free(int fd);
-```
-
-Request the kernel free all internal data structures for managing IPM.
+Stop tracing and collect any remaining data from each cpu.
+This may be called even if tracing is already stopped.
 
 Returns 0 on success or a negative error code.
 
@@ -110,12 +115,10 @@ Returns 0 on success or a negative error code.
 
 Here's a sketch of typical usage:
 
-1) ???
-
-## Notes
-
-- ???
-
-## TODOs (beyond those in the source)
-
-- ???
+1) *ioctl_cpuperf_alloc_trace(fd, &alloc)*
+2) *ioctl_cpuperf_stage_config(fd, &config)*
+3) *ioctl_cpuperf_start(fd)*
+4) launch program one wishes to trace
+5) *ioctl_cpuperf_stop(fd)*
+6) fetch handles for each vmo, and process data
+7) *ioctl_cpuperf_free_trace(fd)* [this will free each buffer as well]
