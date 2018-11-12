@@ -11,9 +11,6 @@ readonly GARNET_ROOT="${FUCHSIA_ROOT}/garnet"
 readonly BUILDTOOLS_DIR="${FUCHSIA_ROOT}/buildtools"
 readonly CIPD="${BUILDTOOLS_DIR}/cipd"
 
-# TODO(crbug.com/902956): remove this after FFmpeg rollout
-rm -rf "${GARNET_ROOT}/lib/media/ffmpeg/prebuilt/pkg/ffmpeg/docs"
-
 INTERNAL_ACCESS=false
 if [[ "$(${CIPD} ls fuchsia_internal)" != "No matching packages." ]]; then
   INTERNAL_ACCESS=true
