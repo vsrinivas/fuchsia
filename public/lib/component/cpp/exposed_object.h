@@ -33,6 +33,9 @@ class ExposedObject {
   ExposedObject(ExposedObject&& other) = default;
   ExposedObject& operator=(ExposedObject&& other) = default;
 
+  // Adds a child to this object.
+  void add_child(ExposedObject* child);
+
   // Explicitly set the parent of this object. This method handles removing the
   // object from its current parent, if any, and attaching it to the new parent.
   void set_parent(const ObjectDir& parent);
@@ -41,14 +44,10 @@ class ExposedObject {
   void remove_from_parent();
 
   // Gets the |ObjectDir| representation of this object.
-  ObjectDir object_dir() { return object_dir_; }
+  ObjectDir object_dir() const { return object_dir_; }
 
   // Gets the |Object| this is wrapping.
-  fbl::RefPtr<Object> object() { return object_dir_.object(); }
-
- protected:
-  // Adds a child to this object.
-  void add_child(ExposedObject* child);
+  fbl::RefPtr<Object> object() const { return object_dir_.object(); }
 
  private:
   // Helper to move this object to a different parent.
