@@ -36,6 +36,7 @@ static uint32_t GetImportedMemoryTypeIndex(vk::PhysicalDevice physical_device,
                                            vk::Device device) {
   // Is there a better way to get the memory type bits than creating and
   // immediately destroying a buffer?
+  // TODO(SCN-79): Use sysmem for this when it's available.
   constexpr vk::DeviceSize kUnimportantBufferSize = 30000;
   vk::BufferCreateInfo buffer_create_info;
   buffer_create_info.size = kUnimportantBufferSize;
