@@ -29,7 +29,7 @@ namespace wlan {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
-static constexpr size_t kMaxBssPerChannel = 100;
+static constexpr size_t kMaxBss = 1000;
 
 static void SendScanEnd(DeviceInterface* device, uint64_t txn_id, wlan_mlme::ScanResultCodes code) {
     wlan_mlme::ScanEnd msg;
@@ -143,24 +143,14 @@ bool Scanner::OffChannelHandlerImpl::EndOffChannelTime(bool interrupted,
         return true;
     }
 
-    zx_status_t status =
-        SendResults(scanner_->device_, scanner_->req_->txn_id, scanner_->current_bss_);
-    if (status != ZX_OK) {
-        errorf("scanner: failed to send results: %d\n", status);
-        SendScanEnd(scanner_->device_, scanner_->req_->txn_id,
-                    wlan_mlme::ScanResultCodes::INTERNAL_ERROR);
-        scanner_->Reset();
+    scanner_->channel_index_ += 1;
+    if (scanner_->channel_index_ >= scanner_->req_->channel_list->size()) {
+        scanner_->SendResultsAndReset();
         return false;
     }
-    scanner_->current_bss_.clear();
-    if (++scanner_->channel_index_ >= scanner_->req_->channel_list->size()) {
-        SendScanEnd(scanner_->device_, scanner_->req_->txn_id, wlan_mlme::ScanResultCodes::SUCCESS);
-        scanner_->Reset();
-        return false;
-    } else {
-        *next_req = scanner_->CreateOffChannelRequest();
-        return true;
-    }
+
+    *next_req = scanner_->CreateOffChannelRequest();
+    return true;
 }
 
 void Scanner::Reset() {
@@ -211,8 +201,8 @@ void Scanner::ProcessBeacon(const MgmtFrameView<Beacon>& bcn_frame) {
 
     auto it = current_bss_.find(bssid.ToU64());
     if (it == current_bss_.end()) {
-        if (current_bss_.size() >= kMaxBssPerChannel) {
-            errorf("maximum number of BSS per channel reached: %lu\n", current_bss_.size());
+        if (current_bss_.size() >= kMaxBss) {
+            errorf("maximum number of BSS reached: %lu\n", current_bss_.size());
             return;
         }
         it = current_bss_
@@ -251,12 +241,15 @@ void Scanner::HandleHwScanComplete() {
         errorf("got a HwScanComplete event while the scanner is not running\n");
         return;
     }
+    SendResultsAndReset();
+}
 
+void Scanner::SendResultsAndReset() {
     zx_status_t status = SendResults(device_, req_->txn_id, current_bss_);
     if (status == ZX_OK) {
         SendScanEnd(device_, req_->txn_id, wlan_mlme::ScanResultCodes::SUCCESS);
     } else {
-        errorf("scanner: failed to send results: %d\n", status);
+        errorf("scanner: failed to send results: %s\n", zx_status_get_string(status));
         SendScanEnd(device_, req_->txn_id, wlan_mlme::ScanResultCodes::INTERNAL_ERROR);
     }
     Reset();

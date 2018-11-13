@@ -57,6 +57,7 @@ class Scanner {
     bool ShouldDropMgmtFrame(const MgmtFrameHeader& hdr);
     void ProcessBeacon(const MgmtFrameView<Beacon>& bcn_frame);
     OffChannelRequest CreateOffChannelRequest();
+    void SendResultsAndReset();
 
     OffChannelHandlerImpl off_channel_handler_;
     DeviceInterface* device_;
