@@ -29,7 +29,7 @@ package("netstack_integration_tests") {
     ":netstack_integration_test",
   ]
 
-  binaries = [
+  tests = [
     {
       name = "netstack_integration_test"
     },
