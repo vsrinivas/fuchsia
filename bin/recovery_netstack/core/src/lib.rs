@@ -37,7 +37,7 @@ pub use crate::device::{
     ethernet::Mac, receive_frame, set_ip_addr, DeviceId, DeviceLayerEventDispatcher,
     DeviceLayerTimerId,
 };
-pub use crate::ip::{Ipv4Addr, Subnet};
+pub use crate::ip::{Ipv4Addr, Subnet, add_device_route};
 pub use crate::transport::udp::UdpEventDispatcher;
 pub use crate::transport::{TransportLayerEventDispatcher, TransportLayerTimerId};
 

@@ -183,6 +183,17 @@ fn lookup_route<A: IpAddr>(state: &IpLayerState, dst_ip: A) -> Option<Destinatio
     A::get_table(state).lookup(dst_ip)
 }
 
+/// Add a route to the forwarding table.
+pub fn add_device_route<D: EventDispatcher, A: IpAddr>(ctx: &mut Context<D>, subnet: Subnet<A>, device: DeviceId) {
+    specialize_ip_addr!(
+        fn generic_add_route(state: &mut IpLayerState, subnet: Subnet<Self>, device: DeviceId) {
+            Ipv4Addr => { state.v4.table.add_device_route(subnet, device) }
+            Ipv6Addr => { state.v6.table.add_device_route(subnet, device) }
+        }
+    );
+    A::generic_add_route(&mut ctx.state().ip, subnet, device)
+}
+
 /// Is this one of our local addresses?
 ///
 /// `is_local_addr` returns whether `addr` is the address associated with one of

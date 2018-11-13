@@ -12,8 +12,9 @@ use std::fs::File;
 use futures::prelude::*;
 
 use netstack_core::{
-    receive_frame, set_ip_addr, Context, DeviceId, DeviceLayerEventDispatcher, EventDispatcher,
-    Ipv4Addr, Mac, StackState, Subnet, TimerId, TransportLayerEventDispatcher, UdpEventDispatcher,
+    add_device_route, receive_frame, set_ip_addr, Context, DeviceId, DeviceLayerEventDispatcher,
+    EventDispatcher, Ipv4Addr, Mac, StackState, Subnet, TimerId, TransportLayerEventDispatcher,
+    UdpEventDispatcher,
 };
 
 /// The event loop.
@@ -64,6 +65,7 @@ impl EventLoop {
         // this as well.
         let fixed_subnet = Subnet::new(Ipv4Addr::new([192, 168, 1, 0]), 24);
         set_ip_addr(&mut event_loop.ctx, eth_id, FIXED_IPADDR, fixed_subnet);
+        add_device_route(&mut event_loop.ctx, fixed_subnet, eth_id);
 
         let mut buf = [0; 2048];
         let mut events = event_loop.ctx.dispatcher().eth_client.get_stream();
