@@ -11,8 +11,8 @@ extern crate serde_derive;
 
 mod opts;
 
-use crate::opts::Opt;
 use connectivity_testing::wlan_service_util;
+use crate::opts::Opt;
 use failure::{bail, Error, ResultExt};
 use fidl_fuchsia_net_oldhttp::{self as http, HttpServiceProxy};
 use fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy};
@@ -56,7 +56,7 @@ fn main() -> Result<(), Error> {
 }
 
 fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
-    let mut test_pass = true;
+    let mut test_pass = false;
     let mut exec = fasync::Executor::new().context("error creating event loop")?;
     let wlan_svc =
         connect_to_service::<DeviceServiceMarker>().context("Failed to connect to wlan_service")?;
@@ -89,6 +89,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                     continue;
                 }
             };
+
             let iface_object = WlanIface::new(sme_proxy, status_response);
 
             test_results.iface_objects.insert(iface, iface_object);
@@ -156,14 +157,14 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
 
             // if any of the checks failed, throw an error to indicate a part of
             // the test failure
-            if !(wlan_iface.connection_success
+            if wlan_iface.connection_success
                 && wlan_iface.dhcp_success
                 && wlan_iface.data_transfer
-                && wlan_iface.disconnect_success)
+                && wlan_iface.disconnect_success
             {
                 // note: failures are logged at the point of the failure,
                 // simply checking here to return overall test status
-                test_pass = false;
+                test_pass = true;
             }
 
             // TODO(NET-1095): add ping check to verify connectivity
