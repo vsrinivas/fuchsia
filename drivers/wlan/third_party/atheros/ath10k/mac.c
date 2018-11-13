@@ -3149,6 +3149,13 @@ int ath10k_mac_bss_assoc(void* thrd_data) {
 
         assoc_arg.peer_phymode = chan_to_phymode(&ar->rx_channel);
 
+        // Workaround for NET-1821: don't try to use HT modes if there isn't an HT IE in the
+        // association response. Eventually we will get more complete information on the PHY
+        // mode to use from the set_channel() and/or configure_assoc() ddk calls.
+        if (!(assoc_arg.peer_flags & ar->wmi.peer_flags->ht)) {
+            assoc_arg.peer_phymode = MODE_11G; // Use b/g modes
+        }
+
         // TODO: set crypto flags (as per ath10k_peer_assoc_h_crypto)
 
 #if 0  // TODO: VHT
