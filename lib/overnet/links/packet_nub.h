@@ -23,12 +23,13 @@ class PacketNub {
   static constexpr uint64_t kAnnounceResendMillis = 1000;
 
   PacketNub(Timer* timer, NodeId node) : timer_(timer), local_node_(node) {}
+  virtual ~PacketNub() {}
 
   virtual void SendTo(Address dest, Slice slice) = 0;
   virtual Router* GetRouter() = 0;
   virtual void Publish(LinkPtr<> link) = 0;
 
-  void Process(TimeStamp received, Address src, Slice slice) {
+  virtual void Process(TimeStamp received, Address src, Slice slice) {
     ScopedModule<PacketNub> in_nub(this);
     // Extract node id and op from slice... this code must be identical with
     // PacketLink.
@@ -42,25 +43,29 @@ class PacketNub {
     }
     const PacketOp op = static_cast<PacketOp>(*p++);
 
+    auto op_state = [](PacketOp op, LinkState state) constexpr {
+      return (static_cast<uint16_t>(op) << 8) | static_cast<uint16_t>(state);
+    };
+
     while (true) {
       Link* link = link_for(src);
       uint64_t node_id;
       OVERNET_TRACE(DEBUG) << " op=" << static_cast<int>(op);
-      switch (OpState(op, link->state)) {
-        case OpState(PacketOp::Connected, LinkState::AckingHello):
+      switch (op_state(op, link->state)) {
+        case op_state(PacketOp::Connected, LinkState::AckingHello):
           if (!link->SetState(LinkState::Connected)) {
             links_.erase(src);
             return;
           }
           BecomePublished(src);
           continue;
-        case OpState(PacketOp::Connected, LinkState::SemiConnected):
+        case op_state(PacketOp::Connected, LinkState::SemiConnected):
           if (!link->SetState(LinkState::Connected)) {
             links_.erase(src);
             return;
           }
           continue;
-        case OpState(PacketOp::Connected, LinkState::Connected):
+        case op_state(PacketOp::Connected, LinkState::Connected):
           if (p == end && link->node_id && *link->node_id < local_node_) {
             // Empty connected packets get reflected to fully advance state
             // machine in the case of connecting when applications are idle.
@@ -69,7 +74,7 @@ class PacketNub {
             link->link->Process(received, std::move(slice));
           }
           return;
-        case OpState(PacketOp::CallMeMaybe, LinkState::Initial):
+        case op_state(PacketOp::CallMeMaybe, LinkState::Initial):
           if (end - begin != kCallMeMaybeSize) {
             OVERNET_TRACE(INFO) << "Received a mis-sized CallMeMaybe packet";
           } else if (!ParseLE64(&p, end, &node_id)) {
@@ -86,8 +91,8 @@ class PacketNub {
             StartHello(src, NodeId(node_id));
           }
           return;
-        case OpState(PacketOp::Hello, LinkState::Initial):
-        case OpState(PacketOp::Hello, LinkState::Announcing):
+        case op_state(PacketOp::Hello, LinkState::Initial):
+        case op_state(PacketOp::Hello, LinkState::Announcing):
           if (end - begin != kHelloSize) {
             OVERNET_TRACE(INFO) << "Received a mis-sized Hello packet";
           } else if (!ParseLE64(&p, end, &node_id)) {
@@ -103,7 +108,7 @@ class PacketNub {
             StartHelloAck(src, NodeId(node_id));
           }
           return;
-        case OpState(PacketOp::HelloAck, LinkState::SayingHello):
+        case op_state(PacketOp::HelloAck, LinkState::SayingHello):
           if (end != p) {
             OVERNET_TRACE(INFO) << "Received a mis-sized HelloAck packet";
           } else {
@@ -137,6 +142,11 @@ class PacketNub {
         StartHello(peer, node);
       }
     }
+  }
+
+  bool HasConnectionTo(Address peer) const {
+    auto it = links_.find(peer);
+    return it != links_.end() && it->second.link != nullptr;
   }
 
  private:
@@ -225,10 +235,6 @@ class PacketNub {
       return SetState(st);
     }
   };
-
-  static constexpr uint16_t OpState(PacketOp op, LinkState state) {
-    return (static_cast<uint16_t>(op) << 8) | static_cast<uint16_t>(state);
-  }
 
   TimeStamp BackoffForTicks(uint64_t initial_millis, int ticks) {
     assert(initial_millis);

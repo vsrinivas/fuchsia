@@ -79,9 +79,9 @@ source_set("linearizer_fuzzer_lib") {
   ]
   deps = [
     ":linearizer",
-    "//garnet/lib/overnet/vocabulary:optional",
     "//garnet/lib/overnet/testing:test_timer",
     "//garnet/lib/overnet/testing:trace_cout",
+    "//garnet/lib/overnet/vocabulary:optional",
   ]
 }
 
