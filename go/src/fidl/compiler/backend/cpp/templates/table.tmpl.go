@@ -153,7 +153,7 @@ void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
     ::fidl::Encode(
         encoder,
         &{{ .FieldDataName }}.value,
-        encoder->Alloc(CodingTraits<{{ .Type.Decl }}>::encoded_size));
+        encoder->Alloc(::fidl::CodingTraits<{{ .Type.Decl }}>::encoded_size));
     uint64_t presence =
         ((encoder->CurrentLength() - length_before) << 32) |
         (encoder->CurrentHandleCount() - handles_before);

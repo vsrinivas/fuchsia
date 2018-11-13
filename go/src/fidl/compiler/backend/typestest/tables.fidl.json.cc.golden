@@ -51,7 +51,7 @@ void OlderSimpleTable::Encode(::fidl::Encoder* encoder, size_t offset) {
     ::fidl::Encode(
         encoder,
         &x_.value,
-        encoder->Alloc(CodingTraits<int64_t>::encoded_size));
+        encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
     uint64_t presence =
         ((encoder->CurrentLength() - length_before) << 32) |
         (encoder->CurrentHandleCount() - handles_before);
@@ -199,7 +199,7 @@ void NewerSimpleTable::Encode(::fidl::Encoder* encoder, size_t offset) {
     ::fidl::Encode(
         encoder,
         &x_.value,
-        encoder->Alloc(CodingTraits<int64_t>::encoded_size));
+        encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
     uint64_t presence =
         ((encoder->CurrentLength() - length_before) << 32) |
         (encoder->CurrentHandleCount() - handles_before);
@@ -211,7 +211,7 @@ void NewerSimpleTable::Encode(::fidl::Encoder* encoder, size_t offset) {
     ::fidl::Encode(
         encoder,
         &y_.value,
-        encoder->Alloc(CodingTraits<int64_t>::encoded_size));
+        encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
     uint64_t presence =
         ((encoder->CurrentLength() - length_before) << 32) |
         (encoder->CurrentHandleCount() - handles_before);
@@ -223,7 +223,7 @@ void NewerSimpleTable::Encode(::fidl::Encoder* encoder, size_t offset) {
     ::fidl::Encode(
         encoder,
         &z_.value,
-        encoder->Alloc(CodingTraits<int64_t>::encoded_size));
+        encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
     uint64_t presence =
         ((encoder->CurrentLength() - length_before) << 32) |
         (encoder->CurrentHandleCount() - handles_before);
@@ -411,7 +411,7 @@ void SimpleTable::Encode(::fidl::Encoder* encoder, size_t offset) {
     ::fidl::Encode(
         encoder,
         &x_.value,
-        encoder->Alloc(CodingTraits<int64_t>::encoded_size));
+        encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
     uint64_t presence =
         ((encoder->CurrentLength() - length_before) << 32) |
         (encoder->CurrentHandleCount() - handles_before);
@@ -423,7 +423,7 @@ void SimpleTable::Encode(::fidl::Encoder* encoder, size_t offset) {
     ::fidl::Encode(
         encoder,
         &y_.value,
-        encoder->Alloc(CodingTraits<int64_t>::encoded_size));
+        encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
     uint64_t presence =
         ((encoder->CurrentLength() - length_before) << 32) |
         (encoder->CurrentHandleCount() - handles_before);

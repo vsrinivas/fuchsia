@@ -260,7 +260,7 @@ void Table::Encode(::fidl::Encoder* encoder, size_t offset) {
     ::fidl::Encode(
         encoder,
         &Field_.value,
-        encoder->Alloc(CodingTraits<int32_t>::encoded_size));
+        encoder->Alloc(::fidl::CodingTraits<int32_t>::encoded_size));
     uint64_t presence =
         ((encoder->CurrentLength() - length_before) << 32) |
         (encoder->CurrentHandleCount() - handles_before);
