@@ -62,7 +62,8 @@ zx_status_t ApMlme::HandleMlmeStartReq(const MlmeMsg<wlan_mlme::StartRequest>& r
     if (bss_ != nullptr) {
         debugf("BSS %s already running but received MLME-START.request\n",
                device_->GetState()->address().ToString().c_str());
-        return ZX_OK;
+        return service::SendStartConfirm(
+            device_, wlan_mlme::StartResultCodes::BSS_ALREADY_STARTED_OR_JOINED);
     }
 
     // Configure BSS in driver.
@@ -79,7 +80,7 @@ zx_status_t ApMlme::HandleMlmeStartReq(const MlmeMsg<wlan_mlme::StartRequest>& r
     bss_.reset(new InfraBss(device_, fbl::move(bcn_sender), bssid));
     bss_->Start(req);
 
-    return ZX_OK;
+    return service::SendStartConfirm(device_, wlan_mlme::StartResultCodes::SUCCESS);
 }
 
 zx_status_t ApMlme::HandleMlmeStopReq(const MlmeMsg<wlan_mlme::StopRequest>& req) {

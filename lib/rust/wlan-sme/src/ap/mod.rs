@@ -21,12 +21,12 @@ use wlan_rsn::{
 };
 use crate::ap::{
     aid::AssociationId,
-    event::Event,
+    event::{Event, SmeEvent},
     rsn::{create_wpa2_psk_rsne, is_valid_rsne_subset},
 };
 use crate::{DeviceInfo, MacAddr, MlmeRequest, Ssid};
 use crate::sink::MlmeSink;
-use crate::timer::{self, TimedEvent, Timer};
+use crate::timer::{self, EventId, TimedEvent, Timer};
 use std::sync::{Arc, Mutex};
 
 const DEFAULT_BEACON_PERIOD: u16 = 100;
@@ -57,10 +57,14 @@ pub type TimeStream = timer::TimeStream<Event>;
 
 enum State<T: Tokens> {
     Idle {
-        device_info: DeviceInfo,
-        mlme_sink: MlmeSink,
-        user_sink: UserSink<T>,
-        timer: Timer<Event>,
+        ctx: Context<T>,
+    },
+    Starting {
+        ctx: Context<T>,
+        ssid: Ssid,
+        rsn_cfg: Option<RsnCfg>,
+        token: T::StartToken,
+        start_timeout: EventId,
     },
     Started {
         bss: InfraBss<T>,
@@ -91,15 +95,18 @@ pub struct ApSme<T: Tokens> {
     state: Option<State<T>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum StartResult {
     Success,
     AlreadyStarted,
     InternalError,
+    Canceled,
+    TimedOut,
+    PreviousStartInProgress,
 }
 
 // A message from the Ap to a user or a group of listeners
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum UserEvent<T: Tokens> {
     StartComplete {
         token: T::StartToken,
@@ -117,10 +124,12 @@ impl<T: Tokens> ApSme<T> {
         let (timer, time_stream) = timer::create_timer();
         let sme = ApSme {
             state: Some(State::Idle {
-                device_info,
-                mlme_sink: MlmeSink::new(mlme_sink),
-                user_sink: UserSink::new(user_sink),
-                timer,
+                ctx: Context {
+                    device_info,
+                    mlme_sink: MlmeSink::new(mlme_sink),
+                    user_sink: UserSink::new(user_sink),
+                    timer,
+                }
             })
         };
         (sme, mlme_stream, user_stream, time_stream)
@@ -128,41 +137,39 @@ impl<T: Tokens> ApSme<T> {
 
     pub fn on_start_command(&mut self, config: Config, token: T::StartToken) {
         self.state = self.state.take().map(|mut state| match state {
-            State::Idle { device_info, mlme_sink, user_sink, timer } => {
+            State::Idle { mut ctx } => {
                 let rsn_cfg_result = create_rsn_cfg(&config.ssid[..], &config.password[..]);
                 match rsn_cfg_result {
                     Err(e) => {
                         error!("error configuring RSN: {}", e);
-                        user_sink.send(UserEvent::StartComplete {
+                        ctx.user_sink.send(UserEvent::StartComplete {
                             token,
                             result: StartResult::InternalError,
                         });
-                        State::Idle { device_info, mlme_sink, user_sink, timer }
+                        State::Idle { ctx }
                     },
                     Ok(rsn_cfg) => {
                         let req = create_start_request(&config, rsn_cfg.as_ref());
-                        mlme_sink.send(MlmeRequest::Start(req));
-                        // Currently, MLME doesn't send any response back. We simply assume
-                        // that the start request succeeded immediately
-                        user_sink.send(UserEvent::StartComplete {
+                        ctx.mlme_sink.send(MlmeRequest::Start(req));
+                        let event = Event::Sme { event: SmeEvent::StartTimeout };
+                        let start_timeout = ctx.timer.schedule(
+                            event.timeout_duration().after_now(), event);
+                        State::Starting {
+                            ctx,
+                            ssid: config.ssid,
+                            rsn_cfg,
                             token,
-                            result: StartResult::Success,
-                        });
-                        State::Started {
-                            bss: InfraBss {
-                                ssid: config.ssid,
-                                rsn_cfg,
-                                client_map: Default::default(),
-                                ctx: Context {
-                                    device_info,
-                                    mlme_sink,
-                                    user_sink,
-                                    timer,
-                                }
-                            }
+                            start_timeout,
                         }
                     }
                 }
+            },
+            State::Starting { ref mut ctx, .. } => {
+                ctx.user_sink.send(UserEvent::StartComplete {
+                    token,
+                    result: StartResult::PreviousStartInProgress,
+                });
+                state
             },
             State::Started { bss: InfraBss { ref mut ctx, .. } } => {
                 let result = StartResult::AlreadyStarted;
@@ -174,9 +181,17 @@ impl<T: Tokens> ApSme<T> {
 
     pub fn on_stop_command(&mut self, token: T::StopToken) {
         self.state = self.state.take().map(|mut state| match state {
-            State::Idle { ref mut user_sink, .. } => {
-                user_sink.send(UserEvent::StopComplete { token });
+            State::Idle { ref mut ctx, .. } => {
+                ctx.user_sink.send(UserEvent::StopComplete { token });
                 state
+            },
+            State::Starting { ctx, token: start_token, .. } => {
+                ctx.user_sink.send(UserEvent::StartComplete {
+                    token: start_token,
+                    result: StartResult::Canceled,
+                });
+                ctx.user_sink.send(UserEvent::StopComplete { token });
+                State::Idle { ctx }
             },
             State::Started { bss } => {
                 let req = fidl_mlme::StopRequest { ssid: bss.ssid.clone() };
@@ -184,12 +199,7 @@ impl<T: Tokens> ApSme<T> {
                 // Currently, MLME doesn't send any response back. We simply assume
                 // that the stop request succeeded immediately
                 bss.ctx.user_sink.send(UserEvent::StopComplete { token });
-                State::Idle {
-                    device_info: bss.ctx.device_info,
-                    mlme_sink: bss.ctx.mlme_sink,
-                    user_sink: bss.ctx.user_sink,
-                    timer: bss.ctx.timer,
-                }
+                State::Idle { ctx: bss.ctx }
             }
         });
     }
@@ -200,36 +210,98 @@ impl<T: Tokens> super::Station for ApSme<T> {
 
     fn on_mlme_event(&mut self, event: MlmeEvent) {
         debug!("received MLME event: {:?}", event);
-        self.state.as_mut().map(|state| match state {
-            State::Idle { .. } => warn!("received MlmeEvent while ApSme is idle {:?}", event),
-            State::Started { ref mut bss } => match event {
-                MlmeEvent::AuthenticateInd { ind } => bss.handle_auth_ind(ind),
-                MlmeEvent::DeauthenticateInd { ind } => bss.handle_deauth(&ind.peer_sta_address),
-                MlmeEvent::DeauthenticateConf { resp } =>
-                    bss.handle_deauth(&resp.peer_sta_address),
-                MlmeEvent::AssociateInd { ind } => bss.handle_assoc_ind(ind),
-                MlmeEvent::DisassociateInd { ind } => bss.handle_disassoc_ind(ind),
-                MlmeEvent::EapolInd { ind } => {
-                    let _ = bss.handle_eapol_ind(ind).map_err(|e| warn!("{}", e));
-                }
-                MlmeEvent::EapolConf { resp } => {
-                    if resp.result_code != fidl_mlme::EapolResultCodes::Success {
-                        // TODO(NET-1634) - Handle unsuccessful EAPoL confirmation. It doesn't
-                        //                  include client address, though. Maybe we can just ignore
-                        //                  these messages and just set a handshake timeout instead
-                        info!("Received unsuccessful EapolConf");
+        self.state = self.state.take().map(|mut state| match state {
+            State::Idle { .. } => {
+                warn!("received MlmeEvent while ApSme is idle {:?}", event);
+                state
+            },
+            State::Starting { ctx, ssid, rsn_cfg, token, start_timeout } => match event {
+                MlmeEvent::StartConf { resp } =>
+                    handle_start_conf(resp, ctx, ssid, rsn_cfg, token),
+                _ => {
+                    warn!("received MlmeEvent while ApSme is starting {:?}", event);
+                    State::Starting { ctx, ssid, rsn_cfg, token, start_timeout }
+                },
+            },
+            State::Started { ref mut bss } => {
+                match event {
+                    MlmeEvent::AuthenticateInd { ind } => bss.handle_auth_ind(ind),
+                    MlmeEvent::DeauthenticateInd { ind } =>
+                        bss.handle_deauth(&ind.peer_sta_address),
+                    MlmeEvent::DeauthenticateConf { resp } =>
+                        bss.handle_deauth(&resp.peer_sta_address),
+                    MlmeEvent::AssociateInd { ind } => bss.handle_assoc_ind(ind),
+                    MlmeEvent::DisassociateInd { ind } => bss.handle_disassoc_ind(ind),
+                    MlmeEvent::EapolInd { ind } => {
+                        let _ = bss.handle_eapol_ind(ind).map_err(|e| warn!("{}", e));
                     }
+                    MlmeEvent::EapolConf { resp } => {
+                        if resp.result_code != fidl_mlme::EapolResultCodes::Success {
+                            // TODO(NET-1634) - Handle unsuccessful EAPoL confirmation. It doesn't
+                            //                  include client address, though. Maybe we can just
+                            //                  ignore these messages and just set a handshake
+                            //                  timeout instead
+                            info!("Received unsuccessful EapolConf");
+                        }
+                    }
+                    _ => warn!("unsupported MlmeEvent type {:?}; ignoring", event),
                 }
-                _ => warn!("unsupported MlmeEvent type {:?}; ignoring", event),
+                state
             }
         });
     }
 
     fn on_timeout(&mut self, timed_event: TimedEvent<Event>) {
-        self.state.as_mut().map(|state| match state {
-            State::Idle { .. } => debug!("received timeout while ApSme is idle"),
-            State::Started { ref mut bss } => bss.handle_timeout(timed_event),
+        self.state = self.state.take().map(|mut state| match state {
+            State::Idle { .. } => state,
+            State::Starting { start_timeout, ctx,
+                              token, ssid, rsn_cfg } => match timed_event.event {
+                Event::Sme { event } => match event {
+                    SmeEvent::StartTimeout if start_timeout == timed_event.id => {
+                        warn!("Timed out waiting for MLME to start");
+                        ctx.user_sink.send(UserEvent::StartComplete {
+                            token,
+                            result: StartResult::TimedOut,
+                        });
+                        State::Idle { ctx }
+                    }
+                    _ => State::Starting { start_timeout, ctx, token, ssid, rsn_cfg },
+                }
+                _ => State::Starting { start_timeout, ctx, token, ssid, rsn_cfg },
+            },
+            State::Started { ref mut bss } => {
+                bss.handle_timeout(timed_event);
+                state
+            },
         });
+    }
+}
+
+fn handle_start_conf<T: Tokens>(conf: fidl_mlme::StartConfirm, ctx: Context<T>, ssid: Ssid,
+                                rsn_cfg: Option<RsnCfg>, token: T::StartToken) -> State<T> {
+    match conf.result_code {
+        fidl_mlme::StartResultCodes::Success => {
+            ctx.user_sink.send(UserEvent::StartComplete {
+                token,
+                result: StartResult::Success,
+            });
+            State::Started {
+                bss: InfraBss {
+                    ssid,
+                    rsn_cfg,
+                    client_map: Default::default(),
+                    ctx,
+                }
+            }
+        },
+        result_code => {
+            error!("failed to start BSS: {:?}", result_code);
+            ctx.user_sink.send(UserEvent::StartComplete {
+                token,
+                result: StartResult::InternalError,
+            });
+            State::Idle { ctx }
+        }
     }
 }
 
@@ -345,9 +417,13 @@ impl<T: Tokens> InfraBss<T> {
     }
 
     fn handle_timeout(&mut self, timed_event: TimedEvent<Event>) {
-        let event = timed_event.event;
-        if let Some(client) = self.client_map.get_mut_client(&event.addr) {
-            client.handle_timeout(timed_event.id, event.event, &mut self.ctx);
+        match timed_event.event {
+            Event::Sme { .. } => (),
+            Event::Client { addr, event } => {
+                if let Some(client) = self.client_map.get_mut_client(&addr) {
+                    client.handle_timeout(timed_event.id, event, &mut self.ctx);
+                }
+            }
         }
     }
 }
@@ -445,8 +521,8 @@ mod tests {
     }
 
     #[test]
-    fn ap_starting() {
-        let (mut sme, mut mlme_stream, _, _) = create_sme();
+    fn ap_starts_success() {
+        let (mut sme, mut mlme_stream, mut user_stream, _) = create_sme();
         sme.on_start_command(unprotected_config(), 10);
 
         let msg = mlme_stream.try_next().unwrap().expect("expect mlme message");
@@ -460,6 +536,82 @@ mod tests {
         } else {
             panic!("expect start AP request to MLME");
         }
+
+        match user_stream.try_next() {
+            Err(e) => assert_eq!(e.description(), "receiver channel is empty"),
+            _ => panic!("unexpected event in user stream"),
+        }
+
+        sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCodes::Success));
+        verify_start_complete(&mut user_stream, 10, StartResult::Success);
+    }
+
+    #[test]
+    fn ap_starts_timeout() {
+        let (mut sme, _, mut user_stream, mut time_stream) = create_sme();
+        sme.on_start_command(unprotected_config(), 10);
+
+        let (_, event) = time_stream.try_next().unwrap().expect("expect timer message");
+        sme.on_timeout(event);
+
+        let msg = user_stream.try_next().unwrap().expect("expect user message");
+        if let UserEvent::StartComplete { token, result } = msg {
+            assert_eq!(token, 10);
+            assert_eq!(result, StartResult::TimedOut);
+        } else {
+            panic!("expect start complete message to user");
+        }
+    }
+
+    #[test]
+    fn ap_starts_fails() {
+        let (mut sme, _, mut user_stream, _) = create_sme();
+        sme.on_start_command(unprotected_config(), 10);
+
+        sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCodes::NotSupported));
+        verify_start_complete(&mut user_stream, 10, StartResult::InternalError);
+    }
+
+    #[test]
+    fn start_req_while_ap_is_starting() {
+        let (mut sme, _, mut user_stream, _) = create_sme();
+        sme.on_start_command(unprotected_config(), 10);
+
+        // While SME is starting, any start request receives an error immediately
+        sme.on_start_command(unprotected_config(), 11);
+        verify_start_complete(&mut user_stream, 11, StartResult::PreviousStartInProgress);
+
+        // Start confirmation for first request should still have an affect
+        sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCodes::Success));
+        verify_start_complete(&mut user_stream, 10, StartResult::Success);
+    }
+
+    #[test]
+    fn ap_stops_while_idle() {
+        let (mut sme, _, mut user_stream, _) = create_sme();
+        sme.on_stop_command(10);
+        verify_stop_complete(&mut user_stream, 10);
+    }
+
+    #[test]
+    fn stop_req_while_ap_is_starting() {
+        let (mut sme, _, mut user_stream, _) = create_sme();
+        sme.on_start_command(unprotected_config(), 10);
+        sme.on_stop_command(11);
+        verify_start_complete(&mut user_stream, 10, StartResult::Canceled);
+        verify_stop_complete(&mut user_stream, 11);
+    }
+
+    #[test]
+    fn ap_stops_after_started() {
+        let (mut sme, mut mlme_stream, mut user_stream, _) = start_unprotected_ap();
+        sme.on_stop_command(10);
+
+        match mlme_stream.try_next().unwrap().expect("expect mlme message") {
+            MlmeRequest::Stop(stop_req) => assert_eq!(stop_req.ssid, SSID.to_vec()),
+            _ => panic!("expect stop AP request to MLME"),
+        }
+        verify_stop_complete(&mut user_stream, 10);
     }
 
     #[test]
@@ -572,6 +724,34 @@ mod tests {
         sme.on_mlme_event(client2.create_assoc_ind(Some(RSNE.to_vec())));
         client2.verify_assoc_resp(&mut mlme_stream, 2, fidl_mlme::AssociateResultCodes::Success);
         client2.verify_eapol_req(&mut mlme_stream);
+    }
+
+    fn create_start_conf(result_code: fidl_mlme::StartResultCodes) -> MlmeEvent {
+        MlmeEvent::StartConf {
+            resp: fidl_mlme::StartConfirm {
+                result_code
+            }
+        }
+    }
+
+    fn verify_start_complete(user_stream: &mut UserStream<FakeTokens>,
+                             expected_token: <FakeTokens as Tokens>::StartToken,
+                             expected_start_result: StartResult) {
+        let msg = user_stream.try_next().unwrap().expect("expect user message");
+        if let UserEvent::StartComplete { token, result } = msg {
+            assert_eq!(token, expected_token);
+            assert_eq!(result, expected_start_result);
+        } else {
+            panic!("expect start complete message to user");
+        }
+    }
+
+    fn verify_stop_complete(user_stream: &mut UserStream<FakeTokens>,
+                            expected_token: <FakeTokens as Tokens>::StartToken) {
+        match user_stream.try_next().unwrap().expect("expect user message") {
+            UserEvent::StopComplete { token } => assert_eq!(token, expected_token),
+            _ => panic!("expect stop complete message to user"),
+        }
     }
 
     struct Client {
@@ -689,14 +869,21 @@ mod tests {
     fn start_ap(protected: bool) -> (ApSme<FakeTokens>, crate::MlmeStream, UserStream<FakeTokens>,
                                      TimeStream) {
 
-        let (mut sme, mut mlme_stream, event_stream, timeout_stream) = create_sme();
+        let (mut sme, mut mlme_stream, mut event_stream, mut time_stream) = create_sme();
         let config = if protected { protected_config() } else { unprotected_config() };
         sme.on_start_command(config, 10);
         match mlme_stream.try_next().unwrap().expect("expect mlme message") {
             MlmeRequest::Start(..) => {} // expected path
             _ => panic!("expect start AP to MLME"),
         }
-        (sme, mlme_stream, event_stream, timeout_stream)
+        // drain time stream
+        while let Ok(..) = time_stream.try_next() {}
+        sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCodes::Success));
+        match event_stream.try_next().unwrap().expect("expect user event message") {
+            UserEvent::StartComplete { .. } => {} // expected path
+            _ => panic!("expect start complete messsage to user"),
+        }
+        (sme, mlme_stream, event_stream, time_stream)
     }
 
     fn create_sme() -> (ApSme<FakeTokens>, MlmeStream, UserStream<FakeTokens>, TimeStream) {

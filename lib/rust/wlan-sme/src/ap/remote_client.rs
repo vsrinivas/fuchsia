@@ -101,7 +101,7 @@ impl RemoteClient {
     }
 
     fn schedule_timer<T: Tokens>(&self, event: ClientEvent, ctx: &mut Context<T>) -> EventId {
-        let event = Event { addr: self.addr.clone(), event };
+        let event = Event::Client { addr: self.addr.clone(), event };
         ctx.timer.schedule(event.timeout_duration().after_now(), event)
     }
 

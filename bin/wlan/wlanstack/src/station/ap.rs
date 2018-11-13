@@ -132,7 +132,11 @@ fn convert_start_result_code(r: ap_sme::StartResult) -> fidl_sme::StartApResultC
     match r {
         ap_sme::StartResult::Success => fidl_sme::StartApResultCode::Success,
         ap_sme::StartResult::AlreadyStarted => fidl_sme::StartApResultCode::AlreadyStarted,
-        ap_sme::StartResult::InternalError => fidl_sme::StartApResultCode::InternalError
+        ap_sme::StartResult::InternalError => fidl_sme::StartApResultCode::InternalError,
+        ap_sme::StartResult::Canceled => fidl_sme::StartApResultCode::Canceled,
+        ap_sme::StartResult::TimedOut => fidl_sme::StartApResultCode::TimedOut,
+        ap_sme::StartResult::PreviousStartInProgress =>
+            fidl_sme::StartApResultCode::PreviousStartInProgress,
     }
 }
 
