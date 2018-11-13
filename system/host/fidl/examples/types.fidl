@@ -249,6 +249,7 @@ struct handles {
     handle<fifo> fifo_handle;
     handle<guest> guest_handle;
     handle<timer> timer_handle;
+    handle<bti> bti_handle;
     handle<profile> profile_handle;
 
     handle? nullable_handle_handle;
@@ -268,6 +269,7 @@ struct handles {
     handle<fifo>? nullable_fifo_handle;
     handle<guest>? nullable_guest_handle;
     handle<timer>? nullable_timer_handle;
+    handle<bti>? nullable_bti_handle;
     handle<profile>? nullable_profile_handle;
 };
 

@@ -73,6 +73,7 @@ Parser::Parser(Lexer* lexer, ErrorReporter* error_reporter)
         {"fifo", types::HandleSubtype::kFifo},
         {"guest", types::HandleSubtype::kGuest},
         {"timer", types::HandleSubtype::kTimer},
+        {"bti", types::HandleSubtype::kBti},
         {"profile", types::HandleSubtype::kProfile},
     };
 

@@ -976,6 +976,7 @@
                 "fifo",
                 "guest",
                 "timer",
+                "bti",
                 "profile"
             ]
         },
