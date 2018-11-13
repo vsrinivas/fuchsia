@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "async-loop-owned-rpc-handler.h"
 #include "devcoordinator.h"
 #include "devhost-shared.h"
 #include "devmgr.h"
@@ -47,7 +48,7 @@ Watcher::Watcher(Devnode* dn, zx::channel ch, uint32_t mask)
     : devnode(dn), handle(fbl::move(ch)), mask(mask) {
 }
 
-class DcIostate {
+class DcIostate : public AsyncLoopOwnedRpcHandler<DcIostate> {
 public:
     explicit DcIostate(Devnode* dn);
     ~DcIostate();
@@ -60,25 +61,6 @@ public:
     static void HandleRpc(fbl::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher,
                           async::WaitBase* wait, zx_status_t status,
                           const zx_packet_signal_t* signal);
-
-    // Begins waiting in |dispatcher| on |ios->wait|.  This transfers ownership
-    // of |ios| to the dispatcher.  The dispatcher returns ownership when the
-    // handler is invoked.
-    static zx_status_t BeginWait(fbl::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher) {
-        zx_status_t status = ios->wait_.Begin(dispatcher);
-        if (status == ZX_OK) {
-            __UNUSED auto ptr = ios.release();
-        }
-        return status;
-    }
-
-    // Entrypoint for the RPC handler that captures the pointer ownership
-    // semantics.
-    void HandleRpcEntry(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                        const zx_packet_signal_t* signal) {
-        fbl::unique_ptr<DcIostate> self(this);
-        HandleRpc(fbl::move(self), dispatcher, wait, status, signal);
-    }
 
     struct Node {
         static fbl::DoublyLinkedListNodeState<DcIostate*>& node_state(DcIostate& obj) {
@@ -93,7 +75,6 @@ public:
 
     // pointer to our devnode, nullptr if it has been removed
     Devnode* devnode_ = nullptr;
-    async::WaitMethod<DcIostate, &DcIostate::HandleRpcEntry> wait_;
 
     // entry in our devnode's iostate list
     fbl::DoublyLinkedListNodeState<DcIostate*> node_;
@@ -195,8 +176,7 @@ void describe_error(zx::channel h, zx_status_t status) {
     h.write(0, &msg, sizeof(msg), nullptr, 0);
 }
 
-DcIostate::DcIostate(Devnode* dn)
-    : devnode_(dn), wait_(this, ZX_HANDLE_INVALID, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED) {
+DcIostate::DcIostate(Devnode* dn) : devnode_(dn) {
 
     devnode_->iostate.push_back(this);
 }
@@ -207,15 +187,14 @@ zx_status_t DcIostate::Create(Devnode* dn, zx::channel* ipc) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    ios->wait_.set_object(ipc->release());
+    ios->set_channel(fbl::move(*ipc));
     // We use wait_.Begin here instead of DcIostate::BeginWait because we need
     // to be able to not close the IPC channel in the event of failure.
-    zx_status_t status = ios->wait_.Begin(DcAsyncLoop()->dispatcher());
+    zx_status_t status = DcIostate::BeginWait(&ios, DcAsyncLoop()->dispatcher());
     if (status != ZX_OK) {
         // Take the handle back from |ios| so it doesn't close it when it's
         // destroyed
-        ipc->reset(ios->wait_.object());
-        ios->wait_.set_object(ZX_HANDLE_INVALID);
+        *ipc = ios->set_channel(zx::channel());
     } else {
         // If the wait succeeded, DcAsyncLoop() now owns |ios|.
         __UNUSED auto ptr = ios.release();
@@ -228,8 +207,7 @@ void DcIostate::DetachFromDevnode() {
         devnode_->iostate.erase(*this);
         devnode_ = nullptr;
     }
-    zx_handle_close(wait_.object());
-    wait_.set_object(ZX_HANDLE_INVALID);
+    set_channel(zx::channel());
 }
 
 DcIostate::~DcIostate() {
