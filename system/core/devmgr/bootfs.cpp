@@ -95,7 +95,7 @@ static zx_status_t CloneVmo(const char* name, size_t name_len, const bootfs_entr
     }
 
     // TODO(mdempsky): Restrict to bin/ and lib/.
-    if ((vmo.replace_as_executable(zx::handle(), &vmo)) != ZX_OK) {
+    if ((r = vmo.replace_as_executable(zx::handle(), &vmo)) != ZX_OK) {
         return r;
     }
 
