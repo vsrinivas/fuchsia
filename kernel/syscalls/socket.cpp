@@ -71,13 +71,6 @@ zx_status_t sys_socket_write(zx_handle_t handle, uint32_t options,
         if (status == ZX_OK)
             nwritten = size;
         break;
-    // TODO(ZX-2994): Remove this cases once the transition is complete.
-    case ZX_SOCKET_SHUTDOWN_WRITE:
-    case ZX_SOCKET_SHUTDOWN_READ:
-    case ZX_SOCKET_SHUTDOWN_READ | ZX_SOCKET_SHUTDOWN_WRITE:
-        if (size == 0)
-            return socket->Shutdown(options & ZX_SOCKET_SHUTDOWN_MASK);
-        __FALLTHROUGH;
     default:
         return ZX_ERR_INVALID_ARGS;
     }
