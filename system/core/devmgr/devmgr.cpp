@@ -678,8 +678,6 @@ static const loader_service_ops_t loader_ops = {
 
 static loader_service_t* loader_service;
 
-#define MAXHND ZX_CHANNEL_MAX_MSG_HANDLES
-
 void bootfs_create_from_startup_handle() {
     zx::vmo bootfs_vmo(zx_take_startup_handle(PA_HND(PA_VMO_BOOTFS, 0)));
     if ((!bootfs_vmo.is_valid()) ||
@@ -704,8 +702,8 @@ void bootfs_create_from_startup_handle() {
 
 void fshost_start() {
     // assemble handles to pass down to fshost
-    zx_handle_t handles[MAXHND];
-    uint32_t types[MAXHND];
+    zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+    uint32_t types[fbl::count_of(handles)];
     size_t n = 0;
     zx_handle_t ldsvc;
 
@@ -739,7 +737,7 @@ void fshost_start() {
     }
 
     // pass bootdata VMOs to fshost
-    for (uint32_t m = 0; n < MAXHND; m++) {
+    for (uint32_t m = 0; n < fbl::count_of(handles); m++) {
         uint32_t type = PA_HND(PA_VMO_BOOTDATA, m);
         if ((handles[n] = zx_take_startup_handle(type)) != ZX_HANDLE_INVALID) {
             devmgr_set_bootdata(zx::unowned_vmo(handles[n]));
@@ -750,7 +748,7 @@ void fshost_start() {
     }
 
     // pass VDSO VMOS to fshost
-    for (uint32_t m = 0; n < MAXHND; m++) {
+    for (uint32_t m = 0; n < fbl::count_of(handles); m++) {
         uint32_t type = PA_HND(PA_VMO_VDSO, m);
         if (m == 0) {
             // By this point, launchpad has already moved PA_HND(PA_VMO_VDSO, 0) into a static.
@@ -768,7 +766,7 @@ void fshost_start() {
     }
 
     // pass KERNEL FILE VMOS to fsboot
-    for (uint32_t m = 0; n < MAXHND; m++) {
+    for (uint32_t m = 0; n < fbl::count_of(handles); m++) {
         uint32_t type = PA_HND(PA_VMO_KERNEL_FILE, m);
         if ((handles[n] = zx_take_startup_handle(type)) != ZX_HANDLE_INVALID) {
             types[n++] = type;
