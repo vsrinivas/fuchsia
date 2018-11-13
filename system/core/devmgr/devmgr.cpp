@@ -814,7 +814,8 @@ zx_status_t devmgr_launch_load(void* ctx, launchpad_t* lp, const char* file) {
     zx::vmo vmo;
     zx_status_t status = devmgr_load_file(file, &vmo, nullptr);
     if (status != ZX_OK) {
-        return status;
+        // TODO(mcgrathr): This case is probably never used.  Remove it later.
+        return launchpad_load_from_file(lp, file);
     }
     return launchpad_load_from_vmo(lp, vmo.release());
 }
