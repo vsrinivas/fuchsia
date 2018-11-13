@@ -143,16 +143,6 @@ static zx_status_t aml_canvas_free(void* ctx, uint8_t canvas_idx) {
     return status;
 }
 
-static void aml_canvas_init(aml_canvas_t* canvas) {
-    WRITE32_DMC_REG(DMC_CAV_LUT_DATAL, 0);
-    WRITE32_DMC_REG(DMC_CAV_LUT_DATAH, 0);
-
-    for (int index = 0; index < NUM_CANVAS_ENTRIES; index++) {
-        WRITE32_DMC_REG(DMC_CAV_LUT_ADDR, DMC_CAV_LUT_ADDR_WR_EN | index);
-        READ32_DMC_REG(DMC_CAV_LUT_DATAH);
-    }
-}
-
 static void aml_canvas_unbind(void* ctx) {
     aml_canvas_t* canvas = ctx;
     device_remove(canvas->zxdev);
@@ -254,9 +244,6 @@ static zx_status_t aml_canvas_bind(void* ctx, zx_device_t* parent) {
         CANVAS_ERROR("Could not map DMC registers %d\n", status);
         goto fail;
     }
-
-    // Do basic initialization
-    aml_canvas_init(canvas);
 
     mtx_init(&canvas->lock, mtx_plain);
 

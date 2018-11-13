@@ -249,7 +249,7 @@ zx_status_t AstroDisplay::SetupDisplayInterface() {
     fbl::AutoLock lock(&display_lock_);
 
     // Figure out board rev and panel type
-    skip_disp_init_ = false;
+    skip_disp_init_ = true;
     panel_type_ = PANEL_UNKNOWN;
 
     if (board_info_.board_revision < BOARD_REV_EVT_1) {
@@ -367,12 +367,12 @@ zx_status_t AstroDisplay::SetupDisplayInterface() {
 
     // Configure osd layer
     current_image_valid_= false;
-    osd_->Disable();
     status = osd_->Configure();
     if (status != ZX_OK) {
         DISP_ERROR("OSD configuration failed!\n");
         return status;
     }
+
     /// Backlight
     backlight_ = fbl::make_unique_checked<astro_display::Backlight>(&ac);
     if (!ac.check()) {
