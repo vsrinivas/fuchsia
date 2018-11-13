@@ -120,10 +120,10 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
         // if the local CPU may be changed underneath us
         DEBUG_ASSERT(arch_ints_disabled());
         mask = mp_get_online_mask() & ~cpu_num_to_mask(arch_curr_cpu_num());
+    } else {
+        // Mask any offline CPUs from target list
+        mask &= mp_get_online_mask();
     }
-
-    // Mask any offline CPUs from target list
-    mask &= mp_get_online_mask();
 
     // disable interrupts so our current CPU doesn't change
     spin_lock_saved_state_t irqstate;
