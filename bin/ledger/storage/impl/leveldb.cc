@@ -189,11 +189,12 @@ Status LevelDb::Init() {
     FXL_LOG(ERROR) << "Failed to create directory under " << db_path_.path();
     return Status::INTERNAL_IO_ERROR;
   }
+  fxl::UniqueFD unique_fd;
   ledger::DetachedPath db_path = db_path_;
   if (db_path_.path() != ".") {
     // Open a UniqueFD at the db path.
-    unique_fd_ = db_path_.OpenFD(&db_path);
-    if (!unique_fd_.is_valid()) {
+    unique_fd = db_path_.OpenFD(&db_path);
+    if (!unique_fd.is_valid()) {
       FXL_LOG(ERROR) << "Unable to open directory at " << db_path_.path()
                      << ". errno: " << errno;
       return Status::INTERNAL_IO_ERROR;
