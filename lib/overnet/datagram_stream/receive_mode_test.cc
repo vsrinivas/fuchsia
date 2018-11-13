@@ -12,7 +12,8 @@ namespace receive_mode_test {
 
 // Wrapper to allow testing parameterized modes without needing to add
 // constructor variants everywhere
-template <ReliabilityAndOrdering reliability_and_ordering>
+template <
+    fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering>
 class ParameterizedWrapper final : public ReceiveMode {
  public:
   ParameterizedWrapper() : mode_(reliability_and_ordering) {}
@@ -77,11 +78,17 @@ class ReceiveModeTest : public ::testing::Test {
 
 typedef ::testing::Types<
     ReliableOrdered, ReliableUnordered, UnreliableOrdered, UnreliableUnordered,
-    TailReliable, ParameterizedWrapper<ReliabilityAndOrdering::ReliableOrdered>,
-    ParameterizedWrapper<ReliabilityAndOrdering::ReliableUnordered>,
-    ParameterizedWrapper<ReliabilityAndOrdering::UnreliableOrdered>,
-    ParameterizedWrapper<ReliabilityAndOrdering::UnreliableUnordered>,
-    ParameterizedWrapper<ReliabilityAndOrdering::TailReliable>>
+    TailReliable,
+    ParameterizedWrapper<
+        fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered>,
+    ParameterizedWrapper<
+        fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableUnordered>,
+    ParameterizedWrapper<
+        fuchsia::overnet::protocol::ReliabilityAndOrdering::UnreliableOrdered>,
+    ParameterizedWrapper<fuchsia::overnet::protocol::ReliabilityAndOrdering::
+                             UnreliableUnordered>,
+    ParameterizedWrapper<
+        fuchsia::overnet::protocol::ReliabilityAndOrdering::TailReliable>>
     ReceiveModeTypes;
 TYPED_TEST_CASE(ReceiveModeTest, ReceiveModeTypes);
 
@@ -132,7 +139,8 @@ template <class T>
 using ReliableOrderedTest = ReceiveModeTest<T>;
 typedef ::testing::Types<
     ReliableOrdered,
-    ParameterizedWrapper<ReliabilityAndOrdering::ReliableOrdered>>
+    ParameterizedWrapper<
+        fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered>>
     ReliableOrderedTypes;
 TYPED_TEST_CASE(ReliableOrderedTest, ReliableOrderedTypes);
 
@@ -152,7 +160,8 @@ template <class T>
 using ReliableUnorderedTest = ReceiveModeTest<T>;
 typedef ::testing::Types<
     ReliableUnordered,
-    ParameterizedWrapper<ReliabilityAndOrdering::ReliableUnordered>>
+    ParameterizedWrapper<
+        fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableUnordered>>
     ReliableUnorderedTypes;
 TYPED_TEST_CASE(ReliableUnorderedTest, ReliableUnorderedTypes);
 
@@ -172,7 +181,8 @@ template <class T>
 using UnreliableOrderedTest = ReceiveModeTest<T>;
 typedef ::testing::Types<
     UnreliableOrdered,
-    ParameterizedWrapper<ReliabilityAndOrdering::UnreliableOrdered>>
+    ParameterizedWrapper<
+        fuchsia::overnet::protocol::ReliabilityAndOrdering::UnreliableOrdered>>
     UnreliableOrderedTypes;
 TYPED_TEST_CASE(UnreliableOrderedTest, UnreliableOrderedTypes);
 
@@ -203,7 +213,8 @@ template <class T>
 using UnreliableUnorderedTest = ReceiveModeTest<T>;
 typedef ::testing::Types<
     UnreliableUnordered,
-    ParameterizedWrapper<ReliabilityAndOrdering::UnreliableUnordered>>
+    ParameterizedWrapper<fuchsia::overnet::protocol::ReliabilityAndOrdering::
+                             UnreliableUnordered>>
     UnreliableUnorderedTypes;
 TYPED_TEST_CASE(UnreliableUnorderedTest, UnreliableUnorderedTypes);
 
@@ -225,7 +236,8 @@ TYPED_TEST(UnreliableUnorderedTest, AnythingGoesReally) {
 template <class T>
 using ErrorTest = ReceiveModeTest<T>;
 typedef ::testing::Types<
-    Error, ParameterizedWrapper<static_cast<ReliabilityAndOrdering>(255)>>
+    Error, ParameterizedWrapper<static_cast<
+               fuchsia::overnet::protocol::ReliabilityAndOrdering>(255)>>
     ErrorTypes;
 TYPED_TEST_CASE(ErrorTest, ErrorTypes);
 
@@ -247,7 +259,7 @@ TYPED_TEST(ErrorTest, BeginAlwaysFails) {
 // Originally led to an OOM generating nacks
 TEST(ReceiveModeFuzzed, _18dd797d7734fe115b89e72e79a26713c480096c) {
   receive_mode::ParameterizedReceiveMode m(
-      static_cast<ReliabilityAndOrdering>(1));
+      static_cast<fuchsia::overnet::protocol::ReliabilityAndOrdering>(1));
   m.Begin(112ull, StatusCallback([](const Status&) {}));
   m.Begin(1125899905794047ull, StatusCallback([](const Status&) {}));
 }
@@ -255,14 +267,14 @@ TEST(ReceiveModeFuzzed, _18dd797d7734fe115b89e72e79a26713c480096c) {
 // Originally led to an out of range index into a bitset
 TEST(ReceiveModeFuzzed, _0ea3e010446b0d18d1a08efc4e7f028372140b81) {
   receive_mode::ParameterizedReceiveMode m(
-      static_cast<ReliabilityAndOrdering>(3));
+      static_cast<fuchsia::overnet::protocol::ReliabilityAndOrdering>(3));
   m.Begin(450ull, StatusCallback([](const Status&) {}));
 }
 
 // Originally led to an OOM generating nacks
 TEST(ReceiveModeFuzzed, _feac8b7a55c39b0d70f86f40d340888a25ea69b8) {
   receive_mode::ParameterizedReceiveMode m(
-      static_cast<ReliabilityAndOrdering>(4));
+      static_cast<fuchsia::overnet::protocol::ReliabilityAndOrdering>(4));
   m.Begin(1ull, StatusCallback([](const Status&) {}));
   m.Begin(143547839805374333ull, StatusCallback([](const Status&) {}));
   m.Begin(139044205818265471ull, StatusCallback([](const Status&) {}));

@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include "status.h"
+#include <zircon/types.h>
+#include <sstream>
 
 namespace overnet {
 
@@ -10,7 +12,7 @@ namespace status_impl {
 const std::string empty_string;
 }
 
-const char *StatusCodeString(StatusCode code) {
+const char* StatusCodeString(StatusCode code) {
   switch (code) {
     case StatusCode::OK:
       return "OK";
@@ -48,6 +50,34 @@ const char *StatusCodeString(StatusCode code) {
       return "DATA_LOSS";
   }
   return "UNKNOWN_STATUS_CODE";
+}
+
+Status Status::FromZx(zx_status_t status) {
+  switch (status) {
+    case ZX_OK:
+      return overnet::Status::Ok();
+    case ZX_ERR_CANCELED:
+      return overnet::Status::Cancelled();
+    default: {
+      std::ostringstream out;
+      out << "zx_status:" << status;
+      return overnet::Status(overnet::StatusCode::UNKNOWN, out.str());
+    }
+  }
+}
+
+Status Status::FromZx(zx_status_t status, const char* desc) {
+  switch (status) {
+    case ZX_OK:
+      return Status::Ok();
+    case ZX_ERR_CANCELED:
+      return Status(StatusCode::CANCELLED, desc);
+    default: {
+      std::ostringstream out;
+      out << "zx_status:" << status << " '" << desc << "'";
+      return Status(overnet::StatusCode::UNKNOWN, out.str());
+    }
+  }
 }
 
 }  // namespace overnet

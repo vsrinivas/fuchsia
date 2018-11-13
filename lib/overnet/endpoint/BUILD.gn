@@ -29,6 +29,7 @@ source_set("message_builder") {
   ]
   deps = [
     ":router_endpoint",
+    "//garnet/lib/overnet/protocol:fidl",
   ]
 }
 
@@ -38,14 +39,17 @@ source_set("router_endpoint") {
     "router_endpoint.cc",
     "router_endpoint.h",
   ]
+  public_deps = [
+    "//garnet/lib/overnet/protocol:fuchsia.overnet.protocol",
+  ]
   deps = [
     "//garnet/lib/overnet/datagram_stream",
-    "//garnet/lib/overnet/labels:reliability_and_ordering",
-    "//garnet/lib/overnet/protocol:fork_frame",
+    "//garnet/lib/overnet/protocol:fidl",
     "//garnet/lib/overnet/routing:router",
     "//garnet/lib/overnet/vocabulary:manual_constructor",
     "//garnet/lib/overnet/vocabulary:optional",
     "//garnet/lib/overnet/vocabulary:slice",
+    "//garnet/lib/overnet/protocol:fuchsia.overnet.protocol",
   ]
 }
 
@@ -56,6 +60,7 @@ source_set("router_endpoint_integration_test") {
   ]
   deps = [
     ":router_endpoint",
+    "//garnet/lib/overnet/protocol:fidl",
     "//garnet/lib/overnet/links:packet_link",
     "//garnet/lib/overnet/testing:test_timer",
     "//garnet/lib/overnet/testing:trace_cout",

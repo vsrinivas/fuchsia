@@ -195,6 +195,10 @@ source_set("status") {
     "status.cc",
     "status.h",
   ]
+  deps = []
+  if (!is_fuchsia) {
+    deps += [ "//zircon/system/public" ]
+  }
 }
 
 source_set("status_test") {

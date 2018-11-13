@@ -224,6 +224,9 @@ class [[nodiscard]] Status final {
 
   void Ignore() {}
 
+  static Status FromZx(int32_t zx_status);
+  static Status FromZx(int32_t zx_status, const char* desc);
+
  private:
   bool is_code_only() const { return code_ < 256; }
 

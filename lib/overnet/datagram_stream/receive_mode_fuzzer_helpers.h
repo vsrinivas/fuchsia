@@ -13,7 +13,9 @@ namespace receive_mode {
 class Fuzzer {
  public:
   explicit Fuzzer(uint8_t type)
-      : receive_mode_(static_cast<ReliabilityAndOrdering>(type)) {}
+      : receive_mode_(
+            static_cast<fuchsia::overnet::protocol::ReliabilityAndOrdering>(
+                type)) {}
 
   void Step() { iteration_++; }
 

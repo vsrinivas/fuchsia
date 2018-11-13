@@ -68,7 +68,7 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer> {
               if (svc.v4_address) {
                 addresses.emplace_back();
                 auto result =
-                    ToOvernetStatus(svc.v4_address->Clone(&addresses.back()));
+                    overnet::Status::FromZx(svc.v4_address->Clone(&addresses.back()));
                 if (result.is_error()) {
                   std::cout << "Failed to clone v4_address: " << result << "\n";
                   addresses.pop_back();
@@ -77,7 +77,7 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer> {
               if (svc.v6_address) {
                 addresses.emplace_back();
                 auto result =
-                    ToOvernetStatus(svc.v6_address->Clone(&addresses.back()));
+                    overnet::Status::FromZx(svc.v6_address->Clone(&addresses.back()));
                 if (result.is_error()) {
                   std::cout << "Failed to clone v6_address: " << result << "\n";
                   addresses.pop_back();

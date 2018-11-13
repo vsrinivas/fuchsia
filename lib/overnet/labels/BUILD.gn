@@ -8,7 +8,6 @@
 source_set("lib") {
   public_deps = [
     ":node_id",
-    ":reliability_and_ordering",
     ":seq_num",
     ":stream_id",
   ]
@@ -44,14 +43,6 @@ source_set("node_id_test") {
   deps = [
     ":node_id",
     "//third_party/googletest:gtest",
-  ]
-}
-
-# reliability_and_ordering
-source_set("reliability_and_ordering") {
-  sources = [
-    "reliability_and_ordering.cc",
-    "reliability_and_ordering.h",
   ]
 }
 

@@ -4,10 +4,9 @@
 
 #pragma once
 
+#include <fuchsia/overnet/protocol/cpp/fidl.h>
 #include <queue>
 #include "garnet/lib/overnet/datagram_stream/datagram_stream.h"
-#include "garnet/lib/overnet/labels/reliability_and_ordering.h"
-#include "garnet/lib/overnet/protocol/fork_frame.h"
 #include "garnet/lib/overnet/routing/router.h"
 #include "garnet/lib/overnet/vocabulary/manual_constructor.h"
 #include "garnet/lib/overnet/vocabulary/optional.h"
@@ -46,14 +45,15 @@ class RouterEndpoint final : public Router {
 
     friend std::ostream& operator<<(std::ostream& out, const NewStream& s) {
       return out << "NewStream{node=" << s.peer_ << ",reliability_and_ordering="
-                 << ReliabilityAndOrderingString(s.reliability_and_ordering_)
+                 << static_cast<int>(s.reliability_and_ordering_)
                  << ",stream_id=" << s.stream_id_ << "}";
     }
 
    private:
     friend class RouterEndpoint;
     NewStream(RouterEndpoint* creator, NodeId peer,
-              ReliabilityAndOrdering reliability_and_ordering,
+              fuchsia::overnet::protocol::ReliabilityAndOrdering
+                  reliability_and_ordering,
               StreamId stream_id)
         : creator_(creator),
           peer_(peer),
@@ -62,18 +62,19 @@ class RouterEndpoint final : public Router {
 
     RouterEndpoint* creator_;
     NodeId peer_;
-    ReliabilityAndOrdering reliability_and_ordering_;
+    fuchsia::overnet::protocol::ReliabilityAndOrdering
+        reliability_and_ordering_;
     StreamId stream_id_;
   };
 
   struct ReceivedIntroduction final {
     NewStream new_stream;
-    Introduction introduction;
+    fuchsia::overnet::protocol::Introduction introduction;
   };
 
   struct OutgoingFork {
     NewStream new_stream;
-    ForkFrame fork_frame;
+    fuchsia::overnet::protocol::ForkFrame fork_frame;
   };
 
   class Stream final : public DatagramStream {
@@ -82,8 +83,10 @@ class RouterEndpoint final : public Router {
    public:
     Stream(NewStream introduction);
 
-    StatusOr<OutgoingFork> Fork(ReliabilityAndOrdering reliability_and_ordering,
-                                Introduction introduction);
+    StatusOr<OutgoingFork> Fork(
+        fuchsia::overnet::protocol::ReliabilityAndOrdering
+            reliability_and_ordering,
+        fuchsia::overnet::protocol::Introduction introduction);
     using DatagramStream::Close;
     void Close(const Status& status, Callback<void> quiesced) override;
 
@@ -92,7 +95,8 @@ class RouterEndpoint final : public Router {
     InternalListNode<Stream> connection_stream_link_;
   };
 
-  ReceivedIntroduction UnwrapForkFrame(NodeId peer, ForkFrame fork_frame);
+  StatusOr<ReceivedIntroduction> UnwrapForkFrame(
+      NodeId peer, fuchsia::overnet::protocol::ForkFrame fork_frame);
 
   using SendOp = Stream::SendOp;
   using ReceiveOp = Stream::ReceiveOp;
@@ -112,8 +116,10 @@ class RouterEndpoint final : public Router {
   }
 
   void RecvIntro(StatusOrCallback<ReceivedIntroduction> ready);
-  void SendIntro(NodeId peer, ReliabilityAndOrdering reliability_and_ordering,
-                 Introduction introduction,
+  void SendIntro(NodeId peer,
+                 fuchsia::overnet::protocol::ReliabilityAndOrdering
+                     reliability_and_ordering,
+                 fuchsia::overnet::protocol::Introduction introduction,
                  StatusOrCallback<NewStream> new_stream);
 
  private:
@@ -134,11 +140,13 @@ class RouterEndpoint final : public Router {
     void Register() { DatagramStream::Register(); }
 
     StatusOr<OutgoingFork> MakeFork(
-        ReliabilityAndOrdering reliability_and_ordering,
-        Introduction introduction);
+        fuchsia::overnet::protocol::ReliabilityAndOrdering
+            reliability_and_ordering,
+        fuchsia::overnet::protocol::Introduction introduction);
 
-    void Fork(ReliabilityAndOrdering reliability_and_ordering,
-              Introduction introduction,
+    void Fork(fuchsia::overnet::protocol::ReliabilityAndOrdering
+                  reliability_and_ordering,
+              fuchsia::overnet::protocol::Introduction introduction,
               StatusOrCallback<NewStream> new_stream);
 
     Stream* GossipStream();
@@ -164,15 +172,16 @@ class RouterEndpoint final : public Router {
     ManualConstructor<ReceiveOp> gossip_read_;
     InternalListNode<ConnectionStream> forking_ready_;
     InternalList<Stream, &Stream::connection_stream_link_> forked_streams_;
-    ManualConstructor<ForkFrame> fork_frame_;
+    ManualConstructor<fuchsia::overnet::protocol::ForkFrame> fork_frame_;
     Optional<Status> closing_status_;
     bool forking_gossip_stream_ = false;
     ClosedPtr<Stream> gossip_stream_;
   };
 
   StatusOr<OutgoingFork> ForkImpl(
-      ReliabilityAndOrdering reliability_and_ordering,
-      Introduction introduction);
+      fuchsia::overnet::protocol::ReliabilityAndOrdering
+          reliability_and_ordering,
+      fuchsia::overnet::protocol::Introduction introduction);
   ConnectionStream* GetOrCreateConnectionStream(NodeId peer);
 
   static constexpr TimeDelta InitialGossipInterval() {

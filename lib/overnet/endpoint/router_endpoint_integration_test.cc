@@ -5,6 +5,7 @@
 #include <array>
 #include <tuple>
 #include "garnet/lib/overnet/links/packet_link.h"
+#include "garnet/lib/overnet/protocol/fidl.h"
 #include "garnet/lib/overnet/testing/test_timer.h"
 #include "garnet/lib/overnet/testing/trace_cout.h"
 #include "gtest/gtest.h"
@@ -413,14 +414,18 @@ INSTANTIATE_TEST_CASE_P(RouterEndpoint_IntegrationEnv_Instance,
 
 struct OneMessageArgs {
   MakeEnv make_env;
-  Introduction intro;
   Slice body;
 };
 
+std::unique_ptr<fuchsia::overnet::protocol::Introduction> AbcIntro() {
+  fuchsia::overnet::protocol::Introduction intro;
+  intro.set_service_name("abc");
+  return std::make_unique<fuchsia::overnet::protocol::Introduction>(
+      std::move(intro));
+}
+
 std::ostream& operator<<(std::ostream& out, OneMessageArgs args) {
-  return out << "env=" << args.make_env->name()
-             << " intro=" << args.intro.Write(Border::None())
-             << " body=" << args.body;
+  return out << "env=" << args.make_env->name() << " body=" << args.body;
 }
 
 class RouterEndpoint_OneMessageIntegration
@@ -430,9 +435,8 @@ TEST_P(RouterEndpoint_OneMessageIntegration, Works) {
   std::cout << "Param: " << GetParam() << std::endl;
   auto env = GetParam().make_env->Make();
 
-  const TimeDelta kAllowedTime =
-      env->AllowedTime(GetParam().intro.Write(Border::None()).length() +
-                       GetParam().body.length());
+  const TimeDelta kAllowedTime = env->AllowedTime(
+      Encode(AbcIntro().get())->length() + GetParam().body.length());
   std::cout << "Allowed time for body: " << kAllowedTime << std::endl;
 
   env->AwaitConnected();
@@ -449,8 +453,8 @@ TEST_P(RouterEndpoint_OneMessageIntegration, Works) {
                 << "ep2: recv_intro status=" << status.AsStatus();
             ASSERT_TRUE(status.is_ok()) << status.AsStatus();
             auto intro = std::move(*status);
-            EXPECT_EQ(GetParam().intro, intro.introduction)
-                << intro.introduction.Write(Border::None());
+            EXPECT_EQ(*AbcIntro(), intro.introduction)
+                << Encode(&intro.introduction);
             auto stream = MakeClosedPtr<RouterEndpoint::Stream>(
                 std::move(intro.new_stream));
             OVERNET_TRACE(INFO) << "ep2: start pull_all";
@@ -473,8 +477,9 @@ TEST_P(RouterEndpoint_OneMessageIntegration, Works) {
 
   ScopedOp scoped_op(Op::New(OpType::OUTGOING_REQUEST));
   env->endpoint1()->SendIntro(
-      env->endpoint2()->node_id(), ReliabilityAndOrdering::ReliableOrdered,
-      GetParam().intro,
+      env->endpoint2()->node_id(),
+      fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered,
+      std::move(*AbcIntro()),
       StatusOrCallback<RouterEndpoint::NewStream>(
           ALLOCATED_CALLBACK,
           [this,
@@ -499,91 +504,33 @@ TEST_P(RouterEndpoint_OneMessageIntegration, Works) {
 const std::vector<OneMessageArgs> kOneMessageArgTests = [] {
   std::vector<OneMessageArgs> out;
   for (MakeEnv make_env : kEnvVariations) {
-    out.emplace_back(OneMessageArgs{
-        make_env,
-        Introduction(
-            {{Introduction::Key::ServiceName, Slice::FromStaticString("abc")}}),
-        Slice::FromStaticString("123")});
-    out.emplace_back(OneMessageArgs{
-        make_env,
-        Introduction(
-            {{Introduction::Key::ServiceName, Slice::FromStaticString("abc")}}),
-        Slice::RepeatedChar(3, 'a')});
-    out.emplace_back(OneMessageArgs{
-        make_env,
-        Introduction(
-            {{Introduction::Key::ServiceName, Slice::FromStaticString("abc")}}),
-        Slice::RepeatedChar(128, 'a')});
-    out.emplace_back(OneMessageArgs{
-        make_env,
-        Introduction(
-            {{Introduction::Key::ServiceName, Slice::FromStaticString("abc")}}),
-        Slice::RepeatedChar(240, 'a')});
-    out.emplace_back(OneMessageArgs{
-        make_env,
-        Introduction(
-            {{Introduction::Key::ServiceName, Slice::FromStaticString("abc")}}),
-        Slice::RepeatedChar(256, 'a')});
-    out.emplace_back(OneMessageArgs{
-        make_env,
-        Introduction(
-            {{Introduction::Key::ServiceName, Slice::FromStaticString("abc")}}),
-        Slice::RepeatedChar(512, 'a')});
-    out.emplace_back(OneMessageArgs{
-        make_env,
-        Introduction(
-            {{Introduction::Key::ServiceName, Slice::FromStaticString("abc")}}),
-        Slice::RepeatedChar(1024, 'b')});
-    out.emplace_back(OneMessageArgs{
-        make_env,
-        Introduction(
-            {{Introduction::Key::ServiceName, Slice::FromStaticString("abc")}}),
-        Slice::RepeatedChar(2 * 1024, 'b')});
-    out.emplace_back(OneMessageArgs{
-        make_env,
-        Introduction(
-            {{Introduction::Key::ServiceName, Slice::FromStaticString("abc")}}),
-        Slice::RepeatedChar(4 * 1024, 'b')});
-    out.emplace_back(OneMessageArgs{
-        make_env,
-        Introduction(
-            {{Introduction::Key::ServiceName, Slice::FromStaticString("abc")}}),
-        Slice::RepeatedChar(8 * 1024, 'b')});
-    out.emplace_back(OneMessageArgs{
-        make_env,
-        Introduction(
-            {{Introduction::Key::ServiceName, Slice::FromStaticString("abc")}}),
-        Slice::RepeatedChar(16 * 1024, 'b')});
-    out.emplace_back(OneMessageArgs{
-        make_env,
-        Introduction(
-            {{Introduction::Key::ServiceName, Slice::FromStaticString("abc")}}),
-        Slice::RepeatedChar(32 * 1024, 'b')});
-    out.emplace_back(OneMessageArgs{
-        make_env,
-        Introduction(
-            {{Introduction::Key::ServiceName, Slice::FromStaticString("abc")}}),
-        Slice::RepeatedChar(64 * 1024, 'b')});
-    out.emplace_back(OneMessageArgs{
-        make_env,
-        Introduction(
-            {{Introduction::Key::ServiceName, Slice::FromStaticString("abc")}}),
-        Slice::RepeatedChar(128 * 1024, 'b')});
-    out.emplace_back(OneMessageArgs{
-        make_env,
-        Introduction(
-            {{Introduction::Key::ServiceName, Slice::FromStaticString("abc")}}),
-        Slice::RepeatedChar(256 * 1024, 'b')});
-    out.emplace_back(OneMessageArgs{
-        make_env,
-        Introduction(
-            {{Introduction::Key::ServiceName, Slice::FromStaticString("abc")}}),
-        Slice::RepeatedChar(512 * 1024, 'b')});
-    out.emplace_back(OneMessageArgs{
-        make_env,
-        Introduction(
-            {{Introduction::Key::ServiceName, Slice::FromStaticString("abc")}}),
-        Slice::RepeatedChar(1024 * 1024, 'b')});
+    out.emplace_back(OneMessageArgs{make_env, Slice::FromStaticString("123")});
+    out.emplace_back(OneMessageArgs{make_env, Slice::RepeatedChar(3, 'a')});
+    out.emplace_back(OneMessageArgs{make_env, Slice::RepeatedChar(128, 'a')});
+    out.emplace_back(OneMessageArgs{make_env, Slice::RepeatedChar(240, 'a')});
+    out.emplace_back(OneMessageArgs{make_env, Slice::RepeatedChar(256, 'a')});
+    out.emplace_back(OneMessageArgs{make_env, Slice::RepeatedChar(512, 'a')});
+    out.emplace_back(OneMessageArgs{make_env, Slice::RepeatedChar(1024, 'b')});
+    out.emplace_back(
+        OneMessageArgs{make_env, Slice::RepeatedChar(2 * 1024, 'b')});
+    out.emplace_back(
+        OneMessageArgs{make_env, Slice::RepeatedChar(4 * 1024, 'b')});
+    out.emplace_back(
+        OneMessageArgs{make_env, Slice::RepeatedChar(8 * 1024, 'b')});
+    out.emplace_back(
+        OneMessageArgs{make_env, Slice::RepeatedChar(16 * 1024, 'b')});
+    out.emplace_back(
+        OneMessageArgs{make_env, Slice::RepeatedChar(32 * 1024, 'b')});
+    out.emplace_back(
+        OneMessageArgs{make_env, Slice::RepeatedChar(64 * 1024, 'b')});
+    out.emplace_back(
+        OneMessageArgs{make_env, Slice::RepeatedChar(128 * 1024, 'b')});
+    out.emplace_back(
+        OneMessageArgs{make_env, Slice::RepeatedChar(256 * 1024, 'b')});
+    out.emplace_back(
+        OneMessageArgs{make_env, Slice::RepeatedChar(512 * 1024, 'b')});
+    out.emplace_back(
+        OneMessageArgs{make_env, Slice::RepeatedChar(1024 * 1024, 'b')});
   }
   return out;
 }();

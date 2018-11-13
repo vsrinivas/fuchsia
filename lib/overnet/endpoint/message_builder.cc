@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "message_builder.h"
+#include "garnet/lib/overnet/protocol/fidl.h"
 namespace overnet {
 
 namespace {
@@ -19,13 +20,14 @@ enum class MessageFragmentType : uint8_t {
 }  // namespace
 
 StatusOr<RouterEndpoint::NewStream> MessageWireEncoder::AppendChannelHandle(
-    Introduction introduction) {
-  auto fork_status =
-      stream_->Fork(ReliabilityAndOrdering::ReliableOrdered, Introduction());
+    fuchsia::overnet::protocol::Introduction introduction) {
+  auto fork_status = stream_->Fork(
+      fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered,
+      std::move(introduction));
   if (fork_status.is_error()) {
     return fork_status.AsStatus();
   }
-  auto fork_frame = fork_status->fork_frame.Write(Border::None());
+  auto fork_frame = std::move(*Encode(&fork_status->fork_frame));
   auto fork_frame_len = fork_frame.length();
   auto fork_frame_len_len = varint::WireSizeFor(fork_frame_len);
   tail_.emplace_back(Slice::WithInitializer(
@@ -151,14 +153,19 @@ Status ParseMessageInto(Slice slice, NodeId peer,
         p = next_fragment;
       } break;
       case MessageFragmentType::kChannel: {
-        auto fork_frame =
-            ForkFrame::Parse(slice.FromPointer(p).ToOffset(fragment_length));
+        auto fork_slice = slice.FromPointer(p).ToOffset(fragment_length);
+        std::vector<uint8_t> copy(fork_slice.begin(), fork_slice.end());
+        auto fork_frame = Decode<fuchsia::overnet::protocol::ForkFrame>(
+            copy.data(), copy.size());
         if (fork_frame.is_error()) {
           return fork_frame.AsStatus();
         }
         auto intro =
             router_endpoint->UnwrapForkFrame(peer, std::move(*fork_frame));
-        auto append_status = builder->AppendChannelHandle(std::move(intro));
+        if (intro.is_error()) {
+          return intro.AsStatus();
+        }
+        auto append_status = builder->AppendChannelHandle(std::move(*intro));
         if (append_status.is_error()) {
           return append_status;
         }

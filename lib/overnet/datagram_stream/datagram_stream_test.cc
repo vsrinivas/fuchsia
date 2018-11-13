@@ -4,10 +4,10 @@
 
 #include "datagram_stream.h"
 #include <memory>
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "garnet/lib/overnet/testing/test_timer.h"
 #include "garnet/lib/overnet/testing/trace_cout.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 
 using testing::_;
 using testing::Mock;
@@ -93,7 +93,8 @@ TEST(DatagramStream, UnreliableSend) {
   }
 
   auto ds1 = MakeClosedPtr<DGStream>(
-      router.get(), NodeId(2), ReliabilityAndOrdering::UnreliableUnordered,
+      router.get(), NodeId(2),
+      fuchsia::overnet::protocol::ReliabilityAndOrdering::UnreliableUnordered,
       StreamId(1));
 
   std::shared_ptr<Message> message;
@@ -134,9 +135,10 @@ TEST(DatagramStream, ReadThenRecv) {
     timer.StepUntilNextEvent();
   }
 
-  auto ds1 = MakeClosedPtr<DGStream>(router.get(), NodeId(2),
-                                     ReliabilityAndOrdering::ReliableUnordered,
-                                     StreamId(1));
+  auto ds1 = MakeClosedPtr<DGStream>(
+      router.get(), NodeId(2),
+      fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableUnordered,
+      StreamId(1));
 
   router->Forward(Message{
       std::move(RoutableMessage(NodeId(2)).AddDestination(
@@ -176,9 +178,10 @@ TEST(DatagramStream, RecvThenRead) {
     timer.StepUntilNextEvent();
   }
 
-  auto ds1 = MakeClosedPtr<DGStream>(router.get(), NodeId(2),
-                                     ReliabilityAndOrdering::ReliableUnordered,
-                                     StreamId(1));
+  auto ds1 = MakeClosedPtr<DGStream>(
+      router.get(), NodeId(2),
+      fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableUnordered,
+      StreamId(1));
 
   DatagramStream::ReceiveOp recv_op(ds1.get());
 

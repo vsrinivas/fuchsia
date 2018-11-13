@@ -42,7 +42,7 @@ class OvernetApp final {
   class ServiceProvider {
    public:
     virtual ~ServiceProvider() {}
-    virtual void Connect(const overnet::Introduction& intro,
+    virtual void Connect(const fuchsia::overnet::protocol::Introduction& intro,
                          zx::channel channel) = 0;
   };
 
@@ -51,8 +51,9 @@ class OvernetApp final {
                                std::unique_ptr<ServiceProvider> provider);
 
   // Bind 'channel' to a local overnet service.
-  void ConnectToLocalService(const overnet::Introduction& intro,
-                             zx::channel channel);
+  void ConnectToLocalService(
+      const fuchsia::overnet::protocol::Introduction& intro,
+      zx::channel channel);
 
   /////////////////////////////////////////////////////////////////////////////
   // Accessors for well known objects.

@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include <fuchsia/overnet/protocol/cpp/fidl.h>
 #include <bitset>
 #include <map>
 #include <unordered_map>
-#include "garnet/lib/overnet/labels/reliability_and_ordering.h"
 #include "garnet/lib/overnet/vocabulary/callback.h"
 #include "garnet/lib/overnet/vocabulary/optional.h"
 #include "garnet/lib/overnet/vocabulary/status.h"
@@ -134,7 +134,8 @@ class Error final : public ReceiveMode {
 class ParameterizedReceiveMode final : public ReceiveMode {
  public:
   explicit ParameterizedReceiveMode(
-      ReliabilityAndOrdering reliability_and_ordering)
+      fuchsia::overnet::protocol::ReliabilityAndOrdering
+          reliability_and_ordering)
       : storage_(), receive_mode_(storage_.Init(reliability_and_ordering)) {}
   ~ParameterizedReceiveMode() { receive_mode_->~ReceiveMode(); }
   void Begin(uint64_t seq, BeginCallback ready) override {
@@ -150,7 +151,8 @@ class ParameterizedReceiveMode final : public ReceiveMode {
  private:
   union Storage {
     Storage() {}
-    ReceiveMode* Init(ReliabilityAndOrdering reliability_and_ordering);
+    ReceiveMode* Init(fuchsia::overnet::protocol::ReliabilityAndOrdering
+                          reliability_and_ordering);
     ~Storage() {}
     ReliableOrdered reliable_ordered;
     ReliableUnordered reliable_unordered;

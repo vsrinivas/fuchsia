@@ -273,17 +273,19 @@ void Error::Close(const Status& status) {}
 // ParameterizedReceiveMode
 
 ReceiveMode* ParameterizedReceiveMode::Storage::Init(
-    ReliabilityAndOrdering reliability_and_ordering) {
+    fuchsia::overnet::protocol::ReliabilityAndOrdering
+        reliability_and_ordering) {
   switch (reliability_and_ordering) {
-    case ReliabilityAndOrdering::ReliableOrdered:
+    case fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered:
       return new (&reliable_ordered) ReliableOrdered();
-    case ReliabilityAndOrdering::ReliableUnordered:
+    case fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableUnordered:
       return new (&reliable_unordered) ReliableUnordered();
-    case ReliabilityAndOrdering::UnreliableOrdered:
+    case fuchsia::overnet::protocol::ReliabilityAndOrdering::UnreliableOrdered:
       return new (&unreliable_ordered) UnreliableOrdered();
-    case ReliabilityAndOrdering::UnreliableUnordered:
+    case fuchsia::overnet::protocol::ReliabilityAndOrdering::
+        UnreliableUnordered:
       return new (&unreliable_unordered) UnreliableUnordered();
-    case ReliabilityAndOrdering::TailReliable:
+    case fuchsia::overnet::protocol::ReliabilityAndOrdering::TailReliable:
       return new (&tail_reliable) TailReliable();
     default:
       return new (&error) Error();

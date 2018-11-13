@@ -23,7 +23,7 @@ class MessageSender {
   virtual Status SetBody(Slice body) = 0;
   virtual Status AppendUnknownHandle() = 0;
   virtual StatusOr<RouterEndpoint::NewStream> AppendChannelHandle(
-      Introduction introduction) = 0;
+      fuchsia::overnet::protocol::Introduction introduction) = 0;
 };
 
 // Target for building an incoming message (from the network).
@@ -60,7 +60,7 @@ class MessageWireEncoder final : public MessageSender {
                   "Unknown handle types not supported for encoding");
   }
   StatusOr<RouterEndpoint::NewStream> AppendChannelHandle(
-      Introduction introduction) override;
+      fuchsia::overnet::protocol::Introduction introduction) override;
 
   Slice Write(Border desired_border) const;
 

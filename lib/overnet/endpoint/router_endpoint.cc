@@ -5,14 +5,14 @@
 #include "router_endpoint.h"
 #include <iostream>
 #include <memory>
-#include "garnet/lib/overnet/protocol/fork_frame.h"
+#include "garnet/lib/overnet/protocol/fidl.h"
 
 namespace overnet {
 
 static const auto kOvernetSystemNamespace =
-    Slice::FromStaticString("fuchsia.overnet.system.");
+    std::string("fuchsia.overnet.system.");
 static const auto kOvernetGossipService =
-    Slice::FromStaticString("fuchsia.overnet.system.gossip");
+    std::string("fuchsia.overnet.system.gossip");
 
 void RouterEndpoint::NewStream::Fail(const Status& status) {
   auto* s = new Stream(std::move(*this));
@@ -135,8 +135,10 @@ void RouterEndpoint::Stream::Close(const Status& status,
 
 RouterEndpoint::ConnectionStream::ConnectionStream(RouterEndpoint* endpoint,
                                                    NodeId peer)
-    : DatagramStream(endpoint, peer, ReliabilityAndOrdering::ReliableUnordered,
-                     StreamId(0)),
+    : DatagramStream(
+          endpoint, peer,
+          fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableUnordered,
+          StreamId(0)),
       endpoint_(endpoint),
       next_stream_id_(peer < endpoint->node_id() ? 2 : 1) {
   BeginForkRead();
@@ -202,16 +204,20 @@ void RouterEndpoint::ConnectionStream::BeginForkRead() {
           Close(Status::Ok(), Callback<void>::Ignored());
           return;
         }
-        auto fork_frame_status = ForkFrame::Parse(
-            Slice::Join(read_status->begin(), read_status->end()));
+
+        auto merged = Slice::Join(read_status->begin(), read_status->end());
+        auto fork_frame_status = Decode<fuchsia::overnet::protocol::ForkFrame>(
+            const_cast<uint8_t*>(merged.begin()), merged.length());
         if (fork_frame_status.is_error()) {
           fork_read_state_ = ReadState::Stopped;
           Close(fork_frame_status.AsStatus(), Callback<void>::Ignored());
           return;
         }
-        const auto& svc =
-            fork_frame_status->introduction()[Introduction::Key::ServiceName];
-        if (svc.has_value() && svc->StartsWith(kOvernetSystemNamespace)) {
+        if (fork_frame_status->introduction.has_service_name() &&
+            fork_frame_status->introduction.service_name()->get().find(
+                kOvernetSystemNamespace) == 0) {
+          const auto& svc =
+              fork_frame_status->introduction.service_name()->get();
           enum class SystemService {
             NO_IDEA,
             GOSSIP,
@@ -220,25 +226,31 @@ void RouterEndpoint::ConnectionStream::BeginForkRead() {
           if (svc == kOvernetGossipService) {
             svc_type = SystemService::GOSSIP;
           }
-          // svc is no longer valid after this line
+          // fork_frame_status, and therefore svc is no longer valid after this
+          // line
           auto received_intro =
               endpoint_->UnwrapForkFrame(peer(), std::move(*fork_frame_status));
+          if (received_intro.is_error()) {
+            fork_read_state_ = ReadState::Stopped;
+            Close(received_intro.AsStatus(), Callback<void>::Ignored());
+            return;
+          }
           switch (svc_type) {
             case SystemService::NO_IDEA:
-              received_intro.new_stream.Fail(
+              received_intro->new_stream.Fail(
                   Status(StatusCode::FAILED_PRECONDITION, "Unknown service"));
               break;
             case SystemService::GOSSIP:
               if (IsGossipStreamInitiator()) {
-                received_intro.new_stream.Fail(
+                received_intro->new_stream.Fail(
                     Status(StatusCode::FAILED_PRECONDITION,
                            "Not gossip stream initiator"));
               } else if (gossip_stream_) {
-                received_intro.new_stream.Fail(
+                received_intro->new_stream.Fail(
                     Status(StatusCode::FAILED_PRECONDITION,
                            "Gossip channel already exists"));
               } else {
-                InstantiateGossipStream(std::move(received_intro.new_stream));
+                InstantiateGossipStream(std::move(received_intro->new_stream));
               }
               break;
           }
@@ -257,18 +269,19 @@ void RouterEndpoint::ConnectionStream::BeginForkRead() {
       }));
 }
 
-void RouterEndpoint::SendIntro(NodeId peer,
-                               ReliabilityAndOrdering reliability_and_ordering,
-                               Introduction introduction,
-                               StatusOrCallback<NewStream> new_stream_ready) {
+void RouterEndpoint::SendIntro(
+    NodeId peer,
+    fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering,
+    fuchsia::overnet::protocol::Introduction introduction,
+    StatusOrCallback<NewStream> new_stream_ready) {
   GetOrCreateConnectionStream(peer)->Fork(reliability_and_ordering,
                                           std::move(introduction),
                                           std::move(new_stream_ready));
 }
 
 StatusOr<RouterEndpoint::OutgoingFork> RouterEndpoint::Stream::Fork(
-    ReliabilityAndOrdering reliability_and_ordering,
-    Introduction introduction) {
+    fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering,
+    fuchsia::overnet::protocol::Introduction introduction) {
   if (connection_stream_ == nullptr) {
     return StatusOr<OutgoingFork>(StatusCode::FAILED_PRECONDITION,
                                   "Closed stream");
@@ -309,19 +322,20 @@ RouterEndpoint::Stream* RouterEndpoint::ConnectionStream::GossipStream() {
   if (gossip_stream_ == nullptr && !closing_status_.has_value() &&
       IsGossipStreamInitiator() && !forking_gossip_stream_) {
     forking_gossip_stream_ = true;
-    Introduction introduction;
-    introduction[Introduction::Key::ServiceName] = kOvernetGossipService;
-    Fork(ReliabilityAndOrdering::UnreliableUnordered, std::move(introduction),
-         [this](StatusOr<NewStream> new_stream) {
-           assert(forking_gossip_stream_);
-           forking_gossip_stream_ = false;
-           if (new_stream.is_error()) {
-             Close(new_stream.AsStatus().WithContext("Opening gossip stream"),
-                   Callback<void>::Ignored());
-           } else {
-             InstantiateGossipStream(std::move(*new_stream));
-           }
-         });
+    fuchsia::overnet::protocol::Introduction introduction;
+    introduction.set_service_name(kOvernetGossipService);
+    Fork(
+        fuchsia::overnet::protocol::ReliabilityAndOrdering::UnreliableUnordered,
+        std::move(introduction), [this](StatusOr<NewStream> new_stream) {
+          assert(forking_gossip_stream_);
+          forking_gossip_stream_ = false;
+          if (new_stream.is_error()) {
+            Close(new_stream.AsStatus().WithContext("Opening gossip stream"),
+                  Callback<void>::Ignored());
+          } else {
+            InstantiateGossipStream(std::move(*new_stream));
+          }
+        });
   }
   return gossip_stream_.get();
 }
@@ -334,8 +348,8 @@ void RouterEndpoint::ConnectionStream::InstantiateGossipStream(NewStream ns) {
 
 StatusOr<RouterEndpoint::OutgoingFork>
 RouterEndpoint::ConnectionStream::MakeFork(
-    ReliabilityAndOrdering reliability_and_ordering,
-    Introduction introduction) {
+    fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering,
+    fuchsia::overnet::protocol::Introduction introduction) {
   if (closing_status_) {
     return *closing_status_;
   }
@@ -345,11 +359,13 @@ RouterEndpoint::ConnectionStream::MakeFork(
 
   return OutgoingFork{
       NewStream{endpoint_, peer(), reliability_and_ordering, id},
-      ForkFrame(id, reliability_and_ordering, std::move(introduction))};
+      fuchsia::overnet::protocol::ForkFrame{id.get(), reliability_and_ordering,
+                                            std::move(introduction)}};
 }
 
 void RouterEndpoint::ConnectionStream::Fork(
-    ReliabilityAndOrdering reliability_and_ordering, Introduction introduction,
+    fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering,
+    fuchsia::overnet::protocol::Introduction introduction,
     StatusOrCallback<NewStream> new_stream_ready) {
   auto outgoing_fork =
       MakeFork(reliability_and_ordering, std::move(introduction));
@@ -357,7 +373,13 @@ void RouterEndpoint::ConnectionStream::Fork(
     new_stream_ready(outgoing_fork.AsStatus());
     return;
   }
-  Slice payload = outgoing_fork->fork_frame.Write(Border::None());
+  std::vector<uint8_t> bytes;
+  auto encoded = Encode(&outgoing_fork->fork_frame);
+  if (encoded.is_error()) {
+    new_stream_ready(encoded.AsStatus());
+    return;
+  }
+  Slice payload = std::move(*encoded);
 
   SendOp send_op(this, payload.length());
   send_op.Push(payload, Callback<void>::Ignored());
@@ -388,12 +410,12 @@ void RouterEndpoint::MaybeContinueIncomingForks() {
   incoming_fork->BeginForkRead();
 }
 
-RouterEndpoint::ReceivedIntroduction RouterEndpoint::UnwrapForkFrame(
-    NodeId peer, ForkFrame fork_frame) {
+StatusOr<RouterEndpoint::ReceivedIntroduction> RouterEndpoint::UnwrapForkFrame(
+    NodeId peer, fuchsia::overnet::protocol::ForkFrame fork_frame) {
   return ReceivedIntroduction{
-      NewStream{this, peer, fork_frame.reliability_and_ordering(),
-                fork_frame.stream_id()},
-      std::move(fork_frame.introduction())};
+      NewStream{this, peer, fork_frame.reliability_and_ordering,
+                StreamId(fork_frame.stream_id)},
+      std::move(fork_frame.introduction)};
 }
 
 void RouterEndpoint::OnUnknownStream(NodeId node_id, StreamId stream_id) {

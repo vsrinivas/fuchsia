@@ -133,12 +133,13 @@ void BoundChannel::WriteToChannelAndStartNextRead(
       waiting_to_write_ = std::move(builder);
       err = async_begin_wait(dispatcher_, &wait_send_.wait);
       if (err != ZX_OK) {
-        Close(ToOvernetStatus(err).WithContext("Beginning wait for write"));
+        Close(overnet::Status::FromZx(err).WithContext(
+            "Beginning wait for write"));
       }
       break;
     default:
       // If the write failed, close the stream.
-      Close(ToOvernetStatus(err).WithContext("Write"));
+      Close(overnet::Status::FromZx(err).WithContext("Write"));
   }
 }
 
@@ -151,7 +152,7 @@ void BoundChannel::StartChannelRead() {
       fidl::HandlePart(handles, ZX_CHANNEL_MAX_MSG_HANDLES));
   auto err = message.Read(zx_channel_.get(), 0);
   OVERNET_TRACE(DEBUG) << "StartChannelRead read result: "
-                       << ToOvernetStatus(err);
+                       << overnet::Status::FromZx(err);
   switch (err) {
     case ZX_OK: {
       // Successful read: build the output message.
@@ -170,15 +171,16 @@ void BoundChannel::StartChannelRead() {
       // Kernel push back: ask to be informed when we can try again.
       err = async_begin_wait(dispatcher_, &wait_recv_.wait);
       OVERNET_TRACE(DEBUG) << "async_begin_wait result: "
-                           << ToOvernetStatus(err);
+                           << overnet::Status::FromZx(err);
       if (err != ZX_OK) {
-        Close(ToOvernetStatus(err).WithContext("Beginning wait for read"));
+        Close(overnet::Status::FromZx(err).WithContext(
+            "Beginning wait for read"));
         break;
       }
       break;
     default:
       // If the read failed, close the stream.
-      Close(ToOvernetStatus(err).WithContext("Read"));
+      Close(overnet::Status::FromZx(err).WithContext("Read"));
       break;
   }
 }
@@ -195,7 +197,8 @@ void BoundChannel::SendReady(async_dispatcher_t* dispatcher, async_wait_t* wait,
 
 void BoundChannel::OnSendReady(zx_status_t status,
                                const zx_packet_signal_t* signal) {
-  OVERNET_TRACE(DEBUG) << "OnSendReady: status=" << ToOvernetStatus(status);
+  OVERNET_TRACE(DEBUG) << "OnSendReady: status="
+                       << overnet::Status::FromZx(status);
   WriteToChannelAndStartNextRead(std::move(waiting_to_write_));
 }
 
@@ -211,11 +214,12 @@ void BoundChannel::RecvReady(async_dispatcher_t* dispatcher, async_wait_t* wait,
 
 void BoundChannel::OnRecvReady(zx_status_t status,
                                const zx_packet_signal_t* signal) {
-  OVERNET_TRACE(DEBUG) << "OnRecvReady: status=" << ToOvernetStatus(status)
+  OVERNET_TRACE(DEBUG) << "OnRecvReady: status="
+                       << overnet::Status::FromZx(status)
                        << " observed=" << signal->observed;
 
   if (status != ZX_OK) {
-    Close(ToOvernetStatus(status).WithContext("OnRecvReady"));
+    Close(overnet::Status::FromZx(status).WithContext("OnRecvReady"));
     return;
   }
 
@@ -283,12 +287,13 @@ overnet::StatusOr<overnet::Slice> BoundChannel::ChannelMessageToOvernet(
     auto err = hdl.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr,
                             nullptr);
     if (err != ZX_OK) {
-      status = ToOvernetStatus(err).WithContext("Getting handle type");
+      status = overnet::Status::FromZx(err).WithContext("Getting handle type");
       continue;
     }
     switch (info.type) {
       case ZX_OBJ_TYPE_CHANNEL: {
-        auto new_stream = builder.AppendChannelHandle(overnet::Introduction());
+        auto new_stream = builder.AppendChannelHandle(
+            fuchsia::overnet::protocol::Introduction());
         auto channel = zx::channel(hdl.release());
         assert(channel.is_valid());
         assert(!hdl.is_valid());
@@ -321,7 +326,7 @@ overnet::Status BoundChannel::FidlMessageBuilder::AppendChannelHandle(
   zx_handle_t a, b;
   zx_status_t err = zx_channel_create(0, &a, &b);
   if (err != ZX_OK) {
-    return ToOvernetStatus(err).WithContext("Appending channel");
+    return overnet::Status::FromZx(err).WithContext("Appending channel");
   }
   stream_->app_->BindStream(std::move(received_introduction.new_stream),
                             zx::channel(a));

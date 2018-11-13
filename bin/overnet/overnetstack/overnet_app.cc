@@ -5,8 +5,8 @@
 #include "overnet_app.h"
 #include <fuchsia/overnet/cpp/fidl.h>
 #include "bound_channel.h"
-#include "fidl_utils.h"
 #include "fuchsia_port.h"
+#include "garnet/lib/overnet/protocol/fidl.h"
 
 namespace overnetstack {
 
@@ -48,7 +48,7 @@ void OvernetApp::UpdateDescription() {
   for (const auto& svc : service_providers_) {
     desc.services.push_back(svc.first);
   }
-  endpoint_.SetDescription(EncodeMessage(&desc));
+  endpoint_.SetDescription(*overnet::Encode(&desc));
 }
 
 void OvernetApp::BindStream(overnet::RouterEndpoint::NewStream ns,
@@ -63,17 +63,17 @@ void OvernetApp::BindStream(overnet::RouterEndpoint::NewStream ns,
   ZX_ASSERT(!channel.is_valid());
 }
 
-void OvernetApp::ConnectToLocalService(const overnet::Introduction& intro,
-                                       zx::channel channel) {
-  auto svc_slice = intro[overnet::Introduction::Key::ServiceName];
-  if (!svc_slice.has_value()) {
+void OvernetApp::ConnectToLocalService(
+    const fuchsia::overnet::protocol::Introduction& intro,
+    zx::channel channel) {
+  if (!intro.has_service_name()) {
     OVERNET_TRACE(DEBUG) << "No service name in local service request";
     return;
   }
-  const std::string svc(svc_slice->begin(), svc_slice->end());
-  auto it = service_providers_.find(svc);
+  auto it = service_providers_.find(*intro.service_name());
   if (it == service_providers_.end()) {
-    OVERNET_TRACE(DEBUG) << "Local service not found: " << svc;
+    OVERNET_TRACE(DEBUG) << "Local service not found: "
+                         << *intro.service_name();
     return;
   }
   it->second->Connect(intro, std::move(channel));
@@ -94,7 +94,7 @@ void OvernetApp::ReadNextIntroduction() {
         auto err = zx_channel_create(0, &a, &b);
         if (err != ZX_OK) {
           status->new_stream.Fail(
-              ToOvernetStatus(err).WithContext("ReadNextIntroduction"));
+              overnet::Status::FromZx(err).WithContext("ReadNextIntroduction"));
           return;
         }
         BindStream(std::move(status->new_stream), zx::channel(a));

@@ -14,28 +14,14 @@ source_set("overnet_fuchsia_compatibility") {
   ]
 }
 
-source_set("fidl_utils") {
-  sources = [
-    "fidl_utils.h",
-  ]
-
-  deps = [
-    ":overnet_fuchsia_compatibility",
-    "//garnet/lib/overnet",
-    "//garnet/public/lib/fidl/cpp",
-  ]
-}
-
 executable("overnetstack_unittests") {
   testonly = true
 
   sources = [
     "run_all_tests.cc",
-    "fidl_utils_test.cc",
   ]
 
   deps = [
-    ":fidl_utils",
     "//garnet/public/fidl/fuchsia.overnet",
     "//third_party/googletest:gtest",
     "//third_party/googletest:gmock",
@@ -60,7 +46,6 @@ executable("bin") {
 
   deps = [
     ":overnet_fuchsia_compatibility",
-    ":fidl_utils",
     "//garnet/lib/overnet",
     "//garnet/public/fidl/fuchsia.mdns",
     "//garnet/public/fidl/fuchsia.overnet",

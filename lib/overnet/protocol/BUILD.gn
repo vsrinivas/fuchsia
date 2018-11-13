@@ -3,21 +3,29 @@
 # found in the LICENSE file.
 
 import("//build/fuzzing/fuzzer.gni")
+import("//build/fidl/fidl.gni")
 
 ###############################################################################
 # AGGREGATE LIBRARIES
 
 source_set("lib") {
+  public_deps = [
+    ":fidl",
+  ]
 }
 
 source_set("tests") {
   testonly = true
   deps = [
     ":ack_frame_test",
-    ":fork_frame_test",
-    ":introduction_test",
     ":routable_message_test",
     ":varint_test",
+  ]
+}
+
+fidl("fuchsia.overnet.protocol") {
+  sources = [
+    "protocol.fidl",
   ]
 }
 
@@ -48,55 +56,15 @@ source_set("ack_frame_test") {
   ]
 }
 
-# fork_frame
-# TODO(ctiller): switch to FIDL
-source_set("fork_frame") {
+# fidl
+source_set("fidl") {
   sources = [
-    "fork_frame.cc",
-    "fork_frame.h",
+    "fidl.h",
   ]
   deps = [
-    ":introduction",  # TODO(ctiller): remove once we switch to FIDL
-    "//garnet/lib/overnet/labels:reliability_and_ordering",
-    "//garnet/lib/overnet/labels:stream_id",
     "//garnet/lib/overnet/vocabulary:slice",
     "//garnet/lib/overnet/vocabulary:status",
-  ]
-}
-
-source_set("fork_frame_test") {
-  testonly = true
-  sources = [
-    "fork_frame_test.cc",
-  ]
-  deps = [
-    ":fork_frame",
-    "//third_party/googletest:gtest",
-  ]
-}
-
-# introduction
-# TODO(ctiller): switch to FIDL
-source_set("introduction") {
-  sources = [
-    "introduction.h",
-  ]
-  deps = [
-    ":varint",
-    "//garnet/lib/overnet/vocabulary:optional",
-    "//garnet/lib/overnet/vocabulary:slice",
-    "//garnet/lib/overnet/vocabulary:status",
-  ]
-}
-
-source_set("introduction_test") {
-  testonly = true
-  sources = [
-    "introduction_test.cc",
-  ]
-  deps = [
-    ":introduction",
-    "//third_party/googletest:gtest",
+    "//garnet/public/lib/fidl/cpp:cpp_base"
   ]
 }
 

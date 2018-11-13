@@ -9,7 +9,6 @@
 #include "garnet/lib/overnet/datagram_stream/receive_mode.h"
 #include "garnet/lib/overnet/environment/timer.h"
 #include "garnet/lib/overnet/environment/trace.h"
-#include "garnet/lib/overnet/labels/reliability_and_ordering.h"
 #include "garnet/lib/overnet/labels/seq_num.h"
 #include "garnet/lib/overnet/packet_protocol/packet_protocol.h"
 #include "garnet/lib/overnet/routing/router.h"
@@ -240,7 +239,8 @@ class DatagramStream : private Router::StreamHandler,
   inline static constexpr auto kModule = Module::DATAGRAM_STREAM;
 
   DatagramStream(Router* router, NodeId peer,
-                 ReliabilityAndOrdering reliability_and_ordering,
+                 fuchsia::overnet::protocol::ReliabilityAndOrdering
+                     reliability_and_ordering,
                  StreamId stream_id);
   ~DatagramStream();
 
@@ -332,7 +332,8 @@ class DatagramStream : private Router::StreamHandler,
   Router* const router_;
   const NodeId peer_;
   const StreamId stream_id_;
-  const ReliabilityAndOrdering reliability_and_ordering_;
+  const fuchsia::overnet::protocol::ReliabilityAndOrdering
+      reliability_and_ordering_;
   uint64_t next_message_id_ = 1;
   uint64_t largest_incoming_message_id_seen_ = 0;
   receive_mode::ParameterizedReceiveMode receive_mode_;

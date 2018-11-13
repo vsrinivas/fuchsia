@@ -115,9 +115,10 @@ StatusOr<MessageFragment> MessageFragment::Parse(Slice slice) {
 ////////////////////////////////////////////////////////////////////////////////
 // DatagramStream proper
 
-DatagramStream::DatagramStream(Router* router, NodeId peer,
-                               ReliabilityAndOrdering reliability_and_ordering,
-                               StreamId stream_id)
+DatagramStream::DatagramStream(
+    Router* router, NodeId peer,
+    fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering,
+    StreamId stream_id)
     : timer_(router->timer()),
       router_(router),
       peer_(peer),
@@ -785,17 +786,18 @@ void DatagramStream::SendNextChunk() {
   };
 
   switch (reliability_and_ordering_) {
-    case ReliabilityAndOrdering::ReliableOrdered:
-    case ReliabilityAndOrdering::ReliableUnordered:
+    case fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered:
+    case fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableUnordered:
       packet_protocol_.Send(
           PacketProtocol::SendRequestHdl(new ReliableChunkSend(this)));
       break;
-    case ReliabilityAndOrdering::UnreliableOrdered:
-    case ReliabilityAndOrdering::UnreliableUnordered:
+    case fuchsia::overnet::protocol::ReliabilityAndOrdering::UnreliableOrdered:
+    case fuchsia::overnet::protocol::ReliabilityAndOrdering::
+        UnreliableUnordered:
       packet_protocol_.Send(
           PacketProtocol::SendRequestHdl(new UnreliableChunkSend(this)));
       break;
-    case ReliabilityAndOrdering::TailReliable:
+    case fuchsia::overnet::protocol::ReliabilityAndOrdering::TailReliable:
       packet_protocol_.Send(
           PacketProtocol::SendRequestHdl(new TailReliableChunkSend(this)));
       break;

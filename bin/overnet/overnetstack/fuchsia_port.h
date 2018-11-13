@@ -29,18 +29,4 @@ inline zx::time FromTimeStamp(overnet::TimeStamp t) {
   return zx::time(us * 1000);
 }
 
-inline overnet::Status ToOvernetStatus(zx_status_t status) {
-  switch (status) {
-    case ZX_OK:
-      return overnet::Status::Ok();
-    case ZX_ERR_CANCELED:
-      return overnet::Status::Cancelled();
-    default: {
-      std::ostringstream out;
-      out << "zx_status:" << zx_status_get_string(status);
-      return overnet::Status(overnet::StatusCode::UNKNOWN, out.str());
-    }
-  }
-}
-
 }  // namespace overnetstack
