@@ -21,7 +21,7 @@ zx_status_t devhost_start_trace_provider() {
 
     status = async_loop_start_thread(loop, "devhost-tracer", nullptr);
     if (status != ZX_OK) {
-        async_loop_shutdown(loop);
+        async_loop_destroy(loop);
         log(ERROR, "devhost: error starting async loop thread: %d\n", status);
         return status;
     }
@@ -29,7 +29,7 @@ zx_status_t devhost_start_trace_provider() {
     async_dispatcher_t* dispatcher = async_loop_get_dispatcher(loop);
     trace_provider_t* trace_provider = trace_provider_create(dispatcher);
     if (!trace_provider) {
-        async_loop_shutdown(loop);
+        async_loop_destroy(loop);
         log(ERROR, "devhost: error registering provider\n");
         return ZX_ERR_INTERNAL;
     }
