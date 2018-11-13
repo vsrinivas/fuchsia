@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "garnet/bin/zxdb/client/client_object.h"
+#include "garnet/bin/zxdb/client/setting_store.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"
 
@@ -74,8 +75,15 @@ class JobContext : public ClientObject {
   // executed when the detach is complete (or fails).
   virtual void Detach(Callback callback) = 0;
 
+  // Provides the setting schema for this object.
+  static fxl::RefPtr<SettingSchema> GetSchema();
+
+  SettingStore& settings() { return settings_; }
+
  protected:
   explicit JobContext(Session* session);
+
+  SettingStore settings_;
 
  private:
   fxl::WeakPtrFactory<JobContext> weak_factory_;

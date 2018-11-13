@@ -121,6 +121,10 @@ std::map<std::string, StoredSetting> SettingStore::GetSettings() const {
   return stored_settings;
 }
 
+bool SettingStore::HasSetting(const std::string& key) const {
+  return schema_->HasSetting(key);
+}
+
 // Setters ---------------------------------------------------------------------
 
 Err SettingStore::SetBool(const std::string& key, bool val) {

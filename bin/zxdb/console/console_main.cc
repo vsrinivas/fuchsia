@@ -121,7 +121,7 @@ int ConsoleMain(int argc, const char* argv[]) {
                  options.symbol_paths.end());
     // Adding it to the settings will trigger the loading of the symbols.
     // Redundant adds are ignored.
-    session.system().settings().SetList(ClientSettings::kSymbolPaths,
+    session.system().settings().SetList(ClientSettings::System::kSymbolPaths,
                                         std::move(paths));
 
     if (!actions.empty()) {

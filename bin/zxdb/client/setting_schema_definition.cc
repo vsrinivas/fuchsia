@@ -5,6 +5,7 @@
 #include "garnet/bin/zxdb/client/setting_schema_definition.h"
 
 #include "garnet/bin/zxdb/client/setting_schema.h"
+#include "garnet/bin/zxdb/client/job_context.h"
 #include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
@@ -21,6 +22,7 @@ void InitializeSchemas() {
   // Simply getting the schemas will create them, so we need to make sure we
   // get all of them.
   System::GetSchema();
+  JobContext::GetSchema();
   Target::GetSchema();
   Thread::GetSchema();
 }

@@ -6,10 +6,12 @@
 
 #include "garnet/bin/zxdb/client/setting_schema.h"
 #include "garnet/bin/zxdb/client/setting_store.h"
+#include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/common/err.h"
+#include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/string_util.h"
@@ -89,26 +91,15 @@ void AddSettingToTable(const StoredSetting& setting,
   }
 }
 
-// Prints all the values for |store| associated with a particular schema.
-// A SettingStore can have values associated with many values as many settings
-// are added to a lower-level schema to implement overriding.
-OutputBuffer PrintSettingStoreFromSchema(const SettingStore& store,
-                                         const SettingSchema& schema) {
+OutputBuffer FormatSettingStore(const SettingStore& store) {
   std::vector<std::vector<OutputBuffer>> rows;
-  for (auto [key, item] : schema.items()) {
-    // Overriden settings are meant to be listed in another schema.
+  for (auto [key, item] : store.schema()->items()) {
+    // Overriden settings are meant to be listen in another schema.
     if (item.overriden())
       continue;
 
-    // A particular store could not have this setting in its schema, meaning
-    // that it will return a null value if the value is not meant to be an
-    // override. In that case, we return the schema default.
     auto setting = store.GetSetting(key);
-    if (setting.value.is_null()) {
-      // We simply override the value for the purpose of printing.
-      setting.schema_item = item;
-      setting.value = schema.GetDefault(key);
-    }
+    FXL_DCHECK(!setting.value.is_null());
 
     AddSettingToTable(setting, &rows);
   }
@@ -118,31 +109,131 @@ OutputBuffer PrintSettingStoreFromSchema(const SettingStore& store,
   return table;
 }
 
-OutputBuffer PrintSettingStore(const SettingStore& store) {
-  OutputBuffer out;
+OutputBuffer FormatSchema(const SettingSchema& schema) {
+  std::vector<std::vector<OutputBuffer>> rows;
+  for (auto [key, item] : schema.items()) {
+    // Overriden settings are meant to be listen in another schema.
+    if (item.overriden())
+      continue;
 
-  auto schema = System::GetSchema();
-  if (!schema->items().empty()) {
-    out.Append({Syntax::kHeading, "System\n"});
-    out.Append(PrintSettingStoreFromSchema(store, *schema));
+    StoredSetting setting;
+    setting.schema_item = schema.GetItem(key);
+    setting.value = setting.schema_item.value();
+    FXL_DCHECK(!setting.value.is_null());
+    AddSettingToTable(setting, &rows);
   }
 
-  schema = Target::GetSchema();
-  if (!schema->items().empty()) {
-    out.Append({Syntax::kHeading, "Target/Process\n"});
-    out.Append(PrintSettingStoreFromSchema(store, *schema));
-  }
-
-  schema = Thread::GetSchema();
-  if (!schema->items().empty()) {
-    out.Append({Syntax::kHeading, "Thread\n"});
-    out.Append(PrintSettingStoreFromSchema(store, *schema));
-  }
-
-  return out;
+  OutputBuffer table;
+  FormatTable(std::vector<ColSpec>(3), rows, &table);
+  return table;
 }
 
 }  // namespace
+
+void FormatSettings(const Command& cmd, OutputBuffer* out) {
+  OutputBuffer current;
+  out->Append(
+      {Syntax::kComment, "Run get <option> to see detailed information.\n"});
+
+
+  // We print each setting
+  out->Append({Syntax::kHeading, "\nSystem\n"});
+  out->Append(FormatSettingStore(cmd.target()->session()->system().settings()));
+
+  JobContext* job = cmd.job_context();
+  current = job ? FormatSettingStore(job->settings())
+                : FormatSchema(*JobContext::GetSchema());
+  if (!current.empty()) {
+    out->Append({Syntax::kHeading, "\nJob\n"});
+    out->Append(current);
+  }
+
+  Target* target = cmd.target();
+  current = target ? FormatSettingStore(target->settings())
+                   : FormatSchema(*Target::GetSchema());
+  if (!current.empty()) {
+    out->Append({Syntax::kHeading, "\nTarget\n"});
+    out->Append(current);
+  }
+
+  Thread* thread = cmd.thread();
+  current = thread ? FormatSettingStore(thread->settings())
+                   : FormatSchema(*Thread::GetSchema());
+  if (!current.empty()) {
+    out->Append({Syntax::kHeading, "\nThread\n"});
+    out->Append(current);
+  }
+}
+
+Err FormatSetting(const Command& cmd, const std::string& setting_name,
+                  OutputBuffer* out) {
+  // We look from more specific to less specific for the setting.
+  Thread* thread = cmd.thread();
+  if (thread && thread->settings().HasSetting(setting_name)) {
+    OutputBuffer tmp;
+    Err err = FormatSetting(thread->settings(), setting_name, &tmp);
+    out->Append(std::move(tmp));
+    return err;
+  }
+
+  Target* target = cmd.target();
+  if (target && target->settings().HasSetting(setting_name)) {
+    OutputBuffer tmp;
+    Err err = FormatSetting(target->settings(), setting_name, &tmp);
+    out->Append(std::move(tmp));
+    return err;
+  }
+
+  JobContext* job = cmd.job_context();
+  if (job && job->settings().HasSetting(setting_name)) {
+    OutputBuffer tmp;
+    Err err = FormatSetting(job->settings(), setting_name, &tmp);
+    out->Append(std::move(tmp));
+    return err;
+  }
+
+  System& system = cmd.target()->session()->system();
+  if (system.settings().HasSetting(setting_name)) {
+    OutputBuffer tmp;
+    Err err = FormatSetting(system.settings(), setting_name, &tmp);
+    out->Append(std::move(tmp));
+    return err;
+  }
+
+  return Err("Could not find setting \"%s\"", setting_name.data());
+}
+
+Err FormatSetting(const SettingStore& store, const std::string& setting_name,
+                  OutputBuffer* out) {
+  if (!store.HasSetting(setting_name))
+    return Err("Could not find setting \"%s\"", setting_name.data());
+
+  auto setting = store.GetSetting(setting_name);
+
+  out->Append({Syntax::kHeading, setting.schema_item.name()});
+  out->Append(OutputBuffer("\n"));
+
+  out->Append(setting.schema_item.description());
+  out->Append(OutputBuffer("\n\n"));
+
+  out->Append({Syntax::kHeading, "Type: "});
+  out->Append(SettingTypeToString(setting.schema_item.type()));
+  out->Append("\n\n");
+
+  out->Append({Syntax::kHeading, "Value(s):\n"});
+  out->Append(FormatSettingValue(setting));
+
+  // List have a copy-paste value for setting the value.
+  if (setting.value.is_list()) {
+    out->Append("\n");
+    out->Append({Syntax::kComment,
+                 "See \"help set\" about using the set value for lists.\n"});
+    out->Append(fxl::StringPrintf("Set value: %s",
+                                  SettingValueToString(setting.value).data()));
+    out->Append("\n");
+  }
+  return Err();
+}
 
 OutputBuffer FormatSettingValue(const StoredSetting& setting) {
   FXL_DCHECK(!setting.value.is_null());
@@ -154,62 +245,14 @@ OutputBuffer FormatSettingValue(const StoredSetting& setting) {
   return out;
 }
 
-OutputBuffer FormatSetting(const StoredSetting& setting) {
-  FXL_DCHECK(!setting.value.is_null());
-
-  OutputBuffer out;
-  out.Append({Syntax::kHeading, setting.schema_item.name()});
-  out.Append(OutputBuffer("\n"));
-
-  out.Append(setting.schema_item.description());
-  out.Append(OutputBuffer("\n\n"));
-
-  out.Append({Syntax::kHeading, "Type: "});
-  out.Append(SettingTypeToString(setting.schema_item.type()));
-  out.Append("\n\n");
-
-  out.Append({Syntax::kHeading, "Value(s):\n"});
-  out.Append(FormatSettingValue(setting));
-
-  // List have a copy-paste value for setting the value.
-  if (setting.value.is_list()) {
-    out.Append("\n");
-    out.Append({Syntax::kComment,
-                "See \"help set\" about using the set value for lists.\n"});
-    out.Append(fxl::StringPrintf("Set value: %s",
-                                 SettingValueToString(setting.value).data()));
-    out.Append("\n");
-  }
-
-  return out;
-}
-
-Err FormatSettings(const SettingStore& store, const std::string& setting_name,
-                   OutputBuffer* out) {
-  // Check if we're asking for a particular setting.
-  if (!setting_name.empty()) {
-    StoredSetting setting = store.GetSetting(setting_name);
-    if (setting.value.is_null()) {
-      return Err("Could not find setting \"%s\" within the current context.",
-                 setting_name.data());
-    }
-
-    *out = FormatSetting(setting);
-    return Err();
-  }
-
-  out->Append({Syntax::kComment,
-               "Run get <option> to see detailed information.\n"});
-  out->Append(PrintSettingStore(store));
-  return Err();
-}
-
 const char* SettingSchemaLevelToString(SettingSchema::Level level) {
   switch (level) {
     case SettingSchema::Level::kDefault:
       return "default";
     case SettingSchema::Level::kSystem:
       return "system";
+    case SettingSchema::Level::kJob:
+      return "job";
     case SettingSchema::Level::kTarget:
       return "target";
     case SettingSchema::Level::kThread:

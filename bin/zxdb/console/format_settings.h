@@ -11,19 +11,25 @@
 
 namespace zxdb {
 
+class Command;
 class Err;
 class OutputBuffer;
 
-// Lists all the values for a store, highlighting any overriden values.
-// Will error if the setting is not found.
-Err FormatSettings(const SettingStore&, const std::string& setting_name,
-                   OutputBuffer* out);
+
+// When formatting settings, the values will depend on the current context (what
+// activated target, thread, jobs, etc.).
+// For that, we pass in the command which holds the current context the user is
+// using.
+void FormatSettings(const Command& cmd, OutputBuffer* out);
+
+
+// Will err out if the setting is not found in the current context.
+Err FormatSetting(const Command& cmd, const std::string& setting_name,
+                  OutputBuffer* out);
+Err FormatSetting(const SettingStore& store, const std::string& setting_name,
+                  OutputBuffer* out);
 
 // Outputs the detailed information about a particular setting.
-OutputBuffer FormatSetting(const StoredSetting&);
-
-// Returns the pretty printable version of the value of a StoredSetting.
-// Useful for feedback.
 OutputBuffer FormatSettingValue(const StoredSetting&);
 
 const char* SettingSchemaLevelToString(SettingSchema::Level);

@@ -440,18 +440,6 @@ Examples
       List the values of settings at the system level.
   )";
 
-Err HandleSettingStore(const SettingStore& store,
-                       const std::string& setting_name) {
-  OutputBuffer out;
-  Err err = FormatSettings(store, setting_name, &out);
-  if (err.has_error())
-    return err;
-
-  // If we find the values, we output them.
-  Console::get()->Output(std::move(out));
-  return Err();
-}
-
 constexpr int kGetSystemSwitch = 0;
 
 Err DoGet(ConsoleContext* context, const Command& cmd) {
@@ -462,38 +450,19 @@ Err DoGet(ConsoleContext* context, const Command& cmd) {
     setting_name = cmd.args()[0];
   }
 
-  // We get the correct SettingStore. We try to be as specific as possible.
-  SettingStore* store = nullptr;
-  Target* target = cmd.target();
-  if (!target)
-    return Err("No target found. Please file a bug with a repro.");
-  Thread* thread = cmd.thread();
-
-  // We check to see if the user specified an explicit context.
-  if (cmd.HasNoun(Noun::kThread)) {
-    if (!thread)
-      return Err("Could not find specified thread.");
-    store = &thread->settings();
-  } else if (cmd.HasNoun(Noun::kProcess)) {
-    if (!target)
-      return Err("Could not find specified target.");
-    store = &target->settings();
+  Err err;
+  OutputBuffer out;
+  if (setting_name.empty()) {
+    FormatSettings(cmd, &out);
+  } else {
+    err = FormatSetting(cmd, setting_name, &out);
   }
 
-  // If we didn't find an explicit context, we query the current one.
-  if (!store) {
-    if (thread) {
-      store = &thread->settings();
-    } else {
-      // Since there is always a target, the system settings are never queried
-      // directly.
-      store = &target->settings();
-    }
-  }
+  if (err.has_error())
+    return err;
 
-  if (!store)
-    return Err("Could not find a setting store. Please file a bug with repro.");
-  return HandleSettingStore(*store, setting_name);
+  Console::get()->Output(std::move(out));
+  return Err();
 }
 
 // Set -------------------------------------------------------------------------
@@ -596,27 +565,37 @@ Err SetInt(SettingStore* store, const std::string& setting_name,
   return store->SetInt(setting_name, out);
 }
 
-Err SetSetting(SettingStore* store, const std::string& setting_name,
-               const std::string& value) {
-  StoredSetting setting = store->GetSetting(setting_name);
-  if (setting.value.is_null())
+Err SetSetting(const std::string& setting_name, const std::string& value,
+               SettingStore* store, StoredSetting* out) {
+  if (!store->HasSetting(setting_name))
     return Err("Could not find setting %s", setting_name.data());
 
-  switch (setting.value.type()) {
+  Err err;
+  switch (store->GetSetting(setting_name).value.type()) {
     case SettingType::kBoolean:
-      return SetBool(store, setting_name, value);
+      err = SetBool(store, setting_name, value);
+      break;
     case SettingType::kInteger:
-      return SetInt(store, setting_name, value);
+      err = SetInt(store, setting_name, value);
+      break;
     case SettingType::kString:
-      return store->SetString(setting_name, value);
+      err = store->SetString(setting_name, value);
+      break;
     case SettingType::kList:
-      return store->SetList(
+      err = store->SetList(
           setting_name, fxl::SplitStringCopy(value, ":", fxl::kKeepWhitespace,
                                              fxl::kSplitWantNonEmpty));
+      break;
     case SettingType::kNull:
       return Err("Unknown type for setting %s. Please file a bug with repro.",
                  setting_name.data());
   }
+
+  if (!err.ok())
+    return err;
+
+  *out = store->GetSetting(setting_name);
+  return Err();
 }
 
 Err DoSet(ConsoleContext* context, const Command& cmd) {
@@ -634,8 +613,14 @@ Err DoSet(ConsoleContext* context, const Command& cmd) {
 
   // Lookup the correct setting store.
   SettingStore* store = nullptr;
-  // We see if we have an explicit thread to set.
-  if (cmd.HasNoun(Noun::kThread)) {
+
+  // We check for a explicit job to set.
+  if (cmd.HasNoun(Noun::kJob)) {
+    JobContext* job = cmd.job_context();
+    if (!job)
+      return Err("Could not find specified job.");
+    store = &job->settings();
+  } else if (cmd.HasNoun(Noun::kThread)) {
     Thread* thread = cmd.thread();
     if (!thread)
       return Err("Could not find specified thread.");
@@ -657,29 +642,16 @@ Err DoSet(ConsoleContext* context, const Command& cmd) {
   if (!store)
     return Err("Could not find a setting store. Please file a bug with repro.");
 
-  Err err = SetSetting(store, setting_name, value);
+  StoredSetting out;  // Used for showing the new value.
+  Err err = SetSetting(setting_name, value, store, &out);
   if (!err.ok())
     return err;
 
-  // There should not be a default value.
-  StoredSetting setting = store->GetSetting(setting_name, false);
-  if (setting.value.is_null())
-    return Err("Null setting after set. Please file a bug with repro.");
-
   // Should never override default (schema) values.
-  FXL_DCHECK(setting.level != SettingSchema::Level::kDefault);
-
-  // Feedback about where the setting was set.
-  if (setting.level == SettingSchema::Level::kSystem) {
-    Console::get()->Output("Set system-level setting:");
-  } else {
-    Console::get()->Output(
-        fxl::StringPrintf("Overrode setting for the given %s:",
-                          SettingSchemaLevelToString(setting.level)));
-  }
+  FXL_DCHECK(out.level != SettingSchema::Level::kDefault);
 
   // We output the new value.
-  Console::get()->Output(FormatSettingValue(setting));
+  Console::get()->Output(FormatSettingValue(out));
   return Err();
 }
 

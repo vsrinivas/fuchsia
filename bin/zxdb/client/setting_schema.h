@@ -25,6 +25,7 @@ class SettingSchema : public fxl::RefCountedThreadSafe<SettingSchema> {
   // to the caller that the value was overriden (and where).
   enum class Level {
     kSystem,
+    kJob,
     kTarget,
     kThread,
     kDefault,  // Means no override, so value is the schema's default.

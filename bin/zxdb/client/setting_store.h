@@ -60,6 +60,8 @@ class SettingStore {
                            bool return_default = true) const;
   std::map<std::string, StoredSetting> GetSettings() const;
 
+  bool HasSetting(const std::string& key) const;
+
  protected:
   std::map<std::string, fxl::ObserverList<SettingStoreObserver>>& observers() {
     return observer_map_;

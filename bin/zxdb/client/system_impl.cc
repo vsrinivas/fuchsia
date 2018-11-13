@@ -35,7 +35,7 @@ SystemImpl::SystemImpl(Session* session)
   // System will be listening to its own options.
   // We don't use SystemSymbols because they live in the symbols library
   // and we don't want it to have a client dependency.
-  settings_.AddObserver(ClientSettings::kSymbolPaths, this);
+  settings_.AddObserver(ClientSettings::System::kSymbolPaths, this);
 }
 
 SystemImpl::~SystemImpl() {
@@ -225,10 +225,10 @@ void SystemImpl::AddNewJobContext(std::unique_ptr<JobContextImpl> job_context) {
 
 void SystemImpl::OnSettingChanged(const SettingStore& store,
                                   const std::string& setting_name) {
-  if (setting_name == ClientSettings::kSymbolPaths) {
+  if (setting_name == ClientSettings::System::kSymbolPaths) {
     // TODO(donosoc): Eventually we should consider some way of unloading
     //                symbols if on-host memory usage starts being a concern.
-    auto paths = store.GetList(ClientSettings::kSymbolPaths);
+    auto paths = store.GetList(ClientSettings::System::kSymbolPaths);
     BuildIDIndex& build_id_index = GetSymbols()->build_id_index();
     for (const std::string& path : paths) {
       if (StringEndsWith(path, ".txt")) {

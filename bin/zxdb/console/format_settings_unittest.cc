@@ -41,7 +41,7 @@ TEST(FormatSetting, NotFound) {
   SettingStore store(GetSchema(), nullptr);
 
   OutputBuffer out;
-  Err err = FormatSettings(store, "invalid", &out);
+  Err err = FormatSetting(store, "invalid", &out);
   EXPECT_TRUE(err.has_error());
 }
 
@@ -50,7 +50,7 @@ TEST(FormatSetting, Setting) {
   SettingStore store(GetSchema(), nullptr);
 
   OutputBuffer out;
-  Err err = FormatSettings(store, "setting-string2", &out);
+  Err err = FormatSetting(store, "setting-string2", &out);
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   EXPECT_EQ("setting-string2\n"
@@ -77,7 +77,7 @@ TEST(FormatSetting, SchemaItemList) {
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   OutputBuffer out;
-  err = FormatSettings(store, "setting-list2", &out);
+  err = FormatSetting(store, "setting-list2", &out);
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // clang-format makes this one very hard to read.

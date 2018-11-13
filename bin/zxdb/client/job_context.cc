@@ -4,14 +4,49 @@
 
 #include "garnet/bin/zxdb/client/job_context.h"
 
+#include "garnet/bin/zxdb/client/setting_schema_definition.h"
+
 namespace zxdb {
 
+// Schema Definition -----------------------------------------------------------
+
+const char* ClientSettings::Job::kFilters = "filters";
+const char* kFiltersDescription = 1 + R"(
+  List of filters to be applied to a job. Filters are used against each new
+  process being spawned under the attached job. If there is match, zxdb will
+  automatically attach to the process.)";
+
+namespace {
+
+fxl::RefPtr<SettingSchema> CreateSchema() {
+  auto schema =
+      fxl::MakeRefCounted<SettingSchema>(SettingSchema::Level::kJob);
+
+  schema->AddList(ClientSettings::Job::kFilters, kFiltersDescription, {});
+
+  return schema;
+}
+
+}  // namespace
+
+// JobContext Implemention -----------------------------------------------------
+
 JobContext::JobContext(Session* session)
-    : ClientObject(session), weak_factory_(this) {}
+    : ClientObject(session),
+    // Implementations can set up fallbacks if needed.
+    settings_(GetSchema(), nullptr),
+    weak_factory_(this) {}
 JobContext::~JobContext() = default;
 
 fxl::WeakPtr<JobContext> JobContext::GetWeakPtr() {
   return weak_factory_.GetWeakPtr();
+}
+
+fxl::RefPtr<SettingSchema> JobContext::GetSchema() {
+  // Will only run initialization once.
+  InitializeSchemas();
+  static fxl::RefPtr<SettingSchema> schema = CreateSchema();
+  return schema;
 }
 
 }  // namespace zxdb
