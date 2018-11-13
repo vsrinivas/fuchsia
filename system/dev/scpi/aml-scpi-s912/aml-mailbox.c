@@ -11,6 +11,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#define READ8_MAILBOX_PL_REG(offset) \
+        readb((uint8_t*)mailbox->mmio_mailbox_payload.vaddr + (offset))
+#define WRITE8_MAILBOX_PL_REG(offset, value) \
+        writeb(value, (uint8_t*)mailbox->mmio_mailbox_payload.vaddr + (offset))
 #define READ32_MAILBOX_PL_REG(offset) \
         readl((uint32_t*)mailbox->mmio_mailbox_payload.vaddr + (offset))
 #define WRITE32_MAILBOX_PL_REG(offset, value) \
@@ -52,11 +56,10 @@ static zx_status_t aml_mailbox_send_cmd(void* ctx,
     aml_mailbox_block_t* tx_mailbox = &vim2_mailbox_block[channel->mailbox];
 
     if (mdata->tx_size != 0) {
-        uint32_t num = GET_NUM_WORDS(mdata->tx_size);
-        uint32_t* tx_payload = (uint32_t*)(mdata->tx_buffer);
-        for (uint32_t i = 0; i < num; i++) {
+        uint8_t* tx_payload = (uint8_t*)(mdata->tx_buffer);
+        for (uint32_t i = 0; i < mdata->tx_size; i++) {
             // AP writes parameters to Payload
-            WRITE32_MAILBOX_PL_REG(tx_mailbox->payload_offset + i, tx_payload[i]);
+            WRITE8_MAILBOX_PL_REG(tx_mailbox->payload_offset + i, tx_payload[i]);
         }
     }
 
@@ -72,10 +75,9 @@ static zx_status_t aml_mailbox_send_cmd(void* ctx,
 
     // AP reads the Payload to get requested information
     if (channel->rx_size != 0) {
-        uint32_t num = GET_NUM_WORDS(channel->rx_size);
-        uint32_t* rx_payload = (uint32_t*)(channel->rx_buffer);
-        for (uint32_t i = 0; i < num; i++) {
-            rx_payload[i] = READ32_MAILBOX_PL_REG(rx_mailbox->payload_offset + i);
+        uint8_t* rx_payload = (uint8_t*)(channel->rx_buffer);
+        for (uint32_t i = 0; i < channel->rx_size; i++) {
+            rx_payload[i] = READ8_MAILBOX_PL_REG(rx_mailbox->payload_offset + i);
         }
     }
 

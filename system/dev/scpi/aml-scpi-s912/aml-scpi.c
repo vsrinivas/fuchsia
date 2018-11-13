@@ -198,7 +198,7 @@ static zx_status_t aml_scpi_get_sensor_value(void* ctx, uint32_t sensor_id,
     aml_scpi_t* scpi = ctx;
     struct {
         uint32_t status;
-        uint16_t sensor_value;
+        uint32_t sensor_value;
     } __PACKED aml_sensor_val;
 
     if (!sensor_value) {
