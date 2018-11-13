@@ -4,6 +4,7 @@
 
 #include "garnet/bin/guest/pkg/biscotti_guest/bin/guest.h"
 
+#include <arpa/inet.h>
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <unistd.h>
@@ -106,6 +107,7 @@ static int convert_socket_to_fd(zx::socket socket) {
 
 // static
 zx_status_t Guest::CreateAndStart(component::StartupContext* context,
+                                  fxl::CommandLine cl,
                                   std::unique_ptr<Guest>* guest) {
   FXL_LOG(INFO) << "Creating Guest Environment...";
   fuchsia::guest::EnvironmentManagerPtr guestmgr;
@@ -113,12 +115,12 @@ zx_status_t Guest::CreateAndStart(component::StartupContext* context,
   fuchsia::guest::EnvironmentControllerPtr guest_env;
   guestmgr->Create(kLinuxEnvirionmentName, guest_env.NewRequest());
 
-  *guest = std::unique_ptr<Guest>(new Guest(std::move(guest_env)));
+  *guest = std::unique_ptr<Guest>(new Guest(std::move(guest_env), std::move(cl)));
   return ZX_OK;
 }
 
-Guest::Guest(fuchsia::guest::EnvironmentControllerPtr env)
-    : guest_env_(std::move(env)) {
+Guest::Guest(fuchsia::guest::EnvironmentControllerPtr env, fxl::CommandLine cl)
+    : guest_env_(std::move(env)), cl_(std::move(cl)) {
   guest_env_->GetHostVsockEndpoint(socket_endpoint_.NewRequest());
   async_ = async_get_default_dispatcher();
   Start();
@@ -216,22 +218,48 @@ void Guest::StartGuest() {
 void Guest::ConfigureNetwork() {
   FXL_CHECK(maitred_)
       << "Called ConfigureNetwork without a maitre'd connection";
+
+  std::string arg;
+  uint32_t ip_addr = 0;
+  uint32_t netmask = 0;
+  uint32_t gateway = 0;
+  if (cl_.GetOptionValue("ip", &arg)) {
+    FXL_LOG(INFO) << "Using ip: " << arg;
+    struct in_addr addr;
+    FXL_CHECK(inet_aton(arg.c_str(), &addr) != 0)
+        << "Failed to parse address string";
+    ip_addr = addr.s_addr;
+  }
+  if (cl_.GetOptionValue("netmask", &arg)) {
+    FXL_LOG(INFO) << "Using netmask: " << arg;
+    struct in_addr addr;
+    FXL_CHECK(inet_aton(arg.c_str(), &addr) != 0)
+        << "Failed to parse address string";
+    netmask = addr.s_addr;
+  }
+  if (cl_.GetOptionValue("gateway", &arg)) {
+    FXL_LOG(INFO) << "Using gateway: " << arg;
+    struct in_addr addr;
+    FXL_CHECK(inet_aton(arg.c_str(), &addr) != 0)
+        << "Failed to parse address string";
+    gateway = addr.s_addr;
+  }
+  if (!ip_addr && !gateway && !netmask) {
+    FXL_LOG(INFO) << "No network configuration arguments provided, skipping network configuration.";
+    FXL_LOG(INFO) << "Re-run with '--help' for more information";
+    return;
+  }
+
   FXL_LOG(INFO) << "Configuring Guest Network...";
 
   grpc::ClientContext context;
   vm_tools::NetworkConfigRequest request;
   vm_tools::EmptyMessage response;
 
-  // TODO(tjdetwiler): This is just some hard-coded values. This doesn't play
-  // nicely with the host netstack but it at least gets us booting until we have
-  // a proper net bridge solution.
   vm_tools::IPv4Config* config = request.mutable_ipv4_config();
-  // 192.168.42.88
-  config->set_address(htonl(0xc0a82a58));
-  // 192.168.42.1
-  config->set_gateway(htonl(0xc0a82a01));
-  // 255.255.255.0
-  config->set_netmask(htonl(0xffffff00));
+  config->set_address(ip_addr);
+  config->set_gateway(gateway);
+  config->set_netmask(netmask);
 
   auto grpc_status = maitred_->ConfigureNetwork(&context, request, &response);
   FXL_CHECK(grpc_status.ok())

@@ -16,6 +16,7 @@
 #include "garnet/bin/guest/pkg/biscotti_guest/third_party/protos/vm_guest.grpc.pb.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
+#include "lib/fxl/command_line.h"
 
 namespace biscotti {
 class Guest : public fuchsia::guest::HostVsockAcceptor,
@@ -24,10 +25,11 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
  public:
   // Creates a new |Guest|
   static zx_status_t CreateAndStart(component::StartupContext* context,
+                                    fxl::CommandLine cl,
                                     std::unique_ptr<Guest>* guest);
 
  private:
-  Guest(fuchsia::guest::EnvironmentControllerPtr env);
+  Guest(fuchsia::guest::EnvironmentControllerPtr env, fxl::CommandLine cl);
 
   void Start();
   void StartGrpcServer();
@@ -76,6 +78,7 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
   std::unique_ptr<vm_tools::Maitred::Stub> maitred_;
   std::unique_ptr<vm_tools::tremplin::Tremplin::Stub> tremplin_;
   LogCollector log_collector_;
+  fxl::CommandLine cl_;
 };
 }  // namespace biscotti
 
