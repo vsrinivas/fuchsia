@@ -196,7 +196,7 @@ static bool test_phys_iter(void) {
     ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     usb_request_release(req);
-
+    zx_handle_close(iommu_handle);
     END_TEST;
 }
 
@@ -298,8 +298,7 @@ static bool test_phys_iter_merge(void) {
     ASSERT_EQ(iter.total_iterated, 9u * PAGE_SIZE, "");
     ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
-    free(req->phys_list);
-
+    usb_request_release(req);
     END_TEST;
 }
 
@@ -358,8 +357,7 @@ static bool test_phys_iter_unaligned_contig(void) {
     ASSERT_EQ(iter.total_iterated, 4u * PAGE_SIZE, "");
     ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
-    free(req->phys_list);
-
+    usb_request_release(req);
     END_TEST;
 }
 
@@ -409,8 +407,7 @@ static bool test_phys_iter_unaligned_noncontig(void) {
     ASSERT_EQ(iter.total_iterated, 2u * PAGE_SIZE, "");
     ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
-    free(req->phys_list);
-
+    usb_request_release(req);
     END_TEST;
 }
 
@@ -445,8 +442,7 @@ static bool test_phys_iter_tiny_aligned(void) {
     ASSERT_EQ(iter.total_iterated, 128u, "");
     ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
-    free(req->phys_list);
-
+    usb_request_release(req);
     END_TEST;
 }
 
@@ -481,8 +477,7 @@ static bool test_phys_iter_tiny_unaligned(void) {
     ASSERT_EQ(iter.total_iterated, 128u, "");
     ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
-    free(req->phys_list);
-
+    usb_request_release(req);
     END_TEST;
 }
 
