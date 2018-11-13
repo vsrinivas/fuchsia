@@ -1159,6 +1159,12 @@ bool GfxCommandApplier::ApplyCreateAmbientLight(
 bool GfxCommandApplier::ApplyCreateDirectionalLight(
     Session* session, ResourceId id,
     fuchsia::ui::gfx::DirectionalLightArgs args) {
+  // TODO(SCN-1255): temporarily disable directional light creation ASAP, so
+  // that people don't try to use them before we decide whether we want them.
+  // They are currently only used by RootPresenter and example programs.
+  // session->error_reporter()->ERROR()
+  //     << "fuchsia.ui.gfx.CreateResourceCmd: DirectionalLights are disabled";
+  // return false;
   auto light = CreateDirectionalLight(session, id);
   return light ? session->resources()->AddResource(id, std::move(light))
                : false;

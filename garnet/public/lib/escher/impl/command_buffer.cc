@@ -40,6 +40,8 @@ void CommandBuffer::Begin(uint64_t sequence_number) {
 
 bool CommandBuffer::Submit(vk::Queue queue,
                            CommandBufferFinishedCallback callback) {
+  // NOTE: this name is important for benchmarking.  Do not remove or modify it
+  // without also updating the "process_scenic_trace.go" script.
   TRACE_DURATION("gfx", "escher::CommandBuffer::Submit");
 
   FXL_DCHECK(is_active_ && !is_submitted_);

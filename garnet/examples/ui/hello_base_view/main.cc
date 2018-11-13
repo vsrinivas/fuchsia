@@ -79,10 +79,19 @@ int main(int argc, const char** argv) {
     view->LaunchShadertoyClient();
 
     // Display the newly-created view using root_presenter.
+    fidl::InterfacePtr<fuchsia::ui::policy::Presentation> presentation;
     fuchsia::ui::policy::Presenter2Ptr root_presenter =
         startup_context
             ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter2>();
-    root_presenter->PresentView(std::move(view_holder_token), nullptr);
+    root_presenter->PresentView(std::move(view_holder_token),
+                                presentation.NewRequest());
+
+    fuchsia::ui::gfx::RendererParam param;
+    param.set_shadow_technique(
+        fuchsia::ui::gfx::ShadowTechnique::STENCIL_SHADOW_VOLUME);
+    std::vector<fuchsia::ui::gfx::RendererParam> params;
+    params.push_back(std::move(param));
+    presentation->SetRendererParams(std::move(params));
 
     loop.Run();
   } else if (kUseExamplePresenter) {

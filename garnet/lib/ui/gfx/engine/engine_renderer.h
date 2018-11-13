@@ -6,13 +6,17 @@
 #define GARNET_LIB_UI_GFX_ENGINE_ENGINE_RENDERER_H_
 
 #include "lib/escher/escher.h"
+#include "lib/escher/paper/paper_renderer2.h"
+#include "lib/escher/paper/paper_renderer_config.h"
 
 namespace scenic_impl {
 namespace gfx {
 
 class Layer;
+class Camera;
 
-// EngineRender knows how to render Scenic layers using escher::PaperRenderer.
+// EngineRenderer knows how to render Scenic layers using escher::PaperRenderer
+// and PaperRenderer2.
 class EngineRenderer {
  public:
   explicit EngineRenderer(escher::EscherWeakPtr weak_escher);
@@ -26,24 +30,35 @@ class EngineRenderer {
                     const std::vector<Layer*>& layers);
 
  private:
-  // Draws all the overlays to textures, which are then drawn using the
-  // returned model. "Overlays" are all the layers except the bottom one.
-  // NOTE: moved "as-is" from Compositor to ease CL review; big changes soon.
-  std::unique_ptr<escher::Model> DrawOverlaysToModel(
-      const std::vector<Layer*>& drawable_layers, const escher::FramePtr& frame,
-      zx_time_t target_presentation_time);
-
-  // NOTE: moved "as-is" from Compositor to ease CL review; big changes soon.
   void DrawLayer(const escher::FramePtr& frame,
                  zx_time_t target_presentation_time, Layer* layer,
                  const escher::ImagePtr& output_image,
-                 const escher::Model* overlay_model);
+                 const escher::Model& overlay_model);
+
+  void DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
+                                  zx_time_t target_presentation_time,
+                                  Layer* layer,
+                                  escher::PaperRendererShadowType shadow_type,
+                                  const escher::ImagePtr& output_image,
+                                  const escher::Model& overlay_model);
+
+  void DrawLayerWithPaperRenderer2(const escher::FramePtr& frame,
+                                   zx_time_t target_presentation_time,
+                                   Layer* layer,
+                                   escher::PaperRendererShadowType shadow_type,
+                                   const escher::ImagePtr& output_image,
+                                   const escher::Model& overlay_model);
 
   escher::ImagePtr GetLayerFramebufferImage(uint32_t width, uint32_t height);
+
+  std::vector<escher::Camera> GenerateEscherCamerasForPaperRenderer(
+      const escher::FramePtr& frame, Camera* camera,
+      escher::ViewingVolume viewing_volume, zx_time_t target_presentation_time);
 
   const escher::EscherWeakPtr escher_;
   escher::PaperRendererPtr paper_renderer_;
   escher::ShadowMapRendererPtr shadow_renderer_;
+  escher::PaperRenderer2Ptr paper_renderer2_;
   std::unique_ptr<escher::hmd::PoseBufferLatchingShader>
       pose_buffer_latching_shader_;
 };

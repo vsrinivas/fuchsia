@@ -74,6 +74,8 @@ void SessionManager::ScheduleUpdateForSession(
 bool SessionManager::ApplyScheduledSessionUpdates(
     CommandContext* command_context, uint64_t presentation_time,
     uint64_t presentation_interval) {
+  // NOTE: this name is important for benchmarking.  Do not remove or modify it
+  // without also updating the "process_scenic_trace.go" script.
   TRACE_DURATION("gfx", "ApplyScheduledSessionUpdates", "time",
                  presentation_time, "interval", presentation_interval);
 

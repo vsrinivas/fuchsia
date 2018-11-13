@@ -395,7 +395,7 @@ void PaperRenderer2::InitRenderPassInfo(RenderPassInfo* rp,
     rp->op_flags = RenderPassInfo::kClearDepthStencilOp |
                    RenderPassInfo::kOptimalColorLayoutOp |
                    RenderPassInfo::kOptimalDepthStencilLayoutOp;
-    rp->clear_color[0].setFloat32({0.1f, 0.1f, 0.2f, 1.f});
+    rp->clear_color[0].setFloat32({0.f, 0.f, 0.f, 1.f});
 
     // If MSAA is enabled, we need to explicitly specify the sub-pass in order
     // to specify the resolve attachment.  Otherwise we allow a default subclass

@@ -6,6 +6,7 @@
 
 #include <trace/event.h>
 
+#include "garnet/lib/ui/gfx/engine/engine_renderer_visitor.h"
 #include "garnet/lib/ui/gfx/engine/frame_timings.h"
 #include "garnet/lib/ui/gfx/resources/camera.h"
 #include "garnet/lib/ui/gfx/resources/compositor/layer.h"
@@ -17,6 +18,7 @@
 #include "garnet/lib/ui/gfx/resources/stereo_camera.h"
 #include "lib/escher/hmd/pose_buffer_latching_shader.h"
 #include "lib/escher/impl/image_cache.h"
+#include "lib/escher/paper/paper_scene.h"
 #include "lib/escher/renderer/batch_gpu_uploader.h"
 #include "lib/escher/renderer/paper_renderer.h"
 #include "lib/escher/renderer/shadow_map.h"
@@ -42,6 +44,11 @@ EngineRenderer::EngineRenderer(escher::EscherWeakPtr weak_escher)
       shadow_renderer_(
           escher::ShadowMapRenderer::New(escher_, paper_renderer_->model_data(),
                                          paper_renderer_->model_renderer())),
+      // We use two depth buffers so that we can render multiple Layers without
+      // introducing a GPU stall.
+      paper_renderer2_(escher::PaperRenderer2::New(
+          escher_, {.shadow_type = escher::PaperRendererShadowType::kNone,
+                    .num_depth_buffers = 2})),
       pose_buffer_latching_shader_(
           std::make_unique<escher::hmd::PoseBufferLatchingShader>(escher_)) {
   paper_renderer_->set_sort_by_pipeline(false);
@@ -53,56 +60,58 @@ void EngineRenderer::RenderLayers(const escher::FramePtr& frame,
                                   zx_time_t target_presentation_time,
                                   const escher::ImagePtr& output_image,
                                   const std::vector<Layer*>& layers) {
-  // TODO(SCN-1119): change this to say "EngineRenderer::RenderLayers".
-  TRACE_DURATION("gfx", "Compositor::DrawFrame");
-  FXL_CHECK(!layers.empty());
-
-  auto overlay_model =
-      DrawOverlaysToModel(layers, frame, target_presentation_time);
-  const auto& bottom_layer = layers[0];
-  DrawLayer(frame, target_presentation_time, bottom_layer, output_image,
-            overlay_model.get());
-}
-
-std::unique_ptr<escher::Model> EngineRenderer::DrawOverlaysToModel(
-    const std::vector<Layer*>& layers, const escher::FramePtr& frame,
-    zx_time_t target_presentation_time) {
-  TRACE_DURATION("gfx", "EngineRenderer::DrawOverlaysToModel");
-
-  if (layers.size() <= 1) {
-    return nullptr;
-  }
-
-  std::vector<escher::Object> layer_objects;
-  layer_objects.reserve(layers.size() - 1);
+  // NOTE: this name is important for benchmarking.  Do not remove or modify it
+  // without also updating the "process_scenic_trace.go" script.
+  TRACE_DURATION("gfx", "EngineRenderer::RenderLayers");
 
   // Render each layer, except the bottom one. Create an escher::Object for
   // each layer, which will be composited as part of rendering the final
   // layer.
-  auto recycler = escher_->resource_recycler();
-  for (size_t i = 1; i < layers.size(); ++i) {
-    auto layer = layers[i];
-    auto texture = escher::Texture::New(
-        recycler, GetLayerFramebufferImage(layer->width(), layer->height()),
-        vk::Filter::eLinear);
+  // TODO(SCN-1254): the efficiency of this GPU compositing could be
+  // improved on tile-based GPUs by generating each layer in a subpass and
+  // compositing it into |output_image| in another subpass.  This is currently
+  // infeasible because we're rendering some layers with PaperRenderer and
+  // others with PaperRenderer2; it will be much easier once PaperRenderer is
+  // deleted.
+  std::vector<escher::Object> overlay_objects;
+  if (layers.size() > 1) {
+    overlay_objects.reserve(layers.size() - 1);
+    auto it = layers.begin();
+    while (++it != layers.end()) {
+      auto layer = *it;
+      auto texture = escher::Texture::New(
+          escher_->resource_recycler(),
+          GetLayerFramebufferImage(layer->width(), layer->height()),
+          // TODO(SCN-1270): shouldn't need linear filter, since this is
+          // 1-1 pixel mapping.  Verify when re-enabling multi-layer support.
+          vk::Filter::eLinear);
 
-    DrawLayer(frame, target_presentation_time, layers[i], texture->image(),
-              nullptr);
+      DrawLayer(frame, target_presentation_time, layer, texture->image(), {});
 
-    // TODO(SCN-1093): it would be preferable to insert barriers instead of
-    // using semaphores.
-    auto semaphore = escher::Semaphore::New(escher_->vk_device());
-    frame->SubmitPartialFrame(semaphore);
-    texture->image()->SetWaitSemaphore(std::move(semaphore));
+      // TODO(SCN-1093): it would be preferable to insert barriers instead of
+      // using semaphores.
+      auto semaphore = escher::Semaphore::New(escher_->vk_device());
+      frame->SubmitPartialFrame(semaphore);
+      texture->image()->SetWaitSemaphore(std::move(semaphore));
 
-    auto material = escher::Material::New(layer->color(), std::move(texture));
-    material->set_opaque(layer->opaque());
+      auto material = escher::Material::New(layer->color(), std::move(texture));
+      material->set_opaque(layer->opaque());
 
-    layer_objects.push_back(escher::Object::NewRect(
-        escher::Transform(layer->translation()), std::move(material)));
+      overlay_objects.push_back(escher::Object::NewRect(
+          escher::Transform(layer->translation()), std::move(material)));
+    }
   }
 
-  return std::make_unique<escher::Model>(std::move(layer_objects));
+  // TODO(SCN-1270): add support for multiple layers.
+  if (layers.size() > 1) {
+    FXL_LOG(ERROR)
+        << "EngineRenderer::RenderLayers(): only a single Layer is supported.";
+    overlay_objects.clear();
+  }
+
+  // Draw the bottom layer with all of the overlay layers above it.
+  DrawLayer(frame, target_presentation_time, layers[0], output_image,
+            escher::Model(std::move(overlay_objects)));
 }
 
 // Helper function for DrawLayer().
@@ -155,13 +164,31 @@ static void InitEscherStage(
   }
 }
 
+// Helper function for DrawLayer
+static escher::PaperRendererShadowType GetPaperRendererShadowType(
+    fuchsia::ui::gfx::ShadowTechnique technique) {
+  using escher::PaperRendererShadowType;
+  using fuchsia::ui::gfx::ShadowTechnique;
+
+  switch (technique) {
+    case ShadowTechnique::UNSHADOWED:
+      return PaperRendererShadowType::kNone;
+    case ShadowTechnique::SCREEN_SPACE:
+      return PaperRendererShadowType::kSsdo;
+    case ShadowTechnique::SHADOW_MAP:
+      return PaperRendererShadowType::kShadowMap;
+    case ShadowTechnique::MOMENT_SHADOW_MAP:
+      return PaperRendererShadowType::kMomentShadowMap;
+    case ShadowTechnique::STENCIL_SHADOW_VOLUME:
+      return PaperRendererShadowType::kShadowVolume;
+  }
+}
+
 void EngineRenderer::DrawLayer(const escher::FramePtr& frame,
                                zx_time_t target_presentation_time, Layer* layer,
                                const escher::ImagePtr& output_image,
-                               const escher::Model* overlay_model) {
-  TRACE_DURATION("gfx", "EngineRenderer::DrawLayer");
+                               const escher::Model& overlay_model) {
   FXL_DCHECK(layer->IsDrawable());
-
   float stage_width = static_cast<float>(output_image->width());
   float stage_height = static_cast<float>(output_image->height());
 
@@ -169,7 +196,7 @@ void EngineRenderer::DrawLayer(const escher::FramePtr& frame,
     // TODO(SCN-248): Should be able to render into a viewport of the
     // output image, but we're not that fancy yet.
     layer->error_reporter()->ERROR()
-        << "TODO(MZ-248): scenic::gfx::EngineRenderer::DrawLayer()"
+        << "TODO(SCN-248): scenic::gfx::EngineRenderer::DrawLayer()"
            ": layer size of "
         << layer->size().x << "x" << layer->size().y
         << " does not match output image size of " << stage_width << "x"
@@ -177,66 +204,41 @@ void EngineRenderer::DrawLayer(const escher::FramePtr& frame,
     return;
   }
 
-  auto& renderer = layer->renderer();
-  auto& scene = renderer->camera()->scene();
-
-  escher::Stage stage;
-  InitEscherStage(&stage, layer->GetViewingVolume(), scene->ambient_lights(),
-                  scene->directional_lights());
-
-  // The BatchGpuUploader is here to update the textures for Materials that are
-  // used in the scene, if and only if the backing image is dirty.
-  // TODO(SCN-1219) See if these updates can be consolidated with the batched
-  // uploads when Sessions are updated.
-  escher::BatchGpuUploader gpu_uploader(escher_, frame->frame_number());
-  escher::Model model(renderer->CreateDisplayList(
-      renderer->camera()->scene(), escher::vec2(layer->size()), &gpu_uploader));
-  gpu_uploader.Submit();
-
-  // Set the renderer's shadow mode, and generate a shadow map if necessary.
-  escher::ShadowMapPtr shadow_map;
-  switch (renderer->shadow_technique()) {
-    case ::fuchsia::ui::gfx::ShadowTechnique::UNSHADOWED:
-      paper_renderer_->set_shadow_type(escher::PaperRendererShadowType::kNone);
+  // TODO(SCN-1273): add pixel tests for various shadow modes (particularly
+  // those implemented by PaperRenderer2).
+  escher::PaperRendererShadowType shadow_type =
+      GetPaperRendererShadowType(layer->renderer()->shadow_technique());
+  switch (shadow_type) {
+    case escher::PaperRendererShadowType::kNone:
+    case escher::PaperRendererShadowType::kSsdo:
+    case escher::PaperRendererShadowType::kShadowMap:
+    case escher::PaperRendererShadowType::kMomentShadowMap:
+      DrawLayerWithPaperRenderer(frame, target_presentation_time, layer,
+                                 shadow_type, output_image, overlay_model);
       break;
-    case ::fuchsia::ui::gfx::ShadowTechnique::SCREEN_SPACE:
-      paper_renderer_->set_shadow_type(escher::PaperRendererShadowType::kSsdo);
+    case escher::PaperRendererShadowType::kShadowVolume:
+      DrawLayerWithPaperRenderer2(frame, target_presentation_time, layer,
+                                  shadow_type, output_image, overlay_model);
       break;
-    case ::fuchsia::ui::gfx::ShadowTechnique::MOMENT_SHADOW_MAP:
-      FXL_DLOG(WARNING) << "Moment shadow maps not implemented";
-    // Fallthrough to regular shadow maps.
-    case ::fuchsia::ui::gfx::ShadowTechnique::SHADOW_MAP:
-      paper_renderer_->set_shadow_type(
-          escher::PaperRendererShadowType::kShadowMap);
-
-      shadow_map = shadow_renderer_->GenerateDirectionalShadowMap(
-          frame, stage, model, stage.key_light().direction(),
-          stage.key_light().color());
-      break;
-    case ::fuchsia::ui::gfx::ShadowTechnique::STENCIL_SHADOW_VOLUME:
-      FXL_DLOG(WARNING) << "Stencil shadow volumes not implemented";
-      paper_renderer_->set_shadow_type(escher::PaperRendererShadowType::kSsdo);
+    case escher::PaperRendererShadowType::kEnumCount:
+      FXL_CHECK(false) << "kEnumCount is not a valid shadow type.";
       break;
   }
+}
 
-  auto draw_frame_lambda = [paper_renderer{paper_renderer_.get()}, frame,
-                            target_presentation_time, &stage, &model,
-                            &output_image, &shadow_map,
-                            &overlay_model](escher::Camera camera) {
-    paper_renderer->DrawFrame(frame, stage, model, camera, output_image,
-                              shadow_map, overlay_model);
-  };
-
-  if (renderer->camera()->IsKindOf<StereoCamera>()) {
-    auto stereo_camera = renderer->camera()->As<StereoCamera>();
+std::vector<escher::Camera>
+EngineRenderer::GenerateEscherCamerasForPaperRenderer(
+    const escher::FramePtr& frame, Camera* camera,
+    escher::ViewingVolume viewing_volume, zx_time_t target_presentation_time) {
+  if (camera->IsKindOf<StereoCamera>()) {
+    auto stereo_camera = camera->As<StereoCamera>();
     escher::Camera left_camera =
         stereo_camera->GetEscherCamera(StereoCamera::Eye::LEFT);
     escher::Camera right_camera =
         stereo_camera->GetEscherCamera(StereoCamera::Eye::RIGHT);
 
     escher::BufferPtr latched_pose_buffer;
-    if (escher::hmd::PoseBuffer pose_buffer =
-            renderer->camera()->GetEscherPoseBuffer()) {
+    if (escher::hmd::PoseBuffer pose_buffer = camera->GetEscherPoseBuffer()) {
       latched_pose_buffer = pose_buffer_latching_shader_->LatchStereoPose(
           frame, left_camera, right_camera, pose_buffer,
           target_presentation_time);
@@ -246,23 +248,122 @@ void EngineRenderer::DrawLayer(const escher::FramePtr& frame,
                                         escher::CameraEye::kRight);
     }
 
-    draw_frame_lambda(left_camera);
-    draw_frame_lambda(right_camera);
+    return {left_camera, right_camera};
   } else {
-    escher::Camera camera =
-        renderer->camera()->GetEscherCamera(stage.viewing_volume());
+    escher::Camera escher_camera = camera->GetEscherCamera(viewing_volume);
 
     escher::BufferPtr latched_pose_buffer;
-    if (escher::hmd::PoseBuffer pose_buffer =
-            renderer->camera()->GetEscherPoseBuffer()) {
+    if (escher::hmd::PoseBuffer pose_buffer = camera->GetEscherPoseBuffer()) {
       latched_pose_buffer = pose_buffer_latching_shader_->LatchPose(
-          frame, camera, pose_buffer, target_presentation_time);
-      camera.SetLatchedPoseBuffer(latched_pose_buffer,
-                                  escher::CameraEye::kLeft);
+          frame, escher_camera, pose_buffer, target_presentation_time);
+      escher_camera.SetLatchedPoseBuffer(latched_pose_buffer,
+                                         escher::CameraEye::kLeft);
     }
 
-    draw_frame_lambda(camera);
+    return {escher_camera};
   }
+}
+
+void EngineRenderer::DrawLayerWithPaperRenderer(
+    const escher::FramePtr& frame, zx_time_t target_presentation_time,
+    Layer* layer, escher::PaperRendererShadowType shadow_type,
+    const escher::ImagePtr& output_image, const escher::Model& overlay_model) {
+  TRACE_DURATION("gfx", "EngineRenderer::DrawLayerWithPaperRenderer");
+
+  auto& renderer = layer->renderer();
+  auto& scene = renderer->camera()->scene();
+
+  escher::Stage stage;
+  InitEscherStage(&stage, layer->GetViewingVolume(), scene->ambient_lights(),
+                  scene->directional_lights());
+
+  escher::BatchGpuUploader gpu_uploader(escher_, frame->frame_number());
+  escher::Model model(renderer->CreateDisplayList(
+      renderer->camera()->scene(), escher::vec2(layer->size()), &gpu_uploader));
+  gpu_uploader.Submit();
+
+  // Set the renderer's shadow mode, and generate a shadow map if necessary.
+  escher::ShadowMapPtr shadow_map;
+  if (shadow_type == escher::PaperRendererShadowType::kMomentShadowMap) {
+    FXL_DLOG(WARNING) << "Moment shadow maps not implemented";
+    shadow_type = escher::PaperRendererShadowType::kShadowMap;
+  }
+  if (shadow_type == escher::PaperRendererShadowType::kShadowMap) {
+    shadow_map = shadow_renderer_->GenerateDirectionalShadowMap(
+        frame, stage, model, stage.key_light().direction(),
+        stage.key_light().color());
+  }
+  paper_renderer_->set_shadow_type(shadow_type);
+
+  auto escher_cameras = GenerateEscherCamerasForPaperRenderer(
+      frame, renderer->camera(), layer->GetViewingVolume(),
+      target_presentation_time);
+  for (auto& c : escher_cameras) {
+    paper_renderer_->DrawFrame(frame, stage, model, c, output_image, shadow_map,
+                               &overlay_model);
+  }
+}
+
+void EngineRenderer::DrawLayerWithPaperRenderer2(
+    const escher::FramePtr& frame, zx_time_t target_presentation_time,
+    Layer* layer, const escher::PaperRendererShadowType shadow_type,
+    const escher::ImagePtr& output_image, const escher::Model& overlay_model) {
+  TRACE_DURATION("gfx", "EngineRenderer::DrawLayerWithPaperRenderer2");
+
+  frame->command_buffer()->TransitionImageLayout(
+      output_image, vk::ImageLayout::eUndefined,
+      vk::ImageLayout::eColorAttachmentOptimal);
+
+  auto& renderer = layer->renderer();
+  auto camera = renderer->camera();
+  auto& scene = camera->scene();
+
+  paper_renderer2_->SetConfig(escher::PaperRendererConfig{
+      .shadow_type = shadow_type,
+      .debug = renderer->enable_debugging(),
+  });
+
+  // Set up PaperScene from Scenic Scene resource.
+  auto paper_scene = fxl::MakeRefCounted<escher::PaperScene>();
+  paper_scene->bounding_box = layer->GetViewingVolume().bounding_box();
+
+  // Set up ambient light.
+  if (scene->ambient_lights().empty()) {
+    FXL_LOG(WARNING)
+        << "scenic_impl::gfx::EngineRenderer: scene has no ambient light.";
+    paper_scene->ambient_light.color = escher::vec3(0, 0, 0);
+  } else {
+    paper_scene->ambient_light.color = scene->ambient_lights()[0]->color();
+  }
+
+  // Set up point lights.
+  paper_scene->point_lights.reserve(scene->point_lights().size());
+  for (auto& light : scene->point_lights()) {
+    paper_scene->point_lights.push_back(escher::PaperPointLight{
+        .position = light->position(),
+        .color = light->color(),
+        .falloff = light->falloff(),
+    });
+  }
+
+  paper_renderer2_->BeginFrame(
+      frame, paper_scene,
+      GenerateEscherCamerasForPaperRenderer(
+          frame, camera, layer->GetViewingVolume(), target_presentation_time),
+      output_image);
+
+  // TODO(SCN-1256): scene-visitation should generate cameras, collect
+  // lights, etc.
+  escher::BatchGpuUploader gpu_uploader(escher_, frame->frame_number());
+  EngineRendererVisitor visitor(paper_renderer2_.get(), &gpu_uploader);
+  visitor.Visit(camera->scene().get());
+
+  gpu_uploader.Submit();
+
+  // TODO(SCN-1270): support for multiple layers.
+  FXL_DCHECK(overlay_model.objects().empty());
+
+  paper_renderer2_->EndFrame();
 }
 
 escher::ImagePtr EngineRenderer::GetLayerFramebufferImage(uint32_t width,

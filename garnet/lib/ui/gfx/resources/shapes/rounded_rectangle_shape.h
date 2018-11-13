@@ -41,6 +41,8 @@ class RoundedRectangleShape final : public PlanarShape {
 
   const escher::MeshPtr& escher_mesh() const { return mesh_; }
 
+  const escher::RoundedRectSpec& spec() const { return spec_; }
+
  private:
   escher::RoundedRectSpec spec_;
   escher::MeshPtr mesh_;

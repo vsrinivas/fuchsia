@@ -137,8 +137,19 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
   auto shader_fs = escher::HackFilesystem::New(debug_dir);
   {
     bool success = shader_fs->InitializeWithRealFiles(
-        std::vector<escher::HackFilePath>{"shaders/model_renderer/main.vert"});
-    FXL_DCHECK(success);
+        {"shaders/model_renderer/main.frag", "shaders/model_renderer/main.vert",
+         "shaders/model_renderer/default_position.vert",
+         "shaders/model_renderer/shadow_map_generation.frag",
+         "shaders/model_renderer/shadow_map_lighting.frag",
+         "shaders/model_renderer/wobble_position.vert",
+         "shaders/paper/common/use.glsl",
+         "shaders/paper/frag/main_ambient_light.frag",
+         "shaders/paper/frag/main_point_light.frag",
+         "shaders/paper/vert/compute_model_space_position.vert",
+         "shaders/paper/vert/compute_world_space_position.vert",
+         "shaders/paper/vert/main_shadow_volume_extrude.vert",
+         "shaders/paper/vert/vertex_attributes.vert"});
+    FXL_DCHECK(success) << "Failed to init shader files.";
   }
 
   // Initialize Escher.
@@ -250,7 +261,7 @@ void GfxSystem::GetDisplayOwnershipEventImmediately(
 
   zx::event dup;
   if (display->ownership_event().duplicate(ZX_RIGHTS_BASIC, &dup) != ZX_OK) {
-    FX_LOGS(ERROR) << "## Vulkan display event dup error";
+    FXL_LOG(ERROR) << "## Vulkan display event dup error";
   } else {
     callback(std::move(dup));
   }
@@ -282,47 +293,42 @@ VkBool32 GfxSystem::HandleDebugReport(VkDebugReportFlagsEXT flags_in,
   // TODO(SCN-704) remove this block
   if (object_type == vk::DebugReportObjectTypeEXT::eDeviceMemory &&
       message_code == 385878038) {
-    FX_LOGS(WARNING) << "Ignoring Vulkan Memory Type Error, see SCN-704";
+    FXL_LOG(WARNING) << "Ignoring Vulkan Memory Type Error, see SCN-704";
   }
 
+#define VK_DEBUG_REPORT_MESSAGE                                         \
+  pMessage << " (layer: " << pLayerPrefix << "  code: " << message_code \
+           << "  object-type: " << vk::to_string(object_type)           \
+           << "  object: " << object << ")" << std::endl;
+
   bool fatal = false;
-
-  auto severity = FX_LOG_ERROR;
-
   if (flags == vk::DebugReportFlagBitsEXT::eInformation) {
-    FX_LOGS(INFO) << "## Vulkan Information: ";
-    severity = FX_LOG_INFO;
+    FXL_LOG(INFO) << "## Vulkan Information: " << VK_DEBUG_REPORT_MESSAGE;
   } else if (flags == vk::DebugReportFlagBitsEXT::eWarning) {
-    FX_LOGS(WARNING) << "## Vulkan Warning: ";
-    severity = FX_LOG_WARNING;
+    FXL_LOG(WARNING) << "## Vulkan Warning: " << VK_DEBUG_REPORT_MESSAGE;
   } else if (flags == vk::DebugReportFlagBitsEXT::ePerformanceWarning) {
-    FX_LOGS(WARNING) << "## Vulkan Performance Warning: ";
-    severity = FX_LOG_WARNING;
+    FXL_LOG(WARNING) << "## Vulkan Performance Warning: "
+                     << VK_DEBUG_REPORT_MESSAGE;
   } else if (flags == vk::DebugReportFlagBitsEXT::eError) {
     // Treat all errors as fatal.
     fatal = true;
-    FX_LOGS(ERROR) << "## Vulkan Error: ";
-    severity = FX_LOG_ERROR;
+    FXL_LOG(ERROR) << "## Vulkan Error: " << VK_DEBUG_REPORT_MESSAGE;
   } else if (flags == vk::DebugReportFlagBitsEXT::eDebug) {
-    FX_LOGS(INFO) << "## Vulkan Debug: ";
-    severity = FX_LOG_INFO;
+    FXL_LOG(INFO) << "## Vulkan Debug: " << VK_DEBUG_REPORT_MESSAGE;
   } else {
     // This should never happen, unless a new value has been added to
     // vk::DebugReportFlagBitsEXT.  In that case, add a new if-clause above.
     fatal = true;
-    FX_LOGS(ERROR) << "## Vulkan Unknown Message Type (flags: "
+    FXL_LOG(ERROR) << "## Vulkan Unknown Message Type (flags: "
                    << vk::to_string(flags) << "): ";
   }
-
-  FX_LOGST_WITH_SEVERITY(severity, nullptr)
-      << pMessage << " (layer: " << pLayerPrefix << "  code: " << message_code
-      << "  object-type: " << vk::to_string(object_type)
-      << "  object: " << object << ")" << std::endl;
 
   // Crash immediately on fatal errors.
   FX_CHECK(!fatal);
 
   return false;
+
+#undef VK_DEBUG_REPORT_MESSAGE
 }
 
 CompositorWeakPtr GfxSystem::GetCompositor(GlobalId compositor_id) const {

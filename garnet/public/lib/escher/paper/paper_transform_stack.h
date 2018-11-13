@@ -52,9 +52,11 @@ class PaperTransformStack final {
   const Item& PushScale(float scale);
   const Item& PushIdentity();
 
-  // Add the clip planes to the stack.  They are not transformed by the current
-  // transform, but will be transformed by subsequent transforms that are pushed
-  // onto the stack.  NOTE: stack's size must be > 0 when this is called.
+  // Add the clip planes to the stack.  These planes are in the space defined by
+  // the current transform.  In other words, they are not transformed by the
+  // current transform, but will be transformed by each subsequent transform
+  // that is pushed onto the stack.  NOTE: stack's size must be > 0 when this is
+  // called.
   const Item& AddClipPlanes(const plane3* clip_planes, size_t num_clip_planes);
   const Item& AddClipPlanes(const std::vector<plane3>& clip_planes) {
     return AddClipPlanes(clip_planes.data(), clip_planes.size());

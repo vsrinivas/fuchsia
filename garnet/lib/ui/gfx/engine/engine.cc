@@ -144,6 +144,8 @@ std::optional<HardwareLayerAssignment> GetHardwareLayerAssignment(
 bool Engine::RenderFrame(const FrameTimingsPtr& timings,
                          uint64_t presentation_time,
                          uint64_t presentation_interval, bool force_render) {
+  // NOTE: this name is important for benchmarking.  Do not remove or modify it
+  // without also updating the "process_scenic_trace.go" script.
   TRACE_DURATION("gfx", "RenderFrame", "frame_number", timings->frame_number(),
                  "time", presentation_time, "interval", presentation_interval);
 
@@ -232,6 +234,8 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings,
 }
 
 void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {
+  // NOTE: this name is important for benchmarking.  Do not remove or modify it
+  // without also updating the "process_scenic_trace.go" script.
   TRACE_DURATION("gfx", "UpdateAndDeliverMetrics", "time", presentation_time);
 
   // Gather all of the scene which might need to be updated.
