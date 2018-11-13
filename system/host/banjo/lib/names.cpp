@@ -181,6 +181,8 @@ std::string NameHandleSubtype(types::HandleSubtype subtype) {
         return "timer";
     case types::HandleSubtype::kBti:
         return "bti";
+    case types::HandleSubtype::kProfile:
+        return "profile";
     }
 }
 
@@ -263,6 +265,8 @@ std::string NameHandleZXObjType(types::HandleSubtype subtype) {
         return "ZX_OBJ_TYPE_TIMER";
     case types::HandleSubtype::kBti:
         return "ZX_OBJ_TYPE_BTI";
+    case types::HandleSubtype::kProfile:
+        return "ZX_OBJ_TYPE_PROFILE";
     }
 }
 

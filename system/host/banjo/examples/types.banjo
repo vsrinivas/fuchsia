@@ -249,6 +249,7 @@ struct handles {
     handle<fifo> fifo_handle;
     handle<guest> guest_handle;
     handle<timer> timer_handle;
+    handle<profile> profile_handle;
 
     handle? nullable_handle_handle;
     handle<process>? nullable_process_handle;
@@ -267,6 +268,7 @@ struct handles {
     handle<fifo>? nullable_fifo_handle;
     handle<guest>? nullable_guest_handle;
     handle<timer>? nullable_timer_handle;
+    handle<profile>? nullable_profile_handle;
 };
 
 const uint32 strings_size = 32;
