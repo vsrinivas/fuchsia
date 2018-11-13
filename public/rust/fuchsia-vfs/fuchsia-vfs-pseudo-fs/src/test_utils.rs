@@ -2,13 +2,38 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Utlities used by tests in both file and directory modules.
+//! Utilities used by tests in both file and directory modules.
 
 #![cfg(test)]
 
-// This can be an async function, but then I would have to say `await!(assert_read(...))`,
-// while with a macro it is `assert_read!(...)`.  As this is local to the testing part of this
-// module, it is probalby OK to use macros to save some repeatition.
+// All of the macros in this file could instead be async functions, but then I would have to say
+// `await!(open_get_proxy(...))`, while with a macro it is `open_get_proxy!(...)`.  As this is
+// local to the testing part of this module, it is probably OK to use macros to save some
+// repetition.
+
+// See comment at the top of the file for why this is a macro.
+macro_rules! open_get_proxy {
+    ($proxy:expr, $flags:expr, $mode:expr, $path:expr, $new_proxy_type:ty) => {{
+        let (new_proxy, new_server_end) =
+            create_proxy::<$new_proxy_type>().expect("Failed to create connection endpoints");
+
+        $proxy
+            .open(
+                $flags,
+                $mode,
+                $path,
+                ServerEnd::<NodeMarker>::new(new_server_end.into_channel()),
+            )
+            .unwrap();
+
+        new_proxy
+    }};
+    ($proxy:expr, $flags:expr, $path:expr, $new_proxy_type:ty) => {
+        open_get_proxy!($proxy, $flags, 0, $path, $new_proxy_type)
+    };
+}
+
+// See comment at the top of the file for why this is a macro.
 macro_rules! assert_read {
     ($proxy:expr, $expected:expr) => {
         let (status, content) = await!($proxy.read($expected.len() as u64)).expect("read failed");
@@ -18,7 +43,7 @@ macro_rules! assert_read {
     };
 }
 
-// See comment above assert_read above for why this is a macro.
+// See comment at the top of the file for why this is a macro.
 macro_rules! assert_read_err {
     ($proxy:expr, $expected_status:expr) => {
         let (status, content) = await!($proxy.read(100)).expect("read failed");
@@ -28,7 +53,7 @@ macro_rules! assert_read_err {
     };
 }
 
-// See comment above assert_read above for why this is a macro.
+// See comment at the top of the file for why this is a macro.
 macro_rules! assert_read_fidl_err {
     ($proxy:expr, $expected_error:pat) => {
         match await!($proxy.read(100)) {
@@ -42,7 +67,7 @@ macro_rules! assert_read_fidl_err {
     };
 }
 
-// See comment above assert_read above for why this is a macro.
+// See comment at the top of the file for why this is a macro.
 macro_rules! assert_read_at {
     ($proxy:expr, $offset:expr, $expected:expr) => {
         let (status, content) =
@@ -53,7 +78,7 @@ macro_rules! assert_read_at {
     };
 }
 
-// See comment above assert_read above for why this is a macro.
+// See comment at the top of the file for why this is a macro.
 macro_rules! assert_read_at_err {
     ($proxy:expr, $offset:expr, $expected_status:expr) => {
         let (status, content) = await!($proxy.read_at(100, $offset)).expect("read failed");
@@ -63,7 +88,7 @@ macro_rules! assert_read_at_err {
     };
 }
 
-// See comment above assert_read above for why this is a macro.
+// See comment at the top of the file for why this is a macro.
 macro_rules! assert_write {
     ($proxy:expr, $content:expr) => {
         let (status, len_written) =
@@ -74,7 +99,7 @@ macro_rules! assert_write {
     };
 }
 
-// See comment above assert_read above for why this is a macro.
+// See comment at the top of the file for why this is a macro.
 macro_rules! assert_write_err {
     ($proxy:expr, $content:expr, $expected_status:expr) => {
         let (status, len_written) =
@@ -85,7 +110,7 @@ macro_rules! assert_write_err {
     };
 }
 
-// See comment above assert_read above for why this is a macro.
+// See comment at the top of the file for why this is a macro.
 macro_rules! assert_write_fidl_err {
     ($proxy:expr, $content:expr, $expected_error:pat) => {
         match await!($proxy.write(&mut $content.bytes())) {
@@ -99,7 +124,7 @@ macro_rules! assert_write_fidl_err {
     };
 }
 
-// See comment above assert_read above for why this is a macro.
+// See comment at the top of the file for why this is a macro.
 macro_rules! assert_write_at {
     ($proxy:expr, $offset:expr, $content:expr) => {
         let (status, len_written) =
@@ -110,7 +135,7 @@ macro_rules! assert_write_at {
     };
 }
 
-// See comment above assert_read above for why this is a macro.
+// See comment at the top of the file for why this is a macro.
 macro_rules! assert_write_at_err {
     ($proxy:expr, $offset:expr, $content:expr, $expected_status:expr) => {
         let (status, len_written) =
@@ -121,7 +146,7 @@ macro_rules! assert_write_at_err {
     };
 }
 
-// See comment above assert_read above for why this is a macro.
+// See comment at the top of the file for why this is a macro.
 macro_rules! assert_seek {
     ($proxy:expr, $pos:expr, Start) => {
         let (status, actual) = await!($proxy.seek($pos, SeekOrigin::Start)).expect("seek failed");
@@ -137,7 +162,7 @@ macro_rules! assert_seek {
     };
 }
 
-// See comment above assert_read above for why this is a macro.
+// See comment at the top of the file for why this is a macro.
 macro_rules! assert_seek_err {
     ($proxy:expr, $pos:expr, $start:ident, $expected_status:expr, $actual_pos:expr) => {
         let (status, actual) = await!($proxy.seek($pos, SeekOrigin::$start)).expect("seek failed");
@@ -147,7 +172,7 @@ macro_rules! assert_seek_err {
     };
 }
 
-// See comment above assert_read above for why this is a macro.
+// See comment at the top of the file for why this is a macro.
 macro_rules! assert_truncate {
     ($proxy:expr, $length:expr) => {
         let status = await!($proxy.truncate($length)).expect("truncate failed");
@@ -156,7 +181,7 @@ macro_rules! assert_truncate {
     };
 }
 
-// See comment above assert_read above for why this is a macro.
+// See comment at the top of the file for why this is a macro.
 macro_rules! assert_truncate_err {
     ($proxy:expr, $length:expr, $expected_status:expr) => {
         let status = await!($proxy.truncate($length)).expect("truncate failed");
@@ -165,7 +190,7 @@ macro_rules! assert_truncate_err {
     };
 }
 
-// See comment above assert_read above for why this is a macro.
+// See comment at the top of the file for why this is a macro.
 macro_rules! assert_get_attr {
     ($proxy:expr, $expected:expr) => {
         let (status, attrs) = await!($proxy.get_attr()).expect("get_attr failed");
@@ -175,7 +200,15 @@ macro_rules! assert_get_attr {
     };
 }
 
-// See comment above assert_read above for why this is a macro.
+// See comment at the top of the file for why this is a macro.
+macro_rules! assert_describe {
+    ($proxy:expr, $expected:expr) => {
+        let node_info = await!($proxy.describe()).expect("describe failed");
+        assert_eq!(node_info, $expected);
+    };
+}
+
+// See comment at the top of the file for why this is a macro.
 macro_rules! assert_close {
     ($proxy:expr) => {
         let status = await!($proxy.close()).expect("close failed");
@@ -184,7 +217,7 @@ macro_rules! assert_close {
     };
 }
 
-// See comment above assert_read above for why this is a macro.
+// See comment at the top of the file for why this is a macro.
 macro_rules! assert_close_err {
     ($proxy:expr, $expected_status:expr) => {
         let status = await!($proxy.close()).expect("close failed");
@@ -199,7 +232,7 @@ macro_rules! assert_close_err {
 //
 //     assert_event!(proxy, FileEvent::OnOpen_ {
 //         s: Status::SHOULD_WAIT.into_raw(),
-//         info: None,
+//         info: Some(Box::new(NodeInfo::{File,Directory} { ... })),
 //     });
 //
 // Instead, I need to split the assertion into a pattern and then additional assertions on what
@@ -216,7 +249,7 @@ macro_rules! assert_event {
     };
 }
 
-// See comment above assert_read above for why this is a macro.
+// See comment at the top of the file for why this is a macro.
 macro_rules! assert_no_event {
     ($proxy:expr) => {
         let event_stream = $proxy.take_event_stream();
@@ -226,5 +259,113 @@ macro_rules! assert_no_event {
                 panic!("Unexpected event: {:?}", unexpected);
             }
         }
+    };
+}
+
+// See comment at the top of the file for why this is a macro.
+macro_rules! open_get_proxy_assert {
+    ($proxy:expr, $flags:expr, $path:expr, $new_proxy_type:ty, $expected_pattern:pat,
+     $expected_assertion:block) => {{
+        let new_proxy = open_get_proxy!($proxy, $flags, $path, $new_proxy_type);
+        assert_event!(new_proxy, $expected_pattern, $expected_assertion);
+        new_proxy
+    }};
+}
+
+// See comment at the top of the file for why this is a macro.
+macro_rules! open_get_file_proxy_assert_ok {
+    ($proxy:expr, $flags:expr, $path:expr) => {
+        open_get_proxy_assert!(
+            $proxy,
+            $flags,
+            $path,
+            FileMarker,
+            FileEvent::OnOpen_ { s, info },
+            {
+                assert_eq!(Status::from_raw(s), Status::OK);
+                assert_eq!(
+                    info,
+                    Some(Box::new(NodeInfo::File(FileObject { event: None }))),
+                );
+            }
+        )
+    };
+}
+
+// See comment at the top of the file for why this is a macro.
+macro_rules! open_as_file_assert_err {
+    ($proxy:expr, $flags:expr, $path:expr, $expected_status:expr) => {
+        open_get_proxy_assert!(
+            $proxy,
+            $flags,
+            $path,
+            FileMarker,
+            FileEvent::OnOpen_ { s, info },
+            {
+                assert_eq!(Status::from_raw(s), $expected_status);
+                assert_eq!(info, None);
+            }
+        );
+    };
+}
+
+// See comment at the top of the file for why this is a macro.
+macro_rules! open_get_directory_proxy_assert_ok {
+    ($proxy:expr, $flags:expr, $path:expr) => {
+        open_get_proxy_assert!(
+            $proxy,
+            $flags,
+            $path,
+            DirectoryMarker,
+            DirectoryEvent::OnOpen_ { s, info },
+            {
+                assert_eq!(Status::from_raw(s), Status::OK);
+                assert_eq!(
+                    info,
+                    Some(Box::new(NodeInfo::Directory(DirectoryObject {
+                        reserved: 0
+                    }))),
+                );
+            }
+        )
+    };
+}
+
+// See comment at the top of the file for why this is a macro.
+macro_rules! open_as_directory_assert_err {
+    ($proxy:expr, $flags:expr, $path:expr, $expected_status:expr) => {
+        open_get_proxy_assert!(
+            $proxy,
+            $flags,
+            $path,
+            DirectoryMarker,
+            DirectoryEvent::OnOpen_ { s, info },
+            {
+                assert_eq!(Status::from_raw(s), $expected_status);
+                assert_eq!(info, None);
+            }
+        );
+    };
+}
+
+// See comment at the top of the file for why this is a macro.
+macro_rules! assert_read_dirents {
+    ($proxy:expr, $max_bytes:expr, $expected:expr) => {
+        let (status, entries) =
+            await!($proxy.read_dirents($max_bytes)).expect("read_dirents failed");
+
+        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(entries, $expected);
+    };
+}
+
+// See comment at the top of the file for why this is a macro.
+macro_rules! assert_read_dirents_err {
+    ($proxy:expr, $max_bytes:expr, $expected_status:expr) => {
+        let (status, entries) =
+            await!($proxy.read_dirents($max_bytes)).expect("read_dirents failed");
+
+        assert_eq!(Status::from_raw(status), $expected_status);
+        assert_eq!(entries.len(), 0);
     };
 }

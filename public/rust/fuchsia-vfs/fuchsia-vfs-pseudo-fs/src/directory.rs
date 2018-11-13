@@ -1,0 +1,1340 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+//! Implementation of a pseudo directory trait.
+
+#![warn(missing_docs)]
+
+use {
+    crate::common::send_on_open_with_error,
+    crate::directory_entry::{DirectoryEntry, EntryInfo},
+    crate::watcher_connection::WatcherConnection,
+    byteorder::{LittleEndian, WriteBytesExt},
+    fidl::encoding::OutOfLine,
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_io::{
+        DirectoryMarker, DirectoryObject, DirectoryRequest, DirectoryRequestStream, NodeAttributes,
+        NodeInfo, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MAX_FILENAME,
+        MODE_PROTECTION_MASK, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_APPEND,
+        OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
+        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        WATCH_EVENT_ADDED, WATCH_MASK_ADDED,
+    },
+    fuchsia_async::Channel,
+    fuchsia_zircon::{
+        sys::{ZX_ERR_INVALID_ARGS, ZX_ERR_NOT_SUPPORTED, ZX_OK},
+        Status,
+    },
+    futures::{
+        future::{FusedFuture, FutureExt},
+        stream::{FuturesUnordered, Stream, StreamExt, StreamFuture},
+        task::LocalWaker,
+        Future, Poll,
+    },
+    libc::S_IRUSR,
+    std::{
+        collections::BTreeMap, io::Write, iter, iter::ExactSizeIterator, marker::Unpin,
+        mem::size_of, ops::Bound, pin::Pin,
+    },
+    void::Void,
+};
+
+/// An implementation of a pseudo directory.  Most clients will probably just use the
+/// DirectoryEntry trait to deal with the pseudo directories uniformly.
+///
+/// In this implementation pseudo directories own all the entries that are directly direct
+/// children, also "running" direct entries when the directory itself is run via [`Future::poll`].
+/// See [`DirectoryEntry`] documentation for details.
+pub struct PseudoDirectory<'entries> {
+    entries: BTreeMap<String, Box<DirectoryEntry + 'entries>>,
+
+    /// MODE_PROTECTION_MASK attributes returned by this directory through io.fidl:Node::GetAttr.
+    /// They have no meaning for the directory operation itself, but may have consequences to the
+    /// POSIX emulation layer.  This field should only have set bits in the MODE_PROTECTION_MASK
+    /// part.
+    protection_attributes: u32,
+
+    connections: FuturesUnordered<StreamFuture<DirectoryConnection>>,
+
+    watchers: Vec<WatcherConnection>,
+}
+
+/// Seek position for this connection to the directory.  We just store the element that was
+/// returned last from ReadDirents for this connection.  Next call will look for the next element
+/// in alphabetical order after the one returned and resume from there.  An alternative is to use
+/// an intrusive tree to have a dual index in both names and IDs that are assigned to the entries
+/// in insertion order.  Then we can store an ID instead of the full entry name.  This is what the
+/// C++ version is doing currently.
+///
+/// It should be possible to do the same intrusive dual-indexing using, for example,
+///
+///     https://docs.rs/intrusive-collections/0.7.6/intrusive_collections/
+///
+/// but, as, I think, at least for the pseudo directories, this approach is fine, and it simple
+/// enough.
+#[derive(Clone)]
+enum DirectoryReadPos {
+    Start,
+    Dot,
+    Name(String),
+    End,
+}
+
+struct DirectoryConnection {
+    requests: DirectoryRequestStream,
+    flags: u32,
+
+    /// Seek position for this connection to the directory.  We just store the element that was
+    /// returned last by ReadDirents for this connection.  Next call will look for the next element
+    /// in alphabetical order and resume from there.
+    seek: DirectoryReadPos,
+}
+
+impl DirectoryConnection {
+    fn into_stream_future(
+        requests: DirectoryRequestStream, flags: u32,
+    ) -> StreamFuture<DirectoryConnection> {
+        (DirectoryConnection {
+            requests,
+            flags,
+            seek: DirectoryReadPos::Start,
+        })
+        .into_future()
+    }
+}
+
+impl Stream for DirectoryConnection {
+    // We are just proxying the DirectoryRequestStream requests.
+    type Item = <DirectoryRequestStream as Stream>::Item;
+
+    fn poll_next(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
+        self.requests.poll_next_unpin(lw)
+    }
+}
+
+/// We assume that usize/isize and u64/i64 are of the same size in a few locations in code.  This
+/// macro is used to mark the locations of those assumptions.
+/// Copied from
+///
+///     https://docs.rs/static_assertions/0.2.5/static_assertions/macro.assert_eq_size.html
+///
+macro_rules! assert_eq_size {
+    ($x:ty, $($xs:ty),+ $(,)*) => {
+        $(let _ = core::mem::transmute::<$x, $xs>;)+
+    };
+}
+
+/// Return type for PseudoDirectory::handle_request().
+enum ConnectionState {
+    Alive,
+    Closed,
+}
+
+/// POSIX emulation layer access attributes set by default for directories created with empty().
+pub const DEFAULT_DIRECTORY_PROTECTION_ATTRIBUTES: u32 = S_IRUSR;
+
+impl<'entries> PseudoDirectory<'entries> {
+    /// Creates an empty directory.
+    ///
+    /// POSIX access attributes are set to [`DEFAULT_DIRECTORY_PROTECTION_ATTRIBUTES`].
+    pub fn empty() -> Self {
+        PseudoDirectory::empty_attr(DEFAULT_DIRECTORY_PROTECTION_ATTRIBUTES)
+    }
+
+    /// Creates an empty directory with the specified POSIX access attributes.
+    pub fn empty_attr(protection_attributes: u32) -> Self {
+        PseudoDirectory {
+            entries: BTreeMap::new(),
+            protection_attributes,
+            connections: FuturesUnordered::new(),
+            watchers: Vec::new(),
+        }
+    }
+
+    /// Adds a child entry to this directory.  The directory will own the child entry item and will
+    /// run it as part of the directory own `poll()` invocation.
+    ///
+    /// `name` should not exceed [`MAX_FILENAME`] bytes in length.  If there is already an entry
+    /// with the same name, no action is taken and [`Status::ALREADY_EXISTS`] is returned.
+    pub fn add_entry<DE>(&mut self, name: &str, entry: DE) -> Result<(), Status>
+    where
+        DE: DirectoryEntry + 'entries,
+    {
+        assert_eq_size!(u64, usize);
+        if name.len() as u64 >= MAX_FILENAME {
+            return Err(Status::INVALID_ARGS);
+        }
+
+        if self.entries.contains_key(name) {
+            return Err(Status::ALREADY_EXISTS);
+        }
+
+        self.send_watcher_event(WATCH_MASK_ADDED, WATCH_EVENT_ADDED, name);
+        let _ = self.entries.insert(name.to_string(), Box::new(entry));
+        Ok(())
+    }
+
+    fn send_watcher_event(&mut self, mask: u32, event: u8, name: &str) {
+        self.watchers.retain(
+            |watcher| match watcher.send_event_check_mask(mask, event, name) {
+                Ok(()) => true,
+                Err(_) => false,
+            },
+        );
+    }
+
+    fn remove_dead_watchers(&mut self, lw: &LocalWaker) {
+        self.watchers.retain(|watcher| !watcher.is_dead(lw));
+    }
+
+    fn validate_flags(&self, parent_flags: u32, flags: u32) -> Result<(), Status> {
+        let allowed_flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DIRECTORY | OPEN_FLAG_DESCRIBE;
+
+        let prohibited_flags =
+            OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT | OPEN_FLAG_TRUNCATE | OPEN_FLAG_APPEND;
+
+        if flags & OPEN_RIGHT_READABLE != 0 && parent_flags & OPEN_RIGHT_READABLE == 0 {
+            return Err(Status::ACCESS_DENIED);
+        }
+
+        // Pseudo directories do not allow modifications or mounting, at this point.
+        if flags & OPEN_RIGHT_WRITABLE != 0 || flags & OPEN_RIGHT_ADMIN != 0 {
+            return Err(Status::ACCESS_DENIED);
+        }
+
+        if flags & prohibited_flags != 0 {
+            return Err(Status::INVALID_ARGS);
+        }
+
+        if flags & !allowed_flags != 0 {
+            return Err(Status::NOT_SUPPORTED);
+        }
+
+        Ok(())
+    }
+
+    fn add_watcher(&mut self, mask: u32, channel: Channel) -> Result<(), fidl::Error> {
+        let conn = WatcherConnection::new(mask, channel);
+
+        let mut keys = &mut self.entries.keys().map(|k| k.as_str());
+        conn.send_events_existing(&mut keys)?;
+        conn.send_event_idle()?;
+
+        self.watchers.push(conn);
+        Ok(())
+    }
+
+    fn add_connection(
+        &mut self, parent_flags: u32, flags: u32, mode: u32, server_end: ServerEnd<NodeMarker>,
+    ) -> Result<(), fidl::Error> {
+        // There should be no MODE_TYPE_* flags set, except for, possibly, MODE_TYPE_DIRECTORY when
+        // the target is a directory.
+        if (mode & !MODE_PROTECTION_MASK) & !MODE_TYPE_DIRECTORY != 0 {
+            let status = if (mode & !MODE_PROTECTION_MASK) & MODE_TYPE_FILE != 0 {
+                Status::NOT_FILE
+            } else {
+                Status::INVALID_ARGS
+            };
+            return send_on_open_with_error(flags, server_end, status);
+        }
+
+        if let Err(status) = self.validate_flags(parent_flags, flags) {
+            return send_on_open_with_error(flags, server_end, status);
+        }
+
+        let (request_stream, control_handle) =
+            ServerEnd::<DirectoryMarker>::new(server_end.into_channel())
+                .into_stream_and_control_handle()?;
+        let conn = DirectoryConnection::into_stream_future(request_stream, flags);
+        self.connections.push(conn);
+
+        if flags & OPEN_FLAG_DESCRIBE != 0 {
+            let mut info = NodeInfo::Directory(DirectoryObject { reserved: 0 });
+            control_handle.send_on_open_(Status::OK.into_raw(), Some(OutOfLine(&mut info)))?;
+        }
+
+        Ok(())
+    }
+
+    fn validate_and_split_path(path: &str) -> Result<(impl Iterator<Item = &str>, bool), Status> {
+        let is_dir = path.ends_with('/');
+
+        // Disallow empty components, ".", and ".."s.  Path is expected to be canonicalized.  See
+        // US-569 for discussion of empty components.
+        {
+            let mut check = path.split('/');
+            // Allow trailing slash to indicate a directory.
+            if is_dir {
+                let _ = check.next_back();
+            }
+
+            if check.any(|c| c.is_empty() || c == ".." || c == ".") {
+                return Err(Status::INVALID_ARGS);
+            }
+        }
+
+        let mut res = path.split('/');
+        if is_dir {
+            let _ = res.next_back();
+        }
+        Ok((res, is_dir))
+    }
+
+    fn handle_request(
+        &mut self, req: DirectoryRequest, connection: &mut DirectoryConnection,
+    ) -> Result<ConnectionState, failure::Error> {
+        match req {
+            DirectoryRequest::Clone {
+                flags,
+                object,
+                control_handle: _,
+            } => {
+                self.add_connection(connection.flags, flags, 0, object)?;
+            }
+            DirectoryRequest::Close { responder } => {
+                responder.send(ZX_OK)?;
+                return Ok(ConnectionState::Closed);
+            }
+            DirectoryRequest::Describe { responder } => {
+                let mut info = NodeInfo::Directory(DirectoryObject { reserved: 0 });
+                responder.send(&mut info)?;
+            }
+            DirectoryRequest::Sync { responder } => {
+                responder.send(ZX_ERR_NOT_SUPPORTED)?;
+            }
+            DirectoryRequest::GetAttr { responder } => {
+                let mut attrs = NodeAttributes {
+                    mode: MODE_TYPE_DIRECTORY | self.protection_attributes,
+                    id: INO_UNKNOWN,
+                    content_size: 0,
+                    storage_size: 0,
+                    link_count: 1,
+                    creation_time: 0,
+                    modification_time: 0,
+                };
+                responder.send(ZX_OK, &mut attrs)?;
+            }
+            DirectoryRequest::SetAttr {
+                flags: _,
+                attributes: _,
+                responder,
+            } => {
+                // According to zircon/system/fidl/fuchsia-io/io.fidl the only flag that might be
+                // modified through this call is OPEN_FLAG_APPEND, and it is not supported by the
+                // PseudoDirectory.
+                responder.send(ZX_ERR_NOT_SUPPORTED)?;
+            }
+            DirectoryRequest::Ioctl {
+                opcode: _,
+                max_out: _,
+                handles: _,
+                in_: _,
+                responder,
+            } => {
+                responder.send(ZX_ERR_NOT_SUPPORTED, &mut iter::empty(), &mut iter::empty())?;
+            }
+            DirectoryRequest::Open {
+                flags,
+                mode,
+                path,
+                object,
+                control_handle: _,
+            } => {
+                self.handle_open(flags, mode, &path, object)?;
+            }
+            DirectoryRequest::Unlink { path: _, responder } => {
+                responder.send(ZX_ERR_NOT_SUPPORTED)?;
+            }
+            DirectoryRequest::ReadDirents {
+                max_bytes,
+                responder,
+            } => {
+                self.handle_read_dirents(connection, max_bytes, |status, entries| {
+                    responder.send(status.into_raw(), entries)
+                })?;
+            }
+            DirectoryRequest::Rewind { responder } => {
+                connection.seek = DirectoryReadPos::Start;
+                responder.send(ZX_OK)?;
+            }
+            DirectoryRequest::GetToken { responder } => {
+                responder.send(ZX_ERR_NOT_SUPPORTED, None)?;
+            }
+            DirectoryRequest::Rename {
+                src: _,
+                dst_parent_token: _,
+                dst: _,
+                responder,
+            } => {
+                responder.send(ZX_ERR_NOT_SUPPORTED)?;
+            }
+            DirectoryRequest::Link {
+                src: _,
+                dst_parent_token: _,
+                dst: _,
+                responder,
+            } => {
+                responder.send(ZX_ERR_NOT_SUPPORTED)?;
+            }
+            DirectoryRequest::Watch {
+                mask,
+                options,
+                watcher,
+                responder,
+            } => {
+                if options != 0 {
+                    responder.send(ZX_ERR_INVALID_ARGS)?;
+                } else {
+                    let channel = Channel::from_channel(watcher)?;
+
+                    let status = self
+                        .add_watcher(mask, channel)
+                        .map(|()| Status::OK)
+                        .unwrap_or_else(|_error| Status::IO_REFUSED);
+                    responder.send(status.into_raw())?;
+                }
+            }
+        }
+        Ok(ConnectionState::Alive)
+    }
+
+    fn handle_open(
+        &mut self, flags: u32, mut mode: u32, path: &str, server_end: ServerEnd<NodeMarker>,
+    ) -> Result<(), fidl::Error> {
+        if path == "/" {
+            return send_on_open_with_error(flags, server_end, Status::INVALID_ARGS);
+        }
+
+        if path == "." {
+            return self.open(flags, mode, &mut iter::empty(), server_end);
+        }
+
+        let (mut names, is_dir) = match Self::validate_and_split_path(path) {
+            Ok(v) => v,
+            Err(status) => return send_on_open_with_error(flags, server_end, status),
+        };
+
+        if is_dir {
+            mode |= MODE_TYPE_DIRECTORY;
+        }
+
+        // It is up to the open method to handle OPEN_FLAG_DESCRIBE from this point on.
+        self.open(flags, mode, &mut names, server_end)?;
+        Ok(())
+    }
+
+    fn encode_dirent(buf: &mut Vec<u8>, max_bytes: u64, entry: &EntryInfo, name: &str) -> bool {
+        let header_size = size_of::<u64>() + size_of::<u8>() + size_of::<u8>();
+
+        assert_eq_size!(u64, usize);
+
+        if buf.len() + header_size + name.len() > max_bytes as usize {
+            return false;
+        }
+
+        assert!(
+            name.len() < MAX_FILENAME as usize,
+            "Entry names are expected to be shorter than MAX_FILENAME ({}) bytes.\n\
+             Got entry: '{}'\n\
+             Length: {} bytes",
+            MAX_FILENAME,
+            name,
+            name.len()
+        );
+
+        assert!(
+            MAX_FILENAME <= u8::max_value() as u64,
+            "Expecting to be able to store MAX_FILENAME ({}) in one byte.",
+            MAX_FILENAME
+        );
+
+        buf.write_u64::<LittleEndian>(entry.inode())
+            .expect("out should be an in memory buffer that grows as needed");
+        buf.write_u8(name.len() as u8)
+            .expect("out should be an in memory buffer that grows as needed");
+        buf.write_u8(entry.type_())
+            .expect("out should be an in memory buffer that grows as needed");
+        buf.write(name.as_ref())
+            .expect("out should be an in memory buffer that grows as needed");
+
+        true
+    }
+
+    fn handle_read_dirents<R>(
+        &mut self, connection: &mut DirectoryConnection, max_bytes: u64, responder: R,
+    ) -> Result<(), fidl::Error>
+    where
+        R: FnOnce(Status, &mut ExactSizeIterator<Item = u8>) -> Result<(), fidl::Error>,
+    {
+        let mut buf = Vec::new();
+        let mut fit_one = false;
+
+        let (entries_iter, mut last_returned) = match &connection.seek {
+            DirectoryReadPos::Start => {
+                if !PseudoDirectory::encode_dirent(
+                    &mut buf,
+                    max_bytes,
+                    &EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY),
+                    ".",
+                ) {
+                    return responder(Status::BUFFER_TOO_SMALL, &mut buf.iter().cloned());
+                }
+
+                fit_one = true;
+                // I wonder why, but rustc can not infer T in
+                //
+                //   pub fn range<T, R>(&self, range: R) -> Range<K, V>
+                //   where
+                //     K: Borrow<T>,
+                //     R: RangeBounds<T>,
+                //     T: Ord + ?Sized,
+                //
+                // for some reason here.  It says:
+                //
+                //   error[E0283]: type annotations required: cannot resolve `_: std::cmp::Ord`
+                //
+                // pointing to "range".  Same for two the other "range()" invocations below.
+                (self.entries.range::<String, _>(..), DirectoryReadPos::Dot)
+            }
+
+            DirectoryReadPos::Dot => (self.entries.range::<String, _>(..), DirectoryReadPos::Dot),
+
+            DirectoryReadPos::Name(last_returned_name) => (
+                self.entries
+                    .range::<String, _>((Bound::Excluded(last_returned_name), Bound::Unbounded)),
+                connection.seek.clone(),
+            ),
+
+            DirectoryReadPos::End => {
+                return responder(Status::OK, &mut buf.iter().cloned());
+            }
+        };
+
+        for (name, entry) in entries_iter {
+            if !PseudoDirectory::encode_dirent(&mut buf, max_bytes, &entry.entry_info(), name) {
+                connection.seek = last_returned;
+                return responder(
+                    if fit_one {
+                        Status::OK
+                    } else {
+                        Status::BUFFER_TOO_SMALL
+                    },
+                    &mut buf.iter().cloned(),
+                );
+            }
+            fit_one = true;
+            last_returned = DirectoryReadPos::Name(name.clone());
+        }
+
+        connection.seek = DirectoryReadPos::End;
+        return responder(Status::OK, &mut buf.iter().cloned());
+    }
+}
+
+impl<'entries> DirectoryEntry for PseudoDirectory<'entries> {
+    fn open(
+        &mut self, flags: u32, mode: u32, path: &mut Iterator<Item = &str>,
+        server_end: ServerEnd<NodeMarker>,
+    ) -> Result<(), fidl::Error> {
+        let name = match path.next() {
+            Some(name) => name,
+            None => {
+                return self.add_connection(!0, flags, mode, server_end);
+            }
+        };
+
+        let entry = match self.entries.get_mut(name) {
+            Some(entry) => entry,
+            None => {
+                return send_on_open_with_error(flags, server_end, Status::NOT_FOUND);
+            }
+        };
+
+        // While this function is recursive, and Rust does not support TCO at the moment, recursion
+        // here does not seem to be too bad.  I've tested a method with a very similar layout:
+        //
+        //     fn open(&mut self, a: u32, b: u32, path: &mut Iterator<Item = &str>, v: u64) -> Result<(), Error>;
+        //
+        // You can run it here:
+        //
+        //     https://play.rust-lang.org/?version=nightly&gist=5471f93c52f3adb7c8d6741ea96f9bce
+        //
+        // Given a path with 2048 components, which is the maximum possible path, considering the
+        // MAX_PATH restirction of 4096, the function used 290KBs of stack.  Rust, by default, uses
+        // 2MB stacks.
+        //
+        // Considering that the open method will only use recursion for the pseudo directories
+        // created by the server, it is not very likely that the server will create such a deep
+        // tree in the first place.
+        //
+        // Removing recursion is a bit inconvenient, as open() is the API for the tree entries.
+        // One way to remove the recursion that I can think of, is to introduce a
+        //
+        //     open_next_entry_or_consume(flags, mode, entry_name, path, server_end) -> Option<&mut DirectoryEntry>
+        //
+        // method that would either return the next DirectoryEntry or will consume
+        // the path futher down (recursively) returning None.  This would allow traversal to happen
+        // in a fixed stack space, still allowing nodes like mount points to intercept the
+        // traversal process. It seems like it will complicate the API for the DirectoryEntry
+        // implementations though.
+
+        entry.open(flags, mode, path, server_end)
+    }
+
+    fn entry_info(&self) -> EntryInfo {
+        EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
+    }
+}
+
+impl<'entries> Unpin for PseudoDirectory<'entries> {}
+
+impl<'entries> Future for PseudoDirectory<'entries> {
+    type Output = Void;
+
+    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+        loop {
+            let mut did_work = false;
+
+            match self.connections.poll_next_unpin(lw) {
+                Poll::Ready(Some((maybe_request, mut connection))) => {
+                    did_work = true;
+                    if let Some(Ok(request)) = maybe_request {
+                        match self.handle_request(request, &mut connection) {
+                            Ok(ConnectionState::Alive) => {
+                                self.connections.push(connection.into_future())
+                            }
+                            Ok(ConnectionState::Closed) => (),
+                            // An error occurred while processing a request.  We will just close
+                            // the connection, effectively closing the underlying channel in the
+                            // destructor.
+                            _ => (),
+                        }
+                    }
+                    // Similarly to the error that occurs while handing a FIDL request, any
+                    // connection level errors cause the connection to be closed.
+                }
+                // Even when we have no connections any more we still report Pending state, as we
+                // may get more connections open in the future.  We will return Poll::Pending
+                // below, if no other items did any work and we are existing our loop.
+                Poll::Ready(None) | Poll::Pending => (),
+            }
+
+            for (name, entry) in self.entries.iter_mut() {
+                match entry.poll_unpin(lw) {
+                    Poll::Ready(result) => {
+                        panic!(
+                            "Entry futures in a pseudo directory should never complete.\n\
+                             Entry name: {}\n\
+                             Result: {:#?}",
+                            name, result
+                        );
+                    }
+                    Poll::Pending => (),
+                }
+            }
+
+            self.remove_dead_watchers(lw);
+
+            if !did_work {
+                break;
+            }
+        }
+
+        Poll::Pending
+    }
+}
+
+impl<'entries> FusedFuture for PseudoDirectory<'entries> {
+    fn is_terminated(&self) -> bool {
+        for entry in self.entries.values() {
+            if !entry.is_terminated() {
+                return false;
+            }
+        }
+
+        // If we have any watcher connections, we may still make progress when a watcher connection
+        // is closed.
+        //
+        // As a pseudo directory blocks when no connections are available, it can not use
+        // `connections.is_terminated()`.  `FuturesUnordered::is_terminated()` will return `false`
+        // for an empty set of connections for the first time, while `PseudoDirectory::poll()` will
+        // return `Pending` in the same situation.  If we do not return `true` here for the empty
+        // connections case for the first time instead, we will hang.
+        self.watchers.len() == 0 && self.connections.len() == 0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use {
+        crate::file::{read_only, read_write},
+        fidl::endpoints::{create_proxy, ServerEnd},
+        fidl_fuchsia_io::{
+            DirectoryEvent, DirectoryMarker, DirectoryObject, DirectoryProxy, FileEvent,
+            FileMarker, FileObject, SeekOrigin, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE,
+            INO_UNKNOWN, MODE_TYPE_DIRECTORY,
+        },
+        fuchsia_async as fasync,
+        futures::channel::mpsc,
+        futures::{select, Future, FutureExt, SinkExt},
+        libc::{S_IRGRP, S_IROTH, S_IRUSR, S_IXGRP, S_IXOTH, S_IXUSR},
+        pin_utils::pin_mut,
+        std::{cell::RefCell, io::Write},
+    };
+
+    fn run_server_client<GetClientRes>(
+        flags: u32, server: impl DirectoryEntry,
+        get_client: impl FnOnce(DirectoryProxy) -> GetClientRes,
+    ) where
+        GetClientRes: Future<Output = ()>,
+    {
+        run_server_client_with_mode(flags, 0, server, get_client)
+    }
+
+    fn run_server_client_with_mode<GetClientRes>(
+        flags: u32, mode: u32, mut server: impl DirectoryEntry,
+        get_client: impl FnOnce(DirectoryProxy) -> GetClientRes,
+    ) where
+        GetClientRes: Future<Output = ()>,
+    {
+        let mut exec = fasync::Executor::new().expect("Executor creation failed");
+
+        let (client_proxy, server_end) =
+            create_proxy::<DirectoryMarker>().expect("Failed to create connection endpoints");
+
+        server
+            .open(
+                flags,
+                mode,
+                &mut iter::empty(),
+                ServerEnd::<NodeMarker>::new(server_end.into_channel()),
+            )
+            .expect("open() failed");
+
+        let client = get_client(client_proxy);
+
+        let future = server.join(client);
+        // TODO: How to limit the execution time?  run_until_stalled() does not trigger timers, so
+        // I can not do this:
+        //
+        //   let timeout = 300.millis();
+        //   let future = future.on_timeout(
+        //       timeout.after_now(),
+        //       || panic!("Test did not finish in {}ms", timeout.millis()));
+
+        // As our clients are async generators, we need to pin this future explicitly.
+        // All async generators are !Unpin by default.
+        pin_mut!(future);
+        exec.run_until_stalled(&mut future);
+    }
+
+    type OpenRequestArgs<'path> = (
+        u32,
+        u32,
+        Box<Iterator<Item = &'path str>>,
+        ServerEnd<DirectoryMarker>,
+    );
+
+    fn run_server_client_with_open_requests_channel<'path, GetClientRes>(
+        mut server: impl DirectoryEntry,
+        get_client: impl FnOnce(mpsc::Sender<OpenRequestArgs<'path>>) -> GetClientRes,
+    ) where
+        GetClientRes: Future<Output = ()>,
+    {
+        let mut exec = fasync::Executor::new().expect("Executor creation failed");
+
+        let (open_requests_tx, open_requests_rx) = mpsc::channel::<OpenRequestArgs<'path>>(0);
+
+        let server_wrapper = async move {
+            let mut open_requests_rx = open_requests_rx.fuse();
+            loop {
+                select! {
+                    _ = server => panic!("directory should never complete"),
+                    open_req = open_requests_rx.next() => {
+                        if let Some((flags, mode, mut path, server_end)) = open_req {
+                            server
+                                .open(flags, mode, &mut path,
+                                      ServerEnd::new(server_end.into_channel()))
+                                .expect("open() failed");
+                        }
+                    },
+                    complete => return,
+                }
+            }
+        };
+
+        let client = get_client(open_requests_tx);
+
+        let future = server_wrapper.join(client);
+
+        // As our clients are async generators, we need to pin this future explicitly.
+        // All async generators are !Unpin by default.
+        pin_mut!(future);
+        exec.run_until_stalled(&mut future);
+    }
+
+    /// A helper to build the "expected" output for a read_dirents call.
+    fn dirents_add_entry(expected: &mut Write, inode: u64, type_: u8, name: &[u8]) {
+        assert!(
+            name.len() < MAX_FILENAME as usize,
+            "Expected entry name should not exceed MAX_FILENAME ({}) bytes.\n\
+             Got: {:?}\n\
+             Length: {} bytes",
+            MAX_FILENAME,
+            name,
+            name.len()
+        );
+
+        expected.write_u64::<LittleEndian>(inode).unwrap();
+        expected.write_u8(name.len() as u8).unwrap();
+        expected.write_u8(type_).unwrap();
+        expected.write(name).unwrap();
+    }
+
+    #[test]
+    fn empty_directory() {
+        run_server_client(
+            OPEN_RIGHT_READABLE,
+            PseudoDirectory::empty(),
+            async move |proxy| {
+                assert_close!(proxy);
+            },
+        );
+    }
+
+    #[test]
+    fn empty_directory_get_attr() {
+        run_server_client(
+            OPEN_RIGHT_READABLE,
+            PseudoDirectory::empty(),
+            async move |proxy| {
+                assert_get_attr!(
+                    proxy,
+                    NodeAttributes {
+                        mode: MODE_TYPE_DIRECTORY | S_IRUSR,
+                        id: INO_UNKNOWN,
+                        content_size: 0,
+                        storage_size: 0,
+                        link_count: 1,
+                        creation_time: 0,
+                        modification_time: 0,
+                    }
+                );
+                assert_close!(proxy);
+            },
+        );
+    }
+
+    #[test]
+    fn empty_attr_directory_get_attr() {
+        run_server_client(
+            OPEN_RIGHT_READABLE,
+            PseudoDirectory::empty_attr(S_IXOTH | S_IROTH | S_IXGRP | S_IRGRP | S_IXUSR | S_IRUSR),
+            async move |proxy| {
+                assert_get_attr!(
+                    proxy,
+                    NodeAttributes {
+                        mode: MODE_TYPE_DIRECTORY
+                            | (S_IXOTH | S_IROTH | S_IXGRP | S_IRGRP | S_IXUSR | S_IRUSR),
+                        id: INO_UNKNOWN,
+                        content_size: 0,
+                        storage_size: 0,
+                        link_count: 1,
+                        creation_time: 0,
+                        modification_time: 0,
+                    }
+                );
+                assert_close!(proxy);
+            },
+        );
+    }
+
+    #[test]
+    fn empty_directory_describe() {
+        run_server_client(
+            OPEN_RIGHT_READABLE,
+            PseudoDirectory::empty(),
+            async move |proxy| {
+                assert_describe!(proxy, NodeInfo::Directory(DirectoryObject { reserved: 0 }));
+                assert_close!(proxy);
+            },
+        );
+    }
+
+    #[test]
+    fn open_empty_directory_with_describe() {
+        run_server_client_with_open_requests_channel(
+            PseudoDirectory::empty(),
+            async move |mut open_sender| {
+                let (proxy, server_end) = create_proxy::<DirectoryMarker>()
+                    .expect("Failed to create connection endpoints");
+
+                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                await!(open_sender.send((flags, 0, Box::new(iter::empty()), server_end))).unwrap();
+                assert_event!(proxy, DirectoryEvent::OnOpen_ { s, info }, {
+                    assert_eq!(s, ZX_OK);
+                    assert_eq!(
+                        info,
+                        Some(Box::new(NodeInfo::Directory(DirectoryObject {
+                            reserved: 0
+                        })))
+                    );
+                });
+            },
+        );
+    }
+
+    #[test]
+    fn one_file_open_existing() {
+        let mut root = PseudoDirectory::empty();
+        root.add_entry("file1", read_only(|| Ok(b"Content".to_vec())))
+            .unwrap();
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            let file1 = open_get_file_proxy_assert_ok!(root, flags, "file1");
+
+            assert_read!(file1, "Content");
+            assert_close!(file1);
+
+            assert_close!(root);
+        });
+    }
+
+    #[test]
+    fn one_file_open_missing() {
+        let mut root = PseudoDirectory::empty();
+        root.add_entry("file1", read_only(|| Ok(b"Content".to_vec())))
+            .unwrap();
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            open_as_file_assert_err!(root, flags, "file2", Status::NOT_FOUND);
+
+            assert_close!(root);
+        });
+    }
+
+    #[test]
+    fn small_tree_traversal() {
+        let mut root = PseudoDirectory::empty();
+        let mut etc_dir = PseudoDirectory::empty();
+        let mut ssh_dir = PseudoDirectory::empty();
+
+        ssh_dir
+            .add_entry("sshd_config", read_only(|| Ok(b"# Empty".to_vec())))
+            .unwrap();
+
+        etc_dir.add_entry("ssh", ssh_dir).unwrap();
+        etc_dir
+            .add_entry("fstab", read_only(|| Ok(b"/dev/fs /".to_vec())))
+            .unwrap();
+
+        root.add_entry("etc", etc_dir).unwrap();
+        root.add_entry("uname", read_only(|| Ok(b"Fuchsia".to_vec())))
+            .unwrap();
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+            async fn open_read_close<'a>(
+                from_dir: &'a DirectoryProxy, path: &'a str, expected_content: &'a str,
+            ) {
+                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                let file = open_get_file_proxy_assert_ok!(from_dir, flags, path);
+                assert_read!(file, expected_content);
+                assert_close!(file);
+            }
+
+            await!(open_read_close(&root, "etc/fstab", "/dev/fs /"));
+
+            {
+                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                let ssh_dir = open_get_directory_proxy_assert_ok!(root, flags, "etc/ssh");
+
+                await!(open_read_close(&ssh_dir, "sshd_config", "# Empty"));
+            }
+
+            await!(open_read_close(&root, "etc/ssh/sshd_config", "# Empty"));
+            await!(open_read_close(&root, "uname", "Fuchsia"));
+
+            assert_close!(root);
+        });
+    }
+
+    #[test]
+    fn open_writable_in_subdir() {
+        let mut root = PseudoDirectory::empty();
+        let mut etc_dir = PseudoDirectory::empty();
+        let mut ssh_dir = PseudoDirectory::empty();
+
+        let write_count = &RefCell::new(0);
+        ssh_dir
+            .add_entry(
+                "sshd_config",
+                read_write(
+                    || Ok(b"# Empty".to_vec()),
+                    100,
+                    |content| {
+                        let mut count = write_count.borrow_mut();
+                        assert_eq!(*&content, format!("Port {}", 22 + *count).as_bytes());
+                        *count += 1;
+                        Ok(())
+                    },
+                ),
+            )
+            .unwrap();
+        etc_dir.add_entry("ssh", ssh_dir).unwrap();
+        root.add_entry("etc", etc_dir).unwrap();
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+            async fn open_read_write_close<'a>(
+                from_dir: &'a DirectoryProxy, path: &'a str, expected_content: &'a str,
+                new_content: &'a str, write_count: &'a RefCell<u32>, expected_count: u32,
+            ) {
+                let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
+                let file = open_get_file_proxy_assert_ok!(from_dir, flags, path);
+                assert_read!(file, expected_content);
+                assert_seek!(file, 0, Start);
+                assert_write!(file, new_content);
+                assert_close!(file);
+
+                assert_eq!(*write_count.borrow(), expected_count);
+            }
+
+            {
+                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                let ssh_dir = open_get_directory_proxy_assert_ok!(root, flags, "etc/ssh");
+
+                await!(open_read_write_close(
+                    &ssh_dir,
+                    "sshd_config",
+                    "# Empty",
+                    "Port 22",
+                    write_count,
+                    1
+                ));
+            }
+
+            await!(open_read_write_close(
+                &root,
+                "etc/ssh/sshd_config",
+                "# Empty",
+                "Port 23",
+                write_count,
+                2
+            ));
+
+            assert_close!(root);
+        });
+    }
+
+    #[test]
+    fn open_non_existing_path() {
+        let mut root = PseudoDirectory::empty();
+        let mut sub_dir = PseudoDirectory::empty();
+
+        sub_dir
+            .add_entry("file1", read_only(|| Ok(b"Content 1".to_vec())))
+            .unwrap();
+
+        root.add_entry("file2", read_only(|| Ok(b"Content 2".to_vec())))
+            .unwrap();
+        root.add_entry("dir", sub_dir).unwrap();
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            open_as_file_assert_err!(&root, flags, "non-existing", Status::NOT_FOUND);
+            open_as_file_assert_err!(&root, flags, "dir/file10", Status::NOT_FOUND);
+            open_as_file_assert_err!(&root, flags, "dir/dir/file10", Status::NOT_FOUND);
+            open_as_file_assert_err!(&root, flags, "dir/dir/file1", Status::NOT_FOUND);
+
+            assert_close!(root);
+        });
+    }
+
+    #[test]
+    fn open_path_within_a_file() {
+        let mut root = PseudoDirectory::empty();
+        let mut sub_dir = PseudoDirectory::empty();
+
+        sub_dir
+            .add_entry("file1", read_only(|| Ok(b"Content 1".to_vec())))
+            .unwrap();
+
+        root.add_entry("file2", read_only(|| Ok(b"Content 2".to_vec())))
+            .unwrap();
+        root.add_entry("dir", sub_dir).unwrap();
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            open_as_file_assert_err!(&root, flags, "file2/file1", Status::NOT_DIR);
+            open_as_file_assert_err!(&root, flags, "dir/file1/file3", Status::NOT_DIR);
+
+            assert_close!(root);
+        });
+    }
+
+    #[test]
+    fn open_file_as_directory() {
+        let mut root = PseudoDirectory::empty();
+        let mut sub_dir = PseudoDirectory::empty();
+
+        sub_dir
+            .add_entry("file2", read_only(|| Ok(b"Content 1".to_vec())))
+            .unwrap();
+
+        root.add_entry("file1", read_only(|| Ok(b"Content 2".to_vec())))
+            .unwrap();
+        root.add_entry("dir", sub_dir).unwrap();
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            let mode = MODE_TYPE_DIRECTORY;
+            {
+                let proxy = open_get_proxy!(&root, flags, mode, "file1", FileMarker);
+                assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
+                    assert_eq!(Status::from_raw(s), Status::NOT_DIR);
+                    assert_eq!(info, None);
+                });
+            }
+            {
+                let proxy = open_get_proxy!(&root, flags, mode, "dir/file2", FileMarker);
+                assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
+                    assert_eq!(Status::from_raw(s), Status::NOT_DIR);
+                    assert_eq!(info, None);
+                });
+            }
+
+            assert_close!(root);
+        });
+    }
+
+    #[test]
+    fn open_directory_as_file() {
+        let mut root = PseudoDirectory::empty();
+        let mut sub_dir = PseudoDirectory::empty();
+
+        sub_dir.add_entry("dir2", PseudoDirectory::empty()).unwrap();
+        root.add_entry("dir", sub_dir).unwrap();
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            let mode = MODE_TYPE_FILE;
+            {
+                let proxy = open_get_proxy!(&root, flags, mode, "dir", DirectoryMarker);
+                assert_event!(proxy, DirectoryEvent::OnOpen_ { s, info }, {
+                    assert_eq!(Status::from_raw(s), Status::NOT_FILE);
+                    assert_eq!(info, None);
+                });
+            }
+            {
+                let proxy = open_get_proxy!(&root, flags, mode, "dir/dir2", DirectoryMarker);
+                assert_event!(proxy, DirectoryEvent::OnOpen_ { s, info }, {
+                    assert_eq!(Status::from_raw(s), Status::NOT_FILE);
+                    assert_eq!(info, None);
+                });
+            }
+
+            assert_close!(root);
+        });
+    }
+
+    #[test]
+    fn trailing_slash_means_directory() {
+        let mut root = PseudoDirectory::empty();
+        let sub_dir = PseudoDirectory::empty();
+
+        root.add_entry("file", read_only(|| Ok(b"Content".to_vec())))
+            .unwrap();
+        root.add_entry("dir", sub_dir).unwrap();
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+
+            open_as_file_assert_err!(&root, flags, "file/", Status::NOT_DIR);
+
+            {
+                let file = open_get_file_proxy_assert_ok!(root, flags, "file");
+                assert_read!(file, "Content");
+                assert_close!(file);
+            }
+
+            {
+                let sub_dir = open_get_directory_proxy_assert_ok!(root, flags, "dir/");
+                assert_close!(sub_dir);
+            }
+
+            assert_close!(root);
+        });
+    }
+
+    #[test]
+    fn no_dots_in_open() {
+        let mut root = PseudoDirectory::empty();
+        let mut sub_dir = PseudoDirectory::empty();
+
+        sub_dir.add_entry("dir2", PseudoDirectory::empty()).unwrap();
+
+        root.add_entry("file", read_only(|| Ok(b"Content".to_vec())))
+            .unwrap();
+        root.add_entry("dir", sub_dir).unwrap();
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            open_as_directory_assert_err!(&root, flags, "dir/../dir2", Status::INVALID_ARGS);
+            open_as_directory_assert_err!(&root, flags, "dir/./dir2", Status::INVALID_ARGS);
+            open_as_directory_assert_err!(&root, flags, "./dir", Status::INVALID_ARGS);
+
+            assert_close!(root);
+        });
+    }
+
+    #[test]
+    fn no_consequtive_slashes_in_open() {
+        let mut root = PseudoDirectory::empty();
+        let mut sub_dir = PseudoDirectory::empty();
+
+        sub_dir.add_entry("dir2", PseudoDirectory::empty()).unwrap();
+        root.add_entry("dir", sub_dir).unwrap();
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            open_as_directory_assert_err!(&root, flags, "dir/../dir2", Status::INVALID_ARGS);
+            open_as_directory_assert_err!(&root, flags, "dir/./dir2", Status::INVALID_ARGS);
+            open_as_directory_assert_err!(&root, flags, "dir//dir2", Status::INVALID_ARGS);
+            open_as_directory_assert_err!(&root, flags, "dir/dir2//", Status::INVALID_ARGS);
+            open_as_directory_assert_err!(&root, flags, "//dir/dir2", Status::INVALID_ARGS);
+            open_as_directory_assert_err!(&root, flags, "./dir", Status::INVALID_ARGS);
+
+            assert_close!(root);
+        });
+    }
+
+    #[test]
+    fn read_dirents_large_buffer() {
+        let mut root = PseudoDirectory::empty();
+        let mut etc_dir = PseudoDirectory::empty();
+        let mut ssh_dir = PseudoDirectory::empty();
+
+        ssh_dir
+            .add_entry("sshd_config", read_only(|| Ok(b"# Empty".to_vec())))
+            .unwrap();
+
+        etc_dir
+            .add_entry("fstab", read_only(|| Ok(b"/dev/fs /".to_vec())))
+            .unwrap();
+        etc_dir
+            .add_entry("passwd", read_only(|| Ok(b"[redacted]".to_vec())))
+            .unwrap();
+        etc_dir
+            .add_entry("shells", read_only(|| Ok(b"/bin/bash".to_vec())))
+            .unwrap();
+        etc_dir.add_entry("ssh", ssh_dir).unwrap();
+
+        root.add_entry("etc", etc_dir).unwrap();
+        root.add_entry("files", read_only(|| Ok(b"Content".to_vec())))
+            .unwrap();
+        root.add_entry("more", read_only(|| Ok(b"Content".to_vec())))
+            .unwrap();
+        root.add_entry("uname", read_only(|| Ok(b"Fuchsia".to_vec())))
+            .unwrap();
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+            let mut expected = Vec::new();
+            {
+                dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_DIRECTORY, b".");
+                dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_DIRECTORY, b"etc");
+                dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"files");
+                dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"more");
+                dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"uname");
+
+                assert_read_dirents!(root, 1000, expected);
+            }
+
+            {
+                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                let etc_dir = open_get_directory_proxy_assert_ok!(root, flags, "etc");
+
+                expected.clear();
+
+                dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_DIRECTORY, b".");
+                dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"fstab");
+                dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"passwd");
+                dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"shells");
+                dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_DIRECTORY, b"ssh");
+
+                assert_read_dirents!(etc_dir, 1000, expected);
+                assert_close!(etc_dir);
+            }
+
+            {
+                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                let ssh_dir = open_get_directory_proxy_assert_ok!(root, flags, "etc/ssh");
+
+                expected.clear();
+
+                dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_DIRECTORY, b".");
+                dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"sshd_config");
+
+                assert_read_dirents!(ssh_dir, 1000, expected);
+                assert_close!(ssh_dir);
+            }
+
+            assert_close!(root);
+        });
+    }
+
+    #[test]
+    fn read_dirents_small_buffer() {
+        let mut root = PseudoDirectory::empty();
+        let etc_dir = PseudoDirectory::empty();
+
+        root.add_entry("etc", etc_dir).unwrap();
+        root.add_entry("files", read_only(|| Ok(b"Content".to_vec())))
+            .unwrap();
+        root.add_entry("more", read_only(|| Ok(b"Content".to_vec())))
+            .unwrap();
+        root.add_entry("uname", read_only(|| Ok(b"Fuchsia".to_vec())))
+            .unwrap();
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+            let mut expected = Vec::new();
+
+            // Entry header is 10 bytes + length of the name in bytes.
+            // (10 + 1) = 11
+            dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_DIRECTORY, b".");
+            assert_read_dirents!(root, 11, expected);
+
+            expected.clear();
+
+            // (10 + 3) = 13
+            dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_DIRECTORY, b"etc");
+            // 13 + (10 + 5) = 28
+            dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"files");
+            assert_read_dirents!(root, 28, expected);
+
+            expected.clear();
+
+            dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"more");
+            dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"uname");
+            assert_read_dirents!(root, 100, expected);
+
+            expected.clear();
+            assert_read_dirents!(root, 100, expected);
+        });
+    }
+
+    #[test]
+    fn read_dirents_very_small_buffer() {
+        let mut root = PseudoDirectory::empty();
+        root.add_entry("file", read_only(|| Ok(b"Content".to_vec())))
+            .unwrap();
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+            // Entry header is 10 bytes, so this read should not be able to return a single entry.
+            assert_read_dirents_err!(root, 8, Status::BUFFER_TOO_SMALL);
+        });
+    }
+}

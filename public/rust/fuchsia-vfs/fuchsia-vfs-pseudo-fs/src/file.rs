@@ -41,8 +41,8 @@ use {
     fidl_fuchsia_io::{
         FileMarker, FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo,
         NodeMarker, SeekOrigin, DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_PROTECTION_MASK,
-        MODE_TYPE_FILE, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
-        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE,
+        OPEN_FLAG_DIRECTORY, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::{
         sys::{ZX_ERR_NOT_SUPPORTED, ZX_OK},
@@ -405,7 +405,12 @@ where
         // There should be no MODE_TYPE_* flags set, except for, possibly, MODE_TYPE_FILE when the
         // target is a pseudo file.
         if (mode & !MODE_PROTECTION_MASK) & !MODE_TYPE_FILE != 0 {
-            return send_on_open_with_error(flags, server_end, Status::INVALID_ARGS);
+            let status = if (mode & !MODE_PROTECTION_MASK) & MODE_TYPE_DIRECTORY != 0 {
+                Status::NOT_DIR
+            } else {
+                Status::INVALID_ARGS
+            };
+            return send_on_open_with_error(flags, server_end, status);
         }
 
         if let Err(status) = self.validate_flags(parent_flags, flags) {

@@ -12,7 +12,9 @@
 #[macro_use]
 mod test_utils;
 
+pub mod directory;
 pub mod directory_entry;
 pub mod file;
 
 mod common;
+mod watcher_connection;
