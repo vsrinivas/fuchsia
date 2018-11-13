@@ -17,6 +17,7 @@ group("no_cmx_whitelist") {
   # instead.
   # https://fuchsia.googlesource.com/docs/+/master/the-book/package_metadata.md#Component-manifest
   visibility = [
+      "//build/images:*",
       "//garnet/bin/bluetooth/tools/bt-cli:*",
       "//garnet/bin/cpuperf:*",
       "//garnet/bin/developer/tiles:*",

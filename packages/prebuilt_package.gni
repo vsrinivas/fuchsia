@@ -112,6 +112,10 @@ template("prebuilt_package") {
     blobs_json = blobs_json
   }
 
+  generate_response_file("${pkg_target_name}.shell_commands.rsp") {
+    response_file_contents = []
+  }
+
   foreach(index,
           [
             {

@@ -129,7 +129,7 @@ template("pm_build_package") {
 #       dest (required)
 #         [path] Location the resource will be placed within `meta/`.
 #
-#   binary (optional)
+#   binary (optional, *DEPRECATED*)
 #     [string] The path to the the primary binary for the package, relative to
 #     `$root_out_dir`. The binary will be placed in the assembled package at
 #     `bin/app` and will be executed by default when running the package.
@@ -152,6 +152,10 @@ template("pm_build_package") {
 #
 #       dest (optional)
 #         [path] Location the binary will be placed within `bin/`.
+#
+#       shell (optional)
+#         [boolean] (default: false) When true, the binary is runnable from the shell.
+#         Shell binaries are run in the shell namespace and are not run as components.
 #
 #   tests (optional)
 #     [list of scopes] Defines the test binaries in the package. A test is
@@ -364,6 +368,8 @@ template("package") {
       }
     }
 
+    shell_binaries = []
+
     # Collect the package's primary manifest.  For a system_image package,
     # this is its contributions to the /system manifest.  For an isolated
     # package, this is the manifest for the package's `pkg/` filesystem.
@@ -377,14 +383,19 @@ template("package") {
       ]
     }
     foreach(binary, pkg.binaries) {
+      if (defined(binary.dest)) {
+        dest = binary.dest
+      } else {
+        dest = binary.name
+      }
+      dest = "bin/${dest}"
+      if (defined(binary.shell) && binary.shell) {
+        shell_binaries += [ dest ]
+      }
+
       pkg_manifest += [
         {
-          if (defined(binary.dest)) {
-            dest = binary.dest
-          } else {
-            dest = binary.name
-          }
-          dest = "bin/${dest}"
+          dest = dest
 
           if (defined(binary.source)) {
             source = binary.source
@@ -594,6 +605,19 @@ template("package") {
           rebase_path("${pkg_target_name}.meta/blobs.json",
                       root_build_dir,
                       target_out_dir),
+        ]
+      }
+    }
+
+    generate_response_file("${pkg_target_name}.shell_commands.rsp") {
+      response_file_contents = []
+
+      foreach(binary, shell_binaries) {
+
+        response_file_contents += [
+          # TODO(CF-105): fuchsia-pkg URIs should always have a variant (add /${pkg.package_version}).
+          "--uri",
+          "fuchsia-pkg://fuchsia.com/${pkg.package_name}#${binary}"
         ]
       }
     }
