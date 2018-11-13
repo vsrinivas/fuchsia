@@ -20,7 +20,6 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/remoteio.h>
 #include <lib/zx/channel.h>
-#include <port/port.h>
 #include <zircon/compiler.h>
 #include <zircon/fidl.h>
 #include <zircon/thread_annotations.h>

@@ -48,7 +48,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/async-loop.cpp \
     system/ulib/sync \
     third_party/ulib/lz4 \
-    system/ulib/port \
     system/ulib/driver-info \
     system/ulib/memfs \
     system/ulib/fs \
@@ -162,7 +161,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
-    system/ulib/port \
     system/ulib/zx \
     system/ulib/zxcpp \
 
