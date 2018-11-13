@@ -1390,6 +1390,8 @@ zx_status_t Station::NotifyAssocContext() {
     assoc_ctx_.bssid.CopyTo(ddk.bssid);
     ddk.aid = assoc_ctx_.aid;
     ddk.listen_interval = assoc_ctx_.listen_interval;
+    ddk.phy = assoc_ctx_.phy;
+    ddk.chan = assoc_ctx_.chan;
 
     auto& rates = assoc_ctx_.rates;
     ZX_DEBUG_ASSERT(rates.size() <= WLAN_MAC_MAX_RATES);
