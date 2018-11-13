@@ -571,7 +571,9 @@ zx_status_t MtkSdmmc::RequestPrepareDma(sdmmc_req_t* req) {
             .phys = phys,
             .phys_count = pagecount,
             .length = req_len,
-            .vmo_offset = req->buf_offset
+            .vmo_offset = req->buf_offset,
+            .sg_list = NULL,
+            .sg_count = 0
         };
 
         if ((status = SetupDmaDescriptors(&phys_iter_buf)) != ZX_OK) {

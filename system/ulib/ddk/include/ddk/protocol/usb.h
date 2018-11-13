@@ -46,14 +46,6 @@ typedef struct usb_response {
     zx_off_t actual;
 } usb_response_t;
 
-// An entry in a scatter gather list.
-typedef struct usb_sg_entry {
-    // length starting at the scatter gather entry offset, must be non zero
-    size_t length;
-    // offset relative to the usb request's vmo_offset
-    uint64_t offset;
-} usb_sg_entry_t;
-
 typedef struct usb_request {
     usb_header_t header;
 
@@ -76,7 +68,7 @@ typedef struct usb_request {
     uint64_t phys_count;
 
     // Scatter gather entries of the payload.
-    usb_sg_entry_t* sg_list;
+    phys_iter_sg_entry_t* sg_list;
     // Number of entries in the scatter gather list.
     uint64_t sg_count;
 

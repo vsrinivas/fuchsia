@@ -491,14 +491,14 @@ static bool test_set_sg_list(void) {
     usb_request_t* req;
     ASSERT_EQ(usb_request_alloc(&req, 3 * PAGE_SIZE, 1, sizeof(usb_request_t)), ZX_OK, "");
     // Wrap around the end of the request.
-    usb_sg_entry_t wrapped[2] = {
+    phys_iter_sg_entry_t wrapped[2] = {
         { .length = 10, .offset = (3 * PAGE_SIZE) - 10 },
         { .length = 50, .offset = 0 }
     };
     ASSERT_EQ(usb_request_set_sg_list(req, wrapped, 2), ZX_OK, "");
     ASSERT_EQ(req->header.length, 60u, "");
 
-    usb_sg_entry_t unordered[3] = {
+    phys_iter_sg_entry_t unordered[3] = {
         { .length = 100, .offset = 2 * PAGE_SIZE },
         { .length = 50, .offset = 500 },
         { .length = 10, .offset = 2000 }
@@ -519,17 +519,360 @@ static bool test_invalid_sg_list(void) {
     ASSERT_EQ(usb_request_alloc_vmo(&req, vmo, PAGE_SIZE, PAGE_SIZE * 3,
                                     0, sizeof(usb_request_t)), ZX_OK, "");
 
-    usb_sg_entry_t out_of_bounds[1] = {
+    phys_iter_sg_entry_t out_of_bounds[1] = {
         { .length = 10, .offset = PAGE_SIZE * 3 }
     };
     ASSERT_NE(usb_request_set_sg_list(req, out_of_bounds, 1), ZX_OK, "entry ends past end of vmo");
 
-    usb_sg_entry_t empty[1] = {
+    phys_iter_sg_entry_t empty[1] = {
         { .length = 0, .offset = 0 }
     };
     ASSERT_NE(usb_request_set_sg_list(req, empty, 1), ZX_OK, "empty entry");
 
     usb_request_release(req);
+    END_TEST;
+}
+
+// Test processing of a page-aligned contiguous backing buffer with a scatter gather list.
+static bool test_phys_iter_sg_aligned_contig(void) {
+    BEGIN_TEST;
+
+    usb_request_t* req;
+    const size_t buf_size = 5 * PAGE_SIZE;
+
+    zx_handle_t vmo_handle;
+    ASSERT_EQ(zx_vmo_create(buf_size, 0, &vmo_handle), ZX_OK, "");
+
+    usb_request_alloc_vmo(&req, vmo_handle, PAGE_SIZE, buf_size, 1, sizeof(usb_request_t));
+    req->phys_list = malloc(sizeof(req->phys_list[0]) * 4);
+    ASSERT_NONNULL(req->phys_list, "");
+    req->phys_count = 4;
+    req->phys_list[0] = 0x12345000;
+    req->phys_list[1] = 0x12346000;
+    req->phys_list[2] = 0x12347000;
+    req->phys_list[3] = 0x12348000;
+
+    phys_iter_sg_entry_t sg_list[3] = {
+         { .length = 100, .offset = 0 },
+         { .length = 2 * PAGE_SIZE, .offset = 500 },
+         { .length = PAGE_SIZE - 100, .offset = 3 * PAGE_SIZE }
+    };
+    ASSERT_EQ(usb_request_set_sg_list(req, sg_list, 3), ZX_OK, "");
+
+    phys_iter_t iter;
+
+    usb_request_phys_iter_init(&iter, req, 0);
+    zx_paddr_t paddr;
+    size_t size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 100u, "first scatter gather entry");
+    ASSERT_EQ(paddr, req->phys_list[0], "first scatter gather entry");
+    ASSERT_EQ(iter.total_iterated, 100u, "");
+    ASSERT_EQ(iter.offset, 100u, "");
+
+    size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 2u * PAGE_SIZE, "second scatter gather entry");
+    ASSERT_EQ(paddr, req->phys_list[0] + 500u, "second scatter gather entry");
+    ASSERT_EQ(iter.total_iterated, (2u * PAGE_SIZE) + 100, "");
+    ASSERT_EQ(iter.offset, 2u * PAGE_SIZE, "");
+
+    size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, PAGE_SIZE - 100u, "third scatter gather entry");
+    ASSERT_EQ(paddr, req->phys_list[3], "third scatter gather entry");
+    ASSERT_EQ(iter.total_iterated, 3u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, PAGE_SIZE - 100u, "");
+
+    size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 0u, "no more scatter gather entries");
+    ASSERT_EQ(iter.total_iterated, 3u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, PAGE_SIZE - 100u, "");
+
+    usb_request_release(req);
+    END_TEST;
+}
+
+// Test processing of a page-aligned non-contiguous backing buffer with a scatter gather list.
+static bool test_phys_iter_sg_aligned_noncontig(void) {
+    BEGIN_TEST;
+
+    usb_request_t* req;
+    const size_t buf_size = 6 * PAGE_SIZE;
+
+    zx_handle_t vmo_handle;
+    ASSERT_EQ(zx_vmo_create(buf_size, 0, &vmo_handle), ZX_OK, "");
+
+    usb_request_alloc_vmo(&req, vmo_handle, PAGE_SIZE * 2, buf_size, 1, sizeof(usb_request_t));
+    req->phys_list = malloc(sizeof(req->phys_list[0]) * 4);
+    ASSERT_NONNULL(req->phys_list, "");
+    req->phys_count = 4;
+    req->phys_list[0] = 0x12341000;
+    req->phys_list[1] = 0x12343000;
+    req->phys_list[2] = 0x12345000;
+    req->phys_list[3] = 0x12347000;
+
+    phys_iter_sg_entry_t sg_list[2] = {
+         { .length = PAGE_SIZE, .offset = (2 * PAGE_SIZE) + 128 },
+         { .length = 2 * PAGE_SIZE, .offset = 10 }
+    };
+    ASSERT_EQ(usb_request_set_sg_list(req, sg_list, 2), ZX_OK, "");
+
+    phys_iter_t iter;
+
+    usb_request_phys_iter_init(&iter, req, 0);
+    zx_paddr_t paddr;
+    size_t size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, PAGE_SIZE - 128u, "first scatter gather entry: part 1");
+    ASSERT_EQ(paddr, req->phys_list[2] + 128u, "first scatter gather entry: part 1");
+    ASSERT_EQ(iter.total_iterated, PAGE_SIZE - 128u, "");
+    ASSERT_EQ(iter.offset, PAGE_SIZE - 128u, "");
+
+    size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 128u, "first scatter gather entry: part 2");
+    ASSERT_EQ(paddr, req->phys_list[3], "first scatter gather entry: part 2");
+    ASSERT_EQ(iter.total_iterated, 1u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, 1u * PAGE_SIZE, "");
+
+    size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, PAGE_SIZE - 10u, "second scatter gather entry: part 1");
+    ASSERT_EQ(paddr, req->phys_list[0] + 10u, "second scatter gather entry: part 1");
+    ASSERT_EQ(iter.total_iterated, (2u * PAGE_SIZE) - 10u, "");
+    ASSERT_EQ(iter.offset, PAGE_SIZE - 10u, "");
+
+    size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 1u * PAGE_SIZE, "second scatter gather entry: part 2");
+    ASSERT_EQ(paddr, req->phys_list[1], "second scatter gather entry: part 2");
+    ASSERT_EQ(iter.total_iterated, (3u * PAGE_SIZE) - 10u, "");
+    ASSERT_EQ(iter.offset, (2u * PAGE_SIZE) - 10u, "");
+
+    size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 10u, "second scatter gather entry: part 3");
+    ASSERT_EQ(paddr, req->phys_list[2], "second scatter gather entry: part 3");
+    ASSERT_EQ(iter.total_iterated, 3u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, 2u * PAGE_SIZE, "");
+
+    size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 0u, "no more scatter gather entries");
+    ASSERT_EQ(iter.total_iterated, 3u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, 2u * PAGE_SIZE, "");
+
+    usb_request_release(req);
+    END_TEST;
+}
+
+// Test processing of a non-page-aligned contiguous backing buffer with a scatter gather list.
+static bool test_phys_iter_sg_unaligned_contig(void) {
+    BEGIN_TEST;
+
+    usb_request_t* req;
+    const size_t buf_size = 7 * PAGE_SIZE;
+
+    zx_handle_t vmo_handle;
+    ASSERT_EQ(zx_vmo_create(buf_size, 0, &vmo_handle), ZX_OK, "");
+
+    usb_request_alloc_vmo(&req, vmo_handle, PAGE_SIZE + 3000, buf_size, 1, sizeof(usb_request_t));
+    req->phys_list = malloc(sizeof(req->phys_list[0]) * 6);
+    ASSERT_NONNULL(req->phys_list, "");
+    req->phys_count = 6;
+    req->phys_list[0] = 0x12345000;
+    req->phys_list[1] = 0x12346000;
+    req->phys_list[2] = 0x12347000;
+    req->phys_list[3] = 0x12348000;
+    req->phys_list[4] = 0x12349000;
+    req->phys_list[5] = 0x1234a000;
+
+    phys_iter_sg_entry_t sg_list[2] = {
+         { .length = 4000, .offset = 2 * PAGE_SIZE },
+         { .length = 5000, .offset = (3 * PAGE_SIZE) + 1000 }
+    };
+    ASSERT_EQ(usb_request_set_sg_list(req, sg_list, 2), ZX_OK, "");
+
+    phys_iter_t iter;
+
+    usb_request_phys_iter_init(&iter, req, 0);
+    zx_paddr_t paddr;
+    size_t size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 4000u, "first scatter gather entry");
+    ASSERT_EQ(paddr, req->phys_list[2] + 3000u, "first scatter gather entry");
+    ASSERT_EQ(iter.total_iterated, 4000u, "");
+    ASSERT_EQ(iter.offset, 4000u, "");
+
+    size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 5000u, "second scatter gather entry");
+    ASSERT_EQ(paddr, req->phys_list[3] + 4000u, "second scatter gather entry");
+    ASSERT_EQ(iter.total_iterated, 9000u, "");
+    ASSERT_EQ(iter.offset, 5000u, "");
+
+    size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 0u, "no more scatter gather entries");
+    ASSERT_EQ(iter.total_iterated, 9000u, "");
+    ASSERT_EQ(iter.offset, 5000u, "");
+
+    usb_request_release(req);
+    END_TEST;
+}
+
+// Test processing of a non-page-aligned non-contiguous backing buffer with a scatter gather list.
+static bool test_phys_iter_sg_unaligned_noncontig(void) {
+    BEGIN_TEST;
+
+    usb_request_t* req;
+    const size_t buf_size = 5 * PAGE_SIZE;
+
+    zx_handle_t vmo_handle;
+    ASSERT_EQ(zx_vmo_create(buf_size, 0, &vmo_handle), ZX_OK, "");
+
+    usb_request_alloc_vmo(&req, vmo_handle, 128, buf_size, 1, sizeof(usb_request_t));
+    req->phys_list = malloc(sizeof(req->phys_list[0]) * 6);
+    ASSERT_NONNULL(req->phys_list, "");
+    req->phys_count = 6;
+    req->phys_list[0] = 0x12345000;
+    req->phys_list[1] = 0x12347000;
+    req->phys_list[2] = 0x12349000;
+    req->phys_list[3] = 0x1234b000;
+    req->phys_list[4] = 0x1234d000;
+    req->phys_list[5] = 0x1234f000;
+
+    phys_iter_sg_entry_t sg_list[2] = {
+         { .length = PAGE_SIZE, .offset = (3 * PAGE_SIZE) + 1 },
+         { .length = 2 * PAGE_SIZE, .offset = PAGE_SIZE }
+    };
+    ASSERT_EQ(usb_request_set_sg_list(req, sg_list, 2), ZX_OK, "");
+
+    phys_iter_t iter;
+
+    usb_request_phys_iter_init(&iter, req, 0);
+    zx_paddr_t paddr;
+    size_t size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, PAGE_SIZE - 129u, "first scatter gather entry: part 1");
+    ASSERT_EQ(paddr, req->phys_list[3] + 129u, "first scatter gather entry: part 1");
+    ASSERT_EQ(iter.total_iterated, PAGE_SIZE - 129u, "");
+    ASSERT_EQ(iter.offset, PAGE_SIZE - 129u, "");
+
+    size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 129u, "first scatter gather entry: part 2");
+    ASSERT_EQ(paddr, req->phys_list[4], "first scatter gather entry: part 2");
+    ASSERT_EQ(iter.total_iterated, 1u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, 1u * PAGE_SIZE, "");
+
+    size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, PAGE_SIZE - 128u, "second scatter gather entry: part 1");
+    ASSERT_EQ(paddr, req->phys_list[1] + 128u, "second scatter gather entry: part 1");
+    ASSERT_EQ(iter.total_iterated, (2u * PAGE_SIZE) - 128u, "");
+    ASSERT_EQ(iter.offset, PAGE_SIZE - 128u, "");
+
+    size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 1u * PAGE_SIZE, "second scatter gather entry: part 2");
+    ASSERT_EQ(paddr, req->phys_list[2], "second scatter gather entry: part 2");
+    ASSERT_EQ(iter.total_iterated, (3u * PAGE_SIZE) - 128u, "");
+    ASSERT_EQ(iter.offset, (2u * PAGE_SIZE) - 128u, "");
+
+    size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 128u, "second scatter gather entry: part 3");
+    ASSERT_EQ(paddr, req->phys_list[3], "second scatter gather entry: part 3");
+    ASSERT_EQ(iter.total_iterated, 3u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, 2u * PAGE_SIZE, "");
+
+    size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 0u, "no more scatter gather entries");
+    ASSERT_EQ(iter.total_iterated, 3u * PAGE_SIZE, "");
+    ASSERT_EQ(iter.offset, 2u * PAGE_SIZE, "");
+
+    usb_request_release(req);
+    END_TEST;
+}
+
+// Test processing of a tiny page-aligned buffer with a scatter gather list.
+static bool test_phys_iter_sg_tiny_aligned(void) {
+    BEGIN_TEST;
+
+    usb_request_t* req;
+    const size_t buf_size = 128;
+
+    zx_handle_t vmo_handle;
+    ASSERT_EQ(zx_vmo_create(buf_size, 0, &vmo_handle), ZX_OK, "");
+
+    usb_request_alloc_vmo(&req, vmo_handle, 0, buf_size, 1, sizeof(usb_request_t));
+    req->phys_list = malloc(sizeof(req->phys_list[0]) * 1);
+    ASSERT_NONNULL(req->phys_list, "");
+    req->phys_count = 1;
+    req->phys_list[0] = 0x12345000;
+
+    phys_iter_sg_entry_t sg_list[2] = {
+         { .length = 10, .offset = 0 },
+         { .length = 20, .offset = 100 }
+    };
+    ASSERT_EQ(usb_request_set_sg_list(req, sg_list, 2), ZX_OK, "");
+
+    phys_iter_t iter;
+
+    usb_request_phys_iter_init(&iter, req, 0);
+    zx_paddr_t paddr;
+    size_t size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 10u, "first scatter gather entry");
+    ASSERT_EQ(paddr, req->phys_list[0], "first scatter gather entry");
+    ASSERT_EQ(iter.total_iterated, 10u, "");
+    ASSERT_EQ(iter.offset, 10u, "");
+
+    size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 20u, "second scatter gather entry");
+    ASSERT_EQ(paddr, req->phys_list[0] + 100u, "second scatter gather entry");
+    ASSERT_EQ(iter.total_iterated, 30u, "");
+    ASSERT_EQ(iter.offset, 20u, "");
+
+    size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 0u, "no more scatter gather entries");
+    ASSERT_EQ(iter.total_iterated, 30u, "");
+    ASSERT_EQ(iter.offset, 20u, "");
+
+    usb_request_release(req);
+
+    END_TEST;
+}
+
+// Test processing of a tiny non-page-aligned buffer with a scatter gather list.
+static bool test_phys_iter_sg_tiny_unaligned(void) {
+    BEGIN_TEST;
+
+    usb_request_t* req;
+    const size_t buf_size = 128;
+
+    zx_handle_t vmo_handle;
+    ASSERT_EQ(zx_vmo_create(PAGE_SIZE, 0, &vmo_handle), ZX_OK, "");
+
+    usb_request_alloc_vmo(&req, vmo_handle, 128, buf_size, 1, sizeof(usb_request_t));
+    req->phys_list = malloc(sizeof(req->phys_list[0]) * 1);
+    ASSERT_NONNULL(req->phys_list, "");
+    req->phys_count = 1;
+    req->phys_list[0] = 0x12345000;
+
+    phys_iter_sg_entry_t sg_list[2] = {
+         { .length = 10, .offset = 0 },
+         { .length = 20, .offset = 128 }
+    };
+    ASSERT_EQ(usb_request_set_sg_list(req, sg_list, 2), ZX_OK, "");
+
+    phys_iter_t iter;
+
+    usb_request_phys_iter_init(&iter, req, 0);
+    zx_paddr_t paddr;
+    size_t size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 10u, "first scatter gather entry");
+    ASSERT_EQ(paddr, req->phys_list[0] + 128u, "first scatter gather entry");
+    ASSERT_EQ(iter.total_iterated, 10u, "");
+    ASSERT_EQ(iter.offset, 10u, "");
+
+    size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 20u, "second scatter gather entry");
+    ASSERT_EQ(paddr, req->phys_list[0] + 256u, "second scatter gather entry");
+    ASSERT_EQ(iter.total_iterated, 30u, "");
+    ASSERT_EQ(iter.offset, 20u, "");
+
+    size = usb_request_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 0u, "no more scatter gather entries");
+    ASSERT_EQ(iter.total_iterated, 30u, "");
+    ASSERT_EQ(iter.offset, 20u, "");
+
+    usb_request_release(req);
+
     END_TEST;
 }
 
@@ -546,6 +889,12 @@ RUN_TEST(test_phys_iter_tiny_aligned)
 RUN_TEST(test_phys_iter_tiny_unaligned)
 RUN_TEST(test_set_sg_list)
 RUN_TEST(test_invalid_sg_list)
+RUN_TEST(test_phys_iter_sg_aligned_contig)
+RUN_TEST(test_phys_iter_sg_aligned_noncontig)
+RUN_TEST(test_phys_iter_sg_unaligned_contig)
+RUN_TEST(test_phys_iter_sg_unaligned_noncontig)
+RUN_TEST(test_phys_iter_sg_tiny_aligned)
+RUN_TEST(test_phys_iter_sg_tiny_unaligned)
 END_TEST_CASE(usb_request_tests)
 
 struct test_case_element* test_case_ddk_usb_request = TEST_CASE_ELEMENT(usb_request_tests);
