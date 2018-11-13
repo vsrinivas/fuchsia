@@ -21,8 +21,15 @@ import("//build/banjo/toolchain.gni")
 #   name (optional)
 #     Name of the library.
 #     Defaults to the target's name.
+#
+#   sdk_category (optional)
+#     Publication level of the library in SDKs.
+#     See //build/sdk/sdk_atom.gni.
 
 template("banjo") {
+  if (defined(invoker.sdk_category)) {
+    not_needed(invoker, [ "sdk_category" ])
+  }
   if (current_toolchain == banjo_toolchain) {
     import("//build/banjo/banjo_library.gni")
 
@@ -44,6 +51,9 @@ template("banjo") {
 }
 
 template("banjo_dummy") {
+  if (defined(invoker.sdk_category)) {
+    not_needed(invoker, [ "sdk_category" ])
+  }
   if (current_toolchain == banjo_toolchain) {
     import("//build/banjo/banjo_library.gni")
 

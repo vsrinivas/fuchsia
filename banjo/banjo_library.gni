@@ -6,13 +6,110 @@ import("//build/compiled_action.gni")
 import("//build/banjo/toolchain.gni")
 import("//build/sdk/sdk_atom.gni")
 
+# Private template to generate an SDK Atom for banjo_library and
+# banjo_dummy_library targets.
+#
+
+template("_banjo_library_sdk") {
+  library_name = target_name
+  if (defined(invoker.name)) {
+    library_name = invoker.name
+  }
+
+  # Process sources.
+  file_base = "banjo/$library_name"
+  all_files = []
+  sdk_sources = []
+  foreach(source, invoker.sources) {
+    relative_source = rebase_path(source, ".")
+    if (string_replace(relative_source, "..", "bogus") != relative_source) {
+      # If the source file is not within the same directory, just use the file
+      # name.
+      relative_source = get_path_info(source, "file")
+    }
+    destination = "$file_base/$relative_source"
+    sdk_sources += [ destination ]
+    all_files += [
+      {
+        source = rebase_path(source)
+        dest = destination
+      },
+    ]
+  }
+
+  # Identify metadata for dependencies.
+  sdk_metas = []
+  sdk_deps = []
+  all_deps = []
+  if (defined(invoker.deps)) {
+    all_deps = invoker.deps
+  }
+  foreach(dep, all_deps) {
+    full_label = get_label_info(dep, "label_no_toolchain")
+    sdk_dep = "${full_label}_sdk"
+    sdk_deps += [ sdk_dep ]
+    gen_dir = get_label_info(sdk_dep, "target_gen_dir")
+    name = get_label_info(sdk_dep, "name")
+    sdk_metas += [ rebase_path("$gen_dir/$name.meta.json") ]
+  }
+
+  # Generate the library metadata.
+  meta_file = "$target_gen_dir/${target_name}.sdk_meta.json"
+  meta_target_name = "${target_name}_meta"
+
+  action(meta_target_name) {
+    script = "//build/banjo/gen_sdk_meta.py"
+
+    inputs = sdk_metas
+
+    outputs = [
+      meta_file,
+    ]
+
+    args = [
+             "--out",
+             rebase_path(meta_file),
+             "--name",
+             library_name,
+             "--root",
+             file_base,
+             "--specs",
+           ] + sdk_metas + [ "--sources" ] + sdk_sources
+
+    deps = sdk_deps
+  }
+
+  sdk_atom("${target_name}_sdk") {
+    id = "sdk://banjo/$library_name"
+
+    category = invoker.sdk_category
+
+    meta = {
+      source = meta_file
+      dest = "$file_base/meta.json"
+      schema = "banjo_library"
+    }
+
+    files = all_files
+
+    non_sdk_deps = [ ":$meta_target_name" ]
+
+    deps = []
+    foreach(dep, all_deps) {
+      label = get_label_info(dep, "label_no_toolchain")
+      deps += [ "${label}_sdk" ]
+    }
+  }
+}
+
 # Generates some representation of a Banjo library that's consumable by Language
 # bindings generators.
 #
 # The parameters for this template are defined in //build/banjo/banjo.gni. The
 # relevant parameters in this template are:
 #   - name;
-#   - sources.
+#   - sources;
+#   - sdk_category.
 
 template("banjo_library") {
   assert(
@@ -132,6 +229,12 @@ template("banjo_library") {
       ":$response_file_target_name",
     ]
   }
+
+  if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
+    _banjo_library_sdk("$target_name") {
+      forward_variables_from(invoker, "*")
+    }
+  }
 }
 
 template("banjo_dummy_library") {
@@ -192,5 +295,11 @@ template("banjo_dummy_library") {
     public_deps = [
       ":$response_file_target_name",
     ]
+  }
+
+  if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
+    _banjo_library_sdk("$target_name") {
+      forward_variables_from(invoker, "*")
+    }
   }
 }

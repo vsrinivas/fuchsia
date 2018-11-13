@@ -5,6 +5,8 @@ import("//build/banjo/banjo.gni")
 banjo("${data.name}") {
   name = "${data.library}"
 
+  sdk_category = "partner"
+
   sources = [
     % for source in sorted(data.sources):
     "${source}",

@@ -34,6 +34,10 @@
         "type"
       ]
     },
+    "banjo_library_name": {
+      "description": "Name of a BANJO library",
+      "type": "string"
+    },
     "fidl_library_name": {
       "description": "Name of a FIDL library",
       "type": "string"
