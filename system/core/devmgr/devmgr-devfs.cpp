@@ -188,16 +188,11 @@ zx_status_t DcIostate::Create(Devnode* dn, zx::channel* ipc) {
     }
 
     ios->set_channel(fbl::move(*ipc));
-    // We use wait_.Begin here instead of DcIostate::BeginWait because we need
-    // to be able to not close the IPC channel in the event of failure.
     zx_status_t status = DcIostate::BeginWait(&ios, DcAsyncLoop()->dispatcher());
     if (status != ZX_OK) {
         // Take the handle back from |ios| so it doesn't close it when it's
         // destroyed
         *ipc = ios->set_channel(zx::channel());
-    } else {
-        // If the wait succeeded, DcAsyncLoop() now owns |ios|.
-        __UNUSED auto ptr = ios.release();
     }
     return status;
 }
