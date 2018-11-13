@@ -4,7 +4,7 @@ import("//build/json/validate_json.gni")
 #
 # Parameters
 #   cmx (required)
-#     This is the .cmx file that wants to be validated. 
+#     This is the .cmx file that wants to be validated.
 #
 #   deps (optional)
 template("validate_cmx") {
@@ -15,6 +15,7 @@ template("validate_cmx") {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "public_deps",
                              "testonly",
                              "visibility",
                            ])
