@@ -2046,10 +2046,12 @@ __NO_SAFESTACK NO_ASAN static dl_start_return_t __dls3(void* start_arg) {
     // handles, so things are somewhat normal.
     early_init();
 
+    // The initial processargs message may not pass the application
+    // name or any other arguments, so we check that condition.
     void* entry = dls3(exec_vmo,
-                       (char*)&buffer[procargs->args_off],
-                       (char*)&buffer[procargs->environ_off],
-                       (char*)&buffer[nbytes],
+                       procargs->args_num == 0 ? "" : (const char*)&buffer[procargs->args_off],
+                       (const char*)&buffer[procargs->environ_off],
+                       (const char*)&buffer[nbytes],
                        procargs->environ_num);
 
     if (vdso.global <= 0) {
