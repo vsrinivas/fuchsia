@@ -289,10 +289,11 @@ the word "fuzz" and place it in the appropriate system/utest directory, e.g.
 Add a fuzz test declaration in the
 corresponding rules.mk; e.g.:
 ```sh
-MODULE := $(LOCAL_DIR)-fuzztest
+MODULE := $(LOCAL_DIR).fuzztest
 MODULE_TYPE := fuzztest
-MODULE_NAME := hidparse-fuzzer # Optional
+MODULE_NAME := hid_parser_fuzztest # Matches fuzz_target in BUILD.gn
 MODULE_SRCS = $(LOCAL_DIR)/hid-parser-fuzztest.cpp
+MODULE_LIBS = system/ulib/c system/ulib/fdio
 ```
 
 *__NOTE__: There are [open issues][TC-241] around how Garnet drivers are built and linked into
@@ -304,7 +305,7 @@ this, first add the Zircon fuzzer to the special `zircon_fuzzers` package define
 `//garnet/tests/zircon/BUILD.gn`.  You can use this to add seed [corpora][corpus], [dictionaries],
 and/or an [options] file as normal in a [GN fuzz target], e.g:
 ```python
-fuzz_target("hid_parser_fuzztest") {
+fuzz_target("hid_parser_fuzztest") { # Matches MODULE_NAME in rules.mk
   corpora = [ "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" ]
   dictionary = "//zircon/system/utest/hid-parser/hid-parser-fuzztest.dict"
   options = "//zircon/system/utest/hid-parser/hid-parser-fuzztest.options"
