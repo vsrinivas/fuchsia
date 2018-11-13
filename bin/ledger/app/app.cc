@@ -80,14 +80,15 @@ class App : public ledger_internal::LedgerController {
       builder.SetFirebaseApiKey(app_params_.firebase_api_key);
     }
 
-    environment_ =
-        std::make_unique<Environment>(builder.SetAsync(loop_.dispatcher())
-                                          .SetIOAsync(io_loop_.dispatcher())
-                                          .Build());
+    environment_ = std::make_unique<Environment>(
+        builder.SetDisableStatistics(app_params_.disable_statistics)
+            .SetAsync(loop_.dispatcher())
+            .SetIOAsync(io_loop_.dispatcher())
+            .SetStartupContext(startup_context_.get())
+            .Build());
     auto user_communicator_factory =
         std::make_unique<p2p_sync::UserCommunicatorFactoryImpl>(
-            environment_.get(), startup_context_.get(),
-            app_params_.disable_statistics ? "" : "ledger_p2p");
+            environment_.get());
 
     factory_impl_ = std::make_unique<LedgerRepositoryFactoryImpl>(
         environment_.get(), std::move(user_communicator_factory),

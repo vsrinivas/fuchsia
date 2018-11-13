@@ -147,7 +147,7 @@ void PutBenchmark::Run() {
                         : "on")
                 << (update_ ? " --update" : "");
   Status status = GetLedger(
-      startup_context_.get(), component_controller_.NewRequest(), nullptr,
+      startup_context_.get(), component_controller_.NewRequest(), nullptr, "",
       "put", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_);
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;

@@ -16,9 +16,7 @@ namespace p2p_provider {
 constexpr fxl::StringView user_id_filename = "p2p_user_id";
 
 UserIdProviderImpl::UserIdProviderImpl(
-    ledger::Environment* environment,
-    component::StartupContext* startup_context,
-    ledger::DetachedPath user_directory,
+    ledger::Environment* environment, ledger::DetachedPath user_directory,
     fuchsia::modular::auth::TokenProviderPtr token_provider_ptr,
     std::string cobalt_client_name)
     : user_id_path_(user_directory.SubPath(user_id_filename)),
@@ -26,7 +24,9 @@ UserIdProviderImpl::UserIdProviderImpl(
           firebase_auth::FirebaseAuthImpl::Config{
               environment->firebase_api_key(), cobalt_client_name},
           environment->dispatcher(), environment->random(),
-          std::move(token_provider_ptr), startup_context)) {}
+          std::move(token_provider_ptr), environment->startup_context())) {}
+
+UserIdProviderImpl::~UserIdProviderImpl() = default;
 
 void UserIdProviderImpl::GetUserId(
     fit::function<void(Status, std::string)> callback) {

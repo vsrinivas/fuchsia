@@ -105,7 +105,7 @@ GetPageBenchmark::GetPageBenchmark(
 
 void GetPageBenchmark::Run() {
   Status status = GetLedger(
-      startup_context_.get(), component_controller_.NewRequest(), nullptr,
+      startup_context_.get(), component_controller_.NewRequest(), nullptr, "",
       "get_page", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_);
 
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {

@@ -24,7 +24,7 @@ Status GetLedger(component::StartupContext* context,
                  fidl::InterfaceRequest<fuchsia::sys::ComponentController>
                      controller_request,
                  cloud_provider::CloudProviderPtr cloud_provider,
-                 std::string ledger_name,
+                 std::string user_id, std::string ledger_name,
                  const DetachedPath& ledger_repository_path,
                  fit::function<void()> error_handler, LedgerPtr* ledger);
 

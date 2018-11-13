@@ -283,6 +283,7 @@ void SessionmgrImpl::InitializeLedger(
   AtEnd(Teardown(kBasicTimeout, "Ledger", ledger_app_.get()));
 
   fuchsia::ledger::cloud::CloudProviderPtr cloud_provider;
+  std::string ledger_user_id;
   if (account_ && !options_.no_cloud_provider_for_ledger) {
     // If not running in Guest mode, spin up a cloud provider for Ledger to use
     // for syncing.
@@ -296,6 +297,7 @@ void SessionmgrImpl::InitializeLedger(
         cloud_provider_factory_.NewRequest());
 
     cloud_provider = GetCloudProvider();
+    ledger_user_id = account_->profile_id;
 
     // TODO(mesch): Teardown cloud_provider_app_ ?
   }
@@ -312,9 +314,9 @@ void SessionmgrImpl::InitializeLedger(
 
   // The directory "/data" is the data root "/data/LEDGER" that the ledger app
   // client is configured to.
-  ledger_repository_factory_->GetRepository(GetLedgerRepositoryDirectory(),
-                                            std::move(cloud_provider),
-                                            ledger_repository_.NewRequest());
+  ledger_repository_factory_->GetRepository(
+      GetLedgerRepositoryDirectory(), std::move(cloud_provider), ledger_user_id,
+      ledger_repository_.NewRequest());
 
   // If ledger state is erased from underneath us (happens when the cloud store
   // is cleared), ledger will close the connection to |ledger_repository_|.

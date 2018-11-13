@@ -9,6 +9,7 @@
 
 #include <lib/async/dispatcher.h>
 #include <lib/backoff/backoff.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
 #include <lib/timekeeper/clock.h>
 
@@ -22,8 +23,9 @@ namespace ledger {
 class Environment {
  public:
   using BackoffFactory = fit::function<std::unique_ptr<backoff::Backoff>()>;
-  Environment(async_dispatcher_t* dispatcher, async_dispatcher_t* io_dispatcher,
-              std::string firebase_api_key,
+  Environment(bool disable_statistics, async_dispatcher_t* dispatcher,
+              async_dispatcher_t* io_dispatcher, std::string firebase_api_key,
+              component::StartupContext* startup_context,
               std::unique_ptr<coroutine::CoroutineService> coroutine_service,
               BackoffFactory backoff_factory,
               std::unique_ptr<timekeeper::Clock> clock,
@@ -33,32 +35,41 @@ class Environment {
 
   Environment& operator=(Environment&& other) noexcept;
 
-  async_dispatcher_t* dispatcher() { return dispatcher_; }
+  bool disable_statistics() const { return disable_statistics_; }
+
+  async_dispatcher_t* dispatcher() const { return dispatcher_; }
 
   // Returns the async_dispatcher_t to be used for I/O operations.
-  async_dispatcher_t* io_dispatcher() { return io_dispatcher_; }
+  async_dispatcher_t* io_dispatcher() const { return io_dispatcher_; }
 
-  const std::string& firebase_api_key() { return firebase_api_key_; };
+  const std::string& firebase_api_key() const { return firebase_api_key_; };
 
-  coroutine::CoroutineService* coroutine_service() {
+  component::StartupContext* startup_context() const {
+    return startup_context_;
+  };
+
+  coroutine::CoroutineService* coroutine_service() const {
     return coroutine_service_.get();
   }
 
   std::unique_ptr<backoff::Backoff> MakeBackoff();
 
-  timekeeper::Clock* clock() { return clock_.get(); }
+  timekeeper::Clock* clock() const { return clock_.get(); }
 
-  rng::Random* random() { return random_.get(); }
+  rng::Random* random() const { return random_.get(); }
 
  private:
-  async_dispatcher_t* dispatcher_ = nullptr;
+  bool disable_statistics_;
+
+  async_dispatcher_t* dispatcher_;
 
   // The async_dispatcher_t to be used for I/O operations.
-  async_dispatcher_t* io_dispatcher_ = nullptr;
+  async_dispatcher_t* io_dispatcher_;
 
   // The firebase API key.
   std::string firebase_api_key_;
 
+  component::StartupContext* startup_context_;
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
   BackoffFactory backoff_factory_;
   std::unique_ptr<timekeeper::Clock> clock_;
@@ -78,9 +89,12 @@ class EnvironmentBuilder {
   EnvironmentBuilder& operator=(const EnvironmentBuilder& other) = delete;
   EnvironmentBuilder& operator=(EnvironmentBuilder&& other) = delete;
 
+  EnvironmentBuilder& SetDisableStatistics(bool disable_statistics);
   EnvironmentBuilder& SetAsync(async_dispatcher_t* dispatcher);
   EnvironmentBuilder& SetIOAsync(async_dispatcher_t* io_dispatcher);
   EnvironmentBuilder& SetFirebaseApiKey(std::string firebase_api_key);
+  EnvironmentBuilder& SetStartupContext(
+      component::StartupContext* startup_context);
   EnvironmentBuilder& SetCoroutineService(
       std::unique_ptr<coroutine::CoroutineService> coroutine_service);
   EnvironmentBuilder& SetBackoffFactory(
@@ -91,9 +105,11 @@ class EnvironmentBuilder {
   Environment Build();
 
  private:
+  bool disable_statistics_ = true;
   async_dispatcher_t* dispatcher_ = nullptr;
   async_dispatcher_t* io_dispatcher_ = nullptr;
   std::string firebase_api_key_;
+  component::StartupContext* startup_context_;
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
   Environment::BackoffFactory backoff_factory_;
   std::unique_ptr<timekeeper::Clock> clock_;

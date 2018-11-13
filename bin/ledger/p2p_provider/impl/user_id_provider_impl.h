@@ -18,14 +18,16 @@
 
 namespace p2p_provider {
 
+// Implementation of |UserIdProvider| that retrieves the user id from the user
+// Google profile using the given |TokenProvider| and caches this information in
+// the filesystem.
 class UserIdProviderImpl : public UserIdProvider {
  public:
   UserIdProviderImpl(
-      ledger::Environment* environment,
-      component::StartupContext* startup_context,
-      ledger::DetachedPath user_directory,
+      ledger::Environment* environment, ledger::DetachedPath user_directory,
       fuchsia::modular::auth::TokenProviderPtr token_provider_ptr,
       std::string cobalt_client_name);
+  ~UserIdProviderImpl() override;
 
   void GetUserId(fit::function<void(Status, std::string)> callback) override;
 

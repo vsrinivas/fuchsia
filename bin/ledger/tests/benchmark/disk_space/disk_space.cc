@@ -136,7 +136,7 @@ DiskSpaceBenchmark::DiskSpaceBenchmark(
 
 void DiskSpaceBenchmark::Run() {
   Status status = GetLedger(
-      startup_context_.get(), component_controller_.NewRequest(), nullptr,
+      startup_context_.get(), component_controller_.NewRequest(), nullptr, "",
       "disk_space", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_);
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;

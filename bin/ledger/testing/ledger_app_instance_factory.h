@@ -59,6 +59,7 @@ class LedgerAppInstanceFactory {
 
    private:
     virtual cloud_provider::CloudProviderPtr MakeCloudProvider() = 0;
+    virtual std::string GetUserId() = 0;
 
     LoopController* loop_controller_;
     fidl::VectorPtr<uint8_t> test_ledger_name_;

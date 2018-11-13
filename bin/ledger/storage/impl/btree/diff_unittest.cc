@@ -89,20 +89,20 @@ TEST_F(DiffTest, ForEachDiff) {
   bool called;
   Status status;
   size_t current_change = 0;
-  ForEachDiff(environment_.coroutine_service(), &fake_storage_,
-              base_root_identifier, other_root_identifier, "",
-              [&other_changes, &current_change](EntryChange e) {
-                EXPECT_EQ(other_changes[current_change].deleted, e.deleted);
-                if (e.deleted) {
-                  EXPECT_EQ(other_changes[current_change].entry.key,
-                            e.entry.key);
-                } else {
-                  EXPECT_EQ(other_changes[current_change].entry, e.entry);
-                }
-                ++current_change;
-                return true;
-              },
-              callback::Capture(callback::SetWhenCalled(&called), &status));
+  ForEachDiff(
+      environment_.coroutine_service(), &fake_storage_, base_root_identifier,
+      other_root_identifier, "",
+      [&other_changes, &current_change](EntryChange e) {
+        EXPECT_EQ(other_changes[current_change].deleted, e.deleted);
+        if (e.deleted) {
+          EXPECT_EQ(other_changes[current_change].entry.key, e.entry.key);
+        } else {
+          EXPECT_EQ(other_changes[current_change].entry, e.entry);
+        }
+        ++current_change;
+        return true;
+      },
+      callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
@@ -137,26 +137,28 @@ TEST_F(DiffTest, ForEachDiffWithMinKey) {
 
   // ForEachDiff with a "key0" as min_key should return both changes.
   size_t current_change = 0;
-  ForEachDiff(environment_.coroutine_service(), &fake_storage_,
-              base_root_identifier, other_root_identifier, "key0",
-              [&changes, &current_change](EntryChange e) {
-                EXPECT_EQ(changes[current_change++].entry, e.entry);
-                return true;
-              },
-              callback::Capture(callback::SetWhenCalled(&called), &status));
+  ForEachDiff(
+      environment_.coroutine_service(), &fake_storage_, base_root_identifier,
+      other_root_identifier, "key0",
+      [&changes, &current_change](EntryChange e) {
+        EXPECT_EQ(changes[current_change++].entry, e.entry);
+        return true;
+      },
+      callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(changes.size(), current_change);
 
   // With "key60" as min_key, only key75 should be returned.
-  ForEachDiff(environment_.coroutine_service(), &fake_storage_,
-              base_root_identifier, other_root_identifier, "key60",
-              [&changes](EntryChange e) {
-                EXPECT_EQ(changes[1].entry, e.entry);
-                return true;
-              },
-              callback::Capture(callback::SetWhenCalled(&called), &status));
+  ForEachDiff(
+      environment_.coroutine_service(), &fake_storage_, base_root_identifier,
+      other_root_identifier, "key60",
+      [&changes](EntryChange e) {
+        EXPECT_EQ(changes[1].entry, e.entry);
+        return true;
+      },
+      callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
@@ -186,13 +188,14 @@ TEST_F(DiffTest, ForEachDiffWithMinKeySkipNodes) {
   ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, changes,
                                     &other_root_identifier));
 
-  ForEachDiff(environment_.coroutine_service(), &fake_storage_,
-              base_root_identifier, other_root_identifier, "key01",
-              [&changes](EntryChange e) {
-                EXPECT_EQ(changes[0].entry, e.entry);
-                return true;
-              },
-              callback::Capture(callback::SetWhenCalled(&called), &status));
+  ForEachDiff(
+      environment_.coroutine_service(), &fake_storage_, base_root_identifier,
+      other_root_identifier, "key01",
+      [&changes](EntryChange e) {
+        EXPECT_EQ(changes[0].entry, e.entry);
+        return true;
+      },
+      callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
@@ -219,14 +222,15 @@ TEST_F(DiffTest, ForEachDiffPriorityChange) {
   // ForEachDiff should return all changes just applied.
   size_t change_count = 0;
   EntryChange actual_change;
-  ForEachDiff(environment_.coroutine_service(), &fake_storage_,
-              base_root_identifier, other_root_identifier, "",
-              [&actual_change, &change_count](EntryChange e) {
-                actual_change = e;
-                ++change_count;
-                return true;
-              },
-              callback::Capture(callback::SetWhenCalled(&called), &status));
+  ForEachDiff(
+      environment_.coroutine_service(), &fake_storage_, base_root_identifier,
+      other_root_identifier, "",
+      [&actual_change, &change_count](EntryChange e) {
+        actual_change = e;
+        ++change_count;
+        return true;
+      },
+      callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(Status::OK, status);

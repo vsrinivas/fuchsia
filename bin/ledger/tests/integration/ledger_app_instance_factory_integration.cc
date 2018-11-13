@@ -8,6 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/backoff/exponential_backoff.h>
+#include <lib/component/cpp/testing/startup_context_for_test.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/handles/object_info.h>
@@ -59,10 +60,12 @@ class DelegatedRandom final : public rng::Random {
 Environment BuildEnvironment(async::TestLoop* loop,
                              async_dispatcher_t* dispatcher,
                              async_dispatcher_t* io_dispatcher,
+                             component::StartupContext* startup_context,
                              rng::Random* random) {
   return EnvironmentBuilder()
       .SetAsync(dispatcher)
       .SetIOAsync(io_dispatcher)
+      .SetStartupContext(startup_context)
       .SetBackoffFactory([random] {
         return std::make_unique<backoff::ExponentialBackoff>(
             kBackoffDuration, 1u, kBackoffDuration,
@@ -72,15 +75,6 @@ Environment BuildEnvironment(async::TestLoop* loop,
       .SetRandom(std::make_unique<DelegatedRandom>(random))
       .Build();
 }
-
-class FakeUserIdProvider : public p2p_provider::UserIdProvider {
- public:
-  FakeUserIdProvider() {}
-
-  void GetUserId(fit::function<void(Status, std::string)> callback) override {
-    callback(Status::OK, kUserId);
-  };
-};
 
 class LedgerAppInstanceImpl final
     : public LedgerAppInstanceFactory::LedgerAppInstance {
@@ -108,13 +102,16 @@ class LedgerAppInstanceImpl final
             request,
         std::unique_ptr<p2p_sync::UserCommunicatorFactory>
             user_communicator_factory)
-        : environment_(
-              BuildEnvironment(loop, dispatcher, io_dispatcher, random)),
-          factory_impl_(&environment_, std::move(user_communicator_factory), component::ObjectDir()),
+        : startup_context_(component::testing::StartupContextForTest::Create()),
+          environment_(BuildEnvironment(loop, dispatcher, io_dispatcher,
+                                        startup_context_.get(), random)),
+          factory_impl_(&environment_, std::move(user_communicator_factory),
+                        component::ObjectDir()),
           proxy_(&factory_impl_, std::move(request)) {}
     ~LedgerRepositoryFactoryContainer() {}
 
    private:
+    std::unique_ptr<component::StartupContext> startup_context_;
     Environment environment_;
     LedgerRepositoryFactoryImpl factory_impl_;
     fuchsia::ledger::internal::LedgerRepositoryFactoryErrorNotifierProxy proxy_;
@@ -123,6 +120,7 @@ class LedgerAppInstanceImpl final
   };
 
   cloud_provider::CloudProviderPtr MakeCloudProvider() override;
+  std::string GetUserId() override;
 
   std::unique_ptr<SubLoop> loop_;
   std::unique_ptr<SubLoop> io_loop_;
@@ -178,6 +176,8 @@ cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
   return cloud_provider;
 }
 
+std::string LedgerAppInstanceImpl::GetUserId() { return kUserId; }
+
 LedgerAppInstanceImpl::~LedgerAppInstanceImpl() {
   async::PostTask(loop_->dispatcher(), [this] { factory_container_.reset(); });
   loop_->DrainAndQuit();
@@ -192,15 +192,17 @@ class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
                               NetConnectorFactory* netconnector_factory,
                               std::string host_name)
       : services_dispatcher_(services_dispatcher),
+        startup_context_(component::testing::StartupContextForTest::Create()),
         environment_(BuildEnvironment(loop, services_dispatcher,
-                                      services_dispatcher, random)),
+                                      services_dispatcher,
+                                      startup_context_.get(), random)),
         netconnector_factory_(netconnector_factory),
         host_name_(std::move(host_name)),
         weak_ptr_factory_(this) {}
   ~FakeUserCommunicatorFactory() override {}
 
   std::unique_ptr<p2p_sync::UserCommunicator> GetUserCommunicator(
-      DetachedPath /*user_directory*/) override {
+      std::unique_ptr<p2p_provider::UserIdProvider> user_id_provider) override {
     fuchsia::netconnector::NetConnectorPtr netconnector;
     async::PostTask(services_dispatcher_,
                     callback::MakeScoped(
@@ -211,14 +213,14 @@ class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
                         }));
     std::unique_ptr<p2p_provider::P2PProvider> provider =
         std::make_unique<p2p_provider::P2PProviderImpl>(
-            host_name_, std::move(netconnector),
-            std::make_unique<FakeUserIdProvider>());
+            host_name_, std::move(netconnector), std::move(user_id_provider));
     return std::make_unique<p2p_sync::UserCommunicatorImpl>(
         std::move(provider), environment_.coroutine_service());
   }
 
  private:
   async_dispatcher_t* const services_dispatcher_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   Environment environment_;
   NetConnectorFactory* const netconnector_factory_;
   std::string host_name_;

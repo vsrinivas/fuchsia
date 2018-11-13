@@ -42,7 +42,7 @@ Status GetLedger(component::StartupContext* context,
                  fidl::InterfaceRequest<fuchsia::sys::ComponentController>
                      controller_request,
                  cloud_provider::CloudProviderPtr cloud_provider,
-                 std::string ledger_name,
+                 std::string user_id, std::string ledger_name,
                  const DetachedPath& ledger_repository_path,
                  fit::function<void()> error_handler, LedgerPtr* ledger) {
   fxl::UniqueFD dir(openat(ledger_repository_path.root_fd(),
@@ -68,7 +68,7 @@ Status GetLedger(component::StartupContext* context,
 
   repository_factory->GetRepository(
       fsl::CloneChannelFromFileDescriptor(dir.get()), std::move(cloud_provider),
-      repository.NewRequest());
+      std::move(user_id), repository.NewRequest());
 
   (*ledger).set_error_handler(
       [error_handler = std::move(error_handler)](zx_status_t status) {

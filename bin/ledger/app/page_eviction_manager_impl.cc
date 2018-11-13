@@ -288,14 +288,14 @@ Status PageEvictionManagerImpl::CanEvictEmptyPage(
 
   Status status;
   PagePredicateResult empty_state;
-  auto sync_call_status =
-      coroutine::SyncCall(handler,
-                          [this, ledger_name = ledger_name.ToString(),
-                           page_id = page_id.ToString()](auto callback) {
-                            delegate_->PageIsClosedOfflineAndEmpty(
-                                ledger_name, page_id, std::move(callback));
-                          },
-                          &status, &empty_state);
+  auto sync_call_status = coroutine::SyncCall(
+      handler,
+      [this, ledger_name = ledger_name.ToString(),
+       page_id = page_id.ToString()](auto callback) {
+        delegate_->PageIsClosedOfflineAndEmpty(ledger_name, page_id,
+                                               std::move(callback));
+      },
+      &status, &empty_state);
   if (sync_call_status == coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERNAL_ERROR;
   }

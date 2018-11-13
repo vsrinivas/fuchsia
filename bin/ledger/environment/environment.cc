@@ -15,19 +15,23 @@
 namespace ledger {
 
 Environment::Environment(
-    async_dispatcher_t* dispatcher, async_dispatcher_t* io_dispatcher,
-    std::string firebase_api_key,
+    bool disable_statistics, async_dispatcher_t* dispatcher,
+    async_dispatcher_t* io_dispatcher, std::string firebase_api_key,
+    component::StartupContext* startup_context,
     std::unique_ptr<coroutine::CoroutineService> coroutine_service,
     BackoffFactory backoff_factory, std::unique_ptr<timekeeper::Clock> clock,
     std::unique_ptr<rng::Random> random)
-    : dispatcher_(dispatcher),
+    : disable_statistics_(disable_statistics),
+      dispatcher_(dispatcher),
       io_dispatcher_(io_dispatcher),
       firebase_api_key_(std::move(firebase_api_key)),
+      startup_context_(startup_context),
       coroutine_service_(std::move(coroutine_service)),
       backoff_factory_(std::move(backoff_factory)),
       clock_(std::move(clock)),
       random_(std::move(random)) {
   FXL_DCHECK(dispatcher_);
+  FXL_DCHECK(startup_context_);
   FXL_DCHECK(coroutine_service_);
   FXL_DCHECK(backoff_factory_);
   FXL_DCHECK(clock_);
@@ -39,14 +43,17 @@ Environment::Environment(Environment&& other) noexcept {
 }
 
 Environment& Environment::operator=(Environment&& other) noexcept {
+  disable_statistics_ = other.disable_statistics_;
   dispatcher_ = other.dispatcher_;
   io_dispatcher_ = other.io_dispatcher_;
   firebase_api_key_ = std::move(other.firebase_api_key_);
+  startup_context_ = other.startup_context_;
   coroutine_service_ = std::move(other.coroutine_service_);
   backoff_factory_ = std::move(other.backoff_factory_);
   clock_ = std::move(other.clock_);
   random_ = std::move(other.random_);
   FXL_DCHECK(dispatcher_);
+  FXL_DCHECK(startup_context_);
   FXL_DCHECK(coroutine_service_);
   FXL_DCHECK(backoff_factory_);
   FXL_DCHECK(clock_);
@@ -65,6 +72,12 @@ EnvironmentBuilder::EnvironmentBuilder()
 
 EnvironmentBuilder::~EnvironmentBuilder() {}
 
+EnvironmentBuilder& EnvironmentBuilder::SetDisableStatistics(
+    bool disable_statistics) {
+  disable_statistics_ = disable_statistics;
+  return *this;
+}
+
 EnvironmentBuilder& EnvironmentBuilder::SetAsync(
     async_dispatcher_t* dispatcher) {
   dispatcher_ = dispatcher;
@@ -80,6 +93,12 @@ EnvironmentBuilder& EnvironmentBuilder::SetIOAsync(
 EnvironmentBuilder& EnvironmentBuilder::SetFirebaseApiKey(
     std::string firebase_api_key) {
   firebase_api_key_ = std::move(firebase_api_key);
+  return *this;
+}
+
+EnvironmentBuilder& EnvironmentBuilder::SetStartupContext(
+    component::StartupContext* startup_context) {
+  startup_context_ = startup_context;
   return *this;
 }
 
@@ -124,7 +143,8 @@ Environment EnvironmentBuilder::Build() {
           random->NewBitGenerator<uint64_t>());
     };
   }
-  return Environment(dispatcher_, io_dispatcher_, std::move(firebase_api_key_),
+  return Environment(disable_statistics_, dispatcher_, io_dispatcher_,
+                     std::move(firebase_api_key_), startup_context_,
                      std::move(coroutine_service_), std::move(backoff_factory_),
                      std::move(clock_), std::move(random_));
 }

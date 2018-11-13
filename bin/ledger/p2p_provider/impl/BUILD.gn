@@ -12,6 +12,8 @@ source_set("impl") {
     "p2p_provider_impl.h",
     "remote_connection.cc",
     "remote_connection.h",
+    "static_user_id_provider.cc",
+    "static_user_id_provider.h",
     "user_id_provider_impl.cc",
     "user_id_provider_impl.h",
   ]

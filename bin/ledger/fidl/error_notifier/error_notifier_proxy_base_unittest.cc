@@ -287,6 +287,5 @@ TEST_F(ErrorNotifierTest, OnEmptyWithRunningOperation) {
   EXPECT_TRUE(called);
 }
 
-
 }  // namespace
 }  // namespace ledger

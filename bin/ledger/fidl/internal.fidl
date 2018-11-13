@@ -23,11 +23,17 @@ interface LedgerRepositoryFactory : fuchsia.ledger.ErrorNotifier {
     //     instance backed by the same disk directory can be running
     //     concurrently.
     //     TODO(qsr): Use typed channel when remoteio has been migrated to FIDL2.
-    // |cloud_provider| is used by the Ledger to synchronize data through the
+    // |cloud_provider| is used by Ledger to synchronize data through the
     //     cloud. If |cloud_provider| is disconnected, Ledger shuts down the
     //     repository and disconnects all clients.
+    // |user_id| is a unique, not device local, user identifier. It will be
+    //     used to enable Peer to Peer over NetConnector, and will be removed
+    //     once Ledger uses Overnet for Peer to Peer communication. If it is
+    //     empty, Ledger will try to retrieve a TokenProvider in the
+    //     environment to fetch the identifier.
     1: GetRepository(handle<channel> repository_directory,
                      fuchsia.ledger.cloud.CloudProvider? cloud_provider,
+                     string user_id,
                      request<LedgerRepository> repository);
 };
 

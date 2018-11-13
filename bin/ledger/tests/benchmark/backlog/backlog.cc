@@ -200,11 +200,11 @@ void BacklogBenchmark::ConnectWriter() {
   bool ret = files::CreateDirectory(writer_path);
   FXL_DCHECK(ret);
 
-  Status status =
-      GetLedger(startup_context_.get(), writer_controller_.NewRequest(),
-                nullptr, "backlog", DetachedPath(std::move(writer_path)),
+  Status status = GetLedger(
+      startup_context_.get(), writer_controller_.NewRequest(), nullptr, "",
+      "backlog", DetachedPath(std::move(writer_path)),
 
-                []() { FXL_LOG(INFO) << "Writer closed."; }, &writer_);
+      []() { FXL_LOG(INFO) << "Writer closed."; }, &writer_);
   if (QuitOnError(QuitLoopClosure(), status, "Get writer ledger")) {
     return;
   }
@@ -263,7 +263,7 @@ void BacklogBenchmark::ConnectUploader() {
       user_id_, cloud_provider_uploader.NewRequest());
   Status status = GetLedger(
       startup_context_.get(), uploader_controller_.NewRequest(),
-      std::move(cloud_provider_uploader), "backlog",
+      std::move(cloud_provider_uploader), user_id_.user_id(), "backlog",
       DetachedPath(std::move(uploader_path)), QuitLoopClosure(), &uploader_);
   if (QuitOnError(QuitLoopClosure(), status, "Get uploader ledger")) {
     return;
@@ -307,7 +307,7 @@ void BacklogBenchmark::ConnectReader() {
                                             cloud_provider_reader.NewRequest());
   Status status = GetLedger(
       startup_context_.get(), reader_controller_.NewRequest(),
-      std::move(cloud_provider_reader), "backlog",
+      std::move(cloud_provider_reader), user_id_.user_id(), "backlog",
       DetachedPath(std::move(reader_path)), QuitLoopClosure(), &reader_);
   if (QuitOnError(QuitLoopClosure(), status, "ConnectReader")) {
     return;

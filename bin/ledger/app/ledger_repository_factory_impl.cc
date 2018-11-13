@@ -29,6 +29,7 @@
 #include "peridot/bin/ledger/cloud_sync/impl/user_sync_impl.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/p2p_provider/impl/p2p_provider_impl.h"
+#include "peridot/bin/ledger/p2p_provider/impl/static_user_id_provider.h"
 #include "peridot/bin/ledger/p2p_provider/impl/user_id_provider_impl.h"
 #include "peridot/bin/ledger/p2p_sync/impl/user_communicator_impl.h"
 #include "peridot/bin/ledger/storage/impl/leveldb_factory.h"
@@ -198,12 +199,13 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
 
 struct LedgerRepositoryFactoryImpl::RepositoryInformation {
  public:
-  explicit RepositoryInformation(int root_fd)
+  explicit RepositoryInformation(int root_fd, std::string user_id)
       : base_path(root_fd),
         content_path(base_path.SubPath(kContentPath)),
         cache_path(content_path.SubPath(kCachePath)),
         page_usage_db_path(content_path.SubPath(kPageUsageDbPath)),
-        staging_path(base_path.SubPath(kStagingPath)) {}
+        staging_path(base_path.SubPath(kStagingPath)),
+        user_id(std::move(user_id)) {}
 
   RepositoryInformation(const RepositoryInformation& other) = default;
   RepositoryInformation(RepositoryInformation&& other) = default;
@@ -217,6 +219,7 @@ struct LedgerRepositoryFactoryImpl::RepositoryInformation {
   DetachedPath cache_path;
   DetachedPath page_usage_db_path;
   DetachedPath staging_path;
+  std::string user_id;
   std::string name;
 };
 
@@ -234,6 +237,7 @@ LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() {}
 void LedgerRepositoryFactoryImpl::GetRepository(
     zx::channel repository_handle,
     fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
+    fidl::StringPtr user_id,
     fidl::InterfaceRequest<ledger_internal::LedgerRepository>
         repository_request,
     fit::function<void(Status)> callback) {
@@ -243,19 +247,21 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     callback(Status::IO_ERROR);
     return;
   }
-  GetRepositoryByFD(std::move(root_fd), std::move(cloud_provider),
+  GetRepositoryByFD(std::move(root_fd), std::move(cloud_provider), *user_id,
                     std::move(repository_request), std::move(callback));
 }
 
 void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
     fxl::UniqueFD root_fd,
     fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
+    std::string user_id,
     fidl::InterfaceRequest<ledger_internal::LedgerRepository>
         repository_request,
     fit::function<void(Status)> callback) {
   TRACE_DURATION("ledger", "repository_factory_get_repository");
 
-  RepositoryInformation repository_information(root_fd.get());
+  RepositoryInformation repository_information(root_fd.get(),
+                                               std::move(user_id));
   if (!repository_information.Init(environment_->random())) {
     callback(Status::IO_ERROR);
     return;
@@ -299,7 +305,8 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
   db_factory->Init();
   component::ExposedObject repository_exposed_object(
       convert::ToHex(repository_information.name));
-  repository_exposed_object.set_parent(inspect_object_dir_.find({kRepositoriesPath}));
+  repository_exposed_object.set_parent(
+      inspect_object_dir_.find({kRepositoriesPath}));
   auto repository = std::make_unique<LedgerRepositoryImpl>(
       std::move(repository_exposed_object), repository_information.content_path,
       environment_, std::move(db_factory), std::move(watchers),
@@ -346,8 +353,24 @@ LedgerRepositoryFactoryImpl::CreateP2PSync(
     return nullptr;
   }
 
+  std::unique_ptr<p2p_provider::UserIdProvider> user_id_provider;
+  if (!repository_information.user_id.empty()) {
+    user_id_provider = std::make_unique<p2p_provider::StaticUserIdProvider>(
+        repository_information.user_id);
+  } else {
+    fuchsia::modular::auth::TokenProviderPtr token_provider =
+        environment_->startup_context()
+            ->ConnectToEnvironmentService<
+                fuchsia::modular::auth::TokenProvider>();
+
+    user_id_provider = std::make_unique<p2p_provider::UserIdProviderImpl>(
+        environment_, repository_information.content_path,
+        std::move(token_provider),
+        environment_->disable_statistics() ? "" : "ledger_p2p");
+  }
+
   return user_communicator_factory_->GetUserCommunicator(
-      repository_information.content_path);
+      std::move(user_id_provider));
 }
 
 void LedgerRepositoryFactoryImpl::OnVersionMismatch(

@@ -118,11 +118,11 @@ TEST(Coroutine, SynchronousAsyncCall) {
   coroutine_service.StartCoroutine(
       [&received_value](CoroutineHandler* handler) {
         UseStack();
-        EXPECT_EQ(
-            ContinuationStatus::OK,
-            SyncCall(handler,
-                     [](fit::function<void(size_t)> callback) { callback(1); },
-                     &received_value));
+        EXPECT_EQ(ContinuationStatus::OK,
+                  SyncCall(
+                      handler,
+                      [](fit::function<void(size_t)> callback) { callback(1); },
+                      &received_value));
         UseStack();
       });
   EXPECT_EQ(1u, received_value);

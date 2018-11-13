@@ -197,8 +197,9 @@ void FakePageStorage::GetPiece(
         callback(Status::OK,
                  std::make_unique<FakeObject>(object_identifier, it->second));
       });
-  async::PostDelayedTask(environment_->dispatcher(),
-                         [this] { SendNextObject(); }, kFakePageStorageDelay);
+  async::PostDelayedTask(
+      environment_->dispatcher(), [this] { SendNextObject(); },
+      kFakePageStorageDelay);
 }
 
 void FakePageStorage::GetCommitContents(const Commit& commit,

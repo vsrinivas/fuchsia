@@ -42,7 +42,7 @@ fuchsia::ledger::internal::LedgerRepository*
 LedgerRepositoryForTesting::ledger_repository() {
   if (!ledger_repo_) {
     ledger_repo_factory_->GetRepository(
-        fsl::CloneChannelFromFileDescriptor(tmp_fs_.root_fd()), nullptr,
+        fsl::CloneChannelFromFileDescriptor(tmp_fs_.root_fd()), nullptr, "",
         ledger_repo_.NewRequest());
   }
 

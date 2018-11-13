@@ -108,7 +108,7 @@ TEST_F(LedgerEndToEndTest, PutAndGet) {
       ledger_repository;
   scoped_tmpfs::ScopedTmpFS tmpfs;
   ledger_repository_factory_->GetRepository(
-      fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()), nullptr,
+      fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()), nullptr, "",
       ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
@@ -181,7 +181,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
 
   ledger_repository_factory_->GetRepository(
       fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
-      std::move(cloud_provider_ptr), ledger_repository.NewRequest());
+      std::move(cloud_provider_ptr), "user_id", ledger_repository.NewRequest());
 
   bool repo_disconnected = false;
   ledger_repository.set_error_handler(
@@ -242,7 +242,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
 
   ledger_repository_factory_->GetRepository(
       fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
-      std::move(cloud_provider_ptr), ledger_repository.NewRequest());
+      std::move(cloud_provider_ptr), "user_id", ledger_repository.NewRequest());
 
   bool repo_disconnected = false;
   ledger_repository.set_error_handler(
@@ -282,7 +282,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
       &cloud_provider, cloud_provider_ptr.NewRequest());
   ledger_repository_factory_->GetRepository(
       fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
-      std::move(cloud_provider_ptr), ledger_repository.NewRequest());
+      std::move(cloud_provider_ptr), "user_id", ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
   ASSERT_EQ(ZX_OK, ledger_repository->Sync());
@@ -332,7 +332,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
       &cloud_provider, cloud_provider_ptr.NewRequest());
   ledger_repository_factory_->GetRepository(
       fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
-      std::move(cloud_provider_ptr), ledger_repository.NewRequest());
+      std::move(cloud_provider_ptr), "user_id", ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
   ASSERT_EQ(ZX_OK, ledger_repository->Sync());

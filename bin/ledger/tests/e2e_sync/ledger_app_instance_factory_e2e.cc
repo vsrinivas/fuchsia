@@ -40,6 +40,7 @@ class LedgerAppInstanceImpl final
 
  private:
   cloud_provider::CloudProviderPtr MakeCloudProvider() override;
+  std::string GetUserId() override;
 
   SyncParams sync_params_;
   std::unique_ptr<component::StartupContext> startup_context_;
@@ -99,6 +100,8 @@ cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
                                             cloud_provider.NewRequest());
   return cloud_provider;
 }
+
+std::string LedgerAppInstanceImpl::GetUserId() { return user_id_.user_id(); }
 
 }  // namespace
 

@@ -5,7 +5,9 @@
 #ifndef PERIDOT_BIN_LEDGER_P2P_SYNC_PUBLIC_USER_COMMUNICATOR_FACTORY_H_
 #define PERIDOT_BIN_LEDGER_P2P_SYNC_PUBLIC_USER_COMMUNICATOR_FACTORY_H_
 
-#include "peridot/bin/ledger/filesystem/detached_path.h"
+#include <memory>
+
+#include "peridot/bin/ledger/p2p_provider/public/user_id_provider.h"
 #include "peridot/bin/ledger/p2p_sync/public/user_communicator.h"
 
 namespace p2p_sync {
@@ -16,7 +18,7 @@ class UserCommunicatorFactory {
   virtual ~UserCommunicatorFactory() {}
 
   virtual std::unique_ptr<UserCommunicator> GetUserCommunicator(
-      ledger::DetachedPath user_directory) = 0;
+      std::unique_ptr<p2p_provider::UserIdProvider> user_id_provider) = 0;
 };
 
 }  // namespace p2p_sync

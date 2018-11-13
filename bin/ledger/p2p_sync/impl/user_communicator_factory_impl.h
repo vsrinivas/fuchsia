@@ -8,9 +8,8 @@
 #include <memory>
 #include <string>
 
-#include <lib/component/cpp/startup_context.h>
-
 #include "peridot/bin/ledger/environment/environment.h"
+#include "peridot/bin/ledger/p2p_provider/public/user_id_provider.h"
 #include "peridot/bin/ledger/p2p_sync/public/user_communicator.h"
 #include "peridot/bin/ledger/p2p_sync/public/user_communicator_factory.h"
 
@@ -18,18 +17,14 @@ namespace p2p_sync {
 // Factory for creating UserCommunicators with default configuration.
 class UserCommunicatorFactoryImpl : public UserCommunicatorFactory {
  public:
-  UserCommunicatorFactoryImpl(ledger::Environment* environment,
-                              component::StartupContext* startup_context,
-                              std::string cobalt_client_name);
+  UserCommunicatorFactoryImpl(ledger::Environment* environment);
   ~UserCommunicatorFactoryImpl() override;
 
   std::unique_ptr<UserCommunicator> GetUserCommunicator(
-      ledger::DetachedPath user_directory) override;
+      std::unique_ptr<p2p_provider::UserIdProvider> user_id_provider) override;
 
  private:
   ledger::Environment* const environment_;
-  component::StartupContext* const startup_context_;
-  const std::string cobalt_client_name_;
 };
 
 }  // namespace p2p_sync

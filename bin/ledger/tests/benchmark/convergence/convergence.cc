@@ -161,10 +161,11 @@ void ConvergenceBenchmark::Run() {
     cloud_provider_factory_.MakeCloudProvider(user_id_,
                                               cloud_provider.NewRequest());
 
-    Status status = GetLedger(
-        startup_context_.get(), device_context->controller.NewRequest(),
-        std::move(cloud_provider), "convergence", DetachedPath(synced_dir_path),
-        QuitLoopClosure(), &device_context->ledger);
+    Status status = GetLedger(startup_context_.get(),
+                              device_context->controller.NewRequest(),
+                              std::move(cloud_provider), user_id_.user_id(),
+                              "convergence", DetachedPath(synced_dir_path),
+                              QuitLoopClosure(), &device_context->ledger);
     if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
       return;
     }

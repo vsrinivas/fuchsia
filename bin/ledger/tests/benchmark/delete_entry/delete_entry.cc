@@ -119,7 +119,7 @@ DeleteEntryBenchmark::DeleteEntryBenchmark(
 void DeleteEntryBenchmark::Run() {
   Status status =
       GetLedger(startup_context_.get(), component_controller_.NewRequest(),
-                nullptr, "delete_entry", DetachedPath(tmp_dir_.path()),
+                nullptr, "", "delete_entry", DetachedPath(tmp_dir_.path()),
                 QuitLoopClosure(), &ledger_);
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;

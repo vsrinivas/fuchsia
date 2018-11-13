@@ -16,24 +16,12 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "peridot/bin/ledger/p2p_provider/impl/static_user_id_provider.h"
 #include "peridot/bin/ledger/p2p_provider/public/user_id_provider.h"
 #include "peridot/bin/ledger/testing/netconnector/netconnector_factory.h"
 
 namespace p2p_provider {
 namespace {
-
-class FakeUserIdProvider : public p2p_provider::UserIdProvider {
- public:
-  explicit FakeUserIdProvider(std::string user_id)
-      : user_id_(std::move(user_id)) {}
-
-  void GetUserId(fit::function<void(Status, std::string)> callback) override {
-    callback(Status::OK, user_id_);
-  };
-
- private:
-  std::string user_id_;
-};
 
 class RecordingClient : public P2PProvider::Client {
  public:
@@ -88,7 +76,7 @@ class P2PProviderImplTest : public gtest::TestLoopFixture {
     net_connector_factory_.AddBinding(host_name, netconnector.NewRequest());
     return std::make_unique<p2p_provider::P2PProviderImpl>(
         std::move(host_name), std::move(netconnector),
-        std::make_unique<FakeUserIdProvider>(std::move(user_name)));
+        std::make_unique<StaticUserIdProvider>(std::move(user_name)));
   }
 
  protected:

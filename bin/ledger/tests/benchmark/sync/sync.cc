@@ -167,7 +167,7 @@ void SyncBenchmark::Run() {
                                             cloud_provider_alpha.NewRequest());
   Status status = GetLedger(
       startup_context_.get(), alpha_controller_.NewRequest(),
-      std::move(cloud_provider_alpha), "sync",
+      std::move(cloud_provider_alpha), user_id_.user_id(), "sync",
       DetachedPath(std::move(alpha_path)), QuitLoopClosure(), &alpha_);
   if (QuitOnError(QuitLoopClosure(), status, "alpha ledger")) {
     return;
@@ -178,7 +178,7 @@ void SyncBenchmark::Run() {
                                             cloud_provider_beta.NewRequest());
 
   status = GetLedger(startup_context_.get(), beta_controller_.NewRequest(),
-                     std::move(cloud_provider_beta), "sync",
+                     std::move(cloud_provider_beta), user_id_.user_id(), "sync",
                      DetachedPath(beta_path), QuitLoopClosure(), &beta_);
   if (QuitOnError(QuitLoopClosure(), status, "beta ledger")) {
     return;

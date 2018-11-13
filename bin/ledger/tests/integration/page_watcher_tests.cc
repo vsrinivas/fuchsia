@@ -37,8 +37,9 @@ class PageWatcherIntegrationTest : public IntegrationTest {
 
 class Watcher : public PageWatcher {
  public:
-  explicit Watcher(fidl::InterfaceRequest<PageWatcher> request,
-                   fit::closure change_callback = [] {})
+  explicit Watcher(
+      fidl::InterfaceRequest<PageWatcher> request,
+      fit::closure change_callback = [] {})
       : binding_(this, std::move(request)),
         change_callback_(std::move(change_callback)) {}
 

@@ -48,6 +48,7 @@ class LedgerRepositoryFactoryImpl
   void GetRepository(
       zx::channel repository_handle,
       fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
+      fidl::StringPtr user_id,
       fidl::InterfaceRequest<ledger_internal::LedgerRepository>
           repository_request,
       fit::function<void(Status)> callback) override;
@@ -57,6 +58,7 @@ class LedgerRepositoryFactoryImpl
   void GetRepositoryByFD(
       fxl::UniqueFD root_fd,
       fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
+      std::string user_id,
       fidl::InterfaceRequest<ledger_internal::LedgerRepository>
           repository_request,
       fit::function<void(Status)> callback);

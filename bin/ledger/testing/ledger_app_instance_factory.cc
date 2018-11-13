@@ -44,7 +44,7 @@ LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedgerRepository() {
   });
   ledger_repository_factory_->GetRepository(
       fsl::CloneChannelFromFileDescriptor(tmpfs_.root_fd()),
-      MakeCloudProvider(), repository.NewRequest());
+      MakeCloudProvider(), GetUserId(), repository.NewRequest());
   return repository;
 }
 

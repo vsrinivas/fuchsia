@@ -92,8 +92,7 @@ void LedgerStorageImpl::GetPageStorage(
     return;
   }
 
-  GetOrCreateDb(std::move(path), std::move(page_id),
-                std::move(timed_callback));
+  GetOrCreateDb(std::move(path), std::move(page_id), std::move(timed_callback));
 }
 
 void LedgerStorageImpl::DeletePageStorage(

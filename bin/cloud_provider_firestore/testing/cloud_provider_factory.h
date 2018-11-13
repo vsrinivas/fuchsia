@@ -38,7 +38,7 @@ class CloudProviderFactory {
 
     static UserId New();
 
-    const std::string& user_id() { return user_id_; }
+    const std::string& user_id() const { return user_id_; }
 
    private:
     UserId();

@@ -117,7 +117,7 @@ void UpdateEntryBenchmark::Run() {
                 << " --transaction-size=" << transaction_size_;
   Status status =
       GetLedger(startup_context_.get(), component_controller_.NewRequest(),
-                nullptr, "update_entry", DetachedPath(tmp_dir_.path()),
+                nullptr, "", "update_entry", DetachedPath(tmp_dir_.path()),
                 QuitLoopClosure(), &ledger_);
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;
