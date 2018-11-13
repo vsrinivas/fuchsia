@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/protocol/ethernet.h>
 #include <fbl/auto_call.h>
 #include <fuchsia/net/stack/cpp/fidl.h>
+#include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fidl/cpp/interface_handle.h>
@@ -201,5 +203,108 @@ TEST_F(NetstackLaunchTest, AddEthernetDevice) {
         list_ifs = true;
       });
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return list_ifs; }, zx::sec(5)));
+}
+
+TEST_F(NetstackLaunchTest, DHCPRequestSent) {
+  auto services = CreateServices();
+
+  // TODO(NET-1818): parameterize this over multiple netstack implementations
+  fuchsia::sys::LaunchInfo launch_info;
+  launch_info.url = "netstack";
+  launch_info.out = component::testing::CloneFileDescriptor(1);
+  launch_info.err = component::testing::CloneFileDescriptor(2);
+  zx_status_t status = services->AddServiceWithLaunchInfo(
+      std::move(launch_info), fuchsia::netstack::Netstack::Name_);
+  ASSERT_TRUE(status == ZX_OK);
+
+  auto env = CreateNewEnclosingEnvironment("NetstackDHCPTest_RequestSent",
+                                           std::move(services));
+  ASSERT_TRUE(WaitForEnclosingEnvToStart(env.get()));
+
+  zx::socket sock;
+  status = CreateEthertap(&sock);
+  EXPECT_EQ(ZX_OK, status);
+  zx::channel svc;
+  status = OpenEthertapDev(&svc);
+  EXPECT_EQ(ZX_OK, status);
+  fprintf(stderr, "found tap device\n");
+
+  status = sock.signal_peer(0u, ETHERTAP_SIGNAL_ONLINE);
+  EXPECT_EQ(ZX_OK, status);
+  fprintf(stderr, "set ethertap link status online\n");
+
+  fuchsia::netstack::NetstackPtr netstack;
+  env->ConnectToService(netstack.NewRequest());
+  fidl::StringPtr topo_path = "/fake/device";
+
+  fidl::StringPtr interface_name = "dhcp_test_interface";
+  fuchsia::netstack::InterfaceConfig config =
+      fuchsia::netstack::InterfaceConfig{};
+  config.name = interface_name;
+  config.ip_address_config.set_dhcp(true);
+
+  // TODO(NET-1864): migrate to fuchsia.net.stack.AddEthernetInterface when we
+  // migrate netcfg to use AddEthernetInterface.
+  netstack->AddEthernetDevice(
+      std::move(topo_path), std::move(config),
+      fidl::InterfaceHandle<::zircon::ethernet::Device>(std::move(svc)));
+
+  RealLoopFixture::RunLoopWithTimeout();
+
+  std::byte* buf = new std::byte[1500];
+  size_t attempt_to_read = 1500;
+  size_t read;
+  size_t parsed = 0;
+  zx_signals_t pending = 0;
+  status = sock.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED |
+                             ZX_SOCKET_PEER_WRITE_DISABLED,
+                         zx::clock::get_monotonic() + zx::sec(5), &pending);
+  fprintf(stdout, "wait_one for socket readable: %s\n",
+          zx_status_get_string(status));
+  EXPECT_EQ(ZX_OK, status);
+  ASSERT_TRUE((pending & ZX_SOCKET_READABLE) > 0);
+  status = sock.read(0, buf, attempt_to_read, &read);
+  fprintf(stdout, "status: %s; read %zu bytes of %zu requested\n",
+          zx_status_get_string(status), read, attempt_to_read);
+  ASSERT_TRUE(read > 0);
+
+  fprintf(stdout, "parsing ethertap frame\n");
+  // Ethertap prepends a message type to ethernet frames.
+  EXPECT_EQ((unsigned int)buf[0], ETHERTAP_MSG_PACKET);
+
+  fprintf(stdout, "parsing Ethernet frame\n");
+  std::byte* eth = &buf[sizeof(ethertap_socket_header_t)];
+  parsed += sizeof(ethertap_socket_header_t);
+  // ethertype should be IPv4
+  EXPECT_EQ((int)eth[12], 0x08);
+
+  fprintf(stdout, "parsing IP header\n");
+  // TODO(stijlist): add an ETH_FRAME_MIN_HDR_SIZE to ddk's ethernet.h
+  size_t eth_frame_min_hdr_size = 14;
+  std::byte* ip = &eth[eth_frame_min_hdr_size];
+  parsed += eth_frame_min_hdr_size;
+  // protocol should be UDP
+  EXPECT_EQ((int)ip[9], 17);
+
+  size_t ihl = (size_t)(ip[0] & (std::byte)0x0f);
+  size_t ip_bytes = (ihl * 32u) / 8u;
+
+  fprintf(stdout, "parsing UDP header\n");
+  std::byte* udp = &ip[ip_bytes];
+  parsed += ip_bytes;
+
+  uint16_t src_port = (uint16_t)udp[0] << 8 | (uint8_t)udp[1];
+  uint16_t dst_port = (uint16_t)udp[2] << 8 | (uint8_t)udp[3];
+
+  // DHCP requests from netstack should come from port 68 (DHCP client) to port
+  // 67 (DHCP server).
+  EXPECT_EQ(src_port, 68u);
+  EXPECT_EQ(dst_port, 67u);
+
+  fprintf(stdout, "parsing DHCP packet\n");
+  std::byte* dhcp = &udp[8];
+  // Assert the DHCP op type is DHCP request.
+  std::byte dhcp_op_type = dhcp[0];
+  EXPECT_EQ((int)dhcp_op_type, 0x01);
 }
 }  // namespace
