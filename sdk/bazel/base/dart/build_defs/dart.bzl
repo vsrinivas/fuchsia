@@ -56,6 +56,7 @@ def compile_kernel_action(
         sdk_root,
         main,
         srcs,
+        deps,
         kernel_snapshot_file,
         manifest_file,
         main_dilp_file,
@@ -71,6 +72,7 @@ def compile_kernel_action(
         sdk_root: The Dart SDK root `File` (Dart or Flutter's platform libs).
         main: The main `File`.
         srcs: Additional list of source `File`.
+        deps: A list of `Label`s this app depends on.
         kernel_snapshot_file: The kernel snapshot `File` output.
         manifest_file: The Fuchsia manifest `File` output.
         main_dilp_file: The compiled main dilp `File` output.
@@ -83,7 +85,7 @@ def compile_kernel_action(
     dart_ctx = make_dart_context(
         ctx = context,
         package = package_name,
-        deps = context.attr.deps,
+        deps = deps,
     )
 
     # 1. Create the .packages file.
@@ -164,7 +166,7 @@ def compile_kernel_action(
             kernel_snapshot_file.path,
             "%s:///%s" % (single_root_scheme, main.path),
         ],
-        inputs = build_dir_files.values() + srcs + [
+        inputs = dart_ctx.transitive_srcs.files + build_dir_files.values() + srcs + [
             kernel_compiler,
             sdk_root,
             package_spec,

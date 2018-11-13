@@ -28,6 +28,7 @@ def _flutter_app_impl(context):
         sdk_root = context.files._platform_lib[0],
         main = context.files.main[0],
         srcs = context.files.srcs,
+        deps = context.attr.deps,
         kernel_snapshot_file = kernel_snapshot_file,
         manifest_file = manifest_file,
         main_dilp_file = context.outputs.main_dilp,
