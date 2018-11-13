@@ -15,6 +15,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/sherlock-canvas.cpp \
     $(LOCAL_DIR)/sherlock-clk.cpp \
     $(LOCAL_DIR)/sherlock-emmc.cpp \
+    $(LOCAL_DIR)/sherlock-sdio.cpp \
     $(LOCAL_DIR)/sherlock-gpio.cpp \
     $(LOCAL_DIR)/sherlock-i2c.cpp \
     $(LOCAL_DIR)/sherlock-mali.cpp \
@@ -23,6 +24,7 @@ MODULE_SRCS := \
 
 MODULE_STATIC_LIBS := \
     system/dev/lib/amlogic \
+    system/dev/lib/broadcom \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \

@@ -20,10 +20,17 @@ enum {
     BTI_BOARD,
     BTI_USB_XHCI,
     BTI_EMMC,
+    BTI_SDIO,
     BTI_MALI,
     BTI_CANVAS,
     BTI_VIDEO,
     BTI_CAMERA,
+};
+
+// MAC address metadata indices
+enum {
+    MACADDR_WIFI = 0,
+    MACADDR_BLUETOOTH = 1,
 };
 
 // These should match the mmio table defined in sherlock-i2c.c
@@ -56,6 +63,8 @@ private:
     zx_status_t I2cInit();
     zx_status_t UsbInit();
     zx_status_t EmmcInit();
+    zx_status_t BCM43458LpoClockInit(); // required for BCM43458 wifi/bluetooth chip.
+    zx_status_t SdioInit();
     zx_status_t ClkInit();
     zx_status_t CameraInit();
     zx_status_t MaliInit();
