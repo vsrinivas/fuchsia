@@ -6,8 +6,8 @@ _packages() {
 
 # _products completes a comma separated list of products
 _products() {
-  # products are files without extensions in */products/ and vendor/*/products/
-  _values -s , $(cd ${fuchsia_dir} && echo */products/**/^*.*(.N) vendor/*/products/**/^*.*(.N))
+  # products are .gni files in */products/ and vendor/*/products/
+  _values -s , $(cd ${fuchsia_dir} && echo */products/**/*.gni(.N) vendor/*/products/**/*.gni(.N))
 }
 
 _gn_args_caching_policy() {
