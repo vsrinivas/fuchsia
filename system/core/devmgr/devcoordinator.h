@@ -18,6 +18,7 @@
 #include <fbl/unique_ptr.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/socket.h>
@@ -111,7 +112,7 @@ struct Device {
                           async::WaitBase* wait, zx_status_t status,
                           const zx_packet_signal_t* signal);
 
-    zx_handle_t hrpc;
+    zx::channel hrpc;
     uint32_t flags;
 
     async::WaitMethod<Device, &Device::HandleRpcEntry> wait{this};
@@ -254,10 +255,10 @@ public:
     }
 
     SuspendContext(Flags flags, uint32_t sflags, zx::socket socket,
-                   zx_handle_t kernel = ZX_HANDLE_INVALID,
-                   zx_handle_t bootdata = ZX_HANDLE_INVALID) :
+                   zx::vmo kernel = zx::vmo(),
+                   zx::vmo bootdata = zx::vmo()) :
         flags_(flags), sflags_(sflags), socket_(fbl::move(socket)),
-        kernel_(kernel), bootdata_(bootdata) {
+        kernel_(fbl::move(kernel)), bootdata_(fbl::move(bootdata)) {
     }
 
     ~SuspendContext() {
@@ -280,8 +281,8 @@ public:
     DevhostList& devhosts() { return devhosts_; }
     const DevhostList& devhosts() const { return devhosts_; }
 
-    zx_handle_t kernel() const { return kernel_; }
-    zx_handle_t bootdata() const { return bootdata_; }
+    const zx::vmo& kernel() const { return kernel_; }
+    const zx::vmo& bootdata() const { return bootdata_; }
 
     // Close the socket whose ownership was handed to this SuspendContext.
     void CloseSocket() {
@@ -316,8 +317,8 @@ private:
     zx::socket socket_;
 
     // mexec arguments
-    zx_handle_t kernel_ = ZX_HANDLE_INVALID;
-    zx_handle_t bootdata_ = ZX_HANDLE_INVALID;
+    zx::vmo kernel_;
+    zx::vmo bootdata_;
 };
 
 // This device is never destroyed
@@ -399,5 +400,14 @@ bool dc_is_bindable(const Driver* drv, uint32_t protocol_id,
 
 extern bool dc_asan_drivers;
 extern bool dc_launched_first_devhost;
+
+// Methods for composing FIDL RPCs to the devhosts
+zx_status_t dh_send_remove_device(const Device* dev);
+zx_status_t dh_send_create_device(Device* dev, Devhost* dh, zx::channel rpc, zx::vmo driver,
+                                  const char* args, zx::handle rpc_proxy);
+zx_status_t dh_send_create_device_stub(Devhost* dh, zx::channel rpc, uint32_t protocol_id);
+zx_status_t dh_send_bind_driver(Device* dev, const char* libname, zx::vmo driver);
+zx_status_t dh_send_connect_proxy(const Device* dev, zx::channel proxy);
+zx_status_t dh_send_suspend(const Device* dev, uint32_t flags);
 
 } // namespace devmgr

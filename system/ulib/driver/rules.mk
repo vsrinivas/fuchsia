@@ -22,7 +22,6 @@ MODULE_SRCS := \
 	$(DEVMGR_SRCS)/devhost-api.cpp \
 	$(DEVMGR_SRCS)/devhost-core.cpp \
 	$(DEVMGR_SRCS)/devhost-rpc-server.cpp \
-	$(DEVMGR_SRCS)/devhost-shared.cpp \
 	$(DEVMGR_SRCS)/zx-device.cpp \
 
 ifeq ($(call TOBOOL,$(ENABLE_DRIVER_TRACING)),true)
@@ -33,6 +32,7 @@ MODULE_HEADER_DEPS := \
 endif
 
 MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-device-manager \
     system/fidl/fuchsia-io \
 
 MODULE_STATIC_LIBS := \

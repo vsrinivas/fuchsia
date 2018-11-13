@@ -4,7 +4,6 @@
 
 #include "async-loop-owned-rpc-handler.h"
 #include "devcoordinator.h"
-#include "devhost-shared.h"
 #include "devmgr.h"
 #include "fshost.h"
 #include "log.h"
@@ -607,13 +606,8 @@ static void devfs_open(Devnode* dirdn, zx_handle_t h, char* path, uint32_t flags
     }
 
     // Otherwise we will pass the request on to the remote.
-    fuchsia_io_DirectoryOpen(dn->device->hrpc, flags, 0, path, strlen(path), ipc.release());
+    fuchsia_io_DirectoryOpen(dn->device->hrpc.get(), flags, 0, path, strlen(path), ipc.release());
 }
-
-// Double-check that Open (the only message we forward)
-// cannot be mistaken for an internal dev coordinator RPC message
-static_assert((fuchsia_io_DirectoryOpenOrdinal &
-               static_cast<uint32_t>(Message::Op::kIdBit)) == 0, "");
 
 static zx_status_t fill_dirent(vdirent_t* de, size_t delen, uint64_t ino,
                                const fbl::String& name, uint8_t type) {

@@ -14,13 +14,13 @@ MODULE_GROUP := core
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/bootfs.cpp \
-    $(LOCAL_DIR)/devhost-shared.cpp \
     $(LOCAL_DIR)/devmgr.cpp \
     $(LOCAL_DIR)/devmgr-binding.cpp \
     $(LOCAL_DIR)/devmgr-coordinator.cpp \
     $(LOCAL_DIR)/devmgr-devfs.cpp \
     $(LOCAL_DIR)/devmgr-drivers.cpp \
-    $(LOCAL_DIR)/devmgr-fdio.cpp
+    $(LOCAL_DIR)/devmgr-fdio.cpp \
+    $(LOCAL_DIR)/devmgr-fidl.cpp \
 
 # userboot supports loading via the dynamic linker, so libc (system/ulib/c)
 # can be linked dynamically.  But it doesn't support any means to look
@@ -30,6 +30,7 @@ MODULE_SRCS += \
 # analyzer.
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-crash \
+    system/fidl/fuchsia-device-manager \
     system/fidl/fuchsia-io \
     system/fidl/fuchsia-mem \
 
@@ -155,15 +156,18 @@ MODULE_NAME := dmctl
 
 MODULE_SRCS := \
 	$(LOCAL_DIR)/dmctl.cpp \
-	$(LOCAL_DIR)/devhost-shared.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
+    system/ulib/fidl \
     system/ulib/zx \
     system/ulib/zxcpp \
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-device-manager \
 
 include make/module.mk
