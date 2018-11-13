@@ -160,7 +160,7 @@ static zx_status_t gic_init() {
     gic_wait_for_rwp(GICD_CTLR);
     ISB;
 
-    // diistributer config: mask and clear all spis, set group 1.
+    // distributor config: mask and clear all spis, set group 1.
     uint i;
     for (i = 32; i < gic_max_int; i += 32) {
         GICREG(0, GICD_ICENABLER(i / 32)) = ~0;
