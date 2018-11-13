@@ -749,8 +749,6 @@ void RenderEngineCommandStreamer::ResetCurrentContext()
     auto context = inflight_command_sequences_.front().GetContext().lock();
     DASSERT(context);
 
-    context->Kill();
-
     // Cleanup resources for any inflight command sequences on this context
     while (!inflight_command_sequences_.empty()) {
         auto& sequence = inflight_command_sequences_.front();
@@ -759,6 +757,8 @@ void RenderEngineCommandStreamer::ResetCurrentContext()
                 inflight_command_sequences_.front().GetContext().lock());
         inflight_command_sequences_.pop();
     }
+
+    context->Kill();
 
     // Reset the engine hardware
     EngineCommandStreamer::Reset();

@@ -73,21 +73,39 @@ public:
 
         switch (how) {
             case NORMAL:
-                EXPECT_TRUE(list.WaitForCompletion(100));
+                EXPECT_TRUE(list.WaitForCompletion(1000));
                 EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
                 EXPECT_EQ(kValue, reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1]);
                 break;
-            case FAULT:
+            case FAULT: {
                 // Intel won't actually fault because bad gpu addresses are valid
-                EXPECT_TRUE(list.WaitForCompletion(2000));
+                auto start = std::chrono::steady_clock::now();
+                while (std::chrono::duration<double, std::milli>(
+                           std::chrono::high_resolution_clock::now() - start)
+                           .count() < 2000) {
+                    if (magma_get_error(connection_) == MAGMA_STATUS_CONNECTION_LOST) {
+                        break;
+                    }
+                }
                 EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_get_error(connection_));
+                EXPECT_TRUE(list.WaitForCompletion(1000));
                 EXPECT_EQ(0xdeadbeef, reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1]);
                 break;
-            case HANG:
-                EXPECT_TRUE(list.WaitForCompletion(2000));
+            }
+            case HANG: {
+                auto start = std::chrono::steady_clock::now();
+                while (std::chrono::duration<double, std::milli>(
+                           std::chrono::high_resolution_clock::now() - start)
+                           .count() < 2000) {
+                    if (magma_get_error(connection_) == MAGMA_STATUS_CONNECTION_LOST) {
+                        break;
+                    }
+                }
                 EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_get_error(connection_));
+                EXPECT_TRUE(list.WaitForCompletion(1000));
                 EXPECT_EQ(kValue, reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1]);
                 break;
+            }
         }
 
         EXPECT_EQ(magma_unmap(connection_, batch_buffer), 0);
