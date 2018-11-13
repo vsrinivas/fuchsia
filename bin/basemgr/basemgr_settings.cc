@@ -30,13 +30,7 @@ BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
   no_minfs = command_line.HasOption("no_minfs");
   test = command_line.HasOption("test");
   enable_presenter = command_line.HasOption("enable_presenter");
-  // fuchsia::auth::TokenManager is used if the settings flag
-  // |enable_garnet_token_manager| is enabled or if the file
-  // |/data/modular/use_garnet_token_manager| exists. The latter form will be
-  // useful for QA to test the flow before we turn on for everyone.
-  enable_garnet_token_manager =
-      command_line.HasOption("enable_garnet_token_manager") ||
-      files::IsFile("/data/modular/use_garnet_token_manager");
+  enable_garnet_token_manager = true;
 
   ParseShellArgs(command_line.GetOptionValueWithDefault("base_shell_args", ""),
                  &base_shell.args);
