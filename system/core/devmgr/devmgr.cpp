@@ -29,6 +29,7 @@
 #include <lib/zx/debuglog.h>
 #include <lib/zx/port.h>
 #include <lib/zx/resource.h>
+#include <lib/zx/vmo.h>
 
 #include "bootfs.h"
 #include "devmgr.h"
@@ -483,19 +484,19 @@ static void start_console_shell() {
 }
 
 static void load_cmdline_from_bootfs() {
+    zx::vmo vmo;
     uint32_t file_size;
-    zx_handle_t vmo = devmgr_load_file("/boot/config/devmgr", &file_size);
-    if (vmo == ZX_HANDLE_INVALID) {
+    zx_handle_t status = devmgr_load_file("/boot/config/devmgr", &vmo, &file_size);
+    if (status != ZX_OK) {
         return;
     }
 
     auto cfg = fbl::make_unique<char[]>(file_size + 1);
     if (cfg == nullptr) {
-        zx_handle_close(vmo);
         return;
     }
 
-    zx_status_t status = zx_vmo_read(vmo, cfg.get(), 0, file_size);
+    status = zx_vmo_read(vmo.get(), cfg.get(), 0, file_size);
     if (status != ZX_OK) {
         printf("zx_vmo_read on /boot/config/devmgr BOOTFS VMO: %d (%s)\n",
                status, zx_status_get_string(status));
@@ -802,25 +803,21 @@ void fshost_start() {
     zx_handle_close(dl_set_loader_service(ldsvc));
 }
 
-zx_handle_t devmgr_load_file(const char* path, uint32_t* out_size) {
+zx_status_t devmgr_load_file(const char* path, zx::vmo* out_vmo, uint32_t* out_size) {
     if (strncmp(path, "/boot/", 6)) {
-        return ZX_HANDLE_INVALID;
+        return ZX_ERR_NOT_FOUND;
     }
-    zx::vmo vmo;
-    if (bootfs.Open(path + 6, &vmo, out_size) != ZX_OK) {
-        return ZX_HANDLE_INVALID;
-    }
-    return vmo.release();
+    return bootfs.Open(path + 6, out_vmo, out_size);
 }
 
 zx_status_t devmgr_launch_load(void* ctx, launchpad_t* lp, const char* file) {
-    zx_handle_t vmo = devmgr_load_file(file, nullptr);
-    if (vmo != ZX_HANDLE_INVALID) {
-        return launchpad_load_from_vmo(lp, vmo);
-    } else {
+    zx::vmo vmo;
+    zx_status_t status = devmgr_load_file(file, &vmo, nullptr);
+    if (status != ZX_OK) {
         // TODO(mcgrathr): This case is probably never used.  Remove it later.
         return launchpad_load_from_file(lp, file);
     }
+    return launchpad_load_from_vmo(lp, vmo.release());
 }
 
 void devmgr_vfs_exit() {
@@ -919,9 +916,9 @@ zx_status_t svchost_start() {
     };
     int argc = require_system ? 2 : 1;
 
-    zx_handle_t svchost_vmo = devmgr_load_file(argv[0], nullptr);
-    if (svchost_vmo == ZX_HANDLE_INVALID) {
-        // TODO(kulakowski/teisenbe) Synthesize a status here.
+    zx::vmo svchost_vmo;
+    status = devmgr_load_file(argv[0], &svchost_vmo, nullptr);
+    if (status != ZX_OK) {
         return status;
     }
 
@@ -930,7 +927,7 @@ zx_status_t svchost_start() {
 
     launchpad_t* lp = nullptr;
     launchpad_create(job_copy.get(), name, &lp);
-    launchpad_load_from_vmo(lp, svchost_vmo);
+    launchpad_load_from_vmo(lp, svchost_vmo.release());
     launchpad_set_args(lp, argc, argv);
     launchpad_add_handle(lp, dir_request.release(), PA_DIRECTORY_REQUEST);
     launchpad_add_handle(lp, logger.release(), PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO));
