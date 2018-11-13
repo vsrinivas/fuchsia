@@ -5,6 +5,8 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.bluetooth.gatt") {
+  sdk_category = "partner"
+
   sources = [
     "client.fidl",
     "server.fidl",

@@ -5,6 +5,8 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.bluetooth") {
+  sdk_category = "partner"
+
   sources = [
     "status.fidl",
     "nullables.fidl",
