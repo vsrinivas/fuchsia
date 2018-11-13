@@ -60,7 +60,7 @@ TEST_F(SocketDrainerTest, ShutdownRead) {
   drainer.Start(std::move(socket2));
   char buf[] = {'H', 'e', 'l', 'l', 'o'};
   socket1.write(0u, buf, sizeof(buf), nullptr);
-  socket1.write(ZX_SOCKET_SHUTDOWN_WRITE, nullptr, 0u, nullptr);
+  socket1.shutdown(ZX_SOCKET_SHUTDOWN_WRITE);
   RunLoopUntilIdle();
   EXPECT_EQ("Hello", client.GetValue());
 }

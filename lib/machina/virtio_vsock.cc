@@ -279,7 +279,7 @@ zx_status_t VirtioVsock::SocketConnection::Shutdown(uint32_t flags) {
   uint32_t shutdown_flags =
       (flags & VIRTIO_VSOCK_FLAG_SHUTDOWN_RECV ? ZX_SOCKET_SHUTDOWN_READ : 0) |
       (flags & VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND ? ZX_SOCKET_SHUTDOWN_WRITE : 0);
-  return socket_.write(shutdown_flags, nullptr, 0, nullptr);
+  return socket_.shutdown(shutdown_flags);
 }
 
 static zx_status_t setup_desc_chain(VirtioQueue* queue,
