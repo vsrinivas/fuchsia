@@ -132,7 +132,7 @@ class ControlStream : public StreamBase {
           ResourceAttachBacking(
               reinterpret_cast<const virtio_gpu_resource_attach_backing_t*>(
                   request),
-              response, response_len - sizeof(virtio_gpu_ctrl_hdr_t));
+              response, request_len - sizeof(virtio_gpu_ctrl_hdr_t));
           break;
         case VIRTIO_GPU_CMD_RESOURCE_DETACH_BACKING:
           CHECK_LEN_OR_CONTINUE(virtio_gpu_resource_detach_backing_t,
