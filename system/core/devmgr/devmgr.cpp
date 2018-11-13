@@ -456,11 +456,11 @@ static int pwrbtn_monitor_starter(void* arg) {
     }
     launchpad_set_nametable(lp, count, nametable);
 
-    zx_handle_t debuglog;
-    if ((status = zx_debuglog_create(ZX_HANDLE_INVALID, 0, &debuglog) < 0)) {
+    zx::debuglog debuglog;
+    if ((status = zx::debuglog::create(zx::resource(), 0, &debuglog) < 0)) {
         launchpad_abort(lp, status, "devmgr: cannot create debuglog handle");
     } else {
-        launchpad_add_handle(lp, debuglog, PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO | 0));
+        launchpad_add_handle(lp, debuglog.release(), PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO | 0));
     }
 
     const char* errmsg;
