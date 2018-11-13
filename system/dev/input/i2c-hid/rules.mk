@@ -18,4 +18,9 @@ MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-hidbus \
     system/banjo/ddk-protocol-i2c \
 
+ifeq ($(call TOBOOL,$(ENABLE_DRIVER_TRACING)),true)
+MODULE_STATIC_LIBS += system/ulib/trace.driver
+endif
+MODULE_HEADER_DEPS += system/ulib/trace system/ulib/trace-engine
+
 include make/module.mk

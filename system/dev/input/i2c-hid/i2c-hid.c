@@ -9,6 +9,7 @@
 #include <ddk/protocol/hidbus.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/i2c-lib.h>
+#include <ddk/trace/event.h>
 
 #include <zircon/assert.h>
 #include <zircon/types.h>
@@ -251,6 +252,7 @@ static int i2c_hid_noirq_thread(void* arg) {
     while (true) {
         usleep(I2C_POLL_INTERVAL_USEC);
         size_t actual = 0;
+        TRACE_DURATION("input", "Device Read");
         mtx_lock(&dev->i2c_lock);
         zx_status_t status = device_read(dev->i2cdev, buf, len, 0, &actual);
         if (status != ZX_OK) {
@@ -345,6 +347,7 @@ static int i2c_hid_irq_thread(void* arg) {
             break;
         }
 
+        TRACE_DURATION("input", "Device Read");
         mtx_lock(&dev->i2c_lock);
 
         size_t actual = 0;
