@@ -116,8 +116,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   // Called by StoryControllerImpl.
   void NotifyStoryStateChange(
       fidl::StringPtr story_id, fuchsia::modular::StoryState story_state,
-      fuchsia::modular::StoryVisibilityState story_visibility_state,
-      bool handle_back_gesture);
+      fuchsia::modular::StoryVisibilityState story_visibility_state);
 
   // Called by StoryControllerImpl.
   void NotifyStoryActivityChange(
@@ -205,8 +204,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   void NotifyStoryWatchers(
       const fuchsia::modular::internal::StoryData* const story_data,
       fuchsia::modular::StoryState story_state,
-      fuchsia::modular::StoryVisibilityState story_visibility_state,
-      bool handle_back_gesture);
+      fuchsia::modular::StoryVisibilityState story_visibility_state);
 
   void MaybeLoadStoryShell();
 

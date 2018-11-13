@@ -87,9 +87,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   fuchsia::modular::StoryVisibilityState GetStoryVisibilityState() const;
 
   // Called by StoryProviderImpl.
-  bool HandlingBackGesture() const;
-
-  // Called by StoryProviderImpl.
   //
   // Returns a list of the ongoing activities in this story.
   fidl::VectorPtr<fuchsia::modular::OngoingActivityType> GetOngoingActivities();
@@ -223,10 +220,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // surface was focused.
   void OnSurfaceFocused(fidl::StringPtr surface_id);
 
-  // Allows the Story Shell to inform the Session Shell via the Story Controller
-  // whether it is handling back gestures or not.
-  void OnHandlingBackGesture(const bool handling_back_gesture);
-
   // Initializes the Environment under which all new processes in the story are
   // launched. Use |story_environment_| to manipulate the environment's
   // services.
@@ -248,11 +241,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // shell. This state is per device and only kept in memory.
   fuchsia::modular::StoryVisibilityState visibility_state_{
       fuchsia::modular::StoryVisibilityState::DEFAULT};
-
-  // In the absence of a gesture disambiguator, story shell needs to coordinate
-  // back gesture handling with Session Shell.
-  // This state is per story and only kept in memory.
-  bool story_shell_handling_back_gesture_{false};
 
   StoryProviderImpl* const story_provider_impl_;
 
