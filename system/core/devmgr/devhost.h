@@ -198,8 +198,8 @@ zx_status_t devhost_start_connection(fbl::unique_ptr<DevfsConnection> ios, zx::c
 // routines devhost uses to talk to dev coordinator
 zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& dev,
                         const fbl::RefPtr<zx_device_t>& child, const char* proxy_args,
-                        const zx_device_prop_t* props, uint32_t prop_count);
-zx_status_t devhost_remove(const fbl::RefPtr<zx_device_t>& dev);
+                        const zx_device_prop_t* props, uint32_t prop_count) REQ_DM_LOCK;
+zx_status_t devhost_remove(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
 void devhost_make_visible(const fbl::RefPtr<zx_device_t>& dev);
 
 
