@@ -4,7 +4,10 @@
 
 use fuchsia_zircon::{self as zx, prelude::DurationNum};
 
-use crate::MacAddr;
+use crate::{
+    MacAddr,
+    timer::TimeoutDuration,
+};
 
 pub const START_TIMEOUT_SECONDS: i64 = 5;
 pub const KEY_EXCHANGE_TIMEOUT_SECONDS: i64 = 2;
@@ -21,8 +24,8 @@ pub enum Event {
     }
 }
 
-impl Event {
-    pub fn timeout_duration(&self) -> zx::Duration {
+impl TimeoutDuration for Event {
+    fn timeout_duration(&self) -> zx::Duration {
         match self {
             Event::Sme { event } => event.timeout_duration(),
             Event::Client { event, .. } => event.timeout_duration(),

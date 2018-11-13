@@ -152,8 +152,7 @@ impl<T: Tokens> ApSme<T> {
                         let req = create_start_request(&config, rsn_cfg.as_ref());
                         ctx.mlme_sink.send(MlmeRequest::Start(req));
                         let event = Event::Sme { event: SmeEvent::StartTimeout };
-                        let start_timeout = ctx.timer.schedule(
-                            event.timeout_duration().after_now(), event);
+                        let start_timeout = ctx.timer.schedule(event);
                         State::Starting {
                             ctx,
                             ssid: config.ssid,

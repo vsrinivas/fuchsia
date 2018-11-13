@@ -101,8 +101,7 @@ impl RemoteClient {
     }
 
     fn schedule_timer<T: Tokens>(&self, event: ClientEvent, ctx: &mut Context<T>) -> EventId {
-        let event = Event::Client { addr: self.addr.clone(), event };
-        ctx.timer.schedule(event.timeout_duration().after_now(), event)
+        ctx.timer.schedule(Event::Client { addr: self.addr.clone(), event })
     }
 
     fn process_authenticator_updates<T: Tokens>(&mut self, update_sink: &UpdateSink,
