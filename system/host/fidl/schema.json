@@ -975,7 +975,8 @@
                 "vmar",
                 "fifo",
                 "guest",
-                "timer"
+                "timer",
+                "profile"
             ]
         },
         "primitive-subtype": {

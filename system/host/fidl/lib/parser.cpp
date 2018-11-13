@@ -73,6 +73,7 @@ Parser::Parser(Lexer* lexer, ErrorReporter* error_reporter)
         {"fifo", types::HandleSubtype::kFifo},
         {"guest", types::HandleSubtype::kGuest},
         {"timer", types::HandleSubtype::kTimer},
+        {"profile", types::HandleSubtype::kProfile},
     };
 
     last_token_ = Lex();

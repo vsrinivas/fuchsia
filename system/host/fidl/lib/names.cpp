@@ -158,6 +158,8 @@ std::string NameHandleSubtype(types::HandleSubtype subtype) {
         return "guest";
     case types::HandleSubtype::kTimer:
         return "timer";
+    case types::HandleSubtype::kProfile:
+        return "profile";
     }
 }
 
@@ -238,6 +240,8 @@ std::string NameHandleZXObjType(types::HandleSubtype subtype) {
         return "ZX_OBJ_TYPE_GUEST";
     case types::HandleSubtype::kTimer:
         return "ZX_OBJ_TYPE_TIMER";
+    case types::HandleSubtype::kProfile:
+        return "ZX_OBJ_TYPE_PROFILE";
     }
 }
 

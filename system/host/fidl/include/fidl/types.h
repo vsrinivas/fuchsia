@@ -36,6 +36,7 @@ enum struct HandleSubtype : zx_obj_type_t {
     kFifo = ZX_OBJ_TYPE_FIFO,
     kGuest = ZX_OBJ_TYPE_GUEST,
     kTimer = ZX_OBJ_TYPE_TIMER,
+    kProfile = ZX_OBJ_TYPE_PROFILE,
 };
 
 enum struct PrimitiveSubtype {
