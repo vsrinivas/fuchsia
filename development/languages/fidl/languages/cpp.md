@@ -469,7 +469,7 @@ Zircon so we may prefer to follow the C++ standard library style here as well.
 
 ```cpp
 class string {
-public:
+   public:
     void init(size_t size, uint8_t* data);
     size_t size() const;
     bool empty() const;
@@ -481,7 +481,7 @@ public:
     iterator begin();
     // etc...
 
-private:
+   private:
     fidl_string string_;
 };
 ```
@@ -494,9 +494,9 @@ No constructor or destructor so this is POD.
 #### fidl::vector<T>
 
 ```cpp
-template<typename T>
+template <typename T>
 class vector {
-public:
+   public:
     void init(size_t size, T* data);
     size_t size() const;
     bool empty() const;
@@ -506,9 +506,9 @@ public:
     T& operator[](size_t pos);
     const T& operator[](size_t pos) const;
     iterator begin();
-    // etc…
+    // etc...
 
-private:
+   private:
     fidl_vector vector_;
 };
 ```
@@ -521,9 +521,9 @@ No constructor or destructor so this is POD.
 #### fidl::array<T, N>
 
 ```cpp
-template<typename T, size_t N>
+template <typename T, size_t N>
 class array {
-public:
+   public:
     size_t size() const;
     bool empty() const;
     bool null() const;
@@ -532,11 +532,12 @@ public:
     T& operator[](size_t pos);
     const T& operator[](size_t pos) const;
     iterator begin();
-    // etc…
+    // etc...;
 
-private:
+   private:
     T[N] array_;
 };
+
 ```
 
 Holds a reference to a fixed-length array of elements stored within the buffer.
@@ -548,15 +549,15 @@ No constructor or destructor so this is POD.
 
 ```cpp
 class buffer {
-public:
+   public:
     buffer(size_t max_capacity = ZX_MAX_MESSAGE_SIZE);
     ~buffer();
 
-    template<typename T>
+    template <typename T>
     T* append();
 
     fidl::string append_string(size_t size);
-    template<typename T>
+    template <typename T>
     fidl::string append_string(const char* text);
 
     fidl::vector<T> append_vector(size_t size);
@@ -564,11 +565,11 @@ public:
     const uint8_t* data() const;
     size_t size() const;
 
-    ZX_status_t encode(const fidl_encoding_table* encoding_table,
-        std::vector<zx_handle_t>* out_handles);
+    zx_status_t encode(const fidl_encoding_table* encoding_table,
+                       std::vector<zx_handle_t>* out_handles);
 
-    ZX_status_t decode(const fidl_encoding_table* encoding_table,
-        const std::vector<zx_handle_t>& out_handles);
+    zx_status_t decode(const fidl_encoding_table* encoding_table,
+                       const std::vector<zx_handle_t>& out_handles);
 };
 ```
 
@@ -583,28 +584,29 @@ something similar for incoming messages.
 ##### Example
 
 ```cpp
-ZX_status_t say_hello(
-const zx::channel& channel, const char* text, zx::handle token) {
+zx_status_t say_hello(const zx::channel& channel, const char* text,
+                      zx::handle token) {
     assert(strlen(text) <= MAX_TEXT_SIZE);
 
     fidl::buffer buf();
 
     auto header = buf.append<fidl_message_header>();
     header->transaction_id = 1;
-header->flags = 0;
-header->ordinal = example_Animal_Say_ordinal;
+    header->flags = 0;
+    header->ordinal = example_Animal_Say_ordinal;
 
     auto args = buf.append<example::Animal::Say_args>();
     args->text = buf.append_string(text);
-args->token = std::move(token);
+    args->token = std::move(token);
 
-std::vector<zx::handle> handles;
-ZX_status_t status = buf.encode(example::Animal::Say_args::encoding,
-    &handles);
+    std::vector<zx::handle> handles;
+    zx_status_t status =
+        buf.encode(example::Animal::Say_args::encoding, &handles);
     if (status == ZX_OK) {
-        status = channel.write(0, buf.data(), buf.size(),
-        reinterpret_cast<const zx_handle_t*>(handles.data()),
-        handles.size());
+        status =
+            channel.write(0, buf.data(), buf.size(),
+                          reinterpret_cast<const zx_handle_t*>(handles.data()),
+                          handles.size());
     }
     return status;
 }
@@ -620,7 +622,7 @@ InterfaceRequest<T> / interface_req<T>?
 
 async waiter
 
-etc…
+etc...
 
 ## Suggested API Improvements over FIDL v1
 
