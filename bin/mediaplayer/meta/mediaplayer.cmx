@@ -6,9 +6,11 @@
         "services": [
             "fuchsia.media.Audio",
             "fuchsia.mediacodec.CodecFactory",
+            "fuchsia.net.oldhttp.HttpService",
             "fuchsia.sys.Environment",
             "fuchsia.tracelink.Registry",
-            "fuchsia.net.oldhttp.HttpService"
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.ui.viewsv1.ViewManager"
         ]
     }
 }
