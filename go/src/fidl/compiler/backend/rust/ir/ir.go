@@ -83,15 +83,14 @@ type Interface struct {
 
 type Method struct {
 	types.Attributes
-	Ordinal      types.Ordinal
-	OrdinalName  string
-	Name         string
-	CamelName    string
-	HasRequest   bool
-	Request      []Parameter
-	HasResponse  bool
-	Response     []Parameter
-	ResponseSize int
+	Ordinal     types.Ordinal
+	OrdinalName string
+	Name        string
+	CamelName   string
+	HasRequest  bool
+	Request     []Parameter
+	HasResponse bool
+	Response    []Parameter
 }
 
 type Parameter struct {
