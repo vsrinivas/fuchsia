@@ -483,7 +483,7 @@ zx_status_t sys_interrupt_bind(zx_handle_t inth, zx_handle_t porth,
         return ZX_ERR_WRONG_TYPE;
     }
 
-    return interrupt->Bind(port, interrupt, key);
+    return interrupt->Bind(fbl::move(port), key);
 }
 
 // zx_status_t zx_interrupt_ack

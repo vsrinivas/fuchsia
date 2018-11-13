@@ -38,8 +38,7 @@ public:
     zx_status_t Ack();
     zx_status_t Destroy();
     void InterruptHandler();
-    zx_status_t Bind(fbl::RefPtr<PortDispatcher> port_dispatcher,
-                     fbl::RefPtr<InterruptDispatcher> interrupt, uint64_t key);
+    zx_status_t Bind(fbl::RefPtr<PortDispatcher> port_dispatcher, uint64_t key);
 
 protected:
     virtual void MaskInterrupt() = 0;

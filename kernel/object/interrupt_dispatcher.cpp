@@ -156,8 +156,7 @@ zx_status_t InterruptDispatcher::Destroy() {
     return ZX_OK;
 }
 
-zx_status_t InterruptDispatcher::Bind(fbl::RefPtr<PortDispatcher> port_dispatcher,
-                                      fbl::RefPtr<InterruptDispatcher> interrupt, uint64_t key) {
+zx_status_t InterruptDispatcher::Bind(fbl::RefPtr<PortDispatcher> port_dispatcher, uint64_t key) {
     Guard<SpinLock, IrqSave> guard{&spinlock_};
     if (state_ == InterruptState::DESTROYED) {
         return ZX_ERR_CANCELED;
