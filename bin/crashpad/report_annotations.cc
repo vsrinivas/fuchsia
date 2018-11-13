@@ -49,7 +49,7 @@ std::string GetBoardName() {
 }
 
 std::string GetVersion() {
-  const char kFilepath[] = "/system/data/build/last-update";
+  const char kFilepath[] = "/config/build-info/last-update";
   std::string build_timestamp;
   if (!files::ReadFileToString(kFilepath, &build_timestamp)) {
     FX_LOGS(ERROR) << "Failed to read build timestamp from '" << kFilepath

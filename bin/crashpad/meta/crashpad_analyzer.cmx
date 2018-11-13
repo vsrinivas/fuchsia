@@ -3,13 +3,17 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "dev": [ "misc/sysinfo" ],
-        "features": [ "persistent-storage", "root-ssl-certificates" ],
+        "dev": [
+            "misc/sysinfo"
+        ],
+        "features": [
+            "build-info",
+            "persistent-storage",
+            "root-ssl-certificates"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.net.LegacySocketProvider"
-        ],
-        "system": [ "data/build" ]
+        ]
     }
 }
-
