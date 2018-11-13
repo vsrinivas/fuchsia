@@ -50,7 +50,7 @@ void Bootfs::Destroy() {
                   MappingSize());
 }
 
-zx_status_t Bootfs::Parse(Callback callback, void* cookie) {
+zx_status_t Bootfs::Parse(Callback callback) {
     size_t avail = dirsize_;
     auto* p = static_cast<char*>(dir_);
     zx_status_t r;
@@ -62,7 +62,7 @@ zx_status_t Bootfs::Parse(Callback callback, void* cookie) {
             printf("bootfs: bogus entry!\n");
             return ZX_ERR_IO;
         }
-        if ((r = callback(cookie, e)) != ZX_OK) {
+        if ((r = callback(e)) != ZX_OK) {
             return r;
         }
         p += sz;

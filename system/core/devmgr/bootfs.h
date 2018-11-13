@@ -10,6 +10,7 @@
 #include <stdint.h>
 
 #include <fbl/algorithm.h>
+#include <fbl/function.h>
 #include <lib/zx/vmo.h>
 
 namespace devmgr {
@@ -40,8 +41,8 @@ public:
     zx_status_t Open(const char* name, zx::vmo* vmo_out, uint32_t* size_out);
 
     // Parses the bootfs file system and calls |callback| for each |bootfs_entry_t|.
-    using Callback = zx_status_t (void* cookie, const bootfs_entry_t* entry);
-    zx_status_t Parse(Callback callback, void* cookie);
+    using Callback = fbl::Function<zx_status_t(const bootfs_entry_t* entry)>;
+    zx_status_t Parse(Callback callback);
 
     // Attempts to duplicate the underling |vmo_| with the same
     // rights, and returns it. Returns ZX_HANDLE_INVALID on any

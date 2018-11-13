@@ -70,23 +70,6 @@ using RamdiskList = fbl::SinglyLinkedList<fbl::unique_ptr<BootdataRamdisk>>;
 // implement |devmgr_launch|.
 const FsManager* g_fshost = nullptr;
 
-using AddFileFn = fbl::Function<zx_status_t(const char* path, zx_handle_t vmo,
-                                            zx_off_t off, size_t len)>;
-
-struct callback_data {
-    zx_handle_t vmo;
-    unsigned int file_count;
-    AddFileFn add_file;
-};
-
-zx_status_t callback(void* arg, const bootfs_entry_t* entry) {
-    auto cd = static_cast<callback_data*>(arg);
-    //printf("bootfs: %s @%zd (%zd bytes)\n", path, off, len);
-    cd->add_file(entry->name, cd->vmo, entry->data_off, entry->data_len);
-    ++cd->file_count;
-    return ZX_OK;
-}
-
 zx_status_t SetupBootfsVmo(const fbl::unique_ptr<FsManager>& root, uint32_t n,
                            uint32_t type, zx_handle_t vmo) {
     uint64_t size;
@@ -104,13 +87,6 @@ zx_status_t SetupBootfsVmo(const fbl::unique_ptr<FsManager>& root, uint32_t n,
     uintptr_t address;
     zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, vmo, 0, size, &address);
 
-    struct callback_data cd = {
-        .vmo = vmo,
-        .file_count = 0u,
-        .add_file = (type == BOOTDATA_BOOTFS_SYSTEM) ?
-                fbl::BindMember(root.get(), &FsManager::SystemfsAddFile) :
-                fbl::BindMember(root.get(), &FsManager::BootfsAddFile),
-    };
     if ((type == BOOTDATA_BOOTFS_SYSTEM) && !root->IsSystemMounted()) {
         status = root->MountSystem();
         if (status != ZX_OK) {
@@ -118,9 +94,9 @@ zx_status_t SetupBootfsVmo(const fbl::unique_ptr<FsManager>& root, uint32_t n,
             return status;
         }
     }
-    // We need to duplicate |vmo| because |bootfs_create| takes ownership of the
-    // |vmo| and closes it during |bootfs_destroy|. However, we've stored |vmo|
-    // in |cd|, and |callback| will further store |vmo| in memfs.
+    // We need to duplicate |vmo| because |bootfs::Create| takes ownership of the
+    // |vmo| and closes it during |bootfs::Destroy|. However, our |bootfs::Parse|
+    // callback will further store |vmo| in memfs.
     zx::vmo bootfs_vmo;
     status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, bootfs_vmo.reset_and_get_address());
     if (status != ZX_OK) {
@@ -129,7 +105,14 @@ zx_status_t SetupBootfsVmo(const fbl::unique_ptr<FsManager>& root, uint32_t n,
     }
     Bootfs bfs;
     if (Bootfs::Create(fbl::move(bootfs_vmo), &bfs) == ZX_OK) {
-        bfs.Parse(callback, &cd);
+        auto add_file = (type == BOOTDATA_BOOTFS_SYSTEM) ?
+            &FsManager::SystemfsAddFile :
+            &FsManager::BootfsAddFile;
+        bfs.Parse([&root, add_file, vmo](const bootfs_entry_t *entry) -> zx_status_t {
+                      // printf("bootfs: %s @%zd (%zd bytes)\n", path, off, len);
+                      (root.get()->*add_file)(entry->name, vmo, entry->data_off, entry->data_len);
+                      return ZX_OK;
+                  });
         bfs.Destroy();
     }
     if (type == BOOTDATA_BOOTFS_SYSTEM) {
