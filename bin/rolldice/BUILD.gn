@@ -30,7 +30,12 @@ package("rolldice") {
     ":bin",
   ]
 
-  binary = "rolldice"
+  binaries = [
+    {
+      name = "rolldice"
+      shell = true
+    },
+  ]
 
   meta = [
     {
