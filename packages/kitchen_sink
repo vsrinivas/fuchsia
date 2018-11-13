@@ -4,6 +4,7 @@
         "garnet/packages/config/network",
         "garnet/packages/config/openssh_keys",
         "garnet/packages/config/thermd",
+        "build/packages/shell-commands",
         "garnet/packages/all"
     ]
 }

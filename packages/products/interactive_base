@@ -1,5 +1,6 @@
 {
     "imports": [
+        "build/packages/shell-commands",
         "garnet/packages/products/graphical",
         "garnet/packages/products/network_installer",
         "garnet/packages/config/mdns",

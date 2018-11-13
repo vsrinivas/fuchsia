@@ -83,7 +83,7 @@ TEST(NamespaceBuilder, Shell) {
   builder.AddSandbox(sandbox, [] { return zx::channel(); });
 
   fdio_flat_namespace_t* flat = builder.Build();
-  EXPECT_EQ(11u, flat->count);
+  EXPECT_EQ(12u, flat->count);
 
   std::vector<std::string> paths;
   for (size_t i = 0; i < flat->count; ++i)
@@ -98,6 +98,7 @@ TEST(NamespaceBuilder, Shell) {
               paths.end());
 
   // Paths that are only part of "shell", not "root-ssl-certificates"
+  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/bin") != paths.end());
   EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/blob") != paths.end());
   EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/boot") != paths.end());
   EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/data") != paths.end());
