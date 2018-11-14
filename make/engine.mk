@@ -377,7 +377,7 @@ EXTRA_KERNELDEPS :=
 EXTRA_CLEANDEPS :=
 
 # build ids
-EXTRA_IDFILES := $(KERNEL_ELF).id
+EXTRA_IDFILES :=
 
 # All kernel modules contribute to this list.
 ALLMODULE_OBJS :=
@@ -624,6 +624,10 @@ $$(BUILDDIR)/$(notdir $(lib)): $(lib); $$(link-toolchain-file-cmd)
 )
 endef
 $(eval $(toolchain-id-files))
+
+ifeq ($(call TOBOOL,$(ENABLE_ULIB_ONLY)),false)
+EXTRA_IDFILES += $(KERNEL_ELF).id
+endif
 
 ifneq ($(EXTRA_IDFILES),)
 $(BUILDDIR)/ids.txt: $(EXTRA_IDFILES)
