@@ -7,13 +7,16 @@
 
 #include "garnet/public/lib/fostr/hex_dump.h"
 #include "lib/fidl/cpp/array.h"
+#include "lib/fidl/cpp/vector.h"
+#include "lib/fostr/indent.h"
+
+#ifdef __Fuchsia__
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fidl/cpp/interface_request.h"
-#include "lib/fidl/cpp/vector.h"
-#include "lib/fostr/indent.h"
 #include "lib/fostr/zx_types.h"
+#endif
 
 namespace fostr {
 namespace internal {
@@ -90,6 +93,7 @@ std::ostream& operator<<(std::ostream& os, const VectorPtr<uint8_t>& value);
 template <>
 std::ostream& operator<<(std::ostream& os, const VectorPtr<int8_t>& value);
 
+#ifdef __Fuchsia__
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const Binding<T>& value) {
   if (!value.is_bound()) {
@@ -125,6 +129,7 @@ std::ostream& operator<<(std::ostream& os, const InterfaceRequest<T>& value) {
 
   return os << value.channel();
 }
+#endif
 
 }  // namespace fidl
 

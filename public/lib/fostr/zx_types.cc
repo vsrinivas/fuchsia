@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifdef __Fuchsia__
+
 #include "garnet/public/lib/fostr/zx_types.h"
 
 #include <iomanip>
@@ -130,3 +132,5 @@ std::ostream& operator<<(std::ostream& os, const zx::vmo& value) {
 }
 
 }  // namespace zx
+
+#endif  // __Fuchsia__
