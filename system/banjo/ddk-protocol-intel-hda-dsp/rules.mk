@@ -10,11 +10,10 @@ MODULE_TYPE := banjo
 
 MODULE_PACKAGE := banjo
 
-MODULE_BANJO_LIBRARY := ddk.protocol.intel_hda_dsp
+MODULE_BANJO_LIBRARY := ddk.protocol.intelhda.dsp
 
-MODULE_BANJO_NAME := intel-hda-dsp
+MODULE_BANJO_NAME := intelhda/dsp
 
 MODULE_SRCS += $(LOCAL_DIR)/intel-hda-dsp.banjo
 
 include make/module.mk
-

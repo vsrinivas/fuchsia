@@ -4,6 +4,6 @@
 
 #pragma once
 
-#include <ddk/protocol/platform-bus.h>
+#include <ddk/protocol/platform/bus.h>
 
 zx_status_t qemu_test_init(pbus_protocol_t* pbus);

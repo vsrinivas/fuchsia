@@ -16,7 +16,7 @@
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
 #include <ddk/protocol/pci.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/usb-bus.h>
 #include <ddk/protocol/usb.h>

@@ -7,10 +7,10 @@
 #include <threads.h>
 
 #include <ddk/device.h>
-#include <ddk/protocol/gpio-impl.h>
+#include <ddk/protocol/gpioimpl.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/iommu.h>
-#include <ddktl/protocol/platform-bus.h>
+#include <ddktl/protocol/platform/bus.h>
 #include <fbl/macros.h>
 
 namespace sherlock {

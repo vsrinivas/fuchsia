@@ -10,13 +10,12 @@ MODULE_TYPE := banjo
 
 MODULE_PACKAGE := banjo
 
-MODULE_BANJO_LIBRARY := ddk.protocol.platform_device
+MODULE_BANJO_LIBRARY := ddk.protocol.platform.device
 
-MODULE_BANJO_NAME := platform-device
+MODULE_BANJO_NAME := platform/device
 
 MODULE_BANJO_DEPS := system/banjo/ddk-driver
 
 MODULE_SRCS += $(LOCAL_DIR)/platform-device.banjo
 
 include make/module.mk
-

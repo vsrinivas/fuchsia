@@ -6,7 +6,7 @@
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 
 __BEGIN_CDECLS
 struct vim2_display;  // fwd decl

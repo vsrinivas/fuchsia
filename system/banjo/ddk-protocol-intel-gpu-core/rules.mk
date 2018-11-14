@@ -10,11 +10,10 @@ MODULE_TYPE := banjo
 
 MODULE_PACKAGE := banjo
 
-MODULE_BANJO_LIBRARY := ddk.protocol.intel_gpu_core
+MODULE_BANJO_LIBRARY := ddk.protocol.intelgpucore
 
-MODULE_BANJO_NAME := intel-gpu-core
+MODULE_BANJO_NAME := intelgpucore
 
 MODULE_SRCS += $(LOCAL_DIR)/intel-gpu-core.banjo
 
 include make/module.mk
-

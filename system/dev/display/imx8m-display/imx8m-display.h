@@ -13,7 +13,7 @@
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddk/mmio-buffer.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/display-controller.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>

@@ -4,7 +4,7 @@
 
 #pragma once
 #include <ddk/device.h>
-#include <ddk/protocol/ethernet-mac.h>
+#include <ddk/protocol/ethernet/mac.h>
 
 namespace phy {
 

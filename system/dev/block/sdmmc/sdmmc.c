@@ -16,7 +16,7 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/debug.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sdmmc.h>
 #include <ddk/trace/event.h>
 

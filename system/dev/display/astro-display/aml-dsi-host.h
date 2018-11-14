@@ -6,7 +6,7 @@
 
 #include <unistd.h>
 #include <zircon/compiler.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <fbl/optional.h>
 #include <fbl/unique_ptr.h>
 #include <hwreg/mmio.h>

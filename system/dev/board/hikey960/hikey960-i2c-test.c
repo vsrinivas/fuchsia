@@ -17,7 +17,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/i2c-lib.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -107,11 +107,3 @@ ZIRCON_DRIVER_BEGIN(hikey960_i2c_test, i2c_test_driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_HIKEY960),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_HIKEY960_I2C_TEST),
 ZIRCON_DRIVER_END(hikey960_i2c_test)
-
-
-
-
-
-
-
-

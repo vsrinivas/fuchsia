@@ -5,8 +5,8 @@
 #pragma once
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/platform-bus.h>
-#include <ddktl/protocol/platform-device.h>
+#include <ddktl/protocol/platform/bus.h>
+#include <ddktl/protocol/platform/device.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 

@@ -10,7 +10,7 @@
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 
 #include <lib/zircon-internal/device/cpu-trace/intel-pt.h>
 #include <lib/zircon-internal/mtrace.h>

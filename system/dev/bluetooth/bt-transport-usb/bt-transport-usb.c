@@ -6,7 +6,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/bt-hci.h>
+#include <ddk/protocol/bt/hci.h>
 #include <ddk/protocol/usb.h>
 #include <ddk/usb/usb.h>
 #include <usb/usb-request.h>

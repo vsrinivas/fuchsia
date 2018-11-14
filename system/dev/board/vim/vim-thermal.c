@@ -6,7 +6,7 @@
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform-bus.h>
+#include <ddk/protocol/platform/bus.h>
 #include <soc/aml-s912/s912-gpio.h>
 #include <soc/aml-s912/s912-hw.h>
 #include <soc/aml-common/aml-thermal.h>
@@ -217,4 +217,3 @@ zx_status_t vim2_thermal_init(vim_bus_t* bus) {
     }
     return ZX_OK;
 }
-

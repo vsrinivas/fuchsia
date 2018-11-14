@@ -7,10 +7,10 @@
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/clk.h>
-#include <ddktl/protocol/gpio-impl.h>
-#include <ddktl/protocol/i2c-impl.h>
+#include <ddktl/protocol/gpioimpl.h>
+#include <ddktl/protocol/i2cimpl.h>
 #include <ddktl/protocol/iommu.h>
-#include <ddktl/protocol/platform-bus.h>
+#include <ddktl/protocol/platform/bus.h>
 #include <fbl/array.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>

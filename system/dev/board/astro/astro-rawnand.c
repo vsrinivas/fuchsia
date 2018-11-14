@@ -9,7 +9,7 @@
 #include <ddk/metadata/nand.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/gpio.h>
-#include <ddk/protocol/platform-bus.h>
+#include <ddk/protocol/platform/bus.h>
 #include <hw/reg.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
@@ -126,4 +126,3 @@ zx_status_t aml_raw_nand_init(aml_bus_t* bus) {
 
     return ZX_OK;
 }
-

@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddktl/mmio.h>
 #include <ddktl/protocol/clk.h>

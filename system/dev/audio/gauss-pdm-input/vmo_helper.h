@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <zircon/types.h>
 #include <lib/zx/vmo.h>
 

@@ -15,7 +15,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 
 #include <string.h>
 #include <lib/sync/completion.h>

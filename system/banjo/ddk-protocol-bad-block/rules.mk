@@ -10,11 +10,10 @@ MODULE_TYPE := banjo
 
 MODULE_PACKAGE := banjo
 
-MODULE_BANJO_LIBRARY := ddk.protocol.bad_block
+MODULE_BANJO_LIBRARY := ddk.protocol.badblock
 
-MODULE_BANJO_NAME := bad-block
+MODULE_BANJO_NAME := badblock
 
 MODULE_SRCS += $(LOCAL_DIR)/bad-block.banjo
 
 include make/module.mk
-

@@ -9,7 +9,7 @@
 #include <ddk/metadata/nand.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/gpio.h>
-#include <ddk/protocol/platform-bus.h>
+#include <ddk/protocol/platform/bus.h>
 #include <hw/reg.h>
 #include <soc/aml-a113/a113-hw.h>
 #include <unistd.h>
@@ -127,4 +127,3 @@ zx_status_t gauss_raw_nand_init(gauss_bus_t* bus) {
 
     return ZX_OK;
 }
-

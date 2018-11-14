@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/bt-hci.h>
+#include <ddk/protocol/bt/hci.h>
 #include <ddk/protocol/serial.h>
 #include <zircon/device/bt-hci.h>
 #include <zircon/device/serial.h>

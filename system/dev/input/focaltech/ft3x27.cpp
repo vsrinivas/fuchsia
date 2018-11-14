@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/i2c-lib.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

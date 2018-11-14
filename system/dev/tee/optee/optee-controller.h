@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/tee.h>

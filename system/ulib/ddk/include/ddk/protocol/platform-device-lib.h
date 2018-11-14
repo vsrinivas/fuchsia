@@ -6,7 +6,7 @@
 
 #include <ddk/io-buffer.h>
 #include <ddk/mmio-buffer.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 

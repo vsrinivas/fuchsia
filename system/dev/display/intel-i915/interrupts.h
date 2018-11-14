@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddk/protocol/intel-gpu-core.h>
+#include <ddk/protocol/intelgpucore.h>
 #include <fbl/macros.h>
 #include <threads.h>
 #include <zircon/types.h>

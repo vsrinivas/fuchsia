@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
-#include <ddk/protocol/intel-hda-dsp.h>
+#include <ddk/protocol/intelhda/dsp.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 #include <fbl/atomic.h>

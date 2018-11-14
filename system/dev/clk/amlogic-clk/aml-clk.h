@@ -7,7 +7,7 @@
 #include "aml-clk-blocks.h"
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>

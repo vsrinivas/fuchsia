@@ -8,7 +8,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
-#include <ddk/protocol/bad-block.h>
+#include <ddk/protocol/badblock.h>
 #include <ddk/protocol/nand.h>
 
 #include <fbl/algorithm.h>

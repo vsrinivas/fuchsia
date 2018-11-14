@@ -5,7 +5,7 @@
 #pragma once
 
 #include <assert.h>
-#include <ddk/protocol/intel-gpu-core.h>
+#include <ddk/protocol/intelgpucore.h>
 #include <fbl/algorithm.h>
 #include <inttypes.h>
 #include <zircon/pixelformat.h>

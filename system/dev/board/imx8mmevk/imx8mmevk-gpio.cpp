@@ -6,8 +6,8 @@
 
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/gpio.h>
-#include <ddk/protocol/platform-bus.h>
-#include <ddktl/protocol/gpio-impl.h>
+#include <ddk/protocol/platform/bus.h>
+#include <ddktl/protocol/gpioimpl.h>
 #include <soc/imx8m-mini/imx8m-mini-hw.h>
 #include <soc/imx8m-mini/imx8m-mini-iomux.h>
 

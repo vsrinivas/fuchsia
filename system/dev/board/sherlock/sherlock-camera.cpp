@@ -7,7 +7,7 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/camera.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/protocol/gpio-impl.h>
+#include <ddktl/protocol/gpioimpl.h>
 #include <fbl/unique_ptr.h>
 #include <hw/reg.h>
 #include <soc/aml-meson/g12b-clk.h>

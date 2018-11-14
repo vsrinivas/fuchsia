@@ -10,11 +10,10 @@ MODULE_TYPE := banjo
 
 MODULE_PACKAGE := banjo
 
-MODULE_BANJO_LIBRARY := ddk.protocol.bt_gatt_svc
+MODULE_BANJO_LIBRARY := ddk.protocol.bt.gattsvc
 
-MODULE_BANJO_NAME := bt-gatt-svc
+MODULE_BANJO_NAME := gattsvc
 
 MODULE_SRCS += $(LOCAL_DIR)/bt-gatt-svc.banjo
 
 include make/module.mk
-

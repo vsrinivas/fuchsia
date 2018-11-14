@@ -6,7 +6,7 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/intel-hda-codec.h>
+#include <ddk/protocol/intelhda/codec.h>
 #include <lib/zx/channel.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>

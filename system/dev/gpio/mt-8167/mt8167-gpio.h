@@ -5,13 +5,13 @@
 #pragma once
 
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/gpio-impl.h>
-#include <ddk/protocol/platform-bus.h>
+#include <ddk/protocol/gpioimpl.h>
+#include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform-device-lib.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/gpio-impl.h>
+#include <ddktl/protocol/gpioimpl.h>
 
 #include <fbl/array.h>
 

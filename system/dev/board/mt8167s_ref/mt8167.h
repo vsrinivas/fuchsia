@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/platform-bus.h>
+#include <ddktl/protocol/platform/bus.h>
 
 #include <fbl/macros.h>
 

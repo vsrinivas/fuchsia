@@ -4,7 +4,7 @@
 
 #include "lcd.h"
 #include <ddk/debug.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 
 #define DELAY_CMD           (0xFF)

@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/mmio-buffer.h>
-#include <ddk/protocol/platform-bus.h>
+#include <ddk/protocol/platform/bus.h>
 #include <hw/reg.h>
 
 #define SDM_FRACTIONALITY       ((uint32_t)16384)

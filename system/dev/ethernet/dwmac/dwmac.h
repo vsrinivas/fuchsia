@@ -5,11 +5,11 @@
 #pragma once
 
 #include <ddk/device.h>
-#include <ddk/protocol/ethernet-board.h>
-#include <ddk/protocol/ethernet-mac.h>
+#include <ddk/protocol/ethernet/board.h>
+#include <ddk/protocol/ethernet/mac.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/i2c.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/test.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>

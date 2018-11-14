@@ -5,9 +5,9 @@
 #pragma once
 
 #include <ddk/mmio-buffer.h>
-#include <ddk/protocol/gpio-impl.h>
+#include <ddk/protocol/gpioimpl.h>
 #include <ddk/protocol/iommu.h>
-#include <ddk/protocol/platform-bus.h>
+#include <ddk/protocol/platform/bus.h>
 #include <soc/aml-a113/a113-clocks.h>
 
 #include <threads.h>

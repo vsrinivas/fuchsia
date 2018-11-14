@@ -5,7 +5,7 @@
 #pragma once
 
 #include "display-device.h"
-#include <ddk/protocol/i2c-impl.h>
+#include <ddk/protocol/i2cimpl.h>
 
 namespace i915 {
 

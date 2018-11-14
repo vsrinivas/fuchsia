@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddk/protocol/platform-proxy.h>
+#include <ddk/protocol/platform/proxy.h>
 #include <ddktl/device.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_counted.h>

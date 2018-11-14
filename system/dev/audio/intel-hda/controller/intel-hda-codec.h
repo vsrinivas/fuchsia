@@ -6,7 +6,7 @@
 
 #include <ddk/binding.h>
 #include <ddk/device.h>
-#include <ddk/protocol/intel-hda-codec.h>
+#include <ddk/protocol/intelhda/codec.h>
 #include <lib/zx/handle.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>

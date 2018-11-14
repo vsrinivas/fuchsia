@@ -14,7 +14,7 @@
 #include <ddk/binding.h>
 #include <ddk/io-buffer.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 
 #include <zircon/syscalls.h>
 #include <zircon/assert.h>
@@ -173,4 +173,3 @@ zx_status_t configure_pll(vim2_display_t* display, const struct hdmi_param* p, c
     DISP_INFO("done!\n");
     return ZX_OK;
 }
-

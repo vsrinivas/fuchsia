@@ -4,13 +4,13 @@
 
 #include <threads.h>
 
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
-#include <ddk/protocol/serial-impl.h>
+#include <ddk/protocol/serialimpl.h>
 #include <ddk/protocol/serial.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
-#include <ddktl/protocol/serial-impl.h>
+#include <ddktl/protocol/serialimpl.h>
 
 #include <fbl/function.h>
 #include <fbl/mutex.h>

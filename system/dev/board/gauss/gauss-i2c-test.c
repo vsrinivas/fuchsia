@@ -17,7 +17,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/i2c-lib.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 
 #include <zircon/process.h>
 #include <zircon/syscalls.h>

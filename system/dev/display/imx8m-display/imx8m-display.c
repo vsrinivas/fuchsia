@@ -10,7 +10,7 @@
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <hw/reg.h>
 #include <stdint.h>

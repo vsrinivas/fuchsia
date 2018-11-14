@@ -20,7 +20,7 @@
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/listnode.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
 
 namespace mt8167s_display {

@@ -10,7 +10,7 @@
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/i2c.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/platform-device.h>
+#include <ddktl/protocol/platform/device.h>
 #include <fbl/array.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library ddk.protocol.platform_proxy;
+library ddk.protocol.platform.proxy;
 
 using zx;
 
@@ -32,5 +32,3 @@ interface PlatformProxy {
     2: Proxy(vector<void> req, vector<handle> req_handle) -> (zx.status s, vector<void> resp,
                                                               vector<handle> resp_handle);
 };
-
-

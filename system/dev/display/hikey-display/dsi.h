@@ -6,7 +6,7 @@
 
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 #include <threads.h>

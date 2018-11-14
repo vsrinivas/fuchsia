@@ -7,7 +7,7 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/intel-gpu-core.h>
+#include <ddk/protocol/intelgpucore.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/pci-lib.h>
 #include <hw/inout.h>

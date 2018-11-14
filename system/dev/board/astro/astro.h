@@ -5,9 +5,9 @@
 #pragma once
 
 #include <ddk/device.h>
-#include <ddk/protocol/gpio-impl.h>
+#include <ddk/protocol/gpioimpl.h>
 #include <ddk/protocol/iommu.h>
-#include <ddk/protocol/platform-bus.h>
+#include <ddk/protocol/platform/bus.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 
 // BTI IDs for our devices

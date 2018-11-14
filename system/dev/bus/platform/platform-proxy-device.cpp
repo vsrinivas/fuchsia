@@ -15,8 +15,8 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/i2c-lib.h>
-#include <ddk/protocol/platform-bus.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/bus.h>
+#include <ddk/protocol/platform/device.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
 #include <lib/zx/vmar.h>

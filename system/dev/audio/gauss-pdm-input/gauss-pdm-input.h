@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/device.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 
 typedef struct {
     zx_device_t* zxdev;

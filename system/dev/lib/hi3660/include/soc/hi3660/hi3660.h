@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/mmio-buffer.h>
-#include <ddk/protocol/gpio-impl.h>
+#include <ddk/protocol/gpioimpl.h>
 #include <zircon/listnode.h>
 
 typedef struct {

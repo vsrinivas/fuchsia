@@ -9,7 +9,7 @@
 #include <ddk/device.h>
 #include <ddk/protocol/clk.h>
 #include <ddk/protocol/gpio.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddktl/mmio.h>
 #include <dev/pci/designware/atu-cfg.h>

@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/serial.h>
-#include <ddk/protocol/serial-impl.h>
+#include <ddk/protocol/serialimpl.h>
 #include <zircon/device/serial.h>
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>

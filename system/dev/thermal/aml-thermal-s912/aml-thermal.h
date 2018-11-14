@@ -6,7 +6,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/platform-device.h>
+#include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/scpi.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/port.h>

@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/platform-proxy.h>
+#include <ddktl/protocol/platform/proxy.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
 #include <lib/zx/channel.h>

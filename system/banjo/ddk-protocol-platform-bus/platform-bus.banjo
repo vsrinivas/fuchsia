@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library ddk.protocol.platform_bus;
+library ddk.protocol.platform.bus;
 
-using ddk.protocol.platform_device;
+using ddk.protocol.platform.device;
 using zx;
 
 struct PbusMmio {
@@ -120,10 +120,9 @@ interface PBus {
            -> (zx.status s);
     /// Board drivers may use this to get information about the board, and to
     /// differentiate between multiple boards that they support.
-    4: GetBoardInfo() -> (zx.status s, ddk.protocol.platform_device.PdevBoardInfo info);
+    4: GetBoardInfo() -> (zx.status s, ddk.protocol.platform.device.PdevBoardInfo info);
     /// Board drivers may use this to set information about the board
     /// (like the board revision number).
     /// Platform device drivers can access this via `pdev_get_board_info()`.
     5: SetBoardInfo(PbusBoardInfo info) -> (zx.status s);
 };
-

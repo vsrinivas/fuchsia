@@ -8,7 +8,7 @@
 
 #include <ddk/io-buffer.h>
 #include <ddk/mmio-buffer.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 
 #include <hw/reg.h>
 #include <lib/sync/completion.h>

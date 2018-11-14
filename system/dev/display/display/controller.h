@@ -9,7 +9,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddk/protocol/display-controller.h>
-#include <ddk/protocol/i2c-impl.h>
+#include <ddk/protocol/i2cimpl.h>
 #include <fbl/array.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_hash_table.h>

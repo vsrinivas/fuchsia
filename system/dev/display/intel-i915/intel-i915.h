@@ -7,9 +7,9 @@
 #if __cplusplus
 
 #include <ddk/mmio-buffer.h>
-#include <ddk/protocol/intel-gpu-core.h>
+#include <ddk/protocol/intelgpucore.h>
 #include <ddk/protocol/pci.h>
-#include <ddk/protocol/i2c-impl.h>
+#include <ddk/protocol/i2cimpl.h>
 #include <ddktl/mmio.h>
 #include <ddktl/protocol/display-controller.h>
 

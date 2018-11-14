@@ -6,8 +6,8 @@
 
 #include <ddk/binding.h>
 #include <ddk/device.h>
-#include <ddk/protocol/intel-hda-codec.h>
-#include <ddk/protocol/intel-hda-dsp.h>
+#include <ddk/protocol/intelhda/codec.h>
+#include <ddk/protocol/intelhda/dsp.h>
 #include <fbl/mutex.h>
 #include <lib/fzl/vmo-mapper.h>
 

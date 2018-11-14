@@ -10,11 +10,10 @@ MODULE_TYPE := banjo
 
 MODULE_PACKAGE := banjo
 
-MODULE_BANJO_LIBRARY := ddk.protocol.bt_hci
+MODULE_BANJO_LIBRARY := ddk.protocol.bt.hci
 
-MODULE_BANJO_NAME := bt-hci
+MODULE_BANJO_NAME := bt/hci
 
 MODULE_SRCS += $(LOCAL_DIR)/bt-hci.banjo
 
 include make/module.mk
-

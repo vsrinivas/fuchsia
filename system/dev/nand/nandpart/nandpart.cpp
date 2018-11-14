@@ -13,7 +13,7 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/nand.h>
-#include <ddk/protocol/bad-block.h>
+#include <ddk/protocol/badblock.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>

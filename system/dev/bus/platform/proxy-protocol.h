@@ -5,8 +5,8 @@
 #pragma once
 
 #include <ddk/protocol/i2c.h>
-#include <ddk/protocol/platform-device.h>
-#include <ddk/protocol/platform-proxy.h>
+#include <ddk/protocol/platform/device.h>
+#include <ddk/protocol/platform/proxy.h>
 
 namespace platform_bus {
 

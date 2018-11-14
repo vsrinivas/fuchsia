@@ -7,7 +7,7 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/gpt.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform-bus.h>
+#include <ddk/protocol/platform/bus.h>
 
 #include <soc/mt8167/mt8167-hw.h>
 

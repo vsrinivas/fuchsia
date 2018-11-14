@@ -7,8 +7,8 @@
 #include <hw/reg.h>
 #include <lib/sync/completion.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform-bus.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/bus.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/mailbox.h>
 #include <ddk/protocol/scpi.h>
 #include <ddk/debug.h>

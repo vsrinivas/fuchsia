@@ -5,8 +5,8 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform-bus.h>
-#include <ddktl/protocol/gpio-impl.h>
+#include <ddk/protocol/platform/bus.h>
+#include <ddktl/protocol/gpioimpl.h>
 
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>

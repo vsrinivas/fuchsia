@@ -7,7 +7,7 @@
 #include <ddktl/i2c-channel.h>
 #include <ddktl/mmio.h>
 #include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/platform-device.h>
+#include <ddktl/protocol/platform/device.h>
 
 #include <fbl/optional.h>
 #include <lib/zx/bti.h>

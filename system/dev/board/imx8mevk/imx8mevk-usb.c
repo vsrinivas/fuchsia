@@ -8,7 +8,7 @@
 #include <ddk/metadata.h>
 #include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform-bus.h>
+#include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/usb-mode-switch.h>
 #include <hw/reg.h>
 #include <limits.h>

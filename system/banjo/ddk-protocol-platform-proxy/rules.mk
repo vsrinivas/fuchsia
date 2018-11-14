@@ -10,11 +10,10 @@ MODULE_TYPE := banjo
 
 MODULE_PACKAGE := banjo
 
-MODULE_BANJO_LIBRARY := ddk.protocol.platform_proxy
+MODULE_BANJO_LIBRARY := ddk.protocol.platform.proxy
 
-MODULE_BANJO_NAME := platform-proxy
+MODULE_BANJO_NAME := platform/proxy
 
 MODULE_SRCS += $(LOCAL_DIR)/platform-proxy.banjo
 
 include make/module.mk
-

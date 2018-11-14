@@ -8,7 +8,7 @@
 
 #include <ddk/protocol/nand.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/bad-block.h>
+#include <ddktl/protocol/badblock.h>
 #include <ddktl/protocol/nand.h>
 #include <ddktl/protocol/empty-protocol.h>
 

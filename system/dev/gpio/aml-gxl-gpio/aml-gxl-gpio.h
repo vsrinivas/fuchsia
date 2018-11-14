@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <ddk/protocol/platform-bus.h>
+#include <ddk/protocol/platform/bus.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
-#include <ddktl/protocol/gpio-impl.h>
-#include <ddktl/protocol/platform-device.h>
+#include <ddktl/protocol/gpioimpl.h>
+#include <ddktl/protocol/platform/device.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>

@@ -8,8 +8,8 @@
 #include <ddk/mmio-buffer.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/gpio-impl.h>
-#include <ddk/protocol/platform-bus.h>
+#include <ddk/protocol/gpioimpl.h>
+#include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/serial.h>
 #include <hw/reg.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>

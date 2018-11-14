@@ -8,7 +8,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/protocol/gpio-impl.h>
+#include <ddk/protocol/gpioimpl.h>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

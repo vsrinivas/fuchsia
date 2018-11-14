@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddk/protocol/platform-bus.h>
+#include <ddk/protocol/platform/bus.h>
 #include <fbl/array.h>
 #include <fbl/vector.h>
 

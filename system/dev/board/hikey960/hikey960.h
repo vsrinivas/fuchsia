@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/platform-bus.h>
+#include <ddk/protocol/platform/bus.h>
 #include <soc/hi3660/hi3660.h>
 
 // BTI IDs for our devices

@@ -10,13 +10,12 @@ MODULE_TYPE := banjo
 
 MODULE_PACKAGE := banjo
 
-MODULE_BANJO_LIBRARY := ddk.protocol.serial_impl
+MODULE_BANJO_LIBRARY := ddk.protocol.serialimpl
 
-MODULE_BANJO_NAME := serial-impl
+MODULE_BANJO_NAME := serialimpl
 
 MODULE_BANJO_DEPS := system/banjo/ddk-protocol-serial
 
 MODULE_SRCS += $(LOCAL_DIR)/serial-impl.banjo
 
 include make/module.mk
-

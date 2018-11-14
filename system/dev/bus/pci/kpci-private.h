@@ -6,7 +6,7 @@
 
 #include <ddk/device.h>
 #include <ddk/protocol/pciroot.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <zircon/types.h>
 
 typedef struct kpci_device {

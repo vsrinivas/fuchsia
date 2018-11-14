@@ -10,11 +10,10 @@ MODULE_TYPE := banjo
 
 MODULE_PACKAGE := banjo
 
-MODULE_BANJO_LIBRARY := ddk.protocol.i2c_impl
+MODULE_BANJO_LIBRARY := ddk.protocol.i2cimpl
 
-MODULE_BANJO_NAME := i2c-impl
+MODULE_BANJO_NAME := i2cimpl
 
 MODULE_SRCS += $(LOCAL_DIR)/i2c-impl.banjo
 
 include make/module.mk
-

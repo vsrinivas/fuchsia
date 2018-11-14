@@ -10,11 +10,10 @@ MODULE_TYPE := banjo
 
 MODULE_PACKAGE := banjo
 
-MODULE_BANJO_LIBRARY := ddk.protocol.amlogic_canvas
+MODULE_BANJO_LIBRARY := ddk.protocol.amlogiccanvas
 
-MODULE_BANJO_NAME := amlogic-canvas
+MODULE_BANJO_NAME := amlogiccanvas
 
 MODULE_SRCS += $(LOCAL_DIR)/amlogic-canvas.banjo
 
 include make/module.mk
-

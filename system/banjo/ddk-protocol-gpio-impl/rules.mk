@@ -10,13 +10,12 @@ MODULE_TYPE := banjo
 
 MODULE_PACKAGE := banjo
 
-MODULE_BANJO_LIBRARY := ddk.protocol.gpio_impl
+MODULE_BANJO_LIBRARY := ddk.protocol.gpioimpl
 
-MODULE_BANJO_NAME := gpio-impl
+MODULE_BANJO_NAME := gpioimpl
 
 MODULE_BANJO_DEPS := system/banjo/ddk-protocol-gpio
 
 MODULE_SRCS += $(LOCAL_DIR)/gpio-impl.banjo
 
 include make/module.mk
-

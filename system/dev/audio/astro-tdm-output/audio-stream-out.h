@@ -6,7 +6,7 @@
 
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/i2c.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
 #include <ddktl/pdev.h>

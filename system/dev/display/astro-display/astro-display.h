@@ -12,9 +12,9 @@
 #include <lib/zx/bti.h>
 
 #include <ddk/driver.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/gpio.h>
-#include <ddk/protocol/amlogic-canvas.h>
+#include <ddk/protocol/amlogiccanvas.h>
 #include <ddk/debug.h>
 
 #include <ddktl/protocol/display-controller.h>

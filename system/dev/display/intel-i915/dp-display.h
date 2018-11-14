@@ -6,7 +6,7 @@
 
 #include "display-device.h"
 #include "dpcd.h"
-#include <ddk/protocol/i2c-impl.h>
+#include <ddk/protocol/i2cimpl.h>
 
 namespace i915 {
 

@@ -15,9 +15,9 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
-#include <ddk/protocol/platform-proxy.h>
+#include <ddk/protocol/platform/proxy.h>
 #include <zircon/pixelformat.h>
 
 #include "aml-canvas.h"

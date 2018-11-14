@@ -10,11 +10,10 @@ MODULE_TYPE := banjo
 
 MODULE_PACKAGE := banjo
 
-MODULE_BANJO_LIBRARY := ddk.protocol.ethernet_board
+MODULE_BANJO_LIBRARY := ddk.protocol.ethernet.board
 
-MODULE_BANJO_NAME := ethernet-board
+MODULE_BANJO_NAME := ethernet/board
 
 MODULE_SRCS += $(LOCAL_DIR)/ethernet-board.banjo
 
 include make/module.mk
-

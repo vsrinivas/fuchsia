@@ -6,7 +6,7 @@
 #include <limits.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/protocol/intel-hda-dsp.h>
+#include <ddk/protocol/intelhda/dsp.h>
 #include <zircon/process.h>
 
 #include "errors.h"

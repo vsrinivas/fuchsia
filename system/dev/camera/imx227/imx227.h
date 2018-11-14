@@ -4,8 +4,8 @@
 
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/i2c-lib.h>
-#include <ddk/protocol/platform-bus.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/bus.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/clk.h>
 #include <ddktl/protocol/gpio.h>

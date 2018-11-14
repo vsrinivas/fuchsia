@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <ddk/device.h>
-#include <ddk/protocol/ethernet-board.h>
+#include <ddk/protocol/ethernet/board.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/i2c.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
 #include <fbl/atomic.h>
