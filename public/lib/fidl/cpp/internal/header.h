@@ -10,6 +10,7 @@
 
 #include <lib/fidl/cpp/array.h>
 #include <lib/fit/function.h>
+#include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/eventpair.h>
@@ -20,6 +21,7 @@
 #include <lib/zx/log.h>
 #include <lib/zx/port.h>
 #include <lib/zx/process.h>
+#include <lib/zx/profile.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/thread.h>
