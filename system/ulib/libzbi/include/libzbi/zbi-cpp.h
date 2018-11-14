@@ -27,6 +27,10 @@ public:
     Zbi(uint8_t* base, size_t capacity)
         : base_(base), capacity_(capacity) {}
 
+    zbi_result_t Reset() {
+        return zbi_init(base_, capacity_);
+    }
+
     zbi_result_t Check(zbi_header_t** err) const {
         return zbi_check(base_, err);
     }

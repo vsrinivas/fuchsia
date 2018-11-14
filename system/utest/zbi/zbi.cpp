@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include <fbl/auto_call.h>
+#include <fbl/unique_ptr.h>
 #include <zircon/boot/image.h>
 #include <zircon/compiler.h>
 
@@ -361,6 +362,56 @@ static bool ZbiTestAppendMulti(void) {
     END_TEST;
 }
 
+constexpr size_t kTestBufferSize = 1024;
+// Test that we can initialize empty buffers as ZBI containers.
+static bool ZbiTestInit(void) {
+    BEGIN_TEST;
+
+    fbl::unique_ptr<uint8_t[]> buffer;
+    buffer.reset(new uint8_t[kTestBufferSize]);
+
+    zbi::Zbi image(buffer.get(), kTestBufferSize);
+    zbi_result_t result = image.Reset();
+    ASSERT_EQ(result, ZBI_RESULT_OK);
+
+    // Make sure that we've initialized a valid image.
+    ASSERT_EQ(image.Check(nullptr), ZBI_RESULT_OK);
+
+    result = image.AppendSection(sizeof(kTestCmdline), ZBI_TYPE_CMDLINE, 0, 0, kTestCmdline);
+    ASSERT_EQ(result, ZBI_RESULT_OK);
+
+    END_TEST;
+}
+
+// Test that we don't try to create a ZBI in a container that's not big enough.
+static bool ZbiTestInitTooSmall(void) {
+    BEGIN_TEST;
+
+    constexpr uint8_t kSentinel = 0xab;
+
+    // If all goes well, we should never write to this buffer.
+    fbl::unique_ptr<uint8_t[]> buffer;
+    buffer.reset(new uint8_t[kTestBufferSize]);
+
+    // Write a known value into the buffer to ensure that it's not touched.
+    memset(buffer.get(), kSentinel, kTestBufferSize);
+
+    // Create a zbi that's too small to even contain a header.
+    constexpr size_t kMinBufferSize = sizeof(zbi_header_t);
+    zbi::Zbi image(buffer.get(), kMinBufferSize - 1);
+
+    // Try to initialize this ZBI (should fail because there's not enough buffer)
+    zbi_result_t result = image.Reset();
+    EXPECT_NE(result, ZBI_RESULT_OK);
+
+    // Make sure that the underlying buffer was never touched by libzbi.
+    for (size_t i = 0; i < kTestBufferSize; i++) {
+        EXPECT_EQ(buffer.get()[i], kSentinel);
+    }
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(zbi_tests)
 RUN_TEST(ZbiTestBasic)
 RUN_TEST(ZbiTestBadContainer)
@@ -368,6 +419,8 @@ RUN_TEST(ZbiTestTruncated)
 RUN_TEST(ZbiTestAppend)
 RUN_TEST(ZbiTestAppendFull)
 RUN_TEST(ZbiTestAppendMulti)
+RUN_TEST(ZbiTestInit)
+RUN_TEST(ZbiTestInitTooSmall)
 END_TEST_CASE(zbi_tests)
 
 int main(int argc, char** argv) {

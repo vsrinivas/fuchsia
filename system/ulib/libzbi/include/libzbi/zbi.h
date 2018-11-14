@@ -48,6 +48,9 @@ typedef zbi_result_t (*zbi_foreach_cb_t)(zbi_header_t* hdr,
                                          void* payload,
                                          void* cookie);
 
+// Creates an empty ZBI container in buffer.
+zbi_result_t zbi_init(void* buffer, const size_t length);
+
 // Checks the integrity of the underlying ZBI.
 // If err is not null and an error is found, err will point to the ZBI entry
 // in which a problem was found the return value will attempt to specify the

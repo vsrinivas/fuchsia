@@ -17,7 +17,7 @@ MODULE_NAME := zbi-test
 
 MODULE_LIBS := system/ulib/unittest system/ulib/fdio system/ulib/c
 
-MODULE_STATIC_LIBS += system/ulib/libzbi system/ulib/fbl
+MODULE_STATIC_LIBS += system/ulib/libzbi system/ulib/fbl system/ulib/zxcpp
 
 include make/module.mk
 

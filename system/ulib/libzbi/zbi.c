@@ -11,6 +11,24 @@ struct check_state {
     bool seen_bootfs;
 };
 
+zbi_result_t zbi_init(void* buffer, const size_t length) {
+    if (length < sizeof(zbi_header_t)) {
+        return ZBI_RESULT_TOO_BIG;
+    }
+
+    zbi_header_t* hdr = (zbi_header_t*)buffer;
+    hdr->type = ZBI_TYPE_CONTAINER;
+    hdr->length = 0;
+    hdr->extra = ZBI_CONTAINER_MAGIC;
+    hdr->flags = ZBI_FLAG_VERSION;
+    hdr->reserved0 = 0;
+    hdr->reserved1 = 0;
+    hdr->magic = ZBI_ITEM_MAGIC;
+    hdr->crc32 = ZBI_ITEM_NO_CRC32;
+
+    return ZBI_RESULT_OK;
+}
+
 static zbi_result_t for_each_check_entry(zbi_header_t* hdr, void* payload,
                                          void* cookie) {
     struct check_state* const state = cookie;
