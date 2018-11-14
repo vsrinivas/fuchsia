@@ -81,8 +81,7 @@ static void next_pc(GuestState* guest_state) {
 
 static void deadline_callback(timer_t* timer, zx_time_t now, void* arg) {
     auto gich_state = static_cast<GichState*>(arg);
-    __UNUSED zx_status_t status = gich_state->interrupt_tracker.Interrupt(kTimerVector, nullptr);
-    DEBUG_ASSERT(status == ZX_OK);
+    gich_state->interrupt_tracker.VirtualInterrupt(kTimerVector);
 }
 
 static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_state,
@@ -108,7 +107,8 @@ static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_st
     uint64_t cntpct_deadline = guest_state->cntv_cval_el0;
     zx_time_t deadline = cntpct_to_zx_time(cntpct_deadline);
     if (deadline <= current_time()) {
-        return gich_state->interrupt_tracker.Track(kTimerVector);
+        gich_state->interrupt_tracker.Track(kTimerVector, hypervisor::InterruptType::VIRTUAL);
+        return ZX_OK;
     }
 
     timer_set_oneshot(&gich_state->timer, deadline, deadline_callback, gich_state);

@@ -16,65 +16,116 @@
 
 namespace hypervisor {
 
+enum class InterruptType {
+    INACTIVE,
+    VIRTUAL,
+    PHYSICAL
+};
+static_assert(static_cast<int>(InterruptType::PHYSICAL) < 4,
+    "The maximum value in InterruptType must not exceeed 2 bits in size");
+
+template <uint32_t N>
+class InterruptBitmap {
+public:
+    zx_status_t Init() {
+        return bitmap_.Reset(kNumBits);
+    }
+
+    InterruptType Get(uint32_t vector) const {
+        if (vector >= N) {
+            DEBUG_ASSERT(false);
+            return InterruptType::INACTIVE;
+        }
+        size_t first_unset;
+        size_t bitoff = vector * 2;
+        bitmap_.Get(bitoff, bitoff + 2, &first_unset);
+        return static_cast<InterruptType>(bitoff - first_unset);
+    }
+
+    void Set(uint32_t vector, InterruptType type) {
+        if (vector >= N) {
+            DEBUG_ASSERT(false);
+            return;
+        }
+        size_t bitoff = vector * 2;
+        auto state_bit = static_cast<size_t>(type);
+        bitmap_.Clear(bitoff, bitoff + 2);
+        bitmap_.Set(bitoff + 2 - state_bit, bitoff + 2);
+    }
+
+    InterruptType ReverseScan(uint32_t* vector) {
+        size_t bitoff;
+        bool is_empty = bitmap_.ReverseScan(0, kNumBits, false, &bitoff);
+        *vector = static_cast<uint32_t>(bitoff / 2);
+        if (is_empty) {
+            return InterruptType::INACTIVE;
+        } else if (bitoff % 2 == 0) {
+            return InterruptType::VIRTUAL;
+        } else {
+            return InterruptType::PHYSICAL;
+        }
+    }
+
+private:
+    static constexpr uint32_t kNumBits = N * 2;
+    bitmap::RawBitmapGeneric<bitmap::FixedStorage<kNumBits>> bitmap_;
+};
+
 // |N| is the maximum number of interrupts to be tracked.
 template <uint32_t N>
 class InterruptTracker {
 public:
     zx_status_t Init() {
         event_init(&event_, false, EVENT_FLAG_AUTOUNSIGNAL);
-        return bitmap_.Reset(N);
+        AutoSpinLock lock(&lock_);
+        return bitmap_.Init();
     }
 
     // Returns whether there are pending interrupts.
     bool Pending() {
+        uint32_t vector;
         AutoSpinLock lock(&lock_);
-        return !bitmap_.Scan(0, N, false);
+        return bitmap_.ReverseScan(&vector) != InterruptType::INACTIVE;
     }
 
-    bool TryPop(uint32_t vector) {
+    // Tries to pop the given interrupt.
+    InterruptType TryPop(uint32_t vector) {
         AutoSpinLock lock(&lock_);
-        bool has_vector = bitmap_.GetOne(reverse(vector));
-        if (has_vector) {
-            bitmap_.ClearOne(vector);
+        InterruptType type = bitmap_.Get(vector);
+        if (type != InterruptType::INACTIVE) {
+            bitmap_.Set(vector, InterruptType::INACTIVE);
         }
-        return has_vector;
+        return type;
     }
 
     // Pops the highest priority interrupt.
-    zx_status_t Pop(uint32_t* vector) {
-        size_t value;
-        {
-            AutoSpinLock lock(&lock_);
-            if (bitmap_.Scan(0, N, false, &value)) {
-                return ZX_ERR_NOT_FOUND;
-            }
-            bitmap_.ClearOne(value);
+    InterruptType Pop(uint32_t* vector) {
+        AutoSpinLock lock(&lock_);
+        InterruptType type = bitmap_.ReverseScan(vector);
+        if (type != InterruptType::INACTIVE) {
+            bitmap_.Set(*vector, InterruptType::INACTIVE);
         }
-        *vector = reverse(static_cast<uint32_t>(value));
-        return ZX_OK;
+        return type;
     }
 
     // Tracks the given interrupt.
-    zx_status_t Track(uint32_t vector) {
-        if (vector >= N) {
-            return ZX_ERR_OUT_OF_RANGE;
-        }
+    void Track(uint32_t vector, InterruptType type) {
         AutoSpinLock lock(&lock_);
-        bitmap_.SetOne(reverse(vector));
-        return ZX_OK;
+        bitmap_.Set(vector, type);
     }
 
     // Tracks the given interrupt, and signals any waiters.
-    zx_status_t Interrupt(uint32_t vector, bool* signaled) {
-        zx_status_t status = Track(vector);
-        if (status != ZX_OK) {
-            return status;
-        }
+    void Interrupt(uint32_t vector, InterruptType type, bool* signaled) {
+        Track(vector, type);
         int threads_unblocked = event_signal(&event_, true);
         if (signaled != nullptr) {
             *signaled = threads_unblocked > 0;
         }
-        return ZX_OK;
+    }
+
+    // Tracks the given virtual interrupt, and signals any waiters.
+    void VirtualInterrupt(uint32_t vector) {
+        Interrupt(vector, hypervisor::InterruptType::VIRTUAL, nullptr);
     }
 
     // Waits for an interrupt.
@@ -97,13 +148,7 @@ public:
 private:
     event_t event_;
     SpinLock lock_;
-    bitmap::RawBitmapGeneric<bitmap::FixedStorage<N>> bitmap_;
-
-    // We reverse the value, as RawBitmapGeneric::Scan will return the
-    // lowest priority interrupt, but we need the highest priority.
-    static uint32_t reverse(uint32_t vector) {
-        return N - vector - 1;
-    }
+    InterruptBitmap<N> bitmap_ TA_GUARDED(lock_);
 };
 
 } // namespace hypervisor

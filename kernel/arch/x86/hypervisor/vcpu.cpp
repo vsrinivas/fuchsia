@@ -702,16 +702,16 @@ Vcpu::~Vcpu() {
 // Injects an interrupt into the guest, if there is one pending.
 static zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* local_apic_state) {
     uint32_t vector;
-    zx_status_t status = local_apic_state->interrupt_tracker.Pop(&vector);
-    if (status != ZX_OK) {
-        return status == ZX_ERR_NOT_FOUND ? ZX_OK : status;
+    hypervisor::InterruptType type = local_apic_state->interrupt_tracker.Pop(&vector);
+    if (type == hypervisor::InterruptType::INACTIVE) {
+        return ZX_OK;
     }
 
     if (vector < X86_INT_PLATFORM_BASE || vmcs->Read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_IF) {
         // If the vector is non-maskable or interrupts are enabled, we inject an interrupt.
         vmcs->IssueInterrupt(vector);
     } else {
-        local_apic_state->interrupt_tracker.Track(vector);
+        local_apic_state->interrupt_tracker.Track(vector, type);
         // If interrupts are disabled, we set VM exit on interrupt enable.
         vmcs->InterruptWindowExiting(true);
     }
@@ -773,10 +773,9 @@ void vmx_exit(VmxState* vmx_state) {
 
 zx_status_t Vcpu::Interrupt(uint32_t vector) {
     bool signaled = false;
-    zx_status_t status = local_apic_state_.interrupt_tracker.Interrupt(vector, &signaled);
-    if (status != ZX_OK) {
-        return status;
-    } else if (!signaled && running_.load()) {
+    local_apic_state_.interrupt_tracker.Interrupt(
+        vector, hypervisor::InterruptType::VIRTUAL, &signaled);
+    if (!signaled && running_.load()) {
         mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(hypervisor::cpu_of(vpid_)));
     }
     return ZX_OK;

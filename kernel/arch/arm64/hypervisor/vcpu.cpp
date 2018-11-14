@@ -43,17 +43,17 @@ static bool gich_maybe_interrupt(GichState* gich_state) {
         // should raise an IRQ.
         return true;
     }
-    zx_status_t status;
     uint32_t pending = 0;
     uint32_t vector = kTimerVector;
-    if (gich_state->interrupt_tracker.TryPop(vector)) {
+    hypervisor::InterruptType type = gich_state->interrupt_tracker.TryPop(vector);
+    if (type != hypervisor::InterruptType::INACTIVE) {
         // We give timer interrupts precedence over all others. If we find a
         // timer interrupt is pending, process it first.
         goto has_timer;
     }
     while (elrsr != 0) {
-        status = gich_state->interrupt_tracker.Pop(&vector);
-        if (status != ZX_OK) {
+        type = gich_state->interrupt_tracker.Pop(&vector);
+        if (type == hypervisor::InterruptType::INACTIVE) {
             // There are no more pending interrupts.
             break;
         }
@@ -255,10 +255,9 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
 
 zx_status_t Vcpu::Interrupt(uint32_t vector) {
     bool signaled = false;
-    zx_status_t status = gich_state_.interrupt_tracker.Interrupt(vector, &signaled);
-    if (status != ZX_OK) {
-        return status;
-    } else if (!signaled && running_.load()) {
+    gich_state_.interrupt_tracker.Interrupt(
+        vector, hypervisor::InterruptType::VIRTUAL, &signaled);
+    if (!signaled && running_.load()) {
         mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(hypervisor::cpu_of(vpid_)));
     }
     return ZX_OK;

@@ -535,7 +535,8 @@ static zx_status_t handle_apic_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
         // Issue a general protection fault for write only and unimplemented
         // registers.
         dprintf(INFO, "Unhandled x2APIC rdmsr %#lx\n", guest_state->rcx);
-        return local_apic_state->interrupt_tracker.Interrupt(X86_INT_GP_FAULT, nullptr);
+        local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
+        return ZX_OK;
     }
 }
 
@@ -591,7 +592,8 @@ static zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
         return handle_apic_rdmsr(exit_info, vmcs, guest_state, local_apic_state);
     default:
         dprintf(INFO, "Unhandled rdmsr %#lx\n", guest_state->rcx);
-        return local_apic_state->interrupt_tracker.Interrupt(X86_INT_GP_FAULT, nullptr);
+        local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
+        return ZX_OK;
     }
 }
 
@@ -618,7 +620,7 @@ static void deadline_callback(timer_t* timer, zx_time_t now, void* arg) {
         update_timer(local_apic_state, lvt_deadline(local_apic_state));
     }
     uint8_t vector = local_apic_state->lvt_timer & LVT_TIMER_VECTOR_MASK;
-    local_apic_state->interrupt_tracker.Interrupt(vector, nullptr);
+    local_apic_state->interrupt_tracker.VirtualInterrupt(vector);
 }
 
 static void update_timer(LocalApicState* local_apic_state, zx_time_t deadline) {
@@ -690,7 +692,8 @@ static zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     case X2ApicMsr::ESR:
         if (guest_state->rax != 0) {
             // Non-zero writes to EOI and ESR cause GP fault. See Volume 3 Section 10.12.1.2.
-            return local_apic_state->interrupt_tracker.Interrupt(X86_INT_GP_FAULT, nullptr);
+            local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
+            return ZX_OK;
         }
         __FALLTHROUGH;
     case X2ApicMsr::TPR:
@@ -731,7 +734,8 @@ static zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     case X2ApicMsr::SELF_IPI: {
         next_rip(exit_info, vmcs);
         uint32_t vector = static_cast<uint32_t>(guest_state->rax) & UINT8_MAX;
-        return local_apic_state->interrupt_tracker.Interrupt(vector, nullptr);
+        local_apic_state->interrupt_tracker.VirtualInterrupt(vector);
+        return ZX_OK;
     }
     case X2ApicMsr::ICR:
         return handle_ipi(exit_info, vmcs, guest_state, packet);
@@ -739,7 +743,8 @@ static zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
         // Issue a general protection fault for read only and unimplemented
         // registers.
         dprintf(INFO, "Unhandled x2APIC wrmsr %#lx\n", guest_state->rcx);
-        return local_apic_state->interrupt_tracker.Interrupt(X86_INT_GP_FAULT, nullptr);
+        local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
+        return ZX_OK;
     }
 }
 
@@ -762,7 +767,7 @@ static zx_status_t handle_kvm_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     case kKvmBootTime:
         return pvclock_update_boot_time(gpas, guest_paddr);
     default:
-        local_apic_state->interrupt_tracker.Interrupt(X86_INT_GP_FAULT, nullptr);
+        local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
         return ZX_OK;
     }
 }
@@ -814,7 +819,8 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
         return handle_kvm_wrmsr(exit_info, vmcs, guest_state, local_apic_state, pvclock, gpas);
     default:
         dprintf(INFO, "Unhandled wrmsr %#lx\n", guest_state->rcx);
-        return local_apic_state->interrupt_tracker.Interrupt(X86_INT_GP_FAULT, nullptr);
+        local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
+        return ZX_OK;
     }
 }
 
