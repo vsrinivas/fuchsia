@@ -46,8 +46,8 @@ void zx_device::fbl_recycle() TA_NO_THREAD_SAFETY_ANALYSIS {
         printf("device: %p(%s): still has children! not good.\n", this, this->name);
     }
 
-    zx_handle_close(this->event);
-    zx_handle_close(this->local_event);
+    this->event.reset();
+    this->local_event.reset();
 
     // Put on the defered work list for finalization
     devmgr::defer_device_list.push_back(this);

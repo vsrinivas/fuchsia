@@ -48,17 +48,16 @@ void describe_error(zx::channel h, zx_status_t status) {
 }
 
 static zx_status_t create_description(const fbl::RefPtr<zx_device_t>& dev, zxfidl_on_open_t* msg,
-                                      zx_handle_t* handle) {
+                                      zx::eventpair* handle) {
     memset(msg, 0, sizeof(*msg));
     msg->primary.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
     msg->extra.tag = fuchsia_io_NodeInfoTag_device;
     msg->primary.s = ZX_OK;
     msg->primary.info = (fuchsia_io_NodeInfo*)FIDL_ALLOC_PRESENT;
-    *handle = ZX_HANDLE_INVALID;
-    if (dev->event != ZX_HANDLE_INVALID) {
+    handle->reset();
+    if (dev->event.is_valid()) {
         zx_status_t r;
-        if ((r = zx_handle_duplicate(dev->event, ZX_RIGHTS_BASIC,
-                                     handle)) != ZX_OK) {
+        if ((r = dev->event.duplicate(ZX_RIGHTS_BASIC, handle)) != ZX_OK) {
             msg->primary.s = r;
             return r;
         }
@@ -100,12 +99,15 @@ static zx_status_t devhost_get_handles(zx::channel rh, const fbl::RefPtr<zx_devi
 
     if (describe) {
         zxfidl_on_open_t info;
-        zx_handle_t handle;
+        zx::eventpair handle;
         if ((r = create_description(new_dev, &info, &handle)) != ZX_OK) {
             goto fail_open;
         }
-        uint32_t hcount = (handle != ZX_HANDLE_INVALID) ? 1 : 0;
-        r = rh.write(0, &info, sizeof(info), &handle, hcount);
+        uint32_t hcount = (handle.is_valid()) ? 1 : 0;
+        zx_handle_t raw_handles[] = {
+            handle.release(),
+        };
+        r = rh.write(0, &info, sizeof(info), raw_handles, hcount);
         if (r != ZX_OK) {
             goto fail_open;
         }
@@ -168,10 +170,12 @@ static ssize_t do_ioctl(const fbl::RefPtr<zx_device_t>& dev, uint32_t op, const 
         if (out_len < sizeof(zx_handle_t)) {
             return ZX_ERR_BUFFER_TOO_SMALL;
         }
-        auto event = static_cast<zx_handle_t*>(out_buf);
-        if ((r = zx_handle_duplicate(dev->event, ZX_RIGHTS_BASIC | ZX_RIGHT_READ, event)) != ZX_OK) {
+        auto raw_event = static_cast<zx_handle_t*>(out_buf);
+        zx::eventpair event;
+        if ((r = dev->event.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ, &event)) != ZX_OK) {
             return r;
         }
+        *raw_event = event.release();
         *out_actual = sizeof(zx_handle_t);
         return ZX_OK;
     }
@@ -274,11 +278,12 @@ static zx_status_t fidl_node_describe(void* ctx, fidl_txn_t* txn) {
     memset(&info, 0, sizeof(info));
     info.tag = fuchsia_io_NodeInfoTag_device;
     if (dev->event != ZX_HANDLE_INVALID) {
-        zx_status_t status = zx_handle_duplicate(
-            dev->event, ZX_RIGHTS_BASIC, &info.device.event);
+        zx::eventpair event;
+        zx_status_t status = dev->event.duplicate(ZX_RIGHTS_BASIC, &event);
         if (status != ZX_OK) {
             return status;
         }
+        info.device.event = event.release();
     }
     return fuchsia_io_NodeDescribe_reply(txn, &info);
 }

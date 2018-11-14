@@ -154,7 +154,7 @@ __EXPORT zx_status_t device_get_protocol(const zx_device_t* dev, uint32_t proto_
 }
 
 __EXPORT void device_state_clr_set(zx_device_t* dev, zx_signals_t clearflag, zx_signals_t setflag) {
-    zx_object_signal(dev->event, clearflag, setflag);
+    dev->event.signal(clearflag, setflag);
 }
 
 

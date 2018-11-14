@@ -191,9 +191,9 @@ void devhost_device_destroy(zx_device_t* dev) REQ_DM_LOCK {
 
     dev->magic = 0xdeaddeaddeaddead;
 
-    // ensure all handles are invalid
-    dev->event = 0xffffffff;
-    dev->local_event = 0xffffffff;
+    // ensure all owned handles are invalid
+    dev->event.reset();
+    dev->local_event.reset();
 
     // ensure all pointers are invalid
     dev->ctx = nullptr;
@@ -430,8 +430,8 @@ zx_status_t devhost_device_add(const fbl::RefPtr<zx_device_t>& dev,
 #endif
 
     // Don't create an event handle if we alredy have one
-    if ((dev->event == ZX_HANDLE_INVALID) &&
-        ((status = zx_eventpair_create(0, &dev->event, &dev->local_event)) < 0)) {
+    if (!dev->event.is_valid() &&
+        ((status = zx::eventpair::create(0, &dev->event, &dev->local_event)) < 0)) {
         printf("device add: %p(%s): cannot create event: %d\n",
                dev.get(), dev->name, status);
         return fail(status);

@@ -11,6 +11,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/eventpair.h>
 #include <zircon/compiler.h>
 #include <zircon/thread_annotations.h>
 
@@ -92,8 +93,8 @@ struct zx_device : fbl::RefCounted<zx_device>, fbl::Recyclable<zx_device>  {
 
     uint32_t flags = 0;
 
-    zx_handle_t event = ZX_HANDLE_INVALID;
-    zx_handle_t local_event = ZX_HANDLE_INVALID;
+    zx::eventpair event;
+    zx::eventpair local_event;
     // The RPC channel is owned by |conn|
     zx::unowned_channel rpc;
 
