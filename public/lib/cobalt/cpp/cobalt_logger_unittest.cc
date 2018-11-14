@@ -255,9 +255,11 @@ class FakeLoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
  public:
   FakeLoggerFactoryImpl() {}
 
+  // TODO(zmbush): Restore override once zircon change has been submitted.
+
   void CreateLogger(fuchsia::cobalt::ProjectProfile profile,
                     fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
-                    CreateLoggerCallback callback) override {
+                    CreateLoggerCallback callback) /* override */ {
     logger_.reset(new FakeLoggerImpl());
     logger_bindings_.AddBinding(logger_.get(), std::move(request));
     callback(fuchsia::cobalt::Status::OK);
@@ -266,9 +268,19 @@ class FakeLoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   void CreateLoggerSimple(
       fuchsia::cobalt::ProjectProfile profile,
       fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
-      CreateLoggerSimpleCallback callback) override {
+      CreateLoggerSimpleCallback callback) /* override */ {
     callback(fuchsia::cobalt::Status::OK);
   }
+
+  void CreateLoggerFromProjectName(
+      fidl::StringPtr project_name, fuchsia::cobalt::ReleaseStage stage,
+      fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
+      CreateLoggerCallback callback) {}
+
+  void CreateLoggerSimpleFromProjectName(
+      fidl::StringPtr project_name, fuchsia::cobalt::ReleaseStage stage,
+      fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
+      CreateLoggerCallback callback) {}
 
   FakeLoggerImpl* logger() { return logger_.get(); }
 
