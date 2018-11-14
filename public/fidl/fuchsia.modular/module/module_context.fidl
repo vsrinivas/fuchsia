@@ -67,6 +67,7 @@ interface ModuleContext {
 
     /// Gets the IntelligenceServices service vendor associated with this Module
     /// instance.
+    /// DEPRECATED
     8: GetIntelligenceServices(request<IntelligenceServices> request);
 
     /// Gets the id for this story which may be used to create a suggestion

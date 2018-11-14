@@ -38,6 +38,9 @@ ModuleContextImpl::ModuleContextImpl(
       [this](fidl::InterfaceRequest<fuchsia::modular::ModuleContext> request) {
         bindings_.AddBinding(this, std::move(request));
       });
+  service_provider_impl_.AddService<fuchsia::modular::IntelligenceServices>(
+      [this](fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices>
+                 request) { GetIntelligenceServices(std::move(request)); });
   service_provider_impl_.AddBinding(std::move(service_provider_request));
 }
 

@@ -186,6 +186,8 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     auto service_list = fuchsia::sys::ServiceList::New();
     service_list->names.push_back(fuchsia::modular::ComponentContext::Name_);
     service_list->names.push_back(fuchsia::modular::ModuleContext::Name_);
+    service_list->names.push_back(
+        fuchsia::modular::IntelligenceServices::Name_);
     service_list->provider = std::move(module_context_provider);
 
     RunningModInfo running_mod_info;
