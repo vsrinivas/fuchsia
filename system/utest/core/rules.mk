@@ -22,7 +22,8 @@ MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/runtime \
     system/ulib/sync \
-    system/ulib/zx
+    system/ulib/zx \
+    system/ulib/zxcpp
 
 # This separate library is a hack to deal with these functions needing to be compiled with
 # -fno-stack-protector

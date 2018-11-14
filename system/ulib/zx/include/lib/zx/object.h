@@ -13,6 +13,7 @@
 namespace zx {
 
 class port;
+class profile;
 
 // Wraps and takes ownership of a handle to an object.
 //
@@ -176,6 +177,10 @@ public:
 
     zx_status_t set_cookie(const object_base& scope, uint64_t cookie) const {
         return zx_object_set_cookie(get(), scope.get(), cookie);
+    }
+
+    zx_status_t set_profile(const object<profile>& profile, uint32_t options) const {
+        return zx_object_set_profile(get(), profile.get(), options);
     }
 
 private:

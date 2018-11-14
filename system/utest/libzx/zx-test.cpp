@@ -17,6 +17,7 @@
 #include <lib/zx/job.h>
 #include <lib/zx/port.h>
 #include <lib/zx/process.h>
+#include <lib/zx/profile.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/suspend_token.h>
 #include <lib/zx/thread.h>
