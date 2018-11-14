@@ -121,6 +121,10 @@ class RoutingTable {
     }
   }
 
+  Status ValidateIncomingUpdate(
+      const std::vector<fuchsia::overnet::protocol::NodeMetrics>& nodes,
+      const std::vector<fuchsia::overnet::protocol::LinkMetrics>& links) const;
+
  private:
   const NodeId root_node_;
   Timer* const timer_;

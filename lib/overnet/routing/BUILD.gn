@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fuzzing/fuzzer.gni")
+
 ###############################################################################
 # AGGREGATE LIBRARIES
 
@@ -72,5 +74,19 @@ source_set("routing_table") {
     "//garnet/lib/overnet/vocabulary:internal_list",
     "//garnet/lib/overnet/vocabulary:optional",
     "//garnet/lib/overnet/vocabulary:slice",
+  ]
+}
+
+fuzz_target("routing_table_fuzzer") {
+  testonly = true
+  sources = [
+    "routing_table_fuzzer.cc",
+  ]
+  deps = [
+        ":routing_table",
+        "//garnet/lib/overnet/protocol:fidl",
+        "//garnet/lib/overnet/protocol:varint",
+        "//garnet/lib/overnet/testing:test_timer",
+        "//garnet/lib/overnet/testing:trace_cout",
   ]
 }

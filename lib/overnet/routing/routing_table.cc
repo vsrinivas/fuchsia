@@ -329,4 +329,28 @@ RoutingTable::Update RoutingTable::GenerateUpdate(
   return Update{gossip_version_, std::move(data)};
 }
 
+Status RoutingTable::ValidateIncomingUpdate(
+    const std::vector<fuchsia::overnet::protocol::NodeMetrics>& nodes,
+    const std::vector<fuchsia::overnet::protocol::LinkMetrics>& links) const {
+  for (const auto& m : nodes) {
+    if (!m.has_label()) {
+      return Status(StatusCode::INVALID_ARGUMENT, "Unlabelled node in update");
+    }
+    if (m.label()->id == root_node_) {
+      return Status(StatusCode::INVALID_ARGUMENT,
+                    "Received node update to self");
+    }
+  }
+  for (const auto& m : links) {
+    if (!m.has_label()) {
+      return Status(StatusCode::INVALID_ARGUMENT, "Unlabelled node in update");
+    }
+    if (m.label()->from == root_node_) {
+      return Status(StatusCode::INVALID_ARGUMENT,
+                    "Received link update to own link");
+    }
+  }
+  return Status::Ok();
+}
+
 }  // namespace overnet

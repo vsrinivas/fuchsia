@@ -13,7 +13,6 @@
 * datagram stream fuzzer
 * packet protocol fuzzer
 * timer fuzzer
-* routing_table fuzzer
 * packet_nub fuzzer
 
 * routable_message fuzzer for MaxPayloadLength

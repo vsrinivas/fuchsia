@@ -314,23 +314,9 @@ Status Router::ApplyGossipUpdate(Slice update, NodeId from_peer) {
   }
   auto nodes = TakeVector(status->mutable_nodes());
   auto links = TakeVector(status->mutable_links());
-  for (const auto& m : nodes) {
-    if (!m.has_label()) {
-      return Status(StatusCode::INVALID_ARGUMENT, "Unlabelled node in update");
-    }
-    if (m.label()->id == node_id_) {
-      return Status(StatusCode::INVALID_ARGUMENT,
-                    "Received node update to self");
-    }
-  }
-  for (const auto& m : links) {
-    if (!m.has_label()) {
-      return Status(StatusCode::INVALID_ARGUMENT, "Unlabelled node in update");
-    }
-    if (m.label()->from == node_id_) {
-      return Status(StatusCode::INVALID_ARGUMENT,
-                    "Received link update to own link");
-    }
+  auto validation_status = routing_table_.ValidateIncomingUpdate(nodes, links);
+  if (validation_status.is_error()) {
+    return validation_status;
   }
   UpdateRoutingTable(std::move(nodes), std::move(links), true);
   return Status::Ok();

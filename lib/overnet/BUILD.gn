@@ -77,6 +77,7 @@ fuzz_package("overnet_fuzzers") {
     "links:packet_nub_fuzzer",
     "packet_protocol:packet_protocol_fuzzer",
     "protocol:routable_message_fuzzer",
+    "routing:routing_table_fuzzer",
     "vocabulary:internal_list_fuzzer",
   ]
   sanitizers = [ "asan" ]
