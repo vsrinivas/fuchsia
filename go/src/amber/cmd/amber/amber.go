@@ -64,7 +64,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	d, err := daemon.NewDaemon(*store, "", "")
+	var ctlSvc amber.ControlService
+	var evtSvc amber.EventsService
+	d, err := daemon.NewDaemon(*store, "", "", &evtSvc)
 	if err != nil {
 		log.Fatalf("failed to start daemon: %s", err)
 	}
@@ -91,9 +93,12 @@ func main() {
 
 	supMon := sys_update.NewSystemUpdateMonitor(*autoUpdate, d)
 	ctlSvr := control_server.NewControlServer(d, supMon)
-	var bs fidl.BindingSet
 	ctx.OutgoingService.AddService(amber.ControlName, func(c zx.Channel) error {
-		_, err := bs.Add(&amber.ControlStub{Impl: ctlSvr}, c, nil)
+		_, err := ctlSvc.Add(ctlSvr, c, nil)
+		return err
+	})
+	ctx.OutgoingService.AddService(amber.EventsName, func(c zx.Channel) error {
+		_, err := evtSvc.Add(control_server.EventsImpl{}, c, nil)
 		return err
 	})
 	// note: not blocking

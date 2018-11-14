@@ -174,3 +174,10 @@ interface Control {
     // Trigger a garbage collection.
     13: GC();
 };
+
+[Discoverable]
+interface Events {
+    // Event that is triggered when an update failed because blobfs is out of
+    // storage.
+    1: -> OnOutOfSpace();
+};

@@ -25,6 +25,9 @@ type ControlServer struct {
 	sysUpdate *sys_update.SystemUpdateMonitor
 }
 
+type EventsImpl struct {}
+var _ = amber.Events(EventsImpl{})
+
 var merklePat = regexp.MustCompile("^[0-9a-f]{64}$")
 
 func NewControlServer(d *daemon.Daemon, sum *sys_update.SystemUpdateMonitor) *ControlServer {

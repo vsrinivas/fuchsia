@@ -20,6 +20,8 @@ func debugLog(s string, args ...interface{}) {
 }
 
 type unsupportedFile string
+// Export for testing.
+type UnsupportedFile = unsupportedFile
 
 func (f unsupportedFile) Close() error {
 	log.Printf("pkgfs:unsupported(%s): file close", string(f))
@@ -89,6 +91,8 @@ func (f unsupportedFile) SetOpenFlags(flags fs.OpenFlags) error {
 var _ = fs.File(unsupportedFile("impl-check"))
 
 type unsupportedDirectory string
+// Export for testing.
+type UnsupportedDirectory = unsupportedDirectory
 
 func (d unsupportedDirectory) Close() error {
 	log.Printf("pkgfs:unsupported(%s): dir close", string(d))

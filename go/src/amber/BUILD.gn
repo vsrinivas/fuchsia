@@ -121,6 +121,7 @@ foreach(test, test_targets) {
 
     deps = [
       ":amber_lib",
+      "//garnet/go/src/pmd",
       "//garnet/public/go/third_party:github.com/google/go-cmp",
     ]
   }

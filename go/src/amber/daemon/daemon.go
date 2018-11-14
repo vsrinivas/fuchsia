@@ -13,10 +13,12 @@ import (
 	"path/filepath"
 	"sync"
 
+	"fidl/fuchsia/amber"
+
 	"amber/atonce"
 	"amber/source"
 
-	"fidl/fuchsia/amber"
+	"syscall/zx"
 )
 
 const (
@@ -33,11 +35,12 @@ type Daemon struct {
 	muSrcs sync.Mutex
 	srcs   map[string]*source.Source
 
+	events *amber.EventsService
 	aw activationWatcher
 }
 
 // NewDaemon creates a Daemon
-func NewDaemon(store, pkgInstallDir, blobInstallDir string) (*Daemon, error) {
+func NewDaemon(store, pkgInstallDir, blobInstallDir string, events *amber.EventsService) (*Daemon, error) {
 	if pkgInstallDir == "" {
 		pkgInstallDir = DefaultPkgInstallDir
 	}
@@ -50,6 +53,7 @@ func NewDaemon(store, pkgInstallDir, blobInstallDir string) (*Daemon, error) {
 		pkgInstallDir:  pkgInstallDir,
 		blobInstallDir: blobInstallDir,
 		srcs:           make(map[string]*source.Source),
+		events:         events,
 	}
 
 	// Ignore if the directory doesn't exist
@@ -384,6 +388,17 @@ func (d *Daemon) fetchInto(merkle string, length int64, outputDir string) error 
 		for _, source := range d.GetActiveSources() {
 			err = source.FetchInto(merkle, length, outputDir)
 			if err == nil || os.IsExist(err) {
+				return err
+			}
+			if e, ok := err.(zx.Error); ok && e.Status == zx.ErrNoSpace {
+				for key := range d.events.Bindings {
+					if p, ok := d.events.EventProxyFor(key); ok {
+						log.Printf("daemon: blobfs is out of space")
+						if err := p.OnOutOfSpace(); err != nil {
+							log.Printf("daemon: OnOutOfSpace failed: %v", err)
+						}
+					}
+				}
 				return err
 			}
 		}
