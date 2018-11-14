@@ -108,7 +108,7 @@ class Thread : public ClientObject {
   // The pointers in the vector returned by GetFrames() can be cached if the
   // code listens for ThreadObserver::OnThreadFramesInvalidated() and clears
   // the cache at that point.
-  virtual std::vector<Frame*> GetFrames() const = 0;
+  virtual const std::vector<Frame*>& GetFrames() const = 0;
   virtual bool HasAllFrames() const = 0;
   virtual void SyncFrames(std::function<void()> callback) = 0;
 

@@ -53,7 +53,7 @@ class MockThread : public Thread {
                     std::function<void(const Err&)> on_continue) override {}
   void NotifyControllerDone(ThreadController* controller) override {}
   void StepInstruction() override {}
-  std::vector<Frame*> GetFrames() const override { return frames_; }
+  const std::vector<Frame*>& GetFrames() const override { return frames_; }
   bool HasAllFrames() const override { return true; }
   void SyncFrames(std::function<void()> callback) override {
     debug_ipc::MessageLoop::Current()->PostTask(callback);

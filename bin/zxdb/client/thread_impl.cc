@@ -140,12 +140,15 @@ void ThreadImpl::StepInstruction() {
       request, [](const Err& err, debug_ipc::ResumeReply) {});
 }
 
-std::vector<Frame*> ThreadImpl::GetFrames() const {
-  std::vector<Frame*> frames;
-  frames.reserve(frames_.size());
-  for (const auto& cur : frames_)
-    frames.push_back(cur.get());
-  return frames;
+const std::vector<Frame*>& ThreadImpl::GetFrames() const {
+  if (frames_cache_.empty()) {
+    frames_cache_.reserve(frames_.size());
+    for (const auto& cur : frames_)
+      frames_cache_.push_back(cur.get());
+  } else {
+    FXL_DCHECK(frames_.size() == frames_cache_.size());
+  }
+  return frames_cache_;
 }
 
 bool ThreadImpl::HasAllFrames() const { return has_all_frames_; }
@@ -225,6 +228,7 @@ void ThreadImpl::SetMetadata(const debug_ipc::ThreadRecord& record) {
   }
 
   frames_.clear();
+  frames_cache_.clear();
   for (size_t i = 0; i < record.frames.size(); i++) {
     IpSp key(record.frames[i].ip, record.frames[i].sp);
     auto found = existing.find(key);
@@ -326,6 +330,7 @@ void ThreadImpl::ClearFrames() {
     return;  // Nothing to do.
 
   frames_.clear();
+  frames_cache_.clear();
   for (auto& observer : observers())
     observer.OnThreadFramesInvalidated(this);
 }

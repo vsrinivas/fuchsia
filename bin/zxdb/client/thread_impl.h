@@ -32,7 +32,7 @@ class ThreadImpl : public Thread {
                     std::function<void(const Err&)> on_continue) override;
   void NotifyControllerDone(ThreadController* controller) override;
   void StepInstruction() override;
-  std::vector<Frame*> GetFrames() const override;
+  const std::vector<Frame*>& GetFrames() const override;
   bool HasAllFrames() const override;
   void SyncFrames(std::function<void()> callback) override;
   FrameFingerprint GetFrameFingerprint(size_t frame_index) const override;
@@ -75,6 +75,13 @@ class ThreadImpl : public Thread {
 
   std::vector<std::unique_ptr<FrameImpl>> frames_;
   bool has_all_frames_ = false;
+
+  // Cached version of frames_ containing non-owning pointers to the base type.
+  // This is the backing store for GetFrames() which can be called frequently
+  // so we don't want to return a copy every time.
+  //
+  // When empty, it should be repopulated from frames_.
+  mutable std::vector<Frame*> frames_cache_;
 
   // Ordered list of ThreadControllers that apply to this thread. This is
   // a stack where back() is the topmost contoller that applies first.
