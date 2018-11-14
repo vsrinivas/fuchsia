@@ -130,6 +130,6 @@ static_assert(sizeof(trace_buffer_header) == 128, "");
 //
 // This function is not thread-safe relative to the collected data, and
 // assumes tracing is stopped or at least paused.
-__EXPORT void trace_context_snapshot_buffer_header(
+void trace_context_snapshot_buffer_header(
     trace_prolonged_context_t* context,
     ::trace::internal::trace_buffer_header* header);
