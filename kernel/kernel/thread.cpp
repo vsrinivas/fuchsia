@@ -1339,10 +1339,15 @@ static zx_status_t _thread_print_backtrace(thread_t* t, void* fp) {
         return ZX_ERR_BAD_STATE;
     }
 
+    // TODO(jakehehrlich): Remove the legacy format.
     for (size_t n = 0; n < count; n++) {
         printf("bt#%02zu: %p\n", n, tb.pc[n]);
     }
     printf("bt#%02zu: end\n", count);
+
+    for (size_t n = 0; n < count; n++) {
+        printf("{{{bt:%zu:%p}}}\n", n, tb.pc[n]);
+    }
 
     return ZX_OK;
 }
