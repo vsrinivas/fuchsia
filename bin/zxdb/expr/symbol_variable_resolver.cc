@@ -35,14 +35,14 @@ void SymbolVariableResolver::ResolveVariable(
     return;
   }
 
-  uint64_t ip = 0;
-  if (!data_provider_->GetRegister(SymbolDataProvider::kRegisterIP, &ip)) {
+  auto ip = data_provider_->GetRegister(SymbolDataProvider::kRegisterIP);
+  if (!ip) {
     OnComplete(state, Err("No location available."), ExprValue());
     return;
   }
 
   const VariableLocation::Entry* loc_entry =
-      var->location().EntryForIP(symbol_context, ip);
+      var->location().EntryForIP(symbol_context, *ip);
   if (!loc_entry) {
     // No DWARF location applies to the current instruction pointer.
     std::string err_str;

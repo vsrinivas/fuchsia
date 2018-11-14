@@ -275,10 +275,9 @@ DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(
   // This function doesn't set the result_type_ because it is called from
   // different contexts. The callers should set the result_type_ as appropriate
   // for their operation.
-  uint64_t register_data = 0;
-  if (data_provider_->GetRegister(dwarf_register_number, &register_data)) {
+  if (auto reg_data = data_provider_->GetRegister(dwarf_register_number)) {
     // Register data available synchronously.
-    Push(register_data + offset);
+    Push(*reg_data + offset);
     return Completion::kSync;
   }
 

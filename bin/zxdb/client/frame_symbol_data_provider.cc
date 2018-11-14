@@ -27,35 +27,30 @@ FrameSymbolDataProvider::~FrameSymbolDataProvider() = default;
 
 void FrameSymbolDataProvider::DisownFrame() { frame_ = nullptr; }
 
-bool FrameSymbolDataProvider::GetRegister(int dwarf_register_number,
-                                          uint64_t* output) {
+std::optional<uint64_t> FrameSymbolDataProvider::GetRegister(
+    int dwarf_register_number) {
   if (!frame_)
-    return false;
+    return std::nullopt;
 
-  if (dwarf_register_number == kRegisterIP) {
-    *output = frame_->GetAddress();
-    return true;
-  }
+  if (dwarf_register_number == kRegisterIP)
+    return frame_->GetAddress();
 
   // Some common registers are known without having to do a register request.
   switch (GetSpecialRegisterTypeFromDWARFRegisterID(frame_->session()->arch(),
                                                     dwarf_register_number)) {
     case SpecialRegisterType::kIP:
-      *output = frame_->GetAddress();
-      return true;
+      return frame_->GetAddress();
     case SpecialRegisterType::kSP:
-      *output = frame_->GetStackPointer();
-      return true;
+      return frame_->GetStackPointer();
     case SpecialRegisterType::kBP:
-      *output = frame_->GetBasePointerRegister();
-      return true;
+      return frame_->GetBasePointerRegister();
     case SpecialRegisterType::kNone:
       break;
   }
 
   // TODO(brettw) enable synchronous access if the registers are cached.
   // See GetRegisterAsync().
-  return false;
+  return std::nullopt;
 }
 
 void FrameSymbolDataProvider::GetRegisterAsync(int dwarf_register_number,

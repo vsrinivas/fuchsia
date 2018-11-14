@@ -44,12 +44,9 @@ class SymbolDataProvider
   static constexpr int kRegisterIP = -1;
 
   // Request for synchronous register data. If the register data can be provided
-  // synchronously, the data will be put into the output parameter and this
-  // function will return true.
-  //
-  // If synchronous data is not available, this function will return false. The
-  // output will be unmodified. The caller should call GetRegisterAsync().
-  virtual bool GetRegister(int dwarf_register_number, uint64_t* output) = 0;
+  // synchronously, the data will be returned. If synchronous data is not
+  // available, the caller should call GetRegisterAsync().
+  virtual std::optional<uint64_t> GetRegister(int dwarf_register_number) = 0;
 
   // Request for register data with an asynchronous callback. The callback will
   // be issued when the register data is available.

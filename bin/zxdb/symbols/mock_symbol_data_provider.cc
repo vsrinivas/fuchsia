@@ -27,22 +27,19 @@ void MockSymbolDataProvider::AddMemory(uint64_t address,
   mem_[address] = std::move(data);
 }
 
-bool MockSymbolDataProvider::GetRegister(int dwarf_register_number,
-                                         uint64_t* output) {
-  if (dwarf_register_number == kRegisterIP) {
-    *output = ip_;
-    return true;
-  }
+std::optional<uint64_t> MockSymbolDataProvider::GetRegister(
+    int dwarf_register_number) {
+  if (dwarf_register_number == kRegisterIP)
+    return ip_;
 
   const auto& found = regs_.find(dwarf_register_number);
   if (found == regs_.end())
-    return false;
+    return std::nullopt;
 
   if (!found->second.synchronous)
-    return false;  // Force synchronous query.
+    return std::nullopt;  // Force synchronous query.
 
-  *output = found->second.value;
-  return true;
+  return found->second.value;
 }
 
 void MockSymbolDataProvider::GetRegisterAsync(int dwarf_register_number,
