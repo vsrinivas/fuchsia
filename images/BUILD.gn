@@ -1475,10 +1475,10 @@ action("ids.txt") {
 
   deps = [
     ":system_image.manifest",
-    ":vdso-ids.txt",
+    ":kernel-ids.txt",
   ]
   sources = [
-    "$target_out_dir/vdso-ids.txt",
+    "$target_out_dir/kernel-ids.txt",
     system_build_id_map,
   ]
 
@@ -1506,18 +1506,20 @@ action("ids.txt") {
 # at runtime and in backtraces, so it should be in the aggregated ids.txt
 # for symbolization.  The vDSO doesn't appear in zircon_boot_manifests, so
 # fetching it out of Zircon's own ids.txt by name is the only thing to do.
-action("vdso-ids.txt") {
+# Likewise for the kernel itself, whose build ID is useful to have in the map.
+action("kernel-ids.txt") {
   script = "manifest.py"
   sources = [
     "$zircon_build_dir/ids.txt",
   ]
   outputs = [
-    "$target_out_dir/vdso-ids.txt",
+    "$target_out_dir/kernel-ids.txt",
   ]
   args = [
     "--separator= ",
     "--output=" + rebase_path(outputs[0], root_build_dir),
     "--include-source=*/libzircon.so",
+    "--include-source=*/zircon.elf",
     "--manifest=" + rebase_path(sources[0], root_build_dir),
   ]
 }
