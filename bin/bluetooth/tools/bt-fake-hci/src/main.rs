@@ -3,14 +3,19 @@
 // found in the LICENSE file.
 
 #[deny(warnings)]
-use failure::Error;
+use failure::{err_msg, Error};
 use fuchsia_bluetooth::hci;
-use rand::Rng;
 use std::fs::{File, OpenOptions};
 use std::path::Path;
 
-fn usage(appname: &str) -> () {
-    eprintln!("usage: {} [add|rm]", appname);
+fn usage(appname: &str) {
+    eprintln!("usage: {} add", appname);
+    eprintln!("       {} rm DEVICE", appname);
+    eprintln!("");
+    eprintln!("Add a new fake-hci device or remove DEVICE");
+    eprintln!("");
+    eprintln!("examples: {} add           - Adds a new randomly named device", appname);
+    eprintln!("          {} rm bt-hci-129 - Removes the device /dev/test/test/bt-hci-129", appname);
 }
 
 fn open_rdwr<P: AsRef<Path>>(path: P) -> Result<File, Error> {
@@ -23,9 +28,10 @@ fn open_rdwr<P: AsRef<Path>>(path: P) -> Result<File, Error> {
 
 fn rm_device(dev_name: &str) -> Result<(), Error> {
     let path = Path::new(hci::DEV_TEST).join(dev_name);
-    let dev = open_rdwr(path.clone())?;
-
-    hci::destroy_device(&dev).map(|_| println!("{:?} destroyed", path))
+    let path_str = path.to_str().unwrap_or("<invalid path>");
+    let dev = open_rdwr(path.clone())
+        .map_err(|_| err_msg(format!("Cannot open fake hci device: {}", path_str)))?;
+    hci::destroy_device(&dev).map(|_| println!("Device {} successfully removed", path_str))
 }
 
 fn main() {
@@ -40,19 +46,21 @@ fn main() {
 
     match command.as_str() {
         "add" => {
-            if let Ok((_, id)) = hci::create_and_bind_device() {
-                println!("fake device added: {}", id);
-            }
+            match hci::create_and_bind_device() {
+                Ok((_, id)) => println!("fake device added: {}", id),
+                Err(e) => eprintln!("{}", e),
+            };
         }
         "rm" => {
             if args.len() < 3 {
                 usage(appname);
-                return;
+            } else {
+                let device = args[2].as_str();
+                if let Err(err) = rm_device(device) {
+                    eprintln!("Could not remove device {}. Error: {}", device, err);
+                }
             }
-            rm_device(args[2].as_str());
         }
-        _ => {
-            usage(appname);
-        }
+        _ => usage(appname),
     };
 }
