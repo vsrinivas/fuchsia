@@ -54,6 +54,7 @@ class Impl final : public Domain, public common::TaskDomain<Impl, Domain> {
   void CleanUp() {
     AssertOnDispatcherThread();
     bt_log(TRACE, "data-domain", "shutting down");
+    socket_factory_ = nullptr;
     rfcomm_ = nullptr;
     l2cap_ = nullptr;  // Unregisters the RFCOMM PSM.
   }
