@@ -13,6 +13,7 @@ source_set("lib") {
   sources = [
     "data_generator.cc",
     "data_generator.h",
+    "fake_disk_cleanup_manager.h",
     "get_page_ensure_initialized.cc",
     "get_page_ensure_initialized.h",
     "ledger_matcher.cc",
@@ -36,8 +37,10 @@ source_set("lib") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/timekeeper:testing",
+    "//peridot/bin/ledger/app:lib",
     "//peridot/bin/ledger/environment",
     "//peridot/bin/ledger/fidl/include",
+    "//peridot/bin/ledger/storage/public:public",
     "//peridot/lib/convert",
     "//peridot/lib/firebase_auth/testing:service_account",
     "//peridot/lib/rng:testing",

@@ -16,41 +16,12 @@
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/storage/fake/fake_db_factory.h"
 #include "peridot/bin/ledger/storage/public/types.h"
+#include "peridot/bin/ledger/testing/fake_disk_cleanup_manager.h"
 #include "peridot/bin/ledger/testing/test_with_environment.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace ledger {
 namespace {
-
-class FakeDiskCleanupManager : public DiskCleanupManager,
-                               public PageUsageListener {
- public:
-  FakeDiskCleanupManager() {}
-  ~FakeDiskCleanupManager() override {}
-
-  void set_on_empty(fit::closure on_empty_callback) override {}
-
-  bool IsEmpty() override { return true; }
-
-  void TryCleanUp(fit::function<void(Status)> callback) override {
-    // Do not call the callback directly.
-    cleanup_callback = std::move(callback);
-  }
-
-  void OnPageOpened(fxl::StringView /*ledger_name*/,
-                    storage::PageIdView /*page_id*/) override {}
-
-  void OnPageClosed(fxl::StringView /*ledger_name*/,
-                    storage::PageIdView /*page_id*/) override {}
-
-  void OnPageUnused(fxl::StringView /*ledger_name*/,
-                    storage::PageIdView /*page_id*/) override {}
-
-  fit::function<void(Status)> cleanup_callback;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(FakeDiskCleanupManager);
-};
 
 class LedgerRepositoryImplTest : public TestWithEnvironment {
  public:

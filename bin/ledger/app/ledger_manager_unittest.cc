@@ -28,6 +28,7 @@
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/public/ledger_storage.h"
 #include "peridot/bin/ledger/sync_coordinator/public/ledger_sync.h"
+#include "peridot/bin/ledger/testing/fake_disk_cleanup_manager.h"
 #include "peridot/bin/ledger/testing/test_with_environment.h"
 #include "peridot/lib/convert/convert.h"
 
@@ -202,41 +203,6 @@ class FakeLedgerSync : public sync_coordinator::LedgerSync {
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeLedgerSync);
-};
-
-class FakeDiskCleanupManager : public DiskCleanupManager,
-                               public PageUsageListener {
- public:
-  FakeDiskCleanupManager() {}
-  ~FakeDiskCleanupManager() override {}
-
-  void set_on_empty(fit::closure on_empty_callback) override {}
-
-  bool IsEmpty() override { return true; }
-
-  void TryCleanUp(fit::function<void(Status)> callback) override {}
-
-  void OnPageOpened(fxl::StringView /*ledger_name*/,
-                    storage::PageIdView /*page_id*/) override {
-    ++page_opened_count;
-  }
-
-  void OnPageClosed(fxl::StringView /*ledger_name*/,
-                    storage::PageIdView /*page_id*/) override {
-    ++page_closed_count;
-  }
-
-  void OnPageUnused(fxl::StringView /*ledger_name*/,
-                    storage::PageIdView /*page_id*/) override {
-    ++page_unused_count;
-  }
-
-  int page_opened_count = 0;
-  int page_closed_count = 0;
-  int page_unused_count = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(FakeDiskCleanupManager);
 };
 
 class LedgerManagerTest : public TestWithEnvironment {
