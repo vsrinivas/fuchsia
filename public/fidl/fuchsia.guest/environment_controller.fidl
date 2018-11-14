@@ -39,6 +39,32 @@ struct BlockDevice {
     fuchsia.io.File file;
 };
 
+// An interface that will receive channels for Wayland connections.
+[Discoverable]
+interface WaylandDispatcher {
+    // Inform dispatcher of new connection.
+    //
+    // When a client opens a new connection to the virtio_wl device, a new
+    // zx::channel will be created for that connection. The virtio_wl device
+    // will retain one endpoint of that channel and the other endpoint will be
+    // provided to this method. The messages on the channel will be Wayland
+    // protocol messages as sent by the client. Each channel datagram will
+    // contain 1 or more complete Wayland messages.
+    OnNewConnection(handle<channel> channel);
+};
+
+// Properties describing a virtio_wl device.
+struct WaylandDevice {
+    // The amount of guest-physical address space to allocate for virtio_wl
+    // buffers.
+    //
+    // Default to a 1GB allocation.
+    uint64 memory = 1073741824;
+
+    // The dispatcher for new virtio_wl connections.
+    WaylandDispatcher dispatcher;
+};
+
 struct LaunchInfo {
     // The URL of the package to launch.
     string url;
@@ -57,6 +83,11 @@ struct LaunchInfo {
 
     // A set of block devices to add to the virtual machine.
     vector<BlockDevice>? block_devices;
+
+    // An optional virtio_wl device.
+    //
+    // If not provided, no virtio_wl device will be created by the VMM.
+    WaylandDevice? wayland_device;
 };
 
 interface EnvironmentController {

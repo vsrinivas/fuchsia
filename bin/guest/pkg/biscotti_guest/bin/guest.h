@@ -6,17 +6,18 @@
 #define GARNET_BIN_GUEST_PKG_BISCOTTI_GUEST_BIN_GUEST_H_
 
 #include <memory>
+#include <zircon/types.h>
 
 #include <fuchsia/guest/cpp/fidl.h>
 #include <grpc++/grpc++.h>
-#include <zircon/types.h>
+#include <lib/component/cpp/startup_context.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fxl/command_line.h>
+#include <lib/guest/scenic_wayland_dispatcher.h>
 
 #include "garnet/bin/guest/pkg/biscotti_guest/bin/log_collector.h"
 #include "garnet/bin/guest/pkg/biscotti_guest/third_party/protos/tremplin.grpc.pb.h"
 #include "garnet/bin/guest/pkg/biscotti_guest/third_party/protos/vm_guest.grpc.pb.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/command_line.h"
 
 namespace biscotti {
 class Guest : public fuchsia::guest::HostVsockAcceptor,
@@ -28,9 +29,11 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
                                     fxl::CommandLine cl,
                                     std::unique_ptr<Guest>* guest);
 
- private:
-  Guest(fuchsia::guest::EnvironmentControllerPtr env, fxl::CommandLine cl);
+  Guest(component::StartupContext* context,
+        fuchsia::guest::EnvironmentControllerPtr env,
+        fxl::CommandLine cl);
 
+ private:
   void Start();
   void StartGrpcServer();
   void StartGuest();
@@ -79,6 +82,7 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
   std::unique_ptr<vm_tools::tremplin::Tremplin::Stub> tremplin_;
   LogCollector log_collector_;
   fxl::CommandLine cl_;
+  guest::ScenicWaylandDispatcher wayland_dispatcher_;
 };
 }  // namespace biscotti
 

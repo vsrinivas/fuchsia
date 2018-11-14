@@ -14,8 +14,6 @@ source_set("lib") {
     "instance_controller_impl.h",
     "linux.cc",
     "linux.h",
-    "wayland_dispatcher_impl.cc",
-    "wayland_dispatcher_impl.h",
     "zircon.cc",
     "zircon.h",
   ]

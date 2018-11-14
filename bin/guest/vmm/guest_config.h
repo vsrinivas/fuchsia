@@ -38,7 +38,6 @@ class GuestConfig {
   const std::vector<InterruptSpec>& interrupts() const { return interrupts_; }
   uint8_t cpus() const { return cpus_; }
   size_t memory() const { return memory_; }
-  size_t wl_memory() const { return wl_memory_; }
   bool host_memory() const { return host_memory_; }
   bool legacy_net() const { return legacy_net_; }
   bool virtio_balloon() const { return virtio_balloon_; }
@@ -47,7 +46,6 @@ class GuestConfig {
   bool virtio_net() const { return virtio_net_; }
   bool virtio_rng() const { return virtio_rng_; }
   bool virtio_vsock() const { return virtio_vsock_; }
-  bool virtio_wl() const { return virtio_wl_; }
 
  private:
   friend class GuestConfigParser;
@@ -60,7 +58,6 @@ class GuestConfig {
   std::vector<InterruptSpec> interrupts_;
   uint8_t cpus_ = zx_system_get_num_cpus();
   size_t memory_ = 1 << 30;
-  size_t wl_memory_ = 1 << 30;
   bool host_memory_ = false;
   bool legacy_net_ = true;
   bool virtio_balloon_ = true;
@@ -69,7 +66,6 @@ class GuestConfig {
   bool virtio_net_ = true;
   bool virtio_rng_ = true;
   bool virtio_vsock_ = true;
-  bool virtio_wl_ = true;
 };
 
 class GuestConfigParser {

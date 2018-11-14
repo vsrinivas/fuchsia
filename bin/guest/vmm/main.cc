@@ -32,7 +32,6 @@
 #include "garnet/bin/guest/vmm/guest_config.h"
 #include "garnet/bin/guest/vmm/instance_controller_impl.h"
 #include "garnet/bin/guest/vmm/linux.h"
-#include "garnet/bin/guest/vmm/wayland_dispatcher_impl.h"
 #include "garnet/bin/guest/vmm/zircon.h"
 #include "garnet/lib/machina/guest.h"
 #include "garnet/lib/machina/interrupt_controller.h"
@@ -353,28 +352,28 @@ int main(int argc, char** argv) {
   machina::DevMem dev_mem;
 
   // Setup wayland device.
-  size_t wl_dev_mem_size = cfg.wl_memory();
-  zx_gpaddr_t wl_dev_mem_offset = alloc_device_addr(wl_dev_mem_size);
-  if (!dev_mem.AddRange(wl_dev_mem_offset, wl_dev_mem_size)) {
-    FXL_LOG(INFO) << "Could not reserve device memory range for wayland device";
-    return status;
-  }
-  zx::vmar wl_vmar;
-  status = guest.CreateSubVmar(wl_dev_mem_offset, wl_dev_mem_size, &wl_vmar);
-  if (status != ZX_OK) {
-    FXL_LOG(INFO) << "Could not create VMAR for wayland device";
-    return status;
-  }
-  WaylandDispatcherImpl wl_dispatcher(launcher.get());
   machina::VirtioWl wl(guest.phys_mem());
-  if (cfg.virtio_wl()) {
+  if (launch_info.wayland_device) {
+    size_t wl_dev_mem_size = launch_info.wayland_device->memory;
+    zx_gpaddr_t wl_dev_mem_offset = alloc_device_addr(wl_dev_mem_size);
+    if (!dev_mem.AddRange(wl_dev_mem_offset, wl_dev_mem_size)) {
+      FXL_LOG(INFO) << "Could not reserve device memory range for wayland device";
+      return status;
+    }
+    zx::vmar wl_vmar;
+    status = guest.CreateSubVmar(wl_dev_mem_offset, wl_dev_mem_size, &wl_vmar);
+    if (status != ZX_OK) {
+      FXL_LOG(INFO) << "Could not create VMAR for wayland device";
+      return status;
+    }
     status = bus.Connect(wl.pci_device(), true);
     if (status != ZX_OK) {
       FXL_LOG(INFO) << "Could not connect wayland device";
       return status;
     }
     status =
-        wl.Start(guest.object(), std::move(wl_vmar), wl_dispatcher.NewBinding(),
+        wl.Start(guest.object(), std::move(wl_vmar),
+                 std::move(launch_info.wayland_device->dispatcher),
                  launcher.get(), guest.device_dispatcher());
     if (status != ZX_OK) {
       FXL_LOG(INFO) << "Could not start wayland device";

@@ -115,12 +115,14 @@ zx_status_t Guest::CreateAndStart(component::StartupContext* context,
   fuchsia::guest::EnvironmentControllerPtr guest_env;
   guestmgr->Create(kLinuxEnvirionmentName, guest_env.NewRequest());
 
-  *guest = std::unique_ptr<Guest>(new Guest(std::move(guest_env), std::move(cl)));
+  *guest = std::make_unique<Guest>(context, std::move(guest_env), std::move(cl));
   return ZX_OK;
 }
 
-Guest::Guest(fuchsia::guest::EnvironmentControllerPtr env, fxl::CommandLine cl)
-    : guest_env_(std::move(env)), cl_(std::move(cl)) {
+Guest::Guest(component::StartupContext* context,
+             fuchsia::guest::EnvironmentControllerPtr env,
+             fxl::CommandLine cl)
+    : guest_env_(std::move(env)), cl_(std::move(cl)), wayland_dispatcher_(context) {
   guest_env_->GetHostVsockEndpoint(socket_endpoint_.NewRequest());
   async_ = async_get_default_dispatcher();
   Start();
@@ -207,6 +209,8 @@ void Guest::StartGuest() {
   launch_info.url = kLinuxGuestPackage;
   launch_info.args.push_back("--virtio-gpu=false");
   launch_info.block_devices = GetBlockDevices();
+  launch_info.wayland_device = fuchsia::guest::WaylandDevice::New();
+  launch_info.wayland_device->dispatcher = wayland_dispatcher_.NewBinding();
   guest_env_->LaunchInstance(
       std::move(launch_info), guest_controller_.NewRequest(),
       [this](uint32_t cid) {

@@ -40,9 +40,6 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "\t--virtio-net            Enable virtio-net (default)\n";
   std::cerr << "\t--virtio-rng            Enable virtio-rng (default)\n";
   std::cerr << "\t--virtio-vsock          Enable virtio-vsock (default)\n";
-  std::cerr << "\t--virtio-wl             Enable virtio-wl (default)\n";
-  std::cerr << "\t--wl-memory=[bytes]     Reserve 'bytes' of memory for Wayland buffers.\n";
-  std::cerr << "\t                        The suffixes 'k', 'M', and 'G' are accepted\n";
   std::cerr << "\t--zircon=[path]         Load a Zircon kernel from 'path'\n";
   std::cerr << "\n";
   std::cerr << "BLOCK SPEC\n";
@@ -287,8 +284,6 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg)
           {"virtio-net", set_flag(&cfg_->virtio_net_, true)},
           {"virtio-rng", set_flag(&cfg_->virtio_rng_, true)},
           {"virtio-vsock", set_flag(&cfg_->virtio_vsock_, true)},
-          {"virtio-wl", set_flag(&cfg_->virtio_wl_, true)},
-          {"wl-memory", parse_mem_size(&cfg_->wl_memory_)},
           {"zircon",
            save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::ZIRCON)},
       } {}
