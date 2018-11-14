@@ -24,6 +24,8 @@
 #include <hw/sdmmc.h>
 #include <lib/sync/completion.h>
 #include <soc/aml-common/aml-sd-emmc.h>
+#include <soc/aml-s905d2/s905d2-gpio.h>
+#include <soc/aml-s905d2/s905d2-hw.h>
 
 #include <zircon/assert.h>
 #include <zircon/threads.h>
@@ -559,11 +561,6 @@ static int aml_sd_emmc_irq_thread(void* ctx) {
         }
 
         status_irq = regs->sd_emmc_status;
-        if (!(status_irq & AML_SD_EMMC_STATUS_END_OF_CHAIN)) {
-            status = ZX_ERR_IO_INVALID;
-            zxlogf(ERROR, "aml_sd_emmc_irq_thread: END OF CHAIN bit is not set\n");
-            goto complete;
-        }
 
         uint32_t rxd_err = get_bits(status_irq, AML_SD_EMMC_STATUS_RXD_ERR_MASK,
                                     AML_SD_EMMC_STATUS_RXD_ERR_LOC);
@@ -600,6 +597,13 @@ static int aml_sd_emmc_irq_thread(void* ctx) {
             AML_SD_EMMC_ERROR("Descriptor execution timed out, cmd%d, status=0x%x\n", req->cmd_idx,
                               status_irq);
             status = ZX_ERR_TIMED_OUT;
+            goto complete;
+        }
+
+        if (!(status_irq & AML_SD_EMMC_STATUS_END_OF_CHAIN)) {
+            status = ZX_ERR_IO_INVALID;
+            zxlogf(ERROR, "aml_sd_emmc_irq_thread: END OF CHAIN bit is not set status:0x%x\n",
+                   status_irq);
             goto complete;
         }
 
@@ -976,8 +980,9 @@ static zx_status_t aml_sd_emmc_bind(void* ctx, zx_device_t* parent) {
     dev->req_completion = SYNC_COMPLETION_INIT;
 
     zx_status_t status = ZX_OK;
+
     if ((status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &dev->pdev)) != ZX_OK) {
-        zxlogf(ERROR, "aml_sd_emmc_bind: ZX_PROTOCOL_PDEV not available\n");
+        zxlogf(ERROR, "aml_sd_emmc_bind: ZX_PROTOCOL_PLATFORM_DEV not available\n");
         goto fail;
     }
 
@@ -993,12 +998,6 @@ static zx_status_t aml_sd_emmc_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    if (info.mmio_count != info.irq_count) {
-        zxlogf(ERROR, "aml_sd_emmc_bind: mmio_count %u does not match irq_count %u\n",
-               info.mmio_count, info.irq_count);
-        status = ZX_ERR_INVALID_ARGS;
-        goto fail;
-    }
     dev->gpio_count = info.gpio_count;
 
     status = pdev_get_bti(&dev->pdev, 0, &dev->bti);
@@ -1018,6 +1017,16 @@ static zx_status_t aml_sd_emmc_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
+    // Populate board specific information
+    aml_sd_emmc_config_t dev_config;
+    size_t actual;
+    status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE,
+                                 &dev_config, sizeof(aml_sd_emmc_config_t), &actual);
+    if (status != ZX_OK || actual != sizeof(aml_sd_emmc_config_t)) {
+        zxlogf(ERROR, "aml_sd_emmc_bind: device_get_metadata failed\n");
+        goto fail;
+    }
+
     status = pdev_map_interrupt(&dev->pdev, 0, &dev->irq_handle);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml_sdhci_bind: pdev_map_interrupt failed %d\n", status);
@@ -1034,15 +1043,6 @@ static zx_status_t aml_sd_emmc_bind(void* ctx, zx_device_t* parent) {
     }
 
     dev->info.caps = SDMMC_HOST_CAP_BUS_WIDTH_8 | SDMMC_HOST_CAP_VOLTAGE_330;
-    // Populate board specific information
-    aml_sd_emmc_config_t dev_config;
-    size_t actual;
-    status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE,
-                                 &dev_config, sizeof(aml_sd_emmc_config_t), &actual);
-    if (status != ZX_OK || actual != sizeof(aml_sd_emmc_config_t)) {
-        zxlogf(ERROR, "aml_sd_emmc_bind: device_get_metadata failed\n");
-        goto fail;
-    }
     if (dev_config.supports_dma) {
         dev->info.caps |= SDMMC_HOST_CAP_ADMA2;
     }

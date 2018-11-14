@@ -68,6 +68,10 @@
 #define S905D2_EMMC_A_SDIO_BASE         0xffe03000
 #define S905D2_EMMC_A_SDIO_LENGTH       0x2000
 
+//PORT B
+#define S905D2_EMMC_B_SDIO_BASE         0xffe05000
+#define S905D2_EMMC_B_SDIO_LENGTH       0x2000
+
 #define S905D2_RAW_NAND_REG_BASE        (S905D2_AOBUS_BASE + 0x607800)
 #define S905D2_RAW_NAND_CLOCK_BASE      (S905D2_AOBUS_BASE + 0x607000)
 
@@ -165,6 +169,7 @@
 #define S905D2_A0_GPIO_IRQ_1            239
 
 #define S905D2_EMMC_A_SDIO_IRQ          221
+#define S905D2_EMMC_B_SDIO_IRQ          222
 
 // Alternate Functions for SDIO
 #define S905D2_WIFI_SDIO_D0           S905D2_GPIOX(0)
@@ -201,3 +206,6 @@
 
 #define S905D2_EE_AUDIO_BASE          (0xff642000)
 #define S905D2_EE_AUDIO_LENGTH        (0x1000)
+
+#define HHI_GCLK_MPEG0_OFFSET         0x50
+#define HHI_SD_EMMC_CLK_CNTL_OFFSET   0x99
