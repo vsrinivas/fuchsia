@@ -76,17 +76,16 @@ void ListCompletedFrames(Thread* thread, bool long_format) {
 }  // namespace
 
 void OutputFrameList(Thread* thread, bool long_format) {
-  if (thread->HasAllFrames()) {
-    ListCompletedFrames(thread, long_format);
-  } else {
-    thread->SyncFrames([ thread = thread->GetWeakPtr(), long_format ]() {
-      Console* console = Console::get();
-      if (thread)
-        ListCompletedFrames(thread.get(), long_format);
-      else
-        console->Output("Thread exited, no frames.\n");
-    });
-  }
+  // Always request an up-to-date frame list from the agent. Various things
+  // could have changed and the user is manually requesting a new list, so
+  // don't rely on the cached copy even if Thread::HasAllFrames() is true.
+  thread->SyncFrames([ thread = thread->GetWeakPtr(), long_format ]() {
+    Console* console = Console::get();
+    if (thread)
+      ListCompletedFrames(thread.get(), long_format);
+    else
+      console->Output("Thread exited, no frames.\n");
+  });
 }
 
 void FormatFrame(const Frame* frame, OutputBuffer* out, int id) {
