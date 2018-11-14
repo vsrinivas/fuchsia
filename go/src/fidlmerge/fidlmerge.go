@@ -95,6 +95,15 @@ func (a Amendments) ApplyExclusions(root types.Root) types.Root {
 	}
 	root.Structs = newStructs
 
+	newTables := root.Tables[:0]
+	for _, element := range root.Tables {
+		_, found := excludeMap[element.Name]
+		if !found {
+			newTables = append(newTables, element)
+		}
+	}
+	root.Tables = newTables
+
 	newUnions := root.Unions[:0]
 	for _, element := range root.Unions {
 		_, found := excludeMap[element.Name]
@@ -126,6 +135,7 @@ type Root struct {
 	enumsByName      map[types.EncodedCompoundIdentifier]*types.Enum
 	interfacesByName map[types.EncodedCompoundIdentifier]*types.Interface
 	structsByName    map[types.EncodedCompoundIdentifier]*types.Struct
+	tablesByName     map[types.EncodedCompoundIdentifier]*types.Table
 	unionsByName     map[types.EncodedCompoundIdentifier]*types.Union
 	librariesByName  map[types.EncodedLibraryIdentifier]*types.Library
 }
@@ -151,6 +161,11 @@ func NewRoot(fidl types.Root, outputBase string, templates *template.Template, o
 		structsByName[member.Name] = &fidl.Structs[index]
 	}
 
+	tablesByName := make(map[types.EncodedCompoundIdentifier]*types.Table)
+	for index, member := range fidl.Tables {
+		tablesByName[member.Name] = &fidl.Tables[index]
+	}
+
 	unionsByName := make(map[types.EncodedCompoundIdentifier]*types.Union)
 	for index, member := range fidl.Unions {
 		unionsByName[member.Name] = &fidl.Unions[index]
@@ -170,6 +185,7 @@ func NewRoot(fidl types.Root, outputBase string, templates *template.Template, o
 		enumsByName,
 		interfacesByName,
 		structsByName,
+		tablesByName,
 		unionsByName,
 		librariesByName,
 	}
@@ -219,6 +235,11 @@ func (root Root) GetInterface(name types.EncodedCompoundIdentifier) *types.Inter
 // Gets a struct by name.
 func (root Root) GetStruct(name types.EncodedCompoundIdentifier) *types.Struct {
 	return root.structsByName[name]
+}
+
+// Gets a struct by name.
+func (root Root) GetTable(name types.EncodedCompoundIdentifier) *types.Table {
+	return root.tablesByName[name]
 }
 
 // Gets a union by name.

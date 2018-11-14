@@ -97,6 +97,13 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value);
 {{- end }}
 
 
+{{- define "TableWriterDecls" }}
+    {{- range .Tables }}
+std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value);
+    {{- end }}
+{{- end }}
+
+
 {{- define "UnionWriterDecls" }}
     {{- range .Unions }}
 std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value);
@@ -164,6 +171,22 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
 {{- end }}
 
 
+{{- define "TableWriterDefs" }}
+    {{- range .Tables }}
+
+std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) {
+  os << fostr::Indent;
+        {{- range .Members }}
+  if (value.has_{{ .Name }}()) {
+    os << fostr::NewLine << "{{ .Name }}: " << *value.{{ .Name }}();
+  }
+        {{- end }}
+  return os << fostr::Outdent;
+}
+    {{- end }}
+{{- end }}
+
+
 {{- define "UnionWriterDefs" }}
     {{- range .Unions }}
 
@@ -188,6 +211,7 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
     {{- template "IncludeHeader" . }}
     {{- template "EnumWriterDecls" . }}
     {{- template "StructWriterDecls" . }}
+    {{- template "TableWriterDecls" . }}
     {{- template "UnionWriterDecls" . }}
     {{- template "NamespaceClose" . }}
 {{- end }}
@@ -197,6 +221,7 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
     {{- template "ImplementationHeader" . }}
     {{- template "EnumWriterDefs" . }}
     {{- template "StructWriterDefs" . }}
+    {{- template "TableWriterDefs" . }}
     {{- template "UnionWriterDefs" . }}
     {{- template "NamespaceClose" . }}
 {{- end }}
