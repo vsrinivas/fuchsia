@@ -43,11 +43,6 @@ fuchsia::modular::ComponentContextPtr ComponentContextImpl::NewBinding() {
   return ptr;
 }
 
-void ComponentContextImpl::GetLedgerNew(
-    fidl::InterfaceRequest<fuchsia::ledger::Ledger> request) {
-  ledger_repository_->GetLedger(to_array(component_url_), std::move(request));
-}
-
 void ComponentContextImpl::GetLedger(
     fidl::InterfaceRequest<fuchsia::ledger::Ledger> request) {
   ledger_repository_->GetLedger(to_array(component_url_), std::move(request));

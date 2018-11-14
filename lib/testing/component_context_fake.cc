@@ -17,11 +17,6 @@ void ComponentContextFake::Connect(
   bindings_.AddBinding(this, std::move(request));
 }
 
-void ComponentContextFake::GetLedgerNew(
-    fidl::InterfaceRequest<fuchsia::ledger::Ledger> request) {
-  FXL_NOTIMPLEMENTED();
-}
-
 void ComponentContextFake::GetLedger(
     fidl::InterfaceRequest<fuchsia::ledger::Ledger> request) {
   FXL_NOTIMPLEMENTED();
