@@ -355,6 +355,20 @@ extern {
         requeue_count: u32
         ) -> zx_status_t;
 
+    pub fn zx_futex_wait_deprecated(
+        value_ptr: *mut zx_futex_t,
+        current_value: isize,
+        deadline: zx_time_t
+        ) -> zx_status_t;
+
+    pub fn zx_futex_requeue_deprecated(
+        wake_ptr: *mut zx_futex_t,
+        wake_count: u32,
+        current_value: isize,
+        requeue_ptr: *mut zx_futex_t,
+        requeue_count: u32
+        ) -> zx_status_t;
+
     pub fn zx_port_create(
         options: u32,
         out: *mut zx_handle_t

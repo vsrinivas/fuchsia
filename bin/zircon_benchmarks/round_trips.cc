@@ -607,8 +607,8 @@ class FutexTest {
         // Return whether we got a request to shut down.
         return val == 2;
       }
-      zx_status_t status =
-          zx_futex_wait(const_cast<int*>(ptr), val, ZX_TIME_INFINITE);
+      zx_status_t status = zx_futex_wait_deprecated(const_cast<int*>(ptr), val,
+                                                    ZX_TIME_INFINITE);
       FXL_CHECK(status == ZX_OK || status == ZX_ERR_BAD_STATE);
     }
   }
