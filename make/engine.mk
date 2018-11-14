@@ -377,7 +377,7 @@ EXTRA_KERNELDEPS :=
 EXTRA_CLEANDEPS :=
 
 # build ids
-EXTRA_IDFILES :=
+EXTRA_IDFILES := $(KERNEL_ELF).id
 
 # All kernel modules contribute to this list.
 ALLMODULE_OBJS :=
