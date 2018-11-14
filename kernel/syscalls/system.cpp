@@ -149,6 +149,44 @@ void mexec_stash_crashlog(fbl::RefPtr<VmObject> vmo) {
     stashed_crashlog = fbl::move(vmo);
 }
 
+// zx_status_t zx_system_mexec_payload_get
+zx_status_t sys_system_mexec_payload_get(zx_handle_t resource,
+                                         user_out_ptr<void> user_buffer,
+                                         size_t len) {
+    // Highly privilidged, only root resource should have access.
+    zx_status_t result = validate_resource(resource, ZX_RSRC_KIND_ROOT);
+    if (result != ZX_OK) {
+        return result;
+    }
+
+    // Limit the size of the result that we can return to userspace.
+    if (len > kBootdataPlatformExtraBytes) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> buffer;
+    buffer.reset(new (&ac) uint8_t[len]);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    memset(buffer.get(), 0, len);
+
+    // Create a zero length ZBI in the buffer.
+    zbi::Zbi image(buffer.get(), len);
+    zbi_result_t zbi_result = image.Reset();
+    if (zbi_result != ZBI_RESULT_OK) {
+        return ZX_ERR_INTERNAL;
+    }
+
+    result = platform_mexec_patch_zbi(buffer.get(), len);
+    if (result != ZX_OK) {
+        return result;
+    }
+
+    return user_buffer.copy_array_to_user(buffer.get(), len);
+}
+
 // zx_status_t zx_system_mexec
 zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo) {
     // TODO(ZX-971): finer grained validation

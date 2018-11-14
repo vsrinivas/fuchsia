@@ -36,3 +36,7 @@ TODO(ZX-2399)
 ## RETURN VALUE
 
 **zx_system_mexec**() shall not return upon success.
+
+## SEE ALSO
+
+[system_mexec_payload_get](system_mexec_payload_get.md).

@@ -144,6 +144,7 @@
 
 ## System
 + [system_mexec](syscalls/system_mexec.md) - Soft reboot the system with a new kernel and bootimage
++ [system_mexec_payload_get](syscalls/system_mexec_payload_get.md) - Return a ZBI containing ZBI entries necessary to boot this system
 
 ## DDK
 + [bti_create](syscalls/bti_create.md) - create a new bus transaction initiator
