@@ -32,20 +32,25 @@ macro_rules! parse_arg {
 // a FIDL ble_advertise command
 fn ble_advertise_args_to_fidl(
     args_raw: Value,
-) -> Result<(Option<AdvertisingData>, Option<u32>), Error> {
+) -> Result<(Option<AdvertisingData>, Option<u32>, bool), Error> {
     let adv_data_raw = match args_raw.get("advertising_data") {
-        Some(adr) => Some(adr).unwrap().clone(),
+        Some(adr) => adr.clone(),
         None => bail!("Advertising data missing."),
     };
 
     let interval_raw = match args_raw.get("interval_ms") {
-        Some(ir) => Some(ir).unwrap().clone(),
+        Some(ir) => ir.clone(),
         None => bail!("Interval_ms missing."),
     };
+
+    let conn_raw = args_raw
+        .get("connectable")
+        .ok_or(format_err!("Connectable missing"))?;
 
     // Unpack the name for advertising data, as well as interval of advertising
     let name: Option<String> = adv_data_raw["name"].as_str().map(String::from);
     let interval: Option<u32> = interval_raw.as_u64().map(|i| i as u32);
+    let connectable: bool = conn_raw.as_bool().unwrap_or(false);
 
     // TODO(NET-1026): Is there a better way to unpack the args into an AdvData
     // struct? Unfortunately, can't derive deserialize for AdvData
@@ -62,7 +67,7 @@ fn ble_advertise_args_to_fidl(
 
     fx_log_info!(tag: "ble_advertise_args_to_fidl", "AdvData: {:?}", ad);
 
-    Ok((ad, interval))
+    Ok((ad, interval, connectable))
 }
 
 // Takes a serde_json::Value and converts it to arguments required for a FIDL
@@ -145,8 +150,8 @@ pub async fn ble_advertise_method_to_fidl(
 ) -> Result<Value, Error> {
     match BluetoothMethod::from_str(&method_name) {
         BluetoothMethod::BleAdvertise => {
-            let (ad, interval) = ble_advertise_args_to_fidl(args)?;
-            await!(facade.start_adv(ad, interval))?;
+            let (ad, interval, connectable) = ble_advertise_args_to_fidl(args)?;
+            await!(facade.start_adv(ad, interval, connectable))?;
             Ok(to_value(facade.get_adv_id())?)
         }
         BluetoothMethod::BleStopAdvertise => {

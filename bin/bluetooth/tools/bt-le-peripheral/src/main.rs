@@ -41,6 +41,8 @@ struct Opt {
         help = "Do not include device address in advertising data"
     )]
     anonymous: bool,
+    #[structopt(short = "c", long = "connectable", help = "Advertise as connectable")]
+    connectable: bool,
     #[structopt(
         short = "i",
         long = "interval",
@@ -60,28 +62,28 @@ struct Opt {
         long = "service-data",
         parse(try_from_str = "parse_service_data"),
         help = "Service data in the format '<service_uuid>:<string_data>'. \
-            Multiple instances of the flag allowed."
+                Multiple instances of the flag allowed."
     )]
     service_data: Vec<ServiceDataEntry>,
     #[structopt(
         long = "binary-service-data",
         parse(try_from_str = "parse_binary_service_data"),
         help = "Service data in the format '<service_uuid>:<base64_data>'. \
-            Multiple instances of the flag allowed."
+                Multiple instances of the flag allowed."
     )]
     binary_service_data: Vec<ServiceDataEntry>,
     #[structopt(
         long = "manufacturer-data",
         parse(try_from_str = "parse_manufacturer_data"),
         help = "Manufacturer specific data in the format '<company_id>:<string_data>'. \
-            Multiple instances of the flag allowed."
+                Multiple instances of the flag allowed."
     )]
     manufacturer_data: Vec<ManufacturerSpecificDataEntry>,
     #[structopt(
         long = "binary-manufacturer-data",
         parse(try_from_str = "parse_binary_manufacturer_data"),
         help = "Manufacturer specific data in the format '<company_id>:<base64_data>'. \
-            Multiple instances of the flag allowed."
+                Multiple instances of the flag allowed."
     )]
     binary_manufacturer_data: Vec<ManufacturerSpecificDataEntry>,
 }
@@ -214,9 +216,10 @@ fn optionalize<T>(vec: Vec<T>) -> Option<Vec<T>> {
 /// Start advertising and print status on success or construct error on failure
 async fn start_advertising<'a>(
     peripheral: &'a PeripheralProxy, adv: &'a mut AdvertisingData, service_names: &'a [String],
-    interval_ms: u32, anonymous: bool,
+    connectable: bool, interval_ms: u32, anonymous: bool,
 ) -> Result<(), Error> {
-    let (status, adv_id) = await!(peripheral.start_advertising(adv, None, interval_ms, anonymous))?;
+    let (status, adv_id) =
+        await!(peripheral.start_advertising(adv, None, connectable, interval_ms, anonymous))?;
     if let Some(err) = status.error {
         bail!("Failed to initiate advertisement: {:?}", err);
     }
@@ -237,6 +240,7 @@ fn main() -> Result<(), Error> {
         device_name,
         service_uuids,
         anonymous: anon,
+        connectable,
         interval,
         appearance,
         uris,
@@ -278,6 +282,7 @@ fn main() -> Result<(), Error> {
             &peripheral,
             &mut adv,
             &service_names,
+            connectable,
             interval,
             anon
         ))?;
@@ -302,6 +307,7 @@ fn main() -> Result<(), Error> {
                         &peripheral,
                         &mut adv,
                         &service_names,
+                        connectable,
                         interval,
                         anon
                     ))?;

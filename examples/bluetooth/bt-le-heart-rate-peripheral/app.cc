@@ -41,7 +41,7 @@ void App::StartAdvertising() {
       fit::bind_member(this, &App::OnCentralConnected);
   peripheral_.events().OnCentralDisconnected =
       fit::bind_member(this, &App::OnCentralDisconnected);
-  peripheral_->StartAdvertising(std::move(ad), nullptr, 60, false,
+  peripheral_->StartAdvertising(std::move(ad), nullptr, true, 60, false,
                                 std::move(start_adv_result_cb));
 }
 

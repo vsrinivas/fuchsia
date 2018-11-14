@@ -83,7 +83,8 @@ LowEnergyPeripheralServer::~LowEnergyPeripheralServer() {
 
 void LowEnergyPeripheralServer::StartAdvertising(
     AdvertisingData advertising_data, AdvertisingDataPtr scan_result,
-    uint32_t interval, bool anonymous, StartAdvertisingCallback callback) {
+    bool connectable, uint32_t interval, bool anonymous,
+    StartAdvertisingCallback callback) {
   auto* advertising_manager = adapter()->le_advertising_manager();
   ZX_DEBUG_ASSERT(advertising_manager);
 
@@ -109,10 +110,12 @@ void LowEnergyPeripheralServer::StartAdvertising(
   // TODO(armansito): The conversion from hci::Connection to
   // gap::LowEnergyConnectionRef should be performed by a gap library object
   // and not in this layer (see NET-355).
-  connect_cb = [self](auto adv_id, auto link) {
-    if (self)
-      self->OnConnected(std::move(adv_id), std::move(link));
-  };
+  if (connectable) {
+    connect_cb = [self](auto adv_id, auto link) {
+      if (self)
+        self->OnConnected(std::move(adv_id), std::move(link));
+    };
+  }
   auto advertising_status_cb = [self, callback = std::move(callback)](
                                    std::string ad_id,
                                    ::btlib::hci::Status status) mutable {

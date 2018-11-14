@@ -5,6 +5,9 @@
 #![feature(arbitrary_self_types, async_await, await_macro, futures_api, pin)]
 #![deny(warnings)]
 
+#[macro_use]
+extern crate failure;
+
 use failure::Error;
 use fuchsia_async as fasync;
 use futures::channel::mpsc;

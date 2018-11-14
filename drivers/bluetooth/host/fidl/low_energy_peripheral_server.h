@@ -64,8 +64,9 @@ class LowEnergyPeripheralServer
   // fuchsia::bluetooth::le::Peripheral overrides:
   void StartAdvertising(
       fuchsia::bluetooth::le::AdvertisingData advertising_data,
-      fuchsia::bluetooth::le::AdvertisingDataPtr scan_result, uint32_t interval,
-      bool anonymous, StartAdvertisingCallback callback) override;
+      fuchsia::bluetooth::le::AdvertisingDataPtr scan_result, bool connectable,
+      uint32_t interval, bool anonymous,
+      StartAdvertisingCallback callback) override;
 
   void StopAdvertising(::fidl::StringPtr advertisement_id,
                        StopAdvertisingCallback callback) override;

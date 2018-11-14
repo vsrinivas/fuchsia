@@ -84,7 +84,7 @@ impl BleAdvertiseFacade {
     }
 
     pub async fn start_adv(
-        &self, adv_data: Option<AdvertisingData>, interval: Option<u32>,
+        &self, adv_data: Option<AdvertisingData>, interval: Option<u32>, connectable: bool,
     ) -> Result<(), Error> {
         // Default interval (ms) to 1 second
         let intv: u32 = interval.unwrap_or(DEFAULT_BLE_ADV_INTERVAL_MS);
@@ -108,7 +108,8 @@ impl BleAdvertiseFacade {
         let periph = &self.inner.read().peripheral.clone();
         match &periph {
             Some(p) => {
-                let (status, adv_id) = await!(p.start_advertising(&mut ad, None, intv, false))?;
+                let (status, adv_id) =
+                    await!(p.start_advertising(&mut ad, None, connectable, intv, false))?;
                 match status.error {
                     None => {
                         fx_log_info!(tag: "start_adv", "Started advertising id: {:?}", adv_id);
