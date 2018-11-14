@@ -40,20 +40,6 @@ bool CmxMetadata::ParseFromFileAt(int dirfd, const std::string& file,
   return !json_parser->HasError();
 }
 
-bool CmxMetadata::ParseFromDeprecatedRuntimeFileAt(
-    int dirfd, const std::string& file, json::JSONParser* json_parser) {
-  rapidjson::Document document = json_parser->ParseFromFileAt(dirfd, file);
-  if (json_parser->HasError()) {
-    return false;
-  }
-  if (!document.IsObject()) {
-    json_parser->ReportError("File is not a JSON object.");
-    return false;
-  }
-  runtime_meta_.ParseFromDocument(document, json_parser);
-  return !json_parser->HasError();
-}
-
 const rapidjson::Value& CmxMetadata::GetFacet(const std::string& key) {
   return facet_parser_.GetSection(key);
 }

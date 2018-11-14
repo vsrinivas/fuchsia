@@ -41,20 +41,6 @@ class CmxMetadataTest : public ::testing::Test {
     return cmx->ParseFromFileAt(dirfd, *json_basename, json_parser);
   }
 
-  bool ParseFromDeprecatedRuntime(CmxMetadata* cmx,
-                                  json::JSONParser* json_parser,
-                                  const std::string& json,
-                                  std::string* json_basename) {
-    std::string json_path;
-    if (!tmp_dir_.NewTempFileWithData(json, &json_path)) {
-      return false;
-    }
-    *json_basename = files::GetBaseName(json_path);
-    const int dirfd = open(tmp_dir_.path().c_str(), O_RDONLY);
-    return cmx->ParseFromDeprecatedRuntimeFileAt(dirfd, *json_basename,
-                                                 json_parser);
-  }
-
  private:
   files::ScopedTempDir tmp_dir_;
 };
@@ -113,25 +99,6 @@ TEST_F(CmxMetadataTest, ParseEmpty) {
   // Missing "sandbox" defaults to empty.
   EXPECT_FALSE(cmx.sandbox_meta().IsNull());
   EXPECT_TRUE(cmx.runtime_meta().IsNull());
-  EXPECT_TRUE(cmx.program_meta().IsBinaryNull());
-  EXPECT_TRUE(cmx.program_meta().IsDataNull());
-}
-
-TEST_F(CmxMetadataTest, ParseFromDeprecatedRuntime) {
-  rapidjson::Value sandbox;
-  std::string error;
-  const std::string json = R"JSON(
-  { "runner": "dart_runner" }
-  )JSON";
-  CmxMetadata cmx;
-  json::JSONParser json_parser;
-  std::string file_unused;
-  EXPECT_TRUE(
-      ParseFromDeprecatedRuntime(&cmx, &json_parser, json, &file_unused))
-      << json_parser.error_str();
-  EXPECT_TRUE(cmx.sandbox_meta().IsNull());
-  EXPECT_FALSE(cmx.runtime_meta().IsNull());
-  EXPECT_EQ("dart_runner", cmx.runtime_meta().runner());
   EXPECT_TRUE(cmx.program_meta().IsBinaryNull());
   EXPECT_TRUE(cmx.program_meta().IsDataNull());
 }

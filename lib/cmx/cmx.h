@@ -28,11 +28,6 @@ class CmxMetadata {
   bool ParseFromFileAt(int dirfd, const std::string& file,
                        json::JSONParser* json_parser);
 
-  // Initializes the CmxMetadata from a deprecated_runtime JSON file. Returns
-  // false if there were any errors.
-  bool ParseFromDeprecatedRuntimeFileAt(int dirfd, const std::string& file,
-                                        json::JSONParser* json_parser);
-
   // Returns the Facet section value if found, else returns null value.
   const rapidjson::Value& GetFacet(const std::string& key);
 

@@ -52,8 +52,6 @@ constexpr char kDataPathPrefix[] = "data/";
 constexpr char kDataKey[] = "data";
 constexpr char kAppArgv0Prefix[] = "/pkg/";
 constexpr char kLegacyFlatExportedDirPath[] = "meta/legacy_flat_exported_dir";
-// Runtime files are deprecated. Use component manifests instead.
-constexpr char kDeprecatedRuntimePath[] = "meta/deprecated_runtime";
 constexpr zx_status_t kComponentCreationFailed = -1;
 
 using fuchsia::sys::TerminationReason;
@@ -651,10 +649,6 @@ void Realm::CreateComponentFromPackage(
   // If meta/*.cmx has runtime data, get it.
   if (!cmx.runtime_meta().IsNull()) {
     runtime = cmx.runtime_meta();
-  } else {
-    json::JSONParser json_parser;
-    runtime.ParseFromFileAt(fd.get(), kDeprecatedRuntimePath, &json_parser);
-    runtime_parse_error = json_parser.error_str();
   }
 
   fsl::SizedVmo app_data;
