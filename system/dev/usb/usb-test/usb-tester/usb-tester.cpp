@@ -43,9 +43,37 @@ std::optional<TestRequest> TestRequest::Create(size_t len, uint8_t ep_address, s
     usb_request_t* usb_req;
     zx_status_t status = usb_request_alloc(&usb_req, len, ep_address, req_size);
     if (status != ZX_OK) {
-        return std::optional<TestRequest>();
+        return std::nullopt;
     }
-    return std::optional<TestRequest>(TestRequest(usb_req));
+    return TestRequest(usb_req);
+}
+
+std::optional<TestRequest> TestRequest::Create(const zircon_usb_tester_SgList& sg_list,
+                                               uint8_t ep_address, size_t req_size) {
+    size_t buffer_size = 0;
+    // We need to allocate a usb request buffer that covers all the scatter gather entries.
+    for (uint64_t i = 0; i < sg_list.len; ++i) {
+        auto& entry = sg_list.entries[i];
+        buffer_size = fbl::max(buffer_size, entry.offset + entry.length);
+    }
+    usb_request_t* usb_req;
+    zx_status_t status = usb_request_alloc(&usb_req, buffer_size, ep_address, req_size);
+    if (status != ZX_OK) {
+        return std::nullopt;
+    }
+    // Convert the scatter gather list from fidl format to phys_iter format.
+    // usb_request_set_sg_list copies the provided array, so we can declare this locally.
+    phys_iter_sg_entry_t phys_iter_sg_list[sg_list.len];
+    for (uint64_t i = 0; i < sg_list.len; ++i) {
+        const auto& entry = sg_list.entries[i];
+        phys_iter_sg_list[i] = { .length = entry.length, .offset = entry.offset };
+    }
+    status = usb_request_set_sg_list(usb_req, phys_iter_sg_list, sg_list.len);
+    if (status != ZX_OK) {
+        usb_request_release(usb_req);
+        return std::nullopt;
+    }
+    return TestRequest(usb_req);
 }
 
 TestRequest::TestRequest(usb_request_t* usb_req) : usb_req_(usb_req) {
@@ -98,16 +126,29 @@ zx_status_t TestRequest::FillData(zircon_usb_tester_DataPatternType data_pattern
     if (status != ZX_OK) {
         return status;
     }
-    for (size_t i = 0; i < Get()->header.length; ++i) {
-        switch (data_pattern) {
-        case zircon_usb_tester_DataPatternType_CONSTANT:
-            buf[i] = kTestDummyData;
-            break;
-        case zircon_usb_tester_DataPatternType_RANDOM:
-            buf[i] = static_cast<uint8_t>(rand() % 256);
-            break;
-        default:
-            return ZX_ERR_INVALID_ARGS;
+    const auto* sg_list = Get()->sg_list;
+    uint64_t sg_count = Get()->sg_count;
+    // If there is no scatter gather list, we can use this temporary entry for the whole request..
+    phys_iter_sg_entry_t default_sg_list = { .length = Get()->header.length, .offset = 0 };
+    if (!sg_list) {
+        sg_list = &default_sg_list;
+        sg_count = 1;
+    }
+
+    for (size_t i = 0; i < sg_count; ++i) {
+        const auto& sg_entry = sg_list[i];
+        for (size_t j = 0; j < sg_entry.length; ++j) {
+            uint8_t* elem = buf + sg_entry.offset + j;
+            switch (data_pattern) {
+            case zircon_usb_tester_DataPatternType_CONSTANT:
+                *elem = kTestDummyData;
+                break;
+            case zircon_usb_tester_DataPatternType_RANDOM:
+                *elem = static_cast<uint8_t>(rand() % 256);
+                break;
+            default:
+                return ZX_ERR_INVALID_ARGS;
+             }
         }
     }
     return ZX_OK;
@@ -176,15 +217,52 @@ zx_status_t UsbTester::SetModeFwloader() {
     return ZX_OK;
 }
 
-zx_status_t UsbTester::BulkLoopback(const zircon_usb_tester_TestParams* params) {
+zx_status_t TestRequest::GetDataUnscattered(fbl::Array<uint8_t>* out_data) {
+    size_t len = Get()->response.actual;
+    fbl::AllocChecker ac;
+    fbl::Array<uint8_t> buf(new (&ac) uint8_t[len], len);
+
+    if (!ac.check()) {
+        zxlogf(ERROR, "GetDataUnscattered: could not allocate buffer of size %lu\n", len);
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    uint8_t* req_data;
+    zx_status_t status = usb_request_mmap(Get(), reinterpret_cast<void**>(&req_data));
+    if (status != ZX_OK) {
+        return status;
+    }
+    if (Get()->sg_list) {
+        size_t total_copied = 0;
+        for (size_t i = 0; i < Get()->sg_count; ++i) {
+            const auto& entry = Get()->sg_list[i];
+            size_t len_to_copy = fbl::min(len - total_copied, entry.length);
+            memcpy(buf.get() + total_copied, req_data + entry.offset, len_to_copy);
+            total_copied += len_to_copy;
+        }
+    } else {
+        memcpy(buf.get(), req_data, len);
+    }
+
+    *out_data = std::move(buf);
+    return ZX_OK;
+}
+
+zx_status_t UsbTester::BulkLoopback(const zircon_usb_tester_TestParams* params,
+                                    const zircon_usb_tester_SgList* out_sg_list,
+                                    const zircon_usb_tester_SgList* in_sg_list) {
     if (params->len > kReqMaxLen) {
         return ZX_ERR_INVALID_ARGS;
     }
-    auto out_req = TestRequest::Create(params->len, bulk_out_addr_, parent_req_size_);
+    auto out_req = out_sg_list ?
+        TestRequest::Create(*out_sg_list, bulk_out_addr_, parent_req_size_) :
+        TestRequest::Create(params->len, bulk_out_addr_, parent_req_size_);
     if (!out_req.has_value()) {
         return ZX_ERR_NO_MEMORY;
     }
-    auto in_req = TestRequest::Create(params->len, bulk_in_addr_, parent_req_size_);
+    auto in_req = in_sg_list ?
+        TestRequest::Create(*in_sg_list, bulk_in_addr_, parent_req_size_) :
+        TestRequest::Create(params->len, bulk_in_addr_, parent_req_size_);
     if (!in_req.has_value()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -202,17 +280,20 @@ zx_status_t UsbTester::BulkLoopback(const zircon_usb_tester_TestParams* params) 
         return status;
     }
 
-    void* out_data;
-    status = usb_request_mmap(out_req->Get(), &out_data);
+    fbl::Array<uint8_t> out_data;
+    status = out_req->GetDataUnscattered(&out_data);
     if (status != ZX_OK) {
         return status;
     }
-    void* in_data;
-    status = usb_request_mmap(in_req->Get(), &in_data);
+    fbl::Array<uint8_t> in_data;
+    status = in_req->GetDataUnscattered(&in_data);
     if (status != ZX_OK) {
         return status;
     }
-    return memcmp(in_data, out_data, params->len) == 0 ? ZX_OK : ZX_ERR_IO;
+    if (out_data.size() != params->len || in_data.size() != params->len) {
+        return false;
+    }
+    return memcmp(in_data.get(), out_data.get(), params->len) == 0 ? ZX_OK : ZX_ERR_IO;
 }
 
 zx_status_t UsbTester::VerifyLoopback(const fbl::Vector<TestRequest>& out_reqs,
@@ -345,10 +426,12 @@ static zx_status_t fidl_SetModeFwloader(void* ctx, fidl_txn_t* txn) {
 }
 
 static zx_status_t fidl_BulkLoopback(void* ctx, const zircon_usb_tester_TestParams* params,
+                                     const zircon_usb_tester_SgList* out_sg_list,
+                                     const zircon_usb_tester_SgList* in_sg_list,
                                      fidl_txn_t* txn) {
     auto* usb_tester = static_cast<UsbTester*>(ctx);
     return zircon_usb_tester_DeviceBulkLoopback_reply(
-        txn, usb_tester->BulkLoopback(params));
+        txn, usb_tester->BulkLoopback(params, out_sg_list, in_sg_list));
 }
 
 static zx_status_t fidl_IsochLoopback(void* ctx, const zircon_usb_tester_TestParams* params,

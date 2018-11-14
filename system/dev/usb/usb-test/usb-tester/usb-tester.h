@@ -7,6 +7,7 @@
 #include <ddk/usb/usb.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
+#include <fbl/array.h>
 #include <fbl/vector.h>
 #include <lib/sync/completion.h>
 #include <optional>
@@ -27,8 +28,13 @@ namespace usb {
 //    zx_status_t wait_status = req->WaitComplete(&usb_);
 class TestRequest {
 public:
-    static std::optional<TestRequest> Create(size_t len, uint8_t ep_address, size_t parent_req_size);
+    // Creates a request for transferring |len| bytes at the given |ep_address|.
+    static std::optional<TestRequest> Create(size_t len, uint8_t ep_address,
+                                             size_t parent_req_size);
 
+    // Creates a request for transferring data using the given scatter gather list.
+    static std::optional<TestRequest> Create(const zircon_usb_tester_SgList& sg_list,
+                                             uint8_t ep_address, size_t parent_req_size);
     ~TestRequest();
 
     void MoveHelper(TestRequest& other) {
@@ -51,6 +57,9 @@ public:
     zx_status_t WaitComplete(usb_protocol_t* usb);
     // Fills the given test request with data of the requested pattern.
     zx_status_t FillData(zircon_usb_tester_DataPatternType data_pattern);
+    // Copies the request data into a newly created array where the data will be contiguous,
+    // and populates |out_scattered| with the array address.
+    zx_status_t GetDataUnscattered(fbl::Array<uint8_t>* out_unscattered);
 
     // Returns the underlying usb request.
     usb_request_t* Get() const { return usb_req_; }
@@ -79,7 +88,9 @@ public:
     // FIDL message implementation.
     zx_status_t SetModeFwloader();
     // Tests the loopback of data from the bulk OUT EP to the bulk IN EP.
-    zx_status_t BulkLoopback(const zircon_usb_tester_TestParams* params);
+    zx_status_t BulkLoopback(const zircon_usb_tester_TestParams* params,
+                             const zircon_usb_tester_SgList* out_sg_list,
+                             const zircon_usb_tester_SgList* in_sg_list);
     zx_status_t IsochLoopback(const zircon_usb_tester_TestParams* params,
                               zircon_usb_tester_IsochResult* result);
     void GetVersion(uint8_t* major_version, uint8_t* minor_version);

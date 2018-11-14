@@ -6,6 +6,8 @@ library zircon.usb.tester;
 
 using zx;
 
+const uint32 MAX_SG_SEGMENTS = 256;
+
 enum DataPatternType : uint8 {
     CONSTANT = 1;
     RANDOM = 2;
@@ -15,6 +17,20 @@ struct TestParams {
     /// The type of data to transfer.
     DataPatternType data_pattern;
     /// Total number of bytes to transfer.
+    uint64 len;
+};
+
+struct SgEntry {
+    /// Number of bytes in the scatter gather entry.
+    uint64 length;
+    /// Offset in bytes from the start of the data buffer.
+    uint64 offset;
+};
+
+struct SgList {
+    // A vector would break the current requirement for a simple C binding.
+    array<SgEntry>:MAX_SG_SEGMENTS entries;
+    /// Number of entries in the scatter gather list.
     uint64 len;
 };
 
@@ -32,7 +48,7 @@ interface Device {
 
     /// Performs a data loopback on the bulk endpoint of the test device.
     /// Returns ZX_OK if the loopback succeeded.
-    2: BulkLoopback(TestParams params) -> (zx.status s);
+    2: BulkLoopback(TestParams params, SgList? out_ep_sg, SgList? in_ep_sg) -> (zx.status s);
 
     /// Performs a data loopback on the isochronous endpoint of the test device.
     /// Returns ZX_OK if no fatal error occurred during the loopback, and also returns the result

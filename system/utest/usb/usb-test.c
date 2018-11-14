@@ -95,17 +95,56 @@ static bool usb_bulk_loopback_test(void) {
 
     zircon_usb_tester_TestParams params = {
         .data_pattern = zircon_usb_tester_DataPatternType_CONSTANT,
-        .len =  64 * 1024
+        .len = 64 * 1024
     };
     zx_status_t status;
-    ASSERT_EQ(zircon_usb_tester_DeviceBulkLoopback(dev_svc, &params, &status), ZX_OK,
+    ASSERT_EQ(zircon_usb_tester_DeviceBulkLoopback(dev_svc, &params, NULL, NULL, &status), ZX_OK,
               "failed to call DeviceBulkLoopback");
     ASSERT_EQ(status, ZX_OK, "bulk loopback failed: USB_TESTER_DATA_PATTERN_CONSTANT 64 K");
 
     params.data_pattern = zircon_usb_tester_DataPatternType_RANDOM;
-    ASSERT_EQ(zircon_usb_tester_DeviceBulkLoopback(dev_svc, &params, &status), ZX_OK,
+    ASSERT_EQ(zircon_usb_tester_DeviceBulkLoopback(dev_svc, &params, NULL, NULL, &status), ZX_OK,
               "failed to call DeviceBulkLoopback");
     ASSERT_EQ(status, ZX_OK, "bulk loopback failed: USB_TESTER_DATA_PATTERN_RANDOM 64 K");
+
+    close(dev_svc);
+    END_TEST;
+}
+
+static bool usb_bulk_scatter_gather_test(void) {
+    BEGIN_TEST;
+
+    zx_handle_t dev_svc;
+    if (open_test_device(&dev_svc) != ZX_OK) {
+        unittest_printf_critical(" [SKIPPING]");
+        return true;
+    }
+    ASSERT_NE(dev_svc, ZX_HANDLE_INVALID, "invalid device service handle");
+
+    zircon_usb_tester_TestParams params = {
+        .data_pattern = zircon_usb_tester_DataPatternType_RANDOM,
+        .len = 230,
+    };
+    zircon_usb_tester_SgList sg_list = {
+        .entries = {
+            { .length = 10, .offset = 100 },
+            { .length = 30, .offset = 1000 },
+            { .length = 100, .offset = 4000 },
+            { .length = 40, .offset = 5000 },
+            { .length = 50, .offset = 10000 },
+        },
+        .len = 5
+    };
+    zx_status_t status;
+    ASSERT_EQ(zircon_usb_tester_DeviceBulkLoopback(dev_svc, &params, &sg_list, NULL, &status),
+              ZX_OK, "failed to call DeviceBulkLoopback");
+    ASSERT_EQ(status, ZX_OK,
+              "bulk loopback failed: USB_TESTER_DATA_PATTERN_RANDOM 64 K with scatter gather OUT");
+
+    ASSERT_EQ(zircon_usb_tester_DeviceBulkLoopback(dev_svc, &params, NULL, &sg_list, &status),
+              ZX_OK, "failed to call DeviceBulkLoopback");
+    ASSERT_EQ(status, ZX_OK,
+              "bulk loopback failed: USB_TESTER_DATA_PATTERN_RANDOM 64 K with scatter gather IN");
 
     close(dev_svc);
     END_TEST;
@@ -162,6 +201,7 @@ static bool usb_isoch_loopback_test(void) {
 BEGIN_TEST_CASE(usb_tests)
 RUN_TEST(usb_root_hubs_test)
 RUN_TEST(usb_bulk_loopback_test)
+RUN_TEST(usb_bulk_scatter_gather_test)
 RUN_TEST(usb_isoch_loopback_test)
 END_TEST_CASE(usb_tests)
 
