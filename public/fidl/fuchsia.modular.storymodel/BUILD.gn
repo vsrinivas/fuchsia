@@ -4,15 +4,13 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.modular.internal") {
-  cpp_legacy_callbacks = true
-
+fidl("fuchsia.modular.storymodel") {
   sources = [
-    "sessionmgr.fidl",
-    "story_data.fidl",
+    "constants.fidl",
+    "story_model.fidl",
+    "story_model_mutation.fidl",
   ]
   deps = [
-    "//garnet/public/fidl/fuchsia.auth",
     "//peridot/public/fidl/fuchsia.modular",
   ]
 }

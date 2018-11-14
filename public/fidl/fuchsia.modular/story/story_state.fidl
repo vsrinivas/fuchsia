@@ -13,7 +13,6 @@ library fuchsia.modular;
 //   STOPPED  -> RUNNING
 //   RUNNING  -> STOPPING
 //   STOPPING -> STOPPED
-//
 enum StoryState {
     // Story was started using StoryController.Start().
     RUNNING = 1;

@@ -1,0 +1,117 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//peridot/build/tests_package.gni")
+
+group("model") {
+  deps = [
+    ":story_observer",
+    ":story_mutator",
+    "//peridot/public/fidl/fuchsia.modular.storymodel",
+  ]
+}
+
+tests_package("story_model_unittests") {
+  deps = [
+    ":apply_mutations_unittest",
+    ":story_model_owner_unittest",
+  ]
+}
+
+source_set("story_observer") {
+  sources = [
+    "story_observer.h",
+  ]
+
+  public_deps = [
+    "//peridot/public/fidl/fuchsia.modular.storymodel",
+  ]
+}
+
+source_set("story_mutator") {
+  sources = [
+    "story_mutator.cc",
+    "story_mutator.h",
+  ]
+
+  public_deps = [
+    "//peridot/public/fidl/fuchsia.modular.storymodel",
+  ]
+}
+
+source_set("story_model_storage") {
+  sources = [
+    "story_model_storage.h",
+    "story_model_storage.cc",
+  ]
+
+  public_deps = [
+    "//peridot/public/fidl/fuchsia.modular.storymodel",
+  ]
+}
+
+source_set("apply_mutations") {
+  sources = [
+    "apply_mutations.cc",
+    "apply_mutations.h",
+  ]
+
+  public_deps = [
+    "//peridot/public/fidl/fuchsia.modular.storymodel",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+executable("apply_mutations_unittest") {
+  testonly = true
+
+  sources = [
+    "apply_mutations_unittest.cc",
+  ]
+
+  deps = [
+    ":apply_mutations",
+    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+source_set("story_model_owner") {
+  sources = [
+    "story_model_owner.cc",
+    "story_model_owner.h",
+  ]
+
+  public_deps = [
+    "//peridot/public/fidl/fuchsia.modular.storymodel",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/async_promise",
+  ]
+
+  deps = [
+    ":apply_mutations",
+    ":story_model_storage",
+    ":story_mutator",
+    ":story_observer",
+  ]
+}
+
+executable("story_model_owner_unittest") {
+  testonly = true
+
+  sources = [
+    "story_model_owner_unittest.cc",
+  ]
+
+  deps = [
+    ":story_model_owner",
+    ":story_model_storage",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+}

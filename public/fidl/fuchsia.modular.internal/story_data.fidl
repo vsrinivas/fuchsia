@@ -7,11 +7,13 @@ library fuchsia.modular.internal;
 using fuchsia.ledger;
 using fuchsia.modular;
 
+// Metadata and summary information about a single story.  Does not contain the
+// data necessary to run a story: see story_model.fidl for that.
 struct StoryData {
     // Metadata available to the SessionShell.
     fuchsia.modular.StoryInfo story_info;
 
-    // An optiona client-supplied name for this story.
+    // An optional client-supplied name for this story.
     string? story_name;
 
     // Story metadata and configuration.
