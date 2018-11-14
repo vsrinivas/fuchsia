@@ -38,7 +38,6 @@ static zbi_result_t for_each_check_entry(zbi_header_t* hdr, void* payload,
     return result;
 }
 
-
 static zbi_result_t zbi_check_internal(const void* base,
                                        uint32_t check_complete,
                                        zbi_header_t** err) {
@@ -60,11 +59,13 @@ static zbi_result_t zbi_check_internal(const void* base,
     // the rest of the image.  Return diagnostic information back to the caller
     // if they requested it.
     if (res != ZBI_RESULT_OK) {
-        if (err) { *err = (zbi_header_t*)header; }
+        if (err) {
+            *err = (zbi_header_t*)header;
+        }
         return res;
     }
 
-    struct check_state state = { .err = err };
+    struct check_state state = {.err = err};
     res = zbi_for_each(base, for_each_check_entry, &state);
 
     if (res == ZBI_RESULT_OK && check_complete != 0) {
@@ -120,10 +121,13 @@ zbi_result_t zbi_for_each(const void* base, const zbi_foreach_cb_t cb,
 
         zbi_result_t result = cb(entryHeader, entryHeader + 1, cookie);
 
-        if (result != ZBI_RESULT_OK) return result;
+        if (result != ZBI_RESULT_OK) {
+            return result;
+        }
 
-        if ((offset + entryHeader->length + sizeof(zbi_header_t)) > totalSize)
+        if ((offset + entryHeader->length + sizeof(zbi_header_t)) > totalSize) {
             return ZBI_RESULT_ERR_TRUNCATED;
+        }
 
         offset = ZBI_ALIGN(offset + entryHeader->length + sizeof(zbi_header_t));
     }
@@ -141,7 +145,9 @@ zbi_result_t zbi_append_section(void* base, const size_t capacity,
                                              type, extra, flags,
                                              (void**)&new_section);
 
-    if (result != ZBI_RESULT_OK) return result;
+    if (result != ZBI_RESULT_OK) {
+        return result;
+    }
 
     // Copy in the payload.
     memcpy(new_section, payload, section_length);
@@ -153,13 +159,15 @@ zbi_result_t zbi_create_section(void* base, size_t capacity,
                                 uint32_t extra, uint32_t flags,
                                 void** payload) {
     // We don't support CRC computation (yet?)
-    if (flags & ZBI_FLAG_CRC32) return ZBI_RESULT_ERROR;
+    if (flags & ZBI_FLAG_CRC32) {
+        return ZBI_RESULT_ERROR;
+    }
 
     zbi_header_t* hdr = (zbi_header_t*)base;
 
     // Make sure we were actually passed a bootdata container.
     if ((hdr->type != ZBI_TYPE_CONTAINER) ||
-        (hdr->magic != ZBI_ITEM_MAGIC)    ||
+        (hdr->magic != ZBI_ITEM_MAGIC) ||
         (hdr->extra != ZBI_CONTAINER_MAGIC)) {
         return ZBI_RESULT_BAD_TYPE;
     }
@@ -176,7 +184,7 @@ zbi_result_t zbi_create_section(void* base, size_t capacity,
 
     // Fill in the new section header.
     zbi_header_t* new_header = (void*)((uint8_t*)(hdr + 1) + hdr->length);
-    *new_header = (zbi_header_t) {
+    *new_header = (zbi_header_t){
         .type = type,
         .length = section_length,
         .extra = extra,

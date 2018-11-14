@@ -58,7 +58,9 @@ static uint8_t* get_test_zbi_extra(const size_t extra_bytes) {
     const size_t kAllocSize = sizeof(test_zbi_t) + extra_bytes;
     test_zbi_t* result = reinterpret_cast<test_zbi_t*>(malloc(kAllocSize));
 
-    if (!result) return nullptr;
+    if (!result) {
+        return nullptr;
+    }
 
     // Extra bytes are filled with non-zero bytes to test zero padding.
     if (extra_bytes > 0) {
@@ -197,7 +199,7 @@ static bool ZbiTestTruncated(void) {
     zbi::Zbi image(test_zbi);
 
     zbi_header_t* bootdata_header = reinterpret_cast<zbi_header_t*>(test_zbi);
-    bootdata_header->length -= 8;   // Truncate the image.
+    bootdata_header->length -= 8; // Truncate the image.
 
     zbi_header_t* trace = nullptr;
     ASSERT_NE(image.Check(&trace), ZBI_RESULT_OK,
@@ -240,12 +242,12 @@ static bool ZbiTestAppend(void) {
     zbi::Zbi image(test_zbi, kBufferSize);
 
     zbi_result_t result = image.AppendSection(
-        static_cast<uint32_t>(sizeof(kAppendRD)),  // Length
-        ZBI_TYPE_STORAGE_RAMDISK,                  // Type
-        0,                                         // Extra
-        0,                                         // Flags
-        reinterpret_cast<const void*>(kAppendRD)   // Payload.
-    );
+        static_cast<uint32_t>(sizeof(kAppendRD)), // Length
+        ZBI_TYPE_STORAGE_RAMDISK,                 // Type
+        0,                                        // Extra
+        0,                                        // Flags
+        reinterpret_cast<const void*>(kAppendRD)  // Payload.
+        );
 
     ASSERT_EQ(result, ZBI_RESULT_OK, "Append failed");
 
@@ -275,13 +277,13 @@ static bool ZbiTestAppendFull(void) {
 
     ASSERT_NONNULL(test_zbi, "failed to alloc test image");
 
-    auto cleanup = fbl::MakeAutoCall([test_zbi]{
+    auto cleanup = fbl::MakeAutoCall([test_zbi] {
         free(test_zbi);
     });
 
     // Fill the space after the buffer with sentinel bytes and make sure those
     // bytes are never touched by the append operation.
-    const uint8_t kSentinelByte = 0xa5;    // 0b1010 1010 0101 0101
+    const uint8_t kSentinelByte = 0xa5; // 0b1010 1010 0101 0101
     memset(test_zbi + kZbiSize, kSentinelByte, kExtraSentinelLength);
 
     zbi::Zbi image(test_zbi, kZbiSize);
@@ -293,12 +295,11 @@ static bool ZbiTestAppendFull(void) {
     // Try to append a buffer that's one byte too big and make sure we reject
     // it.
     zbi_result_t res = image.AppendSection(
-        kMaxAppendPayloadSize + 1,      // One more than the max length!
+        kMaxAppendPayloadSize + 1, // One more than the max length!
         ZBI_TYPE_STORAGE_RAMDISK,
         0,
         0,
-        reinterpret_cast<const void*>(dataBuffer)
-    );
+        reinterpret_cast<const void*>(dataBuffer));
 
     ASSERT_NE(res, ZBI_RESULT_OK, "zbi appended a section that was too big");
 
@@ -309,8 +310,7 @@ static bool ZbiTestAppendFull(void) {
         ZBI_TYPE_STORAGE_RAMDISK,
         0,
         0,
-        reinterpret_cast<const void*>(dataBuffer)
-    );
+        reinterpret_cast<const void*>(dataBuffer));
 
     ASSERT_EQ(res, ZBI_RESULT_OK, "zbi_append rejected a section that should "
                                   "have fit.");
@@ -331,7 +331,6 @@ static bool ZbiTestAppendMulti(void) {
     auto cleanup = fbl::MakeAutoCall([reference_zbi]() {
         free(reference_zbi);
     });
-
 
     alignas(ZBI_ALIGNMENT) uint8_t test_zbi[sizeof(test_zbi_t)];
     zbi_header_t* hdr = reinterpret_cast<zbi_header_t*>(test_zbi);
