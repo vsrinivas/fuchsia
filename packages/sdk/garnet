@@ -1,6 +1,7 @@
 {
     "imports": [
         "garnet/packages/config/network",
+        "garnet/packages/prod/amber",
         "garnet/packages/prod/bluetooth",
         "garnet/packages/prod/far",
         "garnet/packages/prod/fonts",
