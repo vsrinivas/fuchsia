@@ -251,7 +251,7 @@ void dwc3_start_eps(dwc3_t* dwc) {
     }
 }
 
-static void dwc_ep_read_trb(dwc3_endpoint_t* ep, dwc3_trb_t* trb, dwc3_trb_t* out_trb) {
+void dwc_ep_read_trb(dwc3_endpoint_t* ep, dwc3_trb_t* trb, dwc3_trb_t* out_trb) {
     if (trb >= ep->fifo.first && trb < ep->fifo.last) {
         io_buffer_cache_flush_invalidate(&ep->fifo.buffer, (trb - ep->fifo.first) * sizeof(*trb),
                                          sizeof(*trb));

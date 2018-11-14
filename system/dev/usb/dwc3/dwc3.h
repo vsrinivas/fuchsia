@@ -154,6 +154,7 @@ void dwc3_ep_xfer_complete(dwc3_t* dwc, unsigned ep_num);
 void dwc3_ep_xfer_not_ready(dwc3_t* dwc, unsigned ep_num, unsigned stage);
 zx_status_t dwc3_ep_set_stall(dwc3_t* dwc, unsigned ep_num, bool stall);
 void dwc3_ep_end_transfers(dwc3_t* dwc, unsigned ep_num, zx_status_t reason);
+void dwc_ep_read_trb(dwc3_endpoint_t* ep, dwc3_trb_t* trb, dwc3_trb_t* out_trb);
 
 // Endpoint 0
 zx_status_t dwc3_ep0_init(dwc3_t* dwc);

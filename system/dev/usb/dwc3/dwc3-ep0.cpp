@@ -177,8 +177,9 @@ void dwc3_ep0_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
         bool is_out = ((setup->bmRequestType & USB_DIR_MASK) == USB_DIR_OUT);
         if (setup->wLength > 0 && is_out) {
             // queue a read for the data phase
-            dwc3_ep_start_transfer(dwc, EP0_OUT, TRB_TRBCTL_CONTROL_DATA, paddr, setup->wLength,
-                                   false);
+           io_buffer_cache_flush_invalidate(&dwc->ep0_buffer, 0, dwc->ep0_buffer.size);
+            dwc3_ep_start_transfer(dwc, EP0_OUT, TRB_TRBCTL_CONTROL_DATA, paddr,
+                                   dwc->ep0_buffer.size, false);
             dwc->ep0_state = EP0_STATE_DATA_OUT;
         } else {
             size_t actual;
@@ -202,9 +203,26 @@ void dwc3_ep0_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
        }
        break;
     }
-    case EP0_STATE_DATA_OUT:
+    case EP0_STATE_DATA_OUT: {
+        dwc3_endpoint_t* ep = &dwc->eps[ep_num];
+        dwc3_trb_t  trb;
+        dwc_ep_read_trb(ep, ep->fifo.current, &trb);
+        ep->fifo.current = nullptr;
+        zx_off_t received = dwc->ep0_buffer.size - TRB_BUFSIZ(trb.status);
+
+        // "actual" is unused for OUT transfers.
+        size_t actual;
+        zx_status_t status = dwc3_handle_setup(dwc, &dwc->cur_setup,
+                                               io_buffer_virt(&dwc->ep0_buffer), received,
+                                               &actual);
+        if (status != ZX_OK) {
+            dwc3_cmd_ep_set_stall(dwc, EP0_OUT);
+            dwc3_queue_setup_locked(dwc);
+            break;
+        }
         dwc->ep0_state = EP0_STATE_WAIT_NRDY_IN;
         break;
+    }
     case EP0_STATE_DATA_IN:
         dwc->ep0_state = EP0_STATE_WAIT_NRDY_OUT;
         break;
