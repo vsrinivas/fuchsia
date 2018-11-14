@@ -221,9 +221,11 @@ zx_status_t AmlThermal::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
 }
 
 void AmlThermal::DdkRelease() {
-    const auto status = thrd_join(worker_, nullptr);
-    if (status != ZX_OK) {
-        THERMAL_ERROR("worker thread failed: %d\n", status);
+    if (worker_) {
+        const auto status = thrd_join(worker_, nullptr);
+        if (status != thrd_success) {
+            THERMAL_ERROR("worker thread failed: %d\n", status);
+        }
     }
 }
 
