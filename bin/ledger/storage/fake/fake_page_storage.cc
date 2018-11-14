@@ -12,6 +12,7 @@
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/zx/time.h>
@@ -24,6 +25,23 @@
 
 namespace storage {
 namespace fake {
+
+namespace {
+
+Status ToBuffer(convert::ExtendedStringView value, int64_t offset,
+                int64_t max_size, fsl::SizedVmo* buffer) {
+  size_t start = value.size();
+  // Valid indices are between -N and N-1.
+  if (offset >= -static_cast<int64_t>(value.size()) &&
+      offset < static_cast<int64_t>(value.size())) {
+    start = offset < 0 ? value.size() + offset : offset;
+  }
+  size_t length = max_size < 0 ? value.size() : max_size;
+  bool result = fsl::VmoFromString(value.substr(start, length), buffer);
+  return result ? Status::OK : Status::INTERNAL_IO_ERROR;
+}
+
+}  // namespace
 
 FakePageStorage::FakePageStorage(ledger::Environment* environment,
                                  PageId page_id)
@@ -173,6 +191,32 @@ void FakePageStorage::GetObject(
     ObjectIdentifier object_identifier, Location /*location*/,
     fit::function<void(Status, std::unique_ptr<const Object>)> callback) {
   GetPiece(object_identifier, std::move(callback));
+}
+
+void FakePageStorage::GetObjectPart(
+    ObjectIdentifier object_identifier, int64_t offset, int64_t max_size,
+    Location location, fit::function<void(Status, fsl::SizedVmo)> callback) {
+  GetPiece(object_identifier,
+           [offset, max_size, callback = std::move(callback)](
+               Status status, std::unique_ptr<const Object> piece) {
+             if (status != Status::OK) {
+               callback(status, nullptr);
+               return;
+             }
+             fxl::StringView data;
+             Status data_status = piece->GetData(&data);
+             if (data_status != Status::OK) {
+               callback(data_status, nullptr);
+               return;
+             }
+             fsl::SizedVmo buffer;
+             Status buffer_status = ToBuffer(data, offset, max_size, &buffer);
+             if (buffer_status != Status::OK) {
+               callback(buffer_status, nullptr);
+               return;
+             }
+             callback(Status::OK, std::move(buffer));
+           });
 }
 
 void FakePageStorage::GetPiece(

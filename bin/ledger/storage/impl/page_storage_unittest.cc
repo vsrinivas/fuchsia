@@ -13,6 +13,7 @@
 #include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/arraysize.h>
 #include <lib/fxl/files/directory.h>
 #include <lib/fxl/files/file.h>
@@ -386,6 +387,22 @@ class PageStorageTest : public ledger::TestWithEnvironment {
     EXPECT_TRUE(called);
     EXPECT_EQ(expected_status, status);
     return object;
+  }
+
+  fsl::SizedVmo TryGetObjectPart(const ObjectIdentifier& object_identifier,
+                                 size_t offset, size_t max_size,
+                                 PageStorage::Location location,
+                                 Status expected_status = Status::OK) {
+    bool called;
+    Status status;
+    fsl::SizedVmo vmo;
+    storage_->GetObjectPart(
+        object_identifier, offset, max_size, location,
+        callback::Capture(callback::SetWhenCalled(&called), &status, &vmo));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
+    EXPECT_EQ(expected_status, status);
+    return vmo;
   }
 
   std::unique_ptr<const Object> TryGetPiece(
@@ -1268,6 +1285,117 @@ TEST_F(PageStorageTest, GetObject) {
     ASSERT_EQ(Status::OK, object->GetData(&object_data));
     EXPECT_EQ(data.value, convert::ToString(object_data));
   });
+}
+
+TEST_F(PageStorageTest, GetObjectPart) {
+  RunInCoroutine([this](CoroutineHandler* handler) {
+    ObjectData data("_Some data_");
+    ASSERT_EQ(Status::OK, WriteObject(handler, &data));
+
+    fsl::SizedVmo object_part = TryGetObjectPart(
+        data.object_identifier, 1, data.size - 2, PageStorage::Location::LOCAL);
+    std::string object_part_data;
+    ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+    EXPECT_EQ(data.value.substr(1, data.size - 2),
+              convert::ToString(object_part_data));
+  });
+}
+
+TEST_F(PageStorageTest, GetObjectPartLargeOffset) {
+  RunInCoroutine([this](CoroutineHandler* handler) {
+    ObjectData data("_Some data_");
+    ASSERT_EQ(Status::OK, WriteObject(handler, &data));
+
+    fsl::SizedVmo object_part =
+        TryGetObjectPart(data.object_identifier, data.size * 2, data.size,
+                         PageStorage::Location::LOCAL);
+    std::string object_part_data;
+    ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+    EXPECT_EQ("", convert::ToString(object_part_data));
+  });
+}
+
+TEST_F(PageStorageTest, GetObjectPartLargeMaxSize) {
+  RunInCoroutine([this](CoroutineHandler* handler) {
+    ObjectData data("_Some data_");
+    ASSERT_EQ(Status::OK, WriteObject(handler, &data));
+
+    fsl::SizedVmo object_part = TryGetObjectPart(
+        data.object_identifier, 0, data.size * 2, PageStorage::Location::LOCAL);
+    std::string object_part_data;
+    ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+    EXPECT_EQ(data.value, convert::ToString(object_part_data));
+  });
+}
+
+TEST_F(PageStorageTest, GetObjectPartNegativeArgs) {
+  RunInCoroutine([this](CoroutineHandler* handler) {
+    ObjectData data("_Some data_");
+    ASSERT_EQ(Status::OK, WriteObject(handler, &data));
+
+    fsl::SizedVmo object_part =
+        TryGetObjectPart(data.object_identifier, -data.size + 1, -1,
+                         PageStorage::Location::LOCAL);
+    std::string object_part_data;
+    ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+    EXPECT_EQ(data.value.substr(1, data.size - 1),
+              convert::ToString(object_part_data));
+  });
+}
+
+TEST_F(PageStorageTest, GetLargeObjectPart) {
+  std::string data_str = RandomString(environment_.random(), 65536);
+  size_t offset = 6144;
+  size_t size = 49152;
+
+  ObjectData data(std::move(data_str), ObjectType::TREE_NODE,
+                  InlineBehavior::PREVENT);
+
+  ASSERT_EQ(
+      PieceType::INDEX,
+      GetObjectDigestInfo(data.object_identifier.object_digest()).piece_type);
+
+  bool called;
+  Status status;
+  ObjectIdentifier object_identifier;
+  storage_->AddObjectFromLocal(
+      ObjectType::TREE_NODE, data.ToDataSource(),
+      callback::Capture(callback::SetWhenCalled(&called), &status,
+                        &object_identifier));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(data.object_identifier, object_identifier);
+
+  fsl::SizedVmo object_part = TryGetObjectPart(object_identifier, offset, size,
+                                               PageStorage::Location::LOCAL);
+  std::string object_part_data;
+  ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+  std::string result_str = convert::ToString(object_part_data);
+  EXPECT_EQ(size, result_str.size());
+  EXPECT_EQ(data.value.substr(offset, size), result_str);
+}
+
+TEST_F(PageStorageTest, GetObjectPartFromSync) {
+  ObjectData data("_Some data_", InlineBehavior::PREVENT);
+  FakeSyncDelegate sync;
+  sync.AddObject(data.object_identifier, data.value);
+  storage_->SetSyncDelegate(&sync);
+
+  fsl::SizedVmo object_part = TryGetObjectPart(
+      data.object_identifier, 1, data.size - 2, PageStorage::Location::NETWORK);
+  std::string object_part_data;
+  ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+  EXPECT_EQ(data.value.substr(1, data.size - 2),
+            convert::ToString(object_part_data));
+
+  storage_->SetSyncDelegate(nullptr);
+  ObjectData other_data("_Some other data_", InlineBehavior::PREVENT);
+  TryGetObjectPart(other_data.object_identifier, 1, other_data.size - 2,
+                   PageStorage::Location::LOCAL, Status::NOT_FOUND);
+  TryGetObjectPart(other_data.object_identifier, 1, other_data.size - 2,
+                   PageStorage::Location::NETWORK, Status::NOT_CONNECTED_ERROR);
 }
 
 TEST_F(PageStorageTest, GetObjectFromSync) {

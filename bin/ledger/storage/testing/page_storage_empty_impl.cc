@@ -138,6 +138,13 @@ void PageStorageEmptyImpl::AddObjectFromLocal(
   callback(Status::NOT_IMPLEMENTED, {});
 }
 
+void PageStorageEmptyImpl::GetObjectPart(
+    ObjectIdentifier object_identifier, int64_t offset, int64_t max_size,
+    Location location, fit::function<void(Status, fsl::SizedVmo)> callback) {
+  FXL_NOTIMPLEMENTED();
+  callback(Status::NOT_IMPLEMENTED, nullptr);
+}
+
 void PageStorageEmptyImpl::GetObject(
     ObjectIdentifier /*object_identifier*/, Location /*location*/,
     fit::function<void(Status, std::unique_ptr<const Object>)> callback) {

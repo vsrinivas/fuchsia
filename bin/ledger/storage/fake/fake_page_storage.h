@@ -57,6 +57,10 @@ class FakePageStorage : public PageStorageEmptyImpl {
   void AddObjectFromLocal(
       ObjectType object_type, std::unique_ptr<DataSource> data_source,
       fit::function<void(Status, ObjectIdentifier)> callback) override;
+  void GetObjectPart(
+      ObjectIdentifier object_identifier, int64_t offset, int64_t max_size,
+      Location location,
+      fit::function<void(Status, fsl::SizedVmo)> callback) override;
   void GetObject(ObjectIdentifier object_identifier, Location location,
                  fit::function<void(Status, std::unique_ptr<const Object>)>
                      callback) override;

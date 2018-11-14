@@ -16,22 +16,6 @@
 #include "peridot/bin/ledger/storage/public/types.h"
 
 namespace ledger {
-namespace {
-Status ToBuffer(convert::ExtendedStringView value, int64_t offset,
-                int64_t max_size, fsl::SizedVmo* buffer) {
-  size_t start = value.size();
-  // Valid indices are between -N and N-1.
-  if (offset >= -static_cast<int64_t>(value.size()) &&
-      offset < static_cast<int64_t>(value.size())) {
-    start = offset < 0 ? value.size() + offset : offset;
-  }
-  size_t length = max_size < 0 ? value.size() : max_size;
-
-  bool result = fsl::VmoFromString(value.substr(start, length), buffer);
-  return result ? Status::OK : Status::UNKNOWN_ERROR;
-}
-
-}  // namespace
 
 void PageUtils::ResolveObjectIdentifierAsStringView(
     storage::PageStorage* storage, storage::ObjectIdentifier object_identifier,
@@ -85,21 +69,12 @@ void PageUtils::ResolveObjectIdentifierAsBuffer(
     int64_t offset, int64_t max_size, storage::PageStorage::Location location,
     Status not_found_status,
     fit::function<void(Status, fsl::SizedVmo)> callback) {
-  ResolveObjectIdentifierAsStringView(
-      storage, object_identifier, location, not_found_status,
-      [offset, max_size, callback = std::move(callback)](Status status,
-                                                         fxl::StringView data) {
-        if (status != Status::OK) {
-          callback(status, nullptr);
-          return;
-        }
-        fsl::SizedVmo buffer;
-        Status buffer_status = ToBuffer(data, offset, max_size, &buffer);
-        if (buffer_status != Status::OK) {
-          callback(buffer_status, nullptr);
-          return;
-        }
-        callback(Status::OK, std::move(buffer));
+  storage->GetObjectPart(
+      object_identifier, offset, max_size, location,
+      [not_found_status, callback = std::move(callback)](
+          storage::Status status, fsl::SizedVmo object_part) {
+        callback(ConvertStatus(status, not_found_status),
+                 std::move(object_part));
       });
 }
 

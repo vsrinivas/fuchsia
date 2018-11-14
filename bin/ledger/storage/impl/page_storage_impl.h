@@ -98,6 +98,10 @@ class PageStorageImpl : public PageStorage {
   void AddObjectFromLocal(
       ObjectType object_type, std::unique_ptr<DataSource> data_source,
       fit::function<void(Status, ObjectIdentifier)> callback) override;
+  void GetObjectPart(
+      ObjectIdentifier object_identifier, int64_t offset, int64_t max_size,
+      Location location,
+      fit::function<void(Status, fsl::SizedVmo)> callback) override;
   void GetObject(ObjectIdentifier object_identifier, Location location,
                  fit::function<void(Status, std::unique_ptr<const Object>)>
                      callback) override;
@@ -172,17 +176,27 @@ class PageStorageImpl : public PageStorage {
   void DownloadFullObject(ObjectIdentifier object_identifier,
                           fit::function<void(Status)> callback);
 
-  void GetObjectFromSync(
-      ObjectIdentifier object_identifier,
-      fit::function<void(Status, std::unique_ptr<const Object>)> callback);
+  void GetObjectPartFromSync(
+      ObjectIdentifier object_identifier, size_t offset, size_t size,
+      fit::function<void(Status, fsl::SizedVmo)> callback);
 
+  // Reads the content of an object into a provided VMO. Takes into
+  // account the global offset and size in order to be able to read only the
+  // requested part of an object.
+  // |global_offset| is the offset from the beginning of the full object in
+  // bytes. |global_size| is the maximum size requested to be read into the vmo.
+  // |current_position| is the position of the currently read piece (defined by
+  // |object_identifier|) in the full object. |object_size| is the size of the
+  // currently read piece.
   void FillBufferWithObjectContent(ObjectIdentifier object_identifier,
-                                   fsl::SizedVmo vmo, size_t offset,
-                                   size_t size,
+                                   fsl::SizedVmo vmo, int64_t global_offset,
+                                   size_t global_size, int64_t current_position,
+                                   size_t object_size,
                                    fit::function<void(Status)> callback);
   void FillBufferWithObjectContent(std::unique_ptr<const Object> object,
-                                   fsl::SizedVmo vmo, size_t offset,
-                                   size_t size,
+                                   fsl::SizedVmo vmo, int64_t global_offset,
+                                   size_t global_size, int64_t current_position,
+                                   size_t object_size,
                                    fit::function<void(Status)> callback);
 
   // Notifies the registered watchers of |new_commits|.

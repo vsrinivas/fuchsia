@@ -157,6 +157,17 @@ class PageStorage : public PageSyncClient {
   virtual void GetObject(
       ObjectIdentifier object_identifier, Location location,
       fit::function<void(Status, std::unique_ptr<const Object>)> callback) = 0;
+
+  // Retrieve a part of an object starting at |offset| with a maximum size of
+  // |max_size| and map it to a VMO.
+  // If |offset| is less than 0, starts from |-offset| from the end of the
+  // value. If |max_size| is less than 0, retrieves everything untill the end of
+  // an object.
+  virtual void GetObjectPart(
+      ObjectIdentifier object_identifier, int64_t offset, int64_t max_size,
+      Location location,
+      fit::function<void(Status, fsl::SizedVmo)> callback) = 0;
+
   // Finds the piece associated with the given |object_identifier|. The result
   // or an error will be returned through the given |callback|. Only local
   // storage is checked, and if the object is an index, is it returned as is,
