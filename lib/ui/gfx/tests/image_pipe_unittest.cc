@@ -122,7 +122,7 @@ TEST_F(ImagePipeTest, ImagePipeImageIdMustNotBeZero) {
       fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(session_.get(),
                                                            this);
 
-  uint32_t imageId1 = 0;
+  uint32_t image1_id = 0;
   // Create a checkerboard image and copy it into a vmo.
   {
     size_t image_dim = 100;
@@ -130,7 +130,7 @@ TEST_F(ImagePipeTest, ImagePipeImageIdMustNotBeZero) {
     auto image_info = CreateImageInfoForBgra8Image(image_dim, image_dim);
 
     // Add the image to the image pipe with ImagePipe.AddImage().
-    image_pipe->AddImage(imageId1, std::move(image_info),
+    image_pipe->AddImage(image1_id, std::move(image_info),
                          CopyVmo(checkerboard->vmo()), 0,
                          GetVmoSize(checkerboard->vmo()),
                          fuchsia::images::MemoryType::HOST_MEMORY);
@@ -146,7 +146,7 @@ TEST_F(ImagePipeTest, PresentImagesOutOfOrder) {
       fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(session_.get(),
                                                            this);
 
-  uint32_t imageId1 = 1;
+  uint32_t image1_id = 1;
   // Create a checkerboard image and copy it into a vmo.
   {
     size_t image_dim = 100;
@@ -154,17 +154,17 @@ TEST_F(ImagePipeTest, PresentImagesOutOfOrder) {
     auto image_info = CreateImageInfoForBgra8Image(image_dim, image_dim);
 
     // Add the image to the image pipe with ImagePipe.AddImage().
-    image_pipe->AddImage(imageId1, std::move(image_info),
+    image_pipe->AddImage(image1_id, std::move(image_info),
                          CopyVmo(checkerboard->vmo()), 0,
                          GetVmoSize(checkerboard->vmo()),
                          fuchsia::images::MemoryType::HOST_MEMORY);
   }
   fuchsia::images::ImagePipe::PresentImageCallback callback = [](auto) {};
 
-  image_pipe->PresentImage(imageId1, 1, CopyEventIntoFidlArray(CreateEvent()),
+  image_pipe->PresentImage(image1_id, 1, CopyEventIntoFidlArray(CreateEvent()),
                            CopyEventIntoFidlArray(CreateEvent()),
                            std::move(callback));
-  image_pipe->PresentImage(imageId1, 0, CopyEventIntoFidlArray(CreateEvent()),
+  image_pipe->PresentImage(image1_id, 0, CopyEventIntoFidlArray(CreateEvent()),
                            CopyEventIntoFidlArray(CreateEvent()),
                            std::move(callback));
 
@@ -179,7 +179,7 @@ TEST_F(ImagePipeTest, PresentImagesInOrder) {
       fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(session_.get(),
                                                            this);
 
-  uint32_t imageId1 = 1;
+  uint32_t image1_id = 1;
   // Create a checkerboard image and copy it into a vmo.
   {
     size_t image_dim = 100;
@@ -187,30 +187,31 @@ TEST_F(ImagePipeTest, PresentImagesInOrder) {
     auto image_info = CreateImageInfoForBgra8Image(image_dim, image_dim);
 
     // Add the image to the image pipe with ImagePipe.AddImage().
-    image_pipe->AddImage(imageId1, std::move(image_info),
+    image_pipe->AddImage(image1_id, std::move(image_info),
                          CopyVmo(checkerboard->vmo()), 0,
                          GetVmoSize(checkerboard->vmo()),
                          fuchsia::images::MemoryType::HOST_MEMORY);
   }
   fuchsia::images::ImagePipe::PresentImageCallback callback = [](auto) {};
 
-  image_pipe->PresentImage(imageId1, 1, CopyEventIntoFidlArray(CreateEvent()),
+  image_pipe->PresentImage(image1_id, 1, CopyEventIntoFidlArray(CreateEvent()),
                            CopyEventIntoFidlArray(CreateEvent()),
                            std::move(callback));
-  image_pipe->PresentImage(imageId1, 1, CopyEventIntoFidlArray(CreateEvent()),
+  image_pipe->PresentImage(image1_id, 1, CopyEventIntoFidlArray(CreateEvent()),
                            CopyEventIntoFidlArray(CreateEvent()),
                            std::move(callback));
 
   EXPECT_ERROR_COUNT(0);
 }
 
-// Call Present with in-order presentation times, and expect no error.
+// Call Present with an image with an offset into its memory, and expect no
+// error.
 TEST_F(ImagePipeTest, PresentImagesWithOffset) {
   ImagePipePtr image_pipe =
       fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(session_.get(),
                                                            this);
 
-  uint32_t imageId1 = 1;
+  uint32_t image1_id = 1;
   // Create a checkerboard image and copy it into a vmo.
   {
     size_t w = 100;
@@ -225,17 +226,17 @@ TEST_F(ImagePipeTest, PresentImagesWithOffset) {
     auto image_info = CreateImageInfoForBgra8Image(w, h);
 
     // Add the image to the image pipe with ImagePipe.AddImage().
-    image_pipe->AddImage(imageId1, std::move(image_info),
+    image_pipe->AddImage(image1_id, std::move(image_info),
                          CopyVmo(shared_vmo->vmo()), offset_bytes,
                          GetVmoSize(shared_vmo->vmo()),
                          fuchsia::images::MemoryType::HOST_MEMORY);
   }
   fuchsia::images::ImagePipe::PresentImageCallback callback = [](auto) {};
 
-  image_pipe->PresentImage(imageId1, 1, CopyEventIntoFidlArray(CreateEvent()),
+  image_pipe->PresentImage(image1_id, 1, CopyEventIntoFidlArray(CreateEvent()),
                            CopyEventIntoFidlArray(CreateEvent()),
                            std::move(callback));
-  image_pipe->PresentImage(imageId1, 1, CopyEventIntoFidlArray(CreateEvent()),
+  image_pipe->PresentImage(image1_id, 1, CopyEventIntoFidlArray(CreateEvent()),
                            CopyEventIntoFidlArray(CreateEvent()),
                            std::move(callback));
 
@@ -249,7 +250,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
       fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(session_.get(),
                                                            this);
 
-  uint32_t imageId1 = 1;
+  uint32_t image1_id = 1;
 
   // Create a checkerboard image and copy it into a vmo.
   {
@@ -258,7 +259,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
     auto image_info = CreateImageInfoForBgra8Image(image_dim, image_dim);
 
     // Add the image to the image pipe with ImagePipe.AddImage().
-    image_pipe->AddImage(imageId1, std::move(image_info),
+    image_pipe->AddImage(image1_id, std::move(image_info),
                          CopyVmo(checkerboard->vmo()), 0,
                          GetVmoSize(checkerboard->vmo()),
                          fuchsia::images::MemoryType::HOST_MEMORY);
@@ -268,7 +269,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   zx::event acquire_fence1 = CreateEvent();
   zx::event release_fence1 = CreateEvent();
 
-  image_pipe->PresentImage(imageId1, 0, CopyEventIntoFidlArray(acquire_fence1),
+  image_pipe->PresentImage(image1_id, 0, CopyEventIntoFidlArray(acquire_fence1),
                            CopyEventIntoFidlArray(release_fence1), nullptr);
 
   // Current presented image should be null, since we haven't signalled
@@ -287,7 +288,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   // Image should now be presented.
   ASSERT_TRUE(image1);
 
-  uint32_t imageId2 = 2;
+  uint32_t image2_id = 2;
   // Create a new Image with a gradient.
   {
     size_t image_dim = 100;
@@ -296,7 +297,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
 
     // Add the image to the image pipe.
     image_pipe->AddImage(
-        imageId2, std::move(image_info), CopyVmo(gradient->vmo()), 0,
+        image2_id, std::move(image_info), CopyVmo(gradient->vmo()), 0,
         GetVmoSize(gradient->vmo()), fuchsia::images::MemoryType::HOST_MEMORY);
   }
 
@@ -308,7 +309,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   zx::event acquire_fence2 = CreateEvent();
   zx::event release_fence2 = CreateEvent();
 
-  image_pipe->PresentImage(imageId2, 0, CopyEventIntoFidlArray(acquire_fence2),
+  image_pipe->PresentImage(image2_id, 0, CopyEventIntoFidlArray(acquire_fence2),
                            CopyEventIntoFidlArray(release_fence2), nullptr);
 
   // Verify that the currently display image hasn't changed yet, since we
