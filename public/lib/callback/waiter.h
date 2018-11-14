@@ -135,24 +135,53 @@ class CompletionAccumulator {
 
 }  // namespace internal
 
-// Base implementation for all specialized waiters. It uses an Accumulator
-// abstraction to aggregate results from the different callbacks.
-// |A| is the accumulator, |R| is the final return type and |Args| are the
-// arguments of the callbacks. The accumulator must have the following
-// interface:
+// Base implementation for all specialized waiters.
+//
+// A waiter is in one of the following states:
+// - STARTED: initial state. Creates new waiting callbacks, and accumulates
+// their results (see |Accumulator| below). Moves to FINISHED if the waiter is
+// finalized and all callbacks have completed successfully, as reported by
+// |Accumulator::Update|. Moves to DONE immediately if one of the waiting
+// callbacks fails. Moves to CANCELLED immediately if the waiter is cancelled.
+// - DONE: ignores all future waiting callback completions. Waits until the
+// waiter is either finalized or cancelled, then moves to FINISHED or CANCELLED
+// respectively.
+// - CANCELLED: ignores all future waiting callback completions, never calls the
+// finalization callback.
+// - FINISHED: calls the finalization callback with the accumulated result of
+// all unignored waiting callbacks. Ignores all future waiting callback
+// completions.
+//
+// The base implementation is specialized through an Accumulator abstraction to
+// aggregate results from the different callbacks. |A| is the accumulator, |R|
+// is the final return type and |Args| are the arguments of the callbacks. The
+// accumulator must have the following interface:
 // class Accumulator {
 //  public:
+//   // Called once upon creation of each waiting callback. Returns a TOKEN
+//   // passed to Update() with the result of the call.
 //   TOKEN PrepareCall();
+//   // Called once upon completion of each waiting callback. Returns true on
+//   // success, false on failure. In case of failure, the waiter is done
+//   // immediately and will ignore subsequent waiting callbacks.
 //   bool Update(TOKEN token, Args... args);
+//   // Returns the result of the aggregation, passed to the finalization
+//   // callback of the waiter.
 //   R Result();
 // };
 template <typename A, typename R, typename... Args>
 class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
  public:
+  // Returns a callback for the waiter to wait on. This method must not be
+  // called once |Finalize| or |Cancel| have been called.
+  // If the waiter is done already when |NewCallback| is called, the callback is
+  // a no-op. If the waiter is not done, the callback will pass its parameters
+  // to the accumulator (unless the waiter has become done in the meantime
+  // because one of the waiting callbacks failed).
   fit::function<void(Args...)> NewCallback() {
-    FXL_DCHECK(!finalized_) << "Waiter was already finalized.";
-    FXL_DCHECK(!cancelled_) << "Waiter has been cancelled.";
-    if (done_) {
+    FXL_DCHECK(!result_callback_) << "Waiter was already finalized.";
+    FXL_DCHECK(state_ != State::CANCELLED) << "Waiter has been cancelled.";
+    if (state_ != State::STARTED) {
       return [](Args...) {};
     }
     ++pending_callbacks_;
@@ -162,60 +191,75 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
     };
   }
 
+  // Finalizes the waiter. Must be called at most once.
   void Finalize(fit::function<void(R)> callback) {
-    FXL_DCHECK(!finalized_) << "Waiter already finalized, can't finalize more!";
-    FXL_DCHECK(!cancelled_) << "Waiter has been cancelled.";
+    if (state_ == State::CANCELLED) {
+      return;
+    }
+    // This is a programmer error.
+    FXL_DCHECK(!result_callback_)
+        << "Waiter already finalized, can't finalize more!";
+    // This should never happen: FINISHED can only be reached after having
+    // called Finalize, and Finalize can only be called once.
+    FXL_DCHECK(state_ != State::FINISHED) << "Waiter already finished.";
     result_callback_ = std::move(callback);
-    finalized_ = true;
     ExecuteCallbackIfFinished();
   }
 
-  void Cancel() { cancelled_ = true; }
+  // Cancels the waiter.
+  void Cancel() { state_ = State::CANCELLED; }
 
  protected:
   explicit BaseWaiter(A&& accumulator) : accumulator_(std::move(accumulator)) {}
   virtual ~BaseWaiter() {}
 
  private:
+  // The waiter state. See class comment for allowed transitions.
+  enum class State { STARTED, DONE, CANCELLED, FINISHED };
+
   FRIEND_REF_COUNTED_THREAD_SAFE(BaseWaiter);
   FRIEND_MAKE_REF_COUNTED(BaseWaiter);
 
+  // Receives the result of a |NewCallback| callback and accumulates it if not
+  // already done, cancelled or finished. Then executes the finalization
+  // callback if necessary.
   template <typename T>
   void ReturnResult(T token, Args... args) {
-    if (done_) {
-      FXL_DCHECK(!pending_callbacks_);
+    FXL_DCHECK(pending_callbacks_ > 0);
+    --pending_callbacks_;
+    if (state_ != State::STARTED) {
       return;
     }
-    done_ = !accumulator_.Update(std::move(token), std::forward<Args>(args)...);
-    if (done_) {
-      pending_callbacks_ = 0;
-    } else {
-      --pending_callbacks_;
+    const bool success =
+        accumulator_.Update(std::move(token), std::forward<Args>(args)...);
+    if (!success) {
+      state_ = State::DONE;
     }
     ExecuteCallbackIfFinished();
   }
 
+  // Executes the finalization callback if the waiter is finalized, and there
+  // are no more pending callbacks or the the waiter is done.
+  // Must only be called in STARTED or DONE state.
   void ExecuteCallbackIfFinished() {
-    FXL_DCHECK(!finished_) << "Waiter already finished.";
-    if (!finalized_ || pending_callbacks_) {
+    FXL_DCHECK(state_ != State::FINISHED) << "Waiter already finished.";
+    FXL_DCHECK(state_ != State::CANCELLED)
+        << "Cancelled waiter tried to execute the finalization callback.";
+    if (!result_callback_ ||
+        (state_ == State::STARTED && pending_callbacks_ > 0)) {
       return;
     }
-    finished_ = true;
-    if (!cancelled_) {
-      result_callback_(accumulator_.Result());
-      // The callback might delete this class.
-      return;
-    }
+    state_ = State::FINISHED;
+    result_callback_(accumulator_.Result());
+    // The callback might delete this class.
+    return;
   }
 
   A accumulator_;
-  // TODO(LE-382): Simplify the state machine here.
-  bool done_ = false;
-  bool finalized_ = false;
-  bool finished_ = false;
-  bool cancelled_ = false;
+  State state_ = State::STARTED;
+  // Number of callbacks returned by NewCallback() that have not yet completed.
   size_t pending_callbacks_ = 0;
-
+  // Finalization callback. Must be set in state FINALIZED.
   fit::function<void(R)> result_callback_;
 };
 

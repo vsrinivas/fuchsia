@@ -188,7 +188,22 @@ TEST(CompletionWaiter, MixedInitialize) {
   EXPECT_TRUE(called);
 }
 
-TEST(Waiter, Cancel) {
+TEST(Waiter, CancelThenFinalize) {
+  auto waiter = fxl::MakeRefCounted<CompletionWaiter>();
+
+  auto callback = waiter->NewCallback();
+
+  waiter->Cancel();
+
+  bool called = false;
+  waiter->Finalize([&called] { called = true; });
+
+  EXPECT_FALSE(called);
+  callback();
+  EXPECT_FALSE(called);
+}
+
+TEST(Waiter, FinalizeThenCancel) {
   auto waiter = fxl::MakeRefCounted<CompletionWaiter>();
 
   auto callback = waiter->NewCallback();
