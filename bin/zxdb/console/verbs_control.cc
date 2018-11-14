@@ -487,9 +487,19 @@ Arguments
 Contexts, Schemas and Instance Overrides
 
   Settings have a hierarchical system of contexts where settings are defined.
-  When setting a value, if it is not qualified, it will be set at a system
-  level. In order to override it at a target or thread level, the setting
-  command has to be explicitly qualified. See examples below.
+  When setting a value, if it is not qualified, it will be set the setting at
+  the highest level it can, in order to make it as general as possible.
+
+  In most cases these higher level will be system-wide, to change behavior to
+  the whole system, that can be overriden per-process or per-thread. Sometimes
+  though, the setting only makes sense on a per-object basis (eg. new process
+  filters for jobs). In this case, the unqualified set will work on the current
+  object in the context.
+
+  In order to override a setting at a job, target or thread level, the setting
+  command has to be explicitly qualified. This works for both avoiding setting
+  the value at a global context or to set the value for an object other than
+  the current one. See examples below.
 
   There is detailed information on contexts and schemas in "help get".
 
@@ -515,15 +525,15 @@ Setting Types
 Examples
 
   [zxdb] set boolean_setting true
-  Set system-level setting:
+  Set boolean_setting system-wide:
   true
 
   [zxdb] pr set int_setting 1024
-  Overrode setting for the given process:
+  Set int_setting for process 2:
   1024
 
   [zxdb] p 3 t 2 set string_setting somesuperlongstring
-  Overrode setting for the given thread:
+  Set setting for thread 2 of process 3:
   somesuperlongstring
 
   [zxdb] get foo
@@ -534,10 +544,15 @@ Examples
   ...
   Set value: first:second:third
   [zxdb] set foo first:second:third:fourth
+  Set foo for job 3:
   • first
   • second
   • third
   • fourth
+
+  NOTE: In the last case, even though the setting was not qualified, it was
+        set at the job level. This is because this is a job-specific setting
+        that doesn't make sense system-wide, but rather only per job.
 )";
 
 Err SetBool(SettingStore* store, const std::string& setting_name,
@@ -598,49 +613,102 @@ Err SetSetting(const std::string& setting_name, const std::string& value,
   return Err();
 }
 
+OutputBuffer FormatSetFeedback(const std::string& setting_name,
+                               SettingSchema::Level level, int target_id,
+                               int element_id = 0) {
+  std::string message;
+  switch (level) {
+    case SettingSchema::Level::kSystem:
+      message = fxl::StringPrintf("Set %s system wide:\n", setting_name.data());
+      break;
+    case SettingSchema::Level::kJob:
+      message = fxl::StringPrintf("Set %s for job %d:\n", setting_name.data(),
+                                  element_id);
+      break;
+    case SettingSchema::Level::kTarget:
+      message = fxl::StringPrintf("Set %s for process %d:\n",
+                                  setting_name.data(), element_id);
+      break;
+    case SettingSchema::Level::kThread:
+      message = fxl::StringPrintf("Set %s for thread %d of process %d:\n",
+                                  setting_name.data(), target_id, element_id);
+      break;
+    default:
+      FXL_NOTREACHED() << "Should not receive a default setting.";
+  }
+
+  return OutputBuffer(std::move(message));
+}
+
 Err DoSet(ConsoleContext* context, const Command& cmd) {
   if (cmd.args().size() < 2) {
     return Err("Wrong amount of Arguments. See \"help set\".");
   }
-
-  const std::string& setting_name = cmd.args()[0];
+const std::string& setting_name = cmd.args()[0];
   // TODO(donosoc): Support multi word strings.
   const std::string& value = cmd.args()[1];
 
+  // We lookup which SettingStore should respond to this query.
+  Console* console = Console::get();
+  SettingStore* store = nullptr;
+  Thread* thread = cmd.thread();
   Target* target = cmd.target();
+  JobContext* job_context = cmd.job_context();
+
+  // These indices are for giving better feedback to the user.
+  int target_id = console->context().IdForTarget(target);
+  int element_id = -1;  // ID of the element whose setting was set.
+
   if (!target)
     return Err("No target found. Please file a bug with a repro.");
 
-  // Lookup the correct setting store.
-  SettingStore* store = nullptr;
-
-  // We check for a explicit job to set.
-  if (cmd.HasNoun(Noun::kJob)) {
-    JobContext* job = cmd.job_context();
-    if (!job)
-      return Err("Could not find specified job.");
-    store = &job->settings();
-  } else if (cmd.HasNoun(Noun::kThread)) {
-    Thread* thread = cmd.thread();
-    if (!thread)
-      return Err("Could not find specified thread.");
-    store = &thread->settings();
+  // If the user qualified the query, it means that we want to query *that*
+  // specific SettingStore, so we search for it. We search from more specific
+  // to less specific.
+  if (cmd.HasNoun(Noun::kThread)) {
+    store = thread ? &thread->settings() : nullptr;
+    element_id = cmd.GetNounIndex(Noun::kThread);
   } else if (cmd.HasNoun(Noun::kProcess)) {
-    Target* target = cmd.target();
-    if (!target)
-      return Err("Could not find specified target.");
     store = &target->settings();
-  } else {
-    // Finally, because no context was explicitly defined, we set the global
-    // settings.
-    Target* current_target = cmd.target();
-    if (!current_target)
-      return Err("Could not find current target. Please file bug with repro.");
-    store = &target->session()->system().settings();
+    element_id = cmd.GetNounIndex(Noun::kProcess);
+  } else if (cmd.HasNoun(Noun::kJob)) {
+    store = job_context ? &job_context->settings() : nullptr;
+    element_id = cmd.GetNounIndex(Noun::kJob);
+  }
+
+
+  if (!store) {
+    // We didn't found an explicit specified store, so we lookup in the current
+    // context. We look from less specific to more specific in terms of stores,
+    // so that the setting will be set for a biggest setting as it can.
+    // NOTE(donosoc): Some settings are replicated upwards, even to the system
+    //                level, as they make sense (eg. pause on attach). But
+    //                others only make sense locally (eg. job filters).
+    // TODO(donosoc): This works as long as the settings are not ambiguous. We
+    //                should add a way to desambiguate the setting.
+    if (!target)
+      return Err("No target found. Please file a bug with a repro.");
+
+    System& system = target->session()->system();
+
+    if (system.settings().schema()->HasSetting(setting_name)) {
+      store = &system.settings();
+    } else if (job_context &&
+               job_context->settings().schema()->HasSetting(setting_name)) {
+      store = &job_context->settings();
+      element_id = console->context().IdForJobContext(job_context);
+    } else if (target->settings().schema()->HasSetting(setting_name)) {
+      store = &target->settings();
+      element_id = console->context().IdForTarget(target);
+    } else if (thread &&
+               thread->settings().schema()->HasSetting(setting_name)) {
+      store = &thread->settings();
+      element_id = console->context().IdForThread(thread);
+    }
   }
 
   if (!store)
-    return Err("Could not find a setting store. Please file a bug with repro.");
+    return Err("Could not find setting \"%s\".", setting_name.data());
 
   StoredSetting out;  // Used for showing the new value.
   Err err = SetSetting(setting_name, value, store, &out);
@@ -651,6 +719,9 @@ Err DoSet(ConsoleContext* context, const Command& cmd) {
   FXL_DCHECK(out.level != SettingSchema::Level::kDefault);
 
   // We output the new value.
+
+  Console::get()->Output(
+      FormatSetFeedback(setting_name, out.level, target_id, element_id));
   Console::get()->Output(FormatSettingValue(out));
   return Err();
 }
