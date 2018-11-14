@@ -205,7 +205,7 @@ zx_status_t sys_thread_start(zx_handle_t thread_handle, zx_vaddr_t entry,
                                                      &thread);
     if (status != ZX_OK) {
         // Try again, but with the WRITE right.
-        // TODO(kulakowski) Remove this when all callers are using MANAGE_THREAD.
+        // TODO(ZX-2967) Remove this when all callers are using MANAGE_THREAD.
         status = up->GetDispatcherWithRights(thread_handle, ZX_RIGHT_WRITE, &thread);
         if (status != ZX_OK)
             return status;
