@@ -59,8 +59,8 @@ int main(int argc, const char** argv) {
     fidl::InterfacePtr<fuchsia::ui::scenic::Scenic> scenic =
         startup_context
             ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
-    scenic.set_error_handler([&loop] {
-      FXL_LOG(INFO) << "Lost connection to Scenic.";
+    scenic.set_error_handler([&loop](zx_status_t status) {
+      FXL_LOG(INFO) << "Lost connection to Scenic with error " << status << ".";
       loop.Quit();
     });
 
@@ -116,8 +116,9 @@ int main(int argc, const char** argv) {
     fidl::InterfacePtr<fuchsia::ui::scenic::Scenic> scenic =
         startup_context
             ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
-    scenic.set_error_handler([&loop] {
-      FXL_LOG(INFO) << "Lost connection to Scenic.";
+    scenic.set_error_handler([&loop](zx_status_t status) {
+      FXL_LOG(INFO) << "Lost connection to Scenic with error code " << status
+                    << ".";
       loop.Quit();
     });
 

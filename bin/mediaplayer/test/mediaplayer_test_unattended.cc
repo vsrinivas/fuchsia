@@ -156,7 +156,7 @@ TEST_F(MediaPlayerTestUnattended, StreamSource) {
   fuchsia::media::SimpleStreamSinkPtr sink;
   stream_source->AddStream(std::move(stream_type), kFramesPerSecond, 1,
                            sink.NewRequest());
-  sink.set_error_handler([this]() {
+  sink.set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR) << "SimpleStreamSink connection closed.";
     sink_connection_closed_ = true;
     QuitLoop();

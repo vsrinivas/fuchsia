@@ -117,6 +117,7 @@ class MessageReader {
   //
   // The handler can destroy the |MessageReader|.
   template <class Callable>
+  [[deprecated]]
   typename std::enable_if<!std::is_assignable<fit::function<void(zx_status_t)>,
                                               Callable>::value>::type
   set_error_handler(Callable error_handler) {

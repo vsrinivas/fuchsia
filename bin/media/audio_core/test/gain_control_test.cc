@@ -27,7 +27,7 @@ class GainControlTest : public gtest::RealLoopFixture {
     environment_services_->ConnectToService(audio_.NewRequest());
     ASSERT_TRUE(audio_);
 
-    audio_.set_error_handler([this]() {
+    audio_.set_error_handler([this](zx_status_t status) {
       error_occurred_ = true;
       QuitLoop();
     });
@@ -35,14 +35,14 @@ class GainControlTest : public gtest::RealLoopFixture {
     audio_->CreateAudioRenderer(audio_renderer_.NewRequest());
     ASSERT_TRUE(audio_renderer_);
 
-    audio_renderer_.set_error_handler([this]() {
+    audio_renderer_.set_error_handler([this](zx_status_t status) {
       error_occurred_ = true;
       QuitLoop();
     });
 
     audio_renderer_->BindGainControl(ar_gain_control_.NewRequest());
 
-    ar_gain_control_.set_error_handler([this]() {
+    ar_gain_control_.set_error_handler([this](zx_status_t status) {
       error_occurred_ = true;
       QuitLoop();
     });
