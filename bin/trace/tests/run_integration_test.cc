@@ -11,8 +11,8 @@
 
 #include "garnet/bin/trace/tests/run_test.h"
 
-// Persistent storage is used to assist debugging failures.
-const char kOutputFilePath[] = "/data/test.trace";
+// Note: /data is no longer large enough in qemu sessions
+const char kOutputFilePath[] = "/tmp/test.trace";
 
 const char kUsageString[] = {
   "Usage: run fuchsia-pkg://fuchsia.com/trace_tests#meta/run_integration_test.cmx\\n"

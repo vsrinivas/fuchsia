@@ -12,8 +12,8 @@
 #include "garnet/bin/trace/tests/run_test.h"
 #include "gtest/gtest.h"
 
-// Persistent storage is used to assist debugging failures.
-const char kOutputFilePath[] = "/data/test.trace";
+// Note: /data is no longer large enough in qemu sessions
+const char kOutputFilePath[] = "/tmp/test.trace";
 
 static void RunAndVerify(const char* tspec_path) {
   ASSERT_TRUE(RunTspec(tspec_path, kOutputFilePath));

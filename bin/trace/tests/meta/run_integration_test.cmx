@@ -3,7 +3,10 @@
         "binary": "bin/run_integration_test"
     },
     "sandbox": {
-        "features": [ "persistent-storage" ],
+        "features": [
+            "persistent-storage",
+            "system-temp"
+        ],
 	"services": [
             "fuchsia.process.Launcher"
         ],

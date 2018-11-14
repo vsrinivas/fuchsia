@@ -112,9 +112,9 @@ package("trace_tests") {
   ]
 
   tests = [
-    # XXX(PT-58): test disabled {
-    # XXX(PT-58): test disabled   name = "trace_integration_tests"
-    # XXX(PT-58): test disabled },
+    {
+      name = "trace_integration_tests"
+    },
     {
       name = "trace_tests"
     },
