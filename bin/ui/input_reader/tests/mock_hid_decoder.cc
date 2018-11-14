@@ -36,7 +36,7 @@ bool MockHidDecoder::Init() {
 zx::event MockHidDecoder::GetEvent() {
   zx::event dup;
   zx::event::create(0, &event_);
-  event_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ, &dup);
+  event_.duplicate(ZX_RIGHTS_BASIC, &dup);
   // If any errors occur, returning ZX_HANDLE_INVALID is fine.
   return dup;
 }
