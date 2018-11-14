@@ -24,7 +24,7 @@
 #define AML_SD_EMMC_DEFAULT_RC_CC            4          //16 core clock cycles
 #define AML_SD_EMMC_DEFAULT_CLK_SRC          0          //24MHz
 #define AML_SD_EMMC_DEFAULT_CLK_DIV          60         //Defaults to 400KHz
-#define AML_SD_EMMC_DEFAULT_CLK_CORE_PHASE   2
+#define AML_SD_EMMC_DEFAULT_CLK_CORE_PHASE   3
 #define AML_SD_EMMC_MAX_TUNING_TRIES         7
 #define AML_SD_EMMC_ADJ_DELAY_TEST_ATTEMPTS  10
 
@@ -39,13 +39,6 @@
 #define AML_SD_EMMC_MAX_PIO_DESCS            32  // 16 * 32 = 512
 #define AML_SD_EMMC_MAX_PIO_DATA_SIZE        AML_SD_EMMC_PING_BUFFER_SIZE + \
                                              AML_SD_EMMC_PONG_BUFFER_SIZE
-
-#define AML_SDIO_PORTB_GPIO_REG_5_VAL       0x00020000
-#define AML_SDIO_PORTB_PERIPHS_PINMUX2_VAL  0x01000000
-#define AML_SDIO_PORTB_PERIPHS_GPIO2_EN     0xffffffef
-#define AML_SDIO_PORTB_HHI_GCLK_MPEG0_VAL   0x02000000
-#define AML_SDIO_PORTB_SD_EMMC_CLK_VAL      0xf181ffff
-
 static inline void update_bits(uint32_t *x, uint32_t mask, uint32_t loc, uint32_t val) {
     *x &= ~mask;
     *x |= ((val << loc) & mask);
