@@ -19,8 +19,9 @@ typedef struct keychar {
     uint8_t shift_c;
 } keychar_t;
 
-extern keychar_t qwerty_map[];
-extern keychar_t dvorak_map[];
+#define KEYMAP_SIZE 0x64
+extern const keychar_t qwerty_map[KEYMAP_SIZE];
+extern const keychar_t dvorak_map[KEYMAP_SIZE];
 
 void hid_kbd_parse_report(uint8_t buf[8], hid_keys_t* keys);
 void hid_kbd_pressed_keys(const hid_keys_t* prev, const hid_keys_t* cur, hid_keys_t* pressed);

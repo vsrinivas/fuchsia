@@ -4,7 +4,8 @@
 
 #include <hid/hid.h>
 
-keychar_t qwerty_map[] = {
+// clang-format off
+const keychar_t qwerty_map[] = {
     // 0x00
     {}, {}, {}, {},
     // 0x04
@@ -57,7 +58,7 @@ keychar_t qwerty_map[] = {
     {'8', 0}, {'9', 0}, {'0', 0}, {'.', 0},
 };
 
-keychar_t dvorak_map[] = {
+const keychar_t dvorak_map[] = {
     // 0x00
     {}, {}, {}, {},
     // 0x04
@@ -109,3 +110,4 @@ keychar_t dvorak_map[] = {
     // 0x60
     {'8', 0}, {'9', 0}, {'0', 0}, {'.', 0},
 };
+// clang-format on

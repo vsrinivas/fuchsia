@@ -50,7 +50,7 @@ uint8_t hid_kbd_next_key(hid_keys_t* keys) {
 }
 
 uint8_t hid_map_key(uint32_t usage, bool shift, const keychar_t* keymap) {
-    if (usage > HID_USAGE_KEY_KP_DOT) {
+    if (usage > KEYMAP_SIZE) {
         return 0;
     } else if (shift) {
         return keymap[usage].shift_c;
