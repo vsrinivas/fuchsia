@@ -28,13 +28,17 @@ func NewBacktracePresenter(out io.Writer, next PostProcessor) *BacktracePresente
 
 func printBacktrace(out io.Writer, hdr LineHeader, frame uint64, info addressInfo) {
 	modRelAddr := info.addr - info.seg.Vaddr + info.seg.ModRelAddr
+	var hdrString string
+	if hdr != nil {
+		hdrString = hdr.Present()
+	}
 	if len(info.locs) == 0 {
-		fmt.Fprintf(out, "%s    #%-4d %#016x in <%s>+%#x\n", hdr.Present(), frame, info.addr, info.mod.Name, modRelAddr)
+		fmt.Fprintf(out, "%s    #%-4d %#016x in <%s>+%#x\n", hdrString, frame, info.addr, info.mod.Name, modRelAddr)
 		return
 	}
 	for i, loc := range info.locs {
 		i = len(info.locs) - i - 1
-		fmt.Fprintf(out, "%s    ", hdr.Present())
+		fmt.Fprintf(out, "%s    ", hdrString)
 		var frameStr string
 		if i == 0 {
 			frameStr = fmt.Sprintf("#%d", frame)

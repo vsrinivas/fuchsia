@@ -223,6 +223,47 @@ func ExampleDemux() {
 	//[131.604] 01234.05678> Error at atan2 at atan2.c:49
 }
 
+func ExampleNoHeaderBacktrace() {
+	// mock the input and outputs of llvm-symbolizer
+	symbo := newMockSymbolizer([]mockModule{
+		{"testdata/libc.elf", map[uint64][]SourceLocation{
+			0x429c0: {{NewOptStr("math.h"), 51, NewOptStr("__DOUBLE_FLOAT")}, {NewOptStr("atan2.c"), 49, NewOptStr("atan2")}},
+			0x43680: {{NewOptStr("pow.c"), 23, NewOptStr("pow")}},
+			0x44987: {{NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
+		}},
+	})
+
+	// mock ids.txt
+	repo := NewRepo()
+	repo.AddSource(testBinaries)
+
+	// make a demuxer
+	demuxer := NewDemuxer(repo, symbo)
+
+	// define a little message that will need to be parsed
+	msg := "{{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
+		"{{{mmap:0x12345000:0xcf6bc:load:1:rx:0x0}}}\n" +
+		"Backtrace:\n" +
+		"{{{bt:0:0x12388680}}}\n" +
+		"{{{bt:1:0x123879c0}}}\n"
+
+	// start sending InputLines to the demuxer
+	ctx := context.Background()
+	in := StartParsing(ctx, strings.NewReader(msg))
+	// start the demuxer which will cause filters to send output lines to 'out'
+	out := demuxer.Start(ctx, in)
+
+	Consume(ComposePostProcessors(ctx, out,
+		&FilterContextElements{},
+		NewBacktracePresenter(os.Stdout, NewBasicPresenter(os.Stdout, false))))
+
+	//Output:
+	//Backtrace:
+	//     #0    0x0000000012388680 in pow pow.c:23 <libc.so>+0x43680
+	//     #1.1  0x00000000123879c0 in __DOUBLE_FLOAT math.h:51 <libc.so>+0x429c0
+	//     #1    0x00000000123879c0 in atan2 atan2.c:49 <libc.so>+0x429c0
+}
+
 func ExampleNewBacktracePresenter() {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
