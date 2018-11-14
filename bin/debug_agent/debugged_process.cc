@@ -221,7 +221,17 @@ void DebuggedProcess::OnThreadStarting(zx_koid_t process_koid,
 void DebuggedProcess::OnThreadExiting(zx_koid_t process_koid,
                                       zx_koid_t thread_koid) {
   // Clean up our DebuggedThread object.
-  FXL_DCHECK(threads_.find(thread_koid) != threads_.end());
+  auto found_thread = threads_.find(thread_koid);
+  if (found_thread == threads_.end()) {
+    FXL_NOTREACHED();
+    return;
+  }
+
+  // The thread will currently be in a "Dying" state. For it to complete its
+  // lifecycle it must be resumed.
+  debug_ipc::MessageLoopZircon::Current()->ResumeFromException(
+      found_thread->second->thread(), 0);
+
   threads_.erase(thread_koid);
 
   // Notify the client. Can't call FillThreadRecord since the thread doesn't
