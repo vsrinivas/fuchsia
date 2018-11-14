@@ -42,3 +42,16 @@ zx_status_t sys_futex_requeue(user_in_ptr<const zx_futex_t> wake_ptr, uint32_t w
         wake_ptr, wake_count, current_value,
         requeue_ptr, requeue_count);
 }
+
+// zx_status_t zx_futex_wait_deprecated
+zx_status_t sys_futex_wait_deprecated(
+        user_in_ptr<const zx_futex_t> value_ptr, int32_t current_value, zx_time_t deadline) {
+    return sys_futex_wait(value_ptr, current_value, deadline);
+}
+
+// zx_status_t zx_futex_requeue_deprecated
+zx_status_t sys_futex_requeue_deprecated(
+        user_in_ptr<const zx_futex_t> wake_ptr, uint32_t wake_count, int32_t current_value,
+        user_in_ptr<const zx_futex_t> requeue_ptr, uint32_t requeue_count) {
+    return sys_futex_requeue(wake_ptr, wake_count, current_value, requeue_ptr, requeue_count);
+}
