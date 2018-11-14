@@ -97,6 +97,20 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
 
         // now that we have interfaces...  let's try to use them!
         for (iface_id, wlan_iface) in test_results.iface_objects.iter_mut() {
+            // first check if we can get scan results
+            let scan_result = await!(wlan_service_util::perform_scan(&wlan_iface.sme_proxy));
+            match scan_result {
+                Ok(results) => {
+                    wlan_iface.scan_success = true;
+                    for entry in results.into_iter() {
+                        if entry.best_bss.ssid == opt.target_ssid.as_bytes().to_vec() {
+                            wlan_iface.scan_found_target_ssid = true;
+                        }
+                    }
+                },
+                _ => println!("scan failed")
+            };
+
             let mut requires_disconnect = false;
             // first check if we are connected to the target network already
             if is_connect_to_target_network_needed(
@@ -221,6 +235,10 @@ struct WlanIface {
     #[serde(skip_serializing)]
     initial_status: fidl_sme::ClientStatusResponse,
 
+    scan_success: bool,
+
+    scan_found_target_ssid: bool,
+
     connection_success: bool,
 
     disconnect_success: bool,
@@ -237,6 +255,8 @@ impl WlanIface {
         WlanIface {
             sme_proxy: sme_proxy,
             initial_status: status,
+            scan_success: false,
+            scan_found_target_ssid: false,
             connection_success: false,
             disconnect_success: false,
             dhcp_success: false,
