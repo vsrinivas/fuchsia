@@ -389,7 +389,7 @@ class BasemgrApp : fuchsia::modular::BaseShellContext,
     // Start OAuth Token Manager App.
     fuchsia::modular::AppConfig token_manager_config;
     if (settings_.enable_garnet_token_manager) {
-      token_manager_config.url = "token_manager_rust";
+      token_manager_config.url = "token_manager_factory";
       FXL_DLOG(INFO) << "Initialzing token_manager_factory_app()";
       token_manager_factory_app_ =
           std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
