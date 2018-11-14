@@ -241,15 +241,15 @@ zx_status_t InputDevice::Init() {
     SelectConfig(VIRTIO_INPUT_CFG_EV_BITS, VIRTIO_INPUT_EV_ABS);
     uint8_t cfg_abs_size = config_.size;
 
-    // Assume that if the device supports either relative or absolute events
-    // that it's a pointer, otherwise as long as it supports key events it's a
-    // keyboard.
-    if (cfg_rel_size > 0 || cfg_abs_size > 0) {
-        // Pointer
-        dev_class_ = HID_DEVICE_CLASS_POINTER;
-    } else if (cfg_key_size > 0) {
+    // We only support one of pointer events or key events. In the advent that
+    // the device is trying to present both to us we shall preference the
+    // keyboard events as these are more useful to us.
+    if (cfg_key_size > 0) {
         // Keyboard
         dev_class_ = HID_DEVICE_CLASS_KBD;
+    } else if (cfg_rel_size > 0 || cfg_abs_size > 0) {
+        // Pointer
+        dev_class_ = HID_DEVICE_CLASS_POINTER;
     } else {
         return ZX_ERR_NOT_SUPPORTED;
     }
