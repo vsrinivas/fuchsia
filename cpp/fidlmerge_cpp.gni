@@ -41,8 +41,6 @@ import("//build/fidl/toolchain.gni")
 #
 
 template("fidlmerge_cpp") {
-  assert(is_fuchsia, "This template can only be used in $target_toolchain.")
-
   assert(defined(invoker.fidl_target),
          "fidlmerge_cpp requires parameter fidl_target.")
 
