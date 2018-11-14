@@ -63,6 +63,10 @@ pub enum Error {
     #[fail(display = "Unrecognized descriminant for a FIDL union type.")]
     UnknownUnionTag,
 
+    /// Unrecognized field in a FIDL table type.
+    #[fail(display = "Unrecognized field in a FIDL table type.")]
+    UnknownTableField,
+
     /// A future was polled after it had already completed.
     #[fail(display = "A FIDL future was polled after it had already completed.")]
     PollAfterCompletion,

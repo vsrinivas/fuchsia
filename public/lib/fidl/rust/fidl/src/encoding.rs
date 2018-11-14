@@ -169,8 +169,6 @@ impl<'a> Encoder<'a> {
     /// Runs the provided closure inside an encoder modified
     /// to write the data out-of-line.
     ///
-    /// Returns the a result indicating the offset at which the data was written.
-    ///
     /// Once the closure has completed, this function resets the offset
     /// to where it was at the beginning of the call.
     pub fn write_out_of_line<F>(&mut self, len: usize, f: F) -> Result<()>
@@ -479,10 +477,7 @@ impl_codable_for_fixed_array!(256,);
 
 fn encode_byte_slice(encoder: &mut Encoder, slice_opt: Option<&[u8]>) -> Result<()> {
     match slice_opt {
-        None => {
-            0u64.encode(encoder)?;
-            0u64.encode(encoder)
-        }
+        None => encode_absent_vector(encoder),
         Some(slice) => {
             // Two u64: (len, present)
             (slice.len() as u64).encode(encoder)?;
@@ -496,7 +491,14 @@ fn encode_byte_slice(encoder: &mut Encoder, slice_opt: Option<&[u8]>) -> Result<
     }
 }
 
-fn encode_encodable_iter<Iter, T>(
+/// Encode an missing vector-like component.
+pub fn encode_absent_vector(encoder: &mut Encoder) -> Result<()> {
+    0u64.encode(encoder)?;
+    ALLOC_ABSENT_U64.encode(encoder)
+}
+
+/// Encode an optional iterator over encodable elements into a FIDL vector-like representation.
+pub fn encode_encodable_iter<Iter, T>(
     encoder: &mut Encoder,
     iter_opt: Option<Iter>,
 ) -> Result<()>
@@ -505,10 +507,7 @@ where
     T: Encodable,
 {
     match iter_opt {
-        None => {
-            0u64.encode(encoder)?;
-            ALLOC_ABSENT_U64.encode(encoder)
-        }
+        None => encode_absent_vector(encoder),
         Some(mut iter) => {
             // Two u64: (len, present)
             (iter.len() as u64).encode(encoder)?;
@@ -1213,6 +1212,237 @@ macro_rules! fidl_struct {
     }
 }
 
+/// Encode the provided value behind a FIDL "envelope".
+pub fn encode_in_envelope<T>(val: &mut Option<&mut T>, encoder: &mut Encoder) -> Result<()>
+where
+    T: Encodable + ?Sized
+{
+    // u32 num_bytes
+    // u32 num_handles
+    // 64-bit presence indicator
+
+    // Record the offset of the number of bytes handles in the envelope,
+    // so that we can come back to it after writing the bytes and handles
+    // (until which point we don't know how many handles will be written).
+    let envelope_offset = encoder.offset;
+    0u32.encode(encoder)?; // num_bytes
+    0u32.encode(encoder)?; // num_handles
+
+    match val {
+        Some(x) => {
+            ALLOC_PRESENT_U64.encode(encoder)?;
+            let bytes_before = encoder.buf.len();
+            let handles_before = encoder.handles.len();
+            encoder.write_out_of_line(x.inline_size(), |e| x.encode(e))?;
+            let mut bytes_written = (encoder.buf.len() - bytes_before) as u32;
+            let mut handles_written = (encoder.handles.len() - handles_before) as u32;
+            // Back up and overwrite the `0s` for num_bytes and num_handles
+            let after_offset = encoder.offset;
+            encoder.offset = envelope_offset;
+            bytes_written.encode(encoder)?;
+            handles_written.encode(encoder)?;
+            encoder.offset = after_offset;
+        }
+        None => ALLOC_ABSENT_U64.encode(encoder)?,
+    }
+    Ok(())
+}
+
+#[macro_export]
+macro_rules! fidl_table {
+    (
+        name: $name:ty,
+        members: {$(
+            // NOTE: members must be in order from lowest to highest ordinal
+            $member_name:ident {
+                ty: $member_ty:ty,
+                ordinal: $ordinal:expr,
+            },
+        )*},
+    ) => {
+        impl $crate::encoding::Encodable for $name {
+            fn inline_align(&self) -> usize { 8 }
+            fn inline_size(&self) -> usize { 16 }
+
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
+                let members = &mut [$(
+                    ($ordinal, self.$member_name.as_mut().map(|x| x as &mut $crate::encoding::Encodable)),
+                )*];
+
+                // Cut off the `None` elements at the tail of the table
+                let last_some_index = members
+                    .iter()
+                    .enumerate()
+                    .rev()
+                    .find(|(_i, val)| val.1.is_some())
+                    .map(|(i, _val)| i);
+
+                let members = if let Some(i) = last_some_index {
+                    &mut members[..(i + 1)]
+                } else {
+                    &mut []
+                };
+
+                // Vector header
+                let max_ordinal = members.last().map(|v| v.0).unwrap_or(0);
+                (max_ordinal as u64).encode(encoder)?;
+                ALLOC_PRESENT_U64.encode(encoder)?;
+                let bytes_len = max_ordinal * 16; // 16 = ENVELOPE_INLINE_SIZE
+                encoder.write_out_of_line(bytes_len, |encoder| {
+                    encoder.recurse(|encoder| {
+                        let mut next_ordinal_to_write = 1;
+                        for (ordinal, encodable) in members.iter_mut() {
+                            let ordinal = *ordinal;
+                            if ordinal < next_ordinal_to_write || ordinal > max_ordinal {
+                                panic!("ordinals out of order in fidl_table! declaration");
+                            }
+                            while ordinal > next_ordinal_to_write {
+                                // Fill in envelopes for missing ordinals.
+                                $crate::encoding::encode_in_envelope::<()>(&mut None, encoder)?;
+                                next_ordinal_to_write += 1;
+                            }
+                            $crate::encoding::encode_in_envelope(encodable, encoder)?;
+                            next_ordinal_to_write += 1;
+                        }
+                        Ok(())
+                    })
+                })
+            }
+        }
+
+        impl $crate::encoding::Encodable for Option<$name> {
+            fn inline_align(&self) -> usize { 8 }
+            fn inline_size(&self) -> usize { 16 }
+
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
+                match self {
+                    Some(table) => fidl_encode!(table, encoder),
+                    None => $crate::encoding::encode_absent_vector(encoder),
+                }
+            }
+        }
+
+        impl $crate::encoding::Decodable for $name {
+            fn inline_align() -> usize { 8 }
+            fn inline_size() -> usize { 16 }
+            fn new_empty() -> Self {
+                Self {$(
+                        $member_name: None,
+                )*}
+            }
+            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
+                let mut decode_into = Some(::std::mem::replace(self, fidl_new_empty!(Self)));
+                fidl_decode!(&mut decode_into, decoder)?;
+                match decode_into {
+                    Some(val) => {
+                        *self = val;
+                        Ok(())
+                    }
+                    None => return Err(Error::NotNullable),
+                }
+            }
+        }
+
+        impl $crate::encoding::Decodable for Option<$name> {
+            fn inline_align() -> usize { 8 }
+            fn inline_size() -> usize { 16 }
+            fn new_empty() -> Self { None }
+
+            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
+                // Decode envelope vector header
+                let mut len: u64 = 0;
+                fidl_decode!(&mut len, decoder)?;
+
+                let mut present: u64 = 0;
+                fidl_decode!(&mut present, decoder)?;
+
+                let this_some = match present {
+                    ALLOC_ABSENT_U64 => {
+                        if len != 0 {
+                            return Err(Error::Invalid);
+                        }
+                        *self = None;
+                        return Ok(());
+                    },
+                    ALLOC_PRESENT_U64 => self.get_or_insert_with(|| fidl_new_empty!($name)),
+                    _ => return Err(Error::Invalid),
+                };
+
+                let len = len as usize;
+                let bytes_len = len * 16; // envelope inline_size is 16
+                decoder.read_out_of_line(bytes_len, |decoder| {
+                    // Decode the envelope for each type.
+                    // u32 num_bytes
+                    // u32_num_handles
+                    // 64-bit presence indicator
+                    $(
+                        if decoder.buf.is_empty() {
+                            // The remaining fields have been omitted, so set them to None
+                            this_some.$member_name = None;
+                        } else {
+                            let mut num_bytes: u32 = 0;
+                            fidl_decode!(&mut num_bytes, decoder)?;
+                            let mut num_handles: u32 = 0;
+                            fidl_decode!(&mut num_handles, decoder)?;
+                            let mut present: u64 = 0;
+                            fidl_decode!(&mut present, decoder)?;
+                            let bytes_before = decoder.out_of_line_buf.len();
+                            let handles_before = decoder.handles.len();
+                            match present {
+                                ALLOC_PRESENT_U64 => {
+                                    decoder.read_out_of_line(fidl_inline_size!($member_ty), |d| {
+                                        let val_ref =
+                                           this_some.$member_name.get_or_insert_with(
+                                                || fidl_new_empty!($member_ty));
+                                        fidl_decode!(val_ref, d)?;
+                                        Ok(())
+                                    })?;
+                                }
+                                ALLOC_ABSENT_U64 => {
+                                    this_some.$member_name = None;
+                                }
+                                _ => return Err(Error::Invalid),
+                            }
+                            if bytes_before != (decoder.out_of_line_buf.len() + (num_bytes as usize)) {
+                                return Err(Error::Invalid);
+                            }
+                            if handles_before != (decoder.handles.len() + (num_handles as usize)) {
+                                return Err(Error::Invalid);
+                            }
+                        }
+                    )*
+
+                    // If there are any remaining non-empty envelopes,
+                    // we error since the ordinal is unknown to these bindings.
+                    //
+                    // NOTE: this is the behavior discussed in previous FIDL
+                    // team meetings and is consistent with the behavior on new
+                    // extensible union variants and new interface methods.
+                    // However, it means that receivers of tables must update
+                    // to new generated bindings before they can receive
+                    // messages containing new table fields.
+                    while !decoder.buf.is_empty() {
+                        let mut num_bytes: u32 = 0;
+                        fidl_decode!(&mut num_bytes, decoder)?;
+                        let mut num_handles: u32 = 0;
+                        fidl_decode!(&mut num_handles, decoder)?;
+                        let mut present: u64 = 0;
+                        fidl_decode!(&mut present, decoder)?;
+                        if num_bytes != 0 ||
+                           num_handles != 0 ||
+                           present != ALLOC_ABSENT_U64
+                        {
+                            return Err(Error::UnknownTableField);
+                        }
+                    }
+
+                    Ok(())
+                })
+            }
+        }
+    }
+}
+
 #[macro_export]
 macro_rules! fidl_union {
     (
@@ -1597,6 +1827,14 @@ mod test {
         out
     }
 
+    fn encode_assert_bytes<T: Encodable>(mut data: T, encoded_bytes: &[u8]) {
+        let buf = &mut Vec::new();
+        let handle_buf = &mut Vec::new();
+        Encoder::encode(buf, handle_buf, &mut data)
+            .expect("Encoding failed");
+        assert_eq!(&**buf, encoded_bytes);
+    }
+
     fn assert_identity<T>(mut x: T)
         where T: Encodable + Decodable + Clone + PartialEq + fmt::Debug
     {
@@ -1837,6 +2075,285 @@ mod test {
 
         assert_eq!(body_start.0, &mut body_out.0);
         assert_eq!(body_start.1, &mut body_out.1);
+    }
+
+    struct MyTable {
+        num: Option<i32>,
+        num_none: Option<i32>,
+        string: Option<String>,
+        handle: Option<zx::Handle>,
+    }
+
+    fidl_table! {
+        name: MyTable,
+        members: {
+            num {
+                ty: i32,
+                ordinal: 1,
+            },
+            num_none {
+                ty: i32,
+                ordinal: 2,
+            },
+            string {
+                ty: String,
+                ordinal: 3,
+            },
+            handle {
+                ty: zx::Handle,
+                ordinal: 4,
+            },
+        },
+    }
+
+    struct TablePrefix {
+        num: Option<i32>,
+        num_none: Option<i32>,
+    }
+
+    fidl_table! {
+        name: TablePrefix,
+        members: {
+            num {
+                ty: i32,
+                ordinal: 1,
+            },
+            num_none {
+                ty: i32,
+                ordinal: 2,
+            },
+        },
+    }
+
+    #[test]
+    fn encode_decode_table() {
+        // create a random handle to encode and then decode.
+        let handle = zx::Vmo::create(1024).expect("vmo creation failed");
+        let raw_handle = handle.raw_handle();
+        let mut starting_table = MyTable {
+            num: Some(5),
+            num_none: None,
+            string: Some("foo".to_string()),
+            handle: Some(handle.into_handle()),
+        };
+        let table_out = encode_decode(&mut starting_table);
+        assert_eq!(table_out.num, Some(5));
+        assert_eq!(table_out.num_none, None);
+        assert_eq!(table_out.string, Some("foo".to_string()));
+        assert_eq!(table_out.handle.unwrap().raw_handle(), raw_handle);
+    }
+
+    #[test]
+    fn encode_decode_table_some() {
+        // create a random handle to encode and then decode.
+        let handle = zx::Vmo::create(1024).expect("vmo creation failed");
+        let raw_handle = handle.raw_handle();
+        let mut starting_table = Some(MyTable {
+            num: Some(5),
+            num_none: None,
+            string: Some("foo".to_string()),
+            handle: Some(handle.into_handle()),
+        });
+        let table_out = encode_decode(&mut starting_table);
+        let table_out = table_out.expect("table was None");
+        assert_eq!(table_out.num, Some(5));
+        assert_eq!(table_out.num_none, None);
+        assert_eq!(table_out.string, Some("foo".to_string()));
+        assert_eq!(table_out.handle.unwrap().raw_handle(), raw_handle);
+    }
+
+    #[test]
+    fn encode_decode_table_none() {
+        let table_none = encode_decode::<Option<MyTable>>(&mut None);
+        assert!(table_none.is_none());
+    }
+
+    #[test]
+    fn table_encode_prefix_decode_full() {
+        let mut table_prefix_in = TablePrefix {
+            num: Some(5),
+            num_none: None,
+        };
+        let mut table_out: MyTable = Decodable::new_empty();
+
+        let buf = &mut Vec::new();
+        let handle_buf = &mut Vec::new();
+        Encoder::encode(buf, handle_buf, &mut table_prefix_in).unwrap();
+        Decoder::decode_into(buf, handle_buf, &mut table_out).unwrap();
+
+        assert_eq!(table_out.num, Some(5));
+        assert_eq!(table_out.num_none, None);
+        assert_eq!(table_out.string, None);
+        assert_eq!(table_out.handle, None);
+    }
+
+    #[test]
+    fn table_encode_omits_none_tail() {
+        // "None" fields at the tail of a table shouldn't be encoded at all.
+        let mut table_in = MyTable {
+            num: Some(5),
+            // These fields should all be omitted in the encoded repr,
+            // allowing decoding of the prefix to succeed.
+            num_none: None,
+            string: None,
+            handle: None,
+        };
+        let mut table_prefix_out: TablePrefix = Decodable::new_empty();
+
+        let buf = &mut Vec::new();
+        let handle_buf = &mut Vec::new();
+        Encoder::encode(buf, handle_buf, &mut table_in).unwrap();
+        Decoder::decode_into(buf, handle_buf, &mut table_prefix_out).unwrap();
+
+        assert_eq!(table_prefix_out.num, Some(5));
+        assert_eq!(table_prefix_out.num_none, None);
+    }
+
+    #[test]
+    fn table_decode_fails_on_unrecognized_tail() {
+        let mut table_in = MyTable {
+            num: Some(5),
+            num_none: None,
+            string: Some("foo".to_string()),
+            handle: None,
+        };
+        let mut table_prefix_out: TablePrefix = Decodable::new_empty();
+
+        let buf = &mut Vec::new();
+        let handle_buf = &mut Vec::new();
+        Encoder::encode(buf, handle_buf, &mut table_in).unwrap();
+        let err = Decoder::decode_into(buf, handle_buf, &mut table_prefix_out).unwrap_err();
+        match err {
+            Error::UnknownTableField => {},
+            err => panic!("unexpected error decoding: {:?}", err),
+        }
+    }
+
+    struct SimpleTable {
+        x: Option<i64>,
+        y: Option<i64>,
+    }
+
+    fidl_table! {
+        name: SimpleTable,
+        members: {
+            x {
+                ty: i64,
+                ordinal: 1,
+            },
+            y {
+                ty: i64,
+                ordinal: 5,
+            },
+        },
+    }
+
+    struct TableWithStringAndVector {
+        foo: Option<String>,
+        bar: Option<i32>,
+        baz: Option<Vec<u8>>,
+    }
+
+    fidl_table! {
+        name: TableWithStringAndVector,
+        members: {
+            foo {
+                ty: String,
+                ordinal: 1,
+            },
+            bar {
+                ty: i32,
+                ordinal: 2,
+            },
+            baz {
+                ty: Vec<u8>,
+                ordinal: 3,
+            },
+        },
+    }
+
+    #[test]
+    fn table_golden_simple_table_with_xy() {
+        let simple_table_with_xy: &[u8] = &[
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ];
+        encode_assert_bytes(
+            SimpleTable { x: Some(42), y: Some(67) },
+            simple_table_with_xy,
+        )
+    }
+
+    #[test]
+    fn table_golden_simple_table_with_y() {
+        let simple_table_with_y: &[u8] = &[
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ];
+        encode_assert_bytes(
+            SimpleTable { x: None, y: Some(67) },
+            simple_table_with_y,
+        )
+    }
+
+    #[test]
+    fn table_golden_string_and_vector_hello_27() {
+        let table_with_string_and_vector_hello_27: &[u8] = &[
+            2, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            24, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // envelope 1: alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // envelope 2: alloc present
+            5, 0, 0, 0, 0, 0, 0, 0, // element 1: length
+            255, 255, 255, 255, 255, 255, 255, 255, // element 1: alloc present
+            104, 101, 108, 108, 111, 0, 0, 0, // element 1: hello
+            27, 0, 0, 0, 0, 0, 0, 0, // element 2: value
+        ];
+        encode_assert_bytes(
+            TableWithStringAndVector {
+                foo: Some("hello".to_string()),
+                bar: Some(27),
+                baz: None,
+            },
+            table_with_string_and_vector_hello_27,
+        )
+    }
+
+    #[test]
+    fn table_golden_empty_table() {
+        let empty_table: &[u8] = &[
+            0, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+        ];
+
+        encode_assert_bytes(
+            SimpleTable { x: None, y: None },
+            empty_table,
+        )
     }
 
     #[test]
