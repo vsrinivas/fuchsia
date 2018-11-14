@@ -160,7 +160,7 @@ public:
                         FIDL_POP_AND_CONTINUE_OR_RETURN;
                     }
                     uint32_t size;
-                    if (mul_overflow(envelope_vector_ptr->count, sizeof(uint64_t), &size)) {
+                    if (mul_overflow(envelope_vector_ptr->count, 2 * sizeof(uint64_t), &size)) {
                         SetError("integer overflow calculating table size");
                         FIDL_POP_AND_CONTINUE_OR_RETURN;
                     }
@@ -198,16 +198,32 @@ public:
                     }
                 }
                 const uint32_t tag_offset = static_cast<uint32_t>(
-                    frame->offset + (frame->field - 1) * sizeof(uintptr_t));
+                    frame->offset + (frame->field - 1) * 2 * sizeof(uint64_t));
+                const uint32_t data_offset = static_cast<uint32_t>(
+                    tag_offset + sizeof(uint64_t));
                 const uint64_t packed_sizes = *TypedAt<uint64_t>(tag_offset);
                 frame->field++;
-                if (packed_sizes == 0) {
-                    continue;
+                switch (GetPointerState(TypedAt<void>(data_offset))) {
+                case PointerState::PRESENT:
+                    if (packed_sizes != 0)
+                        break; // expected
+
+                    SetError("Table envelope has present data pointer, but no data, and no handles");
+                    FIDL_POP_AND_CONTINUE_OR_RETURN;
+                case PointerState::ABSENT:
+                    if (packed_sizes == 0)
+                        continue; // skip
+
+                    SetError("Table envelope has absent data pointer, yet has data and/or handles");
+                    FIDL_POP_AND_CONTINUE_OR_RETURN;
+                default:
+                    SetError("Table envelope has bad data pointer");
+                    FIDL_POP_AND_CONTINUE_OR_RETURN;
                 }
                 uint32_t offset;
                 uint32_t handles;
-                const uint32_t table_bytes = static_cast<uint32_t>(packed_sizes >> 32);
-                const uint32_t table_handles = static_cast<uint32_t>(packed_sizes & 0xffffffffu);
+                const uint32_t table_bytes = static_cast<uint32_t>(packed_sizes & 0xffffffffu);
+                const uint32_t table_handles = static_cast<uint32_t>(packed_sizes >> 32);
                 if (add_overflow(out_of_line_offset_, table_bytes, &offset) || offset > num_bytes()) {
                     SetError("integer overflow decoding table field");
                     FIDL_POP_AND_CONTINUE_OR_RETURN;
@@ -222,11 +238,11 @@ public:
                 if (known_field != nullptr) {
                     const fidl_type_t* field_type = known_field->type;
                     uint32_t field_offset;
-                    if (!ClaimOutOfLineStorage(TypeSize(field_type), TypedAt<void*>(tag_offset), &field_offset)) {
+                    if (!ClaimOutOfLineStorage(TypeSize(field_type), TypedAt<void*>(data_offset), &field_offset)) {
                         SetError("table wanted too many bytes in field");
                         FIDL_POP_AND_CONTINUE_OR_RETURN;
                     }
-                    UpdatePointer(TypedAt<void*>(tag_offset), TypedAt<void>(field_offset));
+                    UpdatePointer(TypedAt<void*>(data_offset), TypedAt<void>(field_offset));
                     if (!Push(Frame(field_type, field_offset))) {
                         SetError("recursion depth exceeded decoding table");
                         FIDL_POP_AND_CONTINUE_OR_RETURN;
@@ -234,11 +250,11 @@ public:
                 } else {
                     // Table data will not be processed: discard it.
                     uint32_t field_offset;
-                    if (!ClaimOutOfLineStorage(table_bytes, TypedAt<void*>(tag_offset), &field_offset)) {
+                    if (!ClaimOutOfLineStorage(table_bytes, TypedAt<void*>(data_offset), &field_offset)) {
                         SetError("table wanted too many bytes in field");
                         FIDL_POP_AND_CONTINUE_OR_RETURN;
                     }
-                    UpdatePointer(TypedAt<void*>(tag_offset), TypedAt<void>(field_offset));
+                    UpdatePointer(TypedAt<void*>(data_offset), TypedAt<void>(field_offset));
                     for (uint32_t i = 0; i < table_handles; i++) {
                         if (!ClaimHandle(nullptr)) {
                             SetError("expected handle not present");
