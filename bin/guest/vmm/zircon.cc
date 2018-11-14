@@ -158,7 +158,12 @@ zx_status_t read_unified_zbi(const std::string& zbi_path,
     container_hdr->length += ZBI_ALIGN(items_len);
   }
 
+#if __aarch64__
+  *guest_ip = kernel_hdr->data_kernel.entry + kKernelOffset;
+#elif __x86_64__
   *guest_ip = kernel_hdr->data_kernel.entry;
+#endif
+
   return ZX_OK;
 }
 
