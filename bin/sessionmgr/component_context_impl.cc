@@ -49,10 +49,8 @@ void ComponentContextImpl::GetLedgerNew(
 }
 
 void ComponentContextImpl::GetLedger(
-    fidl::InterfaceRequest<fuchsia::ledger::Ledger> request,
-    GetLedgerCallback callback) {
+    fidl::InterfaceRequest<fuchsia::ledger::Ledger> request) {
   ledger_repository_->GetLedger(to_array(component_url_), std::move(request));
-  callback(fuchsia::ledger::Status::OK);
 }
 
 void ComponentContextImpl::ConnectToAgent(

@@ -117,7 +117,7 @@ TodoApp::TodoApp(async::Loop* loop)
   module_context_->GetComponentContext(component_context_.NewRequest());
   ledger_.set_error_handler(
       NewErrorHandler([this] { loop_->Quit(); }, "Ledger"));
-  component_context_->GetLedgerNew(ledger_.NewRequest());
+  component_context_->GetLedger(ledger_.NewRequest());
   ledger_->GetRootPage(
       page_.NewRequest(),
       HandleResponse([this] { loop_->Quit(); }, "GetRootPage"));
@@ -201,7 +201,8 @@ void TodoApp::Act() {
     }
   });
   zx::duration delay = zx::sec(delay_distribution_(rng_));
-  async::PostDelayedTask(loop_->dispatcher(), [this] { Act(); }, delay);
+  async::PostDelayedTask(
+      loop_->dispatcher(), [this] { Act(); }, delay);
 }
 
 }  // namespace todo

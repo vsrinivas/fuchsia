@@ -23,8 +23,7 @@ void ComponentContextFake::GetLedgerNew(
 }
 
 void ComponentContextFake::GetLedger(
-    fidl::InterfaceRequest<fuchsia::ledger::Ledger> request,
-    GetLedgerCallback callback) {
+    fidl::InterfaceRequest<fuchsia::ledger::Ledger> request) {
   FXL_NOTIMPLEMENTED();
 }
 

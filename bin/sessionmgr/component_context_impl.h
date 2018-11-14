@@ -59,8 +59,8 @@ class ComponentContextImpl : public fuchsia::modular::ComponentContext {
   // |fuchsia::modular::ComponentContext|
   void GetLedgerNew(
       fidl::InterfaceRequest<fuchsia::ledger::Ledger> request) override;
-  void GetLedger(fidl::InterfaceRequest<fuchsia::ledger::Ledger> request,
-                 GetLedgerCallback callback) override;
+  void GetLedger(
+      fidl::InterfaceRequest<fuchsia::ledger::Ledger> request) override;
 
   // |fuchsia::modular::ComponentContext|
   void ConnectToAgent(fidl::StringPtr url,
