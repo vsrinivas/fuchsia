@@ -165,11 +165,11 @@ std::string CollectProfilerLog() {
   async::Loop loop_(&kAsyncLoopConfigNoAttachToThread);
   loop_.StartThread();
 
-  ProfilerLogListener* log_listener;
+  std::unique_ptr<ProfilerLogListener> log_listener;
   async::PostTask(loop_.dispatcher(), [&log_listener, &loop_] {
     async_set_default_dispatcher(loop_.dispatcher());
 
-    log_listener = new ProfilerLogListener([&loop_] {
+    log_listener = std::make_unique<ProfilerLogListener>([&loop_] {
       // Done parsing the log
       loop_.Quit();
     });
@@ -184,8 +184,5 @@ std::string CollectProfilerLog() {
   loop_.Run();
   loop_.JoinThreads();
 
-  std::string formatted_log = log_listener->Log();
-  delete log_listener;
-
-  return formatted_log;
+  return log_listener->Log();
 }

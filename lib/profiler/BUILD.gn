@@ -65,10 +65,8 @@ source_set("profiler_lib") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/syslog/cpp",
     "//zircon/public/fidl/fuchsia-logger",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/syslog",
   ]
 }
 
