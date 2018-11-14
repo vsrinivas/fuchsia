@@ -10,6 +10,7 @@
 #include <dev/interrupt.h>
 #include <kernel/cmdline.h>
 #include <kernel/mp.h>
+#include <kernel/range_check.h>
 #include <kernel/thread.h>
 #include <lib/debuglog.h>
 #include <libzbi/zbi-cpp.h>
@@ -62,13 +63,13 @@ static zx_status_t identity_page_allocate(fbl::RefPtr<VmAspace>* new_aspace,
     // physical address space. For this reason, we need to make a new address
     // space.
     fbl::RefPtr<VmAspace> identity_aspace =
-            VmAspace::Create(VmAspace::TYPE_LOW_KERNEL, "mexec identity");
+        VmAspace::Create(VmAspace::TYPE_LOW_KERNEL, "mexec identity");
     if (!identity_aspace)
         return ZX_ERR_INTERNAL;
 
     // Create a new allocation in the new address space that identity maps the
     // target page.
-    const uint perm_flags_rwx = ARCH_MMU_FLAG_PERM_READ  |
+    const uint perm_flags_rwx = ARCH_MMU_FLAG_PERM_READ |
                                 ARCH_MMU_FLAG_PERM_WRITE |
                                 ARCH_MMU_FLAG_PERM_EXECUTE;
     void* identity_address = (void*)pa;
@@ -93,10 +94,14 @@ static zx_status_t identity_page_allocate(fbl::RefPtr<VmAspace>* new_aspace,
 static zx_status_t vmo_coalesce_pages(zx_handle_t vmo_hdl, const size_t extra_bytes,
                                       paddr_t* addr, uint8_t** vaddr, size_t* size) {
     DEBUG_ASSERT(addr);
-    if (!addr) return ZX_ERR_INVALID_ARGS;
+    if (!addr) {
+        return ZX_ERR_INVALID_ARGS;
+    }
 
     DEBUG_ASSERT(size);
-    if (!size) return ZX_ERR_INVALID_ARGS;
+    if (!size) {
+        return ZX_ERR_INVALID_ARGS;
+    }
 
     auto up = ProcessDispatcher::GetCurrent();
     fbl::RefPtr<VmObjectDispatcher> vmo_dispatcher;
@@ -136,81 +141,6 @@ static zx_status_t vmo_coalesce_pages(zx_handle_t vmo_hdl, const size_t extra_by
     if (vaddr)
         *vaddr = dst_addr;
 
-    return ZX_OK;
-}
-
-static inline bool intervals_intersect(const void* start1, const size_t len1,
-                                       const void* start2, const size_t len2) {
-    const void* end1 = (void*)((uintptr_t)start1 + len1);
-    const void* end2 = (void*)((uintptr_t)start2 + len2);
-
-    // The start of interval1 is inside interval2
-    if (start1 >= start2 && start1 < end2) return true;
-
-    // The end of interval1 is inside interval2
-    if (end1 > start2 && end1 <= end2) return true;
-
-    // interval1 completely encloses interval2
-    if (start2 >= start1 && end2 <= end1) return true;
-
-    return false;
-}
-
-/* Takes a buffer to a bootimage and appends a section to the end of it,
- * returning a pointer to where the section payload can be written. */
-static zx_status_t bootdata_append_section(uint8_t* bootdata_buf, size_t buflen,
-                                           uint32_t section_length, uint32_t type,
-                                           uint32_t extra, uint32_t flags, uint8_t** section) {
-    zbi_header_t* hdr = (zbi_header_t*)bootdata_buf;
-
-    if ((hdr->type != ZBI_TYPE_CONTAINER) ||
-        (hdr->extra != ZBI_CONTAINER_MAGIC)) {
-        // This buffer does not point to a bootimage.
-        return ZX_ERR_WRONG_TYPE;
-    }
-
-    size_t total_len = hdr->length + sizeof(zbi_header_t);
-    size_t new_section_length = ZBI_ALIGN(section_length) + sizeof(zbi_header_t);
-
-    // Make sure there's enough buffer space after the bootdata container to
-    // append the new section.
-    if ((total_len + new_section_length) > buflen) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    }
-
-    // Seek to the end of the bootimage.
-    bootdata_buf += total_len;
-
-    zbi_header_t* new_hdr = (zbi_header_t*)bootdata_buf;
-    new_hdr->type = type;
-    new_hdr->length = section_length;
-    new_hdr->extra = extra;
-    new_hdr->flags = flags | ZBI_FLAG_VERSION;
-    new_hdr->reserved0 = 0;
-    new_hdr->reserved1 = 0;
-    new_hdr->magic = ZBI_ITEM_MAGIC;
-    new_hdr->crc32 = ZBI_ITEM_NO_CRC32;
-
-    bootdata_buf += sizeof(zbi_header_t);
-    *section = bootdata_buf;
-    hdr->length += (uint32_t)new_section_length;
-    return ZX_OK;
-}
-
-/* Takes a buffer to a bootimage and appends a section to the end of it,
- * including copying the |section_length| bytes of data from |section| into the
- * bootimage. */
-zx_status_t bootdata_append_section(uint8_t* bootdata_buf, size_t buflen,
-                                    const uint8_t* section, uint32_t section_length,
-                                    uint32_t type, uint32_t extra, uint32_t flags) {
-    uint8_t* bootdata_section;
-    zx_status_t status = bootdata_append_section(bootdata_buf, buflen, section_length, type, extra,
-                                                 flags, &bootdata_section);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    memcpy(bootdata_section, section, section_length);
     return ZX_OK;
 }
 
@@ -332,12 +262,13 @@ zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo, zx_ha
     ops[0].len = new_kernel_len;
 
     // Null terminated list.
-    ops[1] = { 0, 0, 0 };
+    ops[1] = {0, 0, 0};
 
     // Make sure that the kernel, when copied, will not overwrite the bootdata.
-    DEBUG_ASSERT(!intervals_intersect(ops[0].dst, ops[0].len,
-                                      (const void*)new_bootimage_addr,
-                                      new_bootimage_len));
+    DEBUG_ASSERT(!Intersects(reinterpret_cast<uintptr_t>(ops[0].dst),
+                             ops[0].len,
+                             reinterpret_cast<uintptr_t>(new_bootimage_addr),
+                             new_bootimage_len));
 
     // Sync because there is code in here that we intend to run.
     arch_sync_cache_range((addr_t)id_page_addr, PAGE_SIZE);
@@ -378,37 +309,38 @@ zx_status_t sys_system_powerctl(zx_handle_t root_rsrc, uint32_t cmd,
     }
 
     switch (cmd) {
-        case ZX_SYSTEM_POWERCTL_ENABLE_ALL_CPUS: {
-            cpu_mask_t all_cpus = ((cpu_mask_t)1u << arch_max_num_cpus()) - 1;
-            return mp_hotplug_cpu_mask(~mp_get_online_mask() & all_cpus);
+    case ZX_SYSTEM_POWERCTL_ENABLE_ALL_CPUS: {
+        cpu_mask_t all_cpus = ((cpu_mask_t)1u << arch_max_num_cpus()) - 1;
+        return mp_hotplug_cpu_mask(~mp_get_online_mask() & all_cpus);
+    }
+    case ZX_SYSTEM_POWERCTL_DISABLE_ALL_CPUS_BUT_PRIMARY: {
+        cpu_mask_t primary = cpu_num_to_mask(0);
+        return mp_unplug_cpu_mask(mp_get_online_mask() & ~primary);
+    }
+    case ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE:
+    case ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1: {
+        zx_system_powerctl_arg_t arg;
+        status = raw_arg.copy_from_user(&arg);
+        if (status != ZX_OK) {
+            return status;
         }
-        case ZX_SYSTEM_POWERCTL_DISABLE_ALL_CPUS_BUT_PRIMARY: {
-            cpu_mask_t primary = cpu_num_to_mask(0);
-            return mp_unplug_cpu_mask(mp_get_online_mask() & ~primary);
-        }
-        case ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE:
-        case ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1: {
-            zx_system_powerctl_arg_t arg;
-            status = raw_arg.copy_from_user(&arg);
-            if (status != ZX_OK) {
-                return status;
-            }
 
-            return arch_system_powerctl(cmd, &arg);
-        }
-        case ZX_SYSTEM_POWERCTL_REBOOT:
-            platform_graceful_halt(HALT_ACTION_REBOOT);
-            break;
-        case ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER:
-            platform_graceful_halt(HALT_ACTION_REBOOT_BOOTLOADER);
-            break;
-        case ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY:
-            platform_graceful_halt(HALT_ACTION_REBOOT_RECOVERY);
-            break;
-        case ZX_SYSTEM_POWERCTL_SHUTDOWN:
-            platform_graceful_halt(HALT_ACTION_SHUTDOWN);
-            break;
-        default: return ZX_ERR_INVALID_ARGS;
+        return arch_system_powerctl(cmd, &arg);
+    }
+    case ZX_SYSTEM_POWERCTL_REBOOT:
+        platform_graceful_halt(HALT_ACTION_REBOOT);
+        break;
+    case ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER:
+        platform_graceful_halt(HALT_ACTION_REBOOT_BOOTLOADER);
+        break;
+    case ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY:
+        platform_graceful_halt(HALT_ACTION_REBOOT_RECOVERY);
+        break;
+    case ZX_SYSTEM_POWERCTL_SHUTDOWN:
+        platform_graceful_halt(HALT_ACTION_SHUTDOWN);
+        break;
+    default:
+        return ZX_ERR_INVALID_ARGS;
     }
     return ZX_OK;
 }
