@@ -14,8 +14,8 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <mutex>
-#include <queue>
 #include <thread>
+#include <vector>
 
 namespace image_pipe_swapchain {
 
@@ -72,7 +72,21 @@ class ImagePipeSurfaceAsync : public ImagePipeSurface {
   }
 
   void RemoveImage(uint32_t image_id) override {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::unique_lock<std::mutex> lock(mutex_);
+    for (auto iter = queue_.begin(); iter != queue_.end();) {
+      if (iter->image_id == image_id) {
+        iter = queue_.erase(iter);
+      } else {
+        iter++;
+      }
+    }
+    // TODO(SCN-1107) - remove this workaround
+    static constexpr bool kUseWorkaround = true;
+    while (kUseWorkaround && present_pending_) {
+      lock.unlock();
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
+      lock.lock();
+    }
     image_pipe_->RemoveImage(image_id);
   }
 
@@ -80,14 +94,16 @@ class ImagePipeSurfaceAsync : public ImagePipeSurface {
                     fidl::VectorPtr<zx::event> acquire_fences,
                     fidl::VectorPtr<zx::event> release_fences) override {
     std::lock_guard<std::mutex> lock(mutex_);
-    queue_.push(
+    queue_.push_back(
         {image_id, std::move(acquire_fences), std::move(release_fences)});
-    if (queue_.size() == 1) {
+    if (!present_pending_) {
       PresentNextImageLocked();
     }
   }
 
   void PresentNextImageLocked() {
+    assert(!present_pending_);
+
     if (queue_.empty())
       return;
 
@@ -104,9 +120,12 @@ class ImagePipeSurfaceAsync : public ImagePipeSurface {
                               // This callback happening in a separate thread.
                               [this](fuchsia::images::PresentationInfo pinfo) {
                                 std::lock_guard<std::mutex> lock(mutex_);
-                                queue_.pop();
+                                present_pending_ = false;
                                 PresentNextImageLocked();
                               });
+
+    queue_.erase(queue_.begin());
+    present_pending_ = true;
   }
 
  private:
@@ -118,7 +137,8 @@ class ImagePipeSurfaceAsync : public ImagePipeSurface {
     fidl::VectorPtr<zx::event> acquire_fences;
     fidl::VectorPtr<zx::event> release_fences;
   };
-  std::queue<PendingPresent> queue_;
+  std::vector<PendingPresent> queue_;
+  bool present_pending_ = false;
 };
 
 struct ImagePipeImage {
