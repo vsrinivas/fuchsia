@@ -200,11 +200,11 @@ public:
         state->DeclareStep("create");
         state->DeclareStep("truncate");
         state->DeclareStep("write");
-        state->DeclareStep("close");
+        state->DeclareStep("close_write_fd");
         state->DeclareStep("open");
         state->DeclareStep("read");
         state->DeclareStep("unlink");
-        state->DeclareStep("close");
+        state->DeclareStep("close_read_fd");
 
         // At this specific state, measure how much time in average it takes to perform each of the
         // operations declared.
