@@ -1,10 +1,19 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/sysmgr"
     },
     "sandbox": {
-        "system": [ "data/sysmgr", "bin", "pkgs" ],
-        "services": [ "fuchsia.sys.Environment", "fuchsia.sys.Loader" ],
-        "pkgfs": [ "packages" ]
+        "pkgfs": [
+            "packages"
+        ],
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
+        ],
+        "system": [
+            "data/sysmgr",
+            "bin",
+            "pkgs"
+        ]
     }
 }
