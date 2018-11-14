@@ -62,5 +62,14 @@ if [ "${benchmarks_bot_name}" = garnet-x64-perf-dawson_canyon ]; then
       --print_statistics --out "${OUT_DIR}/blobfs_bench.json"
 fi
 
+# List block devices.  This is for debugging purposes and to help with
+# enabling the storage tests above on new devices.  We do this at the end
+# of this script because block devices aren't always immediately available
+# soon after boot, and because "waitfor" isn't applicable when we are
+# listing all devices.
+echo "-- block devices list (lsblk): start"
+lsblk
+echo "-- block devices list (lsblk): end"
+
 # Exit with a code indicating whether any errors occurred.
 runbench_finish "${OUT_DIR}"
