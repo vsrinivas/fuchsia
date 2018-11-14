@@ -13,6 +13,7 @@
 ## Options (must be first):
 ##   -d, --device   <name>   Connect to device using Fuchsia link-local name.
 ##                           Must be specified if multiple devices are present.
+##   -f, --foreground        Run in the foreground (default is background).
 ##   -o, --output   <dir>    Use the given directory for saving output files.
 ##                           Defaults to the current directory.
 ##   -s, --staging  <dir>    Use the given directory for staging temporary
@@ -88,6 +89,7 @@ CIPD_PREFIX="fuchsia/test_data/fuzzing"
 
 # Global variables
 device=""
+fg=0
 output="."
 staging=""
 keep=0
@@ -282,6 +284,16 @@ EOF
   popd
 }
 
+start() {
+  if [[ ${fg} -eq 0 ]] ; then
+    fx-command-run ssh ${device} fuzz start ${fuzzer} "$@" &
+    sleep 1
+  else
+    fx-command-run ssh ${device} fuzz start ${fuzzer} -jobs=0 "$@"
+  fi
+  record "${fuzzer}"
+}
+
 monitor() {
   # Wait for completion
   while [[ "${status}" == "RUNNING" ]] ; do
@@ -293,7 +305,7 @@ monitor() {
   local title="${fuzzer} has stopped"
   local body=$(record "${fuzzer}")
   if [[ -z "${body}" ]] ; then
-    body="No results produced."
+    body="No reproducers produced."
   fi
   if [[ ${host} == "Linux" ]] ; then
     if [[ -x /usr/bin/notify-send ]] ; then
@@ -353,23 +365,34 @@ main() {
   fx-config-read
   # Parse options
   while [[ "$1" == "-"* ]] ; do
-    case $1 in
+    local opt="$1"
+    shift
+
+    local has_optval
+    case "${opt}" in
+      -f|--foreground)
+        fg=1
+        has_optval=0
+        ;;
       -o|--output)
-        output="$2"
+        output="$1"
+        has_optval=1
         ;;
       -s|--staging)
         keep=1
-        staging="$2"
+        staging="$1"
+        has_optval=1
         ;;
       *)
-        fatal "unknown option: $1"
+        fatal "unknown option: ${opt}"
         ;;
     esac
-    if [[ -z "$2" ]] || [[ "$2" == "-"* ]] ; then
-      fatal "missing value for $1"
+    if [[ ${has_optval} -ne 0 ]] ; then
+      if [[ -z "$1" ]] || [[ "$1" == "-"* ]] ; then
+        fatal "missing value for ${opt}"
+      fi
+      shift
     fi
-    shift
-    shift
   done
   output=$(abspath "${output}")
 
@@ -388,9 +411,7 @@ main() {
       record "${fuzzer}"
       ;;
     start)
-      fx-command-run ssh ${device} fuzz ${command} ${fuzzer} ${args} &
-      sleep 1
-      record "${fuzzer}"
+      start "${args}"
       ;;
     fetch|store)
       set_staging
@@ -422,9 +443,7 @@ main() {
       if [[ ${corpus_size} == "0" ]] ; then
         fetch
       fi
-      fx-command-run ssh ${device} fuzz start ${fuzzer} ${args} &
-      sleep 1
-      record "${fuzzer}"
+      start "${args}"
       monitor &
       sleep 1
       echo
