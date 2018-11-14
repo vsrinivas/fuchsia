@@ -32,4 +32,10 @@ StatusOr<T> Decode(uint8_t* bytes, size_t length) {
   return out;
 }
 
+template <class T>
+StatusOr<T> Decode(Slice update) {
+  std::vector<uint8_t> copy(update.begin(), update.end());
+  return Decode<T>(copy.data(), copy.size());
+}
+
 }  // namespace overnet

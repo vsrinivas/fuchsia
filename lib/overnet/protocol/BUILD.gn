@@ -23,12 +23,6 @@ source_set("tests") {
   ]
 }
 
-fidl("fuchsia.overnet.protocol") {
-  sources = [
-    "protocol.fidl",
-  ]
-}
-
 ###############################################################################
 
 # ack_frame
@@ -74,11 +68,13 @@ source_set("routable_message") {
     "routable_message.cc",
     "routable_message.h",
   ]
-  deps = [
-    ":varint",
+  public_deps = [
     "//garnet/lib/overnet/labels:node_id",
     "//garnet/lib/overnet/labels:seq_num",
     "//garnet/lib/overnet/labels:stream_id",
+  ]
+  deps = [
+    ":varint",
     "//garnet/lib/overnet/vocabulary:optional",
     "//garnet/lib/overnet/vocabulary:slice",
     "//garnet/lib/overnet/vocabulary:status",

@@ -29,6 +29,9 @@ source_set("node_id") {
     "node_id.cc",
     "node_id.h",
   ]
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.overnet.protocol",
+  ]
   deps = [
     "//garnet/lib/overnet/protocol:serialization_helpers",
     "//garnet/lib/overnet/vocabulary:status",
@@ -73,6 +76,9 @@ source_set("stream_id") {
   sources = [
     "stream_id.cc",
     "stream_id.h",
+  ]
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.overnet.protocol",
   ]
   deps = [
     "//garnet/lib/overnet/protocol:varint",

@@ -41,11 +41,14 @@ void PacketLink::Forward(Message message) {
   }
 }
 
-LinkMetrics PacketLink::GetLinkMetrics() {
+fuchsia::overnet::protocol::LinkMetrics PacketLink::GetLinkMetrics() {
   ScopedModule<PacketLink> scoped_module(this);
-  LinkMetrics m(router_->node_id(), peer_, metrics_version_++, label_, true);
-  m.set_bw_link(protocol_.BottleneckBandwidth());
-  m.set_rtt(protocol_.RoundTripTime());
+  fuchsia::overnet::protocol::LinkMetrics m;
+  m.set_label(fuchsia::overnet::protocol::LinkLabel{
+      router_->node_id().as_fidl(), peer_.as_fidl(), label_,
+      metrics_version_++});
+  m.set_bw_link(protocol_.BottleneckBandwidth().bits_per_second());
+  m.set_rtt(protocol_.RoundTripTime().as_us());
   m.set_mss(std::max(32u, protocol_.mss()) - 32);
   return m;
 }

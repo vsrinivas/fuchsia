@@ -6,6 +6,7 @@
 #include <iostream>
 #include <unordered_set>
 #include "garnet/lib/overnet/protocol/varint.h"
+#include "garnet/public/lib/fostr/fidl/fuchsia/overnet/protocol/formatting.h"
 
 using overnet::routing_table_impl::FullLinkLabel;
 
@@ -23,6 +24,11 @@ void MoveInto(std::vector<T>* from, std::vector<T>* to) {
     }
   }
 }
+
+TimeDelta UnpackTime(const uint64_t* delta) {
+  return delta == nullptr ? TimeDelta::PositiveInf()
+                          : TimeDelta::FromMicroseconds(*delta);
+};
 
 }  // namespace
 
@@ -44,9 +50,10 @@ RoutingTable::~RoutingTable() {
   }
 }
 
-void RoutingTable::Update(std::vector<NodeMetrics> node_metrics,
-                          std::vector<LinkMetrics> link_metrics,
-                          bool flush_old_nodes) {
+void RoutingTable::ProcessUpdate(
+    std::vector<fuchsia::overnet::protocol::NodeMetrics> node_metrics,
+    std::vector<fuchsia::overnet::protocol::LinkMetrics> link_metrics,
+    bool flush_old_nodes) {
   if (node_metrics.empty() && link_metrics.empty() && !flush_old_nodes)
     return;
   std::unique_lock<std::mutex> lock(mu_);
@@ -54,14 +61,6 @@ void RoutingTable::Update(std::vector<NodeMetrics> node_metrics,
   const bool was_empty = change_log_.Empty() && !flush_requested_;
   if (flush_old_nodes)
     flush_requested_ = true;
-#ifndef NDEBUG
-  for (const auto& m : node_metrics) {
-    assert(m.version() != 0 || m.created_locally());
-  }
-  for (const auto& m : link_metrics) {
-    assert(m.version() != 0);
-  }
-#endif
   MoveInto(&node_metrics, &change_log_.node_metrics);
   MoveInto(&link_metrics, &change_log_.link_metrics);
   if (!was_empty)
@@ -121,63 +120,64 @@ void RoutingTable::ApplyChanges(TimeStamp now, const Metrics& changes,
 
   // Update all metrics from changelogs.
   for (const auto& m : changes.node_metrics) {
-    OVERNET_TRACE(DEBUG) << "APPLY: " << m;
-    if (m.node_id() == root_node_ && !m.created_locally()) {
-      OVERNET_TRACE(WARNING) << "Dropping node update received to self: " << m;
-      continue;
-    }
-    auto it = node_metrics_.find(m.node_id());
+    auto it = node_metrics_.find(NodeId(m.label()->id));
+    const char* log_verb = "uninteresting";
     if (it == node_metrics_.end()) {
-      if (m.version() != METRIC_VERSION_TOMBSTONE) {
+      if (m.label()->version !=
+          fuchsia::overnet::protocol::METRIC_VERSION_TOMBSTONE) {
         new_gossip_version = true;
         node_metrics_.emplace(std::piecewise_construct,
-                              std::forward_as_tuple(m.node_id()),
-                              std::forward_as_tuple(now, m));
+                              std::forward_as_tuple(NodeId(m.label()->id)),
+                              std::forward_as_tuple(now, fidl::Clone(m)));
+        log_verb = "new";
       }
-    } else if (m.version() > it->second.metrics.version()) {
+    } else if (m.label()->version > it->second.metrics.label()->version) {
       new_gossip_version = true;
-      it->second.metrics = m;
+      it->second.metrics = fidl::Clone(m);
       it->second.last_updated = now;
+      log_verb = "updated";
     }
+    OVERNET_TRACE(DEBUG) << "NODE UPDATE: " << log_verb << " " << m;
   }
   for (const auto& m : changes.link_metrics) {
-    OVERNET_TRACE(DEBUG) << "APPLY: " << m;
     auto report_drop = [&m](const char* why) {
-      OVERNET_TRACE(INFO) << "Drop link info: from=" << m.from()
-                          << " to=" << m.to() << " label=" << m.link_label()
-                          << " version=" << m.version() << ": " << why;
+      OVERNET_TRACE(INFO) << "Drop link info: from=" << m.label()->from
+                          << " to=" << m.label()->to
+                          << " label=" << m.label()->local_id
+                          << " version=" << m.label()->version << ": " << why;
     };
-    if (m.from() == root_node_ && !m.created_locally()) {
-      OVERNET_TRACE(WARNING)
-          << "Dropping link update for link owned by self: " << m;
-      continue;
-    }
     // Cannot add a link if the relevant nodes are unknown.
-    auto from_node = node_metrics_.find(m.from());
+    auto from_node = node_metrics_.find(NodeId(m.label()->from));
     if (from_node == node_metrics_.end()) {
       report_drop("from node does not exist in routing table");
       continue;
     }
-    auto to_node = node_metrics_.find(m.to());
+    auto to_node = node_metrics_.find(NodeId(m.label()->to));
     if (to_node == node_metrics_.end()) {
       report_drop("to node does not exist in routing table");
       continue;
     }
 
     // Add the link.
-    const FullLinkLabel key = {m.from(), m.to(), m.link_label()};
+    const FullLinkLabel key = {NodeId(m.label()->from), NodeId(m.label()->to),
+                               m.label()->local_id};
     auto it = link_metrics_.find(key);
-    if (it == link_metrics_.end() && m.version() != METRIC_VERSION_TOMBSTONE) {
+    if (it == link_metrics_.end() &&
+        m.label()->version !=
+            fuchsia::overnet::protocol::METRIC_VERSION_TOMBSTONE) {
       new_gossip_version = true;
       it = link_metrics_
-               .emplace(std::piecewise_construct, std::forward_as_tuple(key),
-                        std::forward_as_tuple(now, m, &to_node->second))
+               .emplace(
+                   std::piecewise_construct, std::forward_as_tuple(key),
+                   std::forward_as_tuple(now, fidl::Clone(m), &to_node->second))
                .first;
       from_node->second.outgoing_links.PushBack(&it->second);
-    } else if (m.version() > it->second.metrics.version()) {
+      OVERNET_TRACE(DEBUG) << "NEWLINK: " << m;
+    } else if (m.label()->version > it->second.metrics.label()->version) {
       new_gossip_version = true;
-      it->second.metrics = m;
+      it->second.metrics = fidl::Clone(m);
       it->second.last_updated = now;
+      OVERNET_TRACE(DEBUG) << "UPDATELINK: " << m;
     } else {
       report_drop("old version");
       continue;  // Skip keep-alive.
@@ -203,13 +203,13 @@ void RoutingTable::ApplyChanges(TimeStamp now, const Metrics& changes,
 
   // Publish out to the application for propagation.
   if (new_gossip_version) {
-    std::vector<NodeMetrics> publish_node_metrics;
-    std::vector<LinkMetrics> publish_link_metrics;
+    std::vector<fuchsia::overnet::protocol::NodeMetrics> publish_node_metrics;
+    std::vector<fuchsia::overnet::protocol::LinkMetrics> publish_link_metrics;
     for (const auto& np : node_metrics_) {
-      publish_node_metrics.push_back(np.second.metrics);
+      publish_node_metrics.push_back(fidl::Clone(np.second.metrics));
     }
     for (const auto& lp : link_metrics_) {
-      publish_link_metrics.push_back(lp.second.metrics);
+      publish_link_metrics.push_back(fidl::Clone(lp.second.metrics));
     }
     std::lock_guard<std::mutex> mutex(shared_table_mu_);
     gossip_version_++;
@@ -220,8 +220,9 @@ void RoutingTable::ApplyChanges(TimeStamp now, const Metrics& changes,
 
 void RoutingTable::RemoveOutgoingLinks(Node& node) {
   while (Link* link = node.outgoing_links.PopFront()) {
-    link_metrics_.erase(FullLinkLabel{link->metrics.from(), link->metrics.to(),
-                                      link->metrics.link_label()});
+    link_metrics_.erase(FullLinkLabel{NodeId(link->metrics.label()->from),
+                                      NodeId(link->metrics.label()->to),
+                                      link->metrics.label()->local_id});
   }
 }
 
@@ -250,14 +251,14 @@ RoutingTable::SelectedLinks RoutingTable::BuildForwardingTable() {
 
   while (!todo.Empty()) {
     Node* src = todo.PopFront();
-    OVERNET_TRACE(DEBUG) << "VISIT: " << src->metrics;
     src->queued = false;
     for (auto link : src->outgoing_links) {
-      OVERNET_TRACE(DEBUG) << "VISIT_LINK: " << link->metrics;
-      if (link->metrics.version() == METRIC_VERSION_TOMBSTONE)
+      if (link->metrics.label()->version ==
+          fuchsia::overnet::protocol::METRIC_VERSION_TOMBSTONE)
         continue;
-      TimeDelta rtt =
-          src->best_rtt + src->metrics.forwarding_time() + link->metrics.rtt();
+      TimeDelta rtt = src->best_rtt +
+                      UnpackTime(src->metrics.forwarding_time()) +
+                      UnpackTime(link->metrics.rtt());
       Node* dst = link->to_node;
       // For now we order by RTT.
       if (dst->last_path_finding_run != path_finding_run_ ||
@@ -266,7 +267,10 @@ RoutingTable::SelectedLinks RoutingTable::BuildForwardingTable() {
         dst->best_rtt = rtt;
         dst->best_from = src;
         dst->best_link = link;
-        dst->mss = std::min(src->mss, link->metrics.mss());
+        dst->mss =
+            std::min(src->mss, link->metrics.mss()
+                                   ? *link->metrics.mss()
+                                   : std::numeric_limits<uint32_t>::max());
         enqueue(dst);
       }
     }
@@ -283,332 +287,46 @@ RoutingTable::SelectedLinks RoutingTable::BuildForwardingTable() {
       continue;
     }
     Node* n = &node_it->second;
-    while (n->best_from->metrics.node_id() != root_node_) {
+    while (n->best_from->metrics.label()->id != root_node_) {
       n = n->best_from;
     }
     Link* link = n->best_link;
-    assert(link->metrics.from() == root_node_);
+    assert(link->metrics.label()->from == root_node_);
     selected_links[node_it->first] =
-        SelectedLink{link->metrics.link_label(), n->mss};
+        SelectedLink{link->metrics.label()->local_id, n->mss};
   }
 
   return selected_links;
 }
 
-namespace {
-enum class Key : uint64_t {
-  NODE = 1,
-  LINK = 2,
-  VERSION = 3,
+RoutingTable::Update RoutingTable::GenerateUpdate(
+    Optional<NodeId> exclude_node) const {
+  std::unordered_set<NodeId> version_zero_nodes;
+  fuchsia::overnet::protocol::RoutingTableUpdate data;
 
-  FORWARDING_TIME_US = 10,
-  DESCRIPTION = 11,
+  std::lock_guard<std::mutex> mutex(shared_table_mu_);
 
-  LABEL = 49,
-  BW_LINK = 50,
-  BW_USED = 51,
-  RTT = 52,
-  MSS = 53,
-};
-}
-
-std::pair<Slice, uint64_t> RoutingTable::Write(
-    Border desired_border, Optional<NodeId> exclude_node) const {
-  struct Segment {
-    Segment(Key key, NodeId id)
-        : key(key),
-          length(id.wire_length()),
-          write([id](uint8_t* p) { id.Write(p); }) {}
-    Segment(Key key, std::pair<NodeId, NodeId> p)
-        : key(key),
-          length(p.first.wire_length() + p.second.wire_length()),
-          write([p](uint8_t* out) { p.second.Write(p.first.Write(out)); }) {}
-    Segment(Key key, uint64_t x)
-        : key(key),
-          length(varint::WireSizeFor(x)),
-          write([x, length = length](uint8_t* p) {
-            varint::Write(x, length, p);
-          }) {}
-    Segment(Key key, Slice value)
-        : key(key),
-          length(value.length()),
-          write([value = std::move(value)](uint8_t* p) {
-            memcpy(p, value.begin(), value.length());
-          }) {}
-    Key key;
-    uint8_t key_length = varint::WireSizeFor(static_cast<uint64_t>(key));
-    uint32_t length;
-    uint8_t length_length = varint::WireSizeFor(length);
-    std::function<void(uint8_t*)> write;
-  };
-
-  std::vector<Segment> segments;
-
-  uint64_t version;
-
-  {
-    std::unordered_set<NodeId> version_zero_nodes;
-
-    std::lock_guard<std::mutex> mutex(shared_table_mu_);
-    version = gossip_version_;
-
-    for (const auto& m : shared_node_metrics_) {
-      if (m.version() == 0) {
-        version_zero_nodes.insert(m.node_id());
-        continue;
-      }
-      if (m.node_id() == exclude_node)
-        continue;
-      OVERNET_TRACE(DEBUG) << "WRITE: " << m;
-      segments.emplace_back(Key::NODE, m.node_id());
-      segments.emplace_back(Key::VERSION, m.version());
-      if (m.forwarding_time() != TimeDelta::PositiveInf()) {
-        segments.emplace_back(Key::FORWARDING_TIME_US,
-                              m.forwarding_time().as_us());
-      }
-      if (m.description().length() != 0) {
-        segments.emplace_back(Key::DESCRIPTION, m.description());
-      }
+  for (const auto& m : shared_node_metrics_) {
+    if (m.label()->version == 0) {
+      version_zero_nodes.insert(NodeId(m.label()->id));
+      continue;
     }
-
-    for (const auto& m : shared_link_metrics_) {
-      if (m.from() == exclude_node || version_zero_nodes.count(m.from()) > 0 ||
-          version_zero_nodes.count(m.to()) > 0)
-        continue;
-      OVERNET_TRACE(DEBUG) << "WRITE: " << m;
-      segments.emplace_back(Key::LINK, std::make_pair(m.from(), m.to()));
-      segments.emplace_back(Key::VERSION, m.version());
-      segments.emplace_back(Key::LABEL, m.link_label());
-      if (m.bw_link() != Bandwidth::Zero()) {
-        segments.emplace_back(Key::BW_LINK, m.bw_link().bits_per_second());
-      }
-      if (m.bw_used() != Bandwidth::Zero()) {
-        segments.emplace_back(Key::BW_USED, m.bw_used().bits_per_second());
-      }
-      if (m.rtt() != TimeDelta::PositiveInf()) {
-        segments.emplace_back(Key::RTT, m.rtt().as_us());
-      }
-      if (m.mss() != std::numeric_limits<uint32_t>::max()) {
-        segments.emplace_back(Key::MSS, m.mss());
-      }
+    if (NodeId(m.label()->id) == exclude_node) {
+      continue;
     }
+    data.mutable_nodes()->push_back(fidl::Clone(m));
   }
 
-  size_t slice_length = 0;
-  for (const auto& seg : segments) {
-    slice_length += seg.key_length;
-    slice_length += seg.length_length;
-    slice_length += seg.length;
+  for (const auto& m : shared_link_metrics_) {
+    if (NodeId(m.label()->from) == exclude_node ||
+        version_zero_nodes.count(NodeId(m.label()->from)) > 0 ||
+        version_zero_nodes.count(NodeId(m.label()->to)) > 0) {
+      continue;
+    }
+    data.mutable_links()->push_back(fidl::Clone(m));
   }
 
-  return std::make_pair(
-      Slice::WithInitializerAndBorders(
-          slice_length, desired_border,
-          [&](uint8_t* out) {
-            for (const auto& seg : segments) {
-              out = varint::Write(static_cast<uint64_t>(seg.key),
-                                  seg.key_length, out);
-              out = varint::Write(seg.length, seg.length_length, out);
-              seg.write(out);
-              out += seg.length;
-            }
-          }),
-      version);
-}
-
-Status RoutingTable::Parse(Slice update, std::vector<NodeMetrics>* node_metrics,
-                           std::vector<LinkMetrics>* link_metrics) const {
-  const uint8_t* p = update.begin();
-  const uint8_t* const end = update.end();
-  NodeMetrics* adding_node = nullptr;
-  LinkMetrics* adding_link = nullptr;
-  uint64_t key;
-  uint64_t length;
-  auto read_node = [&](const char* what) -> StatusOr<NodeId> {
-    uint64_t id;
-    if (!ParseLE64(&p, end, &id)) {
-      return StatusOr<NodeId>(StatusCode::FAILED_PRECONDITION, what);
-    }
-    return NodeId(id);
-  };
-  auto read_uint64 = [&](const char* what) -> StatusOr<uint64_t> {
-    uint64_t x;
-    if (!varint::Read(&p, end, &x)) {
-      return StatusOr<uint64_t>(StatusCode::FAILED_PRECONDITION, what);
-    }
-    return x;
-  };
-  auto read_slice = [&](const char* what) -> Slice {
-    auto out = update.FromPointer(p).ToOffset(length);
-    p += length;
-    return out;
-  };
-  auto read_bandwidth = [&](const char* what) -> StatusOr<Bandwidth> {
-    return read_uint64(what).Then([](uint64_t x) {
-      return StatusOr<Bandwidth>(Bandwidth::FromBitsPerSecond(x));
-    });
-  };
-  auto read_time_delta = [&](const char* what) -> StatusOr<TimeDelta> {
-    return read_uint64(what).Then([](uint64_t x) {
-      return StatusOr<TimeDelta>(TimeDelta::FromMicroseconds(x));
-    });
-  };
-  auto read_uint32 = [&](const char* what) -> StatusOr<uint32_t> {
-    return read_uint64(what).Then([](uint64_t x) {
-      if (x > std::numeric_limits<uint32_t>::max()) {
-        return StatusOr<uint32_t>(StatusCode::FAILED_PRECONDITION,
-                                  "Out of range");
-      }
-      return StatusOr<uint32_t>(static_cast<uint32_t>(x));
-    });
-  };
-  auto read_node_pair =
-      [&](const char* what) -> StatusOr<std::pair<NodeId, NodeId>> {
-    return read_node(what).Then([&](NodeId n) {
-      return read_node(what).Then(
-          [n](NodeId m) -> StatusOr<std::pair<NodeId, NodeId>> {
-            return std::make_pair(n, m);
-          });
-    });
-  };
-  auto with_link = [&adding_link](auto setter) {
-    return [&adding_link, setter](auto x) {
-      if (!adding_link)
-        return Status(StatusCode::FAILED_PRECONDITION,
-                      "Property only on links");
-      (adding_link->*setter)(x);
-      return Status::Ok();
-    };
-  };
-  auto with_node = [&adding_node](auto setter) {
-    return [&adding_node, setter](auto x) {
-      if (!adding_node)
-        return Status(StatusCode::FAILED_PRECONDITION,
-                      "Property only on nodes");
-      (adding_node->*setter)(x);
-      return Status::Ok();
-    };
-  };
-  while (p != end) {
-    if (!varint::Read(&p, end, &key) || !varint::Read(&p, end, &length)) {
-      return Status(StatusCode::FAILED_PRECONDITION,
-                    "Failed to read segment header");
-    }
-    if (uint64_t(end - p) < length) {
-      return Status(StatusCode::FAILED_PRECONDITION, "Short segment");
-    }
-    Status status = Status::Ok();
-    const uint8_t* const next = p + length;
-    switch (static_cast<Key>(key)) {
-      case Key::NODE:
-        status = read_node("Node::Id").Then([&](NodeId n) {
-          adding_link = nullptr;
-          node_metrics->emplace_back();
-          adding_node = &node_metrics->back();
-          adding_node->set_node_id(n);
-          return Status::Ok();
-        });
-        break;
-      case Key::LINK:
-        status = read_node_pair("Link::Id").Then([&](auto p) {
-          adding_node = nullptr;
-          link_metrics->emplace_back();
-          adding_link = &link_metrics->back();
-          adding_link->set_from_to(p.first, p.second);
-          return Status::Ok();
-        });
-        break;
-      case Key::VERSION:
-        status = read_uint64("Version").Then([&](uint64_t v) {
-          if (v == 0) {
-            return Status(StatusCode::INVALID_ARGUMENT,
-                          "Zero version number is not allowed");
-          }
-          if (adding_link)
-            adding_link->set_version(v);
-          if (adding_node)
-            adding_node->set_version(v);
-          return Status::Ok();
-        });
-        break;
-      case Key::FORWARDING_TIME_US:
-        status = read_time_delta("ForwardingTime")
-                     .Then(with_node(&NodeMetrics::set_forwarding_time));
-        break;
-      case Key::DESCRIPTION:
-        status =
-            with_node(&NodeMetrics::set_description)(read_slice("Description"));
-        break;
-      case Key::LABEL:
-        status =
-            read_uint64("Label").Then(with_link(&LinkMetrics::set_link_label));
-        break;
-      case Key::BW_LINK:
-        status =
-            read_bandwidth("BWLink").Then(with_link(&LinkMetrics::set_bw_link));
-        break;
-      case Key::BW_USED:
-        status =
-            read_bandwidth("BWUsed").Then(with_link(&LinkMetrics::set_bw_link));
-        break;
-      case Key::RTT:
-        status = read_time_delta("RTT").Then(with_link(&LinkMetrics::set_rtt));
-        break;
-      case Key::MSS:
-        status = read_uint32("MSS").Then(with_link(&LinkMetrics::set_mss));
-        break;
-      default:
-        // Unknown field: skip it.
-        OVERNET_TRACE(DEBUG) << "Skipping unknown routing table key " << key;
-        p = next;
-        break;
-    }
-    if (status.is_error()) {
-      return status;
-    }
-    if (p != next) {
-      return Status(StatusCode::FAILED_PRECONDITION,
-                    "Length mismatch reading segment");
-    }
-    p = next;
-  }
-  // Verify everythings ok
-  for (const auto& m : *node_metrics) {
-    if (m.version() == 0) {
-      return Status(StatusCode::INVALID_ARGUMENT,
-                    "Bad node metric: no version number");
-    }
-  }
-  for (const auto& m : *link_metrics) {
-    if (m.version() == 0) {
-      return Status(StatusCode::INVALID_ARGUMENT,
-                    "Bad link metric: no version number");
-    }
-  }
-  return Status::Ok();
-}
-
-Status RoutingTable::Read(Slice update) {
-  OVERNET_TRACE(DEBUG) << "READ: " << update;
-  std::vector<NodeMetrics> node_metrics;
-  std::vector<LinkMetrics> link_metrics;
-  return Parse(std::move(update), &node_metrics, &link_metrics).Then([&] {
-    Update(std::move(node_metrics), std::move(link_metrics), true);
-    return Status::Ok();
-  });
-}
-
-std::ostream& operator<<(std::ostream& out, const LinkMetrics& m) {
-  return out << "LINK{" << m.from() << "->" << m.to() << "/" << m.link_label()
-             << " @ " << m.version() << "; bw_link=" << m.bw_link()
-             << ", bw_used=" << m.bw_used() << ", rtt=" << m.rtt()
-             << ", mss=" << m.mss() << "}";
-}
-
-std::ostream& operator<<(std::ostream& out, const NodeMetrics& m) {
-  return out << "NODE{" << m.node_id() << " @ " << m.version()
-             << "; forwarding_time=" << m.forwarding_time()
-             << ", description=" << m.description() << "}";
+  return Update{gossip_version_, std::move(data)};
 }
 
 }  // namespace overnet

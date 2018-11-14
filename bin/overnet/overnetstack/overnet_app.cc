@@ -43,11 +43,11 @@ void OvernetApp::RegisterServiceProvider(
 }
 
 void OvernetApp::UpdateDescription() {
-  fuchsia::overnet::PeerDescription desc;
+  fuchsia::overnet::protocol::PeerDescription desc;
   for (const auto& svc : service_providers_) {
-    desc.services.push_back(svc.first);
+    desc.mutable_services()->push_back(svc.first);
   }
-  endpoint_.SetDescription(*overnet::Encode(&desc));
+  endpoint_.SetDescription(std::move(desc));
 }
 
 void OvernetApp::BindStream(overnet::RouterEndpoint::NewStream ns,

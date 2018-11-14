@@ -208,10 +208,8 @@ void RouterEndpoint::ConnectionStream::BeginForkRead() {
           return;
         }
 
-        auto merged =
-            Slice::Join((*read_status)->begin(), (*read_status)->end());
         auto fork_frame_status = Decode<fuchsia::overnet::protocol::ForkFrame>(
-            const_cast<uint8_t*>(merged.begin()), merged.length());
+            Slice::Join((*read_status)->begin(), (*read_status)->end()));
         if (fork_frame_status.is_error()) {
           fork_read_state_ = ReadState::Stopped;
           Close(fork_frame_status.AsStatus(), Callback<void>::Ignored());
@@ -371,8 +369,8 @@ RouterEndpoint::ConnectionStream::MakeFork(
 
   return OutgoingFork{
       NewStream{endpoint_, peer(), reliability_and_ordering, id},
-      fuchsia::overnet::protocol::ForkFrame{id.get(), reliability_and_ordering,
-                                            std::move(introduction)}};
+      fuchsia::overnet::protocol::ForkFrame{
+          id.as_fidl(), reliability_and_ordering, std::move(introduction)}};
 }
 
 void RouterEndpoint::ConnectionStream::Fork(

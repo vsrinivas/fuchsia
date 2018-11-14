@@ -18,21 +18,18 @@ overnet::Status Service::Start() {
 void Service::ListPeers(ListPeersCallback callback) {
   using Peer = fuchsia::overnet::Peer;
   std::vector<Peer> response;
-  app_->endpoint()->ForEachNodeMetric([&response,
-                                       self_node = app_->endpoint()->node_id()](
-                                          const overnet::NodeMetrics& m) {
-    std::vector<uint8_t> desc(m.description().begin(), m.description().end());
-    auto desc_status = overnet::Decode<fuchsia::overnet::PeerDescription>(
-        desc.data(), desc.size());
-    if (desc_status.is_error()) {
-      OVERNET_TRACE(WARNING) << "Omit peer with badly encoded description: "
-                             << desc_status.AsStatus();
-      return;
-    }
-    response.emplace_back(Peer{m.node_id().get(), m.node_id() == self_node,
-                               std::move(*desc_status)});
-  });
-  callback(fidl::VectorPtr<Peer>(std::move(response)));
+  app_->endpoint()->ForEachNodeMetric(
+      [&response, self_node = app_->endpoint()->node_id()](
+          const fuchsia::overnet::protocol::NodeMetrics& m) {
+        Peer peer;
+        peer.id = m.label()->id;
+        peer.is_self = m.label()->id == self_node;
+        if (m.has_description()) {
+          peer.description = fidl::Clone(*m.description());
+        }
+        response.emplace_back(std::move(peer));
+      });
+  callback(std::move(response));
 }
 
 void Service::RegisterService(
@@ -58,16 +55,15 @@ void Service::RegisterService(
       service_name, std::make_unique<ServiceProvider>(provider.Bind()));
 }
 
-void Service::ConnectToService(uint64_t node, std::string service_name,
-                               zx::channel channel) {
-  auto node_id = overnet::NodeId(node);
+void Service::ConnectToService(fuchsia::overnet::protocol::NodeId node,
+                               std::string service_name, zx::channel channel) {
   fuchsia::overnet::protocol::Introduction intro;
   intro.set_service_name(service_name);
-  if (app_->endpoint()->node_id() == node_id) {
+  if (app_->endpoint()->node_id() == node) {
     app_->ConnectToLocalService(intro, std::move(channel));
   } else {
     app_->endpoint()->SendIntro(
-        node_id,
+        node,
         fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered,
         std::move(intro),
         overnet::StatusOrCallback<overnet::RouterEndpoint::NewStream>(

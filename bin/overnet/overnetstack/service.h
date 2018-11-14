@@ -23,8 +23,8 @@ class Service final : public fuchsia::overnet::Overnet,
   void RegisterService(std::string service_name,
                        fidl::InterfaceHandle<fuchsia::overnet::ServiceProvider>
                            provider) override;
-  void ConnectToService(uint64_t node, std::string service_name,
-                        zx::channel channel) override;
+  void ConnectToService(fuchsia::overnet::protocol::NodeId node,
+                        std::string service_name, zx::channel channel) override;
 
  private:
   OvernetApp* const app_;

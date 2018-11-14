@@ -1,0 +1,42 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.overnet.protocol;
+
+const uint64 METRIC_VERSION_TOMBSTONE = 0xffffffffffffffff;
+
+table PeerDescription {
+    1: vector<string> services;
+};
+
+struct LinkLabel {
+    NodeId from;
+    NodeId to;
+    uint64 local_id;
+    uint64 version;
+};
+
+table LinkMetrics {
+    1: LinkLabel label;
+    2: uint64 bw_link;
+    3: uint64 bw_used;
+    4: uint64 rtt;
+    5: uint32 mss;
+};
+
+struct NodeLabel {
+    NodeId id;
+    uint64 version;
+};
+
+table NodeMetrics {
+    1: NodeLabel label;
+    2: PeerDescription description;
+    3: uint64 forwarding_time;
+};
+
+table RoutingTableUpdate {
+    1: vector<NodeMetrics> nodes;
+    2: vector<LinkMetrics> links;
+};

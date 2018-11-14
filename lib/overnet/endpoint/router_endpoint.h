@@ -11,6 +11,7 @@
 #include "garnet/lib/overnet/vocabulary/manual_constructor.h"
 #include "garnet/lib/overnet/vocabulary/optional.h"
 #include "garnet/lib/overnet/vocabulary/slice.h"
+#include "garnet/public/lib/fostr/fidl/fuchsia/overnet/protocol/formatting.h"
 
 namespace overnet {
 
@@ -44,8 +45,8 @@ class RouterEndpoint final : public Router {
     ~NewStream() { assert(creator_ == nullptr); }
 
     friend std::ostream& operator<<(std::ostream& out, const NewStream& s) {
-      return out << "NewStream{node=" << s.peer_ << ",reliability_and_ordering="
-                 << static_cast<int>(s.reliability_and_ordering_)
+      return out << "NewStream{node=" << s.peer_
+                 << ",reliability_and_ordering=" << s.reliability_and_ordering_
                  << ",stream_id=" << s.stream_id_ << "}";
     }
 

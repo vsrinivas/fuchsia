@@ -4,8 +4,6 @@
 
 library fuchsia.overnet.protocol;
 
-using StreamId = uint64;
-
 enum ReliabilityAndOrdering {
     ReliableOrdered = 1;
     UnreliableOrdered = 2;

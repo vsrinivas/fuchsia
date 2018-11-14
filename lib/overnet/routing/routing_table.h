@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <fuchsia/overnet/protocol/cpp/fidl.h>
 #include <condition_variable>
 #include <mutex>
 #include <thread>
@@ -17,6 +18,7 @@
 #include "garnet/lib/overnet/vocabulary/internal_list.h"
 #include "garnet/lib/overnet/vocabulary/optional.h"
 #include "garnet/lib/overnet/vocabulary/slice.h"
+#include "garnet/public/lib/fidl/cpp/clone.h"
 
 #include <iostream>
 
@@ -48,90 +50,6 @@ struct hash<overnet::routing_table_impl::FullLinkLabel> {
 
 namespace overnet {
 
-static constexpr uint64_t METRIC_VERSION_TOMBSTONE = ~uint64_t(0);
-
-class LinkMetrics {
- public:
-  LinkMetrics() = default;
-  LinkMetrics(NodeId from, NodeId to, uint64_t version, uint64_t link_label,
-              bool created_locally)
-      : created_locally_(created_locally),
-        from_(from),
-        to_(to),
-        version_(version),
-        link_label_(link_label) {}
-
-  NodeId from() const { return from_; }
-  NodeId to() const { return to_; }
-  uint64_t version() const { return version_; }
-  uint64_t link_label() const { return link_label_; }
-  Bandwidth bw_link() const { return bw_link_; }
-  Bandwidth bw_used() const { return bw_used_; }
-  TimeDelta rtt() const { return rtt_; }
-  uint32_t mss() const { return mss_; }
-  bool created_locally() const { return created_locally_; }
-
-  void set_from_to(NodeId from, NodeId to) {
-    from_ = from;
-    to_ = to;
-  }
-  void set_link_label(uint64_t label) { link_label_ = label; }
-  void set_version(uint64_t version) { version_ = version; }
-  void set_bw_link(Bandwidth x) { bw_link_ = x; }
-  void set_bw_used(Bandwidth x) { bw_used_ = x; }
-  void set_rtt(TimeDelta x) { rtt_ = x; }
-  void set_mss(uint32_t x) { mss_ = x; }
-
- private:
-  bool created_locally_ = false;
-  NodeId from_{0};
-  NodeId to_{0};
-  uint64_t version_{0};
-  uint64_t link_label_{0};
-  Bandwidth bw_link_{Bandwidth::Zero()};
-  Bandwidth bw_used_{Bandwidth::Zero()};
-  TimeDelta rtt_{TimeDelta::PositiveInf()};
-  uint32_t mss_{std::numeric_limits<uint32_t>::max()};
-};
-
-std::ostream& operator<<(std::ostream& out, const LinkMetrics& m);
-
-class NodeMetrics {
- public:
-  NodeMetrics() = default;
-  NodeMetrics(NodeId node_id, uint64_t version, bool created_locally)
-      : created_locally_(created_locally),
-        node_id_(node_id),
-        version_(version) {}
-
-  NodeId node_id() const { return node_id_; }
-  uint64_t version() const { return version_; }
-  TimeDelta forwarding_time() const { return forwarding_time_; }
-  const Slice& description() const { return description_; }
-
-  void set_node_id(NodeId node_id) { node_id_ = node_id; }
-  void set_version(uint64_t version) { version_ = version; }
-  void IncrementVersion() { version_++; }
-  void set_forwarding_time(TimeDelta forwarding_time) {
-    forwarding_time_ = forwarding_time;
-  }
-  void set_description(Slice description) {
-    description_ = std::move(description);
-  }
-  bool created_locally() const { return created_locally_; }
-
-  auto value_parts() const { return std::tie(forwarding_time_, description_); }
-
- private:
-  bool created_locally_ = false;
-  NodeId node_id_{0};
-  uint64_t version_{0};
-  TimeDelta forwarding_time_{TimeDelta::PositiveInf()};
-  Slice description_;
-};
-
-std::ostream& operator<<(std::ostream& out, const NodeMetrics& m);
-
 class RoutingTable {
  public:
   RoutingTable(NodeId root_node, Timer* timer, bool allow_threading);
@@ -151,8 +69,10 @@ class RoutingTable {
   };
   using SelectedLinks = std::unordered_map<NodeId, SelectedLink>;
 
-  void Update(std::vector<NodeMetrics> node_metrics,
-              std::vector<LinkMetrics> link_metrics, bool flush_old_nodes);
+  void ProcessUpdate(
+      std::vector<fuchsia::overnet::protocol::NodeMetrics> node_metrics,
+      std::vector<fuchsia::overnet::protocol::LinkMetrics> link_metrics,
+      bool flush_old_nodes);
 
   // Returns true if this update concludes any changes begun by all prior
   // Update() calls.
@@ -179,16 +99,23 @@ class RoutingTable {
     std::lock_guard<std::mutex> lock(shared_table_mu_);
     return gossip_version_;
   }
-  std::pair<Slice, uint64_t> Write(Border desired_border,
-                                   Optional<NodeId> exclude_node) const;
-  Status Parse(Slice update, std::vector<NodeMetrics>* node_metrics,
-               std::vector<LinkMetrics>* link_metrics) const;
-  Status Read(Slice update);
+
+  struct Update {
+    uint64_t version;
+    fuchsia::overnet::protocol::RoutingTableUpdate data;
+  };
+
+  Update GenerateUpdate(Optional<NodeId> exclude_node) const;
 
   template <class F>
   void ForEachNodeMetric(F visitor) const {
-    std::vector<NodeMetrics> nodes_copy =
-        (std::lock_guard{shared_table_mu_}, shared_node_metrics_);
+    std::vector<fuchsia::overnet::protocol::NodeMetrics> nodes_copy;
+    {
+      std::lock_guard lock{shared_table_mu_};
+      for (const auto& m : shared_node_metrics_) {
+        nodes_copy.emplace_back(fidl::Clone(m));
+      }
+    }
     for (const auto& m : nodes_copy) {
       visitor(m);
     }
@@ -199,8 +126,8 @@ class RoutingTable {
   Timer* const timer_;
 
   struct Metrics {
-    std::vector<NodeMetrics> node_metrics;
-    std::vector<LinkMetrics> link_metrics;
+    std::vector<fuchsia::overnet::protocol::NodeMetrics> node_metrics;
+    std::vector<fuchsia::overnet::protocol::LinkMetrics> link_metrics;
     bool Empty() const { return node_metrics.empty() && link_metrics.empty(); }
     void Clear() {
       node_metrics.clear();
@@ -224,18 +151,19 @@ class RoutingTable {
   struct Node;
 
   struct Link {
-    Link(TimeStamp now, LinkMetrics initial_metrics, Node* to)
-        : metrics(initial_metrics), last_updated(now), to_node(to) {}
-    LinkMetrics metrics;
+    Link(TimeStamp now, fuchsia::overnet::protocol::LinkMetrics initial_metrics,
+         Node* to)
+        : metrics(std::move(initial_metrics)), last_updated(now), to_node(to) {}
+    fuchsia::overnet::protocol::LinkMetrics metrics;
     TimeStamp last_updated;
     InternalListNode<Link> outgoing_link;
     Node* const to_node;
   };
 
   struct Node {
-    Node(TimeStamp now, NodeMetrics initial_metrics)
-        : metrics(initial_metrics), last_updated(now) {}
-    NodeMetrics metrics;
+    Node(TimeStamp now, fuchsia::overnet::protocol::NodeMetrics initial_metrics)
+        : metrics(std::move(initial_metrics)), last_updated(now) {}
+    fuchsia::overnet::protocol::NodeMetrics metrics;
     TimeStamp last_updated;
     InternalList<Link, &Link::outgoing_link> outgoing_links;
 
@@ -256,8 +184,8 @@ class RoutingTable {
 
   mutable std::mutex shared_table_mu_;
   uint64_t gossip_version_ = 0;
-  std::vector<NodeMetrics> shared_node_metrics_;
-  std::vector<LinkMetrics> shared_link_metrics_;
+  std::vector<fuchsia::overnet::protocol::NodeMetrics> shared_node_metrics_;
+  std::vector<fuchsia::overnet::protocol::LinkMetrics> shared_link_metrics_;
 
   uint64_t selected_links_version_ = 0;
   SelectedLinks selected_links_;

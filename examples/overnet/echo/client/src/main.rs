@@ -31,17 +31,17 @@ fn app<'a, 'b>() -> App<'a, 'b> {
 async fn exec(svc: OvernetProxy, text: Option<&str>) -> Result<(), Error> {
     loop {
         let peers = await!(svc.list_peers())?;
-        for peer in peers {
+        for mut peer in peers {
             let (s, p) = zx::Channel::create().context("failed to create zx channel")?;
             if let Err(e) =
-                svc.connect_to_service(peer.id, echo::EchoMarker::NAME, s)
+                svc.connect_to_service(&mut peer.id, echo::EchoMarker::NAME, s)
             {
                 println!("{:?}", e);
                 continue;
             }
             let proxy = fasync::Channel::from_channel(p).context("failed to make async channel")?;
             let cli = echo::EchoProxy::new(proxy);
-            println!("Sending {:?} to {}", text, peer.id);
+            println!("Sending {:?} to {:?}", text, peer.id);
             match await!(cli.echo_string(text)) {
                 Ok(r) => {
                     println!("SUCCESS: received {:?}", r);

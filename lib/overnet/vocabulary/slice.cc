@@ -18,7 +18,7 @@ std::vector<std::pair<uint8_t, size_t>> RLE(const uint8_t* begin,
     if (cur >= 256) {
       assert(count == 0);
     } else {
-      if (count < 10) {
+      if (count < 8) {
         for (size_t i = 0; i < count; i++) {
           out.push_back(std::make_pair(cur, 1));
         }

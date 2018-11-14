@@ -30,10 +30,12 @@ source_set("packet_link") {
     "packet_link.cc",
     "packet_link.h",
   ]
+  public_deps = [
+    "//garnet/lib/overnet/routing:router",
+  ]
   deps = [
     "//garnet/lib/overnet/environment:trace",
     "//garnet/lib/overnet/packet_protocol",
-    "//garnet/lib/overnet/routing:router",
   ]
 }
 
@@ -56,8 +58,10 @@ source_set("packet_nub") {
   sources = [
     "packet_nub.h",
   ]
-  deps = [
+  public_deps = [
     ":packet_link",
+  ]
+  deps = [
     "//garnet/lib/overnet/environment:timer",
     "//garnet/lib/overnet/labels:node_id",
     "//garnet/lib/overnet/vocabulary:slice",
@@ -70,8 +74,10 @@ source_set("packet_nub_fuzzer_lib") {
     "packet_nub_fuzzer.h",
     "packet_nub_fuzzer.cc",
   ]
-  deps = [
+  public_deps = [
     ":packet_nub",
+  ]
+  deps = [
     "//garnet/lib/overnet/testing:test_timer",
     "//garnet/lib/overnet/testing:trace_cout",
   ]

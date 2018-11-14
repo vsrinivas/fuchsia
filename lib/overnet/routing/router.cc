@@ -4,6 +4,8 @@
 
 #include "router.h"
 #include <iostream>
+#include "garnet/lib/overnet/protocol/fidl.h"
+#include "garnet/public/lib/fostr/fidl/fuchsia/overnet/protocol/formatting.h"
 
 namespace overnet {
 
@@ -14,9 +16,12 @@ Router::Router(Timer* timer, NodeId node_id, bool allow_non_determinism)
     : timer_(timer),
       node_id_(node_id),
       rng_(allow_non_determinism ? std::random_device()() : 0),
-      routing_table_(node_id, timer, allow_non_determinism),
-      own_metrics_(node_id, 1, true) {
-  UpdateRoutingTable({own_metrics_}, {}, false);
+      routing_table_(node_id, timer, allow_non_determinism) {
+  own_metrics_.set_label(
+      fuchsia::overnet::protocol::NodeLabel{node_id.as_fidl(), 1});
+  std::vector<fuchsia::overnet::protocol::NodeMetrics> node_metrics;
+  node_metrics.emplace_back(fidl::Clone(own_metrics_));
+  UpdateRoutingTable(std::move(node_metrics), {}, false);
 }
 
 Router::~Router() { shutting_down_ = true; }
@@ -178,12 +183,13 @@ void Router::Forward(Message message) {
   }
 }
 
-void Router::UpdateRoutingTable(std::vector<NodeMetrics> node_metrics,
-                                std::vector<LinkMetrics> link_metrics,
-                                bool flush_old_nodes) {
+void Router::UpdateRoutingTable(
+    std::vector<fuchsia::overnet::protocol::NodeMetrics> node_metrics,
+    std::vector<fuchsia::overnet::protocol::LinkMetrics> link_metrics,
+    bool flush_old_nodes) {
   ScopedModule<Router> scoped_module(this);
-  routing_table_.Update(std::move(node_metrics), std::move(link_metrics),
-                        flush_old_nodes);
+  routing_table_.ProcessUpdate(std::move(node_metrics), std::move(link_metrics),
+                               flush_old_nodes);
   MaybeStartPollingLinkChanges();
 }
 
@@ -214,7 +220,8 @@ void Router::MaybeStartPollingLinkChanges() {
                       it == owned_links_.end() ? nullptr : it->second.get();
                   link_holder(sl.first)->SetLink(
                       link, sl.second.route_mss,
-                      link ? link->GetLinkMetrics().to() == sl.first : false);
+                      link ? link->GetLinkMetrics().label()->to == sl.first
+                           : false);
                 }
                 MaybeStartFlushingOldEntries();
               });
@@ -279,35 +286,82 @@ Optional<NodeId> Router::SelectGossipPeer() {
 
 Slice Router::WriteGossipUpdate(Border desired_border, NodeId target) {
   ScopedModule<Router> scoped_module(this);
-  auto slice_and_version = routing_table_.Write(desired_border, target);
-  link_holder(target)->set_last_gossip_version(slice_and_version.second);
-  return slice_and_version.first;
+  auto update = routing_table_.GenerateUpdate(target);
+  OVERNET_TRACE(DEBUG) << "Generated update version " << update.version << ": "
+                       << update.data;
+  link_holder(target)->set_last_gossip_version(update.version);
+  return std::move(*Encode(&update.data));
 }
+
+namespace {
+template <class T>
+std::vector<T> TakeVector(std::vector<T>* vec) {
+  if (vec == nullptr) {
+    return {};
+  }
+  return std::move(*vec);
+}
+}  // namespace
 
 Status Router::ApplyGossipUpdate(Slice update, NodeId from_peer) {
   ScopedModule<Router> scoped_module(this);
-  auto status = routing_table_.Read(std::move(update));
-  if (status.is_ok()) {
-    MaybeStartPollingLinkChanges();
+  auto status =
+      Decode<fuchsia::overnet::protocol::RoutingTableUpdate>(std::move(update));
+  OVERNET_TRACE(DEBUG) << "Parsed routing update from " << from_peer << ": "
+                       << status;
+  if (status.is_error()) {
+    return status.AsStatus();
   }
-  return status;
+  auto nodes = TakeVector(status->mutable_nodes());
+  auto links = TakeVector(status->mutable_links());
+  for (const auto& m : nodes) {
+    if (!m.has_label()) {
+      return Status(StatusCode::INVALID_ARGUMENT, "Unlabelled node in update");
+    }
+    if (m.label()->id == node_id_) {
+      return Status(StatusCode::INVALID_ARGUMENT,
+                    "Received node update to self");
+    }
+  }
+  for (const auto& m : links) {
+    if (!m.has_label()) {
+      return Status(StatusCode::INVALID_ARGUMENT, "Unlabelled node in update");
+    }
+    if (m.label()->from == node_id_) {
+      return Status(StatusCode::INVALID_ARGUMENT,
+                    "Received link update to own link");
+    }
+  }
+  UpdateRoutingTable(std::move(nodes), std::move(links), true);
+  return Status::Ok();
 }
 
-void Router::SetDescription(Slice slice) {
-  OVERNET_TRACE(INFO) << "SetDescription:" << slice;
-  if (slice == own_metrics_.description()) {
+void Router::SetDescription(
+    fuchsia::overnet::protocol::PeerDescription description) {
+  OVERNET_TRACE(INFO) << "SetDescription:" << description;
+  if (own_metrics_.has_description() &&
+      description == *own_metrics_.description()) {
     return;
   }
-  own_metrics_.set_description(std::move(slice));
-  own_metrics_.IncrementVersion();
-  UpdateRoutingTable({own_metrics_}, {}, false);
+  own_metrics_.set_description(std::move(description));
+  own_metrics_.mutable_label()->version++;
+  std::vector<fuchsia::overnet::protocol::NodeMetrics> node_metrics;
+  node_metrics.emplace_back(fidl::Clone(own_metrics_));
+  UpdateRoutingTable(std::move(node_metrics), {}, false);
 }
 
 void Router::RegisterLink(LinkPtr<> link) {
   ScopedModule<Router> scoped_module(this);
-  const auto& metrics = link->GetLinkMetrics();
-  owned_links_.emplace(metrics.link_label(), std::move(link));
-  UpdateRoutingTable({NodeMetrics(metrics.to(), 0, true)}, {metrics}, false);
+  auto metrics = link->GetLinkMetrics();
+  owned_links_.emplace(metrics.label()->local_id, std::move(link));
+  fuchsia::overnet::protocol::NodeMetrics dummy_node;
+  dummy_node.set_label(
+      fuchsia::overnet::protocol::NodeLabel{metrics.label()->to, 0});
+  std::vector<fuchsia::overnet::protocol::NodeMetrics> node_metrics;
+  node_metrics.emplace_back(std::move(dummy_node));
+  std::vector<fuchsia::overnet::protocol::LinkMetrics> link_metrics;
+  link_metrics.emplace_back(std::move(metrics));
+  UpdateRoutingTable(std::move(node_metrics), std::move(link_metrics), false);
 }
 
 bool Router::StreamHolder::HandleMessage(SeqNum seq, TimeStamp received,

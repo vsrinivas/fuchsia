@@ -40,7 +40,8 @@ source_set("router_endpoint") {
     "router_endpoint.h",
   ]
   public_deps = [
-    "//garnet/lib/overnet/protocol:fuchsia.overnet.protocol",
+    "//garnet/public/fidl/fuchsia.overnet.protocol",
+    "//garnet/public/lib/fostr/fidl/fuchsia.overnet.protocol",
   ]
   deps = [
     "//garnet/lib/overnet/datagram_stream",
@@ -49,7 +50,6 @@ source_set("router_endpoint") {
     "//garnet/lib/overnet/vocabulary:manual_constructor",
     "//garnet/lib/overnet/vocabulary:optional",
     "//garnet/lib/overnet/vocabulary:slice",
-    "//garnet/lib/overnet/protocol:fuchsia.overnet.protocol",
   ]
 }
 

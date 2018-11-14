@@ -155,7 +155,9 @@ class InProcessLink final : public Link {
         [this, quiesced = std::move(quiesced)]() mutable { impl_.reset(); }));
   }
   void Forward(Message message) { impl_->Forward(std::move(message)); }
-  LinkMetrics GetLinkMetrics() { return impl_->GetLinkMetrics(); }
+  fuchsia::overnet::protocol::LinkMetrics GetLinkMetrics() {
+    return impl_->GetLinkMetrics();
+  }
 
  private:
   std::shared_ptr<InProcessLinkImpl> impl_;
@@ -387,7 +389,9 @@ TEST_P(RouterEndpoint_IntegrationEnv, NoOp) {
 TEST_P(RouterEndpoint_IntegrationEnv, NodeDescriptionPropagation) {
   std::cout << "Param: " << GetParam() << std::endl;
   auto env = GetParam()->Make();
-  env->endpoint1()->SetDescription(Slice::FromStaticString("#ff00ff"));
+  fuchsia::overnet::protocol::PeerDescription desc;
+  desc.mutable_services()->push_back("#ff00ff");
+  env->endpoint1()->SetDescription(std::move(desc));
   env->AwaitConnected();
   auto start_wait = env->timer()->Now();
   auto idle_time_done = [&] {
@@ -398,10 +402,13 @@ TEST_P(RouterEndpoint_IntegrationEnv, NodeDescriptionPropagation) {
   }
   bool found = false;
   env->endpoint2()->ForEachNodeMetric(
-      [env = env.get(), &found](const NodeMetrics& m) {
-        if (m.node_id() == env->endpoint1()->node_id()) {
+      [env = env.get(),
+       &found](const fuchsia::overnet::protocol::NodeMetrics& m) {
+        fuchsia::overnet::protocol::PeerDescription want_desc;
+        want_desc.mutable_services()->push_back("#ff00ff");
+        if (m.label()->id == env->endpoint1()->node_id()) {
           found = true;
-          EXPECT_EQ(m.description(), Slice::FromStaticString("#ff00ff"));
+          EXPECT_EQ(*m.description(), want_desc);
         }
       });
   EXPECT_TRUE(found);

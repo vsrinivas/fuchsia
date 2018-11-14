@@ -32,10 +32,10 @@ fn app<'a, 'b>() -> App<'a, 'b> {
 async fn exec(svc: OvernetProxy, text: Option<&str>) -> Result<(), Error> {
     loop {
         let peers = await!(svc.list_peers())?;
-        for peer in peers {
+        for mut peer in peers {
             let (s, p) = zx::Channel::create().context("failed to create zx channel")?;
             if let Err(e) =
-                svc.connect_to_service(peer.id, interfacepassing::ExampleMarker::NAME, s)
+                svc.connect_to_service(&mut peer.id, interfacepassing::ExampleMarker::NAME, s)
             {
                 println!("{:?}", e);
                 continue;
@@ -46,7 +46,7 @@ async fn exec(svc: OvernetProxy, text: Option<&str>) -> Result<(), Error> {
             let (s1, p1) = zx::Channel::create().context("failed to create zx channel")?;
             let proxy_echo = fasync::Channel::from_channel(p1).context("failed to make async channel")?;
             let cli_echo = echo::EchoProxy::new(proxy_echo);
-            println!("Sending {:?} to {}", text, peer.id);
+            println!("Sending {:?} to {:?}", text, peer.id);
             if let Err(e) = cli.request(ServerEnd::new(s1)) {
                 println!("ERROR REQUESTING INTERFACE: {:?}", e);
                 continue;

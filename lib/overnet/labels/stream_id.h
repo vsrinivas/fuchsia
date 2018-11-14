@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <fuchsia/overnet/protocol/cpp/fidl.h>
 #include <stdint.h>
 #include <functional>
 #include <iosfwd>
@@ -15,8 +16,7 @@ namespace overnet {
 class StreamId {
  public:
   explicit StreamId(uint64_t id) : id_(id) {}
-  bool operator==(StreamId other) const { return id_ == other.id_; }
-  bool operator!=(StreamId other) const { return id_ != other.id_; }
+  StreamId(fuchsia::overnet::protocol::StreamId id) : id_(id.id) {}
 
   uint64_t Hash() const { return id_; }
   uint64_t get() const { return id_; }
@@ -27,11 +27,18 @@ class StreamId {
     return varint::Write(id_, wire_length, dst);
   }
 
+  fuchsia::overnet::protocol::StreamId as_fidl() const {
+    return fuchsia::overnet::protocol::StreamId{id_};
+  }
+
  private:
   uint64_t id_;
 };
 
 std::ostream& operator<<(std::ostream& out, StreamId stream_id);
+
+inline bool operator==(StreamId a, StreamId b) { return a.get() == b.get(); }
+inline bool operator!=(StreamId a, StreamId b) { return !operator==(a, b); }
 
 }  // namespace overnet
 

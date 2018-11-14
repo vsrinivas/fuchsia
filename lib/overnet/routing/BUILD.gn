@@ -24,8 +24,10 @@ source_set("router") {
     "router.cc",
     "router.h",
   ]
-  deps = [
+  public_deps = [
     ":routing_table",
+  ]
+  deps = [
     "//garnet/lib/overnet/environment:timer",
     "//garnet/lib/overnet/environment:trace",
     "//garnet/lib/overnet/protocol:routable_message",
@@ -33,6 +35,7 @@ source_set("router") {
     "//garnet/lib/overnet/vocabulary:closed_ptr",
     "//garnet/lib/overnet/vocabulary:lazy_slice",
     "//garnet/lib/overnet/vocabulary:slice",
+    "//garnet/lib/overnet/protocol:fidl",
   ]
 }
 
@@ -55,6 +58,10 @@ source_set("routing_table") {
   sources = [
     "routing_table.cc",
     "routing_table.h",
+  ]
+  public_deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.overnet.protocol",
+    "//garnet/public/fidl/fuchsia.overnet.protocol",
   ]
   deps = [
     "//garnet/lib/overnet/environment:timer",

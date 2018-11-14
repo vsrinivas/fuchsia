@@ -153,10 +153,8 @@ Status ParseMessageInto(Slice slice, NodeId peer,
         p = next_fragment;
       } break;
       case MessageFragmentType::kChannel: {
-        auto fork_slice = slice.FromPointer(p).ToOffset(fragment_length);
-        std::vector<uint8_t> copy(fork_slice.begin(), fork_slice.end());
         auto fork_frame = Decode<fuchsia::overnet::protocol::ForkFrame>(
-            copy.data(), copy.size());
+            slice.FromPointer(p).ToOffset(fragment_length));
         if (fork_frame.is_error()) {
           return fork_frame.AsStatus();
         }

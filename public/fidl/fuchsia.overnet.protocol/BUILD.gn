@@ -4,12 +4,10 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.overnet") {
+fidl("fuchsia.overnet.protocol") {
   sources = [
-    "overnet.fidl",
-  ]
-
-  public_deps = [
-    "//garnet/public/fidl/fuchsia.overnet.protocol",
+    "labels.fidl",
+    "forking.fidl",
+    "routing.fidl",
   ]
 }

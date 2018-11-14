@@ -27,9 +27,7 @@ class MockLink {
     class LinkInst final : public Link {
      public:
       LinkInst(MockLink* link, NodeId src, NodeId peer)
-          : link_(link),
-            fake_link_metrics_(src, peer, 1, reinterpret_cast<uint64_t>(this),
-                               true) {}
+          : link_(link), src_(src), peer_(peer) {}
 
       void Close(Callback<void> quiesced) override {}
 
@@ -37,11 +35,17 @@ class MockLink {
         link_->Forward(std::make_shared<Message>(std::move(message)));
       }
 
-      LinkMetrics GetLinkMetrics() override { return fake_link_metrics_; }
+      fuchsia::overnet::protocol::LinkMetrics GetLinkMetrics() override {
+        fuchsia::overnet::protocol::LinkMetrics lm;
+        lm.set_label(fuchsia::overnet::protocol::LinkLabel{
+            src_.as_fidl(), peer_.as_fidl(), 1, 1});
+        return lm;
+      }
 
      private:
       MockLink* link_;
-      const LinkMetrics fake_link_metrics_;
+      const NodeId src_;
+      const NodeId peer_;
     };
     return overnet::MakeLink<LinkInst>(this, src, peer);
   }
