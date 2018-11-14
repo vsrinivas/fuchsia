@@ -51,6 +51,9 @@ func NewManifest(paths []string) (*Manifest, error) {
 		} else {
 			newPaths, err = parseManifest(path)
 		}
+		if err != nil {
+			return nil, err
+		}
 		for k, v := range newPaths {
 			m.Paths[k] = v
 		}
@@ -165,6 +168,12 @@ func parseManifest(path string) (map[string]string, error) {
 		src := strings.TrimSpace(parts[1])
 		dest := strings.TrimSpace(parts[0])
 
+		// TODO(anmittal): check if files are same and throw error only if they are different.
+		if duplicateSrc, ok := r[dest]; ok {
+			if src != duplicateSrc {
+				return r, fmt.Errorf("build.parseManifest: Multiple entries for key %q, [%s, %s]", dest, src, duplicateSrc)
+			}
+		}
 		r[dest] = src
 	}
 }
