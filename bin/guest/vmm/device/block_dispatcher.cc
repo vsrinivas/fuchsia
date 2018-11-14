@@ -197,7 +197,9 @@ void CreateVolatileWriteBlockDispatcher(
 
   uintptr_t addr;
   status = zx::vmar::root_self()->map(
-      0, vmo, 0, vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr);
+      0, vmo, 0, vmo_size,
+      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_FLAG_REQUIRE_NON_RESIZABLE,
+      &addr);
   FXL_CHECK(status == ZX_OK) << "Failed to map VMO";
 
   auto disp = std::make_unique<VolatileWriteBlockDispatcher>(
