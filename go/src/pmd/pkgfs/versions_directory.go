@@ -47,7 +47,7 @@ func (d *versionsDirectory) Open(name string, flags fs.OpenFlags) (fs.File, fs.D
 		return pd.Open(filepath.Join(parts[1:]...), flags)
 	}
 
-	if !(flags.Directory() || flags.Path()) || flags.Create() {
+	if flags.Create() || flags.Truncate() || flags.Write() || flags.Append() || flags.File() {
 		return nil, nil, nil, fs.ErrNotSupported
 	}
 

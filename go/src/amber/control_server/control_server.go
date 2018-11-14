@@ -91,7 +91,6 @@ func (c *ControlServer) GetUpdateComplete(name string, ver, mer *string) (zx.Cha
 	if mer != nil {
 		merkle = *mer
 	}
-	log.Printf("control_server: get update: %s", filepath.Join(name, version, merkle))
 
 	go func() {
 		c.daemon.UpdateIfStale()
@@ -104,6 +103,14 @@ func (c *ControlServer) GetUpdateComplete(name string, ver, mer *string) (zx.Cha
 			ch.Close()
 			return
 		}
+
+		if _, err := os.Stat(filepath.Join("/pkgfs/versions", root)); err == nil {
+			ch.Write([]byte(root), []zx.Handle{}, 0)
+			ch.Close()
+			return
+		}
+
+		log.Printf("control_server: get update: %s", filepath.Join(name, version, merkle))
 
 		c.daemon.AddWatch(root, func(root string, err error) {
 			if os.IsExist(err) {
