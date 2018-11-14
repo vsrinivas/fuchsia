@@ -89,8 +89,7 @@ AttributesBuilder::InsertResult AttributesBuilder::InsertHelper(std::unique_ptr<
     CHECK_TOO_CLOSE("Simple", attribute_name);
     CHECK_TOO_CLOSE("Transport", attribute_name);
     if (attribute_name == "Transport") {
-        if (!attribute_value.empty() && attribute_value != "SocketControl"
-            && attribute_value != "Channel") {
+        if (attribute_value != "SocketControl" && attribute_value != "Channel") {
             return InsertResult(InsertResult::kInvalidValue,
                 "transport must be either SocketControl or Channel.");
         }

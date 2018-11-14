@@ -100,11 +100,93 @@ interface A {
     END_TEST;
 }
 
+bool empty_transport() {
+    BEGIN_TEST;
+
+    TestLibrary library("transport_attribuets.fidl", R"FIDL(
+library fidl.test.transportattributes;
+
+[Transport]
+interface A {
+    1: MethodA();
+};
+
+)FIDL");
+    EXPECT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(), "invalid attribute value");
+
+    END_TEST;
+}
+
+bool bogus_transport() {
+    BEGIN_TEST;
+
+    TestLibrary library("transport_attribuets.fidl", R"FIDL(
+library fidl.test.transportattributes;
+
+[Transport = "Bogus"]
+interface A {
+    1: MethodA();
+};
+
+)FIDL");
+    EXPECT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(), "invalid attribute value");
+
+    END_TEST;
+}
+
+bool channel_transport() {
+    BEGIN_TEST;
+
+    TestLibrary library("transport_attribuets.fidl", R"FIDL(
+library fidl.test.transportattributes;
+
+[Transport = "Channel"]
+interface A {
+    1: MethodA();
+};
+
+)FIDL");
+    EXPECT_TRUE(library.Compile());
+    ASSERT_EQ(library.errors().size(), 0);
+    ASSERT_EQ(library.warnings().size(), 0);
+
+    END_TEST;
+}
+
+bool socket_control_transport() {
+    BEGIN_TEST;
+
+    TestLibrary library("transport_attribuets.fidl", R"FIDL(
+library fidl.test.transportattributes;
+
+[Transport = "SocketControl"]
+interface A {
+    1: MethodA();
+};
+
+)FIDL");
+    EXPECT_TRUE(library.Compile());
+    ASSERT_EQ(library.errors().size(), 0);
+    ASSERT_EQ(library.warnings().size(), 0);
+
+    END_TEST;
+}
+
 } // namespace
 
-BEGIN_TEST_CASE(dup_attributes_tests);
+BEGIN_TEST_CASE(attributes_tests);
 RUN_TEST(no_two_same_attribute_test);
 RUN_TEST(no_two_same_doc_attribute_test);
 RUN_TEST(no_two_same_attribute_on_library_test);
 RUN_TEST(warn_on_close_attribute_test);
-END_TEST_CASE(dup_attributes_tests);
+RUN_TEST(empty_transport);
+RUN_TEST(bogus_transport);
+RUN_TEST(channel_transport);
+RUN_TEST(socket_control_transport);
+END_TEST_CASE(attributes_tests);
