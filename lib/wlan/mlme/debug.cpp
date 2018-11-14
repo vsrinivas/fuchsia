@@ -224,6 +224,10 @@ std::string DumpToAscii(const uint8_t bytes[], size_t bytes_len) {
 }
 
 std::string HexDump(const uint8_t bytes[], size_t bytes_len) {
+    return HexDump({bytes, bytes_len});
+}
+
+std::string HexDump(Span<const uint8_t> bytes) {
     // Generate a string in following format
     // First 64 of 1500 bytes
     // 0x0000:   b8 ac 6f 2e 57 b3 00 01  6c 99 14 68 08 00 45 10  ..o.W... l..h..E.
@@ -231,21 +235,21 @@ std::string HexDump(const uint8_t bytes[], size_t bytes_len) {
     // 0x0020:   19 7d 00 16 11 29 d1 2a  af 51 d9 b6 d5 ee 50 18  .}...).* .Q....P.
     // 0x0030:   49 48 8b fa 00 00 0e 12  ea 4d 22 d1 67 c0 f1 23  IH...... .M".g..#
 
-    if (bytes == nullptr || bytes_len == 0) { return "(empty)"; }
+    if (bytes.empty()) { return "(empty)"; }
 
     // TODO(porce): Support other than 64
     const size_t kLenLimit = 400;
     char buf[kLenLimit * 8];
     size_t offset = 0;
-    size_t dump_len = std::min(kLenLimit, bytes_len);
+    size_t dump_len = std::min(kLenLimit, bytes.size());
 
-    BUFFER("First %zu of %zu bytes\n", dump_len, bytes_len);
+    BUFFER("First %zu of %zu bytes\n", dump_len, bytes.size());
 
     for (size_t line_beg = 0; line_beg < dump_len; line_beg += kBytesLenLimit) {
         size_t line_len = std::min(kBytesLenLimit, dump_len - line_beg);
 
         BUFFER("0x%04lx:  ", line_beg);
-        BUFFER("%s", HexDumpOneline(&bytes[line_beg], line_len).c_str());
+        BUFFER("%s", HexDumpOneline(bytes.subspan(line_beg, line_len)).c_str());
 
         if (line_beg + kBytesLenLimit < dump_len) {
             BUFFER("\n");  // More lines to print
@@ -255,23 +259,23 @@ std::string HexDump(const uint8_t bytes[], size_t bytes_len) {
     return std::string(buf);
 }
 
-std::string HexDumpOneline(const uint8_t bytes[], size_t bytes_len) {
+std::string HexDumpOneline(Span<const uint8_t> bytes) {
     // Generate a string in following format
     // b8 ac 6f 2e 57 b3 00 01  6c 99 14 68 08 00 45 10  ..o.W... l..h..E.
 
-    if (bytes == nullptr || bytes_len == 0) { return ""; }
+    if (bytes.empty()) { return ""; }
     char buf[80];
     size_t offset = 0;
     memset(buf, ' ', sizeof(buf));
     buf[sizeof(buf) - 1] = '\0';
 
-    for (size_t i = 0; i < std::min(bytes_len, kBytesLenLimit); i++) {
+    for (size_t i = 0; i < std::min(bytes.size(), kBytesLenLimit); i++) {
         BUFFER("%02x", bytes[i]);
         if (i == 7) { BUFFER(" "); }
     }
     buf[offset] = ' ';
     offset = 3 * kBytesLenLimit + 2 + 2;  // Fast-forward to align to the ASCII start position
-    BUFFER("%s", DumpToAscii(bytes, bytes_len).c_str());
+    BUFFER("%s", DumpToAscii(bytes.data(), bytes.size()).c_str());
 
     return std::string(buf);
 }

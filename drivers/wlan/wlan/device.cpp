@@ -19,6 +19,7 @@
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/timer_manager.h>
+#include <wlan/mlme/validate_frame.h>
 #include <wlan/mlme/wlan.h>
 #include <wlan/protocol/ioctl.h>
 #include <zircon/assert.h>
@@ -483,6 +484,7 @@ wlan_tx_info_t MakeTxInfo(const fbl::unique_ptr<Packet>& packet, const TxVector&
 
 zx_status_t Device::SendWlan(fbl::unique_ptr<Packet> packet, CBW cbw, PHY phy, uint32_t flags) {
     ZX_DEBUG_ASSERT(packet->len() <= std::numeric_limits<uint16_t>::max());
+    ZX_DEBUG_ASSERT(ValidateFrame("Transmitting a malformed frame", *packet));
 
     auto tv = GetTxVector(minstrel_, packet, cbw, phy, flags);
     packet->CopyCtrlFrom(MakeTxInfo(packet, tv, minstrel_ != nullptr, flags));
@@ -551,12 +553,20 @@ zx_status_t Device::ConfigureBss(wlan_bss_config_t* cfg) {
 }
 
 zx_status_t Device::EnableBeaconing(wlan_bcn_config_t* bcn_cfg) {
+    if (bcn_cfg != nullptr) {
+        ZX_DEBUG_ASSERT(ValidateFrame("Malformed beacon template", {
+                reinterpret_cast<const uint8_t*>(bcn_cfg->tmpl.packet_head.data_buffer),
+                bcn_cfg->tmpl.packet_head.data_size
+        }));
+    }
     return wlanmac_proxy_.EnableBeaconing(0u, bcn_cfg);
 }
 
 zx_status_t Device::ConfigureBeacon(fbl::unique_ptr<Packet> beacon) {
     ZX_DEBUG_ASSERT(beacon.get() != nullptr);
     if (beacon.get() == nullptr) { return ZX_ERR_INVALID_ARGS; }
+
+    ZX_DEBUG_ASSERT(ValidateFrame("Malformed beacon template", *beacon));
 
     wlan_tx_packet_t tx_packet = beacon->AsWlanTxPacket();
     return wlanmac_proxy_.ConfigureBeacon(0u, &tx_packet);

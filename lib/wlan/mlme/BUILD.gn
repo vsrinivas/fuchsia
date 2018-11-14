@@ -73,6 +73,7 @@ source_set("mlme") {
     "service.cpp",
     "timer.cpp",
     "timer_manager.cpp",
+    "validate_frame.cpp",
   ]
 
   public_deps = [

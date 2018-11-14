@@ -28,7 +28,8 @@ std::string Describe(const TxVector& tx_vec, tx_vec_idx_t tx_vec_idx = kInvalidT
 std::string Describe(tx_vec_idx_t tx_vec_idx);
 
 std::string HexDump(const uint8_t bytes[], size_t bytes_len);
-std::string HexDumpOneline(const uint8_t bytes[], size_t bytes_len);
+std::string HexDump(Span<const uint8_t> bytes);
+std::string HexDumpOneline(Span<const uint8_t> bytes);
 
 std::string Describe(const BlockAckParameters& param);
 std::string Describe(const AddBaRequestFrame& req);
