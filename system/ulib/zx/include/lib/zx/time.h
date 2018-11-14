@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ZX_TIME_H_
+#define LIB_ZX_TIME_H_
 
 #include <stdint.h>
 #include <zircon/compiler.h>
@@ -248,3 +249,5 @@ inline time deadline_after(zx::duration nanoseconds) {
 }
 
 } // namespace zx
+
+#endif  // LIB_ZX_TIME_H_

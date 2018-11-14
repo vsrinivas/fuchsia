@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ZX_VMAR_H_
+#define LIB_ZX_VMAR_H_
 
 #include <lib/zx/object.h>
 #include <lib/zx/vmo.h>
@@ -57,3 +58,5 @@ public:
 using unowned_vmar = unowned<vmar>;
 
 } // namespace zx
+
+#endif  // LIB_ZX_VMAR_H_

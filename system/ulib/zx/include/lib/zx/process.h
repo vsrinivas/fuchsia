@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ZX_PROCESS_H_
+#define LIB_ZX_PROCESS_H_
 
 #include <lib/zx/object.h>
 #include <lib/zx/task.h>
@@ -62,3 +63,5 @@ public:
 using unowned_process = unowned<process>;
 
 } // namespace zx
+
+#endif  // LIB_ZX_PROCESS_H_

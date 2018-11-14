@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ZX_OBJECT_H_
+#define LIB_ZX_OBJECT_H_
 
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -309,3 +310,5 @@ private:
 };
 
 } // namespace zx
+
+#endif  // LIB_ZX_OBJECT_H_

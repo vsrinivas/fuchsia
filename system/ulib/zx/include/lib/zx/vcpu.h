@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ZX_VCPU_H_
+#define LIB_ZX_VCPU_H_
 
 #include <lib/zx/guest.h>
 #include <lib/zx/handle.h>
@@ -51,3 +52,5 @@ public:
 using unowned_vcpu = unowned<vcpu>;
 
 } // namespace zx
+
+#endif  // LIB_ZX_VCPU_H_

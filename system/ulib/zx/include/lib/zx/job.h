@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ZX_JOB_H_
+#define LIB_ZX_JOB_H_
 
 #include <lib/zx/task.h>
 #include <zircon/process.h>
@@ -58,3 +59,5 @@ public:
 using unowned_job = unowned<job>;
 
 } // namespace zx
+
+#endif  // LIB_ZX_JOB_H_
