@@ -457,9 +457,6 @@ static zx_status_t usb_dev_get_descriptor(usb_device_t* dev, uint8_t request_typ
                         desc[index++] = 0;
                     }
                 }
-                // zero terminate
-                desc[index++] = 0;
-                desc[index++] = 0;
                 header->bLength = index;
             }
 
