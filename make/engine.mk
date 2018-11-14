@@ -440,7 +440,7 @@ USER_MANIFEST_DEBUG_INPUTS :=
 ifeq ($(call TOBOOL,$(ENABLE_INSTALL_SAMPLES)),true)
 USER_MANIFEST_GROUPS :=
 else
-USER_MANIFEST_GROUPS := --groups=!sample,ddk-sample
+USER_MANIFEST_GROUPS := --groups=!sample,!ddk-sample
 endif
 
 # Directory in the bootfs where MODULE_FIRMWARE files go.
