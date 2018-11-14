@@ -39,7 +39,8 @@
 
 #include <list.h>
 #include <malloc.h>
-#include <object/c_user_thread.h>
+#include <object/process_dispatcher.h>
+#include <object/thread_dispatcher.h>
 #include <platform.h>
 #include <printf.h>
 #include <string.h>
@@ -112,7 +113,7 @@ static void invoke_user_callback(thread_t* t, enum thread_user_state_change new_
     TA_EXCL(thread_lock) {
     DEBUG_ASSERT(!arch_ints_disabled() || !spin_lock_held(&thread_lock));
     if (t->user_callback) {
-        t->user_callback(new_state, t->user_thread);
+        t->user_callback(new_state, t);
     }
 }
 
@@ -1137,7 +1138,7 @@ thread_t* thread_create_idle_thread(cpu_num_t cpu_num) {
 
 void thread_owner_name(thread_t* t, char out_name[THREAD_NAME_LENGTH]) {
     if (t->user_thread) {
-        get_user_thread_process_name(t->user_thread, out_name);
+        t->user_thread->process()->get_name(out_name);
         return;
     }
     memcpy(out_name, "kernel", 7);

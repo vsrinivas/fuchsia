@@ -27,7 +27,6 @@
 #include <zircon/syscalls/debug.h>
 #include <zircon/types.h>
 
-#include <object/c_user_thread.h>
 #include <object/excp_port.h>
 #include <object/handle.h>
 #include <object/job_dispatcher.h>
@@ -125,7 +124,7 @@ zx_status_t ThreadDispatcher::Initialize(const char* name, size_t len) {
     thread_set_user_callback(&thread_, &ThreadUserCallback);
 
     // set the per-thread pointer
-    lkthread->user_thread = reinterpret_cast<void*>(this);
+    lkthread->user_thread = this;
 
     // associate the proc's address space with this thread
     process_->aspace()->AttachToThread(lkthread);
@@ -391,8 +390,9 @@ void ThreadDispatcher::Resuming() {
 }
 
 // low level LK callback in thread's context just before exiting
-void ThreadDispatcher::ThreadUserCallback(enum thread_user_state_change new_state, void* arg) {
-    ThreadDispatcher* t = reinterpret_cast<ThreadDispatcher*>(arg);
+void ThreadDispatcher::ThreadUserCallback(enum thread_user_state_change new_state, thread_t* arg) {
+    ThreadDispatcher* t = arg->user_thread;
+    DEBUG_ASSERT(t != nullptr);
 
     switch (new_state) {
     case THREAD_USER_STATE_EXIT:
@@ -973,13 +973,6 @@ zx_status_t ThreadDispatcher::SetPriority(int32_t priority) {
     // The priority was already validated by the Profile dispatcher.
     thread_set_priority(&thread_, priority);
     return ZX_OK;
-}
-
-void get_user_thread_process_name(const void* user_thread,
-                                  char out_name[ZX_MAX_NAME_LEN]) {
-    const ThreadDispatcher* ut =
-        reinterpret_cast<const ThreadDispatcher*>(user_thread);
-    ut->process()->get_name(out_name);
 }
 
 const char* ThreadLifecycleToString(ThreadState::Lifecycle lifecycle) {

@@ -74,7 +74,7 @@ public:
     ~ThreadDispatcher();
 
     static ThreadDispatcher* GetCurrent() {
-        return reinterpret_cast<ThreadDispatcher*>(get_current_thread()->user_thread);
+        return get_current_thread()->user_thread;
     }
 
     // Dispatcher implementation.
@@ -200,7 +200,7 @@ private:
                                            ThreadState::Exception handled_state);
 
     // Dispatch routine for state changes that LK tells us about
-    static void ThreadUserCallback(enum thread_user_state_change new_state, void* arg);
+    static void ThreadUserCallback(enum thread_user_state_change new_state, thread_t* arg);
 
     // change states of the object, do what is appropriate for the state transition
     void SetStateLocked(ThreadState::Lifecycle lifecycle) TA_REQ(get_lock());

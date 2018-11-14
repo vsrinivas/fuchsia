@@ -20,6 +20,9 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+// fwd decl for the user_thread member below.
+class ThreadDispatcher;
+
 __BEGIN_CDECLS
 
 enum thread_state {
@@ -41,7 +44,7 @@ enum thread_user_state_change {
 typedef int (*thread_start_routine)(void* arg);
 typedef void (*thread_trampoline_routine)(void) __NO_RETURN;
 typedef void (*thread_user_callback_t)(enum thread_user_state_change new_state,
-                                       void* user_thread);
+                                       struct thread* thread_context);
 typedef void (*thread_tls_callback_t)(void* tls_value);
 
 // clang-format off
@@ -136,7 +139,7 @@ typedef struct thread {
     struct vmm_aspace* aspace;
 
     // pointer to user thread if one exists for this thread
-    void* user_thread;
+    ThreadDispatcher* user_thread;
     uint64_t user_tid;
     uint64_t user_pid;
 
