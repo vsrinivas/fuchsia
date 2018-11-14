@@ -50,12 +50,45 @@ source_set("ack_frame_test") {
   ]
 }
 
+# coding
+source_set("coding") {
+    sources = [
+        "coding.h",
+        "coding.cc",
+    ]
+    deps = [
+        "//garnet/lib/overnet/vocabulary:slice",
+        "//garnet/lib/overnet/vocabulary:status",
+    ]
+}
+
+fuzz_target("overnet_encoding_fuzzer") {
+  testonly = true
+  sources = [
+    "encoding_fuzzer.cc",
+  ]
+  deps = [
+    ":coding",
+  ]
+}
+
+fuzz_target("overnet_decoding_fuzzer") {
+  testonly = true
+  sources = [
+    "decoding_fuzzer.cc",
+  ]
+  deps = [
+    ":coding",
+  ]
+}
+
 # fidl
 source_set("fidl") {
   sources = [
     "fidl.h",
   ]
   deps = [
+    ":coding",
     "//garnet/lib/overnet/vocabulary:slice",
     "//garnet/lib/overnet/vocabulary:status",
     "//sdk/lib/fidl/cpp:cpp_base",

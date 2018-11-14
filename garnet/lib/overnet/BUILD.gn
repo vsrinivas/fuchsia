@@ -88,6 +88,8 @@ fuzz_package("overnet_fuzzers") {
     "datagram_stream:receive_mode_fuzzer",
     "links:packet_nub_fuzzer",
     "packet_protocol:packet_protocol_fuzzer",
+    "protocol:overnet_encoding_fuzzer",
+    "protocol:overnet_decoding_fuzzer",
     "protocol:routable_message_fuzzer",
     "routing:routing_table_fuzzer",
     "vocabulary:internal_list_fuzzer",
