@@ -8,27 +8,4 @@ struct StoryOptions {
     // Whether or not the story will be hidden on a call to
     // StoryProvider#GetStories.
     bool kind_of_proto_story;
-
-    // If specified, the framework will delete this story when at least one of
-    // the conditions in the given |deletion_policy| is met. If not specified,
-    // the default policy is employed: the story is deleted only when explicitly
-    // signaled by a client. An explicit signal from the client will always
-    // delete the story regardless of the deletion policy.
-    StoryDeletionPolicy? deletion_policy;
-};
-
-struct StoryDeletionPolicy {
-    StoryDeleteAfterLastModDeleted? delete_after_last_mod_deleted;
-};
-
-// The story will be deleted after the last mod is deleted from the story, given
-// that there are no more remaining mods in the story that are about to be
-// launched.
-//
-// NOTE: Stories created without any mods will not be deleted until at least one
-// mod has been added and subsequently deleted.
-struct StoryDeleteAfterLastModDeleted {
-    // FIDL doens't allow empty structs. We want to define policy conditions as
-    // structs so that we can define conditions based on provided values.
-    uint32 dummy;
 };
