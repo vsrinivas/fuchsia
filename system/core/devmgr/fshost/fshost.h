@@ -134,8 +134,6 @@ private:
     fbl::unique_ptr<FshostConnections> connections_;
 };
 
-void devmgr_vfs_exit();
-
 // Function which mounts a handle on behalf of the block watcher.
 void block_device_watcher(fbl::unique_ptr<FsManager> fshost, zx::unowned_job job, bool netboot);
 

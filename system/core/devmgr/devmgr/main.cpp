@@ -24,15 +24,16 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/policy.h>
 
+#include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/util.h>
 #include <lib/zx/debuglog.h>
+#include <lib/zx/event.h>
 #include <lib/zx/port.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 
 #include "devmgr.h"
-#include "../fshost/fshost.h"
 #include "../shared/bootfs.h"
 
 namespace devmgr {

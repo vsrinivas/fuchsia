@@ -4,7 +4,6 @@
 
 #include "devcoordinator.h"
 #include "devmgr.h"
-#include "../fshost/fshost.h"
 #include "../shared/async-loop-owned-rpc-handler.h"
 #include "../shared/log.h"
 
@@ -21,6 +20,7 @@
 #include <lib/fdio/remoteio.h>
 #include <lib/fdio/util.h>
 #include <lib/fidl/coding.h>
+#include <lib/memfs/cpp/vnode.h>
 
 #include <fcntl.h>
 #include <stdio.h>

@@ -110,4 +110,6 @@ bool getenv_bool(const char* key, bool _default);
 // (requiring /system, etc) or not.
 extern bool require_system;
 
+void devmgr_vfs_exit();
+
 } // namespace devmgr
