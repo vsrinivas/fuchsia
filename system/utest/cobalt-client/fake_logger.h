@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <unistd.h>
+
 #include <cobalt-client/cpp/types-internal.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 #include <fbl/vector.h>
 
 namespace cobalt_client {

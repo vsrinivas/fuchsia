@@ -61,11 +61,9 @@ protected:
 //
 // This class is moveable and move-assignable.
 // This class is not copy or copy-assignable.
-// This class is thread-safe.
+// This class is thread-safe except for |Flushing| which is thread-compatible.
 class RemoteCounter : public BaseCounter<int64_t>, public FlushInterface {
 public:
-    using Type = BaseCounter<int64_t>::Type;
-
     RemoteCounter() = delete;
     RemoteCounter(const RemoteMetricInfo& metric_info);
     RemoteCounter(const RemoteCounter&) = delete;
@@ -74,19 +72,15 @@ public:
     RemoteCounter& operator=(RemoteCounter&&) = delete;
     virtual ~RemoteCounter() = default;
 
-    FlushResult Flush(Logger* logger) override;
+    bool Flush(Logger* logger) override;
 
     void UndoFlush() override;
-
-    void CompleteFlush() override;
 
     // Returns the metric_id associated with this remote metric.
     const RemoteMetricInfo& metric_info() const { return metric_info_; }
 
 private:
-    // The buffer containing the data to be flushed.
-    EventBuffer<Type> buffer_;
-
+    int64_t buffer_;
     // Unique-Id representing this metric in the backend.
     RemoteMetricInfo metric_info_;
 };

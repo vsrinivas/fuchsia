@@ -14,6 +14,8 @@
 #include <cobalt-client/cpp/histogram.h>
 #include <cobalt-client/cpp/metric-options.h>
 #include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fuchsia/cobalt/c/fidl.h>
@@ -211,7 +213,7 @@ bool TestFlush() {
             {.index = static_cast<uint32_t>(bucket_index), .count = bucket_index});
     }
 
-    ASSERT_EQ(histogram.Flush(&logger), FlushResult::kSucess);
+    ASSERT_TRUE(histogram.Flush(&logger));
 
     ASSERT_FALSE(logger.logged_histograms().is_empty());
 
@@ -231,21 +233,6 @@ bool TestFlush() {
     END_TEST;
 }
 
-// Verifies that after Flush is called, and before CompletedFlush is called,
-// all calls to Flush returns false.
-bool TestOneFlushAllowed() {
-    BEGIN_TEST;
-    FakeLogger logger;
-    RemoteHistogram histogram = MakeRemoteHistogram();
-
-    ASSERT_EQ(histogram.Flush(&logger), FlushResult::kSucess);
-    ASSERT_EQ(histogram.Flush(&logger), FlushResult::kIgnored);
-    histogram.CompleteFlush();
-    ASSERT_EQ(histogram.Flush(&logger), FlushResult::kSucess);
-
-    END_TEST;
-}
-
 struct FlushArgs {
     // Pointer to the histogram which is flushing incremental snapshot to a
     // 'remote' histogram.
@@ -258,6 +245,9 @@ struct FlushArgs {
     // Used to enforce the threads start together. The main thread will signal
     // after all threads have been started.
     sync_completion_t* start;
+
+    // Mutex used as a barrier for Flush to prevent any overlapping.
+    fbl::Mutex* flush_mutex = nullptr;
 
     // Number of times to perform the given operation.
     size_t operations = 0;
@@ -274,6 +264,7 @@ int FlushFn(void* args) {
 
     for (size_t i = 0; i < flush_args->operations; ++i) {
         if (flush_args->flush) {
+            fbl::AutoLock lock(flush_args->flush_mutex);
             flush_args->histogram->Flush(&logger);
         } else {
             for (uint32_t j = 0; j < kBuckets; ++j) {
@@ -303,6 +294,7 @@ bool TestFlushMultithread() {
     BaseHistogram<kBuckets> accumulated;
     RemoteHistogram<kBuckets> histogram = MakeRemoteHistogram();
     fbl::Vector<thrd_t> thread_ids;
+    fbl::Mutex flush_mutex;
     FlushArgs args[kThreads];
 
     thread_ids.reserve(kThreads);
@@ -317,6 +309,7 @@ bool TestFlushMultithread() {
         args[i].operations = i;
         args[i].flush = i % 2;
         args[i].start = &start;
+        args[i].flush_mutex = &flush_mutex;
         ASSERT_EQ(thrd_create(&thread_id, FlushFn, &args[i]), thrd_success);
     }
 
@@ -417,7 +410,6 @@ bool TestAddAfterFlush() {
     histogram.Add(25, 4);
     ASSERT_EQ(histogram.GetRemoteCount(25), 4);
     remote_histogram->Flush(&logger);
-    remote_histogram->CompleteFlush();
     histogram.Add(25, 4);
     histogram.Add(1500, 2);
 
@@ -446,6 +438,9 @@ struct HistogramFnArgs {
     // Synchronize thread start.
     sync_completion_t* start = nullptr;
 
+    // Used as a barrier for preventing concurrent Flushes.
+    fbl::Mutex* flush_mutex = nullptr;
+
     // Observations each thread will add.
     fbl::Vector<Observation>* observed_values = nullptr;
 
@@ -463,6 +458,7 @@ int HistogramFn(void* v_args) {
         if (!args->flush) {
             args->histogram->Add(obs.value, obs.count);
         } else {
+            fbl::AutoLock lock(args->flush_mutex);
             args->remote_histogram->Flush(&logger);
         }
     }
@@ -547,6 +543,7 @@ bool TestAddAndFlushMultiThread() {
     FlushInterface* remote_histogram;
     Histogram<kBuckets> histogram(options, &remote_histogram);
     fbl::Vector<Observation> observations;
+    fbl::Mutex flush_mutex;
     BaseHistogram<kBuckets + 2> expected_hist, flushed_hist;
 
     // 1500 random observation.
@@ -580,6 +577,7 @@ bool TestAddAndFlushMultiThread() {
     flush_args.flush = true;
     flush_args.flushed_histogram = &flushed_hist;
     flush_args.remote_histogram = remote_histogram;
+    flush_args.flush_mutex = &flush_mutex;
 
     for (size_t thread = 0; thread < kThreads; ++thread) {
         thread_ids.push_back({});
@@ -618,7 +616,6 @@ END_TEST_CASE(BaseHistogramTest)
 
 BEGIN_TEST_CASE(RemoteHistogramTest)
 RUN_TEST(TestFlush)
-RUN_TEST(TestOneFlushAllowed)
 RUN_TEST(TestFlushMultithread)
 END_TEST_CASE(RemoteHistogramTest)
 

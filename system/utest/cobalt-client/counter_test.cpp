@@ -10,6 +10,8 @@
 #include <cobalt-client/cpp/counter-internal.h>
 #include <cobalt-client/cpp/counter.h>
 #include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fuchsia/cobalt/c/fidl.h>
@@ -243,7 +245,7 @@ bool TestFlush() {
     // that metadata is first in the flushed values, and the last element is the event_data we
     // are measuring, which adds some restrictions to the internal implementation, but makes the
     // test cleaner and readable.
-    ASSERT_EQ(counter.Flush(&logger), FlushResult::kSucess);
+    ASSERT_TRUE(counter.Flush(&logger));
 
     actual_metric_info = logger.logged_counts()[0].metric_info;
     actual_count = logger.logged_counts()[0].count;
@@ -265,26 +267,10 @@ bool TestUndoFlush() {
     logger.set_should_fail(false);
 
     counter.Increment(20);
-    ASSERT_NE(counter.Flush(&logger), FlushResult::kIgnored);
+    ASSERT_TRUE(counter.Flush(&logger));
     ASSERT_EQ(counter.Load(), 0);
     counter.UndoFlush();
     ASSERT_EQ(counter.Load(), 20);
-    END_TEST;
-}
-
-// Verify that once Flush is called, future calls to Flush will return false until CompleteFlush is
-// called.
-bool TestCompleteFlush() {
-    BEGIN_TEST;
-    RemoteCounter counter = MakeRemoteCounter();
-    FakeLogger logger;
-    logger.set_should_fail(false);
-
-    counter.Increment(20);
-    ASSERT_EQ(counter.Flush(&logger), FlushResult::kSucess);
-    ASSERT_EQ(counter.Flush(&logger), FlushResult::kIgnored);
-    counter.CompleteFlush();
-    ASSERT_EQ(counter.Flush(&logger), FlushResult::kSucess);
     END_TEST;
 }
 
@@ -301,6 +287,11 @@ struct FlushArgs {
     // Number of times to perform the operation.
     size_t operation_count = 0;
 
+    // Flush operations are thread-compatible and we use a mutex
+    // to provide a barrier. Interaction between other operations
+    // and flushes should remain thread-safe and eventually consistent.
+    fbl::Mutex* flush_mutex = nullptr;
+
     // Whether the thread should flush or increment.
     bool flush = false;
 };
@@ -311,8 +302,8 @@ int FlushFn(void* args) {
     FakeLogger logger;
     for (size_t i = 0; i < flush_args->operation_count; ++i) {
         if (flush_args->flush) {
+            fbl::AutoLock lock(flush_args->flush_mutex);
             flush_args->counter->Flush(&logger);
-            flush_args->counter->CompleteFlush();
         } else {
             flush_args->counter->Increment();
         }
@@ -335,6 +326,7 @@ bool TestFlushMultithread() {
     RemoteCounter counter = MakeRemoteCounter();
     fbl::atomic<BaseCounter<int64_t>::Type> accumulated(0);
     fbl::Vector<thrd_t> thread_ids;
+    fbl::Mutex flush_mutex;
     FlushArgs args[kThreads];
 
     thread_ids.reserve(kThreads);
@@ -349,6 +341,7 @@ bool TestFlushMultithread() {
         args[i].start = &start;
         args[i].accumulated = &accumulated;
         args[i].flush = i % 2;
+        args[i].flush_mutex = &flush_mutex;
         ASSERT_EQ(thrd_create(&thread_id, FlushFn, &args[i]), thrd_success);
     }
 
@@ -383,7 +376,6 @@ END_TEST_CASE(BaseCounterTest)
 BEGIN_TEST_CASE(RemoteCounterTest)
 RUN_TEST(TestFlush)
 RUN_TEST(TestUndoFlush)
-RUN_TEST(TestCompleteFlush)
 RUN_TEST(TestFlushMultithread)
 END_TEST_CASE(RemoteCounterTest)
 

@@ -44,10 +44,9 @@ void Collector::Flush() {
     }
 
     for (internal::FlushInterface* flushable : flushables_) {
-        if (flushable->Flush(logger_.get()) == internal::FlushResult::kFailed) {
+        if (!flushable->Flush(logger_.get())) {
             flushable->UndoFlush();
         }
-        flushable->CompleteFlush();
     }
 
     // Once we are finished we allow flushing again.

@@ -13,29 +13,21 @@ namespace internal {
 
 RemoteCounter::RemoteCounter(const RemoteMetricInfo& metric_info)
     : BaseCounter(), metric_info_(metric_info) {
-    *buffer_.mutable_event_data() = 0;
+    buffer_ = 0;
 }
 
 RemoteCounter::RemoteCounter(RemoteCounter&& other)
     : BaseCounter(fbl::move(other)), buffer_(fbl::move(other.buffer_)),
       metric_info_(other.metric_info_) {}
 
-FlushResult RemoteCounter::Flush(Logger* logger) {
-    if (!buffer_.TryBeginFlush()) {
-        return FlushResult::kIgnored;
-    }
+bool RemoteCounter::Flush(Logger* logger) {
     // Write the current value of the counter to the buffer, and reset it to 0.
-    *buffer_.mutable_event_data() = static_cast<uint32_t>(this->Exchange());
-    return logger->Log(metric_info_, *buffer_.mutable_event_data()) ? FlushResult::kSucess
-                                                                    : FlushResult::kFailed;
+    buffer_ = this->Exchange();
+    return logger->Log(metric_info_, buffer_);
 }
 
 void RemoteCounter::UndoFlush() {
-    this->Increment(*buffer_.mutable_event_data());
-}
-
-void RemoteCounter::CompleteFlush() {
-    buffer_.CompleteFlush();
+    this->Increment(buffer_);
 }
 
 } // namespace internal

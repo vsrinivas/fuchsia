@@ -67,58 +67,6 @@ struct LocalMetricInfo {
     fbl::String name;
 };
 
-// Wraps a collection of observations. The buffer provides two methods for
-// flushing the buffer. Flushing the buffer is an operation were the contents
-// are being transferred, during this transfer the buffer becomes unwriteable
-// until the flush is marked as complete. Any synchronization is left to the
-// user, but |TryBeginFlush| will return true for exactly one thread in a
-// concurrent environment, it is the job of the user to notify when the
-// transfer is complete.
-//
-// if (!buffer_.TryBeginFlush()) {
-//    return;
-// }
-// // Do Flush.
-// buffer_.CompleteFlush();
-//
-// This class is thread-compatible, and thread-safe if a thread only access the buffer data,
-// when TryBeginFlush is true.
-// This class is moveable, but not copyable or assignable.
-template <typename BufferType>
-class EventBuffer {
-public:
-    EventBuffer() : flushing_(false) {}
-    EventBuffer(const EventBuffer&) = delete;
-    EventBuffer(EventBuffer&& other)
-        : buffer_(fbl::move(other.buffer_)), flushing_(other.flushing_.load()) {}
-    EventBuffer& operator=(const EventBuffer&) = delete;
-    EventBuffer& operator=(EventBuffer&&) = delete;
-    ~EventBuffer() {}
-
-    const BufferType& event_data() const { return buffer_; }
-
-    // Returns a pointer to metric where the value should be written.
-    // The metric should only be modified by a flushing thread, and only during the flushing
-    // operation.
-    BufferType* mutable_event_data() { return &buffer_; }
-
-    // Returns true if the calling thread successfully started a flush. Only a single thread
-    // at any point can start a flush, and once started, no flush can start until
-    // the started flush is completed.
-    bool TryBeginFlush() { return !flushing_.exchange(true); }
-
-    bool IsFlushing() { return flushing_.load(); }
-
-    // Makes the buffer writable again, by marking the flushing operation as complete.
-    void CompleteFlush() { flushing_.exchange(false); };
-
-private:
-    // Dumping ground for the metric itself for recording.
-    BufferType buffer_;
-
-    fbl::atomic<bool> flushing_;
-};
-
 // Interface for Logger class. There is no requirement on what to do with the data
 // in the logging buffer, that is up to the implementation.
 // The default implementation is |CobaltLogger|.
@@ -134,27 +82,17 @@ public:
     virtual bool Log(const RemoteMetricInfo& remote_info, int64_t count) = 0;
 };
 
-// Enum for listing possible outcomes of calling |FlushInterface::Flush|.
-enum class FlushResult {
-    kFailed,
-    kIgnored,
-    kSucess,
-};
-
 // Flush Interface for the |Collector| to flush.
 class FlushInterface {
 public:
     virtual ~FlushInterface() = default;
 
-    // Returns true if the data was added to the logger succesfully and starts a flushing process.
-    // Returns false if failed to flush(e.g. a flush process is already started).
-    virtual FlushResult Flush(Logger* logger) = 0;
+    // Returns true if the data was added to the logger succesfully.
+    // Returns false if logger failed to flush the data.
+    virtual bool Flush(Logger* logger) = 0;
 
     // Undo's the effect of the on going flush.
     virtual void UndoFlush() = 0;
-
-    // Marks the flush process as complete.
-    virtual void CompleteFlush() = 0;
 };
 
 } // namespace internal

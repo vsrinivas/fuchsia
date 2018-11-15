@@ -355,6 +355,7 @@ template <bool should_fail>
 bool FlushMultithreadTest() {
     BEGIN_TEST;
     HistogramOptions options = MakeHistogramOptions();
+    // Preallocate with the number of logs to prevent realloc problems.
     fbl::unique_ptr<FakeLogger> logger = fbl::make_unique<FakeLogger>();
     FakeLogger* logger_ptr = logger.get();
     Collector collector = Collector(MakeCollectorOptions(), fbl::move(logger));
@@ -411,6 +412,8 @@ bool FlushMultithreadTest() {
         ASSERT_EQ(thrd_join(thread_id, nullptr), thrd_success);
     }
 
+    collector.Flush();
+
     for (uint32_t metric_id = 0; metric_id < 4; ++metric_id) {
         for (uint32_t event_code = 0; event_code < 3; ++event_code) {
             for (auto& hist : histograms) {
@@ -419,9 +422,9 @@ bool FlushMultithreadTest() {
                                                           hist->size(), options);
                     auto& logged_hist =
                         logger_ptr->GetHistogram(MakeRemoteMetricInfo(metric_id, event_code));
-                    EXPECT_EQ((logged_hist.is_empty() ? 0 : logged_hist[bucket].count) +
-                                  hist->GetRemoteCount(value),
-                              expected_bucket_count);
+                    EXPECT_EQ(
+                        (should_fail ? hist->GetRemoteCount(value) : logged_hist[bucket].count),
+                        expected_bucket_count);
                 }
             }
             for (auto& counter : counters) {

@@ -74,9 +74,6 @@ public:
             bucket_buffer_[i].count = 0;
             bucket_buffer_[i].index = i;
         }
-        auto* buckets = buffer_.mutable_event_data();
-        buckets->set_data(bucket_buffer_);
-        buckets->set_count(num_buckets);
     }
     RemoteHistogram(const RemoteHistogram&) = delete;
     RemoteHistogram(RemoteHistogram&&) = delete;
@@ -84,33 +81,19 @@ public:
     RemoteHistogram& operator=(RemoteHistogram&&) = delete;
     ~RemoteHistogram() override = default;
 
-    FlushResult Flush(Logger* logger) override {
-        if (!buffer_.TryBeginFlush()) {
-            return FlushResult::kIgnored;
-        }
-
+    bool Flush(Logger* logger) override {
         // Sets every bucket back to 0, not all buckets will be at the same instant, but
         // eventual consistency in the backend is good enough.
         for (uint32_t bucket_index = 0; bucket_index < num_buckets; ++bucket_index) {
             bucket_buffer_[bucket_index].count = this->buckets_[bucket_index].Exchange();
         }
-        return logger->Log(metric_info_, bucket_buffer_, num_buckets) ? FlushResult::kSucess
-                                                                      : FlushResult::kFailed;
+        return logger->Log(metric_info_, bucket_buffer_, num_buckets);
     }
 
     void UndoFlush() override {
-        ZX_DEBUG_ASSERT_MSG(buffer_.IsFlushing(),
-                            "UndoFlush should not be called when no flush is ongoing.");
-
         for (uint32_t bucket_index = 0; bucket_index < num_buckets; ++bucket_index) {
             this->buckets_[bucket_index].Increment(bucket_buffer_[bucket_index].count);
         }
-    }
-
-    void CompleteFlush() override {
-        ZX_DEBUG_ASSERT_MSG(buffer_.IsFlushing(),
-                            "CompleteFlush should not be called when no flush is ongoing.");
-        buffer_.CompleteFlush();
     }
 
     // Returns the metric_id associated with this remote metric.
@@ -121,8 +104,6 @@ private:
     // through fidl. This buffer is rewritten on every flush, and contains
     // an entry for each bucket.
     HistogramBucket bucket_buffer_[num_buckets];
-
-    EventBuffer<fidl::VectorView<HistogramBucket>> buffer_;
 
     // Metric information such as metric_id, event_code and component.
     RemoteMetricInfo metric_info_;
