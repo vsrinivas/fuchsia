@@ -9,7 +9,7 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/bt-gatt-svc.h>
+#include <ddk/protocol/bt/gattsvc.h>
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>

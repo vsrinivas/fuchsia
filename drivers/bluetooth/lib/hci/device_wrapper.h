@@ -8,7 +8,7 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
-#include <ddk/protocol/bt-hci.h>
+#include <ddk/protocol/bt/hci.h>
 #include <lib/zx/channel.h>
 
 #include "lib/fxl/files/unique_fd.h"

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "msd_intel_pci_device.h"
-#include <ddk/protocol/intel-gpu-core.h>
+#include <ddk/protocol/intelgpucore.h>
 
 class GttIntelGpuCore : public Gtt {
 public:

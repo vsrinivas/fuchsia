@@ -8,7 +8,7 @@
 #include "platform_device.h"
 
 #include <ddk/device.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 
 namespace magma {
 

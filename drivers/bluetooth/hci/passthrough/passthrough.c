@@ -6,7 +6,7 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/bt-hci.h>
+#include <ddk/protocol/bt/hci.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

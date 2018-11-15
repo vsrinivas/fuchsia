@@ -10,7 +10,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/bt-gatt-svc.h>
+#include <ddk/protocol/bt/gattsvc.h>
 #include <ddk/protocol/hidbus.h>
 
 #include <threads.h>
@@ -86,4 +86,3 @@ struct hogd_t {
   // Report devices are stored as a singly linked list.
   hogd_device_t *report_device;
 };
-

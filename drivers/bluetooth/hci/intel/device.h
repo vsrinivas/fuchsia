@@ -5,9 +5,9 @@
 #pragma once
 
 #include <ddk/driver.h>
-#include <ddk/protocol/bt-hci.h>
+#include <ddk/protocol/bt/hci.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/bt-hci.h>
+#include <ddktl/protocol/bt/hci.h>
 
 #include "vendor_hci.h"
 

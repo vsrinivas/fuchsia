@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <ddk/protocol/bt-hci.h>
+#include <ddk/protocol/bt/hci.h>
 #include <lib/fit/function.h>
 #include <zircon/types.h>
 

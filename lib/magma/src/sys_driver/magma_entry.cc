@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <fuchsia/gpu/magma/c/fidl.h>
 #include <zircon/process.h>
 #include <zircon/types.h>

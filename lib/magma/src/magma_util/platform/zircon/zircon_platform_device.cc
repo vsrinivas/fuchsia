@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/device.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <zircon/process.h>
 

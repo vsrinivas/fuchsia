@@ -6,7 +6,7 @@
 #include <future>
 #include <thread>
 
-#include <ddk/protocol/bt-hci.h>
+#include <ddk/protocol/bt/hci.h>
 #include <lib/async/cpp/task.h>
 #include <zircon/device/bt-hci.h>
 #include <zircon/status.h>

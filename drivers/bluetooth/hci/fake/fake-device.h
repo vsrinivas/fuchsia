@@ -5,7 +5,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/bt-hci.h>
+#include <ddk/protocol/bt/hci.h>
 #include <ddk/protocol/test.h>
 
 #include <fbl/unique_ptr.h>

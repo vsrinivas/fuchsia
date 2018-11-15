@@ -16,7 +16,7 @@
 /* ****************** SDIO CARD Interface Functions **************************/
 
 // TODO(cphoenix): Do we need sdio, completion, status, stdatomic, threads?
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sdio.h>
 #include <ddk/metadata.h>
 #include <wifi/wifi-config.h>

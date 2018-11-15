@@ -186,7 +186,7 @@ void DisplayManager::SetImageConfig(int32_t width, int32_t height,
   image_config_.pixel_format = format;
 
 #if defined(__x86_64__)
-  // IMAGE_TYPE_X_TILED from ddk/protocol/intel-gpu-core.h
+  // IMAGE_TYPE_X_TILED from ddk/protocol/intelgpucore.h
   image_config_.type = 1;
 #elif defined(__aarch64__)
   image_config_.type = 0;
