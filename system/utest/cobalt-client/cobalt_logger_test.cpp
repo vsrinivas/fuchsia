@@ -141,6 +141,8 @@ public:
             .CreateLoggerSimple = Binder::BindMember<&FakeLoggerFactory::CreateLoggerSimple>,
             .CreateLoggerFromProjectName = nullptr,
             .CreateLoggerSimpleFromProjectName = nullptr,
+            .CreateLoggerFromProjectId = nullptr,
+            .CreateLoggerSimpleFromProjectId = nullptr,
         };
         return Binder::BindOps<fuchsia_cobalt_LoggerFactory_dispatch>(
             dispatcher, fbl::move(channel), this, &kOps);
