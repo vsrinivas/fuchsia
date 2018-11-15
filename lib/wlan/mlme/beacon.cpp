@@ -97,8 +97,8 @@ static void WriteElements(BufferWriter* w, const BeaconConfig& config, size_t* r
     WriteRsne(w, config);
     WriteHtCapabilities(w, config);
     WriteHtOperation(w, config);
-    WriteMeshConfiguration(w, config);
     WriteMeshId(w, config);
+    WriteMeshConfiguration(w, config);
 }
 
 template <typename T> static void SetBssType(T* bcn, BssType bss_type) {

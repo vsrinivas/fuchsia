@@ -522,10 +522,10 @@ struct ProbeResponse {
 enum AuthAlgorithm : uint16_t {
     kOpenSystem = 0,
     kSharedKey = 1,
-    kFastBssTransition = 2,
+    kFastBssTransitionAuth = 2,
     kSae = 3,
     // 4-65534 Reserved
-    kVendorSpecific = 65535,
+    kVendorSpecificAuth = 65535,
 };
 
 // IEEE Std 802.11-2016, 9.3.3.12
@@ -590,6 +590,26 @@ struct AssociationResponse {
     uint16_t aid;
 
     constexpr size_t len() const { return sizeof(*this); }
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.3.3.8
+struct ReassociationRequest {
+    CapabilityInfo cap;
+    uint16_t listen_interval;
+    common::MacAddr current_ap_addr;
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.3.3.9
+struct ReassociationResponse {
+    CapabilityInfo cap;
+    uint16_t status_code;
+    uint16_t aid;
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.3.3.16
+struct TimingAdvertisement {
+    uint64_t timestamp;
+    CapabilityInfo cap;
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.3.5

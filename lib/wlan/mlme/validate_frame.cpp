@@ -52,6 +52,7 @@ constexpr AllowedElement Required(ElementId id) {
     return AllowedElement(id, true);
 }
 
+// IEEE Std 802.11-2016, 9.3.3.3
 static constexpr AllowedElement kBeaconElements[] = {
     Required(kSsid),
     Required(kSuppRates),
@@ -95,8 +96,8 @@ static constexpr AllowedElement kBeaconElements[] = {
     kAdvertisementProtocol,
     kRoamingConsortium,
     kEmergencyAlertId,
-    kMeshConfiguration,
     kMeshId,
+    kMeshConfiguration,
     kMeshAwakeWindow,
     kBeaconTiming,
     kMccaopAdvertisementOverview,
@@ -115,7 +116,253 @@ static constexpr AllowedElement kBeaconElements[] = {
     kOperatingModeNotification,
     kReducedNeighborReport,
     kTvhtOperation,
+    // TODO: Estimated Service Parameters (2-byte ID)
+    // TODO: Future Channel Guidance (2-byte ID)
 };
+
+// IEEE Std 802.11-2016, 9.3.3.5
+static constexpr AllowedElement kDisassocElements[] = {
+    kManagementMic
+};
+
+// IEEE Std 802.11-2016, 9.3.3.6
+static constexpr AllowedElement kAssocReqElements[] = {
+    Required(kSsid),
+    Required(kSuppRates),
+    kExtSuppRates,
+    kPowerCapability,
+    kSupportedChannels,
+    kRsn,
+    kQosCapability,
+    kRmEnabledCapabilities,
+    kMobilityDomain,
+    kSuppOperatingClasses,
+    kHtCapabilities,
+    k2040BssCoex,
+    kExtCapabilities,
+    kQosTrafficCapability,
+    kTimBroadcastRequest,
+    kInterworking,
+    kMultiband,
+    kDmgCapabilities,
+    kMultipleMacSublayers,
+    kVhtCapabilities,
+    kOperatingModeNotification,
+};
+
+// IEEE Std 802.11-2016, 9.3.3.7
+static constexpr AllowedElement kAssocRespElements[] = {
+    Required(kSuppRates),
+    kExtSuppRates,
+    kEdcaParamSet,
+    kRcpi,
+    kRsni,
+    kRmEnabledCapabilities,
+    kMobilityDomain,
+    kFastBssTransition,
+    kDseRegisteredLocation,
+    kTimeoutInterval,
+    kHtCapabilities,
+    kHtOperation,
+    k2040BssCoex,
+    kOverlappingBssScanParams,
+    kExtCapabilities,
+    kBssMaxIdlePeriod,
+    kTimBroadcastResponse,
+    kQosMap,
+    kQmfPolicy,
+    kMultiband,
+    kDmgCapabilities,
+    kDmgOperation,
+    kMultipleMacSublayers,
+    kNeighborReport,
+    kVhtCapabilities,
+    kVhtOperation,
+    kOperatingModeNotification,
+    // TODO: Future Channel Guidance (2-byte ID)
+};
+
+// IEEE Std 802.11-2016, 9.3.3.8
+static constexpr AllowedElement kReassocReqElements[] = {
+    Required(kSsid),
+    Required(kSuppRates),
+    kExtSuppRates,
+    kPowerCapability,
+    kSupportedChannels,
+    kRsn,
+    kQosCapability,
+    kRmEnabledCapabilities,
+    kMobilityDomain,
+    kFastBssTransition,
+    // TODO: RIC container? (can be several elements)
+    kSuppOperatingClasses,
+    kHtCapabilities,
+    k2040BssCoex,
+    kExtCapabilities,
+    kQosTrafficCapability,
+    kTimBroadcastRequest,
+    kFmsRequest,
+    kDmsRequest,
+    kInterworking,
+    kMultiband,
+    kDmgCapabilities,
+    kMultipleMacSublayers,
+    kVhtCapabilities,
+    kOperatingModeNotification
+};
+
+// IEEE Std 802.11-2016, 9.3.3.9
+static constexpr AllowedElement kReassocRespElements[] = {
+    Required(kSuppRates),
+    kExtSuppRates,
+    kEdcaParamSet,
+    kRcpi,
+    kRsni,
+    kRmEnabledCapabilities,
+    kRsn,
+    kMobilityDomain,
+    kFastBssTransition,
+    // TODO: RIC container? (can be several elements)
+    kDseRegisteredLocation,
+    kTimeoutInterval,
+    kHtCapabilities,
+    kHtOperation,
+    k2040BssCoex,
+    kOverlappingBssScanParams,
+    kExtCapabilities,
+    kBssMaxIdlePeriod,
+    kTimBroadcastResponse,
+    kFmsResponse,
+    kDmsResponse,
+    kQosMap,
+    kQmfPolicy,
+    kMultiband,
+    kDmgCapabilities,
+    kDmgOperation,
+    kMultipleMacSublayers,
+    kNeighborReport,
+    kVhtCapabilities,
+    kVhtOperation,
+    kOperatingModeNotification
+    // TODO: Future Channel Guidance (2-byte ID)
+};
+
+// IEEE Std 802.11-2016, 9.3.3.10
+static constexpr AllowedElement kProbeReqElements[] = {
+    Required(kSsid),
+    Required(kSuppRates),
+    kRequest,
+    kExtSuppRates,
+    kDsssParamSet,
+    kSuppOperatingClasses,
+    kHtCapabilities,
+    k2040BssCoex,
+    kExtCapabilities,
+    kSsidList,
+    kChannelUsage,
+    kInterworking,
+    kMeshId,
+    kMultiband,
+    kDmgCapabilities,
+    kMultipleMacSublayers,
+    kVhtCapabilities,
+    // TODO: Estimated Service Parameters (2-byte ID)
+    // TODO: Extended Request (2-byte ID)
+};
+
+// IEEE Std 802.11-2016, 9.3.3.11
+static constexpr AllowedElement kProbeRespElements[] = {
+    Required(kSsid),
+    Required(kSuppRates),
+    kDsssParamSet,
+    kCfParamSet,
+    kIbssParamSet,
+    kCountry,
+    kPowerConstraint,
+    kChannelSwitchAnn,
+    kQuiet,
+    kIbssDfs,
+    kTpcReport,
+    kErp,
+    kExtSuppRates,
+    kRsn,
+    kBssLoad,
+    kEdcaParamSet,
+    kMeasurementPilotTrans,
+    kMultipleBssid,
+    kRmEnabledCapabilities,
+    kApChannelReport,
+    kBssAvgAccessDelay,
+    kAntenna,
+    kBssAvailAdmissionCapacity,
+    kBssAcAccessDelay,
+    kMobilityDomain,
+    kDseRegisteredLocation,
+    kExtChannelSwitchAnn,
+    kSuppOperatingClasses,
+    kHtCapabilities,
+    kHtOperation,
+    k2040BssCoex,
+    kOverlappingBssScanParams,
+    kExtCapabilities,
+    kQosTrafficCapability,
+    kChannelUsage,
+    kTimeAdvertisement,
+    kTimeZone,
+    kInterworking,
+    kAdvertisementProtocol,
+    kRoamingConsortium,
+    kEmergencyAlertId,
+    kMeshId,
+    kMeshConfiguration,
+    kMeshAwakeWindow,
+    kBeaconTiming,
+    kMccaopAdvertisementOverview,
+    kMccaopAdvertisement,
+    kMeshChannelSwitchParams,
+    kQmfPolicy,
+    kQloadReport,
+    kMultiband,
+    kDmgCapabilities,
+    kDmgOperation,
+    kMultipleMacSublayers,
+    kAntennaSectorIdPattern,
+    kVhtCapabilities,
+    kVhtOperation,
+    kTransmitPowerEnvelope,
+    kChannelSwitchWrapper,
+    kExtBssLoad,
+    kQuietChannel,
+    kOperatingModeNotification,
+    kReducedNeighborReport,
+    kTvhtOperation,
+    // TODO: Estimated Service Parameters (2-byte ID)
+    kRelayCapabilities
+};
+
+// IEEE Std 802.11-2016, 9.3.3.12
+static constexpr AllowedElement kAuthElements[] = {
+    kChallengeText,
+    kRsn,
+    kMobilityDomain,
+    kFastBssTransition,
+    kTimeoutInterval
+    // TODO: RIC (can be several elements)
+};
+
+// IEEE Std 802.11-2016, 9.3.3.13
+static constexpr AllowedElement kDeauthElements[] = {
+    kManagementMic
+};
+
+// IEEE Std 802.11-2016, 9.3.3.16
+static constexpr AllowedElement kTimingAdElements[] = {
+    kCountry,
+    kPowerConstraint,
+    kTimeAdvertisement,
+    kExtCapabilities
+};
+
 
 static void ValidateFixedSizeElement(size_t offset, Span<const uint8_t> body, size_t expected_size,
                                      const char* element_name, ErrorAccumulator* errors) {
@@ -303,32 +550,58 @@ static void ValidateMgmtFrame(BufferReader* r, ErrorAccumulator* errors) {
 
     switch (mgmt_header->fc.subtype()) {
     case kAssociationRequest:
+        ValidateFrameWithElements(r, sizeof(AssociationRequest), "Association Request",
+                                  kAssocReqElements, errors);
         break;
     case kAssociationResponse:
+        ValidateFrameWithElements(r, sizeof(AssociationResponse), "Association Response",
+                                  kAssocRespElements, errors);
         break;
     case kReassociationRequest:
+        ValidateFrameWithElements(r, sizeof(ReassociationRequest), "Reassociation Request",
+                                  kReassocReqElements, errors);
         break;
     case kReassociationResponse:
+        ValidateFrameWithElements(r, sizeof(ReassociationResponse), "Reassociation Response",
+                                  kReassocRespElements, errors);
         break;
     case kProbeRequest:
+        ValidateFrameWithElements(r, sizeof(ProbeRequest), "Probe Request",
+                                  kProbeReqElements, errors);
         break;
     case kProbeResponse:
+        ValidateFrameWithElements(r, sizeof(ProbeResponse), "Probe Response",
+                                  kProbeRespElements, errors);
         break;
     case kTimingAdvertisement:
+        ValidateFrameWithElements(r, sizeof(TimingAdvertisement), "Timing Advertisement",
+                                  kTimingAdElements, errors);
         break;
     case kBeacon:
         ValidateFrameWithElements(r, sizeof(Beacon), "Beacon", kBeaconElements, errors);
         break;
     case kAtim:
+        if (r->RemainingBytes() > 0) {
+            errors->Add(r->ReadBytes(), "ATIM frame has a non-null body");
+        }
         break;
     case kDisassociation:
+        ValidateFrameWithElements(r, sizeof(Disassociation), "Disassociation",
+                                  kDisassocElements, errors);
         break;
     case kAuthentication:
+        // This will report a false positive if we attempt to write an auth frame
+        // with trailing non-element fields, e.g. "Finite Cyclic Group".
+        // If we get there one day, we can delete this check (or write a proper validator,
+        // which is probably not worth the effort, given how complicated the encoding is).
+        ValidateFrameWithElements(r, sizeof(Authentication), "Authentication",
+                                  kAuthElements, errors);
         break;
     case kDeauthentication:
+        ValidateFrameWithElements(r, sizeof(Deauthentication), "Deauthentication",
+                                  kDeauthElements, errors);
         break;
     case kAction:
-        break;
     case kActionNoAck:
         break;
     }
