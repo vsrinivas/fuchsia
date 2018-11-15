@@ -146,77 +146,6 @@ query() {
   cipd_path="${CIPD_PREFIX}/${fuzzer}"
 }
 
-record() {
-  if [[ -z "$1" ]] ; then
-    return
-  fi
-  query "$1"
-
-  mkdir -p "${output}/${fuzzer}"
-  [[ $? -eq 0 ]] || fatal "failed to make directory: ${output}/${fuzzer}"
-  pushd "${output}/${fuzzer}" >/dev/null
-
-  if [[ ${status} == "RUNNING" ]] && [[ ! -h active ]] ; then
-    local results="$(date +%F-%T)"
-    mkdir ${results}
-    [[ $? -eq 0 ]] || fatal "failed to make directory: ${results}"
-    ln -s ${results} active
-    pushd active >/dev/null
-
-  elif [[ ${status} == "STOPPED" ]] && [[ -h active ]] ; then
-    rm -f latest
-    mv active latest
-    pushd latest >/dev/null
-
-  else
-    # Already started, or already processed
-    return
-  fi
-
-  # Copy log files.
-  i=0
-  while [[ $i -ge 0 ]] ; do
-    local log="fuzz-${i}.log"
-    fx-command-run scp "[${device}]:${data_path}${log}" . 2>/dev/null
-    if [[ $? -eq 0 ]] ; then
-      i=$((${i}+1))
-    else
-      i=-1
-    fi
-  done
-
-  if [[ ${status} == "RUNNING" ]] ; then
-    # Start log collection
-    ${ZIRCON_TOOLS_DIR}/loglistener >zircon.log  &
-    echo $! >.loglistener.pid
-  else
-    # Stop log collection and symbolize
-    if [[ -f .loglistener.pid ]] ; then
-      kill $(cat .loglistener.pid)
-      rm -f .loglistener.pid
-    fi
-    if [[ -f zircon.log ]] ; then
-      ${FUCHSIA_DIR}/zircon/scripts/symbolize \
-        -i ${FUCHSIA_BUILD_DIR}/ids.txt <zircon.log >symbolized.log
-    fi
-
-    # Transfer the fuzz logs
-    for log in fuzz-*.log ; do
-      if [[ -f ${log} ]] ; then
-        for unit in $(grep 'Test unit written to ' ${log} | sed 's/.* //') ; do
-          fx-command-run scp "[${device}]:${unit}" .
-        done
-        fx-command-run ssh ${device} rm "${data_path}${log}"
-      fi
-    done
-
-    # Alert the user
-    echo "Results written to $(pwd -P)"
-  fi
-  popd >/dev/null
-  popd >/dev/null
-}
-
 fetch() {
   [[ "${status}" == "STOPPED" ]] || fatal "fuzzer must be stopped to run this command"
 
@@ -285,28 +214,85 @@ EOF
 }
 
 start() {
+  # Get fuzzer info and check status
+  query "${fuzzer}"
+  [[ ${status} != "RUNNING" ]] || fatal "${fuzzer} is already running"
+
+  # Ensure we have a directory for this target
+  mkdir -p "${output}/${fuzzer}"
+  [[ $? -eq 0 ]] || fatal "failed to make directory: ${output}/${fuzzer}"
+  pushd "${output}/${fuzzer}" >/dev/null
+
+  # Clear all old logs
+  fx-command-run ssh ${device} rm "${data_path}/fuzz-*.log"
+  killall loglistener 2>/dev/null
+
+  # Create a directory for this run
+  local results="$(date +%F-%T)"
+  mkdir ${results}
+  [[ $? -eq 0 ]] || fatal "failed to make directory: ${results}"
+  rm -f latest
+  ln -s ${results} latest
+  pushd latest >/dev/null
+
+  # Start logging
+  ${ZIRCON_TOOLS_DIR}/loglistener >zircon.log  &
+  echo $! >.loglistener.pid
+
+  # Start the fuzzer
   if [[ ${fg} -eq 0 ]] ; then
     fx-command-run ssh ${device} fuzz start ${fuzzer} "$@" &
-    sleep 1
   else
-    fx-command-run ssh ${device} fuzz start ${fuzzer} -jobs=0 "$@"
+    fx-command-run ssh ${device} fuzz start ${fuzzer} -jobs=0 "$@" 2>&1 | tee "fuzz-0.log"
   fi
-  record "${fuzzer}"
+
+  query "${fuzzer}"
+  if [[ ${status} == "RUNNING" ]] ; then
+    echo "'${fuzzer}' started; you should be notified when it stops."
+    echo "To check its progress, use 'fx fuzz check ${fuzzer}'."
+    echo "To stop it manually, use 'fx fuzz stop ${fuzzer}'."
+  elif [[ ${fg} -ne 0 ]] ; then
+    echo "Test units written to $(pwd -P)"
+  fi
+  monitor &
+
+  # Undo pushds
+  popd >/dev/null
+  popd >/dev/null
 }
 
 monitor() {
   # Wait for completion
   while [[ "${status}" == "RUNNING" ]] ; do
-    sleep 10
     query "${fuzzer}"
+    sleep 2
+  done
+  if [[ ${fg} -eq 0 ]] ; then
+    fx-command-run scp "[${device}]:${data_path}/fuzz-*.log" .
+  fi
+
+  # Stop log collection and symbolize
+  if [[ -f .loglistener.pid ]] ; then
+    kill $(cat .loglistener.pid)
+    rm -f .loglistener.pid
+  fi
+  if [[ -f zircon.log ]] ; then
+    ${FUCHSIA_DIR}/zircon/scripts/symbolize \
+      -i ${FUCHSIA_BUILD_DIR}/ids.txt <zircon.log >symbolized.log
+  fi
+
+  # Transfer the fuzz logs
+  local units=0
+  for log in * ; do
+    for unit in $(grep 'Test unit written to ' ${log} | sed 's/.* //') ; do
+      fx-command-run scp "[${device}]:${unit}" .
+      units=$((${units} + 1))
+    done
   done
 
   # Notify user
   local title="${fuzzer} has stopped"
-  local body=$(record "${fuzzer}")
-  if [[ -z "${body}" ]] ; then
-    body="No reproducers produced."
-  fi
+  local body="${units} test units written to $(pwd -P)"
   if [[ ${host} == "Linux" ]] ; then
     if [[ -x /usr/bin/notify-send ]] ; then
       /usr/bin/notify-send "${title}." "${body}"
@@ -408,7 +394,6 @@ main() {
       ;;
     list|check|stop|repro|merge)
       fx-command-run ssh ${device} fuzz ${command} ${fuzzer} ${args}
-      record "${fuzzer}"
       ;;
     start)
       start "${args}"
@@ -417,10 +402,6 @@ main() {
       set_staging
       query "${fuzzer}"
       ${command} ${args}
-      ;;
-    watch)
-      query "${fuzzer}"
-      monitor &
       ;;
     zbi)
       # TODO(security): SEC-141. This command should be replaced by something using //build/images
@@ -437,18 +418,12 @@ main() {
       args="${@:2}"
       echo "Command omitted; starting fuzzer '${fuzzer}' in automatic mode."
       echo "If this isn't what you intended, try 'fx fuzz help'."
-      echo
       set_staging
       query "${fuzzer}"
       if [[ ${corpus_size} == "0" ]] ; then
         fetch
       fi
       start "${args}"
-      monitor &
-      sleep 1
-      echo
-      echo "Fuzzer started; you should be notified when it stops."
-      echo "To check its progress, use 'fx fuzz check'."
       ;;
   esac
 }
