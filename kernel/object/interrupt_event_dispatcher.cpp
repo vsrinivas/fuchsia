@@ -98,13 +98,64 @@ zx_status_t InterruptEventDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher
     return ZX_OK;
 }
 
+zx_status_t InterruptEventDispatcher::BindVcpu(fbl::RefPtr<VcpuDispatcher> vcpu_dispatcher) {
+    Guard<SpinLock, IrqSave> guard{&spinlock_};
+    if (state() == InterruptState::DESTROYED) {
+        return ZX_ERR_CANCELED;
+    } else if (state() == InterruptState::WAITING) {
+        return ZX_ERR_BAD_STATE;
+    } else if (HasPort()) {
+        return ZX_ERR_ALREADY_BOUND;
+    }
+
+    for (const auto& vcpu : vcpus_) {
+        if (vcpu == vcpu_dispatcher) {
+            return ZX_OK;
+        } else if (vcpu->guest() != vcpu_dispatcher->guest()) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+    }
+
+    fbl::AllocChecker ac;
+    vcpus_.push_back(fbl::move(vcpu_dispatcher), &ac);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    if (vcpus_.size() == 1) {
+        MaskInterrupt();
+        UnregisterInterruptHandler();
+        zx_status_t status = register_int_handler(vector_, VcpuIrqHandler, this);
+        if (status != ZX_OK) {
+            return status;
+        }
+        UnmaskInterrupt();
+    }
+    return ZX_OK;
+}
+
 void InterruptEventDispatcher::IrqHandler(void* ctx) {
-    InterruptEventDispatcher* thiz = reinterpret_cast<InterruptEventDispatcher*>(ctx);
+    InterruptEventDispatcher* self = reinterpret_cast<InterruptEventDispatcher*>(ctx);
 
-    if (thiz->get_flags() & INTERRUPT_MASK_POSTWAIT)
-        mask_interrupt(thiz->vector_);
+    if (self->get_flags() & INTERRUPT_MASK_POSTWAIT)
+        mask_interrupt(self->vector_);
 
-    thiz->InterruptHandler();
+    self->InterruptHandler();
+}
+
+void InterruptEventDispatcher::VcpuIrqHandler(void* ctx) {
+    InterruptEventDispatcher* self = reinterpret_cast<InterruptEventDispatcher*>(ctx);
+    self->VcpuInterruptHandler();
+}
+
+void InterruptEventDispatcher::VcpuInterruptHandler() {
+    Guard<SpinLock, IrqSave> guard{&spinlock_};
+    cpu_mask_t mask = 0;
+    for (const auto& vcpu : vcpus_) {
+        mask |= vcpu->Interrupt(vector_, hypervisor::InterruptType::PHYSICAL);
+    }
+    if (mask != 0) {
+        mp_interrupt(MP_IPI_TARGET_MASK, mask);
+    }
 }
 
 void InterruptEventDispatcher::MaskInterrupt() {
@@ -118,6 +169,11 @@ void InterruptEventDispatcher::UnmaskInterrupt() {
 zx_status_t InterruptEventDispatcher::RegisterInterruptHandler() {
     return register_int_handler(vector_, IrqHandler, this);
 }
+
 void InterruptEventDispatcher::UnregisterInterruptHandler() {
     register_int_handler(vector_, nullptr, nullptr);
+}
+
+bool InterruptEventDispatcher::HasVcpu() const {
+    return !vcpus_.is_empty();
 }

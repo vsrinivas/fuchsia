@@ -598,6 +598,10 @@ syscall interrupt_trigger
     (handle: zx_handle_t, options: uint32_t, timestamp: zx_time_t)
     returns (zx_status_t);
 
+syscall interrupt_bind_vcpu
+    (handle: zx_handle_t, vcpu: zx_handle_t, options: uint32_t)
+    returns (zx_status_t);
+
 # DDK Syscalls: MMIO and IoPorts
 
 syscall ioports_request

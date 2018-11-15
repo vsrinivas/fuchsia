@@ -74,7 +74,7 @@ static bool interrupt_port_bound_test(void) {
 
     ASSERT_EQ(zx_interrupt_create(rsrc, 0, ZX_INTERRUPT_VIRTUAL,
                                   &virt_interrupt_port_handle), ZX_OK, "");
-    ASSERT_EQ(zx_port_create(1, &port_handle_bind), ZX_OK, "");
+    ASSERT_EQ(zx_port_create(ZX_PORT_BIND_TO_INTERRUPT, &port_handle_bind), ZX_OK, "");
 
     // Test port binding
     ASSERT_EQ(zx_interrupt_bind(virt_interrupt_port_handle, port_handle_bind, key, 0), ZX_OK, "");
@@ -189,9 +189,154 @@ static bool interrupt_suspend_test(void) {
     END_TEST;
 }
 
+// Tests binding an interrupt to multiple VCPUs
+static bool interrupt_bind_vcpu_test(void) {
+    BEGIN_TEST;
+
+    zx_handle_t rsrc = get_root_resource();
+    zx_handle_t interrupt;
+    zx_handle_t guest;
+    zx_handle_t vmar;
+    zx_handle_t vcpu1;
+    zx_handle_t vcpu2;
+
+    zx_status_t status = zx_guest_create(rsrc, 0, &guest, &vmar);
+    if (status == ZX_ERR_NOT_SUPPORTED) {
+        fprintf(stderr, "Guest creation not supported\n");
+        return true;
+    }
+    ASSERT_EQ(status, ZX_OK, "");
+
+    ASSERT_EQ(zx_interrupt_create(rsrc, 0, 0, &interrupt), ZX_OK, "");
+    ASSERT_EQ(zx_vcpu_create(guest, 0, 0, &vcpu1), ZX_OK, "");
+    ASSERT_EQ(zx_vcpu_create(guest, 0, 0, &vcpu2), ZX_OK, "");
+
+    ASSERT_EQ(zx_interrupt_bind_vcpu(interrupt, vcpu1, 0), ZX_OK, "");
+    ASSERT_EQ(zx_interrupt_bind_vcpu(interrupt, vcpu2, 0), ZX_OK, "");
+
+    ASSERT_EQ(zx_handle_close(vcpu1), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(vcpu2), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(vmar), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(guest), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(interrupt), ZX_OK, "");
+
+    END_TEST;
+}
+
+// Tests binding a virtual interrupt to a VCPU
+static bool interrupt_bind_vcpu_not_supported_test(void) {
+    BEGIN_TEST;
+
+    zx_handle_t rsrc = get_root_resource();
+    zx_handle_t interrupt;
+    zx_handle_t port;
+    zx_handle_t guest;
+    zx_handle_t vmar;
+    zx_handle_t vcpu;
+
+    zx_status_t status = zx_guest_create(rsrc, 0, &guest, &vmar);
+    if (status == ZX_ERR_NOT_SUPPORTED) {
+        fprintf(stderr, "Guest creation not supported\n");
+        return true;
+    }
+    ASSERT_EQ(status, ZX_OK, "");
+
+    ASSERT_EQ(zx_interrupt_create(rsrc, 0, ZX_INTERRUPT_VIRTUAL, &interrupt), ZX_OK, "");
+    ASSERT_EQ(zx_port_create(ZX_PORT_BIND_TO_INTERRUPT, &port), ZX_OK, "");
+    ASSERT_EQ(zx_vcpu_create(guest, 0, 0, &vcpu), ZX_OK, "");
+
+    ASSERT_EQ(zx_interrupt_bind(interrupt, port, 0, 0), ZX_OK, "");
+    ASSERT_EQ(zx_interrupt_bind_vcpu(interrupt, vcpu, 0), ZX_ERR_NOT_SUPPORTED, "");
+
+    ASSERT_EQ(zx_handle_close(vcpu), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(vmar), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(guest), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(port), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(interrupt), ZX_OK, "");
+
+    END_TEST;
+}
+
+// Tests binding an interrupt to a VCPU, after binding it to a port
+static bool interrupt_bind_vcpu_already_bound_test(void) {
+    BEGIN_TEST;
+
+    zx_handle_t rsrc = get_root_resource();
+    zx_handle_t interrupt;
+    zx_handle_t port;
+    zx_handle_t guest;
+    zx_handle_t vmar;
+    zx_handle_t vcpu;
+
+    zx_status_t status = zx_guest_create(rsrc, 0, &guest, &vmar);
+    if (status == ZX_ERR_NOT_SUPPORTED) {
+        fprintf(stderr, "Guest creation not supported\n");
+        return true;
+    }
+    ASSERT_EQ(status, ZX_OK, "");
+
+    ASSERT_EQ(zx_interrupt_create(rsrc, 0, 0, &interrupt), ZX_OK, "");
+    ASSERT_EQ(zx_port_create(ZX_PORT_BIND_TO_INTERRUPT, &port), ZX_OK, "");
+    ASSERT_EQ(zx_vcpu_create(guest, 0, 0, &vcpu), ZX_OK, "");
+
+    ASSERT_EQ(zx_interrupt_bind(interrupt, port, 0, 0), ZX_OK, "");
+    ASSERT_EQ(zx_interrupt_bind_vcpu(interrupt, vcpu, 0), ZX_ERR_ALREADY_BOUND, "");
+
+    ASSERT_EQ(zx_handle_close(vcpu), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(vmar), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(guest), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(port), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(interrupt), ZX_OK, "");
+
+    END_TEST;
+}
+
+// Tests binding an interrupt to VCPUs from different guests
+static bool interrupt_bind_vcpu_multiple_guests_test(void) {
+    BEGIN_TEST;
+
+    zx_handle_t rsrc = get_root_resource();
+    zx_handle_t interrupt;
+    zx_handle_t guest1;
+    zx_handle_t guest2;
+    zx_handle_t vmar1;
+    zx_handle_t vmar2;
+    zx_handle_t vcpu1;
+    zx_handle_t vcpu2;
+
+    zx_status_t status = zx_guest_create(rsrc, 0, &guest1, &vmar1);
+    if (status == ZX_ERR_NOT_SUPPORTED) {
+        fprintf(stderr, "Guest creation not supported\n");
+        return true;
+    }
+    ASSERT_EQ(status, ZX_OK, "");
+
+    ASSERT_EQ(zx_interrupt_create(rsrc, 0, 0, &interrupt), ZX_OK, "");
+    ASSERT_EQ(zx_vcpu_create(guest1, 0, 0, &vcpu1), ZX_OK, "");
+    ASSERT_EQ(zx_guest_create(rsrc, 0, &guest2, &vmar2), ZX_OK, "");
+    ASSERT_EQ(zx_vcpu_create(guest2, 0, 0, &vcpu2), ZX_OK, "");
+
+    ASSERT_EQ(zx_interrupt_bind_vcpu(interrupt, vcpu1, 0), ZX_OK, "");
+    ASSERT_EQ(zx_interrupt_bind_vcpu(interrupt, vcpu2, 0), ZX_ERR_INVALID_ARGS, "");
+
+    ASSERT_EQ(zx_handle_close(vcpu1), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(vcpu2), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(vmar1), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(vmar2), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(guest1), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(guest2), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(interrupt), ZX_OK, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(interrupt_tests)
 RUN_TEST(interrupt_test)
 RUN_TEST(interrupt_port_bound_test)
 RUN_TEST(interrupt_port_non_bindable_test)
 RUN_TEST(interrupt_suspend_test)
+RUN_TEST(interrupt_bind_vcpu_test)
+RUN_TEST(interrupt_bind_vcpu_not_supported_test)
+RUN_TEST(interrupt_bind_vcpu_already_bound_test)
+RUN_TEST(interrupt_bind_vcpu_multiple_guests_test)
 END_TEST_CASE(interrupt_tests)

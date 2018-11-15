@@ -112,7 +112,8 @@ zx_status_t sys_vcpu_interrupt(zx_handle_t vcpu_handle, uint32_t vector) {
     if (status != ZX_OK)
         return status;
 
-    return vcpu->Interrupt(vector);
+    vcpu->VirtualInterrupt(vector);
+    return ZX_OK;
 }
 
 // zx_status_t zx_vcpu_read_state

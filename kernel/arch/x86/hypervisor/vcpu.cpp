@@ -771,14 +771,20 @@ void vmx_exit(VmxState* vmx_state) {
     x86_ltr(selector);
 }
 
-zx_status_t Vcpu::Interrupt(uint32_t vector) {
+cpu_mask_t Vcpu::Interrupt(uint32_t vector, hypervisor::InterruptType type) {
     bool signaled = false;
-    local_apic_state_.interrupt_tracker.Interrupt(
-        vector, hypervisor::InterruptType::VIRTUAL, &signaled);
-    if (!signaled && running_.load()) {
-        mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(hypervisor::cpu_of(vpid_)));
+    local_apic_state_.interrupt_tracker.Interrupt(vector, type, &signaled);
+    if (signaled || !running_.load()) {
+        return 0;
     }
-    return ZX_OK;
+    return cpu_num_to_mask(hypervisor::cpu_of(vpid_));
+}
+
+void Vcpu::VirtualInterrupt(uint32_t vector) {
+    cpu_mask_t mask = Interrupt(vector, hypervisor::InterruptType::VIRTUAL);
+    if (mask != 0) {
+        mp_interrupt(MP_IPI_TARGET_MASK, mask);
+    }
 }
 
 template <typename Out, typename In>

@@ -119,11 +119,6 @@ static bool setup(test_t* test, const char* start, const char* end) {
     zx::resource resource;
     ASSERT_EQ(guest_get_resource(&resource), ZX_OK);
     zx_status_t status = zx::guest::create(resource, 0, &test->guest, &test->vmar);
-    if (status != ZX_OK) {
-        fprintf(stderr, "Failed to create guest\n");
-        return status;
-    }
-
     test->supported = status != ZX_ERR_NOT_SUPPORTED;
     if (!test->supported) {
         fprintf(stderr, "Guest creation not supported\n");

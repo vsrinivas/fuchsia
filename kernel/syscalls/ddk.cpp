@@ -25,6 +25,7 @@
 #include <object/iommu_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/resource.h>
+#include <object/vcpu_dispatcher.h>
 #include <object/virtual_interrupt_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 #include <vm/vm.h>
@@ -484,6 +485,27 @@ zx_status_t sys_interrupt_bind(zx_handle_t inth, zx_handle_t porth,
     }
 
     return interrupt->Bind(fbl::move(port), key);
+}
+
+// zx_status_t zx_interrupt_bind_vcpu
+zx_status_t sys_interrupt_bind_vcpu(zx_handle_t handle, zx_handle_t vcpu,
+                                    uint32_t options) {
+    LTRACEF("handle %x\n", handle);
+
+    auto up = ProcessDispatcher::GetCurrent();
+    fbl::RefPtr<InterruptDispatcher> interrupt_dispatcher;
+    zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_READ, &interrupt_dispatcher);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    fbl::RefPtr<VcpuDispatcher> vcpu_dispatcher;
+    status = up->GetDispatcherWithRights(vcpu, ZX_RIGHT_WRITE, &vcpu_dispatcher);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    return interrupt_dispatcher->BindVcpu(fbl::move(vcpu_dispatcher));
 }
 
 // zx_status_t zx_interrupt_ack

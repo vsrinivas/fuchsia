@@ -90,7 +90,8 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Vcpu);
 
     zx_status_t Resume(zx_port_packet_t* packet);
-    zx_status_t Interrupt(uint32_t interrupt);
+    cpu_mask_t Interrupt(uint32_t vector, hypervisor::InterruptType type);
+    void VirtualInterrupt(uint32_t vector);
     zx_status_t ReadState(uint32_t kind, void* buf, size_t len) const;
     zx_status_t WriteState(uint32_t kind, const void* buf, size_t len);
 

@@ -28,7 +28,7 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-**vcpu_resume**() returns ZX_OK on success. On failure, an error value is
+**vcpu_resume**() returns *ZX_OK* on success. On failure, an error value is
 returned.
 
 ## ERRORS

@@ -253,14 +253,20 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     return status == ZX_ERR_NEXT ? ZX_OK : status;
 }
 
-zx_status_t Vcpu::Interrupt(uint32_t vector) {
+cpu_mask_t Vcpu::Interrupt(uint32_t vector, hypervisor::InterruptType type) {
     bool signaled = false;
-    gich_state_.interrupt_tracker.Interrupt(
-        vector, hypervisor::InterruptType::VIRTUAL, &signaled);
-    if (!signaled && running_.load()) {
-        mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(hypervisor::cpu_of(vpid_)));
+    gich_state_.interrupt_tracker.Interrupt(vector, type, &signaled);
+    if (signaled || !running_.load()) {
+        return 0;
     }
-    return ZX_OK;
+    return cpu_num_to_mask(hypervisor::cpu_of(vpid_));
+}
+
+void Vcpu::VirtualInterrupt(uint32_t vector) {
+    cpu_mask_t mask = Interrupt(vector, hypervisor::InterruptType::VIRTUAL);
+    if (mask != 0) {
+        mp_interrupt(MP_IPI_TARGET_MASK, mask);
+    }
 }
 
 zx_status_t Vcpu::ReadState(uint32_t kind, void* buf, size_t len) const {
