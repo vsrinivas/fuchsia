@@ -132,6 +132,7 @@ void sequential_executor::dispatcher_impl::run_task(pending_task* task,
     assert(current_task_ticket_ == 0);
     const bool finished = (*task)(context);
     assert(!*task == finished);
+    (void)finished;
     if (current_task_ticket_ == 0) {
         return; // task was not suspended, no ticket was produced
     }
