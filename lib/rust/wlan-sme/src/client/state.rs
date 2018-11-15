@@ -191,6 +191,12 @@ impl<T: Tokens> State<T> {
                     LinkState::EstablishingRsna(token, mut rsna) => {
                         match process_eapol_ind(&context.mlme_sink, &mut rsna, &ind) {
                             RsnaStatus::Established => {
+                                context.mlme_sink.send(MlmeRequest::SetCtrlPort(
+                                    fidl_mlme::SetControlledPortRequest {
+                                        peer_sta_address: bss.bssid.clone(),
+                                        state: fidl_mlme::ControlledPortState::Open,
+                                    }
+                                ));
                                 context.info_sink.send(
                                     InfoEvent::RsnaEstablished { att_id: context.att_id });
                                 report_connect_finished(token, &context,
@@ -579,6 +585,7 @@ mod tests {
         let update = SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished);
         let _state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![update]);
 
+        expect_set_ctrl_port(&mut h.mlme_stream, bssid, fidl_mlme::ControlledPortState::Open);
         expect_connect_result(&mut h.user_stream, command_token, ConnectResult::Success);
         expect_info_event(&mut h.info_stream, InfoEvent::RsnaEstablished { att_id: 1 });
         expect_info_event(
@@ -1023,6 +1030,17 @@ mod tests {
         // (sme->mlme) Expect a JoinRequest
         match mlme_stream.try_next().unwrap() {
             Some(MlmeRequest::Join(req)) => assert_eq!(ssid, &req.selected_bss.ssid[..]),
+            _ => panic!("expect set keys req to MLME"),
+        }
+    }
+
+    fn expect_set_ctrl_port(mlme_stream: &mut MlmeStream, bssid: [u8; 6],
+                            state: fidl_mlme::ControlledPortState) {
+        match mlme_stream.try_next().unwrap().expect("expect mlme message") {
+            MlmeRequest::SetCtrlPort(req) => {
+                assert_eq!(req.peer_sta_address, bssid);
+                assert_eq!(req.state, state);
+            },
             other => panic!("expected a Join request, got {:?}", other),
         }
     }

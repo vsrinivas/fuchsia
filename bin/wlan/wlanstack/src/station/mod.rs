@@ -88,6 +88,7 @@ fn forward_mlme_request(req: MlmeRequest, proxy: &MlmeProxy) -> Result<(), fidl:
         MlmeRequest::Deauthenticate(mut req) => proxy.deauthenticate_req(&mut req),
         MlmeRequest::Eapol(mut req) => proxy.eapol_req(&mut req),
         MlmeRequest::SetKeys(mut req) => proxy.set_keys_req(&mut req),
+        MlmeRequest::SetCtrlPort(mut req) => proxy.set_controlled_port(&mut req),
         MlmeRequest::Start(mut req) => proxy.start_req(&mut req),
         MlmeRequest::Stop(mut req) => proxy.stop_req(&mut req),
         MlmeRequest::SendMpOpenAction(mut req) => proxy.send_mp_open_action(&mut req),

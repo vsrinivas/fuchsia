@@ -23,7 +23,6 @@ class RemoteClientInterface {
     virtual void HandleAnyDataFrame(DataFrame<>&&) = 0;
     virtual void HandleAnyCtrlFrame(CtrlFrame<>&&) = 0;
     virtual zx_status_t HandleMlmeMsg(const BaseMlmeMsg& mlme_msg) = 0;
-    virtual void OpenControlledPort() = 0;
 };
 
 }  // namespace wlan

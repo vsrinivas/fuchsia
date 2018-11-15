@@ -45,7 +45,6 @@ class RemoteClient : public RemoteClientInterface {
     void HandleAnyDataFrame(DataFrame<>&& frame) override;
     void HandleAnyCtrlFrame(CtrlFrame<>&& frame) override;
     zx_status_t HandleMlmeMsg(const BaseMlmeMsg& mlme_msg) override;
-    void OpenControlledPort() override;
     zx_status_t SendAuthentication(status_code::StatusCode result);
     zx_status_t SendAssociationResponse(aid_t aid, status_code::StatusCode result);
     zx_status_t SendDeauthentication(::fuchsia::wlan::mlme::ReasonCode reason_code);
@@ -94,7 +93,6 @@ class BaseState {
     virtual void HandleAnyMgmtFrame(MgmtFrame<>&&) {}
     virtual void HandleAnyCtrlFrame(CtrlFrame<>&&) {}
     virtual void HandleEthFrame(EthFrame&&) {}
-    virtual void OpenControlledPort() {}
 
     virtual const char* name() const = 0;
 
@@ -233,7 +231,6 @@ class AssociatedState : public BaseState {
     void HandleAnyMgmtFrame(MgmtFrame<>&&) override;
     void HandleAnyCtrlFrame(CtrlFrame<>&&) override;
     void HandleEthFrame(EthFrame&&) override;
-    void OpenControlledPort() override;
 
     inline const char* name() const override { return kName; }
 

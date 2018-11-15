@@ -129,10 +129,8 @@ struct Context {
     }
 
     void EstablishRsna() {
-        // current implementation naively assumes that RSNA is established as soon as one key is set
-        auto key_data = std::vector(std::cbegin(kKeyData), std::cend(kKeyData));
         ap->HandleMlmeMsg(
-            CreateSetKeysRequest(client_addr, key_data, wlan_mlme::KeyType::PAIRWISE));
+            CreateSetCtrlPortRequest(client_addr, wlan_mlme::ControlledPortState::OPEN));
     }
 
     void AssertAuthInd(MlmeMsg<wlan_mlme::AuthenticateIndication> msg) {
@@ -872,6 +870,17 @@ TEST_F(ApInfraBssTest, ReceiveFrames_BeforeControlledPortOpens) {
 
     // For protected AP, controlled port is not opened until RSNA is established, so data frame
     // should be ignored
+    EXPECT_TRUE(device.eth_queue.empty());
+
+    auto key_data = std::vector(std::cbegin(kKeyData), std::cend(kKeyData));
+    ctx.ap->HandleMlmeMsg(
+        CreateSetKeysRequest(ctx.client_addr, key_data, wlan_mlme::KeyType::PAIRWISE));
+
+    // Simulate client sending data frame to AP
+    ASSERT_TRUE(device.eth_queue.empty());
+    ctx.SendDataFrame();
+
+    // Setting keys doesn't implicit open the controlled port, hence data frame is still ignored
     EXPECT_TRUE(device.eth_queue.empty());
 }
 

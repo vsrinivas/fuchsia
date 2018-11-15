@@ -168,6 +168,8 @@ zx_status_t Dispatcher::HandleAnyMlmeMessage(Span<uint8_t> span) {
         return HandleMlmeMessage<wlan_mlme::EapolRequest>(span, hdr->ordinal);
     case fuchsia_wlan_mlme_MLMESetKeysReqOrdinal:
         return HandleMlmeMessage<wlan_mlme::SetKeysRequest>(span, hdr->ordinal);
+    case fuchsia_wlan_mlme_MLMESetControlledPortOrdinal:
+        return HandleMlmeMessage<wlan_mlme::SetControlledPortRequest>(span, hdr->ordinal);
     case fuchsia_wlan_mlme_MLMESendMpOpenActionOrdinal:
         return HandleMlmeMessage<wlan_mlme::MeshPeeringOpenAction>(span, hdr->ordinal);
     case fuchsia_wlan_mlme_MLMESendMpConfirmActionOrdinal:

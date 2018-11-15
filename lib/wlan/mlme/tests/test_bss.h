@@ -83,6 +83,8 @@ MlmeMsg<::fuchsia::wlan::mlme::EapolRequest> CreateEapolRequest(common::MacAddr 
 MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest> CreateSetKeysRequest(common::MacAddr addr,
                                                                     std::vector<uint8_t> key_data,
                                                                     ::fuchsia::wlan::mlme::KeyType);
+MlmeMsg<::fuchsia::wlan::mlme::SetControlledPortRequest> CreateSetCtrlPortRequest(
+    common::MacAddr peer_addr, ::fuchsia::wlan::mlme::ControlledPortState);
 fbl::unique_ptr<Packet> CreateAuthReqFrame(common::MacAddr client_addr);
 fbl::unique_ptr<Packet> CreateAuthRespFrame(AuthAlgorithm auth_algo);
 fbl::unique_ptr<Packet> CreateDeauthFrame(common::MacAddr client_addr);

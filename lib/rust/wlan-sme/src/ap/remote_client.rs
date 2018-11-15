@@ -124,7 +124,15 @@ impl RemoteClient {
                 }
                 SecAssocUpdate::Key(key) => self.send_key(key, ctx),
                 SecAssocUpdate::Status(status) => match status {
-                    SecAssocStatus::EssSaEstablished => cancel(&mut self.key_exchange_timeout),
+                    SecAssocStatus::EssSaEstablished => {
+                        cancel(&mut self.key_exchange_timeout);
+                        ctx.mlme_sink.send(MlmeRequest::SetCtrlPort(
+                            fidl_mlme::SetControlledPortRequest {
+                                peer_sta_address: self.addr.clone(),
+                                state: fidl_mlme::ControlledPortState::Open,
+                            }
+                        ));
+                    }
                     _ => (),
                 }
             }
@@ -259,10 +267,11 @@ mod tests {
             _ => panic!("expect eapol response sent to MLME"),
         }
 
-        // On handling EAPOL indication, authenticator derives some keys
+        // On handling EAPOL indication, authenticator derives some keys and signal that it's done
         let ptk_update = SecAssocUpdate::Key(Key::Ptk(test_utils::ptk()));
         let gtk_update = SecAssocUpdate::Key(Key::Gtk(test_utils::gtk()));
-        mock_auth.set_on_eapol_frame_results(vec![ptk_update, gtk_update]);
+        let done_update = SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished);
+        mock_auth.set_on_eapol_frame_results(vec![ptk_update, gtk_update, done_update]);
         let eapol_ind = fidl_mlme::EapolIndication {
             src_addr: CLIENT_ADDR,
             dst_addr: AP_ADDR,
@@ -300,6 +309,15 @@ mod tests {
                 assert_eq!(k.cipher_suite_type, 4);
             },
             _ => panic!("expect set keys req to MLME"),
+        }
+
+        // Verify that remote client tells MLME to open controlled port
+        match mlme_stream.try_next().unwrap().expect("expect mlme message") {
+            MlmeRequest::SetCtrlPort(set_ctrl_port_req) => {
+                assert_eq!(set_ctrl_port_req.peer_sta_address, CLIENT_ADDR);
+                assert_eq!(set_ctrl_port_req.state, fidl_mlme::ControlledPortState::Open);
+            }
+            _ => panic!("expect set ctrl port req to MLME"),
         }
     }
 
@@ -353,6 +371,12 @@ mod tests {
         let update = SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished);
         mock_auth.set_initiate_results(vec![update]);
         remote_client.initiate_key_exchange(&mut ctx, 1);
+
+        // Clear out the SetCtrlPort request
+        match mlme_stream.try_next().unwrap().expect("expect mlme message") {
+            MlmeRequest::SetCtrlPort(..) => (),  // expected path
+            _ => panic!("expect set ctrl port req to MLME"),
+        }
 
         // Verify timed event was scheduled and use it to try to trigger timeout
         let (_, timed_event) = time_stream.try_next().unwrap().expect("expect timed event");

@@ -397,10 +397,6 @@ void AssociatedState::HandleEthFrame(EthFrame&& eth_frame) {
     client_->bss()->SendDataFrame(DataFrame<>(data_frame->Take()));
 }
 
-void AssociatedState::OpenControlledPort() {
-    eapol_controlled_port_ = eapol::PortState::kOpen;
-}
-
 void AssociatedState::HandleDeauthentication(MgmtFrame<Deauthentication>&& frame) {
     debugbss("[client] [%s] received Deauthentication: %hu\n", client_->addr().ToString().c_str(),
              frame.body()->reason_code);
@@ -525,6 +521,14 @@ zx_status_t AssociatedState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
         return HandleMlmeEapolReq(*eapol_request);
     } else if (auto deauth_req = msg.As<wlan_mlme::DeauthenticateRequest>()) {
         return HandleMlmeDeauthReq(*deauth_req);
+    } else if (auto req = msg.As<wlan_mlme::SetControlledPortRequest>()) {
+        ZX_DEBUG_ASSERT(client_->addr() == common::MacAddr(req->body()->peer_sta_address.data()));
+        if (req->body()->state == wlan_mlme::ControlledPortState::OPEN) {
+            eapol_controlled_port_ = eapol::PortState::kOpen;
+        } else {
+            eapol_controlled_port_ = eapol::PortState::kBlocked;
+        }
+        return ZX_OK;
     } else {
         warnf("[client] [%s] unexpected MLME msg type in associated state; ordinal: %u\n",
               client_->addr().ToString().c_str(), msg.ordinal());
@@ -765,10 +769,6 @@ void RemoteClient::HandleAnyCtrlFrame(CtrlFrame<>&& frame) {
 
 zx_status_t RemoteClient::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     return state_->HandleMlmeMsg(msg);
-}
-
-void RemoteClient::OpenControlledPort() {
-    state_->OpenControlledPort();
 }
 
 zx_status_t RemoteClient::ScheduleTimer(zx::time deadline, TimedEvent* event) {

@@ -277,17 +277,6 @@ zx_status_t InfraBss::HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysReque
             errorf("Could not configure keys in hardware: %d\n", status);
             return status;
         }
-
-        common::MacAddr client_addr(key_desc.address.data());
-        if (client_addr.IsUcast()) {
-            auto client = GetClient(client_addr);
-            // TODO: We should only open controlled port when RSNA has been established, not as soon
-            //       as one key has. Going with simple logic for now to get things working, but this
-            //       should be revisited later. Specifically, we should have an MLME primitive to
-            //       open a controlled port since the SME has all the information about when all
-            //       the keys finish deriving.
-            if (client != nullptr) { client->OpenControlledPort(); }
-        }
     }
 
     return ZX_OK;

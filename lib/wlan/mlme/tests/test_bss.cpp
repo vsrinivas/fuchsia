@@ -228,6 +228,15 @@ MlmeMsg<wlan_mlme::SetKeysRequest> CreateSetKeysRequest(common::MacAddr addr,
     return {std::move(*req), fuchsia_wlan_mlme_MLMESetKeysReqOrdinal};
 }
 
+MlmeMsg<wlan_mlme::SetControlledPortRequest> CreateSetCtrlPortRequest(
+    common::MacAddr peer_addr, wlan_mlme::ControlledPortState state) {
+    auto req = wlan_mlme::SetControlledPortRequest::New();
+    std::memcpy(req->peer_sta_address.mutable_data(), peer_addr.byte, sizeof(peer_addr));
+    req->state = state;
+
+    return {std::move(*req), fuchsia_wlan_mlme_MLMESetKeysReqOrdinal};
+}
+
 fbl::unique_ptr<Packet> CreateBeaconFrame(common::MacAddr bssid) {
     constexpr size_t ie_len = 256;
     constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + Beacon::max_len() + ie_len;

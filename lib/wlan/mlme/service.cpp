@@ -24,6 +24,8 @@ std::optional<common::MacAddr> GetPeerAddr(const BaseMlmeMsg& msg) {
         return std::make_optional<common::MacAddr>(auth_resp->body()->peer_sta_address.data());
     } else if (auto assoc_resp = msg.As<wlan_mlme::AssociateResponse>()) {
         return std::make_optional<common::MacAddr>(assoc_resp->body()->peer_sta_address.data());
+    } else if (auto open_req = msg.As<wlan_mlme::SetControlledPortRequest>()) {
+        return std::make_optional<common::MacAddr>(open_req->body()->peer_sta_address.data());
     } else {
         return std::nullopt;
     }

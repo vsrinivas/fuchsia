@@ -71,6 +71,14 @@ zx_status_t Station::HandleAnyMlmeMsg(const BaseMlmeMsg& mlme_msg) {
         return HandleMlmeEapolReq(*eapol_req);
     } else if (auto setkeys_req = mlme_msg.As<wlan_mlme::SetKeysRequest>()) {
         return HandleMlmeSetKeysReq(*setkeys_req);
+    } else if (auto set_ctrl_port_req = mlme_msg.As<wlan_mlme::SetControlledPortRequest>()) {
+        if (set_ctrl_port_req->body()->state == wlan_mlme::ControlledPortState::OPEN) {
+            controlled_port_ = eapol::PortState::kOpen;
+            device_->SetStatus(ETHMAC_STATUS_ONLINE);
+        } else {
+            controlled_port_ = eapol::PortState::kBlocked;
+            device_->SetStatus(0);
+        }
     }
     return ZX_OK;
 }
@@ -1002,12 +1010,6 @@ zx_status_t Station::HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysReques
         }
     }
 
-    // Once keys have been successfully configured, open controlled port and report link up
-    // status.
-    // TODO(hahnr): This is a very simplified assumption and we might need a little more logic to
-    // correctly track the port's state.
-    controlled_port_ = eapol::PortState::kOpen;
-    device_->SetStatus(ETHMAC_STATUS_ONLINE);
     return ZX_OK;
 }
 

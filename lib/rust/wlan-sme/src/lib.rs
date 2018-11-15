@@ -39,6 +39,7 @@ pub enum MlmeRequest {
     Deauthenticate(fidl_mlme::DeauthenticateRequest),
     Eapol(fidl_mlme::EapolRequest),
     SetKeys(fidl_mlme::SetKeysRequest),
+    SetCtrlPort(fidl_mlme::SetControlledPortRequest),
     Start(fidl_mlme::StartRequest),
     Stop(fidl_mlme::StopRequest),
     SendMpOpenAction(fidl_mlme::MeshPeeringOpenAction),

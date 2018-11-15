@@ -308,7 +308,7 @@ void Device::StartScan(wlan_mlme::ScanRequest req) {
 }
 
 void Device::JoinReq(wlan_mlme::JoinRequest req) {
-    SetDataStateUnlocked(OFFLINE);
+    SetEthmacStatusUnlocked(false);
 
     wlanif_join_req_t impl_req = {};
 
@@ -335,7 +335,7 @@ void Device::JoinReq(wlan_mlme::JoinRequest req) {
 }
 
 void Device::AuthenticateReq(wlan_mlme::AuthenticateRequest req) {
-    SetDataStateUnlocked(OFFLINE);
+    SetEthmacStatusUnlocked(false);
 
     wlanif_auth_req_t impl_req = {};
 
@@ -364,7 +364,7 @@ void Device::AuthenticateResp(wlan_mlme::AuthenticateResponse resp) {
 }
 
 void Device::DeauthenticateReq(wlan_mlme::DeauthenticateRequest req) {
-    SetDataStateUnlocked(OFFLINE);
+    SetEthmacStatusUnlocked(false);
 
     wlanif_deauth_req_t impl_req = {};
 
@@ -378,8 +378,8 @@ void Device::DeauthenticateReq(wlan_mlme::DeauthenticateRequest req) {
 }
 
 void Device::AssociateReq(wlan_mlme::AssociateRequest req) {
-    bool is_protected = !req.rsn.is_null();
-    SetDataStateUnlocked(is_protected ? ASSOC_REQ_RSN : ASSOC_REQ_OPEN);
+    std::lock_guard<std::mutex> lock(lock_);
+    protected_bss_ = !req.rsn.is_null();
 
     wlanif_assoc_req_t impl_req = {};
 
@@ -387,7 +387,7 @@ void Device::AssociateReq(wlan_mlme::AssociateRequest req) {
     std::memcpy(impl_req.peer_sta_address, req.peer_sta_address.data(), ETH_ALEN);
 
     // rsne
-    if (is_protected) {
+    if (protected_bss_) {
         CopyRSNE(req.rsn, impl_req.rsne, &impl_req.rsne_len);
     } else {
         impl_req.rsne_len = 0;
@@ -412,7 +412,7 @@ void Device::AssociateResp(wlan_mlme::AssociateResponse resp) {
 }
 
 void Device::DisassociateReq(wlan_mlme::DisassociateRequest req) {
-    SetDataStateUnlocked(OFFLINE);
+    SetEthmacStatusUnlocked(false);
 
     wlanif_disassoc_req_t impl_req = {};
 
@@ -426,7 +426,7 @@ void Device::DisassociateReq(wlan_mlme::DisassociateRequest req) {
 }
 
 void Device::ResetReq(wlan_mlme::ResetRequest req) {
-    SetDataStateUnlocked(OFFLINE);
+    SetEthmacStatusUnlocked(false);
 
     wlanif_reset_req_t impl_req = {};
 
@@ -440,7 +440,7 @@ void Device::ResetReq(wlan_mlme::ResetRequest req) {
 }
 
 void Device::StartReq(wlan_mlme::StartRequest req) {
-    SetDataStateUnlocked(ONLINE);
+    SetEthmacStatusUnlocked(true);
 
     wlanif_start_req_t impl_req = {};
 
@@ -466,7 +466,7 @@ void Device::StartReq(wlan_mlme::StartRequest req) {
 }
 
 void Device::StopReq(wlan_mlme::StopRequest req) {
-    SetDataStateUnlocked(OFFLINE);
+    SetEthmacStatusUnlocked(false);
 
     wlanif_stop_req_t impl_req = {};
 
@@ -492,14 +492,6 @@ void Device::SetKeysReq(wlan_mlme::SetKeysRequest req) {
         ConvertSetKeyDescriptor(&impl_req.keylist[desc_ndx], (*req.keylist)[desc_ndx]);
     }
 
-    // TODO: Track keys more accurately (NET-1439)
-    {
-        std::lock_guard<std::mutex> lock(lock_);
-        if (data_state_ == ASSOC_REQ_RSN) {
-            SetDataStateLocked(ONLINE);
-        }
-    }
-
     wlanif_impl_.ops->set_keys_req(wlanif_impl_.ctx, &impl_req);
 }
 
@@ -517,14 +509,6 @@ void Device::DeleteKeysReq(wlan_mlme::DeleteKeysRequest req) {
     }
     for (size_t desc_ndx = 0; desc_ndx < num_keys; desc_ndx++) {
         ConvertDeleteKeyDescriptor(&impl_req.keylist[desc_ndx], (*req.keylist)[desc_ndx]);
-    }
-
-    // TODO: Track keys more accurately (NET-1439)
-    {
-        std::lock_guard<std::mutex> lock(lock_);
-        if (data_state_ == ONLINE) {
-            SetDataStateLocked(ASSOC_REQ_RSN);
-        }
     }
 
     wlanif_impl_.ops->del_keys_req(wlanif_impl_.ctx, &impl_req);
@@ -616,10 +600,10 @@ void Device::MeshPeeringEstablished(wlan_mlme::MeshPeeringParams params) {
 void Device::SetControlledPort(wlan_mlme::SetControlledPortRequest req) {
     switch (req.state) {
     case wlan_mlme::ControlledPortState::OPEN:
-        SetDataStateUnlocked(ONLINE);
+        SetEthmacStatusUnlocked(true);
         break;
     case wlan_mlme::ControlledPortState::CLOSED:
-        SetDataStateUnlocked(OFFLINE);
+        SetEthmacStatusUnlocked(false);
         break;
     }
 }
@@ -661,7 +645,7 @@ void Device::OnScanEnd(wlanif_scan_end_t* end) {
 void Device::JoinConf(wlanif_join_confirm_t* resp) {
     std::lock_guard<std::mutex> lock(lock_);
 
-    SetDataStateLocked(OFFLINE);
+    SetEthmacStatusLocked(false);
 
     if (!binding_.is_bound()) {
         return;
@@ -678,7 +662,7 @@ void Device::JoinConf(wlanif_join_confirm_t* resp) {
 void Device::AuthenticateConf(wlanif_auth_confirm_t* resp) {
     std::lock_guard<std::mutex> lock(lock_);
 
-    SetDataStateLocked(OFFLINE);
+    SetEthmacStatusLocked(false);
 
     if (!binding_.is_bound()) {
         return;
@@ -717,7 +701,7 @@ void Device::AuthenticateInd(wlanif_auth_ind_t* ind) {
 void Device::DeauthenticateConf(wlanif_deauth_confirm_t* resp) {
     std::lock_guard<std::mutex> lock(lock_);
 
-    SetDataStateLocked(OFFLINE);
+    SetEthmacStatusLocked(false);
 
     if (!binding_.is_bound()) {
         return;
@@ -734,7 +718,7 @@ void Device::DeauthenticateConf(wlanif_deauth_confirm_t* resp) {
 void Device::DeauthenticateInd(wlanif_deauth_indication_t* ind) {
     std::lock_guard<std::mutex> lock(lock_);
 
-    SetDataStateLocked(OFFLINE);
+    SetEthmacStatusLocked(false);
 
     if (!binding_.is_bound()) {
         return;
@@ -754,8 +738,10 @@ void Device::DeauthenticateInd(wlanif_deauth_indication_t* ind) {
 void Device::AssociateConf(wlanif_assoc_confirm_t* resp) {
     std::lock_guard<std::mutex> lock(lock_);
 
-    if (resp->result_code == WLAN_ASSOC_RESULT_SUCCESS && data_state_ == ASSOC_REQ_OPEN) {
-        SetDataStateLocked(ONLINE);
+    // For unprotected network, set data state to online immediately. For protected network, do
+    // nothing. Later on upper layer would send message to open controlled port.
+    if (resp->result_code == WLAN_ASSOC_RESULT_SUCCESS && !protected_bss_) {
+        SetEthmacStatusLocked(true);
     }
 
     if (!binding_.is_bound()) {
@@ -803,7 +789,7 @@ void Device::AssociateInd(wlanif_assoc_ind_t* ind) {
 void Device::DisassociateConf(wlanif_disassoc_confirm_t* resp) {
     std::lock_guard<std::mutex> lock(lock_);
 
-    SetDataStateLocked(OFFLINE);
+    SetEthmacStatusLocked(false);
 
     if (!binding_.is_bound()) {
         return;
@@ -820,7 +806,7 @@ void Device::DisassociateConf(wlanif_disassoc_confirm_t* resp) {
 void Device::DisassociateInd(wlanif_disassoc_indication_t* ind) {
     std::lock_guard<std::mutex> lock(lock_);
 
-    SetDataStateLocked(OFFLINE);
+    SetEthmacStatusLocked(false);
 
     if (!binding_.is_bound()) {
         return;
@@ -840,9 +826,7 @@ void Device::DisassociateInd(wlanif_disassoc_indication_t* ind) {
 void Device::StartConf(wlanif_start_confirm_t* resp) {
     std::lock_guard<std::mutex> lock(lock_);
 
-    if (resp->result_code == WLAN_START_RESULT_SUCCESS) {
-        SetDataStateLocked(ONLINE);
-    }
+    if (resp->result_code == WLAN_START_RESULT_SUCCESS) { SetEthmacStatusLocked(true); }
 
     if (!binding_.is_bound()) {
         return;
@@ -859,7 +843,7 @@ void Device::StartConf(wlanif_start_confirm_t* resp) {
 void Device::StopConf() {
     std::lock_guard<std::mutex> lock(lock_);
 
-    SetDataStateLocked(OFFLINE);
+    SetEthmacStatusLocked(false);
 
     if (!binding_.is_bound()) {
         return;
@@ -978,16 +962,13 @@ zx_status_t Device::EthSetParam(uint32_t param, int32_t value, const void* data,
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-void Device::SetDataStateLocked(data_states new_state) {
-    if (((new_state == ONLINE) != (data_state_ == ONLINE)) && eth_started_) {
-        ethmac_ifc_status(&ethmac_ifc_, new_state == ONLINE ? ETHMAC_STATUS_ONLINE : 0);
-    }
-    data_state_ = new_state;
+void Device::SetEthmacStatusLocked(bool online) {
+    if (eth_started_) { ethmac_ifc_status(&ethmac_ifc_, online ? ETHMAC_STATUS_ONLINE : 0); }
 }
 
-void Device::SetDataStateUnlocked(data_states new_state) {
+void Device::SetEthmacStatusUnlocked(bool online) {
     std::lock_guard<std::mutex> lock(lock_);
-    SetDataStateLocked(new_state);
+    SetEthmacStatusLocked(online);
 }
 
 void Device::EthRecv(void* data, size_t length, uint32_t flags) {

@@ -110,11 +110,15 @@ struct ClientTest : public ::testing::Test {
         TriggerTimeout(ObjectTarget::kChannelScheduler);
     }
 
-    void EstablishRsna() {
-        // current implementation naively assumes that RSNA is established as soon as one key is set
+    void SetKey() {
         auto key_data = std::vector(std::cbegin(kKeyData), std::cend(kKeyData));
         client.HandleMlmeMsg(
             CreateSetKeysRequest(common::MacAddr(kBssid1), key_data, wlan_mlme::KeyType::PAIRWISE));
+    }
+
+    void EstablishRsna() {
+        client.HandleMlmeMsg(CreateSetCtrlPortRequest(common::MacAddr(kBssid1),
+                                                      wlan_mlme::ControlledPortState::OPEN));
     }
 
     void Connect(bool rsn = true) {
@@ -520,6 +524,11 @@ TEST_F(ClientTest, ReceiveDataAfterAssociation_Protected) {
     SendDataFrame();
     ASSERT_TRUE(device.AreQueuesEmpty());
 
+    // Setting key does not open controlled port
+    SetKey();
+    SendDataFrame();
+    ASSERT_TRUE(device.AreQueuesEmpty());
+
     // Establish RSNA and verify data frame can be received
     EstablishRsna();
     SendDataFrame();
@@ -541,6 +550,13 @@ TEST_F(ClientTest, SendDataAfterAssociation_Protected) {
 
     // After association but before RSNA is established, data frame is sent out but unprotected
     Associate();
+    SendEthFrame();
+    EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
+    AssertDataFrameSentToAp(std::move(*device.wlan_queue.begin()), kTestPayload);
+    device.wlan_queue.clear();
+
+    // Setting key does not open controlled port, so data frame is still unprotected
+    SetKey();
     SendEthFrame();
     EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     AssertDataFrameSentToAp(std::move(*device.wlan_queue.begin()), kTestPayload);

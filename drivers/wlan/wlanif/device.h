@@ -102,15 +102,10 @@ class Device : public wlan_mlme::MLME {
 
     wlanif_impl_protocol_t wlanif_impl_;
 
-    enum data_states {
-        OFFLINE,
-        ASSOC_REQ_RSN,   // ASSOCIATE.request received, waiting for confirm and RSNA
-        ASSOC_REQ_OPEN,  // ASSOCIATE.request received, waiting for confirm
-        ONLINE
-    } data_state_ __TA_GUARDED(lock_) = OFFLINE;
+    void SetEthmacStatusLocked(bool online) __TA_REQUIRES(lock_);
+    void SetEthmacStatusUnlocked(bool online);
 
-    void SetDataStateLocked(data_states state) __TA_REQUIRES(lock_);
-    void SetDataStateUnlocked(data_states state);
+    bool protected_bss_ __TA_GUARDED(lock_) = false;
 
     bool eth_started_ __TA_GUARDED(lock_) = false;
     ethmac_ifc_t ethmac_ifc_ __TA_GUARDED(lock_);
