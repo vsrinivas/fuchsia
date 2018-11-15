@@ -613,6 +613,17 @@ void Device::MeshPeeringEstablished(wlan_mlme::MeshPeeringParams params) {
     errorf("MeshPeeringEstablished is not implemented\n");
 }
 
+void Device::SetControlledPort(wlan_mlme::SetControlledPortRequest req) {
+    switch (req.state) {
+    case wlan_mlme::ControlledPortState::OPEN:
+        SetDataStateUnlocked(ONLINE);
+        break;
+    case wlan_mlme::ControlledPortState::CLOSED:
+        SetDataStateUnlocked(OFFLINE);
+        break;
+    }
+}
+
 void Device::OnScanResult(wlanif_scan_result_t* result) {
     std::lock_guard<std::mutex> lock(lock_);
     if (!binding_.is_bound()) {

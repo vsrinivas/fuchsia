@@ -56,6 +56,7 @@ class Device : public wlan_mlme::MLME {
     void GetMinstrelStats(wlan_mlme::MinstrelStatsRequest req,
                           GetMinstrelStatsCallback cb) override;
     void SendMpOpenAction(wlan_mlme::MeshPeeringOpenAction req) override;
+    void SetControlledPort(wlan_mlme::SetControlledPortRequest req) override;
     void SendMpConfirmAction(wlan_mlme::MeshPeeringConfirmAction req) override;
     void MeshPeeringEstablished(wlan_mlme::MeshPeeringParams params) override;
 

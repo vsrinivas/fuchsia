@@ -933,12 +933,13 @@ interface MLME {
     0x1001: -> SignalReport(SignalReportIndication ind);
 
     0x1002: -> EapolInd(EapolIndication ind);
+    0x1003: SetControlledPort(SetControlledPortRequest req);
 
-    0x1003: QueryDeviceInfo() -> (DeviceInfo info);
+    0x1004: QueryDeviceInfo() -> (DeviceInfo info);
 
     0x1005: StatsQueryReq();
     0x1006: -> StatsQueryResp(StatsQueryResponse resp);
 
     0x1007: ListMinstrelPeers() -> (MinstrelListResponse resp);
-    0x1008 : GetMinstrelStats(MinstrelStatsRequest req) ->(MinstrelStatsResponse resp);
+    0x1008: GetMinstrelStats(MinstrelStatsRequest req) ->(MinstrelStatsResponse resp);
 };

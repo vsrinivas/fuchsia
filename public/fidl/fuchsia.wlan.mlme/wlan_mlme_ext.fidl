@@ -69,5 +69,17 @@ struct MinstrelStatsResponse {
     fuchsia.wlan.minstrel.Peer? peer;
 };
 
+// SET_CONTROLLED_PORT.request
+
+struct SetControlledPortRequest {
+    array<uint8>:6 peer_sta_address;
+    ControlledPortState state;
+};
+
+enum ControlledPortState {
+    CLOSED = 0;
+    OPEN = 1;
+};
+
 // Method ordinals are defined in wlan_mlme.fidl to prevent error prone overlaps with official
 // MLME primitives.
