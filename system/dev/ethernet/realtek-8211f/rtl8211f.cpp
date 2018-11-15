@@ -123,11 +123,11 @@ zx_status_t PhyDevice::Create(zx_device_t* device) {
         return status;
     }
 
-    eth_mac_config_phy_t cb;
-    cb.callback = PhyDevice::ConfigPhy;
+    eth_mac_callbacks_t cb;
+    cb.config_phy = PhyDevice::ConfigPhy;
     cb.ctx = phy_device.get();
 
-    eth_mac_register_callback(&phy_device->eth_mac_, &cb);
+    eth_mac_register_callbacks(&phy_device->eth_mac_, &cb);
     return status;
 }
 

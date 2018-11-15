@@ -79,7 +79,7 @@ int DWMacDevice::WorkerThread() {
     sync_completion_wait(&cb_registered_signal_, ZX_TIME_INFINITE);
 
     // Configure the phy.
-    config_phy_.callback(config_phy_.ctx, mac_);
+    cbs_.config_phy(cbs_.ctx, mac_);
 
     InitDevice();
 
@@ -239,14 +239,14 @@ zx_status_t DWMacDevice::Create(zx_device_t* device) {
         return reinterpret_cast<DWMacDevice*>(arg)->MDIORead(reg, val);
     };
 
-    auto register_cb_thunk = [](void* arg, const eth_mac_config_phy_t* cb) -> zx_status_t {
-        return reinterpret_cast<DWMacDevice*>(arg)->RegisterCallback(cb);
+    auto register_cb_thunk = [](void* arg, const eth_mac_callbacks_t* cb) -> zx_status_t {
+        return reinterpret_cast<DWMacDevice*>(arg)->RegisterCallbacks(cb);
     };
 
     static eth_mac_protocol_ops_t proto_ops = {
         .mdio_read = mdio_read_thunk,
         .mdio_write = mdio_write_thunk,
-        .register_callback = register_cb_thunk,
+        .register_callbacks = register_cb_thunk,
     }; // namespace eth
 
     // Populate board specific information
@@ -389,12 +389,12 @@ zx_status_t DWMacDevice::MDIORead(uint32_t reg, uint32_t* val) {
     return ZX_ERR_TIMED_OUT;
 }
 
-zx_status_t DWMacDevice::RegisterCallback(const eth_mac_config_phy_t* cb) {
-    if (cb == nullptr) {
+zx_status_t DWMacDevice::RegisterCallbacks(const eth_mac_callbacks_t* cbs) {
+    if (cbs == nullptr) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    config_phy_ = *cb;
+    cbs_ = *cbs;
 
     sync_completion_signal(&cb_registered_signal_);
     return ZX_OK;
