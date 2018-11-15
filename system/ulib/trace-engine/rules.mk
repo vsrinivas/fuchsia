@@ -39,6 +39,7 @@ MODULE_NAME := trace-engine-driver
 
 MODULE_TYPE := userlib
 MODULE_COMPILEFLAGS += -fvisibility=hidden
+MODULE_COMPILEFLAGS += -DDDK_TRACING
 
 # trace_generate_nonce() exists even when driver tracing is disabled
 MODULE_SRCS := \

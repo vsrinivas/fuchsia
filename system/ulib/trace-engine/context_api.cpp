@@ -563,7 +563,7 @@ __EXPORT bool trace_context_is_category_enabled(
     return trace::RegisterString(context, category_literal, true, nullptr);
 }
 
-__EXPORT void trace_context_register_string_copy(
+EXPORT_NO_DDK void trace_context_register_string_copy(
     trace_context_t* context,
     const char* string, size_t length,
     trace_string_ref_t* out_ref) {
@@ -592,7 +592,7 @@ __EXPORT void trace_context_register_string_literal(
     ZX_DEBUG_ASSERT(result);
 }
 
-__EXPORT bool trace_context_register_category_literal(
+EXPORT_NO_DDK bool trace_context_register_category_literal(
     trace_context_t* context,
     const char* category_literal,
     trace_string_ref_t* out_ref) {
@@ -643,7 +643,7 @@ __EXPORT void trace_context_register_current_thread(
                                   out_ref);
 }
 
-__EXPORT void trace_context_register_thread(
+EXPORT_NO_DDK void trace_context_register_thread(
     trace_context_t* context,
     zx_koid_t process_koid, zx_koid_t thread_koid,
     trace_thread_ref_t* out_ref) {
@@ -754,7 +754,7 @@ __EXPORT void trace_context_write_blob_record(
     }
 }
 
-__EXPORT void trace_context_write_kernel_object_record(
+EXPORT_NO_DDK void trace_context_write_kernel_object_record(
     trace_context_t* context,
     bool use_durable,
     zx_koid_t koid, zx_obj_type_t type,
@@ -778,7 +778,7 @@ __EXPORT void trace_context_write_kernel_object_record(
     }
 }
 
-__EXPORT void trace_context_write_kernel_object_record_for_handle(
+EXPORT_NO_DDK void trace_context_write_kernel_object_record_for_handle(
     trace_context_t* context,
     zx_handle_t handle,
     const trace_arg_t* args, size_t num_args) {
@@ -810,7 +810,7 @@ __EXPORT void trace_context_write_kernel_object_record_for_handle(
     }
 }
 
-__EXPORT void trace_context_write_process_info_record(
+EXPORT_NO_DDK void trace_context_write_process_info_record(
     trace_context_t* context,
     zx_koid_t process_koid,
     const trace_string_ref_t* process_name_ref) {
@@ -819,7 +819,7 @@ __EXPORT void trace_context_write_process_info_record(
                                              process_name_ref, nullptr, 0u);
 }
 
-__EXPORT void trace_context_write_thread_info_record(
+EXPORT_NO_DDK void trace_context_write_thread_info_record(
     trace_context_t* context,
     zx_koid_t process_koid,
     zx_koid_t thread_koid,
@@ -835,7 +835,7 @@ __EXPORT void trace_context_write_thread_info_record(
                                              thread_name_ref, &arg, 1u);
 }
 
-__EXPORT void trace_context_write_context_switch_record(
+EXPORT_NO_DDK void trace_context_write_context_switch_record(
     trace_context_t* context,
     trace_ticks_t event_time,
     trace_cpu_number_t cpu_number,
@@ -869,7 +869,7 @@ __EXPORT void trace_context_write_context_switch_record(
     }
 }
 
-__EXPORT void trace_context_write_log_record(
+EXPORT_NO_DDK void trace_context_write_log_record(
     trace_context_t* context,
     trace_ticks_t event_time,
     const trace_thread_ref_t* thread_ref,
@@ -1085,7 +1085,7 @@ __EXPORT void trace_context_write_flow_end_event_record(
 }
 
 // TODO(dje): Move data to header?
-__EXPORT void trace_context_write_initialization_record(
+EXPORT_NO_DDK void trace_context_write_initialization_record(
     trace_context_t* context,
     zx_ticks_t ticks_per_second) {
     const size_t record_size = sizeof(trace::RecordHeader) +
@@ -1098,7 +1098,7 @@ __EXPORT void trace_context_write_initialization_record(
     }
 }
 
-__EXPORT void trace_context_write_string_record(
+EXPORT_NO_DDK void trace_context_write_string_record(
     trace_context_t* context,
     trace_string_index_t index, const char* string, size_t length) {
     if (unlikely(!trace::WriteStringRecord(context, false, index,
@@ -1107,7 +1107,7 @@ __EXPORT void trace_context_write_string_record(
     }
 }
 
-__EXPORT void trace_context_write_thread_record(
+EXPORT_NO_DDK void trace_context_write_thread_record(
     trace_context_t* context,
     trace_thread_index_t index,
     zx_koid_t process_koid,
@@ -1118,11 +1118,11 @@ __EXPORT void trace_context_write_thread_record(
     }
 }
 
-__EXPORT void* trace_context_alloc_record(trace_context_t* context, size_t num_bytes) {
+EXPORT_NO_DDK void* trace_context_alloc_record(trace_context_t* context, size_t num_bytes) {
     return context->AllocRecord(num_bytes);
 }
 
-__EXPORT void trace_context_snapshot_buffer_header(
+EXPORT_NO_DDK void trace_context_snapshot_buffer_header(
     trace_prolonged_context_t* context,
     ::trace::internal::trace_buffer_header* header) {
     auto ctx = reinterpret_cast<trace_context_t*>(context);

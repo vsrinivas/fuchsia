@@ -35,10 +35,13 @@ EXTERN(trace_context_write_instant_event_record)
 
 /* Misc. */
 EXTERN(trace_generate_nonce)
+EXTERN(trace_state)
 EXTERN(trace_is_category_enabled)
 EXTERN(trace_context_is_category_enabled)
 EXTERN(trace_context_begin_write_blob_record)
 EXTERN(trace_context_write_blob_record)
+EXTERN(trace_context_register_current_thread)
+EXTERN(trace_context_register_string_literal)
 EXTERN(trace_context_register_vthread)
 
 /* The observer API. */

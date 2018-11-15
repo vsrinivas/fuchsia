@@ -164,11 +164,10 @@ void notify_engine_all_observers_started_if_needed_locked() __TA_REQUIRES(g_engi
 /*** Trace engine functions ***/
 
 // thread-safe
-__EXPORT zx_status_t trace_start_engine(async_dispatcher_t* dispatcher,
-                                        trace_handler_t* handler,
-                                        trace_buffering_mode_t buffering_mode,
-                                        void* buffer,
-                                        size_t buffer_num_bytes) {
+EXPORT_NO_DDK zx_status_t trace_start_engine(
+        async_dispatcher_t* dispatcher, trace_handler_t* handler,
+        trace_buffering_mode_t buffering_mode,
+        void* buffer, size_t buffer_num_bytes) {
     ZX_DEBUG_ASSERT(dispatcher);
     ZX_DEBUG_ASSERT(handler);
     ZX_DEBUG_ASSERT(buffer);
@@ -245,7 +244,7 @@ __EXPORT zx_status_t trace_start_engine(async_dispatcher_t* dispatcher,
 }
 
 // thread-safe
-__EXPORT zx_status_t trace_stop_engine(zx_status_t disposition) {
+EXPORT_NO_DDK zx_status_t trace_stop_engine(zx_status_t disposition) {
     fbl::AutoLock lock(&g_engine_mutex);
 
     // We must have have an active trace in order to stop it.
@@ -302,8 +301,8 @@ void trace_engine_request_save_buffer(uint32_t wrapped_count,
 // |wrapped_count| and |durable_end| are the values that were passed to it,
 // and are passed back to us for sanity checking purposes.
 // thread-safe
-__EXPORT zx_status_t trace_engine_mark_buffer_saved(uint32_t wrapped_count,
-                                                    uint64_t durable_data_end) {
+EXPORT_NO_DDK zx_status_t trace_engine_mark_buffer_saved(
+        uint32_t wrapped_count, uint64_t durable_data_end) {
     auto context = trace_acquire_prolonged_context();
 
     // No point in updating if there's no active trace.
@@ -481,8 +480,8 @@ __EXPORT trace_context_t* trace_acquire_context() {
     return g_context;
 }
 
-__EXPORT trace_context_t* trace_acquire_context_for_category(const char* category_literal,
-                                                             trace_string_ref_t* out_ref) {
+__EXPORT trace_context_t* trace_acquire_context_for_category(
+        const char* category_literal, trace_string_ref_t* out_ref) {
     // This is marked likely because tracing is usually disabled and we want
     // to return as quickly as possible from this function.
     trace_context_t* context = trace_acquire_context();
@@ -514,7 +513,7 @@ __EXPORT void trace_release_context(trace_context_t* context) {
 }
 
 // thread-safe, fail-fast, lock-free
-__EXPORT trace_prolonged_context_t* trace_acquire_prolonged_context() {
+EXPORT_NO_DDK trace_prolonged_context_t* trace_acquire_prolonged_context() {
     // There's no need for extreme efficiency here, but for consistency with
     // |trace_acquire_context()| we copy what it does.
     uint32_t count = g_context_refs.load(fbl::memory_order_relaxed);
@@ -539,7 +538,7 @@ __EXPORT trace_prolonged_context_t* trace_acquire_prolonged_context() {
 }
 
 // thread-safe, never-fail, lock-free
-__EXPORT void trace_release_prolonged_context(trace_prolonged_context_t* context) {
+EXPORT_NO_DDK void trace_release_prolonged_context(trace_prolonged_context_t* context) {
     auto tcontext = reinterpret_cast<trace_context_t*>(context);
     ZX_DEBUG_ASSERT(tcontext == g_context);
     ZX_DEBUG_ASSERT(get_prolonged_context_refs(g_context_refs.load(fbl::memory_order_relaxed)) != 0u);

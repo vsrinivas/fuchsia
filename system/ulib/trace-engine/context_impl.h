@@ -13,6 +13,15 @@
 #include <trace-engine/context.h>
 #include <trace-engine/handler.h>
 
+// Not all API routines are exported to the DDK.
+// Routines that are always exported use __EXPORT.
+// Routines that are not exported to the DDK use EXPORT_NO_DDK.
+#ifdef DDK_TRACING
+#define EXPORT_NO_DDK
+#else
+#define EXPORT_NO_DDK __EXPORT
+#endif
+
 using trace::internal::trace_buffer_header;
 
 // Return true if there are no buffer acquisitions of the trace context.
