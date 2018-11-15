@@ -37,9 +37,24 @@
 ##   --product             Include the listed product in the build. Defaults to
 ##                         the default product for the current layer (e.g.,
 ##                         "garnet/packages/default.gni" for the Garnet layer).
-##   --packages            Additional packages to be built and made available.
-##                         If the --packages argument is given multiple times,
-##                         all the specified packages are included in the build.
+##   --available           Additional packages to be built and included in the
+##                         set of packages available for pushing dynamically.
+##                         If the --available argument is given multiple times,
+##                         all the specified available are included in this set.
+##                         These packages are added to the available set defined
+##                         by the board and product specifications.
+##   --preinstall          Additional packages to be built and included in the
+##                         system image alongside the monolithic system image.
+##                         If the --preinstall argument is given multiple times,
+##                         all the specified packages are included in this set.
+##                         These packages are added to the available set defined
+##                         by the board and product specifications.
+##   --monolith            Additional packages to be built and included in the
+##                         monolithic system image.
+##                         If the --monolith argument is given multiple times,
+##                         all the specified packages are included in this set.
+##                         These packages are added to the available set defined
+##                         by the board and product specifications.
 ##   --variant             Pass a `select_variant=[VARIANT*,...]` GN build argument
 ##                         collecting all the --variant arguments in order.
 ##   --fuzz-with           Pass a sanitizer name, e.g. "--fuzz-with asan" to
@@ -98,6 +113,12 @@
 ##                         This flag is deprecated, please use exactly one
 ##                         --product and specify packages to add in addition to
 ##                         the product with --packages.
+##   --packages            Additional packages to be built and made available.
+##                         If the --packages argument is given multiple times,
+##                         all the specified packages are included in the
+##                         build.
+##                         This flag is deprecated, please use one of
+##                         --available, --preinstall, or --monolith.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 
@@ -132,6 +153,9 @@ function main {
   local gn_args="target_cpu=\"${arch}\""
   local boards=()
   local products=()
+  local available=()
+  local preinstall=()
+  local monolith=()
   local packages=()
   local zircon_args=()
   local extra_packages=()
@@ -157,6 +181,30 @@ function main {
           return 1
         fi
         products+=("$2")
+        shift
+        ;;
+      --available)
+        if [[ $# -lt 2 ]]; then
+          fx-command-help
+          return 1
+        fi
+        IFS=, available+=("$2")
+        shift
+        ;;
+      --preinstall)
+        if [[ $# -lt 2 ]]; then
+          fx-command-help
+          return 1
+        fi
+        IFS=, preinstall+=("$2")
+        shift
+        ;;
+      --monolith)
+        if [[ $# -lt 2 ]]; then
+          fx-command-help
+          return 1
+        fi
+        IFS=, monolith+=("$2")
         shift
         ;;
       --boards)
@@ -388,6 +436,20 @@ function main {
     gn_args+=" fuchsia_packages+=["
   fi
   for package in ${packages[@]} ${extra_packages[@]}; do
+    gn_args+="\"${package}\","
+  done
+  gn_args+="]"
+
+  gn_args+=" available+=["
+  for package in ${available[@]}; do
+    gn_args+="\"${package}\","
+  done
+  gn_args+="] preinstall+=["
+  for package in ${preinstall[@]}; do
+    gn_args+="\"${package}\","
+  done
+  gn_args+="] monolith+=["
+  for package in ${monolith[@]}; do
     gn_args+="\"${package}\","
   done
   gn_args+="]"
