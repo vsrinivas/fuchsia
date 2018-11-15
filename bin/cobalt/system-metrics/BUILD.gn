@@ -24,7 +24,6 @@ executable("system-metrics") {
 
 metrics_registry("cobalt_system_metrics_registry") {
   project_id = 102
-  use_target_name = true
 }
 
 package("cobalt_system_metrics") {

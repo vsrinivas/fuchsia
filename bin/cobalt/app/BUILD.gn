@@ -12,7 +12,6 @@ metrics_registry("cobalt_internal_metrics_registry") {
   # cobalt_internal customer
   customer_id = 2147483647
   project_name = "metrics"
-  use_target_name = true
 }
 
 source_set("lib") {

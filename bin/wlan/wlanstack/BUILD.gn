@@ -10,7 +10,6 @@ metrics_registry("wlan_metrics_registry") {
   # This ID must match the Cobalt config from
   # //third_party/cobalt_config/projects.yaml
   project_id = 106
-  use_target_name = true
 }
 
 rustc_binary("bin") {
