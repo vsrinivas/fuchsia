@@ -158,6 +158,8 @@ zx_status_t read_unified_zbi(const std::string& zbi_path,
     container_hdr->length += ZBI_ALIGN(items_len);
   }
 
+  // On arm64, the kernel is relocatable so the entry point must be offset by
+  // kKernelOffset. On x64, the entry point is absolute.
 #if __aarch64__
   *guest_ip = kernel_hdr->data_kernel.entry + kKernelOffset;
 #elif __x86_64__
@@ -167,11 +169,10 @@ zx_status_t read_unified_zbi(const std::string& zbi_path,
   return ZX_OK;
 }
 
-static zx_status_t build_data_zbi(const GuestConfig& cfg,
-                                  const machina::PhysMem& phys_mem,
-                                  const machina::DevMem& dev_mem,
-                                  const std::vector<machina::PlatformDevice*>& devices,
-                                  uintptr_t zbi_off) {
+static zx_status_t build_data_zbi(
+    const GuestConfig& cfg, const machina::PhysMem& phys_mem,
+    const machina::DevMem& dev_mem,
+    const std::vector<machina::PlatformDevice*>& devices, uintptr_t zbi_off) {
   auto container_hdr = phys_mem.as<zbi_header_t>(zbi_off);
   const size_t zbi_max = phys_mem.size() - zbi_off;
 
@@ -205,19 +206,20 @@ static zx_status_t build_data_zbi(const GuestConfig& cfg,
   // Memory config.
   std::vector<zbi_mem_range_t> mem_config;
 
-  dev_mem.YieldInverseRange(0, cfg.memory(), [&mem_config](auto range){
+  dev_mem.YieldInverseRange(0, cfg.memory(), [&mem_config](auto range) {
     mem_config.emplace_back(zbi_mem_range_t{
-      .paddr = range.addr,
-      .length = range.size,
-      .type = ZBI_MEM_RANGE_RAM,
+        .paddr = range.addr,
+        .length = range.size,
+        .type = ZBI_MEM_RANGE_RAM,
     });
   });
 
   // Zircon only supports a limited number of peripheral ranges so for any
   // dev_mem ranges that are not in the RAM range we will build a single
   // peripheral range to cover all of them.
-  zbi_mem_range_t periph_range = {.paddr = 0, .length = 0, .type = ZBI_MEM_RANGE_PERIPHERAL};
-  for (const auto& range: dev_mem) {
+  zbi_mem_range_t periph_range = {
+      .paddr = 0, .length = 0, .type = ZBI_MEM_RANGE_PERIPHERAL};
+  for (const auto& range : dev_mem) {
     if (range.addr < cfg.memory()) {
       mem_config.emplace_back(zbi_mem_range_t{
           .paddr = range.addr,
@@ -296,7 +298,7 @@ zx_status_t setup_zircon(const GuestConfig& cfg,
                          const machina::DevMem& dev_mem,
                          const std::vector<machina::PlatformDevice*>& devices,
                          uintptr_t* guest_ip, uintptr_t* boot_ptr) {
-zx_status_t status = read_unified_zbi(cfg.kernel_path(), kKernelOffset,
+  zx_status_t status = read_unified_zbi(cfg.kernel_path(), kKernelOffset,
                                         kRamdiskOffset, phys_mem, guest_ip);
 
   if (status != ZX_OK) {
