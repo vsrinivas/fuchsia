@@ -523,17 +523,6 @@ syscall futex_get_owner
     (value_ptr: zx_futex_t[1] IN, koid: zx_koid_t[1] OUT)
     returns (zx_status_t);
 
-#! None.
-syscall futex_wait_deprecated blocking
-    (value_ptr: zx_futex_t[1] IN, current_value: int32_t, deadline: zx_time_t)
-    returns (zx_status_t);
-
-#! None.
-syscall futex_requeue_deprecated
-    (wake_ptr: zx_futex_t[1] IN, wake_count: uint32_t, current_value: int32_t,
-        requeue_ptr: zx_futex_t[1] IN, requeue_count: uint32_t)
-    returns (zx_status_t);
-
 # Ports
 
 #^ Create an IO port.

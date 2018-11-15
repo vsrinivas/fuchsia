@@ -78,17 +78,3 @@ zx_status_t sys_futex_get_owner(user_in_ptr<const zx_futex_t> value_ptr,
     LTRACEF("futex %p\n", value_ptr.get());
     return ProcessDispatcher::GetCurrent()->futex_context()->FutexGetOwner(value_ptr, koid);
 }
-
-// zx_status_t zx_futex_wait_deprecated
-zx_status_t sys_futex_wait_deprecated(
-        user_in_ptr<const zx_futex_t> value_ptr, int32_t current_value, zx_time_t deadline) {
-    return sys_futex_wait(value_ptr, current_value, ZX_HANDLE_INVALID, deadline);
-}
-
-// zx_status_t zx_futex_requeue_deprecated
-zx_status_t sys_futex_requeue_deprecated(
-        user_in_ptr<const zx_futex_t> wake_ptr, uint32_t wake_count, int32_t current_value,
-        user_in_ptr<const zx_futex_t> requeue_ptr, uint32_t requeue_count) {
-    return sys_futex_requeue(wake_ptr, wake_count, current_value,
-                             requeue_ptr, requeue_count, ZX_HANDLE_INVALID);
-}
