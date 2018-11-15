@@ -51,6 +51,16 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
       fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
       CreateLoggerCallback callback) {}
 
+  void CreateLoggerFromProjectId(
+      uint32_t project_id, fuchsia::cobalt::ReleaseStage stage,
+      fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
+      CreateLoggerFromProjectNameCallback callback) {}
+
+  void CreateLoggerSimpleFromProjectId(
+      uint32_t project_id, fuchsia::cobalt::ReleaseStage stage,
+      fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
+      CreateLoggerSimpleFromProjectNameCallback callback) {}
+
   encoder::ClientSecret client_secret_;
   fidl::BindingSet<fuchsia::cobalt::Logger,
                    std::unique_ptr<fuchsia::cobalt::Logger>>

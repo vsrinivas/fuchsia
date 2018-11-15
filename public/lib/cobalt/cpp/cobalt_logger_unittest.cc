@@ -275,12 +275,22 @@ class FakeLoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   void CreateLoggerFromProjectName(
       fidl::StringPtr project_name, fuchsia::cobalt::ReleaseStage stage,
       fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
-      CreateLoggerCallback callback) {}
+      CreateLoggerFromProjectNameCallback callback) /* override */ {}
 
   void CreateLoggerSimpleFromProjectName(
       fidl::StringPtr project_name, fuchsia::cobalt::ReleaseStage stage,
       fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
-      CreateLoggerCallback callback) {}
+      CreateLoggerSimpleFromProjectNameCallback callback) /* override */ {}
+
+  void CreateLoggerFromProjectId(
+      uint32_t project_id, fuchsia::cobalt::ReleaseStage stage,
+      fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
+      CreateLoggerFromProjectNameCallback callback) /* override */ {}
+
+  void CreateLoggerSimpleFromProjectId(
+      uint32_t project_id, fuchsia::cobalt::ReleaseStage stage,
+      fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
+      CreateLoggerSimpleFromProjectNameCallback callback) /* override */ {}
 
   FakeLoggerImpl* logger() { return logger_.get(); }
 
