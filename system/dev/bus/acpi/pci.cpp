@@ -362,10 +362,14 @@ zx_status_t pci_init(zx_device_t* parent,
     // ACPI names are stored as 4 bytes in a u32
     memcpy(dev_ctx->name, &info->Name, 4);
 
-    status = acpi_bbn_call(object, &dev_ctx->info.base_bus_number);
+    status = acpi_bbn_call(object, &dev_ctx->info.start_bus_num);
     if (status != ZX_OK && status != ZX_ERR_NOT_FOUND) {
         zxlogf(TRACE, "%s Unable to read _BBN for '%s' (%d), assuming base bus of 0\n",
                kLogTag, dev_ctx->name, status);
+
+        // Until we find an ecam we assume this potential legacy pci bus spans
+        // bus 0 to bus 255 in its segment group.
+        dev_ctx->info.end_bus_num = 255;
     }
     bool found_bbn = (status == ZX_OK);
 
@@ -379,52 +383,46 @@ zx_status_t pci_init(zx_device_t* parent,
     // If an MCFG is found for the given segment group this root has then we'll
     // cache it for later pciroot operations and use its information to populate
     // any fields missing via _BBN / _SEG.
+    auto& pinfo = dev_ctx->info;
     pci_mcfg_allocation_t mcfg_alloc;
     status = pci_get_segment_mcfg_alloc(dev_ctx->info.segment_group, &mcfg_alloc);
     if (status == ZX_OK) {
-        auto& ecam = dev_ctx->info.ecam;
-        ecam.base_address = mcfg_alloc.base_address;
-        ecam.segment_group = mcfg_alloc.segment_group;
-        ecam.start_bus_num = mcfg_alloc.start_bus_num;
-        ecam.end_bus_num = mcfg_alloc.end_bus_num;
-        dev_ctx->info.has_ecam = true;
+        // Do the bus values make sense?
+        if (found_bbn && mcfg_alloc.start_bus_num != pinfo.start_bus_num) {
+            zxlogf(ERROR,
+                   "%s: conflicting base bus num for '%s', _BBN reports %u and MCFG reports %u\n",
+                   kLogTag, dev_ctx->name, pinfo.start_bus_num, mcfg_alloc.start_bus_num);
+        }
+
+        // Do the segment values make sense?
+        if (pinfo.segment_group != 0 && pinfo.segment_group != mcfg_alloc.segment_group) {
+            zxlogf(ERROR,
+                   "%s: conflicting segment group for '%s', _BBN reports %u and MCFG reports %u\n",
+                   kLogTag, dev_ctx->name, pinfo.segment_group, mcfg_alloc.segment_group);
+        }
+
+        // Since we have an ecam its metadata will replace anything defined in the ACPI tables.
+        pinfo.segment_group = mcfg_alloc.segment_group;
+        pinfo.start_bus_num = mcfg_alloc.start_bus_num;
+        pinfo.end_bus_num = mcfg_alloc.end_bus_num;
 
         // The bus driver needs a VMO representing the entire ecam region so it can map it in
-        size_t ecam_size = (ecam.end_bus_num - ecam.start_bus_num) * PCIE_ECAM_BYTES_PER_BUS;
-        status = zx_vmo_create_physical(get_root_resource(), ecam.base_address, ecam_size,
-                                        &ecam.vmo_handle);
+        size_t ecam_size = (pinfo.end_bus_num - pinfo.start_bus_num) * PCIE_ECAM_BYTES_PER_BUS;
+        zx_paddr_t vmo_base = mcfg_alloc.base_address +
+                              (pinfo.start_bus_num * PCIE_ECAM_BYTES_PER_BUS);
+        status = zx_vmo_create_physical(get_root_resource(), vmo_base, ecam_size, &pinfo.ecam_vmo);
         if (status != ZX_OK) {
             zxlogf(ERROR, "couldn't create VMO for ecam, mmio cfg will not work: %d!\n", status);
             return status;
         }
-
-        // Default to configuration in the mcfg allocation if we didn't find a _BBN entry
-        if (!found_bbn) {
-            dev_ctx->info.base_bus_number = mcfg_alloc.start_bus_num;
-        }
-
-        if (dev_ctx->info.segment_group != 0 &&
-            dev_ctx->info.segment_group != mcfg_alloc.segment_group) {
-            zxlogf(ERROR,
-                   "%s: conflicting segment group for '%s', _BBN reports %u and MCFG reports %u\n",
-                   kLogTag, dev_ctx->name, dev_ctx->info.segment_group, mcfg_alloc.segment_group);
-        }
-    }
-
-    if (!found_bbn && !dev_ctx->info.has_ecam) {
-        zxlogf(ERROR, "%s '%s' had no _BBN or ECAM, this may reflect a configuration error!",
-               kLogTag, dev_ctx->name);
     }
 
     if (zxlog_level_enabled(TRACE)) {
-        auto& pi = dev_ctx->info;
-        printf("%s %s { acpi_obj(%p), bbn(%u), seg(%u), ecam(%u) }\n", kLogTag,
-               dev_ctx->name, dev_ctx->acpi_object, pi.base_bus_number, pi.segment_group,
-               pi.has_ecam);
-        if (pi.has_ecam) {
-            printf("%s ecam { base(%#" PRIxPTR "), segment(%u), start_bus(%u), end_bus(%u) }\n",
-                   kLogTag, pi.ecam.base_address, pi.ecam.segment_group, pi.ecam.start_bus_num,
-                   pi.ecam.end_bus_num);
+        printf("%s %s { acpi_obj(%p), bus range: %u:%u, segment: %u }\n", kLogTag,
+               dev_ctx->name, dev_ctx->acpi_object, pinfo.start_bus_num, pinfo.end_bus_num,
+               pinfo.segment_group);
+        if (pinfo.ecam_vmo != ZX_HANDLE_INVALID) {
+            printf("%s ecam base %#" PRIxPTR "\n", kLogTag, mcfg_alloc.base_address);
         }
     }
 
@@ -445,7 +443,7 @@ zx_status_t pci_init(zx_device_t* parent,
     // after device_add in the event that unbind/release are called from the DDK. See
     // the below TODO for more information.
     char name[5];
-    uint8_t last_pci_bbn = dev_ctx->info.base_bus_number;
+    uint8_t last_pci_bbn = dev_ctx->info.start_bus_num;
     memcpy(name, dev_ctx->name, sizeof(name));
 
     status = device_add(parent, &args, &dev_ctx->zxdev);

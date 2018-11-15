@@ -147,7 +147,7 @@ protected:
 // ecam and can be directly accessed with standard IO operations.t
 class MmioConfig final : public Config {
 public:
-    static fbl::RefPtr<Config> Create(pci_bdf_t bdf, void* base);
+    static fbl::RefPtr<Config> Create(pci_bdf_t bdf, void* ecam_base, uint8_t bus_base);
     uint8_t Read(const PciReg8 addr) const final;
     uint16_t Read(const PciReg16 addr) const final;
     uint32_t Read(const PciReg32 addr) const final;

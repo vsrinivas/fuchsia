@@ -56,15 +56,18 @@ constexpr PciReg32 Config::kBridgeExpansionRomAddress;
 constexpr PciReg16 Config::kBridgeControl;
 
 // MMIO Config Implementation
-fbl::RefPtr<Config> MmioConfig::Create(pci_bdf_t bdf, void* ecam_base) {
+fbl::RefPtr<Config> MmioConfig::Create(pci_bdf_t bdf, void* ecam_base, uint8_t bus_base) {
+    ZX_DEBUG_ASSERT(bus_base <= bdf.bus_id);
     ZX_DEBUG_ASSERT(bdf.device_id < PCI_MAX_DEVICES_PER_BUS);
     ZX_DEBUG_ASSERT(bdf.function_id < PCI_MAX_FUNCTIONS_PER_DEVICE);
 
+    zx_paddr_t bdf_start = reinterpret_cast<zx_paddr_t>(ecam_base);
     // Find the offset into the ecam region for the given bdf address. Every bus
     // has 32 devices, every device has 8 functions, and each function has an
-    // extended config space of 4096 bytes.
-    zx_paddr_t bdf_start = reinterpret_cast<zx_paddr_t>(ecam_base);
-    bdf_start += bdf.bus_id * PCIE_ECAM_BYTES_PER_BUS;
+    // extended config space of 4096 bytes. The base address of the vmo provided
+    // to the bus driver corresponds to the start_bus_num, so offset the bdf address
+    // based on the bottom of our ecam.
+    bdf_start += (bdf.bus_id - bus_base) * PCIE_ECAM_BYTES_PER_BUS;
     bdf_start += bdf.device_id * PCI_MAX_FUNCTIONS_PER_DEVICE * PCIE_EXTENDED_CONFIG_SIZE;
     bdf_start += bdf.function_id * PCIE_EXTENDED_CONFIG_SIZE;
 

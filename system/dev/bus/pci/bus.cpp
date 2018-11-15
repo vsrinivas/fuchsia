@@ -36,22 +36,37 @@ zx_status_t Bus::Create(zx_device_t* parent) {
         return status;
     }
 
-    return bus->DdkAdd("pci");
+    // Grab the info beforehand so we can get segment/bus information from it
+    // and appropriately name our DDK device.
+    pci_platform_info_t info;
+    status = bus->GetPciPlatformInfo(&info);
+    if (status != ZX_OK) {
+        pci_errorf("failed to obtain platform information: %d!\n", status);
+        return status;
+    }
+
+    // Name the bus instance with segment group and bus range, for example:
+    // pci[0][0:255] for a legacy pci bus in segment group 0.
+    char name[32];
+    snprintf(name, sizeof(name), "pci[%u][%u:%u]", info.segment_group, info.start_bus_num,
+             info.end_bus_num);
+
+    return bus->DdkAdd(name);
 }
 
 // Maps a vmo as an mmio_buffer to be used as this Bus driver's ECAM region
 // for config space access.
 zx_status_t Bus::MapEcam(void) {
-    ZX_DEBUG_ASSERT(info_.has_ecam);
+    ZX_DEBUG_ASSERT(info_.ecam_vmo != ZX_HANDLE_INVALID);
 
     size_t size;
-    zx_status_t status = zx_vmo_get_size(info_.ecam.vmo_handle, &size);
+    zx_status_t status = zx_vmo_get_size(info_.ecam_vmo, &size);
     if (status != ZX_OK) {
         pci_errorf("couldn't get ecam vmo size: %d!\n", status);
         return status;
     }
 
-    status = mmio_buffer_init(&ecam_, 0, size, info_.ecam.vmo_handle, ZX_CACHE_POLICY_UNCACHED);
+    status = mmio_buffer_init(&ecam_, 0, size, info_.ecam_vmo, ZX_CACHE_POLICY_UNCACHED);
     if (status != ZX_OK) {
         pci_errorf("couldn't map ecam vmo: %d!\n", status);
         return status;
@@ -66,8 +81,6 @@ zx_status_t Bus::Initialize() {
     // Temporarily dump the config of bdf 00:00.0 to show proxy config
     // is working properly.
     pci_bdf_t bdf = {0, 0, 0};
-    pciroot_protocol_t proto = {};
-    GetProto(&proto);
 
     zx_status_t status = GetPciPlatformInfo(&info_);
     if (status != ZX_OK) {
@@ -75,20 +88,25 @@ zx_status_t Bus::Initialize() {
         return status;
     }
 
-    if (info_.has_ecam) {
-        MapEcam();
-    }
+    if (info_.ecam_vmo != ZX_HANDLE_INVALID) {
+        if ((status = MapEcam()) != ZX_OK) {
+            return status;
+        }
 
-    auto cfg = MmioConfig::Create(bdf, ecam_.vaddr);
-    if (cfg) {
-        cfg->DumpConfig(PCI_BASE_CONFIG_SIZE);
+        // Temporary code to demonstrate MMIO works
+        auto cfg = MmioConfig::Create(bdf, ecam_.vaddr, info_.start_bus_num);
+        if (cfg) {
+            cfg->DumpConfig(PCI_BASE_CONFIG_SIZE);
+        }
+    } else {
+        pci_errorf("couldn't find vmo for ecam!\n");
     }
 
     return ZX_OK;
 }
 
 void Bus::DdkRelease() {
-    if (info_.has_ecam) {
+    if (ecam_.vaddr) {
         mmio_buffer_release(&ecam_);
     }
     delete this;
