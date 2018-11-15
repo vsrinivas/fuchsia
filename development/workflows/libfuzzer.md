@@ -257,7 +257,7 @@ __IMPORTANT__: The build system will build the fuzz targets __only__ if it is ex
 instrument them for fuzzing with an appropriate sanitizer.  The easiest way to achieve this is using
 the `--fuzz-with <sanitizer>` flag with `fx set`, e.g:
 ```
-$ fx set --fuzz-with asan --packages garnet/packages/tests/all
+$ fx set x64 --fuzz-with asan --packages garnet/packages/tests/all
 $ fx full-build
 ```
 
