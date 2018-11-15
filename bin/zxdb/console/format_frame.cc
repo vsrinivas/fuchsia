@@ -118,8 +118,8 @@ void FormatFrameLong(const Frame* frame, FormatValue* out,
                         ", SP = 0x%" PRIx64,
                         frame->GetAddress(), bp, frame->GetStackPointer())));
 
-  if (location.function()) {
-    const Function* func = location.function().Get()->AsFunction();
+  if (location.symbol()) {
+    const Function* func = location.symbol().Get()->AsFunction();
     if (func) {
       // Always list function parameters in the order specified.
       for (const auto& param : func->parameters()) {

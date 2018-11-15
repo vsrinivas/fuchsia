@@ -27,6 +27,7 @@ class Binary;
 namespace zxdb {
 
 class DwarfSymbolFactory;
+class Variable;
 
 // Represents the symbols for a module (executable or shared library).
 //
@@ -68,7 +69,7 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   std::vector<Location> ResolveLineInputLocation(
       const SymbolContext& symbol_context, const InputLocation& input_location,
       const ResolveOptions& options) const;
-  std::vector<Location> ResolveFunctionInputLocation(
+  std::vector<Location> ResolveSymbolInputLocation(
       const SymbolContext& symbol_context, const InputLocation& input_location,
       const ResolveOptions& options) const;
   std::vector<Location> ResolveAddressInputLocation(
@@ -78,6 +79,12 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   // Symbolizes the given address if possible.
   Location LocationForAddress(const SymbolContext& symbol_context,
                               uint64_t absolute_address) const;
+
+  // Converts the given global or static variable to a Location. This doesn't
+  // work for local variables which are dynamic and based on the current CPU
+  // state and stack.
+  Location LocationForVariable(const SymbolContext& symbol_context,
+                               fxl::RefPtr<Variable> variable) const;
 
   // Resolves the line number information for the given file, which must be an
   // exact match. This is a helper function for ResolveLineInputLocation().

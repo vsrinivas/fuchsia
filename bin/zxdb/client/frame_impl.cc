@@ -106,13 +106,13 @@ bool FrameImpl::EnsureBasePointer() {
   }
 
   const Location& loc = GetLocation();
-  if (!loc.function()) {
+  if (!loc.symbol()) {
     // Unsymbolized.
     computed_base_pointer_ = stack_frame_.bp;
     return true;
   }
 
-  const Function* function = loc.function().Get()->AsFunction();
+  const Function* function = loc.symbol().Get()->AsFunction();
   const VariableLocation::Entry* location_entry = nullptr;
   if (!function ||
       !(location_entry = function->frame_base().EntryForIP(loc.symbol_context(),

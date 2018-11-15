@@ -24,13 +24,44 @@ class Location {
   //
   // The "symbolized" state doesn't necessarily mean there are symbols, it
   // just means we tried to symbolize it.
-  enum class State { kInvalid, kAddress, kSymbolized };
+  enum class State {
+    // There is no address or data for this location.
+    kInvalid,
+
+    // There is an address for this location but we haven't tried to symbolize
+    // it.
+    kAddress,
+
+    // There is an address for the location and we tried to symbolize it. This
+    // doesn't mean that symbolization succeeded, so the symbol() and file/line
+    // could still be empty.
+    kSymbolized,
+
+    // The symbol corresponds to a Variable, but its location has not been
+    // computed so it will have a null address.
+    //
+    // Some global variables actually need to be evaluated asynchronously
+    // based on the current CPU state. For example, TLS values are located
+    // relative to the CPU register that indicates the TLS base. When
+    // resolving a symbolic name, we can encounter these which can't be
+    // evaluated in the global context of the synbol system.
+    //
+    // Currently these aren't handled in most places. But if a caller is in a
+    // position to evaluate this it can fill out the address from the symbol.
+    kUnlocatedVariable,
+  };
 
   Location();
   Location(State state, uint64_t address);
+
+  // Symbolized location.
   Location(uint64_t address, FileLine file_line, int column,
            const SymbolContext& symbol_context,
-           const LazySymbol& function = LazySymbol());
+           LazySymbol symbol = LazySymbol());
+
+  // Unlocated variable.
+  Location(const SymbolContext& symbol_context, LazySymbol symbol);
+
   ~Location();
 
   bool is_valid() const { return state_ != State::kInvalid; }
@@ -40,7 +71,7 @@ class Location {
   // succeeded to symbolize EITHER the line or the function. One or the other
   // could be missing, however.
   bool is_symbolized() const { return state_ == State::kSymbolized; }
-  bool has_symbols() const { return file_line_.is_valid() || function_; }
+  bool has_symbols() const { return file_line_.is_valid() || symbol_; }
 
   // The absolute address of this location.
   uint64_t address() const { return address_; }
@@ -48,13 +79,15 @@ class Location {
   const FileLine& file_line() const { return file_line_; }
   int column() const { return column_; }
 
-  // The function associated with this address, if any. This will be the
-  // most specific inline or regular function covering the given address.
+  // The symbol associated with this address, if any. In the case of code, this
+  // will be the most specific inline or regular function covering the given
+  // address. It could also be a variable symbol corresponding to a global or
+  // static variable.
   //
   // This isn't necessarily valid, even if the State == kSymbolized. It could
   // be the symbol table indicates file/line info for this address but could
   // lack a function record for it.
-  const LazySymbol& function() const { return function_; }
+  const LazySymbol& symbol() const { return symbol_; }
 
   // Symbolized locations will have a valid symbol context for converting
   // addresses.
@@ -70,7 +103,7 @@ class Location {
   uint64_t address_ = 0;
   FileLine file_line_;
   int column_ = 0;
-  LazySymbol function_;
+  LazySymbol symbol_;
   SymbolContext symbol_context_ = SymbolContext::ForRelativeAddresses();
 };
 

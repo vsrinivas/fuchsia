@@ -83,10 +83,10 @@ bool AbbrevHasCode(const llvm::DWARFAbbreviationDeclaration* abbrev) {
   return false;
 }
 
-size_t RecursiveCountFunctionDies(const ModuleSymbolIndexNode& node) {
-  size_t result = node.function_dies().size();
+size_t RecursiveCountDies(const ModuleSymbolIndexNode& node) {
+  size_t result = node.dies().size();
   for (const auto& pair : node.sub())
-    result += RecursiveCountFunctionDies(pair.second);
+    result += RecursiveCountDies(pair.second);
   return result;
 }
 
@@ -255,7 +255,7 @@ class FunctionImplIndexer {
     ModuleSymbolIndexNode* cur = root_;
     for (int i = static_cast<int>(components.size()) - 1; i >= 0; i--)
       cur = cur->AddChild(std::move(components[i]));
-    cur->AddFunctionDie(ModuleSymbolIndexNode::DieRef(impl.entry->getOffset()));
+    cur->AddDie(ModuleSymbolIndexNode::DieRef(impl.entry->getOffset()));
   }
 
  private:
@@ -302,11 +302,11 @@ void ModuleSymbolIndex::CreateIndex(llvm::object::ObjectFile* object_file) {
 }
 
 size_t ModuleSymbolIndex::CountSymbolsIndexed() const {
-  return RecursiveCountFunctionDies(root_);
+  return RecursiveCountDies(root_);
 }
 
-const std::vector<ModuleSymbolIndexNode::DieRef>&
-ModuleSymbolIndex::FindFunctionExact(const std::string& input) const {
+const std::vector<ModuleSymbolIndexNode::DieRef>& ModuleSymbolIndex::FindExact(
+    const std::string& input) const {
   // Split the input on "::" which we'll traverse the tree with.
   //
   // TODO(brettw) this doesn't handle a lot of things like templates. By
@@ -338,7 +338,7 @@ ModuleSymbolIndex::FindFunctionExact(const std::string& input) const {
     cur = &found->second;
   }
 
-  return cur->function_dies();
+  return cur->dies();
 }
 
 std::vector<std::string> ModuleSymbolIndex::FindFileMatches(

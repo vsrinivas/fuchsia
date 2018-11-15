@@ -439,7 +439,7 @@ std::string DescribeLocation(const Location& loc, bool always_show_address) {
   if (always_show_address)
     result = fxl::StringPrintf("0x%" PRIx64 ", ", loc.address());
 
-  const Function* func = loc.function().Get()->AsFunction();
+  const Function* func = loc.symbol().Get()->AsFunction();
   if (func) {
     const std::string& func_name = func->GetFullName();
     if (!func_name.empty()) {

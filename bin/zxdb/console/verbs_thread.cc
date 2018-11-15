@@ -301,9 +301,9 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
     return Err("There isn't a current frame to read locals from.");
 
   const Location& location = cmd.frame()->GetLocation();
-  if (!location.function())
+  if (!location.symbol())
     return Err("There is no symbol information for the frame.");
-  const Function* function = location.function().Get()->AsFunction();
+  const Function* function = location.symbol().Get()->AsFunction();
   if (!function)
     return Err("Symbols are corrupt.");
 

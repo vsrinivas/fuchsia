@@ -43,7 +43,7 @@ class ModuleSymbolIndex {
 
   // Takes a fully-qualified name with namespaces and classes and template
   // parameters and returns the list of symbols which match exactly.
-  const std::vector<ModuleSymbolIndexNode::DieRef>& FindFunctionExact(
+  const std::vector<ModuleSymbolIndexNode::DieRef>& FindExact(
       const std::string& input) const;
 
   // Looks up the name in the file index and returns the set of matches. The

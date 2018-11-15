@@ -94,8 +94,8 @@ Err ReadLocation(const Command& cmd, const char* command_name,
 
   // Some symbols can give us sizes.
   if (input_location.type == InputLocation::Type::kSymbol) {
-    if (location->function()) {
-      if (const CodeBlock* block = location->function().Get()->AsCodeBlock()) {
+    if (location->symbol()) {
+      if (const CodeBlock* block = location->symbol().Get()->AsCodeBlock()) {
         *location_size = block->GetFullRange(location->symbol_context()).size();
       }
     }

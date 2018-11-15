@@ -259,6 +259,10 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
       return Completion::kSync;
     case llvm::dwarf::DW_OP_stack_value:
       return OpStackValue();
+    case llvm::dwarf::DW_OP_GNU_push_tls_address:
+      // TODO(DX-694) support TLS.
+      ReportError("TLS not currently supported. See DX-694.");
+      return Completion::kSync;
 
     default:
       // Invalid or unknown opcode.

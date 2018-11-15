@@ -13,7 +13,7 @@
 
 namespace zxdb {
 
-TEST(ModuleSymbolIndex, FindFunctionExact) {
+TEST(ModuleSymbolIndex, FindExact) {
   TestSymbolModule module;
   std::string err;
   ASSERT_TRUE(module.Load(&err)) << err;
@@ -29,23 +29,23 @@ TEST(ModuleSymbolIndex, FindFunctionExact) {
 #endif
 
   // Standalone function search.
-  auto result = index.FindFunctionExact(TestSymbolModule::kMyFunctionName);
+  auto result = index.FindExact(TestSymbolModule::kMyFunctionName);
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
   // Standalone function inside a namespace.
-  result = index.FindFunctionExact(TestSymbolModule::kNamespaceFunctionName);
+  result = index.FindExact(TestSymbolModule::kNamespaceFunctionName);
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
   // Namespace + class member function search.
-  result = index.FindFunctionExact(TestSymbolModule::kMyMemberOneName);
+  result = index.FindExact(TestSymbolModule::kMyMemberOneName);
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
   // Same but in the 2nd compilation unit (tests unit-relative addressing).
-  result = index.FindFunctionExact(TestSymbolModule::kFunctionInTest2Name);
+  result = index.FindExact(TestSymbolModule::kFunctionInTest2Name);
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
   // Namespace + class + struct with static member function search.
-  result = index.FindFunctionExact(TestSymbolModule::kMyMemberTwoName);
+  result = index.FindExact(TestSymbolModule::kMyMemberTwoName);
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 }
 

@@ -194,10 +194,11 @@ TEST_F(DwarfExprEvalTest, AsyncRegister) {
 // Tests synchronously hitting an invalid opcode.
 TEST_F(DwarfExprEvalTest, SyncInvalidOp) {
   // Make a program that consists only of a user-defined opcode (not supported).
-  DoEvalTest({llvm::dwarf::DW_OP_lo_user}, false,
+  // Can't use DW_OP_lo_user because that's a GNU TLS extension we know about.
+  DoEvalTest({llvm::dwarf::DW_OP_lo_user + 1}, false,
              DwarfExprEval::Completion::kSync, 0,
              DwarfExprEval::ResultType::kValue,
-             "Invalid opcode 0xe0 in DWARF expression.");
+             "Invalid opcode 0xe1 in DWARF expression.");
 }
 
 // Tests synchronously hitting an invalid opcode (async error handling).
@@ -206,7 +207,8 @@ TEST_F(DwarfExprEvalTest, AsyncInvalidOp) {
   provider()->AddRegisterValue(0, false, kValue);
 
   // Make a program that consists of getting an async register and then
-  // executing an invalid opcode.
+  // executing an invalid opcode. Can't use DW_OP_lo_user because that's a GNU
+  // TLS extension we know about.
   std::vector<uint8_t> expr_data;
   expr_data.push_back(llvm::dwarf::DW_OP_reg0);
   expr_data.push_back(llvm::dwarf::DW_OP_lo_user + 1);

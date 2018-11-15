@@ -6,11 +6,16 @@
 
 #include <algorithm>
 
+#include "garnet/bin/zxdb/symbols/dwarf_expr_eval.h"
 #include "garnet/bin/zxdb/symbols/dwarf_symbol_factory.h"
+#include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/input_location.h"
 #include "garnet/bin/zxdb/symbols/line_details.h"
 #include "garnet/bin/zxdb/symbols/resolve_options.h"
 #include "garnet/bin/zxdb/symbols/symbol_context.h"
+#include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
+#include "garnet/bin/zxdb/symbols/variable.h"
+#include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
@@ -23,6 +28,40 @@ namespace zxdb {
 namespace {
 
 enum class FileChecked { kUnchecked = 0, kMatch, kNoMatch };
+
+// Implementation of SymbolDataProvider that returns no memory or registers.
+// This is used when evaluating global variables' location expressions which
+// normally just declare an address. See LocationForVariable().
+class GlobalSymbolDataProvider : public SymbolDataProvider {
+ public:
+  static Err GetContextError() {
+    return Err(
+        "Global variable requires register or memory data to locate. "
+        "Please file a bug with a repro.");
+  }
+
+  // SymbolDataProvider implementation.
+  std::optional<uint64_t> GetRegister(int dwarf_register_number) override {
+    return std::nullopt;
+  }
+  void GetRegisterAsync(int dwarf_register_number,
+                        GetRegisterCallback callback) override {
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [cb = std::move(callback)]() { cb(GetContextError(), 0); });
+  }
+  std::optional<uint64_t> GetFrameBase() override { return std::nullopt; }
+  void GetFrameBaseAsync(GetRegisterCallback callback) override {
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [cb = std::move(callback)]() { cb(GetContextError(), 0); });
+  }
+  void GetMemoryAsync(uint64_t address, uint32_t size,
+                      GetMemoryCallback callback) override {
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [cb = std::move(callback)]() {
+          cb(GetContextError(), std::vector<uint8_t>());
+        });
+  }
+};
 
 bool SameFileLine(const llvm::DWARFDebugLine::Row& a,
                   const llvm::DWARFDebugLine::Row& b) {
@@ -221,8 +260,8 @@ std::vector<Location> ModuleSymbolsImpl::ResolveInputLocation(
     case InputLocation::Type::kLine:
       return ResolveLineInputLocation(symbol_context, input_location, options);
     case InputLocation::Type::kSymbol:
-      return ResolveFunctionInputLocation(symbol_context, input_location,
-                                          options);
+      return ResolveSymbolInputLocation(symbol_context, input_location,
+                                        options);
     case InputLocation::Type::kAddress:
       return ResolveAddressInputLocation(symbol_context, input_location,
                                          options);
@@ -320,32 +359,42 @@ std::vector<Location> ModuleSymbolsImpl::ResolveLineInputLocation(
   return result;
 }
 
-std::vector<Location> ModuleSymbolsImpl::ResolveFunctionInputLocation(
+std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
     const SymbolContext& symbol_context, const InputLocation& input_location,
     const ResolveOptions& options) const {
-  const std::vector<ModuleSymbolIndexNode::DieRef>& entries =
-      index_.FindFunctionExact(input_location.symbol);
-
   std::vector<Location> result;
-  for (const auto& cur : entries) {
-    llvm::DWARFDie die = cur.ToDie(context_.get());
+  for (const auto& die_ref : index_.FindExact(input_location.symbol)) {
+    LazySymbol lazy_symbol =
+        symbol_factory_->MakeLazy(die_ref.ToDie(context_.get()));
+    const Symbol* symbol = lazy_symbol.Get();
 
-    auto ranges_or_error = die.getAddressRanges();
-    if (!ranges_or_error)
+    if (const Function* function = symbol->AsFunction()) {
+      // Symbol is a function.
+      if (function->code_ranges().empty())
+        continue;  // No code associated with this.
+
+      // Compute the full file/line information if requested. This recomputes
+      // function DIE which is unnecessary but makes the code structure
+      // simpler and ensures the results are always the same with regard to
+      // how things like inlined functions are handled (if the location maps
+      // to both a function and an inlined function inside of it).
+      uint64_t abs_addr =
+          symbol_context.RelativeToAbsolute(function->code_ranges()[0].begin());
+      if (options.symbolize)
+        result.push_back(LocationForAddress(symbol_context, abs_addr));
+      else
+        result.emplace_back(Location::State::kAddress, abs_addr);
+    } else if (const Variable* variable = symbol->AsVariable()) {
+      // Symbol is a variable. This will be the case for global variables and
+      // file- and class-level statics. This always symbolizes since we
+      // already computed the symbol.
+      result.push_back(LocationForVariable(
+          symbol_context,
+          fxl::RefPtr<Variable>(const_cast<Variable*>(variable))));
+    } else {
+      // Unknown type of symbol.
       continue;
-
-    // Get the minimum address associated with this DIE.
-    auto min_iter = std::min_element(
-        ranges_or_error.get().begin(), ranges_or_error.get().end(),
-        [](const llvm::DWARFAddressRange& a, const llvm::DWARFAddressRange& b) {
-          return a.LowPC < b.LowPC;
-        });
-
-    uint64_t abs_addr = symbol_context.RelativeToAbsolute(min_iter->LowPC);
-    if (options.symbolize)
-      result.push_back(LocationForAddress(symbol_context, abs_addr));
-    else
-      result.emplace_back(Location::State::kAddress, abs_addr);
+    }
   }
   return result;
 }
@@ -368,7 +417,7 @@ std::vector<Location> ModuleSymbolsImpl::ResolveAddressInputLocation(
 // function rather than its name.
 Location ModuleSymbolsImpl::LocationForAddress(
     const SymbolContext& symbol_context, uint64_t absolute_address) const {
-  // TODO(brettw) handle addresses that aren't code (e.g. data).
+  // TODO(DX-695) handle addresses that aren't code like global variables.
   uint64_t relative_address =
       symbol_context.AbsoluteToRelative(absolute_address);
   llvm::DWARFUnit* unit = CompileUnitForRelativeAddress(relative_address);
@@ -402,6 +451,37 @@ Location ModuleSymbolsImpl::LocationForAddress(
   // No line information.
   return Location(absolute_address, FileLine(), 0, symbol_context,
                   std::move(lazy_function));
+}
+
+Location ModuleSymbolsImpl::LocationForVariable(
+    const SymbolContext& symbol_context, fxl::RefPtr<Variable> variable) const {
+  // Evaluate the DWARF expression for the variable. Global and static
+  // variables' locations aren't based on CPU state. In some cases like TLS
+  // the location may require CPU state or may result in a constant instead
+  // of an address. In these cases give up and return an "unlocated variable."
+  // These can easily be evaluated by the expression system so we can still
+  // print their values.
+
+  // Need one unique location.
+  if (variable->location().locations().size() != 1)
+    return Location(symbol_context, LazySymbol(std::move(variable)));
+
+  auto global_data_provider = fxl::MakeRefCounted<GlobalSymbolDataProvider>();
+  DwarfExprEval eval;
+  eval.Eval(global_data_provider, symbol_context,
+            variable->location().locations()[0].expression,
+            [](DwarfExprEval* eval, const Err& err) {});
+
+  // Only evaluate synchronous outputs that result in a pointer.
+  if (!eval.is_complete() || !eval.is_success() ||
+      eval.GetResultType() != DwarfExprEval::ResultType::kPointer)
+    return Location(symbol_context, LazySymbol(std::move(variable)));
+
+  // TODO(brettw) in all of the return cases we could in the future fill in the
+  // file/line of the definition of the variable. Currently Variables don't
+  // provide that (even though it's usually in the DWARF symbols).
+  return Location(eval.GetResult(), FileLine(), 0, symbol_context,
+                  LazySymbol(std::move(variable)));
 }
 
 // To a first approximation we just look up the line in the line table for

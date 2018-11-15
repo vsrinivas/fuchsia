@@ -18,10 +18,15 @@ class DWARFContext;
 namespace zxdb {
 
 // One node in the ModuleSymbolIndex tree. One node represents the set of things
-// with the same name inside a given namespace of a module. There could
-// be multiple types of things with the same name in different compilation unit,
-// and a single function can have multiple locations. So one one can represent
-// many namespaces and functions.
+// with the same name inside a given namespace of a module. The index contains
+// things that might need to be named globally: functions, globals, and class
+// statics. It does not contain function-level statics. Variables in functions
+// are searched when in the context of that function, and can't be referenced
+// outside of it.
+//
+// There could be multiple types of things with the same name in different
+// compilation unit, and a single function can have multiple locations. So one
+// one can represent many namespaces and functions.
 class ModuleSymbolIndexNode {
  public:
   // A reference to a DIE that doesn't need the unit or the underlying
@@ -48,19 +53,19 @@ class ModuleSymbolIndexNode {
 
   ModuleSymbolIndexNode();
 
-  // Makes a node pointing to one function.
+  // Makes a node pointing to one DIE.
   ModuleSymbolIndexNode(const DieRef& ref);
 
   ~ModuleSymbolIndexNode();
 
-  bool empty() const { return sub_.empty() && function_dies_.empty(); }
+  bool empty() const { return sub_.empty() && dies_.empty(); }
 
   const std::map<std::string, ModuleSymbolIndexNode>& sub() const {
     return sub_;
   }
-  const std::vector<DieRef>& function_dies() const { return function_dies_; }
+  const std::vector<DieRef>& dies() const { return dies_; }
 
-  // Dump functions for debugging. A node does not contain its own name (this
+  // Dump DIEs for debugging. A node does not contain its own name (this
   // is stored in the parent's map. If printing some node other than the root,
   // specify the name.
   void Dump(std::ostream& out, int indent_level = 0) const;
@@ -71,8 +76,8 @@ class ModuleSymbolIndexNode {
   // have many megabytes of dump.
   std::string AsString(int indent_level = 0) const;
 
-  // Adds a DIE for a function with the name of this node.
-  void AddFunctionDie(const DieRef& ref);
+  // Adds a DIE with the name of this node.
+  void AddDie(const DieRef& ref);
 
   // Adds a child node with the given name and returns it. If one already exits
   // with the name, returns the existing one.
@@ -92,10 +97,10 @@ class ModuleSymbolIndexNode {
   // copying all the strings again.
   std::map<std::string, ModuleSymbolIndexNode> sub_;
 
-  // For any functions matching this name, lists the DIEs that implement it.
-  // If a function has the same name as a namespace, there could be sub_
-  // entries as well as function_dies_.
-  std::vector<DieRef> function_dies_;
+  // For any DIES matching this name, lists the DIEs that implement it.
+  // If a function or static variable has the same name as a namespace, there
+  // could be sub_ entries as well as dies_.
+  std::vector<DieRef> dies_;
 };
 
 }  // namespace zxdb

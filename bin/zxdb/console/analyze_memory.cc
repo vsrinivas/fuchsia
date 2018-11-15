@@ -323,7 +323,7 @@ std::string MemoryAnalysis::GetPointedToAnnotation(uint64_t data) const {
       InputLocation(data));
   FXL_DCHECK(locations.size() == 1);
 
-  if (!locations[0].function()) {
+  if (!locations[0].symbol()) {
     // Check if this points into any relevant aspace entries. Want the deepest
     // one smaller than the max size threshold.
     int max_depth = -1;
@@ -345,7 +345,7 @@ std::string MemoryAnalysis::GetPointedToAnnotation(uint64_t data) const {
   }
   // TODO(brettw) this should indicate the byte offset from the beginning of
   // the function, or maybe the file/line number.
-  return "▷ inside " + locations[0].function().Get()->GetFullName();
+  return "▷ inside " + locations[0].symbol().Get()->GetFullName();
 }
 
 }  // namespace internal

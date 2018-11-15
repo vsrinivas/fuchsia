@@ -43,9 +43,9 @@ SymbolEvalContext::SymbolEvalContext(
       data_provider_(data_provider),
       resolver_(std::move(data_provider)),
       weak_factory_(this) {
-  if (!location.function())
+  if (!location.symbol())
     return;
-  const CodeBlock* function = location.function().Get()->AsCodeBlock();
+  const CodeBlock* function = location.symbol().Get()->AsCodeBlock();
   if (!function)
     return;
 

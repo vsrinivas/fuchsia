@@ -65,7 +65,7 @@ std::vector<Location> TargetSymbolsImpl::ResolveInputLocation(
              symbol_context, input_location, ResolveOptions())) {
       // Clear the location on the result to prevent confusion.
       result.emplace_back(0, location.file_line(), location.column(),
-                          location.symbol_context(), location.function());
+                          location.symbol_context(), location.symbol());
     }
   }
   return result;

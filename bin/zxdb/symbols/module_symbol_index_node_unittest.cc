@@ -27,10 +27,10 @@ TEST(ModuleSymbolIndexNode, AddChildMerge) {
   //     node1 = "foo" [1 function = #1]
   //       node2 = "bar" [1 function = #2]
   ModuleSymbolIndexNode node2;
-  node2.AddFunctionDie(DieRef(offset2));
+  node2.AddDie(DieRef(offset2));
 
   ModuleSymbolIndexNode node1;
-  node1.AddFunctionDie(DieRef(offset1));
+  node1.AddDie(DieRef(offset1));
   node1.AddChild(std::make_pair(bar, std::move(node2)));
 
   ModuleSymbolIndexNode root;
@@ -42,10 +42,10 @@ TEST(ModuleSymbolIndexNode, AddChildMerge) {
   //   merge1 = "foo" [1 function = #3]
   //     merge2 = "bloop" [1 function = #4]
   ModuleSymbolIndexNode merge2;
-  merge2.AddFunctionDie(DieRef(offset4));
+  merge2.AddDie(DieRef(offset4));
 
   ModuleSymbolIndexNode merge1;
-  merge1.AddFunctionDie(DieRef(offset3));
+  merge1.AddDie(DieRef(offset3));
   merge1.AddChild(std::make_pair(bloop, std::move(merge2)));
 
   // Now merge in "merge1" as a child of the root.
@@ -60,14 +60,14 @@ TEST(ModuleSymbolIndexNode, AddChildMerge) {
   // Check root.
   ASSERT_EQ(1u, root.sub().size());
   EXPECT_FALSE(root.empty());
-  EXPECT_TRUE(root.function_dies().empty());
+  EXPECT_TRUE(root.dies().empty());
   EXPECT_EQ(foo, root.sub().begin()->first);
 
   // Check out1.
   const ModuleSymbolIndexNode& out1 = root.sub().begin()->second;
-  ASSERT_EQ(2u, out1.function_dies().size());
-  EXPECT_EQ(offset1, out1.function_dies()[0].offset());
-  EXPECT_EQ(offset3, out1.function_dies()[1].offset());
+  ASSERT_EQ(2u, out1.dies().size());
+  EXPECT_EQ(offset1, out1.dies()[0].offset());
+  EXPECT_EQ(offset3, out1.dies()[1].offset());
   ASSERT_EQ(2u, out1.sub().size());
   EXPECT_EQ(bar, out1.sub().begin()->first);
   EXPECT_EQ(bloop, (++out1.sub().begin())->first);
@@ -75,14 +75,14 @@ TEST(ModuleSymbolIndexNode, AddChildMerge) {
   // Check out2.
   const ModuleSymbolIndexNode& out2 = out1.sub().begin()->second;
   EXPECT_TRUE(out2.sub().empty());
-  ASSERT_EQ(1u, out2.function_dies().size());
-  EXPECT_EQ(offset2, out2.function_dies()[0].offset());
+  ASSERT_EQ(1u, out2.dies().size());
+  EXPECT_EQ(offset2, out2.dies()[0].offset());
 
   // Check out3.
   const ModuleSymbolIndexNode& out3 = (++out1.sub().begin())->second;
   EXPECT_TRUE(out3.sub().empty());
-  ASSERT_EQ(1u, out3.function_dies().size());
-  EXPECT_EQ(offset4, out3.function_dies()[0].offset());
+  ASSERT_EQ(1u, out3.dies().size());
+  EXPECT_EQ(offset4, out3.dies()[0].offset());
 }
 
 }  // namespace zxdb

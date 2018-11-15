@@ -802,8 +802,8 @@ void FormatValue::FormatFunctionPointer(
   // Try to symbolize the function being pointed to.
   Location loc = process_context_->GetLocationForAddress(address);
   std::string function_name;
-  if (loc.function()) {
-    if (const Function* func = loc.function().Get()->AsFunction())
+  if (loc.symbol()) {
+    if (const Function* func = loc.symbol().Get()->AsFunction())
       function_name = func->GetFullName();
   }
   if (function_name.empty()) {

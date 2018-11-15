@@ -20,7 +20,7 @@ llvm::DWARFDie ModuleSymbolIndexNode::DieRef::ToDie(
 ModuleSymbolIndexNode::ModuleSymbolIndexNode() = default;
 
 ModuleSymbolIndexNode::ModuleSymbolIndexNode(const DieRef& ref) {
-  function_dies_.emplace_back(ref);
+  dies_.emplace_back(ref);
 }
 
 ModuleSymbolIndexNode::~ModuleSymbolIndexNode() = default;
@@ -34,8 +34,8 @@ void ModuleSymbolIndexNode::Dump(std::ostream& out, int indent_level) const {
 void ModuleSymbolIndexNode::Dump(const std::string& name, std::ostream& out,
                                  int indent_level) const {
   out << std::string(indent_level * 2, ' ') << name;
-  if (!function_dies_.empty())
-    out << " (" << function_dies_.size() << ")";
+  if (!dies_.empty())
+    out << " (" << dies_.size() << ")";
   out << std::endl;
   for (const auto& cur : sub_)
     cur.second.Dump(cur.first, out, indent_level + 1);
@@ -47,8 +47,8 @@ std::string ModuleSymbolIndexNode::AsString(int indent_level) const {
   return out.str();
 }
 
-void ModuleSymbolIndexNode::AddFunctionDie(const DieRef& ref) {
-  function_dies_.emplace_back(ref);
+void ModuleSymbolIndexNode::AddDie(const DieRef& ref) {
+  dies_.emplace_back(ref);
 }
 
 ModuleSymbolIndexNode* ModuleSymbolIndexNode::AddChild(std::string&& name) {
@@ -79,12 +79,11 @@ void ModuleSymbolIndexNode::Merge(ModuleSymbolIndexNode&& other) {
 
   // There should not be duplicates since this will be the result of iterating
   // one module's DIEs.
-  if (!other.function_dies_.empty()) {
-    if (function_dies_.empty()) {
-      function_dies_ = std::move(other.function_dies_);
+  if (!other.dies_.empty()) {
+    if (dies_.empty()) {
+      dies_ = std::move(other.dies_);
     } else {
-      function_dies_.insert(function_dies_.end(), other.function_dies_.begin(),
-                            other.function_dies_.end());
+      dies_.insert(dies_.end(), other.dies_.begin(), other.dies_.end());
     }
   }
 }
