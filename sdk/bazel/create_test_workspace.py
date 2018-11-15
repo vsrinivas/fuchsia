@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import argparse
+from collections import defaultdict
 import os
 import shutil
 import stat
@@ -31,7 +32,7 @@ class SdkWorkspaceInfo(object):
     def __init__(self):
         # Map of target to list of header files.
         # Used to verify that including said headers works properly.
-        self.headers = {}
+        self.headers = defaultdict(list)
         # Whether the workspace has C/C++ content.
         self.with_cc = False
         # Whether the workspace has Dart content.
@@ -80,6 +81,10 @@ def create_test_workspace(sdk, output, workspace_info):
     if workspace_info.with_cc:
         # Generate test to verify that headers compile fine.
         headers = workspace_info.headers
+        # TODO(DX-691): remove these exceptions.
+        headers['//pkg/crypto'].remove('openssl/arm_arch.h')
+        headers['//pkg/fdio'].remove('lib/fdio/remoteio.h')
+        headers.pop('//pkg/zircon_internal', None)
         header_base = os.path.join(output, 'headers')
         write_file(make_dir(os.path.join(header_base, 'BUILD')),
                    'headers_build', {

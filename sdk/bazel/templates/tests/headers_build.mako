@@ -10,8 +10,4 @@ cc_binary(
       "@fuchsia_sdk${dep}",
       % endfor
     ],
-    # TODO(DX-521): enable this test.
-    tags = [
-      "ignored",
-    ],
 )
