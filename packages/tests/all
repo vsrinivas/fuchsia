@@ -2,6 +2,7 @@
     "imports": [
         "garnet/packages/tests/amber",
         "garnet/packages/tests/asio",
+        "garnet/packages/tests/async_promise",
         "garnet/packages/tests/ath10k",
         "garnet/packages/tests/auth",
         "garnet/packages/tests/bluetooth",
