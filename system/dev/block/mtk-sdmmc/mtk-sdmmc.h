@@ -67,10 +67,11 @@ public:
 
 private:
     MtkSdmmc(zx_device_t* parent, ddk::MmioBuffer mmio, zx::bti bti, const sdmmc_host_info_t& info,
-             zx::interrupt irq, const ddk::GpioProtocolProxy& reset_gpio)
+             zx::interrupt irq, const ddk::GpioProtocolProxy& reset_gpio,
+             const pdev_device_info_t& dev_info)
         : DeviceType(parent), mmio_(std::move(mmio)), bti_(std::move(bti)), info_(info),
-                     irq_(std::move(irq)), req_(nullptr), cmd_status_(ZX_OK),
-                     reset_gpio_(reset_gpio) {}
+          irq_(std::move(irq)), req_(nullptr), cmd_status_(ZX_OK), reset_gpio_(reset_gpio),
+          dev_info_(dev_info) {}
 
     zx_status_t Init();
 
@@ -116,6 +117,7 @@ private:
     sdmmc_req_t* req_ TA_GUARDED(mutex_);
     zx_status_t cmd_status_ TA_GUARDED(mutex_);
     ddk::GpioProtocolProxy reset_gpio_;
+    const pdev_device_info_t dev_info_;
 };
 
 // TuneWindow keeps track of the results of a series of tuning tests. It is expected that either

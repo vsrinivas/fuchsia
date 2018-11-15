@@ -12,6 +12,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/bind.c \
     $(LOCAL_DIR)/mt8167.cpp \
     $(LOCAL_DIR)/mt8167-emmc.cpp \
+    $(LOCAL_DIR)/mt8167-sdio.cpp \
     $(LOCAL_DIR)/mt8167-soc.cpp \
     $(LOCAL_DIR)/mt8167-gpio.cpp \
     $(LOCAL_DIR)/mt8167-display.cpp \
@@ -23,6 +24,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
+    system/ulib/hwreg \
     system/ulib/zx \
     system/ulib/zxcpp \
 

@@ -19,6 +19,7 @@ namespace board_mt8167 {
 enum {
     BTI_DISPLAY,
     BTI_EMMC,
+    BTI_SDIO,
 };
 
 class Mt8167;
@@ -40,6 +41,7 @@ private:
 
     zx_status_t Start();
     zx_status_t EmmcInit();
+    zx_status_t SdioInit();
     zx_status_t SocInit();
     zx_status_t GpioInit();
     zx_status_t DisplayInit();

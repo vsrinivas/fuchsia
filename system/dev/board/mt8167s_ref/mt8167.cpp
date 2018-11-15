@@ -68,6 +68,10 @@ int Mt8167::Thread() {
         zxlogf(ERROR, "EmmcInit() failed\n");
         return -1;
     }
+    if (SdioInit() != ZX_OK) {
+        zxlogf(ERROR, "SdioInit() failed\n");
+        return -1;
+    }
     if (DisplayInit() != ZX_OK) {
         zxlogf(ERROR, "DisplayInit() failed\n");
         return -1;

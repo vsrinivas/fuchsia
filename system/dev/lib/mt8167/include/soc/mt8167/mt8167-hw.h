@@ -32,6 +32,12 @@
 #define MT8167_MSDC0_BASE                                   0x11120000
 #define MT8167_MSDC0_SIZE                                   0x22c
 
+#define MT8167_MSDC2_BASE                                   0x11170000
+#define MT8167_MSDC2_SIZE                                   0x22c
+
+#define MT8167_MSDC2_GPIO_BASE                              0x10005e40
+#define MT8167_MSDC2_GPIO_SIZE                              0x20
+
 // Display Subsystem
 #define MT8167_DISP_OVL_BASE                                0x14007000
 #define MT8167_DISP_OVL_SIZE                                0x1000
@@ -64,6 +70,7 @@
 #define MT8167_IRQ_I2C2                                     114
 #define MT8167_IRQ_UART0                                    116
 #define MT8167_IRQ_UART1                                    117
+#define MT8167_IRQ_MSDC2                                    141
 #define MT8167_IRQ_HDMI_SIFM                                142
 #define MT8167_IRQ_ETHER_NIC_WRAP                           143
 #define MT8167_IRQ_ARM_EINT                                 166
@@ -80,3 +87,5 @@
 #define MT8167_GPIO_EINT_MAX                                131
 
 #define MT8167_GPIO_MSDC0_RST                               114
+
+#define MT8167_GPIO_MT7668_PMU_EN                           2

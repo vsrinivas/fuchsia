@@ -8,42 +8,48 @@
 #include <ddk/metadata/gpt.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
-
+#include <fbl/algorithm.h>
 #include <soc/mt8167/mt8167-hw.h>
 
 #include "mt8167.h"
 
+namespace {
+
+constexpr uint32_t kFifoDepth = 128;
+
+}  // namespace
+
 namespace board_mt8167 {
 
 zx_status_t Mt8167::EmmcInit() {
-    const pbus_mmio_t emmc_mmios[] = {
+    static const pbus_mmio_t emmc_mmios[] = {
         {
             .base = MT8167_MSDC0_BASE,
             .length = MT8167_MSDC0_SIZE,
         }
     };
 
-    const pbus_bti_t emmc_btis[] = {
+    static const pbus_bti_t emmc_btis[] = {
         {
             .iommu_index = 0,
             .bti_id = BTI_EMMC,
         }
     };
 
-    static uint32_t msdc_fifo_depth = 128;
+    uint32_t fifo_depth = kFifoDepth;
 
     static const guid_map_t guid_map[] = {
         { "boot_a", GUID_ZIRCON_A_VALUE },
         { "boot_b", GUID_ZIRCON_B_VALUE },
         { "userdata", GUID_FVM_VALUE }
     };
-    static_assert(sizeof(guid_map) / sizeof(guid_map[0]) <= DEVICE_METADATA_GUID_MAP_MAX_ENTRIES);
+    static_assert(fbl::count_of(guid_map) <= DEVICE_METADATA_GUID_MAP_MAX_ENTRIES);
 
     static const pbus_metadata_t emmc_metadata[] = {
         {
             .type = DEVICE_METADATA_PRIVATE,
-            .data_buffer = &msdc_fifo_depth,
-            .data_size = sizeof(msdc_fifo_depth)
+            .data_buffer = &fifo_depth,
+            .data_size = sizeof(fifo_depth)
         },
         {
             .type = DEVICE_METADATA_GUID_MAP,
@@ -83,7 +89,7 @@ zx_status_t Mt8167::EmmcInit() {
 
     zx_status_t status = pbus_.DeviceAdd(&emmc_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: DeviceAdd MSDC0 failed %d\n", __FUNCTION__, status);
     }
 
     return status;

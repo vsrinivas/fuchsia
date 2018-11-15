@@ -9,6 +9,7 @@
 #include <ddk/debug.h>
 #include <ddk/io-buffer.h>
 #include <ddk/metadata.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
@@ -154,7 +155,8 @@ zx_status_t MtkSdmmc::Create(zx_device_t* parent) {
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<MtkSdmmc> device(new (&ac) MtkSdmmc(parent, std::move(mmio_obj), std::move(bti),
-                                                        info, std::move(irq), reset_gpio));
+                                                        info, std::move(irq), reset_gpio,
+                                                        dev_info));
 
     if (!ac.check()) {
         zxlogf(ERROR, "%s: MtkSdmmc alloc failed\n", __FILE__);
@@ -179,7 +181,13 @@ zx_status_t MtkSdmmc::Init() {
     // Set bus clock to f_OD (400 kHZ) for identification mode.
     SdmmcSetBusFreq(kIdentificationModeBusFreq);
 
-    SdcCfg::Get().ReadFrom(&mmio_).set_bus_width(SdcCfg::kBusWidth1).WriteTo(&mmio_);
+    auto sdc_cfg = SdcCfg::Get().ReadFrom(&mmio_);
+    if (dev_info_.did == PDEV_DID_MEDIATEK_SDIO) {
+        // TODO(bradenkell): Handle in-band interrupts from the SDIO device.
+        sdc_cfg.set_sdio_interrupt_enable(0).set_sdio_enable(1);
+    }
+
+    sdc_cfg.set_bus_width(SdcCfg::kBusWidth1).WriteTo(&mmio_);
 
     DmaCtrl::Get().ReadFrom(&mmio_).set_last_buffer(1).WriteTo(&mmio_);
 

@@ -13,6 +13,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/mtk-sdmmc.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/mt8167 \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \

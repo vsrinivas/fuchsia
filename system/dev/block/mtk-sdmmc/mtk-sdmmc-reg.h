@@ -105,6 +105,8 @@ public:
     static auto Get() { return hwreg::RegisterAddr<SdcCfg>(0x30); }
 
     DEF_FIELD(31, 24, read_timeout);
+    DEF_BIT(20, sdio_interrupt_enable);
+    DEF_BIT(19, sdio_enable);
     DEF_FIELD(17, 16, bus_width);
 };
 
@@ -159,11 +161,16 @@ public:
             }
         }
 
+        if (req->cmd_flags & SDMMC_CMD_TYPE_ABORT) {
+            cmd.set_stop(1);
+        }
+
         return cmd;
     }
 
     DEF_FIELD(29, 28, auto_cmd);
     DEF_FIELD(27, 16, block_size);
+    DEF_BIT(14, stop);
     DEF_BIT(13, write);
     DEF_FIELD(12, 11, block_type);
     DEF_FIELD(9, 7, resp_type);
