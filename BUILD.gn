@@ -17,7 +17,6 @@ group("no_cmx_whitelist") {
   # instead.
   # https://fuchsia.googlesource.com/docs/+/master/the-book/package_metadata.md#Component-manifest
   visibility = [
-      "//build/images:*",
       "//garnet/bin/bluetooth/tools/bt-cli:*",
       "//garnet/bin/cpuperf:*",
       "//garnet/bin/developer/tiles:*",
@@ -54,10 +53,8 @@ group("no_cmx_whitelist") {
       "//garnet/lib/magma/gnbuild/magma-arm-mali:*",
       "//garnet/lib/magma/gnbuild/magma-intel-gen:*",
       "//garnet/lib/magma/gnbuild/magma-vsl-gc:*",
-      "//garnet/lib/root_ssl_certificates:*",
       "//garnet/lib/ui/gfx/tests:*",
       "//garnet/testing/syzkaller:*",
-      "//garnet:*",
       "//peridot/bin/agents/clipboard:*",
       "//peridot/bin/basemgr:*",
       "//peridot/bin/context_engine:*",

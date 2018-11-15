@@ -173,7 +173,6 @@ action("create-shell-commands") {
 
 package("shell-commands") {
   testonly = true
-  deprecated_no_cmx = "//build"
   extra = get_target_outputs(":create-shell-commands")
   deps = [":create-shell-commands"]
 }
