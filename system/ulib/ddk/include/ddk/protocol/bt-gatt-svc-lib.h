@@ -2,14 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-//          MODIFY system/fidl/protocols/bt_gatt_svc.banjo INSTEAD.
-
 #pragma once
 
 #include <string.h>
 
-#include <ddk/protocol/bt-gatt-svc.h>
+#include <ddk/protocol/bt/gattsvc.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
