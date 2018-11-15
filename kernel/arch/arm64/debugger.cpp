@@ -116,9 +116,6 @@ zx_status_t arch_set_fp_regs(struct thread* thread, const zx_thread_state_fp_reg
 zx_status_t arch_get_vector_regs(struct thread* thread, zx_thread_state_vector_regs* out) {
     Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
-    if (thread->state == THREAD_RUNNING)
-        return ZX_ERR_BAD_STATE;
-
     const fpstate* in = &thread->arch.fpstate;
     out->fpcr = in->fpcr;
     out->fpsr = in->fpsr;
@@ -132,9 +129,6 @@ zx_status_t arch_get_vector_regs(struct thread* thread, zx_thread_state_vector_r
 
 zx_status_t arch_set_vector_regs(struct thread* thread, const zx_thread_state_vector_regs* in) {
     Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
-
-    if (thread->state == THREAD_RUNNING)
-        return ZX_ERR_BAD_STATE;
 
     fpstate* out = &thread->arch.fpstate;
     out->fpcr = in->fpcr;
@@ -151,9 +145,11 @@ zx_status_t arch_get_debug_regs(struct thread* thread, zx_thread_state_debug_reg
     arm64_debug_state_t state = {};
     Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
-    if (thread->state == THREAD_RUNNING)
-        return ZX_ERR_BAD_STATE;
-
+    // TODO(ZX-3025): Change the getter of these values to be the in-memory ones instead of
+    //                querying the HW. Currently this behaviour is wrong, because it will return
+    //                the debug state of the *current* thread running instead of the one named
+    //                by the handle.
+    //                This is what the x86 counterpart does.
     arm64_read_hw_debug_regs(&state);
 
     // Copy over the state from the internal representation.
@@ -178,9 +174,6 @@ zx_status_t arch_get_debug_regs(struct thread* thread, zx_thread_state_debug_reg
 zx_status_t arch_set_debug_regs(struct thread* thread, const zx_thread_state_debug_regs* in) {
     arm64_debug_state_t state = {};
     Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
-
-    if (thread->state == THREAD_RUNNING)
-        return ZX_ERR_BAD_STATE;
 
     // We copy over the state from the input.
     state.hw_bps_count = in->hw_bps_count;

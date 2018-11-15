@@ -123,9 +123,6 @@ zx_status_t x86_get_set_vector_regs(struct thread* thread, zx_thread_state_vecto
     bool mark_present = access == RegAccess::kSet;
 
     Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
-    if (thread->state == THREAD_RUNNING) {
-        return ZX_ERR_BAD_STATE;
-    }
 
     constexpr int kNumSSERegs = 16;
 
@@ -320,9 +317,6 @@ zx_status_t arch_get_fp_regs(struct thread* thread, zx_thread_state_fp_regs* out
     memset(out, 0, sizeof(zx_thread_state_fp_regs));
 
     Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
-    if (thread->state == THREAD_RUNNING) {
-        return ZX_ERR_BAD_STATE;
-    }
 
     uint32_t comp_size = 0;
     x86_xsave_legacy_area* save = static_cast<x86_xsave_legacy_area*>(
@@ -343,9 +337,6 @@ zx_status_t arch_get_fp_regs(struct thread* thread, zx_thread_state_fp_regs* out
 
 zx_status_t arch_set_fp_regs(struct thread* thread, const zx_thread_state_fp_regs* in) {
     Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
-    if (thread->state == THREAD_RUNNING) {
-        return ZX_ERR_BAD_STATE;
-    }
 
     uint32_t comp_size = 0;
     x86_xsave_legacy_area* save = static_cast<x86_xsave_legacy_area*>(
@@ -386,9 +377,6 @@ static void print_debug_state(const x86_debug_state_t* debug_state) {
 
 zx_status_t arch_get_debug_regs(struct thread* thread, zx_thread_state_debug_regs* out) {
     Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
-    if (thread->state == THREAD_RUNNING) {
-        return ZX_ERR_BAD_STATE;
-    }
 
     // The kernel updates this per-thread data everytime a hw debug event occurs, meaning that
     // these values will be always up to date. If the thread is not using hw debug capabilities,
@@ -405,9 +393,6 @@ zx_status_t arch_get_debug_regs(struct thread* thread, zx_thread_state_debug_reg
 
 zx_status_t arch_set_debug_regs(struct thread* thread, const zx_thread_state_debug_regs* in) {
     Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
-    if (thread->state == THREAD_RUNNING) {
-        return ZX_ERR_BAD_STATE;
-    }
 
     // Replace the state of the thread with the given one. We now need to keep track of the debug
     // state of this register across context switches.
@@ -448,9 +433,6 @@ zx_status_t arch_set_debug_regs(struct thread* thread, const zx_thread_state_deb
 
 zx_status_t arch_get_x86_register_fs(struct thread* thread, uint64_t* out) {
     Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
-    if (thread->state == THREAD_RUNNING) {
-        return ZX_ERR_BAD_STATE;
-    }
 
     *out = thread->arch.fs_base;
     return ZX_OK;
@@ -458,9 +440,6 @@ zx_status_t arch_get_x86_register_fs(struct thread* thread, uint64_t* out) {
 
 zx_status_t arch_set_x86_register_fs(struct thread* thread, const uint64_t* in) {
     Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
-    if (thread->state == THREAD_RUNNING) {
-        return ZX_ERR_BAD_STATE;
-    }
 
     thread->arch.fs_base = *in;
     return ZX_OK;
@@ -468,9 +447,6 @@ zx_status_t arch_set_x86_register_fs(struct thread* thread, const uint64_t* in) 
 
 zx_status_t arch_get_x86_register_gs(struct thread* thread, uint64_t* out) {
     Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
-    if (thread->state == THREAD_RUNNING) {
-        return ZX_ERR_BAD_STATE;
-    }
 
     *out = thread->arch.gs_base;
     return ZX_OK;
@@ -478,9 +454,6 @@ zx_status_t arch_get_x86_register_gs(struct thread* thread, uint64_t* out) {
 
 zx_status_t arch_set_x86_register_gs(struct thread* thread, const uint64_t* in) {
     Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
-    if (thread->state == THREAD_RUNNING) {
-        return ZX_ERR_BAD_STATE;
-    }
 
     thread->arch.gs_base = *in;
     return ZX_OK;
