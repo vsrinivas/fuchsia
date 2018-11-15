@@ -22,6 +22,7 @@ struct PciEcam {
     uint16 segment_group;
     uint8 start_bus_num;
     uint8 end_bus_num;
+    handle vmo_handle;
 };
 
 /// This structure is the primary means of passing PCI platform information

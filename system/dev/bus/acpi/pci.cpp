@@ -382,12 +382,23 @@ zx_status_t pci_init(zx_device_t* parent,
     pci_mcfg_allocation_t mcfg_alloc;
     status = pci_get_segment_mcfg_alloc(dev_ctx->info.segment_group, &mcfg_alloc);
     if (status == ZX_OK) {
-        dev_ctx->info.ecam.base_address = mcfg_alloc.base_address;
-        dev_ctx->info.ecam.segment_group = mcfg_alloc.segment_group;
-        dev_ctx->info.ecam.start_bus_num = mcfg_alloc.start_bus_num;
-        dev_ctx->info.ecam.end_bus_num = mcfg_alloc.end_bus_num;
+        auto& ecam = dev_ctx->info.ecam;
+        ecam.base_address = mcfg_alloc.base_address;
+        ecam.segment_group = mcfg_alloc.segment_group;
+        ecam.start_bus_num = mcfg_alloc.start_bus_num;
+        ecam.end_bus_num = mcfg_alloc.end_bus_num;
         dev_ctx->info.has_ecam = true;
 
+        // The bus driver needs a VMO representing the entire ecam region so it can map it in
+        size_t ecam_size = (ecam.end_bus_num - ecam.start_bus_num) * PCIE_ECAM_BYTES_PER_BUS;
+        status = zx_vmo_create_physical(get_root_resource(), ecam.base_address, ecam_size,
+                                        &ecam.vmo_handle);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "couldn't create VMO for ecam, mmio cfg will not work: %d!\n", status);
+            return status;
+        }
+
+        // Default to configuration in the mcfg allocation if we didn't find a _BBN entry
         if (!found_bbn) {
             dev_ctx->info.base_bus_number = mcfg_alloc.start_bus_num;
         }
@@ -405,7 +416,7 @@ zx_status_t pci_init(zx_device_t* parent,
                kLogTag, dev_ctx->name);
     }
 
-    if (driver_get_log_flags() & DDK_LOG_TRACE) {
+    if (zxlog_level_enabled(TRACE)) {
         auto& pi = dev_ctx->info;
         printf("%s %s { acpi_obj(%p), bbn(%u), seg(%u), ecam(%u) }\n", kLogTag,
                dev_ctx->name, dev_ctx->acpi_object, pi.base_bus_number, pi.segment_group,

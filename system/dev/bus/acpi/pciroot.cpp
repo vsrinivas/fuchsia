@@ -197,7 +197,9 @@ static zx_status_t pciroot_op_get_bti(void* context, uint32_t bdf, uint32_t inde
 
 #ifdef ENABLE_USER_PCI
 static zx_status_t pciroot_op_get_pci_platform_info(void* ctx, pci_platform_info_t* info) {
-    return ZX_ERR_NOT_SUPPORTED;
+    pciroot_ctx_t* pciroot = static_cast<pciroot_ctx_t*>(ctx);
+    *info = pciroot->info;
+    return ZX_OK;
 }
 
 static zx_status_t pciroot_op_get_pci_irq_info(void* ctx, pci_irq_info_t* info) {

@@ -1,10 +1,11 @@
-// Copyright 2017 The Fuchsia Authors
+// Copyright 2018 The Fuchsia Authors
 //
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
 #include "config.h"
+#include "common.h"
 
 #include <assert.h>
 #include <ddk/debug.h>
@@ -55,12 +56,26 @@ constexpr PciReg32 Config::kBridgeExpansionRomAddress;
 constexpr PciReg16 Config::kBridgeControl;
 
 // MMIO Config Implementation
-fbl::RefPtr<Config> MmioConfig::Create(pci_bdf_t bdf, zx_paddr_t base) {
+fbl::RefPtr<Config> MmioConfig::Create(pci_bdf_t bdf, void* ecam_base) {
+    ZX_DEBUG_ASSERT(bdf.device_id < PCI_MAX_DEVICES_PER_BUS);
+    ZX_DEBUG_ASSERT(bdf.function_id < PCI_MAX_FUNCTIONS_PER_DEVICE);
+
+    // Find the offset into the ecam region for the given bdf address. Every bus
+    // has 32 devices, every device has 8 functions, and each function has an
+    // extended config space of 4096 bytes.
+    zx_paddr_t bdf_start = reinterpret_cast<zx_paddr_t>(ecam_base);
+    bdf_start += bdf.bus_id * PCIE_ECAM_BYTES_PER_BUS;
+    bdf_start += bdf.device_id * PCI_MAX_FUNCTIONS_PER_DEVICE * PCIE_EXTENDED_CONFIG_SIZE;
+    bdf_start += bdf.function_id * PCIE_EXTENDED_CONFIG_SIZE;
+
+    pci_infof("created mmio cfg for bdf %02x:%02x.%1x (base: %#" PRIxPTR ")\n",
+              bdf.bus_id, bdf.device_id, bdf.function_id, bdf_start);
     fbl::AllocChecker ac;
-    fbl::RefPtr<Config> cfg = AdoptRef(new (&ac) MmioConfig(bdf, base));
+    fbl::RefPtr<Config> cfg = AdoptRef(new (&ac) MmioConfig(bdf, bdf_start));
     if (!ac.check()) {
         zxlogf(ERROR, "failed to allocate memory for PciConfig!\n");
     }
+
     return cfg;
 }
 
