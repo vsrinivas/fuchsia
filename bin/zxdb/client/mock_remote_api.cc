@@ -17,8 +17,9 @@ void MockRemoteAPI::AddOrChangeBreakpoint(
     std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb) {
   breakpoint_add_count_++;
   last_breakpoint_add_ = request;
-  debug_ipc::MessageLoop::Current()->PostTask(
-      [cb]() { cb(Err(), debug_ipc::AddOrChangeBreakpointReply()); });
+  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb]() {
+    cb(Err(), debug_ipc::AddOrChangeBreakpointReply());
+  });
 }
 
 void MockRemoteAPI::RemoveBreakpoint(
@@ -26,16 +27,17 @@ void MockRemoteAPI::RemoveBreakpoint(
     std::function<void(const Err&, debug_ipc::RemoveBreakpointReply)> cb) {
   breakpoint_remove_count_++;
   debug_ipc::MessageLoop::Current()->PostTask(
-      [cb]() { cb(Err(), debug_ipc::RemoveBreakpointReply()); });
+      FROM_HERE, [cb]() { cb(Err(), debug_ipc::RemoveBreakpointReply()); });
 }
 
 void MockRemoteAPI::ThreadStatus(
     const debug_ipc::ThreadStatusRequest& request,
     std::function<void(const Err&, debug_ipc::ThreadStatusReply)> cb) {
   // Returns the canned response.
-  debug_ipc::MessageLoop::Current()->PostTask([
-    cb, response = thread_status_reply_
-  ]() { cb(Err(), std::move(response)); });
+  debug_ipc::MessageLoop::Current()->PostTask(
+      FROM_HERE, [cb, response = thread_status_reply_]() {
+        cb(Err(), std::move(response));
+      });
 }
 
 void MockRemoteAPI::Resume(
@@ -44,7 +46,7 @@ void MockRemoteAPI::Resume(
   // Always returns success and then quits the message loop (we can make
   // quitting an option in the future if some test doesn't want this).
   resume_count_++;
-  debug_ipc::MessageLoop::Current()->PostTask([cb]() {
+  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb]() {
     cb(Err(), debug_ipc::ResumeReply());
     debug_ipc::MessageLoop::Current()->QuitNow();
   });

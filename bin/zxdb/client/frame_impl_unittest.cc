@@ -56,7 +56,7 @@ class MockThread : public Thread {
   const std::vector<Frame*>& GetFrames() const override { return frames_; }
   bool HasAllFrames() const override { return true; }
   void SyncFrames(std::function<void()> callback) override {
-    debug_ipc::MessageLoop::Current()->PostTask(callback);
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, callback);
   }
   FrameFingerprint GetFrameFingerprint(size_t frame_index) const override {
     return FrameFingerprint();
@@ -65,7 +65,8 @@ class MockThread : public Thread {
       std::vector<debug_ipc::RegisterCategory::Type> cats_to_get,
       std::function<void(const Err&, const RegisterSet&)> cb) override {
     debug_ipc::MessageLoop::Current()->PostTask(
-        [ registers = register_contents_, cb ]() { cb(Err(), registers); });
+        FROM_HERE,
+        [registers = register_contents_, cb]() { cb(Err(), registers); });
   }
 
  private:

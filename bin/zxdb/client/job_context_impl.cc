@@ -90,7 +90,7 @@ void JobContextImpl::AttachInternal(debug_ipc::AttachRequest::Type type,
   if (state_ != State::kNone) {
     // Avoid reentering caller to dispatch the error.
     debug_ipc::MessageLoop::Current()->PostTask(
-        [callback, weak_ptr = GetWeakPtr()]() {
+        FROM_HERE, [callback, weak_ptr = GetWeakPtr()]() {
           callback(std::move(weak_ptr),
                    Err("Can't attach, job is already running or starting."));
         });
@@ -121,7 +121,7 @@ void JobContextImpl::AttachToComponentRoot(Callback callback) {
 void JobContextImpl::Detach(Callback callback) {
   if (!job_.get()) {
     debug_ipc::MessageLoop::Current()->PostTask(
-        [callback, weak_ptr = GetWeakPtr()]() {
+        FROM_HERE, [callback, weak_ptr = GetWeakPtr()]() {
           callback(std::move(weak_ptr), Err("Error detaching: No job."));
         });
     return;

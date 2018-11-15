@@ -36,7 +36,7 @@ class TestExprNode : public ExprNode {
       cb(Err(), value_);
     } else {
       debug_ipc::MessageLoop::Current()->PostTask(
-          [ value = value_, cb ]() { cb(Err(), value); });
+          FROM_HERE, [value = value_, cb]() { cb(Err(), value); });
     }
   }
   void Print(std::ostream& out, int indent) const override {}

@@ -59,7 +59,7 @@ class SessionSink : public RemoteAPI {
     resume_count_++;
     resume_request_ = request;
     MessageLoop::Current()->PostTask(
-        [cb]() { cb(Err(), debug_ipc::ResumeReply()); });
+        FROM_HERE, [cb]() { cb(Err(), debug_ipc::ResumeReply()); });
   }
 
   void AddOrChangeBreakpoint(
@@ -67,8 +67,9 @@ class SessionSink : public RemoteAPI {
       std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb)
       override {
     set_breakpoint_ids_.insert(request.breakpoint.breakpoint_id);
-    MessageLoop::Current()->PostTask(
-        [cb]() { cb(Err(), debug_ipc::AddOrChangeBreakpointReply()); });
+    MessageLoop::Current()->PostTask(FROM_HERE, [cb]() {
+      cb(Err(), debug_ipc::AddOrChangeBreakpointReply());
+    });
   }
 
   void RemoveBreakpoint(
@@ -77,7 +78,7 @@ class SessionSink : public RemoteAPI {
       override {
     set_breakpoint_ids_.erase(request.breakpoint_id);
     MessageLoop::Current()->PostTask(
-        [cb]() { cb(Err(), debug_ipc::RemoveBreakpointReply()); });
+        FROM_HERE, [cb]() { cb(Err(), debug_ipc::RemoveBreakpointReply()); });
   }
 
  private:

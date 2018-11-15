@@ -108,7 +108,7 @@ void MemoryAnalysis::Schedule(const AnalyzeMemoryOptions& opts) {
   // Test code could have set everything, in which case trigger a run.
   if (HasEverything()) {
     debug_ipc::MessageLoop::Current()->PostTask(
-        [this_ref]() { this_ref->DoAnalysis(); });
+        FROM_HERE, [this_ref]() { this_ref->DoAnalysis(); });
   }
 }
 

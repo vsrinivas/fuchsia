@@ -35,12 +35,12 @@ class TargetSink : public RemoteAPI {
       const debug_ipc::LaunchRequest& request,
       std::function<void(const Err&, debug_ipc::LaunchReply)> cb) override {
     MessageLoop::Current()->PostTask(
-        [this, cb]() { cb(launch_err_, launch_reply_); });
+        FROM_HERE, [this, cb]() { cb(launch_err_, launch_reply_); });
   }
 
   void Kill(const debug_ipc::KillRequest& request,
             std::function<void(const Err&, debug_ipc::KillReply)> cb) override {
-    MessageLoop::Current()->PostTask([cb]() {
+    MessageLoop::Current()->PostTask(FROM_HERE, [cb]() {
       // For now, always report success.
       cb(Err(), debug_ipc::KillReply());
     });
@@ -50,13 +50,13 @@ class TargetSink : public RemoteAPI {
       const debug_ipc::AttachRequest& request,
       std::function<void(const Err&, debug_ipc::AttachReply)> cb) override {
     MessageLoop::Current()->PostTask(
-        [this, cb]() { cb(attach_err_, attach_reply_); });
+        FROM_HERE, [this, cb]() { cb(attach_err_, attach_reply_); });
   }
 
   void Detach(
       const debug_ipc::DetachRequest& request,
       std::function<void(const Err&, debug_ipc::DetachReply)> cb) override {
-    MessageLoop::Current()->PostTask([cb]() {
+    MessageLoop::Current()->PostTask(FROM_HERE, [cb]() {
       // For now, always report success.
       cb(Err(), debug_ipc::DetachReply());
     });

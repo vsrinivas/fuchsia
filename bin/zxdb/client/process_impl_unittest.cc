@@ -27,7 +27,7 @@ class ProcessSink : public RemoteAPI {
     resume_count_++;
     resume_request_ = request;
     debug_ipc::MessageLoop::Current()->PostTask(
-        [cb]() { cb(Err(), debug_ipc::ResumeReply()); });
+        FROM_HERE, [cb]() { cb(Err(), debug_ipc::ResumeReply()); });
   }
 
  private:

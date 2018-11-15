@@ -12,6 +12,8 @@ static_library("helper") {
     "buffered_fd.h",
     "elf.cc",
     "elf.h",
+    "file_line_function.cc",
+    "file_line_function.h",
     "message_loop.cc",
     "message_loop.h",
     "stream_buffer.cc",

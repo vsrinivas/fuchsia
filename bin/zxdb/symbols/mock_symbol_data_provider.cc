@@ -44,26 +44,26 @@ std::optional<uint64_t> MockSymbolDataProvider::GetRegister(
 
 void MockSymbolDataProvider::GetRegisterAsync(int dwarf_register_number,
                                               GetRegisterCallback callback) {
-  debug_ipc::MessageLoop::Current()->PostTask([
-    callback, weak_provider = weak_factory_.GetWeakPtr(), dwarf_register_number
-  ]() {
-    if (!weak_provider) {
-      // Destroyed before callback ready.
-      return;
-    }
+  debug_ipc::MessageLoop::Current()->PostTask(
+      FROM_HERE, [callback, weak_provider = weak_factory_.GetWeakPtr(),
+                  dwarf_register_number]() {
+        if (!weak_provider) {
+          // Destroyed before callback ready.
+          return;
+        }
 
-    const auto& found = weak_provider->regs_.find(dwarf_register_number);
-    if (found == weak_provider->regs_.end())
-      callback(Err("Failed"), 0);
-    callback(Err(), found->second.value);
-  });
+        const auto& found = weak_provider->regs_.find(dwarf_register_number);
+        if (found == weak_provider->regs_.end())
+          callback(Err("Failed"), 0);
+        callback(Err(), found->second.value);
+      });
 }
 
 std::optional<uint64_t> MockSymbolDataProvider::GetFrameBase() { return bp_; }
 
 void MockSymbolDataProvider::GetFrameBaseAsync(GetRegisterCallback callback) {
   debug_ipc::MessageLoop::Current()->PostTask(
-      [ callback, weak_provider = weak_factory_.GetWeakPtr() ]() {
+      FROM_HERE, [callback, weak_provider = weak_factory_.GetWeakPtr()]() {
         if (!weak_provider) {
           // Destroyed before callback ready.
           return;
@@ -76,7 +76,7 @@ void MockSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
                                             GetMemoryCallback callback) {
   auto found = FindBlockForAddress(address);
   if (found == mem_.end()) {
-    debug_ipc::MessageLoop::Current()->PostTask([callback]() {
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [callback]() {
       // The API states that invalid memory is not an error, it just does a
       // short read.
       callback(Err(), std::vector<uint8_t>());
@@ -91,7 +91,7 @@ void MockSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
     subset.resize(size_to_return);
     memcpy(&subset[0], &found->second[offset], size_to_return);
     debug_ipc::MessageLoop::Current()->PostTask(
-        [callback, subset]() { callback(Err(), subset); });
+        FROM_HERE, [callback, subset]() { callback(Err(), subset); });
   }
 }
 

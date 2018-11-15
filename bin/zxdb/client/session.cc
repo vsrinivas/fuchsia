@@ -156,7 +156,7 @@ void Session::PendingConnection::Initiate(
 void Session::PendingConnection::ConnectBackgroundThread(
     fxl::RefPtr<PendingConnection> owner) {
   Err err = DoConnectBackgroundThread();
-  main_loop_->PostTask([owner = std::move(owner), err]() {
+  main_loop_->PostTask(FROM_HERE, [owner = std::move(owner), err]() {
     owner->ConnectCompleteMainThread(owner, err);
   });
 }
@@ -385,7 +385,7 @@ bool Session::ConnectCanProceed(std::function<void(const Err&)> callback) {
   if (err.has_error()) {
     if (callback) {
       debug_ipc::MessageLoop::Current()->PostTask(
-          [callback, err]() { callback(err); });
+          FROM_HERE, [callback, err]() { callback(err); });
     }
     return false;
   }
@@ -415,7 +415,7 @@ void Session::OpenMinidump(const std::string& path,
   Err err = reinterpret_cast<MinidumpRemoteAPI*>(remote_api_.get())->Open(path);
 
   debug_ipc::MessageLoop::Current()->PostTask(
-      [callback, err]() { callback(err); });
+      FROM_HERE, [callback, err]() { callback(err); });
 }
 
 void Session::Disconnect(std::function<void(const Err&)> callback) {
@@ -430,7 +430,7 @@ void Session::Disconnect(std::function<void(const Err&)> callback) {
 
     if (callback) {
       debug_ipc::MessageLoop::Current()->PostTask(
-          [callback, err]() { callback(err); });
+          FROM_HERE, [callback, err]() { callback(err); });
     }
     return;
   }
@@ -442,7 +442,7 @@ void Session::Disconnect(std::function<void(const Err&)> callback) {
     // The connection is persistent (passed in via the constructor) and can't
     // be disconnected.
     if (callback) {
-      debug_ipc::MessageLoop::Current()->PostTask([callback]() {
+      debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [callback]() {
         callback(Err(ErrType::kGeneral,
                      "The connection can't be disconnected in this build "
                      "of the debugger."));
@@ -455,7 +455,7 @@ void Session::Disconnect(std::function<void(const Err&)> callback) {
 
   if (callback) {
     debug_ipc::MessageLoop::Current()->PostTask(
-        [callback]() { callback(Err()); });
+        FROM_HERE, [callback]() { callback(Err()); });
   }
 }
 

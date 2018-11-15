@@ -73,7 +73,7 @@ void TargetImpl::Launch(Callback callback) {
   if (err.has_error()) {
     // Avoid reentering caller to dispatch the error.
     debug_ipc::MessageLoop::Current()->PostTask(
-        [callback, err, weak_ptr = GetWeakPtr()]() {
+        FROM_HERE, [callback, err, weak_ptr = GetWeakPtr()]() {
           callback(std::move(weak_ptr), err);
         });
     return;
@@ -95,7 +95,7 @@ void TargetImpl::Launch(Callback callback) {
 void TargetImpl::Kill(Callback callback) {
   if (!process_.get()) {
     debug_ipc::MessageLoop::Current()->PostTask(
-        [callback, weak_ptr = GetWeakPtr()]() {
+        FROM_HERE, [callback, weak_ptr = GetWeakPtr()]() {
           callback(std::move(weak_ptr), Err("Error detaching: No process."));
         });
     return;
@@ -120,11 +120,12 @@ void TargetImpl::Kill(Callback callback) {
 void TargetImpl::Attach(uint64_t koid, Callback callback) {
   if (state_ != State::kNone) {
     // Avoid reentering caller to dispatch the error.
-    debug_ipc::MessageLoop::Current()->PostTask([callback,
-                                                 weak_ptr = GetWeakPtr()]() {
-      callback(std::move(weak_ptr),
-               Err("Can't attach, program is already running or starting."));
-    });
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [callback, weak_ptr = GetWeakPtr()]() {
+          callback(
+              std::move(weak_ptr),
+              Err("Can't attach, program is already running or starting."));
+        });
     return;
   }
 
@@ -143,7 +144,7 @@ void TargetImpl::Attach(uint64_t koid, Callback callback) {
 void TargetImpl::Detach(Callback callback) {
   if (!process_.get()) {
     debug_ipc::MessageLoop::Current()->PostTask(
-        [callback, weak_ptr = GetWeakPtr()]() {
+        FROM_HERE, [callback, weak_ptr = GetWeakPtr()]() {
           callback(std::move(weak_ptr), Err("Error detaching: No process."));
         });
     return;

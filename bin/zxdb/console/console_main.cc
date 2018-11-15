@@ -90,6 +90,9 @@ int ConsoleMain(int argc, const char* argv[]) {
   }
 
   debug_ipc::MessageLoopPoll loop;
+  if (options.debug_info)
+    loop.set_debug_mode(true);
+
   loop.Init();
 
   // This scope forces all the objects to be destroyed before the Cleanup()

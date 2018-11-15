@@ -23,7 +23,7 @@ TEST(MessageLoop, PostQuit) {
   PlatformMessageLoop loop;
   loop.Init();
 
-  loop.PostTask([loop_ptr = &loop]() { loop_ptr->QuitNow(); });
+  loop.PostTask(FROM_HERE, [loop_ptr = &loop]() { loop_ptr->QuitNow(); });
   loop.Run();
 
   loop.Cleanup();
@@ -66,7 +66,8 @@ TEST(MessageLoop, WatchPipeFD) {
     ASSERT_TRUE(watch_handle.watching());
 
     // Enqueue a task that should cause pipefd[1] to become readable.
-    loop.PostTask([write_fd = pipefd[1]]() { write(write_fd, "Hello", 5); });
+    loop.PostTask(FROM_HERE,
+                  [write_fd = pipefd[1]]() { write(write_fd, "Hello", 5); });
 
     // This will quit on success because the OnFDReadable callback called
     // QuitNow, or hang forever on failure.
@@ -104,7 +105,8 @@ TEST(MessageLoop, ZirconSocket) {
     ASSERT_TRUE(watch_handle.watching());
 
     // Enqueue a task that should cause receiver to become readable.
-    loop.PostTask([&sender]() { sender.write(0, "Hello", 5, nullptr); });
+    loop.PostTask(FROM_HERE,
+                  [&sender]() { sender.write(0, "Hello", 5, nullptr); });
 
     // This will quit on success because the OnSocketReadable callback called
     // QuitNow, or hang forever on failure.

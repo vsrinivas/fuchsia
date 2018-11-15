@@ -67,7 +67,7 @@ void FrameSymbolDataProvider::GetRegisterAsync(int dwarf_register_number,
   // stack frames.
   if (!frame_ || !IsTopFrame()) {
     debug_ipc::MessageLoop::Current()->PostTask(
-        [ dwarf_register_number, cb = std::move(callback) ]() {
+        FROM_HERE, [dwarf_register_number, cb = std::move(callback)]() {
           cb(Err(fxl::StringPrintf("Register %d unavailable.",
                                    dwarf_register_number)),
              0);
@@ -103,9 +103,9 @@ std::optional<uint64_t> FrameSymbolDataProvider::GetFrameBase() {
 
 void FrameSymbolDataProvider::GetFrameBaseAsync(GetRegisterCallback cb) {
   if (!frame_) {
-    debug_ipc::MessageLoop::Current()->PostTask([cb = std::move(cb)]() {
-      cb(Err("Call frame destroyed."), 0);
-    });
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE,
+        [cb = std::move(cb)]() { cb(Err("Call frame destroyed."), 0); });
     return;
   }
 
@@ -117,9 +117,10 @@ void FrameSymbolDataProvider::GetFrameBaseAsync(GetRegisterCallback cb) {
 void FrameSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
                                              GetMemoryCallback callback) {
   if (!frame_) {
-    debug_ipc::MessageLoop::Current()->PostTask([cb = std::move(callback)]() {
-      cb(Err("Call frame destroyed."), std::vector<uint8_t>());
-    });
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [cb = std::move(callback)]() {
+          cb(Err("Call frame destroyed."), std::vector<uint8_t>());
+        });
     return;
   }
 
@@ -127,7 +128,7 @@ void FrameSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
   // system. Prevent those.
   if (size > 1024 * 1024) {
     debug_ipc::MessageLoop::Current()->PostTask(
-        [ address, size, cb = std::move(callback) ]() {
+        FROM_HERE, [address, size, cb = std::move(callback)]() {
           cb(Err(fxl::StringPrintf("Memory request for %u bytes at 0x%" PRIx64
                                    " is too large.",
                                    size, address)),

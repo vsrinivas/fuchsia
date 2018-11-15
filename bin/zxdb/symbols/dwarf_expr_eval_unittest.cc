@@ -125,9 +125,11 @@ TEST_F(DwarfExprEvalTest, InfiniteLoop) {
 
   // Let the message loop process messages for a few times so the evaluator can
   // run.
-  loop().PostTask([]() { debug_ipc::MessageLoop::Current()->QuitNow(); });
+  loop().PostTask(FROM_HERE,
+                  []() { debug_ipc::MessageLoop::Current()->QuitNow(); });
   loop().Run();
-  loop().PostTask([]() { debug_ipc::MessageLoop::Current()->QuitNow(); });
+  loop().PostTask(FROM_HERE,
+                  []() { debug_ipc::MessageLoop::Current()->QuitNow(); });
   loop().Run();
 
   // Reset the evaluator, this should cancel everything.
@@ -136,7 +138,8 @@ TEST_F(DwarfExprEvalTest, InfiniteLoop) {
   // This should not crash (the evaluator may have posted a pending task
   // that will get executed when we run the loop again, and it should notice
   // the object is gone).
-  loop().PostTask([]() { debug_ipc::MessageLoop::Current()->QuitNow(); });
+  loop().PostTask(FROM_HERE,
+                  []() { debug_ipc::MessageLoop::Current()->QuitNow(); });
   loop().Run();
 
   // Callback should never have been issued.

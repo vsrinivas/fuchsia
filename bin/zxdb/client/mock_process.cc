@@ -30,15 +30,16 @@ ProcessSymbols* MockProcess::GetSymbols() { return nullptr; }
 void MockProcess::GetModules(
     std::function<void(const Err&, std::vector<debug_ipc::Module>)> cb) {
   MessageLoop::Current()->PostTask(
-      [cb]() { cb(Err(), std::vector<debug_ipc::Module>()); });
+      FROM_HERE, [cb]() { cb(Err(), std::vector<debug_ipc::Module>()); });
 }
 
 void MockProcess::GetAspace(
     uint64_t address,
     std::function<void(const Err&, std::vector<debug_ipc::AddressRegion>)> cb)
     const {
-  MessageLoop::Current()->PostTask(
-      [cb]() { cb(Err(), std::vector<debug_ipc::AddressRegion>()); });
+  MessageLoop::Current()->PostTask(FROM_HERE, [cb]() {
+    cb(Err(), std::vector<debug_ipc::AddressRegion>());
+  });
 }
 
 std::vector<Thread*> MockProcess::GetThreads() const {
@@ -48,7 +49,7 @@ std::vector<Thread*> MockProcess::GetThreads() const {
 Thread* MockProcess::GetThreadFromKoid(uint64_t koid) { return nullptr; }
 
 void MockProcess::SyncThreads(std::function<void()> cb) {
-  MessageLoop::Current()->PostTask([cb]() { cb(); });
+  MessageLoop::Current()->PostTask(FROM_HERE, [cb]() { cb(); });
 }
 
 void MockProcess::Pause() {}
@@ -57,12 +58,13 @@ void MockProcess::Continue() {}
 
 void MockProcess::ContinueUntil(const InputLocation& location,
                                 std::function<void(const Err&)> cb) {
-  MessageLoop::Current()->PostTask([cb]() { cb(Err()); });
+  MessageLoop::Current()->PostTask(FROM_HERE, [cb]() { cb(Err()); });
 }
 
 void MockProcess::ReadMemory(uint64_t address, uint32_t size,
                              std::function<void(const Err&, MemoryDump)> cb) {
-  MessageLoop::Current()->PostTask([cb]() { cb(Err(), MemoryDump()); });
+  MessageLoop::Current()->PostTask(FROM_HERE,
+                                   [cb]() { cb(Err(), MemoryDump()); });
 }
 
 }  // namespace zxdb

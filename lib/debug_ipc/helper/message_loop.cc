@@ -38,12 +38,13 @@ void MessageLoop::Run() {
   RunImpl();
 }
 
-void MessageLoop::PostTask(std::function<void()> fn) {
+void MessageLoop::PostTask(FileLineFunction file_line,
+                           std::function<void()> fn) {
   bool needs_awaken;
   {
     std::lock_guard<std::mutex> guard(mutex_);
     needs_awaken = task_queue_.empty();
-    task_queue_.push_back(std::move(fn));
+    task_queue_.push_back({std::move(file_line), std::move(fn)});
   }
   if (needs_awaken)
     SetHasTasks();
@@ -56,11 +57,15 @@ bool MessageLoop::ProcessPendingTask() {
   if (task_queue_.empty())
     return false;
 
-  std::function<void()> task = std::move(task_queue_.front());
+  Task task = std::move(task_queue_.front());
   task_queue_.pop_front();
   {
     mutex_.unlock();
-    task();
+    if (debug_mode()) {
+      FXL_LOG(INFO) << "Running task from [" << task.file_line.ToString()
+                    << "]";
+    }
+    task.task_fn();
     mutex_.lock();
   }
   return true;

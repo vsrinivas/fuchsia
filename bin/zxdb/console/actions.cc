@@ -54,7 +54,7 @@ void ActionFlow::ScheduleActions(std::vector<Action>&& actions,
   callback_ = std::move(callback);
 
   // We schedule the first action to run
-  debug_ipc::MessageLoop::Current()->PostTask([&]() {
+  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [&]() {
     const auto& action = flow_.front();
     action(*session_, console_);
   });
@@ -90,7 +90,7 @@ void ActionFlow::PostActionCallback(Err err) {
   // Schedule the next action.
   const auto& next_action = flow.current_action();
   debug_ipc::MessageLoop::Current()->PostTask(
-      [&]() { next_action(*flow.session_, flow.console_); });
+      FROM_HERE, [&]() { next_action(*flow.session_, flow.console_); });
 }
 
 void ActionFlow::Clear() {

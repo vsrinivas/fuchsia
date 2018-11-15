@@ -31,30 +31,31 @@ Err ErrNoArch() { return Err("Architecture not supported"); }
 template <typename ReplyType>
 void ErrNoLive(std::function<void(const Err&, ReplyType)> cb) {
   debug_ipc::MessageLoop::Current()->PostTask(
-      [cb]() { cb(ErrNoLive(), ReplyType()); });
+      FROM_HERE, [cb]() { cb(ErrNoLive(), ReplyType()); });
 }
 
 template <typename ReplyType>
 void ErrNoImpl(std::function<void(const Err&, ReplyType)> cb) {
   debug_ipc::MessageLoop::Current()->PostTask(
-      [cb]() { cb(ErrNoImpl(), ReplyType()); });
+      FROM_HERE, [cb]() { cb(ErrNoImpl(), ReplyType()); });
 }
 
 template <typename ReplyType>
 void ErrNoDump(std::function<void(const Err&, ReplyType)> cb) {
   debug_ipc::MessageLoop::Current()->PostTask(
-      [cb]() { cb(ErrNoDump(), ReplyType()); });
+      FROM_HERE, [cb]() { cb(ErrNoDump(), ReplyType()); });
 }
 
 template <typename ReplyType>
 void ErrNoArch(std::function<void(const Err&, ReplyType)> cb) {
   debug_ipc::MessageLoop::Current()->PostTask(
-      [cb]() { cb(ErrNoArch(), ReplyType()); });
+      FROM_HERE, [cb]() { cb(ErrNoArch(), ReplyType()); });
 }
 
 template <typename ReplyType>
 void Succeed(std::function<void(const Err&, ReplyType)> cb, ReplyType r) {
-  debug_ipc::MessageLoop::Current()->PostTask([cb, r]() { cb(Err(), r); });
+  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
+                                              [cb, r]() { cb(Err(), r); });
 }
 
 template <typename ValueType>

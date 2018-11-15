@@ -9,7 +9,8 @@
 #include <map>
 #include <mutex>
 
-#include "garnet/public/lib/fxl/macros.h"
+#include "garnet/lib/debug_ipc/helper/file_line_function.h"
+#include "lib/fxl/macros.h"
 
 #if defined(__Fuchsia__)
 #include <zircon/compiler.h>
@@ -51,7 +52,7 @@ class MessageLoop {
   // Runs the message loop.
   void Run();
 
-  void PostTask(std::function<void()> fn);
+  void PostTask(FileLineFunction file_line, std::function<void()> fn);
 
   // Exits the message loop immediately, not running pending functions. This
   // must be called only on the MessageLoop thread.
@@ -70,6 +71,9 @@ class MessageLoop {
   // You can only watch a handle once. Note that stdin/stdout/stderr can be
   // the same underlying OS handle, so the caller can only watch one of them.
   virtual WatchHandle WatchFD(WatchMode mode, int fd, FDWatcher* watcher) = 0;
+
+  bool debug_mode() const { return debug_mode_; }
+  void set_debug_mode(bool active) { debug_mode_ = active; }
 
  protected:
   virtual void RunImpl() = 0;
@@ -99,9 +103,17 @@ class MessageLoop {
  private:
   friend WatchHandle;
 
-  std::deque<std::function<void()>> task_queue_;
+  struct Task {
+    FileLineFunction file_line;
+    std::function<void()> task_fn;
+  };
+
+  std::deque<Task> task_queue_;
 
   bool should_quit_ = false;
+
+  // Whether the message loop should output debug information.
+  bool debug_mode_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MessageLoop);
 };

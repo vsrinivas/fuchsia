@@ -14,8 +14,9 @@ namespace {
 
 using debug_ipc::MessageLoop;
 
-#define STOP_MESSAGE_LOOP() \
-  MessageLoop::Current()->PostTask([]() { MessageLoop::Current()->QuitNow(); })
+#define STOP_MESSAGE_LOOP()         \
+  MessageLoop::Current()->PostTask( \
+      FROM_HERE, []() { MessageLoop::Current()->QuitNow(); })
 
 // We override the Console in order to be able to override the dispatch
 // function

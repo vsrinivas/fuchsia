@@ -30,7 +30,7 @@ std::optional<uint64_t> MockFrame::GetBasePointer() const {
 }
 void MockFrame::GetBasePointerAsync(std::function<void(uint64_t bp)> cb) {
   debug_ipc::MessageLoop::Current()->PostTask(
-      [ bp = stack_frame_.bp, cb ]() { cb(bp); });
+      FROM_HERE, [bp = stack_frame_.bp, cb]() { cb(bp); });
 }
 uint64_t MockFrame::GetStackPointer() const { return stack_frame_.sp; }
 

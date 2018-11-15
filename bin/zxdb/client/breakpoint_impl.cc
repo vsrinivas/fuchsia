@@ -125,7 +125,7 @@ void BreakpointImpl::SetSettings(const BreakpointSettings& settings,
   Err err = ValidateSettings(settings);
   if (err.has_error()) {
     debug_ipc::MessageLoop::Current()->PostTask(
-        [callback, err]() { callback(err); });
+        FROM_HERE, [callback, err]() { callback(err); });
     return;
   }
 
@@ -251,7 +251,7 @@ void BreakpointImpl::SyncBackend(std::function<void(const Err&)> callback) {
     // Backend doesn't know about it and we don't require anything.
     if (callback) {
       debug_ipc::MessageLoop::Current()->PostTask(
-          [callback]() { callback(Err()); });
+          FROM_HERE, [callback]() { callback(Err()); });
     }
   }
 }

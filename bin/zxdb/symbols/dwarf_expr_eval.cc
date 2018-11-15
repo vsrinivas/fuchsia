@@ -86,8 +86,8 @@ void DwarfExprEval::ContinueEval() {
     if (instruction_count == kMaxInstructionsAtOnce) {
       // Enough instructions have run at once. Schedule a callback to continue
       // execution in the message loop.
-      debug_ipc::MessageLoop::Current()
-          ->PostTask([weak_eval = weak_factory_.GetWeakPtr()]() {
+      debug_ipc::MessageLoop::Current()->PostTask(
+          FROM_HERE, [weak_eval = weak_factory_.GetWeakPtr()]() {
             if (weak_eval)
               weak_eval->ContinueEval();
           });

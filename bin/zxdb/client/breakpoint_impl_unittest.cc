@@ -34,8 +34,9 @@ class BreakpointSink : public RemoteAPI {
       override {
     adds.push_back(std::make_pair(request, cb));
 
-    MessageLoop::Current()->PostTask(
-        [cb]() { cb(Err(), debug_ipc::AddOrChangeBreakpointReply()); });
+    MessageLoop::Current()->PostTask(FROM_HERE, [cb]() {
+      cb(Err(), debug_ipc::AddOrChangeBreakpointReply());
+    });
   }
 
   void RemoveBreakpoint(
@@ -45,7 +46,7 @@ class BreakpointSink : public RemoteAPI {
     removes.push_back(std::make_pair(request, cb));
 
     MessageLoop::Current()->PostTask(
-        [cb]() { cb(Err(), debug_ipc::RemoveBreakpointReply()); });
+        FROM_HERE, [cb]() { cb(Err(), debug_ipc::RemoveBreakpointReply()); });
   }
 
   std::vector<AddPair> adds;
