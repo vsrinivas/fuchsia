@@ -440,10 +440,11 @@ tx_vec_idx_t MinstrelRateSelector::GetTxVector(const wlan::common::MacAddr& addr
         probe_idx = GetNextProbe(peer);
         const TxStats& tx_stats = peer->tx_stats_map[probe_idx];
         // tx vector does not need probing if:
-        // 1) It is the highest basic rate
+        // 1) It is the highest basic rate, highest throuput or highest probability
         // 2) It has more attempts than others
         // 3) It is slower than max_probability and has been probed at least kMaxSlowProbe times
-        should_not_probe = (probe_idx == peer->basic_highest) ||
+        should_not_probe = (probe_idx == peer->basic_highest) || probe_idx == peer->max_tp ||
+                           probe_idx == peer->max_probability ||
                            (tx_stats.attempts_cur > peer->num_probe_cycles_done) ||
                            ((tx_stats.perfect_tx_time > baseline_tx_time) &&
                             (tx_stats.attempts_cur >= kMaxSlowProbe));

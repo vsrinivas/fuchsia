@@ -57,10 +57,13 @@ struct MinstrelTest : public ::testing::Test {
                     },
             },
     };
-    // Note: 129 is the lowest basic rate and will never be used to probe.
-    const tx_vec_idx_t want_probe_idx_[23] = {
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 129, 130, 131, 132, 133, 134, 135,
-        /* 136 */};
+    // Note: 16 is the max throughput and 136 is the highest basic rate. They will never be probed.
+    const tx_vec_idx_t want_probe_idx_[22] =
+        // clang-format off
+        {1,   2,   3,   4,   5,   6,   7,   8,
+         9,   10,  11,  12,  13,  14,  15,  /* 16 ,*/
+         129, 130, 131, 132, 133, 134, 135, /* 136 */};
+        // clang-format on
 };
 
 TEST_F(MinstrelTest, AddPeer) {
