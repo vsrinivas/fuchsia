@@ -10,10 +10,9 @@
 #include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <fuchsia/device/manager/c/fidl.h>
-
-#include "device-internal.h"
-
 #include <zircon/device/dmctl.h>
+
+#include "../devhost/device-internal.h"
 
 using namespace devmgr;
 

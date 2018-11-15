@@ -31,9 +31,9 @@
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 
-#include "bootfs.h"
 #include "devmgr.h"
-#include "fshost.h"
+#include "../fshost/fshost.h"
+#include "../shared/bootfs.h"
 
 namespace devmgr {
 

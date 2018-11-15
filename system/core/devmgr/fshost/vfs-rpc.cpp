@@ -25,7 +25,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 
-#include "devmgr.h"
+#include "../devmgr/devmgr.h"
 #include "fshost.h"
 
 #define ZXDEBUG 0

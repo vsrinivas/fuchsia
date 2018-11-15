@@ -13,14 +13,14 @@ MODULE_TYPE := userapp
 MODULE_GROUP := core
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/bootfs.cpp \
-    $(LOCAL_DIR)/devmgr.cpp \
-    $(LOCAL_DIR)/devmgr-binding.cpp \
-    $(LOCAL_DIR)/devmgr-coordinator.cpp \
-    $(LOCAL_DIR)/devmgr-devfs.cpp \
-    $(LOCAL_DIR)/devmgr-drivers.cpp \
-    $(LOCAL_DIR)/devmgr-fdio.cpp \
-    $(LOCAL_DIR)/devmgr-fidl.cpp \
+    $(LOCAL_DIR)/devmgr/main.cpp \
+    $(LOCAL_DIR)/devmgr/binding.cpp \
+    $(LOCAL_DIR)/devmgr/coordinator.cpp \
+    $(LOCAL_DIR)/devmgr/devfs.cpp \
+    $(LOCAL_DIR)/devmgr/drivers.cpp \
+    $(LOCAL_DIR)/devmgr/fidl.cpp \
+    $(LOCAL_DIR)/shared/bootfs.cpp \
+    $(LOCAL_DIR)/shared/fdio.cpp \
 
 # userboot supports loading via the dynamic linker, so libc (system/ulib/c)
 # can be linked dynamically.  But it doesn't support any means to look
@@ -75,11 +75,11 @@ MODULE_TYPE := userapp
 MODULE_GROUP := core
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/bootfs.cpp \
-    $(LOCAL_DIR)/block-watcher.cpp \
-    $(LOCAL_DIR)/devmgr-fdio.cpp \
-    $(LOCAL_DIR)/fshost.cpp \
-    $(LOCAL_DIR)/vfs-rpc.cpp
+    $(LOCAL_DIR)/fshost/block-watcher.cpp \
+    $(LOCAL_DIR)/fshost/main.cpp \
+    $(LOCAL_DIR)/fshost/vfs-rpc.cpp \
+    $(LOCAL_DIR)/shared/bootfs.cpp \
+    $(LOCAL_DIR)/shared/fdio.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/memfs.cpp \
@@ -139,7 +139,7 @@ MODULE_TYPE := userapp
 MODULE_GROUP := core
 
 MODULE_SRCS := \
-	$(LOCAL_DIR)/devhost-main.cpp
+	$(LOCAL_DIR)/devhost/main.cpp
 
 MODULE_LIBS := system/ulib/driver system/ulib/fdio system/ulib/c
 
@@ -155,7 +155,7 @@ MODULE_TYPE := driver
 MODULE_NAME := dmctl
 
 MODULE_SRCS := \
-	$(LOCAL_DIR)/dmctl.cpp \
+	$(LOCAL_DIR)/dmctl/dmctl.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \

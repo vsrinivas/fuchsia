@@ -36,14 +36,14 @@
 #include <lib/zx/vmo.h>
 #include <zxcpp/new.h>
 
-#include "async-loop-owned-rpc-handler.h"
+#include "../shared/async-loop-owned-rpc-handler.h"
 #include "devhost.h"
-#include "devhost-main.h"
+#include "main.h"
 #if ENABLE_DRIVER_TRACING
-#include "devhost-tracing.h"
+#include "tracing.h"
 #endif
-#include "fidl_txn.h"
-#include "log.h"
+#include "../shared/fidl_txn.h"
+#include "../shared/log.h"
 
 zx_status_t zx_driver::Create(fbl::RefPtr<zx_driver>* out_driver) {
     *out_driver = fbl::AdoptRef(new zx_driver());

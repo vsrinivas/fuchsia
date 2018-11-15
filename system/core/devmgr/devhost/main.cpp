@@ -4,7 +4,7 @@
 
 #include <zircon/compiler.h>
 
-#include "devhost-main.h"
+#include "main.h"
 
 __BEGIN_CDECLS
 

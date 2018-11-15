@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "async-loop-owned-rpc-handler.h"
 #include "devcoordinator.h"
 #include "devmgr.h"
-#include "fshost.h"
-#include "log.h"
+#include "../fshost/fshost.h"
+#include "../shared/async-loop-owned-rpc-handler.h"
+#include "../shared/log.h"
 
 #include <zircon/fidl.h>
 #include <zircon/listnode.h>

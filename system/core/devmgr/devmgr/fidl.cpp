@@ -8,7 +8,7 @@
 #include <lib/fidl/cpp/message_part.h>
 
 #include "devcoordinator.h"
-#include "log.h"
+#include "../shared/log.h"
 
 namespace devmgr {
 

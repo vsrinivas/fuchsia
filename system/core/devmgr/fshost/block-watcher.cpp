@@ -24,7 +24,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
-#include "devmgr.h"
+#include "../devmgr/devmgr.h"
 #include "fshost.h"
 
 namespace devmgr {

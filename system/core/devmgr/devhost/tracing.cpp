@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "devhost-tracing.h"
+#include "tracing.h"
 
 #include <lib/async-loop/loop.h>
 #include <trace-provider/provider.h>
 
-#include "log.h"
+#include "../shared/log.h"
 
 using namespace devmgr;
 

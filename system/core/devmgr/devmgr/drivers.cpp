@@ -11,7 +11,7 @@
 
 #include "devmgr.h"
 #include "devcoordinator.h"
-#include "log.h"
+#include "../shared/log.h"
 
 #include <driver-info/driver-info.h>
 

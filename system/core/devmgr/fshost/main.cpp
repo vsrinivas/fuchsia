@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "devmgr.h"
-#include "fshost.h"
-
 #include <bootdata/decompress.h>
 
 #include <fbl/function.h>
@@ -35,7 +32,8 @@
 #include <string.h>
 #include <threads.h>
 
-#include "bootfs.h"
+#include "../devmgr/devmgr.h"
+#include "../shared/bootfs.h"
 #include "fshost.h"
 
 namespace devmgr {

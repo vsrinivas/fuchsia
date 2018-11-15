@@ -33,11 +33,11 @@
 #include <zircon/syscalls/system.h>
 
 #include "devcoordinator.h"
-#include "devhost.h"
 #include "devmgr.h"
-#include "fidl_txn.h"
-#include "log.h"
-#include "fshost.h"
+#include "../devhost/devhost.h"
+#include "../fshost/fshost.h"
+#include "../shared/fidl_txn.h"
+#include "../shared/log.h"
 
 namespace devmgr {
 

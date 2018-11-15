@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "async-loop-owned-rpc-handler.h"
-#include "devhost-lock.h"
+#include "lock.h"
 #include "device-internal.h"
+#include "../shared/async-loop-owned-rpc-handler.h"
 
 #include <ddk/binding.h>
 #include <ddk/device.h>
