@@ -12,7 +12,8 @@ Zircon is the microkernel underlying the rest of Fuchsia. Zircon
 also provides core drivers and Fuchsia's libc implementation.
 
  - [Concepts][zircon-concepts]
- - [System Calls][zircon-syscalls] / VDSO (libzircon)
+ - [System Calls][zircon-syscalls]
+ - [vDSO (libzircon)][zircon-vdso]
 
 ## Zircon Core
 
@@ -95,6 +96,7 @@ also provides core drivers and Fuchsia's libc implementation.
 
 [zircon-concepts]: https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md
 [zircon-syscalls]: https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls.md
+[zircon-vdso]: https://fuchsia.googlesource.com/zircon/+/master/docs/vdso.md
 [zircon-ddk]: https://fuchsia.googlesource.com/zircon/+/HEAD/docs/ddk/overview.md
 [FIDL]: https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/README.md
 [framework-story]: https://fuchsia.googlesource.com/peridot/+/master/docs/modular/story.md
