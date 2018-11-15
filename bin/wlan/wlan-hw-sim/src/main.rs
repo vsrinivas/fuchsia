@@ -126,7 +126,8 @@ fn create_wlantap_config() -> wlantap::WlantapPhyConfig {
                 create_2_4_ghz_band_info()
             ]
         },
-        name: String::from("wlantap0")
+        name: String::from("wlantap0"),
+        quiet: false,
     }
 }
 

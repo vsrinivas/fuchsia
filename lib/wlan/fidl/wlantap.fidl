@@ -10,6 +10,7 @@ using fuchsia.wlan.mlme;
 struct WlantapPhyConfig {
     fuchsia.wlan.device.PhyInfo phy_info;
     string name;
+    bool quiet;
 };
 
 // See wlan_rx_info_t

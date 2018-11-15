@@ -133,7 +133,8 @@ mod tests {
                 caps: vec![],
                 bands: vec![create_2_4_ghz_band_info()]
             },
-            name: String::from("devwatchtap")
+            name: String::from("devwatchtap"),
+            quiet: false,
         }
     }
 
