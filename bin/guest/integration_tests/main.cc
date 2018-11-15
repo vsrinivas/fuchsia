@@ -31,8 +31,8 @@ class ZirconGuestTest : public GuestTest<ZirconGuestTest> {
   }
 
   static bool SetUpGuest() {
-    if (WaitForPkgfs() != ZX_OK) {
-      ADD_FAILURE() << "Failed to wait for pkgfs";
+    if (WaitForSystemReady() != ZX_OK) {
+      ADD_FAILURE() << "Failed to wait for system ready";
       return false;
     }
     return true;
@@ -47,9 +47,7 @@ TEST_F(ZirconGuestTest, LaunchGuest) {
 
 TEST_F(ZirconGuestTest, VirtioRng) {
   std::string result;
-  std::string cmd =
-      fxl::StringPrintf("run %s#%s", kTestUtilsUrl, kVirtioRngUtilCmx);
-  EXPECT_EQ(Execute(cmd, &result), ZX_OK);
+  EXPECT_EQ(Run(kVirtioRngUtilCmx, "", &result), ZX_OK);
   EXPECT_THAT(result, HasSubstr("PASS"));
 }
 

@@ -9,8 +9,10 @@
 
 static constexpr char kZirconGuestUrl[] = "zircon_guest";
 static constexpr char kLinuxGuestUrl[] = "linux_guest";
-static constexpr char kTestUtilsUrl[] =
-    "fuchsia-pkg://fuchsia.com/guest_integration_tests_utils";
+
+zx_status_t GuestWaitForSystemReady(EnclosedGuest& enclosed_guest);
+zx_status_t GuestRun(EnclosedGuest& enclosed_guest, const std::string& cmx,
+                     const std::string& args, std::string* result);
 
 template <class T>
 class GuestTest : public ::testing::Test {
@@ -31,20 +33,8 @@ class GuestTest : public ::testing::Test {
     delete enclosed_guest_;
   }
 
-  static zx_status_t WaitForPkgfs() {
-    for (size_t i = 0; i != 20; ++i) {
-      std::string ps;
-      zx_status_t status = Execute("ps", &ps);
-      if (status != ZX_OK) {
-        return status;
-      }
-      zx::nanosleep(zx::deadline_after(zx::msec(500)));
-      auto pkgfs = ps.find("pkgfs");
-      if (pkgfs != std::string::npos) {
-        return ZX_OK;
-      }
-    }
-    return ZX_ERR_BAD_STATE;
+  static zx_status_t WaitForSystemReady() {
+    return GuestWaitForSystemReady(*enclosed_guest_);
   }
 
   void SetUp() {
@@ -53,9 +43,14 @@ class GuestTest : public ::testing::Test {
     ASSERT_TRUE(setup_succeeded_) << "Guest setup failed";
   }
 
-  static zx_status_t Execute(std::string message,
+  static zx_status_t Execute(const std::string& message,
                              std::string* result = nullptr) {
     return enclosed_guest_->Execute(message, result);
+  }
+
+  static zx_status_t Run(const std::string& cmx, const std::string& args,
+                         std::string* result = nullptr) {
+    return GuestRun(*enclosed_guest_, cmx, args, result);
   }
 
  private:
