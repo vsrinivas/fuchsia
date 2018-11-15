@@ -1,5 +1,6 @@
 {
   "packages": [
+    "//garnet/bin/telephony/modem-mgr",
     "//garnet/bin/telephony/ril-qmi",
     "//garnet/bin/telephony/ril-qmi:ril-qmi-tests",
     "//garnet/drivers/telephony/qmi-fake-transport",

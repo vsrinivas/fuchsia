@@ -11,4 +11,8 @@ using fuchsia.telephony.ril;
 interface Manager {
   /// Returns whether or not a modem is currently available on the system.
   1: IsAvailable() -> (bool available);
+
+  /// Get access to a RIL
+  // TODO(bwb): get per modem, not just first one on the system
+  2: GetRilHandle(request<fuchsia.telephony.ril.RadioInterfaceLayer> ril_iface) -> (bool status);
 };

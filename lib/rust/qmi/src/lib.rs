@@ -37,8 +37,6 @@ const IOCTL_QMI_GET_CHANNEL: raw::c_int = make_ioctl!(
 );
 
 pub fn set_network_status(device: &File, state: bool) -> Result<(), zx::Status> {
-    let mut handle: zx::sys::zx_handle_t = zx::sys::ZX_HANDLE_INVALID;
-
     // This call is safe because the callee does not retain any data from the call, and the return
     // value ensures that the handle is a valid handle to a zx::channel.
     unsafe {
