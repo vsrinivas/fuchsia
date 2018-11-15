@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
-import("//third_party/cobalt_config/cobalt_config.gni")
+import("//build/rust/rustc_binary.gni")
+import("//third_party/cobalt_config/metrics_registry.gni")
 
-cobalt_config("wlan_metrics_registry") {
+metrics_registry("wlan_metrics_registry") {
   # This ID must match the Cobalt config from
   # //third_party/cobalt_config/projects.yaml
   project_id = 106
@@ -17,6 +17,7 @@ rustc_binary("bin") {
   name = "wlanstack2"
   with_unit_tests = true
   edition = "2018"
+
   # with_lto = "fat"
 
   deps = [
@@ -28,10 +29,10 @@ rustc_binary("bin") {
     "//garnet/lib/wlan/fidl:service-rustc",
     "//garnet/lib/wlan/fidl:sme-rustc",
     "//garnet/lib/wlan/fidl:wlantap-rustc",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/fidl/fuchsia.wlan.minstrel:fuchsia.wlan.minstrel-rustc",
     "//garnet/public/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
     "//garnet/public/fidl/fuchsia.wlan.stats:fuchsia.wlan.stats-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
@@ -66,12 +67,10 @@ package("wlanstack2") {
   resources = [
     {
       path = rebase_path(
-              get_label_info(
-                             ":wlan_metrics_registry",
-                             "target_gen_dir")
-              + "/wlan_metrics_registry.pb")
+              get_label_info(":wlan_metrics_registry", "target_gen_dir") +
+              "/wlan_metrics_registry.pb")
       dest = "wlan_metrics_registry.pb"
-    }
+    },
   ]
 }
 
@@ -79,13 +78,13 @@ package("wlanstack2-tests") {
   testonly = true
 
   deps = [
-    ":bin"
+    ":bin",
   ]
 
   tests = [
     {
       name = "wlanstack2_bin_test_rustc"
-      dest =  "wlanstack2_bin_test_rustc"
-    }
+      dest = "wlanstack2_bin_test_rustc"
+    },
   ]
 }

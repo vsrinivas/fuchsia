@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//third_party/cobalt_config/cobalt_config.gni")
+import("//third_party/cobalt_config/metrics_registry.gni")
 import("//third_party/protobuf/proto_library.gni")
 
 executable("system-metrics") {
@@ -22,7 +22,7 @@ executable("system-metrics") {
   ]
 }
 
-cobalt_config("cobalt_system_metrics_registry") {
+metrics_registry("cobalt_system_metrics_registry") {
   project_id = 102
   use_target_name = true
 }
@@ -42,9 +42,9 @@ package("cobalt_system_metrics") {
 
   resources = [
     {
-      path = rebase_path(
-              get_label_info(":cobalt_system_metrics_registry",
-                             "target_gen_dir") + "/cobalt_system_metrics_registry.pb")
+      path = rebase_path(get_label_info(":cobalt_system_metrics_registry",
+                                        "target_gen_dir") +
+                         "/cobalt_system_metrics_registry.pb")
       dest = "cobalt_system_metrics_registry.pb"
     },
   ]
