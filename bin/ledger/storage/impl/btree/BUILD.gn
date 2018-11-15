@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fuzzing/fuzzer.gni")
 import("//third_party/flatbuffers/flatbuffer.gni")
 
 visibility = [ "//peridot/bin/ledger/*" ]
@@ -101,4 +102,14 @@ source_set("unittests") {
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]
+}
+
+fuzz_target("encoding_fuzzer") {
+  sources = [
+    "encoding_fuzztest.cc",
+  ]
+  deps = [
+    ":lib",
+    "//peridot/bin/ledger/storage/public",
+  ]
 }

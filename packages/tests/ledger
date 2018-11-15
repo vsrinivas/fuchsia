@@ -4,6 +4,7 @@
         "peridot/packages/prod/ledger"
     ],
     "packages": [
-        "//peridot/bin/ledger:ledger_tests"
+        "//peridot/bin/ledger:ledger_tests",
+        "//peridot/bin/ledger:ledger_fuzzers"
     ]
 }
