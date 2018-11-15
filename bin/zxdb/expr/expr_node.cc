@@ -15,6 +15,7 @@
 #include "garnet/bin/zxdb/expr/resolve_collection.h"
 #include "garnet/bin/zxdb/expr/resolve_ptr_ref.h"
 #include "garnet/bin/zxdb/expr/symbol_variable_resolver.h"
+#include "garnet/bin/zxdb/symbols/arch.h"
 #include "garnet/bin/zxdb/symbols/array_type.h"
 #include "garnet/bin/zxdb/symbols/base_type.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
@@ -119,9 +120,9 @@ void AddressOfExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
               Symbol::kTagPointerType, LazySymbol(value.type_ref()));
 
           std::vector<uint8_t> contents;
-          contents.resize(sizeof(uint64_t));
-          uint64_t address = value.source().address();
-          memcpy(&contents[0], &address, sizeof(uint64_t));
+          contents.resize(kTargetPointerSize);
+          TargetPointer address = value.source().address();
+          memcpy(&contents[0], &address, sizeof(kTargetPointerSize));
 
           cb(Err(), ExprValue(std::move(ptr_type), std::move(contents)));
         }

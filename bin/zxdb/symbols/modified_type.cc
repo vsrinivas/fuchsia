@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/symbols/modified_type.h"
 
+#include "garnet/bin/zxdb/symbols/arch.h"
 #include "garnet/bin/zxdb/symbols/function_type.h"
 
 namespace zxdb {
@@ -33,8 +34,7 @@ ModifiedType::ModifiedType(int kind, LazySymbol modified)
     if (mod_type)
       set_byte_size(mod_type->byte_size());
   } else if (IsPointerTag(kind)) {
-    // Assume 64-bit pointers.
-    set_byte_size(8);
+    set_byte_size(kTargetPointerSize);
   }
 }
 

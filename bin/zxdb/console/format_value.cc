@@ -45,7 +45,7 @@ OutputBuffer ErrStringToOutput(const std::string& s) {
   return OutputBuffer(Syntax::kComment, "<" + s + ">");
 }
 
-OutputBuffer InvalidPointerToOutput(uint64_t address) {
+OutputBuffer InvalidPointerToOutput(TargetPointer address) {
   OutputBuffer out;
   out.Append(OutputBuffer(fxl::StringPrintf("0x%" PRIx64 " ", address)));
   out.Append(ErrStringToOutput("invalid pointer"));
@@ -442,12 +442,12 @@ void FormatValue::FormatCharPointer(
     fxl::RefPtr<SymbolDataProvider> data_provider, const Type* type,
     const ExprValue& value, const FormatValueOptions& options,
     OutputKey output_key) {
-  if (value.data().size() != sizeof(uint64_t)) {
+  if (value.data().size() != kTargetPointerSize) {
     OutputKeyComplete(output_key, ErrStringToOutput("Bad pointer data."));
     return;
   }
 
-  uint64_t address = value.GetAs<uint64_t>();
+  TargetPointer address = value.GetAs<TargetPointer>();
   if (!address) {
     // Special-case null pointers to just print a null address.
     OutputKeyComplete(output_key, OutputBuffer("0x0"));
@@ -715,12 +715,11 @@ void FormatValue::FormatPointer(const ExprValue& value,
         fxl::StringPrintf("(%s) ", value.type()->GetFullName().c_str()));
   }
 
-  // Expect all pointers to be 8 bytes.
-  Err err = value.EnsureSizeIs(sizeof(uint64_t));
+  Err err = value.EnsureSizeIs(kTargetPointerSize);
   if (err.has_error())
     out->Append(ErrToOutput(err));
   else
-    out->Append(fxl::StringPrintf("0x%" PRIx64, value.GetAs<uint64_t>()));
+    out->Append(fxl::StringPrintf("0x%" PRIx64, value.GetAs<TargetPointer>()));
 }
 
 void FormatValue::FormatReference(fxl::RefPtr<SymbolDataProvider> data_provider,
@@ -745,7 +744,7 @@ void FormatValue::FormatReference(fxl::RefPtr<SymbolDataProvider> data_provider,
     }
 
     // Followed by the address.
-    uint64_t address = 0;
+    TargetPointer address = 0;
     Err addr_err = original_value.PromoteToUint64(&address);
     if (addr_err.has_error()) {
       // Invalid data in the reference.
@@ -778,8 +777,7 @@ void FormatValue::FormatFunctionPointer(
   // are usually very long and not very informative. If explicitly requested,
   // the types will be printed out by the calling function.
 
-  // Expect all pointers to be 8 bytes.
-  Err err = value.EnsureSizeIs(sizeof(uint64_t));
+  Err err = value.EnsureSizeIs(kTargetPointerSize);
   if (err.has_error()) {
     out->Append(ErrToOutput(err));
     return;
@@ -793,7 +791,7 @@ void FormatValue::FormatFunctionPointer(
     return;
   }
 
-  uint64_t address = value.GetAs<uint64_t>();
+  TargetPointer address = value.GetAs<TargetPointer>();
   if (address == 0) {
     // Special-case null pointers. Don't bother trying to decode the address
     // or show a type.

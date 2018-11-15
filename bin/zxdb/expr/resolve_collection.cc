@@ -7,6 +7,7 @@
 #include "garnet/bin/zxdb/expr/expr_eval_context.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/expr/resolve_ptr_ref.h"
+#include "garnet/bin/zxdb/symbols/arch.h"
 #include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
 #include "garnet/bin/zxdb/symbols/inherited_from.h"
@@ -114,7 +115,7 @@ void DoResolveMemberByPointer(fxl::RefPtr<ExprEvalContext> context,
                               const Collection* pointed_to_type,
                               const DataMember* member,
                               std::function<void(const Err&, ExprValue)> cb) {
-  Err err = base_ptr.EnsureSizeIs(sizeof(uint64_t));
+  Err err = base_ptr.EnsureSizeIs(kTargetPointerSize);
   if (err.has_error()) {
     cb(err, ExprValue());
     return;
@@ -127,7 +128,7 @@ void DoResolveMemberByPointer(fxl::RefPtr<ExprEvalContext> context,
     return;
   }
 
-  uint64_t base_address = base_ptr.GetAs<uint64_t>();
+  TargetPointer base_address = base_ptr.GetAs<TargetPointer>();
   uint32_t offset = member->member_location();
   ResolvePointer(context->GetDataProvider(), base_address + offset,
                  std::move(member_type), std::move(cb));

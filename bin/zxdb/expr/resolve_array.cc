@@ -6,6 +6,7 @@
 
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
+#include "garnet/bin/zxdb/symbols/arch.h"
 #include "garnet/bin/zxdb/symbols/array_type.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
 #include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
@@ -57,16 +58,16 @@ void ResolvePointerArray(
   value_type = value_type->GetConcreteType();
 
   // The address is stored in the contents of the array value.
-  Err err = array.EnsureSizeIs(sizeof(uint64_t));
+  Err err = array.EnsureSizeIs(kTargetPointerSize);
   if (err.has_error()) {
     cb(err, std::vector<ExprValue>());
     return;
   }
-  uint64_t base_address = array.GetAs<uint64_t>();
+  TargetPointer base_address = array.GetAs<TargetPointer>();
 
   uint32_t type_size = value_type->byte_size();
-  uint64_t begin_address = base_address + type_size * begin_index;
-  uint64_t end_address = base_address + type_size * end_index;
+  TargetPointer begin_address = base_address + type_size * begin_index;
+  TargetPointer end_address = base_address + type_size * end_index;
 
   data_provider->GetMemoryAsync(begin_address, end_address - begin_address, [
     type = fxl::RefPtr<Type>(const_cast<Type*>(value_type)), begin_address,

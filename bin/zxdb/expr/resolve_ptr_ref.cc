@@ -6,6 +6,7 @@
 
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
+#include "garnet/bin/zxdb/symbols/arch.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
 #include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
 #include "garnet/bin/zxdb/symbols/type.h"
@@ -18,11 +19,11 @@ namespace {
 
 // Extracts the value from the ExprValue, assuming it's a pointer. If not,
 // return the error, otherwise fill in *pointer_value.
-Err GetPointerValue(const ExprValue& value, uint64_t* pointer_value) {
-  Err err = value.EnsureSizeIs(sizeof(uint64_t));
+Err GetPointerValue(const ExprValue& value, TargetPointer* pointer_value) {
+  Err err = value.EnsureSizeIs(kTargetPointerSize);
   if (err.has_error())
     return err;
-  *pointer_value = value.GetAs<uint64_t>();
+  *pointer_value = value.GetAs<TargetPointer>();
   return Err();
 }
 
@@ -63,7 +64,7 @@ void ResolvePointer(fxl::RefPtr<SymbolDataProvider> data_provider,
     return;
   }
 
-  uint64_t pointer_value = 0;
+  TargetPointer pointer_value = 0;
   err = GetPointerValue(pointer, &pointer_value);
   if (err.has_error()) {
     cb(err, ExprValue());
@@ -98,7 +99,7 @@ void EnsureResolveReference(fxl::RefPtr<SymbolDataProvider> data_provider,
   const Type* underlying_type = reference->modified().Get()->AsType();
 
   // The value will be the address for reference types.
-  uint64_t pointer_value = 0;
+  TargetPointer pointer_value = 0;
   Err err = GetPointerValue(value, &pointer_value);
   if (err.has_error()) {
     cb(err, ExprValue());
