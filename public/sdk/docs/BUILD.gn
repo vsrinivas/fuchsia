@@ -14,5 +14,9 @@ sdk_documentation("docs") {
       source = "ssh.md"
       dest = "docs/ssh.md"
     },
+    {
+      source = "bootserver.md"
+      dest = "docs/bootserver.md"
+    },
   ]
 }
