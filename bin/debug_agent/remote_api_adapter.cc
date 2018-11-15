@@ -95,6 +95,7 @@ void RemoteAPIAdapter::OnStreamReadable() {
       DISPATCH(RemoveBreakpoint);
       DISPATCH(ThreadStatus);
       DISPATCH(AddressSpace);
+      DISPATCH(JobFilter);
 
       // Attach is special (see remote_api.h): forward the raw data instead of
       // a deserizlied version.

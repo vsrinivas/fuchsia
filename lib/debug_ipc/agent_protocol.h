@@ -108,6 +108,12 @@ bool ReadRequest(MessageReader* reader, AddressSpaceRequest* request,
 void WriteReply(const AddressSpaceReply& reply, uint32_t transaction_id,
                 MessageWriter* writer);
 
+// JobFilter.
+bool ReadRequest(MessageReader* reader, JobFilterRequest* request,
+                 uint32_t* transaction_id);
+void WriteReply(const JobFilterReply& reply, uint32_t transaction_id,
+                MessageWriter* writer);
+
 // Notifications ---------------------------------------------------------------
 //
 // (These don't have a "request"/"reply".)

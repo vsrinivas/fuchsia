@@ -15,7 +15,7 @@ namespace zxdb {
 class JobImpl;
 class SystemImpl;
 
-class JobContextImpl : public JobContext {
+class JobContextImpl : public JobContext, public SettingStoreObserver {
  public:
   // The system owns this object and will outlive it.
   explicit JobContextImpl(SystemImpl* system);
@@ -43,6 +43,10 @@ class JobContextImpl : public JobContext {
   void AttachToComponentRoot(Callback callback) override;
   void Detach(Callback callback) override;
 
+  // SettingStoreObserver implementation
+  void OnSettingChanged(const SettingStore&,
+                        const std::string& setting_name) override;
+
  private:
   SystemImpl* system_;  // Owns |this|.
 
@@ -50,6 +54,7 @@ class JobContextImpl : public JobContext {
 
   // Associated job if there is one.
   std::unique_ptr<JobImpl> job_;
+  std::vector<std::string> filters_;
 
   fxl::WeakPtrFactory<JobContextImpl> impl_weak_factory_;
 
@@ -63,6 +68,11 @@ class JobContextImpl : public JobContext {
   void OnAttachReply(Callback callback, const Err& err, uint64_t koid,
                      uint32_t status, const std::string& job_name);
   void OnDetachReply(const Err& err, uint32_t status, Callback callback);
+
+  // If job is running this will update |filters_| only after getting OK from
+  // agent else it will set |filters_| and return.
+  void SendAndUpdateFilters(std::vector<std::string> filters,
+                            bool force_send = false);
 
   FXL_DISALLOW_COPY_AND_ASSIGN(JobContextImpl);
 };

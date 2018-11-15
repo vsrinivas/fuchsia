@@ -71,6 +71,9 @@ class RemoteAPIImpl : public RemoteAPI {
       const debug_ipc::AddressSpaceRequest& request,
       std::function<void(const Err&, debug_ipc::AddressSpaceReply)> cb)
       override;
+  void JobFilter(
+      const debug_ipc::JobFilterRequest& request,
+      std::function<void(const Err&, debug_ipc::JobFilterReply)> cb) override;
 
  private:
   // Sends a message with an asynchronous reply.

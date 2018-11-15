@@ -376,6 +376,25 @@ void WriteReply(const ModulesReply& reply, uint32_t transaction_id,
   Serialize(reply.modules, writer);
 }
 
+// JobFilter ------------------------------------------------------------------
+
+bool ReadRequest(MessageReader* reader, JobFilterRequest* request,
+                 uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+  if (!reader->ReadUint64(&request->job_koid))
+    return false;
+  return Deserialize(reader, &request->filters);
+}
+
+void WriteReply(const JobFilterReply& reply, uint32_t transaction_id,
+                MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kJobFilter, transaction_id);
+  writer->WriteUint32(reply.status);
+}
+
 // Registers -------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, RegistersRequest* request,

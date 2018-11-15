@@ -53,4 +53,8 @@ void DebuggedJob::OnProcessStarting(zx_koid_t job_koid, zx_koid_t process_koid,
   debug_ipc::MessageLoopZircon::Current()->ResumeFromException(thread, 0);
 }
 
+void DebuggedJob::SetFilters(std::vector<std::string> filters) {
+  filters_ = std::move(filters);
+}
+
 }  // namespace debug_agent

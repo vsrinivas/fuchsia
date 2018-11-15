@@ -76,6 +76,8 @@ class DebugAgent : public RemoteAPI,
                       debug_ipc::ThreadStatusReply* reply) override;
   void OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,
                       debug_ipc::AddressSpaceReply* reply) override;
+  void OnJobFilter(const debug_ipc::JobFilterRequest& request,
+                   debug_ipc::JobFilterReply* reply) override;
 
   // Breakpoint::ProcessDelegate implementation.
   zx_status_t RegisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,

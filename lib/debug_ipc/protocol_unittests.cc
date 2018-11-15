@@ -482,6 +482,30 @@ TEST(Protocol, AspaceReply) {
   EXPECT_EQ(initial.map[3].depth, second.map[3].depth);
 }
 
+// JobFilter ------------------------------------------------------------------
+
+TEST(Protocol, JobFilterRequest) {
+  JobFilterRequest initial;
+  initial.job_koid = 5678;
+  initial.filters.push_back("Clock");
+  initial.filters.push_back("Time");
+  initial.filters.push_back("Network");
+
+  JobFilterRequest second;
+  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  EXPECT_EQ(initial.job_koid, second.job_koid);
+  EXPECT_EQ(initial.filters, second.filters);
+}
+
+TEST(Protocol, JobFilterReply) {
+  JobFilterReply initial;
+  initial.status = 67;
+
+  JobFilterReply second;
+  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  EXPECT_EQ(initial.status, second.status);
+}
+
 // Registers -------------------------------------------------------------------
 
 using debug_ipc::RegisterID;

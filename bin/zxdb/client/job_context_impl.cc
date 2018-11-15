@@ -9,17 +9,19 @@
 #include "garnet/bin/zxdb/client/job_impl.h"
 #include "garnet/bin/zxdb/client/remote_api.h"
 #include "garnet/bin/zxdb/client/session.h"
+#include "garnet/bin/zxdb/client/setting_schema_definition.h"
 #include "garnet/bin/zxdb/client/system_impl.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
+#include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
 JobContextImpl::JobContextImpl(SystemImpl* system)
-    : JobContext(system->session()),
-      system_(system),
-      impl_weak_factory_(this) {}
+    : JobContext(system->session()), system_(system), impl_weak_factory_(this) {
+  settings_.AddObserver(ClientSettings::Job::kFilters, this);
+}
 
 JobContextImpl::~JobContextImpl() {
   // If the job is still running, make sure we broadcast terminated
@@ -48,6 +50,9 @@ void JobContextImpl::OnAttachReplyThunk(
   if (job_context) {
     job_context->OnAttachReply(std::move(callback), err, koid, status,
                                job_name);
+    if (!job_context->filters_.empty()) {
+      job_context->SendAndUpdateFilters(job_context->filters_, true);
+    }
   } else {
     // The reply that the job was launched came after the local
     // objects were destroyed.
@@ -142,6 +147,45 @@ void JobContextImpl::Detach(Callback callback) {
           callback(weak_job_context, err);
         }
       });
+}
+
+void JobContextImpl::SendAndUpdateFilters(std::vector<std::string> filters,
+                                          bool force_send) {
+  if (!job_.get()) {
+    filters_ = std::move(filters);
+    return;
+  }
+  if (!force_send && filters_ == filters) {
+    return;
+  }
+  debug_ipc::JobFilterRequest request;
+  request.job_koid = job_->GetKoid();
+  request.filters = filters;
+  session()->remote_api()->JobFilter(
+      request, [filters, weak_job_context = impl_weak_factory_.GetWeakPtr()](
+                   const Err& err, debug_ipc::JobFilterReply reply) {
+        if (reply.status != 0) {
+          printf("Error adding filter, error: %s.",
+                 debug_ipc::ZxStatusToString(reply.status).data());
+          if (weak_job_context) {
+            // Agent failed, reset filters in settings.
+            // This will also trigger another callback but would be a no-op
+            // because |force_send| would be false.
+            weak_job_context->settings_.SetList(ClientSettings::Job::kFilters,
+                                                weak_job_context->filters_);
+          }
+          return;
+        }
+        if (weak_job_context) {
+          weak_job_context->filters_ = std::move(filters);
+        }
+      });
+}
+
+void JobContextImpl::OnSettingChanged(const SettingStore&,
+                                      const std::string& setting_name) {
+  FXL_CHECK(setting_name == ClientSettings::Job::kFilters);
+  SendAndUpdateFilters(settings_.GetList(setting_name));
 }
 
 void JobContextImpl::OnDetachReply(const Err& err, uint32_t status,

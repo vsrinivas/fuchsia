@@ -327,8 +327,8 @@ void DebugAgent::OnThreadStatus(const debug_ipc::ThreadStatusRequest& request,
   DebuggedThread* thread =
       GetDebuggedThread(request.process_koid, request.thread_koid);
   if (thread) {
-    thread->FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kFull, nullptr,
-                             &reply->record);
+    thread->FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kFull,
+                             nullptr, &reply->record);
   } else {
     // When the thread is not found the thread record is set to "dead".
     reply->record.koid = request.thread_koid;
@@ -361,6 +361,17 @@ void DebugAgent::OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,
   DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
   if (proc)
     proc->OnAddressSpace(request, reply);
+}
+
+void DebugAgent::OnJobFilter(const debug_ipc::JobFilterRequest& request,
+                             debug_ipc::JobFilterReply* reply) {
+  DebuggedJob* job = GetDebuggedJob(request.job_koid);
+  if (!job) {
+    reply->status = ZX_ERR_INVALID_ARGS;
+    return;
+  }
+  job->SetFilters(std::move(request.filters));
+  reply->status = ZX_OK;
 }
 
 DebuggedProcess* DebugAgent::GetDebuggedProcess(zx_koid_t koid) {

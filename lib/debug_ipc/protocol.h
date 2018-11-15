@@ -38,6 +38,7 @@ struct MsgHeader {
     kRemoveBreakpoint,
     kThreadStatus,
     kAddressSpace,
+    kJobFilter,
 
     // The "notify" messages are sent unrequested from the agent to the client.
     kNotifyProcessExiting,
@@ -227,6 +228,16 @@ struct ModulesRequest {
 };
 struct ModulesReply {
   std::vector<Module> modules;
+};
+
+// Request to set filter.
+struct JobFilterRequest {
+  uint64_t job_koid = 0;
+  std::vector<std::string> filters;
+};
+
+struct JobFilterReply {
+  uint32_t status;  // zx_status for filter request
 };
 
 // Registers -------------------------------------------------------------------

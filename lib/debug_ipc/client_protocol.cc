@@ -429,8 +429,7 @@ bool ReadReply(MessageReader* reader, ModulesReply* reply,
   return true;
 }
 
-// Address Space
-// ---------------------------------------------------------------------
+// Address Space --------------------------------------------------------------
 
 void WriteRequest(const AddressSpaceRequest& request, uint32_t transaction_id,
                   MessageWriter* writer) {
@@ -446,6 +445,25 @@ bool ReadReply(MessageReader* reader, AddressSpaceReply* reply,
   *transaction_id = header.transaction_id;
 
   return Deserialize(reader, &reply->map);
+}
+
+// JobFilter ------------------------------------------------------------------
+
+void WriteRequest(const JobFilterRequest& request, uint32_t transaction_id,
+                  MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kJobFilter, transaction_id);
+  writer->WriteUint64(request.job_koid);
+  return Serialize(request.filters, writer);
+}
+
+bool ReadReply(MessageReader* reader, JobFilterReply* reply,
+               uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+
+  return reader->ReadUint32(&reply->status);
 }
 
 // Notifications ---------------------------------------------------------------

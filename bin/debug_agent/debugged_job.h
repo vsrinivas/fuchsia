@@ -33,7 +33,7 @@ class DebuggedJob : public debug_ipc::ZirconExceptionWatcher {
   zx_koid_t koid() const { return koid_; }
   zx::job& job() { return job_; }
 
-  void AddFilter(std::string filter) { filters_.push_back(std::move(filter)); }
+  void SetFilters(std::vector<std::string> filters);
 
   // Returns true on success. On failure, the object may not be used further.
   bool Init();

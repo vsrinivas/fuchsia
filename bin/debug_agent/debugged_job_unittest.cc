@@ -92,7 +92,7 @@ TEST_F(JobDebuggerTest, OneProcess) {
   DebuggedJob debugged_job(this, KoidForObject(duplicate_job),
                            std::move(duplicate_job));
   ASSERT_TRUE(debugged_job.Init());
-  debugged_job.AddFilter("t");
+  debugged_job.SetFilters({"t"});
   ASSERT_EQ(0u, processes_.size());
   zx_handle_t proc = ZX_HANDLE_INVALID;
   int pipefd[2];
@@ -117,7 +117,7 @@ TEST_F(JobDebuggerTest, DebuggedJobKilled) {
     DebuggedJob debugged_job(this, KoidForObject(duplicate_job),
                              std::move(duplicate_job));
     ASSERT_TRUE(debugged_job.Init());
-    debugged_job.AddFilter("t");
+    debugged_job.SetFilters({"t"});
     ASSERT_EQ(0u, processes_.size());
     zx_handle_t proc = ZX_HANDLE_INVALID;
     int pipefd[2];
@@ -149,7 +149,7 @@ TEST_F(JobDebuggerTest, MultipleProcesses) {
   DebuggedJob debugged_job(this, KoidForObject(duplicate_job),
                            std::move(duplicate_job));
   ASSERT_TRUE(debugged_job.Init());
-  debugged_job.AddFilter("t");
+  debugged_job.SetFilters({"t"});
   ASSERT_EQ(0u, processes_.size());
 
   int pipefd[2];
@@ -184,7 +184,7 @@ TEST_F(JobDebuggerTest, ProcessInNestedJob) {
   DebuggedJob debugged_job(this, KoidForObject(duplicate_job),
                            std::move(duplicate_job));
   ASSERT_TRUE(debugged_job.Init());
-  debugged_job.AddFilter("t");
+  debugged_job.SetFilters({"t"});
   ASSERT_EQ(0u, processes_.size());
   zx_handle_t proc = ZX_HANDLE_INVALID;
   int pipefd[2];
@@ -207,7 +207,7 @@ TEST_F(JobDebuggerTest, FilterFullName) {
                            std::move(duplicate_job));
   ASSERT_TRUE(debugged_job.Init());
   constexpr char name[] = "true";
-  debugged_job.AddFilter(name);
+  debugged_job.SetFilters({name});
   ASSERT_EQ(0u, processes_.size());
   zx_handle_t proc = ZX_HANDLE_INVALID;
   int pipefd[2];
@@ -229,7 +229,7 @@ TEST_F(JobDebuggerTest, FilterMultipleProcess) {
   DebuggedJob debugged_job(this, KoidForObject(duplicate_job),
                            std::move(duplicate_job));
   ASSERT_TRUE(debugged_job.Init());
-  debugged_job.AddFilter("t");
+  debugged_job.SetFilters({"t"});
   ASSERT_EQ(0u, processes_.size());
 
   int pipefd[2];
@@ -259,8 +259,7 @@ TEST_F(JobDebuggerTest, MultipleFilters) {
   DebuggedJob debugged_job(this, KoidForObject(duplicate_job),
                            std::move(duplicate_job));
   ASSERT_TRUE(debugged_job.Init());
-  debugged_job.AddFilter("t");
-  debugged_job.AddFilter("f");
+  debugged_job.SetFilters({"t", "f"});
   ASSERT_EQ(0u, processes_.size());
 
   int pipefd[2];

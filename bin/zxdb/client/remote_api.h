@@ -72,6 +72,9 @@ class RemoteAPI {
   virtual void AddressSpace(
       const debug_ipc::AddressSpaceRequest& request,
       std::function<void(const Err&, debug_ipc::AddressSpaceReply)> cb);
+  virtual void JobFilter(
+      const debug_ipc::JobFilterRequest& request,
+      std::function<void(const Err&, debug_ipc::JobFilterReply)> cb);
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(RemoteAPI);

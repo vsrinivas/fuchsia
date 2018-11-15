@@ -67,6 +67,9 @@ class RemoteAPI {
 
   virtual void OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,
                               debug_ipc::AddressSpaceReply* reply) = 0;
+
+  virtual void OnJobFilter(const debug_ipc::JobFilterRequest& request,
+                           debug_ipc::JobFilterReply* reply) = 0;
 };
 
 }  // namespace debug_agent

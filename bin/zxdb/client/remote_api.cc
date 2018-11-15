@@ -104,4 +104,10 @@ void RemoteAPI::AddressSpace(
   FXL_NOTREACHED();
 }
 
+void RemoteAPI::JobFilter(
+    const debug_ipc::JobFilterRequest& request,
+    std::function<void(const Err&, debug_ipc::JobFilterReply)> cb) {
+  FXL_NOTREACHED();
+}
+
 }  // namespace zxdb
