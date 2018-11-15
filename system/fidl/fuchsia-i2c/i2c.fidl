@@ -1,0 +1,33 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.i2c;
+
+using zx;
+
+const uint32 MAX_TRANSFER_SIZE = 8196;  // More than enough for I2C
+
+enum SegmentType {
+    /// Flags the end of a serialized list of segments.
+    END = 1;
+    /// Segment to be read from the I2C device.
+    READ = 2;
+    /// Segment to be written to the I2C device.
+    WRITE = 3;
+};
+
+/// Segment header for a serialized SlaveTransfer.
+/// TODO(ZX-3029): Avoid requiring serialization and have SlaveTransfer take an argument of
+/// vector<Segment>:MAX_SEGMENTS instead once we have better support in the C bindings or for C++.
+struct Segment {
+    uint32 type;
+    uint32 len;
+};
+
+[Layout = "Simple"]
+interface Device {
+    /// Send and receive data on the I2C device.
+    1: SlaveTransfer(vector<uint8>:MAX_TRANSFER_SIZE in) -> (zx.status s,
+       vector<uint8>:MAX_TRANSFER_SIZE out);
+};

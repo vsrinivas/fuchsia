@@ -12,8 +12,8 @@
 #include <ddk/trace/event.h>
 
 #include <zircon/assert.h>
+#include <zircon/hw/i2c.h>
 #include <zircon/types.h>
-#include <zircon/device/i2c.h>
 
 #include <endian.h>
 #include <stdbool.h>

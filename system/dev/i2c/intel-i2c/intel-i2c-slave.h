@@ -10,6 +10,15 @@
 #include <zircon/listnode.h>
 #include <stdint.h>
 
+#define I2C_7BIT_ADDRESS 7
+#define I2C_10BIT_ADDRESS 10
+
+typedef struct i2c_slave_segment {
+    int type;
+    int len;
+    uint8_t* buf;
+} i2c_slave_segment_t;
+
 typedef struct intel_serialio_i2c_slave_device {
     zx_device_t* zxdev;
     struct intel_serialio_i2c_device* controller;

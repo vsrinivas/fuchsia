@@ -7,7 +7,7 @@
 #include <ddk/protocol/auxdata.h>
 #include <ddk/protocol/pciroot.h>
 #include <pci/pio.h>
-#include <zircon/device/i2c.h>
+#include <zircon/hw/i2c.h>
 #include <zircon/types.h>
 
 #include "acpi-private.h"

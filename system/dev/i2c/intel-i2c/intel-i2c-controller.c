@@ -10,11 +10,11 @@
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/pci-lib.h>
+#include <fuchsia/i2c/c/fidl.h>
 #include <hw/reg.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <hw/pci.h>
-#include <zircon/device/i2c.h>
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -68,7 +68,7 @@ static void intel_i2c_transact(void* ctx, const i2c_op_t ops[], size_t cnt,
     for (size_t i = 0; i < cnt; ++i) {
         if (ops[i].is_read) {
             segs[i].buf = p_reads;
-            segs[i].type = I2C_SEGMENT_TYPE_READ;
+            segs[i].type = fuchsia_i2c_SegmentType_READ;
             p_reads += ops[i].data_size;
             if (p_reads - read_buffer > MAX_TRANSFER_SIZE) {
                 free(read_buffer);
@@ -77,7 +77,7 @@ static void intel_i2c_transact(void* ctx, const i2c_op_t ops[], size_t cnt,
             }
         } else {
             segs[i].buf = (void*)ops[i].data_buffer;
-            segs[i].type = I2C_SEGMENT_TYPE_WRITE;
+            segs[i].type = fuchsia_i2c_SegmentType_WRITE;
         }
         segs[i].len = ops[i].data_size;
     }

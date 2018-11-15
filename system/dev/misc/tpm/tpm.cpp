@@ -22,7 +22,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/unique_free_ptr.h>
-#include <zircon/device/i2c.h>
 #include <zircon/device/tpm.h>
 #include <zircon/types.h>
 #include <stdlib.h>

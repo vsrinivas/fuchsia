@@ -14,4 +14,6 @@ MODULE_SRCS += \
 
 MODULE_LIBS := system/ulib/zircon system/ulib/fdio system/ulib/c
 
+MODULE_FIDL_LIBS := system/fidl/fuchsia-i2c
+
 include make/module.mk

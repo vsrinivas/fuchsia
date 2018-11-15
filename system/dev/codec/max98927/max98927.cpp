@@ -5,7 +5,6 @@
 #include <ddk/debug.h>
 #include <ddk/protocol/i2c-lib.h>
 #include <zircon/device/audio-codec.h>
-#include <zircon/device/i2c.h>
 #include <zircon/assert.h>
 
 #include <fbl/alloc_checker.h>

@@ -4,9 +4,9 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <fuchsia/i2c/c/fidl.h>
 #include <hw/reg.h>
 #include <zircon/types.h>
-#include <zircon/device/i2c.h>
 #include <zircon/listnode.h>
 #include <zircon/thread_annotations.h>
 #include <stddef.h>
@@ -71,8 +71,8 @@ zx_status_t intel_serialio_i2c_slave_transfer(
     zx_status_t status = ZX_OK;
 
     for (int i = 0; i < segment_count; i++) {
-        if (segments[i].type != I2C_SEGMENT_TYPE_READ &&
-            segments[i].type != I2C_SEGMENT_TYPE_WRITE) {
+        if (segments[i].type != fuchsia_i2c_SegmentType_READ &&
+            segments[i].type != fuchsia_i2c_SegmentType_WRITE) {
             status = ZX_ERR_INVALID_ARGS;
             goto transfer_finish_2;
         }
@@ -110,7 +110,7 @@ zx_status_t intel_serialio_i2c_slave_transfer(
     // Enable the controller.
     RMWREG32(&controller->regs->i2c_en, I2C_EN_ENABLE, 1, 1);
 
-    int last_type = I2C_SEGMENT_TYPE_END;
+    int last_type = fuchsia_i2c_SegmentType_END;
     if (segment_count)
         last_type = segments->type;
 
@@ -129,7 +129,7 @@ zx_status_t intel_serialio_i2c_slave_transfer(
             uint32_t cmd = (restart << DATA_CMD_RESTART);
             restart = 0;
             switch (segments->type) {
-            case I2C_SEGMENT_TYPE_WRITE:
+            case fuchsia_i2c_SegmentType_WRITE:
                 // Wait if the TX FIFO is full
                 if (!(readl(&controller->regs->i2c_sta) &
                       (0x1 << I2C_STA_TFNF))) {
@@ -143,7 +143,7 @@ zx_status_t intel_serialio_i2c_slave_transfer(
                 cmd |= (DATA_CMD_CMD_WRITE << DATA_CMD_CMD);
                 buf++;
                 break;
-            case I2C_SEGMENT_TYPE_READ:
+            case fuchsia_i2c_SegmentType_READ:
                 cmd |= (DATA_CMD_CMD_READ << DATA_CMD_CMD);
                 break;
             default:
@@ -157,10 +157,10 @@ zx_status_t intel_serialio_i2c_slave_transfer(
                 cmd |= (0x1 << DATA_CMD_STOP);
             }
 
-            if (segments->type == I2C_SEGMENT_TYPE_READ) {
+            if (segments->type == fuchsia_i2c_SegmentType_READ) {
                 status = intel_serialio_i2c_issue_rx(controller, cmd);
                 outstanding_reads++;
-            } else if (segments->type == I2C_SEGMENT_TYPE_WRITE) {
+            } else if (segments->type == fuchsia_i2c_SegmentType_WRITE) {
                 status = intel_serialio_i2c_issue_tx(controller, cmd);
             } else {
                 __builtin_trap();
@@ -263,7 +263,7 @@ static zx_status_t intel_serialio_i2c_slave_read(
     void* ctx, void* buf, size_t count, zx_off_t off, size_t* actual) {
     intel_serialio_i2c_slave_device_t* slave = ctx;
     i2c_slave_segment_t segment = {
-        .type = I2C_SEGMENT_TYPE_READ,
+        .type = fuchsia_i2c_SegmentType_READ,
         .buf = buf,
         .len = count,
     };
@@ -278,7 +278,7 @@ static zx_status_t intel_serialio_i2c_slave_write(
     void* ctx, const void* buf, size_t count, zx_off_t off, size_t* actual) {
     intel_serialio_i2c_slave_device_t* slave = ctx;
     i2c_slave_segment_t segment = {
-        .type = I2C_SEGMENT_TYPE_WRITE,
+        .type = fuchsia_i2c_SegmentType_WRITE,
         .buf = (void*)buf,
         .len = count,
     };
@@ -289,75 +289,75 @@ static zx_status_t intel_serialio_i2c_slave_write(
     return status;
 }
 
-static zx_status_t intel_serialio_i2c_slave_transfer_ioctl(
-    intel_serialio_i2c_slave_device_t* slave, uint32_t op, const void* in_buf, size_t in_len,
-    void* out_buf, size_t out_len, size_t* out_actual) {
+static zx_status_t intel_serialio_i2c_slave_transfer_helper(
+    intel_serialio_i2c_slave_device_t* slave, const void* in_buf, size_t in_len, void* out_buf,
+    size_t out_len, size_t* out_actual) {
     zx_status_t status;
-    const size_t base_size = sizeof(i2c_slave_ioctl_segment_t);
+    const size_t base_size = sizeof(fuchsia_i2c_Segment);
 
     size_t read_len = 0;
     size_t write_len = 0;
     int segment_count = 0;
-    const i2c_slave_ioctl_segment_t* ioctl_segment = (const i2c_slave_ioctl_segment_t*)in_buf;
+    const fuchsia_i2c_Segment* segment = (const fuchsia_i2c_Segment*)in_buf;
     const void* end = (uint8_t*)in_buf + in_len;
     // Check that the inputs and output buffer are valid.
-    while ((void*)ioctl_segment < end) {
-        if (ioctl_segment->type == I2C_SEGMENT_TYPE_END) {
+    while ((void*)segment < end) {
+        if (segment->type == fuchsia_i2c_SegmentType_END) {
             // Advance past the segment, which should be the beginning of write
             // data or the end (if there are no writes).
-            ioctl_segment++;
+            segment++;
             break;
         }
-        if ((void*)((uint8_t*)ioctl_segment + base_size) > end) {
+        if ((void*)((uint8_t*)segment + base_size) > end) {
             status = ZX_ERR_INVALID_ARGS;
-            goto slave_transfer_ioctl_finish_2;
+            goto slave_transfer_finish_2;
         }
 
-        int len = ioctl_segment->len;
+        int len = segment->len;
 
-        switch (ioctl_segment->type) {
-        case I2C_SEGMENT_TYPE_READ:
+        switch (segment->type) {
+        case fuchsia_i2c_SegmentType_READ:
             read_len += len;
             break;
-        case I2C_SEGMENT_TYPE_WRITE:
+        case fuchsia_i2c_SegmentType_WRITE:
             write_len += len;
             break;
         }
-        ioctl_segment++;
+        segment++;
         segment_count++;
     }
-    if ((void*)((uint8_t*)ioctl_segment + write_len) != end) {
+    if ((void*)((uint8_t*)segment + write_len) != end) {
         status = ZX_ERR_INVALID_ARGS;
-        goto slave_transfer_ioctl_finish_2;
+        goto slave_transfer_finish_2;
     }
     if (out_len < read_len) {
         status = ZX_ERR_INVALID_ARGS;
-        goto slave_transfer_ioctl_finish_2;
+        goto slave_transfer_finish_2;
     }
-    uint8_t* data = (uint8_t*)ioctl_segment;
+    uint8_t* data = (uint8_t*)segment;
 
     // Build a list of segments to transfer.
     i2c_slave_segment_t* segments =
         calloc(segment_count, sizeof(*segments));
     if (!segments) {
         status = ZX_ERR_NO_MEMORY;
-        goto slave_transfer_ioctl_finish_2;
+        goto slave_transfer_finish_2;
     }
     i2c_slave_segment_t* cur_segment = segments;
     uintptr_t out_addr = (uintptr_t)out_buf;
-    ioctl_segment = (const i2c_slave_ioctl_segment_t*)in_buf;
+    segment = (const fuchsia_i2c_Segment*)in_buf;
     for (int i = 0; i < segment_count; i++) {
-        int len = ioctl_segment->len;
+        int len = segment->len;
 
-        switch (ioctl_segment->type) {
-        case I2C_SEGMENT_TYPE_READ:
-            cur_segment->type = I2C_SEGMENT_TYPE_READ;
+        switch (segment->type) {
+        case fuchsia_i2c_SegmentType_READ:
+            cur_segment->type = fuchsia_i2c_SegmentType_READ;
             cur_segment->len = len;
             cur_segment->buf = (uint8_t*)out_addr;
             out_addr += len;
             break;
-        case I2C_SEGMENT_TYPE_WRITE:
-            cur_segment->type = I2C_SEGMENT_TYPE_WRITE;
+        case fuchsia_i2c_SegmentType_WRITE:
+            cur_segment->type = fuchsia_i2c_SegmentType_WRITE;
             cur_segment->len = len;
             cur_segment->buf = data;
             data += len;
@@ -365,12 +365,12 @@ static zx_status_t intel_serialio_i2c_slave_transfer_ioctl(
         default:
             // invalid segment type
             status = ZX_ERR_INVALID_ARGS;
-            goto slave_transfer_ioctl_finish_1;
+            goto slave_transfer_finish_1;
             break;
         }
 
         cur_segment++;
-        ioctl_segment++;
+        segment++;
     }
 
     status = intel_serialio_i2c_slave_transfer(slave, segments, segment_count);
@@ -378,9 +378,9 @@ static zx_status_t intel_serialio_i2c_slave_transfer_ioctl(
         *out_actual = read_len;
     }
 
-slave_transfer_ioctl_finish_1:
+slave_transfer_finish_1:
     free(segments);
-slave_transfer_ioctl_finish_2:
+slave_transfer_finish_2:
     return status;
 }
 
@@ -428,23 +428,28 @@ zx_status_t intel_serialio_i2c_slave_get_irq(intel_serialio_i2c_slave_device_t* 
     return ZX_ERR_NOT_FOUND;
 }
 
-static zx_status_t intel_serialio_i2c_slave_ioctl(
-    void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-    void* out_buf, size_t out_len, size_t* out_actual) {
-    intel_serialio_i2c_slave_device_t* slave = ctx;
-    switch (op) {
-    case IOCTL_I2C_SLAVE_TRANSFER:
-        return intel_serialio_i2c_slave_transfer_ioctl(
-            slave, op, in_buf, in_len, out_buf, out_len, out_actual);
-        break;
-    default:
-        return ZX_ERR_INVALID_ARGS;
-    }
-}
-
 static void intel_serialio_i2c_slave_release(void* ctx) {
     intel_serialio_i2c_slave_device_t* slave = ctx;
     free(slave);
+}
+
+static zx_status_t fidl_SlaveTransfer(void* ctx, const unsigned char *in_buf,
+                                      long unsigned int in_len, fidl_txn_t* txn) {
+    intel_serialio_i2c_slave_device_t* slave = ctx;
+    uint8_t out_data[fuchsia_i2c_MAX_TRANSFER_SIZE];
+    size_t out_actual = 0;
+    zx_status_t status = intel_serialio_i2c_slave_transfer_helper(
+        slave, in_buf, in_len,
+        out_data, fuchsia_i2c_MAX_TRANSFER_SIZE, &out_actual);
+    return fuchsia_i2c_DeviceSlaveTransfer_reply(txn, status, out_data, out_actual);
+}
+
+static fuchsia_i2c_Device_ops_t fidl_ops = {
+    .SlaveTransfer = fidl_SlaveTransfer,
+};
+
+zx_status_t intel_serialio_i2c_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_i2c_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
 // Implement the device protocol for the slave devices.
@@ -453,6 +458,7 @@ zx_protocol_device_t intel_serialio_i2c_slave_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .read = intel_serialio_i2c_slave_read,
     .write = intel_serialio_i2c_slave_write,
-    .ioctl = intel_serialio_i2c_slave_ioctl,
+    .ioctl = NULL,
+    .message = intel_serialio_i2c_message,
     .release = intel_serialio_i2c_slave_release,
 };
