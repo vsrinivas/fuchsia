@@ -58,6 +58,7 @@ sdk("garnet") {
     "//garnet/public/fidl/fuchsia.ui.views:fuchsia.ui.views_sdk($fidl_toolchain)",
     "//garnet/public/fidl/fuchsia.ui.viewsv1:fuchsia.ui.viewsv1_sdk($fidl_toolchain)",
     "//garnet/public/fidl/fuchsia.ui.viewsv1token:fuchsia.ui.viewsv1token_sdk($fidl_toolchain)",
+    "//garnet/public/fidl/fuchsia.wlan.service:fuchsia.wlan.service_sdk($fidl_toolchain)",
     "//garnet/public/lib/fidl/cpp:cpp_sdk",
     "//garnet/public/lib/svc:svc_sdk",
     "//garnet/public/lib/ui/scenic/cpp:cpp_sdk",
