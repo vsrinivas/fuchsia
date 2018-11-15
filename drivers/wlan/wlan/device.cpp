@@ -237,13 +237,16 @@ fbl::unique_ptr<Packet> Device::PreparePacket(const void* data, size_t length, P
 zx_status_t Device::QueuePacket(fbl::unique_ptr<Packet> packet) {
     if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
     std::lock_guard<std::mutex> lock(packet_queue_lock_);
+    bool was_empty = packet_queue_.is_empty();
     packet_queue_.Enqueue(std::move(packet));
 
-    zx_status_t status = QueueDevicePortPacket(DevicePacket::kPacketQueued);
-    if (status != ZX_OK) {
-        errorf("could not send packet queued msg err=%d\n", status);
-        packet_queue_.UndoEnqueue();
-        return status;
+    if (was_empty) {
+        zx_status_t status = QueueDevicePortPacket(DevicePacket::kPacketQueued);
+        if (status != ZX_OK) {
+            errorf("could not send packet queued msg err=%d\n", status);
+            packet_queue_.UndoEnqueue();
+            return status;
+        }
     }
     return ZX_OK;
 }
@@ -637,14 +640,17 @@ void Device::MainLoop() {
                 dispatcher_->HwScanComplete(pkt.status);
                 break;
             case to_enum_type(DevicePacket::kPacketQueued): {
-                fbl::unique_ptr<Packet> packet;
+                PacketQueue queued_packets{};
                 {
                     std::lock_guard<std::mutex> lock(packet_queue_lock_);
-                    packet = packet_queue_.Dequeue();
-                    ZX_DEBUG_ASSERT(packet != nullptr);
+                    queued_packets = packet_queue_.Drain();
                 }
-                zx_status_t status = dispatcher_->HandlePacket(std::move(packet));
-                if (status != ZX_OK) { errorf("could not handle packet err=%d\n", status); }
+                while (!queued_packets.is_empty()) {
+                    auto packet = queued_packets.Dequeue();
+                    ZX_DEBUG_ASSERT(packet != nullptr);
+                    zx_status_t status = dispatcher_->HandlePacket(std::move(packet));
+                    if (status != ZX_OK) { errorf("could not handle packet err=%d\n", status); }
+                }
                 break;
             }
             case to_enum_type(DevicePacket::kReportTxStatus): {
@@ -727,14 +733,17 @@ void Device::ProcessChannelPacketLocked(const zx_port_packet_t& pkt) {
         packet->set_peer(Packet::Peer::kService);
         {
             std::lock_guard<std::mutex> lock(packet_queue_lock_);
+            bool was_empty = packet_queue_.is_empty();
             packet_queue_.Enqueue(std::move(packet));
-            status = QueueDevicePortPacket(DevicePacket::kPacketQueued);
-            if (status != ZX_OK) {
-                warnf("could not send packet queued msg err=%d\n", status);
-                packet_queue_.UndoEnqueue();
-                // TODO(tkilbourn): recover as gracefully as possible
-                channel_.reset();
-                return;
+            if (was_empty) {
+                status = QueueDevicePortPacket(DevicePacket::kPacketQueued);
+                if (status != ZX_OK) {
+                    warnf("could not send packet queued msg err=%d\n", status);
+                    packet_queue_.UndoEnqueue();
+                    // TODO(tkilbourn): recover as gracefully as possible
+                    channel_.reset();
+                    return;
+                }
             }
         }
     }

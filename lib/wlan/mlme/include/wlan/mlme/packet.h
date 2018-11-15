@@ -227,6 +227,7 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
 class PacketQueue {
    public:
     using PacketPtr = fbl::unique_ptr<Packet>;
+    PacketQueue() = default;
 
     bool is_empty() const { return queue_.is_empty(); }
     size_t size() const { return size_; }
@@ -252,7 +253,17 @@ class PacketQueue {
         return packet;
     }
 
+    PacketQueue Drain() {
+        fbl::DoublyLinkedList<PacketPtr> ret{};
+        queue_.swap(ret);
+        size_t size = size_;
+        size_ = 0;
+        return {std::move(ret), size};
+    }
+
    private:
+    PacketQueue(fbl::DoublyLinkedList<PacketPtr>&& queue, size_t size)
+        : queue_(std::move(queue)), size_(size) {}
     fbl::DoublyLinkedList<PacketPtr> queue_;
     size_t size_ = 0;
 };
