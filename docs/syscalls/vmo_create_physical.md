@@ -37,10 +37,10 @@ The following rights will be set on the handle by default:
 **ZX_RIGHT_MAP** - May be mapped.
 
 **ZX_RIGHT_GET_PROPERTY** - May get its properties using
-[object_get_property](object_get_property).
+[object_get_property](object_get_property.md).
 
 **ZX_RIGHT_SET_PROPERTY** - May set its properties using
-[object_set_property](object_set_property).
+[object_set_property](object_set_property.md).
 
 The **ZX_VMO_ZERO_CHILDREN** signal is active on a newly created VMO. It becomes
 inactive whenever a clone of the VMO is created and becomes active again when

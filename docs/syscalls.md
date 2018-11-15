@@ -52,12 +52,12 @@
 + [channel_write](syscalls/channel_write.md) - write a message to a channel
 
 ## Sockets
-+ [socket_accept](../syscalls/socket_accept.md) - receive a socket via a socket
-+ [socket_create](../syscalls/socket_create.md) - create a new socket
-+ [socket_read](../syscalls/socket_read.md) - read data from a socket
-+ [socket_share](../syscalls/socket_share.md) - share a socket via a socket
-+ [socket_shutdown](../syscalls/socket_shutdown.md) - prevent reading or writing
-+ [socket_write](../syscalls/socket_write.md) - write data to a socket
++ [socket_accept](syscalls/socket_accept.md) - receive a socket via a socket
++ [socket_create](syscalls/socket_create.md) - create a new socket
++ [socket_read](syscalls/socket_read.md) - read data from a socket
++ [socket_share](syscalls/socket_share.md) - share a socket via a socket
++ [socket_shutdown](syscalls/socket_shutdown.md) - prevent reading or writing
++ [socket_write](syscalls/socket_write.md) - write data to a socket
 
 ## Fifos
 + [fifo_create](syscalls/fifo_create.md) - create a new fifo
@@ -87,7 +87,7 @@
 + [vmo_get_size](syscalls/vmo_get_size.md) - obtain the size of a vmo
 + [vmo_set_size](syscalls/vmo_set_size.md) - adjust the size of a vmo
 + [vmo_op_range](syscalls/vmo_op_range.md) - perform an operation on a range of a vmo
-+ [vmo_replace_as_executable](syscall/vmo_replace_as_executable.md) - add execute rights to a vmo
++ [vmo_replace_as_executable](syscalls/vmo_replace_as_executable.md) - add execute rights to a vmo
 + [vmo_create_physical](syscalls/vmo_create_physical.md) - create a VM object referring to a specific contiguous range of physical memory
 + [vmo_clone](syscalls/vmo_clone.md) - clone a vmo
 + [vmo_set_cache_policy](syscalls/vmo_set_cache_policy.md) - set the caching policy for pages held by a VMO.

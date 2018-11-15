@@ -51,7 +51,7 @@ It was not created with the ZX_SOCKET_HAS_ACCEPT option.
 
 ## LIMITATIONS
 
-The socket share queue is only element deep.
+The socket share queue is only one element deep.
 
 ## SEE ALSO
 

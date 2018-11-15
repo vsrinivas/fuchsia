@@ -40,10 +40,10 @@ The following rights will be set on the handle by default:
 **ZX_RIGHT_MAP** - May be mapped.
 
 **ZX_RIGHT_GET_PROPERTY** - May get its properties using
-[object_get_property](object_get_property).
+[object_get_property](object_get_property.md).
 
 **ZX_RIGHT_SET_PROPERTY** - May set its properties using
-[object_set_property](object_set_property).
+[object_set_property](object_set_property.md).
 
 The *options* field can be 0 or **ZX_VMO_NON_RESIZABLE** to create a VMO
 that cannot change size. Clones of a non-resizable VMO can be resized.
