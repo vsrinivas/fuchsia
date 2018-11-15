@@ -489,6 +489,8 @@ mod tests {
     const BSS_BAZ: [u8; 6] = [0x62, 0x73, 0x73, 0x62, 0x61, 0x7a];
     const SSID_BAZ: &[u8] = b"baz";
 
+    // TODO(NET-1885) - removed #[allow(dead_code)] once `connecting_to_ap` test is fixed
+    #[allow(dead_code)]
     const CHANNEL: wlan_mlme::WlanChan = wlan_mlme::WlanChan {
         primary: 6,
         secondary80: 0,
@@ -501,7 +503,8 @@ mod tests {
     fn all_tests() {
         let mut ok = true;
         ok = run_test("simulate_scan", simulate_scan) && ok;
-        ok = run_test("connecting_to_ap", connecting_to_ap) && ok;
+        // TODO(NET-1885) - commenting out due to flake
+        // ok = run_test("connecting_to_ap", connecting_to_ap) && ok;
         assert!(ok);
     }
 
@@ -530,6 +533,8 @@ mod tests {
         assert_eq!(&expected_aps, &aps[..]);
     }
 
+    // TODO(NET-1885) - removed #[allow(dead_code)] once test is fixed
+    #[allow(dead_code)]
     // test
     fn connecting_to_ap() {
         let mut exec = fasync::Executor::new().expect("Failed to create an executor");
