@@ -40,6 +40,11 @@ namespace {
 
 constexpr int kStepIntoUnsymbolized = 1;
 constexpr int kForceTypes = 2;
+constexpr int kForceNumberChar = 3;
+constexpr int kForceNumberSigned = 4;
+constexpr int kForceNumberUnsigned = 5;
+constexpr int kForceNumberHex = 6;
+constexpr int kMaxArraySize = 7;
 
 // If the system has at least one running process, returns true. If not,
 // returns false and sets the err.
@@ -57,11 +62,59 @@ bool VerifySystemHasRunningProcess(System* system, Err* err) {
 }
 
 // Populates the formatting options with the given command's switches.
-FormatValueOptions GetFormatValueOptions(const Command& cmd) {
-  FormatValueOptions options;
-  options.always_show_types = cmd.HasSwitch(kForceTypes);
-  return options;
+Err GetFormatValueOptions(const Command& cmd, FormatValueOptions* options) {
+  options->always_show_types = cmd.HasSwitch(kForceTypes);
+
+  if (cmd.HasSwitch(kMaxArraySize)) {
+    int size = 0;
+    Err err = StringToInt(cmd.GetSwitchValue(kMaxArraySize), &size);
+    if (err.has_error())
+      return err;
+    options->max_array_size = static_cast<uint32_t>(size);
+  }
+
+  // Mapping from command-line parameter to format enum.
+  constexpr size_t kFormatCount = 4;
+  static constexpr std::pair<int, FormatValueOptions::NumFormat>
+      kFormats[kFormatCount] = {
+          {kForceNumberChar, FormatValueOptions::NumFormat::kChar},
+          {kForceNumberUnsigned, FormatValueOptions::NumFormat::kUnsigned},
+          {kForceNumberSigned, FormatValueOptions::NumFormat::kSigned},
+          {kForceNumberHex, FormatValueOptions::NumFormat::kHex}};
+
+  int num_type_overrides = 0;
+  for (const auto& cur : kFormats) {
+    if (cmd.HasSwitch(cur.first)) {
+      num_type_overrides++;
+      options->num_format = cur.second;
+    }
+  }
+
+  if (num_type_overrides > 1)
+    return Err("More than one type override (-c, -d, -u, -x) specified.");
+  return Err();
 }
+
+#define FORMAT_VALUE_SWITCHES                                                 \
+  "  --max-array=<number>\n"                                                  \
+  "      Specifies the maximum array size to print. By default this is\n"     \
+  "      256. Specifying large values will slow things down and make the\n"   \
+  "      output harder to read, but the default is sometimes insufficient.\n" \
+  "      This also applies to strings.\n"                                     \
+  "\n"                                                                        \
+  "  -t\n"                                                                    \
+  "  --types\n"                                                               \
+  "      Force type printing on. The type of every value printed will be\n"   \
+  "      explicitly shown.\n"                                                 \
+  "\n"                                                                        \
+  "Number formatting options\n"                                               \
+  "\n"                                                                        \
+  "  Force numeric values to be of specific types with these options:\n"      \
+  "\n"                                                                        \
+  "  -c  Character\n"                                                         \
+  "  -d  Signed decimal\n"                                                    \
+  "  -u  Unsigned decimal\n"                                                  \
+  "  -x  Unsigned hexadecimal\n"
 
 // backtrace -------------------------------------------------------------------
 
@@ -225,11 +278,8 @@ const char kLocalsHelp[] =
 
 Arguments
 
-  -t
-  --types
-      Force type printing on. The type of every value printed will be
-      explicitly shown.
-
+)" FORMAT_VALUE_SWITCHES
+    R"(
 Examples
 
   locals
@@ -299,7 +349,11 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
     return Err();
   }
 
-  FormatValueOptions options = GetFormatValueOptions(cmd);
+  FormatValueOptions options;
+  err = GetFormatValueOptions(cmd, &options);
+  if (err.has_error())
+    return err;
+
   auto helper = fxl::MakeRefCounted<FormatValue>(
       std::make_unique<FormatValueProcessContextImpl>(cmd.target()));
   for (const auto& pair : vars) {
@@ -502,11 +556,8 @@ const char kPrintHelp[] =
 
 Arguments
 
-  -t
-  --types
-      Force type printing on. The type of every value printed will be
-      explicitly shown.
-
+)" FORMAT_VALUE_SWITCHES
+    R"(
 Expressions
 
   The expression evaluator understands the following C/C++ things:
@@ -563,7 +614,11 @@ Err DoPrint(ConsoleContext* context, const Command& cmd) {
   if (expr.empty())
     return Err("Usage: print <expression>\nSee \"help print\" for more.");
 
-  FormatValueOptions options = GetFormatValueOptions(cmd);
+  FormatValueOptions options;
+  err = GetFormatValueOptions(cmd, &options);
+  if (err.has_error())
+    return err;
+
   auto data_provider = cmd.frame()->GetSymbolDataProvider();
   auto formatter = fxl::MakeRefCounted<FormatValue>(
       std::make_unique<FormatValueProcessContextImpl>(cmd.target()));
@@ -948,8 +1003,14 @@ Err DoUntil(ConsoleContext* context, const Command& cmd) {
 }  // namespace
 
 void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
-  // Shared by several verbs.
-  SwitchRecord force_types(kForceTypes, false, "types", 't');
+  // Shared options for value printing.
+  const std::vector<SwitchRecord> format_switches{
+      SwitchRecord(kForceTypes, false, "types", 't'),
+      SwitchRecord(kForceNumberChar, false, "", 'c'),
+      SwitchRecord(kForceNumberSigned, false, "", 'd'),
+      SwitchRecord(kForceNumberUnsigned, false, "", 'u'),
+      SwitchRecord(kForceNumberHex, false, "", 'x'),
+      SwitchRecord(kMaxArraySize, true, "max-array")};
 
   (*verbs)[Verb::kBacktrace] =
       VerbRecord(&DoBacktrace, {"backtrace", "bt"}, kBacktraceShortHelp,
@@ -964,7 +1025,7 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
   // locals
   VerbRecord locals(&DoLocals, {"locals"}, kLocalsShortHelp, kLocalsHelp,
                     CommandGroup::kQuery);
-  locals.switches.push_back(force_types);
+  locals.switches = format_switches;
   (*verbs)[Verb::kLocals] = std::move(locals);
 
   (*verbs)[Verb::kNext] =
@@ -980,7 +1041,7 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
   // print
   VerbRecord print(&DoPrint, {"print", "p"}, kPrintShortHelp, kPrintHelp,
                    CommandGroup::kQuery);
-  print.switches.push_back(force_types);
+  print.switches = format_switches;
   (*verbs)[Verb::kPrint] = std::move(print);
 
   // regs
