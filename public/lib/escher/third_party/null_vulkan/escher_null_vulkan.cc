@@ -1209,6 +1209,8 @@ VKAPI_ATTR VkResult VKAPI_CALL vkBindImageMemory2KHR(
     uint32_t                                    bindInfoCount,
     const VkBindImageMemoryInfoKHR*             pBindInfos) { return VK_SUCCESS; }
 
+#ifdef VK_USE_PLATFORM_MAGMA_KHR
+
 VKAPI_ATTR VkResult VKAPI_CALL vkGetMemoryFuchsiaHandleKHR(
     VkDevice                                    device,
     const VkMemoryGetFuchsiaHandleInfoKHR*      pGetFuchsiaHandleInfo,
@@ -1228,8 +1230,6 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetSemaphoreFuchsiaHandleKHR(
     VkDevice                                    device,
     const VkSemaphoreGetFuchsiaHandleInfoKHR*   pGetFuchsiaHandleInfo,
     uint32_t*                                   pFuchsiaHandle) { return VK_SUCCESS; }
-
-#ifdef VK_USE_PLATFORM_MAGMA_KHR
 
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateMagmaSurfaceKHR(
     VkInstance                                  instance,
