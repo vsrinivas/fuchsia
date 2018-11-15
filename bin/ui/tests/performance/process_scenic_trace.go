@@ -251,6 +251,7 @@ func reportScenicFps(model benchmarking.Model, testSuite string, testResultsFile
 	gfxStr := "gfx"
 	for _, e := range averageEvents {
 		events := model.FindEvents(benchmarking.EventsFilter{Cat: &gfxStr, Name: &e.Name})
+		durations := extractDurations(events)
 		avgDuration := jsonFloat(benchmarking.AvgDuration(events) / OneMsecInUsecs)
 		if e.Label == "" {
 			e.Label = e.Name
@@ -261,7 +262,7 @@ func reportScenicFps(model benchmarking.Model, testSuite string, testResultsFile
 			Label:     e.Label,
 			TestSuite: testSuite,
 			Unit:      benchmarking.Milliseconds,
-			Values:    []float64{avgDuration},
+			Values:    durations,
 		})
 	}
 	renderFrameStr := "RenderFrame"
