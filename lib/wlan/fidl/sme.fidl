@@ -111,6 +111,9 @@ enum StartApResultCode {
     SUCCESS = 0;
     ALREADY_STARTED = 1;
     INTERNAL_ERROR = 2;
+    CANCELED = 3;
+    TIMED_OUT = 4;
+    PREVIOUS_START_IN_PROGRESS = 5;
 };
 
 interface ApSme {
