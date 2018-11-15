@@ -66,6 +66,10 @@ package("components_binary_test") {
 
   meta = [
     {
+      dest = "components_binary_argv_test.cmx"
+      path = rebase_path(dest)
+    },
+    {
       path = rebase_path("meta/program1.cmx")
       dest = "program1.cmx"
     },

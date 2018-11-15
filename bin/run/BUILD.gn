@@ -21,14 +21,20 @@ executable("bin") {
 }
 
 package("run") {
-  deprecated_system_image = true
-
   deps = [
     ":bin",
   ]
 
+  meta = [
+    {
+      dest = "run.cmx"
+      path = rebase_path(dest)
+    }
+  ]
+
   binaries = [
     {
+      shell = true
       name = "run"
     },
   ]

@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "test/multiple_components"
     },
     "sandbox": {
         "services": [ "fuchsia.sys.Environment" ]

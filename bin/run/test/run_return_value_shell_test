@@ -12,7 +12,7 @@ run_test () {
     local expected
     expected=$1
     local actual
-    run run_test_exiter $expected
+    /bin/run run_test_exiter $expected
     actual=$?
     if [ $actual -ne $expected ]; then
         echo "FAIL"

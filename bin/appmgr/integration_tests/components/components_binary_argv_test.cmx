@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "test/components_binary_argv_test"
+    },
+    "sandbox": {
+        "features": [
+            "shell"
+        ],
+        "services": [
+            "fuchsia.process.Resolver",
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

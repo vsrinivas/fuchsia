@@ -16,7 +16,9 @@
 TEST(Run, Daemonize) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  const char* run_d_command_argv[] = {"/system/bin/run", "-d",
+  // It is not possible to use the /bin trampoline unless
+  // fuchsia.process.Resolver is proxied to the child process.
+  const char* run_d_command_argv[] = {"/pkgfs/packages/run/0/bin/run", "-d",
                                       "test_program_name", nullptr};
 
   zx::job job;

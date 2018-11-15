@@ -9,7 +9,7 @@
 #include <zircon/syscalls.h>
 #include "gtest/gtest.h"
 
-static constexpr char kRunPath[] = "/system/bin/run";
+static constexpr char kRunPath[] = "/bin/run";
 static constexpr char kExiter[] = "run_test_exiter";
 
 void test_case(const char* value) {

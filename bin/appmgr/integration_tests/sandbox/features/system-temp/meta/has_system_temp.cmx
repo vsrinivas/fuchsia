@@ -1,9 +1,11 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "test/has_system_temp"
     },
     "sandbox": {
-        "features": [ "system-temp" ],
-	"services": []
+        "features": [
+            "system-temp"
+        ],
+        "services": []
     }
 }

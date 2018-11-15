@@ -156,7 +156,7 @@ TEST_F(ChrealmTest, ConnectToService) {
   {
     std::string out;
     const std::vector<const char*> args = {
-        "/system/bin/chrealm", realm_path.c_str(), "--", "/system/bin/run",
+        "/system/bin/chrealm", realm_path.c_str(), "--", "/pkgfs/packages/run/0/bin/run",
         "chrealm_test_get_message"};
     RunCommand(args, &out);
     EXPECT_EQ(kMessage, out);

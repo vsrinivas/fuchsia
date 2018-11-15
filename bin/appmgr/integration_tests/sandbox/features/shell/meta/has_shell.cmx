@@ -1,9 +1,11 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "test/has_shell"
     },
     "sandbox": {
-        "features": [ "shell" ],
+        "features": [
+            "shell"
+        ],
         "services": []
     }
 }

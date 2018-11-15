@@ -93,6 +93,8 @@ bool PackageLoader::LoadResource(const fxl::UniqueFD& dir,
   if (!fsl::VmoFromFilenameAt(dir.get(), path, &resource)) {
     return false;
   }
+
+  resource.vmo().set_property(ZX_PROP_NAME, path.c_str(), path.length());
   package.data = fidl::MakeOptional(std::move(resource).ToTransport());
 
   return true;

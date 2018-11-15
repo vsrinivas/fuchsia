@@ -10,10 +10,11 @@ sandbox_test_package("some_services") {
   ]
 
   deps = [
-    "//garnet/bin/appmgr/integration_tests/fidl/fuchsia.testing.appmgr",
     "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
+    "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock"
+    "//third_party/googletest:gmock",
+    "//zircon/public/fidl/fuchsia-process",
   ]
 }
 
@@ -23,7 +24,6 @@ sandbox_test_package("no_services") {
   ]
 
   deps = [
-    "//garnet/bin/appmgr/integration_tests/fidl/fuchsia.testing.appmgr",
     "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock"
@@ -36,7 +36,6 @@ sandbox_test_package("multiple_components") {
   ]
 
   deps = [
-    "//garnet/bin/appmgr/integration_tests/fidl/fuchsia.testing.appmgr",
     "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl/test:gtest_main",

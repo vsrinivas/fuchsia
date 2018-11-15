@@ -1,8 +1,8 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "test/no_shell"
     },
     "sandbox": {
-	"services": []
+        "services": []
     }
 }

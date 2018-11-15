@@ -20,37 +20,3 @@ source_set("namespace_test") {
     "//third_party/googletest:gtest",
   ]
 }
-
-executable("run_in_test_env_bin") {
-  output_name = "run_in_test_env"
-  testonly = true
-
-  deps = [
-    "//garnet/bin/appmgr/integration_tests/fidl/fuchsia.testing.appmgr",
-    "//garnet/public/fidl/fuchsia.sys",
-    "//garnet/public/lib/component/cpp/testing",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/zx",
-  ]
-
-  sources = [
-    "run_in_test_env.cc",
-  ]
-}
-
-package("run_in_test_env") {
-  testonly = true
-
-  deps = [
-    ":run_in_test_env_bin",
-  ]
-
-  binary = "run_in_test_env"
-
-  meta = [
-    {
-      path = rebase_path("meta/run_in_test_env.cmx")
-      dest = "run_in_test_env.cmx"
-    },
-  ]
-}

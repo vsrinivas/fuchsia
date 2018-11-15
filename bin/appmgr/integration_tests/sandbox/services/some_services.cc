@@ -7,8 +7,9 @@
 #include <string>
 #include <vector>
 
+#include <fuchsia/ldsvc/cpp/fidl.h>
+#include <fuchsia/process/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/testing/appmgr/cpp/fidl.h>
 #include <zircon/errors.h>
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -16,22 +17,25 @@
 
 TEST_F(NamespaceTest, SomeServices) {
   // Only whitelisted service is available.
-  fuchsia::testing::appmgr::TestServiceSyncPtr test_service;
-  fuchsia::testing::appmgr::TestService2SyncPtr test_service2;
-  ConnectToService(test_service.NewRequest());
-  ConnectToService(test_service2.NewRequest());
+  fuchsia::sys::LoaderSyncPtr loader;
+  fuchsia::process::ResolverSyncPtr resolver;
+  ConnectToService(loader.NewRequest());
+  ConnectToService(resolver.NewRequest());
   RunLoopUntilIdle();
 
-  ::fidl::StringPtr message, message2;
-  ASSERT_EQ(ZX_OK, test_service->GetMessage(&message));
-  EXPECT_EQ(ZX_ERR_PEER_CLOSED, test_service2->GetMessage(&message2));
-  EXPECT_EQ(message.get(), "hello");
-  EXPECT_EQ(message2.get(), "");
+  fuchsia::sys::PackagePtr pkg;
+  ASSERT_EQ(ZX_ERR_PEER_CLOSED, loader->LoadUrl("some-url", &pkg));
+
+  zx_status_t status;
+  zx::vmo exe;
+  fidl::InterfaceHandle<fuchsia::ldsvc::Loader> svc;
+  EXPECT_EQ(ZX_OK,
+            resolver->Resolve("some_url", &status, &exe, &svc));
 
   // readdir should list services in sandbox.
   std::vector<std::string> files;
   ASSERT_TRUE(files::ReadDirContents("/svc", &files));
   EXPECT_THAT(files, ::testing::UnorderedElementsAre(
                          ".", "fuchsia.sys.Environment",
-                         "fuchsia.testing.appmgr.TestService"));
+                         "fuchsia.process.Resolver"));
 }

@@ -88,6 +88,17 @@ package("run_tests") {
     ":run_return_value_test",
   ]
 
+  meta = [
+    {
+      dest = "run_return_value_shell_test.cmx"
+      path = rebase_path(dest)
+    },
+    {
+      dest = "run_return_value_test.cmx"
+      path = rebase_path(dest)
+    },
+  ]
+
   tests = [
     {
       name = "run_return_value_test"

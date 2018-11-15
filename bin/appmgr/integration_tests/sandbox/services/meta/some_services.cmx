@@ -1,10 +1,10 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "test/some_services"
     },
     "sandbox": {
         "services": [
-            "fuchsia.testing.appmgr.TestService",
+            "fuchsia.process.Resolver",
             "fuchsia.sys.Environment"
         ]
     }

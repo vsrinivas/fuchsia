@@ -1,9 +1,11 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "test/has_persistent_storage"
     },
     "sandbox": {
-        "features": [ "persistent-storage" ],
+        "features": [
+            "persistent-storage"
+        ],
         "services": []
     }
 }
