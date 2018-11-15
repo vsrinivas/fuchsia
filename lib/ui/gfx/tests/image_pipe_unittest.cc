@@ -17,8 +17,8 @@ namespace test {
 
 class DummyImage : public Image {
  public:
-  DummyImage(Session* session, escher::ImagePtr image)
-      : Image(session, 0u, Image::kTypeInfo) {
+  DummyImage(Session* session, ResourceId id, escher::ImagePtr image)
+      : Image(session, id, Image::kTypeInfo) {
     image_ = std::move(image);
   }
 
@@ -97,7 +97,7 @@ class ImagePipeThatCreatesDummyImages : public ImagePipe {
 
  private:
   // Override to create an Image without a backing escher::Image.
-  ImagePtr CreateImage(Session* session, MemoryPtr memory,
+  ImagePtr CreateImage(Session* session, ResourceId id, MemoryPtr memory,
                        const fuchsia::images::ImageInfo& image_info,
                        uint64_t memory_offset,
                        ErrorReporter* error_reporter) override {
@@ -107,7 +107,7 @@ class ImagePipeThatCreatesDummyImages : public ImagePipe {
     escher::ImagePtr escher_image = escher::Image::New(
         dummy_resource_manager_, escher_info, vk::Image(), nullptr);
     FXL_CHECK(escher_image);
-    auto image = fxl::AdoptRef(new DummyImage(session, escher_image));
+    auto image = fxl::AdoptRef(new DummyImage(session, id, escher_image));
 
     dummy_images_.push_back(image);
     return image;
@@ -384,6 +384,102 @@ TEST_F(ImagePipeTest, ImagePipeUpdateTwoFrames) {
   // presented, we should still have zero calls to UpdatePixels for that image.
   ASSERT_EQ(image_pipe->dummy_images_[0]->update_count_, 0u);
   ASSERT_EQ(image_pipe->dummy_images_[1]->update_count_, 2u);
+}
+
+// Present two frames on the ImagePipe. After presenting the first image but
+// before signalling its acquire fence, remove it. Verify that this doesn't
+// cause any errors.
+TEST_F(ImagePipeTest, ImagePipeRemoveImageThatIsPendingPresent) {
+  ImagePipePtr image_pipe =
+      fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(session_.get(),
+                                                           this);
+
+  uint32_t image1_id = 1;
+
+  // Create a checkerboard image and copy it into a vmo.
+  {
+    size_t image_dim = 100;
+    auto checkerboard = CreateVmoWithCheckerboardPixels(image_dim, image_dim);
+    auto image_info = CreateImageInfoForBgra8Image(image_dim, image_dim);
+
+    // Add the image to the image pipe with ImagePipe.AddImage().
+    image_pipe->AddImage(image1_id, std::move(image_info),
+                         CopyVmo(checkerboard->vmo()), 0,
+                         GetVmoSize(checkerboard->vmo()),
+                         fuchsia::images::MemoryType::HOST_MEMORY);
+  }
+
+  // Make checkerboard the currently displayed image.
+  zx::event acquire_fence1 = CreateEvent();
+  zx::event release_fence1 = CreateEvent();
+
+  image_pipe->PresentImage(image1_id, 0, CopyEventIntoFidlArray(acquire_fence1),
+                           CopyEventIntoFidlArray(release_fence1), nullptr);
+
+  // Current presented image should be null, since we haven't signalled
+  // acquire fence yet.
+  RunLoopUntilIdle();
+  ASSERT_FALSE(image_pipe->GetEscherImage());
+
+  // Remove the image; by the ImagePipe semantics, the consumer will
+  // still keep a reference to it so any future presents will still work.
+  image_pipe->RemoveImage(image1_id);
+
+  // Signal on the acquire fence.
+  acquire_fence1.signal(0u, escher::kFenceSignalled);
+
+  // Run until image1 is presented.
+  RunLoopUntilIdle();
+  ASSERT_TRUE(image_pipe->GetEscherImage());
+  escher::ImagePtr image1 = image_pipe->GetEscherImage();
+
+  // Image should now be presented.
+  ASSERT_TRUE(image1);
+
+  uint32_t image2_id = 2;
+  // Create a new Image with a gradient.
+  {
+    size_t image_dim = 100;
+    auto gradient = CreateVmoWithGradientPixels(image_dim, image_dim);
+    auto image_info = CreateImageInfoForBgra8Image(image_dim, image_dim);
+
+    // Add the image to the image pipe.
+    image_pipe->AddImage(
+        image2_id, std::move(image_info), CopyVmo(gradient->vmo()), 0,
+        GetVmoSize(gradient->vmo()), fuchsia::images::MemoryType::HOST_MEMORY);
+  }
+
+  // The first image should not have been released.
+  RunLoopUntilIdle();
+  ASSERT_FALSE(IsEventSignalled(release_fence1, escher::kFenceSignalled));
+
+  // Make gradient the currently displayed image.
+  zx::event acquire_fence2 = CreateEvent();
+  zx::event release_fence2 = CreateEvent();
+
+  image_pipe->PresentImage(image2_id, 0, CopyEventIntoFidlArray(acquire_fence2),
+                           CopyEventIntoFidlArray(release_fence2), nullptr);
+
+  // Verify that the currently display image hasn't changed yet, since we
+  // haven't signalled the acquire fence.
+  RunLoopUntilIdle();
+  ASSERT_EQ(image_pipe->GetEscherImage(), image1);
+
+  // Signal on the acquire fence.
+  acquire_fence2.signal(0u, escher::kFenceSignalled);
+
+  // There should be a new image presented.
+  RunLoopUntilIdle();
+  escher::ImagePtr image2 = image_pipe->GetEscherImage();
+  ASSERT_TRUE(image2);
+  ASSERT_NE(image1, image2);
+
+  // The first image should have been released.
+  ASSERT_EQ(mock_release_fence_signaller_->num_calls_to_add_cpu_release_fence(),
+            1u);
+  ASSERT_TRUE(IsEventSignalled(release_fence1, escher::kFenceSignalled));
+  ASSERT_FALSE(IsEventSignalled(release_fence2, escher::kFenceSignalled));
+  EXPECT_ERROR_COUNT(0);
 }
 
 // TODO(MZ-151): More tests.

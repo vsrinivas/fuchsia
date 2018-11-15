@@ -11,7 +11,6 @@
 #include <queue>
 
 #include <fuchsia/images/cpp/fidl.h>
-#include "garnet/lib/ui/gfx/engine/resource_map.h"
 #include "garnet/lib/ui/gfx/resources/image.h"
 #include "garnet/lib/ui/gfx/resources/image_base.h"
 #include "garnet/lib/ui/gfx/resources/image_pipe_handler.h"
@@ -70,7 +69,8 @@ class ImagePipe : public ImageBase {
   void CloseConnectionAndCleanUp();
 
   // Virtual so that test subclasses can override.
-  virtual ImagePtr CreateImage(Session* session, MemoryPtr memory,
+  virtual ImagePtr CreateImage(Session* session, ResourceId id,
+                               MemoryPtr memory,
                                const fuchsia::images::ImageInfo& image_info,
                                uint64_t memory_offset,
                                ErrorReporter* error_reporter);
@@ -80,7 +80,7 @@ class ImagePipe : public ImageBase {
   // A |Frame| stores the arguments passed to a particular invocation of
   // Present().
   struct Frame {
-    ResourceId image_id;
+    ImagePtr image;
     uint64_t presentation_time;
     std::unique_ptr<escher::FenceSetListener> acquire_fences;
     ::fidl::VectorPtr<zx::event> release_fences;
@@ -96,7 +96,7 @@ class ImagePipe : public ImageBase {
   ImagePtr current_image_;
   ::fidl::VectorPtr<zx::event> current_release_fences_;
 
-  ResourceMap images_;
+  std::unordered_map<ResourceId, ImagePtr> images_;
   bool is_valid_ = true;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ImagePipe);
