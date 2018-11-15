@@ -63,7 +63,7 @@ CollectorOptions MakeCollectorOptions() {
 
 MetricOptions MakeMetricOptions(uint32_t metric_id = kMetricId, uint32_t event_code = kEventCode) {
     MetricOptions options;
-    options.SetType(MetricOptions::kRemote);
+    options.SetMode(MetricOptions::Mode::kRemote);
     options.metric_id = metric_id;
     options.event_code = event_code;
     options.component = kComponent;
@@ -75,7 +75,7 @@ HistogramOptions MakeHistogramOptions(uint32_t metric_id = kMetricId,
     // | .....| ....| ...| .... |
     // -inf  -2     0    2    +inf
     HistogramOptions options = HistogramOptions::Linear(kBuckets, /*scalar*/ 2, /*offset*/ -2);
-    options.SetType(MetricOptions::kRemote);
+    options.SetMode(MetricOptions::Mode::kRemote);
     options.metric_id = metric_id;
     options.event_code = event_code;
     options.component = kComponent;

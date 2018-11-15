@@ -42,7 +42,7 @@ namespace {
 
 MetricOptions MakeMetricOptions() {
     MetricOptions options;
-    options.SetType(MetricOptions::kRemote);
+    options.SetMode(MetricOptions::Mode::kRemote);
     options.metric_id = kMetricId;
     options.component = kComponent;
     options.event_code = kEventCode;

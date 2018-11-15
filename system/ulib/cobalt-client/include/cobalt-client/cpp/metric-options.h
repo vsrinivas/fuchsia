@@ -15,24 +15,30 @@ namespace cobalt_client {
 // Defines basic set of options for instantiating a metric.
 struct MetricOptions {
 
-    enum Mode : uint8_t {
+    enum class Mode : uint8_t {
         // Metric is aggregated locally and published
         // via collector interface.
         kLocal = 1,
         // Metric deltas are aggregated locally, and sent
         // for global agreggation to a remote service.
         kRemote = 2,
+        // Combination of kLocal and kRemote.
+        kRemoteAndLocal = 3,
     };
 
-    void SetType(uint8_t type) { this->type = type; }
+    void SetMode(Mode mode) { this->mode = mode; }
 
     // Returns true if the metrics supports remote collection.
     // This is values collected by another service, such as Cobalt.
-    bool IsRemote() const { return type & kRemote; }
+    bool IsRemote() const {
+        return mode == Mode::kRemote || mode == Mode::kRemoteAndLocal;
+    }
 
     // Returns true if the metric supports in process collection.
     // This is values tied to the process life-time.
-    bool IsLocal() const { return type & kLocal; }
+    bool IsLocal() const {
+        return mode == Mode::kLocal || mode == Mode::kRemoteAndLocal;
+    }
 
     // Required for local metrics. If not set, and metric is both Local and Remote,
     // this will be generated from the |metric_id|, |event_code|(if not 0) and |component|(if not
@@ -62,7 +68,7 @@ struct MetricOptions {
 
     // Defines whether the metric is local or remote.
     // Internal use, should not be set manually.
-    uint8_t type;
+    Mode mode;
 };
 
 // Describes an histogram, and provides data for mapping a value to a given bucket.

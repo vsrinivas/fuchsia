@@ -16,7 +16,7 @@ namespace {
 bool TestLocal() {
     BEGIN_TEST;
     MetricOptions options;
-    options.SetType(MetricOptions::kLocal);
+    options.SetMode(MetricOptions::Mode::kLocal);
     ASSERT_TRUE(options.IsLocal());
     ASSERT_FALSE(options.IsRemote());
     END_TEST;
@@ -25,7 +25,7 @@ bool TestLocal() {
 bool TestRemote() {
     BEGIN_TEST;
     MetricOptions options;
-    options.SetType(MetricOptions::kRemote);
+    options.SetMode(MetricOptions::Mode::kRemote);
     ASSERT_TRUE(options.IsRemote());
     ASSERT_FALSE(options.IsLocal());
     END_TEST;
@@ -34,7 +34,7 @@ bool TestRemote() {
 bool TestLocalAndRemote() {
     BEGIN_TEST;
     MetricOptions options;
-    options.SetType(MetricOptions::kRemote | MetricOptions::kLocal);
+    options.SetMode(MetricOptions::Mode::kRemoteAndLocal);
     ASSERT_TRUE(options.IsRemote());
     ASSERT_TRUE(options.IsLocal());
     END_TEST;

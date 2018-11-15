@@ -49,7 +49,7 @@ MetricOptions MakeMetricOptions() {
 bool TestFromMetricOptions() {
     BEGIN_TEST;
     MetricOptions options = MakeMetricOptions();
-    options.SetType(MetricOptions::kLocal | MetricOptions::kRemote);
+    options.SetMode(MetricOptions::Mode::kRemoteAndLocal);
     LocalMetricInfo info = LocalMetricInfo::From(options);
     ASSERT_STR_EQ(info.name.c_str(), "MetricName.SomeRandomComponent.EventName");
     END_TEST;
@@ -58,7 +58,7 @@ bool TestFromMetricOptions() {
 bool TestFromMetricOptionsNoGetMetricName() {
     BEGIN_TEST;
     MetricOptions options = MakeMetricOptions();
-    options.SetType(MetricOptions::kLocal | MetricOptions::kRemote);
+    options.SetMode(MetricOptions::Mode::kRemoteAndLocal);
     options.get_metric_name = nullptr;
     LocalMetricInfo info = LocalMetricInfo::From(options);
     ASSERT_STR_EQ(info.name.c_str(), "1.SomeRandomComponent.EventName");
@@ -68,7 +68,7 @@ bool TestFromMetricOptionsNoGetMetricName() {
 bool TestFromMetricOptionsNoGetEventName() {
     BEGIN_TEST;
     MetricOptions options = MakeMetricOptions();
-    options.SetType(MetricOptions::kLocal | MetricOptions::kRemote);
+    options.SetMode(MetricOptions::Mode::kRemoteAndLocal);
     options.get_event_name = nullptr;
     LocalMetricInfo info = LocalMetricInfo::From(options);
     ASSERT_STR_EQ(info.name.c_str(), "MetricName.SomeRandomComponent.2");
@@ -78,7 +78,7 @@ bool TestFromMetricOptionsNoGetEventName() {
 bool TestFromMetricOptionsNoComponent() {
     BEGIN_TEST;
     MetricOptions options = MakeMetricOptions();
-    options.SetType(MetricOptions::kRemote | MetricOptions::kLocal);
+    options.SetMode(MetricOptions::Mode::kRemoteAndLocal);
     options.component.clear();
     LocalMetricInfo info = LocalMetricInfo::From(options);
     ASSERT_STR_EQ(info.name.c_str(), "MetricName.EventName");
