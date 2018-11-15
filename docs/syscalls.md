@@ -88,6 +88,9 @@
 + [vmo_set_size](syscalls/vmo_set_size.md) - adjust the size of a vmo
 + [vmo_op_range](syscalls/vmo_op_range.md) - perform an operation on a range of a vmo
 + [vmo_replace_as_executable](syscall/vmo_replace_as_executable.md) - add execute rights to a vmo
++ [vmo_create_physical](syscalls/vmo_create_physical.md) - create a VM object referring to a specific contiguous range of physical memory
++ [vmo_clone](syscalls/vmo_clone.md) - clone a vmo
++ [vmo_set_cache_policy](syscalls/vmo_set_cache_policy.md) - set the caching policy for pages held by a VMO.
 
 ## Virtual Memory Address Regions (VMARs)
 + [vmar_allocate](syscalls/vmar_allocate.md) - create a new child VMAR
@@ -106,6 +109,7 @@
 + [clock_get_monotonic](syscalls/clock_get_monotonic.md) - read the monotonic system clock
 + [ticks_get](syscalls/ticks_get.md) - read high-precision timer ticks
 + [ticks_per_second](syscalls/ticks_per_second.md) - read the number of high-precision timer ticks in a second
++ [deadline_after](syscalls/deadline_after.md) - Convert a time relative to now to an absolute deadline
 
 ## Timers
 + [timer_create](syscalls/timer_create.md) - create a timer object
@@ -130,15 +134,21 @@
 + [system_get_version](syscalls/system_get_version.md) - get version string
 
 ## Logging
-+ log_create - create a kernel managed log reader or writer
-+ log_write - write log entry to log
-+ log_read - read log entries from log
++ [log_create](syscalls/log_create.md) - create a kernel managed log reader or writer
++ [log_write](syscalls/log_write.md) - write log entry to log
++ [log_read](syscalls/log_read.md) - read log entries from log
 
 ## Multi-function
 + [vmar_unmap_handle_close_thread_exit](syscalls/vmar_unmap_handle_close_thread_exit.md) - three-in-one
 + [futex_wake_handle_close_thread_exit](syscalls/futex_wake_handle_close_thread_exit.md) - three-in-one
 
+## System
++ [system_mexec](syscalls/system_mexec.md) - Soft reboot the system with a new kernel and bootimage
+
 ## DDK
++ [bti_create](syscalls/bti_create.md) - create a new bus transaction initiator
++ [bti_pin](syscalls/bti_pin.md) - pin pages and grant devices access to them
++ [bti_release_quarantine](syscalls/bti_release_quarantine.md) - releases all quarantined PMTs
 + [cache_flush](syscalls/cache_flush.md) - Flush CPU data and/or instruction caches
 + [interrupt_ack](syscalls/interrupt_ack.md) - Acknowledge an interrupt object
 + [interrupt_bind](syscalls/interrupt_bind.md) - Bind an interrupt object to a port
@@ -146,9 +156,7 @@
 + [interrupt_destroy](syscalls/interrupt_destroy.md) - Destroy an interrupt object
 + [interrupt_trigger](syscalls/interrupt_trigger.md) - Trigger a virtual interrupt object
 + [interrupt_wait](syscalls/interrupt_wait.md) - Wait on an interrupt object
++ [iommu_create](syscalls/iommu_create.md) - create a new IOMMU object in the kernel
++ [pmt_unpin](syscalls/pmt_unpin.md) - unpin pages and revoke device access to them
++ [resource_create](syscalls/resource_create.md) - create a resource object
 + [smc_call](syscalls/smc_call.md) - Make an SMC call from user space
-+ acpi_uefi_rsdp
-+ ioports_request
-+ framebuffer_set_range
-+ vmo_create_contiguous
-+ vmo_create_physical

@@ -2,7 +2,7 @@
 
 ## NAME
 
-zx_system_mexec - Soft reboot the system with a new kernel and bootimage
+system_mexec - Soft reboot the system with a new kernel and bootimage
 
 ## SYNOPSIS
 
