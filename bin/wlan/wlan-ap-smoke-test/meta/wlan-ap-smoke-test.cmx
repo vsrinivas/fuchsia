@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.stack.Stack",
+            "fuchsia.wlan.device.service.DeviceService"
+        ]
+    }
+}

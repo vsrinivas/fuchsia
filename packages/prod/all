@@ -92,6 +92,7 @@
         "garnet/packages/prod/vim",
         "garnet/packages/prod/vulkan",
         "garnet/packages/prod/wlan",
+        "garnet/packages/prod/wlan-ap-smoke-test",
         "garnet/packages/prod/wlan_drivers",
         "garnet/packages/prod/wlan_tools",
         "garnet/packages/prod/wlan-hw-sim",
