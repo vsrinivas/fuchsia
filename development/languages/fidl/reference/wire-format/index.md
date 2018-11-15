@@ -898,7 +898,7 @@ safety checks:
 
 ## Notes
 
-[channel call]: ../../syscalls/channel_call.md
+[channel call]: https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/channel_call.md
 
 [^1]: Justification for unterminated strings. Since strings can contain embedded
     null characters, it is safer to encode the size explicitly and to make no
