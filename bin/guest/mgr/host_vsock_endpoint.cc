@@ -87,58 +87,35 @@ void HostVsockEndpoint::Connect(
     callback(ZX_ERR_CONNECTION_REFUSED);
     return;
   }
-  zx::handle dup;
-  zx_status_t status = handle.duplicate(ZX_RIGHT_WAIT, &dup);
-  if (status != ZX_OK) {
-    callback(status);
-    return;
-  }
   uint32_t src_port;
-  status = AllocEphemeralPort(&src_port);
+  zx_status_t status = AllocEphemeralPort(&src_port);
   if (status != ZX_OK) {
     callback(status);
     return;
   }
   // Get access to the guests.
-  acceptor->Accept(
-      fuchsia::guest::HOST_CID, src_port, port, std::move(handle),
-      [this, dup = std::move(dup), src_port,
-       callback = std::move(callback)](zx_status_t status) mutable {
-        ConnectCallback(status, std::move(dup), src_port, std::move(callback));
-      });
+  acceptor->Accept(fuchsia::guest::HOST_CID, src_port, port, std::move(handle),
+                   [this, src_port, callback = std::move(callback)](
+                       zx_status_t status) mutable {
+                     ConnectCallback(status, src_port, std::move(callback));
+                   });
 }
 
 void HostVsockEndpoint::ConnectCallback(
-    zx_status_t status, zx::handle dup, uint32_t src_port,
+    zx_status_t status, uint32_t src_port,
     fuchsia::guest::HostVsockEndpoint::ConnectCallback callback) {
-  auto free_port =
-      fit::defer([this, src_port]() { FreeEphemeralPort(src_port); });
   if (status != ZX_OK) {
-    callback(status);
-    return;
+    FreeEphemeralPort(src_port);
   }
-
-  auto conn = std::make_unique<Connection>();
-  conn->port = src_port;
-  conn->handle = std::move(dup);
-  conn->wait.set_trigger(__ZX_OBJECT_PEER_CLOSED);
-  conn->wait.set_object(conn->handle.get());
-  conn->wait.set_handler(
-      [this, conn = conn.get()](...) { OnPeerClosed(conn); });
-  status = conn->wait.Begin(async_get_default_dispatcher());
-  if (status != ZX_OK) {
-    callback(status);
-    return;
-  }
-
-  connections_.emplace(conn->port, std::move(conn));
-  free_port.cancel();
-  callback(ZX_OK);
+  callback(status);
 }
 
-void HostVsockEndpoint::OnPeerClosed(Connection* conn) {
-  FreeEphemeralPort(conn->port);
-  connections_.erase(conn->port);
+void HostVsockEndpoint::OnShutdown(uint32_t port) {
+  // If there are no listeners for this port then it was ephemeral and should
+  // free it.
+  if (listeners_.find(port) == listeners_.end()) {
+    FreeEphemeralPort(port);
+  }
 }
 
 zx_status_t HostVsockEndpoint::AllocEphemeralPort(uint32_t* port) {

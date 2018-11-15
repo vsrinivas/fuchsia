@@ -27,6 +27,7 @@ class GuestVsockEndpoint : public fuchsia::guest::GuestVsockAcceptor {
 
   fidl::Binding<fuchsia::guest::HostVsockConnector> connector_binding_;
   fuchsia::guest::GuestVsockAcceptorPtr acceptor_;
+  fuchsia::guest::GuestVsockEndpointPtr guest_endpoint_;
 };
 
 }  // namespace guestmgr

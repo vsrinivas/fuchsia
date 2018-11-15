@@ -264,8 +264,9 @@ TEST_F(HostVsockEndpointTest, ConnectHostToGuestFreeEphemeralPort) {
     request.callback(ZX_OK);
   }
 
-  // Disconnect the first connection.
+  // Disconnect the first connection and generate the shutdown event.
   handles[0].reset();
+  host_endpoint_.OnShutdown(requests[0].src_port);
 
   RunLoopUntilIdle();
 

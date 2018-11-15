@@ -47,18 +47,12 @@ class HostVsockEndpoint : public fuchsia::guest::HostVsockConnector,
       uint32_t cid, uint32_t port, zx::handle handle,
       fuchsia::guest::HostVsockEndpoint::ConnectCallback callback) override;
 
+  void OnShutdown(uint32_t port);
+
  private:
-  struct Connection {
-    uint32_t port;
-    zx::handle handle;
-    async::Wait wait;
-  };
-
   void ConnectCallback(
-      zx_status_t status, zx::handle dup, uint32_t src_port,
+      zx_status_t status, uint32_t src_port,
       fuchsia::guest::HostVsockEndpoint::ConnectCallback remote_callback);
-
-  void OnPeerClosed(Connection* conn);
 
   zx_status_t AllocEphemeralPort(uint32_t* port);
   void FreeEphemeralPort(uint32_t port);
@@ -67,7 +61,6 @@ class HostVsockEndpoint : public fuchsia::guest::HostVsockConnector,
   bitmap::RleBitmap port_bitmap_;
   fidl::BindingSet<fuchsia::guest::HostVsockEndpoint> bindings_;
   std::unordered_map<uint32_t, fuchsia::guest::HostVsockAcceptorPtr> listeners_;
-  std::unordered_map<uint32_t, std::unique_ptr<Connection>> connections_;
 };
 
 }  // namespace guestmgr

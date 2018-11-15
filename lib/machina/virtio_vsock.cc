@@ -627,6 +627,10 @@ VirtioVsock::Connection* VirtioVsock::GetConnectionLocked(ConnectionKey key) {
 
 bool VirtioVsock::EraseOnErrorLocked(ConnectionKey key, zx_status_t status) {
   if (status != ZX_OK) {
+    for (auto& binding : endpoint_bindings_.bindings()) {
+      binding->events().OnShutdown(key.local_cid, key.local_port, guest_cid(),
+                                   key.remote_port);
+    }
     connections_.erase(key);
   }
   return status != ZX_OK;

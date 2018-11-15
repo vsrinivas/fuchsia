@@ -59,6 +59,9 @@ class EnvironmentControllerImpl : public fuchsia::guest::EnvironmentController {
       fidl::InterfaceRequest<fuchsia::guest::HostVsockEndpoint> endpoint)
       override;
 
+  void OnVsockShutdown(uint32_t src_cid, uint32_t src_port, uint32_t dst_cid,
+                       uint32_t dst_port);
+
   fuchsia::guest::GuestVsockAcceptor* GetAcceptor(uint32_t cid);
 
   const uint32_t id_;

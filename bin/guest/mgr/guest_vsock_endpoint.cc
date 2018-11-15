@@ -9,9 +9,10 @@ namespace guestmgr {
 GuestVsockEndpoint::GuestVsockEndpoint(
     uint32_t cid, fuchsia::guest::GuestVsockEndpointPtr guest_endpoint,
     fuchsia::guest::HostVsockConnector* connector)
-    : connector_binding_(connector) {
-  guest_endpoint->SetContextId(cid, connector_binding_.NewBinding(),
-                               acceptor_.NewRequest());
+    : connector_binding_(connector),
+      guest_endpoint_(std::move(guest_endpoint)) {
+  guest_endpoint_->SetContextId(cid, connector_binding_.NewBinding(),
+                                acceptor_.NewRequest());
 }
 
 void GuestVsockEndpoint::Accept(uint32_t src_cid, uint32_t src_port,

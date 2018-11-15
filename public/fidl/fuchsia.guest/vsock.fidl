@@ -50,6 +50,7 @@ interface HostVsockConnector {
 interface GuestVsockEndpoint {
     1: SetContextId(uint32 cid, HostVsockConnector connector,
                     request<GuestVsockAcceptor> acceptor);
+    2: -> OnShutdown(uint32 src_cid, uint32 src_port, uint32 dst_cid, uint32 dst_port);
 };
 
 // Exposed by a host to provide the ability for listeners to be multiplexed by

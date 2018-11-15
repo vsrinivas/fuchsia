@@ -51,8 +51,7 @@ void EnvironmentControllerImpl::LaunchInstance(
   info.directory_request = services.NewRequest();
   info.flat_namespace = std::move(launch_info.flat_namespace);
   std::string label = launch_info.label ? launch_info.label : launch_info.url;
-  auto guest_services =
-      std::make_unique<GuestServices>(std::move(launch_info));
+  auto guest_services = std::make_unique<GuestServices>(std::move(launch_info));
   info.additional_services = guest_services->ServeDirectory();
   launcher_->CreateComponent(std::move(info),
                              component_controller.NewRequest());
@@ -62,6 +61,8 @@ void EnvironmentControllerImpl::LaunchInstance(
   const uint32_t cid = next_guest_cid_++;
   fuchsia::guest::GuestVsockEndpointPtr guest_endpoint;
   services.ConnectToService(guest_endpoint.NewRequest());
+  guest_endpoint.events().OnShutdown =
+      fit::bind_member(this, &EnvironmentControllerImpl::OnVsockShutdown);
   auto endpoint = std::make_unique<GuestVsockEndpoint>(
       cid, std::move(guest_endpoint), &host_vsock_endpoint_);
 
@@ -80,6 +81,15 @@ void EnvironmentControllerImpl::LaunchInstance(
   }
 
   callback(cid);
+}
+
+void EnvironmentControllerImpl::OnVsockShutdown(uint32_t src_cid,
+                                                uint32_t src_port,
+                                                uint32_t dst_cid,
+                                                uint32_t dst_port) {
+  if (src_cid == fuchsia::guest::HOST_CID) {
+    host_vsock_endpoint_.OnShutdown(src_port);
+  }
 }
 
 void EnvironmentControllerImpl::GetHostVsockEndpoint(
