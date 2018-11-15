@@ -23,7 +23,6 @@ package("deprecated_build_info") {
 }
 
 package("build-info") {
-  deprecated_no_cmx = "//build"
   deps = [ ":last-update.txt" ]
   resources = [
     {
