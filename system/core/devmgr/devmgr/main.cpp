@@ -35,6 +35,7 @@
 
 #include "devmgr.h"
 #include "../shared/bootfs.h"
+#include "../shared/fdio.h"
 
 namespace devmgr {
 

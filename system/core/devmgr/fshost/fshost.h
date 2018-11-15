@@ -17,6 +17,8 @@
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
+#include "../shared/fdio.h"
+
 namespace devmgr {
 
 // FshostConnections represents the link from fshost to external

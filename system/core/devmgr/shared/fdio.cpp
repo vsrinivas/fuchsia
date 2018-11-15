@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "../devmgr/devmgr.h"
-
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
 
@@ -11,6 +9,8 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/util.h>
 #include <lib/zx/debuglog.h>
+#include <lib/zx/job.h>
+#include <lib/zx/process.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 
@@ -24,6 +24,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#include "fdio.h"
 
 namespace devmgr {
 

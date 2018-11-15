@@ -32,7 +32,6 @@
 #include <string.h>
 #include <threads.h>
 
-#include "../devmgr/devmgr.h"
 #include "../shared/bootfs.h"
 #include "fshost.h"
 

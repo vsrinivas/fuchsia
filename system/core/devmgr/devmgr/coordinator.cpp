@@ -35,6 +35,7 @@
 #include "devcoordinator.h"
 #include "devmgr.h"
 #include "../devhost/devhost.h"
+#include "../shared/fdio.h"
 #include "../shared/fidl_txn.h"
 #include "../shared/log.h"
 
