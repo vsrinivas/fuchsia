@@ -141,16 +141,13 @@ impl Socket {
 
     /// Close half of the socket, so attempts by the other side to write will fail.
     ///
-    /// Implements the `ZX_SOCKET_HALF_CLOSE` option of
-    /// [zx_socket_write](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/socket_write.md).
+    /// Implements the `ZX_SOCKET_SHUTDOWN_WRITE` option of
+    /// [zx_socket_shutdown](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/socket_shutdown.md).
     pub fn half_close(&self) -> Result<(), Status> {
         let status = unsafe {
-            sys::zx_socket_write(
+            sys::zx_socket_shutdown(
                 self.raw_handle(),
-                sys::ZX_SOCKET_HALF_CLOSE,
-                ptr::null(),
-                0,
-                ptr::null_mut(),
+                sys::ZX_SOCKET_SHUTDOWN_WRITE,
             )
         };
         ok(status)

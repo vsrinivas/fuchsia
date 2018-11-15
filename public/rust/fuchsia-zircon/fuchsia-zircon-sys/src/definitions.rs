@@ -208,6 +208,11 @@ extern {
         actual: *mut usize
         ) -> zx_status_t;
 
+    pub fn zx_socket_shutdown(
+        handle: zx_handle_t,
+        options: u32,
+        ) -> zx_status_t;
+
     pub fn zx_thread_exit(
         );
 

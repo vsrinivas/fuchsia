@@ -273,7 +273,8 @@ pub const ZX_CPRNG_DRAW_MAX_LEN: usize = 256;
 pub const ZX_CPRNG_ADD_ENTROPY_MAX_LEN: usize = 256;
 
 // Socket flags and limits.
-pub const ZX_SOCKET_HALF_CLOSE: u32 = 1;
+pub const ZX_SOCKET_SHUTDOWN_WRITE: u32 = 1;
+pub const ZX_SOCKET_SHUTDOWN_READ: u32 = 1 << 1;
 
 // VM Object clone flags
 pub const ZX_VMO_CLONE_COPY_ON_WRITE: u32 = 1;
