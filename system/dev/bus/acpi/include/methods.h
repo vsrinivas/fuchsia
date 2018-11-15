@@ -34,7 +34,7 @@ zx_status_t acpi_osc_call(ACPI_HANDLE dev_obj,
                           uint32_t* dwords_out,
                           bool* bit_masked);
 zx_status_t acpi_psv_call(ACPI_HANDLE dev_obj, uint64_t* out);
-zx_status_t acpi_seg_call(ACPI_HANDLE dev_obj, uint8_t* out_seg);
+zx_status_t acpi_seg_call(ACPI_HANDLE dev_obj, uint16_t* out_seg);
 zx_status_t acpi_tmp_call(ACPI_HANDLE dev_obj, uint64_t* out);
 
 __END_CDECLS;

@@ -147,7 +147,7 @@ zx_status_t acpi_psv_call(ACPI_HANDLE dev_obj, uint64_t* out) {
 }
 
 // Call the ACPI _SEG method to query a PCI Host Bridge's segment group
-zx_status_t acpi_seg_call(ACPI_HANDLE dev_obj, uint8_t* out_seg) {
+zx_status_t acpi_seg_call(ACPI_HANDLE dev_obj, uint16_t* out_seg) {
     uint64_t out;
     ACPI_STATUS status = acpi_evaluate_integer(dev_obj, "_SEG", &out);
     // Lower 8 bits of _SEG returned integer is the PCI segment group.
