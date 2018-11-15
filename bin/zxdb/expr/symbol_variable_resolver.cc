@@ -61,7 +61,7 @@ void SymbolVariableResolver::ResolveVariable(
   }
 
   // Schedule the expression to be evaluated.
-  state->dwarf_eval.Eval(data_provider_, loc_entry->expression, [
+  state->dwarf_eval.Eval(data_provider_, symbol_context, loc_entry->expression, [
     state, type = std::move(type), weak_this = weak_factory_.GetWeakPtr()
   ](DwarfExprEval * eval, const Err& err) {
     if (weak_this)

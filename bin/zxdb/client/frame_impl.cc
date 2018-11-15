@@ -152,6 +152,7 @@ bool FrameImpl::EnsureBasePointer() {
   };
 
   auto eval_result = base_pointer_eval_->Eval(GetSymbolDataProvider(),
+                                              loc.symbol_context(),
                                               location_entry->expression,
                                               std::move(save_result));
 

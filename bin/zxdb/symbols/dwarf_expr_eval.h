@@ -12,6 +12,7 @@
 
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/symbols/arch.h"
+#include "garnet/bin/zxdb/symbols/symbol_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -77,12 +78,16 @@ class DwarfExprEval {
   // This will take a reference to the SymbolDataProvider until the computation
   // is complete.
   //
+  // The symbol context is used to evaluate relative addresses. It should be
+  // the context associated with the module that this expression is from.
+  //
   // The return value will indicate if the request completed synchronously. In
   // synchronous completion the callback will have been called reentrantly from
   // within the stack of this function. This does not indicate success as it
   // could suceed or fail both synchronously and asynchronously.
   Completion Eval(fxl::RefPtr<SymbolDataProvider> data_provider,
-                  Expression expr, CompletionCallback cb);
+                  const SymbolContext& symbol_context, Expression expr,
+                  CompletionCallback cb);
 
  private:
   // Evaluates the next phases of the expression until an asynchronous operation
@@ -132,6 +137,7 @@ class DwarfExprEval {
   // Operations. On call, the expr_index_ will index the byte following the
   // opcode, and on return expr_index_ will index the next instruction (any
   // parameters will be consumed).
+  Completion OpAddr();
   Completion OpBra();
   Completion OpBreg(uint8_t op);
   Completion OpDeref();
@@ -159,6 +165,7 @@ class DwarfExprEval {
   void Skip(int64_t amount);
 
   fxl::RefPtr<SymbolDataProvider> data_provider_;
+  SymbolContext symbol_context_;
 
   // The expression. See also expr_index_.
   Expression expr_;

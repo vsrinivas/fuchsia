@@ -9,6 +9,7 @@
 
 #include <utility>
 
+#include "garnet/bin/zxdb/symbols/arch.h"
 #include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "lib/fxl/logging.h"
@@ -18,7 +19,9 @@
 
 namespace zxdb {
 
-DwarfExprEval::DwarfExprEval() : weak_factory_(this) {}
+DwarfExprEval::DwarfExprEval()
+    : symbol_context_(SymbolContext::ForRelativeAddresses()),
+      weak_factory_(this) {}
 DwarfExprEval::~DwarfExprEval() = default;
 
 DwarfExprEval::ResultType DwarfExprEval::GetResultType() const {
@@ -34,20 +37,22 @@ uint64_t DwarfExprEval::GetResult() const {
 }
 
 DwarfExprEval::Completion DwarfExprEval::Eval(
-    fxl::RefPtr<SymbolDataProvider> data_provider, Expression expr,
+    fxl::RefPtr<SymbolDataProvider> data_provider,
+    const SymbolContext& symbol_context, Expression expr,
     CompletionCallback cb) {
   is_complete_ = false;
   data_provider_ = std::move(data_provider);
+  symbol_context_ = symbol_context;
   expr_ = std::move(expr);
   expr_index_ = 0;
   completion_callback_ = std::move(cb);
   stack_.clear();
 
   if (!expr_.empty()) {
-    // Assume 64-bit (8 bytes per address) little-endian.
+    // Assume little-endian.
     data_extractor_ = std::make_unique<llvm::DataExtractor>(
         llvm::StringRef(reinterpret_cast<const char*>(&expr_[0]), expr_.size()),
-        true, 8);
+        true, kTargetPointerSize);
   }
 
   ContinueEval();
@@ -123,14 +128,7 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
 
   switch (op) {
     case llvm::dwarf::DW_OP_addr:
-      // This is disabled until we have an example. The spec doesn't say
-      // anything about what this is supposed to be relative to (most likely
-      // the current module load address). It doesn't make sense for it to be
-      // truely absolute since no absolute addresses will be known at build
-      // time.
-      // return OpPushUnsigned(8);  // Assume 64-bit (8-bytes per address).
-      ReportUnimplementedOpcode(op);
-      return Completion::kSync;
+      return OpAddr();
     case llvm::dwarf::DW_OP_const1u:
       return OpPushUnsigned(1);
     case llvm::dwarf::DW_OP_const1s:
@@ -386,6 +384,17 @@ DwarfExprEval::Completion DwarfExprEval::OpBinary(uint64_t (*op)(uint64_t,
   return Completion::kSync;
 }
 
+// 1 parameter: unsigned the size of a pointer. This is relative to the load
+// address of the current module. It is used to for globals and statics.
+DwarfExprEval::Completion DwarfExprEval::OpAddr() {
+  TargetPointer offset;
+  if (!ReadUnsigned(kTargetPointerSize, &offset))
+    return Completion::kSync;
+
+  Push(symbol_context_.RelativeToAbsolute(offset));
+  return Completion::kSync;
+}
+
 // 1 parameter: 2 byte signed integer constant.
 DwarfExprEval::Completion DwarfExprEval::OpBra() {
   // "The 2-byte constant is the number of bytes of the DWARF expression to skip
@@ -476,25 +485,25 @@ DwarfExprEval::Completion DwarfExprEval::OpFbreg() {
   }
 
   // Must request async.
-  data_provider_->GetFrameBaseAsync(
-      [ weak_eval = weak_factory_.GetWeakPtr(), offset ](
-                                 const Err& err, uint64_t value) {
-        if (!weak_eval)
-          return;
-        if (err.has_error()) {
-          weak_eval->ReportError(err);
-          return;
-        }
+  data_provider_->GetFrameBaseAsync([
+    weak_eval = weak_factory_.GetWeakPtr(), offset
+  ](const Err& err, uint64_t value) {
+    if (!weak_eval)
+      return;
+    if (err.has_error()) {
+      weak_eval->ReportError(err);
+      return;
+    }
 
-        if (value == 0)
-          weak_eval->ReportError("Base Pointer is 0, can't evaluate.");
+    if (value == 0)
+      weak_eval->ReportError("Base Pointer is 0, can't evaluate.");
 
-        weak_eval->result_type_ = ResultType::kPointer;
-        weak_eval->Push(static_cast<uint64_t>(value + offset));
+    weak_eval->result_type_ = ResultType::kPointer;
+    weak_eval->Push(static_cast<uint64_t>(value + offset));
 
-        // Picks up processing at the next instruction.
-        weak_eval->ContinueEval();
-      });
+    // Picks up processing at the next instruction.
+    weak_eval->ContinueEval();
+  });
 
   return Completion::kAsync;
 }

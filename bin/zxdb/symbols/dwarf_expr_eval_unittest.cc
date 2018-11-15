@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/symbols/dwarf_expr_eval.h"
+#include "garnet/bin/zxdb/symbols/arch.h"
 #include "garnet/bin/zxdb/symbols/mock_symbol_data_provider.h"
 #include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
 #include "gtest/gtest.h"
@@ -12,6 +13,10 @@
 namespace zxdb {
 
 namespace {
+
+// Base address of the imaginary module. Relative addresses will be relative to
+// this number.
+constexpr TargetPointer kModuleBase = 0x78000000;
 
 class DwarfExprEvalTest : public testing::Test {
  public:
@@ -23,6 +28,7 @@ class DwarfExprEvalTest : public testing::Test {
 
   DwarfExprEval& eval() { return eval_; }
   fxl::RefPtr<MockSymbolDataProvider> provider() { return provider_; }
+  const SymbolContext symbol_context() const { return symbol_context_; }
   debug_ipc::MessageLoop& loop() { return loop_; }
 
   // If expected_message is non-null, this error message will be expected on
@@ -38,6 +44,7 @@ class DwarfExprEvalTest : public testing::Test {
   DwarfExprEval eval_;
   debug_ipc::PlatformMessageLoop loop_;
   fxl::RefPtr<MockSymbolDataProvider> provider_;
+  SymbolContext symbol_context_ = SymbolContext(kModuleBase);
 };
 
 void DwarfExprEvalTest::DoEvalTest(
@@ -48,7 +55,7 @@ void DwarfExprEvalTest::DoEvalTest(
   bool callback_issued = false;
   EXPECT_EQ(
       expected_completion,
-      eval_.Eval(provider(), data,
+      eval_.Eval(provider(), symbol_context_, data,
                  [&callback_issued, expected_success, expected_completion,
                   expected_result, expected_result_type,
                   expected_message](DwarfExprEval* eval, const Err& err) {
@@ -118,7 +125,7 @@ TEST_F(DwarfExprEvalTest, InfiniteLoop) {
   std::unique_ptr<DwarfExprEval> eval = std::make_unique<DwarfExprEval>();
 
   bool callback_issued = false;
-  eval->Eval(provider(), loop_data,
+  eval->Eval(provider(), symbol_context(), loop_data,
              [&callback_issued](DwarfExprEval* eval, const Err& err) {
                callback_issued = true;
              });
@@ -215,17 +222,6 @@ TEST_F(DwarfExprEvalTest, LiteralOp) {
              4u, DwarfExprEval::ResultType::kPointer);
 }
 
-/* TODO(brettw) Commented out until this is implemented (see comment in
-                implementation).
-TEST_F(DwarfExprEvalTest, Addr) {
-  // Always expect 8-byte (64-bit) addresses.
-  DoEvalTest(
-      {llvm::dwarf::DW_OP_addr, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0xf0},
-      true, DwarfExprEval::Completion::kSync, 0xf001020304050607u,
-DwarfExprEval::kPointer);
-}
-*/
-
 // Tests that reading fixed-length constant without enough room fails.
 TEST_F(DwarfExprEvalTest, Const4ReadOffEnd) {
   DoEvalTest({llvm::dwarf::DW_OP_const4u, 0xf0}, false,
@@ -242,6 +238,13 @@ TEST_F(DwarfExprEvalTest, ConstReadOffEnd) {
              DwarfExprEval::Completion::kSync, 0,
              DwarfExprEval::ResultType::kPointer,
              "Bad number format in DWARF expression.");
+}
+
+TEST_F(DwarfExprEvalTest, Addr) {
+  // This encodes the relative address 0x4000.
+  DoEvalTest({llvm::dwarf::DW_OP_addr, 0, 0x40, 0, 0, 0, 0, 0, 0}, true,
+             DwarfExprEval::Completion::kSync, kModuleBase + 0x4000,
+             DwarfExprEval::ResultType::kPointer);
 }
 
 TEST_F(DwarfExprEvalTest, Breg) {
