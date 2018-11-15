@@ -3,6 +3,7 @@
 * [Introduction](#introduction)
 * [Concepts](#concepts)
   * [Scenic](#scenic)
+    * [Scenic and Fuchsia](#scenic-and-fuchsia)
   * [Sessions](#sessions)
   * [Resources](#resources)
     * [Nodes](#nodes)
@@ -42,6 +43,32 @@ Scenic's responsibilities are:
 
 - Diagnostics: Scenic provides a diagnostic interface to help developers
   debug their models and measure performance.
+
+## Scenic and Fuchsia
+
+![Diagram of Scenic within Fuchsia](scenic_within_fuchsia_diagram.png)
+
+Scenic's API allows any client to insert its UI into the global scene graph.
+Processes using the UI framework [_Flutter_](https://flutter.io/) are one
+example; the lower layer of Flutter, called [_Flutter Engine_](https://github.com/flutter/engine),
+contains code responsible for communicating with Scenic.
+
+Scenic has several internal subsystems. _Gfx_ owns the scene graph and is
+responsible for rendering. _Input_ is responsible for routing input events to clients,
+which also involves coordinating gesture recognition across clients. _Anim_
+is a yet-to-be created system for coordinating transitions across clients
+as well as offloading animations to Scenic.
+
+[_Escher_](https://fuchsia.googlesource.com/garnet/+/master/public/lib/escher/README.md)
+is a Vulkan-based rendering library used by the _Gfx_ system.
+
+_Root Presenter_ is an independent service which is responsible for
+_presenting_ the system's UI; using the Scenic API, it creates the root of a
+Scenic scene graph, embeds the root process's UI, and reads input events
+using its _Input Reader_ library and continually forwards them to Scenic.
+
+Scenic is a client of the [_Vulkan graphics driver_](https://fuchsia.googlesource.com/garnet/+/master/lib/magma/)
+and the system _Display Driver_.
 
 # Concepts
 
