@@ -8,7 +8,6 @@ visibility = [ "//peridot/bin/ledger/*" ]
 
 metrics_registry("ledger_metrics_registry") {
   project_id = 100
-  use_target_name = true
 }
 
 source_set("cobalt") {

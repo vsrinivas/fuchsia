@@ -11,7 +11,6 @@ visibility = [
 
 metrics_registry("basemgr_metrics_registry") {
   project_id = 101
-  use_target_name = true
 }
 
 source_set("cobalt") {
