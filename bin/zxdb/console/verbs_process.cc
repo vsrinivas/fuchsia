@@ -119,25 +119,31 @@ void ProcessCommandCallback(const char* verb, fxl::WeakPtr<Target> target,
 
 // new -------------------------------------------------------------------------
 
-const char kNewShortHelp[] = "new: Create a new process context.";
+const char kNewShortHelp[] = "new: Create a new process/job context.";
 const char kNewHelp[] =
     R"(new
 
-  Creates a new process context. A process context holds settings (binary name,
-  command line arguments, etc.) and possibly a running process. The new
-  context will have no associated process and can then be run or attached.
+  Creates a new process/job context.
 
-  The settings from the current process context will be cloned. If an explicit
-  process is specified ("process 2 new"), the new process context will clone
+  A process context holds settings (binary name, command line arguments, etc.)
+  and possibly a running process. The new context will have no associated
+  process and can then be run or attached.
+
+  A job context holds settings (filters, etc.)
+  and possibly a running job. The new context will have no associated
+  job and can then be run or attached.
+
+  The settings from the current process/job context will be cloned. If an explicit
+  process/job is specified ("process 2 new"), the new process/job context will clone
   the given one. The new context will be the active context.
 
-  A process noun must be specified. Long-term we want to add support to "new"
+  A process/job noun must be specified. Long-term we want to add support to "new"
   multiple things.
 
 Hints
 
-  To see a list of available process contexts, type "process". To switch the
-  active process context, specify its index ("process 3").
+  To see a list of available process/job contexts, type "process" or "job". To switch the
+  active process context, specify its index ("(process|job) 3").
 
 Example
 
@@ -148,12 +154,15 @@ Example
   Process 1 Running 3456 chrome
   [zxdb] process new
   Process 2 created.
-  [zxdb] attach 1239
+  [zxdb] pr attach 1239
   Process 2 Running 1239
+
+  This example attaches to some existing job.
+  [zxdb] job new
+  Job 2 created.
+  [zxdb] j attach 1239
+  Job 2 Running 1239
 )";
-// TODO(anmittal): move out of this file as this is no longer process specific
-// verb. Also fix help. Currently verbs are matched by aliases and not by noun
-// context.
 Err DoNew(ConsoleContext* context, const Command& cmd) {
   Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kJob});
   if (err.has_error())
@@ -268,24 +277,30 @@ Err DoKill(ConsoleContext* context, const Command& cmd,
 
 // attach ----------------------------------------------------------------------
 
-const char kAttachShortHelp[] = "attach: Attach to a running process.";
+const char kAttachShortHelp[] = "attach: Attach to a running process/job.";
 const char kAttachHelp[] =
-    R"(attach <process koid>
+    R"(attach <process/job koid>
 
 Hints
 
-  Use the "ps" command to view the active process tree.
+  Use the "ps" command to view the active process and job tree.
 
-  To debug more than one process at a time, use "new" to create a new process
-  context.
+  To debug more than one process/job at a time, use "new" to create a new
+  process/job context.
 
 Examples
 
   attach 2371
       Attaches to the process with koid 2371.
 
+  job attach 2323
+      Attaches to job with koid 2323.
+
   process 4 attach 2371
       Attaches process context 4 to the process with koid 2371.
+
+  job 3 attach 2323
+      Attaches job context 3 to the job with koid 2323.
 )";
 Err DoAttach(ConsoleContext* context, const Command& cmd,
              CommandCallback callback = nullptr) {
@@ -330,25 +345,31 @@ Err DoAttach(ConsoleContext* context, const Command& cmd,
 
 // detach ----------------------------------------------------------------------
 
-const char kDetachShortHelp[] = "detach: Detach from a process.";
+const char kDetachShortHelp[] = "detach: Detach from a process/job.";
 const char kDetachHelp[] =
     R"(detach
 
-  Detaches the debugger from a running process. The process will continue
+  Detaches the debugger from a running process/job. The process will continue
   running.
 
 Hints
 
-  By default the current process is detached.
-  To detach a different process prefix with "process N"
+  By default the current process/job is detached.
+  To detach a different process/job prefix with "process N" or "job N"
 
 Examples
 
   detach
       Detaches from the current process.
 
+  job detach
+      Detaches from the current job.
+
   process 4 detach
       Detaches from process context 4.
+
+  job 3 detach
+      Detaches from job context 3.
 )";
 Err DoDetach(ConsoleContext* context, const Command& cmd,
              CommandCallback callback = nullptr) {

@@ -243,8 +243,6 @@ const char kJobHelp[] =
 
   Alias: "j"
 
-  (Work in progress, will not work)
-
   Selects or lists job contexts.
 
   By itself, "job" will list available job contexts with their IDs. New
@@ -526,10 +524,8 @@ void ListBreakpoints(ConsoleContext* context) {
   FormatTable(
       {ColSpec(Align::kLeft),
        ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
-       ColSpec(Align::kLeft, 0, "Scope"),
-       ColSpec(Align::kLeft, 0, "Stop"),
-       ColSpec(Align::kLeft, 0, "Enabled"),
-       ColSpec(Align::kLeft, 0, "Type"),
+       ColSpec(Align::kLeft, 0, "Scope"), ColSpec(Align::kLeft, 0, "Stop"),
+       ColSpec(Align::kLeft, 0, "Enabled"), ColSpec(Align::kLeft, 0, "Type"),
        ColSpec(Align::kLeft, 0, "Location")},
       rows, &out);
   Console::get()->Output(std::move(out));
