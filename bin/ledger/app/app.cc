@@ -127,8 +127,8 @@ class App : public ledger_internal::LedgerController {
   fit::deferred_action<fit::closure> cobalt_cleaner_;
   std::unique_ptr<Environment> environment_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> factory_impl_;
-  callback::AutoCleanableSet<
-      fuchsia::ledger::internal::LedgerRepositoryFactoryErrorNotifierProxy>
+  callback::AutoCleanableSet<ErrorNotifierBinding<
+      fuchsia::ledger::internal::LedgerRepositoryFactoryErrorNotifierDelegate>>
       factory_bindings_;
   fidl::BindingSet<LedgerController> controller_bindings_;
 

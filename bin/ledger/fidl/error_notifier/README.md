@@ -1,4 +1,4 @@
-## Generated ErrorNotifierProxy ##
+## Generated ErrorNotifierDelegate ##
 
 The ledger API is sending a status and closing the connection on unexpected
 errors for every interface that extends ledger.ErrorNotifier. These interfaces
@@ -10,7 +10,8 @@ able to close it with the correct status in case of error, and must also
 implement the |Sync| method.
 
 To reduce the amount of repeating code, the files in this directory allow to
-automatically generate an ErrorNotifierProxy and an ErrorNotifierDelegate.
+automatically generate an ErrorNotifierDelegate and an implementation of the
+base interface that delegates to it.
 
 When one wants to implement an interface extending ledger.ErrorNotifier, one
 therefore only need to implement the generated delegate interface. For each
@@ -19,10 +20,10 @@ with an additional callback taking a ::fuchsia::ledger::Status. The implementor
 must call this additional callback when the call is finished, with either
 Status::OK if the call is successful, or with any error status if it is not.
 
-When one wants to bind a request, one can instantiate a new Proxy, associating
-it with an implementation of the Delegate. The proxy will take care of
-forwarding the call to the Delegate, as well as handling the error reporting and
-the |Sync| calls.
+When one wants to bind a request, one can instantiate a new
+ErrorNotifierBinding, associating it with an implementation of the Delegate. The
+binding will take care of forwarding the call to the Delegate, as well as handling
+the error reporting and the |Sync| calls.
 
 For an example, see error\_notifier\_proxy\_base\_unittest.cc, which implements
 the ErrorNotifierTestDelegate interface that is automatically generated from the

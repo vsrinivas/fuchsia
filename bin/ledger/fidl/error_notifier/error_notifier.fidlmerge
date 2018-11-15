@@ -118,9 +118,9 @@ std::unique_ptr<{{- template "QualifiedId" .Identifier }}>
 // Produces an implementation of the FIDL interface method that forward to the NotifierDelegate.
 {{- define "RequestMethodSignatureForward" -}}
   {{- if .HasResponse -}}
-{{ .Name }}({{ template "ForwardParams" .Request }}{{ if .Request }}, {{ end }}WrapOperation("{{ .Name }}", std::move(callback)))
+{{ .Name }}({{ template "ForwardParams" .Request }}{{ if .Request }}, {{ end }}binding_->WrapOperation("{{ .Name }}", std::move(callback)))
   {{- else -}}
-{{ .Name }}({{ template "ForwardParams" .Request }}{{ if .Request }}, {{ end }}NewErrorCallback("{{ .Name }}"))
+{{ .Name }}({{ template "ForwardParams" .Request }}{{ if .Request }}, {{ end }}binding_->NewErrorCallback("{{ .Name }}"))
   {{- end -}}
 {{ end -}}
 
@@ -151,7 +151,7 @@ std::unique_ptr<{{- template "QualifiedId" .Identifier }}>
 {{ template "ThisFidlInclude" . }}
 #include <lib/fidl/cpp/interface_request.h>
 
-#include "peridot/bin/ledger/fidl/error_notifier/error_notifier_proxy_base.h"
+#include "peridot/bin/ledger/fidl/error_notifier/error_notifier_binding.h"
 
 {{/* keep the newline */}}
     {{- range .Name.Parts }}
@@ -174,6 +174,9 @@ namespace {{ . }} {
 {{- define "InterfaceDeclaration" }}
 class {{ .Name.Parts.Name }}ErrorNotifierDelegate {
  public:
+  using FidlInterface = {{ .Name.Parts.Name }};
+  class Impl;
+
   virtual ~{{ .Name.Parts.Name }}ErrorNotifierDelegate() = default;
     {{- range .Methods }}
         {{- if (and .HasRequest (not (eq .Name "Sync" ))) }}
@@ -182,15 +185,12 @@ class {{ .Name.Parts.Name }}ErrorNotifierDelegate {
     {{- end }}
 };
 
-class {{ .Name.Parts.Name }}ErrorNotifierProxy :
-    public ::ledger::ErrorNotifierProxyBase<{{ .Name.Parts.Name }},
-                                            {{ .Name.Parts.Name }}ErrorNotifierDelegate> {
+class {{ .Name.Parts.Name }}ErrorNotifierDelegate::Impl : public {{ .Name.Parts.Name }} {
  public:
-  {{ .Name.Parts.Name }}ErrorNotifierProxy({{ .Name.Parts.Name }}ErrorNotifierDelegate* delegate,
-      ::fidl::InterfaceRequest<{{ .Name.Parts.Name }}> request)
-    : ::ledger::ErrorNotifierProxyBase<{{ .Name.Parts.Name }},
-                                       {{ .Name.Parts.Name }}ErrorNotifierDelegate>(
-        "{{ .Name.Parts.Name }}", delegate, std::move(request)) {}
+  static constexpr char kInterfaceName[] = "{{ .Name.Parts.Name }}";
+  Impl({{ .Name.Parts.Name }}ErrorNotifierDelegate* delegate,
+       ::ledger::ErrorNotifierBinding<{{ .Name.Parts.Name }}ErrorNotifierDelegate>* binding)
+       : delegate_(delegate), binding_(binding) {}
 
  private:
     {{- range .Methods }}
@@ -200,6 +200,12 @@ class {{ .Name.Parts.Name }}ErrorNotifierProxy :
   }
         {{- end }}
     {{- end }}
+  void Sync(::fit::function<void()> callback) override {
+    binding_->Sync(std::move(callback));
+  }
+
+  {{ .Name.Parts.Name }}ErrorNotifierDelegate* delegate_;
+  ::ledger::ErrorNotifierBinding<{{ .Name.Parts.Name }}ErrorNotifierDelegate>* binding_;
 };
 
 {{/* keep the newline */}}

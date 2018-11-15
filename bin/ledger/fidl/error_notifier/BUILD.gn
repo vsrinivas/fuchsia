@@ -7,7 +7,7 @@ import("//peridot/bin/ledger/fidl/error_notifier/error_notifier.gni")
 
 source_set("error_notifier") {
   sources = [
-    "error_notifier_proxy_base.h",
+    "error_notifier_binding.h",
   ]
 
   public_deps = [
@@ -30,7 +30,7 @@ source_set("unittests") {
   testonly = true
 
   sources = [
-    "error_notifier_proxy_base_unittest.cc",
+    "error_notifier_binding_unittest.cc",
   ]
 
   deps = [

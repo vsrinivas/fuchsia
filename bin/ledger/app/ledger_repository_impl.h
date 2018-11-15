@@ -108,8 +108,8 @@ class LedgerRepositoryImpl
   callback::AutoCleanableMap<std::string, LedgerManager,
                              convert::StringViewComparator>
       ledger_managers_;
-  callback::AutoCleanableSet<
-      fuchsia::ledger::internal::LedgerRepositoryErrorNotifierProxy>
+  callback::AutoCleanableSet<ErrorNotifierBinding<
+      fuchsia::ledger::internal::LedgerRepositoryErrorNotifierDelegate>>
       bindings_;
   fit::closure on_empty_callback_;
 

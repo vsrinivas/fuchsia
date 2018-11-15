@@ -21,19 +21,19 @@ class ErrorNotifierTestErrorNotifierDelegateImpl
   int empty_reponse_count() { return empty_reponse_count_; }
   int not_empty_reponse_count() { return not_empty_reponse_count_; }
   int parameter_received() { return parameter_received_; }
-  ::fuchsia::ledger::Status& status_to_return() { return status_to_return_; }
+  fuchsia::ledger::Status& status_to_return() { return status_to_return_; }
   bool& delay_callback() { return delay_callback_; }
   void RunDelayedCallback() { delayed_callback_(); }
 
  private:
   // ErrorNotifierTestErrorNotifierDelegate implementation.
   void NoResponse(
-      ::fit::function<void(::fuchsia::ledger::Status)> callback) override {
+      fit::function<void(fuchsia::ledger::Status)> callback) override {
     NoResponseWithParameter(1, std::move(callback));
   }
   void NoResponseWithParameter(
       int8_t input,
-      ::fit::function<void(::fuchsia::ledger::Status)> callback) override {
+      fit::function<void(fuchsia::ledger::Status)> callback) override {
     parameter_received_ = input;
     ++no_reponse_count_;
     delayed_callback_ = [callback = std::move(callback),
@@ -45,12 +45,12 @@ class ErrorNotifierTestErrorNotifierDelegateImpl
     }
   }
   void EmptyResponse(
-      ::fit::function<void(::fuchsia::ledger::Status)> callback) override {
+      fit::function<void(fuchsia::ledger::Status)> callback) override {
     EmptyResponseWithParameter(2, std::move(callback));
   }
   void EmptyResponseWithParameter(
       int8_t input,
-      ::fit::function<void(::fuchsia::ledger::Status)> callback) override {
+      fit::function<void(fuchsia::ledger::Status)> callback) override {
     parameter_received_ = input;
     ++empty_reponse_count_;
     delayed_callback_ = [callback = std::move(callback),
@@ -62,14 +62,13 @@ class ErrorNotifierTestErrorNotifierDelegateImpl
     }
   }
 
-  void NotEmptyResponse(::fit::function<void(::fuchsia::ledger::Status, int8_t)>
+  void NotEmptyResponse(::fit::function<void(fuchsia::ledger::Status, int8_t)>
                             callback) override {
     NotEmptyResponseWithParameter(3, std::move(callback));
   }
   void NotEmptyResponseWithParameter(
       int8_t input,
-      ::fit::function<void(::fuchsia::ledger::Status, int8_t)> callback)
-      override {
+      fit::function<void(fuchsia::ledger::Status, int8_t)> callback) override {
     parameter_received_ = input;
     ++not_empty_reponse_count_;
     delayed_callback_ = [callback = std::move(callback),
@@ -85,19 +84,20 @@ class ErrorNotifierTestErrorNotifierDelegateImpl
   int32_t empty_reponse_count_ = 0;
   int32_t not_empty_reponse_count_ = 0;
   int32_t parameter_received_ = 0;
-  ::fuchsia::ledger::Status status_to_return_ = ::fuchsia::ledger::Status::OK;
+  fuchsia::ledger::Status status_to_return_ = fuchsia::ledger::Status::OK;
   bool delay_callback_ = false;
   fit::closure delayed_callback_;
 };
 
 class ErrorNotifierTest : public gtest::TestLoopFixture {
  protected:
-  ErrorNotifierTest() : proxy_(&impl_, ptr_.NewRequest()) {}
+  ErrorNotifierTest() : binding_(&impl_, ptr_.NewRequest()) {}
 
   ErrorNotifierTestErrorNotifierDelegateImpl impl_;
   fuchsia::ledger::errornotifiertest::ErrorNotifierTestPtr ptr_;
-  fuchsia::ledger::errornotifiertest::ErrorNotifierTestErrorNotifierProxy
-      proxy_;
+  ErrorNotifierBinding<fuchsia::ledger::errornotifiertest::
+                           ErrorNotifierTestErrorNotifierDelegate>
+      binding_;
 };
 
 TEST_F(ErrorNotifierTest, NoResponse) {
@@ -265,7 +265,7 @@ TEST_F(ErrorNotifierTest, NotEmptyResponseSync) {
 
 TEST_F(ErrorNotifierTest, OnEmpty) {
   bool called;
-  proxy_.set_on_empty(callback::SetWhenCalled(&called));
+  binding_.set_on_empty(callback::SetWhenCalled(&called));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
   ptr_.Close(ZX_OK);
@@ -276,7 +276,7 @@ TEST_F(ErrorNotifierTest, OnEmpty) {
 TEST_F(ErrorNotifierTest, OnEmptyWithRunningOperation) {
   impl_.delay_callback() = true;
   bool called;
-  proxy_.set_on_empty(callback::SetWhenCalled(&called));
+  binding_.set_on_empty(callback::SetWhenCalled(&called));
   ptr_->NoResponse();
   RunLoopUntilIdle();
   EXPECT_FALSE(called);

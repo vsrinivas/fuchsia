@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_FIDL_ERROR_NOTIFIER_ERROR_NOTIFIER_PROXY_BASE_H_
-#define PERIDOT_BIN_LEDGER_FIDL_ERROR_NOTIFIER_ERROR_NOTIFIER_PROXY_BASE_H_
+#ifndef PERIDOT_BIN_LEDGER_FIDL_ERROR_NOTIFIER_ERROR_NOTIFIER_BINDING_H_
+#define PERIDOT_BIN_LEDGER_FIDL_ERROR_NOTIFIER_ERROR_NOTIFIER_BINDING_H_
 
 #include <map>
 #include <utility>
@@ -17,42 +17,53 @@
 
 namespace ledger {
 
-// Base class for implementation of FIDL interface |I| implementing the
-// ErrorNotifier interface and using the error notifier delegate interface |D|.
+// Class for binding of FIDL interface  implementing the ErrorNotifier interface
+// and using the error notifier delegate interface |D|.
 // For a FIDL interface Foo, |D| is an interface named FooErrorNotifierDelegate
-// that needs to be implemented by the user and passed to FooErrorNotifierProxy
-// (also automatically generated).
+// that needs to be implemented by the user and passed to ErrorNotifierBinding.
 //
-// This base class handles the following features:
+// This class internally handles the following features:
 // - Implement the |Sync| method.
-// - Implement an |Unbind| method similar to |Bindings::Unbind|.
-// - Implement the |set_on_empty| method to be usable with AutoCleanableSet
 // - Provides a factory for passing a callback to the companion implementation
 //   that will handle reporting the error and closing the connection.
 // - Provides a |WrapOperation| method that needs to be called on all callback
 //   before passing to the companion implementation so that |Sync| can keep
 //   track of what operations are currently in progress.
-template <typename I, typename D>
-class ErrorNotifierProxyBase : public I {
- protected:
-  ErrorNotifierProxyBase(const char* interface_name, D* delegate,
-                         fidl::InterfaceRequest<I> request)
-      : delegate_(delegate),
-        interface_name_(interface_name),
-        binding_(this, std::move(request)) {
+//
+// This class exposes the following features:
+// - Access to the methods of the underlying bindings.
+// - Implement the |set_on_empty| method to be usable with AutoCleanableSet.
+template <typename D>
+class ErrorNotifierBinding {
+ public:
+  ErrorNotifierBinding(D* delegate) : impl_(delegate, this), binding_(&impl_) {
     binding_.set_error_handler(
         [this](zx_status_t /* status */) { CheckEmpty(); });
     sync_helper_.set_on_empty([this] { CheckEmpty(); });
   }
 
- public:
+  ErrorNotifierBinding(
+      D* delegate, fidl::InterfaceRequest<typename D::FidlInterface> request,
+      async_dispatcher_t* dispatcher = nullptr)
+      : ErrorNotifierBinding(delegate) {
+    binding_.Bind(std::move(request), dispatcher);
+  }
+
   void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
   bool empty() { return !binding_.is_bound() && sync_helper_.empty(); }
 
-  fidl::InterfaceRequest<I> Unbind() { return binding_.Unbind(); }
+  fidl::InterfaceRequest<typename D::FidlInterface> Unbind() {
+    return binding_.Unbind();
+  }
+  fidl::InterfaceHandle<typename D::FidlInterface> NewBinding(
+      async_dispatcher_t* dispatcher = nullptr) {
+    return binding_.NewBinding(dispatcher);
+  }
 
- protected:
-  void Sync(fit::function<void()> callback) override {
+ private:
+  friend typename D::Impl;
+
+  void Sync(fit::function<void()> callback) {
     sync_helper_.RegisterSynchronizationCallback(std::move(callback));
   }
 
@@ -68,7 +79,7 @@ class ErrorNotifierProxyBase : public I {
             callback(std::forward<Args>(args)...);
             return;
           }
-          FXL_LOG(INFO) << "FIDL call " << interface_name_
+          FXL_LOG(INFO) << "FIDL call " << D::Impl::kInterfaceName
                         << "::" << function_name << " failed with status: "
                         << static_cast<zx_status_t>(status)
                         << ". Sending the epitaph and closing the connection.";
@@ -84,21 +95,18 @@ class ErrorNotifierProxyBase : public I {
     return WrapOperation(function_name, fit::closure([] {}));
   }
 
-  D* const delegate_;
-
- private:
   void CheckEmpty() {
     if (empty() && on_empty_) {
       on_empty_();
     }
   }
 
-  const char* const interface_name_;
-  fidl::Binding<I> binding_;
+  typename D::Impl impl_;
+  fidl::Binding<typename D::FidlInterface> binding_;
   fit::closure on_empty_;
   SyncHelper sync_helper_;
 };
 
 }  // namespace ledger
 
-#endif  // PERIDOT_BIN_LEDGER_FIDL_ERROR_NOTIFIER_ERROR_NOTIFIER_PROXY_BASE_H_
+#endif  // PERIDOT_BIN_LEDGER_FIDL_ERROR_NOTIFIER_ERROR_NOTIFIER_BINDING_H_

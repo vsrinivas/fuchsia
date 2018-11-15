@@ -107,14 +107,16 @@ class LedgerAppInstanceImpl final
                                         startup_context_.get(), random)),
           factory_impl_(&environment_, std::move(user_communicator_factory),
                         component::ObjectDir()),
-          proxy_(&factory_impl_, std::move(request)) {}
+          binding_(&factory_impl_, std::move(request)) {}
     ~LedgerRepositoryFactoryContainer() {}
 
    private:
     std::unique_ptr<component::StartupContext> startup_context_;
     Environment environment_;
     LedgerRepositoryFactoryImpl factory_impl_;
-    fuchsia::ledger::internal::LedgerRepositoryFactoryErrorNotifierProxy proxy_;
+    ErrorNotifierBinding<
+        fuchsia::ledger::internal::LedgerRepositoryFactoryErrorNotifierDelegate>
+        binding_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryContainer);
   };
