@@ -26,6 +26,24 @@ template("assert_cmx") {
     found_cmx = true
   }
 
+  # Packages that only contain shell binaries are allowed.
+  if (defined(invoker.binaries)) {
+    bins = []
+    foreach(binary, invoker.binaries) {
+      if (defined(binary.shell) && binary.shell) {
+        bins += [ binary ]
+      }
+    }
+    if (bins == invoker.binaries) {
+      found_cmx = true
+    }
+  }
+
+  # Packages that only contain data are allowed.
+  if (!defined(invoker.binaries) && !defined(invoker.binary)) {
+    found_cmx = true
+  }
+
   foreach(item, package_meta) {
     dest = item.path
     if (defined(item.dest)) {
