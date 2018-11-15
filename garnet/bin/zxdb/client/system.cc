@@ -18,6 +18,14 @@ const char* kSymbolPathsDescription =
   it will be treated as a mapping database from build ID to file path.
   Otherwise, the path will be loaded as an ELF file.)";
 
+const char* ClientSettings::System::kSymbolRepoPaths = "symbol-repo-paths";
+const char* kSymbolRepoPathsDescription = 1 + R"(
+  List of GNU-style repositories for symbol lookup. When a directory path is
+  passed, a folder called .debug-id will be expected beneath it. From there, a
+  file called ab/cdefg will be assumed to contain the stripped binary with
+  debug id "abcdefg" and a file called ab/cdefg.debug will be expected to
+  contain the unstripped binary or stripped symbols.)";
+
 const char* ClientSettings::System::kPauseNewProcesses = "pause-new-processes";
 static const char* kPauseNewProcessDescription =
     R"(  Whether a process should pause the initial thread on startup.)";
@@ -30,6 +38,8 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
 
   schema->AddList(ClientSettings::System::kSymbolPaths, kSymbolPathsDescription,
                   {});
+  schema->AddList(ClientSettings::System::kSymbolRepoPaths,
+                  kSymbolRepoPathsDescription, {});
   schema->AddBool(ClientSettings::System::kPauseNewProcesses,
                   kPauseNewProcessDescription, true);
 

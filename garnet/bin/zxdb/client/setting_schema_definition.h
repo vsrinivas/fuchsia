@@ -20,6 +20,7 @@ class SettingSchema;
 struct ClientSettings {
   struct System {
     static const char* kSymbolPaths;
+    static const char* kSymbolRepoPaths;
     static const char* kPauseNewProcesses;
   };
 

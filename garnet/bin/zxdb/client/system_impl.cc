@@ -37,6 +37,7 @@ SystemImpl::SystemImpl(Session* session)
   // We don't use SystemSymbols because they live in the symbols library
   // and we don't want it to have a client dependency.
   settings_.AddObserver(ClientSettings::System::kSymbolPaths, this);
+  settings_.AddObserver(ClientSettings::System::kSymbolRepoPaths, this);
 }
 
 SystemImpl::~SystemImpl() {
@@ -264,6 +265,12 @@ void SystemImpl::OnSettingChanged(const SettingStore& store,
       } else {
         build_id_index.AddSymbolSource(path);
       }
+    }
+  } else if (setting_name == ClientSettings::System::kSymbolRepoPaths) {
+    auto paths = store.GetList(ClientSettings::System::kSymbolRepoPaths);
+    BuildIDIndex& build_id_index = GetSymbols()->build_id_index();
+    for (const std::string& path : paths) {
+      build_id_index.AddRepoSymbolSource(path);
     }
   } else {
     FXL_LOG(WARNING) << "Unhandled setting change: " << setting_name;

@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/symbols/build_id_index.h"
 
+#include <algorithm>
 #include <filesystem>
 
 #include "garnet/lib/debug_ipc/helper/elf.h"
@@ -13,6 +14,30 @@
 
 namespace zxdb {
 
+namespace {
+
+std::filesystem::path BuildIdToDebugPath(const std::string& build_id) {
+  std::string build_id_clean = build_id;
+
+  build_id_clean.erase(
+    std::remove(build_id_clean.begin(), build_id_clean.end(), '-'),
+    build_id_clean.end());
+  std::transform(build_id_clean.begin(), build_id_clean.end(),
+                 build_id_clean.begin(), ::tolower);
+
+  if (build_id_clean.length() < 3) {
+    return std::filesystem::path();
+  }
+
+  const std::string& folder = build_id_clean.substr(0, 2);
+  const std::string& file =
+    build_id_clean.substr(2, build_id_clean.size() - 2) + ".debug";
+
+  return std::filesystem::path(folder) / file;
+}
+
+}  // namespace
+
 BuildIDIndex::BuildIDIndex() = default;
 BuildIDIndex::~BuildIDIndex() = default;
 
@@ -21,8 +46,27 @@ std::string BuildIDIndex::FileForBuildID(const std::string& build_id) {
 
   auto found = build_id_to_file_.find(build_id);
   if (found == build_id_to_file_.end())
-    return std::string();
+    return SearchRepoSources(build_id);
   return found->second;
+}
+
+std::string BuildIDIndex::SearchRepoSources(const std::string& build_id) {
+  auto local_path = BuildIdToDebugPath(build_id);
+
+  if (local_path.empty()) {
+    return std::string();
+  }
+
+  for (const auto& source : repo_sources_) {
+    const auto& path =
+      std::filesystem::path(source) / ".build-id" / local_path;
+
+    if (std::filesystem::exists(path)) {
+      return path;
+    }
+  }
+
+  return std::string();
 }
 
 void BuildIDIndex::AddBuildIDMapping(const std::string& build_id,
@@ -51,6 +95,11 @@ void BuildIDIndex::AddSymbolSource(const std::string& path) {
 
   sources_.emplace_back(path);
   ClearCache();
+}
+
+void BuildIDIndex::AddRepoSymbolSource(const std::string& path) {
+  repo_sources_.emplace_back(path);
+  // No cache clear since Repo sources bypass the cache.
 }
 
 BuildIDIndex::StatusList BuildIDIndex::GetStatus() {

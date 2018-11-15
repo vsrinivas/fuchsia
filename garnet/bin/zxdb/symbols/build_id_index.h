@@ -53,6 +53,11 @@ class BuildIDIndex {
   // Will ignore the path if it's already loaded.
   void AddSymbolSource(const std::string& path);
 
+  // Adds a GNU-style symbol repository to the search index. The path given
+  // should have underneath it a .build-id folder, which in turn should contain
+  // files of the form ab/cdefg.debug, where abc-defg is the build ID.
+  void AddRepoSymbolSource(const std::string& path);
+
   // Returns the status of the symbols. This will force the cache to be fresh
   // so may cause I/O.
   StatusList GetStatus();
@@ -89,6 +94,9 @@ class BuildIDIndex {
   // ELF file and it was added to the index.
   bool IndexOneSourceFile(const std::string& file_path);
 
+  // Search the repo sources.
+  std::string SearchRepoSources(const std::string& build_id);
+
   // Function to output informational messages. May be null. Use LogMessage().
   std::function<void(const std::string&)> information_callback_;
 
@@ -96,6 +104,9 @@ class BuildIDIndex {
 
   // Either files or directories to index.
   std::vector<std::string> sources_;
+
+  // GNU-style repository sources.
+  std::vector<std::string> repo_sources_;
 
   // Maintains the logs of how many symbols were indexed for each location.
   StatusList status_;

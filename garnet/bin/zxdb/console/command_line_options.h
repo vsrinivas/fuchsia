@@ -19,6 +19,8 @@ struct CommandLineOptions {
   std::optional<std::string> run;
   std::optional<std::string> script_file;
   std::vector<std::string> symbol_paths;
+
+  std::vector<std::string> symbol_repo_paths;
 };
 
 // Parses the given command line into options and params.
