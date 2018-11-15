@@ -25,13 +25,21 @@
 namespace debug_agent {
 
 DebuggedThread::DebuggedThread(DebuggedProcess* process, zx::thread thread,
-                               zx_koid_t koid, bool resume)
+                               zx_koid_t koid, ThreadCreationOption option)
     : debug_agent_(process->debug_agent()),
       process_(process),
       thread_(std::move(thread)),
       koid_(koid) {
-  if (resume)
-    debug_ipc::MessageLoopZircon::Current()->ResumeFromException(thread_, 0);
+  switch (option) {
+    case ThreadCreationOption::kRunningKeepRunning:
+      // do nothing
+      break;
+    case ThreadCreationOption::kSuspendedKeepSuspended:
+      suspend_reason_ = SuspendReason::kException;
+      break;
+    case ThreadCreationOption::kSuspendedShouldRun:
+      debug_ipc::MessageLoopZircon::Current()->ResumeFromException(thread_, 0);
+  }
 }
 
 DebuggedThread::~DebuggedThread() {}
@@ -54,10 +62,11 @@ void DebuggedThread::OnException(uint32_t type) {
     current_breakpoint_ = nullptr;
     if (completes_bp_step &&
         run_mode_ == debug_ipc::ResumeRequest::How::kContinue) {
-      // This step was an internal thing to step over the breakpoint in service
-      // of continuing from a breakpoint. Transparently resume the thread since
-      // the client didn't request the step. The step (non-continue) cases will
-      // be handled below in the normal flow since we just finished a step.
+      // This step was an internal thing to step over the breakpoint in
+      // service of continuing from a breakpoint. Transparently resume the
+      // thread since the client didn't request the step. The step
+      // (non-continue) cases will be handled below in the normal flow since
+      // we just finished a step.
       ResumeForRunMode();
       return;
     }
@@ -82,9 +91,9 @@ void DebuggedThread::OnException(uint32_t type) {
         if (run_mode_ == debug_ipc::ResumeRequest::How::kContinue) {
           // This could be due to a race where the user was previously single
           // stepping and then requested a continue before the single stepping
-          // completed. It could also be a breakpoint that was deleted while in
-          // the process of single-stepping over it. In both cases, the least
-          // confusing thing is to resume automatically.
+          // completed. It could also be a breakpoint that was deleted while
+          // in the process of single-stepping over it. In both cases, the
+          // least confusing thing is to resume automatically.
           ResumeForRunMode();
           return;
         }
@@ -213,9 +222,9 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
     // breakpoint.
     if (arch::ArchProvider::Get().IsBreakpointInstruction(process_->process(),
                                                           breakpoint_address)) {
-      // The breakpoint is a hardcoded instruction in the program code. In this
-      // case we want to continue from the following instruction since the
-      // breakpoint instruction will never go away.
+      // The breakpoint is a hardcoded instruction in the program code. In
+      // this case we want to continue from the following instruction since
+      // the breakpoint instruction will never go away.
       *arch::ArchProvider::Get().IPInRegs(regs) =
           arch::ArchProvider::Get().NextInstructionForSoftwareExceptionAddress(
               *arch::ArchProvider::Get().IPInRegs(regs));
@@ -228,27 +237,27 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
       }
 
       if (!process_->dl_debug_addr() && process_->RegisterDebugState()) {
-        // This breakpoint was the explicit breakpoint ld.so executes to notify
-        // us that the loader is ready. Send the current module list and
-        // silently keep this thread stopped. The client will explicitly
-        // resume this thread when it's ready to continue (it will need to load
-        // symbols for the moduless and may need to set breakpoints based on
-        // them).
+        // This breakpoint was the explicit breakpoint ld.so executes to
+        // notify us that the loader is ready. Send the current module list
+        // and silently keep this thread stopped. The client will explicitly
+        // resume this thread when it's ready to continue (it will need to
+        // load symbols for the moduless and may need to set breakpoints based
+        // on them).
         std::vector<uint64_t> paused_threads;
         paused_threads.push_back(koid());
         process_->SendModuleNotification(std::move(paused_threads));
         return OnStop::kIgnore;
       }
     } else {
-      // Not a breakpoint instruction. Probably the breakpoint instruction used
-      // to be ours but its removal raced with the exception handler. Resume
-      // from the instruction that used to be the breakpoint.
+      // Not a breakpoint instruction. Probably the breakpoint instruction
+      // used to be ours but its removal raced with the exception handler.
+      // Resume from the instruction that used to be the breakpoint.
       *arch::ArchProvider::Get().IPInRegs(regs) = breakpoint_address;
 
-      // Don't automatically continue execution here. A race for this should be
-      // unusual and maybe something weird happened that caused an exception
-      // we're not set up to handle. Err on the side of telling the user about
-      // the exception.
+      // Don't automatically continue execution here. A race for this should
+      // be unusual and maybe something weird happened that caused an
+      // exception we're not set up to handle. Err on the side of telling the
+      // user about the exception.
     }
   }
   return OnStop::kSendNotification;
@@ -303,9 +312,9 @@ void DebuggedThread::UpdateForHitProcessBreakpoint(
   }
 
   // Delete any one-shot breakpoints. Since there can be multiple Breakpoints
-  // (some one-shot, some not) referring to the current ProcessBreakpoint, this
-  // operation could delete the ProcessBreakpoint or it could not. If it does,
-  // our observer will be told and current_breakpoint_ will be cleared.
+  // (some one-shot, some not) referring to the current ProcessBreakpoint,
+  // this operation could delete the ProcessBreakpoint or it could not. If it
+  // does, our observer will be told and current_breakpoint_ will be cleared.
   for (const auto& stats : *hit_breakpoints) {
     if (stats.should_delete)
       process_->debug_agent()->RemoveBreakpoint(stats.breakpoint_id);

@@ -64,7 +64,8 @@ class FakeProcess : public DebuggedProcess {
 
   DebuggedThread* CreateThread(zx_koid_t tid) {
     if (!thread_) {
-      thread_ = std::make_unique<DebuggedThread>(this, zx::thread(), 1, false);
+      thread_ = std::make_unique<DebuggedThread>(
+          this, zx::thread(), 1, ThreadCreationOption::kSuspendedKeepSuspended);
     }
     return thread_.get();
   }

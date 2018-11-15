@@ -28,7 +28,12 @@ DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, zx_koid_t koid,
       koid_(koid),
       process_(std::move(proc)),
       resume_initial_thread_(resume_inital_thread),
-      waiting_for_initial_thread_(true) {}
+      waiting_for_initial_thread_(true) {
+  // set this propery so we can know about module loads.
+  const intptr_t kMagicValue = ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET;
+  zx_object_set_property(process_.get(), ZX_PROP_PROCESS_DEBUG_ADDR,
+                         &kMagicValue, sizeof(kMagicValue));
+}
 DebuggedProcess::~DebuggedProcess() = default;
 
 bool DebuggedProcess::Init() {
@@ -104,9 +109,10 @@ void DebuggedProcess::PopulateCurrentThreads() {
     zx_handle_t handle;
     if (zx_object_get_child(process_.get(), koid, ZX_RIGHT_SAME_RIGHTS,
                             &handle) == ZX_OK) {
-      auto added =
-          threads_.emplace(koid, std::make_unique<DebuggedThread>(
-                                     this, zx::thread(handle), koid, true));
+      auto added = threads_.emplace(
+          koid, std::make_unique<DebuggedThread>(
+                    this, zx::thread(handle), koid,
+                    ThreadCreationOption::kRunningKeepRunning));
       added.first->second->SendThreadNotification();
     }
   }
@@ -205,14 +211,16 @@ void DebuggedProcess::OnThreadStarting(zx_koid_t process_koid,
   zx::thread thread = ThreadForKoid(process_.get(), thread_koid);
 
   FXL_DCHECK(threads_.find(thread_koid) == threads_.end());
-  bool resume = true;
+  ThreadCreationOption option = ThreadCreationOption::kSuspendedShouldRun;
   if (waiting_for_initial_thread_) {
     waiting_for_initial_thread_ = false;
-    resume = resume_initial_thread_;
+    if (!resume_initial_thread_) {
+      option = ThreadCreationOption::kSuspendedKeepSuspended;
+    }
   }
   auto added = threads_.emplace(
       thread_koid, std::make_unique<DebuggedThread>(this, std::move(thread),
-                                                    thread_koid, resume));
+                                                    thread_koid, option));
 
   // Notify the client.
   added.first->second->SendThreadNotification();

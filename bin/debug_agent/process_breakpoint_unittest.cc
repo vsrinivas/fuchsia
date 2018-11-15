@@ -97,8 +97,9 @@ class FakeProcess : public DebuggedProcess {
   ~FakeProcess() = default;
 
   void AddThread(zx_koid_t koid) {
-    threads_[koid] =
-        std::make_unique<DebuggedThread>(this, zx::thread(), koid, false);
+    threads_[koid] = std::make_unique<DebuggedThread>(
+        this, zx::thread(), koid,
+        ThreadCreationOption::kSuspendedKeepSuspended);
   }
 
   DebuggedThread* GetThread(zx_koid_t koid) const override {

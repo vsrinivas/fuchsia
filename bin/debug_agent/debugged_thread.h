@@ -18,6 +18,17 @@ class DebugAgent;
 class DebuggedProcess;
 class ProcessBreakpoint;
 
+enum class ThreadCreationOption {
+  // Already running, don't do anything
+  kRunningKeepRunning,
+
+  // Already suspended, keep it suspended
+  kSuspendedKeepSuspended,
+
+  // Already suspended, run it
+  kSuspendedShouldRun
+};
+
 class DebuggedThread {
  public:
   // The SuspendReason indicates why the thread was suspended from our
@@ -41,7 +52,7 @@ class DebuggedThread {
   // it won't in in this state. The |starting| flag indicates that this is
   // a thread discoverd via a debug notification.
   DebuggedThread(DebuggedProcess* process, zx::thread thread,
-                 zx_koid_t thread_koid, bool resume);
+                 zx_koid_t thread_koid, ThreadCreationOption option);
   virtual ~DebuggedThread();
 
   zx::thread& thread() { return thread_; }

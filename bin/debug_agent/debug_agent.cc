@@ -34,17 +34,17 @@ DebugAgent::~DebugAgent() {}
 void DebugAgent::OnProcessStart(zx::process process) {
   auto koid = KoidForObject(process);
   auto name = NameForObject(process);
-  DebuggedProcess* new_process =
-      AddDebuggedProcess(koid, std::move(process), false);
-  if (!new_process) {
-    return;
-  }
+
+  // send notification, then create debug process so that thread notification is
+  // sent after this
   debug_ipc::NotifyProcessStarting notify;
   notify.koid = koid;
   notify.name = name;
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteNotifyProcessStarting(notify, &writer);
   stream()->Write(writer.MessageComplete());
+
+  AddDebuggedProcess(koid, std::move(process), false);
 }
 
 void DebugAgent::RemoveDebuggedProcess(zx_koid_t process_koid) {
