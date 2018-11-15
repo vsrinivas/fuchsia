@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <assert.h>
 #include <pthread.h>
 
 #include <zircon/syscalls.h>
@@ -35,11 +34,11 @@ static void* gs_base_test_thread(void* thread_arg) {
 
     // Wait until all the test threads reach this point.
     int rv = pthread_barrier_wait(&g_barrier);
-    assert(rv == 0 || rv == PTHREAD_BARRIER_SERIAL_THREAD);
+    EXPECT_TRUE(rv == 0 || rv == PTHREAD_BARRIER_SERIAL_THREAD);
 
     if (x86_feature_fsgsbase()) {
-        assert(_readgsbase_u64() == gs_base);
-        assert(_readfsbase_u64() == fs_base);
+        EXPECT_TRUE(_readgsbase_u64() == gs_base);
+        EXPECT_TRUE(_readfsbase_u64() == fs_base);
     }
 
     return nullptr;

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <assert.h>
+#include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/rights.h>
 #include <zircon/syscalls.h>
@@ -51,18 +51,18 @@ static int reader_thread(void* arg) {
     items[1].waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
     do {
         status = zx_object_wait_many(items, 2, ZX_TIME_INFINITE);
-        assert(status == ZX_OK);
+        ZX_ASSERT(status == ZX_OK);
         uint32_t data;
         uint32_t num_bytes = sizeof(uint32_t);
         if (items[0].pending & ZX_CHANNEL_READABLE) {
             status = zx_channel_read(channel[0], 0u, &data, NULL,
                                      num_bytes, 0, &num_bytes, NULL);
-            assert(status == ZX_OK);
+            ZX_ASSERT(status == ZX_OK);
             packets[0] += 1;
         } else if (items[1].pending & ZX_CHANNEL_READABLE) {
             status = zx_channel_read(channel[1], 0u, &data, NULL,
                                      num_bytes, 0, &num_bytes, NULL);
-            assert(status == ZX_OK);
+            ZX_ASSERT(status == ZX_OK);
             packets[1] += 1;
         } else {
             if (items[0].pending & ZX_CHANNEL_PEER_CLOSED)
@@ -71,15 +71,15 @@ static int reader_thread(void* arg) {
                 closed[1] = true;
         }
     } while (!closed[0] || !closed[1]);
-    assert(packets[0] == 3);
-    assert(packets[1] == 2);
+    ZX_ASSERT(packets[0] == 3);
+    ZX_ASSERT(packets[1] == 2);
     return 0;
 }
 
 static zx_signals_t get_satisfied_signals(zx_handle_t handle) {
     zx_signals_t pending = 0;
-    __UNUSED zx_status_t status = zx_object_wait_one(handle, 0u, 0u, &pending);
-    assert(status == ZX_ERR_TIMED_OUT);
+    zx_status_t status = zx_object_wait_one(handle, 0u, 0u, &pending);
+    ZX_ASSERT(status == ZX_ERR_TIMED_OUT);
     return pending;
 }
 
@@ -406,16 +406,16 @@ static void write_test_message(zx_handle_t channel,
     static const char data[1000] = {};
     zx_handle_t handles[10] = {};
 
-    assert(size <= sizeof(data));
-    assert(num_handles <= countof(handles));
+    ZX_ASSERT(size <= sizeof(data));
+    ZX_ASSERT(num_handles <= countof(handles));
 
     for (uint32_t i = 0; i < num_handles; i++) {
         zx_status_t status = zx_handle_duplicate(handle, ZX_RIGHT_TRANSFER, &handles[i]);
-        assert(status == ZX_OK);
+        ZX_ASSERT(status == ZX_OK);
     }
 
-    __UNUSED zx_status_t status = zx_channel_write(channel, 0u, data, size, handles, num_handles);
-    assert(status == ZX_OK);
+    zx_status_t status = zx_channel_write(channel, 0u, data, size, handles, num_handles);
+    ZX_ASSERT(status == ZX_OK);
 }
 
 static bool channel_may_discard(void) {

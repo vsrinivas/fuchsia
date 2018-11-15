@@ -1,6 +1,7 @@
 #include <time.h>
 
 #include <assert.h>
+#include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 
 #include "time_conversion.h"
@@ -12,7 +13,7 @@ int nanosleep(const struct timespec* req, struct timespec* rem) {
     // which reports back how much time is remaining. Until then,
     // always report back 0 timeout remaining.
 
-    int ret = _zx_nanosleep(__duration_timespec_to_deadline(*req));
+    __UNUSED int ret = _zx_nanosleep(__duration_timespec_to_deadline(*req));
     assert(ret == 0);
     if (rem) {
         *rem = (struct timespec){

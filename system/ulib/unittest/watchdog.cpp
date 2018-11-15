@@ -13,6 +13,7 @@
 #include <time.h>
 
 #include <unittest/unittest.h>
+#include <zircon/compiler.h>
 
 constexpr int WATCHDOG_ERRCODE = 5;
 
@@ -227,7 +228,7 @@ void watchdog_terminate() {
     if (watchdog_is_enabled()) {
         pthread_mutex_lock(&mutex);
         tests_running = false;
-        int res = pthread_cond_signal(&cond);
+        __UNUSED int res = pthread_cond_signal(&cond);
         assert(res == 0);
         pthread_mutex_unlock(&mutex);
         res = pthread_join(watchdog_thread, NULL);

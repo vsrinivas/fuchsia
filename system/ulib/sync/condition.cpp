@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 #include <lib/sync/condition.h>
-#include <lib/sync/internal/condition-template.h>
+
 #include <assert.h>
+#include <lib/sync/internal/condition-template.h>
+#include <zircon/compiler.h>
 
 template <>
 struct condition_impl_internal::MutexOps<sync_mutex_t> {
@@ -29,7 +31,7 @@ struct condition_impl_internal::MutexOps<sync_mutex_t> {
 };
 
 void sync_condition_wait(sync_condition_t* condition, sync_mutex_t* mutex) {
-    zx_status_t status = condition_impl_internal::timedwait(
+    __UNUSED zx_status_t status = condition_impl_internal::timedwait(
         condition, mutex, ZX_TIME_INFINITE, nullptr);
     assert(status == ZX_OK);
 }

@@ -9,6 +9,7 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 #include <unittest/unittest.h>
 
@@ -48,7 +49,7 @@ static int thread_fn_1(void* arg) {
 
     do {
         zx_nanosleep(zx_deadline_after(ZX_MSEC(200)));
-        zx_status_t status = zx_object_signal(events[1], 0u, ZX_EVENT_SIGNALED);
+        __UNUSED zx_status_t status = zx_object_signal(events[1], 0u, ZX_EVENT_SIGNALED);
         assert(status == ZX_OK);
     } while (!wait(events[2], events[0]));
 
@@ -60,7 +61,7 @@ static int thread_fn_2(void* arg) {
 
     while (!wait(events[1], events[0])) {
         zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
-        zx_status_t status = zx_object_signal(events[2], 0u, ZX_EVENT_SIGNALED);
+        __UNUSED zx_status_t status = zx_object_signal(events[2], 0u, ZX_EVENT_SIGNALED);
         assert(status == ZX_OK);
     }
 

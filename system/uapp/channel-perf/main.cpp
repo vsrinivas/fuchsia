@@ -48,7 +48,8 @@ void do_test(uint32_t duration_sec, const TestArgs& test_args) {
 
     // We'll send/receive duplicates of this handle.
     zx_handle_t event;
-    assert(zx_event_create(0u, &event) == ZX_OK);
+    status = zx_event_create(0u, &event);
+    assert(status == ZX_OK);
 
     // Storage space for our messages' stuff.
     fbl::unique_ptr<uint8_t[]> data;
