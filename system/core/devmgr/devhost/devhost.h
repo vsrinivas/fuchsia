@@ -28,9 +28,6 @@
 #include <threads.h>
 #include <stdint.h>
 
-// Handle IDs for USER0 handles
-#define ID_HJOBROOT 4
-
 // Nothing outside of devmgr/{devmgr,devhost,rpc-device}.c
 // should be calling devhost_*() APIs, as this could
 // violate the internal locking design.
@@ -201,9 +198,6 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& dev,
                         const zx_device_prop_t* props, uint32_t prop_count) REQ_DM_LOCK;
 zx_status_t devhost_remove(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
 void devhost_make_visible(const fbl::RefPtr<zx_device_t>& dev);
-
-
-zx_handle_t get_root_resource();
 
 struct CreationContext {
     fbl::RefPtr<zx_device_t> parent;

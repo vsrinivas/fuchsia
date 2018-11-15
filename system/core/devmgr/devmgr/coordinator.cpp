@@ -34,10 +34,13 @@
 
 #include "devcoordinator.h"
 #include "devmgr.h"
-#include "../devhost/devhost.h"
 #include "../shared/fdio.h"
 #include "../shared/fidl_txn.h"
 #include "../shared/log.h"
+
+// Handle ID to use for the root job when spawning devhosts.  This number must match the
+// value used in system/dev/misc/sysinfo/sysinfo.c
+#define ID_HJOBROOT 4
 
 namespace devmgr {
 

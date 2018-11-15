@@ -52,5 +52,6 @@ zx::channel devfs_root_clone();
 extern bool require_system;
 
 void devmgr_vfs_exit();
+zx_handle_t get_root_resource();
 
 } // namespace devmgr
