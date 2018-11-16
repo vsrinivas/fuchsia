@@ -12,6 +12,7 @@
 
 #include "garnet/bin/debug_agent/object_util.h"
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace debug_agent {
@@ -253,6 +254,9 @@ TEST_F(JobDebuggerTest, FilterMultipleProcess) {
   WaitForProcToExit(proc2, 0);
 }
 
+
+// Launch two seperate processes and check that multiple filters can attach to
+// them.
 TEST_F(JobDebuggerTest, MultipleFilters) {
   zx::job duplicate_job;
   ASSERT_EQ(ZX_OK, job_.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate_job));
@@ -280,8 +284,12 @@ TEST_F(JobDebuggerTest, MultipleFilters) {
     return processes_.size() == 2;
   })) << "Expected processes size 2, got: "
       << processes_.size();
-  ASSERT_EQ(KoidForObject(processes_[0]), pid1);
-  ASSERT_EQ(KoidForObject(processes_[1]), pid2);
+
+  // debug_agent can get processes in any order because LaunchProcess is async
+  // so create an array and check that it contains both pids.
+  std::vector<uint64_t> pids = {KoidForObject(processes_[1]),
+                                KoidForObject(processes_[0])};
+  EXPECT_THAT(pids, ::testing::UnorderedElementsAre(pid2, pid1));
   WaitForProcToExit(proc1, 0);
   WaitForProcToExit(proc2, 0);
 }
