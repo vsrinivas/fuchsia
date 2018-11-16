@@ -33,9 +33,9 @@
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 
-#include "devmgr.h"
 #include "../shared/bootfs.h"
 #include "../shared/fdio.h"
+#include "devmgr.h"
 
 namespace devmgr {
 
@@ -290,7 +290,7 @@ int service_starter(void* arg) {
         zx_handle_t handles[] = {
             duplicate_job.release(),
             exception_port.release(),
-            exception_channel_passed.release()
+            exception_channel_passed.release(),
         };
         uint32_t handle_types[] = {PA_HND(PA_USER0, 0), PA_HND(PA_USER0, 1), PA_HND(PA_USER0, 2)};
         static const char* argv_crashsvc[] = {"/boot/bin/crashsvc"};

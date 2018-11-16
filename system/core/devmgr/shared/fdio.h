@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include <lib/zx/channel.h>
 #include <launchpad/launchpad.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/job.h>
 
 namespace devmgr {
 
