@@ -198,6 +198,7 @@ typedef struct wlan_chan_list {
 
 // Capabilities are grouped by band, by industry de facto standard.
 typedef struct wlan_band_info {
+    // Values from enum Band (WLAN_BAND_*)
     uint8_t band_id;
     // HT PHY capabilities.
     bool ht_supported;
