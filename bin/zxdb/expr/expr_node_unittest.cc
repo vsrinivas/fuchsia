@@ -238,8 +238,9 @@ TEST_F(ExprNodeTest, UnaryMinus) {
 TEST_F(ExprNodeTest, DereferenceReferencePointer) {
   auto data_provider = fxl::MakeRefCounted<MockSymbolDataProvider>();
   auto context = fxl::MakeRefCounted<SymbolEvalContext>(
+      fxl::WeakPtr<const ProcessSymbols>(),
       SymbolContext::ForRelativeAddresses(), data_provider,
-      fxl::RefPtr<CodeBlock>());
+      nullptr);
 
   // Dereferencing should remove the const on the pointer but not the pointee.
   auto base_type =

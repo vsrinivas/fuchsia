@@ -22,6 +22,7 @@ class MockProcessSymbols : public ProcessSymbols {
   void AddSymbol(const std::string& name, std::vector<Location> locations);
 
   // ProcessSymbols implementation.
+  fxl::WeakPtr<const ProcessSymbols> GetWeakPtr() const override;
   TargetSymbols* GetTargetSymbols() override;
   std::vector<ModuleSymbolStatus> GetStatus() const override;
   std::vector<Location> ResolveInputLocation(
@@ -32,6 +33,8 @@ class MockProcessSymbols : public ProcessSymbols {
 
  private:
   std::map<std::string, std::vector<Location>> symbols_;
+
+  mutable fxl::WeakPtrFactory<const ProcessSymbols> weak_factory_;
 };
 
 }  // namespace zxdb

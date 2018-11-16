@@ -43,7 +43,7 @@ fxl::RefPtr<SymbolDataProvider> MockFrame::GetSymbolDataProvider() const {
 fxl::RefPtr<ExprEvalContext> MockFrame::GetExprEvalContext() const {
   if (!symbol_eval_context_) {
     symbol_eval_context_ = fxl::MakeRefCounted<SymbolEvalContext>(
-        GetSymbolDataProvider(), location_);
+        fxl::WeakPtr<const ProcessSymbols>(), GetSymbolDataProvider(), location_);
   }
   return symbol_eval_context_;
 }

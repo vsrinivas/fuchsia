@@ -45,7 +45,7 @@ class SymbolVariableResolver {
   //
   // If this object is destroyed, the callback will be canceled.
   void ResolveVariable(const SymbolContext& symbol_context, const Variable* var,
-                       Callback cb);
+                       Callback cb) const;
 
  private:
   // The data associated with one in-progress variable resolution. This must be
@@ -68,16 +68,19 @@ class SymbolVariableResolver {
 
   // Callback for when the dwarf_eval_ has completed evaluation.
   void OnDwarfEvalComplete(fxl::RefPtr<ResolutionState> state, const Err& err,
-                           fxl::RefPtr<Type> type);
+                           fxl::RefPtr<Type> type) const;
 
   // Issue the callback. The callback could possibly delete |this| so don't
   // do anything after calling.
   void OnComplete(fxl::RefPtr<ResolutionState> state, const Err& err,
-                  ExprValue value);
+                  ExprValue value) const;
 
   fxl::RefPtr<SymbolDataProvider> data_provider_;
 
-  fxl::WeakPtrFactory<SymbolVariableResolver> weak_factory_;
+  // Mutable because const functions want to take weak references to this class
+  // that are logically const, but there's no such thing as a weak ref to a
+  // const class.
+  mutable fxl::WeakPtrFactory<SymbolVariableResolver> weak_factory_;
 };
 
 }  // namespace zxdb

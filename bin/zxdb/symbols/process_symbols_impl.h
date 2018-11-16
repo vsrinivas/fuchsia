@@ -49,6 +49,7 @@ class ProcessSymbolsImpl : public ProcessSymbols {
   void SetModules(const std::vector<debug_ipc::Module>& modules);
 
   // ProcessSymbols implementation.
+  fxl::WeakPtr<const ProcessSymbols> GetWeakPtr() const override;
   TargetSymbols* GetTargetSymbols() override;
   std::vector<ModuleSymbolStatus> GetStatus() const override;
   std::vector<Location> ResolveInputLocation(
@@ -97,6 +98,9 @@ class ProcessSymbolsImpl : public ProcessSymbols {
   // Maps load address to the module symbol information.
   using ModuleMap = std::map<uint64_t, ModuleInfo>;
   ModuleMap modules_;
+
+  // Mutable so we can get weak pointers to a const object.
+  mutable fxl::WeakPtrFactory<const ProcessSymbols> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ProcessSymbolsImpl);
 };

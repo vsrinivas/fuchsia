@@ -11,12 +11,16 @@
 
 namespace zxdb {
 
-MockProcessSymbols::MockProcessSymbols() = default;
+MockProcessSymbols::MockProcessSymbols() : weak_factory_(this) {}
 MockProcessSymbols::~MockProcessSymbols() = default;
 
 void MockProcessSymbols::AddSymbol(const std::string& name,
                                    std::vector<Location> locations) {
   symbols_[name] = std::move(locations);
+}
+
+fxl::WeakPtr<const ProcessSymbols> MockProcessSymbols::GetWeakPtr() const {
+  return weak_factory_.GetWeakPtr();
 }
 
 TargetSymbols* MockProcessSymbols::GetTargetSymbols() { return nullptr; }

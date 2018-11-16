@@ -10,7 +10,8 @@
 
 #include "garnet/bin/zxdb/symbols/location.h"
 #include "garnet/bin/zxdb/symbols/resolve_options.h"
-#include "garnet/public/lib/fxl/macros.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
@@ -24,6 +25,8 @@ class ProcessSymbols {
  public:
   ProcessSymbols();
   virtual ~ProcessSymbols();
+
+  virtual fxl::WeakPtr<const ProcessSymbols> GetWeakPtr() const = 0;
 
   virtual TargetSymbols* GetTargetSymbols() = 0;
 

@@ -90,6 +90,7 @@ TEST_F(SymbolEvalContextTest, NotFoundSynchronous) {
   provider()->set_ip(0x1010);
 
   auto context = fxl::MakeRefCounted<SymbolEvalContext>(
+      fxl::WeakPtr<const ProcessSymbols>(),
       SymbolContext::ForRelativeAddresses(), provider(), MakeCodeBlock());
   fxl::RefPtr<ExprEvalContext> eval_context(context);
 
@@ -108,6 +109,7 @@ TEST_F(SymbolEvalContextTest, FoundSynchronous) {
   provider()->AddRegisterValue(0, true, kValue);
 
   auto context = fxl::MakeRefCounted<SymbolEvalContext>(
+      fxl::WeakPtr<const ProcessSymbols>(),
       SymbolContext::ForRelativeAddresses(), provider(), MakeCodeBlock());
   fxl::RefPtr<ExprEvalContext> eval_context(context);
 
@@ -131,6 +133,7 @@ TEST_F(SymbolEvalContextTest, FoundAsynchronous) {
   provider()->set_ip(0x1010);
 
   auto context = fxl::MakeRefCounted<SymbolEvalContext>(
+      fxl::WeakPtr<const ProcessSymbols>(),
       SymbolContext::ForRelativeAddresses(), provider(), MakeCodeBlock());
   fxl::RefPtr<ExprEvalContext> eval_context(context);
 
@@ -160,6 +163,7 @@ TEST_F(SymbolEvalContextTest, FoundButNotEvaluatable) {
   provider()->set_ip(0x1010);
 
   auto context = fxl::MakeRefCounted<SymbolEvalContext>(
+      fxl::WeakPtr<const ProcessSymbols>(),
       SymbolContext::ForRelativeAddresses(), provider(), MakeCodeBlock());
   fxl::RefPtr<ExprEvalContext> eval_context(context);
 
@@ -217,6 +221,7 @@ TEST_F(SymbolEvalContextTest, FoundThis) {
   function->set_object_pointer(LazySymbol(this_var));
 
   auto context = fxl::MakeRefCounted<SymbolEvalContext>(
+      fxl::WeakPtr<const ProcessSymbols>(),
       SymbolContext::ForRelativeAddresses(), provider(), function);
   fxl::RefPtr<ExprEvalContext> eval_context(context);
 
@@ -259,6 +264,7 @@ TEST_F(SymbolEvalContextTest, NodeIntegation) {
   provider()->set_ip(0x1010);
 
   auto context = fxl::MakeRefCounted<SymbolEvalContext>(
+      fxl::WeakPtr<const ProcessSymbols>(),
       SymbolContext::ForRelativeAddresses(), provider(), MakeCodeBlock());
   fxl::RefPtr<ExprEvalContext> eval_context(context);
 

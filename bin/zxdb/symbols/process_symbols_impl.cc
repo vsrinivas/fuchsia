@@ -25,9 +25,15 @@ bool ExpectSymbolsForName(const std::string& name) { return name != "<vDSO>"; }
 
 ProcessSymbolsImpl::ProcessSymbolsImpl(Notifications* notifications,
                                        TargetSymbolsImpl* target_symbols)
-    : notifications_(notifications), target_symbols_(target_symbols) {}
+    : notifications_(notifications),
+      target_symbols_(target_symbols),
+      weak_factory_(this) {}
 
 ProcessSymbolsImpl::~ProcessSymbolsImpl() = default;
+
+fxl::WeakPtr<const ProcessSymbols> ProcessSymbolsImpl::GetWeakPtr() const {
+  return weak_factory_.GetWeakPtr();
+}
 
 void ProcessSymbolsImpl::SetModules(
     const std::vector<debug_ipc::Module>& modules) {

@@ -90,6 +90,7 @@ fxl::RefPtr<ExprEvalContext> FrameImpl::GetExprEvalContext() const {
   if (!symbol_eval_context_) {
     EnsureSymbolized();
     symbol_eval_context_ = fxl::MakeRefCounted<SymbolEvalContext>(
+        thread_->GetProcess()->GetSymbols()->GetWeakPtr(),
         GetSymbolDataProvider(), location_);
   }
   return symbol_eval_context_;

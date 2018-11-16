@@ -25,7 +25,7 @@ SymbolVariableResolver::SymbolVariableResolver(
 SymbolVariableResolver::~SymbolVariableResolver() = default;
 
 void SymbolVariableResolver::ResolveVariable(
-    const SymbolContext& symbol_context, const Variable* var, Callback cb) {
+    const SymbolContext& symbol_context, const Variable* var, Callback cb) const {
   auto state = fxl::MakeRefCounted<ResolutionState>(std::move(cb));
 
   // Need to explicitly take a reference to the type.
@@ -71,7 +71,7 @@ void SymbolVariableResolver::ResolveVariable(
 
 void SymbolVariableResolver::OnDwarfEvalComplete(
     fxl::RefPtr<ResolutionState> state, const Err& err,
-    fxl::RefPtr<Type> type) {
+    fxl::RefPtr<Type> type) const {
   if (err.has_error()) {
     // Error decoding.
     OnComplete(state, err, ExprValue());
@@ -109,7 +109,7 @@ void SymbolVariableResolver::OnDwarfEvalComplete(
 }
 
 void SymbolVariableResolver::OnComplete(fxl::RefPtr<ResolutionState> state,
-                                        const Err& err, ExprValue value) {
+                                        const Err& err, ExprValue value) const {
   // WARNING: executing the callback can delete |this|.
   state->callback(err, std::move(value));
 }
