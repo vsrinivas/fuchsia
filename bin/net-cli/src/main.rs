@@ -56,12 +56,12 @@ async fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> Result<(), Error> {
                 // Safe because we checked the return status above.
                 zx::Channel::from(unsafe { zx::Handle::from_raw(client) }),
             );
-            let response = await!(stack.add_ethernet_interface(&topological_path, dev))
+            let (err, id) = await!(stack.add_ethernet_interface(&topological_path, dev))
                 .context("error adding device")?;
-            if let Some(e) = response.0 {
+            if let Some(e) = err {
                 println!("Error adding interface {}: {:?}", path, e)
             } else {
-                println!("Added interface {}", response.1)
+                println!("Added interface {}", id)
             }
         }
         IfCmd::Del { id } => {
