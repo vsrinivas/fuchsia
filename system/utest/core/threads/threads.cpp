@@ -1567,15 +1567,23 @@ RUN_TEST(TestKillSuspendedThread)
 RUN_TEST(TestSuspendSingleWaitAsyncSignalDelivery)
 RUN_TEST(TestSuspendRepeatingWaitAsyncSignalDelivery)
 RUN_TEST(TestReadingGeneralRegisterState)
-RUN_TEST(TestReadingFpRegisterState)
-RUN_TEST(TestReadingVectorRegisterState)
+
+// Test disabled, see ZX-2508.
+// RUN_TEST(TestReadingFpRegisterState)
+// RUN_TEST(TestReadingVectorRegisterState)
+
 RUN_TEST(TestWritingGeneralRegisterState)
-RUN_TEST(TestWritingFpRegisterState)
-RUN_TEST(TestWritingVectorRegisterState)
+
+// Test disabled, see ZX-2508.
+// RUN_TEST(TestWritingFpRegisterState)
+// RUN_TEST(TestWritingVectorRegisterState)
+
 RUN_TEST(TestNoncanonicalRipAddress)
 RUN_TEST(TestWritingArmFlagsRegister)
-RUN_TEST(TestWriteReadDebugRegisterState);
-RUN_TEST(TestDebugRegistersValidation);
+
+// Test disabled, see ZX-2508.
+// RUN_TEST(TestWriteReadDebugRegisterState);
+// RUN_TEST(TestDebugRegistersValidation);
 
 END_TEST_CASE(threads_tests)
 
