@@ -149,9 +149,10 @@ query() {
 fetch() {
   [[ "${status}" == "STOPPED" ]] || fatal "fuzzer must be stopped to run this command"
 
-  local version="$1"
-  if [[ -z "${version}" ]] ; then
-    version="latest"
+  local version="${1:-latest}"
+  # "latest" is a ref, but digests are tags that are prefixed with "version:"
+  if [[ "${version}" != "latest" ]] ; then
+    version="version:${version}"
   fi
 
   local corpus="${staging}/${fuzzer}/corpus"
@@ -161,7 +162,7 @@ fetch() {
   # Get corpus from CIPD
   if ${CIPD} ls -r "${CIPD_PREFIX}" | grep -q "${fuzzer}" ; then
     ${CIPD} install "${cipd_path}" ${version} --root "${corpus}"
-    [[ $? -ne 0 ]] || fatal "failed to retrieve corpus"
+    [[ $? -eq 0 ]] || fatal "failed to retrieve corpus"
   fi
 
   # Add any upstream third-party corpora
@@ -209,7 +210,12 @@ $(ls -1 | grep -v cipd | sed 's/^/  - file: /')
 EOF
   # TODO: catch the error and tell user to do this
   # $ cipd auth-login  # One-time auth.
-  ${CIPD} create --pkg-def cipd.yaml -tag version:${version}
+  ${CIPD} create --pkg-def cipd.yaml -tag version:${version} -ref latest
+  echo "***"
+  echo "Successfully stored package for ${fuzzer}, version ${version}."
+  # cipd creates a .cipd directory in corpus that misses +x so it cannot be
+  # cleaned up properly in cleanup().
+  sudo chmod -R +x ${corpus}
   popd
 }
 
