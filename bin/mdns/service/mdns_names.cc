@@ -66,6 +66,10 @@ bool MatchRight(const std::string& name, const std::string& right,
 }  // namespace
 
 // static
+const std::string MdnsNames::kAnyServiceFullName =
+    "_services._dns-sd._udp.local.";
+
+// static
 std::string MdnsNames::LocalHostFullName(const std::string& host_name) {
   FXL_DCHECK(IsValidOtherName(host_name));
 

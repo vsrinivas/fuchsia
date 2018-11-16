@@ -55,6 +55,9 @@ class InstanceResponder : public MdnsAgent {
   // Sends an announcement and schedules the next announcement, as appropriate.
   void SendAnnouncement();
 
+  // Sends a reply to a query for any service.
+  void SendAnyServiceResponse(const ReplyAddress& reply_address);
+
   // Gets an |Mdns::Publication| from |mdns_responder_| and, if not null, sends
   // it. An empty |subtype| indicates no subtype.
   void GetAndSendPublication(bool query, const std::string& subtype = "",

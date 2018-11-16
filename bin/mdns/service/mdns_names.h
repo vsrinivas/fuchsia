@@ -12,6 +12,9 @@
 namespace mdns {
 
 struct MdnsNames {
+  // Name used to query for any service on the subnet.
+  static const std::string kAnyServiceFullName;
+
   // Constructs a local host name from a simple host name. For example, produces
   // "host.local." from "host". The simple host name must not end in a ".".
   static std::string LocalHostFullName(const std::string& host_name);

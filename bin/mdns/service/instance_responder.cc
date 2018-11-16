@@ -42,6 +42,9 @@ void InstanceResponder::ReceiveQuestion(const DnsQuestion& question,
     case DnsType::kPtr:
       if (MdnsNames::MatchServiceName(name, service_name_, &subtype)) {
         GetAndSendPublication(true, subtype, reply_address);
+      } else if (question.name_.dotted_string_ ==
+                 MdnsNames::kAnyServiceFullName) {
+        SendAnyServiceResponse(reply_address);
       }
       break;
     case DnsType::kSrv:
@@ -110,6 +113,15 @@ void InstanceResponder::SendAnnouncement() {
                   fxl::TimePoint::Now() + announcement_interval_);
 
   announcement_interval_ = announcement_interval_ * 2;
+}
+
+void InstanceResponder::SendAnyServiceResponse(
+    const ReplyAddress& reply_address) {
+  auto ptr_resource = std::make_shared<DnsResource>(
+      MdnsNames::kAnyServiceFullName, DnsType::kPtr);
+  ptr_resource->ptr_.pointer_domain_name_ =
+      MdnsNames::LocalServiceFullName(service_name_);
+  SendResource(ptr_resource, MdnsResourceSection::kAnswer, reply_address);
 }
 
 void InstanceResponder::GetAndSendPublication(
