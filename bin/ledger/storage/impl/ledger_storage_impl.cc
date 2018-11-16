@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/storage/impl/ledger_storage_impl.h"
 
+#include <string>
+
 #include <dirent.h>
 #include <algorithm>
 #include <iterator>
@@ -49,12 +51,11 @@ std::string GetId(fxl::StringView bytes) {
 LedgerStorageImpl::LedgerStorageImpl(
     ledger::Environment* environment,
     encryption::EncryptionService* encryption_service, DbFactory* db_factory,
-    ledger::DetachedPath content_dir, const std::string& ledger_name)
+    ledger::DetachedPath content_dir)
     : environment_(environment),
       encryption_service_(encryption_service),
       db_factory_(db_factory),
-      storage_dir_(content_dir.SubPath(
-          {kSerializationVersion, GetDirectoryName(ledger_name)})),
+      storage_dir_(std::move(content_dir)),
       weak_factory_(this) {}
 
 LedgerStorageImpl::~LedgerStorageImpl() {}

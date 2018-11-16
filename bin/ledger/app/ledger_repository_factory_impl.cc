@@ -24,8 +24,8 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
-#include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/disk_cleanup_manager_impl.h"
+#include "peridot/bin/ledger/app/serialization_version.h"
 #include "peridot/bin/ledger/cloud_sync/impl/user_sync_impl.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/p2p_provider/impl/p2p_provider_impl.h"
@@ -41,11 +41,12 @@ namespace {
 
 // The contents of each repository are organized in the following way:
 //   <base_path>
-//   ├── content/
+//   ├── <serialization-version>
 //   │   ├── name
 //   │   ├── cache/
 //   │   ├── page_usage_db/
-//   │   └── ...
+//   │   └── ledgers
+//   │       └── ...
 //   └── staging/
 //
 // - <base_path>/
@@ -70,9 +71,9 @@ namespace {
 // This two-phase deletion guarantees that the repository will be in a correct
 // state even if the deletion execution is unexpectedly terminated.
 
-constexpr fxl::StringView kContentPath = "content";
 constexpr fxl::StringView kCachePath = "cache";
 constexpr fxl::StringView kPageUsageDbPath = "page_usage_db";
+constexpr fxl::StringView kLedgersPath = "ledgers";
 constexpr fxl::StringView kStagingPath = "staging";
 constexpr fxl::StringView kNamePath = "name";
 
@@ -201,9 +202,10 @@ struct LedgerRepositoryFactoryImpl::RepositoryInformation {
  public:
   explicit RepositoryInformation(int root_fd, std::string user_id)
       : base_path(root_fd),
-        content_path(base_path.SubPath(kContentPath)),
+        content_path(base_path.SubPath(kSerializationVersion)),
         cache_path(content_path.SubPath(kCachePath)),
         page_usage_db_path(content_path.SubPath(kPageUsageDbPath)),
+        ledgers_path(content_path.SubPath(kLedgersPath)),
         staging_path(base_path.SubPath(kStagingPath)),
         user_id(std::move(user_id)) {}
 
@@ -218,6 +220,7 @@ struct LedgerRepositoryFactoryImpl::RepositoryInformation {
   DetachedPath content_path;
   DetachedPath cache_path;
   DetachedPath page_usage_db_path;
+  DetachedPath ledgers_path;
   DetachedPath staging_path;
   std::string user_id;
   std::string name;
@@ -308,7 +311,7 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
   repository_exposed_object.set_parent(
       inspect_object_dir_.find({kRepositoriesPath}));
   auto repository = std::make_unique<LedgerRepositoryImpl>(
-      std::move(repository_exposed_object), repository_information.content_path,
+      std::move(repository_exposed_object), repository_information.ledgers_path,
       environment_, std::move(db_factory), std::move(watchers),
       std::move(user_sync), std::move(disk_cleanup_manager),
       disk_cleanup_manager_ptr);

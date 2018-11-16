@@ -105,8 +105,7 @@ void PageEvictionManagerImpl::Completer::CallCallbacks(Status status) {
 PageEvictionManagerImpl::PageEvictionManagerImpl(Environment* environment,
                                                  DetachedPath db_path)
     : environment_(environment),
-      db_(environment, db_path.SubPath({storage::kSerializationVersion,
-                                        kPageUsageDbSerializationVersion})),
+      db_(environment, db_path.SubPath(kPageUsageDbSerializationVersion)),
       coroutine_manager_(environment_->coroutine_service()),
       weak_factory_(this) {}
 

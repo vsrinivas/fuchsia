@@ -18,6 +18,7 @@ executable("e2e_local") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
+    "//peridot/bin/ledger/app:serialization_version",
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/ledger/filesystem",
     "//peridot/bin/ledger/testing:get_ledger",

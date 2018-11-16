@@ -27,7 +27,7 @@ class LedgerStorageTest : public ledger::TestWithEnvironment {
       : encryption_service_(dispatcher()),
         db_factory_(dispatcher()),
         storage_(&environment_, &encryption_service_, &db_factory_,
-                 ledger::DetachedPath(tmpfs_.root_fd()), "test_app") {}
+                 ledger::DetachedPath(tmpfs_.root_fd())) {}
 
   ~LedgerStorageTest() override {}
 

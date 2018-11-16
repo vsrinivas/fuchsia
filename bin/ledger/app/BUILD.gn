@@ -2,7 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//peridot/bin/ledger/*" ]
+visibility = [
+  # needed to access the serialization version constant
+  # TODO(ppi): extract the serialization version constant to a separate library
+  "//peridot/bin/cloud_provider_firestore/*",
+  "//peridot/bin/ledger/*",
+]
 
 executable("app") {
   output_name = "ledger"
@@ -98,6 +103,7 @@ source_set("lib") {
   ]
 
   deps = [
+    ":serialization_version",
     "//garnet/public/fidl/fuchsia.netconnector",
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fidl/cpp",
@@ -121,6 +127,7 @@ source_set("lib") {
     "//peridot/bin/ledger/storage/public",
     "//peridot/bin/ledger/sync_coordinator/impl",
     "//peridot/bin/ledger/sync_coordinator/public",
+    "//peridot/lib/base64url:base64url",
     "//peridot/lib/convert",
     "//peridot/lib/socket",
     "//peridot/public/fidl/fuchsia.ledger",
@@ -130,6 +137,14 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/public/lib/component/cpp",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}
+
+source_set("serialization_version") {
+  sources = [
+    "serialization_version.h",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

@@ -54,9 +54,9 @@ source_set("lib") {
   ]
 
   deps = [
-    # Needed to access the serialization version constant.
     "//garnet/public/lib/callback",
-    "//peridot/bin/ledger/storage/public",
+    "//garnet/public/lib/fsl",
+    "//peridot/bin/ledger/app:serialization_version",
     "//peridot/lib/commit_pack",
     "//peridot/lib/convert",
   ]

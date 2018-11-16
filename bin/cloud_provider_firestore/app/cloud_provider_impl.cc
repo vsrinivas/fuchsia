@@ -14,7 +14,7 @@
 #include "peridot/bin/cloud_provider_firestore/app/credentials_provider_impl.h"
 #include "peridot/bin/cloud_provider_firestore/app/grpc_status.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/encoding.h"
-#include "peridot/bin/ledger/storage/public/constants.h"
+#include "peridot/bin/ledger/app/serialization_version.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace cloud_provider_firestore {
@@ -42,7 +42,7 @@ std::string GetVersionPath(fxl::StringView user_path) {
       kSeparator,
       kVersionsCollection,
       kSeparator,
-      storage::kSerializationVersion,
+      ledger::kSerializationVersion,
   });
 }
 
@@ -125,7 +125,7 @@ void CloudProviderImpl::GetDeviceSet(
 
   // Create a placeholder document for the root of the serialization version.
   CreatePlaceholderDocument(user_path, kVersionsCollection,
-                            storage::kSerializationVersion.ToString());
+                            ledger::kSerializationVersion.ToString());
 }
 
 void CloudProviderImpl::GetPageCloud(
@@ -145,7 +145,7 @@ void CloudProviderImpl::GetPageCloud(
 
   // Create a placeholder document for the root of the serialization version.
   CreatePlaceholderDocument(user_path, kVersionsCollection,
-                            storage::kSerializationVersion.ToString());
+                            ledger::kSerializationVersion.ToString());
   // Create a placeholder document for the root of the app namespace.
   CreatePlaceholderDocument(version_path, kNamespaceCollection,
                             EncodeKey(app_id_str));

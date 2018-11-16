@@ -89,6 +89,8 @@ class LedgerRepositoryImpl
 
   void CheckEmpty();
 
+  DetachedPath GetPathFor(fxl::StringView ledger_name);
+
   // LedgerRepositoryDebug:
   void GetInstancesList(GetInstancesListCallback callback) override;
 

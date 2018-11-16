@@ -20,6 +20,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "peridot/bin/ledger/app/serialization_version.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"
 #include "peridot/bin/ledger/filesystem/directory_reader.h"
@@ -155,7 +156,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
 
   ledger_internal::LedgerRepositoryPtr ledger_repository;
   scoped_tmpfs::ScopedTmpFS tmpfs;
-  const std::string content_path = "content";
+  const std::string content_path = ledger::kSerializationVersion.ToString();
   const std::string deletion_sentinel_path = content_path + "/sentinel";
   ASSERT_TRUE(files::CreateDirectoryAt(tmpfs.root_fd(), content_path));
   ASSERT_TRUE(
@@ -223,7 +224,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
 
   ledger_internal::LedgerRepositoryPtr ledger_repository;
   scoped_tmpfs::ScopedTmpFS tmpfs;
-  const std::string content_path = "content";
+  const std::string content_path = ledger::kSerializationVersion.ToString();
   const std::string deletion_sentinel_path = content_path + "/sentinel";
   ASSERT_TRUE(files::CreateDirectoryAt(tmpfs.root_fd(), content_path));
   ASSERT_TRUE(

@@ -5,8 +5,6 @@
 #ifndef PERIDOT_BIN_LEDGER_STORAGE_IMPL_LEDGER_STORAGE_IMPL_H_
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_LEDGER_STORAGE_IMPL_H_
 
-#include <string>
-
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/memory/weak_ptr.h>
@@ -26,8 +24,7 @@ class LedgerStorageImpl : public LedgerStorage {
   LedgerStorageImpl(ledger::Environment* environment,
                     encryption::EncryptionService* encryption_service,
                     storage::DbFactory* db_factory,
-                    ledger::DetachedPath content_dir,
-                    const std::string& ledger_name);
+                    ledger::DetachedPath content_dir);
   ~LedgerStorageImpl() override;
 
   // Initializes this LedgerStorageImpl by creating the |content_dir| directory

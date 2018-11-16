@@ -11,9 +11,16 @@
 #include "peridot/bin/ledger/p2p_sync/public/ledger_communicator.h"
 #include "peridot/bin/ledger/storage/impl/ledger_storage_impl.h"
 #include "peridot/bin/ledger/sync_coordinator/public/ledger_sync.h"
+#include "peridot/lib/base64url/base64url.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace ledger {
+namespace {
+// Encodes opaque bytes in a way that is usable as a directory name.
+std::string GetDirectoryName(fxl::StringView bytes) {
+  return base64url::Base64UrlEncode(bytes);
+}
+}  // namespace
 
 LedgerRepositoryImpl::LedgerRepositoryImpl(
     component::ExposedObject exposed_object, DetachedPath content_path,
@@ -114,8 +121,8 @@ Status LedgerRepositoryImpl::GetLedgerManager(
   std::unique_ptr<encryption::EncryptionService> encryption_service =
       encryption_service_factory_.MakeEncryptionService(name_as_string);
   auto ledger_storage = std::make_unique<storage::LedgerStorageImpl>(
-      environment_, encryption_service.get(), db_factory_.get(), content_path_,
-      name_as_string);
+      environment_, encryption_service.get(), db_factory_.get(),
+      GetPathFor(name_as_string));
   storage::Status status = ledger_storage->Init();
   if (status != storage::Status::OK) {
     return PageUtils::ConvertStatus(status);
@@ -202,6 +209,11 @@ void LedgerRepositoryImpl::DiskCleanUp(fit::function<void(Status)> callback) {
       callback(status);
     }
   });
+}
+
+DetachedPath LedgerRepositoryImpl::GetPathFor(fxl::StringView ledger_name) {
+  FXL_DCHECK(!ledger_name.empty());
+  return content_path_.SubPath(GetDirectoryName(ledger_name));
 }
 
 void LedgerRepositoryImpl::GetInstancesList(GetInstancesListCallback callback) {
