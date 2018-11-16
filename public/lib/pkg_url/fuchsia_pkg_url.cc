@@ -11,17 +11,18 @@
 
 namespace component {
 
-constexpr char kFuchsiaPkgPrefix[] = "fuchsia-pkg://";
-// Assume anything between the last / and # is the package name.
-// TODO(CP-110): Support pkg-variant and pkg-hash.
-static const std::regex* const kPackageName = new std::regex("([^/]+)(?=#|$)");
-// Resource path is anything after #.
-static const std::regex* const kHasResource = new std::regex("#");
-static const std::regex* const kResourcePath = new std::regex("([^#]+)$");
+static const std::string kFuchsiaPkgPrefix = "fuchsia-pkg://";
+
+// kFuchsiaPkgRexp has the following group matches:
+// 1: user/domain/port/etc (everything after scheme, before path)
+// 2: package name
+// 3: package variant
+// 4: resource path
+static const std::regex* const kFuchsiaPkgRexp = new std::regex("^fuchsia-pkg://([^/]+)/([^/#]+)(?:/([^/#]+))?(?:#(.+))?$");
 
 // static
 bool FuchsiaPkgUrl::IsFuchsiaPkgScheme(const std::string& url) {
-  return url.find(kFuchsiaPkgPrefix) == 0;
+  return url.compare(0, kFuchsiaPkgPrefix.length(), kFuchsiaPkgPrefix) == 0;
 }
 
 std::string FuchsiaPkgUrl::GetDefaultComponentCmxPath() const {
@@ -36,22 +37,18 @@ bool FuchsiaPkgUrl::Parse(const std::string& url) {
   package_name_.clear();
   resource_path_.clear();
 
-  if (!IsFuchsiaPkgScheme(url)) {
+  std::smatch match_data;
+
+  if (!std::regex_match(url, match_data, *kFuchsiaPkgRexp)) {
     return false;
   }
 
-  url_ = url;
-  std::smatch sm;
-  if (!(std::regex_search(url, sm, *kPackageName) && sm.size() >= 2)) {
-    return false;
-  }
-  package_name_ = sm[1].str();
-  if (std::regex_search(url, sm, *kHasResource)) {
-    if (!(std::regex_search(url, sm, *kResourcePath) && sm.size() >= 2)) {
-      return false;
-    }
-    resource_path_ = sm[1].str();
-  }
+  url_ = match_data[0].str();
+
+  package_name_ = match_data[2].str();
+  // TODO(CP-110): variant_ = match_data[3].str();
+  resource_path_ = match_data[4].str();
+
   return true;
 }
 

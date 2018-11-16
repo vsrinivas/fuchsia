@@ -37,6 +37,16 @@ TEST(FuchsiaPkgUrl, Parse) {
       fp.Parse("fuchsia-pkg://fuchsia.com/component_hello_world#meta/stuff"));
   EXPECT_EQ("component_hello_world", fp.package_name());
   EXPECT_EQ("meta/stuff", fp.resource_path());
+
+  EXPECT_TRUE(
+      fp.Parse("fuchsia-pkg://example.com/data-package#stuff"));
+  EXPECT_EQ("data-package", fp.package_name());
+  EXPECT_EQ("stuff", fp.resource_path());
+
+  EXPECT_TRUE(
+      fp.Parse("fuchsia-pkg://example.com/data-package/variant#stuff"));
+  EXPECT_EQ("data-package", fp.package_name());
+  EXPECT_EQ("stuff", fp.resource_path());
 }
 
 TEST(FuchsiaPkgUrl, pkgfs_dir_path) {
