@@ -16,29 +16,30 @@ namespace cobalt_client {
 struct MetricOptions {
 
     enum class Mode : uint8_t {
-        // Metric is aggregated locally and published
-        // via collector interface.
-        kLocal = 1,
-        // Metric deltas are aggregated locally, and sent
-        // for global agreggation to a remote service.
-        kRemote = 2,
+        // This mode marks a set of options as a placeholder, allowing metric instantiations to
+        // defer initialization to a later stage.
+        kLazy,
+        // Metric is aggregated locally and published via collector interface.
+        kLocal,
+        // Metric deltas are aggregated locally, and sent for global agreggation to a remote
+        // service.
+        kRemote,
         // Combination of kLocal and kRemote.
-        kRemoteAndLocal = 3,
+        kRemoteAndLocal,
     };
 
     void SetMode(Mode mode) { this->mode = mode; }
 
     // Returns true if the metrics supports remote collection.
     // This is values collected by another service, such as Cobalt.
-    bool IsRemote() const {
-        return mode == Mode::kRemote || mode == Mode::kRemoteAndLocal;
-    }
+    bool IsRemote() const { return mode == Mode::kRemote || mode == Mode::kRemoteAndLocal; }
 
     // Returns true if the metric supports in process collection.
     // This is values tied to the process life-time.
-    bool IsLocal() const {
-        return mode == Mode::kLocal || mode == Mode::kRemoteAndLocal;
-    }
+    bool IsLocal() const { return mode == Mode::kLocal || mode == Mode::kRemoteAndLocal; }
+
+    // Returns true if this does not represent a valid configuration, and is in |kLazy| mode.
+    bool IsLazy() const { return mode == Mode::kLazy; }
 
     // Required for local metrics. If not set, and metric is both Local and Remote,
     // this will be generated from the |metric_id|, |event_code|(if not 0) and |component|(if not
@@ -68,7 +69,7 @@ struct MetricOptions {
 
     // Defines whether the metric is local or remote.
     // Internal use, should not be set manually.
-    Mode mode;
+    Mode mode = Mode::kLazy;
 };
 
 // Describes an histogram, and provides data for mapping a value to a given bucket.

@@ -59,6 +59,25 @@ protected:
     BaseCounter<uint64_t> buckets_[num_buckets];
 };
 
+// Free functions to move logic outside the templated class.
+
+// Initializes buckets such that bucket[i].index = i and bucket[i].count = 0.
+void InitBucketBuffer(HistogramBucket* buckets, uint32_t bucket_count);
+
+// Sets |metric_info| to respective values from |options|, and initializes the buckets.
+void InitLazily(const MetricOptions& options, HistogramBucket* buckets, uint32_t num_buckets,
+                RemoteMetricInfo* metric_info);
+
+// Sets the count of each bucket in |bucket_buffer| to the respective value in
+// |buckets|, and sets the count in |buckets| to 0.
+bool HistogramFlush(const RemoteMetricInfo& metric_info, Logger* logger,
+                    BaseCounter<uint64_t>* buckets, HistogramBucket* bucket_buffer,
+                    uint32_t num_buckets);
+
+// Undo's an ungoing Flush effects.
+void HistogramUndoFlush(BaseCounter<uint64_t>* buckets, HistogramBucket* bucket_buffer,
+                        uint32_t num_buckets);
+
 // This class provides a histogram which represents a full fledged cobalt metric. The histogram
 // owner will call |Flush| which is meant to incrementally persist data to cobalt.
 //
@@ -67,13 +86,10 @@ protected:
 template <uint32_t num_buckets>
 class RemoteHistogram : public BaseHistogram<num_buckets>, public FlushInterface {
 public:
-    RemoteHistogram() = delete;
+    RemoteHistogram() = default;
     RemoteHistogram(const RemoteMetricInfo& metric_info)
         : BaseHistogram<num_buckets>(), metric_info_(metric_info) {
-        for (uint32_t i = 0; i < num_buckets; ++i) {
-            bucket_buffer_[i].count = 0;
-            bucket_buffer_[i].index = i;
-        }
+        InitBucketBuffer(bucket_buffer_, num_buckets);
     }
     RemoteHistogram(const RemoteHistogram&) = delete;
     RemoteHistogram(RemoteHistogram&&) = delete;
@@ -81,20 +97,15 @@ public:
     RemoteHistogram& operator=(RemoteHistogram&&) = delete;
     ~RemoteHistogram() override = default;
 
-    bool Flush(Logger* logger) override {
-        // Sets every bucket back to 0, not all buckets will be at the same instant, but
-        // eventual consistency in the backend is good enough.
-        for (uint32_t bucket_index = 0; bucket_index < num_buckets; ++bucket_index) {
-            bucket_buffer_[bucket_index].count = this->buckets_[bucket_index].Exchange();
-        }
-        return logger->Log(metric_info_, bucket_buffer_, num_buckets);
+    void Initialize(const MetricOptions& options) {
+        InitLazily(options, bucket_buffer_, num_buckets, &metric_info_);
     }
 
-    void UndoFlush() override {
-        for (uint32_t bucket_index = 0; bucket_index < num_buckets; ++bucket_index) {
-            this->buckets_[bucket_index].Increment(bucket_buffer_[bucket_index].count);
-        }
+    bool Flush(Logger* logger) override {
+        return HistogramFlush(metric_info_, logger, this->buckets_, bucket_buffer_, num_buckets);
     }
+
+    void UndoFlush() override { HistogramUndoFlush(this->buckets_, bucket_buffer_, num_buckets); }
 
     // Returns the metric_id associated with this remote metric.
     const RemoteMetricInfo& metric_info() const { return metric_info_; }

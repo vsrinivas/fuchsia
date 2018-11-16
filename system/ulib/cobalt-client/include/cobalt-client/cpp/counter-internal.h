@@ -34,9 +34,11 @@ public:
     // All atomic operations use this memory order.
     static constexpr fbl::memory_order kMemoryOrder = fbl::memory_order::memory_order_relaxed;
 
-    BaseCounter() : counter_(0) {}
+    BaseCounter()
+        : counter_(0) {}
     BaseCounter(const BaseCounter&) = delete;
-    BaseCounter(BaseCounter&& other) : counter_(other.Exchange(0)) {}
+    BaseCounter(BaseCounter&& other)
+        : counter_(other.Exchange(0)) {}
     BaseCounter& operator=(const BaseCounter&) = delete;
     BaseCounter& operator=(BaseCounter&&) = delete;
     ~BaseCounter() = default;
@@ -64,7 +66,7 @@ protected:
 // This class is thread-safe except for |Flushing| which is thread-compatible.
 class RemoteCounter : public BaseCounter<int64_t>, public FlushInterface {
 public:
-    RemoteCounter() = delete;
+    RemoteCounter() = default;
     RemoteCounter(const RemoteMetricInfo& metric_info);
     RemoteCounter(const RemoteCounter&) = delete;
     RemoteCounter(RemoteCounter&&);
@@ -75,6 +77,9 @@ public:
     bool Flush(Logger* logger) override;
 
     void UndoFlush() override;
+
+    // Should only be called when default constructed.
+    void Initialize(const MetricOptions& metric_options);
 
     // Returns the metric_id associated with this remote metric.
     const RemoteMetricInfo& metric_info() const { return metric_info_; }

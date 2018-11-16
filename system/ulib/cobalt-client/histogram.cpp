@@ -87,6 +87,39 @@ void LoadLinear(uint32_t bucket_count, HistogramOptions* options) {
 }
 
 } // namespace
+
+void InitBucketBuffer(HistogramBucket* buckets, uint32_t bucket_count) {
+    for (uint32_t i = 0; i < bucket_count; ++i) {
+        buckets[i].count = 0;
+        buckets[i].index = i;
+    }
+}
+
+void InitLazily(const MetricOptions& options, HistogramBucket* buckets, uint32_t num_buckets,
+                RemoteMetricInfo* metric_info) {
+    ZX_DEBUG_ASSERT(!options.IsLazy());
+    *metric_info = RemoteMetricInfo::From(options);
+    InitBucketBuffer(buckets, num_buckets);
+}
+
+bool HistogramFlush(const RemoteMetricInfo& metric_info, Logger* logger,
+                    BaseCounter<uint64_t>* buckets, HistogramBucket* bucket_buffer,
+                    uint32_t num_buckets) {
+    // Sets every bucket back to 0, not all buckets will be at the same instant, but
+    // eventual consistency in the backend is good enough.
+    for (uint32_t bucket_index = 0; bucket_index < num_buckets; ++bucket_index) {
+        bucket_buffer[bucket_index].count = buckets[bucket_index].Exchange();
+    }
+    return logger->Log(metric_info, bucket_buffer, num_buckets);
+}
+
+void HistogramUndoFlush(BaseCounter<uint64_t>* buckets, HistogramBucket* bucket_buffer,
+                        uint32_t num_buckets) {
+    for (uint32_t bucket_index = 0; bucket_index < num_buckets; ++bucket_index) {
+        buckets[bucket_index].Increment(bucket_buffer[bucket_index].count);
+    }
+}
+
 } // namespace internal
 
 HistogramOptions::HistogramOptions(const HistogramOptions&) = default;

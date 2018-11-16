@@ -19,6 +19,7 @@ bool TestLocal() {
     options.SetMode(MetricOptions::Mode::kLocal);
     ASSERT_TRUE(options.IsLocal());
     ASSERT_FALSE(options.IsRemote());
+    ASSERT_FALSE(options.IsLazy());
     END_TEST;
 }
 
@@ -26,8 +27,9 @@ bool TestRemote() {
     BEGIN_TEST;
     MetricOptions options;
     options.SetMode(MetricOptions::Mode::kRemote);
-    ASSERT_TRUE(options.IsRemote());
-    ASSERT_FALSE(options.IsLocal());
+    EXPECT_TRUE(options.IsRemote());
+    EXPECT_FALSE(options.IsLocal());
+    EXPECT_FALSE(options.IsLazy());
     END_TEST;
 }
 
@@ -35,8 +37,19 @@ bool TestLocalAndRemote() {
     BEGIN_TEST;
     MetricOptions options;
     options.SetMode(MetricOptions::Mode::kRemoteAndLocal);
-    ASSERT_TRUE(options.IsRemote());
-    ASSERT_TRUE(options.IsLocal());
+    EXPECT_TRUE(options.IsRemote());
+    EXPECT_TRUE(options.IsLocal());
+    EXPECT_FALSE(options.IsLazy());
+    END_TEST;
+}
+
+bool TestLazy() {
+    BEGIN_TEST;
+    MetricOptions options;
+    options.SetMode(MetricOptions::Mode::kLazy);
+    EXPECT_TRUE(options.IsLazy());
+    EXPECT_FALSE(options.IsRemote());
+    EXPECT_FALSE(options.IsLocal());
     END_TEST;
 }
 
@@ -178,6 +191,7 @@ BEGIN_TEST_CASE(MetricOptionsTest)
 RUN_TEST(TestLocal)
 RUN_TEST(TestRemote)
 RUN_TEST(TestLocalAndRemote)
+RUN_TEST(TestLazy)
 END_TEST_CASE(MetricOptionsTest);
 
 BEGIN_TEST_CASE(HistogramOptionsTest)

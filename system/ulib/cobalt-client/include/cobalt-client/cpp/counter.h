@@ -23,26 +23,18 @@ public:
     // Underlying type used for representing an actual counter.
     using Count = uint64_t;
 
-    Counter() = delete;
-    Counter(const MetricOptions& options)
-        : remote_counter_(internal::RemoteMetricInfo::From(options)) {}
-    Counter(const MetricOptions& options, Collector* collector)
-        : remote_counter_(internal::RemoteMetricInfo::From(options)) {
-        collector_ = collector;
-        collector_->Subscribe(&remote_counter_);
-    };
+    Counter() = default;
+    Counter(const MetricOptions& options);
+    Counter(const MetricOptions& options, Collector* collector);
     // Constructor for internal use only.
-    Counter(const MetricOptions& options, internal::FlushInterface** flush_interface)
-        : remote_counter_(internal::RemoteMetricInfo::From(options)) {
-        *flush_interface = &remote_counter_;
-    };
+    Counter(const MetricOptions& options, internal::FlushInterface** flush_interface);
     Counter(const Counter& other) = delete;
     Counter(Counter&&) = delete;
-    ~Counter() {
-        if (collector_ != nullptr) {
-            collector_->UnSubscribe(&remote_counter_);
-        }
-    }
+    ~Counter();
+
+    // Optionally initialize lazily the histogram, if is more readable to do so
+    // in the constructor or function body.
+    void Initialize(const MetricOptions& options, Collector* collector);
 
     // Increments the counter value by |value|. This applies to local and remote
     // values of the counter.
@@ -55,6 +47,7 @@ public:
 private:
     internal::RemoteCounter remote_counter_;
     Collector* collector_ = nullptr;
+    MetricOptions::Mode mode_ = MetricOptions::Mode::kLazy;
 };
 
 } // namespace cobalt_client
