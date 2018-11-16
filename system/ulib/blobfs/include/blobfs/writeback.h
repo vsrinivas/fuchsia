@@ -124,9 +124,9 @@ public:
     WritebackWork(Blobfs* bs, fbl::RefPtr<VnodeBlob> vnode);
     ~WritebackWork() = default;
 
-    // Returns the WritebackWork to the default state that it was in
-    // after being created. Takes in the |reason| it is being reset.
-    void Reset(zx_status_t reason);
+    // Sets the WritebackWork to a completed state. |status| should indicate whether the work was
+    // completed successfully.
+    void MarkCompleted(zx_status_t status);
 
     // Returns true if the WritebackWork is "ready" to be processed. This is always true unless a
     // "ready callback" exists, in which case that callback determines the state of readiness. Once

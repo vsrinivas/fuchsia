@@ -101,9 +101,9 @@ zx_status_t WriteTxn::Flush() {
     return status;
 }
 
-void WritebackWork::Reset(zx_status_t reason) {
+void WritebackWork::MarkCompleted(zx_status_t status) {
     WriteTxn::Reset();
-    InvokeSyncCallback(reason);
+    InvokeSyncCallback(status);
     ResetInternal();
 }
 
@@ -449,8 +449,8 @@ int WritebackQueue::WritebackThread(void* arg) {
             b->lock_.Release();
 
             if (error) {
-                // If we are in a read only state, reset the work without completing it.
-                work->Reset(ZX_ERR_BAD_STATE);
+                // If we are in a read only state, mark the work complete with an error status.
+                work->MarkCompleted(ZX_ERR_BAD_STATE);
             } else {
                 // If we should complete the work, make sure it has been buffered.
                 // (This is not necessary if we are currently in an error state).

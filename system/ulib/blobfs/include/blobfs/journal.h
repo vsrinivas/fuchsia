@@ -57,7 +57,7 @@ public:
     // pending sync closures within the work.
     void ForceReset() {
         if (work_ != nullptr) {
-            work_->Reset(ZX_ERR_BAD_STATE);
+            work_->MarkCompleted(ZX_ERR_BAD_STATE);
         }
     }
 
@@ -417,6 +417,7 @@ public:
                                                       context_(ProcessorContext::kDefault) {}
 
     ~JournalProcessor() {
+        ZX_ASSERT(IsEmpty());
         SetContext(ProcessorContext::kDefault);
     }
 
@@ -433,7 +434,10 @@ public:
 
     void ResetWork() {
         if (work_ != nullptr) {
-            work_->Reset(ZX_ERR_BAD_STATE);
+            // WritebackWork must be marked complete here to avoid failing the assertion that
+            // pending write requests do not still exist on WriteTxn destruction.
+            work_->MarkCompleted(ZX_ERR_BAD_STATE);
+            work_.reset();
         }
     }
 

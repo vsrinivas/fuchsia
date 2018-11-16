@@ -825,8 +825,8 @@ zx_status_t Blobfs::EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType
         __FALLTHROUGH;
     default:
         // The file system is currently in a readonly state.
-        // Reset the work to ensure that any callbacks are completed.
-        work->Reset(ZX_ERR_BAD_STATE);
+        // Mark the work complete to ensure that any pending callbacks are invoked.
+        work->MarkCompleted(ZX_ERR_BAD_STATE);
         return ZX_ERR_BAD_STATE;
     }
 }

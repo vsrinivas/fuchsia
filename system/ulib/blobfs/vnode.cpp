@@ -552,7 +552,7 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
         // to avoid asserting that no write requests exist on destruction.
         auto set_error = fbl::MakeAutoCall([&]() {
             if (wb != nullptr) {
-                wb->Reset(ZX_ERR_BAD_STATE);
+                wb->MarkCompleted(ZX_ERR_BAD_STATE);
             }
 
             SetState(kBlobStateError);
