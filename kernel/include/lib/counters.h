@@ -37,11 +37,10 @@ __BEGIN_CDECLS
 //             "kernel.exceptions.fpu"
 //             "kernel.handles.new"
 //
-//  Reading the counters in code
-//  Don't. The counters are maintained in a per-cpu arena and
-//  atomic operations are never used to set their value so
-//  they are both imprecise and reflect only the operations
-//  on a particular core.
+// Reading the counters in code
+// Don't. The counters are maintained in a per-cpu arena and atomic
+// operations are never used to set their value so they are both
+// imprecise and reflect only the operations on a particular core.
 
 struct k_counter_desc {
     const char* name;

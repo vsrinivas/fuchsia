@@ -6,6 +6,7 @@
 
 #include <lib/counters.h>
 
+#include <stdlib.h>
 #include <string.h>
 
 #include <arch/ops.h>
@@ -23,6 +24,7 @@
 #include <lk/init.h>
 
 #include <lib/console.h>
+#include <lib/counters_private.h>
 
 // The arena is allocated in kernel.ld linker script.
 extern int64_t kcounters_arena[];
@@ -77,7 +79,74 @@ static void counters_init(unsigned level) {
     }
 }
 
-static void dump_counter(const k_counter_desc* desc) {
+// Collapse values to only non-zero ones and sort.
+void counters_clean_up_values(const uint64_t* values_in, uint64_t* values_out, size_t* count_out) {
+  assert(values_in != values_out);
+
+  *count_out = 0;
+  for (size_t i = 0; i < SMP_MAX_CPUS; ++i) {
+    if (values_in[i] > 0) {
+      values_out[(*count_out)++] = values_in[i];
+    }
+  }
+
+  qsort(values_out, *count_out, sizeof(uint64_t), [](const void* a, const void* b) {
+      return (*((uint64_t*)a) > *((uint64_t*)b)) - (*((uint64_t*)a) < *((uint64_t*)b));
+  });
+}
+
+static constexpr uint64_t DOT8_SHIFT = 8;
+
+// This calculation tries to match what sheets.google.com uses for QUARTILE()
+// and PERCENTAGE(), however this uses 56.8 rather than floating point.
+// https://en.wikipedia.org/wiki/Percentile#The_linear_interpolation_between_closest_ranks_method
+// This is just a linear interpolation between the items bracketing that
+// percentage. The input value array must be sorted on entry to this function.
+uint64_t counters_get_percentile(const uint64_t* values, size_t count, uint64_t percentage_dot8) {
+    assert(count >= 2);
+
+    uint64_t target_dot8 = (count - 1) * percentage_dot8;
+    uint64_t low_index = target_dot8 >> DOT8_SHIFT;
+    uint64_t high_index = low_index + 1;
+    uint64_t fraction_dot8 = target_dot8 & 0xff;
+
+    uint64_t delta = values[high_index] - values[low_index];
+    return ((values[low_index] << DOT8_SHIFT) + fraction_dot8 * delta);
+}
+
+bool counters_has_outlier(const uint64_t* values_in) {
+    uint64_t values[SMP_MAX_CPUS];
+    size_t count;
+    counters_clean_up_values(values_in, values, &count);
+    if (count < 2)
+        return false;
+
+    // If there's a value that's an outlier per
+    // https://en.wikipedia.org/wiki/Outlier#Tukey's_fences, then we deem it
+    // worth outputting the per-core values. This is not perfect, but it is
+    // somewhat tricky to determine outliers for small data sets. We typically
+    // have something like 4 cores here, and e.g. calculating standard deviation
+    // is not useful for so few values.
+    const uint64_t q1_dot8 = counters_get_percentile(values, count, /*0.25*/ 64);
+    const uint64_t q3_dot8 = counters_get_percentile(values, count, /*0.75*/ 192);
+    const uint64_t k_dot8 = /*1.5*/ 384;
+    const uint64_t q_delta_dot8 = q3_dot8 - q1_dot8;
+    const int64_t low_dot8 =
+        q1_dot8 - static_cast<int64_t>(((k_dot8 * q_delta_dot8) >> DOT8_SHIFT));
+    const int64_t high_dot8 =
+        q3_dot8 + static_cast<int64_t>(((k_dot8 * q_delta_dot8) >> DOT8_SHIFT));
+
+    for (size_t i = 0; i < count; ++i) {
+      if ((static_cast<int64_t>(values[i]) << DOT8_SHIFT) < low_dot8 ||
+          (static_cast<int64_t>(values[i]) << DOT8_SHIFT) > high_dot8) {
+        return true;
+      }
+  }
+
+  return false;
+}
+
+static void dump_counter(const k_counter_desc* desc, bool verbose) {
     size_t counter_index = kcounter_index(desc);
 
     uint64_t sum = 0;
@@ -93,23 +162,28 @@ static void dump_counter(const k_counter_desc* desc) {
     if (sum == 0u)
         return;
 
-    // Print the per-core counts when the sum is not zero.
-    printf("     ");
-    for (size_t ix = 0; ix != SMP_MAX_CPUS; ++ix) {
-        if (values[ix] > 0)
-            printf("[%zu:%lu]", ix, values[ix]);
+    // Print the per-core counts if verbose (-v) is set and it's not zero, or if
+    // a value for one of the cores indicates it's an outlier.
+    if (verbose || counters_has_outlier(values)) {
+        printf("     ");
+        for (size_t ix = 0; ix != SMP_MAX_CPUS; ++ix) {
+            if (values[ix] > 0) {
+                printf("[%zu:%lu]", ix, values[ix]);
+            }
+        }
+        printf("\n");
     }
-    printf("\n");
 }
 
-static void dump_all_counters() {
+static void dump_all_counters(bool verbose) {
     printf("%zu counters available:\n", get_num_counters());
     for (auto it = kcountdesc_begin; it != kcountdesc_end; ++it) {
-        dump_counter(it);
+        dump_counter(it, verbose);
     }
 }
 
 static int watcher_thread_fn(void* arg) {
+    bool verbose = static_cast<bool>(reinterpret_cast<uintptr_t>(arg));
     while (true) {
         {
             fbl::AutoLock lock(&watcher_lock);
@@ -120,7 +194,7 @@ static int watcher_thread_fn(void* arg) {
 
             watched_counter_t* wc;
             list_for_every_entry (&watcher_list, wc, watched_counter_t, node) {
-                dump_counter(wc->desc);
+                dump_counter(wc->desc, verbose);
             }
         }
 
@@ -129,9 +203,18 @@ static int watcher_thread_fn(void* arg) {
 }
 
 static int view_counter(int argc, const cmd_args* argv) {
+    bool verbose = false;
+    if (argc == 3) {
+        if (strcmp(argv[1].str, "-v") == 0) {
+            verbose = true;
+            argc--;
+            argv++;
+        }
+    }
+
     if (argc == 2) {
-        if (strcmp(argv[1].str, "--all") == 0) {
-            dump_all_counters();
+        if (strcmp(argv[1].str, "all") == 0) {
+            dump_all_counters(verbose);
         } else {
             int num_results = 0;
             auto name = argv[1].str;
@@ -139,21 +222,21 @@ static int view_counter(int argc, const cmd_args* argv) {
             while (desc != kcountdesc_end) {
                 if (!prefix_match(name, desc->name))
                     break;
-                dump_counter(desc);
+                dump_counter(desc, verbose);
                 ++num_results;
                 ++desc;
             }
             if (num_results == 0) {
-                printf("counter '%s' not found, try --all\n", name);
+                printf("counter '%s' not found, try all\n", name);
             } else {
                 printf("%d counters found\n", num_results);
             }
         }
     } else {
         printf(
-            "counters view <counter-name>\n"
-            "counters view <counter-prefix>\n"
-            "counters view --all\n"
+            "counters view [-v] <counter-name>\n"
+            "counters view [-v] <counter-prefix>\n"
+            "counters view [-v] all\n"
         );
         return 1;
     }
@@ -162,8 +245,17 @@ static int view_counter(int argc, const cmd_args* argv) {
 }
 
 static int watch_counter(int argc, const cmd_args* argv) {
+    bool verbose = false;
+    if (argc == 3) {
+        if (strcmp(argv[1].str, "-v") == 0) {
+            verbose = true;
+            argc--;
+            argv++;
+        }
+    }
+
     if (argc == 2) {
-        if (strcmp(argv[1].str, "--stop") == 0) {
+        if (strcmp(argv[1].str, "stop") == 0) {
             fbl::AutoLock lock(&watcher_lock);
             watched_counter_t* wc;
             while ((wc = list_remove_head_type(
@@ -198,7 +290,8 @@ static int watch_counter(int argc, const cmd_args* argv) {
             list_add_head(&watcher_list, &wc->node);
             if (watcher_thread == nullptr) {
                 watcher_thread = thread_create(
-                    "counter-watcher", watcher_thread_fn, nullptr, LOW_PRIORITY);
+                    "counter-watcher", watcher_thread_fn,
+                    reinterpret_cast<void*>(static_cast<uintptr_t>(verbose)), LOW_PRIORITY);
                 if (watcher_thread == nullptr) {
                     printf("no memory for watcher thread\n");
                     return 1;
@@ -209,8 +302,8 @@ static int watch_counter(int argc, const cmd_args* argv) {
 
     } else {
         printf(
-            "counters watch <counter-id>\n"
-            "counters watch --stop\n"
+            "counters watch [-v] <counter-id>\n"
+            "counters watch stop\n"
         );
     }
 
@@ -229,8 +322,8 @@ static int cmd_counters(int argc, const cmd_args* argv, uint32_t flags) {
 
     printf(
         "inspect system counters:\n"
-        "  counters view <name>\n"
-        "  counters watch <id>\n"
+        "  counters view [-v] <name>\n"
+        "  counters watch [-v] <id>\n"
     );
     return 0;
 }
