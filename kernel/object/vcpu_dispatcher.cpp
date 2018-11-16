@@ -43,9 +43,9 @@ zx_status_t VcpuDispatcher::Resume(zx_port_packet_t* packet) {
     return vcpu_->Resume(packet);
 }
 
-cpu_mask_t VcpuDispatcher::Interrupt(uint32_t vector, hypervisor::InterruptType type) {
+cpu_mask_t VcpuDispatcher::PhysicalInterrupt(uint32_t vector) {
     canary_.Assert();
-    return vcpu_->Interrupt(vector, type);
+    return vcpu_->Interrupt(vector, hypervisor::InterruptType::PHYSICAL);
 }
 
 void VcpuDispatcher::VirtualInterrupt(uint32_t vector) {

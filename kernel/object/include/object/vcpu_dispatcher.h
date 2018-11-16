@@ -6,7 +6,6 @@
 
 #pragma once
 
-#include <hypervisor/interrupt_tracker.h>
 #include <object/dispatcher.h>
 #include <zircon/rights.h>
 
@@ -28,7 +27,7 @@ public:
     zx_status_t Resume(zx_port_packet_t* packet);
     // Adds an interrupt vector to the list of pending interrupts. If the VCPU
     // is running, this returns a CPU mask that can be used to interrupt it.
-    cpu_mask_t Interrupt(uint32_t vector, hypervisor::InterruptType type);
+    cpu_mask_t PhysicalInterrupt(uint32_t vector);
     void VirtualInterrupt(uint32_t vector);
     zx_status_t ReadState(uint32_t kind, void* buffer, size_t len) const;
     zx_status_t WriteState(uint32_t kind, const void* buffer, size_t len);

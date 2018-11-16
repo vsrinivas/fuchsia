@@ -151,7 +151,7 @@ void InterruptEventDispatcher::VcpuInterruptHandler() {
     Guard<SpinLock, IrqSave> guard{&spinlock_};
     cpu_mask_t mask = 0;
     for (const auto& vcpu : vcpus_) {
-        mask |= vcpu->Interrupt(vector_, hypervisor::InterruptType::PHYSICAL);
+        mask |= vcpu->PhysicalInterrupt(vector_);
     }
     if (mask != 0) {
         mp_interrupt(MP_IPI_TARGET_MASK, mask);
