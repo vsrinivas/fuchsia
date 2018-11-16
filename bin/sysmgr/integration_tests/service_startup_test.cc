@@ -33,6 +33,9 @@ TEST_F(TestSysmgr, ServiceStartup) {
   },
   "startup_services": [
     "fuchsia.amber.Control"
+  ],
+  "update_dependencies": [
+    "fuchsia.amber.Control"
   ]
 })";
   sysmgr_args.push_back(kSysmgrConfig);

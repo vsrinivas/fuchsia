@@ -33,12 +33,17 @@ App::App(Config config)
       svc_root_(fbl::AdoptRef(new fs::PseudoDir())) {
   FXL_DCHECK(startup_context_);
 
+  // The set of excluded services below are services that are the transitive
+  // closure of dependencies required for auto-updates that must not be resolved
+  // via the update service.
+  const auto update_dependencies = config.TakeUpdateDependencies();
+  std::unordered_set<std::string> update_dependency_urls;
+
   // Register services.
-  static const char* const kAmberName = fuchsia::amber::Control::Name_;
-  std::string amber_url;
   for (auto& pair : config.TakeServices()) {
-    if (pair.first == kAmberName) {
-      amber_url = *pair.second->url;
+    if (std::find(update_dependencies.begin(), update_dependencies.end(),
+                  pair.first) != std::end(update_dependencies)) {
+      update_dependency_urls.insert(*pair.second->url);
     }
     RegisterSingleton(pair.first, std::move(pair.second));
   }
@@ -56,15 +61,30 @@ App::App(Config config)
   // |env_services_| is initialized.
   fuchsia::amber::ControlPtr amber_ctl;
   if (kAutoUpdatePackages) {
-    if (amber_url.empty()) {
-      FXL_LOG(WARNING) << "auto_update_packages = true but amber is not "
-                       << "in sys environment. Disabling auto-updates.";
+    static const char* const kAmberName = fuchsia::amber::Control::Name_;
+    bool amber_missing =
+        std::find(update_dependencies.begin(), update_dependencies.end(),
+                  kAmberName) == update_dependencies.end();
+    // Check if any component urls that are excluded (dependencies of
+    // Amber/startup) were not registered from the above configuration.
+    bool missing_services = false;
+    for (auto& dep : update_dependencies) {
+      if (std::find(svc_names_->begin(), svc_names_->end(), dep) ==
+          svc_names_->end()) {
+        FXL_LOG(WARNING) << "missing service required for auto updates: " << dep;
+        missing_services = true;
+      }
+    }
+    if (amber_missing || missing_services) {
+      FXL_LOG(WARNING) << "auto_update_packages = true but some update "
+                          "dependencies are missing in the sys environment. "
+                          "Disabling auto-updates.";
     } else {
       env_services_->ConnectToService(kAmberName,
                                       amber_ctl.NewRequest().TakeChannel());
     }
   }
-  RegisterAppLoaders(config.TakeAppLoaders(), std::move(amber_url),
+  RegisterAppLoaders(config.TakeAppLoaders(), std::move(update_dependency_urls),
                      std::move(amber_ctl));
 
   // Set up environment for the programs we will run.
@@ -148,11 +168,11 @@ void App::RegisterSingleton(std::string service_name,
 }
 
 void App::RegisterAppLoaders(Config::ServiceMap app_loaders,
-                             std::string amber_url,
+                             std::unordered_set<std::string> update_dependency_urls,
                              fuchsia::amber::ControlPtr amber_ctl) {
   if (amber_ctl) {
     app_loader_ = DelegatingLoader::MakeWithPackageUpdatingFallback(
-        std::move(app_loaders), env_launcher_.get(), std::move(amber_url),
+        std::move(app_loaders), env_launcher_.get(), std::move(update_dependency_urls),
         std::move(amber_ctl));
   } else {
     app_loader_ = DelegatingLoader::MakeWithParentFallback(

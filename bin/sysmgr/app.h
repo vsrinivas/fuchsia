@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <unordered_set>
 
 #include <fs/managed-vfs.h>
 #include <fuchsia/amber/cpp/fidl.h>
@@ -39,7 +40,8 @@ class App {
   void RegisterSingleton(std::string service_name,
                          fuchsia::sys::LaunchInfoPtr launch_info);
   void RegisterDefaultServiceConnector();
-  void RegisterAppLoaders(Config::ServiceMap app_loaders, std::string amber_url,
+  void RegisterAppLoaders(Config::ServiceMap app_loaders,
+                          std::unordered_set<std::string> update_dependency_urls,
                           fuchsia::amber::ControlPtr amber_ctl);
   void LaunchApplication(fuchsia::sys::LaunchInfo launch_info);
 

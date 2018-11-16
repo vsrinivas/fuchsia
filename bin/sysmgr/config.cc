@@ -20,6 +20,7 @@ constexpr char kAppLoaders[] = "loaders";
 constexpr char kApps[] = "apps";
 constexpr char kServices[] = "services";
 constexpr char kStartupServices[] = "startup_services";
+constexpr char kUpdateDependencies[] = "update_dependencies";
 
 }  // namespace
 
@@ -82,6 +83,23 @@ void Config::ParseDocument(rapidjson::Document document) {
             [](const rapidjson::Value& val) { return val.IsString(); })) {
       for (const auto& service : value.GetArray()) {
         startup_services_.push_back(service.GetString());
+      }
+    } else {
+      json_parser_.ReportError(
+          StringPrintf("'%s' is not an array of strings.", name));
+    }
+  }
+
+  auto update_dependencies_it = document.FindMember(kUpdateDependencies);
+  if (update_dependencies_it != document.MemberEnd()) {
+    const auto& value = update_dependencies_it->value;
+    const auto* name = update_dependencies_it->name.GetString();
+    if (value.IsArray() &&
+        std::all_of(
+            value.GetArray().begin(), value.GetArray().end(),
+            [](const rapidjson::Value& val) { return val.IsString(); })) {
+      for (const auto& service : value.GetArray()) {
+        update_dependencies_.push_back(service.GetString());
       }
     } else {
       json_parser_.ReportError(

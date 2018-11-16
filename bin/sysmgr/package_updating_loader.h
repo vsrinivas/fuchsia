@@ -6,6 +6,7 @@
 #define GARNET_BIN_SYSMGR_PACKAGE_UPDATING_LOADER_H_
 
 #include <string>
+#include <unordered_set>
 
 #include <fuchsia/amber/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
@@ -23,7 +24,7 @@ class PackageUpdatingLoader final : public component::PackageLoader {
  public:
   typedef fit::function<void(std::string)> DoneCallback;
 
-  PackageUpdatingLoader(std::string amber_url,
+  PackageUpdatingLoader(std::unordered_set<std::string> update_dependency_urls,
                         fuchsia::amber::ControlPtr amber_ctl,
                         async_dispatcher_t* dispatcher);
   ~PackageUpdatingLoader() override;
@@ -43,7 +44,7 @@ class PackageUpdatingLoader final : public component::PackageLoader {
                                   const zx_packet_signal_t* signal,
                                   bool daemon_err, DoneCallback done_cb);
 
-  const std::string amber_url_;
+  const std::unordered_set<std::string> update_dependency_urls_;
   fuchsia::amber::ControlPtr amber_ctl_;
   async_dispatcher_t* const dispatcher_;  // Not owned.
 

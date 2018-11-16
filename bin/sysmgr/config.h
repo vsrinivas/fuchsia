@@ -24,6 +24,7 @@ class Config {
   using ServiceMap =
       std::unordered_map<std::string, fuchsia::sys::LaunchInfoPtr>;
   using StartupServiceVector = std::vector<std::string>;
+  using UpdateDependencies = std::vector<std::string>;
   using AppVector = std::vector<fuchsia::sys::LaunchInfoPtr>;
 
   Config() = default;
@@ -47,6 +48,10 @@ class Config {
     return std::move(startup_services_);
   }
 
+  UpdateDependencies TakeUpdateDependencies() {
+    return std::move(update_dependencies_);
+  }
+
   ServiceMap TakeAppLoaders() { return std::move(app_loaders_); }
 
   AppVector TakeApps() { return std::move(apps_); }
@@ -60,6 +65,7 @@ class Config {
 
   ServiceMap services_;
   StartupServiceVector startup_services_;
+  UpdateDependencies update_dependencies_;
   ServiceMap app_loaders_;
   AppVector apps_;
   json::JSONParser json_parser_;

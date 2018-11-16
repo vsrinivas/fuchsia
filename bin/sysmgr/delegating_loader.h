@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <fuchsia/amber/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -31,7 +32,8 @@ class DelegatingLoader : public fuchsia::sys::Loader {
       fuchsia::sys::LoaderPtr fallback);
   static std::unique_ptr<DelegatingLoader> MakeWithPackageUpdatingFallback(
       Config::ServiceMap delegates, fuchsia::sys::Launcher* delegate_launcher,
-      std::string amber_url, fuchsia::amber::ControlPtr amber_ctl);
+      std::unordered_set<std::string> update_dependency_urls,
+      fuchsia::amber::ControlPtr amber_ctl);
   ~DelegatingLoader() override;
 
   // |Loader|:
@@ -41,7 +43,8 @@ class DelegatingLoader : public fuchsia::sys::Loader {
   // |fallback| xor |amber_ctl| is set.
   DelegatingLoader(Config::ServiceMap delegates,
                    fuchsia::sys::Launcher* delegate_launcher,
-                   fuchsia::sys::LoaderPtr fallback, std::string amber_url,
+                   fuchsia::sys::LoaderPtr fallback,
+                   std::unordered_set<std::string> update_dependency_urls,
                    fuchsia::amber::ControlPtr amber_ctl);
 
   struct LoaderRecord {

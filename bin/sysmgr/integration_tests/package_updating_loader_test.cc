@@ -86,7 +86,7 @@ class PackageUpdatingLoaderTest
     fuchsia::amber::ControlPtr amber_ctl;
     amber_service->AddBinding(amber_ctl.NewRequest(dispatcher()));
     loader_ = std::make_unique<PackageUpdatingLoader>(
-        "my_amber", std::move(amber_ctl), dispatcher());
+        std::unordered_set<std::string>{"my_amber"}, std::move(amber_ctl), dispatcher());
     loader_service_ =
         fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
           loader_->AddBinding(

@@ -13,20 +13,22 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/io/fd.h"
 #include "lib/fsl/vmo/file.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/substitute.h"
+#include "lib/pkg_url/url_resolver.h"
 #include "lib/svc/cpp/services.h"
 
 namespace sysmgr {
 
 PackageUpdatingLoader::PackageUpdatingLoader(
-    std::string amber_url, fuchsia::amber::ControlPtr amber_ctl,
-    async_dispatcher_t* dispatcher)
-    : amber_url_(std::move(amber_url)),
+    std::unordered_set<std::string> update_dependency_urls,
+    fuchsia::amber::ControlPtr amber_ctl, async_dispatcher_t* dispatcher)
+    : update_dependency_urls_(std::move(update_dependency_urls)),
       amber_ctl_(std::move(amber_ctl)),
       dispatcher_(dispatcher) {}
 
@@ -36,7 +38,14 @@ void PackageUpdatingLoader::LoadUrl(fidl::StringPtr url,
                                     LoadUrlCallback callback) {
   // The updating loader can only update fuchsia-pkg URLs.
   component::FuchsiaPkgUrl fuchsia_url;
-  if (!fuchsia_url.Parse(url)) {
+  bool parsed = false;
+  if (component::FuchsiaPkgUrl::IsFuchsiaPkgScheme(url)) {
+    parsed = fuchsia_url.Parse(url);
+  } else {
+    parsed =
+        fuchsia_url.Parse("fuchsia-pkg://fuchsia.com/" + component::GetPathFromURL(url));
+  }
+  if (!parsed) {
     PackageLoader::LoadUrl(url, callback);
     return;
   }
@@ -53,10 +62,11 @@ void PackageUpdatingLoader::LoadUrl(fidl::StringPtr url,
     PackageLoader::LoadUrl(url, callback);
   };
 
-  if (url == amber_url_) {
-    // Avoid infinite reentry: Don't attempt to update the amber package
-    // when starting amber. Contacting the amber service may require starting
-    // its component, which would end up back here.
+  if (std::find(update_dependency_urls_.begin(), update_dependency_urls_.end(),
+                url) != std::end(update_dependency_urls_)) {
+    // Avoid infinite reentry and cycles: Don't attempt to update the amber or
+    // any dependent package. Contacting the amber service may require starting
+    // its component or a dependency, which would end up back here.
     done_cb("");
     return;
   }

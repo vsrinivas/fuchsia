@@ -24,26 +24,26 @@ std::string GetScheme(const std::string& url) {
 std::unique_ptr<DelegatingLoader> DelegatingLoader::MakeWithParentFallback(
     Config::ServiceMap delegates, fuchsia::sys::Launcher* delegate_launcher,
     fuchsia::sys::LoaderPtr fallback) {
-  return std::unique_ptr<DelegatingLoader>(
-      new DelegatingLoader(std::move(delegates), delegate_launcher,
-                           std::move(fallback), "", nullptr));
+  return std::unique_ptr<DelegatingLoader>(new DelegatingLoader(
+      std::move(delegates), delegate_launcher, std::move(fallback),
+      std::unordered_set<std::string>{}, nullptr));
 }
 
 // static
 std::unique_ptr<DelegatingLoader>
 DelegatingLoader::MakeWithPackageUpdatingFallback(
     Config::ServiceMap delegates, fuchsia::sys::Launcher* delegate_launcher,
-    std::string amber_url, fuchsia::amber::ControlPtr amber_ctl) {
+    std::unordered_set<std::string> update_dependency_urls, fuchsia::amber::ControlPtr amber_ctl) {
   return std::unique_ptr<DelegatingLoader>(
       new DelegatingLoader(std::move(delegates), delegate_launcher, nullptr,
-                           std::move(amber_url), std::move(amber_ctl)));
+                           std::move(update_dependency_urls), std::move(amber_ctl)));
 }
 
-DelegatingLoader::DelegatingLoader(Config::ServiceMap delegates,
-                                   fuchsia::sys::Launcher* delegate_launcher,
-                                   fuchsia::sys::LoaderPtr fallback,
-                                   std::string amber_url,
-                                   fuchsia::amber::ControlPtr amber_ctl)
+DelegatingLoader::DelegatingLoader(
+    Config::ServiceMap delegates, fuchsia::sys::Launcher* delegate_launcher,
+    fuchsia::sys::LoaderPtr fallback,
+    std::unordered_set<std::string> update_dependency_urls,
+    fuchsia::amber::ControlPtr amber_ctl)
     : delegate_launcher_(delegate_launcher),
       parent_fallback_(std::move(fallback)) {
   for (auto& pair : delegates) {
@@ -53,7 +53,7 @@ DelegatingLoader::DelegatingLoader(Config::ServiceMap delegates,
   }
   if (amber_ctl) {
     package_updating_fallback_ = std::make_unique<PackageUpdatingLoader>(
-        std::move(amber_url), std::move(amber_ctl),
+        std::move(update_dependency_urls), std::move(amber_ctl),
         async_get_default_dispatcher());
   }
 }
