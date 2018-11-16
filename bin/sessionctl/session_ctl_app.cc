@@ -1,98 +1,150 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 #include "peridot/bin/sessionctl/session_ctl_app.h"
+#include "peridot/bin/sessionctl/session_ctl_constants.h"
 
 namespace modular {
 
 SessionCtlApp::SessionCtlApp(
     fuchsia::modular::PuppetMaster* const puppet_master,
-    const fxl::CommandLine& command_line, const modular::Logger& logger,
-    async_dispatcher_t* const dispatcher,
+    const modular::Logger& logger, async_dispatcher_t* const dispatcher,
     const std::function<void()>& on_command_executed)
     : puppet_master_(puppet_master),
-      command_line_(command_line),
       logger_(logger),
       dispatcher_(dispatcher),
       on_command_executed_(on_command_executed) {}
 
-std::string SessionCtlApp::ExecuteRemoveModCommand() {
+std::string SessionCtlApp::ExecuteCommand(
+    std::string cmd, const fxl::CommandLine& command_line) {
+  if (cmd == kAddModCommandString) {
+    return ExecuteAddModCommand(command_line);
+  } else if (cmd == kRemoveModCommandString) {
+    return ExecuteRemoveModCommand(command_line);
+  } else if (cmd == kDeleteStoryCommandString) {
+    return ExecuteDeleteStoryCommand(command_line);
+  } else {
+    return kGetUsageErrorString;
+  }
+}
+
+std::string SessionCtlApp::ExecuteRemoveModCommand(
+    const fxl::CommandLine& command_line) {
   std::string story_name;
   std::string mod_name;
   std::vector<std::string> missing_flags;
 
-  if (command_line_.HasOption("story_name")) {
-    command_line_.GetOptionValue("story_name", &story_name);
+  if (command_line.HasOption(kStoryNameFlagString)) {
+    command_line.GetOptionValue(kStoryNameFlagString, &story_name);
   } else {
-    missing_flags.push_back("story_name");
+    missing_flags.push_back(kStoryNameFlagString);
   }
 
-  if (command_line_.HasOption("mod_name")) {
-    command_line_.GetOptionValue("mod_name", &mod_name);
+  if (command_line.HasOption(kModNameFlagString)) {
+    command_line.GetOptionValue(kModNameFlagString, &mod_name);
   } else {
-    missing_flags.push_back("mod_name");
+    missing_flags.push_back(kModNameFlagString);
   }
 
   std::string parsing_error = GenerateMissingFlagString(missing_flags);
   if (!parsing_error.empty()) {
-    logger_.LogError("remove_mod", parsing_error);
+    logger_.LogError(kAddModCommandString, parsing_error);
     return parsing_error;
   }
 
   auto commands = MakeRemoveModCommands(mod_name);
 
-  std::map<std::string, std::string> params = {{"mod_name", mod_name},
-                                               {"story_name", story_name}};
+  std::map<std::string, std::string> params = {
+      {kModNameFlagString, mod_name}, {kStoryNameFlagString, story_name}};
 
   puppet_master_->ControlStory(story_name, story_puppet_master_.NewRequest());
-  PostTaskExecuteStoryCommand("remove_mod", std::move(commands), params);
+  PostTaskExecuteStoryCommand(kRemoveModCommandString, std::move(commands),
+                              params);
 
   return parsing_error;
 }
 
-std::string SessionCtlApp::ExecuteAddModCommand() {
+std::string SessionCtlApp::ExecuteAddModCommand(
+    const fxl::CommandLine& command_line) {
   std::string mod_url;
   std::string story_name;
   std::string mod_name;
 
   std::vector<std::string> missing_flags;
 
-  if (command_line_.HasOption("mod_url")) {
-    command_line_.GetOptionValue("mod_url", &mod_url);
+  if (command_line.HasOption(kModUrlFlagString)) {
+    command_line.GetOptionValue(kModUrlFlagString, &mod_url);
   } else {
-    missing_flags.emplace_back("mod_url");
+    missing_flags.emplace_back(kModUrlFlagString);
   }
 
-  if (command_line_.HasOption("story_name")) {
-    command_line_.GetOptionValue("story_name", &story_name);
+  if (command_line.HasOption(kStoryNameFlagString)) {
+    command_line.GetOptionValue(kStoryNameFlagString, &story_name);
   } else {
-    missing_flags.emplace_back("story_name");
+    missing_flags.emplace_back(kStoryNameFlagString);
   }
 
-  if (command_line_.HasOption("mod_name")) {
-    command_line_.GetOptionValue("mod_name", &mod_name);
+  if (command_line.HasOption(kModNameFlagString)) {
+    command_line.GetOptionValue(kModNameFlagString, &mod_name);
   } else {
-    missing_flags.emplace_back("mod_name");
+    missing_flags.emplace_back(kModNameFlagString);
   }
 
   std::string parsing_error = GenerateMissingFlagString(missing_flags);
   if (!parsing_error.empty()) {
-    logger_.LogError("add_mod", parsing_error);
+    logger_.LogError(kAddModCommandString, parsing_error);
     return parsing_error;
   }
 
   auto commands = MakeAddModCommands(mod_url, mod_name);
 
-  if (command_line_.HasOption("focus_mod")) {
+  if (command_line.HasOption(kFocusModFlagString)) {
     commands.push_back(MakeFocusModCommand(mod_name));
   }
 
-  if (command_line_.HasOption("focus_story")) {
+  if (command_line.HasOption(kFocusStoryFlagString)) {
     commands.push_back(MakeFocusStoryCommand());
   }
 
   std::map<std::string, std::string> params = {
-      {"mod_url", mod_url}, {"mod_name", mod_name}, {"story_name", story_name}};
+      {kModUrlFlagString, mod_url},
+      {kModNameFlagString, mod_name},
+      {kStoryNameFlagString, story_name}};
 
   puppet_master_->ControlStory(story_name, story_puppet_master_.NewRequest());
-  PostTaskExecuteStoryCommand("add_mod", std::move(commands), params);
+  PostTaskExecuteStoryCommand(kAddModCommandString, std::move(commands),
+                              params);
+
+  return parsing_error;
+}
+
+std::string SessionCtlApp::ExecuteDeleteStoryCommand(
+    const fxl::CommandLine& command_line) {
+  std::string story_name;
+  std::vector<std::string> missing_flags;
+
+  if (command_line.HasOption(kStoryNameFlagString)) {
+    command_line.GetOptionValue(kStoryNameFlagString, &story_name);
+  } else {
+    missing_flags.emplace_back(kStoryNameFlagString);
+  }
+
+  std::string parsing_error = GenerateMissingFlagString(missing_flags);
+  if (!parsing_error.empty()) {
+    logger_.LogError(kDeleteStoryCommandString, parsing_error);
+    return parsing_error;
+  }
+
+  std::map<std::string, std::string> params = {
+      {kStoryNameFlagString, story_name}};
+
+  async::PostTask(dispatcher_, [this, story_name, params]() mutable {
+    puppet_master_->DeleteStory(story_name, [this, params] {
+      logger_.Log(kDeleteStoryCommandString, params);
+      on_command_executed_();
+    });
+  });
 
   return parsing_error;
 }
@@ -152,22 +204,22 @@ void SessionCtlApp::PostTaskExecuteStoryCommand(
     const std::string command_name,
     fidl::VectorPtr<fuchsia::modular::StoryCommand> commands,
     std::map<std::string, std::string> params) {
-  async::PostTask(
-      dispatcher_,
-      [this, command_name, commands = std::move(commands), params]() mutable {
-        ExecuteStoryCommand(std::move(commands), params.at("story_name"))
-            ->Then([this, command_name, params](bool has_error,
-                                                std::string result) {
+  async::PostTask(dispatcher_, [this, command_name,
+                                commands = std::move(commands),
+                                params]() mutable {
+    ExecuteStoryCommand(std::move(commands), params.at(kStoryNameFlagString))
+        ->Then(
+            [this, command_name, params](bool has_error, std::string result) {
               if (has_error) {
                 logger_.LogError(command_name, result);
               } else {
                 auto params_copy = params;
-                params_copy.emplace("story_id", result);
+                params_copy.emplace(kStoryIdFlagString, result);
                 logger_.Log(command_name, params_copy);
               }
               on_command_executed_();
             });
-      });
+  });
 }
 
 modular::FuturePtr<bool, std::string> SessionCtlApp::ExecuteStoryCommand(

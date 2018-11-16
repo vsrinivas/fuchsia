@@ -23,6 +23,7 @@
 
 #include "peridot/bin/sessionctl/logger.h"
 #include "peridot/bin/sessionctl/session_ctl_app.h"
+#include "peridot/bin/sessionctl/session_ctl_constants.h"
 
 using ::fuchsia::modular::PuppetMaster;
 using ::fuchsia::modular::PuppetMasterPtr;
@@ -97,6 +98,10 @@ std::string GetUsage() {
     remove_mod
       Remove the mod.
         required: --mod_name, --story_name
+
+    delete_story
+      Delete the story.
+        required: --story_name
         optional: --json_out)";
 }
 
@@ -119,7 +124,8 @@ int main(int argc, const char** argv) {
   const auto& positional_args = command_line.positional_args();
   const auto& cmd = positional_args.empty() ? "" : positional_args[0];
 
-  const modular::Logger logger(command_line.HasOption("json_out"));
+  const modular::Logger logger(
+      command_line.HasOption(modular::kJsonOutFlagString));
   auto sessions = FindAllSessions();
 
   if (sessions.empty()) {
@@ -128,7 +134,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  if (!command_line.HasOption("json_out")) {
+  if (!command_line.HasOption(modular::kJsonOutFlagString)) {
     std::cout << "Found the following sessions:\n\n";
     for (const auto& session : sessions) {
       std::cout << "\t" << session.name << ": " << session.service_path
@@ -139,15 +145,11 @@ int main(int argc, const char** argv) {
 
   // To get a PuppetMaster service for a session, use the following code:
   PuppetMasterPtr puppet_master = ConnectToPuppetMaster(sessions[0]);
-  modular::SessionCtlApp app(puppet_master.get(), command_line, logger,
-                             loop.dispatcher(), [&loop] { loop.Quit(); });
+  modular::SessionCtlApp app(puppet_master.get(), logger, loop.dispatcher(),
+                             [&loop] { loop.Quit(); });
 
-  std::string parsing_error;
-  if (cmd == "add_mod") {
-    parsing_error = app.ExecuteAddModCommand();
-  } else if (cmd == "remove_mod") {
-    parsing_error = app.ExecuteRemoveModCommand();
-  } else {
+  std::string parsing_error = app.ExecuteCommand(cmd, command_line);
+  if (parsing_error == modular::kGetUsageErrorString) {
     // Print help if command doesn't match a valid command.
     std::cout << GetUsage() << std::endl;
     return 1;

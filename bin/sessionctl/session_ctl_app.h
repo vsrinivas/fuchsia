@@ -1,3 +1,7 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 #ifndef PERIDOT_BIN_SESSIONCTL_SESSION_CTL_APP_H_
 #define PERIDOT_BIN_SESSIONCTL_SESSION_CTL_APP_H_
 
@@ -17,6 +21,7 @@ using ::fuchsia::modular::PuppetMaster;
 using ::fuchsia::modular::PuppetMasterPtr;
 
 namespace modular {
+
 class SessionCtlApp {
  public:
   // Constructs a SessionCtlApp which can read and execute session commands.
@@ -27,13 +32,20 @@ class SessionCtlApp {
   // |on_command_executed| A callback which is called whenever a command has
   // finished executing.
   explicit SessionCtlApp(fuchsia::modular::PuppetMaster* const puppet_master,
-                         const fxl::CommandLine& command_line,
                          const modular::Logger& logger,
                          async_dispatcher_t* const dispatcher,
                          const std::function<void()>& on_command_executed);
 
-  std::string ExecuteAddModCommand();
-  std::string ExecuteRemoveModCommand();
+  // Dispatches the |cmd| and returns an empty string on success, "GetUsage" if
+  // |cmd| is not valid, and a string of missing flags on failure.
+  std::string ExecuteCommand(std::string cmd,
+                             const fxl::CommandLine& command_line);
+
+  // Executes the respective command and returns an empty string on success and
+  // a string of missing flags on failure.
+  std::string ExecuteAddModCommand(const fxl::CommandLine& command_line);
+  std::string ExecuteRemoveModCommand(const fxl::CommandLine& command_line);
+  std::string ExecuteDeleteStoryCommand(const fxl::CommandLine& command_line);
 
  private:
   // Focus the story to which the mod we are adding belongs.
