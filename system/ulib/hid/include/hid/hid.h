@@ -26,7 +26,7 @@ void hid_kbd_parse_report(uint8_t buf[8], hid_keys_t* keys);
 void hid_kbd_pressed_keys(const hid_keys_t* prev, const hid_keys_t* cur, hid_keys_t* pressed);
 void hid_kbd_released_keys(const hid_keys_t* prev, const hid_keys_t* cur, hid_keys_t* released);
 uint8_t hid_kbd_next_key(hid_keys_t* keys);
-uint8_t hid_map_key(uint32_t usage, bool shift, keychar_t* keymap);
+uint8_t hid_map_key(uint32_t usage, bool shift, const keychar_t* keymap);
 
 // iterates over keys in in the hid_keys_t structure.
 // keys should be hid_keys_t*, keycode should be uint8_t
