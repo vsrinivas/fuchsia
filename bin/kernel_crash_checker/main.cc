@@ -39,10 +39,16 @@ class CrashpadAnalyzer {
     context_->ConnectToEnvironmentService(analyzer.NewRequest());
     FXL_DCHECK(analyzer);
 
-    const zx_status_t status = analyzer->ProcessCrashlog(std::move(crashlog));
+    zx_status_t out_status;
+    const zx_status_t status =
+        analyzer->ProcessKernelPanicCrashlog(std::move(crashlog), &out_status);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "failed to connect to crash analyzer: " << status
                      << " (" << zx_status_get_string(status) << ")";
+    }
+    if (out_status != ZX_OK) {
+      FX_LOGS(ERROR) << "failed to process kernel crash log: " << out_status
+                     << " (" << zx_status_get_string(out_status) << ")";
     }
   }
 

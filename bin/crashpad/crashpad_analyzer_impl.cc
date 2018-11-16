@@ -316,20 +316,32 @@ CrashpadAnalyzerImpl::CrashpadAnalyzerImpl(
   FXL_DCHECK(database_);
 }
 
-void CrashpadAnalyzerImpl::HandleException(zx::process process,
-                                           zx::thread thread,
-                                           zx::port exception_port,
-                                           HandleExceptionCallback callback) {
-  callback();
+void CrashpadAnalyzerImpl::HandleNativeException(
+    zx::process process, zx::thread thread, zx::port exception_port,
+    HandleNativeExceptionCallback callback) {
+  // TODO(DX-653): we should return a more meaningful status depending on
+  // the handling.
+  callback(ZX_OK);
   if (HandleException(std::move(process), std::move(thread),
                       std::move(exception_port)) != EXIT_SUCCESS) {
     FX_LOGS(ERROR) << "failed to handle exception. Won't retry.";
   }
 }
 
-void CrashpadAnalyzerImpl::ProcessCrashlog(fuchsia::mem::Buffer crashlog,
-                                           ProcessCrashlogCallback callback) {
-  callback();
+void CrashpadAnalyzerImpl::HandleManagedRuntimeException(
+    ManagedRuntimeLanguage language, fidl::StringPtr component_url,
+    fidl::StringPtr exception, fuchsia::mem::Buffer stackTrace,
+    HandleManagedRuntimeExceptionCallback callback) {
+  // TODO(DX-246): to be implemented.
+  callback(ZX_ERR_NOT_SUPPORTED);
+}
+
+void CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
+    fuchsia::mem::Buffer crashlog,
+    ProcessKernelPanicCrashlogCallback callback) {
+  // TODO(DX-653): we should return a more meaningful status depending on
+  // the handling.
+  callback(ZX_OK);
   if (ProcessCrashlog(std::move(crashlog)) != EXIT_SUCCESS) {
     FX_LOGS(ERROR) << "failed to process VMO crashlog. Won't retry.";
   }

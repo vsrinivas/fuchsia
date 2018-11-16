@@ -5,10 +5,12 @@
 #ifndef GARNET_BIN_CRASHPAD_CRASHPAD_ANALYZER_IMPL_H_
 #define GARNET_BIN_CRASHPAD_CRASHPAD_ANALYZER_IMPL_H_
 
+#include <string>
 #include <utility>
 
 #include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
+#include <lib/fidl/cpp/string.h>
 #include <lib/fxl/macros.h>
 #include <lib/zx/port.h>
 #include <lib/zx/process.h>
@@ -26,12 +28,18 @@ class CrashpadAnalyzerImpl : public Analyzer {
   // local report database cannot be accessed.
   static std::unique_ptr<CrashpadAnalyzerImpl> TryCreate();
 
-  void HandleException(zx::process process, zx::thread thread,
-                       zx::port exception_port,
-                       HandleExceptionCallback callback) override;
+  void HandleNativeException(zx::process process, zx::thread thread,
+                             zx::port exception_port,
+                             HandleNativeExceptionCallback callback) override;
 
-  void ProcessCrashlog(fuchsia::mem::Buffer crashlog,
-                       ProcessCrashlogCallback callback) override;
+  void HandleManagedRuntimeException(
+      ManagedRuntimeLanguage language, fidl::StringPtr component_url,
+      fidl::StringPtr exception, fuchsia::mem::Buffer stackTrace,
+      HandleManagedRuntimeExceptionCallback callback) override;
+
+  void ProcessKernelPanicCrashlog(
+      fuchsia::mem::Buffer crashlog,
+      ProcessKernelPanicCrashlogCallback callback) override;
 
  private:
   explicit CrashpadAnalyzerImpl(
