@@ -133,6 +133,8 @@ func connect() error {
 		return err
 	}
 
+	logger = proxy
+
 	return nil
 }
 
