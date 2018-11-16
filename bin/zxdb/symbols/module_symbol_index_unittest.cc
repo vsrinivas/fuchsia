@@ -47,6 +47,14 @@ TEST(ModuleSymbolIndex, FindExact) {
   // Namespace + class + struct with static member function search.
   result = index.FindExact(TestSymbolModule::kMyMemberTwoName);
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
+
+  // Global variable.
+  result = index.FindExact(TestSymbolModule::kGlobalName);
+  EXPECT_EQ(1u, result.size()) << "Symbol not found.";
+
+  // Class static variable.
+  result = index.FindExact(TestSymbolModule::kClassStaticName);
+  EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 }
 
 TEST(ModuleSymbolIndex, FindFileMatches) {

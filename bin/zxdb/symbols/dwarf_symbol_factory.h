@@ -47,7 +47,8 @@ class DwarfSymbolFactory : public SymbolFactory {
   fxl::RefPtr<Symbol> DecodeMemberPtr(const llvm::DWARFDie& die);
   fxl::RefPtr<Symbol> DecodeModifiedType(const llvm::DWARFDie& die);
   fxl::RefPtr<Symbol> DecodeNamespace(const llvm::DWARFDie& die);
-  fxl::RefPtr<Symbol> DecodeVariable(const llvm::DWARFDie& die);
+  fxl::RefPtr<Symbol> DecodeVariable(const llvm::DWARFDie& die,
+                                     bool is_specification = false);
 
   // This can be null if the module is unloaded but there are still some
   // dangling type references to it.

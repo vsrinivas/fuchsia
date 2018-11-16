@@ -42,16 +42,26 @@ copy("copy_test_so") {
   ]
 }
 
-## NOT RUN BY BUILD, REFERENCE ONLY --------------------------------------------
+# NOT RUN BY BUILD, REFERENCE ONLY ---------------------------------------------
 
-## Generates a static line_lookup_test used in the ModuleSymbols tests.
-## This output should not change, as the tests heavily rely on the binary layout
-## being the same. Ideally, we would have a way of extracting only the debug
-## information and test against that, instead on relying on pre-compiled
-## binaries.
-##
-## This rule is ran offline for the x64 architecture and the result is checked
-## in for the testing.
+# Generates a static line_lookup_test used in the ModuleSymbols tests.
+# This output should not change, as the tests heavily rely on the binary layout
+# being the same. Ideally, we would have a way of extracting only the debug
+# information and test against that, instead on relying on pre-compiled
+# binaries.
+#
+# This rule is run offline for the x64 architecture and the result is checked
+# in for the testing.
+#
+# TO UPDATE
+#
+#  - Uncomment this target.
+#  - Add a reference to it from some target that is in the build (one of the
+#    above ones is fine).
+#  - Build an x64 build. As of this writing it will generate
+#    "<out_dir>/x64-shared/lib.unstripped/libsymbol_test_so.so".
+#  - Copy that file to "libsymbol_test_so.targetso" in this directory.
+#
 # shared_library("symbol_test_so") {
 #   sources = [
 #     "line_lookup_symbol_test.cc",

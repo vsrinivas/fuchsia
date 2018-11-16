@@ -37,6 +37,8 @@ class TestSymbolModule {
   static const char kMyMemberOneName[];
   static const char kFunctionInTest2Name[];
   static const char kMyMemberTwoName[];
+  static const char kGlobalName[];
+  static const char kClassStaticName[];
 
   TestSymbolModule();
   ~TestSymbolModule();

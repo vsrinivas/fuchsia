@@ -19,20 +19,30 @@ namespace zxdb {
 
 namespace {
 
-// We want to index the things that can have software breakpoints attached to
-// them. These are the DW_TAG_subprogram entries that have a range of code.
-// These implementations won't always have the full type information, when the
-// declaration is separate from the implementation, the implementation will
-// reference the separate declaration node. The declaration of the function
-// will contain the name and have the proper nesting inside classes and
-// namespaces, etc. according to the structure of the original code.
+// We want to index the things that may need to be referenced globally: global
+// variables, file and class static variables, and function implementations.
+//
+// Indexable functions are the DW_TAG_subprogram entries that have a range of
+// code. These implementations won't always have the full type information,
+// when the declaration is separate from the implementation, the implementation
+// will reference the separate declaration node. The declaration of the
+// function will contain the name and have the proper nesting inside classes
+// and namespaces, etc. according to the structure of the original code.
+//
+// Variables work similarly. A global variable will often have a separate
+// declaration (in the proper namespaces) and storage (often outside of
+// namespaces), but file-level statics with the declaration and storage
+// declared all-in-one will have one entry representing everything.
 //
 // In a compile unit (basically one object file), there will likely be lots of
 // declarations from all the headers, and a smaller number of actual function
-// definitions.
+// definitions and variable storage.
 //
-// From a high level, we want to search the DIEs for subprogram implementations,
-// Then follow the link to their definition (if separate from the
+// From a high level, we want to search the DIEs for the implementations and
+// variable storage which is the stuff that will need to be referenced from
+// the global context in the debugger.
+//
+// Then we follow the link to their definition (if separate from the
 // implementation), then walk up the tree to get the full class and namespacing
 // information. But walking the tree upwards requires lots of linear searching
 // since the tree is stored in a flat array.
@@ -53,17 +63,17 @@ namespace {
 // call, calling unit.getUnitDIE(), and manually iterating the children of
 // that.
 
-// Stores the information from a function DIE that has code, representing
-// something we want to index. The entry will always refer to the DIE for the
-// implementation, and the offset will refer to the offset of the DIE for the
-// definition.
+// The SymbolStorage stores the information from the "implementation" of a
+// symbol (a function DIE that has code or a variable that has a location),
+// representing something we want to index. The entry will always refer to the
+// DIE for the implementation, and the offset will refer to the offset of the
+// DIE for the definition.
 //
-// Some functions have separate definitions, and some don't. If the definition
-// and implementation is the same, the offset will just point to the entry.
-// This makes slightly more work, but this simplified the control flow and
-// we're optimizing for most functions having definitions.
-struct FunctionImpl {
-  FunctionImpl(const llvm::DWARFDebugInfoEntry* e, uint64_t offs)
+// Some functions and variables have separate definitions, and some don't. If
+// the definition and implementation is the same, the offset will just point to
+// the entry.
+struct SymbolStorage {
+  SymbolStorage(const llvm::DWARFDebugInfoEntry* e, uint64_t offs)
       : entry(e), definition_unit_offset(offs) {}
 
   const llvm::DWARFDebugInfoEntry* entry;
@@ -83,6 +93,15 @@ bool AbbrevHasCode(const llvm::DWARFAbbreviationDeclaration* abbrev) {
   return false;
 }
 
+// Returns true if the given abbreviation defines a "location".
+bool AbbrevHasLocation(const llvm::DWARFAbbreviationDeclaration* abbrev) {
+  for (const auto spec : abbrev->attributes()) {
+    if (spec.Attr == llvm::dwarf::DW_AT_location)
+      return true;
+  }
+  return false;
+}
+
 size_t RecursiveCountDies(const ModuleSymbolIndexNode& node) {
   size_t result = node.dies().size();
   for (const auto& pair : node.sub())
@@ -90,15 +109,15 @@ size_t RecursiveCountDies(const ModuleSymbolIndexNode& node) {
   return result;
 }
 
-// Step 1 of the algorithm above. Fills the function_impls array with the
+// Step 1 of the algorithm above. Fills the symbol_storage array with the
 // information for all function implementations (ones with addresses). Fills
 // the parent_indices array with the index of the parent of each DIE in the
 // unit (it will be exactly unit->getNumDIEs() long). The root node will have
 // kNoParent set.
-void ExtractUnitFunctionImplsAndParents(
-    llvm::DWARFContext* context, llvm::DWARFUnit* unit,
-    std::vector<FunctionImpl>* function_impls,
-    std::vector<unsigned>* parent_indices) {
+void ExtractUnitIndexableEntries(llvm::DWARFContext* context,
+                                 llvm::DWARFUnit* unit,
+                                 std::vector<SymbolStorage>* symbol_storage,
+                                 std::vector<unsigned>* parent_indices) {
   DwarfDieDecoder decoder(context, unit);
 
   // The offset of the declaration. This can be unit-relative or file-absolute.
@@ -119,16 +138,19 @@ void ExtractUnitFunctionImplsAndParents(
 
   // Stores the list of parent indices according to the current depth in the
   // tree. At any given point, the parent index of the current node will be
-  // tree_stack.back().
+  // tree_stack.back(). inside_function should be set if this node or any
+  // parent node is a function.
   struct StackEntry {
-    StackEntry(int d, unsigned i) : depth(d), index(i) {}
+    StackEntry(int d, unsigned i, bool f)
+        : depth(d), index(i), inside_function(f) {}
 
     int depth;
     unsigned index;
+    bool inside_function;
   };
   std::vector<StackEntry> tree_stack;
   tree_stack.reserve(8);
-  tree_stack.push_back(StackEntry(-1, kNoParent));
+  tree_stack.push_back(StackEntry(-1, kNoParent, false));
 
   for (unsigned i = 0; i < die_count; i++) {
     // All optional variables need to be reset so we know which ones are set
@@ -136,36 +158,54 @@ void ExtractUnitFunctionImplsAndParents(
     decl_unit_offset.reset();
     decl_global_offset.reset();
 
-    // Decode. Decode is the slowest part of the indexing so try to avoid it.
-    // Here we check the tag and whether the abbreviation entry has a code
-    // PC range before doing decode since this will eliminate the majority of
-    // DIEs in typical programs.
-    //
-    // Trying to cache whether the abbreviation declaration is of the right
-    // type (there are a limited number of types of these) doesn't help.
-    // Checking the abbreviation array is ~6-12 comparisons, which is roughly
-    // equivalent to [unordered_]map lookup.
     const llvm::DWARFDebugInfoEntry* die =
         unit->getDIEAtIndex(i).getDebugInfoEntry();
     const llvm::DWARFAbbreviationDeclaration* abbrev =
         die->getAbbreviationDeclarationPtr();
-    if (abbrev && abbrev->getTag() == llvm::dwarf::DW_TAG_subprogram &&
+    if (!abbrev)
+      continue;
+
+    // See if we should bother decoding. Decode is the slowest part of the
+    // indexing so try to avoid it. Here we check the tag and whether the
+    // abbreviation entry has the required attributes before doing decode since
+    // this will eliminate the majority of DIEs in typical programs.
+    //
+    // Note: Trying to cache whether the abbreviation declaration is of the
+    // right type (there are a limited number of types of these) doesn't help.
+    // Checking the abbreviation array is ~6-12 comparisons, which is roughly
+    // equivalent to [unordered_]map lookup.
+    bool is_function = false;
+    bool should_index = false;
+    if (abbrev->getTag() == llvm::dwarf::DW_TAG_subprogram &&
         AbbrevHasCode(abbrev)) {
-      decoder.Decode(*die);
       // Found a function implementation.
+      is_function = true;
+      should_index = true;
+    } else if (!tree_stack.back().inside_function &&
+               abbrev->getTag() == llvm::dwarf::DW_TAG_variable &&
+               AbbrevHasLocation(abbrev)) {
+      // Found variable storage outside of a function (variables inside
+      // functions are local so don't get added to the global index).
+      should_index = true;
+    }
+
+    // Add this node to the index.
+    if (should_index) {
+      decoder.Decode(*die);
       if (decl_unit_offset) {
         // Save the declaration for indexing.
-        function_impls->emplace_back(die,
+        symbol_storage->emplace_back(die,
                                      unit->getOffset() + *decl_unit_offset);
       } else if (decl_global_offset) {
         FXL_NOTREACHED() << "Implement DW_FORM_ref_addr for references.";
       } else {
         // This function has no separate definition so use it as its own
         // declaration (the name and such will be on itself).
-        function_impls->emplace_back(die, die->getOffset());
+        symbol_storage->emplace_back(die, die->getOffset());
       }
     }
 
+    // Fix up the parent tracking stack.
     StackEntry& tree_stack_back = tree_stack.back();
     int current_depth = static_cast<int>(die->getDepth());
     if (current_depth == tree_stack_back.depth) {
@@ -178,7 +218,9 @@ void ExtractUnitFunctionImplsAndParents(
       // the tree this will do nothing), then add the current level.
       while (tree_stack.back().depth >= current_depth)
         tree_stack.pop_back();
-      tree_stack.push_back(StackEntry(current_depth, i));
+
+      tree_stack.push_back(StackEntry(
+          current_depth, i, is_function || tree_stack.back().inside_function));
     }
 
     // Save parent info. The parent of this node is the one right before the
@@ -190,12 +232,12 @@ void ExtractUnitFunctionImplsAndParents(
 // The per-function part of step 2 of the algorithm described above. This
 // finds the definition of the function in the unit's DIEs. It's given a
 // map of DIE indices to their parent indices generated for the unit by
-// ExtractUnitFunctionImplsAndParents for quickly finding parents.
-class FunctionImplIndexer {
+// ExtractUnitIndexableEntries for quickly finding parents.
+class SymbolStorageIndexer {
  public:
-  FunctionImplIndexer(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
-                      const std::vector<unsigned>& parent_indices,
-                      ModuleSymbolIndexNode* root)
+  SymbolStorageIndexer(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
+                       const std::vector<unsigned>& parent_indices,
+                       ModuleSymbolIndexNode* root)
       : unit_(unit),
         parent_indices_(parent_indices),
         root_(root),
@@ -203,7 +245,7 @@ class FunctionImplIndexer {
     decoder_.AddCString(llvm::dwarf::DW_AT_name, &name_);
   }
 
-  void AddFunction(const FunctionImpl& impl) {
+  void AddDIE(const SymbolStorage& impl) {
     // Components of the function name in reverse order (so "foo::Bar::Fn")
     // would be { "Fn", "Bar", "foo"}
     std::vector<std::string> components;
@@ -213,8 +255,6 @@ class FunctionImplIndexer {
     llvm::DWARFDie die = unit_->getDIEForOffset(impl.definition_unit_offset);
     if (!die.isValid())
       return;  // Invalid
-    if (die.getTag() != llvm::dwarf::DW_TAG_subprogram)
-      return;  // Not a function.
     if (!FillName(die))
       return;
     components.emplace_back(*name_);
@@ -384,16 +424,15 @@ void ModuleSymbolIndex::IndexCompileUnit(llvm::DWARFContext* context,
                                          llvm::DWARFUnit* unit,
                                          unsigned unit_index) {
   // Find the things to index.
-  std::vector<FunctionImpl> function_impls;
-  function_impls.reserve(256);
+  std::vector<SymbolStorage> symbol_storage;
+  symbol_storage.reserve(256);
   std::vector<unsigned> parent_indices;
-  ExtractUnitFunctionImplsAndParents(context, unit, &function_impls,
-                                     &parent_indices);
+  ExtractUnitIndexableEntries(context, unit, &symbol_storage, &parent_indices);
 
   // Index each one.
-  FunctionImplIndexer indexer(context, unit, parent_indices, &root_);
-  for (const FunctionImpl& impl : function_impls)
-    indexer.AddFunction(impl);
+  SymbolStorageIndexer indexer(context, unit, parent_indices, &root_);
+  for (const SymbolStorage& impl : symbol_storage)
+    indexer.AddDIE(impl);
 
   IndexCompileUnitSourceFiles(context, unit, unit_index);
 }

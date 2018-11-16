@@ -225,8 +225,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeSymbol(
       symbol = fxl::MakeRefCounted<Symbol>(static_cast<int>(die.getTag()));
   }
 
-  // Only set the parent block if it hasn't been set already by the
-  // type-specific factory. In particular, we want the function specification's
+  // Set the parent block if it hasn't been set already by the type-specific
+  // factory. In particular, we want the function/variable specification's
   // parent block if there was a specification since it will contain the
   // namespace and class stuff.
   if (!symbol->parent()) {
@@ -330,10 +330,14 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
   function->set_inner_blocks(std::move(inner_blocks));
   function->set_variables(std::move(variables));
 
-  if (is_specification) {
-    // Always set the parent symbol when parsing a specification. This is the
-    // thing that will carry the namespace and struct/class membership
-    // information.
+  if (!function->parent()) {
+    // Set the parent symbol when it hasn't already been set. We always want
+    // the specification's parent instead of the implementation block's
+    // parent (if they're different) because the namespace and enclosing class
+    // information comes from the declaration.
+    //
+    // If this is already set, it means we recursively followed the
+    // specification which already set it.
     llvm::DWARFDie parent = die.getParent();
     if (parent)
       function->set_parent(MakeLazy(parent));
@@ -602,8 +606,6 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunctionType(
 
   auto function = fxl::MakeRefCounted<FunctionType>(
       lazy_return_type, std::move(parameters));
-  if (llvm::DWARFDie parent = die.getParent())
-    function->set_parent(MakeLazy(parent));
   return function;
 }
 
@@ -678,8 +680,6 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeMemberPtr(
 
   auto member_ptr = fxl::MakeRefCounted<MemberPtr>(
       MakeLazy(container_type), MakeLazy(type));
-  if (llvm::DWARFDie parent = die.getParent())
-    member_ptr->set_parent(MakeLazy(parent));
   return member_ptr;
 }
 
@@ -721,8 +721,12 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeNamespace(
 }
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariable(
-    const llvm::DWARFDie& die) {
+    const llvm::DWARFDie& die,
+    bool is_specification) {
   DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
+
+  llvm::DWARFDie specification;
+  decoder.AddReference(llvm::dwarf::DW_AT_specification, &specification);
 
   llvm::Optional<const char*> name;
   decoder.AddCString(llvm::dwarf::DW_AT_name, &name);
@@ -740,13 +744,38 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariable(
   if (!decoder.Decode(die))
     return fxl::MakeRefCounted<Symbol>();
 
-  auto result = fxl::MakeRefCounted<Variable>(die.getTag());
+  fxl::RefPtr<Variable> variable;
+
+  // If this DIE has a link to a specification (and we haven't already followed
+  // such a link), first read that in to get things like the mangled name,
+  // parent context, and declaration locations. Then we'll overlay our values
+  // on that object.
+  if (!is_specification && specification) {
+    auto spec = DecodeVariable(specification, true);
+    Variable* spec_variable = spec->AsVariable();
+    // If the specification is invalid, just ignore it and read out the values
+    // that we can find in this DIE. An empty one will be created below.
+    if (spec_variable)
+      variable = fxl::RefPtr<Variable>(spec_variable);
+  }
+  if (!variable)
+    variable = fxl::MakeRefCounted<Variable>(die.getTag());
+
   if (name)
-    result->set_assigned_name(*name);
+    variable->set_assigned_name(*name);
   if (type)
-    result->set_type(MakeLazy(type));
-  result->set_location(std::move(location));
-  return result;
+    variable->set_type(MakeLazy(type));
+  variable->set_location(std::move(location));
+
+  if (!variable->parent()) {
+    // Set the parent symbol when it hasn't already been set. As with
+    // functions, we always want the specification's parent. See
+    // DecodeFunction().
+    llvm::DWARFDie parent = die.getParent();
+    if (parent)
+      variable->set_parent(MakeLazy(parent));
+  }
+  return variable;
 }
 
 }  // namespace zxdb

@@ -11,6 +11,19 @@
 //   DW_AT_name = "my_ns"
 namespace my_ns {
 
+// DW_TAG_variable
+//   DW_AT_name = "kGlobal
+//   DW_AT_type = <ref to DIE declaring "int">
+//   DW_AT_external = true
+//   DW_AT_decl_file = ...
+//   DW_AT_decl_line = ...
+//   DW_AT_location = ...
+//   DW_AT_linkage_name = "_ZN5my_ns7kGlobalE"
+//
+//   (Unlike MyClass::kClassStatic, this variable shared the declaration and
+//   storage.)
+int kGlobal = 19;
+
 // DW_TAG_class_type
 //   DW_AT_name = "MyClass"
 class MyClass {
@@ -26,7 +39,16 @@ class MyClass {
     NOINLINE static int MyMemberTwo();
   };
 
-  // DW_TAG_subprogram:
+  // DW_TAG_member
+  //   DW_AT_name = "kClassStatic"
+  //   DW_AT_type = <ref to DIE declaring "int">
+  //   DW_AT_decl_file = ...
+  //   DW_AT_decl_line = ...
+  //   DW_AT_external = true
+  //   DW_AT_declaration = true
+  static int kClassStatic;
+
+  // DW_TAG_subprogram
   //   DW_AT_name = "MyMemberOne"
   //   DW_AT_linkage_name = "_ZN5my_ns7MyClass11MyMemberOneEv"
   //   DW_AT_declaration = true (indicates implementation is elsewhere).
@@ -37,6 +59,14 @@ class MyClass {
   //     DW_AT_type = <reference to "MyClass*" type>
   NOINLINE int MyMemberOne() { return 42; }
 };
+
+// DW_TAG_variable
+//   DW_AT_specification = <ref to DIE declaring this class member>.
+//   DW_AT_location = ...
+//   DW_AT_linkage_name "_ZN5my_ns7MyClass12kClassStaticE"
+//
+//   (Unlike kGlobal, this static has a separate declaration and storage.)
+int MyClass::kClassStatic = 12;
 
 // The DW_TAG_namespace will end here even though the namespace encloses the
 // following function definition. The namespace is only used for the

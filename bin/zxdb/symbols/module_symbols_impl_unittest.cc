@@ -10,7 +10,10 @@
 #include "garnet/bin/zxdb/symbols/line_details.h"
 #include "garnet/bin/zxdb/symbols/module_symbols_impl.h"
 #include "garnet/bin/zxdb/symbols/resolve_options.h"
+#include "garnet/bin/zxdb/symbols/symbol_context.h"
 #include "garnet/bin/zxdb/symbols/test_symbol_module.h"
+#include "garnet/bin/zxdb/symbols/type.h"
+#include "garnet/bin/zxdb/symbols/variable.h"
 #include "gtest/gtest.h"
 
 namespace zxdb {
@@ -215,6 +218,51 @@ TEST(ModuleSymbols, ResolveLineInputLocation) {
                                             InputLocation(addrs[1].address()));
     EXPECT_EQ(17, locations[0].file_line().line());
   }
+}
+
+TEST(ModuleSymbols, ResolveGlobalVariable) {
+  ModuleSymbolsImpl module(TestSymbolModule::GetCheckedInTestFileName(), "");
+  Err err = module.Load();
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
+
+  ResolveOptions options;
+  options.symbolize = true;
+  std::vector<Location> addrs;
+
+  // Look up "kGlobal" which should be a variable of type "int" at some
+  // nonzero location.
+  addrs = module.ResolveInputLocation(
+      symbol_context, InputLocation(TestSymbolModule::kGlobalName), options);
+  ASSERT_LE(1u, addrs.size());
+  EXPECT_TRUE(addrs[0].symbol());
+  const Variable* var = addrs[0].symbol().Get()->AsVariable();
+  ASSERT_TRUE(var);
+  EXPECT_EQ(TestSymbolModule::kGlobalName, var->GetFullName());
+  const Type* var_type = var->type().Get()->AsType();
+  ASSERT_TRUE(var_type);
+  EXPECT_EQ("int", var_type->GetFullName());
+
+  // This number may change if we recompile the symbol test. That's OK, just
+  // make sure it agrees with the relative address from symbol dump.
+  EXPECT_EQ(0x2000u, addrs[0].address());
+
+  // Look up the class static.
+  addrs = module.ResolveInputLocation(
+      symbol_context, InputLocation(TestSymbolModule::kClassStaticName), options);
+  ASSERT_LE(1u, addrs.size());
+  EXPECT_TRUE(addrs[0].symbol());
+  var = addrs[0].symbol().Get()->AsVariable();
+  ASSERT_TRUE(var);
+  EXPECT_EQ(TestSymbolModule::kClassStaticName, var->GetFullName());
+  var_type = var->type().Get()->AsType();
+  ASSERT_TRUE(var_type);
+  EXPECT_EQ("int", var_type->GetFullName());
+
+  // This number may change if we recompile the symbol test. That's OK, just
+  // make sure it agrees with the relative address from symbol dump.
+  EXPECT_EQ(0x2004u, addrs[0].address());
 }
 
 }  // namespace zxdb
