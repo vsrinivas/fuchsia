@@ -9,12 +9,12 @@
 
 #include <utility>
 
-#include "lib/pkg_url/url_resolver.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/io/fd.h"
 #include "lib/fsl/vmo/file.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/substitute.h"
+#include "lib/pkg_url/url_resolver.h"
 
 namespace component {
 
@@ -61,7 +61,7 @@ void ComponentLoader::AddBinding(
   bindings_.AddBinding(this, std::move(request));
 }
 
-bool ComponentLoader::LoadComponentFromPackage(const std::string& package_name,
+void ComponentLoader::LoadComponentFromPackage(const std::string& package_name,
                                                LoadComponentCallback callback) {
   TRACE_DURATION("appmgr", "ComponentLoader::LoadComponentFromPackage",
                  "package_name", package_name);
@@ -73,9 +73,14 @@ bool ComponentLoader::LoadComponentFromPackage(const std::string& package_name,
       fxl::Substitute("fuchsia-pkg://fuchsia.com/$0", package_name);
   if (!package_url.Parse(url_str)) {
     FXL_LOG(ERROR) << "Could not parse package url: " << url_str;
-    return false;
+    callback(nullptr);
+    return;
   }
-  return LoadComponentFromPkgfs(std::move(package_url), callback);
+  if (!LoadComponentFromPkgfs(std::move(package_url), callback)) {
+    FXL_LOG(ERROR) << "Could not load package for package: " << package_name;
+    callback(nullptr);
+    return;
+  }
 }
 
 // static

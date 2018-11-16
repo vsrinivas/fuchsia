@@ -9,10 +9,10 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/zx/vmo.h>
-#include "lib/pkg_url/fuchsia_pkg_url.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/io/fd.h"
 #include "lib/fxl/macros.h"
+#include "lib/pkg_url/fuchsia_pkg_url.h"
 
 namespace component {
 
@@ -44,7 +44,7 @@ class ComponentLoader : public fuchsia::sys::Loader {
   virtual bool LoadComponentFromPkgfs(FuchsiaPkgUrl resolved_url,
                                       LoadComponentCallback callback) = 0;
 
-  bool LoadComponentFromPackage(const std::string& package_name,
+  void LoadComponentFromPackage(const std::string& package_name,
                                 LoadComponentCallback callback);
 
   fidl::BindingSet<fuchsia::sys::Loader> bindings_;

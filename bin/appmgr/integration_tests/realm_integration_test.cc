@@ -122,6 +122,36 @@ TEST_F(RealmTest, Resolve) {
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, kTimeout));
 }
 
+TEST_F(RealmTest, LaunchNonExistentComponent) {
+  auto env_services = CreateServices();
+  auto enclosing_environment =
+      CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
+  ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_environment.get()));
+
+  // try to launch file url.
+  auto controller1 =
+      RunComponent(enclosing_environment.get(), "does_not_exist");
+  bool wait = false;
+  controller1.events().OnTerminated =
+      [&wait](int64_t return_code, fuchsia::sys::TerminationReason reason) {
+        wait = true;
+        EXPECT_EQ(reason, fuchsia::sys::TerminationReason::PACKAGE_NOT_FOUND);
+      };
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, kTimeout));
+
+  // try to launch pkg url.
+  auto controller2 =
+      RunComponent(enclosing_environment.get(),
+                   "fuchsia-pkg://fuchsia.com/does_not_exist#meta/some.cmx");
+  wait = false;
+  controller2.events().OnTerminated =
+      [&wait](int64_t return_code, fuchsia::sys::TerminationReason reason) {
+        wait = true;
+        EXPECT_EQ(reason, fuchsia::sys::TerminationReason::PACKAGE_NOT_FOUND);
+      };
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, kTimeout));
+}
+
 // This test exercises the fact that two components should be in separate jobs,
 // and thus when one component controller kills its job due to a .Kill() call
 // the other component should run uninterrupted.
@@ -135,8 +165,8 @@ TEST_F(RealmTest, CreateTwoKillOne) {
       CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
   ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_environment.get()));
   // launch component normally
-  auto controller1 = RunComponent(enclosing_environment.get(),
-                                  "echo2_server_cpp");
+  auto controller1 =
+      RunComponent(enclosing_environment.get(), "echo2_server_cpp");
 
   // make sure echo service is running.
   fidl::examples::echo::EchoPtr echo;
