@@ -46,11 +46,13 @@ archs=(
 )
 
 # arguments to fx set
-_arguments '1:arch:{_describe "arch" archs}' '--release[release build]' \
-  '--packages[packages to build]:packages:_packages' \
-  '--products[products to build]:products:_products' \
-  '--goma[use goma]' "--no-goma[don't use goma]" \
-  "--no-ensure-goma[don't make sure goma is running]" \
-  "--ccache[use ccache]" "--no-ccache[don't use ccache]" \
-  "--args[arguments for gn gen]:args:{_gn_args}" \
-  '--goma-dir[goma directory to use]:directory:_files -/'
+_arguments '1:arch:{_describe "arch" archs}' \
+  '2::build_dir:{__fx_build_dir}' \
+  '(:)--release[release build]' \
+  '(:)--packages[packages to build]:packages:_packages' \
+  '(:)--products[products to build]:products:_products' \
+  '(:)--goma[use goma]' "--no-goma[don't use goma]" \
+  "(:)--no-ensure-goma[don't make sure goma is running]" \
+  "(:)--ccache[use ccache]" "--no-ccache[don't use ccache]" \
+  "(:)--args[arguments for gn gen]:args:{_gn_args}" \
+  '(:)--goma-dir[goma directory to use]:directory:_files -/'
