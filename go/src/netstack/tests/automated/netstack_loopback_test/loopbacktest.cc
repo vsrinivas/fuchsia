@@ -133,6 +133,68 @@ TEST(NetStreamTest, BlockingAcceptWrite) {
   }
 }
 
+// NetStreamTest.BlockingAcceptWriteMultiple
+
+const int32_t kConnections = 100;
+
+void BlockingAcceptWriteMultiple() {
+  int acptfd = socket(AF_INET, SOCK_STREAM, 0);
+  ASSERT_GE(acptfd, 0);
+
+  struct sockaddr_in addr;
+  addr.sin_family = AF_INET;
+  addr.sin_port = 0;
+  addr.sin_addr.s_addr = INADDR_ANY;
+  int ret = bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr));
+  ASSERT_EQ(0, ret) << "bind failed: " << errno;
+
+  socklen_t addrlen = sizeof(addr);
+  ret = getsockname(acptfd, (struct sockaddr*)&addr, &addrlen);
+  ASSERT_EQ(0, ret) << "getsockname failed: " << errno;
+
+  int ntfyfd[2];
+  ASSERT_EQ(0, pipe(ntfyfd));
+
+  ret = listen(acptfd, 10);
+  ASSERT_EQ(0, ret) << "listen failed: " << errno;
+
+  std::thread thrd[kConnections];
+  std::string out[kConnections];
+  const char* msg = "hello";
+
+  for (int i = 0; i < kConnections; i++) {
+    thrd[i] = std::thread(StreamConnectRead, &addr, &out[i], ntfyfd[1]);
+  }
+
+  for (int i = 0; i < kConnections; i++) {
+    struct pollfd pfd = {acptfd, POLLIN, 0};
+    ASSERT_EQ(1, poll(&pfd, 1, kTimeout));
+
+    int connfd = accept(acptfd, nullptr, nullptr);
+    ASSERT_GE(connfd, 0) << "accept failed: " << errno;
+
+    ASSERT_EQ((ssize_t)strlen(msg), write(connfd, msg, strlen(msg)));
+    ASSERT_EQ(0, close(connfd));
+
+    ASSERT_EQ(true, WaitSuccess(ntfyfd[0], kTimeout));
+  }
+
+  for (int i = 0; i < kConnections; i++) {
+    thrd[i].join();
+    EXPECT_STREQ(msg, out[i].c_str());
+  }
+
+  EXPECT_EQ(0, close(acptfd));
+  EXPECT_EQ(0, close(ntfyfd[0]));
+  EXPECT_EQ(0, close(ntfyfd[1]));
+}
+
+TEST(NetStreamTest, BlockingAcceptWriteMultiple) {
+  for (int i = 0; i < kRepeatEach; i++) {
+    BlockingAcceptWriteMultiple();
+  }
+}
+
 // NetStreamTest.BlockAcceptWriteNoClose
 
 // NoClose simulates an unexpected process exit by closing the socket handle

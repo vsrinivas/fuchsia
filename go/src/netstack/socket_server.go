@@ -936,7 +936,7 @@ func (s *socketServer) opGetPeerName(ios *iostate, msg *zxsocket.Msg) (status zx
 
 func (s *socketServer) loopListen(ios *iostate, inCh chan struct{}) {
 	// When an incoming connection is available, wait for the listening socket to
-	// enter a shareable state, then share it with zircon.
+	// enter a shareable state, then share it with the client.
 	for {
 		select {
 		case <-inCh:
@@ -944,60 +944,66 @@ func (s *socketServer) loopListen(ios *iostate, inCh chan struct{}) {
 		case <-ios.closing:
 			return
 		}
-		obs, err := zxwait.Wait(zx.Handle(ios.dataHandle),
-			zx.SignalSocketShare|zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING,
-			zx.TimensecInfinite)
-		switch mxerror.Status(err) {
-		case zx.ErrOk:
-			switch {
-			case obs&zx.SignalSocketShare != 0:
-				// NOP
-			case obs&LOCAL_SIGNAL_CLOSING != 0:
+		// We got incoming connections.
+		// Note that we don't know how many connections pending (the waiter channel won't
+		// queue more than one notification) so we'll need to call Accept repeatedly until
+		// it returns tcpip.ErrWouldBlock.
+		for {
+			obs, err := zxwait.Wait(zx.Handle(ios.dataHandle),
+				zx.SignalSocketShare|zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING,
+				zx.TimensecInfinite)
+			switch mxerror.Status(err) {
+			case zx.ErrOk:
+				switch {
+				case obs&zx.SignalSocketShare != 0:
+					// NOP
+				case obs&LOCAL_SIGNAL_CLOSING != 0:
+					return
+				case obs&zx.SignalSocketPeerClosed != 0:
+					return
+				}
+			case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
 				return
-			case obs&zx.SignalSocketPeerClosed != 0:
+			default:
+				log.Printf("listen: wait failed: %v", err)
+			}
+
+			newep, newwq, e := ios.ep.Accept()
+			if e == tcpip.ErrWouldBlock {
+				// No more pending connections.
+				break
+			}
+			if e != nil {
+				if debug {
+					log.Printf("listen: accept failed: %v", e)
+				}
 				return
 			}
-		case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
-			return
-		default:
-			log.Printf("listen: wait failed: %v", err)
-		}
 
-		newep, newwq, e := ios.ep.Accept()
-		if e == tcpip.ErrWouldBlock {
-			log.Printf("listen: internal error. Accept returned ErrWouldBlock")
-			continue
-		}
-		if e != nil {
-			if debug {
-				log.Printf("listen: accept failed: %v", e)
+			if logAccept {
+				localAddr, err := newep.GetLocalAddress()
+				remoteAddr, err2 := newep.GetRemoteAddress()
+				if err == nil && err2 == nil {
+					log.Printf("TCP accept: local(%v, %v), remote(%v, %v)", localAddr.Addr, localAddr.Port, remoteAddr.Addr, remoteAddr.Port)
+				}
 			}
-			return
-		}
 
-		if logAccept {
-			localAddr, err := newep.GetLocalAddress()
-			remoteAddr, err2 := newep.GetRemoteAddress()
-			if err == nil && err2 == nil {
-				log.Printf("TCP accept: local(%v, %v), remote(%v, %v)", localAddr.Addr, localAddr.Port, remoteAddr.Addr, remoteAddr.Port)
+			localS, peerS, err := s.newIostate(ios.netProto, ios.transProto, newwq, newep, true)
+			if err != nil {
+				if debug {
+					log.Printf("listen: newIostate failed: %v", err)
+				}
+				return
 			}
-		}
 
-		localS, peerS, err := s.newIostate(ios.netProto, ios.transProto, newwq, newep, true)
-		if err != nil {
-			if debug {
-				log.Printf("listen: newIostate failed: %v", err)
+			if err := ios.dataHandle.Share(zx.Handle(peerS)); err != nil {
+				log.Printf("listen: Share failed: %v", err)
+				return
 			}
-			return
-		}
-
-		if err := ios.dataHandle.Share(zx.Handle(peerS)); err != nil {
-			log.Printf("listen: Share failed: %v", err)
-			return
-		}
-		if err := signalConnectSuccess(localS, false); err != nil {
-			log.Printf("listen: signalConnectSuccess failed: %v", err)
-			return
+			if err := signalConnectSuccess(localS, false); err != nil {
+				log.Printf("listen: signalConnectSuccess failed: %v", err)
+				return
+			}
 		}
 	}
 }
