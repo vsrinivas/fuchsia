@@ -52,12 +52,11 @@ fuchsia::modular::auth::AccountPtr Convert(
       FXL_DCHECK(false) << "Unrecognized IdentityProvider"
                         << user->identity_provider();
   }
+
   account->display_name = user->display_name()->str();
-  if (account->display_name.is_null()) {
-    account->display_name = "";
-  }
   account->url = user->profile_url()->str();
   account->image_url = user->image_url()->str();
+
   if (flatbuffers::IsFieldPresent(
           user, fuchsia::modular::UserStorage::VT_PROFILE_ID)) {
     account->profile_id = user->profile_id()->str();
@@ -328,10 +327,15 @@ void UserProviderImpl::AddUserV2(
         auto account = fuchsia::modular::auth::Account::New();
         account->id = account_id;
         account->identity_provider = identity_provider;
-        account->display_name = user_profile_info->display_name;
-        account->url = user_profile_info->url;
-        account->image_url = user_profile_info->image_url;
         account->profile_id = user_profile_info->id;
+        account->display_name = user_profile_info->display_name.is_null()
+                                    ? ""
+                                    : user_profile_info->display_name;
+        account->url =
+            user_profile_info->url.is_null() ? "" : user_profile_info->url;
+        account->image_url = user_profile_info->image_url.is_null()
+                                 ? ""
+                                 : user_profile_info->image_url;
 
         std::string error;
         if (!AddUserToAccountsDB(account.get(), &error)) {
