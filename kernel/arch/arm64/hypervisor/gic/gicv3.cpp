@@ -67,7 +67,7 @@ static zx_status_t gicv3_get_gicv(paddr_t* gicv_paddr) {
 }
 
 static uint64_t gicv3_get_lr_from_vector(uint32_t vector) {
-    return ICH_LR_PENDING | ICH_LR_GROUP1 | (vector & ICH_LR_VIRTUAL_ID_MASK);
+    return (vector & ICH_LR_VIRTUAL_ID_MASK) | ICH_LR_GROUP1 | ICH_LR_PENDING;
 }
 
 static uint32_t gicv3_get_vector_from_lr(uint64_t lr) {
