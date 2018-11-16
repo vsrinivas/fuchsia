@@ -58,14 +58,19 @@ import("//build/json/validate_json.gni")
 #       dest (required)
 #         [path] Location the resource will be placed within `data/`.
 #
+#   test (optional)
+#     [bool] Should be true if this component is test.
+#
 #   deps (optional)
 #   public_deps (optional)
 #   data_deps (optional)
 #   visibility (optional)
+#   testonly (optional)
 #     Usual GN meanings.
 #
 template("fuchsia_component") {
   component_label = get_label_info(":$target_name", "label_with_toolchain")
+  forward_variables_from(invoker, [ "testonly" ])
   assert(
       current_toolchain == target_toolchain,
       "Component $component_label rule only supported for $target_toolchain.")
@@ -81,6 +86,7 @@ template("fuchsia_component") {
                              "resources",
                              "visibility",
                              "manifest",
+                             "test",
                            ])
 
     # remove this check once we support dart and flutter
@@ -96,6 +102,9 @@ template("fuchsia_component") {
     }
     if (!defined(public_deps)) {
       public_deps = []
+    }
+    if (!defined(test)) {
+      test = false
     }
     if (!defined(loadable_modules)) {
       loadable_modules = []
@@ -127,9 +136,13 @@ template("fuchsia_component") {
     },
   ]
 
+  bin_dir = "bin/"
+  if (component.test) {
+    bin_dir = "test/"
+  }
   component_manifest += [
     {
-      dest = "bin/" + get_path_info(component.binary, "file")
+      dest = bin_dir + get_path_info(component.binary, "file")
       source = rebase_path(component.binary, "", root_out_dir)
     },
   ]
@@ -177,5 +190,62 @@ template("fuchsia_component") {
     public_deps = [
       ":${target_name}.manifest",
     ]
+  }
+}
+
+# Defines fuchsia test component.
+#
+# This template is used to define a unit of test component.
+# A component always has a manifest defining that component.
+#
+# Parameters
+#
+#   binary (required)
+#     [path] The path to the the primary binary for the component.
+#            This is also be used to infer your manifest source and
+#            destination path.
+#
+#   manifest (optional)
+#     see fuchsia_component()
+#     Would be infered from binary name if not specified.
+#
+#
+#   loadable_modules (optional)
+#     see fuchsia_component()
+#
+#   resources (optional)
+#     see fuchsia_component()
+#
+#   deps (optional)
+#   public_deps (optional)
+#   data_deps (optional)
+#   visibility (optional)
+#     Usual GN meanings.
+#
+template("fuchsia_test_component") {
+  forward_variables_from(invoker,
+                         [
+                           "binary",
+                           "manifest",
+                         ])
+
+  # remove this check once we support dart and flutter
+  assert(defined(binary), "Component $target_name should define binary")
+  fuchsia_component(target_name) {
+    testonly = true
+    test = true
+    name = get_path_info(binary, "file")
+    if (!defined(manifest)) {
+      manifest = rebase_path("meta/${name}.cmx")
+    }
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "deps",
+                             "public_deps",
+                             "loadable_modules",
+                             "resources",
+                             "visibility",
+                           ])
   }
 }
