@@ -28,6 +28,7 @@ extern const CodecVTable* const kCodecVtable[256];
 // Currently named codecs. Future implementations may expand this.
 enum class Coding : uint8_t {
   Identity = 0,
+  Snappy = 1,
 };
 
 static inline constexpr auto kDefaultCoding = Coding::Identity;

@@ -59,6 +59,7 @@ source_set("coding") {
     deps = [
         "//garnet/lib/overnet/vocabulary:slice",
         "//garnet/lib/overnet/vocabulary:status",
+        "//third_party/snappy",
     ]
 }
 
