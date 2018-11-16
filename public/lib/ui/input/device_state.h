@@ -51,7 +51,8 @@ class KeyboardState : public State {
   void ScheduleRepeat(uint64_t sequence, zx::duration delta);
 
   DeviceState* device_state_;
-  keychar_t* keymap_;  // assigned to a global static qwerty_map or dvorak_map
+  const keychar_t*
+      keymap_;  // assigned to a global static qwerty_map or dvorak_map
 
   std::vector<uint32_t> keys_;
   std::vector<uint32_t> repeat_keys_;
