@@ -10,6 +10,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/hidbus.h>
+#include <ddk/trace/event.h>
 #include <fuchsia/hardware/input/c/fidl.h>
 
 #include <zircon/assert.h>
@@ -40,6 +41,9 @@
 // needs a hack as well.
 #define BOOT_MOUSE_HACK 1
 
+#define HID_REPORT_TRACE_ID(instance_id, report_id) \
+    (((uint64_t) (report_id) << 32) | (instance_id))
+
 typedef struct hid_device {
     zx_device_t* zxdev;
 
@@ -62,6 +66,7 @@ typedef struct hid_device {
     hid_report_size_t sizes[HID_MAX_REPORT_IDS];
 
     struct list_node instance_list;
+    uint32_t next_instance_trace_id;
     mtx_t instance_lock;
 
     char name[ZX_DEVICE_NAME_MAX + 1];
@@ -74,6 +79,9 @@ typedef struct hid_instance {
     uint32_t flags;
 
     zx_hid_fifo_t fifo;
+    uint32_t trace_id;
+    uint32_t reports_written;
+    uint32_t reports_read;
 
     struct list_node node;
 } hid_instance_t;
@@ -163,6 +171,8 @@ static input_report_size_t get_max_input_reportsize(hid_device_t* hid) {
 
 static zx_status_t hid_read_instance(void* ctx, void* buf, size_t count, zx_off_t off,
                                      size_t* actual) {
+    TRACE_DURATION("input", "HID Read Instance");
+
     hid_instance_t* hid = ctx;
 
     if (hid->flags & HID_FLAGS_DEAD) {
@@ -200,6 +210,10 @@ static zx_status_t hid_read_instance(void* ctx, void* buf, size_t count, zx_off_
     }
     mtx_unlock(&hid->fifo.lock);
     if (r > 0) {
+        TRACE_FLOW_END("input", "hid_instance_report",
+                       HID_REPORT_TRACE_ID(hid->trace_id,
+                                           hid->reports_read));
+        ++hid->reports_read;
         *actual = r;
         r = ZX_OK;
     } else if (r == 0) {
@@ -468,6 +482,7 @@ static zx_status_t hid_open_device(void* ctx, zx_device_t** dev_out, uint32_t fl
 
     mtx_lock(&hid->instance_lock);
     list_add_tail(&hid->instance_list, &inst->node);
+    inst->trace_id = hid->next_instance_trace_id++;
     mtx_unlock(&hid->instance_lock);
 
     *dev_out = inst->zxdev;
@@ -496,6 +511,8 @@ zx_protocol_device_t hid_device_proto = {
 void hid_io_queue(void* cookie, const void* _buf, size_t len) {
     const uint8_t* buf = _buf;
     hid_device_t* hid = cookie;
+
+    TRACE_DURATION("input", "HID IO Queue");
 
     mtx_lock(&hid->instance_lock);
 
@@ -579,6 +596,11 @@ void hid_io_queue(void* cookie, const void* _buf, size_t len) {
                     instance->flags |= HID_FLAGS_WRITE_FAILED;
                 }
             } else {
+                TRACE_FLOW_BEGIN(
+                    "input", "hid_instance_report",
+                    HID_REPORT_TRACE_ID(instance->trace_id,
+                                        instance->reports_written));
+                ++instance->reports_written;
                 instance->flags &= ~HID_FLAGS_WRITE_FAILED;
                 if (was_empty) {
                     device_state_set(instance->zxdev, DEV_STATE_READABLE);
@@ -615,6 +637,7 @@ static zx_status_t hid_bind(void* ctx, zx_device_t* parent) {
 
     mtx_init(&hiddev->instance_lock, mtx_plain);
     list_initialize(&hiddev->instance_list);
+    hiddev->next_instance_trace_id = 1u;
 
     snprintf(hiddev->name, sizeof(hiddev->name), "hid-device-%03d", hiddev->info.dev_num);
     hiddev->name[ZX_DEVICE_NAME_MAX] = 0;
