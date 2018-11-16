@@ -13,10 +13,10 @@
 #include <fuchsia/crash/c/fidl.h>
 #include <inspector/inspector.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/backtrace-request/backtrace-request.h>
 #include <lib/crashanalyzer/crashanalyzer.h>
 #include <lib/fdio/util.h>
 #include <lib/fidl/cpp/message_buffer.h>
-#include <lib/backtrace-request/backtrace-request.h>
 #include <pretty/hexdump.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
@@ -353,40 +353,57 @@ static zx_status_t handle_message(zx_handle_t channel, fidl::MessageBuffer* buff
     if (!message.has_header())
         return ZX_ERR_INVALID_ARGS;
     switch (message.ordinal()) {
-    case fuchsia_crash_AnalyzerHandleExceptionOrdinal: {
+    case fuchsia_crash_AnalyzerHandleNativeExceptionOrdinal: {
         const char* error_msg = nullptr;
-        zx_status_t status = message.Decode(&fuchsia_crash_AnalyzerHandleExceptionRequestTable, &error_msg);
+        zx_status_t status = message.Decode(&fuchsia_crash_AnalyzerHandleNativeExceptionRequestTable, &error_msg);
         if (status != ZX_OK) {
             fprintf(stderr, "crashanalyzer: error: %s\n", error_msg);
             return status;
         }
-        auto* request = message.GetBytesAs<fuchsia_crash_AnalyzerHandleExceptionRequest>();
+        auto* request = message.GetBytesAs<fuchsia_crash_AnalyzerHandleNativeExceptionRequest>();
 
         // Whether to use libunwind or not.
         // If not then we use a simple algorithm that assumes ABI-specific
         // frame pointers are present.
         bool use_libunwind = true;
 
-        fuchsia_crash_AnalyzerHandleExceptionResponse response;
+        fuchsia_crash_AnalyzerHandleNativeExceptionResponse response;
         memset(&response, 0, sizeof(response));
         response.hdr.txid = request->hdr.txid;
         response.hdr.ordinal = request->hdr.ordinal;
+        // TODO(DX-653): we should set a more meaningful status depending on
+        // the result of process_report.
+        response.status = ZX_OK;
         status = zx_channel_write(channel, 0, &response, sizeof(response), nullptr, 0);
 
         process_report(request->process, request->thread, request->exception_port, use_libunwind);
 
         return status;
     }
-    case fuchsia_crash_AnalyzerProcessCrashlogOrdinal: {
-        fprintf(stderr, "crashanalyzer: error: No processing of crashlog VMO supported\n");
+    case fuchsia_crash_AnalyzerHandleManagedRuntimeExceptionOrdinal: {
+        fprintf(stderr, "crashanalyzer: error: No handling of managed runtime exception supported\n");
 
         const char* error_msg = nullptr;
-        zx_status_t status = message.Decode(&fuchsia_crash_AnalyzerProcessCrashlogRequestTable, &error_msg);
+        zx_status_t status = message.Decode(&fuchsia_crash_AnalyzerHandleManagedRuntimeExceptionRequestTable, &error_msg);
         if (status != ZX_OK) {
             fprintf(stderr, "crashanalyzer: error: %s\n", error_msg);
             return status;
         }
-        auto* request = message.GetBytesAs<fuchsia_crash_AnalyzerProcessCrashlogRequest>();
+        auto* request = message.GetBytesAs<fuchsia_crash_AnalyzerHandleManagedRuntimeExceptionRequest>();
+        zx_handle_close(request->stackTrace.vmo);
+
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    case fuchsia_crash_AnalyzerProcessKernelPanicCrashlogOrdinal: {
+        fprintf(stderr, "crashanalyzer: error: No processing of kernel panic crashlog supported\n");
+
+        const char* error_msg = nullptr;
+        zx_status_t status = message.Decode(&fuchsia_crash_AnalyzerProcessKernelPanicCrashlogRequestTable, &error_msg);
+        if (status != ZX_OK) {
+            fprintf(stderr, "crashanalyzer: error: %s\n", error_msg);
+            return status;
+        }
+        auto* request = message.GetBytesAs<fuchsia_crash_AnalyzerProcessKernelPanicCrashlogRequest>();
         zx_handle_close(request->crashlog.vmo);
 
         return ZX_ERR_NOT_SUPPORTED;

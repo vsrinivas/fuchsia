@@ -231,9 +231,12 @@ int crash_analyzer_listener(void* arg) {
         analyzer_request = ZX_HANDLE_INVALID;
         if (status != ZX_OK)
             goto cleanup;
-        status = fuchsia_crash_AnalyzerHandleException(analyzer, handles[0], handles[1], handles[2]);
-        // fuchsia_crash_AnalyzerHandleException always consumes the handles.
+        zx_status_t out_status;
+        status = fuchsia_crash_AnalyzerHandleNativeException(analyzer, handles[0], handles[1], handles[2], &out_status);
+        // fuchsia_crash_AnalyzerHandleNativeException always consumes the handles.
         memset(handles, 0, sizeof(handles));
+        if (status == ZX_OK)
+            status = out_status;
 
     cleanup:
         if (analyzer)
