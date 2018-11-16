@@ -113,25 +113,26 @@ bool TestGeneralAvailability() {
     END_TEST;
 }
 
-bool CreateTest() {
+// Sanity Check
+bool ConstructFromOptionsTest() {
     BEGIN_TEST;
     CollectorOptions options = MakeCollectorOptions();
-    fbl::unique_ptr<Collector> collector = Collector::Create(std::move(options));
+    Collector collector = Collector(std::move(options));
     // Sanity check nothing crashes.
-    auto histogram = Histogram<kBuckets>(MakeHistogramOptions(), collector.get());
-    auto counter = Counter(MakeMetricOptions(), collector.get());
+    auto histogram = Histogram<kBuckets>(MakeHistogramOptions(), &collector);
+    auto counter = Counter(MakeMetricOptions(), &collector);
 
     histogram.Add(1);
     counter.Increment();
 
-    collector->Flush();
+    collector.Flush();
     END_TEST;
 }
 
 bool AddCounterTest() {
     BEGIN_TEST;
     fbl::unique_ptr<FakeLogger> logger = fbl::make_unique<FakeLogger>();
-    Collector collector = Collector(MakeCollectorOptions(), std::move(logger));
+    Collector collector(std::move(logger));
     auto counter = Counter(MakeMetricOptions(), &collector);
     counter.Increment(5);
     ASSERT_EQ(counter.GetRemoteCount(), 5);
@@ -142,7 +143,7 @@ bool AddCounterTest() {
 bool AddCounterMultipleTest() {
     BEGIN_TEST;
     fbl::unique_ptr<FakeLogger> logger = fbl::make_unique<FakeLogger>();
-    Collector collector = Collector(MakeCollectorOptions(), std::move(logger));
+    Collector collector(std::move(logger));
 
     auto counter = Counter(MakeMetricOptions(1, 1), &collector);
     auto counter_2 = Counter(MakeMetricOptions(1, 2), &collector);
@@ -159,7 +160,7 @@ bool AddCounterMultipleTest() {
 bool AddHistogramTest() {
     BEGIN_TEST;
     fbl::unique_ptr<FakeLogger> logger = fbl::make_unique<FakeLogger>();
-    Collector collector = Collector(MakeCollectorOptions(), std::move(logger));
+    Collector collector(std::move(logger));
 
     auto histogram = Histogram<kBuckets>(MakeHistogramOptions(), &collector);
 
@@ -172,7 +173,7 @@ bool AddHistogramTest() {
 bool AddHistogramMultipleTest() {
     BEGIN_TEST;
     fbl::unique_ptr<FakeLogger> logger = fbl::make_unique<FakeLogger>();
-    Collector collector = Collector(MakeCollectorOptions(), std::move(logger));
+    Collector collector(std::move(logger));
 
     auto histogram =
         Histogram<kBuckets>(MakeHistogramOptions(/*metric_id*/ 1, /*event_code*/ 1), &collector);
@@ -197,7 +198,7 @@ bool FlushTest() {
     HistogramOptions options = MakeHistogramOptions();
     fbl::unique_ptr<FakeLogger> logger = fbl::make_unique<FakeLogger>();
     FakeLogger* logger_ptr = logger.get();
-    Collector collector = Collector(MakeCollectorOptions(), std::move(logger));
+    Collector collector(std::move(logger));
 
     auto histogram =
         Histogram<kBuckets>(MakeHistogramOptions(/*metric_id*/ 1, /*event_code*/ 1), &collector);
@@ -241,7 +242,7 @@ bool FlushFailTest() {
     HistogramOptions options = MakeHistogramOptions();
     fbl::unique_ptr<FakeLogger> logger = fbl::make_unique<FakeLogger>();
     FakeLogger* logger_ptr = logger.get();
-    Collector collector = Collector(MakeCollectorOptions(), std::move(logger));
+    Collector collector(std::move(logger));
 
     auto histogram =
         Histogram<kBuckets>(MakeHistogramOptions(/*metric_id*/ 1, /*event_code*/ 1), &collector);
@@ -360,7 +361,7 @@ bool FlushMultithreadTest() {
     // Preallocate with the number of logs to prevent realloc problems.
     fbl::unique_ptr<FakeLogger> logger = fbl::make_unique<FakeLogger>();
     FakeLogger* logger_ptr = logger.get();
-    Collector collector = Collector(MakeCollectorOptions(), std::move(logger));
+    Collector collector(std::move(logger));
     logger_ptr->set_should_fail(should_fail);
     fbl::Vector<fbl::unique_ptr<Histogram<kBuckets>>> histograms;
     fbl::Vector<fbl::unique_ptr<Counter>> counters;
@@ -448,7 +449,7 @@ RUN_TEST(TestGeneralAvailability)
 END_TEST_CASE(CollectorOptionsTest)
 
 BEGIN_TEST_CASE(CollectorTest)
-RUN_TEST(CreateTest)
+RUN_TEST(ConstructFromOptionsTest)
 RUN_TEST(AddCounterTest)
 RUN_TEST(AddCounterMultipleTest)
 RUN_TEST(AddHistogramTest)

@@ -25,10 +25,29 @@ using internal::Logger;
 using internal::RemoteCounter;
 using internal::RemoteHistogram;
 
+internal::CobaltOptions MakeCobaltOptions(CollectorOptions options) {
+    ZX_DEBUG_ASSERT_MSG(options.load_config, "Must define a load_config function.");
+    internal::CobaltOptions cobalt_options;
+    cobalt_options.logger_deadline_first_attempt = options.initial_response_deadline;
+    cobalt_options.logger_deadline = options.response_deadline;
+    cobalt_options.config_reader = std::move(options.load_config);
+    cobalt_options.service_connect = [](const char* service_path,
+                                        zx::channel service) -> zx_status_t {
+        return fdio_service_connect(service_path, service.release());
+    };
+    cobalt_options.service_path.AppendPrintf("/svc/%s", fuchsia_cobalt_LoggerFactory_Name);
+    cobalt_options.release_stage = static_cast<internal::ReleaseStage>(options.release_stage);
+    return cobalt_options;
+}
+
 } // namespace
 
-Collector::Collector(const CollectorOptions& options, fbl::unique_ptr<internal::Logger> logger)
-    : logger_(std::move(logger)) {
+Collector::Collector(CollectorOptions options)
+    : logger_(fbl::make_unique<internal::CobaltLogger>(MakeCobaltOptions(std::move(options)))) {
+    flushing_.store(false);
+}
+
+Collector::Collector(fbl::unique_ptr<internal::Logger> logger) : logger_(std::move(logger)) {
     flushing_.store(false);
 }
 
@@ -63,22 +82,6 @@ void Collector::UnSubscribe(internal::FlushInterface* flushable) {
             break;
         }
     }
-}
-
-fbl::unique_ptr<Collector> Collector::Create(CollectorOptions options) {
-    ZX_DEBUG_ASSERT_MSG(options.load_config, "Must define a load_config function.");
-    internal::CobaltOptions cobalt_options;
-    cobalt_options.logger_deadline_first_attempt = options.initial_response_deadline;
-    cobalt_options.logger_deadline = options.response_deadline;
-    cobalt_options.config_reader = std::move(options.load_config);
-    cobalt_options.service_connect = [](const char* service_path,
-                                        zx::channel service) -> zx_status_t {
-        return fdio_service_connect(service_path, service.release());
-    };
-    cobalt_options.service_path.AppendPrintf("/svc/%s", fuchsia_cobalt_LoggerFactory_Name);
-    cobalt_options.release_stage = static_cast<internal::ReleaseStage>(options.release_stage);
-    return fbl::make_unique<Collector>(
-        options, fbl::make_unique<internal::CobaltLogger>(std::move(cobalt_options)));
 }
 
 CollectorOptions CollectorOptions::GeneralAvailability() {

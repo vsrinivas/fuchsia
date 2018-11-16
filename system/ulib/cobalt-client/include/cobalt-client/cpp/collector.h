@@ -68,10 +68,8 @@ struct CollectorOptions {
 // This class is thread-compatible.
 class Collector {
 public:
-    // Returns a |Collector|
-    static fbl::unique_ptr<Collector> Create(CollectorOptions options);
-
-    Collector(const CollectorOptions& options, fbl::unique_ptr<internal::Logger> logger);
+    Collector(CollectorOptions options);
+    Collector(fbl::unique_ptr<internal::Logger> logger);
     Collector(const Collector&) = delete;
     Collector(Collector&&) = delete;
     Collector& operator=(const Collector&) = delete;
