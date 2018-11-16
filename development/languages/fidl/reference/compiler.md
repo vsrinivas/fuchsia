@@ -5,7 +5,7 @@ This document describes the command-line interface to the FIDL compiler.
 Information on the internals of that tool lives
 [alongside the source of the tool](../../system/host/fidl/README.md).
 
-See [Overview](index.md) for more information about FIDL's overall
+See [Overview](../intro/README.md) for more information about FIDL's overall
 purpose, goals, and requirements, as well as links to related documents.
 
 ## Overview
