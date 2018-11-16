@@ -34,7 +34,13 @@ KeyPriorityStorage ToKeyPriorityStorage(KeyPriority priority) {
   }
 }
 
+bool IsTreeNodeEntryValid(const EntryStorage* entry) {
+  return entry && entry->key() &&
+         IsObjectIdentifierStorageValid(entry->object_id());
+}
+
 Entry ToEntry(const EntryStorage* entry_storage) {
+  FXL_DCHECK(IsTreeNodeEntryValid(entry_storage));
   return Entry{convert::ToString(entry_storage->key()),
                ToObjectIdentifier(entry_storage->object_id()),
                ToKeyPriority(entry_storage->priority())};
@@ -65,6 +71,9 @@ bool CheckValidTreeNodeSerialization(fxl::StringView data) {
     if (child->index() < expected_min_next_index) {
       return false;
     }
+    if (!IsObjectIdentifierStorageValid(child->object_id())) {
+      return false;
+    }
     expected_min_next_index = child->index() + 1;
   }
 
@@ -73,10 +82,22 @@ bool CheckValidTreeNodeSerialization(fxl::StringView data) {
     return false;
   }
 
-  // Check that keys are in order.
+  // Check that the first entry is correct.
+  if (tree_node->entries()->size() > 0) {
+    const auto* entry = *tree_node->entries()->begin();
+    if (!IsTreeNodeEntryValid(entry)) {
+      return false;
+    }
+  }
+  // Check that the rest of the entries are correct and that the keys are in
+  // order.
   auto it = std::adjacent_find(
       tree_node->entries()->begin(), tree_node->entries()->end(),
       [](const auto* e1, const auto* e2) {
+        FXL_DCHECK(IsTreeNodeEntryValid(e1));
+        if (!IsTreeNodeEntryValid(e2)) {
+          return true;
+        }
         return convert::ExtendedStringView(e1->key()) >=
                convert::ExtendedStringView(e2->key());
       });

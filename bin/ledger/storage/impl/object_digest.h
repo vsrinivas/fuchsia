@@ -24,6 +24,9 @@ enum class ObjectDigestType {
 };
 
 // Returns whether the given digest is valid.
+bool IsDigestValid(convert::ExtendedStringView object_digest);
+
+// Returns whether the given digest is valid.
 bool IsDigestValid(const ObjectDigest& object_digest);
 
 // Returns the type of |object_digest|.

@@ -41,13 +41,17 @@ bool DecodeObjectIdentifier(fxl::StringView data,
   }
   const ObjectIdentifierStorage* storage = GetObjectIdentifierStorage(
       reinterpret_cast<const unsigned char*>(data.data()));
-  ObjectDigest object_digest = convert::ToString(storage->object_digest());
-  if (!IsDigestValid(object_digest)) {
+  if (!IsObjectIdentifierStorageValid(storage)) {
     return false;
   }
   *object_identifier = {storage->key_index(), storage->deletion_scope_id(),
-                        std::move(object_digest)};
+                        convert::ToString(storage->object_digest())};
   return true;
+}
+
+bool IsObjectIdentifierStorageValid(const ObjectIdentifierStorage* storage) {
+  return storage && storage->object_digest() &&
+         IsDigestValid(storage->object_digest());
 }
 
 }  // namespace storage

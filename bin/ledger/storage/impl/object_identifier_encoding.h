@@ -28,6 +28,10 @@ std::string EncodeObjectIdentifier(const ObjectIdentifier& object_identifier);
 bool DecodeObjectIdentifier(fxl::StringView data,
                             ObjectIdentifier* object_identifier);
 
+// Returns whether a |ObjectIdentifierStorage| obtained from flatbuffer is
+// valid.
+bool IsObjectIdentifierStorageValid(const ObjectIdentifierStorage* storage);
+
 }  // namespace storage
 
 #endif  // PERIDOT_BIN_LEDGER_STORAGE_IMPL_OBJECT_IDENTIFIER_ENCODING_H_

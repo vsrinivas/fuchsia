@@ -29,7 +29,7 @@ std::string AddPrefix(char c, convert::ExtendedStringView data) {
 
 }  // namespace
 
-bool IsDigestValid(const ObjectDigest& object_digest) {
+bool IsDigestValid(convert::ExtendedStringView object_digest) {
   if (object_digest.size() <= kStorageHashSize) {
     // |object_digest| is of type inline.
     return true;
@@ -46,6 +46,10 @@ bool IsDigestValid(const ObjectDigest& object_digest) {
   }
   // The first character is invalid.
   return false;
+}
+
+bool IsDigestValid(const ObjectDigest& object_digest) {
+  return IsDigestValid(convert::ExtendedStringView(object_digest));
 }
 
 ObjectDigestType GetObjectDigestType(const ObjectDigest& object_digest) {
