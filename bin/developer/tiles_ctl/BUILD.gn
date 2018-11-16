@@ -20,14 +20,13 @@ executable("bin") {
 }
 
 package("tiles_ctl") {
-  deprecated_system_image = true
-
   deps = [
     ":bin",
   ]
 
   binaries = [
     {
+      shell = true
       name = "tiles_ctl"
     },
   ]

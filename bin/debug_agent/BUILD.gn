@@ -97,13 +97,13 @@ executable("bin") {
 }
 
 package("debug_agent") {
-  deprecated_system_image = true
   deps = [
     ":bin",
   ]
 
   binaries = [
     {
+      shell = true
       name = "debug_agent"
     },
   ]
