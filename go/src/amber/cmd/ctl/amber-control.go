@@ -42,16 +42,10 @@ Commands
     get_blob      - get the specified content blob
         -i: content ID of the blob
 
-    add_src   - add a source to the list we can use
-        -n: name of the update source
-        -f: path to a source config file
-        -h: SHA256 hash of source config file (required if path is a URL, ignored otherwise)
-        -s: location of the package source
-        -b: location of the blob source
-        -k: the hex string of the public ED25519 key for the source
-        -l: requests per period that can be made to the source (0 for unlimited)
-        -p: length of time (in milliseconds) over which the limit passed to
-            '-l' applies, 0 for no limit
+    add_src       - add a source to the list we can use
+        -n: name of the update source (optional, with URL)
+        -f: file path or url to a source config file
+        -h: SHA256 hash of source config file (optional, with URL)
 
     rm_src        - remove a source, if it exists
         -n: name of the update source
@@ -70,19 +64,14 @@ Commands
 `
 
 var (
-	fs        = flag.NewFlagSet("default", flag.ExitOnError)
-	pkgFile   = fs.String("f", "", "Path to a source config file")
-	hash      = fs.String("h", "", "SHA256 hash of source config file (required if -f is a URL, ignored otherwise)")
-	name      = fs.String("n", "", "Name of a source or package")
-	version   = fs.String("v", "", "Version of a package")
-	srcUrl    = fs.String("s", "", "The location of a package source")
-	blobUrl   = fs.String("b", "", "The location of the blob source")
-	rateLimit = fs.Uint64("l", 0, "Maximum number of requests allowable in a time period.")
-	srcKey    = fs.String("k", "", "Root key for the source, this can be either the key itself or a http[s]:// or file:// URL to the key")
-	blobID    = fs.String("i", "", "Content ID of the blob")
-	noWait    = fs.Bool("nowait", false, "Return once installation has started, package will not yet be available.")
-	merkle    = fs.String("m", "", "Merkle root of the desired update.")
-	period    = fs.Uint("p", 0, "Duration in milliseconds over which the request limit applies.")
+	fs      = flag.NewFlagSet("default", flag.ExitOnError)
+	pkgFile = fs.String("f", "", "Path to a source config file")
+	hash    = fs.String("h", "", "SHA256 hash of source config file (required if -f is a URL, ignored otherwise)")
+	name    = fs.String("n", "", "Name of a source or package")
+	version = fs.String("v", "", "Version of a package")
+	blobID  = fs.String("i", "", "Content ID of the blob")
+	noWait  = fs.Bool("nowait", false, "Return once installation has started, package will not yet be available.")
+	merkle  = fs.String("m", "", "Merkle root of the desired update.")
 )
 
 type ErrGetFile string
@@ -120,74 +109,39 @@ func addSource(a *amber.ControlInterface) error {
 	var cfg amber.SourceConfig
 
 	if len(*pkgFile) == 0 {
-		name := strings.TrimSpace(*name)
-		if len(name) == 0 {
-			return fmt.Errorf("no source id provided")
-		}
+		return fmt.Errorf("a url or file path (via -f) are required")
+	}
 
-		srcUrl := strings.TrimSpace(*srcUrl)
-		if len(srcUrl) == 0 {
-			return fmt.Errorf("no repository URL provided")
-		}
-		if _, err := url.ParseRequestURI(srcUrl); err != nil {
-			return fmt.Errorf("provided URL %q is not valid: %s", srcUrl, err)
-		}
+	var source io.Reader
+	url, err := url.Parse(*pkgFile)
+	if err == nil && url.IsAbs() {
+		var expectedHash []byte
+		hash := strings.TrimSpace(*hash)
+		if len(hash) != 0 {
 
-		blobUrl := strings.TrimSpace(*blobUrl)
-		if _, err := url.ParseRequestURI(blobUrl); err != nil {
-			return fmt.Errorf("provided URL %q is not valid: %s", blobUrl, err)
-		}
-
-		srcKey := strings.TrimSpace(*srcKey)
-		if len(srcKey) == 0 {
-			return fmt.Errorf("No repository key provided")
-		}
-		if _, err := hex.DecodeString(srcKey); err != nil {
-			return fmt.Errorf("Provided repository key %q contains invalid characters", srcKey)
-		}
-
-		cfg = amber.SourceConfig{
-			Id:          name,
-			RepoUrl:     srcUrl,
-			BlobRepoUrl: blobUrl,
-			RateLimit:   *rateLimit,
-			RatePeriod:  int32(*period),
-			RootKeys: []amber.KeyConfig{
-				amber.KeyConfig{
-					Type:  "ed25519",
-					Value: srcKey,
-				},
-			},
-		}
-	} else {
-		var source io.Reader
-		url, err := url.Parse(*pkgFile)
-		if err == nil && url.IsAbs() {
-			hash := strings.TrimSpace(*hash)
-			if len(hash) == 0 {
-				return fmt.Errorf("no source config hash provided")
-			}
-
-			expectedHash, err := hex.DecodeString(hash)
+			var err error
+			expectedHash, err = hex.DecodeString(hash)
 			if err != nil {
 				return fmt.Errorf("hash is not a hex encoded string: %v", err)
 			}
+		}
 
-			resp, err := http.Get(*pkgFile)
-			if err != nil {
-				return NewErrGetFile("failed to GET file", err)
-			}
-			defer resp.Body.Close()
-			if resp.StatusCode != 200 {
-				io.Copy(ioutil.Discard, resp.Body)
-				return fmt.Errorf("GET response: %v", resp.Status)
-			}
+		resp, err := http.Get(*pkgFile)
+		if err != nil {
+			return NewErrGetFile("failed to GET file", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != 200 {
+			io.Copy(ioutil.Discard, resp.Body)
+			return fmt.Errorf("GET response: %v", resp.Status)
+		}
 
-			body, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				return fmt.Errorf("failed to read file body: %v", err)
-			}
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("failed to read file body: %v", err)
+		}
 
+		if len(expectedHash) != 0 {
 			hasher := sha256.New()
 			hasher.Write(body)
 			actualHash := hasher.Sum(nil)
@@ -195,22 +149,30 @@ func addSource(a *amber.ControlInterface) error {
 			if !bytes.Equal(expectedHash, actualHash) {
 				return fmt.Errorf("hash of config file does not match!")
 			}
-
-			source = bytes.NewReader(body)
-
-		} else {
-			f, err := os.Open(*pkgFile)
-			if err != nil {
-				return fmt.Errorf("failed to open file: %v", err)
-			}
-			defer f.Close()
-
-			source = f
 		}
 
-		if err := json.NewDecoder(source).Decode(&cfg); err != nil {
-			return fmt.Errorf("failed to parse source config: %v", err)
+		source = bytes.NewReader(body)
+
+	} else {
+		f, err := os.Open(*pkgFile)
+		if err != nil {
+			return fmt.Errorf("failed to open file: %v", err)
 		}
+		defer f.Close()
+
+		source = f
+	}
+
+	if err := json.NewDecoder(source).Decode(&cfg); err != nil {
+		return fmt.Errorf("failed to parse source config: %v", err)
+	}
+
+	if len(*name) != 0 {
+		cfg.Id = *name
+	}
+
+	if cfg.BlobRepoUrl == "" {
+		cfg.BlobRepoUrl = filepath.Join(cfg.RepoUrl, "blobs")
 	}
 
 	added, err := a.AddSrc(cfg)

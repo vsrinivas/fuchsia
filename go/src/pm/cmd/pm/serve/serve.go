@@ -5,6 +5,7 @@
 package serve
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -120,6 +121,79 @@ func Run(cfg *build.Config, args []string) error {
 	}
 
 	http.Handle("/", http.FileServer(http.Dir(*repoDir)))
+
+	http.Handle("/config.json", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		var scheme = "http://"
+		if r.TLS != nil {
+			scheme = "https://"
+		}
+
+		repoUrl := fmt.Sprintf("%s%s", scheme, r.Host)
+
+		var signedKeys struct {
+			Signed struct {
+				Keys map[string]struct {
+					Keytype string
+					Keyval  struct {
+						Public string
+					}
+				}
+				Roles struct {
+					Root struct {
+						Keyids []string
+					}
+					Threshold int
+				}
+			}
+		}
+		f, err := os.Open(filepath.Join(*repoDir, "root.json"))
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			log.Printf("root.json missing or unreadable: %s", err)
+			return
+		}
+		defer f.Close()
+		if err := json.NewDecoder(f).Decode(&signedKeys); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			log.Printf("root.json parsing error: %s", err)
+			return
+		}
+
+		cfg := struct {
+			ID          string
+			RepoURL     string
+			BlobRepoURL string
+			RatePeriod  int
+			RootKeys    []struct {
+				Type  string
+				Value string
+			}
+			StatusConfig struct {
+				Enabled bool
+			}
+			Auto bool
+		}{
+			ID:          repoUrl,
+			RepoURL:     repoUrl,
+			BlobRepoURL: repoUrl + "/blobs",
+			RatePeriod:  0,
+			StatusConfig: struct {
+				Enabled bool
+			}{
+				Enabled: true,
+			},
+			Auto: true,
+		}
+		for _, id := range signedKeys.Signed.Roles.Root.Keyids {
+			k := signedKeys.Signed.Keys[id]
+			cfg.RootKeys = append(cfg.RootKeys, struct{ Type, Value string }{
+				Type:  k.Keytype,
+				Value: k.Keyval.Public,
+			})
+		}
+		json.NewEncoder(w).Encode(cfg)
+	}))
 
 	if !*quiet {
 		fmt.Printf("%s [pm serve] serving %s at http://%s\n",
