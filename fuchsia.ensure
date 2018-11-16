@@ -19,7 +19,7 @@ gn/gn/${platform} git_revision:bdb0fd02324b120cacde634a9235405061c8ea06
 infra/tools/luci/vpython/${platform} git_revision:00e2d8b49a4e7505d1c71f19d15c9e7c5b9245a5
 
 # LUCI editor
-infra/tools/luci/led/${platform} git_revision:364409bad34a43aaaeab8d3d92d8f890fb96d572
+infra/tools/luci/led/${platform} git_revision:522debceb9aeba7dbce7f811687a640656d4e8cd
 
 # LogDog CLI client
 infra/tools/luci/logdog/logdog/${platform} git_revision:cf9d281c2ff478928ff11dfa4995d09a97046990
