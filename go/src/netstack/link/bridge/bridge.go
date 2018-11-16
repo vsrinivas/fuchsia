@@ -114,7 +114,7 @@ func (ep *endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, d
 		if dstLinkAddr == l.LinkAddress() {
 			// The destination of the packet is this port on the bridge.  We
 			// assume that the MAC address is unique.
-			ep.dispatcher.DeliverNetworkPacket(l, dstLinkAddr, srcLinkAddr, p, vv)
+			ep.dispatcher.DeliverNetworkPacket(l, srcLinkAddr, dstLinkAddr, p, vv)
 			return
 		}
 	}
