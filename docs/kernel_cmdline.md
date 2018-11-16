@@ -23,6 +23,10 @@ lines starting with # are ignored.  Whitespace is not allowed in names.
 If this option is set, the system will not use Address Space Layout
 Randomization.
 
+## bootsvc.next=\<bootfs path\>
+Controls what program is executed by bootsvc to continue the boot process.
+If this is not specified, the default next program will be used.
+
 ## crashsvc.analyzer=\<service-host\>
 
 If this is empty, the default crash analyzer in svchost will be used
