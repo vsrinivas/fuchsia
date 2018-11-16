@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "ethertap_client.h"
-#include <errno.h>
+
 #include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <lib/async/cpp/wait.h>
@@ -32,8 +32,10 @@ namespace netemul {
 
 class EthertapClientImpl : public EthertapClient {
  public:
-  explicit EthertapClientImpl(zx::socket sock, EthertapConfig config)
-      : buf_(config.mtu + sizeof(ethertap_socket_header_t)),
+  explicit EthertapClientImpl(async_dispatcher_t* dispatcher, zx::socket sock,
+                              EthertapConfig config)
+      : dispatcher_(dispatcher),
+        buf_(config.mtu + sizeof(ethertap_socket_header_t)),
         config_(std::move(config)),
         sock_(std::move(sock)) {
     sock_data_wait_.set_object(sock_.get());
@@ -60,7 +62,7 @@ class EthertapClientImpl : public EthertapClient {
   }
 
   static std::unique_ptr<EthertapClientImpl> Create(
-      const EthertapConfig& incfg) {
+      async_dispatcher_t* dispatcher, const EthertapConfig& incfg) {
     zx::socket sock;
     fbl::unique_fd ctlfd(open(kTapctl, O_RDONLY));
     if (!ctlfd.is_valid()) {
@@ -82,7 +84,8 @@ class EthertapClientImpl : public EthertapClient {
       return nullptr;
     }
 
-    return std::make_unique<EthertapClientImpl>(std::move(sock), incfg);
+    return std::make_unique<EthertapClientImpl>(dispatcher, std::move(sock),
+                                                incfg);
   }
 
   void Close() override {
@@ -136,13 +139,14 @@ class EthertapClientImpl : public EthertapClient {
   }
 
   void WaitOnSocket() {
-    zx_status_t status = sock_data_wait_.Begin(async_get_default_dispatcher());
+    zx_status_t status = sock_data_wait_.Begin(dispatcher_);
     if (status != ZX_OK) {
       fprintf(stderr, "Can't wait on ethertap socket: %s\n",
               zx_status_get_string(status));
     }
   }
 
+  async_dispatcher_t* dispatcher_;
   std::vector<uint8_t> buf_;
   EthertapConfig config_;
   zx::socket sock_;
@@ -153,8 +157,11 @@ class EthertapClientImpl : public EthertapClient {
 };
 
 std::unique_ptr<EthertapClient> EthertapClient::Create(
-    const EthertapConfig& config) {
-  return EthertapClientImpl::Create(config);
+    const EthertapConfig& config, async_dispatcher_t* dispatcher) {
+  if (dispatcher == nullptr) {
+    dispatcher = async_get_default_dispatcher();
+  }
+  return EthertapClientImpl::Create(dispatcher, config);
 }
 
 }  // namespace netemul

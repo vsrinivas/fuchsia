@@ -16,15 +16,19 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <iostream>
+#include <sstream>
 
 namespace netemul {
 using ZDevice = fuchsia::hardware::ethernet::Device;
 using ZFifos = fuchsia::hardware::ethernet::Fifos;
 using ZFifoEntry = fuchsia::hardware::ethernet::FifoEntry;
-const char kEthernetDir[] = "/dev/class/ethernet";
 
+// WatchCbArgs is intended to be used *only* to capture context for fdio dir
+// watching. Note that base_dir and search_mac are references, not copies. That
+// is only allowed because fdio dir watch callback is called synchronously.
 struct WatchCbArgs {
-  fidl::InterfacePtr<ZDevice> device;
+  std::string result;
+  const std::string& base_dir;
   const Mac& search_mac;
 };
 
@@ -35,9 +39,10 @@ class FifoHolder {
     ZFifoEntry e;
   };
 
-  explicit FifoHolder(std::unique_ptr<ZFifos> fifos,
+  explicit FifoHolder(async_dispatcher_t* dispatcher,
+                      std::unique_ptr<ZFifos> fifos,
                       const EthernetConfig& config)
-      : buf_config_(config) {
+      : dispatcher_(dispatcher), buf_config_(config) {
     tx_.reset(fifos->tx.release());
     rx_.reset(fifos->rx.release());
   }
@@ -166,7 +171,7 @@ class FifoHolder {
   }
 
   void WaitOnFifoData() {
-    zx_status_t status = fifo_data_wait_.Begin(async_get_default_dispatcher());
+    zx_status_t status = fifo_data_wait_.Begin(dispatcher_);
     if (status != ZX_OK) {
       fprintf(stderr, "EthernetClient can't wait on fifo data: %s\n",
               zx_status_get_string(status));
@@ -223,6 +228,7 @@ class FifoHolder {
   }
 
  private:
+  async_dispatcher_t* dispatcher_;
   uint64_t vmo_size_ = 0;
   zx::vmo buf_;
   uintptr_t mapped_ = 0;
@@ -268,8 +274,8 @@ static zx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
   fuchsia::hardware::ethernet::Info info;
   zx_status_t status = iface->GetInfo(&info);
   if (status != ZX_OK) {
-    fprintf(stderr, "could not get ethernet info for %s/%s: %s\n", kEthernetDir,
-            fn, zx_status_get_string(status));
+    fprintf(stderr, "could not get ethernet info for %s/%s: %s\n",
+            args->base_dir.c_str(), fn, zx_status_get_string(status));
     // Return ZX_OK to keep watching for devices.
     return ZX_OK;
   }
@@ -283,7 +289,9 @@ static zx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
     return ZX_OK;
   }
 
-  args->device = iface.Unbind().Bind();
+  std::ostringstream ss;
+  ss << args->base_dir << "/" << fn;
+  args->result = ss.str();
   return ZX_ERR_STOP;
 }
 
@@ -297,7 +305,8 @@ void EthernetClient::Setup(const EthernetConfig& config,
           callback(status);
           return;
         }
-        fifos_ = std::make_unique<FifoHolder>(std::move(fifos), config);
+        fifos_ =
+            std::make_unique<FifoHolder>(dispatcher_, std::move(fifos), config);
 
         fifos_->SetPeerClosedCallback([this]() {
           if (peer_closed_callback_) {
@@ -317,27 +326,11 @@ void EthernetClient::Setup(const EthernetConfig& config,
       });
 }
 
-EthernetClient::Ptr EthernetClient::RetrieveWithMAC(const Mac& mac) {
-  WatchCbArgs args{.search_mac = mac};
-
-  int ethdir = open(kEthernetDir, O_RDONLY);
-  if (ethdir < 0) {
-    fprintf(stderr, "could not open %s: %s\n", kEthernetDir, strerror(errno));
-    return nullptr;
-  }
-
-  zx_status_t status;
-  status = fdio_watch_directory(ethdir, WatchCb, zx_deadline_after(ZX_SEC(2)),
-                                reinterpret_cast<void*>(&args));
-  if (status == ZX_ERR_STOP) {
-    return std::make_unique<EthernetClient>(std::move(args.device));
-  } else {
-    return nullptr;
-  }
-}
 EthernetClient::EthernetClient(
+    async_dispatcher_t* dispatcher,
+
     fidl::InterfacePtr<fuchsia::hardware::ethernet::Device> ptr)
-    : device_(std::move(ptr)) {
+    : dispatcher_(dispatcher), device_(std::move(ptr)) {
   device_.set_error_handler([this](zx_status_t status) {
     fprintf(stderr, "EthernetClient error = %s\n",
             zx_status_get_string(status));
@@ -351,14 +344,6 @@ EthernetClient::~EthernetClient() {
   if (device_) {
     device_.Unbind().BindSync()->Stop();
   }
-}
-
-fzl::fifo<fuchsia::hardware::ethernet::FifoEntry>& EthernetClient::tx_fifo() {
-  return fifos_->tx_fifo();
-}
-
-fzl::fifo<fuchsia::hardware::ethernet::FifoEntry>& EthernetClient::rx_fifo() {
-  return fifos_->rx_fifo();
 }
 
 zx_status_t EthernetClient::Send(const void* data, uint16_t len) {
@@ -391,6 +376,60 @@ void EthernetClient::SetDataCallback(EthernetClient::DataCallback cb) {
 
 void EthernetClient::SetPeerClosedCallback(PeerClosedCallback cb) {
   peer_closed_callback_ = std::move(cb);
+}
+
+std::string EthernetClientFactory::MountPointWithMAC(const Mac& mac,
+                                                     unsigned int deadline_ms) {
+  WatchCbArgs args{.base_dir = base_dir_, .search_mac = mac};
+
+  int ethdir = open(base_dir_.c_str(), O_RDONLY);
+  if (ethdir < 0) {
+    fprintf(stderr, "could not open %s: %s\n", base_dir_.c_str(),
+            strerror(errno));
+    return nullptr;
+  }
+
+  zx_status_t status;
+  status = fdio_watch_directory(ethdir, WatchCb,
+                                zx_deadline_after(ZX_MSEC(deadline_ms)),
+                                reinterpret_cast<void*>(&args));
+  if (status == ZX_ERR_STOP) {
+    return std::move(args.result);
+  } else {
+    return std::string();  // empty string if not found
+  }
+}
+
+EthernetClient::Ptr EthernetClientFactory::RetrieveWithMAC(
+    const Mac& mac, unsigned int deadline_ms, async_dispatcher_t* dispatcher) {
+  if (dispatcher == nullptr) {
+    dispatcher = async_get_default_dispatcher();
+  }
+
+  auto mount = MountPointWithMAC(mac, deadline_ms);
+  if (mount.empty()) {
+    return nullptr;
+  }
+
+  int devfd = open(mount.c_str(), O_RDONLY);
+  if (devfd < 0) {
+    fprintf(stderr, "could not open %s: %s\n", mount.c_str(), strerror(errno));
+    return nullptr;
+  }
+
+  zx::channel svc;
+  {
+    zx_status_t status =
+        fdio_get_service_handle(devfd, svc.reset_and_get_address());
+    if (status != ZX_OK) {
+      return nullptr;
+    }
+  }
+
+  fidl::InterfaceHandle<ZDevice> handle;
+  handle.set_channel(std::move(svc));
+
+  return std::make_unique<EthernetClient>(dispatcher, handle.Bind());
 }
 
 }  // namespace netemul

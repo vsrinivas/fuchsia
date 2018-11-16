@@ -32,11 +32,11 @@ class Mac {
 
   void SetMulticast() { d[0] |= NETEMUL_MAC_MULTICAST; }
 
-  // helper to generate a random local unicast mac
-  void RandomLocalUnicast() {
-    std::random_device dev;
+  // helper to generate a random local unicast mac with a given string seed
+  void RandomLocalUnicast(const std::string& str_seed) {
+    std::seed_seq seed(str_seed.begin(), str_seed.end());
     std::independent_bits_engine<std::default_random_engine, CHAR_BIT, uint8_t>
-        rnd(dev());
+        rnd(seed);
     std::generate(d, &d[6], rnd);
     SetUnicast();
     SetLocallyAdministered();
