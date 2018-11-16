@@ -13,22 +13,22 @@
 
 namespace examples {
 
-constexpr zx_duration_t kCaptureChunkDuration = ZX_MSEC(100);
-constexpr size_t kCaptureChunkCount = 10;
-constexpr uint32_t kMinChannels = 1;
-constexpr uint32_t kMaxChannels = 8;
-
-static const std::string kShowUsageOption1 = "?";
-static const std::string kShowUsageOption2 = "help";
-static const std::string kVerboseOption = "v";
-static const std::string kGainOption = "gain";
+// TODO(mpuryear): make these constexpr char[] and eliminate c_str() usage later
 static const std::string kLoopbackOption = "loopback";
-static const std::string kAsyncModeOption = "async";
+static const std::string kChannelsOption = "chans";
+static const std::string kFrameRateOption = "rate";
 static const std::string kFloatFormatOption = "float";
 static const std::string k24In32FormatOption = "int24";
 static const std::string kPacked24FormatOption = "packed24";
-static const std::string kFrameRateOption = "rate";
-static const std::string kChannelsOption = "chans";
+static const std::string kGainOption = "gain";
+static const std::string kMuteOption = "mute";
+static const std::string kAsyncModeOption = "async";
+static const std::string kVerboseOption = "v";
+static const std::string kShowUsageOption1 = "help";
+static const std::string kShowUsageOption2 = "?";
+
+constexpr zx_duration_t kCaptureChunkDuration = ZX_MSEC(100);
+constexpr size_t kCaptureChunkCount = 10;
 
 WavRecorder::~WavRecorder() {
   if (payload_buf_virt_ != nullptr) {
@@ -90,48 +90,53 @@ void WavRecorder::Run(component::StartupContext* app_context) {
 }
 
 void WavRecorder::Usage() {
-  printf("Usage: %s [options] <filename>\n", cmd_line_.argv0().c_str());
+  printf("\nUsage: %s [options] <filename>\n", cmd_line_.argv0().c_str());
   printf("Record an audio signal from the specified source, to a .wav file.\n");
   printf("\nValid options:\n");
 
-  printf("  --%s\t\t\t: Be verbose; display per-packet info\n",
-         kVerboseOption.c_str());
-
-  printf("\n    Default is to not set gain, leaving this as 0 dB (unity)\n");
-  printf("  --%s=<gain_db>      : Set input gain (range [%.1f, +%.1f])\n",
-         kGainOption.c_str(), fuchsia::media::MUTED_GAIN_DB,
-         fuchsia::media::MAX_GAIN_DB);
-
-  printf("\n    Default is to capture from the preferred input device\n");
-  printf("  --%s\t\t: Capture final-mix-output from preferred output device\n",
+  printf("\n   By default, use the preferred input device\n");
+  printf(" --%s\t\tCapture final-mix output from the preferred output device\n",
          kLoopbackOption.c_str());
 
-  printf("\n    Default is to use the device's preferred frame rate\n");
-  printf("  --%s=<rate>\t: Specify the capture frame rate (range [%u, %u])\n",
+  printf(
+      "\n   By default, use device-preferred channel count and frame rate, in "
+      "16-bit integer samples\n");
+  printf(" --%s=<NUM_CHANS>\tSpecify the number of channels (in [%u, %u])\n",
+         kChannelsOption.c_str(), fuchsia::media::MIN_PCM_CHANNEL_COUNT,
+         fuchsia::media::MAX_PCM_CHANNEL_COUNT);
+  printf(" --%s=<rate>\t\tSpecify the capture frame rate (Hz in [%u, %u])\n",
          kFrameRateOption.c_str(), fuchsia::media::MIN_PCM_FRAMES_PER_SECOND,
          fuchsia::media::MAX_PCM_FRAMES_PER_SECOND);
-
-  printf("\n    Default is to use the device's preferred number of channels\n");
-  printf(
-      "  --%s=<count>\t: Specify the number of channels captured (range [%u, "
-      "%u])\n",
-      kChannelsOption.c_str(), kMinChannels, kMaxChannels);
-
-  printf("\n    Default is to record and save as 16-bit integer\n");
-  printf("  --%s\t\t: Record and save as 32-bit float\n",
+  printf(" --%s\t\tRecord and save as 32-bit float\n",
          kFloatFormatOption.c_str());
   printf(
-      "  --%s\t\t: Record and save as 24-in-32 integer (left-justified "
-      "'padded-32')\n",
+      " --%s\t\tRecord and save as left-justified 24-in-32 int ('padded-24')\n",
       k24In32FormatOption.c_str());
-  printf(
-      "  --%s\t\t: Record as 24-in-32 'padded-32', but save as 'packed-24'\n",
-      kPacked24FormatOption.c_str());
+  printf(" --%s\t\tRecord as 24-in-32 'padded-24'; save as 'packed-24'\n",
+         kPacked24FormatOption.c_str());
 
   printf(
-      "\n    Default is to record in 'synchronous' (packet-by-packet) mode\n");
-  printf("  --%s\t\t: Capture using 'asynchronous' mode\n\n",
+      "\n   By default, don't set AudioCapturer gain and mute (unity 0 dB, "
+      "unmuted)\n");
+  printf(
+      " --%s[=<GAIN_DB>]\tSet stream gain (dB in [%.1f, +%.1f]; 0.0 if only "
+      "'--%s' is provided)\n",
+      kGainOption.c_str(), fuchsia::media::MUTED_GAIN_DB,
+      fuchsia::media::MAX_GAIN_DB, kGainOption.c_str());
+  printf(
+      " --%s[=<0|1>]\t\tSet stream mute (0=Unmute or 1=Mute; Mute if only "
+      "'--%s' is provided)\n",
+      kMuteOption.c_str(), kMuteOption.c_str());
+
+  printf("\n   By default, use packet-by-packet ('synchronous') mode\n");
+  printf(" --%s\t\tCapture using sequential-buffer ('asynchronous') mode\n",
          kAsyncModeOption.c_str());
+
+  printf("\n --%s\t\t\tBe verbose; display per-packet info\n",
+         kVerboseOption.c_str());
+  printf(" --%s, --%s\t\tShow this message\n", kShowUsageOption1.c_str(),
+         kShowUsageOption2.c_str());
+  printf("\n");
 }
 
 void WavRecorder::Shutdown() {
@@ -216,7 +221,7 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
   zx_status_t res;
 
   if (!type.medium_specific.is_audio()) {
-    FXL_LOG(ERROR) << "default format is not audio!";
+    FXL_LOG(ERROR) << "Default format is not audio!";
     return;
   }
 
@@ -239,6 +244,7 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
 
   bool change_format = false;
   bool change_gain = false;
+  bool set_mute = false;
 
   if (fmt.sample_format != sample_format_) {
     change_format = true;
@@ -266,21 +272,36 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
     }
   }
 
-  if (cmd_line_.GetOptionValue(kGainOption, &opt)) {
-    if (::sscanf(opt.c_str(), "%f", &stream_gain_db_) != 1) {
-      Usage();
-      return;
-    }
+  if (cmd_line_.HasOption(kGainOption)) {
+    stream_gain_db_ = 0.0f;
+    if (cmd_line_.GetOptionValue(kGainOption, &opt)) {
+      if (::sscanf(opt.c_str(), "%f", &stream_gain_db_) != 1) {
+        Usage();
+        return;
+      }
 
-    if ((stream_gain_db_ < fuchsia::media::MUTED_GAIN_DB) ||
-        (stream_gain_db_ > fuchsia::media::MAX_GAIN_DB)) {
-      printf("Gain (%.3f dB) must be within range [%.1f, %.1f]\n",
-             stream_gain_db_, fuchsia::media::MUTED_GAIN_DB,
-             fuchsia::media::MAX_GAIN_DB);
-      return;
+      if ((stream_gain_db_ < fuchsia::media::MUTED_GAIN_DB) ||
+          (stream_gain_db_ > fuchsia::media::MAX_GAIN_DB)) {
+        printf("Gain (%.3f dB) must be within range [%.1f, %.1f]\n",
+               stream_gain_db_, fuchsia::media::MUTED_GAIN_DB,
+               fuchsia::media::MAX_GAIN_DB);
+        return;
+      }
     }
-
     change_gain = true;
+  }
+
+  if (cmd_line_.HasOption(kMuteOption)) {
+    stream_mute_ = true;
+    if (cmd_line_.GetOptionValue(kMuteOption, &opt)) {
+      uint32_t mute_val;
+      if (::sscanf(opt.c_str(), "%u", &mute_val) != 1) {
+        Usage();
+        return;
+      }
+      stream_mute_ = (mute_val > 0);
+    }
+    set_mute = true;
   }
 
   if (cmd_line_.GetOptionValue(kChannelsOption, &opt)) {
@@ -290,9 +311,11 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
       return;
     }
 
-    if ((count < kMinChannels) || (count > kMaxChannels)) {
+    if ((count < fuchsia::media::MIN_PCM_CHANNEL_COUNT) ||
+        (count > fuchsia::media::MAX_PCM_CHANNEL_COUNT)) {
       printf("Channel count (%u) must be within range [%u, %u]\n", count,
-             kMinChannels, kMaxChannels);
+             fuchsia::media::MIN_PCM_CHANNEL_COUNT,
+             fuchsia::media::MAX_PCM_CHANNEL_COUNT);
       return;
     }
 
@@ -331,6 +354,9 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
   // Set the specified gain (if specified) for the recording.
   if (change_gain) {
     gain_control_->SetGain(stream_gain_db_);
+  }
+  if (set_mute) {
+    gain_control_->SetMute(stream_mute_);
   }
 
   // Create our shared payload buffer, map it into place, then dup the handle
@@ -388,6 +414,10 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
          filename_);
   if (change_gain) {
     printf(", applying gain of %.2f dB", stream_gain_db_);
+  }
+  if (set_mute) {
+    printf(", after setting stream Mute to %s",
+           stream_mute_ ? "TRUE" : "FALSE");
   }
   printf("\n");
 
