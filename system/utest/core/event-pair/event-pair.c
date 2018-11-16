@@ -26,16 +26,12 @@ static bool create_test(void) {
         zx_info_handle_basic_t info[2] = {};
         zx_status_t status = zx_object_get_info(h[0], ZX_INFO_HANDLE_BASIC, &info[0], sizeof(info[0]), NULL, NULL);
         ASSERT_EQ(status, ZX_OK, "");
-        EXPECT_EQ(info[0].rights,
-                  ZX_RIGHTS_BASIC | ZX_RIGHT_READ |
-                  ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL | ZX_RIGHT_SIGNAL_PEER,
+        EXPECT_EQ(info[0].rights, ZX_RIGHTS_BASIC | ZX_RIGHT_SIGNAL | ZX_RIGHT_SIGNAL_PEER,
                   "wrong rights");
         EXPECT_EQ(info[0].type, (uint32_t)ZX_OBJ_TYPE_EVENTPAIR, "wrong type");
         status = zx_object_get_info(h[1], ZX_INFO_HANDLE_BASIC, &info[1], sizeof(info[1]), NULL, NULL);
         ASSERT_EQ(status, ZX_OK, "");
-        EXPECT_EQ(info[1].rights,
-                  ZX_RIGHTS_BASIC | ZX_RIGHT_READ |
-                  ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL | ZX_RIGHT_SIGNAL_PEER,
+        EXPECT_EQ(info[1].rights, ZX_RIGHTS_BASIC | ZX_RIGHT_SIGNAL | ZX_RIGHT_SIGNAL_PEER,
                   "wrong rights");
         EXPECT_EQ(info[1].type, (uint32_t)ZX_OBJ_TYPE_EVENTPAIR, "wrong type");
 
