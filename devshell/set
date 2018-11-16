@@ -440,15 +440,21 @@ function main {
   done
   gn_args+="]"
 
+  gn_args+=" if (!defined(available)) { available = [] }"
   gn_args+=" available+=["
   for package in ${available[@]}; do
     gn_args+="\"${package}\","
   done
-  gn_args+="] preinstall+=["
+  gn_args+="]"
+
+  gn_args+=" if (!defined(preinstall)) { preinstall = [] }"
+  gn_args+=" preinstall+=["
   for package in ${preinstall[@]}; do
     gn_args+="\"${package}\","
   done
-  gn_args+="] monolith+=["
+  gn_args+="]"
+  gn_args+=" if (!defined(monolith)) { monolith = [] }"
+  gn_args+=" monolith+=["
   for package in ${monolith[@]}; do
     gn_args+="\"${package}\","
   done
