@@ -7,10 +7,10 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.pkg") {
   sources = [
     "cache.fidl",
-    "pkg.fidl",
+    "common.fidl",
     "repo.fidl",
     "resolver.fidl",
-    "system_version_admin.fidl",
+    "system_blob_admin.fidl",
   ]
 
   public_deps = [
