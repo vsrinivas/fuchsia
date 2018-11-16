@@ -7,7 +7,53 @@
 
 namespace overnet {
 
+////////////////////////////////////////////////////////////////////////////////
+// API implementation
+
+Coding SliceCodingOracle::SuggestCoding() {
+  // If we don't know the size, just guess maximum compression.
+  if (!size_.has_value()) {
+    return Coding::Snappy;
+  }
+
+  // For really small things avoid extra allocations.
+  if (*size_ < 256) {
+    return Coding::Identity;
+  }
+
+  return Coding::Snappy;
+}
+
+StatusOr<Slice> Encode(Coding coding, Slice slice) {
+  if (slice.length() == 0) {
+    return slice;
+  }
+  auto status =
+      kCodecVtable[static_cast<uint8_t>(coding)]->encode(std::move(slice));
+  if (status.is_error()) {
+    return status;
+  }
+  assert(status->length() != 0);
+  return status->WithPrefix(
+      1, [coding](uint8_t* p) { *p = static_cast<uint8_t>(coding); });
+}
+
+StatusOr<Slice> Decode(Slice slice) {
+  if (slice.length() == 0) {
+    return slice;
+  }
+  Coding coding = static_cast<Coding>(*slice.begin());
+  slice.TrimBegin(1);
+  return kCodecVtable[static_cast<uint8_t>(coding)]->decode(std::move(slice));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Codec implementations go in this super secret namespace.
+
 namespace {
+
+////////////////////////////////////////////////////////////////////////////////
+// Basic encoders and utilities
 
 Border NoBorder(size_t size) { return Border::None(); }
 

@@ -31,8 +31,6 @@ enum class Coding : uint8_t {
   Snappy = 1,
 };
 
-static inline constexpr auto kDefaultCoding = Coding::Identity;
-
 // Given a coding and a size, how much border should be allocated for a message?
 inline Border BorderForSourceSize(Coding coding, size_t size) {
   return kCodecVtable[static_cast<uint8_t>(coding)]
@@ -45,31 +43,28 @@ inline const char* CodingName(Coding coding) {
   return kCodecVtable[static_cast<uint8_t>(coding)]->name;
 }
 
-// Encode some data with a pre-selected coding.
-inline StatusOr<Slice> Encode(Coding coding, Slice slice) {
-  auto status =
-      kCodecVtable[static_cast<uint8_t>(coding)]->encode(std::move(slice));
-  if (status.is_error()) {
-    return status;
+class SliceCodingOracle {
+ public:
+  SliceCodingOracle& SetSize(size_t size) {
+    size_ = size;
+    return *this;
   }
-  return status->WithPrefix(
-      1, [coding](uint8_t* p) { *p = static_cast<uint8_t>(coding); });
-}
+
+  Coding SuggestCoding();
+
+ private:
+  Optional<size_t> size_;
+};
+
+// Encode some data with a pre-selected coding.
+StatusOr<Slice> Encode(Coding coding, Slice slice);
+// Decode an encoded slice.
+StatusOr<Slice> Decode(Slice slice);
 
 // Encode some data with an auto-selected coding.
 inline StatusOr<Slice> Encode(Slice slice) {
-  return Encode(kDefaultCoding, slice);
-}
-
-// Decode an encoded slice.
-inline StatusOr<Slice> Decode(Slice slice) {
-  if (slice.length() == 0) {
-    return StatusOr<Slice>(StatusCode::INVALID_ARGUMENT,
-                           "Can't decode an empty slice");
-  }
-  Coding coding = static_cast<Coding>(*slice.begin());
-  slice.TrimBegin(1);
-  return kCodecVtable[static_cast<uint8_t>(coding)]->decode(std::move(slice));
+  return Encode(SliceCodingOracle().SetSize(slice.length()).SuggestCoding(),
+                slice);
 }
 
 }  // namespace overnet

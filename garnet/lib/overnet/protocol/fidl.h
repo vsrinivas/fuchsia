@@ -11,20 +11,33 @@
 
 namespace overnet {
 
-template <class T>
-StatusOr<Slice> Encode(Coding coding, T* object) {
+namespace fidl_impl {
+template <class T, class CodingSelector>
+StatusOr<Slice> Encode(CodingSelector coding_selector, T* object) {
   std::vector<uint8_t> output;
   const char* error_msg;
   if (zx_status_t status = fidl::EncodeObject(object, &output, &error_msg);
       status != ZX_OK) {
     return Status::FromZx(status, error_msg);
   }
+  const auto coding = coding_selector(output.size());
   return Encode(coding, Slice::FromContainer(std::move(output)));
+}
+
+}  // namespace fidl_impl
+
+template <class T>
+StatusOr<Slice> Encode(Coding coding, T* object) {
+  return fidl_impl::Encode([coding](auto) { return coding; }, object);
 }
 
 template <class T>
 StatusOr<Slice> Encode(T* object) {
-  return Encode(kDefaultCoding, object);
+  return fidl_impl::Encode(
+      [](size_t size) {
+        return SliceCodingOracle().SetSize(size).SuggestCoding();
+      },
+      object);
 }
 
 template <class T>
