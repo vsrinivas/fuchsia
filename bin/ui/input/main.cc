@@ -100,6 +100,8 @@ class InputApp {
       }
     } else if (positional_args[0] == "keyevent") {
       KeyEventCommand(positional_args, duration);
+    } else {
+      Usage();
     }
   }
 
