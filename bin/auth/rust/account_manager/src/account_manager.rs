@@ -2,19 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use account_common::{FidlLocalAccountId, LocalAccountId};
+use account_common::{AccountManagerError, FidlLocalAccountId, LocalAccountId};
 use fidl::encoding::OutOfLine;
 use fidl::endpoints::{ClientEnd, ServerEnd};
-use fidl::Error;
 use fidl_fuchsia_auth::{AuthState, AuthStateSummary, AuthenticationContextProviderMarker};
 use fidl_fuchsia_auth_account::{
     AccountAuthState, AccountListenerMarker, AccountListenerOptions, AccountManagerRequest,
     AccountManagerRequestStream, AccountMarker, Status,
 };
+
+use failure::Error;
+use futures::lock::Mutex;
 use futures::prelude::*;
-use log::info;
-use parking_lot::Mutex;
-use std::collections::BTreeSet;
+use log::{info, warn};
+use std::collections::BTreeMap;
+use std::sync::Arc;
+
+use crate::account_handler_connection::AccountHandlerConnection;
 
 /// The core component of the account system for Fuchsia.
 ///
@@ -23,12 +27,10 @@ use std::collections::BTreeSet;
 /// service providers, and launches and delegates to AccountHandler component instances to
 /// determine the detailed state and authentication for each account.
 pub struct AccountManager {
-    /// (Temporary) The next unused local account identifier.
-    // TODO(jsankey): Replace this temporary sequential ID assignment with randomness.
-    next_id: Mutex<u64>,
-
-    /// An ordered set of LocalAccountIds for accounts provisioned on the current device.
-    ids: Mutex<BTreeSet<LocalAccountId>>,
+    /// An ordered map from the `LocalAccountId` of all accounts on the device to an
+    /// `Option` containing the `AcountHandlerConnection` used to communicate with the associated
+    /// AccountHandler if a connecton exists, or None otherwise.
+    ids_to_handlers: Mutex<BTreeMap<LocalAccountId, Option<Arc<AccountHandlerConnection>>>>,
 }
 
 impl AccountManager {
@@ -41,8 +43,7 @@ impl AccountManager {
     /// Constructs a new AccountManager with no accounts.
     pub fn new() -> AccountManager {
         AccountManager {
-            next_id: Mutex::new(1),
-            ids: Mutex::new(BTreeSet::new()),
+            ids_to_handlers: Mutex::new(BTreeMap::new()),
         }
     }
 
@@ -51,19 +52,19 @@ impl AccountManager {
         &self, mut stream: AccountManagerRequestStream,
     ) -> Result<(), Error> {
         while let Some(req) = await!(stream.try_next())? {
-            self.handle_request(req)?;
+            await!(self.handle_request(req))?;
         }
         Ok(())
     }
 
     /// Handles a single request to the AccountManager.
-    pub fn handle_request(&self, req: AccountManagerRequest) -> Result<(), Error> {
+    pub async fn handle_request(&self, req: AccountManagerRequest) -> Result<(), fidl::Error> {
         match req {
             AccountManagerRequest::GetAccountIds { responder } => {
-                responder.send(&mut self.get_account_ids().iter_mut())
+                responder.send(&mut await!(self.get_account_ids()).iter_mut())
             }
             AccountManagerRequest::GetAccountAuthStates { responder } => {
-                let mut response = self.get_account_auth_states();
+                let mut response = await!(self.get_account_auth_states());
                 responder.send(response.0, &mut response.1.iter_mut())
             }
             AccountManagerRequest::GetAccount {
@@ -71,14 +72,18 @@ impl AccountManager {
                 auth_context_provider,
                 account,
                 responder,
-            } => responder.send(self.get_account(id.into(), auth_context_provider, account)),
+            } => responder.send(await!(self.get_account(
+                id.into(),
+                auth_context_provider,
+                account
+            ))),
             AccountManagerRequest::RegisterAccountListener {
                 listener,
                 options,
                 responder,
             } => responder.send(self.register_account_listener(listener, options)),
             AccountManagerRequest::RemoveAccount { id, responder } => {
-                responder.send(self.remove_account(id.into()))
+                responder.send(await!(self.remove_account(id.into())))
             }
             AccountManagerRequest::ProvisionFromAuthProvider {
                 auth_context_provider,
@@ -90,24 +95,49 @@ impl AccountManager {
                 responder.send(response.0, response.1.as_mut().map(OutOfLine))
             }
             AccountManagerRequest::ProvisionNewAccount { responder } => {
-                let mut response = self.provision_new_account();
+                let mut response = await!(self.provision_new_account());
                 responder.send(response.0, response.1.as_mut().map(OutOfLine))
             }
         }
     }
 
-    fn get_account_ids(&self) -> Vec<FidlLocalAccountId> {
-        self.ids.lock().iter().map(|id| id.clone().into()).collect()
+    /// Returns an `AccountHandlerConnection` for the specified `LocalAccountId`, either by
+    /// returning the existing entry from the map or by creating and adding a new entry to the map.
+    async fn get_handler_for_existing_account<'a>(
+        &'a self, account_id: &'a LocalAccountId,
+    ) -> Result<Arc<AccountHandlerConnection>, AccountManagerError> {
+        let mut ids_to_handlers_lock = await!(self.ids_to_handlers.lock());
+        match ids_to_handlers_lock.get(account_id) {
+            None => return Err(AccountManagerError::new(Status::NotFound)),
+            Some(Some(existing_handler)) => return Ok(Arc::clone(existing_handler)),
+            Some(None) => { /* ID is valid but a handler doesn't exist yet */ }
+        }
+
+        // Initialize a new account handler if not.
+        let new_handler = Arc::new(await!(AccountHandlerConnection::new_for_account(
+            account_id
+        ))?);
+        ids_to_handlers_lock.insert(account_id.clone(), Some(Arc::clone(&new_handler)));
+        Ok(new_handler)
     }
 
-    fn get_account_auth_states(&self) -> (Status, Vec<AccountAuthState>) {
-        // TODO(jsankey): Collect authentication state from AccountHandler instances
-        // rather than returning a fixed value.
+    async fn get_account_ids(&self) -> Vec<FidlLocalAccountId> {
+        await!(self.ids_to_handlers.lock())
+            .keys()
+            .map(|id| id.clone().into())
+            .collect()
+    }
+
+    async fn get_account_auth_states(&self) -> (Status, Vec<AccountAuthState>) {
+        // TODO(jsankey): Collect authentication state from AccountHandler instances rather than
+        // returning a fixed value. This will involve opening account handler connections (in
+        // parallel) for all of the accounts where encryption keys for the account's data partition
+        // are available.
+        let ids_to_handlers_lock = await!(self.ids_to_handlers.lock());
         (
             Status::Ok,
-            self.ids
-                .lock()
-                .iter()
+            ids_to_handlers_lock
+                .keys()
                 .map(|id| AccountAuthState {
                     account_id: id.clone().into(),
                     auth_state: Self::DEFAULT_AUTH_STATE,
@@ -116,13 +146,26 @@ impl AccountManager {
         )
     }
 
-    fn get_account(
-        &self, _id: LocalAccountId,
-        _auth_context_provider: ClientEnd<AuthenticationContextProviderMarker>,
-        _account: ServerEnd<AccountMarker>,
+    async fn get_account(
+        &self, id: LocalAccountId,
+        auth_context_provider: ClientEnd<AuthenticationContextProviderMarker>,
+        account: ServerEnd<AccountMarker>,
     ) -> Status {
-        // TODO(jsankey): Implement this method
-        Status::InternalError
+        let account_handler = match await!(self.get_handler_for_existing_account(&id)) {
+            Ok(account_handler) => account_handler,
+            Err(err) => {
+                warn!("Failure getting account handler connection: {:?}", err);
+                return err.status;
+            }
+        };
+
+        await!(account_handler
+            .proxy()
+            .get_account(auth_context_provider, account))
+        .unwrap_or_else(|err| {
+            warn!("Failure calling get account: {:?}", err);
+            Status::IoError
+        })
     }
 
     fn register_account_listener(
@@ -132,26 +175,61 @@ impl AccountManager {
         Status::InternalError
     }
 
-    fn remove_account(&self, id: LocalAccountId) -> Status {
-        let mut ids_lock = self.ids.lock();
-        if ids_lock.contains(&id) {
-            ids_lock.remove(&id);
-            info!("Removing account {:?}", id);
-            // TODO(jsankey): Persist the change in installed accounts.
-            Status::Ok
-        } else {
-            Status::NotFound
+    async fn remove_account(&self, id: LocalAccountId) -> Status {
+        // TODO(jsankey): Open an account handler if necessary and ask it to remove persistent
+        // storage for the account.
+        match await!(self.ids_to_handlers.lock()).remove(&id) {
+            None => return Status::NotFound,
+            Some(None) => info!("Removing account without open handler: {:?}", id),
+            Some(Some(account_handler)) => {
+                info!("Removing account and terminating its handler: {:?}", id);
+                await!(account_handler.terminate());
+            }
         }
+        Status::Ok
     }
 
-    fn provision_new_account(&self) -> (Status, Option<FidlLocalAccountId>) {
-        let mut next_id_lock = self.next_id.lock();
-        let new_id = LocalAccountId::new(*next_id_lock);
-        self.ids.lock().insert(new_id.clone());
-        *next_id_lock += 1;
-        info!("Adding new local account {:?}", new_id);
-        // TODO(jsankey): Persist the change in installed accounts.
-        (Status::Ok, Some(new_id.into()))
+    async fn provision_new_account(&self) -> (Status, Option<FidlLocalAccountId>) {
+        let account_handler = match AccountHandlerConnection::new() {
+            Ok(connection) => Arc::new(connection),
+            Err(err) => {
+                warn!("Failure creating account handler connection: {:?}", err);
+                return (err.status, None);
+            }
+        };
+
+        let account_id = match await!(account_handler.proxy().create_account()) {
+            Ok((Status::Ok, Some(account_id))) => LocalAccountId::from(*account_id),
+            Ok((Status::Ok, None)) => {
+                warn!("Failure creating account, handler returned success without ID");
+                return (Status::InternalError, None);
+            }
+            Ok((stat, _)) => {
+                warn!("Failure creating new account, handler returned {:?}", stat);
+                return (stat, None);
+            }
+            Err(err) => {
+                warn!("Failure calling create account: {:?}", err);
+                return (Status::IoError, None);
+            }
+        };
+
+        info!("Adding new local account {:?}", account_id);
+        // TODO(jsankey): Persist the change in installed accounts, ensuring this has succeeded
+        // before adding to our in-memory state.
+
+        let mut ids_to_handlers_lock = await!(self.ids_to_handlers.lock());
+        if ids_to_handlers_lock.get(&account_id).is_some() {
+            // IDs are 64 bit integers that are meant to be random. Its very unlikely we'll create
+            // the same one twice but not impossible.
+            // TODO(jsankey): Once account handler is handling persistent state it may be able to
+            // detect this condition itself, if not it needs to be told to delete any state it has
+            // created for this user we're not going to add.
+            warn!("Duplicate ID creating new account");
+            return (Status::UnknownError, None);
+        }
+        ids_to_handlers_lock.insert(account_id.clone(), Some(account_handler));
+        (Status::Ok, Some(account_id.into()))
     }
 
     fn provision_from_auth_provider(
@@ -195,10 +273,14 @@ mod tests {
             .expect("Executor run failed.")
     }
 
-    fn create_test_object(next_id: u64, existing_ids: Vec<u64>) -> AccountManager {
+    fn create_test_object(existing_ids: Vec<u64>) -> AccountManager {
         AccountManager {
-            next_id: Mutex::new(next_id),
-            ids: Mutex::new(existing_ids.into_iter().map(LocalAccountId::new).collect()),
+            ids_to_handlers: Mutex::new(
+                existing_ids
+                    .into_iter()
+                    .map(|id| (LocalAccountId::new(id), None))
+                    .collect(),
+            ),
         }
     }
 
@@ -208,9 +290,10 @@ mod tests {
             .collect()
     }
 
-    fn fidl_local_id_box(i: u64) -> Box<FidlLocalAccountId> {
-        Box::new(FidlLocalAccountId { id: i })
-    }
+    /// Note: Many AccountManager methods launch instances of an AccountHandler. Since its
+    /// currently not convenient to mock out this component launching in Rust, we rely on the
+    /// hermertic component test to provide coverage for these areas and only cover the in-process
+    /// behavior with this unit-test.
 
     #[test]
     fn test_initially_empty() {
@@ -225,44 +308,10 @@ mod tests {
     }
 
     #[test]
-    fn test_provision_new_account() {
-        request_stream_test(AccountManager::new(), async move |proxy| {
-            // Add two accounts.
-            assert_eq!(
-                await!(proxy.provision_new_account())?,
-                (Status::Ok, Some(fidl_local_id_box(1)))
-            );
-            assert_eq!(
-                await!(proxy.provision_new_account())?,
-                (Status::Ok, Some(fidl_local_id_box(2)))
-            );
-
-            // Verify both are visible in the ID and AuthState getters.
-            assert_eq!(
-                await!(proxy.get_account_ids())?,
-                fidl_local_id_vec(vec![1, 2])
-            );
-
-            let expected_account_auth_states = vec![1, 2]
-                .into_iter()
-                .map(|id| AccountAuthState {
-                    account_id: FidlLocalAccountId { id },
-                    auth_state: AccountManager::DEFAULT_AUTH_STATE,
-                })
-                .collect();
-            assert_eq!(
-                await!(proxy.get_account_auth_states())?,
-                (Status::Ok, expected_account_auth_states)
-            );
-            Ok(())
-        });
-    }
-
-    #[test]
     fn test_remove_missing_account() {
         request_stream_test(
             // Manually create an account manager with one account.
-            create_test_object(2, vec![1]),
+            create_test_object(vec![1]),
             async move |proxy| {
                 // Try to delete a very different account from the one we added.
                 assert_eq!(
@@ -278,7 +327,7 @@ mod tests {
     fn test_remove_present_account() {
         request_stream_test(
             // Manually create an account manager with two accounts.
-            create_test_object(3, vec![1, 2]),
+            create_test_object(vec![1, 2]),
             async move |proxy| {
                 // Try to remove the first one.
                 assert_eq!(

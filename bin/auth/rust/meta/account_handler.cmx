@@ -3,6 +3,9 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "persistent-storage" ]
+        "features": [ "persistent-storage" ],
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
     }
 }

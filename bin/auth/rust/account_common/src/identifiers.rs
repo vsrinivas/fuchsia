@@ -12,6 +12,7 @@
 // to be more ergonomic and remove the need for this module.
 
 use std::cmp::Ordering;
+use std::hash::{Hash, Hasher};
 use std::fmt::{Debug, Formatter};
 
 /// Implements `$name` as a new wrapper type.
@@ -20,7 +21,7 @@ use std::fmt::{Debug, Formatter};
 /// in both directions to a type with the same name in `$fidl_crate`. This type must by a struct
 /// contain a single field of type `$type` named 'id'.
 ///
-/// `$type` must implement the following traits: `Debug`, `Clone`, `Eq`, and `Ord`.
+/// `$type` must implement the following traits: `Debug`, `Clone`, `Hash`, `Eq`, and `Ord`.
 ///
 /// # Examples
 ///
@@ -50,6 +51,12 @@ macro_rules! wrapper_type {
                         id: self.inner.id.clone(),
                     },
                 }
+            }
+        }
+
+        impl Hash for $name {
+            fn hash<H: Hasher>(&self, state: &mut H) {
+                self.inner.id.hash(state);
             }
         }
 

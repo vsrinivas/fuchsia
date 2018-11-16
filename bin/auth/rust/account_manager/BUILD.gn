@@ -13,6 +13,7 @@ rustc_binary("account_manager") {
     "//garnet/bin/auth/rust/account_common",
     "//garnet/public/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//garnet/public/fidl/fuchsia.auth.account:fuchsia.auth.account-rustc",
+    "//garnet/lib/auth/fidl:account-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",

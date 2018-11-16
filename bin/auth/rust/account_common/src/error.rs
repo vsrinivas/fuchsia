@@ -35,7 +35,6 @@ impl AccountManagerError {
     }
 
     /// Sets a cause on the current error.
-    #[allow(dead_code)] // TODO(jsankey): Use this method in the next CL.
     pub fn with_cause<T: Into<Error>>(mut self, cause: T) -> Self {
         self.cause = Some(cause.into());
         self

@@ -10,10 +10,7 @@
 mod error;
 /// More ergonomic wrapper types for FIDL account and persona identifiers.
 mod identifiers;
-/// A simple wrapper to set values after instantiation.
-mod deferred;
 
 pub use crate::error::AccountManagerError;
 pub use crate::identifiers::{FidlGlobalAccountId, FidlLocalAccountId, FidlLocalPersonaId,
                              GlobalAccountId, LocalAccountId, LocalPersonaId};
-pub use crate::deferred::DeferredOption;
