@@ -95,12 +95,16 @@ static zx_status_t gicv2_get_gicv(paddr_t* gicv_paddr) {
     return ZX_OK;
 }
 
-static uint64_t gicv2_get_lr_from_vector(uint32_t vector) {
-    return (vector & GICH_LR_VIRTUAL_ID_MASK) | GICH_LR_PENDING;
+static uint64_t gicv2_get_lr_from_vector(bool hw, uint8_t prio, uint32_t vector) {
+    uint64_t lr = GICH_LR_PENDING | GICH_LR_PRIORITY(prio) | GICH_LR_VIRTUAL_ID(vector);
+    if (hw) {
+        lr |= GICH_LR_HARDWARE | GICH_LR_PHYSICAL_ID(vector);
+    }
+    return lr;
 }
 
 static uint32_t gicv2_get_vector_from_lr(uint64_t lr) {
-    return lr & GICH_LR_VIRTUAL_ID_MASK;
+    return lr & GICH_LR_VIRTUAL_ID(UINT64_MAX);
 }
 
 static uint32_t gicv2_get_num_lrs() {

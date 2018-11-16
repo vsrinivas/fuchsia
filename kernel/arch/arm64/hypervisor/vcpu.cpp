@@ -64,7 +64,8 @@ static bool gich_maybe_interrupt(GichState* gich_state) {
             continue;
         }
         uint32_t lr_index = __builtin_ctzl(elrsr);
-        uint64_t lr = gic_get_lr_from_vector(vector);
+        bool hw = type == hypervisor::InterruptType::PHYSICAL;
+        uint64_t lr = gic_get_lr_from_vector(hw, 0, vector);
         gich_state->lr[lr_index] = lr;
         elrsr &= ~(1u << lr_index);
     }

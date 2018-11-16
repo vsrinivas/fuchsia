@@ -24,8 +24,6 @@ static constexpr uint32_t kTimerVector = 27;
 static_assert(kTimerVector < kNumInterrupts, "Timer vector is out of range");
 
 typedef struct zx_port_packet zx_port_packet_t;
-using InterruptBitmap = bitmap::RawBitmapGeneric<bitmap::FixedStorage<kNumInterrupts>>;
-
 class PortDispatcher;
 
 class Guest {
@@ -63,7 +61,7 @@ struct GichState {
     // Tracks pending interrupts.
     hypervisor::InterruptTracker<kNumInterrupts> interrupt_tracker;
     // Tracks active interrupts.
-    InterruptBitmap active_interrupts;
+    bitmap::RawBitmapGeneric<bitmap::FixedStorage<kNumInterrupts>> active_interrupts;
 
     // GICH state to be restored between VM exits.
     uint32_t num_lrs;
