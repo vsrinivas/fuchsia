@@ -115,7 +115,7 @@ would use:
 
 ```bash
   -DBOOTSTRAP_LLVM_DEFAULT_TARGET_TRIPLE=x86_64-linux-gnu \
-  -DSTAGE2_LINUX_x86_64_SYSROOT=${FUCHSIA}/buildtools/linux-x64/sysroot \
+  -DSTAGE2_LINUX_x86_64-linux-gnu_SYSROOT=${FUCHSIA}/buildtools/linux-x64/sysroot \
 ```
 
 To install the compiler just built into `/usr/local`, you can use the
@@ -306,7 +306,7 @@ cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
   -DLLVM_ENABLE_PROJECTS="clang;lld" \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
   -DLLVM_DEFAULT_TARGET_TRIPLE=x86_64-linux-gnu \
-  -DLINUX_x86_64_SYSROOT=${FUCHSIA}/buildtools/linux-x64/sysroot \
+  -DLINUX_x86_64-linux-gnu_SYSROOT=${FUCHSIA}/buildtools/linux-x64/sysroot \
   -DFUCHSIA_SDK=${SDK_DIR} \
   -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia-stage2.cmake \
   ${LLVM_SRCDIR}/llvm
@@ -328,7 +328,7 @@ cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
   -DLLVM_ENABLE_PROJECTS="clang;lld" \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
   -DLLVM_DEFAULT_TARGET_TRIPLE=x86_64-linux-gnu \
-  -DLINUX_x86_64_SYSROOT=${FUCHSIA}/buildtools/linux-x64/sysroot \
+  -DLINUX_x86_64-linux-gnu_SYSROOT=${FUCHSIA}/buildtools/linux-x64/sysroot \
   -DFUCHSIA_SDK=${SDK_DIR} \
   -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia-stage2.cmake \
   ${LLVM_SRCDIR}/llvm
