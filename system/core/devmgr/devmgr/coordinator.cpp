@@ -193,7 +193,7 @@ static zx_status_t handle_dmctl_write(size_t len, const char* cmd) {
                      "shutdown          - power off the system\n"
                      "suspend           - suspend the system to RAM\n"
                      "reboot            - reboot the system\n"
-                     "reboot-bootloader - reboot the system into boatloader\n"
+                     "reboot-bootloader - reboot the system into bootloader\n"
                      "reboot-recovery   - reboot the system into recovery\n"
                      "kerneldebug       - send a command to the kernel\n"
                      "ktraceoff         - stop kernel tracing\n"
