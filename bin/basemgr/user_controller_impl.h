@@ -29,13 +29,13 @@ namespace modular {
 // |UserControllerImpl| starts and manages a Sessionmgr. The life time of a
 // Sessionmgr is bound to this class.  |UserControllerImpl| is not self-owned,
 // but still drives its own deletion: On logout, it signals its
-// owner (BasemgrApp) to delete it.
+// owner (BasemgrImpl) to delete it.
 class UserControllerImpl : fuchsia::modular::UserController,
                            fuchsia::modular::internal::UserContext {
  public:
   // After perfoming logout, to signal our completion (and deletion of our
   // instance) to our owner, we do it using a callback supplied to us in our
-  // constructor. (The alternative is to take in a BasemgrApp*, which seems
+  // constructor. (The alternative is to take in a BasemgrImpl*, which seems
   // a little specific and overscoped).
   using DoneCallback = std::function<void(UserControllerImpl*)>;
 
