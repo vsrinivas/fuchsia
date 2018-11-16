@@ -67,7 +67,7 @@ class result_adapter<Handler, DefaultV, DefaultE, void, false> {
 public:
     using result_type = ::fit::result<DefaultV, DefaultE>;
 
-    result_adapter(Handler handler)
+    explicit result_adapter(Handler handler)
         : handler_(std::move(handler)) {}
 
     template <typename... Args>
@@ -86,7 +86,7 @@ class result_adapter<Handler, DefaultV, DefaultE, ::fit::pending_result, false> 
 public:
     using result_type = ::fit::result<DefaultV, DefaultE>;
 
-    result_adapter(Handler handler)
+    explicit result_adapter(Handler handler)
         : handler_(std::move(handler)) {}
 
     template <typename... Args>
@@ -105,7 +105,7 @@ class result_adapter<Handler, DefaultV, DefaultE, ::fit::ok_result<V>, false> {
 public:
     using result_type = ::fit::result<V, DefaultE>;
 
-    result_adapter(Handler handler)
+    explicit result_adapter(Handler handler)
         : handler_(std::move(handler)) {}
 
     template <typename... Args>
@@ -124,7 +124,7 @@ class result_adapter<Handler, DefaultV, DefaultE, ::fit::error_result<E>, false>
 public:
     using result_type = ::fit::result<DefaultV, E>;
 
-    result_adapter(Handler handler)
+    explicit result_adapter(Handler handler)
         : handler_(std::move(handler)) {}
 
     template <typename... Args>
@@ -143,7 +143,7 @@ class result_adapter<Handler, DefaultV, DefaultE, ::fit::result<V, E>, false> {
 public:
     using result_type = ::fit::result<V, E>;
 
-    result_adapter(Handler handler)
+    explicit result_adapter(Handler handler)
         : handler_(std::move(handler)) {}
 
     template <typename... Args>
@@ -170,7 +170,7 @@ class result_adapter<Handler, DefaultV, DefaultE, ReturnType, true> {
 public:
     using result_type = typename continuation_traits::result_type;
 
-    result_adapter(Handler handler)
+    explicit result_adapter(Handler handler)
         : handler_(std::move(handler)) {}
 
     template <typename... Args>
@@ -202,7 +202,7 @@ class context_adapter {
 public:
     using result_type = typename base_type::result_type;
 
-    context_adapter(Handler handler)
+    explicit context_adapter(Handler handler)
         : base_(std::move(handler)) {}
 
     template <typename... Args>
@@ -223,7 +223,7 @@ class context_adapter<Handler, DefaultV, DefaultE, num_extra_args, true> {
 public:
     using result_type = typename base_type::result_type;
 
-    context_adapter(Handler handler)
+    explicit context_adapter(Handler handler)
         : base_(std::move(handler)) {}
 
     template <typename... Args>
@@ -244,7 +244,7 @@ class context_handler_invoker final {
 public:
     using result_type = typename base_type::result_type;
 
-    context_handler_invoker(Handler handler)
+    explicit context_handler_invoker(Handler handler)
         : base_(std::move(handler)) {}
 
     result_type operator()(::fit::context& context) {
@@ -263,7 +263,7 @@ class result_handler_invoker final {
 public:
     using result_type = typename base_type::result_type;
 
-    result_handler_invoker(Handler handler)
+    explicit result_handler_invoker(Handler handler)
         : base_(std::move(handler)) {}
 
     result_type operator()(::fit::context& context, PriorResult& result) {
@@ -284,7 +284,7 @@ class value_handler_invoker final {
 public:
     using result_type = typename base_type::result_type;
 
-    value_handler_invoker(Handler handler)
+    explicit value_handler_invoker(Handler handler)
         : base_(std::move(handler)) {}
 
     result_type operator()(::fit::context& context, PriorResult& result) {
@@ -304,7 +304,7 @@ class value_handler_invoker<Handler, PriorResult, void> final {
 public:
     using result_type = typename base_type::result_type;
 
-    value_handler_invoker(Handler handler)
+    explicit value_handler_invoker(Handler handler)
         : base_(std::move(handler)) {}
 
     result_type operator()(::fit::context& context, PriorResult& result) {
@@ -325,7 +325,7 @@ class error_handler_invoker final {
 public:
     using result_type = typename base_type::result_type;
 
-    error_handler_invoker(Handler handler)
+    explicit error_handler_invoker(Handler handler)
         : base_(std::move(handler)) {}
 
     result_type operator()(::fit::context& context, PriorResult& result) {
@@ -345,7 +345,7 @@ class error_handler_invoker<Handler, PriorResult, void> final {
 public:
     using result_type = typename base_type::result_type;
 
-    error_handler_invoker(Handler handler)
+    explicit error_handler_invoker(Handler handler)
         : base_(std::move(handler)) {}
 
     result_type operator()(::fit::context& context, PriorResult& result) {
@@ -453,7 +453,7 @@ private:
 template <typename PriorPromise>
 class discard_result_continuation final {
 public:
-    discard_result_continuation(PriorPromise prior_promise)
+    explicit discard_result_continuation(PriorPromise prior_promise)
         : prior_(std::move(prior_promise)) {}
 
     fit::result<> operator()(::fit::context& context) {
@@ -484,7 +484,7 @@ inline bool all_true(bool value, Ts... values) {
 template <typename... Promises>
 class join_continuation final {
 public:
-    join_continuation(Promises... promises)
+    explicit join_continuation(Promises... promises)
         : promises_(std::make_tuple(std::move(promises)...)) {}
 
     ::fit::result<std::tuple<typename Promises::result_type...>> operator()(
