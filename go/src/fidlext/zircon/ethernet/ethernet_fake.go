@@ -11,6 +11,8 @@ import (
 	"fidl/zircon/ethernet"
 )
 
+var _ ethernet.Device = (*Device)(nil)
+
 type Device struct {
 	testing.TB
 
