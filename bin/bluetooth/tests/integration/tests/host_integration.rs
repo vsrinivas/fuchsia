@@ -443,7 +443,7 @@ async fn watch_for_new_host_helper(
 ) -> Result<(File, PathBuf), Error> {
     while let Some(msg) = await!(watcher.try_next())? {
         match msg.event {
-            VfsWatchEvent::ADD_FILE => {
+            VfsWatchEvent::EXISTING | VfsWatchEvent::ADD_FILE => {
                 let path = PathBuf::from(format!(
                     "{}/{}",
                     BT_HOST_DIR,
