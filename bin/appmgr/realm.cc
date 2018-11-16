@@ -254,11 +254,11 @@ Realm::Realm(RealmArgs args)
 
   if (!parent_) {
     // Set up Loader service for root realm.
-    root_loader_.reset(new RootLoader);
+    package_loader_.reset(new component::PackageLoader);
     default_namespace_->services()->AddService(
         fuchsia::sys::Loader::Name_,
         fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-          root_loader_->AddBinding(
+          package_loader_->AddBinding(
               fidl::InterfaceRequest<fuchsia::sys::Loader>(std::move(channel)));
           return ZX_OK;
         })));
@@ -390,7 +390,7 @@ void Realm::Resolve(fidl::StringPtr name,
     return;
   }
 
-  loader_->LoadComponent(
+  loader_->LoadUrl(
       canon_url,
       fxl::MakeCopyable([this, callback = fbl::move(callback)](
                             fuchsia::sys::PackagePtr package) mutable {
@@ -400,35 +400,18 @@ void Realm::Resolve(fidl::StringPtr name,
           callback(ZX_ERR_NOT_FOUND, std::move(binary), std::move(loader));
           return;
         }
+        if (!package->data) {
+          callback(ZX_ERR_NOT_FOUND, std::move(binary), std::move(loader));
+          return;
+        }
+        binary.swap(package->data->vmo);
+
         if (!package->directory) {
           callback(ZX_ERR_NOT_FOUND, std::move(binary), std::move(loader));
           return;
         }
-
         fxl::UniqueFD dirfd =
             fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
-
-        component::FuchsiaPkgUrl pkgurl;
-        if (!pkgurl.Parse(package->resolved_url)) {
-          FXL_LOG(ERROR) << "Could not parse package url: "
-                         << package->resolved_url;
-          callback(ZX_ERR_INTERNAL, std::move(binary), std::move(loader));
-          return;
-        }
-
-        zx_status_t status;
-        fxl::UniqueFD fd(
-            openat(dirfd.get(), pkgurl.resource_path().c_str(), O_RDONLY));
-        if (fd.is_valid()) {
-          status = fdio_get_vmo_clone(fd.get(), binary.reset_and_get_address());
-        } else {
-          status = ZX_ERR_NOT_FOUND;
-        }
-
-        if (status != ZX_OK) {
-          callback(status, std::move(binary), std::move(loader));
-          return;
-        }
 
         zx::channel chan;
         if (DynamicLibraryLoader::Start(std::move(dirfd), &chan) != ZX_OK) {
@@ -481,20 +464,18 @@ void Realm::CreateComponent(
   } else if (launcher_type == "package") {
     // "package" type doesn't use a runner.
 
-    // launch_info is moved before LoadComponent() gets at its first argument.
+    // launch_info is moved before LoadUrl() gets at its first argument.
     fidl::StringPtr url = launch_info.url;
-    loader_->LoadComponent(
+    loader_->LoadUrl(
         url,
         fxl::MakeCopyable([this, launch_info = std::move(launch_info),
                            component_request = std::move(component_request),
                            callback = fbl::move(callback)](
                               fuchsia::sys::PackagePtr package) mutable {
-          if (package) {
-            if (package->directory) {
-              CreateComponentFromPackage(
-                  std::move(package), std::move(launch_info),
-                  std::move(component_request), fbl::move(callback));
-            }
+          if (package && package->directory) {
+            CreateComponentFromPackage(
+                std::move(package), std::move(launch_info),
+                std::move(component_request), fbl::move(callback));
           } else {
             component_request.SetReturnValues(
                 kComponentCreationFailed, TerminationReason::PACKAGE_NOT_FOUND);

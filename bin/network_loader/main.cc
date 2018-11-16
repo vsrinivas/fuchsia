@@ -26,7 +26,7 @@ namespace http = ::fuchsia::net::oldhttp;
 class RetryingLoader {
  public:
   RetryingLoader(http::URLLoaderPtr url_loader, const std::string& url,
-                 fuchsia::sys::Loader::LoadComponentCallback callback)
+                 fuchsia::sys::Loader::LoadUrlCallback callback)
       : url_loader_(std::move(url_loader)),
         url_(url),
         callback_(std::move(callback)),
@@ -63,8 +63,7 @@ class RetryingLoader {
   void ProcessResponse(const http::URLResponse& response) {
     if (response.status_code == 200) {
       auto package = fuchsia::sys::Package::New();
-      package->data =
-          fidl::MakeOptional(std::move(response.body->buffer()));
+      package->data = fidl::MakeOptional(std::move(response.body->buffer()));
       package->resolved_url = std::move(response.url);
       SendResponse(std::move(package));
     } else if (response.error) {
@@ -78,13 +77,14 @@ class RetryingLoader {
   }
 
   void Retry(const http::URLResponse& response) {
-    async::PostDelayedTask(async_get_default_dispatcher(),
-                           [weak_this = weak_ptr_factory_.GetWeakPtr()] {
-                             if (weak_this) {
-                               weak_this->Attempt();
-                             }
-                           },
-                           zx::nsec(retry_delay_.ToNanoseconds()));
+    async::PostDelayedTask(
+        async_get_default_dispatcher(),
+        [weak_this = weak_ptr_factory_.GetWeakPtr()] {
+          if (weak_this) {
+            weak_this->Attempt();
+          }
+        },
+        zx::nsec(retry_delay_.ToNanoseconds()));
 
     if (quiet_tries_ > 0) {
       FXL_VLOG(2) << "Retrying load of " << url_ << " due to "
@@ -113,7 +113,7 @@ class RetryingLoader {
 
   const http::URLLoaderPtr url_loader_;
   const std::string url_;
-  const fuchsia::sys::Loader::LoadComponentCallback callback_;
+  const fuchsia::sys::Loader::LoadUrlCallback callback_;
   fit::closure deleter_;
   // Tries before an error is printed. No errors will be printed afterwards
   // either.
@@ -131,8 +131,7 @@ class NetworkLoader : public fuchsia::sys::Loader {
     context_->ConnectToEnvironmentService(http_.NewRequest());
   }
 
-  void LoadComponent(fidl::StringPtr url,
-                     LoadComponentCallback callback) override {
+  void LoadUrl(fidl::StringPtr url, LoadUrlCallback callback) override {
     http::URLLoaderPtr loader;
     http_->CreateURLLoader(loader.NewRequest());
 

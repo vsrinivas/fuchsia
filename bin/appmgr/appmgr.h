@@ -10,8 +10,8 @@
 #include <fs/synchronous-vfs.h>
 
 #include "garnet/bin/appmgr/realm.h"
-#include "garnet/bin/appmgr/root_loader.h"
 #include "garnet/bin/appmgr/util.h"
+#include "garnet/lib/loader/package_loader.h"
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/services.h"
 

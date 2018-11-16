@@ -35,15 +35,13 @@ class DelegatingLoader : public fuchsia::sys::Loader {
   ~DelegatingLoader() override;
 
   // |Loader|:
-  void LoadComponent(fidl::StringPtr url,
-                     LoadComponentCallback callback) override;
+  void LoadUrl(fidl::StringPtr url, LoadUrlCallback callback) override;
 
  private:
   // |fallback| xor |amber_ctl| is set.
   DelegatingLoader(Config::ServiceMap delegates,
                    fuchsia::sys::Launcher* delegate_launcher,
-                   fuchsia::sys::LoaderPtr fallback,
-                   std::string amber_url,
+                   fuchsia::sys::LoaderPtr fallback, std::string amber_url,
                    fuchsia::amber::ControlPtr amber_ctl);
 
   struct LoaderRecord {

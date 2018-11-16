@@ -32,42 +32,47 @@ PackageUpdatingLoader::PackageUpdatingLoader(
 
 PackageUpdatingLoader::~PackageUpdatingLoader() = default;
 
-bool PackageUpdatingLoader::LoadComponentFromPkgfs(
-    component::FuchsiaPkgUrl component_url, LoadComponentCallback callback) {
-  auto done_cb = [this, component_url,
+void PackageUpdatingLoader::LoadUrl(fidl::StringPtr url,
+                                    LoadUrlCallback callback) {
+  // The updating loader can only update fuchsia-pkg URLs.
+  component::FuchsiaPkgUrl fuchsia_url;
+  if (!fuchsia_url.Parse(url)) {
+    PackageLoader::LoadUrl(url, callback);
+    return;
+  }
+
+  auto done_cb = [this, url,
                   callback = std::move(callback)](std::string error) mutable {
-    const std::string& pkg_path = component_url.pkgfs_dir_path();
     if (!error.empty()) {
       FXL_LOG(ERROR) << "Package update encountered unexpected error \""
-                     << error << "\": " << pkg_path;
+                     << error << "\": " << url;
       callback(nullptr);
       return;
     }
-    if (!LoadPackage(component_url, callback)) {
-      FXL_LOG(ERROR) << "Package failed to load after package update: "
-                     << pkg_path;
-      callback(nullptr);
-      return;
-    }
+
+    PackageLoader::LoadUrl(url, callback);
   };
-  if (component_url.ToString() == amber_url_) {
+
+  if (url == amber_url_) {
     // Avoid infinite reentry: Don't attempt to update the amber package
     // when starting amber. Contacting the amber service may require starting
     // its component, which would end up back here.
     done_cb("");
-    return true;
+    return;
   }
-  StartUpdatePackage(component_url.package_name(), std::move(done_cb));
-  return true;
+  StartUpdatePackage(std::move(fuchsia_url), std::move(done_cb));
+  return;
 }
 
-void PackageUpdatingLoader::StartUpdatePackage(const std::string& package_name,
-                                               DoneCallback done_cb) {
+void PackageUpdatingLoader::StartUpdatePackage(
+    const component::FuchsiaPkgUrl url, DoneCallback done_cb) {
   auto cb = [this,
              done_cb = std::move(done_cb)](zx::channel reply_chan) mutable {
     ListenForPackage(std::move(reply_chan), std::move(done_cb));
   };
-  amber_ctl_->GetUpdateComplete(package_name, "0", nullptr, std::move(cb));
+  // TODO(CF-???): pass variant here
+  amber_ctl_->GetUpdateComplete(url.package_name(), "0", nullptr,
+                                std::move(cb));
 }
 
 namespace {

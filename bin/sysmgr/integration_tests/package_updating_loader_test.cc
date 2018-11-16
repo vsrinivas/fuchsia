@@ -71,9 +71,7 @@ class AmberControlMock : public fuchsia::amber::Control {
       fuchsia::amber::Control::SetSrcEnabledCallback callback) override {
     FXL_LOG(FATAL) << "not implemented";
   }
-  void GC() override {
-    FXL_LOG(FATAL) << "not implemented";
-  }
+  void GC() override { FXL_LOG(FATAL) << "not implemented"; }
 
  private:
   fidl::BindingSet<fuchsia::amber::Control> bindings_;
@@ -147,7 +145,6 @@ class AmberControlSuccessMock : public AmberControlMock {
   std::vector<zx::channel> update_channels_;
 };
 
-
 TEST_F(PackageUpdatingLoaderTest, Success) {
   AmberControlSuccessMock amber_service;
   Init(&amber_service);
@@ -156,8 +153,8 @@ TEST_F(PackageUpdatingLoaderTest, Success) {
   // by trying to use a service offered by it.
   zx::channel h1, h2;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
-  auto launch_info =
-      CreateLaunchInfo("echo2_server_cpp", std::move(h2));
+  auto launch_info = CreateLaunchInfo(
+      "fuchsia-pkg://fuchsia.com/echo2_server_cpp", std::move(h2));
   auto controller = env_->CreateComponent(std::move(launch_info));
   fidl::examples::echo::EchoPtr echo;
   ConnectToServiceAt(std::move(h1), echo.NewRequest());
@@ -202,8 +199,8 @@ TEST_F(PackageUpdatingLoaderTest, DaemonError) {
   // by trying to use a service offered by it.
   zx::channel h1, h2;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
-  auto launch_info =
-      CreateLaunchInfo("echo2_server_cpp", std::move(h2));
+  auto launch_info = CreateLaunchInfo(
+      "fuchsia-pkg://fuchsia.com/echo2_server_cpp", std::move(h2));
   auto controller = env_->CreateComponent(std::move(launch_info));
   fidl::examples::echo::EchoPtr echo;
   ConnectToServiceAt(std::move(h1), echo.NewRequest());
@@ -237,16 +234,16 @@ TEST_F(PackageUpdatingLoaderTest, PeerClosed) {
   // by trying to use a service offered by it.
   zx::channel h1, h2;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
-  auto launch_info =
-      CreateLaunchInfo("echo2_server_cpp", std::move(h2));
+  auto launch_info = CreateLaunchInfo(
+      "fuchsia-pkg://fuchsia.com/echo2_server_cpp", std::move(h2));
   auto controller = env_->CreateComponent(std::move(launch_info));
   bool terminated = false;
   fuchsia::sys::TerminationReason reason;
-  controller.events().OnTerminated =
-      [&](int64_t code, fuchsia::sys::TerminationReason r) {
-        terminated = true;
-        reason = r;
-      };
+  controller.events().OnTerminated = [&](int64_t code,
+                                         fuchsia::sys::TerminationReason r) {
+    terminated = true;
+    reason = r;
+  };
   ASSERT_TRUE(
       RunLoopWithTimeoutOrUntil([&] { return terminated; }, zx::sec(10)));
   EXPECT_EQ(reason, fuchsia::sys::TerminationReason::PACKAGE_NOT_FOUND);

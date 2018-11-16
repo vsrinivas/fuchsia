@@ -21,10 +21,10 @@
 #include "garnet/bin/appmgr/hub/realm_hub.h"
 #include "garnet/bin/appmgr/namespace.h"
 #include "garnet/bin/appmgr/namespace_builder.h"
-#include "garnet/bin/appmgr/root_loader.h"
 #include "garnet/bin/appmgr/runner_holder.h"
 #include "garnet/bin/appmgr/scheme_map.h"
 #include "garnet/lib/cmx/runtime.h"
+#include "garnet/lib/loader/package_loader.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fit/function.h"
 #include "lib/fsl/vmo/file.h"
@@ -150,7 +150,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   std::string label_;
   std::string koid_;
   const bool run_virtual_console_;
-  std::unique_ptr<RootLoader> root_loader_;
+  std::unique_ptr<component::PackageLoader> package_loader_;
 
   zx::job job_;
 

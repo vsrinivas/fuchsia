@@ -11,15 +11,15 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
-#include "garnet/lib/loader/component_loader.h"
-#include "lib/pkg_url/fuchsia_pkg_url.h"
+#include "garnet/lib/loader/package_loader.h"
 #include "lib/fxl/macros.h"
+#include "lib/pkg_url/fuchsia_pkg_url.h"
 
 namespace sysmgr {
 
 // A component loader that updates a package (or installs it for the first time)
 // before running a component in it. Requires a connection to the amber service.
-class PackageUpdatingLoader final : public component::ComponentLoader {
+class PackageUpdatingLoader final : public component::PackageLoader {
  public:
   typedef fit::function<void(std::string)> DoneCallback;
 
@@ -28,8 +28,10 @@ class PackageUpdatingLoader final : public component::ComponentLoader {
                         async_dispatcher_t* dispatcher);
   ~PackageUpdatingLoader() override;
 
+  void LoadUrl(fidl::StringPtr url, LoadUrlCallback callback) override;
+
  private:
-  void StartUpdatePackage(const std::string& package_name,
+  void StartUpdatePackage(const component::FuchsiaPkgUrl url,
                           DoneCallback done_cb);
   void ListenForPackage(zx::channel reply_chan, DoneCallback done_cb);
   static void WaitForUpdateDone(async_dispatcher_t* dispatcher,
@@ -39,11 +41,7 @@ class PackageUpdatingLoader final : public component::ComponentLoader {
   static void FinishWaitForUpdate(async_dispatcher_t* dispatcher,
                                   async::Wait* wait, zx_status_t status,
                                   const zx_packet_signal_t* signal,
-                                  bool daemon_err,
-                                  DoneCallback done_cb);
-
-  bool LoadComponentFromPkgfs(component::FuchsiaPkgUrl component_url,
-                              LoadComponentCallback callback) override;
+                                  bool daemon_err, DoneCallback done_cb);
 
   const std::string amber_url_;
   fuchsia::amber::ControlPtr amber_ctl_;

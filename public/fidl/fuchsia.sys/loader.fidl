@@ -4,9 +4,9 @@
 
 library fuchsia.sys;
 
-// An interface for loading components.
+// An interface for loading from pacakges.
 [Discoverable]
 interface Loader {
-  // Load a components's package.
-  1: LoadComponent(string url) -> (Package? package);
+    // LoadUrl a package by url.
+    1: LoadUrl(string url) -> (Package? package);
 };

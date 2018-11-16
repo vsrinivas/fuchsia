@@ -21,13 +21,12 @@ std::string GetScheme(const std::string& url) {
 }  // namespace
 
 // static
-std::unique_ptr<DelegatingLoader>
-DelegatingLoader::MakeWithParentFallback(
+std::unique_ptr<DelegatingLoader> DelegatingLoader::MakeWithParentFallback(
     Config::ServiceMap delegates, fuchsia::sys::Launcher* delegate_launcher,
     fuchsia::sys::LoaderPtr fallback) {
-  return std::unique_ptr<DelegatingLoader>(new DelegatingLoader(
-      std::move(delegates), delegate_launcher, std::move(fallback), "",
-      nullptr));
+  return std::unique_ptr<DelegatingLoader>(
+      new DelegatingLoader(std::move(delegates), delegate_launcher,
+                           std::move(fallback), "", nullptr));
 }
 
 // static
@@ -61,8 +60,7 @@ DelegatingLoader::DelegatingLoader(Config::ServiceMap delegates,
 
 DelegatingLoader::~DelegatingLoader() = default;
 
-void DelegatingLoader::LoadComponent(fidl::StringPtr url,
-                                     LoadComponentCallback callback) {
+void DelegatingLoader::LoadUrl(fidl::StringPtr url, LoadUrlCallback callback) {
   std::string scheme = GetScheme(url);
   if (!scheme.empty()) {
     auto it = delegates_by_scheme_.find(scheme);
@@ -71,15 +69,15 @@ void DelegatingLoader::LoadComponent(fidl::StringPtr url,
       if (!record->loader) {
         StartDelegate(record);
       }
-      record->loader->LoadComponent(url, std::move(callback));
+      record->loader->LoadUrl(url, std::move(callback));
       return;
     }
   }
 
   if (package_updating_fallback_) {
-    package_updating_fallback_->LoadComponent(url, callback);
+    package_updating_fallback_->LoadUrl(url, callback);
   } else {
-    parent_fallback_->LoadComponent(url, callback);
+    parent_fallback_->LoadUrl(url, callback);
   }
 }
 
