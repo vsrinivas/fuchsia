@@ -127,7 +127,7 @@ func StartParsing(ctx context.Context, reader io.Reader) <-chan InputLine {
 	float := floatRegexp
 	dec := decRegexp
 	tags := `[^\[\]]*`
-	b.addRule(fmt.Sprintf(`\[(%s)\]%s(%s)\.(%s)>%s(.*)$`, float, space, dec, dec, space), func(args ...string) {
+	b.addRule(fmt.Sprintf(`\[(%s)\]%s(%s)\.(%s)>(.*)$`, float, space, dec, dec), func(args ...string) {
 		var hdr logHeader
 		var line InputLine
 		hdr.time = str2float(args[1])
@@ -139,7 +139,7 @@ func StartParsing(ctx context.Context, reader io.Reader) <-chan InputLine {
 		line.msg = args[4]
 		out <- line
 	})
-	b.addRule(fmt.Sprintf(`\[(%s)\]\[(%s)\]\[(%s)\]\[(%s)\] ([A-Z]+):?%s(.*)$`, float, dec, dec, tags, space), func(args ...string) {
+	b.addRule(fmt.Sprintf(`\[(%s)\]\[(%s)\]\[(%s)\]\[(%s)\] ([A-Z]+):?(.*)$`, float, dec, dec, tags), func(args ...string) {
 		var hdr sysLogHeader
 		var line InputLine
 		hdr.time = str2float(args[1])

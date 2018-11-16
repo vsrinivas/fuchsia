@@ -145,6 +145,29 @@ func TestColor(t *testing.T) {
 	}
 }
 
+func TestKeepLeadingSpace(t *testing.T) {
+	// mock the input and outputs of llvm-symbolizer
+	symbo := newMockSymbolizer([]mockModule{})
+	// mock ids.txt
+	repo := NewRepo()
+	// make a demuxer
+	demuxer := NewDemuxer(repo, symbo)
+
+	// define a little message that will need to be parsed
+	msg := "[0.000] 00000.00000>      \tkeep\n"
+
+	// start sending InputLines to the demuxer
+	ctx := context.Background()
+	in := StartParsing(ctx, strings.NewReader(msg))
+	// start the demuxer which will cause filters to send output lines to 'out'
+	out := demuxer.Start(ctx, in)
+	var buf bytes.Buffer
+	Consume(ComposePostProcessors(ctx, out, NewBasicPresenter(&buf, false)))
+	if string(buf.Bytes()) != msg {
+		t.Fatal("expected", msg, "got", string(buf.Bytes()))
+	}
+}
+
 func ExampleDummyProcess() {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{

@@ -7,6 +7,7 @@ package symbolize
 import (
 	"fmt"
 	"io"
+	"unicode"
 )
 
 // BacktracePresenter intercepts backtrace elements on their own line and
@@ -57,12 +58,31 @@ func printBacktrace(out io.Writer, hdr LineHeader, frame uint64, info addressInf
 	}
 }
 
+func isSpace(s string) bool {
+	for _, r := range s {
+		if !unicode.IsSpace(r) {
+			return false
+		}
+	}
+	return true
+}
+
 func (b *BacktracePresenter) Process(line OutputLine, out chan<- OutputLine) {
 	if len(line.line) == 1 {
 		if bt, ok := line.line[0].(*BacktraceElement); ok {
 			printBacktrace(b.out, line.header, bt.num, bt.info)
 			// Don't process a backtrace we've already output.
 			return
+		}
+	}
+	if len(line.line) == 2 {
+		// Note that we're going to discard the text in front.
+		if txt, ok := line.line[0].(*Text); ok && isSpace(txt.text) {
+			if bt, ok := line.line[1].(*BacktraceElement); ok {
+				printBacktrace(b.out, line.header, bt.num, bt.info)
+				// Don't process a backtrace we've already output.
+				return
+			}
 		}
 	}
 	b.next.Process(line, out)
@@ -75,9 +95,13 @@ type FilterContextElements struct {
 
 func (f *FilterContextElements) Process(line OutputLine, out chan<- OutputLine) {
 	for _, token := range line.line {
-		switch token.(type) {
+		switch t := token.(type) {
 		case *ColorCode, *ResetElement, *ModuleElement, *MappingElement:
 			continue
+		case *Text:
+			if isSpace(t.text) {
+				continue
+			}
 		}
 		out <- line
 		return
@@ -163,7 +187,7 @@ func (b *BasicPresenter) printSrcLoc(loc SourceLocation, info addressInfo) {
 
 func (b *BasicPresenter) Process(res OutputLine, out chan<- OutputLine) {
 	if res.header != nil {
-		fmt.Fprintf(b.output, "%s ", res.header.Present())
+		fmt.Fprintf(b.output, "%s", res.header.Present())
 	}
 	for _, token := range res.line {
 		switch node := token.(type) {
