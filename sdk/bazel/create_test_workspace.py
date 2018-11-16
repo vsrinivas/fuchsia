@@ -82,7 +82,6 @@ def create_test_workspace(sdk, output, workspace_info):
         # Generate test to verify that headers compile fine.
         headers = workspace_info.headers
         # TODO(DX-691): remove these exceptions.
-        headers['//pkg/crypto'].remove('openssl/arm_arch.h')
         headers['//pkg/fdio'].remove('lib/fdio/remoteio.h')
         headers.pop('//pkg/zircon_internal', None)
         header_base = os.path.join(output, 'headers')
