@@ -21,8 +21,11 @@ enum class InterruptType {
     VIRTUAL,
     PHYSICAL
 };
-static_assert(static_cast<int>(InterruptType::PHYSICAL) < 4,
-    "The maximum value in InterruptType must not exceeed 2 bits in size");
+static_assert(
+    static_cast<int>(InterruptType::INACTIVE) == 0 &&
+    static_cast<int>(InterruptType::VIRTUAL) == 1 &&
+    static_cast<int>(InterruptType::PHYSICAL) == 2,
+    "InterruptBitmap relies on these invariants.");
 
 template <uint32_t N>
 class InterruptBitmap {
@@ -39,7 +42,7 @@ public:
         size_t first_unset;
         size_t bitoff = vector * 2;
         bitmap_.Get(bitoff, bitoff + 2, &first_unset);
-        return static_cast<InterruptType>(bitoff - first_unset);
+        return static_cast<InterruptType>(first_unset - bitoff);
     }
 
     void Set(uint32_t vector, InterruptType type) {
@@ -48,18 +51,21 @@ public:
             return;
         }
         size_t bitoff = vector * 2;
-        auto state_bit = static_cast<size_t>(type);
         bitmap_.Clear(bitoff, bitoff + 2);
-        bitmap_.Set(bitoff + 2 - state_bit, bitoff + 2);
+        if (type != InterruptType::INACTIVE) {
+            auto state_bit = static_cast<size_t>(type);
+            bitmap_.Set(bitoff, bitoff + state_bit);
+        }
     }
 
     InterruptType ReverseScan(uint32_t* vector) {
         size_t bitoff;
         bool is_empty = bitmap_.ReverseScan(0, kNumBits, false, &bitoff);
-        *vector = static_cast<uint32_t>(bitoff / 2);
         if (is_empty) {
             return InterruptType::INACTIVE;
-        } else if (bitoff % 2 == 0) {
+        }
+        *vector = static_cast<uint32_t>(bitoff / 2);
+        if (bitoff % 2 == 0) {
             return InterruptType::VIRTUAL;
         } else {
             return InterruptType::PHYSICAL;

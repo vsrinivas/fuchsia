@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <err.h>
 #include <hypervisor/guest_physical_address_space.h>
+#include <hypervisor/interrupt_tracker.h>
 #include <lib/unittest/unittest.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
@@ -517,6 +518,65 @@ static bool guest_physical_address_space_write_combining() {
     END_TEST;
 }
 
+static bool interrupt_bitmap() {
+    BEGIN_TEST;
+
+    hypervisor::InterruptBitmap<8> bitmap;
+
+    uint32_t vector = UINT32_MAX;
+    ASSERT_EQ(ZX_OK, bitmap.Init(), "");
+    EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Get(0), "");
+    EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Get(1), "");
+    EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.ReverseScan(&vector), "");
+    EXPECT_EQ(UINT32_MAX, vector, "");
+
+    // Index 0.
+    vector = UINT32_MAX;
+    bitmap.Set(0u, hypervisor::InterruptType::VIRTUAL);
+    EXPECT_EQ(hypervisor::InterruptType::VIRTUAL, bitmap.Get(0), "");
+    EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Get(1), "");
+    EXPECT_EQ(hypervisor::InterruptType::VIRTUAL, bitmap.ReverseScan(&vector), "");
+    EXPECT_EQ(0u, vector, "");
+
+    vector = UINT32_MAX;
+    bitmap.Set(0u, hypervisor::InterruptType::PHYSICAL);
+    EXPECT_EQ(hypervisor::InterruptType::PHYSICAL, bitmap.Get(0), "");
+    EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Get(1), "");
+    EXPECT_EQ(hypervisor::InterruptType::PHYSICAL, bitmap.ReverseScan(&vector), "");
+    EXPECT_EQ(0u, vector, "");
+
+    vector = UINT32_MAX;
+    bitmap.Set(0u, hypervisor::InterruptType::INACTIVE);
+    EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Get(0), "");
+    EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Get(1), "");
+    EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.ReverseScan(&vector), "");
+    EXPECT_EQ(UINT32_MAX, vector, "");
+
+    // Index 1.
+    vector = UINT32_MAX;
+    bitmap.Set(1u, hypervisor::InterruptType::VIRTUAL);
+    EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Get(0), "");
+    EXPECT_EQ(hypervisor::InterruptType::VIRTUAL, bitmap.Get(1), "");
+    EXPECT_EQ(hypervisor::InterruptType::VIRTUAL, bitmap.ReverseScan(&vector), "");
+    EXPECT_EQ(1u, vector, "");
+
+    vector = UINT32_MAX;
+    bitmap.Set(1u, hypervisor::InterruptType::PHYSICAL);
+    EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Get(0), "");
+    EXPECT_EQ(hypervisor::InterruptType::PHYSICAL, bitmap.Get(1), "");
+    EXPECT_EQ(hypervisor::InterruptType::PHYSICAL, bitmap.ReverseScan(&vector), "");
+    EXPECT_EQ(1u, vector, "");
+
+    vector = UINT32_MAX;
+    bitmap.Set(1u, hypervisor::InterruptType::INACTIVE);
+    EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Get(0), "");
+    EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Get(1), "");
+    EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.ReverseScan(&vector), "");
+    EXPECT_EQ(UINT32_MAX, vector, "");
+
+    END_TEST;
+}
+
 // Use the function name as the test name
 #define HYPERVISOR_UNITTEST(fname) UNITTEST(#fname, fname)
 
@@ -533,4 +593,5 @@ HYPERVISOR_UNITTEST(guest_physical_address_space_map_interrupt_controller)
 HYPERVISOR_UNITTEST(guest_physical_address_space_uncached)
 HYPERVISOR_UNITTEST(guest_physical_address_space_uncached_device)
 HYPERVISOR_UNITTEST(guest_physical_address_space_write_combining)
+HYPERVISOR_UNITTEST(interrupt_bitmap)
 UNITTEST_END_TESTCASE(hypervisor, "hypervisor", "Hypervisor unit tests.");
