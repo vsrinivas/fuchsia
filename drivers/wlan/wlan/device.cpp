@@ -693,6 +693,12 @@ void Device::MainLoop() {
 }
 
 void Device::ProcessChannelPacketLocked(const zx_port_packet_t& pkt) {
+    if (!channel_.is_valid()) {
+        // It could be that we closed the channel (e.g., in WlanUnbind()) but there is still
+        // a pending packet in the port that indicates read availability on that channel.
+        // In that case we simply ignore the packet since we can't read from the channel anyway.
+        return;
+    }
     for (size_t i = 0; i < pkt.signal.count; ++i) {
         auto buffer = LargeBufferAllocator::New();
         if (buffer == nullptr) {
