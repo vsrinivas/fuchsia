@@ -1,17 +1,24 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 package main
 
 import (
+	"testing"
+	"syscall/zx"
+
 	"fidl/fuchsia/netstack"
 	"fidl/zircon/ethernet"
 	ethernetext "fidlext/zircon/ethernet"
+
+	"netstack/link/eth"
+
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/arp"
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/network/ipv6"
 	"github.com/google/netstack/tcpip/stack"
-	"netstack/link/eth"
-	"syscall/zx"
-	"testing"
 )
 
 const (
