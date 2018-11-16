@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/package/component.gni")
+
 executable("logger_integration_cpp_tests") {
   testonly = true
 
@@ -15,5 +17,12 @@ executable("logger_integration_cpp_tests") {
     "//garnet/public/lib/syslog/cpp",
     "//zircon/public/fidl/fuchsia-logger",
     "//zircon/public/lib/syslog",
+  ]
+}
+
+fuchsia_test_component("test_component") {
+  binary = "logger_integration_cpp_tests"
+  deps = [
+    ":logger_integration_cpp_tests",
   ]
 }

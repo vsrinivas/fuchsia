@@ -1,0 +1,19 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.logger.Log": "logger",
+                "fuchsia.logger.LogSink": "logger"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/logger_integration_bin_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.logger.Log"
+        ]
+    }
+}
