@@ -104,9 +104,7 @@ fn define_lease_expiration_handler_future<'a, F: Fn() -> i64>(
     let expiration_interval = Interval::new(EXPIRATION_INTERVAL_SECS.seconds());
     expiration_interval
         .map(move |()| {
-            println!("dhcpd: interval timer fired");
             server.lock().unwrap().release_expired_leases();
-            println!("dhcpd: expired leases released");
         })
         .map(|_| Ok(()))
         .try_collect::<()>()
