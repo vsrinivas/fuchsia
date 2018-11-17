@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "devhost.h"
 #include "device-internal.h"
+
+#include "devhost.h"
 #include <fbl/auto_call.h>
 
 zx_status_t zx_device::Create(fbl::RefPtr<zx_device>* out_dev) {

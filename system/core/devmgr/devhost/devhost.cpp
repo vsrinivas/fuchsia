@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "devhost.h"
+
 #include <dlfcn.h>
 #include <inttypes.h>
 #include <new>
@@ -38,7 +40,6 @@
 #include <lib/zx/vmo.h>
 
 #include "../shared/async-loop-owned-rpc-handler.h"
-#include "devhost.h"
 #include "main.h"
 #if ENABLE_DRIVER_TRACING
 #include "tracing.h"
