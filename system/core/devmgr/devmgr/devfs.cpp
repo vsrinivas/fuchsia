@@ -8,7 +8,6 @@
 #include "../shared/log.h"
 
 #include <zircon/fidl.h>
-#include <zircon/listnode.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 #include <zircon/device/vfs.h>
@@ -100,10 +99,19 @@ struct Devnode {
     fbl::DoublyLinkedList<fbl::unique_ptr<Watcher>> watchers;
 
     // entry in our parent devnode's children list
-    list_node_t node = {};
+    struct Node {
+        static fbl::DoublyLinkedListNodeState<Devnode*>& node_state(Devnode& obj) {
+            return obj.node;
+        }
+    };
+    fbl::DoublyLinkedListNodeState<Devnode*> node;
 
     // list of our child devnodes
-    list_node_t children;
+    fbl::DoublyLinkedList<Devnode*, Devnode::Node> children;
+
+    // Pointer to our parent, for removing ourselves from its list of
+    // children. Our parent must outlive us.
+    Devnode* parent = nullptr;
 
     // list of attached iostates
     fbl::DoublyLinkedList<DcIostate*, DcIostate::Node> iostate;
@@ -148,8 +156,6 @@ static ProtocolInfo proto_infos[] = {
 
 Devnode::Devnode(fbl::String name)
     : name(std::move(name)) {
-
-    list_initialize(&children);
 }
 
 static Devnode* proto_dir(uint32_t id) {
@@ -214,8 +220,8 @@ DcIostate::~DcIostate() {
 // A devnode is a directory (from stat's perspective) if
 // it has children, or if it doesn't have a device, or if
 // its device has no rpc handle
-static bool devnode_is_dir(Devnode* dn) {
-    if (list_is_empty(&dn->children)) {
+static bool devnode_is_dir(const Devnode* dn) {
+    if (dn->children.is_empty()) {
         return (dn->device == nullptr) || (dn->device->hrpc == ZX_HANDLE_INVALID);
     }
     return true;
@@ -311,13 +317,12 @@ static zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask) {
     // If the watcher has asked for all existing entries, send it all of them
     // followed by the end-of-existing marker (IDLE).
     if (mask & fuchsia_io_WATCH_MASK_EXISTING) {
-        Devnode* child;
-        list_for_every_entry(&dn->children, child, Devnode, node) {
-            if (child->device && (child->device->flags & DEV_CTX_INVISIBLE)) {
+        for (const auto& child : dn->children) {
+            if (child.device && (child.device->flags & DEV_CTX_INVISIBLE)) {
                 continue;
             }
             //TODO: send multiple per write
-            devfs_notify_single(&watcher, child->name, fuchsia_io_WATCH_EVENT_EXISTING);
+            devfs_notify_single(&watcher, child.name, fuchsia_io_WATCH_EVENT_EXISTING);
         }
         devfs_notify_single(&watcher, "", fuchsia_io_WATCH_EVENT_IDLE);
     }
@@ -345,15 +350,15 @@ static fbl::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, const char* name) {
     if (dn == nullptr) {
         return nullptr;
     }
-    list_add_tail(&parent->children, &dn->node);
+    dn->parent = parent;
+    parent->children.push_back(dn.get());
     return dn;
 }
 
 static Devnode* devfs_lookup(Devnode* parent, const char* name) {
-    Devnode* child;
-    list_for_every_entry(&parent->children, child, Devnode, node) {
-        if (!strcmp(name, child->name.c_str())) {
-            return child;
+    for (auto& child : parent->children) {
+        if (!strcmp(name, child.name.c_str())) {
+            return &child;
         }
     }
     return nullptr;
@@ -430,13 +435,15 @@ got_name:
         }
 
         // add link node to class directory
-        list_add_tail(&dir->children, &dnlink->node);
+        dnlink->parent = dir;
+        dir->children.push_back(dnlink.get());
         dev->link = dnlink.release();
     }
 
 done:
     // add self node to parent directory
-    list_add_tail(&parent->self->children, &dnself->node);
+    dnself->parent = parent->self;
+    parent->self->children.push_back(dnself.get());
     dev->self = dnself.release();
 
     if (!(dev->flags & DEV_CTX_INVISIBLE)) {
@@ -446,8 +453,8 @@ done:
 }
 
 static void devfs_remove(Devnode* dn) {
-    if (list_in_list(&dn->node)) {
-        list_delete(&dn->node);
+    if (dn->node.InContainer()) {
+        dn->parent->children.erase(*dn);
     }
 
     // detach all connected iostates
@@ -487,7 +494,7 @@ static void devfs_remove(Devnode* dn) {
     dn->watchers.clear();
 
     // detach children
-    while (list_remove_head(&dn->children) != nullptr) {
+    while ((dn->children.pop_front() != nullptr)) {
         // they will be unpublished when the devices they're
         // associated with are eventually destroyed
     }
@@ -521,13 +528,12 @@ again:
     if (name[0] == 0) {
         return ZX_ERR_BAD_PATH;
     }
-    Devnode* child;
-    list_for_every_entry(&dn->children, child, Devnode, node) {
-        if (!strcmp(child->name.c_str(), name)) {
-            if(child->device && (child->device->flags & DEV_CTX_INVISIBLE)) {
+    for (auto& child : dn->children) {
+        if (!strcmp(child.name.c_str(), name)) {
+            if(child.device && (child.device->flags & DEV_CTX_INVISIBLE)) {
                 continue;
             }
-            dn = child;
+            dn = &child;
             goto again;
         }
     }
@@ -631,27 +637,26 @@ static zx_status_t devfs_readdir(Devnode* dn, uint64_t* ino_inout, void* data, s
     char* ptr = static_cast<char*>(data);
     uint64_t ino = *ino_inout;
 
-    Devnode* child;
-    list_for_every_entry(&dn->children, child, Devnode, node) {
-        if (child->ino <= ino) {
+    for (const auto& child : dn->children) {
+        if (child.ino <= ino) {
             continue;
         }
-        if (child->device == nullptr) {
+        if (child.device == nullptr) {
             // "pure" directories (like /dev/class/$NAME) do not show up
             // if they have no children, to avoid clutter and confusion.
             // They remain openable, so they can be watched.
-            if (list_is_empty(&child->children)) {
+            if (child.children.is_empty()) {
                 continue;
             }
         } else {
             // invisible devices also do not show up
-            if (child->device->flags & DEV_CTX_INVISIBLE) {
+            if (child.device->flags & DEV_CTX_INVISIBLE) {
                 continue;
             }
         }
-        ino = child->ino;
+        ino = child.ino;
         auto vdirent = reinterpret_cast<vdirent_t*>(ptr);
-        zx_status_t r = fill_dirent(vdirent, len, ino, child->name,
+        zx_status_t r = fill_dirent(vdirent, len, ino, child.name,
                                     VTYPE_TO_DTYPE(V_TYPE_DIR));
         if (r < 0) {
             break;
