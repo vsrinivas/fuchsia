@@ -1,0 +1,3 @@
+import("//garnet/boards/arm64.gni")
+
+board_packages += [ "garnet/packages/config/frank_media_config" ]
