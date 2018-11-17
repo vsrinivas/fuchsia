@@ -135,7 +135,7 @@ class Service {
     std::string error;
     zx_status_t status = chrealm::SpawnBinaryInRealmAsync(
         "/hub", kSshdArgv, child_job.get(),
-        FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_CLONE_LDSVC, actions,
+        FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_DEFAULT_LDSVC, actions,
         process.reset_and_get_address(), &error);
     if (status < 0) {
       shutdown(conn, SHUT_RDWR);

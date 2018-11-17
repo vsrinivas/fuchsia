@@ -21,7 +21,7 @@ TEST(Run, Daemonize) {
 
   zx::job job;
   uint32_t flags =
-      FDIO_SPAWN_CLONE_LDSVC | FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_CLONE_STDIO;
+      FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_CLONE_STDIO;
 
   int launcher_create_calls = 0;
   fuchsia::sys::LaunchInfo received_launch_info;

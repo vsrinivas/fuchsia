@@ -126,7 +126,7 @@ zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data,
     // TODO(CP-62): Processes that don't have their own package use the appmgr's
     // dynamic library loader, which doesn't make much sense. We need to find an
     // appropriate loader service for each executable.
-    flags |= FDIO_SPAWN_CLONE_LDSVC;
+    flags |= FDIO_SPAWN_DEFAULT_LDSVC;
   }
 
   zx::channel directory_request = std::move(launch_info.directory_request);
