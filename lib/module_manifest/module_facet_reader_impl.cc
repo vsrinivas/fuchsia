@@ -35,8 +35,8 @@ ModuleFacetReaderImpl::~ModuleFacetReaderImpl() {}
 void ModuleFacetReaderImpl::GetModuleManifest(
     const std::string& module_url, GetModuleManifestCallback callback) {
   auto canonical_url = CanonicalizeURL(module_url);
-  loader_->LoadComponent(canonical_url, [canonical_url, callback](
-                                            fuchsia::sys::PackagePtr package) {
+  loader_->LoadUrl(canonical_url, [canonical_url,
+                                   callback](fuchsia::sys::PackagePtr package) {
     if (!package) {
       FXL_LOG(ERROR) << "Could not resolve URL: " << canonical_url;
       callback({});

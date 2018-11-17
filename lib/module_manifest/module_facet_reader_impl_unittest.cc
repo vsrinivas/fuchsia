@@ -66,9 +66,9 @@ class FilesystemForTest {
 };
 
 // A Loader used for testing. Use |AddLoadInfo()| to pre-populate answers to
-// |fuchsia.sys.Loader.LoadComponent()| requests. Because directories are not
+// |fuchsia.sys.Loader.LoadUrl()| requests. Because directories are not
 // trivially clonable, |AddLoadInfo(url,..)| is only able to serve one
-// |fuchsia.sys.Loader.LoadComponent(url)|.
+// |fuchsia.sys.Loader.LoadUrl(url)|.
 class SysLoaderForTest : fuchsia::sys::Loader {
  public:
   SysLoaderForTest() : binding_(this) {}
@@ -81,8 +81,8 @@ class SysLoaderForTest : fuchsia::sys::Loader {
     return loader;
   }
 
-  // Populate a one-shot answer to |fuchsia.sys.Loader.LoadComponent|; that is,
-  // LoadComponent() will not be able to answer for |url| a second time unless
+  // Populate a one-shot answer to |fuchsia.sys.Loader.LoadUrl|; that is,
+  // LoadUrl() will not be able to answer for |url| a second time unless
   // |AddLoadInfo| is called again.
   void AddLoadInfo(fidl::StringPtr url, fuchsia::sys::PackagePtr pkg) {
     if (url->find("file://") == std::string::npos) {
@@ -93,7 +93,7 @@ class SysLoaderForTest : fuchsia::sys::Loader {
 
  private:
   // |fuchsia::sys::Loader|
-  void LoadComponent(fidl::StringPtr url, LoadComponentCallback cb) {
+  void LoadUrl(fidl::StringPtr url, LoadUrlCallback cb) {
     if (load_info_.find(url.get()) != load_info_.end()) {
       auto retval = std::move(load_info_[url.get()]);
       load_info_.erase(url.get());
