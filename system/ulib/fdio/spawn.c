@@ -212,8 +212,7 @@ static zx_status_t send_handles(zx_handle_t launcher, size_t handle_capacity,
         }
     }
 
-    // TODO(raggi): rename FDIO_SPAWN_CLONE_LDSVC to FDIO_SPAWN_DEFAULT_LDSVC
-    if ((flags & FDIO_SPAWN_CLONE_LDSVC) != 0) {
+    if ((flags & FDIO_SPAWN_DEFAULT_LDSVC) != 0) {
         handle_infos[h].handle = FIDL_HANDLE_PRESENT;
         handle_infos[h].id = PA_LDSVC_LOADER;
         if (ldsvc == ZX_HANDLE_INVALID) {
@@ -503,7 +502,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
     if ((flags & FDIO_SPAWN_CLONE_JOB) != 0)
         ++handle_capacity;
 
-    if ((flags & FDIO_SPAWN_CLONE_LDSVC) != 0)
+    if ((flags & FDIO_SPAWN_DEFAULT_LDSVC) != 0)
         ++handle_capacity;
 
     if ((flags & FDIO_SPAWN_CLONE_STDIO) != 0)

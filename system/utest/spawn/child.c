@@ -42,16 +42,16 @@ static bool has_arg(uint32_t arg) {
 }
 
 static int check_flags(uint32_t flags, int success) {
-    // We can't actually load the process without FDIO_SPAWN_CLONE_LDSVC, so we
+    // We can't actually load the process without FDIO_SPAWN_DEFAULT_LDSVC, so we
     // always add it into the flags.
-    flags |= FDIO_SPAWN_CLONE_LDSVC;
+    flags |= FDIO_SPAWN_DEFAULT_LDSVC;
 
     bool should_have_job = (flags & FDIO_SPAWN_CLONE_JOB) != 0;
     bool has_job = zx_job_default() != ZX_HANDLE_INVALID;
     if (has_job != should_have_job)
         return -1;
 
-    bool should_have_ldsvc = (flags & FDIO_SPAWN_CLONE_LDSVC) != 0;
+    bool should_have_ldsvc = (flags & FDIO_SPAWN_DEFAULT_LDSVC) != 0;
     zx_handle_t ldsvc;
     bool has_ldsvc = dl_clone_loader_service(&ldsvc) != ZX_ERR_UNAVAILABLE;
     if (has_ldsvc != should_have_ldsvc)

@@ -29,7 +29,7 @@ static zx_status_t launch(const char* filename, const char* const* argv,
     uint32_t events = 0;
     ioctl_pty_read_events(STDIN_FILENO, &events); // ignore any error
 
-    // TODO(abarth): Including FDIO_SPAWN_CLONE_LDSVC doesn't fully make sense.
+    // TODO(abarth): Including FDIO_SPAWN_DEFAULT_LDSVC doesn't fully make sense.
     // We should find a library loader that's appropriate for this program
     // rather than cloning the library loader used by the shell.
     uint32_t flags = FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_ENVIRON;
@@ -99,10 +99,10 @@ zx_status_t process_subshell(union node* n, const char* const* envp,
         {.action = FDIO_SPAWN_ACTION_ADD_HANDLE, .h = {.id = PA_HND(PA_USER0, 0), .handle = ast_vmo}},
     };
 
-    // TODO(abarth): Including FDIO_SPAWN_CLONE_LDSVC doesn't fully make sense.
+    // TODO(abarth): Including FDIO_SPAWN_DEFAULT_LDSVC doesn't fully make sense.
     // We should find a library loader that's appropriate for this program
     // rather than cloning the library loader used by the shell.
-    uint32_t flags = FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_CLONE_LDSVC | FDIO_SPAWN_CLONE_NAMESPACE;
+    uint32_t flags = FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_NAMESPACE;
     return fdio_spawn_etc(job, flags, orig_arg0, argv, envp,
                           countof(actions), actions, process, err_msg);
 }

@@ -146,7 +146,7 @@ static bool spawn_flags_test(void) {
     zx::process process;
 
     {
-        // We can't actually launch a process without FDIO_SPAWN_CLONE_LDSVC
+        // We can't actually launch a process without FDIO_SPAWN_DEFAULT_LDSVC
         // because we can't load the PT_INTERP.
         const char* argv[] = {kSpawnChild, "--flags", "none", nullptr};
         status = fdio_spawn(ZX_HANDLE_INVALID, 0, kSpawnChild, argv,
@@ -157,7 +157,7 @@ static bool spawn_flags_test(void) {
 
     {
         const char* argv[] = {kSpawnChild, "--flags", "none", nullptr};
-        status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_LDSVC,
+        status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_DEFAULT_LDSVC,
                             kSpawnChild, argv, process.reset_and_get_address());
         ASSERT_EQ(ZX_OK, status);
         EXPECT_EQ(51, join(process));
@@ -165,7 +165,7 @@ static bool spawn_flags_test(void) {
 
     {
         const char* argv[] = {kSpawnChild, "--flags", "job", nullptr};
-        status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_CLONE_LDSVC,
+        status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_DEFAULT_LDSVC,
                             kSpawnChild, argv, process.reset_and_get_address());
         ASSERT_EQ(ZX_OK, status);
         EXPECT_EQ(52, join(process));
@@ -173,7 +173,7 @@ static bool spawn_flags_test(void) {
 
     {
         const char* argv[] = {kSpawnChild, "--flags", "namespace", nullptr};
-        status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_LDSVC | FDIO_SPAWN_CLONE_NAMESPACE,
+        status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_NAMESPACE,
                             kSpawnChild, argv, process.reset_and_get_address());
         ASSERT_EQ(ZX_OK, status);
         EXPECT_EQ(53, join(process));
@@ -181,7 +181,7 @@ static bool spawn_flags_test(void) {
 
     {
         const char* argv[] = {kSpawnChild, "--flags", "stdio", nullptr};
-        status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_LDSVC | FDIO_SPAWN_CLONE_STDIO,
+        status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_STDIO,
                             kSpawnChild, argv, process.reset_and_get_address());
         ASSERT_EQ(ZX_OK, status);
         EXPECT_EQ(54, join(process));
@@ -189,7 +189,7 @@ static bool spawn_flags_test(void) {
 
     {
         const char* argv[] = {kSpawnChild, "--flags", "environ", nullptr};
-        status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_LDSVC | FDIO_SPAWN_CLONE_ENVIRON,
+        status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_ENVIRON,
                             kSpawnChild, argv, process.reset_and_get_address());
         ASSERT_EQ(ZX_OK, status);
         EXPECT_EQ(55, join(process));
@@ -217,7 +217,7 @@ static bool spawn_environ_test(void) {
     {
         const char* argv[] = {kSpawnChild, "--env", "empty", nullptr};
         const char* env[] = {nullptr};
-        status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_LDSVC,
+        status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_DEFAULT_LDSVC,
                                 kSpawnChild, argv, env, 0, nullptr,
                                 process.reset_and_get_address(), nullptr);
         ASSERT_EQ(ZX_OK, status);
@@ -227,7 +227,7 @@ static bool spawn_environ_test(void) {
     {
         const char* argv[] = {kSpawnChild, "--env", "one", nullptr};
         const char* env[] = {"SPAWN_TEST_CHILD=1", nullptr};
-        status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_LDSVC,
+        status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_DEFAULT_LDSVC,
                                 kSpawnChild, argv, env, 0, nullptr,
                                 process.reset_and_get_address(), nullptr);
         ASSERT_EQ(ZX_OK, status);

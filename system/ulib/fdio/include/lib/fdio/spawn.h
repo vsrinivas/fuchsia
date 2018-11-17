@@ -23,10 +23,14 @@ __BEGIN_CDECLS
 // argument.
 #define FDIO_SPAWN_CLONE_JOB ((uint32_t)0x0001u)
 
-// Provides the spawned process with the shared library loader used by this
+// Provides the spawned process with the shared library loader resolved via
+// fuchsia.process.Resolver (if resolved), or that which is used by this
 // process.
 //
 // The shared library loader is passed as |PA_LDSVC_LOADER|.
+#define FDIO_SPAWN_DEFAULT_LDSVC ((uint32_t)0x0002u)
+// FDIO_SPAWN_CLONE_LDSVC is the same as FDIO_SPAWN_DEFAULT_LDSVC.
+// TODO(ZX-3031): this name is deprecated.
 #define FDIO_SPAWN_CLONE_LDSVC ((uint32_t)0x0002u)
 
 // Clones the filesystem namespace into the spawned process.
