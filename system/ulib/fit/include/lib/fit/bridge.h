@@ -33,16 +33,20 @@ namespace fit {
 // Its owner may exercise the capability to complete the task (provide its result),
 // it may transfer the capability by moving it to another completer instance,
 // or it may cause the asynchronous task to be "abandoned" by discarding the
-// capability, implying that the task can never produce a result.
+// capability, implying that the task can never produce a result.  When this
+// occurs, the associated consumer's |fit::consumer::was_abandoned()| method
+// will return true and the consumer will not obtain any result from the task.
 // See |fit::consumer::promise()| and |fit::consumer::promise_or_error()| for
-// details on how abandonment of the task is handled by the consumer.
+// details on how abandonment of the task can be handled by the consumer.
 //
 // The consumption capability has a single owner represented by |fit::consumer|.
 // Its owner may exercise the capability to consume the task's result (as a
 /// promise), it may transfer the capability by moving it to another consumer
 // instance, or it may cause the asynchronous task to be "canceled" by
 // discarding the capability, implying that the task's result can never be
-// consumed.  When this occurs, the task's eventual result will be discarded.
+// consumed.  When this occurs, the associated completer's
+// |fit::completer::was_canceled()| method will return true and the task's
+// eventual result (if any) will be silently discarded.
 //
 // SYNOPSIS
 //
@@ -203,6 +207,14 @@ public:
     // reporting completion of the task.
     explicit operator bool() const { return !!completion_ref_; }
 
+    // Returns true if the associated |consumer| has canceled the task.
+    // This method returns a snapshot of the current cancelation state.
+    // Note that the task may be canceled concurrently at any time.
+    bool was_canceled() const {
+        assert(completion_ref_);
+        return completion_ref_.get()->was_canceled();
+    }
+
     // Explicitly abandons the task, meaning that it will never be completed.
     // See |fit::bridge| for details about abandonment.
     void abandon() {
@@ -350,6 +362,14 @@ public:
         consumption_ref_ = consumption_ref();
     }
 
+    // Returns true if the associated |completer| has abandoned the task.
+    // This method returns a snapshot of the current abandonment state.
+    // Note that the task may be abandoned concurrently at any time.
+    bool was_abandoned() const {
+        assert(consumption_ref_);
+        return consumption_ref_.get()->was_abandoned();
+    }
+
     // Returns an unboxed promise which resumes execution once this task has
     // completed.  If the task is abandoned by its completer, the promise
     // will not produce a result, thereby causing subsequent tasks associated
@@ -357,7 +377,10 @@ public:
     // they cannot make progress without the promised result.
     promise_impl<typename bridge_state::promise_continuation>
     promise() {
-        return promise_or(::fit::pending());
+        assert(consumption_ref_);
+        return make_promise_with_continuation(
+            typename bridge_state::promise_continuation(
+                std::move(consumption_ref_)));
     }
 
     // A variant of |promise()| that allows a default result to be provided when
@@ -377,10 +400,9 @@ public:
     promise_impl<typename bridge_state::promise_continuation>
     promise_or(result_type result_if_abandoned) {
         assert(consumption_ref_);
-        bridge_state* state = consumption_ref_.get();
         return make_promise_with_continuation(
-            state->promise_or(std::move(consumption_ref_),
-                              std::move(result_if_abandoned)));
+            typename bridge_state::promise_continuation(
+                std::move(consumption_ref_), std::move(result_if_abandoned)));
     }
 
     consumer(const consumer& other) = delete;

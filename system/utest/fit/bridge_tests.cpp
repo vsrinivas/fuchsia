@@ -121,8 +121,12 @@ bool completer_abandon() {
     {
         fit::bridge<int, const char*> bridge;
         EXPECT_TRUE(bridge.completer());
+        EXPECT_FALSE(bridge.consumer().was_abandoned());
+
         bridge.completer().abandon();
         EXPECT_FALSE(bridge.completer());
+        EXPECT_TRUE(bridge.consumer().was_abandoned());
+
         fit::result<int, const char*> result =
             fit::run_sequentially(bridge.consumer().promise_or(
                 fit::error("Abandoned")));
@@ -135,8 +139,12 @@ bool completer_abandon() {
     {
         fit::bridge<int, const char*> bridge;
         EXPECT_TRUE(bridge.completer());
+        EXPECT_FALSE(bridge.consumer().was_abandoned());
+
         bridge.completer() = fit::completer<int, const char*>();
         EXPECT_FALSE(bridge.completer());
+        EXPECT_TRUE(bridge.consumer().was_abandoned());
+
         fit::result<int, const char*> result =
             fit::run_sequentially(bridge.consumer().promise_or(
                 fit::error("Abandoned")));
@@ -155,8 +163,12 @@ bool completer_complete() {
     {
         fit::bridge<void, const char*> bridge;
         EXPECT_TRUE(bridge.completer());
+        EXPECT_FALSE(bridge.consumer().was_abandoned());
+
         bridge.completer().complete_ok();
         EXPECT_FALSE(bridge.completer());
+        EXPECT_FALSE(bridge.consumer().was_abandoned());
+
         fit::result<void, const char*> result =
             fit::run_sequentially(bridge.consumer().promise());
         EXPECT_FALSE(bridge.consumer());
@@ -167,8 +179,12 @@ bool completer_complete() {
     {
         fit::bridge<int, const char*> bridge;
         EXPECT_TRUE(bridge.completer());
+        EXPECT_FALSE(bridge.consumer().was_abandoned());
+
         bridge.completer().complete_ok(42);
         EXPECT_FALSE(bridge.completer());
+        EXPECT_FALSE(bridge.consumer().was_abandoned());
+
         fit::result<int, const char*> result =
             fit::run_sequentially(bridge.consumer().promise());
         EXPECT_FALSE(bridge.consumer());
@@ -180,8 +196,12 @@ bool completer_complete() {
     {
         fit::bridge<int, void> bridge;
         EXPECT_TRUE(bridge.completer());
+        EXPECT_FALSE(bridge.consumer().was_abandoned());
+
         bridge.completer().complete_error();
         EXPECT_FALSE(bridge.completer());
+        EXPECT_FALSE(bridge.consumer().was_abandoned());
+
         fit::result<int, void> result =
             fit::run_sequentially(bridge.consumer().promise());
         EXPECT_FALSE(bridge.consumer());
@@ -192,8 +212,12 @@ bool completer_complete() {
     {
         fit::bridge<int, const char*> bridge;
         EXPECT_TRUE(bridge.completer());
+        EXPECT_FALSE(bridge.consumer().was_abandoned());
+
         bridge.completer().complete_error("Test");
         EXPECT_FALSE(bridge.completer());
+        EXPECT_FALSE(bridge.consumer().was_abandoned());
+
         fit::result<int, const char*> result =
             fit::run_sequentially(bridge.consumer().promise());
         EXPECT_FALSE(bridge.consumer());
@@ -205,8 +229,12 @@ bool completer_complete() {
     {
         fit::bridge<int, const char*> bridge;
         EXPECT_TRUE(bridge.completer());
+        EXPECT_FALSE(bridge.consumer().was_abandoned());
+
         bridge.completer().complete_or_abandon(fit::ok(42));
         EXPECT_FALSE(bridge.completer());
+        EXPECT_FALSE(bridge.consumer().was_abandoned());
+
         fit::result<int, const char*> result =
             fit::run_sequentially(bridge.consumer().promise());
         EXPECT_FALSE(bridge.consumer());
@@ -218,8 +246,12 @@ bool completer_complete() {
     {
         fit::bridge<int, const char*> bridge;
         EXPECT_TRUE(bridge.completer());
+        EXPECT_FALSE(bridge.consumer().was_abandoned());
+
         bridge.completer().complete_or_abandon(fit::error("Test"));
         EXPECT_FALSE(bridge.completer());
+        EXPECT_FALSE(bridge.consumer().was_abandoned());
+
         fit::result<int, const char*> result =
             fit::run_sequentially(bridge.consumer().promise());
         EXPECT_FALSE(bridge.consumer());
@@ -231,8 +263,12 @@ bool completer_complete() {
     {
         fit::bridge<int, const char*> bridge;
         EXPECT_TRUE(bridge.completer());
+        EXPECT_FALSE(bridge.consumer().was_abandoned());
+
         bridge.completer().complete_or_abandon(fit::pending());
         EXPECT_FALSE(bridge.completer());
+        EXPECT_TRUE(bridge.consumer().was_abandoned());
+
         fit::result<int, const char*> result =
             fit::run_sequentially(bridge.consumer().promise_or(
                 fit::error("Abandoned")));
@@ -252,6 +288,8 @@ bool completer_bind_no_arg_callback() {
         uint64_t run_count = 0;
         fit::bridge<> bridge;
         async_invoke_callback_no_args(&run_count, bridge.completer().bind());
+        EXPECT_FALSE(bridge.completer());
+        EXPECT_FALSE(bridge.consumer().was_abandoned());
 
         fit::result<> result = fit::run_sequentially(
             bridge.consumer().promise());
@@ -264,6 +302,8 @@ bool completer_bind_no_arg_callback() {
         uint64_t run_count = 0;
         fit::bridge<std::tuple<>> bridge;
         async_invoke_callback_no_args(&run_count, bridge.completer().bind_tuple());
+        EXPECT_FALSE(bridge.completer());
+        EXPECT_FALSE(bridge.consumer().was_abandoned());
 
         fit::result<std::tuple<>> result = fit::run_sequentially(
             bridge.consumer().promise());
@@ -282,6 +322,8 @@ bool completer_bind_one_arg_callback() {
         uint64_t run_count = 0;
         fit::bridge<std::string> bridge;
         async_invoke_callback_one_arg(&run_count, bridge.completer().bind());
+        EXPECT_FALSE(bridge.completer());
+        EXPECT_FALSE(bridge.consumer().was_abandoned());
 
         fit::result<std::string> result = fit::run_sequentially(
             bridge.consumer().promise());
@@ -295,6 +337,8 @@ bool completer_bind_one_arg_callback() {
         uint64_t run_count = 0;
         fit::bridge<std::tuple<std::string>> bridge;
         async_invoke_callback_one_arg(&run_count, bridge.completer().bind_tuple());
+        EXPECT_FALSE(bridge.completer());
+        EXPECT_FALSE(bridge.consumer().was_abandoned());
 
         fit::result<std::tuple<std::string>> result = fit::run_sequentially(
             bridge.consumer().promise());
@@ -314,6 +358,8 @@ bool completer_bind_two_arg_callback() {
         uint64_t run_count = 0;
         fit::bridge<std::tuple<std::string, int>> bridge;
         async_invoke_callback_two_args(&run_count, bridge.completer().bind_tuple());
+        EXPECT_FALSE(bridge.completer());
+        EXPECT_FALSE(bridge.consumer().was_abandoned());
 
         fit::result<std::tuple<std::string, int>> result = fit::run_sequentially(
             bridge.consumer().promise());
@@ -373,8 +419,12 @@ bool consumer_cancel() {
     {
         fit::bridge<int, const char*> bridge;
         EXPECT_TRUE(bridge.consumer());
+        EXPECT_FALSE(bridge.completer().was_canceled());
+
         bridge.consumer().cancel();
         EXPECT_FALSE(bridge.consumer());
+        EXPECT_TRUE(bridge.completer().was_canceled());
+
         bridge.completer().complete_ok(42);
         EXPECT_FALSE(bridge.completer());
     }
@@ -383,8 +433,12 @@ bool consumer_cancel() {
     {
         fit::bridge<int, const char*> bridge;
         EXPECT_TRUE(bridge.consumer());
+        EXPECT_FALSE(bridge.completer().was_canceled());
+
         bridge.consumer() = fit::consumer<int, const char*>();
         EXPECT_FALSE(bridge.consumer());
+        EXPECT_TRUE(bridge.completer().was_canceled());
+
         bridge.completer().complete_ok(42);
         EXPECT_FALSE(bridge.completer());
     }
@@ -399,10 +453,15 @@ bool consumer_promise() {
     {
         fit::bridge<int, const char*> bridge;
         EXPECT_TRUE(bridge.consumer());
+        EXPECT_FALSE(bridge.completer().was_canceled());
+
         fit::promise<int, const char*> promise = bridge.consumer().promise();
         EXPECT_FALSE(bridge.consumer());
+        EXPECT_FALSE(bridge.completer().was_canceled());
+
         bridge.completer().complete_ok(42);
         EXPECT_FALSE(bridge.completer());
+
         fit::result<int, const char*> result =
             fit::run_sequentially(std::move(promise));
         EXPECT_EQ(fit::result_state::ok, result.state());
@@ -413,10 +472,15 @@ bool consumer_promise() {
     {
         fit::bridge<int, const char*> bridge;
         EXPECT_TRUE(bridge.consumer());
+        EXPECT_FALSE(bridge.completer().was_canceled());
+
         fit::promise<int, const char*> promise = bridge.consumer().promise();
         EXPECT_FALSE(bridge.consumer());
+        EXPECT_FALSE(bridge.completer().was_canceled());
+
         bridge.completer().abandon();
         EXPECT_FALSE(bridge.completer());
+
         fit::result<int, const char*> result =
             fit::run_sequentially(std::move(promise));
         EXPECT_EQ(fit::result_state::pending, result.state());
@@ -426,11 +490,16 @@ bool consumer_promise() {
     {
         fit::bridge<int, const char*> bridge;
         EXPECT_TRUE(bridge.consumer());
+        EXPECT_FALSE(bridge.completer().was_canceled());
+
         fit::promise<int, const char*> promise = bridge.consumer().promise_or(
             fit::error("Abandoned"));
         EXPECT_FALSE(bridge.consumer());
+        EXPECT_FALSE(bridge.completer().was_canceled());
+
         bridge.completer().complete_ok(42);
         EXPECT_FALSE(bridge.completer());
+
         fit::result<int, const char*> result =
             fit::run_sequentially(std::move(promise));
         EXPECT_EQ(fit::result_state::ok, result.state());
@@ -441,11 +510,16 @@ bool consumer_promise() {
     {
         fit::bridge<int, const char*> bridge;
         EXPECT_TRUE(bridge.consumer());
+        EXPECT_FALSE(bridge.completer().was_canceled());
+
         fit::promise<int, const char*> promise = bridge.consumer().promise_or(
             fit::error("Abandoned"));
         EXPECT_FALSE(bridge.consumer());
+        EXPECT_FALSE(bridge.completer().was_canceled());
+
         bridge.completer().abandon();
         EXPECT_FALSE(bridge.completer());
+
         fit::result<int, const char*> result =
             fit::run_sequentially(std::move(promise));
         EXPECT_EQ(fit::result_state::error, result.state());
