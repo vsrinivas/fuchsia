@@ -4,11 +4,9 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-MODULE := $(LOCAL_DIR)
+# Common pieces.
 
-MODULE_TYPE := usertest
-
-MODULE_SRCS += \
+LOCAL_SRCS := \
     $(LOCAL_DIR)/engine_tests.cpp \
     $(LOCAL_DIR)/event_tests_ntrace.c \
     $(LOCAL_DIR)/event_tests_ntrace.cpp \
@@ -20,29 +18,67 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/no_optimization.c \
     $(LOCAL_DIR)/record_tests.cpp
 
-MODULE_NAME := trace-test
-
-MODULE_HEADER_DEPS := \
+LOCAL_HEADER_DEPS := \
     system/ulib/trace-provider
 
-MODULE_STATIC_LIBS := \
-    system/ulib/trace \
-    system/ulib/trace-provider.handler \
-    system/ulib/trace-reader \
+LOCAL_STATIC_LIBS := \
     system/ulib/async.cpp \
     system/ulib/async \
     system/ulib/async-loop.cpp \
     system/ulib/async-loop \
+    system/ulib/fbl \
+    system/ulib/trace-provider.handler \
+    system/ulib/trace-reader \
     system/ulib/zx \
     system/ulib/zxcpp \
-    system/ulib/fbl
 
-MODULE_LIBS := \
+LOCAL_LIBS := \
     system/ulib/async.default \
     system/ulib/c \
     system/ulib/zircon \
     system/ulib/fdio \
-    system/ulib/trace-engine \
     system/ulib/unittest
+
+# Version of test that uses libtrace-engine.so.
+
+MODULE := $(LOCAL_DIR)
+MODULE_NAME := trace-test
+
+MODULE_TYPE := usertest
+
+MODULE_SRCS := $(LOCAL_SRCS)
+
+MODULE_HEADER_DEPS := $(LOCAL_HEADER_DEPS)
+
+MODULE_STATIC_LIBS := \
+    $(LOCAL_STATIC_LIBS) \
+    system/ulib/trace
+
+MODULE_LIBS := \
+    $(LOCAL_LIBS) \
+    system/ulib/trace-engine
+
+include make/module.mk
+
+# And again using libtrace-engine-static.a.
+
+MODULE := $(LOCAL_DIR).static
+MODULE_NAME := trace-static-test
+
+MODULE_TYPE := usertest
+
+MODULE_SRCS := $(LOCAL_SRCS)
+
+MODULE_HEADER_DEPS := \
+    $(LOCAL_HEADER_DEPS) \
+    system/ulib/trace \
+    system/ulib/trace-engine
+
+MODULE_STATIC_LIBS := \
+    $(LOCAL_STATIC_LIBS) \
+    system/ulib/trace.static \
+    system/ulib/trace-engine.static
+
+MODULE_LIBS := $(LOCAL_LIBS)
 
 include make/module.mk

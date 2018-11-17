@@ -560,7 +560,7 @@ bool RegisterString(trace_context_t* context,
 } // namespace
 } // namespace trace
 
-__EXPORT bool trace_context_is_category_enabled(
+EXPORT bool trace_context_is_category_enabled(
     trace_context_t* context,
     const char* category_literal) {
     return trace::RegisterString(context, category_literal, true, nullptr);
@@ -587,7 +587,7 @@ EXPORT_NO_DDK void trace_context_register_string_copy(
     }
 }
 
-__EXPORT void trace_context_register_string_literal(
+EXPORT void trace_context_register_string_literal(
     trace_context_t* context,
     const char* string_literal,
     trace_string_ref_t* out_ref) {
@@ -602,7 +602,7 @@ EXPORT_NO_DDK bool trace_context_register_category_literal(
     return trace::RegisterString(context, category_literal, true, out_ref);
 }
 
-__EXPORT void trace_context_register_current_thread(
+EXPORT void trace_context_register_current_thread(
     trace_context_t* context,
     trace_thread_ref_t* out_ref) {
     trace::ContextCache* cache = trace::GetCurrentContextCache(context->generation());
@@ -665,7 +665,7 @@ EXPORT_NO_DDK void trace_context_register_thread(
     }
 }
 
-__EXPORT void trace_context_register_vthread(
+EXPORT void trace_context_register_vthread(
     trace_context_t* context,
     zx_koid_t process_koid,
     const char* vthread_literal,
@@ -713,7 +713,7 @@ __EXPORT void trace_context_register_vthread(
     *out_ref = trace_make_inline_thread_ref(process_koid, vthread_koid);
 }
 
-__EXPORT void* trace_context_begin_write_blob_record(
+EXPORT void* trace_context_begin_write_blob_record(
     trace_context_t* context,
     trace_blob_type_t type,
     const trace_string_ref_t* name_ref,
@@ -746,7 +746,7 @@ __EXPORT void* trace_context_begin_write_blob_record(
     }
 }
 
-__EXPORT void trace_context_write_blob_record(
+EXPORT void trace_context_write_blob_record(
     trace_context_t* context,
     trace_blob_type_t type,
     const trace_string_ref_t* name_ref,
@@ -899,7 +899,7 @@ EXPORT_NO_DDK void trace_context_write_log_record(
     }
 }
 
-__EXPORT void trace_context_write_instant_event_record(
+EXPORT void trace_context_write_instant_event_record(
     trace_context_t* context,
     trace_ticks_t event_time,
     const trace_thread_ref_t* thread_ref,
@@ -917,7 +917,7 @@ __EXPORT void trace_context_write_instant_event_record(
     }
 }
 
-__EXPORT void trace_context_write_counter_event_record(
+EXPORT void trace_context_write_counter_event_record(
     trace_context_t* context,
     trace_ticks_t event_time,
     const trace_thread_ref_t* thread_ref,
@@ -935,7 +935,7 @@ __EXPORT void trace_context_write_counter_event_record(
     }
 }
 
-__EXPORT void trace_context_write_duration_event_record(
+EXPORT void trace_context_write_duration_event_record(
     trace_context_t* context,
     trace_ticks_t start_time,
     trace_ticks_t end_time,
@@ -953,7 +953,7 @@ __EXPORT void trace_context_write_duration_event_record(
         nullptr, 0u);
 }
 
-__EXPORT void trace_context_write_duration_begin_event_record(
+EXPORT void trace_context_write_duration_begin_event_record(
     trace_context_t* context,
     trace_ticks_t event_time,
     const trace_thread_ref_t* thread_ref,
@@ -966,7 +966,7 @@ __EXPORT void trace_context_write_duration_begin_event_record(
         args, num_args, 0u);
 }
 
-__EXPORT void trace_context_write_duration_end_event_record(
+EXPORT void trace_context_write_duration_end_event_record(
     trace_context_t* context,
     trace_ticks_t event_time,
     const trace_thread_ref_t* thread_ref,
@@ -979,7 +979,7 @@ __EXPORT void trace_context_write_duration_end_event_record(
         args, num_args, 0u);
 }
 
-__EXPORT void trace_context_write_async_begin_event_record(
+EXPORT void trace_context_write_async_begin_event_record(
     trace_context_t* context,
     trace_ticks_t event_time,
     const trace_thread_ref_t* thread_ref,
@@ -997,7 +997,7 @@ __EXPORT void trace_context_write_async_begin_event_record(
     }
 }
 
-__EXPORT void trace_context_write_async_instant_event_record(
+EXPORT void trace_context_write_async_instant_event_record(
     trace_context_t* context,
     trace_ticks_t event_time,
     const trace_thread_ref_t* thread_ref,
@@ -1015,7 +1015,7 @@ __EXPORT void trace_context_write_async_instant_event_record(
     }
 }
 
-__EXPORT void trace_context_write_async_end_event_record(
+EXPORT void trace_context_write_async_end_event_record(
     trace_context_t* context,
     trace_ticks_t event_time,
     const trace_thread_ref_t* thread_ref,
@@ -1033,7 +1033,7 @@ __EXPORT void trace_context_write_async_end_event_record(
     }
 }
 
-__EXPORT void trace_context_write_flow_begin_event_record(
+EXPORT void trace_context_write_flow_begin_event_record(
     trace_context_t* context,
     trace_ticks_t event_time,
     const trace_thread_ref_t* thread_ref,
@@ -1051,7 +1051,7 @@ __EXPORT void trace_context_write_flow_begin_event_record(
     }
 }
 
-__EXPORT void trace_context_write_flow_step_event_record(
+EXPORT void trace_context_write_flow_step_event_record(
     trace_context_t* context,
     trace_ticks_t event_time,
     const trace_thread_ref_t* thread_ref,
@@ -1069,7 +1069,7 @@ __EXPORT void trace_context_write_flow_step_event_record(
     }
 }
 
-__EXPORT void trace_context_write_flow_end_event_record(
+EXPORT void trace_context_write_flow_end_event_record(
     trace_context_t* context,
     trace_ticks_t event_time,
     const trace_thread_ref_t* thread_ref,

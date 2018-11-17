@@ -16,8 +16,16 @@ MODULE_SRCS = \
     $(LOCAL_DIR)/reader_internal.cpp \
     $(LOCAL_DIR)/records.cpp
 
+# This is for building in zircon.
+MODULE_HEADER_DEPS := \
+    system/ulib/trace-engine
+
+# trace-engine.headers-for-reader is for building outsize of zircon.
+# We cannot declare a dependency on trace-engine itself because then
+# our users will get a libtrace-engine.so dependency. And we don't
+# declare a dependency on trace-engine-static: We only need these headers.
 MODULE_STATIC_LIBS := \
-    system/ulib/trace-engine \
+    system/ulib/trace-engine.headers-for-reader \
     system/ulib/zxcpp \
     system/ulib/fbl
 
@@ -39,8 +47,10 @@ MODULE_SRCS = \
     $(LOCAL_DIR)/reader.cpp \
     $(LOCAL_DIR)/records.cpp
 
+MODULE_HEADER_DEPS := \
+    system/ulib/trace-engine
+
 MODULE_COMPILEFLAGS := \
-    -Isystem/ulib/trace-engine/include \
     -Isystem/ulib/fbl/include
 
 MODULE_HOST_LIBS := \

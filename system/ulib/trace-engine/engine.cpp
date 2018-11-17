@@ -442,12 +442,12 @@ void handle_event(async_dispatcher_t* dispatcher, async_wait_t* wait,
 /*** Trace instrumentation functions ***/
 
 // thread-safe, lock-free
-__EXPORT trace_state_t trace_state() {
+EXPORT trace_state_t trace_state() {
     return static_cast<trace_state_t>(g_state.load(std::memory_order_relaxed));
 }
 
 // thread-safe
-__EXPORT bool trace_is_category_enabled(const char* category_literal) {
+EXPORT bool trace_is_category_enabled(const char* category_literal) {
     trace_context_t* context = trace_acquire_context();
     if (likely(!context))
         return false;
@@ -457,7 +457,7 @@ __EXPORT bool trace_is_category_enabled(const char* category_literal) {
 }
 
 // thread-safe, fail-fast, lock-free
-__EXPORT trace_context_t* trace_acquire_context() {
+EXPORT trace_context_t* trace_acquire_context() {
     // Fail fast: Check whether we could possibly write into the trace buffer.
     // The count must be at least 1 to indicate that the buffer is initialized.
     // This is marked likely because tracing is usually disabled and we want
@@ -481,7 +481,7 @@ __EXPORT trace_context_t* trace_acquire_context() {
     return g_context;
 }
 
-__EXPORT trace_context_t* trace_acquire_context_for_category(
+EXPORT trace_context_t* trace_acquire_context_for_category(
         const char* category_literal, trace_string_ref_t* out_ref) {
     // This is marked likely because tracing is usually disabled and we want
     // to return as quickly as possible from this function.
@@ -498,7 +498,7 @@ __EXPORT trace_context_t* trace_acquire_context_for_category(
 }
 
 // thread-safe, never-fail, lock-free
-__EXPORT void trace_release_context(trace_context_t* context) {
+EXPORT void trace_release_context(trace_context_t* context) {
     ZX_DEBUG_ASSERT(context == g_context);
     ZX_DEBUG_ASSERT(get_buffer_context_refs(g_context_refs.load(std::memory_order_relaxed)) != 0u);
 
@@ -555,7 +555,7 @@ EXPORT_NO_DDK void trace_release_prolonged_context(trace_prolonged_context_t* co
     }
 }
 
-__EXPORT zx_status_t trace_register_observer(zx_handle_t event) {
+EXPORT zx_status_t trace_register_observer(zx_handle_t event) {
     fbl::AutoLock lock(&g_engine_mutex);
 
     for (const auto& item : g_observers) {
@@ -567,7 +567,7 @@ __EXPORT zx_status_t trace_register_observer(zx_handle_t event) {
     return ZX_OK;
 }
 
-__EXPORT zx_status_t trace_unregister_observer(zx_handle_t event) {
+EXPORT zx_status_t trace_unregister_observer(zx_handle_t event) {
     fbl::AutoLock lock(&g_engine_mutex);
 
     for (size_t i = 0; i < g_observers.size(); i++) {
@@ -583,7 +583,7 @@ __EXPORT zx_status_t trace_unregister_observer(zx_handle_t event) {
     return ZX_ERR_NOT_FOUND;
 }
 
-__EXPORT void trace_notify_observer_updated(zx_handle_t event) {
+EXPORT void trace_notify_observer_updated(zx_handle_t event) {
     fbl::AutoLock lock(&g_engine_mutex);
 
     for (auto& item : g_observers) {

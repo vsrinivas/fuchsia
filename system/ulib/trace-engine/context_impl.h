@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <atomic>
+
 #include <zircon/assert.h>
 
 #include <fbl/mutex.h>
@@ -12,14 +14,25 @@
 #include <trace-engine/context.h>
 #include <trace-engine/handler.h>
 
-#include <atomic>
-
-// Not all API routines are exported to the DDK.
-// Routines that are always exported use __EXPORT.
-// Routines that are not exported to the DDK use EXPORT_NO_DDK.
-#ifdef DDK_TRACING
+// Two preprocessor symbols control what symbols we export in a .so:
+// EXPORT and EXPORT_NO_DDK:
+// - EXPORT is for symbols exported to both driver and non-driver versions of
+//   the library ("non-driver" is the normal case).
+// - EXPORT_NO_DDK is for symbols *not* exported in the DDK.
+// A third variant is supported which is to export nothing. This is for cases
+// like libvulkan which want tracing but do not have access to
+// libtrace-engine.so.
+// Two preprocessor symbols are provided by the build system to select which
+// variant we are building: STATIC_LIBRARY and DDK_TRACING. Either neither of
+// them are defined (normal case), or exactly one of them is defined.
+#if defined(STATIC_LIBRARY)
+#define EXPORT
+#define EXPORT_NO_DDK
+#elif defined(DDK_TRACING)
+#define EXPORT __EXPORT
 #define EXPORT_NO_DDK
 #else
+#define EXPORT __EXPORT
 #define EXPORT_NO_DDK __EXPORT
 #endif
 
