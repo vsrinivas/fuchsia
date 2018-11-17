@@ -52,7 +52,7 @@ void EngineRenderer::RenderLayers(const escher::FramePtr& frame,
                                   const escher::ImagePtr& output_image,
                                   const std::vector<Layer*>& layers) {
   // TODO(SCN-1119): change this to say "EngineRenderer::RenderLayers".
-  TRACE_DURATION("gfx", "Compositor::DrawFrame");
+  TRACE_DURATION("gfx", "EngineRenderer::RenderLayers");
 
   auto overlay_model =
       DrawOverlaysToModel(layers, frame, target_presentation_time);

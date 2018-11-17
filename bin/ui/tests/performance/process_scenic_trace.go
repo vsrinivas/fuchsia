@@ -249,7 +249,7 @@ func reportScenicFps(model benchmarking.Model, testSuite string, testResultsFile
 		{1, "ApplyScheduledSessionUpdates", ""},
 		{2, "escher::CommandBuffer::Submit", "CommandBuffer::Submit"},
 		{1, "UpdateAndDeliverMetrics", ""},
-		{1, "Compositor::DrawFrame", ""},
+		{1, "EngineRenderer::RenderLayers", ""},
 		{0, "Scenic Compositor", "Escher GPU time"},
 	}
 
