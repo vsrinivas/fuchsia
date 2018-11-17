@@ -263,6 +263,10 @@ func reportScenicFps(model benchmarking.Model, testSuite string, testResultsFile
 		}
 		fmt.Printf("%-35s %.4gms\n", strings.Repeat("  ", e.IndentLevel)+e.Label,
 			avgDuration)
+		if len(durations) == 0 {
+			fmt.Fprintf(os.Stderr, "Warning: no values found for %s. Falling back to a zero value.\n", e.Label)
+			durations = []float64{0}
+		}
 		testResultsFile.Add(&benchmarking.TestCaseResults{
 			Label:     e.Label,
 			TestSuite: testSuite,
@@ -335,6 +339,10 @@ func reportFlutterFpsForInstance(model benchmarking.Model, testSuite string, tes
 		// to be useful when printed out.
 		if len(metric.Values) == 1 {
 			fmt.Printf("%s: %4g\n", fullName, metric.Values)
+		}
+		if len(metric.Values) == 0 {
+			fmt.Fprintf(os.Stderr, "Warning: no values found for %s. Falling back to a zero value.\n", fullName)
+			metric.Values = []float64{0}
 		}
 		testResultsFile.Add(&benchmarking.TestCaseResults{
 			Label:     fullName,
