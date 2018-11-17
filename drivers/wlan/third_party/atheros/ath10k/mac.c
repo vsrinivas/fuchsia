@@ -2153,7 +2153,7 @@ static void ath10k_mac_vif_sta_connection_loss_work(struct work_struct* work) {
 /* Station management */
 /**********************/
 
-static uint32_t ath10k_peer_assoc_h_listen_intval(struct ath10k* ar) {
+static uint32_t ath10k_peer_assoc_h_listen_intval(struct ath10k* ar, wlan_assoc_ctx_t* assoc) {
     /* Some firmware revisions have unstable STA powersave when listen
      * interval is set too high (e.g. 5). The symptoms are firmware doesn't
      * generate NullFunc frames properly even if buffered frames have been
@@ -2166,8 +2166,7 @@ static uint32_t ath10k_peer_assoc_h_listen_intval(struct ath10k* ar) {
         return 1;
     }
 
-    // Value should be derived from association context (NET-1816)
-    return 3;
+    return assoc->listen_interval;
 }
 
 static void ath10k_peer_assoc_h_basic(struct ath10k* ar,
@@ -2181,7 +2180,7 @@ static void ath10k_peer_assoc_h_basic(struct ath10k* ar,
     arg->vdev_id = arvif->vdev_id;
     arg->peer_aid = assoc->aid;
     arg->peer_flags |= arvif->ar->wmi.peer_flags->auth;
-    arg->peer_listen_intval = ath10k_peer_assoc_h_listen_intval(ar);
+    arg->peer_listen_intval = ath10k_peer_assoc_h_listen_intval(ar, assoc);
     arg->peer_num_spatial_streams = 1;
     arg->peer_caps = assoc->cap_info[0] | (assoc->cap_info[1] << 8);
 }
