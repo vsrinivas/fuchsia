@@ -239,6 +239,11 @@ func reportScenicFps(model benchmarking.Model, testSuite string, testResultsFile
 		Name        string
 		Label       string
 	}
+
+	// List the events we want to include in output. Events are described with:
+	//   Indentation level in output
+	//   Event name in trace
+	//   Event name in output (blank if same as event name in trace)
 	averageEvents := []AverageEvent{
 		{0, "RenderFrame", ""},
 		{1, "ApplyScheduledSessionUpdates", ""},

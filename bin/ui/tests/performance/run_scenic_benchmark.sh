@@ -70,3 +70,5 @@ echo "== $BENCHMARK_LABEL: Processing trace..."
   -test_suite_name="${BENCHMARK_LABEL}" \
   -benchmarks_out_filename="${OUT_FILE}" \
   "${TRACE_FILE}"
+
+echo "== $BENCHMARK_LABEL: Finished processing trace."
