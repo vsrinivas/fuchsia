@@ -424,7 +424,7 @@ static zx_status_t fidl_CreateDevice(void* raw_ctx, zx_handle_t raw_rpc,
         CreationContext creation_context = {
             .parent = std::move(parent),
             .child = nullptr,
-            .rpc = rpc.get(),
+            .rpc = zx::unowned_channel(rpc),
         };
 
         char proxy_args[fuchsia_device_manager_DEVICE_ARGS_MAX + 1];
@@ -490,7 +490,7 @@ static zx_status_t fidl_BindDriver(void* raw_ctx, const char* driver_path_data,
         CreationContext creation_ctx = {
             .parent = ctx->conn->dev,
             .child = nullptr,
-            .rpc = ZX_HANDLE_INVALID,
+            .rpc = zx::unowned_channel(),
         };
         r = drv->BindOp(&creation_ctx, ctx->conn->dev);
 

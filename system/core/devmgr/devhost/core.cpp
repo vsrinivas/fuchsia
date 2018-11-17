@@ -46,13 +46,13 @@ __LOCAL mtx_t devhost_api_lock = MTX_INIT;
 __LOCAL std::atomic<thrd_t> devhost_api_lock_owner(0);
 } // namespace internal
 
-static thread_local CreationContext* creation_ctx;
+static thread_local CreationContext* g_creation_context;
 
 // The creation context is setup before the bind() or create() ops are
 // invoked to provide the ability to sanity check the required device_add()
 // operations these hooks should be making.
 void devhost_set_creation_context(CreationContext* ctx) {
-    creation_ctx = ctx;
+    g_creation_context = ctx;
 }
 
 static zx_status_t default_open(void* ctx, zx_device_t** out, uint32_t flags) {
@@ -414,9 +414,10 @@ zx_status_t devhost_device_add(const fbl::RefPtr<zx_device_t>& dev,
     // that is handling a bind() or create() callback and if that
     // ctx's parent matches the one provided to add we need to do
     // some additional checking...
-    if ((creation_ctx != nullptr) && (creation_ctx->parent == parent)) {
-        ctx = creation_ctx;
-        if (ctx->rpc != ZX_HANDLE_INVALID) {
+    if ((g_creation_context != nullptr) && (g_creation_context->parent == parent)) {
+        ctx = g_creation_context;
+        // If the RPC channel exists, this is for create rather than bind.
+        if (ctx->rpc->is_valid()) {
             // create() must create only one child
             if (ctx->child != nullptr) {
                 printf("devhost: driver attempted to create multiple proxy devices!\n");
@@ -441,7 +442,7 @@ zx_status_t devhost_device_add(const fbl::RefPtr<zx_device_t>& dev,
     dev->flags |= DEV_FLAG_BUSY;
 
     // proxy devices are created through this handshake process
-    if (ctx && (ctx->rpc != ZX_HANDLE_INVALID)) {
+    if (ctx && (ctx->rpc->is_valid())) {
         if (dev->flags & DEV_FLAG_INVISIBLE) {
             printf("devhost: driver attempted to create invisible device in create()\n");
             return ZX_ERR_INVALID_ARGS;

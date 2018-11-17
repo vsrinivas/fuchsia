@@ -32,7 +32,7 @@ namespace devmgr {
 struct CreationContext {
     fbl::RefPtr<zx_device_t> parent;
     fbl::RefPtr<zx_device_t> child;
-    zx_handle_t rpc;
+    zx::unowned_channel rpc;
 };
 
 void devhost_set_creation_context(CreationContext* ctx);
