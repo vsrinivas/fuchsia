@@ -431,9 +431,7 @@ static zx_status_t fidl_CreateDevice(void* raw_ctx, zx_handle_t raw_rpc,
         memcpy(proxy_args, proxy_args_data, proxy_args_size);
         proxy_args[proxy_args_size] = 0;
 
-        devhost_set_creation_context(&creation_context);
-        r = drv->CreateOp(creation_context.parent, "proxy", proxy_args, parent_proxy.release());
-        devhost_set_creation_context(nullptr);
+        r = drv->CreateOp(&creation_context, creation_context.parent, "proxy", proxy_args, parent_proxy.release());
 
         // Suppress a warning about dummy device being in a bad state.  The
         // message is spurious in this case, since the dummy parent never
@@ -494,9 +492,7 @@ static zx_status_t fidl_BindDriver(void* raw_ctx, const char* driver_path_data,
             .child = nullptr,
             .rpc = ZX_HANDLE_INVALID,
         };
-        devhost_set_creation_context(&creation_ctx);
-        r = drv->BindOp(ctx->conn->dev);
-        devhost_set_creation_context(nullptr);
+        r = drv->BindOp(&creation_ctx, ctx->conn->dev);
 
         if ((r == ZX_OK) && (creation_ctx.child == nullptr)) {
             printf("devhost: WARNING: driver '%.*s' did not add device in bind()\n",

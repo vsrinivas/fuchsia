@@ -27,6 +27,18 @@
 #include <threads.h>
 #include <stdint.h>
 
+namespace devmgr {
+
+struct CreationContext {
+    fbl::RefPtr<zx_device_t> parent;
+    fbl::RefPtr<zx_device_t> child;
+    zx_handle_t rpc;
+};
+
+void devhost_set_creation_context(CreationContext* ctx);
+
+} // namespace devmgr
+
 // Nothing outside of devmgr/{devmgr,devhost,rpc-device}.c
 // should be calling devhost_*() APIs, as this could
 // violate the internal locking design.
@@ -93,13 +105,21 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>,
         return ops_->init(&ctx_);
     }
 
-    zx_status_t BindOp(const fbl::RefPtr<zx_device_t>& device) const {
-        return ops_->bind(ctx_, device.get());
+    zx_status_t BindOp(devmgr::CreationContext* creation_context,
+                       const fbl::RefPtr<zx_device_t>& device) const {
+        devmgr::devhost_set_creation_context(creation_context);
+        auto status = ops_->bind(ctx_, device.get());
+        devmgr::devhost_set_creation_context(nullptr);
+        return status;
     }
 
-    zx_status_t CreateOp(const fbl::RefPtr<zx_device_t>& parent, const char* name, const char* args,
+    zx_status_t CreateOp(devmgr::CreationContext* creation_context,
+                         const fbl::RefPtr<zx_device_t>& parent, const char* name, const char* args,
                          zx_handle_t rpc_channel) const {
-        return ops_->create(ctx_, parent.get(), name, args, rpc_channel);
+        devmgr::devhost_set_creation_context(creation_context);
+        auto status = ops_->create(ctx_, parent.get(), name, args, rpc_channel);
+        devmgr::devhost_set_creation_context(nullptr);
+        return status;
     }
 
     void ReleaseOp() const {
@@ -197,14 +217,6 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& dev,
                         const zx_device_prop_t* props, uint32_t prop_count) REQ_DM_LOCK;
 zx_status_t devhost_remove(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
 void devhost_make_visible(const fbl::RefPtr<zx_device_t>& dev);
-
-struct CreationContext {
-    fbl::RefPtr<zx_device_t> parent;
-    fbl::RefPtr<zx_device_t> child;
-    zx_handle_t rpc;
-};
-
-void devhost_set_creation_context(CreationContext* ctx);
 
 // State that is shared between the zx_device implementation and devhost-core.cpp
 void devhost_finalize() REQ_DM_LOCK;
