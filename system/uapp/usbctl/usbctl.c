@@ -169,32 +169,40 @@ static zx_status_t device_init(zx_handle_t svc, const usb_function_t* function) 
     return status;
 }
 
-static int peripheral_command(zx_handle_t svc, int argc, const char* argv[]) {
-    if (argc != 2) {
-        goto usage;
-    }
-
+static int ums_command(zx_handle_t svc, int argc, const char* argv[]) {
     zx_status_t status, status2;
 
-    const char* command = argv[1];
-    if (!strcmp(command, "reset")) {
-        status = zircon_usb_peripheral_DeviceClearFunctions(svc, &status2);
-        if (status == ZX_OK) status = status2;
-    } else if (!strcmp(command, "init-cdc")) {
-        status = device_init(svc, &cdc_function);
-    } else if (!strcmp(command, "init-ums")) {
+    status = zircon_usb_peripheral_DeviceClearFunctions(svc, &status2);
+    if (status == ZX_OK) status = status2;
+    if (status == ZX_OK) {
         status = device_init(svc, &ums_function);
-    } else if (!strcmp(command, "init-test")) {
-        status = device_init(svc, &test_function);
-     } else {
-        goto usage;
     }
 
     return status == ZX_OK ? 0 : -1;
+}
 
-usage:
-    fprintf(stderr, "usage: usbctl device [reset|init-ums|init-cdc|init-test]\n");
-    return -1;
+static int cdc_command(zx_handle_t svc, int argc, const char* argv[]) {
+    zx_status_t status, status2;
+
+    status = zircon_usb_peripheral_DeviceClearFunctions(svc, &status2);
+    if (status == ZX_OK) status = status2;
+    if (status == ZX_OK) {
+        status = device_init(svc, &cdc_function);
+    }
+
+    return status == ZX_OK ? 0 : -1;
+}
+
+static int test_command(zx_handle_t svc, int argc, const char* argv[]) {
+    zx_status_t status, status2;
+
+    status = zircon_usb_peripheral_DeviceClearFunctions(svc, &status2);
+    if (status == ZX_OK) status = status2;
+    if (status == ZX_OK) {
+        status = device_init(svc, &test_function);
+    }
+
+    return status == ZX_OK ? 0 : -1;
 }
 
 static int mode_command(zx_handle_t svc, int argc, const char* argv[]) {
@@ -262,15 +270,24 @@ typedef struct {
 
 static usbctl_command_t commands[] = {
     {
-        "peripheral",
-        peripheral_command,
-        "peripheral [reset|init-cdc|init-ums|init-test] resets the peripheral or "
-        "initializes the UMS function"
+        "init-ums",
+        ums_command,
+        "init-ums - initializes the USB Mass Storage function"
+    },
+    {
+        "init-cdc",
+        cdc_command,
+        "init-cdc - initializes the CDC Ethernet function"
+    },
+    {
+        "init-test",
+        test_command,
+        "init-test - initializes the USB Peripheral Test function"
     },
     {
         "mode",
         mode_command,
-        "mode [none|host|peripheral|otg] sets the current USB mode. "
+        "mode [none|host|peripheral|otg] - sets the current USB mode. "
         "Returns the current mode if no additional arugment is provided."
     },
     { NULL, NULL, NULL },
