@@ -107,15 +107,6 @@ void NamespaceBuilder::AddSandbox(
     PushDirectoryFromPath("/boot/" + path);
 }
 
-void NamespaceBuilder::AddDeprecatedDefaultDirectories() {
-  // TODO(abarth): Remove items from this list as clients no longer need them.
-  PushDirectoryFromPathIfNotPresent("/data");
-  PushDirectoryFromPathIfNotPresent("/system");
-  PushDirectoryFromPathIfNotPresent("/tmp");
-  PushDirectoryFromPathAs("/pkgfs/packages/root_ssl_certificates/0/data",
-                          "/config/ssl");
-}
-
 void NamespaceBuilder::PushDirectoryFromPath(std::string path) {
   PushDirectoryFromPathAs(path, path);
 }
