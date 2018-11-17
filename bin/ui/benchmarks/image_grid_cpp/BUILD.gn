@@ -27,11 +27,16 @@ executable("bin") {
 }
 
 package("image_grid_cpp") {
-  deprecated_no_cmx = "//build"
-
   deps = [
     ":bin",
   ]
 
   binary = "image_grid_cpp"
+
+  meta = [
+    {
+      path = rebase_path("image_grid_cpp.cmx")
+      dest = "image_grid_cpp.cmx"
+    },
+  ]
 }
