@@ -388,7 +388,7 @@ int main(int argc, char** argv) {
         argv++;
     }
 
-    zx::channel _fs_root = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
+    zx::channel fs_root = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
     zx::channel devfs_root = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 1)));
     zx::channel svc_root = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 2)));
     zx_handle_t devmgr_loader = zx_take_startup_handle(PA_HND(PA_USER0, 3));
@@ -406,7 +406,7 @@ int main(int argc, char** argv) {
 
     // Initialize connections to external service managers, and begin
     // monitoring the |fshost_event| for a termination event.
-    root->InitializeConnections(std::move(_fs_root), std::move(devfs_root),
+    root->InitializeConnections(std::move(fs_root), std::move(devfs_root),
                                 std::move(svc_root), std::move(fshost_event));
     g_fshost = root.get();
 

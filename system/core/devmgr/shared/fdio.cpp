@@ -74,7 +74,7 @@ zx_status_t devmgr_launch(
     const zx::job& job, const char* name,
     zx_status_t (*load)(void*, launchpad_t*, const char*), void* ctx,
     int argc, const char* const* argv,
-    const char** _envp, int stdiofd,
+    const char** initial_envp, int stdiofd,
     const zx_handle_t* handles, const uint32_t* types, size_t hcount,
     zx::process* out_proc, uint32_t flags) {
     zx_status_t status;
@@ -85,8 +85,8 @@ zx_status_t devmgr_launch(
         envp[envn++] = LDSO_TRACE_ENV;
     }
     envp[envn++] = ZX_SHELL_ENV_PATH;
-    while ((_envp && _envp[0]) && (envn < MAX_ENVP)) {
-        envp[envn++] = *_envp++;
+    while ((initial_envp && initial_envp[0]) && (envn < MAX_ENVP)) {
+        envp[envn++] = *initial_envp++;
     }
     envp[envn++] = nullptr;
 

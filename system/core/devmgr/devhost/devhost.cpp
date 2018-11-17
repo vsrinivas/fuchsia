@@ -775,7 +775,7 @@ static void proxy_ios_destroy(const fbl::RefPtr<zx_device_t>& dev) {
 
 static zx::debuglog devhost_log_handle;
 
-static ssize_t _devhost_log_write(uint32_t flags, const void* _data, size_t len) {
+static ssize_t devhost_log_write_internal(uint32_t flags, const void* void_data, size_t len) {
     struct Context {
         Context() = default;
 
@@ -793,7 +793,7 @@ static ssize_t _devhost_log_write(uint32_t flags, const void* _data, size_t len)
         ctx->handle = zx::unowned_debuglog(devhost_log_handle);
     }
 
-    const char* data = static_cast<const char*>(_data);
+    const char* data = static_cast<const char*>(void_data);
     size_t r = len;
 
     while (len-- > 0) {
@@ -830,13 +830,13 @@ __EXPORT void driver_printf(uint32_t flags, const char* fmt, ...) {
         r = sizeof(buffer);
     }
 
-    devmgr::_devhost_log_write(flags, buffer, r);
+    devmgr::devhost_log_write_internal(flags, buffer, r);
 }
 
 namespace devmgr {
 
 static ssize_t devhost_log_write(void* cookie, const void* data, size_t len) {
-    return _devhost_log_write(0, data, len);
+    return devhost_log_write_internal(0, data, len);
 }
 
 static void devhost_io_init() {

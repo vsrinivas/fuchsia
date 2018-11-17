@@ -445,7 +445,7 @@ done:
     return ZX_OK;
 }
 
-static void _devfs_remove(Devnode* dn) {
+static void devfs_remove(Devnode* dn) {
     if (list_in_list(&dn->node)) {
         list_delete(&dn->node);
     }
@@ -495,21 +495,21 @@ static void _devfs_remove(Devnode* dn) {
 
 void devfs_unpublish(Device* dev) {
     if (dev->self != nullptr) {
-        _devfs_remove(dev->self);
+        devfs_remove(dev->self);
         dev->self = nullptr;
     }
     if (dev->link != nullptr) {
-        _devfs_remove(dev->link);
+        devfs_remove(dev->link);
         dev->link = nullptr;
     }
 }
 
-static zx_status_t devfs_walk(Devnode** _dn, char* path, char** pathout) {
-    Devnode* dn = *_dn;
+static zx_status_t devfs_walk(Devnode** dn_inout, char* path, char** pathout) {
+    Devnode* dn = *dn_inout;
 
 again:
     if ((path == nullptr) || (path[0] == 0)) {
-        *_dn = dn;
+        *dn_inout = dn;
         return ZX_OK;
     }
     char* name = path;
@@ -531,13 +531,13 @@ again:
             goto again;
         }
     }
-    if (dn == *_dn) {
+    if (dn == *dn_inout) {
         return ZX_ERR_NOT_FOUND;
     }
     if (undo) {
         *undo = '/';
     }
-    *_dn = dn;
+    *dn_inout = dn;
     *pathout = name;
     return ZX_ERR_NEXT;
 }
@@ -627,9 +627,9 @@ static zx_status_t fill_dirent(vdirent_t* de, size_t delen, uint64_t ino,
     return static_cast<zx_status_t>(sz);
 }
 
-static zx_status_t devfs_readdir(Devnode* dn, uint64_t* _ino, void* data, size_t len) {
+static zx_status_t devfs_readdir(Devnode* dn, uint64_t* ino_inout, void* data, size_t len) {
     char* ptr = static_cast<char*>(data);
-    uint64_t ino = *_ino;
+    uint64_t ino = *ino_inout;
 
     Devnode* child;
     list_for_every_entry(&dn->children, child, Devnode, node) {
@@ -660,7 +660,7 @@ static zx_status_t devfs_readdir(Devnode* dn, uint64_t* _ino, void* data, size_t
         len -= r;
     }
 
-    *_ino = ino;
+    *ino_inout = ino;
     return static_cast<zx_status_t>(ptr - static_cast<char*>(data));
 }
 

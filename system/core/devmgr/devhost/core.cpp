@@ -294,7 +294,7 @@ zx_status_t devhost_device_create(zx_driver_t* drv, const fbl::RefPtr<zx_device_
                                   REQ_DM_LOCK {
 
     if (!drv) {
-        printf("devhost: _device_add could not find driver!\n");
+        printf("devhost: device_add could not find driver!\n");
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -606,8 +606,8 @@ zx_status_t devhost_device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags) R
     return r;
 }
 
-static zx_status_t _devhost_device_suspend(const fbl::RefPtr<zx_device>& dev,
-                                           uint32_t flags) REQ_DM_LOCK {
+static zx_status_t devhost_device_suspend_locked(const fbl::RefPtr<zx_device>& dev,
+                                               uint32_t flags) REQ_DM_LOCK {
     // first suspend children (so we suspend from leaf up)
     zx_status_t st;
     for (auto& child : dev->children) {
@@ -636,7 +636,7 @@ zx_status_t devhost_device_suspend(const fbl::RefPtr<zx_device>& dev,
                                    uint32_t flags) REQ_DM_LOCK {
     //TODO this should eventually be two-pass using SUSPENDING/SUSPENDED flags
     enum_lock_acquire();
-    zx_status_t r = _devhost_device_suspend(dev, flags);
+    zx_status_t r = devhost_device_suspend_locked(dev, flags);
     enum_lock_release();
     return r;
 }
