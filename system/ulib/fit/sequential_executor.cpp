@@ -109,8 +109,9 @@ suspended_task sequential_executor::dispatcher_impl::suspend_current_task() {
     return suspended_task(this, current_task_ticket_);
 }
 
+// Unfortunately std::unique_lock does not support thread-safety annotations
 void sequential_executor::dispatcher_impl::wait_for_runnable_tasks(
-    fit::subtle::scheduler::task_queue* out_tasks) {
+    fit::subtle::scheduler::task_queue* out_tasks) FIT_NO_THREAD_SAFETY_ANALYSIS {
     std::unique_lock<std::mutex> lock(guarded_.mutex_);
     for (;;) {
         assert(!guarded_.was_shutdown_);

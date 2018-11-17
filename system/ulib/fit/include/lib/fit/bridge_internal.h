@@ -13,6 +13,7 @@
 
 #include "promise.h"
 #include "result.h"
+#include "thread_safety.h"
 
 namespace fit {
 namespace internal {
@@ -71,7 +72,7 @@ private:
     void drop_consumption_ref();
 
     result_type await_result(::fit::context& context);
-    void deliver_result();
+    void deliver_result() FIT_REQUIRES(mutex_);
 
     std::mutex mutex_;
 
@@ -82,15 +83,15 @@ private:
     std::atomic<int32_t> ref_mask_{1 | 2};
 
     // The disposition of the bridge.
-    disposition disposition_{disposition::pending}; // guarded by mutex_
+    disposition disposition_ FIT_GUARDED(mutex_) = {disposition::pending};
 
     // The suspended task.
     // Invariant: Only valid when disposition is |pending|.
-    suspended_task task_; // guarded by mutex_
+    suspended_task task_ FIT_GUARDED(mutex_);
 
     // The result in flight.
     // Invariant: Only valid when disposition is |pending| or |abandoned|.
-    result_type result_; // guarded by mutex_
+    result_type result_ FIT_GUARDED(mutex_);
 };
 
 // The unique capability held by a bridge's completer.

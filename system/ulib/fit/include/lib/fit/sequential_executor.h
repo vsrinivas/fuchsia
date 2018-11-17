@@ -11,6 +11,7 @@
 
 #include "promise.h"
 #include "scheduler.h"
+#include "thread_safety.h"
 
 namespace fit {
 
@@ -47,6 +48,7 @@ public:
     sequential_executor& operator=(sequential_executor&&) = delete;
 
 private:
+    // The task context for tasks run by the executor.
     class context_impl final : public context {
     public:
         explicit context_impl(sequential_executor* executor);
@@ -59,6 +61,18 @@ private:
         sequential_executor* const executor_;
     };
 
+    // The dispatcher runs tasks and provides the suspended task resolver.
+    //
+    // The lifetime of this object is somewhat complex since there are pointers
+    // to it from multiple sources which are released in different ways.
+    //
+    // - |sequential_executor| holds a pointer in |dispatcher_| which it releases
+    //   after calling |shutdown()| to inform the dispatcher of its own demise
+    // - |suspended_task| holds a pointer to the dispatcher's resolver
+    //   interface and the number of outstanding pointers corresponds to the
+    //   number of outstanding suspended task tickets tracked by |scheduler_|.
+    //
+    // The dispatcher deletes itself once all pointers have been released.
     class dispatcher_impl final : public suspended_task::resolver {
     public:
         dispatcher_impl();
@@ -86,9 +100,9 @@ private:
         // A bunch of state that is guarded by a mutex.
         struct {
             std::mutex mutex_;
-            bool was_shutdown_ = false;
-            bool need_wake_ = false;
-            fit::subtle::scheduler scheduler_;
+            bool was_shutdown_ FIT_GUARDED(mutex_) = false;
+            bool need_wake_ FIT_GUARDED(mutex_) = false;
+            fit::subtle::scheduler scheduler_ FIT_GUARDED(mutex_);
         } guarded_;
     };
 
