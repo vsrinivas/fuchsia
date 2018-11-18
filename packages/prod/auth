@@ -1,10 +1,8 @@
 {
     "labels": [
-        "//garnet/bin/auth:token_manager_factory",
-        "//garnet/bin/auth:token_manager_rust"
+        "//garnet/bin/auth:token_manager_factory"
     ],
     "packages": [
-        "//garnet/bin/auth:token_manager_factory",
-        "//garnet/bin/auth:token_manager_rust"
+        "//garnet/bin/auth:token_manager_factory"
     ]
 }

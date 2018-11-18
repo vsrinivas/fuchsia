@@ -19,23 +19,6 @@ package("token_manager_factory") {
   ]
 }
 
-# TODO(jsankey): Delete this package once users in other repos
-# have been migrated to the identical "token_manager" package.
-package("token_manager_rust") {
-  deps = [
-    "//garnet/bin/auth/rust/token_manager:token_manager_factory",
-  ]
-
-  binary = "rust_crates/token_manager_factory"
-
-  meta = [
-    {
-      path = rebase_path("rust/meta/token_manager.cmx")
-      dest = "token_manager_rust.cmx"
-    },
-  ]
-}
-
 package("account_manager") {
   deps = [
     "//garnet/bin/auth/rust/account_manager:account_manager",
