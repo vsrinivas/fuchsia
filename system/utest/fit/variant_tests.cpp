@@ -10,6 +10,45 @@
 
 namespace {
 
+struct no_copy {
+    no_copy(const no_copy&) = delete;
+    no_copy(no_copy&&) = default;
+    no_copy& operator=(const no_copy&) = delete;
+    no_copy& operator=(no_copy&&) = default;
+};
+
+struct no_move {
+    no_move(const no_move&) = default;
+    no_move(no_move&&) = delete;
+    no_move& operator=(const no_move&) = default;
+    no_move& operator=(no_move&&) = delete;
+};
+
+struct no_copy_no_move {
+    no_copy_no_move(const no_copy_no_move&) = delete;
+    no_copy_no_move(no_copy_no_move&&) = delete;
+    no_copy_no_move& operator=(const no_copy_no_move&) = delete;
+    no_copy_no_move& operator=(no_copy_no_move&&) = delete;
+};
+
+struct non_trivial_destructor {
+    ~non_trivial_destructor() {}
+};
+
+struct non_trivial_copy {
+    non_trivial_copy(const non_trivial_copy&) {}
+    non_trivial_copy(non_trivial_copy&&) = default;
+    non_trivial_copy& operator=(const non_trivial_copy&) { return *this; }
+    non_trivial_copy& operator=(non_trivial_copy&&) = default;
+};
+
+struct non_trivial_move {
+    non_trivial_move(const non_trivial_move&) = default;
+    non_trivial_move(non_trivial_move&&) {}
+    non_trivial_move& operator=(const non_trivial_move&) = default;
+    non_trivial_move& operator=(non_trivial_move&&) { return *this; }
+};
+
 struct literal_traits {
     using variant = fit::internal::variant<
         fit::internal::monostate, int, double>;
@@ -172,6 +211,7 @@ bool swapping() {
 }
 
 // Test constexpr behavior.
+namespace constexpr_test {
 static_assert(literal_traits::variant().index() == 0, "");
 static_assert(literal_traits::const_a.index() == 0, "");
 static_assert(literal_traits::const_a.get<0>() == literal_traits::a_value, "");
@@ -179,6 +219,324 @@ static_assert(literal_traits::const_b.index() == 1, "");
 static_assert(literal_traits::const_b.get<1>() == literal_traits::b_value, "");
 static_assert(literal_traits::const_c.index() == 2, "");
 static_assert(literal_traits::const_c.get<2>() == literal_traits::c_value, "");
+} // namespace constexpr_test
+
+// Ensure the variant is copy-constructible only when the types are copyable.
+namespace copy_construction_test {
+static_assert(
+    std::is_copy_constructible<
+        fit::internal::variant<fit::internal::monostate>>::value,
+    "");
+static_assert(
+    !std::is_copy_constructible<
+        fit::internal::variant<fit::internal::monostate, no_copy>>::value,
+    "");
+static_assert(
+    std::is_copy_constructible<
+        fit::internal::variant<fit::internal::monostate, no_move>>::value,
+    "");
+static_assert(
+    !std::is_copy_constructible<
+        fit::internal::variant<fit::internal::monostate, no_copy_no_move>>::value,
+    "");
+static_assert(
+    std::is_copy_constructible<
+        literal_traits::variant>::value,
+    "");
+static_assert(
+    std::is_copy_constructible<
+        complex_traits::variant>::value,
+    "");
+} // namespace copy_construction_test
+
+// Ensure the variant is copy-assignable only when the types are copyable.
+namespace copy_assignment_test {
+static_assert(
+    std::is_copy_assignable<
+        fit::internal::variant<fit::internal::monostate>>::value,
+    "");
+static_assert(
+    !std::is_copy_assignable<
+        fit::internal::variant<fit::internal::monostate, no_copy>>::value,
+    "");
+static_assert(
+    std::is_copy_assignable<
+        fit::internal::variant<fit::internal::monostate, no_move>>::value,
+    "");
+static_assert(
+    !std::is_copy_assignable<
+        fit::internal::variant<fit::internal::monostate, no_copy_no_move>>::value,
+    "");
+static_assert(
+    std::is_copy_assignable<
+        literal_traits::variant>::value,
+    "");
+static_assert(
+    std::is_copy_assignable<
+        complex_traits::variant>::value,
+    "");
+} // namespace copy_assignment_test
+
+// Ensure the variant is move-constructible only when the types are movable.
+// Note that copy-constructible types are also considered movable.
+namespace move_construction_test {
+static_assert(
+    std::is_move_constructible<
+        fit::internal::variant<fit::internal::monostate>>::value,
+    "");
+static_assert(
+    std::is_move_constructible<
+        fit::internal::variant<fit::internal::monostate, no_copy>>::value,
+    "");
+static_assert(
+    std::is_move_constructible<
+        fit::internal::variant<fit::internal::monostate, no_move>>::value,
+    "");
+static_assert(
+    !std::is_move_constructible<
+        fit::internal::variant<fit::internal::monostate, no_copy_no_move>>::value,
+    "");
+static_assert(
+    std::is_move_constructible<
+        literal_traits::variant>::value,
+    "");
+static_assert(
+    std::is_move_constructible<
+        complex_traits::variant>::value,
+    "");
+} // namespace move_construction_test
+
+// Ensure the variant is move-assignable only when the types are movable.
+// Note that copy-assignable types are also considered movable.
+namespace move_assignment_test {
+static_assert(
+    std::is_move_assignable<
+        fit::internal::variant<fit::internal::monostate>>::value,
+    "");
+static_assert(
+    std::is_move_assignable<
+        fit::internal::variant<fit::internal::monostate, no_copy>>::value,
+    "");
+static_assert(
+    std::is_move_assignable<
+        fit::internal::variant<fit::internal::monostate, no_move>>::value,
+    "");
+static_assert(
+    !std::is_move_assignable<
+        fit::internal::variant<fit::internal::monostate, no_copy_no_move>>::value,
+    "");
+static_assert(
+    std::is_move_assignable<
+        literal_traits::variant>::value,
+    "");
+static_assert(
+    std::is_move_assignable<
+        complex_traits::variant>::value,
+    "");
+} // namespace move_assignment_test
+
+// Ensure that the correct sequence of base types are considered in the
+// implementation of variant to ensure that the right methods participate
+// in overload resolution.
+namespace impl_test {
+
+// Type with a trivial destructor, move, and copy.
+namespace trivial_type {
+static_assert(
+    std::is_base_of<
+        fit::internal::variant_base_impl_trivial<fit::internal::monostate, int>,
+        fit::internal::variant<fit::internal::monostate, int>>::value,
+    "");
+static_assert(
+    !std::is_base_of<
+        fit::internal::variant_move_impl_non_trivial<fit::internal::monostate, int>,
+        fit::internal::variant<fit::internal::monostate, int>>::value,
+    "");
+static_assert(
+    !std::is_base_of<
+        fit::internal::variant_copy_impl_non_trivial<fit::internal::monostate, int>,
+        fit::internal::variant<fit::internal::monostate, int>>::value,
+    "");
+static_assert(
+    std::is_trivially_destructible<
+        fit::internal::variant<fit::internal::monostate, int>>::value,
+    "");
+static_assert(
+    std::is_trivially_move_constructible<
+        fit::internal::variant<fit::internal::monostate, int>>::value,
+    "");
+static_assert(
+    std::is_trivially_copy_constructible<
+        fit::internal::variant<fit::internal::monostate, int>>::value,
+    "");
+static_assert(
+    std::is_trivially_move_assignable<
+        fit::internal::variant<fit::internal::monostate, int>>::value,
+    "");
+static_assert(
+    std::is_trivially_copy_assignable<
+        fit::internal::variant<fit::internal::monostate, int>>::value,
+    "");
+} // namespace trivial_type
+
+// Type with a non-trivial destructor implies it has non-trivial move and copy too.
+namespace non_trivial_destructor_type {
+static_assert(
+    std::is_base_of<
+        fit::internal::variant_base_impl_non_trivial<fit::internal::monostate, non_trivial_destructor>,
+        fit::internal::variant<fit::internal::monostate, non_trivial_destructor>>::value,
+    "");
+static_assert(
+    std::is_base_of<
+        fit::internal::variant_move_impl_non_trivial<fit::internal::monostate, non_trivial_destructor>,
+        fit::internal::variant<fit::internal::monostate, non_trivial_destructor>>::value,
+    "");
+static_assert(
+    std::is_base_of<
+        fit::internal::variant_copy_impl_non_trivial<fit::internal::monostate, non_trivial_destructor>,
+        fit::internal::variant<fit::internal::monostate, non_trivial_destructor>>::value,
+    "");
+static_assert(
+    !std::is_trivially_destructible<
+        fit::internal::variant<fit::internal::monostate, non_trivial_destructor>>::value,
+    "");
+static_assert(
+    !std::is_trivially_move_constructible<
+        fit::internal::variant<fit::internal::monostate, non_trivial_destructor>>::value,
+    "");
+static_assert(
+    !std::is_trivially_copy_constructible<
+        fit::internal::variant<fit::internal::monostate, non_trivial_destructor>>::value,
+    "");
+static_assert(
+    !std::is_trivially_move_assignable<
+        fit::internal::variant<fit::internal::monostate, non_trivial_destructor>>::value,
+    "");
+static_assert(
+    !std::is_trivially_copy_assignable<
+        fit::internal::variant<fit::internal::monostate, non_trivial_destructor>>::value,
+    "");
+} // namespace non_trivial_destructor_type
+
+// Type with a non-trivial move constructor actually ends up being trivially
+// movable anyhow if it has a trivial copy constructor and destructor.
+namespace non_trivial_move_type {
+static_assert(
+    std::is_base_of<
+        fit::internal::variant_base_impl_trivial<fit::internal::monostate, non_trivial_move>,
+        fit::internal::variant<fit::internal::monostate, non_trivial_move>>::value,
+    "");
+static_assert(
+    !std::is_base_of<
+        fit::internal::variant_move_impl_non_trivial<fit::internal::monostate, non_trivial_move>,
+        fit::internal::variant<fit::internal::monostate, non_trivial_move>>::value,
+    "");
+static_assert(
+    !std::is_base_of<
+        fit::internal::variant_copy_impl_non_trivial<fit::internal::monostate, non_trivial_move>,
+        fit::internal::variant<fit::internal::monostate, non_trivial_move>>::value,
+    "");
+static_assert(
+    std::is_trivially_destructible<
+        fit::internal::variant<fit::internal::monostate, non_trivial_move>>::value,
+    "");
+static_assert(
+    std::is_trivially_move_constructible<
+        fit::internal::variant<fit::internal::monostate, non_trivial_move>>::value,
+    "");
+static_assert(
+    std::is_trivially_copy_constructible<
+        fit::internal::variant<fit::internal::monostate, non_trivial_move>>::value,
+    "");
+static_assert(
+    std::is_trivially_move_assignable<
+        fit::internal::variant<fit::internal::monostate, non_trivial_move>>::value,
+    "");
+static_assert(
+    std::is_trivially_copy_assignable<
+        fit::internal::variant<fit::internal::monostate, non_trivial_move>>::value,
+    "");
+} // namespace non_trivial_move_type
+
+// Type with a non-trivial copy constructor may be trivially movable while not
+// trivially copyable.
+namespace non_trivial_copy_type {
+static_assert(
+    std::is_base_of<
+        fit::internal::variant_base_impl_trivial<fit::internal::monostate, non_trivial_copy>,
+        fit::internal::variant<fit::internal::monostate, non_trivial_copy>>::value,
+    "");
+static_assert(
+    !std::is_base_of<
+        fit::internal::variant_move_impl_non_trivial<fit::internal::monostate, non_trivial_copy>,
+        fit::internal::variant<fit::internal::monostate, non_trivial_copy>>::value,
+    "");
+static_assert(
+    std::is_base_of<
+        fit::internal::variant_copy_impl_non_trivial<fit::internal::monostate, non_trivial_copy>,
+        fit::internal::variant<fit::internal::monostate, non_trivial_copy>>::value,
+    "");
+static_assert(
+    std::is_trivially_destructible<
+        fit::internal::variant<fit::internal::monostate, non_trivial_copy>>::value,
+    "");
+static_assert(
+    std::is_trivially_move_constructible<
+        fit::internal::variant<fit::internal::monostate, non_trivial_copy>>::value,
+    "");
+static_assert(
+    !std::is_trivially_copy_constructible<
+        fit::internal::variant<fit::internal::monostate, non_trivial_copy>>::value,
+    "");
+static_assert(
+    std::is_trivially_move_assignable<
+        fit::internal::variant<fit::internal::monostate, non_trivial_copy>>::value,
+    "");
+static_assert(
+    !std::is_trivially_copy_assignable<
+        fit::internal::variant<fit::internal::monostate, non_trivial_copy>>::value,
+    "");
+} // namespace non_trivial_copy_type
+
+// std::string is not trivally destructible, movable, or copyable.
+namespace string_type {
+static_assert(
+    std::is_base_of<
+        fit::internal::variant_base_impl_non_trivial<fit::internal::monostate, std::string>,
+        fit::internal::variant<fit::internal::monostate, std::string>>::value,
+    "");
+static_assert(
+    std::is_base_of<
+        fit::internal::variant_move_impl_non_trivial<fit::internal::monostate, std::string>,
+        fit::internal::variant<fit::internal::monostate, std::string>>::value,
+    "");
+static_assert(
+    std::is_base_of<
+        fit::internal::variant_copy_impl_non_trivial<fit::internal::monostate, std::string>,
+        fit::internal::variant<fit::internal::monostate, std::string>>::value,
+    "");
+static_assert(
+    !std::is_trivially_destructible<
+        fit::internal::variant<fit::internal::monostate, std::string>>::value,
+    "");
+static_assert(
+    !std::is_trivially_move_constructible<
+        fit::internal::variant<fit::internal::monostate, std::string>>::value,
+    "");
+static_assert(
+    !std::is_trivially_copy_constructible<
+        fit::internal::variant<fit::internal::monostate, std::string>>::value,
+    "");
+static_assert(
+    !std::is_trivially_move_assignable<
+        fit::internal::variant<fit::internal::monostate, std::string>>::value,
+    "");
+static_assert(
+    !std::is_trivially_copy_assignable<
+        fit::internal::variant<fit::internal::monostate, std::string>>::value,
+    "");
+} // namespace string_type
+} // namespace impl_test
 
 } // namespace
 

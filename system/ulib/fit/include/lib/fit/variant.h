@@ -69,6 +69,9 @@ static constexpr const in_place_index_t<index>& in_place_index =
 // storage as a literal type.
 template <typename... Ts>
 union variant_storage final {
+    static constexpr bool copy_construct_supported = true;
+    static constexpr bool move_construct_supported = true;
+
     void copy_construct_from(size_t index, const variant_storage& other) {}
     void move_construct_from(size_t index, variant_storage&& other) {}
     void destroy(size_t index) {}
@@ -77,6 +80,13 @@ union variant_storage final {
 
 template <typename T0, typename... Ts>
 union variant_storage<T0, Ts...> final {
+    static constexpr bool copy_construct_supported =
+        std::is_copy_constructible<T0>::value &&
+        variant_storage<Ts...>::copy_construct_supported;
+    static constexpr bool move_construct_supported =
+        std::is_move_constructible<T0>::value &&
+        variant_storage<Ts...>::move_construct_supported;
+
     constexpr variant_storage() = default;
 
     template <typename... Args>
@@ -150,172 +160,227 @@ union variant_storage<T0, Ts...> final {
     variant_storage<Ts...> rest;
 };
 
-// We'll select different implementations depending on whether we can
-// construct a literal type from the alternatives.
-template <bool literal, typename... Ts>
-class variant_impl;
-
-// This representation is designed for use when all alternatives are trivial
+// Holds the index and storage for a variant with a trivial destructor.
 template <typename... Ts>
-class variant_impl<true, monostate, Ts...> final {
+class variant_base_impl_trivial;
+template <typename... Ts>
+class variant_base_impl_trivial<monostate, Ts...> {
 public:
-    constexpr variant_impl()
+    constexpr variant_base_impl_trivial()
         : index_(0),
           storage_(in_place_index<0>, monostate{}) {}
 
     template <size_t index, typename... Args>
-    explicit constexpr variant_impl(in_place_index_t<index>, Args&&... args)
+    explicit constexpr variant_base_impl_trivial(
+        in_place_index_t<index>, Args&&... args)
         : index_(index),
           storage_(in_place_index<index>, std::forward<Args>(args)...) {}
 
-    variant_impl(const variant_impl& other) = default;
-    variant_impl(variant_impl&& other) = default;
-    ~variant_impl() = default;
+    // Used by emplace.
+    void destroy() {}
 
-    variant_impl& operator=(const variant_impl& other) = default;
-    variant_impl& operator=(variant_impl&& other) = default;
-
-    constexpr size_t index() const { return index_; }
-
-    template <size_t index>
-    constexpr auto& get() {
-        assert(index_ == index);
-        return storage_.get(in_place_index<index>);
-    }
-
-    template <size_t index>
-    constexpr const auto& get() const {
-        assert(index_ == index);
-        return storage_.get(in_place_index<index>);
-    }
-
-    template <size_t index, typename... Args>
-    auto& emplace(Args&&... args) {
-        index_ = index;
-        return storage_.emplace(in_place_index<index>,
-                                std::forward<Args>(args)...);
-    }
-
-    void swap(variant_impl& other) {
-        using std::swap;
-        if (&other == this)
-            return;
-        if (index_ == other.index_) {
-            storage_.swap(index_, other.storage_);
-        } else {
-            variant_impl temp(std::move(*this));
-            *this = std::move(other);
-            other = std::move(temp);
-        }
-    }
-
-private:
+protected:
     size_t index_;
     variant_storage<monostate, Ts...> storage_;
 };
 
-// This representation handles the non-trivial cases.
+// Holds the index and storage for a variant with a non-trivial destructor.
 template <typename... Ts>
-class variant_impl<false, monostate, Ts...> final {
+class variant_base_impl_non_trivial;
+template <typename... Ts>
+class variant_base_impl_non_trivial<monostate, Ts...> {
 public:
-    constexpr variant_impl()
+    constexpr variant_base_impl_non_trivial()
         : index_(0),
           storage_(in_place_index<0>, monostate{}) {}
 
     template <size_t index, typename... Args>
-    explicit constexpr variant_impl(in_place_index_t<index>, Args&&... args)
+    explicit constexpr variant_base_impl_non_trivial(
+        in_place_index_t<index>, Args&&... args)
         : index_(index),
           storage_(in_place_index<index>, std::forward<Args>(args)...) {}
 
-    variant_impl(const variant_impl& other)
-        : index_(other.index_) {
-        this->storage_.copy_construct_from(this->index_, other.storage_);
+    ~variant_base_impl_non_trivial() {
+        destroy();
     }
 
-    variant_impl(variant_impl&& other)
-        : index_(other.index_) {
-        this->index_ = other.index_;
-        this->storage_.move_construct_from(this->index_, std::move(other.storage_));
+    // Used by emplace and by the destructor.
+    void destroy() {
+        storage_.destroy(index_);
     }
 
-    ~variant_impl() {
-        this->storage_.destroy(this->index_);
-    }
-
-    variant_impl& operator=(const variant_impl& other) {
-        if (&other == this)
-            return *this;
-        this->storage_.destroy(this->index_);
-        this->index_ = other.index_;
-        this->storage_.copy_construct_from(this->index_, other.storage_);
-        return *this;
-    }
-
-    variant_impl& operator=(variant_impl&& other) {
-        if (&other == this)
-            return *this;
-        this->storage_.destroy(this->index_);
-        this->index_ = other.index_;
-        this->storage_.move_construct_from(this->index_, std::move(other.storage_));
-        return *this;
-    }
-
-    constexpr size_t index() const { return index_; }
-
-    template <size_t index>
-    constexpr auto& get() {
-        assert(index_ == index);
-        return storage_.get(in_place_index<index>);
-    }
-
-    template <size_t index>
-    constexpr const auto& get() const {
-        assert(index_ == index);
-        return storage_.get(in_place_index<index>);
-    }
-
-    template <size_t index, typename... Args>
-    auto& emplace(Args&&... args) {
-        this->storage_.destroy(this->index_);
-        this->index_ = index;
-        return this->storage_.emplace(in_place_index<index>,
-                                      std::forward<Args>(args)...);
-    }
-
-    void swap(variant_impl& other) {
-        using std::swap;
-        if (&other == this)
-            return;
-        if (index_ == other.index_) {
-            storage_.swap(index_, other.storage_);
-        } else {
-            variant_impl temp(std::move(*this));
-            *this = std::move(other);
-            other = std::move(temp);
-        }
-    }
-
-private:
+protected:
     size_t index_;
     union {
         variant_storage<monostate, Ts...> storage_;
     };
 };
 
-template <bool literal, typename... Ts>
-void swap(variant_impl<literal, Ts...>& a, variant_impl<literal, Ts...>& b) {
+// Selects an appropriate variant base class depending on whether
+// its destructor is trivial or non-trivial.
+template <typename... Ts>
+using variant_base_impl =
+    std::conditional_t<
+        std::is_destructible<
+            variant_base_impl_trivial<Ts...>>::value,
+        variant_base_impl_trivial<Ts...>,
+        variant_base_impl_non_trivial<Ts...>>;
+
+// Implements non-trivial move-construction and move-assignment.
+template <typename... Ts>
+class variant_move_impl_non_trivial : protected variant_base_impl<Ts...> {
+    using base = variant_base_impl<Ts...>;
+
+public:
+    using base::base;
+
+    variant_move_impl_non_trivial(
+        const variant_move_impl_non_trivial& other) = default;
+
+    variant_move_impl_non_trivial(
+        variant_move_impl_non_trivial&& other) {
+        index_ = other.index_;
+        storage_.move_construct_from(index_, std::move(other.storage_));
+    }
+
+    variant_move_impl_non_trivial& operator=(
+        const variant_move_impl_non_trivial& other) = default;
+
+    variant_move_impl_non_trivial& operator=(
+        variant_move_impl_non_trivial&& other) {
+        if (&other == this)
+            return *this;
+        storage_.destroy(index_);
+        index_ = other.index_;
+        storage_.move_construct_from(index_, std::move(other.storage_));
+        return *this;
+    }
+
+protected:
+    using base::index_;
+    using base::storage_;
+};
+
+// Selects an appropriate variant base class for moving.
+template <typename... Ts>
+using variant_move_impl =
+    std::conditional_t<
+        (std::is_move_constructible<variant_base_impl<Ts...>>::value &&
+         std::is_move_assignable<variant_base_impl<Ts...>>::value) ||
+            !variant_storage<Ts...>::move_construct_supported,
+        variant_base_impl<Ts...>,
+        variant_move_impl_non_trivial<Ts...>>;
+
+// Implements non-trivial copy-construction and copy-assignment.
+template <typename... Ts>
+class variant_copy_impl_non_trivial : protected variant_move_impl<Ts...> {
+    using base = variant_move_impl<Ts...>;
+
+public:
+    using base::base;
+
+    variant_copy_impl_non_trivial(
+        const variant_copy_impl_non_trivial& other) {
+        index_ = other.index_;
+        storage_.copy_construct_from(index_, other.storage_);
+    }
+
+    variant_copy_impl_non_trivial(
+        variant_copy_impl_non_trivial&&) = default;
+
+    variant_copy_impl_non_trivial& operator=(
+        const variant_copy_impl_non_trivial& other) {
+        if (&other == this)
+            return *this;
+        storage_.destroy(index_);
+        index_ = other.index_;
+        storage_.copy_construct_from(index_, other.storage_);
+        return *this;
+    }
+
+    variant_copy_impl_non_trivial& operator=(
+        variant_copy_impl_non_trivial&&) = default;
+
+protected:
+    using base::index_;
+    using base::storage_;
+};
+
+// Selects an appropriate variant base class for copying.
+// Use the base impl if the type is trivially
+template <typename... Ts>
+using variant_copy_impl =
+    std::conditional_t<
+        (std::is_copy_constructible<variant_move_impl<Ts...>>::value &&
+         std::is_copy_assignable<variant_move_impl<Ts...>>::value) ||
+            !variant_storage<Ts...>::copy_construct_supported,
+        variant_move_impl<Ts...>,
+        variant_copy_impl_non_trivial<Ts...>>;
+
+// Actual variant type.
+template <typename... Ts>
+class variant : private variant_copy_impl<Ts...> {
+    using base = variant_copy_impl<Ts...>;
+
+public:
+    constexpr variant() = default;
+
+    template <size_t index, typename... Args>
+    explicit constexpr variant(in_place_index_t<index> i, Args&&... args)
+        : base(i, std::forward<Args>(args)...) {}
+
+    variant(const variant&) = default;
+    variant(variant&&) = default;
+    ~variant() = default;
+
+    variant& operator=(const variant&) = default;
+    variant& operator=(variant&&) = default;
+
+    constexpr size_t index() const { return index_; }
+
+    template <size_t index>
+    constexpr auto& get() {
+        assert(index_ == index);
+        return storage_.get(in_place_index<index>);
+    }
+
+    template <size_t index>
+    constexpr const auto& get() const {
+        assert(index_ == index);
+        return storage_.get(in_place_index<index>);
+    }
+
+    template <size_t index, typename... Args>
+    auto& emplace(Args&&... args) {
+        this->destroy();
+        index_ = index;
+        return storage_.emplace(in_place_index<index>,
+                                std::forward<Args>(args)...);
+    }
+
+    void swap(variant& other) {
+        using std::swap;
+        if (&other == this)
+            return;
+        if (index_ == other.index_) {
+            storage_.swap(index_, other.storage_);
+        } else {
+            variant temp(std::move(*this));
+            *this = std::move(other);
+            other = std::move(temp);
+        }
+    }
+
+private:
+    using base::index_;
+    using base::storage_;
+};
+
+// Swaps variants.
+template <typename... Ts>
+void swap(variant<Ts...>& a, variant<Ts...>& b) {
     a.swap(b);
 }
-
-// Declare variant implementation.
-template <typename... Ts>
-using variant = variant_impl<
-    std::is_destructible<variant_storage<Ts...>>::value &&
-        std::is_copy_constructible<variant_storage<Ts...>>::value &&
-        std::is_copy_assignable<variant_storage<Ts...>>::value &&
-        std::is_move_constructible<variant_storage<Ts...>>::value &&
-        std::is_move_assignable<variant_storage<Ts...>>::value,
-    Ts...>;
 
 // Gets the type of a variant alternative with the given index.
 template <size_t index, typename Variant>
