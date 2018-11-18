@@ -66,6 +66,7 @@
               "build-info",
               "persistent-storage",
               "shell",
+              "shell-commands",
               "root-ssl-certificates",
               "system-temp",
               "vulkan",
