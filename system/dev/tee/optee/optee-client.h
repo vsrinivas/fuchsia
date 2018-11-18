@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/tee.h>
+#include <ddktl/protocol/empty-protocol.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_hash_table.h>
 #include <zircon/tee/c/fidl.h>
@@ -16,7 +16,7 @@ namespace optee {
 
 class OpteeClient;
 using OpteeClientBase = ddk::Device<OpteeClient, ddk::Closable, ddk::Messageable>;
-using OpteeClientProtocol = ddk::TeeProtocol<OpteeClient>;
+using OpteeClientProtocol = ddk::EmptyProtocol<ZX_PROTOCOL_TEE>;
 
 // The Optee driver allows for simultaneous access from different processes. The OpteeClient object
 // is a distinct device instance for each client connection. This allows for per-instance state to
