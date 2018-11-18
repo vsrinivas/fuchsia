@@ -6,7 +6,7 @@
 #include <ddk/debug.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/rtc.h>
+#include <ddktl/protocol/empty-protocol.h>
 
 #include <fbl/unique_ptr.h>
 
@@ -34,7 +34,7 @@ using RtcDevice = ddk::Device<FallbackRtc, ddk::Messageable>;
 // time based on other sources, most likely the roughtime service which
 // runs at every boot.
 class FallbackRtc : public RtcDevice,
-                    public ddk::RtcProtocol<FallbackRtc> {
+                    public ddk::EmptyProtocol<ZX_PROTOCOL_RTC> {
   public:
     FallbackRtc(zx_device_t* parent)
         : RtcDevice(parent), rtc_last_({}) {
