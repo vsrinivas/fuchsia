@@ -29,6 +29,7 @@ namespace nand {
 namespace {
 
 constexpr uint8_t fvm_guid[] = GUID_FVM_VALUE;
+constexpr uint8_t test_guid[] = GUID_TEST_VALUE;
 
 struct NandPartOpContext {
     uint32_t offset;
@@ -140,6 +141,8 @@ zx_status_t NandPartDevice::Create(zx_device_t* parent) {
         // We only use FTL for the FVM partition.
         if (memcmp(part->type_guid, fvm_guid, sizeof(fvm_guid)) == 0) {
             nand_info.nand_class = zircon_nand_Class_FTL;
+        } else if (memcmp(part->type_guid, test_guid, sizeof(test_guid)) == 0) {
+            nand_info.nand_class = zircon_nand_Class_TEST;
         } else {
             nand_info.nand_class = zircon_nand_Class_BBS;
         }
