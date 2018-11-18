@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
+#include <thread>
 
 #include <fbl/auto_call.h>
 #include <usbhost/usbhost.h>
@@ -62,15 +62,11 @@ bool control_interrupt_test(size_t transfer_size) {
     EXPECT_EQ(memcmp(send_buf, receive_buf, transfer_size), 0);
 
     // Create a thread to wait for interrupt request.
-    auto thread_func = [](void* arg) -> void* {
-        auto* req = static_cast<struct usb_request**>(arg);
+    auto thread_func = [](struct usb_request** req) -> void {
         *req = usb_request_wait(dev, TIMEOUT);
-        return nullptr;
     };
-    pthread_t thread;
     struct usb_request* complete_req = nullptr;
-    ret = pthread_create(&thread, nullptr, thread_func, &complete_req);
-    EXPECT_EQ(ret, 0);
+    std::thread wait_thread (thread_func, &complete_req);
 
     // Queue read for interrupt request
     auto* req = usb_request_new(dev, intr_ep);
@@ -86,7 +82,7 @@ bool control_interrupt_test(size_t transfer_size) {
                             USB_PERIPHERAL_TEST_SEND_INTERUPT, 0, 0, nullptr, 0, TIMEOUT);
     EXPECT_EQ(ret, 0);
 
-    pthread_join(thread, nullptr);
+    wait_thread.join();
 
     EXPECT_EQ(complete_req, req);
 
@@ -142,24 +138,20 @@ bool bulk_test() {
         randomize();
 
         // Create a thread to wait for request completions.
-        auto thread_func = [](void* arg) -> void* {
-            auto* reqs = static_cast<struct usb_request**>(arg);
+        auto thread_func = [](struct usb_request** reqs) -> void {
             *reqs++ = usb_request_wait(dev, TIMEOUT);
             *reqs = usb_request_wait(dev, TIMEOUT);
-            return nullptr;
         };
-        pthread_t thread;
         struct usb_request* complete_reqs[2] = {};
-        int ret = pthread_create(&thread, nullptr, thread_func, complete_reqs);
-        EXPECT_EQ(ret, 0);
+        std::thread wait_thread (thread_func, complete_reqs);
 
         // Queue requests in both directions
-        ret = usb_request_queue(receive_req);
+        int ret = usb_request_queue(receive_req);
         EXPECT_EQ(ret, 0);
         ret = usb_request_queue(send_req);
         EXPECT_EQ(ret, 0);
 
-        pthread_join(thread, nullptr);
+        wait_thread.join();
 
         EXPECT_NE(complete_reqs[0], nullptr);
         EXPECT_NE(complete_reqs[1], nullptr);
