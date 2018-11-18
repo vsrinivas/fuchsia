@@ -6,7 +6,7 @@
 
 #include <ddk/protocol/i2c.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/audio-codec.h>
+#include <ddktl/protocol/empty-protocol.h>
 #include <zircon/types.h>
 #include <fbl/unique_ptr.h>
 
@@ -17,7 +17,7 @@ class Max98927Device;
 using DeviceType = ddk::Device<Max98927Device, ddk::Ioctlable, ddk::Unbindable>;
 
 class Max98927Device : public DeviceType,
-                       public ddk::AudioCodecProtocol<Max98927Device> {
+                       public ddk::EmptyProtocol<ZX_PROTOCOL_AUDIO_CODEC> {
 public:
     static fbl::unique_ptr<Max98927Device> Create(zx_device_t* parent);
 
