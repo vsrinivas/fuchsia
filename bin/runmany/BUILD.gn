@@ -5,8 +5,6 @@
 import("//build/package.gni")
 
 package("runmany") {
-  deprecated_system_image = true
-
   deps = [
     ":runn",
   ]
@@ -14,6 +12,7 @@ package("runmany") {
   binaries = [
     {
       name = "runmany"
+      shell = true
     },
   ]
 }

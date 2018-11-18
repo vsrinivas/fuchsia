@@ -112,7 +112,7 @@ class IqueryGoldenTest : public component::testing::TestWithEnvironment,
 
     // Run:
     // /boot/bin/sh -c "cd <hub>; /system/bin/iquery <args>"
-    command_line = fxl::Substitute("cd $0; /system/bin/$1", hub_directory_path_,
+    command_line = fxl::Substitute("cd $0; /bin/$1", hub_directory_path_,
                                    command_line);
     const char* argv[] = {"sh", "-c", command_line.c_str(), nullptr};
 

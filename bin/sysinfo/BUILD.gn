@@ -11,9 +11,7 @@ executable("bin") {
     "sysinfo.cc",
   ]
 
-  libs = [
-    "zircon",
-  ]
+  libs = [ "zircon" ]
 
   deps = [
     "//garnet/public/lib/netstack/c",
@@ -21,13 +19,14 @@ executable("bin") {
 }
 
 package("sysinfo") {
-  deprecated_system_image = true
-
   deps = [
     ":bin",
   ]
 
-  binaries = [ {
-        name = "sysinfo"
-      } ]
+  binaries = [
+    {
+      name = "sysinfo"
+      shell = true
+    },
+  ]
 }

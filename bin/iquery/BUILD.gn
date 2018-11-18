@@ -66,7 +66,6 @@ executable("test") {
 }
 
 package("iquery") {
-  deprecated_system_image = true
   deps = [
     ":bin",
   ]
@@ -74,6 +73,7 @@ package("iquery") {
   binaries = [
     {
       name = "iquery"
+      shell = true
     },
   ]
 }

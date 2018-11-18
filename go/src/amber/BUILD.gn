@@ -17,13 +17,13 @@ go_library("amber_lib") {
     "//garnet/go/src/sse",
     "//garnet/public/fidl/fuchsia.amber($go_toolchain)",
     "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
-    "//zircon/public/fidl/fuchsia-cobalt($go_toolchain)",
-    "//zircon/public/fidl/fuchsia-mem($go_toolchain)",
     "//garnet/public/go/third_party:github.com/flynn/go-tuf",
     "//garnet/public/go/third_party:github.com/rjw57/oauth2device",
     "//garnet/public/go/third_party:golang.org/x/oauth2",
     "//garnet/public/lib/component/go/src/app",
     "//garnet/public/lib/syslog/go/src/syslog",
+    "//zircon/public/fidl/fuchsia-cobalt($go_toolchain)",
+    "//zircon/public/fidl/fuchsia-mem($go_toolchain)",
   ]
 }
 
@@ -49,7 +49,9 @@ foreach(tgt, amber_target_binaries) {
 
     gopackage = tgt.gopkg
 
-    deps = [ ":amber_lib" ]
+    deps = [
+      ":amber_lib",
+    ]
   }
 }
 
@@ -73,8 +75,8 @@ package("amber") {
     },
     {
       path = rebase_path(
-              get_label_info(":cobalt_sw_delivery_registry",
-                             "target_gen_dir") + "/cobalt_sw_delivery_registry.pb")
+              get_label_info(":cobalt_sw_delivery_registry", "target_gen_dir") +
+              "/cobalt_sw_delivery_registry.pb")
       dest = "cobalt_config.pb"
     },
   ]
@@ -92,8 +94,6 @@ package("amber") {
 }
 
 package("amber_tools") {
-  deprecated_system_image = true
-
   deps = [
     ":amber_ctl",
   ]
@@ -101,6 +101,7 @@ package("amber_tools") {
   binaries = [
     {
       name = "amber_ctl"
+      shell = true
     },
   ]
 }
@@ -113,7 +114,7 @@ test_targets = [
   {
     name = "amber_source_test"
     gopkg = "amber/source"
-  }
+  },
 ]
 foreach(test, test_targets) {
   go_test(test.name) {
@@ -156,7 +157,7 @@ package("test_config") {
     {
       dest = "amber/test_sources/test2/config.json"
       path = rebase_path("etc/sources/test2/config.json")
-    }
+    },
   ]
 }
 

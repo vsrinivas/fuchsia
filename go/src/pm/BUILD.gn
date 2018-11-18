@@ -24,7 +24,7 @@ test_packages = [
   "build",
   "cmd/pm/genkey",
   "keys",
-  "publish"
+  "publish",
 ]
 
 foreach(pkg, test_packages) {
@@ -32,7 +32,9 @@ foreach(pkg, test_packages) {
   name = "pm_${pkg_}_test"
   go_test(name) {
     gopackage = "fuchsia.googlesource.com/pm/${pkg}"
-    deps = [":pm_lib"]
+    deps = [
+      ":pm_lib",
+    ]
   }
 }
 
@@ -40,19 +42,22 @@ go_binary("pm_bin") {
   output_name = "pm"
   gopackage = "fuchsia.googlesource.com/pm/cmd/pm"
   sdk_category = "partner"
-  deps = [":pm_lib"]
+  deps = [
+    ":pm_lib",
+  ]
 }
 
 package("pm") {
-  deprecated_system_image = true
-
   deps = [
     ":pm_bin",
   ]
 
-  binaries = [ {
-        name = "pm"
-      } ]
+  binaries = [
+    {
+      name = "pm"
+      shell = true
+    },
+  ]
 }
 
 install_host_tools("host") {

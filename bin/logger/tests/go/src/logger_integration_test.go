@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	loglistener = "/system/bin/log_listener"
+	loglistener = "/bin/log_listener"
 )
 
 func TestFullStack(t *testing.T) {

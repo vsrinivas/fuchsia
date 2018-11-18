@@ -21,7 +21,6 @@ executable("bin") {
 }
 
 package("tz-util") {
-  deprecated_system_image = true
   deps = [
     ":bin",
   ]
@@ -29,6 +28,7 @@ package("tz-util") {
   binaries = [
     {
       name = "tz-util"
+      shell = true
     },
   ]
 }

@@ -15,19 +15,18 @@ executable("bin") {
     "//zircon/public/lib/fdio",
   ]
 
-  libs = [
-    "zircon",
-  ]
+  libs = [ "zircon" ]
 }
 
 package("time") {
-  deprecated_system_image = true
-
   deps = [
     ":bin",
   ]
 
-  binaries = [ {
-        name = "time"
-      } ]
+  binaries = [
+    {
+      name = "time"
+      shell = true
+    },
+  ]
 }

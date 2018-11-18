@@ -3,9 +3,18 @@
         "binary": "test/logger_integration_go_tests"
     },
     "sandbox": {
-        "services": ["fuchsia.logger.LogSink", "fuchsia.logger.Log", "fuchsia.process.Launcher"],
-        "system": ["bin"],
-        "dev": ["null"],
-        "features": ["system-temp"]
+        "services": [
+            "fuchsia.logger.Log",
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver"
+        ],
+        "dev": [
+            "null"
+        ],
+        "features": [
+            "system-temp",
+            "shell-commands"
+        ]
     }
 }

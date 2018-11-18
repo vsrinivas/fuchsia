@@ -13,13 +13,14 @@ executable("bin") {
 }
 
 package("fortune") {
-  deprecated_system_image = true
-
   deps = [
     ":bin",
   ]
 
-  binaries = [ {
-        name = "fortune"
-      } ]
+  binaries = [
+    {
+      name = "fortune"
+      shell = true
+    },
+  ]
 }

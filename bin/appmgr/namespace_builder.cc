@@ -90,6 +90,8 @@ void NamespaceBuilder::AddSandbox(
         PushDirectoryFromPath("/tmp");
         PushDirectoryFromPath("/volume");
       }
+    } else if (feature == "shell-commands") {
+      PushDirectoryFromPathAs("/pkgfs/packages/shell-commands/0/bin", "/bin");
     } else if (feature == "system-temp") {
       PushDirectoryFromPath("/tmp");
     } else if (feature == "vulkan") {

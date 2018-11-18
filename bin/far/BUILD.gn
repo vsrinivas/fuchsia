@@ -22,14 +22,15 @@ sdk_executable("bin") {
 }
 
 package("far") {
-  deprecated_system_image = true
-
   deps = [
     ":bin",
   ]
 
   binaries = [
-    { name = "far" },
+    {
+      shell = true
+      name = "far"
+    },
   ]
 }
 

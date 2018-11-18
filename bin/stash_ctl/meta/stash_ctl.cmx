@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/stash_ctl"
     },
     "sandbox": {
         "services": [ "fuchsia.stash.Store", "fuchsia.stash.SecureStore" ]

@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/trace"
+    },
+    "sandbox": {
+        "features": [
+            "shell"
+        ],
+        "services": []
+    }
+}
