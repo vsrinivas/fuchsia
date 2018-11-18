@@ -11,6 +11,8 @@ during its `update` step. To download the tools manually, run `update.sh`.
 
 NOTE: These instructions are for Googlers only.
 
+TODO: These instructions are out of date.  Use CIPD for everything.
+
 ### Installing gsutil
 
 The tarballs are uploaded with the "gsutil" program.
