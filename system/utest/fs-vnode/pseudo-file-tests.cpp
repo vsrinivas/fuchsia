@@ -4,8 +4,8 @@
 
 #include <fs/pseudo-file.h>
 
-#include <fbl/initializer_list.h>
 #include <fbl/vector.h>
+#include <initializer_list>
 #include <unittest/unittest.h>
 
 #define EXPECT_FSTR_EQ(expected, actual)                                \
@@ -25,7 +25,7 @@ zx_status_t DummyWriter(fbl::StringPiece input) {
 
 class VectorReader {
 public:
-    VectorReader(fbl::initializer_list<fbl::String> strings)
+    VectorReader(std::initializer_list<fbl::String> strings)
         : strings_(strings) {}
 
     fs::PseudoFile::ReadHandler GetHandler() {

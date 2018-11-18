@@ -87,7 +87,7 @@ void String::Set(const char* data, size_t length, fbl::AllocChecker* ac) {
     ReleaseRef(temp_data); // release after init in case data is within data_
 }
 
-String String::Concat(initializer_list<String> strings) {
+String String::Concat(std::initializer_list<String> strings) {
     const String* last_non_empty_string = nullptr;
     size_t total_length = SumLengths(strings.begin(), strings.end(),
                                      &last_non_empty_string);
@@ -104,7 +104,8 @@ String String::Concat(initializer_list<String> strings) {
     return String(data, nullptr);
 }
 
-String String::Concat(initializer_list<String> strings, AllocChecker* ac) {
+String String::Concat(std::initializer_list<String> strings,
+                      AllocChecker* ac) {
     const String* last_non_empty_string = nullptr;
     size_t total_length = SumLengths(strings.begin(), strings.end(),
                                      &last_non_empty_string);

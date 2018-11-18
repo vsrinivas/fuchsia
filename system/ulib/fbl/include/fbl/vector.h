@@ -8,9 +8,9 @@
 #include <string.h>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/initializer_list.h>
 #include <fbl/macros.h>
 #include <fbl/type_support.h>
+#include <initializer_list>
 #include <zircon/assert.h>
 
 namespace fbl {
@@ -73,7 +73,7 @@ public:
     }
 
 #ifndef _KERNEL
-    Vector(fbl::initializer_list<T> init)
+    Vector(std::initializer_list<T> init)
         : ptr_(init.size() != 0u ? reinterpret_cast<T*>(AllocatorTraits::Allocate(
                                        init.size() * sizeof(T)))
                                  : nullptr),

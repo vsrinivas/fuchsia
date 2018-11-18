@@ -6,9 +6,9 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/atomic.h>
-#include <fbl/initializer_list.h>
 #include <fbl/string_piece.h>
 #include <fbl/string_traits.h>
+#include <initializer_list>
 #include <zircon/compiler.h>
 
 namespace fbl {
@@ -244,11 +244,12 @@ public:
     }
 
     // Concatenates the specified strings.
-    static String Concat(initializer_list<String> strings);
+    static String Concat(std::initializer_list<String> strings);
 
     // Concatenates the specified strings.
     // |ac| must not be null.
-    static String Concat(initializer_list<String> strings, AllocChecker* ac);
+    static String Concat(std::initializer_list<String> strings,
+                         AllocChecker* ac);
 
 private:
     friend struct fbl::tests::StringTestHelper;

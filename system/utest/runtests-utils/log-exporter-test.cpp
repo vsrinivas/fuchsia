@@ -19,7 +19,7 @@ namespace {
 // the lenght of fidl message required to encode this msg object.
 class LogMessage {
 public:
-    LogMessage(fbl::String msg, fbl::initializer_list<fbl::String> tags,
+    LogMessage(fbl::String msg, std::initializer_list<fbl::String> tags,
                uint32_t dropped_logs = 0, uint64_t pid = 1024)
         : msg_(msg), tags_(tags), pid_(pid), dropped_logs_(dropped_logs) {}
 
