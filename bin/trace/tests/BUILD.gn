@@ -82,12 +82,12 @@ executable("integration_test_app") {
   ]
 }
 
-executable("two_provider_provider") {
+executable("two_providers_one_engine") {
   testonly = true
-  output_name = "two_provider_provider"
+  output_name = "two_providers_one_engine"
 
   sources = [
-    "two_provider_provider.cc",
+    "two_providers_one_engine.cc",
   ]
 
   deps = [
@@ -108,7 +108,7 @@ package("trace_tests") {
     ":run_integration_test",
     ":trace_integration_tests",
     ":trace_tests_bin",
-    ":two_provider_provider",
+    ":two_providers_one_engine",
   ]
 
   tests = [
@@ -128,7 +128,7 @@ package("trace_tests") {
       name = "run_integration_test"
     },
     {
-      name = "two_provider_provider"
+      name = "two_providers_one_engine"
     },
   ]
 

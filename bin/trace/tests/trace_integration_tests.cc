@@ -4,10 +4,10 @@
 
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/log_settings_command_line.h>
-#include <zircon/status.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
+#include <zircon/status.h>
 
 #include "garnet/bin/trace/tests/run_test.h"
 #include "gtest/gtest.h"
@@ -32,19 +32,18 @@ TEST(Streaming, FillBuffer) {
   RunAndVerify("/pkg/data/streaming.tspec");
 }
 
-// We currently don't support two providers in one process (and there are no
-// current plans to). But if someone accidentally creates such a beast, we
-// want to handle it gracefully.
-class TwoProvidersInSameProcess : public ::testing::Test {
+// A class for adding an extra provider to the test.
+
+class ExtraProvider : public ::testing::Test {
  protected:
-  // Path of the program that starts two providers.
-  static const char kTwoProviderPath[];
+  // Path of the program that starts two providers using one engine.
+  virtual const char* GetProgramPath() = 0;
 
   const zx::process& provider_process() const { return provider_process_; }
 
   void SetUp() override {
     zx::job job{}; // -> default job
-    argv_.push_back(kTwoProviderPath);
+    argv_.push_back(GetProgramPath());
     AppendLoggingArgs(&argv_, "");
     zx::eventpair their_event;
     auto status = zx::eventpair::create(0u, &our_event_, &their_event);
@@ -78,7 +77,7 @@ class TwoProvidersInSameProcess : public ::testing::Test {
       FXL_LOG(ERROR) << "Failed waiting for provider process to start\n";
       TearDown();
     }
-    FXL_LOG(INFO) << "Two-provider provider started";
+    FXL_LOG(INFO) << GetProgramPath() << " started";
   }
 
   void TearDown() override {
@@ -92,7 +91,7 @@ class TwoProvidersInSameProcess : public ::testing::Test {
         EXPECT_EQ(exit_code, 0);
       }
       provider_process_.reset();
-      FXL_LOG(INFO) << "Two-provider provider terminated";
+      FXL_LOG(INFO) << GetProgramPath() << " terminated";
     }
   }
 
@@ -102,10 +101,17 @@ class TwoProvidersInSameProcess : public ::testing::Test {
   std::vector<std::string> argv_;
 };
 
-const char TwoProvidersInSameProcess::kTwoProviderPath[] =
-  "/pkg/bin/two_provider_provider";
+// We support two providers in one process, but it's the process's
+// responsibility to get it right. E.g., Two providers using one trace-engine
+// is a non-starter.
+class TwoProvidersOneEngine : public ExtraProvider {
+ public:
+  const char* GetProgramPath() override {
+    return "/pkg/bin/two_providers_one_engine";
+  }
+};
 
-TEST_F(TwoProvidersInSameProcess, ErrorHandling) {
+TEST_F(TwoProvidersOneEngine, ErrorHandling) {
   ASSERT_TRUE(provider_process().is_valid());
 
   RunAndVerify("/pkg/data/simple.tspec");
