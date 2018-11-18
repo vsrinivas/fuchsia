@@ -48,8 +48,41 @@ MODULE_TYPE := usertest
 TEST_DIR := $(LOCAL_DIR)/test
 
 MODULE_SRCS += \
-    $(TEST_DIR)/main.cpp \
     $(TEST_DIR)/broker-test.cpp \
+    $(TEST_DIR)/main.cpp \
+    $(TEST_DIR)/parent.cpp \
+
+MODULE_STATIC_LIBS := \
+    system/ulib/fbl \
+    system/ulib/fzl \
+    system/ulib/zx \
+    system/ulib/zxcpp \
+
+MODULE_LIBS := \
+    system/ulib/c \
+    system/ulib/fdio \
+    system/ulib/fs-management \
+    system/ulib/unittest \
+    system/ulib/zircon \
+
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-nand \
+    system/fidl/zircon-nand \
+
+include make/module.mk
+
+MODULE := $(LOCAL_DIR).nandpart_test
+
+MODULE_NAME := nandpart-broker-test
+
+MODULE_TYPE := usertest
+
+TEST_DIR := $(LOCAL_DIR)/test
+
+MODULE_SRCS += \
+    $(TEST_DIR)/broker-test.cpp \
+    $(TEST_DIR)/nandpart-main.cpp \
+    $(TEST_DIR)/parent.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/fbl \

@@ -16,6 +16,7 @@ class ParentDevice {
   public:
     struct TestConfig {
         zircon_nand_Info info;  // Configuration for a new ram-nand.
+        zircon_nand_PartitionMap partition_map;  // Configuration for a new ram-nand.
         const char* path;       // Path to an existing device.
         bool is_broker;         // True is the device is a broker (not a nand).
         uint32_t num_blocks;    // Number of blocks to use.
@@ -36,6 +37,9 @@ class ParentDevice {
 
     const zircon_nand_Info& Info() const { return config_.info; }
     void SetInfo(const zircon_nand_Info& info);
+
+    const zircon_nand_PartitionMap& PartitionMap() const { return config_.partition_map; }
+    void SetPartitionMap(const zircon_nand_PartitionMap& partition_map);
 
     uint32_t NumBlocks() const { return config_.num_blocks; }
     uint32_t FirstBlock() const { return config_.first_block; }
