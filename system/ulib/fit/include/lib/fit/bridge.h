@@ -36,7 +36,7 @@ namespace fit {
 // capability, implying that the task can never produce a result.  When this
 // occurs, the associated consumer's |fit::consumer::was_abandoned()| method
 // will return true and the consumer will not obtain any result from the task.
-// See |fit::consumer::promise()| and |fit::consumer::promise_or_error()| for
+// See |fit::consumer::promise()| and |fit::consumer::promise_or()| for
 // details on how abandonment of the task can be handled by the consumer.
 //
 // The consumption capability has a single owner represented by |fit::consumer|.

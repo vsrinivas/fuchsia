@@ -268,9 +268,8 @@ namespace fit {
 // executors to implement their own policies for running tasks.
 //
 // Decoupling awaiting from blocking makes |fit::promise| quite versatile.
-// |fit::promise| can also interoperate interoperate with other task
-// dispatching mechanisms (including |std::future|) using adapters
-// such as |fit::bridge|.
+// |fit::promise| can also interoperate with other task dispatching mechanisms
+// (including |std::future|) using adapters such as |fit::bridge|.
 //
 // EXAMPLE
 //
