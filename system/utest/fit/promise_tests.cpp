@@ -24,13 +24,6 @@ public:
     }
 };
 
-struct move_only {
-    move_only(const move_only&) = delete;
-    move_only(move_only&&) = default;
-    move_only& operator=(const move_only&) = delete;
-    move_only& operator=(move_only&&) = default;
-};
-
 // Just a simple test to put the promise through its paces.
 // Other tests go into more detail to cover the API surface.
 bool basics() {
@@ -955,13 +948,13 @@ static_assert(std::is_same<
 static_assert(std::is_same<
                   fit::result<void, double>,
                   fit::internal::value_handler_invoker<
-                      void (*)(int&),
+                      void (*)(fit::result<int, double>&),
                       fit::result<int, double>>::result_type>::value,
               "");
 static_assert(std::is_same<
                   fit::result<int, void>,
                   fit::internal::error_handler_invoker<
-                      void (*)(double&),
+                      void (*)(fit::result<int, double>&),
                       fit::result<int, double>>::result_type>::value,
               "");
 
@@ -975,13 +968,13 @@ static_assert(std::is_same<
 static_assert(std::is_same<
                   fit::result<void, double>,
                   fit::internal::value_handler_invoker<
-                      fit::pending_result (*)(int&),
+                      fit::pending_result (*)(fit::result<int, double>&),
                       fit::result<int, double>>::result_type>::value,
               "");
 static_assert(std::is_same<
                   fit::result<int, void>,
                   fit::internal::error_handler_invoker<
-                      fit::pending_result (*)(double&),
+                      fit::pending_result (*)(fit::result<int, double>&),
                       fit::result<int, double>>::result_type>::value,
               "");
 
@@ -995,13 +988,13 @@ static_assert(std::is_same<
 static_assert(std::is_same<
                   fit::result<unsigned, double>,
                   fit::internal::value_handler_invoker<
-                      fit::ok_result<unsigned> (*)(int&),
+                      fit::ok_result<unsigned> (*)(fit::result<int, double>&),
                       fit::result<int, double>>::result_type>::value,
               "");
 static_assert(std::is_same<
                   fit::result<int, void>,
                   fit::internal::error_handler_invoker<
-                      fit::ok_result<int> (*)(double&),
+                      fit::ok_result<int> (*)(fit::result<int, double>&),
                       fit::result<int, double>>::result_type>::value,
               "");
 
@@ -1015,13 +1008,13 @@ static_assert(std::is_same<
 static_assert(std::is_same<
                   fit::result<void, double>,
                   fit::internal::value_handler_invoker<
-                      fit::error_result<double> (*)(int&),
+                      fit::error_result<double> (*)(fit::result<int, double>&),
                       fit::result<int, double>>::result_type>::value,
               "");
 static_assert(std::is_same<
                   fit::result<int, float>,
                   fit::internal::error_handler_invoker<
-                      fit::error_result<float> (*)(double&),
+                      fit::error_result<float> (*)(fit::result<int, double>&),
                       fit::result<int, double>>::result_type>::value,
               "");
 
@@ -1035,13 +1028,13 @@ static_assert(std::is_same<
 static_assert(std::is_same<
                   fit::result<unsigned, float>,
                   fit::internal::value_handler_invoker<
-                      fit::result<unsigned, float> (*)(int&),
+                      fit::result<unsigned, float> (*)(fit::result<int, double>&),
                       fit::result<int, double>>::result_type>::value,
               "");
 static_assert(std::is_same<
                   fit::result<unsigned, float>,
                   fit::internal::error_handler_invoker<
-                      fit::result<unsigned, float> (*)(double&),
+                      fit::result<unsigned, float> (*)(fit::result<int, double>&),
                       fit::result<int, double>>::result_type>::value,
               "");
 
@@ -1055,22 +1048,22 @@ static_assert(std::is_same<
 static_assert(std::is_same<
                   fit::result<unsigned, double>,
                   fit::internal::value_handler_invoker<
-                      fit::promise<unsigned, double> (*)(int&),
+                      fit::promise<unsigned, double> (*)(fit::result<int, double>&),
                       fit::result<int, double>>::result_type>::value,
               "");
 static_assert(std::is_same<
                   fit::result<int, float>,
                   fit::internal::error_handler_invoker<
-                      fit::promise<int, float> (*)(double&),
+                      fit::promise<int, float> (*)(fit::result<int, double>&),
                       fit::result<int, double>>::result_type>::value,
               "");
 
 // handler returning lambda...
 auto result_continuation_lambda = [](fit::result<int, double>&)
     -> fit::result<unsigned, float> { return fit::pending(); };
-auto value_continuation_lambda = [](int&)
+auto value_continuation_lambda = [](fit::result<int, double>&)
     -> fit::result<unsigned, double> { return fit::pending(); };
-auto error_continuation_lambda = [](double&)
+auto error_continuation_lambda = [](fit::result<int, double>&)
     -> fit::result<int, float> { return fit::pending(); };
 static_assert(std::is_same<
                   fit::result<unsigned, float>,
@@ -1136,80 +1129,6 @@ bool example2() {
 }
 
 } // namespace
-
-// These are compile-time diagnostic tests.
-// We expect the following tests to fail at compile time and produce helpful
-// static assertions when enabled manually.
-#if 0
-void diagnose_handler_with_invalid_return_type() {
-    // Doesn't work because result isn't fit::result<>, fit::ok_result<>,
-    // fit::error_result<>, fit::pending_result, a continuation, or void.
-    fit::make_promise([]() -> int { return 0; });
-}
-#endif
-#if 0
-void diagnose_handler_with_too_few_arguments() {
-    // Expected between 1 and 2 arguments, got 0.
-    fit::make_promise([] {})
-        .then([]() {});
-}
-#endif
-#if 0
-void diagnose_handler_with_too_many_arguments() {
-    // Expected between 1 and 2 arguments, got 3.
-    fit::make_promise([] {})
-        .then([](fit::context&, fit::result<>, int excess) {});
-}
-#endif
-#if 0
-void diagnose_handler_with_invalid_context_arg() {
-    // When there are two argument, the first must be fit::context&.
-    fit::make_promise([] {})
-        .then([](fit::result<>, int excess) {});
-}
-#endif
-#if 0
-void diagnose_handler_with_invalid_result_arg() {
-    // The result type must match that produced by the prior.
-    fit::make_promise([] {})
-        .then([](fit::result<int>& result) {});
-}
-#endif
-#if 0
-void diagnose_handler_with_invalid_move_only_result_arg() {
-    // Move-only types must be passed by reference not by value.
-    fit::make_promise([] { return fit::ok(move_only{}); })
-        .then([](fit::result<move_only> result) {});
-}
-#endif
-#if 0
-void diagnose_handler_with_invalid_value_arg() {
-    // The value type must match that produced by the prior.
-    fit::make_promise([] { return fit::ok(3.2f); })
-        .and_then([](int value) {});
-}
-#endif
-#if 0
-void diagnose_handler_with_invalid_move_only_value_arg() {
-    // The value type must match that produced by the prior.
-    fit::make_promise([] { return fit::ok(move_only{}); })
-        .and_then([](move_only value) {});
-}
-#endif
-#if 0
-void diagnose_handler_with_invalid_error_arg() {
-    // The error type must match that produced by the prior.
-    fit::make_promise([] { return fit::error(3.2f); })
-        .or_else([](int error) {});
-}
-#endif
-#if 0
-void diagnose_handler_with_invalid_move_only_error_arg() {
-    // The error type must match that produced by the prior.
-    fit::make_promise([] { return fit::error(move_only{}); })
-        .or_else([](move_only error) {});
-}
-#endif
 
 BEGIN_TEST_CASE(promise_tests)
 RUN_TEST(basics)
