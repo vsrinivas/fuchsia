@@ -59,11 +59,26 @@ struct is_continuation<
 template <typename Handler, typename DefaultV, typename DefaultE,
           typename ReturnType = typename callable_traits<Handler>::return_type,
           bool callable_result = ::fit::is_callable<ReturnType>::value>
-class result_adapter;
+class result_adapter final {
+    // This expression always evaluates to false but depends on the template
+    // type parameters so that it only gets evaluated when the template is
+    // expanded.  If we simply wrote "false", the compiler would raise the
+    // static assertion failure as soon as it encountered the statement.
+    template <typename T>
+    struct check_result { static constexpr bool value = false; };
+    static_assert(
+        check_result<ReturnType>::value,
+        "The provided handler's result type was expected to be "
+        "fit::result<V, E>, fit::ok_result<V>, fit::error_result<E>, "
+        "fit::pending_result, void, or a continuation with the signature "
+        "fit::result<V, E>(fit::context&).  "
+        "Please refer to the combinator's documentation for a list of "
+        "supported handler function signatures.");
+};
 
 // Supports handlers that return void.
 template <typename Handler, typename DefaultV, typename DefaultE>
-class result_adapter<Handler, DefaultV, DefaultE, void, false> {
+class result_adapter<Handler, DefaultV, DefaultE, void, false> final {
 public:
     using result_type = ::fit::result<DefaultV, DefaultE>;
 
@@ -82,7 +97,7 @@ private:
 
 // Supports handlers that return pending_result.
 template <typename Handler, typename DefaultV, typename DefaultE>
-class result_adapter<Handler, DefaultV, DefaultE, ::fit::pending_result, false> {
+class result_adapter<Handler, DefaultV, DefaultE, ::fit::pending_result, false> final {
 public:
     using result_type = ::fit::result<DefaultV, DefaultE>;
 
@@ -101,7 +116,7 @@ private:
 // Supports handlers that return ok_result<V>.
 template <typename Handler, typename DefaultV, typename DefaultE,
           typename V>
-class result_adapter<Handler, DefaultV, DefaultE, ::fit::ok_result<V>, false> {
+class result_adapter<Handler, DefaultV, DefaultE, ::fit::ok_result<V>, false> final {
 public:
     using result_type = ::fit::result<V, DefaultE>;
 
@@ -120,7 +135,7 @@ private:
 // Supports handlers that return error_result<E>.
 template <typename Handler, typename DefaultV, typename DefaultE,
           typename E>
-class result_adapter<Handler, DefaultV, DefaultE, ::fit::error_result<E>, false> {
+class result_adapter<Handler, DefaultV, DefaultE, ::fit::error_result<E>, false> final {
 public:
     using result_type = ::fit::result<DefaultV, E>;
 
@@ -139,7 +154,7 @@ private:
 // Supports handlers that return result<V, E>.
 template <typename Handler, typename DefaultV, typename DefaultE,
           typename V, typename E>
-class result_adapter<Handler, DefaultV, DefaultE, ::fit::result<V, E>, false> {
+class result_adapter<Handler, DefaultV, DefaultE, ::fit::result<V, E>, false> final {
 public:
     using result_type = ::fit::result<V, E>;
 
@@ -160,7 +175,7 @@ private:
 //     fit::result<...>(fit::context&)
 template <typename Handler, typename DefaultV, typename DefaultE,
           typename ReturnType>
-class result_adapter<Handler, DefaultV, DefaultE, ReturnType, true> {
+class result_adapter<Handler, DefaultV, DefaultE, ReturnType, true> final {
     // If the handler doesn't actually return a continuation then the
     // compilation will fail here which is slightly easier to diagnose
     // than if we dropped the result_adapter specialization entirely.
@@ -193,14 +208,33 @@ private:
 // Wraps a handler that may or may not have a fit::context& as first argument.
 // This is determined by checking the argument count.
 template <typename Handler, typename DefaultV, typename DefaultE,
-          int num_extra_args = 0,
-          bool has_context =
-              (callable_traits<Handler>::args::size > num_extra_args)>
-class context_adapter {
+          size_t num_args = 0,
+          ssize_t excess_args =
+              (static_cast<ssize_t>(
+                   ::fit::callable_traits<Handler>::args::size) -
+               static_cast<ssize_t>(num_args))>
+class context_adapter final {
+    static_assert(
+        excess_args >= 0,
+        "The provided handler has too few arguments.  "
+        "Please refer to the combinator's documentation for a list of "
+        "supported handler function signatures.");
+    static_assert(
+        excess_args <= 1,
+        "The provided handler has too many arguments.  "
+        "Please refer to the combinator's documentation for a list of "
+        "supported handler function signatures.");
+};
+
+// Supports handlers without a context argument.
+template <typename Handler, typename DefaultV, typename DefaultE,
+          size_t num_args>
+class context_adapter<Handler, DefaultV, DefaultE, num_args, 0> final {
     using base_type = result_adapter<Handler, DefaultV, DefaultE>;
 
 public:
     using result_type = typename base_type::result_type;
+    static constexpr size_t next_arg_index = 0;
 
     explicit context_adapter(Handler handler)
         : base_(std::move(handler)) {}
@@ -216,12 +250,21 @@ private:
 
 // Supports handlers with a context argument.
 template <typename Handler, typename DefaultV, typename DefaultE,
-          int num_extra_args>
-class context_adapter<Handler, DefaultV, DefaultE, num_extra_args, true> {
+          size_t num_args>
+class context_adapter<Handler, DefaultV, DefaultE, num_args, 1> final {
     using base_type = result_adapter<Handler, DefaultV, DefaultE>;
+    using context_arg_type =
+        typename ::fit::callable_traits<Handler>::args::template at<0>;
+    static_assert(
+        std::is_same<context_arg_type, ::fit::context&>::value,
+        "The provided handler's first argument was expected to be of type "
+        "fit::context& based on the number of arguments it has.  "
+        "Please refer to the combinator's documentation for a list of "
+        "supported handler function signatures.");
 
 public:
     using result_type = typename base_type::result_type;
+    static constexpr size_t next_arg_index = 1;
 
     explicit context_adapter(Handler handler)
         : base_(std::move(handler)) {}
@@ -259,6 +302,19 @@ private:
 template <typename Handler, typename PriorResult>
 class result_handler_invoker final {
     using base_type = context_adapter<Handler, void, void, 1>;
+    using result_arg_type =
+        typename ::fit::callable_traits<Handler>::args::template at<
+            base_type::next_arg_index>;
+    static_assert(
+        (std::is_same<result_arg_type, PriorResult>::value &&
+         std::is_copy_constructible<result_arg_type>::value) ||
+            std::is_same<result_arg_type, PriorResult&>::value ||
+            std::is_same<result_arg_type, const PriorResult&>::value,
+        "The provided handler's last argument was expected to be of type "
+        "fit::result<V, E>&, const fit::result<V, E>&, or fit::result<V, E> "
+        "(if the result is copy-constructible).  "
+        "Please refer to the combinator's documentation for a list of "
+        "supported handler function signatures.");
 
 public:
     using result_type = typename base_type::result_type;
@@ -280,6 +336,18 @@ template <typename Handler, typename PriorResult,
 class value_handler_invoker final {
     using base_type = context_adapter<Handler,
                                       void, typename PriorResult::error_type, 1>;
+    using value_arg_type =
+        typename ::fit::callable_traits<Handler>::args::template at<
+            base_type::next_arg_index>;
+    static_assert(
+        (std::is_same<value_arg_type, V>::value &&
+         std::is_copy_constructible<value_arg_type>::value) ||
+            std::is_same<value_arg_type, V&>::value ||
+            std::is_same<value_arg_type, const V&>::value,
+        "The provided handler's last argument was expected to be of type "
+        "V&, const V&, or V (if the value is copy-constructible).  "
+        "Please refer to the combinator's documentation for a list of "
+        "supported handler function signatures.");
 
 public:
     using result_type = typename base_type::result_type;
@@ -321,6 +389,18 @@ template <typename Handler, typename PriorResult,
 class error_handler_invoker final {
     using base_type = context_adapter<Handler,
                                       typename PriorResult::value_type, void, 1>;
+    using error_arg_type =
+        typename ::fit::callable_traits<Handler>::args::template at<
+            base_type::next_arg_index>;
+    static_assert(
+        (std::is_same<error_arg_type, E>::value &&
+         std::is_copy_constructible<error_arg_type>::value) ||
+            std::is_same<error_arg_type, E&>::value ||
+            std::is_same<error_arg_type, const E&>::value,
+        "The provided handler's last argument was expected to be of type "
+        "E&, const E&, or E (if the error is copy-constructible).  "
+        "Please refer to the combinator's documentation for a list of "
+        "supported handler function signatures.");
 
 public:
     using result_type = typename base_type::result_type;
