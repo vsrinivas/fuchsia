@@ -97,15 +97,14 @@ namespace fit {
 // sizes.  Here's how we might decode those errors uniformly into |fit::result|
 // allowing them to be handled using combinators such as |or_else|.
 //
-//     using write_callback = fit::function<void(ssize_t bytes_written)>;
+//     using write_callback = fit::function<void(size_t bytes_written, int error)>;
 //     void write_async(size_t num_bytes, uint8_t* buffer, write_callback cb);
 //
 //     fit::promise<size_t, int> promise_write(uint8_t* buffer, size_t num_bytes) {
 //         fit::bridge<size_t, int> bridge;
 //         write_async(num_bytes, buffer,
-//             [completer = std::move(bridge.completer())](ssize_t bytes_written) {
-//             if (bytes_written < 0) {
-//                 int error = bytes_written;
+//             [completer = std::move(bridge.completer())](size_t bytes_written, int error) {
+//             if (bytes_written == 0) {
 //                 completer.complete_error(error);
 //                 return;
 //             }
