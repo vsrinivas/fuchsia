@@ -529,6 +529,93 @@ bool consumer_promise() {
     END_TEST;
 }
 
+bool schedule_for_consumer() {
+    BEGIN_TEST;
+
+    // Promise completes normally.
+    {
+        uint64_t run_count[2] = {};
+        fit::sequential_executor executor;
+        fit::consumer<int> consumer =
+            fit::schedule_for_consumer(
+                &executor, fit::make_promise([&](fit::context& context) {
+                    assert(context.executor() == &executor);
+                    run_count[0]++;
+                    return fit::ok(42);
+                }));
+        EXPECT_EQ(0, run_count[0]);
+
+        std::async(std::launch::async, [&] { executor.run(); });
+        fit::run_sequentially(
+            consumer.promise()
+                .then([&](fit::context& context, fit::result<int> result) {
+                    assert(context.executor() != &executor);
+                    assert(result.value() == 42);
+                    run_count[1]++;
+                }));
+        EXPECT_EQ(1, run_count[0]);
+        EXPECT_EQ(1, run_count[1]);
+    }
+
+    // Promise abandons its task so the consumer is abandoned too.
+    {
+        uint64_t run_count[2] = {};
+        fit::sequential_executor executor;
+        fit::consumer<int> consumer =
+            fit::schedule_for_consumer(
+                &executor, fit::make_promise([&](fit::context& context)
+                                                 -> fit::result<int> {
+                    assert(context.executor() == &executor);
+                    run_count[0]++;
+                    // The task will be abandoned after we return since
+                    // we not acquire a susended task token for it.
+                    return fit::pending();
+                }));
+        EXPECT_EQ(0, run_count[0]);
+
+        std::async(std::launch::async, [&] { executor.run(); });
+        fit::run_sequentially(
+            consumer.promise()
+                .then([&](fit::context& context, fit::result<int> result) {
+                    // This should not run because the promise was abandoned.
+                    run_count[1]++;
+                }));
+        EXPECT_EQ(1, run_count[0]);
+        EXPECT_EQ(0, run_count[1]);
+    }
+
+    // Promise abandons its task so the consumer is abandoned too
+    // but this time we use promise_or() so we can handle the abandonment.
+    {
+        uint64_t run_count[2] = {};
+        fit::sequential_executor executor;
+        fit::consumer<int> consumer =
+            fit::schedule_for_consumer(
+                &executor, fit::make_promise([&](fit::context& context)
+                                                 -> fit::result<int> {
+                    assert(context.executor() == &executor);
+                    run_count[0]++;
+                    // The task will be abandoned after we return since
+                    // we do not acquire a susended task token for it.
+                    return fit::pending();
+                }));
+        EXPECT_EQ(0, run_count[0]);
+
+        std::async(std::launch::async, [&] { executor.run(); });
+        fit::run_sequentially(
+            consumer.promise_or(fit::error())
+                .then([&](fit::context& context, fit::result<int> result) {
+                    assert(context.executor() != &executor);
+                    assert(result.is_error());
+                    run_count[1]++;
+                }));
+        EXPECT_EQ(1, run_count[0]);
+        EXPECT_EQ(1, run_count[1]);
+    }
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(bridge_tests)
@@ -542,4 +629,5 @@ RUN_TEST(completer_bind_two_arg_callback)
 RUN_TEST(consumer_construction_and_assignment)
 RUN_TEST(consumer_cancel)
 RUN_TEST(consumer_promise)
+RUN_TEST(schedule_for_consumer)
 END_TEST_CASE(bridge_tests)

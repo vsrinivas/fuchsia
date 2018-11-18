@@ -48,6 +48,12 @@ namespace fit {
 // |fit::completer::was_canceled()| method will return true and the task's
 // eventual result (if any) will be silently discarded.
 //
+// DECOUPLING
+//
+// See |fit::schedule_for_consumer()| for a helper which uses a bridge to
+// decouple completion and consumption of a task's result so they can be
+// performed on different executors.
+//
 // SYNOPSIS
 //
 // |V| is the type of value produced when the task completes successfully.
@@ -412,6 +418,70 @@ private:
 
     consumption_ref consumption_ref_;
 };
+
+// Schedules |promise| to run on |executor| and returns a |consumer| which
+// receives the result of the promise upon its completion.
+//
+// This method has the effect of decoupling the evaluation of a promise from
+// the consumption of its result such that they can be performed on different
+// executors (possibly on different threads).
+//
+// |executor| must be non-null.
+// |promise| must be non-empty.
+//
+// EXAMPLE
+//
+// This example shows an object that encapsulates its own executor which it
+// manages independently from that of its clients.  This enables the object
+// to obtain certain assurances such as a guarantee of single-threaded
+// execution for its internal operations even if its clients happen to be
+// multi-threaded (or vice-versa as desired).
+//
+//     // This model has specialized internal threading requirements so it
+//     // manages its own executor.
+//     class model {
+//     public:
+//         fit::consumer<int> perform_calculation(int parameter) {
+//             return fit::schedule_for_consumer(&executor_,
+//                 fit::make_promise([parameter] {
+//                     // In reality, this would likely be a much more
+//                     // complex expression.
+//                     return fit::ok(parameter * parameter);
+//                 });
+//         }
+//
+//     private:
+//         // The model is responsible for initializing and running its own
+//         // executor (perhaps on its own thread).
+//         fit::sequential_executor executor_;
+//     };
+//
+//     // Asks the model to perform a calculation, awaits a result on the
+//     // provided executor (which is different from the one internally used
+//     // by the model), then prints the result.
+//     void print_output(fit::executor* executor, model* m) {
+//         executor->schedule_task(
+//             m->perform_calculation(16)
+//                 .promise_or(fit::error())
+//                 .and_then([] (int result) { printf("done: %d\n", result); })
+//                 .or_else([] { puts("failed or abandoned"); }));
+//     }
+//
+template <typename Promise>
+inline consumer<typename Promise::value_type, typename Promise::error_type>
+schedule_for_consumer(fit::executor* executor, Promise promise) {
+    assert(executor);
+    assert(promise);
+    fit::bridge<typename Promise::value_type,
+                typename Promise::error_type>
+        bridge;
+    executor->schedule_task(
+        promise.then([completer = std::move(bridge.completer())](
+                         typename Promise::result_type& result) mutable {
+            completer.complete_or_abandon(std::move(result));
+        }));
+    return std::move(bridge.consumer());
+}
 
 } // namespace fit
 
