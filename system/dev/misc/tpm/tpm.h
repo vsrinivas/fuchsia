@@ -13,7 +13,7 @@
 #if __cplusplus
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/tpm.h>
+#include <ddktl/protocol/empty-protocol.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 
@@ -55,7 +55,7 @@ class Device;
 using DeviceType = ddk::Device<Device, ddk::Ioctlable, ddk::Suspendable>;
 
 class Device : public DeviceType,
-               public ddk::TpmProtocol<Device> {
+               public ddk::EmptyProtocol<ZX_PROTOCOL_TPM> {
 public:
     Device(zx_device_t* parent, fbl::unique_ptr<HardwareInterface> iface);
     ~Device();
