@@ -12,7 +12,6 @@
 
 #include <block-client/client.h>
 #include <fbl/macros.h>
-#include <fbl/type_support.h>
 #include <lib/zx/fifo.h>
 #include <zircon/types.h>
 

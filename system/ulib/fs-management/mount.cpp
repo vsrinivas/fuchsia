@@ -12,7 +12,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
-#include <fbl/type_support.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fs/client.h>

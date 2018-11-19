@@ -7,7 +7,6 @@
 #include <stdio.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/type_support.h>
 #include <lib/async/default.h>
 #include <lib/fdio/util.h>
 #include <lib/fidl/coding.h>

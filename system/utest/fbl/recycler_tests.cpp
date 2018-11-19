@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 #include <fbl/alloc_checker.h>
-#include <fbl/ref_ptr.h>
 #include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <fbl/type_support.h>
 #include <unittest/unittest.h>
 
 namespace {

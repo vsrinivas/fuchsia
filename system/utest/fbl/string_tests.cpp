@@ -5,7 +5,6 @@
 #include <fbl/string.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/type_support.h>
 #include <unittest/unittest.h>
 
 #include <utility>

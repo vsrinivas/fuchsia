@@ -1765,7 +1765,7 @@ std::ostringstream DdktlGenerator::ProduceInternalHeader() {
     EmitHeaderGuard(&file_);
     EmitBlank(&file_);
     EmitIncludeHeader(&file_, "<" + ToLispCase(StringJoin(library_->name(), "/")) + ".h>");
-    EmitIncludeHeader(&file_, "<fbl/type_support.h>");
+    EmitIncludeHeader(&file_, "<type_traits>");
     EmitBlank(&file_);
     EmitNamespacePrologue(&file_, "ddk");
     EmitNamespacePrologue(&file_, "internal");

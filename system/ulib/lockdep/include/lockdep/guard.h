@@ -7,8 +7,6 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
-#include <fbl/type_support.h>
-
 #include <lockdep/common.h>
 #include <lockdep/lock_class.h>
 #include <lockdep/lock_policy.h>

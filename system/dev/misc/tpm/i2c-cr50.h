@@ -6,7 +6,6 @@
 
 #include <ddk/device.h>
 #include <fbl/mutex.h>
-#include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 #include <stdint.h>
 #include <lib/zx/handle.h>

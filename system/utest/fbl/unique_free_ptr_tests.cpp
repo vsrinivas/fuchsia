@@ -3,15 +3,14 @@
 // found in the LICENSE file.
 
 #include <stdio.h>
+#include <type_traits>
+#include <utility>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/type_support.h>
 #include <fbl/unique_free_ptr.h>
 #include <unittest/unittest.h>
 
-#include <utility>
-
-static_assert(fbl::is_standard_layout<fbl::unique_free_ptr<int>>::value,
+static_assert(std::is_standard_layout<fbl::unique_free_ptr<int>>::value,
               "fbl::unique_free_ptr<int>'s should have a standard layout");
 
 // These tests mostly serve to exercise the unique_free_ptr type and work well with heap checkers as

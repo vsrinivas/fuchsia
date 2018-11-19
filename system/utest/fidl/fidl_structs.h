@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <fbl/type_support.h>
 
 #include <stdalign.h>
 #include <lib/fidl/coding.h>

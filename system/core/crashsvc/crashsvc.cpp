@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fbl/algorithm.h>
-#include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>

@@ -5,10 +5,10 @@
 #pragma once
 
 #include <arch/user_copy.h>
-#include <fbl/type_support.h>
 #include <lib/user_copy/internal.h>
-#include <zircon/types.h>
+#include <type_traits>
 #include <vm/vm.h>
+#include <zircon/types.h>
 
 // user_*_ptr<> wraps a pointer to user memory, to differentiate it from kernel
 // memory. They can be in, out, or inout pointers.
@@ -24,7 +24,7 @@ enum InOutPolicy {
 template <typename T, InOutPolicy Policy>
 class user_ptr {
 public:
-    static_assert(fbl::is_const<T>::value == (Policy == kIn),
+    static_assert(std::is_const<T>::value == (Policy == kIn),
                   "In pointers must be const, and Out and InOut pointers must not be const");
 
     explicit user_ptr(T* p) : ptr_(p) {}
@@ -61,7 +61,7 @@ public:
     // Note: The templatization is simply to allow the class to compile if T is |void|.
     template <typename S = T>
     zx_status_t copy_to_user(const S& src) const {
-        static_assert(fbl::is_same<S, T>::value, "Do not use the template parameter.");
+        static_assert(std::is_same<S, T>::value, "Do not use the template parameter.");
         static_assert(Policy & kOut, "can only copy to user for kOut or kInOut user_ptr");
         return arch_copy_to_user(ptr_, &src, sizeof(S));
     }
@@ -87,7 +87,7 @@ public:
     }
 
     // Copies a single T from user memory. (Using this will fail to compile if T is |void|.)
-    zx_status_t copy_from_user(typename fbl::remove_const<T>::type* dst) const {
+    zx_status_t copy_from_user(typename std::remove_const<T>::type* dst) const {
         static_assert(Policy & kIn, "can only copy from user for kIn or kInOut user_ptr");
         // Intentionally use sizeof(T) here, so *using* this method won't compile if T is |void|.
         return arch_copy_from_user(dst, ptr_, sizeof(T));
@@ -95,7 +95,7 @@ public:
 
     // Copies an array of T from user memory. Note: This takes a count not a size, unless T is
     // |void|.
-    zx_status_t copy_array_from_user(typename fbl::remove_const<T>::type* dst, size_t count) const {
+    zx_status_t copy_array_from_user(typename std::remove_const<T>::type* dst, size_t count) const {
         static_assert(Policy & kIn, "can only copy from user for kIn or kInOut user_ptr");
         size_t len;
         if (mul_overflow(count, internal::type_size<T>(), &len)) {
@@ -106,7 +106,7 @@ public:
 
     // Copies a sub-array of T from user memory. Note: This takes a count not a size, unless T is
     // |void|.
-    zx_status_t copy_array_from_user(typename fbl::remove_const<T>::type* dst, size_t count, size_t offset) const {
+    zx_status_t copy_array_from_user(typename std::remove_const<T>::type* dst, size_t count, size_t offset) const {
         static_assert(Policy & kIn, "can only copy from user for kIn or kInOut user_ptr");
         size_t len;
         if (mul_overflow(count, internal::type_size<T>(), &len)) {

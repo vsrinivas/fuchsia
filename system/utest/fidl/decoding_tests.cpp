@@ -4,8 +4,6 @@
 
 #include <stddef.h>
 
-#include <fbl/type_support.h>
-
 #include <lib/fidl/coding.h>
 
 #include <unittest/unittest.h>

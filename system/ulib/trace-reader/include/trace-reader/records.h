@@ -16,7 +16,6 @@
 #include <fbl/array.h>
 #include <fbl/macros.h>
 #include <fbl/string.h>
-#include <fbl/type_support.h>
 #include <fbl/vector.h>
 #include <trace-engine/types.h>
 

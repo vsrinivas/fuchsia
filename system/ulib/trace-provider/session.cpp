@@ -13,7 +13,6 @@
 
 #include <trace-provider/provider.h>
 #include <lib/zx/vmar.h>
-#include <fbl/type_support.h>
 
 #include <utility>
 

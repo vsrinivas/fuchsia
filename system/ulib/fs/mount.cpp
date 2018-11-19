@@ -7,18 +7,17 @@
 #include <sys/stat.h>
 #include <threads.h>
 
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/debug.h>
 #include <lib/fdio/remoteio.h>
 #include <lib/fdio/vfs.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/auto_lock.h>
-#include <fbl/intrusive_double_list.h>
-#include <fbl/ref_ptr.h>
-#include <fbl/type_support.h>
-#include <fbl/unique_ptr.h>
 
 #include <utility>
 

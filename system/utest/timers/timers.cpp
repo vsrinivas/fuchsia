@@ -8,7 +8,6 @@
 
 #include <lib/zx/timer.h>
 
-#include <fbl/type_support.h>
 
 #include <unistd.h>
 #include <unittest/unittest.h>

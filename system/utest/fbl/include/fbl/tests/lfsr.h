@@ -5,7 +5,6 @@
 #pragma once
 
 #include <stdint.h>
-#include <fbl/type_support.h>
 
 namespace fbl {
 namespace tests {

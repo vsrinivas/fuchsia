@@ -7,7 +7,6 @@
 #include <ddk/debug.h>
 #include <ddk/mmio-buffer.h>
 #include <fbl/macros.h>
-#include <fbl/type_support.h>
 #include <hw/arch_ops.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/resource.h>

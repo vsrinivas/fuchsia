@@ -5,7 +5,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/type_support.h>
 #include <stdio.h>
 #include <unittest/unittest.h>
 

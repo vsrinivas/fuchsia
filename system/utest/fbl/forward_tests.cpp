@@ -4,7 +4,6 @@
 
 #include <stdio.h>
 #include <unittest/unittest.h>
-#include <fbl/type_support.h>
 
 #include <utility>
 

@@ -12,7 +12,6 @@
 #include <fbl/macros.h>
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
-#include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 
 #include <zircon/assert.h>

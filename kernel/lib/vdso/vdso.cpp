@@ -8,7 +8,6 @@
 #include <lib/vdso-constants.h>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/type_support.h>
 #include <kernel/cmdline.h>
 #include <object/handle.h>
 #include <platform.h>
@@ -33,8 +32,7 @@ namespace {
 template<typename T>
 class KernelVmoWindow {
 public:
-    static_assert(fbl::is_pod<T>::value,
-                  "this is for C-compatible types only!");
+    static_assert(__is_pod(T), "this is for C-compatible types only!");
 
     KernelVmoWindow(const char* name,
                     fbl::RefPtr<VmObject> vmo, uint64_t offset)

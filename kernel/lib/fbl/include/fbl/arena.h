@@ -13,7 +13,6 @@
 
 #include <fbl/intrusive_single_list.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/type_support.h>
 
 namespace fbl {
 

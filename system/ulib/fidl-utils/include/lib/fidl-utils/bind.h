@@ -5,10 +5,10 @@
 #pragma once
 
 #include <fbl/macros.h>
-#include <fbl/type_support.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/bind.h>
 #include <lib/zx/channel.h>
+#include <type_traits>
 #include <zircon/assert.h>
 #include <zircon/fidl.h>
 
@@ -62,7 +62,7 @@ struct Binder {
               typename U = typename internal::MemberFunctionTraits<decltype(Fn)>::instance_type,
               typename... Args>
     static zx_status_t BindMember(void* ctx, Args... args) {
-        static_assert(fbl::is_convertible_pointer<T*, U*>::value,
+        static_assert(std::is_convertible<T*, U*>::value,
                       "Binding to method of invalid class");
         auto instance = static_cast<T*>(ctx);
         return (instance->*Fn)(static_cast<decltype(args)&&>(args)...);
@@ -100,7 +100,7 @@ struct Binder {
     template <auto Dispatch, typename Ops>
     static zx_status_t BindOps(async_dispatcher_t* dispatcher, zx::channel channel,
                                T* ctx, const Ops* ops) {
-        static_assert(fbl::is_same<decltype(Dispatch),
+        static_assert(std::is_same<decltype(Dispatch),
                                    zx_status_t (*)(void*, fidl_txn_t*, fidl_msg_t*, const Ops* ops)
                                   >::value, "Invalid dispatch function");
         return fidl_bind(dispatcher, channel.release(),

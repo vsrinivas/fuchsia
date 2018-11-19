@@ -4,10 +4,9 @@
 
 #include <stdlib.h>
 
-#include <block-client/cpp/client.h>
 #include <block-client/client.h>
+#include <block-client/cpp/client.h>
 #include <fbl/macros.h>
-#include <fbl/type_support.h>
 #include <lib/zx/fifo.h>
 #include <zircon/assert.h>
 #include <zircon/device/block.h>

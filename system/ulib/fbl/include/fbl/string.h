@@ -9,6 +9,7 @@
 #include <fbl/string_piece.h>
 #include <fbl/string_traits.h>
 #include <initializer_list>
+#include <type_traits>
 #include <zircon/compiler.h>
 
 namespace fbl {
@@ -107,7 +108,7 @@ public:
     //
     // Works with various string types including fbl::String, fbl::StringView,
     // std::string, and std::string_view.
-    template <typename T, typename = typename enable_if<is_string_like<T>::value>::type>
+    template <typename T, typename = typename std::enable_if<is_string_like<T>::value>::type>
     constexpr String(const T& value)
         : String(GetStringData(value), GetStringLength(value)) {}
 
@@ -178,7 +179,7 @@ public:
     //
     // Works with various string types including fbl::String, fbl::StringView,
     // std::string, and std::string_view.
-    template <typename T, typename = typename enable_if<is_string_like<T>::value>::type>
+    template <typename T, typename = typename std::enable_if<is_string_like<T>::value>::type>
     String& operator=(const T& value) {
         Set(GetStringData(value), GetStringLength(value));
         return *this;

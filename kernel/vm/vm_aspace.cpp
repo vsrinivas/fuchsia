@@ -14,7 +14,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
-#include <fbl/type_support.h>
 #include <inttypes.h>
 #include <kernel/cmdline.h>
 #include <kernel/thread.h>

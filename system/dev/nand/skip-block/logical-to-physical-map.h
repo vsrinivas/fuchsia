@@ -6,7 +6,6 @@
 
 #include <fbl/array.h>
 #include <fbl/macros.h>
-#include <fbl/type_support.h>
 #include <zircon/types.h>
 
 #include <utility>

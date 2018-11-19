@@ -19,7 +19,6 @@
 #include <object/resource.h>
 
 #include <fbl/ref_ptr.h>
-#include <fbl/type_support.h>
 
 #include "priv.h"
 
@@ -72,4 +71,3 @@ zx_status_t sys_object_set_profile(zx_handle_t handle,
 
     return profile->ApplyProfile(fbl::move(thread));
 }
-

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fbl/auto_call.h>
-#include <fbl/type_support.h>
 #include <unittest/unittest.h>
 
 #include <utility>

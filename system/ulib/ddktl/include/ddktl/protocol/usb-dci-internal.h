@@ -7,7 +7,7 @@
 #pragma once
 
 #include <ddk/protocol/usb-dci.h>
-#include <fbl/type_support.h>
+#include <fbl/macros.h>
 
 namespace ddk {
 namespace internal {

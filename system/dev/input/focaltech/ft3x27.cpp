@@ -9,7 +9,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/type_support.h>
 #include <hw/arch_ops.h>
 #include <hw/reg.h>
 #include <zircon/compiler.h>

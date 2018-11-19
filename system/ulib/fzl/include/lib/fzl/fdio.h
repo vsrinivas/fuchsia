@@ -4,11 +4,10 @@
 
 #pragma once
 
+#include <fbl/auto_call.h>
+#include <fbl/unique_fd.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/zx/channel.h>
-#include <fbl/auto_call.h>
-#include <fbl/type_support.h>
-#include <fbl/unique_fd.h>
 
 #include <utility>
 

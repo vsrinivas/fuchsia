@@ -5,7 +5,6 @@
 #pragma once
 
 #include <fbl/algorithm.h>
-#include <fbl/type_support.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <stdint.h>

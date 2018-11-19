@@ -6,7 +6,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/algorithm.h>
 #include <fbl/intrusive_single_list.h>
-#include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <lib/fdio/util.h>

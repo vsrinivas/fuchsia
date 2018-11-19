@@ -16,7 +16,6 @@
 #include <lib/zx/vmar.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/type_support.h>
 
 #include <zircon/process.h>
 #include <zircon/syscalls/debug.h>

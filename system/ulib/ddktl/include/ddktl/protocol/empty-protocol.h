@@ -6,7 +6,6 @@
 
 #include <ddk/driver.h>
 #include <ddktl/device-internal.h>
-#include <fbl/type_support.h>
 #include <zircon/assert.h>
 
 // Mixin for protocol which have no protocol ops.

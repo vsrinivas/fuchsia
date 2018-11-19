@@ -4,9 +4,8 @@
 
 #pragma once
 
+#include <type_traits>
 #include <zircon/compiler.h>
-
-#include <fbl/type_support.h>
 
 #include <lockdep/global_reference.h>
 
@@ -126,7 +125,7 @@ struct LockPolicyType {
 // Specialization that returns the lock policy type for the combination of
 // |Lock| and |Option| tagged by the macros above.
 template <typename Lock, typename Option>
-struct LockPolicyType<Lock, Option, fbl::void_t<LookupLockPolicy<Lock, Option>>> {
+struct LockPolicyType<Lock, Option, std::void_t<LookupLockPolicy<Lock, Option>>> {
     using Type = LookupLockPolicy<Lock, Option>;
 };
 

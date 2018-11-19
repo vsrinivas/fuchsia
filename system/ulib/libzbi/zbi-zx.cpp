@@ -4,7 +4,6 @@
 
 #include <libzbi/zbi-zx.h>
 
-#include <fbl/type_support.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>

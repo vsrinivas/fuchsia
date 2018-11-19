@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fbl/string.h>
-#include <fbl/type_support.h>
 #include <fbl/unique_fd.h>
 #include <lib/zx/socket.h>
 #include <lib/syslog/global.h>

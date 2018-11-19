@@ -10,7 +10,6 @@
 #ifndef _KERNEL
 #include <ddktl/mmio.h>
 #endif
-#include <fbl/type_support.h>
 #include <limits.h>
 #include <stdint.h>
 #include <zircon/assert.h>

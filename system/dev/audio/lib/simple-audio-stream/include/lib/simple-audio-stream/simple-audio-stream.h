@@ -11,7 +11,6 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/type_support.h>
 #include <fbl/vector.h>
 #include <lib/zx/vmo.h>
 #include <zircon/compiler.h>

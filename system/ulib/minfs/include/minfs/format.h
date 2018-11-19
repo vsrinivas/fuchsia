@@ -9,7 +9,6 @@
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
 #include <fbl/macros.h>
-#include <fbl/type_support.h>
 
 #include <zircon/types.h>
 

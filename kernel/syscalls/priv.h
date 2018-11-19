@@ -16,7 +16,6 @@ class user_out_handle;
 #define ZX_SYSCALL_PARAM_ATTR(x)
 #include <zircon/syscall-definitions.h>
 
-#include <fbl/type_support.h>
 #include <object/handle.h>
 #include <object/process_dispatcher.h>
 

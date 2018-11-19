@@ -5,7 +5,6 @@
 #pragma once
 
 #include <lib/zx/fifo.h>
-#include <fbl/type_support.h>
 
 #include <utility>
 

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <fbl/type_support.h>
+#include <fbl/macros.h>
 
 namespace ddk {
 namespace internal {

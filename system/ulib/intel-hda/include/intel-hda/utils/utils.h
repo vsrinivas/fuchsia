@@ -4,17 +4,16 @@
 
 #pragma once
 
-#include <zircon/device/audio.h>
-#include <zircon/types.h>
+#include <fbl/function.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/vector.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/vmo.h>
-#include <fbl/function.h>
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
-#include <fbl/type_support.h>
-#include <fbl/vector.h>
+#include <zircon/device/audio.h>
+#include <zircon/types.h>
 
 #include <intel-hda/utils/codec-caps.h>
 

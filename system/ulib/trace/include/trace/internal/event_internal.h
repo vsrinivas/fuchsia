@@ -470,7 +470,7 @@ __END_CDECLS
 #ifdef __cplusplus
 
 #include <fbl/string_traits.h>
-#include <fbl/type_support.h>
+#include <type_traits>
 
 namespace trace {
 namespace internal {
@@ -496,7 +496,8 @@ struct ArgumentValueMaker<decltype(nullptr)> {
 template <typename T>
 struct ArgumentValueMaker<
     T,
-    typename fbl::enable_if<fbl::is_signed_integer<T>::value &&
+    typename std::enable_if<std::is_signed<T>::value &&
+                            std::is_integral<T>::value &&
                             (sizeof(T) <= sizeof(int32_t))>::type> {
     static trace_arg_value_t Make(int32_t value) {
         return trace_make_int32_arg_value(value);
@@ -506,7 +507,7 @@ struct ArgumentValueMaker<
 template <typename T>
 struct ArgumentValueMaker<
     T,
-    typename fbl::enable_if<fbl::is_unsigned_integer<T>::value &&
+    typename std::enable_if<std::is_unsigned<T>::value &&
                             (sizeof(T) <= sizeof(uint32_t))>::type> {
     static trace_arg_value_t Make(uint32_t value) {
         return trace_make_uint32_arg_value(value);
@@ -516,7 +517,8 @@ struct ArgumentValueMaker<
 template <typename T>
 struct ArgumentValueMaker<
     T,
-    typename fbl::enable_if<fbl::is_signed_integer<T>::value &&
+    typename std::enable_if<std::is_signed<T>::value &&
+                            std::is_integral<T>::value &&
                             (sizeof(T) > sizeof(int32_t)) &&
                             (sizeof(T) <= sizeof(int64_t))>::type> {
     static trace_arg_value_t Make(int64_t value) {
@@ -527,7 +529,7 @@ struct ArgumentValueMaker<
 template <typename T>
 struct ArgumentValueMaker<
     T,
-    typename fbl::enable_if<fbl::is_unsigned_integer<T>::value &&
+    typename std::enable_if<std::is_unsigned<T>::value &&
                             (sizeof(T) > sizeof(uint32_t)) &&
                             (sizeof(T) <= sizeof(uint64_t))>::type> {
     static trace_arg_value_t Make(uint64_t value) {
@@ -536,8 +538,8 @@ struct ArgumentValueMaker<
 };
 
 template <typename T>
-struct ArgumentValueMaker<T, typename fbl::enable_if<fbl::is_enum<T>::value>::type> {
-    using UnderlyingType = typename fbl::underlying_type<T>::type;
+struct ArgumentValueMaker<T, typename std::enable_if<std::is_enum<T>::value>::type> {
+    using UnderlyingType = typename std::underlying_type<T>::type;
     static trace_arg_value_t Make(UnderlyingType value) {
         return ArgumentValueMaker<UnderlyingType>::Make(value);
     }
@@ -546,7 +548,7 @@ struct ArgumentValueMaker<T, typename fbl::enable_if<fbl::is_enum<T>::value>::ty
 template <typename T>
 struct ArgumentValueMaker<
     T,
-    typename fbl::enable_if<fbl::is_floating_point<T>::value>::type> {
+    typename std::enable_if<std::is_floating_point<T>::value>::type> {
     static trace_arg_value_t Make(double value) {
         return trace_make_double_arg_value(value);
     }
@@ -572,7 +574,7 @@ struct ArgumentValueMaker<const char*> {
 // std::string, and std::string_view.
 template <typename T>
 struct ArgumentValueMaker<T,
-                          typename fbl::enable_if<fbl::is_string_like<T>::value>::type> {
+                          typename std::enable_if<fbl::is_string_like<T>::value>::type> {
     static trace_arg_value_t Make(const T& value) {
         return trace_make_string_arg_value(
             trace_make_inline_string_ref(fbl::GetStringData(value),

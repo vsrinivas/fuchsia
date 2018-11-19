@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include <fbl/type_support.h>
 #include <lib/fzl/time.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>

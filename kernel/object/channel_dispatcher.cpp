@@ -22,7 +22,6 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <fbl/type_support.h>
 #include <zircon/rights.h>
 #include <zircon/types.h>
 

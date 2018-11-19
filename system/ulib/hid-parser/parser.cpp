@@ -7,7 +7,6 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/intrusive_double_list.h>
-#include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 

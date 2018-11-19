@@ -6,7 +6,6 @@
 
 #include <ddk/debug.h>
 #include <fbl/auto_lock.h>
-#include <fbl/type_support.h>
 #include <pretty/hexdump.h>
 #include <zircon/compiler.h>
 

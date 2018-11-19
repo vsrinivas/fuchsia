@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fbl/algorithm.h>
-#include <fbl/type_support.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/remoteio.h>

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fbl/integer_sequence.h>
-#include <fbl/type_support.h>
 #include <limits>
 #include <stdint.h>
 #include <unittest/unittest.h>

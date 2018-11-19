@@ -6,7 +6,6 @@
 #include "mdio-regs.h"
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
-#include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 #include <stdio.h>
 #include <string.h>

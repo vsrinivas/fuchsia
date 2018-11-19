@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fbl/macros.h>
 #include <fbl/type_support.h>
 
 struct s {};

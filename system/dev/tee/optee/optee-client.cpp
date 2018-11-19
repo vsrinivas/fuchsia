@@ -5,7 +5,6 @@
 #include <ddk/debug.h>
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
-#include <fbl/type_support.h>
 #include <fbl/vector.h>
 #include <lib/zx/vmo.h>
 #include <tee-client-api/tee-client-types.h>
