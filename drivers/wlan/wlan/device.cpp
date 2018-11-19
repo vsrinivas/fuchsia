@@ -681,7 +681,7 @@ void Device::MainLoop() {
         case ZX_PKT_TYPE_SIGNAL_ONE:
             switch (ToPortKeyType(pkt.key)) {
             case PortKeyType::kService:
-                ProcessChannelPacketLocked(pkt);
+                ProcessChannelPacketLocked(pkt.signal.count);
                 break;
             default:
                 errorf("unknown port key: %" PRIu64 "\n", pkt.key);
@@ -700,14 +700,14 @@ void Device::MainLoop() {
     channel_.reset();
 }
 
-void Device::ProcessChannelPacketLocked(const zx_port_packet_t& pkt) {
+void Device::ProcessChannelPacketLocked(uint64_t signal_count) {
     if (!channel_.is_valid()) {
         // It could be that we closed the channel (e.g., in WlanUnbind()) but there is still
         // a pending packet in the port that indicates read availability on that channel.
         // In that case we simply ignore the packet since we can't read from the channel anyway.
         return;
     }
-    for (size_t i = 0; i < pkt.signal.count; ++i) {
+    for (size_t i = 0; i < signal_count; ++i) {
         auto buffer = LargeBufferAllocator::New();
         if (buffer == nullptr) {
             errorf("no free buffers available!\n");
@@ -731,20 +731,9 @@ void Device::ProcessChannelPacketLocked(const zx_port_packet_t& pkt) {
 
         auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), read));
         packet->set_peer(Packet::Peer::kService);
-        {
-            std::lock_guard<std::mutex> lock(packet_queue_lock_);
-            bool was_empty = packet_queue_.is_empty();
-            packet_queue_.Enqueue(std::move(packet));
-            if (was_empty) {
-                status = QueueDevicePortPacket(DevicePacket::kPacketQueued);
-                if (status != ZX_OK) {
-                    warnf("could not send packet queued msg err=%d\n", status);
-                    packet_queue_.UndoEnqueue();
-                    // TODO(tkilbourn): recover as gracefully as possible
-                    channel_.reset();
-                    return;
-                }
-            }
+        status = dispatcher_->HandlePacket(std::move(packet));
+        if (status != ZX_OK) {
+            errorf("Could not handle service packet: %s\n", zx_status_get_string(status));
         }
     }
     RegisterChannelWaitLocked();

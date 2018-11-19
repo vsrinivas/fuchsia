@@ -112,7 +112,7 @@ class Device : public DeviceInterface {
     zx_status_t QueuePacket(fbl::unique_ptr<Packet> packet) __TA_EXCLUDES(packet_queue_lock_);
 
     void MainLoop();
-    void ProcessChannelPacketLocked(const zx_port_packet_t& pkt) __TA_REQUIRES(lock_);
+    void ProcessChannelPacketLocked(uint64_t signal_count) __TA_REQUIRES(lock_);
     zx_status_t RegisterChannelWaitLocked() __TA_REQUIRES(lock_);
     // Queue a packet that does not contain user data, either there is no user data or user data is
     // too large and needs to be enqueued into packet_queue_ separately.
