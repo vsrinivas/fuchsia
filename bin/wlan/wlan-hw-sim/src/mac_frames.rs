@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {bitfield::{bitfield, bitfield_bitrange, bitfield_fields},
-     byteorder::{LittleEndian, WriteBytesExt},
-     std::io};
+#[allow(unused_imports)]
+use bitfield::{bitfield, bitfield_bitrange, bitfield_fields};
+use byteorder::{LittleEndian, WriteBytesExt};
+use std::io;
 
 // IEEE Std 802.11-2016, 9.2.4.1.3 Table 9-1
 #[derive(Clone, Copy, Debug)]
