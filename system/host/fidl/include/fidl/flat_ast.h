@@ -460,7 +460,7 @@ struct Type {
         : kind(kind), size(size), nullability(nullability) {}
 
     const Kind kind;
-    // Set at construction time for most Types. Identifier types get
+    // Set at construction time for most types. Identifier types get
     // this set later, during compilation.
     uint32_t size;
     const types::Nullability nullability;
@@ -639,11 +639,11 @@ struct IdentifierType : public Type {
 };
 
 struct Using {
-    Using(Name name, std::unique_ptr<PrimitiveType> type)
-        : name(std::move(name)), type(std::move(type)) {}
+    Using(Name name, const PrimitiveType* type)
+        : name(std::move(name)), type(type) {}
 
     const Name name;
-    const std::unique_ptr<PrimitiveType> type;
+    const PrimitiveType* type;
 };
 
 struct Const : public Decl {
@@ -793,6 +793,136 @@ struct Interface : public Decl {
     std::vector<const Method*> all_methods;
 };
 
+// Typespace provides builders for all types (e.g. array, vector, string), and
+// ensures canonicalization, i.e. the same type is represented by one object,
+// shared amongst all uses of said type. For instance, while the text
+// `vector<uint8>:7` may appear multiple times in source, these all indicate
+// the same type.
+class Typespace {
+public:
+    enum LookupMode {
+        kNoForwardReferences,
+        kAllowForwardReferences,
+    };
+
+    // Lookup looks up a type by its name, or alias, and returns the type
+    // which corresponds, whilst respecting the nullability qualifier.
+    // If the type exists, returns the type, otherwise returns nullptr.
+    //
+    // If forward references are allowed, a placeholder type is returned
+    // if the type does not exist yet. This allows forward references to be
+    // made, and later resolved.
+    //
+    // See also RegisterDecl, RegisterAlias, and
+    // EnsureAllTypesHaveBeenResolved.
+    Type* Lookup(const flat::Name& name, types::Nullability nullability,
+                 LookupMode lookup_mode);
+
+    // ArrayType creates or returns an array type for the |element_type|,
+    // and |element_count|.
+    ArrayType* ArrayType(Type* element_type, Size element_count);
+
+    // VectorType creates or returns a vector type for the |element_type|,
+    // |max_size|, and |nullability|.
+    VectorType* VectorType(Type* element_type, Size max_size,
+                           types::Nullability nullability);
+
+    // StringType creates or returns a string type for |max_size|,
+    // and |nullability|.
+    StringType* StringType(Size max_size, types::Nullability nullability);
+
+    // HandleType creates or returns a handle type for the |subtype|,
+    // and |nullability|.
+    HandleType* HandleType(types::HandleSubtype subtype, types::Nullability nullability);
+
+    // RequestType creates or returns an interface request type for the |name|,
+    // and |nullability|.
+    RequestHandleType* RequestType(Name name, types::Nullability nullability);
+
+    // RegisterDecl registers a declaration under a specific name. Registering
+    // a declaration resolves all prior references to this named type, i.e.
+    // earlier lookups from forward references.
+    // This method returns true if there was no name conflict, false otherwise.
+    bool RegisterDecl(Name name, Decl* decl);
+
+    // RegisterAlias registers a type alias, such as `using int = int32;`. An
+    // aliased type can be referenced by either name, with no behavioral
+    // difference.
+    // This method returns true if there was no name conflict, false otherwise.
+    bool RegisterAlias(Name name, Name alias);
+
+    // EnsureAllTypesHaveBeenResolved checks that all forward references have
+    // been propertly resolved.
+    bool EnsureAllTypesHaveBeenResolved();
+
+    // BoostrapRootTypes creates a instance with all primitive types. It is
+    // meant to be used as the top-level types lookup mechanism, providing
+    // definitional meaning to names such as `int64`, or `bool`.
+    static Typespace RootTypes() {
+        Typespace root_typespace;
+        ByName primitive_types;
+        auto add = [&](const std::string name, types::PrimitiveSubtype subtype) {
+            root_typespace.owned_names_.push_back(
+                std::make_unique<Name>(nullptr, name));
+            primitive_types.emplace(
+                root_typespace.owned_names_.back().get(),
+                std::make_unique<PrimitiveType>(subtype));
+        };
+
+        add("bool", types::PrimitiveSubtype::kBool);
+
+        add("int8", types::PrimitiveSubtype::kInt8);
+        add("int16", types::PrimitiveSubtype::kInt16);
+        add("int32", types::PrimitiveSubtype::kInt32);
+        add("int64", types::PrimitiveSubtype::kInt64);
+        add("uint8", types::PrimitiveSubtype::kUint8);
+        add("uint16", types::PrimitiveSubtype::kUint16);
+        add("uint32", types::PrimitiveSubtype::kUint32);
+        add("uint64", types::PrimitiveSubtype::kUint64);
+
+        add("float32", types::PrimitiveSubtype::kFloat32);
+        add("float64", types::PrimitiveSubtype::kFloat64);
+
+        root_typespace.named_types_.emplace(
+            types::Nullability::kNonnullable, std::move(primitive_types));
+        return root_typespace;
+    }
+
+private:
+    // CreateForwardDeclaredType creates a placeholder for the named type. As
+    // the name suggest, this type must be resolved by registering a named type
+    // for it.
+    //
+    // See also RegisterDecl, RegisterAlias, and
+    // EnsureAllTypesHaveBeenResolved.
+    Type* CreateForwardDeclaredType(const flat::Name& name, types::Nullability nullability);
+
+    struct cmpName {
+        bool operator()(const flat::Name* a, const flat::Name* b) const {
+            return *a < *b;
+        }
+    };
+
+    using BySize = std::map<const Size, std::unique_ptr<Type>>;
+    using ByNullability = std::map<types::Nullability, std::unique_ptr<Type>>;
+    using ByName = std::map<const flat::Name*, std::unique_ptr<Type>, cmpName>;
+    using ByHandleSubtype = std::map<types::HandleSubtype, std::unique_ptr<Type>>;
+
+    using ByNullabilityThenBySize = std::map<types::Nullability, BySize>;
+    using ByNullabilityThenByName = std::map<types::Nullability, ByName>;
+    using ByNullabilityThenByHandleSubtype = std::map<types::Nullability, ByHandleSubtype>;
+
+    std::map<const Type*, BySize> array_types_;
+    std::map<const Type*, ByNullabilityThenBySize> vector_types_;
+    ByNullabilityThenBySize string_types_;
+    ByNullabilityThenByHandleSubtype handle_types_;
+    ByNullabilityThenByName request_types_;
+    ByNullabilityThenByName named_types_;
+    ByName aliases_;
+
+    std::vector<std::unique_ptr<Name>> owned_names_;
+};
+
 class Libraries {
 public:
     // Insert |library|.
@@ -824,8 +954,8 @@ private:
     bool InsertByName(StringView filename, const std::vector<StringView>& name,
                       Library* library);
 
-    typedef std::map<std::vector<StringView>, Library*> ByName;
-    typedef std::map<std::string, std::unique_ptr<ByName>> ByFilename;
+    using ByName = std::map<std::vector<StringView>, Library*>;
+    using ByFilename = std::map<std::string, std::unique_ptr<ByName>>;
 
     ByFilename dependencies_;
     std::set<Library*> dependencies_aggregate_;
@@ -833,8 +963,8 @@ private:
 
 class Library {
 public:
-    Library(const Libraries* all_libraries, ErrorReporter* error_reporter)
-        : all_libraries_(all_libraries), error_reporter_(error_reporter) {}
+    Library(const Libraries* all_libraries, ErrorReporter* error_reporter, Typespace* typespace)
+        : all_libraries_(all_libraries), error_reporter_(error_reporter), typespace_(typespace) {}
 
     bool ConsumeFile(std::unique_ptr<raw::File> file);
     bool Compile();
@@ -889,9 +1019,13 @@ private:
     // return the declaration corresponding to name.
     Decl* LookupConstant(const Type* type, const Name& name);
 
+    // Given a name, checks whether that name corresponds to a primitive type. If
+    // so, returns the type. Otherwise, returns nullptr.
+    const PrimitiveType* LookupPrimitiveType(const Name& name) const;
+
     // Given a name, checks whether that name corresponds to a type alias. If
     // so, returns the type. Otherwise, returns nullptr.
-    PrimitiveType* LookupTypeAlias(const Name& name) const;
+    const PrimitiveType* LookupTypeAlias(const Name& name) const;
 
     // Returns nullptr when |type| does not correspond directly to a
     // declaration. For example, if |type| refers to int32 or if it is
@@ -1018,6 +1152,7 @@ private:
     std::map<const Name*, Const*, PtrCompare<Name>> constants_;
 
     ErrorReporter* error_reporter_;
+    Typespace* typespace_;
 
     uint32_t anon_counter_ = 0;
 };

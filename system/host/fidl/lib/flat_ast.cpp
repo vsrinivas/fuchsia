@@ -303,10 +303,6 @@ TypeShape PrimitiveTypeShape(types::PrimitiveSubtype type) {
     }
 }
 
-std::unique_ptr<PrimitiveType> MakePrimitiveType(const raw::PrimitiveType* primitive_type) {
-    return std::make_unique<PrimitiveType>(primitive_type->subtype);
-}
-
 } // namespace
 
 bool Decl::HasAttribute(fidl::StringView name) const {
@@ -375,6 +371,34 @@ bool IsSimple(const Type* type, const FieldShape& fieldshape) {
             return fieldshape.Depth() == 0u;
         }
     }
+    }
+}
+
+Type* Typespace::Lookup(const flat::Name& name, types::Nullability nullability,
+                        LookupMode lookup_mode) {
+    assert(lookup_mode == LookupMode::kNoForwardReferences && "forward refs not implemented yet");
+
+    const auto by_nullability_iter = named_types_.find(nullability);
+    if (by_nullability_iter != named_types_.end()) {
+        // Direct lookup.
+        const ByName& by_name = by_nullability_iter->second;
+        auto by_name_iter1 = by_name.find(&name);
+        if (by_name_iter1 != by_name.end())
+            return by_name_iter1->second.get();
+
+        // Global lookup.
+        Name global_name(nullptr, name.name_part());
+        auto by_name_iter2 = by_name.find(&global_name);
+        if (by_name_iter2 != by_name.end())
+            return by_name_iter2->second.get();
+    }
+
+    // Unknown.
+    switch (lookup_mode) {
+    case LookupMode::kNoForwardReferences:
+        return nullptr;
+    case LookupMode::kAllowForwardReferences:
+        return CreateForwardDeclaredType(name, nullability);
     }
 }
 
@@ -617,26 +641,34 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, SourceLocation lo
         *out_type = std::make_unique<RequestHandleType>(std::move(name), request_type->nullability);
         break;
     }
-    case raw::Type::Kind::kPrimitive: {
-        auto primitive_type = static_cast<raw::PrimitiveType*>(raw_type.get());
-        *out_type = MakePrimitiveType(primitive_type);
-        break;
-    }
     case raw::Type::Kind::kIdentifier: {
         auto identifier_type = static_cast<raw::IdentifierType*>(raw_type.get());
         Name name;
         if (!CompileCompoundIdentifier(identifier_type->identifier.get(), location, &name)) {
             return false;
         }
-        auto primitive_type = LookupTypeAlias(name);
+
+        // Special case: primitives.
+        const auto primitive_type = LookupPrimitiveType(name);
         if (primitive_type != nullptr) {
             if (identifier_type->nullability != types::Nullability::kNonnullable) {
                 return Fail(raw_type->location(), "primitives cannot be nullable");
             }
             *out_type = std::make_unique<PrimitiveType>(*primitive_type);
-        } else {
-            *out_type = std::make_unique<IdentifierType>(std::move(name), identifier_type->nullability);
+            return true;
         }
+
+        // Special case: type aliases.
+        const auto alias_type = LookupTypeAlias(name);
+        if (alias_type != nullptr) {
+            if (identifier_type->nullability != types::Nullability::kNonnullable) {
+                return Fail(raw_type->location(), "type aliases cannot be nullable");
+            }
+            *out_type = std::make_unique<PrimitiveType>(*alias_type);
+            return true;
+        }
+
+        *out_type = std::make_unique<IdentifierType>(std::move(name), identifier_type->nullability);
         break;
     }
     }
@@ -644,7 +676,7 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, SourceLocation lo
 }
 
 bool Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
-    if (using_directive->maybe_primitive)
+    if (using_directive->maybe_type)
         return ConsumeTypeAlias(std::move(using_directive));
 
     std::vector<StringView> library_name;
@@ -678,10 +710,23 @@ bool Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
 }
 
 bool Library::ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive) {
-    assert(using_directive->maybe_primitive);
+    assert(using_directive->maybe_type);
+
     auto location = using_directive->using_path->components[0]->location();
-    auto name = Name(this, location);
-    auto using_dir = std::make_unique<Using>(std::move(name), MakePrimitiveType(using_directive->maybe_primitive.get()));
+    auto alias_name = Name(this, location);
+    Name type_name;
+    if (!CompileCompoundIdentifier(using_directive->maybe_type->identifier.get(),
+                                   using_directive->maybe_type->location(),
+                                   &type_name)) {
+        return false;
+    }
+    auto primitive_type = LookupPrimitiveType(type_name);
+    if (primitive_type == nullptr) {
+        std::string message("may only alias primitive types, found ");
+        message += NameName(type_name, ".", "/");
+        return Fail(location, message);
+    }
+    auto using_dir = std::make_unique<Using>(std::move(alias_name), primitive_type);
     type_aliases_.emplace(&using_dir->name, using_dir.get());
     using_.push_back(std::move(using_dir));
     return true;
@@ -719,8 +764,21 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
         members.emplace_back(location, std::move(value), std::move(attributes));
     }
     auto type = types::PrimitiveSubtype::kUint32;
-    if (enum_declaration->maybe_subtype)
-        type = enum_declaration->maybe_subtype->subtype;
+    if (enum_declaration->maybe_subtype) {
+        auto location = enum_declaration->maybe_subtype->location();
+        Name subtype_name;
+        if (!CompileCompoundIdentifier(enum_declaration->maybe_subtype->identifier.get(),
+                                       location, &subtype_name)) {
+            return false;
+        }
+        auto primitive_type = LookupPrimitiveType(subtype_name);
+        if (primitive_type == nullptr) {
+            std::string message("enums may only be of primitive types, found ");
+            message += NameName(subtype_name, ".", "/");
+            return Fail(location, message);
+        }
+        type = primitive_type->subtype;
+    }
 
     auto attributes = std::move(enum_declaration->attributes);
     ValidateAttributesPlacement(AttributePlacement::kEnumDecl, attributes.get());
@@ -1355,11 +1413,21 @@ Decl* Library::LookupConstant(const Type* type, const Name& name) {
 // Library resolution is concerned with resolving identifiers to their
 // declarations, and with computing type sizes and alignments.
 
-PrimitiveType* Library::LookupTypeAlias(const Name& name) const {
-    auto it = type_aliases_.find(&name);
+const PrimitiveType* Library::LookupPrimitiveType(const Name& name) const {
+    auto type = typespace_->Lookup(name, types::Nullability::kNonnullable,
+                                   Typespace::LookupMode::kNoForwardReferences);
+    if (type == nullptr)
+        return nullptr;
+    if (type->kind != Type::Kind::kPrimitive)
+        return nullptr;
+    return static_cast<PrimitiveType*>(type);
+}
+
+const PrimitiveType* Library::LookupTypeAlias(const Name& name) const {
+    const auto it = type_aliases_.find(&name);
     if (it == type_aliases_.end())
         return nullptr;
-    return it->second->type.get();
+    return it->second->type;
 }
 
 Decl* Library::LookupDeclByType(const Type* type, LookupOption option) const {

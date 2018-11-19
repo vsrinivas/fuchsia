@@ -139,10 +139,6 @@ public:
             DISPATCH_TO(RequestHandleType, Type, element);
             break;
         }
-        case Type::Kind::kPrimitive: {
-            DISPATCH_TO(PrimitiveType, Type, element);
-            break;
-        }
         case Type::Kind::kIdentifier: {
             DISPATCH_TO(IdentifierType, Type, element);
             break;
@@ -166,9 +162,6 @@ public:
         element->Accept(*this);
     }
     virtual void OnRequestHandleType(std::unique_ptr<RequestHandleType> const& element) {
-        element->Accept(*this);
-    }
-    virtual void OnPrimitiveType(std::unique_ptr<PrimitiveType> const& element) {
         element->Accept(*this);
     }
     virtual void OnIdentifierType(std::unique_ptr<IdentifierType> const& element) {

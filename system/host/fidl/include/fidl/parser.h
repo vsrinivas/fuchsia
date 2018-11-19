@@ -191,11 +191,11 @@ private:
 
     std::unique_ptr<raw::Using> ParseUsing();
 
+    std::unique_ptr<raw::IdentifierType> ParseIdentifierType();
     std::unique_ptr<raw::ArrayType> ParseArrayType();
     std::unique_ptr<raw::VectorType> ParseVectorType();
     std::unique_ptr<raw::StringType> ParseStringType();
     std::unique_ptr<raw::HandleType> ParseHandleType();
-    std::unique_ptr<raw::PrimitiveType> ParsePrimitiveType();
     std::unique_ptr<raw::RequestHandleType> ParseRequestHandleType();
     std::unique_ptr<raw::Type> ParseType();
 

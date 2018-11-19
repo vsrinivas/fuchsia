@@ -231,7 +231,6 @@ public:
         kString,
         kHandle,
         kRequestHandle,
-        kPrimitive,
         kIdentifier,
     };
 
@@ -301,16 +300,6 @@ public:
     types::Nullability nullability;
 };
 
-class PrimitiveType : public Type {
-public:
-    explicit PrimitiveType(SourceElement const& element, types::PrimitiveSubtype subtype)
-        : Type(element.start_, element.end_, Kind::kPrimitive), subtype(subtype) {}
-
-    void Accept(TreeVisitor& visitor);
-
-    types::PrimitiveSubtype subtype;
-};
-
 class IdentifierType : public Type {
 public:
     IdentifierType(SourceElement const& element, std::unique_ptr<CompoundIdentifier> identifier, types::Nullability nullability)
@@ -324,8 +313,8 @@ public:
 
 class Using : public SourceElement {
 public:
-    Using(SourceElement const& element, std::unique_ptr<CompoundIdentifier> using_path, std::unique_ptr<Identifier> maybe_alias, std::unique_ptr<PrimitiveType> maybe_primitive)
-        : SourceElement(element), using_path(std::move(using_path)), maybe_alias(std::move(maybe_alias)), maybe_primitive(std::move(maybe_primitive)) {}
+    Using(SourceElement const& element, std::unique_ptr<CompoundIdentifier> using_path, std::unique_ptr<Identifier> maybe_alias, std::unique_ptr<IdentifierType> maybe_type)
+        : SourceElement(element), using_path(std::move(using_path)), maybe_alias(std::move(maybe_alias)), maybe_type(std::move(maybe_type)) {}
 
     void Accept(TreeVisitor& visitor);
 
@@ -333,7 +322,7 @@ public:
     std::unique_ptr<Identifier> maybe_alias;
     // TODO(pascal): We should be more explicit for type aliases such as
     // `using foo = int8;` and use a special purpose AST element.
-    std::unique_ptr<PrimitiveType> maybe_primitive;
+    std::unique_ptr<IdentifierType> maybe_type;
 };
 
 class ConstDeclaration : public SourceElement {
@@ -367,7 +356,7 @@ class EnumDeclaration : public SourceElement {
 public:
     EnumDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
                     std::unique_ptr<Identifier> identifier,
-                    std::unique_ptr<PrimitiveType> maybe_subtype,
+                    std::unique_ptr<IdentifierType> maybe_subtype,
                     std::vector<std::unique_ptr<EnumMember>> members)
         : SourceElement(element), attributes(std::move(attributes)), identifier(std::move(identifier)),
           maybe_subtype(std::move(maybe_subtype)), members(std::move(members)) {}
@@ -376,7 +365,7 @@ public:
 
     std::unique_ptr<AttributeList> attributes;
     std::unique_ptr<Identifier> identifier;
-    std::unique_ptr<PrimitiveType> maybe_subtype;
+    std::unique_ptr<IdentifierType> maybe_subtype;
     std::vector<std::unique_ptr<EnumMember>> members;
 };
 

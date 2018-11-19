@@ -27,8 +27,8 @@ public:
         : source_file_(MakeSourceFile(filename, raw_source_code)),
           lexer_(source_file_, &error_reporter_),
           parser_(&lexer_, &error_reporter_),
-          library_(std::make_unique<fidl::flat::Library>(&all_libraries_, &error_reporter_)) {
-    }
+          library_(std::make_unique<fidl::flat::Library>(
+              &all_libraries_, &error_reporter_, &typespace_)) {}
 
     bool AddDependentLibrary(TestLibrary& dependent_library) {
         // For testing, we have conveniences to construct compiled test
@@ -106,6 +106,10 @@ public:
         return nullptr;
     }
 
+    const fidl::flat::Library* library() const {
+        return library_.get();
+    }
+
     fidl::SourceFile source_file() {
         return source_file_;
     }
@@ -121,6 +125,7 @@ public:
 protected:
     fidl::SourceFile source_file_;
     fidl::ErrorReporter error_reporter_;
+    fidl::flat::Typespace typespace_ = fidl::flat::Typespace::RootTypes();
     fidl::Lexer lexer_;
     fidl::Parser parser_;
     fidl::flat::Libraries all_libraries_;

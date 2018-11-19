@@ -62,18 +62,6 @@ KEYWORD(Struct, "struct")
 KEYWORD(Table, "table")
 KEYWORD(Union, "union")
 
-KEYWORD(Bool, "bool")
-KEYWORD(Int8, "int8")
-KEYWORD(Int16, "int16")
-KEYWORD(Int32, "int32")
-KEYWORD(Int64, "int64")
-KEYWORD(Uint8, "uint8")
-KEYWORD(Uint16, "uint16")
-KEYWORD(Uint32, "uint32")
-KEYWORD(Uint64, "uint64")
-KEYWORD(Float32, "float32")
-KEYWORD(Float64, "float64")
-
 KEYWORD(True, "true")
 KEYWORD(False, "false")
 

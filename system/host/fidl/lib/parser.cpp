@@ -17,21 +17,7 @@ namespace fidl {
 #define CASE_IDENTIFIER(K) \
     Token::KindAndSubkind(Token::Kind::kIdentifier, K).combined()
 
-#define TOKEN_PRIMITIVE_TYPE_CASES                  \
-    case CASE_IDENTIFIER(Token::Subkind::kBool):    \
-    case CASE_IDENTIFIER(Token::Subkind::kInt8):    \
-    case CASE_IDENTIFIER(Token::Subkind::kInt16):   \
-    case CASE_IDENTIFIER(Token::Subkind::kInt32):   \
-    case CASE_IDENTIFIER(Token::Subkind::kInt64):   \
-    case CASE_IDENTIFIER(Token::Subkind::kUint8):   \
-    case CASE_IDENTIFIER(Token::Subkind::kUint16):  \
-    case CASE_IDENTIFIER(Token::Subkind::kUint32):  \
-    case CASE_IDENTIFIER(Token::Subkind::kUint64):  \
-    case CASE_IDENTIFIER(Token::Subkind::kFloat32): \
-    case CASE_IDENTIFIER(Token::Subkind::kFloat64)
-
 #define TOKEN_TYPE_CASES                           \
-    TOKEN_PRIMITIVE_TYPE_CASES:                    \
     case CASE_IDENTIFIER(Token::Subkind::kNone):   \
     case CASE_IDENTIFIER(Token::Subkind::kArray):  \
     case CASE_IDENTIFIER(Token::Subkind::kVector): \
@@ -341,7 +327,7 @@ std::unique_ptr<raw::Using> Parser::ParseUsing() {
         return Fail();
 
     std::unique_ptr<raw::Identifier> maybe_alias;
-    std::unique_ptr<raw::PrimitiveType> maybe_primitive;
+    std::unique_ptr<raw::IdentifierType> maybe_type;
 
     if (MaybeConsumeToken(IdentifierOfSubkind(Token::Subkind::kAs))) {
         if (!Ok())
@@ -352,12 +338,26 @@ std::unique_ptr<raw::Using> Parser::ParseUsing() {
     } else if (MaybeConsumeToken(OfKind(Token::Kind::kEqual))) {
         if (!Ok() || using_path->components.size() != 1u)
             return Fail();
-        maybe_primitive = ParsePrimitiveType();
+        maybe_type = ParseIdentifierType();
         if (!Ok())
             return Fail();
     }
 
-    return std::make_unique<raw::Using>(scope.GetSourceElement(), std::move(using_path), std::move(maybe_alias), std::move(maybe_primitive));
+    return std::make_unique<raw::Using>(scope.GetSourceElement(), std::move(using_path), std::move(maybe_alias), std::move(maybe_type));
+}
+
+std::unique_ptr<raw::IdentifierType> Parser::ParseIdentifierType() {
+    ASTScope scope(this);
+    auto identifier = ParseCompoundIdentifier();
+    if (!Ok())
+        return Fail();
+    auto nullability = types::Nullability::kNonnullable;
+    if (MaybeConsumeToken(OfKind(Token::Kind::kQuestion))) {
+        if (!Ok())
+            return Fail();
+        nullability = types::Nullability::kNullable;
+    }
+    return std::make_unique<raw::IdentifierType>(scope.GetSourceElement(), std::move(identifier), nullability);
 }
 
 std::unique_ptr<raw::ArrayType> Parser::ParseArrayType() {
@@ -468,53 +468,6 @@ std::unique_ptr<raw::HandleType> Parser::ParseHandleType() {
     return std::make_unique<raw::HandleType>(scope.GetSourceElement(), subtype, nullability);
 }
 
-std::unique_ptr<raw::PrimitiveType> Parser::ParsePrimitiveType() {
-    types::PrimitiveSubtype subtype;
-
-    switch (Peek().combined()) {
-    case CASE_IDENTIFIER(Token::Subkind::kBool):
-        subtype = types::PrimitiveSubtype::kBool;
-        break;
-    case CASE_IDENTIFIER(Token::Subkind::kInt8):
-        subtype = types::PrimitiveSubtype::kInt8;
-        break;
-    case CASE_IDENTIFIER(Token::Subkind::kInt16):
-        subtype = types::PrimitiveSubtype::kInt16;
-        break;
-    case CASE_IDENTIFIER(Token::Subkind::kInt32):
-        subtype = types::PrimitiveSubtype::kInt32;
-        break;
-    case CASE_IDENTIFIER(Token::Subkind::kInt64):
-        subtype = types::PrimitiveSubtype::kInt64;
-        break;
-    case CASE_IDENTIFIER(Token::Subkind::kUint8):
-        subtype = types::PrimitiveSubtype::kUint8;
-        break;
-    case CASE_IDENTIFIER(Token::Subkind::kUint16):
-        subtype = types::PrimitiveSubtype::kUint16;
-        break;
-    case CASE_IDENTIFIER(Token::Subkind::kUint32):
-        subtype = types::PrimitiveSubtype::kUint32;
-        break;
-    case CASE_IDENTIFIER(Token::Subkind::kUint64):
-        subtype = types::PrimitiveSubtype::kUint64;
-        break;
-    case CASE_IDENTIFIER(Token::Subkind::kFloat32):
-        subtype = types::PrimitiveSubtype::kFloat32;
-        break;
-    case CASE_IDENTIFIER(Token::Subkind::kFloat64):
-        subtype = types::PrimitiveSubtype::kFloat64;
-        break;
-    default:
-        return Fail();
-    }
-    ASTScope scope(this);
-    ConsumeToken(OfKind(Peek().kind()));
-    if (!Ok())
-        return Fail();
-    return std::make_unique<raw::PrimitiveType>(scope.GetSourceElement(), subtype);
-}
-
 std::unique_ptr<raw::RequestHandleType> Parser::ParseRequestHandleType() {
     ASTScope scope(this);
     ConsumeToken(IdentifierOfSubkind(Token::Subkind::kRequest));
@@ -541,17 +494,10 @@ std::unique_ptr<raw::RequestHandleType> Parser::ParseRequestHandleType() {
 std::unique_ptr<raw::Type> Parser::ParseType() {
     switch (Peek().combined()) {
     case CASE_TOKEN(Token::Kind::kIdentifier): {
-        ASTScope scope(this);
-        auto identifier = ParseCompoundIdentifier();
+        auto type = ParseIdentifierType();
         if (!Ok())
             return Fail();
-        auto nullability = types::Nullability::kNonnullable;
-        if (MaybeConsumeToken(OfKind(Token::Kind::kQuestion))) {
-            if (!Ok())
-                return Fail();
-            nullability = types::Nullability::kNullable;
-        }
-        return std::make_unique<raw::IdentifierType>(scope.GetSourceElement(), std::move(identifier), nullability);
+        return type;
     }
 
     case CASE_IDENTIFIER(Token::Subkind::kArray): {
@@ -584,13 +530,6 @@ std::unique_ptr<raw::Type> Parser::ParseType() {
 
     case CASE_IDENTIFIER(Token::Subkind::kRequest): {
         auto type = ParseRequestHandleType();
-        if (!Ok())
-            return Fail();
-        return type;
-    }
-
-    TOKEN_PRIMITIVE_TYPE_CASES : {
-        auto type = ParsePrimitiveType();
         if (!Ok())
             return Fail();
         return type;
@@ -654,11 +593,11 @@ Parser::ParseEnumDeclaration(std::unique_ptr<raw::AttributeList> attributes, AST
     auto identifier = ParseIdentifier();
     if (!Ok())
         return Fail();
-    std::unique_ptr<raw::PrimitiveType> subtype;
+    std::unique_ptr<raw::IdentifierType> maybe_subtype;
     if (MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
         if (!Ok())
             return Fail();
-        subtype = ParsePrimitiveType();
+        maybe_subtype = ParseIdentifierType();
         if (!Ok())
             return Fail();
     }
@@ -695,7 +634,7 @@ Parser::ParseEnumDeclaration(std::unique_ptr<raw::AttributeList> attributes, AST
 
     return std::make_unique<raw::EnumDeclaration>(scope.GetSourceElement(),
                                                   std::move(attributes), std::move(identifier),
-                                                  std::move(subtype), std::move(members));
+                                                  std::move(maybe_subtype), std::move(members));
 }
 
 std::unique_ptr<raw::Parameter> Parser::ParseParameter() {

@@ -27,9 +27,8 @@ struct Bad {
     ASSERT_FALSE(library.Compile());
     const auto& errors = library.errors();
     ASSERT_EQ(1, errors.size());
-    // TODO(FIDL-361): Improve error message.
     ASSERT_STR_STR(errors[0].c_str(),
-        "unexpected token Question, was expecting Identifier");
+        "primitives cannot be nullable");
 
     END_TEST;
 }
@@ -51,7 +50,7 @@ struct Bad {
     const auto& errors = library.errors();
     ASSERT_EQ(1, errors.size());
     ASSERT_STR_STR(errors[0].c_str(),
-        "primitives cannot be nullable");
+        "type aliases cannot be nullable");
 
     END_TEST;
 }

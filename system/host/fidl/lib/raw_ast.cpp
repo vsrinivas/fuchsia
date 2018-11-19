@@ -106,11 +106,6 @@ void RequestHandleType::Accept(TreeVisitor& visitor) {
     visitor.OnNullability(nullability);
 }
 
-void PrimitiveType::Accept(TreeVisitor& visitor) {
-    SourceElementMark sem(visitor, *this);
-    visitor.OnPrimitiveSubtype(subtype);
-}
-
 void IdentifierType::Accept(TreeVisitor& visitor) {
     SourceElementMark sem(visitor, *this);
     visitor.OnCompoundIdentifier(identifier);
@@ -123,8 +118,8 @@ void Using::Accept(TreeVisitor& visitor) {
     if (maybe_alias != nullptr) {
         visitor.OnIdentifier(maybe_alias);
     }
-    if (maybe_primitive != nullptr) {
-        visitor.OnPrimitiveType(maybe_primitive);
+    if (maybe_type != nullptr) {
+        visitor.OnIdentifierType(maybe_type);
     }
 }
 
@@ -154,7 +149,7 @@ void EnumDeclaration::Accept(TreeVisitor& visitor) {
     }
     visitor.OnIdentifier(identifier);
     if (maybe_subtype != nullptr) {
-        visitor.OnPrimitiveType(maybe_subtype);
+        visitor.OnIdentifierType(maybe_subtype);
     }
     for (auto member = members.begin(); member != members.end(); ++member) {
         visitor.OnEnumMember(*member);
