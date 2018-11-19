@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <fbl/integer_sequence.h>
 #include <stddef.h>
+#include <utility>
 
 //
 // Compile-time type info utility without RTTI.
@@ -79,9 +79,9 @@ private:
     static constexpr const char* BaseName = Get().kName;
 
     constexpr TypeInfo()
-        : TypeInfo(make_index_sequence<Size>{}) {}
+        : TypeInfo(std::make_index_sequence<Size>{}) {}
     template <size_t... Is>
-    constexpr TypeInfo(index_sequence<Is...>)
+    constexpr TypeInfo(std::index_sequence<Is...>)
         : name{(Is < Size - 1 ? BaseName[Offset + Is] : '\0')...} {}
 
     const char name[Size];
