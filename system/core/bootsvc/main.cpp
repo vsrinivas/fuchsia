@@ -103,6 +103,23 @@ void LoadCmdlineOverridesFromBootfs(const fbl::RefPtr<bootsvc::BootfsService>& b
     }
 }
 
+// Set up the channel we will use for passing the root resource off.  We
+// embed the root resource in a channel to make it harder to accidentally
+// leave a handle to it in some process on the way to devmgr.
+zx::channel CreateResourceChannel() {
+    zx::resource resource(zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)));
+    ZX_ASSERT_MSG(resource.is_valid(), "bootsvc: did not receive resource handle\n");
+
+    zx::channel client, server;
+    zx_status_t status = zx::channel::create(0, &server, &client);
+    ZX_ASSERT(status == ZX_OK);
+
+    zx_handle_t handles[] = { resource.release() };
+    status = server.write(0, nullptr, 0, handles, fbl::count_of(handles));
+    ZX_ASSERT(status == ZX_OK);
+    return client;
+}
+
 struct LaunchNextProcessArgs {
     fbl::RefPtr<bootsvc::BootfsService> bootfs;
     fbl::Vector<zx::vmo> bootdata;
@@ -115,9 +132,8 @@ struct LaunchNextProcessArgs {
 // - A namespace containing a /boot, serviced by bootsvc
 // - A loader that can load libraries from /boot, serviced by bootsvc
 // - A handle to the root job
-// - A handle to the root resource (TODO(teisenbe): This should be a channel to
-//                                  a service for obtaining the root resource)
 // - A handle to each of the bootdata VMOs the kernel provided
+// - A handle to a channel containing the root resource, with type kResourceChannelHandleType
 int LaunchNextProcess(void* raw_ctx) {
     fbl::unique_ptr<LaunchNextProcessArgs> args(static_cast<LaunchNextProcessArgs*>(raw_ctx));
 
@@ -132,6 +148,8 @@ int LaunchNextProcess(void* raw_ctx) {
     zx_status_t status = args->bootfs->Open(next_program, &program, &file_size);
     ZX_ASSERT_MSG(status == ZX_OK, "bootsvc: failed to open '%s': %s\n", next_program,
                   zx_status_get_string(status));
+
+    zx::channel resource_client = CreateResourceChannel();
 
     // Get the bootfs fuchsia.io.Node service channel that we will hand to the
     // next process in the boot chain.
@@ -159,10 +177,11 @@ int LaunchNextProcess(void* raw_ctx) {
     if (status != ZX_OK) {
         launchpad_abort(lp, status, "bootsvc: cannot create debuglog handle");
     } else {
-        launchpad_add_handle(lp, debuglog.release(), PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO | 0));
+        launchpad_add_handle(lp, debuglog.release(), PA_HND(PA_FDIO_LOGGER,
+                                                            FDIO_FLAG_USE_FOR_STDIO | 0));
     }
 
-    launchpad_add_handle(lp, zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)), PA_HND(PA_RESOURCE, 0));
+    launchpad_add_handle(lp, resource_client.release(), bootsvc::kResourceChannelHandleType);
 
     unsigned bootdata_idx = 0;
     for (zx::vmo& bootdata : args->bootdata) {

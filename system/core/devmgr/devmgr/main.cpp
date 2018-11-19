@@ -577,10 +577,18 @@ static zx_status_t fuchsia_create_job() {
 int main(int argc, char** argv) {
     using namespace devmgr;
 
-    root_resource_handle = zx_take_startup_handle(PA_HND(PA_RESOURCE, 0));
-    root_job_handle = zx::job::default_job();
-
     printf("devmgr: main()\n");
+
+    // Read the root resource out of its channel
+    {
+        zx::channel root_resource_channel(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
+        uint32_t actual_handles = 0;
+        zx_status_t status = root_resource_channel.read(0, nullptr, 0, nullptr,
+                                                        &root_resource_handle, 1, &actual_handles);
+        ZX_ASSERT(status == ZX_OK && actual_handles == 1);
+    }
+
+    root_job_handle = zx::job::default_job();
 
     devfs_init(*root_job_handle);
 

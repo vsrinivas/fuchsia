@@ -15,6 +15,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <lib/fdio/namespace.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/job.h>
 #include <lib/zx/vmo.h>
 #include <unittest/unittest.h>
@@ -128,8 +129,16 @@ bool TestNamespace() {
 bool TestStartupHandles() {
     BEGIN_TEST;
 
-    // Check we were given a resource handle (should be the root one)
-    zx::handle root_resource(zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)));
+    // Check we were given a channel that when read produces a resource handle (should be the root one)
+    zx::channel resource_channel(zx_take_startup_handle(bootsvc::kResourceChannelHandleType));
+    ASSERT_TRUE(resource_channel.is_valid());
+
+    zx::handle root_resource;
+    uint32_t actual = 0;
+    ASSERT_EQ(resource_channel.read(0, nullptr, 0, nullptr, root_resource.reset_and_get_address(),
+                                    1, &actual), ZX_OK);
+    ASSERT_EQ(actual, 1);
+
     ASSERT_TRUE(root_resource.is_valid());
     zx_info_handle_basic_t basic;
     ASSERT_EQ(root_resource.get_info(ZX_INFO_HANDLE_BASIC, &basic, sizeof(basic), nullptr, nullptr),
