@@ -19,7 +19,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/devmgr/devfs.cpp \
     $(LOCAL_DIR)/devmgr/drivers.cpp \
     $(LOCAL_DIR)/devmgr/fidl.cpp \
-    $(LOCAL_DIR)/shared/bootfs.cpp \
     $(LOCAL_DIR)/shared/fdio.cpp \
 
 # userboot supports loading via the dynamic linker, so libc (system/ulib/c)

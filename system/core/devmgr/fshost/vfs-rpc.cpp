@@ -76,9 +76,10 @@ FsManager::FsManager() {
     zx_status_t status = CreateFilesystem("<root>", &root_vfs_, &global_root_);
     ZX_ASSERT(status == ZX_OK);
 
-    status = CreateFilesystem("boot", &root_vfs_, &bootfs_root_);
+    fbl::RefPtr<memfs::VnodeDir> bootfs_root;
+    status = CreateFilesystem("boot", &root_vfs_, &bootfs_root);
     ZX_ASSERT(status == ZX_OK);
-    root_vfs_.MountSubtree(global_root_.get(), bootfs_root_);
+    root_vfs_.MountSubtree(global_root_.get(), std::move(bootfs_root));
 
     status = CreateFilesystem("tmp", &root_vfs_, &memfs_root_);
     ZX_ASSERT(status == ZX_OK);
@@ -96,11 +97,6 @@ FsManager::FsManager() {
     global_loop_->StartThread("root-dispatcher");
     root_vfs_.SetDispatcher(global_loop_->dispatcher());
     system_vfs_.SetDispatcher(global_loop_->dispatcher());
-}
-
-zx_status_t FsManager::BootfsAddFile(const char* path, zx_handle_t vmo, zx_off_t off,
-                                     size_t len) {
-    return AddVmofile(bootfs_root_, path, vmo, off, len);
 }
 
 zx_status_t FsManager::SystemfsAddFile(const char* path, zx_handle_t vmo, zx_off_t off,

@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <threads.h>
 #include <unistd.h>
+#include <utility>
 
 #include <fbl/unique_fd.h>
 #include <fuchsia/crash/c/fidl.h>
@@ -36,11 +37,8 @@
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 
-#include <utility>
-
-#include "../shared/bootfs.h"
-#include "../shared/fdio.h"
 #include "devmgr.h"
+#include "../shared/fdio.h"
 
 namespace devmgr {
 
@@ -550,69 +548,6 @@ static void start_console_shell() {
     }
 }
 
-static void load_cmdline_from_bootfs() {
-    zx::vmo vmo;
-    uint32_t file_size;
-    zx_handle_t status = devmgr_load_file("/boot/config/devmgr", &vmo, &file_size);
-    if (status != ZX_OK) {
-        return;
-    }
-
-    auto cfg = fbl::make_unique<char[]>(file_size + 1);
-    if (cfg == nullptr) {
-        return;
-    }
-
-    status = zx_vmo_read(vmo.get(), cfg.get(), 0, file_size);
-    if (status != ZX_OK) {
-        printf("zx_vmo_read on /boot/config/devmgr BOOTFS VMO: %d (%s)\n",
-               status, zx_status_get_string(status));
-        return;
-    }
-    cfg[file_size] = '\0';
-
-    // putenv() below takes ownership of pieces of this memory, so just release
-    // ownership of it now.
-    char* x = cfg.release();
-    while (*x) {
-        // skip any leading whitespace
-        while (isspace(*x)) {
-            x++;
-        }
-
-        // find the next line (seek for CR or NL)
-        char* next = x;
-        for (;;) {
-            // eof? we're all done then
-            if (*next == 0) {
-                return;
-            }
-            if ((*next == '\r') || (*next == '\n')) {
-                *next++ = 0;
-                break;
-            }
-            next++;
-        }
-
-        // process line if not a comment and not a zero-length name
-        if ((*x != '#') && (*x != '=')) {
-            for (char* y = x; *y != 0; y++) {
-                // space in name is invalid, give up
-                if (isspace(*y)) {
-                    break;
-                }
-                // valid looking env entry? store it
-                if (*y == '=') {
-                    putenv(x);
-                    break;
-                }
-            }
-        }
-
-        x = next;
-    }
-}
-
 static zx_status_t fuchsia_create_job() {
     zx_status_t status = zx::job::create(*root_job_handle, 0u, &fuchsia_job_handle);
     if (status != ZX_OK) {
@@ -642,12 +577,6 @@ static zx_status_t fuchsia_create_job() {
 int main(int argc, char** argv) {
     using namespace devmgr;
 
-    // Close the loader-service channel so the service can go away.
-    // We won't use it any more (no dlopen calls in this process).
-    zx_handle_close(dl_set_loader_service(ZX_HANDLE_INVALID));
-
-    devmgr_io_init();
-
     root_resource_handle = zx_take_startup_handle(PA_HND(PA_RESOURCE, 0));
     root_job_handle = zx::job::default_job();
 
@@ -669,9 +598,6 @@ int main(int argc, char** argv) {
     zx::channel::create(0, &appmgr_req_cli, &appmgr_req_srv);
     zx::event::create(0, &fshost_event);
 
-    bootfs_create_from_startup_handle();
-
-    load_cmdline_from_bootfs();
     char** e = environ;
     while (*e) {
         printf("cmdline: %s\n", *e++);
@@ -711,62 +637,6 @@ namespace devmgr {
 
 static zx_handle_t fs_root;
 
-static Bootfs bootfs;
-
-static zx_status_t load_object(void* ctx, const char* name, zx_handle_t* vmo_out) {
-    char tmp[256];
-    if (snprintf(tmp, sizeof(tmp), "lib/%s", name) >= (int)sizeof(tmp)) {
-        return ZX_ERR_BAD_PATH;
-    }
-    auto bootfs = static_cast<Bootfs*>(ctx);
-    zx::vmo vmo;
-    zx_status_t status = bootfs->Open(tmp, &vmo, nullptr);
-    if (status == ZX_OK) {
-        *vmo_out = vmo.release();
-    }
-    return status;
-}
-
-static zx_status_t load_abspath(void* ctx, const char* name, zx_handle_t* vmo) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-static zx_status_t publish_data_sink(void* ctx, const char* name, zx_handle_t vmo) {
-    zx_handle_close(vmo);
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-static const loader_service_ops_t loader_ops = {
-    .load_object = load_object,
-    .load_abspath = load_abspath,
-    .publish_data_sink = publish_data_sink,
-    .finalizer = nullptr,
-};
-
-static loader_service_t* loader_service;
-
-void bootfs_create_from_startup_handle() {
-    zx::vmo bootfs_vmo(zx_take_startup_handle(PA_HND(PA_VMO_BOOTFS, 0)));
-    if ((!bootfs_vmo.is_valid()) ||
-        (Bootfs::Create(std::move(bootfs_vmo), &bootfs) != ZX_OK)) {
-        printf("devmgr: cannot find and open bootfs\n");
-        exit(1);
-    }
-
-    // create a local loader service backed directly by the primary bootfs
-    // to allow us to load the fshost (since we don't have filesystems before
-    // the fshost starts up).
-    zx_handle_t ldsvc;
-    if ((loader_service_create(nullptr, &loader_ops, &bootfs, &loader_service) != ZX_OK) ||
-        (loader_service_connect(loader_service, &ldsvc) != ZX_OK)) {
-        printf("devmgr: cannot create loader service\n");
-        exit(1);
-    }
-
-    // set the bootfs-loader as the default loader service for now
-    zx_handle_close(dl_set_loader_service(ldsvc));
-}
-
 void fshost_start() {
     // assemble handles to pass down to fshost
     zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
@@ -774,12 +644,9 @@ void fshost_start() {
     size_t n = 0;
     zx_handle_t ldsvc;
 
-    // pass /, /dev, and /svc handles to fsboot
+    // pass / and /svc handles to fsboot
     if (zx_channel_create(0, &fs_root, &handles[0]) == ZX_OK) {
         types[n++] = PA_HND(PA_USER0, 0);
-    }
-    if ((handles[n] = devfs_root_clone().release()) != ZX_HANDLE_INVALID) {
-        types[n++] = PA_HND(PA_USER0, 1);
     }
     if ((handles[n] = fs_clone("svc").release()) != ZX_HANDLE_INVALID) {
         types[n++] = PA_HND(PA_USER0, 2);
@@ -790,11 +657,6 @@ void fshost_start() {
         ldsvc = ZX_HANDLE_INVALID;
     }
 
-    // pass primary bootfs to fshost
-    handles[n] = bootfs.DuplicateVmo().release();
-    if (handles[n] != ZX_HANDLE_INVALID) {
-        types[n++] = PA_HND(PA_VMO_BOOTFS, 0);
-    }
 
     // pass fuchsia start event to fshost
     zx::event fshost_event_duplicate;
@@ -862,27 +724,14 @@ void fshost_start() {
 
     devmgr_launch(svcs_job_handle, "fshost",
                   &devmgr_launch_load, nullptr, argc, argv, envp, -1,
-                  handles, types, n, nullptr, 0);
+                  handles, types, n, nullptr, FS_BOOT | FS_DEV);
 
     // switch to system loader service provided by fshost
     zx_handle_close(dl_set_loader_service(ldsvc));
 }
 
-zx_status_t devmgr_load_file(const char* path, zx::vmo* out_vmo, uint32_t* out_size) {
-    if (strncmp(path, "/boot/", 6)) {
-        return ZX_ERR_NOT_FOUND;
-    }
-    return bootfs.Open(path + 6, out_vmo, out_size);
-}
-
 zx_status_t devmgr_launch_load(void* ctx, launchpad_t* lp, const char* file) {
-    zx::vmo vmo;
-    zx_status_t status = devmgr_load_file(file, &vmo, nullptr);
-    if (status != ZX_OK) {
-        // TODO(mcgrathr): This case is probably never used.  Remove it later.
-        return launchpad_load_from_file(lp, file);
-    }
-    return launchpad_load_from_vmo(lp, vmo.release());
+    return launchpad_load_from_file(lp, file);
 }
 
 void devmgr_vfs_exit() {
@@ -896,9 +745,29 @@ void devmgr_vfs_exit() {
     }
 }
 
+zx::channel bootfs_root_clone() {
+    zx::channel boot, boot_remote;
+    zx_status_t status = zx::channel::create(0, &boot, &boot_remote);
+    if (status != ZX_OK) {
+        return zx::channel();
+    }
+
+    fdio_ns_t* ns;
+    status = fdio_ns_get_installed(&ns);
+    ZX_ASSERT(status == ZX_OK);
+    status = fdio_ns_connect(ns, "/boot", ZX_FS_RIGHT_READABLE, boot_remote.release());
+    if (status != ZX_OK) {
+        return zx::channel();
+    }
+    return boot;
+}
+
 zx::channel fs_clone(const char* path) {
     if (!strcmp(path, "dev")) {
         return devfs_root_clone();
+    }
+    if (!strcmp(path, "boot")) {
+        return bootfs_root_clone();
     }
     zx::channel h0, h1;
     if (zx::channel::create(0, &h0, &h1) != ZX_OK) {
@@ -926,27 +795,24 @@ zx::channel fs_clone(const char* path) {
 void devmgr_vfs_init() {
     printf("devmgr: vfs init\n");
 
-    fshost_start();
-
     fdio_ns_t* ns;
     zx_status_t r;
-    if ((r = fdio_ns_create(&ns)) != ZX_OK) {
-        printf("devmgr: cannot create namespace: %d\n", r);
+    if ((r = fdio_ns_get_installed(&ns)) != ZX_OK) {
+        printf("devmgr: cannot get namespace: %d\n", r);
         return;
     }
     if ((r = fdio_ns_bind(ns, "/dev", fs_clone("dev").release())) != ZX_OK) {
         printf("devmgr: cannot bind /dev to namespace: %d\n", r);
     }
-    if ((r = fdio_ns_bind(ns, "/boot", fs_clone("boot").release())) != ZX_OK) {
-        printf("devmgr: cannot bind /boot to namespace: %d\n", r);
-    }
+
+    // Start fshost before binding /system, since it publishes it.
+    fshost_start();
+
     if ((r = fdio_ns_bind(ns, "/system", fs_clone("system").release())) != ZX_OK) {
         printf("devmgr: cannot bind /system to namespace: %d\n", r);
     }
-    if ((r = fdio_ns_install(ns)) != ZX_OK) {
-        printf("devmgr: cannot install namespace: %d\n", r);
-    }
 }
+
 
 zx_status_t svchost_start() {
     zx::channel dir_request;
@@ -981,18 +847,12 @@ zx_status_t svchost_start() {
     };
     int argc = require_system ? 2 : 1;
 
-    zx::vmo svchost_vmo;
-    status = devmgr_load_file(argv[0], &svchost_vmo, nullptr);
-    if (status != ZX_OK) {
-        return status;
-    }
-
     zx::job job_copy;
     svcs_job_handle.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_MANAGE_JOB, &job_copy);
 
     launchpad_t* lp = nullptr;
     launchpad_create(job_copy.get(), name, &lp);
-    launchpad_load_from_vmo(lp, svchost_vmo.release());
+    launchpad_load_from_file(lp, argv[0]);
     launchpad_set_args(lp, argc, argv);
     launchpad_add_handle(lp, dir_request.release(), PA_DIRECTORY_REQUEST);
     launchpad_add_handle(lp, logger.release(), PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO));

@@ -22,7 +22,6 @@ void coordinator();
 
 void devfs_init(const zx::job& root_job);
 
-void devmgr_io_init();
 void devmgr_svc_init();
 void devmgr_vfs_init();
 void devmgr_set_bootdata(zx::unowned_vmo vmo);
@@ -32,7 +31,6 @@ zx_status_t devmgr_launch_load(void* ctx, launchpad_t* lp, const char* file);
 
 bool secondary_bootfs_ready();
 
-void bootfs_create_from_startup_handle();
 void fshost_start();
 
 zx::job get_sysinfo_job_root();

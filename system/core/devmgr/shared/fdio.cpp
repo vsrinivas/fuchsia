@@ -31,20 +31,6 @@
 
 namespace devmgr {
 
-void devmgr_io_init() {
-    // setup stdout
-    zx::debuglog h;
-    if (zx::debuglog::create(zx::resource(), 0, &h) < 0) {
-        return;
-    }
-    fdio_t* logger;
-    if ((logger = fdio_logger_create(h.release())) == nullptr) {
-        return;
-    }
-    close(1);
-    fdio_bind_to_fd(logger, 1, 0);
-}
-
 #define MAX_ENVP 16
 #define CHILD_JOB_RIGHTS (ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE)
 

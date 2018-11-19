@@ -69,8 +69,7 @@ using RamdiskList = fbl::SinglyLinkedList<fbl::unique_ptr<BootdataRamdisk>>;
 // implement |devmgr_launch|.
 const FsManager* g_fshost = nullptr;
 
-zx_status_t SetupBootfsVmo(const fbl::unique_ptr<FsManager>& root, uint32_t n,
-                           uint32_t type, zx_handle_t vmo) {
+zx_status_t SetupBootfsVmo(const fbl::unique_ptr<FsManager>& root, uint32_t n, zx_handle_t vmo) {
     uint64_t size;
     zx_status_t status = zx_vmo_get_size(vmo, &size);
     if (status != ZX_OK) {
@@ -86,7 +85,7 @@ zx_status_t SetupBootfsVmo(const fbl::unique_ptr<FsManager>& root, uint32_t n,
     uintptr_t address;
     zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, vmo, 0, size, &address);
 
-    if ((type == BOOTDATA_BOOTFS_SYSTEM) && !root->IsSystemMounted()) {
+    if (!root->IsSystemMounted()) {
         status = root->MountSystem();
         if (status != ZX_OK) {
             printf("devmgr: failed to mount /system (%d)\n", status);
@@ -104,29 +103,15 @@ zx_status_t SetupBootfsVmo(const fbl::unique_ptr<FsManager>& root, uint32_t n,
     }
     bootfs::Parser bfs;
     if (bfs.Init(zx::unowned_vmo(bootfs_vmo)) == ZX_OK) {
-        auto add_file = (type == BOOTDATA_BOOTFS_SYSTEM) ?
-            &FsManager::SystemfsAddFile :
-            &FsManager::BootfsAddFile;
-        bfs.Parse([&root, add_file, vmo](const bootfs_entry_t *entry) -> zx_status_t {
+        bfs.Parse([&root, vmo](const bootfs_entry_t *entry) -> zx_status_t {
                       // printf("bootfs: %s @%zd (%zd bytes)\n", path, off, len);
-                      (root.get()->*add_file)(entry->name, vmo, entry->data_off, entry->data_len);
+                      root.get()->SystemfsAddFile(entry->name, vmo, entry->data_off,
+                                                  entry->data_len);
                       return ZX_OK;
                   });
     }
-    if (type == BOOTDATA_BOOTFS_SYSTEM) {
-        root->SystemfsSetReadonly(getenv("zircon.system.writable") == nullptr);
-    }
+    root->SystemfsSetReadonly(getenv("zircon.system.writable") == nullptr);
     return ZX_OK;
-}
-
-void SetupLastCrashlog(const fbl::unique_ptr<FsManager>& root, zx_handle_t vmo_in,
-                       uint64_t off_in, size_t sz) {
-    printf("devmgr: last crashlog is %zu bytes\n", sz);
-    zx_handle_t vmo;
-    if (copy_vmo(vmo_in, off_in, sz, &vmo) != ZX_OK) {
-        return;
-    }
-    root->BootfsAddFile(LAST_PANIC_FILEPATH, vmo, 0, sz);
 }
 
 zx_status_t MiscDeviceAdded(int dirfd, int event, const char* fn, void* cookie) {
@@ -173,13 +158,7 @@ void SetupBootfs(const fbl::unique_ptr<FsManager>& root,
                  const fbl::unique_ptr<RamdiskList>& ramdisk_list) {
     unsigned idx = 0;
 
-    zx::vmo vmo(zx_take_startup_handle(HND_BOOTFS(0)));
-    if (vmo.is_valid()) {
-        SetupBootfsVmo(root, idx++, BOOTDATA_BOOTFS_BOOT, vmo.release());
-    } else {
-        printf("devmgr: missing primary bootfs?!\n");
-    }
-
+    zx::vmo vmo;
     for (unsigned n = 0; vmo.reset(zx_take_startup_handle(HND_BOOTDATA(n))), vmo.is_valid(); n++) {
         bootdata_t bootdata;
         zx_status_t status = vmo.read(&bootdata, 0, sizeof(bootdata));
@@ -213,9 +192,12 @@ void SetupBootfs(const fbl::unique_ptr<FsManager>& root,
                 printf("devmgr: unexpected bootdata container header\n");
                 continue;
             case BOOTDATA_BOOTFS_DISCARD:
-                // this was already unpacked for us by userboot
+                // this was already unpacked for us by userboot and bootsvc
                 break;
             case BOOTDATA_BOOTFS_BOOT:
+                // These should have been consumed by userboot and bootsvc.
+                printf("devmgr: unexpected boot-type bootfs\n");
+                break;
             case BOOTDATA_BOOTFS_SYSTEM: {
                 const char* errmsg;
                 zx_handle_t bootfs_vmo;
@@ -225,7 +207,7 @@ void SetupBootfs(const fbl::unique_ptr<FsManager>& root,
                 if (status < 0) {
                     printf("devmgr: failed to decompress bootdata: %s\n", errmsg);
                 } else {
-                    SetupBootfsVmo(root, idx++, bootdata.type, bootfs_vmo);
+                    SetupBootfsVmo(root, idx++, bootfs_vmo);
                 }
                 break;
             }
@@ -245,9 +227,6 @@ void SetupBootfs(const fbl::unique_ptr<FsManager>& root,
                 }
                 break;
             }
-            case BOOTDATA_LAST_CRASHLOG:
-                SetupLastCrashlog(root, vmo.get(), off + sizeof(bootdata_t), bootdata.length);
-                break;
             default:
                 break;
             }
@@ -257,57 +236,6 @@ void SetupBootfs(const fbl::unique_ptr<FsManager>& root,
 
         // Close the VMO once we've finished processing it.
         vmo.reset();
-    }
-}
-
-// Look for VMOs passed as startup handles of PA_HND_TYPE type, and add them to
-// the filesystem under the path /boot/VMO_SUBDIR_LEN/<vmo-name>.
-void FetchVmos(const fbl::unique_ptr<FsManager>& root, uint_fast8_t type,
-               const char* debug_type_name) {
-    for (uint_fast16_t i = 0; true; ++i) {
-        zx_handle_t vmo = zx_take_startup_handle(PA_HND(type, i));
-        if (vmo == ZX_HANDLE_INVALID)
-            break;
-
-        if (type == PA_VMO_VDSO && i == 0) {
-            // The first vDSO is the default vDSO.  Since we've stolen
-            // the startup handle, launchpad won't find it on its own.
-            // So point launchpad at it.
-            launchpad_set_vdso_vmo(vmo);
-        }
-
-        // The vDSO VMOs have names like "vdso/default", so those
-        // become VMO files at "/boot/kernel/vdso/default".
-        char name[VMO_SUBDIR_LEN + ZX_MAX_NAME_LEN] = VMO_SUBDIR;
-        size_t size;
-        zx_status_t status = zx_object_get_property(vmo, ZX_PROP_NAME,
-                                                    name + VMO_SUBDIR_LEN,
-                                                    sizeof(name) - VMO_SUBDIR_LEN);
-        if (status != ZX_OK) {
-            printf("devmgr: zx_object_get_property on %s %u: %s\n",
-                   debug_type_name, i, zx_status_get_string(status));
-            continue;
-        }
-        status = zx_vmo_get_size(vmo, &size);
-        if (status != ZX_OK) {
-            printf("devmgr: zx_vmo_get_size on %s %u: %s\n",
-                   debug_type_name, i, zx_status_get_string(status));
-            continue;
-        }
-        if (size == 0) {
-            // empty vmos do not get installed
-            zx_handle_close(vmo);
-            continue;
-        }
-        if (!strcmp(name + VMO_SUBDIR_LEN, "crashlog")) {
-            // the crashlog has a special home
-            strcpy(name, LAST_PANIC_FILEPATH);
-        }
-        status = root->BootfsAddFile(name, vmo, 0, size);
-        if (status != ZX_OK) {
-            printf("devmgr: failed to add %s %u to filesystem: %s\n",
-                   debug_type_name, i, zx_status_get_string(status));
-        }
     }
 }
 
@@ -338,8 +266,8 @@ zx::channel FshostConnections::Open(const char* path) const {
 zx_status_t FshostConnections::CreateNamespace() {
     fdio_ns_t* ns;
     zx_status_t status;
-    if ((status = fdio_ns_create(&ns)) != ZX_OK) {
-        printf("fshost: cannot create namespace: %d\n", status);
+    if ((status = fdio_ns_get_installed(&ns)) != ZX_OK) {
+        printf("fshost: cannot get namespace: %d\n", status);
         return status;
     }
 
@@ -347,20 +275,8 @@ zx_status_t FshostConnections::CreateNamespace() {
         printf("fshost: cannot bind /fs to namespace: %d\n", status);
         return status;
     }
-    if ((status = fdio_ns_bind(ns, "/dev", Open("dev").release())) != ZX_OK) {
-        printf("fshost: cannot bind /dev to namespace: %d\n", status);
-        return status;
-    }
-    if ((status = fdio_ns_bind(ns, "/boot", Open("boot").release())) != ZX_OK) {
-        printf("devmgr: cannot bind /boot to namespace: %d\n", status);
-        return status;
-    }
     if ((status = fdio_ns_bind(ns, "/system", Open("system").release())) != ZX_OK) {
         printf("devmgr: cannot bind /system to namespace: %d\n", status);
-        return status;
-    }
-    if ((status = fdio_ns_install(ns)) != ZX_OK) {
-        printf("fshost: cannot install namespace: %d\n", status);
         return status;
     }
     return ZX_OK;
@@ -389,7 +305,19 @@ int main(int argc, char** argv) {
     }
 
     zx::channel fs_root = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
-    zx::channel devfs_root = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 1)));
+    zx::channel devfs_root;
+    {
+        zx::channel devfs_root_remote;
+        zx_status_t status = zx::channel::create(0, &devfs_root, &devfs_root_remote);
+        ZX_ASSERT(status == ZX_OK);
+
+        fdio_ns_t* ns;
+        status = fdio_ns_get_installed(&ns);
+        ZX_ASSERT(status == ZX_OK);
+        status = fdio_ns_connect(ns, "/dev", ZX_FS_RIGHT_READABLE, devfs_root_remote.release());
+        ZX_ASSERT_MSG(status == ZX_OK, "fshost: failed to connect to /dev: %s\n",
+                      zx_status_get_string(status));
+    }
     zx::channel svc_root = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 2)));
     zx_handle_t devmgr_loader = zx_take_startup_handle(PA_HND(PA_USER0, 3));
     zx::event fshost_event = zx::event(zx_take_startup_handle(PA_HND(PA_USER1, 0)));
@@ -401,8 +329,6 @@ int main(int argc, char** argv) {
     // startup handles passed to fshost.
     fbl::unique_ptr<RamdiskList> bootdata_ramdisk_list = fbl::make_unique<RamdiskList>();
     SetupBootfs(root, bootdata_ramdisk_list);
-    FetchVmos(root, PA_VMO_VDSO, "PA_VMO_VDSO");
-    FetchVmos(root, PA_VMO_KERNEL_FILE, "PA_VMO_KERNEL_FILE");
 
     // Initialize connections to external service managers, and begin
     // monitoring the |fshost_event| for a termination event.

@@ -57,12 +57,10 @@ public:
         return *connections_.get();
     }
 
-    // Created a named VmoFile in "/boot". Ownership of |vmo| assumed global.
-    zx_status_t BootfsAddFile(const char* path, zx_handle_t vmo, zx_off_t off, size_t len);
     // Created a named VmoFile in "/system". Ownership of |vmo| assumed global.
     zx_status_t SystemfsAddFile(const char* path, zx_handle_t vmo, zx_off_t off, size_t len);
 
-    // Signal that both "/boot" and "/system" have been mounted.
+    // Signal that "/system" has been mounted.
     void FuchsiaStart() const {
         connections_->Event().signal(0, FSHOST_SIGNAL_READY);
     }
@@ -112,7 +110,6 @@ private:
 
     // The Root VFS manages the following filesystems:
     // - The global root filesystem (including the mount points)
-    // - "/boot"
     // - "/tmp"
     memfs::Vfs root_vfs_;
 
@@ -125,8 +122,6 @@ private:
     fbl::RefPtr<memfs::VnodeDir> global_root_;
     // The globally accessible "/tmp", in-memory filesystem directory.
     fbl::RefPtr<memfs::VnodeDir> memfs_root_;
-    // The inflated "bootfs" filesystem, containing read-only packed VMOs.
-    fbl::RefPtr<memfs::VnodeDir> bootfs_root_;
 
     // The location of an optional system image filesystem.
     fbl::RefPtr<memfs::VnodeDir> systemfs_root_;
