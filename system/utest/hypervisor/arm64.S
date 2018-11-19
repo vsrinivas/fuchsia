@@ -100,6 +100,13 @@ FUNCTION vcpu_interrupt_end
 
 // Test wfi instruction handling.
 FUNCTION vcpu_wfi_start
+    // Setup the virtual timer by:
+    // 1. Setting the compare value to 0.
+    // 2. Enabling the virtual timer.
+    msr cntv_cval_el0, xzr
+    mov x0, 1
+    msr cntv_ctl_el0, x0
+
     wfi
     test_complete
 FUNCTION vcpu_wfi_end

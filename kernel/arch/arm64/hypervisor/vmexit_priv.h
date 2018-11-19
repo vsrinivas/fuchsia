@@ -113,6 +113,7 @@ struct DataAbort {
 
 // clang-format on
 
+void timer_maybe_interrupt(GuestState* guest_state, GichState* gich_state);
 zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gich_state,
                            hypervisor::GuestPhysicalAddressSpace* gpas, hypervisor::TrapMap* traps,
                            zx_port_packet_t* packet);

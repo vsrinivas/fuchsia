@@ -113,6 +113,7 @@ AutoGich::~AutoGich() {
     for (uint32_t i = 0; i < gich_state_->num_lrs; i++) {
         gich_state_->lr[i] = gic_read_gich_lr(i);
     }
+
     arch_enable_ints();
 }
 
@@ -198,6 +199,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     bool force_virtual_interrupt = false;
     zx_status_t status;
     do {
+        timer_maybe_interrupt(guest_state, &gich_state_);
         uint64_t curr_hcr = hcr_;
         uint32_t misr = 0;
         if (gich_maybe_interrupt(&gich_state_) || force_virtual_interrupt) {
