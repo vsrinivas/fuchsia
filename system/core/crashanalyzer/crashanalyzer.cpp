@@ -67,7 +67,7 @@ static void do_print_zx_error(const char* file, int line, const char* what, zx_s
 // Return true if the thread is to be resumed "successfully" (meaning the o/s
 // won't kill it, and thus the kill process).
 
-static bool is_resumable_swbreak(uint32_t excp_type) {
+static bool is_resumable_swbreak(zx_excp_type_t excp_type) {
     if (excp_type == ZX_EXCP_SW_BREAKPOINT && swbreak_backtrace_enabled)
         return true;
     return false;
@@ -93,7 +93,7 @@ static int have_swbreak_magic(const zx_thread_state_general_regs_t* regs) {
 
 #endif
 
-static const char* excp_type_to_str(uint32_t type) {
+static const char* excp_type_to_str(zx_excp_type_t type) {
     switch (type) {
     case ZX_EXCP_GENERAL:
         return "general fault";
@@ -128,7 +128,7 @@ static constexpr size_t kMemoryDumpSize = 256;
 static zx_handle_t crashed_thread = ZX_HANDLE_INVALID;
 
 // The exception that |crashed_thread| got.
-static uint32_t crashed_thread_excp_type;
+static zx_excp_type_t crashed_thread_excp_type;
 
 #if defined(__aarch64__)
 static bool write_general_regs(zx_handle_t thread, void* buf, size_t buf_size) {
@@ -170,7 +170,7 @@ static void resume_thread(zx_handle_t thread, zx_handle_t exception_port, bool h
 }
 
 static void resume_thread_from_exception(zx_handle_t thread, zx_handle_t exception_port,
-                                         uint32_t excp_type,
+                                         zx_excp_type_t excp_type,
                                          const zx_thread_state_general_regs_t* gregs) {
     if (is_resumable_swbreak(excp_type) &&
         gregs != nullptr && have_swbreak_magic(gregs)) {
@@ -218,8 +218,7 @@ static zx_koid_t get_koid(zx_handle_t handle) {
     return info.koid;
 }
 
-static void process_report(zx_handle_t process, zx_handle_t thread, zx_handle_t exception_port,
-                           bool use_libunwind) {
+static void print_debug_info(zx_handle_t process, zx_handle_t thread, zx_excp_type_t* type, zx_thread_state_general_regs_t* regs) {
     zx_koid_t pid = get_koid(process);
     zx_koid_t tid = get_koid(thread);
 
@@ -232,29 +231,25 @@ static void process_report(zx_handle_t process, zx_handle_t thread, zx_handle_t 
                                             &report, sizeof(report), NULL, NULL);
     if (status != ZX_OK) {
         printf("failed to get exception report for [%" PRIu64 ".%" PRIu64 "] : error %d\n", pid, tid, status);
-        zx_handle_close(process);
-        zx_handle_close(thread);
         return;
     }
 
-    uint32_t type = report.header.type;
+    *type = report.header.type;
 
-    if (!ZX_EXCP_IS_ARCH(type) && type != ZX_EXCP_POLICY_ERROR)
+    if (!ZX_EXCP_IS_ARCH(*type) && *type != ZX_EXCP_POLICY_ERROR) {
         return;
+    }
 
-    crashed_thread_excp_type = type;
+    crashed_thread_excp_type = *type;
     auto context = report.context;
 
-    zx_thread_state_general_regs_t reg_buf;
-    zx_thread_state_general_regs_t* regs = nullptr;
     zx_vaddr_t pc = 0, sp = 0, fp = 0;
     const char* arch = "unknown";
     const char* fatal = "fatal ";
 
-    if (inspector_read_general_regs(thread, &reg_buf) != ZX_OK)
-        goto Fail;
-    // Delay setting this until here so Fail will know we now have the regs.
-    regs = &reg_buf;
+    if (inspector_read_general_regs(thread, regs) != ZX_OK) {
+        return;
+    }
 
 #if defined(__x86_64__)
     arch = "x86_64";
@@ -267,18 +262,15 @@ static void process_report(zx_handle_t process, zx_handle_t thread, zx_handle_t 
     sp = regs->sp;
     fp = regs->r[29];
 #else
-    // It's unlikely we'll get here as trying to read the regs will likely
-    // fail, but we don't assume that.
-    printf("unsupported architecture .. coming soon.\n");
-    goto Fail;
+#error unsupported architecture;
 #endif
 
     // This won't print "fatal" in the case where this is a s/w bkpt but
     // ZX_CRASHLOGGER_REQUEST_SELF_BT_MAGIC isn't set. Big deal.
-    if (is_resumable_swbreak(type))
+    if (is_resumable_swbreak(*type))
         fatal = "";
     // TODO(MA-922): Remove this and make policy exceptions fatal.
-    if (type == ZX_EXCP_POLICY_ERROR)
+    if (*type == ZX_EXCP_POLICY_ERROR)
         fatal = "";
 
     char process_name[ZX_MAX_NAME_LEN];
@@ -308,7 +300,7 @@ static void process_report(zx_handle_t process, zx_handle_t thread, zx_handle_t 
                context.arch.u.arm_64.far, context.arch.u.arm_64.esr);
     }
 #else
-    __UNREACHABLE;
+#error unsupported architecture;
 #endif
 
     printf("bottom of user stack:\n");
@@ -317,6 +309,11 @@ static void process_report(zx_handle_t process, zx_handle_t thread, zx_handle_t 
     printf("arch: %s\n", arch);
 
     {
+        // Whether to use libunwind or not.
+        // If not then we use a simple algorithm that assumes ABI-specific
+        // frame pointers are present.
+        const bool use_libunwind = true;
+
         // TODO (jakehehrlich): Remove old dso format.
         inspector_dsoinfo_t* dso_list = inspector_dso_fetch_list(process);
         inspector_dso_print_list(stdout, dso_list);
@@ -330,19 +327,20 @@ static void process_report(zx_handle_t process, zx_handle_t thread, zx_handle_t 
 
     // TODO(ZX-588): Print a backtrace of all other threads in the process.
 
-Fail:
     if (verbosity_level >= 1)
         printf("Done handling thread %" PRIu64 ".%" PRIu64 ".\n", pid, tid);
+}
+
+static void print_debug_info_and_resume_thread(zx_handle_t process, zx_handle_t thread, zx_handle_t exception_port) {
+    zx_excp_type_t type = 0;
+    zx_thread_state_general_regs_t regs;
+    print_debug_info(process, thread, &type, &regs);
 
     // allow the thread (and then process) to die, unless the exception is
-    // to just trigger a backtrace (if enabled)
-    resume_thread_from_exception(thread, exception_port, type, regs);
+    // to just trigger a backtrace (if enabled).
+    resume_thread_from_exception(thread, exception_port, type, &regs);
     crashed_thread = ZX_HANDLE_INVALID;
     crashed_thread_excp_type = 0u;
-
-    zx_handle_close(thread);
-    zx_handle_close(process);
-    zx_handle_close(exception_port);
 }
 
 static zx_status_t handle_message(zx_handle_t channel, fidl::MessageBuffer* buffer) {
@@ -362,11 +360,6 @@ static zx_status_t handle_message(zx_handle_t channel, fidl::MessageBuffer* buff
         }
         auto* request = message.GetBytesAs<fuchsia_crash_AnalyzerHandleNativeExceptionRequest>();
 
-        // Whether to use libunwind or not.
-        // If not then we use a simple algorithm that assumes ABI-specific
-        // frame pointers are present.
-        bool use_libunwind = true;
-
         fuchsia_crash_AnalyzerHandleNativeExceptionResponse response;
         memset(&response, 0, sizeof(response));
         response.hdr.txid = request->hdr.txid;
@@ -376,7 +369,10 @@ static zx_status_t handle_message(zx_handle_t channel, fidl::MessageBuffer* buff
         response.status = ZX_OK;
         status = zx_channel_write(channel, 0, &response, sizeof(response), nullptr, 0);
 
-        process_report(request->process, request->thread, request->exception_port, use_libunwind);
+        print_debug_info_and_resume_thread(request->process, request->thread, request->exception_port);
+        zx_handle_close(request->thread);
+        zx_handle_close(request->process);
+        zx_handle_close(request->exception_port);
 
         return status;
     }
