@@ -74,19 +74,15 @@ template("dart_fuchsia_test") {
   }
 
   if (!test_package_only) {
-    generated_run_test_sh_target = "run_${target_name}"
-
-    # package.gni requires all test files to be under $root_build_dir.
-    generated_run_test_sh =
-        "${root_build_dir}/${generated_run_test_sh_target}.sh"
+    generated_run_test_sh_target = "${root_build_dir}/${target_name}"
 
     action(generated_run_test_sh_target) {
       script = "//build/dart/gen_run_sh.py"
       outputs = [
-        generated_run_test_sh,
+        generated_run_test_sh_target,
       ]
       args = [
-        "--out=" + rebase_path(generated_run_test_sh),
+        "--out=" + rebase_path(generated_run_test_sh_target),
         "--to_be_run=${invoker.target_name}",
       ]
     }
@@ -106,7 +102,8 @@ template("dart_fuchsia_test") {
     if (!test_package_only) {
       tests = [
         {
-          name = "${generated_run_test_sh_target}.sh"
+          name = generated_run_test_sh_target
+          dest = target_name
         },
       ]
     }
