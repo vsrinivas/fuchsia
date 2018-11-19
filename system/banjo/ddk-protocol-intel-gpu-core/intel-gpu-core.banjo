@@ -22,7 +22,7 @@ interface ZxIntelGpuCore {
 
     /// Maps the given |pci_bar|; address returned in |addr_out|, size in bytes returned in
     /// |size_out|.
-    2: MapPciMmio(uint32 pci_bar) -> (zx.status s, vector<void>? buf);
+    2: MapPciMmio(uint32 pci_bar) -> (zx.status s, vector<voidptr>? buf);
 
     /// Unmaps the given |pci_bar|.
     3: UnmapPciMmio(uint32 pci_bar) -> (zx.status s);

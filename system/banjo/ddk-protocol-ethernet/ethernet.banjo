@@ -44,12 +44,12 @@ struct EthmacInfo {
 
 union EthmacInternal {
     uint64 val;
-    vector<void> ptr;
+    vector<voidptr> ptr;
 };
 
 struct EthmacNetbuf {
     /// Provided by the generic ethernet driver.
-    vector<void> data;
+    vector<voidptr> data;
     /// Only used if ETHMAC_FEATURE_DMA is available.
     zx.paddr phys;
     uint16 reserved;
@@ -67,7 +67,7 @@ interface EthmacIfc {
     /// Value with bits set from the |ETHMAC_STATUS_*| flags
     1: Status(uint32 status) -> ();
 
-    2: Recv(vector<void> data, uint32 flags) -> ();
+    2: Recv(vector<voidptr> data, uint32 flags) -> ();
 
     /// complete_tx() is called to return ownership of a netbuf to the generic ethernet driver.
     /// Return status indicates queue state:
@@ -89,7 +89,7 @@ struct EthDevMetadata {
 const uint32 ETHMAC_TX_OPT_MORE = 1;
 
 /// SETPARAM_ values identify the parameter to set. Each call to set_param()
-/// takes an int32_t |value| and void* |data| which have meaning specific to
+/// takes an int32_t |value| and voidptr* |data| which have meaning specific to
 /// the parameter being set.
 
 /// |value| is bool. |data| is unused.
@@ -148,7 +148,7 @@ interface Ethmac {
     ///
     /// set_param() may be called at any time after start() is called including from multiple threads
     /// simultaneously.
-    5: SetParam(uint32 param, int32 value, vector<void> data) -> (zx.status s);
+    5: SetParam(uint32 param, int32 value, vector<voidptr> data) -> (zx.status s);
 
     /// Get the BTI handle (needed to pin DMA memory) for this device.
     /// This method is only valid on devices that advertise ETHMAC_FEATURE_DMA

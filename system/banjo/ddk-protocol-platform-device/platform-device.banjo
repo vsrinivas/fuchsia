@@ -45,7 +45,7 @@ struct PdevMmio {
 [Layout="ddk-protocol", DefaultProtocol]
 interface PDev {
     1: GetMmio(uint32 index) -> (zx.status s, PdevMmio mmio);
-    2: MapMmio(uint32 index, uint32 cache_policy) -> (zx.status s, vector<void>? vaddr,
+    2: MapMmio(uint32 index, uint32 cache_policy) -> (zx.status s, vector<voidptr>? vaddr,
                                                       zx.paddr paddr, handle<vmo> @handle);
     3: GetInterrupt(uint32 index, uint32 flags) -> (zx.status s, handle<interrupt> irq);
     4: GetBti(uint32 index) -> (zx.status s, handle<bti> bti);
@@ -53,5 +53,5 @@ interface PDev {
     6: GetDeviceInfo() -> (zx.status s, PdevDeviceInfo info);
     7: GetBoardInfo() -> (zx.status s, PdevBoardInfo info);
     8: DeviceAdd (uint32 index, ddk.driver.DeviceAddArgs args) -> (zx.status s, ddk.driver.ZxDevice? device);
-    9: GetProtocol (uint32 proto_id, uint32 index) -> (zx.status s, vector<void> out_protocol);
+    9: GetProtocol (uint32 proto_id, uint32 index) -> (zx.status s, vector<voidptr> out_protocol);
 };

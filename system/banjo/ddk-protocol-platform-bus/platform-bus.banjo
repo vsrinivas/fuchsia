@@ -52,7 +52,7 @@ struct PbusMetadata {
     /// Metadata type.
     uint32    type;
     /// Pointer to metadata.
-    vector<void> data;
+    vector<voidptr> data;
 };
 
 /// Device metadata to be passed from bootloader via a ZBI record.
@@ -98,7 +98,7 @@ struct PbusBoardInfo {
 
 [Layout="ddk-callback"]
 interface PlatformProxyCb {
-    1: Callback(vector<void> req, vector<handle> req_handle) -> (vector<void> resp,
+    1: Callback(vector<voidptr> req, vector<handle> req_handle) -> (vector<voidptr> resp,
                                                                  vector<handle> resp_handle);
 };
 
@@ -116,7 +116,7 @@ interface PBus {
     2: ProtocolDeviceAdd(uint32 proto_id, PbusDev dev) -> (zx.status s);
     /// Called by protocol implementation drivers to register their protocol
     /// with the platform bus.
-    3: RegisterProtocol(uint32 proto_id, vector<void> protocol, PlatformProxyCb proxy_cb)
+    3: RegisterProtocol(uint32 proto_id, vector<voidptr> protocol, PlatformProxyCb proxy_cb)
            -> (zx.status s);
     /// Board drivers may use this to get information about the board, and to
     /// differentiate between multiple boards that they support.

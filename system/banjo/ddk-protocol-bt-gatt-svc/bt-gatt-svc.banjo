@@ -86,7 +86,7 @@ struct BtGattChr {
 /// Value change notification callback of the |EnableNotifications| function.
 [Layout="ddk-callback"]
 interface BtGattNotificationValue {
-    1: Callback(BtGattId id, vector<void> value) -> ();
+    1: Callback(BtGattId id, vector<voidptr> value) -> ();
 };
 
 [Layout="ddk-protocol"]
@@ -104,15 +104,15 @@ interface BtGattSvc {
 
     /// Reads the value of the characteristic with the given ID.
     [Async]
-    3: ReadCharacteristic(BtGattId id) -> (BtGattStatus status, BtGattId id, vector<void> value);
+    3: ReadCharacteristic(BtGattId id) -> (BtGattStatus status, BtGattId id, vector<voidptr> value);
 
     /// Reads the long value of the characteristic with the given ID.
     [Async]
     4: ReadLongCharacteristic(BtGattId id, uint16 offset, usize max_bytes)
-           -> (BtGattStatus status, BtGattId id, vector<void> value);
+           -> (BtGattStatus status, BtGattId id, vector<voidptr> value);
 
     [Async]
-    5: WriteCharacteristic(BtGattId id, vector<void> buf) -> (BtGattStatus status, BtGattId id);
+    5: WriteCharacteristic(BtGattId id, vector<voidptr> buf) -> (BtGattStatus status, BtGattId id);
 
     /// Enables notifications from the characteristic with the given ID. Returns
     /// `ZX_ERR_BAD_STATE` if the service has not been started yet.

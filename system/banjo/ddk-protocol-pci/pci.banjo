@@ -42,7 +42,7 @@ enum PciCapId : uint8 {
 [Layout="ddk-protocol"]
 interface Pci {
     1: GetBar(uint32 bar_id) -> (zx.status s, zircon.syscalls.pci.ZxPciBar res);
-    2: MapBar(uint32 bar_id, uint32 cache_policy) -> (zx.status s, vector<void>? vaddr,
+    2: MapBar(uint32 bar_id, uint32 cache_policy) -> (zx.status s, vector<voidptr>? vaddr,
                                                       handle<vmo> @handle);
     3: EnableBusMaster(bool enable) -> (zx.status s);
     4: ResetDevice() -> (zx.status s);
@@ -53,7 +53,7 @@ interface Pci {
     9: ConfigRead(uint16 offset, usize width) -> (zx.status s, uint32 value);
     10: ConfigWrite(uint16 offset, usize width, uint32 value) -> (zx.status s);
     11: GetNextCapability(uint8 type, uint8 offset) -> (uint8 cap);
-    12: GetAuxdata(string args) -> (zx.status s, vector<void> data);
+    12: GetAuxdata(string args) -> (zx.status s, vector<voidptr> data);
     13: GetBti(uint32 index) -> (zx.status s, handle<bti> bti);
 };
 
@@ -62,7 +62,7 @@ interface Pci {
 //    return pci_get_next_capability(pci, kPciCfgCapabilitiesPtr - 1u, type);
 //}
 //static inline zx_status_t pci_get_auxdata(const pci_protocol_t* pci,
-//                                          const char* args, void* data,
+//                                          const char* args, voidptr* data,
 //                                          uint32_t bytes, uint32_t* actual) {
 //    return pci->ops->get_auxdata(pci->ctx, args, data, bytes, actual);
 //}

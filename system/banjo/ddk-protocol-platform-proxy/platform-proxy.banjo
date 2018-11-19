@@ -26,9 +26,9 @@ struct PlatformProxyRsp {
 interface PlatformProxy {
     /// Used by protocol client drivers to register their local protocol implementation
     /// with the platform proxy driver.
-    1: RegisterProtocol(uint32 proto_id, vector<void> protocol) -> (zx.status s);
+    1: RegisterProtocol(uint32 proto_id, vector<voidptr> protocol) -> (zx.status s);
     /// Used by protocol client drivers to proxy a protocol call to the protocol implementation
     /// driver in the platform bus driver's devhost.
-    2: Proxy(vector<void> req, vector<handle> req_handle) -> (zx.status s, vector<void> resp,
+    2: Proxy(vector<voidptr> req, vector<handle> req_handle) -> (zx.status s, vector<voidptr> resp,
                                                               vector<handle> resp_handle);
 };

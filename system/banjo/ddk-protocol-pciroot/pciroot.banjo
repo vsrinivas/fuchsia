@@ -49,7 +49,7 @@ enum PciAddressSpace : uint8 {
 [Layout="ddk-protocol"]
 interface Pciroot {
     /// Legacy methods
-    1: GetAuxdata(string args) -> (zx.status s, vector<void> data);
+    1: GetAuxdata(string args) -> (zx.status s, vector<voidptr> data);
     2: GetBti(uint32 bdf, uint32 index) -> (zx.status s, handle<bti> bti);
     /// Get the platform information structure from the pciroot protocol to be used for bus init.
     3: GetPciPlatformInfo() -> (zx.status s, PciPlatformInfo info);

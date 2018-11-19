@@ -27,7 +27,7 @@ interface SerialImpl {
   /// Configures the given serial port.
   2: Config(uint32 baud_rate, uint32 flags) -> (zx.status s);
   3: Enable(bool enable) -> (zx.status s);
-  4: Read() -> (zx.status s, vector<void> buf);
-  5: Write(vector<void> buf) -> (zx.status s, usize actual);
+  4: Read() -> (zx.status s, vector<voidptr> buf);
+  5: Write(vector<voidptr> buf) -> (zx.status s, usize actual);
   6: SetNotifyCallback(SerialNotify cb) -> (zx.status s);
 };

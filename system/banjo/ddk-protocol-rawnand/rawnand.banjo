@@ -10,11 +10,11 @@ using zx;
 [Layout="ddk-protocol"]
 interface RawNand {
     /// Read one nand page with hwecc.
-    1: ReadPageHwecc(uint32 nandpage) -> (zx.status s, vector<void> data, vector<void> oob,
+    1: ReadPageHwecc(uint32 nandpage) -> (zx.status s, vector<voidptr> data, vector<voidptr> oob,
                                           uint32 ecc_correct);
 
     /// Write one nand page with hwecc.
-    2: WritePageHwecc(vector<void> data, vector<void> oob, uint32 nandpage) -> (zx.status s);
+    2: WritePageHwecc(vector<voidptr> data, vector<voidptr> oob, uint32 nandpage) -> (zx.status s);
 
     /// Erase nand block.
     3: EraseBlock(uint32 nandpage) -> (zx.status s);

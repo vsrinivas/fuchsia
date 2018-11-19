@@ -51,7 +51,7 @@ struct SdmmcReq {
     /// Used if use_dma is true
     handle<vmo> dma_vmo;
     /// Used if use_dma is false
-    vector<void>? virt;
+    vector<voidptr>? virt;
     /// offset into dma_vmo or virt
     uint64 buf_offset;
     handle pmt;

@@ -8,12 +8,12 @@ using zx;
 
 struct MailboxDataBuf {
     uint32 cmd;
-    vector<void> tx;
+    vector<voidptr> tx;
 };
 
 struct MailboxChannel {
     uint32 mailbox;
-    vector<void> rx;
+    vector<voidptr> rx;
 };
 
 [Layout="ddk-protocol"]

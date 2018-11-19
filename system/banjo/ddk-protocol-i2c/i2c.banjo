@@ -11,7 +11,7 @@ const uint32 I2C_MAX_RW_OPS = 8;
 
 /// See `Transact` below for usage.
 struct I2cOp{
-    vector<void> data;
+    vector<voidptr> data;
     bool is_read;
     bool stop;
 };

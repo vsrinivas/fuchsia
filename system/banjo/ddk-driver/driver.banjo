@@ -26,7 +26,7 @@ struct DeviceAddArgs {
 
     /// Context pointer for use by the driver
     /// and passed to driver in all zx_protocol_device_t callbacks
-    void ctx;
+    voidptr ctx;
 
     /// Pointer to device's device protocol operations
     ZxProtocolDevice? ops;
@@ -41,7 +41,7 @@ struct DeviceAddArgs {
     uint32 proto_id;
 
     /// Optional custom protocol operations for this device
-    void proto_ops;
+    voidptr proto_ops;
 
     /// Arguments used with DEVICE_ADD_MUST_ISOLATE
     /// these will be passed to the create() driver op of
