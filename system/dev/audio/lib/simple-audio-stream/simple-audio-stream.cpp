@@ -4,11 +4,10 @@
 
 #include <audio-proto-utils/format-utils.h>
 #include <ddk/debug.h>
-#include <fbl/limits.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
-#include <zircon/device/audio.h>
-
+#include <limits>
 #include <utility>
+#include <zircon/device/audio.h>
 
 namespace audio {
 
@@ -280,7 +279,7 @@ zx_status_t SimpleAudioStream::OnGetStreamFormats(dispatcher::Channel* channel,
     uint16_t formats_sent = 0;
     audio_proto::StreamGetFmtsResp resp = { };
 
-    if (supported_formats_.size() > fbl::numeric_limits<uint16_t>::max()) {
+    if (supported_formats_.size() > std::numeric_limits<uint16_t>::max()) {
         zxlogf(ERROR,
                 "Too many formats (%zu) to send during AUDIO_STREAM_CMD_GET_FORMATS request!\n",
                supported_formats_.size());

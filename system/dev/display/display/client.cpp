@@ -4,16 +4,14 @@
 
 #include <ddk/debug.h>
 #include <fbl/auto_lock.h>
-#include <fbl/limits.h>
+#include <lib/async/cpp/task.h>
 #include <lib/edid/edid.h>
 #include <lib/fidl/cpp/builder.h>
 #include <lib/fidl/cpp/message.h>
-#include <lib/async/cpp/task.h>
 #include <math.h>
-#include <zircon/pixelformat.h>
-#include <zircon/device/display-controller.h>
-
 #include <utility>
+#include <zircon/device/display-controller.h>
+#include <zircon/pixelformat.h>
 
 #include "client.h"
 

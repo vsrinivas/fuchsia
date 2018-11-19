@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <math.h>
 #include <fbl/algorithm.h>
-#include <fbl/limits.h>
-
+#include <limits>
+#include <math.h>
 #include <utility>
 
 #include "debug-logging.h"
@@ -497,7 +496,7 @@ bool FeatureUnit::SetMute(const usb_protocol_t& proto, bool mute) {
     } else {
         // Section 5.2.2.4.3.2 of the USB Audio 1.0 spec defines int16::min as
         // -inf dB for the purpose of setting gain.
-        int16_t tgt = mute ? fbl::numeric_limits<int16_t>::min() : vol_cur_;
+        int16_t tgt = mute ? std::numeric_limits<int16_t>::min() : vol_cur_;
         SetFeature(proto, USB_AUDIO_VOLUME_CONTROL, tgt);
     }
 

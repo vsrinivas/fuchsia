@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
 #include <hwreg/bitfields.h>
 #include <stddef.h>

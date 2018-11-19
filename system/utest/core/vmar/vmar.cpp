@@ -4,13 +4,13 @@
 
 #include <assert.h>
 #include <atomic>
+#include <climits>
 #include <errno.h>
-#include <limits.h>
+#include <limits>
 #include <stdalign.h>
 #include <unistd.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/limits.h>
 #include <sys/mman.h>
 #include <unittest/unittest.h>
 #include <zircon/process.h>
@@ -784,7 +784,7 @@ bool invalid_args_test() {
     EXPECT_EQ(zx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE), ZX_OK);
 
     // size rounds up to 0
-    constexpr size_t bad_size = fbl::numeric_limits<size_t>::max() - PAGE_SIZE + 2;
+    constexpr size_t bad_size = std::numeric_limits<size_t>::max() - PAGE_SIZE + 2;
     static_assert(((bad_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1)) == 0, "");
     EXPECT_EQ(zx_vmar_allocate(vmar,
                                ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,

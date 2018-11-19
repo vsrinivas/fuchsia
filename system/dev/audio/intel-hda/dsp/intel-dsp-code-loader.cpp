@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/limits.h>
-#include <zircon/assert.h>
+#include <climits>
+#include <limits>
 #include <stdio.h>
 #include <string.h>
-#include <limits.h>
+#include <zircon/assert.h>
 
 #include <hw/arch_ops.h>
 #include <zircon/process.h>
@@ -105,7 +105,7 @@ zx_status_t IntelDspCodeLoader::TransferFirmware(const fzl::PinnedVmo& pinned_fw
     for (num_region = 0; (num_region < region_count) && (remaining > 0); num_region++) {
         const auto& r = pinned_fw.region(num_region);
 
-        if (r.size > fbl::numeric_limits<uint32_t>::max()) {
+        if (r.size > std::numeric_limits<uint32_t>::max()) {
             LOG(ERROR, "VMO region too large (%" PRIu64 " bytes)\n", r.size);
             return ZX_ERR_INTERNAL;
         }

@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/assert.h>
-#include <zircon/compiler.h>
-#include <lib/zx/channel.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
-#include <fbl/limits.h>
+#include <lib/zx/channel.h>
 #include <string.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
 
 #include <dispatcher-pool/dispatcher-thread-pool.h>
 

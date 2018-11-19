@@ -6,7 +6,7 @@
 #include <audio-utils/audio-stream.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/limits.h>
+#include <limits>
 #include <zircon/time.h>
 #include <zircon/types.h>
 
@@ -51,7 +51,7 @@ zx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
 
     uint64_t ring_bytes_64 =
         (zx_duration_mul_int64(CHUNK_TIME, frame_rate_) / ZX_SEC(1)) * frame_sz_;
-    if (ring_bytes_64 > fbl::numeric_limits<uint32_t>::max()) {
+    if (ring_bytes_64 > std::numeric_limits<uint32_t>::max()) {
         printf("Invalid frame rate %u\n", frame_rate_);
         return res;
     }

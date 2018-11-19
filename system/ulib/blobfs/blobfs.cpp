@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <inttypes.h>
+#include <limits>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,13 +16,12 @@
 #include <digest/merkle-tree.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
-#include <fbl/limits.h>
 #include <fbl/ref_ptr.h>
-#include <lib/fdio/debug.h>
 #include <fs/block-txn.h>
 #include <fs/ticker.h>
-#include <lib/zx/event.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fdio/debug.h>
+#include <lib/zx/event.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
@@ -1277,10 +1277,10 @@ zx_status_t Blobfs::AddInodes() {
 
     const uint32_t kInodesPerSlice = static_cast<uint32_t>(info_.slice_size / kBlobfsInodeSize);
     uint64_t inodes64 = (info_.ino_slices + static_cast<uint32_t>(request.length)) * kInodesPerSlice;
-    ZX_DEBUG_ASSERT(inodes64 <= fbl::numeric_limits<uint32_t>::max());
+    ZX_DEBUG_ASSERT(inodes64 <= std::numeric_limits<uint32_t>::max());
     uint32_t inodes = static_cast<uint32_t>(inodes64);
     uint32_t inoblks = (inodes + kBlobfsInodesPerBlock - 1) / kBlobfsInodesPerBlock;
-    ZX_DEBUG_ASSERT(info_.inode_count <= fbl::numeric_limits<uint32_t>::max());
+    ZX_DEBUG_ASSERT(info_.inode_count <= std::numeric_limits<uint32_t>::max());
     uint32_t inoblks_old = (static_cast<uint32_t>(info_.inode_count) + kBlobfsInodesPerBlock - 1) / kBlobfsInodesPerBlock;
     ZX_DEBUG_ASSERT(inoblks_old <= inoblks);
 
@@ -1323,7 +1323,7 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks) {
     request.offset = (kFVMDataStart / kBlocksPerSlice) + info_.dat_slices;
 
     uint64_t blocks64 = (info_.dat_slices + request.length) * kBlocksPerSlice;
-    ZX_DEBUG_ASSERT(blocks64 <= fbl::numeric_limits<uint32_t>::max());
+    ZX_DEBUG_ASSERT(blocks64 <= std::numeric_limits<uint32_t>::max());
     uint32_t blocks = static_cast<uint32_t>(blocks64);
     uint32_t abmblks = (blocks + kBlobfsBlockBits - 1) / kBlobfsBlockBits;
     uint64_t abmblks_old = (info_.data_block_count + kBlobfsBlockBits - 1) / kBlobfsBlockBits;

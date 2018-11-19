@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <climits>
 #include <fbl/auto_call.h>
-#include <fbl/limits.h>
 #include <lib/fzl/pinned-vmo.h>
+#include <limits>
 
 namespace fzl {
 
@@ -34,7 +35,7 @@ zx_status_t PinnedVmo::Pin(const zx::vmo& vmo, const zx::bti& bti, uint32_t righ
 
     // Allocate storage for the results.
     ZX_DEBUG_ASSERT((vmo_size > 0) && !(vmo_size & (PAGE_SIZE - 1)));
-    ZX_DEBUG_ASSERT((vmo_size / PAGE_SIZE) < fbl::numeric_limits<uint32_t>::max());
+    ZX_DEBUG_ASSERT((vmo_size / PAGE_SIZE) < std::numeric_limits<uint32_t>::max());
     fbl::AllocChecker ac;
     uint32_t page_count = static_cast<uint32_t>(vmo_size / PAGE_SIZE);
     fbl::unique_ptr<zx_paddr_t[]> addrs(new (&ac) zx_paddr_t[page_count]);

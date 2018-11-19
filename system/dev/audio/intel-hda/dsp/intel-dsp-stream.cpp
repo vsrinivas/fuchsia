@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fbl/auto_call.h>
-#include <fbl/limits.h>
 
 #include <zircon/device/audio.h>
 

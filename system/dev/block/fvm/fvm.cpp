@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <new>
 #include <atomic>
-#include <stdbool.h>
+#include <limits>
+#include <new>
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
@@ -14,7 +14,6 @@
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <fbl/limits.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
@@ -637,7 +636,7 @@ zx_status_t VPartitionManager::DdkIoctl(uint32_t op, const void* cmd,
             return ZX_ERR_BUFFER_TOO_SMALL;
         const alloc_req_t* request = static_cast<const alloc_req_t*>(cmd);
 
-        if (request->slice_count >= fbl::numeric_limits<uint32_t>::max()) {
+        if (request->slice_count >= std::numeric_limits<uint32_t>::max()) {
             return ZX_ERR_OUT_OF_RANGE;
         } else if (request->slice_count == 0) {
             return ZX_ERR_OUT_OF_RANGE;

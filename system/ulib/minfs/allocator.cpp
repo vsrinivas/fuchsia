@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <limits>
 #include <stdlib.h>
 #include <string.h>
 
@@ -49,7 +50,7 @@ AllocatorFvmMetadata::~AllocatorFvmMetadata() = default;
 
 uint32_t AllocatorFvmMetadata::UnitsPerSlices(uint32_t slices, uint32_t unit_size) const {
     uint64_t units = (slice_size_ * slices) / unit_size;
-    ZX_DEBUG_ASSERT(units <= fbl::numeric_limits<uint32_t>::max());
+    ZX_DEBUG_ASSERT(units <= std::numeric_limits<uint32_t>::max());
     return static_cast<uint32_t>(units);
 }
 

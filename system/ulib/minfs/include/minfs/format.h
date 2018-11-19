@@ -8,7 +8,6 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
-#include <fbl/limits.h>
 #include <fbl/macros.h>
 #include <fbl/type_support.h>
 
@@ -16,6 +15,7 @@
 
 #include <assert.h>
 #include <limits.h>
+#include <limits>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -56,7 +56,7 @@ constexpr uint32_t kMinfsDirectPerDindirect = kMinfsDirectPerIndirect * kMinfsDi
 //                                         * kMinfsDirectPerIndirect));
 // TODO(ZX-1523): Remove this artificial cap when MinFS can safely deal
 // with files larger than 4GB.
-constexpr uint64_t kMinfsMaxFileBlock = (fbl::numeric_limits<uint32_t>::max() / kMinfsBlockSize)
+constexpr uint64_t kMinfsMaxFileBlock = (std::numeric_limits<uint32_t>::max() / kMinfsBlockSize)
                                         - 1;
 constexpr uint64_t kMinfsMaxFileSize  = kMinfsMaxFileBlock * kMinfsBlockSize;
 

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <limits>
 #include <dirent.h>
 #include <fcntl.h>
 #include <stdio.h>
 
 #include <zircon/device/intel-hda.h>
 #include <lib/fdio/io.h>
-#include <fbl/limits.h>
 
 #include "zircon_device.h"
 
@@ -55,7 +55,7 @@ zx_status_t ZirconDevice::CallDevice(const zx_channel_call_args_t& args, uint64_
 
     if (timeout_msec == ZX_TIME_INFINITE) {
         deadline = ZX_TIME_INFINITE;
-    } else if (timeout_msec >= fbl::numeric_limits<zx_time_t>::max() / ZX_MSEC(1)) {
+    } else if (timeout_msec >= std::numeric_limits<zx_time_t>::max() / ZX_MSEC(1)) {
         return ZX_ERR_INVALID_ARGS;
     } else {
         deadline = zx_deadline_after(ZX_MSEC(timeout_msec));

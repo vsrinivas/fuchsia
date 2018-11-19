@@ -4,21 +4,19 @@
 
 #include <audio-proto-utils/format-utils.h>
 #include <ddk/device.h>
-#include <usb/usb-request.h>
 #include <digest/digest.h>
+#include <dispatcher-pool/dispatcher-thread-pool.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
-#include <fbl/limits.h>
 #include <lib/zx/vmar.h>
+#include <limits>
 #include <string.h>
+#include <usb/usb-request.h>
+#include <utility>
 #include <zircon/hw/usb-audio.h>
 #include <zircon/process.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
-
-#include <dispatcher-pool/dispatcher-thread-pool.h>
-
-#include <utility>
 
 #include "usb-audio.h"
 #include "usb-audio-device.h"
@@ -421,7 +419,7 @@ zx_status_t UsbAudioStream::OnGetStreamFormatsLocked(dispatcher::Channel* channe
     audio_proto::StreamGetFmtsResp resp = { };
 
     const auto& formats = ifc_->formats();
-    if (formats.size() > fbl::numeric_limits<uint16_t>::max()) {
+    if (formats.size() > std::numeric_limits<uint16_t>::max()) {
         LOG(ERROR, "Too many formats (%zu) to send during AUDIO_STREAM_CMD_GET_FORMATS request!\n",
             formats.size());
         return ZX_ERR_INTERNAL;
@@ -719,7 +717,7 @@ zx_status_t UsbAudioStream::OnGetStringLocked(dispatcher::Channel* channel,
         resp.strlen = 0;
     } else {
         size_t todo = fbl::min<size_t>(sizeof(resp.str), str->size());
-        ZX_DEBUG_ASSERT(todo <= fbl::numeric_limits<uint32_t>::max());
+        ZX_DEBUG_ASSERT(todo <= std::numeric_limits<uint32_t>::max());
 
         ::memset(resp.str, 0, sizeof(resp.str));
         if (todo) {

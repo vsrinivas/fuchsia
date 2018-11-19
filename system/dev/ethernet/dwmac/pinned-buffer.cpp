@@ -4,6 +4,7 @@
 
 #include "pinned-buffer.h"
 
+#include <climits>
 #include <utility>
 
 fbl::RefPtr<PinnedBuffer> PinnedBuffer::Create(size_t size, const zx::bti& bti,

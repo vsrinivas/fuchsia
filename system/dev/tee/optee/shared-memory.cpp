@@ -8,7 +8,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/optional.h>
-#include <fbl/limits.h>
 
 #include <utility>
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <float.h>
+#include <limits>
 #include <math.h>
 #include <string.h>
 
@@ -10,7 +11,6 @@
 
 #include <cobalt-client/cpp/histogram-internal.h>
 #include <cobalt-client/cpp/metric-options.h>
-#include <fbl/limits.h>
 #include <fuchsia/cobalt/c/fidl.h>
 
 namespace cobalt_client {
@@ -41,8 +41,8 @@ uint32_t GetLinearBucket(double value, uint32_t bucket_count, const HistogramOpt
         return bucket_count - 1;
     }
     double unshifted_bucket = (value - options.offset) / options.scalar;
-    ZX_DEBUG_ASSERT(unshifted_bucket >= fbl::numeric_limits<uint32_t>::min());
-    ZX_DEBUG_ASSERT(unshifted_bucket <= fbl::numeric_limits<uint32_t>::max());
+    ZX_DEBUG_ASSERT(unshifted_bucket >= std::numeric_limits<uint32_t>::min());
+    ZX_DEBUG_ASSERT(unshifted_bucket <= std::numeric_limits<uint32_t>::max());
     return static_cast<uint32_t>(unshifted_bucket) + 1;
 }
 

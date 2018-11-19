@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <inttypes.h>
+#include <limits>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,7 +16,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
-#include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
 #include <fs/block-txn.h>
 #include <fs/trace.h>
@@ -218,7 +218,7 @@ zx_status_t CheckSuperblock(const Superblock* info, Bcache* bc) {
         if (dat_blocks_needed > dat_blocks_allocated) {
             FS_TRACE_ERROR("minfs: Not enough slices for data blocks\n");
             return ZX_ERR_INVALID_ARGS;
-        } else if (dat_blocks_allocated + info->dat_block > fbl::numeric_limits<blk_t>::max()) {
+        } else if (dat_blocks_allocated + info->dat_block > std::numeric_limits<blk_t>::max()) {
             FS_TRACE_ERROR("minfs: Data blocks overflow blk_t\n");
             return ZX_ERR_INVALID_ARGS;
         } else if (dat_blocks_needed <= 1) {

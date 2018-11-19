@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
-#include <fbl/limits.h>
+#include <limits>
 #include <soc/aml-common/aml-pdm-audio.h>
-
 #include <utility>
 
 // Filter configurations
@@ -209,7 +208,7 @@ void AmlPdmDevice::AudioClkDis(uint32_t audio_blk_mask) {
 zx_status_t AmlPdmDevice::SetBuffer(zx_paddr_t buf, size_t len) {
     //Ensure ring buffer resides in lower memory (dma pointers are 32-bit)
     //    and len is at least 8 (size of each dma operation)
-    if (((buf + len - 1) > fbl::numeric_limits<uint32_t>::max()) || (len < 8)) {
+    if (((buf + len - 1) > std::numeric_limits<uint32_t>::max()) || (len < 8)) {
         return ZX_ERR_INVALID_ARGS;
     }
 

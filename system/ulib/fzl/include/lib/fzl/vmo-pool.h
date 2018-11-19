@@ -6,11 +6,11 @@
 
 #include <fbl/array.h>
 #include <fbl/intrusive_single_list.h>
-#include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
+#include <limits>
 #include <zircon/types.h>
 
 namespace fzl {
@@ -81,7 +81,7 @@ private:
     };
 
     // The sentinel value for no in-progress buffer:
-    static constexpr uint32_t kInvalidCurBuffer = fbl::numeric_limits<uint32_t>::max();
+    static constexpr uint32_t kInvalidCurBuffer = std::numeric_limits<uint32_t>::max();
     // The buffer to which we are currently writing.
     uint32_t current_buffer_ = kInvalidCurBuffer;
     // VMO backing the buffer.

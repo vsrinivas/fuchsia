@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <inttypes.h>
+#include <limits>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,10 +15,9 @@
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/limits.h>
-#include <lib/fdio/debug.h>
 #include <fs/block-txn.h>
 #include <fs/trace.h>
+#include <lib/fdio/debug.h>
 
 #ifdef __Fuchsia__
 #include <fs/fvm.h>
@@ -92,7 +92,7 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
             FS_TRACE_ERROR("blobfs: Not enough slices for data blocks\n");
             return ZX_ERR_INVALID_ARGS;
         } else if (dat_blocks_allocated + DataStartBlock(*info) >
-                   fbl::numeric_limits<uint32_t>::max()) {
+                   std::numeric_limits<uint32_t>::max()) {
             FS_TRACE_ERROR("blobfs: Data blocks overflow uint32\n");
             return ZX_ERR_INVALID_ARGS;
         }

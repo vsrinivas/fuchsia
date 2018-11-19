@@ -7,13 +7,13 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <fbl/limits.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
@@ -256,7 +256,7 @@ ssize_t emu_write(int fd, const void* buf, size_t count) {
     zx_status_t status = f->vn->Write(buf, count, f->off, &actual);
     if (status == ZX_OK) {
         f->off += actual;
-        ZX_DEBUG_ASSERT(actual <= fbl::numeric_limits<ssize_t>::max());
+        ZX_DEBUG_ASSERT(actual <= std::numeric_limits<ssize_t>::max());
         return static_cast<ssize_t>(actual);
     }
 
@@ -272,7 +272,7 @@ ssize_t emu_pwrite(int fd, const void* buf, size_t count, off_t off) {
     size_t actual;
     zx_status_t status = f->vn->Write(buf, count, off, &actual);
     if (status == ZX_OK) {
-        ZX_DEBUG_ASSERT(actual <= fbl::numeric_limits<ssize_t>::max());
+        ZX_DEBUG_ASSERT(actual <= std::numeric_limits<ssize_t>::max());
         return static_cast<ssize_t>(actual);
     }
 
@@ -289,7 +289,7 @@ ssize_t emu_read(int fd, void* buf, size_t count) {
     zx_status_t status = f->vn->Read(buf, count, f->off, &actual);
     if (status == ZX_OK) {
         f->off += actual;
-        ZX_DEBUG_ASSERT(actual <= fbl::numeric_limits<ssize_t>::max());
+        ZX_DEBUG_ASSERT(actual <= std::numeric_limits<ssize_t>::max());
         return static_cast<ssize_t>(actual);
     }
     ZX_DEBUG_ASSERT(status < 0);
@@ -304,7 +304,7 @@ ssize_t emu_pread(int fd, void* buf, size_t count, off_t off) {
     size_t actual;
     zx_status_t status = f->vn->Read(buf, count, off, &actual);
     if (status == ZX_OK) {
-        ZX_DEBUG_ASSERT(actual <= fbl::numeric_limits<ssize_t>::max());
+        ZX_DEBUG_ASSERT(actual <= std::numeric_limits<ssize_t>::max());
         return static_cast<ssize_t>(actual);
     }
     ZX_DEBUG_ASSERT(status < 0);

@@ -14,12 +14,11 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <fbl/limits.h>
 #include <fbl/ref_ptr.h>
+#include <lib/zx/fifo.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
-#include <lib/zx/fifo.h>
 
 #include "server.h"
 

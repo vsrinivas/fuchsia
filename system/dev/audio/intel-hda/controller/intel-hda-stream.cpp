@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 
 #include <hw/arch_ops.h>
-#include <zircon/syscalls.h>
-#include <fbl/limits.h>
+#include <limits>
 #include <string.h>
+#include <utility>
+#include <zircon/syscalls.h>
 
 #include <intel-hda/utils/utils.h>
-
-#include <utility>
 
 #include "debug-logging.h"
 #include "intel-hda-codec.h"
@@ -436,7 +435,7 @@ zx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
     // 3) The user wants more notifications per ring than we have BDL entries.
     tmp = static_cast<uint64_t>(req.min_ring_buffer_frames) * bytes_per_frame_;
     if ((req.min_ring_buffer_frames == 0) ||
-        (tmp > fbl::numeric_limits<uint32_t>::max()) ||
+        (tmp > std::numeric_limits<uint32_t>::max()) ||
         (req.notifications_per_ring > MAX_BDL_LENGTH)) {
         LOG(TRACE, "Invalid client args while setting buffer "
                    "(min frames %u, notif/ring %u)\n",
@@ -523,7 +522,7 @@ zx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
     for (entry = 0; (entry < MAX_BDL_LENGTH) && (amt_done < rb_size); ++entry) {
         const auto& r = pinned_ring_buffer_.region(region_num);
 
-        if (r.size > fbl::numeric_limits<uint32_t>::max()) {
+        if (r.size > std::numeric_limits<uint32_t>::max()) {
             LOG(TRACE, "VMO region too large! (%" PRIu64 " bytes)", r.size);
             resp.result = ZX_ERR_INTERNAL;
             goto finished;

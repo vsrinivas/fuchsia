@@ -4,13 +4,13 @@
 
 #pragma once
 
+#include <climits>
 #include <ddktl/mmio.h>
 #include <fbl/intrusive_double_list.h>
-#include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
-#include <region-alloc/region-alloc.h>
 #include <lib/zx/bti.h>
-
+#include <limits>
+#include <region-alloc/region-alloc.h>
 #include <utility>
 
 namespace optee {
@@ -75,7 +75,7 @@ public:
         : vaddr_(vaddr),
           paddr_(paddr),
           region_allocator_(
-              RegionAllocator::RegionPool::Create(fbl::numeric_limits<size_t>::max())) {
+              RegionAllocator::RegionPool::Create(std::numeric_limits<size_t>::max())) {
         region_allocator_.AddRegion({.base = 0, .size = size});
     }
 

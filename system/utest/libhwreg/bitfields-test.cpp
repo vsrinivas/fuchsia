@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-#include <fbl/limits.h>
-#include <limits.h>
+#include <climits>
+#include <limits>
 #include <stdio.h>
 #include <unittest/unittest.h>
 
@@ -103,7 +103,7 @@ static bool struct_sub_field_test() {
     StructSubFieldTest val = {};
 
     // Ensure writing to a whole length field affects all bits
-    constexpr IntType kMax = fbl::numeric_limits<IntType>::max();
+    constexpr IntType kMax = std::numeric_limits<IntType>::max();
     EXPECT_EQ(0u, val.whole_length());
     val.set_whole_length(kMax);
     EXPECT_EQ(kMax, val.whole_length());
@@ -181,30 +181,30 @@ static bool reg_rsvdz_test() {
     // Ensure we mask off the RsvdZ bits when we write them back, regardless of
     // what we read them as.
     {
-        fake_reg = fbl::numeric_limits<uint8_t>::max();
+        fake_reg = std::numeric_limits<uint8_t>::max();
         auto reg = TestReg8::Get().ReadFrom(&mmio);
-        EXPECT_EQ(fbl::numeric_limits<uint8_t>::max(), reg.reg_value());
+        EXPECT_EQ(std::numeric_limits<uint8_t>::max(), reg.reg_value());
         reg.WriteTo(&mmio);
         EXPECT_EQ(0x7u, fake_reg);
     }
     {
-        fake_reg = fbl::numeric_limits<uint16_t>::max();
+        fake_reg = std::numeric_limits<uint16_t>::max();
         auto reg = TestReg16::Get().ReadFrom(&mmio);
-        EXPECT_EQ(fbl::numeric_limits<uint16_t>::max(), reg.reg_value());
+        EXPECT_EQ(std::numeric_limits<uint16_t>::max(), reg.reg_value());
         reg.WriteTo(&mmio);
         EXPECT_EQ(0x8001u, fake_reg);
     }
     {
-        fake_reg = fbl::numeric_limits<uint32_t>::max();
+        fake_reg = std::numeric_limits<uint32_t>::max();
         auto reg = TestReg32::Get().ReadFrom(&mmio);
-        EXPECT_EQ(fbl::numeric_limits<uint32_t>::max(), reg.reg_value());
+        EXPECT_EQ(std::numeric_limits<uint32_t>::max(), reg.reg_value());
         reg.WriteTo(&mmio);
         EXPECT_EQ((1ull << 11) | 0x17ull, fake_reg);
     }
     {
-        fake_reg = fbl::numeric_limits<uint64_t>::max();
+        fake_reg = std::numeric_limits<uint64_t>::max();
         auto reg = TestReg64::Get().ReadFrom(&mmio);
-        EXPECT_EQ(fbl::numeric_limits<uint64_t>::max(), reg.reg_value());
+        EXPECT_EQ(std::numeric_limits<uint64_t>::max(), reg.reg_value());
         reg.WriteTo(&mmio);
         EXPECT_EQ(0x7full << 11, fake_reg);
     }
@@ -246,30 +246,30 @@ static bool reg_rsvdz_full_test() {
     // Ensure we mask off the RsvdZ bits when we write them back, regardless of
     // what we read them as.
     {
-        fake_reg = fbl::numeric_limits<uint8_t>::max();
+        fake_reg = std::numeric_limits<uint8_t>::max();
         auto reg = TestReg8::Get().ReadFrom(&mmio);
-        EXPECT_EQ(fbl::numeric_limits<uint8_t>::max(), reg.reg_value());
+        EXPECT_EQ(std::numeric_limits<uint8_t>::max(), reg.reg_value());
         reg.WriteTo(&mmio);
         EXPECT_EQ(0u, fake_reg);
     }
     {
-        fake_reg = fbl::numeric_limits<uint16_t>::max();
+        fake_reg = std::numeric_limits<uint16_t>::max();
         auto reg = TestReg16::Get().ReadFrom(&mmio);
-        EXPECT_EQ(fbl::numeric_limits<uint16_t>::max(), reg.reg_value());
+        EXPECT_EQ(std::numeric_limits<uint16_t>::max(), reg.reg_value());
         reg.WriteTo(&mmio);
         EXPECT_EQ(0u, fake_reg);
     }
     {
-        fake_reg = fbl::numeric_limits<uint32_t>::max();
+        fake_reg = std::numeric_limits<uint32_t>::max();
         auto reg = TestReg32::Get().ReadFrom(&mmio);
-        EXPECT_EQ(fbl::numeric_limits<uint32_t>::max(), reg.reg_value());
+        EXPECT_EQ(std::numeric_limits<uint32_t>::max(), reg.reg_value());
         reg.WriteTo(&mmio);
         EXPECT_EQ(0u, fake_reg);
     }
     {
-        fake_reg = fbl::numeric_limits<uint64_t>::max();
+        fake_reg = std::numeric_limits<uint64_t>::max();
         auto reg = TestReg64::Get().ReadFrom(&mmio);
-        EXPECT_EQ(fbl::numeric_limits<uint64_t>::max(), reg.reg_value());
+        EXPECT_EQ(std::numeric_limits<uint64_t>::max(), reg.reg_value());
         reg.WriteTo(&mmio);
         EXPECT_EQ(0u, fake_reg);
     }

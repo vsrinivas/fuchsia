@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <limits>
 #include <stdio.h>
 #include <threads.h>
 #include <unistd.h>
 
-#include <zircon/errors.h>
-#include <zircon/time.h>
-#include <zircon/types.h>
-#include <zircon/syscalls.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/intrusive_single_list.h>
-#include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
+#include <zircon/errors.h>
+#include <zircon/syscalls.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
 
 #include <utility>
 
@@ -137,7 +137,7 @@ int LoadGeneratorThread::Run() {
 
 double LoadGeneratorThread::MakeRandomDouble(double min, double max) {
     double norm(rand_r(&seed_));
-    norm /= fbl::numeric_limits<int>::max();
+    norm /= std::numeric_limits<int>::max();
     return min + (norm * (max - min));
 }
 

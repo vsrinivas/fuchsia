@@ -2,29 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <climits>
 #include <errno.h>
 #include <fcntl.h>
-#include <limits.h>
+#include <limits>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <time.h>
 #include <threads.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <block-client/client.h>
-#include <zircon/device/block.h>
-#include <zircon/syscalls.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
-#include <fbl/limits.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/unique_fd.h>
+#include <fbl/unique_ptr.h>
 #include <pretty/hexdump.h>
 #include <unittest/unittest.h>
+#include <zircon/device/block.h>
+#include <zircon/syscalls.h>
 
 #include <blktest/blktest.h>
 
@@ -694,14 +694,14 @@ bool blkdev_test_fifo_bad_client_overflow(void) {
 
     // Send a request that tries to overflow the VMO
     request.length     = 2;
-    request.vmo_offset = fbl::numeric_limits<uint64_t>::max();
+    request.vmo_offset = std::numeric_limits<uint64_t>::max();
     request.dev_offset = 0;
     ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_OUT_OF_RANGE);
 
     // Send a request that tries to overflow the device
     request.length     = 2;
     request.vmo_offset = 0;
-    request.dev_offset = fbl::numeric_limits<uint64_t>::max();
+    request.dev_offset = std::numeric_limits<uint64_t>::max();
     ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_OUT_OF_RANGE);
 
     block_fifo_release_client(client);

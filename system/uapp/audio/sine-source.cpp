@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/assert.h>
-#include <math.h>
 #include <fbl/algorithm.h>
-#include <fbl/limits.h>
+#include <limits>
+#include <math.h>
+#include <zircon/assert.h>
 
 #include "sine-source.h"
 
@@ -26,7 +26,7 @@ zx_status_t SineSource::Init(float freq,
     channels_ = channels;
 
     frames_to_produce_ = (duration_secs == 0.0)
-                       ? fbl::numeric_limits<uint64_t>::max()
+                       ? std::numeric_limits<uint64_t>::max()
                        : static_cast<uint64_t>(duration_secs * static_cast<float>(frame_rate_));
     sine_scalar_ = (freq * 2.0 * M_PI) / frame_rate_;
     amp_ = fbl::clamp<double>(amp, 0.0, 1.0);
@@ -113,7 +113,7 @@ zx_status_t SineSource::InitInternal() {
     sample_format_ = SAMPLE_FORMAT;
     get_frames_thunk_ = &SineSource::GetFramesInternal<SAMPLE_FORMAT>;
     frame_size_ = static_cast<uint32_t>(sizeof(SampleType) * channels_);
-    amp_ *= fbl::numeric_limits<ComputedType>::max() - 1;
+    amp_ *= std::numeric_limits<ComputedType>::max() - 1;
 
     return ZX_OK;
 }

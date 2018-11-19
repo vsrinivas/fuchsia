@@ -4,7 +4,7 @@
 
 #include <fbl/algorithm.h>
 
-#include <fbl/limits.h>
+#include <limits>
 #include <unittest/unittest.h>
 
 namespace {
@@ -70,7 +70,7 @@ bool round_up_test() {
     EXPECT_EQ(fbl::round_up(123u, 100u), 200u);
     EXPECT_EQ(fbl::round_up(123456u, 1000u), 124000u);
 
-    uint64_t large_int = fbl::numeric_limits<uint32_t>::max() + 1LLU;
+    uint64_t large_int = std::numeric_limits<uint32_t>::max() + 1LLU;
     EXPECT_EQ(fbl::round_up(large_int, 64U), large_int);
     EXPECT_EQ(fbl::round_up(large_int, 64LLU), large_int);
     EXPECT_EQ(fbl::round_up(large_int + 63LLU, 64U), large_int + 64LLU);
@@ -102,7 +102,7 @@ bool round_down_test() {
     EXPECT_EQ(fbl::round_down(123u, 100u), 100u);
     EXPECT_EQ(fbl::round_down(123456u, 1000u), 123000u);
 
-    uint64_t large_int = fbl::numeric_limits<uint32_t>::max() + 1LLU;
+    uint64_t large_int = std::numeric_limits<uint32_t>::max() + 1LLU;
     EXPECT_EQ(fbl::round_down(large_int, 64U), large_int);
     EXPECT_EQ(fbl::round_down(large_int, 64LLU), large_int);
     EXPECT_EQ(fbl::round_down(large_int + 63LLU, 64U), large_int);
@@ -310,7 +310,7 @@ bool gcd_test() {
     EXPECT_EQ(fbl::gcd(val1, val0), val1);
 
     // GCD(0,X) and GCD(X,0) == X
-    T val2 = fbl::numeric_limits<T>::max();
+    T val2 = std::numeric_limits<T>::max();
     T val3 = val2 / 8;
     EXPECT_EQ(fbl::gcd(val0, val2), val2);
     EXPECT_EQ(fbl::gcd(val3, val0), val3);
@@ -356,7 +356,7 @@ bool lcm_test() {
     EXPECT_EQ(fbl::lcm(val1, val0), val0);
 
     // LCM(0,X) and LCM(X,0) == 0
-    T val2 = fbl::numeric_limits<T>::max();
+    T val2 = std::numeric_limits<T>::max();
     T val3 = static_cast<T>(val2 >> (sizeof(T) * 4));
     EXPECT_EQ(fbl::lcm(val0, val3), val0);
     EXPECT_EQ(fbl::lcm(val2, val0), val0);

@@ -7,11 +7,10 @@
 #include <ddk/device.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <fbl/algorithm.h>
-#include <fbl/limits.h>
-#include <zircon/device/audio.h>
 #include <lib/zx/vmar.h>
-
+#include <limits>
 #include <utility>
+#include <zircon/device/audio.h>
 
 #include "a113-pdm.h"
 #include "dispatcher-pool/dispatcher-thread-pool.h"
@@ -295,7 +294,7 @@ zx_status_t GaussPdmInputStream::OnGetStreamFormats(
     uint16_t formats_sent = 0;
     audio_proto::StreamGetFmtsResp resp = { };
 
-    if (supported_formats_.size() > fbl::numeric_limits<uint16_t>::max()) {
+    if (supported_formats_.size() > std::numeric_limits<uint16_t>::max()) {
         zxlogf(ERROR, "Too many formats (%zu) to send during "
                       "AUDIO_STREAM_CMD_GET_FORMATS request!\n",
                supported_formats_.size());
@@ -677,7 +676,7 @@ GaussPdmInputStream::OnGetBuffer(dispatcher::Channel* channel,
     }
 
     ZX_DEBUG_ASSERT((ring_buffer_size_.load() / frame_size_) <=
-                    fbl::numeric_limits<decltype(resp.num_ring_buffer_frames)>::max());
+                    std::numeric_limits<decltype(resp.num_ring_buffer_frames)>::max());
     resp.num_ring_buffer_frames =
         static_cast<decltype(resp.num_ring_buffer_frames)>(ring_buffer_size_.load() / frame_size_);
 

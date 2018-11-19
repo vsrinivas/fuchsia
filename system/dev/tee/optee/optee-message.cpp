@@ -6,7 +6,7 @@
 
 #include <ddk/debug.h>
 #include <endian.h>
-#include <fbl/limits.h>
+#include <limits>
 #include <string.h>
 
 namespace {
@@ -36,7 +36,7 @@ OpenSessionMessage::OpenSessionMessage(SharedMemoryManager::DriverMemoryPool* me
     ZX_DEBUG_ASSERT(message_pool != nullptr);
 
     const size_t num_params = parameter_set.count + kNumFixedOpenSessionParams;
-    ZX_DEBUG_ASSERT(num_params <= fbl::numeric_limits<uint32_t>::max());
+    ZX_DEBUG_ASSERT(num_params <= std::numeric_limits<uint32_t>::max());
 
     zx_status_t status = message_pool->Allocate(CalculateSize(num_params), &memory_);
 

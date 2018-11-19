@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <limits>
 #include <new>
-#include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
 #include <utility>
@@ -14,12 +14,11 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <fbl/limits.h>
 #include <fbl/ref_ptr.h>
+#include <lib/zx/fifo.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
-#include <lib/zx/fifo.h>
 
 #include "server.h"
 
@@ -181,7 +180,7 @@ zx_status_t BlockServer::Read(block_fifo_request_t* requests, size_t* count) {
 }
 
 zx_status_t BlockServer::FindVmoIDLocked(vmoid_t* out) {
-    for (vmoid_t i = last_id_; i < fbl::numeric_limits<vmoid_t>::max(); i++) {
+    for (vmoid_t i = last_id_; i < std::numeric_limits<vmoid_t>::max(); i++) {
         if (!tree_.find(i).IsValid()) {
             *out = i;
             last_id_ = static_cast<vmoid_t>(i + 1);
@@ -318,7 +317,7 @@ void BlockServer::ProcessRequest(block_fifo_request_t* request) {
         }
 
         if ((request->length < 1) ||
-            (request->length > fbl::numeric_limits<uint32_t>::max())) {
+            (request->length > std::numeric_limits<uint32_t>::max())) {
             // Operation which is too small or too large
             TxnComplete(ZX_ERR_INVALID_ARGS, reqid, group);
             return;

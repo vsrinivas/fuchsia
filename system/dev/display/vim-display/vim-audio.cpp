@@ -4,8 +4,8 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
+#include <limits>
 #include <math.h>
 #include <new>
 #include <utility>
@@ -108,7 +108,7 @@ void Vim2Audio::OnDisplayAdded(const vim2_display_t* display, uint64_t display_i
     }
 
     const auto& r = pinned_spdif_rb.region(0);
-    if ((r.phys_addr + r.size - 1) > fbl::numeric_limits<uint32_t>::max()) {
+    if ((r.phys_addr + r.size - 1) > std::numeric_limits<uint32_t>::max()) {
         DISP_ERROR("Audio ring buffer VMO is not below 4GB! [0x%zx, 0x%zx]\n",
                    r.phys_addr,
                    r.phys_addr + r.size);

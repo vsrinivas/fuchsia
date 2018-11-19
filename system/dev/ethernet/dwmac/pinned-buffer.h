@@ -5,7 +5,6 @@
 #pragma once
 
 #include <ddk/debug.h>
-#include <fbl/limits.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <lib/fzl/vmo-mapper.h>

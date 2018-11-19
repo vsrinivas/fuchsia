@@ -7,7 +7,7 @@
 #include <audio-proto-utils/format-utils.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
-#include <fbl/limits.h>
+#include <limits>
 
 #include <audio-proto/audio-proto.h>
 #include <intel-hda/codec-utils/codec-driver-base.h>
@@ -404,7 +404,7 @@ zx_status_t IntelHDAStreamBase::DoGetStreamFormatsLocked(dispatcher::Channel* ch
     size_t formats_sent = 0;
     audio_proto::StreamGetFmtsResp resp = { };
 
-    if (supported_formats_.size() > fbl::numeric_limits<uint16_t>::max()) {
+    if (supported_formats_.size() > std::numeric_limits<uint16_t>::max()) {
         LOG("Too many formats (%zu) to send during AUDIO_STREAM_CMD_GET_FORMATS request!\n",
             supported_formats_.size());
         return ZX_ERR_INTERNAL;

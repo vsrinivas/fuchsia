@@ -4,7 +4,7 @@
 
 #include <fbl/atomic.h>
 
-#include <fbl/limits.h>
+#include <limits>
 #include <unittest/unittest.h>
 
 namespace {
@@ -375,8 +375,8 @@ T test_values[] = {
     0,
     1,
     23,
-    fbl::numeric_limits<T>::min() / 4,
-    fbl::numeric_limits<T>::max() / 4,
+    std::numeric_limits<T>::min() / 4,
+    std::numeric_limits<T>::max() / 4,
 };
 
 template <>

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/assert.h>
-#include <fbl/auto_call.h>
 #include <fbl/algorithm.h>
-#include <fbl/limits.h>
+#include <fbl/auto_call.h>
+#include <limits>
 #include <lib/fdio/io.h>
 #include <stdio.h>
+#include <zircon/assert.h>
 
 #include "wav-sink.h"
 
@@ -127,9 +127,9 @@ zx_status_t WAVSink::Finalize() {
     }
 
     constexpr size_t riff_overhead = sizeof(RIFFChunkHeader) + sizeof(WAVHeader);
-    auto riff_size = fbl::min<uint64_t>(fbl::numeric_limits<uint32_t>::max(),
+    auto riff_size = fbl::min<uint64_t>(std::numeric_limits<uint32_t>::max(),
                                          bytes_written_ + riff_overhead);
-    auto data_size = fbl::min<uint64_t>(fbl::numeric_limits<uint32_t>::max(),
+    auto data_size = fbl::min<uint64_t>(std::numeric_limits<uint32_t>::max(),
                                          bytes_written_);
 
     zx_status_t res;

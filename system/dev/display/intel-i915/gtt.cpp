@@ -5,11 +5,10 @@
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/pci-lib.h>
 
+#include <climits>
 #include <fbl/algorithm.h>
-#include <fbl/limits.h>
-#include <limits.h>
+#include <limits>
 #include <stdlib.h>
-
 #include <utility>
 
 #include "intel-i915.h"
@@ -40,7 +39,7 @@ inline uint32_t get_pte_offset(uint32_t idx) {
 namespace i915 {
 
 Gtt::Gtt() :
-    region_allocator_(RegionAllocator::RegionPool::Create(fbl::numeric_limits<size_t>::max())) {}
+    region_allocator_(RegionAllocator::RegionPool::Create(std::numeric_limits<size_t>::max())) {}
 
 Gtt::~Gtt() {
     if (scratch_buffer_paddr_) {

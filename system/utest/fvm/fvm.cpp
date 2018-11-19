@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <climits>
 #include <errno.h>
 #include <fcntl.h>
-#include <limits.h>
+#include <limits>
 #include <new>
 #include <poll.h>
 #include <stdbool.h>
@@ -25,7 +26,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
-#include <fbl/limits.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_fd.h>
@@ -911,11 +911,11 @@ bool TestVPartitionExtend() {
 
     // Allocate OBSCENELY too many slices
     erequest.offset = slice_count;
-    erequest.length = fbl::numeric_limits<size_t>::max();
+    erequest.length = std::numeric_limits<size_t>::max();
     ASSERT_LT(ioctl_block_fvm_extend(vp_fd, &erequest), 0, "Expected request failure");
 
     // Allocate slices at a too-large offset
-    erequest.offset = fbl::numeric_limits<size_t>::max();
+    erequest.offset = std::numeric_limits<size_t>::max();
     erequest.length = 1;
     ASSERT_LT(ioctl_block_fvm_extend(vp_fd, &erequest), 0, "Expected request failure");
 

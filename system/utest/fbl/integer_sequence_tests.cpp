@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fbl/integer_sequence.h>
-#include <fbl/limits.h>
 #include <fbl/type_support.h>
+#include <limits>
 #include <stdint.h>
 #include <unittest/unittest.h>
 
@@ -13,7 +13,7 @@ namespace {
 template <typename T, T... Is>
 T Max(fbl::integer_sequence<T, Is...>) {
     T sequence[sizeof...(Is)] = {Is...};
-    T value = fbl::numeric_limits<T>::min();
+    T value = std::numeric_limits<T>::min();
     for (size_t i = 0; i < sizeof...(Is); i++) {
         if (sequence[i] > value)
             value = sequence[i];
@@ -24,7 +24,7 @@ T Max(fbl::integer_sequence<T, Is...>) {
 template <typename T, T... Is>
 T Min(fbl::integer_sequence<T, Is...>) {
     T sequence[sizeof...(Is)] = {Is...};
-    T value = fbl::numeric_limits<T>::max();
+    T value = std::numeric_limits<T>::max();
     for (size_t i = 0; i < sizeof...(Is); i++) {
         if (sequence[i] < value)
             value = sequence[i];
