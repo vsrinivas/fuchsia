@@ -30,7 +30,6 @@ __BEGIN_CDECLS
 #define ZXSIO_SIGNAL_OUTGOING ZX_USER_SIGNAL_1
 #define ZXSIO_SIGNAL_ERROR ZX_USER_SIGNAL_2
 #define ZXSIO_SIGNAL_CONNECTED ZX_USER_SIGNAL_3
-#define ZXSIO_SIGNAL_HALFCLOSED ZX_USER_SIGNAL_4
 
 // wire format for datagram messages
 typedef struct fdio_socket_msg {

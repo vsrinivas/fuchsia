@@ -325,11 +325,6 @@ static zx_status_t fdio_socket_shutdown(fdio_t* io, int how) {
         return ZX_ERR_BAD_STATE;
     }
     zxsio_t* sio = (zxsio_t*)io;
-    if (how == SHUT_WR || how == SHUT_RDWR) {
-        // netstack expects this user signal to be set - raise it to keep that code working until
-        // it learns about the read/write disabled signals.
-        zx_object_signal_peer(sio->s.socket, 0u, ZXSIO_SIGNAL_HALFCLOSED);
-    }
     uint32_t options = 0;
     switch (how) {
     case SHUT_RD:
