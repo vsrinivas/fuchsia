@@ -22,7 +22,6 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_free_ptr.h>
 #include <fbl/vector.h>
 #include <zircon/types.h>
 

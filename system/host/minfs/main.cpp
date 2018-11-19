@@ -9,7 +9,6 @@
 #include <string.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/unique_free_ptr.h>
 #include <minfs/fsck.h>
 #include <minfs/host.h>
 #include <minfs/minfs.h>
