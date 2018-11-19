@@ -5,7 +5,6 @@
 #ifndef LIB_COMPONENT_CPP_OBJECT_DIR_H_
 #define LIB_COMPONENT_CPP_OBJECT_DIR_H_
 
-#include <fbl/atomic.h>
 
 #include "expose.h"
 

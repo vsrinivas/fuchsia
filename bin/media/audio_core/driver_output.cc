@@ -6,11 +6,11 @@
 
 #include <audio-proto-utils/format-utils.h>
 #include <dispatcher-pool/dispatcher-channel.h>
-#include <fbl/atomic.h>
 #include <fbl/limits.h>
-#include <lib/fit/defer.h>
-#include <zircon/process.h>
 #include <iomanip>
+#include <lib/fit/defer.h>
+#include <optional>
+#include <zircon/process.h>
 
 #include "garnet/bin/media/audio_core/audio_device_manager.h"
 #include "garnet/lib/media/wav_writer/wav_writer.h"
@@ -31,7 +31,7 @@ static constexpr int64_t kDefaultMaxRetentionNsec = ZX_MSEC(60);
 static constexpr int64_t kDefaultRetentionGapNsec = ZX_MSEC(10);
 static constexpr zx_duration_t kUnderflowCooldown = ZX_SEC(1);
 
-static fbl::atomic<zx_txid_t> TXID_GEN(1);
+static std::atomic<zx_txid_t> TXID_GEN(1);
 static thread_local zx_txid_t TXID = TXID_GEN.fetch_add(1);
 
 fbl::RefPtr<AudioOutput> DriverOutput::Create(zx::channel stream_channel,

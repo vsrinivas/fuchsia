@@ -5,11 +5,12 @@
 #include "garnet/lib/media/wav_writer/wav_writer.h"
 #include <endian.h>
 #include <fcntl.h>
+#include <iomanip>
 #include <lib/fdio/io.h>
+#include <limits>
+#include <optional>
 #include <unistd.h>
 #include <zircon/compiler.h>
-#include <iomanip>
-#include <limits>
 
 namespace media {
 namespace audio {
@@ -220,7 +221,7 @@ ssize_t WriteData(int file_desc, const void* const buffer, size_t num_bytes) {
 
 // Private static ('enabled' specialization) member, for default WAV file name
 template <>
-fbl::atomic<uint32_t> WavWriter<true>::instance_count_(0u);
+std::atomic<uint32_t> WavWriter<true>::instance_count_(0u);
 
 //
 // Public instance methods (general template implementation)

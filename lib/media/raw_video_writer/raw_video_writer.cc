@@ -4,12 +4,13 @@
 
 #include "raw_video_writer.h"
 
+#include <atomic>
 #include <endian.h>
-
 #include <fcntl.h>
-#include <unistd.h>
 #include <iomanip>
+#include <optional>
 #include <string>
+#include <unistd.h>
 
 namespace media {
 
@@ -21,7 +22,7 @@ constexpr const char* kFileExtension = ".raw_video";
 }  // namespace
 
 template <>
-fbl::atomic<uint32_t> RawVideoWriter<true>::instance_count_(0u);
+std::atomic<uint32_t> RawVideoWriter<true>::instance_count_(0u);
 
 template <bool enabled>
 RawVideoWriter<enabled>::RawVideoWriter(const char* file_name) {

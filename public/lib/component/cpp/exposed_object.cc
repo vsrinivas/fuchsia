@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 //
+#include <optional>
 #include <string>
 
-#include <fbl/atomic.h>
 #include <fbl/ref_ptr.h>
 #include <lib/fxl/strings/string_printf.h>
 
@@ -41,7 +41,7 @@ void ExposedObject::move_parents(const ObjectDir& new_parent) {
 }
 
 std::string ExposedObject::UniqueName(const std::string& prefix) {
-  static fbl::atomic_uint_fast64_t next_id;
+  static std::atomic_uint_fast64_t next_id;
   std::string out = prefix;
   auto value = next_id.fetch_add(1);
   fxl::StringAppendf(&out, "0x%lx", value);

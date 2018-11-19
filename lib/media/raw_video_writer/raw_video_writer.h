@@ -5,7 +5,6 @@
 #ifndef GARNET_LIB_MEDIA_RAW_VIDEO_WRITER_RAW_VIDEO_WRITER_H_
 #define GARNET_LIB_MEDIA_RAW_VIDEO_WRITER_RAW_VIDEO_WRITER_H_
 
-#include <fbl/atomic.h>
 #include <lib/fxl/files/unique_fd.h>
 
 namespace media {
@@ -137,7 +136,7 @@ class RawVideoWriter {
   std::string file_name_;
   fxl::UniqueFD file_;
 
-  static fbl::atomic<uint32_t> instance_count_;
+  static std::atomic<uint32_t> instance_count_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RawVideoWriter);
 };

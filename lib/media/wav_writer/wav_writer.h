@@ -5,12 +5,13 @@
 #ifndef GARNET_LIB_MEDIA_WAV_WRITER_WAV_WRITER_H_
 #define GARNET_LIB_MEDIA_WAV_WRITER_WAV_WRITER_H_
 
-#include <fbl/atomic.h>
-#include <fuchsia/media/cpp/fidl.h>
-#include <stdint.h>
-#include <zircon/types.h>
-#include <string>
 #include "lib/fxl/files/unique_fd.h"
+#include <fuchsia/media/cpp/fidl.h>
+#include <memory>
+#include <optional>
+#include <stdint.h>
+#include <string>
+#include <zircon/types.h>
 
 namespace media {
 namespace audio {
@@ -64,7 +65,7 @@ class WavWriter {
   fxl::UniqueFD file_;
   size_t payload_written_ = 0;
 
-  static fbl::atomic<uint32_t> instance_count_;
+  static std::atomic<uint32_t> instance_count_;
 };
 
 template <>
