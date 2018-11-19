@@ -29,7 +29,9 @@ public:
 
     AddressManager(Owner* owner, uint32_t address_slot_count);
 
-    // Used to clear all address mappings if the hardware was reset.
+    // Used to clear all address mappings if the hardware will be reset. It
+    // waits until all current address-space operations are done, and ensures no
+    // more will start.
     void ClearAddressMappings(bool force_expire);
 
     bool AssignAddressSpace(MsdArmAtom* atom);
@@ -54,6 +56,8 @@ public:
     }
 
 private:
+    // AddressSlots handle the mappings between AddressSpaces and the hardware
+    // registers.
     struct AddressSlot {
         std::weak_ptr<AddressSlotMapping> mapping;
 
@@ -64,6 +68,9 @@ private:
         const void* address_space = nullptr;
     };
 
+    // A HardwareSlot handles the registers for a specific address space. Each
+    // slot has its own lock because flushing a slot can take a long time and we
+    // want to be able to flush multiple slots in parallel.
     struct HardwareSlot {
         HardwareSlot(uint32_t slot) : registers(slot) {}
 
@@ -74,7 +81,7 @@ private:
         void InvalidateSlot(magma::RegisterIo* io) __TA_REQUIRES(lock);
         void UnlockMmu(magma::RegisterIo* io) __TA_REQUIRES(lock);
 
-        std::mutex lock;
+        std::mutex lock; // This lock should only be taken while address_slot_lock_ is held.
         __TA_GUARDED(lock) registers::AsRegisters registers;
     };
 

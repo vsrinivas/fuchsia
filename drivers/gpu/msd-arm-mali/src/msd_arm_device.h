@@ -153,7 +153,9 @@ private:
     void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, bool enqueue_front = false);
     void SuspectedGpuHang();
     static void InitializeHardwareQuirks(GpuFeatures* features, magma::RegisterIo* registers);
+    bool PowerDownL2();
     bool IsProtectedModeSupported();
+    bool ExitProtectedMode();
     void EnterProtectedMode();
     bool ResetDevice();
     bool IsInProtectedMode();

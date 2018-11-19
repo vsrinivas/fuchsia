@@ -211,8 +211,6 @@ bool MsdArmDevice::Init(void* device_handle)
 
 bool MsdArmDevice::InitializeHardware()
 {
-    // force_expire is false because nothing should have been using an address space before.
-    address_manager_->ClearAddressMappings(false);
     cycle_counter_refcount_ = 0;
     DASSERT(registers::GpuStatus::Get().ReadFrom(register_io_.get()).cycle_count_active().get() == 0);
     EnableInterrupts();
@@ -307,11 +305,40 @@ int MsdArmDevice::GpuInterruptThreadLoop()
         if (interrupt_thread_quit_flag_)
             break;
 
-        auto request = std::make_unique<GpuInterruptRequest>();
-        auto reply = request->GetReply();
+        auto irq_status = registers::GpuIrqFlags::GetStatus().ReadFrom(register_io_.get());
+        auto clear_flags = registers::GpuIrqFlags::GetIrqClear().FromValue(0);
+        // Handle some interrupts on the interrupt thread so the device thread
+        // can wait for them to complete.
+        if (irq_status.reset_completed().get()) {
+            DLOG("Received GPU reset completed");
+            clear_flags.reset_completed().set(true);
+            reset_semaphore_->Signal();
+            irq_status.reset_completed().set(0);
+        }
+        if (irq_status.power_changed_single().get() || irq_status.power_changed_all().get()) {
+            clear_flags.power_changed_single().set(irq_status.power_changed_single().get());
+            clear_flags.power_changed_all().set(irq_status.power_changed_all().get());
+            irq_status.power_changed_single().set(0);
+            irq_status.power_changed_all().set(0);
+            power_manager_->ReceivedPowerInterrupt(register_io_.get());
+            if (power_manager_->l2_ready_status() &&
+                (cache_coherency_status_ == kArmMaliCacheCoherencyAce)) {
+                auto enable_reg = registers::CoherencyFeatures::GetEnable().FromValue(0);
+                enable_reg.ace().set(true);
+                enable_reg.WriteTo(register_io_.get());
+            }
+        }
+        if (clear_flags.reg_value()) {
+            clear_flags.WriteTo(register_io_.get());
+        }
 
-        EnqueueDeviceRequest(std::move(request), true);
-        reply->Wait();
+        if (irq_status.reg_value()) {
+            auto request = std::make_unique<GpuInterruptRequest>();
+            auto reply = request->GetReply();
+
+            EnqueueDeviceRequest(std::move(request), true);
+            reply->Wait();
+        }
     }
 
     DLOG("GPU Interrupt thread exited");
@@ -321,6 +348,11 @@ int MsdArmDevice::GpuInterruptThreadLoop()
 magma::Status MsdArmDevice::ProcessGpuInterrupt()
 {
     auto irq_status = registers::GpuIrqFlags::GetStatus().ReadFrom(register_io_.get());
+    // Some interrupts are handled on the interrupt thread, so ignore them in this
+    // function.
+    irq_status.reset_completed().set(0);
+    irq_status.power_changed_single().set(0);
+    irq_status.power_changed_all().set(0);
     auto clear_flags = registers::GpuIrqFlags::GetIrqClear().FromValue(irq_status.reg_value());
     clear_flags.WriteTo(register_io_.get());
 
@@ -328,23 +360,6 @@ magma::Status MsdArmDevice::ProcessGpuInterrupt()
     if (!irq_status.reg_value())
         magma::log(magma::LOG_WARNING, "Got unexpected GPU IRQ with no flags set\n");
 
-    if (irq_status.reset_completed().get()) {
-        DLOG("Received GPU reset completed");
-        reset_semaphore_->Signal();
-        irq_status.reset_completed().set(0);
-    }
-
-    if (irq_status.power_changed_single().get() || irq_status.power_changed_all().get()) {
-        irq_status.power_changed_single().set(0);
-        irq_status.power_changed_all().set(0);
-        power_manager_->ReceivedPowerInterrupt(register_io_.get());
-        if (power_manager_->l2_ready_status() &&
-            (cache_coherency_status_ == kArmMaliCacheCoherencyAce)) {
-            auto enable_reg = registers::CoherencyFeatures::GetEnable().FromValue(0);
-            enable_reg.ace().set(true);
-            enable_reg.WriteTo(register_io_.get());
-        }
-    }
     if (irq_status.performance_counter_sample_completed().get()) {
         uint64_t duration_ms = 0;
         std::vector<uint32_t> perf_result = perf_counters_->ReadCompleted(&duration_ms);
@@ -959,20 +974,43 @@ void MsdArmDevice::InitializeHardwareQuirks(GpuFeatures* features, magma::Regist
 bool MsdArmDevice::IsProtectedModeSupported()
 {
     uint32_t gpu_product_id = gpu_features_.gpu_id.product_id().get();
+    // TODO(MA-522): Support protected mode when using ACE cache coherency. Apparently
+    // the L2 needs to be powered down then switched to ACE Lite in that mode.
+    if (cache_coherency_status_ == kArmMaliCacheCoherencyAce)
+        return false;
     // All Bifrost should support it. 0x6956 is Mali-t60x MP4 r0p0, so it doesn't count.
     return gpu_product_id != 0x6956 && (gpu_product_id > 0x1000);
 }
 
 void MsdArmDevice::EnterProtectedMode()
 {
+    // TODO(MA-522): If cache-coherency is enabled, power down L2 and wait for the
+    // completion of that.
     register_io_->Write32(registers::GpuCommand::kOffset,
                           registers::GpuCommand::kCmdSetProtectedMode);
+}
+
+bool MsdArmDevice::ExitProtectedMode()
+{
+    // Remove perf counter address mapping.
+    perf_counters_->ForceDisable();
+    // |force_expire| is false because nothing should have been using an address
+    // space before. Do this before powering down L2 so connections don't try to
+    // hit the MMU while that's happening.
+    address_manager_->ClearAddressMappings(false);
+
+    if (!PowerDownL2()) {
+        return DRETF(false, "Powering down L2 timed out\n");
+    }
+
+    return ResetDevice();
 }
 
 bool MsdArmDevice::ResetDevice()
 {
     // Reset semaphore shouldn't already be signaled.
     DASSERT(!reset_semaphore_->Wait(0));
+
     register_io_->Write32(registers::GpuCommand::kOffset, registers::GpuCommand::kCmdSoftReset);
 
     if (!reset_semaphore_->Wait(1000)) {
@@ -980,7 +1018,23 @@ bool MsdArmDevice::ResetDevice()
         return false;
     }
 
-    return InitializeHardware();
+    if (!InitializeHardware()) {
+        magma::log(magma::LOG_WARNING, "Initialize hardware failed");
+        return false;
+    }
+
+    if (!power_manager_->WaitForShaderReady(register_io_.get())) {
+        magma::log(magma::LOG_WARNING, "Waiting for shader ready failed");
+        return false;
+    }
+
+    return true;
+}
+
+bool MsdArmDevice::PowerDownL2()
+{
+    power_manager_->DisableL2(register_io_.get());
+    return power_manager_->WaitForL2Disable(register_io_.get());
 }
 
 bool MsdArmDevice::IsInProtectedMode()

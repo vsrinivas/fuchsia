@@ -8,6 +8,7 @@
 
 PowerManager::PowerManager(magma::RegisterIo* io)
 {
+    power_state_semaphore_ = magma::PlatformSemaphore::Create();
     // Initialize current set of running cores.
     ReceivedPowerInterrupt(io);
     last_check_time_ = std::chrono::steady_clock::now();
@@ -24,8 +25,60 @@ void PowerManager::EnableCores(magma::RegisterIo* io, uint64_t shader_bitmask)
                                           registers::CoreReadyState::ActionType::kActionPowerOn, 1);
 }
 
+void PowerManager::DisableL2(magma::RegisterIo* io)
+{
+    uint32_t powered_on_shaders =
+        registers::CoreReadyState::ReadBitmask(io, registers::CoreReadyState::CoreType::kShader,
+                                               registers::CoreReadyState::StatusType::kReady) |
+        registers::CoreReadyState::ReadBitmask(
+            io, registers::CoreReadyState::CoreType::kShader,
+            registers::CoreReadyState::StatusType::kPowerTransitioning);
+
+    registers::CoreReadyState::WriteState(io, registers::CoreReadyState::CoreType::kShader,
+                                          registers::CoreReadyState::ActionType::kActionPowerOff,
+                                          powered_on_shaders);
+    registers::CoreReadyState::WriteState(io, registers::CoreReadyState::CoreType::kL2,
+                                          registers::CoreReadyState::ActionType::kActionPowerOff,
+                                          1);
+    registers::CoreReadyState::WriteState(io, registers::CoreReadyState::CoreType::kTiler,
+                                          registers::CoreReadyState::ActionType::kActionPowerOff,
+                                          1);
+}
+
+bool PowerManager::WaitForL2Disable(magma::RegisterIo* io)
+{
+    while (true) {
+        bool powered_on =
+            registers::CoreReadyState::ReadBitmask(io, registers::CoreReadyState::CoreType::kL2,
+                                                   registers::CoreReadyState::StatusType::kReady) |
+            registers::CoreReadyState::ReadBitmask(
+                io, registers::CoreReadyState::CoreType::kL2,
+                registers::CoreReadyState::StatusType::kPowerTransitioning);
+        if (!powered_on)
+            return true;
+        if (!power_state_semaphore_->Wait(1000))
+            return false;
+    }
+}
+
+bool PowerManager::WaitForShaderReady(magma::RegisterIo* io)
+{
+    while (true) {
+        // Only wait for 1 shader to be ready, since that's enough to execute
+        // commands.
+        bool powered_on =
+            registers::CoreReadyState::ReadBitmask(io, registers::CoreReadyState::CoreType::kShader,
+                                                   registers::CoreReadyState::StatusType::kReady);
+        if (powered_on)
+            return true;
+        if (!power_state_semaphore_->Wait(1000))
+            return false;
+    }
+}
+
 void PowerManager::ReceivedPowerInterrupt(magma::RegisterIo* io)
 {
+    std::lock_guard<std::mutex> lock(ready_status_mutex_);
     tiler_ready_status_ =
         registers::CoreReadyState::ReadBitmask(io, registers::CoreReadyState::CoreType::kTiler,
                                                registers::CoreReadyState::StatusType::kReady);
@@ -35,6 +88,7 @@ void PowerManager::ReceivedPowerInterrupt(magma::RegisterIo* io)
     shader_ready_status_ =
         registers::CoreReadyState::ReadBitmask(io, registers::CoreReadyState::CoreType::kShader,
                                                registers::CoreReadyState::StatusType::kReady);
+    power_state_semaphore_->Signal();
 }
 
 void PowerManager::UpdateGpuActive(bool active)

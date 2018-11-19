@@ -62,13 +62,26 @@ void AddressManager::AtomFinished(MsdArmAtom* atom)
 void AddressManager::ClearAddressMappings(bool force_expire)
 {
     std::lock_guard<std::mutex> lock(address_slot_lock_);
-    for (auto& slot : address_slots_) {
+    for (uint32_t i = 0; i < address_slots_.size(); i++) {
+        auto& slot = address_slots_[i];
+        HardwareSlot& hardware_slot = *registers_[i];
+        std::lock_guard<std::mutex> lock(hardware_slot.lock);
+
+        if (slot.address_space) {
+            // Invalidate the hardware slot to ensure the relevant regions of the L2 cache are
+            // flushed, because any AddressSpace invalidations afterwards (before the L2 is shut
+            // down) will be ignored and could otherwise allow flushing the L2 to write to
+            // deallocated memory.
+            hardware_slot.InvalidateSlot(owner_->register_io());
+            slot.address_space = nullptr;
+        }
         if (force_expire) {
             slot.mapping.reset();
         } else {
+            // Do this check while HardwareSlot is locked, to ensure that any previous
+            // FlushAddressMappingRange has finished and released its mapping.
             DASSERT(slot.mapping.expired());
         }
-        slot.address_space = nullptr;
     }
 }
 

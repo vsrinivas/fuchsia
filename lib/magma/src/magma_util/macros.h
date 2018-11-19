@@ -180,6 +180,21 @@ static inline int64_t ms_to_signed_ns(uint64_t ms)
     return static_cast<int64_t>(ms) * 1000000;
 }
 
+#define MAGMA_THREAD_ANNOTATION(x) __attribute__((x))
+
+#define MAGMA_CAPABILITY(x) MAGMA_THREAD_ANNOTATION(__capability__(x))
+#define MAGMA_GUARDED(x) MAGMA_THREAD_ANNOTATION(__guarded_by__(x))
+#define MAGMA_ACQUIRE(...) MAGMA_THREAD_ANNOTATION(__acquire_capability__(__VA_ARGS__))
+#define MAGMA_TRY_ACQUIRE(...) MAGMA_THREAD_ANNOTATION(__try_acquire_capability__(__VA_ARGS__))
+#define MAGMA_ACQUIRED_BEFORE(...) MAGMA_THREAD_ANNOTATION(__acquired_before__(__VA_ARGS__))
+#define MAGMA_ACQUIRED_AFTER(...) MAGMA_THREAD_ANNOTATION(__acquired_after__(__VA_ARGS__))
+#define MAGMA_RELEASE(...) MAGMA_THREAD_ANNOTATION(__release_capability__(__VA_ARGS__))
+#define MAGMA_REQUIRES(...) MAGMA_THREAD_ANNOTATION(__requires_capability__(__VA_ARGS__))
+#define MAGMA_EXCLUDES(...) MAGMA_THREAD_ANNOTATION(__locks_excluded__(__VA_ARGS__))
+#define MAGMA_RETURN_CAPABILITY(x) MAGMA_THREAD_ANNOTATION(__lock_returned__(x))
+#define MAGMA_SCOPED_CAPABILITY MAGMA_THREAD_ANNOTATION(__scoped_lockable__)
+#define MAGMA_NO_THREAD_SAFETY_ANALYSIS MAGMA_THREAD_ANNOTATION(__no_thread_safety_analysis__)
+
 } // namespace magma
 
 #endif // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_MACROS_H_

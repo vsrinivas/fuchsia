@@ -137,7 +137,10 @@ public:
         EXPECT_NE(device, nullptr);
         device->set_register_io(std::move(register_io));
         auto connection = MsdArmConnection::Create(0, device.get());
-        device->power_manager_->shader_ready_status_ = 0xfu;
+        {
+            std::lock_guard<std::mutex> lock(device->power_manager_->ready_status_mutex_);
+            device->power_manager_->shader_ready_status_ = 0xfu;
+        }
 
         auto null_atom =
             std::make_unique<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data(), 0);
@@ -225,11 +228,38 @@ public:
         }
 
         EXPECT_FALSE(device->IsInProtectedMode());
+        EXPECT_EQ(1u, device->power_manager_->l2_ready_status());
+
+        EXPECT_TRUE(device->perf_counters_->Enable());
 
         device->EnterProtectedMode();
+        EXPECT_EQ(1u, device->power_manager_->l2_ready_status());
         EXPECT_TRUE(device->IsInProtectedMode());
-        EXPECT_TRUE(device->ResetDevice());
+        EXPECT_TRUE(device->perf_counters_->running());
+
+        EXPECT_TRUE(device->ExitProtectedMode());
+        EXPECT_EQ(1u, device->power_manager_->l2_ready_status());
         EXPECT_FALSE(device->IsInProtectedMode());
+        // Exiting protected mode should disable performance counters.
+        EXPECT_FALSE(device->perf_counters_->running());
+    }
+
+    void PowerDownL2()
+    {
+        // Use device thread so the test can wait for a power down interrupt.
+        std::unique_ptr<MsdArmDevice> device = MsdArmDevice::Create(GetTestDeviceHandle(), true);
+        ASSERT_NE(nullptr, device);
+
+        // In theory this could work without protected mode, but it's not needed. On the amlogic
+        // T820 in the VIM2, powering down the L2 seems to cause GPU faults when the shader cores
+        // are later powered back up again.
+        if (!device->IsProtectedModeSupported()) {
+            magma::log(magma::LOG_WARNING, "Protected mode not supported, skipping test");
+            return;
+        }
+
+        EXPECT_TRUE(device->PowerDownL2());
+        EXPECT_EQ(0u, device->power_manager_->l2_ready_status());
     }
 };
 
@@ -279,4 +309,10 @@ TEST(MsdArmDevice, ProtectMode)
 {
     TestMsdArmDevice test;
     test.ProtectedMode();
+}
+
+TEST(MsdArmDevice, PowerDownL2)
+{
+    TestMsdArmDevice test;
+    test.PowerDownL2();
 }

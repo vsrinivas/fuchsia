@@ -24,6 +24,18 @@ public:
     bool TriggerRead(bool keep_enabled);
     std::vector<uint32_t> ReadCompleted(uint64_t* duration_ms_out);
 
+    void ForceDisable()
+    {
+        counter_state_ = PerformanceCounterState::kDisabled;
+        address_mapping_.reset();
+    }
+
+    bool running() const
+    {
+        return counter_state_ == PerformanceCounterState::kEnabled ||
+               counter_state_ == PerformanceCounterState::kTriggered;
+    }
+
 private:
     friend class PerformanceCounterTest;
     enum class PerformanceCounterState {

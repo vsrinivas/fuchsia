@@ -50,13 +50,16 @@ bool PerformanceCounters::Enable()
         if (!buffer->platform_buffer()->MapCpu(&cpu_map)) {
             return DRETF(false, "Failed to map perf counter buffer\n");
         }
-        auto mapping = owner_->address_manager()->AllocateMappingForAddressSpace(connection);
-        if (!mapping) {
-            return DRETF(false, "Unable to map perf counter address space to GPU");
-        }
         buffer->platform_buffer()->CleanCache(0, kPerfBufferSize, true);
         connection_ = connection;
         buffer_ = buffer;
+    }
+
+    if (!address_mapping_) {
+        auto mapping = owner_->address_manager()->AllocateMappingForAddressSpace(connection_);
+        if (!mapping) {
+            return DRETF(false, "Unable to map perf counter address space to GPU");
+        }
         address_mapping_ = mapping;
     }
     // Ensure the cache flush or any previous read completes before signaling the hardware to

@@ -230,7 +230,7 @@ public:
         kPowerTransitioning = 0x100,
 
         // Read-only: the set of cores that are currently executing work.
-        kPowerActive = 0x100,
+        kPowerActive = 0x140,
     };
 
     enum class ActionType {
