@@ -24,6 +24,11 @@ typedef struct usb_request usb_request_t;
 
 typedef void (*usb_request_complete_cb)(usb_request_t* req, void* cookie);
 
+// Returns a batch of completed requests for an endpoint.
+// The client should free the completed_reqs array once they are finished with it.
+typedef void (*usb_batch_complete_cb)(usb_request_t** completed_reqs, size_t num_completed,
+                                      void* cookie);
+
 // Should be set by the requestor.
 typedef struct usb_header {
     // frame number for scheduling isochronous transfers
@@ -80,15 +85,6 @@ typedef struct usb_request {
     // callback.
     usb_request_complete_cb complete_cb;
 
-    // Set by the requestor for opting out of the complete_cb()
-    // callback for successfully completed requests. The callback
-    // will still be invoked if an error is encountered.
-    // This is useful for isochronous requests, where the requestor
-    // may not care about most callbacks. They will still have to request
-    // callbacks at a regular interval to queue more data, and free or
-    // reuse previously silently completed requests.
-    bool cb_on_error_only;
-
     // Set by requestor for passing data to complete_cb callback
     // The saved_cookie field can be used to temporarily save the
     // original cookie.
@@ -116,6 +112,14 @@ typedef struct usb_request {
     // by the requestor.
     void (*release_cb)(usb_request_t* req);
     size_t alloc_size;
+
+    // For requests queued on endpoints which have batching enabled via
+    // usb_configure_batch_callback().
+    // Set by the requestor if a callback is required on this request's completion.
+    // This is useful for isochronous requests, where the requestor does not care about
+    // most callbacks.
+    // The requestor should ensure the last request has this set to true.
+    bool require_batch_cb;
 } usb_request_t;
 
 
@@ -125,6 +129,10 @@ typedef struct {
                            size_t* out_length);
     // queues a USB request
     void (*request_queue)(void* ctx, usb_request_t* usb_request);
+
+    zx_status_t (*configure_batch_callback)(void* ctx, uint8_t ep_address,
+                                            usb_batch_complete_cb cb, void* cookie);
+
     usb_speed_t (*get_speed)(void* ctx);
     zx_status_t (*set_interface)(void* ctx, uint8_t interface_number, uint8_t alt_setting);
     uint8_t (*get_configuration)(void* ctx);
@@ -188,6 +196,18 @@ static inline zx_status_t usb_clear_feature(const usb_protocol_t* usb, uint8_t r
 
 static inline void usb_request_queue(const usb_protocol_t* usb, usb_request_t* usb_request) {
     return usb->ops->request_queue(usb->ctx, usb_request);
+}
+
+// Configures an endpoint to batch multiple requests to a single callback.
+// Requests will receive a callback if they have set require_batch_cb to true, or an error occurs.
+//   ep_address: the endpoint which requests will be queued on.
+//   complete_cb: callback for the batch of completed requests.
+//   cookie: user data passed to the |complete_cb|.
+static inline zx_status_t usb_configure_batch_callback(const usb_protocol_t* usb,
+                                                       uint8_t ep_address,
+                                                       usb_batch_complete_cb complete_cb,
+                                                       void* cookie) {
+    return usb->ops->configure_batch_callback(usb->ctx, ep_address, complete_cb, cookie);
 }
 
 static inline usb_speed_t usb_get_speed(const usb_protocol_t* usb) {

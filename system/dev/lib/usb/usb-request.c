@@ -311,9 +311,6 @@ __EXPORT void usb_request_complete(usb_request_t* req, zx_status_t status, zx_of
     req->response.status = status;
     req->response.actual = actual;
 
-    if (req->cb_on_error_only && req->response.status == ZX_OK) {
-        return;
-    }
     if (req->complete_cb) {
         req->complete_cb(req, req->cookie);
     }

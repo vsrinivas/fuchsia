@@ -241,6 +241,13 @@ static void usb_device_request_queue(void* ctx, usb_request_t* req) {
     usb_hci_request_queue(&dev->hci, req);
 }
 
+
+static zx_status_t usb_device_configure_batch_callback(void* ctx, uint8_t ep_address,
+                                                       usb_batch_complete_cb cb, void* cookie) {
+    // TODO(jocelyndang): implement this.
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 static usb_speed_t usb_device_get_speed(void* ctx) {
     usb_device_t* dev = ctx;
     return dev->speed;
@@ -369,6 +376,7 @@ static size_t usb_device_get_request_size(void* ctx) {
 static usb_protocol_ops_t _usb_protocol = {
     .control = usb_device_control,
     .request_queue = usb_device_request_queue,
+    .configure_batch_callback = usb_device_configure_batch_callback,
     .get_speed = usb_device_get_speed,
     .set_interface = usb_device_set_interface,
     .get_configuration = usb_device_get_configuration,
