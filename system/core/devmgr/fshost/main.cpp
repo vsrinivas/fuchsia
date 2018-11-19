@@ -9,6 +9,7 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/ramdisk.h>
 #include <launchpad/launchpad.h>
+#include <lib/bootfs/parser.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
@@ -34,7 +35,6 @@
 
 #include <utility>
 
-#include "../shared/bootfs.h"
 #include "fshost.h"
 
 namespace devmgr {
@@ -102,8 +102,8 @@ zx_status_t SetupBootfsVmo(const fbl::unique_ptr<FsManager>& root, uint32_t n,
         printf("devmgr: failed to duplicate vmo for /system (%d)\n", status);
         return status;
     }
-    Bootfs bfs;
-    if (Bootfs::Create(std::move(bootfs_vmo), &bfs) == ZX_OK) {
+    bootfs::Parser bfs;
+    if (bfs.Init(zx::unowned_vmo(bootfs_vmo)) == ZX_OK) {
         auto add_file = (type == BOOTDATA_BOOTFS_SYSTEM) ?
             &FsManager::SystemfsAddFile :
             &FsManager::BootfsAddFile;
@@ -112,7 +112,6 @@ zx_status_t SetupBootfsVmo(const fbl::unique_ptr<FsManager>& root, uint32_t n,
                       (root.get()->*add_file)(entry->name, vmo, entry->data_off, entry->data_len);
                       return ZX_OK;
                   });
-        bfs.Destroy();
     }
     if (type == BOOTDATA_BOOTFS_SYSTEM) {
         root->SystemfsSetReadonly(getenv("zircon.system.writable") == nullptr);

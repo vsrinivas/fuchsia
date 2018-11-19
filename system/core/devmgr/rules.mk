@@ -78,7 +78,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/fshost/block-watcher.cpp \
     $(LOCAL_DIR)/fshost/main.cpp \
     $(LOCAL_DIR)/fshost/vfs-rpc.cpp \
-    $(LOCAL_DIR)/shared/bootfs.cpp \
     $(LOCAL_DIR)/shared/fdio.cpp \
 
 MODULE_STATIC_LIBS := \
@@ -91,6 +90,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/async-loop.cpp \
     system/ulib/async-loop \
     system/ulib/bootdata \
+    system/ulib/bootfs \
     system/ulib/fbl \
     system/ulib/gpt \
     system/ulib/sync \
