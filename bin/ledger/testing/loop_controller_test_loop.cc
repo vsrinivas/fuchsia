@@ -6,6 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/defer.h>
+#include <memory>
 
 namespace ledger {
 
@@ -14,7 +15,7 @@ namespace {
 class SubLoopTestLoop : public SubLoop {
  public:
   explicit SubLoopTestLoop(LoopController* controller,
-                           fbl::unique_ptr<async::LoopInterface> loop_interface)
+                           std::unique_ptr<async::LoopInterface> loop_interface)
       : controller_(controller), loop_interface_(std::move(loop_interface)) {}
 
   void DrainAndQuit() override {
@@ -30,7 +31,7 @@ class SubLoopTestLoop : public SubLoop {
 
  private:
   LoopController* controller_;
-  fbl::unique_ptr<async::LoopInterface> loop_interface_;
+  std::unique_ptr<async::LoopInterface> loop_interface_;
 };
 
 class CallbackWaiterImpl : public CallbackWaiter {
@@ -84,7 +85,9 @@ void LoopControllerTestLoop::RunLoop() { loop_->RunUntilIdle(); }
 void LoopControllerTestLoop::StopLoop() { loop_->Quit(); }
 
 std::unique_ptr<SubLoop> LoopControllerTestLoop::StartNewLoop() {
-  return std::make_unique<SubLoopTestLoop>(this, loop_->StartNewLoop());
+  return std::make_unique<SubLoopTestLoop>(
+      this,
+      std::unique_ptr<async::LoopInterface>(loop_->StartNewLoop().release()));
 }
 
 std::unique_ptr<CallbackWaiter> LoopControllerTestLoop::NewWaiter() {
