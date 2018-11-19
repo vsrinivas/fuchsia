@@ -21,7 +21,7 @@ function listen {
     addr="$(get-fuchsia-device-addr --nowait --timeout=1000)"
     if [[ -n "${addr}" ]]; then
       echo "Connecting to device (${addr})..."
-      (fx-command-exec ssh "${addr}" /system/bin/log_listener "$@" || true)
+      (fx-command-exec ssh "${addr}" log_listener "$@" || true)
       if [[ $? -eq 0 ]]; then
         break
       fi
