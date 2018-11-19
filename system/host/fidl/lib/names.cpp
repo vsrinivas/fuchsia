@@ -393,7 +393,7 @@ std::string NameIdentifier(SourceLocation name) {
 std::string NameName(const flat::Name& name, StringView library_separator, StringView name_separator) {
     std::string compiled_name = LibraryName(name.library(), library_separator);
     compiled_name += name_separator;
-    compiled_name += name.name().data();
+    compiled_name += name.name_part();
     return compiled_name;
 }
 

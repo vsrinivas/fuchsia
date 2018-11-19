@@ -306,7 +306,7 @@ fidl::StringView Decl::GetAttribute(fidl::StringView name) const {
 }
 
 std::string Decl::GetName() const {
-    return name.name().data();
+    return name.name_part();
 }
 
 bool IsSimple(const Type* type, const FieldShape& fieldshape) {
@@ -445,12 +445,8 @@ Name Library::NextAnonymousName() {
     // JSON IR, and are exposed to the backends.
     std::ostringstream data;
     data << "SomeLongAnonymousPrefix";
-    data << anon_source_files_.size();
-    anon_source_files_.push_back(std::make_unique<SourceFile>(
-        "anonymous", StringView(data.str())));
-    auto src_file = anon_source_files_.back().get();
-    auto name = Name(this, SourceLocation(src_file->data(), *src_file));
-    return name;
+    data << anon_counter_++;
+    return Name(this, StringView(data.str()));
 }
 
 bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,
@@ -507,7 +503,7 @@ bool Library::RegisterDecl(Decl* decl) {
     auto iter = declarations_.emplace(name, decl);
     if (!iter.second) {
         std::string message = "Name collision: ";
-        message.append(name->name().data());
+        message.append(name->name_part());
         return Fail(*name, message);
     }
     return true;
@@ -738,7 +734,7 @@ bool Library::ConsumeInterfaceDeclaration(
     std::vector<Interface::Method> methods;
     for (auto& method : interface_declaration->methods) {
         std::unique_ptr<raw::Ordinal> ordinal_literal =
-            std::make_unique<raw::Ordinal>(fidl::ordinals::GetOrdinal(library_name_, name.name().data(), *method));
+            std::make_unique<raw::Ordinal>(fidl::ordinals::GetOrdinal(library_name_, name.name_part(), *method));
 
         auto attributes = std::move(method->attributes);
         SourceLocation method_name = method->identifier->location();
@@ -1136,7 +1132,7 @@ Decl* Library::LookupConstant(const Type* type, const Name& name) {
     }
     auto enum_decl = static_cast<Enum*>(decl);
     for (auto& member : enum_decl->members) {
-        if (member.name.data() == name.name().data()) {
+        if (member.name.data() == name.name_part()) {
             return enum_decl;
         }
     }
@@ -1216,7 +1212,7 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
             auto decl = LookupConstant(type, identifier->name);
             if (decl == nullptr) {
                 std::string message("Unable to find the constant named: ");
-                message += identifier->name.name().data();
+                message += identifier->name.name_part();
                 return Fail(identifier->name, message.data());
             }
             edges.insert(decl);
@@ -1416,7 +1412,8 @@ bool Library::CompileInterface(Interface* interface_declaration) {
                 return Fail(name, message);
             }
             auto superinterface = static_cast<const Interface*>(decl);
-            if (method_scope.interfaces.Insert(superinterface, superinterface->name.name()).ok()) {
+            assert(!superinterface->name.is_anonymous());
+            if (method_scope.interfaces.Insert(superinterface, superinterface->name.source_location()).ok()) {
                 if (!Visitor(superinterface, Visitor))
                     return false;
             } else {
@@ -1749,7 +1746,7 @@ bool Library::CompileRequestHandleType(flat::RequestHandleType* request_type,
     auto named_decl = LookupDeclByName(request_type->name);
     if (!named_decl || named_decl->kind != Decl::Kind::kInterface) {
         std::string message = "Undefined reference \"";
-        message.append(request_type->name.name().data());
+        message.append(request_type->name.name_part());
         message.append("\" in request handle name");
         return Fail(request_type->name, message);
     }
@@ -1770,7 +1767,7 @@ bool Library::CompileIdentifierType(flat::IdentifierType* identifier_type,
     auto named_decl = LookupDeclByName(identifier_type->name);
     if (!named_decl) {
         std::string message("Undefined reference \"");
-        message.append(identifier_type->name.name().data());
+        message.append(identifier_type->name.name_part());
         message.append("\" in identifier type name");
         return Fail(identifier_type->name, message);
     }

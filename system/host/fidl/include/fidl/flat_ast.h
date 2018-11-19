@@ -33,24 +33,43 @@ class Library;
 // This is needed (for now) to work around declaration order issues.
 std::string LibraryName(const Library* library, StringView separator);
 
+// Name represents a scope name, i.e. a name within the context of a library
+// or in the 'global' context. Names either reference (or name) things which
+// appear in source, or are synthesized by the compiler (e.g. an anonymous
+// struct name).
 struct Name {
-    Name()
-        : name_(SourceLocation()) {}
+    Name() {}
 
-    Name(const Library* library, SourceLocation name)
-        : library_(library), name_(name) {}
+    Name(const Library* library, const SourceLocation name) :
+        library_(library),
+        name_from_source_(std::make_unique<SourceLocation>(name)) {}
+ 
+    Name(const Library* library, const std::string& name) :
+        library_(library),
+        anonymous_name_(std::make_unique<std::string>(name)) {}
 
     Name(Name&&) = default;
     Name& operator=(Name&&) = default;
 
+    bool is_anonymous() const { return name_from_source_ == nullptr; }
     const Library* library() const { return library_; }
-    SourceLocation name() const { return name_; }
+    const SourceLocation& source_location() const {
+        assert(!is_anonymous());
+        return *name_from_source_.get();
+    }
+    const StringView name_part() const {
+        if (is_anonymous())
+            return *anonymous_name_.get();
+        return name_from_source_->data();
+    }
 
     bool operator==(const Name& other) const {
+        // TODO(pascallouis): Why are we lenient, and allow a name comparison,
+        // rather than require the more stricter pointer equality here?
         if (LibraryName(library_, ".") != LibraryName(other.library_, ".")) {
             return false;
         }
-        return name_.data() == other.name_.data();
+        return name_part() == other.name_part();
     }
     bool operator!=(const Name& other) const { return !operator==(other); }
 
@@ -58,12 +77,13 @@ struct Name {
         if (LibraryName(library_, ".") != LibraryName(other.library_, ".")) {
             return LibraryName(library_, ".") < LibraryName(other.library_, ".");
         }
-        return name_.data() < other.name_.data();
+        return name_part() < other.name_part();
     }
 
 private:
     const Library* library_ = nullptr;
-    SourceLocation name_;
+    std::unique_ptr<SourceLocation> name_from_source_;
+    std::unique_ptr<std::string> anonymous_name_;
 };
 
 struct Constant {
@@ -538,7 +558,12 @@ public:
 private:
     bool Fail(StringView message);
     bool Fail(const SourceLocation& location, StringView message);
-    bool Fail(const Name& name, StringView message) { return Fail(name.name(), message); }
+    bool Fail(const Name& name, StringView message) {
+        if (name.is_anonymous()) {
+            return Fail(message);
+        }
+        return Fail(name.source_location(), message);
+    }
     bool Fail(const Decl& decl, StringView message) { return Fail(decl.name, message); }
 
     Name NextAnonymousName();
@@ -725,7 +750,7 @@ private:
 
     ErrorReporter* error_reporter_;
 
-    std::vector<std::unique_ptr<SourceFile>> anon_source_files_;
+    uint32_t anon_counter_ = 0;
 };
 
 } // namespace flat
