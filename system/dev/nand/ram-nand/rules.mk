@@ -46,7 +46,6 @@ TEST_DIR := $(LOCAL_DIR)/test
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/ram-nand.cpp \
-    $(TEST_DIR)/fake-ddk.cpp \
     $(TEST_DIR)/main.cpp \
     $(TEST_DIR)/ram-nand.cpp \
     $(TEST_DIR)/ram-nand-ctl.cpp \
@@ -54,6 +53,7 @@ MODULE_SRCS += \
 MODULE_COMPILEFLAGS := -I$(LOCAL_DIR)
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/fake_ddk \
     system/ulib/fbl \
     system/ulib/fzl \
     system/ulib/ddk \

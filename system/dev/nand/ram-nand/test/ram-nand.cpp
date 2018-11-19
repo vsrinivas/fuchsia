@@ -8,6 +8,7 @@
 #include <ddk/metadata/nand.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
+#include <lib/fake_ddk/fake_ddk.h>
 #include <unittest/unittest.h>
 #include <zircon/boot/image.h>
 #include <zircon/nand/c/fidl.h>
@@ -15,7 +16,6 @@
 
 #include <utility>
 
-#include "fake-ddk.h"
 #include "ram-nand.h"
 
 namespace {
