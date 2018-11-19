@@ -14,7 +14,6 @@
 #include <fbl/array.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
-#include <fbl/optional.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <lib/sync/completion.h>
@@ -23,6 +22,8 @@
 #include <stdint.h>
 #include <threads.h>
 #include <zircon/types.h>
+
+#include <optional>
 
 #include "platform-device.h"
 #include "platform-protocol-device.h"
@@ -123,10 +124,10 @@ private:
     pdev_board_info_t board_info_;
 
     // Protocols that are optionally provided by the board driver.
-    fbl::optional<ddk::ClkProtocolProxy> clk_;
-    fbl::optional<ddk::GpioImplProtocolProxy> gpio_;
-    fbl::optional<ddk::IommuProtocolProxy> iommu_;
-    fbl::optional<ddk::I2cImplProtocolProxy> i2c_;
+    std::optional<ddk::ClkProtocolProxy> clk_;
+    std::optional<ddk::GpioImplProtocolProxy> gpio_;
+    std::optional<ddk::IommuProtocolProxy> iommu_;
+    std::optional<ddk::I2cImplProtocolProxy> i2c_;
 
     // Completion used by WaitProtocol().
     sync_completion_t proto_completion_ __TA_GUARDED(proto_completion_mutex_);

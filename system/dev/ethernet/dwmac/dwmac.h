@@ -16,11 +16,11 @@
 #include <ddktl/mmio.h>
 #include <ddktl/protocol/ethernet.h>
 #include <fbl/mutex.h>
-#include <fbl/optional.h>
 #include <fbl/unique_ptr.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/vmo.h>
+#include <optional>
 #include <threads.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -156,7 +156,7 @@ private:
     pdev_protocol_t pdev_;
     eth_board_protocol_t eth_board_;
 
-    fbl::optional<ddk::MmioBuffer> dwmac_regs_iobuff_;
+    std::optional<ddk::MmioBuffer> dwmac_regs_iobuff_;
 
     dw_mac_regs_t* dwmac_regs_ = nullptr;
     dw_dma_regs_t* dwdma_regs_ = nullptr;

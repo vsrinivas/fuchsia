@@ -12,13 +12,14 @@
 
 #include <fbl/array.h>
 #include <fbl/mutex.h>
-#include <fbl/optional.h>
 
 #include <hid/buttons.h>
 
 #include <lib/zx/interrupt.h>
 
 #include <zircon/thread_annotations.h>
+
+#include <optional>
 
 namespace buttons {
 
@@ -68,6 +69,6 @@ private:
     ddk::HidbusIfcProxy proxy_ TA_GUARDED(proxy_lock_);
     fbl::Array<buttons_button_config_t> buttons_;
     fbl::Array<Gpio> gpios_;
-    fbl::optional<uint8_t> fdr_gpio_;
+    std::optional<uint8_t> fdr_gpio_;
 };
 }

@@ -4,13 +4,14 @@
 
 #pragma once
 
+#include <ddk/protocol/platform-device-lib.h>
+#include <ddk/protocol/platform/device.h>
+#include <ddktl/device.h>
+#include <ddktl/mmio.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/platform-device-lib.h>
-#include <ddktl/mmio.h>
-#include <fbl/optional.h>
-#include <ddktl/device.h>
+
+#include <optional>
 
 #include "aml-dsi.h"
 #include "dw-mipi-dsi-reg.h"
@@ -57,8 +58,8 @@ private:
     void PhyInit();
     zx_status_t WaitforPhyReady();
 
-    fbl::optional<ddk::MmioBuffer>              mipi_dsi_mmio_;
-    fbl::optional<ddk::MmioBuffer>              dsi_phy_mmio_;
+    std::optional<ddk::MmioBuffer>              mipi_dsi_mmio_;
+    std::optional<ddk::MmioBuffer>              dsi_phy_mmio_;
     pdev_protocol_t                  pdev_ = {nullptr, nullptr};
     uint32_t                                    num_of_lanes_;
     DsiPhyConfig                                dsi_phy_cfg_;

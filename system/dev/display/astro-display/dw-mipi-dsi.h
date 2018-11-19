@@ -9,10 +9,11 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddktl/mmio.h>
-#include <fbl/optional.h>
-#include "mipi-dsi.h"
-#include "dw-mipi-dsi-reg.h"
+
 #include "common.h"
+#include "dw-mipi-dsi-reg.h"
+#include "mipi-dsi.h"
+#include <optional>
 
 // Assigned Virtual Channel ID for Astro
 // TODO(payamm): Will need to generate and maintain VCID for multi-display
@@ -55,7 +56,7 @@ private:
     zx_status_t GenRead(const MipiDsiCmd& cmd);
     zx_status_t SendCmd(const MipiDsiCmd& cmd);
 
-    fbl::optional<ddk::MmioBuffer>          mipi_dsi_mmio_;
+    std::optional<ddk::MmioBuffer>          mipi_dsi_mmio_;
     pdev_protocol_t              pdev_ = {nullptr, nullptr};
 
     bool                                    initialized_ = false;

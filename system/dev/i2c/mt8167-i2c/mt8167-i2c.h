@@ -8,7 +8,6 @@
 #include <ddktl/mmio.h>
 #include <ddktl/protocol/i2cimpl.h>
 
-#include <fbl/optional.h>
 #include <fbl/vector.h>
 
 #include <lib/zx/event.h>
@@ -16,6 +15,8 @@
 #include <lib/zx/port.h>
 
 #include <threads.h>
+
+#include <optional>
 
 #include "mt8167-i2c-regs.h"
 
@@ -57,7 +58,7 @@ private:
     void ShutDown();
 
     uint32_t bus_count_;
-    fbl::optional<XoRegs> xo_regs_;
+    std::optional<XoRegs> xo_regs_;
     fbl::Vector<Key> keys_;
     zx::port irq_port_;
     thrd_t irq_thread_;

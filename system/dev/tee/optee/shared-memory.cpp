@@ -7,8 +7,8 @@
 #include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
-#include <fbl/optional.h>
 
+#include <optional>
 #include <utility>
 
 namespace optee {
@@ -34,7 +34,7 @@ zx_status_t SharedMemoryManager::Create(zx_paddr_t shared_mem_start,
     }
     shared_mem_size = shared_mem_end - shared_mem_start;
 
-    fbl::optional<ddk::MmioPinnedBuffer> pinned;
+    std::optional<ddk::MmioPinnedBuffer> pinned;
     zx_status_t status = secure_world_memory.Pin(bti, &pinned);
     if (status != ZX_OK) {
         zxlogf(ERROR, "optee: unable to pin secure world memory\n");

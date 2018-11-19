@@ -9,8 +9,8 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
-#include <fbl/optional.h>
 #include <lib/zx/interrupt.h>
+#include <optional>
 #include <threads.h>
 #include <zircon/device/thermal.h>
 
@@ -40,9 +40,9 @@ private:
     void UpdateRiseThresholdIrq(uint32_t irq);
     uint32_t trim_info_;
     pdev_protocol_t pdev_;
-    fbl::optional<ddk::MmioBuffer> pll_mmio_;
-    fbl::optional<ddk::MmioBuffer> ao_mmio_;
-    fbl::optional<ddk::MmioBuffer> hiu_mmio_;
+    std::optional<ddk::MmioBuffer> pll_mmio_;
+    std::optional<ddk::MmioBuffer> ao_mmio_;
+    std::optional<ddk::MmioBuffer> hiu_mmio_;
     zx::interrupt tsensor_irq_;
     thrd_t irq_thread_;
     std::atomic<bool> running_;

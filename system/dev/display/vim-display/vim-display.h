@@ -8,16 +8,17 @@
 #include <assert.h>
 #include <ddk/debug.h>
 #include <ddk/protocol/amlogiccanvas.h>
-#include <ddk/protocol/gpio.h>
 #include <ddk/protocol/display/controller.h>
+#include <ddk/protocol/gpio.h>
 #include <ddktl/mmio.h>
-#include <fbl/optional.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/listnode.h>
 #include <zircon/pixelformat.h>
+
+#include <optional>
 
 #include "vim-audio.h"
 
@@ -80,13 +81,13 @@ typedef struct vim2_display {
     bool                                vd1_image_valid;
     uint32_t                            vd1_image;
 
-    fbl::optional<ddk::MmioBuffer>    mmio_preset;
-    fbl::optional<ddk::MmioBuffer>    mmio_hdmitx;
-    fbl::optional<ddk::MmioBuffer>    mmio_hiu;
-    fbl::optional<ddk::MmioBuffer>    mmio_vpu;
-    fbl::optional<ddk::MmioBuffer>    mmio_hdmitx_sec;
-    fbl::optional<ddk::MmioBuffer>    mmio_dmc;
-    fbl::optional<ddk::MmioBuffer>    mmio_cbus;
+    std::optional<ddk::MmioBuffer>    mmio_preset;
+    std::optional<ddk::MmioBuffer>    mmio_hdmitx;
+    std::optional<ddk::MmioBuffer>    mmio_hiu;
+    std::optional<ddk::MmioBuffer>    mmio_vpu;
+    std::optional<ddk::MmioBuffer>    mmio_hdmitx_sec;
+    std::optional<ddk::MmioBuffer>    mmio_dmc;
+    std::optional<ddk::MmioBuffer>    mmio_cbus;
 
     zx_handle_t                         vsync_interrupt;
 

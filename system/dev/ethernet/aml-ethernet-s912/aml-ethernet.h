@@ -9,8 +9,9 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
-#include <fbl/optional.h>
 #include <threads.h>
+
+#include <optional>
 
 namespace eth {
 
@@ -50,8 +51,8 @@ private:
 
     i2c_protocol_t i2c_;
 
-    fbl::optional<ddk::MmioBuffer> periph_mmio_;
-    fbl::optional<ddk::MmioBuffer> hhi_mmio_;
+    std::optional<ddk::MmioBuffer> periph_mmio_;
+    std::optional<ddk::MmioBuffer> hhi_mmio_;
 };
 
 } // namespace eth

@@ -6,21 +6,22 @@
 
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/usb-dci.h>
 #include <ddk/protocol/usb-mode-switch.h>
 #include <ddktl/mmio.h>
 #include <fbl/mutex.h>
-#include <fbl/optional.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/interrupt.h>
 #include <zircon/device/usb-peripheral.h>
+#include <zircon/hw/usb.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
-#include <zircon/hw/usb.h>
 
 #include <threads.h>
+
+#include <optional>
 
 #include "dwc3-types.h"
 
@@ -87,7 +88,7 @@ typedef struct {
     pdev_protocol_t pdev;
     usb_mode_switch_protocol_t ums;
     usb_dci_interface_t dci_intf;
-    fbl::optional<ddk::MmioBuffer> mmio;
+    std::optional<ddk::MmioBuffer> mmio;
     zx::handle bti_handle;
 
     usb_mode_t usb_mode;

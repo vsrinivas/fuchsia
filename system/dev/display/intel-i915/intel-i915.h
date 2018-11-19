@@ -13,11 +13,12 @@
 #include <ddktl/mmio.h>
 #include <ddktl/protocol/display/controller.h>
 
-#include <fbl/optional.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <hw/pci.h>
 #include <threads.h>
+
+#include <optional>
 
 #include "display-device.h"
 #include "dp-display.h"
@@ -212,7 +213,7 @@ private:
     mtx_t bar_lock_;
     // The mmio_space_ is read only. The internal registers are guarded by various locks where
     // appropriate.
-    fbl::optional<ddk::MmioBuffer> mmio_space_;
+    std::optional<ddk::MmioBuffer> mmio_space_;
 
     // References to displays. References are owned by devmgr, but will always
     // be valid while they are in this vector.

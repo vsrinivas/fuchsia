@@ -7,9 +7,9 @@
 #include <ddk/usb/usb.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <fbl/optional.h>
 #include <fbl/vector.h>
 #include <lib/sync/completion.h>
+#include <optional>
 #include <usb/usb-request.h>
 #include <zircon/usb/tester/c/fidl.h>
 
@@ -27,7 +27,7 @@ namespace usb {
 //    zx_status_t wait_status = req->WaitComplete(&usb_);
 class TestRequest {
 public:
-    static fbl::optional<TestRequest> Create(size_t len, uint8_t ep_address, size_t parent_req_size);
+    static std::optional<TestRequest> Create(size_t len, uint8_t ep_address, size_t parent_req_size);
 
     ~TestRequest();
 

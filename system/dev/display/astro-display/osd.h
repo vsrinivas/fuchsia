@@ -8,8 +8,9 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddktl/mmio.h>
-#include <fbl/optional.h>
+
 #include "common.h"
+#include <optional>
 
 namespace astro_display {
 
@@ -32,7 +33,7 @@ private:
     void EnableScaling(bool enable);
     void Enable();
 
-    fbl::optional<ddk::MmioBuffer>      vpu_mmio_;
+    std::optional<ddk::MmioBuffer>      vpu_mmio_;
     pdev_protocol_t          pdev_ = {nullptr, nullptr};
 
     // Framebuffer dimension

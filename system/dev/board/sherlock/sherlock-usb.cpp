@@ -4,15 +4,16 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddktl/mmio.h>
 #include <ddk/platform-defs.h>
-#include <fbl/optional.h>
+#include <ddktl/mmio.h>
 #include <hw/reg.h>
 #include <lib/zx/handle.h>
 #include <soc/aml-common/aml-usb-phy-v2.h>
 
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
+
+#include <optional>
 
 #include "sherlock.h"
 
@@ -64,7 +65,7 @@ constexpr uint32_t PLL_SETTING_6 = 0xe0004;
 constexpr uint32_t PLL_SETTING_7 = 0xe000c;
 
 zx_status_t PerformUsbTuning(bool host, bool default_val) {
-    fbl::optional<ddk::MmioBuffer> buf;
+    std::optional<ddk::MmioBuffer> buf;
     zx_status_t status;
 
     zx::unowned_resource resource(get_root_resource());

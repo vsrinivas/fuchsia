@@ -6,7 +6,6 @@
 
 #include <ddktl/pdev.h>
 #include <dispatcher-pool/dispatcher-timer.h>
-#include <fbl/optional.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
 #include <lib/zx/bti.h>
@@ -14,6 +13,8 @@
 
 #include <audio-proto/audio-proto.h>
 #include <soc/aml-common/aml-pdm-audio.h>
+
+#include <optional>
 
 namespace audio {
 namespace astro {
@@ -46,7 +47,7 @@ private:
 
     fbl::RefPtr<dispatcher::Timer> notify_timer_;
 
-    fbl::optional<ddk::PDev> pdev_;
+    std::optional<ddk::PDev> pdev_;
 
     zx::vmo ring_buffer_vmo_;
     fzl::PinnedVmo pinned_ring_buffer_;

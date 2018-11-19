@@ -4,21 +4,19 @@
 
 #pragma once
 
-#include <string.h>
-
 #include <ddk/debug.h>
 #include <ddk/mmio-buffer.h>
 #include <fbl/macros.h>
-#include <fbl/optional.h>
 #include <fbl/type_support.h>
 #include <hw/arch_ops.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
+#include <optional>
+#include <string.h>
+#include <utility>
 #include <zircon/assert.h>
 #include <zircon/process.h>
-
-#include <utility>
 
 #ifdef TEST_MMIO_FAKE
 extern void mmio_fake_read(uintptr_t base, size_t size, zx_off_t off, void* value);
@@ -94,7 +92,7 @@ public:
     }
 
     static zx_status_t Create(zx_off_t offset, size_t size, zx::vmo vmo, uint32_t cache_policy,
-                              fbl::optional<MmioBase>* mmio_buffer) {
+                              std::optional<MmioBase>* mmio_buffer) {
         mmio_buffer_t mmio;
         zx_status_t status = mmio_buffer_init(&mmio, offset, size, vmo.release(), cache_policy);
         if (status == ZX_OK) {
@@ -104,7 +102,7 @@ public:
     }
 
     static zx_status_t Create(zx_paddr_t base, size_t size, const zx::resource& resource,
-                              uint32_t cache_policy, fbl::optional<MmioBase>* mmio_buffer) {
+                              uint32_t cache_policy, std::optional<MmioBase>* mmio_buffer) {
         mmio_buffer_t mmio;
         zx_status_t status = mmio_buffer_init_physical(&mmio, base, size, resource.get(),
                                                        cache_policy);
@@ -133,7 +131,7 @@ public:
         return zx::unowned_vmo(mmio_.vmo);
     }
 
-    zx_status_t Pin(const zx::bti& bti, fbl::optional<MmioPinnedBuffer>* pinned_buffer) {
+    zx_status_t Pin(const zx::bti& bti, std::optional<MmioPinnedBuffer>* pinned_buffer) {
         mmio_pinned_buffer_t pinned;
         zx_status_t status = mmio_buffer_pin(&mmio_, bti.get(), &pinned);
         if (status == ZX_OK) {

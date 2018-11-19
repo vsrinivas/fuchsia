@@ -4,13 +4,14 @@
 
 #pragma once
 
-#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
 #include <fbl/mutex.h>
-#include <fbl/optional.h>
 #include <hwreg/mmio.h>
+
+#include <optional>
 
 namespace thermal {
 
@@ -36,7 +37,7 @@ private:
     uint32_t enable_bit_;
     uint32_t clk_enable_bit_;
     pdev_protocol_t pdev_;
-    fbl::optional<ddk::MmioBuffer> pwm_mmio_;
+    std::optional<ddk::MmioBuffer> pwm_mmio_;
     fbl::Mutex pwm_lock_;
 };
 } // namespace thermal

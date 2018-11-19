@@ -22,7 +22,6 @@ fbl_common_tests := \
     $(LOCAL_DIR)/intrusive_hash_table_sll_tests.cpp \
     $(LOCAL_DIR)/intrusive_singly_linked_list_tests.cpp \
     $(LOCAL_DIR)/intrusive_wavl_tree_tests.cpp \
-    $(LOCAL_DIR)/optional_tests.cpp \
     $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/recycler_tests.cpp \
     $(LOCAL_DIR)/ref_ptr_tests.cpp \

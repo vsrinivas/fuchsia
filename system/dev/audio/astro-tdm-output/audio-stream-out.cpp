@@ -6,6 +6,7 @@
 #include <ddk/debug.h>
 #include <math.h>
 
+#include <optional>
 #include <utility>
 
 namespace audio {
@@ -51,7 +52,7 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
         return status;
     }
 
-    fbl::optional<ddk::MmioBuffer> mmio;
+    std::optional<ddk::MmioBuffer> mmio;
     status = pdev_->MapMmio(0, &mmio);
     if (status != ZX_OK) {
         return status;

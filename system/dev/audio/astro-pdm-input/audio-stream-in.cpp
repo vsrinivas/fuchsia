@@ -9,6 +9,7 @@
 #include <ddk/platform-defs.h>
 #include <math.h>
 
+#include <optional>
 #include <utility>
 
 namespace audio {
@@ -65,7 +66,7 @@ zx_status_t AstroAudioStreamIn::InitPDev() {
         zxlogf(ERROR, "%s could not obtain bti - %d\n", __func__, status);
         return status;
     }
-    fbl::optional<ddk::MmioBuffer> mmio0, mmio1;
+    std::optional<ddk::MmioBuffer> mmio0, mmio1;
     status = pdev_->MapMmio(0, &mmio0);
     if (status != ZX_OK) {
         return status;

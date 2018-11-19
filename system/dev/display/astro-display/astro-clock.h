@@ -4,15 +4,16 @@
 
 #pragma once
 
+#include <ddk/driver.h>
+#include <ddk/protocol/platform-device-lib.h>
+#include <ddk/protocol/platform/device.h>
+#include <ddktl/device.h>
+#include <ddktl/mmio.h>
+#include <hwreg/mmio.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
-#include <ddk/driver.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/platform-device-lib.h>
-#include <ddktl/mmio.h>
-#include <fbl/optional.h>
-#include <hwreg/mmio.h>
-#include <ddktl/device.h>
+
+#include <optional>
 
 #include "aml-dsi.h"
 #include "hhi-regs.h"
@@ -44,8 +45,8 @@ private:
     // the desired lcd clock
     zx_status_t GenerateHPLL(const DisplaySetting& disp_setting);
 
-    fbl::optional<ddk::MmioBuffer>          vpu_mmio_;
-    fbl::optional<ddk::MmioBuffer>          hhi_mmio_;
+    std::optional<ddk::MmioBuffer>          vpu_mmio_;
+    std::optional<ddk::MmioBuffer>          hhi_mmio_;
     pdev_protocol_t              pdev_ = {nullptr, nullptr};
 
     PllConfig                               pll_cfg_;

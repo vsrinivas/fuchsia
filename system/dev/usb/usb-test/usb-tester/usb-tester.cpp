@@ -16,9 +16,9 @@
 #include <zircon/hw/usb.h>
 #include <zircon/usb/tester/c/fidl.h>
 
+#include <optional>
 #include <stdlib.h>
 #include <string.h>
-
 #include <utility>
 
 #include "usb-tester-hw.h"
@@ -39,13 +39,13 @@ inline uint8_t LSB(int n) { return static_cast<uint8_t>(n & 0xFF); }
 
 namespace usb {
 
-fbl::optional<TestRequest> TestRequest::Create(size_t len, uint8_t ep_address, size_t req_size) {
+std::optional<TestRequest> TestRequest::Create(size_t len, uint8_t ep_address, size_t req_size) {
     usb_request_t* usb_req;
     zx_status_t status = usb_request_alloc(&usb_req, len, ep_address, req_size);
     if (status != ZX_OK) {
-        return fbl::optional<TestRequest>();
+        return std::optional<TestRequest>();
     }
-    return fbl::optional<TestRequest>(TestRequest(usb_req));
+    return std::optional<TestRequest>(TestRequest(usb_req));
 }
 
 TestRequest::TestRequest(usb_request_t* usb_req) : usb_req_(usb_req) {

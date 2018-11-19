@@ -6,9 +6,8 @@
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/gpt.h>
-#include <ddktl/mmio.h>
 #include <ddk/platform-defs.h>
-#include <fbl/optional.h>
+#include <ddktl/mmio.h>
 #include <hw/reg.h>
 #include <lib/zx/handle.h>
 

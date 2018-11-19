@@ -1,9 +1,11 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 #include <ddktl/pdev.h>
 
 #include <ddk/debug.h>
+#include <optional>
 
 namespace ddk {
 
@@ -20,7 +22,7 @@ void PDev::ShowInfo() {
     }
 }
 
-zx_status_t PDev::MapMmio(uint32_t index, fbl::optional<MmioBuffer>* mmio) {
+zx_status_t PDev::MapMmio(uint32_t index, std::optional<MmioBuffer>* mmio) {
     pdev_mmio_t pdev_mmio;
 
     zx_status_t status = GetMmio(index, &pdev_mmio);
@@ -31,24 +33,24 @@ zx_status_t PDev::MapMmio(uint32_t index, fbl::optional<MmioBuffer>* mmio) {
                               ZX_CACHE_POLICY_UNCACHED_DEVICE, mmio);
 }
 
-fbl::optional<I2cChannel> PDev::GetI2c(uint32_t index) {
+std::optional<I2cChannel> PDev::GetI2c(uint32_t index) {
     i2c_protocol_t i2c;
     size_t actual;
     zx_status_t res = GetProtocol(ZX_PROTOCOL_I2C, index, &i2c, sizeof(i2c), &actual);
     if (res != ZX_OK || actual != sizeof(i2c)) {
-        return fbl::nullopt;
+        return {};
     }
-    return fbl::optional<I2cChannel>(&i2c);
+    return std::optional<I2cChannel>(&i2c);
 }
 
-fbl::optional<GpioProtocolProxy> PDev::GetGpio(uint32_t index) {
+std::optional<GpioProtocolProxy> PDev::GetGpio(uint32_t index) {
     gpio_protocol_t gpio;
     size_t actual;
     zx_status_t res = GetProtocol(ZX_PROTOCOL_GPIO, index, &gpio, sizeof(gpio), &actual);
     if (res != ZX_OK || actual != sizeof(gpio)) {
-        return fbl::nullopt;
+        return {};
     }
-    return fbl::optional<GpioProtocolProxy>(&gpio);
+    return std::optional<GpioProtocolProxy>(&gpio);
 }
 
 } // namespace ddk

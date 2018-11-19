@@ -9,12 +9,13 @@
 #include <ddk/device.h>
 #include <ddk/protocol/clk.h>
 #include <ddk/protocol/gpio.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddktl/mmio.h>
 #include <dev/pci/designware/atu-cfg.h>
-#include <fbl/optional.h>
 #include <fbl/unique_ptr.h>
+
+#include <optional>
 
 #include "aml-pcie.h"
 
@@ -42,13 +43,13 @@ class AmlPcieDevice {
     gpio_protocol_t gpio_;
 
     // MMIO Buffers
-    fbl::optional<ddk::MmioBuffer> dbi_;
-    fbl::optional<ddk::MmioBuffer> cfg_;
-    fbl::optional<ddk::MmioBuffer> rst_;
-    fbl::optional<ddk::MmioBuffer> pll_;
+    std::optional<ddk::MmioBuffer> dbi_;
+    std::optional<ddk::MmioBuffer> cfg_;
+    std::optional<ddk::MmioBuffer> rst_;
+    std::optional<ddk::MmioBuffer> pll_;
 
     // Pinned MMIO Buffers
-    fbl::optional<ddk::MmioPinnedBuffer> dbi_pinned_;
+    std::optional<ddk::MmioPinnedBuffer> dbi_pinned_;
 
     // Device Metadata
     iatu_translation_entry_t atu_cfg_;

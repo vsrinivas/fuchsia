@@ -13,6 +13,7 @@
 #include <lib/zx/bti.h>
 #include <zircon/driver/binding.h>
 
+#include <optional>
 #include <utility>
 
 #include "aml-pcie-clk.h"
@@ -76,7 +77,7 @@ zx_status_t AmlPcieDevice::InitMmios() {
     }
     dbi_ = ddk::MmioBuffer(mmio);
 
-    fbl::optional<ddk::MmioPinnedBuffer> mmio_pinned;
+    std::optional<ddk::MmioPinnedBuffer> mmio_pinned;
     st = dbi_->Pin(pin_bti, &mmio_pinned);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_pcie: failed to pin DBI, st = %d\n", st);

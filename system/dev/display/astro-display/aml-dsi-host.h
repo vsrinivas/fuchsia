@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <unistd.h>
-#include <zircon/compiler.h>
 #include <ddk/protocol/platform/device.h>
-#include <fbl/optional.h>
+#include <ddktl/device.h>
 #include <fbl/unique_ptr.h>
 #include <hwreg/mmio.h>
-#include <ddktl/device.h>
+#include <optional>
+#include <unistd.h>
+#include <zircon/compiler.h>
 
 #include "common.h"
 #include "hhi-regs.h"
@@ -41,8 +41,8 @@ private:
     void PhyDisable();
     zx_status_t HostModeInit(uint32_t opp, const DisplaySetting& disp_setting);
 
-    fbl::optional<ddk::MmioBuffer>              mipi_dsi_mmio_;
-    fbl::optional<ddk::MmioBuffer>              hhi_mmio_;
+    std::optional<ddk::MmioBuffer>              mipi_dsi_mmio_;
+    std::optional<ddk::MmioBuffer>              hhi_mmio_;
 
     pdev_protocol_t                  pdev_ = {};
 
