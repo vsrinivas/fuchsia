@@ -10,6 +10,8 @@
 #include <lib/zx/vmo.h>
 #include <zircon/listnode.h>
 
+#include <atomic>
+
 #include "fuchsia/display/c/fidl.h"
 #include "fence.h"
 #include "id-map.h"
@@ -98,7 +100,7 @@ private:
     fbl::RefPtr<FenceReference> armed_signal_fence_ = nullptr;
 
     // Flag which indicates that the image is currently in some display configuration.
-    fbl::atomic_bool in_use_ = {};
+    std::atomic_bool in_use_ = {};
     // Flag indicating that the image is being managed by the display hardware. Only
     // accessed under the controller mutex.
     bool presenting_ = false;

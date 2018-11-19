@@ -11,7 +11,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/atomic.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_piece.h>
 #include <fbl/unique_ptr.h>

@@ -15,7 +15,7 @@
 
 #ifdef __cplusplus
 
-#include <fbl/atomic.h>
+#include <atomic>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
@@ -23,9 +23,8 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <lib/fzl/fifo.h>
-#include <lib/zx/vmo.h>
 #include <lib/sync/completion.h>
-
+#include <lib/zx/vmo.h>
 #include <utility>
 
 #include "txn-group.h"
@@ -205,8 +204,8 @@ private:
     // next operation that arrives.
     bool deferred_barrier_before_ = false;
     BlockMsgQueue in_queue_;
-    fbl::atomic<size_t> pending_count_;
-    fbl::atomic<bool> barrier_in_progress_;
+    std::atomic<size_t> pending_count_;
+    std::atomic<bool> barrier_in_progress_;
     TransactionGroup groups_[MAX_TXN_GROUP_COUNT];
 
     fbl::Mutex server_lock_;

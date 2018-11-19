@@ -10,7 +10,6 @@
 #include <cobalt-client/cpp/counter-internal.h>
 #include <cobalt-client/cpp/histogram-internal.h>
 #include <cobalt-client/cpp/types-internal.h>
-#include <fbl/atomic.h>
 #include <fbl/string_buffer.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>

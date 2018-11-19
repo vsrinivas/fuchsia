@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <atomic>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/mipicsi.h>
-#include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform-device-lib.h>
+#include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
-#include <fbl/atomic.h>
 #include <fbl/unique_ptr.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/zx/interrupt.h>
@@ -52,7 +52,7 @@ private:
 
     zx::bti bti_;
     zx::interrupt adap_irq_;
-    fbl::atomic<bool> running_;
+    std::atomic<bool> running_;
     thrd_t irq_thread_;
 
     zx::vmo ring_buffer_vmo_;

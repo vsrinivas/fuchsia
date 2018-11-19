@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <ddk/protocol/platform/device.h>
+#include <atomic>
 #include <ddk/protocol/platform-device-lib.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
-#include <fbl/atomic.h>
 #include <fbl/optional.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>
@@ -45,7 +45,7 @@ private:
     fbl::optional<ddk::MmioBuffer> hiu_mmio_;
     zx::interrupt tsensor_irq_;
     thrd_t irq_thread_;
-    fbl::atomic<bool> running_;
+    std::atomic<bool> running_;
     zx_handle_t port_;
     thermal_device_info_t thermal_config_;
     uint32_t current_trip_idx_ = 0;

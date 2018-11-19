@@ -5,6 +5,7 @@
 #include "devhost.h"
 
 #include <assert.h>
+#include <atomic>
 #include <errno.h>
 #include <fcntl.h>
 #include <new>
@@ -43,7 +44,7 @@ namespace devmgr {
 
 namespace internal {
 __LOCAL mtx_t devhost_api_lock = MTX_INIT;
-__LOCAL fbl::atomic<thrd_t> devhost_api_lock_owner(0);
+__LOCAL std::atomic<thrd_t> devhost_api_lock_owner(0);
 } // namespace internal
 
 static thread_local CreationContext* creation_ctx;

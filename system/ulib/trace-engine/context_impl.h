@@ -6,12 +6,13 @@
 
 #include <zircon/assert.h>
 
-#include <fbl/atomic.h>
 #include <fbl/mutex.h>
 #include <lib/zx/event.h>
 #include <trace-engine/buffer_internal.h>
 #include <trace-engine/context.h>
 #include <trace-engine/handler.h>
+
+#include <atomic>
 
 // Not all API routines are exported to the DDK.
 // Routines that are always exported use __EXPORT.
@@ -58,7 +59,7 @@ struct trace_context {
     trace_buffering_mode_t buffering_mode() const { return buffering_mode_; }
 
     uint64_t num_records_dropped() const {
-        return num_records_dropped_.load(fbl::memory_order_relaxed);
+        return num_records_dropped_.load(std::memory_order_relaxed);
     }
 
     bool UsingDurableBuffer() const {
@@ -189,12 +190,12 @@ private:
     }
 
     bool IsDurableBufferFull() const {
-        return durable_buffer_full_mark_.load(fbl::memory_order_relaxed) != 0;
+        return durable_buffer_full_mark_.load(std::memory_order_relaxed) != 0;
     }
 
     // Return true if |buffer_number| is ready to be written to.
     bool IsRollingBufferReady(int buffer_number) const {
-        return rolling_buffer_full_mark_[buffer_number].load(fbl::memory_order_relaxed) == 0;
+        return rolling_buffer_full_mark_[buffer_number].load(std::memory_order_relaxed) == 0;
     }
 
     // Return true if the other rolling buffer is ready to be written to.
@@ -203,7 +204,7 @@ private:
     }
 
     uint32_t CurrentWrappedCount() const {
-        auto current = rolling_buffer_current_.load(fbl::memory_order_relaxed);
+        auto current = rolling_buffer_current_.load(std::memory_order_relaxed);
         return GetWrappedCount(current);
     }
 
@@ -232,11 +233,11 @@ private:
         uint64_t full_offset_plus_counter =
             MakeOffsetPlusCounter(rolling_buffer_size_, wrapped_count);
         rolling_buffer_current_.store(full_offset_plus_counter,
-                                      fbl::memory_order_relaxed);
+                                      std::memory_order_relaxed);
     }
 
     void MarkRecordDropped() {
-        num_records_dropped_.fetch_add(1, fbl::memory_order_relaxed);
+        num_records_dropped_.fetch_add(1, std::memory_order_relaxed);
     }
 
     void NotifyRollingBufferFullLocked(uint32_t wrapped_count,
@@ -276,13 +277,13 @@ private:
     // This only used in circular and streaming modes.
     // Starts at |durable_buffer_start| and grows from there.
     // May exceed |durable_buffer_end| when the buffer is full.
-    fbl::atomic<uint64_t> durable_buffer_current_;
+    std::atomic<uint64_t> durable_buffer_current_;
 
     // Offset beyond the last successful allocation, or zero if not full.
     // This only used in circular and streaming modes: There is no separate
     // buffer for durable records in oneshot mode.
     // Only ever set to non-zero once in the lifetime of the trace context.
-    fbl::atomic<uint64_t> durable_buffer_full_mark_;
+    std::atomic<uint64_t> durable_buffer_full_mark_;
 
     // Allocation pointer of the current buffer for non-durable records,
     // plus a wrapped counter. These are combined into one so that they can
@@ -300,18 +301,18 @@ private:
     //
     // This value is also used for durable records in oneshot mode: in
     // oneshot mode durable and non-durable records share the same buffer.
-    fbl::atomic<uint64_t> rolling_buffer_current_;
+    std::atomic<uint64_t> rolling_buffer_current_;
 
     // Offset beyond the last successful allocation, or zero if not full.
     // Only ever set to non-zero once when the buffer fills.
     // This will only be set in oneshot and streaming modes.
-    fbl::atomic<uint64_t> rolling_buffer_full_mark_[2];
+    std::atomic<uint64_t> rolling_buffer_full_mark_[2];
 
     // A count of the number of records that have been dropped.
-    fbl::atomic<uint64_t> num_records_dropped_{0};
+    std::atomic<uint64_t> num_records_dropped_{0};
 
     // A count of the number of records that have been dropped.
-    fbl::atomic<uint64_t> num_records_dropped_after_buffer_switch_{0};
+    std::atomic<uint64_t> num_records_dropped_after_buffer_switch_{0};
 
     // Set to true if the engine needs to stop tracing for some reason.
     bool tracing_artificially_stopped_ __TA_GUARDED(buffer_switch_mutex_) = false;
@@ -325,10 +326,10 @@ private:
     trace_handler_t* const handler_;
 
     // The next thread index to be assigned.
-    fbl::atomic<trace_thread_index_t> next_thread_index_{
+    std::atomic<trace_thread_index_t> next_thread_index_{
         TRACE_ENCODED_THREAD_REF_MIN_INDEX};
 
     // The next string table index to be assigned.
-    fbl::atomic<trace_string_index_t> next_string_index_{
+    std::atomic<trace_string_index_t> next_string_index_{
         TRACE_ENCODED_STRING_REF_MIN_INDEX};
 };

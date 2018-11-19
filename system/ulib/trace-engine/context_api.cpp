@@ -4,11 +4,11 @@
 
 #include <string.h>
 
+#include <atomic>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/atomic.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/unique_ptr.h>
 #include <lib/zx/process.h>
@@ -23,7 +23,7 @@ namespace {
 
 // The cached koid of this process.
 // Initialized on first use.
-fbl::atomic<uint64_t> g_process_koid{ZX_KOID_INVALID};
+std::atomic<uint64_t> g_process_koid{ZX_KOID_INVALID};
 
 // This thread's koid.
 // Initialized on first use.
@@ -37,10 +37,10 @@ zx_koid_t GetKoid(zx_handle_t handle) {
 }
 
 zx_koid_t GetCurrentProcessKoid() {
-    zx_koid_t koid = g_process_koid.load(fbl::memory_order_relaxed);
+    zx_koid_t koid = g_process_koid.load(std::memory_order_relaxed);
     if (unlikely(koid == ZX_KOID_INVALID)) {
         koid = GetKoid(zx_process_self());
-        g_process_koid.store(koid, fbl::memory_order_relaxed); // idempotent
+        g_process_koid.store(koid, std::memory_order_relaxed); // idempotent
     }
     return koid;
 }

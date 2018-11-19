@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/atomic.h>
 #include <tftp/tftp.h>
 #include <unittest/unittest.h>
 
@@ -11,6 +10,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+
+#include <atomic>
 
 // This test simulates a tftp file transfer by running two threads. Both the
 // file and transport interfaces are implemented in memory buffers.
@@ -139,8 +140,8 @@ void file_close(void* file_cookie) {
 typedef struct {
     uint8_t buf[FAKE_SOCK_BUF_SZ];
     size_t size = FAKE_SOCK_BUF_SZ;
-    fbl::atomic<size_t> read_ndx;
-    fbl::atomic<size_t> write_ndx;
+    std::atomic<size_t> read_ndx;
+    std::atomic<size_t> write_ndx;
 } fake_socket_t;
 static fake_socket_t client_out_socket;
 static fake_socket_t server_out_socket;

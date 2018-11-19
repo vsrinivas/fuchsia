@@ -9,7 +9,6 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
-#include <fbl/atomic.h>
 #include <fbl/optional.h>
 #include <threads.h>
 

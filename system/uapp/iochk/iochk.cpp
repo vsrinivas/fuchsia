@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <atomic>
 #include <assert.h>
 #include <fcntl.h>
 #include <math.h>
@@ -9,9 +10,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <utility>
 
 #include <block-client/cpp/client.h>
-#include <fbl/atomic.h>
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
@@ -29,8 +30,6 @@
 #include <zircon/skipblock/c/fidl.h>
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
-
-#include <utility>
 
 namespace {
 
@@ -286,7 +285,7 @@ private:
           client_(client), vmoid_(vmoid), group_(group) {}
     ~BlockChecker() = default;
 
-    static fbl::atomic<uint16_t> next_txid_;
+    static std::atomic<uint16_t> next_txid_;
 
     fzl::OwnedVmoMapper mapper_;
     block_info_t info_;
@@ -295,7 +294,7 @@ private:
     groupid_t group_;
 };
 
-fbl::atomic<uint16_t> BlockChecker::next_txid_;
+std::atomic<uint16_t> BlockChecker::next_txid_;
 
 class SkipBlockChecker : public Checker {
 public:

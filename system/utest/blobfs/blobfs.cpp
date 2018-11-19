@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <atomic>
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -10,6 +11,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <threads.h>
+#include <utility>
 #include <utime.h>
 
 #include <blobfs/format.h>
@@ -18,7 +20,6 @@
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/atomic.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
@@ -40,8 +41,6 @@
 #include <zircon/device/ramdisk.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
-
-#include <utility>
 
 #include "blobfs-test.h"
 
@@ -2360,7 +2359,7 @@ static bool CorruptAtMount(BlobfsTest* blobfsTest) {
 
 typedef struct reopen_data {
     char path[PATH_MAX];
-    fbl::atomic_bool complete;
+    std::atomic_bool complete;
 } reopen_data_t;
 
 int reopen_thread(void* arg) {

@@ -4,12 +4,13 @@
 
 #include <trace-engine/handler.h>
 
+#include <atomic>
 #include <stdio.h>
 #include <string.h>
+#include <utility>
 
 #include <zircon/assert.h>
 
-#include <fbl/atomic.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
@@ -17,8 +18,6 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/event.h>
 #include <trace-engine/instrumentation.h>
-
-#include <utility>
 
 #include "context_impl.h"
 
@@ -36,7 +35,7 @@ fbl::Mutex g_engine_mutex;
 // Rules:
 //   - can only be modified while holding g_engine_mutex
 //   - can be read atomically at any time
-fbl::atomic<int> g_state{TRACE_STOPPED};
+std::atomic<int> g_state{TRACE_STOPPED};
 
 // Trace disposition.
 // This is the status that will be reported to the trace handler when the
@@ -90,7 +89,7 @@ fbl::Vector<Observer> g_observers __TA_GUARDED(g_engine_mutex);
 // count by |kProlongedCounterIncrement|.
 // To maintain the property that the full count only transitions from 0 to 1
 // when the engine is started |kProlongedCounterIncrement| == 1.
-fbl::atomic_uint32_t g_context_refs{0u};
+std::atomic_uint32_t g_context_refs{0u};
 
 // The uint32_t context ref count is split this way:
 // |31 ... 8| = buffer acquisition count
@@ -196,9 +195,9 @@ EXPORT_NO_DDK zx_status_t trace_start_engine(
     fbl::AutoLock lock(&g_engine_mutex);
 
     // We must have fully stopped a prior tracing session before starting a new one.
-    if (g_state.load(fbl::memory_order_relaxed) != TRACE_STOPPED)
+    if (g_state.load(std::memory_order_relaxed) != TRACE_STOPPED)
         return ZX_ERR_BAD_STATE;
-    ZX_DEBUG_ASSERT(g_context_refs.load(fbl::memory_order_relaxed) == 0u);
+    ZX_DEBUG_ASSERT(g_context_refs.load(std::memory_order_relaxed) == 0u);
 
     zx::event event;
     zx_status_t status = zx::event::create(0u, &event);
@@ -217,7 +216,7 @@ EXPORT_NO_DDK zx_status_t trace_start_engine(
         return status;
 
     // Initialize the trace engine state and context.
-    g_state.store(TRACE_STARTED, fbl::memory_order_relaxed);
+    g_state.store(TRACE_STARTED, std::memory_order_relaxed);
     g_dispatcher = dispatcher;
     g_handler = handler;
     g_disposition = ZX_OK;
@@ -231,7 +230,7 @@ EXPORT_NO_DDK zx_status_t trace_start_engine(
     trace_context_write_initialization_record(g_context, zx_ticks_per_second());
 
     // After this point clients can acquire references to the trace context.
-    g_context_refs.store(kProlongedCounterIncrement, fbl::memory_order_release);
+    g_context_refs.store(kProlongedCounterIncrement, std::memory_order_release);
 
     // Notify observers that the state changed.
     if (g_observers.is_empty()) {
@@ -250,7 +249,7 @@ EXPORT_NO_DDK zx_status_t trace_stop_engine(zx_status_t disposition) {
     fbl::AutoLock lock(&g_engine_mutex);
 
     // We must have have an active trace in order to stop it.
-    int state = g_state.load(fbl::memory_order_relaxed);
+    int state = g_state.load(std::memory_order_relaxed);
     if (state == TRACE_STOPPED)
         return ZX_ERR_BAD_STATE;
 
@@ -259,10 +258,10 @@ EXPORT_NO_DDK zx_status_t trace_stop_engine(zx_status_t disposition) {
         return ZX_OK; // already stopping
 
     ZX_DEBUG_ASSERT(state == TRACE_STARTED);
-    ZX_DEBUG_ASSERT(g_context_refs.load(fbl::memory_order_relaxed) != 0u);
+    ZX_DEBUG_ASSERT(g_context_refs.load(std::memory_order_relaxed) != 0u);
 
     // Begin stopping the trace.
-    g_state.store(TRACE_STOPPING, fbl::memory_order_relaxed);
+    g_state.store(TRACE_STOPPING, std::memory_order_relaxed);
 
     // Notify observers that the state changed.
     notify_observers_locked();
@@ -278,7 +277,7 @@ EXPORT_NO_DDK zx_status_t trace_stop_engine(zx_status_t disposition) {
 // This is an internal function, only called from context.cpp.
 // thread-safe
 bool trace_engine_is_buffer_context_released() {
-    return (g_context_refs.load(fbl::memory_order_relaxed) &
+    return (g_context_refs.load(std::memory_order_relaxed) &
             kBufferCounterMask) == 0;
 }
 
@@ -347,8 +346,8 @@ void handle_context_released(async_dispatcher_t* dispatcher) {
     {
         fbl::AutoLock lock(&g_engine_mutex);
 
-        ZX_DEBUG_ASSERT(g_state.load(fbl::memory_order_relaxed) == TRACE_STOPPING);
-        ZX_DEBUG_ASSERT(g_context_refs.load(fbl::memory_order_relaxed) == 0u);
+        ZX_DEBUG_ASSERT(g_state.load(std::memory_order_relaxed) == TRACE_STOPPING);
+        ZX_DEBUG_ASSERT(g_context_refs.load(std::memory_order_relaxed) == 0u);
         ZX_DEBUG_ASSERT(g_context != nullptr);
 
         // Update final buffer state.
@@ -371,7 +370,7 @@ void handle_context_released(async_dispatcher_t* dispatcher) {
         g_context = nullptr;
 
         // After this point, it's possible for the engine to be restarted.
-        g_state.store(TRACE_STOPPED, fbl::memory_order_relaxed);
+        g_state.store(TRACE_STOPPED, std::memory_order_relaxed);
 
         // Notify observers that the state changed.
         notify_observers_locked();
@@ -406,7 +405,7 @@ void handle_hard_shutdown(async_dispatcher_t* dispatcher) {
     }
 
     // Uh oh.
-    auto context_refs = g_context_refs.load(fbl::memory_order_relaxed);
+    auto context_refs = g_context_refs.load(std::memory_order_relaxed);
     fprintf(stderr,
             "TraceEngine: Timed out waiting for %u buffer, %u prolonged trace context\n"
             "references (raw 0x%x) to be released after %lu ns\n"
@@ -444,7 +443,7 @@ void handle_event(async_dispatcher_t* dispatcher, async_wait_t* wait,
 
 // thread-safe, lock-free
 __EXPORT trace_state_t trace_state() {
-    return static_cast<trace_state_t>(g_state.load(fbl::memory_order_relaxed));
+    return static_cast<trace_state_t>(g_state.load(std::memory_order_relaxed));
 }
 
 // thread-safe
@@ -463,7 +462,7 @@ __EXPORT trace_context_t* trace_acquire_context() {
     // The count must be at least 1 to indicate that the buffer is initialized.
     // This is marked likely because tracing is usually disabled and we want
     // to return as quickly as possible from this function.
-    uint32_t count = g_context_refs.load(fbl::memory_order_relaxed);
+    uint32_t count = g_context_refs.load(std::memory_order_relaxed);
     if (likely(count == 0u))
         return nullptr;
 
@@ -472,10 +471,10 @@ __EXPORT trace_context_t* trace_acquire_context() {
     //
     // Note the ACQUIRE fence here since the trace context may have changed
     // from the perspective of this thread.
-    while (!g_context_refs.compare_exchange_weak(&count,
+    while (!g_context_refs.compare_exchange_weak(count,
                                                  count + kBufferCounterIncrement,
-                                                 fbl::memory_order_acquire,
-                                                 fbl::memory_order_relaxed)) {
+                                                 std::memory_order_acquire,
+                                                 std::memory_order_relaxed)) {
         if (unlikely(count == 0u))
             return nullptr;
     }
@@ -501,12 +500,12 @@ __EXPORT trace_context_t* trace_acquire_context_for_category(
 // thread-safe, never-fail, lock-free
 __EXPORT void trace_release_context(trace_context_t* context) {
     ZX_DEBUG_ASSERT(context == g_context);
-    ZX_DEBUG_ASSERT(get_buffer_context_refs(g_context_refs.load(fbl::memory_order_relaxed)) != 0u);
+    ZX_DEBUG_ASSERT(get_buffer_context_refs(g_context_refs.load(std::memory_order_relaxed)) != 0u);
 
     // Note the RELEASE fence here since the trace context and trace buffer
     // contents may have changes from the perspective of other threads.
     auto previous = g_context_refs.fetch_sub(kBufferCounterIncrement,
-                                             fbl::memory_order_release);
+                                             std::memory_order_release);
     if (unlikely(previous == kBufferCounterIncrement)) {
         // Notify the engine that the last reference was released.
         zx_status_t status = g_event.signal(0u, SIGNAL_CONTEXT_RELEASED);
@@ -518,7 +517,7 @@ __EXPORT void trace_release_context(trace_context_t* context) {
 EXPORT_NO_DDK trace_prolonged_context_t* trace_acquire_prolonged_context() {
     // There's no need for extreme efficiency here, but for consistency with
     // |trace_acquire_context()| we copy what it does.
-    uint32_t count = g_context_refs.load(fbl::memory_order_relaxed);
+    uint32_t count = g_context_refs.load(std::memory_order_relaxed);
     if (likely(count == 0u))
         return nullptr;
 
@@ -527,14 +526,14 @@ EXPORT_NO_DDK trace_prolonged_context_t* trace_acquire_prolonged_context() {
     //
     // Note the ACQUIRE fence here since the trace context may have changed
     // from the perspective of this thread.
-    while (!g_context_refs.compare_exchange_weak(&count,
+    while (!g_context_refs.compare_exchange_weak(count,
                                                  count + kProlongedCounterIncrement,
-                                                 fbl::memory_order_acquire,
-                                                 fbl::memory_order_relaxed)) {
+                                                 std::memory_order_acquire,
+                                                 std::memory_order_relaxed)) {
         if (likely(count == 0u))
             return nullptr;
     }
-    ZX_DEBUG_ASSERT(get_prolonged_context_refs(g_context_refs.load(fbl::memory_order_relaxed)) <=
+    ZX_DEBUG_ASSERT(get_prolonged_context_refs(g_context_refs.load(std::memory_order_relaxed)) <=
                     kMaxProlongedCounter);
     return reinterpret_cast<trace_prolonged_context_t*>(g_context);
 }
@@ -543,12 +542,12 @@ EXPORT_NO_DDK trace_prolonged_context_t* trace_acquire_prolonged_context() {
 EXPORT_NO_DDK void trace_release_prolonged_context(trace_prolonged_context_t* context) {
     auto tcontext = reinterpret_cast<trace_context_t*>(context);
     ZX_DEBUG_ASSERT(tcontext == g_context);
-    ZX_DEBUG_ASSERT(get_prolonged_context_refs(g_context_refs.load(fbl::memory_order_relaxed)) != 0u);
+    ZX_DEBUG_ASSERT(get_prolonged_context_refs(g_context_refs.load(std::memory_order_relaxed)) != 0u);
 
     // Note the RELEASE fence here since the trace context and trace buffer
     // contents may have changes from the perspective of other threads.
     auto previous = g_context_refs.fetch_sub(kProlongedCounterIncrement,
-                                             fbl::memory_order_release);
+                                             std::memory_order_release);
     if (unlikely(previous == kProlongedCounterIncrement)) {
         // Notify the engine that the last reference was released.
         zx_status_t status = g_event.signal(0u, SIGNAL_CONTEXT_RELEASED);

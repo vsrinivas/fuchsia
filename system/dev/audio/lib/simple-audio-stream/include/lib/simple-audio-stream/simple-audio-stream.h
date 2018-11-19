@@ -17,6 +17,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <atomic>
 #include <utility>
 
 namespace audio {
@@ -332,7 +333,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     // State used for protocol enforcement.
     bool rb_started_ __TA_GUARDED(domain_->token()) = false;
     bool rb_fetched_ __TA_GUARDED(domain_->token()) = false;
-    fbl::atomic<uint32_t> expected_notifications_per_ring_{0};
+    std::atomic<uint32_t> expected_notifications_per_ring_{0};
 };
 
 }  // namespace audio

@@ -4,12 +4,12 @@
 
 #pragma once
 
+#include <atomic>
 #include <stdint.h>
 #include <unistd.h>
 
 #include <cobalt-client/cpp/metric-options.h>
 #include <cobalt-client/cpp/types-internal.h>
-#include <fbl/atomic.h>
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
@@ -32,7 +32,7 @@ public:
     using Type = T;
 
     // All atomic operations use this memory order.
-    static constexpr fbl::memory_order kMemoryOrder = fbl::memory_order::memory_order_relaxed;
+    static constexpr auto kMemoryOrder = std::memory_order_relaxed;
 
     BaseCounter()
         : counter_(0) {}
@@ -55,7 +55,7 @@ public:
 protected:
     static_assert(fbl::is_integral<Type>::value, "Can only count integral types");
 
-    fbl::atomic<Type> counter_;
+    std::atomic<Type> counter_;
 };
 
 // Counter which represents a standalone cobalt metric. Provides API for converting

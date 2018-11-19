@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <threads.h>
 
 #include <ddk/device.h>
@@ -111,7 +112,7 @@ private:
     i2c_protocol_t i2c_;
 
     thrd_t thread_;
-    fbl::atomic<bool> running_;
+    std::atomic<bool> running_;
 
     fbl::Mutex proxy_lock_;
     ddk::HidbusIfcProxy proxy_ __TA_GUARDED(proxy_lock_);

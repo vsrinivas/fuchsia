@@ -11,13 +11,14 @@
 #include <cobalt-client/cpp/metric-options.h>
 #include <cobalt-client/cpp/types-internal.h>
 
-#include <fbl/atomic.h>
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
+
+#include <atomic>
 
 namespace cobalt_client {
 
@@ -92,7 +93,7 @@ private:
     fbl::Vector<internal::FlushInterface*> flushables_;
 
     fbl::unique_ptr<internal::Logger> logger_ = nullptr;
-    fbl::atomic<bool> flushing_ = false;
+    std::atomic<bool> flushing_ = false;
 };
 
 } // namespace cobalt_client

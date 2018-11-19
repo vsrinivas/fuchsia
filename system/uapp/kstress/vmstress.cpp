@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fbl/algorithm.h>
-#include <fbl/atomic.h>
 #include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
@@ -14,6 +13,7 @@
 #include <zircon/syscalls.h>
 
 #include <assert.h>
+#include <atomic>
 #include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
@@ -43,7 +43,7 @@ private:
     thrd_t threads_[16]{};
 
     // used by the worker threads at runtime
-    fbl::atomic<bool> shutdown_{false};
+    std::atomic<bool> shutdown_{false};
     zx::vmo vmo_{};
 };
 

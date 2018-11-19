@@ -4,20 +4,19 @@
 
 #pragma once
 
+#include <atomic>
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/i2c-channel.h>
 #include <ddktl/pdev.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/hidbus.h>
-#include <fbl/atomic.h>
 #include <fbl/mutex.h>
 #include <hid/gt92xx.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>
-#include <zircon/types.h>
-
 #include <utility>
+#include <zircon/types.h>
 
 // clang-format off
 #define GT_REG_SLEEP            0x8040
@@ -98,7 +97,7 @@ private:
     gt92xx_touch_t gt_rpt_ __TA_GUARDED(proxy_lock_);
     zx::interrupt irq_;
     thrd_t thread_;
-    fbl::atomic<bool> running_;
+    std::atomic<bool> running_;
     fbl::Mutex proxy_lock_;
     ddk::HidbusIfcProxy proxy_ __TA_GUARDED(proxy_lock_);
 };

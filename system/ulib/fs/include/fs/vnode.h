@@ -9,7 +9,6 @@
 #include <string.h>
 #include <sys/types.h>
 
-#include <fbl/atomic.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>

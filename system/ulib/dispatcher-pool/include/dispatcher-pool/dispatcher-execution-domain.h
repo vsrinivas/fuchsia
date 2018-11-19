@@ -15,6 +15,8 @@
 
 #include <dispatcher-pool/dispatcher-event-source.h>
 
+#include <atomic>
+
 namespace dispatcher {
 
 class ThreadPool;
@@ -153,7 +155,7 @@ private:
 
     fbl::Mutex sources_lock_;
     Token domain_token_;
-    fbl::atomic<uint32_t> deactivated_ __TA_GUARDED(sources_lock_);
+    std::atomic<uint32_t> deactivated_ __TA_GUARDED(sources_lock_);
     bool dispatch_in_progress_ __TA_GUARDED(sources_lock_) = false;
     bool dispatch_sync_in_progress_ __TA_GUARDED(sources_lock_) = false;
     fbl::RefPtr<ThreadPool> thread_pool_ __TA_GUARDED(sources_lock_);

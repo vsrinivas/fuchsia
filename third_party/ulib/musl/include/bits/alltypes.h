@@ -1,5 +1,7 @@
 #if defined(__cplusplus) && !defined(__clang__)
-#define _Atomic(t) t
+#define __C11_ATOMIC(t) t
+#else
+#define __C11_ATOMIC(t) _Atomic(t)
 #endif
 
 #if defined(__NEED_uint8_t) && !defined(__DEFINED_uint8_t)
@@ -376,12 +378,12 @@ typedef struct __sigset_t { unsigned long __bits[128 / sizeof(long)]; } sigset_t
 #endif
 
 #if defined(__NEED_pthread_once_t) && !defined(__DEFINED_pthread_once_t)
-typedef _Atomic(int) pthread_once_t;
+typedef __C11_ATOMIC(int) pthread_once_t;
 #define __DEFINED_pthread_once_t
 #endif
 
 #if defined(__NEED_once_flag) && !defined(__DEFINED_once_flag)
-typedef _Atomic(int) once_flag;
+typedef __C11_ATOMIC(int) once_flag;
 #define __DEFINED_once_flag
 #endif
 
@@ -391,7 +393,7 @@ typedef unsigned pthread_key_t;
 #endif
 
 #if defined(__NEED_pthread_spinlock_t) && !defined(__DEFINED_pthread_spinlock_t)
-typedef _Atomic(int) pthread_spinlock_t;
+typedef __C11_ATOMIC(int) pthread_spinlock_t;
 #define __DEFINED_pthread_spinlock_t
 #endif
 
@@ -452,8 +454,8 @@ typedef struct {
 #if defined(__NEED_pthread_mutex_t) && !defined(__DEFINED_pthread_mutex_t)
 typedef struct {
     int _m_type;
-    _Atomic(int) _m_lock;
-    _Atomic(int) _m_waiters;
+    __C11_ATOMIC(int) _m_lock;
+    __C11_ATOMIC(int) _m_waiters;
     int _m_count;
 } pthread_mutex_t;
 #define __DEFINED_pthread_mutex_t
@@ -475,7 +477,7 @@ typedef struct {
     void* _c_head;
     int _c_clock;
     void* _c_tail;
-    _Atomic(int) _c_lock;
+    __C11_ATOMIC(int) _c_lock;
 } pthread_cond_t;
 #define __DEFINED_pthread_cond_t
 #endif
@@ -485,26 +487,26 @@ typedef struct {
     void* _c_head;
     int _c_clock;
     void* _c_tail;
-    _Atomic(int) _c_lock;
+    __C11_ATOMIC(int) _c_lock;
 } cnd_t;
 #define __DEFINED_cnd_t
 #endif
 
 #if defined(__NEED_pthread_rwlock_t) && !defined(__DEFINED_pthread_rwlock_t)
 typedef struct {
-    _Atomic(int) _rw_lock;
-    _Atomic(int) _rw_waiters;
+    __C11_ATOMIC(int) _rw_lock;
+    __C11_ATOMIC(int) _rw_waiters;
 } pthread_rwlock_t;
 #define __DEFINED_pthread_rwlock_t
 #endif
 
 #if defined(__NEED_pthread_barrier_t) && !defined(__DEFINED_pthread_barrier_t)
 typedef struct {
-    _Atomic(int) _b_lock;
-    _Atomic(int) _b_waiters;
+    __C11_ATOMIC(int) _b_lock;
+    __C11_ATOMIC(int) _b_waiters;
     unsigned int _b_limit;
-    _Atomic(int) _b_count;
-    _Atomic(int) _b_waiters2;
+    __C11_ATOMIC(int) _b_count;
+    __C11_ATOMIC(int) _b_waiters2;
     void* _b_inst;
 } pthread_barrier_t;
 #define __DEFINED_pthread_barrier_t
@@ -512,8 +514,8 @@ typedef struct {
 
 #if defined(__NEED_sem_t) && !defined(__DEFINED_sem_t)
 typedef struct {
-    _Atomic(int) _s_value;
-    _Atomic(int) _s_waiters;
+    __C11_ATOMIC(int) _s_value;
+    __C11_ATOMIC(int) _s_waiters;
 } sem_t;
 #define __DEFINED_sem_t
 #endif

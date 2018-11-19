@@ -4,8 +4,8 @@
 
 #pragma once
 
+#include <atomic>
 #include <fbl/alloc_checker.h>
-#include <fbl/atomic.h>
 #include <fbl/string_piece.h>
 #include <fbl/string_traits.h>
 #include <initializer_list>
@@ -263,13 +263,13 @@ private:
     // at the beginning of the string buffer itself.
     static constexpr size_t kLengthFieldOffset = 0u;
     static constexpr size_t kRefCountFieldOffset = sizeof(size_t);
-    static constexpr size_t kDataFieldOffset = sizeof(size_t) + sizeof(atomic_uint);
+    static constexpr size_t kDataFieldOffset = sizeof(size_t) + sizeof(std::atomic_uint);
 
     static size_t* length_field_of(char* data) {
         return reinterpret_cast<size_t*>(data - kDataFieldOffset + kLengthFieldOffset);
     }
-    static atomic_uint* ref_count_field_of(char* data) {
-        return reinterpret_cast<atomic_uint*>(data - kDataFieldOffset + kRefCountFieldOffset);
+    static std::atomic_uint* ref_count_field_of(char* data) {
+        return reinterpret_cast<std::atomic_uint*>(data - kDataFieldOffset + kRefCountFieldOffset);
     }
     static constexpr size_t buffer_size(size_t length) {
         return kDataFieldOffset + length + 1u;
@@ -277,13 +277,13 @@ private:
 
     // For use by test code only.
     unsigned int ref_count() const {
-        return ref_count_field_of(data_)->load(memory_order_relaxed);
+        return ref_count_field_of(data_)->load(std::memory_order_relaxed);
     }
 
     // Storage for an empty string.
     struct EmptyBuffer {
         size_t length{0u};
-        atomic_uint ref_count{1u};
+        std::atomic_uint ref_count{1u};
         char nul{0};
     };
     static_assert(offsetof(EmptyBuffer, length) == kLengthFieldOffset, "");

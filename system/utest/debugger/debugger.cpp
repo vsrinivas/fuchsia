@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <atomic>
 #include <inttypes.h>
 #include <link.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <fbl/atomic.h>
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
 #include <lib/zircon-internal/crashlogger.h>
@@ -49,7 +49,7 @@ constexpr char kTestSegfaultChildName[] = "segfault";
 // Used for testing the s/w breakpoint insn.
 constexpr char kTestSwbreakChildName[] = "swbreak";
 
-fbl::atomic<int> extra_thread_count;
+std::atomic<int> extra_thread_count;
 
 uint64_t extract_pc_reg(const zx_thread_state_general_regs_t* regs) {
 #if defined(__x86_64__)
@@ -247,7 +247,7 @@ bool handle_thread_exiting(zx_handle_t inferior, const zx_port_packet_t* packet)
 bool handle_expected_page_fault(zx_handle_t inferior,
                                 zx_handle_t port,
                                 const zx_port_packet_t* packet,
-                                fbl::atomic<int>* segv_count) {
+                                std::atomic<int>* segv_count) {
     BEGIN_HELPER;
 
     unittest_printf("wait-inf: got page fault exception\n");
@@ -288,7 +288,7 @@ bool debugger_test_exception_handler(zx_handle_t inferior, zx_handle_t port,
     BEGIN_HELPER;
 
     // Note: This may be NULL if the test is not expecting a page fault.
-    fbl::atomic<int>* segv_count = static_cast<fbl::atomic<int>*>(handler_arg);
+    std::atomic<int>* segv_count = static_cast<std::atomic<int>*>(handler_arg);
 
     zx_koid_t pid = tu_get_koid(inferior);
 
@@ -340,7 +340,7 @@ bool DebuggerTest() {
     if (!setup_inferior(kTestInferiorChildName, &lp, &inferior, &channel))
         return false;
 
-    fbl::atomic<int> segv_count;
+    std::atomic<int> segv_count;
 
     expect_debugger_attached_eq(inferior, false, "debugger should not appear attached");
     zx_handle_t eport = tu_io_port_create();
@@ -689,7 +689,7 @@ bool SuspendedRegAccessTest() {
 struct suspended_in_syscall_reg_access_arg {
     bool do_channel_call;
     zx_handle_t syscall_handle;
-    fbl::atomic<uintptr_t> sp;
+    std::atomic<uintptr_t> sp;
 };
 
 // "zx_channel_call treats the leading bytes of the payload as
@@ -881,9 +881,9 @@ bool SuspendedInChannelCallRegAccessTest() {
 }
 
 struct suspend_in_exception_data {
-    fbl::atomic<int> segv_count;
-    fbl::atomic<int> suspend_count;
-    fbl::atomic<int> resume_count;
+    std::atomic<int> segv_count;
+    std::atomic<int> suspend_count;
+    std::atomic<int> resume_count;
     zx_handle_t thread_handle;
     zx_handle_t suspend_token;
     zx_koid_t process_id;

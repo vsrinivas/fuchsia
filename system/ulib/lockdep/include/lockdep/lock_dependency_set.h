@@ -4,9 +4,8 @@
 
 #pragma once
 
-#include <stddef.h>
-
-#include <fbl/atomic.h>
+#include <atomic>
+#include <cstddef>
 
 #include <lockdep/common.h>
 
@@ -35,7 +34,7 @@ public:
     bool HasLockClass(LockClassId id) const {
         for (size_t i = 0; i < kMaxLockDependencies; i++) {
             const auto& entry = GetEntry(id, i);
-            const LockClassId entry_id = entry.load(fbl::memory_order_relaxed);
+            const LockClassId entry_id = entry.load(std::memory_order_relaxed);
             if (entry_id == id)
                 return true;
             else if (entry_id == kInvalidLockClassId)
@@ -63,14 +62,14 @@ public:
     LockResult AddLockClass(LockClassId id) {
         for (size_t i = 0; i < kMaxLockDependencies; i++) {
             auto& entry = GetEntry(id, i);
-            LockClassId entry_id = entry.load(fbl::memory_order_relaxed);
+            LockClassId entry_id = entry.load(std::memory_order_relaxed);
             if (entry_id == id)
                 return LockResult::DependencyExists;
             while (entry_id == kInvalidLockClassId) {
                 const bool result =
-                    entry.compare_exchange_weak(&entry_id, id,
-                                                fbl::memory_order_relaxed,
-                                                fbl::memory_order_relaxed);
+                    entry.compare_exchange_weak(entry_id, id,
+                                                std::memory_order_relaxed,
+                                                std::memory_order_relaxed);
                 if (result) {
                     return LockResult::Success;
                 } else if (entry_id == id) {
@@ -95,7 +94,7 @@ public:
         LockClassId operator*() const {
             // TODO(eieio): See if it makes sense to add a memory order param
             // to the iterator.
-            return set->list_[index].load(fbl::memory_order_relaxed);
+            return set->list_[index].load(std::memory_order_relaxed);
         }
 
         Iterator operator++() {
@@ -132,24 +131,24 @@ public:
     // new lock violations.
     void clear() {
         for (size_t i = 0; i < kMaxLockDependencies; i++)
-            list_[i].store(kInvalidLockClassId, fbl::memory_order_relaxed);
+            list_[i].store(kInvalidLockClassId, std::memory_order_relaxed);
     }
 
 private:
     // Returns a reference to an entry by computing a trivial hash of the given id
     // and a linear probe offset.
-    fbl::atomic<LockClassId>& GetEntry(LockClassId id, size_t offset) {
+    std::atomic<LockClassId>& GetEntry(LockClassId id, size_t offset) {
         const size_t index = (id + offset) % kMaxLockDependencies;
         return list_[index];
     }
-    const fbl::atomic<LockClassId>& GetEntry(LockClassId id, size_t offset) const {
+    const std::atomic<LockClassId>& GetEntry(LockClassId id, size_t offset) const {
         const size_t index = (id + offset) % kMaxLockDependencies;
         return list_[index];
     }
 
     // The list of atomic variables that make up the hash set. Initialized to
     // kInvalidLockClassId  (0).
-    fbl::atomic<LockClassId> list_[kMaxLockDependencies]{};
+    std::atomic<LockClassId> list_[kMaxLockDependencies]{};
 };
 
 } // namespace lockdep

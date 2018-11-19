@@ -17,6 +17,7 @@
 #include <intel-hda/utils/intel-hda-registers.h>
 #include <intel-hda/utils/intel-hda-proto.h>
 
+#include <atomic>
 #include <utility>
 
 #include "debug-logging.h"
@@ -29,7 +30,7 @@ namespace intel_hda {
 
 // static member variable declaration
 constexpr uint        IntelHDAController::RIRB_RESERVED_RESPONSE_SLOTS;
-fbl::atomic_uint32_t IntelHDAController::device_id_gen_(0u);
+std::atomic_uint32_t IntelHDAController::device_id_gen_(0u);
 
 // Device interface thunks
 #define DEV(_ctx)  static_cast<IntelHDAController*>(_ctx)

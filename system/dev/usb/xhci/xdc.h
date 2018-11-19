@@ -4,11 +4,11 @@
 
 #pragma once
 
+#include <atomic>
 #include <ddk/device.h>
 #include <ddk/protocol/usb.h>
-#include <usb/usb-request.h>
-#include <fbl/atomic.h>
 #include <lib/sync/completion.h>
+#include <usb/usb-request.h>
 #include <xdc-server-utils/packet.h>
 
 #include "xdc-hw.h"
@@ -108,7 +108,7 @@ typedef struct {
     thrd_t start_thread;
 
     // Whether to suspend all activity.
-    fbl::atomic<bool> suspended;
+    std::atomic<bool> suspended;
 
     xdc_endpoint_t eps[NUM_EPS];
     // Whether the Debug Device is in the Configured state.
@@ -132,7 +132,7 @@ typedef struct {
 
     // At least one xdc instance has been opened.
     sync_completion_t has_instance_completion;
-    fbl::atomic<int> num_instances;
+    std::atomic<int> num_instances;
 } xdc_t;
 
 // TODO(jocelyndang): we should get our own handles rather than borrowing them from XHCI.

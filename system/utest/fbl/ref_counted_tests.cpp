@@ -6,7 +6,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/atomic.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <unittest/unittest.h>

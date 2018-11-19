@@ -9,7 +9,6 @@
 
 #include <cobalt-client/cpp/metric-options.h>
 
-#include <fbl/atomic.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
 #include <fuchsia/cobalt/c/fidl.h>

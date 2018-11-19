@@ -3,21 +3,21 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <atomic>
 #include <errno.h>
 #include <limits.h>
 #include <stdalign.h>
 #include <unistd.h>
 
+#include <fbl/algorithm.h>
+#include <fbl/limits.h>
+#include <sys/mman.h>
+#include <unittest/unittest.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/port.h>
-#include <fbl/atomic.h>
-#include <fbl/algorithm.h>
-#include <fbl/limits.h>
-#include <unittest/unittest.h>
-#include <sys/mman.h>
 
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 
@@ -54,7 +54,7 @@ bool check_pages_mapped(zx_handle_t process, uintptr_t base, uint64_t bitmap, si
 
 // Thread run by test_local_address, used to attempt an access to memory
 void TestWriteAddressThread(uintptr_t address, bool* success) {
-    auto p = reinterpret_cast<fbl::atomic_uint8_t*>(address);
+    auto p = reinterpret_cast<std::atomic_uint8_t*>(address);
     p->store(5);
     *success = true;
 
@@ -62,7 +62,7 @@ void TestWriteAddressThread(uintptr_t address, bool* success) {
 }
 // Thread run by test_local_address, used to attempt an access to memory
 void TestReadAddressThread(uintptr_t address, bool* success) {
-    auto p = reinterpret_cast<fbl::atomic_uint8_t*>(address);
+    auto p = reinterpret_cast<std::atomic_uint8_t*>(address);
     (void)p->load();
     *success = true;
 
@@ -1726,8 +1726,8 @@ bool protect_over_demand_paged_test() {
               ZX_OK);
     EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
 
-    fbl::atomic_uint8_t* target =
-        reinterpret_cast<fbl::atomic_uint8_t*>(mapping_addr);
+    std::atomic_uint8_t* target =
+        reinterpret_cast<std::atomic_uint8_t*>(mapping_addr);
     target[0].store(5);
     target[size / 2].store(6);
     target[size - 1].store(7);
@@ -1771,8 +1771,8 @@ bool protect_large_uncommitted_test() {
     EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
 
     // Make sure some pages exist
-    fbl::atomic_uint8_t* target =
-        reinterpret_cast<fbl::atomic_uint8_t*>(mapping_addr);
+    std::atomic_uint8_t* target =
+        reinterpret_cast<std::atomic_uint8_t*>(mapping_addr);
     target[0].store(5);
     target[size / 2].store(6);
     target[size - 1].store(7);
@@ -1820,8 +1820,8 @@ bool unmap_large_uncommitted_test() {
     EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
 
     // Make sure some pages exist
-    fbl::atomic_uint8_t* target =
-        reinterpret_cast<fbl::atomic_uint8_t*>(mapping_addr);
+    std::atomic_uint8_t* target =
+        reinterpret_cast<std::atomic_uint8_t*>(mapping_addr);
     target[0].store(5);
     target[size / 2].store(6);
     target[size - 1].store(7);

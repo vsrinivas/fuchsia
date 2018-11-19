@@ -14,16 +14,17 @@
 
 #ifdef __cplusplus
 
-#include <fs/managed-vfs.h>
-#include <fs/vfs.h>
-#include <fs/vnode.h>
-#include <fbl/atomic.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <fs/managed-vfs.h>
 #include <fs/remote.h>
+#include <fs/vfs.h>
+#include <fs/vnode.h>
 #include <fs/watcher.h>
 #include <lib/zx/vmo.h>
+
+#include <atomic>
 
 namespace memfs {
 
@@ -60,16 +61,16 @@ protected:
     uint64_t modify_time_;
 
     uint64_t GetInoCounter() const {
-        return ino_ctr_.load(fbl::memory_order_relaxed);
+        return ino_ctr_.load(std::memory_order_relaxed);
     }
 
     uint64_t GetDeletedInoCounter() const {
-        return deleted_ino_ctr_.load(fbl::memory_order_relaxed);
+        return deleted_ino_ctr_.load(std::memory_order_relaxed);
     }
 
 private:
-    static fbl::atomic<uint64_t> ino_ctr_;
-    static fbl::atomic<uint64_t> deleted_ino_ctr_;
+    static std::atomic<uint64_t> ino_ctr_;
+    static std::atomic<uint64_t> deleted_ino_ctr_;
 };
 
 class VnodeFile final : public VnodeMemfs {

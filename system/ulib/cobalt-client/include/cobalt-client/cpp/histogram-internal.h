@@ -9,7 +9,6 @@
 
 #include <cobalt-client/cpp/counter-internal.h>
 #include <cobalt-client/cpp/types-internal.h>
-#include <fbl/atomic.h>
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>

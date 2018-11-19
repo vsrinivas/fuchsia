@@ -4,23 +4,22 @@
 
 #pragma once
 
+#include <atomic>
 #include <lib/sync/completion.h>
-#include <zircon/hw/usb.h>
-#include <zircon/hw/usb-hub.h>
-#include <zircon/types.h>
-#include <zircon/listnode.h>
 #include <limits.h>
-#include <stdbool.h>
 #include <threads.h>
+#include <zircon/hw/usb-hub.h>
+#include <zircon/hw/usb.h>
+#include <zircon/listnode.h>
+#include <zircon/types.h>
 
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
 #include <ddk/protocol/pci.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/usb-bus.h>
 #include <ddk/protocol/usb.h>
-#include <fbl/atomic.h>
 #include <usb/usb-request.h>
 
 #include "xhci-hw.h"
@@ -115,7 +114,7 @@ struct xhci {
     usb_bus_interface_t bus;
 
     xhci_mode_t mode;
-    fbl::atomic<bool> suspended;
+    std::atomic<bool> suspended;
 
     // Desired number of interrupters. This may be greater than what is
     // supported by hardware. The actual number of interrupts configured

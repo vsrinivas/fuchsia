@@ -9,6 +9,8 @@
 #include <fbl/ref_counted_internal.h>
 #include <fbl/ref_ptr.h>
 
+#include <atomic>
+
 namespace fbl {
 namespace internal {
 
@@ -39,15 +41,15 @@ public:
     // loop does not have to do a separate load.
     //
     bool AddRefMaybeInDestructor() const __WARN_UNUSED_RESULT {
-        int32_t old = this->ref_count_.load(memory_order_acquire);
+        int32_t old = this->ref_count_.load(std::memory_order_acquire);
         do {
             if (old <= 0) {
                 return false;
             }
-        } while (!this->ref_count_.compare_exchange_weak(&old,
+        } while (!this->ref_count_.compare_exchange_weak(old,
                                                          old + 1,
-                                                         memory_order_acq_rel,
-                                                         memory_order_acquire));
+                                                         std::memory_order_acq_rel,
+                                                         std::memory_order_acquire));
         return true;
     }
 };

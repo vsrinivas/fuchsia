@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <atomic>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -10,7 +11,6 @@
 #include <threads.h>
 #include <unistd.h>
 
-#include <fbl/atomic.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/xorshiftrand.h>
 #include <perftest/results.h>
@@ -127,11 +127,11 @@ typedef struct {
     bool write;
     bool linear;
 
-    fbl::atomic<int> pending;
+    std::atomic<int> pending;
     sync_completion_t signal;
 } bio_random_args_t;
 
-static fbl::atomic<reqid_t> next_reqid(0);
+std::atomic<reqid_t> next_reqid(0);
 
 static int bio_random_thread(void* arg) {
     auto* a = reinterpret_cast<bio_random_args_t*>(arg);

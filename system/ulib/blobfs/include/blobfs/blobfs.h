@@ -46,6 +46,7 @@
 #include <blobfs/journal.h>
 #include <blobfs/writeback.h>
 
+#include <atomic>
 #include <utility>
 
 namespace blobfs {
@@ -266,7 +267,7 @@ private:
 
     Blobfs* const blobfs_;
     BlobFlags flags_ = {};
-    fbl::atomic_bool syncing_;
+    std::atomic_bool syncing_;
 
     // The mapping here consists of:
     // 1) The Merkle Tree
@@ -618,7 +619,7 @@ private:
 
     fbl::unique_fd blockfd_;
     block_info_t block_info_ = {};
-    fbl::atomic<groupid_t> next_group_ = {};
+    std::atomic<groupid_t> next_group_ = {};
     block_client::Client fifo_client_;
 
     RawBitmap block_map_ = {};

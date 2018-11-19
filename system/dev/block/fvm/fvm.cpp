@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <new>
+#include <atomic>
 #include <stdbool.h>
 #include <string.h>
 #include <threads.h>
@@ -11,7 +12,6 @@
 
 #include <ddk/protocol/block.h>
 #include <fbl/array.h>
-#include <fbl/atomic.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/limits.h>
@@ -135,8 +135,8 @@ zx_status_t VPartitionManager::AddPartition(fbl::unique_ptr<VPartition> vp) cons
 }
 
 struct VpmIoCookie {
-    fbl::atomic<size_t> num_txns;
-    fbl::atomic<zx_status_t> status;
+    std::atomic<size_t> num_txns;
+    std::atomic<zx_status_t> status;
     sync_completion_t signal;
 };
 

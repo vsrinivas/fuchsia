@@ -9,6 +9,7 @@
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
 
+#include <atomic>
 #include <utility>
 
 #include "a113-ddr.h"
@@ -130,8 +131,8 @@ private:
 
     uint32_t fifo_depth_ = 0x200;
 
-    fbl::atomic<size_t> ring_buffer_size_;
-    fbl::atomic<uint32_t> notifications_per_ring_;
+    std::atomic<size_t> ring_buffer_size_;
+    std::atomic<uint32_t> notifications_per_ring_;
 };
 
 } // namespace gauss

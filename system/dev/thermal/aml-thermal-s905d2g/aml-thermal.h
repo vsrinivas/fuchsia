@@ -10,7 +10,6 @@
 #include "aml-voltage.h"
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <fbl/atomic.h>
 #include <fbl/unique_ptr.h>
 #include <threads.h>
 

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <atomic>
 #include <ctype.h>
 #include <inttypes.h>
 #include <limits.h>
@@ -9,18 +10,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#include <unistd.h>
 #include <threads.h>
+#include <unistd.h>
 
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/object.h>
 #include <fbl/algorithm.h>
-#include <fbl/atomic.h>
 #include <fbl/function.h>
 #include <lib/fzl/memory-probe.h>
 #include <pretty/hexdump.h>
 #include <unittest/unittest.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
 
 #include "bench.h"
 
@@ -1706,9 +1706,9 @@ bool vmo_unmap_coherency() {
     struct worker_args {
         size_t len;
         uintptr_t ptr;
-        fbl::atomic<bool> exit;
-        fbl::atomic<bool> exited;
-        fbl::atomic<size_t> count;
+        std::atomic<bool> exit;
+        std::atomic<bool> exited;
+        std::atomic<size_t> count;
     } args = {};
     args.len = len;
     args.ptr = ptr;

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <atomic>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_counted_upgradeable.h>
 #include <fbl/ref_ptr.h>
@@ -15,7 +16,7 @@ class RawUpgradeTester :
     public fbl::RefCountedUpgradeable<RawUpgradeTester<EnableAdoptionValidator>,
                                       EnableAdoptionValidator> {
 public:
-    RawUpgradeTester(fbl::Mutex* mutex, fbl::atomic<bool>* destroying, zx::event* event)
+    RawUpgradeTester(fbl::Mutex* mutex, std::atomic<bool>* destroying, zx::event* event)
         : mutex_(mutex), destroying_(destroying), destroying_event_(event) {}
 
     ~RawUpgradeTester() {
@@ -27,7 +28,7 @@ public:
 
 private:
     fbl::Mutex* mutex_;
-    fbl::atomic<bool>* destroying_;
+    std::atomic<bool>* destroying_;
     zx::event* destroying_event_;
 };
 
@@ -48,7 +49,7 @@ static bool upgrade_fail_test() {
 
     fbl::Mutex mutex;
     fbl::AllocChecker ac;
-    fbl::atomic<bool> destroying{false};
+    std::atomic<bool> destroying{false};
     zx::event destroying_event;
 
     zx_status_t status = zx::event::create(0u, &destroying_event);
@@ -86,7 +87,7 @@ static bool upgrade_success_test() {
 
     fbl::Mutex mutex;
     fbl::AllocChecker ac;
-    fbl::atomic<bool> destroying{false};
+    std::atomic<bool> destroying{false};
 
     auto ref = fbl::AdoptRef(new (&ac) RawUpgradeTester<EnableAdoptionValidator>(&mutex,
                                                                                  &destroying,

@@ -76,16 +76,17 @@
 #include <assert.h>
 #include <inttypes.h>
 
-#include <fbl/atomic.h>
 #include <fbl/auto_lock.h>
 #include <trace-engine/fields.h>
 #include <trace-engine/handler.h>
+
+#include <atomic>
 
 namespace trace {
 namespace {
 
 // The next context generation number.
-fbl::atomic<uint32_t> g_next_generation{1u};
+std::atomic<uint32_t> g_next_generation{1u};
 
 } // namespace
 } // namespace trace
@@ -93,7 +94,7 @@ fbl::atomic<uint32_t> g_next_generation{1u};
 trace_context::trace_context(void* buffer, size_t buffer_num_bytes,
                              trace_buffering_mode_t buffering_mode,
                              trace_handler_t* handler)
-    : generation_(trace::g_next_generation.fetch_add(1u, fbl::memory_order_relaxed) + 1u),
+    : generation_(trace::g_next_generation.fetch_add(1u, std::memory_order_relaxed) + 1u),
       buffering_mode_(buffering_mode),
       buffer_start_(reinterpret_cast<uint8_t*>(buffer)),
       buffer_end_(buffer_start_ + buffer_num_bytes),
@@ -121,7 +122,7 @@ uint64_t* trace_context::AllocRecord(size_t num_bytes) {
         // TODO(dje): This can be optimized a bit. Later.
         uint64_t offset_plus_counter =
             rolling_buffer_current_.fetch_add(num_bytes,
-                                              fbl::memory_order_relaxed);
+                                              std::memory_order_relaxed);
         uint32_t wrapped_count = GetWrappedCount(offset_plus_counter);
         int buffer_number = GetBufferNumber(wrapped_count);
         uint64_t buffer_offset  = GetBufferOffset(offset_plus_counter);
@@ -171,7 +172,7 @@ uint64_t* trace_context::AllocRecord(size_t num_bytes) {
             // a record that this happened, but since it's rare we keep
             // it simple and maintain just a global count and no time
             // information.
-            num_records_dropped_after_buffer_switch_.fetch_add(1, fbl::memory_order_relaxed);
+            num_records_dropped_after_buffer_switch_.fetch_add(1, std::memory_order_relaxed);
             return nullptr;
         }
 
@@ -279,7 +280,7 @@ uint64_t* trace_context::AllocDurableRecord(size_t num_bytes) {
 
     uint64_t buffer_offset =
         durable_buffer_current_.fetch_add(num_bytes,
-                                          fbl::memory_order_relaxed);
+                                          std::memory_order_relaxed);
     if (likely(buffer_offset + num_bytes <= durable_buffer_size_)) {
         uint8_t* ptr = durable_buffer_start_ + buffer_offset;
         return reinterpret_cast<uint64_t*>(ptr); // success!
@@ -292,11 +293,11 @@ uint64_t* trace_context::AllocDurableRecord(size_t num_bytes) {
 }
 
 bool trace_context::AllocThreadIndex(trace_thread_index_t* out_index) {
-    trace_thread_index_t index = next_thread_index_.fetch_add(1u, fbl::memory_order_relaxed);
+    trace_thread_index_t index = next_thread_index_.fetch_add(1u, std::memory_order_relaxed);
     if (unlikely(index > TRACE_ENCODED_THREAD_REF_MAX_INDEX)) {
         // Guard again possible wrapping.
         next_thread_index_.store(TRACE_ENCODED_THREAD_REF_MAX_INDEX + 1u,
-                                 fbl::memory_order_relaxed);
+                                 std::memory_order_relaxed);
         return false;
     }
     *out_index = index;
@@ -304,11 +305,11 @@ bool trace_context::AllocThreadIndex(trace_thread_index_t* out_index) {
 }
 
 bool trace_context::AllocStringIndex(trace_string_index_t* out_index) {
-    trace_string_index_t index = next_string_index_.fetch_add(1u, fbl::memory_order_relaxed);
+    trace_string_index_t index = next_string_index_.fetch_add(1u, std::memory_order_relaxed);
     if (unlikely(index > TRACE_ENCODED_STRING_REF_MAX_INDEX)) {
         // Guard again possible wrapping.
         next_string_index_.store(TRACE_ENCODED_STRING_REF_MAX_INDEX + 1u,
-                                 fbl::memory_order_relaxed);
+                                 std::memory_order_relaxed);
         return false;
     }
     *out_index = index;
@@ -393,19 +394,19 @@ void trace_context::InitBufferHeader() {
 void trace_context::UpdateBufferHeaderAfterStopped() {
     // If the buffer filled, then the current pointer is "snapped" to the end.
     // Therefore in that case we need to use the buffer_full_mark.
-    uint64_t durable_last_offset = durable_buffer_current_.load(fbl::memory_order_relaxed);
-    uint64_t durable_buffer_full_mark = durable_buffer_full_mark_.load(fbl::memory_order_relaxed);
+    uint64_t durable_last_offset = durable_buffer_current_.load(std::memory_order_relaxed);
+    uint64_t durable_buffer_full_mark = durable_buffer_full_mark_.load(std::memory_order_relaxed);
     if (durable_buffer_full_mark != 0)
         durable_last_offset = durable_buffer_full_mark;
     header_->durable_data_end = durable_last_offset;
 
     uint64_t offset_plus_counter =
-        rolling_buffer_current_.load(fbl::memory_order_relaxed);
+        rolling_buffer_current_.load(std::memory_order_relaxed);
     uint64_t last_offset = GetBufferOffset(offset_plus_counter);
     uint32_t wrapped_count = GetWrappedCount(offset_plus_counter);
     header_->wrapped_count = wrapped_count;
     int buffer_number = GetBufferNumber(wrapped_count);
-    uint64_t buffer_full_mark = rolling_buffer_full_mark_[buffer_number].load(fbl::memory_order_relaxed);
+    uint64_t buffer_full_mark = rolling_buffer_full_mark_[buffer_number].load(std::memory_order_relaxed);
     if (buffer_full_mark != 0)
         last_offset = buffer_full_mark;
     header_->rolling_data_end[buffer_number] = last_offset;
@@ -419,10 +420,10 @@ size_t trace_context::RollingBytesAllocated() const {
         // There is a window during the processing of buffer-full where
         // |rolling_buffer_current_| may point beyond the end of the buffer.
         // This is ok, we don't promise anything better.
-        uint64_t full_bytes = rolling_buffer_full_mark_[0].load(fbl::memory_order_relaxed);
+        uint64_t full_bytes = rolling_buffer_full_mark_[0].load(std::memory_order_relaxed);
         if (full_bytes != 0)
             return full_bytes;
-        return rolling_buffer_current_.load(fbl::memory_order_relaxed);
+        return rolling_buffer_current_.load(std::memory_order_relaxed);
     }
     case TRACE_BUFFERING_MODE_CIRCULAR:
     case TRACE_BUFFERING_MODE_STREAMING: {
@@ -430,7 +431,7 @@ size_t trace_context::RollingBytesAllocated() const {
         // we're trying to compute the total.
         fbl::AutoLock lock(&buffer_switch_mutex_);
         uint64_t offset_plus_counter =
-            rolling_buffer_current_.load(fbl::memory_order_relaxed);
+            rolling_buffer_current_.load(std::memory_order_relaxed);
         uint32_t wrapped_count = GetWrappedCount(offset_plus_counter);
         int buffer_number = GetBufferNumber(wrapped_count);
         // Note: If we catch things at the point where the buffer has
@@ -443,7 +444,7 @@ size_t trace_context::RollingBytesAllocated() const {
         // must be set. However, it may be zero if streaming and we happened
         // to stop at a point where the buffer was saved, and hasn't
         // subsequently been written to.
-        uint64_t full_mark_other_buffer = rolling_buffer_full_mark_[!buffer_number].load(fbl::memory_order_relaxed);
+        uint64_t full_mark_other_buffer = rolling_buffer_full_mark_[!buffer_number].load(std::memory_order_relaxed);
         return full_mark_other_buffer + buffer_offset;
     }
     default:
@@ -453,9 +454,9 @@ size_t trace_context::RollingBytesAllocated() const {
 
 size_t trace_context::DurableBytesAllocated() const {
     // Note: This will return zero in oneshot mode (as it should).
-    uint64_t offset = durable_buffer_full_mark_.load(fbl::memory_order_relaxed);
+    uint64_t offset = durable_buffer_full_mark_.load(std::memory_order_relaxed);
     if (offset == 0)
-        offset = durable_buffer_current_.load(fbl::memory_order_relaxed);
+        offset = durable_buffer_current_.load(std::memory_order_relaxed);
     return offset;
 }
 
@@ -463,13 +464,13 @@ void trace_context::MarkDurableBufferFull(uint64_t last_offset) {
     // Snap to the endpoint to reduce likelihood of pointer wrap-around.
     // Otherwise each new attempt fill continually increase the offset.
     durable_buffer_current_.store(reinterpret_cast<uint64_t>(durable_buffer_size_),
-                                  fbl::memory_order_relaxed);
+                                  std::memory_order_relaxed);
 
     // Mark the end point if not already marked.
     uintptr_t expected_mark = 0u;
     if (durable_buffer_full_mark_.compare_exchange_strong(
-            &expected_mark, last_offset,
-            fbl::memory_order_relaxed, fbl::memory_order_relaxed)) {
+            expected_mark, last_offset,
+            std::memory_order_relaxed, std::memory_order_relaxed)) {
         fprintf(stderr, "TraceEngine: durable buffer full @offset %" PRIu64 "\n",
                 last_offset);
         header_->durable_data_end = last_offset;
@@ -494,8 +495,8 @@ void trace_context::MarkOneshotBufferFull(uint64_t last_offset) {
     // Mark the end point if not already marked.
     uintptr_t expected_mark = 0u;
     if (rolling_buffer_full_mark_[0].compare_exchange_strong(
-            &expected_mark, last_offset,
-            fbl::memory_order_relaxed, fbl::memory_order_relaxed)) {
+            expected_mark, last_offset,
+            std::memory_order_relaxed, std::memory_order_relaxed)) {
         header_->rolling_data_end[0] = last_offset;
     }
 
@@ -507,8 +508,8 @@ void trace_context::MarkRollingBufferFull(uint32_t wrapped_count, uint64_t last_
     int buffer_number = GetBufferNumber(wrapped_count);
     uint64_t expected_mark = 0u;
     if (rolling_buffer_full_mark_[buffer_number].compare_exchange_strong(
-            &expected_mark, last_offset,
-            fbl::memory_order_relaxed, fbl::memory_order_relaxed)) {
+            expected_mark, last_offset,
+            std::memory_order_relaxed, std::memory_order_relaxed)) {
         header_->rolling_data_end[buffer_number] = last_offset;
     }
 }
@@ -521,13 +522,13 @@ void trace_context::SwitchRollingBufferLocked(uint32_t prev_wrapped_count,
     // until we update |rolling_buffer_current_|.
     uint32_t new_wrapped_count = prev_wrapped_count + 1;
     int next_buffer = GetBufferNumber(new_wrapped_count);
-    rolling_buffer_full_mark_[next_buffer].store(0, fbl::memory_order_relaxed);
+    rolling_buffer_full_mark_[next_buffer].store(0, std::memory_order_relaxed);
     header_->rolling_data_end[next_buffer] = 0;
 
     // Do this last: After this tracing resumes in the new buffer.
     uint64_t new_offset_plus_counter = MakeOffsetPlusCounter(0, new_wrapped_count);
     rolling_buffer_current_.store(new_offset_plus_counter,
-                                     fbl::memory_order_relaxed);
+                                     std::memory_order_relaxed);
 }
 
 void trace_context::MarkTracingArtificiallyStopped() {
@@ -577,10 +578,10 @@ void trace_context::MarkRollingBufferSaved(uint32_t wrapped_count,
     int buffer_number = GetBufferNumber(wrapped_count);
     {
         // TODO(dje): Manage bad responses from TraceManager.
-        int current_buffer_number = GetBufferNumber(GetWrappedCount(rolling_buffer_current_.load(fbl::memory_order_relaxed)));
+        int current_buffer_number = GetBufferNumber(GetWrappedCount(rolling_buffer_current_.load(std::memory_order_relaxed)));
         ZX_DEBUG_ASSERT(buffer_number != current_buffer_number);
     }
-    rolling_buffer_full_mark_[buffer_number].store(0, fbl::memory_order_relaxed);
+    rolling_buffer_full_mark_[buffer_number].store(0, std::memory_order_relaxed);
     header_->rolling_data_end[buffer_number] = 0;
     // Don't update |rolling_buffer_current_| here, that is done when we
     // successfully allocate the next record. Until then we want to keep

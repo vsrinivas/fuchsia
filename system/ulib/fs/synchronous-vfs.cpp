@@ -4,9 +4,8 @@
 
 #include <fs/synchronous-vfs.h>
 
-#include <lib/async/cpp/task.h>
-#include <fbl/atomic.h>
 #include <fbl/unique_ptr.h>
+#include <lib/async/cpp/task.h>
 #include <lib/sync/completion.h>
 
 #include <utility>

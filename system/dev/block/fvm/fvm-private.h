@@ -16,6 +16,7 @@
 
 #ifdef __cplusplus
 
+#include <atomic>
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
 #include <fbl/algorithm.h>
@@ -213,7 +214,7 @@ private:
     block_impl_protocol_t bp_;
 
     // Lock used to prevent multiple device remove calls.
-    fbl::atomic<bool> device_remove_ = false;
+    std::atomic<bool> device_remove_ = false;
 };
 
 class VPartition : public PartitionDeviceType, public ddk::BlockImplProtocol<VPartition> {

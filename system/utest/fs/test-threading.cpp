@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <atomic>
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -12,9 +13,8 @@
 #include <threads.h>
 #include <unistd.h>
 
-#include <zircon/syscalls.h>
-#include <fbl/atomic.h>
 #include <unittest/unittest.h>
+#include <zircon/syscalls.h>
 
 #include "filesystems.h"
 #include "misc.h"
@@ -155,9 +155,9 @@ bool TestRenameExclusive(void) {
 
         // Test case of renaming from multiple sources at once,
         // to a single destination
-        fbl::atomic<uint32_t> ctr{0};
+        std::atomic<uint32_t> ctr{0};
         ASSERT_TRUE((thread_action_test<10, 1>([](void* arg) {
-            auto ctr = reinterpret_cast<fbl::atomic<uint32_t>*>(arg);
+            auto ctr = reinterpret_cast<std::atomic<uint32_t>*>(arg);
             char start[128];
             snprintf(start, sizeof(start) - 1, "::rename_start_%u", ctr->fetch_add(1));
             if (mkdir(start, 0666)) {
@@ -197,9 +197,9 @@ bool TestRenameOverwrite(void) {
     for (size_t i = 0; i < kIterCount; i++) {
         // Test case of renaming from multiple sources at once,
         // to a single destination
-        fbl::atomic<uint32_t> ctr{0};
+        std::atomic<uint32_t> ctr{0};
         ASSERT_TRUE((thread_action_test<10, 10>([](void* arg) {
-            auto ctr = reinterpret_cast<fbl::atomic<uint32_t>*>(arg);
+            auto ctr = reinterpret_cast<std::atomic<uint32_t>*>(arg);
             char start[128];
             snprintf(start, sizeof(start) - 1, "::rename_start_%u", ctr->fetch_add(1));
             if (mkdir(start, 0666)) {

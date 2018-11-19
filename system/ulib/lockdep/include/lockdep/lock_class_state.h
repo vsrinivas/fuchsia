@@ -4,12 +4,11 @@
 
 #pragma once
 
+#include <atomic>
+#include <fbl/algorithm.h>
 #include <stdint.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
-
-#include <fbl/algorithm.h>
-#include <fbl/atomic.h>
 
 #include <lockdep/common.h>
 #include <lockdep/lock_dependency_set.h>
@@ -186,7 +185,7 @@ private:
         // The parent of the disjoint sets this node belongs to. Nodes start out
         // alone in their own set. Sets are joined by the loop detector when
         // found within a cycle.
-        fbl::atomic<LoopNode*> parent{this};
+        std::atomic<LoopNode *> parent{this};
 
         // Linked list node for the loop detector's active node stack. The use
         // of a linked list of statically allocated nodes avoids dynamic memory
@@ -216,15 +215,15 @@ private:
         // neither caller publishes any other stores, nor depends on any other
         // loads.
         void CompareExchangeParent(LoopNode** expected, LoopNode* desired) {
-            parent.compare_exchange_weak(expected, desired,
-                                         fbl::memory_order_relaxed,
-                                         fbl::memory_order_relaxed);
+            parent.compare_exchange_weak(*expected, desired,
+                                         std::memory_order_relaxed,
+                                         std::memory_order_relaxed);
         }
 
         // Removes this node from whatever disjoint set it belongs to and
         // returns it to its own separate set.
         void Reset() {
-            parent.store(this, fbl::memory_order_relaxed);
+            parent.store(this, std::memory_order_relaxed);
         }
     };
 
@@ -329,16 +328,16 @@ private:
         static LoopNode* FindSet(LoopNode* node) {
             while (true) {
                 // First pass: either terminate or attempt path split.
-                LoopNode* parent = node->parent.load(fbl::memory_order_relaxed);
-                LoopNode* grandparent = parent->parent.load(fbl::memory_order_relaxed);
+                LoopNode* parent = node->parent.load(std::memory_order_relaxed);
+                LoopNode* grandparent = parent->parent.load(std::memory_order_relaxed);
                 if (parent == grandparent)
                     return parent;
                 node->CompareExchangeParent(&parent, grandparent);
 
                 // Second pass: either terminate, retry if last pass failed, or
                 // advance and attempt path split.
-                parent = node->parent.load(fbl::memory_order_relaxed);
-                grandparent = parent->parent.load(fbl::memory_order_relaxed);
+                parent = node->parent.load(std::memory_order_relaxed);
+                grandparent = parent->parent.load(std::memory_order_relaxed);
                 if (parent == grandparent)
                     return parent;
                 node->CompareExchangeParent(&parent, grandparent);

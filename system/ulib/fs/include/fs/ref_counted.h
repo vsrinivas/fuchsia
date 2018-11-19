@@ -4,11 +4,12 @@
 
 #pragma once
 
-#include <fbl/atomic.h>
 #include <fbl/ref_counted_upgradeable.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include <atomic>
 
 namespace fs {
 
@@ -53,10 +54,10 @@ public:
     // Vnode::fbl_recycle) before the initial recycle execution terminates.
     void ResurrectRef() const {
         if (EnableAdoptionValidator) {
-            int32_t old = this->ref_count_.load(fbl::memory_order_relaxed);
+            int32_t old = this->ref_count_.load(std::memory_order_relaxed);
             ZX_DEBUG_ASSERT_MSG(old == 0, "count %d(0x%08x) != 0\n", old, old);
         }
-        this->ref_count_.store(1, fbl::memory_order_relaxed);
+        this->ref_count_.store(1, std::memory_order_relaxed);
     }
 };
 

@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <atomic>
 #include <threads.h>
+#include <utility>
 
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -16,7 +18,6 @@
 #include <lib/async/time.h>
 #include <lib/async/wait.h>
 
-#include <fbl/atomic.h>
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
 #include <fbl/mutex.h>
@@ -24,8 +25,6 @@
 #include <unittest/unittest.h>
 #include <zircon/status.h>
 #include <zircon/threads.h>
-
-#include <utility>
 
 namespace {
 
@@ -1027,37 +1026,37 @@ public:
     ConcurrencyMeasure(uint32_t end)
         : end_(end) {}
 
-    uint32_t max_threads() const { return fbl::atomic_load(&max_threads_, fbl::memory_order_acquire); }
-    uint32_t count() const { return fbl::atomic_load(&count_, fbl::memory_order_acquire); }
+    uint32_t max_threads() const { return max_threads_.load(std::memory_order_acquire); }
+    uint32_t count() const { return count_.load(std::memory_order_acquire); }
 
     void Tally(async_dispatcher_t* dispatcher) {
         // Increment count of concurrently active threads.  Update maximum if needed.
-        uint32_t active = 1u + fbl::atomic_fetch_add(&active_threads_, 1u,
-                                                     fbl::memory_order_acq_rel);
+        uint32_t active = 1u + std::atomic_fetch_add_explicit(&active_threads_, 1u,
+                                                     std::memory_order_acq_rel);
         uint32_t old_max;
         do {
-            old_max = fbl::atomic_load(&max_threads_, fbl::memory_order_acquire);
+            old_max = max_threads_.load(std::memory_order_acquire);
         } while (active > old_max &&
-                 !fbl::atomic_compare_exchange_weak(&max_threads_, &old_max, active,
-                                                    fbl::memory_order_acq_rel,
-                                                    fbl::memory_order_acquire));
+                 !max_threads_.compare_exchange_weak(
+                     old_max, active,
+                     std::memory_order_acq_rel, std::memory_order_acquire));
 
         // Pretend to do work.
         zx::nanosleep(zx::deadline_after(zx::msec(1)));
 
         // Decrement count of active threads.
-        fbl::atomic_fetch_sub(&active_threads_, 1u, fbl::memory_order_acq_rel);
+        std::atomic_fetch_sub_explicit(&active_threads_, 1u, std::memory_order_acq_rel);
 
         // Quit when last item processed.
-        if (1u + fbl::atomic_fetch_add(&count_, 1u, fbl::memory_order_acq_rel) == end_)
+        if (1u + std::atomic_fetch_add_explicit(&count_, 1u, std::memory_order_acq_rel) == end_)
             async_loop_quit(async_loop_from_dispatcher(dispatcher));
     }
 
 private:
     const uint32_t end_;
-    fbl::atomic_uint32_t count_{};
-    fbl::atomic_uint32_t active_threads_{};
-    fbl::atomic_uint32_t max_threads_{};
+    std::atomic_uint32_t count_{};
+    std::atomic_uint32_t active_threads_{};
+    std::atomic_uint32_t max_threads_{};
 };
 
 class ThreadAssertWait : public TestWait {

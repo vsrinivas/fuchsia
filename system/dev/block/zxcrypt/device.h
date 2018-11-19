@@ -15,7 +15,6 @@
 #include <ddk/protocol/block.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
-#include <fbl/atomic.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <lib/zx/port.h>
@@ -26,6 +25,8 @@
 #include <zircon/listnode.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
+
+#include <atomic>
 
 #include "extra.h"
 #include "worker.h"
@@ -104,14 +105,14 @@ private:
 
     // Set if device is active, i.e. |Init| has been called but |DdkUnbind| hasn't. I/O requests to
     // |BlockQueue| are immediately completed with |ZX_ERR_BAD_STATE| if this is not set.
-    fbl::atomic_bool active_;
+    std::atomic_bool active_;
 
     // Set if writes are stalled, i.e.  a write request was deferred due to lack of space in the
     // write buffer, and no requests have since completed.
-    fbl::atomic_bool stalled_;
+    std::atomic_bool stalled_;
 
     // the number of operations currently "in-flight".
-    fbl::atomic_uint64_t num_ops_;
+    std::atomic_uint64_t num_ops_;
 
     // This struct bundles several commonly accessed fields.  The bare pointer IS owned by the
     // object; it's "constness" prevents it from being an automatic pointer but allows it to be used

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <atomic>
 #include <stdint.h>
 #include <string.h>
 #include <threads.h>
@@ -169,7 +170,7 @@ struct ExchangeArgs {
     BaseCounter<uint64_t>* counter;
 
     // Accumulated value of exchanged values in the counter.
-    fbl::atomic<BaseCounter<uint64_t>::Type>* accumulated;
+    std::atomic<BaseCounter<uint64_t>::Type>* accumulated;
 
     // Wait for main thread to signal before we start.
     sync_completion_t* start;
@@ -185,7 +186,7 @@ int ExchangeFn(void* args) {
     ExchangeArgs* exchange_args = static_cast<ExchangeArgs*>(args);
     sync_completion_wait(exchange_args->start, zx::sec(20).get());
     BaseCounter<uint64_t>::Type value = exchange_args->counter->Exchange(exchange_args->value);
-    exchange_args->accumulated->fetch_add(value, fbl::memory_order_relaxed);
+    exchange_args->accumulated->fetch_add(value, std::memory_order_relaxed);
     return thrd_success;
 }
 
@@ -197,7 +198,7 @@ bool TestExchangeMultiThread() {
     BEGIN_TEST;
     sync_completion_t start;
     BaseCounter<uint64_t> counter;
-    fbl::atomic<BaseCounter<uint64_t>::Type> accumulated(0);
+    std::atomic<BaseCounter<uint64_t>::Type> accumulated(0);
     fbl::Vector<thrd_t> thread_ids;
     ExchangeArgs args[kThreads];
 
@@ -225,7 +226,7 @@ bool TestExchangeMultiThread() {
 
     // Each thread should increase the counter by a total of value, which yields a total of:
     // kThreads * (kThreads + 1)/ 2 = Sum(i=1, kThreads) i
-    ASSERT_EQ(counter.Load() + accumulated.load(fbl::memory_order_relaxed),
+    ASSERT_EQ(counter.Load() + accumulated.load(std::memory_order_relaxed),
               kThreads * (kThreads + 1) / 2);
     END_TEST;
 }
@@ -282,7 +283,7 @@ struct FlushArgs {
     sync_completion_t* start;
 
     // Flushed accumulated value.
-    fbl::atomic<RemoteCounter::Type>* accumulated;
+    std::atomic<RemoteCounter::Type>* accumulated;
 
     // Number of times to perform the operation.
     size_t operation_count = 0;
@@ -311,7 +312,7 @@ int FlushFn(void* args) {
 
     if (flush_args->flush) {
         for (auto count_entry : logger.logged_counts()) {
-            flush_args->accumulated->fetch_add(count_entry.count, fbl::memory_order_relaxed);
+            flush_args->accumulated->fetch_add(count_entry.count, std::memory_order_relaxed);
         }
     }
     return thrd_success;
@@ -324,7 +325,7 @@ bool TestFlushMultithread() {
     BEGIN_TEST;
     sync_completion_t start;
     RemoteCounter counter = MakeRemoteCounter();
-    fbl::atomic<BaseCounter<int64_t>::Type> accumulated(0);
+    std::atomic<BaseCounter<int64_t>::Type> accumulated(0);
     fbl::Vector<thrd_t> thread_ids;
     fbl::Mutex flush_mutex;
     FlushArgs args[kThreads];
@@ -359,7 +360,7 @@ bool TestFlushMultithread() {
 
     // Since the last thread to finish might not have flushed, we verify that the total of whats
     // left, plust what we have accumulated equals the expected amount.
-    ASSERT_EQ(counter.Load() + accumulated.load(fbl::memory_order_relaxed),
+    ASSERT_EQ(counter.Load() + accumulated.load(std::memory_order_relaxed),
               ceil_threads * ceil_threads);
     END_TEST;
 }

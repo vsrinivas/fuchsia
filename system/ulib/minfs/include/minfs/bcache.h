@@ -27,6 +27,8 @@
 #include <fs/vnode.h>
 #include <minfs/format.h>
 
+#include <atomic>
+
 namespace minfs {
 
 class Bcache : public fs::TransactionHandler {
@@ -137,7 +139,7 @@ private:
 #ifdef __Fuchsia__
     block_client::Client fifo_client_{}; // Fast path to interact with block device
     block_info_t info_{};
-    fbl::atomic<groupid_t> next_group_ = {};
+    std::atomic<groupid_t> next_group_ = {};
 #else
     off_t offset_{};
 #endif

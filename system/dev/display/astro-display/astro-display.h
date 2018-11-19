@@ -21,10 +21,9 @@
 #include <ddktl/protocol/display/controller.h>
 #include <ddktl/device.h>
 
-#include <fbl/unique_ptr.h>
-#include <fbl/atomic.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <fbl/unique_ptr.h>
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>

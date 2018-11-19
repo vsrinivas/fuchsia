@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <inttypes.h>
+#include <atomic>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <utility>
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/atomic.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
@@ -22,8 +23,6 @@
 #include <lib/memfs/memfs.h>
 #include <lib/sync/completion.h>
 #include <zircon/device/vfs.h>
-
-#include <utility>
 
 #include "dnode.h"
 
@@ -102,16 +101,16 @@ void Vfs::WillFreeVMO(size_t vmo_size) {
     num_allocated_pages_ -= freed_pages;
 }
 
-fbl::atomic<uint64_t> VnodeMemfs::ino_ctr_ = 0;
-fbl::atomic<uint64_t> VnodeMemfs::deleted_ino_ctr_ = 0;
+std::atomic<uint64_t> VnodeMemfs::ino_ctr_ = 0;
+std::atomic<uint64_t> VnodeMemfs::deleted_ino_ctr_ = 0;
 
 VnodeMemfs::VnodeMemfs(Vfs* vfs) : dnode_(nullptr), link_count_(0), vfs_(vfs),
-    ino_(ino_ctr_.fetch_add(1, fbl::memory_order_relaxed)) {
+    ino_(ino_ctr_.fetch_add(1, std::memory_order_relaxed)) {
     create_time_ = modify_time_ = zx_clock_get(ZX_CLOCK_UTC);
 }
 
 VnodeMemfs::~VnodeMemfs() {
-    deleted_ino_ctr_.fetch_add(1, fbl::memory_order_relaxed);
+    deleted_ino_ctr_.fetch_add(1, std::memory_order_relaxed);
 }
 
 zx_status_t VnodeMemfs::Setattr(const vnattr_t* attr) {

@@ -15,6 +15,7 @@ static_assert(false, "Fuchsia only header");
 #include <blobfs/format.h>
 #include <blobfs/writeback.h>
 
+#include <atomic>
 #include <utility>
 
 namespace blobfs {
@@ -113,7 +114,7 @@ public:
 
 private:
     JournalBase* journal_; // Pointer to the journal containing this entry.
-    fbl::atomic<uint32_t> status_; // Current EntryStatus. Accessed by multiple threads.
+    std::atomic<uint32_t> status_; // Current EntryStatus. Accessed by multiple threads.
     uint32_t block_count_; // Number of blocks in the entry (not including header/commit).
 
     // Contents of the start and commit blocks for this journal entry.

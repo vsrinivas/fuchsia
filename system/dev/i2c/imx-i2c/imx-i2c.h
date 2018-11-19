@@ -10,7 +10,6 @@
 #include <ddktl/mmio.h>
 #include <ddktl/protocol/i2cimpl.h>
 
-#include <fbl/atomic.h>
 #include <fbl/optional.h>
 
 namespace imx_i2c {

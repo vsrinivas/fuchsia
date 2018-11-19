@@ -10,6 +10,8 @@
 #include <lib/syslog/logger.h>
 #include <lib/syslog/wire_format.h>
 
+#include <atomic>
+
 #include "fx_logger.h"
 
 namespace {
@@ -30,7 +32,7 @@ zx_koid_t GetCurrentThreadKoid() {
 
 void fx_logger::ActivateFallback(int fallback_fd) {
     fbl::AutoLock lock(&fallback_mutex_);
-    if (logger_fd_.load(fbl::memory_order_relaxed) != -1) {
+    if (logger_fd_.load(std::memory_order_relaxed) != -1) {
         return;
     }
     ZX_DEBUG_ASSERT(fallback_fd >= -1);
@@ -48,7 +50,7 @@ void fx_logger::ActivateFallback(int fallback_fd) {
     }
     // Do not change fd_to_close_ as we don't want to close fallback_fd.
     // We will still close original console_fd_
-    logger_fd_.store(fallback_fd, fbl::memory_order_relaxed);
+    logger_fd_.store(fallback_fd, std::memory_order_relaxed);
 }
 
 zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity,
@@ -116,7 +118,7 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity,
     auto status = socket_.write(0, &packet, size, nullptr);
     if (status == ZX_ERR_BAD_STATE || status == ZX_ERR_PEER_CLOSED) {
         ActivateFallback(-1);
-        return VLogWriteToFd(logger_fd_.load(fbl::memory_order_relaxed),
+        return VLogWriteToFd(logger_fd_.load(std::memory_order_relaxed),
                              severity, tag, packet.data + msg_pos, args, false);
     }
     if (status != ZX_OK) {
@@ -199,7 +201,7 @@ zx_status_t fx_logger::VLogWrite(fx_log_severity_t severity, const char* tag,
     }
 
     zx_status_t status;
-    int fd = logger_fd_.load(fbl::memory_order_relaxed);
+    int fd = logger_fd_.load(std::memory_order_relaxed);
     if (fd != -1) {
         status = VLogWriteToFd(fd, severity, tag, msg, args, perform_format);
     } else if (socket_.is_valid()) {
@@ -219,7 +221,7 @@ zx_status_t fx_logger::AddTags(const char** tags, size_t ntags) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    auto fd_mode = logger_fd_.load(fbl::memory_order_relaxed) != -1;
+    auto fd_mode = logger_fd_.load(std::memory_order_relaxed) != -1;
     for (size_t i = 0; i < ntags; i++) {
         auto len = strlen(tags[i]);
         fbl::String str(

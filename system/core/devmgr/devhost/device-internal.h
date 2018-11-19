@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <ddk/device.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
@@ -133,7 +134,7 @@ struct zx_device : fbl::RefCounted<zx_device>, fbl::Recyclable<zx_device>  {
     // This is an atomic so that the connection's async loop can inspect this
     // value to determine if an expected shutdown is happening.  See comments in
     // devhost_remove().
-    fbl::atomic<devmgr::DevcoordinatorConnection*> conn = nullptr;
+    std::atomic<devmgr::DevcoordinatorConnection*> conn = nullptr;
 
     fbl::Mutex proxy_ios_lock;
     devmgr::ProxyIostate* proxy_ios TA_GUARDED(proxy_ios_lock) = nullptr;

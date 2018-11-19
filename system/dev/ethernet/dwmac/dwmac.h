@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <ddk/device.h>
 #include <ddk/protocol/ethernet/board.h>
 #include <ddk/protocol/ethernet/mac.h>
@@ -172,7 +173,7 @@ private:
     uint32_t rx_packet_ = 0;
     uint32_t loop_count_ = 0;
 
-    fbl::atomic<bool> running_;
+    std::atomic<bool> running_;
 
     thrd_t thread_;
     thrd_t worker_thread_;

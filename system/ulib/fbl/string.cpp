@@ -5,11 +5,11 @@
 #include <fbl/string.h>
 
 #include <new>
+#include <atomic>
 #include <string.h>
 
 #include <zircon/assert.h>
 #include <fbl/algorithm.h>
-#include <fbl/atomic.h>
 
 namespace fbl {
 namespace {
@@ -182,7 +182,7 @@ void String::Init(size_t count, char ch, AllocChecker* ac) {
 }
 
 void String::InitWithEmpty() {
-    gEmpty.ref_count.fetch_add(1u, memory_order_relaxed);
+    gEmpty.ref_count.fetch_add(1u, std::memory_order_relaxed);
     data_ = &gEmpty.nul;
 }
 
@@ -201,19 +201,19 @@ char* String::AllocData(size_t length, AllocChecker* ac) {
 char* String::InitData(void* buffer, size_t length) {
     char* data = static_cast<char*>(buffer) + kDataFieldOffset;
     *length_field_of(data) = length;
-    new (ref_count_field_of(data)) atomic_uint(1u);
+    new (ref_count_field_of(data)) std::atomic_uint(1u);
     return data;
 }
 
 void String::AcquireRef(char* data) {
-    ref_count_field_of(data)->fetch_add(1u, memory_order_relaxed);
+    ref_count_field_of(data)->fetch_add(1u, std::memory_order_relaxed);
 }
 
 void String::ReleaseRef(char* data) {
-    unsigned int prior_count = ref_count_field_of(data)->fetch_sub(1u, memory_order_release);
+    unsigned int prior_count = ref_count_field_of(data)->fetch_sub(1u, std::memory_order_release);
     ZX_DEBUG_ASSERT(prior_count != 0u);
     if (prior_count == 1u) {
-        atomic_thread_fence(memory_order_acquire);
+        atomic_thread_fence(std::memory_order_acquire);
         operator delete(data - kDataFieldOffset);
     }
 }

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <fbl/atomic.h>
+#include <atomic>
 #include <threads.h>
 #include <zircon/thread_annotations.h>
 
@@ -14,7 +14,7 @@ namespace devmgr {
 
 namespace internal {
 extern mtx_t devhost_api_lock;
-extern fbl::atomic<thrd_t> devhost_api_lock_owner;
+extern std::atomic<thrd_t> devhost_api_lock_owner;
 } // namespace internal
 
 #define REQ_DM_LOCK TA_REQ(&::devmgr::internal::devhost_api_lock)
