@@ -22,6 +22,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/lib/lexer.cpp \
     $(LOCAL_DIR)/lib/library_zx.cpp \
     $(LOCAL_DIR)/lib/names.cpp \
+    $(LOCAL_DIR)/lib/ordinals.cpp \
     $(LOCAL_DIR)/lib/parser.cpp \
     $(LOCAL_DIR)/lib/raw_ast.cpp \
     $(LOCAL_DIR)/lib/source_file.cpp \
@@ -44,5 +45,11 @@ std::string JsonSchema::schema_ = " >> $@ && \
 	done &&  \
 	printf "\
 ;\n" >> $@ \
+
+MODULE_HOST_LIBS := \
+    third_party/ulib/uboringssl.hostlib \
+
+MODULE_COMPILEFLAGS := \
+    -Ithird_party/ulib/uboringssl/include \
 
 include make/module.mk

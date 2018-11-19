@@ -126,6 +126,33 @@ bool golden_file_test() {
     END_TEST;
 }
 
+bool removing_ordinals_is_okay() {
+    BEGIN_TEST;
+
+    for (auto element : formatted_output_) {
+        TestLibrary library(element.first, element.second);
+        std::unique_ptr<fidl::raw::File> ast;
+        EXPECT_TRUE(library.Parse(ast));
+
+        fidl::raw::OrdinalRemovalVisitor ordinal_visitor;
+        ordinal_visitor.OnFile(ast);
+
+        fidl::raw::FormattingTreeVisitor formatting_visitor;
+        formatting_visitor.OnFile(ast);
+
+        TestLibrary post_library("dummy", formatting_visitor.formatted_output()->c_str());
+
+        std::unique_ptr<fidl::raw::File> post_ast;
+        post_library.Parse(post_ast);
+        const auto& errors = post_library.errors();
+        if (errors.size() != 0) {
+            ASSERT_EQ(0, errors.size(), ("Unexpected error: " + errors[0]).c_str());
+        }
+    }
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(formatter_tests);
@@ -133,4 +160,5 @@ InitializeContents();
 RUN_TEST(idempotence_test);
 RUN_TEST(basic_formatting_rules_test);
 RUN_TEST(golden_file_test);
+RUN_TEST(removing_ordinals_is_okay);
 END_TEST_CASE(formatter_tests);

@@ -161,6 +161,12 @@ std::unique_ptr<raw::NumericLiteral> Parser::ParseNumericLiteral() {
 std::unique_ptr<raw::Ordinal> Parser::ParseOrdinal() {
     ASTScope scope(this);
 
+    if (Peek().kind() != Token::Kind::kNumericLiteral) {
+        // Ordinals are currently optional.  If there is none, generate it later
+        // (once we've figured out the method name and signature).
+        return nullptr;
+    }
+
     ConsumeToken(OfKind(Token::Kind::kNumericLiteral));
     if (!Ok())
         return Fail();
@@ -829,6 +835,8 @@ Parser::ParseInterfaceDeclaration(std::unique_ptr<raw::AttributeList> attributes
             return Done;
 
         case Token::Kind::kNumericLiteral:
+        case Token::Kind::kArrow:
+        case Token::Kind::kIdentifier:
             methods.emplace_back(ParseInterfaceMethod(std::move(attributes), scope));
             return More;
         }

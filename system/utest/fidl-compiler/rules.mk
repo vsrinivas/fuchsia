@@ -31,6 +31,7 @@ EXAMPLE_FILES := \
     $(EXAMPLE_DIR)/example-7.fidl \
     $(EXAMPLE_DIR)/example-8.fidl \
     $(EXAMPLE_DIR)/example-9.fidl \
+    $(EXAMPLE_DIR)/example-10.fidl \
     $(EXAMPLE_DIR)/interface-ordinals.fidl \
     $(EXAMPLE_DIR)/library-a/point.fidl \
     $(EXAMPLE_DIR)/library-b/view.fidl \
@@ -71,6 +72,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/max_bytes_tests.cpp \
     $(LOCAL_DIR)/max_handle_tests.cpp \
     $(LOCAL_DIR)/optionals_tests.cpp \
+    $(LOCAL_DIR)/ordinals_tests.cpp \
     $(LOCAL_DIR)/parsing_tests.cpp \
     $(LOCAL_DIR)/superinterface_tests.cpp \
     $(LOCAL_DIR)/table_tests.cpp \
@@ -81,11 +83,13 @@ MODULE_SRCS := \
 MODULE_COMPILEFLAGS := \
     -Isystem/ulib/unittest/include \
     -Isystem/utest/fidl-compiler \
+    -Ithird_party/ulib/uboringssl/include \
 
 MODULE_HOST_LIBS := \
     system/host/fidl \
     system/ulib/pretty.hostlib \
     system/ulib/unittest.hostlib \
+    third_party/ulib/uboringssl.hostlib \
 
 MODULE_PACKAGE_INCS := \
     $(LOCAL_DIR)/examples.h \

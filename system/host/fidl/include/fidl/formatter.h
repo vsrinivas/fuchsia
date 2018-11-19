@@ -394,6 +394,31 @@ private:
     }
 };
 
+class OrdinalRemovalVisitor : public fidl::raw::DeclarationOrderTreeVisitor {
+public:
+    OrdinalRemovalVisitor() {}
+    virtual void OnInterfaceMethod(
+        std::unique_ptr<fidl::raw::InterfaceMethod> const& element) override {
+        if (element->ordinal != nullptr) {
+            const char* start = element->ordinal->start_.data().data();
+            const char* end = element->ordinal->end_.data().data() +
+                              element->ordinal->end_.data().size();
+            for (char* ptr = const_cast<char*>(start); ptr < end; ptr++) {
+                // Don't erase comments in the middle of ordinals;
+                if (strncmp("//", ptr, 2) == 0) {
+                    while (*ptr != '\n' && ptr < end) {
+                        ptr++;
+                    }
+                    continue;
+                }
+                *ptr = ' ';
+            }
+            element->ordinal.reset(nullptr);
+        }
+        DeclarationOrderTreeVisitor::OnInterfaceMethod(element);
+    }
+};
+
 } // namespace raw
 } // namespace fidl
 
