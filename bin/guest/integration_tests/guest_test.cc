@@ -33,7 +33,7 @@ zx_status_t GuestWaitForSystemReady(EnclosedGuest& enclosed_guest) {
 
 zx_status_t GuestRun(EnclosedGuest& enclosed_guest, const std::string& cmx,
                      const std::string& args, std::string* result) {
-  std::string message = fxl::StringPrintf("run %s#%s %s", kTestUtilsUrl,
+  std::string message = fxl::StringPrintf("/pkgfs/packages/run/0/bin/run %s#%s %s", kTestUtilsUrl,
                                           cmx.c_str(), args.c_str());
   // Even after checking for pkgfs to start up, the guest might not be ready to
   // accept run commands. We loop here to give it some time and reduce test
