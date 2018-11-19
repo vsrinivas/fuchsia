@@ -19,21 +19,10 @@ Tested Wifi/Bluetooth adapters include:
 * QCA6174A
 * QCA9880
 
-*** promo
-Fuchsia does not have a deterministic ordering for bringing up PCI devices, so the
-/dev/class/ethernet/xxx paths have no well-defined mapping to the ports on the front of the device.
-In order for netbooting and loglistener to work, we need to let netsvc know which path corresponds
-to the left-most ethernet port.
-***
-
-Create a file that contains the text
-`kernel.serial=legacy netsvc.interface=/dev/sys/pci/00:1f.6/e1000/ethernet`.
-
 In your `fx set` commandline, add the following arguments:
-
-`--args='kernel_cmdline_files=["<absolute path to your file>"] zedboot_cmdline_files=["<absolute path to your file>"]'`
-
-[optional] Add `always_zedboot=true` in --args
+* `--board "garnet/boards/toulouse.gni"`
+* `--product "garnet/products/toulouse.gni"`
+* [optional] `--args "always_zedboot=true"`
 
 The last option will always boot to zedboot instead of booting off the paved image. You have to
 press 'm' before the timeout if you want to boot from disk, or re-pave without
@@ -80,3 +69,4 @@ The other settings may be left at their default values.
 * screen /dev/ttyUSB0 115200'
 * picocom -b 115200 /dev/ttyUSB0
 * miniterm.py /dev/ttyUSB0 115200
+* minicom -o -t vt100 -b 115200 -D /dev/ttyUSB0  (Supports control chars. Use Ctrl+a q to quit)
