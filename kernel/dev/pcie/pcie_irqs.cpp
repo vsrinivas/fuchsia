@@ -515,11 +515,12 @@ void PcieDevice::MsiIrqHandler(pcie_irq_handler_state_t& hstate) {
         MaskUnmaskMsiIrqLocked(hstate.pci_irq_id, false);
 }
 
-void PcieDevice::MsiIrqHandlerThunk(void *arg) {
+interrupt_eoi PcieDevice::MsiIrqHandlerThunk(void *arg) {
     DEBUG_ASSERT(arg);
     auto& hstate = *(reinterpret_cast<pcie_irq_handler_state_t*>(arg));
     DEBUG_ASSERT(hstate.dev);
-    return hstate.dev->MsiIrqHandler(hstate);
+    hstate.dev->MsiIrqHandler(hstate);
+    return IRQ_EOI_ISSUE;
 }
 
 /******************************************************************************

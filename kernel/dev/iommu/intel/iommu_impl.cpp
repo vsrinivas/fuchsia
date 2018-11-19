@@ -623,13 +623,13 @@ zx_status_t IommuImpl::WaitForValueLocked(RegType* reg,
     return ZX_ERR_TIMED_OUT;
 }
 
-void IommuImpl::FaultHandler(void* ctx) {
+interrupt_eoi IommuImpl::FaultHandler(void* ctx) {
     auto self = static_cast<IommuImpl*>(ctx);
     auto status = reg::FaultStatus::Get().ReadFrom(&self->mmio_);
 
     if (!status.primary_pending_fault()) {
         TRACEF("Non primary fault\n");
-        return;
+        return IRQ_EOI_ISSUE;
     }
 
     auto caps = reg::Capability::Get().ReadFrom(&self->mmio_);
@@ -666,6 +666,7 @@ void IommuImpl::FaultHandler(void* ctx) {
     // TODO(teisenbe): How do we guarantee we get an interrupt on the next fault/if we left a fault unprocessed?
     status.set_primary_fault_overflow(1);
     status.WriteTo(&self->mmio_);
+    return IRQ_EOI_ISSUE;
 }
 
 zx_status_t IommuImpl::ConfigureFaultEventInterruptLocked() {

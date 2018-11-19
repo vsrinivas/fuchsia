@@ -109,7 +109,7 @@ static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
 #define UARTREG(reg) (*(volatile uint32_t*)((uart_base) + (reg)))
 #define SOCREG(reg) (*(volatile uint32_t*)((soc_base) + (reg)))
 
-static void uart_irq_handler(void* arg) {
+static interrupt_eoi uart_irq_handler(void* arg) {
     // read interrupt status and mask
     while (UARTREG(UART_LSR) & UART_LSR_DR) {
         if (cbuf_space_avail(&uart_rx_buf) == 0) {
@@ -129,6 +129,8 @@ static void uart_irq_handler(void* arg) {
         event_signal(&uart_dputc_event, true);
         spin_unlock(&uart_spinlock);
     }
+
+    return IRQ_EOI_ISSUE;
 }
 
 // panic-time getc/putc

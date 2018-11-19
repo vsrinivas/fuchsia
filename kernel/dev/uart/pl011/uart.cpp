@@ -69,7 +69,7 @@ static inline void pl011_unmask_tx() {
     UARTREG(uart_base, UART_IMSC) |= (1 << 5);
 }
 
-static void pl011_uart_irq(void* arg) {
+static interrupt_eoi pl011_uart_irq(void* arg) {
     /* read interrupt status and mask */
     uint32_t isr = UARTREG(uart_base, UART_TMIS);
 
@@ -96,6 +96,8 @@ static void pl011_uart_irq(void* arg) {
         pl011_mask_tx();
     }
     spin_unlock(&uart_spinlock);
+
+    return IRQ_EOI_ISSUE;
 }
 
 static void pl011_uart_init(const void* driver_data, uint32_t length) {

@@ -8,6 +8,7 @@
 
 #include <fbl/canary.h>
 #include <fbl/vector.h>
+#include <kernel/mp.h>
 #include <object/interrupt_dispatcher.h>
 #include <sys/types.h>
 #include <zircon/types.h>
@@ -34,8 +35,8 @@ private:
     bool HasVcpu() const final;
 
     zx_status_t RegisterInterruptHandler();
-    static void IrqHandler(void* ctx);
-    static void VcpuIrqHandler(void* ctx);
+    static interrupt_eoi IrqHandler(void* ctx);
+    static interrupt_eoi VcpuIrqHandler(void* ctx);
     void VcpuInterruptHandler();
 
     const uint32_t vector_;

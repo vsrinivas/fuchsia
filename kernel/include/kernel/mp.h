@@ -18,6 +18,14 @@
 
 __BEGIN_CDECLS
 
+// NOTE(abdulla): This is located here to break a circular dependency.
+enum interrupt_eoi {
+    // Issue an EOI and deactivate the interrupt.
+    IRQ_EOI_ISSUE = 0,
+    // Do not issue an EOI, allow the interrupt to be deactivated elsewhere.
+    IRQ_EOI_SKIP = 1,
+};
+
 typedef void (*mp_ipi_task_func_t)(void* context);
 typedef void (*mp_sync_task_t)(void* context);
 
@@ -67,11 +75,11 @@ static inline zx_status_t mp_unplug_cpu(cpu_num_t cpu) {
 }
 
 // called from arch code during reschedule irq
-void mp_mbx_reschedule_irq(void*);
+interrupt_eoi mp_mbx_reschedule_irq(void*);
 // called from arch code during generic task irq
-void mp_mbx_generic_irq(void*);
+interrupt_eoi mp_mbx_generic_irq(void*);
 // called from arch code during interrupt irq
-void mp_mbx_interrupt_irq(void*);
+interrupt_eoi mp_mbx_interrupt_irq(void*);
 
 // represents a pending task for some number of CPUs to execute
 struct mp_ipi_task {

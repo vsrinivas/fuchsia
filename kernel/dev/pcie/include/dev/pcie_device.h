@@ -420,7 +420,7 @@ private:
     zx_status_t EnterMsiIrqMode(uint requested_irqs);
 
     void        MsiIrqHandler(pcie_irq_handler_state_t& hstate);
-    static void MsiIrqHandlerThunk(void *arg);
+    static interrupt_eoi MsiIrqHandlerThunk(void *arg);
 
     // Common Internal IRQ support.
     void        ResetCommonIrqBookkeeping();

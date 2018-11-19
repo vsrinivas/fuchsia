@@ -391,7 +391,7 @@ cleanup_mutex:
     return status;
 }
 
-void mp_mbx_generic_irq(void*) {
+interrupt_eoi mp_mbx_generic_irq(void*) {
     DEBUG_ASSERT(arch_ints_disabled());
     const cpu_num_t local_cpu = arch_curr_cpu_num();
 
@@ -408,9 +408,11 @@ void mp_mbx_generic_irq(void*) {
 
         task->func(task->context);
     }
+
+    return IRQ_EOI_ISSUE;
 }
 
-void mp_mbx_reschedule_irq(void*) {
+interrupt_eoi mp_mbx_reschedule_irq(void*) {
     const cpu_num_t cpu = arch_curr_cpu_num();
 
     LTRACEF("cpu %u\n", cpu);
@@ -420,15 +422,19 @@ void mp_mbx_reschedule_irq(void*) {
     if (mp.active_cpus & cpu_num_to_mask(cpu)) {
         thread_preempt_set_pending();
     }
+
+    return IRQ_EOI_ISSUE;
 }
 
-void mp_mbx_interrupt_irq(void*) {
+interrupt_eoi mp_mbx_interrupt_irq(void*) {
     const cpu_num_t cpu = arch_curr_cpu_num();
 
     LTRACEF("cpu %u\n", cpu);
 
     // do nothing, the entire point of this interrupt is to simply have one
     // delivered to the cpu.
+
+    return IRQ_EOI_ISSUE;
 }
 
 __WEAK zx_status_t arch_mp_cpu_hotplug(uint cpu_id) {

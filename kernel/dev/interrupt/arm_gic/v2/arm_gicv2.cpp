@@ -281,11 +281,13 @@ static void gic_handle_irq(struct iframe* frame) {
 
     // deliver the interrupt
     struct int_handler_struct* handler = pdev_get_int_handler(vector);
+    interrupt_eoi eoi = IRQ_EOI_ISSUE;
     if (handler->handler) {
-        handler->handler(handler->arg);
+        eoi = handler->handler(handler->arg);
     }
-
-    GICREG(0, GICC_EOIR) = iar;
+    if (eoi == IRQ_EOI_ISSUE) {
+        GICREG(0, GICC_EOIR) = iar;
+    }
 
     LTRACEF_LEVEL(2, "cpu %u exit\n", cpu);
 
@@ -309,12 +311,14 @@ static zx_status_t gic_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
     return ZX_OK;
 }
 
-static void arm_ipi_halt_handler(void*) {
+static interrupt_eoi arm_ipi_halt_handler(void*) {
     LTRACEF("cpu %u\n", arch_curr_cpu_num());
 
     arch_disable_ints();
     while (true) {
     }
+
+    return IRQ_EOI_ISSUE;
 }
 
 static void gic_init_percpu() {

@@ -170,10 +170,12 @@ void platform_irq(x86_iframe_t* frame) {
 
     {
         AutoSpinLockNoIrqSave guard(&handler->lock);
-        if (handler->handler)
+        if (handler->handler) {
             handler->handler(handler->arg);
+        }
     }
 
+    // NOTE: On x86, we always deactivate the interrupt.
     apic_issue_eoi();
 }
 

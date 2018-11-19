@@ -133,18 +133,21 @@ zx_status_t InterruptEventDispatcher::BindVcpu(fbl::RefPtr<VcpuDispatcher> vcpu_
     return ZX_OK;
 }
 
-void InterruptEventDispatcher::IrqHandler(void* ctx) {
+interrupt_eoi InterruptEventDispatcher::IrqHandler(void* ctx) {
     InterruptEventDispatcher* self = reinterpret_cast<InterruptEventDispatcher*>(ctx);
 
     if (self->get_flags() & INTERRUPT_MASK_POSTWAIT)
         mask_interrupt(self->vector_);
 
     self->InterruptHandler();
+    return IRQ_EOI_ISSUE;
 }
 
-void InterruptEventDispatcher::VcpuIrqHandler(void* ctx) {
+interrupt_eoi InterruptEventDispatcher::VcpuIrqHandler(void* ctx) {
     InterruptEventDispatcher* self = reinterpret_cast<InterruptEventDispatcher*>(ctx);
     self->VcpuInterruptHandler();
+    // Skip the EOI to allow the guest to deactivate the interrupt.
+    return IRQ_EOI_SKIP;
 }
 
 void InterruptEventDispatcher::VcpuInterruptHandler() {

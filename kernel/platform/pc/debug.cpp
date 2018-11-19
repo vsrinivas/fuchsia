@@ -64,7 +64,7 @@ static void uart_write(uint8_t reg, uint8_t val) {
     }
 }
 
-static void uart_irq_handler(void *arg) {
+static interrupt_eoi uart_irq_handler(void *arg) {
     spin_lock(&uart_spinlock);
 
     // see why we have gotten an irq
@@ -99,6 +99,7 @@ static void uart_irq_handler(void *arg) {
     }
 
     spin_unlock(&uart_spinlock);
+    return IRQ_EOI_ISSUE;
 }
 
 static void platform_drain_debug_uart_rx(void) {

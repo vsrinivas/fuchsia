@@ -147,9 +147,10 @@ public:
 private:
     explicit SharedLegacyIrqHandler(uint irq_id);
 
-    static void HandlerThunk(void *arg) {
+    static interrupt_eoi HandlerThunk(void *arg) {
         DEBUG_ASSERT(arg);
-        return reinterpret_cast<SharedLegacyIrqHandler*>(arg)->Handler();
+        reinterpret_cast<SharedLegacyIrqHandler*>(arg)->Handler();
+        return IRQ_EOI_ISSUE;
     }
 
     void Handler();

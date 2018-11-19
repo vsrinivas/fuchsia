@@ -46,7 +46,7 @@ zx_status_t get_interrupt_config(unsigned int vector,
                                  enum interrupt_trigger_mode* tm,
                                  enum interrupt_polarity* pol);
 
-typedef void (*int_handler)(void* arg);
+typedef interrupt_eoi (*int_handler)(void* arg);
 
 zx_status_t register_int_handler(unsigned int vector, int_handler handler, void* arg);
 

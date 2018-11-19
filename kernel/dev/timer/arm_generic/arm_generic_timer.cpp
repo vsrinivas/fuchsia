@@ -185,9 +185,10 @@ static uint64_t read_ct(void) {
     return cntpct;
 }
 
-static void platform_tick(void* arg) {
+static interrupt_eoi platform_tick(void* arg) {
     write_ctl(0);
     timer_tick(current_time());
+    return IRQ_EOI_ISSUE;
 }
 
 zx_status_t platform_set_oneshot_timer(zx_time_t deadline) {
