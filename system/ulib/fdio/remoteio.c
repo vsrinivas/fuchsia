@@ -601,8 +601,3 @@ zx_status_t zxrio_open_handle(zx_handle_t h, const char* path, uint32_t flags,
     }
     return fdio_from_handles(control_channel, &info.extra, out);
 }
-
-__EXPORT
-fdio_t* fdio_remote_create(zx_handle_t h, zx_handle_t event) {
-    return fdio_zxio_create_remote(h, event);
-}

@@ -8,6 +8,7 @@
 #include <lib/zxio/ops.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+#include <threads.h>
 
 // This header exposes some guts of zxio in order to transition fdio to build on
 // top of zxio.
@@ -43,8 +44,16 @@ typedef struct zxio_vmofile {
     zxio_t io;
     zx_handle_t control;
     zx_handle_t vmo;
-    // etc
+    zx_off_t off;
+    zx_off_t end;
+    zx_off_t ptr;
+    // TODO: Migrate to sync_mutex_t.
+    mtx_t lock;
 } zxio_vmofile_t;
+
+zx_status_t zxio_vmofile_init(zxio_vmofile_t* file, zx_handle_t control,
+                              zx_handle_t vmo, zx_off_t offset, zx_off_t length,
+                              zx_off_t seek);
 
 // pipe ------------------------------------------------------------------------
 

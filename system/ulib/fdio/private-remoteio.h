@@ -20,9 +20,6 @@ typedef struct fdio_zxio_remote {
     zxio_remote_t remote;
 } fdio_zxio_remote_t;
 
-// Create an |fdio_t| for a remote file backed by zxio.
-fdio_t* fdio_zxio_create_remote(zx_handle_t control, zx_handle_t event);
-
 // open operation directly on remoteio handle
 zx_status_t zxrio_open_handle(zx_handle_t h, const char* path, uint32_t flags,
                               uint32_t mode, fdio_t** out);

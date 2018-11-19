@@ -233,8 +233,14 @@ static fdio_ops_t vmofile_ops = {
     .shutdown = fdio_default_shutdown,
 };
 
+#define FDIO_USE_ZXIO_VMOFILE 0
+
 fdio_t* fdio_vmofile_create(zx_handle_t h, zx_handle_t vmo,
                             zx_off_t offset, zx_off_t length, zx_off_t seek) {
+#if FDIO_USE_ZXIO_VMOFILE
+    (void)vmofile_ops;
+    return fdio_zxio_vmofile_create(h, vmo, offset, length, seek);
+#else
     vmofile_t* vf = fdio_alloc(sizeof(vmofile_t));
     if (vf == NULL) {
         zx_handle_close(h);
@@ -252,6 +258,7 @@ fdio_t* fdio_vmofile_create(zx_handle_t h, zx_handle_t vmo,
     vf->ptr = offset + seek;
     mtx_init(&vf->lock, mtx_plain);
     return &vf->io;
+#endif
 }
 
 __EXPORT

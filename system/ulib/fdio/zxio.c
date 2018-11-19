@@ -77,6 +77,38 @@ static void fdio_zxio_wait_end(fdio_t* io, zx_signals_t signals,
     *out_events = events;
 }
 
+static zx_status_t fdio_zxio_clone(fdio_t* io, zx_handle_t* handles,
+                                   uint32_t* types) {
+    zxio_t* z = fdio_get_zxio(io);
+    zx_handle_t local, remote;
+    zx_status_t status = zx_channel_create(0, &local, &remote);
+    if (status != ZX_OK) {
+        return status;
+    }
+    uint32_t flags = fuchsia_io_OPEN_RIGHT_READABLE | fuchsia_io_OPEN_RIGHT_WRITABLE;
+    status = zxio_clone_async(z, flags, remote);
+    if (status != ZX_OK) {
+        zx_handle_close(local);
+        return status;
+    }
+    handles[0] = local;
+    types[0] = PA_FDIO_REMOTE;
+    return 1;
+}
+
+static zx_status_t fdio_zxio_unwrap(fdio_t* io, zx_handle_t* handles,
+                                    uint32_t* types) {
+    zxio_t* z = fdio_get_zxio(io);
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    zx_status_t status = zxio_release(z, &handle);
+    if (status != ZX_OK) {
+        return status;
+    }
+    handles[0] = handle;
+    types[0] = PA_FDIO_REMOTE;
+    return 1;
+}
+
 static zx_status_t fdio_zxio_sync(fdio_t* io) {
     zxio_t* z = fdio_get_zxio(io);
     return zxio_sync(z);
@@ -190,24 +222,6 @@ static zx_status_t fdio_zxio_remote_open(fdio_t* io, const char* path,
     return zxrio_open_handle(rio->control, path, flags, mode, out);
 }
 
-static zx_status_t fdio_zxio_remote_clone(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
-    zxio_t* z = fdio_get_zxio(io);
-    zx_handle_t local, remote;
-    zx_status_t status = zx_channel_create(0, &local, &remote);
-    if (status != ZX_OK) {
-        return status;
-    }
-    uint32_t flags = fuchsia_io_OPEN_RIGHT_READABLE | fuchsia_io_OPEN_RIGHT_WRITABLE;
-    status = zxio_clone_async(z, flags, remote);
-    if (status != ZX_OK) {
-        zx_handle_close(local);
-        return status;
-    }
-    handles[0] = local;
-    types[0] = PA_FDIO_REMOTE;
-    return 1;
-}
-
 static zx_status_t fidl_ioctl(zx_handle_t h, uint32_t op, const void* in_buf,
                               size_t in_len, void* out_buf, size_t out_len,
                               size_t* out_actual) {
@@ -301,18 +315,6 @@ static void fdio_zxio_remote_wait_end(fdio_t* io, zx_signals_t signals, uint32_t
     *_events = ((signals >> POLL_SHIFT) & POLL_MASK) | events;
 }
 
-static zx_status_t fdio_zxio_remote_unwrap(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
-    zxio_t* z = fdio_get_zxio(io);
-    zx_handle_t handle = ZX_HANDLE_INVALID;
-    zx_status_t status = zxio_release(z, &handle);
-    if (status != ZX_OK) {
-        return status;
-    }
-    handles[0] = handle;
-    types[0] = PA_FDIO_REMOTE;
-    return 1;
-}
-
 static zx_status_t fdio_zxio_remote_get_vmo(fdio_t* io, int flags, zx_handle_t* out_vmo) {
     zxio_remote_t* rio = fdio_get_zxio_remote(io);
     zx_handle_t vmo = ZX_HANDLE_INVALID;
@@ -398,11 +400,11 @@ fdio_ops_t fdio_zxio_remote_ops = {
     .misc = fdio_default_misc,
     .close = fdio_zxio_close,
     .open = fdio_zxio_remote_open,
-    .clone = fdio_zxio_remote_clone,
+    .clone = fdio_zxio_clone,
     .ioctl = fdio_zxio_remote_ioctl,
     .wait_begin = fdio_zxio_remote_wait_begin,
     .wait_end = fdio_zxio_remote_wait_end,
-    .unwrap = fdio_zxio_remote_unwrap,
+    .unwrap = fdio_zxio_unwrap,
     .posix_ioctl = fdio_default_posix_ioctl,
     .get_vmo = fdio_zxio_remote_get_vmo,
     .get_token = fdio_zxio_remote_get_token,
@@ -424,7 +426,8 @@ fdio_ops_t fdio_zxio_remote_ops = {
     .shutdown = fdio_default_shutdown,
 };
 
-fdio_t* fdio_zxio_create_remote(zx_handle_t control, zx_handle_t event) {
+__EXPORT
+fdio_t* fdio_remote_create(zx_handle_t control, zx_handle_t event) {
     fdio_zxio_remote_t* fv = fdio_alloc(sizeof(fdio_zxio_remote_t));
     if (fv == NULL) {
         zx_handle_close(control);
@@ -435,6 +438,114 @@ fdio_t* fdio_zxio_create_remote(zx_handle_t control, zx_handle_t event) {
     fv->io.magic = FDIO_MAGIC;
     atomic_init(&fv->io.refcount, 1);
     zx_status_t status = zxio_remote_init(&fv->remote, control, event);
+    if (status != ZX_OK) {
+        return NULL;
+    }
+    return &fv->io;
+}
+
+// Vmofile ---------------------------------------------------------------------
+
+// Implements the |fdio_t| contract using |zxio_vmofile_t|.
+//
+// Has an ops table that translates fdio ops into zxio ops. Some of the fdio ops
+// require using the underlying handles in the |zxio_vmofile_t|, which is why
+// this object needs to use |zxio_vmofile_t| directly.
+//
+// Will be removed once the transition to the zxio backend is complete.
+typedef struct fdio_zxio_vmofile {
+    fdio_t io;
+    zxio_vmofile_t file;
+} fdio_zxio_vmofile_t;
+
+static inline zxio_vmofile_t* fdio_get_zxio_vmofile(fdio_t* io) {
+    fdio_zxio_vmofile_t* wrapper = (fdio_zxio_vmofile_t*)io;
+    return &wrapper->file;
+}
+
+static zx_status_t fdio_zxio_vmofile_get_vmo(fdio_t* io, int flags,
+                                             zx_handle_t* out_vmo) {
+    zxio_vmofile_t* file = fdio_get_zxio_vmofile(io);
+
+    if (out_vmo == NULL) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    size_t length = file->end - file->off;
+    if (flags & FDIO_MMAP_FLAG_PRIVATE) {
+        // Why don't we consider file->off in this branch? It seems like we
+        // want to clone the part of the VMO from file->off to file->end rather
+        // than length bytes at the start of the VMO.
+        return zx_vmo_clone(file->vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0, length,
+                            out_vmo);
+    } else {
+        size_t vmo_length = 0;
+        if (file->off != 0 || zx_vmo_get_size(file->vmo, &vmo_length) != ZX_OK ||
+            length != vmo_length) {
+            return ZX_ERR_NOT_FOUND;
+        }
+        zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_GET_PROPERTY |
+                ZX_RIGHT_MAP;
+        rights |= (flags & FDIO_MMAP_FLAG_READ) ? ZX_RIGHT_READ : 0;
+        rights |= (flags & FDIO_MMAP_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
+        rights |= (flags & FDIO_MMAP_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
+        return zx_handle_duplicate(file->vmo, rights, out_vmo);
+    }
+}
+
+fdio_ops_t fdio_zxio_vmofile_ops = {
+    .read = fdio_zxio_read,
+    .read_at = fdio_zxio_read_at,
+    // Rather than using fdio_zxio_write, which fails with ZX_ERR_NOT_SUPPORTED
+    // for vmofile, we use fdio_default_write, which "succeeds" but actually
+    // does nothing. This behavior matches the behavior of the implementaiton
+    // prior to zxio, but seems inconsistent.
+    .write = fdio_default_write,
+    .write_at = fdio_zxio_write_at,
+    .seek = fdio_zxio_seek,
+    .misc = fdio_default_misc,
+    .close = fdio_zxio_close,
+    .open = fdio_default_open,
+    .clone = fdio_zxio_clone,
+    .ioctl = fdio_default_ioctl,
+    .wait_begin = fdio_default_wait_begin,
+    .wait_end = fdio_default_wait_end,
+    .unwrap = fdio_zxio_unwrap,
+    .posix_ioctl = fdio_default_posix_ioctl,
+    .get_vmo = fdio_zxio_vmofile_get_vmo,
+    .get_token = fdio_default_get_token,
+    .get_attr = fdio_zxio_get_attr,
+    .set_attr = fdio_zxio_set_attr,
+    .sync = fdio_zxio_sync,
+    .readdir = fdio_default_readdir,
+    .rewind = fdio_default_rewind,
+    .unlink = fdio_default_unlink,
+    .truncate = fdio_zxio_truncate,
+    .rename = fdio_default_rename,
+    .link = fdio_default_link,
+    .get_flags = fdio_zxio_get_flags,
+    .set_flags = fdio_zxio_set_flags,
+    .recvfrom = fdio_default_recvfrom,
+    .sendto = fdio_default_sendto,
+    .recvmsg = fdio_default_recvmsg,
+    .sendmsg = fdio_default_sendmsg,
+    .shutdown = fdio_default_shutdown,
+};
+
+fdio_t* fdio_zxio_vmofile_create(zx_handle_t control, zx_handle_t vmo,
+                                 zx_off_t offset, zx_off_t length,
+                                 zx_off_t seek) {
+    fdio_zxio_vmofile_t* fv = fdio_alloc(sizeof(fdio_zxio_vmofile_t));
+    if (fv == NULL) {
+        zx_handle_close(control);
+        zx_handle_close(vmo);
+        return NULL;
+    }
+    fv->io.ops = &fdio_zxio_vmofile_ops;
+    fv->io.magic = FDIO_MAGIC;
+    atomic_init(&fv->io.refcount, 1);
+    zx_status_t status = zxio_vmofile_init(&fv->file, control, vmo, offset,
+                                           length, seek);
     if (status != ZX_OK) {
         return NULL;
     }

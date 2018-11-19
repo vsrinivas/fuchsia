@@ -134,7 +134,7 @@ fdio_t* fdio_socketpair_create(zx_handle_t h);
 
 // Creates an |fdio_t| for a VMO file.
 //
-// * |h| is an (optional) handle to the control channel for the VMO file.
+// * |control| is an (optional) handle to the control channel for the VMO file.
 //   (The fdio_vmo_fd function calls this function without a control channel.)
 // * |vmo| is the VMO that contains the contents of the file.
 // * |offset| is the index of the first byte of the file in the VMO.
@@ -143,8 +143,12 @@ fdio_t* fdio_socketpair_create(zx_handle_t h);
 //   |offset| within the underlying VMO).
 //
 // Always consumes |h| and |vmo|.
-fdio_t* fdio_vmofile_create(zx_handle_t h, zx_handle_t vmo, zx_off_t offset,
-                            zx_off_t length, zx_off_t seek);
+fdio_t* fdio_vmofile_create(zx_handle_t control, zx_handle_t vmo,
+                            zx_off_t offset, zx_off_t length, zx_off_t seek);
+
+// Same as above, but uses the zxio backend.
+fdio_t* fdio_zxio_vmofile_create(zx_handle_t control, zx_handle_t vmo,
+                                 zx_off_t offset, zx_off_t length, zx_off_t seek);
 
 // Creates an |fdio_t| from a Zircon socket object.
 //

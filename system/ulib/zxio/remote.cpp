@@ -284,6 +284,8 @@ static zx_status_t zxio_remote_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* 
         return ZX_ERR_IO;
     }
     *out_vmo = vmo;
+    // What size should we return?
+    *out_size = 0u;
     return ZX_OK;
 }
 

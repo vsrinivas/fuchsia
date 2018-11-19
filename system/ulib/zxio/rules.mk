@@ -14,6 +14,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/null.cpp \
     $(LOCAL_DIR)/pipe.cpp \
     $(LOCAL_DIR)/remote.cpp \
+    $(LOCAL_DIR)/vmofile.cpp \
     $(LOCAL_DIR)/zxio.cpp \
 
 MODULE_FIDL_LIBS := system/fidl/fuchsia-io
