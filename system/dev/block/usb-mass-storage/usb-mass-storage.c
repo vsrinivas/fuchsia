@@ -262,7 +262,7 @@ static zx_status_t ums_mode_sense6(ums_t* ums, uint8_t lun, scsi_mode_sense_6_da
 
 static zx_status_t ums_data_transfer(ums_t* ums, ums_txn_t* txn, zx_off_t offset, size_t length,
                                      uint8_t ep_address) {
-    usb_request_t* req = &ums->data_transfer_req;
+    usb_request_t* req = ums->data_transfer_req;
 
     zx_status_t status = usb_request_init(req, txn->op.rw.vmo, offset, length, ep_address);
     if (status != ZX_OK) {
@@ -449,6 +449,11 @@ static void ums_release(void* ctx) {
     }
     if (ums->csw_req) {
         usb_request_release(ums->csw_req);
+    }
+    if (ums->data_transfer_req) {
+        usb_request_release(ums->data_transfer_req);
+        //The release_cb of data_transfer_req does not free the req.
+        free(ums->data_transfer_req);
     }
 
     free(ums);
@@ -773,9 +778,15 @@ static zx_status_t ums_bind(void* ctx, zx_device_t* device) {
         goto fail;
     }
 
+    status = usb_request_alloc(&ums->data_transfer_req, 0, bulk_in_addr,
+                               ums->parent_req_size);
+    if (status != ZX_OK) {
+        goto fail;
+    }
     ums->cbw_req->complete_cb = ums_req_complete;
     ums->data_req->complete_cb = ums_req_complete;
     ums->csw_req->complete_cb = ums_req_complete;
+    ums->data_transfer_req->complete_cb = ums_req_complete;
 
     ums->tag_send = ums->tag_receive = 8;
 
