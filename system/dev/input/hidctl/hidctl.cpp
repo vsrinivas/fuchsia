@@ -13,6 +13,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <utility>
+
 namespace hidctl {
 
 HidCtl::HidCtl(zx_device_t* device) : ddk::Device<HidCtl, ddk::Ioctlable>(device) {}
@@ -48,7 +50,7 @@ zx_status_t HidCtl::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, voi
 
 
         auto hiddev = fbl::unique_ptr<hidctl::HidDevice>(
-                new hidctl::HidDevice(zxdev(), config, fbl::move(local)));
+                new hidctl::HidDevice(zxdev(), config, std::move(local)));
 
         status = hiddev->DdkAdd("hidctl-dev");
         if (status != ZX_OK) {
@@ -83,7 +85,7 @@ HidDevice::HidDevice(zx_device_t* device, const hid_ioctl_config* config, zx::so
     dev_class_(config->dev_class),
     report_desc_(new uint8_t[config->rpt_desc_len]),
     report_desc_len_(config->rpt_desc_len),
-    data_(fbl::move(data)) {
+    data_(std::move(data)) {
     ZX_DEBUG_ASSERT(data_.is_valid());
     memcpy(report_desc_.get(), config->rpt_desc, report_desc_len_);
     int ret = thrd_create_with_name(&thread_, hid_device_thread, reinterpret_cast<void*>(this),

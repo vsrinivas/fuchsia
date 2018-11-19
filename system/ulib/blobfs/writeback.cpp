@@ -5,6 +5,8 @@
 #include <blobfs/blobfs.h>
 #include <blobfs/writeback.h>
 
+#include <utility>
+
 namespace blobfs {
 
 WriteTxn::~WriteTxn() {
@@ -42,7 +44,7 @@ void WriteTxn::Enqueue(zx_handle_t vmo, uint64_t relative_block, uint64_t absolu
     request.vmo_offset = relative_block;
     request.dev_offset = absolute_block;
     request.length = nblocks;
-    requests_.push_back(fbl::move(request));
+    requests_.push_back(std::move(request));
     block_count_ += request.length;
 }
 
@@ -120,12 +122,12 @@ bool WritebackWork::IsReady() {
 
 void WritebackWork::SetReadyCallback(ReadyCallback callback) {
     ZX_DEBUG_ASSERT(!ready_cb_);
-    ready_cb_ = fbl::move(callback);
+    ready_cb_ = std::move(callback);
 }
 
 void WritebackWork::SetSyncCallback(SyncCallback callback) {
     ZX_DEBUG_ASSERT(!sync_cb_);
-    sync_cb_ = fbl::move(callback);
+    sync_cb_ = std::move(callback);
 }
 
 void WritebackWork::SetSyncComplete() {
@@ -147,7 +149,7 @@ zx_status_t WritebackWork::Complete() {
 }
 
 WritebackWork::WritebackWork(Blobfs* bs, fbl::RefPtr<VnodeBlob> vn) :
-    WriteTxn(bs), ready_cb_(nullptr), sync_cb_(nullptr), sync_(false), vn_(fbl::move(vn)) {}
+    WriteTxn(bs), ready_cb_(nullptr), sync_cb_(nullptr), sync_(false), vn_(std::move(vn)) {}
 
 void WritebackWork::InvokeSyncCallback(zx_status_t status) {
     if (sync_cb_) {
@@ -182,14 +184,14 @@ zx_status_t Buffer::Create(Blobfs* blobfs, size_t blocks, const char* label,
         return status;
     }
 
-    fbl::unique_ptr<Buffer> buffer(new Buffer(blobfs, fbl::move(mapper)));
+    fbl::unique_ptr<Buffer> buffer(new Buffer(blobfs, std::move(mapper)));
     if ((status = buffer->blobfs_->AttachVmo(buffer->mapper_.vmo().get(), &buffer->vmoid_))
         != ZX_OK) {
         fprintf(stderr, "Buffer: Failed to attach vmo\n");
         return status;
     }
 
-    *out = fbl::move(buffer);
+    *out = std::move(buffer);
     return ZX_OK;
 }
 
@@ -361,7 +363,7 @@ zx_status_t WritebackQueue::Create(Blobfs* blobfs, const size_t buffer_blocks,
         return status;
     }
 
-    fbl::unique_ptr<WritebackQueue> wb(new WritebackQueue(fbl::move(buffer)));
+    fbl::unique_ptr<WritebackQueue> wb(new WritebackQueue(std::move(buffer)));
 
     if (cnd_init(&wb->work_completed_) != thrd_success) {
         return ZX_ERR_NO_RESOURCES;
@@ -378,7 +380,7 @@ zx_status_t WritebackQueue::Create(Blobfs* blobfs, const size_t buffer_blocks,
 
     fbl::AutoLock lock(&wb->lock_);
     wb->state_ = WritebackState::kRunning;
-    *out = fbl::move(wb);
+    *out = std::move(wb);
     return ZX_OK;
 }
 
@@ -405,7 +407,7 @@ zx_status_t WritebackQueue::Enqueue(fbl::unique_ptr<WritebackWork> work) {
         }
     }
 
-    work_queue_.push(fbl::move(work));
+    work_queue_.push(std::move(work));
     cnd_signal(&work_added_);
     return status;
 }

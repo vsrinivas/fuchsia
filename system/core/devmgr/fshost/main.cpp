@@ -32,6 +32,8 @@
 #include <string.h>
 #include <threads.h>
 
+#include <utility>
+
 #include "../shared/bootfs.h"
 #include "fshost.h"
 
@@ -50,10 +52,10 @@ constexpr uint32_t kFsDirFlags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_ADMIN |
 
 struct BootdataRamdisk : public fbl::SinglyLinkedListable<fbl::unique_ptr<BootdataRamdisk>> {
 public:
-    explicit BootdataRamdisk(zx::vmo vmo) : vmo_(fbl::move(vmo)) {}
+    explicit BootdataRamdisk(zx::vmo vmo) : vmo_(std::move(vmo)) {}
 
     zx::vmo TakeRamdisk() {
-        return fbl::move(vmo_);
+        return std::move(vmo_);
     }
 private:
     zx::vmo vmo_;
@@ -101,7 +103,7 @@ zx_status_t SetupBootfsVmo(const fbl::unique_ptr<FsManager>& root, uint32_t n,
         return status;
     }
     Bootfs bfs;
-    if (Bootfs::Create(fbl::move(bootfs_vmo), &bfs) == ZX_OK) {
+    if (Bootfs::Create(std::move(bootfs_vmo), &bfs) == ZX_OK) {
         auto add_file = (type == BOOTDATA_BOOTFS_SYSTEM) ?
             &FsManager::SystemfsAddFile :
             &FsManager::BootfsAddFile;
@@ -240,7 +242,7 @@ void SetupBootfs(const fbl::unique_ptr<FsManager>& root,
                            errmsg);
                 } else {
                     auto ramdisk = fbl::make_unique<BootdataRamdisk>(zx::vmo(ramdisk_vmo));
-                    ramdisk_list->push_front(fbl::move(ramdisk));
+                    ramdisk_list->push_front(std::move(ramdisk));
                 }
                 break;
             }
@@ -314,8 +316,8 @@ void FetchVmos(const fbl::unique_ptr<FsManager>& root, uint_fast8_t type,
 
 FshostConnections::FshostConnections(zx::channel devfs_root, zx::channel svc_root,
                                      zx::channel fs_root, zx::event event)
-    : devfs_root_(fbl::move(devfs_root)), svc_root_(fbl::move(svc_root)),
-      fs_root_(fbl::move(fs_root)), event_(fbl::move(event)) {}
+    : devfs_root_(std::move(devfs_root)), svc_root_(std::move(svc_root)),
+      fs_root_(std::move(fs_root)), event_(std::move(event)) {}
 
 zx::channel FshostConnections::Open(const char* path) const {
     if (!strcmp(path, "svc")) {
@@ -405,8 +407,8 @@ int main(int argc, char** argv) {
 
     // Initialize connections to external service managers, and begin
     // monitoring the |fshost_event| for a termination event.
-    root->InitializeConnections(fbl::move(_fs_root), fbl::move(devfs_root),
-                                fbl::move(svc_root), fbl::move(fshost_event));
+    root->InitializeConnections(std::move(_fs_root), std::move(devfs_root),
+                                std::move(svc_root), std::move(fshost_event));
     g_fshost = root.get();
 
     // If we have a "/system" ramdisk, start higher level services.
@@ -443,7 +445,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    block_device_watcher(fbl::move(root), zx::job::default_job(), netboot);
+    block_device_watcher(std::move(root), zx::job::default_job(), netboot);
 
     printf("fshost: terminating (block device watcher finished?)\n");
     return 0;

@@ -6,6 +6,8 @@
 
 #include <zircon/assert.h>
 
+#include <utility>
+
 namespace trace {
 
 TraceObserver::TraceObserver() {
@@ -20,7 +22,7 @@ void TraceObserver::Start(async_dispatcher_t* dispatcher, fbl::Closure callback)
     ZX_DEBUG_ASSERT(callback);
 
     Stop();
-    callback_ = fbl::move(callback);
+    callback_ = std::move(callback);
 
     zx_status_t status = zx::event::create(0u, &event_);
     ZX_ASSERT(status == ZX_OK);

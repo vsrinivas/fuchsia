@@ -25,6 +25,8 @@
 #include <zircon/status.h>
 #include <zircon/threads.h>
 
+#include <utility>
+
 namespace {
 
 class TestWait : public async_wait_t {
@@ -175,7 +177,7 @@ public:
         : interval_(interval), repeat_count_(repeat_count) {}
 
     void set_finish_callback(fbl::Closure callback) {
-        finish_callback_ = fbl::move(callback);
+        finish_callback_ = std::move(callback);
     }
 
 protected:

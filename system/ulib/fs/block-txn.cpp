@@ -10,6 +10,8 @@
 #include <fs/block-txn.h>
 #include <fs/vfs.h>
 
+#include <utility>
+
 namespace fs {
 
 BlockTxn::BlockTxn(TransactionHandler* handler) : handler_(handler) {}
@@ -55,7 +57,7 @@ void BlockTxn::EnqueueOperation(uint32_t op, vmoid_t id, uint64_t vmo_offset,
     request.length = blocks;
     request.vmo_offset = vmo_offset;
     request.dev_offset = dev_offset;
-    requests_.push_back(fbl::move(request));
+    requests_.push_back(std::move(request));
 }
 
 zx_status_t BlockTxn::Transact() {

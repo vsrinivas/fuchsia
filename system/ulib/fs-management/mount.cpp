@@ -28,13 +28,15 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
+#include <utility>
+
 namespace {
 
 using fbl::unique_fd;
 
 zx_status_t MountFs(int fd, zx_handle_t root) {
     zx_status_t status;
-    fzl::FdioCaller caller(fbl::move(fbl::unique_fd(fd)));
+    fzl::FdioCaller caller{fbl::unique_fd(fd)};
     zx_status_t io_status = fuchsia_io_DirectoryAdminMount(caller.borrow_channel(),
                                                            root, &status);
     caller.release().release();
@@ -141,7 +143,7 @@ zx_status_t Mounter::MakeDirAndMount(const mount_options_t& options) {
     cleanup.cancel();
 
     zx_status_t status;
-    fzl::FdioCaller caller(fbl::move(parent));
+    fzl::FdioCaller caller(std::move(parent));
     zx_status_t io_status = fuchsia_io_DirectoryAdminMountAndCreate(
             caller.borrow_channel(), root_, name, strlen(name), flags_, &status);
     if (io_status != ZX_OK) {
@@ -182,7 +184,7 @@ zx_status_t Mounter::LaunchAndMount(LaunchCallback cb, const mount_options_t& op
 
 zx_status_t Mounter::MountNativeFs(const char* binary, unique_fd device,
                                    const mount_options_t& options, LaunchCallback cb) {
-    zx_status_t status = PrepareHandles(fbl::move(device));
+    zx_status_t status = PrepareHandles(std::move(device));
     if (status != ZX_OK) {
         return status;
     }
@@ -215,7 +217,7 @@ zx_status_t Mounter::MountNativeFs(const char* binary, unique_fd device,
 }
 
 zx_status_t Mounter::MountFat(unique_fd device, const mount_options_t& options, LaunchCallback cb) {
-    zx_status_t status = PrepareHandles(fbl::move(device));
+    zx_status_t status = PrepareHandles(std::move(device));
     if (status != ZX_OK) {
         return status;
     }
@@ -242,11 +244,11 @@ zx_status_t Mounter::Mount(unique_fd device, disk_format_t format, const mount_o
                            LaunchCallback cb) {
     switch (format) {
     case DISK_FORMAT_MINFS:
-        return MountNativeFs("/boot/bin/minfs", fbl::move(device), options, cb);
+        return MountNativeFs("/boot/bin/minfs", std::move(device), options, cb);
     case DISK_FORMAT_BLOBFS:
-        return MountNativeFs("/boot/bin/blobfs", fbl::move(device), options, cb);
+        return MountNativeFs("/boot/bin/blobfs", std::move(device), options, cb);
     case DISK_FORMAT_FAT:
-        return MountFat(fbl::move(device), options, cb);
+        return MountFat(std::move(device), options, cb);
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -355,7 +357,7 @@ zx_status_t mount(int device_fd, const char* mount_path, disk_format_t df,
 zx_status_t fumount(int mount_fd) {
     zx_handle_t h;
     zx_status_t status;
-    fzl::FdioCaller caller(fbl::move(fbl::unique_fd(mount_fd)));
+    fzl::FdioCaller caller{fbl::unique_fd(mount_fd)};
     zx_status_t io_status = fuchsia_io_DirectoryAdminUnmountNode(caller.borrow_channel(),
                                                                  &status, &h);
     caller.release().release();

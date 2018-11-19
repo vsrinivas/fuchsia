@@ -27,6 +27,8 @@
 #include <zircon/types.h>
 #include <zxcrypt/volume.h>
 
+#include <utility>
+
 #include "debug.h"
 #include "device.h"
 #include "extra.h"
@@ -168,7 +170,7 @@ zx_status_t Device::Init() {
     for (size_t i = 0; i < kNumWorkers; ++i) {
         zx::port port;
         port_.duplicate(ZX_RIGHT_SAME_RIGHTS, &port);
-        if ((rc = workers_[i].Start(this, *volume, fbl::move(port))) != ZX_OK) {
+        if ((rc = workers_[i].Start(this, *volume, std::move(port))) != ZX_OK) {
             zxlogf(ERROR, "failed to start worker %zu: %s\n", i, zx_status_get_string(rc));
             return rc;
         }

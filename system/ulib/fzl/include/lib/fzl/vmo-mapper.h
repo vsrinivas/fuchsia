@@ -10,6 +10,8 @@
 #include <lib/fzl/vmar-manager.h>
 #include <lib/zx/vmo.h>
 
+#include <utility>
+
 namespace fzl {
 
 class VmoMapper {
@@ -84,7 +86,7 @@ protected:
                             fbl::RefPtr<VmarManager> vmar_manager);
 
     void MoveFromOther(VmoMapper* other) {
-        vmar_manager_ = fbl::move(other->vmar_manager_);
+        vmar_manager_ = std::move(other->vmar_manager_);
 
         start_ = other->start_;
         other->start_ = 0;

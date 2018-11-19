@@ -14,6 +14,8 @@
 #include <trace/event.h>
 #include <trace-provider/handler.h>
 
+#include <utility>
+
 namespace {
 int RunClosure(void* arg) {
     auto closure = static_cast<fbl::Closure*>(arg);
@@ -25,7 +27,7 @@ int RunClosure(void* arg) {
 void RunThread(fbl::Closure closure) {
     thrd_t thread;
     int result = thrd_create(&thread, RunClosure,
-                             new fbl::Closure(fbl::move(closure)));
+                             new fbl::Closure(std::move(closure)));
     ZX_ASSERT(result == thrd_success);
 
     result = thrd_join(thread, nullptr);

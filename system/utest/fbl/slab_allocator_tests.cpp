@@ -10,6 +10,8 @@
 #include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 
+#include <utility>
+
 namespace {
 
 enum class ConstructType {
@@ -134,8 +136,8 @@ struct UnmanagedTestTraits {
     public:
         ObjType()                                     : TestBase() { }
         explicit ObjType(const size_t& val)           : TestBase(val) { }
-        explicit ObjType(size_t&& val)                : TestBase(fbl::move(val)) { }
-        explicit ObjType(const size_t& a, size_t&& b) : TestBase(a, fbl::move(b)) { }
+        explicit ObjType(size_t&& val)                : TestBase(std::move(val)) { }
+        explicit ObjType(const size_t& a, size_t&& b) : TestBase(a, std::move(b)) { }
     };
 
     static constexpr size_t MaxSlabs  = 4;
@@ -158,8 +160,8 @@ struct UniquePtrTestTraits {
     public:
         ObjType()                                     : TestBase() { }
         explicit ObjType(const size_t& val)           : TestBase(val) { }
-        explicit ObjType(size_t&& val)                : TestBase(fbl::move(val)) { }
-        explicit ObjType(const size_t& a, size_t&& b) : TestBase(a, fbl::move(b)) { }
+        explicit ObjType(size_t&& val)                : TestBase(std::move(val)) { }
+        explicit ObjType(const size_t& a, size_t&& b) : TestBase(a, std::move(b)) { }
     };
 
 
@@ -184,8 +186,8 @@ struct RefPtrTestTraits {
     public:
         ObjType()                                     : TestBase() { }
         explicit ObjType(const size_t& val)           : TestBase(val) { }
-        explicit ObjType(size_t&& val)                : TestBase(fbl::move(val)) { }
-        explicit ObjType(const size_t& a, size_t&& b) : TestBase(a, fbl::move(b)) { }
+        explicit ObjType(size_t&& val)                : TestBase(std::move(val)) { }
+        explicit ObjType(const size_t& a, size_t&& b) : TestBase(a, std::move(b)) { }
     };
 
     static constexpr size_t MaxSlabs  = 4;
@@ -264,13 +266,13 @@ bool do_slab_test(typename Traits::AllocatorType& allocator, size_t test_allocs)
         switch (i % 4) {
         case 0: ptr = allocator.New(); break;
         case 1: ptr = allocator.New(i); break;
-        case 2: ptr = allocator.New(fbl::move(i)); break;
-        case 3: ptr = allocator.New(i, fbl::move(i)); break;
+        case 2: ptr = allocator.New(std::move(i)); break;
+        case 3: ptr = allocator.New(i, std::move(i)); break;
         }
 
         if (i < MAX_ALLOCS) {
             ASSERT_NONNULL(ptr, "Allocation failed when it should not have!");
-            ref_list.push_front(fbl::move(ptr));
+            ref_list.push_front(std::move(ptr));
         } else {
             ASSERT_NULL(ptr, "Allocation succeeded when it should not have!");
         }
@@ -383,8 +385,8 @@ struct StaticUnmanagedTestTraits {
     public:
         ObjType()                                     : TestBase() { }
         explicit ObjType(const size_t& val)           : TestBase(val) { }
-        explicit ObjType(size_t&& val)                : TestBase(fbl::move(val)) { }
-        explicit ObjType(const size_t& a, size_t&& b) : TestBase(a, fbl::move(b)) { }
+        explicit ObjType(size_t&& val)                : TestBase(std::move(val)) { }
+        explicit ObjType(const size_t& a, size_t&& b) : TestBase(a, std::move(b)) { }
     };
 
     static size_t MaxAllocs() { return AllocatorType::AllocsPerSlab * AllocatorType::max_slabs(); }
@@ -409,8 +411,8 @@ struct StaticUniquePtrTestTraits {
     public:
         ObjType()                                     : TestBase() { }
         explicit ObjType(const size_t& val)           : TestBase(val) { }
-        explicit ObjType(size_t&& val)                : TestBase(fbl::move(val)) { }
-        explicit ObjType(const size_t& a, size_t&& b) : TestBase(a, fbl::move(b)) { }
+        explicit ObjType(size_t&& val)                : TestBase(std::move(val)) { }
+        explicit ObjType(const size_t& a, size_t&& b) : TestBase(a, std::move(b)) { }
     };
 
     static size_t MaxAllocs() { return AllocatorType::AllocsPerSlab * AllocatorType::max_slabs(); }
@@ -437,8 +439,8 @@ struct StaticRefPtrTestTraits {
     public:
         ObjType()                                     : TestBase() { }
         explicit ObjType(const size_t& val)           : TestBase(val) { }
-        explicit ObjType(size_t&& val)                : TestBase(fbl::move(val)) { }
-        explicit ObjType(const size_t& a, size_t&& b) : TestBase(a, fbl::move(b)) { }
+        explicit ObjType(size_t&& val)                : TestBase(std::move(val)) { }
+        explicit ObjType(const size_t& a, size_t&& b) : TestBase(a, std::move(b)) { }
     };
 
     static constexpr size_t MaxSlabs  = 4;
@@ -483,13 +485,13 @@ bool do_static_slab_test(size_t test_allocs) {
         switch (i % 4) {
         case 0: ptr = AllocatorType::New(); break;
         case 1: ptr = AllocatorType::New(i); break;
-        case 2: ptr = AllocatorType::New(fbl::move(i)); break;
-        case 3: ptr = AllocatorType::New(i, fbl::move(i)); break;
+        case 2: ptr = AllocatorType::New(std::move(i)); break;
+        case 3: ptr = AllocatorType::New(i, std::move(i)); break;
         }
 
         if (i < MAX_ALLOCS) {
             ASSERT_NONNULL(ptr, "Allocation failed when it should not have!");
-            ref_list.push_front(fbl::move(ptr));
+            ref_list.push_front(std::move(ptr));
         } else {
             ASSERT_NULL(ptr, "Allocation succeeded when it should not have!");
         }

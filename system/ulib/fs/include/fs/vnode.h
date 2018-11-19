@@ -23,10 +23,14 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <utility>
+
 #ifdef __Fuchsia__
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/remoteio.h>
 #include <lib/zx/channel.h>
+
+#include <utility>
 #endif // __Fuchsia__
 
 namespace fs {
@@ -215,7 +219,7 @@ inline zx_status_t OpenVnode(uint32_t flags, fbl::RefPtr<Vnode>* vnode) {
     fbl::RefPtr<Vnode> redirect;
     zx_status_t status = (*vnode)->Open(flags, &redirect);
     if (status == ZX_OK && redirect != nullptr) {
-        *vnode = fbl::move(redirect);
+        *vnode = std::move(redirect);
     }
     return status;
 }

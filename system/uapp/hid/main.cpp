@@ -23,6 +23,8 @@
 #include <zircon/threads.h>
 #include <zircon/types.h>
 
+#include <utility>
+
 // defined in report.cpp
 void print_report_descriptor(const uint8_t* rpt_desc, size_t desc_len);
 
@@ -288,7 +290,7 @@ static int hid_input_thread(void* arg) {
     input_args_t* args = (input_args_t*)arg;
     lprintf("hid: input thread started for %s\n", args->name);
 
-    fzl::FdioCaller caller(fbl::move(args->fd));
+    fzl::FdioCaller caller(std::move(args->fd));
 
     uint16_t max_report_len = 0;
     ssize_t rc = hid_status(caller, args->name, &max_report_len);
@@ -433,7 +435,7 @@ int get_report(int argc, const char** argv) {
         printf("could not open %s: %d\n", argv[0], errno);
         return -1;
     }
-    fzl::FdioCaller caller(fbl::move(fbl::unique_fd(fd)));
+    fzl::FdioCaller caller{fbl::unique_fd(fd)};
 
     xprintf("hid: getting report size for id=0x%02x type=%u\n", id, type);
 
@@ -507,7 +509,7 @@ int set_report(int argc, const char** argv) {
         printf("could not open %s: %d\n", argv[0], errno);
         return -1;
     }
-    fzl::FdioCaller caller(fbl::move(fbl::unique_fd(fd)));
+    fzl::FdioCaller caller{fbl::unique_fd(fd)};
 
     // If the set/get report args parsed, then we must have at least 3 arguments.
     ZX_DEBUG_ASSERT(argc >= 3);
@@ -562,7 +564,7 @@ int parse(int argc, const char** argv) {
         return -1;
     }
 
-    fzl::FdioCaller caller(fbl::move(fbl::unique_fd(fd)));
+    fzl::FdioCaller caller{fbl::unique_fd(fd)};
     zx_status_t status = parse_rpt_descriptor(caller, argv[0]);
     return static_cast<int>(status);
 }

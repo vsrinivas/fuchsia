@@ -8,6 +8,8 @@
 #include <fbl/type_support.h>
 #include <unittest/unittest.h>
 
+#include <utility>
+
 namespace fbl {
 namespace tests {
 struct StringTestHelper {
@@ -206,7 +208,7 @@ bool copy_move_and_assignment_test() {
     {
         fbl::String abc("abc");
         fbl::String copy(abc);
-        fbl::String move(fbl::move(copy));
+        fbl::String move(std::move(copy));
         EXPECT_STR_EQ("abc", abc.data());
         EXPECT_STR_EQ("", copy.data());
         EXPECT_EQ(abc.data(), move.data());
@@ -226,7 +228,7 @@ bool copy_move_and_assignment_test() {
         fbl::String abc("abc");
         fbl::String copy(abc);
         fbl::String str;
-        str = fbl::move(copy);
+        str = std::move(copy);
         EXPECT_STR_EQ("abc", abc.data());
         EXPECT_STR_EQ("", copy.data());
         EXPECT_EQ(abc.data(), str.data());

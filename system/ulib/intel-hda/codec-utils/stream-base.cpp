@@ -14,6 +14,8 @@
 #include <intel-hda/codec-utils/stream-base.h>
 #include <intel-hda/utils/intel-hda-proto.h>
 
+#include <utility>
+
 #include "debug-logging.h"
 
 namespace audio {
@@ -83,7 +85,7 @@ zx_status_t IntelHDAStreamBase::Activate(fbl::RefPtr<IntelHDACodecDriverBase>&& 
         parent_codec_.reset();
         codec_channel_.reset();
     });
-    parent_codec_  = fbl::move(parent_codec);
+    parent_codec_  = std::move(parent_codec);
     codec_channel_ = codec_channel;
 
     // Allow our implementation to send its initial stream setup commands to the
@@ -262,7 +264,7 @@ zx_status_t IntelHDAStreamBase::ProcessSetStreamFmt(const ihda_proto::SetStreamF
     resp.hdr.transaction_id = set_format_tid_;
     resp.result = ZX_OK;
     resp.external_delay_nsec = 0;   // report his properly based on the codec path delay.
-    res = stream_channel_->Write(&resp, sizeof(resp), fbl::move(ring_buffer_channel));
+    res = stream_channel_->Write(&resp, sizeof(resp), std::move(ring_buffer_channel));
 
 finished:
     // Something went fatally wrong when trying to send the result back to the
@@ -380,8 +382,8 @@ zx_status_t IntelHDAStreamBase::DeviceIoctl(uint32_t op,
     zx::channel client_endpoint;
     zx_status_t res = channel->Activate(&client_endpoint,
                                         default_domain_,
-                                        fbl::move(phandler),
-                                        fbl::move(chandler));
+                                        std::move(phandler),
+                                        std::move(chandler));
     if (res == ZX_OK) {
         if (privileged) {
             ZX_DEBUG_ASSERT(stream_channel_ == nullptr);

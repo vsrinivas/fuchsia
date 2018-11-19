@@ -9,6 +9,8 @@
 #include <lib/zx/fifo.h>
 #include <zircon/status.h>
 
+#include <utility>
+
 #include "pave-utils.h"
 #include "pave-logging.h"
 
@@ -38,7 +40,7 @@ zx_status_t FlushBlockDevice(const fbl::unique_fd& fd) {
     }
 
     block_client::Client client;
-    zx_status_t status = block_client::Client::Create(fbl::move(fifo), &client);
+    zx_status_t status = block_client::Client::Create(std::move(fifo), &client);
     if (status != ZX_OK) {
         ERROR("Couldn't create block client\n");
         return status;

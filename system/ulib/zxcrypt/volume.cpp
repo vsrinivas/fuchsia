@@ -36,6 +36,8 @@
 #include <zircon/types.h>
 #include <zxcrypt/volume.h>
 
+#include <utility>
+
 #define ZXDEBUG 0
 
 namespace zxcrypt {
@@ -150,7 +152,7 @@ zx_status_t SyncIO(zx_device_t* dev, uint32_t cmd, void* buf, size_t off, size_t
 
 Volume::Volume(fbl::unique_fd&& fd) {
     Reset();
-    fd_ = fbl::move(fd);
+    fd_ = std::move(fd);
     dev_ = nullptr;
 }
 
@@ -188,7 +190,7 @@ zx_status_t Volume::Init(fbl::unique_fd fd, fbl::unique_ptr<Volume>* out) {
     }
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Volume> volume(new (&ac) Volume(fbl::move(fd)));
+    fbl::unique_ptr<Volume> volume(new (&ac) Volume(std::move(fd)));
     if (!ac.check()) {
         xprintf("allocation failed: %zu bytes\n", sizeof(Volume));
         return ZX_ERR_NO_MEMORY;
@@ -198,7 +200,7 @@ zx_status_t Volume::Init(fbl::unique_fd fd, fbl::unique_ptr<Volume>* out) {
         return rc;
     }
 
-    *out = fbl::move(volume);
+    *out = std::move(volume);
     return ZX_OK;
 }
 
@@ -207,14 +209,14 @@ zx_status_t Volume::Create(fbl::unique_fd fd, const crypto::Secret& key,
     zx_status_t rc;
 
     fbl::unique_ptr<Volume> volume;
-    if ((rc = Volume::Init(fbl::move(fd), &volume)) != ZX_OK ||
+    if ((rc = Volume::Init(std::move(fd), &volume)) != ZX_OK ||
         (rc = volume->CreateBlock()) != ZX_OK || (rc = volume->SealBlock(key, 0)) != ZX_OK ||
         (rc = volume->CommitBlock()) != ZX_OK) {
         return rc;
     }
 
     if (out) {
-        *out = fbl::move(volume);
+        *out = std::move(volume);
     }
     return ZX_OK;
 }
@@ -224,12 +226,12 @@ zx_status_t Volume::Unlock(fbl::unique_fd fd, const crypto::Secret& key, key_slo
     zx_status_t rc;
 
     fbl::unique_ptr<Volume> volume;
-    if ((rc = Volume::Init(fbl::move(fd), &volume)) != ZX_OK ||
+    if ((rc = Volume::Init(std::move(fd), &volume)) != ZX_OK ||
         (rc = volume->Unlock(key, slot)) != ZX_OK) {
         return rc;
     }
 
-    *out = fbl::move(volume);
+    *out = std::move(volume);
     return ZX_OK;
 }
 
@@ -251,7 +253,7 @@ zx_status_t Volume::Unlock(zx_device_t* dev, const crypto::Secret& key, key_slot
         return rc;
     }
 
-    *out = fbl::move(volume);
+    *out = std::move(volume);
     return ZX_OK;
 }
 

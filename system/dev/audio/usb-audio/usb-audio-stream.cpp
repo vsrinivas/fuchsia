@@ -18,6 +18,8 @@
 
 #include <dispatcher-pool/dispatcher-thread-pool.h>
 
+#include <utility>
+
 #include "usb-audio.h"
 #include "usb-audio-device.h"
 #include "usb-audio-stream.h"
@@ -40,8 +42,8 @@ UsbAudioStream::UsbAudioStream(UsbAudioDevice* parent,
     : UsbAudioStreamBase(parent->zxdev()),
       AudioStreamProtocol(ifc->direction() == Direction::Input),
       parent_(*parent),
-      ifc_(fbl::move(ifc)),
-      default_domain_(fbl::move(default_domain)),
+      ifc_(std::move(ifc)),
+      default_domain_(std::move(default_domain)),
       create_time_(zx_clock_get_monotonic()) {
     snprintf(log_prefix_, sizeof(log_prefix_),
              "UsbAud %04hx:%04hx %s-%03d",
@@ -74,7 +76,7 @@ fbl::RefPtr<UsbAudioStream> UsbAudioStream::Create(UsbAudioDevice* parent,
 
     fbl::AllocChecker ac;
     auto stream = fbl::AdoptRef(
-            new (&ac) UsbAudioStream(parent, fbl::move(ifc), fbl::move(domain)));
+            new (&ac) UsbAudioStream(parent, std::move(ifc), std::move(domain)));
     if (!ac.check()) {
         LOG_EX(ERROR, *parent,
                "Out of memory while attempting to allocate UsbAudioStream\n");
@@ -298,8 +300,8 @@ zx_status_t UsbAudioStream::DdkIoctl(uint32_t op,
     zx::channel client_endpoint;
     zx_status_t res = channel->Activate(&client_endpoint,
                                         default_domain_,
-                                        fbl::move(phandler),
-                                        fbl::move(chandler));
+                                        std::move(phandler),
+                                        std::move(chandler));
     if (res == ZX_OK) {
         if (privileged) {
             ZX_DEBUG_ASSERT(stream_channel_ == nullptr);
@@ -593,8 +595,8 @@ zx_status_t UsbAudioStream::OnSetStreamFormatLocked(dispatcher::Channel* channel
 
         resp.result = rb_channel_->Activate(&client_rb_channel,
                                             default_domain_,
-                                            fbl::move(phandler),
-                                            fbl::move(chandler));
+                                            std::move(phandler),
+                                            std::move(chandler));
         if (resp.result != ZX_OK) {
             rb_channel_.reset();
         }
@@ -604,7 +606,7 @@ finished:
     if (resp.result == ZX_OK) {
         // TODO(johngro): Report the actual external delay.
         resp.external_delay_nsec = 0;
-        return channel->Write(&resp, sizeof(resp), fbl::move(client_rb_channel));
+        return channel->Write(&resp, sizeof(resp), std::move(client_rb_channel));
     } else {
         return channel->Write(&resp, sizeof(resp));
     }
@@ -821,7 +823,7 @@ finished:
     zx_status_t res;
     if (resp.result == ZX_OK) {
         ZX_DEBUG_ASSERT(client_rb_handle.is_valid());
-        res = channel->Write(&resp, sizeof(resp), fbl::move(client_rb_handle));
+        res = channel->Write(&resp, sizeof(resp), std::move(client_rb_handle));
     } else {
         res = channel->Write(&resp, sizeof(resp));
     }

@@ -13,6 +13,8 @@
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
+#include <utility>
+
 namespace {
 
 bool OpenHelper(const zx::channel& directory, const char* path, zx::channel* response_channel) {
@@ -28,7 +30,7 @@ bool OpenHelper(const zx::channel& directory, const char* path, zx::channel* res
     ASSERT_EQ(client.wait_one(ZX_CHANNEL_PEER_CLOSED | ZX_CHANNEL_READABLE,
                               zx::deadline_after(zx::sec(1)), &pending), ZX_OK);
     ASSERT_EQ(pending & ZX_CHANNEL_READABLE, ZX_CHANNEL_READABLE);
-    *response_channel = fbl::move(client);
+    *response_channel = std::move(client);
 
     END_HELPER;
 }

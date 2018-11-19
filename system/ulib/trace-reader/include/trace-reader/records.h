@@ -6,6 +6,7 @@
 
 #include <new>
 #include <stdint.h>
+#include <utility>
 
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
@@ -88,7 +89,7 @@ public:
     static ArgumentValue MakeDouble(double value) { return ArgumentValue(value); }
 
     static ArgumentValue MakeString(fbl::String value) {
-        return ArgumentValue(fbl::move(value));
+        return ArgumentValue(std::move(value));
     }
 
     static ArgumentValue MakePointer(uint64_t value) {
@@ -99,13 +100,13 @@ public:
         return ArgumentValue(KoidTag(), value);
     }
 
-    ArgumentValue(ArgumentValue&& other) { MoveFrom(fbl::move(other)); }
+    ArgumentValue(ArgumentValue&& other) { MoveFrom(std::move(other)); }
 
     ~ArgumentValue() { Destroy(); }
 
     ArgumentValue& operator=(ArgumentValue&& other) {
         Destroy();
-        MoveFrom(fbl::move(other));
+        MoveFrom(std::move(other));
         return *this;
     }
 
@@ -177,7 +178,7 @@ private:
 
     explicit ArgumentValue(fbl::String string)
         : type_(ArgumentType::kString) {
-        new (&string_) fbl::String(fbl::move(string));
+        new (&string_) fbl::String(std::move(string));
     }
 
     explicit ArgumentValue(PointerTag, uint64_t pointer)
@@ -208,14 +209,14 @@ private:
 class Argument final {
 public:
     explicit Argument(fbl::String name, ArgumentValue value)
-        : name_(fbl::move(name)), value_(fbl::move(value)) {}
+        : name_(std::move(name)), value_(std::move(value)) {}
 
     Argument(Argument&& other)
-        : name_(fbl::move(other.name_)), value_(fbl::move(other.value_)) {}
+        : name_(std::move(other.name_)), value_(std::move(other.value_)) {}
 
     Argument& operator=(Argument&& other) {
-        name_ = fbl::move(other.name_);
-        value_ = fbl::move(other.value_);
+        name_ = std::move(other.name_);
+        value_ = std::move(other.value_);
         return *this;
     }
 
@@ -252,15 +253,15 @@ public:
     };
 
     explicit MetadataContent(ProviderInfo provider_info)
-        : type_(MetadataType::kProviderInfo), provider_info_(fbl::move(provider_info)) {}
+        : type_(MetadataType::kProviderInfo), provider_info_(std::move(provider_info)) {}
 
     explicit MetadataContent(ProviderSection provider_section)
         : type_(MetadataType::kProviderSection),
-          provider_section_(fbl::move(provider_section)) {}
+          provider_section_(std::move(provider_section)) {}
 
     explicit MetadataContent(ProviderEvent provider_event)
         : type_(MetadataType::kProviderEvent),
-          provider_event_(fbl::move(provider_event)) {}
+          provider_event_(std::move(provider_event)) {}
 
     const ProviderInfo& GetProviderInfo() const {
         ZX_DEBUG_ASSERT(type_ == MetadataType::kProviderInfo);
@@ -278,13 +279,13 @@ public:
     }
 
     MetadataContent(MetadataContent&& other)
-        : type_(other.type_) { MoveFrom(fbl::move(other)); }
+        : type_(other.type_) { MoveFrom(std::move(other)); }
 
     ~MetadataContent() { Destroy(); }
 
     MetadataContent& operator=(MetadataContent&& other) {
         Destroy();
-        MoveFrom(fbl::move(other));
+        MoveFrom(std::move(other));
         return *this;
     }
 
@@ -356,40 +357,40 @@ public:
     };
 
     explicit EventData(Instant instant)
-        : type_(EventType::kInstant), instant_(fbl::move(instant)) {}
+        : type_(EventType::kInstant), instant_(std::move(instant)) {}
 
     explicit EventData(Counter counter)
-        : type_(EventType::kCounter), counter_(fbl::move(counter)) {}
+        : type_(EventType::kCounter), counter_(std::move(counter)) {}
 
     explicit EventData(DurationBegin duration_begin)
-        : type_(EventType::kDurationBegin), duration_begin_(fbl::move(duration_begin)) {}
+        : type_(EventType::kDurationBegin), duration_begin_(std::move(duration_begin)) {}
 
     explicit EventData(DurationEnd duration_end)
-        : type_(EventType::kDurationEnd), duration_end_(fbl::move(duration_end)) {}
+        : type_(EventType::kDurationEnd), duration_end_(std::move(duration_end)) {}
 
     explicit EventData(AsyncBegin async_begin)
-        : type_(EventType::kAsyncBegin), async_begin_(fbl::move(async_begin)) {}
+        : type_(EventType::kAsyncBegin), async_begin_(std::move(async_begin)) {}
 
     explicit EventData(AsyncInstant async_instant)
-        : type_(EventType::kAsyncInstant), async_instant_(fbl::move(async_instant)) {}
+        : type_(EventType::kAsyncInstant), async_instant_(std::move(async_instant)) {}
 
     explicit EventData(AsyncEnd async_end)
-        : type_(EventType::kAsyncEnd), async_end_(fbl::move(async_end)) {}
+        : type_(EventType::kAsyncEnd), async_end_(std::move(async_end)) {}
 
     explicit EventData(FlowBegin flow_begin)
-        : type_(EventType::kFlowBegin), flow_begin_(fbl::move(flow_begin)) {}
+        : type_(EventType::kFlowBegin), flow_begin_(std::move(flow_begin)) {}
 
     explicit EventData(FlowStep flow_step)
-        : type_(EventType::kFlowStep), flow_step_(fbl::move(flow_step)) {}
+        : type_(EventType::kFlowStep), flow_step_(std::move(flow_step)) {}
 
     explicit EventData(FlowEnd flow_end)
-        : type_(EventType::kFlowEnd), flow_end_(fbl::move(flow_end)) {}
+        : type_(EventType::kFlowEnd), flow_end_(std::move(flow_end)) {}
 
-    EventData(EventData&& other) { MoveFrom(fbl::move(other)); }
+    EventData(EventData&& other) { MoveFrom(std::move(other)); }
 
     EventData& operator=(EventData&& other) {
         Destroy();
-        MoveFrom(fbl::move(other));
+        MoveFrom(std::move(other));
         return *this;
     }
 
@@ -543,53 +544,53 @@ public:
     };
 
     explicit Record(Metadata record)
-        : type_(RecordType::kMetadata), metadata_(fbl::move(record)) {}
+        : type_(RecordType::kMetadata), metadata_(std::move(record)) {}
 
     explicit Record(Initialization record)
-        : type_(RecordType::kInitialization), initialization_(fbl::move(record)) {}
+        : type_(RecordType::kInitialization), initialization_(std::move(record)) {}
 
     explicit Record(String record)
         : type_(RecordType::kString) {
-        new (&string_) String(fbl::move(record));
+        new (&string_) String(std::move(record));
     }
 
     explicit Record(Thread record)
         : type_(RecordType::kThread) {
-        new (&thread_) Thread(fbl::move(record));
+        new (&thread_) Thread(std::move(record));
     }
 
     explicit Record(Event record)
         : type_(RecordType::kEvent) {
-        new (&event_) Event(fbl::move(record));
+        new (&event_) Event(std::move(record));
     }
 
     explicit Record(Blob record)
         : type_(RecordType::kBlob) {
-        new (&blob_) Blob(fbl::move(record));
+        new (&blob_) Blob(std::move(record));
     }
 
     explicit Record(KernelObject record)
         : type_(RecordType::kKernelObject) {
-        new (&kernel_object_) KernelObject(fbl::move(record));
+        new (&kernel_object_) KernelObject(std::move(record));
     }
 
     explicit Record(ContextSwitch record)
         : type_(RecordType::kContextSwitch) {
-        new (&context_switch_) ContextSwitch(fbl::move(record));
+        new (&context_switch_) ContextSwitch(std::move(record));
     }
 
     explicit Record(Log record)
         : type_(RecordType::kLog) {
-        new (&log_) Log(fbl::move(record));
+        new (&log_) Log(std::move(record));
     }
 
-    Record(Record&& other) { MoveFrom(fbl::move(other)); }
+    Record(Record&& other) { MoveFrom(std::move(other)); }
 
     ~Record() { Destroy(); }
 
     Record& operator=(Record&& other) {
         Destroy();
-        MoveFrom(fbl::move(other));
+        MoveFrom(std::move(other));
         return *this;
     }
 

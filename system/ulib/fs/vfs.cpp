@@ -24,6 +24,8 @@
 #include <lib/zx/event.h>
 #include <lib/zx/process.h>
 #include <zircon/assert.h>
+
+#include <utility>
 #endif
 
 // #define DEBUG_PRINTF
@@ -64,7 +66,7 @@ zx_status_t vfs_lookup(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
     if (name == "..") {
         return ZX_ERR_INVALID_ARGS;
     } else if (name == ".") {
-        *out = fbl::move(vn);
+        *out = std::move(vn);
         return ZX_OK;
     }
     return vn->Lookup(out, name);
@@ -94,7 +96,7 @@ bool RemoteContainer::IsRemote() const {
 }
 
 zx::channel RemoteContainer::DetachRemote() {
-    return fbl::move(remote_);
+    return std::move(remote_);
 }
 
 zx_handle_t RemoteContainer::GetRemote() const {
@@ -103,7 +105,7 @@ zx_handle_t RemoteContainer::GetRemote() const {
 
 void RemoteContainer::SetRemote(zx::channel remote) {
     ZX_DEBUG_ASSERT(!remote_.is_valid());
-    remote_ = fbl::move(remote);
+    remote_ = std::move(remote);
 }
 
 #endif
@@ -122,7 +124,7 @@ zx_status_t Vfs::Open(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
 #ifdef __Fuchsia__
     fbl::AutoLock lock(&vfs_lock_);
 #endif
-    return OpenLocked(fbl::move(vndir), out, path, out_path, flags, mode);
+    return OpenLocked(std::move(vndir), out, path, out_path, flags, mode);
 }
 
 zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
@@ -139,7 +141,7 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
 #ifdef __Fuchsia__
     if (vndir->IsRemote()) {
         // remote filesystem, return handle and path through to caller
-        *out = fbl::move(vndir);
+        *out = std::move(vndir);
         *out_path = path;
         return ZX_OK;
     }
@@ -178,7 +180,7 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
 #endif
     } else {
     try_open:
-        r = vfs_lookup(fbl::move(vndir), &vn, path);
+        r = vfs_lookup(std::move(vndir), &vn, path);
         if (r < 0) {
             return r;
         }
@@ -186,7 +188,7 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
         if (!(flags & ZX_FS_FLAG_NOREMOTE) && vn->IsRemote()) {
             // Opening a mount point: Traverse across remote.
             *out_path = ".";
-            *out = fbl::move(vn);
+            *out = std::move(vn);
             return ZX_OK;
         }
 
@@ -289,8 +291,8 @@ zx_status_t Vfs::VnodeToToken(fbl::RefPtr<Vnode> vn, zx::event* ios_token,
     } else if ((r = new_ios_token.set_cookie(*zx::process::self(), vnode_cookie)) != ZX_OK) {
         return r;
     }
-    *ios_token = fbl::move(new_ios_token);
-    *out = fbl::move(new_token);
+    *ios_token = std::move(new_ios_token);
+    *out = std::move(new_token);
     return ZX_OK;
 }
 
@@ -337,7 +339,7 @@ zx_status_t Vfs::Rename(zx::event token, fbl::RefPtr<Vnode> oldparent,
         if (ReadonlyLocked()) {
             return ZX_ERR_ACCESS_DENIED;
         }
-        if ((r = TokenToVnode(fbl::move(token), &newparent)) != ZX_OK) {
+        if ((r = TokenToVnode(std::move(token), &newparent)) != ZX_OK) {
             return r;
         }
 
@@ -363,7 +365,7 @@ zx_status_t Vfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent,
     fbl::AutoLock lock(&vfs_lock_);
     fbl::RefPtr<fs::Vnode> newparent;
     zx_status_t r;
-    if ((r = TokenToVnode(fbl::move(token), &newparent)) != ZX_OK) {
+    if ((r = TokenToVnode(std::move(token), &newparent)) != ZX_OK) {
         return r;
     }
     // Local filesystem
@@ -407,7 +409,7 @@ zx_status_t Vfs::ServeConnection(fbl::unique_ptr<Connection> connection) {
 
     zx_status_t status = connection->Serve();
     if (status == ZX_OK) {
-        RegisterConnection(fbl::move(connection));
+        RegisterConnection(std::move(connection));
     }
     return status;
 }
@@ -434,7 +436,7 @@ zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel) 
         return r;
     }
 
-    return vn->Serve(this, fbl::move(channel), ZX_FS_RIGHT_ADMIN);
+    return vn->Serve(this, std::move(channel), ZX_FS_RIGHT_ADMIN);
 }
 
 #endif // ifdef __Fuchsia__
@@ -466,8 +468,8 @@ zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out_vn,
 #ifdef __Fuchsia__
         if (vn->IsRemote()) {
             // Remote filesystem mount, caller must resolve.
-            *out_vn = fbl::move(vn);
-            *out_path = fbl::move(path);
+            *out_vn = std::move(vn);
+            *out_path = std::move(path);
             return ZX_OK;
         }
 #endif
@@ -478,13 +480,13 @@ zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out_vn,
         if (next_path == nullptr) {
             // Final path segment.
             *out_vn = vn;
-            *out_path = fbl::move(path);
+            *out_path = std::move(path);
             return ZX_OK;
         }
 
         // Path has at least one additional segment.
         fbl::StringPiece component(path.data(), next_path - path.data());
-        if ((r = vfs_lookup(fbl::move(vn), &vn, component)) != ZX_OK) {
+        if ((r = vfs_lookup(std::move(vn), &vn, component)) != ZX_OK) {
             return r;
         }
         // Traverse to the next segment.

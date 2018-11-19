@@ -17,6 +17,7 @@
 #include <threads.h>
 #include <time.h>
 #include <unistd.h>
+#include <utility>
 #include <utime.h>
 
 #include <blobfs/format.h>
@@ -212,7 +213,7 @@ bool ValidateFVM(const char* device_path, ValidationResult result = ValidationRe
     ASSERT_TRUE(fd);
     block_info_t info;
     ASSERT_GT(ioctl_block_get_info(fd.get(), &info), 0);
-    fvm::Checker checker(fbl::move(fd), info.block_size, true);
+    fvm::Checker checker(std::move(fd), info.block_size, true);
     switch (result) {
     case ValidationResult::Valid:
         ASSERT_TRUE(checker.Validate());
@@ -315,12 +316,12 @@ public:
         vmoid_t vmoid;
         ASSERT_GT(ioctl_block_attach_vmo(client->fd(), &xfer_vmo, &vmoid), 0);
 
-        fbl::unique_ptr<VmoBuf> vb(new (&ac) VmoBuf(fbl::move(client),
-                                                     fbl::move(vmo),
-                                                     fbl::move(buf),
+        fbl::unique_ptr<VmoBuf> vb(new (&ac) VmoBuf(std::move(client),
+                                                     std::move(vmo),
+                                                     std::move(buf),
                                                      vmoid));
         ASSERT_TRUE(ac.check());
-        *out = fbl::move(vb);
+        *out = std::move(vb);
         END_HELPER;
     }
 
@@ -339,8 +340,8 @@ private:
 
     VmoBuf(fbl::RefPtr<VmoClient> client, zx::vmo vmo,
            fbl::unique_ptr<uint8_t[]> buf, vmoid_t vmoid) :
-        client_(fbl::move(client)), vmo_(fbl::move(vmo)),
-        buf_(fbl::move(buf)), vmoid_(vmoid) {}
+        client_(std::move(client)), vmo_(std::move(vmo)),
+        buf_(std::move(buf)), vmoid_(vmoid) {}
 
     fbl::RefPtr<VmoClient> client_;
     zx::vmo vmo_;
@@ -358,7 +359,7 @@ bool VmoClient::Create(int fd, fbl::RefPtr<VmoClient>* out) {
     ASSERT_GT(ioctl_block_get_info(fd, &vc->info_), 0, "Failed to get block info");
     ASSERT_EQ(block_fifo_create_client(fifo, &vc->client_), ZX_OK);
     vc->fd_ = fd;
-    *out = fbl::move(vc);
+    *out = std::move(vc);
     END_HELPER;
 }
 
@@ -2268,7 +2269,7 @@ bool TestMounting() {
     ASSERT_TRUE(rootfd);
     zx_status_t status;
     fuchsia_io_FilesystemInfo info;
-    fzl::FdioCaller caller(fbl::move(rootfd));
+    fzl::FdioCaller caller(std::move(rootfd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status,
                                                        &info), ZX_OK);
     const char* kFsName = "minfs";
@@ -2352,7 +2353,7 @@ bool TestMkfs() {
     ASSERT_TRUE(rootfd);
     zx_status_t status;
     fuchsia_io_FilesystemInfo info;
-    fzl::FdioCaller caller(fbl::move(rootfd));
+    fzl::FdioCaller caller(std::move(rootfd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status,
                                                        &info), ZX_OK);
     const char* kFsName = "minfs";
@@ -2698,7 +2699,7 @@ int random_access_thread(void* arg) {
             ASSERT_TRUE(CheckWriteColor(self->vp_fd, off, len, color));
             ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color));
             fbl::AllocChecker ac;
-            self->extents.push_back(fbl::move(extent), &ac);
+            self->extents.push_back(std::move(extent), &ac);
             ASSERT_TRUE(ac.check());
             break;
         }
@@ -2793,7 +2794,7 @@ int random_access_thread(void* arg) {
                 st->slices_left += self->extents[extent_index].len;
             }
             for (size_t i = extent_index; i < self->extents.size() - 1; i++) {
-                self->extents[i] = fbl::move(self->extents[i + 1]);
+                self->extents[i] = std::move(self->extents[i + 1]);
             }
             self->extents.pop_back();
             break;
@@ -2865,7 +2866,7 @@ bool TestRandomOpMultithreaded() {
         extent.start = 0;
         extent.len = 1;
         fbl::AllocChecker ac;
-        s.thread_states[i].extents.push_back(fbl::move(extent), &ac);
+        s.thread_states[i].extents.push_back(std::move(extent), &ac);
         EXPECT_TRUE(ac.check());
         EXPECT_TRUE(CheckWriteReadBlock(s.thread_states[i].vp_fd, 0, kBlocksPerSlice));
         EXPECT_EQ(thrd_create(&s.thread_states[i].thr,
@@ -2934,7 +2935,7 @@ bool TestCheckBadArguments() {
     ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0);
     fbl::unique_fd fd(open(ramdisk_path, O_RDWR));
     ASSERT_TRUE(fd, 0);
-    checker.SetDevice(fbl::move(fd));
+    checker.SetDevice(std::move(fd));
     ASSERT_FALSE(checker.Validate(), "Checker should be missing block size");
 
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0);
@@ -2951,7 +2952,7 @@ bool TestCheckNewFVM() {
     fbl::unique_fd fd(open(ramdisk_path, O_RDWR));
     ASSERT_TRUE(fd, 0);
 
-    fvm::Checker checker(fbl::move(fd), 512, true);
+    fvm::Checker checker(std::move(fd), 512, true);
     ASSERT_TRUE(checker.Validate());
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0);
     END_TEST;

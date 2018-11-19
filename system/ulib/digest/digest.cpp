@@ -18,6 +18,8 @@
 #define BORINGSSL_NO_CXX
 #include <openssl/sha.h>
 
+#include <utility>
+
 namespace digest {
 
 // The previously opaque crypto implementation context.
@@ -39,7 +41,7 @@ Digest::~Digest() {
 
 Digest::Digest(Digest&& o) {
     ZX_DEBUG_ASSERT(o.ref_count_ == 0);
-    ctx_ = fbl::move(o.ctx_);
+    ctx_ = std::move(o.ctx_);
     memcpy(bytes_, o.bytes_, kLength);
     memset(o.bytes_, 0, kLength);
 }

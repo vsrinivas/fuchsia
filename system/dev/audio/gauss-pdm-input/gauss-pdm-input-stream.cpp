@@ -11,6 +11,8 @@
 #include <zircon/device/audio.h>
 #include <lib/zx/vmar.h>
 
+#include <utility>
+
 #include "a113-pdm.h"
 #include "dispatcher-pool/dispatcher-thread-pool.h"
 #include "gauss-pdm-input-stream.h"
@@ -30,7 +32,7 @@ zx_status_t GaussPdmInputStream::Create(zx_device_t* parent) {
     }
 
     auto stream =
-        fbl::AdoptRef(new GaussPdmInputStream(parent, fbl::move(domain)));
+        fbl::AdoptRef(new GaussPdmInputStream(parent, std::move(domain)));
 
     zx_status_t res = stream->Bind("pdm-audio-driver", parent);
     if (res == ZX_OK) {
@@ -166,11 +168,11 @@ zx_status_t GaussPdmInputStream::DdkIoctl(uint32_t op, const void* in_buf,
     zx::channel client_endpoint;
     zx_status_t res =
         channel->Activate(&client_endpoint, default_domain_,
-                          fbl::move(phandler), fbl::move(chandler));
+                          std::move(phandler), std::move(chandler));
     if (res == ZX_OK) {
         if (privileged) {
             ZX_DEBUG_ASSERT(stream_channel_ == nullptr);
-            stream_channel_ = fbl::move(channel);
+            stream_channel_ = std::move(channel);
         }
 
         *(reinterpret_cast<zx_handle_t*>(out_buf)) = client_endpoint.release();
@@ -402,7 +404,7 @@ GaussPdmInputStream::OnSetStreamFormat(dispatcher::Channel* channel,
 
             resp.result =
                 rb_channel_->Activate(&client_rb_channel, default_domain_,
-                                      fbl::move(phandler), fbl::move(chandler));
+                                      std::move(phandler), std::move(chandler));
             if (resp.result != ZX_OK) {
                 rb_channel_.reset();
             }
@@ -423,7 +425,7 @@ finished:
             rb_channel_.reset();
         }
     }
-    return channel->Write(&resp, sizeof(resp), fbl::move(client_rb_channel));
+    return channel->Write(&resp, sizeof(resp), std::move(client_rb_channel));
 }
 
 int GaussPdmInputStream::IrqThread() {
@@ -683,7 +685,7 @@ finished:
     zx_status_t res;
     if (resp.result == ZX_OK) {
         ZX_DEBUG_ASSERT(client_rb_handle.is_valid());
-        res = channel->Write(&resp, sizeof(resp), fbl::move(client_rb_handle));
+        res = channel->Write(&resp, sizeof(resp), std::move(client_rb_handle));
     } else {
         res = channel->Write(&resp, sizeof(resp));
     }

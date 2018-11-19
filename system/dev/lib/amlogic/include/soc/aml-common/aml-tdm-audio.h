@@ -9,6 +9,8 @@
 #include <fbl/unique_ptr.h>
 #include <soc/aml-common/aml-audio-regs.h>
 
+#include <utility>
+
 class AmlTdmDevice {
 
 public:
@@ -88,7 +90,7 @@ private:
         clk_src_(clk_src),
         frddr_base_(GetFrddrBase(frddr)),
         tdm_base_(GetTdmBase(tdm)),
-        mmio_(fbl::move(mmio)) {};
+        mmio_(std::move(mmio)) {};
 
     ~AmlTdmDevice() = default;
 

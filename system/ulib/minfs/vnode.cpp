@@ -22,6 +22,8 @@
 #include <lib/fidl-utils/bind.h>
 #include <fbl/auto_lock.h>
 #include <zircon/syscalls.h>
+
+#include <utility>
 #endif
 
 #include "minfs-private.h"
@@ -85,7 +87,7 @@ public:
 
     MinfsConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel,
                     uint32_t flags)
-            : Connection(vfs, fbl::move(vnode), fbl::move(channel), flags) {}
+            : Connection(vfs, std::move(vnode), std::move(channel), flags) {}
 
 private:
     VnodeMinfs& GetVnodeMinfs() const {
@@ -844,7 +846,7 @@ zx_status_t VnodeMinfs::UnlinkChild(Transaction* state,
         inode_.link_count--;
     }
     childvn->RemoveInodeLink(state->GetWork());
-    state->GetWork()->PinVnode(fbl::move(fbl::WrapRefPtr(this)));
+    state->GetWork()->PinVnode(fbl::WrapRefPtr(this));
     state->GetWork()->PinVnode(childvn);
     return kDirIteratorSaveSync;
 }
@@ -892,7 +894,7 @@ zx_status_t VnodeMinfs::DirentCallbackUnlink(fbl::RefPtr<VnodeMinfs> vndir, Dire
     if ((status = vn->CanUnlink()) != ZX_OK) {
         return status;
     }
-    return vndir->UnlinkChild(args->state, fbl::move(vn), de, &args->offs);
+    return vndir->UnlinkChild(args->state, std::move(vn), de, &args->offs);
 }
 
 // same as unlink, but do not validate vnode
@@ -907,7 +909,7 @@ zx_status_t VnodeMinfs::DirentCallbackForceUnlink(fbl::RefPtr<VnodeMinfs> vndir,
     if ((status = vndir->fs_->VnodeGet(&vn, de->ino)) < 0) {
         return status;
     }
-    return vndir->UnlinkChild(args->state, fbl::move(vn), de, &args->offs);
+    return vndir->UnlinkChild(args->state, std::move(vn), de, &args->offs);
 }
 
 // Given a (name, inode, type) combination:
@@ -1058,7 +1060,7 @@ zx_status_t VnodeMinfs::AppendDirent(DirArgs* args) {
     inode_.dirent_count++;
     inode_.seq_num++;
     InodeSync(args->state->GetWork(), kMxFsSyncMtime);
-    args->state->GetWork()->PinVnode(fbl::move(fbl::WrapRefPtr(this)));
+    args->state->GetWork()->PinVnode(fbl::WrapRefPtr(this));
     return ZX_OK;
 }
 
@@ -1095,7 +1097,7 @@ zx_status_t VnodeMinfs::ForEachDirent(DirArgs* args, const DirentCallback func) 
         case kDirIteratorSaveSync:
             inode_.seq_num++;
             InodeSync(args->state->GetWork(), kMxFsSyncMtime);
-            args->state->GetWork()->PinVnode(fbl::move(fbl::WrapRefPtr(this)));
+            args->state->GetWork()->PinVnode(fbl::WrapRefPtr(this));
             return ZX_OK;
         case kDirIteratorDone:
         default:
@@ -1157,7 +1159,7 @@ zx_status_t VnodeMinfs::ValidateFlags(uint32_t flags) {
 #ifdef __Fuchsia__
 zx_status_t VnodeMinfs::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
     return vfs->ServeConnection(fbl::make_unique<MinfsConnection>(
-        vfs, fbl::WrapRefPtr(this), fbl::move(channel), flags));
+        vfs, fbl::WrapRefPtr(this), std::move(channel), flags));
 }
 #endif
 
@@ -1191,7 +1193,7 @@ zx_status_t VnodeMinfs::Close() {
         ZX_ASSERT(fs_->BeginTransaction(0, 0, &state) == ZX_OK);
         fs_->RemoveUnlinked(state->GetWork(), this);
         Purge(state->GetWork());
-        fs_->CommitTransaction(fbl::move(state));
+        fs_->CommitTransaction(std::move(state));
     }
     return ZX_OK;
 }
@@ -1307,8 +1309,8 @@ zx_status_t VnodeMinfs::Write(const void* data, size_t len, size_t offset,
     }
     if (*out_actual != 0) {
         InodeSync(state->GetWork(), kMxFsSyncMtime);  // Successful writes updates mtime
-        state->GetWork()->PinVnode(fbl::move(fbl::WrapRefPtr(this)));
-        fs_->CommitTransaction(fbl::move(state));
+        state->GetWork()->PinVnode(fbl::WrapRefPtr(this));
+        fs_->CommitTransaction(std::move(state));
     }
     return ZX_OK;
 }
@@ -1445,7 +1447,7 @@ zx_status_t VnodeMinfs::LookupInternal(fbl::RefPtr<fs::Vnode>* out, fbl::StringP
     if ((status = fs_->VnodeGet(&vn, args.ino)) < 0) {
         return status;
     }
-    *out = fbl::move(vn);
+    *out = std::move(vn);
     success = (status == ZX_OK);
     return status;
 }
@@ -1483,8 +1485,8 @@ zx_status_t VnodeMinfs::Setattr(const vnattr_t* a) {
         fbl::unique_ptr<Transaction> state;
         ZX_ASSERT(fs_->BeginTransaction(0, 0, &state) == ZX_OK);
         InodeSync(state->GetWork(), kMxFsSyncDefault);
-        state->GetWork()->PinVnode(fbl::move(fbl::WrapRefPtr(this)));
-        fs_->CommitTransaction(fbl::move(state));
+        state->GetWork()->PinVnode(fbl::WrapRefPtr(this));
+        fs_->CommitTransaction(std::move(state));
     }
     return ZX_OK;
 }
@@ -1577,13 +1579,13 @@ VnodeMinfs::VnodeMinfs(Minfs* fs) : fs_(fs) {}
 void VnodeMinfs::Notify(fbl::StringPiece name, unsigned event) { watcher_.Notify(name, event); }
 zx_status_t VnodeMinfs::WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options,
                                  zx::channel watcher) {
-    return watcher_.WatchDir(vfs, this, mask, options, fbl::move(watcher));
+    return watcher_.WatchDir(vfs, this, mask, options, std::move(watcher));
 }
 
 bool VnodeMinfs::IsRemote() const { return remoter_.IsRemote(); }
 zx::channel VnodeMinfs::DetachRemote() { return remoter_.DetachRemote(); }
 zx_handle_t VnodeMinfs::GetRemote() const { return remoter_.GetRemote(); }
-void VnodeMinfs::SetRemote(zx::channel remote) { return remoter_.SetRemote(fbl::move(remote)); }
+void VnodeMinfs::SetRemote(zx::channel remote) { return remoter_.SetRemote(std::move(remote)); }
 
 #endif
 
@@ -1687,12 +1689,12 @@ zx_status_t VnodeMinfs::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece nam
         return status;
     }
 
-    state->GetWork()->PinVnode(fbl::move(fbl::WrapRefPtr(this)));
+    state->GetWork()->PinVnode(fbl::WrapRefPtr(this));
     state->GetWork()->PinVnode(vn);
-    fs_->CommitTransaction(fbl::move(state));
+    fs_->CommitTransaction(std::move(state));
 
     vn->fd_count_ = 1;
-    *out = fbl::move(vn);
+    *out = std::move(vn);
     success = (status == ZX_OK);
     return status;
 }
@@ -1762,8 +1764,8 @@ zx_status_t VnodeMinfs::Unlink(fbl::StringPiece name, bool must_be_dir) {
     args.state = state.get();
     status = ForEachDirent(&args, DirentCallbackUnlink);
     if (status == ZX_OK) {
-        state->GetWork()->PinVnode(fbl::move(fbl::WrapRefPtr(this)));
-        fs_->CommitTransaction(fbl::move(state));
+        state->GetWork()->PinVnode(fbl::WrapRefPtr(this));
+        fs_->CommitTransaction(std::move(state));
     }
     success = (status == ZX_OK);
     return status;
@@ -1788,8 +1790,8 @@ zx_status_t VnodeMinfs::Truncate(size_t len) {
         // Successful truncates update inode
         InodeSync(state->GetWork(), kMxFsSyncMtime);
     }
-    state->GetWork()->PinVnode(fbl::move(fbl::WrapRefPtr(this)));
-    fs_->CommitTransaction(fbl::move(state));
+    state->GetWork()->PinVnode(fbl::WrapRefPtr(this));
+    fs_->CommitTransaction(std::move(state));
     return status;
 }
 
@@ -2014,7 +2016,7 @@ zx_status_t VnodeMinfs::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece 
     }
     state->GetWork()->PinVnode(oldvn);
     state->GetWork()->PinVnode(newdir);
-    fs_->CommitTransaction(fbl::move(state));
+    fs_->CommitTransaction(std::move(state));
     success = true;
     return ZX_OK;
 }
@@ -2075,9 +2077,9 @@ zx_status_t VnodeMinfs::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _targ
     // We have successfully added the vn to a new location. Increment the link count.
     target->inode_.link_count++;
     target->InodeSync(state->GetWork(), kMxFsSyncDefault);
-    state->GetWork()->PinVnode(fbl::move(fbl::WrapRefPtr(this)));
+    state->GetWork()->PinVnode(fbl::WrapRefPtr(this));
     state->GetWork()->PinVnode(target);
-    fs_->CommitTransaction(fbl::move(state));
+    fs_->CommitTransaction(std::move(state));
     return ZX_OK;
 }
 
@@ -2093,7 +2095,7 @@ zx_status_t VnodeMinfs::GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info) {
 
 void VnodeMinfs::Sync(SyncCallback closure) {
     TRACE_DURATION("minfs", "VnodeMinfs::Sync");
-    fs_->Sync([this, cb = fbl::move(closure)](zx_status_t status) {
+    fs_->Sync([this, cb = std::move(closure)](zx_status_t status) {
         if (status != ZX_OK) {
             cb(status);
             return;
@@ -2112,7 +2114,7 @@ zx_status_t VnodeMinfs::AttachRemote(fs::MountChannel h) {
     } else if (IsRemote()) {
         return ZX_ERR_ALREADY_BOUND;
     }
-    SetRemote(fbl::move(h.TakeChannel()));
+    SetRemote(h.TakeChannel());
     return ZX_OK;
 }
 #endif

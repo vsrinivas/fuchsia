@@ -4,10 +4,12 @@
 
 #include <inttypes.h>
 
+#include <utility>
+
 #include "fvm/format.h"
 
 BlobfsFormat::BlobfsFormat(fbl::unique_fd fd, const char* type)
-    : Format(), fd_(fbl::move(fd)) {
+    : Format(), fd_(std::move(fd)) {
     if (!strcmp(type, kBlobTypeName)) {
         memcpy(type_, kBlobType, sizeof(kBlobType));
     } else if (!strcmp(type, kDefaultTypeName)) {

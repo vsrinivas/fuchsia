@@ -11,6 +11,8 @@
 #include <region-alloc/region-alloc.h>
 #include <lib/zx/bti.h>
 
+#include <utility>
+
 namespace optee {
 
 // OP-TEE Shared Memory Management
@@ -89,12 +91,12 @@ public:
 
         fbl::AllocChecker ac;
         auto shared_memory = fbl::make_unique_checked<SharedMemory>(
-            &ac, vaddr_, paddr_, fbl::move(region));
+            &ac, vaddr_, paddr_, std::move(region));
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
 
-        *out_shared_memory = fbl::move(shared_memory);
+        *out_shared_memory = std::move(shared_memory);
         return ZX_OK;
     }
 

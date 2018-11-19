@@ -20,6 +20,8 @@
 #include <intel-hda/utils/codec-commands.h>
 #include <intel-hda/utils/intel-hda-proto.h>
 
+#include <utility>
+
 namespace audio {
 namespace intel_hda {
 namespace codecs {
@@ -86,7 +88,7 @@ protected:
     zx_status_t PublishDeviceLocked() __TA_REQUIRES(obj_lock_);
     void SetSupportedFormatsLocked(fbl::Vector<audio_proto::FormatRange>&& formats)
         __TA_REQUIRES(obj_lock_) {
-        supported_formats_ = fbl::move(formats);
+        supported_formats_ = std::move(formats);
     }
     void SetFormatTidLocked(uint32_t set_format_tid) __TA_REQUIRES(obj_lock_) {
         set_format_tid_ = set_format_tid;

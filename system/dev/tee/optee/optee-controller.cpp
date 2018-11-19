@@ -15,6 +15,8 @@
 #include <fbl/unique_ptr.h>
 #include <tee-client-api/tee-client-types.h>
 
+#include <utility>
+
 #include "optee-client.h"
 #include "optee-controller.h"
 
@@ -148,7 +150,7 @@ zx_status_t OpteeController::InitializeSharedMemory() {
     status = SharedMemoryManager::Create(shared_mem_start,
                                          shared_mem_size,
                                          ddk::MmioBuffer(mmio),
-                                         fbl::move(bti),
+                                         std::move(bti),
                                          &shared_memory_manager_);
 
     if (status != ZX_OK) {

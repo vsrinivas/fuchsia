@@ -11,6 +11,8 @@
 #include <fbl/intrusive_wavl_tree_internal.h>
 #include <fbl/macros.h>
 
+#include <utility>
+
 // Implementation Notes:
 //
 // WAVLTree<> is an implementation of a "Weak AVL" tree; a self
@@ -282,7 +284,7 @@ public:
         // with.
         if (collision) {
             ZX_DEBUG_ASSERT(ptr != nullptr);
-            return internal_swap(collision, fbl::move(ptr));
+            return internal_swap(collision, std::move(ptr));
         }
 
         return nullptr;

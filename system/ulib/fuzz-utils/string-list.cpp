@@ -8,6 +8,8 @@
 #include <fbl/unique_ptr.h>
 #include <fuzz-utils/string-list.h>
 
+#include <utility>
+
 namespace fuzzing {
 
 StringList::StringList() {
@@ -57,9 +59,9 @@ void StringList::push(const char* str, bool front) {
     element->str_.Set(str, &ac);
     ZX_ASSERT(ac.check());
     if (front) {
-        elements_.push_front(fbl::move(element));
+        elements_.push_front(std::move(element));
     } else {
-        elements_.push_back(fbl::move(element));
+        elements_.push_back(std::move(element));
     }
     iterator_ = elements_.end();
 }

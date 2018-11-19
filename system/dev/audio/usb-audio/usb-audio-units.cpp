@@ -6,6 +6,8 @@
 #include <fbl/algorithm.h>
 #include <fbl/limits.h>
 
+#include <utility>
+
 #include "debug-logging.h"
 #include "usb-audio-units.h"
 
@@ -258,7 +260,7 @@ fbl::RefPtr<FeatureUnit> FeatureUnit::Create(const DescriptorListMemory::Iterato
 
                 auto ret = fbl::AdoptRef(new (&ac) FeatureUnit(iter.desc_list(),
                                                                hdr0, hdr1,
-                                                               fbl::move(feat_mem), feat_len,
+                                                               std::move(feat_mem), feat_len,
                                                                iid));
                 if (ac.check()) {
                     return ret;

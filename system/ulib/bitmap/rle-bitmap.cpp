@@ -11,6 +11,8 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
+#include <utility>
+
 namespace bitmap {
 
 namespace {
@@ -34,7 +36,7 @@ fbl::unique_ptr<RleBitmapElement> AllocateElement(RleBitmap::FreeList* free_list
 // with delete.  If *free_list* is not null, append it to *free_list*.
 void ReleaseElement(RleBitmap::FreeList* free_list, fbl::unique_ptr<RleBitmapElement>&& elem) {
     if (free_list) {
-        free_list->push_back(fbl::move(elem));
+        free_list->push_back(std::move(elem));
     }
 }
 
@@ -168,7 +170,7 @@ zx_status_t RleBitmap::SetInternal(size_t bitoff, size_t bitmax, FreeList* free_
 
     // Insert the new element before the first node that ends at a point >=
     // when we begin.
-    elems_.insert(ends_after, fbl::move(new_elem));
+    elems_.insert(ends_after, std::move(new_elem));
     num_bits_ += bitlen;
 
     // If ends_after was the end of the list, there is no merging to do.
@@ -242,7 +244,7 @@ zx_status_t RleBitmap::ClearInternal(size_t bitoff, size_t bitmax, FreeList* fre
                 new_elem->bitoff = bitmax;
                 new_elem->bitlen = itr->bitoff + itr->bitlen - bitmax;
 
-                elems_.insert_after(itr, fbl::move(new_elem));
+                elems_.insert_after(itr, std::move(new_elem));
                 itr->bitlen = bitoff - itr->bitoff;
                 num_bits_ -= (bitmax - bitoff);
                 break;

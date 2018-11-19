@@ -19,6 +19,8 @@
 #include <zircon/device/device.h>
 #include <zircon/types.h>
 
+#include <utility>
+
 namespace {
 
 using MinfsMetrics = fuchsia_minfs_Metrics;
@@ -108,7 +110,7 @@ zx_status_t EnableFsMetrics(const char* path, bool enable) {
     }
 
     zx_status_t status;
-    fzl::FdioCaller caller(fbl::move(fd));
+    fzl::FdioCaller caller(std::move(fd));
     zx_status_t rc = fuchsia_minfs_MinfsToggleMetrics(caller.borrow_channel(), enable, &status);
     if (rc != ZX_OK || status != ZX_OK) {
         fprintf(stderr, "Error toggling metrics for %s, status %d\n",
@@ -127,7 +129,7 @@ zx_status_t GetFsMetrics(const char* path, MinfsMetrics* out_metrics) {
     }
 
     zx_status_t status;
-    fzl::FdioCaller caller(fbl::move(fd));
+    fzl::FdioCaller caller(std::move(fd));
     zx_status_t rc = fuchsia_minfs_MinfsGetMetrics(caller.borrow_channel(), &status, out_metrics);
     if (status == ZX_ERR_UNAVAILABLE) {
         fprintf(stderr, "Metrics Unavailable for %s\n", path);
@@ -208,7 +210,7 @@ void RunFsMetrics(const fbl::StringBuffer<PATH_MAX> path, const StorageMetricOpt
 
     fuchsia_io_FilesystemInfo info;
     zx_status_t status;
-    fzl::FdioCaller caller(fbl::move(fd));
+    fzl::FdioCaller caller(std::move(fd));
     zx_status_t io_status = fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(),
                                                                      &status, &info);
     if (io_status != ZX_OK || status != ZX_OK) {
@@ -272,7 +274,7 @@ void RunBlockMetrics(const fbl::StringBuffer<PATH_MAX> path, const StorageMetric
     char device_buffer[1024];
     size_t path_len;
     zx_status_t status;
-    fzl::FdioCaller caller(fbl::move(fd));
+    fzl::FdioCaller caller(std::move(fd));
     zx_status_t io_status = fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status,
                                                                    device_buffer,
                                                                    sizeof(device_buffer) - 1,

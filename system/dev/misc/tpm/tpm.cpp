@@ -29,6 +29,8 @@
 #include <string.h>
 #include <threads.h>
 
+#include <utility>
+
 #include "i2c-cr50.h"
 #include "tpm.h"
 #include "tpm-commands.h"
@@ -219,7 +221,7 @@ zx_status_t Device::Init() {
 }
 
 Device::Device(zx_device_t* parent, fbl::unique_ptr<HardwareInterface> iface)
-    : DeviceType(parent), iface_(fbl::move(iface)) {
+    : DeviceType(parent), iface_(std::move(iface)) {
     ddk_proto_id_ = ZX_PROTOCOL_TPM;
 }
 
@@ -244,13 +246,13 @@ zx_status_t tpm_bind(void* ctx, zx_device_t* parent) {
     }
 
     fbl::unique_ptr<tpm::I2cCr50Interface> i2c_iface;
-    status = tpm::I2cCr50Interface::Create(parent, fbl::move(irq), &i2c_iface);
+    status = tpm::I2cCr50Interface::Create(parent, std::move(irq), &i2c_iface);
     if (status != ZX_OK) {
         return status;
     }
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<tpm::Device> device(new (&ac) tpm::Device(parent, fbl::move(i2c_iface)));
+    fbl::unique_ptr<tpm::Device> device(new (&ac) tpm::Device(parent, std::move(i2c_iface)));
     if (!ac.check()) {
         return status;
     }

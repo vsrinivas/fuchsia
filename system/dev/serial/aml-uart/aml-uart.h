@@ -18,6 +18,8 @@
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
+#include <utility>
+
 namespace serial {
 
 class AmlUart;
@@ -53,7 +55,7 @@ private:
                      const serial_port_info_t& serial_port_info,
                      ddk::MmioBuffer mmio)
         : DeviceType(parent), pdev_(pdev), serial_port_info_(serial_port_info),
-          mmio_(fbl::move(mmio)) {}
+          mmio_(std::move(mmio)) {}
 
     // Reads the current state from the status register and calls notify_cb if it has changed.
     uint32_t ReadStateAndNotify();

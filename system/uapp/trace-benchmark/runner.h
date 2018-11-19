@@ -10,6 +10,8 @@
 #include <zircon/syscalls.h>
 #include <lib/zx/time.h>
 
+#include <utility>
+
 constexpr unsigned kWarmUpIterations = 10;
 // N.B. This value can't be so large that the buffer fills in oneshot mode.
 // The benchmark will assert-fail if the buffer fills: Otherwise the benchmark
@@ -82,5 +84,5 @@ template <typename T>
 void RunAndMeasure(const char* test_name, const char* spec_name,
                    const T& closure, thunk setup, thunk teardown) {
     RunAndMeasure(test_name, spec_name, kDefaultRunIterations, closure,
-                  fbl::move(setup), fbl::move(teardown));
+                  std::move(setup), std::move(teardown));
 }

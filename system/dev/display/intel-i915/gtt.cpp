@@ -10,6 +10,8 @@
 #include <limits.h>
 #include <stdlib.h>
 
+#include <utility>
+
 #include "intel-i915.h"
 #include "gtt.h"
 #include "macros.h"
@@ -112,7 +114,7 @@ zx_status_t Gtt::AllocRegion(uint32_t length, uint32_t align_pow2,
     if (region_allocator_.GetRegion(region_length, align_pow2, r->region_) != ZX_OK) {
         return ZX_ERR_NO_RESOURCES;
     }
-    *region_out = fbl::move(r);
+    *region_out = std::move(r);
     return ZX_OK;
 }
 
@@ -173,7 +175,7 @@ zx_status_t GttRegion::PopulateRegion(zx_handle_t vmo, uint64_t page_offset,
         }
         vmo_offset += cur_len;
         mapped_end_ = static_cast<uint32_t>(vmo_offset);
-        pmts_.push_back(fbl::move(pmt), &ac);
+        pmts_.push_back(std::move(pmt), &ac);
         ZX_DEBUG_ASSERT(ac.check()); // Shouldn't fail because of the reserve above.
 
         for (unsigned i = 0; i < actual_entries; i++) {

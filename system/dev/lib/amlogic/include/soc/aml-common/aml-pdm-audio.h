@@ -8,6 +8,8 @@
 #include <ddktl/mmio.h>
 #include <fbl/unique_ptr.h>
 #include <soc/aml-common/aml-audio-regs.h>
+
+#include <utility>
 /*
     Presently assumes stereo input with both streams multiplexed on the same
     PDM input line. (TODO: support up to 8 channels to refactor gauss to use this)
@@ -70,8 +72,8 @@ private:
           sysclk_div_(sysclk_div),
           dclk_div_(dclk_div),
           toddr_base_(GetToddrBase(toddr)),
-          pdm_mmio_(fbl::move(pdm_mmio)),
-          audio_mmio_(fbl::move(audio_mmio)){};
+          pdm_mmio_(std::move(pdm_mmio)),
+          audio_mmio_(std::move(audio_mmio)){};
 
     ~AmlPdmDevice() = default;
 

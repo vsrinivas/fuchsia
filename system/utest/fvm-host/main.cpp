@@ -11,6 +11,8 @@
 
 #include <fvm/fvm-lz4.h>
 
+#include <utility>
+
 #define DEFAULT_SLICE_SIZE (64lu * (1 << 20)) // 64 mb
 #define PARTITION_SIZE     (1lu * (1 << 29))  // 512 mb
 #define CONTAINER_SIZE     (5lu * (1 << 30))  // 5 gb
@@ -262,7 +264,7 @@ bool GenerateData(size_t len, fbl::unique_ptr<uint8_t[]>* out) {
         data[n] = static_cast<uint8_t>(rand());
     }
 
-    *out = fbl::move(data);
+    *out = std::move(data);
     END_HELPER;
 }
 
@@ -326,7 +328,7 @@ bool PopulateBlobfs(const char* path, size_t nfiles, size_t max_size) {
     fbl::unique_fd blobfd(open(path, O_RDWR, 0755));
     ASSERT_TRUE(blobfd, "Unable to open blobfs path");
     fbl::unique_ptr<blobfs::Blobfs> bs;
-    ASSERT_EQ(blobfs::blobfs_create(&bs, fbl::move(blobfd)), ZX_OK,
+    ASSERT_EQ(blobfs::blobfs_create(&bs, std::move(blobfd)), ZX_OK,
               "Failed to create blobfs");
     for (unsigned i = 0; i < nfiles; i++) {
         size_t size = 1 + (rand() % max_size);

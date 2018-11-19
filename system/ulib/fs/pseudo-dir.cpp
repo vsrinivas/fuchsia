@@ -9,6 +9,8 @@
 #include <fbl/auto_lock.h>
 #include <fuchsia/io/c/fidl.h>
 
+#include <utility>
+
 namespace fs {
 
 PseudoDir::PseudoDir() = default;
@@ -47,7 +49,7 @@ void PseudoDir::Notify(fbl::StringPiece name, unsigned event) {
 
 zx_status_t PseudoDir::WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options,
                                 zx::channel watcher) {
-    return watcher_.WatchDir(vfs, this, mask, options, fbl::move(watcher));
+    return watcher_.WatchDir(vfs, this, mask, options, std::move(watcher));
 }
 
 zx_status_t PseudoDir::Readdir(vdircookie_t* cookie, void* data, size_t len, size_t* out_actual) {
@@ -99,9 +101,9 @@ zx_status_t PseudoDir::AddEntry(fbl::String name, fbl::RefPtr<fs::Vnode> vn) {
 
     Notify(name.ToStringPiece(), fuchsia_io_WATCH_EVENT_ADDED);
     auto entry = fbl::make_unique<Entry>(next_node_id_++,
-                                         fbl::move(name), fbl::move(vn));
+                                         std::move(name), std::move(vn));
     entries_by_name_.insert(entry.get());
-    entries_by_id_.insert(fbl::move(entry));
+    entries_by_id_.insert(std::move(entry));
     return ZX_OK;
 }
 
@@ -135,7 +137,7 @@ bool PseudoDir::IsEmpty() const {
 }
 
 PseudoDir::Entry::Entry(uint64_t id, fbl::String name, fbl::RefPtr<fs::Vnode> node)
-    : id_(id), name_(fbl::move(name)), node_(fbl::move(node)) {
+    : id_(id), name_(std::move(name)), node_(std::move(node)) {
 }
 
 PseudoDir::Entry::~Entry() = default;

@@ -9,6 +9,8 @@
 #include <lib/zx/process.h>
 #include <unittest/unittest.h>
 
+#include <utility>
+
 namespace {
 
 // This is a simple test of biotime (a block device IO performance
@@ -43,7 +45,7 @@ bool TestBiotimeLinearAccess() {
     BEGIN_TEST;
 
     fbl::Vector<const char*> args = {"-linear"};
-    EXPECT_TRUE(run_biotime(fbl::move(args)));
+    EXPECT_TRUE(run_biotime(std::move(args)));
 
     END_TEST;
 }
@@ -52,7 +54,7 @@ bool TestBiotimeRandomAccess() {
     BEGIN_TEST;
 
     fbl::Vector<const char*> args = {"-random"};
-    EXPECT_TRUE(run_biotime(fbl::move(args)));
+    EXPECT_TRUE(run_biotime(std::move(args)));
 
     END_TEST;
 }
@@ -61,7 +63,7 @@ bool TestBiotimeWrite() {
     BEGIN_TEST;
 
     fbl::Vector<const char*> args = {"-write", "-live-dangerously"};
-    EXPECT_TRUE(run_biotime(fbl::move(args)));
+    EXPECT_TRUE(run_biotime(std::move(args)));
 
     END_TEST;
 }

@@ -15,6 +15,8 @@
 #include <zircon/compiler.h>
 #include <zircon/status.h>
 
+#include <utility>
+
 #include "trace.h"
 
 #define LOCAL_TRACE 0
@@ -208,7 +210,7 @@ void InputDevice::virtio_input_stop(void* ctx) {
 }
 
 InputDevice::InputDevice(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend)
-    : Device(bus_device, fbl::move(bti), fbl::move(backend)) {}
+    : Device(bus_device, std::move(bti), std::move(backend)) {}
 
 InputDevice::~InputDevice() {}
 

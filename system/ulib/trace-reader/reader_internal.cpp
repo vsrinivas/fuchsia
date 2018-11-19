@@ -8,6 +8,8 @@
 
 #include <fbl/string_printf.h>
 
+#include <utility>
+
 namespace trace {
 namespace internal {
 
@@ -120,8 +122,8 @@ fbl::String BufferHeaderReader::Validate(const trace_buffer_header& header,
 
 TraceBufferReader::TraceBufferReader(ChunkConsumer chunk_consumer,
                                      ErrorHandler error_handler)
-    : chunk_consumer_(fbl::move(chunk_consumer)),
-      error_handler_(fbl::move(error_handler)) {
+    : chunk_consumer_(std::move(chunk_consumer)),
+      error_handler_(std::move(error_handler)) {
 }
 
 bool TraceBufferReader::ReadChunks(const void* buffer, size_t buffer_size) {

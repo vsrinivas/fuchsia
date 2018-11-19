@@ -11,6 +11,8 @@
 #include <virtio/virtio.h>
 #include <lib/zx/vmar.h>
 
+#include <utility>
+
 #define LOCAL_TRACE 0
 
 namespace virtio {
@@ -116,7 +118,7 @@ bool TransferQueue::IsEmpty() const {
 }
 
 ConsoleDevice::ConsoleDevice(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend)
-    : Device(bus_device, fbl::move(bti), fbl::move(backend)) {}
+    : Device(bus_device, std::move(bti), std::move(backend)) {}
 
 ConsoleDevice::~ConsoleDevice() {}
 

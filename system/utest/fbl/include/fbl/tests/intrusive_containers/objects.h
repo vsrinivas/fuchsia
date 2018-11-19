@@ -9,6 +9,8 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 
+#include <utility>
+
 namespace fbl {
 namespace tests {
 namespace intrusive_containers {
@@ -160,7 +162,7 @@ struct UniquePtrTestTraits {
     }
 
     // Unique pointers always get cleared when being moved or transferred.
-    static inline PtrType&& Transfer(PtrType& ptr)      { return fbl::move(ptr); }
+    static inline PtrType&& Transfer(PtrType& ptr)      { return std::move(ptr); }
     static bool WasTransferred(const ConstPtrType& ptr) { return ptr == nullptr; }
     static bool WasMoved (const ConstPtrType& ptr)      { return ptr == nullptr; }
 };

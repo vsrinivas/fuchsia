@@ -10,6 +10,8 @@
 #include <fbl/string_buffer.h>
 #include <fbl/string_printf.h>
 
+#include <utility>
+
 namespace trace {
 namespace {
 const char* EventScopeToString(EventScope scope) {
@@ -156,7 +158,7 @@ void ArgumentValue::MoveFrom(ArgumentValue&& other) {
         double_ = other.double_;
         break;
     case ArgumentType::kString:
-        new (&string_) fbl::String(fbl::move(other.string_));
+        new (&string_) fbl::String(std::move(other.string_));
         other.string_.~String(); // call destructor because we set other.type_ to kNull
         break;
     case ArgumentType::kPointer:
@@ -214,13 +216,13 @@ void MetadataContent::MoveFrom(MetadataContent&& other) {
     type_ = other.type_;
     switch (type_) {
     case MetadataType::kProviderInfo:
-        new (&provider_info_) ProviderInfo(fbl::move(other.provider_info_));
+        new (&provider_info_) ProviderInfo(std::move(other.provider_info_));
         break;
     case MetadataType::kProviderSection:
-        new (&provider_section_) ProviderSection(fbl::move(other.provider_section_));
+        new (&provider_section_) ProviderSection(std::move(other.provider_section_));
         break;
     case MetadataType::kProviderEvent:
-        new (&provider_event_) ProviderEvent(fbl::move(other.provider_event_));
+        new (&provider_event_) ProviderEvent(std::move(other.provider_event_));
         break;
     }
 }
@@ -291,34 +293,34 @@ void EventData::MoveFrom(EventData&& other) {
     type_ = other.type_;
     switch (type_) {
     case EventType::kInstant:
-        new (&instant_) Instant(fbl::move(other.instant_));
+        new (&instant_) Instant(std::move(other.instant_));
         break;
     case EventType::kCounter:
-        new (&counter_) Counter(fbl::move(other.counter_));
+        new (&counter_) Counter(std::move(other.counter_));
         break;
     case EventType::kDurationBegin:
-        new (&duration_begin_) DurationBegin(fbl::move(other.duration_begin_));
+        new (&duration_begin_) DurationBegin(std::move(other.duration_begin_));
         break;
     case EventType::kDurationEnd:
-        new (&duration_end_) DurationEnd(fbl::move(other.duration_end_));
+        new (&duration_end_) DurationEnd(std::move(other.duration_end_));
         break;
     case EventType::kAsyncBegin:
-        new (&async_begin_) AsyncBegin(fbl::move(other.async_begin_));
+        new (&async_begin_) AsyncBegin(std::move(other.async_begin_));
         break;
     case EventType::kAsyncInstant:
-        new (&async_instant_) AsyncInstant(fbl::move(other.async_instant_));
+        new (&async_instant_) AsyncInstant(std::move(other.async_instant_));
         break;
     case EventType::kAsyncEnd:
-        new (&async_end_) AsyncEnd(fbl::move(other.async_end_));
+        new (&async_end_) AsyncEnd(std::move(other.async_end_));
         break;
     case EventType::kFlowBegin:
-        new (&flow_begin_) FlowBegin(fbl::move(other.flow_begin_));
+        new (&flow_begin_) FlowBegin(std::move(other.flow_begin_));
         break;
     case EventType::kFlowStep:
-        new (&flow_step_) FlowStep(fbl::move(other.flow_step_));
+        new (&flow_step_) FlowStep(std::move(other.flow_step_));
         break;
     case EventType::kFlowEnd:
-        new (&flow_end_) FlowEnd(fbl::move(other.flow_end_));
+        new (&flow_end_) FlowEnd(std::move(other.flow_end_));
         break;
     }
 }
@@ -393,31 +395,31 @@ void Record::MoveFrom(Record&& other) {
     type_ = other.type_;
     switch (type_) {
     case RecordType::kMetadata:
-        new (&metadata_) Metadata(fbl::move(other.metadata_));
+        new (&metadata_) Metadata(std::move(other.metadata_));
         break;
     case RecordType::kInitialization:
-        new (&initialization_) Initialization(fbl::move(other.initialization_));
+        new (&initialization_) Initialization(std::move(other.initialization_));
         break;
     case RecordType::kString:
-        new (&string_) String(fbl::move(other.string_));
+        new (&string_) String(std::move(other.string_));
         break;
     case RecordType::kThread:
-        new (&thread_) Thread(fbl::move(other.thread_));
+        new (&thread_) Thread(std::move(other.thread_));
         break;
     case RecordType::kEvent:
-        new (&event_) Event(fbl::move(other.event_));
+        new (&event_) Event(std::move(other.event_));
         break;
     case RecordType::kBlob:
-        new (&blob_) Blob(fbl::move(other.blob_));
+        new (&blob_) Blob(std::move(other.blob_));
         break;
     case RecordType::kKernelObject:
-        new (&kernel_object_) KernelObject(fbl::move(other.kernel_object_));
+        new (&kernel_object_) KernelObject(std::move(other.kernel_object_));
         break;
     case RecordType::kContextSwitch:
-        new (&context_switch_) ContextSwitch(fbl::move(other.context_switch_));
+        new (&context_switch_) ContextSwitch(std::move(other.context_switch_));
         break;
     case RecordType::kLog:
-        new (&log_) Log(fbl::move(other.log_));
+        new (&log_) Log(std::move(other.log_));
         break;
     }
 }

@@ -15,6 +15,8 @@
 #include <lib/zx/vmar.h>
 #include <fbl/type_support.h>
 
+#include <utility>
+
 #include "utils.h"
 
 namespace trace {
@@ -25,14 +27,14 @@ Session::Session(void* buffer, size_t buffer_num_bytes,
                  fbl::Vector<fbl::String> enabled_categories)
     : buffer_(buffer),
       buffer_num_bytes_(buffer_num_bytes),
-      fifo_(fbl::move(fifo)),
+      fifo_(std::move(fifo)),
       fifo_wait_(this, fifo_.get(),
                  ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED),
-      enabled_categories_(fbl::move(enabled_categories)) {
+      enabled_categories_(std::move(enabled_categories)) {
     // Build a quick lookup table for IsCategoryEnabled().
     for (const auto& cat : enabled_categories_) {
         auto entry = fbl::make_unique<StringSetEntry>(cat.c_str());
-        enabled_category_set_.insert_or_find(fbl::move(entry));
+        enabled_category_set_.insert_or_find(std::move(entry));
     }
 }
 
@@ -93,8 +95,8 @@ void Session::StartEngine(async_dispatcher_t* dispatcher,
     }
 
     auto session = new Session(reinterpret_cast<void*>(buffer_ptr),
-                               buffer_num_bytes, fbl::move(fifo),
-                               fbl::move(enabled_categories));
+                               buffer_num_bytes, std::move(fifo),
+                               std::move(enabled_categories));
 
     status = session->fifo_wait_.Begin(dispatcher);
     if (status != ZX_OK) {

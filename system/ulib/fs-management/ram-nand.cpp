@@ -15,6 +15,8 @@
 #include <zircon/types.h>
 #include <zircon/nand/c/fidl.h>
 
+#include <utility>
+
 namespace {
 
 constexpr char kBasePath[] = "/dev/misc/nand-ctl";
@@ -23,7 +25,7 @@ constexpr char kBasePath[] = "/dev/misc/nand-ctl";
 
 zx_status_t create_ram_nand(const zircon_nand_RamNandInfo* config, char* out_path) {
     fbl::unique_fd control(open(kBasePath, O_RDWR));
-    fzl::FdioCaller caller(fbl::move(control));
+    fzl::FdioCaller caller(std::move(control));
     char name[zircon_nand_NAME_LEN + 1];
     size_t out_name_size;
     zx_status_t status;

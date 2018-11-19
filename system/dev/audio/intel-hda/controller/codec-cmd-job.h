@@ -13,6 +13,8 @@
 #include <intel-hda/utils/codec-commands.h>
 #include <intel-hda/utils/intel-hda-proto.h>
 
+#include <utility>
+
 namespace audio {
 namespace intel_hda {
 
@@ -45,7 +47,7 @@ private:
                 CodecCommand cmd)
         : cmd_(cmd),
           transaction_id_(transaction_id),
-          response_channel_(fbl::move(response_channel)) { }
+          response_channel_(std::move(response_channel)) { }
 
     ~CodecCmdJob() = default;
 

@@ -14,6 +14,8 @@
 #include <lib/zircon-internal/xorshiftrand.h>
 #include <zircon/syscalls.h>
 
+#include <utility>
+
 namespace async {
 namespace {
 
@@ -70,7 +72,7 @@ public:
         DeadlinesByDispatcher entry{};
         entry.dispatcher = dispatcher;
         entry.deadlines.push_back(deadline);
-        table_.push_back(fbl::move(entry));
+        table_.push_back(std::move(entry));
     }
 
     void CancelTimers(TimerDispatcher* dispatcher) override {

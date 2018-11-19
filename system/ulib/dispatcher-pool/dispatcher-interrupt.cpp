@@ -10,6 +10,8 @@
 #include <dispatcher-pool/dispatcher-interrupt.h>
 #include <dispatcher-pool/dispatcher-thread-pool.h>
 
+#include <utility>
+
 namespace dispatcher {
 
 // static
@@ -33,7 +35,7 @@ zx_status_t Interrupt::Activate(fbl::RefPtr<ExecutionDomain> domain,
 
     fbl::AutoLock obj_lock(&obj_lock_);
 
-    zx_status_t res = ActivateLocked(fbl::move(irq), fbl::move(domain));
+    zx_status_t res = ActivateLocked(std::move(irq), std::move(domain));
     if (res != ZX_OK) {
         return res;
     }
@@ -44,7 +46,7 @@ zx_status_t Interrupt::Activate(fbl::RefPtr<ExecutionDomain> domain,
         return res;
     }
 
-    process_handler_ = fbl::move(process_handler);
+    process_handler_ = std::move(process_handler);
 
     return ZX_OK;
 }
@@ -66,7 +68,7 @@ void Interrupt::Deactivate() {
         if (dispatch_state() != DispatchState::Dispatching) {
             ZX_DEBUG_ASSERT((dispatch_state() == DispatchState::Idle) ||
                             (dispatch_state() == DispatchState::WaitingOnPort));
-            old_process_handler = fbl::move(process_handler_);
+            old_process_handler = std::move(process_handler_);
         }
     }
 }
@@ -104,7 +106,7 @@ void Interrupt::Dispatch(ExecutionDomain* domain) {
         // If so, move our process handler state outside of our lock so that it
         // can safely destruct.
         if (!is_active()) {
-            old_process_handler = fbl::move(process_handler_);
+            old_process_handler = std::move(process_handler_);
         }
     }
 }

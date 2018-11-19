@@ -42,24 +42,24 @@ bool TestJoin() {
     EXPECT_STR_EQ(path.c_str(), "/");
 
     path.Reset();
-    fbl::String str = fbl::move(path.Join(""));
+    fbl::String str = path.Join("");
     EXPECT_STR_EQ(path.c_str(), "/");
 
     path.Reset();
-    str = fbl::move(path.Join("tmp"));
+    str = path.Join("tmp");
     EXPECT_STR_EQ(str.c_str(), "/tmp");
 
-    str = fbl::move(path.Join("/foo"));
+    str = path.Join("/foo");
     EXPECT_STR_EQ(str.c_str(), "/foo");
 
-    str = fbl::move(path.Join("bar/"));
+    str = path.Join("bar/");
     EXPECT_STR_EQ(str.c_str(), "/bar");
 
-    str = fbl::move(path.Join("//baz//"));
+    str = path.Join("//baz//");
     EXPECT_STR_EQ(str.c_str(), "/baz");
 
     path.Reset();
-    str = fbl::move(path.Join("tmp//foo//bar//baz"));
+    str = path.Join("tmp//foo//bar//baz");
     EXPECT_STR_EQ(str.c_str(), "/tmp/foo/bar/baz");
 
     END_TEST;

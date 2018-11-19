@@ -25,6 +25,8 @@
 #include <zircon/process.h>
 #include <zircon/syscalls/iommu.h>
 
+#include <utility>
+
 namespace platform_bus {
 
 zx_status_t PlatformBus::Proxy(
@@ -115,7 +117,7 @@ zx_status_t PlatformBus::PBusRegisterProtocol(uint32_t proto_id, const void* pro
             return ZX_ERR_NO_MEMORY;
         }
 
-        proto_proxys_.insert(fbl::move(proxy));
+        proto_proxys_.insert(std::move(proxy));
         sync_completion_signal(&proto_completion_);
         return ZX_OK;
     }
@@ -432,7 +434,7 @@ zx_status_t PlatformBus::I2cInit(const i2c_impl_protocol_t* i2c) {
             return status;
         }
 
-        i2c_buses_.push_back(fbl::move(i2c_bus));
+        i2c_buses_.push_back(std::move(i2c_bus));
     }
 
     return ZX_OK;
@@ -476,7 +478,7 @@ zx_status_t PlatformBus::Create(zx_device_t* parent, const char* name, zx::vmo z
         return ZX_ERR_NO_MEMORY;
     }
 
-    status = bus->Init(fbl::move(zbi));
+    status = bus->Init(std::move(zbi));
     if (status != ZX_OK) {
         return status;
     }
@@ -492,7 +494,7 @@ PlatformBus::PlatformBus(zx_device_t* parent)
 }
 
 zx_status_t PlatformBus::Init(zx::vmo zbi) {
-    auto status = ReadZbi(fbl::move(zbi));
+    auto status = ReadZbi(std::move(zbi));
     if (status != ZX_OK) {
         return status;
     }
@@ -520,5 +522,5 @@ zx_status_t PlatformBus::Init(zx::vmo zbi) {
 zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const char* name,
                                 const char* args, zx_handle_t zbi_vmo_handle) {
     zx::vmo zbi(zbi_vmo_handle);
-    return platform_bus::PlatformBus::Create(parent, name, fbl::move(zbi));
+    return platform_bus::PlatformBus::Create(parent, name, std::move(zbi));
 }

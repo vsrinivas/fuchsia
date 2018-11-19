@@ -13,6 +13,8 @@
 #include <lib/zx/bti.h>
 #include <zircon/driver/binding.h>
 
+#include <utility>
+
 #include "aml-pcie-clk.h"
 #include "aml-pcie.h"
 
@@ -80,7 +82,7 @@ zx_status_t AmlPcieDevice::InitMmios() {
         zxlogf(ERROR, "aml_pcie: failed to pin DBI, st = %d\n", st);
         return st;
     }
-    dbi_pinned_ = fbl::move(*mmio_pinned);
+    dbi_pinned_ = std::move(*mmio_pinned);
 
     st = pdev_map_mmio_buffer2(&pdev_, kCfgMmio,
                                ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
@@ -181,9 +183,9 @@ zx_status_t AmlPcieDevice::Init() {
     if (st != ZX_OK) return st;
 
     pcie_ = fbl::make_unique<AmlPcie>(
-        fbl::move(*dbi_),
-        fbl::move(*cfg_),
-        fbl::move(*rst_),
+        std::move(*dbi_),
+        std::move(*cfg_),
+        std::move(*rst_),
         1   // Single Lane PCIe
     );
 

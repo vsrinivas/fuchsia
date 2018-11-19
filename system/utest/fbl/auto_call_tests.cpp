@@ -6,6 +6,8 @@
 #include <fbl/type_support.h>
 #include <unittest/unittest.h>
 
+#include <utility>
+
 static volatile int test_func_count;
 
 __NO_INLINE static void test_func()
@@ -79,7 +81,7 @@ static bool auto_call_test()
     {
         a = 0;
         auto ac = fbl::MakeAutoCall([&](){ a++; });
-        auto ac2 = fbl::move(ac);
+        auto ac2 = std::move(ac);
         EXPECT_EQ(a, 0, "autocall hasn't run");
     }
     EXPECT_EQ(a, 1, "autocall has run once");
@@ -90,7 +92,7 @@ static bool auto_call_test()
         auto ac = fbl::MakeAutoCall(&test_func);
         auto ac2 = fbl::MakeAutoCall(&test_func);
         EXPECT_EQ(test_func_count, 0, "autocall hasn't run");
-        ac2 = fbl::move(ac);
+        ac2 = std::move(ac);
         EXPECT_EQ(test_func_count, 1, "autocall has run once");
     }
     EXPECT_EQ(test_func_count, 2, "autocall has run twice");

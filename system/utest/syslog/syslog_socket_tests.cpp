@@ -16,6 +16,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <utility>
+
 __BEGIN_CDECLS
 
 // This does not come from header file as this function should only be used in
@@ -83,7 +85,7 @@ bool TestLogSimpleWrite(void) {
     ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
     const char* msg = "test message";
     FX_LOG(INFO, nullptr, msg);
-    output_compare_helper(fbl::move(local), FX_LOG_INFO, msg, nullptr, 0);
+    output_compare_helper(std::move(local), FX_LOG_INFO, msg, nullptr, 0);
     END_TEST;
 }
 
@@ -94,7 +96,7 @@ bool TestLogWrite(void) {
     EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
     ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
     FX_LOGF(INFO, nullptr, "%d, %s", 10, "just some number");
-    output_compare_helper(fbl::move(local), FX_LOG_INFO, "10, just some number",
+    output_compare_helper(std::move(local), FX_LOG_INFO, "10, just some number",
                           nullptr, 0);
     END_TEST;
 }
@@ -106,7 +108,7 @@ bool TestLogPreprocessedMessage(void) {
     EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
     ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
     FX_LOG(INFO, nullptr, "%d, %s");
-    output_compare_helper(fbl::move(local), FX_LOG_INFO, "%d, %s",
+    output_compare_helper(std::move(local), FX_LOG_INFO, "%d, %s",
                           nullptr, 0);
     END_TEST;
 }
@@ -125,7 +127,7 @@ bool TestLogSeverity(void) {
     EXPECT_EQ(0u, outstanding_bytes);
 
     FX_LOGF(WARNING, nullptr, "%d, %s", 10, "just some number");
-    output_compare_helper(fbl::move(local), FX_LOG_WARNING,
+    output_compare_helper(std::move(local), FX_LOG_WARNING,
                           "10, just some number", nullptr, 0);
     END_TEST;
 }
@@ -138,7 +140,7 @@ bool TestLogWriteWithTag(void) {
     ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
     FX_LOGF(INFO, "tag", "%d, %s", 10, "just some string");
     const char* tags[] = {"tag"};
-    output_compare_helper(fbl::move(local), FX_LOG_INFO, "10, just some string",
+    output_compare_helper(std::move(local), FX_LOG_INFO, "10, just some string",
                           tags, 1);
     END_TEST;
 }
@@ -152,7 +154,7 @@ bool TestLogWriteWithGlobalTag(void) {
     ASSERT_EQ(ZX_OK, init_helper(remote.release(), gtags, 1));
     FX_LOGF(INFO, "tag", "%d, %s", 10, "just some string");
     const char* tags[] = {"gtag", "tag"};
-    output_compare_helper(fbl::move(local), FX_LOG_INFO, "10, just some string",
+    output_compare_helper(std::move(local), FX_LOG_INFO, "10, just some string",
                           tags, 2);
     END_TEST;
 }
@@ -166,7 +168,7 @@ bool TestLogWriteWithMultiGlobalTag(void) {
     ASSERT_EQ(ZX_OK, init_helper(remote.release(), gtags, 2));
     FX_LOGF(INFO, "tag", "%d, %s", 10, "just some string");
     const char* tags[] = {"gtag", "gtag2", "tag"};
-    output_compare_helper(fbl::move(local), FX_LOG_INFO, "10, just some string",
+    output_compare_helper(std::move(local), FX_LOG_INFO, "10, just some string",
                           tags, 3);
     END_TEST;
 }
@@ -212,7 +214,7 @@ bool TestMsgLengthLimit(void) {
     memset(expected + msg_size - 4, '.', 3);
     expected[msg_size - 1] = 0;
     const char* tags[] = {"gtag", "gtag2", "tag"};
-    output_compare_helper(fbl::move(local), FX_LOG_INFO, expected, tags, 3);
+    output_compare_helper(std::move(local), FX_LOG_INFO, expected, tags, 3);
     END_TEST;
 }
 
@@ -237,7 +239,7 @@ bool TestMsgLengthLimitForPreprocessedMsg(void) {
     memset(expected + msg_size - 4, '.', 3);
     expected[msg_size - 1] = 0;
     const char* tags[] = {"gtag", "gtag2", "tag"};
-    output_compare_helper(fbl::move(local), FX_LOG_INFO, expected, tags, 3);
+    output_compare_helper(std::move(local), FX_LOG_INFO, expected, tags, 3);
     END_TEST;
 }
 
@@ -268,7 +270,7 @@ bool TestTagLengthLimit(void) {
     }
     tag[FX_LOG_MAX_TAG_LEN - 1] = 0;
     tags[FX_LOG_MAX_TAGS] = tag;
-    output_compare_helper(fbl::move(local), FX_LOG_INFO, msg, tags,
+    output_compare_helper(std::move(local), FX_LOG_INFO, msg, tags,
                           FX_LOG_MAX_TAGS + 1);
     END_TEST;
 }
@@ -282,7 +284,7 @@ bool TestVlogSimpleWrite(void) {
     const char* msg = "test message";
     FX_LOG_SET_VERBOSITY(1);
     FX_VLOG(1, nullptr, msg);
-    output_compare_helper(fbl::move(local), -1, msg, nullptr, 0);
+    output_compare_helper(std::move(local), -1, msg, nullptr, 0);
     END_TEST;
 }
 
@@ -294,7 +296,7 @@ bool TestVlogWrite(void) {
     ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
     FX_LOG_SET_VERBOSITY(1);
     FX_VLOGF(1, nullptr, "%d, %s", 10, "just some number");
-    output_compare_helper(fbl::move(local), -1, "10, just some number",
+    output_compare_helper(std::move(local), -1, "10, just some number",
                           nullptr, 0);
     END_TEST;
 }
@@ -308,7 +310,7 @@ bool TestVlogWriteWithTag(void) {
     FX_LOG_SET_VERBOSITY(1);
     FX_VLOGF(1, "tag", "%d, %s", 10, "just some string");
     const char* tags[] = {"tag"};
-    output_compare_helper(fbl::move(local), -1, "10, just some string",
+    output_compare_helper(std::move(local), -1, "10, just some string",
                           tags, 1);
     END_TEST;
 }
@@ -332,7 +334,7 @@ bool TestLogVerbosity(void) {
 
     FX_LOG_SET_VERBOSITY(2);
     FX_VLOGF(1, nullptr, "%d, %s", 10, "just some number");
-    output_compare_helper(fbl::move(local), -1,
+    output_compare_helper(std::move(local), -1,
                           "10, just some number", nullptr, 0);
     END_TEST;
 }

@@ -20,6 +20,8 @@
 
 #include <minfs/format.h>
 
+#include <utility>
+
 namespace minfs {
 
 struct MountOptions {
@@ -36,7 +38,7 @@ zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc);
 
 // Format the partition backed by |bc| as MinFS.
 inline zx_status_t Mkfs(fbl::unique_ptr<Bcache> bc) {
-    return Mkfs({}, fbl::move(bc));
+    return Mkfs({}, std::move(bc));
 }
 
 #ifdef __Fuchsia__

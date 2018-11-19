@@ -18,6 +18,8 @@
 #include <zircon/assert.h>
 #include <zircon/process.h>
 
+#include <utility>
+
 #ifdef TEST_MMIO_FAKE
 extern void mmio_fake_read(uintptr_t base, size_t size, zx_off_t off, void* value);
 extern void mmio_fake_write(uintptr_t base, size_t size, const void* value, zx_off_t off);
@@ -41,11 +43,11 @@ public:
     }
 
     MmioPinnedBuffer(MmioPinnedBuffer&& other) {
-        transfer(fbl::move(other));
+        transfer(std::move(other));
     }
 
     MmioPinnedBuffer& operator=(MmioPinnedBuffer&& other) {
-        transfer(fbl::move(other));
+        transfer(std::move(other));
         return *this;
     }
 
@@ -83,11 +85,11 @@ public:
     }
 
     MmioBase(MmioBase&& other) {
-        transfer(fbl::move(other));
+        transfer(std::move(other));
     }
 
     MmioBase& operator=(MmioBase&& other) {
-        transfer(fbl::move(other));
+        transfer(std::move(other));
         return *this;
     }
 

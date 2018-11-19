@@ -6,6 +6,8 @@
 
 #ifdef __Fuchsia__
 #include <fs/connection.h>
+
+#include <utility>
 #endif
 
 namespace fs {
@@ -17,7 +19,7 @@ Vnode::~Vnode() = default;
 #ifdef __Fuchsia__
 zx_status_t Vnode::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
     return vfs->ServeConnection(fbl::make_unique<Connection>(
-        vfs, fbl::WrapRefPtr(this), fbl::move(channel), flags));
+        vfs, fbl::WrapRefPtr(this), std::move(channel), flags));
 }
 
 zx_status_t Vnode::GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info) {

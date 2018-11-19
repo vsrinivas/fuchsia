@@ -11,6 +11,8 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
+#include <utility>
+
 namespace fvm {
 
 // Checker defines a class which may be used to validate an FVM
@@ -23,7 +25,7 @@ public:
 
     // Sets the path of the block device / image to read the FVM from.
     void SetDevice(fbl::unique_fd fd) {
-        fd_ = fbl::move(fd);
+        fd_ = std::move(fd);
     }
 
     // Sets the block size of the provided device. Not automatically queried from the underlying

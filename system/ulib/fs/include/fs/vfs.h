@@ -35,6 +35,8 @@
 #include <fbl/string_piece.h>
 #include <fbl/unique_ptr.h>
 
+#include <utility>
+
 namespace fs {
 
 class Connection;
@@ -83,11 +85,11 @@ public:
     explicit MountChannel(zx_handle_t handle)
         : channel_(handle) {}
     explicit MountChannel(zx::channel channel)
-        : channel_(fbl::move(channel)) {}
+        : channel_(std::move(channel)) {}
     MountChannel(MountChannel&& other)
-        : channel_(fbl::move(other.channel_)) {}
+        : channel_(std::move(other.channel_)) {}
 
-    zx::channel TakeChannel() { return fbl::move(channel_); }
+    zx::channel TakeChannel() { return std::move(channel_); }
 
     ~MountChannel() {
         if (channel_.is_valid()) {

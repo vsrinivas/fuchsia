@@ -20,6 +20,8 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
+#include <utility>
+
 namespace {
 
 struct RamNandOp {
@@ -176,7 +178,7 @@ zx_status_t NandDevice::Init(char name[NAME_MAX], zx::vmo vmo) {
     zx_status_t status;
     const bool use_vmo = vmo.is_valid();
     if (use_vmo) {
-        vmo_ = fbl::move(vmo);
+        vmo_ = std::move(vmo);
 
         uint64_t size;
         status = vmo_.get_size(&size);

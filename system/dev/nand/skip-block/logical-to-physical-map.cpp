@@ -6,11 +6,13 @@
 
 #include <fbl/algorithm.h>
 
+#include <utility>
+
 namespace nand {
 
 LogicalToPhysicalMap::LogicalToPhysicalMap(uint32_t copies, uint32_t block_count,
                                            fbl::Array<uint32_t> bad_blocks)
-    : copies_(copies), block_count_(block_count), bad_blocks_(fbl::move(bad_blocks)) {
+    : copies_(copies), block_count_(block_count), bad_blocks_(std::move(bad_blocks)) {
     ZX_ASSERT(block_count_ > 0);
     ZX_ASSERT(block_count_ >= bad_blocks_.size());
     ZX_ASSERT(block_count_ % copies_ == 0);

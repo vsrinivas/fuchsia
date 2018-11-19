@@ -17,6 +17,8 @@
 
 #include <zircon/assert.h>
 
+#include <utility>
+
 namespace trace {
 
 class Chunk;
@@ -111,7 +113,7 @@ private:
                                   fbl::unique_ptr<StringTableEntry>> {
         StringTableEntry(trace_string_index_t index,
                          fbl::String string)
-            : index(index), string(fbl::move(string)) {}
+            : index(index), string(std::move(string)) {}
 
         trace_string_index_t const index;
         fbl::String const string;

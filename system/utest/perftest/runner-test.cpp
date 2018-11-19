@@ -9,6 +9,8 @@
 
 #include <fbl/algorithm.h>
 
+#include <utility>
+
 // This is a helper for creating a FILE* that we can redirect output to, in
 // order to make the tests below less noisy.  We don't look at the output
 // that is sent to the stream.
@@ -59,7 +61,7 @@ static bool TestResults() {
 
     perftest::internal::TestList test_list;
     perftest::internal::NamedTest test{"no_op_example_test", NoOpTest};
-    test_list.push_back(fbl::move(test));
+    test_list.push_back(std::move(test));
 
     const uint32_t kRunCount = 7;
     perftest::ResultsSet results;
@@ -87,7 +89,7 @@ static bool TestFailingTest() {
 
     perftest::internal::TestList test_list;
     perftest::internal::NamedTest test{"example_test", FailingTest};
-    test_list.push_back(fbl::move(test));
+    test_list.push_back(std::move(test));
 
     const uint32_t kRunCount = 7;
     perftest::ResultsSet results;
@@ -117,7 +119,7 @@ static bool TestBadKeepRunningCalls() {
 
         perftest::internal::TestList test_list;
         perftest::internal::NamedTest test{"example_bad_test", test_func};
-        test_list.push_back(fbl::move(test));
+        test_list.push_back(std::move(test));
 
         const uint32_t kRunCount = 5;
         perftest::ResultsSet results;
@@ -152,7 +154,7 @@ static bool TestMultistepTest() {
 
     perftest::internal::TestList test_list;
     perftest::internal::NamedTest test{"example_test", MultistepTest};
-    test_list.push_back(fbl::move(test));
+    test_list.push_back(std::move(test));
 
     const uint32_t kRunCount = 7;
     perftest::ResultsSet results;
@@ -188,7 +190,7 @@ static bool TestNextStepCalledBeforeKeepRunning() {
 
     perftest::internal::TestList test_list;
     perftest::internal::NamedTest test{"example_bad_test", test_func};
-    test_list.push_back(fbl::move(test));
+    test_list.push_back(std::move(test));
     const uint32_t kRunCount = 5;
     perftest::ResultsSet results;
     DummyOutputStream out;
@@ -222,7 +224,7 @@ static bool TestBadNextStepCalls() {
 
         perftest::internal::TestList test_list;
         perftest::internal::NamedTest test{"example_bad_test", test_func};
-        test_list.push_back(fbl::move(test));
+        test_list.push_back(std::move(test));
 
         const uint32_t kRunCount = 5;
         perftest::ResultsSet results;
@@ -250,7 +252,7 @@ static bool TestBytesProcessedParameter() {
     };
     perftest::internal::TestList test_list;
     perftest::internal::NamedTest test{"throughput_test", test_func};
-    test_list.push_back(fbl::move(test));
+    test_list.push_back(std::move(test));
 
     const uint32_t kRunCount = 5;
     perftest::ResultsSet results;
@@ -283,7 +285,7 @@ static bool TestBytesProcessedParameterMultistep() {
     };
     perftest::internal::TestList test_list;
     perftest::internal::NamedTest test{"throughput_test", test_func};
-    test_list.push_back(fbl::move(test));
+    test_list.push_back(std::move(test));
 
     const uint32_t kRunCount = 5;
     perftest::ResultsSet results;

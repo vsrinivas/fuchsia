@@ -4,10 +4,12 @@
 
 #include <fs/remote-dir.h>
 
+#include <utility>
+
 namespace fs {
 
 RemoteDir::RemoteDir(zx::channel remote_dir_client)
-    : remote_dir_client_(fbl::move(remote_dir_client)) {
+    : remote_dir_client_(std::move(remote_dir_client)) {
     ZX_DEBUG_ASSERT(remote_dir_client_);
 }
 

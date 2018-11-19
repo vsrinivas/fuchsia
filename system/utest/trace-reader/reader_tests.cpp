@@ -10,6 +10,8 @@
 #include <fbl/vector.h>
 #include <unittest/unittest.h>
 
+#include <utility>
+
 namespace {
 
 template <typename T>
@@ -20,13 +22,13 @@ uint64_t ToWord(const T& value) {
 trace::TraceReader::RecordConsumer MakeRecordConsumer(
     fbl::Vector<trace::Record>* out_records) {
     return [out_records](trace::Record record) {
-        out_records->push_back(fbl::move(record));
+        out_records->push_back(std::move(record));
     };
 }
 
 trace::TraceReader::ErrorHandler MakeErrorHandler(fbl::String* out_error) {
     return [out_error](fbl::String error) {
-        *out_error = fbl::move(error);
+        *out_error = std::move(error);
     };
 }
 

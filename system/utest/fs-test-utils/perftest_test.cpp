@@ -205,13 +205,13 @@ bool RunTestCasesPreservesOrder() {
 
     TestCaseInfo info;
     info.name = "MyTestCase";
-    info.tests.push_back({fbl::move(test_1), "test_1", /*required_disk_space=*/0});
-    info.tests.push_back({fbl::move(test_2), "test_2", 0});
-    info.tests.push_back({fbl::move(test_3), "test_3", 0});
+    info.tests.push_back({std::move(test_1), "test_1", /*required_disk_space=*/0});
+    info.tests.push_back({std::move(test_2), "test_2", 0});
+    info.tests.push_back({std::move(test_3), "test_3", 0});
     info.teardown = false;
 
     fbl::Vector<TestCaseInfo> test_cases;
-    test_cases.push_back(fbl::move(info));
+    test_cases.push_back(std::move(info));
     ASSERT_TRUE(RunTestCases(f_options, p_options, test_cases, /*out=*/nullptr));
 
     // Verify order is preserved.
@@ -256,13 +256,13 @@ bool RunTestCasesPreservesOrderWithMultipleSamples() {
     TestCaseInfo info;
     info.sample_count = 20;
     info.name = "MyTestCase";
-    info.tests.push_back({fbl::move(test_1), "test_1", /*required_disk_space=*/0});
-    info.tests.push_back({fbl::move(test_2), "test_2", 0});
-    info.tests.push_back({fbl::move(test_3), "test_3", 0});
+    info.tests.push_back({std::move(test_1), "test_1", /*required_disk_space=*/0});
+    info.tests.push_back({std::move(test_2), "test_2", 0});
+    info.tests.push_back({std::move(test_3), "test_3", 0});
     info.teardown = false;
 
     fbl::Vector<TestCaseInfo> test_cases;
-    test_cases.push_back(fbl::move(info));
+    test_cases.push_back(std::move(info));
     ASSERT_TRUE(RunTestCases(f_options, p_options, test_cases, /*out=*/nullptr));
 
     // Verify order is preserved.
@@ -297,11 +297,11 @@ bool RunTestCasesWritesResultsAndStatistics() {
 
     TestCaseInfo info;
     info.name = "MyTestCase";
-    info.tests.push_back({fbl::move(test_1), "test_1", /*required_disk_space=*/0});
+    info.tests.push_back({std::move(test_1), "test_1", /*required_disk_space=*/0});
     info.teardown = false;
 
     fbl::Vector<TestCaseInfo> test_cases;
-    test_cases.push_back(fbl::move(info));
+    test_cases.push_back(std::move(info));
 
     FILE* fp = fopen(kFakeStdout, "w+");
     ASSERT_TRUE(fp);

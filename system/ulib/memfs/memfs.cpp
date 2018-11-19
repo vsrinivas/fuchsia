@@ -23,6 +23,8 @@
 #include <lib/sync/completion.h>
 #include <zircon/device/vfs.h>
 
+#include <utility>
+
 #include "dnode.h"
 
 namespace {
@@ -42,7 +44,7 @@ zx_status_t Vfs::CreateFromVmo(VnodeDir* parent, fbl::StringPiece name,
 
 void Vfs::MountSubtree(VnodeDir* parent, fbl::RefPtr<VnodeDir> subtree) {
     fbl::AutoLock lock(&vfs_lock_);
-    parent->MountSubtree(fbl::move(subtree));
+    parent->MountSubtree(std::move(subtree));
 }
 
 zx_status_t Vfs::FillFsId() {
@@ -135,7 +137,7 @@ zx_status_t VnodeMemfs::AttachRemote(fs::MountChannel h) {
     } else if (IsRemote()) {
         return ZX_ERR_ALREADY_BOUND;
     }
-    SetRemote(fbl::move(h.TakeChannel()));
+    SetRemote(h.TakeChannel());
     return ZX_OK;
 }
 

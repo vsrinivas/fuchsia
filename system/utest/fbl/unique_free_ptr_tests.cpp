@@ -9,6 +9,8 @@
 #include <fbl/unique_free_ptr.h>
 #include <unittest/unittest.h>
 
+#include <utility>
+
 static_assert(fbl::is_standard_layout<fbl::unique_free_ptr<int>>::value,
               "fbl::unique_free_ptr<int>'s should have a standard layout");
 
@@ -21,7 +23,7 @@ static bool ufptr_test_move() {
     {
         fbl::unique_free_ptr<int> ptr(static_cast<int*>(malloc(sizeof(int))));
 
-        fbl::unique_free_ptr<int> ptr2 = fbl::move(ptr);
+        fbl::unique_free_ptr<int> ptr2 = std::move(ptr);
         EXPECT_NULL(ptr, "expected ptr to be null");
     }
 

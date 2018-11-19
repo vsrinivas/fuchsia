@@ -16,6 +16,8 @@
 #include <lib/fidl/cpp/vector_view.h>
 #include <lib/zx/channel.h>
 
+#include <utility>
+
 namespace cobalt_client {
 namespace {
 
@@ -26,7 +28,7 @@ using internal::RemoteHistogram;
 } // namespace
 
 Collector::Collector(const CollectorOptions& options, fbl::unique_ptr<internal::Logger> logger)
-    : logger_(fbl::move(logger)) {
+    : logger_(std::move(logger)) {
     flushing_.store(false);
 }
 
@@ -68,7 +70,7 @@ fbl::unique_ptr<Collector> Collector::Create(CollectorOptions options) {
     internal::CobaltOptions cobalt_options;
     cobalt_options.logger_deadline_first_attempt = options.initial_response_deadline;
     cobalt_options.logger_deadline = options.response_deadline;
-    cobalt_options.config_reader = fbl::move(options.load_config);
+    cobalt_options.config_reader = std::move(options.load_config);
     cobalt_options.service_connect = [](const char* service_path,
                                         zx::channel service) -> zx_status_t {
         return fdio_service_connect(service_path, service.release());
@@ -76,31 +78,31 @@ fbl::unique_ptr<Collector> Collector::Create(CollectorOptions options) {
     cobalt_options.service_path.AppendPrintf("/svc/%s", fuchsia_cobalt_LoggerFactory_Name);
     cobalt_options.release_stage = static_cast<internal::ReleaseStage>(options.release_stage);
     return fbl::make_unique<Collector>(
-        options, fbl::make_unique<internal::CobaltLogger>(fbl::move(cobalt_options)));
+        options, fbl::make_unique<internal::CobaltLogger>(std::move(cobalt_options)));
 }
 
 CollectorOptions CollectorOptions::GeneralAvailability() {
     CollectorOptions options;
     options.release_stage = static_cast<uint32_t>(internal::ReleaseStage::kGa);
-    return fbl::move(options);
+    return options;
 }
 
 CollectorOptions CollectorOptions::Dogfood() {
     CollectorOptions options;
     options.release_stage = static_cast<uint32_t>(internal::ReleaseStage::kDogfood);
-    return fbl::move(options);
+    return options;
 }
 
 CollectorOptions CollectorOptions::Fishfood() {
     CollectorOptions options;
     options.release_stage = static_cast<uint32_t>(internal::ReleaseStage::kFishfood);
-    return fbl::move(options);
+    return options;
 }
 
 CollectorOptions CollectorOptions::Debug() {
     CollectorOptions options;
     options.release_stage = static_cast<uint32_t>(internal::ReleaseStage::kDebug);
-    return fbl::move(options);
+    return options;
 }
 
 } // namespace cobalt_client

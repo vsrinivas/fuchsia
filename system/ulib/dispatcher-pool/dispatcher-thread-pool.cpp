@@ -10,6 +10,8 @@
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <dispatcher-pool/dispatcher-thread-pool.h>
 
+#include <utility>
+
 #include "debug-logging.h"
 
 namespace dispatcher {
@@ -57,7 +59,7 @@ zx_status_t ThreadPool::Get(fbl::RefPtr<ThreadPool>* pool_out, uint32_t priority
     }
 
     *pool_out = new_pool;
-    active_pools_.insert(fbl::move(new_pool));
+    active_pools_.insert(std::move(new_pool));
     return ZX_OK;
 }
 
@@ -73,7 +75,7 @@ void ThreadPool::ShutdownAll() {
         }
 
         system_shutdown_ = true;
-        shutdown_targets = fbl::move(active_pools_);
+        shutdown_targets = std::move(active_pools_);
     }
 
     for (auto& pool : shutdown_targets)
@@ -101,7 +103,7 @@ zx_status_t ThreadPool::AddDomainToPool(fbl::RefPtr<ExecutionDomain> domain) {
     if (pool_shutting_down_)
         return ZX_ERR_BAD_STATE;
 
-    active_domains_.push_back(fbl::move(domain));
+    active_domains_.push_back(std::move(domain));
     ++active_domain_count_;
 
     while ((active_thread_count_ < active_domain_count_) &&
@@ -112,7 +114,7 @@ zx_status_t ThreadPool::AddDomainToPool(fbl::RefPtr<ExecutionDomain> domain) {
             break;
         }
 
-        active_threads_.push_front(fbl::move(thread));
+        active_threads_.push_front(std::move(thread));
         if (active_threads_.front().Start() != ZX_OK) {
             LOG("Failed to start new thread\n");
             thread = active_threads_.pop_front();
@@ -202,7 +204,7 @@ void ThreadPool::InternalShutdown() {
         // Move the contents of the active domains list into a local variable so
         // that we don't need to hold onto the pool lock while we shut down the
         // domains.
-        domains_to_deactivate = fbl::move(active_domains_);
+        domains_to_deactivate = std::move(active_domains_);
     }
 
     // Deactivate any domains we may have still had assigned to us, then let go
@@ -247,7 +249,7 @@ void ThreadPool::InternalShutdown() {
 fbl::unique_ptr<ThreadPool::Thread> ThreadPool::Thread::Create(fbl::RefPtr<ThreadPool> pool,
                                                                 uint32_t id) {
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Thread> ret(new (&ac) Thread(fbl::move(pool), id));
+    fbl::unique_ptr<Thread> ret(new (&ac) Thread(std::move(pool), id));
 
     if (!ac.check())
         return nullptr;
@@ -256,7 +258,7 @@ fbl::unique_ptr<ThreadPool::Thread> ThreadPool::Thread::Create(fbl::RefPtr<Threa
 }
 
 ThreadPool::Thread::Thread(fbl::RefPtr<ThreadPool> pool, uint32_t id)
-    : pool_(fbl::move(pool)),
+    : pool_(std::move(pool)),
       id_(id) {
 }
 

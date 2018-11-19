@@ -9,6 +9,8 @@
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
 
+#include <utility>
+
 #include "a113-ddr.h"
 #include "a113-pdm.h"
 #include "audio-proto/audio-proto.h"
@@ -51,7 +53,7 @@ private:
         zx_device_t* parent,
         fbl::RefPtr<dispatcher::ExecutionDomain>&& default_domain)
         : GaussPdmInputStreamBase(parent),
-          default_domain_(fbl::move(default_domain)) {}
+          default_domain_(std::move(default_domain)) {}
 
     virtual ~GaussPdmInputStream();
 

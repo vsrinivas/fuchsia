@@ -7,6 +7,8 @@
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
 
+#include <utility>
+
 namespace fs {
 
 // A wrapper around a singly linked list to make it appear as a queue.
@@ -21,11 +23,11 @@ public:
     template <typename T>
     void push(T&& ptr) {
         if (queue_.is_empty()) {
-            queue_.push_front(fbl::forward<T>(ptr));
+            queue_.push_front(std::forward<T>(ptr));
             next_ = queue_.begin();
         } else {
             auto to_be_next = queue_.make_iterator(*ptr);
-            queue_.insert_after(next_, fbl::forward<T>(ptr));
+            queue_.insert_after(next_, std::forward<T>(ptr));
             next_ = to_be_next;
         }
     }

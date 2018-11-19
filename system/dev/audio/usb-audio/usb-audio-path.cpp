@@ -4,6 +4,8 @@
 
 #include <fbl/alloc_checker.h>
 
+#include <utility>
+
 #include "debug-logging.h"
 #include "usb-audio-path.h"
 
@@ -19,7 +21,7 @@ fbl::unique_ptr<AudioPath> AudioPath::Create(uint32_t unit_count) {
         return nullptr;
     }
 
-    fbl::unique_ptr<AudioPath> ret(new (&ac) AudioPath(fbl::move(units), unit_count));
+    fbl::unique_ptr<AudioPath> ret(new (&ac) AudioPath(std::move(units), unit_count));
     if (!ac.check()) {
         GLOBAL_LOG(ERROR, "Failed to allocate AudioPath!");
         return nullptr;
@@ -31,7 +33,7 @@ fbl::unique_ptr<AudioPath> AudioPath::Create(uint32_t unit_count) {
 void AudioPath::AddUnit(uint32_t ndx, fbl::RefPtr<AudioUnit> unit) {
     ZX_DEBUG_ASSERT(ndx < unit_count_);
     ZX_DEBUG_ASSERT(unit != nullptr);
-    units_[ndx] = fbl::move(unit);
+    units_[ndx] = std::move(unit);
 }
 
 zx_status_t AudioPath::Setup(const usb_protocol_t& proto) {

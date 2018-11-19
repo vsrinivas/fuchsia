@@ -4,13 +4,15 @@
 
 #include <ddk/debug.h>
 
+#include <utility>
+
 #include "controller.h"
 #include "image.h"
 
 namespace display {
 
 Image::Image(Controller* controller, const image_t& image_config, zx::vmo handle)
-        : info_(image_config), controller_(controller), vmo_(fbl::move(handle)) { }
+        : info_(image_config), controller_(controller), vmo_(std::move(handle)) { }
 
 Image::~Image() {
     ZX_DEBUG_ASSERT(!fbl::atomic_load(&in_use_));
@@ -21,8 +23,8 @@ Image::~Image() {
 
 void Image::PrepareFences(fbl::RefPtr<FenceReference>&& wait,
                           fbl::RefPtr<FenceReference>&& signal) {
-    wait_fence_ = fbl::move(wait);
-    signal_fence_ = fbl::move(signal);
+    wait_fence_ = std::move(wait);
+    signal_fence_ = std::move(signal);
 
     if (wait_fence_) {
         zx_status_t status = wait_fence_->StartReadyWait();
@@ -49,7 +51,7 @@ void Image::StartPresent() {
 
 void Image::EarlyRetire() {
     if (wait_fence_) {
-        wait_fence_->SetImmediateRelease(fbl::move(signal_fence_));
+        wait_fence_->SetImmediateRelease(std::move(signal_fence_));
         wait_fence_ = nullptr;
     }
     fbl::atomic_store(&in_use_, false);
@@ -67,7 +69,7 @@ void Image::StartRetire() {
         fbl::atomic_store(&in_use_, false);
     } else {
         retiring_ = true;
-        armed_signal_fence_ = fbl::move(signal_fence_);
+        armed_signal_fence_ = std::move(signal_fence_);
     }
 }
 

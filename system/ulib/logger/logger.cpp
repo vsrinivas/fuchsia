@@ -14,6 +14,8 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
+#include <utility>
+
 namespace logger {
 namespace {
 
@@ -22,7 +24,7 @@ static fx_log_packet_t packet;
 } // namespace
 
 LoggerImpl::LoggerImpl(zx::channel channel, int out_fd)
-    : channel_(fbl::move(channel)),
+    : channel_(std::move(channel)),
       fd_(out_fd),
       wait_(this, channel_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED),
       socket_wait_(this) {
@@ -169,7 +171,7 @@ zx_status_t LoggerImpl::ReadAndDispatchMessage(fidl::MessageBuffer* buffer, asyn
         return ZX_ERR_INVALID_ARGS;
     switch (message.ordinal()) {
     case fuchsia_logger_LogSinkConnectOrdinal:
-        return Connect(fbl::move(message), dispatcher);
+        return Connect(std::move(message), dispatcher);
     default:
         fprintf(stderr, "logger: error: Unknown message ordinal: %d\n", message.ordinal());
         return ZX_ERR_NOT_SUPPORTED;

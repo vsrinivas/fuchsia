@@ -15,7 +15,9 @@
 #include <zircon/device/device.h>
 
 #include <minfs/format.h>
+
 #include "minfs-private.h"
+#include <utility>
 
 namespace minfs {
 
@@ -61,7 +63,7 @@ int Bcache::Sync() {
 
 zx_status_t Bcache::Create(fbl::unique_ptr<Bcache>* out, fbl::unique_fd fd, uint32_t blockmax) {
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Bcache> bc(new (&ac) Bcache(fbl::move(fd), blockmax));
+    fbl::unique_ptr<Bcache> bc(new (&ac) Bcache(std::move(fd), blockmax));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -80,12 +82,12 @@ zx_status_t Bcache::Create(fbl::unique_ptr<Bcache>* out, fbl::unique_fd fd, uint
         return static_cast<zx_status_t>(r);
     }
     zx_status_t status;
-    if ((status = block_client::Client::Create(fbl::move(fifo), &bc->fifo_client_)) != ZX_OK) {
+    if ((status = block_client::Client::Create(std::move(fifo), &bc->fifo_client_)) != ZX_OK) {
         return status;
     }
 #endif
 
-    *out = fbl::move(bc);
+    *out = std::move(bc);
     return ZX_OK;
 }
 
@@ -116,7 +118,7 @@ zx_status_t Bcache::AttachVmo(zx_handle_t vmo, vmoid_t* out) const {
 #endif
 
 Bcache::Bcache(fbl::unique_fd fd, uint32_t blockmax) :
-    fd_(fbl::move(fd)), blockmax_(blockmax) {}
+    fd_(std::move(fd)), blockmax_(blockmax) {}
 
 Bcache::~Bcache() {
 #ifdef __Fuchsia__

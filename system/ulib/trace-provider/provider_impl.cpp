@@ -17,6 +17,8 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <utility>
+
 #include "session.h"
 #include "trace_provider.fidl.h"
 #include "utils.h"
@@ -27,7 +29,7 @@ namespace internal {
 TraceProviderImpl::TraceProviderImpl(async_dispatcher_t* dispatcher,
                                      zx::channel channel)
     : dispatcher_(dispatcher),
-      connection_(this, fbl::move(channel)) {
+      connection_(this, std::move(channel)) {
 }
 
 TraceProviderImpl::~TraceProviderImpl() = default;
@@ -36,8 +38,8 @@ void TraceProviderImpl::Start(trace_buffering_mode_t buffering_mode,
                               zx::vmo buffer, zx::fifo fifo,
                               fbl::Vector<fbl::String> enabled_categories) {
     Session::StartEngine(
-        dispatcher_, buffering_mode, fbl::move(buffer), fbl::move(fifo),
-        fbl::move(enabled_categories));
+        dispatcher_, buffering_mode, std::move(buffer), std::move(fifo),
+        std::move(enabled_categories));
 }
 
 void TraceProviderImpl::Stop() {
@@ -50,7 +52,7 @@ void TraceProviderImpl::OnClose() {
 
 TraceProviderImpl::Connection::Connection(TraceProviderImpl* impl,
                                           zx::channel channel)
-    : impl_(impl), channel_(fbl::move(channel)),
+    : impl_(impl), channel_(std::move(channel)),
       wait_(this, channel_.get(),
             ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED) {
     zx_status_t status = wait_.Begin(impl_->dispatcher_);
@@ -150,8 +152,8 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(
         default:
             return false;
         }
-        impl_->Start(trace_buffering_mode, fbl::move(buffer), fbl::move(fifo),
-                     fbl::move(categories));
+        impl_->Start(trace_buffering_mode, std::move(buffer), std::move(fifo),
+                     std::move(categories));
         return true;
     }
     case fuchsia_tracelink_ProviderStopOrdinal: {
@@ -192,7 +194,7 @@ static zx_status_t ConnectToServiceRegistry(zx::channel* out_registry_client) {
     if (status != ZX_OK)
         return status;
 
-    *out_registry_client = fbl::move(registry_client);
+    *out_registry_client = std::move(registry_client);
     return ZX_OK;
 }
 
@@ -229,7 +231,7 @@ trace_provider_t* trace_provider_create_with_name(async_dispatcher_t* dispatcher
     }
 
     return new trace::internal::TraceProviderImpl(dispatcher,
-                                                  fbl::move(provider_service));
+                                                  std::move(provider_service));
 }
 
 trace_provider_t* trace_provider_create(async_dispatcher_t* dispatcher) {
@@ -288,7 +290,7 @@ trace_provider_t* trace_provider_create_synchronously(async_dispatcher_t* dispat
     if (out_manager_is_tracing_already)
         *out_manager_is_tracing_already = manager_is_tracing_already;
     return new trace::internal::TraceProviderImpl(dispatcher,
-                                                  fbl::move(provider_service));
+                                                  std::move(provider_service));
 }
 
 void trace_provider_destroy(trace_provider_t* provider) {

@@ -11,6 +11,8 @@
 #include <lib/fidl/cpp/message_buffer.h>
 #include <unittest/unittest.h>
 
+#include <utility>
+
 namespace runtests {
 namespace {
 
@@ -139,7 +141,7 @@ zx_status_t SendLogMessagesHelper(const zx::channel& listener, int oridinal,
 // Log call in Log interface.
 zx_status_t SendLogMessage(const zx::channel& listener, LogMessage log_msg) {
     fbl::Vector<LogMessage> log_msgs;
-    log_msgs.push_back(fbl::move(log_msg));
+    log_msgs.push_back(std::move(log_msg));
     return SendLogMessagesHelper(listener, fuchsia_logger_LogListenerLogOrdinal, log_msgs);
 }
 
@@ -161,15 +163,15 @@ bool TestLog() {
     FILE* buf_file = fmemopen(buf, sizeof(buf), "w");
 
     // start listener
-    auto log_listener = fbl::make_unique<LogExporter>(fbl::move(listener_request), buf_file);
+    auto log_listener = fbl::make_unique<LogExporter>(std::move(listener_request), buf_file);
     log_listener->set_error_handler([](zx_status_t status) {
         EXPECT_EQ(ZX_ERR_CANCELED, status);
     });
 
     LogMessage msg1("my message");
-    ASSERT_EQ(ZX_OK, SendLogMessage(listener, fbl::move(msg1)));
+    ASSERT_EQ(ZX_OK, SendLogMessage(listener, std::move(msg1)));
     LogMessage msg2("my message", {"tag123"});
-    ASSERT_EQ(ZX_OK, SendLogMessage(listener, fbl::move(msg2)));
+    ASSERT_EQ(ZX_OK, SendLogMessage(listener, std::move(msg2)));
 
     ASSERT_EQ(ZX_OK, log_listener->RunUntilIdle());
     fflush(buf_file);
@@ -180,7 +182,7 @@ bool TestLog() {
                   buf);
 
     LogMessage msg3("my message", {"tag123", "tag2"});
-    ASSERT_EQ(ZX_OK, SendLogMessage(listener, fbl::move(msg3)));
+    ASSERT_EQ(ZX_OK, SendLogMessage(listener, std::move(msg3)));
 
     ASSERT_EQ(ZX_OK, log_listener->RunUntilIdle());
     fflush(buf_file);
@@ -204,7 +206,7 @@ bool TestLogMany() {
     FILE* buf_file = fmemopen(buf, sizeof(buf), "w");
 
     // start listener
-    auto log_listener = fbl::make_unique<LogExporter>(fbl::move(listener_request), buf_file);
+    auto log_listener = fbl::make_unique<LogExporter>(std::move(listener_request), buf_file);
     log_listener->set_error_handler([](zx_status_t status) {
         EXPECT_EQ(ZX_ERR_CANCELED, status);
     });
@@ -212,8 +214,8 @@ bool TestLogMany() {
     LogMessage msg1("my message");
     LogMessage msg2("my message2", {"tag1", "tag2"});
     fbl::Vector<LogMessage> msgs;
-    msgs.push_back(fbl::move(msg1));
-    msgs.push_back(fbl::move(msg2));
+    msgs.push_back(std::move(msg1));
+    msgs.push_back(std::move(msg2));
     ASSERT_EQ(ZX_OK, SendLogMessages(listener, msgs));
 
     ASSERT_EQ(ZX_OK, log_listener->RunUntilIdle());
@@ -225,7 +227,7 @@ bool TestLogMany() {
                   buf);
     LogMessage msg3("my message", {"tag1"});
     msgs.reset();
-    msgs.push_back(fbl::move(msg3));
+    msgs.push_back(std::move(msg3));
     ASSERT_EQ(ZX_OK, SendLogMessages(listener, msgs));
 
     ASSERT_EQ(ZX_OK, log_listener->RunUntilIdle());
@@ -250,23 +252,23 @@ bool TestDroppedLogs() {
     FILE* buf_file = fmemopen(buf, sizeof(buf), "w");
 
     // start listener
-    auto log_listener = fbl::make_unique<LogExporter>(fbl::move(listener_request), buf_file);
+    auto log_listener = fbl::make_unique<LogExporter>(std::move(listener_request), buf_file);
     log_listener->set_error_handler([](zx_status_t status) {
         EXPECT_EQ(ZX_ERR_CANCELED, status);
     });
 
     LogMessage msg1("my message1", 1);
-    ASSERT_EQ(ZX_OK, SendLogMessage(listener, fbl::move(msg1)));
+    ASSERT_EQ(ZX_OK, SendLogMessage(listener, std::move(msg1)));
     LogMessage msg2("my message2", 1);
-    ASSERT_EQ(ZX_OK, SendLogMessage(listener, fbl::move(msg2)));
+    ASSERT_EQ(ZX_OK, SendLogMessage(listener, std::move(msg2)));
     LogMessage msg3("my message3", 1, 1011);
-    ASSERT_EQ(ZX_OK, SendLogMessage(listener, fbl::move(msg3)));
+    ASSERT_EQ(ZX_OK, SendLogMessage(listener, std::move(msg3)));
     LogMessage msg4("my message4", 1, 1011);
-    ASSERT_EQ(ZX_OK, SendLogMessage(listener, fbl::move(msg4)));
+    ASSERT_EQ(ZX_OK, SendLogMessage(listener, std::move(msg4)));
     LogMessage msg5("my message5", 2, 1011);
-    ASSERT_EQ(ZX_OK, SendLogMessage(listener, fbl::move(msg5)));
+    ASSERT_EQ(ZX_OK, SendLogMessage(listener, std::move(msg5)));
     LogMessage msg6("my message6", 2);
-    ASSERT_EQ(ZX_OK, SendLogMessage(listener, fbl::move(msg6)));
+    ASSERT_EQ(ZX_OK, SendLogMessage(listener, std::move(msg6)));
 
     ASSERT_EQ(ZX_OK, log_listener->RunUntilIdle());
     fflush(buf_file);

@@ -24,6 +24,8 @@
 #include "minfs-private.h"
 #include <minfs/writeback.h>
 
+#include <utility>
+
 namespace minfs {
 
 #ifdef __Fuchsia__
@@ -57,7 +59,7 @@ void WriteTxn::Enqueue(zx_handle_t vmo, uint64_t vmo_offset, uint64_t dev_offset
     request.vmo_offset = vmo_offset;
     request.dev_offset = dev_offset;
     request.length = nblocks;
-    requests_.push_back(fbl::move(request));
+    requests_.push_back(std::move(request));
 }
 
 zx_status_t WriteTxn::Flush(zx_handle_t vmo, vmoid_t vmoid) {
@@ -128,7 +130,7 @@ size_t WritebackWork::Complete(zx_handle_t vmo, vmoid_t vmoid) {
 
 void WritebackWork::SetClosure(SyncCallback closure) {
     ZX_DEBUG_ASSERT(!closure_);
-    closure_ = fbl::move(closure);
+    closure_ = std::move(closure);
 }
 #else
 void WritebackWork::Complete() {
@@ -147,14 +149,14 @@ void WritebackWork::PinVnode(fbl::RefPtr<VnodeMinfs> vn) {
         }
     }
     ZX_DEBUG_ASSERT(node_count_ < fbl::count_of(vn_));
-    vn_[node_count_++] = fbl::move(vn);
+    vn_[node_count_++] = std::move(vn);
 }
 
 #ifdef __Fuchsia__
 
 zx_status_t WritebackBuffer::Create(Bcache* bc, fzl::OwnedVmoMapper mapper,
                                     fbl::unique_ptr<WritebackBuffer>* out) {
-    fbl::unique_ptr<WritebackBuffer> wb(new WritebackBuffer(bc, fbl::move(mapper)));
+    fbl::unique_ptr<WritebackBuffer> wb(new WritebackBuffer(bc, std::move(mapper)));
     if (wb->mapper_.size() % kMinfsBlockSize != 0) {
         return ZX_ERR_INVALID_ARGS;
     } else if (cnd_init(&wb->consumer_cvar_) != thrd_success) {
@@ -171,12 +173,12 @@ zx_status_t WritebackBuffer::Create(Bcache* bc, fzl::OwnedVmoMapper mapper,
         return status;
     }
 
-    *out = fbl::move(wb);
+    *out = std::move(wb);
     return ZX_OK;
 }
 
 WritebackBuffer::WritebackBuffer(Bcache* bc, fzl::OwnedVmoMapper mapper) :
-    bc_(bc), unmounting_(false), mapper_(fbl::move(mapper)),
+    bc_(bc), unmounting_(false), mapper_(std::move(mapper)),
     cap_(mapper_.size() / kMinfsBlockSize) {}
 
 WritebackBuffer::~WritebackBuffer() {
@@ -306,7 +308,7 @@ void WritebackBuffer::Enqueue(fbl::unique_ptr<WritebackWork> work) {
         CopyToBufferLocked(work.get());
     }
 
-    work_queue_.push(fbl::move(work));
+    work_queue_.push(std::move(work));
     cnd_signal(&consumer_cvar_);
 }
 

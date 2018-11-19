@@ -10,6 +10,8 @@
 
 #include <intel-hda/utils/intel-hda-registers.h>
 
+#include <utility>
+
 #include "debug-logging.h"
 #include "intel-hda-codec.h"
 #include "intel-hda-controller.h"
@@ -152,7 +154,7 @@ void IntelHDAController::ProcessRIRB() {
 
             // Sanity checks complete.  Pass the response and the job which
             // triggered it on to the codec.
-            codec->ProcessSolicitedResponse(resp, fbl::move(job));
+            codec->ProcessSolicitedResponse(resp, std::move(job));
         } else {
             auto codec = GetCodec(caddr);
             if (!codec) {
@@ -207,13 +209,13 @@ zx_status_t IntelHDAController::QueueCodecCmd(fbl::unique_ptr<CodecCmdJob>&& job
         // If we have no space in the CORB, there must be some jobs which are
         // currently in-flight.
         ZX_DEBUG_ASSERT(!in_flight_corb_jobs_.is_empty());
-        pending_corb_jobs_.push_back(fbl::move(job));
+        pending_corb_jobs_.push_back(std::move(job));
     } else {
         // Alternatively, if there is space in the CORB, the pending job queue
         // had better be empty.
         ZX_DEBUG_ASSERT(pending_corb_jobs_.is_empty());
         SendCodecCmdLocked(job->command());
-        in_flight_corb_jobs_.push_back(fbl::move(job));
+        in_flight_corb_jobs_.push_back(std::move(job));
     }
 
     CommitCORBLocked();
@@ -258,7 +260,7 @@ void IntelHDAController::ProcessCORB() {
 
         SendCodecCmdLocked(job->command());
 
-        in_flight_corb_jobs_.push_back(fbl::move(job));
+        in_flight_corb_jobs_.push_back(std::move(job));
     }
     LOG(SPEW, "Update CORB WP; WP is @%u\n", corb_wr_ptr_);
 

@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
+#include <utility>
 
 #include <ddk/device.h>
 #include <ddk/protocol/block.h>
@@ -92,7 +93,7 @@ void InQueueAdd(zx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
 
 }  // namespace
 
-IoBuffer::IoBuffer(zx::vmo vmo, vmoid_t id) : io_vmo_(fbl::move(vmo)), vmoid_(id) {}
+IoBuffer::IoBuffer(zx::vmo vmo, vmoid_t id) : io_vmo_(std::move(vmo)), vmoid_(id) {}
 
 IoBuffer::~IoBuffer() {}
 
@@ -206,11 +207,11 @@ zx_status_t BlockServer::AttachVmo(zx::vmo vmo, vmoid_t* out) {
     }
 
     fbl::AllocChecker ac;
-    fbl::RefPtr<IoBuffer> ibuf = fbl::AdoptRef(new (&ac) IoBuffer(fbl::move(vmo), id));
+    fbl::RefPtr<IoBuffer> ibuf = fbl::AdoptRef(new (&ac) IoBuffer(std::move(vmo), id));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-    tree_.insert(fbl::move(ibuf));
+    tree_.insert(std::move(ibuf));
     *out = id;
     return ZX_OK;
 }
@@ -525,5 +526,5 @@ zx_status_t blockserver_serve(BlockServer* bs) {
 }
 zx_status_t blockserver_attach_vmo(BlockServer* bs, zx_handle_t raw_vmo, vmoid_t* out) {
     zx::vmo vmo(raw_vmo);
-    return bs->AttachVmo(fbl::move(vmo), out);
+    return bs->AttachVmo(std::move(vmo), out);
 }

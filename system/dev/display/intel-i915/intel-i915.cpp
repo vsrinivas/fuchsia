@@ -25,6 +25,8 @@
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 
+#include <utility>
+
 #include "dp-display.h"
 #include "hdmi-display.h"
 #include "intel-i915.h"
@@ -239,7 +241,7 @@ void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
             LOG_INFO("failed to init hotplug display\n");
         } else {
             DisplayDevice* device_ptr = device.get();
-            if (AddDisplay(fbl::move(device)) == ZX_OK) {
+            if (AddDisplay(std::move(device)) == ZX_OK) {
                 added_device = device_ptr;
             }
         }
@@ -663,7 +665,7 @@ void Controller::InitDisplays() {
     for (uint32_t i = 0; i < registers::kDdiCount; i++) {
         auto disp_device = QueryDisplay(registers::kDdis[i]);
         if (disp_device) {
-            AddDisplay(fbl::move(disp_device));
+            AddDisplay(std::move(disp_device));
         }
     }
 
@@ -742,7 +744,7 @@ zx_status_t Controller::AddDisplay(fbl::unique_ptr<DisplayDevice>&& display) {
     display_devices_.reserve(display_devices_.size() + 1, &ac);
 
     if (ac.check()) {
-        display_devices_.push_back(fbl::move(display), &ac);
+        display_devices_.push_back(std::move(display), &ac);
         assert(ac.check());
 
         fbl::unique_ptr<DisplayDevice>& new_device = display_devices_[display_devices_.size() - 1];
@@ -839,7 +841,7 @@ zx_status_t Controller::DisplayControllerImplImportVmoImage(image_t* image, zx_h
         if (status != ZX_OK) {
             return status;
         }
-        gtt_region = fbl::move(alt_gtt_region);
+        gtt_region = std::move(alt_gtt_region);
     }
 
     status = gtt_region->PopulateRegion(vmo, offset / PAGE_SIZE, length);
@@ -848,7 +850,7 @@ zx_status_t Controller::DisplayControllerImplImportVmoImage(image_t* image, zx_h
     }
 
     image->handle = gtt_region->base();
-    imported_images_.push_back(fbl::move(gtt_region));
+    imported_images_.push_back(std::move(gtt_region));
     return ZX_OK;
 }
 
@@ -1695,7 +1697,7 @@ zx_status_t Controller::GttAlloc(uint64_t page_count, uint64_t* addr_out) {
     }
     *addr_out = region->base();
 
-    imported_gtt_regions_.push_back(fbl::move(region));
+    imported_gtt_regions_.push_back(std::move(region));
     return ZX_OK;
 }
 

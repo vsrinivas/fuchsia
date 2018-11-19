@@ -28,6 +28,8 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/port.h>
 
+#include <utility>
+
 static zx_status_t validate_handle(zx_handle_t handle) {
     return zx_object_get_info(handle, ZX_INFO_HANDLE_VALID,
                               nullptr, 0, 0u, nullptr);
@@ -59,7 +61,7 @@ static bool handle_move_test() {
     zx::event event;
     // Check move semantics.
     ASSERT_EQ(zx::event::create(0u, &event), ZX_OK);
-    zx::handle handle(fbl::move(event));
+    zx::handle handle(std::move(event));
     ASSERT_EQ(event.release(), ZX_HANDLE_INVALID);
     ASSERT_EQ(validate_handle(handle.get()), ZX_OK);
     END_TEST;

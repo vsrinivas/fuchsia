@@ -19,6 +19,8 @@
 #include <lib/sync/completion.h>
 #include <zircon/boot/image.h>
 
+#include <utility>
+
 namespace nand {
 
 namespace {
@@ -210,7 +212,7 @@ zx_status_t SkipBlockDevice::GetBadBlockList(fbl::Array<uint32_t>* bad_blocks) {
     if (bad_block_list_len != bad_block_count) {
         return ZX_ERR_INTERNAL;
     }
-    *bad_blocks = fbl::move(fbl::Array<uint32_t>(bad_block_list.release(), bad_block_count));
+    *bad_blocks = fbl::Array<uint32_t>(bad_block_list.release(), bad_block_count);
     return ZX_OK;
 }
 
@@ -230,7 +232,7 @@ zx_status_t SkipBlockDevice::Bind() {
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-    nand_op_ = fbl::move(nand_op);
+    nand_op_ = std::move(nand_op);
 
     // TODO(surajmalhotra): Potentially make this lazy instead of in the bind.
     fbl::Array<uint32_t> bad_blocks;
@@ -239,8 +241,8 @@ zx_status_t SkipBlockDevice::Bind() {
         zxlogf(ERROR, "skip-block: Failed to get bad block list\n");
         return status;
     }
-    block_map_ = fbl::move(LogicalToPhysicalMap(copy_count_, nand_info_.num_blocks,
-                                                fbl::move(bad_blocks)));
+    block_map_ = LogicalToPhysicalMap(copy_count_, nand_info_.num_blocks,
+                                      std::move(bad_blocks));
 
     return DdkAdd("skip-block");
 }
@@ -373,8 +375,8 @@ zx_status_t SkipBlockDevice::Write(const ReadWriteOperation& op, bool* bad_block
                 fbl::Array<uint32_t> bad_blocks;
                 // TODO(surajmalhotra): Make it impossible for this to fail.
                 ZX_ASSERT(GetBadBlockList(&bad_blocks) == ZX_OK);
-                block_map_ = fbl::move(LogicalToPhysicalMap(copy_count_, nand_info_.num_blocks,
-                                                            fbl::move(bad_blocks)));
+                block_map_ = LogicalToPhysicalMap(
+                    copy_count_, nand_info_.num_blocks, std::move(bad_blocks));
                 *bad_block_grown = true;
                 continue;
             }

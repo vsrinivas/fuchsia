@@ -10,6 +10,8 @@
 #include <string.h>
 #include <lib/zx/time.h>
 
+#include <utility>
+
 namespace tpm {
 
 constexpr zx::duration I2cCr50Interface::kNoIrqTimeout;
@@ -17,7 +19,7 @@ constexpr zx::duration I2cCr50Interface::kI2cRetryDelay;
 constexpr size_t kNumI2cTries = 3;
 
 I2cCr50Interface::I2cCr50Interface(zx_device_t* i2c_dev, zx::handle irq)
-        : i2c_(i2c_dev), irq_(fbl::move(irq)) {
+        : i2c_(i2c_dev), irq_(std::move(irq)) {
 }
 
 I2cCr50Interface::~I2cCr50Interface() {
@@ -26,11 +28,11 @@ I2cCr50Interface::~I2cCr50Interface() {
 zx_status_t I2cCr50Interface::Create(zx_device_t* i2c_dev, zx::handle irq,
                                      fbl::unique_ptr<I2cCr50Interface>* out) {
     fbl::AllocChecker ac;
-    fbl::unique_ptr<I2cCr50Interface> iface(new (&ac) I2cCr50Interface(i2c_dev, fbl::move(irq)));
+    fbl::unique_ptr<I2cCr50Interface> iface(new (&ac) I2cCr50Interface(i2c_dev, std::move(irq)));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-    *out = fbl::move(iface);
+    *out = std::move(iface);
     return ZX_OK;
 }
 

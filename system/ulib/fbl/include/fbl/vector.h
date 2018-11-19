@@ -11,6 +11,7 @@
 #include <fbl/macros.h>
 #include <fbl/type_support.h>
 #include <initializer_list>
+#include <utility>
 #include <zircon/assert.h>
 
 namespace fbl {
@@ -142,7 +143,7 @@ public:
     }
 
     void push_back(T&& value, AllocChecker* ac) {
-        push_back_internal(fbl::move(value), ac);
+        push_back_internal(std::move(value), ac);
     }
 
     void push_back(const T& value, AllocChecker* ac) {
@@ -151,7 +152,7 @@ public:
 
 #ifndef _KERNEL
     void push_back(T&& value) {
-        push_back_internal(fbl::move(value));
+        push_back_internal(std::move(value));
     }
 
     void push_back(const T& value) {
@@ -160,7 +161,7 @@ public:
 #endif // _KERNEL
 
     void insert(size_t index, T&& value, AllocChecker* ac) {
-        insert_internal(index, fbl::move(value), ac);
+        insert_internal(index, std::move(value), ac);
     }
 
     void insert(size_t index, const T& value, AllocChecker* ac) {
@@ -169,7 +170,7 @@ public:
 
 #ifndef _KERNEL
     void insert(size_t index, T&& value) {
-        insert_internal(index, fbl::move(value));
+        insert_internal(index, std::move(value));
     }
 
     void insert(size_t index, const T& value) {
@@ -184,10 +185,10 @@ public:
     // Index must be less than the size of the vector.
     T erase(size_t index) {
         ZX_DEBUG_ASSERT(index < size_);
-        auto val = fbl::move(ptr_[index]);
+        auto val = std::move(ptr_[index]);
         shift_forward(index);
         consider_shrinking();
-        return fbl::move(val);
+        return std::move(val);
     }
 
     void pop_back() {
@@ -232,14 +233,14 @@ private:
         if (!grow_for_new_element(ac)) {
             return;
         }
-        new (&ptr_[size_++]) T(fbl::forward<U>(value));
+        new (&ptr_[size_++]) T(std::forward<U>(value));
     }
 
     template <typename U,
               typename = typename enable_if<is_same<internal::remove_cv_ref<U>, T>::value>::type>
     void push_back_internal(U&& value) {
         grow_for_new_element();
-        new (&ptr_[size_++]) T(fbl::forward<U>(value));
+        new (&ptr_[size_++]) T(std::forward<U>(value));
     }
 
     // Insert an element into the |index| position in the vector, shifting
@@ -253,7 +254,7 @@ private:
         if (!grow_for_new_element(ac)) {
             return;
         }
-        insert_complete(index, fbl::forward<U>(value));
+        insert_complete(index, std::forward<U>(value));
     }
 
     template <typename U,
@@ -261,7 +262,7 @@ private:
     void insert_internal(size_t index, U&& value) {
         ZX_DEBUG_ASSERT(index <= size_);
         grow_for_new_element();
-        insert_complete(index, fbl::forward<U>(value));
+        insert_complete(index, std::forward<U>(value));
     }
 
     // The second half of 'insert', which asumes that there is enough
@@ -272,13 +273,13 @@ private:
         if (index == size_) {
             // Inserting into the end of the vector; nothing to shift
             size_++;
-            new (&ptr_[index]) T(fbl::forward<U>(value));
+            new (&ptr_[index]) T(std::forward<U>(value));
         } else {
             // Avoid calling both a destructor and move constructor, preferring
             // to simply call a move assignment operator if the index contains
             // a valid (yet already moved-from) object.
             shift_back(index);
-            ptr_[index] = fbl::forward<U>(value);
+            ptr_[index] = std::forward<U>(value);
         }
     }
 
@@ -300,9 +301,9 @@ private:
         ZX_DEBUG_ASSERT(size_ < capacity_);
         ZX_DEBUG_ASSERT(size_ > 0);
         size_++;
-        new (&ptr_[size_ - 1]) T(fbl::move(ptr_[size_ - 2]));
+        new (&ptr_[size_ - 1]) T(std::move(ptr_[size_ - 2]));
         for (size_t i = size_ - 2; i > index; i--) {
-            ptr_[i] = fbl::move(ptr_[i - 1]);
+            ptr_[i] = std::move(ptr_[i - 1]);
         }
     }
 
@@ -321,7 +322,7 @@ private:
     shift_forward(size_t index) {
         ZX_DEBUG_ASSERT(size_ > 0);
         for (size_t i = index; (i + 1) < size_; i++) {
-            ptr_[i] = fbl::move(ptr_[i + 1]);
+            ptr_[i] = std::move(ptr_[i + 1]);
         }
         ptr_[--size_].~T();
     }
@@ -336,7 +337,7 @@ private:
     typename enable_if<!is_pod<U>::value, void>::type
     transfer_to(T* newPtr, size_t elements) {
         for (size_t i = 0; i < elements; i++) {
-            new (&newPtr[i]) T(fbl::move(ptr_[i]));
+            new (&newPtr[i]) T(std::move(ptr_[i]));
             ptr_[i].~T();
         }
     }

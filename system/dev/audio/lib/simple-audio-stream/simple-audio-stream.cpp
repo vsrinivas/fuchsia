@@ -8,6 +8,8 @@
 #include <lib/simple-audio-stream/simple-audio-stream.h>
 #include <zircon/device/audio.h>
 
+#include <utility>
+
 namespace audio {
 
 void SimpleAudioStream::Shutdown() {
@@ -147,8 +149,8 @@ zx_status_t SimpleAudioStream::DdkIoctl(uint32_t op, const void* in_buf, size_t 
     zx::channel client_endpoint;
     zx_status_t res = channel->Activate(&client_endpoint,
                                         domain_,
-                                        fbl::move(phandler),
-                                        fbl::move(chandler));
+                                        std::move(phandler),
+                                        std::move(chandler));
     if (res == ZX_OK) {
         if (privileged) {
             ZX_DEBUG_ASSERT(stream_channel_ == nullptr);
@@ -392,8 +394,8 @@ zx_status_t SimpleAudioStream::OnSetStreamFormat(dispatcher::Channel* channel,
 
             resp.result = rb_channel_->Activate(&client_rb_channel,
                                                 domain_,
-                                                fbl::move(phandler),
-                                                fbl::move(chandler));
+                                                std::move(phandler),
+                                                std::move(chandler));
             if (resp.result != ZX_OK) {
                 rb_channel_.reset();
             }
@@ -403,7 +405,7 @@ zx_status_t SimpleAudioStream::OnSetStreamFormat(dispatcher::Channel* channel,
 finished:
     if (resp.result == ZX_OK) {
         resp.external_delay_nsec = external_delay_nsec_;
-        return channel->Write(&resp, sizeof(resp), fbl::move(client_rb_channel));
+        return channel->Write(&resp, sizeof(resp), std::move(client_rb_channel));
     } else {
         return channel->Write(&resp, sizeof(resp));
     }
@@ -522,7 +524,7 @@ zx_status_t SimpleAudioStream::OnGetBuffer(dispatcher::Channel* channel,
         zx::vmo buffer;
         resp.result = GetBuffer(req, &resp.num_ring_buffer_frames, &buffer);
         if (resp.result == ZX_OK) {
-            zx_status_t res = channel->Write(&resp, sizeof(resp), fbl::move(buffer));
+            zx_status_t res = channel->Write(&resp, sizeof(resp), std::move(buffer));
             if (res == ZX_OK) {
                 expected_notifications_per_ring_.store(req.notifications_per_ring);
                 rb_fetched_ = true;

@@ -14,6 +14,8 @@
 #include <zircon/compiler.h>
 #include <zircon/time.h>
 
+#include <utility>
+
 #include "trace.h"
 #include "virtio_gpu.h"
 
@@ -172,7 +174,7 @@ zx_status_t GpuDevice::virtio_gpu_allocate_vmo(void* ctx, uint64_t size, zx_hand
 }
 
 GpuDevice::GpuDevice(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend)
-    : Device(bus_device, fbl::move(bti), fbl::move(backend)) {
+    : Device(bus_device, std::move(bti), std::move(backend)) {
     sem_init(&request_sem_, 0, 1);
     sem_init(&response_sem_, 0, 0);
     cnd_init(&flush_cond_);

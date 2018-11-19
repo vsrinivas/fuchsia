@@ -6,6 +6,8 @@
 #include <fbl/auto_call.h>
 #include <pretty/hexdump.h>
 
+#include <utility>
+
 #include "debug-logging.h"
 #include "usb-audio-descriptors.h"
 
@@ -45,7 +47,7 @@ fbl::RefPtr<DescriptorListMemory> DescriptorListMemory::Create(usb_protocol_t* p
 }
 
 DescriptorListMemory::Iterator::Iterator(fbl::RefPtr<DescriptorListMemory> mem)
-    : mem_(fbl::move(mem)) {
+    : mem_(std::move(mem)) {
     ZX_DEBUG_ASSERT(mem_ != nullptr);
     // Make sure our offset is valid, or go ahead and invalidate it right from
     // the start.

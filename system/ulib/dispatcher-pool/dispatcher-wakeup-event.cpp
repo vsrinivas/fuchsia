@@ -9,6 +9,8 @@
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <dispatcher-pool/dispatcher-wakeup-event.h>
 
+#include <utility>
+
 namespace dispatcher {
 
 // static
@@ -33,7 +35,7 @@ zx_status_t WakeupEvent::Activate(fbl::RefPtr<ExecutionDomain> domain,
     if (res != ZX_OK)
         return res;
 
-    res = ActivateLocked(fbl::move(event), fbl::move(domain));
+    res = ActivateLocked(std::move(event), std::move(domain));
     if (res != ZX_OK)
         return res;
 
@@ -43,7 +45,7 @@ zx_status_t WakeupEvent::Activate(fbl::RefPtr<ExecutionDomain> domain,
         return res;
     }
 
-    process_handler_ = fbl::move(process_handler);
+    process_handler_ = std::move(process_handler);
 
     return ZX_OK;
 }
@@ -68,7 +70,7 @@ void WakeupEvent::Deactivate() {
         if (dispatch_state() != DispatchState::Dispatching) {
             ZX_DEBUG_ASSERT((dispatch_state() == DispatchState::Idle) ||
                             (dispatch_state() == DispatchState::WaitingOnPort));
-            old_process_handler = fbl::move(process_handler_);
+            old_process_handler = std::move(process_handler_);
         }
     }
 }
@@ -148,7 +150,7 @@ void WakeupEvent::Dispatch(ExecutionDomain* domain) {
         // If so, move our process handler state outside of our lock so that it
         // can safely destruct.
         if (!is_active()) {
-            old_process_handler = fbl::move(process_handler_);
+            old_process_handler = std::move(process_handler_);
         }
     }
 }

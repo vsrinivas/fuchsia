@@ -6,6 +6,8 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <zircon/assert.h>
 
+#include <utility>
+
 namespace fzl {
 
 zx_status_t VmoMapper::CreateAndMap(uint64_t size,
@@ -36,7 +38,7 @@ zx_status_t VmoMapper::CreateAndMap(uint64_t size,
         }
     }
 
-    ret = InternalMap(vmo, 0, size, map_flags, fbl::move(vmar_manager));
+    ret = InternalMap(vmo, 0, size, map_flags, std::move(vmar_manager));
     if (ret != ZX_OK) {
         return ret;
     }
@@ -50,7 +52,7 @@ zx_status_t VmoMapper::CreateAndMap(uint64_t size,
             }
         }
 
-        *vmo_out = fbl::move(vmo);
+        *vmo_out = std::move(vmo);
     }
 
     return ZX_OK;
@@ -139,7 +141,7 @@ zx_status_t VmoMapper::InternalMap(const zx::vmo& vmo,
     }
 
     size_ = size;
-    vmar_manager_ = fbl::move(vmar_manager);
+    vmar_manager_ = std::move(vmar_manager);
 
     return ZX_OK;
 }

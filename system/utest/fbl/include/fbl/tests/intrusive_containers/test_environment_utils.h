@@ -6,6 +6,8 @@
 
 #include <fbl/type_support.h>
 
+#include <utility>
+
 namespace fbl {
 namespace tests {
 namespace intrusive_containers {
@@ -26,7 +28,7 @@ struct ContainerUtils<ContainerType,
     using PtrType   = typename PtrTraits::PtrType;
 
     static void MoveInto(ContainerType& container, PtrType&& ptr) {
-        container.push_front(fbl::move(ptr));
+        container.push_front(std::move(ptr));
     }
 };
 
@@ -37,7 +39,7 @@ struct ContainerUtils<ContainerType,
     using PtrType   = typename PtrTraits::PtrType;
 
     static void MoveInto(ContainerType& container, PtrType&& ptr) {
-        container.insert(fbl::move(ptr));
+        container.insert(std::move(ptr));
     }
 };
 

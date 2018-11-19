@@ -8,6 +8,8 @@
 #include <fbl/limits.h>
 #include <soc/aml-s912/s912-audio.h>
 
+#include <utility>
+
 #include "hdmitx.h"
 #include "vim-display.h"
 #include "vim-spdif-audio-stream.h"
@@ -48,9 +50,9 @@ Vim2SpdifAudioStream::Vim2SpdifAudioStream(const vim2_display* display,
     : SimpleAudioStream(display->parent, false),
       display_(display),
       display_id_(display_id),
-      regs_(fbl::move(regs)),
-      ring_buffer_vmo_(fbl::move(ring_buffer_vmo)),
-      pinned_ring_buffer_(fbl::move(pinned_ring_buffer)) {
+      regs_(std::move(regs)),
+      ring_buffer_vmo_(std::move(ring_buffer_vmo)),
+      pinned_ring_buffer_(std::move(pinned_ring_buffer)) {
 }
 
 void Vim2SpdifAudioStream::ShutdownHook() {

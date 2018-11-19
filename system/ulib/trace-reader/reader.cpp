@@ -9,12 +9,14 @@
 #include <fbl/string_printf.h>
 #include <trace-engine/fields.h>
 
+#include <utility>
+
 namespace trace {
 
 TraceReader::TraceReader(RecordConsumer record_consumer,
                          ErrorHandler error_handler)
-    : record_consumer_(fbl::move(record_consumer)),
-      error_handler_(fbl::move(error_handler)) {
+    : record_consumer_(std::move(record_consumer)),
+      error_handler_(std::move(error_handler)) {
     // Provider ids begin at 1. We don't have a provider yet but we want to
     // set the current provider. So set it to non-existent provider 0.
     RegisterProvider(0u, "");
@@ -184,7 +186,7 @@ bool TraceReader::ReadStringRecord(Chunk& record, RecordHeader header) {
     fbl::String string(string_view);
 
     RegisterString(index, string);
-    record_consumer_(Record(Record::String{index, fbl::move(string)}));
+    record_consumer_(Record(Record::String{index, std::move(string)}));
     return true;
 }
 
@@ -234,8 +236,8 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
         if (!record.ReadUint64(&scope))
             return false;
         record_consumer_(Record(Record::Event{
-            timestamp, process_thread, fbl::move(category), fbl::move(name),
-            fbl::move(arguments),
+            timestamp, process_thread, std::move(category), std::move(name),
+            std::move(arguments),
             EventData(EventData::Instant{static_cast<EventScope>(scope)})}));
         break;
     }
@@ -244,20 +246,20 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
         if (!record.ReadUint64(&id))
             return false;
         record_consumer_(Record(Record::Event{
-            timestamp, process_thread, fbl::move(category), fbl::move(name),
-            fbl::move(arguments), EventData(EventData::Counter{id})}));
+            timestamp, process_thread, std::move(category), std::move(name),
+            std::move(arguments), EventData(EventData::Counter{id})}));
         break;
     }
     case EventType::kDurationBegin: {
         record_consumer_(Record(Record::Event{
-            timestamp, process_thread, fbl::move(category), fbl::move(name),
-            fbl::move(arguments), EventData(EventData::DurationBegin{})}));
+            timestamp, process_thread, std::move(category), std::move(name),
+            std::move(arguments), EventData(EventData::DurationBegin{})}));
         break;
     }
     case EventType::kDurationEnd: {
         record_consumer_(Record(Record::Event{
-            timestamp, process_thread, fbl::move(category), fbl::move(name),
-            fbl::move(arguments), EventData(EventData::DurationEnd{})}));
+            timestamp, process_thread, std::move(category), std::move(name),
+            std::move(arguments), EventData(EventData::DurationEnd{})}));
         break;
     }
     case EventType::kAsyncBegin: {
@@ -265,8 +267,8 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
         if (!record.ReadUint64(&id))
             return false;
         record_consumer_(Record(Record::Event{
-            timestamp, process_thread, fbl::move(category), fbl::move(name),
-            fbl::move(arguments), EventData(EventData::AsyncBegin{id})}));
+            timestamp, process_thread, std::move(category), std::move(name),
+            std::move(arguments), EventData(EventData::AsyncBegin{id})}));
         break;
     }
     case EventType::kAsyncInstant: {
@@ -274,8 +276,8 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
         if (!record.ReadUint64(&id))
             return false;
         record_consumer_(Record(Record::Event{
-            timestamp, process_thread, fbl::move(category), fbl::move(name),
-            fbl::move(arguments), EventData(EventData::AsyncInstant{id})}));
+            timestamp, process_thread, std::move(category), std::move(name),
+            std::move(arguments), EventData(EventData::AsyncInstant{id})}));
         break;
     }
     case EventType::kAsyncEnd: {
@@ -283,8 +285,8 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
         if (!record.ReadUint64(&id))
             return false;
         record_consumer_(Record(Record::Event{
-            timestamp, process_thread, fbl::move(category), fbl::move(name),
-            fbl::move(arguments), EventData(EventData::AsyncEnd{id})}));
+            timestamp, process_thread, std::move(category), std::move(name),
+            std::move(arguments), EventData(EventData::AsyncEnd{id})}));
         break;
     }
     case EventType::kFlowBegin: {
@@ -292,8 +294,8 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
         if (!record.ReadUint64(&id))
             return false;
         record_consumer_(Record(Record::Event{
-            timestamp, process_thread, fbl::move(category), fbl::move(name),
-            fbl::move(arguments), EventData(EventData::FlowBegin{id})}));
+            timestamp, process_thread, std::move(category), std::move(name),
+            std::move(arguments), EventData(EventData::FlowBegin{id})}));
         break;
     }
     case EventType::kFlowStep: {
@@ -301,8 +303,8 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
         if (!record.ReadUint64(&id))
             return false;
         record_consumer_(Record(Record::Event{
-            timestamp, process_thread, fbl::move(category), fbl::move(name),
-            fbl::move(arguments), EventData(EventData::FlowStep{id})}));
+            timestamp, process_thread, std::move(category), std::move(name),
+            std::move(arguments), EventData(EventData::FlowStep{id})}));
         break;
     }
     case EventType::kFlowEnd: {
@@ -310,8 +312,8 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
         if (!record.ReadUint64(&id))
             return false;
         record_consumer_(Record(Record::Event{
-            timestamp, process_thread, fbl::move(category), fbl::move(name),
-            fbl::move(arguments), EventData(EventData::FlowEnd{id})}));
+            timestamp, process_thread, std::move(category), std::move(name),
+            std::move(arguments), EventData(EventData::FlowEnd{id})}));
         break;
     }
     default: {
@@ -361,7 +363,7 @@ bool TraceReader::ReadKernelObjectRecord(Chunk& record, RecordHeader header) {
         return false;
 
     record_consumer_(
-        Record(Record::KernelObject{koid, object_type, name, fbl::move(arguments)}));
+        Record(Record::KernelObject{koid, object_type, name, std::move(arguments)}));
     return true;
 }
 
@@ -444,19 +446,19 @@ bool TraceReader::ReadArguments(Chunk& record,
         auto type = ArgumentFields::Type::Get<ArgumentType>(header);
         switch (type) {
         case ArgumentType::kNull: {
-            out_arguments->push_back(Argument{fbl::move(name),
+            out_arguments->push_back(Argument{std::move(name),
                                               ArgumentValue::MakeNull()});
             break;
         }
         case ArgumentType::kInt32: {
             auto value = Int32ArgumentFields::Value::Get<int32_t>(header);
-            out_arguments->push_back(Argument{fbl::move(name),
+            out_arguments->push_back(Argument{std::move(name),
                                               ArgumentValue::MakeInt32(value)});
             break;
         }
         case ArgumentType::kUint32: {
             auto value = Uint32ArgumentFields::Value::Get<uint32_t>(header);
-            out_arguments->push_back(Argument{fbl::move(name),
+            out_arguments->push_back(Argument{std::move(name),
                                               ArgumentValue::MakeUint32(value)});
             break;
         }
@@ -466,7 +468,7 @@ bool TraceReader::ReadArguments(Chunk& record,
                 ReportError("Failed to read int64 argument value");
                 return false;
             }
-            out_arguments->push_back(Argument{fbl::move(name),
+            out_arguments->push_back(Argument{std::move(name),
                                               ArgumentValue::MakeInt64(value)});
             break;
         }
@@ -476,7 +478,7 @@ bool TraceReader::ReadArguments(Chunk& record,
                 ReportError("Failed to read uint64 argument value");
                 return false;
             }
-            out_arguments->push_back(Argument{fbl::move(name),
+            out_arguments->push_back(Argument{std::move(name),
                                               ArgumentValue::MakeUint64(value)});
             break;
         }
@@ -486,7 +488,7 @@ bool TraceReader::ReadArguments(Chunk& record,
                 ReportError("Failed to read double argument value");
                 return false;
             }
-            out_arguments->push_back(Argument{fbl::move(name),
+            out_arguments->push_back(Argument{std::move(name),
                                               ArgumentValue::MakeDouble(value)});
             break;
         }
@@ -499,8 +501,8 @@ bool TraceReader::ReadArguments(Chunk& record,
                 return false;
             }
             out_arguments->push_back(
-                Argument{fbl::move(name),
-                         ArgumentValue::MakeString(fbl::move(value))});
+                Argument{std::move(name),
+                         ArgumentValue::MakeString(std::move(value))});
             break;
         }
         case ArgumentType::kPointer: {
@@ -509,7 +511,7 @@ bool TraceReader::ReadArguments(Chunk& record,
                 ReportError("Failed to read pointer argument value");
                 return false;
             }
-            out_arguments->push_back(Argument{fbl::move(name),
+            out_arguments->push_back(Argument{std::move(name),
                                               ArgumentValue::MakePointer(value)});
             break;
         }
@@ -519,7 +521,7 @@ bool TraceReader::ReadArguments(Chunk& record,
                 ReportError("Failed to read koid argument value");
                 return false;
             }
-            out_arguments->push_back(Argument{fbl::move(name),
+            out_arguments->push_back(Argument{std::move(name),
                                               ArgumentValue::MakeKoid(value)});
             break;
         }
@@ -558,7 +560,7 @@ void TraceReader::RegisterProvider(ProviderId id, fbl::String name) {
     provider->name = name;
     current_provider_ = provider.get();
 
-    providers_.insert_or_replace(fbl::move(provider));
+    providers_.insert_or_replace(std::move(provider));
 }
 
 void TraceReader::RegisterString(trace_string_index_t index, fbl::String string) {
@@ -566,7 +568,7 @@ void TraceReader::RegisterString(trace_string_index_t index, fbl::String string)
                     index <= TRACE_ENCODED_STRING_REF_MAX_INDEX);
 
     auto entry = fbl::make_unique<StringTableEntry>(index, string);
-    current_provider_->string_table.insert_or_replace(fbl::move(entry));
+    current_provider_->string_table.insert_or_replace(std::move(entry));
 }
 
 void TraceReader::RegisterThread(trace_thread_index_t index,
@@ -575,7 +577,7 @@ void TraceReader::RegisterThread(trace_thread_index_t index,
                     index <= TRACE_ENCODED_THREAD_REF_MAX_INDEX);
 
     auto entry = fbl::make_unique<ThreadTableEntry>(index, process_thread);
-    current_provider_->thread_table.insert_or_replace(fbl::move(entry));
+    current_provider_->thread_table.insert_or_replace(std::move(entry));
 }
 
 bool TraceReader::DecodeStringRef(Chunk& chunk,
@@ -633,7 +635,7 @@ bool TraceReader::DecodeThreadRef(Chunk& chunk,
 
 void TraceReader::ReportError(fbl::String error) const {
     if (error_handler_)
-        error_handler_(fbl::move(error));
+        error_handler_(std::move(error));
 }
 
 Chunk::Chunk()

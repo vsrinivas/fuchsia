@@ -18,6 +18,8 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <zircon/device/block.h>
 
+#include <utility>
+
 #include "dma_descriptors.h"
 
 namespace {
@@ -151,8 +153,8 @@ zx_status_t MtkSdmmc::Create(zx_device_t* parent) {
     }
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<MtkSdmmc> device(new (&ac) MtkSdmmc(parent, fbl::move(mmio_obj), fbl::move(bti),
-                                                        info, fbl::move(irq), reset_gpio));
+    fbl::unique_ptr<MtkSdmmc> device(new (&ac) MtkSdmmc(parent, std::move(mmio_obj), std::move(bti),
+                                                        info, std::move(irq), reset_gpio));
 
     if (!ac.check()) {
         zxlogf(ERROR, "%s: MtkSdmmc alloc failed\n", __FILE__);
@@ -358,10 +360,10 @@ template <typename DelayCallback, typename RequestCallback>
 void MtkSdmmc::TestDelaySettings(DelayCallback&& set_delay, RequestCallback&& do_request,
                                  TuneWindow* window) {
     for (uint32_t delay = 0; delay <= PadTune0::kDelayMax; delay++) {
-        fbl::forward<DelayCallback>(set_delay)(delay);
+        std::forward<DelayCallback>(set_delay)(delay);
 
         for (int i = 0; i < kTuningDelayIterations; i++) {
-            if (fbl::forward<RequestCallback>(do_request)() != ZX_OK) {
+            if (std::forward<RequestCallback>(do_request)() != ZX_OK) {
                 window->Fail();
                 break;
             } else if (i == kTuningDelayIterations - 1) {

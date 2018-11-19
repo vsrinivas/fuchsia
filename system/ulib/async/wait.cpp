@@ -4,6 +4,8 @@
 
 #include <lib/async/cpp/wait.h>
 
+#include <utility>
+
 namespace async {
 
 WaitBase::WaitBase(zx_handle_t object, zx_signals_t trigger, async_wait_handler_t* handler)
@@ -47,7 +49,7 @@ zx_status_t WaitBase::Cancel() {
 }
 
 Wait::Wait(zx_handle_t object, zx_signals_t trigger, Handler handler)
-    : WaitBase(object, trigger, &Wait::CallHandler), handler_(fbl::move(handler)) {}
+    : WaitBase(object, trigger, &Wait::CallHandler), handler_(std::move(handler)) {}
 
 Wait::~Wait() = default;
 

@@ -9,6 +9,8 @@
 #include <unittest/unittest.h>
 #include <zircon/types.h>
 
+#include <utility>
+
 namespace nand {
 
 bool CheckMultiple(LogicalToPhysicalMap ltop_map, fbl::Vector<fbl::Vector<uint32_t>> expected) {
@@ -31,14 +33,14 @@ bool CheckMultiple(LogicalToPhysicalMap ltop_map, fbl::Vector<fbl::Vector<uint32
 
 bool Check(LogicalToPhysicalMap ltop_map, fbl::Vector<uint32_t> expected) {
     fbl::Vector<fbl::Vector<uint32_t>> expected_;
-    expected_.push_back(fbl::move(expected));
-    return CheckMultiple(fbl::move(ltop_map), fbl::move(expected_));
+    expected_.push_back(std::move(expected));
+    return CheckMultiple(std::move(ltop_map), std::move(expected_));
 }
 
 bool SimpleTest() {
     BEGIN_TEST;
     LogicalToPhysicalMap ltop_map(1, 5, fbl::Array<uint32_t>());
-    EXPECT_TRUE(Check(fbl::move(ltop_map), {0, 1, 2, 3, 4}));
+    EXPECT_TRUE(Check(std::move(ltop_map), {0, 1, 2, 3, 4}));
     END_TEST;
 }
 
@@ -46,8 +48,8 @@ bool SingleBadTest() {
     BEGIN_TEST;
     fbl::Array<uint32_t> bad_blocks(new uint32_t[1], 1);
     bad_blocks[0] = 2;
-    LogicalToPhysicalMap ltop_map(1, 5, fbl::move(bad_blocks));
-    EXPECT_TRUE(Check(fbl::move(ltop_map), {0, 1, 3, 4}));
+    LogicalToPhysicalMap ltop_map(1, 5, std::move(bad_blocks));
+    EXPECT_TRUE(Check(std::move(ltop_map), {0, 1, 3, 4}));
     END_TEST;
 }
 
@@ -55,8 +57,8 @@ bool FirstBadTest() {
     BEGIN_TEST;
     fbl::Array<uint32_t> bad_blocks(new uint32_t[1], 1);
     bad_blocks[0] = 0;
-    LogicalToPhysicalMap ltop_map(1, 5, fbl::move(bad_blocks));
-    EXPECT_TRUE(Check(fbl::move(ltop_map), {1, 2, 3, 4}));
+    LogicalToPhysicalMap ltop_map(1, 5, std::move(bad_blocks));
+    EXPECT_TRUE(Check(std::move(ltop_map), {1, 2, 3, 4}));
     END_TEST;
 }
 
@@ -64,8 +66,8 @@ bool LastBadTest() {
     BEGIN_TEST;
     fbl::Array<uint32_t> bad_blocks(new uint32_t[1], 1);
     bad_blocks[0] = 4;
-    LogicalToPhysicalMap ltop_map(1, 5, fbl::move(bad_blocks));
-    EXPECT_TRUE(Check(fbl::move(ltop_map), {0, 1, 2, 3}));
+    LogicalToPhysicalMap ltop_map(1, 5, std::move(bad_blocks));
+    EXPECT_TRUE(Check(std::move(ltop_map), {0, 1, 2, 3}));
     END_TEST;
 }
 
@@ -75,8 +77,8 @@ bool MultipleBadTest() {
     bad_blocks[0] = 0;
     bad_blocks[1] = 2;
     bad_blocks[2] = 4;
-    LogicalToPhysicalMap ltop_map(1, 5, fbl::move(bad_blocks));
-    EXPECT_TRUE(Check(fbl::move(ltop_map), {1, 3}));
+    LogicalToPhysicalMap ltop_map(1, 5, std::move(bad_blocks));
+    EXPECT_TRUE(Check(std::move(ltop_map), {1, 3}));
     END_TEST;
 }
 
@@ -86,7 +88,7 @@ bool AllBadTest() {
     bad_blocks[0] = 0;
     bad_blocks[1] = 1;
     bad_blocks[2] = 2;
-    LogicalToPhysicalMap ltop_map(1, 3, fbl::move(bad_blocks));
+    LogicalToPhysicalMap ltop_map(1, 3, std::move(bad_blocks));
 
     EXPECT_EQ(ltop_map.LogicalBlockCount(0), 0);
     uint32_t physical;
@@ -103,7 +105,7 @@ bool MultipleCopiesTest() {
     expected.push_back({2, 3});
     expected.push_back({4, 5});
     expected.push_back({6, 7});
-    EXPECT_TRUE(CheckMultiple(fbl::move(ltop_map), fbl::move(expected)));
+    EXPECT_TRUE(CheckMultiple(std::move(ltop_map), std::move(expected)));
     END_TEST;
 }
 
@@ -115,11 +117,11 @@ bool MultipleCopiesSomeBadTest() {
     bad_blocks[2] = 3;
     bad_blocks[3] = 5;
     bad_blocks[4] = 6;
-    LogicalToPhysicalMap ltop_map(2, 8, fbl::move(bad_blocks));
+    LogicalToPhysicalMap ltop_map(2, 8, std::move(bad_blocks));
     fbl::Vector<fbl::Vector<uint32_t>> expected;
     expected.push_back({2});
     expected.push_back({4, 7});
-    EXPECT_TRUE(CheckMultiple(fbl::move(ltop_map), fbl::move(expected)));
+    EXPECT_TRUE(CheckMultiple(std::move(ltop_map), std::move(expected)));
     END_TEST;
 }
 

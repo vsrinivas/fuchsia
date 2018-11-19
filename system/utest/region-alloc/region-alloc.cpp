@@ -9,6 +9,8 @@
 
 #include <fbl/algorithm.h>
 
+#include <utility>
+
 #include "common.h"
 
 namespace {
@@ -41,7 +43,7 @@ static bool ralloc_region_pools_test() {
     // Create another allocator and transfer ownership of our region pool
     // reference to it.  Then let the allocator go out of scope.
     {
-        RegionAllocator alloc2(fbl::move(pool));
+        RegionAllocator alloc2(std::move(pool));
         EXPECT_NULL(pool);
     }
     EXPECT_NULL(pool);
@@ -104,7 +106,7 @@ static bool ralloc_region_pools_test() {
 
     // Now assign pool2 to the allocator.  Now that it is no longer using any
     // resources, this should succeed.
-    EXPECT_EQ(ZX_OK, alloc.SetRegionPool(fbl::move(pool2)));
+    EXPECT_EQ(ZX_OK, alloc.SetRegionPool(std::move(pool2)));
     EXPECT_NULL(pool2);
 
     END_TEST;

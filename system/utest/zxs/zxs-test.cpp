@@ -14,6 +14,8 @@
 
 #include <unittest/unittest.h>
 
+#include <utility>
+
 #define IOCTL_ZXS_TEST \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_TEST, 1)
 
@@ -135,7 +137,7 @@ static zx_status_t handle_message(async_dispatcher_t* dispatcher,
             return ZX_ERR_STOP;
         }
 
-        status = start_socket_server(dispatcher, fbl::move(local));
+        status = start_socket_server(dispatcher, std::move(local));
         if (status != ZX_OK) {
             printf("ZXSIO_LISTEN failed to start socket server: %d (%s)\n",
                    status, zx_status_get_string(status));
@@ -231,7 +233,7 @@ static bool SetUp(FakeNetstack* fake) {
                                 &local, &remote);
     ASSERT_EQ(ZX_OK, status);
 
-    status = start_socket_server(dispatcher, fbl::move(remote));
+    status = start_socket_server(dispatcher, std::move(remote));
     ASSERT_EQ(ZX_OK, status);
 
     fake->socket = {

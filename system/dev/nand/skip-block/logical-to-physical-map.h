@@ -9,6 +9,8 @@
 #include <fbl/type_support.h>
 #include <zircon/types.h>
 
+#include <utility>
+
 namespace nand {
 
 // Logical block to physical block mapping. Provides bad block skip
@@ -26,14 +28,14 @@ public:
     // Move constructor.
     LogicalToPhysicalMap(LogicalToPhysicalMap&& other)
         : copies_(other.copies_), block_count_(other.block_count_),
-          bad_blocks_(fbl::move(other.bad_blocks_)) {}
+          bad_blocks_(std::move(other.bad_blocks_)) {}
 
     // Move assignment operator.
     LogicalToPhysicalMap& operator=(LogicalToPhysicalMap&& other) {
         if (this != &other) {
             copies_ = other.copies_;
             block_count_ = other.block_count_;
-            bad_blocks_ = fbl::move(other.bad_blocks_);
+            bad_blocks_ = std::move(other.bad_blocks_);
         }
         return *this;
     }

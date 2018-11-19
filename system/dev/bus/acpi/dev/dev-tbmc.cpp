@@ -19,6 +19,8 @@
 
 #include <acpica/acpi.h>
 
+#include <utility>
+
 #include "errors.h"
 
 class AcpiTbmcDevice;
@@ -266,7 +268,7 @@ zx_status_t AcpiTbmcDevice::Create(zx_device_t* parent, ACPI_HANDLE acpi_handle,
         return acpi_to_zx_status(acpi_status);
     }
 
-    *out = fbl::move(dev);
+    *out = std::move(dev);
     return ZX_OK;
 }
 

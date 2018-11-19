@@ -21,6 +21,8 @@
 #include <zircon/status.h>
 #include <zxcrypt/volume.h>
 
+#include <utility>
+
 #include "device-partitioner.h"
 #include "pave-logging.h"
 #include "pave-utils.h"
@@ -110,7 +112,7 @@ zx_status_t OpenPartition(const char* path,
 
     CallbackInfo info = {
         .out_partition = out_partition,
-        .should_filter_file = fbl::move(should_filter_file),
+        .should_filter_file = std::move(should_filter_file),
     };
 
     auto cb = [](int dirfd, int event, const char* filename, void* cookie) {
@@ -129,7 +131,7 @@ zx_status_t OpenPartition(const char* path,
             return ZX_OK;
         }
         if (info->out_partition) {
-            *(info->out_partition) = fbl::move(devfd);
+            *(info->out_partition) = std::move(devfd);
         }
         return ZX_ERR_STOP;
     };
@@ -257,12 +259,12 @@ fbl::unique_ptr<DevicePartitioner> DevicePartitioner::Create() {
 #if defined(__x86_64__)
     if ((CrosDevicePartitioner::Initialize(&device_partitioner) == ZX_OK) ||
         (EfiDevicePartitioner::Initialize(&device_partitioner) == ZX_OK)) {
-        return fbl::move(device_partitioner);
+        return device_partitioner;
     }
 #elif defined(__aarch64__)
     if ((SkipBlockDevicePartitioner::Initialize(&device_partitioner) == ZX_OK) ||
         (FixedDevicePartitioner::Initialize(&device_partitioner) == ZX_OK)) {
-        return fbl::move(device_partitioner);
+        return device_partitioner;
     }
 #endif
     return nullptr;
@@ -361,7 +363,7 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_ptr<GptDevicePartiti
     }
 
     releaser.cancel();
-    *gpt_out = fbl::move(WrapUnique(new GptDevicePartitioner(fbl::move(fd), gpt, block_info)));
+    *gpt_out = WrapUnique(new GptDevicePartitioner(std::move(fd), gpt, block_info));
     return ZX_OK;
 }
 
@@ -598,7 +600,7 @@ zx_status_t EfiDevicePartitioner::Initialize(fbl::unique_ptr<DevicePartitioner>*
     }
 
     LOG("Successfully initialized EFI Device Partitioner\n");
-    *partitioner = fbl::move(WrapUnique(new EfiDevicePartitioner(fbl::move(gpt))));
+    *partitioner = WrapUnique(new EfiDevicePartitioner(std::move(gpt)));
     return ZX_OK;
 }
 
@@ -732,7 +734,7 @@ zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_ptr<DevicePartitioner>
     }
 
     LOG("Successfully initialized CrOS Device Partitioner\n");
-    *partitioner = fbl::move(WrapUnique(new CrosDevicePartitioner(fbl::move(gpt_partitioner))));
+    *partitioner = WrapUnique(new CrosDevicePartitioner(std::move(gpt_partitioner)));
     return ZX_OK;
 }
 
@@ -874,7 +876,7 @@ zx_status_t FixedDevicePartitioner::Initialize(fbl::unique_ptr<DevicePartitioner
         return ZX_ERR_NOT_SUPPORTED;
     }
     LOG("Successfully initialized FixedDevicePartitioner Device Partitioner\n");
-    *partitioner = fbl::move(WrapUnique(new FixedDevicePartitioner));
+    *partitioner = WrapUnique(new FixedDevicePartitioner);
     return ZX_OK;
 }
 
@@ -945,7 +947,7 @@ zx_status_t SkipBlockDevicePartitioner::Initialize(
         return ZX_ERR_NOT_SUPPORTED;
     }
     LOG("Successfully initialized SkipBlockDevicePartitioner Device Partitioner\n");
-    *partitioner = fbl::move(WrapUnique(new SkipBlockDevicePartitioner));
+    *partitioner = WrapUnique(new SkipBlockDevicePartitioner);
     return ZX_OK;
 }
 

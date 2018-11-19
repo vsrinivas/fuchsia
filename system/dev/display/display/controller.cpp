@@ -9,6 +9,8 @@
 #include <audio-proto-utils/format-utils.h>
 #include <zircon/device/display-controller.h>
 
+#include <utility>
+
 #include "controller.h"
 #include "client.h"
 #include "fuchsia/display/c/fidl.h"
@@ -357,7 +359,7 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
         }
 
         if (displays_.insert_or_find(info)) {
-            added_success[added_success_count++] = fbl::move(info);
+            added_success[added_success_count++] = std::move(info);
         } else {
             zxlogf(INFO, "Ignoring duplicate display\n");
         }

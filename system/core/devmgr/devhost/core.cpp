@@ -14,6 +14,7 @@
 #include <sys/stat.h>
 #include <threads.h>
 #include <unistd.h>
+#include <utility>
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -229,7 +230,7 @@ void devhost_finalize() {
     }
 
     // Otherwise we snapshot the list
-    auto list = fbl::move(defer_device_list);
+    auto list = std::move(defer_device_list);
 
     // We detach all the devices from their parents list-of-children
     // while under the DM lock to avoid an enumerator starting to mutate
@@ -326,7 +327,7 @@ zx_status_t devhost_device_create(zx_driver_t* drv, const fbl::RefPtr<zx_device_
     // TODO(teisenbe): Why do we default to dev.get() here?  Why not just
     // nullptr
     dev->ctx = ctx ? ctx : dev.get();
-    *out = fbl::move(dev);
+    *out = std::move(dev);
     return ZX_OK;
 }
 
@@ -594,7 +595,7 @@ zx_status_t devhost_device_open_at(const fbl::RefPtr<zx_device_t>& dev,
             panic();
         }
     }
-    *out = fbl::move(new_ref);
+    *out = std::move(new_ref);
     return r;
 }
 

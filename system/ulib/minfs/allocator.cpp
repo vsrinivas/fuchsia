@@ -10,6 +10,8 @@
 #include <minfs/allocator.h>
 #include <minfs/block-txn.h>
 
+#include <utility>
+
 namespace minfs {
 namespace {
 
@@ -67,7 +69,7 @@ AllocatorMetadata::AllocatorMetadata(blk_t data_start_block,
                                      AllocatorFvmMetadata fvm,
                                      uint32_t* pool_used, uint32_t* pool_total) :
     data_start_block_(data_start_block), metadata_start_block_(metadata_start_block),
-    using_fvm_(using_fvm), fvm_(fbl::move(fvm)),
+    using_fvm_(using_fvm), fvm_(std::move(fvm)),
     pool_used_(pool_used), pool_total_(pool_total) {}
 AllocatorMetadata::AllocatorMetadata(AllocatorMetadata&&) = default;
 AllocatorMetadata& AllocatorMetadata::operator=(AllocatorMetadata&&) = default;
@@ -75,16 +77,16 @@ AllocatorMetadata::~AllocatorMetadata() = default;
 
 Allocator::Allocator(Bcache* bc, SuperblockManager* sb, size_t unit_size, GrowHandler grow_cb,
                      AllocatorMetadata metadata) :
-    bc_(bc), sb_(sb), unit_size_(unit_size), grow_cb_(fbl::move(grow_cb)),
-    metadata_(fbl::move(metadata)), reserved_(0), hint_(0) {}
+    bc_(bc), sb_(sb), unit_size_(unit_size), grow_cb_(std::move(grow_cb)),
+    metadata_(std::move(metadata)), reserved_(0), hint_(0) {}
 Allocator::~Allocator() = default;
 
 zx_status_t Allocator::Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn* txn, size_t unit_size,
                               GrowHandler grow_cb, AllocatorMetadata metadata,
                               fbl::unique_ptr<Allocator>* out) {
     auto allocator = fbl::unique_ptr<Allocator>(new Allocator(bc, sb, unit_size,
-                                                              fbl::move(grow_cb),
-                                                              fbl::move(metadata)));
+                                                              std::move(grow_cb),
+                                                              std::move(metadata)));
     blk_t pool_blocks = BitmapBlocksForSize(allocator->metadata_.PoolTotal());
 
     zx_status_t status;
@@ -104,7 +106,7 @@ zx_status_t Allocator::Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn* tx
     auto data = allocator->map_.StorageUnsafe()->GetData();
 #endif
     txn->Enqueue(data, 0, allocator->metadata_.MetadataStartBlock(), pool_blocks);
-    *out = fbl::move(allocator);
+    *out = std::move(allocator);
     return ZX_OK;
 }
 

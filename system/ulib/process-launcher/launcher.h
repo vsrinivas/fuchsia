@@ -14,6 +14,8 @@
 #include <lib/zx/channel.h>
 #include <stdint.h>
 
+#include <utility>
+
 namespace launcher {
 
 class LauncherImpl : public fbl::SinglyLinkedListable<fbl::unique_ptr<LauncherImpl>> {
@@ -26,7 +28,7 @@ public:
     zx_status_t Begin(async_dispatcher_t* dispatcher);
 
     void set_error_handler(ErrorCallback error_handler) {
-        error_handler_ = fbl::move(error_handler);
+        error_handler_ = std::move(error_handler);
     }
 
     LauncherImpl* GetKey() const { return const_cast<LauncherImpl*>(this); }

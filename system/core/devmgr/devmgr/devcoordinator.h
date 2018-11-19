@@ -18,6 +18,8 @@
 #include <lib/zx/socket.h>
 #include <lib/zx/vmo.h>
 
+#include <utility>
+
 #include "metadata.h"
 
 namespace devmgr {
@@ -251,8 +253,8 @@ public:
     SuspendContext(Flags flags, uint32_t sflags, zx::socket socket,
                    zx::vmo kernel = zx::vmo(),
                    zx::vmo bootdata = zx::vmo()) :
-        flags_(flags), sflags_(sflags), socket_(fbl::move(socket)),
-        kernel_(fbl::move(kernel)), bootdata_(fbl::move(bootdata)) {
+        flags_(flags), sflags_(sflags), socket_(std::move(socket)),
+        kernel_(std::move(kernel)), bootdata_(std::move(bootdata)) {
     }
 
     ~SuspendContext() {

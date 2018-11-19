@@ -8,6 +8,8 @@
 #include <fbl/type_support.h>
 #include <unittest/unittest.h>
 
+#include <utility>
+
 namespace {
 
 bool invalid_fd_test() {
@@ -128,8 +130,8 @@ bool move_test() {
         EXPECT_TRUE(verify_pipes_open(in.get(), out.get()));
         EXPECT_TRUE(verify_pipes_closed(in2.get(), out2.get()));
 
-        in2 = fbl::move(in);
-        out2 = fbl::move(out);
+        in2 = std::move(in);
+        out2 = std::move(out);
 
         EXPECT_TRUE(verify_pipes_closed(in.get(), out.get()));
         EXPECT_TRUE(verify_pipes_open(in2.get(), out2.get()));
@@ -145,8 +147,8 @@ bool move_test() {
 
         EXPECT_TRUE(verify_pipes_open(in.get(), out.get()));
 
-        fbl::unique_fd in2 = fbl::move(in);
-        fbl::unique_fd out2 = fbl::move(out);
+        fbl::unique_fd in2 = std::move(in);
+        fbl::unique_fd out2 = std::move(out);
 
         EXPECT_TRUE(verify_pipes_closed(in.get(), out.get()));
         EXPECT_TRUE(verify_pipes_open(in2.get(), out2.get()));

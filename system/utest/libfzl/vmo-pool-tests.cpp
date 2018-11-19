@@ -7,6 +7,8 @@
 #include <unittest/unittest.h>
 #include <zircon/rights.h>
 
+#include <utility>
+
 #include "vmo-probe.h"
 
 // Things to test:
@@ -177,7 +179,7 @@ bool vmo_pool_init_vector_test() {
     fbl::AllocChecker ac;
     // Move the tester's vmos into a vector:
     for (size_t i = 0; i < kNumVmos; ++i) {
-        vmo_vector.push_back(fbl::move(tester.vmo_handles_[i]), &ac);
+        vmo_vector.push_back(std::move(tester.vmo_handles_[i]), &ac);
         ASSERT_TRUE(ac.check());
     }
     ASSERT_NE(tester.pool_.Init(vmo_vector), ZX_OK);

@@ -74,7 +74,7 @@ public:
     //       thingy->HandleChannel(ch);
     //     });
     //
-    //     my_channel_.Activate(..., fbl::move(phandler), ...);
+    //     my_channel_.Activate(..., std::move(phandler), ...);
     //
     //     my_state_++;  // This fails, we are not running in the domain.
     // }

@@ -23,6 +23,8 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <utility>
+
 #define INPUT_PATH "/input"
 #define DMCTL_PATH "/misc/dmctl"
 
@@ -130,7 +132,7 @@ static zx_status_t InputDeviceAdded(int dirfd, int event, const char* name, void
         }
         fd.reset(raw_fd);
     }
-    fzl::FdioCaller caller(fbl::move(fd));
+    fzl::FdioCaller caller(std::move(fd));
 
     // Retrieve and parse the report descriptor
     uint16_t desc_len = 0;
@@ -197,7 +199,7 @@ int main(int argc, char**argv) {
     }
     dirfd.reset();
 
-    fzl::FdioCaller caller(fbl::move(info.fd));
+    fzl::FdioCaller caller(std::move(info.fd));
     uint16_t report_size = 0;
     if (zircon_input_DeviceGetMaxInputReportSize(caller.borrow_channel(), &report_size) != ZX_OK) {
         printf("pwrbtn-monitor: Failed to to get max report size\n");

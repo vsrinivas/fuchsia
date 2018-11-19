@@ -29,6 +29,8 @@
 #include <minfs/fsck.h>
 #include <minfs/minfs.h>
 
+#include <utility>
+
 #include "minfs-private.h"
 
 // #define DEBUG_PRINTF
@@ -274,7 +276,7 @@ zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks
     }
 
     (*out).reset(
-        new Transaction(fbl::move(work), fbl::move(inode_promise), fbl::move(block_promise)));
+        new Transaction(std::move(work), std::move(inode_promise), std::move(block_promise)));
     return ZX_OK;
 }
 
@@ -282,8 +284,8 @@ zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks
 void Minfs::Sync(SyncCallback closure) {
     fbl::unique_ptr<Transaction> state;
     ZX_ASSERT(BeginTransaction(0, 0, &state) == ZX_OK);
-    state->GetWork()->SetClosure(fbl::move(closure));
-    CommitTransaction(fbl::move(state));
+    state->GetWork()->SetClosure(std::move(closure));
+    CommitTransaction(std::move(state));
 }
 #endif
 
@@ -291,14 +293,14 @@ void Minfs::Sync(SyncCallback closure) {
 Minfs::Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<SuperblockManager> sb,
              fbl::unique_ptr<Allocator> block_allocator, fbl::unique_ptr<InodeManager> inodes,
              fbl::unique_ptr<WritebackBuffer> writeback, uint64_t fs_id)
-    : bc_(fbl::move(bc)), sb_(fbl::move(sb)), block_allocator_(fbl::move(block_allocator)),
-      inodes_(fbl::move(inodes)), writeback_(fbl::move(writeback)), fs_id_(fs_id) {}
+    : bc_(std::move(bc)), sb_(std::move(sb)), block_allocator_(std::move(block_allocator)),
+      inodes_(std::move(inodes)), writeback_(std::move(writeback)), fs_id_(fs_id) {}
 #else
 Minfs::Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<SuperblockManager> sb,
              fbl::unique_ptr<Allocator> block_allocator, fbl::unique_ptr<InodeManager> inodes,
              BlockOffsets offsets)
-    : bc_(fbl::move(bc)), sb_(fbl::move(sb)), block_allocator_(fbl::move(block_allocator)),
-      inodes_(fbl::move(inodes)), offsets_(fbl::move(offsets)) {}
+    : bc_(std::move(bc)), sb_(std::move(sb)), block_allocator_(std::move(block_allocator)),
+      inodes_(std::move(inodes)), offsets_(std::move(offsets)) {}
 #endif
 
 Minfs::~Minfs() {
@@ -528,7 +530,7 @@ zx_status_t Minfs::PurgeUnlinked() {
     sb_->MutableInfo()->unlinked_tail = 0;
     sb_->Write(state->GetWork());
 
-    CommitTransaction(fbl::move(state));
+    CommitTransaction(std::move(state));
     return ZX_OK;
 }
 
@@ -602,7 +604,7 @@ zx_status_t Minfs::VnodeNew(Transaction* state, fbl::RefPtr<VnodeMinfs>* out, ui
     InoNew(state, vn->GetInode(), &ino);
     vn->SetIno(ino);
     VnodeInsert(vn.get());
-    *out = fbl::move(vn);
+    *out = std::move(vn);
     return ZX_OK;
 }
 
@@ -642,7 +644,7 @@ zx_status_t Minfs::VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino) {
 
     fbl::RefPtr<VnodeMinfs> vn = VnodeLookup(ino);
     if (vn != nullptr) {
-        *out = fbl::move(vn);
+        *out = std::move(vn);
         UpdateOpenMetrics(/* cache_hit= */ true, ticker.End());
         return ZX_OK;
     }
@@ -654,7 +656,7 @@ zx_status_t Minfs::VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino) {
 
     VnodeInsert(vn.get());
 
-    *out = fbl::move(vn);
+    *out = std::move(vn);
     UpdateOpenMetrics(/* cache_hit= */ false, ticker.End());
     return ZX_OK;
 }
@@ -725,12 +727,12 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
         &sb->MutableInfo()->dat_slices, &sb->MutableInfo()->abm_slices, info->slice_size);
     AllocatorMetadata block_allocator_meta =
         AllocatorMetadata(info->dat_block, abm_start_block, (info->flags & kMinfsFlagFVM) != 0,
-                          fbl::move(block_allocator_fvm), &sb->MutableInfo()->alloc_block_count,
+                          std::move(block_allocator_fvm), &sb->MutableInfo()->alloc_block_count,
                           &sb->MutableInfo()->block_count);
 
     fbl::unique_ptr<Allocator> block_allocator;
     if ((status = Allocator::Create(bc.get(), sb.get(), &txn, kMinfsBlockSize, nullptr,
-                                    fbl::move(block_allocator_meta), &block_allocator)) != ZX_OK) {
+                                    std::move(block_allocator_meta), &block_allocator)) != ZX_OK) {
         FS_TRACE_ERROR("Minfs::Create failed to initialize block allocator: %d\n", status);
         return status;
     }
@@ -740,11 +742,11 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
         &sb->MutableInfo()->ino_slices, &sb->MutableInfo()->ibm_slices, info->slice_size);
     AllocatorMetadata inode_allocator_meta =
         AllocatorMetadata(ino_start_block, ibm_start_block, (info->flags & kMinfsFlagFVM) != 0,
-                          fbl::move(inode_allocator_fvm), &sb->MutableInfo()->alloc_inode_count,
+                          std::move(inode_allocator_fvm), &sb->MutableInfo()->alloc_inode_count,
                           &sb->MutableInfo()->inode_count);
 
     fbl::unique_ptr<InodeManager> inodes;
-    if ((status = InodeManager::Create(bc.get(), sb.get(), &txn, fbl::move(inode_allocator_meta),
+    if ((status = InodeManager::Create(bc.get(), sb.get(), &txn, std::move(inode_allocator_meta),
                                        ino_start_block, info->inode_count, &inodes)) != ZX_OK) {
         FS_TRACE_ERROR("Minfs::Create failed to initialize inodes: %d\n", status);
         return status;
@@ -771,7 +773,7 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
     }
 
     fbl::unique_ptr<WritebackBuffer> writeback;
-    status = WritebackBuffer::Create(bc.get(), fbl::move(mapper), &writeback);
+    status = WritebackBuffer::Create(bc.get(), std::move(mapper), &writeback);
     if (status != ZX_OK) {
         return status;
     }
@@ -783,19 +785,19 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
         return status;
     }
     auto fs =
-        fbl::unique_ptr<Minfs>(new Minfs(fbl::move(bc), fbl::move(sb), fbl::move(block_allocator),
-                                         fbl::move(inodes), fbl::move(writeback), id));
+        fbl::unique_ptr<Minfs>(new Minfs(std::move(bc), std::move(sb), std::move(block_allocator),
+                                         std::move(inodes), std::move(writeback), id));
 #else
     auto fs =
-        fbl::unique_ptr<Minfs>(new Minfs(fbl::move(bc), fbl::move(sb), fbl::move(block_allocator),
-                                         fbl::move(inodes), fbl::move(offsets)));
+        fbl::unique_ptr<Minfs>(new Minfs(std::move(bc), std::move(sb), std::move(block_allocator),
+                                         std::move(inodes), std::move(offsets)));
 #endif
 
     if ((status = fs->PurgeUnlinked()) != ZX_OK) {
         return status;
     }
 
-    *out = fbl::move(fs);
+    *out = std::move(fs);
     return ZX_OK;
 }
 
@@ -856,7 +858,7 @@ zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, fbl::RefPtr<VnodeMinfs>* ro
     const Superblock* info = reinterpret_cast<Superblock*>(blk);
 
     fbl::unique_ptr<Minfs> fs;
-    if ((status = Minfs::Create(fbl::move(bc), info, &fs)) != ZX_OK) {
+    if ((status = Minfs::Create(std::move(bc), info, &fs)) != ZX_OK) {
         FS_TRACE_ERROR("minfs: mount failed\n");
         return status;
     }
@@ -869,7 +871,7 @@ zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, fbl::RefPtr<VnodeMinfs>* ro
 
     ZX_DEBUG_ASSERT(vn->IsDirectory());
     __UNUSED auto r = fs.release();
-    *root_out = fbl::move(vn);
+    *root_out = std::move(vn);
     return ZX_OK;
 }
 
@@ -880,7 +882,7 @@ zx_status_t MountAndServe(const MountOptions* options, async_dispatcher_t* dispa
     TRACE_DURATION("minfs", "MountAndServe");
 
     fbl::RefPtr<VnodeMinfs> vn;
-    zx_status_t status = Mount(fbl::move(bc), &vn);
+    zx_status_t status = Mount(std::move(bc), &vn);
     if (status != ZX_OK) {
         return status;
     }
@@ -888,21 +890,21 @@ zx_status_t MountAndServe(const MountOptions* options, async_dispatcher_t* dispa
     Minfs* vfs = vn->fs_;
     vfs->SetReadonly(options->readonly);
     vfs->SetMetrics(options->metrics);
-    vfs->SetUnmountCallback(fbl::move(on_unmount));
+    vfs->SetUnmountCallback(std::move(on_unmount));
     vfs->SetDispatcher(dispatcher);
-    return vfs->ServeDirectory(fbl::move(vn), fbl::move(mount_channel));
+    return vfs->ServeDirectory(std::move(vn), std::move(mount_channel));
 }
 
 void Minfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
-    ManagedVfs::Shutdown([this, cb = fbl::move(cb)](zx_status_t status) mutable {
-        Sync([this, cb = fbl::move(cb)](zx_status_t) mutable {
-            async::PostTask(dispatcher(), [this, cb = fbl::move(cb)]() mutable {
+    ManagedVfs::Shutdown([this, cb = std::move(cb)](zx_status_t status) mutable {
+        Sync([this, cb = std::move(cb)](zx_status_t) mutable {
+            async::PostTask(dispatcher(), [this, cb = std::move(cb)]() mutable {
                 // Ensure writeback buffer completes before auxiliary structures
                 // are deleted.
                 writeback_ = nullptr;
                 bc_->Sync();
 
-                auto on_unmount = fbl::move(on_unmount_);
+                auto on_unmount = std::move(on_unmount_);
 
                 // Explicitly delete this (rather than just letting the memory release when
                 // the process exits) to ensure that the block device's fifo has been
@@ -1154,7 +1156,7 @@ zx_status_t SparseFsck(fbl::unique_fd fd, off_t start, off_t end,
 
     zx_status_t status;
     fbl::unique_ptr<minfs::Bcache> bc;
-    if ((status = minfs::Bcache::Create(&bc, fbl::move(fd), static_cast<uint32_t>(size))) !=
+    if ((status = minfs::Bcache::Create(&bc, std::move(fd), static_cast<uint32_t>(size))) !=
         ZX_OK) {
         fprintf(stderr, "error: cannot create block cache\n");
         return status;
@@ -1165,7 +1167,7 @@ zx_status_t SparseFsck(fbl::unique_fd fd, off_t start, off_t end,
         return status;
     }
 
-    return Fsck(fbl::move(bc));
+    return Fsck(std::move(bc));
 }
 #endif
 

@@ -25,6 +25,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <utility>
+
 #include "fdio.h"
 
 namespace devmgr {
@@ -136,7 +138,7 @@ zx_status_t devmgr_launch(
                argv[0], name, errmsg, status);
     } else {
         if (out_proc != nullptr) {
-            *out_proc = fbl::move(proc);
+            *out_proc = std::move(proc);
         }
         printf("devmgr: launch %s (%s) OK\n", argv[0], name);
     }

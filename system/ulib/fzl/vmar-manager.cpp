@@ -5,6 +5,8 @@
 #include <fbl/alloc_checker.h>
 #include <lib/fzl/vmar-manager.h>
 
+#include <utility>
+
 namespace fzl {
 
 fbl::RefPtr<VmarManager> VmarManager::Create(size_t size,
@@ -30,7 +32,7 @@ fbl::RefPtr<VmarManager> VmarManager::Create(size_t size,
         return nullptr;
     }
 
-    ret->parent_ = fbl::move(parent);
+    ret->parent_ = std::move(parent);
     ret->start_ = reinterpret_cast<void*>(child_addr);
     ret->size_ = size;
 

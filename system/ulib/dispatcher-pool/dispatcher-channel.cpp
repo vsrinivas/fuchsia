@@ -11,6 +11,8 @@
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <dispatcher-pool/dispatcher-thread-pool.h>
 
+#include <utility>
+
 namespace dispatcher {
 
 // static
@@ -44,10 +46,10 @@ zx_status_t Channel::Activate(zx::channel* client_channel_out,
         return res;
 
     // Attempt to activate.
-    res = Activate(fbl::move(channel),
-                   fbl::move(domain),
-                   fbl::move(process_handler),
-                   fbl::move(channel_closed_handler));
+    res = Activate(std::move(channel),
+                   std::move(domain),
+                   std::move(process_handler),
+                   std::move(channel_closed_handler));
 
     // If something went wrong, make sure we close the channel endpoint we were
     // going to give back to the caller.
@@ -73,15 +75,15 @@ zx_status_t Channel::Activate(zx::channel channel,
         if ((process_handler_ != nullptr) || (channel_closed_handler_ != nullptr))
             return ZX_ERR_BAD_STATE;
 
-        ret = ActivateLocked(fbl::move(channel), fbl::move(domain));
+        ret = ActivateLocked(std::move(channel), std::move(domain));
         // If we succeeded, take control of the handlers provided by our caller.
         // Otherwise, wait until we are outside of our lock before we let the
         // handler state go out of scope and destruct.
         if (ret == ZX_OK) {
             ZX_DEBUG_ASSERT(process_handler_ == nullptr);
             ZX_DEBUG_ASSERT(channel_closed_handler_ == nullptr);
-            process_handler_ = fbl::move(process_handler);
-            channel_closed_handler_ = fbl::move(channel_closed_handler);
+            process_handler_ = std::move(process_handler);
+            channel_closed_handler_ = std::move(channel_closed_handler);
         }
     }
     return ret;
@@ -105,8 +107,8 @@ void Channel::Deactivate() {
         if (dispatch_state() != DispatchState::Dispatching) {
             ZX_DEBUG_ASSERT((dispatch_state() == DispatchState::Idle) ||
                             (dispatch_state() == DispatchState::WaitingOnPort));
-            old_process_handler = fbl::move(process_handler_);
-            old_channel_closed_handler = fbl::move(channel_closed_handler_);
+            old_process_handler = std::move(process_handler_);
+            old_channel_closed_handler = std::move(channel_closed_handler_);
         }
     }
 }
@@ -115,7 +117,7 @@ zx_status_t Channel::ActivateLocked(zx::channel channel, fbl::RefPtr<ExecutionDo
     ZX_DEBUG_ASSERT((domain != nullptr) && channel.is_valid());
 
     // Take ownership of the channel resource and execution domain reference.
-    zx_status_t res = EventSource::ActivateLocked(fbl::move(channel), fbl::move(domain));
+    zx_status_t res = EventSource::ActivateLocked(std::move(channel), std::move(domain));
     if (res != ZX_OK) {
         return res;
     }
@@ -199,8 +201,8 @@ void Channel::Dispatch(ExecutionDomain* domain) {
         // state to local storage so that the handlers can destruct from outside
         // of our main lock.
         if (!is_active()) {
-            old_process_handler = fbl::move(process_handler_);
-            old_channel_closed_handler = fbl::move(channel_closed_handler_);
+            old_process_handler = std::move(process_handler_);
+            old_channel_closed_handler = std::move(channel_closed_handler_);
         }
     }
 }

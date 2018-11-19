@@ -11,6 +11,8 @@
 #include <fbl/type_support.h>
 #include <zircon/compiler.h>
 
+#include <utility>
+
 namespace fbl {
 
 // This is a simplified version of std::unique_ptr<> that can automatically
@@ -225,7 +227,7 @@ struct unique_type<T[]> {
 template <typename T, typename... Args>
 typename internal::unique_type<T>::single
 make_unique(Args&&... args) {
-    return unique_ptr<T>(new T(fbl::forward<Args>(args)...));
+    return unique_ptr<T>(new T(std::forward<Args>(args)...));
 }
 
 template <typename T, typename... Args>
@@ -238,7 +240,7 @@ make_unique(size_t size) {
 template <typename T, typename... Args>
 typename internal::unique_type<T>::single
 make_unique_checked(AllocChecker* ac, Args&&... args) {
-    return unique_ptr<T>(new (ac) T(fbl::forward<Args>(args)...));
+    return unique_ptr<T>(new (ac) T(std::forward<Args>(args)...));
 }
 
 }  // namespace fbl

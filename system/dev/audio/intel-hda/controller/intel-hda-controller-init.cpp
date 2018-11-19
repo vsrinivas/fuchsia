@@ -6,6 +6,8 @@
 #include <limits.h>
 #include <zircon/thread_annotations.h>
 
+#include <utility>
+
 #include "binding.h"
 #include "debug-logging.h"
 #include "intel-hda-controller.h"
@@ -182,7 +184,7 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
         return res;
     }
 
-    pci_bti_ = RefCountedBti::Create(fbl::move(pci_bti));
+    pci_bti_ = RefCountedBti::Create(std::move(pci_bti));
     if (pci_bti_ == nullptr) {
         LOG(ERROR, "Out of memory while attempting to allocate BTI wrapper for IHDA Controller\n");
         return ZX_ERR_NO_MEMORY;
@@ -267,7 +269,7 @@ zx_status_t IntelHDAController::SetupPCIInterrupts() {
                            return controller->HandleIrq();
                        };
 
-    res = irq_->Activate(default_domain_, fbl::move(irq), fbl::move(irq_handler));
+    res = irq_->Activate(default_domain_, std::move(irq), std::move(irq_handler));
 
     if (res != ZX_OK) {
         LOG(ERROR, "Failed to activate IRQ dispatcher! (res %d)\n", res);
@@ -323,7 +325,7 @@ zx_status_t IntelHDAController::SetupStreamDescriptors() {
         ZX_DEBUG_ASSERT(i < countof(all_streams_));
         ZX_DEBUG_ASSERT(all_streams_[i] == nullptr);
         all_streams_[i] = stream;
-        ReturnStreamLocked(fbl::move(stream));
+        ReturnStreamLocked(std::move(stream));
     }
 
     return ZX_OK;

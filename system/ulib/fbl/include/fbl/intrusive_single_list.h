@@ -9,6 +9,8 @@
 #include <fbl/intrusive_pointer_traits.h>
 #include <fbl/macros.h>
 
+#include <utility>
+
 // Usage Notes:
 //
 // fbl::SinglyLinkedList<> is a templated intrusive container class which
@@ -77,7 +79,7 @@
 //
 //     for (size_t i = 0; SOME_NUMBER; ++i) {
 //         unique_ptr<Foo> new_foo(new Foo(...));
-//         list.push_front(fbl::move(new_foo));
+//         list.push_front(std::move(new_foo));
 //     }
 //
 //     for (const auto& foo : list)
@@ -128,7 +130,7 @@
 //                 break;
 //         }
 //
-//         default_list.push_front(fbl::move(new_foo));
+//         default_list.push_front(std::move(new_foo));
 //     }
 //
 //     for (const auto& foo : default_list) foo.print();
@@ -549,7 +551,7 @@ public:
             }
         }
 
-        return fbl::move(ptr);
+        return std::move(ptr);
     }
 
 private:

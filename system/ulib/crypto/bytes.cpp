@@ -22,6 +22,8 @@
 #define BORINGSSL_NO_CXX
 #include <openssl/mem.h>
 
+#include <utility>
+
 #define ZXDEBUG 0
 
 namespace crypto {
@@ -70,7 +72,7 @@ zx_status_t Bytes::Resize(size_t size, uint8_t fill) {
     }
 
     len_ = size;
-    buf_ = fbl::move(tmp);
+    buf_ = std::move(tmp);
     return ZX_OK;
 }
 

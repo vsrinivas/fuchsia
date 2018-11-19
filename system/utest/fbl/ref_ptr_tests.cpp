@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <unittest/unittest.h>
 
+#include <utility>
+
 namespace {
 
 class RefCallCounter {
@@ -108,7 +110,7 @@ static bool ref_ptr_test() {
     EXPECT_EQ(1, RefCallCounter::destroy_calls());
 
     {
-        RefCallPtr ptr2 = fbl::move(ptr);
+        RefCallPtr ptr2 = std::move(ptr);
 
         // Moving shouldn't cause any add or release but should update values.
         EXPECT_EQ(1, counter.add_ref_calls());
@@ -342,7 +344,7 @@ static bool do_test() {
         EXPECT_EQ(1, Stats::release_calls());
         EXPECT_EQ(0, Stats::destroy_count());
 
-        fbl::RefPtr<Base> base_ptr(fbl::move(derived_ptr));
+        fbl::RefPtr<Base> base_ptr(std::move(derived_ptr));
 
         EXPECT_NULL(derived_ptr);
         EXPECT_NONNULL(base_ptr);
@@ -378,7 +380,7 @@ static bool do_test() {
         EXPECT_EQ(0, Stats::destroy_count());
     }
 
-    // Assign RefPtr<Base> at declaration time with a fbl::move
+    // Assign RefPtr<Base> at declaration time with a std::move
     {
         EXPECT_NONNULL(derived_ptr);
         EXPECT_EQ(1, Stats::adopt_calls());
@@ -386,7 +388,7 @@ static bool do_test() {
         EXPECT_EQ(1, Stats::release_calls());
         EXPECT_EQ(0, Stats::destroy_count());
 
-        fbl::RefPtr<Base> base_ptr = fbl::move(derived_ptr);
+        fbl::RefPtr<Base> base_ptr = std::move(derived_ptr);
 
         EXPECT_NULL(derived_ptr);
         EXPECT_NONNULL(base_ptr);
@@ -423,7 +425,7 @@ static bool do_test() {
         EXPECT_EQ(0, Stats::destroy_count());
     }
 
-    // Assign RefPtr<Base> after declaration with a fbl::move
+    // Assign RefPtr<Base> after declaration with a std::move
     {
         EXPECT_NONNULL(derived_ptr);
         EXPECT_EQ(1, Stats::adopt_calls());
@@ -432,7 +434,7 @@ static bool do_test() {
         EXPECT_EQ(0, Stats::destroy_count());
 
         fbl::RefPtr<Base> base_ptr;
-        base_ptr = fbl::move(derived_ptr);
+        base_ptr = std::move(derived_ptr);
 
         EXPECT_NULL(derived_ptr);
         EXPECT_NONNULL(base_ptr);
@@ -488,7 +490,7 @@ static bool do_test() {
 
     // Pass the pointer to a function as an rvalue reference and implicit cast
     {
-        bool test_res = handoff_rvalue_fn<fbl::RefPtr<Base>>(fbl::move(derived_ptr));
+        bool test_res = handoff_rvalue_fn<fbl::RefPtr<Base>>(std::move(derived_ptr));
         EXPECT_TRUE(test_res);
 
         EXPECT_NULL(derived_ptr);
@@ -546,7 +548,7 @@ static bool ref_ptr_upcast_test() {
     {
         // Now test pass by move.
         OverloadTestHelper helper;
-        helper.PassByMove(fbl::move(ptr));
+        helper.PassByMove(std::move(ptr));
 
         EXPECT_NULL(ptr);
         EXPECT_EQ(OverloadTestHelper::Result::ClassA, helper.result());
@@ -595,7 +597,7 @@ static bool ref_ptr_to_const_test() {
     EXPECT_EQ(const_refptr->get_x(), 23);
 
     // Move a ref-ptr to a ref-ptr-to-const.
-    fbl::RefPtr<const C> moved_const_refptr = fbl::move(refptr);
+    fbl::RefPtr<const C> moved_const_refptr = std::move(refptr);
     ASSERT_NONNULL(moved_const_refptr.get());
     // Now refptr should have been nulled out.
     ASSERT_NULL(refptr.get());
@@ -603,7 +605,7 @@ static bool ref_ptr_to_const_test() {
     // Move a ref-ptr-to-const into another ref-ptr-to-const.
     const_refptr.reset();
     ASSERT_NULL(const_refptr);
-    const_refptr = fbl::move(moved_const_refptr);
+    const_refptr = std::move(moved_const_refptr);
     ASSERT_NONNULL(const_refptr);
     ASSERT_NULL(moved_const_refptr);
 
@@ -622,7 +624,7 @@ static bool ref_ptr_move_assign() {
     EXPECT_NONNULL(ptr1);
     EXPECT_NONNULL(ptr2);
 
-    ptr1 = fbl::move(ptr2);
+    ptr1 = std::move(ptr2);
     EXPECT_EQ(ptr1.get(), &counter2);
     EXPECT_NULL(ptr2);
 
@@ -630,7 +632,14 @@ static bool ref_ptr_move_assign() {
     EXPECT_EQ(0, counter2.release_calls());
 
     // Test self-assignment
-    ptr1 = fbl::move(ptr1);
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wself-move"
+#endif
+    ptr1 = std::move(ptr1);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
     EXPECT_EQ(ptr1.get(), &counter2);
     EXPECT_EQ(0, counter2.release_calls());
 

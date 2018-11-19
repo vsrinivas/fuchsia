@@ -15,6 +15,8 @@ static_assert(false, "Fuchsia only header");
 #include <blobfs/format.h>
 #include <blobfs/writeback.h>
 
+#include <utility>
+
 namespace blobfs {
 class JournalBase;
 class JournalProcessor;
@@ -265,7 +267,7 @@ private:
     Journal(Blobfs* blobfs, fbl::unique_ptr<Buffer> info, fbl::unique_ptr<Buffer> entries,
             uint64_t start_block)
         : blobfs_(blobfs), start_block_(start_block),
-          info_(fbl::move(info)), entries_(fbl::move(entries)) {}
+          info_(std::move(info)), entries_(std::move(entries)) {}
 
     // Creates an entry within the journal ranging from |header_index| to |commit_index|, inclusive.
     fbl::unique_ptr<JournalEntry> CreateEntry(uint64_t header_index, uint64_t commit_index,
@@ -436,7 +438,7 @@ public:
 
     void EnqueueWork() {
         if (work_ != nullptr) {
-            journal_->EnqueueEntryWork(fbl::move(work_));
+            journal_->EnqueueEntryWork(std::move(work_));
         }
     }
 

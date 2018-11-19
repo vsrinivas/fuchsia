@@ -30,6 +30,8 @@
 #include <zircon/syscalls/log.h>
 #include <zircon/syscalls/object.h>
 
+#include <utility>
+
 #include "vc.h"
 
 port_t port;
@@ -281,7 +283,7 @@ static void setup_dir_watcher(const char* dir,
         return;
     }
 
-    fzl::FdioCaller caller(fbl::move(fd));
+    fzl::FdioCaller caller(std::move(fd));
     zx_status_t status;
     zx_status_t io_status = fuchsia_io_DirectoryWatch(caller.borrow_channel(),
                                                       fuchsia_io_WATCH_MASK_ALL, 0,

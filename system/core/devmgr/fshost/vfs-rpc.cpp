@@ -25,6 +25,8 @@
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 
+#include <utility>
+
 #include "fshost.h"
 
 #define ZXDEBUG 0
@@ -59,7 +61,7 @@ zx_status_t AddVmofile(fbl::RefPtr<memfs::VnodeDir> vnb, const char* path, zx_ha
             if (r < 0) {
                 return r;
             }
-            vnb = fbl::RefPtr<memfs::VnodeDir>::Downcast(fbl::move(out));
+            vnb = fbl::RefPtr<memfs::VnodeDir>::Downcast(std::move(out));
             path = nextpath + 1;
         }
     }
@@ -122,7 +124,7 @@ void FsManager::SystemfsSetReadonly(bool value) {
 zx_status_t FsManager::InstallFs(const char* path, zx::channel h) {
     for (unsigned n = 0; n < fbl::count_of(kMountPoints); n++) {
         if (!strcmp(path, kMountPoints[n])) {
-            return root_vfs_.InstallRemote(mount_nodes[n], fs::MountChannel(fbl::move(h)));
+            return root_vfs_.InstallRemote(mount_nodes[n], fs::MountChannel(std::move(h)));
         }
     }
     return ZX_ERR_NOT_FOUND;
@@ -131,7 +133,7 @@ zx_status_t FsManager::InstallFs(const char* path, zx::channel h) {
 zx_status_t FsManager::InitializeConnections(zx::channel root, zx::channel devfs_root,
                                              zx::channel svc_root, zx::event fshost_event) {
     // Serve devmgr's root handle using our own root directory.
-    zx_status_t status = ConnectRoot(fbl::move(root));
+    zx_status_t status = ConnectRoot(std::move(root));
     if (status != ZX_OK) {
         printf("fshost: Cannot connect to fshost root: %d\n", status);
     }
@@ -141,10 +143,10 @@ zx_status_t FsManager::InitializeConnections(zx::channel root, zx::channel devfs
         printf("fshost: cannot create global root\n");
     }
 
-    connections_ = fbl::make_unique<FshostConnections>(fbl::move(devfs_root),
-                                                       fbl::move(svc_root),
-                                                       fbl::move(fs_root),
-                                                       fbl::move(fshost_event));
+    connections_ = fbl::make_unique<FshostConnections>(std::move(devfs_root),
+                                                       std::move(svc_root),
+                                                       std::move(fs_root),
+                                                       std::move(fshost_event));
     // Now that we've initialized our connection to the outside world,
     // monitor for external shutdown events.
     WatchExit();
@@ -152,7 +154,7 @@ zx_status_t FsManager::InitializeConnections(zx::channel root, zx::channel devfs
 }
 
 zx_status_t FsManager::ConnectRoot(zx::channel server) {
-    return ServeVnode(global_root_, fbl::move(server));
+    return ServeVnode(global_root_, std::move(server));
 }
 
 zx_status_t FsManager::ServeRoot(zx::channel* out) {
@@ -161,10 +163,10 @@ zx_status_t FsManager::ServeRoot(zx::channel* out) {
     if (status != ZX_OK) {
         return ZX_OK;
     }
-    if ((status = ServeVnode(global_root_, fbl::move(server))) != ZX_OK) {
+    if ((status = ServeVnode(global_root_, std::move(server))) != ZX_OK) {
         return status;
     }
-    *out = fbl::move(client);
+    *out = std::move(client);
     return ZX_OK;
 }
 
@@ -184,7 +186,7 @@ void FsManager::WatchExit() {
 }
 
 zx_status_t FsManager::ServeVnode(fbl::RefPtr<memfs::VnodeDir>& vn, zx::channel server) {
-    return vn->vfs()->ServeDirectory(vn, fbl::move(server));
+    return vn->vfs()->ServeDirectory(vn, std::move(server));
 }
 
 zx_status_t FsManager::LocalMount(memfs::VnodeDir* parent, const char* name,
@@ -199,11 +201,11 @@ zx_status_t FsManager::LocalMount(memfs::VnodeDir* parent, const char* name,
     if (status != ZX_OK) {
         return ZX_OK;
     }
-    if ((status = ServeVnode(subtree, fbl::move(server))) != ZX_OK) {
+    if ((status = ServeVnode(subtree, std::move(server))) != ZX_OK) {
         return status;
     }
-    return parent->vfs()->InstallRemote(fbl::move(vn),
-                                        fs::MountChannel(fbl::move(client)));
+    return parent->vfs()->InstallRemote(std::move(vn),
+                                        fs::MountChannel(std::move(client)));
 }
 
 } // namespace devmgr

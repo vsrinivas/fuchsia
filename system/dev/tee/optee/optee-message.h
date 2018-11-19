@@ -11,6 +11,8 @@
 #include <tee-client-api/tee-client-types.h>
 #include <zircon/assert.h>
 
+#include <utility>
+
 #include "optee-smc.h"
 #include "shared-memory.h"
 #include "util.h"
@@ -163,7 +165,7 @@ protected:
     //
     // Move constructor for MessageBase.
     MessageBase(MessageBase&& msg)
-        : memory_(fbl::move(msg.memory_)) {
+        : memory_(std::move(msg.memory_)) {
         msg.memory_ = nullptr;
     }
 
@@ -175,7 +177,7 @@ protected:
         : memory_(nullptr) {}
 
     explicit MessageBase(SharedMemoryPtr memory)
-        : memory_(fbl::move(memory)) {}
+        : memory_(std::move(memory)) {}
 
     MessageHeader* header() const {
         ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing uninitialized OP-TEE message");
@@ -290,8 +292,8 @@ public:
     //
     // Move constructor for RpcMessage.
     RpcMessage(RpcMessage&& rpc_msg)
-        : MessageBase(fbl::move(rpc_msg)),
-          is_valid_(fbl::move(rpc_msg.is_valid_)) {
+        : MessageBase(std::move(rpc_msg)),
+          is_valid_(std::move(rpc_msg.is_valid_)) {
         rpc_msg.is_valid_ = false;
     }
 
@@ -350,7 +352,7 @@ public:
     //
     // Constructs a LoadTaRpcMessage from a moved-in RpcMessage.
     explicit LoadTaRpcMessage(RpcMessage&& rpc_message)
-        : RpcMessage(fbl::move(rpc_message)) {
+        : RpcMessage(std::move(rpc_message)) {
         ZX_DEBUG_ASSERT(is_valid()); // The RPC message passed in should've been valid
         ZX_DEBUG_ASSERT(command() == RpcMessage::Command::kLoadTa);
 
@@ -413,7 +415,7 @@ public:
     //
     // Constructs a AllocateMemoryRpcMessage from a moved-in RpcMessage.
     explicit AllocateMemoryRpcMessage(RpcMessage&& rpc_message)
-        : RpcMessage(fbl::move(rpc_message)) {
+        : RpcMessage(std::move(rpc_message)) {
         ZX_DEBUG_ASSERT(is_valid()); // The RPC message passed in should've been valid
         ZX_DEBUG_ASSERT(command() == RpcMessage::Command::kAllocateMemory);
 
@@ -478,7 +480,7 @@ public:
     //
     // Constructs a FreeMemoryRpcMessage from a moved-in RpcMessage.
     explicit FreeMemoryRpcMessage(RpcMessage&& rpc_message)
-        : RpcMessage(fbl::move(rpc_message)) {
+        : RpcMessage(std::move(rpc_message)) {
         ZX_DEBUG_ASSERT(is_valid()); // The RPC message passed in should've been valid
         ZX_DEBUG_ASSERT(command() == RpcMessage::Command::kFreeMemory);
 
@@ -535,7 +537,7 @@ public:
     //
     // Constructs a FileSystemRpcMessage from a moved-in RpcMessage.
     explicit FileSystemRpcMessage(RpcMessage&& rpc_message)
-        : RpcMessage(fbl::move(rpc_message)) {
+        : RpcMessage(std::move(rpc_message)) {
         ZX_DEBUG_ASSERT(is_valid()); // The RPC message passed in should've been valid
         ZX_DEBUG_ASSERT(command() == RpcMessage::Command::kAccessFileSystem);
 

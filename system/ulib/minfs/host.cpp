@@ -22,6 +22,8 @@
 #include <minfs/minfs.h>
 #include <zircon/assert.h>
 
+#include <utility>
+
 #include "minfs-private.h"
 
 namespace {
@@ -118,12 +120,12 @@ int emu_mkfs(const char* path) {
     off_t size = s.st_size / minfs::kMinfsBlockSize;
 
     fbl::unique_ptr<minfs::Bcache> bc;
-    if (minfs::Bcache::Create(&bc, fbl::move(fd), (uint32_t) size) < 0) {
+    if (minfs::Bcache::Create(&bc, std::move(fd), (uint32_t) size) < 0) {
         fprintf(stderr, "error: cannot create block cache\n");
         return -1;
     }
 
-    return Mkfs(fbl::move(bc));
+    return Mkfs(std::move(bc));
 }
 
 int emu_mount(const char* path) {
@@ -142,12 +144,12 @@ int emu_mount(const char* path) {
     off_t size = s.st_size / minfs::kMinfsBlockSize;
 
     fbl::unique_ptr<minfs::Bcache> bc;
-    if (minfs::Bcache::Create(&bc, fbl::move(fd), (uint32_t) size) < 0) {
+    if (minfs::Bcache::Create(&bc, std::move(fd), (uint32_t) size) < 0) {
         fprintf(stderr, "error: cannot create block cache\n");
         return -1;
     }
 
-    int r = minfs::Mount(fbl::move(bc), &fakeFs.fake_root);
+    int r = minfs::Mount(std::move(bc), &fakeFs.fake_root);
     if (r == 0) {
         fakeFs.fake_vfs.reset(fakeFs.fake_root->fs_);
     }
@@ -155,7 +157,7 @@ int emu_mount(const char* path) {
 }
 
 int emu_mount_bcache(fbl::unique_ptr<minfs::Bcache> bc) {
-    int r = minfs::Mount(fbl::move(bc), &fakeFs.fake_root) == ZX_OK ? 0 : -1;
+    int r = minfs::Mount(std::move(bc), &fakeFs.fake_root) == ZX_OK ? 0 : -1;
     if (r == 0) {
         fakeFs.fake_vfs.reset(fakeFs.fake_root->fs_);
     }

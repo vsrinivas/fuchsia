@@ -88,10 +88,10 @@ namespace dispatcher {
 //      thingy->ClientDisconnected(ch);
 //   }
 //
-//   return ch->Activate(fbl::move(ch_handle),
+//   return ch->Activate(std::move(ch_handle),
 //                       my_domain_,
-//                       fbl::move(phandler),
-//                       fbl::move(dhandler));
+//                       std::move(phandler),
+//                       std::move(dhandler));
 // }
 //
 class Channel : public EventSource {

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <limits.h>
+#include <utility>
 
 #include <cobalt-client/cpp/collector-internal.h>
 #include <cobalt-client/cpp/types-internal.h>
@@ -94,7 +95,7 @@ public:
             .EndTimer = nullptr,
             .LogIntHistogram = Binder::BindMember<&FakeSimpleLogger::LogIntHistogram>,
         };
-        return Binder::BindOps<fuchsia_cobalt_LoggerSimple_dispatch>(dispatcher, fbl::move(channel),
+        return Binder::BindOps<fuchsia_cobalt_LoggerSimple_dispatch>(dispatcher, std::move(channel),
                                                                      this, &kOps);
     }
 
@@ -145,13 +146,13 @@ public:
             .CreateLoggerSimpleFromProjectId = nullptr,
         };
         return Binder::BindOps<fuchsia_cobalt_LoggerFactory_dispatch>(
-            dispatcher, fbl::move(channel), this, &kOps);
+            dispatcher, std::move(channel), this, &kOps);
     }
 
     void set_logger_create_status(fuchsia_cobalt_Status status) { logger_create_status = status; }
 
     void set_logger_binder(fbl::Function<void(zx_handle_t)> logger_binder) {
-        logger_binder_ = fbl::move(logger_binder);
+        logger_binder_ = std::move(logger_binder);
     }
 
 private:
@@ -324,7 +325,7 @@ private:
 
         Context() {
             services.loop =
-                fbl::move(fbl::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread));
+                std::move(fbl::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread));
         }
 
         struct ReturnValues {
@@ -356,7 +357,7 @@ private:
             CobaltOptions options = MakeOptions(return_values.config_reader, &channels.factory,
                                                 return_values.service_connect);
             fbl::unique_ptr<CobaltLogger> logger =
-                fbl::make_unique<CobaltLogger>(fbl::move(options));
+                fbl::make_unique<CobaltLogger>(std::move(options));
             services.loop->StartThread("FactoryServiceThread");
             return logger;
         }
@@ -371,7 +372,7 @@ private:
                                          zx::time::infinite().get(), nullptr),
                       ZX_OK);
             ASSERT_EQ(
-                services.factory.Bind(services.loop->dispatcher(), fbl::move(channels.factory)),
+                services.factory.Bind(services.loop->dispatcher(), std::move(channels.factory)),
                 ZX_OK);
             END_HELPER;
         }

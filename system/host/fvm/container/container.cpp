@@ -6,6 +6,8 @@
 
 #include <fbl/unique_fd.h>
 
+#include <utility>
+
 #include "fvm/container.h"
 
 zx_status_t Container::Create(const char* path, off_t offset, off_t length,
@@ -42,7 +44,7 @@ zx_status_t Container::Create(const char* path, off_t offset, off_t length,
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
-        *container = fbl::move(fvmContainer);
+        *container = std::move(fvmContainer);
         return ZX_OK;
     }
 
@@ -61,7 +63,7 @@ zx_status_t Container::Create(const char* path, off_t offset, off_t length,
             return ZX_ERR_NO_MEMORY;
         }
 
-        *container = fbl::move(sparseContainer);
+        *container = std::move(sparseContainer);
         return ZX_OK;
     }
 

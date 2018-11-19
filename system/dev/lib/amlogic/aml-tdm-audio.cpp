@@ -6,6 +6,8 @@
 #include <fbl/limits.h>
 #include <soc/aml-common/aml-tdm-audio.h>
 
+#include <utility>
+
 //static
 fbl::unique_ptr<AmlTdmDevice> AmlTdmDevice::Create(ddk::MmioBuffer mmio,
                                                    ee_audio_mclk_src_t src,
@@ -21,7 +23,7 @@ fbl::unique_ptr<AmlTdmDevice> AmlTdmDevice::Create(ddk::MmioBuffer mmio,
 
     fbl::AllocChecker ac;
     auto tdm = fbl::unique_ptr<AmlTdmDevice>(new (&ac)
-        AmlTdmDevice(fbl::move(mmio), src, tdm_dev, frddr_dev, mclk, fifo_depth));
+        AmlTdmDevice(std::move(mmio), src, tdm_dev, frddr_dev, mclk, fifo_depth));
     if (!ac.check()) {
         return nullptr;
     }

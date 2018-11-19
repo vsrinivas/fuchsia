@@ -18,6 +18,8 @@
 #include <perftest/perftest.h>
 #include <unittest/unittest.h>
 
+#include <utility>
+
 namespace fs_bench {
 namespace {
 
@@ -191,7 +193,7 @@ bool RunBenchmark(int argc, char** argv) {
                 return WriteBigFile(16 * (1 << 10), state, fixture);
             };
             write_test.required_disk_space = test_sample_count * 16 * 1024 * (cycle + 1);
-            testcase.tests.push_back(fbl::move(write_test));
+            testcase.tests.push_back(std::move(write_test));
 
             read_test.name =
                 fbl::StringPrintf("%s/%d-Cycle/Read", testcase.name.c_str(), cycle + 1);
@@ -199,9 +201,9 @@ bool RunBenchmark(int argc, char** argv) {
                 return ReadBigFile(16 * (1 << 10), state, fixture);
             };
             read_test.required_disk_space = test_sample_count * 16 * 1024 * (cycle + 1);
-            testcase.tests.push_back(fbl::move(read_test));
+            testcase.tests.push_back(std::move(read_test));
         }
-        testcases.push_back(fbl::move(testcase));
+        testcases.push_back(std::move(testcase));
     }
 
     // Path walk tests.
@@ -223,19 +225,19 @@ bool RunBenchmark(int argc, char** argv) {
         TestInfo mkdir_test;
         mkdir_test.name = fbl::StringPrintf("%s/Mkdir", testcase.name.c_str());
         mkdir_test.test_fn = fbl::BindMember(&pw_op, &PathWalkOp::Mkdir);
-        testcase.tests.push_back(fbl::move(mkdir_test));
+        testcase.tests.push_back(std::move(mkdir_test));
 
         TestInfo stat_test;
         stat_test.name = fbl::StringPrintf("%s/Stat", testcase.name.c_str());
         stat_test.test_fn = fbl::BindMember(&pw_op, &PathWalkOp::Stat);
-        testcase.tests.push_back(fbl::move(stat_test));
+        testcase.tests.push_back(std::move(stat_test));
 
         TestInfo unlink_test;
         unlink_test.name = fbl::StringPrintf("%s/Unlink", testcase.name.c_str());
         unlink_test.test_fn = fbl::BindMember(&pw_op, &PathWalkOp::Unlink);
 
-        testcase.tests.push_back(fbl::move(unlink_test));
-        testcases.push_back(fbl::move(testcase));
+        testcase.tests.push_back(std::move(unlink_test));
+        testcases.push_back(std::move(testcase));
     }
 
     return fs_test_utils::RunTestCases(f_opts, p_opts, testcases);

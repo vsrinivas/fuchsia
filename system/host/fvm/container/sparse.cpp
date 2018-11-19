@@ -4,6 +4,8 @@
 
 #include <inttypes.h>
 
+#include <utility>
+
 #include "fvm/container.h"
 
 constexpr size_t kLz4HeaderSize = 15;
@@ -77,7 +79,7 @@ zx_status_t SparseContainer::Create(const char* path, size_t slice_size, uint32_
         return status;
     }
 
-    *out = fbl::move(sparseContainer);
+    *out = std::move(sparseContainer);
     return ZX_OK;
 }
 
@@ -113,7 +115,7 @@ SparseContainer::SparseContainer(const char* path, uint64_t slice_size, uint32_t
 
         for (unsigned i = 0; i < image_.partition_count; i++) {
             partition_info_t partition;
-            partitions_.push_back(fbl::move(partition));
+            partitions_.push_back(std::move(partition));
             if (read(fd_.get(), &partitions_[i].descriptor, sizeof(fvm::partition_descriptor_t)) !=
                     sizeof(fvm::partition_descriptor_t)) {
                 fprintf(stderr, "SparseContainer: Failed to read partition %u\n", i);
@@ -191,7 +193,7 @@ zx_status_t SparseContainer::Verify() const {
             return ZX_ERR_INTERNAL;
         }
 
-        if ((status = Format::Check(fbl::move(dupfd), start, end, extent_lengths, part)) != ZX_OK) {
+        if ((status = Format::Check(std::move(dupfd), start, end, extent_lengths, part)) != ZX_OK) {
             const char* name = reinterpret_cast<const char*>(partitions_[i].descriptor.name);
             fprintf(stderr, "%s fsck returned an error.\n", name);
             return status;
@@ -320,7 +322,7 @@ zx_status_t SparseContainer::AddPartition(const char* path, const char* type_nam
         return status;
     }
 
-    if ((status = AllocatePartition(fbl::move(format))) != ZX_OK) {
+    if ((status = AllocatePartition(std::move(format))) != ZX_OK) {
         fprintf(stderr, "Sparse partition allocation failed\n");
         return status;
     }
@@ -343,7 +345,7 @@ zx_status_t SparseContainer::AllocatePartition(fbl::unique_ptr<Format> format) {
         return status;
     }
 
-    partitions_.push_back(fbl::move(partition));
+    partitions_.push_back(std::move(partition));
 
     if (++image_.partition_count != partitions_.size()) {
         fprintf(stderr, "Unexpected number of partitions\n");
@@ -366,7 +368,7 @@ zx_status_t SparseContainer::AllocatePartition(fbl::unique_ptr<Format> format) {
         return status;
     }
 
-    partitions_[part_index].format = fbl::move(format);
+    partitions_[part_index].format = std::move(format);
     return ZX_OK;
 }
 

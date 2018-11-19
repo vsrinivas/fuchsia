@@ -9,6 +9,8 @@
 #include <fcntl.h>
 #include <stdio.h>
 
+#include <utility>
+
 #include "xdc-init.h"
 
 static const char* const DEV_XDC_DIR = "/dev/class/usb-dbc";
@@ -26,7 +28,7 @@ zx_status_t configure_xdc(uint32_t stream_id, fbl::unique_fd* out_fd) {
         if (fd < 0) {
             continue;
         }
-        fzl::FdioCaller caller(fbl::move(fbl::unique_fd(fd)));
+        fzl::FdioCaller caller{fbl::unique_fd(fd)};
         zx_status_t status;
         zx_status_t res = fuchsia_usb_debug_DeviceSetStream(caller.borrow_channel(),
                                                             stream_id, &status);
@@ -49,4 +51,3 @@ zx_status_t configure_xdc(uint32_t stream_id, fbl::unique_fd* out_fd) {
     fprintf(stderr, "No debug device found\n");
     return ZX_ERR_NOT_FOUND;
 }
-

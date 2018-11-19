@@ -13,6 +13,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <utility>
+
 // This macro allows for per-device tracing rather than enabling tracing for the whole driver
 // TODO(tkilbourn): decide whether this is worth the effort
 #define ethertap_trace(args...) \
@@ -53,7 +55,7 @@ zx_status_t TapCtl::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, voi
         config.name[ETHERTAP_MAX_NAME_LEN] = '\0';
 
         auto tap = fbl::unique_ptr<eth::TapDevice>(
-                new eth::TapDevice(zxdev(), &config, fbl::move(local)));
+                new eth::TapDevice(zxdev(), &config, std::move(local)));
 
         status = tap->DdkAdd(config.name);
         if (status != ZX_OK) {
@@ -86,7 +88,7 @@ TapDevice::TapDevice(zx_device_t* device, const ethertap_ioctl_config* config, z
     options_(config->options),
     features_(config->features | ETHMAC_FEATURE_SYNTH),
     mtu_(config->mtu),
-    data_(fbl::move(data)) {
+    data_(std::move(data)) {
     ZX_DEBUG_ASSERT(data_.is_valid());
     memcpy(mac_, config->mac, 6);
 

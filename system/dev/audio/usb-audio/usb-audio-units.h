@@ -11,6 +11,8 @@
 #include <fbl/ref_ptr.h>
 #include <zircon/hw/usb-audio.h>
 
+#include <utility>
+
 #include "usb-audio-descriptors.h"
 
 // Notes: usb-audio-units.h contains a collection of definitions of classes used
@@ -77,7 +79,7 @@ class AudioUnit : public fbl::WAVLTreeContainable<fbl::RefPtr<AudioUnit>>,
     AudioUnit(fbl::RefPtr<DescriptorListMemory> desc_list,
               const usb_audio_ac_ut_desc* desc,
               uint8_t iid)
-        : desc_list_(fbl::move(desc_list)), desc_(desc), iid_(iid) {}
+        : desc_list_(std::move(desc_list)), desc_(desc), iid_(iid) {}
     virtual ~AudioUnit() {}
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(AudioUnit);
@@ -121,7 +123,7 @@ class Terminal : public AudioUnit {
     Terminal(fbl::RefPtr<DescriptorListMemory> desc_list,
              const usb_audio_ac_terminal_desc* desc,
              uint8_t iid)
-        : AudioUnit(fbl::move(desc_list), reinterpret_cast<const usb_audio_ac_ut_desc*>(desc), iid),
+        : AudioUnit(std::move(desc_list), reinterpret_cast<const usb_audio_ac_ut_desc*>(desc), iid),
           term_desc_(desc) {}
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(Terminal);
@@ -144,7 +146,7 @@ class InputTerminal : public Terminal {
     InputTerminal(fbl::RefPtr<DescriptorListMemory> desc_list,
                   const usb_audio_ac_input_terminal_desc* desc,
                   uint8_t iid)
-        : Terminal(fbl::move(desc_list),
+        : Terminal(std::move(desc_list),
                    reinterpret_cast<const usb_audio_ac_terminal_desc*>(desc),
                    iid) {}
 
@@ -171,7 +173,7 @@ class OutputTerminal : public Terminal {
     OutputTerminal(fbl::RefPtr<DescriptorListMemory> desc_list,
                    const usb_audio_ac_output_terminal_desc* desc,
                    uint8_t iid)
-        : Terminal(fbl::move(desc_list),
+        : Terminal(std::move(desc_list),
                    reinterpret_cast<const usb_audio_ac_terminal_desc*>(desc), iid) {}
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(OutputTerminal);
@@ -209,7 +211,7 @@ class MixerUnit : public AudioUnit {
               const usb_audio_ac_mixer_unit_desc_1* desc_1,
               const usb_audio_ac_mixer_unit_desc_2* desc_2,
               uint8_t iid)
-        : AudioUnit(fbl::move(desc_list),
+        : AudioUnit(std::move(desc_list),
                     reinterpret_cast<const usb_audio_ac_ut_desc*>(desc_0),
                     iid),
           mixer_desc_1_(desc_1),
@@ -248,7 +250,7 @@ class SelectorUnit : public AudioUnit {
                  const usb_audio_ac_selector_unit_desc_0* desc_0,
                  const usb_audio_ac_selector_unit_desc_1* desc_1,
                  uint8_t iid)
-        : AudioUnit(fbl::move(desc_list),
+        : AudioUnit(std::move(desc_list),
                     reinterpret_cast<const usb_audio_ac_ut_desc*>(desc_0),
                     iid),
           selector_desc_1_(desc_1) {}
@@ -320,7 +322,7 @@ class FeatureUnit : public AudioUnit {
                 fbl::unique_ptr<Features[]> feature_mem,
                 size_t feature_len,
                 uint8_t iid)
-        : AudioUnit(fbl::move(desc_list),
+        : AudioUnit(std::move(desc_list),
                     reinterpret_cast<const usb_audio_ac_ut_desc*>(desc_0),
                     iid),
           feature_desc_1_(desc_1),
@@ -393,7 +395,7 @@ class ProcessingUnit : public AudioUnit {
                    const usb_audio_ac_processing_unit_desc_1* desc_1,
                    const usb_audio_ac_processing_unit_desc_2* desc_2,
                    uint8_t iid)
-        : AudioUnit(fbl::move(desc_list),
+        : AudioUnit(std::move(desc_list),
                     reinterpret_cast<const usb_audio_ac_ut_desc*>(desc_0),
                     iid),
           processing_desc_1_(desc_1),
@@ -430,7 +432,7 @@ class ExtensionUnit : public AudioUnit {
               const usb_audio_ac_extension_unit_desc_1* desc_1,
               const usb_audio_ac_extension_unit_desc_2* desc_2,
               uint8_t iid)
-        : AudioUnit(fbl::move(desc_list),
+        : AudioUnit(std::move(desc_list),
                     reinterpret_cast<const usb_audio_ac_ut_desc*>(desc_0),
                     iid),
           extension_desc_1_(desc_1),

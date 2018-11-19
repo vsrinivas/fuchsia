@@ -32,6 +32,8 @@
 #include <zircon/syscalls/policy.h>
 #include <zircon/syscalls/system.h>
 
+#include <utility>
+
 #include "devcoordinator.h"
 #include "devmgr.h"
 #include "../shared/fdio.h"
@@ -321,7 +323,7 @@ static zx_status_t load_vmo(const char* libname, zx::vmo* out_vmo) {
         vmo_name = libname;
     }
     vmo.set_property(ZX_PROP_NAME, vmo_name, strlen(vmo_name));
-    *out_vmo = fbl::move(vmo);
+    *out_vmo = std::move(vmo);
     return r;
 }
 
@@ -602,7 +604,7 @@ static zx_status_t dc_notify(const Device* dev, uint32_t op) {
 }
 
 static void dc_watch(zx::channel h) {
-    dc_watch_channel = fbl::move(h);
+    dc_watch_channel = std::move(h);
     for (const auto& dev : list_devices) {
         if (dev.flags & (DEV_CTX_DEAD | DEV_CTX_ZOMBIE)) {
             // if device is dead, ignore it
@@ -752,7 +754,7 @@ static void dc_release_device(Device* dev) {
     while ((md = dev->metadata.pop_front()) != nullptr) {
         if (md->has_path) {
             // return to published_metadata list
-            published_metadata.push_back(fbl::move(md));
+            published_metadata.push_back(std::move(md));
         } else {
             // metadata was attached directly to this device, so we release it now
         }
@@ -811,7 +813,7 @@ static zx_status_t dc_add_device(Device* parent, zx::channel rpc,
         return ZX_ERR_NO_MEMORY;
     }
 
-    dev->hrpc = fbl::move(rpc);
+    dev->hrpc = std::move(rpc);
     dev->prop_count = static_cast<uint32_t>(props_count);
     dev->protocol_id = protocol_id;
 
@@ -1156,7 +1158,7 @@ static zx_status_t dc_add_metadata(Device* dev, uint32_t type, const void* data,
     md->type = type;
     md->length = length;
     memcpy(md->Data(), data, length);
-    dev->metadata.push_front(fbl::move(md));
+    dev->metadata.push_front(std::move(md));
     return ZX_OK;
 }
 
@@ -1196,7 +1198,7 @@ static zx_status_t dc_publish_metadata(Device* dev, const char* path, uint32_t t
     md->has_path = true;
     memcpy(md->Data(), data, length);
     strcpy(md->Data() + length, path);
-    published_metadata.push_front(fbl::move(md));
+    published_metadata.push_front(std::move(md));
     return ZX_OK;
 }
 
@@ -1212,7 +1214,7 @@ static zx_status_t fidl_AddDevice(void* ctx, zx_handle_t raw_rpc,
     fbl::StringPiece driver_path(driver_path_data, driver_path_size);
     fbl::StringPiece args(args_data, args_size);
 
-    zx_status_t status = dc_add_device(parent, fbl::move(rpc), props_data, props_count,
+    zx_status_t status = dc_add_device(parent, std::move(rpc), props_data, props_count,
                                        name, protocol_id, driver_path, args, false);
     return fuchsia_device_manager_CoordinatorAddDevice_reply(txn, status);
 }
@@ -1230,7 +1232,7 @@ static zx_status_t fidl_AddDeviceInvisible(void* ctx, zx_handle_t raw_rpc,
     fbl::StringPiece driver_path(driver_path_data, driver_path_size);
     fbl::StringPiece args(args_data, args_size);
 
-    zx_status_t status = dc_add_device(parent, fbl::move(rpc), props_data, props_count, name,
+    zx_status_t status = dc_add_device(parent, std::move(rpc), props_data, props_count, name,
                                        protocol_id, driver_path, args, true);
     return fuchsia_device_manager_CoordinatorAddDeviceInvisible_reply(txn, status);
 }
@@ -1350,7 +1352,7 @@ static zx_status_t fidl_DmCommand(void* ctx, zx_handle_t raw_log_socket,
     zx::socket log_socket(raw_log_socket);
 
     if (log_socket.is_valid()) {
-        dmctl_socket = fbl::move(log_socket);
+        dmctl_socket = std::move(log_socket);
     }
 
     zx_status_t status = handle_dmctl_write(command_size, command_data);
@@ -1369,7 +1371,7 @@ static zx_status_t fidl_DmOpenVirtcon(void* ctx, zx_handle_t raw_vc_receiver) {
 static zx_status_t fidl_DmWatch(void* ctx, zx_handle_t raw_watcher) {
     zx::channel watcher(raw_watcher);
 
-    dc_watch(fbl::move(watcher));
+    dc_watch(std::move(watcher));
     return ZX_OK;
 }
 
@@ -1377,7 +1379,7 @@ static zx_status_t fidl_DmMexec(void* ctx, zx_handle_t raw_kernel, zx_handle_t r
     zx::vmo kernel(raw_kernel);
     zx::vmo bootdata(raw_bootdata);
 
-    dc_mexec(fbl::move(kernel), fbl::move(bootdata));
+    dc_mexec(std::move(kernel), std::move(bootdata));
     return ZX_OK;
 }
 
@@ -1558,20 +1560,20 @@ static zx_status_t dh_create_device(Device* dev, Devhost* dh,
             return r;
         }
 
-        r = dh_send_create_device(dev, dh, fbl::move(hrpc_remote), fbl::move(vmo), args,
-                                  fbl::move(rpc_proxy));
+        r = dh_send_create_device(dev, dh, std::move(hrpc_remote), std::move(vmo), args,
+                                  std::move(rpc_proxy));
         if (r != ZX_OK) {
             return r;
         }
     } else {
-        r = dh_send_create_device_stub(dh, fbl::move(hrpc_remote), dev->protocol_id);
+        r = dh_send_create_device_stub(dh, std::move(hrpc_remote), dev->protocol_id);
         if (r != ZX_OK) {
             return r;
         }
     }
 
     dev->wait.set_object(hrpc.get());
-    dev->hrpc = fbl::move(hrpc);
+    dev->hrpc = std::move(hrpc);
     dev->wait.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
     if ((r = dev->wait.Begin(DcAsyncLoop()->dispatcher())) != ZX_OK) {
         return r;
@@ -1657,13 +1659,13 @@ static zx_status_t dh_bind_driver(Device* dev, const char* libname) {
         return r;
     }
 
-    if ((r = dh_send_bind_driver(dev, libname, fbl::move(vmo))) != ZX_OK) {
+    if ((r = dh_send_bind_driver(dev, libname, std::move(vmo))) != ZX_OK) {
         return r;
     }
 
     dev->flags |= DEV_CTX_BOUND;
 
-    dev->pending.push_back(fbl::move(pending));
+    dev->pending.push_back(std::move(pending));
     return ZX_OK;
 }
 
@@ -1707,22 +1709,22 @@ static zx_status_t dc_prepare_proxy(Device* dev) {
                 log(ERROR, "devcoord: cannot create proxy rpc channel: %d\n", r);
                 return r;
             }
-            h1 = fbl::move(c1);
+            h1 = std::move(c1);
         } else if (dev == &sys_device) {
             // pass bootdata VMO handle to sys device
-            h1 = fbl::move(bootdata_vmo);
+            h1 = std::move(bootdata_vmo);
         }
         if ((r = dc_new_devhost(devhostname, dev->host,
                                 &dev->proxy->host)) < 0) {
             log(ERROR, "devcoord: dc_new_devhost: %d\n", r);
             return r;
         }
-        if ((r = dh_create_device(dev->proxy, dev->proxy->host, arg1, fbl::move(h1))) < 0) {
+        if ((r = dh_create_device(dev->proxy, dev->proxy->host, arg1, std::move(h1))) < 0) {
             log(ERROR, "devcoord: dh_create_device: %d\n", r);
             return r;
         }
         if (need_proxy_rpc) {
-            if ((r = dh_send_connect_proxy(dev, fbl::move(h0))) < 0) {
+            if ((r = dh_send_connect_proxy(dev, std::move(h0))) < 0) {
                 log(ERROR, "devcoord: dh_send_connect_proxy: %d\n", r);
             }
         }
@@ -1812,7 +1814,7 @@ static zx_status_t dc_suspend_devhost(Devhost* dh, SuspendContext* ctx) {
     if (pending == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
-    dev->pending.push_back(fbl::move(pending));
+    dev->pending.push_back(std::move(pending));
 
     // TODO(teisenbe/kulakowski) Make SuspendContext automatically refcounted.
     ctx->AddRef();
@@ -1931,7 +1933,7 @@ static void dc_suspend(uint32_t flags) {
         return;
     }
     // Move the socket in to prevent the rpc handler from closing the handle.
-    *ctx = SuspendContext(SuspendContext::Flags::kSuspend, flags, fbl::move(dmctl_socket));
+    *ctx = SuspendContext(SuspendContext::Flags::kSuspend, flags, std::move(dmctl_socket));
 
     ctx->set_dh(build_suspend_list(ctx));
 
@@ -1959,7 +1961,7 @@ static void dc_mexec(zx::vmo kernel, zx::vmo bootdata) {
         return;
     }
     *ctx = SuspendContext(SuspendContext::Flags::kSuspend, DEVICE_SUSPEND_FLAG_MEXEC,
-                          zx::socket(), fbl::move(kernel), fbl::move(bootdata));
+                          zx::socket(), std::move(kernel), std::move(bootdata));
 
     ctx->set_dh(build_suspend_list(ctx));
 

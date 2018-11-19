@@ -17,6 +17,8 @@
 #include <threads.h>
 #include <zircon/types.h>
 
+#include <utility>
+
 // clang-format off
 #define GT_REG_SLEEP            0x8040
 #define GT_REG_CONFIG_DATA      0x8047
@@ -44,8 +46,8 @@ public:
     Gt92xxDevice(zx_device_t* device, ddk::I2cChannel i2c,
                  ddk::GpioProtocolProxy intr, ddk::GpioProtocolProxy reset)
         : ddk::Device<Gt92xxDevice, ddk::Unbindable>(device),
-          i2c_(fbl::move(i2c)), int_gpio_(fbl::move(intr)),
-          reset_gpio_(fbl::move(reset)){};
+          i2c_(std::move(i2c)), int_gpio_(std::move(intr)),
+          reset_gpio_(std::move(reset)){};
 
     static zx_status_t Create(zx_device_t* device);
 

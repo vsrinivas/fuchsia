@@ -11,6 +11,8 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
 
+#include <utility>
+
 namespace fzl {
 
 // OwnedVmoWrapper is a convenience wrapper around the underlying VmoMapper
@@ -59,7 +61,7 @@ public:
 
 protected:
     void MoveFromOther(OwnedVmoMapper* other) {
-        vmo_ = fbl::move(other->vmo_);
+        vmo_ = std::move(other->vmo_);
         VmoMapper::MoveFromOther(other);
     }
 

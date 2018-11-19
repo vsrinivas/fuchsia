@@ -8,6 +8,8 @@
 #include <fbl/type_support.h>
 #include <unittest/unittest.h>
 
+#include <utility>
+
 namespace {
 
 bool empty_string_test() {
@@ -81,7 +83,7 @@ bool copy_move_and_assignment_test() {
 
     {
         fbl::StringPiece abc(data);
-        fbl::StringPiece str(fbl::move(abc));
+        fbl::StringPiece str(std::move(abc));
         EXPECT_EQ(data, str.data());
         EXPECT_EQ(3u, str.length());
     }
@@ -97,7 +99,7 @@ bool copy_move_and_assignment_test() {
     {
         fbl::StringPiece abc(data);
         fbl::StringPiece str;
-        str = fbl::move(abc);
+        str = std::move(abc);
         EXPECT_EQ(data, str.data());
         EXPECT_EQ(3u, str.length());
     }

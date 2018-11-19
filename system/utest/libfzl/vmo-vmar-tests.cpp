@@ -10,6 +10,8 @@
 
 #include <fbl/algorithm.h>
 
+#include <utility>
+
 #include "vmo-probe.h"
 
 namespace {
@@ -313,7 +315,7 @@ bool vmo_mapper_move_test() {
 
         // Move the mapping from mapper1 into mapper2 using assignment.  Make sure
         // the region is still mapped and has not moved in our address space.
-        mapper2 = fbl::move(mapper1);
+        mapper2 = std::move(mapper1);
 
         ASSERT_NULL(mapper1.start());
         ASSERT_EQ(mapper1.size(), 0);
@@ -322,7 +324,7 @@ bool vmo_mapper_move_test() {
         ASSERT_TRUE(vmo_probe::probe_verify_region(addr, size, ACCESS_FLAGS));
 
         // Now do the same thing, but this time move using construction.
-        VmoMapper mapper3(fbl::move(mapper2));
+        VmoMapper mapper3(std::move(mapper2));
 
         ASSERT_NULL(mapper2.start());
         ASSERT_EQ(mapper2.size(), 0);
@@ -341,7 +343,7 @@ bool vmo_mapper_move_test() {
         // Now, move mapper3 on top of mapper1 via assignment and make sure that
         // mapper1's old region is properly unmapped while mapper3's contents remain
         // mapped and are properly moved.
-        mapper1 = fbl::move(mapper3);
+        mapper1 = std::move(mapper3);
 
         ASSERT_NULL(mapper3.start());
         ASSERT_EQ(mapper3.size(), 0);

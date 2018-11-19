@@ -35,6 +35,9 @@ char       *strtok(char *, char const *);
 int         strcoll(const char *s1, const char *s2) __PURE;
 size_t      strxfrm(char *dest, const char *src, size_t n) __PURE;
 
+// Not actually defined in the kernel, but <cstring> expects the declaration.
+char        *strerror(int);
+
 /* non standard */
 size_t strlcat(char *, char const *, size_t);
 size_t strlcpy(char *, char const *, size_t);

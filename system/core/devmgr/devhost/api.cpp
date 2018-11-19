@@ -11,6 +11,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#include <utility>
+
 using namespace devmgr;
 
 // These are the API entry-points from drivers
@@ -104,7 +106,7 @@ __EXPORT zx_status_t device_remove(zx_device_t* dev) {
     // This recovers the leaked reference that happened in
     // device_add_from_driver() above.
     auto dev_ref = fbl::internal::MakeRefPtrNoAdopt(dev);
-    r = devhost_device_remove(fbl::move(dev_ref));
+    r = devhost_device_remove(std::move(dev_ref));
     DM_UNLOCK();
     return r;
 }
@@ -230,7 +232,7 @@ zx_status_t device_open_at(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr<zx_d
 zx_status_t device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags) {
     zx_status_t r;
     DM_LOCK();
-    r = devhost_device_close(fbl::move(dev), flags);
+    r = devhost_device_close(std::move(dev), flags);
     DM_UNLOCK();
     return r;
 }

@@ -71,11 +71,11 @@ bool closure() {
     EXPECT_EQ(2, fheap_value);
 
     // move initialization of a nullptr
-    ClosureFunction fnull2(fbl::move(fnull));
+    ClosureFunction fnull2(std::move(fnull));
     EXPECT_FALSE(!!fnull2);
 
     // move initialization of an inline callable
-    ClosureFunction finline2(fbl::move(finline));
+    ClosureFunction finline2(std::move(finline));
     EXPECT_TRUE(!!finline2);
     EXPECT_FALSE(!!finline);
     finline2();
@@ -84,7 +84,7 @@ bool closure() {
     EXPECT_EQ(4, finline_value);
 
     // move initialization of a heap callable
-    ClosureFunction fheap2(fbl::move(fheap));
+    ClosureFunction fheap2(std::move(fheap));
     EXPECT_TRUE(!!fheap2);
     EXPECT_FALSE(!!fheap);
     fheap2();
@@ -118,7 +118,7 @@ bool closure() {
 
     // move assignment of non-null
     ClosureFunction fnew([] {});
-    fnew = fbl::move(finline2);
+    fnew = std::move(finline2);
     EXPECT_TRUE(!!fnew);
     fnew();
     EXPECT_EQ(5, finline_value);
@@ -126,7 +126,7 @@ bool closure() {
     EXPECT_EQ(6, finline_value);
 
     // move assignment of null
-    fnew = fbl::move(fnull);
+    fnew = std::move(fnull);
     EXPECT_FALSE(!!fnew);
 
     // callable assignment with operator=
@@ -281,11 +281,11 @@ bool binary_op() {
     EXPECT_EQ(2, fheap_value);
 
     // move initialization of a nullptr
-    BinaryOpFunction fnull2(fbl::move(fnull));
+    BinaryOpFunction fnull2(std::move(fnull));
     EXPECT_FALSE(!!fnull2);
 
     // move initialization of an inline callable
-    BinaryOpFunction finline2(fbl::move(finline));
+    BinaryOpFunction finline2(std::move(finline));
     EXPECT_TRUE(!!finline2);
     EXPECT_FALSE(!!finline);
     EXPECT_EQ(10, finline2(3, 7));
@@ -294,7 +294,7 @@ bool binary_op() {
     EXPECT_EQ(4, finline_value);
 
     // move initialization of a heap callable
-    BinaryOpFunction fheap2(fbl::move(fheap));
+    BinaryOpFunction fheap2(std::move(fheap));
     EXPECT_TRUE(!!fheap2);
     EXPECT_FALSE(!!fheap);
     EXPECT_EQ(10, fheap2(3, 7));
@@ -330,7 +330,7 @@ bool binary_op() {
 
     // move assignment of non-null
     BinaryOpFunction fnew([](int a, int b) { return 0; });
-    fnew = fbl::move(finline2);
+    fnew = std::move(finline2);
     EXPECT_TRUE(!!fnew);
     EXPECT_EQ(10, fnew(3, 7));
     EXPECT_EQ(5, finline_value);
@@ -338,7 +338,7 @@ bool binary_op() {
     EXPECT_EQ(6, finline_value);
 
     // move assignment of null
-    fnew = fbl::move(fnull);
+    fnew = std::move(fnull);
     EXPECT_FALSE(!!fnew);
 
     // callable assignment with operator=
@@ -472,19 +472,19 @@ bool sized_function_size_bounds() {
     BEGIN_TEST;
 
     auto empty = [] {};
-    fbl::SizedFunction<Closure, sizeof(empty)> fempty(fbl::move(empty));
+    fbl::SizedFunction<Closure, sizeof(empty)> fempty(std::move(empty));
     static_assert(sizeof(fempty) >= sizeof(empty), "size bounds");
 
     auto small = [ x = 1, y = 2 ] {
         (void)x; // suppress unused lambda capture warning
         (void)y;
     };
-    fbl::SizedFunction<Closure, sizeof(small)> fsmall(fbl::move(small));
+    fbl::SizedFunction<Closure, sizeof(small)> fsmall(std::move(small));
     static_assert(sizeof(fsmall) >= sizeof(small), "size bounds");
     fsmall = [] {};
 
     auto big = [ big = Big(), x = 1 ] { (void)x; };
-    fbl::SizedFunction<Closure, sizeof(big)> fbig(fbl::move(big));
+    fbl::SizedFunction<Closure, sizeof(big)> fbig(std::move(big));
     static_assert(sizeof(fbig) >= sizeof(big), "size bounds");
     fbig = [ x = 1, y = 2 ] {
         (void)x;
@@ -511,19 +511,19 @@ bool inline_function_size_bounds() {
     BEGIN_TEST;
 
     auto empty = [] {};
-    fbl::InlineFunction<Closure, sizeof(empty)> fempty(fbl::move(empty));
+    fbl::InlineFunction<Closure, sizeof(empty)> fempty(std::move(empty));
     static_assert(sizeof(fempty) >= sizeof(empty), "size bounds");
 
     auto small = [ x = 1, y = 2 ] {
         (void)x; // suppress unused lambda capture warning
         (void)y;
     };
-    fbl::InlineFunction<Closure, sizeof(small)> fsmall(fbl::move(small));
+    fbl::InlineFunction<Closure, sizeof(small)> fsmall(std::move(small));
     static_assert(sizeof(fsmall) >= sizeof(small), "size bounds");
     fsmall = [] {};
 
     auto big = [ big = Big(), x = 1 ] { (void)x; };
-    fbl::InlineFunction<Closure, sizeof(big)> fbig(fbl::move(big));
+    fbl::InlineFunction<Closure, sizeof(big)> fbig(std::move(big));
     static_assert(sizeof(fbig) >= sizeof(big), "size bounds");
     fbig = [ x = 1, y = 2 ] {
         (void)x;
@@ -555,9 +555,9 @@ bool move_only_argument_and_result() {
         *value += 1;
         return value;
     });
-    arg = f(fbl::move(arg));
+    arg = f(std::move(arg));
     EXPECT_EQ(1, *arg);
-    arg = f(fbl::move(arg));
+    arg = f(std::move(arg));
     EXPECT_EQ(2, *arg);
 
     END_TEST;
@@ -609,7 +609,7 @@ bool bind_member() {
     BindMember(&obj, &Obj::Call)();
     EXPECT_EQ(23, BindMember(&obj, &Obj::AddOne)(22));
     EXPECT_EQ(6, BindMember(&obj, &Obj::Sum)(1, 2, 3));
-    move_only_value = BindMember(&obj, &Obj::AddAndReturn)(fbl::move(move_only_value));
+    move_only_value = BindMember(&obj, &Obj::AddAndReturn)(std::move(move_only_value));
     EXPECT_EQ(5, *move_only_value);
     EXPECT_EQ(3, obj.calls);
 

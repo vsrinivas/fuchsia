@@ -6,6 +6,8 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
+#include <utility>
+
 #include "tas27xx.h"
 
 namespace audio {
@@ -15,7 +17,7 @@ namespace astro {
 fbl::unique_ptr<Tas27xx> Tas27xx::Create(ddk::I2cChannel&& i2c) {
     fbl::AllocChecker ac;
 
-    auto ptr = fbl::unique_ptr<Tas27xx>(new (&ac) Tas27xx(fbl::move(i2c)));
+    auto ptr = fbl::unique_ptr<Tas27xx>(new (&ac) Tas27xx(std::move(i2c)));
     if (!ac.check()) {
         return nullptr;
     }

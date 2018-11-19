@@ -18,6 +18,8 @@
 #include <fbl/vector.h>
 #include <unittest/unittest.h>
 
+#include <utility>
+
 namespace runtests {
 namespace {
 
@@ -211,7 +213,7 @@ int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* a
         if (arg == "--") {
             break;
         }
-        test_dir_globs.push_back(fbl::move(arg));
+        test_dir_globs.push_back(std::move(arg));
     }
     i++; // Skip "--" itself
     for (; i < argc; ++i) {

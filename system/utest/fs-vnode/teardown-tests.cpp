@@ -19,6 +19,8 @@
 // under highly controlled situations.
 #include <lib/fdio/../../../private-fidl.h>
 
+#include <utility>
+
 namespace {
 
 class FdCountVnode : public fs::Vnode {
@@ -60,7 +62,7 @@ public:
 
 private:
     void Sync(fs::Vnode::SyncCallback callback) final {
-        callback_ = fbl::move(callback);
+        callback_ = std::move(callback);
         thrd_t thrd;
         ZX_ASSERT(thrd_create(&thrd, &AsyncTearDownVnode::SyncThread, this) == thrd_success);
         thrd_detach(thrd);
@@ -75,7 +77,7 @@ private:
             sync_completion_signal(&vn->completions_[0]);
             // B) Wait until the connection has been closed.
             sync_completion_wait(&vn->completions_[1], ZX_TIME_INFINITE);
-            callback = fbl::move(vn->callback_);
+            callback = std::move(vn->callback_);
         }
         callback(ZX_OK);
         return 0;
@@ -110,7 +112,7 @@ bool sync_start(sync_completion_t* completions, async::Loop* loop,
     zx::channel server;
     ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
     ASSERT_EQ(vn->Open(0, nullptr), ZX_OK);
-    ASSERT_EQ(vn->Serve(vfs->get(), fbl::move(server), 0), ZX_OK);
+    ASSERT_EQ(vn->Serve(vfs->get(), std::move(server), 0), ZX_OK);
     vn = nullptr;
 
     ASSERT_TRUE(send_sync(client));
@@ -258,7 +260,7 @@ bool TestTeardownSlowClone() {
     zx::channel client, server;
     ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
     ASSERT_EQ(vn->Open(0, nullptr), ZX_OK);
-    ASSERT_EQ(vn->Serve(vfs.get(), fbl::move(server), 0), ZX_OK);
+    ASSERT_EQ(vn->Serve(vfs.get(), std::move(server), 0), ZX_OK);
     vn = nullptr;
 
     // A) Wait for sync to begin.
@@ -314,7 +316,7 @@ bool TestSynchronousTeardown() {
         zx::channel server;
         ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
         ASSERT_EQ(vn->Open(0, nullptr), ZX_OK);
-        ASSERT_EQ(vn->Serve(vfs.get(), fbl::move(server), 0), ZX_OK);
+        ASSERT_EQ(vn->Serve(vfs.get(), std::move(server), 0), ZX_OK);
     }
 
     loop.Quit();
@@ -326,7 +328,7 @@ bool TestSynchronousTeardown() {
         zx::channel server;
         ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
         ASSERT_EQ(vn->Open(0, nullptr), ZX_OK);
-        ASSERT_EQ(vn->Serve(vfs.get(), fbl::move(server), 0), ZX_OK);
+        ASSERT_EQ(vn->Serve(vfs.get(), std::move(server), 0), ZX_OK);
     }
 
     {

@@ -9,6 +9,8 @@
 #include <zircon/status.h>
 #include <unittest/unittest.h>
 
+#include <utility>
+
 // These unit tests are for the Digest object in ulib/digest.
 
 namespace {
@@ -139,7 +141,7 @@ bool DigestMove(void) {
         ASSERT_TRUE(digest1 == uninitialized_digest);
         ASSERT_FALSE(digest1.is_valid());
 
-        Digest digest2(fbl::move(digest1));
+        Digest digest2(std::move(digest1));
         ASSERT_TRUE(digest1 == uninitialized_digest);
         ASSERT_FALSE(digest1.is_valid());
         ASSERT_TRUE(digest2 == uninitialized_digest);
@@ -161,7 +163,7 @@ bool DigestMove(void) {
 
     // Move the hash into digest2.  Verify that the context goes with the move
     // operation.
-    Digest digest2(fbl::move(digest1));
+    Digest digest2(std::move(digest1));
     ASSERT_TRUE(digest1 == uninitialized_digest);
     ASSERT_FALSE(digest1.is_valid());
     ASSERT_TRUE(digest1 == uninitialized_digest);
@@ -179,7 +181,7 @@ bool DigestMove(void) {
 
     // Move the result of the hash into a new digest3.  Verify that neither is
     // valid, but that the result was properly moved.
-    Digest digest3(fbl::move(digest2));
+    Digest digest3(std::move(digest2));
     ASSERT_FALSE(digest2.is_valid());
     ASSERT_FALSE(digest3.is_valid());
     ASSERT_TRUE(digest2 == uninitialized_digest);

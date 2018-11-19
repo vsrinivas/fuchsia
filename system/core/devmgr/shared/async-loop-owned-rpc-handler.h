@@ -8,6 +8,10 @@
 #include <fbl/unique_ptr.h>
 #include <lib/zx/channel.h>
 
+#include <utility>
+
+#include <utility>
+
 namespace devmgr {
 
 // Mixin for representing a type that represents an RPC handler and is owned
@@ -51,7 +55,7 @@ public:
     void HandleRpcEntry(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                         const zx_packet_signal_t* signal) {
         fbl::unique_ptr<T> self(static_cast<T*>(this));
-        T::HandleRpc(fbl::move(self), dispatcher, wait, status, signal);
+        T::HandleRpc(std::move(self), dispatcher, wait, status, signal);
     }
 
     zx::unowned_channel channel() {

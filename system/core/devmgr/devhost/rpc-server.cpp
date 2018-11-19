@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
+#include <utility>
 
 #include <lib/sync/completion.h>
 #include <ddk/device.h>
@@ -81,7 +82,7 @@ static zx_status_t devhost_get_handles(zx::channel rh, const fbl::RefPtr<zx_devi
     if (!newconn) {
         r = ZX_ERR_NO_MEMORY;
         if (describe) {
-            describe_error(fbl::move(rh), r);
+            describe_error(std::move(rh), r);
         }
         return r;
     }
@@ -115,7 +116,7 @@ static zx_status_t devhost_get_handles(zx::channel rh, const fbl::RefPtr<zx_devi
 
     // If we can't add the new conn and handle to the dispatcher our only option
     // is to give up and tear down.  In practice, this should never happen.
-    if ((r = devhost_start_connection(fbl::move(newconn), fbl::move(rh))) != ZX_OK) {
+    if ((r = devhost_start_connection(std::move(newconn), std::move(rh))) != ZX_OK) {
         fprintf(stderr, "devhost_get_handles: failed to start iostate\n");
         // TODO(teisenbe/kulakowski): Should this be goto fail_open?
         goto fail;
@@ -123,10 +124,10 @@ static zx_status_t devhost_get_handles(zx::channel rh, const fbl::RefPtr<zx_devi
     return ZX_OK;
 
 fail_open:
-    device_close(fbl::move(new_dev), flags);
+    device_close(std::move(new_dev), flags);
 fail:
     if (describe) {
-        describe_error(fbl::move(rh), r);
+        describe_error(std::move(rh), r);
     }
     return r;
 }
@@ -257,7 +258,7 @@ static zx_status_t fidl_node_clone(void* ctx, uint32_t flags, zx_handle_t object
     auto conn = static_cast<DevfsConnection*>(ctx);
     zx::channel c(object);
     flags = conn->flags | (flags & ZX_FS_FLAG_DESCRIBE);
-    devhost_get_handles(fbl::move(c), conn->dev, nullptr, flags);
+    devhost_get_handles(std::move(c), conn->dev, nullptr, flags);
     return ZX_OK;
 }
 
@@ -265,7 +266,7 @@ static zx_status_t fidl_node_close(void* ctx, fidl_txn_t* txn) {
     auto conn = static_cast<DevfsConnection*>(ctx);
     // Call device_close to let the driver execute its close hook.  This may
     // be the last reference to the device, causing it to be destroyed.
-    device_close(fbl::move(conn->dev), conn->flags);
+    device_close(std::move(conn->dev), conn->flags);
 
     fuchsia_io_NodeClose_reply(txn, ZX_OK);
     return ERR_DISPATCHER_DONE;
@@ -301,7 +302,7 @@ zx_status_t devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t
     if (!strcmp(path_data, ".")) {
         path_data = nullptr;
     }
-    devhost_get_handles(fbl::move(c), dev, path_data, flags);
+    devhost_get_handles(std::move(c), dev, path_data, flags);
     return ZX_OK;
 }
 
@@ -310,7 +311,7 @@ static zx_status_t fidl_directory_open(void* ctx, uint32_t flags, uint32_t mode,
                                        zx_handle_t object) {
     auto conn = static_cast<DevfsConnection*>(ctx);
     zx::channel c(object);
-    return devhost_device_connect(conn->dev, flags, path_data, path_size, fbl::move(c));
+    return devhost_device_connect(conn->dev, flags, path_data, path_size, std::move(c));
 }
 
 static zx_status_t fidl_directory_unlink(void* ctx, const char* path_data,

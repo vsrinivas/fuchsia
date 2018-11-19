@@ -14,6 +14,8 @@
 #include <fbl/unique_ptr.h>
 #include <threads.h>
 
+#include <utility>
+
 namespace thermal {
 
 class AmlThermal;
@@ -31,11 +33,11 @@ public:
                fbl::unique_ptr<thermal::AmlCpuFrequency> cpufreq_scaling,
                opp_info_t opp_info,
                thermal_device_info_t thermal_config)
-        : DeviceType(device), tsensor_(fbl::move(tsensor)),
-          voltage_regulator_(fbl::move(voltage_regulator)),
-          cpufreq_scaling_(fbl::move(cpufreq_scaling)),
-          opp_info_(fbl::move(opp_info)),
-          thermal_config_(fbl::move(thermal_config)) {
+        : DeviceType(device), tsensor_(std::move(tsensor)),
+          voltage_regulator_(std::move(voltage_regulator)),
+          cpufreq_scaling_(std::move(cpufreq_scaling)),
+          opp_info_(std::move(opp_info)),
+          thermal_config_(std::move(thermal_config)) {
         ddk_proto_id_ = ZX_PROTOCOL_THERMAL;
     };
     static zx_status_t Create(zx_device_t* device);

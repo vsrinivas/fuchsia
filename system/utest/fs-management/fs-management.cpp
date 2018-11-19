@@ -31,6 +31,8 @@
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
 
+#include <utility>
+
 namespace {
 
 fs_test_utils::FixtureOptions PartitionOverFvmWithRamdisk() {
@@ -58,7 +60,7 @@ bool CheckMountedFs(const char* path, const char* fs_name, size_t len) {
 
     fuchsia_io_FilesystemInfo info;
     zx_status_t status;
-    fzl::FdioCaller caller(fbl::move(fd));
+    fzl::FdioCaller caller(std::move(fd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &info),
               ZX_OK);
     ASSERT_EQ(status, ZX_OK);
@@ -229,7 +231,7 @@ bool DoMountEvil(const char* parentfs_name, const char* mount_path) {
     fbl::unique_fd badfd(open(mount_path, O_RDONLY | O_DIRECTORY));
     ASSERT_TRUE(badfd);
     zx_status_t status;
-    fzl::FdioCaller caller(fbl::move(badfd));
+    fzl::FdioCaller caller(std::move(badfd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminUnmount(caller.borrow_channel(), &status), ZX_OK);
     ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED);
     ASSERT_EQ(close(caller.release().release()), 0);
@@ -239,7 +241,7 @@ bool DoMountEvil(const char* parentfs_name, const char* mount_path) {
     badfd.reset(open(mount_path, O_RDONLY | O_DIRECTORY));
     ASSERT_TRUE(badfd);
     zx_handle_t h;
-    caller.reset(fbl::move(badfd));
+    caller.reset(std::move(badfd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminUnmountNode(caller.borrow_channel(), &status, &h), ZX_OK);
     ASSERT_EQ(h, ZX_HANDLE_INVALID);
     ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED);
@@ -310,7 +312,7 @@ bool UmountTestEvil() {
     fbl::unique_fd weak_root_fd(open(mount_path, O_RDONLY | O_DIRECTORY));
     ASSERT_TRUE(weak_root_fd);
     zx_status_t status;
-    fzl::FdioCaller caller(fbl::move(weak_root_fd));
+    fzl::FdioCaller caller(std::move(weak_root_fd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminUnmount(caller.borrow_channel(), &status), ZX_OK);
     ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED);
     weak_root_fd.reset(caller.release().release());
@@ -320,7 +322,7 @@ bool UmountTestEvil() {
     ASSERT_EQ(mkdirat(weak_root_fd.get(), "subdir", 0666), 0);
     fbl::unique_fd weak_subdir_fd(openat(weak_root_fd.get(), "subdir", O_RDONLY | O_DIRECTORY));
     ASSERT_TRUE(weak_subdir_fd);
-    caller.reset(fbl::move(weak_subdir_fd));
+    caller.reset(std::move(weak_subdir_fd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminUnmount(caller.borrow_channel(), &status), ZX_OK);
     ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED);
 
@@ -452,7 +454,7 @@ bool MountGetDevice() {
     char* device_path = static_cast<char*>(device_buffer);
     zx_status_t status;
     size_t path_len;
-    fzl::FdioCaller caller(fbl::move(mountfd));
+    fzl::FdioCaller caller(std::move(mountfd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status,
                                                      device_path, sizeof(device_buffer),
                                                      &path_len),
@@ -467,7 +469,7 @@ bool MountGetDevice() {
 
     mountfd.reset(open(mount_path, O_RDONLY | O_ADMIN));
     ASSERT_TRUE(mountfd);
-    caller.reset(fbl::move(mountfd));
+    caller.reset(std::move(mountfd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status,
                                                      device_path, sizeof(device_buffer),
                                                      &path_len),
@@ -478,7 +480,7 @@ bool MountGetDevice() {
 
     mountfd.reset(open(mount_path, O_RDONLY));
     ASSERT_TRUE(mountfd);
-    caller.reset(fbl::move(mountfd));
+    caller.reset(std::move(mountfd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status,
                                                      device_path, sizeof(device_buffer),
                                                      &path_len),
@@ -490,7 +492,7 @@ bool MountGetDevice() {
 
     mountfd.reset(open(mount_path, O_RDONLY | O_ADMIN));
     ASSERT_TRUE(mountfd);
-    caller.reset(fbl::move(mountfd));
+    caller.reset(std::move(mountfd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status,
                                                      device_path, sizeof(device_buffer),
                                                      &path_len),

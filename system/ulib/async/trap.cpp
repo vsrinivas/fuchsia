@@ -4,6 +4,8 @@
 
 #include <lib/async/cpp/trap.h>
 
+#include <utility>
+
 namespace async {
 
 GuestBellTrapBase::GuestBellTrapBase(async_guest_bell_trap_handler_t* handler)
@@ -17,7 +19,7 @@ zx_status_t GuestBellTrapBase::SetTrap(
 }
 
 GuestBellTrap::GuestBellTrap(Handler handler)
-    : GuestBellTrapBase(&GuestBellTrap::CallHandler), handler_(fbl::move(handler)) {}
+    : GuestBellTrapBase(&GuestBellTrap::CallHandler), handler_(std::move(handler)) {}
 
 GuestBellTrap::~GuestBellTrap() = default;
 

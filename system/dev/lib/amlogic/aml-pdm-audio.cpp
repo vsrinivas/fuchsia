@@ -6,6 +6,8 @@
 #include <fbl/limits.h>
 #include <soc/aml-common/aml-pdm-audio.h>
 
+#include <utility>
+
 // Filter configurations
 //mode 1 lpf1
 static const uint32_t lpf1m1[] = {
@@ -72,7 +74,7 @@ fbl::unique_ptr<AmlPdmDevice> AmlPdmDevice::Create(ddk::MmioBuffer pdm_mmio,
 
     fbl::AllocChecker ac;
     auto pdm = fbl::unique_ptr<AmlPdmDevice>(
-        new (&ac) AmlPdmDevice(fbl::move(pdm_mmio), fbl::move(audio_mmio),
+        new (&ac) AmlPdmDevice(std::move(pdm_mmio), std::move(audio_mmio),
                                pdm_clk_src, sysclk_div, dclk_div,
                                toddr_dev, fifo_depth));
     if (!ac.check()) {

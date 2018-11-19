@@ -33,6 +33,8 @@
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 
+#include <utility>
+
 #include "../shared/bootfs.h"
 #include "../shared/fdio.h"
 #include "devmgr.h"
@@ -683,7 +685,7 @@ static loader_service_t* loader_service;
 void bootfs_create_from_startup_handle() {
     zx::vmo bootfs_vmo(zx_take_startup_handle(PA_HND(PA_VMO_BOOTFS, 0)));
     if ((!bootfs_vmo.is_valid()) ||
-        (Bootfs::Create(fbl::move(bootfs_vmo), &bootfs) != ZX_OK)) {
+        (Bootfs::Create(std::move(bootfs_vmo), &bootfs) != ZX_OK)) {
         printf("devmgr: cannot find and open bootfs\n");
         exit(1);
     }

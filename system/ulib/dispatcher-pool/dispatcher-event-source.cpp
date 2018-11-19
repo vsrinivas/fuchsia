@@ -10,6 +10,8 @@
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <dispatcher-pool/dispatcher-thread-pool.h>
 
+#include <utility>
+
 namespace dispatcher {
 
 EventSource::EventSource(zx_signals_t process_signal_mask)
@@ -73,9 +75,9 @@ zx_status_t EventSource::ActivateLocked(zx::handle handle, fbl::RefPtr<Execution
     if (res != ZX_OK)
         return res;
 
-    handle_ = fbl::move(handle);
-    domain_ = fbl::move(domain);
-    thread_pool_ = fbl::move(thread_pool);
+    handle_ = std::move(handle);
+    domain_ = std::move(domain);
+    thread_pool_ = std::move(thread_pool);
 
     return ZX_OK;
 }

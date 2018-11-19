@@ -9,6 +9,8 @@
 #include <ddk/platform-defs.h>
 #include <math.h>
 
+#include <utility>
+
 namespace audio {
 namespace astro {
 
@@ -73,8 +75,8 @@ zx_status_t AstroAudioStreamIn::InitPDev() {
         return status;
     }
 
-    pdm_ = AmlPdmDevice::Create(fbl::move(*mmio0),
-                                fbl::move(*mmio1),
+    pdm_ = AmlPdmDevice::Create(std::move(*mmio0),
+                                std::move(*mmio1),
                                 HIFI_PLL, 7, 499, TODDR_B);
     if (pdm_ == nullptr) {
         zxlogf(ERROR, "%s failed to create pdm device\n", __func__);
@@ -167,7 +169,7 @@ zx_status_t AstroAudioStreamIn::InitPost() {
             return pdm->ProcessRingNotification();
         });
 
-    return notify_timer_->Activate(domain_, fbl::move(thandler));
+    return notify_timer_->Activate(domain_, std::move(thandler));
 }
 
 zx_status_t AstroAudioStreamIn::Stop() {

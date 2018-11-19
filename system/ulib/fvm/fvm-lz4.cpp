@@ -4,10 +4,12 @@
 
 #include "fvm/fvm-lz4.h"
 
+#include <utility>
+
 namespace fvm {
 zx_status_t SparseReader::Create(fbl::unique_fd fd, fbl::unique_ptr<SparseReader>* out) {
     fbl::AllocChecker ac;
-    fbl::unique_ptr<SparseReader> reader(new (&ac) SparseReader(fbl::move(fd)));
+    fbl::unique_ptr<SparseReader> reader(new (&ac) SparseReader(std::move(fd)));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -17,11 +19,11 @@ zx_status_t SparseReader::Create(fbl::unique_fd fd, fbl::unique_ptr<SparseReader
         return status;
     }
 
-    *out = fbl::move(reader);
+    *out = std::move(reader);
     return ZX_OK;
 }
 
-SparseReader::SparseReader(fbl::unique_fd fd) : compressed_(false), fd_(fbl::move(fd)) {}
+SparseReader::SparseReader(fbl::unique_fd fd) : compressed_(false), fd_(std::move(fd)) {}
 
 zx_status_t SparseReader::ReadMetadata() {
     // Read sparse image header.
@@ -319,11 +321,11 @@ zx_status_t decompress_sparse(const char* infile, const char* outfile) {
 
     zx_status_t status;
     fbl::unique_ptr<SparseReader> reader;
-    if ((status = SparseReader::Create(fbl::move(infd), &reader))) {
+    if ((status = SparseReader::Create(std::move(infd), &reader))) {
         return status;
     }
 
-    return reader->WriteDecompressed(fbl::move(outfd));
+    return reader->WriteDecompressed(std::move(outfd));
 }
 
 } // namespace fvm

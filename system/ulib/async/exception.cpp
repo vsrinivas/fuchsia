@@ -4,6 +4,8 @@
 
 #include <lib/async/cpp/exception.h>
 
+#include <utility>
+
 namespace async {
 
 ExceptionBase::ExceptionBase(zx_handle_t task, uint32_t options,
@@ -58,7 +60,7 @@ zx_status_t ExceptionBase::Resume(zx_handle_t task, uint32_t options) {
 Exception::Exception(zx_handle_t task, uint32_t options,
                      Handler handler)
     : ExceptionBase(task, options, &Exception::CallHandler),
-      handler_(fbl::move(handler)) {}
+      handler_(std::move(handler)) {}
 
 Exception::~Exception() = default;
 

@@ -13,6 +13,8 @@
 #include <lockdep/common.h>
 #include <lockdep/lock_class_state.h>
 
+#include <utility>
+
 namespace lockdep {
 
 // Linked list entry that tracks a lock acquired by a thread. Each thread
@@ -34,7 +36,7 @@ public:
     AcquiredLockEntry(const AcquiredLockEntry&) = delete;
     AcquiredLockEntry& operator=(const AcquiredLockEntry&) = delete;
 
-    AcquiredLockEntry(AcquiredLockEntry&& other) { *this = move(other); }
+    AcquiredLockEntry(AcquiredLockEntry&& other) { *this = std::move(other); }
     AcquiredLockEntry& operator=(AcquiredLockEntry&& other) {
         if (this != &other) {
             ZX_ASSERT(!InContainer());

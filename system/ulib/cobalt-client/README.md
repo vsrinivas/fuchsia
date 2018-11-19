@@ -39,7 +39,7 @@ cobalt_client::CollectorOptions MakeOptions() {
         // We check if we can read.
         return vmo->write(buffer,0, total_bytes) == ZX_OK;
     };
-    return fbl::move(options);
+    return std::move(options);
 }
 ```
 

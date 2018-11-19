@@ -4,8 +4,8 @@
 
 #pragma once
 
+#include "string.h"
 #include <stdarg.h>
-#include <string.h>
 
 #include <fbl/string.h>
 #include <fbl/string_piece.h>

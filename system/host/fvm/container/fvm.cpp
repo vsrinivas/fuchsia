@@ -19,6 +19,8 @@
 
 #if defined(__linux__)
 #include <linux/fs.h>
+
+#include <utility>
 #define IOCTL_GET_BLOCK_COUNT BLKGETSIZE
 #endif
 
@@ -36,7 +38,7 @@ zx_status_t FvmContainer::Create(const char* path, size_t slice_size, off_t offs
         return status;
     }
 
-    *out = fbl::move(fvmContainer);
+    *out = std::move(fvmContainer);
     return ZX_OK;
 }
 
@@ -252,7 +254,7 @@ zx_status_t FvmContainer::Verify() const {
             return ZX_ERR_INTERNAL;
         }
 
-        if ((status = Format::Check(fbl::move(dupfd), start, end, extent_lengths, part)) != ZX_OK) {
+        if ((status = Format::Check(std::move(dupfd), start, end, extent_lengths, part)) != ZX_OK) {
             fprintf(stderr, "%s fsck returned an error.\n", vpart->name);
             return status;
         }
@@ -562,11 +564,11 @@ zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name) 
     }
 
     partition_info_t partition;
-    partition.format = fbl::move(format);
+    partition.format = std::move(format);
     partition.vpart_index = vpart_index;
     partition.pslice_start = pslice_start;
     partition.slice_count = slice_count;
-    partitions_.push_back(fbl::move(partition));
+    partitions_.push_back(std::move(partition));
     return ZX_OK;
 }
 

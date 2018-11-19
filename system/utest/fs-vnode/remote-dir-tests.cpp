@@ -6,6 +6,8 @@
 
 #include <unittest/unittest.h>
 
+#include <utility>
+
 namespace {
 
 bool TestRemoteDir() {
@@ -15,7 +17,7 @@ bool TestRemoteDir() {
     ASSERT_EQ(ZX_OK, zx::channel::create(0u, &server, &client));
 
     zx_handle_t client_handle = client.get();
-    auto dir = fbl::AdoptRef<fs::RemoteDir>(new fs::RemoteDir(fbl::move(client)));
+    auto dir = fbl::AdoptRef<fs::RemoteDir>(new fs::RemoteDir(std::move(client)));
 
     // get attributes
     vnattr_t attr;

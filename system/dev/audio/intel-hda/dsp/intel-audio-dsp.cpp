@@ -7,6 +7,8 @@
 #include <fbl/auto_lock.h>
 #include <string.h>
 
+#include <utility>
+
 #include "intel-audio-dsp.h"
 #include "intel-dsp-code-loader.h"
 
@@ -156,7 +158,7 @@ zx_status_t IntelAudioDsp::SetupDspDevice() {
         return res;
     }
 
-    hda_bti_ = RefCountedBti::Create(fbl::move(bti));
+    hda_bti_ = RefCountedBti::Create(std::move(bti));
     if (hda_bti_ == nullptr) {
         LOG(ERROR, "Out of memory while attempting to allocate BTI wrapper for IHDA DSP\n");
         return ZX_ERR_NO_MEMORY;

@@ -7,6 +7,8 @@
 #include <fbl/function.h>
 #include <lib/async/wait.h>
 
+#include <utility>
+
 namespace async {
 
 // Holds context for an asynchronous wait and its handler, with RAII semantics.
@@ -105,7 +107,7 @@ public:
                   Handler handler = nullptr);
     ~Wait();
 
-    void set_handler(Handler handler) { handler_ = fbl::move(handler); }
+    void set_handler(Handler handler) { handler_ = std::move(handler); }
     bool has_handler() const { return !!handler_; }
 
 private:

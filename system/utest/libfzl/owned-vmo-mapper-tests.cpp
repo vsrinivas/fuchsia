@@ -6,6 +6,8 @@
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <unittest/unittest.h>
 
+#include <utility>
+
 // Note: these tests focus on the added functionality of the owned VMO
 // mapper.  The core functionality is assumed to have already been tested by the
 // vmo/vmar tests.
@@ -55,8 +57,8 @@ bool UncheckedCreateHelper(fbl::unique_ptr<fzl::OwnedVmoMapper>* out_mapper,
 
     ASSERT_NONNULL(out_mapper);
     auto mapper = fbl::make_unique<fzl::OwnedVmoMapper>();
-    if (mapper->CreateAndMap(size, name, map_options, fbl::move(manager), cache_policy) == ZX_OK) {
-        *out_mapper = fbl::move(mapper);
+    if (mapper->CreateAndMap(size, name, map_options, std::move(manager), cache_policy) == ZX_OK) {
+        *out_mapper = std::move(mapper);
     }
     END_HELPER;
 }
@@ -99,7 +101,7 @@ bool CreateAndMapHelper(fzl::OwnedVmoMapper* inout_mapper,
     status = inout_mapper->CreateAndMap(size,
                                         name,
                                         map_options,
-                                        fbl::move(manager),
+                                        std::move(manager),
                                         cache_policy);
     ASSERT_EQ(status, ZX_OK);
     ASSERT_TRUE(ValidateCreateHelper(*inout_mapper, size));
@@ -122,7 +124,7 @@ bool MapHelper(fzl::OwnedVmoMapper* inout_mapper,
 
     ASSERT_NONNULL(inout_mapper);
     zx_status_t status;
-    status = inout_mapper->Map(fbl::move(vmo), size, map_options, fbl::move(manager));
+    status = inout_mapper->Map(std::move(vmo), size, map_options, std::move(manager));
     ASSERT_EQ(status, ZX_OK);
     ASSERT_TRUE(ValidateCreateHelper(*inout_mapper, size));
 
@@ -163,7 +165,7 @@ bool MapTest() {
     ASSERT_EQ(status, ZX_OK);
 
     fzl::OwnedVmoMapper mapper;
-    ASSERT_TRUE(MapHelper<NON_ROOT_VMAR>(&mapper, fbl::move(vmo), ZX_PAGE_SIZE));
+    ASSERT_TRUE(MapHelper<NON_ROOT_VMAR>(&mapper, std::move(vmo), ZX_PAGE_SIZE));
 
     END_TEST;
 }
@@ -190,7 +192,7 @@ bool MoveTest() {
         ASSERT_NULL(orig_manager);
     }
 
-    fzl::OwnedVmoMapper mapper2(fbl::move(mapper1));;
+    fzl::OwnedVmoMapper mapper2(std::move(mapper1));;
     ASSERT_EQ(mapper1.vmo().get(), ZX_HANDLE_INVALID);
     ASSERT_NULL(mapper1.start());
     ASSERT_EQ(mapper1.size(), 0);
@@ -203,7 +205,7 @@ bool MoveTest() {
     ASSERT_TRUE(ValidateCreateHelper(mapper2, orig_size));
 
     // Move by assignment
-    mapper1 = fbl::move(mapper2);
+    mapper1 = std::move(mapper2);
 
     ASSERT_EQ(mapper2.vmo().get(), ZX_HANDLE_INVALID);
     ASSERT_NULL(mapper2.start());

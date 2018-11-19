@@ -41,6 +41,8 @@
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
+#include <utility>
+
 #include "blobfs-test.h"
 
 #define TMPFS_PATH "/blobfs-tmp"
@@ -464,7 +466,7 @@ bool BlobfsTest::CheckInfo(uint64_t* total_bytes, uint64_t* used_bytes) {
 
     zx_status_t status;
     fuchsia_io_FilesystemInfo info;
-    fzl::FdioCaller caller(fbl::move(fd));
+    fzl::FdioCaller caller(std::move(fd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &info),
               ZX_OK);
     ASSERT_EQ(status, ZX_OK);
@@ -656,7 +658,7 @@ static bool GenerateBlob(BlobSrcFunction sourceCb, size_t size_data,
                                  info->size_merkle, 0, info->size_data, digest),
               ZX_OK, "Failed to validate Merkle Tree");
 
-    *out = fbl::move(info);
+    *out = std::move(info);
     END_HELPER;
 }
 
@@ -672,7 +674,7 @@ bool QueryInfo(size_t expected_nodes, size_t expected_bytes) {
 
     zx_status_t status;
     fuchsia_io_FilesystemInfo info;
-    fzl::FdioCaller caller(fbl::move(fd));
+    fzl::FdioCaller caller(std::move(fd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &info),
               ZX_OK);
     ASSERT_EQ(status, ZX_OK);
@@ -1539,7 +1541,7 @@ static bool InvalidOps(BlobfsTest* blobfsTest) {
 
     // Test that a blob fd cannot unmount the entire blobfs.
     zx_status_t status;
-    fzl::FdioCaller caller(fbl::move(fd));
+    fzl::FdioCaller caller(std::move(fd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminUnmount(caller.borrow_channel(), &status), ZX_OK);
     ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED);
     fd.reset(caller.release().release());
@@ -1649,7 +1651,7 @@ enum TestState {
 
 typedef struct blob_state : public fbl::DoublyLinkedListable<fbl::unique_ptr<blob_state>> {
     blob_state(fbl::unique_ptr<blob_info_t> i)
-        : info(fbl::move(i)), state(empty), writes_remaining(1) {
+        : info(std::move(i)), state(empty), writes_remaining(1) {
             bytes_remaining = info->size_data;
         }
 
@@ -1676,7 +1678,7 @@ bool blob_create_helper(blob_list_t* bl, unsigned* seed) {
     ASSERT_TRUE(GenerateRandomBlob(1 + (rand_r(seed) % (1 << 16)), &info));
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<blob_state_t> state(new (&ac) blob_state(fbl::move(info)));
+    fbl::unique_ptr<blob_state_t> state(new (&ac) blob_state(std::move(info)));
     ASSERT_EQ(ac.check(), true);
 
     {
@@ -1689,7 +1691,7 @@ bool blob_create_helper(blob_list_t* bl, unsigned* seed) {
         ASSERT_TRUE(fd, "Failed to create blob");
         state->fd.reset(fd.release());
 
-        bl->list.push_front(fbl::move(state));
+        bl->list.push_front(std::move(state));
         bl->blob_count++;
     }
     return true;
@@ -1711,7 +1713,7 @@ bool blob_config_helper(blob_list_t* bl) {
     }
     {
         fbl::AutoLock al(&bl->list_lock);
-        bl->list.push_front(fbl::move(state));
+        bl->list.push_front(std::move(state));
     }
     return true;
 }
@@ -1739,7 +1741,7 @@ bool blob_write_data_helper(blob_list_t* bl) {
     }
     {
         fbl::AutoLock al(&bl->list_lock);
-        bl->list.push_front(fbl::move(state));
+        bl->list.push_front(std::move(state));
     }
     return true;
 }
@@ -1759,7 +1761,7 @@ bool blob_read_data_helper(blob_list_t* bl) {
     }
     {
         fbl::AutoLock al(&bl->list_lock);
-        bl->list.push_front(fbl::move(state));
+        bl->list.push_front(std::move(state));
     }
     return true;
 }
@@ -1799,7 +1801,7 @@ bool blob_reopen_helper(blob_list_t* bl) {
     }
     {
         fbl::AutoLock al(&bl->list_lock);
-        bl->list.push_front(fbl::move(state));
+        bl->list.push_front(std::move(state));
     }
     return true;
 }
@@ -2090,7 +2092,7 @@ static bool NoSpace(BlobfsTest* blobfsTest) {
         ASSERT_EQ(StreamAll(write, fd.get(), info->data.get(), info->size_data), 0,
                   "Failed to write Data");
         ASSERT_EQ(close(fd.release()), 0);
-        last_info = fbl::move(info);
+        last_info = std::move(info);
 
         if (++count % 50 == 0) {
             printf("Allocated %lu blobs\n", count);
@@ -2188,7 +2190,7 @@ static bool QueryDevicePath(BlobfsTest* blobfsTest) {
     char* device_path = static_cast<char*>(device_buffer);
     zx_status_t status;
     size_t path_len;
-    fzl::FdioCaller caller(fbl::move(dirfd));
+    fzl::FdioCaller caller(std::move(dirfd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status,
                                                      device_path, sizeof(device_buffer),
                                                      &path_len), ZX_OK);
@@ -2203,7 +2205,7 @@ static bool QueryDevicePath(BlobfsTest* blobfsTest) {
 
     dirfd.reset(open(MOUNT_PATH "/.", O_RDONLY));
     ASSERT_TRUE(dirfd, "Cannot open root directory");
-    caller.reset(fbl::move(dirfd));
+    caller.reset(std::move(dirfd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status,
                                                      device_path, sizeof(device_buffer),
                                                      &path_len), ZX_OK);
@@ -2691,17 +2693,17 @@ static bool TestJournalEntryLifetime() {
     // Create and process a 'work' entry.
     fbl::unique_ptr<blobfs::JournalEntry> entry(
         new blobfs::JournalEntry(&journal, blobfs::EntryStatus::kInit, 0, 0,
-                                 fbl::move(journal.CreateBufferedWork(1))));
+                                 journal.CreateBufferedWork(1)));
     fbl::unique_ptr<blobfs::WritebackWork> first_work = journal.CreateDefaultWork();
     first_work->SetSyncCallback(entry->CreateSyncCallback());
-    processor.ProcessWorkEntry(fbl::move(entry));
+    processor.ProcessWorkEntry(std::move(entry));
 
     // Create and process another 'work' entry.
     entry.reset(new blobfs::JournalEntry(&journal, blobfs::EntryStatus::kInit, 0, 0,
-                                         fbl::move(journal.CreateBufferedWork(1))));
+                                         journal.CreateBufferedWork(1)));
     fbl::unique_ptr<blobfs::WritebackWork> second_work = journal.CreateDefaultWork();
     second_work->SetSyncCallback(entry->CreateSyncCallback());
-    processor.ProcessWorkEntry(fbl::move(entry));
+    processor.ProcessWorkEntry(std::move(entry));
 
     // Enqueue the processor's work (this is a no-op).
     processor.EnqueueWork();

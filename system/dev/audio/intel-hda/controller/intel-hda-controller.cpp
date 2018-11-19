@@ -17,6 +17,8 @@
 #include <intel-hda/utils/intel-hda-registers.h>
 #include <intel-hda/utils/intel-hda-proto.h>
 
+#include <utility>
+
 #include "debug-logging.h"
 #include "intel-hda-codec.h"
 #include "intel-hda-controller.h"
@@ -132,7 +134,7 @@ fbl::RefPtr<IntelHDAStream> IntelHDAController::AllocateStream(IntelHDAStream::T
 
 void IntelHDAController::ReturnStream(fbl::RefPtr<IntelHDAStream>&& ptr) {
     fbl::AutoLock lock(&stream_pool_lock_);
-    ReturnStreamLocked(fbl::move(ptr));
+    ReturnStreamLocked(std::move(ptr));
 }
 
 void IntelHDAController::ReturnStreamLocked(fbl::RefPtr<IntelHDAStream>&& ptr) {
@@ -148,7 +150,7 @@ void IntelHDAController::ReturnStreamLocked(fbl::RefPtr<IntelHDAStream>&& ptr) {
     }
 
     ptr->Configure(IntelHDAStream::Type::INVALID, 0);
-    dst->insert(fbl::move(ptr));
+    dst->insert(std::move(ptr));
 }
 
 uint8_t IntelHDAController::AllocateStreamTagLocked(bool input) {
@@ -226,7 +228,7 @@ zx_status_t IntelHDAController::DeviceIoctl(uint32_t op,
 
     return HandleDeviceIoctl(op, out_buf, out_len, out_actual,
                              default_domain_,
-                             fbl::move(phandler),
+                             std::move(phandler),
                              nullptr);
 }
 

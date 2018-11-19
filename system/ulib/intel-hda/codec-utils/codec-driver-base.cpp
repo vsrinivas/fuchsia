@@ -17,6 +17,8 @@
 #include <intel-hda/utils/intel-hda-proto.h>
 #include <intel-hda/utils/utils.h>
 
+#include <utility>
+
 #include "debug-logging.h"
 
 namespace audio {
@@ -104,10 +106,10 @@ zx_status_t IntelHDACodecDriverBase::Bind(zx_device_t* codec_dev, const char* na
         codec->ProcessClientDeactivate(channel);
     });
 
-    res = device_channel->Activate(fbl::move(channel),
+    res = device_channel->Activate(std::move(channel),
                                    default_domain_,
-                                   fbl::move(phandler),
-                                   fbl::move(chandler));
+                                   std::move(phandler),
+                                   std::move(chandler));
     if (res != ZX_OK) {
         fbl::AutoLock device_channel_lock(&device_channel_lock_);
         device_channel_.reset();
@@ -235,7 +237,7 @@ zx_status_t IntelHDACodecDriverBase::ProcessClientRequest(dispatcher::Channel* c
                       resp.hdr.transaction_id);
             return ZX_ERR_BAD_STATE;
         } else {
-            return ProcessStreamResponse(stream, resp, resp_size, fbl::move(rxed_handle));
+            return ProcessStreamResponse(stream, resp, resp_size, std::move(rxed_handle));
         }
     } else {
         switch(resp.hdr.cmd) {
@@ -315,7 +317,7 @@ zx_status_t IntelHDACodecDriverBase::ProcessStreamResponse(
             return res;
         }
 
-        return stream->ProcessSetStreamFmt(resp.set_stream_fmt, fbl::move(channel));
+        return stream->ProcessSetStreamFmt(resp.set_stream_fmt, std::move(channel));
     }
 
     default:

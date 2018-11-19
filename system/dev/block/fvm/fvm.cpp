@@ -7,6 +7,7 @@
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
+#include <utility>
 
 #include <ddk/protocol/block.h>
 #include <fbl/array.h>
@@ -51,7 +52,7 @@ fbl::unique_ptr<SliceExtent> SliceExtent::Split(size_t vslice) {
     while (!is_empty() && vslice + 1 != end()) {
         pop_back();
     }
-    return fbl::move(new_extent);
+    return new_extent;
 }
 
 bool SliceExtent::Merge(const SliceExtent& other) {
@@ -281,7 +282,7 @@ zx_status_t VPartitionManager::Load() {
             return status;
         }
 
-        *out_mapping = fbl::move(mapper);
+        *out_mapping = std::move(mapper);
         return ZX_OK;
     };
 
@@ -305,10 +306,10 @@ zx_status_t VPartitionManager::Load() {
 
     if (metadata == mapper.start()) {
         first_metadata_is_primary_ = true;
-        metadata_ = fbl::move(mapper);
+        metadata_ = std::move(mapper);
     } else {
         first_metadata_is_primary_ = false;
-        metadata_ = fbl::move(mapper_backup);
+        metadata_ = std::move(mapper_backup);
     }
 
     // Begin initializing the underlying partitions
@@ -357,7 +358,7 @@ zx_status_t VPartitionManager::Load() {
             fprintf(stderr, "FVM: Freeing inactive partition\n");
             FreeSlices(vpartitions[i].get(), 0, VSliceMax());
             continue;
-        } else if (AddPartition(fbl::move(vpartitions[i]))) {
+        } else if (AddPartition(std::move(vpartitions[i]))) {
             continue;
         }
         device_count++;
@@ -665,7 +666,7 @@ zx_status_t VPartitionManager::DdkIoctl(uint32_t op, const void* cmd,
                 return status;
             }
         }
-        if ((status = AddPartition(fbl::move(vpart))) != ZX_OK) {
+        if ((status = AddPartition(std::move(vpart))) != ZX_OK) {
             return status;
         }
         return ZX_OK;
@@ -723,7 +724,7 @@ zx_status_t VPartition::Create(VPartitionManager* vpm, size_t entry_index,
         return ZX_ERR_NO_MEMORY;
     }
 
-    *out = fbl::move(vp);
+    *out = std::move(vp);
     return ZX_OK;
 }
 
@@ -794,7 +795,7 @@ zx_status_t VPartition::SliceSetLocked(size_t vslice, uint32_t pslice) {
         }
         ZX_DEBUG_ASSERT(new_extent->GetKey() == vslice);
         ZX_DEBUG_ASSERT(new_extent->get(vslice) == pslice);
-        slice_map_.insert(fbl::move(new_extent));
+        slice_map_.insert(std::move(new_extent));
         extent = --slice_map_.upper_bound(vslice);
     }
 
@@ -823,7 +824,7 @@ bool VPartition::SliceFreeLocked(size_t vslice) {
         if (new_extent == nullptr) {
             return false;
         }
-        slice_map_.insert(fbl::move(new_extent));
+        slice_map_.insert(std::move(new_extent));
     }
     // Removing from end of extent
     extent->pop_back();

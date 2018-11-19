@@ -25,6 +25,8 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <utility>
+
 #include "ring.h"
 #include "trace.h"
 
@@ -138,7 +140,7 @@ zx_status_t InitBuffers(const zx::bti& bti, fbl::unique_ptr<io_buffer_t[]>* out)
             return rc;
         }
     }
-    *out = fbl::move(bufs);
+    *out = std::move(bufs);
     return ZX_OK;
 }
 
@@ -183,7 +185,7 @@ uint8_t* GetFrameData(io_buffer_t* bufs, uint16_t ring_id, uint16_t desc_id, siz
 } // namespace
 
 EthernetDevice::EthernetDevice(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend)
-    : Device(bus_device, fbl::move(bti), fbl::move(backend)), rx_(this), tx_(this), bufs_(nullptr),
+    : Device(bus_device, std::move(bti), std::move(backend)), rx_(this), tx_(this), bufs_(nullptr),
       unkicked_(0), ifc_({nullptr, nullptr}) {
 }
 
@@ -298,7 +300,7 @@ void EthernetDevice::Release() {
 
 void EthernetDevice::ReleaseLocked() {
     ifc_.ops = nullptr;
-    ReleaseBuffers(fbl::move(bufs_));
+    ReleaseBuffers(std::move(bufs_));
     Device::Release();
 }
 

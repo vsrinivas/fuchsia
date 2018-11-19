@@ -5,6 +5,8 @@
 #include <fbl/optional.h>
 #include <unittest/unittest.h>
 
+#include <utility>
+
 namespace {
 
 struct slot {
@@ -98,9 +100,9 @@ bool construct_move() {
     BEGIN_TEST;
 
     fbl::optional<slot> a(slot{42});
-    fbl::optional<slot> b(fbl::move(a));
+    fbl::optional<slot> b(std::move(a));
     fbl::optional<slot> c;
-    fbl::optional<slot> d(fbl::move(c));
+    fbl::optional<slot> d(std::move(c));
     EXPECT_FALSE(a.has_value());
     EXPECT_TRUE(b.has_value());
     EXPECT_EQ(42, b.value().value);
@@ -177,30 +179,37 @@ bool assign_move() {
     EXPECT_EQ(55, b.value().value);
     EXPECT_FALSE(c.has_value());
 
-    a = fbl::move(b);
+    a = std::move(b);
     EXPECT_TRUE(a.has_value());
     EXPECT_EQ(55, a.value().value);
     EXPECT_FALSE(b.has_value());
 
-    b = fbl::move(c);
+    b = std::move(c);
     EXPECT_FALSE(b.has_value());
     EXPECT_FALSE(c.has_value());
 
-    c = fbl::move(b);
+    c = std::move(b);
     EXPECT_FALSE(c.has_value());
     EXPECT_FALSE(b.has_value());
 
-    b = fbl::move(a);
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wself-move"
+#endif
+    b = std::move(a);
     EXPECT_TRUE(b.has_value());
     EXPECT_EQ(55, b.value().value);
     EXPECT_FALSE(a.has_value());
 
-    b = fbl::move(b);
+    b = std::move(b);
     EXPECT_TRUE(b.has_value());
     EXPECT_EQ(55, b.value().value);
 
-    a = fbl::move(a);
+    a = std::move(a);
     EXPECT_FALSE(a.has_value());
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
     END_TEST;
 }

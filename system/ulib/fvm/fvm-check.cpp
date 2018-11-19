@@ -14,12 +14,14 @@
 #include <fvm/fvm-check.h>
 #include <zircon/status.h>
 
+#include <utility>
+
 namespace fvm {
 
 Checker::Checker() = default;
 
 Checker::Checker(fbl::unique_fd fd, uint32_t block_size, bool silent) :
-        fd_(fbl::move(fd)), block_size_(block_size), logger_(silent) {}
+        fd_(std::move(fd)), block_size_(block_size), logger_(silent) {}
 
 Checker::~Checker() = default;
 
@@ -107,7 +109,7 @@ bool Checker::LoadFVM(FvmInfo* out) const {
         slice_size,
     };
 
-    *out = fbl::move(info);
+    *out = std::move(info);
     return true;
 }
 
@@ -143,7 +145,7 @@ bool Checker::LoadPartitions(const size_t slice_count, const fvm::slice_entry_t*
             Slice slice = { vpart, slice_table[i].Vslice(), i };
 
             slices.push_back(slice);
-            partitions[vpart].slices.push_back(fbl::move(slice));
+            partitions[vpart].slices.push_back(std::move(slice));
         }
     }
 
@@ -160,8 +162,8 @@ bool Checker::LoadPartitions(const size_t slice_count, const fvm::slice_entry_t*
         }
     }
 
-    *out_slices = fbl::move(slices);
-    *out_partitions = fbl::move(partitions);
+    *out_slices = std::move(slices);
+    *out_partitions = std::move(partitions);
     return valid;
 }
 

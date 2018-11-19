@@ -6,6 +6,8 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 
+#include <utility>
+
 #include "debug-logging.h"
 #include "usb-audio-device.h"
 #include "usb-audio-path.h"
@@ -147,7 +149,7 @@ zx_status_t UsbAudioStreamInterface::AddInterface(DescriptorListMemory::Iterator
         }
 
         max_req_size_ = fbl::max(max_req_size_, format->max_req_size());
-        formats_.push_back(fbl::move(format));
+        formats_.push_back(std::move(format));
     } else {
         if (idle_hdr_ == nullptr) {
             idle_hdr_ = ihdr;
@@ -415,7 +417,7 @@ void UsbAudioStreamInterface::LinkPath(fbl::unique_ptr<AudioPath> path) {
     ZX_DEBUG_ASSERT(path_ == nullptr);
     ZX_DEBUG_ASSERT(direction() == path->direction());
     ZX_DEBUG_ASSERT(term_link() == path->stream_terminal().id());
-    path_ = fbl::move(path);
+    path_ = std::move(path);
 }
 
 zx_status_t UsbAudioStreamInterface::Format::Init(DescriptorListMemory::Iterator* iter) {

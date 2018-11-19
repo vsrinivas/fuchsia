@@ -13,6 +13,8 @@
 #include <unittest/unittest.h>
 #include <zircon/nand/c/fidl.h>
 
+#include <utility>
+
 namespace {
 
 zircon_nand_RamNandInfo BuildConfig() {
@@ -27,7 +29,7 @@ class NandDevice {
     explicit NandDevice(const zircon_nand_RamNandInfo& config = BuildConfig()) {
         if (create_ram_nand(&config, path_) == ZX_OK) {
             fbl::unique_fd device(open(path_, O_RDWR));
-            caller_.reset(fbl::move(device));
+            caller_.reset(std::move(device));
         }
     }
 

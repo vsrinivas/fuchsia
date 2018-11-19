@@ -4,6 +4,8 @@
 
 #include <fbl/alloc_checker.h>
 
+#include <utility>
+
 #include "vim-audio-utils.h"
 
 namespace audio {
@@ -36,7 +38,7 @@ fbl::RefPtr<RefCountedVmo> RefCountedVmo::Create(zx::vmo vmo) {
     }
 
     fbl::AllocChecker ac;
-    auto ret = fbl::AdoptRef(new (&ac) RefCountedVmo(fbl::move(vmo)));
+    auto ret = fbl::AdoptRef(new (&ac) RefCountedVmo(std::move(vmo)));
     if (!ac.check()) {
         return nullptr;
     }

@@ -6,6 +6,8 @@
 
 #include <fbl/vector.h>
 
+#include <utility>
+
 namespace audio {
 namespace intel_hda {
 namespace codecs {
@@ -63,7 +65,7 @@ zx_status_t QemuStream::OnActivateLocked() {
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    SetSupportedFormatsLocked(fbl::move(supported_formats));
+    SetSupportedFormatsLocked(std::move(supported_formats));
 
     return DisableConverterLocked();
 }

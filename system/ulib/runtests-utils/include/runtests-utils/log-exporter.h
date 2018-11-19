@@ -20,6 +20,8 @@
 typedef zx_handle_t fuchsia_logger_LogListener;
 #include <fuchsia/logger/c/fidl.h>
 
+#include <utility>
+
 namespace runtests {
 
 // Error while launching LogExporter.
@@ -40,7 +42,7 @@ enum ExporterLaunchError {
 //    zx::channel channel;
 //    //init above channel to link to logger service
 //    ...
-//    LogExporter l(fbl::move(channel), f);
+//    LogExporter l(std::move(channel), f);
 //    l->StartThread();
 class LogExporter {
 public:
@@ -70,14 +72,14 @@ public:
     // while serving |channel_|. If an error occurs, the channel will close and
     // the listener thread will stop.
     void set_error_handler(ErrorHandler error_handler) {
-        error_handler_ = fbl::move(error_handler);
+        error_handler_ = std::move(error_handler);
     }
 
     // Sets Error handler which would be called whenever there is an error
     // writing to file. If an error occurs, the channel will close and the
     // listener thread will stop.
     void set_file_error_handler(FileErrorHandler error_handler) {
-        file_error_handler_ = fbl::move(error_handler);
+        file_error_handler_ = std::move(error_handler);
     }
 
 private:

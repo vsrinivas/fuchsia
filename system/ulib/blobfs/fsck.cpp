@@ -8,6 +8,8 @@
 
 #ifdef __Fuchsia__
 #include <blobfs/blobfs.h>
+
+#include <utility>
 #else
 #include <blobfs/host.h>
 #endif
@@ -93,12 +95,12 @@ BlobfsChecker::BlobfsChecker()
     : blobfs_(nullptr), alloc_inodes_(0), alloc_blocks_(0), error_blobs_(0), inode_blocks_(0) {};
 
 void BlobfsChecker::Init(fbl::unique_ptr<Blobfs> blob) {
-    blobfs_ = fbl::move(blob);
+    blobfs_ = std::move(blob);
 }
 
 zx_status_t Fsck(fbl::unique_ptr<Blobfs> blob) {
     BlobfsChecker chk;
-    chk.Init(fbl::move(blob));
+    chk.Init(std::move(blob));
     chk.TraverseInodeBitmap();
     chk.TraverseBlockBitmap();
     return chk.CheckAllocatedCounts();

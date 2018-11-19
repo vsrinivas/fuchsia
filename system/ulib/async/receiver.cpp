@@ -4,6 +4,8 @@
 
 #include <lib/async/cpp/receiver.h>
 
+#include <utility>
+
 namespace async {
 
 ReceiverBase::ReceiverBase(async_receiver_handler_t* handler)
@@ -16,7 +18,7 @@ zx_status_t ReceiverBase::QueuePacket(async_dispatcher_t* dispatcher, const zx_p
 }
 
 Receiver::Receiver(Handler handler)
-    : ReceiverBase(&Receiver::CallHandler), handler_(fbl::move(handler)) {}
+    : ReceiverBase(&Receiver::CallHandler), handler_(std::move(handler)) {}
 
 Receiver::~Receiver() = default;
 

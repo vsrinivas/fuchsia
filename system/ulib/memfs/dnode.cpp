@@ -12,6 +12,8 @@
 #include <fbl/unique_ptr.h>
 #include <lib/memfs/cpp/vnode.h>
 
+#include <utility>
+
 #include "dnode.h"
 
 namespace memfs {
@@ -29,7 +31,7 @@ fbl::RefPtr<Dnode> Dnode::Create(fbl::StringPiece name, fbl::RefPtr<VnodeMemfs> 
     }
     memcpy(namebuffer.get(), name.data(), name.length());
     namebuffer[name.length()] = '\0';
-    fbl::RefPtr<Dnode> dn = fbl::AdoptRef(new (&ac) Dnode(vn, fbl::move(namebuffer),
+    fbl::RefPtr<Dnode> dn = fbl::AdoptRef(new (&ac) Dnode(vn, std::move(namebuffer),
                                                           static_cast<uint32_t>(name.length())));
     if (!ac.check()) {
         return nullptr;
@@ -85,7 +87,7 @@ void Dnode::AddChild(fbl::RefPtr<Dnode> parent, fbl::RefPtr<Dnode> child) {
     } else {
         child->ordering_token_ = parent->children_.back().ordering_token_ + 1;
     }
-    parent->children_.push_back(fbl::move(child));
+    parent->children_.push_back(std::move(child));
     parent->vnode_->UpdateModified();
 }
 
@@ -180,18 +182,18 @@ bool Dnode::IsSubdirectory(fbl::RefPtr<Dnode> dn) const {
 }
 
 fbl::unique_ptr<char[]> Dnode::TakeName() {
-    return fbl::move(name_);
+    return std::move(name_);
 }
 
 void Dnode::PutName(fbl::unique_ptr<char[]> name, size_t len) {
     flags_ = static_cast<uint32_t>((flags_ & ~kDnodeNameMax) | len);
-    name_ = fbl::move(name);
+    name_ = std::move(name);
 }
 
 bool Dnode::IsDirectory() const { return vnode_->IsDirectory(); }
 
 Dnode::Dnode(fbl::RefPtr<VnodeMemfs> vn, fbl::unique_ptr<char[]> name, uint32_t flags) :
-    vnode_(fbl::move(vn)), parent_(nullptr), ordering_token_(0), flags_(flags), name_(fbl::move(name)) {
+    vnode_(std::move(vn)), parent_(nullptr), ordering_token_(0), flags_(flags), name_(std::move(name)) {
 };
 
 size_t Dnode::NameLen() const {

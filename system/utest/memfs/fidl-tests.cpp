@@ -22,6 +22,8 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
+#include <utility>
+
 namespace {
 
 bool TestFidlBasic() {
@@ -69,7 +71,7 @@ bool QueryInfo(const char* path, fuchsia_io_FilesystemInfo* info) {
     fbl::unique_fd fd(open(path, O_RDONLY | O_DIRECTORY));
     ASSERT_TRUE(fd);
     zx_status_t status;
-    fzl::FdioCaller caller(fbl::move(fd));
+    fzl::FdioCaller caller(std::move(fd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, info),
               ZX_OK);
     ASSERT_EQ(status, ZX_OK);

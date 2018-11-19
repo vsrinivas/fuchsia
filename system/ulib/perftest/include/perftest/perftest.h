@@ -10,6 +10,8 @@
 #include <fbl/string.h>
 #include <perftest/results.h>
 
+#include <utility>
+
 // This is a library for writing performance tests.  It supports
 // performance tests that involve running an operation repeatedly,
 // sequentially, and recording the times taken by each run of the
@@ -178,7 +180,7 @@ void RegisterSimpleTest(const char* test_name) {
         }
         return true;
     };
-    RegisterTest(test_name, fbl::move(wrapper_func));
+    RegisterTest(test_name, std::move(wrapper_func));
 }
 
 // Entry point for the perf test runner that a test executable should call

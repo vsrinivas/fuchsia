@@ -12,6 +12,8 @@
 #include <unittest/unittest.h>
 #include <zircon/syscalls.h>
 
+#include <utility>
+
 namespace {
 
 template <typename T>
@@ -109,16 +111,16 @@ bool FifoTest() {
         zx_handle_t handle_0 = zx_fifo_0.get();
         ASSERT_NE(handle_0, ZX_HANDLE_INVALID);
 
-        fzl::fifo<int> moved_fifo(fbl::move(zx_fifo_0));
+        fzl::fifo<int> moved_fifo(std::move(zx_fifo_0));
         ASSERT_EQ(moved_fifo.get_handle(), handle_0);
         ASSERT_EQ(zx_fifo_0.get(), ZX_HANDLE_INVALID);
 
-        fzl::fifo<int> moved_again(fbl::move(moved_fifo));
+        fzl::fifo<int> moved_again(std::move(moved_fifo));
         ASSERT_EQ(moved_again.get_handle(), handle_0);
         ASSERT_EQ(moved_fifo.get_handle(), ZX_HANDLE_INVALID);
 
         zx::handle opaque_handle(moved_again.release());
-        fzl::fifo<int> from_opaque(fbl::move(opaque_handle));
+        fzl::fifo<int> from_opaque(std::move(opaque_handle));
         ASSERT_EQ(from_opaque.get_handle(), handle_0);
         ASSERT_EQ(opaque_handle.get(), ZX_HANDLE_INVALID);
 

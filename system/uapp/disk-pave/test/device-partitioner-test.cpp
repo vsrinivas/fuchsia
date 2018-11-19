@@ -23,6 +23,8 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <utility>
+
 namespace {
 
 constexpr uint8_t kZirconAType[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
@@ -166,9 +168,9 @@ bool InsertTestDevices(fbl::StringPiece path, bool skip) {
     ASSERT_GE(ioctl_device_get_topo_path(fd.get(), const_cast<char*>(topo_path.data()), PATH_MAX),
               0);
     if (skip) {
-        test_skip_block_devices.push_back(fbl::move(topo_path));
+        test_skip_block_devices.push_back(std::move(topo_path));
     } else {
-        test_block_devices.push_back(fbl::move(topo_path));
+        test_block_devices.push_back(std::move(topo_path));
     }
     END_HELPER;
 }
@@ -182,7 +184,7 @@ public:
                                            const_cast<char*>(path.data())),
                   ZX_OK);
         ASSERT_TRUE(InsertTestDevices(path.ToStringPiece(), false));
-        device->reset(new BlockDevice(fbl::move(path)));
+        device->reset(new BlockDevice(std::move(path)));
         END_HELPER;
     }
 
@@ -196,7 +198,7 @@ public:
 
 private:
     BlockDevice(fbl::String path)
-        : path_(fbl::move(path)) {}
+        : path_(std::move(path)) {}
 
     fbl::String path_;
 };
@@ -238,7 +240,7 @@ public:
         info.vmo = dup.release();
         ASSERT_EQ(create_ram_nand(&info, const_cast<char*>(path.data())), ZX_OK);
         ASSERT_TRUE(InsertTestDevices(path.ToStringPiece(), true));
-        device->reset(new SkipBlockDevice(fbl::move(path), fbl::move(mapper)));
+        device->reset(new SkipBlockDevice(std::move(path), std::move(mapper)));
         END_HELPER;
     }
 
@@ -252,7 +254,7 @@ public:
 
 private:
     SkipBlockDevice(fbl::String path, fzl::VmoMapper mapper)
-        : path_(fbl::move(path)), mapper_(fbl::move(mapper)) {}
+        : path_(std::move(path)), mapper_(std::move(mapper)) {}
 
     fbl::String path_;
     fzl::VmoMapper mapper_;

@@ -9,6 +9,8 @@
 
 #include <audio-proto-utils/format-utils.h>
 
+#include <utility>
+
 #include "intel-audio-dsp.h"
 #include "intel-dsp-stream.h"
 
@@ -54,7 +56,7 @@ zx_status_t IntelDspStream::ProcessSetStreamFmt(const ihda_proto::SetStreamFmtRe
     // The DSP needs to coordinate with ring buffer commands. Set up an additional
     // channel to intercept messages on the ring buffer channel.
     zx::channel client_endpoint;
-    res = CreateClientRingBufferChannelLocked(fbl::move(ring_buffer_channel), &client_endpoint);
+    res = CreateClientRingBufferChannelLocked(std::move(ring_buffer_channel), &client_endpoint);
     if (res != ZX_OK) {
         LOG(ERROR, "Failed to set up client ring buffer channel (res %d)\n", res);
         goto finished;
@@ -75,7 +77,7 @@ zx_status_t IntelDspStream::ProcessSetStreamFmt(const ihda_proto::SetStreamFmtRe
     resp.hdr.transaction_id = set_format_tid();
     resp.result = ZX_OK;
     resp.external_delay_nsec = 0;   // report his properly based on the codec path delay.
-    res = stream_channel()->Write(&resp, sizeof(resp), fbl::move(client_endpoint));
+    res = stream_channel()->Write(&resp, sizeof(resp), std::move(client_endpoint));
 
     // If we don't have a set format operation in flight, or the stream channel
     // has been closed, this set format operation has been canceled.  Do not
@@ -124,10 +126,10 @@ zx_status_t IntelDspStream::CreateClientRingBufferChannelLocked(
         stream->ProcessRbDeactivate(channel);
     });
 
-    zx_status_t res = channel->Activate(fbl::move(ring_buffer_channel),
+    zx_status_t res = channel->Activate(std::move(ring_buffer_channel),
                                         domain(),
-                                        fbl::move(phandler),
-                                        fbl::move(chandler));
+                                        std::move(phandler),
+                                        std::move(chandler));
     if (res != ZX_OK) {
         return res;
     }
@@ -157,8 +159,8 @@ zx_status_t IntelDspStream::CreateClientRingBufferChannelLocked(
 
     res = client_channel->Activate(out_client_channel,
                                    domain(),
-                                   fbl::move(client_phandler),
-                                   fbl::move(client_chandler));
+                                   std::move(client_phandler),
+                                   std::move(client_chandler));
     if (res == ZX_OK) {
         ZX_DEBUG_ASSERT(client_rb_channel_ == nullptr);
         client_rb_channel_ = client_channel;
@@ -215,7 +217,7 @@ zx_status_t IntelDspStream::ProcessRbRequest(dispatcher::Channel* channel) {
         break;
     }
 
-    return client_rb_channel_->Write(&req, req_size, fbl::move(rxed_handle));
+    return client_rb_channel_->Write(&req, req_size, std::move(rxed_handle));
 }
 
 void IntelDspStream::ProcessRbDeactivate(const dispatcher::Channel* channel) {
@@ -316,7 +318,7 @@ zx_status_t IntelDspStream::OnActivateLocked() {
         return ZX_ERR_NO_MEMORY;
     }
 
-    SetSupportedFormatsLocked(fbl::move(supported_formats));
+    SetSupportedFormatsLocked(std::move(supported_formats));
     return ZX_OK;
 }
 

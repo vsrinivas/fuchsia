@@ -24,6 +24,8 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <utility>
+
 #include "fshost.h"
 
 namespace devmgr {
@@ -32,7 +34,7 @@ namespace {
 class BlockWatcher {
 public:
     BlockWatcher(fbl::unique_ptr<FsManager> fshost, zx::unowned_job job, bool netboot)
-        : fshost_(fbl::move(fshost)), job_(job), netboot_(netboot) {}
+        : fshost_(std::move(fshost)), job_(job), netboot_(netboot) {}
 
     void FuchsiaStart() const {
         fshost_->FuchsiaStart();
@@ -43,7 +45,7 @@ public:
     }
 
     zx_status_t InstallFs(const char* path, zx::channel h) {
-        return fshost_->InstallFs(path, fbl::move(h));
+        return fshost_->InstallFs(path, std::move(h));
     }
 
     const zx::unowned_job& Job() const {
@@ -111,12 +113,12 @@ void pkgfs_finish(BlockWatcher* watcher, zx::process proc, zx::channel pkgfs_roo
         return;
     }
 
-    if (watcher->InstallFs("/pkgfs", fbl::move(pkgfs_root)) != ZX_OK) {
+    if (watcher->InstallFs("/pkgfs", std::move(pkgfs_root)) != ZX_OK) {
         printf("fshost: failed to install /pkgfs\n");
         return;
     }
 
-    if (watcher->InstallFs("/system", fbl::move(h0)) != ZX_OK) {
+    if (watcher->InstallFs("/system", std::move(h0)) != ZX_OK) {
         printf("fshost: failed to install /system\n");
         return;
     }
@@ -167,7 +169,7 @@ void old_launch_blob_init(BlockWatcher* watcher) {
         return;
     }
 
-    pkgfs_finish(watcher, fbl::move(proc), fbl::move(pkgfs_root));
+    pkgfs_finish(watcher, std::move(proc), std::move(pkgfs_root));
 }
 
 // Launching pkgfs uses its own loader service and command lookup to run out of
@@ -303,7 +305,7 @@ bool pkgfs_launch(BlockWatcher* watcher) {
         return false;
     }
 
-    pkgfs_finish(watcher, fbl::move(proc), fbl::move(h0));
+    pkgfs_finish(watcher, std::move(proc), std::move(h0));
     return true;
 }
 
@@ -490,9 +492,9 @@ zx_status_t mount_minfs(BlockWatcher* watcher, fbl::unique_fd fd, mount_options_
 
         return st;
     } else if (gpt_is_data_guid(type_guid, read_sz)) {
-        return watcher->MountData(fbl::move(fd), options);
+        return watcher->MountData(std::move(fd), options);
     } else if (gpt_is_install_guid(type_guid, read_sz)) {
-        return watcher->MountInstall(fbl::move(fd), options);
+        return watcher->MountInstall(std::move(fd), options);
     }
     printf("fshost: Unrecognized partition GUID for minfs; not mounting\n");
     return ZX_ERR_INVALID_ARGS;
@@ -570,7 +572,7 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
         if (memcmp(guid, expected_guid, sizeof(guid)) == 0) {
             printf("devmgr: mounting install partition\n");
             mount_options_t options = default_mount_options;
-            mount_minfs(watcher, fbl::move(fd), &options);
+            mount_minfs(watcher, std::move(fd), &options);
             return ZX_OK;
         }
 
@@ -590,7 +592,7 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
 
         mount_options_t options = default_mount_options;
         options.enable_journal = true;
-        zx_status_t status = watcher->MountBlob(fbl::move(fd), &options);
+        zx_status_t status = watcher->MountBlob(std::move(fd), &options);
         if (status != ZX_OK) {
             printf("devmgr: Failed to mount blobfs partition %s at %s: %s.\n",
                    device_path, PATH_BLOB, zx_status_get_string(status));
@@ -605,7 +607,7 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
             return ZX_OK;
         }
         mount_options_t options = default_mount_options;
-        mount_minfs(watcher, fbl::move(fd), &options);
+        mount_minfs(watcher, std::move(fd), &options);
         return ZX_OK;
     }
     case DISK_FORMAT_FAT: {
@@ -636,7 +638,7 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
 
 void block_device_watcher(fbl::unique_ptr<FsManager> fshost, zx::unowned_job job, bool netboot) {
     g_job = job;
-    BlockWatcher watcher(fbl::move(fshost), fbl::move(job), netboot);
+    BlockWatcher watcher(std::move(fshost), std::move(job), netboot);
 
     fbl::unique_fd dirfd(open("/dev/class/block", O_DIRECTORY | O_RDONLY));
     if (dirfd) {

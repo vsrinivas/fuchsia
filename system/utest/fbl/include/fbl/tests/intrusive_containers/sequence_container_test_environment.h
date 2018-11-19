@@ -8,6 +8,8 @@
 #include <fbl/algorithm.h>
 #include <fbl/tests/intrusive_containers/base_test_environments.h>
 
+#include <utility>
+
 namespace fbl {
 namespace tests {
 namespace intrusive_containers {
@@ -80,7 +82,7 @@ public:
 #endif
                 EXPECT_TRUE(TestEnvTraits::WasTransferred(new_object), "");
             } else {
-                container.push_front(fbl::move(new_object));
+                container.push_front(std::move(new_object));
                 EXPECT_TRUE(TestEnvTraits::WasMoved(new_object), "");
             }
         }
@@ -119,7 +121,7 @@ public:
 #endif
                 EXPECT_TRUE(TestEnvTraits::WasTransferred(new_object), "");
             } else {
-                container().push_back(fbl::move(new_object));
+                container().push_back(std::move(new_object));
                 EXPECT_TRUE(TestEnvTraits::WasMoved(new_object), "");
             }
         }
@@ -329,7 +331,7 @@ public:
 #endif
             EXPECT_TRUE(TestEnvTraits::WasTransferred(new_object), "");
         } else {
-            container().insert_after(iter, fbl::move(new_object));
+            container().insert_after(iter, std::move(new_object));
             EXPECT_TRUE(TestEnvTraits::WasMoved(new_object), "");
         }
 
@@ -353,7 +355,7 @@ public:
         EXPECT_EQ(0u, ObjType::live_obj_count(), "");
         EXPECT_EQ(0U, Size(container()), "");
         EXPECT_TRUE(container().is_empty(), "");
-        container().push_front(fbl::move(this->CreateTrackedObject(0, 0, true)));
+        container().push_front(std::move(this->CreateTrackedObject(0, 0, true)));
 
         // Insert some elements after the last element container.
         static constexpr size_t END_INSERT_COUNT = 2;
@@ -425,7 +427,7 @@ public:
 #endif
             EXPECT_TRUE(TestEnvTraits::WasTransferred(new_object), "");
         } else {
-            container().insert(target, fbl::move(new_object));
+            container().insert(target, std::move(new_object));
             EXPECT_TRUE(TestEnvTraits::WasMoved(new_object), "");
         }
 
@@ -560,7 +562,7 @@ public:
         for (size_t i = begin; i < end; ++i) {
             PtrType new_object = this->CreateTrackedObject(i, i);
             ASSERT_NONNULL(new_object, "");
-            container().push_back(fbl::move(new_object));
+            container().push_back(std::move(new_object));
             EXPECT_TRUE(TestEnvTraits::WasMoved(new_object), "");
         }
 
@@ -820,7 +822,7 @@ public:
             ASSERT_NONNULL(new_obj, "");
             EXPECT_EQ(i + 1, ObjType::live_obj_count(), "");
 
-            container().push_front(fbl::move(new_obj));
+            container().push_front(std::move(new_obj));
         }
         EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
 
@@ -919,7 +921,7 @@ public:
             ASSERT_NONNULL(new_obj, "");
             EXPECT_EQ(i + 1, ObjType::live_obj_count(), "");
 
-            container().push_front(fbl::move(new_obj));
+            container().push_front(std::move(new_obj));
         }
 
         // Replace all of the members of the contianer with new members which
@@ -996,7 +998,7 @@ public:
             ASSERT_NONNULL(new_obj, "");
             EXPECT_EQ(i + 1, ObjType::live_obj_count(), "");
 
-            container().push_front(fbl::move(new_obj));
+            container().push_front(std::move(new_obj));
         }
         EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
 
@@ -1054,7 +1056,7 @@ public:
             ASSERT_NONNULL(new_obj, "");
             EXPECT_EQ(i + 1, ObjType::live_obj_count(), "");
 
-            container().push_front(fbl::move(new_obj));
+            container().push_front(std::move(new_obj));
         }
 
         // Replace all of the members of the contianer with new members which

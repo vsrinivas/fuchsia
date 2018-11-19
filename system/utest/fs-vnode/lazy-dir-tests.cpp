@@ -7,6 +7,8 @@
 #include <fs/pseudo-file.h>
 #include <unittest/unittest.h>
 
+#include <utility>
+
 namespace {
 
 class DirentChecker {
@@ -66,7 +68,7 @@ public:
     }
 
     void AddContent(TestContent content) {
-        contents_.push_back(fbl::move(content));
+        contents_.push_back(std::move(content));
     }
 
     fbl::RefPtr<fs::Vnode> last_output_file;

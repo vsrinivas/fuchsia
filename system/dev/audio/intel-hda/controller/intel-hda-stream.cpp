@@ -9,6 +9,8 @@
 
 #include <intel-hda/utils/utils.h>
 
+#include <utility>
+
 #include "debug-logging.h"
 #include "intel-hda-codec.h"
 #include "intel-hda-stream.h"
@@ -208,8 +210,8 @@ zx_status_t IntelHDAStream::SetStreamFormat(const fbl::RefPtr<dispatcher::Execut
     zx_status_t res;
     fbl::RefPtr<dispatcher::Channel> local_endpoint;
     res = CreateAndActivateChannel(domain,
-                                   fbl::move(phandler),
-                                   fbl::move(chandler),
+                                   std::move(phandler),
+                                   std::move(chandler),
                                    &local_endpoint,
                                    client_endpoint_out);
     if (res != ZX_OK) {
@@ -229,7 +231,7 @@ zx_status_t IntelHDAStream::SetStreamFormat(const fbl::RefPtr<dispatcher::Execut
 
     // Record our new client channel
     fbl::AutoLock channel_lock(&channel_lock_);
-    channel_ = fbl::move(local_endpoint);
+    channel_ = std::move(local_endpoint);
     bytes_per_frame_ = StreamFormat(encoded_fmt).bytes_per_frame();
 
     return ZX_OK;
@@ -606,7 +608,7 @@ zx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
 finished:
     if (resp.result == ZX_OK) {
         // Success.  DMA is set up and ready to go.
-        return channel_->Write(&resp, sizeof(resp), fbl::move(client_rb_handle));
+        return channel_->Write(&resp, sizeof(resp), std::move(client_rb_handle));
     } else {
         ReleaseRingBufferLocked();
         return channel_->Write(&resp, sizeof(resp));

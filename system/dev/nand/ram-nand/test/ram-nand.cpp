@@ -13,6 +13,8 @@
 #include <zircon/nand/c/fidl.h>
 #include <zircon/process.h>
 
+#include <utility>
+
 #include "fake-ddk.h"
 #include "ram-nand.h"
 
@@ -206,7 +208,7 @@ fbl::unique_ptr<NandDevice> CreateDevice(size_t* operation_size) {
     if (device->Init(name, zx::vmo()) != ZX_OK) {
         return nullptr;
     }
-    return fbl::move(device);
+    return device;
 }
 
 bool BasicDeviceProtocolTest() {

@@ -16,6 +16,8 @@
 
 #include <port/port.h>
 
+#include <utility>
+
 #include "keyboard.h"
 
 #define LOW_REPEAT_KEY_FREQ 250000000
@@ -49,7 +51,7 @@ static void set_caps_lock_led(int keyboard_fd, bool caps_lock) {
     const uint8_t report_body[1] = { static_cast<uint8_t>(caps_lock ? kUsbCapsLockBit : 0) };
 
     // Temporarily wrap keyboard_fd, we will release it after the call so we don't close it.
-    fzl::FdioCaller caller(fbl::move(fbl::unique_fd(keyboard_fd)));
+    fzl::FdioCaller caller{fbl::unique_fd(keyboard_fd)};
     zx_status_t call_status;
     zx_status_t status = zircon_input_DeviceSetReport(caller.borrow_channel(),
                                                       zircon_input_ReportType_OUTPUT, 0,
@@ -233,7 +235,7 @@ zx_status_t new_input_device(int fd, keypress_handler_t handler) {
     uint32_t proto = zircon_input_BootProtocol_NONE;
 
     // Temporarily wrap fd, we will release it after the call so we don't close it.
-    fzl::FdioCaller caller(fbl::move(fbl::unique_fd(fd)));
+    fzl::FdioCaller caller{fbl::unique_fd(fd)};
     zx_status_t status = zircon_input_DeviceGetBootProtocol(caller.borrow_channel(), &proto);
     caller.release().release();
     if ((status != ZX_OK) || (proto != zircon_input_BootProtocol_KBD)) {

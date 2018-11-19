@@ -35,6 +35,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <utility>
+
 // Delay for data to work through the system. The test will pause this long, so it's best
 // to keep it fairly short. If it's too short, the test will occasionally be flaky,
 // especially on qemu.
@@ -180,7 +182,7 @@ public:
     }
 
     zx_status_t Register(zx::channel svc, const char* name, uint32_t nbufs, uint16_t bufsize) {
-        svc_ = fbl::move(svc);
+        svc_ = std::move(svc);
         zx_status_t call_status = ZX_OK;
         size_t name_len = fbl::min<size_t>(strlen(name), zircon_ethernet_MAX_CLIENT_NAME_LEN);
         zx_status_t status = zircon_ethernet_DeviceSetClientName(svc_.get(), name,
@@ -256,7 +258,7 @@ public:
             entry->e.length = bufsize_;
             entry->e.flags = 0;
             entry->e.cookie = reinterpret_cast<uintptr_t>(mapped_) + entry->e.offset;
-            tx_available_.push_front(fbl::move(entry));
+            tx_available_.push_front(std::move(entry));
         }
 
         return ZX_OK;
@@ -347,7 +349,7 @@ public:
         zircon_ethernet_FifoEntry* entry = nullptr;
         if (entry_ptr != nullptr) {
             entry = &entry_ptr->e;
-            tx_pending_.push_front(fbl::move(entry_ptr));
+            tx_pending_.push_front(std::move(entry_ptr));
         }
         return entry;
     }
@@ -356,7 +358,7 @@ public:
         auto entry_ptr = tx_pending_.erase_if(
                 [entry](const FifoEntry& tx_entry) { return tx_entry.e.cookie == entry->cookie; });
         if (entry_ptr != nullptr) {
-            tx_available_.push_front(fbl::move(entry_ptr));
+            tx_available_.push_front(std::move(entry_ptr));
         }
     }
 
@@ -457,7 +459,7 @@ static bool AddClientHelper(zx::socket* sock,
     ASSERT_TRUE(svc.is_valid());
 
     // Initialize the ethernet client
-    ASSERT_EQ(ZX_OK, client->Register(fbl::move(svc), openInfo.name, 32, 2048));
+    ASSERT_EQ(ZX_OK, client->Register(std::move(svc), openInfo.name, 32, 2048));
     if (openInfo.online) {
         // Start the ethernet client
         ASSERT_EQ(ZX_OK, client->Start());

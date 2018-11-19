@@ -6,6 +6,8 @@
 #include <lib/zx/vmar.h>
 #include <string.h>
 
+#include <utility>
+
 namespace fzl {
 
 VmoPool::~VmoPool() {
@@ -25,7 +27,7 @@ zx_status_t VmoPool::Init(const zx::vmo* vmos, size_t num_vmos) {
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-    buffers_ = fbl::move(buffers);
+    buffers_ = std::move(buffers);
     free_buffers_.clear_unsafe();
 
     zx_status_t status;

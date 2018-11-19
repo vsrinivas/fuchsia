@@ -8,6 +8,8 @@
 #include <lib/async/task.h>
 #include <lib/zx/time.h>
 
+#include <utility>
+
 namespace async {
 
 // Posts a task to invoke |handler| with a deadline of now.
@@ -142,7 +144,7 @@ public:
     explicit Task(Handler handler = nullptr);
     ~Task();
 
-    void set_handler(Handler handler) { handler_ = fbl::move(handler); }
+    void set_handler(Handler handler) { handler_ = std::move(handler); }
     bool has_handler() const { return !!handler_; }
 
 private:
@@ -187,7 +189,7 @@ public:
     explicit TaskClosure(fbl::Closure handler = nullptr);
     ~TaskClosure();
 
-    void set_handler(fbl::Closure handler) { handler_ = fbl::move(handler); }
+    void set_handler(fbl::Closure handler) { handler_ = std::move(handler); }
     bool has_handler() const { return !!handler_; }
 
 private:

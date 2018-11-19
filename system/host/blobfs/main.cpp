@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include <blobfs/fsck.h>
@@ -157,7 +158,7 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
                 info.path = path;
 
                 mtx.lock();
-                merkle_list_.push_back(fbl::move(info));
+                merkle_list_.push_back(std::move(info));
                 mtx.unlock();
             }
         }));
@@ -217,11 +218,11 @@ zx_status_t BlobfsCreator::Mkfs() {
 zx_status_t BlobfsCreator::Fsck() {
     zx_status_t status;
     fbl::unique_ptr<blobfs::Blobfs> vn;
-    if ((status = blobfs::blobfs_create(&vn, fbl::move(fd_))) < 0) {
+    if ((status = blobfs::blobfs_create(&vn, std::move(fd_))) < 0) {
         return status;
     }
 
-    return blobfs::Fsck(fbl::move(vn));
+    return blobfs::Fsck(std::move(vn));
 }
 
 zx_status_t BlobfsCreator::Add() {
@@ -232,7 +233,7 @@ zx_status_t BlobfsCreator::Add() {
 
     zx_status_t status = ZX_OK;
     fbl::unique_ptr<blobfs::Blobfs> blobfs;
-    if ((status = blobfs_create(&blobfs, fbl::move(fd_))) != ZX_OK) {
+    if ((status = blobfs_create(&blobfs, std::move(fd_))) != ZX_OK) {
         return status;
     }
 

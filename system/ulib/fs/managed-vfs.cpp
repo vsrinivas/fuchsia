@@ -9,6 +9,8 @@
 #include <fbl/unique_ptr.h>
 #include <lib/sync/completion.h>
 
+#include <utility>
+
 namespace fs {
 
 ManagedVfs::ManagedVfs() : is_shutting_down_(false) {}
@@ -26,9 +28,9 @@ bool ManagedVfs::IsTerminated() const {
 // Asynchronously drop all connections.
 void ManagedVfs::Shutdown(ShutdownCallback handler) {
     ZX_DEBUG_ASSERT(handler);
-    zx_status_t status = async::PostTask(dispatcher(), [this, closure = fbl::move(handler)]() mutable {
+    zx_status_t status = async::PostTask(dispatcher(), [this, closure = std::move(handler)]() mutable {
         ZX_DEBUG_ASSERT(!shutdown_handler_);
-        shutdown_handler_ = fbl::move(closure);
+        shutdown_handler_ = std::move(closure);
         is_shutting_down_ = true;
 
         UninstallAll(ZX_TIME_INFINITE);
@@ -56,13 +58,13 @@ void ManagedVfs::OnShutdownComplete(async_dispatcher_t*, async::TaskBase*, zx_st
                   "Failed to complete VFS shutdown: dispatcher status = %d\n", status);
     ZX_DEBUG_ASSERT(shutdown_handler_);
 
-    auto handler = fbl::move(shutdown_handler_);
+    auto handler = std::move(shutdown_handler_);
     handler(status);
 }
 
 void ManagedVfs::RegisterConnection(fbl::unique_ptr<Connection> connection) {
     ZX_DEBUG_ASSERT(!is_shutting_down_);
-    connections_.push_back(fbl::move(connection));
+    connections_.push_back(std::move(connection));
 }
 
 void ManagedVfs::UnregisterConnection(Connection* connection) {

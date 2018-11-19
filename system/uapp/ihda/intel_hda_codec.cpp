@@ -6,6 +6,8 @@
 
 #include <fbl/algorithm.h>
 
+#include <utility>
+
 namespace audio {
 namespace intel_hda {
 
@@ -449,7 +451,7 @@ zx_status_t IntelHDACodec::Enumerate() {
         if (codec == nullptr)
             return ZX_ERR_NO_MEMORY;
 
-        if (!codecs_.insert_or_find(fbl::move(codec)))
+        if (!codecs_.insert_or_find(std::move(codec)))
             return ZX_ERR_INTERNAL;
 
         return ZX_OK;

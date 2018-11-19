@@ -45,7 +45,7 @@ zx_status_t VideoBuffer::Create(zx::vmo&& vmo,
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<VideoBuffer> res(
-        new (&ac) VideoBuffer(fbl::move(vmo), size, virt));
+        new (&ac) VideoBuffer(std::move(vmo), size, virt));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -58,7 +58,7 @@ zx_status_t VideoBuffer::Create(zx::vmo&& vmo,
 
     res->Init();
 
-    *out = fbl::move(res);
+    *out = std::move(res);
     return ZX_OK;
 }
 

@@ -23,6 +23,8 @@
 #include <dispatcher-pool/dispatcher-timer.h>
 #include <soc/aml-a113/aml-tdm.h>
 
+#include <utility>
+
 namespace audio {
 namespace gauss {
 
@@ -68,7 +70,7 @@ private:
                    fbl::RefPtr<dispatcher::ExecutionDomain>&& default_domain)
         : TdmAudioStreamBase(parent),
           TdmOutputStreamProtocol(),
-          default_domain_(fbl::move(default_domain)),
+          default_domain_(std::move(default_domain)),
           create_time_(zx_clock_get_monotonic()) { }
 
     virtual ~TdmOutputStream();

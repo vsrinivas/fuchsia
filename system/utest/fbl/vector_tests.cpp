@@ -10,6 +10,8 @@
 #include <fbl/vector.h>
 #include <unittest/unittest.h>
 
+#include <utility>
+
 namespace fbl {
 namespace tests {
 namespace {
@@ -96,7 +98,7 @@ struct UniquePtrTraits {
 template <typename T>
 struct RefCountedItem : public fbl::RefCounted<RefCountedItem<T>> {
     RefCountedItem(T v)
-        : val(fbl::move(v)) {}
+        : val(std::move(v)) {}
     DISALLOW_COPY_ASSIGN_AND_MOVE(RefCountedItem);
     T val;
 };
@@ -486,7 +488,7 @@ bool VectorTestMove() {
         gen.Reset();
         ASSERT_FALSE(vectorA.is_empty());
         ASSERT_EQ(vectorA.size(), size);
-        fbl::Vector<ItemType, TestAllocatorTraits> vectorB(fbl::move(vectorA));
+        fbl::Vector<ItemType, TestAllocatorTraits> vectorB(std::move(vectorA));
         ASSERT_TRUE(ItemTraits::CheckLiveCount(size));
         ASSERT_TRUE(vectorA.is_empty());
         ASSERT_EQ(vectorA.size(), 0);
@@ -513,7 +515,7 @@ bool VectorTestMove() {
         gen.Reset();
         ASSERT_EQ(vectorA.size(), size);
         fbl::Vector<ItemType, TestAllocatorTraits> vectorB;
-        vectorB = fbl::move(vectorA);
+        vectorB = std::move(vectorA);
         ASSERT_TRUE(ItemTraits::CheckLiveCount(size));
         ASSERT_EQ(vectorA.size(), 0);
         ASSERT_EQ(vectorB.size(), size);
@@ -605,8 +607,8 @@ bool VectorTestIterator() {
             ASSERT_EQ(ItemTraits::GetValue(e), base);
             // Take the element out, and put it back... just to check
             // that we can.
-            auto other = fbl::move(e);
-            e = fbl::move(other);
+            auto other = std::move(e);
+            e = std::move(other);
             ASSERT_EQ(ItemTraits::GetValue(e), base);
         }
 

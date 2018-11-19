@@ -8,6 +8,8 @@
 #include <lib/async/trap.h>
 #include <lib/zx/guest.h>
 
+#include <utility>
+
 namespace async {
 
 // Holds context for a bell trap and its handler.
@@ -77,7 +79,7 @@ public:
     explicit GuestBellTrap(Handler handler = nullptr);
     ~GuestBellTrap();
 
-    void set_handler(Handler handler) { handler_ = fbl::move(handler); }
+    void set_handler(Handler handler) { handler_ = std::move(handler); }
     bool has_handler() const { return !!handler_; }
 
 private:

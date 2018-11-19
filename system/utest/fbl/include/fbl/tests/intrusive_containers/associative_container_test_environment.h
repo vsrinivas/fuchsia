@@ -143,7 +143,7 @@ public:
 #endif
                 EXPECT_TRUE(TestEnvTraits::WasTransferred(new_object), "");
             } else {
-                container.insert(fbl::move(new_object));
+                container.insert(std::move(new_object));
                 EXPECT_TRUE(TestEnvTraits::WasMoved(new_object), "");
             }
         }
@@ -295,7 +295,7 @@ public:
                     EXPECT_TRUE(TestEnvTraits::WasTransferred(new_object), "");
                 } else {
                     success = container().insert_or_find(
-                            fbl::move(new_object),
+                            std::move(new_object),
                             pass_iterator ? &iter : nullptr);
 
                     EXPECT_TRUE(TestEnvTraits::WasMoved(new_object), "");
@@ -351,7 +351,7 @@ public:
 #endif
                 } else {
                     success = container().insert_or_find(
-                            fbl::move(new_object),
+                            std::move(new_object),
                             pass_iterator ? &iter : nullptr);
                 }
 
@@ -482,7 +482,7 @@ private:
     // an operation being tested when the test environment's pointer type
     // supports copying (eg, T* or RefPtr<T>).
     //
-    // When copying is not supported (unique_ptr<T>), it will use fbl::move to
+    // When copying is not supported (unique_ptr<T>), it will use std::move to
     // return an rvalue reference to the pointer instead.  This is *only* to
     // keep the compiler happy.  In general, tests should exercise themselves
     // using the MoveUtil helper, then test again using CopyUtil, but only if
@@ -510,12 +510,12 @@ private:
 #if TEST_WILL_NOT_COMPILE || 0
         static const PtrType& Op(PtrType& ptr) { return ptr; }
 #else
-        static PtrType&& Op(PtrType& ptr) { return fbl::move(ptr); }
+        static PtrType&& Op(PtrType& ptr) { return std::move(ptr); }
 #endif
     };
 
     struct MoveUtil {
-        static PtrType&& Op(PtrType& ptr) { return fbl::move(ptr); }
+        static PtrType&& Op(PtrType& ptr) { return std::move(ptr); }
     };
 };
 

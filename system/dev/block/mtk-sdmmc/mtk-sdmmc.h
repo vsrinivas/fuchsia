@@ -18,6 +18,8 @@
 #include <lib/zx/interrupt.h>
 #include <zircon/thread_annotations.h>
 
+#include <utility>
+
 #include "mtk-sdmmc-reg.h"
 
 namespace sdmmc {
@@ -66,8 +68,8 @@ public:
 private:
     MtkSdmmc(zx_device_t* parent, ddk::MmioBuffer mmio, zx::bti bti, const sdmmc_host_info_t& info,
              zx::interrupt irq, const ddk::GpioProtocolProxy& reset_gpio)
-        : DeviceType(parent), mmio_(fbl::move(mmio)), bti_(fbl::move(bti)), info_(info),
-                     irq_(fbl::move(irq)), req_(nullptr), cmd_status_(ZX_OK),
+        : DeviceType(parent), mmio_(std::move(mmio)), bti_(std::move(bti)), info_(info),
+                     irq_(std::move(irq)), req_(nullptr), cmd_status_(ZX_OK),
                      reset_gpio_(reset_gpio) {}
 
     zx_status_t Init();

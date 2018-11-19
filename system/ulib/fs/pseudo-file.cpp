@@ -4,11 +4,13 @@
 
 #include <fs/pseudo-file.h>
 
+#include <utility>
+
 namespace fs {
 
 PseudoFile::PseudoFile(ReadHandler read_handler, WriteHandler write_handler)
-    : read_handler_(fbl::move(read_handler)),
-      write_handler_(fbl::move(write_handler)) {
+    : read_handler_(std::move(read_handler)),
+      write_handler_(std::move(write_handler)) {
 }
 
 PseudoFile::~PseudoFile() = default;
@@ -39,7 +41,7 @@ zx_status_t PseudoFile::Getattr(vnattr_t* attr) {
 
 BufferedPseudoFile::BufferedPseudoFile(ReadHandler read_handler, WriteHandler write_handler,
                                        size_t input_buffer_capacity)
-    : PseudoFile(fbl::move(read_handler), fbl::move(write_handler)),
+    : PseudoFile(std::move(read_handler), std::move(write_handler)),
       input_buffer_capacity_(input_buffer_capacity) {}
 
 BufferedPseudoFile::~BufferedPseudoFile() = default;
@@ -53,13 +55,13 @@ zx_status_t BufferedPseudoFile::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_red
         }
     }
 
-    *out_redirect = fbl::AdoptRef(new Content(fbl::WrapRefPtr(this), flags, fbl::move(output)));
+    *out_redirect = fbl::AdoptRef(new Content(fbl::WrapRefPtr(this), flags, std::move(output)));
     return ZX_OK;
 }
 
 BufferedPseudoFile::Content::Content(fbl::RefPtr<BufferedPseudoFile> file, uint32_t flags,
                                      fbl::String output)
-    : file_(fbl::move(file)), flags_(flags), output_(fbl::move(output)) {}
+    : file_(std::move(file)), flags_(flags), output_(std::move(output)) {}
 
 BufferedPseudoFile::Content::~Content() {
     delete[] input_data_;
@@ -157,7 +159,7 @@ void BufferedPseudoFile::Content::SetInputLength(size_t length) {
 }
 
 UnbufferedPseudoFile::UnbufferedPseudoFile(ReadHandler read_handler, WriteHandler write_handler)
-    : PseudoFile(fbl::move(read_handler), fbl::move(write_handler)) {}
+    : PseudoFile(std::move(read_handler), std::move(write_handler)) {}
 
 UnbufferedPseudoFile::~UnbufferedPseudoFile() = default;
 
@@ -167,7 +169,7 @@ zx_status_t UnbufferedPseudoFile::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_r
 }
 
 UnbufferedPseudoFile::Content::Content(fbl::RefPtr<UnbufferedPseudoFile> file, uint32_t flags)
-    : file_(fbl::move(file)), flags_(flags),
+    : file_(std::move(file)), flags_(flags),
       truncated_since_last_successful_write_(flags_ & (ZX_FS_FLAG_CREATE | ZX_FS_FLAG_TRUNCATE)) {}
 
 UnbufferedPseudoFile::Content::~Content() = default;

@@ -16,6 +16,8 @@
 #include <lib/sync/completion.h>
 #include <unittest/unittest.h>
 
+#include <utility>
+
 #include "fake_logger.h"
 
 namespace cobalt_client {
@@ -58,7 +60,7 @@ CollectorOptions MakeCollectorOptions() {
         *size = 1;
         return zx::vmo::create(1, 0, vmo) == ZX_OK;
     };
-    return fbl::move(options);
+    return options;
 }
 
 MetricOptions MakeMetricOptions(uint32_t metric_id = kMetricId, uint32_t event_code = kEventCode) {
@@ -79,7 +81,7 @@ HistogramOptions MakeHistogramOptions(uint32_t metric_id = kMetricId,
     options.metric_id = metric_id;
     options.event_code = event_code;
     options.component = kComponent;
-    return fbl::move(options);
+    return options;
 }
 
 // Sanity check for this codepath.
@@ -114,7 +116,7 @@ bool TestGeneralAvailability() {
 bool CreateTest() {
     BEGIN_TEST;
     CollectorOptions options = MakeCollectorOptions();
-    fbl::unique_ptr<Collector> collector = Collector::Create(fbl::move(options));
+    fbl::unique_ptr<Collector> collector = Collector::Create(std::move(options));
     // Sanity check nothing crashes.
     auto histogram = Histogram<kBuckets>(MakeHistogramOptions(), collector.get());
     auto counter = Counter(MakeMetricOptions(), collector.get());
@@ -129,7 +131,7 @@ bool CreateTest() {
 bool AddCounterTest() {
     BEGIN_TEST;
     fbl::unique_ptr<FakeLogger> logger = fbl::make_unique<FakeLogger>();
-    Collector collector = Collector(MakeCollectorOptions(), fbl::move(logger));
+    Collector collector = Collector(MakeCollectorOptions(), std::move(logger));
     auto counter = Counter(MakeMetricOptions(), &collector);
     counter.Increment(5);
     ASSERT_EQ(counter.GetRemoteCount(), 5);
@@ -140,7 +142,7 @@ bool AddCounterTest() {
 bool AddCounterMultipleTest() {
     BEGIN_TEST;
     fbl::unique_ptr<FakeLogger> logger = fbl::make_unique<FakeLogger>();
-    Collector collector = Collector(MakeCollectorOptions(), fbl::move(logger));
+    Collector collector = Collector(MakeCollectorOptions(), std::move(logger));
 
     auto counter = Counter(MakeMetricOptions(1, 1), &collector);
     auto counter_2 = Counter(MakeMetricOptions(1, 2), &collector);
@@ -157,7 +159,7 @@ bool AddCounterMultipleTest() {
 bool AddHistogramTest() {
     BEGIN_TEST;
     fbl::unique_ptr<FakeLogger> logger = fbl::make_unique<FakeLogger>();
-    Collector collector = Collector(MakeCollectorOptions(), fbl::move(logger));
+    Collector collector = Collector(MakeCollectorOptions(), std::move(logger));
 
     auto histogram = Histogram<kBuckets>(MakeHistogramOptions(), &collector);
 
@@ -170,7 +172,7 @@ bool AddHistogramTest() {
 bool AddHistogramMultipleTest() {
     BEGIN_TEST;
     fbl::unique_ptr<FakeLogger> logger = fbl::make_unique<FakeLogger>();
-    Collector collector = Collector(MakeCollectorOptions(), fbl::move(logger));
+    Collector collector = Collector(MakeCollectorOptions(), std::move(logger));
 
     auto histogram =
         Histogram<kBuckets>(MakeHistogramOptions(/*metric_id*/ 1, /*event_code*/ 1), &collector);
@@ -195,7 +197,7 @@ bool FlushTest() {
     HistogramOptions options = MakeHistogramOptions();
     fbl::unique_ptr<FakeLogger> logger = fbl::make_unique<FakeLogger>();
     FakeLogger* logger_ptr = logger.get();
-    Collector collector = Collector(MakeCollectorOptions(), fbl::move(logger));
+    Collector collector = Collector(MakeCollectorOptions(), std::move(logger));
 
     auto histogram =
         Histogram<kBuckets>(MakeHistogramOptions(/*metric_id*/ 1, /*event_code*/ 1), &collector);
@@ -239,7 +241,7 @@ bool FlushFailTest() {
     HistogramOptions options = MakeHistogramOptions();
     fbl::unique_ptr<FakeLogger> logger = fbl::make_unique<FakeLogger>();
     FakeLogger* logger_ptr = logger.get();
-    Collector collector = Collector(MakeCollectorOptions(), fbl::move(logger));
+    Collector collector = Collector(MakeCollectorOptions(), std::move(logger));
 
     auto histogram =
         Histogram<kBuckets>(MakeHistogramOptions(/*metric_id*/ 1, /*event_code*/ 1), &collector);
@@ -358,7 +360,7 @@ bool FlushMultithreadTest() {
     // Preallocate with the number of logs to prevent realloc problems.
     fbl::unique_ptr<FakeLogger> logger = fbl::make_unique<FakeLogger>();
     FakeLogger* logger_ptr = logger.get();
-    Collector collector = Collector(MakeCollectorOptions(), fbl::move(logger));
+    Collector collector = Collector(MakeCollectorOptions(), std::move(logger));
     logger_ptr->set_should_fail(should_fail);
     fbl::Vector<fbl::unique_ptr<Histogram<kBuckets>>> histograms;
     fbl::Vector<fbl::unique_ptr<Counter>> counters;

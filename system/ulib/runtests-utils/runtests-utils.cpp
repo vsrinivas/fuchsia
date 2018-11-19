@@ -26,6 +26,8 @@
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 
+#include <utility>
+
 namespace runtests {
 
 void ParseTestNames(const fbl::StringPiece input, fbl::Vector<fbl::String>* output) {
@@ -341,7 +343,7 @@ bool RunTests(const RunTestFn& RunTest, const fbl::Vector<fbl::String>& test_pat
         if (result->launch_status != SUCCESS) {
             *failed_count += 1;
         }
-        results->push_back(fbl::move(result));
+        results->push_back(std::move(result));
     }
     return true;
 }

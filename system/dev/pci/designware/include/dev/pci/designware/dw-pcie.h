@@ -12,6 +12,8 @@
 
 #include <dev/pci/designware/atu-cfg.h>
 
+#include <utility>
+
 namespace pcie {
 namespace designware {
 
@@ -19,7 +21,7 @@ class DwPcie {
 protected:
     DwPcie(ddk::MmioBuffer dbi, ddk::MmioBuffer cfg,
            const uint32_t nLanes)
-        : dbi_(fbl::move(dbi)), cfg_(fbl::move(cfg)), nLanes_(nLanes) {}
+        : dbi_(std::move(dbi)), cfg_(std::move(cfg)), nLanes_(nLanes) {}
     virtual ~DwPcie() {}
 
     virtual bool IsLinkUp();

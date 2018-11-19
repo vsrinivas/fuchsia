@@ -14,6 +14,8 @@
 #include <minfs/host.h>
 #include <minfs/minfs.h>
 
+#include <utility>
+
 #include "minfs.h"
 
 char kDot[2] = ".";
@@ -334,7 +336,7 @@ zx_status_t MinfsCreator::Mkfs() {
     }
 
     // Consume the bcache to mkfs.
-    if ((status = minfs::Mkfs(fbl::move(bc))) != ZX_OK) {
+    if ((status = minfs::Mkfs(std::move(bc))) != ZX_OK) {
         return status;
     }
 
@@ -353,7 +355,7 @@ zx_status_t MinfsCreator::Fsck() {
     if ((status = GenerateBcache(&bc)) != ZX_OK) {
         return status;
     }
-    return minfs::Fsck(fbl::move(bc));
+    return minfs::Fsck(std::move(bc));
 }
 
 zx_status_t MinfsCreator::Add() {
@@ -628,14 +630,14 @@ zx_status_t MinfsCreator::GenerateBcache(fbl::unique_ptr<minfs::Bcache>* out) {
     int dupfd = dup(fd_.get());
 
     fbl::unique_ptr<minfs::Bcache> bc;
-    if (minfs::Bcache::Create(&bc, fbl::move(fd_), block_count) < 0) {
+    if (minfs::Bcache::Create(&bc, std::move(fd_), block_count) < 0) {
         fprintf(stderr, "error: cannot create block cache\n");
         return ZX_ERR_IO;
     }
 
     bc->SetOffset(GetOffset());
     fd_.reset(dupfd);
-    *out = fbl::move(bc);
+    *out = std::move(bc);
     return ZX_OK;
 }
 
@@ -651,7 +653,7 @@ zx_status_t MinfsCreator::MountMinfs() {
         return status;
     }
 
-    return emu_mount_bcache(fbl::move(bc));
+    return emu_mount_bcache(std::move(bc));
 }
 
 int main(int argc, char** argv) {

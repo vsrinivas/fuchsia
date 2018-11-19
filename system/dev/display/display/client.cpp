@@ -13,6 +13,8 @@
 #include <zircon/pixelformat.h>
 #include <zircon/device/display-controller.h>
 
+#include <utility>
+
 #include "client.h"
 
 #define SELECT_TABLE_CASE(NAME) case NAME ## Ordinal: table = &NAME ## RequestTable; break
@@ -189,7 +191,7 @@ void Client::HandleControllerApi(async_dispatcher_t* dispatcher, async::WaitBase
     if (resp_bytes.actual() != 0) {
         ZX_DEBUG_ASSERT(out_type != nullptr);
 
-        fidl::Message resp(fbl::move(resp_bytes),
+        fidl::Message resp(std::move(resp_bytes),
                            fidl::HandlePart(&out_handle, 1, has_out_handle ? 1 : 0));
         resp.header() = msg.header();
 
@@ -223,7 +225,7 @@ void Client::HandleImportVmoImage(const fuchsia_display_ControllerImportVmoImage
 
     if (resp->res == ZX_OK) {
         fbl::AllocChecker ac;
-        auto image = fbl::AdoptRef(new (&ac) Image(controller_, dc_image, fbl::move(vmo)));
+        auto image = fbl::AdoptRef(new (&ac) Image(controller_, dc_image, std::move(vmo)));
         if (!ac.check()) {
             controller_->dc()->ReleaseImage(&dc_image);
 
@@ -233,7 +235,7 @@ void Client::HandleImportVmoImage(const fuchsia_display_ControllerImportVmoImage
 
         image->id = next_image_id_++;
         resp->image_id = image->id;
-        images_.insert(fbl::move(image));
+        images_.insert(std::move(image));
     }
 }
 
@@ -263,9 +265,9 @@ void Client::HandleImportEvent(const fuchsia_display_ControllerImportEventReques
         if (!fence.IsValid()) {
             fbl::AllocChecker ac;
             auto new_fence = fbl::AdoptRef(new (&ac) Fence(this, controller_->loop().dispatcher(),
-                                                           req->id, fbl::move(event)));
+                                                           req->id, std::move(event)));
             if (ac.check() && new_fence->CreateRef()) {
-                fences_.insert_or_find(fbl::move(new_fence));
+                fences_.insert_or_find(std::move(new_fence));
                 success = true;
             }
         } else {
@@ -317,7 +319,7 @@ void Client::HandleCreateLayer(const fuchsia_display_ControllerCreateLayerReques
     new_layer->current_layer_.type = kInvalidLayerType;
     new_layer->pending_layer_.type = kInvalidLayerType;
 
-    layers_.insert(fbl::move(new_layer));
+    layers_.insert(std::move(new_layer));
 
     resp->res = ZX_OK;
 }
@@ -743,12 +745,12 @@ void Client::HandleApplyConfig(const fuchsia_display_ControllerApplyConfigReques
                     return;
                 }
                 layer_node.layer->pending_image_->PrepareFences(
-                        fbl::move(wait_fence),
+                        std::move(wait_fence),
                         GetFence(layer->pending_signal_event_id_));
                 {
                     fbl::AutoLock lock(controller_->mtx());
                     list_add_tail(&layer->waiting_images_, &layer->pending_image_->node.link);
-                    layer->pending_image_->node.self = fbl::move(layer->pending_image_);
+                    layer->pending_image_->node.self = std::move(layer->pending_image_);
                 }
             }
         }
@@ -1090,7 +1092,7 @@ void Client::ApplyConfig() {
                 // Drop any images older than node.
                 do_early_retire(&layer->waiting_images_, node);
 
-                layer->displayed_image_ = fbl::move(node->self);
+                layer->displayed_image_ = std::move(node->self);
                 list_remove_head(&layer->waiting_images_);
 
                 uint64_t handle = layer->displayed_image_->info().handle;
@@ -1237,7 +1239,7 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
 
         config->pending_ = config->current_;
 
-        configs_.insert(fbl::move(config));
+        configs_.insert(std::move(config));
     }
 
     // We need 2 loops, since we need to make sure we allocate the

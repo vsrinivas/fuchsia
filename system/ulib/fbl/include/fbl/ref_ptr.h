@@ -10,6 +10,8 @@
 #include <fbl/recycler.h>
 #include <fbl/type_support.h>
 
+#include <utility>
+
 namespace fbl {
 
 template <typename T>
@@ -118,7 +120,7 @@ public:
 
     // Move assignment
     RefPtr& operator=(RefPtr&& r) {
-        RefPtr(fbl::move(r)).swap(*this);
+        RefPtr(std::move(r)).swap(*this);
         return *this;
     }
 
@@ -136,7 +138,7 @@ public:
     //
     // fbl::RefPtr<MyBase> foo = MakeBase();
     // auto bar_copy = fbl::RefPtr<MyDerived>::Downcast(foo);
-    // auto bar_move = fbl::RefPtr<MyDerived>::Downcast(fbl::move(foo));
+    // auto bar_move = fbl::RefPtr<MyDerived>::Downcast(std::move(foo));
     //
     template <typename BaseRefPtr>
     static RefPtr Downcast(BaseRefPtr base) {
@@ -268,12 +270,12 @@ class MakeRefCountedHelper final {
  public:
   template <typename... Args>
   static RefPtr<T> MakeRefCounted(Args&&... args) {
-    return AdoptRef<T>(new T(forward<Args>(args)...));
+    return AdoptRef<T>(new T(std::forward<Args>(args)...));
   }
 
   template <typename... Args>
   static RefPtr<T> MakeRefCountedChecked(AllocChecker* ac, Args&&... args) {
-    return AdoptRef<T>(new (ac) T(forward<Args>(args)...));
+    return AdoptRef<T>(new (ac) T(std::forward<Args>(args)...));
   }
 };
 
@@ -282,13 +284,13 @@ class MakeRefCountedHelper final {
 template <typename T, typename... Args>
 RefPtr<T> MakeRefCounted(Args&&... args) {
   return internal::MakeRefCountedHelper<T>::MakeRefCounted(
-      forward<Args>(args)...);
+      std::forward<Args>(args)...);
 }
 
 template <typename T, typename... Args>
 RefPtr<T> MakeRefCountedChecked(AllocChecker* ac, Args&&... args) {
   return internal::MakeRefCountedHelper<T>::MakeRefCountedChecked(
-      ac, forward<Args>(args)...);
+      ac, std::forward<Args>(args)...);
 }
 
 } // namespace fbl

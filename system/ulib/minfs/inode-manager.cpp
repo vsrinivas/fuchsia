@@ -7,6 +7,8 @@
 #include <minfs/block-txn.h>
 #include <minfs/inode-manager.h>
 
+#include <utility>
+
 namespace minfs {
 
 InodeManager::InodeManager(Bcache* bc, blk_t start_block) :
@@ -27,7 +29,7 @@ zx_status_t InodeManager::Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn*
 
     zx_status_t status;
     if ((status = Allocator::Create(bc, sb, txn, kMinfsInodeSize,
-                                    fbl::move(grow_cb), fbl::move(metadata),
+                                    std::move(grow_cb), std::move(metadata),
                                     &mgr->inode_allocator_)) != ZX_OK) {
         return status;
     }
@@ -46,7 +48,7 @@ zx_status_t InodeManager::Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn*
     }
     txn->Enqueue(vmoid, 0, start_block, inoblks);
 #endif
-    *out = fbl::move(mgr);
+    *out = std::move(mgr);
     return ZX_OK;
 }
 

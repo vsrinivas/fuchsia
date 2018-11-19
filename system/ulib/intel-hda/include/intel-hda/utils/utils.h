@@ -18,6 +18,8 @@
 
 #include <intel-hda/utils/codec-caps.h>
 
+#include <utility>
+
 namespace audio {
 namespace intel_hda {
 
@@ -41,7 +43,7 @@ class RefCountedBti : public fbl::RefCounted<RefCountedBti> {
     const zx::bti& initiator() const { return initiator_; }
 
   private:
-    explicit RefCountedBti(zx::bti initiator) : initiator_(fbl::move(initiator)) { }
+    explicit RefCountedBti(zx::bti initiator) : initiator_(std::move(initiator)) { }
     zx::bti initiator_;
 };
 

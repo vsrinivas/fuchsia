@@ -30,6 +30,8 @@
 #include <blobfs/blobfs.h>
 #include <blobfs/format.h>
 
+#include <utility>
+
 namespace blobfs {
 
 class Blobfs;
@@ -231,7 +233,7 @@ public:
     }
 private:
     Buffer(Blobfs* blobfs, fzl::OwnedVmoMapper mapper)
-        : blobfs_(blobfs), mapper_(fbl::move(mapper)), start_(0), length_(0),
+        : blobfs_(blobfs), mapper_(std::move(mapper)), start_(0), length_(0),
           capacity_(mapper_.size() / kBlobfsBlockSize) {}
 
     Blobfs* blobfs_;
@@ -271,7 +273,7 @@ private:
     using ProducerQueue = fs::Queue<Waiter*>;
     using WorkQueue = fs::Queue<fbl::unique_ptr<WritebackWork>>;
 
-    WritebackQueue(fbl::unique_ptr<Buffer> buffer) : buffer_(fbl::move(buffer)) {}
+    WritebackQueue(fbl::unique_ptr<Buffer> buffer) : buffer_(std::move(buffer)) {}
 
     // Blocks until |blocks| blocks of data are free for the caller.
     // Doesn't actually allocate any space.

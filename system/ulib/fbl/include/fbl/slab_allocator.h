@@ -15,6 +15,7 @@
 #include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 #include <new>
+#include <utility>
 #include <zircon/compiler.h>
 
 // Usage Notes:
@@ -583,7 +584,7 @@ public:
         // about).
         ObjType* obj = ::fbl::SlabAllocator<SATraits>::ConstructObject(
                 mem,
-                fbl::forward<ConstructorSignature>(args)...);
+                std::forward<ConstructorSignature>(args)...);
 
         // Now, record the slab allocator this object came from so it can be
         // returned later on.
@@ -729,7 +730,7 @@ private:
 
     template <typename... ConstructorSignature>
     static ObjType* ConstructObject(void* mem, ConstructorSignature&&... args) {
-        return new (mem) ObjType(fbl::forward<ConstructorSignature>(args)...);
+        return new (mem) ObjType(std::forward<ConstructorSignature>(args)...);
     }
 };
 
@@ -854,7 +855,7 @@ public:
 
     template <typename... ConstructorSignature>
     static PtrType New(ConstructorSignature&&... args) {
-        return allocator_.New(fbl::forward<ConstructorSignature>(args)...);
+        return allocator_.New(std::forward<ConstructorSignature>(args)...);
     }
 
     static size_t max_slabs() { return allocator_.max_slabs(); }
@@ -869,7 +870,7 @@ private:
 
     template <typename... ConstructorSignature>
     static ObjType* ConstructObject(void* mem, ConstructorSignature&&... args) {
-        return new (mem) ObjType(fbl::forward<ConstructorSignature>(args)...);
+        return new (mem) ObjType(std::forward<ConstructorSignature>(args)...);
     }
 
     static void ReturnToFreeList(void* ptr) { allocator_.ReturnToFreeList(ptr); }

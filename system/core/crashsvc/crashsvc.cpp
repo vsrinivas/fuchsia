@@ -19,6 +19,8 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls/exception.h>
 
+#include <utility>
+
 static bool GetChildKoids(const zx::job& job, zx_object_info_topic_t child_kind,
                           fbl::unique_ptr<zx_koid_t[]>* koids, size_t* num_koids) {
     size_t actual = 0;
@@ -55,7 +57,7 @@ static bool FindProcess(const zx::job& job, zx_koid_t process_koid, zx::process*
     // Search this job for the process.
     zx::process process;
     if (job.get_child(process_koid, ZX_RIGHT_SAME_RIGHTS, &process) == ZX_OK) {
-        *out = fbl::move(process);
+        *out = std::move(process);
         return true;
     }
 

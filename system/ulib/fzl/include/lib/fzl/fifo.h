@@ -7,6 +7,8 @@
 #include <lib/zx/fifo.h>
 #include <fbl/type_support.h>
 
+#include <utility>
+
 namespace fzl {
 
 template<typename W, typename R = W>
@@ -15,11 +17,11 @@ class fifo {
 public:
     constexpr fifo() = default;
 
-    explicit fifo(zx::fifo&& fifo) : fifo_(fbl::move(fifo)) {}
+    explicit fifo(zx::fifo&& fifo) : fifo_(std::move(fifo)) {}
 
     explicit fifo(zx_handle_t value) : fifo_(value) {}
 
-    explicit fifo(zx::handle&& h) : fifo_(fbl::move(h)) {}
+    explicit fifo(zx::handle&& h) : fifo_(std::move(h)) {}
 
     void reset(zx_handle_t value = ZX_HANDLE_INVALID) {
         fifo_.reset(value);

@@ -8,6 +8,8 @@
 #include <fbl/unique_ptr.h>
 #include <fuzz-utils/string-map.h>
 
+#include <utility>
+
 namespace fuzzing {
 
 StringMap::StringMap() {
@@ -70,7 +72,7 @@ void StringMap::set(const char* key, const char* val) {
     ZX_ASSERT(ac.check());
     element->val.Set(val, &ac);
     ZX_ASSERT(ac.check());
-    elements_.insert_or_replace(fbl::move(element));
+    elements_.insert_or_replace(std::move(element));
     iterator_ = elements_.end();
 }
 

@@ -34,6 +34,8 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <utility>
+
 #include "fuchsia/display/c/fidl.h"
 
 #define DEV_INPUT "/dev/class/input"
@@ -1068,7 +1070,7 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
-        fzl::FdioCaller caller(fbl::move(fbl::unique_fd(fd)));
+        fzl::FdioCaller caller{fbl::unique_fd(fd)};
 
         uint16_t rpt_desc_len;
         status = zircon_input_DeviceGetReportDescSize(caller.borrow_channel(), &rpt_desc_len);
@@ -1114,14 +1116,14 @@ int main(int argc, char* argv[]) {
     uint16_t max_touch_rpt_sz = 0;
     uint16_t max_touchpad_rpt_sz = 0;
     if (touchfd >= 0) {
-        fzl::FdioCaller caller(fbl::move(fbl::unique_fd(touchfd)));
+        fzl::FdioCaller caller{fbl::unique_fd(touchfd)};
         status = zircon_input_DeviceGetMaxInputReportSize(caller.borrow_channel(),
                                                           &max_touch_rpt_sz);
         touchfd = caller.release().release();
         ZX_ASSERT(status == ZX_OK);
     }
     if (touchpadfd >= 0) {
-        fzl::FdioCaller caller(fbl::move(fbl::unique_fd(touchpadfd)));
+        fzl::FdioCaller caller{fbl::unique_fd(touchpadfd)};
         status = zircon_input_DeviceGetMaxInputReportSize(caller.borrow_channel(),
                                                           &max_touchpad_rpt_sz);
         touchpadfd = caller.release().release();

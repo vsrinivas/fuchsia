@@ -4,6 +4,8 @@
 
 #include "device-resources.h"
 
+#include <utility>
+
 namespace {
 
 template <typename T>
@@ -53,7 +55,7 @@ zx_status_t DeviceResources::Init(const pbus_dev_t* pdev, uint32_t* next_index) 
             if (status != ZX_OK) {
                 return status;
             }
-            children_.push_back(fbl::move(dr));
+            children_.push_back(std::move(dr));
         }
     }
 

@@ -15,6 +15,8 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <utility>
+
 namespace audio {
 namespace vim2 {
 
@@ -43,7 +45,7 @@ public:
 private:
     friend class fbl::RefPtr<RefCountedVmo>;
 
-    explicit RefCountedVmo(zx::vmo vmo) : vmo_(fbl::move(vmo)) { }
+    explicit RefCountedVmo(zx::vmo vmo) : vmo_(std::move(vmo)) { }
     ~RefCountedVmo() = default;
 
     const zx::vmo vmo_;

@@ -17,6 +17,8 @@
 #include <zircon/types.h>
 #include <zxcrypt/volume.h>
 
+#include <utility>
+
 #include "debug.h"
 #include "device.h"
 #include "extra.h"
@@ -58,7 +60,7 @@ zx_status_t Worker::Start(Device* device, const Volume& volume, zx::port&& port)
         return rc;
     }
 
-    port_ = fbl::move(port);
+    port_ = std::move(port);
 
     if (thrd_create(&thrd_, WorkerRun, this) != thrd_success) {
         zxlogf(ERROR, "failed to start thread\n");

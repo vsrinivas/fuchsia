@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <utility>
 
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
@@ -153,7 +154,7 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, const FileMapping& ma
         return status;
     } else if ((status = bs->WriteBitmap(inode->num_blocks, inode->start_block)) != ZX_OK) {
         return status;
-    } else if ((status = bs->WriteNode(fbl::move(inode_block))) != ZX_OK) {
+    } else if ((status = bs->WriteNode(std::move(inode_block))) != ZX_OK) {
         return status;
     } else if ((status = bs->WriteInfo()) != ZX_OK) {
         return status;
@@ -192,7 +193,7 @@ zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd fd) {
     extent_lengths[3] = JournalBlocks(info_block.info) * kBlobfsBlockSize;
     extent_lengths[4] = DataBlocks(info_block.info) * kBlobfsBlockSize;
 
-    if ((status = Blobfs::Create(fbl::move(fd), 0, info_block, extent_lengths, out)) != ZX_OK) {
+    if ((status = Blobfs::Create(std::move(fd), 0, info_block, extent_lengths, out)) != ZX_OK) {
         fprintf(stderr, "blobfs: mount failed; could not create blobfs\n");
         return status;
     }
@@ -243,7 +244,7 @@ zx_status_t blobfs_create_sparse(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd fd
     extent_lengths[3] = extent_vector[3];
     extent_lengths[4] = extent_vector[4];
 
-    if ((status = Blobfs::Create(fbl::move(fd), start, info_block, extent_lengths, out)) != ZX_OK) {
+    if ((status = Blobfs::Create(std::move(fd), start, info_block, extent_lengths, out)) != ZX_OK) {
         fprintf(stderr, "blobfs: mount failed; could not create blobfs\n");
         return status;
     }
@@ -300,9 +301,9 @@ zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
                         const fbl::Vector<size_t>& extent_lengths) {
     fbl::unique_ptr<Blobfs> blob;
     zx_status_t status;
-    if ((status = blobfs_create_sparse(&blob, fbl::move(fd), start, end, extent_lengths)) != ZX_OK) {
+    if ((status = blobfs_create_sparse(&blob, std::move(fd), start, end, extent_lengths)) != ZX_OK) {
         return status;
-    } else if ((status = Fsck(fbl::move(blob))) != ZX_OK) {
+    } else if ((status = Fsck(std::move(blob))) != ZX_OK) {
         return status;
     }
     return ZX_OK;
@@ -310,7 +311,7 @@ zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
 
 Blobfs::Blobfs(fbl::unique_fd fd, off_t offset, const info_block_t& info_block,
                const fbl::Array<size_t>& extent_lengths)
-    : blockfd_(fbl::move(fd)),
+    : blockfd_(std::move(fd)),
       dirty_(false), offset_(offset) {
     ZX_ASSERT(extent_lengths.size() == kExtentCount);
     memcpy(&info_block_, info_block.block, kBlobfsBlockSize);
@@ -343,7 +344,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd blockfd_, off_t offset, const info_blo
         }
     }
 
-    auto fs = fbl::unique_ptr<Blobfs>(new Blobfs(fbl::move(blockfd_), offset,
+    auto fs = fbl::unique_ptr<Blobfs>(new Blobfs(std::move(blockfd_), offset,
                                                  info_block, extent_lengths));
 
     if ((status = fs->LoadBitmap()) < 0) {
@@ -351,7 +352,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd blockfd_, off_t offset, const info_blo
         return status;
     }
 
-    *out = fbl::move(fs);
+    *out = std::move(fs);
     return ZX_OK;
 }
 
@@ -425,7 +426,7 @@ zx_status_t Blobfs::NewBlob(const Digest& digest, fbl::unique_ptr<InodeBlock>* o
 
     dirty_ = true;
     info_.alloc_inode_count++;
-    *out = fbl::move(ino_block);
+    *out = std::move(ino_block);
     return ZX_OK;
 }
 

@@ -15,6 +15,8 @@
 #include <hw/reg.h>
 #include <inttypes.h>
 
+#include <utility>
+
 namespace gpio {
 
 constexpr int kPinsPerBlock = 32;
@@ -82,10 +84,10 @@ private:
                const AmlGpioInterrupt* gpio_interrupt, const AmlPinMuxBlock* pinmux_blocks,
                size_t block_count, fbl::Array<fbl::Mutex> block_locks,
                fbl::Array<uint16_t> irq_info)
-        : DeviceType(parent), pdev_(pdev), mmios_{fbl::move(mmio_gpio), fbl::move(mmio_gpio_a0)},
-          mmio_interrupt_(fbl::move(mmio_interrupt)), gpio_blocks_(gpio_blocks),
+        : DeviceType(parent), pdev_(pdev), mmios_{std::move(mmio_gpio), std::move(mmio_gpio_a0)},
+          mmio_interrupt_(std::move(mmio_interrupt)), gpio_blocks_(gpio_blocks),
           gpio_interrupt_(gpio_interrupt), pinmux_blocks_(pinmux_blocks), block_count_(block_count),
-          block_locks_(fbl::move(block_locks)), irq_info_(fbl::move(irq_info)), irq_status_(0) {}
+          block_locks_(std::move(block_locks)), irq_info_(std::move(irq_info)), irq_status_(0) {}
 
     // Note: The out_pin_index returned by this API is not the index of the pin
     // in the particular GPIO block. eg. if its 7, its not GPIOH7

@@ -33,11 +33,13 @@
 
 #include <acpica/acpi.h>
 
+#include <utility>
+
 #include "../../include/errors.h"
 
 AcpiCrOsEcMotionDevice::AcpiCrOsEcMotionDevice(fbl::RefPtr<AcpiCrOsEc> ec, zx_device_t* parent,
                                                ACPI_HANDLE acpi_handle)
-    : DeviceType(parent), ec_(fbl::move(ec)), acpi_handle_(acpi_handle) {
+    : DeviceType(parent), ec_(std::move(ec)), acpi_handle_(acpi_handle) {
 }
 
 AcpiCrOsEcMotionDevice::~AcpiCrOsEcMotionDevice() {
@@ -479,7 +481,7 @@ zx_status_t AcpiCrOsEcMotionDevice::Create(fbl::RefPtr<AcpiCrOsEc> ec, zx_device
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<AcpiCrOsEcMotionDevice> dev(
-            new (&ac) AcpiCrOsEcMotionDevice(fbl::move(ec), parent, acpi_handle));
+            new (&ac) AcpiCrOsEcMotionDevice(std::move(ec), parent, acpi_handle));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -503,7 +505,7 @@ zx_status_t AcpiCrOsEcMotionDevice::Create(fbl::RefPtr<AcpiCrOsEc> ec, zx_device
         return acpi_to_zx_status(acpi_status);
     }
 
-    *out = fbl::move(dev);
+    *out = std::move(dev);
     return ZX_OK;
 }
 
@@ -802,6 +804,6 @@ zx_status_t AcpiCrOsEcMotionDevice::BuildHidDescriptor() {
     }
 
     hid_descriptor_len_ = total_size;
-    hid_descriptor_ = fbl::move(desc);
+    hid_descriptor_ = std::move(desc);
     return ZX_OK;
 }

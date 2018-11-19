@@ -8,6 +8,8 @@
 #include <fbl/intrusive_double_list.h>
 #include <string.h>
 
+#include <utility>
+
 #include "usb-audio.h"
 #include "usb-audio-device.h"
 #include "usb-audio-stream.h"
@@ -189,7 +191,7 @@ void UsbAudioDevice::Probe() {
             if (res == ZX_OK) {
                 // No need to log in case of failure, the interface class
                 // should already have done so.
-                control_ifc = fbl::move(control);
+                control_ifc = std::move(control);
             }
             break;
         }
@@ -221,7 +223,7 @@ void UsbAudioDevice::Probe() {
                         iid, iter.offset(), iter.desc_list()->size());
                 } else {
                     LOG(TRACE, "Discovered new audio streaming interface (id %u)\n", iid);
-                    aud_stream_ifcs.push_back(fbl::move(ifc));
+                    aud_stream_ifcs.push_back(std::move(ifc));
                 }
             }
             break;
@@ -311,7 +313,7 @@ void UsbAudioDevice::Probe() {
         // Link the path to the stream interface.
         LOG(TRACE, "Linking streaming interface id %u to audio path terminal %u\n",
                 stream_ifc->iid(), path->stream_terminal().id());
-        stream_ifc->LinkPath(fbl::move(path));
+        stream_ifc->LinkPath(std::move(path));
 
         // Log a warning if we are about to build an audio path which operates
         // in separate clock domain.  We still need to add support for this
@@ -324,7 +326,7 @@ void UsbAudioDevice::Probe() {
         }
 
         // Create a new audio stream, handing the stream interface over to it.
-        auto stream = UsbAudioStream::Create(this, fbl::move(stream_ifc));
+        auto stream = UsbAudioStream::Create(this, std::move(stream_ifc));
         if (stream == nullptr) {
             // No need to log an error, the Create method has already done so.
             continue;

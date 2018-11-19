@@ -4,10 +4,12 @@
 
 #include <fs/service.h>
 
+#include <utility>
+
 namespace fs {
 
 Service::Service(Connector connector)
-    : connector_(fbl::move(connector)) {}
+    : connector_(std::move(connector)) {}
 
 Service::~Service() = default;
 
@@ -32,7 +34,7 @@ zx_status_t Service::Serve(Vfs* vfs, zx::channel channel, uint32_t flags) {
     if (!connector_) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    return connector_(fbl::move(channel));
+    return connector_(std::move(channel));
 }
 
 } // namespace fs

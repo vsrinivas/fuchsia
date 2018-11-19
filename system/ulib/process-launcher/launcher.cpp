@@ -14,6 +14,8 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
+#include <utility>
+
 namespace launcher {
 namespace {
 
@@ -38,7 +40,7 @@ void PushCStrs(const fbl::Vector<fbl::String>& source, fbl::Vector<const char*>*
 } // namespace
 
 LauncherImpl::LauncherImpl(zx::channel channel)
-    : channel_(fbl::move(channel)),
+    : channel_(std::move(channel)),
       wait_(this, channel_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED) {
 }
 
@@ -88,17 +90,17 @@ zx_status_t LauncherImpl::ReadAndDispatchMessage(fidl::MessageBuffer* buffer) {
         return ZX_ERR_INVALID_ARGS;
     switch (message.ordinal()) {
     case fuchsia_process_LauncherLaunchOrdinal:
-        return Launch(buffer, fbl::move(message));
+        return Launch(buffer, std::move(message));
     case fuchsia_process_LauncherCreateWithoutStartingOrdinal:
-        return CreateWithoutStarting(buffer, fbl::move(message));
+        return CreateWithoutStarting(buffer, std::move(message));
     case fuchsia_process_LauncherAddArgsOrdinal:
-        return AddArgs(fbl::move(message));
+        return AddArgs(std::move(message));
     case fuchsia_process_LauncherAddEnvironsOrdinal:
-        return AddEnvirons(fbl::move(message));
+        return AddEnvirons(std::move(message));
     case fuchsia_process_LauncherAddNamesOrdinal:
-        return AddNames(fbl::move(message));
+        return AddNames(std::move(message));
     case fuchsia_process_LauncherAddHandlesOrdinal:
-        return AddHandles(fbl::move(message));
+        return AddHandles(std::move(message));
     default:
         fprintf(stderr, "launcher: error: Unknown message ordinal: %d\n", message.ordinal());
         return ZX_ERR_NOT_SUPPORTED;

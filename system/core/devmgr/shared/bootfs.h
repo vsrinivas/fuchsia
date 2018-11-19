@@ -4,10 +4,11 @@
 
 #pragma once
 
-#include <zircon/boot/bootdata.h>
-#include <zircon/types.h>
-#include <zircon/compiler.h>
 #include <stdint.h>
+#include <utility>
+#include <zircon/boot/bootdata.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/function.h>
@@ -51,7 +52,7 @@ public:
 
 private:
     Bootfs(zx::vmo vmo, uint32_t dirsize, void* dir) :
-        vmo_(fbl::move(vmo)), dirsize_(dirsize), dir_(dir) {}
+        vmo_(std::move(vmo)), dirsize_(dirsize), dir_(dir) {}
 
     Bootfs(const Bootfs&) = delete;
     Bootfs& operator=(const Bootfs&) = delete;

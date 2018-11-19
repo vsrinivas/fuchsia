@@ -18,6 +18,8 @@
 #include <lib/zx/event.h>
 #include <trace-engine/instrumentation.h>
 
+#include <utility>
+
 #include "context_impl.h"
 
 namespace {
@@ -220,7 +222,7 @@ EXPORT_NO_DDK zx_status_t trace_start_engine(
     g_handler = handler;
     g_disposition = ZX_OK;
     g_context = new trace_context(buffer, buffer_num_bytes, buffering_mode, handler);
-    g_event = fbl::move(event);
+    g_event = std::move(event);
 
     g_context->InitBufferHeader();
 

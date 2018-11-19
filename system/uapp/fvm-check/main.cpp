@@ -12,6 +12,8 @@
 #include <fvm/fvm-check.h>
 #include <zircon/status.h>
 
+#include <utility>
+
 namespace {
 
 constexpr char kUsageMessage[] = R"""(
@@ -56,7 +58,7 @@ bool GetOptions(int argc, char** argv, fvm::Checker* checker) {
             return false;
         }
 
-        checker->SetDevice(fbl::move(fd));
+        checker->SetDevice(std::move(fd));
         return true;
     }
     return false;

@@ -9,6 +9,8 @@
 #include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 
+#include <utility>
+
 static int destroy_count = 0;
 
 struct DeleteCounter {
@@ -65,7 +67,7 @@ static bool uptr_test_move() {
         CountingPtr ptr(new (&ac) DeleteCounter);
         EXPECT_TRUE(ac.check());
 
-        CountingPtr ptr2 = fbl::move(ptr);
+        CountingPtr ptr2 = std::move(ptr);
         EXPECT_NULL(ptr, "expected ptr to be null");
     }
 
@@ -217,7 +219,7 @@ static bool uptr_test_array_move() {
         CountingArrPtr ptr(new (&ac) DeleteCounter[1]);
         EXPECT_TRUE(ac.check());
 
-        CountingArrPtr ptr2 = fbl::move(ptr);
+        CountingArrPtr ptr2 = std::move(ptr);
         EXPECT_NULL(ptr, "expected ptr to be null");
     }
     EXPECT_EQ(1, destroy_count);
@@ -426,30 +428,30 @@ static bool test_upcast() {
     {
         EXPECT_NONNULL(derived_ptr);
 
-        fbl::unique_ptr<Base> base_ptr(fbl::move(derived_ptr));
+        fbl::unique_ptr<Base> base_ptr(std::move(derived_ptr));
 
         EXPECT_NULL(derived_ptr);
         EXPECT_NONNULL(base_ptr);
     }
 
-    // Assign unique_ptr<Base> at declaration time with a fbl::move
+    // Assign unique_ptr<Base> at declaration time with a std::move
     derived_ptr.reset(new (&ac) Derived());
     ASSERT_TRUE(ac.check());
     {
         EXPECT_NONNULL(derived_ptr);
 
-        fbl::unique_ptr<Base> base_ptr = fbl::move(derived_ptr);
+        fbl::unique_ptr<Base> base_ptr = std::move(derived_ptr);
 
         EXPECT_NULL(derived_ptr);
         EXPECT_NONNULL(base_ptr);
     }
 
-    // Assign unique_ptr<Base> after declaration with a fbl::move
+    // Assign unique_ptr<Base> after declaration with a std::move
     derived_ptr.reset(new (&ac) Derived());
     ASSERT_TRUE(ac.check());
     {
         fbl::unique_ptr<Base> base_ptr;
-        base_ptr = fbl::move(derived_ptr);
+        base_ptr = std::move(derived_ptr);
     }
 
     // Pass the pointer to a function with a move and an implicit cast
@@ -458,7 +460,7 @@ static bool test_upcast() {
     {
         EXPECT_NONNULL(derived_ptr);
 
-        bool test_res = handoff_fn<fbl::unique_ptr<Base>>(fbl::move(derived_ptr));
+        bool test_res = handoff_fn<fbl::unique_ptr<Base>>(std::move(derived_ptr));
 
         EXPECT_NULL(derived_ptr);
         EXPECT_TRUE(test_res);
@@ -474,7 +476,7 @@ static bool test_upcast() {
 #endif
 
 #if TEST_WILL_NOT_COMPILE || 0
-    // Assign unique_ptr<Base> at declaration time without a fbl::move.
+    // Assign unique_ptr<Base> at declaration time without a std::move.
     derived_ptr.reset(new (&ac) Derived());
     ASSERT_TRUE(ac.check());
     {
@@ -483,7 +485,7 @@ static bool test_upcast() {
 #endif
 
 #if TEST_WILL_NOT_COMPILE || 0
-    // Assign unique_ptr<Base> after declaration without a fbl::move.
+    // Assign unique_ptr<Base> after declaration without a std::move.
     derived_ptr.reset(new (&ac) Derived());
     ASSERT_TRUE(ac.check());
     {
@@ -528,7 +530,7 @@ static bool uptr_upcasting() {
         ASSERT_TRUE(ac.check());
 
         fbl::unique_ptr<const B> const_ptr;
-        const_ptr = fbl::move(ptr);
+        const_ptr = std::move(ptr);
 
         EXPECT_NULL(ptr);
         EXPECT_NONNULL(const_ptr);
@@ -554,7 +556,7 @@ static bool uptr_upcasting() {
     {
         // Now test pass by move.
         OverloadTestHelper helper;
-        helper.PassByMove(fbl::move(ptr));
+        helper.PassByMove(std::move(ptr));
 
         EXPECT_NULL(ptr);
         EXPECT_EQ(OverloadTestHelper::Result::ClassA, helper.result());

@@ -8,6 +8,8 @@
 #include <cobalt-client/cpp/counter.h>
 #include <zircon/assert.h>
 
+#include <utility>
+
 namespace cobalt_client {
 namespace internal {
 
@@ -17,7 +19,7 @@ RemoteCounter::RemoteCounter(const RemoteMetricInfo& metric_info)
 }
 
 RemoteCounter::RemoteCounter(RemoteCounter&& other)
-    : BaseCounter(fbl::move(other)), buffer_(fbl::move(other.buffer_)),
+    : BaseCounter(std::move(other)), buffer_(std::move(other.buffer_)),
       metric_info_(other.metric_info_) {}
 
 bool RemoteCounter::Flush(Logger* logger) {

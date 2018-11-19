@@ -44,7 +44,7 @@ struct Watcher : fbl::DoublyLinkedListable<fbl::unique_ptr<Watcher>> {
 };
 
 Watcher::Watcher(Devnode* dn, zx::channel ch, uint32_t mask)
-    : devnode(dn), handle(fbl::move(ch)), mask(mask) {
+    : devnode(dn), handle(std::move(ch)), mask(mask) {
 }
 
 class DcIostate : public AsyncLoopOwnedRpcHandler<DcIostate> {
@@ -141,10 +141,12 @@ struct ProtocolInfo {
 static ProtocolInfo proto_infos[] = {
 #define DDK_PROTOCOL_DEF(tag, val, name, flags) { name, nullptr, val, flags },
 #include <ddk/protodefs.h>
+
+#include <utility>
 };
 
 Devnode::Devnode(fbl::String name)
-    : name(fbl::move(name)) {
+    : name(std::move(name)) {
 
     list_initialize(&children);
 }
@@ -186,7 +188,7 @@ zx_status_t DcIostate::Create(Devnode* dn, zx::channel* ipc) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    ios->set_channel(fbl::move(*ipc));
+    ios->set_channel(std::move(*ipc));
     zx_status_t status = DcIostate::BeginWait(&ios, DcAsyncLoop()->dispatcher());
     if (status != ZX_OK) {
         // Take the handle back from |ios| so it doesn't close it when it's
@@ -300,7 +302,7 @@ static void devfs_notify(Devnode* dn, const fbl::String& name, unsigned op) {
 }
 
 static zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask) {
-    auto watcher = fbl::make_unique<Watcher>(dn, fbl::move(h), mask);
+    auto watcher = fbl::make_unique<Watcher>(dn, std::move(h), mask);
     if (watcher == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -322,7 +324,7 @@ static zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask) {
     // Watcher may have been freed by devfs_notify_single, so check before
     // adding.
     if (watcher) {
-        dn->watchers.push_front(fbl::move(watcher));
+        dn->watchers.push_front(std::move(watcher));
     }
     return ZX_OK;
 }
@@ -575,7 +577,7 @@ static void devfs_open(Devnode* dirdn, zx_handle_t h, char* path, uint32_t flags
 
     if (r != ZX_OK) {
         if (describe) {
-            describe_error(fbl::move(ipc), r);
+            describe_error(std::move(ipc), r);
         }
         return;
     }
@@ -586,7 +588,7 @@ static void devfs_open(Devnode* dirdn, zx_handle_t h, char* path, uint32_t flags
         zx::unowned_channel unowned_ipc(ipc);
         if ((r = DcIostate::Create(dn, &ipc)) != ZX_OK) {
             if (describe) {
-                describe_error(fbl::move(ipc), r);
+                describe_error(std::move(ipc), r);
             }
             return;
         }
@@ -773,7 +775,7 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* 
         if (request->mask & (~fuchsia_io_WATCH_MASK_ALL) || request->options != 0) {
             return fuchsia_io_DirectoryWatch_reply(txn, ZX_ERR_INVALID_ARGS);
         }
-        r = devfs_watch(dn, fbl::move(watcher), request->mask);
+        r = devfs_watch(dn, std::move(watcher), request->mask);
         return fuchsia_io_DirectoryWatch_reply(txn, r);
     }
     case fuchsia_io_DirectoryAdminQueryFilesystemOrdinal: {
@@ -805,7 +807,7 @@ void DcIostate::HandleRpc(fbl::unique_ptr<DcIostate> ios, async_dispatcher_t* di
 
     if (signal->observed & ZX_CHANNEL_READABLE) {
         if (zxfidl_handler(wait->object(), DcIostate::DevfsFidlHandler, ios.get()) == ZX_OK) {
-            ios->BeginWait(fbl::move(ios), dispatcher);
+            ios->BeginWait(std::move(ios), dispatcher);
             return;
         }
     } else if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
@@ -849,7 +851,7 @@ void devfs_init(const zx::job& root_job) {
         return;
     }
 
-    g_devfs_root = fbl::move(h1);
+    g_devfs_root = std::move(h1);
 }
 
 } // namespace devmgr

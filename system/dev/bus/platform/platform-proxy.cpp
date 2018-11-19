@@ -15,6 +15,8 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 
+#include <utility>
+
 #include "platform-proxy-client.h"
 #include "platform-proxy-device.h"
 
@@ -102,7 +104,7 @@ zx_status_t PlatformProxy::RegisterProtocol(uint32_t proto_id, const void* proto
         return ZX_ERR_NO_MEMORY;
     }
 
-    protocols_.insert(fbl::move(proto));
+    protocols_.insert(std::move(proto));
 
     if (protocols_.size() == protocol_count_) {
         // All the protocols are registered, so we can now add the actual platform device.

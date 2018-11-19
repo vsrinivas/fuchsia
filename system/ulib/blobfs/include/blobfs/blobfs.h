@@ -46,6 +46,8 @@
 #include <blobfs/journal.h>
 #include <blobfs/writeback.h>
 
+#include <utility>
+
 namespace blobfs {
 
 class Blobfs;
@@ -389,7 +391,7 @@ public:
     }
 
     void SetUnmountCallback(fbl::Closure closure) {
-        on_unmount_ = fbl::move(closure);
+        on_unmount_ = std::move(closure);
     }
 
     // Initializes the WritebackQueue and Journal (if enabled in |options|),

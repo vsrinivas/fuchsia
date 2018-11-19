@@ -9,10 +9,12 @@
 #include <inttypes.h>
 #include <limits.h>
 
+#include <utility>
+
 namespace virtio {
 
 RngDevice::RngDevice(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend)
-    : Device(bus_device, fbl::move(bti), fbl::move(backend)) {
+    : Device(bus_device, std::move(bti), std::move(backend)) {
 }
 
 RngDevice::~RngDevice() {

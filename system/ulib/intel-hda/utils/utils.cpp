@@ -9,6 +9,8 @@
 #include <fbl/algorithm.h>
 #include <intel-hda/utils/utils.h>
 
+#include <utility>
+
 namespace audio {
 namespace intel_hda {
 
@@ -39,7 +41,7 @@ zx_status_t WaitCondition(zx_duration_t timeout,
 fbl::RefPtr<RefCountedBti> RefCountedBti::Create(zx::bti initiator) {
     fbl::AllocChecker ac;
 
-    auto ret = fbl::AdoptRef(new (&ac) RefCountedBti(fbl::move(initiator)));
+    auto ret = fbl::AdoptRef(new (&ac) RefCountedBti(std::move(initiator)));
     if (!ac.check()) {
         return nullptr;
     }

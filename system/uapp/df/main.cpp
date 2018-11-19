@@ -19,6 +19,8 @@
 #include <lib/fzl/fdio.h>
 #include <zircon/device/vfs.h>
 
+#include <utility>
+
 int usage(void) {
     fprintf(stderr, "usage: df [ <option>* ] [paths]\n");
     fprintf(stderr, "df displays the mounted filesystems for a list of paths\n");
@@ -187,7 +189,7 @@ int main(int argc, const char** argv) {
 
         fuchsia_io_FilesystemInfo info;
         zx_status_t status;
-        fzl::FdioCaller caller(fbl::move(fd));
+        fzl::FdioCaller caller(std::move(fd));
         zx_status_t io_status = fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(),
                                                                          &status, &info);
         if (io_status != ZX_OK || status != ZX_OK) {

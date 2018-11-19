@@ -14,6 +14,8 @@
 #include <unittest/unittest.h>
 #include <zircon/syscalls.h>
 
+#include <utility>
+
 namespace {
 
 // Initializes |wait| to wait on |event| to call |closure| once |trigger| is
@@ -21,7 +23,7 @@ namespace {
 void InitWait(async::Wait* wait, fbl::Closure closure, const zx::event& event,
               zx_signals_t trigger) {
     wait->set_handler(
-        [closure = fbl::move(closure)] (async_dispatcher_t*, async::Wait*,
+        [closure = std::move(closure)] (async_dispatcher_t*, async::Wait*,
                                         zx_status_t,
                                         const zx_packet_signal_t*) {
         closure();

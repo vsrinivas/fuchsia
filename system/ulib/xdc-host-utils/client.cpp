@@ -14,6 +14,8 @@
 #include <xdc-host-utils/client.h>
 #include <xdc-host-utils/conn.h>
 
+#include <utility>
+
 namespace xdc {
 
 zx_status_t GetStream(uint32_t stream_id, fbl::unique_fd* out_fd) {
@@ -50,7 +52,7 @@ zx_status_t GetStream(uint32_t stream_id, fbl::unique_fd* out_fd) {
         fprintf(stderr, "Stream id %u was already taken, exiting\n", stream_id);
         return ZX_ERR_ALREADY_BOUND;
     }
-    *out_fd = fbl::move(fd);
+    *out_fd = std::move(fd);
     return ZX_OK;
 }
 

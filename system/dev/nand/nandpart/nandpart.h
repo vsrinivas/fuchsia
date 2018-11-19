@@ -15,6 +15,8 @@
 #include <fbl/ref_ptr.h>
 #include <zircon/types.h>
 
+#include <utility>
+
 #include "bad-block.h"
 
 namespace nand {
@@ -59,7 +61,7 @@ private:
                             const zircon_nand_Info& nand_info, uint32_t erase_block_start)
         : DeviceType(parent), nand_proto_(nand_proto), nand_(&nand_proto_),
           parent_op_size_(parent_op_size), nand_info_(nand_info),
-          erase_block_start_(erase_block_start), bad_block_(fbl::move(bad_block)) {}
+          erase_block_start_(erase_block_start), bad_block_(std::move(bad_block)) {}
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(NandPartDevice);
 

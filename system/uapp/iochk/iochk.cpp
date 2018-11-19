@@ -30,6 +30,8 @@
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
 
+#include <utility>
+
 namespace {
 
 constexpr char kUsageMessage[] = R"""(
@@ -213,7 +215,7 @@ public:
         groupid_t group = next_txid_.fetch_add(1);
         ZX_ASSERT(group < MAX_TXN_GROUP_COUNT);
 
-        checker->reset(new BlockChecker(fbl::move(mapping), info, client, vmoid, group));
+        checker->reset(new BlockChecker(std::move(mapping), info, client, vmoid, group));
         return ZX_OK;
     }
 
@@ -280,7 +282,7 @@ public:
 private:
     BlockChecker(fzl::OwnedVmoMapper mapper, block_info_t info,
                  block_client::Client& client, vmoid_t vmoid, groupid_t group)
-        : Checker(mapper.start()), mapper_(fbl::move(mapper)), info_(info),
+        : Checker(mapper.start()), mapper_(std::move(mapper)), info_(info),
           client_(client), vmoid_(vmoid), group_(group) {}
     ~BlockChecker() = default;
 
@@ -308,7 +310,7 @@ public:
             return status;
         }
 
-        checker->reset(new SkipBlockChecker(fbl::move(mapping), fbl::move(vmo), caller, info));
+        checker->reset(new SkipBlockChecker(std::move(mapping), std::move(vmo), caller, info));
         return ZX_OK;
     }
 
@@ -383,7 +385,7 @@ public:
 private:
     SkipBlockChecker(fzl::VmoMapper mapper, zx::vmo vmo, fzl::FdioCaller& caller,
                      zircon_skipblock_PartitionInfo info)
-        : Checker(mapper.start()), mapper_(fbl::move(mapper)), vmo_(fbl::move(vmo)),
+        : Checker(mapper.start()), mapper_(std::move(mapper)), vmo_(std::move(vmo)),
           caller_(caller), info_(info) {}
     ~SkipBlockChecker() = default;
 
@@ -573,7 +575,7 @@ int iochk(int argc, char** argv) {
     WorkContext ctx(ProgressBar(), false);
 
     if (skip) {
-        ctx.skip.caller.reset(fbl::move(fd));
+        ctx.skip.caller.reset(std::move(fd));
         // Skip Block Device Setup.
         zx_status_t status;
         zircon_skipblock_PartitionInfo info;
@@ -613,7 +615,7 @@ int iochk(int argc, char** argv) {
             return -1;
         }
     } else {
-        ctx.block.fd = fbl::move(fd);
+        ctx.block.fd = std::move(fd);
         // Block Device Setup.
         block_info_t info;
         if (ioctl_block_get_info(ctx.block.fd.get(), &info) != sizeof(info)) {
@@ -660,7 +662,7 @@ int iochk(int argc, char** argv) {
             return -1;
         }
 
-        if (block_client::Client::Create(fbl::move(fifo), &ctx.block.client) != ZX_OK) {
+        if (block_client::Client::Create(std::move(fifo), &ctx.block.client) != ZX_OK) {
             printf("cannot create block client for device\n");
             return -1;
         }

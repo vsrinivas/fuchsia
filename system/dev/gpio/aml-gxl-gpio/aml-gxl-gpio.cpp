@@ -15,6 +15,8 @@
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 
+#include <utility>
+
 #include "s905-blocks.h"
 #include "s905x-blocks.h"
 #include "s912-blocks.h"
@@ -136,15 +138,15 @@ zx_status_t AmlGxlGpio::Create(zx_device_t* parent) {
 
     fbl::unique_ptr<AmlGxlGpio> device(new (&ac) AmlGxlGpio(parent,
                                                             pdev,
-                                                            fbl::move(mmio_gpio),
-                                                            fbl::move(mmio_gpio_a0),
-                                                            fbl::move(mmio_interrupt),
+                                                            std::move(mmio_gpio),
+                                                            std::move(mmio_gpio_a0),
+                                                            std::move(mmio_interrupt),
                                                             gpio_blocks,
                                                             gpio_interrupt,
                                                             pinmux_blocks,
                                                             block_count,
-                                                            fbl::move(block_locks),
-                                                            fbl::move(irq_info)));
+                                                            std::move(block_locks),
+                                                            std::move(irq_info)));
     if (!ac.check()) {
         zxlogf(ERROR, "AmlGxlGpio::Create: device object alloc failed\n");
         return ZX_ERR_NO_MEMORY;

@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <new>
+#include <utility>
 
 #include <fbl/type_support.h>
 
@@ -15,9 +16,9 @@ namespace {
 
 template <typename T>
 void swap(T& t1, T& t2) {
-    T temp(fbl::move(t1));
-    t1 = fbl::move(t2);
-    t2 = fbl::move(temp);
+    T temp(std::move(t1));
+    t1 = std::move(t2);
+    t2 = std::move(temp);
 }
 
 } // namespace
@@ -39,7 +40,7 @@ public:
         : has_value_(false) {}
 
     explicit constexpr optional(T value)
-        : has_value_(true), value_(fbl::move(value)) {}
+        : has_value_(true), value_(std::move(value)) {}
 
     optional(const optional& other)
         : has_value_(other.has_value_) {
@@ -51,7 +52,7 @@ public:
     optional(optional&& other)
         : has_value_(other.has_value_) {
         if (has_value_) {
-            new (&value_) T(fbl::move(other.value_));
+            new (&value_) T(std::move(other.value_));
             other.value_.~T();
             other.has_value_ = false;
         }
@@ -78,7 +79,7 @@ public:
 
     template <typename U = T>
     constexpr T value_or(U&& default_value) const {
-        return has_value_ ? value_ : static_cast<T>(fbl::forward<U>(default_value));
+        return has_value_ ? value_ : static_cast<T>(std::forward<U>(default_value));
     }
 
     constexpr T* operator->() { return &value_; }
@@ -110,14 +111,14 @@ public:
             return *this;
         if (has_value_) {
             if (other.has_value_) {
-                value_ = fbl::move(other.value_);
+                value_ = std::move(other.value_);
                 other.value_.~T();
                 other.has_value_ = false;
             } else {
                 reset();
             }
         } else if (other.has_value_) {
-            new (&value_) T(fbl::move(other.value_));
+            new (&value_) T(std::move(other.value_));
             has_value_ = true;
             other.value_.~T();
             other.has_value_ = false;
@@ -132,9 +133,9 @@ public:
 
     optional& operator=(T value) {
         if (has_value_) {
-            value_ = fbl::move(value);
+            value_ = std::move(value);
         } else {
-            new (&value_) T(fbl::move(value));
+            new (&value_) T(std::move(value));
             has_value_ = true;
         }
         return *this;
@@ -154,13 +155,13 @@ public:
             if (other.has_value_) {
               fbl::swap(value_, other.value_);
             } else {
-                new (&other.value_) T(fbl::move(value_));
+                new (&other.value_) T(std::move(value_));
                 other.has_value_ = true;
                 value_.~T();
                 has_value_ = false;
             }
         } else if (other.has_value_) {
-            new (&value_) T(fbl::move(other.value_));
+            new (&value_) T(std::move(other.value_));
             has_value_ = true;
             other.value_.~T();
             other.has_value_ = false;

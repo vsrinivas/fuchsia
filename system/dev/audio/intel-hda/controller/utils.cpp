@@ -15,6 +15,8 @@
 #include <zircon/process.h>
 #include <lib/zx/channel.h>
 
+#include <utility>
+
 #include "debug-logging.h"
 #include "utils.h"
 
@@ -91,8 +93,8 @@ zx_status_t HandleDeviceIoctl(uint32_t op,
 
     zx::channel remote_endpoint_out;
     zx_status_t res = CreateAndActivateChannel(domain,
-                                               fbl::move(phandler),
-                                               fbl::move(chandler),
+                                               std::move(phandler),
+                                               std::move(chandler),
                                                nullptr,
                                                &remote_endpoint_out);
     if (res == ZX_OK) {
@@ -119,10 +121,10 @@ zx_status_t CreateAndActivateChannel(const fbl::RefPtr<dispatcher::ExecutionDoma
 
     zx_status_t res = channel->Activate(remote_endpoint_out,
                                         domain,
-                                        fbl::move(phandler),
-                                        fbl::move(chandler));
+                                        std::move(phandler),
+                                        std::move(chandler));
     if ((res == ZX_OK) && (local_endpoint_out != nullptr)) {
-        *local_endpoint_out = fbl::move(channel);
+        *local_endpoint_out = std::move(channel);
     }
 
     return res;

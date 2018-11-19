@@ -26,6 +26,8 @@
 
 #include <blobfs/blobfs.h>
 
+#include <utility>
+
 using digest::Digest;
 
 namespace blobfs {
@@ -129,7 +131,7 @@ zx_status_t VnodeBlob::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
     if ((status = blobfs_->LookupBlob(digest, &vn)) < 0) {
         return status;
     }
-    *out = fbl::move(vn);
+    *out = std::move(vn);
     return ZX_OK;
 }
 
@@ -164,7 +166,7 @@ zx_status_t VnodeBlob::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
         return status;
     }
     vn->fd_count_ = 1;
-    *out = fbl::move(vn);
+    *out = std::move(vn);
     return ZX_OK;
 }
 
@@ -252,7 +254,7 @@ zx_status_t VnodeBlob::GetVmo(int flags, zx_handle_t* out) {
 
 void VnodeBlob::Sync(SyncCallback closure) {
     if (atomic_load(&syncing_)) {
-        blobfs_->Sync([this, cb = fbl::move(closure)](zx_status_t status) {
+        blobfs_->Sync([this, cb = std::move(closure)](zx_status_t status) {
             if (status != ZX_OK) {
                 cb(status);
                 return;
@@ -277,7 +279,7 @@ fbl::RefPtr<VnodeBlob> VnodeBlob::CloneWatcherTeardown() {
     if (clone_watcher_.is_pending()) {
         clone_watcher_.Cancel();
         clone_watcher_.set_object(ZX_HANDLE_INVALID);
-        return fbl::move(clone_ref_);
+        return std::move(clone_ref_);
     }
     return nullptr;
 }

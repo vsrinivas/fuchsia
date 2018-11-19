@@ -14,6 +14,8 @@
 #include <gpt/gpt.h>
 #include <zircon/types.h>
 
+#include <utility>
+
 namespace paver {
 
 enum class Partition {
@@ -123,7 +125,7 @@ private:
     static bool FindTargetGptPath(fbl::String* out);
 
     GptDevicePartitioner(fbl::unique_fd fd, gpt_device_t* gpt, block_info_t block_info)
-        : fd_(fbl::move(fd)), gpt_(gpt), block_info_(block_info) {}
+        : fd_(std::move(fd)), gpt_(gpt), block_info_(block_info) {}
 
     zx_status_t CreateGptPartition(const char* name, uint8_t* type, uint64_t offset,
                                    uint64_t blocks, uint8_t* out_guid);
@@ -154,7 +156,7 @@ public:
 
 private:
     EfiDevicePartitioner(fbl::unique_ptr<GptDevicePartitioner> gpt)
-        : gpt_(fbl::move(gpt)) {}
+        : gpt_(std::move(gpt)) {}
 
     fbl::unique_ptr<GptDevicePartitioner> gpt_;
 };
@@ -180,7 +182,7 @@ public:
 
 private:
     CrosDevicePartitioner(fbl::unique_ptr<GptDevicePartitioner> gpt)
-        : gpt_(fbl::move(gpt)) {}
+        : gpt_(std::move(gpt)) {}
 
     fbl::unique_ptr<GptDevicePartitioner> gpt_;
 };

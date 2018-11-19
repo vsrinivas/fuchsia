@@ -35,6 +35,8 @@
 #include <zircon/syscalls.h>
 #include <zxcrypt/volume.h>
 
+#include <utility>
+
 #include "fvm/fvm-sparse.h"
 #include "fvm/fvm.h"
 #include "pave-lib.h"
@@ -123,7 +125,7 @@ zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo,
         ERROR("Couldn't attach VMO\n");
         return ZX_ERR_IO;
     }
-    return block_client::Client::Create(fbl::move(fifo), client_out);
+    return block_client::Client::Create(std::move(fifo), client_out);
 }
 
 // Stream an FVM partition to disk.
@@ -474,7 +476,7 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
     memset(tmp, 0, key.len());
 
     fbl::unique_ptr<zxcrypt::Volume> volume;
-    if ((status = zxcrypt::Volume::Create(fbl::move(part->new_part), key, &volume)) != ZX_OK ||
+    if ((status = zxcrypt::Volume::Create(std::move(part->new_part), key, &volume)) != ZX_OK ||
         (status = volume->Open(zx::sec(3), &part->new_part)) != ZX_OK) {
         ERROR("Could not create zxcrypt volume\n");
         return status;
@@ -684,7 +686,7 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& fvm_fd,
 zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_fd) {
     fbl::unique_ptr<fvm::SparseReader> reader;
     zx_status_t status;
-    if ((status = fvm::SparseReader::Create(fbl::move(src_fd), &reader)) != ZX_OK) {
+    if ((status = fvm::SparseReader::Create(std::move(src_fd), &reader)) != ZX_OK) {
         return status;
     }
 
@@ -699,7 +701,7 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
     fvm::sparse_image_t* hdr = reader->Image();
     // Acquire an fd to the FVM, either by finding one that already
     // exists, or formatting a new one.
-    fbl::unique_fd fvm_fd(FvmPartitionFormat(fbl::move(partition_fd2), hdr->slice_size,
+    fbl::unique_fd fvm_fd(FvmPartitionFormat(std::move(partition_fd2), hdr->slice_size,
                                              BindOption::TryBind));
     if (!fvm_fd) {
         ERROR("Couldn't find FVM partition\n");
@@ -742,7 +744,7 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
             parts[p].old_part.reset();
         }
 
-        fvm_fd = FvmPartitionFormat(fbl::move(partition_fd), hdr->slice_size,
+        fvm_fd = FvmPartitionFormat(std::move(partition_fd), hdr->slice_size,
                                     BindOption::Reformat);
         if (!fvm_fd) {
             ERROR("Couldn't reformat FVM partition.\n");
@@ -879,7 +881,7 @@ zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
             }
         }
         LOG("Streaming partitions...\n");
-        if ((status = FvmStreamPartitions(fbl::move(partition_fd), fbl::move(payload_fd))) != ZX_OK) {
+        if ((status = FvmStreamPartitions(std::move(partition_fd), std::move(payload_fd))) != ZX_OK) {
             ERROR("Failed to stream partitions: %s\n", zx_status_get_string(status));
             return status;
         }
@@ -911,7 +913,7 @@ zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
         return status;
     }
     if (partitioner->UseSkipBlockInterface()) {
-        fzl::FdioCaller caller(fbl::move(partition_fd));
+        fzl::FdioCaller caller(std::move(partition_fd));
         status = WriteVmoToSkipBlock(mapper.vmo(), payload_size, caller, block_size_bytes);
         partition_fd = caller.release();
     } else {
@@ -953,21 +955,21 @@ zx_status_t RealMain(Flags flags) {
     case Command::kInstallBootloader:
         if (flags.arch == Arch::X64 && !flags.force) {
             LOG("SKIPPING BOOTLOADER install on x64 device, pass --force if desired.\n");
-            Drain(fbl::move(flags.payload_fd));
+            Drain(std::move(flags.payload_fd));
             return ZX_OK;
         }
         break;
     case Command::kInstallEfi:
         if ((is_cros_device || flags.arch == Arch::ARM64) && !flags.force) {
             LOG("SKIPPING EFI install on ARM64/CROS device, pass --force if desired.\n");
-            Drain(fbl::move(flags.payload_fd));
+            Drain(std::move(flags.payload_fd));
             return ZX_OK;
         }
         break;
     case Command::kInstallKernc:
         if (!is_cros_device && !flags.force) {
             LOG("SKIPPING KERNC install on non-CROS device, pass --force if desired.\n");
-            Drain(fbl::move(flags.payload_fd));
+            Drain(std::move(flags.payload_fd));
             return ZX_OK;
         }
         break;
@@ -976,18 +978,18 @@ zx_status_t RealMain(Flags flags) {
     case Command::kInstallZirconR:
         if (is_cros_device && !flags.force) {
             LOG("SKIPPING Zircon-{A/B/R} install on CROS device, pass --force if desired.\n");
-            Drain(fbl::move(flags.payload_fd));
+            Drain(std::move(flags.payload_fd));
             return ZX_OK;
         }
         break;
     case Command::kInstallDataFile:
-        return DataFilePave(fbl::move(device_partitioner), fbl::move(flags.payload_fd), flags.path);
+        return DataFilePave(std::move(device_partitioner), std::move(flags.payload_fd), flags.path);
 
     default:
         ERROR("Unsupported command.");
         return ZX_ERR_NOT_SUPPORTED;
     }
-    return PartitionPave(fbl::move(device_partitioner), fbl::move(flags.payload_fd),
+    return PartitionPave(std::move(device_partitioner), std::move(flags.payload_fd),
                          PartitionType(flags.cmd), flags.arch);
 }
 
@@ -1003,7 +1005,7 @@ zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner,
     fbl::unique_fd part_fd(open_partition(nullptr, data_guid, ZX_SEC(1), path));
     if (!part_fd) {
         ERROR("DATA partition not found in FVM\n");
-        Drain(fbl::move(payload_fd));
+        Drain(std::move(payload_fd));
         return ZX_ERR_NOT_FOUND;
     }
 
@@ -1042,7 +1044,7 @@ zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner,
     if ((status = mount(open(minfs_path, O_RDWR), mount_path, DISK_FORMAT_MINFS,
                         &opts, launch_logs_async)) != ZX_OK) {
         ERROR("mount error: %s\n", zx_status_get_string(status));
-        Drain(fbl::move(payload_fd));
+        Drain(std::move(payload_fd));
         return status;
     }
 
@@ -1072,14 +1074,14 @@ zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner,
         if (!kfd) {
             umount(mount_path);
             ERROR("open %s error: %s\n", data_path, strerror(errno));
-            Drain(fbl::move(payload_fd));
+            Drain(std::move(payload_fd));
             return ZX_ERR_IO;
         }
         while ((n = read(payload_fd.get(), &buf, sizeof(buf))) > 0) {
             if (write(kfd.get(), &buf, n) != n) {
                 umount(mount_path);
                 ERROR("write %s error: %s\n", data_path, strerror(errno));
-                Drain(fbl::move(payload_fd));
+                Drain(std::move(payload_fd));
                 return ZX_ERR_IO;
             }
         }

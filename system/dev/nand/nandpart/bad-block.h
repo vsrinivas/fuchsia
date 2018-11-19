@@ -17,6 +17,8 @@
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
+#include <utility>
+
 namespace nand {
 
 // Interface for interacting with device bad blocks.
@@ -44,9 +46,9 @@ public:
 
 protected:
     BadBlock(zx::vmo data_vmo, zx::vmo oob_vmo, fbl::Array<uint8_t> nand_op)
-        : data_vmo_(fbl::move(data_vmo)),
-          oob_vmo_(fbl::move(oob_vmo)),
-          nand_op_(fbl::move(nand_op)) {}
+        : data_vmo_(std::move(data_vmo)),
+          oob_vmo_(std::move(oob_vmo)),
+          nand_op_(std::move(nand_op)) {}
 
     // Ensures serialized access.
     fbl::Mutex lock_;

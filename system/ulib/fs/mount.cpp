@@ -20,6 +20,8 @@
 #include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 
+#include <utility>
+
 namespace fs {
 
 constexpr Vfs::MountNode::MountNode() : vn_(nullptr) {}
@@ -57,14 +59,14 @@ zx_status_t Vfs::InstallRemote(fbl::RefPtr<Vnode> vn, MountChannel h) {
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-    zx_status_t status = vn->AttachRemote(fbl::move(h));
+    zx_status_t status = vn->AttachRemote(std::move(h));
     if (status != ZX_OK) {
         return status;
     }
     // Save this node in the list of mounted vnodes
-    mount_point->SetNode(fbl::move(vn));
+    mount_point->SetNode(std::move(vn));
     fbl::AutoLock lock(&vfs_lock_);
-    remote_list_.push_front(fbl::move(mount_point));
+    remote_list_.push_front(std::move(mount_point));
     return ZX_OK;
 }
 
@@ -80,13 +82,13 @@ zx_status_t Vfs::InstallRemoteLocked(fbl::RefPtr<Vnode> vn, MountChannel h) {
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-    zx_status_t status = vn->AttachRemote(fbl::move(h));
+    zx_status_t status = vn->AttachRemote(std::move(h));
     if (status != ZX_OK) {
         return status;
     }
     // Save this node in the list of mounted vnodes
-    mount_point->SetNode(fbl::move(vn));
-    remote_list_.push_front(fbl::move(mount_point));
+    mount_point->SetNode(std::move(vn));
+    remote_list_.push_front(std::move(mount_point));
     return ZX_OK;
 }
 
@@ -111,12 +113,12 @@ zx_status_t Vfs::MountMkdir(fbl::RefPtr<Vnode> vn, fbl::StringPiece name, MountC
             return ZX_ERR_BAD_STATE;
         }
     }
-    return Vfs::InstallRemoteLocked(vn, fbl::move(h));
+    return Vfs::InstallRemoteLocked(vn, std::move(h));
 }
 
 zx_status_t Vfs::UninstallRemote(fbl::RefPtr<Vnode> vn, zx::channel* h) {
     fbl::AutoLock lock(&vfs_lock_);
-    return UninstallRemoteLocked(fbl::move(vn), h);
+    return UninstallRemoteLocked(std::move(vn), h);
 }
 
 zx_status_t Vfs::ForwardOpenRemote(fbl::RefPtr<Vnode> vn, zx::channel channel,
@@ -131,7 +133,7 @@ zx_status_t Vfs::ForwardOpenRemote(fbl::RefPtr<Vnode> vn, zx::channel channel,
                                              path.length(), channel.release());
     if (r == ZX_ERR_PEER_CLOSED) {
         zx::channel c;
-        UninstallRemoteLocked(fbl::move(vn), &c);
+        UninstallRemoteLocked(std::move(vn), &c);
     }
     return r;
 }

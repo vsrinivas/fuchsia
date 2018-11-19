@@ -19,6 +19,8 @@
 #include <fbl/auto_lock.h>
 #include <lib/sync/completion.h>
 
+#include <utility>
+
 namespace nand {
 
 namespace {
@@ -89,8 +91,8 @@ zx_status_t AmlBadBlock::Create(Config config, fbl::RefPtr<BadBlock>* out) {
     }
 
     // Construct all the things.
-    *out = fbl::MakeRefCountedChecked<AmlBadBlock>(&ac, fbl::move(data_vmo), fbl::move(oob_vmo),
-                                                   fbl::move(nand_op), config, nand_info,
+    *out = fbl::MakeRefCountedChecked<AmlBadBlock>(&ac, std::move(data_vmo), std::move(oob_vmo),
+                                                   std::move(nand_op), config, nand_info,
                                                    reinterpret_cast<BlockStatus*>(vaddr_table),
                                                    table_len,
                                                    reinterpret_cast<OobMetadata*>(vaddr_oob));

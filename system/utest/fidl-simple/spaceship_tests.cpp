@@ -13,6 +13,8 @@
 
 #include <unittest/unittest.h>
 
+#include <utility>
+
 namespace {
 
 class SpaceShip {
@@ -88,7 +90,7 @@ public:
         };
 
         return SpaceShipBinder::BindOps<fidl_test_spaceship_SpaceShip_dispatch>(
-            dispatcher, fbl::move(channel), this, &kOps);
+            dispatcher, std::move(channel), this, &kOps);
     }
 };
 
@@ -105,7 +107,7 @@ static bool spaceship_test(void) {
 
     async_dispatcher_t* dispatcher = async_loop_get_dispatcher(loop);
     SpaceShip ship;
-    ASSERT_EQ(ZX_OK, ship.Bind(dispatcher, fbl::move(server)));
+    ASSERT_EQ(ZX_OK, ship.Bind(dispatcher, std::move(server)));
 
     {
         const uint32_t stars[3] = {11u, 0u, UINT32_MAX};
@@ -260,7 +262,7 @@ public:
         };
 
         return SpaceShipBinder::BindOps<fidl_test_spaceship_SpaceShip_dispatch>(
-            dispatcher, fbl::move(channel), this, &kOps);
+            dispatcher, std::move(channel), this, &kOps);
     }
 
 private:
@@ -281,7 +283,7 @@ static bool spaceship_async_test(void) {
 
     async_dispatcher_t* dispatcher = async_loop_get_dispatcher(loop);
     AsyncSpaceShip ship;
-    ASSERT_EQ(ZX_OK, ship.Bind(dispatcher, fbl::move(server)));
+    ASSERT_EQ(ZX_OK, ship.Bind(dispatcher, std::move(server)));
 
     // Try invoking a member function which responds asynchronously and rebinds the connection.
     {
@@ -368,7 +370,7 @@ public:
         };
 
         return SpaceShipBinder::BindOps<fidl_test_spaceship_SpaceShip_dispatch>(
-            dispatcher, fbl::move(channel), this, &kOps);
+            dispatcher, std::move(channel), this, &kOps);
     }
 };
 

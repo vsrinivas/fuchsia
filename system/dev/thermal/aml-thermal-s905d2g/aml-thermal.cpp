@@ -12,6 +12,8 @@
 #include <zircon/device/thermal.h>
 #include <zircon/syscalls/port.h>
 
+#include <utility>
+
 namespace thermal {
 
 zx_status_t AmlThermal::SetTarget(uint32_t opp_idx) {
@@ -131,11 +133,11 @@ zx_status_t AmlThermal::Create(zx_device_t* device) {
     }
 
     auto thermal_device = fbl::make_unique_checked<AmlThermal>(&ac, device,
-                                                                   fbl::move(tsensor),
-                                                                   fbl::move(voltage_regulator),
-                                                                   fbl::move(cpufreq_scaling),
-                                                                   fbl::move(opp_info),
-                                                                   fbl::move(thermal_config));
+                                                                   std::move(tsensor),
+                                                                   std::move(voltage_regulator),
+                                                                   std::move(cpufreq_scaling),
+                                                                   std::move(opp_info),
+                                                                   std::move(thermal_config));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }

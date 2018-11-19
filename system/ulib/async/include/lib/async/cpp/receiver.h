@@ -7,6 +7,8 @@
 #include <fbl/function.h>
 #include <lib/async/receiver.h>
 
+#include <utility>
+
 namespace async {
 
 // Holds content for a packet receiver and its handler.
@@ -71,7 +73,7 @@ public:
     explicit Receiver(Handler handler = nullptr);
     ~Receiver();
 
-    void set_handler(Handler handler) { handler_ = fbl::move(handler); }
+    void set_handler(Handler handler) { handler_ = std::move(handler); }
     bool has_handler() const { return !!handler_; }
 
 private:

@@ -22,6 +22,8 @@
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 
+#include <utility>
+
 #include "platform-proxy.h"
 #include "proxy-protocol.h"
 
@@ -567,7 +569,7 @@ zx_status_t ProxyDevice::InitCommon() {
         mmio.base = resp.paddr;
         mmio.length = resp.length;
         mmio.resource.reset(rsrc_handle);
-        mmios_.push_back(fbl::move(mmio), &ac);
+        mmios_.push_back(std::move(mmio), &ac);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -594,7 +596,7 @@ zx_status_t ProxyDevice::InitCommon() {
         irq.irq = resp.irq;
         irq.mode = resp.mode;
         irq.resource.reset(rsrc_handle);
-        irqs_.push_back(fbl::move(irq), &ac);
+        irqs_.push_back(std::move(irq), &ac);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }

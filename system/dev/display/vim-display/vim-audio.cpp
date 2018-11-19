@@ -8,6 +8,7 @@
 #include <fbl/unique_ptr.h>
 #include <math.h>
 #include <new>
+#include <utility>
 
 #include "hdmitx.h"
 #include "vim-audio.h"
@@ -70,7 +71,7 @@ zx_status_t Vim2Audio::Init(const pdev_protocol_t* pdev) {
         return res;
     }
 
-    spdif_rb_vmo_ = RefCountedVmo::Create(fbl::move(spdif_rb_vmo));
+    spdif_rb_vmo_ = RefCountedVmo::Create(std::move(spdif_rb_vmo));
     if (spdif_rb_vmo_ == nullptr) {
         DISP_ERROR("Failed to allocate RefCountedVmo\n");
         return ZX_ERR_NO_MEMORY;
@@ -117,7 +118,7 @@ void Vim2Audio::OnDisplayAdded(const vim2_display_t* display, uint64_t display_i
     spdif_stream_ = SimpleAudioStream::Create<Vim2SpdifAudioStream>(display,
                                                                     regs_,
                                                                     spdif_rb_vmo_,
-                                                                    fbl::move(pinned_spdif_rb),
+                                                                    std::move(pinned_spdif_rb),
                                                                     display_id);
 }
 

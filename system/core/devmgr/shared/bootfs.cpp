@@ -14,6 +14,8 @@
 
 #include <fbl/algorithm.h>
 
+#include <utility>
+
 #include "bootfs.h"
 
 namespace devmgr {
@@ -39,7 +41,7 @@ zx_status_t Bootfs::Create(zx::vmo vmo, Bootfs* bfs_out) {
         return r;
     }
     auto dir = reinterpret_cast<char*>(addr) + sizeof(hdr);
-    *bfs_out = Bootfs(fbl::move(vmo), hdr.dirsize, dir);
+    *bfs_out = Bootfs(std::move(vmo), hdr.dirsize, dir);
     return ZX_OK;
 }
 
@@ -99,7 +101,7 @@ static zx_status_t CloneVmo(const char* name, size_t name_len, const bootfs_entr
         return r;
     }
 
-    *vmo_out = fbl::move(vmo);
+    *vmo_out = std::move(vmo);
     if (size_out) {
         *size_out = e.data_len;
     }

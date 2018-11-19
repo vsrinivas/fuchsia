@@ -6,6 +6,8 @@
 #include <limits.h>
 #include <stdint.h>
 
+#include <utility>
+
 namespace {
 
 enum class FsTestType {
@@ -148,7 +150,7 @@ public:
         fbl::unique_ptr<blobfs::WritebackWork> work = CreateWork();
         work->Enqueue(1, 0, 0, block_count);
         work->SetBuffer(2);
-        return fbl::move(work);
+        return work;
     }
 
 private:

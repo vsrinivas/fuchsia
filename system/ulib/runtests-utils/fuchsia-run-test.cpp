@@ -27,6 +27,8 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <utility>
+
 namespace runtests {
 
 // Path to helper binary which can run test as a component. This binary takes
@@ -120,7 +122,7 @@ zx_status_t LoadObject(void* ctx, const char* name, zx_handle_t* out) {
         }
         fbl::unique_fd fd(openat(state->root_dir_fd.get(), path, O_RDONLY));
         if (fd) {
-            return VmoFromFd(fbl::move(fd), name, out);
+            return VmoFromFd(std::move(fd), name, out);
         }
     }
     return ZX_ERR_NOT_FOUND;
@@ -130,7 +132,7 @@ zx_status_t LoadAbspath(void* ctx, const char* path, zx_handle_t* out) {
     const auto state = static_cast<LoaderServiceState*>(ctx);
     fbl::unique_fd fd(openat(state->root_dir_fd.get(), path, O_RDONLY));
     if (fd) {
-        return VmoFromFd(fbl::move(fd), path, out);
+        return VmoFromFd(std::move(fd), path, out);
     }
     return ZX_ERR_NOT_FOUND;
 }

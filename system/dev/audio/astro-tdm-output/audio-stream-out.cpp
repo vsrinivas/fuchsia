@@ -6,6 +6,8 @@
 #include <ddk/debug.h>
 #include <math.h>
 
+#include <utility>
+
 namespace audio {
 namespace astro {
 
@@ -37,7 +39,7 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
         zxlogf(ERROR, "%s failed to allocate i2c\n", __func__);
         return ZX_ERR_NO_RESOURCES;
     }
-    codec_ = Tas27xx::Create(fbl::move(*i2c));
+    codec_ = Tas27xx::Create(std::move(*i2c));
     if (!codec_) {
         zxlogf(ERROR, "%s could not get tas27xx\n", __func__);
         return ZX_ERR_NO_RESOURCES;
@@ -54,7 +56,7 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
     if (status != ZX_OK) {
         return status;
     }
-    aml_audio_ = AmlTdmDevice::Create(fbl::move(*mmio),
+    aml_audio_ = AmlTdmDevice::Create(std::move(*mmio),
                                       HIFI_PLL, TDM_OUT_B, FRDDR_B, MCLK_A);
     if (aml_audio_ == nullptr) {
         zxlogf(ERROR, "%s failed to create tdm device\n", __func__);
@@ -130,7 +132,7 @@ zx_status_t AstroAudioStreamOut::InitPost() {
             return tdm->ProcessRingNotification();
         });
 
-    return notify_timer_->Activate(domain_, fbl::move(thandler));
+    return notify_timer_->Activate(domain_, std::move(thandler));
 }
 
 //Timer handler for sending out position notifications

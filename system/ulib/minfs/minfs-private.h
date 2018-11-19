@@ -41,6 +41,8 @@
 #include <minfs/superblock.h>
 #include <minfs/writeback.h>
 
+#include <utility>
+
 #define EXTENT_COUNT 5
 
 // A compile-time debug check, which, if enabled, causes
@@ -195,7 +197,7 @@ public:
     }
 
 #ifdef __Fuchsia__
-    void SetUnmountCallback(fbl::Closure closure) { on_unmount_ = fbl::move(closure); }
+    void SetUnmountCallback(fbl::Closure closure) { on_unmount_ = std::move(closure); }
     void Shutdown(fs::Vfs::ShutdownCallback cb) final;
 
     // Returns a unique identifier for this instance.

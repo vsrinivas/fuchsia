@@ -10,6 +10,8 @@
 #include <fbl/type_support.h>
 #include <fbl/unique_fd.h>
 
+#include <utility>
+
 namespace fzl {
 
 // Helper utility which borrows a file descriptor to allow the caller
@@ -22,7 +24,7 @@ public:
     FdioCaller() : io_(nullptr) {}
 
     explicit FdioCaller(fbl::unique_fd fd) :
-        fd_(fbl::move(fd)), io_(fdio_unsafe_fd_to_io(fd_.get())) {}
+        fd_(std::move(fd)), io_(fdio_unsafe_fd_to_io(fd_.get())) {}
 
     ~FdioCaller() {
         release();
@@ -30,7 +32,7 @@ public:
 
     void reset(fbl::unique_fd fd) {
         release();
-        fd_ = fbl::move(fd);
+        fd_ = std::move(fd);
         io_ = fdio_unsafe_fd_to_io(fd_.get());
     }
 
@@ -39,7 +41,7 @@ public:
             fdio_unsafe_release(io_);
             io_ = nullptr;
         }
-        return fbl::move(fd_);
+        return std::move(fd_);
     }
 
     explicit operator bool() const {

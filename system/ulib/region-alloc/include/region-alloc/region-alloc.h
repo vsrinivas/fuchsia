@@ -241,6 +241,8 @@ __END_CDECLS
 #include <fbl/slab_allocator.h>
 #include <fbl/unique_ptr.h>
 
+#include <utility>
+
 // C++ API
 class RegionAllocator {
 public:
@@ -347,7 +349,7 @@ public:
     explicit RegionAllocator(const RegionPool::RefPtr& region_pool)
         : region_pool_(region_pool) { }
     explicit RegionAllocator(RegionPool::RefPtr&& region_pool)
-        : region_pool_(fbl::move(region_pool)) { }
+        : region_pool_(std::move(region_pool)) { }
     RegionAllocator(const RegionAllocator& c) = delete;
     RegionAllocator& operator=(const RegionAllocator& c) = delete;
 
@@ -360,7 +362,7 @@ public:
     // assigned and currently has allocations from this pool.
     zx_status_t SetRegionPool(const RegionPool::RefPtr& region_pool) __TA_EXCLUDES(alloc_lock_);
     zx_status_t SetRegionPool(RegionPool::RefPtr&& region_pool) __TA_EXCLUDES(alloc_lock_) {
-        RegionPool::RefPtr ref(fbl::move(region_pool));
+        RegionPool::RefPtr ref(std::move(region_pool));
         return SetRegionPool(ref);
     }
 
@@ -491,7 +493,7 @@ public:
         __TA_EXCLUDES(alloc_lock_) {
         fbl::AutoLock alloc_lock(&alloc_lock_);
         for (const auto& region : allocated_regions_by_base_) {
-            if (!fbl::forward<WalkCallback>(cb)(&region)) {
+            if (!std::forward<WalkCallback>(cb)(&region)) {
                 break;
             }
         }

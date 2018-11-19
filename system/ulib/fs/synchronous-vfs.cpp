@@ -9,6 +9,8 @@
 #include <fbl/unique_ptr.h>
 #include <lib/sync/completion.h>
 
+#include <utility>
+
 namespace fs {
 
 SynchronousVfs::SynchronousVfs() : is_shutting_down_(false) {}
@@ -37,7 +39,7 @@ void SynchronousVfs::Shutdown(ShutdownCallback handler) {
 
 void SynchronousVfs::RegisterConnection(fbl::unique_ptr<Connection> connection) {
     ZX_DEBUG_ASSERT(!is_shutting_down_);
-    connections_.push_back(fbl::move(connection));
+    connections_.push_back(std::move(connection));
 }
 
 void SynchronousVfs::UnregisterConnection(Connection* connection) {

@@ -11,6 +11,8 @@
 #include <fbl/tests/intrusive_containers/test_environment_utils.h>
 #include <fbl/unique_ptr.h>
 
+#include <utility>
+
 namespace fbl {
 namespace tests {
 namespace intrusive_containers {
@@ -43,7 +45,7 @@ protected:
         if (ref_held)
             refs_held_++;
 
-        return fbl::move(ret);
+        return std::move(ret);
     }
 
     static constexpr size_t OBJ_COUNT = 17;
@@ -121,7 +123,7 @@ protected:
         if (hold_ref)
             refed_objects_[ndx] = ret;
 
-        return fbl::move(ret);
+        return std::move(ret);
     }
 
     void ReleaseObject(size_t ndx) {
@@ -752,7 +754,7 @@ public:
             for (size_t i = 0; i < OTHER_COUNT; ++i) {
                 PtrType ptr = TestEnvTraits::CreateObject(OTHER_START + OTHER_COUNT - i - 1);
                 raw_ptrs[i] = PtrTraits::GetRaw(ptr);
-                ContainerUtils<ContainerType>::MoveInto(other_container, fbl::move(ptr));
+                ContainerUtils<ContainerType>::MoveInto(other_container, std::move(ptr));
             }
 
             // Sanity check
@@ -847,7 +849,7 @@ public:
 #if TEST_WILL_NOT_COMPILE || 0
         ContainerType other_container(container());
 #else
-        ContainerType other_container(fbl::move(container()));
+        ContainerType other_container(std::move(container()));
 #endif
         EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
         EXPECT_EQ(OBJ_COUNT, Size(other_container), "");
@@ -867,7 +869,7 @@ public:
 #if TEST_WILL_NOT_COMPILE || 0
         ContainerType another_container = other_container;
 #else
-        ContainerType another_container = fbl::move(other_container);
+        ContainerType another_container = std::move(other_container);
 #endif
         EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
         EXPECT_EQ(OBJ_COUNT, Size(another_container), "");
@@ -894,7 +896,7 @@ public:
             while (extras_added < EXTRA_COUNT)
                 ContainerUtils<ContainerType>::MoveInto(
                         container(),
-                        fbl::move(TestEnvTraits::CreateObject(extras_added++)));
+                        std::move(TestEnvTraits::CreateObject(extras_added++)));
         }
 
         // Sanity checks before the assignment
@@ -912,7 +914,7 @@ public:
 #if TEST_WILL_NOT_COMPILE || 0
         container() = another_container;
 #else
-        container() = fbl::move(another_container);
+        container() = std::move(another_container);
 #endif
 
         // another_container should now be empty, and we should have returned to our
@@ -971,7 +973,7 @@ public:
         OtherContainerType other_container;
         for (auto iter = container().begin(); iter != container().end(); ++iter) {
             ContainerUtils<OtherContainerType>::MoveInto(other_container,
-                                                         fbl::move(iter.CopyPointer()));
+                                                         std::move(iter.CopyPointer()));
         }
 
         // The two containers should be the same length, and nothing should have
@@ -1209,7 +1211,7 @@ public:
 
     static PtrType TakePtr(PtrType& ptr) {
         if constexpr (PtrTraits::IsManaged) {
-            return fbl::move(ptr);
+            return std::move(ptr);
         } else {
             PtrType tmp = ptr;
             ptr = nullptr;

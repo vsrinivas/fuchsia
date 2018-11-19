@@ -23,6 +23,8 @@
 #include <unittest/unittest.h>
 #include <zircon/device/vfs.h>
 
+#include <utility>
+
 #include "filesystems.h"
 #include "misc.h"
 
@@ -33,7 +35,7 @@ bool QueryInfo(fuchsia_io_FilesystemInfo* info) {
     fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
     ASSERT_TRUE(fd);
     zx_status_t status;
-    fzl::FdioCaller caller(fbl::move(fd));
+    fzl::FdioCaller caller(std::move(fd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, info),
               ZX_OK);
     ASSERT_EQ(status, ZX_OK);
@@ -119,7 +121,7 @@ bool ToggleMetrics(bool enabled) {
     BEGIN_HELPER;
     fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
     ASSERT_TRUE(fd);
-    fzl::FdioCaller caller(fbl::move(fd));
+    fzl::FdioCaller caller(std::move(fd));
     zx_status_t status;
     ASSERT_EQ(fuchsia_minfs_MinfsToggleMetrics(caller.borrow_channel(), enabled, &status), ZX_OK);
     ASSERT_EQ(status, ZX_OK);
@@ -131,7 +133,7 @@ bool GetMetricsUnavailable() {
     fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
     ASSERT_TRUE(fd);
     zx_status_t status;
-    fzl::FdioCaller caller(fbl::move(fd));
+    fzl::FdioCaller caller(std::move(fd));
     fuchsia_minfs_Metrics metrics;
     ASSERT_EQ(fuchsia_minfs_MinfsGetMetrics(caller.borrow_channel(), &status, &metrics),
               ZX_OK);
@@ -144,7 +146,7 @@ bool GetMetrics(fuchsia_minfs_Metrics* metrics) {
     fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
     ASSERT_TRUE(fd);
     zx_status_t status;
-    fzl::FdioCaller caller(fbl::move(fd));
+    fzl::FdioCaller caller(std::move(fd));
     ASSERT_EQ(fuchsia_minfs_MinfsGetMetrics(caller.borrow_channel(), &status, metrics),
               ZX_OK);
     ASSERT_EQ(status, ZX_OK);

@@ -7,6 +7,8 @@
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <string.h>
 
+#include <utility>
+
 namespace fzl {
 
 zx_status_t OwnedVmoMapper::CreateAndMap(uint64_t size,
@@ -17,14 +19,14 @@ zx_status_t OwnedVmoMapper::CreateAndMap(uint64_t size,
     zx::vmo temp;
     zx_status_t res = VmoMapper::CreateAndMap(size,
                                               map_options,
-                                              fbl::move(vmar_manager),
+                                              std::move(vmar_manager),
                                               &temp,
                                               ZX_RIGHT_SAME_RIGHTS,
                                               cache_policy);
 
     if (res == ZX_OK) {
         temp.set_property(ZX_PROP_NAME, name, name ? strlen(name) : 0);
-        vmo_ = fbl::move(temp);
+        vmo_ = std::move(temp);
     }
 
     return res;
@@ -37,7 +39,7 @@ zx_status_t OwnedVmoMapper::Map(zx::vmo vmo,
     zx_status_t res = VmoMapper::Map(vmo, 0, size, map_options, vmar_manager);
 
     if (res == ZX_OK) {
-        vmo_ = fbl::move(vmo);
+        vmo_ = std::move(vmo);
     }
 
     return res;

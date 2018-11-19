@@ -20,6 +20,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <utility>
+
 #include "simple-display.h"
 
 // implement display controller protocol
@@ -175,7 +177,7 @@ zx_status_t SimpleDisplay::Bind(const char* name, fbl::unique_ptr<SimpleDisplay>
 SimpleDisplay::SimpleDisplay(zx_device_t* parent, ddk::MmioBuffer framebuffer_mmio,
                              uint32_t width, uint32_t height,
                              uint32_t stride, zx_pixel_format_t format)
-        : DeviceType(parent), framebuffer_mmio_(fbl::move(framebuffer_mmio)),
+        : DeviceType(parent), framebuffer_mmio_(std::move(framebuffer_mmio)),
           width_(width), height_(height), stride_(stride), format_(format) { }
 
 zx_status_t bind_simple_pci_display_bootloader(zx_device_t* dev, const char* name, uint32_t bar) {
@@ -210,7 +212,7 @@ zx_status_t bind_simple_pci_display(zx_device_t* dev, const char* name, uint32_t
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<SimpleDisplay> display(new (&ac) SimpleDisplay(
-            dev, fbl::move(framebuffer_mmio), width, height, stride, format));
+            dev, std::move(framebuffer_mmio), width, height, stride, format));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }

@@ -23,6 +23,8 @@
 #include <trace-reader/reader_internal.h>
 #include <unittest/unittest.h>
 
+#include <utility>
+
 namespace {
 
 class Fixture : private trace::TraceHandler {
@@ -145,10 +147,10 @@ public:
                      fbl::Vector<fbl::String>* out_errors) {
         trace::TraceReader reader(
             [out_records](trace::Record record) {
-                out_records->push_back(fbl::move(record));
+                out_records->push_back(std::move(record));
             },
             [out_errors](fbl::String error) {
-                out_errors->push_back(fbl::move(error));
+                out_errors->push_back(std::move(error));
             });
         trace::internal::TraceBufferReader buffer_reader(
             [&reader](trace::Chunk chunk) {
@@ -157,7 +159,7 @@ public:
                 }
             },
             [out_errors](fbl::String error) {
-                out_errors->push_back(fbl::move(error));
+                out_errors->push_back(std::move(error));
             });
         return buffer_reader.ReadChunks(buffer_.get(), buffer_.size());
     }
@@ -377,7 +379,7 @@ bool fixture_compare_n_records(size_t max_num_records, const char* expected,
     EXPECT_TRUE(fixture_compare_raw_records(records, 0, max_num_records, expected));
 
     if (out_records) {
-        *out_records = fbl::move(records);
+        *out_records = std::move(records);
     }
 
     END_HELPER;

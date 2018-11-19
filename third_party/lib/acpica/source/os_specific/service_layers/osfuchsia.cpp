@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <threads.h>
+#include <utility>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
@@ -436,7 +437,7 @@ void* AcpiOsMapMemory(
     fbl::unique_ptr<AcpiOsMappingNode> mn(
         new AcpiOsMappingNode(reinterpret_cast<uintptr_t>(out_addr),
                               vaddr, length, vmo));
-    os_mapping_tbl.insert(fbl::move(mn));
+    os_mapping_tbl.insert(std::move(mn));
 
     return out_addr;
 }
@@ -567,7 +568,7 @@ ACPI_STATUS AcpiOsExecute(
     task->ctx = Context;
 
     mtx_lock(&os_execute_state.lock);
-    os_execute_state.tasks.push_back(fbl::move(task));
+    os_execute_state.tasks.push_back(std::move(task));
     mtx_unlock(&os_execute_state.lock);
     cnd_signal(&os_execute_state.cond);
 
@@ -943,7 +944,7 @@ ACPI_STATUS AcpiOsInstallInterruptHandler(
         return AE_ERROR;
     }
 
-    sci_irq = fbl::move(arg);
+    sci_irq = std::move(arg);
     return AE_OK;
 }
 

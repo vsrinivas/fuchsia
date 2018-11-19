@@ -10,6 +10,8 @@
 #include <lib/zx/vmo.h>
 #include <tee-client-api/tee-client-types.h>
 
+#include <utility>
+
 #include "optee-client.h"
 #include "optee-smc.h"
 
@@ -289,7 +291,7 @@ zx_status_t OpteeClient::AllocateSharedMemory(size_t size,
     *out_phys_addr = sh_mem->paddr();
 
     // Track the new piece of allocated SharedMemory in the list
-    allocated_shared_memory_.push_back(fbl::move(sh_mem));
+    allocated_shared_memory_.push_back(std::move(sh_mem));
 
     // TODO(godtamit): Move away from memory addresses as memory identifiers
     //
@@ -444,14 +446,14 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
 
     switch (message.command()) {
     case RpcMessage::Command::kLoadTa: {
-        LoadTaRpcMessage load_ta_msg(fbl::move(message));
+        LoadTaRpcMessage load_ta_msg(std::move(message));
         if (!load_ta_msg.is_valid()) {
             return ZX_ERR_INVALID_ARGS;
         }
         return HandleRpcCommandLoadTa(&load_ta_msg);
     }
     case RpcMessage::Command::kAccessFileSystem: {
-        FileSystemRpcMessage fs_msg(fbl::move(message));
+        FileSystemRpcMessage fs_msg(std::move(message));
         if (!fs_msg.is_valid()) {
             return ZX_ERR_INVALID_ARGS;
         }
@@ -467,14 +469,14 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
         zxlogf(ERROR, "optee: RPC command to suspend recognized but not implemented\n");
         return ZX_ERR_NOT_SUPPORTED;
     case RpcMessage::Command::kAllocateMemory: {
-        AllocateMemoryRpcMessage alloc_mem_msg(fbl::move(message));
+        AllocateMemoryRpcMessage alloc_mem_msg(std::move(message));
         if (!alloc_mem_msg.is_valid()) {
             return ZX_ERR_INVALID_ARGS;
         }
         return HandleRpcCommandAllocateMemory(&alloc_mem_msg);
     }
     case RpcMessage::Command::kFreeMemory: {
-        FreeMemoryRpcMessage free_mem_msg(fbl::move(message));
+        FreeMemoryRpcMessage free_mem_msg(std::move(message));
         if (!free_mem_msg.is_valid()) {
             return ZX_ERR_INVALID_ARGS;
         }

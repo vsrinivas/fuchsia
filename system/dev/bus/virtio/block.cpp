@@ -15,6 +15,8 @@
 #include <sys/param.h>
 #include <zircon/compiler.h>
 
+#include <utility>
+
 #include "trace.h"
 
 #define LOCAL_TRACE 0
@@ -114,7 +116,7 @@ zx_status_t BlockDevice::virtio_block_ioctl(void* ctx, uint32_t op, const void* 
 }
 
 BlockDevice::BlockDevice(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend)
-    : Device(bus_device, fbl::move(bti), fbl::move(backend)) {
+    : Device(bus_device, std::move(bti), std::move(backend)) {
     sync_completion_reset(&txn_signal_);
 
     memset(&blk_req_buf_, 0, sizeof(blk_req_buf_));

@@ -5,6 +5,8 @@
 #include "client.h"
 #include "fence.h"
 
+#include <utility>
+
 namespace display {
 
 bool Fence::CreateRef() {
@@ -44,7 +46,7 @@ zx_status_t Fence::OnRefArmed(fbl::RefPtr<FenceReference>&& ref) {
         }
     }
 
-    armed_refs_.push_back(fbl::move(ref));
+    armed_refs_.push_back(std::move(ref));
     return ZX_OK;
 }
 
@@ -71,7 +73,7 @@ void Fence::OnReady(async_dispatcher_t* dispatcher, async::WaitBase* self,
 }
 
 Fence::Fence(FenceCallback* cb, async_dispatcher_t* dispatcher, uint64_t fence_id, zx::event&& event)
-        : cb_(cb), dispatcher_(dispatcher), event_(fbl::move(event)) {
+        : cb_(cb), dispatcher_(dispatcher), event_(std::move(event)) {
     id = fence_id;
 }
 
@@ -89,7 +91,7 @@ void FenceReference::ResetReadyWait() {
 }
 
 void FenceReference::SetImmediateRelease(fbl::RefPtr<FenceReference>&& fence) {
-    release_fence_ = fbl::move(fence);
+    release_fence_ = std::move(fence);
 }
 
 void FenceReference::OnReady() {
@@ -103,7 +105,7 @@ void FenceReference::Signal() {
     fence_->Signal();
 }
 
-FenceReference::FenceReference(fbl::RefPtr<Fence> fence) : fence_(fbl::move(fence)) { }
+FenceReference::FenceReference(fbl::RefPtr<Fence> fence) : fence_(std::move(fence)) { }
 
 FenceReference::~FenceReference() {
     fence_->cb_->OnRefForFenceDead(fence_.get());

@@ -26,6 +26,8 @@
 #include <minfs/block-txn.h>
 #include <minfs/format.h>
 
+#include <utility>
+
 namespace minfs {
 
 class VnodeMinfs;
@@ -87,9 +89,9 @@ public:
     Transaction(fbl::unique_ptr<WritebackWork> work,
                 fbl::unique_ptr<AllocatorPromise> inode_promise,
                 fbl::unique_ptr<AllocatorPromise> block_promise)
-        : work_(fbl::move(work)),
-          inode_promise_(fbl::move(inode_promise)),
-          block_promise_(fbl::move(block_promise)) {}
+        : work_(std::move(work)),
+          inode_promise_(std::move(inode_promise)),
+          block_promise_(std::move(block_promise)) {}
 
     size_t AllocateInode() {
         ZX_DEBUG_ASSERT(inode_promise_ != nullptr);
@@ -102,7 +104,7 @@ public:
     }
 
     void SetWork(fbl::unique_ptr<WritebackWork> work) {
-        work_ = fbl::move(work);
+        work_ = std::move(work);
     }
 
     WritebackWork* GetWork() {
@@ -112,7 +114,7 @@ public:
 
     fbl::unique_ptr<WritebackWork> RemoveWork() {
         ZX_DEBUG_ASSERT(work_ != nullptr);
-        return fbl::move(work_);
+        return std::move(work_);
     }
 
 private:

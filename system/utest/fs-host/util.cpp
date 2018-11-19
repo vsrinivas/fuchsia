@@ -11,6 +11,8 @@
 
 #include <minfs/fsck.h>
 
+#include <utility>
+
 void setup_fs_test(size_t disk_size) {
     int r = open(MOUNT_PATH, O_RDWR | O_CREAT | O_EXCL, 0755);
 
@@ -68,10 +70,10 @@ int run_fsck() {
     size_t size = stats.st_size /= minfs::kMinfsBlockSize;
 
     fbl::unique_ptr<minfs::Bcache> block_cache;
-    if (minfs::Bcache::Create(&block_cache, fbl::move(disk), size) < 0) {
+    if (minfs::Bcache::Create(&block_cache, std::move(disk), size) < 0) {
         fprintf(stderr, "error: cannot create block cache\n");
         return -1;
     }
 
-    return Fsck(fbl::move(block_cache));
+    return Fsck(std::move(block_cache));
 }

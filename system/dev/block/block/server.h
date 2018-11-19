@@ -26,6 +26,8 @@
 #include <lib/zx/vmo.h>
 #include <lib/sync/completion.h>
 
+#include <utility>
+
 #include "txn-group.h"
 
 // Represents the mapping of "vmoid --> VMO"
@@ -134,7 +136,7 @@ public:
         // Placement constructor, followed by explicit destructor in ~BlockMsg();
         new (&bop->extra) block_msg_extra_t();
         BlockMsg msg(bop);
-        *out = fbl::move(msg);
+        *out = std::move(msg);
         return ZX_OK;
     }
 

@@ -19,6 +19,8 @@
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
+#include <utility>
+
 #include "errors.h"
 
 class AcpiPwrbtnDevice;
@@ -278,7 +280,7 @@ zx_status_t AcpiPwrbtnDevice::Create(zx_device_t* parent,
         return acpi_to_zx_status(status);
     }
 
-    *out = fbl::move(dev);
+    *out = std::move(dev);
     return ZX_OK;
 }
 

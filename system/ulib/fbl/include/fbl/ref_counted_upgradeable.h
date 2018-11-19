@@ -115,7 +115,7 @@ public:
 //          }
 //
 //          if (rc_client) {
-//              bar->Client(move(rc_client));  // Bar might keep a ref to client.
+//              bar->Client(std::move(rc_client));  // Bar might keep a ref to client.
 //          } else {
 //              bar->OnNoClient();
 //          }
@@ -128,7 +128,7 @@ public:
 //
 //  class Client: public RefCounted<Client> {
 //  public:
-//      Client(RefPtr<Holder> holder) : holder_(move(holder)) {
+//      Client(RefPtr<Holder> holder) : holder_(std::move(holder)) {
 //          holder_->add_client(this);
 //      }
 //

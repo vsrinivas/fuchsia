@@ -39,6 +39,8 @@
 #include <zircon/device/ramdisk.h>
 #include <zircon/syscalls.h>
 
+#include <utility>
+
 namespace tests {
 
 static int GetRamdisk(uint64_t blk_size, uint64_t blk_count, const uint8_t* guid = nullptr,
@@ -65,7 +67,7 @@ public:
         int raw_fd = GetRamdisk(blk_size, blk_count);
         fbl::unique_fd fd(raw_fd);
         ASSERT_TRUE(fd, "Could not open ramdisk device");
-        *out = fbl::unique_ptr<RamdiskTest>(new RamdiskTest(fbl::move(fd)));
+        *out = fbl::unique_ptr<RamdiskTest>(new RamdiskTest(std::move(fd)));
         END_HELPER;
     }
 
@@ -75,7 +77,7 @@ public:
         int raw_fd = GetRamdisk(blk_size, blk_count, guid, guid_len);
         fbl::unique_fd fd(raw_fd);
         ASSERT_TRUE(fd, "Could not open ramdisk device");
-        *out = fbl::unique_ptr<RamdiskTest>(new RamdiskTest(fbl::move(fd)));
+        *out = fbl::unique_ptr<RamdiskTest>(new RamdiskTest(std::move(fd)));
         END_HELPER;
     }
 
@@ -97,7 +99,7 @@ public:
     }
 
 private:
-    RamdiskTest(fbl::unique_fd fd) : fd_(fbl::move(fd)) {}
+    RamdiskTest(fbl::unique_fd fd) : fd_(std::move(fd)) {}
 
     fbl::unique_fd fd_;
 };
@@ -395,7 +397,7 @@ bool RamdiskTestReleaseDuringFifoAccess(void) {
               "Failed to get FIFO");
     groupid_t group = 0;
     block_client::Client client;
-    ASSERT_EQ(block_client::Client::Create(fbl::move(fifo), &client), ZX_OK);
+    ASSERT_EQ(block_client::Client::Create(std::move(fifo), &client), ZX_OK);
     uint64_t vmo_size = PAGE_SIZE * 3;
     zx_handle_t vmo;
     ASSERT_EQ(zx_vmo_create(vmo_size, 0, &vmo), ZX_OK, "Failed to create VMO");
@@ -535,7 +537,7 @@ bool RamdiskTestFifoBasic(void) {
               "Failed to attach vmo");
 
     block_client::Client client;
-    ASSERT_EQ(block_client::Client::Create(fbl::move(fifo), &client), ZX_OK);
+    ASSERT_EQ(block_client::Client::Create(std::move(fifo), &client), ZX_OK);
 
     // Batch write the VMO to the ramdisk
     // Split it into two requests, spread across the disk
@@ -780,7 +782,7 @@ bool RamdiskTestFifoMultipleVmo(void) {
                 fifo.reset_and_get_address()), expected, "Failed to get FIFO");
     groupid_t group = 0;
     block_client::Client client;
-    ASSERT_EQ(block_client::Client::Create(fbl::move(fifo), &client), ZX_OK);
+    ASSERT_EQ(block_client::Client::Create(std::move(fifo), &client), ZX_OK);
 
     // Create multiple VMOs
     fbl::AllocChecker ac;
@@ -845,7 +847,7 @@ bool RamdiskTestFifoMultipleVmoMultithreaded(void) {
               fifo.reset_and_get_address()), expected, "Failed to get FIFO");
 
     block_client::Client client;
-    ASSERT_EQ(block_client::Client::Create(fbl::move(fifo), &client), ZX_OK);
+    ASSERT_EQ(block_client::Client::Create(std::move(fifo), &client), ZX_OK);
 
     // Create multiple VMOs
     size_t num_threads = MAX_TXN_GROUP_COUNT;
@@ -919,7 +921,7 @@ bool RamdiskTestFifoUncleanShutdown(void) {
     expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(ramdisk->fd(), &fifo), expected, "Failed to get FIFO");
     block_client::Client client;
-    ASSERT_EQ(block_client::Client::Create(fbl::move(zx::fifo(fifo)), &client), ZX_OK);
+    ASSERT_EQ(block_client::Client::Create(zx::fifo(fifo), &client), ZX_OK);
 
     for (size_t i = 0; i < objs.size(); i++) {
         ASSERT_TRUE(create_vmo_helper(ramdisk->fd(), &objs[i], kBlockSize));
@@ -950,7 +952,7 @@ bool RamdiskTestFifoLargeOpsCount(void) {
     ASSERT_EQ(ioctl_block_get_fifos(ramdisk->fd(),
               fifo.reset_and_get_address()), expected, "Failed to get FIFO");
     block_client::Client client;
-    ASSERT_EQ(block_client::Client::Create(fbl::move(fifo), &client), ZX_OK);
+    ASSERT_EQ(block_client::Client::Create(std::move(fifo), &client), ZX_OK);
 
     // Create a vmo
     TestVmoObject obj;
@@ -1047,7 +1049,7 @@ bool RamdiskTestFifoIntermediateOpFailure(void) {
     ASSERT_EQ(ioctl_block_get_fifos(ramdisk->fd(), fifo.reset_and_get_address()), expected,
               "Failed to get FIFO");
     block_client::Client client;
-    ASSERT_EQ(block_client::Client::Create(fbl::move(fifo), &client), ZX_OK);
+    ASSERT_EQ(block_client::Client::Create(std::move(fifo), &client), ZX_OK);
     groupid_t group = 0;
 
     constexpr size_t kRequestCount = 3;
@@ -1131,7 +1133,7 @@ bool RamdiskTestFifoBadClientVmoid(void) {
     ASSERT_EQ(ioctl_block_get_fifos(ramdisk->fd(), fifo.reset_and_get_address()), expected,
               "Failed to get FIFO");
     block_client::Client client;
-    ASSERT_EQ(block_client::Client::Create(fbl::move(fifo), &client), ZX_OK);
+    ASSERT_EQ(block_client::Client::Create(std::move(fifo), &client), ZX_OK);
     groupid_t group = 0;
 
     // Create a vmo
@@ -1165,7 +1167,7 @@ bool RamdiskTestFifoBadClientUnalignedRequest(void) {
     ASSERT_EQ(ioctl_block_get_fifos(ramdisk->fd(), fifo.reset_and_get_address()), expected,
               "Failed to get FIFO");
     block_client::Client client;
-    ASSERT_EQ(block_client::Client::Create(fbl::move(fifo), &client), ZX_OK);
+    ASSERT_EQ(block_client::Client::Create(std::move(fifo), &client), ZX_OK);
     groupid_t group = 0;
 
     // Create a vmo of at least size "kBlockSize * 2", since we'll
@@ -1203,7 +1205,7 @@ bool RamdiskTestFifoBadClientOverflow(void) {
     ASSERT_EQ(ioctl_block_get_fifos(ramdisk->fd(), fifo.reset_and_get_address()), expected,
               "Failed to get FIFO");
     block_client::Client client;
-    ASSERT_EQ(block_client::Client::Create(fbl::move(fifo), &client), ZX_OK);
+    ASSERT_EQ(block_client::Client::Create(std::move(fifo), &client), ZX_OK);
     groupid_t group = 0;
 
     // Create a vmo of at least size "kBlockSize * 2", since we'll
@@ -1264,7 +1266,7 @@ bool RamdiskTestFifoBadClientBadVmo(void) {
     ASSERT_EQ(ioctl_block_get_fifos(ramdisk->fd(), fifo.reset_and_get_address()), expected,
               "Failed to get FIFO");
     block_client::Client client;
-    ASSERT_EQ(block_client::Client::Create(fbl::move(fifo), &client), ZX_OK);
+    ASSERT_EQ(block_client::Client::Create(std::move(fifo), &client), ZX_OK);
     groupid_t group = 0;
 
     // create a VMO of 1 block, which will round up to PAGE_SIZE
@@ -1335,7 +1337,7 @@ bool RamdiskTestFifoSleepUnavailable(void) {
               "Failed to attach vmo");
 
     block_client::Client client;
-    ASSERT_EQ(block_client::Client::Create(fbl::move(fifo), &client), ZX_OK);
+    ASSERT_EQ(block_client::Client::Create(std::move(fifo), &client), ZX_OK);
 
     // Put the ramdisk to sleep after 1 block (complete transaction).
     uint64_t one = 1;
@@ -1499,7 +1501,7 @@ bool RamdiskTestFifoSleepDeferred(void) {
               "Failed to attach vmo");
 
     block_client::Client client;
-    ASSERT_EQ(block_client::Client::Create(fbl::move(fifo), &client), ZX_OK);
+    ASSERT_EQ(block_client::Client::Create(std::move(fifo), &client), ZX_OK);
 
     // Create a bunch of requests, some of which are guaranteed to block.
     block_fifo_request_t requests[16];

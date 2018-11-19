@@ -6,6 +6,8 @@
 #include <fbl/auto_lock.h>
 #include <zircon/assert.h>
 
+#include <utility>
+
 #include "intel-hda-dsp.h"
 #include "intel-hda-controller.h"
 #include "utils.h"
@@ -207,7 +209,7 @@ zx_status_t IntelHDADSP::DeviceIoctl(uint32_t op,
 
     return HandleDeviceIoctl(op, out_buf, out_len, out_actual,
                              default_domain_,
-                             fbl::move(phandler),
+                             std::move(phandler),
                              nullptr);
 }
 
@@ -330,8 +332,8 @@ zx_status_t IntelHDADSP::CodecGetDispatcherChannel(zx_handle_t* remote_endpoint_
     zx::channel client_channel;
     zx_status_t res;
     res = CreateAndActivateChannel(default_domain_,
-                                   fbl::move(phandler),
-                                   fbl::move(chandler),
+                                   std::move(phandler),
+                                   std::move(chandler),
                                    &codec_driver_channel_,
                                    &client_channel);
     if (res == ZX_OK) {
@@ -432,13 +434,13 @@ void IntelHDADSP::ProcessClientDeactivate(const dispatcher::Channel* channel) {
     IntelHDAStream::Tree tmp;
     {
         fbl::AutoLock lock(&active_streams_lock_);
-        tmp = fbl::move(active_streams_);
+        tmp = std::move(active_streams_);
     }
 
     while (!tmp.is_empty()) {
         auto stream = tmp.pop_front();
         stream->Deactivate();
-        controller_.ReturnStream(fbl::move(stream));
+        controller_.ReturnStream(std::move(stream));
     }
 }
 
@@ -467,7 +469,7 @@ zx_status_t IntelHDADSP::ProcessRequestStream(dispatcher::Channel* channel,
         resp.stream_tag = stream->tag();
 
         fbl::AutoLock lock(&active_streams_lock_);
-        active_streams_.insert(fbl::move(stream));
+        active_streams_.insert(std::move(stream));
     } else {
         // Failure; tell the codec that we are out of streams.
         resp.result     = ZX_ERR_NO_MEMORY;
@@ -502,7 +504,7 @@ zx_status_t IntelHDADSP::ProcessReleaseStream(dispatcher::Channel* channel,
     // Give the stream back to the controller and (if an ack was requested) tell
     // our codec driver that things went well.
     stream->Deactivate();
-    controller_.ReturnStream(fbl::move(stream));
+    controller_.ReturnStream(std::move(stream));
 
     if (req.hdr.cmd & IHDA_NOACK_FLAG)
         return ZX_OK;
@@ -553,7 +555,7 @@ zx_status_t IntelHDADSP::ProcessSetStreamFmt(dispatcher::Channel* channel,
     ZX_DEBUG_ASSERT(client_channel.is_valid());
     ihda_proto::SetStreamFmtResp resp;
     resp.hdr = req.hdr;
-    res = channel->Write(&resp, sizeof(resp), fbl::move(client_channel));
+    res = channel->Write(&resp, sizeof(resp), std::move(client_channel));
 
     if (res != ZX_OK)
         LOG(TRACE, "Failed to send stream channel back to codec driver (res %d)\n", res);

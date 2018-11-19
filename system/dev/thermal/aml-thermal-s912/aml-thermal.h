@@ -13,6 +13,8 @@
 #include <threads.h>
 #include <zircon/device/thermal.h>
 
+#include <utility>
+
 #pragma once
 
 namespace thermal {
@@ -47,7 +49,7 @@ public:
           scpi_proto_(scpi_proto),
           scpi_(&scpi_proto_),
           sensor_id_(sensor_id),
-          port_(fbl::move(port)) {}
+          port_(std::move(port)) {}
 
     // Create and bind a driver instance.
     static zx_status_t Create(zx_device_t* device);

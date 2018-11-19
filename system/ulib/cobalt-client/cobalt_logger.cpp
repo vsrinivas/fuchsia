@@ -8,6 +8,8 @@
 #include <lib/fidl/coding.h>
 #include <lib/fidl/cpp/vector_view.h>
 
+#include <utility>
+
 namespace cobalt_client {
 namespace internal {
 namespace {
@@ -74,7 +76,7 @@ void HandleChannelStatus(zx::channel* logger_client, zx_status_t result) {
 } // namespace
 
 CobaltLogger::CobaltLogger(CobaltOptions options)
-    : options_(fbl::move(options)), logger_(ZX_HANDLE_INVALID) {}
+    : options_(std::move(options)), logger_(ZX_HANDLE_INVALID) {}
 
 bool CobaltLogger::Log(const RemoteMetricInfo& metric_info, const HistogramBucket* buckets,
                        size_t bucket_count) {
@@ -156,7 +158,7 @@ bool CobaltLogger::TrySendLoggerRequest() {
     }
 
     // Attempt to connect to LoggerFactory.
-    if (options_.service_connect(options_.service_path.c_str(), fbl::move(logger_factory)) !=
+    if (options_.service_connect(options_.service_path.c_str(), std::move(logger_factory)) !=
         ZX_OK) {
         return false;
     }

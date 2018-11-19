@@ -32,6 +32,8 @@
 #include <blobfs/blobfs.h>
 #include <blobfs/lz4.h>
 
+#include <utility>
+
 using digest::Digest;
 using digest::MerkleTree;
 
@@ -136,10 +138,10 @@ zx_status_t EnqueuePaginated(fbl::unique_ptr<WritebackWork>* work, Blobfs* blobf
             if (status != ZX_OK) {
                 return status;
             }
-            if ((status = blobfs->EnqueueWork(fbl::move(*work), EnqueueType::kData)) != ZX_OK) {
+            if ((status = blobfs->EnqueueWork(std::move(*work), EnqueueType::kData)) != ZX_OK) {
                 return status;
             }
-            *work = fbl::move(tmp);
+            *work = std::move(tmp);
         }
     }
     return ZX_OK;
@@ -453,7 +455,7 @@ zx_status_t VnodeBlob::WriteMetadata() {
 
     blobfs_->PersistNode(wb.get(), map_index_, inode_);
     wb->SetSyncComplete();
-    if ((status = blobfs_->EnqueueWork(fbl::move(wb), EnqueueType::kJournal)) != ZX_OK) {
+    if ((status = blobfs_->EnqueueWork(std::move(wb), EnqueueType::kJournal)) != ZX_OK) {
         return status;
     }
 
@@ -572,7 +574,7 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
         }
 
         // Enqueue the blob's final data work. Metadata must be enqueued separately.
-        if ((status = blobfs_->EnqueueWork(fbl::move(wb), EnqueueType::kData)) != ZX_OK) {
+        if ((status = blobfs_->EnqueueWork(std::move(wb), EnqueueType::kData)) != ZX_OK) {
             return status;
         }
 
@@ -998,7 +1000,7 @@ void Blobfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
     TRACE_DURATION("blobfs", "Blobfs::Unmount");
 
     // 1) Shutdown all external connections to blobfs.
-    ManagedVfs::Shutdown([this, cb = fbl::move(cb)](zx_status_t status) mutable {
+    ManagedVfs::Shutdown([this, cb = std::move(cb)](zx_status_t status) mutable {
         // 2a) Shutdown all internal connections to blobfs.
         // Store the Vnodes in a vector to avoid destroying
         // them while holding the hash lock.
@@ -1008,15 +1010,15 @@ void Blobfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
             for (auto& blob : open_hash_) {
                 auto vn = blob.CloneWatcherTeardown();
                 if (vn != nullptr) {
-                    internal_references.push_back(fbl::move(vn));
+                    internal_references.push_back(std::move(vn));
                 }
             }
         }
         internal_references.reset();
 
         // 2b) Flush all pending work to blobfs to the underlying storage.
-        Sync([this, cb = fbl::move(cb)](zx_status_t status) mutable {
-            async::PostTask(dispatcher(), [this, cb = fbl::move(cb)]() mutable {
+        Sync([this, cb = std::move(cb)](zx_status_t status) mutable {
+            async::PostTask(dispatcher(), [this, cb = std::move(cb)]() mutable {
                 // 3) Ensure the underlying disk has also flushed.
                 {
                     fs::WriteTxn sync_txn(this);
@@ -1028,7 +1030,7 @@ void Blobfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
 
                 DumpMetrics();
 
-                auto on_unmount = fbl::move(on_unmount_);
+                auto on_unmount = std::move(on_unmount_);
 
                 // Manually destroy Blobfs. The promise of Shutdown is that no
                 // connections are active, and destroying the Blobfs object
@@ -1117,7 +1119,7 @@ zx_status_t Blobfs::PurgeBlob(VnodeBlob* vn) {
         FreeNode(wb.get(), node_index);
         FreeBlocks(wb.get(), nblocks, start_block);
         VnodeReleaseHard(vn);
-        return EnqueueWork(fbl::move(wb), EnqueueType::kJournal);
+        return EnqueueWork(std::move(wb), EnqueueType::kJournal);
     }
     default: {
         assert(false);
@@ -1227,7 +1229,7 @@ zx_status_t Blobfs::LookupBlob(const Digest& digest, fbl::RefPtr<VnodeBlob>* out
     if (vn != nullptr) {
         UpdateLookupMetrics(vn->SizeData());
         if (out != nullptr) {
-            *out = fbl::move(vn);
+            *out = std::move(vn);
         }
         return ZX_OK;
     }
@@ -1304,7 +1306,7 @@ zx_status_t Blobfs::AddInodes() {
     WriteInfo(wb.get());
     wb.get()->Enqueue(node_map_.vmo().get(), inoblks_old, NodeMapStartBlock(info_) + inoblks_old,
                 inoblks - inoblks_old);
-    return EnqueueWork(fbl::move(wb), EnqueueType::kJournal);
+    return EnqueueWork(std::move(wb), EnqueueType::kJournal);
 }
 
 zx_status_t Blobfs::AddBlocks(size_t nblocks) {
@@ -1366,7 +1368,7 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks) {
     info_.data_block_count = blocks;
 
     WriteInfo(wb.get());
-    return EnqueueWork(fbl::move(wb), EnqueueType::kJournal);
+    return EnqueueWork(std::move(wb), EnqueueType::kJournal);
 }
 
 void Blobfs::Sync(SyncCallback closure) {
@@ -1377,9 +1379,9 @@ void Blobfs::Sync(SyncCallback closure) {
         return;
     }
 
-    wb->SetSyncCallback(fbl::move(closure));
+    wb->SetSyncCallback(std::move(closure));
     // This may return an error, but it doesn't matter - the closure will be called anyway.
-    status = EnqueueWork(fbl::move(wb), EnqueueType::kJournal);
+    status = EnqueueWork(std::move(wb), EnqueueType::kJournal);
 }
 
 void Blobfs::UpdateAllocationMetrics(uint64_t size_data, const fs::Duration& duration) {
@@ -1445,7 +1447,7 @@ void Blobfs::UpdateMerkleVerifyMetrics(uint64_t size_data, uint64_t size_merkle,
 }
 
 Blobfs::Blobfs(fbl::unique_fd fd, const Superblock* info)
-    : blockfd_(fbl::move(fd)) {
+    : blockfd_(std::move(fd)) {
     memcpy(&info_, info, sizeof(Superblock));
 }
 
@@ -1473,7 +1475,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options,
     }
 
     fbl::AllocChecker ac;
-    auto fs = fbl::unique_ptr<Blobfs>(new Blobfs(fbl::move(fd), info));
+    auto fs = fbl::unique_ptr<Blobfs>(new Blobfs(std::move(fd), info));
     fs->SetReadonly(options.readonly);
     fs->SetCachePolicy(options.cache_policy);
     if (options.metrics) {
@@ -1491,7 +1493,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options,
         return static_cast<zx_status_t>(r);
     }
 
-    if ((status = block_client::Client::Create(fbl::move(fifo), &fs->fifo_client_)) != ZX_OK) {
+    if ((status = block_client::Client::Create(std::move(fifo), &fs->fifo_client_)) != ZX_OK) {
         return status;
     }
 
@@ -1540,7 +1542,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options,
         return status;
     }
 
-    *out = fbl::move(fs);
+    *out = std::move(fs);
     return ZX_OK;
 }
 
@@ -1561,7 +1563,7 @@ zx_status_t Blobfs::InitializeVnodes() {
 
             // Delay reading any data from disk until read.
             size_t size = vn->SizeData();
-            zx_status_t status = VnodeInsertClosedLocked(fbl::move(vn));
+            zx_status_t status = VnodeInsertClosedLocked(std::move(vn));
             if (status != ZX_OK) {
                 char name[digest::Digest::kLength * 2 + 1];
                 digest.ToString(name, sizeof(name));
@@ -1585,7 +1587,7 @@ void Blobfs::VnodeReleaseSoft(VnodeBlob* raw_vn) {
     raw_vn->ResurrectRef();
     fbl::RefPtr<VnodeBlob> vn = fbl::internal::MakeRefPtrNoAdopt(raw_vn);
     ZX_ASSERT(open_hash_.erase(raw_vn->GetKey()) != nullptr);
-    ZX_ASSERT(VnodeInsertClosedLocked(fbl::move(vn)) == ZX_OK);
+    ZX_ASSERT(VnodeInsertClosedLocked(std::move(vn)) == ZX_OK);
 }
 
 zx_status_t Blobfs::Reload() {
@@ -1704,7 +1706,7 @@ zx_status_t Blobfs::OpenRootNode(fbl::RefPtr<VnodeBlob>* out) {
         return status;
     }
 
-    *out = fbl::move(vn);
+    *out = std::move(vn);
     return ZX_OK;
 }
 
@@ -1740,7 +1742,7 @@ zx_status_t Initialize(fbl::unique_fd blockfd, const MountOptions& options,
         return status;
     }
 
-    if ((status = Blobfs::Create(fbl::move(blockfd), options, info, out)) != ZX_OK) {
+    if ((status = Blobfs::Create(std::move(blockfd), options, info, out)) != ZX_OK) {
         fprintf(stderr, "blobfs: mount failed; could not create blobfs\n");
         return status;
     }
@@ -1753,7 +1755,7 @@ zx_status_t Mount(async_dispatcher_t* dispatcher, fbl::unique_fd blockfd,
     zx_status_t status;
     fbl::unique_ptr<Blobfs> fs;
 
-    if ((status = Initialize(fbl::move(blockfd), options, &fs)) != ZX_OK) {
+    if ((status = Initialize(std::move(blockfd), options, &fs)) != ZX_OK) {
         return status;
     }
 
@@ -1770,7 +1772,7 @@ zx_status_t Mount(async_dispatcher_t* dispatcher, fbl::unique_fd blockfd,
     }
 
     fs->SetDispatcher(dispatcher);
-    fs->SetUnmountCallback(fbl::move(on_unmount));
+    fs->SetUnmountCallback(std::move(on_unmount));
 
     fbl::RefPtr<VnodeBlob> vn;
     if ((status = fs->OpenRootNode(&vn)) != ZX_OK) {
@@ -1778,7 +1780,7 @@ zx_status_t Mount(async_dispatcher_t* dispatcher, fbl::unique_fd blockfd,
         return status;
     }
 
-    if ((status = fs->ServeDirectory(fbl::move(vn), fbl::move(root))) != ZX_OK) {
+    if ((status = fs->ServeDirectory(std::move(vn), std::move(root))) != ZX_OK) {
         fprintf(stderr, "blobfs: mount failed; could not serve root directory\n");
         return status;
     }
@@ -1804,14 +1806,14 @@ zx_status_t Blobfs::EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType
         if (journal_ != nullptr) {
             // If journaling is enabled (both in general and for this WritebackWork),
             // attempt to enqueue to the journal buffer.
-            return journal_->Enqueue(fbl::move(work));
+            return journal_->Enqueue(std::move(work));
         }
         // Even if our enqueue type is kJournal,
         // fall through to the writeback queue if the journal doesn't exist.
         __FALLTHROUGH;
     case EnqueueType::kData:
         if (writeback_ != nullptr) {
-            return writeback_->Enqueue(fbl::move(work));
+            return writeback_->Enqueue(std::move(work));
         }
         // If writeback_ does not exist, we are in a readonly state.
         // Fall through to the default case.

@@ -12,6 +12,8 @@
 #include <lib/fzl/fdio.h>
 #include <unittest/unittest.h>
 
+#include <utility>
+
 namespace {
 
 bool fdio_call_io() {
@@ -29,7 +31,7 @@ bool fdio_call_io() {
     ASSERT_TRUE(fd);
 
     // Try some filesystem operations natively:
-    fzl::FdioCaller caller(fbl::move(fd));
+    fzl::FdioCaller caller(std::move(fd));
     ASSERT_TRUE(caller);
 
     const char* golden = "foobar";

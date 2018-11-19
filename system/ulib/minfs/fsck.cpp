@@ -9,7 +9,9 @@
 
 #include <minfs/format.h>
 #include <minfs/fsck.h>
+
 #include "minfs-private.h"
+#include <utility>
 
 // #define DEBUG_PRINTF
 #ifdef DEBUG_PRINTF
@@ -605,11 +607,11 @@ zx_status_t MinfsChecker::Init(fbl::unique_ptr<Bcache> bc, const Superblock* inf
         return status;
     }
     fbl::unique_ptr<Minfs> fs;
-    if ((status = Minfs::Create(fbl::move(bc), info, &fs)) != ZX_OK) {
+    if ((status = Minfs::Create(std::move(bc), info, &fs)) != ZX_OK) {
         FS_TRACE_ERROR("MinfsChecker::Create Failed to Create Minfs: %d\n", status);
         return status;
     }
-    fs_ = fbl::move(fs);
+    fs_ = std::move(fs);
 
     return ZX_OK;
 }
@@ -630,7 +632,7 @@ zx_status_t Fsck(fbl::unique_ptr<Bcache> bc) {
     }
 
     MinfsChecker chk;
-    if ((status = chk.Init(fbl::move(bc), info)) != ZX_OK) {
+    if ((status = chk.Init(std::move(bc), info)) != ZX_OK) {
         FS_TRACE_ERROR("Fsck: Init failure: %d\n", status);
         return status;
     }

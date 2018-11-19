@@ -20,6 +20,8 @@
 
 #include <acpica/acpi.h>
 
+#include <utility>
+
 #include "../../include/errors.h"
 
 zx_status_t AcpiCrOsEc::Create(fbl::RefPtr<AcpiCrOsEc>* out) {
@@ -47,7 +49,7 @@ zx_status_t AcpiCrOsEc::Create(fbl::RefPtr<AcpiCrOsEc>* out) {
         return ZX_ERR_IO;
     }
 
-    *out = fbl::move(dev);
+    *out = std::move(dev);
     return ZX_OK;
 }
 

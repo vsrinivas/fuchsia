@@ -7,6 +7,8 @@
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <dispatcher-pool/dispatcher-thread-pool.h>
 
+#include <utility>
+
 namespace dispatcher {
 
 // static
@@ -25,7 +27,7 @@ fbl::RefPtr<ExecutionDomain> ExecutionDomain::Create(uint32_t priority) {
     ZX_DEBUG_ASSERT(thread_pool != nullptr);
 
     fbl::AllocChecker ac;
-    auto new_domain = fbl::AdoptRef(new (&ac) ExecutionDomain(thread_pool, fbl::move(evt)));
+    auto new_domain = fbl::AdoptRef(new (&ac) ExecutionDomain(thread_pool, std::move(evt)));
     if (!ac.check())
         return nullptr;
 
@@ -33,14 +35,14 @@ fbl::RefPtr<ExecutionDomain> ExecutionDomain::Create(uint32_t priority) {
     if (res != ZX_OK)
         return nullptr;
 
-    return fbl::move(new_domain);
+    return new_domain;
 }
 
 ExecutionDomain::ExecutionDomain(fbl::RefPtr<ThreadPool> thread_pool,
                                  zx::event dispatch_idle_evt)
     : deactivated_(0),
-      thread_pool_(fbl::move(thread_pool)),
-      dispatch_idle_evt_(fbl::move(dispatch_idle_evt)) {
+      thread_pool_(std::move(thread_pool)),
+      dispatch_idle_evt_(std::move(dispatch_idle_evt)) {
     ZX_DEBUG_ASSERT(thread_pool_ != nullptr);
     ZX_DEBUG_ASSERT(dispatch_idle_evt_.is_valid());
 }
@@ -107,7 +109,7 @@ void ExecutionDomain::Deactivate(bool sync_dispatch) {
     decltype(thread_pool_) pool;
     {
         fbl::AutoLock sources_lock(&sources_lock_);
-        pool = fbl::move(thread_pool_);
+        pool = std::move(thread_pool_);
     }
 
     if (pool != nullptr)
@@ -140,7 +142,7 @@ zx_status_t ExecutionDomain::AddEventSource(
 
     // We are still active.  Transfer the reference to this event_source to our set
     // of sources.
-    sources_.push_front(fbl::move(event_source));
+    sources_.push_front(std::move(event_source));
     return ZX_OK;
 }
 

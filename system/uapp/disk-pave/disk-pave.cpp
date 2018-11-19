@@ -10,6 +10,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <utility>
+
 #include "pave-lib.h"
 #include "pave-logging.h"
 
@@ -127,5 +129,5 @@ int main(int argc, char** argv) {
         PrintUsage();
         return -1;
     }
-    return paver::RealMain(fbl::move(flags)) == ZX_OK ? 0 : -1;
+    return paver::RealMain(std::move(flags)) == ZX_OK ? 0 : -1;
 }

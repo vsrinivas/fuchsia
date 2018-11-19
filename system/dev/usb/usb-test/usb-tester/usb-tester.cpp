@@ -19,6 +19,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <utility>
+
 #include "usb-tester-hw.h"
 
 namespace {
@@ -124,7 +126,7 @@ zx_status_t UsbTester::AllocTestReqs(size_t num_reqs, size_t len, uint8_t ep_add
         if (!test_req.has_value()) {
             return ZX_ERR_NO_MEMORY;
         }
-        out_test_reqs->push_back(fbl::move(test_req.value()));
+        out_test_reqs->push_back(std::move(test_req.value()));
     }
     return ZX_OK;
 }

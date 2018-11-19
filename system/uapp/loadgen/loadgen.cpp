@@ -17,6 +17,8 @@
 #include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
 
+#include <utility>
+
 static constexpr uint32_t kDefaultNumThreads = 4;
 static constexpr float kDefaultMinWorkMsec = 5.0f;
 static constexpr float kDefaultMaxWorkMsec = 15.0f;
@@ -224,7 +226,7 @@ int main(int argc, char** argv) {
             return -1;
         }
 
-        threads.push_front(fbl::move(t));
+        threads.push_front(std::move(t));
     }
 
     for (auto& t : threads) {

@@ -10,6 +10,8 @@
 
 #include <unittest/unittest.h>
 
+#include <utility>
+
 namespace {
 
 bool test_service() {
@@ -22,7 +24,7 @@ bool test_service() {
         [&bound_channel](zx::channel channel) {
             if (bound_channel)
                 return ZX_ERR_IO;
-            bound_channel = fbl::move(channel);
+            bound_channel = std::move(channel);
             return ZX_OK;
         }));
 
@@ -46,12 +48,12 @@ bool test_service() {
 
     // serve, the connector will return success the first time
     fs::SynchronousVfs vfs;
-    EXPECT_EQ(ZX_OK, svc->Serve(&vfs, fbl::move(c1), ZX_FS_RIGHT_READABLE));
+    EXPECT_EQ(ZX_OK, svc->Serve(&vfs, std::move(c1), ZX_FS_RIGHT_READABLE));
     EXPECT_EQ(hc1, bound_channel.get());
 
     // the connector will return failure because bound_channel is still valid
     // we test that the error is propagated back up through Serve
-    EXPECT_EQ(ZX_ERR_IO, svc->Serve(&vfs, fbl::move(c2), ZX_FS_RIGHT_READABLE));
+    EXPECT_EQ(ZX_ERR_IO, svc->Serve(&vfs, std::move(c2), ZX_FS_RIGHT_READABLE));
     EXPECT_EQ(hc1, bound_channel.get());
 
     END_TEST;
@@ -86,7 +88,7 @@ bool TestServeDirectory() {
         }));
     directory->AddEntry("abc", vnode);
 
-    EXPECT_EQ(ZX_OK, vfs.ServeDirectory(directory, fbl::move(server)));
+    EXPECT_EQ(ZX_OK, vfs.ServeDirectory(directory, std::move(server)));
     EXPECT_EQ(ZX_ERR_BAD_STATE, loop.RunUntilIdle());
 
     END_TEST;

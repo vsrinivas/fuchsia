@@ -17,6 +17,8 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <utility>
+
 namespace audio {
 
 struct SimpleAudioStreamProtocol : public ddk::internal::base_protocol {
@@ -55,7 +57,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
                       "Class must derive from SimpleAudioStream!");
 
         fbl::AllocChecker ac;
-        auto ret = fbl::AdoptRef(new (&ac) T(fbl::forward<ConstructorSignature>(args)...));
+        auto ret = fbl::AdoptRef(new (&ac) T(std::forward<ConstructorSignature>(args)...));
 
         if (!ac.check()) {
             return nullptr;

@@ -162,12 +162,14 @@ struct remove_extent<T[N]> {
     using type = T;
 };
 
+#ifdef _KERNEL
 // move
 
 template <typename T>
 constexpr typename remove_reference<T>::type&& move(T&& t) {
     return static_cast<typename remove_reference<T>::type&&>(t);
 }
+#endif
 
 // forward:
 
