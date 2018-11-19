@@ -4,7 +4,6 @@
 
 #include <audio-utils/audio-input.h>
 #include <fbl/algorithm.h>
-#include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <inttypes.h>
@@ -17,6 +16,7 @@
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+#include <limits>
 #include <stdio.h>
 #include <utility>
 #include <zircon/compiler.h>
@@ -91,9 +91,9 @@ class FxProcessor {
 
   static inline float Norm(int16_t value) {
     return (value < 0)
-               ? static_cast<float>(value) / fbl::numeric_limits<int16_t>::min()
+               ? static_cast<float>(value) / std::numeric_limits<int16_t>::min()
                : static_cast<float>(value) /
-                     fbl::numeric_limits<int16_t>::max();
+                     std::numeric_limits<int16_t>::max();
   }
 
   static inline float FuzzNorm(float norm_value, float gain) {
@@ -600,8 +600,8 @@ void FxProcessor::PreampInputEffect(int16_t* src, int16_t* dst,
     int32_t tmp = src[i];
     tmp *= preamp_gain_fixed_;
     tmp >>= PREAMP_GAIN_FRAC_BITS;
-    tmp = fbl::clamp<int32_t>(tmp, fbl::numeric_limits<int16_t>::min(),
-                              fbl::numeric_limits<int16_t>::max());
+    tmp = fbl::clamp<int32_t>(tmp, std::numeric_limits<int16_t>::min(),
+                              std::numeric_limits<int16_t>::max());
     dst[i] = static_cast<int16_t>(tmp);
   }
 }
@@ -616,8 +616,8 @@ void FxProcessor::ReverbMixEffect(int16_t* src, int16_t* dst, uint32_t frames) {
     tmp *= reverb_feedback_gain_fixed_;
     tmp >>= 16;
     tmp += dst[i];
-    tmp = fbl::clamp<int32_t>(tmp, fbl::numeric_limits<int16_t>::min(),
-                              fbl::numeric_limits<int16_t>::max());
+    tmp = fbl::clamp<int32_t>(tmp, std::numeric_limits<int16_t>::min(),
+                              std::numeric_limits<int16_t>::max());
     dst[i] = static_cast<int16_t>(tmp);
   }
 }
@@ -627,8 +627,8 @@ void FxProcessor::FuzzEffect(int16_t* src, int16_t* dst, uint32_t frames) {
     float norm = FuzzNorm(Norm(src[i]), fuzz_gain_);
     dst[i] =
         (src[i] < 0)
-            ? static_cast<int16_t>(fbl::numeric_limits<int16_t>::min() * norm)
-            : static_cast<int16_t>(fbl::numeric_limits<int16_t>::max() * norm);
+            ? static_cast<int16_t>(std::numeric_limits<int16_t>::min() * norm)
+            : static_cast<int16_t>(std::numeric_limits<int16_t>::max() * norm);
   }
 }
 
@@ -639,8 +639,8 @@ void FxProcessor::MixedFuzzEffect(int16_t* src, int16_t* dst, uint32_t frames) {
     float mixed = ((fnorm * fuzz_mix_) + (norm * fuzz_mix_inv_));
     dst[i] =
         (src[i] < 0)
-            ? static_cast<int16_t>(fbl::numeric_limits<int16_t>::min() * mixed)
-            : static_cast<int16_t>(fbl::numeric_limits<int16_t>::max() * mixed);
+            ? static_cast<int16_t>(std::numeric_limits<int16_t>::min() * mixed)
+            : static_cast<int16_t>(std::numeric_limits<int16_t>::max() * mixed);
   }
 }
 

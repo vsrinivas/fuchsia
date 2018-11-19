@@ -6,7 +6,6 @@
 
 #include <audio-proto-utils/format-utils.h>
 #include <dispatcher-pool/dispatcher-channel.h>
-#include <fbl/limits.h>
 #include <iomanip>
 #include <lib/fit/defer.h>
 #include <optional>

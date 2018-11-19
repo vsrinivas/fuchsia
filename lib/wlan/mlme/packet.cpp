@@ -4,10 +4,10 @@
 
 #include <wlan/mlme/packet.h>
 
-#include <fbl/limits.h>
 #include <zircon/assert.h>
 
 #include <algorithm>
+#include <limits>
 #include <utility>
 
 namespace wlan {
@@ -25,7 +25,7 @@ zx_status_t Packet::CopyFrom(const void* src, size_t len, size_t offset) {
 }
 
 wlan_tx_packet_t Packet::AsWlanTxPacket() {
-    ZX_DEBUG_ASSERT(len() <= fbl::numeric_limits<uint16_t>::max());
+    ZX_DEBUG_ASSERT(len() <= std::numeric_limits<uint16_t>::max());
     wlan_tx_packet_t tx_pkt = {};
     tx_pkt.packet_head.data_buffer = data();
     tx_pkt.packet_head.data_size = static_cast<uint16_t>(len());

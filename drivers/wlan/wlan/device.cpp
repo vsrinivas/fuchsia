@@ -7,7 +7,6 @@
 #include "probe_sequence.h"
 
 #include <ddk/device.h>
-#include <fbl/limits.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
 #include <wlan/common/channel.h>
@@ -33,6 +32,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <limits>
 #include <utility>
 
 namespace wlan {
@@ -478,7 +478,7 @@ wlan_tx_info_t MakeTxInfo(const fbl::unique_ptr<Packet>& packet, const TxVector&
 }
 
 zx_status_t Device::SendWlan(fbl::unique_ptr<Packet> packet, CBW cbw, PHY phy, uint32_t flags) {
-    ZX_DEBUG_ASSERT(packet->len() <= fbl::numeric_limits<uint16_t>::max());
+    ZX_DEBUG_ASSERT(packet->len() <= std::numeric_limits<uint16_t>::max());
 
     auto tv = GetTxVector(minstrel_, packet, cbw, phy, flags);
     packet->CopyCtrlFrom(MakeTxInfo(packet, tv, minstrel_ != nullptr, flags));
