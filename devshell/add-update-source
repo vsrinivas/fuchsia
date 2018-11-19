@@ -81,10 +81,7 @@ function main {
     exit 1
   fi
 
-  config_dir="${repository_dir}/${source_name}"
-  mkdir -p "${config_dir}"
-  config_path="${config_dir}/config.json"
-  config_url="http://[${local_addr}]:8083/${source_name}/config.json"
+  config_url="http://[${local_addr}]:8083/config.json"
 
   if [[ "${config_type}" == "devhost" ]]; then
     repo_url="http://[${local_addr}]:8083"
@@ -95,19 +92,8 @@ function main {
     exit 1
   fi
 
-  "${FUCHSIA_DIR}/scripts/generate-update-source-config.py" \
-    --build-dir="${FUCHSIA_BUILD_DIR}" \
-    --name="${source_name}" \
-    --repo-url="${repo_url}" \
-    --blobs-url="${repo_url}/blobs" \
-    --output "${config_path}" \
-    || exit $?
-
-  config_hash=$(shasum -a 256 $config_path | cut -f1 -d' ')
-
   fx-command-run shell $device_arg amber_ctl add_src \
-    -f "${config_url}" \
-    -h "${config_hash}"
+    -f "${config_url}"
   err=$?
 
   if [[ $err -ne 0 ]]; then
