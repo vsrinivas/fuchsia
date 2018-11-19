@@ -27,7 +27,7 @@ struct HardwareLayerAssignment {
   std::vector<Item> items;
   Swapchain* swapchain = nullptr;
 
-  explicit operator bool() const { return swapchain && ~items.empty(); }
+  explicit operator bool() const { return swapchain && !items.empty(); }
 };
 
 }  // namespace gfx
