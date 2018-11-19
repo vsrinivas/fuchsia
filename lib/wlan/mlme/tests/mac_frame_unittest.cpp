@@ -74,7 +74,7 @@ template <size_t padding_len, size_t payload_len> struct TripleHdrFrame {
 static fbl::unique_ptr<Packet> GetPacket(size_t len) {
     auto buffer = GetBuffer(len);
     memset(buffer->data(), 0, len);
-    return fbl::make_unique<Packet>(fbl::move(buffer), len);
+    return fbl::make_unique<Packet>(std::move(buffer), len);
 }
 
 using DefaultTripleHdrFrame = TripleHdrFrame<0, 10>;
@@ -130,7 +130,7 @@ TEST(Frame, General) {
     test_frame->hdr2.b = 24;
 
     // Verify frame's accessors and length.
-    Frame<TestHdr1> frame(fbl::move(pkt));
+    Frame<TestHdr1> frame{std::move(pkt)};
     ASSERT_FALSE(frame.IsEmpty());
     ASSERT_EQ(frame.len(), DefaultTripleHdrFrame::len());
     ASSERT_EQ(frame.hdr()->a, 42);
@@ -146,7 +146,7 @@ TEST(Frame, General_Const_Frame) {
     test_frame->hdr2.b = 24;
 
     // Verify a constant frame's accessors and length. Constant accessors differ from regular ones.
-    const Frame<TestHdr1> frame(fbl::move(pkt));
+    const Frame<TestHdr1> frame{std::move(pkt)};
     ASSERT_FALSE(frame.IsEmpty());
     ASSERT_EQ(frame.len(), DefaultTripleHdrFrame::len());
     ASSERT_EQ(frame.hdr()->a, 42);
@@ -162,7 +162,7 @@ TEST(Frame, Take) {
     test_frame->hdr2.b = 24;
 
     // Derive frame with unknown body...
-    Frame<TestHdr1> frame(fbl::move(pkt));
+    Frame<TestHdr1> frame(std::move(pkt));
     // ... and take the frame's underlying Packet to construct a new, specialized frame.
     Frame<TestHdr1, TestHdr2> specialized_frame(frame.Take());
     // Verify the first frame is considered "taken" and that the new specialized one is valid.
@@ -179,7 +179,7 @@ TEST(Frame, ExactlySizedBuffer_HdrOnly) {
     size_t pkt_len = sizeof(TestHdr1);
     auto pkt = GetPacket(pkt_len);
 
-    Frame<TestHdr1> frame(fbl::move(pkt));
+    Frame<TestHdr1> frame(std::move(pkt));
     ASSERT_EQ(frame.len(), sizeof(TestHdr1));
     ASSERT_EQ(frame.body_len(), static_cast<size_t>(0));
 }
@@ -189,7 +189,7 @@ TEST(Frame, ExactlySizedBuffer_Frame) {
     size_t pkt_len = sizeof(TestHdr1) + sizeof(FixedSizedPayload);
     auto pkt = GetPacket(pkt_len);
 
-    Frame<TestHdr1, FixedSizedPayload> frame(fbl::move(pkt));
+    Frame<TestHdr1, FixedSizedPayload> frame(std::move(pkt));
     ASSERT_EQ(frame.len(), sizeof(TestHdr1) + sizeof(FixedSizedPayload));
     ASSERT_EQ(frame.body_len(), sizeof(FixedSizedPayload));
 }
@@ -207,7 +207,7 @@ TEST(Frame, RxInfo_MacFrame) {
     pkt->CopyCtrlFrom(rx_info);
 
     // Only MAC frames can hold rx_info;
-    MgmtFrame<> mgmt_frame(fbl::move(pkt));
+    MgmtFrame<> mgmt_frame(std::move(pkt));
     ASSERT_TRUE(mgmt_frame.View().has_rx_info());
     ASSERT_EQ(memcmp(mgmt_frame.View().rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
 
@@ -227,7 +227,7 @@ TEST(Frame, RxInfo_OtherFrame) {
     pkt->CopyCtrlFrom(rx_info);
 
     // Only MAC frames can hold rx_info. Test some others.
-    Frame<TestHdr1> frame1(fbl::move(pkt));
+    Frame<TestHdr1> frame1(std::move(pkt));
     ASSERT_FALSE(frame1.View().has_rx_info());
     Frame<TestHdr1> frame2(frame1.Take());
     ASSERT_FALSE(frame2.View().has_rx_info());
@@ -254,7 +254,7 @@ TEST(Frame, RxInfo_PaddingAlignedBody) {
     auto data = pkt->mut_field<uint8_t>(hdr->len() + 2);
     data[0] = 42;
 
-    DataFrame<> data_frame(fbl::move(pkt));
+    DataFrame<> data_frame(std::move(pkt));
     ASSERT_TRUE(data_frame.View().has_rx_info());
     ASSERT_EQ(memcmp(data_frame.View().rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
     ASSERT_EQ(data_frame.body()->data[0], 42);
@@ -276,7 +276,7 @@ TEST(Frame, RxInfo_NoPaddingAlignedBody) {
     auto data = pkt->mut_field<uint8_t>(hdr->len());
     data[0] = 42;
 
-    DataFrame<> data_frame(fbl::move(pkt));
+    DataFrame<> data_frame(std::move(pkt));
     ASSERT_TRUE(data_frame.View().has_rx_info());
     ASSERT_EQ(memcmp(data_frame.View().rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
     ASSERT_EQ(data_frame.body()->data[0], 42);

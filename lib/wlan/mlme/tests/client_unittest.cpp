@@ -64,7 +64,7 @@ struct ClientTest : public ::testing::Test {
         fbl::unique_ptr<Packet> pkt;
         auto status = CreateFrame<F>(&pkt);
         if (status != ZX_OK) { return status; }
-        station.HandleAnyWlanFrame(fbl::move(pkt));
+        station.HandleAnyWlanFrame(std::move(pkt));
         return ZX_OK;
     }
 
@@ -100,7 +100,7 @@ struct ClientTest : public ::testing::Test {
         fbl::unique_ptr<Packet> pkt;
         auto status = CreateBeaconFrameWithBssid(&pkt, bssid);
         if (status != ZX_OK) { return status; }
-        station.HandleAnyWlanFrame(fbl::move(pkt));
+        station.HandleAnyWlanFrame(std::move(pkt));
         return ZX_OK;
     }
 
@@ -166,7 +166,7 @@ struct ClientTest : public ::testing::Test {
         ASSERT_EQ(pkt->peer(), Packet::Peer::kService);
 
         MlmeMsg<wlan_mlme::AuthenticateConfirm> msg;
-        auto status = MlmeMsg<wlan_mlme::AuthenticateConfirm>::FromPacket(fbl::move(pkt), &msg);
+        auto status = MlmeMsg<wlan_mlme::AuthenticateConfirm>::FromPacket(std::move(pkt), &msg);
         ASSERT_EQ(status, ZX_OK);
         ASSERT_EQ(msg.body()->result_code, result_code);
     }
@@ -176,7 +176,7 @@ struct ClientTest : public ::testing::Test {
         ASSERT_EQ(pkt->peer(), Packet::Peer::kService);
 
         MlmeMsg<wlan_mlme::AssociateConfirm> msg;
-        auto status = MlmeMsg<wlan_mlme::AssociateConfirm>::FromPacket(fbl::move(pkt), &msg);
+        auto status = MlmeMsg<wlan_mlme::AssociateConfirm>::FromPacket(std::move(pkt), &msg);
         ASSERT_EQ(status, ZX_OK);
         ASSERT_EQ(msg.body()->association_id, aid);
         ASSERT_EQ(msg.body()->result_code, result_code);
@@ -228,7 +228,7 @@ TEST_F(ClientTest, Authenticate) {
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
     auto auths = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAuthenticateConfOrdinal>);
     ASSERT_FALSE(auths.empty());
-    AssertAuthConfirm(fbl::move(*auths.begin()), wlan_mlme::AuthenticateResultCodes::SUCCESS);
+    AssertAuthConfirm(std::move(*auths.begin()), wlan_mlme::AuthenticateResultCodes::SUCCESS);
 
     // Verify a delayed timeout won't cause another confirmation.
     device.svc_queue.clear();
@@ -263,7 +263,7 @@ TEST_F(ClientTest, Associate) {
     ASSERT_FALSE(device.svc_queue.empty());
     auto assocs = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateConfOrdinal>);
     ASSERT_EQ(assocs.size(), static_cast<size_t>(1));
-    AssertAssocConfirm(fbl::move(*assocs.begin()), kAid, wlan_mlme::AssociateResultCodes::SUCCESS);
+    AssertAssocConfirm(std::move(*assocs.begin()), kAid, wlan_mlme::AssociateResultCodes::SUCCESS);
 
     // Verify a delayed timeout won't cause another confirmation.
     device.svc_queue.clear();
@@ -289,7 +289,7 @@ TEST_F(ClientTest, AuthTimeout) {
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
     auto auths = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAuthenticateConfOrdinal>);
     ASSERT_FALSE(auths.empty());
-    AssertAuthConfirm(fbl::move(*auths.begin()),
+    AssertAuthConfirm(std::move(*auths.begin()),
                       wlan_mlme::AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
 }
 
@@ -311,7 +311,7 @@ TEST_F(ClientTest, AssocTimeout) {
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
     auto assocs = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateConfOrdinal>);
     ASSERT_FALSE(assocs.empty());
-    AssertAssocConfirm(fbl::move(*assocs.begin()), 0,
+    AssertAssocConfirm(std::move(*assocs.begin()), 0,
                        wlan_mlme::AssociateResultCodes::REFUSED_TEMPORARILY);
 }
 
@@ -394,7 +394,7 @@ TEST_F(ClientTest, DropManagementFrames) {
     mgmt_hdr->addr2 = common::MacAddr(kClientAddress);
     mgmt_hdr->addr3 = common::MacAddr(kBssid2);
     w.Write<Deauthentication>()->reason_code = 42;
-    station.HandleAnyWlanFrame(fbl::move(packet));
+    station.HandleAnyWlanFrame(std::move(packet));
 
     // Verify neither a management frame nor service message were sent.
     ASSERT_TRUE(device.svc_queue.empty());
@@ -618,7 +618,7 @@ TEST_F(ClientTest, InvalidAuthenticationResponse) {
     // Send authentication frame with wrong algorithm.
     fbl::unique_ptr<Packet> auth_pkt;
     ASSERT_EQ(CreateFrame<Authentication>(&auth_pkt), ZX_OK);
-    MgmtFrame<Authentication> auth_frame(fbl::move(auth_pkt));
+    MgmtFrame<Authentication> auth_frame(std::move(auth_pkt));
     auth_frame.body()->auth_algorithm_number = AuthAlgorithm::kSae;
     ASSERT_EQ(station.HandleAnyWlanFrame(auth_frame.Take()), ZX_OK);
 
@@ -626,7 +626,7 @@ TEST_F(ClientTest, InvalidAuthenticationResponse) {
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
     auto auths = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAuthenticateConfOrdinal>);
     ASSERT_FALSE(auths.empty());
-    AssertAuthConfirm(fbl::move(*auths.begin()),
+    AssertAuthConfirm(std::move(*auths.begin()),
                       wlan_mlme::AuthenticateResultCodes::AUTHENTICATION_REJECTED);
 
     // Fast forward in time would have caused a timeout.
@@ -639,7 +639,7 @@ TEST_F(ClientTest, InvalidAuthenticationResponse) {
     // Send a second, now valid authentication frame.
     // This frame should be ignored as the client reset.
     ASSERT_EQ(CreateFrame<Authentication>(&auth_pkt), ZX_OK);
-    auth_frame = MgmtFrame<Authentication>(fbl::move(auth_pkt));
+    auth_frame = MgmtFrame<Authentication>(std::move(auth_pkt));
     ASSERT_EQ(station.HandleAnyWlanFrame(auth_frame.Take()), ZX_OK);
 
     // Fast forward in time far beyond an authentication timeout.

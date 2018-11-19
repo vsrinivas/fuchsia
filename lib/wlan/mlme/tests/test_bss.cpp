@@ -93,7 +93,7 @@ wlan_mlme::BSSDescription CreateBssDescription() {
 
     bss_desc.rssi_dbm = -35;
 
-    return fbl::move(bss_desc);
+    return bss_desc;
 }
 
 zx_status_t CreateStartRequest(MlmeMsg<wlan_mlme::StartRequest>* out_msg, bool protected_ap) {
@@ -241,7 +241,7 @@ zx_status_t CreateBeaconFrameWithBssid(fbl::unique_ptr<Packet>* out_packet, comm
     wlan_rx_info_t rx_info{.rx_flags = 0};
     packet->CopyCtrlFrom(rx_info);
 
-    *out_packet = fbl::move(packet);
+    *out_packet = std::move(packet);
 
     return ZX_OK;
 }
@@ -278,7 +278,7 @@ zx_status_t CreateProbeRequest(fbl::unique_ptr<Packet>* out_packet) {
     wlan_rx_info_t rx_info{.rx_flags = 0};
     packet->CopyCtrlFrom(rx_info);
 
-    *out_packet = fbl::move(packet);
+    *out_packet = std::move(packet);
 
     return ZX_OK;
 }
@@ -307,7 +307,7 @@ zx_status_t CreateAuthReqFrame(fbl::unique_ptr<Packet>* out_packet, common::MacA
     wlan_rx_info_t rx_info{.rx_flags = 0};
     packet->CopyCtrlFrom(rx_info);
 
-    *out_packet = fbl::move(packet);
+    *out_packet = std::move(packet);
 
     return ZX_OK;
 }
@@ -338,7 +338,7 @@ zx_status_t CreateAuthRespFrame(fbl::unique_ptr<Packet>* out_packet) {
     wlan_rx_info_t rx_info{.rx_flags = 0};
     packet->CopyCtrlFrom(rx_info);
 
-    *out_packet = fbl::move(packet);
+    *out_packet = std::move(packet);
 
     return ZX_OK;
 }
@@ -365,7 +365,7 @@ zx_status_t CreateDeauthFrame(fbl::unique_ptr<Packet>* out_packet, common::MacAd
     wlan_rx_info_t rx_info{.rx_flags = 0};
     packet->CopyCtrlFrom(rx_info);
 
-    *out_packet = fbl::move(packet);
+    *out_packet = std::move(packet);
 
     return ZX_OK;
 }
@@ -405,7 +405,7 @@ zx_status_t CreateAssocReqFrame(fbl::unique_ptr<Packet>* out_packet, common::Mac
     wlan_rx_info_t rx_info{.rx_flags = 0};
     packet->CopyCtrlFrom(rx_info);
 
-    *out_packet = fbl::move(packet);
+    *out_packet = std::move(packet);
 
     return ZX_OK;
 }
@@ -439,7 +439,7 @@ zx_status_t CreateAssocRespFrame(fbl::unique_ptr<Packet>* out_packet) {
     wlan_rx_info_t rx_info{.rx_flags = 0};
     packet->CopyCtrlFrom(rx_info);
 
-    *out_packet = fbl::move(packet);
+    *out_packet = std::move(packet);
 
     return ZX_OK;
 }
@@ -466,7 +466,7 @@ zx_status_t CreateDisassocFrame(fbl::unique_ptr<Packet>* out_packet, common::Mac
     wlan_rx_info_t rx_info{.rx_flags = 0};
     packet->CopyCtrlFrom(rx_info);
 
-    *out_packet = fbl::move(packet);
+    *out_packet = std::move(packet);
 
     return ZX_OK;
 }
@@ -502,7 +502,7 @@ DataFrame<LlcHeader> CreateDataFrame(const uint8_t* payload, size_t len) {
     wlan_rx_info_t rx_info{.rx_flags = 0};
     packet->CopyCtrlFrom(rx_info);
 
-    return DataFrame<LlcHeader>(fbl::move(packet));
+    return DataFrame<LlcHeader>(std::move(packet));
 }
 
 DataFrame<> CreateNullDataFrame() {
@@ -527,7 +527,7 @@ DataFrame<> CreateNullDataFrame() {
     wlan_rx_info_t rx_info{.rx_flags = 0};
     packet->CopyCtrlFrom(rx_info);
 
-    return DataFrame<>(fbl::move(packet));
+    return DataFrame<>(std::move(packet));
 }
 
 EthFrame CreateEthFrame(const uint8_t* payload, size_t len) {
@@ -545,7 +545,7 @@ EthFrame CreateEthFrame(const uint8_t* payload, size_t len) {
     eth_hdr->ether_type = 2;
     w.Write({payload, len});
 
-    return EthFrame(fbl::move(packet));
+    return EthFrame(std::move(packet));
 }
 
 }  // namespace wlan

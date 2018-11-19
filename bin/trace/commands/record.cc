@@ -550,7 +550,7 @@ void Record::Start(const fxl::CommandLine& command_line) {
         exporter_->ExportRecord(record);
 
         if (aggregate_events_ && record.type() == trace::RecordType::kEvent) {
-          events_.push_back(fbl::move(record));
+          events_.push_back(std::move(record));
         }
       },
       [](fbl::String error) { FXL_LOG(ERROR) << error.c_str(); },

@@ -162,7 +162,7 @@ static zx_status_t BuildBeaconOrProbeResponse(const BeaconConfig& config, common
         *tim_ele_offset = w.WrittenBytes() + rel_tim_ele_offset;
     }
 
-    *buffer = MgmtFrame<T>(fbl::move(packet));
+    *buffer = MgmtFrame<T>(std::move(packet));
     return ZX_OK;
 }
 

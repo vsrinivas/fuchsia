@@ -16,7 +16,7 @@ bool TimedEvent::Triggered(zx::time now) const {
     return deadline_ <= now;
 }
 
-TimerManager::TimerManager(fbl::unique_ptr<Timer> timer) : timer_(fbl::move(timer)) {
+TimerManager::TimerManager(fbl::unique_ptr<Timer> timer) : timer_(std::move(timer)) {
     ZX_DEBUG_ASSERT(timer_ != nullptr);
 }
 

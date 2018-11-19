@@ -51,7 +51,7 @@ zx_status_t ApMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
 }
 
 zx_status_t ApMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {
-    if (bss_ != nullptr) { bss_->HandleAnyFrame(fbl::move(pkt)); }
+    if (bss_ != nullptr) { bss_->HandleAnyFrame(std::move(pkt)); }
     return ZX_OK;
 }
 
@@ -77,7 +77,7 @@ zx_status_t ApMlme::HandleMlmeStartReq(const MlmeMsg<wlan_mlme::StartRequest>& r
 
     // Create and start BSS.
     auto bcn_sender = fbl::make_unique<BeaconSender>(device_);
-    bss_.reset(new InfraBss(device_, fbl::move(bcn_sender), bssid));
+    bss_.reset(new InfraBss(device_, std::move(bcn_sender), bssid));
     bss_->Start(req);
 
     return service::SendStartConfirm(device_, wlan_mlme::StartResultCodes::SUCCESS);

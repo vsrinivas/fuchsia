@@ -45,7 +45,7 @@ static fbl::unique_ptr<Packet> IntoPacket(const T& msg, uint32_t ordinal = 42) {
     auto packet = GetSvcPacket(kBufLen);
     memset(packet->data(), 0, kBufLen);
     SerializeServiceMsg(packet.get(), ordinal, msg.get());
-    return fbl::move(packet);
+    return packet;
 }
 
 struct MockOnChannelHandler : OnChannelHandler {
@@ -76,7 +76,7 @@ class ScannerTest : public ::testing::Test {
     zx_status_t Start() {
         auto pkt = IntoPacket(req_, fuchsia_wlan_mlme_MLMEStartScanOrdinal);
         MlmeMsg<wlan_mlme::ScanRequest> start_req;
-        if (MlmeMsg<wlan_mlme::ScanRequest>::FromPacket(fbl::move(pkt), &start_req) != ZX_OK) {
+        if (MlmeMsg<wlan_mlme::ScanRequest>::FromPacket(std::move(pkt), &start_req) != ZX_OK) {
             return ZX_ERR_IO;
         }
         return scanner_.Start(start_req);
@@ -190,11 +190,11 @@ TEST_F(ScannerTest, ScanResponse) {
     info.snr_dbh = 30;
 
     auto buffer = GetBuffer(sizeof(kBeacon));
-    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), sizeof(kBeacon));
+    auto packet = fbl::make_unique<Packet>(std::move(buffer), sizeof(kBeacon));
     packet->CopyCtrlFrom(info);
     memcpy(packet->mut_field<uint8_t*>(0), kBeacon, sizeof(kBeacon));
 
-    chan_sched_.HandleIncomingFrame(fbl::move(packet));
+    chan_sched_.HandleIncomingFrame(std::move(packet));
 
     mock_dev_.SetTime(zx::time(1));
     chan_sched_.HandleTimeout();

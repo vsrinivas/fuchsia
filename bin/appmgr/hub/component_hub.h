@@ -20,15 +20,15 @@ class ComponentHub : public Hub {
   ComponentHub(fbl::RefPtr<fs::PseudoDir> root);
 
   zx_status_t SetProcessId(fbl::String koid) {
-    return AddEntry("process-id", fbl::move(koid));
+    return AddEntry("process-id", std::move(koid));
   }
 
   zx_status_t SetArgs(fbl::String args) {
-    return AddEntry("args", fbl::move(args));
+    return AddEntry("args", std::move(args));
   }
 
   zx_status_t PublishOut(fbl::RefPtr<fs::Vnode> vn) {
-    return AddEntry("out", fbl::move(vn));
+    return AddEntry("out", std::move(vn));
   }
 
   ~ComponentHub();

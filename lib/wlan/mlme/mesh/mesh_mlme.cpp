@@ -131,7 +131,7 @@ void MeshMlme::SendPeeringOpen(const MlmeMsg<wlan_mlme::MeshPeeringOpenAction>& 
 
     BufferWriter w(*packet);
     WriteMpOpenActionFrame(&w, MacHeaderWriter { self_addr(), &seq_ }, *req.body());
-    SendMgmtFrame(fbl::move(packet));
+    SendMgmtFrame(std::move(packet));
 }
 
 void MeshMlme::SendPeeringConfirm(const MlmeMsg<wlan_mlme::MeshPeeringConfirmAction>& req) {
@@ -140,11 +140,11 @@ void MeshMlme::SendPeeringConfirm(const MlmeMsg<wlan_mlme::MeshPeeringConfirmAct
 
     BufferWriter w(*packet);
     WriteMpConfirmActionFrame(&w, MacHeaderWriter { self_addr(), &seq_ }, *req.body());
-    SendMgmtFrame(fbl::move(packet));
+    SendMgmtFrame(std::move(packet));
 }
 
 void MeshMlme::SendMgmtFrame(fbl::unique_ptr<Packet> packet) {
-    zx_status_t status = device_->SendWlan(fbl::move(packet), CBW20, WLAN_PHY_OFDM);
+    zx_status_t status = device_->SendWlan(std::move(packet), CBW20, WLAN_PHY_OFDM);
     if (status != ZX_OK) {
         errorf("[mesh-mlme] failed to send a mgmt frame: %s\n", zx_status_get_string(status));
     }
@@ -155,7 +155,7 @@ zx_status_t MeshMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {
     case Packet::Peer::kEthernet:
         break;
     case Packet::Peer::kWlan:
-        return HandleAnyWlanFrame(fbl::move(pkt));
+        return HandleAnyWlanFrame(std::move(pkt));
     default:
         errorf("unknown Packet peer: %u\n", pkt->peer());
         break;
@@ -166,7 +166,7 @@ zx_status_t MeshMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {
 zx_status_t MeshMlme::HandleAnyWlanFrame(fbl::unique_ptr<Packet> pkt) {
     if (auto possible_mgmt_frame = MgmtFrameView<>::CheckType(pkt.get())) {
         if (auto mgmt_frame = possible_mgmt_frame.CheckLength()) {
-            return HandleAnyMgmtFrame(mgmt_frame.IntoOwned(fbl::move(pkt)));
+            return HandleAnyMgmtFrame(mgmt_frame.IntoOwned(std::move(pkt)));
         }
     }
     return ZX_OK;

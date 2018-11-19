@@ -18,6 +18,7 @@
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>
+#include <utility>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -78,7 +79,7 @@ using audio::utils::AudioInput;
 class FxProcessor {
  public:
   FxProcessor(fbl::unique_ptr<AudioInput> input, fit::closure quit_callback)
-      : input_(fbl::move(input)), quit_callback_(std::move(quit_callback)) {
+      : input_(std::move(input)), quit_callback_(std::move(quit_callback)) {
     FXL_DCHECK(quit_callback_);
   }
 
@@ -736,7 +737,7 @@ int main(int argc, char** argv) {
   fuchsia::media::AudioPtr audio =
       startup_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
 
-  FxProcessor fx(fbl::move(input), [&loop]() {
+  FxProcessor fx(std::move(input), [&loop]() {
     async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });
   });
   fx.Startup(std::move(audio));

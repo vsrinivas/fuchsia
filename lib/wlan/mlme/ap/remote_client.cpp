@@ -360,7 +360,7 @@ void AssociatedState::HandleEthFrame(EthFrame&& eth_frame) {
     if (dozing_) {
         // Enqueue ethernet frame and postpone conversion to when the frame is sent
         // to the client.
-        auto status = EnqueueEthernetFrame(fbl::move(eth_frame));
+        auto status = EnqueueEthernetFrame(std::move(eth_frame));
         if (status == ZX_ERR_NO_RESOURCES) {
             debugps("[client] [%s] reached PS buffering limit; dropping frame\n",
                     client_->addr().ToString().c_str());
@@ -426,7 +426,7 @@ void AssociatedState::HandlePsPollFrame(CtrlFrame<PsPollFrame>&& frame) {
 
     packet->set_len(w.WrittenBytes());
 
-    zx_status_t status = client_->bss()->SendDataFrame(DataFrame<>(fbl::move(packet)),
+    zx_status_t status = client_->bss()->SendDataFrame(DataFrame<>(std::move(packet)),
                                                        WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY);
     if (status != ZX_OK) {
         errorf(
@@ -496,7 +496,7 @@ void AssociatedState::HandleDataLlcFrame(DataFrame<LlcHeader>&& frame) {
 
     packet->set_len(w.WrittenBytes());
 
-    auto status = client_->bss()->SendEthFrame(EthFrame(fbl::move(packet)));
+    auto status = client_->bss()->SendEthFrame(EthFrame(std::move(packet)));
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send ethernet data: %d\n",
                client_->addr().ToString().c_str(), status);
@@ -587,7 +587,7 @@ zx_status_t AssociatedState::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRe
 
     packet->set_len(w.WrittenBytes());
 
-    auto status = client_->bss()->SendDataFrame(DataFrame<>(fbl::move(packet)),
+    auto status = client_->bss()->SendDataFrame(DataFrame<>(std::move(packet)),
                                                 WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY);
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send EAPOL request packet: %d\n",
@@ -666,7 +666,7 @@ zx_status_t AssociatedState::EnqueueEthernetFrame(EthFrame&& eth_frame) {
     debugps("[client] [%s] client is dozing; buffer outbound frame\n",
             client_->addr().ToString().c_str());
 
-    bu_queue_.push(fbl::move(eth_frame));
+    bu_queue_.push(std::move(eth_frame));
     client_->ReportBuChange(aid_, bu_queue_.size());
 
     return ZX_OK;
@@ -721,7 +721,7 @@ void RemoteClient::MoveToState(fbl::unique_ptr<BaseState> to) {
     if (state_ != nullptr) { state_->OnExit(); }
 
     debugbss("[client] [%s] %s -> %s\n", addr().ToString().c_str(), from_name, to->name());
-    state_ = fbl::move(to);
+    state_ = std::move(to);
 
     state_->OnEnter();
 }
@@ -732,19 +732,19 @@ void RemoteClient::HandleTimeout() {
 }
 
 void RemoteClient::HandleAnyEthFrame(EthFrame&& frame) {
-    state_->HandleEthFrame(fbl::move(frame));
+    state_->HandleEthFrame(std::move(frame));
 }
 
 void RemoteClient::HandleAnyMgmtFrame(MgmtFrame<>&& frame) {
-    state_->HandleAnyMgmtFrame(fbl::move(frame));
+    state_->HandleAnyMgmtFrame(std::move(frame));
 }
 
 void RemoteClient::HandleAnyDataFrame(DataFrame<>&& frame) {
-    state_->HandleAnyDataFrame(fbl::move(frame));
+    state_->HandleAnyDataFrame(std::move(frame));
 }
 
 void RemoteClient::HandleAnyCtrlFrame(CtrlFrame<>&& frame) {
-    state_->HandleAnyCtrlFrame(fbl::move(frame));
+    state_->HandleAnyCtrlFrame(std::move(frame));
 }
 
 zx_status_t RemoteClient::HandleMlmeMsg(const BaseMlmeMsg& msg) {
@@ -789,7 +789,7 @@ zx_status_t RemoteClient::SendAuthentication(status_code::StatusCode result) {
 
     packet->set_len(w.WrittenBytes());
 
-    auto status = bss_->SendMgmtFrame(MgmtFrame<>(fbl::move(packet)));
+    auto status = bss_->SendMgmtFrame(MgmtFrame<>(std::move(packet)));
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send auth response packet: %d\n", addr_.ToString().c_str(),
                status);
@@ -845,7 +845,7 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
 
     packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
-    auto status = bss_->SendMgmtFrame(MgmtFrame<>(fbl::move(packet)));
+    auto status = bss_->SendMgmtFrame(MgmtFrame<>(std::move(packet)));
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send auth response packet: %d\n", addr_.ToString().c_str(),
                status);
@@ -874,7 +874,7 @@ zx_status_t RemoteClient::SendDeauthentication(wlan_mlme::ReasonCode reason_code
 
     packet->set_len(w.WrittenBytes());
 
-    auto status = bss_->SendMgmtFrame(MgmtFrame<>(fbl::move(packet)));
+    auto status = bss_->SendMgmtFrame(MgmtFrame<>(std::move(packet)));
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send dauthentication packet: %d\n",
                addr_.ToString().c_str(), status);
@@ -944,7 +944,7 @@ zx_status_t RemoteClient::SendAddBaRequest() {
     finspect("Outbound ADDBA Req frame: len %zu\n", w.WrittenBytes());
     finspect("  addba req: %s\n", debug::Describe(*addbareq_hdr).c_str());
 
-    auto status = bss_->SendMgmtFrame(MgmtFrame<>(fbl::move(packet)));
+    auto status = bss_->SendMgmtFrame(MgmtFrame<>(std::move(packet)));
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send AddbaRequest: %d\n", addr_.ToString().c_str(), status);
     }
@@ -990,7 +990,7 @@ zx_status_t RemoteClient::SendAddBaResponse(const AddBaRequestFrame& req) {
     finspect("Outbound ADDBA Resp frame: len %zu\n", w.WrittenBytes());
     finspect("Outbound Mgmt Frame(ADDBA Resp): %s\n", debug::Describe(*addbaresp_hdr).c_str());
 
-    auto status = bss_->SendMgmtFrame(MgmtFrame<>(fbl::move(packet)));
+    auto status = bss_->SendMgmtFrame(MgmtFrame<>(std::move(packet)));
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send AddBaResponse: %d\n", addr_.ToString().c_str(),
                status);

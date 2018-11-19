@@ -26,11 +26,11 @@ class Hub {
   zx_status_t AddEntry(fbl::String name, fbl::String value);
 
   zx_status_t SetName(fbl::String name) {
-    return AddEntry("name", fbl::move(name));
+    return AddEntry("name", std::move(name));
   }
 
   zx_status_t SetJobId(fbl::String koid) {
-    return AddEntry("job-id", fbl::move(koid));
+    return AddEntry("job-id", std::move(koid));
   }
 
   zx_status_t EnsureComponentDir();

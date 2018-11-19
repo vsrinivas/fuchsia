@@ -19,10 +19,10 @@ ControlImpl::ControlImpl(video::usb::UsbVideoStream* usb_video_stream,
                          fidl::InterfaceRequest<Control> control,
                          async_dispatcher_t* dispatcher,
                          fit::closure on_connection_closed)
-    : binding_(this, fbl::move(control), dispatcher),
+    : binding_(this, std::move(control), dispatcher),
       usb_video_stream_(usb_video_stream) {
   binding_.set_error_handler(
-      [occ = fbl::move(on_connection_closed)](zx_status_t status) { occ(); });
+      [occ = std::move(on_connection_closed)](zx_status_t status) { occ(); });
 }
 
 void ControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
@@ -34,9 +34,9 @@ void ControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
       for (uint32_t i = 0; i < fuchsia::camera::MAX_FORMATS_PER_RESPONSE; i++) {
         formats.push_back((*formats_)[i]);
       }
-      callback(fbl::move(formats), formats_->size(), ZX_OK);
+      callback(std::move(formats), formats_->size(), ZX_OK);
     } else {
-      callback(fbl::move(formats_), formats_->size(), status);
+      callback(std::move(formats_), formats_->size(), status);
     }
   } else {
     uint32_t formats_to_send =
@@ -48,9 +48,9 @@ void ControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
         formats.push_back((*formats_)[index + i]);
       }
 
-      callback(fbl::move(formats), formats_->size(), ZX_OK);
+      callback(std::move(formats), formats_->size(), ZX_OK);
     } else {
-      callback(fbl::move(formats), formats_->size(), ZX_ERR_INVALID_ARGS);
+      callback(std::move(formats), formats_->size(), ZX_ERR_INVALID_ARGS);
     }
   }
 }
@@ -87,8 +87,8 @@ void ControlImpl::CreateStream(
     return;
   }
 
-  stream_ = fbl::make_unique<StreamImpl>(*this, fbl::move(stream),
-                                         fbl::move(stream_token));
+  stream_ = fbl::make_unique<StreamImpl>(*this, std::move(stream),
+                                         std::move(stream_token));
 }
 
 void ControlImpl::StreamImpl::OnFrameAvailable(
@@ -135,8 +135,8 @@ ControlImpl::StreamImpl::StreamImpl(
     ControlImpl& owner, fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
     zx::eventpair stream_token)
     : owner_(owner),
-      binding_(this, fbl::move(stream)),
-      stream_token_(fbl::move(stream_token)),
+      binding_(this, std::move(stream)),
+      stream_token_(std::move(stream_token)),
       // If not triggered by the token being closed, this waiter will be
       // cancelled by the destruction of this class, so the "this" pointer will
       // be valid as long as the waiter is around.

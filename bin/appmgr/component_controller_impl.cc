@@ -131,8 +131,8 @@ ComponentControllerBase::ComponentControllerBase(
   }
 
   hub_.SetName(label_);
-  hub_.AddEntry("url", fbl::move(url));
-  hub_.AddEntry("args", fbl::move(args));
+  hub_.AddEntry("url", std::move(url));
+  hub_.AddEntry("args", std::move(args));
   if (export_dir_type == ExportedDirType::kPublicDebugCtrlLayout) {
     zx_handle_t dir_client = fdio_service_clone(exported_dir_.get());
     if (dir_client == ZX_HANDLE_INVALID) {
@@ -141,7 +141,7 @@ ComponentControllerBase::ComponentControllerBase(
       zx::channel chan(std::move(dir_client));
       out_wait_ = std::make_unique<OutputWait>(
           this, exported_dir_.get(), ZX_CHANNEL_PEER_CLOSED | ZX_USER_SIGNAL_0);
-      output_dir_ = fbl::AdoptRef(new fs::RemoteDir(fbl::move(chan)));
+      output_dir_ = fbl::AdoptRef(new fs::RemoteDir(std::move(chan)));
       zx_status_t status = out_wait_->Begin(async_get_default_dispatcher());
       FXL_DCHECK(status == ZX_OK);
     }

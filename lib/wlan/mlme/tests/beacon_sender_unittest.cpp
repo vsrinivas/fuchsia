@@ -81,7 +81,7 @@ TEST_F(BeaconSenderTest, Start) {
 
     bcn_sender.UpdateBeacon(ps_cfg);
 
-    auto pkt = fbl::move(device.beacon);
+    auto pkt = std::move(device.beacon);
     EXPECT_TRUE(device.beaconing_enabled);
     ASSERT_NE(pkt, nullptr);
 

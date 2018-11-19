@@ -199,7 +199,7 @@ zx_status_t VideoDisplay::OpenFakeCamera() {
     FXL_LOG(INFO) << "Starting Fake Camera Server";
     fake_camera_control_server_ =
         fbl::make_unique<simple_camera::FakeControlImpl>(
-            fbl::move(control_interface), fidl_dispatch_loop_->dispatcher(),
+            std::move(control_interface), fidl_dispatch_loop_->dispatcher(),
             [] {
               FXL_LOG(INFO) << "Deleting Fake Camera Server";
               fake_camera_control_server_.reset();

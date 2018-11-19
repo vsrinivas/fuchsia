@@ -331,7 +331,7 @@ void CrashpadAnalyzerImpl::HandleException(zx::process process,
 void CrashpadAnalyzerImpl::ProcessCrashlog(fuchsia::mem::Buffer crashlog,
                                            ProcessCrashlogCallback callback) {
   callback();
-  if (ProcessCrashlog(fbl::move(crashlog)) != EXIT_SUCCESS) {
+  if (ProcessCrashlog(std::move(crashlog)) != EXIT_SUCCESS) {
     FX_LOGS(ERROR) << "failed to process VMO crashlog. Won't retry.";
   }
 }

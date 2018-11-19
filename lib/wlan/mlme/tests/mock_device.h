@@ -77,18 +77,18 @@ struct MockDevice : public DeviceInterface {
     }
 
     zx_status_t SendEthernet(fbl::unique_ptr<Packet> packet) override final {
-        eth_queue.push_back(fbl::move(packet));
+        eth_queue.push_back(std::move(packet));
         return ZX_OK;
     }
 
     zx_status_t SendWlan(fbl::unique_ptr<Packet> packet, CBW cbw, PHY phy,
                          uint32_t flags) override final {
-        wlan_queue.push_back(fbl::move(packet));
+        wlan_queue.push_back(std::move(packet));
         return ZX_OK;
     }
 
     zx_status_t SendService(fbl::unique_ptr<Packet> packet) override final {
-        svc_queue.push_back(fbl::move(packet));
+        svc_queue.push_back(std::move(packet));
         return ZX_OK;
     }
 
@@ -114,7 +114,7 @@ struct MockDevice : public DeviceInterface {
     }
 
     zx_status_t ConfigureBeacon(fbl::unique_ptr<Packet> packet) override final {
-        beacon = fbl::move(packet);
+        beacon = std::move(packet);
         return ZX_OK;
     }
 

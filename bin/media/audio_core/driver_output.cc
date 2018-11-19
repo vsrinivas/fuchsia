@@ -36,13 +36,13 @@ static thread_local zx_txid_t TXID = TXID_GEN.fetch_add(1);
 
 fbl::RefPtr<AudioOutput> DriverOutput::Create(zx::channel stream_channel,
                                               AudioDeviceManager* manager) {
-  return fbl::AdoptRef(new DriverOutput(manager, fbl::move(stream_channel)));
+  return fbl::AdoptRef(new DriverOutput(manager, std::move(stream_channel)));
 }
 
 DriverOutput::DriverOutput(AudioDeviceManager* manager,
                            zx::channel initial_stream_channel)
     : StandardOutputBase(manager),
-      initial_stream_channel_(fbl::move(initial_stream_channel)) {}
+      initial_stream_channel_(std::move(initial_stream_channel)) {}
 
 DriverOutput::~DriverOutput() { wav_writer_.Close(); }
 
@@ -54,7 +54,7 @@ zx_status_t DriverOutput::Init() {
     return res;
   }
 
-  res = driver_->Init(fbl::move(initial_stream_channel_));
+  res = driver_->Init(std::move(initial_stream_channel_));
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to initialize driver object (res " << res << ")";
     return res;

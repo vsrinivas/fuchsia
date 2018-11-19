@@ -96,7 +96,7 @@ template <typename Header, typename Body = UnknownBody> class FrameView {
 
     Frame<Header, Body> IntoOwned(fbl::unique_ptr<Packet> pkt) const {
         ZX_DEBUG_ASSERT(pkt != nullptr && pkt.get() == pkt_);
-        return Frame<Header, Body>(data_offset_, fbl::move(pkt));
+        return Frame<Header, Body>(data_offset_, std::move(pkt));
     }
 
     const uint8_t* data() const {
@@ -197,11 +197,11 @@ template <typename Header, typename Body = UnknownBody> class FrameView {
 
 template <typename Header, typename Body = UnknownBody> class Frame {
    public:
-    explicit Frame(fbl::unique_ptr<Packet> pkt) : data_offset_(0), pkt_(fbl::move(pkt)) {
+    explicit Frame(fbl::unique_ptr<Packet> pkt) : data_offset_(0), pkt_(std::move(pkt)) {
         ZX_DEBUG_ASSERT(pkt_ != nullptr);
     }
 
-    Frame(size_t offset, fbl::unique_ptr<Packet> pkt) : data_offset_(offset), pkt_(fbl::move(pkt)) {
+    Frame(size_t offset, fbl::unique_ptr<Packet> pkt) : data_offset_(offset), pkt_(std::move(pkt)) {
         ZX_DEBUG_ASSERT(pkt_ != nullptr);
     }
 
@@ -238,7 +238,7 @@ template <typename Header, typename Body = UnknownBody> class Frame {
     // will be `empty` from that moment on and should no longer be used.
     fbl::unique_ptr<Packet> Take() {
         ZX_DEBUG_ASSERT(!IsEmpty());
-        return fbl::move(pkt_);
+        return std::move(pkt_);
     }
 
     FrameView<Header, Body> View() const {

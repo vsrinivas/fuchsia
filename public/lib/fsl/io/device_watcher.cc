@@ -7,6 +7,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <sys/types.h>
+#include <utility>
 
 #include <fbl/unique_fd.h>
 #include <fuchsia/io/c/fidl.h>
@@ -54,7 +55,7 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::CreateWithIdleCallback(
   if (zx::channel::create(0, &client, &server) != ZX_OK) {
     return nullptr;
   }
-  fzl::FdioCaller caller(fbl::move(dir_fd));
+  fzl::FdioCaller caller{std::move(dir_fd)};
   uint32_t mask =
       fuchsia_io_WATCH_MASK_ADDED | fuchsia_io_WATCH_MASK_EXISTING | fuchsia_io_WATCH_MASK_IDLE;
   zx_status_t status;

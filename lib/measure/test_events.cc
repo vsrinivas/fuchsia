@@ -56,7 +56,7 @@ trace::Record::Event Instant(fbl::String name, fbl::String category,
   return trace::Record::Event{
       timestamp,       {},
       category,        name,
-      fbl::move(args), trace::EventData(trace::EventData::Instant{})};
+      std::move(args), trace::EventData(trace::EventData::Instant{})};
 }
 }  // namespace test
 

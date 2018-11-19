@@ -99,7 +99,7 @@ zx_status_t AudioDevice::Init() {
       });
 
   zx_status_t res =
-      mix_wakeup_->Activate(mix_domain_, fbl::move(process_handler));
+      mix_wakeup_->Activate(mix_domain_, std::move(process_handler));
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to activate wakeup event for AudioDevice!  "
                    << "(res " << res << ")";

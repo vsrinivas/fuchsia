@@ -11,9 +11,9 @@ namespace component {
 
 HubInfo::HubInfo(fbl::String label, fbl::String koid,
                  fbl::RefPtr<fs::PseudoDir> hub_dir)
-    : label_(fbl::move(label)),
-      koid_(fbl::move(koid)),
-      hub_dir_(fbl::move(hub_dir)) {}
+    : label_(std::move(label)),
+      koid_(std::move(koid)),
+      hub_dir_(std::move(hub_dir)) {}
 
 HubInfo::~HubInfo() = default;
 

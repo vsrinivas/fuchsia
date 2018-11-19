@@ -48,9 +48,9 @@ struct DynamicTestHdr {
 
 static fbl::unique_ptr<Packet> GetPacket(size_t len) {
     auto buffer = GetBuffer(len);
-    auto pkt = fbl::make_unique<Packet>(fbl::move(buffer), len);
+    auto pkt = fbl::make_unique<Packet>(std::move(buffer), len);
     pkt->clear();
-    return fbl::move(pkt);
+    return pkt;
 }
 
 size_t no_padding(size_t v) {
@@ -129,10 +129,10 @@ void AssertCorrectDataFrameType(DataSubtype type, const Packet* pkt, bool is_ams
 
 Packet WrapInPacket(std::vector<uint8_t> data, Packet::Peer peer = Packet::Peer::kWlan) {
     auto buf = GetBuffer(data.size());
-    Packet pkt(fbl::move(buf), data.size());
+    Packet pkt(std::move(buf), data.size());
     pkt.CopyFrom(data.data(), data.size(), 0);
     pkt.set_peer(peer);
-    return fbl::move(pkt);
+    return pkt;
 }
 
 TEST(FrameValidation, TestHdrLength) {

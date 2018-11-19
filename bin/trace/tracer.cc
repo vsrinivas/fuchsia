@@ -51,8 +51,8 @@ void Tracer::Start(fuchsia::tracing::TraceOptions options,
                             [this]() { start_callback_(); });
 
   buffer_.reserve(kReadBufferSize);
-  reader_.reset(new trace::TraceReader(fbl::move(record_consumer),
-                                       fbl::move(error_handler)));
+  reader_.reset(new trace::TraceReader(std::move(record_consumer),
+                                       std::move(error_handler)));
 
   dispatcher_ = async_get_default_dispatcher();
   wait_.set_object(socket_.get());

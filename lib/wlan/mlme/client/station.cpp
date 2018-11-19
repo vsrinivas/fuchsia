@@ -84,12 +84,12 @@ zx_status_t Station::HandleAnyWlanFrame(fbl::unique_ptr<Packet> pkt) {
         auto mgmt_frame = possible_mgmt_frame.CheckLength();
         if (!mgmt_frame) { return ZX_ERR_BUFFER_TOO_SMALL; }
 
-        HandleAnyMgmtFrame(mgmt_frame.IntoOwned(fbl::move(pkt)));
+        HandleAnyMgmtFrame(mgmt_frame.IntoOwned(std::move(pkt)));
     } else if (auto possible_data_frame = DataFrameView<>::CheckType(pkt.get())) {
         auto data_frame = possible_data_frame.CheckLength();
         if (!data_frame) { return ZX_ERR_BUFFER_TOO_SMALL; }
 
-        HandleAnyDataFrame(data_frame.IntoOwned(fbl::move(pkt)));
+        HandleAnyDataFrame(data_frame.IntoOwned(std::move(pkt)));
     }
 
     return ZX_OK;
@@ -204,7 +204,7 @@ zx_status_t Station::HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequ
     packet->set_len(w.WrittenBytes());
 
     finspect("Outbound Mgmt Frame(Auth): %s\n", debug::Describe(*mgmt_hdr).c_str());
-    status = SendMgmtFrame(fbl::move(packet));
+    status = SendMgmtFrame(std::move(packet));
     if (status != ZX_OK) {
         errorf("could not send authentication frame: %d\n", status);
         service::SendAuthConfirm(device_, join_ctx_->bssid(),
@@ -314,7 +314,7 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
     packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
     finspect("Outbound Mgmt Frame (AssocReq): %s\n", debug::Describe(*mgmt_hdr).c_str());
-    zx_status_t status = SendMgmtFrame(fbl::move(packet));
+    zx_status_t status = SendMgmtFrame(std::move(packet));
     if (status != ZX_OK) {
         errorf("could not send assoc packet: %d\n", status);
         service::SendAssocConfirm(device_,
@@ -598,7 +598,7 @@ zx_status_t Station::HandleAddBaRequest(const AddBaRequestFrame& addbareq) {
     finspect("Outbound ADDBA Resp frame: len %zu\n", w.WrittenBytes());
     finspect("Outbound Mgmt Frame(ADDBA Resp): %s\n", debug::Describe(*addbaresp_hdr).c_str());
 
-    auto status = SendMgmtFrame(fbl::move(packet));
+    auto status = SendMgmtFrame(std::move(packet));
     if (status != ZX_OK) { errorf("could not send AddBaResponse: %d\n", status); }
     return status;
 }
@@ -683,7 +683,7 @@ zx_status_t Station::HandleLlcFrame(const FrameView<LlcHeader>& llc_frame, size_
 
     packet->set_len(w.WrittenBytes());
 
-    auto status = device_->SendEthernet(fbl::move(packet));
+    auto status = device_->SendEthernet(std::move(packet));
     if (status != ZX_OK) { errorf("could not send ethernet data: %d\n", status); }
     return status;
 }
@@ -793,7 +793,7 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
     finspect("  llc  hdr: %s\n", debug::Describe(*llc_hdr).c_str());
     finspect("  frame   : %s\n", debug::HexDump(packet->data(), packet->len()).c_str());
 
-    auto status = SendWlan(fbl::move(packet), cbw, phy);
+    auto status = SendWlan(std::move(packet), cbw, phy);
     if (status != ZX_OK) { errorf("could not send wlan data: %d\n", status); }
     return status;
 }
@@ -879,7 +879,7 @@ zx_status_t Station::SendKeepAliveResponse() {
     CBW cbw = (assoc_ctx_.is_cbw40_tx ? CBW40 : CBW20);
     packet->set_len(w.WrittenBytes());
 
-    auto status = SendWlan(fbl::move(packet), cbw, WLAN_PHY_HT);
+    auto status = SendWlan(std::move(packet), cbw, WLAN_PHY_HT);
     if (status != ZX_OK) {
         errorf("could not send keep alive frame: %d\n", status);
         return status;
@@ -934,7 +934,7 @@ zx_status_t Station::SendAddBaRequestFrame() {
     finspect("Outbound ADDBA Req frame: len %zu\n", w.WrittenBytes());
     finspect("  addba req: %s\n", debug::Describe(*addbareq_hdr).c_str());
 
-    auto status = SendMgmtFrame(fbl::move(packet));
+    auto status = SendMgmtFrame(std::move(packet));
     if (status != ZX_OK) {
         errorf("could not send AddBaRequest: %d\n", status);
         return status;
@@ -981,7 +981,7 @@ zx_status_t Station::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& 
     packet->set_len(w.WrittenBytes());
 
     zx_status_t status =
-        SendWlan(fbl::move(packet), CBW20, WLAN_PHY_HT, WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY);
+        SendWlan(std::move(packet), CBW20, WLAN_PHY_HT, WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY);
     if (status != ZX_OK) {
         errorf("could not send eapol request packet: %d\n", status);
         service::SendEapolConfirm(device_, wlan_mlme::EapolResultCodes::TRANSMISSION_FAILURE);
@@ -1050,7 +1050,7 @@ void Station::SendBufferedUnits() {
         fbl::unique_ptr<Packet> packet = bu_queue_.Dequeue();
         debugps("sending buffered frame; queue size at: %lu\n", bu_queue_.size());
         ZX_DEBUG_ASSERT(packet->peer() == Packet::Peer::kEthernet);
-        HandleEthFrame(EthFrame(fbl::move(packet)));
+        HandleEthFrame(EthFrame(std::move(packet)));
     }
 }
 
@@ -1075,12 +1075,12 @@ void Station::DumpDataFrame(const DataFrameView<>& frame) {
 
 zx_status_t Station::SendCtrlFrame(fbl::unique_ptr<Packet> packet, CBW cbw, PHY phy) {
     chan_sched_->EnsureOnChannel(timer_mgr_.Now() + kOnChannelTimeAfterSend);
-    return SendWlan(fbl::move(packet), cbw, phy);
+    return SendWlan(std::move(packet), cbw, phy);
 }
 
 zx_status_t Station::SendMgmtFrame(fbl::unique_ptr<Packet> packet) {
     chan_sched_->EnsureOnChannel(timer_mgr_.Now() + kOnChannelTimeAfterSend);
-    return SendWlan(fbl::move(packet), CBW20, WLAN_PHY_OFDM);
+    return SendWlan(std::move(packet), CBW20, WLAN_PHY_OFDM);
 }
 
 zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
@@ -1106,7 +1106,7 @@ zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
     CBW cbw = (assoc_ctx_.is_cbw40_tx ? CBW40 : CBW20);
 
     packet->set_len(w.WrittenBytes());
-    auto status = SendWlan(fbl::move(packet), cbw, WLAN_PHY_HT);
+    auto status = SendWlan(std::move(packet), cbw, WLAN_PHY_HT);
     if (status != ZX_OK) {
         errorf("could not send power management frame: %d\n", status);
         return status;
@@ -1139,7 +1139,7 @@ zx_status_t Station::SendPsPoll() {
     CBW cbw = (assoc_ctx_.is_cbw40_tx ? CBW40 : CBW20);
 
     packet->set_len(w.WrittenBytes());
-    auto status = SendCtrlFrame(fbl::move(packet), cbw, WLAN_PHY_HT);
+    auto status = SendCtrlFrame(std::move(packet), cbw, WLAN_PHY_HT);
     if (status != ZX_OK) {
         errorf("could not send power management packet: %d\n", status);
         return status;
@@ -1168,12 +1168,12 @@ zx_status_t Station::SendDeauthFrame(wlan_mlme::ReasonCode reason_code) {
 
     finspect("Outbound Mgmt Frame(Deauth): %s\n", debug::Describe(*mgmt_hdr).c_str());
     packet->set_len(w.WrittenBytes());
-    return SendMgmtFrame(fbl::move(packet));
+    return SendMgmtFrame(std::move(packet));
 }
 
 zx_status_t Station::SendWlan(fbl::unique_ptr<Packet> packet, CBW cbw, PHY phy, uint32_t flags) {
     auto packet_bytes = packet->len();
-    zx_status_t status = device_->SendWlan(fbl::move(packet), cbw, phy, flags);
+    zx_status_t status = device_->SendWlan(std::move(packet), cbw, phy, flags);
     if (status == ZX_OK) {
         WLAN_STATS_INC(tx_frame.out);
         WLAN_STATS_ADD(packet_bytes, tx_frame.out_bytes);

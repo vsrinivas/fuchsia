@@ -297,7 +297,7 @@ zx_status_t UsbVideoStream::DdkIoctl(uint32_t op, const void* in_buf,
 
   if (control_interface.is_valid()) {
     camera_control_ = fbl::make_unique<camera::ControlImpl>(
-        this, fbl::move(control_interface), fidl_dispatch_loop_->dispatcher(),
+        this, std::move(control_interface), fidl_dispatch_loop_->dispatcher(),
         [this] {
           fbl::AutoLock lock(&lock_);
 

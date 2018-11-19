@@ -56,9 +56,9 @@ void FakeControlImpl::OnFrameAvailable(
 FakeControlImpl::FakeControlImpl(fidl::InterfaceRequest<Control> control,
                                  async_dispatcher_t* dispatcher,
                                  fit::closure on_connection_closed)
-    : binding_(this, fbl::move(control), dispatcher) {
+    : binding_(this, std::move(control), dispatcher) {
   binding_.set_error_handler(
-      [occ = fbl::move(on_connection_closed)](zx_status_t status) { occ(); });
+      [occ = std::move(on_connection_closed)](zx_status_t status) { occ(); });
 }
 
 void FakeControlImpl::PostNextCaptureTask() {
@@ -131,7 +131,7 @@ void FakeControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
   format.format.planes[0].bytes_per_row = 4 * 640;
 
   formats.push_back(format);
-  callback(fbl::move(formats), 1, ZX_OK);
+  callback(std::move(formats), 1, ZX_OK);
 }
 
 void FakeControlImpl::GetDeviceInfo(GetDeviceInfoCallback callback) {
@@ -153,8 +153,8 @@ void FakeControlImpl::CreateStream(
 
   buffers_.Init(buffer_collection.vmos.data(), buffer_collection.buffer_count);
 
-  stream_ = fbl::make_unique<FakeStreamImpl>(*this, fbl::move(stream));
-  stream_token_ = fbl::move(stream_token);
+  stream_ = fbl::make_unique<FakeStreamImpl>(*this, std::move(stream));
+  stream_token_ = std::move(stream_token);
   // If not triggered by the token being closed, this waiter will be cancelled
   // by the destruction of this class, so the "this" pointer will be valid as
   // long as the waiter is around.
@@ -203,7 +203,7 @@ void FakeControlImpl::FakeStreamImpl::ReleaseFrame(uint32_t buffer_index) {
 FakeControlImpl::FakeStreamImpl::FakeStreamImpl(
     FakeControlImpl& owner,
     fidl::InterfaceRequest<fuchsia::camera::Stream> stream)
-    : owner_(owner), binding_(this, fbl::move(stream)) {
+    : owner_(owner), binding_(this, std::move(stream)) {
   binding_.set_error_handler([this](zx_status_t status) {
     // Anything to do here?
   });

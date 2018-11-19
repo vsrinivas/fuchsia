@@ -14,16 +14,16 @@ namespace component {
 Hub::Hub(fbl::RefPtr<fs::PseudoDir> root) : dir_(root) {}
 
 zx_status_t Hub::AddEntry(fbl::String name, fbl::RefPtr<fs::Vnode> vn) {
-  return dir_->AddEntry(fbl::move(name), fbl::move(vn));
+  return dir_->AddEntry(std::move(name), std::move(vn));
 }
 
 zx_status_t Hub::AddEntry(fbl::String name, fbl::String value) {
-  return dir_->AddEntry(fbl::move(name),
-                        fbl::move(fbl::AdoptRef(new fs::UnbufferedPseudoFile(
+  return dir_->AddEntry(std::move(name),
+                        fbl::AdoptRef(new fs::UnbufferedPseudoFile(
                             [value](fbl::String* output) {
                               *output = value;
                               return ZX_OK;
-                            }))));
+                            })));
 }
 
 zx_status_t Hub::EnsureComponentDir() {

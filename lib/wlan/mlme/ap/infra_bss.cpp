@@ -22,7 +22,7 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 InfraBss::InfraBss(DeviceInterface* device, fbl::unique_ptr<BeaconSender> bcn_sender,
                    const common::MacAddr& bssid)
-    : bssid_(bssid), device_(device), bcn_sender_(fbl::move(bcn_sender)) {
+    : bssid_(bssid), device_(device), bcn_sender_(std::move(bcn_sender)) {
     ZX_DEBUG_ASSERT(bcn_sender_ != nullptr);
 }
 
@@ -102,12 +102,12 @@ void InfraBss::HandleAnyFrame(fbl::unique_ptr<Packet> pkt) {
     switch (pkt->peer()) {
     case Packet::Peer::kEthernet: {
         if (auto eth_frame = EthFrameView::CheckType(pkt.get()).CheckLength()) {
-            HandleEthFrame(eth_frame.IntoOwned(fbl::move(pkt)));
+            HandleEthFrame(eth_frame.IntoOwned(std::move(pkt)));
         }
         break;
     }
     case Packet::Peer::kWlan:
-        HandleAnyWlanFrame(fbl::move(pkt));
+        HandleAnyWlanFrame(std::move(pkt));
         break;
     default:
         errorf("unknown Packet peer: %u\n", pkt->peer());
@@ -118,15 +118,15 @@ void InfraBss::HandleAnyFrame(fbl::unique_ptr<Packet> pkt) {
 void InfraBss::HandleAnyWlanFrame(fbl::unique_ptr<Packet> pkt) {
     if (auto possible_mgmt_frame = MgmtFrameView<>::CheckType(pkt.get())) {
         if (auto mgmt_frame = possible_mgmt_frame.CheckLength()) {
-            HandleAnyMgmtFrame(mgmt_frame.IntoOwned(fbl::move(pkt)));
+            HandleAnyMgmtFrame(mgmt_frame.IntoOwned(std::move(pkt)));
         }
     } else if (auto possible_data_frame = DataFrameView<>::CheckType(pkt.get())) {
         if (auto data_frame = possible_data_frame.CheckLength()) {
-            HandleAnyDataFrame(data_frame.IntoOwned(fbl::move(pkt)));
+            HandleAnyDataFrame(data_frame.IntoOwned(std::move(pkt)));
         }
     } else if (auto possible_ctrl_frame = CtrlFrameView<>::CheckType(pkt.get())) {
         if (auto ctrl_frame = possible_ctrl_frame.CheckLength()) {
-            HandleAnyCtrlFrame(ctrl_frame.IntoOwned(fbl::move(pkt)));
+            HandleAnyCtrlFrame(ctrl_frame.IntoOwned(std::move(pkt)));
         }
     }
 }
@@ -164,7 +164,7 @@ void InfraBss::HandleAnyMgmtFrame(MgmtFrame<>&& frame) {
 
     // Forward all frames to the correct client.
     auto client = GetClient(client_addr);
-    if (client != nullptr) { client->HandleAnyMgmtFrame(fbl::move(frame)); }
+    if (client != nullptr) { client->HandleAnyMgmtFrame(std::move(frame)); }
 }
 
 void InfraBss::HandleAnyDataFrame(DataFrame<>&& frame) {
@@ -173,7 +173,7 @@ void InfraBss::HandleAnyDataFrame(DataFrame<>&& frame) {
     // Let the correct RemoteClient instance process the received frame.
     const auto& client_addr = frame.hdr()->addr2;
     auto client = GetClient(client_addr);
-    if (client != nullptr) { client->HandleAnyDataFrame(fbl::move(frame)); }
+    if (client != nullptr) { client->HandleAnyDataFrame(std::move(frame)); }
 }
 
 void InfraBss::HandleAnyCtrlFrame(CtrlFrame<>&& frame) {
@@ -186,7 +186,7 @@ void InfraBss::HandleAnyCtrlFrame(CtrlFrame<>&& frame) {
         auto client = GetClient(client_addr);
         if (client == nullptr) { return; }
 
-        client->HandleAnyCtrlFrame(fbl::move(frame));
+        client->HandleAnyCtrlFrame(std::move(frame));
     }
 }
 
@@ -202,7 +202,7 @@ void InfraBss::HandleEthFrame(EthFrame&& eth_frame) {
     auto& dest_addr = eth_frame.hdr()->dest;
     if (dest_addr.IsUcast()) {
         auto client = GetClient(dest_addr);
-        if (client != nullptr) { client->HandleAnyEthFrame(fbl::move(eth_frame)); }
+        if (client != nullptr) { client->HandleAnyEthFrame(std::move(eth_frame)); }
     } else {
         // Process multicast frames ourselves.
         if (auto data_frame = EthToDataFrame(eth_frame, false)) {
@@ -245,11 +245,11 @@ void InfraBss::HandleNewClientAuthAttempt(const MgmtFrameView<Authentication>& f
     fbl::unique_ptr<Timer> timer = nullptr;
     auto status = CreateClientTimer(client_addr, &timer);
     if (status == ZX_OK) {
-        auto client = fbl::make_unique<RemoteClient>(device_, TimerManager(fbl::move(timer)),
+        auto client = fbl::make_unique<RemoteClient>(device_, TimerManager(std::move(timer)),
                                                      this,  // bss
                                                      this,  // client listener
                                                      client_addr);
-        clients_.emplace(client_addr, fbl::move(client));
+        clients_.emplace(client_addr, std::move(client));
     } else {
         errorf("[infra-bss] [%s] could not create client timer: %d\n", bssid_.ToString().c_str(),
                status);
@@ -382,7 +382,7 @@ zx_status_t InfraBss::BufferFrame(fbl::unique_ptr<Packet> packet) {
     }
 
     debugps("[infra-bss] [%s] buffer outbound frame\n", bssid_.ToString().c_str());
-    bu_queue_.push(fbl::move(packet));
+    bu_queue_.push(std::move(packet));
     ps_cfg_.GetTim()->SetTrafficIndication(kGroupAdressedAid, true);
     return ZX_OK;
 }
@@ -425,7 +425,7 @@ zx_status_t InfraBss::SendNextBu() {
         // IEEE Std 802.11-2016, 9.2.4.1.8
         fc->set_more_data(bu_queue_.size() > 0);
         debugps("[infra-bss] [%s] sent group addressed BU\n", bssid_.ToString().c_str());
-        return device_->SendWlan(fbl::move(packet), CBW20, WLAN_PHY_OFDM);
+        return device_->SendWlan(std::move(packet), CBW20, WLAN_PHY_OFDM);
     } else {
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
@@ -470,7 +470,7 @@ std::optional<DataFrame<LlcHeader>> InfraBss::EthToDataFrame(const EthFrame& eth
 
     // Ralink appears to setup BlockAck session AND AMPDU handling
     // TODO(porce): Use a separate sequence number space in that case
-    return DataFrame<LlcHeader>(fbl::move(packet));
+    return DataFrame<LlcHeader>(std::move(packet));
 }
 
 void InfraBss::OnPreTbtt() {

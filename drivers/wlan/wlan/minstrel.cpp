@@ -171,7 +171,7 @@ void AddSupportedHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map, CBW
 
 MinstrelRateSelector::MinstrelRateSelector(TimerManager&& timer_mgr, ProbeSequence&& probe_sequence,
                                            zx::duration update_interval)
-    : timer_mgr_(fbl::move(timer_mgr)),
+    : timer_mgr_(std::move(timer_mgr)),
       probe_sequence_(std::move(probe_sequence)),
       update_interval_(update_interval) {}
 

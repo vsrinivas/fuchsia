@@ -50,7 +50,7 @@ zx_status_t ClientMlme::Init() {
         errorf("could not create channel scheduler timer: %d\n", status);
         return status;
     }
-    chan_sched_.reset(new ChannelScheduler(&on_channel_handler_, device_, fbl::move(timer)));
+    chan_sched_.reset(new ChannelScheduler(&on_channel_handler_, device_, std::move(timer)));
 
     scanner_.reset(new Scanner(device_, chan_sched_.get()));
     return status;
@@ -152,12 +152,12 @@ zx_status_t ClientMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {
         // station sends frame to device when on channel, or buffers it when
         // off channel.
         if (auto eth_frame = EthFrameView::CheckType(pkt.get()).CheckLength()) {
-            sta_->HandleEthFrame(eth_frame.IntoOwned(fbl::move(pkt)));
+            sta_->HandleEthFrame(eth_frame.IntoOwned(std::move(pkt)));
         }
         break;
     }
     case Packet::Peer::kWlan: {
-        chan_sched_->HandleIncomingFrame(fbl::move(pkt));
+        chan_sched_->HandleIncomingFrame(std::move(pkt));
         break;
     }
     default:
@@ -243,7 +243,7 @@ void ClientMlme::OnChannelHandlerImpl::HandleOnChannelFrame(fbl::unique_ptr<Pack
         }
     }
 
-    if (mlme_->sta_ != nullptr) { mlme_->sta_->HandleAnyWlanFrame(fbl::move(packet)); }
+    if (mlme_->sta_ != nullptr) { mlme_->sta_->HandleAnyWlanFrame(std::move(packet)); }
 }
 
 void ClientMlme::OnChannelHandlerImpl::ReturnedOnChannel() {

@@ -50,7 +50,7 @@ zx_status_t StandardOutputBase::Init() {
         return ZX_OK;
       });
 
-  res = mix_timer_->Activate(mix_domain_, fbl::move(process_handler));
+  res = mix_timer_->Activate(mix_domain_, std::move(process_handler));
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to activate mix_timer_ (res " << res << ")";
   }

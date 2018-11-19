@@ -28,7 +28,7 @@ zx_status_t AudioInput::Init() {
     return res;
   }
 
-  res = driver_->Init(fbl::move(initial_stream_channel_));
+  res = driver_->Init(std::move(initial_stream_channel_));
   if (res == ZX_OK) {
     state_ = State::Initialized;
   }

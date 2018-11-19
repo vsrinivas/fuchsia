@@ -33,7 +33,7 @@ static fbl::unique_ptr<Packet> IntoPacket(const T& msg, uint32_t ordinal = 42) {
     auto packet = GetSvcPacket(kBufLen);
     memset(packet->data(), 0, kBufLen);
     SerializeServiceMsg(packet.get(), ordinal, msg.get());
-    return fbl::move(packet);
+    return packet;
 }
 
 TEST(MlmeMsg, General) {
@@ -44,7 +44,7 @@ TEST(MlmeMsg, General) {
 
     // Verify correctness.
     MlmeMsg<wlan_mlme::DeauthenticateRequest> mlme_msg;
-    auto status = MlmeMsg<wlan_mlme::DeauthenticateRequest>::FromPacket(fbl::move(pkt), &mlme_msg);
+    auto status = MlmeMsg<wlan_mlme::DeauthenticateRequest>::FromPacket(std::move(pkt), &mlme_msg);
     ASSERT_EQ(status, ZX_OK);
     auto deauth_conf = mlme_msg.body();
     ASSERT_NE(deauth_conf, nullptr);
@@ -58,7 +58,7 @@ TEST(MlmeMsg, Generalize) {
     auto pkt = IntoPacket(fidl_msg);
 
     MlmeMsg<wlan_mlme::DeauthenticateRequest> mlme_msg;
-    auto status = MlmeMsg<wlan_mlme::DeauthenticateRequest>::FromPacket(fbl::move(pkt), &mlme_msg);
+    auto status = MlmeMsg<wlan_mlme::DeauthenticateRequest>::FromPacket(std::move(pkt), &mlme_msg);
     ASSERT_EQ(status, ZX_OK);
 
     // Generalize message and attempt to specialize to wrong type.
@@ -80,7 +80,7 @@ TEST(MlmeMsg, CorruptedPacket) {
 
     // Verify correctness.
     MlmeMsg<wlan_mlme::DeauthenticateRequest> mlme_msg;
-    auto status = MlmeMsg<wlan_mlme::DeauthenticateRequest>::FromPacket(fbl::move(pkt), &mlme_msg);
+    auto status = MlmeMsg<wlan_mlme::DeauthenticateRequest>::FromPacket(std::move(pkt), &mlme_msg);
     ASSERT_NE(status, ZX_OK);
 }
 
@@ -95,7 +95,7 @@ TEST_F(ServiceTest, SendAuthInd) {
     ASSERT_EQ(inds.size(), static_cast<size_t>(1));
     ASSERT_EQ(inds[0]->peer(), Packet::Peer::kService);
     MlmeMsg<wlan_mlme::AuthenticateIndication> msg;
-    auto status = MlmeMsg<wlan_mlme::AuthenticateIndication>::FromPacket(fbl::move(inds[0]), &msg);
+    auto status = MlmeMsg<wlan_mlme::AuthenticateIndication>::FromPacket(std::move(inds[0]), &msg);
     ASSERT_EQ(status, ZX_OK);
 
     ASSERT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), peer_sta.byte, 6), 0);
@@ -120,7 +120,7 @@ TEST_F(ServiceTest, SendAssocInd) {
     ASSERT_EQ(inds.size(), static_cast<size_t>(1));
     ASSERT_EQ(inds[0]->peer(), Packet::Peer::kService);
     MlmeMsg<wlan_mlme::AssociateIndication> msg;
-    auto status = MlmeMsg<wlan_mlme::AssociateIndication>::FromPacket(fbl::move(inds[0]), &msg);
+    auto status = MlmeMsg<wlan_mlme::AssociateIndication>::FromPacket(std::move(inds[0]), &msg);
     ASSERT_EQ(status, ZX_OK);
 
     ASSERT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), peer_sta.byte, 6), 0);
@@ -145,7 +145,7 @@ TEST_F(ServiceTest, SendAssocInd_EmptyRsne) {
     ASSERT_EQ(inds.size(), static_cast<size_t>(1));
     ASSERT_EQ(inds[0]->peer(), Packet::Peer::kService);
     MlmeMsg<wlan_mlme::AssociateIndication> msg;
-    auto status = MlmeMsg<wlan_mlme::AssociateIndication>::FromPacket(fbl::move(inds[0]), &msg);
+    auto status = MlmeMsg<wlan_mlme::AssociateIndication>::FromPacket(std::move(inds[0]), &msg);
     ASSERT_EQ(status, ZX_OK);
 
     ASSERT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), peer_sta.byte, 6), 0);

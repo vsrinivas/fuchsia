@@ -392,7 +392,7 @@ void Realm::Resolve(fidl::StringPtr name,
 
   loader_->LoadUrl(
       canon_url,
-      fxl::MakeCopyable([this, callback = fbl::move(callback)](
+      fxl::MakeCopyable([this, callback = std::move(callback)](
                             fuchsia::sys::PackagePtr package) mutable {
         zx::vmo binary;
         fidl::InterfaceHandle<fuchsia::ldsvc::Loader> loader;
@@ -470,12 +470,12 @@ void Realm::CreateComponent(
         url,
         fxl::MakeCopyable([this, launch_info = std::move(launch_info),
                            component_request = std::move(component_request),
-                           callback = fbl::move(callback)](
+                           callback = std::move(callback)](
                               fuchsia::sys::PackagePtr package) mutable {
           if (package && package->directory) {
             CreateComponentFromPackage(
                 std::move(package), std::move(launch_info),
-                std::move(component_request), fbl::move(callback));
+                std::move(component_request), std::move(callback));
           } else {
             component_request.SetReturnValues(
                 kComponentCreationFailed, TerminationReason::PACKAGE_NOT_FOUND);
@@ -759,7 +759,7 @@ void Realm::CreateComponentFromPackage(
     CreateElfBinaryComponentFromPackage(
         std::move(launch_info), app_data, app_argv0, exported_dir_layout,
         std::move(loader_service), builder.Build(),
-        std::move(component_request), std::move(ns), fbl::move(callback));
+        std::move(component_request), std::move(ns), std::move(callback));
   } else {
     // Use other component runners.
     CreateRunnerComponentFromPackage(

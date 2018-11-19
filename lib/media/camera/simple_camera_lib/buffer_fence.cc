@@ -79,7 +79,7 @@ void BufferFence::SetReleaseFenceHandler(BufferCallback callback) {
     FXL_LOG(ERROR) << "callback is nullptr";
     return;
   }
-  release_fence_callback_ = fbl::move(callback);
+  release_fence_callback_ = std::move(callback);
   release_fence_waiter_.set_object(release_fence_.get());
   release_fence_waiter_.set_trigger(ZX_EVENT_SIGNALED);
   // Clear the release fence, so we don't just trigger ourselves

@@ -643,7 +643,7 @@ void Device::MainLoop() {
                     packet = packet_queue_.Dequeue();
                     ZX_DEBUG_ASSERT(packet != nullptr);
                 }
-                zx_status_t status = dispatcher_->HandlePacket(fbl::move(packet));
+                zx_status_t status = dispatcher_->HandlePacket(std::move(packet));
                 if (status != ZX_OK) { errorf("could not handle packet err=%d\n", status); }
                 break;
             }
@@ -851,7 +851,7 @@ zx_status_t Device::CreateMinstrel(uint32_t features) {
     const zx::duration minstrel_update_interval =
         (features & WLAN_DRIVER_FEATURE_SYNTH) != 0 ? zx::msec(20) : zx::msec(100);
     minstrel_.reset(new MinstrelRateSelector(
-        TimerManager(fbl::move(timer)), ProbeSequence::RandomSequence(), minstrel_update_interval));
+        TimerManager(std::move(timer)), ProbeSequence::RandomSequence(), minstrel_update_interval));
     return ZX_OK;
 }
 

@@ -62,8 +62,8 @@ zx_status_t AudioDriver::Init(zx::channel stream_channel) {
       });
 
   res = stream_channel_->Activate(
-      fbl::move(stream_channel), owner_->mix_domain_,
-      fbl::move(process_handler), fbl::move(channel_closed_handler));
+      std::move(stream_channel), owner_->mix_domain_,
+      std::move(process_handler), std::move(channel_closed_handler));
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to activate stream channel for AudioDriver!  "
                    << "(res " << res << ")";
@@ -80,7 +80,7 @@ zx_status_t AudioDriver::Init(zx::channel stream_channel) {
       });
 
   res = cmd_timeout_->Activate(owner_->mix_domain_,
-                               fbl::move(cmd_timeout_handler));
+                               std::move(cmd_timeout_handler));
   if (res != ZX_OK) {
     FXL_LOG(ERROR)
         << "Failed to activate command timeout timer for AudioDriver!  "
@@ -773,9 +773,9 @@ zx_status_t AudioDriver::ProcessSetFormatResponse(
       });
 
   zx_status_t res;
-  res = rb_channel_->Activate(fbl::move(rb_channel), owner_->mix_domain_,
-                              fbl::move(process_handler),
-                              fbl::move(channel_closed_handler));
+  res = rb_channel_->Activate(std::move(rb_channel), owner_->mix_domain_,
+                              std::move(process_handler),
+                              std::move(channel_closed_handler));
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to activate ring buffer channel (res = " << res
                    << ")";
@@ -883,7 +883,7 @@ zx_status_t AudioDriver::ProcessGetBufferResponse(
   {
     std::lock_guard<std::mutex> lock(ring_buffer_state_lock_);
 
-    ring_buffer_ = DriverRingBuffer::Create(fbl::move(rb_vmo), bytes_per_frame_,
+    ring_buffer_ = DriverRingBuffer::Create(std::move(rb_vmo), bytes_per_frame_,
                                             resp.num_ring_buffer_frames,
                                             owner_->is_input());
     if (ring_buffer_ == nullptr) {

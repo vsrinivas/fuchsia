@@ -8,13 +8,13 @@ namespace wlan {
 
 ChannelScheduler::ChannelScheduler(OnChannelHandler* handler, DeviceInterface* device,
                                    fbl::unique_ptr<Timer> timer)
-    : on_channel_handler_(handler), device_(device), timer_(fbl::move(timer)) {}
+    : on_channel_handler_(handler), device_(device), timer_(std::move(timer)) {}
 
 void ChannelScheduler::HandleIncomingFrame(fbl::unique_ptr<Packet> packet) {
     if (on_channel_) {
-        on_channel_handler_->HandleOnChannelFrame(fbl::move(packet));
+        on_channel_handler_->HandleOnChannelFrame(std::move(packet));
     } else {
-        off_channel_request_.handler->HandleOffChannelFrame(fbl::move(packet));
+        off_channel_request_.handler->HandleOffChannelFrame(std::move(packet));
     }
 }
 

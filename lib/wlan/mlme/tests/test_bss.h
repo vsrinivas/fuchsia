@@ -125,7 +125,7 @@ static zx_status_t WriteServiceMessage(T* message, uint32_t ordinal, MlmeMsg<T>*
     zx_status_t status = SerializeServiceMsg(packet.get(), ordinal, message);
     if (status != ZX_OK) { return status; }
 
-    return MlmeMsg<T>::FromPacket(fbl::move(packet), out_msg);
+    return MlmeMsg<T>::FromPacket(std::move(packet), out_msg);
 }
 
 }  // namespace wlan
