@@ -64,8 +64,8 @@ zx_status_t Sherlock::I2cInit() {
 
     // setup pinmux for our I2C busses
     //i2c_ao_0
-    gpio_impl.SetAltFunction(T931_GPIOA(2), 1);
-    gpio_impl.SetAltFunction(T931_GPIOA(3), 1);
+    gpio_impl.SetAltFunction(T931_GPIOAO(2), 1);
+    gpio_impl.SetAltFunction(T931_GPIOAO(3), 1);
     //i2c2
     gpio_impl.SetAltFunction(T931_GPIOZ(14), 3);
     gpio_impl.SetAltFunction(T931_GPIOZ(15), 3);
