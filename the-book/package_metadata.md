@@ -207,6 +207,12 @@ The set of currently known features are as follows:
   shared libraries. The `shell` feature also implies the `root-ssl-certificates`
   feature.
 
+- `shell-commands`, which requests access to the currently available shell
+  binaries (note: not "installed", but "available"). Binaries are mapped into
+  `/bin` in the requesters namespace. Running these commands may require the
+  `fuchsia.process.Resolver` and `fuchsia.process.Launcher` services also
+  be requested.
+
 - `system-temp`, which requests access to the system temp directory, located at
   `/tmp` in the package's namespace. (Future work will likely remove access to
   the system temp directory in favor of a local temp directory for each
