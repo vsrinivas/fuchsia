@@ -30,7 +30,7 @@
 
 namespace {
 
-const char kStoryName[] = "story";
+const char kStoryNamePrefix[] = "story-";
 
 class Settings {
  public:
@@ -177,7 +177,8 @@ class TestApp : public modular::ViewApp {
   void StoryCreate() {
     FXL_LOG(INFO) << "StoryCreate()";
     TRACE_ASYNC_BEGIN("benchmark", "story/create", 0);
-    puppet_master_->ControlStory(kStoryName, story_puppet_master_.NewRequest());
+    std::string story_name = std::string(kStoryNamePrefix) + std::to_string(story_count_);
+    puppet_master_->ControlStory(story_name, story_puppet_master_.NewRequest());
 
     fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
     fuchsia::modular::AddMod add_mod;
@@ -191,9 +192,9 @@ class TestApp : public modular::ViewApp {
 
     story_puppet_master_->Enqueue(std::move(commands));
     story_puppet_master_->Execute(
-        [this](fuchsia::modular::ExecuteResult result) {
+        [this, story_name](fuchsia::modular::ExecuteResult result) {
           TRACE_ASYNC_END("benchmark", "story/create", 0);
-          StoryInfo(kStoryName);
+          StoryInfo(story_name);
         });
   }
 
