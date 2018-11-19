@@ -8,6 +8,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <memory>
+#include <utility>
 
 #include <fbl/unique_fd.h>
 #include <fuchsia/io/c/fidl.h>
@@ -36,7 +37,7 @@ void WaitForMinfs() {
     if (fd.is_valid()) {
       fuchsia_io_FilesystemInfo info;
       zx_status_t status, io_status;
-      fzl::FdioCaller caller(fbl::move(fd));
+      fzl::FdioCaller caller{std::move(fd)};
       io_status = fuchsia_io_DirectoryAdminQueryFilesystem(
           caller.borrow_channel(), &status, &info);
       if (io_status == ZX_OK && status == ZX_OK) {
