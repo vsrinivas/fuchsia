@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/zircon.gni")
+import("//build/gn/packages.gni")
 import("//build/images/manifest.gni")
 import("//build/packages/package_internal.gni")
 
@@ -110,7 +111,23 @@ template("prebuilt_package") {
   generate_system_index(target_name + ".system_index.rsp") {
     deprecated_system_image = false
     meta_target = ":$pkg_target_name"
-    package_set = ""  # TODO(jamesr): Compute
+
+    foreach(name, available_packages) {
+      if (name == pkg_label) {
+        package_set = "available"
+      }
+    }
+    foreach(name, preinstall_packages) {
+      if (name == pkg_label) {
+        package_set = "preinstall"
+      }
+    }
+    foreach(name, monolith_packages) {
+      if (name == pkg_label) {
+        package_set = "monolith"
+      }
+    }
+
     package_name = pkg.package_name
     package_version = pkg.package_version
     blobs_json = blobs_json
