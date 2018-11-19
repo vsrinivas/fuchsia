@@ -85,7 +85,7 @@ class SysLoaderForTest : fuchsia::sys::Loader {
   // LoadUrl() will not be able to answer for |url| a second time unless
   // |AddLoadInfo| is called again.
   void AddLoadInfo(fidl::StringPtr url, fuchsia::sys::PackagePtr pkg) {
-    if (url->find("file://") == std::string::npos) {
+    if (url->find("//") == std::string::npos) {
       url = fxl::Substitute("file://$0", url.get());
     }
     load_info_[url.get()] = std::move(pkg);
@@ -143,16 +143,36 @@ class ModuleFacetReaderImplTest : public gtest::RealLoopFixture {
     return &module_facet_reader_impl_;
   }
 
-  // Populates a one-shot answer for ModuleFacetReader::GetModuleFacet()
-  void PopulateModFacet(fxl::StringView mod_pkg_name,
-                        fxl::StringView mod_cmx_data) {
+  // Populates a one-shot answer for fuchsia::sys::Loader used by
+  // ModuleFacetReaderImpl::GetModuleFacet()
+  void PopulateModFacetFromPkgUrl(fxl::StringView mod_pkg_name,
+                                  fxl::StringView mod_cmx_data) {
     fs_.AddFile(fxl::Substitute("/$0/meta/$0.cmx", mod_pkg_name),
                 mod_cmx_data.data());
     auto pkg = fuchsia::sys::Package::New();
-    pkg->resolved_url =
-        fxl::Substitute("fuchsia-pkg://fuchsia.com/$0", mod_pkg_name);
+    pkg->resolved_url = fxl::Substitute(
+        "fuchsia-pkg://fuchsia.com/$0#meta/$0.cmx", mod_pkg_name);
     pkg->directory = fs_.GetChannelForDir(mod_pkg_name);
     sys_loader_.AddLoadInfo(mod_pkg_name.ToString(), std::move(pkg));
+  }
+
+  // Populates a one-shot answer for fuchsia::sys::Loader used by
+  // ModuleFacetReaderImpl::GetModuleFacet()
+  void PopulateModFacetFromComponentUrl(fxl::StringView mod_pkg_name,
+                                        fxl::StringView mod_component_name,
+                                        fxl::StringView mod_cmx_data) {
+    fs_.AddFile(
+        fxl::Substitute("/$0/meta/$1.cmx", mod_pkg_name, mod_component_name),
+        mod_cmx_data.data());
+    auto pkg = fuchsia::sys::Package::New();
+    pkg->resolved_url =
+        fxl::Substitute("fuchsia-pkg://fuchsia.com/$0#meta/$1.cmx",
+                        mod_pkg_name, mod_component_name);
+    pkg->directory = fs_.GetChannelForDir(mod_pkg_name);
+    sys_loader_.AddLoadInfo(
+        fxl::Substitute("fuchsia-pkg://fuchsia.com/$0#meta/$1.cmx",
+                        mod_pkg_name, mod_component_name),
+        std::move(pkg));
   }
 
  private:
@@ -161,9 +181,9 @@ class ModuleFacetReaderImplTest : public gtest::RealLoopFixture {
   modular::ModuleFacetReaderImpl module_facet_reader_impl_;
 };
 
-TEST_F(ModuleFacetReaderImplTest, ModFacetExists) {
+TEST_F(ModuleFacetReaderImplTest, ModFacetFoundFromPkgUrl) {
   constexpr char kModName[] = "my_mod_url";
-  PopulateModFacet(kModName, kBasicFacet);
+  PopulateModFacetFromPkgUrl(kModName, kBasicFacet);
 
   bool done = false;
   module_facet_reader()->GetModuleManifest(
@@ -178,9 +198,30 @@ TEST_F(ModuleFacetReaderImplTest, ModFacetExists) {
   EXPECT_TRUE(done);
 }
 
+TEST_F(ModuleFacetReaderImplTest, ModFacetFoundFromComponentUrl) {
+  constexpr char kPkgName[] = "my_pkg_name";
+  constexpr char kModName[] = "my_mod_name";
+  PopulateModFacetFromComponentUrl(kPkgName, kModName, kBasicFacet);
+
+  bool done = false;
+  module_facet_reader()->GetModuleManifest(
+      fxl::Substitute("fuchsia-pkg://fuchsia.com/$0#meta/$1.cmx", kPkgName,
+                      kModName),
+      [&done](fuchsia::modular::ModuleManifestPtr manifest) {
+        EXPECT_TRUE(manifest);
+        EXPECT_EQ("fuchsia-pkg://fuchsia.com/my_pkg_name#meta/my_mod_name.cmx",
+                  manifest->binary);
+        EXPECT_EQ("suggestion_headline", manifest->suggestion_headline);
+        EXPECT_EQ(1u, manifest->intent_filters->size());
+        done = true;
+      });
+  RunLoopUntil([&done] { return done; });
+  EXPECT_TRUE(done);
+}
+
 TEST_F(ModuleFacetReaderImplTest, ModHasNoFacet) {
   constexpr char kModName[] = "my_mod_url";
-  PopulateModFacet(kModName, kNoFacet);
+  PopulateModFacetFromPkgUrl(kModName, kNoFacet);
   bool done = false;
   module_facet_reader()->GetModuleManifest(
       kModName, [&done](fuchsia::modular::ModuleManifestPtr manifest) {
