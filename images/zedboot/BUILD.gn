@@ -34,6 +34,7 @@ zedboot_images = []
 # subset that is useful to Zedboot.
 zedboot_binary_patterns = [
   # These are the core things needed for booting (local and netboot).
+  "bin/bootsvc",
   "bin/devmgr",
   "bin/dlog",
   "bin/fshost",
