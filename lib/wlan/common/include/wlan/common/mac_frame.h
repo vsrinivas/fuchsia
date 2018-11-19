@@ -7,7 +7,6 @@
 
 #include <endian.h>
 #include <fbl/algorithm.h>
-#include <fbl/type_support.h>
 #include <lib/zx/time.h>
 #include <wlan/common/action_frame.h>
 #include <wlan/common/bitfield.h>

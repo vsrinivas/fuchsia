@@ -5,7 +5,6 @@
 #ifndef GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_ACTION_FRAME_H_
 #define GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_ACTION_FRAME_H_
 
-#include <fbl/type_support.h>
 #include <wlan/common/bitfield.h>
 #include <wlan/common/element.h>
 #include <wlan/common/macaddr.h>

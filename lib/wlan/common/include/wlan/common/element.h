@@ -5,7 +5,6 @@
 #ifndef GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_ELEMENT_H_
 #define GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_ELEMENT_H_
 
-#include <fbl/type_support.h>
 #include <wlan/common/bitfield.h>
 #include <wlan/common/element_id.h>
 #include <wlan/common/logging.h>

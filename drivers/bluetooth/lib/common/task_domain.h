@@ -9,7 +9,6 @@
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/type_support.h>
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>

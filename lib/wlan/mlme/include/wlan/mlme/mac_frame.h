@@ -7,7 +7,6 @@
 
 #include <wlan/mlme/sequence.h>
 
-#include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 #include <lib/zx/time.h>
 #include <wlan/common/bitfield.h>

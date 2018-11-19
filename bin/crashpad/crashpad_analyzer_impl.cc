@@ -8,7 +8,6 @@
 #include <string>
 #include <utility>
 
-#include <fbl/type_support.h>
 #include <fuchsia/crash/cpp/fidl.h>
 #include <lib/fdio/io.h>
 #include <lib/fxl/files/directory.h>

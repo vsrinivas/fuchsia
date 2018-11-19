@@ -4,13 +4,11 @@
 
 #include "garnet/bin/trace/tracer.h"
 
-#include <utility>
-
-#include <fbl/type_support.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <trace-engine/fields.h>
 #include <trace-reader/reader.h>
+#include <utility>
 
 #include "lib/fxl/logging.h"
 
