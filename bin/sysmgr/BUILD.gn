@@ -6,7 +6,7 @@ import("//build/package.gni")
 
 declare_args() {
   # Whether the component loader should automatically update packages.
-  auto_update_packages = false
+  auto_update_packages = true
 }
 
 source_set("lib") {
