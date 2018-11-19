@@ -18,10 +18,11 @@ package("tests") {
     {
       name = "bt-host-unittests"
     },
-    {
-      name = "rust_crates/host_integration"
-      dest = "bt-host-integration-tests"
-    },
+### Disabled as this is flaking on CI: FLK-7 
+#    {
+#      name = "rust_crates/host_integration"
+#      dest = "bt-host-integration-tests"
+#    },
     {
       name = "rust_crates/host_lifecycle"
       dest = "bt-host-lifecycle-test"
