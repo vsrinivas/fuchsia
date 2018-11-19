@@ -5,13 +5,9 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-LOCAL_DIR := $(GET_LOCAL_DIR)
-
 PLATFORM_BOARD_NAME := qemu
-PLATFORM_USE_SHIM := true
-PLATFORM_USE_GZIP := true
 
-include make/board.mk
+include kernel/target/arm64/boot-shim/rules.mk
 
 # qemu needs a shimmed kernel
 QEMU_ZIRCON := $(BUILDDIR)/qemu-zircon.bin

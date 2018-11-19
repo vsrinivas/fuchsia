@@ -6,14 +6,10 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-set -e
-
-MEMBASE=0x00000000
-KERNEL_OFFSET=0x00080000
-RAMDISK_OFFSET=0x07c00000
-DT_OFFSET=0x07a00000
+set -eo pipefail
 
 CMDLINE=
+EXTRA_ARGS=()
 
 SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ZIRCON_DIR="${SCRIPTS_DIR}/.."
@@ -21,9 +17,6 @@ ZIRCON_DIR="${SCRIPTS_DIR}/.."
 FIRMWARE_DIR=/tmp/hikey/hikey-firmware
 FIRMWARE_GIT=https://android.googlesource.com/device/linaro/hikey
 FIRMWARE_TAG=android-o-iot-preview-5
-
-MKBOOTIMG="${ZIRCON_DIR}/third_party/tools/android/mkbootimg"
-MKDTIMG="${ZIRCON_DIR}/third_party/tools/android/mkdtimg"
 
 help() {
     echo "usage: ${0} [options]"
@@ -72,15 +65,7 @@ flash_firmware() {
 }
 
 flash_kernel() {
-    "${MKBOOTIMG}" \
-        --kernel $KERNEL \
-        --kernel_offset $KERNEL_OFFSET \
-        --base $MEMBASE \
-        --ramdisk_offset $RAMDISK_OFFSET \
-        --ramdisk "${RAMDISK}" \
-        --tags_offset $DT_OFFSET \
-        --cmdline "${CMDLINE}" \
-        -o $OUT_IMAGE
+    "${ZIRCON_DIR}/kernel/target/arm64/board/hikey960/package-image.sh" -B "${BUILD_DIR}" "${EXTRA_ARGS[@]}"
 
     fastboot flash boot $OUT_IMAGE
     # Can't guarantee that the target has written image to flash before the
@@ -102,19 +87,15 @@ shift $((OPTIND-1))
 
 BUILD_DIR="${BUILD_DIR:-build-arm64}"
 RAMDISK="${RAMDISK:-${BUILD_DIR}/hikey960-bootdata.bin}"
-OUT_IMAGE="${BUILD_DIR}/boot.img"
+OUT_IMAGE="${BUILD_DIR}/hikey960-boot.img"
 
 if [[ $FLAG_FIRMWARE ]]; then
     flash_firmware
     exit 0
 fi
 
-BOARD=hikey960
-BOOTDATA_BIN="${BUILD_DIR}/${BOARD}-zircon-bootimage.bin"
-ZBOOTDATA_BIN="${BUILD_DIR}/z${BOARD}-zircon-bootimage.bin"
-gzip -c ${BOOTDATA_BIN} > ${ZBOOTDATA_BIN}
-KERNEL=${ZBOOTDATA_BIN}
-RAMDISK="${BUILD_DIR}/dummy-ramdisk.bin"
-dd if=/dev/zero of=${RAMDISK} bs=4096 count=1
+if [[ -n "${CMDLINE}" ]]; then
+    EXTRA_ARGS+=(-c "${CMDLINE}")
+fi
 
 flash_kernel

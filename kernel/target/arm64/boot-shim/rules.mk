@@ -6,6 +6,10 @@
 
 BOOT_SHIM_DIR := $(GET_LOCAL_DIR)
 
+ifeq ($(PLATFORM_BOARD_NAME),)
+$(error PLATFORM_BOARD_NAME not defined)
+endif
+
 BOOT_SHIM_BUILDDIR := $(BUILDDIR)/boot-shim/$(PLATFORM_BOARD_NAME)
 
 BOOT_SHIM_SRCS := \
@@ -77,3 +81,4 @@ $(BOOT_SHIM_BIN): $(BOOT_SHIM_ELF) $(BOOT_SHIM_ELF).pure-stamp
 	$(call BUILDECHO,generating $@)
 	$(NOECHO)$(OBJCOPY) -O binary $< $@
 GENERATED += $(BOOT_SHIM_BIN)
+EXTRA_BUILDDEPS += $(BOOT_SHIM_BIN)

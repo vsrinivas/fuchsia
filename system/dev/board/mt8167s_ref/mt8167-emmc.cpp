@@ -90,7 +90,10 @@ zx_status_t Mt8167::EmmcInit() {
         { "boot_b", GUID_ZIRCON_B_VALUE },
         { "vbmeta_a", GUID_VBMETA_A_VALUE },
         { "vbmeta_b", GUID_VBMETA_B_VALUE },
-        { "userdata", GUID_FVM_VALUE }
+        { "userdata", GUID_FVM_VALUE },
+        // For now, just give the paver a place to write Zircon-R,
+        // even though the bootloader won't support it.
+        { "vendor_a", GUID_ZIRCON_R_VALUE },
     };
     static_assert(fbl::count_of(guid_map) <= DEVICE_METADATA_GUID_MAP_MAX_ENTRIES);
 

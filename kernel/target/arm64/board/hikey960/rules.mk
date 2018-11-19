@@ -4,10 +4,6 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-LOCAL_DIR := $(GET_LOCAL_DIR)
-
 PLATFORM_BOARD_NAME := hikey960
-PLATFORM_USE_SHIM := true
-PLATFORM_USE_GZIP := true
 
-include make/board.mk
+include kernel/target/arm64/boot-shim/rules.mk

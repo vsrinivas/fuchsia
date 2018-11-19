@@ -6,6 +6,31 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+set -eo pipefail
 
-exec $DIR/flash-avb -b mt8167s_ref
+SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+ZIRCON_DIR="${SCRIPTS_DIR}/.."
+EXTRA_ARGS=()
+
+function HELP {
+    echo "help:"
+    echo "-m            : Add mexec option to command line"
+    echo "-h for help"
+    exit 1
+}
+
+while getopts "mh" FLAG; do
+    case $FLAG in
+        m) EXTRA_ARGS+=(-m);;
+        h) HELP;;
+        \?)
+            echo unrecognized option
+            HELP
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+"${ZIRCON_DIR}/kernel/target/arm64/board/mt8167s_ref/package-image.sh" -B "${ZIRCON_DIR}/build-arm64" "${EXTRA_ARGS[@]}"
+
+"${SCRIPTS_DIR}/flash-avb" -b mt8167s_ref "$@"
