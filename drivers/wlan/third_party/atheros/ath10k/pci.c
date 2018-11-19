@@ -3226,6 +3226,8 @@ static zx_status_t ath10k_pci_probe(void* ctx, zx_device_t* dev) {
     zx_pcie_device_info_t pci_info;
     if (pci_get_device_info(&pci, &pci_info) != ZX_OK) { return ZX_ERR_NOT_SUPPORTED; }
 
+    char* chip_name;
+    float version;
     switch (pci_info.device_id) {
     case QCA988X_2_0_DEVICE_ID:
         hw_rev = ATH10K_HW_QCA988X;
@@ -3233,6 +3235,8 @@ static zx_status_t ath10k_pci_probe(void* ctx, zx_device_t* dev) {
         pci_soft_reset = ath10k_pci_warm_reset;
         pci_hard_reset = ath10k_pci_qca988x_chip_reset;
         targ_cpu_to_ce_addr = ath10k_pci_qca988x_targ_cpu_to_ce_addr;
+        chip_name = "QCA988X";
+        version = 2.0;
         break;
     case QCA9887_1_0_DEVICE_ID:
         hw_rev = ATH10K_HW_QCA9887;
@@ -3240,6 +3244,8 @@ static zx_status_t ath10k_pci_probe(void* ctx, zx_device_t* dev) {
         pci_soft_reset = ath10k_pci_warm_reset;
         pci_hard_reset = ath10k_pci_qca988x_chip_reset;
         targ_cpu_to_ce_addr = ath10k_pci_qca988x_targ_cpu_to_ce_addr;
+        chip_name = "QCA9887";
+        version = 1,0;
         break;
     case QCA6164_2_1_DEVICE_ID:
     case QCA6174_2_1_DEVICE_ID:
@@ -3248,6 +3254,13 @@ static zx_status_t ath10k_pci_probe(void* ctx, zx_device_t* dev) {
         pci_soft_reset = ath10k_pci_warm_reset;
         pci_hard_reset = ath10k_pci_qca6174_chip_reset;
         targ_cpu_to_ce_addr = ath10k_pci_qca988x_targ_cpu_to_ce_addr;
+        if (pci_info.device_id == QCA6164_2_1_DEVICE_ID) {
+            chip_name = "QCA6164";
+            version = 2.1;
+        } else {
+            chip_name = "QCA6174";
+            version = 2.1;
+        }
         break;
     case QCA99X0_2_0_DEVICE_ID:
         hw_rev = ATH10K_HW_QCA99X0;
@@ -3255,6 +3268,8 @@ static zx_status_t ath10k_pci_probe(void* ctx, zx_device_t* dev) {
         pci_soft_reset = ath10k_pci_qca99x0_soft_chip_reset;
         pci_hard_reset = ath10k_pci_qca99x0_chip_reset;
         targ_cpu_to_ce_addr = ath10k_pci_qca99x0_targ_cpu_to_ce_addr;
+        chip_name = "QCA99X0";
+        version = 2.0;
         break;
     case QCA9984_1_0_DEVICE_ID:
         hw_rev = ATH10K_HW_QCA9984;
@@ -3262,6 +3277,8 @@ static zx_status_t ath10k_pci_probe(void* ctx, zx_device_t* dev) {
         pci_soft_reset = ath10k_pci_qca99x0_soft_chip_reset;
         pci_hard_reset = ath10k_pci_qca99x0_chip_reset;
         targ_cpu_to_ce_addr = ath10k_pci_qca99x0_targ_cpu_to_ce_addr;
+        chip_name = "QCA9984";
+        version = 1.0;
         break;
     case QCA9888_2_0_DEVICE_ID:
         hw_rev = ATH10K_HW_QCA9888;
@@ -3269,6 +3286,8 @@ static zx_status_t ath10k_pci_probe(void* ctx, zx_device_t* dev) {
         pci_soft_reset = ath10k_pci_qca99x0_soft_chip_reset;
         pci_hard_reset = ath10k_pci_qca99x0_chip_reset;
         targ_cpu_to_ce_addr = ath10k_pci_qca99x0_targ_cpu_to_ce_addr;
+        chip_name = "QCA9888";
+        version = 2.0;
         break;
     case QCA9377_1_0_DEVICE_ID:
         hw_rev = ATH10K_HW_QCA9377;
@@ -3276,11 +3295,14 @@ static zx_status_t ath10k_pci_probe(void* ctx, zx_device_t* dev) {
         pci_soft_reset = NULL;
         pci_hard_reset = ath10k_pci_qca6174_chip_reset;
         targ_cpu_to_ce_addr = ath10k_pci_qca988x_targ_cpu_to_ce_addr;
+        chip_name = "QCA9377";
+        version = 1.0;
         break;
     default:
         ath10k_err("unrecognized device ID: %#0" PRIx16 "\n", pci_info.device_id);
         return ZX_ERR_NOT_SUPPORTED;
     }
+    ath10k_info("ath10k: Probed chip %s ver: %.1f\n", chip_name, version);
 
     ret =
         ath10k_core_create(&ar, sizeof(*ar_pci), dev, ATH10K_BUS_PCI, hw_rev, &ath10k_pci_hif_ops);
