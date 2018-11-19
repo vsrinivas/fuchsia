@@ -732,7 +732,6 @@ struct ath10k_vif {
 };
 
 struct ath10k {
-    zx_device_t* zxdev_parent;  // The parent device we will add into.
     zx_device_t* zxdev;         // Or 'zxdev_phy', which binds to the hardware device.
     zx_device_t* zxdev_mac;
     uint8_t mac_addr[ETH_ALEN];
@@ -1028,6 +1027,7 @@ zx_status_t ath10k_core_start(struct ath10k* ar, enum ath10k_firmware_mode mode,
                               const struct ath10k_fw_components* fw_components);
 zx_status_t ath10k_wait_for_suspend(struct ath10k* ar, uint32_t suspend_opt);
 void ath10k_core_stop(struct ath10k* ar);
+zx_status_t ath10k_core_add_phy_interface(struct ath10k* ar, zx_device_t* dev);
 zx_status_t ath10k_core_register(struct ath10k* ar, uint32_t chip_id);
 void ath10k_core_unregister(struct ath10k* ar);
 

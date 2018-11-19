@@ -3410,8 +3410,8 @@ static zx_status_t ath10k_pci_probe(void* ctx, zx_device_t* dev) {
     thrd_detach(ar->monitor_thread);
 #endif
 
-    // Save the parent device. Will be used in after core is registered.
-    ar->zxdev_parent = dev;
+    ret = ath10k_core_add_phy_interface(ar, dev);
+    if (ret != ZX_OK) { goto err_free_irq; }
 
     ret = ath10k_core_register(ar, chip_id);
     if (ret != ZX_OK) {

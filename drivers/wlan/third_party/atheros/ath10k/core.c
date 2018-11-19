@@ -2330,7 +2330,7 @@ static wlanphy_impl_protocol_ops_t wlanphy_ops = {
     .destroy_iface = ath10k_core_destroy_iface,
 };
 
-static zx_status_t ath10k_core_add_phy_interface(struct ath10k* ar) {
+zx_status_t ath10k_core_add_phy_interface(struct ath10k* ar, zx_device_t* dev) {
     // Add PHY interface
     device_add_args_t phy_args = {
         .version = DEVICE_ADD_ARGS_VERSION,
@@ -2339,8 +2339,9 @@ static zx_status_t ath10k_core_add_phy_interface(struct ath10k* ar) {
         .ops = &device_phy_ops,
         .proto_id = ZX_PROTOCOL_WLANPHY_IMPL,
         .proto_ops = &wlanphy_ops,
+        .flags = DEVICE_ADD_INVISIBLE,
     };
-    return device_add(ar->zxdev_parent, &phy_args, &ar->zxdev);
+    return device_add(dev, &phy_args, &ar->zxdev);
 }
 
 static zx_status_t ath10k_core_register_work(void* thrd_data) {
@@ -2385,12 +2386,8 @@ static zx_status_t ath10k_core_register_work(void* thrd_data) {
 
     BITARR_SET(ar->dev_flags, ATH10K_FLAG_CORE_REGISTERED);
 
-    // After core is registered, add PHY interface.
-    status = ath10k_core_add_phy_interface(ar);
-    if (status != ZX_OK) {
-        ath10k_err("failed to add PHY interface. status=%d\n", status);
-        goto err;
-    }
+    // After core is registered, expose wlanphy interface.
+    device_make_visible(ar->zxdev);
 
     return ZX_OK;
 
