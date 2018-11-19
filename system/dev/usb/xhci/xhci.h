@@ -90,6 +90,10 @@ typedef struct xhci_usb_request_internal {
      list_node_t node;
 } xhci_usb_request_internal_t;
 
+#define USB_REQ_TO_XHCI_INTERNAL(req, size) \\
+    ((xhci_usb_request_internal_t *)((uintptr_t)(req) + (size)))
+#define XHCI_INTERNAL_TO_USB_REQ(ctx, size) ((usb_request_t *)((uintptr_t)(ctx) - (size)))
+
 typedef struct xhci xhci_t;
 
 typedef void (*xhci_command_complete_cb)(void* data, uint32_t cc, xhci_trb_t* command_trb,
@@ -185,6 +189,9 @@ struct xhci {
     mtx_t command_queue_mutex;
     sync_completion_t command_queue_completion;
 
+    //offset of xhci internal in usb_request_t.
+    uint32_t req_int_off;
+
     // DMA buffers used by xhci_device_thread in xhci-device-manager.c
     uint8_t* input_context;
     zx_paddr_t input_context_phys;
@@ -228,6 +235,12 @@ void xhci_wait_bits64(volatile uint64_t* ptr, uint64_t bits, uint64_t expected);
 
 void xhci_stop(xhci_t* xhci);
 void xhci_free(xhci_t* xhci);
+
+bool xhci_add_to_list_tail(xhci_t* xhci, list_node_t* list, usb_request_t* req);
+bool xhci_add_to_list_head(xhci_t* xhci, list_node_t* list, usb_request_t* req);
+bool xhci_remove_from_list_head(xhci_t* xhci, list_node_t* list, usb_request_t** req);
+bool xhci_remove_from_list_tail(xhci_t* xhci, list_node_t* list, usb_request_t** req);
+void xhci_delete_req_node(xhci_t* xhci, usb_request_t* req);
 
 // returns monotonically increasing frame count
 uint64_t xhci_get_current_frame(xhci_t* xhci);
