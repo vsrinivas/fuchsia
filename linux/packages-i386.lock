@@ -1,23 +1,23 @@
-hash: 30bf2c9be8c9104bf2166e35be3a2a305c722e8be8d2ee52f9aaa8ac4147a91e
-updated: 2018-10-29T16:52:45.536250389-07:00
+hash: 6a5cfff67301c2b5fc62305d798be8b511ce875cec717186839f010647865acd
+updated: 2018-11-18T16:36:21.648124722-08:00
 packages:
 - package: libc6
-  version: 2.27-6
-  filename: pool/main/g/glibc/libc6_2.27-6_i386.deb
-  hash: 87e8e671b9baf3d0543f9e0f70b005f0e4ac7286a304e486b0588de9b2a7f8e1
+  version: 2.19-18+deb8u10
+  filename: pool/main/g/glibc/libc6_2.19-18+deb8u10_i386.deb
+  hash: 1d1f82f905386ff6a1dab08ec69b3b1d8bddbfd7c41b68e295e0a204232ad1ae
 - package: libc6-dev
-  version: 2.27-6
-  filename: pool/main/g/glibc/libc6-dev_2.27-6_i386.deb
-  hash: 1c7cebf9e47ed705847dc8d8b0b495e23d0012c72b001a30b159b5ece1dd688b
-- package: libgcc-6-dev
-  version: 6.4.0-23
-  filename: pool/main/g/gcc-6/libgcc-6-dev_6.4.0-23_i386.deb
-  hash: f3b580a54f2f8dca608386c55e6762aeb6741b650a49f9b18242b0e226677e0c
+  version: 2.19-18+deb8u10
+  filename: pool/main/g/glibc/libc6-dev_2.19-18+deb8u10_i386.deb
+  hash: 287ea40a96c4eafb94843169f6bf802335182b68f78a1b4bab95851c3385866d
+- package: libgcc-4.9-dev
+  version: 4.9.2-10+deb8u1
+  filename: pool/main/g/gcc-4.9/libgcc-4.9-dev_4.9.2-10+deb8u1_i386.deb
+  hash: 26dea9f1b54c86dba2059a9b1416cc8f45de75b2f7a26f3fdc52cb82d37e45a0
 - package: libgcc1
-  version: 1:8.2.0-8
-  filename: pool/main/g/gcc-8/libgcc1_8.2.0-8_i386.deb
-  hash: fe88dc9775da578aa16d6f4169b8406f4620c83b4139d2522295bd9a7dcfea73
+  version: 1:4.9.2-10+deb8u1
+  filename: pool/main/g/gcc-4.9/libgcc1_4.9.2-10+deb8u1_i386.deb
+  hash: 8d6f382ac18f77f2be38ab210428d6fba598fc3d5c197572f665330d79b4f27f
 - package: linux-libc-dev
-  version: 4.18.10-2
-  filename: pool/main/l/linux/linux-libc-dev_4.18.10-2_i386.deb
-  hash: 4ea61de9cf22b22f7330883cd6706c282fda725d59d1452fafdd74c7f2a3085b
+  version: 3.16.51-3
+  filename: pool/main/l/linux/linux-libc-dev_3.16.51-3_i386.deb
+  hash: 35def1939fccfd26335d000528a0053e6092a488abce9bbb47d94eb161115d1b

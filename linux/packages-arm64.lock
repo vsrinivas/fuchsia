@@ -1,23 +1,23 @@
-hash: 30bf2c9be8c9104bf2166e35be3a2a305c722e8be8d2ee52f9aaa8ac4147a91e
-updated: 2018-10-29T16:53:06.564856755-07:00
+hash: 6a5cfff67301c2b5fc62305d798be8b511ce875cec717186839f010647865acd
+updated: 2018-11-18T16:36:37.840104448-08:00
 packages:
 - package: libc6
-  version: 2.27-6
-  filename: pool/main/g/glibc/libc6_2.27-6_arm64.deb
-  hash: db779c54cf1392cfb0ebd0fee5ebe36971b73e2cfdd584ce0b521d6abac538da
+  version: 2.19-18+deb8u10
+  filename: pool/main/g/glibc/libc6_2.19-18+deb8u10_arm64.deb
+  hash: b52eab4f1beeb020e20fb44bc2dc02a9ccf12fc70213d6a56921e08308bc3e9c
 - package: libc6-dev
-  version: 2.27-6
-  filename: pool/main/g/glibc/libc6-dev_2.27-6_arm64.deb
-  hash: cc52aac270fff92e0b3c3352d46f0ce0526a6a85f1b3e9f1d097d96f39f2c597
-- package: libgcc-6-dev
-  version: 6.4.0-23
-  filename: pool/main/g/gcc-6/libgcc-6-dev_6.4.0-23_arm64.deb
-  hash: bb1086f13b1dcf639b32dd3e21e8077e2c38aae85bb2e91d49747a355b62fcc3
+  version: 2.19-18+deb8u10
+  filename: pool/main/g/glibc/libc6-dev_2.19-18+deb8u10_arm64.deb
+  hash: 9cf8ae92bb508873e19b43975b5841166fc2476664d9de52eb62ae3a1a50abb3
+- package: libgcc-4.9-dev
+  version: 4.9.2-10+deb8u1
+  filename: pool/main/g/gcc-4.9/libgcc-4.9-dev_4.9.2-10+deb8u1_arm64.deb
+  hash: 5141491d88ffd8288e86efb54cbfa40dbaf7e23ff11ace44261a798c78220f2e
 - package: libgcc1
-  version: 1:8.2.0-8
-  filename: pool/main/g/gcc-8/libgcc1_8.2.0-8_arm64.deb
-  hash: 1385448d607ac18111c29cd459250f5de722f08effb63dcc9f7be4b8fb7c8f8a
+  version: 1:4.9.2-10+deb8u1
+  filename: pool/main/g/gcc-4.9/libgcc1_4.9.2-10+deb8u1_arm64.deb
+  hash: 7585b1dc42b3958fefe1cc40754fb2d25f6d8ce5e4fa14a61b053310d6793594
 - package: linux-libc-dev
-  version: 4.18.10-2
-  filename: pool/main/l/linux/linux-libc-dev_4.18.10-2_arm64.deb
-  hash: 41e5b762a73a414b23ccedd0899b66fe6121afb631a7e9e0146f7e295e833660
+  version: 3.16.51-3
+  filename: pool/main/l/linux/linux-libc-dev_3.16.51-3_arm64.deb
+  hash: f2e7ab5f0cc3dd03cd7278e5574dc25b744a399f75cb2890c346a064954779dd
