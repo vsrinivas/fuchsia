@@ -10,6 +10,7 @@
 #include <fbl/unique_ptr.h>
 #include <hypervisor/id_allocator.h>
 #include <hypervisor/page.h>
+#include <kernel/mp.h>
 
 class El2TranslationTable {
 public:
@@ -38,6 +39,7 @@ public:
     ~El2CpuState();
 
 private:
+    cpu_mask_t cpu_mask_ = 0;
     El2TranslationTable table_;
     fbl::Array<El2Stack> stacks_;
 

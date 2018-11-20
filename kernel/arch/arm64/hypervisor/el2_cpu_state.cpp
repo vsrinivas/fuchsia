@@ -11,7 +11,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <hypervisor/cpu.h>
-#include <kernel/mp.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 
@@ -73,42 +72,47 @@ zx_status_t El2CpuState::OnTask(void* context, uint cpu_num) {
 
 static void el2_off_task(void* arg) {
     zx_status_t status = arm64_el2_off();
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         dprintf(CRITICAL, "Failed to turn EL2 off for CPU %u\n", arch_curr_cpu_num());
+    }
 }
 
 // static
 zx_status_t El2CpuState::Create(fbl::unique_ptr<El2CpuState>* out) {
     fbl::AllocChecker ac;
     fbl::unique_ptr<El2CpuState> cpu_state(new (&ac) El2CpuState);
-    if (!ac.check())
+    if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
+    }
     zx_status_t status = cpu_state->Init();
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return status;
+    }
 
     // Initialise the EL2 translation table.
     status = cpu_state->table_.Init();
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return status;
+    }
 
     // Allocate EL2 stack for each CPU.
     size_t num_cpus = arch_max_num_cpus();
     El2Stack* stacks = new (&ac) El2Stack[num_cpus];
-    if (!ac.check())
+    if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
+    }
     fbl::Array<El2Stack> el2_stacks(stacks, num_cpus);
     for (auto& stack : el2_stacks) {
         zx_status_t status = stack.Alloc();
-        if (status != ZX_OK)
+        if (status != ZX_OK) {
             return status;
+        }
     }
     cpu_state->stacks_ = fbl::move(el2_stacks);
 
     // Setup EL2 for all online CPUs.
-    cpu_mask_t cpu_mask = percpu_exec(OnTask, cpu_state.get());
-    if (cpu_mask != mp_get_online_mask()) {
-        mp_sync_exec(MP_IPI_TARGET_MASK, cpu_mask, el2_off_task, nullptr);
+    cpu_state->cpu_mask_ = percpu_exec(OnTask, cpu_state.get());
+    if (cpu_state->cpu_mask_ != mp_get_online_mask()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -117,15 +121,16 @@ zx_status_t El2CpuState::Create(fbl::unique_ptr<El2CpuState>* out) {
 }
 
 El2CpuState::~El2CpuState() {
-    mp_sync_exec(MP_IPI_TARGET_ALL, 0, el2_off_task, nullptr);
+    mp_sync_exec(MP_IPI_TARGET_MASK, cpu_mask_, el2_off_task, nullptr);
 }
 
 zx_status_t alloc_vmid(uint8_t* vmid) {
     fbl::AutoLock lock(&guest_mutex);
     if (num_guests == 0) {
         zx_status_t status = El2CpuState::Create(&el2_cpu_state);
-        if (status != ZX_OK)
+        if (status != ZX_OK) {
             return status;
+        }
     }
     num_guests++;
     return el2_cpu_state->AllocId(vmid);
@@ -134,10 +139,12 @@ zx_status_t alloc_vmid(uint8_t* vmid) {
 zx_status_t free_vmid(uint8_t vmid) {
     fbl::AutoLock lock(&guest_mutex);
     zx_status_t status = el2_cpu_state->FreeId(vmid);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return status;
+    }
     num_guests--;
-    if (num_guests == 0)
+    if (num_guests == 0) {
         el2_cpu_state.reset();
+    }
     return ZX_OK;
 }
