@@ -4,16 +4,19 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/gpu/clock/c/fidl.h>
 #include <inttypes.h>
+#include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <zircon/device/gpu.h>
 #include <zircon/device/thermal.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/syscalls/system.h>
+
+#include <zx/handle.h>
 
 // TODO(braval): Combine thermd & thermd_arm and have a unified
 // code for the thermal deamon
@@ -67,6 +70,13 @@ int main(int argc, char** argv) {
   if (fd_gpu < 0) {
     fprintf(stderr, "ERROR: Failed to open gpu: %d (errno %d) \n", fd_gpu,
             errno);
+    return -1;
+  }
+
+  zx::handle gpu_handle;
+  st = fdio_get_service_handle(fd_gpu, gpu_handle.reset_and_get_address());
+  if (st != ZX_OK) {
+    fprintf(stderr, "ERROR: Failed to get gpu service: %d\n", st);
     return -1;
   }
 
@@ -155,11 +165,14 @@ int main(int argc, char** argv) {
       int gpu_clk_freq_source =
           info.trip_point_info[trip_idx].gpu_clk_freq_source;
       if (gpu_clk_freq_source != -1) {
-        rc = ioctl_gpu_set_clk_freq_source(fd_gpu, &gpu_clk_freq_source);
-        if (rc) {
+        zx_status_t status2;
+        st = fuchsia_gpu_clock_ClockSetFrequencySource(
+            gpu_handle.get(), gpu_clk_freq_source, &status2);
+        if (st != ZX_OK || status2 != ZX_OK) {
           fprintf(stderr,
-                  "ERROR: Failed to change gpu clock freq source: %zd\n", rc);
-          return rc;
+                  "ERROR: Failed to change gpu clock freq source: %d %d\n", st,
+                  status2);
+          return -1;
         }
       }
     }
