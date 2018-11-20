@@ -183,7 +183,7 @@ struct wmi_ops {
     zx_status_t (*ext_resource_config)(struct ath10k* ar, struct ath10k_msg_buf** msg_buf_ptr,
                                        enum wmi_host_platform_type type,
                                        uint32_t fw_feature_bitmap);
-    int (*get_vdev_subtype)(struct ath10k* ar, enum wmi_vdev_subtype subtype);
+    zx_status_t (*get_vdev_subtype)(struct ath10k* ar, enum wmi_vdev_subtype subtype, int* result);
     zx_status_t (*gen_pdev_bss_chan_info_req)(struct ath10k* ar,
                                               struct ath10k_msg_buf** msg_buf_ptr,
                                               enum wmi_bss_survey_req_type type);
@@ -1071,10 +1071,11 @@ static inline zx_status_t ath10k_wmi_ext_resource_config(struct ath10k* ar,
 }
 
 static inline zx_status_t ath10k_wmi_get_vdev_subtype(struct ath10k* ar,
-                                                      enum wmi_vdev_subtype subtype) {
+                                                      enum wmi_vdev_subtype subtype,
+                                                      int* result) {
     if (!ar->wmi.ops->get_vdev_subtype) { return ZX_ERR_NOT_SUPPORTED; }
 
-    return ar->wmi.ops->get_vdev_subtype(ar, subtype);
+    return ar->wmi.ops->get_vdev_subtype(ar, subtype, result);
 }
 
 static inline zx_status_t ath10k_wmi_pdev_bss_chan_info_request(struct ath10k* ar,

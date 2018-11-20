@@ -7597,18 +7597,24 @@ unlock:
 }
 #endif  // NEEDS PORTING
 
-int ath10k_wmi_op_get_vdev_subtype(struct ath10k* ar, enum wmi_vdev_subtype subtype) {
+zx_status_t ath10k_wmi_op_get_vdev_subtype(struct ath10k* ar, enum wmi_vdev_subtype subtype,
+                                           int* result) {
     switch (subtype) {
     case WMI_VDEV_SUBTYPE_NONE:
-        return WMI_VDEV_SUBTYPE_LEGACY_NONE;
+        *result = WMI_VDEV_SUBTYPE_LEGACY_NONE;
+        return ZX_OK;
     case WMI_VDEV_SUBTYPE_P2P_DEVICE:
-        return WMI_VDEV_SUBTYPE_LEGACY_P2P_DEV;
+        *result = WMI_VDEV_SUBTYPE_LEGACY_P2P_DEV;
+        return ZX_OK;
     case WMI_VDEV_SUBTYPE_P2P_CLIENT:
-        return WMI_VDEV_SUBTYPE_LEGACY_P2P_CLI;
+        *result = WMI_VDEV_SUBTYPE_LEGACY_P2P_CLI;
+        return ZX_OK;
     case WMI_VDEV_SUBTYPE_P2P_GO:
-        return WMI_VDEV_SUBTYPE_LEGACY_P2P_GO;
+        *result = WMI_VDEV_SUBTYPE_LEGACY_P2P_GO;
+        return ZX_OK;
     case WMI_VDEV_SUBTYPE_PROXY_STA:
-        return WMI_VDEV_SUBTYPE_LEGACY_PROXY_STA;
+        *result = WMI_VDEV_SUBTYPE_LEGACY_PROXY_STA;
+        return ZX_OK;
     case WMI_VDEV_SUBTYPE_MESH_11S:
     case WMI_VDEV_SUBTYPE_MESH_NON_11S:
         return ZX_ERR_NOT_SUPPORTED;
@@ -7616,28 +7622,35 @@ int ath10k_wmi_op_get_vdev_subtype(struct ath10k* ar, enum wmi_vdev_subtype subt
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-#if 0   // NEEDS PORTING
-static int ath10k_wmi_10_2_4_op_get_vdev_subtype(struct ath10k* ar,
-        enum wmi_vdev_subtype subtype) {
+static zx_status_t ath10k_wmi_10_2_4_op_get_vdev_subtype(struct ath10k* ar,
+        enum wmi_vdev_subtype subtype,
+        int* result) {
     switch (subtype) {
     case WMI_VDEV_SUBTYPE_NONE:
-        return WMI_VDEV_SUBTYPE_10_2_4_NONE;
+        *result = WMI_VDEV_SUBTYPE_10_2_4_NONE;
+        return ZX_OK;
     case WMI_VDEV_SUBTYPE_P2P_DEVICE:
-        return WMI_VDEV_SUBTYPE_10_2_4_P2P_DEV;
+        *result = WMI_VDEV_SUBTYPE_10_2_4_P2P_DEV;
+        return ZX_OK;
     case WMI_VDEV_SUBTYPE_P2P_CLIENT:
-        return WMI_VDEV_SUBTYPE_10_2_4_P2P_CLI;
+        *result = WMI_VDEV_SUBTYPE_10_2_4_P2P_CLI;
+        return ZX_OK;
     case WMI_VDEV_SUBTYPE_P2P_GO:
-        return WMI_VDEV_SUBTYPE_10_2_4_P2P_GO;
+        *result = WMI_VDEV_SUBTYPE_10_2_4_P2P_GO;
+        return ZX_OK;
     case WMI_VDEV_SUBTYPE_PROXY_STA:
-        return WMI_VDEV_SUBTYPE_10_2_4_PROXY_STA;
+        *result = WMI_VDEV_SUBTYPE_10_2_4_PROXY_STA;
+        return ZX_OK;
     case WMI_VDEV_SUBTYPE_MESH_11S:
-        return WMI_VDEV_SUBTYPE_10_2_4_MESH_11S;
+        *result = WMI_VDEV_SUBTYPE_10_2_4_MESH_11S;
+        return ZX_OK;
     case WMI_VDEV_SUBTYPE_MESH_NON_11S:
-        return -ENOTSUPP;
+        return ZX_ERR_NOT_SUPPORTED;
     }
-    return -ENOTSUPP;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
+#if 0   // NEEDS PORTING
 static int ath10k_wmi_10_4_op_get_vdev_subtype(struct ath10k* ar,
         enum wmi_vdev_subtype subtype) {
     switch (subtype) {
@@ -7792,8 +7805,8 @@ static const struct wmi_ops wmi_ops = {
     .gen_addba_set_resp = ath10k_wmi_op_gen_addba_set_resp,
     .gen_delba_send = ath10k_wmi_op_gen_delba_send,
     .fw_stats_fill = ath10k_wmi_main_op_fw_stats_fill,
-    .get_vdev_subtype = ath10k_wmi_op_get_vdev_subtype,
 #endif  // NEEDS PORTING
+    .get_vdev_subtype = ath10k_wmi_op_get_vdev_subtype,
     .gen_echo = ath10k_wmi_op_gen_echo,
     /* .gen_bcn_tmpl not implemented */
     /* .gen_prb_tmpl not implemented */
@@ -7878,8 +7891,8 @@ static const struct wmi_ops wmi_10_1_ops = {
     .gen_addba_set_resp = ath10k_wmi_op_gen_addba_set_resp,
     .gen_delba_send = ath10k_wmi_op_gen_delba_send,
     .fw_stats_fill = ath10k_wmi_10x_op_fw_stats_fill,
-    .get_vdev_subtype = ath10k_wmi_op_get_vdev_subtype,
 #endif  // NEEDS PORTING
+    .get_vdev_subtype = ath10k_wmi_op_get_vdev_subtype,
     .gen_echo = ath10k_wmi_op_gen_echo,
     /* .gen_bcn_tmpl not implemented */
     /* .gen_prb_tmpl not implemented */
@@ -7966,8 +7979,8 @@ static const struct wmi_ops wmi_10_2_ops = {
     .gen_addba_set_resp = ath10k_wmi_op_gen_addba_set_resp,
     .gen_delba_send = ath10k_wmi_op_gen_delba_send,
     .fw_stats_fill = ath10k_wmi_10x_op_fw_stats_fill,
-    .get_vdev_subtype = ath10k_wmi_op_get_vdev_subtype,
 #endif  // NEEDS PORTING
+    .get_vdev_subtype = ath10k_wmi_op_get_vdev_subtype,
     /* .gen_pdev_enable_adaptive_cca not implemented */
 };
 
@@ -8055,8 +8068,8 @@ static const struct wmi_ops wmi_10_2_4_ops = {
     .gen_pdev_get_tpc_config = ath10k_wmi_10_2_4_op_gen_pdev_get_tpc_config,
     .fw_stats_fill = ath10k_wmi_10x_op_fw_stats_fill,
     .gen_pdev_enable_adaptive_cca = ath10k_wmi_op_gen_pdev_enable_adaptive_cca,
-    .get_vdev_subtype = ath10k_wmi_10_2_4_op_get_vdev_subtype,
 #endif  // NEEDS PORTING
+    .get_vdev_subtype = ath10k_wmi_10_2_4_op_get_vdev_subtype,
     /* .gen_bcn_tmpl not implemented */
     /* .gen_prb_tmpl not implemented */
     /* .gen_p2p_go_bcn_ie not implemented */

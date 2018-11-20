@@ -6718,7 +6718,9 @@ void ath10k_wmi_10_4_op_fw_stats_fill(struct ath10k* ar,
                                       struct ath10k_fw_stats* fw_stats,
                                       char* buf);
 #endif  // NEEDS PORTING
-int ath10k_wmi_op_get_vdev_subtype(struct ath10k* ar, enum wmi_vdev_subtype subtype);
+
+zx_status_t ath10k_wmi_op_get_vdev_subtype(struct ath10k* ar, enum wmi_vdev_subtype subtype,
+                                           int* result);
 zx_status_t ath10k_wmi_barrier(struct ath10k* ar);
 
 #endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_WMI_H_

@@ -684,7 +684,6 @@ struct ath10k_vif {
     uint32_t vdev_id;
     uint16_t peer_id;
     enum wmi_vdev_type vdev_type;  // WMI_VDEV_TYPE_* defined by Atheros.
-    enum wmi_vdev_subtype vdev_subtype;
     uint32_t beacon_interval;
     uint32_t dtim_period;
     enum ath10k_beacon_state beacon_state;

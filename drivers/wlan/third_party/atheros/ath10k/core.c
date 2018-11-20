@@ -1770,7 +1770,12 @@ static zx_status_t ath10k_core_reset_rx_filter(struct ath10k* ar) {
 
     vdev_id = 0;
     vdev_type = WMI_VDEV_TYPE_STA;
-    vdev_subtype = ath10k_wmi_get_vdev_subtype(ar, WMI_VDEV_SUBTYPE_NONE);
+    ret = ath10k_wmi_get_vdev_subtype(ar, WMI_VDEV_SUBTYPE_NONE, &vdev_subtype);
+    if (ret != ZX_OK) {
+        ath10k_err("failed to get vdev subtype for NONE: %s\n", zx_status_get_string(ret));
+        return ZX_ERR_INTERNAL;
+    }
+
     vdev_addr = ar->mac_addr;
 
     ret = ath10k_wmi_vdev_create(ar, vdev_id, vdev_type, vdev_subtype, vdev_addr);

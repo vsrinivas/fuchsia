@@ -5050,6 +5050,7 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
     ath10k_dbg(ar, ATH10K_DBG_MAC, "mac create vdev %i map %llx\n", bit, ar->free_vdev_map);
 
     arvif->vdev_id = bit;
+    int vdev_subtype = 0;
 
     switch (vif_role) {
 #if 0   // NEEDS PORTING
@@ -5078,7 +5079,11 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
             ath10k_err("the firmware does not support MESH_11S vif subtype\n");
             goto err;
         }
-        arvif->vdev_subtype = ath10k_wmi_get_vdev_subtype(ar, WMI_VDEV_SUBTYPE_MESH_11S);
+        ret = ath10k_wmi_get_vdev_subtype(ar, WMI_VDEV_SUBTYPE_MESH_11S, &vdev_subtype);
+        if (ret != ZX_OK) {
+            ath10k_err("failed to get vdev subtype for MESH_11S: %s\n", zx_status_get_string(ret));
+            goto err;
+        }
         arvif->vdev_type = WMI_VDEV_TYPE_AP;
         break;
     case WLAN_MAC_ROLE_AP:
@@ -5148,10 +5153,9 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
 
     ath10k_dbg(ar, ATH10K_DBG_MAC,
                "mac vdev create %d (add interface) type %d subtype %d bcnmode %s\n", arvif->vdev_id,
-               arvif->vdev_type, arvif->vdev_subtype, arvif->beacon_buf ? "single-buf" : "per-skb");
+               arvif->vdev_type, vdev_subtype, arvif->beacon_buf ? "single-buf" : "per-skb");
 
-    ret = ath10k_wmi_vdev_create(ar, arvif->vdev_id, arvif->vdev_type, arvif->vdev_subtype,
-                                 ar->mac_addr);
+    ret = ath10k_wmi_vdev_create(ar, arvif->vdev_id, arvif->vdev_type, vdev_subtype, ar->mac_addr);
     if (ret != ZX_OK) {
         ath10k_warn("failed to create WMI vdev %i: %s\n", arvif->vdev_id,
                     zx_status_get_string(ret));
