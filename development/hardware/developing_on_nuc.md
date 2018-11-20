@@ -61,34 +61,7 @@ NUCs don’t come with RAM or an SSD so you need to install them.
 
 -----
 
-## 3. Build Fuchsia <a name="build"/>
-
-1. Follow the [getting started guidelines](../../getting_started.md)
-1. Plug in your USB key to your build workstation
-1. Identify the path to your USB key by running `fx list-usb-disks`
-1. Create a Zedboot USB by running `fx mkzedboot /path/to/usb/disk`
-1. Plug the Zedboot USB key into the NUC and boot it
-1. Run `fx pave` on your workstation
-
-## 4. Install Fuchsia <a name="install"/>
-
-1. Plug in your installable fuchsia usb drive into NUC.
-1. Turn on NUC.
-1. Wait for NUC to boot into fuchsia.
-1. Alt-tab to a terminal if you don’t boot into a terminal.
-<br/><center><img width="50%" src="images/developing_on_nuc/terminal.jpg"/></center><br/><br/>
-1. Run ‘lsblk’.  This should say there’s a ‘block’ device at 003.
-<br/><center><img width="50%" src="images/developing_on_nuc/lsblk.jpg"/></center><br/><br/>
-1. Run ‘gpt init /dev/class/block/003’.  Say ‘y’ to the warning.
-1. Run ‘install-fuchsia’.
-1. Run ‘dm reboot’.
-1. Remove usb drive.
-
-At this point the NUC should boot to fuchsia without the usb drive.  It’s using the internal SSD.  But it won’t work with netbooting.  Let’s fix that.
-
------
-
-## 5. Update NUC BIOS to allow netbooting <a name="bios"/>
+## 3. Update NUC BIOS to enable EFI booting <a name="bios"/>
 
 1. Reboot NUC.
 1. Press F2 while booting to enter BIOS.
@@ -96,6 +69,22 @@ At this point the NUC should boot to fuchsia without the usb drive.  It’s usin
 1. Uncheck ‘Legacy Boot’.
 <br/><center><img width="50%" src="images/developing_on_nuc/bios.jpg"/></center><br/><br/>
 1. Press the X in the top right to leave the BIOS.  Ensure you save before exiting.
+
+-----
+
+## 4. Build Fuchsia <a name="build"/>
+
+1. Follow the [getting started guidelines](../../getting_started.md)
+
+-----
+
+## 5. Pave Fuchsia <a name="pave"/>
+
+1. Plug in your USB key to your build workstation
+1. Identify the path to your USB key by running `fx list-usb-disks`
+1. Create a Zedboot USB by running `fx mkzedboot /path/to/usb/disk`
+1. Plug the Zedboot USB key into the NUC and boot it
+1. Run `fx pave` on your workstation
 
 -----
 
