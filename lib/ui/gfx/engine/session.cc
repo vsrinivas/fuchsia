@@ -1370,7 +1370,7 @@ ResourcePtr Session::CreateRoundedRectangle(ResourceId id, float width,
       this, id, rect_spec,
       factory->NewRoundedRect(
           rect_spec, mesh_spec,
-          engine()->GetCommandContext()->batch_gpu_uploader()));
+          engine()->GetCommandContext()->batch_gpu_uploader));
 }
 
 ResourcePtr Session::CreateMesh(ResourceId id) {

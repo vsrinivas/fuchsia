@@ -37,7 +37,6 @@ class DisplaySwapchain : public Swapchain {
 
   // |Swapchain|
   bool DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
-                           const HardwareLayerAssignment& hla,
                            DrawCallback draw_callback) override;
 
  private:

@@ -274,7 +274,6 @@ DisplaySwapchain::~DisplaySwapchain() {
 
 std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
     const FrameTimingsPtr& frame_timings) {
-  FXL_DCHECK(frame_timings);
   FXL_CHECK(escher_);
   auto render_finished_escher_semaphore =
       escher::Semaphore::NewExportableSem(device_);
@@ -326,10 +325,7 @@ std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
 }
 
 bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
-                                           const HardwareLayerAssignment& hla,
                                            DrawCallback draw_callback) {
-  FXL_DCHECK(hla.swapchain == this);
-
   // Find the next framebuffer to render into, and other corresponding data.
   auto& buffer = swapchain_buffers_[next_frame_index_];
 
@@ -358,30 +354,10 @@ bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
   outstanding_frame_count_++;
 
   // Render the scene.
-  size_t num_hardware_layers = hla.items.size();
-  // TODO(SCN-1088): handle more hardware layers.
-  FXL_DCHECK(num_hardware_layers == 1);
-
-  // TODO(SCN-1098): we'd like to validate that the layer ID is supported
-  // by the display/display-controller, but the DisplayManager API doesn't
-  // currently expose it, and rather than hack in an accessor for |layer_id_|
-  // we should fix this "properly", whatever that means.
-  // FXL_DCHECK(hla.items[0].hardware_layer_id is supported by display);
-  for (size_t i = 0; i < num_hardware_layers; ++i) {
+  {
     TRACE_DURATION("gfx", "DisplaySwapchain::DrawAndPresent() draw");
-
-    // A single semaphore is sufficient to guarantee that all images have been
-    // rendered, so only provide the semaphore when rendering the image for
-    // the final layer.
-    escher::SemaphorePtr render_finished_escher_semaphore =
-        (i + 1 == num_hardware_layers)
-            ? frame_record->render_finished_escher_semaphore
-            : escher::SemaphorePtr();
-    // TODO(SCN-1088): handle more hardware layers: the single image from
-    // buffer.escher_image is not enough; we need one for each layer.
-    draw_callback(frame_timings->target_presentation_time(),
-                  buffer.escher_image, hla.items[i], escher::SemaphorePtr(),
-                  render_finished_escher_semaphore);
+    draw_callback(buffer.escher_image, escher::SemaphorePtr(),
+                  frame_record->render_finished_escher_semaphore);
   }
 
   // When the image is completely rendered, present it.

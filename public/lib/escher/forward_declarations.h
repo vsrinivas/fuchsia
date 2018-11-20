@@ -87,10 +87,6 @@ typedef fxl::RefPtr<ShadowMapRenderer> ShadowMapRendererPtr;
 typedef fxl::RefPtr<Texture> TexturePtr;
 typedef fxl::RefPtr<TimestampProfiler> TimestampProfilerPtr;
 
-namespace hmd {
-class PoseBufferLatchingShader;
-}  // namespace hmd
-
 namespace impl {
 // From deprecated escher/impl directory.
 class CommandBuffer;

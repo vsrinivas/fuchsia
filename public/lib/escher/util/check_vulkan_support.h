@@ -7,10 +7,6 @@
 
 namespace escher {
 
-// This attempts to create a VkInstance and then a VkDevice, and returns true
-// if successful and false otherwise.  These are both destroyed before the
-// function returns.  Therefore, this shouldn't be called from production code
-// where fast startup time is an issue.
 bool VulkanIsSupported();
 
 }  // namespace escher
