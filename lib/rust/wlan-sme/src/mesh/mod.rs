@@ -142,7 +142,7 @@ impl<T: Tokens> super::Station for MeshSme<T> {
                                 .. action.common
                             },
                             peer_link_id: action.common.local_link_id,
-                            aid: 0,
+                            aid: 1,
                         };
                         self.mlme_sink.send(MlmeRequest::SendMpConfirmAction(conf));
                     }

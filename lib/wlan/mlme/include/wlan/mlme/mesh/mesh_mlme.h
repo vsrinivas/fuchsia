@@ -7,6 +7,8 @@
 
 #include <wlan/common/buffer_reader.h>
 #include <wlan/mlme/device_interface.h>
+#include <wlan/mlme/mac_header_writer.h>
+#include <wlan/mlme/mesh/path_table.h>
 #include <wlan/mlme/mlme.h>
 
 namespace wlan {
@@ -30,7 +32,11 @@ class MeshMlme : public Mlme {
         const MlmeMsg<::fuchsia::wlan::mlme::StartRequest>& req);
     void SendPeeringOpen(const MlmeMsg<::fuchsia::wlan::mlme::MeshPeeringOpenAction>& req);
     void SendPeeringConfirm(const MlmeMsg<::fuchsia::wlan::mlme::MeshPeeringConfirmAction>& req);
+
+    void SendDataFrame(fbl::unique_ptr<Packet> packet);
     void SendMgmtFrame(fbl::unique_ptr<Packet> packet);
+
+    void HandleEthTx(EthFrame&& frame);
 
     zx_status_t HandleAnyWlanFrame(fbl::unique_ptr<Packet> pkt);
     zx_status_t HandleAnyMgmtFrame(MgmtFrame<>&& frame);
@@ -38,9 +44,13 @@ class MeshMlme : public Mlme {
     zx_status_t HandleSelfProtectedAction(common::MacAddr src_addr, BufferReader* r);
     zx_status_t HandleMpmOpenAction(common::MacAddr src_addr, BufferReader* r);
 
+    MacHeaderWriter CreateMacHeaderWriter();
+
     DeviceInterface* const device_;
     bool joined_ = false;
     Sequence seq_;
+    uint32_t mesh_seq_ = 0;
+    PathTable path_table_;
 };
 
 }  // namespace wlan

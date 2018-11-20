@@ -66,6 +66,7 @@ source_set("mlme") {
     "mcs.cpp",
     "mesh/mesh_mlme.cpp",
     "mesh/parse_mp_action.cpp",
+    "mesh/path_table.cpp",
     "mesh/write_mp_action.cpp",
     "packet.cpp",
     "parse_beacon.cpp",

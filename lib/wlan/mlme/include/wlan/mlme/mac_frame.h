@@ -281,6 +281,8 @@ using MsduCallback = std::function<void(FrameView<LlcHeader>, size_t)>;
 // Returns a list of all LLC frames carried in an AMSDU data frame.
 zx_status_t DeaggregateAmsdu(const DataFrameView<AmsduSubframeHeader>&, MsduCallback);
 
+void FillEtherLlcHeader(LlcHeader* llc, uint16_t protocol_id);
+
 }  // namespace wlan
 
 #endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_MAC_FRAME_H_

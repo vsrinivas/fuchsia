@@ -15,15 +15,23 @@ namespace wlan {
 // Please examine the code in *.cpp before using it for your purpose.
 class MacHeaderWriter {
  public:
-     explicit MacHeaderWriter(const common::MacAddr& src_addr, Sequence* seq)
-       : src_addr_(src_addr), seq_(seq) { }
+    explicit MacHeaderWriter(const common::MacAddr& transmitter_addr, Sequence* seq)
+       : transmitter_addr_(transmitter_addr), seq_(seq) { }
 
-     void WriteMeshMgmtHeader(BufferWriter* writer,
-                              ManagementSubtype subtype,
-                              const common::MacAddr& dst_addr) const;
+    void WriteMeshMgmtHeader(BufferWriter* writer,
+                             ManagementSubtype subtype,
+                             const common::MacAddr& dst_addr) const;
 
+    void WriteMeshDataHeaderIndivAddressed(BufferWriter* w,
+                                           const common::MacAddr& next_hop_addr,
+                                           const common::MacAddr& mesh_dst_addr,
+                                           const common::MacAddr& mesh_src_addr) const;
+
+    void WriteMeshDataHeaderGroupAddressed(BufferWriter* w,
+                                           const common::MacAddr& dst_addr,
+                                           const common::MacAddr& mesh_src_addr) const;
  private:
-    common::MacAddr src_addr_;
+    common::MacAddr transmitter_addr_;
     Sequence* seq_;
 };
 

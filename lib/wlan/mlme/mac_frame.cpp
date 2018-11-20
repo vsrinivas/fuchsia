@@ -99,4 +99,12 @@ zx_status_t DeaggregateAmsdu(const DataFrameView<AmsduSubframeHeader>& data_amsd
     return ZX_OK;
 }
 
+void FillEtherLlcHeader(LlcHeader* llc, uint16_t protocol_id) {
+    llc->dsap = kLlcSnapExtension;
+    llc->ssap = kLlcSnapExtension;
+    llc->control = kLlcUnnumberedInformation;
+    std::memcpy(llc->oui, kLlcOui, sizeof(llc->oui));
+    llc->protocol_id = protocol_id;
+}
+
 }  // namespace wlan

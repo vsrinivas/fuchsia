@@ -13,6 +13,8 @@
 #include <wlan/mlme/service.h>
 #include <zircon/status.h>
 
+#include <wlan/mlme/debug.h>
+
 namespace wlan {
 
 static constexpr size_t kMaxMeshMgmtFrameSize = 1024;
@@ -121,6 +123,7 @@ wlan_mlme::StartResultCodes MeshMlme::Start(const MlmeMsg<wlan_mlme::StartReques
         return wlan_mlme::StartResultCodes::INTERNAL_ERROR;
     }
 
+    device_->SetStatus(ETHMAC_STATUS_ONLINE);
     joined_ = true;
     return wlan_mlme::StartResultCodes::SUCCESS;
 }
@@ -130,7 +133,7 @@ void MeshMlme::SendPeeringOpen(const MlmeMsg<wlan_mlme::MeshPeeringOpenAction>& 
     if (packet == nullptr) { return; }
 
     BufferWriter w(*packet);
-    WriteMpOpenActionFrame(&w, MacHeaderWriter { self_addr(), &seq_ }, *req.body());
+    WriteMpOpenActionFrame(&w, CreateMacHeaderWriter(), *req.body());
     SendMgmtFrame(std::move(packet));
 }
 
@@ -139,7 +142,7 @@ void MeshMlme::SendPeeringConfirm(const MlmeMsg<wlan_mlme::MeshPeeringConfirmAct
     if (packet == nullptr) { return; }
 
     BufferWriter w(*packet);
-    WriteMpConfirmActionFrame(&w, MacHeaderWriter { self_addr(), &seq_ }, *req.body());
+    WriteMpConfirmActionFrame(&w, CreateMacHeaderWriter(), *req.body());
     SendMgmtFrame(std::move(packet));
 }
 
@@ -150,9 +153,22 @@ void MeshMlme::SendMgmtFrame(fbl::unique_ptr<Packet> packet) {
     }
 }
 
+void MeshMlme::SendDataFrame(fbl::unique_ptr<Packet> packet) {
+    // TODO(gbonik): select appropriate CBW and PHY per peer.
+    // For ath10k, this probably doesn't matter since the driver/firmware should pick
+    // the appropriate settings automatically based on the configure_assoc data
+    zx_status_t status = device_->SendWlan(std::move(packet), CBW20, WLAN_PHY_OFDM);
+    if (status != ZX_OK) {
+        errorf("[mesh-mlme] failed to send a data frame: %s\n", zx_status_get_string(status));
+    }
+}
+
 zx_status_t MeshMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {
     switch (pkt->peer()) {
     case Packet::Peer::kEthernet:
+        if (auto eth_frame = EthFrameView::CheckType(pkt.get()).CheckLength()) {
+            HandleEthTx(EthFrame(eth_frame.IntoOwned(std::move(pkt))));
+        }
         break;
     case Packet::Peer::kWlan:
         return HandleAnyWlanFrame(std::move(pkt));
@@ -161,6 +177,55 @@ zx_status_t MeshMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {
         break;
     }
     return ZX_OK;
+}
+
+static constexpr size_t GetDataFrameBufferSize(size_t eth_payload_len) {
+    return DataFrameHeader::max_len()
+            + sizeof(MeshControl)
+            + 2 * common::kMacAddrLen // optional address extension
+            + LlcHeader::max_len()
+            + eth_payload_len;
+}
+
+void MeshMlme::HandleEthTx(EthFrame&& frame) {
+    auto packet = GetWlanPacket(GetDataFrameBufferSize(frame.body_len()));
+    if (packet == nullptr) { return; }
+    BufferWriter w(*packet);
+    constexpr uint8_t ttl = 32;
+
+    if (frame.hdr()->dest.IsGroupAddr()) {
+        CreateMacHeaderWriter().WriteMeshDataHeaderGroupAddressed(
+                &w, frame.hdr()->dest, self_addr());
+        auto mesh_ctl = w.Write<MeshControl>();
+        mesh_ctl->ttl = ttl;
+        mesh_ctl->seq = mesh_seq_++;
+        if (frame.hdr()->src != self_addr()) {
+            mesh_ctl->flags.set_addr_ext_mode(kAddrExt4);
+            w.WriteValue(frame.hdr()->src);
+        }
+    } else {
+        auto path = path_table_.GetPath(frame.hdr()->dest);
+        if (!path) {
+            // TODO(gbonik): buffer the frame and initiate path discovery
+            return;
+        }
+        CreateMacHeaderWriter().WriteMeshDataHeaderIndivAddressed(
+                &w, path->next_hop, path->mesh_target, self_addr());
+        auto mesh_ctl = w.Write<MeshControl>();
+        mesh_ctl->ttl = ttl;
+        mesh_ctl->seq = mesh_seq_++;
+        if (frame.hdr()->src != self_addr() || frame.hdr()->dest != path->mesh_target) {
+            mesh_ctl->flags.set_addr_ext_mode(kAddrExt56);
+            w.WriteValue(frame.hdr()->dest);
+            w.WriteValue(frame.hdr()->src);
+        }
+    }
+
+    auto llc_hdr = w.Write<LlcHeader>();
+    FillEtherLlcHeader(llc_hdr, frame.hdr()->ether_type);
+    w.Write({frame.hdr()->payload, frame.body_len()});
+    packet->set_len(w.WrittenBytes());
+    SendDataFrame(std::move(packet));
 }
 
 zx_status_t MeshMlme::HandleAnyWlanFrame(fbl::unique_ptr<Packet> pkt) {
@@ -223,6 +288,10 @@ zx_status_t MeshMlme::HandleMpmOpenAction(common::MacAddr src_addr, BufferReader
 
 zx_status_t MeshMlme::HandleTimeout(const ObjectId id) {
     return ZX_OK;
+}
+
+MacHeaderWriter MeshMlme::CreateMacHeaderWriter() {
+    return MacHeaderWriter { self_addr(), &seq_ };
 }
 
 }  // namespace wlan

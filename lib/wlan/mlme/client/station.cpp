@@ -779,11 +779,7 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
     // TODO(porce): Construct htc_order field
 
     auto llc_hdr = w.Write<LlcHeader>();
-    llc_hdr->dsap = kLlcSnapExtension;
-    llc_hdr->ssap = kLlcSnapExtension;
-    llc_hdr->control = kLlcUnnumberedInformation;
-    std::memcpy(llc_hdr->oui, kLlcOui, sizeof(llc_hdr->oui));
-    llc_hdr->protocol_id = eth_hdr->ether_type;
+    FillEtherLlcHeader(llc_hdr, eth_hdr->ether_type);
     w.Write({eth_hdr->payload, eth_frame.body_len()});
 
     CBW cbw = CBW20;

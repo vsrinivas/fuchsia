@@ -714,6 +714,25 @@ struct PsPollFrame {
     constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
 
+// IEEE Std 802.11-2016, Table 9-20
+constexpr uint8_t kAddrExtNone = 0;
+constexpr uint8_t kAddrExt4 = 1;
+constexpr uint8_t kAddrExt56 = 2;
+
+// IEEE Std 802.11-2016, 9.2.4.7.3, Figure 9-17
+class MeshFlags : public common::BitField<uint8_t> {
+ public:
+    WLAN_BIT_FIELD(addr_ext_mode, 0, 2);
+    // bits 2-7 reserved
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.2.4.7.3, Figure 9-16
+struct MeshControl {
+    MeshFlags flags;
+    uint8_t ttl;
+    uint32_t seq;
+} __PACKED;
+
 // IEEE Std 802.2, 1998 Edition, 3.2
 // IETF RFC 1042
 struct LlcHeader {
