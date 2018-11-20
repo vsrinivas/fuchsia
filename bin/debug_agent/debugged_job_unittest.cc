@@ -171,8 +171,9 @@ TEST_F(JobDebuggerTest, MultipleProcesses) {
     return processes_.size() == 2;
   })) << "Expected processes size 2, got: "
       << processes_.size();
-  ASSERT_EQ(KoidForObject(processes_[0]), pid1);
-  ASSERT_EQ(KoidForObject(processes_[1]), pid2);
+  std::vector<uint64_t> pids = {KoidForObject(processes_[0]),
+                                KoidForObject(processes_[1])};
+  EXPECT_THAT(pids, ::testing::UnorderedElementsAre(pid1, pid2));
   WaitForProcToExit(proc1, 0);
   WaitForProcToExit(proc2, 0);
 }
