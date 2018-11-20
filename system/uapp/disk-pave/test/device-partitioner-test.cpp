@@ -30,6 +30,8 @@ namespace {
 constexpr uint8_t kZirconAType[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
 constexpr uint8_t kZirconBType[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
 constexpr uint8_t kZirconRType[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
+constexpr uint8_t kVbMetaAType[GPT_GUID_LEN] = GUID_VBMETA_A_VALUE;
+constexpr uint8_t kVbMetaBType[GPT_GUID_LEN] = GUID_VBMETA_B_VALUE;
 constexpr uint8_t kFvmType[GPT_GUID_LEN] = GUID_FVM_VALUE;
 
 constexpr uint64_t kBlockSize = 0x1000;
@@ -38,7 +40,7 @@ constexpr uint64_t kBlockCount = 0x10;
 constexpr uint32_t kOobSize = 8;
 constexpr uint32_t kPageSize = 1024;
 constexpr uint32_t kPagesPerBlock = 16;
-constexpr uint32_t kNumBlocks = 16;
+constexpr uint32_t kNumBlocks = 18;
 constexpr zircon_nand_RamNandInfo kNandInfo = {
     .vmo = ZX_HANDLE_INVALID,
     .padding = 0,
@@ -54,7 +56,7 @@ constexpr zircon_nand_RamNandInfo kNandInfo = {
     .partition_map = {
         .device_guid = {},
         .padding = 0,
-        .partition_count = 5,
+        .partition_count = 7,
         .partitions = {
             {
                 .type_guid = {},
@@ -112,6 +114,30 @@ constexpr zircon_nand_RamNandInfo kNandInfo = {
                 .copy_count = 0,
                 .copy_byte_offset = 0,
                 .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'r'},
+                .padding = 0,
+                .hidden = false,
+                .bbt = false,
+            },
+            {
+                .type_guid = GUID_VBMETA_A_VALUE,
+                .unique_guid = {},
+                .first_block = 14,
+                .last_block = 15,
+                .copy_count = 0,
+                .copy_byte_offset = 0,
+                .name = {'v', 'b', 'm', 'e', 't', 'a', '-', 'a'},
+                .padding = 0,
+                .hidden = false,
+                .bbt = false,
+            },
+            {
+                .type_guid = GUID_VBMETA_B_VALUE,
+                .unique_guid = {},
+                .first_block = 16,
+                .last_block = 17,
+                .copy_count = 0,
+                .copy_byte_offset = 0,
+                .name = {'v', 'b', 'm', 'e', 't', 'a', '-', 'b'},
                 .padding = 0,
                 .hidden = false,
                 .bbt = false,
@@ -352,6 +378,8 @@ bool FinalizePartitionTest() {
     ASSERT_EQ(partitioner->FinalizePartition(paver::Partition::kZirconA), ZX_OK);
     ASSERT_EQ(partitioner->FinalizePartition(paver::Partition::kZirconB), ZX_OK);
     ASSERT_EQ(partitioner->FinalizePartition(paver::Partition::kZirconR), ZX_OK);
+    ASSERT_EQ(partitioner->FinalizePartition(paver::Partition::kVbMetaA), ZX_OK);
+    ASSERT_EQ(partitioner->FinalizePartition(paver::Partition::kVbMetaB), ZX_OK);
     ASSERT_EQ(partitioner->FinalizePartition(paver::Partition::kFuchsiaVolumeManager), ZX_OK);
 
     END_TEST;
@@ -361,10 +389,12 @@ bool FindPartitionTest() {
     BEGIN_TEST;
 
     ASSERT_TRUE(Initialize());
-    fbl::unique_ptr<BlockDevice> fvm, zircon_a, zircon_b, zircon_r;
+    fbl::unique_ptr<BlockDevice> fvm, zircon_a, zircon_b, zircon_r, vbmeta_a, vbmeta_b;
     ASSERT_TRUE(BlockDevice::Create(kZirconAType, &zircon_a));
     ASSERT_TRUE(BlockDevice::Create(kZirconBType, &zircon_b));
     ASSERT_TRUE(BlockDevice::Create(kZirconRType, &zircon_r));
+    ASSERT_TRUE(BlockDevice::Create(kVbMetaAType, &vbmeta_a));
+    ASSERT_TRUE(BlockDevice::Create(kVbMetaBType, &vbmeta_b));
     ASSERT_TRUE(BlockDevice::Create(kFvmType, &fvm));
 
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
@@ -374,6 +404,8 @@ bool FindPartitionTest() {
     ASSERT_EQ(partitioner->FindPartition(paver::Partition::kZirconA, &fd), ZX_OK);
     ASSERT_EQ(partitioner->FindPartition(paver::Partition::kZirconB, &fd), ZX_OK);
     ASSERT_EQ(partitioner->FindPartition(paver::Partition::kZirconR, &fd), ZX_OK);
+    ASSERT_EQ(partitioner->FindPartition(paver::Partition::kVbMetaA, &fd), ZX_OK);
+    ASSERT_EQ(partitioner->FindPartition(paver::Partition::kVbMetaB, &fd), ZX_OK);
     ASSERT_EQ(partitioner->FindPartition(paver::Partition::kFuchsiaVolumeManager, &fd), ZX_OK);
 
     END_TEST;
@@ -383,10 +415,12 @@ bool GetBlockSizeTest() {
     BEGIN_TEST;
 
     ASSERT_TRUE(Initialize());
-    fbl::unique_ptr<BlockDevice> fvm, zircon_a, zircon_b, zircon_r;
+    fbl::unique_ptr<BlockDevice> fvm, zircon_a, zircon_b, zircon_r, vbmeta_a, vbmeta_b;
     ASSERT_TRUE(BlockDevice::Create(kZirconAType, &zircon_a));
     ASSERT_TRUE(BlockDevice::Create(kZirconBType, &zircon_b));
     ASSERT_TRUE(BlockDevice::Create(kZirconRType, &zircon_r));
+    ASSERT_TRUE(BlockDevice::Create(kVbMetaAType, &vbmeta_a));
+    ASSERT_TRUE(BlockDevice::Create(kVbMetaBType, &vbmeta_b));
     ASSERT_TRUE(BlockDevice::Create(kFvmType, &fvm));
 
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
@@ -401,6 +435,12 @@ bool GetBlockSizeTest() {
     ASSERT_EQ(partitioner->GetBlockSize(fd, &block_size), ZX_OK);
     ASSERT_EQ(block_size, kBlockSize);
     ASSERT_EQ(partitioner->FindPartition(paver::Partition::kZirconR, &fd), ZX_OK);
+    ASSERT_EQ(partitioner->GetBlockSize(fd, &block_size), ZX_OK);
+    ASSERT_EQ(block_size, kBlockSize);
+    ASSERT_EQ(partitioner->FindPartition(paver::Partition::kVbMetaA, &fd), ZX_OK);
+    ASSERT_EQ(partitioner->GetBlockSize(fd, &block_size), ZX_OK);
+    ASSERT_EQ(block_size, kBlockSize);
+    ASSERT_EQ(partitioner->FindPartition(paver::Partition::kVbMetaB, &fd), ZX_OK);
     ASSERT_EQ(partitioner->GetBlockSize(fd, &block_size), ZX_OK);
     ASSERT_EQ(block_size, kBlockSize);
     ASSERT_EQ(partitioner->FindPartition(paver::Partition::kFuchsiaVolumeManager, &fd), ZX_OK);
@@ -496,6 +536,8 @@ bool FinalizePartitionTest() {
     ASSERT_EQ(partitioner->FinalizePartition(paver::Partition::kZirconA), ZX_OK);
     ASSERT_EQ(partitioner->FinalizePartition(paver::Partition::kZirconB), ZX_OK);
     ASSERT_EQ(partitioner->FinalizePartition(paver::Partition::kZirconR), ZX_OK);
+    ASSERT_EQ(partitioner->FinalizePartition(paver::Partition::kVbMetaA), ZX_OK);
+    ASSERT_EQ(partitioner->FinalizePartition(paver::Partition::kVbMetaB), ZX_OK);
 
     END_TEST;
 }
@@ -517,6 +559,8 @@ bool FindPartitionTest() {
     ASSERT_EQ(partitioner->FindPartition(paver::Partition::kZirconA, &fd), ZX_OK);
     ASSERT_EQ(partitioner->FindPartition(paver::Partition::kZirconB, &fd), ZX_OK);
     ASSERT_EQ(partitioner->FindPartition(paver::Partition::kZirconR, &fd), ZX_OK);
+    ASSERT_EQ(partitioner->FindPartition(paver::Partition::kVbMetaA, &fd), ZX_OK);
+    ASSERT_EQ(partitioner->FindPartition(paver::Partition::kVbMetaB, &fd), ZX_OK);
 
     ASSERT_EQ(partitioner->FindPartition(paver::Partition::kFuchsiaVolumeManager, &fd), ZX_OK);
 
@@ -547,6 +591,12 @@ bool GetBlockSizeTest() {
     ASSERT_EQ(partitioner->GetBlockSize(fd, &block_size), ZX_OK);
     ASSERT_EQ(block_size, kPageSize * kPagesPerBlock);
     ASSERT_EQ(partitioner->FindPartition(paver::Partition::kZirconR, &fd), ZX_OK);
+    ASSERT_EQ(partitioner->GetBlockSize(fd, &block_size), ZX_OK);
+    ASSERT_EQ(block_size, kPageSize * kPagesPerBlock);
+    ASSERT_EQ(partitioner->FindPartition(paver::Partition::kVbMetaA, &fd), ZX_OK);
+    ASSERT_EQ(partitioner->GetBlockSize(fd, &block_size), ZX_OK);
+    ASSERT_EQ(block_size, kPageSize * kPagesPerBlock);
+    ASSERT_EQ(partitioner->FindPartition(paver::Partition::kVbMetaB, &fd), ZX_OK);
     ASSERT_EQ(partitioner->GetBlockSize(fd, &block_size), ZX_OK);
     ASSERT_EQ(block_size, kPageSize * kPagesPerBlock);
 

@@ -21,6 +21,8 @@ enum class Command {
     kInstallZirconA,
     kInstallZirconB,
     kInstallZirconR,
+    kInstallVbMetaA,
+    kInstallVbMetaB,
     kInstallDataFile,
     kInstallFvm,
     kWipe,

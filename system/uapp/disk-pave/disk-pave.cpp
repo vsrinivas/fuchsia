@@ -30,6 +30,8 @@ void PrintUsage() {
     ERROR("  install-zircona    : Install a ZIRCON-A partition to the device\n");
     ERROR("  install-zirconb    : Install a ZIRCON-B partition to the device\n");
     ERROR("  install-zirconr    : Install a ZIRCON-R partition to the device\n");
+    ERROR("  install-vbmetaa    : Install a VBMETA-A partition to the device\n");
+    ERROR("  install-vbmetab    : Install a VBMETA-B partition to the device\n");
     ERROR("  install-fvm        : Install a sparse FVM to the device\n");
     ERROR("  install-data-file  : Install a file to DATA (--path required)\n");
     ERROR("  wipe               : Clean up the install disk\n");
@@ -65,6 +67,10 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
         flags->cmd = Command::kInstallZirconB;
     } else if (!strcmp(argv[0], "install-zirconr")) {
         flags->cmd = Command::kInstallZirconR;
+    } else if (!strcmp(argv[0], "install-vbmetaa")) {
+        flags->cmd = Command::kInstallVbMetaA;
+    } else if (!strcmp(argv[0], "install-vbmetab")) {
+        flags->cmd = Command::kInstallVbMetaB;
     } else if (!strcmp(argv[0], "install-data-file")) {
         flags->cmd = Command::kInstallDataFile;
     } else if (!strcmp(argv[0], "install-fvm")) {

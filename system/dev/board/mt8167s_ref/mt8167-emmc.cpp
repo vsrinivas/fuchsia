@@ -41,6 +41,8 @@ zx_status_t Mt8167::EmmcInit() {
     static const guid_map_t guid_map[] = {
         { "boot_a", GUID_ZIRCON_A_VALUE },
         { "boot_b", GUID_ZIRCON_B_VALUE },
+        { "vbmeta_a", GUID_VBMETA_A_VALUE },
+        { "vbmeta_b", GUID_VBMETA_B_VALUE },
         { "userdata", GUID_FVM_VALUE }
     };
     static_assert(fbl::count_of(guid_map) <= DEVICE_METADATA_GUID_MAP_MAX_ENTRIES);

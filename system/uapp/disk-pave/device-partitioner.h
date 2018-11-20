@@ -26,6 +26,8 @@ enum class Partition {
     kZirconA,
     kZirconB,
     kZirconR,
+    kVbMetaA,
+    kVbMetaB,
     kFuchsiaVolumeManager,
     // The following are only valid for WipePartition.
     kInstallType,

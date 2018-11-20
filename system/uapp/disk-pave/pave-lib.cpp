@@ -62,6 +62,10 @@ static Partition PartitionType(const Command command) {
         return Partition::kZirconB;
     case Command::kInstallZirconR:
         return Partition::kZirconR;
+    case Command::kInstallVbMetaA:
+        return Partition::kVbMetaA;
+    case Command::kInstallVbMetaB:
+        return Partition::kVbMetaB;
     case Command::kInstallFvm:
         return Partition::kFuchsiaVolumeManager;
     default:

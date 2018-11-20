@@ -900,6 +900,16 @@ zx_status_t FixedDevicePartitioner::FindPartition(Partition partition_type,
         memcpy(type, zircon_r_type, GPT_GUID_LEN);
         break;
     }
+    case Partition::kVbMetaA: {
+        const uint8_t vbmeta_a_type[GPT_GUID_LEN] = GUID_VBMETA_A_VALUE;
+        memcpy(type, vbmeta_a_type, GPT_GUID_LEN);
+        break;
+    }
+    case Partition::kVbMetaB: {
+        const uint8_t vbmeta_b_type[GPT_GUID_LEN] = GUID_VBMETA_B_VALUE;
+        memcpy(type, vbmeta_b_type, GPT_GUID_LEN);
+        break;
+    }
     case Partition::kFuchsiaVolumeManager: {
         const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
         memcpy(type, fvm_type, GPT_GUID_LEN);
@@ -974,6 +984,16 @@ zx_status_t SkipBlockDevicePartitioner::FindPartition(Partition partition_type,
     case Partition::kZirconR: {
         const uint8_t zircon_r_type[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
         memcpy(type, zircon_r_type, GPT_GUID_LEN);
+        break;
+    }
+    case Partition::kVbMetaA: {
+        const uint8_t vbmeta_a_type[GPT_GUID_LEN] = GUID_VBMETA_A_VALUE;
+        memcpy(type, vbmeta_a_type, GPT_GUID_LEN);
+        break;
+    }
+    case Partition::kVbMetaB: {
+        const uint8_t vbmeta_b_type[GPT_GUID_LEN] = GUID_VBMETA_B_VALUE;
+        memcpy(type, vbmeta_b_type, GPT_GUID_LEN);
         break;
     }
     case Partition::kFuchsiaVolumeManager: {

@@ -676,6 +676,10 @@ const char* gpt_guid_to_type(const char* guid) {
         return "factory";
     } else if (!strcmp(GUID_BOOTLOADER_STRING, guid)) {
         return "bootloader";
+    } else if (!strcmp(GUID_VBMETA_A_STRING, guid)) {
+        return "vbmeta_a";
+    } else if (!strcmp(GUID_VBMETA_B_STRING, guid)) {
+        return "vbmeta_b";
     } else {
         return "unknown";
     }
