@@ -628,10 +628,14 @@ static zx_status_t dc_launch_devhost(Devhost* host,
 
     launchpad_add_handle(lp, hrpc, PA_HND(PA_USER0, 0));
 
-    zx_handle_t h;
+    // Give devhosts the root resource if we have it (in tests, we may not)
     //TODO: limit root resource to root devhost only
-    zx_handle_duplicate(get_root_resource(), ZX_RIGHT_SAME_RIGHTS, &h);
-    launchpad_add_handle(lp, h, PA_HND(PA_RESOURCE, 0));
+    zx_handle_t h;
+    zx_handle_t root_resource = get_root_resource();
+    if (root_resource != ZX_HANDLE_INVALID) {
+        zx_handle_duplicate(root_resource, ZX_RIGHT_SAME_RIGHTS, &h);
+        launchpad_add_handle(lp, h, PA_HND(PA_RESOURCE, 0));
+    }
 
     // Inherit devmgr's environment (including kernel cmdline)
     launchpad_clone(lp, LP_CLONE_ENVIRON);

@@ -573,6 +573,23 @@ static zx_status_t fuchsia_create_job() {
     return ZX_OK;
 }
 
+// Get the root resource from the startup handle.  Not receiving the startup
+// handle is logged, but not fatal.  In test environments, it would not be
+// present.
+void fetch_root_resource() {
+    // Read the root resource out of its channel
+    zx::channel root_resource_channel(zx_take_startup_handle(BOOTSVC_ROOT_RESOURCE_CHANNEL_HND));
+    if (!root_resource_channel.is_valid()) {
+        printf("devmgr: did not receive root resource channel\n");
+        return;
+    }
+    uint32_t actual_handles = 0;
+    zx_status_t status = root_resource_channel.read(0, nullptr, 0, nullptr,
+                                                    &root_resource_handle, 1, &actual_handles);
+    ZX_ASSERT_MSG(status == ZX_OK && actual_handles == 1,
+                  "devmgr: did not receive root resource: %s\n", zx_status_get_string(status));
+}
+
 } // namespace devmgr
 
 int main(int argc, char** argv) {
@@ -580,15 +597,7 @@ int main(int argc, char** argv) {
 
     printf("devmgr: main()\n");
 
-    // Read the root resource out of its channel
-    {
-        zx::channel root_resource_channel(
-                zx_take_startup_handle(BOOTSVC_ROOT_RESOURCE_CHANNEL_HND));
-        uint32_t actual_handles = 0;
-        zx_status_t status = root_resource_channel.read(0, nullptr, 0, nullptr,
-                                                        &root_resource_handle, 1, &actual_handles);
-        ZX_ASSERT(status == ZX_OK && actual_handles == 1);
-    }
+    fetch_root_resource();
 
     root_job_handle = zx::job::default_job();
 
@@ -807,13 +816,11 @@ void devmgr_vfs_init() {
 
     fdio_ns_t* ns;
     zx_status_t r;
-    if ((r = fdio_ns_get_installed(&ns)) != ZX_OK) {
-        printf("devmgr: cannot get namespace: %d\n", r);
-        return;
-    }
-    if ((r = fdio_ns_bind(ns, "/dev", fs_clone("dev").release())) != ZX_OK) {
-        printf("devmgr: cannot bind /dev to namespace: %d\n", r);
-    }
+    r = fdio_ns_get_installed(&ns);
+    ZX_ASSERT_MSG(r == ZX_OK, "devmgr: cannot get namespace: %s\n", zx_status_get_string(r));
+    r = fdio_ns_bind(ns, "/dev", fs_clone("dev").release());
+    ZX_ASSERT_MSG(r == ZX_OK, "devmgr: cannot bind /dev to namespace: %s\n",
+                  zx_status_get_string(r));
 
     // Start fshost before binding /system, since it publishes it.
     fshost_start();
