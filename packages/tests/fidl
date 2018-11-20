@@ -1,4 +1,7 @@
 {
+    "labels": [
+        "//garnet/tests/fidl-changes"
+    ],
     "packages": [
         "//garnet/public/lib/fidl/cpp:fidl_tests",
         "//garnet/examples/fidl/echo2_server_cpp:echo2_server_cpp_tests"

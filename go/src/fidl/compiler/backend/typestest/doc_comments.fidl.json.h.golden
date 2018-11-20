@@ -30,7 +30,7 @@ class Interface {
   using EventSender_ = Interface_EventSender;
   using Sync_ = Interface_Sync;
   virtual ~Interface();
-  
+      
   // method comment #1
   //
   // method comment #3

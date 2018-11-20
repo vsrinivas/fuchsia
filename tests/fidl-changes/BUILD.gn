@@ -1,0 +1,78 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+group("fidl-changes") {
+  deps = [
+    ":cpp",
+    ":fidl.test.after",
+    ":fidl.test.before",
+  ]
+}
+
+fidl("fidl.test.before") {
+  sources = [
+    "fidl/before.fidl",
+  ]
+}
+
+fidl("fidl.test.during") {
+  sources = [
+    "fidl/during.fidl",
+  ]
+}
+
+fidl("fidl.test.after") {
+  sources = [
+    "fidl/after.fidl",
+  ]
+}
+
+group("cpp") {
+  deps = [
+    ":cpp_after",
+    ":cpp_before",
+    ":cpp_during_1",
+    ":cpp_during_2",
+  ]
+}
+
+executable("cpp_before") {
+  sources = [
+    "cpp/before.cc",
+  ]
+  defines = [ "BEFORE" ]
+  deps = [
+    ":fidl.test.before",
+  ]
+}
+
+executable("cpp_during_1") {
+  sources = [
+    "cpp/before.cc",
+  ]
+  deps = [
+    ":fidl.test.during",
+  ]
+}
+
+executable("cpp_during_2") {
+  sources = [
+    "cpp/after.cc",
+  ]
+  deps = [
+    ":fidl.test.during",
+  ]
+}
+
+executable("cpp_after") {
+  sources = [
+    "cpp/after.cc",
+  ]
+  defines = [ "AFTER" ]
+  deps = [
+    ":fidl.test.after",
+  ]
+}

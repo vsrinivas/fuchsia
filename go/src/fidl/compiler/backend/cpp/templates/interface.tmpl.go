@@ -75,10 +75,14 @@ class {{ .Name }} {
       {{ .CallbackWrapper }}<void({{ template "ParamTypes" .Response }})>;
     {{- end }}
     {{- if .HasRequest }}
-  {{range .DocComments}}
+      {{ range .DocComments }}
   //{{ . }}
-  {{- end}}
+      {{- end }}
+      {{- if .Transitional }}
+  virtual void {{ template "RequestMethodSignature" . }} { };
+      {{- else }}
   virtual void {{ template "RequestMethodSignature" . }} = 0;
+      {{- end }}
     {{- end }}
   {{- end }}
 };

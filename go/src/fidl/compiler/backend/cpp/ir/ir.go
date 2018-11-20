@@ -142,6 +142,7 @@ type Method struct {
 	CallbackType        string
 	ResponseHandlerType string
 	ResponderType       string
+	Transitional        bool
 }
 
 type Parameter struct {
@@ -646,6 +647,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 		if !v.HasRequest {
 			responseTypeNameSuffix = "EventTable"
 		}
+		_, transitional := v.LookupAttribute("Transitional")
 		m := Method{
 			v.Attributes,
 			v.Ordinal,
@@ -662,6 +664,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			callbackType,
 			fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
 			fmt.Sprintf("%s_%s_Responder", r.Name, v.Name),
+			transitional,
 		}
 		r.Methods = append(r.Methods, m)
 	}
