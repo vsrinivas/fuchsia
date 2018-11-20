@@ -14,6 +14,7 @@
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
+#include <fuchsia/gpu/clock/c/fidl.h>
 #include <hw/reg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -170,11 +171,31 @@ static zx_status_t aml_gpu_ioctl(void* ctx, uint32_t op,
     }
 }
 
+static zx_status_t aml_gpu_SetFrequencySource(void* ctx, uint32_t clk_source, fidl_txn_t* txn) {
+    aml_gpu_t* gpu = ctx;
+    if (clk_source >= MAX_GPU_CLK_FREQ) {
+        GPU_ERROR("Invalid clock freq source index\n");
+        return fuchsia_gpu_clock_ClockSetFrequencySource_reply(txn, ZX_ERR_NOT_SUPPORTED);
+    }
+    aml_gpu_set_clk_freq_source(gpu, clk_source);
+    return fuchsia_gpu_clock_ClockSetFrequencySource_reply(txn, ZX_OK);
+}
+
+
+static fuchsia_gpu_clock_Clock_ops_t fidl_ops = {
+    .SetFrequencySource = aml_gpu_SetFrequencySource
+};
+
+static zx_status_t aml_gpu_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_gpu_clock_Clock_dispatch(ctx, txn, msg, &fidl_ops);
+}
+
 static zx_protocol_device_t aml_gpu_protocol = {
     .version = DEVICE_OPS_VERSION,
     .release = aml_gpu_release,
     .get_protocol = aml_gpu_get_protocol,
     .ioctl = aml_gpu_ioctl,
+    .message = aml_gpu_message,
 };
 
 static zx_status_t aml_gpu_bind(void* ctx, zx_device_t* parent) {
