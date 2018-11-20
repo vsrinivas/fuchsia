@@ -38,6 +38,15 @@ zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t n
 zx_status_t fidl_validate_msg(const fidl_type_t* type, const fidl_msg_t* msg,
                               const char** out_error_msg);
 
+// Traverses a linearized FIDL message, closing all handles within it.
+// This function is a no-op on host side.
+//
+// Handle values in |bytes| are replaced with ZX_HANDLE_INVALID.
+zx_status_t fidl_close_handles(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
+                               const char** out_error_msg);
+zx_status_t fidl_close_handles_msg(const fidl_type_t* type, const fidl_msg_t* msg,
+                                   const char** out_error_msg);
+
 // Stores the name of a fidl type into the provided buffer.
 // Truncates the name if it is too long to fit into the buffer.
 // Returns the number of characters written into the buffer.

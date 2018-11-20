@@ -19,9 +19,13 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/message.cpp \
     $(LOCAL_DIR)/transport.cpp \
     $(LOCAL_DIR)/validating.cpp \
+    $(LOCAL_DIR)/handle_closing.cpp \
 
 MODULE_LIBS := \
     system/ulib/zircon \
+
+MODULE_COMPILEFLAGS += \
+    -Isystem/ulib/fit/include \
 
 MODULE_PACKAGE := src
 

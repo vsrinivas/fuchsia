@@ -18,6 +18,8 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/message_tests.cpp \
     $(LOCAL_DIR)/validating_tests.cpp \
+    $(LOCAL_DIR)/handle_closing_tests.cpp \
+    $(LOCAL_DIR)/llcpp_types_tests.cpp \
 
 MODULE_NAME := fidl-test
 
@@ -32,5 +34,8 @@ MODULE_LIBS := \
     system/ulib/fdio \
     system/ulib/unittest \
     system/ulib/zircon \
+
+MODULE_COMPILEFLAGS += \
+    -Isystem/ulib/fit/include \
 
 include make/module.mk
