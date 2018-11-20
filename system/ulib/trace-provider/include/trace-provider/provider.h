@@ -73,14 +73,17 @@ typedef struct trace_provider trace_provider_t;
 // Creates a trace provider associated with the specified async dispatcher
 // and registers it with the tracing system.
 //
-// |name| is the name of the trace provider and is used for diagnostic
-// purposes. The maximum supported length is 100 characters.
-//
 // The trace provider will start and stop the trace engine in response to requests
 // from the tracing system.
 //
+// |to_service| is the channel to use to connect to the trace manager.
+// It is consumed regardless of success/failure.
+//
 // |dispatcher| is the asynchronous dispatcher which the trace provider and trace
 // engine will use for dispatch.  This must outlive the trace provider instance.
+//
+// |name| is the name of the trace provider and is used for diagnostic
+// purposes. The maximum supported length is 100 characters.
 //
 // Returns the trace provider, or null if creation failed.
 //
@@ -88,25 +91,44 @@ typedef struct trace_provider trace_provider_t;
 // Switch to passively exporting the trace provider via the "hub" through
 // the process's exported directory once that stuff is implemented.  We'll
 // probably need to pass some extra parameters to the trace provider then.
-trace_provider_t* trace_provider_create_with_name(async_dispatcher_t* dispatcher,
-                                                  const char* name);
+trace_provider_t* trace_provider_create_with_name_etc(
+    zx_handle_t to_service, async_dispatcher_t* dispatcher, const char* name);
 
 // Wrapper around trace_provider_create_with_name for backward compatibility.
 // TODO(DX-422): Update all providers to use create_with_name, then change this
 // to also take a name, then update all providers to call this one, and then
 // delete trace_provider_create_with_name.
-trace_provider_t* trace_provider_create(async_dispatcher_t* dispatcher);
+trace_provider_t* trace_provider_create_etc(
+    zx_handle_t to_service, async_dispatcher_t* dispatcher);
 
-// Same as trace_provider_create except does not return until the provider is
-// registered with the trace manager.
-// |name| is the name of the provider, used for diagnostic purposes.
+// Same as trace_provider_create_with_name except does not return until the
+// provider is registered with the trace manager.
 // On return, if !NULL, |*out_already_started| is true if the trace manager has
 // already started tracing, which is a hint to the provider to wait for the
 // Start() message before continuing if it wishes to not drop trace records
 // before Start() is received.
-trace_provider_t* trace_provider_create_synchronously(async_dispatcher_t* dispatcher,
-                                                      const char* name,
-                                                      bool* out_already_started);
+trace_provider_t* trace_provider_create_synchronously_etc(
+    zx_handle_t to_service, async_dispatcher_t* dispatcher, const char* name,
+    bool* out_already_started);
+
+// Wrappers on the above functions that use fdio.
+trace_provider_t* trace_provider_create_with_name_fdio(
+    async_dispatcher_t* dispatcher, const char* name);
+trace_provider_t* trace_provider_create_with_fdio(
+    async_dispatcher_t* dispatcher);
+trace_provider_t* trace_provider_create_synchronously_with_fdio(
+    async_dispatcher_t* dispatcher, const char* name,
+    bool* out_already_started);
+
+// Compatibility wrappers.
+// TODO(PT-63): Remove these (and the _etc suffixes on the above routines)
+// when all clients are updated.
+trace_provider_t* trace_provider_create_with_name(
+    async_dispatcher_t* dispatcher, const char* name);
+trace_provider_t* trace_provider_create(async_dispatcher_t* dispatcher);
+trace_provider_t* trace_provider_create_synchronously(
+    async_dispatcher_t* dispatcher, const char* name,
+    bool* out_already_started);
 
 // Destroys the trace provider.
 void trace_provider_destroy(trace_provider_t* provider);
@@ -116,11 +138,13 @@ __END_CDECLS
 #ifdef __cplusplus
 
 #include <fbl/unique_ptr.h>
+#include <lib/zx/channel.h>
 
 namespace trace {
 
 // Convenience RAII wrapper for creating and destroying a trace provider.
-class TraceProvider {
+// TODO(PT-63): Remove Etc suffix when all clients are updated.
+class TraceProviderEtc {
 public:
     // Create a trace provider synchronously, and return an indicator of
     // whether tracing has started already in |*out_already_started|.
@@ -128,28 +152,33 @@ public:
     // This is done with a factory function because it's more complex than
     // the basic constructor.
     static bool CreateSynchronously(
+            zx::channel to_service,
             async_dispatcher_t* dispatcher,
             const char* name,
-            fbl::unique_ptr<TraceProvider>* out_provider,
+            fbl::unique_ptr<TraceProviderEtc>* out_provider,
             bool* out_already_started) {
-        auto provider = trace_provider_create_synchronously(
-            dispatcher, name, out_already_started);
+        auto provider = trace_provider_create_synchronously_etc(
+            to_service.release(), dispatcher, name, out_already_started);
         if (!provider)
             return false;
-        *out_provider = fbl::unique_ptr<TraceProvider>(new TraceProvider(provider));
+        *out_provider = fbl::unique_ptr<TraceProviderEtc>(
+            new TraceProviderEtc(provider));
         return true;
     }
 
     // Creates a trace provider.
-    TraceProvider(async_dispatcher_t* dispatcher)
-        : provider_(trace_provider_create(dispatcher)) {}
+    TraceProviderEtc(zx::channel to_service, async_dispatcher_t* dispatcher)
+        : provider_(trace_provider_create_etc(to_service.release(),
+                                              dispatcher)) {}
 
     // Creates a trace provider.
-    TraceProvider(async_dispatcher_t* dispatcher, const char* name)
-        : provider_(trace_provider_create_with_name(dispatcher, name)) {}
+    TraceProviderEtc(zx::channel to_service, async_dispatcher_t* dispatcher,
+                     const char* name)
+        : provider_(trace_provider_create_with_name_etc(to_service.release(),
+                                                        dispatcher, name)) {}
 
     // Destroys a trace provider.
-    ~TraceProvider() {
+    ~TraceProviderEtc() {
         if (provider_)
             trace_provider_destroy(provider_);
     }
@@ -159,12 +188,50 @@ public:
         return provider_ != nullptr;
     }
 
-private:
-    TraceProvider(trace_provider_t* provider)
+protected:
+    explicit TraceProviderEtc(trace_provider_t* provider)
         : provider_(provider) {}
 
+private:
     trace_provider_t* const provider_;
 };
+
+class TraceProviderWithFdio : public TraceProviderEtc {
+public:
+    static bool CreateSynchronously(
+            async_dispatcher_t* dispatcher,
+            const char* name,
+            fbl::unique_ptr<TraceProviderWithFdio>* out_provider,
+            bool* out_already_started) {
+        auto provider = trace_provider_create_synchronously_with_fdio(
+            dispatcher, name, out_already_started);
+        if (!provider)
+            return false;
+        *out_provider = fbl::unique_ptr<TraceProviderWithFdio>(
+            new TraceProviderWithFdio(provider));
+        return true;
+    }
+
+    // Creates a trace provider.
+    explicit TraceProviderWithFdio(async_dispatcher_t* dispatcher)
+        : TraceProviderWithFdio(
+            trace_provider_create_with_fdio(dispatcher)) {}
+
+    // Creates a trace provider.
+    explicit TraceProviderWithFdio(async_dispatcher_t* dispatcher,
+                                   const char* name)
+        : TraceProviderWithFdio(
+            trace_provider_create_with_name_fdio(dispatcher, name)) {}
+
+private:
+    explicit TraceProviderWithFdio(trace_provider_t* provider)
+        : TraceProviderEtc(provider) {}
+};
+
+// Compatibility wrapper.
+// TODO(PT-63): Delete (and remove _etc from above version) when all clients
+// are updated.
+using TraceProvider = TraceProviderWithFdio;
 
 } // namespace trace
 

@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(PT-63): Remove the "_etc" suffix on all API functions.
+
 #include "provider_impl.h"
 
 #include <stdio.h>
 
 #include <fbl/algorithm.h>
 #include <lib/async/default.h>
-#include <lib/fdio/util.h>
 #include <lib/fidl/coding.h>
 #include <lib/zx/process.h>
 #include <zircon/assert.h>
@@ -180,39 +181,19 @@ void TraceProviderImpl::Connection::Close() {
 } // namespace internal
 } // namespace trace
 
-static zx_status_t ConnectToServiceRegistry(zx::channel* out_registry_client) {
-    // Connect to the trace registry.
-    zx::channel registry_client;
-    zx::channel registry_service;
-    zx_status_t status = zx::channel::create(0u, &registry_client, &registry_service);
-    if (status != ZX_OK)
-        return status;
+trace_provider_t* trace_provider_create_with_name_etc(
+        zx_handle_t to_service_h, async_dispatcher_t* dispatcher,
+        const char* name) {
+    zx::channel to_service(to_service_h);
 
-    status = fdio_service_connect("/svc/fuchsia.tracelink.Registry",
-                                  registry_service.release()); // takes ownership
-    if (status != ZX_OK)
-        return status;
-
-    *out_registry_client = std::move(registry_client);
-    return ZX_OK;
-}
-
-trace_provider_t* trace_provider_create_with_name(async_dispatcher_t* dispatcher,
-                                                  const char* name) {
+    ZX_DEBUG_ASSERT(to_service.is_valid());
     ZX_DEBUG_ASSERT(dispatcher);
-
-    zx::channel registry_client;
-    auto status = ConnectToServiceRegistry(&registry_client);
-    if (status != ZX_OK) {
-        fprintf(stderr, "TraceProvider: connection failed: status=%d(%s)\n",
-                status, zx_status_get_string(status));
-        return nullptr;
-    }
 
     // Create the channel to which we will bind the trace provider.
     zx::channel provider_client;
     zx::channel provider_service;
-    status = zx::channel::create(0u, &provider_client, &provider_service);
+    zx_status_t status =
+        zx::channel::create(0u, &provider_client, &provider_service);
     if (status != ZX_OK) {
         fprintf(stderr, "TraceProvider: channel create failed: status=%d(%s)\n",
                 status, zx_status_get_string(status));
@@ -221,19 +202,22 @@ trace_provider_t* trace_provider_create_with_name(async_dispatcher_t* dispatcher
 
     // Register the trace provider.
     status = fuchsia_tracelink_RegistryRegisterTraceProvider(
-        registry_client.get(), provider_client.release(),
+        to_service.get(), provider_client.release(),
         trace::internal::GetPid(), name, strlen(name));
     if (status != ZX_OK) {
         fprintf(stderr, "TraceProvider: registry failed: status=%d(%s)\n",
                 status, zx_status_get_string(status));
         return nullptr;
     }
+    // Note: |to_service| can be closed now. Let it close as a consequence
+    // of going out of scope.
 
-    return new trace::internal::TraceProviderImpl(dispatcher,
-                                                  std::move(provider_service));
+    return new trace::internal::TraceProviderImpl(
+        dispatcher, std::move(provider_service));
 }
 
-trace_provider_t* trace_provider_create(async_dispatcher_t* dispatcher) {
+trace_provider_t* trace_provider_create_etc(zx_handle_t to_service,
+                                            async_dispatcher_t* dispatcher) {
     auto self = zx::process::self();
     char name[ZX_MAX_NAME_LEN];
     auto status = self->get_property(ZX_PROP_NAME, name, sizeof(name));
@@ -242,26 +226,22 @@ trace_provider_t* trace_provider_create(async_dispatcher_t* dispatcher) {
                 status, zx_status_get_string(status));
         name[0] = '\0';
     }
-    return trace_provider_create_with_name(dispatcher, name);
+    return trace_provider_create_with_name_etc(to_service, dispatcher, name);
 }
 
-trace_provider_t* trace_provider_create_synchronously(async_dispatcher_t* dispatcher,
-                                                      const char* name,
-                                                      bool* out_manager_is_tracing_already) {
-    ZX_DEBUG_ASSERT(dispatcher);
+trace_provider_t* trace_provider_create_synchronously_etc(
+        zx_handle_t to_service_h, async_dispatcher_t* dispatcher,
+        const char* name, bool* out_manager_is_tracing_already) {
+    zx::channel to_service(to_service_h);
 
-    zx::channel registry_client;
-    auto status = ConnectToServiceRegistry(&registry_client);
-    if (status != ZX_OK) {
-        fprintf(stderr, "TraceProvider: connection failed: status=%d(%s)\n",
-                status, zx_status_get_string(status));
-        return nullptr;
-    }
+    ZX_DEBUG_ASSERT(to_service.is_valid());
+    ZX_DEBUG_ASSERT(dispatcher);
 
     // Create the channel to which we will bind the trace provider.
     zx::channel provider_client;
     zx::channel provider_service;
-    status = zx::channel::create(0u, &provider_client, &provider_service);
+    zx_status_t status =
+        zx::channel::create(0u, &provider_client, &provider_service);
     if (status != ZX_OK) {
         fprintf(stderr, "TraceProvider: channel create failed: status=%d(%s)\n",
                 status, zx_status_get_string(status));
@@ -272,7 +252,7 @@ trace_provider_t* trace_provider_create_synchronously(async_dispatcher_t* dispat
     zx_status_t registry_status;
     bool manager_is_tracing_already;
     status = fuchsia_tracelink_RegistryRegisterTraceProviderSynchronously(
-        registry_client.get(), provider_client.release(),
+        to_service.get(), provider_client.release(),
         trace::internal::GetPid(), name, strlen(name),
         &registry_status, &manager_is_tracing_already);
     if (status != ZX_OK) {
@@ -285,6 +265,8 @@ trace_provider_t* trace_provider_create_synchronously(async_dispatcher_t* dispat
                 status, zx_status_get_string(status));
         return nullptr;
     }
+    // Note: |to_service| can be closed now. Let it close as a consequence
+    // of going out of scope.
 
     if (out_manager_is_tracing_already)
         *out_manager_is_tracing_already = manager_is_tracing_already;

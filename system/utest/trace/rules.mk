@@ -33,12 +33,14 @@ LOCAL_STATIC_LIBS := \
     system/ulib/zx \
     system/ulib/zxcpp \
 
+# fdio is here so that things like printf work.
+# Otherwise they silently fail (output is dropped).
 LOCAL_LIBS := \
     system/ulib/async.default \
     system/ulib/c \
-    system/ulib/zircon \
     system/ulib/fdio \
-    system/ulib/unittest
+    system/ulib/unittest \
+    system/ulib/zircon \
 
 # Version of test that uses libtrace-engine.so.
 
