@@ -355,10 +355,10 @@ static bool vmo_commit_test() {
     ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
     ASSERT_TRUE(vmo, "vmobject creation\n");
 
-    uint64_t committed;
-    auto ret = vmo->CommitRange(0, alloc_size, &committed);
+    auto ret = vmo->CommitRange(0, alloc_size);
     ASSERT_EQ(ZX_OK, ret, "committing vm object\n");
-    EXPECT_EQ(ROUNDUP_PAGE_SIZE(alloc_size), committed,
+    EXPECT_EQ(ROUNDUP_PAGE_SIZE(alloc_size),
+              PAGE_SIZE * vmo->AllocatedPages(),
               "committing vm object\n");
     END_TEST;
 }
@@ -386,8 +386,7 @@ static bool vmo_pin_test() {
     status = vmo->Pin(0, alloc_size);
     EXPECT_EQ(ZX_ERR_NOT_FOUND, status, "pinning uncommitted range\n");
 
-    uint64_t n;
-    status = vmo->CommitRange(PAGE_SIZE, 3 * PAGE_SIZE, &n);
+    status = vmo->CommitRange(PAGE_SIZE, 3 * PAGE_SIZE);
     EXPECT_EQ(ZX_OK, status, "committing range\n");
 
     status = vmo->Pin(0, alloc_size);
@@ -400,19 +399,19 @@ static bool vmo_pin_test() {
     status = vmo->Pin(PAGE_SIZE, 3 * PAGE_SIZE);
     EXPECT_EQ(ZX_OK, status, "pinning committed range\n");
 
-    status = vmo->DecommitRange(PAGE_SIZE, 3 * PAGE_SIZE, &n);
+    status = vmo->DecommitRange(PAGE_SIZE, 3 * PAGE_SIZE);
     EXPECT_EQ(ZX_ERR_BAD_STATE, status, "decommitting pinned range\n");
-    status = vmo->DecommitRange(PAGE_SIZE, PAGE_SIZE, &n);
+    status = vmo->DecommitRange(PAGE_SIZE, PAGE_SIZE);
     EXPECT_EQ(ZX_ERR_BAD_STATE, status, "decommitting pinned range\n");
-    status = vmo->DecommitRange(3 * PAGE_SIZE, PAGE_SIZE, &n);
+    status = vmo->DecommitRange(3 * PAGE_SIZE, PAGE_SIZE);
     EXPECT_EQ(ZX_ERR_BAD_STATE, status, "decommitting pinned range\n");
 
     vmo->Unpin(PAGE_SIZE, 3 * PAGE_SIZE);
 
-    status = vmo->DecommitRange(PAGE_SIZE, 3 * PAGE_SIZE, &n);
+    status = vmo->DecommitRange(PAGE_SIZE, 3 * PAGE_SIZE);
     EXPECT_EQ(ZX_OK, status, "decommitting unpinned range\n");
 
-    status = vmo->CommitRange(PAGE_SIZE, 3 * PAGE_SIZE, &n);
+    status = vmo->CommitRange(PAGE_SIZE, 3 * PAGE_SIZE);
     EXPECT_EQ(ZX_OK, status, "committing range\n");
     status = vmo->Pin(PAGE_SIZE, 3 * PAGE_SIZE);
     EXPECT_EQ(ZX_OK, status, "pinning committed range\n");
@@ -438,8 +437,7 @@ static bool vmo_multiple_pin_test() {
     ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
     ASSERT_TRUE(vmo, "vmobject creation\n");
 
-    uint64_t n;
-    status = vmo->CommitRange(0, alloc_size, &n);
+    status = vmo->CommitRange(0, alloc_size);
     EXPECT_EQ(ZX_OK, status, "committing range\n");
 
     status = vmo->Pin(0, alloc_size);
@@ -455,23 +453,23 @@ static bool vmo_multiple_pin_test() {
     EXPECT_EQ(ZX_ERR_UNAVAILABLE, status, "page is pinned too much\n");
 
     vmo->Unpin(0, alloc_size);
-    status = vmo->DecommitRange(PAGE_SIZE, 4 * PAGE_SIZE, &n);
+    status = vmo->DecommitRange(PAGE_SIZE, 4 * PAGE_SIZE);
     EXPECT_EQ(ZX_ERR_BAD_STATE, status, "decommitting pinned range\n");
-    status = vmo->DecommitRange(5 * PAGE_SIZE, alloc_size - 5 * PAGE_SIZE, &n);
+    status = vmo->DecommitRange(5 * PAGE_SIZE, alloc_size - 5 * PAGE_SIZE);
     EXPECT_EQ(ZX_OK, status, "decommitting unpinned range\n");
 
     vmo->Unpin(PAGE_SIZE, 4 * PAGE_SIZE);
-    status = vmo->DecommitRange(PAGE_SIZE, 4 * PAGE_SIZE, &n);
+    status = vmo->DecommitRange(PAGE_SIZE, 4 * PAGE_SIZE);
     EXPECT_EQ(ZX_OK, status, "decommitting unpinned range\n");
 
     for (unsigned int i = 2; i < VM_PAGE_OBJECT_MAX_PIN_COUNT; ++i) {
         vmo->Unpin(0, PAGE_SIZE);
     }
-    status = vmo->DecommitRange(0, PAGE_SIZE, &n);
+    status = vmo->DecommitRange(0, PAGE_SIZE);
     EXPECT_EQ(ZX_ERR_BAD_STATE, status, "decommitting unpinned range\n");
 
     vmo->Unpin(0, PAGE_SIZE);
-    status = vmo->DecommitRange(0, PAGE_SIZE, &n);
+    status = vmo->DecommitRange(0, PAGE_SIZE);
     EXPECT_EQ(ZX_OK, status, "decommitting unpinned range\n");
 
     END_TEST;
@@ -486,10 +484,10 @@ static bool vmo_odd_size_commit_test() {
     ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
     ASSERT_TRUE(vmo, "vmobject creation\n");
 
-    uint64_t committed;
-    auto ret = vmo->CommitRange(0, alloc_size, &committed);
+    auto ret = vmo->CommitRange(0, alloc_size);
     EXPECT_EQ(ZX_OK, ret, "committing vm object\n");
-    EXPECT_EQ(ROUNDUP_PAGE_SIZE(alloc_size), committed,
+    EXPECT_EQ(ROUNDUP_PAGE_SIZE(alloc_size),
+              PAGE_SIZE * vmo->AllocatedPages(),
               "committing vm object\n");
     END_TEST;
 }
@@ -554,12 +552,11 @@ static bool vmo_contiguous_decommit_test() {
     ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
     ASSERT_TRUE(vmo, "vmobject creation\n");
 
-    uint64_t n;
-    status = vmo->DecommitRange(PAGE_SIZE, 4 * PAGE_SIZE, &n);
+    status = vmo->DecommitRange(PAGE_SIZE, 4 * PAGE_SIZE);
     ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED, "decommit fails due to pinned pages\n");
-    status = vmo->DecommitRange(0, 4 * PAGE_SIZE, &n);
+    status = vmo->DecommitRange(0, 4 * PAGE_SIZE);
     ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED, "decommit fails due to pinned pages\n");
-    status = vmo->DecommitRange(alloc_size - PAGE_SIZE, PAGE_SIZE, &n);
+    status = vmo->DecommitRange(alloc_size - PAGE_SIZE, PAGE_SIZE);
     ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED, "decommit fails due to pinned pages\n");
 
     // Make sure all pages are still present and contiguous
@@ -929,10 +926,10 @@ static bool vmo_lookup_test() {
     EXPECT_EQ(0u, pages_seen, "lookup on uncommitted pages\n");
     pages_seen = 0;
 
-    uint64_t committed;
-    status = vmo->CommitRange(PAGE_SIZE, PAGE_SIZE, &committed);
+    status = vmo->CommitRange(PAGE_SIZE, PAGE_SIZE);
     EXPECT_EQ(ZX_OK, status, "committing vm object\n");
-    EXPECT_EQ(static_cast<size_t>(PAGE_SIZE), committed, "committing vm object\n");
+    EXPECT_EQ(static_cast<size_t>(1), vmo->AllocatedPages(),
+               "committing vm object\n");
 
     // Should fail, since first page isn't mapped
     status = vmo->Lookup(0, alloc_size, 0, lookup_fn, &pages_seen);
@@ -953,9 +950,9 @@ static bool vmo_lookup_test() {
     pages_seen = 0;
 
     // Commit the rest
-    status = vmo->CommitRange(0, alloc_size, &committed);
+    status = vmo->CommitRange(0, alloc_size);
     EXPECT_EQ(ZX_OK, status, "committing vm object\n");
-    EXPECT_EQ(alloc_size - PAGE_SIZE, committed, "committing vm object\n");
+    EXPECT_EQ(alloc_size, PAGE_SIZE * vmo->AllocatedPages(), "committing vm object\n");
 
     status = vmo->Lookup(0, alloc_size, 0, lookup_fn, &pages_seen);
     EXPECT_EQ(ZX_OK, status, "lookup on partially committed pages\n");

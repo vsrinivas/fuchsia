@@ -140,7 +140,7 @@ zx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t s
                 return ZX_ERR_ACCESS_DENIED;
             }
             // TODO: handle partial commits
-            auto status = vmo_->CommitRange(offset, size, nullptr);
+            auto status = vmo_->CommitRange(offset, size);
             return status;
         }
         case ZX_VMO_OP_DECOMMIT: {
@@ -148,7 +148,7 @@ zx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t s
                 return ZX_ERR_ACCESS_DENIED;
             }
             // TODO: handle partial decommits
-            auto status = vmo_->DecommitRange(offset, size, nullptr);
+            auto status = vmo_->DecommitRange(offset, size);
             return status;
         }
         case ZX_VMO_OP_LOCK:

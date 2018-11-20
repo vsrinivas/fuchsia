@@ -428,7 +428,7 @@ public:
 
     // Convenience wrapper for vmo()->DecommitRange() with the necessary
     // offset modification and locking.
-    zx_status_t DecommitRange(size_t offset, size_t len, size_t* decommitted);
+    zx_status_t DecommitRange(size_t offset, size_t len);
 
     // Map in pages from the underlying vm object, optionally committing pages as it goes
     zx_status_t MapRange(size_t offset, size_t len, bool commit);

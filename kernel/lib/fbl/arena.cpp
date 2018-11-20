@@ -183,7 +183,7 @@ void* Arena::Pool::Pop() {
                     name_, committed_, nc, st);
             // Try to clean up any committed pages, but don't require
             // that it succeeds.
-            mapping_->DecommitRange(offset, len, /* decommitted */ nullptr);
+            mapping_->DecommitRange(offset, len);
             return nullptr;
         }
         committed_ = nc;
@@ -214,7 +214,7 @@ void Arena::Pool::Push(void* p) {
         const size_t offset = reinterpret_cast<vaddr_t>(nc) - mapping_->base();
         const size_t len = committed_ - nc;
         // If this fails or decommits less than we asked for, oh well.
-        mapping_->DecommitRange(offset, len, /* decommitted */ nullptr);
+        mapping_->DecommitRange(offset, len);
         committed_ = nc;
     }
 }

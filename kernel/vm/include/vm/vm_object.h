@@ -69,12 +69,12 @@ public:
     }
 
     // find physical pages to back the range of the object
-    virtual zx_status_t CommitRange(uint64_t offset, uint64_t len, uint64_t* committed) {
+    virtual zx_status_t CommitRange(uint64_t offset, uint64_t len) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
     // free a range of the vmo back to the default state
-    virtual zx_status_t DecommitRange(uint64_t offset, uint64_t len, uint64_t* decommitted) {
+    virtual zx_status_t DecommitRange(uint64_t offset, uint64_t len) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 

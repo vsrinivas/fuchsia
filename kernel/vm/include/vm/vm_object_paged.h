@@ -57,8 +57,8 @@ public:
 
     size_t AllocatedPagesInRange(uint64_t offset, uint64_t len) const override;
 
-    zx_status_t CommitRange(uint64_t offset, uint64_t len, uint64_t* committed) override;
-    zx_status_t DecommitRange(uint64_t offset, uint64_t len, uint64_t* decommitted) override;
+    zx_status_t CommitRange(uint64_t offset, uint64_t len) override;
+    zx_status_t DecommitRange(uint64_t offset, uint64_t len) override;
 
     zx_status_t Pin(uint64_t offset, uint64_t len) override;
     void Unpin(uint64_t offset, uint64_t len) override;

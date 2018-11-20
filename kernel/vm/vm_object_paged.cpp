@@ -533,13 +533,9 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
     return ZX_OK;
 }
 
-zx_status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len, uint64_t* committed) {
+zx_status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len) {
     canary_.Assert();
     LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 "\n", offset, len);
-
-    if (committed) {
-        *committed = 0;
-    }
 
     Guard<fbl::Mutex> guard{&lock_};
 
@@ -606,27 +602,16 @@ zx_status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len, uint64_t* 
         // range should be valid.
         zx_status_t status = GetPageLocked(o, flags, &page_list, &p, &pa);
         ASSERT(status == ZX_OK);
-
-        if (committed) {
-            *committed += PAGE_SIZE;
-        }
     }
 
     DEBUG_ASSERT(list_is_empty(&page_list));
 
-    // for now we only support committing as much as we were asked for
-    DEBUG_ASSERT(!committed || *committed == count * PAGE_SIZE);
-
     return ZX_OK;
 }
 
-zx_status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len, uint64_t* decommitted) {
+zx_status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len) {
     canary_.Assert();
     LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 "\n", offset, len);
-
-    if (decommitted) {
-        *decommitted = 0;
-    }
 
     if (options_ & kContiguous) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -668,10 +653,7 @@ zx_status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len, uint64_t
     // iterate through the pages, freeing them
     // TODO: use page_list iterator, move pages to list, free at once
     while (start < end) {
-        auto status = page_list_.FreePage(start);
-        if (status == ZX_OK && decommitted) {
-            *decommitted += PAGE_SIZE;
-        }
+        page_list_.FreePage(start);
         start += PAGE_SIZE;
     }
 

@@ -530,8 +530,7 @@ zx_status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
     return coalescer.Flush();
 }
 
-zx_status_t VmMapping::DecommitRange(size_t offset, size_t len,
-                                     size_t* decommitted) {
+zx_status_t VmMapping::DecommitRange(size_t offset, size_t len) {
     canary_.Assert();
     LTRACEF("%p [%#zx+%#zx], offset %#zx, len %#zx\n",
             this, base_, size_, offset, len);
@@ -545,7 +544,7 @@ zx_status_t VmMapping::DecommitRange(size_t offset, size_t len,
     }
     // VmObject::DecommitRange will typically call back into our instance's
     // VmMapping::UnmapVmoRangeLocked.
-    return object_->DecommitRange(object_offset_ + offset, len, decommitted);
+    return object_->DecommitRange(object_offset_ + offset, len);
 }
 
 zx_status_t VmMapping::DestroyLocked() {

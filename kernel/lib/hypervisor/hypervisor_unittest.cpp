@@ -41,13 +41,9 @@ static zx_status_t create_vmo(size_t vmo_size, fbl::RefPtr<VmObject>* vmo) {
 }
 
 static zx_status_t commit_vmo(fbl::RefPtr<VmObject> vmo) {
-    uint64_t committed = 0;
-    zx_status_t status = vmo->CommitRange(0, vmo->size(), &committed);
+    zx_status_t status = vmo->CommitRange(0, vmo->size());
     if (status != ZX_OK) {
         return status;
-    }
-    if (committed != vmo->size()) {
-        return ZX_ERR_BAD_STATE;
     }
     return ZX_OK;
 }
