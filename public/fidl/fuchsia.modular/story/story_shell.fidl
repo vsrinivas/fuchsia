@@ -60,7 +60,7 @@ interface StoryShell {
     // Reconnect the view in viewConnection.
     //
     // Called to reconnect views that have previously been added
-    // to the StoryShell via addView, and then disconnected. a ViewOwner
+    // to the StoryShell via addSurface, and then disconnected. a ViewOwner
     // connects to a child view and is notified if the view is available. If
     // it becomes unavailable it's disconnected. If a surface with a
     // disconnected view is to be shown again, ReconnectView is called.
