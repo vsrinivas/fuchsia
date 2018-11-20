@@ -30,12 +30,12 @@ fuchsia/sysroot/linux-amd64
 	ae0677829357edb199c21e76b1ea31eb8ef62817
 
 fuchsia/tools/symbolize/linux-amd64
-	git_revision:6cd60365f9467dfb5cc1a8ddecd88f003da428a6
-	U8ffpWuX02jlNKbu5zbhQV7grx1c8UCnop9cepmbhfkC
+	git_revision:f472cb6938d7d030a8e758af187869d24dff596f
+	1mc9BGcvaf6oNEbnQy142g1Lv2jxr8R1wwe9E0tKOn8C
 
 fuchsia/tools/symbolize/mac-amd64
-	git_revision:6cd60365f9467dfb5cc1a8ddecd88f003da428a6
-	PrfW7WKWToGP1vFj3DF_giDZhkbPTXBBSfw7T29wi2AC
+	git_revision:f472cb6938d7d030a8e758af187869d24dff596f
+	qSOXk7uepAiNUNhhSmHxWrucDIbcucKQC-PznnLolpEC
 
 fuchsia_internal/firmware/bluetooth/bcm4345c4
 	git_revision:1e41b7d6f96f09558a36a636de2819068cd71ea0
