@@ -101,10 +101,10 @@ static zx_status_t zxrio_connect(zx_handle_t svc, zx_handle_t cnxn,
     zx_status_t r;
     switch (op) {
     case fuchsia_io_NodeCloneOrdinal:
-        r = fidl_clone_request(svc, cnxn, flags);
+        r = fuchsia_io_NodeClone(svc, flags, cnxn);
         break;
     case fuchsia_io_DirectoryOpenOrdinal:
-        r = fidl_open_request(svc, cnxn, flags, mode, name, len);
+        r = fuchsia_io_DirectoryOpen(svc, flags, mode, name, len, cnxn);
         break;
     default:
         zx_handle_close(cnxn);
@@ -531,10 +531,10 @@ static zx_status_t zxrio_sync_open_connection(zx_handle_t svc, uint32_t op,
 
     switch (op) {
     case fuchsia_io_NodeCloneOrdinal:
-        r = fidl_clone_request(svc, cnxn, flags);
+        r = fuchsia_io_NodeClone(svc, flags, cnxn);
         break;
     case fuchsia_io_DirectoryOpenOrdinal:
-        r = fidl_open_request(svc, cnxn, flags, mode, path, pathlen);
+        r = fuchsia_io_DirectoryOpen(svc, flags, mode, path, pathlen, cnxn);
         break;
     default:
         zx_handle_close(cnxn);

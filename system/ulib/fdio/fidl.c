@@ -23,8 +23,6 @@
 
 #include "private-fidl.h"
 
-#define MXDEBUG 0
-
 static zx_status_t txn_reply(fidl_txn_t* txn, const fidl_msg_t* msg) {
     zxfidl_connection_t* cnxn = (void*) txn;
     fidl_message_header_t* hdr = msg->bytes;
@@ -108,18 +106,6 @@ zx_status_t zxfidl_handler(zx_handle_t h, zxfidl_cb_t cb, void* cookie) {
                                      NULL, NULL) == ZX_OK);
         return handle_rpc(h, cb, cookie);
     }
-}
-
-// Always consumes cnxn. Exported for the sake of vs-vnode tests
-__EXPORT
-zx_status_t fidl_clone_request(zx_handle_t srv, zx_handle_t cnxn, uint32_t flags) {
-    return fuchsia_io_NodeClone(srv, flags, cnxn);
-}
-
-// Always consumes cnxn.
-zx_status_t fidl_open_request(zx_handle_t srv, zx_handle_t cnxn, uint32_t flags,
-                              uint32_t mode, const char* path, size_t pathlen) {
-    return fuchsia_io_DirectoryOpen(srv, flags, mode, path, pathlen, cnxn);
 }
 
 zx_status_t fidl_ioctl(zx_handle_t h, uint32_t op, const void* in_buf,

@@ -271,7 +271,7 @@ bool TestTeardownSlowClone() {
 
     zx::channel client2, server2;
     ASSERT_EQ(zx::channel::create(0, &client2, &server2), ZX_OK);
-    ASSERT_EQ(fidl_clone_request(client.get(), server2.release(), 0), ZX_OK);
+    ASSERT_EQ(fuchsia_io_NodeClone(client.get(), 0, server2.release()), ZX_OK);
 
     // The connection is now:
     // - In a sync callback,
