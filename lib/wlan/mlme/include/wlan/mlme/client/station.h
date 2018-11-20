@@ -122,7 +122,8 @@ class Station {
     uint8_t GetTid(const EthFrame& frame);
     zx_status_t SetAssocContext(const MgmtFrameView<AssociationResponse>& resp);
     std::optional<AssocContext> BuildAssocCtx(const MgmtFrameView<AssociationResponse>& frame,
-                              const wlan_channel_t& join_chan, PHY join_phy);
+                                              const wlan_channel_t& join_chan, PHY join_phy,
+                                              uint16_t listen_interval);
 
     zx_status_t NotifyAssocContext();
 

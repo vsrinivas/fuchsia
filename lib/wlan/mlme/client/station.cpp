@@ -1423,7 +1423,8 @@ void Station::ResetStats() {
 
 // TODO(porce): replace SetAssocContext()
 std::optional<AssocContext> Station::BuildAssocCtx(const MgmtFrameView<AssociationResponse>& frame,
-                                                   const wlan_channel_t& join_chan, PHY join_phy) {
+                                                   const wlan_channel_t& join_chan, PHY join_phy,
+                                                   uint16_t listen_interval) {
     size_t ie_chains_len = frame.body_len() - frame.body()->len();
     auto bssid = frame.hdr()->addr3;
     auto bss = MakeBssAssocCtx(*frame.body(), {frame.body()->elements, ie_chains_len}, bssid);
@@ -1438,6 +1439,7 @@ std::optional<AssocContext> Station::BuildAssocCtx(const MgmtFrameView<Associati
     ctx.set_aid(bss->aid);
     ctx.phy = ctx.DerivePhy();
     ctx.chan = join_chan;
+    ctx.listen_interval = listen_interval;
 
     if (join_phy != ctx.phy) {
         // This situation is out-of specification, and may happen
