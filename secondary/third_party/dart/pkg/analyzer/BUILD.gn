@@ -23,6 +23,7 @@ dart_library("analyzer") {
     "//third_party/dart-pkg/pub/package_config",
     "//third_party/dart-pkg/pub/path",
     "//third_party/dart-pkg/pub/plugin",
+    "//third_party/dart-pkg/pub/pub_semver",
     "//third_party/dart-pkg/pub/source_span",
     "//third_party/dart-pkg/pub/watcher",
     "//third_party/dart-pkg/pub/yaml",
