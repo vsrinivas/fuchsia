@@ -925,14 +925,9 @@ struct ath10k {
     thrd_t isr_thread;
     thrd_t register_work;
     thrd_t restart_work;
-    thrd_t assoc_work;
 #if DEBUG_MSG_BUF
     thrd_t monitor_thread;
 #endif
-
-    mtx_t assoc_lock;
-    sync_completion_t assoc_complete;
-    struct ath10k_msg_buf* assoc_frame;
 
 #if 0   // NEEDS PORTING
     /* cycle count is reported twice for each visited channel during scan.

@@ -2257,33 +2257,6 @@ zx_status_t ath10k_wmi_event_mgmt_rx(struct ath10k* ar, struct ath10k_msg_buf* b
                buf->used, fc & IEEE80211_FRAME_TYPE_MASK, fc & IEEE80211_FRAME_SUBTYPE_MASK);
 
     void* frame_data = ath10k_msg_buf_get_payload(buf) + buf->rx.frame_offset;
-
-    // There's no wlan event for assocation, so we have to look for the association
-    // response ourselves and send the associate command to the firmware.
-    // TODO: NET-821
-    if ((ieee80211_get_frame_type(hdr) == IEEE80211_FRAME_TYPE_MGMT) &&
-        ieee80211_get_frame_subtype(hdr) == IEEE80211_FRAME_SUBTYPE_ASSOC_RESP) {
-        mtx_lock(&ar->assoc_lock);
-        // assoc_frame is reset to NULL by ath10k_mac_bss_assoc when it has finished
-        // processing an association response.
-        if (ar->assoc_frame == NULL) {
-            ar->assoc_frame = buf;
-            // This path is critical. If we don't tell the firmware to associate before
-            // the first key packet is received, it will gladly deauthenticate us.
-            sync_completion_signal(&ar->assoc_complete);
-
-            // mac_bss_assoc owns the buffer now
-            free_buf = false;
-        } else {
-            // In general the lock should prevent us from getting here, but if by some
-            // chance we get back-to-back packets and no progress has been made on the
-            // assoc thread, drop this one.
-            mtx_unlock(&ar->assoc_lock);
-            goto maybe_free_buf;
-        }
-        mtx_unlock(&ar->assoc_lock);
-    }
-
     ar->wlanmac.ifc->recv(ar->wlanmac.cookie, 0, frame_data, arg.buf_len, &rx_info);
 
 maybe_free_buf:

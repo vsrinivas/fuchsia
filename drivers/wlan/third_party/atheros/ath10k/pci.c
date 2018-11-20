@@ -3151,8 +3151,7 @@ static zx_status_t ath10k_pci_configure_assoc(void* ctx, uint32_t options,
 
     switch (ar->arvif.vdev_type) {
     case WMI_VDEV_TYPE_STA:
-        // TODO(NET-818): Implement
-        return ZX_OK;
+        return ath10k_mac_bss_assoc(ar, assoc_ctx);
 
     case WMI_VDEV_TYPE_AP:
         ethaddr_sprintf(buf, assoc_ctx->bssid);
