@@ -6,7 +6,7 @@
 
 #include <lib/gtest/real_loop_fixture.h>
 
-#include "garnet/bin/media/audio_core/test/audio_core_tests_shared.h"
+#include "garnet/bin/media/audio_core/test/audio_fidl_tests_shared.h"
 #include "lib/component/cpp/environment_services_helper.h"
 #include "lib/fxl/logging.h"
 
@@ -15,9 +15,9 @@ namespace audio {
 namespace test {
 
 //
-// AudioCoreTest class
+// AudioTest
 //
-class AudioCoreTest : public gtest::RealLoopFixture {
+class AudioTest : public gtest::RealLoopFixture {
  protected:
   virtual void SetUp() override;
   void TearDown() override;
@@ -35,7 +35,7 @@ class AudioCoreTest : public gtest::RealLoopFixture {
 //
 // SystemGainMuteTest class
 //
-class SystemGainMuteTest : public AudioCoreTest {
+class SystemGainMuteTest : public AudioTest {
  protected:
   void SetUp() override;
 
@@ -51,10 +51,10 @@ class SystemGainMuteTest : public AudioCoreTest {
 };
 
 //
-// AudioCoreTest implementation
+// AudioTest implementation
 //
 // Connect to Audio interface and set an error handler
-void AudioCoreTest::SetUp() {
+void AudioTest::SetUp() {
   ::gtest::RealLoopFixture::SetUp();
 
   environment_services_ = component::GetEnvironmentServices();
@@ -67,14 +67,14 @@ void AudioCoreTest::SetUp() {
   });
 }
 
-void AudioCoreTest::TearDown() {
+void AudioTest::TearDown() {
   EXPECT_FALSE(error_occurred_);
 
   ::gtest::RealLoopFixture::TearDown();
 }
 
 // Expecting NOT to receive a disconnect. Wait, then check for errors.
-bool AudioCoreTest::ReceiveNoDisconnectCallback() {
+bool AudioTest::ReceiveNoDisconnectCallback() {
   bool timed_out = RunLoopWithTimeout(kDurationTimeoutExpected);
   EXPECT_FALSE(error_occurred_);
   EXPECT_TRUE(timed_out) << kNoTimeoutErr;
@@ -88,7 +88,7 @@ bool AudioCoreTest::ReceiveNoDisconnectCallback() {
 // Register for notification of SystemGainMute changes; receive initial values
 // and set the system to a known baseline for gain/mute testing.
 void SystemGainMuteTest::SetUp() {
-  AudioCoreTest::SetUp();
+  AudioTest::SetUp();
 
   audio_.events().SystemGainMuteChanged = [this](float gain_db, bool muted) {
     received_gain_db_ = gain_db;
@@ -172,6 +172,11 @@ bool SystemGainMuteTest::ReceiveNoGainCallback() {
 }
 
 //
+// TODO(mpuryear): AudioTest_Negative class and tests, for cases where we
+// expect Audio binding to disconnect -- and Audio interface ptr to be reset.
+//
+
+//
 // Audio validation
 // Tests of the asynchronous Audio interface.
 //
@@ -179,7 +184,7 @@ bool SystemGainMuteTest::ReceiveNoGainCallback() {
 // from error -- with subsequent reset of the interface ptr -- can take effect.
 //
 // Test creation and interface independence of AudioRenderer.
-TEST_F(AudioCoreTest, CreateAudioRenderer) {
+TEST_F(AudioTest, CreateAudioRenderer) {
   // Validate Audio can create AudioRenderer interface.
   audio_->CreateAudioRenderer(audio_renderer_.NewRequest());
   // Give time for Disconnect to occur, if it must.
@@ -202,7 +207,7 @@ TEST_F(AudioCoreTest, CreateAudioRenderer) {
 }
 
 // Test creation and interface independence of AudioCapturer.
-TEST_F(AudioCoreTest, CreateAudioCapturer) {
+TEST_F(AudioTest, CreateAudioCapturer) {
   // Validate Audio can create AudioCapturer interface.
   audio_->CreateAudioCapturer(audio_capturer_.NewRequest(), false);
   ASSERT_TRUE(ReceiveNoDisconnectCallback()) << kConnectionErr;
@@ -224,7 +229,7 @@ TEST_F(AudioCoreTest, CreateAudioCapturer) {
 }
 
 // Test setting (and re-setting) the audio output routing policy.
-TEST_F(AudioCoreTest, SetRoutingPolicy) {
+TEST_F(AudioTest, SetRoutingPolicy) {
   audio_->SetRoutingPolicy(
       fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS);
   ASSERT_TRUE(ReceiveNoDisconnectCallback()) << kConnectionErr;

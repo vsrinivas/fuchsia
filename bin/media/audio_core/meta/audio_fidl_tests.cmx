@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/audio_core_tests"
+        "binary": "test/audio_fidl_tests"
     },
     "facets": {
         "fuchsia.test": {

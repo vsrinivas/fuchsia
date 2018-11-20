@@ -13,7 +13,7 @@ namespace audio {
 namespace test {
 
 //
-// AudioCoreSyncTest
+// AudioSyncTest
 //
 // We expect the async and sync interfaces to track each other exactly -- any
 // behavior otherwise is a bug in core FIDL. These tests were only created to
@@ -21,7 +21,7 @@ namespace test {
 // In short, further testing of the sync interfaces (over and above any testing
 // done on the async interfaces) should not be needed.
 //
-class AudioCoreSyncTest : public gtest::RealLoopFixture {
+class AudioSyncTest : public gtest::RealLoopFixture {
  protected:
   void SetUp() override {
     ::gtest::RealLoopFixture::SetUp();
@@ -38,7 +38,7 @@ class AudioCoreSyncTest : public gtest::RealLoopFixture {
 };
 
 //
-// TODO(mpuryear): AudioCoreSyncTest_Negative class and tests, for cases where
+// TODO(mpuryear): AudioSyncTest_Negative class and tests, for cases where
 // we expect AudioSync binding to disconnect, and AudioSyncPtr to be reset.
 //
 
@@ -47,7 +47,7 @@ class AudioCoreSyncTest : public gtest::RealLoopFixture {
 // Tests of the synchronously-proxied Audio interface: AudioSync.
 //
 // Test creation and interface independence of AudioRenderer.
-TEST_F(AudioCoreSyncTest, CreateAudioRenderer) {
+TEST_F(AudioSyncTest, CreateAudioRenderer) {
   // Validate Audio can create AudioRenderer interface.
   EXPECT_EQ(ZX_OK, audio_sync_->CreateAudioRenderer(
                        audio_renderer_sync_.NewRequest()));
@@ -65,7 +65,7 @@ TEST_F(AudioCoreSyncTest, CreateAudioRenderer) {
 }
 
 // Test creation and interface independence of AudioCapturer.
-TEST_F(AudioCoreSyncTest, CreateAudioCapturer) {
+TEST_F(AudioSyncTest, CreateAudioCapturer) {
   // Validate Audio can create AudioCapturer interface.
   EXPECT_EQ(ZX_OK, audio_sync_->CreateAudioCapturer(
                        audio_capturer_sync_.NewRequest(), true));
@@ -82,7 +82,7 @@ TEST_F(AudioCoreSyncTest, CreateAudioCapturer) {
 }
 
 // Test the setting of audio output routing policy.
-TEST_F(AudioCoreSyncTest, SetRoutingPolicy) {
+TEST_F(AudioSyncTest, SetRoutingPolicy) {
   // Validate Audio can set last-plugged routing policy synchronously.
   EXPECT_EQ(ZX_OK,
             audio_sync_->SetRoutingPolicy(

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_AUDIO_CORE_TEST_AUDIO_CORE_TESTS_SHARED_H_
-#define GARNET_BIN_MEDIA_AUDIO_CORE_TEST_AUDIO_CORE_TESTS_SHARED_H_
+#ifndef GARNET_BIN_MEDIA_AUDIO_CORE_TEST_AUDIO_FIDL_TESTS_SHARED_H_
+#define GARNET_BIN_MEDIA_AUDIO_CORE_TEST_AUDIO_FIDL_TESTS_SHARED_H_
 
 #include <fuchsia/media/cpp/fidl.h>
 
@@ -38,4 +38,4 @@ constexpr float kTooHighGainDb = fuchsia::media::MAX_GAIN_DB + 0.1f;
 }  // namespace audio
 }  // namespace media
 
-#endif  // GARNET_BIN_MEDIA_AUDIO_CORE_TEST_AUDIO_CORE_TESTS_SHARED_H_
+#endif  // GARNET_BIN_MEDIA_AUDIO_CORE_TEST_AUDIO_FIDL_TESTS_SHARED_H_

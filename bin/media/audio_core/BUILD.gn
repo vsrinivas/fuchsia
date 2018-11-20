@@ -99,14 +99,14 @@ executable("audio_core") {
 
 executable("test_bin") {
   testonly = true
-  output_name = "audio_core_tests"
+  output_name = "audio_fidl_tests"
 
   sources = [
-    "test/audio_core_sync_test.cc",
-    "test/audio_core_test.cc",
-    "test/audio_core_tests_shared.h",
+    "test/audio_fidl_tests_shared.h",
     "test/audio_renderer_sync_test.cc",
     "test/audio_renderer_test.cc",
+    "test/audio_sync_test.cc",
+    "test/audio_test.cc",
     "test/gain_control_test.cc",
     "test/main.cc",
   ]
@@ -121,14 +121,14 @@ executable("test_bin") {
   ]
 }
 
-test_package("audio_core_tests") {
+test_package("audio_fidl_tests") {
   deps = [
     ":test_bin",
   ]
 
   tests = [
     {
-      name = "audio_core_tests"
+      name = "audio_fidl_tests"
     },
   ]
 }

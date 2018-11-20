@@ -6,7 +6,7 @@
 
 #include <lib/gtest/real_loop_fixture.h>
 
-#include "garnet/bin/media/audio_core/test/audio_core_tests_shared.h"
+#include "garnet/bin/media/audio_core/test/audio_fidl_tests_shared.h"
 #include "lib/component/cpp/environment_services_helper.h"
 
 namespace media {
