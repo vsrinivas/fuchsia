@@ -54,7 +54,6 @@ group("no_cmx_whitelist") {
       "//garnet/lib/magma/gnbuild/magma-intel-gen:*",
       "//garnet/lib/magma/gnbuild/magma-vsl-gc:*",
       "//garnet/lib/ui/gfx/tests:*",
-      "//garnet/testing/syzkaller:*",
       "//peridot/bin/agents/clipboard:*",
       "//peridot/bin/basemgr:*",
       "//peridot/bin/context_engine:*",
