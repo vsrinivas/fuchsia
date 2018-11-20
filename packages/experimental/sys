@@ -1,0 +1,6 @@
+{
+    "labels": [
+        "//garnet/public/fidl/fuchsia.data",
+        "//garnet/public/fidl/fuchsia.sys2"
+    ]
+}

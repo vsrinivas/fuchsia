@@ -1,0 +1,74 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys2;
+
+using fuchsia.data;
+
+// A component declaration.
+//
+// This information is typically encoded in the component manifest (.cmx file)
+// if it has one or may be generated at runtime by a component resolver for
+// those that don't.
+//
+// See [Component Manifests](https://fuchsia.googlesource.com/docs/+/master/the-book/components/manifests.md)
+// for more details.
+//
+// TODO(CP-154): Change this to a FIDL table for extensibility.
+struct ComponentDecl {
+    // The URL of the component's runner.
+    //
+    // The empty string indicates the system's default runner which is
+    // used for standalone ELF binaries or scripts with "#!" headers.
+    string:MAX_URL_LENGTH runner_url;
+
+    // Information about the program to run when the component is executed.
+    //
+    // The component manager provides the contents of this dictionary to the
+    // component runner when executing the program.  Each component runner
+    // can freely define the contents of this dictionary as needed.
+    //
+    // The system's default runner understands the following entries:
+    //
+    // - "binary": string
+    //   The path of the executable relative to the root of the package.
+    //   Typically an ELF binary.
+    //
+    // - "args": vector of strings
+    //   The command-line arguments to provide to the executable at runtime.
+    //
+    // - "env": dictionary of strings
+    //   The environment variables to provide to the executable at runtime.
+    //
+    // Other runners may define different entries.
+    fuchsia.data.Dictionary program;
+
+    // List of capabilities imported by the component.
+    // The imported capabilities must be unique and non-overlapping.
+    vector<ImportDecl> imports;
+
+    // List of capabilities exported by the component.
+    // The exported capabilities must be unique and non-overlapping.
+    vector<ExportDecl> exports;
+
+    // Additional metadata about the component.
+    // The facets must have unique names.
+    vector<FacetDecl> facets;
+
+    // The component's statically instantiated children.
+    // The children must have unique names.
+    vector<ChildDecl> children;
+
+    // TODO(CP-154): Declare placeholders for groups of dynamically
+    // instantiated children called "collections".  Should resemble
+    // statically instantiated children except that the URL and some
+    // parameters of the instance declaration will be supplied at
+    // runtime.
+
+    // TODO(CP-154): Declare a mechanism for making resolvers available
+    // to children, perhaps as a route or export.
+
+    // TODO(CP-154): Declare where runners should get parents, perhaps
+    // as a collection.
+};

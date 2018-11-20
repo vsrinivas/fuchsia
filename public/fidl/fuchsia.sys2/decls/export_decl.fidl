@@ -1,0 +1,23 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys2;
+
+// Declares a capability exported to a component's containing realm, such
+// as a service offered by the component or one of its children at runtime.
+union ExportDecl {
+    ExportedService service;
+};
+
+// Offers a service to the containing realm.
+struct ExportedService {
+    // The name of the service.
+    string:MAX_SERVICE_NAME_LENGTH name;
+
+    // The provider of the service relative to the component itself.
+    // Valid relations: SELF, CHILD.
+    RelativeId source;
+
+    // TODO(CP-154): Allow specification of full source path of the service.
+};

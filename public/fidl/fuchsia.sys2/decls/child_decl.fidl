@@ -1,0 +1,25 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys2;
+
+// Statically declares a child component instance.
+struct ChildDecl {
+    // The name assigned to the child by its parent.
+    // Must be non-empty and unique among all sibings.
+    string:MAX_CHILD_NAME_LENGTH name;
+
+    // The child component's URL.
+    // Must be non-empty and well-formed.
+    string:MAX_URL_LENGTH url;
+
+    // List of capabilities routed to the child by its parent.
+    // The routed capabilities must be unique and non-overlapping.
+    vector<RouteDecl> routes;
+
+    // TODO(CP-154): Provide a way to supply parameters to the child,
+    // possibly as command-line arguments, by URL, or maybe in some
+    // other way which is orthogonal to other inputs to mitigate confused
+    // deputy issues.  Perhaps as a dictionary like we do for runners?
+};

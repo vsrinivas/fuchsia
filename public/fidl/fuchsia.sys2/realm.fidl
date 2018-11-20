@@ -1,0 +1,70 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys2;
+
+using fuchsia.io;
+using zx;
+
+// An interface used by a component instance to manage its own realm,
+// such as for binding to its children.
+//
+// Note: The component manager exposes this interface to components
+// that import the "fuchsia.sys2.Realm" service.
+[Discoverable]
+interface Realm {
+    // Binds to a child component instance, causing it to start running if
+    // it is not already running.
+    //
+    // |child_name| must be the name of an already declared child in the realm.
+    // |binding| is bound to the child.
+    1: BindChild(string child_name, request<ComponentBinding> binding);
+
+    // TODO(CP-154): Dynamically add/remove children in collections.
+    // Perhaps have a way to control their durability.
+    //2: AddChild(string collection_name, ChildDecl decl);
+    //3: RemoveChild(string collection_name, string child_name);
+
+    // TODO(CP-154): Add methods for resolving packages and components
+    // within the realm.
+};
+
+// An interface that retains a connection to a component instance.
+//
+// Holding a binding is an indication to the component manager that the
+// bound component instance is providing a useful service on behalf of
+// the component instance that requested the binding.
+//
+// A component instance may retained by multiple bindings simultaneously.
+// Typically this means that the component instance will continue to run
+// until one of the following occurs:
+//
+// - All of the bindings retaining the component have been released.
+// - The component instance terminates (or crashes).
+// - The component instance is removed from its parent.
+// - The component instance is killed due to component management policies
+//   such as software updates or reallocation of system resources.
+//
+// EPITAPH
+//
+// This interface uses a FIDL epitaph to indicate that the bound component
+// instance has terminated and to describe its final disposition.
+//
+// The following epitaph status codes have particular significance:
+//
+// - |ZX_ERR_NOT_FOUND|: The component instance named in the call to
+//   |Realm.BindChild()| does not exist.
+// - |ZX_ERR_UNAVAILABLE|: The component instance could not be started.
+// - |ERR_COMPONENT_DIED|: The component instance was started but
+//   subsequently terminated unexpectedly.
+//
+// Other status codes (e.g. |ZX_ERR_PEER_CLOSED|) may indicate a failure
+// of the component manager itself.
+interface ComponentBinding {
+    // Gets a directory containing objects exported by the child.
+    1: GetExports(request<fuchsia.io.Directory> exports);
+
+    // TODO(CP-154): Provide a mechanism to apply hints to a binding to
+    // modulate its retention and resource allocation characteristics.
+};

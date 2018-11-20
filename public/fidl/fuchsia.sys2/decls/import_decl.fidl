@@ -1,0 +1,51 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys2;
+
+// Declares a capability imported into a component's own sandbox, such as a
+// service offered by the component's containing realm, the component itself,
+// or one of its children.
+union ImportDecl {
+    ImportedService service;
+    ImportedDirectory directory;
+    ImportedFeature feature;
+};
+
+// Requests use of a service.
+struct ImportedService {
+    // The name of the service.
+    string:MAX_SERVICE_NAME_LENGTH name;
+
+    // The provider of the service relative to the component itself.
+    // Valid relations: REALM, SELF, CHILD.
+    RelativeId source;
+
+    // TODO(CP-154): Allow specification of full source path of the service.
+};
+
+// Requests use of a directory.
+struct ImportedDirectory {
+    // The path of the directory.
+    string:MAX_DIRECTORY_PATH_LENGTH path;
+
+    // The provider of the directory relative to the component itself.
+    // Valid relations: REALM, SELF, CHILD.
+    RelativeId source;
+
+    // TODO(CP-154): Allow specification of full source path of the directory.
+};
+
+// Requests use of a special sandbox feature.
+//
+// TODO(CP-154): Whose job should it be to interpret these features?
+// Should we hardcode this into the component manager or defer to
+// component runners to some degree.  Perhaps this should be modeled
+// more declaratively instead of being special cased.  See also
+// providing access to directories, devices, and other resources.
+struct ImportedFeature {
+    // The name of the feature.
+    // e.g. "vulkan", "persistent-storage", "cache"
+    string:MAX_FEATURE_NAME_LENGTH name;
+};

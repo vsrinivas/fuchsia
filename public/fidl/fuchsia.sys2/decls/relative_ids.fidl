@@ -1,0 +1,27 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys2;
+
+// Specifies a relation from one component to its containing realm, itself,
+// or one of its children.
+union RelativeId {
+    RelativeIdForRealm realm;
+    RelativeIdForSelf self;
+    RelativeIdForChild child;
+};
+
+struct RelativeIdForRealm {
+    // TODO(FIDL-283): Delete once FIDL supports empty structs.
+    bool dummy;
+};
+
+struct RelativeIdForSelf {
+    // TODO(FIDL-283): Delete once FIDL supports empty structs.
+    bool dummy;
+};
+
+struct RelativeIdForChild {
+    string:MAX_CHILD_NAME_LENGTH child_name;
+};

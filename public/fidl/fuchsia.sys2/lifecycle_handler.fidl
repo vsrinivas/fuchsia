@@ -1,0 +1,26 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys2;
+
+// An interface that a component instance may implement to receive lifecycle
+// events from the component manager.  It provides an opportunity for the
+// instance to exercise limited discretionary control over its own
+// lifecycle.
+[Discoverable]
+interface LifecycleHandler {
+    // Called by the component manager when the instance is being stopped
+    // to give it an opportunity to close client connections, finish pending
+    // work, record its state, and terminate.
+    //
+    // Once this method returns, or after a brief system-configured timeout,
+    // the component manager will forcibly terminate the instance's runtime
+    // environment (such as by killing its process and/or job if it has not
+    // already exited).
+    //
+    // TODO(CP-154): Add a link to wherever we intend to document how
+    // to configure the system's timeout.  We currently expect it to be on
+    // the order of seconds.  TBD.
+    1: Stop() -> ();
+};
