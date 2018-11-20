@@ -1081,7 +1081,12 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params) {
         DECODE_ERROR("Failed to duplicate BTI - status: %d\n", dup_result);
         return false;
       }
-      // TODO: Extract actual has_sar, sar_width, sar_height and pass in here.
+      // VP9 doesn't have sample_aspect_ratio at ES (.ivf) layer, so here we
+      // report "false, 1, 1" to indicate that the ES doesn't have a
+      // sample_aspect_ratio.  The Codec client may potentially obtain
+      // sample_aspect_ratio from other sources such as a .webm container. If
+      // those potential sources don't provide sample_aspect_ratio, then 1:1 is
+      // a reasonable default.
       zx_status_t initialize_result = initialize_frames_handler_(
           std::move(duplicated_bti), frames_.size(), params->width,
           params->height, stride, display_width, display_height, false, 1, 1);

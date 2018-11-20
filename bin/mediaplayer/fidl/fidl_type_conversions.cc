@@ -17,8 +17,10 @@ static const char kAudioMimeTypeLpcm[] = "audio/raw";
 
 static const char kVideoMimeTypeUncompressed[] = "video/raw";
 static const char kVideoMimeTypeH264[] = "video/h264";
-// TODO(dalesat): Restore this once the VP9 decoder provides pixel aspect ratio.
-// static const char kVideoMimeTypeVp9[] = "video/vp9";
+// TODO(dalesat): (or dustingreen) Enable after amlogic-video VP9 decode
+// is fully working.
+//
+//static const char kVideoMimeTypeVp9[] = "video/vp9";
 // TODO(dalesat): Add MPEG2.
 
 static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c,
@@ -517,9 +519,9 @@ fuchsia::mediacodec::CodecFormatDetailsPtr TypeConverter<
         mime_type = kVideoMimeTypeH264;
       } else if (input.encoding() ==
                  media_player::StreamType::kVideoEncodingVp9) {
-        // Disabling this one, because the decoder won't currently provide
-        // pixel aspect ratio. We have an ffmpeg decoder.
-        // TODO(dalesat): Enable this once VP9 reports pixel aspect ratio.
+        // TODO(dalesat): (or dustingreen) Enable after amlogic-video VP9 decode
+        // is fully working.
+        //
         // mime_type = kVideoMimeTypeVp9;
       }
       break;
