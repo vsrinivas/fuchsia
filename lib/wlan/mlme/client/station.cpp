@@ -464,7 +464,7 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
 
     // TODO(porce): Move into |assoc_ctx_|
     state_ = WlanState::kAssociated;
-    assoc_ctx_.set_aid(assoc->aid);
+    assoc_ctx_.aid = assoc->aid;
 
     // Spread the good news upward
     service::SendAssocConfirm(device_, wlan_mlme::AssociateResultCodes::SUCCESS, assoc_ctx_.aid);
@@ -1436,7 +1436,7 @@ std::optional<AssocContext> Station::BuildAssocCtx(const MgmtFrameView<Associati
     // Add info that can't be derived by the intersection
     ctx.ts_start = timer_mgr_.Now();
     ctx.bssid = bss->bssid;
-    ctx.set_aid(bss->aid);
+    ctx.aid = bss->aid;
     ctx.phy = ctx.DerivePhy();
     ctx.chan = join_chan;
     ctx.listen_interval = listen_interval;

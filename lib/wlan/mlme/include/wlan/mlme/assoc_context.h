@@ -52,7 +52,6 @@ struct AssocContext {
     bool is_cbw40_rx = false;
     bool is_cbw40_tx = false;
 
-    void set_aid(uint16_t aid) { aid = aid & kAidMask; }
     PHY DerivePhy() const;
     wlan_assoc_ctx_t ToDdk() const;
 };
