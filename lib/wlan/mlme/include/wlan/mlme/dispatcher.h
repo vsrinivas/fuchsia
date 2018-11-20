@@ -30,6 +30,7 @@ class Dispatcher {
 
     zx_status_t HandlePacket(fbl::unique_ptr<Packet>);
     zx_status_t HandlePortPacket(uint64_t key);
+    zx_status_t HandleAnyMlmeMessage(Span<uint8_t> span);
 
     // Called when the hardware reports an indication such as Pre-TBTT.
     void HwIndication(uint32_t ind);
@@ -38,14 +39,11 @@ class Dispatcher {
     ::fuchsia::wlan::mlme::StatsQueryResponse GetStatsToFidl() const;
 
    private:
-    zx_status_t HandleSvcPacket(fbl::unique_ptr<Packet> packet);
-    template <typename Message>
-    zx_status_t HandleMlmeMessage(fbl::unique_ptr<Packet> packet, uint32_t ordinal);
+    template <typename Message> zx_status_t HandleMlmeMessage(Span<uint8_t> span, uint32_t ordinal);
     zx_status_t HandleQueryDeviceInfo(zx_txid_t txid);
     zx_status_t HandleMlmeStats(uint32_t ordinal) const;
     zx_status_t HandleMinstrelPeerList(uint32_t ordinal, zx_txid_t txid) const;
-    zx_status_t HandleMinstrelTxStats(fbl::unique_ptr<Packet> packet, uint32_t ordinal,
-                                      zx_txid_t txid) const;
+    zx_status_t HandleMinstrelTxStats(Span<uint8_t> span, uint32_t ordinal, zx_txid_t txid) const;
     template <typename T> zx_status_t SendServiceMessage(uint32_t ordinal, T* msg) const;
 
     DeviceInterface* device_;

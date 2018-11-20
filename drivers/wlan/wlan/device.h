@@ -72,7 +72,7 @@ class Device : public DeviceInterface {
     zx_status_t DeliverEthernet(Span<const uint8_t> eth_frame) override final;
     zx_status_t SendWlan(fbl::unique_ptr<Packet> packet, CBW cbw, PHY phy,
                          uint32_t flags) override final;
-    zx_status_t SendService(fbl::unique_ptr<Packet> packet) override final;
+    zx_status_t SendService(Span<const uint8_t> span) override final;
     zx_status_t SetChannel(wlan_channel_t chan) override final;
     zx_status_t SetStatus(uint32_t status) override final;
     zx_status_t ConfigureBss(wlan_bss_config_t* cfg) override final;
@@ -151,6 +151,7 @@ class Device : public DeviceInterface {
 
     std::mutex packet_queue_lock_;
     PacketQueue packet_queue_ __TA_GUARDED(packet_queue_lock_);
+    std::vector<uint8_t> fidl_msg_buf_ __TA_GUARDED(lock_);
 };
 
 zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info);

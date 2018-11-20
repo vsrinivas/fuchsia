@@ -5,8 +5,10 @@
 #ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_SERVICE_H_
 #define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_SERVICE_H_
 
+#include <wlan/common/buffer_reader.h>
 #include <wlan/common/energy.h>
 #include <wlan/common/macaddr.h>
+#include <wlan/common/span.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
@@ -21,81 +23,36 @@
 namespace wlan {
 
 template <typename T>
+zx_status_t SerializeServiceMsg(fidl::Encoder* enc, T* msg, zx_txid_t txid = 0) {
+    // Encode our message of type T. The encoder will take care of extending the buffer to
+    // accommodate out-of-line data (e.g., vectors, strings, and nullable data).
+    enc->Alloc(fidl::CodingTraits<T>::encoded_size);
+    msg->Encode(enc, sizeof(fidl_message_header_t));
+
+    // The coding tables for fidl structs do not include offsets for the message header, so we must
+    // run validation starting after this header.
+    auto encoded = enc->GetMessage();
+    ZX_ASSERT(encoded.has_header());
+    encoded.set_txid(txid);
+
+    auto msg_body = encoded.payload();
+    const char* err_msg = nullptr;
+    zx_status_t status = fidl_validate(T::FidlType, msg_body.data(), msg_body.size(), 0, &err_msg);
+    if (status != ZX_OK) { errorf("could not validate encoded message: %s\n", err_msg); }
+    return status;
+}
+
+template <typename T>
 static zx_status_t SendServiceMsg(DeviceInterface* device, T* message, uint32_t ordinal,
                                   zx_txid_t txid = 0) {
-    // TODO(FIDL-2): replace this when we can get the size of the serialized response.
-    auto packet = GetSvcPacket(kHugeBufferSize);
-    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    fidl::Encoder enc(ordinal);
 
-    zx_status_t status = SerializeServiceMsg(packet.get(), ordinal, message, txid);
+    zx_status_t status = SerializeServiceMsg(&enc, message, txid);
     if (status != ZX_OK) {
         errorf("could not serialize FIDL message %d: %d\n", ordinal, status);
         return status;
     }
-    return device->SendService(std::move(packet));
-}
-
-template <typename T>
-zx_status_t DeserializeServiceMsg(const Packet& packet, uint32_t ordinal, T* out) {
-    if (out == nullptr) return ZX_ERR_INVALID_ARGS;
-
-    // Verify that the message header contains the ordinal we expect.
-    auto h = packet.mut_field<fidl_message_header_t>(0);
-    if (h->ordinal != ordinal) return ZX_ERR_IO;
-
-    // Extract the message contents and decode in-place (i.e., fixup all the out-of-line pointers to
-    // be offsets into the buffer).
-    auto payload = packet.mut_field<uint8_t>(sizeof(fidl_message_header_t));
-    size_t payload_len = packet.len() - sizeof(fidl_message_header_t);
-    const char* err_msg = nullptr;
-    zx_status_t status = fidl_decode(T::FidlType, payload, payload_len, nullptr, 0, &err_msg);
-    if (status != ZX_OK) {
-        errorf("could not decode received message: %s\n", err_msg);
-        return status;
-    }
-
-    // Construct a fidl Message and decode it into our T.
-    fidl::Message msg(fidl::BytePart(payload, payload_len, payload_len), fidl::HandlePart());
-    fidl::Decoder decoder(std::move(msg));
-    *out = std::move(fidl::DecodeAs<T>(&decoder, 0));
-    return ZX_OK;
-}
-
-template <typename T>
-zx_status_t SerializeServiceMsg(Packet* packet, uint32_t ordinal, T* msg, zx_txid_t txid = 0) {
-    // Create an encoder that sets the ordinal to m.
-    fidl::Encoder enc(ordinal);
-
-    // Encode our message of type T. The encoder will take care of extending the buffer to
-    // accommodate out-of-line data (e.g., vectors, strings, and nullable data).
-    enc.Alloc(fidl::CodingTraits<T>::encoded_size);
-    msg->Encode(&enc, sizeof(fidl_message_header_t));
-
-    // The coding tables for fidl structs do not include offsets for the message header, so we must
-    // run validation starting after this header.
-    auto encoded = enc.GetMessage();
-    if (txid != 0) {
-        ZX_DEBUG_ASSERT(encoded.has_header());
-        encoded.set_txid(txid);
-    }
-    ZX_ASSERT(encoded.bytes().actual() >= sizeof(fidl_message_header_t));
-    const void* msg_bytes = encoded.bytes().data() + sizeof(fidl_message_header_t);
-    uint32_t msg_actual = encoded.bytes().actual() - sizeof(fidl_message_header_t);
-    const char* err_msg = nullptr;
-    zx_status_t status = fidl_validate(T::FidlType, msg_bytes, msg_actual, 0, &err_msg);
-    if (status != ZX_OK) {
-        errorf("could not validate encoded message: %s\n", err_msg);
-        return status;
-    }
-
-    // Copy all of the encoded data, including the header, into the packet.
-    status = packet->CopyFrom(encoded.bytes().data(), encoded.bytes().actual(), 0);
-    if (status == ZX_OK) {
-        // We must set the length ourselves, since the initial packet length was almost certainly an
-        // over-estimate.
-        packet->set_len(encoded.bytes().actual());
-    }
-    return status;
+    return device->SendService(enc.GetMessage().bytes());
 }
 
 template <typename M> class MlmeMsg;
@@ -129,18 +86,35 @@ template <typename M> class MlmeMsg : public BaseMlmeMsg {
     static const uint8_t kTypeId = 0;
     ~MlmeMsg() override = default;
 
-    static zx_status_t FromPacket(fbl::unique_ptr<Packet> pkt, MlmeMsg<M>* out_msg) {
-        ZX_DEBUG_ASSERT(pkt != nullptr);
+    static zx_status_t Decode(Span<uint8_t> span, MlmeMsg<M>* out_msg) {
+        ZX_ASSERT(out_msg != nullptr);
 
-        auto hdr = FromBytes<fidl_message_header_t>(pkt->data(), pkt->len());
-        if (hdr == nullptr) { return ZX_ERR_NOT_SUPPORTED; }
+        BufferReader reader(span);
+        auto h = reader.Read<fidl_message_header_t>();
+        if (h == nullptr) {
+            errorf("MLME message too short\n");
+            return ZX_ERR_INVALID_ARGS;
+        }
 
-        out_msg->ordinal_ = hdr->ordinal;
-        out_msg->txid_ = hdr->txid;
+        out_msg->ordinal_ = h->ordinal;
+        out_msg->txid_ = h->txid;
 
-        auto status = DeserializeServiceMsg(*pkt, hdr->ordinal, &out_msg->msg_);
-        if (status != ZX_OK) { return status; }
+        // Extract the message contents and decode in-place (i.e., fixup all the out-of-line
+        // pointers to be offsets into the span).
+        auto payload = span.subspan(reader.ReadBytes());
+        const char* err_msg = nullptr;
+        zx_status_t status =
+            fidl_decode(M::FidlType, payload.data(), payload.size(), nullptr, 0, &err_msg);
+        if (status != ZX_OK) {
+            errorf("could not decode received message: %s\n", err_msg);
+            return status;
+        }
 
+        // Construct a fidl Message and decode it into M.
+        fidl::Message msg(fidl::BytePart(payload.data(), payload.size(), payload.size()),
+                          fidl::HandlePart());
+        fidl::Decoder decoder(std::move(msg));
+        out_msg->msg_ = std::move(fidl::DecodeAs<M>(&decoder, 0));
         return ZX_OK;
     }
 

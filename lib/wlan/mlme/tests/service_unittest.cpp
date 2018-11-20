@@ -25,26 +25,18 @@ struct ServiceTest : public ::testing::Test {
     MockDevice device;
 };
 
-template <typename T>
-static fbl::unique_ptr<Packet> IntoPacket(const T& msg, uint32_t ordinal = 42) {
-    // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
-    // everyone.
-    constexpr size_t kBufLen = 4096;
-    auto packet = GetSvcPacket(kBufLen);
-    memset(packet->data(), 0, kBufLen);
-    SerializeServiceMsg(packet.get(), ordinal, msg.get());
-    return packet;
-}
-
 TEST(MlmeMsg, General) {
     // Construct simple message and write it to a Packet.
     auto fidl_msg = wlan_mlme::DeauthenticateRequest::New();
     common::kBcastMac.CopyTo(fidl_msg->peer_sta_address.mutable_data());
-    auto pkt = IntoPacket(fidl_msg);
+
+    fidl::Encoder enc(42);
+    SerializeServiceMsg(&enc, fidl_msg.get());
 
     // Verify correctness.
     MlmeMsg<wlan_mlme::DeauthenticateRequest> mlme_msg;
-    auto status = MlmeMsg<wlan_mlme::DeauthenticateRequest>::FromPacket(std::move(pkt), &mlme_msg);
+    auto status =
+        MlmeMsg<wlan_mlme::DeauthenticateRequest>::Decode(enc.GetMessage().bytes(), &mlme_msg);
     ASSERT_EQ(status, ZX_OK);
     auto deauth_conf = mlme_msg.body();
     ASSERT_NE(deauth_conf, nullptr);
@@ -55,10 +47,12 @@ TEST(MlmeMsg, Generalize) {
     // Construct simple message and write it to a Packet.
     auto fidl_msg = wlan_mlme::DeauthenticateRequest::New();
     common::kBcastMac.CopyTo(fidl_msg->peer_sta_address.mutable_data());
-    auto pkt = IntoPacket(fidl_msg);
+    fidl::Encoder enc(42);
+    SerializeServiceMsg(&enc, fidl_msg.get());
 
     MlmeMsg<wlan_mlme::DeauthenticateRequest> mlme_msg;
-    auto status = MlmeMsg<wlan_mlme::DeauthenticateRequest>::FromPacket(std::move(pkt), &mlme_msg);
+    auto status =
+        MlmeMsg<wlan_mlme::DeauthenticateRequest>::Decode(enc.GetMessage().bytes(), &mlme_msg);
     ASSERT_EQ(status, ZX_OK);
 
     // Generalize message and attempt to specialize to wrong type.
@@ -75,12 +69,14 @@ TEST(MlmeMsg, CorruptedPacket) {
     // Construct simple message but shorten it.
     auto fidl_msg = wlan_mlme::DeauthenticateRequest::New();
     common::kBcastMac.CopyTo(fidl_msg->peer_sta_address.mutable_data());
-    auto pkt = IntoPacket(fidl_msg);
-    pkt->set_len(pkt->len() - 1);
+    fidl::Encoder enc(42);
+    SerializeServiceMsg(&enc, fidl_msg.get());
+    Span<uint8_t> span(enc.GetMessage().bytes());
+    Span<uint8_t> invalid_span(span.data(), span.size() - 1);
 
     // Verify correctness.
     MlmeMsg<wlan_mlme::DeauthenticateRequest> mlme_msg;
-    auto status = MlmeMsg<wlan_mlme::DeauthenticateRequest>::FromPacket(std::move(pkt), &mlme_msg);
+    auto status = MlmeMsg<wlan_mlme::DeauthenticateRequest>::Decode(invalid_span, &mlme_msg);
     ASSERT_NE(status, ZX_OK);
 }
 
@@ -91,11 +87,10 @@ TEST_F(ServiceTest, SendAuthInd) {
     service::SendAuthIndication(&device, peer_sta, auth_type);
 
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-    auto inds = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAuthenticateIndOrdinal>);
+    auto inds = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAuthenticateIndOrdinal>);
     ASSERT_EQ(inds.size(), static_cast<size_t>(1));
-    ASSERT_EQ(inds[0]->peer(), Packet::Peer::kService);
     MlmeMsg<wlan_mlme::AuthenticateIndication> msg;
-    auto status = MlmeMsg<wlan_mlme::AuthenticateIndication>::FromPacket(std::move(inds[0]), &msg);
+    auto status = MlmeMsg<wlan_mlme::AuthenticateIndication>::Decode(inds[0], &msg);
     ASSERT_EQ(status, ZX_OK);
 
     ASSERT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), peer_sta.byte, 6), 0);
@@ -116,11 +111,10 @@ TEST_F(ServiceTest, SendAssocInd) {
 
     // -- verify
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-    auto inds = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateIndOrdinal>);
+    auto inds = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateIndOrdinal>);
     ASSERT_EQ(inds.size(), static_cast<size_t>(1));
-    ASSERT_EQ(inds[0]->peer(), Packet::Peer::kService);
     MlmeMsg<wlan_mlme::AssociateIndication> msg;
-    auto status = MlmeMsg<wlan_mlme::AssociateIndication>::FromPacket(std::move(inds[0]), &msg);
+    auto status = MlmeMsg<wlan_mlme::AssociateIndication>::Decode(inds[0], &msg);
     ASSERT_EQ(status, ZX_OK);
 
     ASSERT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), peer_sta.byte, 6), 0);
@@ -141,11 +135,10 @@ TEST_F(ServiceTest, SendAssocInd_EmptyRsne) {
 
     // -- verify
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-    auto inds = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateIndOrdinal>);
+    auto inds = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateIndOrdinal>);
     ASSERT_EQ(inds.size(), static_cast<size_t>(1));
-    ASSERT_EQ(inds[0]->peer(), Packet::Peer::kService);
     MlmeMsg<wlan_mlme::AssociateIndication> msg;
-    auto status = MlmeMsg<wlan_mlme::AssociateIndication>::FromPacket(std::move(inds[0]), &msg);
+    auto status = MlmeMsg<wlan_mlme::AssociateIndication>::Decode(inds[0], &msg);
     ASSERT_EQ(status, ZX_OK);
 
     ASSERT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), peer_sta.byte, 6), 0);

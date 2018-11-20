@@ -71,9 +71,6 @@ zx_status_t Dispatcher::HandlePacket(fbl::unique_ptr<Packet> packet) {
 
     zx_status_t status = ZX_OK;
     switch (packet->peer()) {
-    case Packet::Peer::kService:
-        status = HandleSvcPacket(std::move(packet));
-        break;
     case Packet::Peer::kEthernet:
         status = mlme_->HandleFramePacket(std::move(packet));
         break;
@@ -122,13 +119,12 @@ zx_status_t Dispatcher::HandlePortPacket(uint64_t key) {
     return ZX_OK;
 }
 
-zx_status_t Dispatcher::HandleSvcPacket(fbl::unique_ptr<Packet> packet) {
+zx_status_t Dispatcher::HandleAnyMlmeMessage(Span<uint8_t> span) {
     debugfn();
 
-    const uint8_t* bytes = packet->data();
-    auto hdr = FromBytes<fidl_message_header_t>(bytes, packet->len());
+    auto hdr = FromBytes<fidl_message_header_t>(span);
     if (hdr == nullptr) {
-        errorf("short service packet len=%zu\n", packet->len());
+        errorf("short mlme message, len=%zu\n", span.size());
         return ZX_OK;
     }
     debughdr("service packet txid=%u flags=%u ordinal=%u\n", hdr->txid, hdr->flags, hdr->ordinal);
@@ -142,41 +138,40 @@ zx_status_t Dispatcher::HandleSvcPacket(fbl::unique_ptr<Packet> packet) {
     case fuchsia_wlan_mlme_MLMEListMinstrelPeersOrdinal:
         return HandleMinstrelPeerList(hdr->ordinal, hdr->txid);
     case fuchsia_wlan_mlme_MLMEGetMinstrelStatsOrdinal:
-        return HandleMinstrelTxStats(std::move(packet), hdr->ordinal, hdr->txid);
+        return HandleMinstrelTxStats(span, hdr->ordinal, hdr->txid);
     }
 
     switch (hdr->ordinal) {
     case fuchsia_wlan_mlme_MLMEResetReqOrdinal:
         infof("resetting MLME\n");
-        HandleMlmeMessage<wlan_mlme::ResetRequest>(std::move(packet), hdr->ordinal);
+        HandleMlmeMessage<wlan_mlme::ResetRequest>(span, hdr->ordinal);
         return ZX_OK;
     case fuchsia_wlan_mlme_MLMEStartReqOrdinal:
-        return HandleMlmeMessage<wlan_mlme::StartRequest>(std::move(packet), hdr->ordinal);
+        return HandleMlmeMessage<wlan_mlme::StartRequest>(span, hdr->ordinal);
     case fuchsia_wlan_mlme_MLMEStopReqOrdinal:
-        return HandleMlmeMessage<wlan_mlme::StopRequest>(std::move(packet), hdr->ordinal);
+        return HandleMlmeMessage<wlan_mlme::StopRequest>(span, hdr->ordinal);
     case fuchsia_wlan_mlme_MLMEStartScanOrdinal:
-        return HandleMlmeMessage<wlan_mlme::ScanRequest>(std::move(packet), hdr->ordinal);
+        return HandleMlmeMessage<wlan_mlme::ScanRequest>(span, hdr->ordinal);
     case fuchsia_wlan_mlme_MLMEJoinReqOrdinal:
-        return HandleMlmeMessage<wlan_mlme::JoinRequest>(std::move(packet), hdr->ordinal);
+        return HandleMlmeMessage<wlan_mlme::JoinRequest>(span, hdr->ordinal);
     case fuchsia_wlan_mlme_MLMEAuthenticateReqOrdinal:
-        return HandleMlmeMessage<wlan_mlme::AuthenticateRequest>(std::move(packet), hdr->ordinal);
+        return HandleMlmeMessage<wlan_mlme::AuthenticateRequest>(span, hdr->ordinal);
     case fuchsia_wlan_mlme_MLMEAuthenticateRespOrdinal:
-        return HandleMlmeMessage<wlan_mlme::AuthenticateResponse>(std::move(packet), hdr->ordinal);
+        return HandleMlmeMessage<wlan_mlme::AuthenticateResponse>(span, hdr->ordinal);
     case fuchsia_wlan_mlme_MLMEDeauthenticateReqOrdinal:
-        return HandleMlmeMessage<wlan_mlme::DeauthenticateRequest>(std::move(packet), hdr->ordinal);
+        return HandleMlmeMessage<wlan_mlme::DeauthenticateRequest>(span, hdr->ordinal);
     case fuchsia_wlan_mlme_MLMEAssociateReqOrdinal:
-        return HandleMlmeMessage<wlan_mlme::AssociateRequest>(std::move(packet), hdr->ordinal);
+        return HandleMlmeMessage<wlan_mlme::AssociateRequest>(span, hdr->ordinal);
     case fuchsia_wlan_mlme_MLMEAssociateRespOrdinal:
-        return HandleMlmeMessage<wlan_mlme::AssociateResponse>(std::move(packet), hdr->ordinal);
+        return HandleMlmeMessage<wlan_mlme::AssociateResponse>(span, hdr->ordinal);
     case fuchsia_wlan_mlme_MLMEEapolReqOrdinal:
-        return HandleMlmeMessage<wlan_mlme::EapolRequest>(std::move(packet), hdr->ordinal);
+        return HandleMlmeMessage<wlan_mlme::EapolRequest>(span, hdr->ordinal);
     case fuchsia_wlan_mlme_MLMESetKeysReqOrdinal:
-        return HandleMlmeMessage<wlan_mlme::SetKeysRequest>(std::move(packet), hdr->ordinal);
+        return HandleMlmeMessage<wlan_mlme::SetKeysRequest>(span, hdr->ordinal);
     case fuchsia_wlan_mlme_MLMESendMpOpenActionOrdinal:
-        return HandleMlmeMessage<wlan_mlme::MeshPeeringOpenAction>(std::move(packet), hdr->ordinal);
+        return HandleMlmeMessage<wlan_mlme::MeshPeeringOpenAction>(span, hdr->ordinal);
     case fuchsia_wlan_mlme_MLMESendMpConfirmActionOrdinal:
-        return HandleMlmeMessage<wlan_mlme::MeshPeeringConfirmAction>(std::move(packet),
-                                                                      hdr->ordinal);
+        return HandleMlmeMessage<wlan_mlme::MeshPeeringConfirmAction>(span, hdr->ordinal);
     default:
         warnf("unknown MLME method %u\n", hdr->ordinal);
         return ZX_ERR_NOT_SUPPORTED;
@@ -184,9 +179,9 @@ zx_status_t Dispatcher::HandleSvcPacket(fbl::unique_ptr<Packet> packet) {
 }
 
 template <typename Message>
-zx_status_t Dispatcher::HandleMlmeMessage(fbl::unique_ptr<Packet> packet, uint32_t ordinal) {
+zx_status_t Dispatcher::HandleMlmeMessage(Span<uint8_t> span, uint32_t ordinal) {
     MlmeMsg<Message> msg;
-    auto status = MlmeMsg<Message>::FromPacket(std::move(packet), &msg);
+    auto status = MlmeMsg<Message>::Decode(span, &msg);
     if (status != ZX_OK) {
         errorf("could not deserialize MLME primitive %d: \n", ordinal);
         return status;
@@ -278,15 +273,14 @@ zx_status_t Dispatcher::HandleMinstrelPeerList(uint32_t ordinal, zx_txid_t txid)
     return SendServiceMsg(device_, &resp, fuchsia_wlan_mlme_MLMEListMinstrelPeersOrdinal, txid);
 }
 
-zx_status_t Dispatcher::HandleMinstrelTxStats(fbl::unique_ptr<wlan::Packet> packet,
-                                              uint32_t ordinal, zx_txid_t txid) const {
+zx_status_t Dispatcher::HandleMinstrelTxStats(Span<uint8_t> span, uint32_t ordinal,
+                                              zx_txid_t txid) const {
     debugfn();
     ZX_DEBUG_ASSERT(ordinal == fuchsia_wlan_mlme_MLMEGetMinstrelStatsOrdinal);
 
     wlan_mlme::MinstrelStatsResponse resp{};
     MlmeMsg<wlan_mlme::MinstrelStatsRequest> req;
-    zx_status_t status =
-        MlmeMsg<wlan_mlme::MinstrelStatsRequest>::FromPacket(std::move(packet), &req);
+    zx_status_t status = MlmeMsg<wlan_mlme::MinstrelStatsRequest>::Decode(span, &req);
     if (status != ZX_OK) {
         errorf("could not deserialize MLME primitive %d: %s\n", ordinal,
                zx_status_get_string(status));

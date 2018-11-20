@@ -18,7 +18,7 @@
 #include <fbl/unique_ptr.h>
 #include <gtest/gtest.h>
 #include <algorithm>
-#include <unordered_set>
+#include <vector>
 
 #include "test_timer.h"
 
@@ -26,8 +26,8 @@ namespace wlan {
 
 static constexpr uint8_t kClientAddress[] = {0x94, 0x3C, 0x49, 0x49, 0x9F, 0x2D};
 
-template <uint32_t ordinal> bool IsMlmeMsg(const Packet* pkt) {
-    auto hdr = FromBytes<fidl_message_header_t>(pkt->data(), pkt->len());
+template <uint32_t ordinal> bool IsMlmeMsg(Span<const uint8_t> span) {
+    auto hdr = FromBytes<fidl_message_header_t>(span);
     if (hdr == nullptr) { return 0; }
 
     return hdr->ordinal == ordinal;
@@ -40,7 +40,7 @@ struct MockDevice : public DeviceInterface {
    public:
     using PacketList = std::vector<fbl::unique_ptr<Packet>>;
     using KeyList = std::vector<wlan_key_config_t>;
-    typedef bool (*PacketPredicate)(const Packet*);
+    typedef bool (*SpanPredicate)(Span<const uint8_t>);
 
     MockDevice() : sta_assoc_ctx_{} {
         state = fbl::AdoptRef(new DeviceState);
@@ -77,7 +77,7 @@ struct MockDevice : public DeviceInterface {
     }
 
     zx_status_t DeliverEthernet(Span<const uint8_t> eth_frame) override final {
-        eth_queue.push_back({ eth_frame.cbegin(), eth_frame.cend() });
+        eth_queue.push_back({eth_frame.cbegin(), eth_frame.cend()});
         return ZX_OK;
     }
 
@@ -87,8 +87,9 @@ struct MockDevice : public DeviceInterface {
         return ZX_OK;
     }
 
-    zx_status_t SendService(fbl::unique_ptr<Packet> packet) override final {
-        svc_queue.push_back(std::move(packet));
+    zx_status_t SendService(Span<const uint8_t> span) override final {
+        std::vector<uint8_t> msg(span.cbegin(), span.cend());
+        svc_queue.push_back(msg);
         return ZX_OK;
     }
 
@@ -166,18 +167,17 @@ struct MockDevice : public DeviceInterface {
 
     uint16_t GetChannelNumber() { return state->channel().primary; }
 
-    template <typename T> zx_status_t GetQueuedServiceMsg(uint32_t ordinal, T* out) {
-        if (svc_queue.empty()) {
-            return ZX_ERR_NOT_FOUND;
-        }
+    template <typename T> zx_status_t GetQueuedServiceMsg(uint32_t ordinal, MlmeMsg<T>* out) {
+        if (svc_queue.empty()) { return ZX_ERR_NOT_FOUND; }
         auto iter = svc_queue.begin();
-        auto packet = std::move(*iter);
+        auto span = *iter;
         svc_queue.erase(iter);
-        return DeserializeServiceMsg<T>(*packet, ordinal, out);
+        return MlmeMsg<T>::Decode(span, out);
     }
 
-    PacketList GetServicePackets(PacketPredicate predicate = nullptr) {
-        return GetPackets(&svc_queue, predicate ? predicate : [](auto pkt) { return true; });
+    std::vector<std::vector<uint8_t>> GetServiceMsgs(SpanPredicate predicate = nullptr) {
+        return GetSvcMsgs(
+            &svc_queue, predicate ? predicate : [](auto span) { return true; });
     }
 
     std::vector<std::vector<uint8_t>> GetEthPackets() {
@@ -186,9 +186,7 @@ struct MockDevice : public DeviceInterface {
         return tmp;
     }
 
-    PacketList GetWlanPackets(PacketPredicate predicate = nullptr) {
-        return GetPackets(&wlan_queue, predicate ? predicate : [](auto pkt) { return true; });
-    }
+    PacketList GetWlanPackets() { return std::move(wlan_queue); }
 
     KeyList GetKeys() { return keys; }
 
@@ -197,7 +195,7 @@ struct MockDevice : public DeviceInterface {
     fbl::RefPtr<DeviceState> state;
     wlanmac_info_t wlanmac_info;
     PacketList wlan_queue;
-    PacketList svc_queue;
+    std::vector<std::vector<uint8_t>> svc_queue;
     std::vector<std::vector<uint8_t>> eth_queue;
     fbl::unique_ptr<wlan_bss_config_t> bss_cfg;
     KeyList keys;
@@ -206,19 +204,18 @@ struct MockDevice : public DeviceInterface {
     wlan_assoc_ctx_t sta_assoc_ctx_;
 
    private:
-    PacketList GetPackets(PacketList* lst, PacketPredicate predicate) {
-        std::vector<fbl::unique_ptr<Packet>> matches;
-        for (auto iter = lst->begin(); iter != lst->end(); ++iter) {
-            if (predicate(iter->get())) { matches.push_back(std::move(*iter)); }
+    std::vector<std::vector<uint8_t>> GetSvcMsgs(std::vector<std::vector<uint8_t>>* lst,
+                                                 SpanPredicate predicate) {
+        std::vector<std::vector<uint8_t>> matches;
+        for (auto msg : *lst) {
+            if (predicate(msg)) { matches.push_back(msg); }
         }
-        lst->erase(std::remove_if(lst->begin(), lst->end(), [](auto& i) { return i == nullptr; }),
-                   lst->end());
+        lst->erase(std::remove_if(lst->begin(), lst->end(), predicate), lst->end());
         return matches;
     }
 
     timekeeper::TestClock clock_;
 };
-
 }  // namespace
 }  // namespace wlan
 

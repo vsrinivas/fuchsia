@@ -162,22 +162,18 @@ struct ClientTest : public ::testing::Test {
         ASSERT_TRUE(chan_sched.OnChannel());                 // sanity check
     }
 
-    void AssertAuthConfirm(fbl::unique_ptr<Packet> pkt,
+    void AssertAuthConfirm(std::vector<uint8_t> vec,
                            wlan_mlme::AuthenticateResultCodes result_code) {
-        ASSERT_EQ(pkt->peer(), Packet::Peer::kService);
-
         MlmeMsg<wlan_mlme::AuthenticateConfirm> msg;
-        auto status = MlmeMsg<wlan_mlme::AuthenticateConfirm>::FromPacket(std::move(pkt), &msg);
+        auto status = MlmeMsg<wlan_mlme::AuthenticateConfirm>::Decode(vec, &msg);
         ASSERT_EQ(status, ZX_OK);
         ASSERT_EQ(msg.body()->result_code, result_code);
     }
 
-    void AssertAssocConfirm(fbl::unique_ptr<Packet> pkt, uint16_t aid,
+    void AssertAssocConfirm(std::vector<uint8_t> vec, uint16_t aid,
                             wlan_mlme::AssociateResultCodes result_code) {
-        ASSERT_EQ(pkt->peer(), Packet::Peer::kService);
-
         MlmeMsg<wlan_mlme::AssociateConfirm> msg;
-        auto status = MlmeMsg<wlan_mlme::AssociateConfirm>::FromPacket(std::move(pkt), &msg);
+        auto status = MlmeMsg<wlan_mlme::AssociateConfirm>::Decode(vec, &msg);
         ASSERT_EQ(status, ZX_OK);
         ASSERT_EQ(msg.body()->association_id, aid);
         ASSERT_EQ(msg.body()->result_code, result_code);
@@ -227,9 +223,9 @@ TEST_F(ClientTest, Authenticate) {
     // Respond with a Authentication frame and verify a AUTHENTICATION.confirm message was sent.
     ASSERT_EQ(SendFrame<Authentication>(), ZX_OK);
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-    auto auths = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAuthenticateConfOrdinal>);
+    auto auths = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAuthenticateConfOrdinal>);
     ASSERT_FALSE(auths.empty());
-    AssertAuthConfirm(std::move(*auths.begin()), wlan_mlme::AuthenticateResultCodes::SUCCESS);
+    AssertAuthConfirm(auths[0], wlan_mlme::AuthenticateResultCodes::SUCCESS);
 
     // Verify a delayed timeout won't cause another confirmation.
     device.svc_queue.clear();
@@ -262,15 +258,15 @@ TEST_F(ClientTest, Associate) {
     // Respond with a Association Response frame and verify a ASSOCIATE.confirm message was sent.
     ASSERT_EQ(SendFrame<AssociationResponse>(), ZX_OK);
     ASSERT_FALSE(device.svc_queue.empty());
-    auto assocs = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateConfOrdinal>);
+    auto assocs = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateConfOrdinal>);
     ASSERT_EQ(assocs.size(), static_cast<size_t>(1));
-    AssertAssocConfirm(std::move(*assocs.begin()), kAid, wlan_mlme::AssociateResultCodes::SUCCESS);
+    AssertAssocConfirm(assocs[0], kAid, wlan_mlme::AssociateResultCodes::SUCCESS);
 
     // Verify a delayed timeout won't cause another confirmation.
     device.svc_queue.clear();
     SetTimeInBeaconPeriods(100);
     station.HandleTimeout();
-    assocs = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateConfOrdinal>);
+    assocs = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateConfOrdinal>);
     ASSERT_TRUE(assocs.empty());
 }
 
@@ -288,10 +284,9 @@ TEST_F(ClientTest, AuthTimeout) {
     SetTimeInBeaconPeriods(kAuthTimeout);
     station.HandleTimeout();
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-    auto auths = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAuthenticateConfOrdinal>);
+    auto auths = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAuthenticateConfOrdinal>);
     ASSERT_FALSE(auths.empty());
-    AssertAuthConfirm(std::move(*auths.begin()),
-                      wlan_mlme::AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
+    AssertAuthConfirm(auths[0], wlan_mlme::AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
 }
 
 TEST_F(ClientTest, AssocTimeout) {
@@ -310,10 +305,9 @@ TEST_F(ClientTest, AssocTimeout) {
     SetTimeInBeaconPeriods(40);
     station.HandleTimeout();
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-    auto assocs = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateConfOrdinal>);
+    auto assocs = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAssociateConfOrdinal>);
     ASSERT_FALSE(assocs.empty());
-    AssertAssocConfirm(std::move(*assocs.begin()), 0,
-                       wlan_mlme::AssociateResultCodes::REFUSED_TEMPORARILY);
+    AssertAssocConfirm(assocs[0], 0, wlan_mlme::AssociateResultCodes::REFUSED_TEMPORARILY);
 }
 
 TEST_F(ClientTest, ExchangeDataAfterAssociation) {
@@ -414,8 +408,7 @@ TEST_F(ClientTest, AutoDeauth_NoBeaconReceived) {
     IncreaseTimeByBeaconPeriods(kAutoDeauthTimeout - 1);
     station.HandleTimeout();
     ASSERT_TRUE(device.wlan_queue.empty());
-    auto deauths =
-        device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
+    auto deauths = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
     ASSERT_TRUE(deauths.empty());
 
     // Auto-deauth timeout, client should be deauthenticated.
@@ -424,7 +417,7 @@ TEST_F(ClientTest, AutoDeauth_NoBeaconReceived) {
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                       wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
-    deauths = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
+    deauths = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
     ASSERT_EQ(deauths.size(), static_cast<size_t>(1));
 }
 
@@ -445,8 +438,7 @@ TEST_F(ClientTest, AutoDeauth_NoBeaconsShortlyAfterConnecting) {
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                       wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
-    auto deauths =
-        device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
+    auto deauths = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
     ASSERT_EQ(deauths.size(), static_cast<size_t>(1));
 }
 
@@ -478,8 +470,7 @@ TEST_F(ClientTest, AutoDeauth_DoNotDeauthWhileSwitchingChannel) {
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                       wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
-    auto deauths =
-        device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
+    auto deauths = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
     ASSERT_EQ(deauths.size(), static_cast<size_t>(1));
 }
 
@@ -531,8 +522,7 @@ TEST_F(ClientTest, AutoDeauth_InterleavingBeaconsAndChannelSwitches) {
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                       wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
-    auto deauths =
-        device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
+    auto deauths = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
     ASSERT_EQ(deauths.size(), static_cast<size_t>(1));
 }
 
@@ -565,8 +555,7 @@ TEST_F(ClientTest, AutoDeauth_SwitchingChannelBeforeDeauthTimeoutCouldTrigger) {
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                       wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
-    auto deauths =
-        device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
+    auto deauths = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
     ASSERT_EQ(deauths.size(), static_cast<size_t>(1));
 }
 
@@ -581,8 +570,7 @@ TEST_F(ClientTest, AutoDeauth_ForeignBeaconShouldNotPreventDeauth) {
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                       wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
-    auto deauths =
-        device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
+    auto deauths = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal>);
     ASSERT_EQ(deauths.size(), static_cast<size_t>(1));
 }
 
@@ -625,7 +613,7 @@ TEST_F(ClientTest, InvalidAuthenticationResponse) {
 
     // Verify that AUTHENTICATION.confirm was received.
     ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-    auto auths = device.GetServicePackets(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAuthenticateConfOrdinal>);
+    auto auths = device.GetServiceMsgs(IsMlmeMsg<fuchsia_wlan_mlme_MLMEAuthenticateConfOrdinal>);
     ASSERT_FALSE(auths.empty());
     AssertAuthConfirm(std::move(*auths.begin()),
                       wlan_mlme::AuthenticateResultCodes::AUTHENTICATION_REJECTED);

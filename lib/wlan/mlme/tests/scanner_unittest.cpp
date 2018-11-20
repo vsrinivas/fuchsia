@@ -37,17 +37,6 @@ const uint8_t kBeacon[] = {
     0x64, 0x00, 0x01, 0x00, 0x00, 0x09, 0x74, 0x65, 0x73, 0x74, 0x20, 0x73, 0x73, 0x69, 0x64,
 };
 
-template <typename T>
-static fbl::unique_ptr<Packet> IntoPacket(const T& msg, uint32_t ordinal = 42) {
-    // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
-    // everyone.
-    const size_t kBufLen = 4096;
-    auto packet = GetSvcPacket(kBufLen);
-    memset(packet->data(), 0, kBufLen);
-    SerializeServiceMsg(packet.get(), ordinal, msg.get());
-    return packet;
-}
-
 struct MockOnChannelHandler : OnChannelHandler {
     virtual void HandleOnChannelFrame(fbl::unique_ptr<Packet>) override {}
     virtual void PreSwitchOffChannel() override {}
@@ -74,29 +63,33 @@ class ScannerTest : public ::testing::Test {
     }
 
     zx_status_t Start() {
-        auto pkt = IntoPacket(req_, fuchsia_wlan_mlme_MLMEStartScanOrdinal);
+        fidl::Encoder enc(fuchsia_wlan_mlme_MLMEStartScanOrdinal);
+        SerializeServiceMsg(&enc, req_.get());
         MlmeMsg<wlan_mlme::ScanRequest> start_req;
-        if (MlmeMsg<wlan_mlme::ScanRequest>::FromPacket(std::move(pkt), &start_req) != ZX_OK) {
+        if (MlmeMsg<wlan_mlme::ScanRequest>::Decode(enc.GetMessage().bytes(), &start_req) !=
+            ZX_OK) {
             return ZX_ERR_IO;
         }
         return scanner_.Start(start_req);
     }
 
     wlan_mlme::ScanResult ExpectScanResult() {
-        wlan_mlme::ScanResult result;
+        MlmeMsg<wlan_mlme::ScanResult> result;
         zx_status_t st =
             mock_dev_.GetQueuedServiceMsg(fuchsia_wlan_mlme_MLMEOnScanResultOrdinal, &result);
         EXPECT_EQ(ZX_OK, st);
-        return result;
+        wlan_mlme::ScanResult body;
+        result.body()->Clone(&body);
+        return body;
     }
 
     wlan_mlme::ScanEnd ExpectScanEnd() {
-        wlan_mlme::ScanEnd scan_end;
+        MlmeMsg<wlan_mlme::ScanEnd> scan_end;
         zx_status_t st =
             mock_dev_.GetQueuedServiceMsg(fuchsia_wlan_mlme_MLMEOnScanEndOrdinal, &scan_end);
         EXPECT_EQ(ZX_OK, st);
-        EXPECT_EQ(123u, scan_end.txn_id);
-        return scan_end;
+        EXPECT_EQ(123u, scan_end.body()->txn_id);
+        return std::move(*scan_end.body());
     }
 
     wlan_mlme::ScanRequestPtr req_;

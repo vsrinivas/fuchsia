@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef GARNET_LIB_WLAN_MLME_TESTS_TEST_BSS_H_
+#define GARNET_LIB_WLAN_MLME_TESTS_TEST_BSS_H_
+
 #include <lib/timekeeper/clock.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/client/channel_scheduler.h>
@@ -41,9 +44,8 @@ static constexpr uint8_t kSsid[] = {'F', 'u', 'c', 'h', 's', 'i', 'a', '-', 'A',
 static constexpr uint8_t kEapolPdu[] = {'E', 'A', 'P', 'O', 'L'};
 static constexpr uint8_t kKeyData[] = {0x40, 0x41, 0x42, 0x43, 0x44};
 static constexpr SupportedRate kSupportedRates[] = {
-    SupportedRate(2),  SupportedRate(12), SupportedRate(24), SupportedRate(48),
-    SupportedRate(54), SupportedRate(96), SupportedRate(108),
-    SupportedRate(1),  SupportedRate(16), SupportedRate(36)};
+    SupportedRate(2),  SupportedRate(12),  SupportedRate(24), SupportedRate(48), SupportedRate(54),
+    SupportedRate(96), SupportedRate(108), SupportedRate(1),  SupportedRate(16), SupportedRate(36)};
 
 static constexpr uint8_t kRsne[] = {
     0x30,                    // element id
@@ -119,13 +121,13 @@ enable_if_same<M, ::fuchsia::wlan::mlme::AssociateRequest> CreateMlmeMsg(MlmeMsg
 
 template <typename T>
 static zx_status_t WriteServiceMessage(T* message, uint32_t ordinal, MlmeMsg<T>* out_msg) {
-    auto packet = GetSvcPacket(16384);
-    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    zx_status_t status = SerializeServiceMsg(packet.get(), ordinal, message);
+    fidl::Encoder enc(ordinal);
+    zx_status_t status = SerializeServiceMsg(&enc, message);
     if (status != ZX_OK) { return status; }
 
-    return MlmeMsg<T>::FromPacket(std::move(packet), out_msg);
+    return MlmeMsg<T>::Decode(enc.GetMessage().bytes(), out_msg);
 }
 
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_MLME_TESTS_TEST_BSS_H_

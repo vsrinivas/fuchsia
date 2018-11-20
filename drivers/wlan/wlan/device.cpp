@@ -85,16 +85,17 @@ static ethmac_protocol_ops_t ethmac_ops = {
     .queue_tx = [](void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) -> zx_status_t {
         return DEV(ctx)->EthmacQueueTx(options, netbuf);
     },
-    .set_param = [](void* ctx, uint32_t param, int32_t value, const void* data,
-                    size_t data_size) -> zx_status_t {
-        return DEV(ctx)->EthmacSetParam(param, value, data, data_size);
-    },
+    .set_param = [](void* ctx, uint32_t param, int32_t value, const void* data, size_t data_size)
+        -> zx_status_t { return DEV(ctx)->EthmacSetParam(param, value, data, data_size); },
 };
 #undef DEV
 
 Device::Device(zx_device_t* device, wlanmac_protocol_t wlanmac_proto,
                std::shared_ptr<component::Services> services)
-    : parent_(device), wlanmac_proxy_(wlanmac_proto), services_(services) {
+    : parent_(device),
+      wlanmac_proxy_(wlanmac_proto),
+      services_(services),
+      fidl_msg_buf_(ZX_CHANNEL_MAX_MSG_BYTES) {
     debugfn();
     state_ = fbl::AdoptRef(new DeviceState);
 }
@@ -516,10 +517,8 @@ zx_status_t Device::SendWlan(fbl::unique_ptr<Packet> packet, CBW cbw, PHY phy, u
 // This *should* be safe, since the worst case is that
 // the syscall fails, and we return an error.
 // TODO(tkilbourn): consider refactoring this so we don't have to abandon the safety analysis.
-zx_status_t Device::SendService(fbl::unique_ptr<Packet> packet) __TA_NO_THREAD_SAFETY_ANALYSIS {
-    if (channel_.is_valid()) {
-        return channel_.write(0u, packet->data(), packet->len(), nullptr, 0);
-    }
+zx_status_t Device::SendService(Span<const uint8_t> span) __TA_NO_THREAD_SAFETY_ANALYSIS {
+    if (channel_.is_valid()) { return channel_.write(0u, span.data(), span.size(), nullptr, 0); }
     return ZX_OK;
 }
 
@@ -566,10 +565,10 @@ zx_status_t Device::ConfigureBss(wlan_bss_config_t* cfg) {
 
 zx_status_t Device::EnableBeaconing(wlan_bcn_config_t* bcn_cfg) {
     if (bcn_cfg != nullptr) {
-        ZX_DEBUG_ASSERT(ValidateFrame("Malformed beacon template", {
-                reinterpret_cast<const uint8_t*>(bcn_cfg->tmpl.packet_head.data_buffer),
-                bcn_cfg->tmpl.packet_head.data_size
-        }));
+        ZX_DEBUG_ASSERT(
+            ValidateFrame("Malformed beacon template",
+                          {reinterpret_cast<const uint8_t*>(bcn_cfg->tmpl.packet_head.data_buffer),
+                           bcn_cfg->tmpl.packet_head.data_size}));
     }
     return wlanmac_proxy_.EnableBeaconing(0u, bcn_cfg);
 }
@@ -730,31 +729,23 @@ void Device::ProcessChannelPacketLocked(uint64_t signal_count) {
         // In that case we simply ignore the packet since we can't read from the channel anyway.
         return;
     }
+
     for (size_t i = 0; i < signal_count; ++i) {
-        auto buffer = LargeBufferAllocator::New();
-        if (buffer == nullptr) {
-            errorf("no free buffers available!\n");
-            // TODO: reply on the channel
-            channel_.reset();
-            return;
-        }
         uint32_t read = 0;
-        zx_status_t status =
-            channel_.read(0, buffer->data(), buffer->capacity(), &read, nullptr, 0, nullptr);
+        zx_status_t status = channel_.read(0, fidl_msg_buf_.data(), fidl_msg_buf_.size(), &read,
+                                           nullptr, 0, nullptr);
         if (status == ZX_ERR_SHOULD_WAIT) { break; }
         if (status != ZX_OK) {
             if (status == ZX_ERR_PEER_CLOSED) {
                 infof("channel closed\n");
             } else {
-                errorf("could not read channel: %d\n", status);
+                errorf("could not read channel: %s\n", zx_status_get_string(status));
             }
             channel_.reset();
             return;
         }
 
-        auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), read));
-        packet->set_peer(Packet::Peer::kService);
-        status = dispatcher_->HandlePacket(std::move(packet));
+        status = dispatcher_->HandleAnyMlmeMessage({fidl_msg_buf_.data(), read});
         if (status != ZX_OK) {
             errorf("Could not handle service packet: %s\n", zx_status_get_string(status));
         }
