@@ -12,15 +12,18 @@ MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/backtrace.cpp \
+    $(LOCAL_DIR)/debug-info.cpp \
     $(LOCAL_DIR)/dso-list.cpp \
     $(LOCAL_DIR)/registers.cpp \
     $(LOCAL_DIR)/utils.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/backtrace-request \
     system/ulib/elf-search \
+    system/ulib/fbl \
+    system/ulib/pretty \
     system/ulib/zx \
     system/ulib/zxcpp \
-    system/ulib/fbl \
 
 MODULE_LIBS := \
     third_party/ulib/backtrace \

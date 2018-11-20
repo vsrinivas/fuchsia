@@ -11,9 +11,9 @@
 #include <stdio.h>
 
 #include <zircon/compiler.h>
-#include <zircon/types.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -25,7 +25,7 @@ typedef struct inspector_dsoinfo inspector_dsoinfo_t;
 typedef zx_x86_64_exc_data_t inspector_excp_data_t;
 #elif defined(__aarch64__)
 typedef zx_arm64_exc_data_t inspector_excp_data_t;
-#else   // unsupported arch
+#else // unsupported arch
 typedef int inspector_excp_data_t;
 #endif
 
@@ -62,8 +62,8 @@ extern void inspector_dso_free_list(inspector_dsoinfo_t*);
 
 // Return the DSO that contains |pc|.
 // Returns NULL if not found.
-extern inspector_dsoinfo_t* inspector_dso_lookup (inspector_dsoinfo_t* dso_list,
-                                                  zx_vaddr_t pc);
+extern inspector_dsoinfo_t* inspector_dso_lookup(inspector_dsoinfo_t* dso_list,
+                                                 zx_vaddr_t pc);
 
 // Print markup context to |f|. This includes every module and every mapped
 // region of memory derived from those modules.
@@ -90,5 +90,16 @@ zx_status_t inspector_read_general_regs(zx_handle_t thread,
 void inspector_print_general_regs(FILE* f,
                                   const zx_thread_state_general_regs_t* regs,
                                   const inspector_excp_data_t* excp_data);
+
+// Prints to stdout the debug info (registers, bottom of user stack, dso list,
+// backtrace, etc.) of the given |thread| in |process|.
+// Does NOT close the handles nor resume the thread.
+void inspector_print_debug_info(zx_handle_t process, zx_handle_t thread);
+
+// Same as above except that it resumes the thread from the exception port at
+// the end.
+void inspector_print_debug_info_and_resume_thread(zx_handle_t process,
+                                                  zx_handle_t thread,
+                                                  zx_handle_t exception_port);
 
 __END_CDECLS
