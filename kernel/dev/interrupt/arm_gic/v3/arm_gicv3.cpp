@@ -12,6 +12,7 @@
 #include <bits.h>
 #include <dev/interrupt.h>
 #include <dev/interrupt/arm_gic_common.h>
+#include <dev/interrupt/arm_gic_hw_interface.h>
 #include <err.h>
 #include <inttypes.h>
 #include <kernel/stats.h>
@@ -518,7 +519,7 @@ static void arm_gic_v3_init(const void* driver_data, uint32_t length) {
     // If a GIC driver is already registered to the GIC interface it's means we are running GICv2
     // and we do not need to initialize GICv3. Since we have added both GICv3 and GICv2 in board.mdi,
     // both drivers are initialized
-    if (gicv3_is_gic_registered()) {
+    if (arm_gic_is_registered()) {
         return;
     }
 

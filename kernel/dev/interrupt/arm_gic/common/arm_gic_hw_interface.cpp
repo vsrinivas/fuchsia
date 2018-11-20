@@ -51,6 +51,14 @@ uint64_t gic_read_gich_elrsr() {
     return gic_ops->read_gich_elrsr();
 }
 
+void gic_write_gich_apr(uint32_t val) {
+    return gic_ops->write_gich_apr(val);
+}
+
+uint32_t gic_read_gich_apr() {
+    return gic_ops->read_gich_apr();
+}
+
 uint32_t gic_read_gich_misr() {
     return gic_ops->read_gich_misr();
 }
@@ -79,10 +87,6 @@ uint32_t gic_get_num_lrs() {
     return gic_ops->get_num_lrs();
 }
 
-void gic_write_gich_apr(uint32_t val) {
-    return gic_ops->write_gich_apr(val);
-}
-
-uint32_t gic_read_gich_apr() {
-    return gic_ops->read_gich_apr();
+uint32_t get_pending_vector() {
+    return gic_ops->get_pending_vector();
 }

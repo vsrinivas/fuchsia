@@ -111,6 +111,10 @@ static uint32_t gicv2_get_num_lrs() {
     return (gicv2_read_gich_vtr() & GICH_VTR_LIST_REGS_MASK) + 1;
 }
 
+static uint32_t gicv2_get_pending_vector() {
+    return GICREG(0, GICC_HPPIR) & GICC_HPPIR_INTID_MASK;
+}
+
 static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
     .read_gich_hcr = gicv2_read_gich_hcr,
     .write_gich_hcr = gicv2_write_gich_hcr,
@@ -128,6 +132,7 @@ static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
     .get_lr_from_vector = gicv2_get_lr_from_vector,
     .get_vector_from_lr = gicv2_get_vector_from_lr,
     .get_num_lrs = gicv2_get_num_lrs,
+    .get_pending_vector = gicv2_get_pending_vector,
 };
 
 void gicv2_hw_interface_register() {

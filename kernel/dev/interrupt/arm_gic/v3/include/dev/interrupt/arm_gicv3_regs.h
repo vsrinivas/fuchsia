@@ -20,6 +20,7 @@
 #define ICC_CTLR_EL1 "S3_0_C12_C12_4"
 #define ICC_PMR_EL1 "S3_0_C4_C6_0"
 #define ICC_IAR1_EL1 "S3_0_C12_C12_0"
+#define ICC_HPPIR1_EL1 "S3_0_C12_C12_2"
 #define ICC_SRE_EL1 "S3_0_C12_C12_5"
 #define ICC_BPR1_EL1 "S3_0_C12_C12_3"
 #define ICC_IGRPEN1_EL1 "S3_0_C12_C12_7"
@@ -134,6 +135,13 @@ static inline void gic_write_eoir(uint32_t val) {
 static inline uint32_t gic_read_iar() {
     uint64_t temp;
     __asm__ volatile("mrs %0, " ICC_IAR1_EL1
+                     : "=r"(temp));
+    return (uint32_t)temp;
+}
+
+static inline uint32_t gic_read_hppir() {
+    uint64_t temp;
+    __asm__ volatile("mrs %0, " ICC_HPPIR1_EL1
                      : "=r"(temp));
     return (uint32_t)temp;
 }
