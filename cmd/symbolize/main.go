@@ -23,6 +23,8 @@ var (
 	idsPath       string
 	colorValue    string
 	jsonOutput    string
+	// TODO(jakehehrlich): Make idsRel always true and remove this flag.
+	idsRel bool
 )
 
 func init() {
@@ -30,6 +32,7 @@ func init() {
 	flag.StringVar(&idsPath, "ids", "", "path to ids.txt")
 	flag.StringVar(&colorValue, "color", "auto", "can be `always`, `auto`, or `never`.")
 	flag.StringVar(&jsonOutput, "json-output", "", "outputs trigger information to the specified file")
+	flag.BoolVar(&idsRel, "ids-rel", false, "tells the symbolizer to always use ids.txt relative paths")
 }
 
 func getColor() (color.Color, error) {
@@ -92,7 +95,7 @@ func main() {
 	// Construct the nodes of the pipeline
 	symbolizer := symbolize.NewLLVMSymbolizer(llvmSymboPath)
 	repo := symbolize.NewRepo()
-	err = repo.AddSource(symbolize.NewIDsSource(idsPath))
+	err = repo.AddSource(symbolize.NewIDsSource(idsPath, idsRel))
 	if err != nil {
 		symbolizeLogger.Fatalf("%v", err)
 	}

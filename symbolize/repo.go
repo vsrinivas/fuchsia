@@ -7,6 +7,7 @@ package symbolize
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -29,10 +30,11 @@ type BinaryFileSource interface {
 // idsSource is a BinaryFileSource parsed from ids.txt
 type idsSource struct {
 	pathToIDs string
+	rel       bool
 }
 
-func NewIDsSource(pathToIDs string) BinaryFileSource {
-	return &idsSource{pathToIDs}
+func NewIDsSource(pathToIDs string, rel bool) BinaryFileSource {
+	return &idsSource{pathToIDs, rel}
 }
 
 func (i *idsSource) name() string {
@@ -45,7 +47,17 @@ func (i *idsSource) getBinaries() ([]elflib.BinaryFileRef, error) {
 		return nil, err
 	}
 	defer file.Close()
-	return elflib.ReadIDsFile(file)
+	out, err := elflib.ReadIDsFile(file)
+	if err != nil {
+		return nil, err
+	}
+	if i.rel {
+		base := filepath.Dir(i.pathToIDs)
+		for idx, ref := range out {
+			out[idx].Filepath = filepath.Join(base, ref.Filepath)
+		}
+	}
+	return out, nil
 }
 
 func (i *idsSource) getModTime() (*time.Time, error) {
