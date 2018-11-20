@@ -35,6 +35,14 @@ default rights for each object type, which can be reduced via
 | **ZX_RIGHT_MANAGE_PROCESS** | **NOT YET IMPLEMENTED** Allows creation of threads, etc |
 | **ZX_RIGHT_MANAGE_THREAD**  | **NOT YET IMPLEMENTED** Allows suspending/resuming threads, etc|
 
+## ZX_RIGHTS_BASIC
+
+The basic rights allow primitive manipulation of handles and are common to the
+majority of handle types by default. These are *ZX_RIGHT_DUPLICATE*,
+*ZX_RIGHT_TRANSFER*, *ZX_RIGHT_WAIT*, and *ZX_RIGHT_INSPECT*.
+
+These four rights are referred to as *ZX_RIGHTS_BASIC* when used together.
+
 ## See also
 [Objects](objects.md),
 [Handles](handles.md)

@@ -57,10 +57,6 @@ In the event of failure, a negative error value is returned.
 
 **ZX_ERR_PEER_CLOSED**  **zx_object_signal_peer**() called on an object with a closed peer.
 
-## NOTE
-
-*ZX_RIGHT_WRITE* is used to gate access to signal bits.  This will likely change.
-
 ## SEE ALSO
 
 [event_create](event_create.md),

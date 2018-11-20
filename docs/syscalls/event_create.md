@@ -18,12 +18,10 @@ zx_status_t zx_event_create(uint32_t options, zx_handle_t* out);
 is, its *ZX_USER_SIGNAL_n* (where *n* is 0 through 7) signals can be
 manipulated using **object_signal**().
 
-The newly-created handle will have the *ZX_RIGHT_TRANSFER*, *ZX_RIGHT_DUPLICATE*,
-*ZX_RIGHT_READ*, *ZX_RIGHT_WRITE*, and *ZX_RIGHT_SIGNAL* rights.
-
 ## RIGHTS
 
-TODO(ZX-2399)
+The newly-created handle will have the [basic rights](../rights.md#zx_rights_basic)
+plus *ZX_RIGHT_SIGNAL*.
 
 ## RETURN VALUE
 
