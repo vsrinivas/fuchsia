@@ -165,6 +165,8 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                 // note: failures are logged at the point of the failure,
                 // simply checking here to return overall test status
                 test_pass = true;
+            } else {
+                test_pass = false;
             }
 
             // TODO(NET-1095): add ping check to verify connectivity
