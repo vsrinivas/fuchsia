@@ -108,8 +108,8 @@ TEST_F(LedgerRepositoryImplTest, ConcurrentCalls) {
 TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
   bool zeroth_callback_called = false;
   fuchsia::inspect::Object zeroth_read_object;
-  object_dir_.object()->ReadData(fxl::MakeCopyable(callback::Capture(
-      callback::SetWhenCalled(&zeroth_callback_called), &zeroth_read_object)));
+  object_dir_.object()->ReadData(callback::Capture(
+      callback::SetWhenCalled(&zeroth_callback_called), &zeroth_read_object));
   EXPECT_TRUE(zeroth_callback_called);
   ExpectRequestsMetric(&zeroth_read_object, 0UL);
 
@@ -117,8 +117,8 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
   repository_->BindRepository(first_ledger_repository_ptr.NewRequest());
   bool first_callback_called = false;
   fuchsia::inspect::Object first_read_object;
-  object_dir_.object()->ReadData(fxl::MakeCopyable(callback::Capture(
-      callback::SetWhenCalled(&first_callback_called), &first_read_object)));
+  object_dir_.object()->ReadData(callback::Capture(
+      callback::SetWhenCalled(&first_callback_called), &first_read_object));
   EXPECT_TRUE(first_callback_called);
   ExpectRequestsMetric(&first_read_object, 1UL);
 
@@ -126,8 +126,8 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
   repository_->BindRepository(second_ledger_repository_ptr.NewRequest());
   bool second_callback_called = false;
   fuchsia::inspect::Object second_read_object;
-  object_dir_.object()->ReadData(fxl::MakeCopyable(callback::Capture(
-      callback::SetWhenCalled(&second_callback_called), &second_read_object)));
+  object_dir_.object()->ReadData(callback::Capture(
+      callback::SetWhenCalled(&second_callback_called), &second_read_object));
   EXPECT_TRUE(second_callback_called);
   ExpectRequestsMetric(&second_read_object, 2UL);
 }
