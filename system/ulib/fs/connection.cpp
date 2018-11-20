@@ -11,6 +11,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#include <fs/handler.h>
 #include <fs/trace.h>
 #include <fs/vnode.h>
 #include <fuchsia/io/c/fidl.h>
@@ -374,7 +375,7 @@ void Connection::Terminate(bool call_close) {
 }
 
 zx_status_t Connection::CallHandler() {
-    return zxfidl_handler(channel_.get(), &Connection::HandleMessageThunk, this);
+    return vfs_handler(channel_.get(), &Connection::HandleMessageThunk, this);
 }
 
 void Connection::CallClose() {
@@ -456,7 +457,7 @@ zx_status_t Connection::NodeSync(fidl_txn_t* txn) {
     if (IsPathOnly(flags_)) {
         return fuchsia_io_NodeSync_reply(txn, ZX_ERR_BAD_HANDLE);
     }
-    Vnode::SyncCallback closure([this, ctxn = zxfidl_txn_copy(txn)]
+    Vnode::SyncCallback closure([this, ctxn = vfs_txn_copy(txn)]
                                 (zx_status_t status) mutable {
         fuchsia_io_NodeSync_reply(&ctxn.txn, status);
 
@@ -800,7 +801,7 @@ zx_status_t Connection::DirectoryAdminUnmount(fidl_txn_t* txn) {
 
     // Unmount is fatal to the requesting connections.
     Vfs::ShutdownCallback closure([ch = std::move(channel_),
-                                   ctxn = zxfidl_txn_copy(txn)]
+                                   ctxn = vfs_txn_copy(txn)]
                                   (zx_status_t status) mutable {
         fuchsia_io_DirectoryAdminUnmount_reply(&ctxn.txn, status);
     });

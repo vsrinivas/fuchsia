@@ -25,6 +25,7 @@
 
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
+#include <fs/handler.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -663,12 +664,12 @@ void DevfsConnection::HandleRpc(fbl::unique_ptr<DevfsConnection> conn,
     }
 
     if (signal->observed & ZX_CHANNEL_READABLE) {
-        if (zxfidl_handler(wait->object(), devhost_fidl_handler, conn.get()) == ZX_OK) {
+        if (vfs_handler(wait->object(), devhost_fidl_handler, conn.get()) == ZX_OK) {
             BeginWait(std::move(conn), dispatcher);
             return;
         }
     } else if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-        zxfidl_handler(ZX_HANDLE_INVALID, devhost_fidl_handler, conn.get());
+        vfs_handler(ZX_HANDLE_INVALID, devhost_fidl_handler, conn.get());
     } else {
         printf("dh_handle_fidl_rpc: invalid signals %x\n", signal->observed);
         exit(0);

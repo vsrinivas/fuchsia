@@ -11,7 +11,6 @@
 
 __BEGIN_CDECLS
 
-
 // TODO(abarth): Remove all these functions once FDIO is rehosted on ZXIO.
 zx_status_t fidl_ioctl(zx_handle_t h, uint32_t op, const void* in_buf,
                        size_t in_len, void* out_buf, size_t out_len,

@@ -141,7 +141,10 @@ MODULE_GROUP := core
 MODULE_SRCS := \
 	$(LOCAL_DIR)/devhost/main.cpp
 
-MODULE_LIBS := system/ulib/driver system/ulib/fdio system/ulib/c
+MODULE_LIBS := \
+    system/ulib/driver \
+    system/ulib/fdio \
+    system/ulib/c \
 
 include make/module.mk
 

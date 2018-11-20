@@ -44,6 +44,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/fbl \
     system/ulib/fidl \
+    system/ulib/fs \
     system/ulib/sync \
     system/ulib/port \
     system/ulib/zx \

@@ -26,6 +26,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <fs/handler.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/debug.h>
 #include <lib/fdio/io.h>

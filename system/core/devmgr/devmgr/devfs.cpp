@@ -15,6 +15,7 @@
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
+#include <fs/handler.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/remoteio.h>
@@ -806,12 +807,12 @@ void DcIostate::HandleRpc(fbl::unique_ptr<DcIostate> ios, async_dispatcher_t* di
     }
 
     if (signal->observed & ZX_CHANNEL_READABLE) {
-        if (zxfidl_handler(wait->object(), DcIostate::DevfsFidlHandler, ios.get()) == ZX_OK) {
+        if (vfs_handler(wait->object(), DcIostate::DevfsFidlHandler, ios.get()) == ZX_OK) {
             ios->BeginWait(std::move(ios), dispatcher);
             return;
         }
     } else if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-        zxfidl_handler(ZX_HANDLE_INVALID, DcIostate::DevfsFidlHandler, ios.get());
+        vfs_handler(ZX_HANDLE_INVALID, DcIostate::DevfsFidlHandler, ios.get());
     } else {
         log(ERROR, "devcoord: DcIostate::HandleRpc: invalid signals %x\n", signal->observed);
         exit(0);
