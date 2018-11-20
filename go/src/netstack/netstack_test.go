@@ -5,8 +5,8 @@
 package main
 
 import (
-	"testing"
 	"syscall/zx"
+	"testing"
 
 	"fidl/fuchsia/netstack"
 	"fidl/zircon/ethernet"
@@ -57,7 +57,27 @@ func TestNicName(t *testing.T) {
 	}
 }
 
-func TestInitialDhcpConfiguration(t *testing.T) {
+func TestNicStartedByDefault(t *testing.T) {
+	ns := newNetstack(t)
+
+	startCalled := false
+	eth := deviceForAddEth(ethernet.Info{}, t)
+	eth.StartImpl = func() (int32, error) {
+		startCalled = true
+		return int32(zx.ErrOk), nil
+	}
+
+	_, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &eth)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !startCalled {
+		t.Errorf("expected ethernet.Device.Start to be called from addEth")
+	}
+}
+
+func TestDhcpConfiguration(t *testing.T) {
 	ns := newNetstack(t)
 
 	ipAddressConfig := netstack.IpAddressConfig{}

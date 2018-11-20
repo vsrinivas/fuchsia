@@ -233,7 +233,11 @@ func (ifs *ifState) setDHCPStatus(enabled bool) {
 	}
 	if enabled {
 		d.ctx, d.cancel = context.WithCancel(ifs.ctx)
-		d.client.Run(d.ctx)
+		if c := d.client; c != nil {
+			c.Run(d.ctx)
+		} else {
+			panic(fmt.Sprintf("nil DHCP client on interface %s", ifs.nic.Name))
+		}
 	} else if d.cancel != nil {
 		d.cancel()
 	}
@@ -486,16 +490,9 @@ func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceCon
 			return nil
 		}
 
-		status, err := client.GetStatus()
-		if err != nil {
-			return fmt.Errorf("NIC %s: failed to get device status for MAC=%x: %v", ifs.nic.Name, client.Info.Mac, err)
-		}
-
 		switch config.IpAddressConfig.Which() {
 		case netstack.IpAddressConfigDhcp:
-			if status == eth.LinkUp {
-				ifs.setDHCPStatus(true)
-			}
+			ifs.setDHCPStatus(true)
 		case netstack.IpAddressConfigStaticIp:
 			subnet := config.IpAddressConfig.StaticIp
 			protocol, tcpipAddr, retval := ns.validateInterfaceAddress(subnet.Addr, subnet.PrefixLen)
@@ -504,7 +501,7 @@ func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceCon
 			}
 			ns.setInterfaceAddress(ifs.nic.ID, protocol, tcpipAddr, subnet.PrefixLen)
 		}
-		return nil
+		return ifs.eth.Up()
 	})
 }
 

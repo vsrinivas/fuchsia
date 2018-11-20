@@ -138,17 +138,11 @@ func NewClient(clientName string, topo string, device ethernet.Device, arena *Ar
 		if err := c.rxCompleteLocked(); err != nil {
 			return fmt.Errorf("eth: failed to load rx fifo: %v", err)
 		}
-		if status, err := device.Start(); err != nil {
-			return err
-		} else if err := checkStatus(status, "Start"); err != nil {
-			return err
-		}
 		return nil
 	}(); err != nil {
 		c.closeLocked()
 		return nil, err
 	}
-	c.changeStateLocked(StateStarted)
 
 	return c, nil
 }
