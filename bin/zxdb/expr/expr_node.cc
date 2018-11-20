@@ -18,6 +18,7 @@
 #include "garnet/bin/zxdb/symbols/arch.h"
 #include "garnet/bin/zxdb/symbols/array_type.h"
 #include "garnet/bin/zxdb/symbols/base_type.h"
+#include "garnet/bin/zxdb/symbols/data_member.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
 #include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -228,7 +229,12 @@ void DereferenceExprNode::Print(std::ostream& out, int indent) const {
 
 void IdentifierExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                               EvalCallback cb) const {
-  context->GetNamedValue(name_.value(), std::move(cb));
+  context->GetNamedValue(
+      name_.value(), [cb = std::move(cb)](const Err& err, fxl::RefPtr<Symbol>,
+                                          ExprValue value) {
+        // Discard resolved symbol, we only need the value.
+        cb(err, std::move(value));
+      });
 }
 
 void IdentifierExprNode::Print(std::ostream& out, int indent) const {
@@ -262,7 +268,9 @@ void MemberAccessExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
     // Everything else should be a -> operator.
     ResolveMemberByPointer(
         context, base, member_value,
-        [cb = std::move(cb)](const Err& err, ExprValue result) {
+        [cb = std::move(cb)](const Err& err, fxl::RefPtr<Symbol>,
+                             ExprValue result) {
+          // Discard resolved symbol, we only need the value.
           cb(err, std::move(result));
         });
   });

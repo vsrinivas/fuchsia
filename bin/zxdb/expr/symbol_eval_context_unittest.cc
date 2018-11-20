@@ -9,6 +9,7 @@
 #include "garnet/bin/zxdb/symbols/base_type.h"
 #include "garnet/bin/zxdb/symbols/code_block.h"
 #include "garnet/bin/zxdb/symbols/collection.h"
+#include "garnet/bin/zxdb/symbols/data_member.h"
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/inherited_from.h"
 #include "garnet/bin/zxdb/symbols/mock_symbol_data_provider.h"
@@ -55,6 +56,34 @@ class SymbolEvalContextTest : public testing::Test {
   fxl::RefPtr<MockSymbolDataProvider> provider_;
 };
 
+struct ValueResult {
+  bool called = false;  // Set when the callback is issued.
+  Err err;
+  ExprValue value;
+  fxl::RefPtr<Symbol> symbol;
+};
+
+// Indicates whether GetNamedValue should exit the message loop when the
+// callback is issued. Synchronous results don't need this.
+enum GetNamedValueAsync { kQuitLoop, kSynchronous };
+
+// Wrapper around eval_context->GetNamedValue that places the callback
+// parameters into a struct. It makes the callsites cleaner.
+void GetNamedValue(fxl::RefPtr<ExprEvalContext>& eval_context,
+                   const std::string& name, GetNamedValueAsync async,
+                   ValueResult* result) {
+  eval_context->GetNamedValue(
+      name, [result, async](const Err& err, fxl::RefPtr<Symbol> symbol,
+                            ExprValue value) {
+        result->called = true;
+        result->err = err;
+        result->value = std::move(value);
+        result->symbol = std::move(symbol);
+        if (async == kQuitLoop)
+          debug_ipc::MessageLoop::Current()->QuitNow();
+      });
+}
+
 }  // namespace
 
 TEST_F(SymbolEvalContextTest, NotFoundSynchronous) {
@@ -64,19 +93,13 @@ TEST_F(SymbolEvalContextTest, NotFoundSynchronous) {
       SymbolContext::ForRelativeAddresses(), provider(), MakeCodeBlock());
   fxl::RefPtr<ExprEvalContext> eval_context(context);
 
-  bool called = false;
-  Err out_err;
-  ExprValue out_value;
-  eval_context->GetNamedValue(
-      "not_present",
-      [&called, &out_err, &out_value](const Err& err, ExprValue value) {
-        called = true;
-        out_err = err;
-        out_value = value;
-      });
-  EXPECT_TRUE(called);
-  EXPECT_TRUE(out_err.has_error());
-  EXPECT_EQ(ExprValue(), out_value);
+  ValueResult result;
+  GetNamedValue(eval_context, "not_present", kSynchronous, &result);
+
+  EXPECT_TRUE(result.called);
+  EXPECT_TRUE(result.err.has_error());
+  EXPECT_EQ(ExprValue(), result.value);
+  EXPECT_FALSE(result.symbol);
 }
 
 TEST_F(SymbolEvalContextTest, FoundSynchronous) {
@@ -88,18 +111,18 @@ TEST_F(SymbolEvalContextTest, FoundSynchronous) {
       SymbolContext::ForRelativeAddresses(), provider(), MakeCodeBlock());
   fxl::RefPtr<ExprEvalContext> eval_context(context);
 
-  bool called = false;
-  Err out_err;
-  ExprValue out_value;
-  eval_context->GetNamedValue("present", [&called, &out_err, &out_value](
-                                             const Err& err, ExprValue value) {
-    called = true;
-    out_err = err;
-    out_value = value;
-  });
-  EXPECT_TRUE(called);
-  EXPECT_FALSE(out_err.has_error()) << out_err.msg();
-  EXPECT_EQ(ExprValue(kValue), out_value);
+  ValueResult result;
+  GetNamedValue(eval_context, "present", kSynchronous, &result);
+
+  EXPECT_TRUE(result.called);
+  EXPECT_FALSE(result.err.has_error()) << result.err.msg();
+  EXPECT_EQ(ExprValue(kValue), result.value);
+
+  // Symbol should match.
+  ASSERT_TRUE(result.symbol);
+  const Variable* var = result.symbol->AsVariable();
+  ASSERT_TRUE(var);
+  EXPECT_EQ("present", var->GetFullName());
 }
 
 TEST_F(SymbolEvalContextTest, FoundAsynchronous) {
@@ -111,25 +134,52 @@ TEST_F(SymbolEvalContextTest, FoundAsynchronous) {
       SymbolContext::ForRelativeAddresses(), provider(), MakeCodeBlock());
   fxl::RefPtr<ExprEvalContext> eval_context(context);
 
-  bool called = false;
-  Err out_err;
-  ExprValue out_value;
-  eval_context->GetNamedValue("present", [&called, &out_err, &out_value](
-                                             const Err& err, ExprValue value) {
-    called = true;
-    out_err = err;
-    out_value = value;
-    debug_ipc::MessageLoop::Current()->QuitNow();
-  });
+  ValueResult result;
+  GetNamedValue(eval_context, "present", kQuitLoop, &result);
+
   // Should not have been called yet since retrieving the register is
   // asynchronous.
-  EXPECT_FALSE(called);
+  EXPECT_FALSE(result.called);
 
   // Running the message loop should complete the callback.
   loop().Run();
-  EXPECT_TRUE(called);
-  EXPECT_FALSE(out_err.has_error()) << out_err.msg();
-  EXPECT_EQ(ExprValue(kValue), out_value);
+  EXPECT_TRUE(result.called);
+  EXPECT_FALSE(result.err.has_error()) << result.err.msg();
+  EXPECT_EQ(ExprValue(kValue), result.value);
+
+  // Symbol should match.
+  ASSERT_TRUE(result.symbol);
+  const Variable* var = result.symbol->AsVariable();
+  ASSERT_TRUE(var);
+  EXPECT_EQ("present", var->GetFullName());
+}
+
+// Tests a symbol that's found but couldn't be evaluated (in this case, because
+// there's no "register 0" available.
+TEST_F(SymbolEvalContextTest, FoundButNotEvaluatable) {
+  provider()->set_ip(0x1010);
+
+  auto context = fxl::MakeRefCounted<SymbolEvalContext>(
+      SymbolContext::ForRelativeAddresses(), provider(), MakeCodeBlock());
+  fxl::RefPtr<ExprEvalContext> eval_context(context);
+
+  ValueResult result;
+  GetNamedValue(eval_context, "present", kQuitLoop, &result);
+
+  // Running the message loop should complete the callback.
+  loop().Run();
+
+  // The value should be not found.
+  EXPECT_TRUE(result.called);
+  EXPECT_TRUE(result.err.has_error());
+  EXPECT_EQ(ExprValue(), result.value);
+
+  // The symbol should still have been found even though the value could not
+  // be computed.
+  ASSERT_TRUE(result.symbol);
+  const Variable* var = result.symbol->AsVariable();
+  ASSERT_TRUE(var);
+  EXPECT_EQ("present", var->GetFullName());
 }
 
 // Tests finding variables on |this| and subclasses of |this|.
@@ -171,43 +221,35 @@ TEST_F(SymbolEvalContextTest, FoundThis) {
   fxl::RefPtr<ExprEvalContext> eval_context(context);
 
   // First get d2 on the derived class. "this" should be implicit.
-  bool called = false;
-  Err out_err;
-  ExprValue out_value;
-  eval_context->GetNamedValue(
-      "d2", [&called, &out_err, &out_value](const Err& err, ExprValue value) {
-        called = true;
-        out_err = err;
-        out_value = value;
-        debug_ipc::MessageLoop::Current()->QuitNow();
-      });
+  ValueResult result_d2;
+  GetNamedValue(eval_context, "d2", kQuitLoop, &result_d2);
+
   // Should not have been called yet since retrieving the register is
   // asynchronous.
-  EXPECT_FALSE(called);
+  EXPECT_FALSE(result_d2.called);
 
   // Running the message loop should complete the callback.
   loop().Run();
-  EXPECT_TRUE(called);
-  EXPECT_FALSE(out_err.has_error()) << out_err.msg();
-  EXPECT_EQ(ExprValue(static_cast<uint32_t>(kD2)), out_value);
+  EXPECT_TRUE(result_d2.called);
+  EXPECT_FALSE(result_d2.err.has_error()) << result_d2.err.msg();
+  EXPECT_EQ(ExprValue(static_cast<uint32_t>(kD2)), result_d2.value);
 
   // Now get b2 on the base class, it should implicitly find it on "this"
   // and then check the base class.
-  called = false;
-  out_err = Err();
-  out_value = ExprValue();
-  eval_context->GetNamedValue(
-      "b2", [&called, &out_err, &out_value](const Err& err, ExprValue value) {
-        called = true;
-        out_err = err;
-        out_value = value;
-        debug_ipc::MessageLoop::Current()->QuitNow();
-      });
-  EXPECT_FALSE(called);
+  ValueResult result_b2;
+  GetNamedValue(eval_context, "b2", kQuitLoop, &result_b2);
+
+  EXPECT_FALSE(result_b2.called);
   loop().Run();
-  EXPECT_TRUE(called);
-  EXPECT_FALSE(out_err.has_error()) << out_err.msg();
-  EXPECT_EQ(ExprValue(static_cast<uint32_t>(kB2)), out_value);
+  EXPECT_TRUE(result_b2.called);
+  EXPECT_FALSE(result_b2.err.has_error()) << result_b2.err.msg();
+  EXPECT_EQ(ExprValue(static_cast<uint32_t>(kB2)), result_b2.value);
+
+  // Symbol should match.
+  ASSERT_TRUE(result_b2.symbol);
+  const DataMember* dm = result_b2.symbol->AsDataMember();
+  ASSERT_TRUE(dm);
+  EXPECT_EQ("b2", dm->GetFullName());
 }
 
 // This is a larger test that runs the EvalContext through ExprNode.Eval.

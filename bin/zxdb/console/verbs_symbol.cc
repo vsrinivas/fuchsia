@@ -24,6 +24,9 @@
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/string_util.h"
 #include "garnet/bin/zxdb/expr/expr_eval_context.h"
+#include "garnet/bin/zxdb/expr/expr_value.h"
+#include "garnet/bin/zxdb/symbols/collection.h"
+#include "garnet/bin/zxdb/symbols/data_member.h"
 #include "garnet/bin/zxdb/symbols/location.h"
 #include "garnet/bin/zxdb/symbols/module_symbol_status.h"
 #include "garnet/bin/zxdb/symbols/process_symbols.h"
@@ -85,6 +88,18 @@ void DumpVariableInfo(const SymbolContext& symbol_context,
   out->Append(fxl::StringPrintf("DWARF tag: 0x%x\n",
                                 static_cast<unsigned>(variable->tag())));
   DumpVariableLocation(symbol_context, variable->location(), out);
+}
+
+void DumpDataMemberInfo(const DataMember* data_member, OutputBuffer* out) {
+  out->Append("Data member: " + data_member->GetFullName() + "\n");
+  const Symbol* parent = data_member->parent().Get();
+  out->Append("Contained in: " + parent->GetFullName() + "\n");
+  out->Append(fxl::StringPrintf("Type: %s\n",
+                                GetTypeDescription(data_member->type()).c_str()));
+  out->Append(fxl::StringPrintf("Offset within container: %" PRIu32 "\n",
+                                data_member->member_location()));
+  out->Append(fxl::StringPrintf("DWARF tag: 0x%x\n",
+                                static_cast<unsigned>(data_member->tag())));
 }
 
 // list ------------------------------------------------------------------------
@@ -333,13 +348,24 @@ Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
     const Location& location = cmd.frame()->GetLocation();
     fxl::RefPtr<ExprEvalContext> eval_context =
         cmd.frame()->GetExprEvalContext();
-    if (const Variable* variable =
-            eval_context->GetVariableSymbol(symbol_name)) {
-      OutputBuffer out;
-      DumpVariableInfo(location.symbol_context(), variable, &out);
-      Console::get()->Output(std::move(out));
-      return Err();
-    }
+    eval_context->GetNamedValue(symbol_name,
+      [location](const Err& err, fxl::RefPtr<Symbol> symbol, ExprValue value) {
+        // Expression evaluation could fail but there still could be a symbol.
+        OutputBuffer out;
+        if (!symbol) {
+          FXL_DCHECK(err.has_error());
+          out.OutputErr(err);
+        } else if (auto variable = symbol->AsVariable()) {
+          DumpVariableInfo(location.symbol_context(), variable, &out);
+        } else if (auto data_member = symbol->AsDataMember()) {
+          DumpDataMemberInfo(data_member, &out);
+        } else {
+          out.Append("TODO: support this command for non-Variables.");
+        }
+        Console::get()->Output(std::move(out));
+        return Err();
+      });
+    return Err();  // Will complete asynchronously.
   }
 
   return Err(fxl::StringPrintf("No symbol \"%s\" found in the current context.",

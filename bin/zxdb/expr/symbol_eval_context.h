@@ -23,8 +23,6 @@ class Variable;
 // system. It will provide the values of variables currently in scope.
 class SymbolEvalContext : public ExprEvalContext {
  public:
-  using ValueCallback = std::function<void(const Err&, ExprValue)>;
-
   SymbolEvalContext(const SymbolContext& symbol_context,
                     fxl::RefPtr<SymbolDataProvider> data_provider,
                     fxl::RefPtr<CodeBlock> code_block);
@@ -33,12 +31,14 @@ class SymbolEvalContext : public ExprEvalContext {
   ~SymbolEvalContext() override;
 
   // ExprEvalContext implementation.
-  const Variable* GetVariableSymbol(const std::string& name) override;
   void GetNamedValue(const std::string& name, ValueCallback cb) override;
   SymbolVariableResolver& GetVariableResolver() override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
 
  private:
+  // Searches the local scopes for a match on the variable
+  const Variable* GetLocalVariable(const std::string& name);
+
   // Searches the given vector of values for one with the given name. If found,
   // returns it, otherwise returns null.
   const Variable* SearchVariableVector(const std::vector<LazySymbol>& vect,

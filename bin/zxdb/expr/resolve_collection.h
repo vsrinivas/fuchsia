@@ -42,10 +42,12 @@ void ResolveMemberByPointer(fxl::RefPtr<ExprEvalContext> context,
                             std::function<void(const Err&, ExprValue)> cb);
 
 // Same as previous version but takes the name of the member to find.
-void ResolveMemberByPointer(fxl::RefPtr<ExprEvalContext> context,
-                            const ExprValue& base_ptr,
-                            const std::string& member_name,
-                            std::function<void(const Err&, ExprValue)> cb);
+// The callback also provides the DataMember corresponding to what the name
+// matched.
+void ResolveMemberByPointer(
+    fxl::RefPtr<ExprEvalContext> context, const ExprValue& base_ptr,
+    const std::string& member_name,
+    std::function<void(const Err&, fxl::RefPtr<DataMember>, ExprValue)> cb);
 
 // Takes a Collection value and a base class inside of it, computes the value
 // of the base class and puts it in *out. The base class must be a direct base

@@ -56,7 +56,7 @@ Err FindMemberNamed(const Collection* base, const std::string& member_name,
   // Check the class and all of its base classes.
   bool found = VisitClassHierarchy(
       base, [&member_name, out, offset](const Collection* cur_collection,
-                                       uint32_t cur_offset) -> bool {
+                                        uint32_t cur_offset) -> bool {
         // Called for each collection in the hierarchy.
         for (const auto& lazy : cur_collection->data_members()) {
           const DataMember* data = lazy.Get()->AsDataMember();
@@ -203,14 +203,14 @@ void ResolveMemberByPointer(fxl::RefPtr<ExprEvalContext> context,
   DoResolveMemberByPointer(context, base_ptr, coll, member, std::move(cb));
 }
 
-void ResolveMemberByPointer(fxl::RefPtr<ExprEvalContext> context,
-                            const ExprValue& base_ptr,
-                            const std::string& member_name,
-                            std::function<void(const Err&, ExprValue)> cb) {
+void ResolveMemberByPointer(
+    fxl::RefPtr<ExprEvalContext> context, const ExprValue& base_ptr,
+    const std::string& member_name,
+    std::function<void(const Err&, fxl::RefPtr<DataMember>, ExprValue)> cb) {
   const Collection* coll = nullptr;
   Err err = GetPointedToCollection(base_ptr.type(), &coll);
   if (err.has_error()) {
-    cb(err, ExprValue());
+    cb(err, fxl::RefPtr<DataMember>(), ExprValue());
     return;
   }
 
@@ -218,11 +218,16 @@ void ResolveMemberByPointer(fxl::RefPtr<ExprEvalContext> context,
   uint32_t member_offset = 0;
   err = FindMemberNamed(coll, member_name, &member, &member_offset);
   if (err.has_error()) {
-    cb(err, ExprValue());
+    cb(err, fxl::RefPtr<DataMember>(), ExprValue());
     return;
   }
 
-  DoResolveMemberByPointer(context, base_ptr, coll, member, std::move(cb));
+  DoResolveMemberByPointer(context, base_ptr, coll, member, [
+    cb = std::move(cb),
+    member_ref = fxl::RefPtr<DataMember>(const_cast<DataMember*>(member))
+  ](const Err& err, ExprValue value) {
+    cb(err, std::move(member_ref), std::move(value));
+  });
 }
 
 Err ResolveInherited(const ExprValue& value, const InheritedFrom* from,

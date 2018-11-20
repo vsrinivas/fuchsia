@@ -36,7 +36,7 @@ class TestExprNode : public ExprNode {
       cb(Err(), value_);
     } else {
       debug_ipc::MessageLoop::Current()->PostTask(
-          FROM_HERE, [value = value_, cb]() { cb(Err(), value); });
+          FROM_HERE, [ value = value_, cb ]() { cb(Err(), value); });
     }
   }
   void Print(std::ostream& out, int indent) const override {}
@@ -65,17 +65,17 @@ class TestEvalContext : public ExprEvalContext {
   void AddVariable(const std::string& name, ExprValue v) { values_[name] = v; }
 
   // ExprEvalContext implementation.
-  const Variable* GetVariableSymbol(const std::string& name) override {
-    return nullptr;  // Not needed by this test.
-  }
   void GetNamedValue(
       const std::string& name,
-      std::function<void(const Err& err, ExprValue value)> cb) override {
+      std::function<void(const Err&, fxl::RefPtr<Symbol>, ExprValue)> cb)
+      override {
+    // Can ignore the symbol output for this test, it's not needed by the
+    // expression evaluation system.
     auto found = values_.find(name);
     if (found == values_.end())
-      cb(Err("Not found"), ExprValue());
+      cb(Err("Not found"), fxl::RefPtr<Symbol>(), ExprValue());
     else
-      cb(Err(), found->second);
+      cb(Err(), fxl::RefPtr<Symbol>(), found->second);
   }
   SymbolVariableResolver& GetVariableResolver() override { return resolver_; }
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override {
