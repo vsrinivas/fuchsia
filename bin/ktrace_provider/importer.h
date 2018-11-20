@@ -122,10 +122,12 @@ class Importer {
                          uint32_t meta);
 
   struct CpuInfo {
+    zx_koid_t current_thread = ZX_KOID_INVALID;
     trace_thread_ref_t current_thread_ref = trace_make_unknown_thread_ref();
   };
 
-  trace_thread_ref_t GetCpuCurrentThread(trace_cpu_number_t cpu_number);
+  trace_thread_ref_t GetCpuCurrentThreadRef(trace_cpu_number_t cpu_number);
+  zx_koid_t GetCpuCurrentThread(trace_cpu_number_t cpu_number);
   trace_thread_ref_t SwitchCpuToThread(trace_cpu_number_t cpu_number,
                                        zx_koid_t thread);
   trace_thread_ref_t SwitchCpuToKernelThread(trace_cpu_number_t cpu_number,
@@ -170,6 +172,13 @@ class Importer {
     bool valid = false;
   };
   std::unordered_map<zx_koid_t, VcpuDuration> vcpu_durations_;
+
+  struct SyscallDuration {
+    trace_ticks_t begin;
+    uint32_t syscall;
+    bool valid = false;
+  };
+  std::unordered_map<zx_koid_t, SyscallDuration> syscall_durations_;
 
   std::unordered_map<uint32_t, trace_string_ref_t> irq_names_;
   std::unordered_map<uint32_t, trace_string_ref_t> probe_names_;

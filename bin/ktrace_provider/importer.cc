@@ -358,7 +358,7 @@ bool Importer::HandleVcpuExitMeta(uint32_t exit, const fbl::StringPiece& name) {
 
 bool Importer::HandleIRQEnter(trace_ticks_t event_time,
                               trace_cpu_number_t cpu_number, uint32_t irq) {
-  trace_thread_ref_t thread_ref = GetCpuCurrentThread(cpu_number);
+  trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
   if (!trace_is_unknown_thread_ref(&thread_ref)) {
     trace_string_ref_t name_ref = GetNameRef(irq_names_, "irq", irq);
     trace_context_write_duration_begin_event_record(
@@ -370,7 +370,7 @@ bool Importer::HandleIRQEnter(trace_ticks_t event_time,
 
 bool Importer::HandleIRQExit(trace_ticks_t event_time,
                              trace_cpu_number_t cpu_number, uint32_t irq) {
-  trace_thread_ref_t thread_ref = GetCpuCurrentThread(cpu_number);
+  trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
   if (!trace_is_unknown_thread_ref(&thread_ref)) {
     trace_string_ref_t name_ref = GetNameRef(irq_names_, "irq", irq);
     trace_context_write_duration_end_event_record(
@@ -383,13 +383,15 @@ bool Importer::HandleIRQExit(trace_ticks_t event_time,
 bool Importer::HandleSyscallEnter(trace_ticks_t event_time,
                                   trace_cpu_number_t cpu_number,
                                   uint32_t syscall) {
-  trace_thread_ref_t thread_ref = GetCpuCurrentThread(cpu_number);
-  if (!trace_is_unknown_thread_ref(&thread_ref)) {
-    trace_string_ref_t name_ref =
-        GetNameRef(syscall_names_, "syscall", syscall);
-    trace_context_write_duration_begin_event_record(
-        context_, event_time, &thread_ref, &syscall_category_ref_, &name_ref,
-        nullptr, 0u);
+  zx_koid_t thread = GetCpuCurrentThread(cpu_number);
+  if (thread != ZX_KOID_INVALID) {
+    auto& duration = syscall_durations_[thread];
+    if (duration.valid) {
+      FXL_LOG(WARNING) << "Syscall duration for thread " << thread
+                       << " already exists";
+    }
+    duration =
+        SyscallDuration{.begin = event_time, .syscall = syscall, .valid = true};
   }
   return true;
 }
@@ -397,13 +399,26 @@ bool Importer::HandleSyscallEnter(trace_ticks_t event_time,
 bool Importer::HandleSyscallExit(trace_ticks_t event_time,
                                  trace_cpu_number_t cpu_number,
                                  uint32_t syscall) {
-  trace_thread_ref_t thread_ref = GetCpuCurrentThread(cpu_number);
-  if (!trace_is_unknown_thread_ref(&thread_ref)) {
+  zx_koid_t thread = GetCpuCurrentThread(cpu_number);
+  if (thread != ZX_KOID_INVALID) {
+    auto& duration = syscall_durations_[thread];
+    if (!duration.valid) {
+      // This is common as syscalls that start before tracing starts will not
+      // have a corresponding SyscallEnter call and should be ignored.
+      return false;
+    }
+    if (duration.syscall != syscall) {
+      FXL_LOG(WARNING) << "Syscall end type on thread " << thread
+                       << " does not match the begin type";
+      return false;
+    }
+    trace_thread_ref_t thread_ref = GetThreadRef(thread);
     trace_string_ref_t name_ref =
         GetNameRef(syscall_names_, "syscall", syscall);
-    trace_context_write_duration_end_event_record(
-        context_, event_time, &thread_ref, &syscall_category_ref_, &name_ref,
-        nullptr, 0u);
+    trace_context_write_duration_event_record(
+        context_, duration.begin, event_time, &thread_ref,
+        &syscall_category_ref_, &name_ref, nullptr, 0u);
+    duration.valid = false;
   }
   return true;
 }
@@ -411,7 +426,7 @@ bool Importer::HandleSyscallExit(trace_ticks_t event_time,
 bool Importer::HandlePageFault(trace_ticks_t event_time,
                                trace_cpu_number_t cpu_number,
                                uint64_t virtual_address, uint32_t flags) {
-  trace_thread_ref_t thread_ref = GetCpuCurrentThread(cpu_number);
+  trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
   if (!trace_is_unknown_thread_ref(&thread_ref)) {
     trace_arg_t args[] = {
         trace_make_arg(vaddr_name_ref_,
@@ -431,7 +446,7 @@ bool Importer::HandleContextSwitch(
     trace_thread_priority_t incoming_thread_priority, zx_koid_t outgoing_thread,
     KernelThread outgoing_kernel_thread, zx_koid_t incoming_thread,
     KernelThread incoming_kernel_thread) {
-  trace_thread_ref_t outgoing_thread_ref = GetCpuCurrentThread(cpu_number);
+  trace_thread_ref_t outgoing_thread_ref = GetCpuCurrentThreadRef(cpu_number);
   trace_thread_ref_t incoming_thread_ref =
       incoming_thread
           ? SwitchCpuToThread(cpu_number, incoming_thread)
@@ -655,17 +670,24 @@ bool Importer::HandleVcpuUnblock(trace_ticks_t event_time, zx_koid_t thread,
   return true;
 }
 
-trace_thread_ref_t Importer::GetCpuCurrentThread(
+trace_thread_ref_t Importer::GetCpuCurrentThreadRef(
     trace_cpu_number_t cpu_number) {
   if (cpu_number >= cpu_infos_.size())
     return trace_make_unknown_thread_ref();
   return cpu_infos_[cpu_number].current_thread_ref;
 }
 
+zx_koid_t Importer::GetCpuCurrentThread(trace_cpu_number_t cpu_number) {
+  if (cpu_number >= cpu_infos_.size())
+    return ZX_KOID_INVALID;
+  return cpu_infos_[cpu_number].current_thread;
+}
+
 trace_thread_ref_t Importer::SwitchCpuToThread(trace_cpu_number_t cpu_number,
                                                zx_koid_t thread) {
   if (cpu_number >= cpu_infos_.size())
     cpu_infos_.resize(cpu_number + 1u);
+  cpu_infos_[cpu_number].current_thread = thread;
   return cpu_infos_[cpu_number].current_thread_ref = GetThreadRef(thread);
 }
 
@@ -673,6 +695,7 @@ trace_thread_ref_t Importer::SwitchCpuToKernelThread(
     trace_cpu_number_t cpu_number, KernelThread kernel_thread) {
   if (cpu_number >= cpu_infos_.size())
     cpu_infos_.resize(cpu_number + 1u);
+  cpu_infos_[cpu_number].current_thread = kernel_thread;
   return cpu_infos_[cpu_number].current_thread_ref =
              GetKernelThreadRef(kernel_thread);
 }
