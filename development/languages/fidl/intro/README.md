@@ -139,8 +139,8 @@ Requirements
 
 ## Where to Find the Code
 
-- [The compiler](../../system/host/fidl)
-- [C bindings](../../system/ulib/fidl)
+- [The compiler](https://fuchsia.googlesource.com/zircon/+/master/system/host/fidl)
+- [C bindings](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fidl)
 - [C++ bindings](https://fuchsia.googlesource.com/garnet/+/master/public/lib/fidl/cpp)
 - [Go bindings](https://fuchsia.googlesource.com/garnet/+/master/public/lib/fidl/go)
 - [Rust bindings](https://fuchsia.googlesource.com/garnet/+/master/public/lib/fidl/rust)
