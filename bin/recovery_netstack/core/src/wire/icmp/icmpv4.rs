@@ -13,9 +13,7 @@ use crate::error::ParseError;
 use crate::ip::{Ipv4, Ipv4Addr};
 
 use super::common::{IcmpDestUnreachable, IcmpEchoReply, IcmpEchoRequest, IcmpTimeExceeded};
-use super::{
-    peek_message_type, HasOriginalPacket, IcmpIpExt, IcmpPacket, IcmpUnusedCode, IdAndSeq,
-};
+use super::{peek_message_type, IcmpIpExt, IcmpPacket, IcmpUnusedCode, IdAndSeq, OriginalPacket};
 
 /// An ICMPv4 packet with a dynamic message type.
 ///
@@ -111,10 +109,22 @@ impl_icmp_message!(
     IcmpDestUnreachable,
     DestUnreachable,
     Icmpv4DestUnreachableCode,
-    true
+    OriginalPacket<B>
 );
-impl_icmp_message!(Ipv4, IcmpEchoRequest, EchoRequest, IcmpUnusedCode, true);
-impl_icmp_message!(Ipv4, IcmpEchoReply, EchoReply, IcmpUnusedCode, true);
+impl_icmp_message!(
+    Ipv4,
+    IcmpEchoRequest,
+    EchoRequest,
+    IcmpUnusedCode,
+    OriginalPacket<B>
+);
+impl_icmp_message!(
+    Ipv4,
+    IcmpEchoReply,
+    EchoReply,
+    IcmpUnusedCode,
+    OriginalPacket<B>
+);
 
 create_net_enum! {
   Icmpv4RedirectCode,
@@ -131,11 +141,15 @@ pub struct Icmpv4Redirect {
     gateway: Ipv4Addr,
 }
 
-impl HasOriginalPacket for Icmpv4Redirect {}
-
 impl_from_bytes_as_bytes_unaligned!(Icmpv4Redirect);
 
-impl_icmp_message!(Ipv4, Icmpv4Redirect, Redirect, Icmpv4RedirectCode, true);
+impl_icmp_message!(
+    Ipv4,
+    Icmpv4Redirect,
+    Redirect,
+    Icmpv4RedirectCode,
+    OriginalPacket<B>
+);
 
 create_net_enum! {
   Icmpv4TimeExceededCode,
@@ -148,7 +162,7 @@ impl_icmp_message!(
     IcmpTimeExceeded,
     TimeExceeded,
     Icmpv4TimeExceededCode,
-    true
+    OriginalPacket<B>
 );
 
 #[derive(Copy, Clone)]
@@ -211,16 +225,9 @@ impl_icmp_message!(
     Ipv4,
     Icmpv4TimestampRequest,
     TimestampRequest,
-    IcmpUnusedCode,
-    false
+    IcmpUnusedCode
 );
-impl_icmp_message!(
-    Ipv4,
-    Icmpv4TimestampReply,
-    TimestampReply,
-    IcmpUnusedCode,
-    false
-);
+impl_icmp_message!(Ipv4, Icmpv4TimestampReply, TimestampReply, IcmpUnusedCode);
 
 create_net_enum! {
   Icmpv4ParameterProblemCode,
@@ -239,8 +246,6 @@ pub struct Icmpv4ParameterProblem {
      * the message_body field in IcmpPacket */
 }
 
-impl HasOriginalPacket for Icmpv4ParameterProblem {}
-
 impl_from_bytes_as_bytes_unaligned!(Icmpv4ParameterProblem);
 
 impl_icmp_message!(
@@ -248,24 +253,24 @@ impl_icmp_message!(
     Icmpv4ParameterProblem,
     ParameterProblem,
     Icmpv4ParameterProblemCode,
-    true
+    OriginalPacket<B>
 );
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::wire::icmp::IcmpMessage;
+    use crate::wire::icmp::{IcmpMessage, MessageBody};
     use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketSerializer};
     use crate::wire::util::{BufferAndRange, PacketSerializer, SerializationRequest};
 
-    fn serialize_to_bytes<B: ByteSlice, M: IcmpMessage<Ipv4>>(
+    fn serialize_to_bytes<B: ByteSlice, M: IcmpMessage<Ipv4, B>>(
         src_ip: Ipv4Addr, dst_ip: Ipv4Addr, icmp: &IcmpPacket<Ipv4, B, M>,
         serializer: Ipv4PacketSerializer,
     ) -> Vec<u8> {
         let icmp_serializer = icmp.serializer(src_ip, dst_ip);
         let mut data = vec![0; icmp_serializer.max_header_bytes() + icmp.message_body.len()];
         let body_offset = data.len() - icmp.message_body.len();
-        (&mut data[body_offset..]).copy_from_slice(&icmp.message_body);
+        (&mut data[body_offset..]).copy_from_slice(icmp.message_body.bytes());
         BufferAndRange::new_from(&mut data[..], body_offset..)
             .encapsulate(icmp_serializer)
             .encapsulate(serializer)
@@ -282,7 +287,7 @@ mod test {
         // TODO: Check range
         let (icmp, _) =
             IcmpPacket::<_, _, IcmpEchoRequest>::parse(ip.body(), src_ip, dst_ip).unwrap();
-        assert_eq!(icmp.message_body(), ECHO_DATA);
+        assert_eq!(icmp.original_packet().bytes(), ECHO_DATA);
         assert_eq!(icmp.message().id_seq.id(), IDENTIFIER);
         assert_eq!(icmp.message().id_seq.seq(), SEQUENCE_NUM);
 
@@ -298,8 +303,8 @@ mod test {
         // TODO: Check range
         let (icmp, _) =
             IcmpPacket::<_, _, IcmpEchoReply>::parse(ip.body(), src_ip, dst_ip).unwrap();
+        assert_eq!(icmp.original_packet().bytes(), ECHO_DATA);
         assert_eq!(icmp.message().id_seq.id(), IDENTIFIER);
-        assert_eq!(icmp.message_body(), ECHO_DATA);
         assert_eq!(icmp.message().id_seq.seq(), SEQUENCE_NUM);
 
         let data = serialize_to_bytes(src_ip, dst_ip, &icmp, ip.serializer());

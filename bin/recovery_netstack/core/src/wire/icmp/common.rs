@@ -4,7 +4,7 @@
 
 //! Common ICMP packets.
 
-use super::{HasOriginalPacket, IdAndSeq};
+use super::IdAndSeq;
 
 /// An ICMP Destination Unreachable message.
 #[derive(Copy, Clone)]
@@ -15,8 +15,6 @@ pub struct IcmpDestUnreachable {
     /* Body of IcmpDestUnreachable is entirely variable-length, so is stored in
      * the message_body field in IcmpPacket */
 }
-
-impl HasOriginalPacket for IcmpDestUnreachable {}
 
 impl_from_bytes_as_bytes_unaligned!(IcmpDestUnreachable);
 
@@ -58,7 +56,5 @@ pub struct IcmpTimeExceeded {
     /* Body of IcmpTimeExceeded is entirely variable-length, so is stored in
      * the message_body field in IcmpPacket */
 }
-
-impl HasOriginalPacket for IcmpTimeExceeded {}
 
 impl_from_bytes_as_bytes_unaligned!(IcmpTimeExceeded);

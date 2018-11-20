@@ -60,19 +60,23 @@ macro_rules! create_net_enum {
 /// - `$has_body` - `true` or `false` depending on whether this message type
 ///   supports a body
 macro_rules! impl_icmp_message {
-    ($ip:ident, $type:ident, $msg_variant:ident, $code:tt, $has_body:expr) => {
-        impl crate::wire::icmp::IcmpMessage<$ip> for $type {
+    ($ip:ident, $type:ident, $msg_variant:ident, $code:tt, $body_type:ty) => {
+        impl<B> crate::wire::icmp::IcmpMessage<$ip, B> for $type {
             type Code = $code;
+
+            type Body = $body_type;
 
             const TYPE: <$ip as IcmpIpExt>::IcmpMessageType =
                 impl_icmp_message_inner_message_type!($ip, $msg_variant);
-
-            const HAS_BODY: bool = $has_body;
 
             fn code_from_u8(u: u8) -> Option<Self::Code> {
                 impl_icmp_message_inner_code_from_u8!($code, u)
             }
         }
+    };
+
+    ($ip:ident, $type:ident, $msg_variant:ident, $code:tt) => {
+        impl_icmp_message!($ip, $type, $msg_variant, $code, ());
     };
 }
 

@@ -12,7 +12,7 @@ use crate::error::ParseError;
 use crate::ip::{Ipv6, Ipv6Addr};
 
 use super::common::{IcmpDestUnreachable, IcmpEchoReply, IcmpEchoRequest, IcmpTimeExceeded};
-use super::{peek_message_type, HasOriginalPacket, IcmpIpExt, IcmpPacket, IcmpUnusedCode};
+use super::{peek_message_type, IcmpIpExt, IcmpPacket, IcmpUnusedCode, OriginalPacket};
 
 /// An ICMPv6 packet with a dynamic message type.
 ///
@@ -77,9 +77,21 @@ create_net_enum! {
     EchoReply: ECHO_REPLY = 129,
 }
 
-impl_icmp_message!(Ipv6, IcmpEchoRequest, EchoRequest, IcmpUnusedCode, true);
+impl_icmp_message!(
+    Ipv6,
+    IcmpEchoRequest,
+    EchoRequest,
+    IcmpUnusedCode,
+    OriginalPacket<B>
+);
 
-impl_icmp_message!(Ipv6, IcmpEchoReply, EchoReply, IcmpUnusedCode, true);
+impl_icmp_message!(
+    Ipv6,
+    IcmpEchoReply,
+    EchoReply,
+    IcmpUnusedCode,
+    OriginalPacket<B>
+);
 
 create_net_enum! {
   Icmpv6DestUnreachableCode,
@@ -97,7 +109,7 @@ impl_icmp_message!(
     IcmpDestUnreachable,
     DestUnreachable,
     Icmpv6DestUnreachableCode,
-    true
+    OriginalPacket<B>
 );
 
 #[derive(Copy, Clone)]
@@ -106,9 +118,14 @@ pub struct Icmpv6PacketTooBig {
     MTU: [u8; 4],
 }
 
-impl HasOriginalPacket for Icmpv6PacketTooBig {}
 impl_from_bytes_as_bytes_unaligned!(Icmpv6PacketTooBig);
-impl_icmp_message!(Ipv6, Icmpv6PacketTooBig, PacketTooBig, IcmpUnusedCode, true);
+impl_icmp_message!(
+    Ipv6,
+    Icmpv6PacketTooBig,
+    PacketTooBig,
+    IcmpUnusedCode,
+    OriginalPacket<B>
+);
 
 create_net_enum! {
   Icmpv6TimeExceededCode,
@@ -121,7 +138,7 @@ impl_icmp_message!(
     IcmpTimeExceeded,
     TimeExceeded,
     Icmpv6TimeExceededCode,
-    true
+    OriginalPacket<B>
 );
 
 create_net_enum! {
@@ -138,8 +155,6 @@ pub struct Icmpv6ParameterProblem {
     pointer: [u8; 4],
 }
 
-impl HasOriginalPacket for Icmpv6ParameterProblem {}
-
 impl_from_bytes_as_bytes_unaligned!(Icmpv6ParameterProblem);
 
 impl_icmp_message!(
@@ -147,25 +162,25 @@ impl_icmp_message!(
     Icmpv6ParameterProblem,
     ParameterProblem,
     Icmpv6ParameterProblemCode,
-    true
+    OriginalPacket<B>
 );
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::wire::icmp::{IcmpMessage, IcmpPacket};
+    use crate::wire::icmp::{IcmpMessage, IcmpPacket, MessageBody};
     use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketSerializer};
     use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketSerializer};
     use crate::wire::util::{BufferAndRange, PacketSerializer, SerializationRequest};
 
-    fn serialize_to_bytes<B: ByteSlice, M: IcmpMessage<Ipv6>>(
+    fn serialize_to_bytes<B: ByteSlice, M: IcmpMessage<Ipv6, B>>(
         src_ip: Ipv6Addr, dst_ip: Ipv6Addr, icmp: &IcmpPacket<Ipv6, B, M>,
         serializer: Ipv6PacketSerializer,
     ) -> Vec<u8> {
         let icmp_serializer = icmp.serializer(src_ip, dst_ip);
         let mut data = vec![0; icmp_serializer.max_header_bytes() + icmp.message_body.len()];
         let body_offset = data.len() - icmp.message_body.len();
-        (&mut data[body_offset..]).copy_from_slice(&icmp.message_body);
+        (&mut data[body_offset..]).copy_from_slice(icmp.message_body.bytes());
         BufferAndRange::new_from(&mut data[..], body_offset..)
             .encapsulate(icmp_serializer)
             .encapsulate(serializer)
@@ -182,7 +197,7 @@ mod tests {
         // TODO: Check range
         let (icmp, _) =
             IcmpPacket::<_, _, IcmpEchoRequest>::parse(ip.body(), src_ip, dst_ip).unwrap();
-        assert_eq!(icmp.message_body(), ECHO_DATA);
+        assert_eq!(icmp.original_packet().bytes(), ECHO_DATA);
         assert_eq!(icmp.message().id_seq.id(), IDENTIFIER);
         assert_eq!(icmp.message().id_seq.seq(), SEQUENCE_NUM);
 

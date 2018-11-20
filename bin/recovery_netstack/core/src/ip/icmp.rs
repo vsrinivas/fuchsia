@@ -51,7 +51,7 @@ pub fn receive_icmp_packet<D: EventDispatcher, A: IpAddr, B: AsRef<[u8]> + AsMut
                         // we're responding to the sender, so these are flipped
                         let (src_ip, dst_ip) = (dst_ip, src_ip);
                         send_ip_packet(ctx, dst_ip, IpProto::Icmp, |src_ip| {
-                            buffer.encapsulate(IcmpPacketSerializer::<Ipv4, _>::new(
+                            buffer.encapsulate(IcmpPacketSerializer::<Ipv4, B, _>::new(
                                 src_ip,
                                 dst_ip,
                                 code,
@@ -94,7 +94,7 @@ pub fn receive_icmp_packet<D: EventDispatcher, A: IpAddr, B: AsRef<[u8]> + AsMut
                         // we're responding to the sender, so these are flipped
                         let (src_ip, dst_ip) = (dst_ip, src_ip);
                         send_ip_packet(ctx, dst_ip, IpProto::Icmp, |src_ip| {
-                            buffer.encapsulate(IcmpPacketSerializer::<Ipv6, _>::new(
+                            buffer.encapsulate(IcmpPacketSerializer::<Ipv6, B, _>::new(
                                 src_ip,
                                 dst_ip,
                                 code,
