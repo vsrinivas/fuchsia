@@ -25,6 +25,7 @@ import (
 	"fidl/fuchsia/amber"
 
 	"fuchsia.googlesource.com/merkle"
+	"fuchsia.googlesource.com/pmd/amberer"
 	"fuchsia.googlesource.com/pmd/pkgfs"
 	tuf "github.com/flynn/go-tuf"
 )
@@ -422,7 +423,7 @@ func TestOutOfSpace(t *testing.T) {
 	panicerr(err)
 	defer os.RemoveAll(indexPath)
 
-	pkgfs, err := pkgfs.New(indexPath, blobfsPath)
+	pkgfs, err := pkgfs.New(indexPath, blobfsPath, amberer.NewAmberClient())
 	panicerr(err)
 
 	pkgfsDir, err := ioutil.TempDir("", "pkgfs-test-mount")

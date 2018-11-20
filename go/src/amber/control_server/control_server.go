@@ -195,6 +195,14 @@ func (c *ControlServer) PackagesActivated(merkle []string) error {
 	return nil
 }
 
+func (c *ControlServer) PackagesFailed(merkle []string, status int32, blobMerkle string) error {
+	log.Printf("control_server: packages failed %s due to blob %s, status: %d", merkle, blobMerkle, status)
+	for _, m := range merkle {
+		c.daemon.Failed(m, zx.Status(status))
+	}
+	return nil
+}
+
 func (c *ControlServer) SetSrcEnabled(id string, enabled bool) (amber.Status, error) {
 	if enabled {
 		if err := c.daemon.EnableSource(id); err != nil {

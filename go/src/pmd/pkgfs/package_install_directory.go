@@ -11,6 +11,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"syscall/zx"
 	"time"
 
 	"thinfs/fs"
@@ -180,6 +181,13 @@ type installFile struct {
 	blob *os.File
 }
 
+func (f *installFile) reportBlobError(err error) {
+	// Out-of-space is the only error we care to report.
+	if e, ok := err.(zx.Error); ok && e.Status == zx.ErrNoSpace {
+		f.fs.index.InstallingFailedForBlob(f.name, err)
+	}
+}
+
 func (f *installFile) open() error {
 	if !merklePat.Match([]byte(f.name)) {
 		return fs.ErrInvalidArgs
@@ -213,16 +221,21 @@ func (f *installFile) open() error {
 }
 
 func (f *installFile) Write(p []byte, off int64, whence int) (int, error) {
+	var err error
+	n := 0
+
 	if whence != fs.WhenceFromCurrent || off != 0 {
-		return 0, fs.ErrNotSupported
+		err = zx.Error{Status: zx.ErrNotSupported}
+		goto blob_install_failed
 	}
 
 	// It is illegal to write past the truncated size of a blob.
 	if f.written > f.size {
-		return 0, fs.ErrInvalidArgs
+		err = zx.Error{Status: zx.ErrInvalidArgs}
+		goto blob_install_failed
 	}
 
-	n, err := f.blob.Write(p)
+	n, err = f.blob.Write(p)
 	f.written += uint64(n)
 
 	if f.written >= f.size && err == nil {
@@ -230,12 +243,14 @@ func (f *installFile) Write(p []byte, off int64, whence int) (int, error) {
 		f.fs.index.Fulfill(f.name)
 
 		if f.isPkg {
-			// If a package installation fails, the error is reported here.
+			// If a package installation fails, the error is returned here.
 			return n, f.importPackage()
 		}
 	}
 
-	// If a blob installation fails, the error is reported here.
+	// If a blob installation fails, the error is returned here.
+blob_install_failed:
+	f.reportBlobError(err)
 	return n, goErrToFSErr(err)
 }
 
@@ -257,14 +272,17 @@ func (f *installFile) Stat() (int64, time.Time, time.Time, error) {
 }
 
 func (f *installFile) Truncate(sz uint64) error {
+	var err error
+
 	f.size = sz
-	err := f.blob.Truncate(int64(f.size))
+	err = f.blob.Truncate(int64(f.size))
 
 	if f.size == 0 && f.name == identityBlob && err == nil {
 		// Fulfill any needs against the identity blob
 		f.fs.index.Fulfill(f.name)
 	}
 
+	f.reportBlobError(err)
 	return goErrToFSErr(err)
 }
 
@@ -273,14 +291,14 @@ func (f *installFile) Truncate(sz uint64) error {
 func (f *installFile) importPackage() error {
 	b, err := f.fs.blobfs.Open(f.name)
 	if err != nil {
-		f.fs.index.InstallingFailed(f.name)
+		f.fs.index.InstallingFailedForPackage(f.name)
 		log.Printf("error opening package blob after writing: %s: %s", f.name, err)
 		return fs.ErrFailedPrecondition
 	}
 
 	r, err := far.NewReader(b)
 	if err != nil {
-		f.fs.index.InstallingFailed(f.name)
+		f.fs.index.InstallingFailedForPackage(f.name)
 		log.Printf("error reading package archive: %s", err)
 		// Note: translates to zx.ErrBadState
 		return fs.ErrFailedPrecondition
@@ -288,7 +306,7 @@ func (f *installFile) importPackage() error {
 
 	pf, err := r.ReadFile("meta/package")
 	if err != nil {
-		f.fs.index.InstallingFailed(f.name)
+		f.fs.index.InstallingFailedForPackage(f.name)
 		log.Printf("error reading package metadata: %s", err)
 		// Note: translates to zx.ErrBadState
 		return fs.ErrFailedPrecondition
@@ -297,14 +315,14 @@ func (f *installFile) importPackage() error {
 	var p pkg.Package
 	err = json.Unmarshal(pf, &p)
 	if err != nil {
-		f.fs.index.InstallingFailed(f.name)
+		f.fs.index.InstallingFailedForPackage(f.name)
 		log.Printf("error parsing package metadata: %s", err)
 		// Note: translates to zx.ErrBadState
 		return fs.ErrFailedPrecondition
 	}
 
 	if err := p.Validate(); err != nil {
-		f.fs.index.InstallingFailed(f.name)
+		f.fs.index.InstallingFailedForPackage(f.name)
 		log.Printf("package is invalid: %s", err)
 		// Note: translates to zx.ErrBadState
 		return fs.ErrFailedPrecondition

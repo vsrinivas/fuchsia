@@ -27,6 +27,7 @@ import (
 	"thinfs/zircon/rpc"
 
 	"fuchsia.googlesource.com/pm/pkg"
+	"fuchsia.googlesource.com/pmd/amberer"
 	"fuchsia.googlesource.com/pmd/blobfs"
 	"fuchsia.googlesource.com/pmd/index"
 )
@@ -42,7 +43,7 @@ type Filesystem struct {
 }
 
 // New initializes a new pkgfs filesystem server
-func New(indexDir, blobDir string) (*Filesystem, error) {
+func New(indexDir string, blobDir string, am amberer.AmberClient) (*Filesystem, error) {
 	bm, err := blobfs.New(blobDir)
 	if err != nil {
 		return nil, fmt.Errorf("pkgfs: open blobfs: %s", err)
@@ -51,7 +52,7 @@ func New(indexDir, blobDir string) (*Filesystem, error) {
 	static := index.NewStatic()
 	f := &Filesystem{
 		static: static,
-		index:  index.NewDynamic(indexDir, static),
+		index:  index.NewDynamic(indexDir, static, am),
 		blobfs: bm,
 		mountInfo: mountInfo{
 			parentFd: -1,
@@ -291,6 +292,10 @@ func goErrToFSErr(err error) error {
 			return fs.ErrNotFound
 		case zx.ErrNoSpace:
 			return fs.ErrNoSpace
+		case zx.ErrNotSupported:
+			return fs.ErrNotSupported
+		case zx.ErrInvalidArgs:
+			return fs.ErrInvalidArgs
 		default:
 			debugLog("pkgfs: unmapped os err to fs err: %T %v", err, err)
 			return err

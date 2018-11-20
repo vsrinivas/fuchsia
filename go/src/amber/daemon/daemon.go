@@ -12,13 +12,12 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"syscall/zx"
 
 	"fidl/fuchsia/amber"
 
 	"amber/atonce"
 	"amber/source"
-
-	"syscall/zx"
 )
 
 const (
@@ -435,6 +434,10 @@ func (d *Daemon) AddWatch(merkle string, f func(string, error)) {
 
 func (d *Daemon) Activated(merkle string) {
 	d.aw.update(merkle, nil)
+}
+
+func (d *Daemon) Failed(merkle string, status zx.Status) {
+	d.aw.update(merkle, zx.Error{Status: status})
 }
 
 func (d *Daemon) GC() error {

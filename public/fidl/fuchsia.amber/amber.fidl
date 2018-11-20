@@ -4,6 +4,8 @@
 
 library fuchsia.amber;
 
+using zx;
+
 struct OAuth2Config {
     string clientId;
 
@@ -175,6 +177,10 @@ interface Control {
 
     // Trigger a garbage collection.
     GC();
+
+    // Sent when a blob fails to write, causing one or more package installs to
+    // permanently fail.
+    PackagesFailed(vector<string> merkle, zx.status error, string blob_merkle);
 };
 
 [Discoverable]

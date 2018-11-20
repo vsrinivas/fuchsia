@@ -13,10 +13,10 @@ import (
 	"path/filepath"
 	"sort"
 	"sync"
-
-	"fuchsia.googlesource.com/pmd/amberer"
+	"syscall/zx"
 
 	"fuchsia.googlesource.com/pm/pkg"
+	"fuchsia.googlesource.com/pmd/amberer"
 )
 
 // DynamicIndex provides concurrency safe access to a dynamic index of packages and package metadata
@@ -24,6 +24,9 @@ type DynamicIndex struct {
 	root string
 
 	static *StaticIndex
+
+	// client to connect to amber
+	amberClient amberer.AmberClient
 
 	// mu protects all following fields
 	mu sync.Mutex
@@ -39,15 +42,16 @@ type DynamicIndex struct {
 }
 
 // NewDynamic initializes an DynamicIndex with the given root path.
-func NewDynamic(root string, static *StaticIndex) *DynamicIndex {
+func NewDynamic(root string, static *StaticIndex, am amberer.AmberClient) *DynamicIndex {
 	// TODO(PKG-14): error is deliberately ignored. This should not be fatal to boot.
 	_ = os.MkdirAll(root, os.ModePerm)
 	return &DynamicIndex{
-		root:       root,
-		static:     static,
-		installing: make(map[string]pkg.Package),
-		needs:      make(map[string]map[string]struct{}),
-		waiting:    make(map[string]map[string]struct{}),
+		root:        root,
+		static:      static,
+		installing:  make(map[string]pkg.Package),
+		needs:       make(map[string]map[string]struct{}),
+		waiting:     make(map[string]map[string]struct{}),
+		amberClient: am,
 	}
 }
 
@@ -99,6 +103,7 @@ func (idx *DynamicIndex) Add(p pkg.Package, root string) error {
 	if err := ioutil.WriteFile(path, []byte(root), os.ModePerm); err != nil {
 		return err
 	}
+
 	idx.Notify(root)
 	return nil
 }
@@ -139,16 +144,38 @@ func (idx *DynamicIndex) UpdateInstalling(root string, p pkg.Package) {
 	idx.installing[root] = p
 }
 
-// InstallingFailed removes an entry from the package installation index, this
-// is called when the package meta.far blob is not readable, or the package is
-// not valid.
-func (idx *DynamicIndex) InstallingFailed(root string) {
-	log.Printf("installing package %s failed", root)
-
+// InstallingFailedForBlob notifies amber that blob install failed for a package.
+// It does not actually stop the package's installation for the other blobs; the choice
+// to retry the package installation is left up to amber.
+func (idx *DynamicIndex) InstallingFailedForBlob(blobRoot string, err error) {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
-	delete(idx.installing, root)
+	pkgRoots := []string{}
+	for p := range idx.needs[blobRoot] {
+		pkgRoots = append(pkgRoots, p)
+	}
+	var status zx.Status
+	if e, ok := err.(zx.Error); ok {
+		status = e.Status
+	} else {
+		// "err" should be a zx.Error, but fall back to a generic error code
+		// in case it's not.
+		status = zx.ErrInternal
+	}
+	idx.amberClient.PackagesFailed(pkgRoots, status, blobRoot)
+}
+
+// InstallingFailedForPackage removes an entry from the package installation index,
+// this is called when the package meta.far blob is not readable, or the package is
+// not valid.
+func (idx *DynamicIndex) InstallingFailedForPackage(pkgRoot string) {
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+
+	p := idx.installing[pkgRoot]
+	log.Printf("package failed %s/%s (%s)", p.Name, p.Version, pkgRoot)
+	delete(idx.installing, pkgRoot)
 }
 
 // AddNeeds updates the index about the blobs required in order to activate an
@@ -183,7 +210,7 @@ func (idx *DynamicIndex) AddNeeds(root string, needs map[string]struct{}) error 
 	log.Printf("asking amber to fetch %d needed blobs", len(cn))
 	go func() {
 		for _, root := range cn {
-			amberer.GetBlob(root)
+			idx.amberClient.GetBlob(root)
 		}
 	}()
 	return nil
@@ -194,11 +221,10 @@ func (idx *DynamicIndex) AddNeeds(root string, needs map[string]struct{}) error 
 // mean that the package is activated, only that its blob has been written. When
 // a packages 'waiting' set has been emptied, fulfill will call Add, which is
 // the point of activation.
-func (idx *DynamicIndex) Fulfill(need string) []string {
+func (idx *DynamicIndex) Fulfill(need string) {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
-	fulfilled := []string{}
 	packageRoots := idx.needs[need]
 	delete(idx.needs, need)
 
@@ -218,10 +244,8 @@ func (idx *DynamicIndex) Fulfill(need string) []string {
 				log.Printf("package activated %s/%s (%s)", p.Name, p.Version, pkgRoot)
 			}
 			delete(idx.installing, pkgRoot)
-			fulfilled = append(fulfilled, pkgRoot)
 		}
 	}
-	return fulfilled
 }
 
 func (idx *DynamicIndex) HasNeed(root string) bool {
@@ -249,7 +273,7 @@ func (idx *DynamicIndex) Notify(roots ...string) {
 		return
 	}
 
-	go amberer.PackagesActivated(roots)
+	idx.amberClient.PackagesActivated(roots)
 }
 
 // PackageBlobs returns the list of blobs which are meta FARs backing packages

@@ -19,6 +19,7 @@ import (
 
 	"fuchsia.googlesource.com/merkle"
 	"fuchsia.googlesource.com/pm/build"
+	"fuchsia.googlesource.com/pmd/amberer"
 	"fuchsia.googlesource.com/pmd/ramdisk"
 )
 
@@ -132,7 +133,7 @@ func tmain(m *testing.M) int {
 	}
 	defer os.RemoveAll(d)
 
-	pkgfs, err := New(indexPath, blobfsPath)
+	pkgfs, err := New(indexPath, blobfsPath, amberer.NewAmberClient())
 	if err != nil {
 		panic(err)
 	}
