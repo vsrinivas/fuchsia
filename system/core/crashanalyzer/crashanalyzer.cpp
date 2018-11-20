@@ -121,15 +121,6 @@ static const char* excp_type_to_str(zx_excp_type_t type) {
 // Space for this is allocated on the stack, so this can't be too large.
 static constexpr size_t kMemoryDumpSize = 256;
 
-// Handle of the thread we're dumping.
-// This is used by both the main thread and the self-dumper thread.
-// However there is no need to lock it as the self-dumper thread only runs
-// when the main thread has crashed.
-static zx_handle_t crashed_thread = ZX_HANDLE_INVALID;
-
-// The exception that |crashed_thread| got.
-static zx_excp_type_t crashed_thread_excp_type;
-
 #if defined(__aarch64__)
 static bool write_general_regs(zx_handle_t thread, void* buf, size_t buf_size) {
     // The syscall takes a uint32_t.
@@ -222,10 +213,6 @@ static void print_debug_info(zx_handle_t process, zx_handle_t thread, zx_excp_ty
     zx_koid_t pid = get_koid(process);
     zx_koid_t tid = get_koid(thread);
 
-    // Record the crashed thread so that if we crash then self_dump_func
-    // can (try to) "resume" the thread so that it's not left hanging.
-    crashed_thread = thread;
-
     zx_exception_report_t report;
     zx_status_t status = zx_object_get_info(thread, ZX_INFO_THREAD_EXCEPTION_REPORT,
                                             &report, sizeof(report), NULL, NULL);
@@ -240,7 +227,6 @@ static void print_debug_info(zx_handle_t process, zx_handle_t thread, zx_excp_ty
         return;
     }
 
-    crashed_thread_excp_type = *type;
     auto context = report.context;
 
     zx_vaddr_t pc = 0, sp = 0, fp = 0;
@@ -339,8 +325,6 @@ static void print_debug_info_and_resume_thread(zx_handle_t process, zx_handle_t 
     // allow the thread (and then process) to die, unless the exception is
     // to just trigger a backtrace (if enabled).
     resume_thread_from_exception(thread, exception_port, type, &regs);
-    crashed_thread = ZX_HANDLE_INVALID;
-    crashed_thread_excp_type = 0u;
 }
 
 static zx_status_t handle_message(zx_handle_t channel, fidl::MessageBuffer* buffer) {
