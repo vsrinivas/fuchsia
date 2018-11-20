@@ -980,7 +980,7 @@ struct VhtCapabilitiesInfo : public common::BitField<uint32_t> {
 
     WLAN_BIT_FIELD(max_mpdu_len, 0, 2);
 
-    // Supported channel width set. See IEEE Std 80.211-2016, Table 9-250.
+    // Supported channel width set. See IEEE Std 802.11-2016, Table 9-250.
     WLAN_BIT_FIELD(supported_cbw_set, 2, 2);
 
     WLAN_BIT_FIELD(rx_ldpc, 4, 1);

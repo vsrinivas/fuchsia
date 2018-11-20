@@ -118,6 +118,7 @@ class Station {
 
     CapabilityInfo OverrideCapability(CapabilityInfo cap) const;
     zx_status_t OverrideHtCapability(HtCapabilities* htc) const;
+    zx_status_t OverrideVhtCapability(VhtCapabilities* vht_cap, const JoinContext& join_ctx) const;
     uint8_t GetTid();
     uint8_t GetTid(const EthFrame& frame);
     zx_status_t SetAssocContext(const MgmtFrameView<AssociationResponse>& resp);

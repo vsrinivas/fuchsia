@@ -309,8 +309,21 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
 
         common::WriteHtCapabilities(&elem_w, ht_cap);
     }
-    ZX_DEBUG_ASSERT(assoc->Validate(elem_w.WrittenBytes()));
 
+    if (join_ctx_->IsVht()) {
+        auto vht_cap = client_capability.vht_cap.value_or(VhtCapabilities{});
+        // debugf("VHT cap(hardware reports): %s\n", debug::Describe(vht_cap).c_str());
+        if (auto status = OverrideVhtCapability(&vht_cap, *join_ctx_); status != ZX_OK) {
+            errorf("could not build VhtCapabilities (%s)\n", zx_status_get_string(status));
+            service::SendAssocConfirm(device_,
+                                      wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+            return ZX_ERR_IO;
+        }
+        // debugf("VHT cap(after overriding): %s\n", debug::Describe(vht_cap).c_str());
+        common::WriteVhtCapabilities(&elem_w, vht_cap);
+    }
+
+    ZX_DEBUG_ASSERT(assoc->Validate(elem_w.WrittenBytes()));
     packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
     finspect("Outbound Mgmt Frame (AssocReq): %s\n", debug::Describe(*mgmt_hdr).c_str());
@@ -1275,6 +1288,20 @@ zx_status_t Station::OverrideHtCapability(HtCapabilities* ht_cap) const {
     // TODO(NET-1403): Lift up the restriction after broader interop and assoc_ctx_ adjustment.
     hci.set_tx_stbc(0);
 
+    return ZX_OK;
+}
+
+zx_status_t Station::OverrideVhtCapability(VhtCapabilities* vht_cap,
+                                           const JoinContext& join_ctx) const {
+    ZX_DEBUG_ASSERT(vht_cap != nullptr);
+    if (vht_cap == nullptr) { return ZX_ERR_INVALID_ARGS; }
+
+    // See IEEE Std 802.11-2016 Table 9-250. Note zero in comparison has no name.
+    VhtCapabilitiesInfo& vci = vht_cap->vht_cap_info;
+    if (vci.supported_cbw_set() > 0) {
+        auto cbw = join_ctx.channel().cbw;
+        if (cbw != CBW160 && cbw != CBW80P80) { vht_cap->vht_cap_info.set_supported_cbw_set(0); }
+    }
     return ZX_OK;
 }
 
