@@ -11,6 +11,7 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <fbl/unique_fd.h>
 #include <fuchsia/crash/c/fidl.h>
 #include <launchpad/launchpad.h>
 #include <loader-service/loader-service.h>
@@ -27,10 +28,12 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/util.h>
+#include <lib/fdio/watcher.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/event.h>
 #include <lib/zx/port.h>
 #include <lib/zx/resource.h>
+#include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 
 #include <utility>
@@ -73,6 +76,46 @@ zx::job get_sysinfo_job_root() {
     } else {
         return h;
     }
+}
+
+// Wait for the requested file.  Its parent directory must exist.
+static zx_status_t wait_for_file(const char* path, zx::time deadline) {
+    char path_copy[PATH_MAX];
+    if (strlen(path) >= PATH_MAX) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    strcpy(path_copy, path);
+
+    char* last_slash = strrchr(path_copy, '/');
+    // Waiting on the root of the fs or paths with no slashes is not supported by this function
+    if (last_slash == path_copy || last_slash == nullptr) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    last_slash[0] = 0;
+    char* dirname = path_copy;
+    char* basename = last_slash + 1;
+
+    auto watch_func = [](int dirfd, int event, const char* fn, void* cookie) -> zx_status_t {
+        auto basename = static_cast<const char*>(cookie);
+        if (event != WATCH_EVENT_ADD_FILE) {
+            return ZX_OK;
+        }
+        if (!strcmp(fn, basename)) {
+            return ZX_ERR_STOP;
+        }
+        return ZX_OK;
+    };
+
+    fbl::unique_fd dirfd(open(dirname, O_RDONLY));
+    if (!dirfd.is_valid()) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    zx_status_t status = fdio_watch_directory(dirfd.get(), watch_func, deadline.get(),
+                                              reinterpret_cast<void*>(basename));
+    if (status == ZX_ERR_STOP) {
+        return ZX_OK;
+    }
+    return status;
 }
 
 static const char* argv_sh[] = {"/boot/bin/sh"};
@@ -416,23 +459,30 @@ static int console_starter(void* arg) {
     }
 
     const char* device = getenv("console.path");
-    if (!device)
+    if (!device) {
         device = "/dev/misc/console";
+    }
 
     const char* envp[] = {
         term,
         nullptr,
     };
-    for (unsigned n = 0; n < 30; n++) {
-        int fd;
-        if ((fd = open(device, O_RDWR)) >= 0) {
-            devmgr_launch(svcs_job_handle, "sh:console",
-                          &devmgr_launch_load, nullptr,
-                          fbl::count_of(argv_sh), argv_sh, envp, fd, nullptr, nullptr, 0, nullptr, FS_ALL);
-            break;
-        }
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+
+    zx_status_t status = wait_for_file(device, zx::time::infinite());
+    if (status != ZX_OK) {
+        printf("devmgr: failed to wait for console '%s'\n", device);
+        return 1;
     }
+    fbl::unique_fd fd(open(device, O_RDWR));;
+    if (!fd.is_valid()) {
+        printf("devmgr: failed to open console '%s'\n", device);
+        return 1;
+    }
+
+    devmgr_launch(svcs_job_handle, "sh:console",
+                  &devmgr_launch_load, nullptr,
+                  fbl::count_of(argv_sh), argv_sh, envp, fd.release(), nullptr, nullptr, 0,
+                  nullptr, FS_ALL);
     return 0;
 }
 
