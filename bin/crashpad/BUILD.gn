@@ -59,6 +59,7 @@ source_set("crashpad_analyzer_impl") {
     "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
+    "//zircon/public/lib/inspector",
   ]
 }
 
