@@ -42,6 +42,7 @@ public:
         std::string doc;
         std::vector<uint32_t> array_counts;
         types::Nullability nullability;
+        bool address_of = false;
     };
 
     struct NamedMethod {
@@ -86,6 +87,8 @@ protected:
         std::string camel_case_name;
         std::string doc;
         std::vector<NamedMethod> methods;
+        // True if we wish to generate handle wrappers.
+        bool handle_wrappers;
     };
 
     struct NamedStruct {
