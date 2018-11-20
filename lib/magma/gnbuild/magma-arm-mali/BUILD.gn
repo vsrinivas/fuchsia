@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
 if (have_prebuilt_libvulkan_arm) {
@@ -19,14 +20,18 @@ package("magma-arm-mali") {
     }
 
     if (magma_enable_developer_build) {
-      deps = [ "//garnet/drivers/gpu/msd-arm-mali:msd_arm_test" ]
+      deps = [
+        "//garnet/drivers/gpu/msd-arm-mali:msd_arm_test",
+      ]
       drivers = [
         {
           name = "libmsd_arm_test.so"
         },
       ]
     } else {
-      deps = [ "//garnet/drivers/gpu/msd-arm-mali:msd_arm" ]
+      deps = [
+        "//garnet/drivers/gpu/msd-arm-mali:msd_arm",
+      ]
       drivers = [
         {
           name = "libmsd_arm.so"
@@ -142,20 +147,30 @@ package("nonhardware-tests") {
   }
 }
 
-package("tests") {
+# Run with autorun or "run_test_component msd_arm_mali_integration_tests"
+test_package("msd-arm-mali-integration-tests") {
+  tests = []
+
+  if (build_msd_arm_mali) {
+    deps = [
+      "//garnet/drivers/gpu/msd-arm-mali/tests/integration",
+    ]
+
+    tests += [
+      {
+        name = "msd_arm_mali_integration_tests"
+      },
+    ]
+  }
+}
+
+package("autorun") {
   testonly = true
   deprecated_system_image = true
 
   if (build_msd_arm_mali) {
     deps = [
       ":autorun_mali",
-      "//garnet/drivers/gpu/msd-arm-mali/tests/integration",
-    ]
-
-    tests = [
-      {
-        name = "msd_arm_mali_integration_tests"
-      },
     ]
 
     binaries = [

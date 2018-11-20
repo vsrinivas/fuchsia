@@ -10,7 +10,7 @@ echo [UNIT TEST START=]
 echo [UNIT TEST END===]
 echo [INTEGRATION TEST START=]
 /system/test/magma_abi_conformance_tests
-/system/test/msd_arm_mali_integration_tests
+run_test_component msd_arm_mali_integration_tests
 if [ -e /pkgfs/packages/vulkan-tests/0/test/vkext ]; then
   run fuchsia-pkg://fuchsia.com/vulkan-tests#meta/vkext.cmx --gtest_filter=-VulkanExtension.Scanout
   run fuchsia-pkg://fuchsia.com/vulkan-tests#meta/vkreadback.cmx

@@ -6,6 +6,7 @@
         "//garnet/lib/magma/tests:tests",
         "//garnet/lib/magma/tests:vulkan-tests",
         "//garnet/lib/magma/gnbuild/magma-intel-gen:tests",
-        "//garnet/lib/magma/gnbuild/magma-arm-mali:tests"
+        "//garnet/lib/magma/gnbuild/magma-arm-mali:msd-arm-mali-integration-tests",
+        "//garnet/lib/magma/gnbuild/magma-arm-mali:autorun"
     ]
 }
