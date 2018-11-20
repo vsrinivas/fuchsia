@@ -390,20 +390,6 @@ zx_status_t UsbTester::Create(zx_device_t* parent) {
     if (status != ZX_OK) {
         return status;
     }
-
-    usb_composite_protocol_t usb_composite;
-    status = device_get_protocol(parent, ZX_PROTOCOL_USB_COMPOSITE, &usb_composite);
-    if (status != ZX_OK) {
-        return status;
-    }
-    auto want_interface = [](usb_interface_descriptor_t* intf, void* arg) {
-        return intf->bInterfaceClass == USB_CLASS_VENDOR;
-    };
-    status = usb_claim_additional_interfaces(&usb_composite, want_interface, nullptr);
-    if (status != ZX_OK) {
-        return status;
-    }
-
     size_t parent_req_size = usb_get_request_size(&usb);
 
     // Find the endpoints.
@@ -444,6 +430,16 @@ zx_status_t UsbTester::Create(zx_device_t* parent) {
                     isoch_intf.out_max_packet = usb_ep_max_packet(endp);
                 }
                 break;
+            }
+            usb_ss_ep_comp_descriptor_t* ss_comp_desc = NULL;
+            usb_descriptor_header_t* desc = usb_desc_iter_peek(&iter);
+            if (desc && desc->bDescriptorType == USB_DT_SS_EP_COMPANION) {
+                ss_comp_desc = (usb_ss_ep_comp_descriptor_t *)desc;
+            }
+            status = usb_enable_endpoint(&usb, endp, ss_comp_desc, true);
+            if (status != ZX_OK) {
+                zxlogf(ERROR, "%s: usb_enable_endpoint failed %d\n", __FUNCTION__, status);
+                return status;
             }
             endp = usb_desc_iter_next_endpoint(&iter);
         }
