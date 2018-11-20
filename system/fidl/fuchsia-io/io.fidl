@@ -376,7 +376,7 @@ struct FilesystemInfo {
 [Layout = "Simple"]
 interface DirectoryAdmin : Directory {
     // Mount a channel representing a remote filesystem onto this directory.
-    // All future requests to this node will be forwarded to the remote filesytem.
+    // All future requests to this node will be forwarded to the remote filesystem.
     // To re-open a node without forwarding to the remote target, the node
     // should be opened with OPEN_FLAG_NO_RMOTE.
     Mount(Directory remote) -> (zx.status s);
