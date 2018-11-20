@@ -4,7 +4,7 @@
 # found in the LICENSE file.
 
 import argparse
-from common import FUCHSIA_ROOT, get_package_imports, get_product_imports
+from common import FUCHSIA_ROOT, get_package_imports
 import json
 import os
 import subprocess
@@ -35,11 +35,6 @@ NO_AGGREGATION_DIRECTORIES = [
     'disabled',
     'products',
 ]
-
-# README.md and .gni files are allowed in package directories, but aren't
-# JSON package definitions files.
-def is_package_file(file):
-    return file != 'README.md' and not file.endswith('.gni')
 
 
 def check_json(packages):
@@ -102,7 +97,7 @@ def check_all(directory, dep_map, layer, is_root=True):
         for file in filenames:
             if is_root and (file in ROOT_CANONICAL_PACKAGES or file == layer):
                 continue
-            if file in CANONICAL_PACKAGES or not is_package_file(file):
+            if file in CANONICAL_PACKAGES or file == 'README.md':
                 continue
             package = os.path.join(dirpath, file)
             if not verify(package):
@@ -137,19 +132,6 @@ def check_root(base, layer):
     return all_there
 
 
-def check_product_root(base, layer):
-    '''Verified that the default product is present.'''
-    missing = []
-    for product in REQUIRED_PRODUCTS:
-        path = os.path.join(base, product)
-        if not os.path.isfile(path):
-            missing.append(path)
-    if not missing:
-        return True
-    print('Missing products: %s' % missing)
-    return False
-
-
 def main():
     parser = argparse.ArgumentParser(
             description=('Checks that packages in a given layer are properly '
@@ -169,35 +151,20 @@ def main():
     if args.layer:
         layer = args.layer
         packages_base = os.path.join(layer, 'packages')
-        products_base = os.path.join(layer, 'products')
     else:
         layer = args.vendor_layer
         packages_base = os.path.join('vendor', layer, 'packages')
-        products_base = os.path.join('vendor', layer, 'products')
 
     # List all packages files.
     packages = []
     for dirpath, dirnames, filenames in os.walk(packages_base):
-        packages.extend([os.path.join(dirpath, f) for f in filenames
-                         if is_package_file(f)])
-
-    products = []
-    for dirpath, dirnames, filenames in os.walk(products_base):
-        products.extend([os.path.join(dirpath, f) for f in filenames
-                         if is_package_file(f)])
+        packages.extend([os.path.join(dirpath, f) for f in filenames if f != 'README.md'])
 
     if not check_json(packages):
         return False
 
-    if not check_json(products):
-        return False
-
     schema = os.path.join(SCRIPT_DIR, 'package_schema.json')
     if not check_schema(packages, args.json_validator, schema):
-        return False
-
-    schema = os.path.join(SCRIPT_DIR, 'product_schema.json')
-    if not check_schema(products, args.json_validator, schema):
         return False
 
     deps = dict([(p, get_package_imports(p)) for p in packages])
@@ -212,13 +179,6 @@ def main():
         return False
 
     if not check_root(packages_base, layer):
-        return False
-
-    deps = dict([(p, get_product_imports(p)) for p in products])
-    if not check_deps_exist(deps):
-        return False
-
-    if not check_product_root(products_base, layer):
         return False
 
     return True
