@@ -12,6 +12,7 @@
 #ifndef __ASSEMBLER__
 
 #include <assert.h>
+#include <arch/arm64/registers.h>
 #include <stddef.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
@@ -54,6 +55,13 @@ struct arch_thread {
 
     // saved fpu state
     struct fpstate fpstate;
+
+    // |track_debug_state| tells whether the kernel should keep track of the whole debug state for
+    // this thread. Normally this is set explicitly by an user that wants to make use of HW
+    // breakpoints or watchpoints.
+    // Userspace can still read the complete |debug_state| even if |track_debug_state| is false.
+    bool track_debug_state;
+    arm64_debug_state_t debug_state;
 };
 
 #define thread_pointer_offsetof(field)          \

@@ -47,13 +47,18 @@
 // system. They go numbering by DBGBCR0, DBGBCR1, ... until the value defined in ID_AADFR0_EL1.
 
 #define ARM64_DBGBCR_E          (1u << 0)
-#define ARM64_DBGBCR_PMC        (0x3u << 1)  // Bits 1-2.
+#define ARM64_DBGBCR_PMC        (0b11u << 1)  // Bits 1-2.
 #define ARM64_DBGBCR_PMC_SHIFT  1u
-#define ARM64_DBGBCR_BAS        (0xFu << 5)  // Bits 5-8.
+#define ARM64_DBGBCR_BAS        (0b1111u << 5)  // Bits 5-8.
+#define ARM64_DBGGCR_BAS_SHIFT  5u
 #define ARM64_DBGBCR_HMC        (1u << 13)
-#define ARM64_DBGBCR_SSC        (0x3u << 14) // Bits 14-15.
-#define ARM64_DBGBCR_LBN        (0xFu << 16) // Bits 16-19.
-#define ARM64_DBGBCR_BT         (0xFu << 20) // Bits 20-23.
+#define ARM64_DBGBCR_HMC_SHIFT  13u
+#define ARM64_DBGBCR_SSC        (0b111u << 14) // Bits 14-15.
+#define ARM64_DBGBCR_SSC_SHIFT  14u
+#define ARM64_DBGBCR_LBN        (0b1111u << 16) // Bits 16-19.
+#define ARM64_DBGBCR_LBN_SHIFT  16u
+#define ARM64_DBGBCR_BT         (0b1111u << 20) // Bits 20-23.
+#define ARM64_DBGBCR_BY_SHIFT   20u
 
 // The user can only activate/deactivate breakpoints.
 #define ARM64_DBGBCR_USER_MASK (ARM64_DBGBCR_E)
@@ -72,6 +77,9 @@
 
 #define ARM64_MAX_HW_BREAKPOINTS 16
 
+#include <zircon/compiler.h>
+#include <sys/types.h>
+
 __BEGIN_CDECLS
 
 /* Kernel tracking of the current state of the debug registers for a particular thread.
@@ -85,18 +93,14 @@ typedef struct arm64_debug_state {
     uint32_t dbgbcr;
     uint64_t dbgbvr;
   } hw_bps[ARM64_MAX_HW_BREAKPOINTS];
-  // This field is the BRPs field on ID_AADFR0_EL1 (plus one), which doesn't change.
-  // Ideally we could just query this information from a static place calculated on boot time
-  // instead of having to have this value around for every thread.
-  uint8_t hw_bps_count;
-
   // TODO(donosoc): Do watchpoint integration.
 } arm64_debug_state_t;
 
 
-/* Disables the HW debug functionalities for the current thread.
- * There is no "enable" call. To do this, use arm_write_debug_state. */
-void arm64_disable_debug_state(void);
+/* Enable/disable the HW debug functionalities for the current thread. */
+void arm64_disable_debug_state();
+void arm64_enable_debug_state();
+
 /* Checks whether the given state is valid to install on a running thread.
  * Will mask out reserved values on DBGBCR<n>. This is for the caller convenience, considering
  * that we don't have a good mechanism to communicate back to the user what went wrong with the
@@ -104,7 +108,7 @@ void arm64_disable_debug_state(void);
 bool arm64_validate_debug_state(arm64_debug_state_t *debug_state);
 
 /* Returns the amount of HW breakpoints present in this CPU. */
-uint8_t arm64_hw_breakpoint_count(void);
+uint8_t arm64_hw_breakpoint_count();
 
 /* Read from the CPU registers into |debug_state|. */
 void arm64_read_hw_debug_regs(arm64_debug_state_t* debug_state);
@@ -115,5 +119,9 @@ void arm64_read_hw_debug_regs(arm64_debug_state_t* debug_state);
  *            In any other context (eg. setting debug values from a syscall), you *MUST* call
  *            arm64_validate_debug_state first. */
 void arm64_write_hw_debug_regs(const arm64_debug_state_t* debug_state);
+
+/* Handles the context switch for debug HW functionality.
+ * Will only copy over state if it's enabled (non-zero) for |new_thread|. */
+void arm64_debug_state_context_switch(thread* old_thread, thread* new_thread);
 
 __END_CDECLS

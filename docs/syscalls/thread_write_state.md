@@ -41,10 +41,12 @@ amount of breakpoints possible. But in most cases a given CPU implementation
 holds a lesser amount, meaning that the upper values beyond the limit are not
 used.
 
-Any setting call **must** set the correct amount of breakpoints/watchpoints in
-every call. The syscall will return **ZX_ERR_INVALID_ARGS** otherwise. You can
-get the correct amount of registers by getting the
-[the debug state through thread_read_state](thread_read_state.md#zx_thread_state_debug_regs).
+The kernel will write all the available registers in the hardware independent of
+the given breakpoint/watchpoint count value. This means that all the correct
+state must be set for the call.
+
+You can get the current state of the registers by calling
+[thread_read_state](thread_read_state.md#zx_thread_state_debug_regs).
 
 ## RIGHTS
 

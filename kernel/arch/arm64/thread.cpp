@@ -68,6 +68,12 @@ void arch_thread_initialize(thread_t* t, vaddr_t entry_point) {
     t->arch.unsafe_sp =
         ROUNDDOWN(t->stack.unsafe_base + t->stack.size, 16);
 #endif
+
+    // Initialize the debug state to a valid initial state.
+    for (size_t i = 0; i < ARM64_MAX_HW_BREAKPOINTS; i++) {
+        t->arch.debug_state.hw_bps[i].dbgbcr =(0b10u << ARM64_DBGBCR_PMC_SHIFT) | ARM64_DBGBCR_BAS;
+        t->arch.debug_state.hw_bps[i].dbgbvr = 0;
+    }
 }
 
 __NO_SAFESTACK void arch_thread_construct_first(thread_t* t) {
@@ -102,6 +108,7 @@ __NO_SAFESTACK void arch_context_switch(thread_t* oldthread,
     newthread->arch.current_percpu_ptr = arm64_read_percpu_ptr();
 
     arm64_fpu_context_switch(oldthread, newthread);
+    arm64_debug_state_context_switch(oldthread, newthread);
     arm64_context_switch(&oldthread->arch.sp, newthread->arch.sp);
 }
 
@@ -119,4 +126,20 @@ void* arch_thread_get_blocked_fp(struct thread* t) {
     struct context_switch_frame* frame = (struct context_switch_frame*)t->arch.sp;
 
     return (void*)frame->r29;
+}
+
+void arm64_debug_state_context_switch(thread *old_thread, thread *new_thread) {
+    // If the new thread has debug state, then install it, replacing the current contents.
+    if (unlikely(new_thread->arch.track_debug_state)) {
+        arm64_write_hw_debug_regs(&new_thread->arch.debug_state);
+        arm64_enable_debug_state();
+        return;
+    }
+
+    // If the old thread had debug state running and the new one doesn't use it, disable the
+    // debug capabilities. We don't need to clear the state because if a new thread being
+    // scheduled needs them, then it will overwrite the state.
+    if (unlikely(old_thread->arch.track_debug_state)) {
+        arm64_disable_debug_state();
+    }
 }

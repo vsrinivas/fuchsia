@@ -713,11 +713,8 @@ void x86_read_debug_status(x86_debug_state_t* debug_state) {
 
 void x86_disable_debug_state(void) {
     // Disabling dr7 is enough to disable the debug functionality.
-    // We need a variable loaded into a register in order to be able to transfer that value into
-    // DB7.
     uint64_t zero_val = 0;
     asm("mov %0, %%dr7" ::"r"(zero_val));
-
 }
 
 void x86_read_hw_debug_regs(x86_debug_state_t* debug_state) {

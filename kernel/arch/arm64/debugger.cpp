@@ -142,28 +142,21 @@ zx_status_t arch_set_vector_regs(struct thread* thread, const zx_thread_state_ve
 }
 
 zx_status_t arch_get_debug_regs(struct thread* thread, zx_thread_state_debug_regs* out) {
-    arm64_debug_state_t state = {};
+    out->hw_bps_count = arm64_hw_breakpoint_count();
     Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
-    // TODO(ZX-3025): Change the getter of these values to be the in-memory ones instead of
-    //                querying the HW. Currently this behaviour is wrong, because it will return
-    //                the debug state of the *current* thread running instead of the one named
-    //                by the handle.
-    //                This is what the x86 counterpart does.
-    arm64_read_hw_debug_regs(&state);
-
-    // Copy over the state from the internal representation.
-    out->hw_bps_count = state.hw_bps_count;
-    for (size_t i = 0; i < state.hw_bps_count; i++) {
-        out->hw_bps[i].dbgbcr = state.hw_bps[i].dbgbcr;
-        out->hw_bps[i].dbgbvr = state.hw_bps[i].dbgbvr;
+    // The kernel ensures that this state is being kept up to date, so we can safely copy the
+    // information over.
+    for (size_t i = 0; i < out->hw_bps_count; i++) {
+        out->hw_bps[i].dbgbcr = thread->arch.debug_state.hw_bps[i].dbgbcr;
+        out->hw_bps[i].dbgbvr = thread->arch.debug_state.hw_bps[i].dbgbvr;
     }
 
     // Hacked through the last debug registers for now for development.
     // THIS CODE WILL GO AWAY!
     // This normally doesn't affect functionality as normally a CPU implementation has around six
     // debug registers.
-    // TODO(donosoc): This should be exposed through a standard interface.
+    // TODO(ZX-3038): This should be exposed through a standard interface.
     //                Either the sysinfo fidl, the vDSO info mapping or some other mechanism.
     out->hw_bps[AARCH64_MAX_HW_BREAKPOINTS - 1].dbgbvr = ARM64_READ_SYSREG(id_aa64dfr0_el1);
     out->hw_bps[AARCH64_MAX_HW_BREAKPOINTS - 2].dbgbvr = ARM64_READ_SYSREG(mdscr_el1);
@@ -173,11 +166,9 @@ zx_status_t arch_get_debug_regs(struct thread* thread, zx_thread_state_debug_reg
 
 zx_status_t arch_set_debug_regs(struct thread* thread, const zx_thread_state_debug_regs* in) {
     arm64_debug_state_t state = {};
-    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
     // We copy over the state from the input.
-    state.hw_bps_count = in->hw_bps_count;
-    size_t bp_count = arm64_hw_breakpoint_count();
+    uint64_t bp_count = arm64_hw_breakpoint_count();
     for (size_t i = 0; i < bp_count; i++) {
         state.hw_bps[i].dbgbcr = in->hw_bps[i].dbgbcr;
         state.hw_bps[i].dbgbvr = in->hw_bps[i].dbgbvr;
@@ -187,7 +178,9 @@ zx_status_t arch_set_debug_regs(struct thread* thread, const zx_thread_state_deb
         return ZX_ERR_INVALID_ARGS;
     }
 
-    arm64_write_hw_debug_regs(&state);
+    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+    thread->arch.track_debug_state = true;
+    thread->arch.debug_state = state;
 
     return ZX_OK;
 }

@@ -56,8 +56,7 @@ struct arch_thread {
     x86_debug_state_t debug_state;
 };
 
-static inline void x86_set_suspended_general_regs(struct arch_thread *thread,
-                                                  uint32_t source, void *gregs)
+static inline void x86_set_suspended_general_regs(struct arch_thread *thread, uint32_t source, void *gregs)
 {
     DEBUG_ASSERT(thread->suspended_general_regs.gregs == NULL);
     DEBUG_ASSERT(gregs != NULL);

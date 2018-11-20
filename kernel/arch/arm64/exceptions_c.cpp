@@ -116,6 +116,23 @@ static void arm64_brk_handler(struct arm64_iframe_long* iframe, uint exception_f
     try_dispatch_user_exception(ZX_EXCP_SW_BREAKPOINT, iframe, esr);
 }
 
+static void arm64_hw_breakpoint_handler(struct arm64_iframe_long* iframe, uint exception_flags,
+                                        uint32_t esr) {
+    if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
+        /* trapped inside the kernel, this is bad */
+        printf("HW breakpoint in kernel: PC at %#" PRIx64 "\n", iframe->elr);
+        exception_die(iframe, esr);
+    }
+
+    // We don't need to save the debug state because it doesn't change by an exception. The only
+    // way to change the debug state is through the thread write syscall.
+
+    // NOTE: ARM64 Doesn't provide a good way to comunicate exception status (without exposing ESR
+    //       to userspace). This means a debugger will have to compare the registers with the PC
+    //       on the exceptions to find out which breakpoint triggered the exception.
+    try_dispatch_user_exception(ZX_EXCP_HW_BREAKPOINT, iframe, esr);
+}
+
 static void arm64_step_handler(struct arm64_iframe_long* iframe, uint exception_flags,
                                uint32_t esr) {
     if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
@@ -123,6 +140,7 @@ static void arm64_step_handler(struct arm64_iframe_long* iframe, uint exception_
         printf("software step in kernel: PC at %#" PRIx64 "\n", iframe->elr);
         exception_die(iframe, esr);
     }
+    // TODO(ZX-3037): Is it worth separating this into two separate exceptions?
     try_dispatch_user_exception(ZX_EXCP_HW_BREAKPOINT, iframe, esr);
 }
 
@@ -285,6 +303,10 @@ extern "C" void arm64_sync_exception(
     case 0b100100: /* data abort from lower level */
     case 0b100101: /* data abort from same level */
         arm64_data_abort_handler(iframe, exception_flags, esr);
+        break;
+    case 0b110000: /* HW breakpoint from a lower level */
+    case 0b110001: /* HW breakpoint from same level */
+        arm64_hw_breakpoint_handler(iframe, exception_flags, esr);
         break;
     case 0b110010: /* software step from lower level */
     case 0b110011: /* software step from same level */

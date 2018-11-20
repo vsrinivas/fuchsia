@@ -65,7 +65,7 @@ void arch_thread_initialize(thread_t* t, vaddr_t entry_point) {
     t->arch.fs_base = 0;
     t->arch.gs_base = 0;
 
-    // Initialize the debug registers to 0.
+    // Initialize the debug registers to a valid initial state.
     t->arch.track_debug_state = false;
     for (size_t i = 0; i < 4; i++) {
       t->arch.debug_state.dr[i] = 0;
@@ -166,15 +166,22 @@ void arch_context_switch(thread_t* oldthread, thread_t* newthread) {
 }
 
 void x86_debug_state_context_switch(thread_t *old_thread, thread_t *new_thread) {
-    // If the new thread has debug state, so we install it, replacing the current contents.
+    // If the new thread has debug state, then install it, replacing the current contents.
     if (unlikely(new_thread->arch.track_debug_state)) {
-      x86_write_hw_debug_regs(&new_thread->arch.debug_state);
-      return;
+        // NOTE: There is no enable debug state call, as x86 doesn't have a global enable/disable
+        //       switch, but rather enables particular registers through DR7. These registers are
+        //       selected by userspace (and filtered by zircon) in the thread_write_state state
+        //       syscall.
+        //
+        //       This means that just writing the thread debug state into the CPU is enough to
+        //       activate the debug functionality.
+        x86_write_hw_debug_regs(&new_thread->arch.debug_state);
+        return;
     }
 
-    // If the old thread had debug state running and the new one doesn't uses it, disable the
+    // If the old thread had debug state running and the new one doesn't use it, disable the
     // debug capabilities.
     if (unlikely(old_thread->arch.track_debug_state)) {
-      x86_disable_debug_state();
+        x86_disable_debug_state();
     }
 }

@@ -15,14 +15,16 @@ void arm64_disable_debug_state() {
     ARM64_WRITE_SYSREG(mdscr_el1, mdscr_val);
 }
 
-bool arm64_validate_debug_state(arm64_debug_state_t* state) {
-    // Must modify the correct amount of breakpoints.
-    size_t hw_bp_count = arm64_hw_breakpoint_count();
-    if (state->hw_bps_count != hw_bp_count) {
-        return false;
-    }
+void arm64_enable_debug_state() {
+    // The KDE bit enables and disables debug exceptions for the current execution.
+    // Instruction Breakpoint Exceptions (software breakpoints) cannot be deactivated.
+    uint32_t mdscr_val = ARM64_READ_SYSREG_32(mdscr_el1) | ARM64_MDSCR_EL1_KDE;
+    ARM64_WRITE_SYSREG(mdscr_el1, mdscr_val);
+}
 
+bool arm64_validate_debug_state(arm64_debug_state_t* state) {
     // Validate that the addresses are valid.
+    size_t hw_bp_count = arm64_hw_breakpoint_count();
     for (size_t i = 0; i < hw_bp_count; i++) {
         uint64_t addr = state->hw_bps[i].dbgbvr;
         if (addr != 0 && !is_user_address(addr)) {
@@ -52,7 +54,7 @@ uint8_t arm64_hw_breakpoint_count() {
 
 static void arm64_read_hw_breakpoint_by_index(arm64_debug_state_t* debug_state,
                                               unsigned int index) {
-    DEBUG_ASSERT(index < debug_state->hw_bps_count);
+    DEBUG_ASSERT(index < arm64_hw_breakpoint_count());
 
     switch (index) {
     case 0:
@@ -126,19 +128,16 @@ static void arm64_read_hw_breakpoint_by_index(arm64_debug_state_t* debug_state,
 
 void arm64_read_hw_debug_regs(arm64_debug_state_t* debug_state) {
     uint8_t count = arm64_hw_breakpoint_count();
-    debug_state->hw_bps_count = count;
     for (unsigned int i = 0; i < count; i++) {
         arm64_read_hw_breakpoint_by_index(debug_state, i);
     }
-
-    debug_state->hw_bps_count = arm64_hw_breakpoint_count();
 }
 
 // Writing Debug State ---------------------------------------------------------------------------
 
 static void arm64_write_hw_breakpoint_by_index(const arm64_debug_state_t* debug_state,
                                                unsigned int index) {
-    DEBUG_ASSERT(index < debug_state->hw_bps_count);
+    DEBUG_ASSERT(index < arm64_hw_breakpoint_count());
 
     switch (index) {
     case 0:
@@ -211,7 +210,8 @@ static void arm64_write_hw_breakpoint_by_index(const arm64_debug_state_t* debug_
 }
 
 void arm64_write_hw_debug_regs(const arm64_debug_state_t* debug_state) {
-    for (unsigned int i = 0; i < debug_state->hw_bps_count; i++) {
+    uint64_t bps_count = arm64_hw_breakpoint_count();
+    for (unsigned int i = 0; i < bps_count; i++) {
         arm64_write_hw_breakpoint_by_index(debug_state, i);
     }
 }

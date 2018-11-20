@@ -326,6 +326,7 @@ typedef struct x86_debug_state {
 /* Disables the HW debug functionalities for the current thread.
  * There is no "enable" call. To do this, use the x86_write_debug_state call. */
 void x86_disable_debug_state(void);
+
 /* Checks whether the given state is valid to install on a running thread.
  * Will mask out reserved values on DR6 and DR7. This is for the caller convenience, considering
  * that we don't have a good mechanism to communicate back to the user what went wrong with the
@@ -334,11 +335,10 @@ bool x86_validate_debug_state(x86_debug_state_t* debug_state);
 
 /* Only update the status section of |debug_state| (DR6). All other state will not be modified */
 void x86_read_debug_status(x86_debug_state_t* debug_state);
-// TODO(donosoc): write x86_write_debug_status(x86_debug_state_t*), which is for internal use by
-//                Zircon to keep DR6 up to date.
 
 /* Read from the CPU registers into |debug_state|. */
 void x86_read_hw_debug_regs(x86_debug_state_t* debug_state);
+
 /* Write from the |debug_state| into the CPU registers.
  *
  * IMPORTANT: This function is used in the context switch, so no validation is done, just writing.
@@ -347,7 +347,7 @@ void x86_read_hw_debug_regs(x86_debug_state_t* debug_state);
 void x86_write_hw_debug_regs(const x86_debug_state_t* debug_state);
 
 /* Handles the context switch for debug HW functionality (drN registers).
- * Will only copy over state if it's enabled (non-zero). */
+ * Will only copy over state if it's enabled (non-zero) for |new_thread|. */
 void x86_debug_state_context_switch(thread_t* old_thread, thread_t* new_thread);
 
 __END_CDECLS
