@@ -10,6 +10,8 @@
 #include <algorithm>
 #include <numeric>
 
+#include "test_utils.h"
+
 namespace wlan {
 namespace {
 
@@ -40,6 +42,8 @@ TEST(BufferUtils, Writer) {
 
     EXPECT_EQ(w.WrittenBytes(), 11u);
     EXPECT_EQ(w.RemainingBytes(), 5u);
+    const uint8_t expected[5] = { 11, 12, 13, 14, 15 };
+    EXPECT_RANGES_EQ(expected, w.RemainingBuffer());
 
     EXPECT_EQ(buf[0], 1);
     EXPECT_EQ(buf[1], 0);

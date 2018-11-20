@@ -226,9 +226,8 @@ zx_status_t CreateBeaconFrameWithBssid(fbl::unique_ptr<Packet>* out_packet, comm
     bcn->cap.set_ess(1);
     bcn->cap.set_short_preamble(1);
 
-    BufferWriter elem_w({bcn->elements, w.RemainingBytes()});
+    BufferWriter elem_w(w.RemainingBuffer());
     common::WriteSsid(&elem_w, kSsid);
-
     RatesWriter rates_writer{kSupportedRates};
     rates_writer.WriteSupportedRates(&elem_w);
     common::WriteDsssParamSet(&elem_w, kBssChannel.primary);
@@ -264,7 +263,7 @@ zx_status_t CreateProbeRequest(fbl::unique_ptr<Packet>* out_packet) {
     mgmt_hdr->addr3 = bssid;
 
     auto probereq = w.Write<ProbeRequest>();
-    BufferWriter elem_w({probereq->elements, w.RemainingBytes()});
+    BufferWriter elem_w(w.RemainingBuffer());
     common::WriteSsid(&elem_w, kSsid);
 
     RatesWriter rates_writer{kSupportedRates};
@@ -396,9 +395,10 @@ zx_status_t CreateAssocReqFrame(fbl::unique_ptr<Packet>* out_packet, common::Mac
     assoc->cap = cap;
     assoc->listen_interval = kListenInterval;
 
-    BufferWriter elem_w({assoc->elements, w.RemainingBytes()});
+    BufferWriter elem_w(w.RemainingBuffer());
     if (!ssid.empty()) { common::WriteSsid(&w, ssid); }
     if (rsn) { w.Write(kRsne); }
+    ZX_DEBUG_ASSERT(assoc->Validate(elem_w.WrittenBytes()));
 
     packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 

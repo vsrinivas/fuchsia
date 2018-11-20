@@ -285,7 +285,7 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
                                         join_ctx_->bss()->op_rate_set, client_capability.rates);
     if (!rates.has_value()) { return ZX_ERR_NOT_SUPPORTED; }
 
-    BufferWriter elem_w({assoc->elements, reserved_ie_len});
+    BufferWriter elem_w(w.RemainingBuffer());
     common::WriteSsid(&elem_w, *join_ctx_->bss()->ssid);
     RatesWriter rates_writer{*rates};
     rates_writer.WriteSupportedRates(&elem_w);

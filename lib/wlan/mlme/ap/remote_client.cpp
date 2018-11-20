@@ -823,16 +823,10 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
     assoc->cap.set_short_preamble(1);
 
     // Write elements.
-    BufferWriter elem_w({assoc->elements, reserved_ie_len});
-
-    auto rates = bss_->Rates();
-
-    RatesWriter rates_writer{rates};
-
+    BufferWriter elem_w(w.RemainingBuffer());
+    RatesWriter rates_writer(bss_->Rates());
     rates_writer.WriteSupportedRates(&elem_w);
     rates_writer.WriteExtendedSupportedRates(&elem_w);
-
-    // TODO(NET-567): Write negotiated SupportedRates, ExtendedSupportedRates IEs
 
     auto ht = bss_->Ht();
     if (ht.ready) {

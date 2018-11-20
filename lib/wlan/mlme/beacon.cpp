@@ -145,10 +145,9 @@ static zx_status_t BuildBeaconOrProbeResponse(const BeaconConfig& config, common
     bcn->cap.set_short_preamble(1);
 
     // Write elements.
-    BufferWriter elem_w({bcn->elements, reserved_ie_len});
+    BufferWriter elem_w(w.RemainingBuffer());
     size_t rel_tim_ele_offset = SIZE_MAX;
     WriteElements(&elem_w, config, &rel_tim_ele_offset);
-
     ZX_DEBUG_ASSERT(bcn->Validate(elem_w.WrittenBytes()));
 
     // Update packet's final length and tx_info.

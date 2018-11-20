@@ -50,6 +50,7 @@ class BufferWriter {
     Span<const uint8_t> WrittenData() const { return buf_.subspan(0, offset_); }
     size_t WrittenBytes() const { return offset_; }
     size_t RemainingBytes() const { return buf_.size() - offset_; }
+    Span<uint8_t> RemainingBuffer() { return buf_.subspan(offset_); }
 
 private:
     size_t offset_ = 0;
