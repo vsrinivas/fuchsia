@@ -28,7 +28,8 @@ class JoinContext {
     enum PHY phy() const { return phy_; }
     const ::fuchsia::wlan::mlme::BSSDescription* bss() const { return &bss_; }
 
-    bool IsHtOrLater() const { return (phy_ == WLAN_PHY_HT || phy_ == WLAN_PHY_VHT); }
+    bool IsHt() const { return phy_ == WLAN_PHY_HT; }
+    bool IsVht() const { return phy_ == WLAN_PHY_VHT; }
 
     // SanitizeChannel tests the validation of input wlan_channel_t
     // to support interoperable Join and Association.

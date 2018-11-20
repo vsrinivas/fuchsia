@@ -294,7 +294,7 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
     // Write RSNE from MLME-Association.request if available.
     if (req.body()->rsn) { elem_w.Write(*req.body()->rsn); }
 
-    if (join_ctx_->IsHtOrLater()) {
+    if (join_ctx_->IsHt() || join_ctx_->IsVht()) {
         auto ht_cap = client_capability.ht_cap.value_or(HtCapabilities{});
         debugf("HT cap(hardware reports): %s\n", debug::Describe(ht_cap).c_str());
 
@@ -500,7 +500,7 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
     // Wrap this as EstablishBlockAckSession(peer_mac_addr)
     // Signal to lower MAC for proper session handling
 
-    if (join_ctx_->IsHtOrLater()) { SendAddBaRequestFrame(); }
+    if (join_ctx_->IsHt() || join_ctx_->IsVht()) { SendAddBaRequestFrame(); }
     return ZX_OK;
 }
 
