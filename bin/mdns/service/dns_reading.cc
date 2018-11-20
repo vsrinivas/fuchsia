@@ -174,8 +174,10 @@ PacketReader& operator>>(PacketReader& reader, DnsResourceDataTxt& value) {
     reader >> length;
 
     if (length > reader.bytes_remaining()) {
+#ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
       FXL_DLOG(ERROR) << "Bad string length, offset "
                       << reader.bytes_consumed();
+#endif
       reader.MarkUnhealthy();
       return reader;
     }
@@ -248,8 +250,10 @@ PacketReader& operator>>(PacketReader& reader, DnsResource& value) {
 
   if (data_size > reader.bytes_remaining()) {
     reader.MarkUnhealthy();
+#ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
     FXL_DLOG(ERROR) << "data_size is " << data_size << ", remaining is "
                     << reader.bytes_remaining();
+#endif
   }
 
   if (!reader.healthy()) {
@@ -314,8 +318,10 @@ PacketReader& operator>>(PacketReader& reader, DnsResource& value) {
       }
     } break;
     default:
+#ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
       FXL_DLOG(WARNING) << "Skipping data for unsupported resource type "
                         << static_cast<uint16_t>(value.type_);
+#endif
       reader.Bytes(data_size);
       break;
   }
@@ -330,7 +336,9 @@ PacketReader& operator>>(PacketReader& reader, DnsMessage& value) {
       value.header_.answer_count_ > kMaxAnswers ||
       value.header_.authority_count_ > kMaxAuthorities ||
       value.header_.additional_count_ > kMaxAdditionals) {
+#ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
     FXL_DLOG(ERROR) << "Max record count exceeded; rejecting message.";
+#endif
     reader.MarkUnhealthy();
     return reader;
   }
