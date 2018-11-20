@@ -136,6 +136,7 @@ static inline uint32_t gic_read_iar() {
     uint64_t temp;
     __asm__ volatile("mrs %0, " ICC_IAR1_EL1
                      : "=r"(temp));
+    DSB;
     return (uint32_t)temp;
 }
 
