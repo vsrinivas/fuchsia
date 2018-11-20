@@ -206,6 +206,11 @@ int main(int argc, char** argv) {
     printf("bootsvc: Loading boot cmdline overrides...\n");
     LoadCmdlineOverridesFromBootfs(bootfs_svc);
 
+    // Consume certain VMO types from the startup handle table
+    printf("bootsvc: Loading kernel VMOs...\n");
+    bootfs_svc->PublishStartupVmos(PA_VMO_VDSO, "PA_VMO_VDSO");
+    bootfs_svc->PublishStartupVmos(PA_VMO_KERNEL_FILE, "PA_VMO_KERNEL_FILE");
+
     // Creating the loader service
     printf("bootsvc: Creating loader service...\n");
     fbl::RefPtr<bootsvc::BootfsLoaderService> loader;

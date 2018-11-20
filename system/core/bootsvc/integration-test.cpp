@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <dirent.h>
 #include <dlfcn.h>
+#include <sys/types.h>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -73,6 +75,29 @@ bool TestStartupHandles() {
     END_TEST;
 }
 
+// Check that the kernel-provided VDSOs were added to /boot/kernel/vdso
+bool TestVdsosPresent() {
+    BEGIN_TEST;
+
+    DIR* dir = opendir("/boot/kernel/vdso");
+    ASSERT_NOT_NULL(dir);
+
+    size_t count = 0;
+    dirent* entry;
+    while ((entry = readdir(dir)) != nullptr) {
+        if (!strcmp(entry->d_name, ".")) {
+            continue;
+        }
+        ASSERT_EQ(entry->d_type, DT_REG);
+        ++count;
+    }
+    ASSERT_GT(count, 0);
+
+    closedir(dir);
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(bootsvc_integration_tests)
@@ -80,6 +105,7 @@ RUN_TEST(TestBootCmdline)
 RUN_TEST(TestLoader)
 RUN_TEST(TestNamespace)
 RUN_TEST(TestStartupHandles)
+RUN_TEST(TestVdsosPresent)
 END_TEST_CASE(bootsvc_integration_tests)
 
 int main(int argc, char** argv) {

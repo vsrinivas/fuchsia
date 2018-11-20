@@ -27,6 +27,15 @@ public:
 
     // Looks up the given path in the bootfs and returns its contents and size.
     zx_status_t Open(const char* path, zx::vmo* vmo, size_t* size);
+
+    // Publishes the given |vmo| range into the bootfs at |path|.  |path| should
+    // not begin with a slash and be relative to the root of the bootfs.  |vmo|
+    // may not be closed until after BootfsService is destroyed.
+    zx_status_t PublishVmo(const char* path, const zx::vmo& vmo, zx_off_t off, size_t len);
+
+    // Publishes all of the VMOs from the startup handles table with the given
+    // |type|.  |debug_type_name| is used for debug printing.
+    void PublishStartupVmos(uint8_t type, const char* debug_type_name);
 private:
     BootfsService() = default;
 
