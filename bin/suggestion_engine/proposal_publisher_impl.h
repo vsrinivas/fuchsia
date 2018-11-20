@@ -39,12 +39,6 @@ class ProposalPublisherImpl : public fuchsia::modular::ProposalPublisher {
   void ProposeNavigation(
       fuchsia::modular::NavigationAction navigation) override;
 
-  void NotifyProposalInteraction(
-      fidl::StringPtr proposal_id,
-      fuchsia::modular::InteractionType interaction_type);
-
-  void NotifyProposalRemoved(fidl::StringPtr proposal_id);
-
   const std::string component_url() { return component_url_; }
 
  private:

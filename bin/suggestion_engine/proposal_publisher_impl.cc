@@ -32,20 +32,6 @@ void ProposalPublisherImpl::ProposeNavigation(
   engine_->ProposeNavigation(navigation);
 }
 
-void ProposalPublisherImpl::NotifyProposalInteraction(
-    fidl::StringPtr proposal_id,
-    fuchsia::modular::InteractionType interaction_type) {
-  for (auto& binding : bindings_) {
-    binding->events().OnProposalInteraction(proposal_id, interaction_type);
-  }
-}
-
-void ProposalPublisherImpl::NotifyProposalRemoved(fidl::StringPtr proposal_id) {
-  for (auto& binding : bindings_) {
-    binding->events().OnProposalRemoved(proposal_id);
-  }
-}
-
 void ProposalPublisherImpl::Remove(fidl::StringPtr proposal_id) {
   engine_->RemoveNextProposal(component_url_, proposal_id);
 }

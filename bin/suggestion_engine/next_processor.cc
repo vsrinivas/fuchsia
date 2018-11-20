@@ -81,12 +81,6 @@ void NextProcessor::AddProposal(const std::string& component_url,
 
 void NextProcessor::RemoveProposal(const std::string& component_url,
                                    const std::string& proposal_id) {
-  RemoveProposal(component_url, proposal_id, nullptr /* proposal_publisher */);
-}
-
-void NextProcessor::RemoveProposal(
-    const std::string& component_url, const std::string& proposal_id,
-    ProposalPublisherImpl* const proposal_publisher_impl) {
   const auto key = std::make_pair(component_url, proposal_id);
   auto toRemove = prototypes_.find(key);
   if (toRemove != prototypes_.end()) {
@@ -94,10 +88,6 @@ void NextProcessor::RemoveProposal(
     // until removed from the ranked list
     RemoveProposalFromList(component_url, proposal_id);
     prototypes_.erase(toRemove);
-
-    if (proposal_publisher_impl != nullptr) {
-      proposal_publisher_impl->NotifyProposalRemoved(proposal_id);
-    }
   }
 }
 

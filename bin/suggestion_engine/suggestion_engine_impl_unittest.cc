@@ -109,8 +109,8 @@ class SuggestionEngineTest : public testing::TestWithSessionStorage {
     suggestion_engine_impl_->Connect(provider_ptr_.NewRequest());
     suggestion_engine_impl_->Connect(debug_ptr_.NewRequest());
 
-    suggestion_engine_impl_->RegisterProposalPublisher(
-        "Proposinator", proposal_publisher_.NewRequest());
+    proposal_publisher_ = std::make_unique<ProposalPublisherImpl>(
+        suggestion_engine_impl_.get(), "Proposinator");
   }
 
  protected:
@@ -136,8 +136,6 @@ class SuggestionEngineTest : public testing::TestWithSessionStorage {
     display.headline = headline;
     fuchsia::modular::Proposal proposal;
     proposal.id = id;
-    proposal.affinity.resize(0);
-    proposal.on_selected.resize(0);
     proposal.display = std::move(display);
     return proposal;
   }
@@ -233,34 +231,11 @@ class SuggestionEngineTest : public testing::TestWithSessionStorage {
     proposal->on_selected.push_back(std::move(command));
   }
 
-  void RegisterNotifyProposalInteraction(
-      bool* on_proposal_interaction_called, std::string expected_proposal_id,
-      fuchsia::modular::InteractionType expected_interaction) {
-    proposal_publisher_.events().OnProposalInteraction =
-        [on_proposal_interaction_called, expected_proposal_id,
-         expected_interaction](
-            fidl::StringPtr proposal_id,
-            fuchsia::modular::InteractionType interaction_type) {
-          *on_proposal_interaction_called =
-              proposal_id == expected_proposal_id &&
-              interaction_type == expected_interaction;
-        };
-  }
-
-  void RegisterNotifyProposalRemoved(bool* on_proposal_removed_called,
-                                     std::string expected_proposal_id) {
-    proposal_publisher_.events().OnProposalRemoved =
-        [on_proposal_removed_called,
-         expected_proposal_id](fidl::StringPtr proposal_id) {
-          *on_proposal_removed_called = proposal_id == expected_proposal_id;
-        };
-  }
-
+  std::unique_ptr<ProposalPublisherImpl> proposal_publisher_;
   std::unique_ptr<SessionStorage> session_storage_;
   std::unique_ptr<PuppetMasterImpl> puppet_master_impl_;
   std::unique_ptr<SuggestionEngineImpl> suggestion_engine_impl_;
   std::unique_ptr<TestContextReaderImpl> context_reader_impl_;
-  fuchsia::modular::ProposalPublisherPtr proposal_publisher_;
   fuchsia::modular::SuggestionEnginePtr engine_ptr_;
   fuchsia::modular::SuggestionProviderPtr provider_ptr_;
   fuchsia::modular::SuggestionDebugPtr debug_ptr_;
@@ -528,13 +503,6 @@ TEST_F(SuggestionEngineTest, RemoveNextProposalRich) {
 TEST_F(SuggestionEngineTest, NotifyInteractionSelected) {
   StartListeningForNext(10);
 
-  bool on_proposal_interaction_called = false;
-  bool on_proposal_removed_called = false;
-  RegisterNotifyProposalInteraction(
-      &on_proposal_interaction_called, "1",
-      fuchsia::modular::InteractionType::SELECTED);
-  RegisterNotifyProposalRemoved(&on_proposal_removed_called, "1");
-
   // Add proposal. One action of each action we support that translates to
   // StoryCommand is added. This set of actions doesn't really make sense in an
   // actual use case.
@@ -559,8 +527,6 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelected) {
                                              std::move(interaction));
 
   RunLoopUntil([&] { return test_executor_.execute_count() == 1; });
-  EXPECT_TRUE(on_proposal_interaction_called);
-  EXPECT_TRUE(on_proposal_removed_called);
 
   // The executor should have been called with the right commands.
   auto story_id = test_executor_.last_story_id();
@@ -621,13 +587,6 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelected) {
 TEST_F(SuggestionEngineTest, NotifyInteractionSelectedWithStoryName) {
   StartListeningForNext(10);
 
-  bool on_proposal_interaction_called = false;
-  bool on_proposal_removed_called = false;
-  RegisterNotifyProposalInteraction(
-      &on_proposal_interaction_called, "1",
-      fuchsia::modular::InteractionType::SELECTED);
-  RegisterNotifyProposalRemoved(&on_proposal_removed_called, "1");
-
   // Add proposal.
   auto proposal = MakeProposal("1", "foo");
   proposal.story_name = "foo_story";
@@ -652,8 +611,6 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelectedWithStoryName) {
   // The executor should have been called with the command associated to the
   // action added above.
   EXPECT_EQ("foo_story", test_executor_.last_story_id());
-  EXPECT_TRUE(on_proposal_interaction_called);
-  EXPECT_TRUE(on_proposal_removed_called);
 
   auto& commands = test_executor_.last_commands();
   ASSERT_EQ(1u, commands.size());
@@ -681,13 +638,6 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelectedWithStoryName) {
 TEST_F(SuggestionEngineTest, NotifyInteractionDismissed) {
   StartListeningForNext(10);
 
-  bool on_proposal_interaction_called = false;
-  bool on_proposal_removed_called = false;
-  RegisterNotifyProposalInteraction(
-      &on_proposal_interaction_called, "1",
-      fuchsia::modular::InteractionType::DISMISSED);
-  RegisterNotifyProposalRemoved(&on_proposal_removed_called, "1");
-
   // Add proposal.
   auto proposal = MakeProposal("1", "foo");
   AddFocusModuleAction(&proposal, "mod_name");
@@ -709,8 +659,6 @@ TEST_F(SuggestionEngineTest, NotifyInteractionDismissed) {
 
   // The executor shouldn't have been called.
   EXPECT_EQ(0, test_executor_.execute_count());
-  EXPECT_TRUE(on_proposal_interaction_called);
-  EXPECT_TRUE(on_proposal_removed_called);
 
   // We should have been notified with no suggestions after dismissing this
   // suggestion.
@@ -720,13 +668,6 @@ TEST_F(SuggestionEngineTest, NotifyInteractionDismissed) {
 
 TEST_F(SuggestionEngineTest, NotifyInteractionDismissedWithStoryName) {
   StartListeningForNext(10);
-
-  bool on_proposal_interaction_called = false;
-  bool on_proposal_removed_called = false;
-  RegisterNotifyProposalInteraction(
-      &on_proposal_interaction_called, "1",
-      fuchsia::modular::InteractionType::DISMISSED);
-  RegisterNotifyProposalRemoved(&on_proposal_removed_called, "1");
 
   // Add proposal.
   auto proposal = MakeProposal("1", "foo");
@@ -747,10 +688,9 @@ TEST_F(SuggestionEngineTest, NotifyInteractionDismissedWithStoryName) {
                                              std::move(interaction));
 
   RunLoopUntilIdle();
+
   // The executor shouldn't have been called.
   EXPECT_EQ(0, test_executor_.execute_count());
-  EXPECT_TRUE(on_proposal_interaction_called);
-  EXPECT_TRUE(on_proposal_removed_called);
 
   // We should have been notified with no suggestions after dismissing this
   // suggestion.
@@ -769,13 +709,6 @@ TEST_F(SuggestionEngineTest, NotifyInteractionDismissedWithStoryName) {
 
 TEST_F(SuggestionEngineTest, NotifyInteractionSelectedRich) {
   StartListeningForNext(10);
-
-  // See comment in SuggestionEngineImpl::HandleSelectedInteraction
-  // For reason why Rich suggestions aren't removed or promoted.
-  bool on_proposal_interaction_called = false;
-  RegisterNotifyProposalInteraction(
-      &on_proposal_interaction_called, "1",
-      fuchsia::modular::InteractionType::SELECTED);
 
   // Add proposal.
   auto proposal = MakeRichProposal("1", "foo_rich");
@@ -798,7 +731,6 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelectedRich) {
                                              std::move(interaction));
 
   RunLoopUntilIdle();
-  EXPECT_TRUE(on_proposal_interaction_called);
 
   // The executor should have been called for a second time with a command to
   // promote the story that the adding of the the proposal created.
@@ -817,13 +749,6 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelectedRich) {
 
 TEST_F(SuggestionEngineTest, NotifyInteractionDismissedRich) {
   StartListeningForNext(10);
-
-  bool on_proposal_interaction_called = false;
-  bool on_proposal_removed_called = false;
-  RegisterNotifyProposalInteraction(
-      &on_proposal_interaction_called, "1",
-      fuchsia::modular::InteractionType::DISMISSED);
-  RegisterNotifyProposalRemoved(&on_proposal_removed_called, "1");
 
   // Add proposal.
   auto proposal = MakeRichProposal("1", "foo_rich");
@@ -851,8 +776,6 @@ TEST_F(SuggestionEngineTest, NotifyInteractionDismissedRich) {
 
   // The executor shouldn't have been called again.
   EXPECT_EQ(0, test_executor_.execute_count());
-  EXPECT_TRUE(on_proposal_interaction_called);
-  EXPECT_TRUE(on_proposal_removed_called);
 
   // Ensure the story that was created when we added the rich proposal is gone.
   bool done{};
@@ -867,10 +790,6 @@ TEST_F(SuggestionEngineTest, NotifyInteractionDismissedRich) {
 TEST_F(SuggestionEngineTest, NotifyInteractionSnoozedInterruption) {
   StartListeningForInterruptions();
   StartListeningForNext(10);
-
-  bool on_proposal_interaction_called = false;
-  RegisterNotifyProposalInteraction(&on_proposal_interaction_called, "1",
-                                    fuchsia::modular::InteractionType::SNOOZED);
 
   // Add interruptive proposal.
   proposal_publisher_->Propose(MakeInterruptionProposal("1", "foo"));
@@ -900,10 +819,6 @@ TEST_F(SuggestionEngineTest, NotifyInteractionExpiredInterruption) {
   StartListeningForInterruptions();
   StartListeningForNext(10);
 
-  bool on_proposal_interaction_called = false;
-  RegisterNotifyProposalInteraction(&on_proposal_interaction_called, "1",
-                                    fuchsia::modular::InteractionType::EXPIRED);
-
   // Add interruptive proposal.
   proposal_publisher_->Propose(MakeInterruptionProposal("1", "foo"));
 
@@ -922,7 +837,6 @@ TEST_F(SuggestionEngineTest, NotifyInteractionExpiredInterruption) {
                                              std::move(interaction));
 
   RunLoopUntilIdle();
-  EXPECT_TRUE(on_proposal_interaction_called);
 
   // The suggestion should still be there after being notified.
   auto& listener_results = next_listener_.last_suggestions();
@@ -933,13 +847,6 @@ TEST_F(SuggestionEngineTest, NotifyInteractionExpiredInterruption) {
 TEST_F(SuggestionEngineTest, NotifyInteractionSelectedInterruption) {
   StartListeningForInterruptions();
   StartListeningForNext(10);
-
-  bool on_proposal_interaction_called = false;
-  bool on_proposal_removed_called = false;
-  RegisterNotifyProposalInteraction(
-      &on_proposal_interaction_called, "1",
-      fuchsia::modular::InteractionType::SELECTED);
-  RegisterNotifyProposalRemoved(&on_proposal_removed_called, "1");
 
   // Add interruptive proposal.
   auto proposal = MakeInterruptionProposal("1", "foo");
@@ -958,8 +865,6 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelectedInterruption) {
                                              std::move(interaction));
 
   RunLoopUntil([&] { return test_executor_.execute_count() == 1; });
-  EXPECT_TRUE(on_proposal_interaction_called);
-  EXPECT_TRUE(on_proposal_removed_called);
 
   // The executor should have been called with a command to add a mod and
   // created a story.
@@ -988,13 +893,6 @@ TEST_F(SuggestionEngineTest, NotifyInteractionDismissedInterruption) {
   StartListeningForInterruptions();
   StartListeningForNext(10);
 
-  bool on_proposal_interaction_called = false;
-  bool on_proposal_removed_called = false;
-  RegisterNotifyProposalInteraction(
-      &on_proposal_interaction_called, "1",
-      fuchsia::modular::InteractionType::DISMISSED);
-  RegisterNotifyProposalRemoved(&on_proposal_removed_called, "1");
-
   // Add interruptive proposal.
   auto proposal = MakeInterruptionProposal("1", "foo");
   AddFocusModuleAction(&proposal, "mod_name");
@@ -1015,8 +913,6 @@ TEST_F(SuggestionEngineTest, NotifyInteractionDismissedInterruption) {
 
   // The executor shouldn't have been called.
   EXPECT_EQ(0, test_executor_.execute_count());
-  EXPECT_TRUE(on_proposal_interaction_called);
-  EXPECT_TRUE(on_proposal_removed_called);
 
   // The suggestion shouldn't be there anymore.
   EXPECT_TRUE(next_listener_.last_suggestions()->empty());
