@@ -21,7 +21,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <zircon/device/gpu.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
@@ -147,30 +146,6 @@ static zx_status_t aml_gpu_get_protocol(void* ctx, uint32_t proto_id, void* out_
     return ZX_OK;
 }
 
-static zx_status_t aml_gpu_ioctl(void* ctx, uint32_t op,
-                                 const void* in_buf, size_t in_len,
-                                 void* out_buf, size_t out_len,
-                                 size_t* out_actual) {
-    aml_gpu_t* gpu = ctx;
-    switch (op) {
-    case IOCTL_GPU_SET_CLK_FREQ_SOURCE: {
-        if (in_len != sizeof(int32_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        int32_t* clk_source = (int32_t*)in_buf;
-
-        if (*clk_source >= MAX_GPU_CLK_FREQ) {
-            GPU_ERROR("Invalid clock freq source index\n");
-            return ZX_ERR_NOT_SUPPORTED;
-        }
-        aml_gpu_set_clk_freq_source(gpu, *clk_source);
-        return ZX_OK;
-    }
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-}
-
 static zx_status_t aml_gpu_SetFrequencySource(void* ctx, uint32_t clk_source, fidl_txn_t* txn) {
     aml_gpu_t* gpu = ctx;
     if (clk_source >= MAX_GPU_CLK_FREQ) {
@@ -194,7 +169,6 @@ static zx_protocol_device_t aml_gpu_protocol = {
     .version = DEVICE_OPS_VERSION,
     .release = aml_gpu_release,
     .get_protocol = aml_gpu_get_protocol,
-    .ioctl = aml_gpu_ioctl,
     .message = aml_gpu_message,
 };
 
