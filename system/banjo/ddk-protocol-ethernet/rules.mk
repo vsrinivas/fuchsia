@@ -14,8 +14,6 @@ MODULE_BANJO_LIBRARY := ddk.protocol.ethernet
 
 MODULE_BANJO_NAME := ethernet
 
-MODULE_BANJO_DEPS := system/banjo/zircon-listnode
-
 MODULE_SRCS += $(LOCAL_DIR)/ethernet.banjo
 
 include make/module.mk

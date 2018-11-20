@@ -55,12 +55,6 @@ typedef struct ethdev0 {
     zx_device_t* zxdev;
 } ethdev0_t;
 
-typedef struct tx_info {
-    struct ethdev* edev;
-    uint64_t fifo_cookie;
-    ethmac_netbuf_t netbuf;
-} tx_info_t;
-
 // transmit thread has been created
 #define ETHDEV_TX_THREAD (1u)
 
@@ -120,7 +114,10 @@ typedef struct ethdev {
     zx_paddr_t* paddr_map;
     zx_handle_t pmt;
 
-    tx_info_t all_tx_bufs[FIFO_DEPTH];
+    // FIFO_DEPTH entries, each |tx_size| large.
+    void *all_tx_bufs;
+    size_t tx_size;
+
     mtx_t lock;               // Protects free_tx_bufs
     list_node_t free_tx_bufs; // tx_info_t elements
 
@@ -138,6 +135,20 @@ typedef struct ethdev {
 } ethdev_t;
 
 #define FAIL_REPORT_RATE 50
+
+typedef struct tx_info {
+    struct ethdev* edev;
+    uint64_t fifo_cookie;
+    list_node_t node;
+} tx_info_t;
+
+static tx_info_t* netbuf_to_tx_info(ethdev0_t* edev0, ethmac_netbuf_t* netbuf) {
+    return (tx_info_t*)((uintptr_t)netbuf + edev0->info.netbuf_size);
+}
+
+static ethmac_netbuf_t* tx_info_to_netbuf(ethdev0_t* edev0, tx_info_t* tx_info) {
+    return (ethmac_netbuf_t*)((uintptr_t)tx_info - edev0->info.netbuf_size);
+}
 
 static ssize_t eth_promisc_helper_logic_locked(ethdev_t* edev, bool req_on, uint32_t state_bit,
                                                uint32_t param_id, int32_t* requesters_count) {
@@ -355,7 +366,7 @@ static void eth0_recv(void* cookie, const void* data, size_t len, uint32_t flags
 // Borrows a TX buffer from the pool. Logs and returns NULL if none is available
 static tx_info_t* eth_get_tx_info(ethdev_t* edev) {
     mtx_lock(&edev->lock);
-    tx_info_t* tx_info = list_remove_head_type(&edev->free_tx_bufs, tx_info_t, netbuf.node);
+    tx_info_t* tx_info = list_remove_head_type(&edev->free_tx_bufs, tx_info_t, node);
     mtx_unlock(&edev->lock);
     if (tx_info == NULL) {
         zxlogf(ERROR, "eth [%s]: tx_info pool empty\n", edev->name);
@@ -366,12 +377,13 @@ static tx_info_t* eth_get_tx_info(ethdev_t* edev) {
 // Returns a TX buffer to the pool
 static void eth_put_tx_info(ethdev_t* edev, tx_info_t* tx_info) {
     mtx_lock(&edev->lock);
-    list_add_head(&edev->free_tx_bufs, &tx_info->netbuf.node);
+    list_add_head(&edev->free_tx_bufs, &tx_info->node);
     mtx_unlock(&edev->lock);
 }
 
 static void eth0_complete_tx(void* cookie, ethmac_netbuf_t* netbuf, zx_status_t status) {
-    tx_info_t* tx_info = containerof(netbuf, tx_info_t, netbuf);
+    ethdev0_t* edev0 = cookie;
+    tx_info_t* tx_info = netbuf_to_tx_info(edev0, netbuf);
     ethdev_t* edev = tx_info->edev;
     zircon_ethernet_FifoEntry entry = {.offset = netbuf->data_buffer - edev->io_buf,
                               .length = netbuf->data_size,
@@ -459,14 +471,15 @@ static int eth_send(ethdev_t* edev, zircon_ethernet_FifoEntry* entries, uint32_t
             if (opts) {
                 zxlogf(SPEW, "setting OPT_MORE (%u packets to go)\n", count);
             }
-            tx_info->netbuf.data_buffer = edev->io_buf + e->offset;
+            ethmac_netbuf_t* netbuf = tx_info_to_netbuf(edev0, tx_info);
+            netbuf->data_buffer = edev->io_buf + e->offset;
             if (edev0->info.features & ETHMAC_FEATURE_DMA) {
-                tx_info->netbuf.phys = edev->paddr_map[e->offset / PAGE_SIZE] +
+                netbuf->phys = edev->paddr_map[e->offset / PAGE_SIZE] +
                                        (e->offset & PAGE_MASK);
             }
-            tx_info->netbuf.data_size = e->length;
+            netbuf->data_size = e->length;
             tx_info->fifo_cookie = e->cookie;
-            status = ethmac_queue_tx(&edev0->mac, opts, &tx_info->netbuf);
+            status = ethmac_queue_tx(&edev0->mac, opts, netbuf);
             if (edev->state & ETHDEV_TX_LOOPBACK) {
                 eth_tx_echo(edev0, edev->io_buf + e->offset, e->length);
             }
@@ -953,10 +966,19 @@ static zx_status_t eth0_open(void* ctx, zx_device_t** out, uint32_t flags) {
     }
     edev->edev0 = edev0;
 
+    edev->tx_size = ROUNDUP(sizeof(tx_info_t) + edev0->info.netbuf_size, 8);
+    if ((edev->all_tx_bufs = calloc(FIFO_DEPTH, edev->tx_size)) == NULL) {
+        free(edev);
+        return ZX_ERR_NO_MEMORY;
+    }
+
     list_initialize(&edev->free_tx_bufs);
     for (size_t ndx = 0; ndx < FIFO_DEPTH; ndx++) {
-        edev->all_tx_bufs[ndx].edev = edev;
-        list_add_tail(&edev->free_tx_bufs, &edev->all_tx_bufs[ndx].netbuf.node);
+        ethmac_netbuf_t* netbuf =
+                (ethmac_netbuf_t*)((uintptr_t)edev->all_tx_bufs + (edev->tx_size * ndx));
+        tx_info_t* tx_info = netbuf_to_tx_info(edev0, netbuf);
+        tx_info->edev = edev;
+        list_add_tail(&edev->free_tx_bufs, &tx_info->node);
     }
     mtx_init(&edev->lock, mtx_plain);
 
@@ -971,6 +993,7 @@ static zx_status_t eth0_open(void* ctx, zx_device_t** out, uint32_t flags) {
 
     zx_status_t status;
     if ((status = device_add(edev0->zxdev, &args, &edev->zxdev)) < 0) {
+        free(edev->all_tx_bufs);
         free(edev);
         return status;
     }
@@ -1049,6 +1072,14 @@ static zx_status_t eth_bind(void* ctx, zx_device_t* dev) {
         status = ZX_ERR_NOT_SUPPORTED;
         goto fail;
     }
+
+    if (edev0->info.netbuf_size < sizeof(ethmac_netbuf_t)) {
+        zxlogf(ERROR, "eth: bind: device '%s': invalid buffer size %ld\n",
+               device_get_name(dev), edev0->info.netbuf_size);
+        status = ZX_ERR_NOT_SUPPORTED;
+        goto fail;
+    }
+    edev0->info.netbuf_size = ROUNDUP(edev0->info.netbuf_size, 8);
 
     mtx_init(&edev0->lock, mtx_plain);
     list_initialize(&edev0->list_active);

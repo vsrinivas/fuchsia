@@ -469,6 +469,7 @@ zx_status_t DWMacDevice::EthmacQuery(uint32_t options, ethmac_info_t* info) {
     info->features = ETHMAC_FEATURE_DMA;
     info->mtu = 1500;
     memcpy(info->mac, mac_, sizeof info->mac);
+    info->netbuf_size = sizeof(ethmac_netbuf_t);
     return ZX_OK;
 }
 

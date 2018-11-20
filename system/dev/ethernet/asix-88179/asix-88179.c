@@ -103,6 +103,11 @@ typedef struct {
     // TODO: support additional tx header fields
 } ax88179_tx_hdr_t;
 
+typedef struct txn_info {
+    ethmac_netbuf_t netbuf;
+    list_node_t node;
+} txn_info_t;
+
 static zx_status_t ax88179_read_mac(ax88179_t* eth, uint8_t reg_addr, uint8_t reg_len, void* data) {
     size_t out_length;
     zx_status_t status = usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
@@ -370,17 +375,16 @@ static void ax88179_write_complete(usb_request_t* request, void* cookie) {
     if (!list_is_empty(&eth->pending_netbuf)) {
         // If we have any pending netbufs, add them to the recently-freed usb request
         request->header.length = 0;
-        ethmac_netbuf_t* next_netbuf = list_peek_head_type(&eth->pending_netbuf, ethmac_netbuf_t,
-                                                           node);
-        while (next_netbuf != NULL && ax88179_append_to_tx_req(&eth->usb, request,
-                                                               next_netbuf) == ZX_OK) {
-            list_remove_head_type(&eth->pending_netbuf, ethmac_netbuf_t, node);
+        txn_info_t* next_txn = list_peek_head_type(&eth->pending_netbuf, txn_info_t, node);
+        while (next_txn != NULL && ax88179_append_to_tx_req(&eth->usb, request,
+                                                            &next_txn->netbuf) == ZX_OK) {
+            list_remove_head_type(&eth->pending_netbuf, txn_info_t, node);
             mtx_lock(&eth->mutex);
             if (eth->ifc.ops) {
-                ethmac_ifc_complete_tx(&eth->ifc, next_netbuf, ZX_OK);
+                ethmac_ifc_complete_tx(&eth->ifc, &next_txn->netbuf, ZX_OK);
             }
             mtx_unlock(&eth->mutex);
-            next_netbuf = list_peek_head_type(&eth->pending_netbuf, ethmac_netbuf_t, node);
+            next_txn = list_peek_head_type(&eth->pending_netbuf, txn_info_t, node);
         }
         list_add_tail(&eth->pending_usb_tx, &request->node);
     } else {
@@ -459,6 +463,7 @@ static void ax88179_handle_interrupt(ax88179_t* eth, usb_request_t* request) {
 
 static zx_status_t ax88179_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) {
     size_t length = netbuf->data_size;
+    txn_info_t* txn = containerof(netbuf, txn_info_t, netbuf);
 
     if (length > (AX88179_MTU + MAX_ETH_HDRS)) {
         zxlogf(ERROR, "ax88179: unsupported packet length %zu\n", length);
@@ -528,7 +533,7 @@ static zx_status_t ax88179_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t
     return ZX_OK;
 
 bufs_full:
-    list_add_tail(&eth->pending_netbuf, &netbuf->node);
+    list_add_tail(&eth->pending_netbuf, &txn->node);
     zxlogf(DEBUG1, "ax88179: buffers full, there are %zu pending netbufs\n",
             list_length(&eth->pending_netbuf));
     mtx_unlock(&eth->tx_lock);
@@ -582,6 +587,7 @@ static zx_status_t ax88179_query(void* ctx, uint32_t options, ethmac_info_t* inf
     memset(info, 0, sizeof(*info));
     info->mtu = 1500;
     memcpy(info->mac, eth->mac_addr, sizeof(eth->mac_addr));
+    info->netbuf_size = sizeof(txn_info_t);
 
     return ZX_OK;
 }

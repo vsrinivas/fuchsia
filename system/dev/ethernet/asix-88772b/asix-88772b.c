@@ -72,6 +72,11 @@ typedef struct {
     mtx_t mutex;
 } ax88772b_t;
 
+typedef struct txn_info {
+    ethmac_netbuf_t netbuf;
+    list_node_t node;
+} txn_info_t;
+
 static zx_status_t ax88772b_set_value(ax88772b_t* eth, uint8_t request, uint16_t value) {
     return usb_control(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
                        request, value, 0, NULL, 0, ZX_TIME_INFINITE, NULL);
@@ -263,11 +268,10 @@ static void ax88772b_write_complete(usb_request_t* request, void* cookie) {
     mtx_lock(&eth->mutex);
     if (!list_is_empty(&eth->pending_netbufs)) {
         // If we have any netbufs that are waiting to be sent, reuse the request we just got back
-        ethmac_netbuf_t* netbuf = list_remove_head_type(&eth->pending_netbufs, ethmac_netbuf_t,
-                                                        node);
-        zx_status_t send_result = ax88772b_send(eth, request, netbuf);
+        txn_info_t* txn = list_remove_head_type(&eth->pending_netbufs, txn_info_t, node);
+        zx_status_t send_result = ax88772b_send(eth, request, &txn->netbuf);
         if (eth->ifc.ops) {
-            ethmac_ifc_complete_tx(&eth->ifc, netbuf, send_result);
+            ethmac_ifc_complete_tx(&eth->ifc, &txn->netbuf, send_result);
         }
     } else {
         list_add_tail(&eth->free_write_reqs, &request->node);
@@ -347,9 +351,10 @@ static zx_status_t ax88772b_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_
 
     mtx_lock(&eth->mutex);
 
+    txn_info_t* txn = containerof(netbuf, txn_info_t, netbuf);
     list_node_t* node = list_remove_head(&eth->free_write_reqs);
     if (!node) {
-        list_add_tail(&eth->pending_netbufs, &netbuf->node);
+        list_add_tail(&eth->pending_netbufs, &txn->node);
         status = ZX_ERR_SHOULD_WAIT;
         goto out;
     }
@@ -409,6 +414,7 @@ static zx_status_t ax88772b_query(void* ctx, uint32_t options, ethmac_info_t* in
     ZX_DEBUG_ASSERT(USB_BUF_OUT_SIZE - ETH_HEADER_SIZE >= ETH_MTU);
     info->mtu = ETH_MTU;
     memcpy(info->mac, eth->mac_addr, sizeof(eth->mac_addr));
+    info->netbuf_size = sizeof(txn_info_t);
 
     return ZX_OK;
 }

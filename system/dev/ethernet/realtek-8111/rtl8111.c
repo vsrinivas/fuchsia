@@ -214,6 +214,7 @@ static zx_status_t rtl8111_query(void* ctx, uint32_t options, ethmac_info_t* inf
     memset(info, 0, sizeof(*info));
     info->mtu = ETH_BUF_SIZE;
     memcpy(info->mac, edev->mac, sizeof(edev->mac));
+    info->netbuf_size = sizeof(ethmac_netbuf_t);
 
     return ZX_OK;
 }

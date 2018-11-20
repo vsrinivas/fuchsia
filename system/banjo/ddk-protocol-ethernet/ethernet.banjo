@@ -4,7 +4,6 @@
 
 library ddk.protocol.ethernet;
 
-using zircon.listnode;
 using zx;
 
 const uint32 ETH_MAC_SIZE            = 6;    // bytes
@@ -39,14 +38,12 @@ struct EthmacInfo {
     uint32 mtu;
     array<uint8>:ETH_MAC_SIZE mac;
     array<uint8>:2 reserved0;
-    array<uint32>:4 reserved1;
+    uint64 netbuf_size;
+    array<uint32>:2 reserved1;
 };
 
-union EthmacInternal {
-    uint64 val;
-    vector<voidptr> ptr;
-};
-
+/// Note that this struct may have a private section encoded after it. Allocator much call parent
+/// device's |Query| to get the correct size.
 struct EthmacNetbuf {
     /// Provided by the generic ethernet driver.
     vector<voidptr> data;
@@ -54,12 +51,6 @@ struct EthmacNetbuf {
     zx.paddr phys;
     uint16 reserved;
     uint32 flags;
-
-    /// Shared between the generic ethernet and ethmac drivers.
-    zircon.listnode.ListNode node;
-
-    /// For use by the ethmac driver.
-    EthmacInternal u;
 };
 
 [Layout="ddk-interface"]

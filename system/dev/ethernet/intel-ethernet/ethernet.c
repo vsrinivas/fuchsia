@@ -96,6 +96,7 @@ static zx_status_t eth_query(void* ctx, uint32_t options, ethmac_info_t* info) {
     ZX_DEBUG_ASSERT(ETH_TXBUF_SIZE >= ETH_MTU);
     info->mtu = ETH_MTU;
     memcpy(info->mac, edev->eth.mac, sizeof(edev->eth.mac));
+    info->netbuf_size = sizeof(ethmac_netbuf_t);
 
     return ZX_OK;
 }

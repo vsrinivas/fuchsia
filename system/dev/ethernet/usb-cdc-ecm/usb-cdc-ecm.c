@@ -67,7 +67,7 @@ typedef struct {
     mtx_t tx_mutex;
     ecm_endpoint_t tx_endpoint;
     list_node_t tx_txn_bufs;        // list of usb_request_t
-    list_node_t tx_pending_infos;   // list of ethmac_netbuf_t
+    list_node_t tx_pending_infos;   // list of txn_info_t
     bool unbound;                   // set to true when device is going away. Guarded by tx_mutex
     uint64_t tx_endpoint_delay;     // wait time between 2 transmit requests
 
@@ -78,6 +78,11 @@ typedef struct {
     uint64_t rx_endpoint_delay;    // wait time between 2 recv requests
 } ecm_ctx_t;
 
+typedef struct txn_info {
+    ethmac_netbuf_t netbuf;
+    list_node_t node;
+} txn_info_t;
+
 static void ecm_unbind(void* cookie) {
     zxlogf(TRACE, "%s: unbinding\n", module_name);
     ecm_ctx_t* ctx = cookie;
@@ -85,10 +90,10 @@ static void ecm_unbind(void* cookie) {
     mtx_lock(&ctx->tx_mutex);
     ctx->unbound = true;
     if (ctx->ethmac_ifc.ops) {
-        ethmac_netbuf_t* netbuf;
-        while ((netbuf = list_remove_head_type(&ctx->tx_pending_infos, ethmac_netbuf_t, node)) !=
+        txn_info_t* txn;
+        while ((txn = list_remove_head_type(&ctx->tx_pending_infos, txn_info_t, node)) !=
                NULL) {
-            ethmac_ifc_complete_tx(&ctx->ethmac_ifc, netbuf, ZX_ERR_PEER_CLOSED);
+            ethmac_ifc_complete_tx(&ctx->ethmac_ifc, &txn->netbuf, ZX_ERR_PEER_CLOSED);
         }
     }
     mtx_unlock(&ctx->tx_mutex);
@@ -165,6 +170,7 @@ static zx_status_t ecm_ethmac_query(void* ctx, uint32_t options, ethmac_info_t* 
     memset(info, 0, sizeof(*info));
     info->mtu = eth->mtu;
     memcpy(info->mac, eth->mac_addr, sizeof(eth->mac_addr));
+    info->netbuf_size = sizeof(txn_info_t);
 
     return ZX_OK;
 }
@@ -255,11 +261,11 @@ static void usb_write_complete(usb_request_t* request, void* cookie) {
     }
 
     bool additional_tx_queued = false;
-    ethmac_netbuf_t* netbuf;
+    txn_info_t* txn;
     zx_status_t send_status = ZX_OK;
     if (!list_is_empty(&ctx->tx_pending_infos)) {
-        netbuf = list_peek_head_type(&ctx->tx_pending_infos, ethmac_netbuf_t, node);
-        if ((send_status = send_locked(ctx, netbuf)) != ZX_ERR_SHOULD_WAIT) {
+        txn = list_peek_head_type(&ctx->tx_pending_infos, txn_info_t, node);
+        if ((send_status = send_locked(ctx, &txn->netbuf)) != ZX_ERR_SHOULD_WAIT) {
             list_remove_head(&ctx->tx_pending_infos);
             additional_tx_queued = true;
         }
@@ -269,7 +275,7 @@ static void usb_write_complete(usb_request_t* request, void* cookie) {
 
     mtx_lock(&ctx->ethmac_mutex);
     if (additional_tx_queued && ctx->ethmac_ifc.ops) {
-        ethmac_ifc_complete_tx(&ctx->ethmac_ifc, netbuf, send_status);
+        ethmac_ifc_complete_tx(&ctx->ethmac_ifc, &txn->netbuf, send_status);
     }
     mtx_unlock(&ctx->ethmac_mutex);
 
@@ -348,7 +354,8 @@ static zx_status_t ecm_ethmac_queue_tx(void* cookie, uint32_t options, ethmac_ne
         status = send_locked(ctx, netbuf);
         if (status == ZX_ERR_SHOULD_WAIT) {
             // No buffers available, queue it up
-            list_add_tail(&ctx->tx_pending_infos, &netbuf->node);
+            txn_info_t* txn = containerof(netbuf, txn_info_t, netbuf);
+            list_add_tail(&ctx->tx_pending_infos, &txn->node);
         }
     }
 

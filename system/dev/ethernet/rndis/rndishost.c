@@ -234,6 +234,7 @@ static zx_status_t rndishost_query(void* ctx, uint32_t options, ethmac_info_t* i
     memset(info, 0, sizeof(*info));
     info->mtu = eth->mtu;
     memcpy(info->mac, eth->mac_addr, sizeof(eth->mac_addr));
+    info->netbuf_size = sizeof(ethmac_netbuf_t);
 
     return ZX_OK;
 }

@@ -116,6 +116,7 @@ zx_status_t TapDevice::EthmacQuery(uint32_t options, ethmac_info_t* info) {
     info->features = features_;
     info->mtu = mtu_;
     memcpy(info->mac, mac_, 6);
+    info->netbuf_size = sizeof(ethmac_netbuf_t);
     return ZX_OK;
 }
 

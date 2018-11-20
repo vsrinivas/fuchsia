@@ -429,6 +429,7 @@ static zx_status_t e1000_query(void* ctx, uint32_t options, ethmac_info_t* info)
     memset(info, 0, sizeof *info);
     info->mtu = ETH_MTU;
     memcpy(info->mac, adapter->hw.mac.addr, sizeof adapter->hw.mac.addr);
+    info->netbuf_size = sizeof(ethmac_netbuf_t);
 
     return ZX_OK;
 }
