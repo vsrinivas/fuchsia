@@ -35,7 +35,6 @@ const debug = false
 const logListen = false
 const logAccept = false
 
-const ZX_SOCKET_HALF_CLOSE = 1
 const ZXSIO_SIGNAL_INCOMING = zx.SignalUser0
 const ZXSIO_SIGNAL_OUTGOING = zx.SignalUser1
 const ZXSIO_SIGNAL_CONNECTED = zx.SignalUser3
@@ -292,12 +291,12 @@ func (ios *iostate) loopStreamRead(stk *stack.Stack) {
 				if err == tcpip.ErrConnectionRefused {
 					ios.lastError = err
 				}
-				_, err := ios.dataHandle.Write(nil, ZX_SOCKET_HALF_CLOSE)
+				err := ios.dataHandle.Shutdown(zx.SocketShutdownWrite)
 				switch mxerror.Status(err) {
 				case zx.ErrOk:
 				case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
 				default:
-					log.Printf("socket read: send ZX_SOCKET_HALF_CLOSE failed: %v", err)
+					log.Printf("socket read: shutdown failed: %v", err)
 				}
 				return
 			}
