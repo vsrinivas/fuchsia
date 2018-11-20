@@ -294,25 +294,57 @@ func (f *Source) initSource() error {
 	return nil
 }
 
+func oauth2Config(c *amber.OAuth2Config) *oauth2.Config {
+	if c == nil {
+		return nil
+	}
+	return &oauth2.Config{
+		ClientID:     c.ClientId,
+		ClientSecret: c.ClientSecret,
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  c.AuthUrl,
+			TokenURL: c.TokenUrl,
+		},
+		Scopes: c.Scopes,
+	}
+}
+
 func oauth2deviceConfig(c *amber.OAuth2Config) *oauth2device.Config {
 	if c == nil {
 		return nil
 	}
 
 	return &oauth2device.Config{
-		Config: &oauth2.Config{
-			ClientID:     c.ClientId,
-			ClientSecret: c.ClientSecret,
-			Endpoint: oauth2.Endpoint{
-				AuthURL:  c.AuthUrl,
-				TokenURL: c.TokenUrl,
-			},
-			Scopes: c.Scopes,
-		},
+		Config: oauth2Config(c),
 		DeviceEndpoint: oauth2device.DeviceEndpoint{
 			CodeURL: c.DeviceCodeUrl,
 		},
 	}
+}
+
+func oauth2HttpClient(httpClient *http.Client, cfg *oauth2.Config,
+	token *oauth2.Token) (*http.Client, oauth2.TokenSource) {
+	if cfg == nil {
+		return httpClient, nil
+	}
+
+	// If we have oauth2 configured, we need to wrap the client in order to
+	// inject the authentication header.
+	var tokenSource oauth2.TokenSource
+	// Store the client in the context so oauth2 can use it to
+	// fetch the token. This client's transport will also be used
+	// as the base of the client oauth2 returns to us, except for
+	// the request timeout, which we manually have to copy over.
+	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, httpClient)
+
+	timeout := httpClient.Timeout
+
+	tokenSource = cfg.TokenSource(ctx, token)
+	httpClient = oauth2.NewClient(ctx, tokenSource)
+
+	httpClient.Timeout = timeout
+
+	return httpClient, tokenSource
 }
 
 // Initialize (or reinitialize) the TUFClient. This is especially useful when
@@ -327,24 +359,8 @@ func (f *Source) updateTUFClientLocked() error {
 		return err
 	}
 
-	// If we have oauth2 configured, we need to wrap the client in order to
-	// inject the authentication header.
-	var tokenSource oauth2.TokenSource
-
-	if c := oauth2deviceConfig(f.cfg.Config.Oauth2Config); c != nil {
-		// Store the client in the context so oauth2 can use it to
-		// fetch the token. This client's transport will also be used
-		// as the base of the client oauth2 returns to us, except for
-		// the request timeout, which we manually have to copy over.
-		ctx := context.WithValue(context.Background(), oauth2.HTTPClient, httpClient)
-
-		timeout := httpClient.Timeout
-
-		tokenSource = c.TokenSource(ctx, f.cfg.Oauth2Token)
-		httpClient = oauth2.NewClient(ctx, tokenSource)
-
-		httpClient.Timeout = timeout
-	}
+	authConfig := oauth2Config(f.cfg.Config.Oauth2Config)
+	httpClient, tokenSource := oauth2HttpClient(httpClient, authConfig, f.cfg.Oauth2Token)
 
 	// Create a new tuf client that uses the new http client.
 	remoteStore, err := tuf.HTTPRemoteStore(f.cfg.Config.RepoUrl, nil, httpClient)
@@ -552,19 +568,27 @@ func (f *Source) waitForDeviceAuthorization(config *oauth2device.Config, code *o
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	f.cfg.Oauth2Token = token
-
-	if err := f.updateTUFClientLocked(); err != nil {
-		log.Printf("failed to update tuf client: %s", err)
-		return
-	}
-
-	if err := f.saveLocked(); err != nil {
-		log.Printf("failed to save config: %s", err)
+	if err := f.setAuthTokenLocked(token); err != nil {
 		return
 	}
 
 	log.Printf("remote store updated: %s", f.cfg.Config.Id)
+}
+
+func (f *Source) setAuthTokenLocked(token *oauth2.Token) error {
+	f.cfg.Oauth2Token = token
+
+	if err := f.updateTUFClientLocked(); err != nil {
+		log.Printf("failed to update tuf client: %s", err)
+		return err
+	}
+
+	if err := f.saveLocked(); err != nil {
+		log.Printf("failed to save config: %s", err)
+		return err
+	}
+
+	return nil
 }
 
 // UpdateIfStale updates this source if the source has not recently updated.
