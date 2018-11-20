@@ -314,6 +314,7 @@ zx_status_t Device::EthmacQuery(uint32_t options, ethmac_info_t* info) {
         info->features |= ETHMAC_FEATURE_SYNTH;
     }
     info->mtu = 1500;
+    info->netbuf_size = sizeof(ethmac_netbuf_t);
 
     return ZX_OK;
 }
