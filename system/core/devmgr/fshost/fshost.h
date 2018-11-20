@@ -111,7 +111,7 @@ private:
     };
     fbl::RefPtr<fs::Vnode> mount_nodes[fbl::count_of(kMountPoints)];
 
-    // The Root VFS manages the following filesytems:
+    // The Root VFS manages the following filesystems:
     // - The global root filesystem (including the mount points)
     // - "/boot"
     // - "/tmp"
