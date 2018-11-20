@@ -2,18 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIAPLAYER_TEST_MEDIAPLAYER_TEST_VIEW_H_
-#define GARNET_BIN_MEDIAPLAYER_TEST_MEDIAPLAYER_TEST_VIEW_H_
-
-#include <memory>
-#include <queue>
+#ifndef GARNET_BIN_MEDIAPLAYER_TEST_MEDIAPLAYER_TEST_UTIL_VIEW_H_
+#define GARNET_BIN_MEDIAPLAYER_TEST_MEDIAPLAYER_TEST_UTIL_VIEW_H_
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/mediaplayer/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
-
-#include "garnet/bin/mediaplayer/test/mediaplayer_test_params.h"
+#include <memory>
+#include <queue>
+#include "garnet/bin/mediaplayer/test/mediaplayer_test_util_params.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/media/timeline/timeline_function.h"
@@ -22,13 +20,13 @@
 namespace media_player {
 namespace test {
 
-class MediaPlayerTestView : public scenic::V1BaseView {
+class MediaPlayerTestUtilView : public scenic::V1BaseView {
  public:
-  MediaPlayerTestView(scenic::ViewContext view_context,
-                      fit::function<void(int)> quit_callback,
-                      const MediaPlayerTestParams& params);
+  MediaPlayerTestUtilView(scenic::ViewContext view_context,
+                          fit::function<void(int)> quit_callback,
+                          const MediaPlayerTestUtilParams& params);
 
-  ~MediaPlayerTestView() override;
+  ~MediaPlayerTestUtilView() override;
 
  private:
   enum class State { kPaused, kPlaying, kEnded };
@@ -69,7 +67,7 @@ class MediaPlayerTestView : public scenic::V1BaseView {
   void StartNewSeekInterval();
 
   fit::function<void(int)> quit_callback_;
-  const MediaPlayerTestParams& params_;
+  const MediaPlayerTestUtilParams& params_;
   size_t current_url_index_ = 0;
 
   scenic::ShapeNode background_node_;
@@ -95,10 +93,10 @@ class MediaPlayerTestView : public scenic::V1BaseView {
 
   bool scenic_ready_ = false;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerTestView);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerTestUtilView);
 };
 
 }  // namespace test
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIAPLAYER_TEST_MEDIAPLAYER_TEST_VIEW_H_
+#endif  // GARNET_BIN_MEDIAPLAYER_TEST_MEDIAPLAYER_TEST_UTIL_VIEW_H_

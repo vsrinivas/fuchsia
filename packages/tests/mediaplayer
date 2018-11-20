@@ -1,5 +1,6 @@
 {
     "packages": [
-        "//garnet/bin/mediaplayer:mediaplayer_tests"
+        "//garnet/bin/mediaplayer:mediaplayer_tests",
+        "//garnet/bin/mediaplayer:mediaplayer_test_util"
     ]
 }

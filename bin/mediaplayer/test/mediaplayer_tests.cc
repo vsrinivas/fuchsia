@@ -28,18 +28,18 @@ static constexpr uint32_t kSinkFeedMaxPacketCount = 10;
 constexpr char kBearFilePath[] = "/pkg/data/media_test_data/bear.mp4";
 
 // Base class for mediaplayer tests.
-class MediaPlayerTestUnattended
+class MediaPlayerTests
     : public component::testing::TestWithEnvironment {
  protected:
   struct Command {
     Command() = default;
     virtual ~Command() = default;
-    virtual void Execute(MediaPlayerTestUnattended* test) = 0;
+    virtual void Execute(MediaPlayerTests* test) = 0;
   };
 
   struct OpenCommand : public Command {
     OpenCommand(const std::string& path) : path_(path) {}
-    void Execute(MediaPlayerTestUnattended* test) override {
+    void Execute(MediaPlayerTests* test) override {
       auto fd = fxl::UniqueFD(open(path_.c_str(), O_RDONLY));
       EXPECT_TRUE(fd.is_valid());
       test->player_->SetFileSource(
@@ -51,7 +51,7 @@ class MediaPlayerTestUnattended
   };
 
   struct PlayCommand : public Command {
-    void Execute(MediaPlayerTestUnattended* test) override {
+    void Execute(MediaPlayerTests* test) override {
       test->player_->Play();
       test->should_play_ = true;
       test->ExecuteNextCommand();
@@ -59,7 +59,7 @@ class MediaPlayerTestUnattended
   };
 
   struct PauseCommand : public Command {
-    void Execute(MediaPlayerTestUnattended* test) override {
+    void Execute(MediaPlayerTests* test) override {
       test->player_->Pause();
       test->should_play_ = false;
       test->ExecuteNextCommand();
@@ -68,7 +68,7 @@ class MediaPlayerTestUnattended
 
   struct SeekCommand : public Command {
     SeekCommand(zx::duration position) : position_(position) {}
-    void Execute(MediaPlayerTestUnattended* test) override {
+    void Execute(MediaPlayerTests* test) override {
       test->player_->Seek(position_.get());
       test->start_position_ = position_.get();
       test->ExecuteNextCommand();
@@ -78,7 +78,7 @@ class MediaPlayerTestUnattended
 
   struct WaitForPositionCommand : public Command {
     WaitForPositionCommand(zx::duration position) : position_(position) {}
-    void Execute(MediaPlayerTestUnattended* test) override {
+    void Execute(MediaPlayerTests* test) override {
       test->wait_for_position_ = position_.get();
       // The |OnStatusChanged| handler calls |ExecuteNextCommand| for us when
       // the time comes.
@@ -88,7 +88,7 @@ class MediaPlayerTestUnattended
 
   struct SleepCommand : public Command {
     SleepCommand(zx::duration duration) : duration_(duration) {}
-    void Execute(MediaPlayerTestUnattended* test) override {
+    void Execute(MediaPlayerTests* test) override {
       async::PostDelayedTask(test->dispatcher(),
                              [test]() { test->ExecuteNextCommand(); },
                              zx::duration(duration_));
@@ -234,7 +234,7 @@ class MediaPlayerTestUnattended
 };  // namespace media_player
 
 // Play a synthetic WAV file from beginning to end.
-TEST_F(MediaPlayerTestUnattended, PlayWav) {
+TEST_F(MediaPlayerTests, PlayWav) {
   fake_audio_.renderer().ExpectPackets({{0, 4096, 0x20c39d1e31991800},
                                         {1024, 4096, 0xeaf137125d313800},
                                         {2048, 4096, 0x6162095671991800},
@@ -267,7 +267,7 @@ TEST_F(MediaPlayerTestUnattended, PlayWav) {
 }
 
 // Play an LPCM elementary stream using |StreamSource|
-TEST_F(MediaPlayerTestUnattended, StreamSource) {
+TEST_F(MediaPlayerTests, StreamSource) {
   fake_audio_.renderer().ExpectPackets({{0, 4096, 0xd2fbd957e3bf0000},
                                         {1024, 4096, 0xda25db3fa3bf0000},
                                         {2048, 4096, 0xe227e0f6e3bf0000},
@@ -327,7 +327,7 @@ TEST_F(MediaPlayerTestUnattended, StreamSource) {
 }
 
 // Play a real A/V file from beginning to end.
-TEST_F(MediaPlayerTestUnattended, PlayBear) {
+TEST_F(MediaPlayerTests, PlayBear) {
   // TODO(dalesat): Use ExpectPackets for audio.
   // This doesn't currently work, because the decoder behaves differently on
   // different targets.

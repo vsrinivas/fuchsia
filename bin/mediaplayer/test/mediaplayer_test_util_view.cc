@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/mediaplayer/test/mediaplayer_test_view.h"
+#include "garnet/bin/mediaplayer/test/mediaplayer_test_util_view.h"
 
 #include <fcntl.h>
 #include <hid/usages.h>
 #include <zx/eventpair.h>
-
-#include "garnet/bin/mediaplayer/test/mediaplayer_test_params.h"
+#include "garnet/bin/mediaplayer/graph/formatting.h"
+#include "garnet/bin/mediaplayer/test/mediaplayer_test_util_params.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/io/fd.h"
@@ -16,8 +16,6 @@
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/type_converters.h"
 #include "lib/url/gurl.h"
-
-#include "garnet/bin/mediaplayer/graph/formatting.h"
 
 namespace media_player {
 namespace test {
@@ -48,9 +46,9 @@ int64_t rand_less_than(int64_t limit) {
 
 }  // namespace
 
-MediaPlayerTestView::MediaPlayerTestView(scenic::ViewContext view_context,
-                                         fit::function<void(int)> quit_callback,
-                                         const MediaPlayerTestParams& params)
+MediaPlayerTestUtilView::MediaPlayerTestUtilView(
+    scenic::ViewContext view_context, fit::function<void(int)> quit_callback,
+    const MediaPlayerTestUtilParams& params)
     : scenic::V1BaseView(std::move(view_context), "Media Player"),
       quit_callback_(std::move(quit_callback)),
       params_(params),
@@ -108,9 +106,10 @@ MediaPlayerTestView::MediaPlayerTestView(scenic::ViewContext view_context,
   SetUrl(params_.urls().front());
 }
 
-MediaPlayerTestView::~MediaPlayerTestView() {}
+MediaPlayerTestUtilView::~MediaPlayerTestUtilView() {}
 
-bool MediaPlayerTestView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
+bool MediaPlayerTestUtilView::OnInputEvent(
+    fuchsia::ui::input::InputEvent event) {
   bool handled = false;
   if (event.is_pointer()) {
     const auto& pointer = event.pointer();
@@ -150,12 +149,12 @@ bool MediaPlayerTestView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
   return handled;
 }
 
-void MediaPlayerTestView::OnPropertiesChanged(
+void MediaPlayerTestUtilView::OnPropertiesChanged(
     ::fuchsia::ui::viewsv1::ViewProperties old_properties) {
   Layout();
 }
 
-void MediaPlayerTestView::SetUrl(const std::string url_as_string) {
+void MediaPlayerTestUtilView::SetUrl(const std::string url_as_string) {
   url::GURL url = url::GURL(url_as_string);
 
   if (url.SchemeIsFile()) {
@@ -166,7 +165,7 @@ void MediaPlayerTestView::SetUrl(const std::string url_as_string) {
   }
 }
 
-void MediaPlayerTestView::Layout() {
+void MediaPlayerTestUtilView::Layout() {
   if (!has_logical_size())
     return;
 
@@ -251,7 +250,7 @@ void MediaPlayerTestView::Layout() {
   InvalidateScene();
 }
 
-void MediaPlayerTestView::OnSceneInvalidated(
+void MediaPlayerTestUtilView::OnSceneInvalidated(
     fuchsia::images::PresentationInfo presentation_info) {
   if (!has_physical_size())
     return;
@@ -286,7 +285,7 @@ void MediaPlayerTestView::OnSceneInvalidated(
   }
 }
 
-void MediaPlayerTestView::OnChildAttached(
+void MediaPlayerTestUtilView::OnChildAttached(
     uint32_t child_key, ::fuchsia::ui::viewsv1::ViewInfo child_view_info) {
   FXL_DCHECK(child_key == kVideoChildKey);
 
@@ -294,7 +293,7 @@ void MediaPlayerTestView::OnChildAttached(
   Layout();
 }
 
-void MediaPlayerTestView::OnChildUnavailable(uint32_t child_key) {
+void MediaPlayerTestUtilView::OnChildUnavailable(uint32_t child_key) {
   FXL_DCHECK(child_key == kVideoChildKey);
   FXL_LOG(ERROR) << "Video view died unexpectedly";
 
@@ -305,7 +304,7 @@ void MediaPlayerTestView::OnChildUnavailable(uint32_t child_key) {
   Layout();
 }
 
-void MediaPlayerTestView::HandleStatusChanged(
+void MediaPlayerTestUtilView::HandleStatusChanged(
     const fuchsia::mediaplayer::PlayerStatus& status) {
   // Process status received from the player.
   if (status.timeline_function) {
@@ -357,7 +356,7 @@ void MediaPlayerTestView::HandleStatusChanged(
   InvalidateScene();
 }
 
-void MediaPlayerTestView::OnEndOfStream() {
+void MediaPlayerTestUtilView::OnEndOfStream() {
   if (params_.test_seek()) {
     StartNewSeekInterval();
     return;
@@ -382,7 +381,7 @@ void MediaPlayerTestView::OnEndOfStream() {
   media_player_->Play();
 }
 
-void MediaPlayerTestView::TogglePlayPause() {
+void MediaPlayerTestUtilView::TogglePlayPause() {
   switch (state_) {
     case State::kPaused:
       media_player_->Play();
@@ -399,7 +398,7 @@ void MediaPlayerTestView::TogglePlayPause() {
   }
 }
 
-int64_t MediaPlayerTestView::progress_ns() const {
+int64_t MediaPlayerTestUtilView::progress_ns() const {
   if (duration_ns_ == 0) {
     return 0;
   }
@@ -418,7 +417,7 @@ int64_t MediaPlayerTestView::progress_ns() const {
   return position;
 }
 
-float MediaPlayerTestView::normalized_progress() const {
+float MediaPlayerTestUtilView::normalized_progress() const {
   if (duration_ns_ == 0) {
     return 0.0f;
   }
@@ -426,7 +425,7 @@ float MediaPlayerTestView::normalized_progress() const {
   return progress_ns() / static_cast<float>(duration_ns_);
 }
 
-void MediaPlayerTestView::StartNewSeekInterval() {
+void MediaPlayerTestUtilView::StartNewSeekInterval() {
   in_current_seek_interval_ = false;
 
   if (duration_ns_ == 0) {

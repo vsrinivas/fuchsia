@@ -2,25 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIAPLAYER_TEST_MEDIAPLAYER_TEST_PARAMS_H_
-#define GARNET_BIN_MEDIAPLAYER_TEST_MEDIAPLAYER_TEST_PARAMS_H_
+#ifndef GARNET_BIN_MEDIAPLAYER_TEST_MEDIAPLAYER_TEST_UTIL_PARAMS_H_
+#define GARNET_BIN_MEDIAPLAYER_TEST_MEDIAPLAYER_TEST_UTIL_PARAMS_H_
 
 #include <string>
 #include <vector>
-
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
 
 namespace media_player {
 namespace test {
 
-class MediaPlayerTestParams {
+class MediaPlayerTestUtilParams {
  public:
-  MediaPlayerTestParams(const fxl::CommandLine& command_line);
+  MediaPlayerTestUtilParams(const fxl::CommandLine& command_line);
 
   bool is_valid() const { return is_valid_; }
-
-  bool unattended() const { return urls_.empty(); }
 
   bool play() const { return play_; }
 
@@ -42,10 +39,10 @@ class MediaPlayerTestParams {
   bool loop_ = false;
   bool test_seek_ = false;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerTestParams);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerTestUtilParams);
 };
 
 }  // namespace test
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIAPLAYER_TEST_MEDIAPLAYER_TEST_PARAMS_H_
+#endif  // GARNET_BIN_MEDIAPLAYER_TEST_MEDIAPLAYER_TEST_UTIL_PARAMS_H_

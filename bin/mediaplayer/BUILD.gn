@@ -54,6 +54,48 @@ executable("mediaplayer_bin") {
   ]
 }
 
+executable("mediaplayer_test_util_bin") {
+  output_name = "mediaplayer_test_util"
+
+  sources = [
+    "test/test_util_main.cc",
+    "test/mediaplayer_test_util_params.cc",
+    "test/mediaplayer_test_util_params.h",
+    "test/mediaplayer_test_util_view.cc",
+    "test/mediaplayer_test_util_view.h",
+  ]
+
+  deps = [
+    ":mediaplayer_bin",
+    "//garnet/bin/mediaplayer/graph",
+    "//garnet/public/fidl/fuchsia.mediaplayer",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/ui/base_view/cpp",
+    "//garnet/public/lib/url",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+package("mediaplayer_test_util") {
+  binary = "mediaplayer_test_util"
+
+  testonly = true
+
+  deps = [
+    ":mediaplayer_test_util_bin",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/mediaplayer_test_util.cmx")
+      dest = "mediaplayer_test_util.cmx"
+    },
+  ]
+}
+
 executable("tests") {
   output_name = "mediaplayer_tests"
 
@@ -77,12 +119,7 @@ executable("tests") {
     "test/fakes/fake_wav_reader.h",
     "test/fakes/packet_info.cc",
     "test/fakes/packet_info.h",
-    "test/main.cc",
-    "test/mediaplayer_test_params.cc",
-    "test/mediaplayer_test_params.h",
-    "test/mediaplayer_test_unattended.cc",
-    "test/mediaplayer_test_view.cc",
-    "test/mediaplayer_test_view.h",
+    "test/mediaplayer_tests.cc",
     "test/sink_feeder.cc",
     "test/sink_feeder.h",
   ]
@@ -97,6 +134,7 @@ executable("tests") {
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/ui/base_view/cpp",
     "//garnet/public/lib/url",
+    "//third_party/googletest:gtest_main",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/zx",

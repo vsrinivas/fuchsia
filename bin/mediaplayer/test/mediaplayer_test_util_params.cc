@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/mediaplayer/test/mediaplayer_test_params.h"
+#include "garnet/bin/mediaplayer/test/mediaplayer_test_util_params.h"
 
 #include <iostream>
-
 #include "lib/fxl/strings/split_string.h"
 
 namespace media_player {
 namespace test {
 
-MediaPlayerTestParams::MediaPlayerTestParams(
+MediaPlayerTestUtilParams::MediaPlayerTestUtilParams(
     const fxl::CommandLine& command_line) {
   is_valid_ = false;
 
@@ -36,10 +35,9 @@ MediaPlayerTestParams::MediaPlayerTestParams(
     }
   }
 
-  if (urls_.empty() && (play_ || loop_ || test_seek_)) {
+  if (urls_.empty()) {
     Usage();
-    std::cerr
-        << "Urls/paths required for --play, --loop and --test-seek options\n";
+    std::cerr << "Urls/paths required\n";
     return;
   }
 
@@ -56,14 +54,13 @@ MediaPlayerTestParams::MediaPlayerTestParams(
   is_valid_ = true;
 }
 
-void MediaPlayerTestParams::Usage() {
-  std::cerr << "mediaplayer_tests usage:\n";
-  std::cerr << "    set_root_view mediaplayer_tests [ options ] url-or-path*\n";
+void MediaPlayerTestUtilParams::Usage() {
+  std::cerr << "mediaplayer_test_util usage:\n";
+  std::cerr << "    set_root_view mediaplayer_test_util [ options ] url-or-path*\n";
   std::cerr << "options:\n";
   std::cerr << "    --play       play on startup\n";
   std::cerr << "    --loop       play the files in a loop on startup\n";
   std::cerr << "    --test-seek  play random segments of one file on startup\n";
-  std::cerr << "For CQ test, run with no arguments\n";
 }
 
 }  // namespace test
