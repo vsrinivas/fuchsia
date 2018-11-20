@@ -12,4 +12,9 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
-fx-symbolize
+
+if [[ $# > 1 && "$1" = "-i" ]]; then
+  fx-symbolize "$2"
+else
+  fx-symbolize
+fi

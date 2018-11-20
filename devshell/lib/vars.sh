@@ -27,9 +27,12 @@ function fx-symbolize {
     source "${FUCHSIA_DIR}/buildtools/vars.sh"
   fi
   local idstxt="${FUCHSIA_BUILD_DIR}/ids.txt"
+  if [[ $# > 0 ]]; then
+    idstxt="$1"
+  fi
   local prebuilt_dir="${FUCHSIA_DIR}/zircon/prebuilt/downloads"
   local llvm_symbolizer="${BUILDTOOLS_CLANG_DIR}/bin/llvm-symbolizer"
-  "${prebuilt_dir}/symbolize" -ids "$idstxt" -llvm-symbolizer "$llvm_symbolizer"
+  "${prebuilt_dir}/symbolize" -ids-rel -ids "$idstxt" -llvm-symbolizer "$llvm_symbolizer"
 }
 
 function fx-config-read-if-present {
