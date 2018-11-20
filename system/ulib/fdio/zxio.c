@@ -10,10 +10,10 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <zircon/device/ioctl.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
-#include "private-fidl.h"
 #include "private-remoteio.h"
 #include "private.h"
 
@@ -206,6 +206,61 @@ static zx_status_t fdio_zxio_remote_clone(fdio_t* io, zx_handle_t* handles, uint
     handles[0] = local;
     types[0] = PA_FDIO_REMOTE;
     return 1;
+}
+
+static zx_status_t fidl_ioctl(zx_handle_t h, uint32_t op, const void* in_buf,
+                              size_t in_len, void* out_buf, size_t out_len,
+                              size_t* out_actual) {
+    size_t in_handle_count = 0;
+    size_t out_handle_count = 0;
+    switch (IOCTL_KIND(op)) {
+    case IOCTL_KIND_GET_HANDLE:
+        out_handle_count = 1;
+        break;
+    case IOCTL_KIND_GET_TWO_HANDLES:
+        out_handle_count = 2;
+        break;
+    case IOCTL_KIND_GET_THREE_HANDLES:
+        out_handle_count = 3;
+        break;
+    case IOCTL_KIND_SET_HANDLE:
+        in_handle_count = 1;
+        break;
+    case IOCTL_KIND_SET_TWO_HANDLES:
+        in_handle_count = 2;
+        break;
+    }
+
+    if (in_len < in_handle_count * sizeof(zx_handle_t)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (out_len < out_handle_count * sizeof(zx_handle_t)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx_handle_t hbuf[out_handle_count];
+    size_t out_handle_actual;
+    zx_status_t io_status, status;
+    if ((io_status = fuchsia_io_NodeIoctl(h, op,
+                                          out_len, (zx_handle_t*) in_buf,
+                                          in_handle_count, in_buf,
+                                          in_len, &status, hbuf,
+                                          out_handle_count, &out_handle_actual,
+                                          out_buf, out_len, out_actual)) != ZX_OK) {
+        return io_status;
+    }
+
+    if (status != ZX_OK) {
+        zx_handle_close_many(hbuf, out_handle_actual);
+        return status;
+    }
+    if (out_handle_actual != out_handle_count) {
+        zx_handle_close_many(hbuf, out_handle_actual);
+        return ZX_ERR_IO;
+    }
+
+    memcpy(out_buf, hbuf, out_handle_count * sizeof(zx_handle_t));
+    return ZX_OK;
 }
 
 static ssize_t fdio_zxio_remote_ioctl(fdio_t* io, uint32_t op, const void* in_buf,

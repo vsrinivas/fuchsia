@@ -15,10 +15,6 @@
 
 #include <unittest/unittest.h>
 
-// Used to minimize boilerplate for invoking FIDL requests
-// under highly controlled situations.
-#include <lib/fdio/../../../private-fidl.h>
-
 #include <utility>
 
 namespace {

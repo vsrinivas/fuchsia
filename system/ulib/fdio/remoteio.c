@@ -29,7 +29,6 @@
 #include <lib/fdio/util.h>
 #include <lib/fdio/vfs.h>
 
-#include "private-fidl.h"
 #include "private-remoteio.h"
 
 #define ZXDEBUG 0
