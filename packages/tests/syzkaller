@@ -1,8 +1,0 @@
-{
-    "imports": [
-        "garnet/packages/kitchen_sink"
-    ],
-    "packages": [
-        "//garnet/testing/syzkaller"
-    ]
-}

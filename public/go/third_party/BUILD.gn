@@ -6,12 +6,6 @@ import("//build/go/go_library.gni")
 
 # TODO(raggi): move this into golibs
 
-# TODO(raggi): move this into golibs
-go_library("github.com/google/syzkaller") {
-  name = "github.com/google/syzkaller"
-  source_dir = "//third_party/syzkaller"
-}
-
 template("golib") {
   go_library(target_name) {
     name = target_name
