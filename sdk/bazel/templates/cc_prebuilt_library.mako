@@ -25,11 +25,7 @@ cc_library(
         "${dep}",
         % endfor
     ],
-    includes = [
-        % for include in sorted(data.includes):
-        "${include}",
-        % endfor
-    ],
+    strip_include_prefix = "${data.includes}",
     data = fuchsia_select({
         % for arch in sorted(data.prebuilts.keys()):
         "//build_defs/target_cpu:${arch}": [":${arch}_dist"],

@@ -107,8 +107,9 @@ def main():
         print('--> Testing for %s target' % arch)
         config_flags = ['--config=fuchsia_%s' % arch]
         print(' (A) Testing with C++14 (default)')
+        cpp14_flags = ['--cxxopt=-Wc++14-compat', '--cxxopt=-Wc++17-extensions']
         if not BazelTester(args.no_sdk, args.ignored, args.bazel,
-                           optional_flags=config_flags).run():
+                           optional_flags=config_flags + cpp14_flags).run():
             return 1
         print(' (B) Testing with C++17')
         cpp17_flags = ['--cxxopt=-std=c++17', '--cxxopt=-Wc++17-compat']

@@ -19,9 +19,5 @@ cc_library(
         "${dep}",
         % endfor
     ],
-    includes = [
-        % for include in sorted(data.includes):
-        "${include}",
-        % endfor
-    ],
+    strip_include_prefix = "${data.includes}",
 )

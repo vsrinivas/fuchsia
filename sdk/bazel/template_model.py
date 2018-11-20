@@ -18,7 +18,7 @@ class _CppLibrary(object):
         self.name = name
         self.hdrs = []
         self.deps = []
-        self.includes = []
+        self.includes = ''
 
 
 class CppSourceLibrary(_CppLibrary):

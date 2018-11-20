@@ -202,8 +202,7 @@ class BazelBuilder(Frontend):
         for dep in atom['deps']:
             library.deps.append('//pkg/' + sanitize(dep))
 
-        library.includes.append(os.path.relpath(atom['include_dir'],
-                                                atom['root']))
+        library.includes = os.path.relpath(atom['include_dir'], atom['root'])
 
         include_paths = map(lambda h: os.path.relpath(h, atom['include_dir']),
                             atom['headers'])
@@ -228,8 +227,7 @@ class BazelBuilder(Frontend):
             dep_name = sanitize(dep)
             library.deps.append('//fidl/%s:%s_cc' % (dep_name, dep_name))
 
-        library.includes.append(os.path.relpath(atom['include_dir'],
-                                                atom['root']))
+        library.includes = os.path.relpath(atom['include_dir'], atom['root'])
 
         include_paths = map(lambda h: os.path.relpath(h, atom['include_dir']),
                             atom['headers'])

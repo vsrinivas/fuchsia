@@ -3,11 +3,11 @@
 cc_binary(
     name = "headers",
     srcs = [
-      "headers.cc",
+        "headers.cc",
     ],
     deps = [
-      % for dep in sorted(data['deps']):
-      "@fuchsia_sdk${dep}",
-      % endfor
+        % for dep in sorted(data['deps']):
+        "@fuchsia_sdk${dep}",
+        % endfor
     ],
 )
