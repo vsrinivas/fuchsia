@@ -70,8 +70,7 @@ class RawBlockDispatcher : public BlockDispatcher {
 
 void CreateRawBlockDispatcher(fuchsia::io::FilePtr file,
                               NestedBlockDispatcherCallback callback) {
-  auto file_ptr = file.get();
-  file_ptr->GetAttr(
+  file->GetAttr(
       [file = std::move(file), callback = std::move(callback)](
           zx_status_t status, fuchsia::io::NodeAttributes attrs) mutable {
         if (status != ZX_OK) {
