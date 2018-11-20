@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <utility>
 
+#include <fbl/algorithm.h>
 #include <fs/connection.h>
 #include <launchpad/launchpad.h>
 #include <lib/bootfs/parser.h>
@@ -16,42 +17,40 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
+#include "util.h"
+
 namespace bootsvc {
 
-namespace {
-
-const char* kLastPanicFilepath = "log/last-panic.txt";
-
-} // namespace
-
-zx_status_t BootfsService::Create(zx::vmo bootfs_vmo, async_dispatcher_t* dispatcher,
+zx_status_t BootfsService::Create(async_dispatcher_t* dispatcher,
                                   fbl::RefPtr<BootfsService>* out) {
     auto svc = fbl::AdoptRef(new BootfsService());
 
+    zx_status_t status = memfs::CreateFilesystem("<root>", &svc->vfs_, &svc->root_);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    svc->vfs_.SetDispatcher(dispatcher);
+    *out = std::move(svc);
+    return ZX_OK;
+}
+
+zx_status_t BootfsService::AddBootfs(zx::vmo bootfs_vmo) {
     bootfs::Parser parser;
     zx_status_t status = parser.Init(zx::unowned_vmo(bootfs_vmo));
     if (status != ZX_OK) {
         return status;
     }
 
-    status = memfs::CreateFilesystem("<root>", &svc->vfs_, &svc->root_);
-    if (status != ZX_OK) {
-        return status;
-    }
-
     // Load all of the entries in the bootfs into the FS
-    status = parser.Parse([&bootfs_vmo, &svc](const bootfs_entry_t *entry) -> zx_status_t {
-        svc->PublishVmo(entry->name, bootfs_vmo, entry->data_off, entry->data_len);
+    status = parser.Parse([this, &bootfs_vmo](const bootfs_entry_t *entry) -> zx_status_t {
+        PublishUnownedVmo(entry->name, bootfs_vmo, entry->data_off, entry->data_len);
         return ZX_OK;
     });
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    svc->vfs_.SetDispatcher(dispatcher);
-    svc->bootfs_ = std::move(bootfs_vmo);
-    *out = std::move(svc);
-    return ZX_OK;
+    // Add this VMO to our list of parts even on failure, since we may have
+    // added a file
+    owned_vmos_.push_back(std::move(bootfs_vmo));
+    return status;
 }
 
 zx_status_t BootfsService::CreateRootConnection(zx::channel* out) {
@@ -99,18 +98,28 @@ zx_status_t BootfsService::Open(const char* path, zx::vmo* vmo, size_t* size) {
 }
 
 BootfsService::~BootfsService() {
-    auto callback = [vmo(std::move(bootfs_))](zx_status_t status) mutable {
-        // Bootfs uses multiple Vnodes which share a reference to a single VMO.
-        // Since the lifetime of the VMO is coupled with the BootfsService, all
+    auto callback = [parts(std::move(owned_vmos_))](zx_status_t status) mutable {
+        // Bootfs uses multiple Vnodes which may share a reference to a single VMO.
+        // Since the lifetime of the VMOs are coupled with the BootfsService, all
         // connections to these Vnodes must be terminated (with Shutdown) before
-        // we can safely close the VMO
-        vmo.reset();
+        // we can safely close the VMOs
+        parts.reset();
     };
     vfs_.Shutdown(std::move(callback));
 }
 
-zx_status_t BootfsService::PublishVmo(const char* path, const zx::vmo& vmo, zx_off_t off,
+zx_status_t BootfsService::PublishVmo(const char* path, zx::vmo vmo, zx_off_t off,
                                       size_t len) {
+    zx_status_t status = PublishUnownedVmo(path, vmo, off, len);
+    if (status != ZX_OK) {
+        return status;
+    }
+    owned_vmos_.push_back(std::move(vmo));
+    return ZX_OK;
+}
+
+zx_status_t BootfsService::PublishUnownedVmo(const char* path, const zx::vmo& vmo, zx_off_t off,
+                                             size_t len) {
     ZX_ASSERT(root_ != nullptr);
     fbl::RefPtr<memfs::VnodeDir> vnb(root_);
     zx_status_t r;
@@ -191,18 +200,19 @@ void BootfsService::PublishStartupVmos(uint8_t type, const char* debug_type_name
 
         if (!strcmp(name + kVmoSubdirLen, "crashlog")) {
             // the crashlog has a special home
-            strcpy(name, kLastPanicFilepath);
+            strcpy(name, kLastPanicFilePath);
         }
 
-        status = PublishVmo(name, *vmo, 0, size);
+        if (owned_vmo.is_valid()) {
+            status = PublishVmo(name, std::move(owned_vmo), 0, size);
+        } else {
+            status = PublishUnownedVmo(name, *vmo, 0, size);
+        }
         if (status != ZX_OK) {
-            printf("bootsvc: failed to add %s %u to filesystem: %s\n",
-                   debug_type_name, i, zx_status_get_string(status));
+            printf("bootsvc: failed to add %s %u to filesystem as %s: %s\n",
+                   debug_type_name, i, name, zx_status_get_string(status));
             continue;
         }
-        // Leak the VMO, since vfs_ may rely on it being still around after we
-        // publish it.
-        __UNUSED auto h = owned_vmo.release();
     }
 }
 

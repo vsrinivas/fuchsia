@@ -6,10 +6,13 @@
 #include <stdio.h>
 #include <utility>
 
+#include <bootdata/decompress.h>
+#include <fbl/vector.h>
 #include <launchpad/launchpad.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/util.h>
 #include <lib/zx/debuglog.h>
+#include <zircon/boot/bootdata.h>
 #include <zircon/dlfcn.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -17,6 +20,7 @@
 
 #include "bootfs-loader-service.h"
 #include "bootfs-service.h"
+#include "util.h"
 
 namespace {
 
@@ -101,6 +105,7 @@ void LoadCmdlineOverridesFromBootfs(const fbl::RefPtr<bootsvc::BootfsService>& b
 
 struct LaunchNextProcessArgs {
     fbl::RefPtr<bootsvc::BootfsService> bootfs;
+    fbl::Vector<zx::vmo> bootdata;
 };
 
 // Launch the next process in the boot chain.
@@ -112,6 +117,7 @@ struct LaunchNextProcessArgs {
 // - A handle to the root job
 // - A handle to the root resource (TODO(teisenbe): This should be a channel to
 //                                  a service for obtaining the root resource)
+// - A handle to each of the bootdata VMOs the kernel provided
 int LaunchNextProcess(void* raw_ctx) {
     fbl::unique_ptr<LaunchNextProcessArgs> args(static_cast<LaunchNextProcessArgs*>(raw_ctx));
 
@@ -158,6 +164,11 @@ int LaunchNextProcess(void* raw_ctx) {
 
     launchpad_add_handle(lp, zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)), PA_HND(PA_RESOURCE, 0));
 
+    unsigned bootdata_idx = 0;
+    for (zx::vmo& bootdata : args->bootdata) {
+        launchpad_add_handle(lp, bootdata.release(), PA_HND(PA_VMO_BOOTDATA, bootdata_idx++));
+    }
+
     const char* errmsg;
     if ((status = launchpad_go(lp, nullptr, &errmsg)) < 0) {
         printf("bootsvc: launchpad %s failed: %s: %s\n", next_program, errmsg,
@@ -168,15 +179,85 @@ int LaunchNextProcess(void* raw_ctx) {
     return 0;
 }
 
-void StartLaunchNextProcessThread(const fbl::RefPtr<bootsvc::BootfsService>& bootfs) {
+void StartLaunchNextProcessThread(const fbl::RefPtr<bootsvc::BootfsService>& bootfs,
+                                  fbl::Vector<zx::vmo> bootdata) {
     auto args = fbl::make_unique<LaunchNextProcessArgs>();
     args->bootfs = bootfs;
+    args->bootdata = std::move(bootdata);
 
     thrd_t t;
     int status = thrd_create(&t, LaunchNextProcess, args.release());
     ZX_ASSERT(status == thrd_success);
     status = thrd_detach(t);
     ZX_ASSERT(status == thrd_success);
+}
+
+// Checks if there are any additions to the BOOT bootfs and if there is a
+// crashlog from the bootloader.  Modifies the bootdata_vmos vector as necessary
+zx_status_t ProcessBootdata(const fbl::RefPtr<bootsvc::BootfsService>& bootfs,
+                            const fbl::Vector<zx::vmo>& bootdata_vmos) {
+    for (const zx::vmo& vmo : bootdata_vmos) {
+        bootdata_t bootdata;
+        zx_status_t status = vmo.read(&bootdata, 0, sizeof(bootdata));
+        if (status < 0) {
+            continue;
+        }
+        if ((bootdata.type != BOOTDATA_CONTAINER) || (bootdata.extra != BOOTDATA_MAGIC)) {
+            printf("bootsvc: bootdata item does not contain bootdata\n");
+            continue;
+        }
+        if (!(bootdata.flags & BOOTDATA_FLAG_V2)) {
+            printf("bootsvc: bootdata v1 no longer supported\n");
+            continue;
+        }
+
+        size_t len = bootdata.length;
+        size_t off = sizeof(bootdata);
+
+        while (len > sizeof(bootdata)) {
+            zx_status_t status = vmo.read(&bootdata, off, sizeof(bootdata));
+            if (status < 0) {
+                break;
+            }
+            size_t itemlen = BOOTDATA_ALIGN(sizeof(bootdata_t) + bootdata.length);
+            if (itemlen > len) {
+                printf("bootsvc: bootdata item too large (%zd > %zd)\n", itemlen, len);
+                break;
+            }
+            switch (bootdata.type) {
+            case BOOTDATA_CONTAINER:
+                printf("bootsvc: unexpected bootdata container header\n");
+                break;
+            case BOOTDATA_BOOTFS_BOOT: {
+                const char* errmsg;
+                zx::vmo bootfs_vmo;
+                status = decompress_bootdata(zx_vmar_root_self(), vmo.get(),
+                                             off, bootdata.length + sizeof(bootdata_t),
+                                             bootfs_vmo.reset_and_get_address(), &errmsg);
+                if (status != ZX_OK) {
+                    printf("bootsvc: failed to decompress bootfs: %s\n", errmsg);
+                    break;
+                }
+                status = bootfs->AddBootfs(std::move(bootfs_vmo));
+                if (status != ZX_OK) {
+                    printf("bootsvc: failed to add bootfs: %s\n", errmsg);
+                    break;
+                }
+
+                // Mark that we've already processed this one.
+                bootdata.type = BOOTDATA_BOOTFS_DISCARD;
+                vmo.write(&bootdata.type, off + offsetof(bootdata_t, type),
+                          sizeof(bootdata.type));
+                break;
+            }
+            default:
+                break;
+            }
+            off += itemlen;
+            len -= itemlen;
+        }
+    }
+    return ZX_OK;
 }
 
 } // namespace
@@ -197,10 +278,17 @@ int main(int argc, char** argv) {
     // Set up the bootfs service
     printf("bootsvc: Creating bootfs service...\n");
     fbl::RefPtr<bootsvc::BootfsService> bootfs_svc;
-    zx_status_t status = bootsvc::BootfsService::Create(std::move(bootfs_vmo), loop.dispatcher(),
-                                                        &bootfs_svc);
+    zx_status_t status = bootsvc::BootfsService::Create(loop.dispatcher(), &bootfs_svc);
     ZX_ASSERT_MSG(status == ZX_OK, "BootfsService creation failed: %s\n",
                   zx_status_get_string(status));
+    status = bootfs_svc->AddBootfs(std::move(bootfs_vmo));
+    ZX_ASSERT_MSG(status == ZX_OK, "bootfs add failed: %s\n", zx_status_get_string(status));
+
+    // Process the bootdata to get additional bootfs parts
+    printf("bootsvc: Processing bootdata...\n");
+    fbl::Vector<zx::vmo> bootdata = bootsvc::RetrieveBootdata();
+    status = ProcessBootdata(bootfs_svc, bootdata);
+    ZX_ASSERT_MSG(status == ZX_OK, "Procesing bootdata failed: %s\n", zx_status_get_string(status));
 
     // Apply any cmdline overrides from bootfs
     printf("bootsvc: Loading boot cmdline overrides...\n");
@@ -230,7 +318,7 @@ int main(int argc, char** argv) {
     // it may issue requests to the loader, which runs in the async loop that
     // starts running after this.
     printf("bootsvc: Launching next process...\n");
-    StartLaunchNextProcessThread(bootfs_svc);
+    StartLaunchNextProcessThread(bootfs_svc, std::move(bootdata));
 
     // Begin serving the bootfs fileystem and loader
     loop.Run();

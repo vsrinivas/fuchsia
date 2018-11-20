@@ -4,18 +4,25 @@
 
 #include <dirent.h>
 #include <dlfcn.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <utility>
 
 #include <fbl/algorithm.h>
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
+#include <fbl/unique_fd.h>
+#include <fbl/unique_ptr.h>
 #include <lib/fdio/namespace.h>
 #include <lib/zx/job.h>
 #include <lib/zx/vmo.h>
 #include <unittest/unittest.h>
+#include <zircon/boot/bootdata.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
+
+#include "util.h"
 
 namespace {
 
@@ -23,6 +30,66 @@ namespace {
 bool TestBootCmdline() {
     BEGIN_TEST;
     ASSERT_STR_EQ(getenv("bootsvc.next"), "bin/bootsvc-tests");
+    END_TEST;
+}
+
+// Make sure that bootsvc passed the bootdata here, and check if it published
+// a crashlog if one of the bootdata had one.
+bool TestBootdata() {
+    BEGIN_TEST;
+
+    fbl::Vector<zx::vmo> bootdata_vmos = bootsvc::RetrieveBootdata();
+    ASSERT_GT(bootdata_vmos.size(), 0);
+
+    for (const zx::vmo& vmo : bootdata_vmos) {
+        bootdata_t bootdata;
+        zx_status_t status = vmo.read(&bootdata, 0, sizeof(bootdata));
+        if (status < 0) {
+            continue;
+        }
+        if ((bootdata.type != BOOTDATA_CONTAINER) || (bootdata.extra != BOOTDATA_MAGIC)) {
+            continue;
+        }
+        if (!(bootdata.flags & BOOTDATA_FLAG_V2)) {
+            continue;
+        }
+
+        size_t len = bootdata.length;
+        size_t off = sizeof(bootdata);
+
+        while (len > sizeof(bootdata)) {
+            zx_status_t status = vmo.read(&bootdata, off, sizeof(bootdata));
+            if (status < 0) {
+                break;
+            }
+            size_t itemlen = BOOTDATA_ALIGN(sizeof(bootdata_t) + bootdata.length);
+            if (itemlen > len) {
+                break;
+            }
+            switch (bootdata.type) {
+            case BOOTDATA_LAST_CRASHLOG: {
+                // If we see a LAST_CRASHLOG entry, then the kernel should have
+                // translated it into a VMO file, and bootsvc should have put it
+                // at the path below.
+                char path[strlen(bootsvc::kLastPanicFilePath) + 7];
+                snprintf(path, sizeof(path), "/boot/%s", bootsvc::kLastPanicFilePath);
+
+                auto file_buffer = fbl::make_unique<uint8_t[]>(bootdata.length);
+                auto vmo_buffer = fbl::make_unique<uint8_t[]>(bootdata.length);
+                fbl::unique_fd fd(open(path, O_RDONLY));
+                ASSERT_TRUE(fd.is_valid());
+                ASSERT_EQ(read(fd.get(), file_buffer.get(), bootdata.length), bootdata.length);
+                ASSERT_EQ(vmo.read(vmo_buffer.get(), off + sizeof(bootdata_t), bootdata.length), ZX_OK);
+
+                ASSERT_BYTES_EQ(file_buffer.get(), vmo_buffer.get(), bootdata.length, "");
+                break;
+            }
+            }
+            off += itemlen;
+            len -= itemlen;
+        }
+    }
+
     END_TEST;
 }
 
@@ -102,6 +169,7 @@ bool TestVdsosPresent() {
 
 BEGIN_TEST_CASE(bootsvc_integration_tests)
 RUN_TEST(TestBootCmdline)
+RUN_TEST(TestBootdata)
 RUN_TEST(TestLoader)
 RUN_TEST(TestNamespace)
 RUN_TEST(TestStartupHandles)

@@ -14,6 +14,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/bootfs-loader-service.cpp \
     $(LOCAL_DIR)/bootfs-service.cpp \
     $(LOCAL_DIR)/main.cpp \
+    $(LOCAL_DIR)/util.cpp \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io \
@@ -37,6 +38,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/trace \
     system/ulib/zx \
     system/ulib/zxcpp \
+    third_party/ulib/lz4 \
 
 MODULE_LIBS := \
     system/ulib/async.default \
@@ -55,6 +57,7 @@ MODULE_GROUP := test
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/integration-test.cpp \
+    $(LOCAL_DIR)/util.cpp \
 
 MODULE_NAME := bootsvc-tests
 
