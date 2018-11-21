@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/images/crashpad.gni")
 import("//build/package.gni")
 
 executable("bin") {
@@ -23,10 +22,6 @@ executable("bin") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]
-
-  if (enable_crashpad) {
-    defines = [ "USE_CRASHPAD=1" ]
-  }
 }
 
 package("kernel_crash_checker") {

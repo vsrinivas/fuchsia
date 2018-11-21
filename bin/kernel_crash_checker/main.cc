@@ -79,7 +79,6 @@ int main(int argc, char** argv) {
   }
   FX_LOGS(INFO) << "dumping log from previous kernel panic:\n" << crashlog_str;
 
-#if USE_CRASHPAD
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   fuchsia::net::ConnectivityPtr connectivity =
       component::StartupContext::CreateFromStartupInfo()
@@ -92,7 +91,6 @@ int main(int argc, char** argv) {
     crashpad_analyzer.ProcessCrashlog(std::move(crashlog_vmo).ToTransport());
   };
   loop.Run();
-#endif  // USE_CRASHPAD
 
   return 0;
 }
