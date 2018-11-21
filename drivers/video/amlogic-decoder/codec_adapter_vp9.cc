@@ -300,6 +300,7 @@ void CodecAdapterVp9::CoreCodecConfigureBuffers(
     CodecPort port, const std::vector<std::unique_ptr<CodecPacket>>& packets) {
   if (port == kOutputPort) {
     ZX_DEBUG_ASSERT(all_output_packets_.empty());
+    ZX_DEBUG_ASSERT(free_output_packets_.empty());
     ZX_DEBUG_ASSERT(!all_output_buffers_.empty());
     ZX_DEBUG_ASSERT(all_output_buffers_.size() == packets.size());
     for (auto& packet : packets) {
@@ -369,6 +370,7 @@ void CodecAdapterVp9::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
     // The old all_output_buffers_ are no longer valid.
     all_output_buffers_.clear();
     all_output_packets_.clear();
+    free_output_packets_.clear();
   }
 }
 
