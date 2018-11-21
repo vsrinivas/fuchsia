@@ -2207,7 +2207,6 @@ static void dc_driver_added_sys(Driver* drv, const char* version) {
 
 static int system_driver_loader(void* arg) {
     find_loadable_drivers("/system/driver", dc_driver_added_sys);
-    find_loadable_drivers("/system/lib/driver", dc_driver_added_sys);
 
     zx_packet_user_t pkt = {};
     pkt.u32[0] = CTL_ADD_SYSTEM;
@@ -2247,7 +2246,6 @@ void coordinator() {
 
     find_loadable_drivers("/boot/driver", dc_driver_added_init);
     find_loadable_drivers("/boot/driver/test", dc_driver_added_init);
-    find_loadable_drivers("/boot/lib/driver", dc_driver_added_init);
 
     // Special case early handling for the ramdisk boot
     // path where /system is present before the coordinator
