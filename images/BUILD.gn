@@ -266,6 +266,17 @@ action("preinstall.manifest") {
     sources += [ pkg_rspfile ]
     args += [ "@" + rebase_path(pkg_rspfile, root_build_dir) ]
   }
+
+  update_meta_dir =
+      get_label_info(":update.meta", "target_out_dir") + "/update.meta"
+  update_meta_far_merkle = update_meta_dir + "/meta.far.merkle"
+  args += [
+    "--entry",
+    "update/0=" + rebase_path(update_meta_far_merkle, root_build_dir),
+  ]
+  deps += [
+    ":update.meta",
+  ]
 }
 
 
@@ -342,7 +353,10 @@ action("blob.manifest") {
     blob_manifest,
   ]
   depfile = blob_manifest + ".d"
-  deps = [":system_image.meta"]
+  deps = [
+    ":system_image.meta",
+    ":update.meta",
+  ]
   inputs = []
   script = "blob_manifest.py"
   args = [ "@{{response_file_name}}" ]
@@ -351,6 +365,7 @@ action("blob.manifest") {
     "--output=" + rebase_path(blob_manifest, root_build_dir),
     "--depfile=" + rebase_path(depfile, root_build_dir),
     "--input=" + rebase_path("$target_out_dir/system_image.meta/blobs.json", root_build_dir),
+    "--input=" + rebase_path("$target_out_dir/update.meta/blobs.json", root_build_dir),
   ]
   foreach(pkg_label, monolith_packages + preinstall_packages) {
     pkg_target_name = get_label_info(pkg_label, "name")
