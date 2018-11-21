@@ -351,33 +351,32 @@ static zx_status_t zxio_remote_rewind(zxio_t* io) {
     return io_status != ZX_OK ? io_status : status;
 }
 
-static const zxio_ops_t zxio_remote_ops = {
-    .release = zxio_remote_release,
-    .close = zxio_remote_close,
-    .wait_begin = zxio_null_wait_begin,
-    .wait_end = zxio_null_wait_end,
-    .clone_async = zxio_remote_clone_async,
-    .sync = zxio_remote_sync,
-    .attr_get = zxio_remote_attr_get,
-    .attr_set = zxio_remote_attr_set,
-    .read = zxio_remote_read,
-    .read_at = zxio_remote_read_at,
-    .write = zxio_remote_write,
-    .write_at = zxio_remote_write_at,
-    .seek = zxio_remote_seek,
-    .truncate = zxio_remote_truncate,
-    .flags_get = zxio_remote_flags_get,
-    .flags_set = zxio_remote_flags_set,
-    .vmo_get = zxio_remote_vmo_get,
-    .open = zxio_null_open,
-    .open_async = zxio_remote_open_async,
-    .unlink = zxio_remote_unlink,
-    .token_get = zxio_remote_token_get,
-    .rename = zxio_remote_rename,
-    .link = zxio_remote_link,
-    .readdir = zxio_remote_readdir,
-    .rewind = zxio_remote_rewind,
-};
+static constexpr zxio_ops_t zxio_remote_ops = []() {
+    zxio_ops_t ops = zxio_default_ops;
+    ops.release = zxio_remote_release;
+    ops.close = zxio_remote_close;
+    ops.clone_async = zxio_remote_clone_async;
+    ops.sync = zxio_remote_sync;
+    ops.attr_get = zxio_remote_attr_get;
+    ops.attr_set = zxio_remote_attr_set;
+    ops.read = zxio_remote_read;
+    ops.read_at = zxio_remote_read_at;
+    ops.write = zxio_remote_write;
+    ops.write_at = zxio_remote_write_at;
+    ops.seek = zxio_remote_seek;
+    ops.truncate = zxio_remote_truncate;
+    ops.flags_get = zxio_remote_flags_get;
+    ops.flags_set = zxio_remote_flags_set;
+    ops.vmo_get = zxio_remote_vmo_get;
+    ops.open_async = zxio_remote_open_async;
+    ops.unlink = zxio_remote_unlink;
+    ops.token_get = zxio_remote_token_get;
+    ops.rename = zxio_remote_rename;
+    ops.link = zxio_remote_link;
+    ops.readdir = zxio_remote_readdir;
+    ops.rewind = zxio_remote_rewind;
+    return ops;
+}();
 
 zx_status_t zxio_remote_init(zxio_storage_t* storage, zx_handle_t control,
                              zx_handle_t event) {

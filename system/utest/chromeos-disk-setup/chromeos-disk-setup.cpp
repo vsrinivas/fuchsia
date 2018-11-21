@@ -70,13 +70,13 @@ static zx_status_t mock_seek(zxio_t* io, size_t offset, zxio_seek_origin_t start
     return ZX_OK;
 }
 
-constexpr zxio_ops_t mock_ops = ([]() {
-    zxio_ops_t ops = zxio_null_ops;
+constexpr zxio_ops_t mock_ops = []() {
+    zxio_ops_t ops = zxio_default_ops;
     ops.read = &mock_read;
     ops.write = &mock_write;
     ops.seek = &mock_seek;
     return ops;
-})();
+}();
 
 class TestState {
 public:
@@ -119,8 +119,9 @@ public:
         ASSERT_TRUE(fd_);
         zx_status_t rc = gpt_device_init(fd_.get(), BlockSize(), BlockCount(),
                                          &device_);
-        ASSERT_GE(rc, 0, "Coult not initialize gpt");
-        gpt_device_finalize(device_);
+        ASSERT_GE(rc, 0, "Could not initialize gpt");
+        rc = gpt_device_finalize(device_);
+        ASSERT_GE(rc, 0, "Could not finalize gpt");
         END_HELPER;
     }
 

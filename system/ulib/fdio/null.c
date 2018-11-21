@@ -67,7 +67,7 @@ zx_status_t fdio_default_set_flags(fdio_t* io, uint32_t flags) {
 }
 
 ssize_t fdio_default_read(fdio_t* io, void* _data, size_t len) {
-    return 0;
+    return ZX_ERR_WRONG_TYPE;
 }
 
 ssize_t fdio_default_read_at(fdio_t* io, void* _data, size_t len, off_t offset) {
@@ -75,7 +75,7 @@ ssize_t fdio_default_read_at(fdio_t* io, void* _data, size_t len, off_t offset) 
 }
 
 ssize_t fdio_default_write(fdio_t* io, const void* _data, size_t len) {
-    return len;
+    return ZX_ERR_WRONG_TYPE;
 }
 
 ssize_t fdio_default_write_at(fdio_t* io, const void* _data, size_t len, off_t offset) {
@@ -147,10 +147,18 @@ zx_status_t fdio_default_get_vmo(fdio_t* io, int flags, zx_handle_t* out) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
+static ssize_t fdio_null_read(fdio_t* io, void* _data, size_t len) {
+    return 0;
+}
+
+static ssize_t fdio_null_write(fdio_t* io, const void* _data, size_t len) {
+    return len;
+}
+
 static fdio_ops_t zx_null_ops = {
-    .read = fdio_default_read,
+    .read = fdio_null_read,
     .read_at = fdio_default_read_at,
-    .write = fdio_default_write,
+    .write = fdio_null_write,
     .write_at = fdio_default_write_at,
     .seek = fdio_default_seek,
     .misc = fdio_default_misc,

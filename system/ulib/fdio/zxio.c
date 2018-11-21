@@ -4,6 +4,7 @@
 
 #include <lib/fdio/util.h>
 #include <lib/zxio/inception.h>
+#include <lib/zxio/null.h>
 #include <lib/zxio/zxio.h>
 #include <poll.h>
 #include <stdatomic.h>
@@ -531,11 +532,7 @@ static zx_status_t fdio_zxio_vmofile_get_vmo(fdio_t* io, int flags,
 fdio_ops_t fdio_zxio_vmofile_ops = {
     .read = fdio_zxio_read,
     .read_at = fdio_zxio_read_at,
-    // Rather than using fdio_zxio_write, which fails with ZX_ERR_NOT_SUPPORTED
-    // for vmofile, we use fdio_default_write, which "succeeds" but actually
-    // does nothing. This behavior matches the behavior of the implementaiton
-    // prior to zxio, but seems inconsistent.
-    .write = fdio_default_write,
+    .write = fdio_zxio_write,
     .write_at = fdio_zxio_write_at,
     .seek = fdio_zxio_seek,
     .misc = fdio_default_misc,

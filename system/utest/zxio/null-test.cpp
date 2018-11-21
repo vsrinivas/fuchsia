@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/zxio/inception.h>
+#include <lib/zxio/null.h>
 #include <lib/zxio/zxio.h>
 
 #include <unittest/unittest.h>
@@ -25,13 +25,15 @@ bool null_basic_test(void) {
     ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_attr_set(&io, 0u, &attr));
     char buffer[1024];
     memset(buffer, 0, sizeof(buffer));
-    size_t actual = 0u;
-    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_read(&io, buffer, sizeof(buffer), &actual));
-    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_read_at(&io, 0u, buffer, sizeof(buffer), &actual));
-    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_write(&io, buffer, sizeof(buffer), &actual));
-    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_write_at(&io, 0u, buffer, sizeof(buffer), &actual));
+    size_t actual = 5u;
+    ASSERT_EQ(ZX_OK, zxio_read(&io, buffer, sizeof(buffer), &actual));
+    EXPECT_EQ(0u, actual);
+    ASSERT_EQ(ZX_ERR_WRONG_TYPE, zxio_read_at(&io, 0u, buffer, sizeof(buffer), &actual));
+    ASSERT_EQ(ZX_OK, zxio_write(&io, buffer, sizeof(buffer), &actual));
+    EXPECT_EQ(sizeof(buffer), actual);
+    ASSERT_EQ(ZX_ERR_WRONG_TYPE, zxio_write_at(&io, 0u, buffer, sizeof(buffer), &actual));
     size_t offset = 0u;
-    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_seek(&io, 0u, fuchsia_io_SeekOrigin_START,
+    ASSERT_EQ(ZX_ERR_WRONG_TYPE, zxio_seek(&io, 0u, fuchsia_io_SeekOrigin_START,
                                               &offset));
     ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_truncate(&io, 0u));
     uint32_t flags = 0u;
@@ -59,6 +61,8 @@ bool null_basic_test(void) {
               zxio_dirent_iterator_init(&iter, &io, buffer2, sizeof(buffer2)));
     zxio_dirent_t* entry = nullptr;
     ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_dirent_iterator_next(&iter, &entry));
+
+    ASSERT_EQ(ZX_OK, zxio_close(&io));
 
     END_TEST;
 }

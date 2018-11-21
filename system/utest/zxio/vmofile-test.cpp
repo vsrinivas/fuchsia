@@ -45,8 +45,8 @@ bool vmofile_basic_test(void) {
     ASSERT_EQ(ZX_OK, zxio_read_at(io, 1u, buffer, 6, &actual));
     EXPECT_EQ(actual, 6);
     EXPECT_STR_EQ("fghijk", buffer);
-    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_write(io, buffer, sizeof(buffer), &actual));
-    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_write_at(io, 0u, buffer, sizeof(buffer), &actual));
+    ASSERT_EQ(ZX_ERR_WRONG_TYPE, zxio_write(io, buffer, sizeof(buffer), &actual));
+    ASSERT_EQ(ZX_ERR_WRONG_TYPE, zxio_write_at(io, 0u, buffer, sizeof(buffer), &actual));
     size_t offset = 2u;
     ASSERT_EQ(ZX_OK, zxio_seek(io, 2u, fuchsia_io_SeekOrigin_START, &offset));
     EXPECT_EQ(offset, 2u);

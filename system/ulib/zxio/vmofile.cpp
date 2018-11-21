@@ -148,33 +148,17 @@ static zx_status_t zxio_vmofile_seek(zxio_t* io, size_t offset,
     return ZX_OK;
 }
 
-static const zxio_ops_t zxio_vmofile_ops = {
-    .release = zxio_vmofile_release,
-    .close = zxio_vmofile_close,
-    .wait_begin = zxio_null_wait_begin,
-    .wait_end = zxio_null_wait_end,
-    .clone_async = zxio_vmofile_clone_async,
-    .sync = zxio_null_sync,
-    .attr_get = zxio_vmofile_attr_get,
-    .attr_set = zxio_null_attr_set,
-    .read = zxio_vmofile_read,
-    .read_at = zxio_vmofile_read_at,
-    .write = zxio_null_write,
-    .write_at = zxio_null_write_at,
-    .seek = zxio_vmofile_seek,
-    .truncate = zxio_null_truncate,
-    .flags_get = zxio_null_flags_get,
-    .flags_set = zxio_null_flags_set,
-    .vmo_get = zxio_null_vmo_get,
-    .open = zxio_null_open,
-    .open_async = zxio_null_open_async,
-    .unlink = zxio_null_unlink,
-    .token_get = zxio_null_token_get,
-    .rename = zxio_null_rename,
-    .link = zxio_null_link,
-    .readdir = zxio_null_readdir,
-    .rewind = zxio_null_rewind,
-};
+static constexpr zxio_ops_t zxio_vmofile_ops = []() {
+    zxio_ops_t ops = zxio_default_ops;
+    ops.release = zxio_vmofile_release;
+    ops.close = zxio_vmofile_close;
+    ops.clone_async = zxio_vmofile_clone_async;
+    ops.attr_get = zxio_vmofile_attr_get;
+    ops.read = zxio_vmofile_read;
+    ops.read_at = zxio_vmofile_read_at;
+    ops.seek = zxio_vmofile_seek;
+    return ops;
+}();
 
 zx_status_t zxio_vmofile_init(zxio_storage_t* storage, zx_handle_t control,
                               zx_handle_t vmo, zx_off_t offset, zx_off_t length,

@@ -15,10 +15,6 @@
 
 __BEGIN_CDECLS
 
-// null ------------------------------------------------------------------------
-
-zx_status_t zxio_null_init(zxio_t* remote);
-
 // remote ----------------------------------------------------------------------
 
 // A |zxio_t| backend that uses the |fuchsia.io.Node| protocol.

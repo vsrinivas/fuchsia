@@ -85,33 +85,17 @@ static zx_status_t zxio_pipe_write(zxio_t* io, const void* buffer,
     return zx_socket_write(pipe->socket, 0, buffer, capacity, out_actual);
 }
 
-static const zxio_ops_t zxio_pipe_ops = {
-    .release = zxio_pipe_release,
-    .close = zxio_pipe_close,
-    .wait_begin = zxio_pipe_wait_begin,
-    .wait_end = zxio_pipe_wait_end,
-    .clone_async = zxio_null_clone_async,
-    .sync = zxio_null_sync,
-    .attr_get = zxio_pipe_attr_get,
-    .attr_set = zxio_null_attr_set,
-    .read = zxio_pipe_read,
-    .read_at = zxio_null_read_at,
-    .write = zxio_pipe_write,
-    .write_at = zxio_null_write_at,
-    .seek = zxio_null_seek,
-    .truncate = zxio_null_truncate,
-    .flags_get = zxio_null_flags_get,
-    .flags_set = zxio_null_flags_set,
-    .vmo_get = zxio_null_vmo_get,
-    .open = zxio_null_open,
-    .open_async = zxio_null_open_async,
-    .unlink = zxio_null_unlink,
-    .token_get = zxio_null_token_get,
-    .rename = zxio_null_rename,
-    .link = zxio_null_link,
-    .readdir = zxio_null_readdir,
-    .rewind = zxio_null_rewind,
-};
+static constexpr zxio_ops_t zxio_pipe_ops = []() {
+    zxio_ops_t ops = zxio_default_ops;
+    ops.release = zxio_pipe_release;
+    ops.close = zxio_pipe_close;
+    ops.wait_begin = zxio_pipe_wait_begin;
+    ops.wait_end = zxio_pipe_wait_end;
+    ops.attr_get = zxio_pipe_attr_get;
+    ops.read = zxio_pipe_read;
+    ops.write = zxio_pipe_write;
+    return ops;
+}();
 
 zx_status_t zxio_pipe_init(zxio_storage_t* storage, zx_handle_t socket) {
     zxio_pipe_t* pipe = reinterpret_cast<zxio_pipe_t*>(storage);
