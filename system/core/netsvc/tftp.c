@@ -230,6 +230,12 @@ static tftp_status paver_open_write(const char* filename, size_t size, file_info
     } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_ZIRCONR_HOST_FILENAME)) {
         printf("netsvc: Running ZIRCON-R Paver\n");
         argv[1] = "install-zirconr";
+    } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_VBMETAA_HOST_FILENAME)) {
+        printf("netsvc: Running VBMETA-A Paver\n");
+        argv[1] = "install-vbmetaa";
+    } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_VBMETAB_HOST_FILENAME)) {
+        printf("netsvc: Running VBMETA-B Paver\n");
+        argv[1] = "install-vbmetab";
     } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_SSHAUTH_HOST_FILENAME)) {
         printf("netsvc: Installing SSH authorized_keys\n");
         argv[1] = "install-data-file";

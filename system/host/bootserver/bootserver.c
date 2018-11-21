@@ -202,6 +202,8 @@ void usage(void) {
             "  --zircona <file>         use the supplied file as a ZIRCON-A ZBI\n"
             "  --zirconb <file>         use the supplied file as a ZIRCON-B ZBI\n"
             "  --zirconr <file>         use the supplied file as a ZIRCON-R ZBI\n"
+            "  --vbmetaa <file>         use the supplied file as a AVB vbmeta_a image\n"
+            "  --vbmetab <file>         use the supplied file as a AVB vbmeta_b image\n"
             "  --authorized-keys <file> use the supplied file as an authorized_keys file\n"
             "  --netboot    use the netboot protocol\n"
             "  --tftp       use the tftp protocol (default)\n"
@@ -294,6 +296,8 @@ int main(int argc, char** argv) {
     const char* zircona_image = NULL;
     const char* zirconb_image = NULL;
     const char* zirconr_image = NULL;
+    const char* vbmetaa_image = NULL;
+    const char* vbmetab_image = NULL;
     const char* authorized_keys = NULL;
     const char* fvm_images[MAX_FVM_IMAGES] = {NULL, NULL, NULL, NULL};
     const char* kernel_fn = NULL;
@@ -378,6 +382,22 @@ int main(int argc, char** argv) {
                 return -1;
             }
             zirconr_image = argv[1];
+        } else if (!strcmp(argv[1], "--vbmetaa")) {
+            argc--;
+            argv++;
+            if (argc <= 1) {
+                fprintf(stderr, "'--vbmetaa' option requires an argument (vbmeta_a image)\n");
+                return -1;
+            }
+            vbmetaa_image = argv[1];
+        } else if (!strcmp(argv[1], "--vbmetab")) {
+            argc--;
+            argv++;
+            if (argc <= 1) {
+                fprintf(stderr, "'--vbmetab' option requires an argument (vbmeta_a image)\n");
+                return -1;
+            }
+            vbmetab_image = argv[1];
         } else if (!strcmp(argv[1], "--authorized-keys")) {
             argc--;
             argv++;
@@ -481,7 +501,7 @@ int main(int argc, char** argv) {
         argv++;
     }
     if (!kernel_fn && !bootloader_image && !efi_image && !kernc_image && !zircona_image &&
-        !zirconb_image && !zirconr_image && !fvm_images[0]) {
+        !zirconb_image && !zirconr_image && !vbmetaa_image && !vbmetab_image && !fvm_images[0]) {
         usage();
     }
     if (!nodename) {
@@ -618,6 +638,12 @@ int main(int argc, char** argv) {
         }
         if (status == 0 && zirconr_image) {
             status = xfer(&ra, zirconr_image, NB_ZIRCONR_FILENAME);
+        }
+        if (status == 0 && vbmetaa_image) {
+            status = xfer(&ra, vbmetaa_image, NB_VBMETAA_FILENAME);
+        }
+        if (status == 0 && vbmetab_image) {
+            status = xfer(&ra, vbmetab_image, NB_VBMETAB_FILENAME);
         }
         if (status == 0 && authorized_keys) {
             status = xfer(&ra, authorized_keys, NB_SSHAUTH_FILENAME);
