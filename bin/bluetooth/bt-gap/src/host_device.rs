@@ -104,8 +104,8 @@ impl HostDevice {
         self.host.set_connectable(value)
     }
 
-    pub async fn stop_discovery(&self) -> fidl::Result<Status> {
-        await!(self.host.stop_discovery())
+    pub fn stop_discovery(&self) -> impl Future<Output = fidl::Result<Status>> {
+        self.host.stop_discovery()
     }
 
     pub fn set_discoverable(&self, discoverable: bool) -> impl Future<Output = fidl::Result<Status>> {

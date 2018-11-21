@@ -33,7 +33,7 @@ use fuchsia_bluetooth::{
     util::clone_remote_device
 };
 use fuchsia_async::{self as fasync, TimeoutExt};
-use fuchsia_syslog::{fx_log_err, fx_log_info};
+use fuchsia_syslog::{fx_log_err, fx_log_info, fx_vlog};
 use fuchsia_zircon as zx;
 use fuchsia_zircon::Duration;
 use futures::{task::{LocalWaker, Waker}, Future, Poll, FutureExt, TryFutureExt};
@@ -67,6 +67,7 @@ pub struct DiscoveryRequestToken {
 
 impl Drop for DiscoveryRequestToken {
     fn drop(&mut self) {
+        fx_vlog!(1, "DiscoveryRequestToken dropped");
         if let Some(host) = self.adap.upgrade() {
             host.write().stop_discovery();
         }
