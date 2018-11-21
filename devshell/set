@@ -122,6 +122,51 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 
+function guess_config_within_layer {
+  local config_type="$1"
+  local config_name="$2"
+  local __resultvar="$3"
+
+  # Guess the petal we're using. We'll search at this petal and below for
+  # config matching the type and short name
+  local current_petal
+  current_petal="$(${FUCHSIA_DIR}/build/gn/guess_layer.py)" || return 1
+  readonly current_petal
+
+  # Compute a lookup order starting at the current petal going down.
+  local petal_order="${current_petal}"
+  case $current_petal in
+    vendor/*)
+      petal_order="${petal_order},topaz,peridot,garnet"
+      ;;
+    "topaz")
+      petal_order="${petal_order},peridot,garnet"
+      ;;
+    "peridot")
+      petal_order="${petal_order},garnet"
+      ;;
+  esac
+  readonly petal_order
+
+  # Look through petals in this order to find configs with matching names.
+  IFS=,
+  local petal
+  for petal in $petal_order; do
+    guessed_config="${petal}/${config_type}/${config_name}.gni"
+    if [[ -a "${FUCHSIA_DIR}/${guessed_config}" ]]; then
+      echo "Guessing ${config_type} config ${guessed_config}"
+      eval "${__resultvar}"="${guessed_config}"
+      return
+    fi
+  done
+
+  echo "Could not guess a ${config_type} configuration matching \"${config_name}\""
+  echo "Please specify the full path from the root of the checkout such as"
+  echo "garnet/${config_type}/base.gni"
+  exit 1
+}
+
+
 function main {
   fx-standard-switches "$@"
   set -- "${FX_ARGV[@]}"
@@ -415,6 +460,11 @@ function main {
   fi
 
   for board in ${boards[@]}; do
+    if [[ ! -a "${FUCHSIA_DIR}/${board}" ]]; then
+      local guessed_board=""
+      guess_config_within_layer "boards" "${board}" guessed_board
+      board="${guessed_board}"
+    fi
     gn_args+=" import(\"//${board}\")"
   done
 
@@ -426,6 +476,11 @@ function main {
   fi
 
   for product in ${products[@]}; do
+    if [[ ! -a "${FUCHSIA_DIR}/${product}" ]]; then
+      local guessed_product=""
+      guess_config_within_layer "products" "${product}" guessed_product
+      product="${guessed_product}"
+    fi
     gn_args+=" import(\"//${product}\")"
   done
 
