@@ -75,9 +75,9 @@ void usb_request_release(usb_request_t* req);
 // completed or failed and the request and any virtual or physical memory obtained
 // from it may not be touched again by the processor.
 //
-// The usb_request's complete_cb() will be called as the last action of
-// this method.
-void usb_request_complete(usb_request_t* req, zx_status_t status, zx_off_t actual);
+// The complete_cb() will be called as the last action of this method.
+void usb_request_complete(usb_request_t* req, zx_status_t status, zx_off_t actual,
+                          usb_request_complete_cb complete_cb, void* complete_cb_cookie);
 
 // initializes a phys_iter_t for a usb request
 // max_length is the maximum length of a range returned by usb_request_phys_iter_next()

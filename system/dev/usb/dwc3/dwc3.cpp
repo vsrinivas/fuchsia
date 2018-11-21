@@ -290,7 +290,7 @@ static void dwc3_request_queue(void* ctx, usb_request_t* req) {
     unsigned ep_num = dwc3_ep_num(req->header.ep_address);
     if (ep_num < 2 || ep_num >= countof(dwc->eps)) {
         zxlogf(ERROR, "dwc3_request_queue: bad ep address 0x%02X\n", req->header.ep_address);
-        usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0);
+        usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0, req->complete_cb, req->cookie);
         return;
     }
 

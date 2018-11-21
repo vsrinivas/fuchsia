@@ -171,7 +171,7 @@ void xhci_request_queue(xhci_t* xhci, usb_request_t* req) {
     }
 
     if (status != ZX_OK && status != ZX_ERR_BUFFER_TOO_SMALL) {
-        usb_request_complete(req, status, 0);
+        usb_request_complete(req, status, 0, req->complete_cb, req->cookie);
     }
 }
 

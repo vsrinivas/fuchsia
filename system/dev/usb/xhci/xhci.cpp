@@ -479,10 +479,10 @@ static void xhci_slot_stop(xhci_slot_t* slot, xhci_t* xhci) {
         if (ep->state != EP_STATE_DEAD) {
             usb_request_t* req;
             while (xhci_remove_from_list_tail(xhci, &ep->pending_reqs, &req)) {
-                usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0);
+                usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, req->complete_cb, req->cookie);
             }
             while (xhci_remove_from_list_tail(xhci, &ep->queued_reqs, &req)) {
-                usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0);
+                usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, req->complete_cb, req->cookie);
             }
             ep->state = EP_STATE_DEAD;
         }

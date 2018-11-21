@@ -154,7 +154,8 @@ zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint8_t ep_addre
 
     // call complete callbacks out of the lock
     while (xhci_remove_from_list_head(xhci, &completed_reqs, &req)) {
-        usb_request_complete(req, req->response.status, req->response.actual);
+        usb_request_complete(req, req->response.status, req->response.actual,
+                             req->complete_cb, req->cookie);
     }
 
     return status;
@@ -424,7 +425,8 @@ zx_status_t xhci_queue_transfer(xhci_t* xhci, usb_request_t* req) {
 
     // call complete callbacks out of the lock
     while (xhci_remove_from_list_head(xhci, &completed_reqs, &req)) {
-        usb_request_complete(req, req->response.status, req->response.actual);
+        usb_request_complete(req, req->response.status, req->response.actual,
+                             req->complete_cb, req->cookie);
     }
 
     return ZX_OK;
@@ -506,7 +508,8 @@ zx_status_t xhci_cancel_transfers(xhci_t* xhci, uint32_t slot_id, uint32_t ep_in
 
     // call complete callbacks out of the lock
     while (xhci_remove_from_list_head(xhci, &completed_reqs, &req)) {
-        usb_request_complete(req, req->response.status, req->response.actual);
+        usb_request_complete(req, req->response.status, req->response.actual,
+                             req->complete_cb, req->cookie);
     }
 
     return status;
@@ -800,6 +803,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
 
     // call complete callbacks out of the lock
     while (xhci_remove_from_list_head(xhci, &completed_reqs, &req)) {
-        usb_request_complete(req, req->response.status, req->response.actual);
+        usb_request_complete(req, req->response.status, req->response.actual,
+                             req->complete_cb, req->cookie);
     }
 }

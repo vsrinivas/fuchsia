@@ -428,10 +428,10 @@ static zx_status_t xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_ind
     // complete any remaining requests
     usb_request_t* req;
     while (xhci_remove_from_list_head(xhci, &ep->pending_reqs, &req)) {
-        usb_request_complete(req, complete_status, 0);
+        usb_request_complete(req, complete_status, 0, req->complete_cb, req->cookie);
     }
     while (xhci_remove_from_list_head(xhci, &ep->queued_reqs, &req)) {
-        usb_request_complete(req, complete_status, 0);
+        usb_request_complete(req, complete_status, 0, req->complete_cb, req->cookie);
     }
 
     return ZX_OK;

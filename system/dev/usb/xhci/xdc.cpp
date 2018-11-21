@@ -605,10 +605,10 @@ static void xdc_shutdown(xdc_t* xdc) {
 
         usb_request_t* req;
         while ((req = list_remove_tail_type(&ep->pending_reqs, usb_request_t, node)) != nullptr) {
-            usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0);
+            usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, req->complete_cb, req->cookie);
         }
         while ((req = list_remove_tail_type(&ep->queued_reqs, usb_request_t, node)) != nullptr) {
-            usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0);
+            usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, req->complete_cb, req->cookie);
         }
     }
 
@@ -1167,7 +1167,8 @@ zx_status_t xdc_poll(xdc_t* xdc) {
             usb_request_t* req;
             while ((req = list_remove_head_type(&poll_state.completed_reqs,
                                                 usb_request_t, node)) != nullptr) {
-                usb_request_complete(req, req->response.status, req->response.actual);
+                usb_request_complete(req, req->response.status, req->response.actual,
+                                     req->complete_cb, req->cookie);
             }
         }
     }
