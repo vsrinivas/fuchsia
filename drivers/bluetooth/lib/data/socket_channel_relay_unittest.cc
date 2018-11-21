@@ -23,9 +23,7 @@ namespace {
 
 // We'll test the template using (only) the set of type parameters necessary for
 // the L2CAP instantiation.
-using RelayT =
-    internal::SocketChannelRelay<l2cap::Channel, l2cap::Channel::UniqueId,
-                                 l2cap::SDU>;
+using RelayT = internal::SocketChannelRelay<l2cap::Channel, l2cap::SDU>;
 static_assert(std::is_same_v<RelayT, internal::L2capSocketChannelRelay>);
 
 class DATA_SocketChannelRelayTest : public ::testing::Test {
@@ -136,9 +134,8 @@ class DATA_SocketChannelRelayLifetimeTest : public DATA_SocketChannelRelayTest {
   DATA_SocketChannelRelayLifetimeTest()
       : was_deactivation_callback_invoked_(false),
         relay_(std::make_unique<RelayT>(
-            ConsumeLocalSocket(), channel(), [this](auto channel_id) {
-              was_deactivation_callback_invoked_ = true;
-            })) {}
+            ConsumeLocalSocket(), channel(),
+            [this]() { was_deactivation_callback_invoked_ = true; })) {}
 
  protected:
   bool was_deactivation_callback_invoked() {

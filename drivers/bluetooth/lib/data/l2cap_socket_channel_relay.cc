@@ -27,6 +27,5 @@ static inline bool InvokeWithRxData(
 #include "garnet/drivers/bluetooth/lib/data/socket_channel_relay.cc"
 
 namespace btlib::data::internal {
-template class SocketChannelRelay<l2cap::Channel, l2cap::Channel::UniqueId,
-                                  l2cap::SDU>;
+template class SocketChannelRelay<l2cap::Channel, l2cap::SDU>;
 }  // namespace btlib::data::internal

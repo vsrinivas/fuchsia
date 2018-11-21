@@ -25,10 +25,10 @@ namespace btlib::data::internal {
 // THREAD-SAFETY: This class is thread-hostile. Creation, use, and destruction
 // _must_ occur on a single thread. |dispatcher|, which _must_ be
 // single-threaded, must run on that same thread.
-template <typename ChannelT, typename ChannelIdT, typename RxDataT>
+template <typename ChannelT, typename RxDataT>
 class SocketChannelRelay final {
  public:
-  using DeactivationCallback = fit::function<void(ChannelIdT)>;
+  using DeactivationCallback = fit::function<void()>;
 
   // Creates a SocketChannelRelay which executes on |dispatcher|. Note that
   // |dispatcher| must be single-threaded.

@@ -11,8 +11,7 @@
 #include "garnet/drivers/bluetooth/lib/l2cap/sdu.h"
 
 namespace btlib::data::internal {
-using L2capSocketChannelRelay =
-    SocketChannelRelay<l2cap::Channel, l2cap::Channel::UniqueId, l2cap::SDU>;
+using L2capSocketChannelRelay = SocketChannelRelay<l2cap::Channel, l2cap::SDU>;
 }  // namespace btlib::data::internal
 
 #endif  // GARNET_DRIVERS_BLUETOOTH_LIB_DATA_L2CAP_SOCKET_CHANNEL_RELAY_H_

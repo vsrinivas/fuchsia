@@ -28,7 +28,8 @@ SocketFactory<ChannelT, ChannelIdT, ChannelRxDataT>::MakeSocketForChannel(
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   ZX_DEBUG_ASSERT(channel);
 
-  if (channel_to_relay_.find(channel->unique_id()) != channel_to_relay_.end()) {
+  const auto unique_id = channel->unique_id();
+  if (channel_to_relay_.find(unique_id) != channel_to_relay_.end()) {
     bt_log(ERROR, "l2cap", "channel %u @ %u is already bound to a socket",
            channel->link_handle(), channel->id());
     return {};
@@ -46,12 +47,11 @@ SocketFactory<ChannelT, ChannelIdT, ChannelRxDataT>::MakeSocketForChannel(
   auto relay = std::make_unique<RelayT>(
       std::move(local_socket), channel,
       typename RelayT::DeactivationCallback(
-          [self =
-               weak_ptr_factory_.GetWeakPtr()](ChannelIdT channel_id) mutable {
-            ZX_DEBUG_ASSERT_MSG(self, "(unique_id=%lu)", channel_id);
-            size_t n_erased = self->channel_to_relay_.erase(channel_id);
+          [self = weak_ptr_factory_.GetWeakPtr(), id = unique_id]() mutable {
+            ZX_DEBUG_ASSERT_MSG(self, "(unique_id=%lu)", id);
+            size_t n_erased = self->channel_to_relay_.erase(id);
             ZX_DEBUG_ASSERT_MSG(n_erased == 1, "(n_erased=%zu, unique_id=%lu)",
-                                n_erased, channel_id);
+                                n_erased, id);
           }));
 
   // Note: Activate() may abort, if |channel| has been Activated() without
@@ -62,7 +62,7 @@ SocketFactory<ChannelT, ChannelIdT, ChannelRxDataT>::MakeSocketForChannel(
     return {};
   }
 
-  channel_to_relay_.emplace(channel->unique_id(), std::move(relay));
+  channel_to_relay_.emplace(unique_id, std::move(relay));
   return remote_socket;
 }
 

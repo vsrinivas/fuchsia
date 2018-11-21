@@ -12,8 +12,7 @@
 
 namespace btlib::data::internal {
 using RfcommSocketChannelRelay =
-    SocketChannelRelay<rfcomm::Channel, rfcomm::Channel::UniqueId,
-                       common::ByteBufferPtr>;
+    SocketChannelRelay<rfcomm::Channel, common::ByteBufferPtr>;
 }  // namespace btlib::data::internal
 
 #endif  // GARNET_DRIVERS_BLUETOOTH_LIB_DATA_RFCOMM_SOCKET_CHANNEL_RELAY_H_

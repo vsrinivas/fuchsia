@@ -55,7 +55,7 @@ class SocketFactory final {
   zx::socket MakeSocketForChannel(fbl::RefPtr<ChannelT> channel);
 
  private:
-  using RelayT = SocketChannelRelay<ChannelT, ChannelIdT, ChannelRxDataT>;
+  using RelayT = SocketChannelRelay<ChannelT, ChannelRxDataT>;
 
   const fxl::ThreadChecker thread_checker_;
 
