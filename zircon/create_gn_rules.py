@@ -55,10 +55,6 @@ LIBRARIES_WITHOUT_SDK_HEADERS = ['trace-engine']
 # is the reason why this list is needed.
 NON_SDK_DEPS = ['zircon-internal']
 
-def is_header_excluded(lib_name, header):
-    return lib_name == 'fdio' and os.path.basename(header) == 'remoteio.h'
-
-
 def make_dir(path, is_dir=False):
     '''Creates the directory at `path`.'''
     target = path if is_dir else os.path.dirname(path)
@@ -233,8 +229,6 @@ def generate_compiled_library(package, context):
     for name, path in package.get('includes', {}).iteritems():
         (file, folder) = extract_file(name, path, context)
         data.include_dirs.add('//%s' % folder)
-        if is_header_excluded(lib_name, name):
-            continue
         data.includes[name] = '//%s' % file
 
     # Lib.
