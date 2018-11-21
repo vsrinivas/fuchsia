@@ -17,7 +17,8 @@ typedef struct usb_bus_interface usb_bus_interface_t;
 
 typedef struct usb_hci_protocol_ops {
     // queues a USB request
-    void (*request_queue)(void* ctx, usb_request_t* usb_request);
+    void (*request_queue)(void* ctx, usb_request_t* usb_request,
+                          usb_request_complete_cb complete_cb, void* complete_cb_cookie);
     void (*set_bus_interface)(void* ctx, usb_bus_interface_t* bus_intf);
     size_t (*get_max_device_count)(void* ctx);
     // enables or disables an endpoint using parameters derived from ep_desc
@@ -45,8 +46,10 @@ typedef struct usb_hci_protocol {
     void* ctx;
 } usb_hci_protocol_t;
 
-static inline void usb_hci_request_queue(usb_hci_protocol_t* hci, usb_request_t* usb_request) {
-    return hci->ops->request_queue(hci->ctx, usb_request);
+static inline void usb_hci_request_queue(usb_hci_protocol_t* hci, usb_request_t* usb_request,
+                                         usb_request_complete_cb complete_cb,
+                                         void* complete_cb_cookie) {
+    return hci->ops->request_queue(hci->ctx, usb_request, complete_cb, complete_cb_cookie);
 }
 
 static inline void usb_hci_set_bus_interface(usb_hci_protocol_t* hci, usb_bus_interface_t* intf) {

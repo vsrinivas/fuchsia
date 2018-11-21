@@ -152,10 +152,13 @@ zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint8_t ep_addre
 
     mtx_unlock(&ep->lock);
 
+    xhci_usb_request_internal_t* req_int = nullptr;
     // call complete callbacks out of the lock
-    while (xhci_remove_from_list_head(xhci, &completed_reqs, &req)) {
+    while ((req_int = list_remove_head_type(&completed_reqs,
+                                            xhci_usb_request_internal_t, node)) != nullptr) {
+        req = XHCI_INTERNAL_TO_USB_REQ(req_int, xhci->req_int_off);
         usb_request_complete(req, req->response.status, req->response.actual,
-                             req->complete_cb, req->cookie);
+                             req_int->complete_cb, req_int->cookie);
     }
 
     return status;
@@ -423,10 +426,13 @@ zx_status_t xhci_queue_transfer(xhci_t* xhci, usb_request_t* req) {
 
     mtx_unlock(&ep->lock);
 
+    xhci_usb_request_internal_t* req_int = nullptr;
     // call complete callbacks out of the lock
-    while (xhci_remove_from_list_head(xhci, &completed_reqs, &req)) {
+    while ((req_int = list_remove_head_type(&completed_reqs,
+                                            xhci_usb_request_internal_t, node)) != nullptr) {
+        req = XHCI_INTERNAL_TO_USB_REQ(req_int, xhci->req_int_off);
         usb_request_complete(req, req->response.status, req->response.actual,
-                             req->complete_cb, req->cookie);
+                             req_int->complete_cb, req_int->cookie);
     }
 
     return ZX_OK;
@@ -506,10 +512,13 @@ zx_status_t xhci_cancel_transfers(xhci_t* xhci, uint32_t slot_id, uint32_t ep_in
 
     mtx_unlock(&ep->lock);
 
+    xhci_usb_request_internal_t* req_int;
     // call complete callbacks out of the lock
-    while (xhci_remove_from_list_head(xhci, &completed_reqs, &req)) {
+    while ((req_int = list_remove_head_type(&completed_reqs,
+                                            xhci_usb_request_internal_t, node)) != NULL) {
+        req = XHCI_INTERNAL_TO_USB_REQ(req_int, xhci->req_int_off);
         usb_request_complete(req, req->response.status, req->response.actual,
-                             req->complete_cb, req->cookie);
+                             req_int->complete_cb, req_int->cookie);
     }
 
     return status;
@@ -554,7 +563,7 @@ zx_status_t xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request
     req->header.length = length;
     req->complete_cb = xhci_control_complete;
     req->cookie = &completion;
-    xhci_request_queue(xhci, req);
+    xhci_request_queue(xhci, req, xhci_control_complete, &completion);
     auto status = sync_completion_wait(&completion, ZX_SEC(1));
     if (status == ZX_OK) {
         status = req->response.status;
@@ -758,7 +767,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     // been completed. In the typical case, the context will be found at the head of pending_reqs.
     bool found_req = false;
     usb_request_t* test;
-    xhci_usb_request_internal_t* req_int;
+    xhci_usb_request_internal_t* req_int = nullptr;
     list_for_every_entry(&ep->pending_reqs, req_int, xhci_usb_request_internal_t, node) {
         test = XHCI_INTERNAL_TO_USB_REQ(req_int, xhci->req_int_off);
         if (test == req) {
@@ -802,8 +811,10 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     mtx_unlock(&ep->lock);
 
     // call complete callbacks out of the lock
-    while (xhci_remove_from_list_head(xhci, &completed_reqs, &req)) {
+    while ((req_int = list_remove_head_type(&completed_reqs,
+                                             xhci_usb_request_internal_t, node)) != NULL) {
+        req = XHCI_INTERNAL_TO_USB_REQ(req_int, xhci->req_int_off);
         usb_request_complete(req, req->response.status, req->response.actual,
-                             req->complete_cb, req->cookie);
+                             req_int->complete_cb, req_int->cookie);
     }
 }

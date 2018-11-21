@@ -57,9 +57,10 @@ void xhci_remove_device(xhci_t* xhci, int slot_id) {
     usb_bus_remove_device(&xhci->bus, slot_id);
 }
 
-static void xhci_hci_request_queue(void* ctx, usb_request_t* req) {
+static void xhci_hci_request_queue(void* ctx, usb_request_t* req, usb_request_complete_cb cb,
+                                   void* cookie) {
     auto* xhci = static_cast<xhci_t*>(ctx);
-    xhci_request_queue(xhci, req);
+    xhci_request_queue(xhci, req, cb, cookie);
 }
 
 static void xhci_set_bus_interface(void* ctx, usb_bus_interface_t* bus) {
@@ -160,9 +161,13 @@ usb_hci_protocol_ops_t xhci_hci_protocol = {
     .get_request_size = xhci_get_request_size,
 };
 
-void xhci_request_queue(xhci_t* xhci, usb_request_t* req) {
+void xhci_request_queue(xhci_t* xhci, usb_request_t* req, usb_request_complete_cb cb,
+                        void* cookie) {
     zx_status_t status;
 
+    xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req, xhci->req_int_off);
+    req_int->complete_cb = cb;
+    req_int->cookie = cookie;
     if (req->header.length > xhci_get_max_transfer_size(xhci->zxdev, req->header.device_id,
                                                         req->header.ep_address)) {
         status = ZX_ERR_INVALID_ARGS;
@@ -171,7 +176,7 @@ void xhci_request_queue(xhci_t* xhci, usb_request_t* req) {
     }
 
     if (status != ZX_OK && status != ZX_ERR_BUFFER_TOO_SMALL) {
-        usb_request_complete(req, status, 0, req->complete_cb, req->cookie);
+        usb_request_complete(req, status, 0, cb, cookie);
     }
 }
 

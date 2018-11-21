@@ -426,12 +426,17 @@ static zx_status_t xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_ind
     xhci_transfer_ring_free(transfer_ring);
 
     // complete any remaining requests
-    usb_request_t* req;
-    while (xhci_remove_from_list_head(xhci, &ep->pending_reqs, &req)) {
-        usb_request_complete(req, complete_status, 0, req->complete_cb, req->cookie);
+    usb_request_t* req = nullptr;
+    xhci_usb_request_internal_t* req_int = nullptr;
+    while ((req_int = list_remove_head_type(&ep->pending_reqs,
+                                            xhci_usb_request_internal_t, node)) != nullptr) {
+        req = XHCI_INTERNAL_TO_USB_REQ(req_int, xhci->req_int_off);
+        usb_request_complete(req, complete_status, 0, req_int->complete_cb, req_int->cookie);
     }
-    while (xhci_remove_from_list_head(xhci, &ep->queued_reqs, &req)) {
-        usb_request_complete(req, complete_status, 0, req->complete_cb, req->cookie);
+    while ((req_int = list_remove_head_type(&ep->queued_reqs,
+                                            xhci_usb_request_internal_t, node)) != nullptr) {
+        req = XHCI_INTERNAL_TO_USB_REQ(req_int, xhci->req_int_off);
+        usb_request_complete(req, complete_status, 0, req_int->complete_cb, req_int->cookie);
     }
 
     return ZX_OK;

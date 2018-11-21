@@ -314,30 +314,36 @@ void xhci_stop_root_hubs(xhci_t* xhci) {
 
     for (int i = 0; i < XHCI_RH_COUNT; i++) {
         usb_request_t* req;
+        xhci_usb_request_internal_t* req_int = nullptr;
         xhci_root_hub_t* rh = &xhci->root_hubs[i];
-        while (xhci_remove_from_list_tail(xhci, &rh->pending_intr_reqs, &req)) {
-            usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, req->complete_cb, req->cookie);
+        while ((req_int = list_remove_tail_type(&rh->pending_intr_reqs,
+                                                xhci_usb_request_internal_t, node)) != nullptr) {
+            req = XHCI_INTERNAL_TO_USB_REQ(req_int, xhci->req_int_off);
+            usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, req_int->complete_cb,
+                                 req_int->cookie);
         }
     }
 }
 
-static zx_status_t xhci_rh_get_descriptor(uint8_t request_type, xhci_root_hub_t* rh, uint16_t value,
-                                          uint16_t index, size_t length, usb_request_t* req) {
+static zx_status_t xhci_rh_get_descriptor(xhci_t* xhci, uint8_t request_type, xhci_root_hub_t* rh,
+                                          uint16_t value, uint16_t index, size_t length,
+                                          usb_request_t* req) {
     uint8_t type = request_type & USB_TYPE_MASK;
     uint8_t recipient = request_type & USB_RECIP_MASK;
+    xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req, xhci->req_int_off);
 
     if (type == USB_TYPE_STANDARD && recipient == USB_RECIP_DEVICE) {
         auto desc_type = static_cast<uint8_t>(value >> 8);
         if (desc_type == USB_DT_DEVICE && index == 0) {
             if (length > sizeof(usb_device_descriptor_t)) length = sizeof(usb_device_descriptor_t);
             usb_request_copy_to(req, rh->device_desc, length, 0);
-            usb_request_complete(req, ZX_OK, length, req->complete_cb, req->cookie);
+            usb_request_complete(req, ZX_OK, length, req_int->complete_cb, req_int->cookie);
             return ZX_OK;
         } else if (desc_type == USB_DT_CONFIG && index == 0) {
             uint16_t desc_length = le16toh(rh->config_desc->wTotalLength);
             if (length > desc_length) length = desc_length;
             usb_request_copy_to(req, rh->config_desc, length, 0);
-            usb_request_complete(req, ZX_OK, length, req->complete_cb, req->cookie);
+            usb_request_complete(req, ZX_OK, length, req_int->complete_cb, req_int->cookie);
             return ZX_OK;
         } else if (value >> 8 == USB_DT_STRING) {
             auto string_index = static_cast<uint8_t>(value & 0xFF);
@@ -346,7 +352,7 @@ static zx_status_t xhci_rh_get_descriptor(uint8_t request_type, xhci_root_hub_t*
                 if (length > string[0]) length = string[0];
 
                 usb_request_copy_to(req, string, length, 0);
-                usb_request_complete(req, ZX_OK, length, req->complete_cb, req->cookie);
+                usb_request_complete(req, ZX_OK, length, req_int->complete_cb, req_int->cookie);
                 return ZX_OK;
             }
         }
@@ -364,13 +370,13 @@ static zx_status_t xhci_rh_get_descriptor(uint8_t request_type, xhci_root_hub_t*
 
             if (length > sizeof(desc)) length = sizeof(desc);
             usb_request_copy_to(req, &desc, length, 0);
-            usb_request_complete(req, ZX_OK, length, req->complete_cb, req->cookie);
+            usb_request_complete(req, ZX_OK, length, req_int->complete_cb, req_int->cookie);
             return ZX_OK;
         }
     }
 
     zxlogf(ERROR, "xhci_rh_get_descriptor unsupported value: %d index: %d\n", value, index);
-    usb_request_complete(req, ZX_ERR_NOT_SUPPORTED, 0, req->complete_cb, req->cookie);
+    usb_request_complete(req, ZX_ERR_NOT_SUPPORTED, 0, req_int->complete_cb, req_int->cookie);
     return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -381,16 +387,19 @@ static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
     uint8_t request = setup->bRequest;
     uint16_t value = le16toh(setup->wValue);
     uint16_t index = le16toh(setup->wIndex);
+    xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req, xhci->req_int_off);
 
     zxlogf(SPEW, "xhci_rh_control type: 0x%02X req: %d value: %d index: %d length: %d\n",
             request_type, request, value, index, le16toh(setup->wLength));
 
     if ((request_type & USB_DIR_MASK) == USB_DIR_IN && request == USB_REQ_GET_DESCRIPTOR) {
-        return xhci_rh_get_descriptor(request_type, rh, value, index, le16toh(setup->wLength), req);
+        return xhci_rh_get_descriptor(xhci, request_type, rh, value, index,
+                                      le16toh(setup->wLength), req);
     } else if ((request_type & ~USB_DIR_MASK) == (USB_TYPE_CLASS | USB_RECIP_PORT)) {
         // index is 1-based port number
         if (index < 1 || index > rh->num_ports) {
-            usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0, req->complete_cb, req->cookie);
+            usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0, req_int->complete_cb,
+                                 req_int->cookie);
             return ZX_OK;
         }
         auto rh_port_index = rh->port_map[index - 1];
@@ -399,11 +408,11 @@ static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
         if (request == USB_REQ_SET_FEATURE) {
             if (value == USB_FEATURE_PORT_POWER) {
                 // nothing to do - root hub ports are already powered
-                usb_request_complete(req, ZX_OK, 0, req->complete_cb, req->cookie);
+                usb_request_complete(req, ZX_OK, 0, req_int->complete_cb, req_int->cookie);
                 return ZX_OK;
             } else if (value == USB_FEATURE_PORT_RESET) {
                 xhci_reset_port(xhci, rh, rh_port_index);
-                usb_request_complete(req, ZX_OK, 0, req->complete_cb, req->cookie);
+                usb_request_complete(req, ZX_OK, 0, req_int->complete_cb, req_int->cookie);
                 return ZX_OK;
             }
         } else if (request == USB_REQ_CLEAR_FEATURE) {
@@ -427,7 +436,7 @@ static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
                     break;
             }
 
-            usb_request_complete(req, ZX_OK, 0, req->complete_cb, req->cookie);
+            usb_request_complete(req, ZX_OK, 0, req_int->complete_cb, req_int->cookie);
             return ZX_OK;
         } else if ((request_type & USB_DIR_MASK) == USB_DIR_IN &&
                    request == USB_REQ_GET_STATUS && value == 0) {
@@ -435,20 +444,20 @@ static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
             size_t length = req->header.length;
             if (length > sizeof(*status)) length = sizeof(*status);
             usb_request_copy_to(req, status, length, 0);
-            usb_request_complete(req, ZX_OK, length, req->complete_cb, req->cookie);
+            usb_request_complete(req, ZX_OK, length, req_int->complete_cb, req_int->cookie);
             return ZX_OK;
         }
     } else if (request_type == (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE) &&
                request == USB_REQ_SET_CONFIGURATION && req->header.length == 0) {
         // nothing to do here
-        usb_request_complete(req, ZX_OK, 0, req->complete_cb, req->cookie);
+        usb_request_complete(req, ZX_OK, 0, req_int->complete_cb, req_int->cookie);
         return ZX_OK;
     }
 
     zxlogf(ERROR, "unsupported root hub control request type: 0x%02X req: %d value: %d index: %d\n",
            request_type, request, value, index);
 
-    usb_request_complete(req, ZX_ERR_NOT_SUPPORTED, 0, req->complete_cb, req->cookie);
+    usb_request_complete(req, ZX_ERR_NOT_SUPPORTED, 0, req_int->complete_cb, req_int->cookie);
     return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -475,9 +484,10 @@ static void xhci_rh_handle_intr_req(xhci_t* xhci, xhci_root_hub_t* rh, usb_reque
 
     if (have_status) {
         size_t length = req->header.length;
+        xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req, xhci->req_int_off);
         if (length > sizeof(status_bits)) length = sizeof(status_bits);
         usb_request_copy_to(req, status_bits, length, 0);
-        usb_request_complete(req, ZX_OK, length, req->complete_cb, req->cookie);
+        usb_request_complete(req, ZX_OK, length, req_int->complete_cb, req_int->cookie);
     } else {
         // queue transaction until we have something to report
         xhci_add_to_list_tail(xhci, &rh->pending_intr_reqs, req);
@@ -488,6 +498,7 @@ zx_status_t xhci_rh_usb_request_queue(xhci_t* xhci, usb_request_t* req, int rh_i
     zxlogf(SPEW, "xhci_rh_usb_request_queue rh_index: %d\n", rh_index);
 
     xhci_root_hub_t* rh = &xhci->root_hubs[rh_index];
+    xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req, xhci->req_int_off);
 
     uint8_t ep_index = xhci_endpoint_index(req->header.ep_address);
     if (ep_index == 0) {
@@ -497,7 +508,7 @@ zx_status_t xhci_rh_usb_request_queue(xhci_t* xhci, usb_request_t* req, int rh_i
         return ZX_OK;
     }
 
-    usb_request_complete(req, ZX_ERR_NOT_SUPPORTED, 0, req->complete_cb, req->cookie);
+    usb_request_complete(req, ZX_ERR_NOT_SUPPORTED, 0, req_int->complete_cb, req_int->cookie);
     return ZX_ERR_NOT_SUPPORTED;
 }
 

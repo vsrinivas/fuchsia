@@ -258,7 +258,8 @@ static inline bool xhci_is_root_hub(xhci_t* xhci, uint32_t device_id) {
 zx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int speed);
 void xhci_remove_device(xhci_t* xhci, int slot_id);
 
-void xhci_request_queue(xhci_t* xhci, usb_request_t* req);
+void xhci_request_queue(xhci_t* xhci, usb_request_t* req, usb_request_complete_cb cb,
+                        void* cookie);
 
 __BEGIN_CDECLS
 zx_status_t usb_xhci_bind(void* ctx, zx_device_t* parent);

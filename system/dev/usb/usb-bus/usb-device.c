@@ -198,7 +198,7 @@ static zx_status_t usb_device_control(void* ctx, uint8_t request_type, uint8_t r
     req->cookie = &completion;
     // We call this directly instead of via hci_queue, as it's safe to call our
     // own completion callback, and prevents clients getting into odd deadlocks.
-    usb_hci_request_queue(&dev->hci, req);
+    usb_hci_request_queue(&dev->hci, req, usb_control_complete, &completion);
     zx_status_t status = sync_completion_wait(&completion, timeout);
 
     if (status == ZX_OK) {
@@ -243,7 +243,7 @@ static void usb_device_request_queue(void* ctx, usb_request_t* req) {
     // set device as the cookie so we can get at it in request_complete()
     req->cookie = dev;
 
-    usb_hci_request_queue(&dev->hci, req);
+    usb_hci_request_queue(&dev->hci, req, request_complete, dev);
 }
 
 

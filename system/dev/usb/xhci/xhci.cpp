@@ -477,13 +477,23 @@ static void xhci_slot_stop(xhci_slot_t* slot, xhci_t* xhci) {
 
         mtx_lock(&ep->lock);
         if (ep->state != EP_STATE_DEAD) {
-            usb_request_t* req;
-            while (xhci_remove_from_list_tail(xhci, &ep->pending_reqs, &req)) {
-                usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, req->complete_cb, req->cookie);
+            usb_request_t* req = nullptr;
+            xhci_usb_request_internal_t* req_int = nullptr;
+            while ((req_int = list_remove_head_type(&ep->pending_reqs,
+                                                    xhci_usb_request_internal_t,
+                                                    node)) != nullptr) {
+                req = XHCI_INTERNAL_TO_USB_REQ(req_int, xhci->req_int_off);
+                usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, req_int->complete_cb,
+                                     req_int->cookie);
             }
-            while (xhci_remove_from_list_tail(xhci, &ep->queued_reqs, &req)) {
-                usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, req->complete_cb, req->cookie);
+            while ((req_int = list_remove_head_type(&ep->queued_reqs,
+                                                    xhci_usb_request_internal_t,
+                                                    node)) != nullptr) {
+                req = XHCI_INTERNAL_TO_USB_REQ(req_int, xhci->req_int_off);
+                usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, req_int->complete_cb,
+                                     req_int->cookie);
             }
+
             ep->state = EP_STATE_DEAD;
         }
         mtx_unlock(&ep->lock);
