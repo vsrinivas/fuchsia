@@ -41,3 +41,21 @@ image_pipe_swapchain = {
     "//garnet/lib/vulkan:image_pipe_swapchain",
   ]
 }
+
+image_pipe_swapchain_fb = {
+  loadable_modules = [
+    {
+      name = "libVkLayer_image_pipe_swapchain_fb.so"
+    },
+  ]
+  resources = [
+    {
+      path = rebase_path("src/swapchain/VkLayer_image_pipe_swapchain_fb.json")
+      dest = "vulkan/explicit_layer.d/VkLayer_image_pipe_swapchain_fb.json"
+    },
+  ]
+
+  public_deps = [
+    "//garnet/lib/vulkan/src/swapchain:fb",
+  ]
+}

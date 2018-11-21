@@ -30,6 +30,13 @@ class ImagePipeSurface {
     return supported_image_properties_;
   }
 
+  virtual bool CanPresentPendingImage() { return true; }
+  virtual bool UseScanoutExtension() { return false; }
+
+  virtual bool GetSize(uint32_t* width_out, uint32_t* height_out) {
+    return false;
+  }
+
   uint32_t next_image_id() {
     if (++next_image_id_ == 0) {
       ++next_image_id_;

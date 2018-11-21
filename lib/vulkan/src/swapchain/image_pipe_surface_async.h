@@ -96,4 +96,4 @@ class ImagePipeSurfaceAsync : public ImagePipeSurface {
   bool present_pending_ = false;
 };
 
-} // namespace
+}  // namespace image_pipe_swapchain

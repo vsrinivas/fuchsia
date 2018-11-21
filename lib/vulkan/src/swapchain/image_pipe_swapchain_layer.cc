@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "image_pipe_surface_async.h"
+#if USE_IMAGEPIPE_SURFACE_FB
+#include "image_pipe_surface_fb.h"  // nogncheck
+#else
+#include "image_pipe_surface_async.h"  // nogncheck
+#endif
 
 #include <thread>
 #include <vector>
@@ -156,33 +160,12 @@ VkResult ImagePipeSwapchain::Initialize(
 
   VkFlags usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-  // See
-  // https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/issues/2064
-  if (instance_dispatch_table->EnumerateInstanceExtensionProperties) {
-    uint32_t instance_extension_count;
-
-    result = instance_dispatch_table->EnumerateInstanceExtensionProperties(
-        nullptr, &instance_extension_count, nullptr);
-    if (result != VK_SUCCESS)
-      return result;
-
-    if (instance_extension_count > 0) {
-      std::vector<VkExtensionProperties> instance_extensions(
-          instance_extension_count);
-      result = instance_dispatch_table->EnumerateInstanceExtensionProperties(
-          nullptr, &instance_extension_count, instance_extensions.data());
-      if (result != VK_SUCCESS)
-        return result;
-
-      for (uint32_t i = 0; i < instance_extension_count; i++) {
-        if (!strcmp(VK_GOOGLE_IMAGE_USAGE_SCANOUT_EXTENSION_NAME,
-                    instance_extensions[i].extensionName)) {
-          // TODO(MA-345) support display tiling on request
-          // usage |= VK_IMAGE_USAGE_SCANOUT_BIT_GOOGLE;
-          break;
-        }
-      }
-    }
+  // We can't call EnumerateInstanceExtensionsProperties here; so just assume
+  // that VK_GOOGLE_IMAGE_USAGE_SCANOUT_EXTENSION_NAME is available. This should
+  // perhaps be a device extension anyway; but it will be going away once we
+  // have an image import extension.
+  if (surface_->UseScanoutExtension()) {
+    usage |= VK_IMAGE_USAGE_SCANOUT_BIT_GOOGLE;
   }
 
   uint32_t num_images = pCreateInfo->minImageCount;
@@ -384,7 +367,47 @@ VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns,
     return VK_TIMEOUT;
   }
 
+  bool wait_for_release_fence = false;
+
   if (semaphore == VK_NULL_HANDLE) {
+    wait_for_release_fence = true;
+  } else {
+    zx_handle_t handle;
+
+    if (surface()->CanPresentPendingImage()) {
+      handle = pending_images_[0].release_fence.release();
+    } else {
+      zx::event signaled_event;
+      zx_status_t status = zx::event::create(0, &signaled_event);
+      if (status != ZX_OK) {
+        fprintf(stderr, "event::create failed");
+        return VK_SUCCESS;
+      }
+      signaled_event.signal(0, ZX_EVENT_SIGNALED);
+      handle = signaled_event.release();
+      wait_for_release_fence = true;
+    }
+
+    VkImportSemaphoreFuchsiaHandleInfoKHR import_info = {
+        .sType = VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_FUCHSIA_HANDLE_INFO_KHR,
+        .pNext = nullptr,
+        .semaphore = semaphore,
+        .flags = VK_SEMAPHORE_IMPORT_TEMPORARY_BIT_KHR,
+        .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR,
+        .handle = handle};
+
+    VkLayerDispatchTable* pDisp =
+        GetLayerDataPtr(get_dispatch_key(device_), layer_data_map)
+            ->device_dispatch_table;
+    VkResult result =
+        pDisp->ImportSemaphoreFuchsiaHandleKHR(device_, &import_info);
+    if (result != VK_SUCCESS) {
+      fprintf(stderr, "semaphore import failed: %d", result);
+      return VK_SUCCESS;
+    }
+  }
+
+  if (wait_for_release_fence) {
     // Wait for image to become available.
     zx_signals_t pending;
     zx_status_t status = pending_images_[0].release_fence.wait_one(
@@ -399,25 +422,6 @@ VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns,
       return VK_ERROR_DEVICE_LOST;
     }
     assert(pending & ZX_EVENT_SIGNALED);
-
-  } else {
-    VkImportSemaphoreFuchsiaHandleInfoKHR import_info = {
-        .sType = VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_FUCHSIA_HANDLE_INFO_KHR,
-        .pNext = nullptr,
-        .semaphore = semaphore,
-        .flags = VK_SEMAPHORE_IMPORT_TEMPORARY_BIT_KHR,
-        .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR,
-        .handle = pending_images_[0].release_fence.release()};
-
-    VkLayerDispatchTable* pDisp =
-        GetLayerDataPtr(get_dispatch_key(device_), layer_data_map)
-            ->device_dispatch_table;
-    VkResult result =
-        pDisp->ImportSemaphoreFuchsiaHandleKHR(device_, &import_info);
-    if (result != VK_SUCCESS) {
-      fprintf(stderr, "semaphore import failed: %d", result);
-      return VK_SUCCESS;
-    }
   }
 
   *pImageIndex = pending_images_[0].image_index;
@@ -545,7 +549,12 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateMagmaSurfaceKHR(
     VkInstance instance, const VkMagmaSurfaceCreateInfoKHR* pCreateInfo,
     const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface) {
   *pSurface = reinterpret_cast<VkSurfaceKHR>(
-      new ImagePipeSurfaceAsync(pCreateInfo->imagePipeHandle));
+#if USE_IMAGEPIPE_SURFACE_FB
+      new ImagePipeSurfaceFb()
+#else
+      new ImagePipeSurfaceAsync(pCreateInfo->imagePipeHandle)
+#endif
+  );
   return VK_SUCCESS;
 }
 
@@ -572,10 +581,19 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilitiesKHR(
 
   pSurfaceCapabilities->minImageCount = 2;
   pSurfaceCapabilities->maxImageCount = 0;
-  pSurfaceCapabilities->currentExtent = {0xFFFFFFFF, 0xFFFFFFFF};
   pSurfaceCapabilities->minImageExtent = {1, 1};
-  pSurfaceCapabilities->maxImageExtent = {props.limits.maxImageDimension2D,
-                                          props.limits.maxImageDimension2D};
+
+  uint32_t width = 0;
+  uint32_t height = 0;
+  if (reinterpret_cast<ImagePipeSurface*>(surface)->GetSize(&width, &height)) {
+    pSurfaceCapabilities->maxImageExtent = {width, height};
+    pSurfaceCapabilities->currentExtent = pSurfaceCapabilities->maxImageExtent;
+  } else {
+    pSurfaceCapabilities->currentExtent = {0xFFFFFFFF, 0xFFFFFFFF};
+    pSurfaceCapabilities->maxImageExtent = {props.limits.maxImageDimension2D,
+                                            props.limits.maxImageDimension2D};
+  }
+
   pSurfaceCapabilities->supportedTransforms =
       VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
   pSurfaceCapabilities->currentTransform =
