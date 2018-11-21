@@ -181,23 +181,26 @@ bool StatFile(const char* path, off_t* length) {
 }
 
 bool ReportContainer(const char* path, off_t offset) {
+    BEGIN_HELPER;
     fbl::unique_ptr<Container> container;
     off_t length;
     ASSERT_TRUE(StatFile(path, &length));
     ASSERT_EQ(Container::Create(path, offset, length - offset, 0, &container), ZX_OK,
               "Failed to initialize container");
     ASSERT_EQ(container->Verify(), ZX_OK, "File check failed\n");
-    return true;
+    END_HELPER;
 }
 
 bool ReportSparse(uint32_t flags) {
+    BEGIN_HELPER;
     if ((flags & fvm::kSparseFlagLz4) != 0) {
         unittest_printf("Decompressing sparse file\n");
-        if (fvm::decompress_sparse(sparse_lz4_path, sparse_path) != ZX_OK) {
-            return false;
-        }
+        SparseContainer compressedContainer(sparse_lz4_path, DEFAULT_SLICE_SIZE, flags);
+        ASSERT_EQ(compressedContainer.Decompress(sparse_path), ZX_OK);
     }
-    return ReportContainer(sparse_path, 0);
+
+    ASSERT_TRUE(ReportContainer(sparse_path, 0));
+    END_HELPER;
 }
 
 bool CreateFvm(bool create_before, off_t offset, size_t slice_size) {

@@ -10,6 +10,7 @@
 #include <fbl/string_buffer.h>
 #include <fbl/vector.h>
 #include <fbl/unique_fd.h>
+#include <fvm/fvm-lz4.h>
 #include <fvm/fvm-sparse.h>
 
 #include "format.h"
@@ -211,6 +212,10 @@ public:
     size_t SliceSize() const final;
     zx_status_t AddPartition(const char* path, const char* type_name) final;
 
+    // Decompresses the contents of the sparse file (if they are compressed), and writes the output
+    // to |path|.
+    zx_status_t Decompress(const char* path);
+
 private:
     bool valid_;
     bool dirty_;
@@ -219,6 +224,7 @@ private:
     fvm::sparse_image_t image_;
     fbl::Vector<partition_info_t> partitions_;
     CompressionContext compression_;
+    fbl::unique_ptr<fvm::SparseReader> reader_;
 
     zx_status_t AllocatePartition(fbl::unique_ptr<Format> format);
     zx_status_t AllocateExtent(uint32_t part_index, uint64_t slice_start, uint64_t slice_count,

@@ -1173,6 +1173,11 @@ zx_status_t Minfs::ReadBlk(blk_t bno, blk_t start, blk_t soft_max, blk_t hard_ma
 
 zx_status_t SparseFsck(fbl::unique_fd fd, off_t start, off_t end,
                        const fbl::Vector<size_t>& extent_lengths) {
+    if (start >= end) {
+        fprintf(stderr, "error: Insufficient space allocated\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
+
     if (extent_lengths.size() != kExtentCount) {
         FS_TRACE_ERROR("error: invalid number of extents\n");
         return ZX_ERR_INVALID_ARGS;

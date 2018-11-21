@@ -23,7 +23,7 @@ int usage(void) {
                     " required)\n");
     fprintf(stderr, " sparse : Creates a sparse file. One or more input paths are required.\n");
     fprintf(stderr, " verify : Report basic information about sparse/fvm files and run fsck on"
-                    " contained partitions\n");
+                    " contained partitions.\n");
     fprintf(stderr, " decompress : Decompresses a compressed sparse file. --sparse input path is"
                     " required.\n");
     fprintf(stderr, "Flags (neither or both of offset/length must be specified):\n");
@@ -265,12 +265,13 @@ int main(int argc, char** argv) {
             return -1;
         }
 
-        if (fvm::decompress_sparse(input_path, path) != ZX_OK) {
+        SparseContainer compressedContainer(input_path, slice_size, flags);
+        if (compressedContainer.Decompress(path) != ZX_OK) {
             return -1;
         }
 
-        fbl::unique_ptr<SparseContainer> sparseData(new SparseContainer(path, slice_size, flags));
-        if (sparseData->Verify() != ZX_OK) {
+        SparseContainer sparseContainer(path, slice_size, flags);
+        if (sparseContainer.Verify() != ZX_OK) {
             return -1;
         }
     } else {

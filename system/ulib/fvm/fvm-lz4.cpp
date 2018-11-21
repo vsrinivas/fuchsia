@@ -8,8 +8,16 @@
 
 namespace fvm {
 zx_status_t SparseReader::Create(fbl::unique_fd fd, fbl::unique_ptr<SparseReader>* out) {
+    return SparseReader::CreateHelper(std::move(fd), true /* verbose */, out);
+}
+zx_status_t SparseReader::CreateSilent(fbl::unique_fd fd, fbl::unique_ptr<SparseReader>* out) {
+    return SparseReader::CreateHelper(std::move(fd), false /* verbose */, out);
+}
+
+zx_status_t SparseReader::CreateHelper(fbl::unique_fd fd, bool verbose,
+                                       fbl::unique_ptr<SparseReader>* out) {
     fbl::AllocChecker ac;
-    fbl::unique_ptr<SparseReader> reader(new (&ac) SparseReader(std::move(fd)));
+    fbl::unique_ptr<SparseReader> reader(new (&ac) SparseReader(std::move(fd), verbose));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -23,7 +31,8 @@ zx_status_t SparseReader::Create(fbl::unique_fd fd, fbl::unique_ptr<SparseReader
     return ZX_OK;
 }
 
-SparseReader::SparseReader(fbl::unique_fd fd) : compressed_(false), fd_(std::move(fd)) {}
+SparseReader::SparseReader(fbl::unique_fd fd, bool verbose) : compressed_(false), verbose_(verbose),
+                                                              fd_(std::move(fd)) {}
 
 zx_status_t SparseReader::ReadMetadata() {
     // Read sparse image header.
@@ -63,7 +72,10 @@ zx_status_t SparseReader::ReadMetadata() {
 
     // If image is compressed, additional setup is required
     if (image.flags & fvm::kSparseFlagLz4) {
-        printf("Found compressed file\n");
+        if (verbose_) {
+            printf("Found compressed file\n");
+        }
+
         compressed_ = true;
         // Initialize decompression context
         LZ4F_errorCode_t errc = LZ4F_createDecompressionContext(&dctx_, LZ4F_VERSION);
@@ -293,39 +305,17 @@ zx_status_t SparseReader::WriteDecompressed(fbl::unique_fd outfd) {
 }
 
 void SparseReader::PrintStats() const {
-    printf("Reading FVM from compressed file: %s\n", compressed_ ? "true" : "false");
-    printf("Remaining bytes read into compression buffer:    %lu\n", in_buf_.size);
-    printf("Remaining bytes written to decompression buffer: %lu\n", out_buf_.size);
+    if (verbose_) {
+        printf("Reading FVM from compressed file: %s\n", compressed_ ? "true" : "false");
+        printf("Remaining bytes read into compression buffer:    %lu\n", in_buf_.size);
+        printf("Remaining bytes written to decompression buffer: %lu\n", out_buf_.size);
 #ifdef __Fuchsia__
-    printf("Time reading bytes from sparse FVM file:   %lu (%lu s)\n", read_time_,
-           read_time_ / zx_ticks_per_second());
-    printf("Time reading bytes AND decompressing them: %lu (%lu s)\n", total_time_,
-           total_time_ / zx_ticks_per_second());
+        printf("Time reading bytes from sparse FVM file:   %lu (%lu s)\n", read_time_,
+            read_time_ / zx_ticks_per_second());
+        printf("Time reading bytes AND decompressing them: %lu (%lu s)\n", total_time_,
+            total_time_ / zx_ticks_per_second());
 #endif
-}
-
-zx_status_t decompress_sparse(const char* infile, const char* outfile) {
-    fbl::unique_fd infd, outfd, testfd;
-
-    infd.reset(open(infile, O_RDONLY));
-    if (!infd) {
-        fprintf(stderr, "could not open %s: %s\n", infile, strerror(errno));
-        return ZX_ERR_IO;
     }
-
-    outfd.reset(open(outfile, O_WRONLY | O_CREAT | O_EXCL, 0644));
-    if (!outfd) {
-        fprintf(stderr, "could not open %s: %s\n", outfile, strerror(errno));
-        return ZX_ERR_IO;
-    }
-
-    zx_status_t status;
-    fbl::unique_ptr<SparseReader> reader;
-    if ((status = SparseReader::Create(std::move(infd), &reader))) {
-        return status;
-    }
-
-    return reader->WriteDecompressed(std::move(outfd));
 }
 
 } // namespace fvm

@@ -102,34 +102,31 @@ SparseContainer::SparseContainer(const char* path, uint64_t slice_size, uint32_t
     if (s.st_size > 0) {
         disk_size_ = s.st_size;
 
-        if (read(fd_.get(), &image_, sizeof(fvm::sparse_image_t)) != sizeof(fvm::sparse_image_t)) {
-            fprintf(stderr, "SparseContainer: Failed to read the sparse header\n");
+        fbl::unique_fd dup_fd(dup(fd_.get()));
+        if (fvm::SparseReader::CreateSilent(std::move(dup_fd), &reader_) != ZX_OK) {
+            fprintf(stderr, "SparseContainer: Failed to read metadata from sparse file\n");
             return;
         }
 
-        if (image_.flags & fvm::kSparseFlagLz4) {
-            return;
-        }
+        memcpy(&image_, reader_->Image(), sizeof(fvm::sparse_image_t));
 
         extent_size_ = disk_size_ - image_.header_length;
 
+        uintptr_t partition_ptr = reinterpret_cast<uintptr_t>(reader_->Partitions());
+
         for (unsigned i = 0; i < image_.partition_count; i++) {
             partition_info_t partition;
+            memcpy(&partition.descriptor, reinterpret_cast<void*>(partition_ptr),
+                   sizeof(fvm::partition_descriptor_t));
             partitions_.push_back(std::move(partition));
-            if (read(fd_.get(), &partitions_[i].descriptor, sizeof(fvm::partition_descriptor_t)) !=
-                    sizeof(fvm::partition_descriptor_t)) {
-                fprintf(stderr, "SparseContainer: Failed to read partition %u\n", i);
-                return;
-            }
+            partition_ptr += sizeof(fvm::partition_descriptor_t);
 
-            for (unsigned j = 0; j < partitions_[i].descriptor.extent_count; j++) {
+            for (size_t j = 0; j < partitions_[i].descriptor.extent_count; j++) {
                 fvm::extent_descriptor_t extent;
+                memcpy(&extent, reinterpret_cast<void*>(partition_ptr),
+                       sizeof(fvm::extent_descriptor_t));
                 partitions_[i].extents.push_back(extent);
-                if (read(fd_.get(), &partitions_[i].extents[j], sizeof(fvm::extent_descriptor_t)) !=
-                        sizeof(fvm::extent_descriptor_t)) {
-                    fprintf(stderr, "SparseContainer: Failed to read extent\n");
-                    return;
-                }
+                partition_ptr += sizeof(fvm::extent_descriptor_t);
             }
         }
 
@@ -160,6 +157,15 @@ zx_status_t SparseContainer::Verify() const {
         fprintf(stderr, "SparseContainer: Found invalid container\n");
         return ZX_ERR_INTERNAL;
     }
+
+    if (image_.flags & fvm::kSparseFlagLz4) {
+        // Decompression must occur before verification, since all contents must be available for
+        // fsck.
+        fprintf(stderr, "SparseContainer: Found compressed container; contents cannot be"
+                " verified\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
+
     if (image_.magic != fvm::kSparseFormatMagic) {
         fprintf(stderr, "SparseContainer: Bad magic\n");
         return ZX_ERR_IO;
@@ -328,6 +334,23 @@ zx_status_t SparseContainer::AddPartition(const char* path, const char* type_nam
     }
 
     return ZX_OK;
+}
+
+zx_status_t SparseContainer::Decompress(const char* path) {
+    if ((flags_ & fvm::kSparseFlagLz4) == 0) {
+        fprintf(stderr, "Cannot decompress un-compressed sparse file\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    fbl::unique_fd fd;
+
+    fd.reset(open(path, O_WRONLY | O_CREAT | O_EXCL, 0644));
+    if (!fd) {
+        fprintf(stderr, "could not open %s: %s\n", path, strerror(errno));
+        return ZX_ERR_IO;
+    }
+
+    return reader_->WriteDecompressed(std::move(fd));
 }
 
 zx_status_t SparseContainer::AllocatePartition(fbl::unique_ptr<Format> format) {

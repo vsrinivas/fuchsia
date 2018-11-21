@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#pragma once
+
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -30,6 +32,7 @@ namespace fvm {
 class SparseReader {
 public:
     static zx_status_t Create(fbl::unique_fd fd, fbl::unique_ptr<SparseReader>* out);
+    static zx_status_t CreateSilent(fbl::unique_fd fd, fbl::unique_ptr<SparseReader>* out);
     ~SparseReader();
 
     fvm::sparse_image_t* Image();
@@ -42,7 +45,7 @@ public:
 private:
     typedef struct buffer {
         // Write |length| bytes from |indata| into buffer.
-        bool is_empty() {
+        bool is_empty() const {
             return offset == 0 && size == 0;
         }
 
@@ -85,7 +88,10 @@ private:
         size_t max_size;
     } buffer_t;
 
-    SparseReader(fbl::unique_fd fd);
+    static zx_status_t CreateHelper(fbl::unique_fd fd, bool verbose,
+                                    fbl::unique_ptr<SparseReader>* out);
+
+    SparseReader(fbl::unique_fd fd, bool verbose);
     // Read in header data, prepare buffers and decompression context if necessary
     zx_status_t ReadMetadata();
     // Initialize buffer with a given |size|
@@ -97,6 +103,9 @@ private:
 
     // True if sparse file is compressed
     bool compressed_;
+
+    // If true, all logs are printed.
+    bool verbose_;
 
     fbl::unique_fd fd_;
     fbl::unique_ptr<uint8_t[]> metadata_;
@@ -119,6 +128,4 @@ private:
 #endif
 };
 
-// Read from compressed |infile|, decompress, and write to |outfile|.
-zx_status_t decompress_sparse(const char* infile, const char* outfile);
 } // namespace fvm
