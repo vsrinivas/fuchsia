@@ -13,8 +13,6 @@
 
 __BEGIN_CDECLS
 
-#define VFS_MAX_HANDLES 2
-
 // On Fuchsia, the Block Device is transmitted by file descriptor, rather than
 // by path. This can prevent some racy behavior relating to FS start-up.
 #ifdef __Fuchsia__
