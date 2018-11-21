@@ -10,42 +10,56 @@ template("golib") {
   go_library(target_name) {
     name = target_name
     source_dir = "//third_party/golibs/$name"
-    forward_variables_from(invoker, ["deps"])
+    forward_variables_from(invoker, [ "deps" ])
   }
 }
 
-golib("golang.org/x/crypto") {}
-golib("golang.org/x/net") {}
+golib("golang.org/x/crypto") {
+}
+golib("golang.org/x/net") {
+}
 golib("golang.org/x/oauth2") {
   deps = [
     ":golang.org/x/net",
   ]
 }
 
-golib("github.com/dustin/go-humanize") {}
-golib("github.com/flynn/go-docopt") {}
+golib("github.com/dustin/go-humanize") {
+}
+golib("github.com/flynn/go-docopt") {
+}
 golib("github.com/flynn/go-tuf") {
   deps = [
     ":github.com/dustin/go-humanize",
     ":github.com/flynn/go-docopt",
     ":github.com/syndtr/goleveldb",
     ":github.com/tent/canonical-json-go",
-    ":golang.org/x/crypto"
+    ":golang.org/x/crypto",
   ]
 }
-golib("github.com/go-yaml/yaml") {}
-golib("github.com/golang/glog") {}
+golib("github.com/go-yaml/yaml") {
+}
+golib("github.com/golang/glog") {
+}
 golib("github.com/golang/protobuf") {
   deps = [
-    ":golang.org/x/net"
+    ":golang.org/x/net",
   ]
 }
-golib("github.com/golang/snappy") {}
-golib("github.com/google/go-cmp") {}
-golib("github.com/google/netstack") {}
-golib("github.com/google/subcommands") {}
-golib("github.com/kr/fs") {}
-golib("github.com/pkg/errors") {}
+golib("github.com/golang/snappy") {
+}
+golib("github.com/google/btree") {
+}
+golib("github.com/google/go-cmp") {
+}
+golib("github.com/google/netstack") {
+}
+golib("github.com/google/subcommands") {
+}
+golib("github.com/kr/fs") {
+}
+golib("github.com/pkg/errors") {
+}
 golib("github.com/pkg/sftp") {
   deps = [
     ":github.com/kr/fs",
@@ -55,12 +69,13 @@ golib("github.com/pkg/sftp") {
 }
 golib("github.com/rjw57/oauth2device") {
   deps = [
-    ":golang.org/x/oauth2"
+    ":golang.org/x/oauth2",
   ]
 }
 golib("github.com/syndtr/goleveldb") {
   deps = [
-    ":github.com/golang/snappy"
+    ":github.com/golang/snappy",
   ]
 }
-golib("github.com/tent/canonical-json-go") {}
+golib("github.com/tent/canonical-json-go") {
+}
