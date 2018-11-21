@@ -52,6 +52,11 @@ std::string Describe(const HtExtCapabilities& hec);
 std::string Describe(const TxBfCapability& txbf);
 std::string Describe(const AselCapability& asel);
 std::string Describe(const HtCapabilities& ht_cap);
+std::string Describe(const VhtCapabilitiesInfo& vci);
+std::string Describe(const VhtMcsNss& vmn);
+std::string Describe(const VhtCapabilities& vht_cap);
+std::string Describe(const BasicVhtMcsNss& bvmn);
+std::string Describe(const VhtOperation& vht_op);
 
 std::string Describe(const wlan_ht_caps& ht_caps);
 std::string Describe(const wlan_chan_list& wl);

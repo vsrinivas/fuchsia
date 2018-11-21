@@ -530,6 +530,95 @@ std::string Describe(const wlan_ht_caps& ht_caps) {
     return Describe(HtCapabilities::FromDdk(ht_caps));
 }
 
+std::string Describe(const VhtCapabilitiesInfo& vci) {
+    std::ostringstream oss;
+    oss << std::setfill(' ');  // TODO(TC-271): Delete this line
+    oss << "max_mpdu_len:" << +vci.max_mpdu_len();
+    oss << " supported_cbw_set:" << +vci.supported_cbw_set();
+    oss << " rx_ldpc:" << +vci.rx_ldpc();
+    oss << " sgi_cbw80:" << +vci.sgi_cbw80();
+    oss << " sgi_cbw160:" << +vci.sgi_cbw160();
+    oss << " tx_stbc:" << +vci.tx_stbc();
+    oss << " rx_stbc:" << +vci.rx_stbc();
+    oss << " su_bfer:" << +vci.su_bfer();
+    oss << " su_bfee:" << +vci.su_bfee();
+    oss << " bfee_sts:" << +vci.bfee_sts();
+    oss << " num_sounding:" << +vci.num_sounding();
+    oss << " mu_bfer:" << +vci.mu_bfer();
+    oss << " mu_bfee:" << +vci.mu_bfee();
+    oss << " txop_ps:" << +vci.txop_ps();
+    oss << " htc_vht:" << +vci.htc_vht();
+    oss << " max_ampdu_exp:" << +vci.max_ampdu_exp();
+    oss << " link_adapt:" << +vci.link_adapt();
+    oss << " rx_ant_pattern:" << +vci.rx_ant_pattern();
+    oss << " tx_ant_pattern:" << +vci.tx_ant_pattern();
+    oss << " ext_nss_bw:" << +vci.ext_nss_bw();
+
+    return oss.str();
+}
+
+std::string Describe(const VhtMcsNss& vmn) {
+    std::ostringstream oss;
+    oss << std::setfill(' ');  // TODO(TC-271): Delete this line
+    oss << " [rx_max_mcs]";
+    oss << " ss1:" << +vmn.rx_max_mcs_ss1();
+    oss << " ss2:" << +vmn.rx_max_mcs_ss2();
+    oss << " ss3:" << +vmn.rx_max_mcs_ss3();
+    oss << " ss4:" << +vmn.rx_max_mcs_ss4();
+    oss << " ss5:" << +vmn.rx_max_mcs_ss5();
+    oss << " ss6:" << +vmn.rx_max_mcs_ss6();
+    oss << " ss7:" << +vmn.rx_max_mcs_ss7();
+    oss << " ss8:" << +vmn.rx_max_mcs_ss8();
+    oss << " rx_max_data_rate:" << +vmn.rx_max_data_rate();
+    oss << " max_nsts:" << +vmn.max_nsts();
+
+    oss << " [tx_max_mcs]";
+    oss << " ss1:" << +vmn.tx_max_mcs_ss1();
+    oss << " ss2:" << +vmn.tx_max_mcs_ss2();
+    oss << " ss3:" << +vmn.tx_max_mcs_ss3();
+    oss << " ss4:" << +vmn.tx_max_mcs_ss4();
+    oss << " ss5:" << +vmn.tx_max_mcs_ss5();
+    oss << " ss6:" << +vmn.tx_max_mcs_ss6();
+    oss << " ss7:" << +vmn.tx_max_mcs_ss7();
+    oss << " ss8:" << +vmn.tx_max_mcs_ss8();
+    oss << " tx_max_data_rate:" << +vmn.tx_max_data_rate();
+    oss << " ext_nss_bw:" << +vmn.ext_nss_bw();
+
+    return oss.str();
+}
+
+std::string Describe(const VhtCapabilities& vht_cap) {
+    std::ostringstream oss;
+    oss << std::setfill(' ');  // TODO(TC-271): Delete this line
+    oss << "vci:[" << Describe(vht_cap.vht_cap_info).c_str() << "] ";
+    oss << "mcs_nss:[" << Describe(vht_cap.vht_mcs_nss).c_str() << "]";
+    return oss.str();
+}
+
+std::string Describe(const BasicVhtMcsNss& bvmn) {
+    std::ostringstream oss;
+    oss << std::setfill(' ');  // TODO(TC-271): Delete this line
+    oss << " ss1:" << +bvmn.ss1();
+    oss << " ss2:" << +bvmn.ss2();
+    oss << " ss3:" << +bvmn.ss3();
+    oss << " ss4:" << +bvmn.ss4();
+    oss << " ss5:" << +bvmn.ss5();
+    oss << " ss6:" << +bvmn.ss6();
+    oss << " ss7:" << +bvmn.ss7();
+    oss << " ss8:" << +bvmn.ss8();
+    return oss.str();
+}
+
+std::string Describe(const VhtOperation& vht_op) {
+    std::ostringstream oss;
+    oss << std::setfill(' ');  // TODO(TC-271): Delete this line
+    oss << "vht_cbw:" << +vht_op.vht_cbw;
+    oss << " center_freq_seg0:" << +vht_op.center_freq_seg0;
+    oss << " center_freq_seg1:" << +vht_op.center_freq_seg1;
+    oss << " [basic_vht_mcs_nss] " << Describe(vht_op.basic_mcs).c_str();
+    return oss.str();
+}
+
 std::string Describe(const wlan_chan_list& wl) {
     char buf[512];
     size_t offset = 0;
