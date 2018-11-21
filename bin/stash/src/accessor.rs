@@ -4,9 +4,11 @@
 
 use failure::{err_msg, Error};
 use fidl::endpoints::{RequestStream, ServerEnd};
+use fidl::client::QueryResponseFut;
 use fidl_fuchsia_stash::{
     GetIteratorMarker, GetIteratorRequest, GetIteratorRequestStream, ListIteratorMarker,
     ListIteratorRequest, ListIteratorRequestStream, Value, MAX_KEY_SIZE, MAX_STRING_SIZE,
+    ListItem, KeyValue
 };
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
@@ -135,6 +137,34 @@ impl Accessor {
             .lock()
             .list_prefix(&self.client_name, &prefix);
 
+        // Merge the results with the pending updated fields
+        let fields_updated = self.fields_updated.lock();
+        if !fields_updated.is_empty() {
+            // Delete any fields that have been marked for removal
+            list_results.retain(|li| field_has_been_deleted(fields_updated.get(&li.key)));
+            // Update any fields that have been updated/created
+            for (key, o_val) in fields_updated.iter() {
+                let mut key_was_added = false;
+                for li in list_results.iter_mut() {
+                    if let Some(v) = o_val {
+                        if &li.key == key {
+                            key_was_added = true;
+                            li.type_ = store::value_to_type(&v);
+                        }
+                    }
+                }
+                // This is a new key, append it to the results.
+                if !key_was_added {
+                    if let Some(v) = o_val {
+                        list_results.push(ListItem {
+                            key: key.clone(),
+                            type_: store::value_to_type(&v),
+                        });
+                    }
+                }
+            }
+        }
+
         fasync::spawn(async move {
             let serverChan = fasync::Channel::from_channel(serverEnd.into_channel())?;
             let mut stream = ListIteratorRequestStream::from_channel(serverChan);
@@ -161,6 +191,34 @@ impl Accessor {
             .store_manager
             .lock()
             .get_prefix(&self.client_name, &prefix)?;
+
+        // Merge the results with the pending updated fields
+        let fields_updated = self.fields_updated.lock();
+        if !fields_updated.is_empty() {
+            // Delete any fields that have been marked for removal
+            get_results.retain(|kv| field_has_been_deleted(fields_updated.get(&kv.key)));
+            // Update any fields that have been updated/created
+            for (key, o_val) in fields_updated.iter() {
+                let mut key_was_added = false;
+                for kv in get_results.iter_mut() {
+                    if let Some(v) = o_val {
+                        if &kv.key == key {
+                            key_was_added = true;
+                            kv.val = store::clone_value(v)?;
+                        }
+                    }
+                }
+                // This is a new key, append it to the results.
+                if !key_was_added {
+                    if let Some(v) = o_val {
+                        get_results.push(KeyValue {
+                            key: key.clone(),
+                            val: store::clone_value(v)?,
+                        });
+                    }
+                }
+            }
+        }
 
         let enable_bytes = self.enable_bytes;
 
@@ -199,6 +257,11 @@ impl Accessor {
 
         let list_results = sm.list_prefix(&self.client_name, &prefix);
 
+        for (key, o_val) in fields_updated.iter_mut() {
+            if key.starts_with(&prefix) {
+                *o_val = None;
+            }
+        }
         for li in list_results {
             fields_updated.insert(li.key, None);
         }
@@ -269,6 +332,18 @@ impl Accessor {
     }
 }
 
+// A helper function for use in list_prefix and get_prefix
+fn field_has_been_deleted<T>(f: Option<&Option<T>>) -> bool {
+    match f {
+        // The key has not been updated, keep it
+        None => true,
+        // The key has been marked for removal, drop it
+        Some(None) => false,
+        // The key has been updated to a new value, keep it
+        Some(Some(_)) => true,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::accessor::*;
@@ -282,6 +357,21 @@ mod tests {
 
     fn get_tmp_store_manager(tmp_dir: &TempDir) -> store::StoreManager {
         store::StoreManager::new(tmp_dir.path().join("stash.store")).unwrap()
+    }
+
+    async fn drain_stash_iterator<T, F>(mut f: F) -> Vec<T>
+    where
+        F: FnMut() -> QueryResponseFut<Vec<T>>
+    {
+        let mut res = Vec::new();
+        loop {
+            let mut subset = await!(f()).unwrap();
+            if subset.len() == 0 {
+                break;
+            }
+            res.append(&mut subset);
+        }
+        res
     }
 
     #[test]
@@ -389,18 +479,9 @@ mod tests {
             let (list_iterator, server_end) = create_proxy().unwrap();
             acc.list_prefix(prefix.to_string(), server_end);
 
-            let mut actual = Vec::new();
-            loop {
-                let mut subset = executor
-                    .run_singlethreaded(list_iterator.get_next())
-                    .unwrap();
-                if subset.len() == 0 {
-                    break;
-                }
-                for ListItem { key, type_ } in subset.iter() {
-                    actual.push(key.clone());
-                }
-            }
+            let actual = executor.run_singlethreaded(drain_stash_iterator(|| list_iterator.get_next()));
+            let mut actual : Vec<String> = actual.iter().map(|li| li.key.clone()).collect();
+
             expected.sort_unstable();
             actual.sort_unstable();
             assert_eq!(expected, actual);
@@ -434,18 +515,9 @@ mod tests {
             let (list_iterator, server_end) = create_proxy().unwrap();
             acc.list_prefix(prefix.to_string(), server_end);
 
-            let mut actual = Vec::new();
-            loop {
-                let mut subset = executor
-                    .run_singlethreaded(list_iterator.get_next())
-                    .unwrap();
-                if subset.len() == 0 {
-                    break;
-                }
-                for ListItem { key, type_ } in subset.iter() {
-                    actual.push(key.clone());
-                }
-            }
+            let actual = executor.run_singlethreaded(drain_stash_iterator(|| list_iterator.get_next()));
+            let mut actual : Vec<String> = actual.iter().map(|li| li.key.clone()).collect();
+
             expected.sort_unstable();
             actual.sort_unstable();
             assert_eq!(expected, actual);
@@ -675,5 +747,90 @@ mod tests {
             None,
             sm.lock().get_value(&test_client_name, &"b".to_string())
         );
+    }
+
+    #[test]
+    fn test_delete_prefix_considers_current_commit() {
+        let test_client_name = "test_client".to_string();
+        let test_key = "test_key".to_string();
+
+        let tmp_dir = TempDir::new().unwrap();
+        let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
+        let mut acc = Accessor::new(sm.clone(), true, false, test_client_name.clone());
+
+        for key in vec!["a", "aa", "aaa"] {
+            acc.set_value(key.to_owned(), Value::Boolval(true)).unwrap();
+        }
+        acc.commit().unwrap();
+        for key in vec!["b", "bb", "bbb"] {
+            acc.set_value(key.to_owned(), Value::Boolval(true)).unwrap();
+        }
+
+        acc.delete_prefix("".to_string()).unwrap();
+
+        let mut keys : Vec<String> = acc.fields_updated.lock().keys().map(|s| s.clone()).collect();
+        keys.sort_unstable();
+        assert_eq!(vec!["a", "aa", "aaa", "b", "bb" ,"bbb"], keys);
+        for key in vec!["a", "aa", "aaa", "b", "bb" ,"bbb"] {
+            assert_eq!(Some(&None), acc.fields_updated.lock().get(key));
+        }
+    }
+
+    #[test]
+    fn test_list_prefix_considers_current_commit() {
+        let mut executor = fasync::Executor::new().unwrap();
+
+        let test_client_name = "test_client".to_string();
+        let test_key = "test_key".to_string();
+
+        let tmp_dir = TempDir::new().unwrap();
+        let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
+        let mut acc = Accessor::new(sm.clone(), true, false, test_client_name.clone());
+
+        for key in vec!["a", "aa", "aaa"] {
+            acc.set_value(key.to_owned(), Value::Boolval(true)).unwrap();
+        }
+        acc.commit().unwrap();
+        for key in vec!["b", "bb", "bbb"] {
+            acc.set_value(key.to_owned(), Value::Boolval(true)).unwrap();
+        }
+
+        let (list_iterator, server_end) = create_proxy().unwrap();
+        acc.list_prefix("".to_string(), server_end);
+
+        let res = executor.run_singlethreaded(drain_stash_iterator(|| list_iterator.get_next()));
+        let mut res : Vec<String> = res.iter().map(|li| li.key.clone()).collect();
+
+        res.sort_unstable();
+        assert_eq!(vec!["a", "aa", "aaa", "b", "bb" ,"bbb"], res);
+    }
+
+    #[test]
+    fn test_get_prefix_considers_current_commit() {
+        let mut executor = fasync::Executor::new().unwrap();
+
+        let test_client_name = "test_client".to_string();
+        let test_key = "test_key".to_string();
+
+        let tmp_dir = TempDir::new().unwrap();
+        let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
+        let mut acc = Accessor::new(sm.clone(), true, false, test_client_name.clone());
+
+        for key in vec!["a", "aa", "aaa"] {
+            acc.set_value(key.to_owned(), Value::Boolval(true)).unwrap();
+        }
+        acc.commit().unwrap();
+        for key in vec!["b", "bb", "bbb"] {
+            acc.set_value(key.to_owned(), Value::Boolval(true)).unwrap();
+        }
+
+        let (get_iterator, server_end) = create_proxy().unwrap();
+        acc.get_prefix("".to_string(), server_end);
+
+        let res = executor.run_singlethreaded(drain_stash_iterator(|| get_iterator.get_next()));
+        let mut res : Vec<String> = res.iter().map(|kv| kv.key.clone()).collect();
+
+        res.sort_unstable();
+        assert_eq!(vec!["a", "aa", "aaa", "b", "bb" ,"bbb"], res);
     }
 }

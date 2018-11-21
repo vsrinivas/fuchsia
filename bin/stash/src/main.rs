@@ -4,7 +4,7 @@
 
 // #![deny(warnings)]
 
-#![feature(async_await, await_macro, try_from)]
+#![feature(async_await, await_macro, try_from, futures_api)]
 
 use failure::{Error, ResultExt};
 use fidl::endpoints::RequestStream;

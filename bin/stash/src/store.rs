@@ -185,6 +185,16 @@ impl Store {
     }
 }
 
+pub fn value_to_type(v: &Value) -> ValueType {
+    match v {
+        Value::Intval(_) => ValueType::Int,
+        Value::Floatval(_) => ValueType::Float,
+        Value::Boolval(_) => ValueType::BoolVal,
+        Value::Stringval(_) => ValueType::String,
+        Value::Bytesval(_) => ValueType::Bytes,
+    }
+}
+
 /// StoreManager is used to hold and manipulate a Store, writing changes to disk when appropriate.
 pub struct StoreManager {
     backing_file: PathBuf,
@@ -275,13 +285,7 @@ impl StoreManager {
             if k.starts_with(prefix) {
                 result.push(ListItem {
                     key: k.clone(),
-                    type_: match v {
-                        Value::Intval(_) => ValueType::Int,
-                        Value::Floatval(_) => ValueType::Float,
-                        Value::Boolval(_) => ValueType::BoolVal,
-                        Value::Stringval(_) => ValueType::String,
-                        Value::Bytesval(_) => ValueType::Bytes,
-                    },
+                    type_: value_to_type(&v),
                 });
             }
         }
