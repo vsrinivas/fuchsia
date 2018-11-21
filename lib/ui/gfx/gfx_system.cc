@@ -57,29 +57,33 @@ std::unique_ptr<Engine> GfxSystem::InitializeEngine() {
 
 std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
   // Initialize Vulkan.
+#if SCENIC_VULKAN_SWAPCHAIN
+  constexpr bool kRequiresSurface = true;
+#else
+  constexpr bool kRequiresSurface = false;
+#endif
   escher::VulkanInstance::Params instance_params(
       {{},
        {
            VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+#if SCENIC_VULKAN_SWAPCHAIN
            VK_KHR_SURFACE_EXTENSION_NAME,
            VK_KHR_MAGMA_SURFACE_EXTENSION_NAME,
+#endif
            VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
            VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
            VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME,
        },
-       true});
+       kRequiresSurface});
 
 // Only enable Vulkan validation layers when in debug mode.
 #if !defined(NDEBUG)
   instance_params.layer_names.insert("VK_LAYER_LUNARG_standard_validation");
 #endif
   vulkan_instance_ = escher::VulkanInstance::New(std::move(instance_params));
-#if !defined(__aarch64__) || SCENIC_VULKAN_SWAPCHAIN
+#if SCENIC_VULKAN_SWAPCHAIN
   // When SCENIC_VULKAN_SWAPCHAIN isn't set the Magma surface isn't used to
-  // render, so it isn't needed. The exception is on Intel, because it's used to
-  // query what display formats are supported.
-  // Creating it doesn't work on Amlogic when the DisplaySwapchain is in use,
-  // because both components try to take ownership of the display.
+  // render, so it isn't needed.
   surface_ = CreateVulkanMagmaSurface(vulkan_instance_->vk_instance());
 #endif
 

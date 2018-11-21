@@ -468,44 +468,7 @@ vk::ImageUsageFlags GetFramebufferImageUsage() {
 }
 
 vk::Format GetDisplayImageFormat(escher::VulkanDeviceQueues* device_queues) {
-#if defined(__aarch64__)
-  // Format has to match pixel format for the display.
-  // device_queues->vk_surface() is null on ARM, so it can't be used.
   return vk::Format::eB8G8R8A8Unorm;
-#else
-  vk::PhysicalDevice physical_device = device_queues->vk_physical_device();
-  vk::SurfaceKHR surface = device_queues->vk_surface();
-  FXL_DCHECK(surface);
-
-  // Pick a format and color-space for the swapchain.
-  vk::Format format = vk::Format::eUndefined;
-  vk::ColorSpaceKHR color_space = vk::ColorSpaceKHR::eSrgbNonlinear;
-  {
-    auto result = physical_device.getSurfaceFormatsKHR(surface);
-    VK_CHECK_RESULT(result);
-    for (auto& sf : result.value) {
-      if (sf.colorSpace != color_space)
-        continue;
-
-      // TODO(MZ-382): remove this once Magma supports SRGB swapchains (MA-135).
-      if (sf.format == vk::Format::eB8G8R8A8Unorm) {
-        format = sf.format;
-        break;
-      }
-
-      if (sf.format == vk::Format::eB8G8R8A8Srgb) {
-        // eB8G8R8A8Srgb is our favorite!
-        format = sf.format;
-        break;
-      } else if (format == vk::Format::eUndefined) {
-        // Anything is better than eUndefined.
-        format = sf.format;
-      }
-    }
-  }
-  FXL_CHECK(format != vk::Format::eUndefined);
-  return format;
-#endif
 }
 
 }  // namespace
