@@ -265,9 +265,7 @@ int crash_analyzer_listener(void* arg) {
         if (status != ZX_OK)
             goto cleanup;
 
-        const char* analyzer_command;
-        analyzer_command = getenv("crashsvc.analyzer");
-        if (analyzer_command && strcmp(analyzer_command, "from-appmgr") == 0) {
+        if (require_system) {
             // TODO(abarth|scottmg): Appmgr appears to fail at lookups
             // containing /, so do lookup in two steps ("svc", then "Analyzer")
             // for now. ZX-2265.

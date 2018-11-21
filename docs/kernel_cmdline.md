@@ -23,16 +23,6 @@ lines starting with # are ignored.  Whitespace is not allowed in names.
 If this option is set, the system will not use Address Space Layout
 Randomization.
 
-## crashsvc.analyzer=\<service-host\>
-
-If this is empty, the default crash analyzer in svchost will be used
-which logs exception information and a backtrace to the system log. If
-it is set, the crash analyzer will be found in the given service bundle.
-The only valid non-empty value for this currently is "from-appmgr".
-
-The analyzer process is passed two startup handles: the process and
-thread that sustained the exception.
-
 ## devmgr\.epoch=\<seconds\>
 
 Sets the initial offset (from the Unix epoch, in seconds) for the UTC clock.
