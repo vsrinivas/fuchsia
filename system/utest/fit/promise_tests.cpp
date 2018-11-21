@@ -24,6 +24,22 @@ public:
     }
 };
 
+template <typename V = void, typename E = void>
+class capture_result_wrapper {
+public:
+    template <typename Promise>
+    decltype(auto) wrap(Promise promise) {
+        static_assert(std::is_same<V, typename Promise::value_type>::value, "");
+        static_assert(std::is_same<E, typename Promise::error_type>::value, "");
+        assert(promise);
+        return promise.then([this](fit::result<V, E>& result) {
+            last_result = std::move(result);
+        });
+    }
+
+    fit::result<V, E> last_result;
+};
+
 struct move_only {
     move_only(const move_only&) = delete;
     move_only(move_only&&) = default;
@@ -881,6 +897,36 @@ bool discard_result_combinator() {
     END_TEST;
 }
 
+bool wrap_with_combinator() {
+    BEGIN_TEST;
+
+    fake_context fake_context;
+    capture_result_wrapper<int, char> wrapper;
+    uint64_t successor_run_count = 0;
+
+    // Apply a wrapper which steals a promise's result th
+    auto p = make_delayed_ok_promise(42)
+                 .wrap_with(wrapper)
+                 .then([&](fit::result<>) { successor_run_count++; });
+    static_assert(std::is_same<void, decltype(p)::value_type>::value, "");
+    static_assert(std::is_same<void, decltype(p)::error_type>::value, "");
+
+    fit::result<> result = p(fake_context);
+    EXPECT_TRUE(p);
+    EXPECT_EQ(fit::result_state::pending, result.state());
+    EXPECT_EQ(fit::result_state::pending, wrapper.last_result.state());
+    EXPECT_EQ(0, successor_run_count);
+
+    result = p(fake_context);
+    EXPECT_FALSE(p);
+    EXPECT_EQ(fit::result_state::ok, result.state());
+    EXPECT_EQ(fit::result_state::ok, wrapper.last_result.state());
+    EXPECT_EQ(42, wrapper.last_result.value());
+    EXPECT_EQ(1, successor_run_count);
+
+    END_TEST;
+}
+
 bool box_combinator() {
     BEGIN_TEST;
 
@@ -1225,6 +1271,7 @@ RUN_TEST(and_then_combinator)
 RUN_TEST(or_else_combinator)
 RUN_TEST(inspect_combinator)
 RUN_TEST(discard_result_combinator)
+RUN_TEST(wrap_with_combinator)
 RUN_TEST(box_combinator)
 RUN_TEST(join_combinator)
 RUN_TEST(example1)
