@@ -27,8 +27,7 @@ static inline void trim(std::string& s) {
             }));
     s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
                 return !std::isspace(ch) && ch != '\n';
-            })
-                .base(),
+            }).base(),
             s.end());
 }
 
@@ -329,10 +328,137 @@ union PizzaOrPasta {
     END_TEST;
 }
 
+// This test ensures that inherited methods have the same ordinal / signature /
+// etc as the method from which they are inheriting.
+bool json_generator_test_inheritance() {
+    BEGIN_TEST;
+
+    for (int i = 0; i < kRepeatTestCount; i++) {
+        EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+library fidl.test.json;
+
+[FragileBase]
+interface super {
+   foo(string s) -> (int64 y);
+};
+
+interface sub : super {
+};
+
+)FIDL",
+                                       R"JSON({
+  "version": "0.0.1",
+  "name": "fidl.test.json",
+  "library_dependencies": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [
+    {
+      "name": "fidl.test.json/super",
+      "maybe_attributes": [
+        {
+          "name": "FragileBase",
+          "value": ""
+        }
+      ],
+      "methods": [
+        {
+          "ordinal": 790020540,
+          "name": "foo",
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "string",
+                "nullable": false
+              },
+              "name": "s",
+              "size": 16,
+              "alignment": 8,
+              "offset": 16
+            }
+          ],
+          "maybe_request_size": 32,
+          "maybe_request_alignment": 8,
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "y",
+              "size": 8,
+              "alignment": 8,
+              "offset": 16
+            }
+          ],
+          "maybe_response_size": 24,
+          "maybe_response_alignment": 8
+        }
+      ]
+    },
+    {
+      "name": "fidl.test.json/sub",
+      "methods": [
+        {
+          "ordinal": 790020540,
+          "name": "foo",
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "string",
+                "nullable": false
+              },
+              "name": "s",
+              "size": 16,
+              "alignment": 8,
+              "offset": 16
+            }
+          ],
+          "maybe_request_size": 32,
+          "maybe_request_alignment": 8,
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "y",
+              "size": 8,
+              "alignment": 8,
+              "offset": 16
+            }
+          ],
+          "maybe_response_size": 24,
+          "maybe_response_alignment": 8
+        }
+      ]
+    }
+  ],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "declaration_order": [
+    "fidl.test.json/super",
+    "fidl.test.json/sub"
+  ],
+  "declarations": {
+    "fidl.test.json/super": "interface",
+    "fidl.test.json/sub": "interface"
+  }
+})JSON"));
+    }
+
+    END_TEST;
+}
 } // namespace
 
 BEGIN_TEST_CASE(json_generator_tests);
 RUN_TEST(json_generator_test_struct);
 RUN_TEST(json_generator_test_table);
 RUN_TEST(json_generator_test_union);
+RUN_TEST(json_generator_test_inheritance);
 END_TEST_CASE(json_generator_tests);
