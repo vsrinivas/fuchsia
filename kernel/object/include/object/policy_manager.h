@@ -45,12 +45,12 @@ public:
     //
     // |mode| can be:
     // - ZX_JOB_POL_RELATIVE which creates a new policy that only uses
-    //   the |policy_input| entries that are unespecified in |existing_policy|
+    //   the |policy_input| entries that are unspecified in |existing_policy|
     // - ZX_JOB_POL_ABSOLUTE which creates a new policy that requires
     //   that all |policy_input| entries are used.
     //
     // This call can fail in low memory cases and when the |existing_policy|
-    // and the policy_input are in conflict given the |mode| paramater.
+    // and the policy_input are in conflict given the |mode| parameter.
     zx_status_t AddPolicy(
         uint32_t mode, pol_cookie_t existing_policy,
         const zx_policy_basic* policy_input, size_t policy_count,

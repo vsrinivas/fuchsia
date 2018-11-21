@@ -26,7 +26,7 @@
 
 #define FIRMWARE_DOWNLOAD_DELAY ZX_MSEC(50)
 
-// Hardcoded. Better to paramaterize on chipset.
+// Hardcoded. Better to parameterize on chipset.
 // Broadcom chips need a few hundred msec delay
 // after firmware load
 #define BAUD_RATE_SWITCH_DELAY ZX_MSEC(200)

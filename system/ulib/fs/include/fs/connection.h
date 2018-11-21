@@ -119,7 +119,7 @@ protected:
     // Takes ownership of the FIDL message's handles.
     // The default implementation just closes these handles.
     //
-    // This implementation may be overriden to support additional non-VFS
+    // This implementation may be overridden to support additional non-VFS
     // FIDL protocols.
     virtual zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 

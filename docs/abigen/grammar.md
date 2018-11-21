@@ -42,7 +42,7 @@ file = ( declaration )* , EOF ;
 declaration = syscall-declaration ;
 
 syscall-declaration = syscall IDENTIFIER attribute-list "(" parameter-list ")"
-                      ( "returns" "(" type ( "," paramater-list ) ")" )
+                      ( "returns" "(" type ( "," parameter-list ) ")" )
 
 parameter-list = parameter | parameter "," parameter-list
 

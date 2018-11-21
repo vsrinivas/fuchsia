@@ -148,7 +148,7 @@ int ResolveGlobs(const fbl::Vector<fbl::String>& globs,
 //   to stdout than otherwise.
 // |num_failed| is an output parameter which will be set to the number of test
 //   binaries that failed.
-// |results| is an output paramater to which run results will be appended.
+// |results| is an output parameter to which run results will be appended.
 //
 // Returns false if any test binary failed, true otherwise.
 bool RunTests(const RunTestFn& RunTest, const fbl::Vector<fbl::String>& test_paths,
