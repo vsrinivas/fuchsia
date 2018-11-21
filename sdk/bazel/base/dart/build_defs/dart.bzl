@@ -142,8 +142,8 @@ def compile_kernel_action(
     )
 
     # 5. Compile the kernel.
-    single_root_scheme = "main-root"
-    single_root_base = "."
+    multi_root_scheme = "main-root"
+    multi_root_base = "."
     context.actions.run(
         executable = kernel_script,
         arguments = [
@@ -154,17 +154,17 @@ def compile_kernel_action(
             "dart_runner",
             "--sdk-root",
             sdk_root.dirname,
-            "--single-root-scheme",
-            single_root_scheme,
-            "--single-root-base",
-            single_root_base,
+            "--multi-root-scheme",
+            multi_root_scheme,
+            "--multi-root",
+            multi_root_base,
             "--packages",
             package_spec.path,
             "--manifest",
             manifest_file.path,
             "--output",
             kernel_snapshot_file.path,
-            "%s:///%s" % (single_root_scheme, main.path),
+            "%s:///%s" % (multi_root_scheme, main.path),
         ],
         inputs = dart_ctx.transitive_srcs.files + build_dir_files.values() + srcs + [
             kernel_compiler,
