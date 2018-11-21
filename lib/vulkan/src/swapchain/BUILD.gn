@@ -9,14 +9,17 @@ source_set("surface_header") {
     "image_pipe_surface.h",
   ]
   public_deps = [
-    "//garnet/public/fidl/fuchsia.images",
     "$loader_build_root:vulkan",
+    "//garnet/public/fidl/fuchsia.images",
   ]
 }
 
 loadable_module("swapchain") {
   output_name = "libVkLayer_image_pipe_swapchain"
-  sources = [ "image_pipe_swapchain_layer.cc" ]
+  sources = [
+    "image_pipe_surface_async.h",
+    "image_pipe_swapchain_layer.cc",
+  ]
   include_dirs = [
     "$loader_build_root/include",
     "$loader_build_root/loader",
@@ -25,9 +28,8 @@ loadable_module("swapchain") {
   ]
   deps = [
     ":surface_header",
-    "//zircon/public/lib/async-loop-cpp",
     "$loader_build_root:extra_vulkan_headers",
     "$loader_build_root/layers:layer_common",
+    "//zircon/public/lib/async-loop-cpp",
   ]
-
 }
