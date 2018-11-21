@@ -1,20 +1,11 @@
 # Crash reporting
 
 For development, it is often easier to dump the crash information in the logs as
-the crash happens on device. This is today the default behavior. For devices in
-the field, we want to be able to send a report to a remote crash server instead
-as we might not have access to the devices' logs. We use
+the crash happens on device. For devices in the field, we want to be able to
+send a report to a remote crash server as well as we might not have access to
+the devices' logs. We use
 [Crashpad](https://chromium.googlesource.com/crashpad/crashpad/+/master/README.md)
-as the third-party client library to talk to the remote crash server. "Enabling
-Crashpad" is our current terminology for saying that we are automatically
-uploading crash reports to a remote server instead of dumping the info in the
-logs.
-
-To enable Crashpad, you need to specify an additional build flag:
-
-```sh
-(host)$ fx set ... --args=enable_crashpad=true
-```
+as the third-party client library to talk to the remote crash server.
 
 ## Adding report annotations
 
@@ -25,10 +16,10 @@ annotation, simply add a new field in the map returned by
 
 ## Testing
 
-To test your changes, make sure to first build with Crashpad enabled. Then on a
-real device, we have two helper programs to simulate a kernel crash and a C
-userspace crash. After running each one of them (see commands in sections
-below), you should then look each time for the following line in the syslog:
+To test your changes, on a real device, we have two helper programs to simulate
+a kernel crash and a C userspace crash. After running each one of them (see
+commands in sections below), you should then look each time for the following
+line in the syslog:
 
 ```sh
 (host)$ fx syslog --tag crash
