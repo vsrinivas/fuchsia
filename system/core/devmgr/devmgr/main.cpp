@@ -200,6 +200,17 @@ int crash_analyzer_listener(void* arg) {
             continue;
         }
 
+        zx_handle_t port_handle;
+        status = zx_handle_duplicate(handles[2], ZX_RIGHT_SAME_RIGHTS, &port_handle);
+        if (status != ZX_OK) {
+            printf("devmgr: crash_analyzer_listener: port handle duplicate failed: %d\n", status);
+            // If port handle duplication failed, try to resume and bail.
+            zx_handle_close(thread_handle);
+            zx_task_resume_from_exception(handles[1], handles[2], ZX_RESUME_TRY_NEXT);
+            zx_handle_close_many(handles, fbl::count_of(handles));
+            continue;
+        }
+
         printf("devmgr: crash_analyzer_listener: analyzing exception type 0x%x\n", exception_type);
 
         zx_handle_t appmgr_svc_request = ZX_HANDLE_INVALID;
@@ -252,13 +263,14 @@ int crash_analyzer_listener(void* arg) {
         if (status != ZX_OK) {
             printf("devmgr: crash_analyzer_listener: failed to analyze crash: %d (%s)\n",
                    status, zx_status_get_string(status));
-            status = zx_task_resume(thread_handle, ZX_RESUME_EXCEPTION | ZX_RESUME_TRY_NEXT);
+            status = zx_task_resume_from_exception(thread_handle, port_handle, ZX_RESUME_TRY_NEXT);
             if (status != ZX_OK) {
-                printf("devmgr: crash_analyzer_listener: zx_task_resume: %d (%s)\n",
+                printf("devmgr: crash_analyzer_listener: zx_task_resume_from_exception: %d (%s)\n",
                        status, zx_status_get_string(status));
             }
         }
         zx_handle_close(thread_handle);
+        zx_handle_close(port_handle);
     }
 }
 
