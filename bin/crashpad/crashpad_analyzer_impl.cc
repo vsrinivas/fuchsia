@@ -188,9 +188,9 @@ CrashpadAnalyzerImpl::GetUploadReport(const crashpad::UUID& local_report_id) {
   return report;
 }
 
-int CrashpadAnalyzerImpl::HandleException(zx::process process,
-                                          zx::thread thread,
-                                          zx::port exception_port) {
+int CrashpadAnalyzerImpl::HandleNativeException(zx::process process,
+                                                zx::thread thread,
+                                                zx::port exception_port) {
   inspector_print_debug_info(process.get(), thread.get());
 
   const std::string package_name = GetPackageName(process);
@@ -263,7 +263,8 @@ int CrashpadAnalyzerImpl::HandleException(zx::process process,
   return UploadReport(std::move(report), annotations);
 }
 
-int CrashpadAnalyzerImpl::ProcessCrashlog(fuchsia::mem::Buffer crashlog) {
+int CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
+    fuchsia::mem::Buffer crashlog) {
   FX_LOGS(INFO) << "generating crash report for previous kernel panic";
 
   crashpad::CrashReportDatabase::OperationStatus database_status;
@@ -325,8 +326,8 @@ void CrashpadAnalyzerImpl::HandleNativeException(
   // TODO(DX-653): we should return a more meaningful status depending on
   // the handling.
   callback(ZX_OK);
-  if (HandleException(std::move(process), std::move(thread),
-                      std::move(exception_port)) != EXIT_SUCCESS) {
+  if (HandleNativeException(std::move(process), std::move(thread),
+                            std::move(exception_port)) != EXIT_SUCCESS) {
     FX_LOGS(ERROR) << "failed to handle exception. Won't retry.";
   }
 }
@@ -345,7 +346,7 @@ void CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
   // TODO(DX-653): we should return a more meaningful status depending on
   // the handling.
   callback(ZX_OK);
-  if (ProcessCrashlog(std::move(crashlog)) != EXIT_SUCCESS) {
+  if (ProcessKernelPanicCrashlog(std::move(crashlog)) != EXIT_SUCCESS) {
     FX_LOGS(ERROR) << "failed to process VMO crashlog. Won't retry.";
   }
 }

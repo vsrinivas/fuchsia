@@ -45,9 +45,9 @@ class CrashpadAnalyzerImpl : public Analyzer {
   explicit CrashpadAnalyzerImpl(
       std::unique_ptr<crashpad::CrashReportDatabase> database);
 
-  int HandleException(zx::process process, zx::thread thread,
-                      zx::port exception_port);
-  int ProcessCrashlog(fuchsia::mem::Buffer crashlog);
+  int HandleNativeException(zx::process process, zx::thread thread,
+                            zx::port exception_port);
+  int ProcessKernelPanicCrashlog(fuchsia::mem::Buffer crashlog);
 
   int UploadReport(
       std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> report,
