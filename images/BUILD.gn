@@ -131,14 +131,13 @@ write_file("$root_build_dir/packages.json",
            },
            "json")
 
-
 ###
 ### shell-commands package
 ###
 ### TODO(CF-223)
 ### shell-commands is a Fuchsia package that aggregates all binaries from all
 ### "available" Fuchsia packages producing "#!resolve URI" trampolines. This
-### package is a solution to enable the shell to resolve command line 
+### package is a solution to enable the shell to resolve command line
 ### programs out of ephemeral packages.
 
 # create-shell-commands performs two actions:
@@ -147,7 +146,9 @@ write_file("$root_build_dir/packages.json",
 action("create-shell-commands") {
   testonly = true
   script = "create-shell-commands.py"
-  outputs = ["$target_out_dir/shell-commands-extra.manifest"]
+  outputs = [
+    "$target_out_dir/shell-commands-extra.manifest",
+  ]
   args = [
     "--trampoline-dir",
     rebase_path(target_out_dir + "/commands", root_build_dir),
@@ -173,7 +174,9 @@ action("create-shell-commands") {
 package("shell-commands") {
   testonly = true
   extra = get_target_outputs(":create-shell-commands")
-  deps = [":create-shell-commands"]
+  deps = [
+    ":create-shell-commands",
+  ]
 }
 
 ###
@@ -238,15 +241,11 @@ action("pkgsvr_index") {
 # populated inside /pkgfs/packages that are {name}/{version} containing the
 # merkleroot of the meta.far of that package.
 action("preinstall.manifest") {
-  visibility = [
-    ":data.blk",
-  ]
+  visibility = [ ":data.blk" ]
   testonly = true
 
   script = "manifest.py"
-  args = [
-    "--rewrite=*=pkgfs_index/packages/{target}={source}"
-  ]
+  args = [ "--rewrite=*=pkgfs_index/packages/{target}={source}" ]
   outputs = [
     # The output is in the root build dir in order to avoid a complex rewrite
     # of the source path. The minfs tool this is passed to interprets source
@@ -277,7 +276,6 @@ action("preinstall.manifest") {
     ":update.meta",
   ]
 }
-
 
 # The /boot and /system manifests have to be generated in concert.  Things
 # like drivers going into /system can affect what needs to go into /boot.
@@ -641,6 +639,26 @@ if (custom_signing_script != "") {
       ]
     },
   ]
+  if (use_vbmeta) {
+    images += [
+      {
+        deps = [
+          ":signed",
+        ]
+        sources = [
+          "$root_out_dir/fuchsia.zbi.vbmeta",
+        ]
+        json = {
+          name = "zircon-a.vbmeta"
+          type = "vbmeta"
+          bootserver_pave = [ "--vbmetaa" ]
+        }
+        public = [
+          "IMAGE_VBMETAA_RAW",
+        ]
+      },
+    ]
+  }
 }
 
 # The updater also wants the zedboot zbi as recovery.
@@ -694,7 +712,9 @@ zircon_tool_action("data.blk") {
     data_image_path,
   ]
   depfile = data_image_path + ".d"
-  deps = [ ":preinstall.manifest" ]
+  deps = [
+    ":preinstall.manifest",
+  ]
   preinstall_manifest = get_target_outputs(deps[0])
   args = [
     "--depfile",
@@ -1412,8 +1432,10 @@ action("available_blobs.manifest") {
   response_file_contents = [
     "--output=" + rebase_path(available_blob_manifest, root_build_dir),
     "--depfile=" + rebase_path(depfile, root_build_dir),
-    "--input=" + rebase_path("$target_out_dir/system_image.meta/blobs.json", root_build_dir),
-    "--input=" + rebase_path("$target_out_dir/update.meta/blobs.json", root_build_dir),
+    "--input=" + rebase_path("$target_out_dir/system_image.meta/blobs.json",
+                             root_build_dir),
+    "--input=" +
+        rebase_path("$target_out_dir/update.meta/blobs.json", root_build_dir),
   ]
   foreach(pkg_label, available_packages) {
     pkg_target_name = get_label_info(pkg_label, "name")
@@ -1482,8 +1504,8 @@ action("ids.txt") {
   testonly = true
 
   deps = [
-    ":system_image.manifest",
     ":kernel-ids.txt",
+    ":system_image.manifest",
   ]
   sources = [
     "$target_out_dir/kernel-ids.txt",
@@ -1594,7 +1616,6 @@ foreach(image, images) {
           image_sources += get_target_outputs(label)
         }
       }
-      assert(image_sources == [ image_sources[0] ])
 
       files = [
         {

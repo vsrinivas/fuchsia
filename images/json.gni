@@ -21,7 +21,8 @@
 #
 #   deps (required)
 #     [list of labels] Target that generates the image file.
-#     If `sources` is not specified, this must be an action in this file.
+#     If `sources` is not specified, this must be an action in this file,
+#     and that action must produce a valid ZBI as the first declared output.
 #
 #   installer (optional)
 #     [string] Put this image into the installer image under this name.
@@ -83,7 +84,6 @@ template("write_images_manifest") {
         image_sources += get_target_outputs(label)
       }
     }
-    assert(image_sources == [ image_sources[0] ])
     image_file = rebase_path(image_sources[0], root_build_dir)
 
     if (defined(image.json)) {
