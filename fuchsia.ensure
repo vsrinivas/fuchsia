@@ -62,4 +62,4 @@ fuchsia/qemu/${platform} git_revision:0f0027d617976b4cbb7b937d5836f8ef0ac25ba1
 
 # sysroot
 @Subdir sysroot
-fuchsia/sysroot/${os=linux}-${arch} git_revision:a96053c799a0f1ad0b7e8ab8199edbfa18adcbb6
+fuchsia/sysroot/${os=linux}-${arch} git_revision:3a257b6f56d9f934e852c84c5b82f6c6b71a6182
