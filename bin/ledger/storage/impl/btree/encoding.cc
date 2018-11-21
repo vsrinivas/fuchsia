@@ -143,7 +143,9 @@ std::string EncodeNode(uint8_t level, const std::vector<Entry>& entries,
 bool DecodeNode(fxl::StringView data, uint8_t* level,
                 std::vector<Entry>* res_entries,
                 std::map<size_t, ObjectIdentifier>* res_children) {
-  FXL_DCHECK(CheckValidTreeNodeSerialization(data));
+  if (!CheckValidTreeNodeSerialization(data)) {
+    return false;
+  }
 
   const TreeNodeStorage* tree_node =
       GetTreeNodeStorage(reinterpret_cast<const unsigned char*>(data.data()));
