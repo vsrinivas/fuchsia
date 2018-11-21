@@ -4,9 +4,9 @@
 
 // Check that we can decode things that we can encode.
 
-#include <iostream>
 #include <fidl/test/misc/cpp/fidl.h>
 #include <lib/fidl/internal.h>
+#include <iostream>
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/clone.h"
 
@@ -57,18 +57,16 @@ bool cmp_payload(const uint8_t* actual, size_t actual_size,
   for (size_t i = 0; i < actual_size && i < expected_size; i++) {
     if (actual[i] != expected[i]) {
       pass = false;
-      std::cout << "element[" << i << "]: " <<
-        "actual=" << +actual[i] << " " <<
-        "expected=" << +expected[i] <<
-        "\n";
+      std::cout << "element[" << i << "]: "
+                << "actual=" << +actual[i] << " "
+                << "expected=" << +expected[i] << "\n";
     }
   }
   if (actual_size != expected_size) {
     pass = false;
-    std::cout << "element[...]: " <<
-      "actual.size=" << +actual_size << " " <<
-      "expected.size=" << +expected_size <<
-      "\n";
+    std::cout << "element[...]: "
+              << "actual.size=" << +actual_size << " "
+              << "expected.size=" << +expected_size << "\n";
   }
   return pass;
 }
@@ -76,22 +74,21 @@ bool cmp_payload(const uint8_t* actual, size_t actual_size,
 template <class Input>
 bool ValueToBytes(const Input& input, const std::vector<uint8_t>& expected) {
   fidl::Encoder enc(0xfefefefe);
-  auto offset = enc.Alloc(CodingTraits<SimpleTable>::encoded_size);
+  auto offset = enc.Alloc(CodingTraits<Input>::encoded_size);
   fidl::Clone(input).Encode(&enc, offset);
   auto msg = enc.GetMessage();
   auto payload = msg.payload();
   return cmp_payload(
-    reinterpret_cast<const uint8_t*>(payload.data()), payload.actual(),
-    reinterpret_cast<const uint8_t*>(expected.data()), expected.size()
-  );
+      reinterpret_cast<const uint8_t*>(payload.data()), payload.actual(),
+      reinterpret_cast<const uint8_t*>(expected.data()), expected.size());
 }
 
 TEST(SimpleTable, CheckEmptyTable) {
   SimpleTable input;
 
   auto expected = std::vector<uint8_t>{
-    0, 0, 0, 0, 0, 0, 0, 0, // max ordinal
-    255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+    0,   0,   0,   0,   0,   0,   0,   0,    // max ordinal
+    255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
   };
 
   EXPECT_TRUE(ValueToBytes(input, expected));
@@ -145,6 +142,50 @@ TEST(SimpleTable, SerializeAndDeserializeWithReserved) {
   // NewerSimpleTable is an extended ('new') version of SimpleTable:
   // We should be able to decode to it.
   EXPECT_EQ(1, *RoundTrip<NewerSimpleTable>(input).y());
+}
+
+TEST(Empty, SerializeAndDeserialize) {
+  Empty input{};
+  EXPECT_EQ(input, RoundTrip<Empty>(input));
+}
+
+TEST(Empty, CheckBytes) {
+  Empty input;
+
+  auto expected = std::vector<uint8_t>{
+    0,  // empty struct zero field
+    0, 0, 0, 0, 0, 0, 0,  // 7 bytes of padding after empty struct, to align to 64 bits
+  };
+  EXPECT_TRUE(ValueToBytes(input, expected));
+}
+
+TEST(EmptyStructSandwich, SerializeAndDeserialize) {
+  EmptyStructSandwich input{
+    .before = "before",
+    .after = "after",
+  };
+  EXPECT_EQ(input, RoundTrip<EmptyStructSandwich>(input));
+}
+
+TEST(EmptyStructSandwich, CheckBytes) {
+  EmptyStructSandwich input{
+    .before = "before",
+    .after = "after"
+  };
+
+  auto expected = std::vector<uint8_t>{
+    6,   0,   0,   0,   0,   0,   0,   0,    // length of "before"
+    255, 255, 255, 255, 255, 255, 255, 255,  // "before" is present
+    0,                                       // empty struct zero field
+         0,   0,   0,   0,   0,   0,   0,    // 7 bytes of padding after empty struct, to align to 64 bits
+    5,   0,   0,   0,   0,   0,   0,   0,    // length of "world"
+    255, 255, 255, 255, 255, 255, 255, 255,  // "after" is present
+    'b', 'e', 'f', 'o', 'r', 'e',            // "before" string
+                                  0,   0,    // 2 bytes of padding after "before", to align to 64 bits
+    'a', 'f', 't', 'e', 'r',                 // "after" string
+                             0,   0,   0,    // 3 bytes of padding after "after", to align to 64 bits
+  };
+  EXPECT_TRUE(ValueToBytes(input, expected));
 }
 
 }  // namespace

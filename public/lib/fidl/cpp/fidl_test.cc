@@ -193,13 +193,13 @@ std::vector<fidl::Array<A, 3>> BuildArray(
   return arrays;
 }
 
-TEST(FidlTest, ArrayOfIntComparaison) {
+TEST(FidlTest, ArrayOfIntComparison) {
   // Create an vector of arrays.
   auto arrays = BuildArray<int32_t>([](int32_t i) { return i; });
   EXPECT_TRUE(CheckComparisonOperators(arrays));
 }
 
-TEST(FidlTest, ArrayOfStructComparaison) {
+TEST(FidlTest, ArrayOfStructComparison) {
   // Create an vector of arrays.
   auto arrays =
       BuildArray<Int64Struct>([](int32_t i) { return Int64Struct{i}; });

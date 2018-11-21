@@ -6,6 +6,8 @@ library fidl.test.compatibility;
 
 struct this_is_a_struct { string s; };
 
+struct this_is_an_empty_struct {};
+
 union this_is_a_union {
   string s;
   bool b;
@@ -332,6 +334,7 @@ enum u64_enum : uint64 {
 struct structs {
   this_is_a_struct s;
   this_is_a_struct? nullable_s;
+  this_is_an_empty_struct es;
 };
 
 struct unions {

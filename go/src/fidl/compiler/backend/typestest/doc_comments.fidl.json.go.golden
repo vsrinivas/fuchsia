@@ -27,7 +27,7 @@ type Struct struct {
 	// struct member comment #1
 	//
 	// struct member comment #3
-	Field int32 
+	Field int32
 }
 
 var _mStruct = _bindings.CreateLazyMarshaler(Struct{})

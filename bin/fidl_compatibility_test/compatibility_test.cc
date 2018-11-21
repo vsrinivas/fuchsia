@@ -444,6 +444,10 @@ void ExpectEq(const Struct& a, const Struct& b) {
   EXPECT_EQ(a.structs.s.s, b.structs.s.s);
   EXPECT_EQ(a.structs.nullable_s, b.structs.nullable_s);
 
+  // empty structs
+  EXPECT_EQ(a.structs.es, b.structs.es);
+  EXPECT_EQ(a.structs.es.__reserved, 0u);
+
   // unions
   EXPECT_EQ(a.unions.u.is_s(), b.unions.u.is_s());
   EXPECT_EQ(a.unions.u.s(), b.unions.u.s());
@@ -933,6 +937,8 @@ class CompatibilityTest
 TEST_P(CompatibilityTest, EchoStruct) {
   RecordProperty("proxy_url", proxy_url_);
   RecordProperty("server_url", server_url_);
+  std::cerr << proxy_url_ << " <-> " << server_url_ << std::endl;
+
   Struct sent;
   Initialize(&sent);
   fidl::test::compatibility::EchoClientApp app;
@@ -957,6 +963,8 @@ TEST_P(CompatibilityTest, EchoStruct) {
 TEST_P(CompatibilityTest, EchoStructNoRetVal) {
   RecordProperty("proxy_url", proxy_url_);
   RecordProperty("server_url", server_url_);
+  std::cerr << proxy_url_ << " <-> " << server_url_ << std::endl;
+
   Struct sent;
   Initialize(&sent);
   fidl::test::compatibility::EchoClientApp app;

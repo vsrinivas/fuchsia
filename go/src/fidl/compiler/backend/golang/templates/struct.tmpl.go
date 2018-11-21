@@ -15,7 +15,7 @@ type {{ .Name }} struct {
 	{{- range .DocComments}}
 	//{{ . }}
 	{{- end}}
-	{{ .Name }} {{ .Type }} {{ .Tags }}
+	{{ .Name }} {{ .Type -}} {{ .Tags }}
 	{{- end }}
 }
 

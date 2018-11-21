@@ -17,6 +17,15 @@ struct Has2OptionalFieldStruct {
     Int64Struct? y;
 };
 
+struct Empty {
+};
+
+struct EmptyStructSandwich {
+  string before;
+  Empty e;
+  string after;
+};
+
 union SimpleUnion {
   int32 i32;
   int64 i64;

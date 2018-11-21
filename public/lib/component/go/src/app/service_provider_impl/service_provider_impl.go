@@ -31,7 +31,12 @@ func (spi *ServiceProviderImpl) ConnectToService(name string, handle zx.Handle) 
 		handle.Close()
 		return nil
 	}
-	factory.Create(handle)
+
+	err := factory.Create(handle)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
