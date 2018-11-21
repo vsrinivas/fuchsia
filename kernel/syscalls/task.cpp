@@ -337,7 +337,7 @@ zx_status_t sys_process_create(zx_handle_t job_handle,
     // We check the policy against the process calling zx_process_create, which
     // is the operative policy, rather than against |job_handle|. Access to
     // |job_handle| is controlled by the rights associated with the handle.
-    zx_status_t result = up->QueryPolicy(ZX_POL_NEW_PROCESS);
+    zx_status_t result = up->QueryBasicPolicy(ZX_POL_NEW_PROCESS);
     if (result != ZX_OK)
         return result;
 
@@ -688,5 +688,5 @@ zx_status_t sys_job_set_policy(zx_handle_t job_handle, uint32_t options,
     if (status != ZX_OK)
         return status;
 
-    return job->SetPolicy(options, policy.get(), policy.size());
+    return job->SetBasicPolicy(options, policy.get(), policy.size());
 }

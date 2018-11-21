@@ -242,14 +242,14 @@ public:
     // E.g., in sys_channel_create:
     //
     //     auto up = ProcessDispatcher::GetCurrent();
-    //     zx_status_t res = up->QueryPolicy(ZX_POL_NEW_CHANNEL);
+    //     zx_status_t res = up->QueryBasicPolicy(ZX_POL_NEW_CHANNEL);
     //     if (res != ZX_OK) {
     //         // Channel creation denied by the calling process's
     //         // parent job's policy.
     //         return res;
     //     }
     //     // Ok to create a channel.
-    zx_status_t QueryPolicy(uint32_t condition) const;
+    zx_status_t QueryBasicPolicy(uint32_t condition) const;
 
     // return a cached copy of the vdso code address or compute a new one
     uintptr_t vdso_code_address() {

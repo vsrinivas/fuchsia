@@ -49,7 +49,7 @@ zx_status_t sys_vmo_create(uint64_t size, uint32_t options,
     }
 
     auto up = ProcessDispatcher::GetCurrent();
-    zx_status_t res = up->QueryPolicy(ZX_POL_NEW_VMO);
+    zx_status_t res = up->QueryBasicPolicy(ZX_POL_NEW_VMO);
     if (res != ZX_OK)
         return res;
 

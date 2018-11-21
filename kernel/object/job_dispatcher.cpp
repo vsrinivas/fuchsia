@@ -345,7 +345,7 @@ bool JobDispatcher::Kill() {
     return true;
 }
 
-zx_status_t JobDispatcher::SetPolicy(
+zx_status_t JobDispatcher::SetBasicPolicy(
     uint32_t mode, const zx_policy_basic* in_policy, size_t policy_count) {
     // Can't set policy when there are active processes or jobs.
     Guard<fbl::Mutex> guard{get_lock()};

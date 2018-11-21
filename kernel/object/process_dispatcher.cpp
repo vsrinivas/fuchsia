@@ -402,10 +402,10 @@ Handle* ProcessDispatcher::GetHandleLocked(zx_handle_t handle_value,
 
     // Handle lookup failed.  We potentially generate an exception,
     // depending on the job policy.  Note that we don't use the return
-    // value from QueryPolicy() here: ZX_POL_ACTION_ALLOW and
+    // value from QueryBasicPolicy() here: ZX_POL_ACTION_ALLOW and
     // ZX_POL_ACTION_DENY are equivalent for ZX_POL_BAD_HANDLE.
     if (likely(!skip_policy))
-        QueryPolicy(ZX_POL_BAD_HANDLE);
+        QueryBasicPolicy(ZX_POL_BAD_HANDLE);
     return nullptr;
 }
 
@@ -777,7 +777,7 @@ zx_status_t ProcessDispatcher::set_debug_addr(uintptr_t addr) {
     return ZX_OK;
 }
 
-zx_status_t ProcessDispatcher::QueryPolicy(uint32_t condition) const {
+zx_status_t ProcessDispatcher::QueryBasicPolicy(uint32_t condition) const {
     auto action = policy_.QueryBasicPolicy(condition);
     if (action & ZX_POL_ACTION_EXCEPTION) {
         thread_signal_policy_exception();

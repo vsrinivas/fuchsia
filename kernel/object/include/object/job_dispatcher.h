@@ -102,7 +102,9 @@ public:
 
     // Set policy. |mode| is is either ZX_JOB_POL_RELATIVE or ZX_JOB_POL_ABSOLUTE and
     // in_policy is an array of |count| elements.
-    zx_status_t SetPolicy(uint32_t mode, const zx_policy_basic* in_policy, size_t policy_count);
+    zx_status_t SetBasicPolicy(uint32_t mode,
+                               const zx_policy_basic* in_policy,
+                               size_t policy_count);
     JobPolicy GetPolicy() const;
 
     // Calls the provided |zx_status_t func(JobDispatcher*)| on every
