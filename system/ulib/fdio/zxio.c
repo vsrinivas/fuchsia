@@ -472,7 +472,7 @@ static zx_status_t fdio_zxio_vmofile_get_vmo(fdio_t* io, int flags,
     }
 
     size_t length = file->end - file->off;
-    if (flags & FDIO_MMAP_FLAG_PRIVATE) {
+    if (flags & fuchsia_io_VMO_FLAG_PRIVATE) {
         // Why don't we consider file->off in this branch? It seems like we
         // want to clone the part of the VMO from file->off to file->end rather
         // than length bytes at the start of the VMO.
@@ -486,9 +486,9 @@ static zx_status_t fdio_zxio_vmofile_get_vmo(fdio_t* io, int flags,
         }
         zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_GET_PROPERTY |
                 ZX_RIGHT_MAP;
-        rights |= (flags & FDIO_MMAP_FLAG_READ) ? ZX_RIGHT_READ : 0;
-        rights |= (flags & FDIO_MMAP_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
-        rights |= (flags & FDIO_MMAP_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
+        rights |= (flags & fuchsia_io_VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
+        rights |= (flags & fuchsia_io_VMO_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
+        rights |= (flags & fuchsia_io_VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
         return zx_handle_duplicate(file->vmo, rights, out_vmo);
     }
 }

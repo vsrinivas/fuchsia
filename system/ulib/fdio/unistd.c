@@ -933,7 +933,7 @@ zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_option_t zx_options, int
         return ZX_ERR_BAD_HANDLE;
     }
 
-    int vflags = zx_options | (flags & MAP_PRIVATE ? FDIO_MMAP_FLAG_PRIVATE : 0);
+    int vflags = zx_options | (flags & MAP_PRIVATE ? fuchsia_io_VMO_FLAG_PRIVATE : 0);
     zx_handle_t vmo;
     zx_status_t r = io->ops->get_vmo(io, vflags, &vmo);
     fdio_release(io);
@@ -1293,6 +1293,9 @@ off_t lseek(int fd, off_t offset, int whence) {
     fdio_release(io);
     return r;
 }
+
+#define READDIR_CMD_NONE  0
+#define READDIR_CMD_RESET 1
 
 static int getdirents(int fd, void* ptr, size_t len, long cmd) {
     size_t actual;

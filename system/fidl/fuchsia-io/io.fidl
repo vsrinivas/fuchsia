@@ -175,7 +175,17 @@ enum SeekOrigin : uint32 {
 const uint32 VMO_FLAG_READ = 0x00000001;
 const uint32 VMO_FLAG_WRITE = 0x00000002;
 const uint32 VMO_FLAG_EXEC = 0x00000004;
+
+// Require a copy-on-write clone of the underlying VMO.
+// The request should fail if the VMO is not cloned.
+// May not be supplied with fuchsia_io_VMO_FLAG_EXACT.
 const uint32 VMO_FLAG_PRIVATE = 0x00010000;
+
+// Require an exact (non-cloned) handle to the underlying VMO.
+// The request should fail if a handle to the exact VMO
+// is not returned.
+// May not be supplied with VMO_FLAG_PRIVATE.
+const uint32 VMO_FLAG_EXACT = 0x00020000;
 
 // File defines the interface of a node which contains a flat layout of data.
 [Layout = "Simple"]

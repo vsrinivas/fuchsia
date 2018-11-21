@@ -181,7 +181,7 @@ static zx_status_t vmofile_get_vmo(fdio_t* io, int flags, zx_handle_t* out) {
     }
 
     size_t len = vf->end - vf->off;
-    if (flags & FDIO_MMAP_FLAG_PRIVATE) {
+    if (flags & fuchsia_io_VMO_FLAG_PRIVATE) {
         return zx_vmo_clone(vf->vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0, len, out);
     } else {
         size_t vmo_len = 0;
@@ -191,9 +191,9 @@ static zx_status_t vmofile_get_vmo(fdio_t* io, int flags, zx_handle_t* out) {
         }
         zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_GET_PROPERTY |
                 ZX_RIGHT_MAP;
-        rights |= (flags & FDIO_MMAP_FLAG_READ) ? ZX_RIGHT_READ : 0;
-        rights |= (flags & FDIO_MMAP_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
-        rights |= (flags & FDIO_MMAP_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
+        rights |= (flags & fuchsia_io_VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
+        rights |= (flags & fuchsia_io_VMO_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
+        rights |= (flags & fuchsia_io_VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
         return zx_handle_duplicate(vf->vmo, rights, out);
     }
 }

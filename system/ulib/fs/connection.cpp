@@ -668,11 +668,11 @@ zx_status_t Connection::FileGetVmo(uint32_t flags, fidl_txn_t* txn) {
         return fuchsia_io_FileGetVmo_reply(txn, ZX_ERR_BAD_HANDLE, ZX_HANDLE_INVALID);
     }
 
-    if ((flags & FDIO_MMAP_FLAG_PRIVATE) && (flags & FDIO_MMAP_FLAG_EXACT)) {
+    if ((flags & fuchsia_io_VMO_FLAG_PRIVATE) && (flags & fuchsia_io_VMO_FLAG_EXACT)) {
         return fuchsia_io_FileGetVmo_reply(txn, ZX_ERR_INVALID_ARGS, ZX_HANDLE_INVALID);
-    } else if ((flags_ & ZX_FS_FLAG_APPEND) && flags & FDIO_MMAP_FLAG_WRITE) {
+    } else if ((flags_ & ZX_FS_FLAG_APPEND) && flags & fuchsia_io_VMO_FLAG_WRITE) {
         return fuchsia_io_FileGetVmo_reply(txn, ZX_ERR_ACCESS_DENIED, ZX_HANDLE_INVALID);
-    } else if (!IsWritable(flags_) && (flags & FDIO_MMAP_FLAG_WRITE)) {
+    } else if (!IsWritable(flags_) && (flags & fuchsia_io_VMO_FLAG_WRITE)) {
         return fuchsia_io_FileGetVmo_reply(txn, ZX_ERR_ACCESS_DENIED, ZX_HANDLE_INVALID);
     } else if (!IsReadable(flags_)) {
         return fuchsia_io_FileGetVmo_reply(txn, ZX_ERR_ACCESS_DENIED, ZX_HANDLE_INVALID);
