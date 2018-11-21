@@ -1181,11 +1181,15 @@ void FakeController::OnCommandPacketReceived(
       bt_log(INFO, "fake-hci", "sending inquiry responses..");
       SendInquiryResponses();
 
-      // TODO(jamuraa): do this after an appropriate amount of time?
-      hci::InquiryCompleteEventParams params;
-      params.status = hci::kSuccess;
-      SendEvent(hci::kInquiryCompleteEventCode,
-                common::BufferView(&params, sizeof(params)));
+      async::PostDelayedTask(
+          dispatcher(),
+          [this] {
+            hci::InquiryCompleteEventParams params;
+            params.status = hci::kSuccess;
+            SendEvent(hci::kInquiryCompleteEventCode,
+                      common::BufferView(&params, sizeof(params)));
+          },
+          zx::msec(in_params.inquiry_length * 1280));
       break;
     }
     case hci::kReset: {
