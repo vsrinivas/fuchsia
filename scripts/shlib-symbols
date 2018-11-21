@@ -75,6 +75,8 @@ massage() {
     # and should not be consider part of the ABI.
     __bss_start|__bss_start__|__bss_end__|_bss_end__) continue ;;
     __data_start|__end__|_stack|_etext|_edata|_end) continue ;;
+    __start_xray_fn_idx|__stop_xray_fn_idx) continue ;;
+    __start_xray_instr_map|__stop_xray_instr_map) continue ;;
     esac
 
     case "$type" in

@@ -45,6 +45,13 @@ MODULE_LIBS := $(filter-out system/ulib/zircon,$(MODULE_LIBS)) \
 	       system/ulib/zircon
 endif
 
+ifeq ($(strip $(call TOBOOL,$(USE_XRAY)) \
+	      $(filter $(NO_XRAY),$(MODULE_COMPILEFLAGS))),true)
+MODULE_LDFLAGS += $(XRAY_LDFLAGS)
+MODULE_LIBS := $(filter-out system/ulib/zircon,$(MODULE_LIBS)) \
+	       system/ulib/zircon
+endif
+
 MODULE_SOLIBS := $(foreach lib,$(MODULE_LIBS),$(call TOBUILDDIR,$(lib))/lib$(notdir $(lib)).so.abi)
 MODULE_EXTRA_OBJS += $(foreach lib,$(MODULE_FIDL_LIBS),$(call TOBUILDDIR,$(lib))/gen/obj/tables.cpp.o)
 

@@ -36,10 +36,12 @@ USE_SANCOV ?= false
 USE_PROFILE ?= false
 USE_LTO ?= false
 USE_THINLTO ?= $(USE_LTO)
+USE_XRAY ?= false
 USE_CLANG ?= $(firstword $(filter true,$(call TOBOOL,$(USE_ASAN)) \
 	     		 	       $(call TOBOOL,$(USE_SANCOV)) \
 	     		 	       $(call TOBOOL,$(USE_PROFILE)) \
 	     		 	       $(call TOBOOL,$(USE_LTO))) \
+	     		 	       $(call TOBOOL,$(USE_XRAY)) \
 			 false)
 USE_LLD ?= $(USE_CLANG)
 ifeq ($(call TOBOOL,$(USE_LLD)),true)
@@ -77,6 +79,8 @@ BUILDDIR_SUFFIX := $(BUILDDIR_SUFFIX)-thinlto
 else
 BUILDDIR_SUFFIX := $(BUILDDIR_SUFFIX)-lto
 endif
+else ifeq ($(call TOBOOL,$(USE_XRAY)),true)
+BUILDDIR_SUFFIX := $(BUILDDIR_SUFFIX)-xray
 else ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 BUILDDIR_SUFFIX := $(BUILDDIR_SUFFIX)-clang
 endif
@@ -623,6 +627,18 @@ PROFILE_LIB := $(call clang-print-file-name,libclang_rt.profile.a)
 else
 NO_PROFILE :=
 PROFILE_LIB :=
+endif
+
+ifeq ($(call TOBOOL,$(USE_XRAY)),true)
+USER_COMPILEFLAGS += -fxray-instrument
+NO_XRAY := -fno-xray-instrument
+NO_SANITIZERS += $(NO_XRAY)
+# We need --whole-archive with XRay runtime libraries since symbols in these
+# libraries aren't referenced from the code. This matches the driver logic.
+XRAY_LDFLAGS := --whole-archive $(call clang-print-file-name,libclang_rt.xray.a) $(call clang-print-file-name,libclang_rt.xray-basic.a) --no-whole-archive
+else
+NO_XRAY :=
+XRAY_LDFLAGS :=
 endif
 
 # Save these for the first module.mk iteration to see.
