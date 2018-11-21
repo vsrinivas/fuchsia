@@ -61,6 +61,8 @@ namespace fit {
 //    |inspect()|: examine result of prior promise
 //    |discard_result()|: discard result and unconditionally return
 //                        fit::result<> when prior promise completes
+//    |wrap_with()|: applies a wrapper to the promise
+//    |box()|: wraps the promise's continuation into a |fit::function|
 //    |fit::join_promises()|: await multiple promises, once they all complete
 //                            return a tuple of their results
 //
@@ -660,7 +662,57 @@ public:
                 std::move(*this)));
     }
 
-    // Wraps the promise's continuation inside of a |fit::function|.
+    // Applies a |wrapper| to the promise.  Invokes the wrapper's |wrap()|
+    // method, passes the promise to the wrapper by value followed by any
+    // additional |args| passed to |wrap_with()|, then returns the wrapper's
+    // result.
+    //
+    // |Wrapper| is a type that implements a method called |wrap()| which
+    // accepts a promise as its argument and produces a wrapped result of
+    // any type, such as another promise.
+    //
+    // Asserts that the promise is non-empty.
+    // This method consumes the promise's continuation, leaving it empty.
+    //
+    // EXAMPLE
+    //
+    // In this example, |fit::sequencer| is a wrapper type that imposes
+    // FIFO execution order onto a sequence of wrapped promises.
+    //
+    //     // This wrapper type is intended to be applied to
+    //     // a sequence of promises so we store it in a variable.
+    //     fit::sequencer seq;
+    //
+    //     // This task consists of some amount of work that must be
+    //     // completed sequentially followed by other work that can
+    //     // happen in any order.  We use |wrap_with()| to wrap the
+    //     // sequential work with the sequencer.
+    //     fit::promise<> perform_complex_task() {
+    //         return fit::make_promise([] { /* do sequential work */ })
+    //             .then([] (fit::result<> result) { /* this will also be wrapped */ })
+    //             .wrap_with(seq)
+    //             .then([] (fit::result<> result) { /* do more work */ });
+    //     }
+    //
+    // This example can also be written without using |wrap_with()|.
+    // The behavior is equivalent but the syntax may seem more awkward.
+    //
+    //     fit::sequencer seq;
+    //
+    //     promise<> perform_complex_task() {
+    //         return seq.wrap(
+    //                 fit::make_promise([] { /* sequential work */ })
+    //             ).then([] (fit::result<> result) { /* more work */ });
+    //     }
+    //
+    template <typename Wrapper, typename... Args>
+    decltype(auto) wrap_with(Wrapper& wrapper, Args... args) {
+        assert(state_.has_value());
+        return wrapper.wrap(std::move(*this),
+                            std::forward<Args>(args)...);
+    }
+
+    // Wraps the promise's continuation into a |fit::function|.
     //
     // A boxed promise is easier to store and pass around than the unboxed
     // promises produced by |fit::make_promise()| and combinators, though boxing
