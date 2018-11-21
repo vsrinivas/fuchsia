@@ -5,6 +5,7 @@
 #include "garnet/bin/zxdb/symbols/mock_module_symbols.h"
 
 #include "garnet/bin/zxdb/symbols/input_location.h"
+#include "garnet/bin/zxdb/symbols/lazy_symbol.h"
 #include "garnet/bin/zxdb/symbols/line_details.h"
 #include "garnet/bin/zxdb/symbols/location.h"
 
@@ -21,6 +22,11 @@ void MockModuleSymbols::AddSymbol(const std::string& name,
 
 void MockModuleSymbols::AddLineDetails(uint64_t address, LineDetails details) {
   lines_[address] = std::move(details);
+}
+
+void MockModuleSymbols::AddDieRef(const ModuleSymbolIndexNode::DieRef& die,
+                                  fxl::RefPtr<Symbol> symbol) {
+  die_refs_[die.offset()] = std::move(symbol);
 }
 
 ModuleSymbolStatus MockModuleSymbols::GetStatus() const {
@@ -68,6 +74,16 @@ LineDetails MockModuleSymbols::LineDetailsForAddress(
 std::vector<std::string> MockModuleSymbols::FindFileMatches(
     const std::string& name) const {
   return std::vector<std::string>();
+}
+
+const ModuleSymbolIndex& MockModuleSymbols::GetIndex() const { return index_; }
+
+LazySymbol MockModuleSymbols::IndexDieRefToSymbol(
+    const ModuleSymbolIndexNode::DieRef& die_ref) const {
+  auto found = die_refs_.find(die_ref.offset());
+  if (found == die_refs_.end())
+    return LazySymbol();
+  return LazySymbol(found->second);
 }
 
 }  // namespace zxdb

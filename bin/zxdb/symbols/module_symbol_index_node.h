@@ -42,6 +42,9 @@ class ModuleSymbolIndexNode {
   // The offset stored in this structure is the offset from the beginning of
   // the .debug_info section, which is the same as the offset stored in the
   // llvm::DWARFDebugInfoEntry.
+  //
+  // Random code reading the index can convert a DieRef to a Symbol object
+  // using ModuleSymbols::IndexDieRefToSymbol().
   class DieRef {
    public:
     explicit DieRef() : offset_(0) {}
@@ -50,6 +53,7 @@ class ModuleSymbolIndexNode {
 
     uint32_t offset() const { return offset_; }
 
+    // For use by ModuleSymbols. Other callers read the DieRef comments above.
     llvm::DWARFDie ToDie(llvm::DWARFContext* context) const;
 
    private:

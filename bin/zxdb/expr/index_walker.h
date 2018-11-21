@@ -45,6 +45,16 @@ class IndexWalker {
   // scopes to search in is the job of the caller.
   bool WalkInto(const Identifier& ident);
 
+  // Like WalkInto but does a best effort and always commits the results. This
+  // is typically used to move to the starting point in an index for searching:
+  // just because that exact namespace isn't in the index, doesn't mean one
+  // can't resolve variables in it.
+  //
+  // If given "foo::Bar", and "foo" exists but has no "Bar inside of it,
+  // this will walk to "foo" and returns false. If "Bar" did exist, it would
+  // walk into it and return true.
+  bool WalkIntoClosest(const Identifier& ident);
+
   // Returns true if the given component matches the given string from the
   // index. This will do limited canonicalization on the index string so a
   // comparison of template parameters is possible.

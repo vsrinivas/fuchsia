@@ -17,6 +17,7 @@ namespace zxdb {
 
 struct InputLocation;
 class LineDetails;
+class LoadedModuleSymbols;
 struct ModuleSymbolStatus;
 struct ResolveOptions;
 class TargetSymbols;
@@ -32,6 +33,11 @@ class ProcessSymbols {
 
   // Returns statistics on the currently-loaded modules.
   virtual std::vector<ModuleSymbolStatus> GetStatus() const = 0;
+
+  // Returns the information for all the modules that were loaded with
+  // symbol information.
+  virtual std::vector<const LoadedModuleSymbols*> GetLoadedModuleSymbols()
+      const = 0;
 
   // Converts the given InputLocation into one or more locations. The input
   // can match zero, one, or many locations.

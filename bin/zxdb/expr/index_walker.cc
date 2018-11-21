@@ -81,13 +81,19 @@ bool IndexWalker::WalkInto(const Identifier::Component& comp) {
 
 bool IndexWalker::WalkInto(const Identifier& ident) {
   IndexWalker sub(*this);
+  if (!sub.WalkIntoClosest(ident))
+    return false;
+
+  // Full walk succeeded, commit.
+  std::swap(path_, sub.path_);
+  return true;
+}
+
+bool IndexWalker::WalkIntoClosest(const Identifier& ident) {
   for (const auto& comp : ident.components()) {
-    if (!sub.WalkInto(comp))
+    if (!WalkInto(comp))
       return false;  // This component not found.
   }
-
-  // Got to the end with a result, commit.
-  std::swap(path_, sub.path_);
   return true;
 }
 

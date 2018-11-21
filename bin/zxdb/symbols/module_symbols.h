@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "garnet/bin/zxdb/symbols/location.h"
+#include "garnet/bin/zxdb/symbols/module_symbol_index_node.h"
 #include "garnet/bin/zxdb/symbols/module_symbol_status.h"
 #include "garnet/bin/zxdb/symbols/resolve_options.h"
 #include "garnet/public/lib/fxl/macros.h"
@@ -18,6 +19,7 @@ namespace zxdb {
 class FileLine;
 struct InputLocation;
 class LineDetails;
+class ModuleSymbolIndex;
 struct ResolveOptions;
 class SymbolContext;
 
@@ -109,6 +111,14 @@ class ModuleSymbols {
   // unit for each of the files.
   virtual std::vector<std::string> FindFileMatches(
       const std::string& name) const = 0;
+
+  // Returns the symbol index for this module.
+  virtual const ModuleSymbolIndex& GetIndex() const = 0;
+
+  // Converts the given DieRef from the symbol index to an actual Symbol
+  // object for reading.
+  virtual LazySymbol IndexDieRefToSymbol(
+      const ModuleSymbolIndexNode::DieRef&) const = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleSymbols);

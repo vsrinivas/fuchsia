@@ -131,6 +131,10 @@ class Identifier {
   // becomes "::" and "::" becomes itself).
   Identifier GetScope() const;
 
+  // Returns true if this identifier begins with "::" and as such can only be
+  // resolved in the global namespace.
+  bool InGlobalNamespace() const;
+
   // Returns the full name with all components concatenated together.
   std::string GetFullName() const;
 

@@ -68,6 +68,12 @@ Identifier Identifier::GetScope() const {
   return Identifier(components_.begin(), components_.end() - 1);
 }
 
+bool Identifier::InGlobalNamespace() const {
+  if (components_.empty())
+    return false;
+  return components_[0].has_separator();
+}
+
 std::string Identifier::GetFullName() const { return GetName(false); }
 
 std::string Identifier::GetDebugName() const { return GetName(true); }

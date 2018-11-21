@@ -72,6 +72,22 @@ TEST(Identifier, GetScope) {
   EXPECT_EQ("\"Name1\"; ::,\"Name2\"", three_scoped_names.GetScope().GetDebugName());
 }
 
+TEST(Identifier, InGlobalNamespace) {
+  Identifier empty;
+  EXPECT_FALSE(empty.InGlobalNamespace());
+
+  Identifier non_global;
+  non_global.AppendComponent(Identifier::Component(
+      ExprToken(), ExprToken(ExprToken::kName, "Foo", 0)));
+  EXPECT_FALSE(non_global.InGlobalNamespace());
+
+  Identifier global;
+  global.AppendComponent(
+      Identifier::Component(ExprToken(ExprToken::kColonColon, "::", 0),
+                            ExprToken(ExprToken::kName, "Foo", 0)));
+  EXPECT_TRUE(global.InGlobalNamespace());
+}
+
 TEST(Identifier, FromString) {
   // Empty input.
   auto[empty_err, empty_ident] = Identifier::FromString("");

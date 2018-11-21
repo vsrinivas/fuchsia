@@ -29,6 +29,11 @@ std::vector<ModuleSymbolStatus> MockProcessSymbols::GetStatus() const {
   return std::vector<ModuleSymbolStatus>();
 }
 
+std::vector<const LoadedModuleSymbols*>
+MockProcessSymbols::GetLoadedModuleSymbols() const {
+  return std::vector<const LoadedModuleSymbols*>();
+}
+
 std::vector<Location> MockProcessSymbols::ResolveInputLocation(
     const InputLocation& input_location, const ResolveOptions& options) const {
   std::vector<Location> result;

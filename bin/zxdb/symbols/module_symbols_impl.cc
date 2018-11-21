@@ -215,6 +215,15 @@ std::vector<std::string> ModuleSymbolsImpl::FindFileMatches(
   return index_.FindFileMatches(name);
 }
 
+const ModuleSymbolIndex& ModuleSymbolsImpl::GetIndex() const {
+  return index_;
+}
+
+LazySymbol ModuleSymbolsImpl::IndexDieRefToSymbol(
+    const ModuleSymbolIndexNode::DieRef& die_ref) const {
+  return symbol_factory_->MakeLazy(die_ref.ToDie(context_.get()));
+}
+
 llvm::DWARFUnit* ModuleSymbolsImpl::CompileUnitForRelativeAddress(
     uint64_t relative_address) const {
   return compile_units_.getUnitForOffset(
@@ -237,8 +246,7 @@ std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
     const ResolveOptions& options) const {
   std::vector<Location> result;
   for (const auto& die_ref : index_.FindExact(input_location.symbol)) {
-    LazySymbol lazy_symbol =
-        symbol_factory_->MakeLazy(die_ref.ToDie(context_.get()));
+    LazySymbol lazy_symbol = IndexDieRefToSymbol(die_ref);
     const Symbol* symbol = lazy_symbol.Get();
 
     if (const Function* function = symbol->AsFunction()) {

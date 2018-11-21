@@ -60,6 +60,9 @@ class ModuleSymbolsImpl : public ModuleSymbols {
                                     uint64_t absolute_address) const override;
   std::vector<std::string> FindFileMatches(
       const std::string& name) const override;
+  const ModuleSymbolIndex& GetIndex() const override;
+  LazySymbol IndexDieRefToSymbol(
+      const ModuleSymbolIndexNode::DieRef&) const override;
 
  private:
   llvm::DWARFUnit* CompileUnitForRelativeAddress(
@@ -90,10 +93,11 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   // exact match. This is a helper function for ResolveLineInputLocation().
   //
   // This appends to the given output.
-  void ResolveLineInputLocationForFile(
-      const SymbolContext& symbol_context, const std::string& canonical_file,
-      int line_number, const ResolveOptions& options,
-      std::vector<Location>* output) const;
+  void ResolveLineInputLocationForFile(const SymbolContext& symbol_context,
+                                       const std::string& canonical_file,
+                                       int line_number,
+                                       const ResolveOptions& options,
+                                       std::vector<Location>* output) const;
 
   const std::string name_;
   const std::string build_id_;

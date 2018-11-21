@@ -122,6 +122,17 @@ std::vector<ModuleSymbolStatus> ProcessSymbolsImpl::GetStatus() const {
   return result;
 }
 
+std::vector<const LoadedModuleSymbols*>
+ProcessSymbolsImpl::GetLoadedModuleSymbols() const {
+  std::vector<const LoadedModuleSymbols*> result;
+  result.reserve(modules_.size());
+  for (const auto & [ base, mod_info ] : modules_) {
+    if (mod_info.symbols)
+      result.push_back(mod_info.symbols.get());
+  }
+  return result;
+}
+
 std::vector<Location> ProcessSymbolsImpl::ResolveInputLocation(
     const InputLocation& input_location, const ResolveOptions& options) const {
   FXL_DCHECK(input_location.type != InputLocation::Type::kNone);

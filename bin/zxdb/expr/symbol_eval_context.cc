@@ -60,7 +60,8 @@ SymbolEvalContext::~SymbolEvalContext() = default;
 
 void SymbolEvalContext::GetNamedValue(const Identifier& identifier,
                                       ValueCallback cb) {
-  if (auto found = FindVariable(block_.get(), identifier)) {
+  if (auto found = FindVariable(process_symbols_.get(), block_.get(),
+                                &symbol_context_, identifier)) {
     DoResolve(std::move(*found), std::move(cb));
   } else {
     cb(Err("No variable '%s' found.", identifier.GetFullName().c_str()),

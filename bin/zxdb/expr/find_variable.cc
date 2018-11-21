@@ -6,10 +6,16 @@
 
 #include "garnet/bin/zxdb/expr/found_variable.h"
 #include "garnet/bin/zxdb/expr/identifier.h"
+#include "garnet/bin/zxdb/expr/index_walker.h"
 #include "garnet/bin/zxdb/symbols/code_block.h"
 #include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
 #include "garnet/bin/zxdb/symbols/function.h"
+#include "garnet/bin/zxdb/symbols/loaded_module_symbols.h"
+#include "garnet/bin/zxdb/symbols/module_symbol_index.h"
+#include "garnet/bin/zxdb/symbols/module_symbol_index_node.h"
+#include "garnet/bin/zxdb/symbols/module_symbols.h"
+#include "garnet/bin/zxdb/symbols/process_symbols.h"
 #include "garnet/bin/zxdb/symbols/type_utils.h"
 #include "garnet/bin/zxdb/symbols/visit_scopes.h"
 
@@ -31,11 +37,28 @@ const Variable* SearchVariableVector(const std::vector<LazySymbol>& vect,
   return nullptr;
 }
 
+// Searches the list for a reference to a variable and returns the first one
+// it finds.
+std::optional<FoundVariable> GetVariableFromDieList(
+    const ModuleSymbols* module_symbols,
+    const std::vector<ModuleSymbolIndexNode::DieRef>& dies) {
+  for (const ModuleSymbolIndexNode::DieRef& cur : dies) {
+    LazySymbol lazy_symbol = module_symbols->IndexDieRefToSymbol(cur);
+    if (!lazy_symbol)
+      continue;
+    const Symbol* symbol = lazy_symbol.Get();
+    if (const Variable* var = symbol->AsVariable())
+      return FoundVariable(var);
+  }
+  return std::nullopt;
+}
+
 }  // namespace
 
-std::optional<FoundVariable> FindVariable(const CodeBlock* block,
-                                          const Identifier& identifier) {
-  if (block) {
+std::optional<FoundVariable> FindVariable(
+    const ProcessSymbols* process_symbols, const CodeBlock* block,
+    const SymbolContext* block_symbol_context, const Identifier& identifier) {
+  if (block && !identifier.InGlobalNamespace()) {
     // Search for local variables and function parameters.
     if (auto found = FindLocalVariable(block, identifier))
       return found;
@@ -46,8 +69,10 @@ std::optional<FoundVariable> FindVariable(const CodeBlock* block,
   }
 
   // Fall back to searching global vars.
-  // TODO(brettw) implement this.
-  //   FindGlobalVariable(name)...
+  if (process_symbols) {
+    return FindGlobalVariable(process_symbols, block, block_symbol_context,
+                              identifier);
+  }
   return std::nullopt;
 }
 
@@ -92,7 +117,7 @@ std::optional<FoundMember> FindMember(const Collection* object,
   std::optional<FoundMember> result;
   VisitClassHierarchy(
       object, [ident_name, &result](const Collection* cur_collection,
-                                     uint32_t cur_offset) -> bool {
+                                    uint32_t cur_offset) -> bool {
         // Called for each collection in the hierarchy.
         for (const auto& lazy : cur_collection->data_members()) {
           const DataMember* data = lazy.Get()->AsDataMember();
@@ -126,6 +151,87 @@ std::optional<FoundVariable> FindMemberOnThis(const CodeBlock* block,
 
   if (auto member = FindMember(collection, identifier))
     return FoundVariable(this_var, std::move(*member));
+  return std::nullopt;
+}
+
+std::optional<FoundVariable> FindGlobalVariable(
+    const ProcessSymbols* process_symbols, const CodeBlock* block,
+    const SymbolContext* block_symbol_context, const Identifier& identifier) {
+  std::vector<const LoadedModuleSymbols*> modules =
+      process_symbols->GetLoadedModuleSymbols();
+  if (modules.empty())
+    return std::nullopt;
+
+  Identifier current_scope;
+
+  // When we're given a block to start searching from, always search
+  // that module for symbol matches first. If there are duplicates in other
+  // modules, one normally wants the current one.
+  const LoadedModuleSymbols* current_module = nullptr;
+  if (block) {
+    // If block is non-null, so must be the symbol context.
+    FXL_DCHECK(block_symbol_context);
+
+    // Get the scope for the current block. This may fail in which case we'll
+    // be left with an empty current scope. This is non-fatal so we can ignore
+    // the err: it must means we won't implicitly search the current namespace.
+    Err err;
+    std::tie(err, current_scope) = Identifier::FromString(block->GetFullName());
+    current_scope = current_scope.GetScope();
+
+    // There's not currently a great way to map a symbol (the code block) back
+    // to the module it came from. So use the symbol_context to find the module
+    // that corresponds to its base address.
+    uint64_t block_module_load_address =
+        block_symbol_context->RelativeToAbsolute(0);
+    for (const LoadedModuleSymbols* mod : modules) {
+      if (mod->load_address() == block_module_load_address) {
+        current_module = mod;
+        break;
+      }
+    }
+
+    if (current_module) {
+      // Search the current module.
+      if (auto found = FindGlobalVariableInModule(
+              current_module->module_symbols(), current_scope, identifier))
+        return found;
+    }
+  }
+
+  // Search all non-current modules.
+  for (const LoadedModuleSymbols* loaded_mod : modules) {
+    if (loaded_mod != current_module) {
+      if (auto found = FindGlobalVariableInModule(
+              current_module->module_symbols(), current_scope, identifier))
+        return found;
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<FoundVariable> FindGlobalVariableInModule(
+    const ModuleSymbols* module_symbols, const Identifier& current_scope,
+    const Identifier& identifier) {
+  IndexWalker walker(&module_symbols->GetIndex());
+  if (!identifier.InGlobalNamespace()) {
+    // Unless the input identifier is fully qualifed, start the search in the
+    // current context.
+    walker.WalkIntoClosest(current_scope);
+  }
+
+  // Search from the current namespace going up.
+  do {
+    IndexWalker query_walker(walker);
+    if (query_walker.WalkInto(identifier)) {
+      // Found a match, see if it's actually a variable we can return.
+      const ModuleSymbolIndexNode* match = query_walker.current();
+      if (auto found = GetVariableFromDieList(module_symbols, match->dies()))
+        return found;
+    }
+    // No variable match, move up one level of scope and try again.
+  } while (walker.WalkUp());
+
   return std::nullopt;
 }
 

@@ -52,6 +52,8 @@ class ProcessSymbolsImpl : public ProcessSymbols {
   fxl::WeakPtr<const ProcessSymbols> GetWeakPtr() const override;
   TargetSymbols* GetTargetSymbols() override;
   std::vector<ModuleSymbolStatus> GetStatus() const override;
+  std::vector<const LoadedModuleSymbols*> GetLoadedModuleSymbols()
+      const override;
   std::vector<Location> ResolveInputLocation(
       const InputLocation& input_location,
       const ResolveOptions& options) const override;

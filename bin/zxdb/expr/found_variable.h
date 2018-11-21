@@ -15,7 +15,7 @@ namespace zxdb {
 // either state.
 class FoundVariable {
  public:
-  // Constructor for regular variables.
+  // Constructor for regular variables. Takes a reference to the object.
   explicit FoundVariable(const Variable* variable);
 
   // Constructor for data members.
