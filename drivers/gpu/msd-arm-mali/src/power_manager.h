@@ -24,11 +24,6 @@ public:
     // Called on the GPU interrupt thread.
     void ReceivedPowerInterrupt(magma::RegisterIo* io);
 
-    uint64_t shader_ready_status() const
-    {
-        std::lock_guard<std::mutex> lock(ready_status_mutex_);
-        return shader_ready_status_;
-    }
     uint64_t l2_ready_status() const
     {
         std::lock_guard<std::mutex> lock(ready_status_mutex_);
@@ -62,7 +57,6 @@ private:
     mutable std::mutex ready_status_mutex_;
     MAGMA_GUARDED(ready_status_mutex_) uint64_t tiler_ready_status_ = 0;
     MAGMA_GUARDED(ready_status_mutex_) uint64_t l2_ready_status_ = 0;
-    MAGMA_GUARDED(ready_status_mutex_) uint64_t shader_ready_status_ = 0;
 
     std::unique_ptr<magma::PlatformSemaphore> power_state_semaphore_;
 

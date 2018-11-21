@@ -137,10 +137,6 @@ public:
         EXPECT_NE(device, nullptr);
         device->set_register_io(std::move(register_io));
         auto connection = MsdArmConnection::Create(0, device.get());
-        {
-            std::lock_guard<std::mutex> lock(device->power_manager_->ready_status_mutex_);
-            device->power_manager_->shader_ready_status_ = 0xfu;
-        }
 
         auto null_atom =
             std::make_unique<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data(), 0);
@@ -163,7 +159,7 @@ public:
         device->ExecuteAtomOnDevice(&atom1, reg_io);
 
         registers::JobSlotRegisters regs(kJobSlot);
-        EXPECT_EQ(0xfu, regs.AffinityNext().ReadFrom(reg_io).reg_value());
+        EXPECT_EQ(0xffffffffffffffffu, regs.AffinityNext().ReadFrom(reg_io).reg_value());
         EXPECT_EQ(100u, regs.HeadNext().ReadFrom(reg_io).reg_value());
         constexpr uint32_t kCommandStart = registers::JobSlotCommand::kCommandStart;
         EXPECT_EQ(kCommandStart, regs.CommandNext().ReadFrom(reg_io).reg_value());

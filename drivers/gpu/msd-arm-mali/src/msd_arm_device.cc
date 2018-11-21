@@ -841,7 +841,7 @@ void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* regi
     config.WriteTo(register_io);
 
     // Execute on every powered-on core.
-    slot.AffinityNext().FromValue(power_manager_->shader_ready_status()).WriteTo(register_io);
+    slot.AffinityNext().FromValue(UINT64_MAX).WriteTo(register_io);
     slot.CommandNext().FromValue(registers::JobSlotCommand::kCommandStart).WriteTo(register_io);
 }
 

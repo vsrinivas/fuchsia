@@ -85,9 +85,6 @@ void PowerManager::ReceivedPowerInterrupt(magma::RegisterIo* io)
     l2_ready_status_ =
         registers::CoreReadyState::ReadBitmask(io, registers::CoreReadyState::CoreType::kL2,
                                                registers::CoreReadyState::StatusType::kReady);
-    shader_ready_status_ =
-        registers::CoreReadyState::ReadBitmask(io, registers::CoreReadyState::CoreType::kShader,
-                                               registers::CoreReadyState::StatusType::kReady);
     power_state_semaphore_->Signal();
 }
 
