@@ -27,16 +27,6 @@ Randomization.
 Controls what program is executed by bootsvc to continue the boot process.
 If this is not specified, the default next program will be used.
 
-## crashsvc.analyzer=\<service-host\>
-
-If this is empty, the default crash analyzer in svchost will be used
-which logs exception information and a backtrace to the system log. If
-it is set, the crash analyzer will be found in the given service bundle.
-The only valid non-empty value for this currently is "from-appmgr".
-
-The analyzer process is passed two startup handles: the process and
-thread that sustained the exception.
-
 ## devmgr\.epoch=\<seconds\>
 
 Sets the initial offset (from the Unix epoch, in seconds) for the UTC clock.
