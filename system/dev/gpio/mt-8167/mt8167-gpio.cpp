@@ -138,7 +138,7 @@ zx_status_t Mt8167GpioDevice::GpioImplWrite(uint32_t index, uint8_t value) {
 }
 
 zx_status_t Mt8167GpioDevice::GpioImplGetInterrupt(uint32_t index, uint32_t flags,
-                                                   zx_handle_t* out_handle) {
+                                                   zx::interrupt* out_irq) {
     zx_status_t status;
     if (index >= interrupts_.size()) {
         return ZX_ERR_INVALID_ARGS;
@@ -149,15 +149,15 @@ zx_status_t Mt8167GpioDevice::GpioImplGetInterrupt(uint32_t index, uint32_t flag
         return ZX_ERR_ALREADY_EXISTS;
     }
 
-    zx_handle_t handle;
-    status = zx_interrupt_create(0, index, ZX_INTERRUPT_VIRTUAL, &handle);
+    zx::interrupt irq;
+    status = zx::interrupt::create(zx::resource(), index, ZX_INTERRUPT_VIRTUAL, &irq);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s zx_interrupt_create failed %d \n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s zx::interrupt::create failed %d \n", __FUNCTION__, status);
         return status;
     }
-    status = zx_handle_duplicate(handle, ZX_RIGHT_SAME_RIGHTS, out_handle);
+    status = irq.duplicate(ZX_RIGHT_SAME_RIGHTS, out_irq);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s zx_handle_duplicate failed %d \n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s interrupt.duplicate failed %d \n", __FUNCTION__, status);
         return status;
     }
 
@@ -183,7 +183,7 @@ zx_status_t Mt8167GpioDevice::GpioImplGetInterrupt(uint32_t index, uint32_t flag
     default:
         return ZX_ERR_INVALID_ARGS;
     }
-    interrupts_[index] = zx::interrupt(handle);
+    interrupts_[index] = std::move(irq);
     eint_.Enable(index);
     zxlogf(TRACE, "%s EINT %u enabled\n", __FUNCTION__, index);
     return ZX_OK;

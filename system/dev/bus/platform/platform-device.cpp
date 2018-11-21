@@ -303,8 +303,10 @@ zx_status_t PlatformDevice::RpcGpioGetInterrupt(const DeviceResources* dr, uint3
         return ZX_ERR_OUT_OF_RANGE;
     }
 
-    zx_status_t status = bus_->gpio()->GetInterrupt(dr->gpio(index).gpio, flags, out_handle);
+    zx::interrupt irq;
+    zx_status_t status = bus_->gpio()->GetInterrupt(dr->gpio(index).gpio, flags, &irq);
     if (status == ZX_OK) {
+        *out_handle = irq.release();
         *out_handle_count = 1;
     }
     return status;

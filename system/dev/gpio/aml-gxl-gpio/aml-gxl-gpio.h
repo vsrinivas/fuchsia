@@ -70,7 +70,7 @@ public:
     zx_status_t GpioImplSetAltFunction(uint32_t pin, uint64_t function);
     zx_status_t GpioImplRead(uint32_t pin, uint8_t* out_value);
     zx_status_t GpioImplWrite(uint32_t pin, uint8_t value);
-    zx_status_t GpioImplGetInterrupt(uint32_t pin, uint32_t flags, zx_handle_t* out_handle);
+    zx_status_t GpioImplGetInterrupt(uint32_t pin, uint32_t flags, zx::interrupt* out_irq);
     zx_status_t GpioImplReleaseInterrupt(uint32_t pin);
     zx_status_t GpioImplSetPolarity(uint32_t pin, uint32_t polarity);
 

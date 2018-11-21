@@ -360,7 +360,7 @@ zx_status_t AmlGxlGpio::GpioImplWrite(uint32_t pin, uint8_t value) {
 }
 
 zx_status_t AmlGxlGpio::GpioImplGetInterrupt(uint32_t pin, uint32_t flags,
-                                             zx_handle_t* out_handle) {
+                                             zx::interrupt* out_irq) {
     if (pin > kMaxGpioIndex) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -399,7 +399,8 @@ zx_status_t AmlGxlGpio::GpioImplGetInterrupt(uint32_t pin, uint32_t flags,
     }
 
     // Create Interrupt Object
-    if ((status = pdev_get_interrupt(&pdev_, index, flags_, out_handle)) != ZX_OK) {
+    if ((status = pdev_get_interrupt(&pdev_, index, flags_,
+                                     out_irq->reset_and_get_address())) != ZX_OK) {
         zxlogf(ERROR, "AmlGxlGpio::GpioImplGetInterrupt: pdev_map_interrupt failed %d\n", status);
         return status;
     }
