@@ -4,6 +4,8 @@
 
 library fuchsia.device.manager;
 
+// TODO(teisenbe): Move these interfaces to be internal to the devmgr codebase
+
 using zx;
 
 // This definition must be the same size as zx_device_prop_t and is checked by

@@ -13,10 +13,16 @@ MODULE_SRCS += \
 
 MODULE_NAME := kernel-unittests
 
+MODULE_STATIC_LIBS := \
+    system/ulib/zx \
+
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/fdio \
     system/ulib/unittest \
     system/ulib/zircon \
+
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-device-manager \
 
 include make/module.mk

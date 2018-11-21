@@ -5,9 +5,14 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <fuchsia/device/manager/c/fidl.h>
+#include <lib/fdio/util.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/socket.h>
 #include <unittest/unittest.h>
-#include <zircon/device/dmctl.h>
 #include <zircon/syscalls.h>
+
+namespace {
 
 // Ask the kernel to run its unit tests.
 bool run_kernel_unittests() {
@@ -18,22 +23,26 @@ bool run_kernel_unittests() {
     // Send the command via devmgr.
     int dmctl_fd = open("/dev/misc/dmctl", O_WRONLY);
     ASSERT_GE(dmctl_fd, 0);
-    dmctl_cmd_t cmd;
-    ASSERT_LE(sizeof(command_string), sizeof(cmd.name));
-    strcpy(cmd.name, command_string);
-    // devmgr's ioctl() requires us to pass a socket, but we don't read
+
+    zx::channel dmctl;
+    ASSERT_EQ(fdio_get_service_handle(dmctl_fd, dmctl.reset_and_get_address()), ZX_OK);
+
+    // dmctl's ExecuteCommand() requires us to pass a socket, but we don't read
     // from the other endpoint.
-    zx_handle_t handle;
-    ASSERT_EQ(zx_socket_create(0, &cmd.h, &handle), ZX_OK);
-    ssize_t result = ioctl_dmctl_command(dmctl_fd, &cmd);
-    ASSERT_EQ(close(dmctl_fd), 0);
-    ASSERT_EQ(zx_handle_close(handle), ZX_OK);
+    zx::socket local, remote;
+    ASSERT_EQ(zx::socket::create(0, &local, &remote), ZX_OK);
+    zx_status_t call_status;
+    zx_status_t status = fuchsia_device_manager_ExternalControllerExecuteCommand(
+            dmctl.get(), remote.release(), command_string, strlen(command_string), &call_status);
 
     // Check result of kernel unit tests.
-    ASSERT_EQ(result, ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(call_status, ZX_OK);
 
     END_TEST;
 }
+
+} // namespace
 
 BEGIN_TEST_CASE(kernel_unittests)
 RUN_TEST(run_kernel_unittests)

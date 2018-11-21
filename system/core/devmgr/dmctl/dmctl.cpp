@@ -10,7 +10,8 @@
 #include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <fuchsia/device/manager/c/fidl.h>
-#include <zircon/device/dmctl.h>
+#include <lib/zx/socket.h>
+#include <lib/zx/vmo.h>
 
 #include "../devhost/device-internal.h"
 
@@ -19,7 +20,7 @@ using namespace devmgr;
 namespace {
 
 class Dmctl;
-using DmctlBase = ddk::Device<Dmctl, ddk::Ioctlable, ddk::Writable>;
+using DmctlBase = ddk::Device<Dmctl, ddk::Messageable, ddk::Writable>;
 
 class Dmctl : public DmctlBase {
 public:
@@ -29,8 +30,7 @@ public:
 
     void DdkRelease();
     zx_status_t DdkWrite(const void* buf, size_t count, zx_off_t off, size_t* actual);
-    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                         size_t out_len, size_t* out_actual);
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 };
 
 Dmctl::Dmctl(zx_device_t* parent) : DmctlBase(parent) {
@@ -65,55 +65,48 @@ zx_status_t Dmctl::DdkWrite(const void* buf, size_t count, zx_off_t off, size_t*
     return ZX_OK;
 }
 
-zx_status_t Dmctl::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                            void* out_buf, size_t out_len, size_t* out_actual) {
-    const zx::channel& rpc = *zxdev()->rpc;
+static zx_status_t fidl_ExecuteCommand(void* ctx, zx_handle_t raw_log_socket,
+                                       const char* command_data, size_t command_size, fidl_txn_t* txn) {
+    zx::socket log_socket(raw_log_socket);
+    auto zxdev = static_cast<zx_device_t*>(ctx);
+    const zx::channel& rpc = *zxdev->rpc;
+
     zx_status_t status, call_status;
-    switch (op) {
-    case IOCTL_DMCTL_COMMAND: {
-        if (in_len != sizeof(dmctl_cmd_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
+    status = fuchsia_device_manager_CoordinatorDmCommand(
+            rpc.get(), log_socket.release(), command_data, command_size,
+            &call_status);
+    if (status == ZX_OK) {
+        status = call_status;
+    }
+    return fuchsia_device_manager_ExternalControllerExecuteCommand_reply(txn, status);
+}
 
-        dmctl_cmd_t cmd;
-        memcpy(&cmd, in_buf, sizeof(cmd));
-        cmd.name[sizeof(cmd.name) - 1] = 0;
+static zx_status_t fidl_OpenVirtcon(void* ctx, zx_handle_t raw_vc_receiver) {
+    zx::channel vc_receiver(raw_vc_receiver);
+    auto zxdev = static_cast<zx_device_t*>(ctx);
+    const zx::channel& rpc = *zxdev->rpc;
 
-        status = fuchsia_device_manager_CoordinatorDmCommand(
-                rpc.get(), cmd.h, static_cast<const char*>(cmd.name), strlen(cmd.name),
-                &call_status);
-        if (status != ZX_OK) {
-            return status;
-        } else if (call_status != ZX_OK) {
-            // NOT_SUPPORTED tells the dispatcher to close the handle for
-            // ioctls that accept a handle argument, so we have to avoid
-            // returning that in this case where the handle has been passed
-            // to another process (and effectively closed)
-            if (call_status == ZX_ERR_NOT_SUPPORTED) {
-                call_status = ZX_ERR_INTERNAL;
-            }
-            return call_status;
-        }
+    return fuchsia_device_manager_CoordinatorDmOpenVirtcon(rpc.get(), vc_receiver.release());
+}
 
-        *out_actual = 0;
-        return ZX_OK;
-    }
-    case IOCTL_DMCTL_OPEN_VIRTCON: {
-        if (in_len != sizeof(zx_handle_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        return fuchsia_device_manager_CoordinatorDmOpenVirtcon(rpc.get(), *(zx_handle_t*)in_buf);
-    }
-    case IOCTL_DMCTL_MEXEC: {
-        if (in_len != sizeof(dmctl_mexec_args_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        auto args = reinterpret_cast<const dmctl_mexec_args_t*>(in_buf);
-        return fuchsia_device_manager_CoordinatorDmMexec(rpc.get(), args->kernel, args->bootdata);
-    }
-    default:
-        return ZX_ERR_INVALID_ARGS;
-    }
+static zx_status_t fidl_PerformMexec(void* ctx, zx_handle_t raw_kernel, zx_handle_t raw_bootdata) {
+    zx::vmo kernel(raw_kernel);
+    zx::vmo bootdata(raw_bootdata);
+    auto zxdev = static_cast<zx_device_t*>(ctx);
+    const zx::channel& rpc = *zxdev->rpc;
+
+    return fuchsia_device_manager_CoordinatorDmMexec(rpc.get(), kernel.release(),
+                                                     bootdata.release());
+}
+
+static fuchsia_device_manager_ExternalController_ops_t fidl_ops = {
+    .ExecuteCommand = fidl_ExecuteCommand,
+    .OpenVirtcon = fidl_OpenVirtcon,
+    .PerformMexec = fidl_PerformMexec,
+};
+
+zx_status_t Dmctl::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_device_manager_ExternalController_dispatch(zxdev(), txn, msg, &fidl_ops);
 }
 
 zx_driver_ops_t dmctl_driver_ops = []() {

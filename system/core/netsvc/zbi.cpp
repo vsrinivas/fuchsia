@@ -11,7 +11,7 @@
 zx_status_t netboot_prepare_zbi(zx_handle_t nbkernel_vmo,
                                 zx_handle_t nbbootdata_vmo,
                                 const uint8_t* cmdline, uint32_t cmdline_size,
-                                dmctl_mexec_args_t* args) {
+                                zx_handle_t* kernel_vmo, zx_handle_t* bootdata_vmo) {
     zbi::ZbiVMO kernel, data;
 
     if (nbkernel_vmo == ZX_HANDLE_INVALID) {
@@ -64,7 +64,7 @@ zx_status_t netboot_prepare_zbi(zx_handle_t nbkernel_vmo,
     printf("netbootloader: kernel ZBI %#x bytes data ZBI %#x bytes\n",
            kernel.Length(), data.Length());
 
-    args->kernel = kernel.Release().release();
-    args->bootdata = data.Release().release();
+    *kernel_vmo = kernel.Release().release();
+    *bootdata_vmo = data.Release().release();
     return ZX_OK;
 }

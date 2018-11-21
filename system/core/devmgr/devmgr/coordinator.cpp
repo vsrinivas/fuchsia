@@ -28,7 +28,6 @@
 #include <lib/zx/socket.h>
 #include <zircon/assert.h>
 #include <zircon/boot/bootdata.h>
-#include <zircon/device/dmctl.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/policy.h>

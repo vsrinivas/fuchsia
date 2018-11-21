@@ -15,10 +15,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <zircon/syscalls.h>
+#include <fuchsia/device/manager/c/fidl.h>
+#include <lib/fdio/util.h>
 #include <pretty/hexdump.h>
-
-#include <zircon/device/dmctl.h>
+#include <zircon/syscalls.h>
 
 int zxc_dump(int argc, char** argv) {
     int fd;
@@ -466,44 +466,40 @@ static int send_dmctl(const char* command, size_t length) {
         fprintf(stderr, "error: cannot open dmctl: %d\n", fd);
         return fd;
     }
-
-    // commands with ':' get passed through and don't use
-    // socket for results (since there are none)
-    const char* p;
-    for (p = command; p < (command + length); p++) {
-        if (*p == ':') {
-            write(fd, command, length);
-            return 0;
-        }
-    }
-
-    dmctl_cmd_t cmd;
-    if (length >= sizeof(cmd.name)) {
-        fprintf(stderr, "error: dmctl command longer than %zu bytes: '%.*s'\n",
-                sizeof(cmd.name), (int)length, command);
-        return -1;
-    }
-    snprintf(cmd.name, sizeof(cmd.name), command);
-
-    zx_handle_t h;
-    if (zx_socket_create(0, &cmd.h, &h) < 0) {
+    zx_handle_t dmctl;
+    zx_status_t status = fdio_get_service_handle(fd, &dmctl);
+    if (status != ZX_OK) {
         return -1;
     }
 
-    int r = ioctl_dmctl_command(fd, &cmd);
-    close(fd);
-    if (r < 0) {
-        zx_handle_close(h);
-        return r;
+    if (length > fuchsia_device_manager_COMMAND_MAX) {
+        fprintf(stderr, "error: dmctl command longer than %u bytes: '%.*s'\n",
+                fuchsia_device_manager_COMMAND_MAX, (int)length, command);
+        return -1;
+    }
+
+    zx_handle_t local, remote;
+    if (zx_socket_create(0, &remote, &local) != ZX_OK) {
+        zx_handle_close(dmctl);
+        return -1;
+    }
+
+    zx_status_t call_status;
+    status = fuchsia_device_manager_ExternalControllerExecuteCommand(dmctl, remote, command,
+                                                                     length, &call_status);
+    remote = ZX_HANDLE_INVALID;
+    zx_handle_close(dmctl);
+    if (status != ZX_OK || call_status != ZX_OK) {
+        zx_handle_close(local);
+        return -1;
     }
 
     for (;;) {
-        zx_status_t status;
         char buf[32768];
         size_t actual;
-        if ((status = zx_socket_read(h, 0, buf, sizeof(buf), &actual)) < 0) {
+        if ((status = zx_socket_read(local, 0, buf, sizeof(buf), &actual)) < 0) {
             if (status == ZX_ERR_SHOULD_WAIT) {
-                zx_object_wait_one(h, ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
+                zx_object_wait_one(local, ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
                                    ZX_TIME_INFINITE, NULL);
                 continue;
             }
@@ -519,7 +515,7 @@ static int send_dmctl(const char* command, size_t length) {
             }
         }
     }
-    zx_handle_close(h);
+    zx_handle_close(local);
 
     return 0;
 }

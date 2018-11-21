@@ -12,6 +12,8 @@ MODULE_PACKAGE := fidl
 
 MODULE_FIDL_LIBRARY := fuchsia.device.manager
 
-MODULE_SRCS += $(LOCAL_DIR)/coordinator.fidl
+MODULE_SRCS += \
+    $(LOCAL_DIR)/coordinator.fidl \
+    $(LOCAL_DIR)/dmctl.fidl
 
 include make/module.mk

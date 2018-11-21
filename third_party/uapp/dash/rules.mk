@@ -47,8 +47,17 @@ MODULE_SRCS += \
 
 MODULE_NAME := sh
 
-MODULE_STATIC_LIBS := system/ulib/pretty third_party/ulib/linenoise
-MODULE_LIBS := system/ulib/fdio system/ulib/c system/ulib/zircon
+MODULE_STATIC_LIBS := \
+    system/ulib/pretty \
+    third_party/ulib/linenoise \
+
+MODULE_LIBS := \
+    system/ulib/c \
+    system/ulib/fdio \
+    system/ulib/zircon
+
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-device-manager \
 
 MODULE_CFLAGS := -D_GNU_SOURCE -DBSD -DIFS_BROKEN -DJOBS=0 -DSHELL \
                  -DUSE_LINENOISE

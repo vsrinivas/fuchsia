@@ -15,15 +15,14 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <fuchsia/device/manager/c/fidl.h>
 #include <inet6/inet6.h>
 #include <inet6/netifc.h>
-
-#include <zircon/process.h>
-#include <zircon/processargs.h>
-#include <zircon/syscalls.h>
-
+#include <lib/fdio/util.h>
 #include <zircon/boot/netboot.h>
-#include <zircon/device/dmctl.h>
+#include <zircon/processargs.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
 
 static uint32_t last_cookie = 0;
 static uint32_t last_cmd = 0;
@@ -214,17 +213,17 @@ static void nb_close(uint32_t cookie,
 }
 
 static zx_status_t do_dmctl_mexec(void) {
-    dmctl_mexec_args_t args;
+    zx_handle_t kernel, bootdata;
     zx_status_t status =
         netboot_prepare_zbi(nbkernel.data, nbbootdata.data,
-                            nbcmdline.file.data, nbcmdline.file.size, &args);
+                            nbcmdline.file.data, nbcmdline.file.size,
+                            &kernel, &bootdata);
     if (status != ZX_OK) {
         return status;
     }
 
     zx_handle_t wait_handle;
-    status = zx_handle_duplicate(
-        args.kernel, ZX_RIGHT_SAME_RIGHTS, &wait_handle);
+    status = zx_handle_duplicate(kernel, ZX_RIGHT_SAME_RIGHTS, &wait_handle);
     if (status != ZX_OK) {
         return status;
     }
@@ -234,10 +233,16 @@ static zx_status_t do_dmctl_mexec(void) {
         return ZX_ERR_INTERNAL;
     }
 
-    int r = ioctl_dmctl_mexec(fd, &args);
-    close(fd);
-    if (r < 0) {
-        return r;
+    zx_handle_t dmctl;
+    status = fdio_get_service_handle(fd, &dmctl);
+    if (status != ZX_OK) {
+        return status;
+    }
+    status = fuchsia_device_manager_ExternalControllerPerformMexec(dmctl, kernel,
+                                                                   bootdata);
+    zx_handle_close(dmctl);
+    if (status != ZX_OK) {
+        return status;
     }
 
     status = zx_object_wait_one(wait_handle, ZX_USER_SIGNAL_0,
