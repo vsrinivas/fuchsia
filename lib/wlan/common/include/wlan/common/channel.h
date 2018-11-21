@@ -21,6 +21,11 @@ namespace common {
 typedef uint16_t Mhz;
 
 // IEEE Std 802.11-2016, Annex E
+// Note the distinction of index for primary20 and index for center frequency.
+// Fuchsia OS minimizes the use of the notion of center frequency,
+// with following exceptions:
+// - CBW80P80's secondary frequency segment
+// - Frequency conversion at device drivers
 constexpr Mhz kBaseFreq2Ghz = 2407;
 constexpr Mhz kBaseFreq5Ghz = 5000;
 

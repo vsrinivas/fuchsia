@@ -44,6 +44,11 @@ TEST_F(ChannelTest, ValidCombo) {
         {104, CBW40BELOW, true},
         {149, CBW40ABOVE, true},
         {153, CBW40BELOW, true},
+        {36, CBW80, true},
+        {40, CBW80, true},
+        {100, CBW80, true},
+        {149, CBW80, true},
+        {161, CBW80, true},
         // Add more interesting cases
         // clang-format on
     };
@@ -101,6 +106,7 @@ TEST_F(ChannelTest, InvalidCombo) {
         {40, CBW40ABOVE, false},
         {149, CBW40BELOW, false},
         {153, CBW40ABOVE, false},
+        {165, CBW80, false},
         // Add more interesting cases
         // clang-format on
     };

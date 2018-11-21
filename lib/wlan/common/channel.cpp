@@ -90,6 +90,9 @@ bool IsValidChan5Ghz(const wlan_channel_t& chan) {
         if (p <= 144 && (p % 8 != 0)) { return false; }
         if (p >= 149 && (p % 8 != 1)) { return false; }
         break;
+    case CBW80:
+        if (p == 165) { return false; }
+        break;
     default:
         return false;
     }
