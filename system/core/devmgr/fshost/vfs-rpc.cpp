@@ -19,7 +19,6 @@
 #include <zircon/thread_annotations.h>
 #include <lib/fdio/debug.h>
 #include <lib/fdio/io.h>
-#include <lib/fdio/remoteio.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>

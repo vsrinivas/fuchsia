@@ -26,7 +26,6 @@
 #include <zircon/types.h>
 
 #include <fbl/auto_lock.h>
-#include <lib/fdio/remoteio.h>
 
 namespace devmgr {
 

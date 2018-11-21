@@ -19,7 +19,6 @@
 #ifdef __Fuchsia__
 #include <lib/async/dispatcher.h>
 #include <lib/fdio/io.h>
-#include <lib/fdio/remoteio.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/vmo.h>

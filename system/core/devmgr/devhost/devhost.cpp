@@ -32,7 +32,6 @@
 #include <lib/async/cpp/receiver.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/util.h>
-#include <lib/fdio/remoteio.h>
 #include <lib/fidl/coding.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/resource.h>

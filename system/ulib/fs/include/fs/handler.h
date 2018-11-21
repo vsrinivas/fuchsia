@@ -42,10 +42,8 @@ __BEGIN_CDECLS
 // - otherwise, the return value is treated as the status to send
 //   in the rpc response, and msg.len indicates how much valid data
 //   to send.  On error return msg.len will be set to 0.
-typedef zx_status_t (*vfs_cb_t)(fidl_msg_t* msg, fidl_txn_t* txn,
-                                   void* cookie);
+typedef zx_status_t (*vfs_cb_t)(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie);
 
-//TODO: this really should be private to fidl.c, but is used by libfs
 typedef struct vfs_connection {
     fidl_txn_t txn;
     zx_handle_t channel;

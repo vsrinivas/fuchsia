@@ -26,7 +26,6 @@
 
 #ifdef __Fuchsia__
 #include <fuchsia/io/c/fidl.h>
-#include <lib/fdio/remoteio.h>
 #include <lib/zx/channel.h>
 
 #include <utility>

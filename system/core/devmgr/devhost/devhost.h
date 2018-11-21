@@ -18,7 +18,6 @@
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/fdio/remoteio.h>
 #include <lib/zx/channel.h>
 #include <zircon/compiler.h>
 #include <zircon/fidl.h>

@@ -26,6 +26,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <fs/connection.h>
 #include <fs/handler.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/debug.h>
@@ -49,7 +50,8 @@ void describe_error(zx::channel h, zx_status_t status) {
     h.write(0, &msg, sizeof(msg), nullptr, 0);
 }
 
-static zx_status_t create_description(const fbl::RefPtr<zx_device_t>& dev, zxfidl_on_open_t* msg,
+static zx_status_t create_description(const fbl::RefPtr<zx_device_t>& dev,
+                                      fs::OnOpenMsg* msg,
                                       zx::eventpair* handle) {
     memset(msg, 0, sizeof(*msg));
     msg->primary.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
@@ -100,7 +102,7 @@ static zx_status_t devhost_get_handles(zx::channel rh, const fbl::RefPtr<zx_devi
     newconn->dev = new_dev;
 
     if (describe) {
-        zxfidl_on_open_t info;
+        fs::OnOpenMsg info;
         zx::eventpair handle;
         if ((r = create_description(new_dev, &info, &handle)) != ZX_OK) {
             goto fail_open;

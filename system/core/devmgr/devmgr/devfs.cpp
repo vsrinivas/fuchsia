@@ -15,10 +15,10 @@
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
+#include <fs/connection.h>
 #include <fs/handler.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/fdio/remoteio.h>
 #include <lib/fdio/util.h>
 #include <lib/fidl/coding.h>
 #include <lib/memfs/cpp/vnode.h>
@@ -594,7 +594,7 @@ static void devfs_open(Devnode* dirdn, zx_handle_t h, char* path, uint32_t flags
             return;
         }
         if (describe) {
-            zxfidl_on_open_t msg;
+            fs::OnOpenMsg msg;
             memset(&msg, 0, sizeof(msg));
             msg.primary.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
             msg.primary.s = ZX_OK;

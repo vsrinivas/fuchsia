@@ -20,7 +20,6 @@
 #include <fbl/ref_ptr.h>
 #include <fs/connection.h>
 #include <fs/remote.h>
-#include <lib/fdio/remoteio.h>
 #include <lib/zx/event.h>
 #include <lib/zx/process.h>
 #include <zircon/assert.h>

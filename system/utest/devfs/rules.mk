@@ -21,9 +21,11 @@ MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/async \
     system/ulib/zx \
     system/ulib/zxcpp \
-    system/ulib/fbl
+    system/ulib/fbl \
+    system/ulib/fs \
 
 MODULE_LIBS := \
     system/ulib/c \

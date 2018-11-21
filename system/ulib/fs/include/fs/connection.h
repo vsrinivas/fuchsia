@@ -23,6 +23,13 @@ namespace fs {
 
 constexpr zx_signals_t kLocalTeardownSignal = ZX_USER_SIGNAL_1;
 
+// A one-way message which may be emitted by the server without an
+// accompanying request. Optionally used as a part of the Open handshake.
+struct OnOpenMsg {
+    fuchsia_io_NodeOnOpenEvent primary;
+    fuchsia_io_NodeInfo extra;
+};
+
 // Connection represents an open connection to a Vnode (the server-side
 // component of a file descriptor).  The Vnode's methods will be invoked
 // in response to RIO protocol messages received over the channel.

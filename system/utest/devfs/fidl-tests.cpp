@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <fbl/algorithm.h>
+#include <fs/connection.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/namespace.h>
-#include <lib/fdio/remoteio.h>
 #include <lib/fdio/util.h>
 #include <lib/zx/channel.h>
 #include <unittest/unittest.h>
@@ -49,9 +49,9 @@ bool FidlOpenValidator(const zx::channel& directory, const char* path,
     uint32_t actual_handles;
     ASSERT_EQ(client.read(0, buf, sizeof(buf), &actual_bytes, handles, fbl::count_of(handles),
                           &actual_handles), ZX_OK);
-    ASSERT_EQ(actual_bytes, sizeof(zxfidl_on_open_t));
+    ASSERT_EQ(actual_bytes, sizeof(fs::OnOpenMsg));
     ASSERT_EQ(actual_handles, expected_handles);
-    auto response = reinterpret_cast<zxfidl_on_open_t*>(buf);
+    auto response = reinterpret_cast<fs::OnOpenMsg*>(buf);
     ASSERT_EQ(response->primary.hdr.ordinal, fuchsia_io_NodeOnOpenOrdinal);
     ASSERT_EQ(response->primary.s, ZX_OK);
     ASSERT_EQ(response->extra.tag, expected_tag);

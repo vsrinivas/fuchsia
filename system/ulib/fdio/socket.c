@@ -13,7 +13,6 @@
 #include <zircon/syscalls.h>
 
 #include <lib/fdio/io.h>
-#include <lib/fdio/remoteio.h>
 #include <lib/fdio/util.h>
 #include <lib/zxs/protocol.h>
 

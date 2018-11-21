@@ -17,7 +17,6 @@
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/debug.h>
 #include <lib/fdio/io.h>
-#include <lib/fdio/remoteio.h>
 #include <lib/fdio/vfs.h>
 #include <lib/zx/handle.h>
 #include <zircon/assert.h>
@@ -47,7 +46,7 @@ zx_status_t GetNodeInfo(const fbl::RefPtr<Vnode>& vn, uint32_t flags,
 }
 
 void Describe(const fbl::RefPtr<Vnode>& vn, uint32_t flags,
-              zxfidl_on_open_t* response, zx_handle_t* handle) {
+              OnOpenMsg* response, zx_handle_t* handle) {
     response->primary.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
     response->extra.file.event = ZX_HANDLE_INVALID;
     zx_status_t r = GetNodeInfo(vn, flags, &response->extra);
@@ -136,12 +135,12 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent, zx::channel channel,
             return;
         }
 
-        zxfidl_on_open_t response;
+        OnOpenMsg response;
         memset(&response, 0, sizeof(response));
         zx_handle_t extra = ZX_HANDLE_INVALID;
         Describe(vnode, flags, &response, &extra);
         uint32_t hcount = (extra != ZX_HANDLE_INVALID) ? 1 : 0;
-        channel.write(0, &response, sizeof(zxfidl_on_open_t), &extra, hcount);
+        channel.write(0, &response, sizeof(OnOpenMsg), &extra, hcount);
     } else if (r != ZX_OK) {
         return;
     }
@@ -414,7 +413,7 @@ zx_status_t Connection::NodeClone(uint32_t flags, zx_handle_t object) {
         status = OpenVnode(open_flags, &vn);
     }
     if (describe) {
-        zxfidl_on_open_t response;
+        OnOpenMsg response;
         memset(&response, 0, sizeof(response));
         response.primary.s = status;
         zx_handle_t extra = ZX_HANDLE_INVALID;
@@ -422,7 +421,7 @@ zx_status_t Connection::NodeClone(uint32_t flags, zx_handle_t object) {
             Describe(vnode_, open_flags, &response, &extra);
         }
         uint32_t hcount = (extra != ZX_HANDLE_INVALID) ? 1 : 0;
-        channel.write(0, &response, sizeof(zxfidl_on_open_t), &extra, hcount);
+        channel.write(0, &response, sizeof(OnOpenMsg), &extra, hcount);
     }
 
     if (status == ZX_OK) {

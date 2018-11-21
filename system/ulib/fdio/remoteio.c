@@ -25,7 +25,6 @@
 #include <lib/fdio/debug.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
-#include <lib/fdio/remoteio.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/vfs.h>
 
@@ -122,11 +121,18 @@ static zx_status_t zxrio_connect(zx_handle_t svc, zx_handle_t cnxn,
     return r;
 }
 
+// A one-way message which may be emitted by the server without an
+// accompanying request. Optionally used as a part of the Open handshake.
+typedef struct {
+    fuchsia_io_NodeOnOpenEvent primary;
+    fuchsia_io_NodeInfo extra;
+} fdio_on_open_msg_t;
+
 // Takes ownership of the optional |extra_handle|.
 //
 // Decodes the handle into |info|, if it exists and should
 // be decoded.
-static zx_status_t zxrio_decode_describe_handle(zxfidl_on_open_t* info,
+static zx_status_t zxrio_decode_describe_handle(fdio_on_open_msg_t* info,
                                                 zx_handle_t extra_handle) {
     bool have_handle = (extra_handle != ZX_HANDLE_INVALID);
     bool want_handle = false;
@@ -187,7 +193,7 @@ fail:
 // message is aligned.
 //
 // Does not close |h|, even on error.
-static zx_status_t zxrio_process_open_response(zx_handle_t h, zxfidl_on_open_t* info) {
+static zx_status_t zxrio_process_open_response(zx_handle_t h, fdio_on_open_msg_t* info) {
     zx_object_wait_one(h, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                        ZX_TIME_INFINITE, NULL);
 
@@ -207,7 +213,7 @@ static zx_status_t zxrio_process_open_response(zx_handle_t h, zxfidl_on_open_t* 
         r = info->primary.s;
     }
 
-    if (dsize != sizeof(zxfidl_on_open_t)) {
+    if (dsize != sizeof(fdio_on_open_msg_t)) {
         r = (r != ZX_OK) ? r : ZX_ERR_IO;
     }
 
@@ -218,13 +224,13 @@ static zx_status_t zxrio_process_open_response(zx_handle_t h, zxfidl_on_open_t* 
         return r;
     }
 
-    // Confirm that the objects "zxfidl_on_open_t" and "fuchsia_io_NodeOnOpenEvent"
+    // Confirm that the objects "fdio_on_open_msg_t" and "fuchsia_io_NodeOnOpenEvent"
     // are aligned enough to be compatible.
     //
     // This is somewhat complicated by the fact that the "fuchsia_io_NodeOnOpenEvent"
     // object has an optional "fuchsia_io_NodeInfo" secondary which exists immediately
     // following the struct.
-    static_assert(__builtin_offsetof(zxfidl_on_open_t, extra) ==
+    static_assert(__builtin_offsetof(fdio_on_open_msg_t, extra) ==
                   FIDL_ALIGN(sizeof(fuchsia_io_NodeOnOpenEvent)),
                   "RIO Description message doesn't align with FIDL response secondary");
     // Connection::NodeDescribe also relies on these static_asserts.
@@ -526,7 +532,8 @@ fail:
 static zx_status_t zxrio_sync_open_connection(zx_handle_t svc, uint32_t op,
                                               uint32_t flags, uint32_t mode,
                                               const char* path, size_t pathlen,
-                                              zxfidl_on_open_t* info, zx_handle_t* out) {
+                                              fdio_on_open_msg_t* info,
+                                              zx_handle_t* out) {
     if (!(flags & ZX_FS_FLAG_DESCRIBE)) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -571,7 +578,7 @@ static zx_status_t zxrio_sync_open_connection(zx_handle_t svc, uint32_t op,
 // |info| may contain an additional handle.
 static zx_status_t zxrio_getobject(zx_handle_t rio_h, uint32_t op, const char* name,
                                    uint32_t flags, uint32_t mode,
-                                   zxfidl_on_open_t* info, zx_handle_t* out) {
+                                   fdio_on_open_msg_t* info, zx_handle_t* out) {
     if (name == NULL) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -604,7 +611,7 @@ static zx_status_t zxrio_getobject(zx_handle_t rio_h, uint32_t op, const char* n
 zx_status_t zxrio_open_handle(zx_handle_t h, const char* path, uint32_t flags,
                               uint32_t mode, fdio_t** out) {
     zx_handle_t control_channel = ZX_HANDLE_INVALID;
-    zxfidl_on_open_t info;
+    fdio_on_open_msg_t info;
     zx_status_t r = zxrio_getobject(h, fuchsia_io_DirectoryOpenOrdinal, path, flags, mode, &info, &control_channel);
     if (r < 0) {
         return r;

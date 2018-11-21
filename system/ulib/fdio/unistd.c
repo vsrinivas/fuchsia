@@ -36,7 +36,6 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/private.h>
-#include <lib/fdio/remoteio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/vfs.h>

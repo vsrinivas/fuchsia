@@ -12,7 +12,6 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-#include <lib/fdio/remoteio.h>
 #include <lib/fdio/vfs.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>

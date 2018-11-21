@@ -5,12 +5,11 @@
 #include "private.h"
 #include "unistd.h"
 
+#include <fuchsia/io/c/fidl.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/vfs.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
-
-#include <lib/fdio/io.h>
-#include <lib/fdio/remoteio.h>
-#include <lib/fdio/vfs.h>
 
 #define MIN_WINDOW (PAGE_SIZE * 4)
 #define MAX_WINDOW ((size_t)64 << 20)

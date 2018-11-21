@@ -6,7 +6,6 @@
 
 #include <zircon/types.h>
 #include <lib/fdio/limits.h>
-#include <lib/fdio/remoteio.h>
 #include <lib/fdio/vfs.h>
 #include <stdarg.h>
 #include <stdatomic.h>

@@ -9,7 +9,6 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 #include <lib/fdio/io.h>
-#include <lib/fdio/remoteio.h>
 #include <lib/fdio/vfs.h>
 
 #ifdef __cplusplus
