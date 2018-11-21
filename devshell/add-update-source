@@ -93,6 +93,7 @@ function main {
   fi
 
   fx-command-run shell $device_arg amber_ctl add_src \
+    -n "${source_name}" \
     -f "${config_url}"
   err=$?
 
