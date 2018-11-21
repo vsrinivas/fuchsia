@@ -366,6 +366,29 @@ type StructMember struct {
 	MaxHandles        int        `json:"max_handles"`
 }
 
+// EmptyStructMember returns a StructMember that's suitable as the sole member
+// of an empty struct.
+func EmptyStructMember(name string) StructMember {
+	// Empty structs have a size of 1, so the uint8 struct member returned by this
+	// function can be used to pad the struct to the correct size.
+
+	return StructMember{
+		Type: Type{
+			Kind:             PrimitiveType,
+			PrimitiveSubtype: Uint8,
+		},
+		Name: Identifier(name),
+		MaybeDefaultValue: &Constant{
+			Kind:       "literal",
+			Identifier: "",
+			Literal: Literal{
+				Kind:  "numeric",
+				Value: "0",
+			},
+		},
+	}
+}
+
 // Interface represents the declaration of a FIDL interface.
 type Interface struct {
 	Attributes

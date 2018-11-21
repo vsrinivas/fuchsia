@@ -701,6 +701,12 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 		r.Members = append(r.Members, c.compileStructMember(v))
 	}
 
+	if len(r.Members) == 0 {
+		r.Members = []StructMember{
+			c.compileStructMember(types.EmptyStructMember("__reserved")),
+		}
+	}
+
 	return r
 }
 
