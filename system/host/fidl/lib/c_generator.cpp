@@ -44,6 +44,18 @@ CGenerator::Member MessageHeader() {
     };
 }
 
+CGenerator::Member EmptyStructMember() {
+  return {
+    .kind = flat::Type::Kind::kPrimitive,
+    .type = NamePrimitiveCType(types::PrimitiveSubtype::kUint8),
+
+    // Prepend the reserved uint8_t field with a single underscore, which is
+    // for reserved identifiers (see ISO C standard, section 7.1.3
+    // <http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf>).
+    .name = "_reserved",
+  };
+}
+
 CGenerator::Transport ParseTransport(StringView view) {
     if (view == "SocketControl") {
         return CGenerator::Transport::SocketControl;
@@ -628,11 +640,21 @@ void CGenerator::GenerateStructDeclaration(StringView name, const std::vector<Me
     if (kind == StructKind::kMessage) {
         file_ << kIndent << "FIDL_ALIGNDECL\n";
     }
-    for (const auto& member : members) {
+
+    auto emit_member = [this](const Member& member) {
         file_ << kIndent;
         EmitMemberDecl(&file_, member);
         file_ << ";\n";
+    };
+
+    for (const auto& member : members) {
+        emit_member(member);
     }
+
+    if (members.empty()) {
+        emit_member(EmptyStructMember());
+    }
+
     file_ << "};\n";
 }
 
@@ -937,12 +959,12 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
             case Transport::Channel:
                 file_ << kIndent << "zx_handle_t _handles[ZX_CHANNEL_MAX_MSG_HANDLES];\n";
                 file_ << kIndent << "zx_status_t _status = fidl_encode(&" << method_info.request->coded_name
-                    << ", _wr_bytes, _wr_num_bytes, _handles, ZX_CHANNEL_MAX_MSG_HANDLES"
-                    << ", &_wr_num_handles, NULL);\n";
+                      << ", _wr_bytes, _wr_num_bytes, _handles, ZX_CHANNEL_MAX_MSG_HANDLES"
+                      << ", &_wr_num_handles, NULL);\n";
                 break;
             case Transport::SocketControl:
                 file_ << kIndent << "zx_status_t _status = fidl_encode(&" << method_info.request->coded_name
-                    << ", _wr_bytes, _wr_num_bytes, NULL, 0, &_wr_num_handles, NULL);\n";
+                      << ", _wr_bytes, _wr_num_bytes, NULL, 0, &_wr_num_handles, NULL);\n";
                 break;
             }
             file_ << kIndent << "if (_status != ZX_OK)\n";
@@ -1065,11 +1087,11 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
                 switch (named_interface.transport) {
                 case Transport::Channel:
                     file_ << kIndent << "_status = fidl_decode(&" << method_info.response->coded_name
-                        << ", _rd_bytes, _actual_num_bytes, _handles, _actual_num_handles, NULL);\n";
+                          << ", _rd_bytes, _actual_num_bytes, _handles, _actual_num_handles, NULL);\n";
                     break;
                 case Transport::SocketControl:
                     file_ << kIndent << "_status = fidl_decode(&" << method_info.response->coded_name
-                        << ", _rd_bytes, _actual_num_bytes, NULL, 0, NULL);\n";
+                          << ", _rd_bytes, _actual_num_bytes, NULL, 0, NULL);\n";
                     break;
                 }
                 file_ << kIndent << "if (_status != ZX_OK)\n";

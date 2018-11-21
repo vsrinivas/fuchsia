@@ -129,6 +129,145 @@ struct Simple {
     END_TEST;
 }
 
+bool json_generator_test_empty_struct() {
+    BEGIN_TEST;
+
+    for (int i = 0; i < kRepeatTestCount; i++) {
+        EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+library fidl.test.json;
+
+struct Empty {
+};
+
+interface EmptyInterface {
+  Send(Empty e);
+  -> Receive (Empty e);
+  SendAndReceive(Empty e) -> (Empty e);
+};
+)FIDL",
+                                       R"JSON(
+{
+  "version": "0.0.1",
+  "name": "fidl.test.json",
+  "library_dependencies": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [
+    {
+      "name": "fidl.test.json/EmptyInterface",
+      "methods": [
+        {
+          "ordinal": 296942602,
+          "name": "Send",
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "fidl.test.json/Empty",
+                "nullable": false
+              },
+              "name": "e",
+              "size": 1,
+              "alignment": 1,
+              "offset": 16,
+              "max_handles": 0
+            }
+          ],
+          "maybe_request_size": 24,
+          "maybe_request_alignment": 8,
+          "has_response": false
+        },
+        {
+          "ordinal": 939543845,
+          "name": "Receive",
+          "has_request": false,
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "fidl.test.json/Empty",
+                "nullable": false
+              },
+              "name": "e",
+              "size": 1,
+              "alignment": 1,
+              "offset": 16,
+              "max_handles": 0
+            }
+          ],
+          "maybe_response_size": 24,
+          "maybe_response_alignment": 8
+        },
+        {
+          "ordinal": 556045674,
+          "name": "SendAndReceive",
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "fidl.test.json/Empty",
+                "nullable": false
+              },
+              "name": "e",
+              "size": 1,
+              "alignment": 1,
+              "offset": 16,
+              "max_handles": 0
+            }
+          ],
+          "maybe_request_size": 24,
+          "maybe_request_alignment": 8,
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "fidl.test.json/Empty",
+                "nullable": false
+              },
+              "name": "e",
+              "size": 1,
+              "alignment": 1,
+              "offset": 16,
+              "max_handles": 0
+            }
+          ],
+          "maybe_response_size": 24,
+          "maybe_response_alignment": 8
+        }
+      ]
+    }
+  ],
+  "struct_declarations": [
+    {
+      "name": "fidl.test.json/Empty",
+      "anonymous": false,
+      "members": [],
+      "size": 1,
+      "alignment": 1,
+      "max_handles": 0
+    }
+  ],
+  "table_declarations": [],
+  "union_declarations": [],
+  "declaration_order": [
+    "fidl.test.json/Empty",
+    "fidl.test.json/EmptyInterface"
+  ],
+  "declarations": {
+    "fidl.test.json/EmptyInterface": "interface",
+    "fidl.test.json/Empty": "struct"
+  }
+}
+)JSON"));
+    }
+
+    END_TEST;
+}
+
 bool json_generator_test_table() {
     BEGIN_TEST;
 
@@ -464,6 +603,7 @@ interface sub : super {
 } // namespace
 
 BEGIN_TEST_CASE(json_generator_tests);
+RUN_TEST(json_generator_test_empty_struct);
 RUN_TEST(json_generator_test_struct);
 RUN_TEST(json_generator_test_table);
 RUN_TEST(json_generator_test_union);

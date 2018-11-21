@@ -190,7 +190,7 @@ static bool invalid_character_test(void) {
     class InvalidCharacterLibrary : public TestLibrary {
     public:
         InvalidCharacterLibrary()
-        : TestLibrary("invalid.character.fidl", R"FIDL(
+            : TestLibrary("invalid.character.fidl", R"FIDL(
 library fidl.test.maxbytes;
 
 // This is all alphanumeric in the appropriate locale, but not a valid
@@ -214,6 +214,21 @@ struct ß {
     END_TEST;
 }
 
+bool empty_struct_test() {
+    BEGIN_TEST;
+
+    TestLibrary library("empty_struct.fidl", R"FIDL(
+library fidl.test.emptystruct;
+
+struct Empty {
+};
+
+)FIDL");
+    EXPECT_TRUE(library.Compile());
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(parser_tests);
@@ -224,4 +239,5 @@ RUN_TEST(bad_char_at_sign_test);
 RUN_TEST(bad_char_slash_test);
 RUN_TEST(bad_identifier_test);
 RUN_TEST(invalid_character_test);
+RUN_TEST(empty_struct_test);
 END_TEST_CASE(parser_tests);

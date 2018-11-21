@@ -924,9 +924,6 @@ Parser::ParseStructDeclaration(std::unique_ptr<raw::AttributeList> attributes, A
     if (!Ok())
         Fail();
 
-    if (members.empty())
-        return Fail();
-
     return std::make_unique<raw::StructDeclaration>(scope.GetSourceElement(),
                                                     std::move(attributes), std::move(identifier),
                                                     std::move(members));

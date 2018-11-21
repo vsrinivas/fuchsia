@@ -153,6 +153,15 @@ TypeShape CStructTypeShape(std::vector<FieldShape*>* fields, uint32_t extra_hand
     max_handles = ClampedAdd(max_handles, extra_handles);
 
     size = AlignTo(size, alignment);
+
+    if (fields->empty()) {
+        assert(size == 0);
+        assert(alignment == 1);
+
+        // Empty structs are defined to have a size of 1 (a single byte).
+        size = 1;
+    }
+
     return TypeShape(size, alignment, depth, max_handles, max_out_of_line);
 }
 
