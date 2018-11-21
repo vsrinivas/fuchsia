@@ -7,7 +7,6 @@ import("//build/config/fuchsia/zbi.gni")
 import("//build/config/fuchsia/zircon.gni")
 import("//build/gn/packages.gni")
 import("//build/images/boot.gni")
-import("//build/images/crashpad.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/fvm.gni")
 import("//build/images/json.gni")
@@ -424,8 +423,7 @@ images += [
 
 declare_args() {
   # List of arguments to add to /boot/config/devmgr.
-  # These come after synthesized arguments to configure blobfs and pkgfs,
-  # and the one generated for [`enable_crashpad`](#enable_crashpad).
+  # These come after synthesized arguments to configure blobfs and pkgfs.
   devmgr_config = []
 
   # List of kernel command line arguments to bake into the boot image.
@@ -529,10 +527,6 @@ action("devmgr_config.txt") {
     "--manifest=" + rebase_path(pkgfs_blob_manifest, root_build_dir),
     "--reset-rewrite",
   ]
-
-  if (enable_crashpad) {
-    args += [ "--entry=crashsvc.analyzer=from-appmgr" ]
-  }
 
   foreach(entry, devmgr_config) {
     args += [ "--entry=$entry" ]
