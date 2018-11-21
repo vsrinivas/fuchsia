@@ -18,8 +18,6 @@
 
 namespace devmgr {
 
-void coordinator();
-
 void devfs_init(const zx::job& root_job);
 
 void devmgr_svc_init();

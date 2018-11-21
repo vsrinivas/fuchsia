@@ -383,7 +383,12 @@ void devfs_advertise(Device* dev);
 void devfs_advertise_modified(Device* dev);
 
 Device* coordinator_init(const zx::job& root_job);
-void coordinator();
+
+// Setup and begin executing the coordinator's loop.
+// |driver_search_path| specifies which directory drivers should be loaded from
+// |sys_device_driver| specifies which driver should be used for the sys device.
+// Either may be nullptr, in which case default values will be used.
+void coordinator(const char* driver_search_path, const char* sys_device_driver);
 
 void load_driver(const char* path,
                  void (*func)(Driver* drv, const char* version));

@@ -2227,8 +2227,22 @@ void load_system_drivers() {
     control_handler.QueuePacket(DcAsyncLoop()->dispatcher(), &pkt);
 }
 
-void coordinator() {
+void coordinator(const char* driver_search_path, const char* sys_device_driver) {
     log(INFO, "devmgr: coordinator()\n");
+
+    // Set up the default values for our arguments if they weren't given.
+    if (driver_search_path == nullptr) {
+        driver_search_path = "/boot/driver";
+    }
+    if (sys_device_driver == nullptr) {
+    // x86 platforms use acpi as the system device
+    // all other platforms use the platform bus
+#if defined(__x86_64__)
+        sys_device_driver = "/boot/driver/bus-acpi.so";
+#else
+        sys_device_driver = "/boot/driver/platform-bus.so";
+#endif
+    }
 
     if (getenv_bool("devmgr.verbose", false)) {
         log_flags |= LOG_ALL;
@@ -2249,7 +2263,9 @@ void coordinator() {
     devfs_publish(&root_device, &sys_device);
     devfs_publish(&root_device, &test_device);
 
-    find_loadable_drivers("/boot/driver", dc_driver_added_init);
+    find_loadable_drivers(driver_search_path, dc_driver_added_init);
+    // TODO(teisenbe): Remove /boot/driver/test once we start running these against
+    // test instances of devmgr
     find_loadable_drivers("/boot/driver/test", dc_driver_added_init);
 
     // Special case early handling for the ramdisk boot
@@ -2261,13 +2277,7 @@ void coordinator() {
         dc_scan_system();
     }
 
-    // x86 platforms use acpi as the system device
-    // all other platforms use the platform bus
-#if defined(__x86_64__)
-    sys_device.libname = "/boot/driver/bus-acpi.so";
-#else
-    sys_device.libname = "/boot/driver/platform-bus.so";
-#endif
+    sys_device.libname = sys_device_driver;
     dc_prepare_proxy(&sys_device);
     dc_prepare_proxy(&test_device);
 
