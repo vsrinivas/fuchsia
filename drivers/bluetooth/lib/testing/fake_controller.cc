@@ -969,6 +969,8 @@ void FakeController::OnCommandPacketReceived(
       if (CheckBit(settings_.lmp_features_page1,
                    hci::LMPFeature::kSecureSimplePairingHostSupport)) {
         params.simple_pairing_mode = hci::GenericEnableParam::kEnable;
+      } else {
+        params.simple_pairing_mode = hci::GenericEnableParam::kDisable;
       }
 
       RespondWithCommandComplete(hci::kReadSimplePairingMode,
