@@ -49,6 +49,11 @@ LIBRARIES_BEING_MOVED = ['zx']
 # the make build and we have to manually curate these libraries.
 LIBRARIES_WITHOUT_SDK_HEADERS = ['trace-engine']
 
+# Packages which should never appear in SDKs.
+# Dependencies on these packages will not be reflected in generated rules. The
+# lack of distinction between public and private deps in the make build system
+# is the reason why this list is needed.
+NON_SDK_DEPS = ['zircon-internal']
 
 def is_header_excluded(lib_name, header):
     return lib_name == 'fdio' and os.path.basename(header) == 'remoteio.h'
@@ -131,6 +136,11 @@ def filter_deps(deps):
     return filter(lambda x: x not in SYSROOT_PACKAGES, deps)
 
 
+def filter_sdk_deps(deps):
+    '''Sanitizes a given SDK dependency list.'''
+    return filter(lambda x: x not in NON_SDK_DEPS, deps)
+
+
 def generate_build_file(path, template_name, data, context):
     '''Creates a build file based on a template.'''
     make_dir(path)
@@ -151,6 +161,7 @@ class SourceLibrary(object):
         self.include_dirs = set()
         self.sources = {}
         self.deps = []
+        self.sdk_deps = []
         self.fidl_deps = []
         self.banjo_deps = []
         self.libs = set()
@@ -180,6 +191,7 @@ def generate_source_library(package, context):
     data.deps += filter_deps(package.get('static-deps', []))
     data.fidl_deps = filter_deps(package.get('fidl-deps', []))
     data.banjo_deps = filter_deps(package.get('banjo-deps', []))
+    data.sdk_deps = filter_sdk_deps(data.deps)
 
     # Special hack for zircon library dependency: enables special codegen
     # in template depending on whether we're building on Fuchsia or not.
@@ -200,6 +212,7 @@ class CompiledLibrary(object):
         self.includes = {}
         self.include_dirs = set()
         self.deps = []
+        self.sdk_deps = []
         self.fidl_deps = []
         self.banjo_deps = []
         self.lib_name = ''
@@ -256,6 +269,7 @@ def generate_compiled_library(package, context):
     data.deps += filter_deps(package.get('static-deps', []))
     data.fidl_deps = filter_deps(package.get('fidl-deps', []))
     data.banjo_deps = filter_deps(package.get('banjo-deps', []))
+    data.sdk_deps = filter_sdk_deps(data.deps)
 
     # Generate the build file.
     template = 'shared_library.mako' if is_shared else 'static_library.mako'

@@ -73,7 +73,7 @@ metadata = {
   % endfor
 
   deps = []
-  % for dep in sorted(data.deps):
+  % for dep in sorted(data.sdk_deps):
   deps += [ "${dep}" ]
   % endfor
 
@@ -109,7 +109,7 @@ sdk_atom("${data.name}_sdk") {
   ]
 
   deps = [
-    % for dep in sorted(data.deps):
+    % for dep in sorted(data.sdk_deps):
     "../${dep}:${dep}_sdk",
     % endfor
   ]
