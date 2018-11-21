@@ -430,5 +430,25 @@ TEST_F(MediaPlayerTests, PlayBear) {
   Execute();
 }
 
+// Regression test for US-544.
+TEST_F(MediaPlayerTests, RegressionTestUS544) {
+  CreateView();
+  Open(kBearFilePath);
+
+  // Play for two seconds and pause.
+  Play();
+  WaitForPosition(zx::sec(2));
+  Pause();
+
+  // Wait a bit.
+  Sleep(zx::sec(2));
+
+  // Seek to the beginning and resume playing.
+  Seek(zx::sec(0));
+  Play();
+
+  Execute(zx::sec(20));
+}
+
 }  // namespace test
 }  // namespace media_player
