@@ -87,17 +87,12 @@ zx_status_t Launch(const char* driver_search_path, const char* sys_device_path,
     ZX_DEBUG_ASSERT(count <= fbl::count_of(nametable));
     launchpad_set_nametable(lp, count, nametable);
 
-// TODO(teisenbe): Uncomment this when we add plumbing for the devfs root
-#if 0
     zx::channel devfs, devfs_server;
     status = zx::channel::create(0, &devfs, &devfs_server);
     if (status != ZX_OK) {
         return status;
     }
     launchpad_add_handle(lp, devfs_server.release(), DEVMGR_LAUNCHER_DEVFS_ROOT_HND);
-    *devfs_root = std::move(devfs);
-#endif
-    devfs_root->reset();
 
     const char* errmsg;
     status = launchpad_go(lp, nullptr, &errmsg);
@@ -106,6 +101,7 @@ zx_status_t Launch(const char* driver_search_path, const char* sys_device_path,
     }
 
     *devmgr_job = std::move(job);
+    *devfs_root = std::move(devfs);
     return ZX_OK;
 }
 
