@@ -38,16 +38,19 @@ class ExprParser {
   fxl::RefPtr<ExprNode> ParseExpression(int precedence);
 
   fxl::RefPtr<ExprNode> AmpersandPrefix(const ExprToken& token);
+  fxl::RefPtr<ExprNode> ScopeInfix(fxl::RefPtr<ExprNode> left,
+                                   const ExprToken& token);
+  fxl::RefPtr<ExprNode> ScopePrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> DotOrArrowInfix(fxl::RefPtr<ExprNode> left,
-                                            const ExprToken& token);
+                                        const ExprToken& token);
   fxl::RefPtr<ExprNode> IntegerPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> LeftParenPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> LeftSquareInfix(fxl::RefPtr<ExprNode> left,
-                                            const ExprToken& token);
+                                        const ExprToken& token);
   fxl::RefPtr<ExprNode> MinusPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> NamePrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> NameInfix(fxl::RefPtr<ExprNode> left,
-                                      const ExprToken& token);
+                                  const ExprToken& token);
   fxl::RefPtr<ExprNode> StarPrefix(const ExprToken& token);
 
   // Returns the next token or the invalid token if nothing is left. Advances
@@ -60,6 +63,14 @@ class ExprParser {
   // token. It will advance to the next token.
   const ExprToken& Consume(ExprToken::Type type, const ExprToken& error_token,
                            const char* error_msg);
+
+  // Joins two IdentifierExprNodes. The |left| can be null which will prepend
+  // the scope token to the right (generating a fully-qualified identifier).
+  // Otherwise, right is null-checked and both are checked that they're
+  // identifiers.
+  fxl::RefPtr<ExprNode> JoinIdentifiers(fxl::RefPtr<ExprNode> left,
+                                        const ExprToken& scope_token,
+                                        fxl::RefPtr<ExprNode> right);
 
   void SetError(const ExprToken& token, std::string msg);
 

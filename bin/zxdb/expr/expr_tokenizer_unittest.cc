@@ -30,14 +30,14 @@ TEST(ExprTokenizer, InvalidChar) {
 }
 
 TEST(ExprTokenizer, Punctuation) {
-  // Char offsets: 0 1234567890123456
-  // Token #'s:      0 1 2  3 45 67 8
-  ExprTokenizer t("\n. * -> & () [] -");
+  // Char offsets: 0 1234567890123456789
+  // Token #'s:      0 1 2  3 45 67 8 9
+  ExprTokenizer t("\n. * -> & () [] - ::");
 
   EXPECT_TRUE(t.Tokenize());
   EXPECT_FALSE(t.err().has_error()) << t.err().msg();
   const auto& tokens = t.tokens();
-  ASSERT_EQ(9u, tokens.size());
+  ASSERT_EQ(10u, tokens.size());
 
   EXPECT_EQ(ExprToken::kDot, tokens[0].type());
   EXPECT_EQ(".", tokens[0].value());
@@ -74,6 +74,10 @@ TEST(ExprTokenizer, Punctuation) {
   EXPECT_EQ(ExprToken::kMinus, tokens[8].type());
   EXPECT_EQ("-", tokens[8].value());
   EXPECT_EQ(16u, tokens[8].byte_offset());
+
+  EXPECT_EQ(ExprToken::kColonColon, tokens[9].type());
+  EXPECT_EQ("::", tokens[9].value());
+  EXPECT_EQ(18u, tokens[9].byte_offset());
 }
 
 TEST(ExprTokenizer, ValidIntegers) {

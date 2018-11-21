@@ -28,6 +28,7 @@ class ExprToken {
     kLeftParen,    // (
     kRightParen,   // )
     kMinus,        // - (by itself, not part of "->")
+    kColonColon,   // ::
 
     // Keep last. Not a token, but the count of tokens.
     kNumTypes

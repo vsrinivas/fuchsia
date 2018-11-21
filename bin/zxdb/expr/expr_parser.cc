@@ -55,32 +55,38 @@ using InfixFunc = fxl::RefPtr<ExprNode> (ExprParser::*)(
 // Lowest precedence: Most C unary operators like "*", "&", and "-".
 constexpr int kPrecedenceUnary = 10;
 
-// Highest precedence: () . -> []: Highest precedence.
-constexpr int kPrecedenceCallAccess = 30;
+// () . -> []
+constexpr int kPrecedenceCallAccess = 20;
+
+// Highest precedence: "::"
+constexpr int kPrecedenceScope = 30;
 
 }  // namespace
 
 struct ExprParser::DispatchInfo {
   PrefixFunc prefix = nullptr;
   InfixFunc infix = nullptr;
-  int precedence = 0;
+  int precedence = 0;  // Only needed when |infix| is set.
 };
 
+// The table is more clear without line wrapping.
+// clang-format off
 ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
-    {nullptr, nullptr, -1},                                          // kInvalid
-    {&ExprParser::NamePrefix, &ExprParser::NameInfix, -1},           // kName
-    {&ExprParser::IntegerPrefix, nullptr, -1},                       // kInteger
-    {nullptr, &ExprParser::DotOrArrowInfix, kPrecedenceCallAccess},  // kDot
-    {&ExprParser::StarPrefix, nullptr, kPrecedenceUnary},            // kStar
-    {&ExprParser::AmpersandPrefix, nullptr, kPrecedenceUnary},  // kAmpersand
-    {nullptr, &ExprParser::DotOrArrowInfix, kPrecedenceCallAccess},  // kArrow
-    {nullptr, &ExprParser::LeftSquareInfix,
-     kPrecedenceCallAccess},                      // kLeftSquare
-    {nullptr, nullptr, -1},                       // kRightSquare
-    {&ExprParser::LeftParenPrefix, nullptr, -1},  // kLeftParen
-    {nullptr, nullptr, -1},                       // kRightParen
-    {&ExprParser::MinusPrefix, nullptr, -1},      // kMinus
+    {nullptr,                      nullptr,                      -1},                     // kInvalid
+    {&ExprParser::NamePrefix,      &ExprParser::NameInfix,       -1},                     // kName
+    {&ExprParser::IntegerPrefix,   nullptr,                      -1},                     // kInteger
+    {nullptr,                      &ExprParser::DotOrArrowInfix, kPrecedenceCallAccess},  // kDot
+    {&ExprParser::StarPrefix,      nullptr,                      kPrecedenceUnary},       // kStar
+    {&ExprParser::AmpersandPrefix, nullptr,                      kPrecedenceUnary},       // kAmpersand
+    {nullptr,                      &ExprParser::DotOrArrowInfix, kPrecedenceCallAccess},  // kArrow
+    {nullptr,                      &ExprParser::LeftSquareInfix, kPrecedenceCallAccess},  // kLeftSquare
+    {nullptr,                      nullptr,                      -1},                     // kRightSquare
+    {&ExprParser::LeftParenPrefix, nullptr,                      -1},                     // kLeftParen
+    {nullptr,                      nullptr,                      -1},                     // kRightParen
+    {&ExprParser::MinusPrefix,     nullptr,                      -1},                     // kMinus
+    {&ExprParser::ScopePrefix,     &ExprParser::ScopeInfix,      kPrecedenceScope}        // kColonColon
 };
+// clang-format on
 
 // static
 const ExprToken ExprParser::kInvalidToken;
@@ -146,15 +152,29 @@ fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence) {
 fxl::RefPtr<ExprNode> ExprParser::AmpersandPrefix(const ExprToken& token) {
   fxl::RefPtr<ExprNode> right = ParseExpression(kPrecedenceUnary);
   if (!has_error() && !right)
-    SetError(token, "Expected expression for '*'.");
+    SetError(token, "Expected expression for '&'.");
   if (has_error())
     return nullptr;
   return fxl::MakeRefCounted<AddressOfExprNode>(std::move(right));
 }
 
+fxl::RefPtr<ExprNode> ExprParser::ScopeInfix(fxl::RefPtr<ExprNode> left,
+                                             const ExprToken& token) {
+  // Scope infix means we have two things separated by a "::". Both the right
+  // and the left should be identifier nodes. Scope resolution is
+  // left-associative so use the same precedence as the token.
+  return JoinIdentifiers(left, token, ParseExpression(kPrecedenceScope));
+}
+
+fxl::RefPtr<ExprNode> ExprParser::ScopePrefix(const ExprToken& token) {
+  // Scope prefix means we found something like "::foo". Scope resolution is
+  // left-associative so use the same precedence as the token.
+  return JoinIdentifiers(nullptr, token, ParseExpression(kPrecedenceScope));
+}
+
 fxl::RefPtr<ExprNode> ExprParser::DotOrArrowInfix(fxl::RefPtr<ExprNode> left,
                                                   const ExprToken& token) {
-  // These are left-associative.
+  // These are left-associative so use the same precedence as the token.
   fxl::RefPtr<ExprNode> right = ParseExpression(kPrecedenceCallAccess);
   if (!right || !right->AsIdentifier()) {
     SetError(token, fxl::StringPrintf(
@@ -166,7 +186,7 @@ fxl::RefPtr<ExprNode> ExprParser::DotOrArrowInfix(fxl::RefPtr<ExprNode> left,
   // Use the name from the right-hand-side identifier, we don't need a full
   // expression for that. If we add function calls it will be necessary.
   return fxl::MakeRefCounted<MemberAccessExprNode>(
-      std::move(left), token, right->AsIdentifier()->name());
+      std::move(left), token, right->AsIdentifier()->ident());
 }
 
 fxl::RefPtr<ExprNode> ExprParser::IntegerPrefix(const ExprToken& token) {
@@ -254,6 +274,54 @@ const ExprToken& ExprParser::Consume(ExprToken::Type type,
 
   SetError(error_token, error_msg);
   return kInvalidToken;
+}
+
+fxl::RefPtr<ExprNode> ExprParser::JoinIdentifiers(fxl::RefPtr<ExprNode> left,
+                                                  const ExprToken& scope_token,
+                                                  fxl::RefPtr<ExprNode> right) {
+  // This always makes a new identifier ExprNode. In most cases this is
+  // unnecessary and we could easily modify left or right, or at least suck out
+  // the Components to avoid copying all the strings. But this is not
+  // performance-critical so the simpler solution is better.
+  auto result = fxl::MakeRefCounted<IdentifierExprNode>();
+
+  // Left identifier is optional since this is also used to prefix things with
+  // a "::".
+  if (left) {
+    if (const IdentifierExprNode* left_ident = left->AsIdentifier()) {
+      result->ident() = left_ident->ident();
+    } else {
+      SetError(scope_token, "'::' not expected here.");
+      return nullptr;
+    }
+  }
+
+  // Right side is required.
+  const IdentifierExprNode* right_ident = nullptr;
+  if (!right || !(right_ident = right->AsIdentifier())) {
+    SetError(scope_token, "Expected identifier after '::'.");
+    return nullptr;
+  }
+
+  // All identifiers should have >= one component.
+  const auto& right_comps = right_ident->ident().components();
+  FXL_DCHECK(!right_comps.empty());
+
+  // Right shoudn't start with a "::" since we're adding another one.
+  const Identifier::Component& first_comp = right_comps[0];
+  if (first_comp.has_separator()) {
+    // Two "::" in a row.
+    SetError(first_comp.separator(), "Duplicate '::'.");
+    return nullptr;
+  }
+
+  // Append all the right elements, adding the new scope to the first.
+  result->ident().components().emplace_back(scope_token, first_comp.name(),
+                                            first_comp.template_spec());
+  for (size_t i = 1; i < right_comps.size(); i++)
+    result->ident().components().push_back(right_comps[i]);
+
+  return result;
 }
 
 void ExprParser::SetError(const ExprToken& token, std::string msg) {

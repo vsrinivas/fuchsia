@@ -54,6 +54,7 @@ class ExprTokenizer {
   bool has_error() const { return err_.has_error(); }
   bool at_end() const { return cur_ == input_.size(); }
   char cur_char() const { return input_[cur_]; }
+  bool can_advance() const { return cur_ < input_.size() - 1; }
 
   std::string input_;
   size_t cur_ = 0;  // Character offset into input_.

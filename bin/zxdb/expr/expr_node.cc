@@ -229,16 +229,19 @@ void DereferenceExprNode::Print(std::ostream& out, int indent) const {
 
 void IdentifierExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                               EvalCallback cb) const {
+  // For now, pass the stringified identifier. In the future we'll want to pass
+  // the Identifier itself so the namespaces can be resolved.
   context->GetNamedValue(
-      name_.value(), [cb = std::move(cb)](const Err& err, fxl::RefPtr<Symbol>,
-                                          ExprValue value) {
+      ident_.GetFullName(),
+      [cb = std::move(cb)](const Err& err, fxl::RefPtr<Symbol>,
+                           ExprValue value) {
         // Discard resolved symbol, we only need the value.
         cb(err, std::move(value));
       });
 }
 
 void IdentifierExprNode::Print(std::ostream& out, int indent) const {
-  out << IndentFor(indent) << "IDENTIFIER(" << name_.value() << ")\n";
+  out << IndentFor(indent) << "IDENTIFIER(" << ident_.GetDebugName() << ")\n";
 }
 
 void IntegerExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
@@ -253,9 +256,14 @@ void IntegerExprNode::Print(std::ostream& out, int indent) const {
 
 void MemberAccessExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                                 EvalCallback cb) const {
+  // This just uses GetFullName() to get the string version of the member.
+  // Normally this will be one word. In C++ you can do "Foo->BaseClass::bar"
+  // to force "bar" to be resolved in the context of the base class. To handle
+  // this case we will want to pass the full Identifier to the ResolveMember()
+  // function.
   bool is_arrow = accessor_.type() == ExprToken::kArrow;
   left_->EvalFollowReferences(context, [
-    context, is_arrow, member_value = member_.value(), cb = std::move(cb)
+    context, is_arrow, member_value = member_.GetFullName(), cb = std::move(cb)
   ](const Err& err, ExprValue base) {
     if (!is_arrow) {
       // "." operator.
@@ -279,7 +287,7 @@ void MemberAccessExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
 void MemberAccessExprNode::Print(std::ostream& out, int indent) const {
   out << IndentFor(indent) << "ACCESSOR(" << accessor_.value() << ")\n";
   left_->Print(out, indent + 1);
-  out << IndentFor(indent + 1) << member_.value() << "\n";
+  out << IndentFor(indent + 1) << member_.GetFullName() << "\n";
 }
 
 void UnaryOpExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,

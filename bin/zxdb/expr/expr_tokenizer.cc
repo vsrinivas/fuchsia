@@ -96,6 +96,7 @@ void ExprTokenizer::AdvanceToEndOfToken(ExprToken::Type type) {
       break;
 
     case ExprToken::kArrow:
+    case ExprToken::kColonColon:
       // The classification code should already have validated there were two
       // characters available.
       AdvanceOneChar();
@@ -140,9 +141,8 @@ ExprToken::Type ExprTokenizer::ClassifyCurrent() {
   switch (cur) {
     case '-':
       // Hyphen could be itself or an arrow, look ahead.
-      if (cur_ < input_.size() - 1) {
-        char following_char = input_[cur_ + 1];
-        if (following_char == '>')
+      if (can_advance()) {
+        if (input_[cur_ + 1] == '>')
           return ExprToken::kArrow;
       }
       // Anything else is a standalone hyphen.
@@ -161,6 +161,17 @@ ExprToken::Type ExprTokenizer::ClassifyCurrent() {
       return ExprToken::kLeftParen;
     case ')':
       return ExprToken::kRightParen;
+    case ':':
+      // Currently only support colons as part of "::", look ahead.
+      if (can_advance()) {
+        if (input_[cur_ + 1] == ':')
+          return ExprToken::kColonColon;
+      }
+      // Any other use of colon is an error.
+      error_location_ = cur_;
+      err_ = Err("Invalid standalone ':' in expression.\n" +
+                 GetErrorContext(input_, cur_));
+      return ExprToken::kInvalid;
     default:
       error_location_ = cur_;
       err_ = Err(

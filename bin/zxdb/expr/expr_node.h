@@ -10,6 +10,7 @@
 
 #include "garnet/bin/zxdb/expr/expr_token.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
+#include "garnet/bin/zxdb/expr/identifier.h"
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/memory/ref_ptr.h"
 
@@ -161,18 +162,22 @@ class IdentifierExprNode : public ExprNode {
             EvalCallback cb) const override;
   void Print(std::ostream& out, int indent) const override;
 
-  // The name of the identifier.
-  const ExprToken& name() const { return name_; }
+  Identifier& ident() { return ident_; }
+  const Identifier& ident() const { return ident_; }
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(IdentifierExprNode);
   FRIEND_MAKE_REF_COUNTED(IdentifierExprNode);
 
   IdentifierExprNode() = default;
-  IdentifierExprNode(const ExprToken& name) : name_(name) {}
+
+  // Simple one-name identifier.
+  IdentifierExprNode(const ExprToken& name) : ident_(name){};
+
+  IdentifierExprNode(Identifier id) : ident_(std::move(id)) {}
   ~IdentifierExprNode() override = default;
 
-  ExprToken name_;
+  Identifier ident_;
 };
 
 // Implements an integer. If we add more numeric types we may want this to be
@@ -213,7 +218,7 @@ class MemberAccessExprNode : public ExprNode {
   const ExprToken& accessor() const { return accessor_; }
 
   // The name of the data member.
-  const ExprToken& member() const { return member_; }
+  const Identifier& member() const { return member_; }
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(MemberAccessExprNode);
@@ -221,13 +226,13 @@ class MemberAccessExprNode : public ExprNode {
 
   MemberAccessExprNode() = default;
   MemberAccessExprNode(fxl::RefPtr<ExprNode> left, const ExprToken& access,
-                       const ExprToken& member)
+                       const Identifier& member)
       : left_(std::move(left)), accessor_(access), member_(member) {}
   ~MemberAccessExprNode() override = default;
 
   fxl::RefPtr<ExprNode> left_;
   ExprToken accessor_;
-  ExprToken member_;
+  Identifier member_;
 };
 
 // Implements unary mathematical operators (the operation depends on the

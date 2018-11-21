@@ -62,8 +62,7 @@ TEST_F(ExprParserTest, Identifier) {
 
   const IdentifierExprNode* ident = result->AsIdentifier();
   ASSERT_TRUE(ident);
-  EXPECT_EQ(ExprToken::kName, ident->name().type());
-  EXPECT_EQ("name", ident->name().value());
+  EXPECT_EQ("name", ident->ident().GetFullName());
 }
 
 TEST_F(ExprParserTest, Dot) {
@@ -78,12 +77,10 @@ TEST_F(ExprParserTest, Dot) {
   // Left side is the "base" identifier.
   const IdentifierExprNode* base = access->left()->AsIdentifier();
   ASSERT_TRUE(base);
-  EXPECT_EQ(ExprToken::kName, base->name().type());
-  EXPECT_EQ("base", base->name().value());
+  EXPECT_EQ("base", base->ident().GetFullName());
 
   // Member name.
-  EXPECT_EQ(ExprToken::kName, access->member().type());
-  EXPECT_EQ("member", access->member().value());
+  EXPECT_EQ("member", access->member().GetFullName());
 }
 
 TEST_F(ExprParserTest, AccessorAtEnd) {
@@ -122,12 +119,10 @@ TEST_F(ExprParserTest, Arrow) {
   // Left side is the "base" identifier.
   const IdentifierExprNode* base = access->left()->AsIdentifier();
   ASSERT_TRUE(base);
-  EXPECT_EQ(ExprToken::kName, base->name().type());
-  EXPECT_EQ("base", base->name().value());
+  EXPECT_EQ("base", base->ident().GetFullName());
 
   // Member name.
-  EXPECT_EQ(ExprToken::kName, access->member().type());
-  EXPECT_EQ("member", access->member().value());
+  EXPECT_EQ("member", access->member().GetFullName());
 
   // Arrow with no name.
   result = Parse("base->");
@@ -143,7 +138,7 @@ TEST_F(ExprParserTest, NestedDotArrow) {
   EXPECT_EQ(
       "ACCESSOR(->)\n"
       " ACCESSOR(.)\n"
-      "  IDENTIFIER(foo)\n"
+      "  IDENTIFIER(\"foo\")\n"
       "  bar\n"
       " baz\n",
       GetParseString("foo.bar->baz"));
@@ -164,11 +159,11 @@ TEST_F(ExprParserTest, ArrayAccess) {
       " ARRAY_ACCESS\n"
       "  ACCESSOR(->)\n"
       "   ACCESSOR(.)\n"
-      "    IDENTIFIER(foo)\n"
+      "    IDENTIFIER(\"foo\")\n"
       "    bar\n"
       "   baz\n"
       "  INTEGER(34)\n"
-      " IDENTIFIER(bar)\n",
+      " IDENTIFIER(\"bar\")\n",
       GetParseString("foo.bar->baz[34][bar]"));
 
   // Empty array access is an error.
@@ -180,12 +175,12 @@ TEST_F(ExprParserTest, ArrayAccess) {
 TEST_F(ExprParserTest, DereferenceAndAddress) {
   EXPECT_EQ(
       "DEREFERENCE\n"
-      " IDENTIFIER(foo)\n",
+      " IDENTIFIER(\"foo\")\n",
       GetParseString("*foo"));
 
   EXPECT_EQ(
       "ADDRESS_OF\n"
-      " IDENTIFIER(foo)\n",
+      " IDENTIFIER(\"foo\")\n",
       GetParseString("&foo"));
 
   // "*" and "&" should be right-associative with respect to each other but
@@ -196,7 +191,7 @@ TEST_F(ExprParserTest, DereferenceAndAddress) {
       "  ADDRESS_OF\n"
       "   ARRAY_ACCESS\n"
       "    ACCESSOR(->)\n"
-      "     IDENTIFIER(foo)\n"
+      "     IDENTIFIER(\"foo\")\n"
       "     bar\n"
       "    INTEGER(1)\n",
       GetParseString("&*&foo->bar[1]"));
@@ -216,7 +211,7 @@ TEST_F(ExprParserTest, Parens) {
       "  DEREFERENCE\n"
       "   ACCESSOR(->)\n"
       "    ADDRESS_OF\n"
-      "     IDENTIFIER(foo)\n"
+      "     IDENTIFIER(\"foo\")\n"
       "    bar\n"
       "  INTEGER(1)\n",
       GetParseString("(&(*(&foo)->bar)[1])"));
@@ -235,7 +230,7 @@ TEST_F(ExprParserTest, UnaryMath) {
   EXPECT_EQ(
       "UNARY(-)\n"
       " DEREFERENCE\n"
-      "  IDENTIFIER(foo)\n",
+      "  IDENTIFIER(\"foo\")\n",
       GetParseString("-*foo"));
 
   // "-" by itself is an error.
@@ -243,6 +238,36 @@ TEST_F(ExprParserTest, UnaryMath) {
   ASSERT_FALSE(result);
   EXPECT_EQ("Expected expression for '-'.", parser().err().msg());
   EXPECT_EQ(0u, parser().error_token().byte_offset());
+}
+
+TEST_F(ExprParserTest, Identifiers) {
+  EXPECT_EQ("IDENTIFIER(\"foo\")\n", GetParseString("foo"));
+  EXPECT_EQ("IDENTIFIER(::,\"foo\")\n", GetParseString("::foo"));
+  EXPECT_EQ("IDENTIFIER(::,\"foo\"; ::,\"bar\")\n",
+            GetParseString("::foo :: bar"));
+
+  auto result = Parse("::");
+  ASSERT_FALSE(result);
+  EXPECT_EQ("Expected identifier after '::'.", parser().err().msg());
+
+  result = Parse(":: :: name");
+  ASSERT_FALSE(result);
+  EXPECT_EQ("Duplicate '::'.", parser().err().msg());
+
+  result = Parse("foo bar");
+  ASSERT_FALSE(result);
+  EXPECT_EQ("Unexpected input, did you forget an operator?",
+            parser().err().msg());
+
+  // It's valid to have identifiers with colons in them to access class members
+  // (this is how you provide an explicit base class).
+  /* TODO(brettw) conver an accessor to use an Identifier for the name so this
+     test works.
+  EXPECT_EQ(
+      "ACCESSOR(->)\n"
+      "  IDENTIFIER(\"foo\")\n",
+      GetParseString("foo->Baz::bar"));
+  */
 }
 
 }  // namespace zxdb
