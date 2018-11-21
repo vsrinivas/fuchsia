@@ -54,7 +54,9 @@ func (i *idsSource) getBinaries() ([]elflib.BinaryFileRef, error) {
 	if i.rel {
 		base := filepath.Dir(i.pathToIDs)
 		for idx, ref := range out {
-			out[idx].Filepath = filepath.Join(base, ref.Filepath)
+			if !filepath.IsAbs(ref.Filepath) {
+				out[idx].Filepath = filepath.Join(base, ref.Filepath)
+			}
 		}
 	}
 	return out, nil
