@@ -272,7 +272,7 @@ bool traits_test() {
         // Creating a zx::interrupt is too hard in a generic testing
         // environment. Instead, we just assert it's got the traits we
         // want.
-        ASSERT_EQ(zx::object_traits<zx::interrupt>::supports_duplication, false);
+        ASSERT_EQ(zx::object_traits<zx::interrupt>::supports_duplication, true);
         ASSERT_EQ(zx::object_traits<zx::interrupt>::supports_user_signal, false);
         ASSERT_EQ(zx::object_traits<zx::interrupt>::supports_wait, true);
         ASSERT_EQ(zx::object_traits<zx::interrupt>::has_peer_handle, false);

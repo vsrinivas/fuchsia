@@ -92,7 +92,7 @@ template <> struct object_traits<vmar> {
 };
 
 template <> struct object_traits<interrupt> {
-    static constexpr bool supports_duplication = false;
+    static constexpr bool supports_duplication = true;
     static constexpr bool supports_user_signal = false;
     static constexpr bool supports_wait = true;
     static constexpr bool has_peer_handle = false;
