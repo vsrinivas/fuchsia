@@ -21,7 +21,7 @@ LAYERS_RE = re.compile('^(garnet|peridot|topaz|vendor/.*)$')
 
 
 # Returns True iff LAYERS_RE matches name.
-def check_import(name):
+def print_if_layer_name(name):
     if LAYERS_RE.match(name):
         print(name)
         return True
@@ -41,19 +41,29 @@ def main():
 
     tree = xml.etree.ElementTree.parse(args.manifest)
 
-    # For people that haven't switched to the flower model, keep using the old
-    # method of guessing the import.
     if tree.find('overrides') is None:
       sys.stderr.write('found no overrides. guessing project from imports\n')
       for elt in tree.iter('import'):
-        if check_import(elt.attrib['name']):
+        # For people that haven't switched to the flower model, keep using the
+        # old method of guessing the import.
+        if print_if_layer_name(elt.attrib['name']):
+          return 0
+        # For people that have switched to the flower model, but don't use any
+        # overrides because they want to be at GI on all layers.
+        # manifest can be something like garnet/garnet in which case we want
+        # garnet or internal/vendor/foo/bar in which case we want vendor/foo.
+        head, name = os.path.split(elt.attrib['manifest'])
+        if 'vendor/' in head:
+          head, name = os.path.split(head)
+          name = os.path.join('vendor', name)
+        if print_if_layer_name(name):
           return 0
 
     # Guess the layer from the name of the <project> that is overriden in the
     # current manifest.
     for elt in tree.iter('overrides'):
       for project in elt.findall('project'):
-        if check_import(project.attrib.get('name', '')):
+        if print_if_layer_name(project.attrib.get('name', '')):
           return 0
 
     sys.stderr.write("ERROR: Could not guess petal from %s. "
