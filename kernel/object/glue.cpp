@@ -8,8 +8,6 @@
 // * Initialization code for kernel/object module
 // * Singleton instances and global locks
 // * Helper functions
-//
-// TODO(dbort): Split this file into self-consistent pieces.
 
 #include <inttypes.h>
 
@@ -24,7 +22,6 @@
 #include <object/diagnostics.h>
 #include <object/excp_port.h>
 #include <object/job_dispatcher.h>
-#include <object/policy_manager.h>
 #include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>
 
@@ -37,16 +34,8 @@
 // All jobs and processes are rooted at the |root_job|.
 static fbl::RefPtr<JobDispatcher> root_job;
 
-// The singleton policy manager, for jobs and processes. This is
-// not a Dispatcher, just a plain class.
-static PolicyManager* policy_manager;
-
 fbl::RefPtr<JobDispatcher> GetRootJobDispatcher() {
     return root_job;
-}
-
-PolicyManager* GetSystemPolicyManager() {
-    return policy_manager;
 }
 
 static void oom_lowmem(size_t shortfall_bytes) {
@@ -76,7 +65,6 @@ static void oom_lowmem(size_t shortfall_bytes) {
 static void object_glue_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
     Handle::Init();
     root_job = JobDispatcher::CreateRootJob();
-    policy_manager = PolicyManager::Create();
     PortDispatcher::Init();
     // Be sure to update kernel_cmdline.md if any of these defaults change.
     oom_init(cmdline_get_bool("kernel.oom.enable", true),

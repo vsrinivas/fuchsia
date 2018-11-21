@@ -1,16 +1,19 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <object/policy_manager.h>
+#include <object/job_policy.h>
 
 #include <assert.h>
 #include <err.h>
 
-#include <zircon/types.h>
-#include <fbl/alloc_checker.h>
+#include <zircon/syscalls/policy.h>
 
 namespace {
+
+constexpr uint32_t kDefaultAction = ZX_POL_ACTION_ALLOW;
+
+constexpr pol_cookie_t kPolicyEmpty = 0u;
 
 // The encoding of the basic policy is done 4 bits per each item.
 //
@@ -52,8 +55,6 @@ union Encoding {
     static bool is_default(uint64_t item) { return item == 0; }
 };
 
-}  // namespace
-
 constexpr uint32_t kPolicyActionValidBits =
     ZX_POL_ACTION_ALLOW | ZX_POL_ACTION_DENY | ZX_POL_ACTION_EXCEPTION | ZX_POL_ACTION_KILL;
 
@@ -65,124 +66,30 @@ static_assert(sizeof(Encoding) == sizeof(pol_cookie_t), "bitfield issue");
 // Make sure that adding new policies forces updating this file.
 static_assert(ZX_POL_MAX == 13u, "please update PolicyManager AddPolicy and QueryBasicPolicy");
 
-PolicyManager* PolicyManager::Create(uint32_t default_action) {
-    fbl::AllocChecker ac;
-    auto pm = new (&ac) PolicyManager(default_action);
-    return ac.check() ? pm : nullptr;
-}
-
-PolicyManager::PolicyManager(uint32_t default_action)
-    : default_action_(default_action) {
-}
-
-zx_status_t PolicyManager::AddPolicy(
-    uint32_t mode, pol_cookie_t existing_policy,
-    const zx_policy_basic* policy_input, size_t policy_count,
-    pol_cookie_t* new_policy) {
-
-    // Don't allow overlong policies.
-    if (policy_count > ZX_POL_MAX)
-        return ZX_ERR_OUT_OF_RANGE;
-
-    uint64_t partials[ZX_POL_MAX] = {0};
-
-    // The policy computation algorithm is as follows:
-    //
-    //    loop over all input entries
-    //        if existing item is default or same then
-    //            store new policy in partial result array
-    //        else if mode is absolute exit with failure
-    //        else continue
-    //
-    // A special case is ZX_POL_NEW_ANY which applies the algorithm with
-    // the same input over all ZX_NEW_ actions so that the following can
-    // be expressed:
-    //
-    //   [0] ZX_POL_NEW_ANY     --> ZX_POL_ACTION_DENY
-    //   [1] ZX_POL_NEW_CHANNEL --> ZX_POL_ACTION_ALLOW
-    //
-    // Which means "deny all object creation except for channel".
-
-    zx_status_t res = ZX_OK;
-
-    for (size_t ix = 0; ix != policy_count; ++ix) {
-        const auto& in = policy_input[ix];
-
-        if (in.condition >= ZX_POL_MAX)
-            return ZX_ERR_INVALID_ARGS;
-
-        if (in.condition == ZX_POL_NEW_ANY) {
-            // loop over all ZX_POL_NEW_xxxx conditions.
-            for (uint32_t it = ZX_POL_NEW_VMO; it <= ZX_POL_NEW_TIMER; ++it) {
-                if ((res = AddPartial(mode, existing_policy, it, in.policy, &partials[it])) < 0)
-                    return res;
-            }
-        } else {
-            if ((res = AddPartial(
-                mode, existing_policy, in.condition, in.policy, &partials[in.condition])) < 0)
-                return res;
-        }
-    }
-
-    // Compute the resultant policy. The simple OR works because the only items that
-    // can change are the items that have zero. See Encoding::is_default().
-    for (const auto& partial : partials) {
-        existing_policy |= partial;
-    }
-
-    *new_policy = existing_policy;
-    return ZX_OK;
-}
-
-uint32_t PolicyManager::QueryBasicPolicy(pol_cookie_t policy, uint32_t condition) {
-    if (policy == kPolicyEmpty)
-        return default_action_;
-
-    Encoding existing = { policy };
-    DEBUG_ASSERT(existing.cookie_mode == Encoding::kPolicyInCookie);
-
-    switch (condition) {
-    case ZX_POL_BAD_HANDLE: return GetEffectiveAction(existing.bad_handle);
-    case ZX_POL_WRONG_OBJECT: return GetEffectiveAction(existing.wrong_obj);
-    case ZX_POL_NEW_VMO: return GetEffectiveAction(existing.new_vmo);
-    case ZX_POL_NEW_CHANNEL: return GetEffectiveAction(existing.new_channel);
-    case ZX_POL_NEW_EVENT: return GetEffectiveAction(existing.new_event);
-    case ZX_POL_NEW_EVENTPAIR: return GetEffectiveAction(existing.new_eventpair);
-    case ZX_POL_NEW_PORT: return GetEffectiveAction(existing.new_port);
-    case ZX_POL_NEW_SOCKET: return GetEffectiveAction(existing.new_socket);
-    case ZX_POL_NEW_FIFO: return GetEffectiveAction(existing.new_fifo);
-    case ZX_POL_NEW_TIMER: return GetEffectiveAction(existing.new_timer);
-    case ZX_POL_NEW_PROCESS: return GetEffectiveAction(existing.new_process);
-    case ZX_POL_VMAR_WX: return GetEffectiveAction(existing.vmar_wx);
-    default: return ZX_POL_ACTION_DENY;
-    }
-}
-
-uint32_t PolicyManager::GetEffectiveAction(uint64_t policy) {
-    return Encoding::is_default(policy) ?
-        default_action_ : Encoding::action(policy);
-}
-
-bool PolicyManager::CanSetEntry(uint64_t existing, uint32_t new_action) {
+bool CanSetEntry(uint64_t existing, uint32_t new_action) {
     if (Encoding::is_default(existing))
         return true;
     return (new_action == Encoding::action(existing)) ? true : false;
 }
 
-#define POLMAN_SET_ENTRY(mode, existing, in_pol, resultant)             \
-    do {                                                                \
-        if (CanSetEntry(existing, in_pol)) {                            \
-            resultant = in_pol & Encoding::kActionBits;                 \
-            resultant |= Encoding::kExplicitBit;                        \
-        } else if (mode == ZX_JOB_POL_ABSOLUTE) {                       \
-            return ZX_ERR_ALREADY_EXISTS;                               \
-        }                                                               \
+uint32_t GetEffectiveAction(uint64_t policy) {
+    return Encoding::is_default(policy) ? kDefaultAction : Encoding::action(policy);
+}
+
+#define POLMAN_SET_ENTRY(mode, existing, in_pol, resultant) \
+    do {                                                    \
+        if (CanSetEntry(existing, in_pol)) {                \
+            resultant = in_pol & Encoding::kActionBits;     \
+            resultant |= Encoding::kExplicitBit;            \
+        } else if (mode == ZX_JOB_POL_ABSOLUTE) {           \
+            return ZX_ERR_ALREADY_EXISTS;                   \
+        }                                                   \
     } while (0)
 
-zx_status_t PolicyManager::AddPartial(uint32_t mode, pol_cookie_t existing_policy,
-                                      uint32_t condition, uint32_t policy, uint64_t* partial) {
-    Encoding existing = { existing_policy };
-    Encoding result = {0};
+zx_status_t AddPartial(uint32_t mode, pol_cookie_t existing_policy,
+                       uint32_t condition, uint32_t policy, uint64_t* partial) {
+    Encoding existing = {existing_policy};
+    Encoding result = {};
 
     if (policy & ~kPolicyActionValidBits)
         return ZX_ERR_NOT_SUPPORTED;
@@ -233,3 +140,106 @@ zx_status_t PolicyManager::AddPartial(uint32_t mode, pol_cookie_t existing_polic
 }
 
 #undef POLMAN_SET_ENTRY
+
+}  // namespace
+
+
+zx_status_t JobPolicy::AddBasicPolicy(uint32_t mode,
+                                      const zx_policy_basic_t* policy_input,
+                                      size_t policy_count) {
+    // Don't allow overlong policies.
+    if (policy_count > ZX_POL_MAX) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    uint64_t partials[ZX_POL_MAX] = {};
+
+    // The policy computation algorithm is as follows:
+    //
+    //    loop over all input entries
+    //        if existing item is default or same then
+    //            store new policy in partial result array
+    //        else if mode is absolute exit with failure
+    //        else continue
+    //
+    // A special case is ZX_POL_NEW_ANY which applies the algorithm with
+    // the same input over all ZX_NEW_ actions so that the following can
+    // be expressed:
+    //
+    //   [0] ZX_POL_NEW_ANY     --> ZX_POL_ACTION_DENY
+    //   [1] ZX_POL_NEW_CHANNEL --> ZX_POL_ACTION_ALLOW
+    //
+    // Which means "deny all object creation except for channel".
+
+    zx_status_t res = ZX_OK;
+
+    pol_cookie_t new_cookie = cookie_;
+
+    for (size_t ix = 0; ix != policy_count; ++ix) {
+        const auto& in = policy_input[ix];
+
+        if (in.condition >= ZX_POL_MAX) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+
+        if (in.condition == ZX_POL_NEW_ANY) {
+            // loop over all ZX_POL_NEW_xxxx conditions.
+            for (uint32_t it = ZX_POL_NEW_VMO; it <= ZX_POL_NEW_TIMER; ++it) {
+                if ((res = AddPartial(mode, new_cookie, it, in.policy, &partials[it])) < 0) {
+                    return res;
+                }
+            }
+        } else {
+            if ((res = AddPartial(
+                     mode, new_cookie, in.condition, in.policy, &partials[in.condition])) < 0) {
+                return res;
+            }
+        }
+    }
+
+    // Compute the resultant policy. The simple OR works because the only items that
+    // can change are the items that have zero. See Encoding::is_default().
+    for (const auto& partial : partials) {
+        new_cookie |= partial;
+    }
+
+    cookie_ = new_cookie;
+    return ZX_OK;
+}
+
+uint32_t JobPolicy::QueryBasicPolicy(uint32_t condition) const {
+    if (cookie_ == kPolicyEmpty) {
+        return kDefaultAction;
+    }
+
+    Encoding existing = {cookie_};
+    DEBUG_ASSERT(existing.cookie_mode == Encoding::kPolicyInCookie);
+
+    switch (condition) {
+    case ZX_POL_BAD_HANDLE: return GetEffectiveAction(existing.bad_handle);
+    case ZX_POL_WRONG_OBJECT: return GetEffectiveAction(existing.wrong_obj);
+    case ZX_POL_NEW_VMO: return GetEffectiveAction(existing.new_vmo);
+    case ZX_POL_NEW_CHANNEL: return GetEffectiveAction(existing.new_channel);
+    case ZX_POL_NEW_EVENT: return GetEffectiveAction(existing.new_event);
+    case ZX_POL_NEW_EVENTPAIR: return GetEffectiveAction(existing.new_eventpair);
+    case ZX_POL_NEW_PORT: return GetEffectiveAction(existing.new_port);
+    case ZX_POL_NEW_SOCKET: return GetEffectiveAction(existing.new_socket);
+    case ZX_POL_NEW_FIFO: return GetEffectiveAction(existing.new_fifo);
+    case ZX_POL_NEW_TIMER: return GetEffectiveAction(existing.new_timer);
+    case ZX_POL_NEW_PROCESS: return GetEffectiveAction(existing.new_process);
+    case ZX_POL_VMAR_WX: return GetEffectiveAction(existing.vmar_wx);
+    default: return ZX_POL_ACTION_DENY;
+    }
+}
+
+bool JobPolicy::operator==(const JobPolicy& rhs) const {
+    if (this == &rhs) {
+        return true;
+    }
+
+    return cookie_ == rhs.cookie_;
+}
+
+bool JobPolicy::operator!=(const JobPolicy& rhs) const {
+    return !operator==(rhs);
+}

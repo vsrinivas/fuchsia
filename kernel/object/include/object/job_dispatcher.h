@@ -10,7 +10,7 @@
 
 #include <object/dispatcher.h>
 #include <object/excp_port.h>
-#include <object/policy_manager.h>
+#include <object/job_policy.h>
 #include <object/process_dispatcher.h>
 
 #include <zircon/types.h>
@@ -103,7 +103,7 @@ public:
     // Set policy. |mode| is is either ZX_JOB_POL_RELATIVE or ZX_JOB_POL_ABSOLUTE and
     // in_policy is an array of |count| elements.
     zx_status_t SetPolicy(uint32_t mode, const zx_policy_basic* in_policy, size_t policy_count);
-    pol_cookie_t GetPolicy();
+    JobPolicy GetPolicy() const;
 
     // Calls the provided |zx_status_t func(JobDispatcher*)| on every
     // JobDispatcher in the system. Stops if |func| returns an error,
@@ -146,7 +146,7 @@ private:
 
     using LiveRefsArray = fbl::Array<fbl::RefPtr<Dispatcher>>;
 
-    JobDispatcher(uint32_t flags, fbl::RefPtr<JobDispatcher> parent, pol_cookie_t policy);
+    JobDispatcher(uint32_t flags, fbl::RefPtr<JobDispatcher> parent, JobPolicy policy);
 
     bool AddChildJob(const fbl::RefPtr<JobDispatcher>& job);
     void RemoveChildJob(JobDispatcher* job);
@@ -197,7 +197,7 @@ private:
     RawJobList jobs_ TA_GUARDED(get_lock());
     RawProcessList procs_ TA_GUARDED(get_lock());
 
-    pol_cookie_t policy_ TA_GUARDED(get_lock());
+    JobPolicy policy_ TA_GUARDED(get_lock());
 
     fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(get_lock());
     fbl::RefPtr<ExceptionPort> debugger_exception_port_ TA_GUARDED(get_lock());

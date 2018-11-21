@@ -29,6 +29,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/interrupt_event_dispatcher.cpp \
     $(LOCAL_DIR)/iommu_dispatcher.cpp \
     $(LOCAL_DIR)/job_dispatcher.cpp \
+    $(LOCAL_DIR)/job_policy.cpp \
     $(LOCAL_DIR)/log_dispatcher.cpp \
     $(LOCAL_DIR)/mbuf.cpp \
     $(LOCAL_DIR)/message_packet.cpp \
@@ -36,7 +37,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/pci_device_dispatcher.cpp \
     $(LOCAL_DIR)/pci_interrupt_dispatcher.cpp \
     $(LOCAL_DIR)/pinned_memory_token_dispatcher.cpp \
-    $(LOCAL_DIR)/policy_manager.cpp \
     $(LOCAL_DIR)/port_dispatcher.cpp \
     $(LOCAL_DIR)/process_dispatcher.cpp \
     $(LOCAL_DIR)/profile_dispatcher.cpp \
@@ -56,6 +56,7 @@ MODULE_SRCS := \
 # Tests
 MODULE_SRCS += \
     $(LOCAL_DIR)/buffer_chain_tests.cpp \
+    $(LOCAL_DIR)/job_policy_tests.cpp \
     $(LOCAL_DIR)/mbuf_tests.cpp \
     $(LOCAL_DIR)/message_packet_tests.cpp \
     $(LOCAL_DIR)/state_tracker_tests.cpp \

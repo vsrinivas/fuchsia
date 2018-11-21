@@ -778,7 +778,7 @@ zx_status_t ProcessDispatcher::set_debug_addr(uintptr_t addr) {
 }
 
 zx_status_t ProcessDispatcher::QueryPolicy(uint32_t condition) const {
-    auto action = GetSystemPolicyManager()->QueryBasicPolicy(policy_, condition);
+    auto action = policy_.QueryBasicPolicy(condition);
     if (action & ZX_POL_ACTION_EXCEPTION) {
         thread_signal_policy_exception();
     }

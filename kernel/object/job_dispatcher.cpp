@@ -107,7 +107,7 @@ JobDispatcher::LiveRefsArray JobDispatcher::ForEachChildInLocked(
 
 fbl::RefPtr<JobDispatcher> JobDispatcher::CreateRootJob() {
     fbl::AllocChecker ac;
-    auto job = fbl::AdoptRef(new (&ac) JobDispatcher(0u, nullptr, kPolicyEmpty));
+    auto job = fbl::AdoptRef(new (&ac) JobDispatcher(0u, nullptr, JobPolicy()));
     if (!ac.check())
         return nullptr;
     job->set_name(kRootJobName, sizeof(kRootJobName));
@@ -140,7 +140,7 @@ zx_status_t JobDispatcher::Create(uint32_t flags,
 
 JobDispatcher::JobDispatcher(uint32_t /*flags*/,
                              fbl::RefPtr<JobDispatcher> parent,
-                             pol_cookie_t policy)
+                             JobPolicy policy)
     : SoloDispatcher(ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS),
       parent_(ktl::move(parent)),
       max_height_(parent_ ? parent_->max_height() - 1 : kRootJobMaxHeight),
@@ -299,7 +299,7 @@ void JobDispatcher::UpdateSignalsIncrementLocked() {
     UpdateStateLocked(clear, 0u);
 }
 
-pol_cookie_t JobDispatcher::GetPolicy() {
+JobPolicy JobDispatcher::GetPolicy() const {
     Guard<fbl::Mutex> guard{get_lock()};
     return policy_;
 }
@@ -353,14 +353,11 @@ zx_status_t JobDispatcher::SetPolicy(
     if (!procs_.is_empty() || !jobs_.is_empty())
         return ZX_ERR_BAD_STATE;
 
-    pol_cookie_t new_policy;
-    auto status = GetSystemPolicyManager()->AddPolicy(
-        mode, policy_, in_policy, policy_count, &new_policy);
+    auto status = policy_.AddBasicPolicy(mode, in_policy, policy_count);
 
     if (status != ZX_OK)
         return status;
 
-    policy_ = new_policy;
     return ZX_OK;
 }
 

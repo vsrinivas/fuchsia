@@ -8,12 +8,12 @@
 
 #include <kernel/event.h>
 #include <kernel/thread.h>
-#include <vm/vm_aspace.h>
 #include <object/dispatcher.h>
 #include <object/futex_context.h>
 #include <object/handle.h>
-#include <object/policy_manager.h>
+#include <object/job_policy.h>
 #include <object/thread_dispatcher.h>
+#include <vm/vm_aspace.h>
 
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
@@ -301,7 +301,7 @@ private:
     const fbl::RefPtr<JobDispatcher> job_;
 
     // Policy set by the Job during Create().
-    const pol_cookie_t policy_;
+    const JobPolicy policy_;
 
     // The process can belong to either of these lists independently.
     fbl::DoublyLinkedListNodeState<ProcessDispatcher*> dll_job_raw_;
