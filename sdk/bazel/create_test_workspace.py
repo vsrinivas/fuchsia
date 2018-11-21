@@ -81,8 +81,6 @@ def create_test_workspace(sdk, output, workspace_info):
     if workspace_info.with_cc:
         # Generate test to verify that headers compile fine.
         headers = workspace_info.headers
-        # TODO(DX-691): remove these exceptions.
-        headers.pop('//pkg/zircon_internal', None)
         header_base = os.path.join(output, 'headers')
         write_file(make_dir(os.path.join(header_base, 'BUILD')),
                    'headers_build', {
