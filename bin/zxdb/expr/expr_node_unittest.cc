@@ -73,9 +73,9 @@ class TestEvalContext : public ExprEvalContext {
     // expression evaluation system.
     auto found = values_.find(name);
     if (found == values_.end())
-      cb(Err("Not found"), fxl::RefPtr<Symbol>(), ExprValue());
+      cb(Err("Not found"), nullptr, ExprValue());
     else
-      cb(Err(), fxl::RefPtr<Symbol>(), found->second);
+      cb(Err(), nullptr, found->second);
   }
   SymbolVariableResolver& GetVariableResolver() override { return resolver_; }
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override {
@@ -396,8 +396,8 @@ TEST_F(ExprNodeTest, ArrayAccess) {
 
   // Clear out references to the stuff being executed. It should not crash, the
   // relevant data should remain alive.
-  context = fxl::RefPtr<TestEvalContext>();
-  access = fxl::RefPtr<ArrayAccessExprNode>();
+  context.reset();
+  access.reset();
 
   loop().Run();
 

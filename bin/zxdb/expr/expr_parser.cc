@@ -99,19 +99,19 @@ fxl::RefPtr<ExprNode> ExprParser::Parse() {
   // and wrote something like "foo 5"
   if (!has_error() && !at_end()) {
     SetError(cur_token(), "Unexpected input, did you forget an operator?");
-    return fxl::RefPtr<ExprNode>();
+    return nullptr;
   }
 
   if (!result && !has_error()) {
     SetError(ExprToken(), "No input to parse.");
-    return fxl::RefPtr<ExprNode>();
+    return nullptr;
   }
   return result;
 }
 
 fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence) {
   if (at_end())
-    return fxl::RefPtr<ExprNode>();
+    return nullptr;
 
   const ExprToken& token = Consume();
   PrefixFunc prefix = kDispatchInfo[token.type()].prefix;
@@ -119,7 +119,7 @@ fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence) {
   if (!prefix) {
     SetError(token, fxl::StringPrintf("Unexpected token '%s'.",
                                       token.value().c_str()));
-    return fxl::RefPtr<ExprNode>();
+    return nullptr;
   }
 
   fxl::RefPtr<ExprNode> left = (this->*prefix)(token);
@@ -133,11 +133,11 @@ fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence) {
     if (!infix) {
       SetError(token, fxl::StringPrintf("Unexpected token '%s'.",
                                         next_token.value().c_str()));
-      return fxl::RefPtr<ExprNode>();
+      return nullptr;
     }
     left = (this->*infix)(std::move(left), next_token);
     if (has_error())
-      return fxl::RefPtr<ExprNode>();
+      return nullptr;
   }
 
   return left;
@@ -148,7 +148,7 @@ fxl::RefPtr<ExprNode> ExprParser::AmpersandPrefix(const ExprToken& token) {
   if (!has_error() && !right)
     SetError(token, "Expected expression for '*'.");
   if (has_error())
-    return fxl::RefPtr<ExprNode>();
+    return nullptr;
   return fxl::MakeRefCounted<AddressOfExprNode>(std::move(right));
 }
 
@@ -160,7 +160,7 @@ fxl::RefPtr<ExprNode> ExprParser::DotOrArrowInfix(fxl::RefPtr<ExprNode> left,
     SetError(token, fxl::StringPrintf(
                         "Expected identifier for right-hand-side of \"%s\".",
                         token.value().c_str()));
-    return fxl::RefPtr<ExprNode>();
+    return nullptr;
   }
 
   // Use the name from the right-hand-side identifier, we don't need a full
@@ -186,7 +186,7 @@ fxl::RefPtr<ExprNode> ExprParser::LeftParenPrefix(const ExprToken& token) {
   if (!has_error())
     Consume(ExprToken::kRightParen, token, "Expected ')' to match.");
   if (has_error())
-    return fxl::RefPtr<ExprNode>();
+    return nullptr;
   return expr;
 }
 
@@ -198,7 +198,7 @@ fxl::RefPtr<ExprNode> ExprParser::LeftSquareInfix(fxl::RefPtr<ExprNode> left,
   if (!has_error())
     Consume(ExprToken::kRightSquare, token, "Expected ']' to match.");
   if (has_error())
-    return fxl::RefPtr<ExprNode>();
+    return nullptr;
   return fxl::MakeRefCounted<ArrayAccessExprNode>(std::move(left),
                                                   std::move(inner));
 }
@@ -211,12 +211,12 @@ fxl::RefPtr<ExprNode> ExprParser::MinusPrefix(const ExprToken& token) {
   if (!has_error() && !inner)
     SetError(token, "Expected expression for '-'.");
   if (has_error())
-    return fxl::RefPtr<ExprNode>();
+    return nullptr;
   return fxl::MakeRefCounted<UnaryOpExprNode>(token, std::move(inner));
 }
 
 fxl::RefPtr<ExprNode> ExprParser::NamePrefix(const ExprToken& token) {
-  return NameInfix(fxl::RefPtr<ExprNode>(), token);
+  return NameInfix(nullptr, token);
 }
 
 fxl::RefPtr<ExprNode> ExprParser::NameInfix(fxl::RefPtr<ExprNode> left,
@@ -229,7 +229,7 @@ fxl::RefPtr<ExprNode> ExprParser::StarPrefix(const ExprToken& token) {
   if (!has_error() && !right)
     SetError(token, "Expected expression for '*'.");
   if (has_error())
-    return fxl::RefPtr<ExprNode>();
+    return nullptr;
   return fxl::MakeRefCounted<DereferenceExprNode>(std::move(right));
 }
 

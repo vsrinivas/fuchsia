@@ -39,20 +39,20 @@ fxl::RefPtr<const Function> GetFunctionWithName(ModuleSymbolsImpl& module,
       module.context(), module.compile_units(), "/type_test.cc");
   EXPECT_TRUE(unit);
   if (!unit)
-    return fxl::RefPtr<Function>();
+    return nullptr;
 
   // Find the GetIntPtr function.
   llvm::DWARFDie function_die = GetFirstDieOfTagAndName(
       module.context(), unit, llvm::dwarf::DW_TAG_subprogram, name);
   EXPECT_TRUE(function_die);
   if (!function_die)
-    return fxl::RefPtr<Function>();
+    return nullptr;
 
   // Should make a valid lazy reference to the function DIE.
   LazySymbol lazy_function = factory->MakeLazy(function_die);
   EXPECT_TRUE(lazy_function);
   if (!lazy_function)
-    return fxl::RefPtr<Function>();
+    return nullptr;
 
   // Deserialize to a function object.
   const Symbol* function_symbol = lazy_function.Get();

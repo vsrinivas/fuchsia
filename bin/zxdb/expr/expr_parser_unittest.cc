@@ -23,7 +23,7 @@ class ExprParserTest : public testing::Test {
     tokenizer_ = std::make_unique<ExprTokenizer>(input);
     if (!tokenizer_->Tokenize()) {
       ADD_FAILURE() << "Tokenization failure: " << input;
-      return fxl::RefPtr<ExprNode>();
+      return nullptr;
     }
 
     parser_ = std::make_unique<ExprParser>(tokenizer_->TakeTokens());

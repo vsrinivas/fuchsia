@@ -210,7 +210,7 @@ void ResolveMemberByPointer(
   const Collection* coll = nullptr;
   Err err = GetPointedToCollection(base_ptr.type(), &coll);
   if (err.has_error()) {
-    cb(err, fxl::RefPtr<DataMember>(), ExprValue());
+    cb(err, nullptr, ExprValue());
     return;
   }
 
@@ -218,7 +218,7 @@ void ResolveMemberByPointer(
   uint32_t member_offset = 0;
   err = FindMemberNamed(coll, member_name, &member, &member_offset);
   if (err.has_error()) {
-    cb(err, fxl::RefPtr<DataMember>(), ExprValue());
+    cb(err, nullptr, ExprValue());
     return;
   }
 
