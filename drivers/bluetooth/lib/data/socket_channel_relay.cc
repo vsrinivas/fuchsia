@@ -14,8 +14,8 @@
 
 namespace btlib::data::internal {
 
-template <typename ChannelT, typename RxDataT>
-SocketChannelRelay<ChannelT, RxDataT>::SocketChannelRelay(
+template <typename ChannelT>
+SocketChannelRelay<ChannelT>::SocketChannelRelay(
     zx::socket socket, fbl::RefPtr<ChannelT> channel,
     DeactivationCallback deactivation_cb)
     : state_(RelayState::kActivating),
@@ -39,8 +39,8 @@ SocketChannelRelay<ChannelT, RxDataT>::SocketChannelRelay(
            fit::bind_member(this, &SocketChannelRelay::OnSocketClosed));
 }
 
-template <typename ChannelT, typename RxDataT>
-SocketChannelRelay<ChannelT, RxDataT>::~SocketChannelRelay() {
+template <typename ChannelT>
+SocketChannelRelay<ChannelT>::~SocketChannelRelay() {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
   if (state_ != RelayState::kDeactivated) {
@@ -52,8 +52,8 @@ SocketChannelRelay<ChannelT, RxDataT>::~SocketChannelRelay() {
   }
 }
 
-template <typename ChannelT, typename RxDataT>
-bool SocketChannelRelay<ChannelT, RxDataT>::Activate() {
+template <typename ChannelT>
+bool SocketChannelRelay<ChannelT>::Activate() {
   ZX_DEBUG_ASSERT(state_ == RelayState::kActivating);
 
   // Note: we assume that BeginWait() does not synchronously dispatch any
@@ -71,7 +71,7 @@ bool SocketChannelRelay<ChannelT, RxDataT>::Activate() {
   const auto self = weak_ptr_factory_.GetWeakPtr();
   const auto channel_id = channel_->id();
   const bool activate_success = channel_->Activate(
-      [self, channel_id](RxDataT rx_data) {
+      [self, channel_id](PacketType rx_data) {
         // Note: this lambda _may_ be invoked synchronously.
         if (self) {
           self->OnChannelDataReceived(std::move(rx_data));
@@ -100,8 +100,8 @@ bool SocketChannelRelay<ChannelT, RxDataT>::Activate() {
   return true;
 }
 
-template <typename ChannelT, typename RxDataT>
-void SocketChannelRelay<ChannelT, RxDataT>::Deactivate() {
+template <typename ChannelT>
+void SocketChannelRelay<ChannelT>::Deactivate() {
   ZX_DEBUG_ASSERT(state_ != RelayState::kDeactivated);
 
   state_ = RelayState::kDeactivating;
@@ -127,8 +127,8 @@ void SocketChannelRelay<ChannelT, RxDataT>::Deactivate() {
   state_ = RelayState::kDeactivated;
 }
 
-template <typename ChannelT, typename RxDataT>
-void SocketChannelRelay<ChannelT, RxDataT>::DeactivateAndRequestDestruction() {
+template <typename ChannelT>
+void SocketChannelRelay<ChannelT>::DeactivateAndRequestDestruction() {
   Deactivate();
   if (deactivation_cb_) {
     // NOTE: deactivation_cb_ is expected to destroy |this|. Since |this|
@@ -139,9 +139,8 @@ void SocketChannelRelay<ChannelT, RxDataT>::DeactivateAndRequestDestruction() {
   }
 }
 
-template <typename ChannelT, typename RxDataT>
-void SocketChannelRelay<ChannelT, RxDataT>::OnSocketReadable(
-    zx_status_t status) {
+template <typename ChannelT>
+void SocketChannelRelay<ChannelT>::OnSocketReadable(zx_status_t status) {
   ZX_DEBUG_ASSERT(state_ == RelayState::kActivated);
   if (!CopyFromSocketToChannel() ||
       !BeginWait("socket read waiter", &sock_read_waiter_)) {
@@ -149,23 +148,21 @@ void SocketChannelRelay<ChannelT, RxDataT>::OnSocketReadable(
   }
 }
 
-template <typename ChannelT, typename RxDataT>
-void SocketChannelRelay<ChannelT, RxDataT>::OnSocketWritable(
-    zx_status_t status) {
+template <typename ChannelT>
+void SocketChannelRelay<ChannelT>::OnSocketWritable(zx_status_t status) {
   ZX_DEBUG_ASSERT(state_ == RelayState::kActivated);
   ZX_DEBUG_ASSERT(!socket_write_queue_.empty());
   ServiceSocketWriteQueue();
 }
 
-template <typename ChannelT, typename RxDataT>
-void SocketChannelRelay<ChannelT, RxDataT>::OnSocketClosed(zx_status_t status) {
+template <typename ChannelT>
+void SocketChannelRelay<ChannelT>::OnSocketClosed(zx_status_t status) {
   ZX_DEBUG_ASSERT(state_ == RelayState::kActivated);
   DeactivateAndRequestDestruction();
 }
 
-template <typename ChannelT, typename RxDataT>
-void SocketChannelRelay<ChannelT, RxDataT>::OnChannelDataReceived(
-    RxDataT rx_data) {
+template <typename ChannelT>
+void SocketChannelRelay<ChannelT>::OnChannelDataReceived(PacketType rx_data) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   // Note: kActivating is deliberately permitted, as ChannelImpl::Activate()
   // will synchronously deliver any queued frames.
@@ -182,8 +179,8 @@ void SocketChannelRelay<ChannelT, RxDataT>::OnChannelDataReceived(
   ServiceSocketWriteQueue();
 }
 
-template <typename ChannelT, typename RxDataT>
-void SocketChannelRelay<ChannelT, RxDataT>::OnChannelClosed() {
+template <typename ChannelT>
+void SocketChannelRelay<ChannelT>::OnChannelClosed() {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   ZX_DEBUG_ASSERT(state_ != RelayState::kActivating);
   ZX_DEBUG_ASSERT(state_ != RelayState::kDeactivated);
@@ -202,8 +199,8 @@ void SocketChannelRelay<ChannelT, RxDataT>::OnChannelClosed() {
   DeactivateAndRequestDestruction();
 }
 
-template <typename ChannelT, typename RxDataT>
-bool SocketChannelRelay<ChannelT, RxDataT>::CopyFromSocketToChannel() {
+template <typename ChannelT>
+bool SocketChannelRelay<ChannelT>::CopyFromSocketToChannel() {
   // Subtle: we make the read buffer larger than the TX MTU, so that we can
   // detect truncated datagrams.
   const size_t read_buf_size = channel_->tx_mtu() + 1;
@@ -254,8 +251,8 @@ bool SocketChannelRelay<ChannelT, RxDataT>::CopyFromSocketToChannel() {
   return true;
 }
 
-template <typename ChannelT, typename RxDataT>
-void SocketChannelRelay<ChannelT, RxDataT>::ServiceSocketWriteQueue() {
+template <typename ChannelT>
+void SocketChannelRelay<ChannelT>::ServiceSocketWriteQueue() {
   // TODO(NET-1477): Similarly to CopyFromSocketToChannel(), we may want to
   // consider yielding occasionally. The data-rate from the Channel into the
   // socket write queue should be bounded by PHY layer data rates, which are
@@ -267,7 +264,7 @@ void SocketChannelRelay<ChannelT, RxDataT>::ServiceSocketWriteQueue() {
     ZX_DEBUG_ASSERT(ValidateRxData(socket_write_queue_.front()));
     ZX_DEBUG_ASSERT(GetRxDataLen(socket_write_queue_.front()));
 
-    const RxDataT& rx_data = socket_write_queue_.front();
+    const PacketType& rx_data = socket_write_queue_.front();
     const bool copy_success = InvokeWithRxData(
         [&](const common::ByteBuffer& rx_bytes) {
           size_t n_bytes_written = 0;
@@ -297,7 +294,7 @@ void SocketChannelRelay<ChannelT, RxDataT>::ServiceSocketWriteQueue() {
   if (!socket_write_queue_.empty() && write_res == ZX_ERR_SHOULD_WAIT) {
     // Since we hava data to write, we want to be woken when the socket has free
     // space in its buffer. And, to avoid spinning, we want to be woken only
-    // when the free space is large enough for our first pending RxDataT.
+    // when the free space is large enough for our first pending PacketType.
     //
     // Note: it is safe to leave TX_THRESHOLD set, even when our queue is empty,
     // because we will only be woken if we also have an active Wait for
@@ -323,8 +320,8 @@ void SocketChannelRelay<ChannelT, RxDataT>::ServiceSocketWriteQueue() {
   }
 }
 
-template <typename ChannelT, typename RxDataT>
-void SocketChannelRelay<ChannelT, RxDataT>::BindWait(
+template <typename ChannelT>
+void SocketChannelRelay<ChannelT>::BindWait(
     zx_signals_t trigger, const char* wait_name, async::Wait* wait,
     fit::function<void(zx_status_t)> handler) {
   wait->set_object(socket_.get());
@@ -370,9 +367,9 @@ void SocketChannelRelay<ChannelT, RxDataT>::BindWait(
   });
 }
 
-template <typename ChannelT, typename RxDataT>
-bool SocketChannelRelay<ChannelT, RxDataT>::BeginWait(const char* wait_name,
-                                                      async::Wait* wait) {
+template <typename ChannelT>
+bool SocketChannelRelay<ChannelT>::BeginWait(const char* wait_name,
+                                             async::Wait* wait) {
   ZX_DEBUG_ASSERT(state_ != RelayState::kDeactivating);
   ZX_DEBUG_ASSERT(state_ != RelayState::kDeactivated);
 
@@ -392,9 +389,8 @@ bool SocketChannelRelay<ChannelT, RxDataT>::BeginWait(const char* wait_name,
   return true;
 }
 
-template <typename ChannelT, typename RxDataT>
-void SocketChannelRelay<ChannelT, RxDataT>::UnbindAndCancelWait(
-    async::Wait* wait) {
+template <typename ChannelT>
+void SocketChannelRelay<ChannelT>::UnbindAndCancelWait(async::Wait* wait) {
   ZX_DEBUG_ASSERT(state_ != RelayState::kActivating);
   ZX_DEBUG_ASSERT(state_ != RelayState::kDeactivated);
   zx_status_t cancel_res;

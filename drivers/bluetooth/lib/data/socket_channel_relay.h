@@ -25,7 +25,7 @@ namespace btlib::data::internal {
 // THREAD-SAFETY: This class is thread-hostile. Creation, use, and destruction
 // _must_ occur on a single thread. |dispatcher|, which _must_ be
 // single-threaded, must run on that same thread.
-template <typename ChannelT, typename RxDataT>
+template <typename ChannelT>
 class SocketChannelRelay final {
  public:
   using DeactivationCallback = fit::function<void()>;
@@ -64,6 +64,8 @@ class SocketChannelRelay final {
   __WARN_UNUSED_RESULT bool Activate();
 
  private:
+  using PacketType = typename ChannelT::PacketType;
+
   enum class RelayState {
     kActivating,
     kActivated,
@@ -92,7 +94,7 @@ class SocketChannelRelay final {
   void OnSocketClosed(zx_status_t status);
 
   // Callbacks for ChannelT events.
-  void OnChannelDataReceived(RxDataT sdu);
+  void OnChannelDataReceived(PacketType sdu);
   void OnChannelClosed();
 
   // Copies any data currently available on |socket_| to |channel_|. Does not
@@ -137,7 +139,7 @@ class SocketChannelRelay final {
   //
   // TODO(NET-1478): Switch to common::LinkedList.
   // TODO(NET-1476): We should set an upper bound on the size of this queue.
-  std::deque<RxDataT> socket_write_queue_;
+  std::deque<PacketType> socket_write_queue_;
 
   const fxl::ThreadChecker thread_checker_;
   fxl::WeakPtrFactory<SocketChannelRelay> weak_ptr_factory_;  // Keep last.

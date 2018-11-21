@@ -8,11 +8,9 @@
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/data/socket_channel_relay.h"
 #include "garnet/drivers/bluetooth/lib/rfcomm/channel.h"
-#include "garnet/drivers/bluetooth/lib/rfcomm/rfcomm.h"
 
 namespace btlib::data::internal {
-using RfcommSocketChannelRelay =
-    SocketChannelRelay<rfcomm::Channel, common::ByteBufferPtr>;
+using RfcommSocketChannelRelay = SocketChannelRelay<rfcomm::Channel>;
 }  // namespace btlib::data::internal
 
 #endif  // GARNET_DRIVERS_BLUETOOTH_LIB_DATA_RFCOMM_SOCKET_CHANNEL_RELAY_H_

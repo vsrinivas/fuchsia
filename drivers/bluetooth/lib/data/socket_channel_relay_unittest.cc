@@ -15,16 +15,13 @@
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
-#include "garnet/drivers/bluetooth/lib/data/l2cap_socket_channel_relay.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/fake_channel.h"
 
 namespace btlib::data {
 namespace {
 
-// We'll test the template using (only) the set of type parameters necessary for
-// the L2CAP instantiation.
-using RelayT = internal::SocketChannelRelay<l2cap::Channel, l2cap::SDU>;
-static_assert(std::is_same_v<RelayT, internal::L2capSocketChannelRelay>);
+// We'll test the template just for L2CAP channels.
+using RelayT = internal::SocketChannelRelay<l2cap::Channel>;
 
 class DATA_SocketChannelRelayTest : public ::testing::Test {
  public:

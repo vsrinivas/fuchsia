@@ -57,6 +57,8 @@ namespace l2cap {
 // Activate().
 class Channel : public fbl::RefCounted<Channel> {
  public:
+  using PacketType = SDU;
+
   // Identifier for this channel's endpoint on this device. It can be prior-
   // specified for fixed channels or allocated for dynamic channels per v5.0,
   // Vol 3, Part A, Section 2.1 "Channel Identifiers." Channels on a link will
@@ -97,10 +99,10 @@ class Channel : public fbl::RefCounted<Channel> {
   // underlying logical link is terminated through other means.
   using ClosedCallback = fit::closure;
 
-  // Callback invoked when a new SDU is received on this channel. Any previously
-  // buffered SDUs will be sent to |rx_cb| right away, provided that |rx_cb| is
-  // not empty and the underlying logical link is active.
-  using RxCallback = fit::function<void(SDU sdu)>;
+  // Callback invoked when a new packet is received on this channel. Any
+  // previously buffered packets will be sent to |rx_cb| right away, provided
+  // that |rx_cb| is not empty and the underlying logical link is active.
+  using RxCallback = fit::function<void(PacketType packet)>;
 
   // Activates this channel assigning |dispatcher| to execute |rx_callback| and
   // |closed_callback|.

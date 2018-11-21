@@ -8,7 +8,6 @@
 #include <zircon/status.h>
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
-#include "garnet/drivers/bluetooth/lib/data/l2cap_socket_channel_relay.h"
 
 namespace btlib::data::internal {
 

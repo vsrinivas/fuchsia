@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "rfcomm_socket_channel_relay.h"
+#include "garnet/drivers/bluetooth/lib/rfcomm/channel.h"
 
 // These functions are |inline|, |static|, and in an unnamed-namespace, to avoid
 // violating the one-definition rule. See
@@ -14,7 +14,7 @@
 // internal linkage. However, the |inline| documentation cited above only
 // explicitly mentions |static| as an example of non-external linkage.
 namespace {
-using BufT = btlib::common::ByteBufferPtr;
+using BufT = btlib::rfcomm::Channel::PacketType;
 static inline bool ValidateRxData(const BufT& buf) { return buf != nullptr; }
 static inline size_t GetRxDataLen(const BufT& buf) { return buf->size(); }
 static inline bool InvokeWithRxData(
@@ -28,5 +28,5 @@ static inline bool InvokeWithRxData(
 #include "garnet/drivers/bluetooth/lib/data/socket_channel_relay.cc"
 
 namespace btlib::data::internal {
-template class SocketChannelRelay<rfcomm::Channel, common::ByteBufferPtr>;
+template class SocketChannelRelay<rfcomm::Channel>;
 }  // namespace btlib::data::internal
