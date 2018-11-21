@@ -113,7 +113,8 @@ static const zxio_ops_t zxio_pipe_ops = {
     .rewind = zxio_null_rewind,
 };
 
-zx_status_t zxio_pipe_init(zxio_pipe_t* pipe, zx_handle_t socket) {
+zx_status_t zxio_pipe_init(zxio_storage_t* storage, zx_handle_t socket) {
+    zxio_pipe_t* pipe = reinterpret_cast<zxio_pipe_t*>(storage);
     zxio_init(&pipe->io, &zxio_pipe_ops);
     pipe->socket = socket;
     return ZX_OK;

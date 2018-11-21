@@ -176,9 +176,10 @@ static const zxio_ops_t zxio_vmofile_ops = {
     .rewind = zxio_null_rewind,
 };
 
-zx_status_t zxio_vmofile_init(zxio_vmofile_t* file, zx_handle_t control,
+zx_status_t zxio_vmofile_init(zxio_storage_t* storage, zx_handle_t control,
                               zx_handle_t vmo, zx_off_t offset, zx_off_t length,
                               zx_off_t seek) {
+    zxio_vmofile_t* file = reinterpret_cast<zxio_vmofile_t*>(storage);
     zxio_init(&file->io, &zxio_vmofile_ops);
     if (seek > length)
         seek = length;

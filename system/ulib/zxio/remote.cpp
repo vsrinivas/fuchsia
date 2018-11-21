@@ -379,10 +379,11 @@ static const zxio_ops_t zxio_remote_ops = {
     .rewind = zxio_remote_rewind,
 };
 
-zx_status_t zxio_remote_init(zxio_remote_t* rio, zx_handle_t control,
+zx_status_t zxio_remote_init(zxio_storage_t* storage, zx_handle_t control,
                              zx_handle_t event) {
-    zxio_init(&rio->io, &zxio_remote_ops);
-    rio->control = control;
-    rio->event = event;
+    zxio_remote_t* remote = reinterpret_cast<zxio_remote_t*>(storage);
+    zxio_init(&remote->io, &zxio_remote_ops);
+    remote->control = control;
+    remote->event = event;
     return ZX_OK;
 }

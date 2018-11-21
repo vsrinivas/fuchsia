@@ -19,9 +19,9 @@ bool vmofile_basic_test(void) {
     ASSERT_EQ(ZX_OK, backing.write(ALPHABET, 0, len));
     ASSERT_EQ(ZX_OK, backing.write(ALPHABET, len, len + len));
 
-    zxio_vmofile_t file;
-    zxio_vmofile_init(&file, ZX_HANDLE_INVALID, backing.release(), 4, len, 3);
-    zxio_t* io = &file.io;
+    zxio_storage_t storage;
+    zxio_vmofile_init(&storage, ZX_HANDLE_INVALID, backing.release(), 4, len, 3);
+    zxio_t* io = &storage.io;
 
     zxio_signals_t observed = ZXIO_SIGNAL_NONE;
     ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_wait_one(io, ZXIO_READABLE,

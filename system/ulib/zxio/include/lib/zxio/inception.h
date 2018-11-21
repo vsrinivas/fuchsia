@@ -35,7 +35,10 @@ typedef struct zxio_remote {
     zx_handle_t event;
 } zxio_remote_t;
 
-zx_status_t zxio_remote_init(zxio_remote_t* remote, zx_handle_t control,
+static_assert(sizeof(zxio_remote_t) <= sizeof(zxio_storage_t),
+              "zxio_remote_t must fit inside zxio_storage_t.");
+
+zx_status_t zxio_remote_init(zxio_storage_t* remote, zx_handle_t control,
                              zx_handle_t event);
 
 // vmofile ---------------------------------------------------------------------
@@ -51,7 +54,10 @@ typedef struct zxio_vmofile {
     mtx_t lock;
 } zxio_vmofile_t;
 
-zx_status_t zxio_vmofile_init(zxio_vmofile_t* file, zx_handle_t control,
+static_assert(sizeof(zxio_vmofile_t) <= sizeof(zxio_storage_t),
+              "zxio_vmofile_t must fit inside zxio_storage_t.");
+
+zx_status_t zxio_vmofile_init(zxio_storage_t* file, zx_handle_t control,
                               zx_handle_t vmo, zx_off_t offset, zx_off_t length,
                               zx_off_t seek);
 
@@ -68,7 +74,10 @@ typedef struct zxio_pipe {
     zx_handle_t socket;
 } zxio_pipe_t;
 
-zx_status_t zxio_pipe_init(zxio_pipe_t* pipe, zx_handle_t socket);
+static_assert(sizeof(zxio_pipe_t) <= sizeof(zxio_storage_t),
+              "zxio_vmofile_t must fit inside zxio_storage_t.");
+
+zx_status_t zxio_pipe_init(zxio_storage_t* pipe, zx_handle_t socket);
 
 __END_CDECLS
 

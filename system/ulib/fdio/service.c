@@ -101,8 +101,8 @@ zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) {
             svc->h = ZX_HANDLE_INVALID;
             r = ZX_OK;
         } else if (io->ops == &fdio_zxio_remote_ops) {
-            fdio_zxio_remote_t* rio = (fdio_zxio_remote_t*) io;
-            r = zxio_release(&rio->remote.io, out);
+            zxio_remote_t* file = fdio_get_zxio_remote(io);
+            r = zxio_release(&file->io, out);
         } else {
             r = ZX_ERR_NOT_SUPPORTED;
             io->ops->close(io);
@@ -122,8 +122,8 @@ zx_handle_t fdio_unsafe_borrow_channel(fdio_t* io) {
         zxsvc_t* svc = (zxsvc_t*) io;
         return svc->h;
     } else if (io->ops == &fdio_zxio_remote_ops) {
-        fdio_zxio_remote_t* rio = (fdio_zxio_remote_t*) io;
-        return rio->remote.control;
+        zxio_remote_t* file = fdio_get_zxio_remote(io);
+        return file->control;
     }
     return ZX_HANDLE_INVALID;
 }

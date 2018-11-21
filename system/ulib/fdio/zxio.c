@@ -21,19 +21,19 @@
 //
 // Every |fdio_t| implementation starts with an embedded |fdio_t|, which the
 // callers use to find the fdio |ops| table. There are several |fdio_t|
-// implementations that use zxio as a backed. All of them have an initial memory
-// layout that matches this structure. Defining this structure lets us define
+// implementations that use zxio as a backed. All of them have a memory layout
+// that matches this structure. Defining this structure lets us define
 // most of the fdio ops that use the zxio backend in a generic way.
 //
 // Will be removed once the transition to the zxio backend is complete.
 typedef struct fdio_zxio {
     fdio_t io;
-    zxio_t zio;
+    zxio_storage_t storage;
 } fdio_zxio_t;
 
 static inline zxio_t* fdio_get_zxio(fdio_t* io) {
     fdio_zxio_t* wrapper = (fdio_zxio_t*)io;
-    return &wrapper->zio;
+    return &wrapper->storage.io;
 }
 
 static zx_status_t fdio_zxio_close(fdio_t* io) {
@@ -201,18 +201,14 @@ static zx_status_t fdio_zxio_set_flags(fdio_t* io, uint32_t flags) {
 
 // Remote ----------------------------------------------------------------------
 
-static_assert(offsetof(fdio_zxio_t, zio) == offsetof(fdio_zxio_remote_t, remote.io),
-              "fdio_zxio_remote_t layout must match fdio_zxio_t");
-
 // POLL_MASK and POLL_SHIFT intend to convert the lower five POLL events into
 // ZX_USER_SIGNALs and vice-versa. Other events need to be manually converted to
 // a zx_signals_t, if they are desired.
 #define POLL_SHIFT  24
 #define POLL_MASK   0x1F
 
-static inline zxio_remote_t* fdio_get_zxio_remote(fdio_t* io) {
-    fdio_zxio_remote_t* wrapper = (fdio_zxio_remote_t*)io;
-    return &wrapper->remote;
+zxio_remote_t* fdio_get_zxio_remote(fdio_t* io) {
+    return (zxio_remote_t*)fdio_get_zxio(io);
 }
 
 static zx_status_t fdio_zxio_remote_open(fdio_t* io, const char* path,
@@ -428,7 +424,7 @@ fdio_ops_t fdio_zxio_remote_ops = {
 
 __EXPORT
 fdio_t* fdio_remote_create(zx_handle_t control, zx_handle_t event) {
-    fdio_zxio_remote_t* fv = fdio_alloc(sizeof(fdio_zxio_remote_t));
+    fdio_zxio_t* fv = fdio_alloc(sizeof(fdio_zxio_t));
     if (fv == NULL) {
         zx_handle_close(control);
         zx_handle_close(event);
@@ -437,7 +433,7 @@ fdio_t* fdio_remote_create(zx_handle_t control, zx_handle_t event) {
     fv->io.ops = &fdio_zxio_remote_ops;
     fv->io.magic = FDIO_MAGIC;
     atomic_init(&fv->io.refcount, 1);
-    zx_status_t status = zxio_remote_init(&fv->remote, control, event);
+    zx_status_t status = zxio_remote_init(&fv->storage, control, event);
     if (status != ZX_OK) {
         return NULL;
     }
@@ -446,21 +442,8 @@ fdio_t* fdio_remote_create(zx_handle_t control, zx_handle_t event) {
 
 // Vmofile ---------------------------------------------------------------------
 
-// Implements the |fdio_t| contract using |zxio_vmofile_t|.
-//
-// Has an ops table that translates fdio ops into zxio ops. Some of the fdio ops
-// require using the underlying handles in the |zxio_vmofile_t|, which is why
-// this object needs to use |zxio_vmofile_t| directly.
-//
-// Will be removed once the transition to the zxio backend is complete.
-typedef struct fdio_zxio_vmofile {
-    fdio_t io;
-    zxio_vmofile_t file;
-} fdio_zxio_vmofile_t;
-
 static inline zxio_vmofile_t* fdio_get_zxio_vmofile(fdio_t* io) {
-    fdio_zxio_vmofile_t* wrapper = (fdio_zxio_vmofile_t*)io;
-    return &wrapper->file;
+    return (zxio_vmofile_t*)fdio_get_zxio(io);
 }
 
 static zx_status_t fdio_zxio_vmofile_get_vmo(fdio_t* io, int flags,
@@ -535,7 +518,7 @@ fdio_ops_t fdio_zxio_vmofile_ops = {
 fdio_t* fdio_zxio_vmofile_create(zx_handle_t control, zx_handle_t vmo,
                                  zx_off_t offset, zx_off_t length,
                                  zx_off_t seek) {
-    fdio_zxio_vmofile_t* fv = fdio_alloc(sizeof(fdio_zxio_vmofile_t));
+    fdio_zxio_t* fv = fdio_alloc(sizeof(fdio_zxio_t));
     if (fv == NULL) {
         zx_handle_close(control);
         zx_handle_close(vmo);
@@ -544,7 +527,7 @@ fdio_t* fdio_zxio_vmofile_create(zx_handle_t control, zx_handle_t vmo,
     fv->io.ops = &fdio_zxio_vmofile_ops;
     fv->io.magic = FDIO_MAGIC;
     atomic_init(&fv->io.refcount, 1);
-    zx_status_t status = zxio_vmofile_init(&fv->file, control, vmo, offset,
+    zx_status_t status = zxio_vmofile_init(&fv->storage, control, vmo, offset,
                                            length, seek);
     if (status != ZX_OK) {
         return NULL;
@@ -553,21 +536,6 @@ fdio_t* fdio_zxio_vmofile_create(zx_handle_t control, zx_handle_t vmo,
 }
 
 // Pipe ------------------------------------------------------------------------
-
-// Implements the |fdio_t| contract using |zxio_pipe_t|.
-//
-// Has an ops table that translates fdio ops into zxio ops. Some of the fdio ops
-// require using the underlying handles in the |zxio_pipe_t|, which is why
-// this object needs to use |zxio_pipe_t| directly.
-//
-// Will be removed once the transition to the zxio backend is complete.
-typedef struct fdio_zxio_pipe {
-    fdio_t io;
-    zxio_pipe_t pipe;
-} fdio_zxio_pipe_t;
-
-static_assert(offsetof(fdio_zxio_t, zio) == offsetof(fdio_zxio_pipe_t, pipe.io),
-              "fdio_zxio_pipe_t layout must match fdio_zxio_t");
 
 static zx_status_t read_blocking(zxio_t* io, void* buffer, size_t capacity,
                                  size_t* out_actual) {
@@ -624,8 +592,7 @@ static ssize_t write_internal(zxio_t* io, bool blocking, const void* data, size_
 }
 
 static inline zxio_pipe_t* fdio_get_zxio_pipe(fdio_t* io) {
-    fdio_zxio_pipe_t* wrapper = (fdio_zxio_pipe_t*)io;
-    return &wrapper->pipe;
+    return (zxio_pipe_t*)fdio_get_zxio(io);
 }
 
 static zx_status_t fdio_zxio_pipe_clone(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
@@ -807,7 +774,7 @@ static fdio_ops_t fdio_zxio_pipe_ops = {
 };
 
 fdio_t* fdio_pipe_create(zx_handle_t socket) {
-    fdio_zxio_pipe_t* fv = fdio_alloc(sizeof(fdio_zxio_pipe_t));
+    fdio_zxio_t* fv = fdio_alloc(sizeof(fdio_zxio_t));
     if (fv == NULL) {
         zx_handle_close(socket);
         return NULL;
@@ -815,7 +782,7 @@ fdio_t* fdio_pipe_create(zx_handle_t socket) {
     fv->io.ops = &fdio_zxio_pipe_ops;
     fv->io.magic = FDIO_MAGIC;
     atomic_init(&fv->io.refcount, 1);
-    zx_status_t status = zxio_pipe_init(&fv->pipe, socket);
+    zx_status_t status = zxio_pipe_init(&fv->storage, socket);
     if (status != ZX_OK) {
         return NULL;
     }
