@@ -232,7 +232,7 @@ static fdio_ops_t vmofile_ops = {
     .shutdown = fdio_default_shutdown,
 };
 
-#define FDIO_USE_ZXIO_VMOFILE 0
+#define FDIO_USE_ZXIO_VMOFILE 1
 
 fdio_t* fdio_vmofile_create(zx_handle_t h, zx_handle_t vmo,
                             zx_off_t offset, zx_off_t length, zx_off_t seek) {
