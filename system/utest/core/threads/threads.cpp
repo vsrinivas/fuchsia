@@ -334,12 +334,6 @@ static bool TestBadStateNonstartedThread() {
     zx_handle_t thread;
 
     ASSERT_EQ(zx_thread_create(zx_process_self(), "thread", 5, 0, &thread), ZX_OK);
-    ASSERT_EQ(zx_task_resume(thread, 0), ZX_ERR_BAD_STATE);
-    ASSERT_EQ(zx_task_resume(thread, 0), ZX_ERR_BAD_STATE);
-    ASSERT_EQ(zx_handle_close(thread), ZX_OK);
-
-    ASSERT_EQ(zx_thread_create(zx_process_self(), "thread", 5, 0, &thread), ZX_OK);
-    ASSERT_EQ(zx_task_resume(thread, 0), ZX_ERR_BAD_STATE);
     zx_handle_t suspend_token = ZX_HANDLE_INVALID;
     ASSERT_EQ(zx_task_suspend_token(thread, &suspend_token), ZX_ERR_BAD_STATE);
     ASSERT_EQ(zx_handle_close(thread), ZX_OK);
@@ -347,11 +341,6 @@ static bool TestBadStateNonstartedThread() {
     ASSERT_EQ(zx_thread_create(zx_process_self(), "thread", 5, 0, &thread), ZX_OK);
     ASSERT_EQ(zx_task_kill(thread), ZX_OK);
     ASSERT_EQ(zx_task_kill(thread), ZX_OK);
-    ASSERT_EQ(zx_handle_close(thread), ZX_OK);
-
-    ASSERT_EQ(zx_thread_create(zx_process_self(), "thread", 5, 0, &thread), ZX_OK);
-    ASSERT_EQ(zx_task_kill(thread), ZX_OK);
-    ASSERT_EQ(zx_task_resume(thread, 0), ZX_ERR_BAD_STATE);
     ASSERT_EQ(zx_handle_close(thread), ZX_OK);
 
     ASSERT_EQ(zx_thread_create(zx_process_self(), "thread", 5, 0, &thread), ZX_OK);
@@ -453,9 +442,6 @@ static bool TestResumeSuspended() {
     ASSERT_TRUE(get_thread_info(thread_h, &info));
     ASSERT_EQ(info.state, ZX_THREAD_STATE_SUSPENDED);
     ASSERT_EQ(info.wait_exception_port_type, ZX_EXCEPTION_PORT_TYPE_NONE);
-
-    // Verify the deprecated zx_task_resume() function fails.
-    ASSERT_EQ(zx_task_resume(thread_h, 0), ZX_ERR_BAD_STATE);
 
     // Resuming the thread should mark the thread as blocked again.
     ASSERT_TRUE(resume_thread_synchronous(thread_h, suspend_token));
