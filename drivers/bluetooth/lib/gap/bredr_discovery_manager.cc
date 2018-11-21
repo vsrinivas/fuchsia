@@ -136,7 +136,7 @@ void BrEdrDiscoveryManager::RequestDiscovery(DiscoveryCallback callback) {
   }
 
   // If we're already scanning, just add a session.
-  if (!discovering_.empty()) {
+  if (!discovering_.empty() || !zombie_discovering_.empty()) {
     bt_log(TRACE, "gap-bredr", "add to active sessions");
     auto session = AddDiscoverySession();
     callback(hci::Status(), std::move(session));
@@ -182,7 +182,7 @@ void BrEdrDiscoveryManager::MaybeStartInquiry() {
   auto params =
       inquiry->mutable_view()->mutable_payload<hci::InquiryCommandParams>();
   params->lap = hci::kGIAC;
-  params->inquiry_length = hci::kInquiryLengthMax;
+  params->inquiry_length = kInquiryLengthDefault;
   params->num_responses = 0;
   hci_->command_channel()->SendCommand(
       std::move(inquiry), dispatcher_,
@@ -214,6 +214,7 @@ void BrEdrDiscoveryManager::MaybeStartInquiry() {
         }
 
         ZX_DEBUG_ASSERT(event.event_code() == hci::kInquiryCompleteEventCode);
+        self->zombie_discovering_.clear();
 
         if (bt_is_error(status, SPEW, "gap", "inquiry complete error")) {
           return;
@@ -511,9 +512,11 @@ void BrEdrDiscoveryManager::RemoveDiscoverySession(
     BrEdrDiscoverySession* session) {
   bt_log(SPEW, "gap-bredr", "removing discovery session");
 
-  discovering_.erase(session);
-  // TODO(jamuraa): When NET-619 is finished, cancel the running inquiry
-  // With StopInquiry();
+  auto removed = discovering_.erase(session);
+  // TODO(NET-619): Cancel the running inquiry with StopInquiry() instead.
+  if (removed) {
+    zombie_discovering_.insert(session);
+  }
 }
 
 std::unique_ptr<BrEdrDiscoverableSession>

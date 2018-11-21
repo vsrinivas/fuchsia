@@ -1232,7 +1232,7 @@ constexpr uint16_t kConnectionHandleMax = 0x0EFF;
 // The maximum value that can ve used for a 8-bit advertising set handle.
 constexpr uint8_t kAdvertisingHandleMax = 0xEF;
 
-// The maximum value that can be sert for the length of an Inquiry
+// The maximum value that can be set for the length of an Inquiry
 constexpr uint8_t kInquiryLengthMax = 0x30;
 
 // Bit 15, or "Clock_Offset_Valid_Flag" of the 16-bit clock offset field.

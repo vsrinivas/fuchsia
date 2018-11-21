@@ -88,6 +88,11 @@ enum AdvFlag : uint8_t {
 };
 // clang-format on
 
+// Constants used in BR/EDR Inquiry (Core Spec v5.0, Vol 2, Part C, Appendix A)
+// Default cycles value for length of Inquiry. See T_gap(100).
+// This is in 1.28s time slice units, and is 10.24 seconds.
+constexpr uint8_t kInquiryLengthDefault = 0x08;
+
 // Constants used in Low Energy Discovery (see Core Spec v5.0, Vol 3, Part C,
 // Appendix A).
 constexpr int64_t kLEGeneralDiscoveryScanMinMs = 10240;       // 10.24 seconds

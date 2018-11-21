@@ -192,6 +192,10 @@ class BrEdrDiscoveryManager final {
   //
   // When |discovering_| becomes empty then scanning is stopped.
   std::unordered_set<BrEdrDiscoverySession*> discovering_;
+  // Sessions that have been removed but are still active.
+  // Inquiry persists until we receive a Inquiry Complete event.
+  // TODO(NET-619): we should not need these once we can Inquiry Cancel.
+  std::unordered_set<BrEdrDiscoverySession*> zombie_discovering_;
 
   // The set of callbacks that are waiting on inquiry to start.
   std::queue<DiscoveryCallback> pending_discovery_;
@@ -200,10 +204,10 @@ class BrEdrDiscoveryManager final {
   // don't own the sessions.  Sessions notify us when they are destroyed to
   // maintain this list.
   //
-  // When |discoverable_| becomes empty then scanning is stopped.
+  // When |discoverable_| becomes empty then inquiry scan is disabled.
   std::unordered_set<BrEdrDiscoverableSession*> discoverable_;
 
-  // The set of callbacks that are waiting on inquiry to start.
+  // The set of callbacks that are waiting on inquiry scan to be active.
   std::queue<hci::StatusCallback> pending_discoverable_;
 
   // The Handler IDs of the event handlers for inquiry results.

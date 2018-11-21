@@ -106,7 +106,7 @@ const auto kInquiry = common::CreateStaticByteBuffer(
   LowerBits(hci::kInquiry), UpperBits(hci::kInquiry),
   0x05, // Paramreter total size
   0x33, 0x8B, 0x9E, // GIAC
-  0x30, // kInquiryMax
+  0x08, // kInquiryLengthDefault
   0x00 // Unlimited responses
 );
 
@@ -396,13 +396,16 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, MultipleRequests) {
 
   EXPECT_EQ(2u, devices_found1);
   EXPECT_EQ(2u, devices_found2);
+
   EXPECT_FALSE(discovery_manager()->discovering());
 
   test_device()->SendCommandChannelPacket(kInquiryComplete);
 }
 
 // Test: starting a session "while" the other one is stopping a session should
-// restart the session
+// still restart the Inquiry.
+// Test: starting a session "while" the other one is stopping should return
+// without needing an InquiryComplete first.
 // Test: we should only request a device's name if it's the first time we
 // encounter it.
 TEST_F(GAP_BrEdrDiscoveryManagerTest, RequestDiscoveryWhileStop) {
@@ -431,14 +434,12 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, RequestDiscoveryWhileStop) {
   EXPECT_EQ(1u, devices_found1);
   EXPECT_TRUE(discovery_manager()->discovering());
 
+  // Drop the active session.
+  session1 = nullptr;
+  RunLoopUntilIdle();
+
   std::unique_ptr<BrEdrDiscoverySession> session2;
   size_t devices_found2 = 0u;
-
-  // TODO(jamuraa, NET-619): test InquiryCancel when it is implemented
-  test_device()->QueueCommandTransaction(
-      CommandTransaction(kInquiry, {&kInquiryRsp, &kInquiryResult}));
-
-  session1 = nullptr;
   discovery_manager()->RequestDiscovery(
       [&session2, &devices_found2](auto status, auto cb_session) {
         EXPECT_TRUE(status);
@@ -447,18 +448,26 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, RequestDiscoveryWhileStop) {
         session2 = std::move(cb_session);
       });
 
-  // We're still waiting on the previous session to complete, so we haven't
-  // started tne new session yet.
+  // The new session should be started at this point, and inquiry results
+  // returned.
+  EXPECT_TRUE(session2);
+  test_device()->SendCommandChannelPacket(kInquiryResult);
+
   RunLoopUntilIdle();
 
-  test_device()->SendCommandChannelPacket(kInquiryResult);
+  EXPECT_EQ(1u, devices_found2);
+
+  // Inquiry should be restarted when the Complete comes in because an active
+  // session2 still exists.
+  // TODO(jamuraa, NET-619): test InquiryCancel when it is implemented
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kInquiry, {&kInquiryRsp, &kInquiryResult}));
   test_device()->SendCommandChannelPacket(kInquiryComplete);
 
   RunLoopUntilIdle();
 
-  EXPECT_TRUE(session2);
   EXPECT_EQ(1u, devices_found1);
-  EXPECT_EQ(1u, devices_found2);
+  EXPECT_EQ(2u, devices_found2);
   EXPECT_TRUE(discovery_manager()->discovering());
 
   test_device()->SendCommandChannelPacket(kInquiryResult);
@@ -466,15 +475,19 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, RequestDiscoveryWhileStop) {
   RunLoopUntilIdle();
 
   EXPECT_EQ(1u, devices_found1);
-  EXPECT_EQ(2u, devices_found2);
+  EXPECT_EQ(3u, devices_found2);
 
   // TODO(jamuraa, NET-619): test InquiryCancel when it is implemented
   session2 = nullptr;
 
+  // After the session is dropped, even if another result comes in, no results
+  // are sent to the callback.
+  test_device()->SendCommandChannelPacket(kInquiryResult);
+
   RunLoopUntilIdle();
 
   EXPECT_EQ(1u, devices_found1);
-  EXPECT_EQ(2u, devices_found2);
+  EXPECT_EQ(3u, devices_found2);
 }
 
 // Test: When Inquiry Fails to start, we report this back to the requester.
