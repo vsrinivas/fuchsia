@@ -75,3 +75,7 @@ zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
                            usb_speed_t speed, usb_device_t** out_device);
 
 void usb_device_remove(usb_device_t* dev);
+
+#define USB_REQ_TO_DEV_INTERNAL(req, size) \
+    ((usb_device_req_internal_t *)((uintptr_t)(req) + (size)))
+#define DEV_INTERNAL_TO_USB_REQ(ctx, size) ((usb_request_t *)((uintptr_t)(ctx) - (size)))

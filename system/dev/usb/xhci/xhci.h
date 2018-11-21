@@ -90,7 +90,7 @@ typedef struct xhci_usb_request_internal {
      list_node_t node;
 } xhci_usb_request_internal_t;
 
-#define USB_REQ_TO_XHCI_INTERNAL(req, size) \\
+#define USB_REQ_TO_XHCI_INTERNAL(req, size) \
     ((xhci_usb_request_internal_t *)((uintptr_t)(req) + (size)))
 #define XHCI_INTERNAL_TO_USB_REQ(ctx, size) ((usb_request_t *)((uintptr_t)(ctx) - (size)))
 

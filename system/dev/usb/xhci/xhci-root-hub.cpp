@@ -315,8 +315,7 @@ void xhci_stop_root_hubs(xhci_t* xhci) {
     for (int i = 0; i < XHCI_RH_COUNT; i++) {
         usb_request_t* req;
         xhci_root_hub_t* rh = &xhci->root_hubs[i];
-        while ((req = list_remove_tail_type(&rh->pending_intr_reqs, usb_request_t, node))
-                != nullptr) {
+        while (xhci_remove_from_list_tail(xhci, &rh->pending_intr_reqs, &req)) {
             usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0);
         }
     }
@@ -453,7 +452,7 @@ static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static void xhci_rh_handle_intr_req(xhci_root_hub_t* rh, usb_request_t* req) {
+static void xhci_rh_handle_intr_req(xhci_t* xhci, xhci_root_hub_t* rh, usb_request_t* req) {
     zxlogf(SPEW, "xhci_rh_handle_intr_req\n");
     uint8_t status_bits[128 / 8];
     bool have_status = 0;
@@ -481,7 +480,7 @@ static void xhci_rh_handle_intr_req(xhci_root_hub_t* rh, usb_request_t* req) {
         usb_request_complete(req, ZX_OK, length);
     } else {
         // queue transaction until we have something to report
-        list_add_tail(&rh->pending_intr_reqs, &req->node);
+        xhci_add_to_list_tail(xhci, &rh->pending_intr_reqs, req);
     }
 }
 
@@ -494,7 +493,7 @@ zx_status_t xhci_rh_usb_request_queue(xhci_t* xhci, usb_request_t* req, int rh_i
     if (ep_index == 0) {
         return xhci_rh_control(xhci, rh, &req->setup, req);
     } else if (ep_index == 2) {
-        xhci_rh_handle_intr_req(rh, req);
+        xhci_rh_handle_intr_req(xhci, rh, req);
         return ZX_OK;
     }
 
@@ -562,10 +561,9 @@ void xhci_handle_root_hub_change(xhci_t* xhci) {
             }
 
             if (status->wPortChange) {
-                usb_request_t* req = list_remove_head_type(&rh->pending_intr_reqs,
-                                                           usb_request_t, node);
-                if (req) {
-                    xhci_rh_handle_intr_req(rh, req);
+                usb_request_t* req;
+                if (xhci_remove_from_list_head(xhci, &rh->pending_intr_reqs, &req)) {
+                    xhci_rh_handle_intr_req(xhci, rh, req);
                 }
             }
         }

@@ -65,7 +65,9 @@ static int callback_thread(void* arg) {
 
         // call completion callbacks outside of the lock
         usb_request_t* req;
-        while ((req = list_remove_head_type(&temp_list, usb_request_t, node))) {
+        usb_device_req_internal_t* req_int;
+        while ((req_int = list_remove_head_type(&temp_list, usb_device_req_internal_t, node))) {
+            req = DEV_INTERNAL_TO_USB_REQ(req_int, dev->parent_req_size);
             usb_request_complete(req, req->response.status, req->response.actual);
         }
     }
@@ -96,7 +98,9 @@ static void request_complete(usb_request_t* req, void* cookie) {
     // move original request to completed_reqs list so it can be completed on the callback_thread
     req->complete_cb = req->saved_complete_cb;
     req->cookie = req->saved_cookie;
-    list_add_tail(&dev->completed_reqs, &req->node);
+
+    usb_device_req_internal_t* req_int = USB_REQ_TO_DEV_INTERNAL(req, dev->parent_req_size);
+    list_add_tail(&dev->completed_reqs, &req_int->node);
     mtx_unlock(&dev->callback_lock);
     sync_completion_signal(&dev->callback_thread_completion);
 }
