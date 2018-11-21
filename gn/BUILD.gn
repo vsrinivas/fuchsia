@@ -172,11 +172,7 @@ action("breakpad_symbols") {
 # their properties.
 target_platforms = []
 foreach(platform, test_platforms) {
-  # TODO(crbug.com/gn/10): Use platform.device.arch when this becomes allowed.
-  platform_device = { # Clear from previous iteration.
-  }
-  platform_device = platform.device
-  if (platform_device.arch == current_cpu) {
+  if (platform.cpu == current_cpu) {
     target_platforms += [ platform ]
   }
 }

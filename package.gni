@@ -171,12 +171,10 @@ template("pm_build_package") {
 #       dest (optional)
 #         [path] Location the binary will be placed within `test/`.
 #
-#       environments (optional, default: [ { device = { type = "QEMU" } } ]):
+#       environments (optional, default: [ { dimensions = { device_type = "QEMU" } } ]):
 #         [list of scopes] Target device environments in which the test will
-#         run. The scopes must be element-wise subscopes of the full platform
-#         environments specified in //build/testing/platforms.gni. Environments
-#         mirror the Environment struct defined in
-#         https://fuchsia.googlesource.com/infra/infra/+/master/fuchsia/testexec/environment.go
+#         run. The scopes dimensions field must be a subscope of the full platform
+#         dimensions given in //build/testing/platforms.gni.
 #
 #       disabled (optional)
 #         [bool] Whether to disable the test on continuous integration

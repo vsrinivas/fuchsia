@@ -4,9 +4,6 @@
 
 import("//build/testing/platforms.gni")
 
-# Names of members of an environment's `device` subscope.
-_device_ids = [ "type" ]
-
 # TODO(joshuaseaton): Only used in package() today; consider a scheme in which
 #   test specs are re-used for host tests.
 
@@ -33,8 +30,8 @@ template("test_spec") {
   } else {
     environments = [
       {
-        device = {
-          type = "QEMU"
+        dimensions = {
+          device_type = "QEMU"
         }
       },
     ]
@@ -48,88 +45,79 @@ template("test_spec") {
     environments = []
   }
 
-  # Consider the operation that takes a scope
+  # Call "expanding" the operation that takes a scope
   # {
   #  x = a
   #  y = b
   #  z = c
   #  ...
   # }
-  # and converts it to a list [{x=a}, {y=b}, {z=c},...]. Call an evironment or
-  # platform "expanded" (denoted below with a prefix of "exp") if each of its
-  # subscopes (device, etc.) have been transformed in this way.
+  # and converts it to a list [{x=a}, {y=b}, {z=c},...].
   #
-  # The utility of the expanded versions is that it allows for a simplified
-  # check of "A is a sub-environment of B" (in which we need only check if
-  # A.device is a sublist of B.device and so on.)
-  #
-  # Expand each test platform and group them by architecture.
-  exp_platforms_target = []
-  exp_platforms_other = []
+  # Expand each scope of test platform dimensions and group them by architecture
+  # (i.e., cpu).
+  target_platform_dims = []
+  other_platform_dims = []
   foreach(platform, test_platforms) {
-    exp_platform = {  # Clear from previous iteration.
-    }
-    exp_platform.device = []
-
-    # Expand out the device subscope.
-    foreach(id, _device_ids) {
-      exp_platform.device += [
+    platform_dims = []  # Clear from previous iteration.
+    foreach(key, all_dimension_keys) {
+      platform_dims += [
         {
-          forward_variables_from(platform.device, [ id ])
+          forward_variables_from(platform, [ key ])
         },
       ]
     }
 
-    # TODO(crbug.com/gn/10): Use platform.device.arch when this becomes allowed.
-    platform_device = {
-    }
-    platform_device = platform.device
-    if (platform_device.arch == current_cpu) {
-      exp_platforms_target += [ exp_platform ]
+    if (platform.cpu == current_cpu) {
+      target_platform_dims += [ platform_dims ]
     } else {
-      exp_platforms_other += [ exp_platform ]
+      other_platform_dims += [ platform_dims ]
     }
   }
 
   foreach(env, environments) {
-    # Likewise, expand each environment.
-    device_list = []  # Clear from previous iteration.
-    if (defined(env.device)) {
-      foreach(id, _device_ids) {
-        device_list += [
+    # Likewise, expand each environment's dimensions.
+    dims = []  # Clear from previous iteration.
+    if (defined(env.dimensions)) {
+      foreach(key, all_dimension_keys) {
+        dims += [
           {
-            forward_variables_from(env.device, [ id ])
+            forward_variables_from(env.dimensions, [ key ])
           },
         ]
       }
     }
 
-    # Check if the environment matches a platform of the target architecture,
-    # If a match, include the environment among the test spec's.
+    # Empty scopes may have been introduced to dims, corresponding to unset keys;
+    # Add and then subtract an empty scope to remove them.
+    empty_dim = {  # Clear from previous iteration.
+    }
+    dims += [ empty_dim ]
+    dims -= [ empty_dim ]
+
+    # Check if the environment's dimensions match those of a platform of the
+    # target architecture; if a match, include the environment among the
+    # test spec's.
     # Note that in GN "A is a subset of B" is equivalent to `A + B - B == []`.
-    matches = false
-    foreach(exp_platform, exp_platforms_target) {
-      matches_on_device =
-          device_list + exp_platform.device - exp_platform.device == []
-      if (matches_on_device) {
-        matches = true
+    match = false
+    foreach(platform_dims, target_platform_dims) {
+      if (dims + platform_dims - platform_dims == []) {
+        match = true
         test_spec.environments += [ env ]
       }
     }
 
-    # If the environment doesn't match a target architecture, ensure that it
-    # matches a platform of another architecture.
-    if (!matches) {
-      foreach(exp_platform, exp_platforms_other) {
-        matches_on_device =
-            device_list + exp_platform.device - exp_platform.device == []
-        matches = matches || matches_on_device
+    # If the environment's dimensions do not match a target architecture, ensure
+    # that they match those of a platform of another architecture.
+    if (!match) {
+      foreach(platform_dims, other_platform_dims) {
+        match = match || dims + platform_dims - platform_dims == []
       }
-      if (!matches) {
+      if (!match) {
         print("Could not match environment specifications for '$target_name':")
         print("$env")
         assert(
-            matches,
+            match,
             "Consult //build/testing/platforms.gni for all allowable specifications")
       }
     }

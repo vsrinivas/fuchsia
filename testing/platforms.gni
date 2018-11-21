@@ -3,34 +3,37 @@
 # found in the LICENSE file.
 
 # This file is a source of truth for what platforms are available for testing
-# and what properties they possess.
+# and what dimensions they possess to match against.
+#
 # Please do not update this file; contact fuchsia-infra-team@google.com with any
 # questions.
 #
-# A test platform entry is given by a scope that mirrors the Environment
-# struct defined in
-# https://fuchsia.googlesource.com/infra/infra/+/master/fuchsia/testexec/environment.go
-#
-# TODO(joshuaseaton): Check in or detail Environment's JSON schema, instead of linking
-# the associated go struct.
+# Swarming is the task distribution system used by Fuchsia to run automated
+# builds. A dimension is a formal Swarming concept effectively given by a
+# key-value pair; it describes a bot property that can be targeted. Below are
+# the published dimensions for the platforms we have available to test on.
+# For more general Swarming documentation see
+# https://chromium.googlesource.com/infra/luci/luci-py/+/master/appengine/swarming/doc/
 
+# All Swarming dimension keys that Fuchsia test authors may use to target test
+# platforms.
+all_dimension_keys = [
+  "device_type",
+  "cpu",
+]
+
+# Scopes of dimensions for every available platform.
 test_platforms = [
   {
-    device = {
-      type = "QEMU"
-      arch = "x64"
-    }
+    device_type = "QEMU"
+    cpu = "x64"
   },
   {
-    device = {
-      type = "QEMU"
-      arch = "arm64"
-    }
+    device_type = "QEMU"
+    cpu = "arm64"
   },
   {
-    device = {
-      type = "Intel NUC Kit NUC7i5DNHE"
-      arch = "x64"
-    }
+    device_type = "Intel NUC Kit NUC7i5DNHE"
+    cpu = "x64"
   },
 ]
