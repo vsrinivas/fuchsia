@@ -52,8 +52,8 @@ then present the device as usual for general applications.  Inspect the syslog f
 
 If you have an attached display, execute the spinning [vkcube](../../../lib/vulkan/tests/vkcube).
 This test uses an imagepipe swapchain to pass frames to the system compositor.  
-Build with --packages garnet/packages/examples/vkcube_image_pipe_swapchain.  
-Run the test with 'set_root_view vkcube_image_pipe_swapchain'.
+Build with --packages garnet/packages/examples/vkcube_on_scenic.  
+Run the test with 'set_root_view vkcube_on_scenic'.
 
 #### L2
 

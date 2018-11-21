@@ -4,7 +4,7 @@
 
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
-executable("vkcube_image_pipe_swapchain") {
+executable("vkcube_on_scenic") {
   sources = [
     "main.cc",
   ]

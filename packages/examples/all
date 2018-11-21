@@ -17,7 +17,7 @@
         "garnet/packages/examples/scenic",
         "garnet/packages/examples/tcp",
         "garnet/packages/examples/vkcube",
-        "garnet/packages/examples/vkcube_image_pipe_swapchain",
+        "garnet/packages/examples/vkcube_on_scenic",
         "garnet/packages/examples/vulkaninfo"
     ]
 }
