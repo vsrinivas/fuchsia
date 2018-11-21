@@ -151,7 +151,7 @@ void RunBenchmarks(bool tracing_enabled, const BenchmarkSpec* spec) {
     });
 
     runner.Run("TRACE_VTHREAD_DURATION_BEGIN macro with 0 arguments", [] {
-        TRACE_VTHREAD_DURATION_BEGIN("+enabled", "name", "vthread", 1);
+        TRACE_VTHREAD_DURATION_BEGIN("+enabled", "name", "vthread", 1, zx_ticks_get());
     });
 
 
@@ -177,7 +177,7 @@ void RunBenchmarks(bool tracing_enabled, const BenchmarkSpec* spec) {
         });
 
         runner.Run("TRACE_VTHREAD_DURATION_BEGIN macro with 0 arguments for disabled category", [] {
-            TRACE_VTHREAD_DURATION_BEGIN("-disabled", "name", "vthread", 1);
+            TRACE_VTHREAD_DURATION_BEGIN("-disabled", "name", "vthread", 1, zx_ticks_get());
         });
     }
 }

@@ -65,7 +65,7 @@ void RunNoTraceBenchmarks() {
     RunAndMeasure(
         "TRACE_VTHREAD_DURATION_BEGIN macro with 0 arguments", "NTRACE",
         [] {
-             TRACE_VTHREAD_DURATION_BEGIN("+enabled", "name", "vthread", 1);
+             TRACE_VTHREAD_DURATION_BEGIN("+enabled", "name", "vthread", 1, zx_ticks_get());
         },
         NullSetup, NullTeardown);
 }
