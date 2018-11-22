@@ -11,7 +11,7 @@
 #include "garnet/drivers/bluetooth/lib/l2cap/sdu.h"
 
 namespace btlib::data::internal {
-using L2capSocketFactory = SocketFactory<l2cap::Channel, l2cap::SDU>;
+using L2capSocketFactory = SocketFactory<l2cap::Channel>;
 }  // namespace btlib::data::internal
 
 #endif  // GARNET_DRIVERS_BLUETOOTH_LIB_DATA_L2CAP_SOCKET_FACTORY_H_

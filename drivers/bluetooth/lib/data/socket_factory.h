@@ -32,7 +32,7 @@ namespace btlib::data::internal {
 // created and destroyed on a single thread. Said thread must have a
 // single-threaded dispatcher. Failure to follow those rules may cause the
 // program to abort.
-template <typename ChannelT, typename ChannelRxDataT>
+template <typename ChannelT>
 class SocketFactory final {
  public:
   SocketFactory();

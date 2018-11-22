@@ -11,8 +11,7 @@
 #include "garnet/drivers/bluetooth/lib/rfcomm/rfcomm.h"
 
 namespace btlib::data::internal {
-using RfcommSocketFactory =
-    SocketFactory<rfcomm::Channel, common::ByteBufferPtr>;
+using RfcommSocketFactory = SocketFactory<rfcomm::Channel>;
 }  // namespace btlib::data::internal
 
 #endif  // GARNET_DRIVERS_BLUETOOTH_LIB_DATA_RFCOMM_SOCKET_FACTORY_H_
