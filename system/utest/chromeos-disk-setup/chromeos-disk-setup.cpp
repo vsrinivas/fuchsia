@@ -343,7 +343,7 @@ void resize_rootc_from_state(TestState* test, gpt_partition_t* rootc,
 }
 
 // assumes that the base layout contains 12 partitions and that
-// partition 0 is the resizable state parition
+// partition 0 is the resizable state partition
 // the fvm partition will be created as the 13th partition
 bool create_test_layout_with_fvm(TestState* test) {
     BEGIN_HELPER;
@@ -521,7 +521,7 @@ bool TestDiskTooSmall(void) {
     uint64_t reserved, unused;
     gpt_device_range(dev, &reserved, &unused);
 
-    // this is the size we need the STATE parition to be if we are to resize
+    // this is the size we need the STATE partition to be if we are to resize
     // it to make room for the partitions we want to add and expand
     uint64_t needed_blks = howmany(SZ_ZX_PART + MIN_SZ_STATE,
                                    test.BlockSize()) + reserved;
