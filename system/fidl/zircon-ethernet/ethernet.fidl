@@ -10,6 +10,12 @@ struct MacAddress {
     array<uint8>:6 octets;
 };
 
+const uint32 DEFAULT_BUFFER_SIZE = 2048; // bytes
+/// When writing payload to a tx buffer, clients of a Device must skip this many bytes
+/// so that lower-layer drivers can fill in additional headers in that space.
+const uint32 MAC_HDR_MAX_SIZE    = 64;   // bytes, the closest power of 2 larger than 44, which is
+                                         // DataFrameHeader::max_size(36) + LlcHeader::max_size(8)
+
 // Info.features bits
 const uint32 INFO_FEATURE_WLAN = 0x00000001;
 const uint32 INFO_FEATURE_SYNTH = 0x00000002;
