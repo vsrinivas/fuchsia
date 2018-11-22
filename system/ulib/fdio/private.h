@@ -133,8 +133,7 @@ fdio_t* fdio_socketpair_create(zx_handle_t h);
 
 // Creates an |fdio_t| for a VMO file.
 //
-// * |control| is an (optional) handle to the control channel for the VMO file.
-//   (The fdio_vmo_fd function calls this function without a control channel.)
+// * |control| is an handle to the control channel for the VMO file.
 // * |vmo| is the VMO that contains the contents of the file.
 // * |offset| is the index of the first byte of the file in the VMO.
 // * |length| is the number of bytes in the file.

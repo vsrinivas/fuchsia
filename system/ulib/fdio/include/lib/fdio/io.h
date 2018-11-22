@@ -59,9 +59,4 @@ zx_status_t fdio_get_vmo_clone(int fd, zx_handle_t* out_vmo);
 // or clone data into a new VMO).
 zx_status_t fdio_get_vmo_exact(int fd, zx_handle_t* out_vmo);
 
-// create a fd that is backed by the given range of the vmo.
-// This function takes ownership of the vmo and will close the vmo when the fd
-// is closed.
-int fdio_vmo_fd(zx_handle_t vmo, uint64_t offset, uint64_t length);
-
 __END_CDECLS

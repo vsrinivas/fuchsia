@@ -4,6 +4,7 @@
 
 #include <lib/zxio/inception.h>
 #include <lib/zxio/zxio.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 
 #include <unittest/unittest.h>
@@ -19,15 +20,21 @@ bool vmofile_basic_test(void) {
     ASSERT_EQ(ZX_OK, backing.write(ALPHABET, 0, len));
     ASSERT_EQ(ZX_OK, backing.write(ALPHABET, len, len + len));
 
+    zx::channel h1, h2;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0u, &h1, &h2));
+
     zxio_storage_t storage;
-    zxio_vmofile_init(&storage, ZX_HANDLE_INVALID, backing.release(), 4, len, 3);
+    zxio_vmofile_init(&storage, h1.release(), backing.release(), 4, len, 3);
     zxio_t* io = &storage.io;
 
     zxio_signals_t observed = ZXIO_SIGNAL_NONE;
     ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_wait_one(io, ZXIO_READABLE,
                                                   ZX_TIME_INFINITE, &observed));
 
-    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_clone_async(io, 0u, ZX_HANDLE_INVALID));
+    zx::channel clone1, clone2;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0u, &clone1, &clone2));
+
+    ASSERT_EQ(ZX_OK, zxio_clone_async(io, 0u, clone1.release()));
     ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_sync(io));
 
     zxio_node_attr_t attr = {};

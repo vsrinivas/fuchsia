@@ -19,10 +19,6 @@ static zx_status_t zxio_vmofile_release(zxio_t* io, zx_handle_t* out_handle) {
     zx_handle_t vmo = file->vmo;
     mtx_unlock(&file->lock);
 
-    if (control == ZX_HANDLE_INVALID) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
     zx_status_t io_status, status;
     if ((io_status = fuchsia_io_FileSeek(control, seek, fuchsia_io_SeekOrigin_START,
                                          &status, &seek)) != ZX_OK) {
@@ -58,10 +54,6 @@ static zx_status_t zxio_vmofile_close(zxio_t* io) {
 static zx_status_t zxio_vmofile_clone_async(zxio_t* io, uint32_t flags,
                                             zx_handle_t request) {
     zxio_vmofile_t* file = reinterpret_cast<zxio_vmofile_t*>(io);
-    if (file->control == ZX_HANDLE_INVALID) {
-        zx_handle_close(request);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
     return fuchsia_io_NodeClone(file->control, flags, request);
 }
 
