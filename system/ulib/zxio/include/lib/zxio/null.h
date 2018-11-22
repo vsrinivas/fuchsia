@@ -51,6 +51,34 @@ zx_status_t zxio_null_readdir(zxio_t* io, void* buffer, size_t capacity,
                               size_t* out_actual);
 zx_status_t zxio_null_rewind(zxio_t* io);
 
+__CONSTEXPR const zxio_ops_t zxio_null_ops = {
+    .release = zxio_null_release,
+    .close = zxio_null_close,
+    .wait_begin = zxio_null_wait_begin,
+    .wait_end = zxio_null_wait_end,
+    .clone_async = zxio_null_clone_async,
+    .sync = zxio_null_sync,
+    .attr_get = zxio_null_attr_get,
+    .attr_set = zxio_null_attr_set,
+    .read = zxio_null_read,
+    .read_at = zxio_null_read_at,
+    .write = zxio_null_write,
+    .write_at = zxio_null_write_at,
+    .seek = zxio_null_seek,
+    .truncate = zxio_null_truncate,
+    .flags_get = zxio_null_flags_get,
+    .flags_set = zxio_null_flags_set,
+    .vmo_get = zxio_null_vmo_get,
+    .open = zxio_null_open,
+    .open_async = zxio_null_open_async,
+    .unlink = zxio_null_unlink,
+    .token_get = zxio_null_token_get,
+    .rename = zxio_null_rename,
+    .link = zxio_null_link,
+    .readdir = zxio_null_readdir,
+    .rewind = zxio_null_rewind,
+};
+
 __END_CDECLS
 
 #endif // LIB_ZXIO_NULL_H_

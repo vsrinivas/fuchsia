@@ -199,6 +199,58 @@ static zx_status_t fdio_zxio_set_flags(fdio_t* io, uint32_t flags) {
     return zxio_flags_set(z, flags);
 }
 
+// Generic ---------------------------------------------------------------------
+
+fdio_ops_t fdio_zxio_ops = {
+    .read = fdio_zxio_read,
+    .read_at = fdio_zxio_read_at,
+    .write = fdio_zxio_write,
+    .write_at = fdio_zxio_write_at,
+    .seek = fdio_zxio_seek,
+    .misc = fdio_default_misc,
+    .close = fdio_zxio_close,
+    .open = fdio_default_open,
+    .clone = fdio_zxio_clone,
+    .ioctl = fdio_default_ioctl,
+    .wait_begin = fdio_zxio_wait_begin,
+    .wait_end = fdio_zxio_wait_end,
+    .unwrap = fdio_zxio_unwrap,
+    .posix_ioctl = fdio_default_posix_ioctl,
+    .get_vmo = fdio_default_get_vmo,
+    .get_token = fdio_default_get_token,
+    .get_attr = fdio_zxio_get_attr,
+    .set_attr = fdio_zxio_set_attr,
+    .sync = fdio_zxio_sync,
+    .readdir = fdio_default_readdir,
+    .rewind = fdio_default_rewind,
+    .unlink = fdio_default_unlink,
+    .truncate = fdio_zxio_truncate,
+    .rename = fdio_default_rename,
+    .link = fdio_default_link,
+    .get_flags = fdio_zxio_get_flags,
+    .set_flags = fdio_zxio_set_flags,
+    .recvfrom = fdio_default_recvfrom,
+    .sendto = fdio_default_sendto,
+    .recvmsg = fdio_default_recvmsg,
+    .sendmsg = fdio_default_sendmsg,
+    .shutdown = fdio_default_shutdown,
+};
+
+__EXPORT
+fdio_t* fdio_zxio_create(zxio_storage_t** out_storage) {
+    fdio_zxio_t* fv = fdio_alloc(sizeof(fdio_zxio_t));
+    if (fv == NULL) {
+        return NULL;
+    }
+    fv->io.ops = &fdio_zxio_ops;
+    fv->io.magic = FDIO_MAGIC;
+    atomic_init(&fv->io.refcount, 1);
+    memset(&fv->storage, 0, sizeof(fv->storage));
+    zxio_null_init(&fv->storage.io);
+    *out_storage = &fv->storage;
+    return &fv->io;
+}
+
 // Remote ----------------------------------------------------------------------
 
 // POLL_MASK and POLL_SHIFT intend to convert the lower five POLL events into

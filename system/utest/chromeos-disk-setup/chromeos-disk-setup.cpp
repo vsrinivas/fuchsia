@@ -11,7 +11,7 @@
 #include <unistd.h>
 
 #include <fbl/unique_fd.h>
-#include <lib/fdio/io.h>
+#include <lib/fdio/util.h>
 #include <lib/zx/vmo.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
@@ -19,6 +19,8 @@
 #include <chromeos-disk-setup/chromeos-disk-setup.h>
 #include <gpt/cros.h>
 #include <gpt/gpt.h>
+#include <lib/zxio/null.h>
+#include <lib/zxio/ops.h>
 
 #include <unittest/unittest.h>
 
@@ -48,6 +50,33 @@ const block_info_t kDefaultBlockInfo = {
     .flags = 0,
     .reserved = 0,
 };
+
+static zx_status_t mock_read(zxio_t* io, void* buffer, size_t capacity, size_t* out_actual) {
+    memset(buffer, 0, capacity);
+    *out_actual = capacity;
+    return ZX_OK;
+}
+
+static zx_status_t mock_write(zxio_t* io, const void* buffer, size_t capacity, size_t* out_actual) {
+    *out_actual = capacity;
+    return ZX_OK;
+}
+
+static zx_status_t mock_seek(zxio_t* io, size_t offset, zxio_seek_origin_t start, size_t* out_offset) {
+    if (start != fuchsia_io_SeekOrigin_START) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    *out_offset = offset;
+    return ZX_OK;
+}
+
+constexpr zxio_ops_t mock_ops = ([]() {
+    zxio_ops_t ops = zxio_null_ops;
+    ops.read = &mock_read;
+    ops.write = &mock_write;
+    ops.seek = &mock_seek;
+    return ops;
+})();
 
 class TestState {
 public:
@@ -81,10 +110,12 @@ public:
     bool PrepareGpt() {
         BEGIN_HELPER;
         ASSERT_EQ(device_, nullptr);
-        const uint64_t sz = BlockCount() * BlockSize();
-        zx::vmo vmo;
-        ASSERT_EQ(zx::vmo::create(sz, 0, &vmo), ZX_OK);
-        fd_.reset(fdio_vmo_fd(vmo.release(), 0, sz));
+
+        zxio_storage_t* storage;
+        fdio_t* io = fdio_zxio_create(&storage);
+        ASSERT_NE(io, nullptr);
+        zxio_init(&storage->io, &mock_ops);
+        fd_.reset(fdio_bind_to_fd(io, -1, 0));
         ASSERT_TRUE(fd_);
         zx_status_t rc = gpt_device_init(fd_.get(), BlockSize(), BlockCount(),
                                          &device_);

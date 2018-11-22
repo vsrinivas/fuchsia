@@ -80,6 +80,19 @@ fdio_t* fdio_logger_create(zx_handle_t);
 fdio_t* fdio_output_create(ssize_t (*func)(void* cookie, const void* data, size_t len),
                            void* cookie);
 
+typedef struct zxio_storage zxio_storage_t;
+
+// Creates an |fdio_t| that is backed by a |zxio_t|.
+//
+// The |zxio_t| is initialized with a null ops table. The |zxio_storage_t| for
+// the |zxio_t| is returned via |out_storage|. The client can re-initialize the
+// |zxio_storage_t| to customize the behavior of the |zxio_t|.
+//
+// To bind the |fdio_t| to a file descriptor, use |fdio_bind_to_fd|.
+//
+// Upon failure, returns NULL.
+fdio_t* fdio_zxio_create(zxio_storage_t** out_storage);
+
 // Attempt to connect a channel to a named service.
 // On success the channel is connected.  On failure
 // an error is returned and the handle is closed.
