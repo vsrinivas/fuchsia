@@ -71,6 +71,7 @@ void CompositeDecoderFactory::ContinueCreateDecoder(
 
   if (iter == children_.end()) {
     callback(nullptr);
+    return;
   }
 
   FXL_DCHECK(*iter);
