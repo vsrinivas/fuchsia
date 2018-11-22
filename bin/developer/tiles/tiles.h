@@ -7,7 +7,7 @@
 
 #include <fuchsia/developer/tiles/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/ui/policy/cpp/fidl.h>
+#include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 
 #include <zx/eventpair.h>
@@ -23,13 +23,10 @@ class Tiles : public fuchsia::ui::viewsv1::ViewListener,
               public fuchsia::ui::viewsv1::ViewContainerListener,
               public fuchsia::developer::tiles::Controller {
  public:
-  Tiles(::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
-        zx::eventpair view_token, component::StartupContext* startup_context,
+  Tiles(component::StartupContext* startup_context,
+        zx::eventpair root_view_token, std::vector<std::string> urls,
         int border);
-
-  ~Tiles() final;
-
-  void AddTilesByURL(std::vector<std::string> urls);
+  ~Tiles() final = default;
 
  private:
   struct ViewData {
@@ -44,8 +41,8 @@ class Tiles : public fuchsia::ui::viewsv1::ViewListener,
     fuchsia::sys::ComponentControllerPtr controller;
     scenic::EntityNode host_node;
 
-    ::fuchsia::ui::viewsv1::ViewProperties view_properties;
-    ::fuchsia::ui::viewsv1::ViewInfo view_info;
+    fuchsia::ui::viewsv1::ViewProperties view_properties;
+    fuchsia::ui::viewsv1::ViewInfo view_info;
   };
 
   // |fuchsia::ui::viewsv1::ViewListener|:
@@ -65,14 +62,14 @@ class Tiles : public fuchsia::ui::viewsv1::ViewListener,
                       AddTileFromURLCallback callback) final;
   void AddTileFromViewProvider(
       fidl::StringPtr url,
-      fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewProvider> provider,
+      fidl::InterfaceHandle<::fuchsia::ui::app::ViewProvider> provider,
       AddTileFromViewProviderCallback callback) final;
   void RemoveTile(uint32_t key) final;
   void ListTiles(ListTilesCallback callback) final;
 
   // Launches initial list of views, passed as command line parameters.
 
-  void AddChildView(uint32_t child_key, zx::eventpair view_owner_token,
+  void AddChildView(uint32_t child_key, zx::eventpair view_holder_token,
                     const std::string& url,
                     fuchsia::sys::ComponentControllerPtr, bool allow_focus);
 
@@ -83,19 +80,17 @@ class Tiles : public fuchsia::ui::viewsv1::ViewListener,
   // Context inherited when TileView is launched.
   component::StartupContext* startup_context_;
 
-  // Connection to the view manager and root view.
-  fuchsia::ui::viewsv1::ViewManagerPtr view_manager_;
-  fidl::Binding<fuchsia::ui::viewsv1::ViewListener> view_listener_binding_;
+  // Connection to the root view.
+  fidl::Binding<fuchsia::ui::viewsv1::ViewListener> root_view_listener_binding_;
   fidl::Binding<fuchsia::ui::viewsv1::ViewContainerListener>
-      view_container_listener_binding_;
-  fuchsia::ui::viewsv1::ViewPtr view_;
+      root_view_container_listener_binding_;
+  fuchsia::ui::viewsv1::ViewPtr root_view_;
+  fuchsia::ui::viewsv1::ViewContainerPtr root_view_container_;
   scenic::Session session_;
 
   scenic::ImportNode root_node_;
   scenic::ShapeNode background_node_;
   scenic::EntityNode container_node_;
-
-  fuchsia::ui::viewsv1::ViewContainerPtr view_container_;
 
   fuchsia::sys::LauncherPtr launcher_;
   fidl::BindingSet<fuchsia::developer::tiles::Controller> tiles_binding_;

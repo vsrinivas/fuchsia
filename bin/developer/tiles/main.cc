@@ -30,17 +30,10 @@ int main(int argc, const char** argv) {
   trace::TraceProvider trace_provider(loop.dispatcher());
 
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-
   if (command_line.HasOption("h") || command_line.HasOption("help")) {
     Usage();
     return 0;
   }
-
-  auto startup_context = component::StartupContext::CreateFromStartupInfo();
-
-  auto view_manager =
-      startup_context
-          ->ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewManager>();
 
   auto border_arg = command_line.GetOptionValueWithDefault("border", "10");
   int border = fxl::StringToNumber<int>(border_arg);
@@ -59,9 +52,9 @@ int main(int argc, const char** argv) {
     FXL_NOTREACHED() << "failed to create tokens.";
 
   // Create tiles with a token for its root view.
-  tiles::Tiles tiles(std::move(view_manager), std::move(view_token),
-                     startup_context.get(), border);
-  tiles.AddTilesByURL(command_line.positional_args());
+  auto startup_context = component::StartupContext::CreateFromStartupInfo();
+  tiles::Tiles tiles(startup_context.get(), std::move(view_token),
+                     command_line.positional_args(), border);
 
   // Ask the presenter to display it.
   auto presenter =

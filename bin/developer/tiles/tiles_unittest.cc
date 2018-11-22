@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/developer/tiles/cpp/fidl.h>
+#include <fuchsia/ui/app/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl_test_base.h>
 #include <gtest/gtest.h>
 #include <zx/eventpair.h>
@@ -38,15 +40,12 @@ class TilesTest : public gtest::TestLoopFixture {
   }
 
   void SetUp() final {
-    fuchsia::ui::viewsv1::ViewManagerPtr view_manager_ptr;
-    view_manager_.Bind(view_manager_ptr.NewRequest());
-
     zx::eventpair view_token;
     if (zx::eventpair::create(0u, &view_owner_token_, &view_token) != ZX_OK)
       FXL_NOTREACHED() << "failed to create tokens.";
 
     tiles_impl_ = std::make_unique<tiles::Tiles>(
-        std::move(view_manager_ptr), std::move(view_token), context_.get(), 10);
+        context_.get(), std::move(view_token), std::vector<std::string>(), 10);
     tiles_ = tiles_impl_.get();
   }
 
