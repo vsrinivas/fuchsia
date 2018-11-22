@@ -11,7 +11,7 @@
 
 #include "gtest/gtest.h"
 
-#include "garnet/drivers/bluetooth/lib/data/l2cap_socket_factory.h"
+#include "garnet/drivers/bluetooth/lib/data/socket_factory.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/fake_channel.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
@@ -20,10 +20,8 @@
 namespace btlib::data::internal {
 namespace {
 
-// We'll test the template using (only) the set of type parameters necessary
-// for the L2CAP instantiation.
+// We'll test the template just for L2CAP channels.
 using FactoryT = internal::SocketFactory<l2cap::Channel>;
-static_assert(std::is_same<FactoryT, L2capSocketFactory>::value);
 
 constexpr l2cap::ChannelId kDynamicChannelIdMin = 0x0040;
 constexpr l2cap::ChannelId kRemoteChannelId = 0x0050;

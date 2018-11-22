@@ -6,8 +6,7 @@
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/task_domain.h"
-#include "garnet/drivers/bluetooth/lib/data/l2cap_socket_factory.h"
-#include "garnet/drivers/bluetooth/lib/data/rfcomm_socket_factory.h"
+#include "garnet/drivers/bluetooth/lib/data/socket_factory.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel_manager.h"
 #include "garnet/drivers/bluetooth/lib/rfcomm/channel_manager.h"
@@ -40,9 +39,10 @@ class Impl final : public Domain, public common::TaskDomain<Impl, Domain> {
 
       InitializeL2CAP();
       InitializeRFCOMM();
-      l2cap_socket_factory_ = std::make_unique<internal::L2capSocketFactory>();
+      l2cap_socket_factory_ =
+          std::make_unique<internal::SocketFactory<l2cap::Channel>>();
       rfcomm_socket_factory_ =
-          std::make_unique<internal::RfcommSocketFactory>();
+          std::make_unique<internal::SocketFactory<rfcomm::Channel>>();
 
       bt_log(TRACE, "data-domain", "initialized");
     });
@@ -242,9 +242,11 @@ class Impl final : public Domain, public common::TaskDomain<Impl, Domain> {
   std::unique_ptr<rfcomm::ChannelManager> rfcomm_;
 
   // Creates sockets that bridge internal L2CAP channels to profile processes.
-  std::unique_ptr<internal::L2capSocketFactory> l2cap_socket_factory_;
+  std::unique_ptr<internal::SocketFactory<l2cap::Channel>>
+      l2cap_socket_factory_;
   // Creates sockets that bridge internal RFCOMM channels to profile processes.
-  std::unique_ptr<internal::RfcommSocketFactory> rfcomm_socket_factory_;
+  std::unique_ptr<internal::SocketFactory<rfcomm::Channel>>
+      rfcomm_socket_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Impl);
 };
