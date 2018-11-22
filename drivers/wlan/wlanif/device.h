@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_WLAN_WLANIF_DEVICE_H_
+#define GARNET_DRIVERS_WLAN_WLANIF_DEVICE_H_
 
 #include <ddk/driver.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -25,8 +26,8 @@ class Device : public wlan_mlme::MLME {
     zx_status_t Bind();
 
     // WLANIF zx_protocol_device_t
-    zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                      size_t out_len, size_t* out_actual);
+    zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len,
+                      size_t* out_actual);
     void Unbind();
     void Release();
 
@@ -49,7 +50,7 @@ class Device : public wlan_mlme::MLME {
     void SetKeysReq(wlan_mlme::SetKeysRequest req) override;
     void DeleteKeysReq(wlan_mlme::DeleteKeysRequest req) override;
     void EapolReq(wlan_mlme::EapolRequest req) override;
-    void DeviceQueryReq(wlan_mlme::DeviceQueryRequest req) override;
+    void QueryDeviceInfo(QueryDeviceInfoCallback cb) override;
     void StatsQueryReq() override;
     void ListMinstrelPeers(ListMinstrelPeersCallback cb) override;
     void GetMinstrelStats(wlan_mlme::MinstrelStatsRequest req,
@@ -120,3 +121,5 @@ class Device : public wlan_mlme::MLME {
 };
 
 }  // namespace wlanif
+
+#endif  // GARNET_DRIVERS_WLAN_WLANIF_DEVICE_H_

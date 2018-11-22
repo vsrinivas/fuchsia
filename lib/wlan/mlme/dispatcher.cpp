@@ -133,18 +133,10 @@ zx_status_t Dispatcher::HandleSvcPacket(fbl::unique_ptr<Packet> packet) {
     }
     debughdr("service packet txid=%u flags=%u ordinal=%u\n", hdr->txid, hdr->flags, hdr->ordinal);
 
-    if (hdr->ordinal == fuchsia_wlan_mlme_MLMEDeviceQueryReqOrdinal) {
-        MlmeMsg<wlan_mlme::DeviceQueryRequest> msg;
-        auto status = MlmeMsg<wlan_mlme::DeviceQueryRequest>::FromPacket(std::move(packet), &msg);
-        if (status != ZX_OK) {
-            errorf("could not deserialize custom MLME-DeviceQueryRequest primitive\n");
-            return status;
-        }
-        return HandleDeviceQueryRequest();
-    }
-
     // Messages in wlan_mlme_ext.fidl does not involve MLME.
     switch (hdr->ordinal) {
+    case fuchsia_wlan_mlme_MLMEQueryDeviceInfoOrdinal:
+        return HandleQueryDeviceInfo(hdr->txid);
     case fuchsia_wlan_mlme_MLMEStatsQueryReqOrdinal:
         return HandleMlmeStats(hdr->ordinal);
     case fuchsia_wlan_mlme_MLMEListMinstrelPeersOrdinal:
@@ -202,10 +194,10 @@ zx_status_t Dispatcher::HandleMlmeMessage(fbl::unique_ptr<Packet> packet, uint32
     return mlme_->HandleMlmeMsg(msg);
 }
 
-zx_status_t Dispatcher::HandleDeviceQueryRequest() {
+zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
     debugfn();
 
-    wlan_mlme::DeviceQueryConfirm resp;
+    wlan_mlme::DeviceInfo resp;
     const wlan_info_t& info = device_->GetWlanInfo().ifc_info;
 
     memcpy(resp.mac_addr.mutable_data(), info.mac_addr, ETH_MAC_SIZE);
@@ -262,7 +254,7 @@ zx_status_t Dispatcher::HandleDeviceQueryRequest() {
         resp.bands->push_back(std::move(band));
     }
 
-    return SendServiceMsg(device_, &resp, fuchsia_wlan_mlme_MLMEDeviceQueryConfOrdinal);
+    return SendServiceMsg(device_, &resp, fuchsia_wlan_mlme_MLMEQueryDeviceInfoOrdinal, txid);
 }
 
 zx_status_t Dispatcher::HandleMlmeStats(uint32_t ordinal) const {

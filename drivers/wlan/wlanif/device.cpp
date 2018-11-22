@@ -546,7 +546,7 @@ void Device::EapolReq(wlan_mlme::EapolRequest req) {
     wlanif_impl_.ops->eapol_req(wlanif_impl_.ctx, &impl_req);
 }
 
-void Device::DeviceQueryReq(wlan_mlme::DeviceQueryRequest req) {
+void Device::QueryDeviceInfo(QueryDeviceInfoCallback cb) {
     std::lock_guard<std::mutex> lock(lock_);
 
     if (!have_query_info_) {
@@ -558,7 +558,7 @@ void Device::DeviceQueryReq(wlan_mlme::DeviceQueryRequest req) {
         return;
     }
 
-    wlan_mlme::DeviceQueryConfirm fidl_resp;
+    wlan_mlme::DeviceInfo fidl_resp;
 
     // mac_addr
     std::memcpy(fidl_resp.mac_addr.mutable_data(), query_info_.mac_addr, ETH_ALEN);
@@ -572,7 +572,7 @@ void Device::DeviceQueryReq(wlan_mlme::DeviceQueryRequest req) {
         ConvertBandCapabilities(&(*fidl_resp.bands)[ndx], query_info_.bands[ndx]);
     }
 
-    binding_.events().DeviceQueryConf(std::move(fidl_resp));
+    cb(std::move(fidl_resp));
 }
 
 void Device::StatsQueryReq() {

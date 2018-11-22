@@ -25,14 +25,6 @@ struct EapolIndication {
     vector<uint8> data;
 };
 
-// DEVICE_QUERY.request
-
-struct DeviceQueryRequest {
-    int32 foo;
-};
-
-// DEVICE_QUERY.confirm
-
 enum MacRole {
     CLIENT = 1;
     AP = 2;
@@ -53,9 +45,7 @@ struct BandCapabilities {
     VhtCapabilities? vht_cap;
 };
 
-// TODO(tkilbourn): add more fields for debugging. For now, we just have the information
-// necessary for the SME.
-struct DeviceQueryConfirm {
+struct DeviceInfo {
     array<uint8>:6 mac_addr;
     MacRole role;
     vector<BandCapabilities> bands;

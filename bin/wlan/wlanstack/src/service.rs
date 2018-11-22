@@ -7,7 +7,7 @@ use fidl::encoding::OutOfLine;
 use fidl::endpoints::RequestStream;
 use fidl_fuchsia_wlan_device_service::{self as fidl_svc, DeviceServiceRequest};
 use fidl_fuchsia_wlan_device as fidl_wlan_dev;
-use fidl_fuchsia_wlan_mlme::{MinstrelStatsResponse};
+use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MinstrelStatsResponse};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::channel::mpsc::UnboundedReceiver;
@@ -18,7 +18,7 @@ use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::Arc;
 
-use crate::device::{self, PhyDevice, PhyMap, IfaceDevice, IfaceMap};
+use crate::device::{self, IfaceDevice, IfaceMap, PhyDevice, PhyMap};
 use crate::future_util::ConcurrentTasks;
 use crate::Never;
 use crate::station;
@@ -86,6 +86,11 @@ async fn handle_fidl_request(request: fidl_svc::DeviceServiceRequest,
         },
         DeviceServiceRequest::ListIfaces { responder } =>
             responder.send(&mut list_ifaces(&ifaces)),
+        DeviceServiceRequest::QueryIface { iface_id, responder } => {
+            let result = query_iface(&ifaces, iface_id);
+            let (status, mut response) = into_status_and_opt(result);
+            responder.send(status.into_raw(), response.as_mut().map(OutOfLine))
+        },
         DeviceServiceRequest::CreateIface { req, responder } => {
             let result = await!(create_iface(&phys, req));
             let (status, mut response) = into_status_and_opt(result);
@@ -180,6 +185,20 @@ fn list_ifaces(ifaces: &IfaceMap) -> fidl_svc::ListIfacesResponse {
         })
         .collect();
     fidl_svc::ListIfacesResponse{ ifaces: list }
+}
+
+fn query_iface(ifaces: &IfaceMap, id: u16) -> Result<fidl_svc::QueryIfaceResponse, zx::Status> {
+    info!("query_iface(id = {})", id);
+    let iface = ifaces.get(&id).ok_or(zx::Status::NOT_FOUND)?;
+
+    let role = match iface.device_info.role {
+        fidl_mlme::MacRole::Client => fidl_wlan_dev::MacRole::Client,
+        fidl_mlme::MacRole::Ap => fidl_wlan_dev::MacRole::Ap,
+        fidl_mlme::MacRole::Mesh => fidl_wlan_dev::MacRole::Mesh,
+    };
+    let dev_path = iface.device.path().to_string_lossy().into_owned();
+    let mac_addr = iface.device_info.mac_addr;
+    Ok(fidl_svc::QueryIfaceResponse { role, id, dev_path, mac_addr })
 }
 
 async fn create_iface(phys: &PhyMap, req: fidl_svc::CreateIfaceRequest)
@@ -290,9 +309,9 @@ mod tests {
     use super::*;
 
     use fidl::endpoints::create_proxy;
-    use fidl_fuchsia_wlan_device::{PhyRequest, PhyRequestStream};
+    use fidl_fuchsia_wlan_device::{self as fidl_dev, PhyRequest, PhyRequestStream};
     use fidl_fuchsia_wlan_device_service::{IfaceListItem, PhyListItem};
-    use fidl_fuchsia_wlan_mlme::MlmeMarker;
+    use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeMarker};
     use fidl_fuchsia_wlan_sme as fidl_sme;
     use fuchsia_wlan_dev as wlan_dev;
     use futures::channel::mpsc;
@@ -383,6 +402,32 @@ mod tests {
             IfaceListItem{ iface_id: 10u16, path: "/dev/null".to_string() },
             IfaceListItem{ iface_id: 20u16, path: "/dev/zero".to_string() },
         ], list)
+    }
+
+    #[test]
+    fn query_iface_success() {
+        let _exec = fasync::Executor::new().expect("Failed to create an executor");
+
+        let (iface_map, _iface_map_events) = IfaceMap::new();
+        let iface_map = Arc::new(iface_map);
+        let iface = fake_client_iface("/dev/null");
+        iface_map.insert(10, iface.iface);
+
+        let response = super::query_iface(&iface_map, 10).expect("querying iface failed");
+        let expected = fake_device_info();
+        assert_eq!(response.role, fidl_dev::MacRole::Client);
+        assert_eq!(response.mac_addr, expected.mac_addr);
+        assert_eq!(response.id, 10);
+        assert_eq!(response.dev_path, "/dev/null");
+    }
+
+    #[test]
+    fn query_iface_not_found() {
+        let (iface_map, _iface_map_events) = IfaceMap::new();
+        let iface_map = Arc::new(iface_map);
+
+        let status = super::query_iface(&iface_map, 10u16).expect_err("querying iface succeeded");
+        assert_eq!(zx::Status::NOT_FOUND, status);
     }
 
     #[test]
@@ -577,16 +622,18 @@ mod tests {
         let (stats_sched, stats_requests) = stats_scheduler::create_scheduler();
         let (proxy, _server) = create_proxy::<MlmeMarker>().expect("Error creating proxy");
         let mlme_query = MlmeQueryProxy::new(proxy);
+        let device_info = fake_device_info();
         let iface = IfaceDevice {
             sme_server: device::SmeServer::Client(sme_sender),
             stats_sched,
             device,
             mlme_query,
+            device_info,
         };
         FakeClientIface {
             iface,
             _stats_requests: stats_requests,
-            new_sme_clients: sme_receiver
+            new_sme_clients: sme_receiver,
         }
     }
 
@@ -603,11 +650,13 @@ mod tests {
         let (stats_sched, stats_requests) = stats_scheduler::create_scheduler();
         let (proxy, _server) = create_proxy::<MlmeMarker>().expect("Error creating proxy");
         let mlme_query = MlmeQueryProxy::new(proxy);
+        let device_info = fake_device_info();
         let iface = IfaceDevice {
             sme_server: device::SmeServer::Ap(sme_sender),
             stats_sched,
             device,
             mlme_query,
+            device_info,
         };
         FakeApIface {
             iface,
@@ -626,6 +675,14 @@ mod tests {
             mac_roles: Vec::new(),
             caps: Vec::new(),
             bands: Vec::new(),
+        }
+    }
+
+    fn fake_device_info() -> fidl_mlme::DeviceInfo {
+        fidl_mlme::DeviceInfo {
+            role: fidl_mlme::MacRole::Client,
+            bands: vec![],
+            mac_addr: [ 0xAC; 6 ],
         }
     }
 

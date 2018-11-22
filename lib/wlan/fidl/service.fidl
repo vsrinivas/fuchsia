@@ -31,6 +31,13 @@ struct IfaceListItem {
     string path;
 };
 
+struct QueryIfaceResponse {
+    fuchsia.wlan.device.MacRole role;
+    uint16 id;
+    string dev_path;
+    array<uint8>:6 mac_addr;
+};
+
 struct ListIfacesResponse {
     vector<IfaceListItem> ifaces;
 };
@@ -65,7 +72,7 @@ interface DeviceService {
 
     // Iface methods
     16: ListIfaces() -> (ListIfacesResponse resp);
-    // 17: reserved for QueryIface
+    17: QueryIface(uint16 iface_id) -> (int32 status, QueryIfaceResponse? resp);
     18: CreateIface(CreateIfaceRequest req) -> (int32 status, CreateIfaceResponse? resp);
     // 19: reserved for StartIface
     // 20: reserved for StopIface

@@ -41,7 +41,7 @@ class Dispatcher {
     zx_status_t HandleSvcPacket(fbl::unique_ptr<Packet> packet);
     template <typename Message>
     zx_status_t HandleMlmeMessage(fbl::unique_ptr<Packet> packet, uint32_t ordinal);
-    zx_status_t HandleDeviceQueryRequest();
+    zx_status_t HandleQueryDeviceInfo(zx_txid_t txid);
     zx_status_t HandleMlmeStats(uint32_t ordinal) const;
     zx_status_t HandleMinstrelPeerList(uint32_t ordinal, zx_txid_t txid) const;
     zx_status_t HandleMinstrelTxStats(fbl::unique_ptr<Packet> packet, uint32_t ordinal,
