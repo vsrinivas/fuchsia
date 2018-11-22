@@ -78,7 +78,7 @@ EntityProviderController::EntityProviderController(
       done_(done) {
   FXL_DLOG(INFO) << "Running fuchsia::modular::EntityProvider";
   if (agent_controller_) {
-    agent_controller_.set_error_handler([this] {
+    agent_controller_.set_error_handler([this](zx_status_t status) {
       done_();
       // |this| no longer valid.
     });
