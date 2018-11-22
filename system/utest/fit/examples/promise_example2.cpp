@@ -8,7 +8,7 @@
 #include <string>
 
 #include <lib/fit/promise.h>
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fit/sequential_executor.h>
 
 #include "utils.h"
 
@@ -164,7 +164,7 @@ auto play_game() {
 }
 
 void run() {
-    fit::run_single_threaded(play_game());
+    fit::run_sequentially(play_game());
 }
 
 } // namespace promise_example2

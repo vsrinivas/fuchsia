@@ -453,7 +453,7 @@ private:
 //     private:
 //         // The model is responsible for initializing and running its own
 //         // executor (perhaps on its own thread).
-//         fit::single_threaded_executor executor_;
+//         fit::sequential_executor executor_;
 //     };
 //
 //     // Asks the model to perform a calculation, awaits a result on the

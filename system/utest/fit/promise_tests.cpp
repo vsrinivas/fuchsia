@@ -5,7 +5,7 @@
 #include <functional>
 
 #include <lib/fit/promise.h>
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fit/sequential_executor.h>
 #include <unittest/unittest.h>
 
 #include "examples/promise_example1.h"
@@ -22,22 +22,6 @@ public:
     fit::suspended_task suspend_task() override {
         assert(false);
     }
-};
-
-template <typename V = void, typename E = void>
-class capture_result_wrapper {
-public:
-    template <typename Promise>
-    decltype(auto) wrap(Promise promise) {
-        static_assert(std::is_same<V, typename Promise::value_type>::value, "");
-        static_assert(std::is_same<E, typename Promise::error_type>::value, "");
-        assert(promise);
-        return promise.then([this](fit::result<V, E>& result) {
-            last_result = std::move(result);
-        });
-    }
-
-    fit::result<V, E> last_result;
 };
 
 struct move_only {
@@ -71,7 +55,7 @@ bool basics() {
 
         // Evaluate the promise.
         fit::result<int, const char*> result =
-            fit::run_single_threaded(std::move(promise));
+            fit::run_sequentially(std::move(promise));
         if (i % 2 == 0) {
             EXPECT_TRUE(result.is_ok());
             EXPECT_EQ(i * i / 2, result.value());
@@ -897,36 +881,6 @@ bool discard_result_combinator() {
     END_TEST;
 }
 
-bool wrap_with_combinator() {
-    BEGIN_TEST;
-
-    fake_context fake_context;
-    capture_result_wrapper<int, char> wrapper;
-    uint64_t successor_run_count = 0;
-
-    // Apply a wrapper which steals a promise's result th
-    auto p = make_delayed_ok_promise(42)
-                 .wrap_with(wrapper)
-                 .then([&](fit::result<>) { successor_run_count++; });
-    static_assert(std::is_same<void, decltype(p)::value_type>::value, "");
-    static_assert(std::is_same<void, decltype(p)::error_type>::value, "");
-
-    fit::result<> result = p(fake_context);
-    EXPECT_TRUE(p);
-    EXPECT_EQ(fit::result_state::pending, result.state());
-    EXPECT_EQ(fit::result_state::pending, wrapper.last_result.state());
-    EXPECT_EQ(0, successor_run_count);
-
-    result = p(fake_context);
-    EXPECT_FALSE(p);
-    EXPECT_EQ(fit::result_state::ok, result.state());
-    EXPECT_EQ(fit::result_state::ok, wrapper.last_result.state());
-    EXPECT_EQ(42, wrapper.last_result.value());
-    EXPECT_EQ(1, successor_run_count);
-
-    END_TEST;
-}
-
 bool box_combinator() {
     BEGIN_TEST;
 
@@ -1271,7 +1225,6 @@ RUN_TEST(and_then_combinator)
 RUN_TEST(or_else_combinator)
 RUN_TEST(inspect_combinator)
 RUN_TEST(discard_result_combinator)
-RUN_TEST(wrap_with_combinator)
 RUN_TEST(box_combinator)
 RUN_TEST(join_combinator)
 RUN_TEST(example1)

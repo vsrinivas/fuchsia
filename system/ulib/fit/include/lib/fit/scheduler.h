@@ -16,7 +16,7 @@ namespace subtle {
 
 // Keeps track of runnable and suspended tasks.
 // This is a low-level building block for implementing executors.
-// For a concrete implementation, see |fit::single_threaded_executor|.
+// For a concrete implementation, see |fit::sequential_executor|.
 //
 // Instances of this object are not thread-safe.  Its client is responsible
 // for providing all necessary synchronization.
