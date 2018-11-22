@@ -12,6 +12,8 @@
 #include <lib/fit/single_threaded_executor.h>
 #include <unittest/unittest.h>
 
+#include "unittest_utils.h"
+
 namespace {
 
 void async_invoke_callback_no_args(
@@ -539,7 +541,7 @@ bool schedule_for_consumer() {
         fit::consumer<int> consumer =
             fit::schedule_for_consumer(
                 &executor, fit::make_promise([&](fit::context& context) {
-                    assert(context.executor() == &executor);
+                    ASSERT_CRITICAL(context.executor() == &executor);
                     run_count[0]++;
                     return fit::ok(42);
                 }));
@@ -549,8 +551,8 @@ bool schedule_for_consumer() {
         fit::run_single_threaded(
             consumer.promise()
                 .then([&](fit::context& context, fit::result<int> result) {
-                    assert(context.executor() != &executor);
-                    assert(result.value() == 42);
+                    ASSERT_CRITICAL(context.executor() != &executor);
+                    ASSERT_CRITICAL(result.value() == 42);
                     run_count[1]++;
                 }));
         EXPECT_EQ(1, run_count[0]);
@@ -565,7 +567,7 @@ bool schedule_for_consumer() {
             fit::schedule_for_consumer(
                 &executor, fit::make_promise([&](fit::context& context)
                                                  -> fit::result<int> {
-                    assert(context.executor() == &executor);
+                    ASSERT_CRITICAL(context.executor() == &executor);
                     run_count[0]++;
                     // The task will be abandoned after we return since
                     // we not acquire a susended task token for it.
@@ -593,7 +595,7 @@ bool schedule_for_consumer() {
             fit::schedule_for_consumer(
                 &executor, fit::make_promise([&](fit::context& context)
                                                  -> fit::result<int> {
-                    assert(context.executor() == &executor);
+                    ASSERT_CRITICAL(context.executor() == &executor);
                     run_count[0]++;
                     // The task will be abandoned after we return since
                     // we do not acquire a susended task token for it.
@@ -605,8 +607,8 @@ bool schedule_for_consumer() {
         fit::run_single_threaded(
             consumer.promise_or(fit::error())
                 .then([&](fit::context& context, fit::result<int> result) {
-                    assert(context.executor() != &executor);
-                    assert(result.is_error());
+                    ASSERT_CRITICAL(context.executor() != &executor);
+                    ASSERT_CRITICAL(result.is_error());
                     run_count[1]++;
                 }));
         EXPECT_EQ(1, run_count[0]);

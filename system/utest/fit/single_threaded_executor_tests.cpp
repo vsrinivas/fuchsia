@@ -8,6 +8,8 @@
 #include <lib/fit/single_threaded_executor.h>
 #include <unittest/unittest.h>
 
+#include "unittest_utils.h"
+
 namespace {
 
 bool running_tasks() {
@@ -23,7 +25,7 @@ bool running_tasks() {
     // and scheduled another task.
     executor.schedule_task(fit::make_promise([&](fit::context& context) {
         run_count[1]++;
-        assert(context.executor() == &executor);
+        ASSERT_CRITICAL(context.executor() == &executor);
         context.executor()->schedule_task(fit::make_promise([&] { run_count[2]++; }));
     }));
     EXPECT_EQ(0, run_count[0]);

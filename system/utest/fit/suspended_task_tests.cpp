@@ -7,6 +7,8 @@
 #include <lib/fit/promise.h>
 #include <unittest/unittest.h>
 
+#include "unittest_utils.h"
+
 namespace {
 
 enum class disposition {
@@ -27,23 +29,23 @@ public:
 
     disposition get_disposition(fit::suspended_task::ticket ticket) {
         auto it = tickets_.find(ticket);
-        assert(it != tickets_.end());
+        ASSERT_CRITICAL(it != tickets_.end());
         return it->second;
     }
 
     fit::suspended_task::ticket duplicate_ticket(
         fit::suspended_task::ticket ticket) override {
         auto it = tickets_.find(ticket);
-        assert(it != tickets_.end());
-        assert(it->second == disposition::pending);
+        ASSERT_CRITICAL(it != tickets_.end());
+        ASSERT_CRITICAL(it->second == disposition::pending);
         return obtain_ticket();
     }
 
     void resolve_ticket(
         fit::suspended_task::ticket ticket, bool resume_task) override {
         auto it = tickets_.find(ticket);
-        assert(it != tickets_.end());
-        assert(it->second == disposition::pending);
+        ASSERT_CRITICAL(it != tickets_.end());
+        ASSERT_CRITICAL(it->second == disposition::pending);
         it->second = resume_task ? disposition::resumed : disposition::released;
     }
 

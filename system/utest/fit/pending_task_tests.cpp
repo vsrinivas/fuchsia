@@ -5,15 +5,17 @@
 #include <lib/fit/promise.h>
 #include <unittest/unittest.h>
 
+#include "unittest_utils.h"
+
 namespace {
 
 class fake_context : public fit::context {
 public:
     fit::executor* executor() const override {
-        assert(false);
+        ASSERT_CRITICAL(false);
     }
     fit::suspended_task suspend_task() override {
-        assert(false);
+        ASSERT_CRITICAL(false);
     }
 };
 

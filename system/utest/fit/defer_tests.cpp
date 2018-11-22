@@ -10,6 +10,8 @@
 #include <lib/fit/nullable.h>
 #include <unittest/unittest.h>
 
+#include "unittest_utils.h"
+
 namespace {
 
 // Counts instances.
@@ -141,7 +143,7 @@ bool target_reassignment() {
     int var = 0;
     {
         fit::deferred_action<T> do_incr;
-        do_incr = []() { assert(false); };
+        do_incr = []() { ASSERT_CRITICAL(false); };
         EXPECT_TRUE(do_incr);
         EXPECT_EQ(var, 0);
 

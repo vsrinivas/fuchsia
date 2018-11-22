@@ -8,6 +8,8 @@
 #include <lib/fit/optional.h>
 #include <unittest/unittest.h>
 
+#include "unittest_utils.h"
+
 namespace {
 
 template <bool define_assignment_operators>
@@ -34,8 +36,8 @@ struct slot : base<define_assignment_operators> {
     }
 
     ~slot() {
-        assert(balance > 0);
-        assert(value != -1);
+        ASSERT_CRITICAL(balance > 0);
+        ASSERT_CRITICAL(value != -1);
         value = -1; // sentinel to catch double-delete
         balance--;
     }

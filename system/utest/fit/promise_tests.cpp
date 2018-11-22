@@ -11,16 +11,17 @@
 #include "examples/promise_example1.h"
 #include "examples/promise_example2.h"
 #include "examples/utils.h"
+#include "unittest_utils.h"
 
 namespace {
 
 class fake_context : public fit::context {
 public:
     fit::executor* executor() const override {
-        assert(false);
+        ASSERT_CRITICAL(false);
     }
     fit::suspended_task suspend_task() override {
-        assert(false);
+        ASSERT_CRITICAL(false);
     }
 };
 
@@ -31,7 +32,7 @@ public:
     decltype(auto) wrap(Promise promise) {
         static_assert(std::is_same<V, typename Promise::value_type>::value, "");
         static_assert(std::is_same<E, typename Promise::error_type>::value, "");
-        assert(promise);
+        ASSERT_CRITICAL(promise);
         return promise.then([this](fit::result<V, E>& result) {
             last_result = std::move(result);
         });
@@ -120,7 +121,7 @@ bool invocation() {
     uint64_t run_count = 0;
     fake_context fake_context;
     fit::promise<> promise([&](fit::context& context) -> fit::result<> {
-        assert(&context == &fake_context);
+        ASSERT_CRITICAL(&context == &fake_context);
         if (++run_count == 2)
             return fit::ok();
         return fit::pending();
@@ -146,7 +147,7 @@ bool take_continuation() {
     uint64_t run_count = 0;
     fake_context fake_context;
     fit::promise<> promise([&](fit::context& context) -> fit::result<> {
-        assert(&context == &fake_context);
+        ASSERT_CRITICAL(&context == &fake_context);
         run_count++;
         return fit::pending();
     });
@@ -360,7 +361,7 @@ bool make_promise() {
     {
         uint64_t run_count = 0;
         auto p = fit::make_promise([&](fit::context& context) {
-            assert(&context == &fake_context);
+            ASSERT_CRITICAL(&context == &fake_context);
             run_count++;
         });
         static_assert(std::is_same<void, decltype(p)::value_type>::value, "");
@@ -383,7 +384,7 @@ bool make_promise_with_continuation() {
     fake_context fake_context;
     auto p = fit::make_promise_with_continuation(
         [&](fit::context& context) -> fit::result<int, char> {
-            assert(&context == &fake_context);
+            ASSERT_CRITICAL(&context == &fake_context);
             run_count++;
             return fit::ok(42);
         });
@@ -402,7 +403,7 @@ bool make_promise_with_continuation() {
 
 auto make_ok_promise(int value) {
     return fit::make_promise([value, count = 0]() mutable -> fit::result<int, char> {
-        assert(count == 0);
+        ASSERT_CRITICAL(count == 0);
         ++count;
         return fit::ok(value);
     });
@@ -410,7 +411,7 @@ auto make_ok_promise(int value) {
 
 auto make_error_promise(char error) {
     return fit::make_promise([error, count = 0]() mutable -> fit::result<int, char> {
-        assert(count == 0);
+        ASSERT_CRITICAL(count == 0);
         ++count;
         return fit::error(error);
     });
@@ -418,7 +419,7 @@ auto make_error_promise(char error) {
 
 auto make_delayed_ok_promise(int value) {
     return fit::make_promise([value, count = 0]() mutable -> fit::result<int, char> {
-        assert(count <= 1);
+        ASSERT_CRITICAL(count <= 1);
         if (++count == 2)
             return fit::ok(value);
         return fit::pending();
@@ -427,7 +428,7 @@ auto make_delayed_ok_promise(int value) {
 
 auto make_delayed_error_promise(char error) {
     return fit::make_promise([error, count = 0]() mutable -> fit::result<int, char> {
-        assert(count <= 1);
+        ASSERT_CRITICAL(count <= 1);
         if (++count == 2)
             return fit::error(error);
         return fit::pending();
@@ -449,7 +450,7 @@ bool then_combinator() {
         auto p =
             make_delayed_ok_promise(42)
                 .then([&](fit::result<int, char> result) -> fit::result<> {
-                    assert(result.value() == 42);
+                    ASSERT_CRITICAL(result.value() == 42);
                     if (++run_count == 2)
                         return fit::ok();
                     return fit::pending();
@@ -478,7 +479,7 @@ bool then_combinator() {
         auto p =
             make_delayed_error_promise('x')
                 .then([&](fit::result<int, char> result) -> fit::result<> {
-                    assert(result.error() == 'x');
+                    ASSERT_CRITICAL(result.error() == 'x');
                     if (++run_count == 2)
                         return fit::ok();
                     return fit::pending();
@@ -522,19 +523,19 @@ bool then_combinator() {
                 })
                 .then([&](fit::context& context, fit::result<int, char> result)
                           -> fit::result<int, char> {
-                    assert(&context == &fake_context);
+                    ASSERT_CRITICAL(&context == &fake_context);
                     run_count++;
                     return fit::ok(result.value() + 1);
                 })
                 .then([&](fit::context& context, fit::result<int, char>& result)
                           -> fit::result<int, char> {
-                    assert(&context == &fake_context);
+                    ASSERT_CRITICAL(&context == &fake_context);
                     run_count++;
                     return fit::ok(result.value() + 1);
                 })
                 .then([&](fit::context& context, const fit::result<int, char>& result)
                           -> fit::result<int, char> {
-                    assert(&context == &fake_context);
+                    ASSERT_CRITICAL(&context == &fake_context);
                     run_count++;
                     return fit::ok(result.value() + 1);
                 });
@@ -561,7 +562,7 @@ bool and_then_combinator() {
         auto p =
             make_delayed_ok_promise(42)
                 .and_then([&](int value) -> fit::result<void, char> {
-                    assert(value == 42);
+                    ASSERT_CRITICAL(value == 42);
                     if (++run_count == 2)
                         return fit::error('y');
                     return fit::pending();
@@ -629,19 +630,19 @@ bool and_then_combinator() {
                 })
                 .and_then([&](fit::context& context, int value)
                               -> fit::result<int, char> {
-                    assert(&context == &fake_context);
+                    ASSERT_CRITICAL(&context == &fake_context);
                     run_count++;
                     return fit::ok(value + 1);
                 })
                 .and_then([&](fit::context& context, int& value)
                               -> fit::result<int, char> {
-                    assert(&context == &fake_context);
+                    ASSERT_CRITICAL(&context == &fake_context);
                     run_count++;
                     return fit::ok(value + 1);
                 })
                 .and_then([&](fit::context& context, const int& value)
                               -> fit::result<int, char> {
-                    assert(&context == &fake_context);
+                    ASSERT_CRITICAL(&context == &fake_context);
                     run_count++;
                     return fit::ok(value + 1);
                 });
@@ -691,7 +692,7 @@ bool or_else_combinator() {
         auto p =
             make_delayed_error_promise('x')
                 .or_else([&](char error) -> fit::result<int> {
-                    assert(error == 'x');
+                    ASSERT_CRITICAL(error == 'x');
                     if (++run_count == 2)
                         return fit::ok(43);
                     return fit::pending();
@@ -736,19 +737,19 @@ bool or_else_combinator() {
                 })
                 .or_else([&](fit::context& context, char error)
                              -> fit::result<int, char> {
-                    assert(&context == &fake_context);
+                    ASSERT_CRITICAL(&context == &fake_context);
                     run_count++;
                     return fit::error(error + 1);
                 })
                 .or_else([&](fit::context& context, char& error)
                              -> fit::result<int, char> {
-                    assert(&context == &fake_context);
+                    ASSERT_CRITICAL(&context == &fake_context);
                     run_count++;
                     return fit::error(error + 1);
                 })
                 .or_else([&](fit::context& context, const char& error)
                              -> fit::result<int, char> {
-                    assert(&context == &fake_context);
+                    ASSERT_CRITICAL(&context == &fake_context);
                     run_count++;
                     return fit::error(error + 1);
                 });
@@ -775,7 +776,7 @@ bool inspect_combinator() {
         auto p =
             make_delayed_ok_promise(42)
                 .inspect([&](fit::result<int, char> result) {
-                    assert(result.value() == 42);
+                    ASSERT_CRITICAL(result.value() == 42);
                     run_count++;
                 });
 
@@ -798,7 +799,7 @@ bool inspect_combinator() {
         auto p =
             make_delayed_error_promise('x')
                 .inspect([&](fit::result<int, char> result) {
-                    assert(result.error() == 'x');
+                    ASSERT_CRITICAL(result.error() == 'x');
                     run_count++;
                 });
 
@@ -820,32 +821,32 @@ bool inspect_combinator() {
         auto p =
             make_ok_promise(42)
                 .inspect([&](fit::result<int, char> result) {
-                    assert(result.value() == 42);
+                    ASSERT_CRITICAL(result.value() == 42);
                     run_count++;
                 })
                 .inspect([&](fit::result<int, char>& result) {
-                    assert(result.value() == 42);
+                    ASSERT_CRITICAL(result.value() == 42);
                     run_count++;
                     result = fit::ok(result.value() + 1);
                 })
                 .inspect([&](const fit::result<int, char>& result) {
-                    assert(result.value() == 43);
+                    ASSERT_CRITICAL(result.value() == 43);
                     run_count++;
                 })
                 .inspect([&](fit::context& context, fit::result<int, char> result) {
-                    assert(result.value() == 43);
-                    assert(&context == &fake_context);
+                    ASSERT_CRITICAL(result.value() == 43);
+                    ASSERT_CRITICAL(&context == &fake_context);
                     run_count++;
                 })
                 .inspect([&](fit::context& context, fit::result<int, char>& result) {
-                    assert(result.value() == 43);
-                    assert(&context == &fake_context);
+                    ASSERT_CRITICAL(result.value() == 43);
+                    ASSERT_CRITICAL(&context == &fake_context);
                     run_count++;
                     result = fit::ok(result.value() + 1);
                 })
                 .inspect([&](fit::context& context, const fit::result<int, char>& result) {
-                    assert(result.value() == 44);
-                    assert(&context == &fake_context);
+                    ASSERT_CRITICAL(result.value() == 44);
+                    ASSERT_CRITICAL(&context == &fake_context);
                     run_count++;
                 });
 
