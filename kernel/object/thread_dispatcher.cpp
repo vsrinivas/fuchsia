@@ -654,15 +654,11 @@ zx_status_t ThreadDispatcher::MarkExceptionHandledWorker(PortDispatcher* eport,
     if (!InExceptionLocked())
         return ZX_ERR_BAD_STATE;
 
-    // TODO(brettw) ZX-2720 Remove this test when all callers are updated to use
-    // the exception port variant, and then always validate |eport|.
-    if (eport != nullptr) {
-        // The exception port isn't used directly but is instead proof that the caller has
-        // permission to resume from the exception. So validate that it corresponds to the
-        // task being resumed.
-        if (!exception_wait_port_->PortMatches(eport, false))
-            return ZX_ERR_ACCESS_DENIED;
-    }
+    // The exception port isn't used directly but is instead proof that the caller has
+    // permission to resume from the exception. So validate that it corresponds to the
+    // task being resumed.
+    if (!exception_wait_port_->PortMatches(eport, /* allow_null */ false))
+        return ZX_ERR_ACCESS_DENIED;
 
     // The thread can be in several states at this point. Alas this is a bit complicated because
     // there is a window in the middle of ExceptionHandlerExchange between the thread going to sleep

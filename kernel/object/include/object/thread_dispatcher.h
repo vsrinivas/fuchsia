@@ -128,7 +128,6 @@ public:
     // Called when an exception handler is finished processing the exception.
     // If |eport| is non-nullptr, then the exception is only continued if
     // |eport| corresponds to the current exception port.
-    // TODO(ZX-2720): Remove nullptr support when |zx_task_resume()| is deleted.
     zx_status_t MarkExceptionHandled(PortDispatcher* eport);
     zx_status_t MarkExceptionNotHandled(PortDispatcher* eport);
 

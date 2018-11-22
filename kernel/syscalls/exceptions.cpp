@@ -141,49 +141,6 @@ zx_status_t sys_task_bind_exception_port(zx_handle_t obj_handle, zx_handle_t epo
     }
 }
 
-// zx_status_t zx_task_resume
-// TODO(ZX-2720): This function is deprecated.
-// Remove it when all uses have been eliminated.
-zx_status_t sys_task_resume(zx_handle_t handle, uint32_t options) {
-    LTRACE_ENTRY;
-
-    if (options & ~(ZX_RESUME_EXCEPTION | ZX_RESUME_TRY_NEXT))
-        return ZX_ERR_INVALID_ARGS;
-    if (!(options & ZX_RESUME_EXCEPTION)) {
-        // These options are only valid with ZX_RESUME_EXCEPTION.
-        if (options & ZX_RESUME_TRY_NEXT)
-            return ZX_ERR_INVALID_ARGS;
-    }
-
-    auto up = ProcessDispatcher::GetCurrent();
-
-    // TODO(ZX-968): Rights checking here
-    fbl::RefPtr<Dispatcher> dispatcher;
-    auto status = up->GetDispatcher(handle, &dispatcher);
-    if (status != ZX_OK)
-        return status;
-
-    auto thread = DownCastDispatcher<ThreadDispatcher>(&dispatcher);
-    if (!thread)
-        return ZX_ERR_WRONG_TYPE;
-
-    if (options & ZX_RESUME_EXCEPTION) {
-        if (options & ZX_RESUME_TRY_NEXT) {
-            return thread->MarkExceptionNotHandled(nullptr);
-        } else {
-            return thread->MarkExceptionHandled(nullptr);
-        }
-    } else {
-        if (options != 0) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        // There should be no more uses of this function to resume from
-        // suspensions, and we don't want to allow new ones.
-        return ZX_ERR_BAD_STATE;
-    }
-}
-
 // zx_status_t zx_task_resume_from_exception
 zx_status_t sys_task_resume_from_exception(zx_handle_t task_handle, zx_handle_t eport_handle,
                                            uint32_t options) {

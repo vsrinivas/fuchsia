@@ -30,8 +30,6 @@ controlled as a single entity.
   within a job.
 + [job_set_policy](../syscalls/job_set_policy.md) - set policy for
   new processes in the job.
-+ [task_resume](../syscalls/task_resume.md) - cause a suspended task to
-  continue running.
 + [task_bind_exception_port](../syscalls/task_bind_exception_port.md) -
   attach an exception port to a task
 + [task_kill](../syscalls/task_kill.md) - cause a task to stop running.

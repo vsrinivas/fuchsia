@@ -75,4 +75,4 @@ In a future build this error will no longer occur.
 [exceptions](../exceptions.md).
 [port_create](port_create.md).
 [port_wait](port_wait.md).
-[task_resume](task_resume.md).
+[task_resume_from_exception](task_resume_from_exception.md).

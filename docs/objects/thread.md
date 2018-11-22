@@ -56,7 +56,6 @@ C11 or POSIX might require threads to be joined.
 
 <br>
 
-+ [task_resume](../syscalls/task_resume.md) - cause a suspended task to continue running
 + [task_bind_exception_port](../syscalls/task_bind_exception_port.md) - attach an exception
 port to a task
 + [task_kill](../syscalls/task_kill.md) - cause a task to stop running
