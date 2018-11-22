@@ -5,7 +5,7 @@
 #include <future> // for std::async
 
 #include <lib/fit/defer.h>
-#include <lib/fit/sequential_executor.h>
+#include <lib/fit/single_threaded_executor.h>
 #include <unittest/unittest.h>
 
 namespace {
@@ -13,7 +13,7 @@ namespace {
 bool running_tasks() {
     BEGIN_TEST;
 
-    fit::sequential_executor executor;
+    fit::single_threaded_executor executor;
     uint64_t run_count[3] = {};
 
     // Schedule a task that runs once and increments a counter.
@@ -43,7 +43,7 @@ bool running_tasks() {
 bool suspending_and_resuming_tasks() {
     BEGIN_TEST;
 
-    fit::sequential_executor executor;
+    fit::single_threaded_executor executor;
     uint64_t run_count[5] = {};
     uint64_t resume_count[5] = {};
     uint64_t resume_count4b = 0;
@@ -130,7 +130,7 @@ bool suspending_and_resuming_tasks() {
 bool abandoning_tasks() {
     BEGIN_TEST;
 
-    fit::sequential_executor executor;
+    fit::single_threaded_executor executor;
     uint64_t run_count[4] = {};
     uint64_t destruction[4] = {};
 
@@ -188,11 +188,11 @@ bool abandoning_tasks() {
     END_TEST;
 }
 
-bool run_sequentially() {
+bool run_single_threaded() {
     BEGIN_TEST;
 
     uint64_t run_count = 0;
-    fit::result<int> result = fit::run_sequentially(fit::make_promise(
+    fit::result<int> result = fit::run_single_threaded(fit::make_promise(
         [&]() {
             run_count++;
             return fit::ok(42);
@@ -205,9 +205,9 @@ bool run_sequentially() {
 
 } // namespace
 
-BEGIN_TEST_CASE(sequential_executor_tests)
+BEGIN_TEST_CASE(single_threaded_executor_tests)
 RUN_TEST(running_tasks)
 RUN_TEST(suspending_and_resuming_tasks)
 RUN_TEST(abandoning_tasks)
-RUN_TEST(run_sequentially)
-END_TEST_CASE(sequential_executor_tests)
+RUN_TEST(run_single_threaded)
+END_TEST_CASE(single_threaded_executor_tests)

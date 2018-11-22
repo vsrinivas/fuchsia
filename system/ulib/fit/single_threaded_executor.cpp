@@ -5,42 +5,42 @@
 // Can't compile this for Zircon userspace yet since libstdc++ isn't available.
 #ifndef FIT_NO_STD_FOR_ZIRCON_USERSPACE
 
-#include <lib/fit/sequential_executor.h>
+#include <lib/fit/single_threaded_executor.h>
 
 namespace fit {
 
-sequential_executor::sequential_executor()
+single_threaded_executor::single_threaded_executor()
     : context_(this), dispatcher_(new dispatcher_impl()) {}
 
-sequential_executor::~sequential_executor() {
+single_threaded_executor::~single_threaded_executor() {
     dispatcher_->shutdown();
 }
 
-void sequential_executor::schedule_task(pending_task task) {
+void single_threaded_executor::schedule_task(pending_task task) {
     assert(task);
     dispatcher_->schedule_task(std::move(task));
 }
 
-void sequential_executor::run() {
+void single_threaded_executor::run() {
     dispatcher_->run(context_);
 }
 
-sequential_executor::context_impl::context_impl(sequential_executor* executor)
+single_threaded_executor::context_impl::context_impl(single_threaded_executor* executor)
     : executor_(executor) {}
 
-sequential_executor::context_impl::~context_impl() = default;
+single_threaded_executor::context_impl::~context_impl() = default;
 
-sequential_executor* sequential_executor::context_impl::executor() const {
+single_threaded_executor* single_threaded_executor::context_impl::executor() const {
     return executor_;
 }
 
-suspended_task sequential_executor::context_impl::suspend_task() {
+suspended_task single_threaded_executor::context_impl::suspend_task() {
     return executor_->dispatcher_->suspend_current_task();
 }
 
-sequential_executor::dispatcher_impl::dispatcher_impl() = default;
+single_threaded_executor::dispatcher_impl::dispatcher_impl() = default;
 
-sequential_executor::dispatcher_impl::~dispatcher_impl() {
+single_threaded_executor::dispatcher_impl::~dispatcher_impl() {
     std::lock_guard<std::mutex> lock(guarded_.mutex_);
     assert(guarded_.was_shutdown_);
     assert(!guarded_.scheduler_.has_runnable_tasks());
@@ -48,7 +48,7 @@ sequential_executor::dispatcher_impl::~dispatcher_impl() {
     assert(!guarded_.scheduler_.has_outstanding_tickets());
 }
 
-void sequential_executor::dispatcher_impl::shutdown() {
+void single_threaded_executor::dispatcher_impl::shutdown() {
     fit::subtle::scheduler::task_queue tasks; // drop outside of the lock
     {
         std::lock_guard<std::mutex> lock(guarded_.mutex_);
@@ -64,7 +64,7 @@ void sequential_executor::dispatcher_impl::shutdown() {
     delete this;
 }
 
-void sequential_executor::dispatcher_impl::schedule_task(pending_task task) {
+void single_threaded_executor::dispatcher_impl::schedule_task(pending_task task) {
     {
         std::lock_guard<std::mutex> lock(guarded_.mutex_);
         assert(!guarded_.was_shutdown_);
@@ -79,7 +79,7 @@ void sequential_executor::dispatcher_impl::schedule_task(pending_task task) {
     wake_.notify_one();
 }
 
-void sequential_executor::dispatcher_impl::run(context_impl& context) {
+void single_threaded_executor::dispatcher_impl::run(context_impl& context) {
     fit::subtle::scheduler::task_queue tasks;
     for (;;) {
         wait_for_runnable_tasks(&tasks);
@@ -97,7 +97,7 @@ void sequential_executor::dispatcher_impl::run(context_impl& context) {
 // Must only be called while |run_task()| is running a task.
 // This happens when the task's continuation calls |context::suspend_task()|
 // upon the context it received as an argument.
-suspended_task sequential_executor::dispatcher_impl::suspend_current_task() {
+suspended_task single_threaded_executor::dispatcher_impl::suspend_current_task() {
     std::lock_guard<std::mutex> lock(guarded_.mutex_);
     assert(!guarded_.was_shutdown_);
     if (current_task_ticket_ == 0) {
@@ -110,7 +110,7 @@ suspended_task sequential_executor::dispatcher_impl::suspend_current_task() {
 }
 
 // Unfortunately std::unique_lock does not support thread-safety annotations
-void sequential_executor::dispatcher_impl::wait_for_runnable_tasks(
+void single_threaded_executor::dispatcher_impl::wait_for_runnable_tasks(
     fit::subtle::scheduler::task_queue* out_tasks) FIT_NO_THREAD_SAFETY_ANALYSIS {
     std::unique_lock<std::mutex> lock(guarded_.mutex_);
     for (;;) {
@@ -128,8 +128,8 @@ void sequential_executor::dispatcher_impl::wait_for_runnable_tasks(
     }
 }
 
-void sequential_executor::dispatcher_impl::run_task(pending_task* task,
-                                                    context& context) {
+void single_threaded_executor::dispatcher_impl::run_task(pending_task* task,
+                                                         context& context) {
     assert(current_task_ticket_ == 0);
     const bool finished = (*task)(context);
     assert(!*task == finished);
@@ -144,14 +144,14 @@ void sequential_executor::dispatcher_impl::run_task(pending_task* task,
     current_task_ticket_ = 0;
 }
 
-suspended_task::ticket sequential_executor::dispatcher_impl::duplicate_ticket(
+suspended_task::ticket single_threaded_executor::dispatcher_impl::duplicate_ticket(
     suspended_task::ticket ticket) {
     std::lock_guard<std::mutex> lock(guarded_.mutex_);
     guarded_.scheduler_.duplicate_ticket(ticket);
     return ticket;
 }
 
-void sequential_executor::dispatcher_impl::resolve_ticket(
+void single_threaded_executor::dispatcher_impl::resolve_ticket(
     suspended_task::ticket ticket, bool resume_task) {
     pending_task abandoned_task; // drop outside of the lock
     bool do_wake = false;

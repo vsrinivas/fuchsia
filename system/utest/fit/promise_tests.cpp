@@ -5,7 +5,7 @@
 #include <functional>
 
 #include <lib/fit/promise.h>
-#include <lib/fit/sequential_executor.h>
+#include <lib/fit/single_threaded_executor.h>
 #include <unittest/unittest.h>
 
 #include "examples/promise_example1.h"
@@ -71,7 +71,7 @@ bool basics() {
 
         // Evaluate the promise.
         fit::result<int, const char*> result =
-            fit::run_sequentially(std::move(promise));
+            fit::run_single_threaded(std::move(promise));
         if (i % 2 == 0) {
             EXPECT_TRUE(result.is_ok());
             EXPECT_EQ(i * i / 2, result.value());

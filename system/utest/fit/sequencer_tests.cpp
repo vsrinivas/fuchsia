@@ -8,7 +8,7 @@
 #include <string>
 
 #include <lib/fit/sequencer.h>
-#include <lib/fit/sequential_executor.h>
+#include <lib/fit/single_threaded_executor.h>
 #include <unittest/unittest.h>
 
 namespace {
@@ -63,7 +63,7 @@ bool sequencing_tasks() {
 
     // Schedule the promises in an order which intentionally does not
     // match the sequencing.
-    fit::sequential_executor executor;
+    fit::single_threaded_executor executor;
     executor.schedule_task(std::move(z1));
     executor.schedule_task(std::move(b));
     executor.schedule_task(std::move(c));
@@ -82,7 +82,7 @@ bool thread_safety() {
     BEGIN_TEST;
 
     fit::sequencer seq;
-    fit::sequential_executor executor;
+    fit::single_threaded_executor executor;
     uint64_t run_count = 0;
 
     // Schedule work from a few threads, just to show that we can.

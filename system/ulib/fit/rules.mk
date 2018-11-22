@@ -7,7 +7,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 fit_srcs := \
     $(LOCAL_DIR)/empty.c \
     $(LOCAL_DIR)/promise.cpp \
-    $(LOCAL_DIR)/sequential_executor.cpp \
+    $(LOCAL_DIR)/single_threaded_executor.cpp \
     $(LOCAL_DIR)/scheduler.cpp \
 
 #
