@@ -52,26 +52,6 @@ namespace {
 const char kLocalCrashDatabase[] = "/data/crashes";
 const char kURL[] = "https://clients2.google.com/cr/report";
 
-class ScopedStoppable {
- public:
-  ScopedStoppable() = default;
-
-  ~ScopedStoppable() {
-    if (stoppable_) {
-      stoppable_->Stop();
-    }
-  }
-
-  void Reset(crashpad::Stoppable* stoppable) { stoppable_.reset(stoppable); }
-
-  crashpad::Stoppable* Get() { return stoppable_.get(); }
-
- private:
-  std::unique_ptr<crashpad::Stoppable> stoppable_;
-
-  DISALLOW_COPY_AND_ASSIGN(ScopedStoppable);
-};
-
 class ScopedUnlink {
  public:
   ScopedUnlink(const std::string& filename) : filename_(filename) {}
