@@ -19,7 +19,9 @@ namespace btintel {
 Device::Device(zx_device_t* device, bt_hci_protocol_t* hci)
     : DeviceType(device), hci_(*hci), firmware_loaded_(false) {}
 
-zx_status_t Device::Bind() { return DdkAdd("btintel", DEVICE_ADD_INVISIBLE); }
+zx_status_t Device::Bind() {
+  return DdkAdd("bt_hci_intel", DEVICE_ADD_INVISIBLE);
+}
 
 zx_status_t Device::LoadFirmware(bool secure) {
   tracef("LoadFirmware(secure: %s)\n", (secure ? "yes" : "no"));
@@ -234,15 +236,15 @@ zx_status_t Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
 }
 
 zx_status_t Device::BtHciOpenCommandChannel(zx_handle_t* out_channel) {
-    return bt_hci_open_command_channel(&hci_, out_channel);
+  return bt_hci_open_command_channel(&hci_, out_channel);
 }
 
 zx_status_t Device::BtHciOpenAclDataChannel(zx_handle_t* out_channel) {
-    return bt_hci_open_acl_data_channel(&hci_, out_channel);
+  return bt_hci_open_acl_data_channel(&hci_, out_channel);
 }
 
 zx_status_t Device::BtHciOpenSnoopChannel(zx_handle_t* out_channel) {
-    return bt_hci_open_snoop_channel(&hci_, out_channel);
+  return bt_hci_open_snoop_channel(&hci_, out_channel);
 }
 
 }  // namespace btintel

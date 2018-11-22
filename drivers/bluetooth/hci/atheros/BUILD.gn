@@ -6,8 +6,8 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 import("//garnet/tools/cipd.gni")
 
-driver_module("btatheros_driver") {
-  output_name = "btatheros"
+driver_module("driver") {
+  output_name = "bt-hci-atheros"
 
   sources = [
     "binding.c",
@@ -58,16 +58,16 @@ if (internal_access) {
   }
 }
 
-package("btatheros") {
+package("atheros") {
   deprecated_system_image = true
 
   deps = [
-    ":btatheros_driver",
+    ":driver",
   ]
 
   drivers = [
     {
-      name = "btatheros.so"
+      name = "bt-hci-atheros.so"
     },
   ]
 

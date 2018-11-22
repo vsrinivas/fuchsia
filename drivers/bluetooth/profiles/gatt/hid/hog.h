@@ -16,31 +16,30 @@
 #include <threads.h>
 
 // org.bluetooth.characteristic.protocol_mode
-#define BTHOG_PROTOCOL_MODE                 0x2A4E
-#define BTHOG_PROTOCOL_MODE_BOOT_MODE       0
-#define BTHOG_PROTOCOL_MODE_REPORT_MODE     1
+#define BT_HOG_PROTOCOL_MODE 0x2A4E
+#define BT_HOG_PROTOCOL_MODE_BOOT_MODE 0
+#define BT_HOG_PROTOCOL_MODE_REPORT_MODE 1
 
 // org.bluetooth.characteristic.report_map
-#define BTHOG_REPORT_MAP                    0x2A4B
+#define BT_HOG_REPORT_MAP 0x2A4B
 
 // org.bluetooth.characteristic.report
-#define BTHOG_REPORT                        0x2A4D
+#define BT_HOG_REPORT 0x2A4D
 
 // org.bluetooth.characteristic.boot_keyboard_input_report
-#define BTHOG_BOOT_KEYBOARD_INPUT_REPORT    0x2A22
+#define BT_HOG_BOOT_KEYBOARD_INPUT_REPORT 0x2A22
 
 // org.bluetooth.characteristic.boot_keyboard_output_report
-#define BTHOG_BOOT_KEYBOARD_OUTPUT_REPORT   0x2A32
+#define BT_HOG_BOOT_KEYBOARD_OUTPUT_REPORT 0x2A32
 
 // org.bluetooth.characteristic.boot_mouse_input_report
-#define BTHOG_BOOT_MOUSE_INPUT_REPORT       0x2A33
+#define BT_HOG_BOOT_MOUSE_INPUT_REPORT 0x2A33
 
 typedef enum {
     HOGD_DEVICE_BOOT_KEYBOARD,
     HOGD_DEVICE_BOOT_MOUSE,
     HOGD_DEVICE_REPORT,
 } hogd_device_type_t;
-
 
 typedef struct hogd_t hogd_t;
 typedef struct hogd_device_t hogd_device_t;

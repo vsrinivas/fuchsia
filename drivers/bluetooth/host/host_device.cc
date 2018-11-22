@@ -64,7 +64,7 @@ zx_status_t HostDevice::Bind() {
   // disallow other drivers from directly binding to it.
   device_add_args_t args = {
       .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "bt-host",
+      .name = "bt_host",
       .ctx = this,
       .ops = &dev_proto_,
       .proto_id = ZX_PROTOCOL_BT_HOST,

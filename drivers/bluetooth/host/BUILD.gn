@@ -5,8 +5,8 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 
-driver_module("host") {
-  output_name = "bthost"
+driver_module("driver") {
+  output_name = "bt-host"
 
   deps = [
     ":sources",
@@ -57,8 +57,8 @@ source_set("sources") {
     "//garnet/public/fidl/fuchsia.bluetooth.control",
     "//garnet/public/fidl/fuchsia.bluetooth.gatt",
     "//garnet/public/fidl/fuchsia.bluetooth.le",
-    "//zircon/public/banjo/ddk-protocol-bt-gattsvc",
     "//garnet/public/lib/fxl",
+    "//zircon/public/banjo/ddk-protocol-bt-gattsvc",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/fbl",
@@ -69,16 +69,16 @@ source_set("sources") {
 
 # TODO(armansito): Enable debug assertions by default from here for all package
 # dependencies when there is a way for it.
-package("bthost") {
+package("host") {
   deprecated_system_image = true
 
   deps = [
-    ":host",
+    ":driver",
   ]
 
   drivers = [
     {
-      name = "bthost.so"
+      name = "bt-host.so"
     },
   ]
 }

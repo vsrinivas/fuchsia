@@ -59,14 +59,14 @@ static bt_hci_protocol_ops_t hci_protocol_ops = {
 zx_status_t Device::Bind() {
   device_add_args_t args = {};
   args.version = DEVICE_ADD_ARGS_VERSION;
-  args.name = "bthci-fake";
+  args.name = "bt_hci_fake";
   args.ctx = this;
   args.ops = &bthci_fake_device_ops;
   args.proto_id = ZX_PROTOCOL_BT_HCI;
 
   zx_status_t status = device_add(parent_, &args, &zxdev_);
   if (status != ZX_OK) {
-    printf("bthci-fake: could not add device: %d\n", status);
+    printf("bt_hci_fake: could not add device: %d\n", status);
     return status;
   }
 
@@ -97,7 +97,7 @@ zx_status_t Device::Bind() {
   device->set_class_of_device(btlib::common::DeviceClass({0x14, 0x08, 0x00}));
   fake_device_->AddDevice(std::move(device));
 
-  loop_.StartThread("bthci-fake");
+  loop_.StartThread("bt_hci_fake");
 
   return status;
 }
@@ -140,7 +140,7 @@ zx_status_t Device::OpenChan(Channel chan_type, zx_handle_t* out_channel) {
   zx::channel in, out;
   auto status = zx::channel::create(0, &out, &in);
   if (status != ZX_OK) {
-    printf("bthci-fake: could not create channel (type %i): %d\n", chan_type,
+    printf("bt_hci_fake: could not create channel (type %i): %d\n", chan_type,
            status);
     return status;
   }

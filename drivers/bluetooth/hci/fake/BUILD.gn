@@ -5,23 +5,8 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 
-package("bthci_fake") {
-  deprecated_system_image = true
-  testonly = true
-
-  deps = [
-    ":fake_driver",
-  ]
-
-  drivers = [
-    {
-      name = "bthci-fake.so"
-    },
-  ]
-}
-
-driver_module("fake_driver") {
-  output_name = "bthci-fake"
+driver_module("driver") {
+  output_name = "bt-hci-fake"
   testonly = true
 
   sources = [
@@ -46,4 +31,19 @@ driver_module("fake_driver") {
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}
+
+package("fake") {
+  deprecated_system_image = true
+  testonly = true
+
+  deps = [
+    ":driver",
+  ]
+
+  drivers = [
+    {
+      name = "bt-hci-fake.so"
+    },
+  ]
 }

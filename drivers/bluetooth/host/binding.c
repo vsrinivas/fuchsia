@@ -8,14 +8,14 @@
 
 #include <zircon/types.h>
 
-extern zx_status_t bthost_bind(void* ctx, zx_device_t* device);
+extern zx_status_t bt_host_bind(void* ctx, zx_device_t* device);
 
-static zx_driver_ops_t bthost_driver_ops = {
+static zx_driver_ops_t bt_host_driver_ops = {
     .version = DRIVER_OPS_VERSION,
-    .bind = bthost_bind,
+    .bind = bt_host_bind,
 };
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(bthost, bthost_driver_ops, "fuchsia", "0.1", 1)
+ZIRCON_DRIVER_BEGIN(bt_host, bt_host_driver_ops, "fuchsia", "0.1", 1)
   BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BT_HCI),
 ZIRCON_DRIVER_END(bt_host)

@@ -17,7 +17,7 @@ static zx_driver_ops_t bthci_fake_driver_ops = {
 };
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(bthci_fake, bthci_fake_driver_ops, "zircon", "0.1", 2)
+ZIRCON_DRIVER_BEGIN(bt_hci_fake, bthci_fake_driver_ops, "zircon", "0.1", 2)
   BI_ABORT_IF_AUTOBIND,
   BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST),
-ZIRCON_DRIVER_END(bthci_fake)
+ZIRCON_DRIVER_END(bt_hci_fake)

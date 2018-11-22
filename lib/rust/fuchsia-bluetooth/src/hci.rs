@@ -20,7 +20,7 @@ use {
 };
 
 pub const DEV_TEST: &str = CONTROL_DEVICE;
-pub const BTHCI_DRIVER_NAME: &str = "/system/driver/bthci-fake.so";
+pub const BTHCI_DRIVER_NAME: &str = "/system/driver/bt-hci-fake.so";
 
 // Returns the name of the fake device and a File representing the device on success.
 pub fn create_and_bind_device() -> Result<(File, String), Error> {
@@ -69,7 +69,8 @@ pub fn bind_fake_device(device: &File) -> Result<(), Error> {
             devname.as_bytes_with_nul().len(),
             ::std::ptr::null_mut() as *mut raw::c_void,
             0,
-        ).map(|_| ())
+        )
+        .map(|_| ())
         .map_err(|e| e.into())
     }
 }
@@ -118,7 +119,8 @@ pub fn open_snoop_channel(device: &File) -> Result<zircon::Handle, Error> {
             0,
             &mut handle as *mut _ as *mut raw::c_void,
             mem::size_of::<zircon::sys::zx_handle_t>(),
-        ).map(|_| Handle::from_raw(handle))
+        )
+        .map(|_| Handle::from_raw(handle))
         .map_err(|e| e.into())
     }
 }

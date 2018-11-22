@@ -5,21 +5,8 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 
-package("bthog") {
-  deprecated_system_image = true
-
-  deps = [
-    ":hog_driver"
-  ]
-
-  drivers = [ {
-    name = "bthog.so"
-  } ]
-}
-
-
-driver_module("hog_driver") {
-  output_name = "bthog"
+driver_module("driver") {
+  output_name = "bt-hog"
 
   sources = [
     "binding.c",
@@ -28,11 +15,24 @@ driver_module("hog_driver") {
   ]
 
   deps = [
+    "//zircon/public/banjo/ddk-protocol-bt-gattsvc",
+    "//zircon/public/banjo/ddk-protocol-hidbus",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/zx",
-    "//zircon/public/banjo/ddk-protocol-bt-gattsvc",
-    "//zircon/public/banjo/ddk-protocol-hidbus",
+  ]
+}
+
+package("hid") {
+  deprecated_system_image = true
+
+  deps = [
+    ":driver",
   ]
 
+  drivers = [
+    {
+      name = "bt-hog.so"
+    },
+  ]
 }

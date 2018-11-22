@@ -4,15 +4,15 @@
 
 import("//build/package.gni")
 
-package("bt-tools") {
+package("tools") {
   deps = [
     "bt-cli:bin",
     "bt-snoop-cli:bin",
     "bt-fake-hci",
     "bt-hci-tool",
     "bt-intel-tool",
-    "bt-le-peripheral",
     "bt-le-central",
+    "bt-le-peripheral",
     "bt-pairing-tool",
   ]
 

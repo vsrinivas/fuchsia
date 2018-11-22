@@ -21,8 +21,8 @@ typedef struct {
   bt_hci_protocol_t hci;
 } passthrough_t;
 
-static zx_status_t passthrough_hci_get_protocol(void* ctx, uint32_t proto_id,
-                                                void* out_proto) {
+static zx_status_t bt_hci_passthrough_get_protocol(void* ctx, uint32_t proto_id,
+                                                   void* out_proto) {
   if (proto_id != ZX_PROTOCOL_BT_HCI) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -37,10 +37,10 @@ static zx_status_t passthrough_hci_get_protocol(void* ctx, uint32_t proto_id,
   return ZX_OK;
 }
 
-static zx_status_t passthrough_hci_ioctl(void* ctx, uint32_t op,
-                                         const void* in_buf, size_t in_len,
-                                         void* out_buf, size_t out_len,
-                                         size_t* out_actual) {
+static zx_status_t bt_hci_passthrough_ioctl(void* ctx, uint32_t op,
+                                            const void* in_buf, size_t in_len,
+                                            void* out_buf, size_t out_len,
+                                            size_t* out_actual) {
   passthrough_t* passthrough = ctx;
   if (out_len < sizeof(zx_handle_t)) {
     return ZX_ERR_BUFFER_TOO_SMALL;
@@ -65,41 +65,41 @@ static zx_status_t passthrough_hci_ioctl(void* ctx, uint32_t op,
   return ZX_OK;
 }
 
-static void passthrough_hci_unbind(void* ctx) {
+static void bt_hci_passthrough_unbind(void* ctx) {
   passthrough_t* passthrough = ctx;
 
   device_remove(passthrough->dev);
 }
 
-static void passthrough_hci_release(void* ctx) { free(ctx); }
+static void bt_hci_passthrough_release(void* ctx) { free(ctx); }
 
 static zx_protocol_device_t passthrough_device_proto = {
     .version = DEVICE_OPS_VERSION,
-    .get_protocol = passthrough_hci_get_protocol,
-    .ioctl = passthrough_hci_ioctl,
-    .unbind = passthrough_hci_unbind,
-    .release = passthrough_hci_release,
+    .get_protocol = bt_hci_passthrough_get_protocol,
+    .ioctl = bt_hci_passthrough_ioctl,
+    .unbind = bt_hci_passthrough_unbind,
+    .release = bt_hci_passthrough_release,
 };
 
-static zx_status_t passthrough_hci_bind(void* ctx, zx_device_t* device) {
-  printf("passthrough_hci_bind: starting\n");
+static zx_status_t bt_hci_passthrough_bind(void* ctx, zx_device_t* device) {
+  printf("bt_hci_passthrough_bind: starting\n");
   passthrough_t* passthrough = calloc(1, sizeof(passthrough_t));
   if (!passthrough) {
-    printf("passthrough_hci_bind: not enough memory\n");
+    printf("bt_hci_passthrough_bind: not enough memory\n");
     return ZX_ERR_NO_MEMORY;
   }
 
   zx_status_t status =
       device_get_protocol(device, ZX_PROTOCOL_BT_HCI, &passthrough->hci);
   if (status != ZX_OK) {
-    printf("passthrough_hci_bind: failed protocol: %s\n",
+    printf("bt_hci_passthrough_bind: failed protocol: %s\n",
            zx_status_get_string(status));
     return status;
   }
 
   device_add_args_t args = {
       .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "bt_passthrough_hci",
+      .name = "bt_hci_passthrough",
       .ctx = passthrough,
       .ops = &passthrough_device_proto,
       .proto_id = ZX_PROTOCOL_BT_HCI,
@@ -112,18 +112,18 @@ static zx_status_t passthrough_hci_bind(void* ctx, zx_device_t* device) {
     return status;
   }
 
-  printf("passthrough_hci_bind failed: %s\n", zx_status_get_string(status));
-  passthrough_hci_release(passthrough);
+  printf("bt_hci_passthrough_bind failed: %s\n", zx_status_get_string(status));
+  bt_hci_passthrough_release(passthrough);
   return status;
 };
 
-static zx_driver_ops_t passthrough_hci_driver_ops = {
+static zx_driver_ops_t bt_hci_passthrough_driver_ops = {
     .version = DRIVER_OPS_VERSION,
-    .bind = passthrough_hci_bind,
+    .bind = bt_hci_passthrough_bind,
 };
 
 // This should be the last driver queried, so we match any transport.
 // clang-format off
-ZIRCON_DRIVER_BEGIN(bt_passthrough_hci, passthrough_hci_driver_ops, "fuchsia", "*0.1", 1)
+ZIRCON_DRIVER_BEGIN(bt_hci_passthrough, bt_hci_passthrough_driver_ops, "fuchsia", "*0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BT_TRANSPORT),
-ZIRCON_DRIVER_END(bt_passthrough_hci)
+ZIRCON_DRIVER_END(bt_hci_passthrough)

@@ -10,6 +10,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/string_printf.h>
 #include <lib/zx/vmo.h>
+#include <usb/usb-request.h>
 #include <zircon/device/bt-hci.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
@@ -51,7 +52,7 @@ Device::Device(zx_device_t* device, bt_hci_protocol_t* hci, usb_protocol_t* usb)
 zx_status_t Device::Bind() {
   device_add_args_t args = {
       .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "btatheros",
+      .name = "bt_hci_atheros",
       .ctx = this,
       .ops = &dev_proto,
       .proto_id = ZX_PROTOCOL_BT_HCI,

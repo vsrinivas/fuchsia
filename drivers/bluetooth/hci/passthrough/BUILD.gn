@@ -5,8 +5,8 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 
-driver_module("passthrough_driver") {
-  output_name = "bthci-passthrough"
+driver_module("driver") {
+  output_name = "bt-hci-passthrough"
 
   sources = [
     "passthrough.c",
@@ -22,14 +22,16 @@ driver_module("passthrough_driver") {
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
-package("bthci_passthrough") {
+package("passthrough") {
   deprecated_system_image = true
 
   deps = [
-    ":passthrough_driver",
+    ":driver",
   ]
 
-  drivers = [ {
-        name = "bthci-passthrough.so"
-  } ]
+  drivers = [
+    {
+      name = "bt-hci-passthrough.so"
+    },
+  ]
 }

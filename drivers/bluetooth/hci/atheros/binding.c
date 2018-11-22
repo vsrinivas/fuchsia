@@ -16,8 +16,8 @@ static zx_driver_ops_t bt_atheros_driver_ops = {
 };
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(bt_atheros, bt_atheros_driver_ops, "fuchsia", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(bt_hci_atheros, bt_atheros_driver_ops, "fuchsia", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_BT_TRANSPORT),
     BI_ABORT_IF(NE, BIND_USB_VID, 0x0CF3), // Atheros Communications Inc.
     BI_MATCH_IF(EQ, BIND_USB_PID, 0xE300),
-ZIRCON_DRIVER_END(bt_atheros)
+ZIRCON_DRIVER_END(bt_hci_atheros)
