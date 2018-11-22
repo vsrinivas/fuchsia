@@ -13,6 +13,7 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/fxl/logging.h>
+#include <lib/fxl/strings/concatenate.h>
 #include <lib/zx/time.h>
 
 #include "peridot/bin/ledger/encryption/primitives/hash.h"
@@ -23,18 +24,6 @@
 
 namespace storage {
 namespace fake {
-
-namespace {
-
-// Builds a fake ObjectDigest by computing the hash of |value|. This is
-// incompatible with real object digests that carry additional information, but
-// is enough for a fake because this information is needed only internally by
-// the real storage, not by external clients of the fake.
-storage::ObjectDigest ComputeDigest(fxl::StringView value) {
-  return ObjectDigest(encryption::SHA256WithLengthHash(value));
-}
-
-}  // namespace
 
 FakePageStorage::FakePageStorage(ledger::Environment* environment,
                                  PageId page_id)
@@ -173,7 +162,7 @@ void FakePageStorage::AddObjectFromLocal(
     value->append(view.data(), view.size());
     if (status == DataSource::Status::DONE) {
       ObjectIdentifier object_identifier =
-          encryption_service_.MakeObjectIdentifier(ComputeDigest(*value));
+          encryption_service_.MakeObjectIdentifier(FakeDigest(*value));
       objects_[object_identifier] = std::move(*value);
       callback(Status::OK, std::move(object_identifier));
     }
@@ -250,6 +239,16 @@ FakePageStorage::GetJournals() const {
 const std::map<ObjectIdentifier, std::string>& FakePageStorage::GetObjects()
     const {
   return objects_;
+}
+
+ObjectDigest FakePageStorage::FakeDigest(fxl::StringView value) const {
+  // Builds a fake ObjectDigest by computing the hash of |value|, and prefixes
+  // it with 0xFACEFEED to intentionally make it longer than real object
+  // digests, start with a 1 bit, and easy to spot in logs. This is incompatible
+  // with real object digests, but is enough for a fake because all clients of
+  // the fake should treat object digests as opaque blobs.
+  return ObjectDigest(fxl::Concatenate(
+      {"\xFA\xCE\xFE\xED", encryption::SHA256WithLengthHash(value)}));
 }
 
 void FakePageStorage::SendNextObject() {

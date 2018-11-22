@@ -61,6 +61,12 @@ class TrackGetObjectFakePageStorage : public fake::FakePageStorage {
   }
 
   std::set<ObjectIdentifier> object_requests;
+
+ protected:
+  ObjectDigest FakeDigest(fxl::StringView content) const override {
+    // BTree code needs storage to return valid digests.
+    return MakeObjectDigest(content.ToString());
+  }
 };
 
 class BTreeUtilsTest : public StorageTest {

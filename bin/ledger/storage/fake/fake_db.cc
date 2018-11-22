@@ -6,6 +6,8 @@
 
 #include <lib/async/cpp/task.h>
 
+#include "peridot/bin/ledger/storage/fake/fake_object.h"
+
 namespace storage {
 namespace fake {
 
@@ -121,12 +123,16 @@ Status FakeDb::HasKey(coroutine::CoroutineHandler* handler,
   return MakeEmptySyncCallAndCheck(dispatcher_, handler);
 }
 
-Status FakeDb::GetObject(coroutine::CoroutineHandler* /*handler*/,
-                         convert::ExtendedStringView /*key*/,
-                         ObjectIdentifier /*object_identifier*/,
-                         std::unique_ptr<const Object>* /*object*/) {
-  FXL_NOTIMPLEMENTED();
-  return Status::NOT_IMPLEMENTED;
+Status FakeDb::GetObject(coroutine::CoroutineHandler* handler,
+                         convert::ExtendedStringView key,
+                         ObjectIdentifier object_identifier,
+                         std::unique_ptr<const Object>* object) {
+  auto it = key_value_store_.find(key.ToString());
+  if (it == key_value_store_.end()) {
+    return Status::NOT_FOUND;
+  }
+  *object = std::make_unique<FakeObject>(object_identifier, it->second);
+  return MakeEmptySyncCallAndCheck(dispatcher_, handler);
 }
 
 Status FakeDb::GetByPrefix(coroutine::CoroutineHandler* handler,

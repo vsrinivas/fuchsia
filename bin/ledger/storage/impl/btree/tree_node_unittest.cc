@@ -18,6 +18,17 @@ namespace storage {
 namespace btree {
 namespace {
 
+class FakePageStorageValidDigest : public fake::FakePageStorage {
+ public:
+  using fake::FakePageStorage::FakePageStorage;
+
+ protected:
+  ObjectDigest FakeDigest(fxl::StringView content) const override {
+    // BTree code needs storage to return valid digests.
+    return MakeObjectDigest(content.ToString());
+  }
+};
+
 class TreeNodeTest : public StorageTest {
  public:
   TreeNodeTest() : fake_storage_(&environment_, "page_id") {}
@@ -55,7 +66,7 @@ class TreeNodeTest : public StorageTest {
     return children;
   }
 
-  fake::FakePageStorage fake_storage_;
+  FakePageStorageValidDigest fake_storage_;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(TreeNodeTest);

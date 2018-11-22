@@ -75,14 +75,6 @@ class PageDbTest : public ledger::TestWithEnvironment {
     ASSERT_EQ(Status::OK, status);
   }
 
-  // Returns an object identifier for the provided fake |object_digest|.
-  // |object_digest| need not be valid as it is only used as an opaque
-  // identifier by PageDB.
-  ObjectIdentifier MakeObjectIdentifier(std::string object_digest) {
-    return encryption_service_.MakeObjectIdentifier(
-        ObjectDigest(std::move(object_digest)));
-  }
-
  protected:
   scoped_tmpfs::ScopedTmpFS tmpfs_;
   encryption::FakeEncryptionService encryption_service_;

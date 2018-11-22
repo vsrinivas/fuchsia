@@ -71,15 +71,27 @@ class FakePageStorage : public PageStorageEmptyImpl {
 
   // For testing:
   void set_autocommit(bool autocommit) { autocommit_ = autocommit; }
-  void set_syned(bool is_synced) { is_synced_ = is_synced; }
+  void set_synced(bool is_synced) { is_synced_ = is_synced; }
+
   const std::map<std::string, std::unique_ptr<FakeJournalDelegate>>&
   GetJournals() const;
+
   const std::map<ObjectIdentifier, std::string>& GetObjects() const;
+
   // Deletes this object from the fake local storage, but keeps it in its
   // "network" storage.
   void DeleteObjectFromLocal(const ObjectIdentifier& object_identifier);
+
   // If set to true, no commit notification is sent to the commit watchers.
   void SetDropCommitNotifications(bool drop);
+
+ protected:
+  // Returns an ObjectDigest (for use in the object identifier returned by
+  // AddObjectFromLocal).
+  // By default, fake object digests are invalid to ensure external clients do
+  // not rely implicitly on the internal encoding. Specific tests can override
+  // this method if they need valid object digests instead.
+  virtual ObjectDigest FakeDigest(fxl::StringView value) const;
 
  private:
   void SendNextObject();

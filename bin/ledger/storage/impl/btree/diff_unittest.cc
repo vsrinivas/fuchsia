@@ -32,6 +32,17 @@ std::unique_ptr<Entry> CreateEntryPtr(std::string key,
 
 std::unique_ptr<Entry> CreateEntryPtr() { return std::unique_ptr<Entry>(); }
 
+class FakePageStorageValidDigest : public fake::FakePageStorage {
+ public:
+  using fake::FakePageStorage::FakePageStorage;
+
+ protected:
+  ObjectDigest FakeDigest(fxl::StringView content) const override {
+    // BTree code needs storage to return valid digests.
+    return MakeObjectDigest(content.ToString());
+  }
+};
+
 class DiffTest : public StorageTest {
  public:
   DiffTest() : fake_storage_(&environment_, "page_id") {}
@@ -56,7 +67,7 @@ class DiffTest : public StorageTest {
     return identifier;
   }
 
-  fake::FakePageStorage fake_storage_;
+  FakePageStorageValidDigest fake_storage_;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(DiffTest);

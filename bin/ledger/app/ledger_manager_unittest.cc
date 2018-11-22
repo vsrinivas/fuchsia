@@ -100,8 +100,8 @@ class FakeLedgerStorage : public storage::LedgerStorage {
                 std::make_unique<DelayIsSyncedCallbackFakePageStorage>(
                     environment_, page_id);
             // If the page was opened before, restore the previous sync state.
-            fake_page_storage->set_syned(synced_pages_.find(page_id) !=
-                                         synced_pages_.end());
+            fake_page_storage->set_synced(synced_pages_.find(page_id) !=
+                                          synced_pages_.end());
             fake_page_storage->DelayIsSyncedCallback(
                 pages_with_delayed_callback.find(page_id) !=
                 pages_with_delayed_callback.end());
@@ -155,7 +155,7 @@ class FakeLedgerStorage : public storage::LedgerStorage {
     }
 
     FXL_CHECK(page_storages_.find(page_id_string) != page_storages_.end());
-    page_storages_[page_id_string]->set_syned(is_synced);
+    page_storages_[page_id_string]->set_synced(is_synced);
   }
 
   void set_page_storage_offline_empty(storage::PageIdView page_id,
