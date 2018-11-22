@@ -48,8 +48,8 @@ test_package("guest_integration_tests") {
       if (target_cpu == "x64") {
         environments = [
           {
-            device = {
-              type = "Intel NUC Kit NUC7i5DNHE"
+            dimensions = {
+              device_type = "Intel NUC Kit NUC7i5DNHE"
             }
           },
         ]
