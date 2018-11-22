@@ -20,7 +20,7 @@ sequencer::sequencer() {
 sequencer::~sequencer() = default;
 
 fit::consumer<> sequencer::swap_prior(fit::consumer<> new_prior) {
-    std::lock_guard lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     fit::consumer<> old_prior = std::move(prior_);
     prior_ = std::move(new_prior);
     return old_prior;
