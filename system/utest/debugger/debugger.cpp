@@ -961,7 +961,7 @@ bool suspended_in_exception_handler(zx_handle_t inferior, zx_handle_t port,
 
             atomic_fetch_add(&data->segv_count, 1);
 
-            ASSERT_EQ(zx_task_resume(data->thread_handle, ZX_RESUME_EXCEPTION), ZX_OK);
+            ASSERT_EQ(zx_task_resume_from_exception(data->thread_handle, port, 0), ZX_OK);
             // At this point we should get ZX_THREAD_SUSPENDED, we'll
             // process it later.
 
