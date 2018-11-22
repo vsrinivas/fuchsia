@@ -1,5 +1,11 @@
 {
     "packages": [
-        "//garnet/examples/media"
+        "//garnet/examples/media:fx",
+        "//garnet/examples/media:simple_sine",
+        "//garnet/examples/media:simple_sine_sync",
+        "//garnet/examples/media:tones",
+        "//garnet/examples/media:tts",
+        "//garnet/examples/media:use_media_decoder",
+        "//garnet/examples/media:wav_recorder"
     ]
 }
