@@ -316,11 +316,6 @@ extern {
         task_handle: zx_handle_t
         ) -> zx_status_t;
 
-    pub fn zx_task_resume(
-        task_handle: zx_handle_t,
-        options: u32
-        ) -> zx_status_t;
-
     pub fn zx_task_kill(
         task_handle: zx_handle_t
         ) -> zx_status_t;
