@@ -33,7 +33,8 @@
  * If the crash was not registered, it will be bubbled up to the crashlogger,
  * and then the test will be terminated.
  */
-static void process_exception(crash_list_t crash_list, const zx_port_packet_t* packet) {
+static void process_exception(crash_list_t crash_list, const zx_port_packet_t* packet,
+                              zx_handle_t exception_port) {
     const zx_packet_exception_t* exception = &packet->exception;
 
     // Check for exceptions from registered processes that are not really crashes.
@@ -58,7 +59,7 @@ static void process_exception(crash_list_t crash_list, const zx_port_packet_t* p
                     exit(ZX_ERR_INTERNAL);
                 }
             }
-            status = zx_task_resume(thread, ZX_RESUME_EXCEPTION);
+            status = zx_task_resume_from_exception(thread, exception_port, 0);
             if (status != ZX_OK) {
                 UNITTEST_FAIL_TRACEF("FATAL: failed to resume [%" PRIu64 ".%" PRIu64
                                      "] : error %s\n",
@@ -112,7 +113,7 @@ static void process_exception(crash_list_t crash_list, const zx_port_packet_t* p
             exit(ZX_ERR_INTERNAL);
         }
         // Pass the exception up to crashlogger.
-        status = zx_task_resume(thread, ZX_RESUME_EXCEPTION | ZX_RESUME_TRY_NEXT);
+        status = zx_task_resume_from_exception(thread, exception_port, ZX_RESUME_TRY_NEXT);
         if (status == ZX_OK) {
             // Give crashlogger a little time to print info about the crashed
             // thread.
@@ -160,7 +161,7 @@ static test_result_t watch_test_thread(zx_handle_t port, crash_list_t crash_list
         }
         switch (packet.key) {
         case EXCEPTION_PORT_KEY:
-            process_exception(crash_list, &packet);
+            process_exception(crash_list, &packet, port);
             break;
         case TEST_ENDED_EVENT_KEY:
             if (packet.signal.observed & TEST_PASSED_SIGNAL) {
