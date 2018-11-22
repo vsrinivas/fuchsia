@@ -357,6 +357,12 @@ job, process, port, resource, socket, thread, vmo`
     compatibility; instead prefer to extend interfaces by adding new methods
     which use new structs.
 
+*   A struct with no fields (an "empty" struct) has a size of 1 and an alignment
+    of 1.
+
+    *   An empty struct is exactly equivalent to a struct with a single
+        **uint8** field that contains a value of zero.
+
 Storage of a structure depends on whether it is nullable at point of reference.
 
 *   Non-nullable structures:
