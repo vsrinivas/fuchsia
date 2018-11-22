@@ -349,7 +349,7 @@ bool get_inferior_thread_handle(zx_handle_t channel, zx_handle_t* thread) {
     END_HELPER;
 }
 
-bool resume_inferior(zx_handle_t inferior, zx_koid_t tid) {
+bool resume_inferior(zx_handle_t inferior, zx_handle_t port, zx_koid_t tid) {
     BEGIN_HELPER;
 
     zx_handle_t thread;
@@ -363,7 +363,7 @@ bool resume_inferior(zx_handle_t inferior, zx_koid_t tid) {
     ASSERT_EQ(status, ZX_OK, "zx_object_get_child failed");
 
     unittest_printf("Resuming inferior ...\n");
-    status = zx_task_resume(thread, ZX_RESUME_EXCEPTION);
+    status = zx_task_resume_from_exception(thread, port, 0);
     if (status == ZX_ERR_BAD_STATE) {
         // If the process has exited then the thread may have exited
         // ExceptionHandlerExchange already. Check.
@@ -373,7 +373,7 @@ bool resume_inferior(zx_handle_t inferior, zx_koid_t tid) {
         }
     }
     tu_handle_close(thread);
-    ASSERT_EQ(status, ZX_OK, "zx_task_resume failed");
+    ASSERT_EQ(status, ZX_OK, "zx_task_resume_from_exception failed");
 
     END_HELPER;
 }
@@ -448,7 +448,7 @@ bool wait_thread_suspended(zx_handle_t proc, zx_handle_t thread, zx_handle_t epo
                 zx_object_get_child(proc, report_tid, ZX_RIGHT_SAME_RIGHTS, &other_thread);
             if (status == ZX_OK) {
                 // And even if it's not gone it may be dead now.
-                status = zx_task_resume(other_thread, ZX_RESUME_EXCEPTION);
+                status = zx_task_resume_from_exception(other_thread, eport, 0);
                 if (status == ZX_ERR_BAD_STATE)
                     ASSERT_TRUE(tu_thread_is_dying_or_dead(other_thread));
                 else

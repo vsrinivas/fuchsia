@@ -88,7 +88,7 @@ extern bool verify_inferior_running(zx_handle_t channel);
 
 extern bool get_inferior_thread_handle(zx_handle_t channel, zx_handle_t* thread);
 
-extern bool resume_inferior(zx_handle_t inferior, zx_koid_t tid);
+extern bool resume_inferior(zx_handle_t inferior, zx_handle_t port, zx_koid_t tid);
 
 extern bool shutdown_inferior(zx_handle_t channel, zx_handle_t inferior);
 

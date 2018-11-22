@@ -204,7 +204,7 @@ bool expect_debugger_attached_eq(zx_handle_t inferior, bool expected, const char
 // This returns a bool as it's a unittest "helper" routine.
 // N.B. This runs on the wait-inferior thread.
 
-bool handle_thread_exiting(zx_handle_t inferior, const zx_port_packet_t* packet) {
+bool handle_thread_exiting(zx_handle_t inferior, zx_handle_t port, const zx_port_packet_t* packet) {
     BEGIN_HELPER;
 
     zx_koid_t tid = packet->exception.tid;
@@ -235,7 +235,7 @@ bool handle_thread_exiting(zx_handle_t inferior, const zx_port_packet_t* packet)
     }
     unittest_printf("wait-inf: thread %" PRId64 " exited\n", tid);
     // A thread is gone, but we only care about the process.
-    if (!resume_inferior(inferior, tid))
+    if (!resume_inferior(inferior, port, tid))
         return false;
 
     END_HELPER;
@@ -305,14 +305,14 @@ bool debugger_test_exception_handler(zx_handle_t inferior, zx_handle_t port,
         switch (packet->type) {
         case ZX_EXCP_THREAD_STARTING:
             unittest_printf("wait-inf: inferior started\n");
-            if (!resume_inferior(inferior, tid))
+            if (!resume_inferior(inferior, port, tid))
                 return false;
             break;
 
         case ZX_EXCP_THREAD_EXITING:
             // N.B. We could get thread exiting messages from previous
             // tests.
-            EXPECT_TRUE(handle_thread_exiting(inferior, packet));
+            EXPECT_TRUE(handle_thread_exiting(inferior, port, packet));
             break;
 
         case ZX_EXCP_FATAL_PAGE_FAULT:
@@ -929,7 +929,7 @@ bool suspended_in_exception_handler(zx_handle_t inferior, zx_handle_t port,
         case ZX_EXCP_THREAD_EXITING:
             // N.B. We could get thread exiting messages from previous
             // tests.
-            EXPECT_TRUE(handle_thread_exiting(inferior, packet));
+            EXPECT_TRUE(handle_thread_exiting(inferior, port, packet));
             break;
 
         case ZX_EXCP_FATAL_PAGE_FAULT: {
