@@ -644,7 +644,7 @@ zx_status_t ProcessDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport
     return ZX_OK;
 }
 
-bool ProcessDispatcher::ResetExceptionPort(bool debugger, bool quietly) {
+bool ProcessDispatcher::ResetExceptionPort(bool debugger) {
     LTRACE_ENTRY_OBJ;
     fbl::RefPtr<ExceptionPort> eport;
 
@@ -683,9 +683,7 @@ bool ProcessDispatcher::ResetExceptionPort(bool debugger, bool quietly) {
         eport->OnTargetUnbind();
     }
 
-    if (!quietly) {
-        OnExceptionPortRemoval(eport);
-    }
+    OnExceptionPortRemoval(eport);
     return true;
 }
 

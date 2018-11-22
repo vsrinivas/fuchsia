@@ -503,7 +503,7 @@ private:
     fbl::RefPtr<ExceptionPort> eport_;
 };
 
-bool JobDispatcher::ResetExceptionPort(bool debugger, bool quietly) {
+bool JobDispatcher::ResetExceptionPort(bool debugger) {
     canary_.Assert();
 
     fbl::RefPtr<ExceptionPort> eport;
@@ -539,11 +539,9 @@ bool JobDispatcher::ResetExceptionPort(bool debugger, bool quietly) {
         eport->OnTargetUnbind();
     }
 
-    if (!quietly) {
-        OnExceptionPortRemovalEnumerator remover(eport);
-        if (!EnumerateChildren(&remover, true)) {
-            DEBUG_ASSERT(false);
-        }
+    OnExceptionPortRemovalEnumerator remover(eport);
+    if (!EnumerateChildren(&remover, true)) {
+        DEBUG_ASSERT(false);
     }
     return true;
 }

@@ -130,7 +130,7 @@ public:
     // exception handling support
     zx_status_t SetExceptionPort(fbl::RefPtr<ExceptionPort> eport);
     // Returns true if a port had been set.
-    bool ResetExceptionPort(bool debugger, bool quietly);
+    bool ResetExceptionPort(bool debugger);
     fbl::RefPtr<ExceptionPort> exception_port();
     fbl::RefPtr<ExceptionPort> debugger_exception_port();
 

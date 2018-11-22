@@ -125,10 +125,6 @@ typedef struct zx_exception_report {
 #define ZX_EXCEPTION_PORT_DEBUGGER ((uint32_t)1)
 // When binding an exception port to a process, set the process's debugger
 // exception port.
-#define ZX_EXCEPTION_PORT_UNBIND_QUIETLY ((uint32_t)2)
-// When unbinding an exception port from a thread or process, any threads that
-// got an exception and are waiting for a response from this exception port
-// will continue to wait for a response.
 
 // The type of exception port a thread may be waiting for a response from.
 // These values are reported in zx_info_thread_t.wait_exception_port_type.

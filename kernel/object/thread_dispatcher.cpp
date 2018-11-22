@@ -486,7 +486,7 @@ zx_status_t ThreadDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport)
     return ZX_OK;
 }
 
-bool ThreadDispatcher::ResetExceptionPort(bool quietly) {
+bool ThreadDispatcher::ResetExceptionPort() {
     canary_.Assert();
 
     fbl::RefPtr<ExceptionPort> eport;
@@ -522,8 +522,7 @@ bool ThreadDispatcher::ResetExceptionPort(bool quietly) {
         eport->OnTargetUnbind();
     }
 
-    if (!quietly)
-        OnExceptionPortRemoval(eport);
+    OnExceptionPortRemoval(eport);
     return true;
 }
 

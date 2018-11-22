@@ -131,9 +131,8 @@ static bool recv_msg_new_thread_handle(zx_handle_t handle, zx_handle_t* thread)
 // resume from a segfault. Such a test is for the debugger API anyway.
 
 static void resume_thread_from_exception(zx_handle_t process, zx_koid_t tid,
-                                         uint32_t excp_port_type,
-                                         uint32_t flags)
-{
+                                         uint32_t excp_port_type, zx_handle_t eport,
+                                         uint32_t flags) {
     zx_handle_t thread;
     zx_status_t status = zx_object_get_child(process, tid, ZX_RIGHT_SAME_RIGHTS, &thread);
     if (status < 0)
@@ -145,7 +144,7 @@ static void resume_thread_from_exception(zx_handle_t process, zx_koid_t tid,
         EXPECT_EQ(info.wait_exception_port_type, excp_port_type, "");
     }
 
-    status = zx_task_resume(thread, ZX_RESUME_EXCEPTION | flags);
+    status = zx_task_resume_from_exception(thread, eport, flags);
     if (status < 0)
         tu_fatal("resume_thread_from_exception", status);
     zx_handle_close(thread);
@@ -304,7 +303,7 @@ static bool wait_process_exit_from_debugger(zx_handle_t eport, zx_handle_t proce
         zx_handle_t thread;
         zx_status_t status = zx_object_get_child(process, tid, ZX_RIGHT_SAME_RIGHTS, &thread);
         if (status == ZX_OK) {
-            status = zx_task_resume(thread, ZX_RESUME_EXCEPTION);
+            status = zx_task_resume_from_exception(thread, eport, 0);
             if (status < 0) {
                 // If the resume failed the thread must be dying or dead.
                 EXPECT_EQ(status, ZX_ERR_BAD_STATE, "");
@@ -793,7 +792,7 @@ static void finish_basic_test(zx_handle_t child,
 
     zx_koid_t tid;
     if (read_and_verify_exception(eport, child, ZX_EXCP_FATAL_PAGE_FAULT, &tid)) {
-        resume_thread_from_exception(child, tid, excp_port_type, ZX_RESUME_TRY_NEXT);
+        resume_thread_from_exception(child, tid, excp_port_type, eport, ZX_RESUME_TRY_NEXT);
         tu_process_wait_signaled(child);
     }
 
@@ -843,7 +842,7 @@ bool job_debug_handler_test_helper(zx_handle_t job, zx_handle_t eport_job_handle
     tu_object_wait_async(child, eport_process, ZX_PROCESS_TERMINATED);
 
     // resume thread from job debugger
-    resume_thread_from_exception(child, packet_tid, ZX_EXCEPTION_PORT_TYPE_JOB_DEBUGGER, 0);
+    resume_thread_from_exception(child, packet_tid, ZX_EXCEPTION_PORT_TYPE_JOB_DEBUGGER, eport, 0);
 
     zx_port_packet_t start_packet_process;
     ASSERT_TRUE(read_packet(eport_process, &start_packet_process), "error reading start exception");
@@ -855,7 +854,8 @@ bool job_debug_handler_test_helper(zx_handle_t job, zx_handle_t eport_job_handle
     EXPECT_EQ(child_info.koid, packet_pid, "packet pid mismatch");
 
     send_msg(our_channel, MSG_DONE);
-    resume_thread_from_exception(child, packet_tid, ZX_EXCEPTION_PORT_TYPE_DEBUGGER, 0);
+    resume_thread_from_exception(child, packet_tid, ZX_EXCEPTION_PORT_TYPE_DEBUGGER, eport_process,
+                                 0);
     wait_process_exit_from_debugger(eport_process, child, packet_tid);
 
     tu_handle_close(child);
@@ -988,7 +988,7 @@ static bool packet_pid_test(void)
     EXPECT_EQ(child_info.koid, packet_pid, "packet pid mismatch");
 
     send_msg(our_channel, MSG_DONE);
-    resume_thread_from_exception(child, packet_tid, ZX_EXCEPTION_PORT_TYPE_DEBUGGER, 0);
+    resume_thread_from_exception(child, packet_tid, ZX_EXCEPTION_PORT_TYPE_DEBUGGER, eport, 0);
     wait_process_exit_from_debugger(eport, child, packet_tid);
 
     tu_handle_close(child);
@@ -1036,8 +1036,7 @@ static bool thread_state_when_starting_or_exiting_test(void)
     ASSERT_TRUE(read_and_verify_exception(eport, child, ZX_EXCP_THREAD_STARTING,
                                           &initial_tid), "");
     EXPECT_TRUE(check_read_or_write_regs_is_rejected(child, initial_tid), "");
-    resume_thread_from_exception(child, initial_tid,
-                                 ZX_EXCEPTION_PORT_TYPE_DEBUGGER, 0);
+    resume_thread_from_exception(child, initial_tid, ZX_EXCEPTION_PORT_TYPE_DEBUGGER, eport, 0);
 
     // Tell the subprocess to create a second thread.
     send_msg(our_channel, MSG_CREATE_AUX_THREAD);
@@ -1047,8 +1046,7 @@ static bool thread_state_when_starting_or_exiting_test(void)
                                           &tid), "");
     EXPECT_NE(tid, initial_tid, "");
     EXPECT_TRUE(check_read_or_write_regs_is_rejected(child, tid), "");
-    resume_thread_from_exception(child, tid, ZX_EXCEPTION_PORT_TYPE_DEBUGGER,
-                                 0);
+    resume_thread_from_exception(child, tid, ZX_EXCEPTION_PORT_TYPE_DEBUGGER, eport, 0);
 
     // Tell the second thread to exit.
     send_msg(our_channel, MSG_SHUTDOWN_AUX_THREAD);
@@ -1063,7 +1061,7 @@ static bool thread_state_when_starting_or_exiting_test(void)
     zx_handle_t thread;
     ASSERT_EQ(zx_object_get_child(child, tid, ZX_RIGHT_SAME_RIGHTS, &thread),
               ZX_OK, "");
-    ASSERT_EQ(zx_task_resume(thread, ZX_RESUME_EXCEPTION), ZX_OK, "");
+    ASSERT_EQ(zx_task_resume_from_exception(thread, eport, 0), ZX_OK, "");
     tu_handle_close(thread);
     // Clean up: Tell the process to exit and wait for it to exit.
     send_msg(our_channel, MSG_DONE);
@@ -1087,7 +1085,7 @@ static bool process_start_test(void)
     zx_koid_t tid;
     if (read_and_verify_exception(eport, child, ZX_EXCP_THREAD_STARTING, &tid)) {
         send_msg(our_channel, MSG_DONE);
-        resume_thread_from_exception(child, tid, ZX_EXCEPTION_PORT_TYPE_DEBUGGER, 0);
+        resume_thread_from_exception(child, tid, ZX_EXCEPTION_PORT_TYPE_DEBUGGER, eport, 0);
         wait_process_exit_from_debugger(eport, child, tid);
     }
 
@@ -1335,7 +1333,7 @@ static bool trigger_test(void)
 
         zx_koid_t tid = ZX_KOID_INVALID;
         (void) read_and_verify_exception(eport, child, ZX_EXCP_THREAD_STARTING, &tid);
-        resume_thread_from_exception(child, tid, ZX_EXCEPTION_PORT_TYPE_DEBUGGER, 0);
+        resume_thread_from_exception(child, tid, ZX_EXCEPTION_PORT_TYPE_DEBUGGER, eport, 0);
 
         zx_port_packet_t packet;
         if (read_packet(eport, &packet)) {
@@ -1347,8 +1345,7 @@ static bool trigger_test(void)
             if (packet.type != ZX_EXCP_THREAD_EXITING) {
                 tid = packet.exception.tid;
                 verify_exception(&packet, child, excp_type);
-                resume_thread_from_exception(child, tid,
-                                             ZX_EXCEPTION_PORT_TYPE_DEBUGGER,
+                resume_thread_from_exception(child, tid, ZX_EXCEPTION_PORT_TYPE_DEBUGGER, eport,
                                              ZX_RESUME_TRY_NEXT);
                 zx_koid_t tid2;
                 if (read_and_verify_exception(eport, child, ZX_EXCP_THREAD_EXITING, &tid2)) {
@@ -1577,78 +1574,6 @@ static bool unbind_while_stopped_test(void)
     END_TEST;
 }
 
-static bool unbind_rebind_while_stopped_test(void)
-{
-    BEGIN_TEST;
-    unittest_printf("unbind_rebind_while_stopped tests\n");
-
-    zx_handle_t child, eport, our_channel;
-    start_test_child_with_eport(zx_job_default(), test_child_name,
-                                &child, &eport, &our_channel);
-
-    zx_port_packet_t start_packet;
-    // Assert reading the start packet succeeds because otherwise the rest
-    // of the test is moot.
-    ASSERT_TRUE(read_packet(eport, &start_packet), "error reading start exception");
-    ASSERT_TRUE(verify_exception(&start_packet, child, ZX_EXCP_THREAD_STARTING),
-                "unexpected exception");
-    zx_koid_t tid = start_packet.exception.tid;
-
-    zx_handle_t thread;
-    zx_status_t status = zx_object_get_child(child, tid, ZX_RIGHT_SAME_RIGHTS, &thread);
-    if (status < 0)
-        tu_fatal("zx_object_get_child", status);
-
-    // The thread may still be running: There's a window between sending the
-    // exception report and the thread going to sleep that is exposed to us.
-    // We want to verify the thread is still waiting for an exception after we
-    // unbind, so wait for the thread to go to sleep before we unbind.
-    // Note that there's no worry of this hanging due to our watchdog.
-    zx_info_thread_t info;
-    do {
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
-        info = tu_thread_get_info(thread);
-    } while (info.state != ZX_THREAD_STATE_BLOCKED_EXCEPTION);
-
-    // Unbind the exception port quietly, meaning to leave the thread
-    // waiting for an exception response.
-    tu_set_exception_port(child, ZX_HANDLE_INVALID, 0,
-                          ZX_EXCEPTION_PORT_DEBUGGER | ZX_EXCEPTION_PORT_UNBIND_QUIETLY);
-
-    // Rebind and fetch the exception report, it should match the one
-    // we just got.
-
-    tu_set_exception_port(child, eport, EXCEPTION_PORT_KEY, ZX_EXCEPTION_PORT_DEBUGGER);
-
-    // Verify exception report matches current exception.
-    zx_exception_report_t report;
-    status = zx_object_get_info(thread, ZX_INFO_THREAD_EXCEPTION_REPORT, &report, sizeof(report), NULL, NULL);
-    if (status < 0)
-        tu_fatal("zx_object_get_info(ZX_INFO_THREAD_EXCEPTION_REPORT)", status);
-    EXPECT_EQ(report.header.type, start_packet.type, "type mismatch");
-    // The "thread-start" report is a synthetic exception and doesn't contain
-    // any arch info yet, so we can't test report.context.arch.
-
-    // Done verifying we got the same exception, send the child on its way
-    // and tell it we're done.
-    resume_thread_from_exception(child, tid, ZX_EXCEPTION_PORT_TYPE_DEBUGGER, 0);
-    send_msg(our_channel, MSG_DONE);
-
-    wait_process_exit_from_debugger(eport, child, tid);
-
-    // We should still be able to get info on the thread.
-    info = tu_thread_get_info(thread);
-    EXPECT_EQ(info.state, ZX_THREAD_STATE_DEAD, "unexpected thread state");
-    EXPECT_EQ(info.wait_exception_port_type, ZX_EXCEPTION_PORT_TYPE_NONE, "wrong exception port type at thread exit");
-
-    tu_handle_close(thread);
-    tu_handle_close(child);
-    tu_handle_close(eport);
-    tu_handle_close(our_channel);
-
-    END_TEST;
-}
-
 static bool kill_while_stopped_at_start_test(void)
 {
     BEGIN_TEST;
@@ -1812,7 +1737,7 @@ static bool full_queue_sending_exception_packet_test(void)
     zx_koid_t initial_tid;
     ASSERT_TRUE(read_and_verify_exception(eport, child, ZX_EXCP_THREAD_STARTING, &initial_tid), "");
     resume_thread_from_exception(child, initial_tid,
-                                 ZX_EXCEPTION_PORT_TYPE_DEBUGGER, 0);
+                                 ZX_EXCEPTION_PORT_TYPE_DEBUGGER, eport, 0);
 
     // Tell the subprocess to create a second thread.
     // We need to observe a thread without the process exiting (process exits
@@ -1824,7 +1749,7 @@ static bool full_queue_sending_exception_packet_test(void)
                                           &tid), "");
     EXPECT_NE(tid, initial_tid, "");
     resume_thread_from_exception(child, tid,
-                                 ZX_EXCEPTION_PORT_TYPE_DEBUGGER, 0);
+                                 ZX_EXCEPTION_PORT_TYPE_DEBUGGER, eport, 0);
 
     // Fill the port with packets thus preventing us from receiving the
     // segfault exception.
@@ -1911,7 +1836,6 @@ RUN_TEST_ENABLE_CRASH_HANDLER(trigger_test);
 RUN_TEST(unbind_walkthrough_by_reset_test);
 RUN_TEST(unbind_walkthrough_by_close_test);
 RUN_TEST(unbind_while_stopped_test);
-RUN_TEST(unbind_rebind_while_stopped_test);
 RUN_TEST(kill_while_stopped_at_start_test);
 RUN_TEST(death_test);
 RUN_TEST_ENABLE_CRASH_HANDLER(self_death_test);

@@ -38,18 +38,8 @@ The exception port will unbind automatically if all handles to *eport*
 are closed while it is still bound.
 
 A thread may be currently waiting for a response from the program that
-bound *eport* when it is unbound. There are two choices for what happens
-to the thread:
-
-- Have exception processing continue as if *eport* had never been bound.
-This is the default behavior.
-
-- Have the thread continue to wait for a response from the same kind
-of exception port as *eport*. This is done by passing
-*ZX_EXCEPTION_PORT_UNBIND_QUIETLY* in *options* when unbinding *eport*.
-This option is useful, for example, when a debugger wants to detach from the
-thread's process, but leave the thread in stasis waiting for an exception
-response.
+bound *eport* when it is unbound. Exception processing will continue as if
+*eport* had never been bound.
 
 ## RIGHTS
 

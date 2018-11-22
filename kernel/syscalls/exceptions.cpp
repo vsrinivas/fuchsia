@@ -22,7 +22,7 @@
 
 #define LOCAL_TRACE 0
 
-static zx_status_t object_unbind_exception_port(zx_handle_t obj_handle, bool debugger, bool quietly) {
+static zx_status_t object_unbind_exception_port(zx_handle_t obj_handle, bool debugger) {
     // TODO(ZX-968): check rights once appropriate right is determined
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -33,25 +33,20 @@ static zx_status_t object_unbind_exception_port(zx_handle_t obj_handle, bool deb
 
     auto job = DownCastDispatcher<JobDispatcher>(&dispatcher);
     if (job) {
-        return job->ResetExceptionPort(debugger, quietly)
-                   ? ZX_OK
-                   : ZX_ERR_BAD_STATE;  // No port was bound.
+        return job->ResetExceptionPort(debugger) ? ZX_OK : ZX_ERR_BAD_STATE; // No port was bound.
     }
 
     auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
     if (process) {
-        return process->ResetExceptionPort(debugger, quietly)
-                   ? ZX_OK
-                   : ZX_ERR_BAD_STATE;  // No port was bound.
+        return process->ResetExceptionPort(debugger) ? ZX_OK
+                                                     : ZX_ERR_BAD_STATE; // No port was bound.
     }
 
     auto thread = DownCastDispatcher<ThreadDispatcher>(&dispatcher);
     if (thread) {
         if (debugger)
             return ZX_ERR_INVALID_ARGS;
-        return thread->ResetExceptionPort(quietly)
-                   ? ZX_OK
-                   : ZX_ERR_BAD_STATE;  // No port was bound.
+        return thread->ResetExceptionPort() ? ZX_OK : ZX_ERR_BAD_STATE; // No port was bound.
     }
 
     return ZX_ERR_WRONG_TYPE;
@@ -134,19 +129,13 @@ zx_status_t sys_task_bind_exception_port(zx_handle_t obj_handle, zx_handle_t epo
                                            uint64_t key, uint32_t options) {
     LTRACE_ENTRY;
 
-    if (eport_handle == ZX_HANDLE_INVALID) {
-        if (options & ~(ZX_EXCEPTION_PORT_DEBUGGER + ZX_EXCEPTION_PORT_UNBIND_QUIETLY))
-            return ZX_ERR_INVALID_ARGS;
-    } else {
-        if (options & ~ZX_EXCEPTION_PORT_DEBUGGER)
-            return ZX_ERR_INVALID_ARGS;
-    }
+    if (options & ~ZX_EXCEPTION_PORT_DEBUGGER)
+        return ZX_ERR_INVALID_ARGS;
 
     bool debugger = (options & ZX_EXCEPTION_PORT_DEBUGGER) != 0;
 
     if (eport_handle == ZX_HANDLE_INVALID) {
-        bool quietly = (options & ZX_EXCEPTION_PORT_UNBIND_QUIETLY) != 0;
-        return object_unbind_exception_port(obj_handle, debugger, quietly);
+        return object_unbind_exception_port(obj_handle, debugger);
     } else {
         return task_bind_exception_port(obj_handle, eport_handle, key, debugger);
     }

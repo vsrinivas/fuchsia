@@ -113,10 +113,6 @@ void ExceptionPort::SetTarget(const fbl::RefPtr<ThreadDispatcher>& target) {
 void ExceptionPort::OnPortZeroHandles() {
     canary_.Assert();
 
-    // TODO(ZX-988): Add a way to mark specific ports as unbinding quietly
-    // when auto-unbinding.
-    static const bool default_quietness = false;
-
     LTRACE_ENTRY_OBJ;
     Guard<fbl::Mutex> guard{&lock_};
     if (port_ == nullptr) {
@@ -146,7 +142,7 @@ void ExceptionPort::OnPortZeroHandles() {
                 auto job = DownCastDispatcher<JobDispatcher>(&target_);
                 DEBUG_ASSERT(job != nullptr);
                 guard.Release();  // The target may call our ::OnTargetUnbind
-                job->ResetExceptionPort(type_ == Type::JOB_DEBUGGER, default_quietness);
+                job->ResetExceptionPort(type_ == Type::JOB_DEBUGGER);
                 break;
             }
             case Type::PROCESS:
@@ -155,7 +151,7 @@ void ExceptionPort::OnPortZeroHandles() {
                 auto process = DownCastDispatcher<ProcessDispatcher>(&target_);
                 DEBUG_ASSERT(process != nullptr);
                 guard.Release();  // The target may call our ::OnTargetUnbind
-                process->ResetExceptionPort(type_ == Type::DEBUGGER, default_quietness);
+                process->ResetExceptionPort(type_ == Type::DEBUGGER);
                 break;
             }
             case Type::THREAD: {
@@ -163,7 +159,7 @@ void ExceptionPort::OnPortZeroHandles() {
                 auto thread = DownCastDispatcher<ThreadDispatcher>(&target_);
                 DEBUG_ASSERT(thread != nullptr);
                 guard.Release();  // The target may call our ::OnTargetUnbind
-                thread->ResetExceptionPort(default_quietness);
+                thread->ResetExceptionPort();
                 break;
             }
             default:
