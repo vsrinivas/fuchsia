@@ -7,6 +7,5 @@
 #include "socket_factory.cc"
 
 namespace btlib::data::internal {
-template class SocketFactory<rfcomm::Channel, rfcomm::Channel::UniqueId,
-                             common::ByteBufferPtr>;
+template class SocketFactory<rfcomm::Channel, common::ByteBufferPtr>;
 }  // namespace btlib::data::internal

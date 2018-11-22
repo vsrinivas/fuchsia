@@ -12,18 +12,17 @@
 
 namespace btlib::data::internal {
 
-template <typename ChannelT, typename ChannelIdT, typename ChannelRxDataT>
-SocketFactory<ChannelT, ChannelIdT, ChannelRxDataT>::SocketFactory()
+template <typename ChannelT, typename ChannelRxDataT>
+SocketFactory<ChannelT, ChannelRxDataT>::SocketFactory()
     : weak_ptr_factory_(this) {}
 
-template <typename ChannelT, typename ChannelIdT, typename ChannelRxDataT>
-SocketFactory<ChannelT, ChannelIdT, ChannelRxDataT>::~SocketFactory() {
+template <typename ChannelT, typename ChannelRxDataT>
+SocketFactory<ChannelT, ChannelRxDataT>::~SocketFactory() {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 }
 
-template <typename ChannelT, typename ChannelIdT, typename ChannelRxDataT>
-zx::socket
-SocketFactory<ChannelT, ChannelIdT, ChannelRxDataT>::MakeSocketForChannel(
+template <typename ChannelT, typename ChannelRxDataT>
+zx::socket SocketFactory<ChannelT, ChannelRxDataT>::MakeSocketForChannel(
     fbl::RefPtr<ChannelT> channel) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   ZX_DEBUG_ASSERT(channel);

@@ -22,8 +22,7 @@ namespace {
 
 // We'll test the template using (only) the set of type parameters necessary
 // for the L2CAP instantiation.
-using FactoryT = internal::SocketFactory<l2cap::Channel,
-                                         l2cap::Channel::UniqueId, l2cap::SDU>;
+using FactoryT = internal::SocketFactory<l2cap::Channel, l2cap::SDU>;
 static_assert(std::is_same<FactoryT, L2capSocketFactory>::value);
 
 constexpr l2cap::ChannelId kDynamicChannelIdMin = 0x0040;

@@ -7,6 +7,5 @@
 #include "socket_factory.cc"
 
 namespace btlib::data::internal {
-template class SocketFactory<l2cap::Channel, l2cap::Channel::UniqueId,
-                             l2cap::SDU>;
+template class SocketFactory<l2cap::Channel, l2cap::SDU>;
 }  // namespace btlib::data::internal

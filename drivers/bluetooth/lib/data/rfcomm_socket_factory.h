@@ -12,8 +12,7 @@
 
 namespace btlib::data::internal {
 using RfcommSocketFactory =
-    SocketFactory<rfcomm::Channel, rfcomm::Channel::UniqueId,
-                  common::ByteBufferPtr>;
+    SocketFactory<rfcomm::Channel, common::ByteBufferPtr>;
 }  // namespace btlib::data::internal
 
 #endif  // GARNET_DRIVERS_BLUETOOTH_LIB_DATA_RFCOMM_SOCKET_FACTORY_H_
