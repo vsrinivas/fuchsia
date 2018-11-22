@@ -155,7 +155,7 @@ static void dump(gpt_device_t* gpt, int* count) {
         unsigned diff;
         gpt_get_diffs(gpt, i, &diff);
         CHECK(GPT_DIFF_NAME);
-        printf("Paritition %d: %s%s%s\n",
+        printf("Partition %d: %s%s%s\n",
                i, X, utf16_to_cstring(name, (const uint16_t*)p->name, GPT_GUID_STRLEN - 1), Y);
         CHECK(GPT_DIFF_FIRST | GPT_DIFF_LAST);
         printf("    Start: %s%" PRIu64 "%s, End: %s%" PRIu64 "%s (%" PRIu64 " blocks)\n",
