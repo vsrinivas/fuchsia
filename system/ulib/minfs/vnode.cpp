@@ -1358,39 +1358,39 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* state, const void* data,
             size_t new_size = fbl::round_up(xfer_off + xfer, kMinfsBlockSize);
             ZX_DEBUG_ASSERT(new_size >= inode_.size); // Overflow.
             if ((status = vmo_.set_size(new_size)) != ZX_OK) {
-                goto done;
+                break;
             }
             vmo_size_ = new_size;
         }
 
         // Update this block of the in-memory VMO
         if ((status = vmo_.write(data, xfer_off, xfer)) != ZX_OK) {
-            goto done;
+            break;
         }
 
         // Update this block on-disk
         blk_t bno;
         if ((status = BlockGet(state, n, &bno))) {
-            goto done;
+            break;
         }
         ZX_DEBUG_ASSERT(bno != 0);
         state->GetWork()->Enqueue(vmo_.get(), n, bno + fs_->Info().dat_block, 1);
 #else
         blk_t bno;
         if ((status = BlockGet(state, n, &bno))) {
-            goto done;
+            break;
         }
         ZX_DEBUG_ASSERT(bno != 0);
         char wdata[kMinfsBlockSize];
         if (fs_->bc_->Readblk(bno + fs_->Info().dat_block, wdata)) {
-            goto done;
+            break;
         }
         memcpy(wdata + adjust, data, xfer);
         if (len < kMinfsBlockSize && max_size >= inode_.size) {
             memset(wdata + adjust + xfer, 0, kMinfsBlockSize - (adjust + xfer));
         }
         if (fs_->bc_->Writeblk(bno + fs_->Info().dat_block, wdata)) {
-            goto done;
+            break;
         }
 #endif
 
@@ -1400,7 +1400,6 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* state, const void* data,
         n++;
     }
 
-done:
     len = (uintptr_t)data - (uintptr_t)start;
     if (len == 0) {
         // If more than zero bytes were requested, but zero bytes were written,
