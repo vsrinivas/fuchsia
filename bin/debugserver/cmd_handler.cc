@@ -1290,8 +1290,8 @@ bool CommandHandler::Handle_vRun(const fxl::StringView& packet,
   // On Linux, the program is considered "live" after vRun, e.g. $pc is set. On
   // Zircon, calling zx_process_start (called by Process::Start()) creates a
   // synthetic exception of type ZX_EXCP_START if a debugger is attached to the
-  // process and halts until a call to zx_task_resume (i.e. called by
-  // Thread::Resume() in gdbserver).
+  // process and halts until a call to zx_task_resume_from_exception (i.e.
+  // called by Thread::Resume() in gdbserver).
   if (!current_process->Start()) {
     FXL_LOG(ERROR) << "vRun: Failed to start process";
     return ReplyWithError(ErrorCode::PERM, std::move(callback));

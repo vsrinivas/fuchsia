@@ -102,6 +102,8 @@ class Thread final {
   // Called after all other processing of a thread exit has been done.
   void Clear();
 
+  zx_handle_t GetExceptionPortHandle();
+
   // The owning process.
   Process* process_;  // weak
 

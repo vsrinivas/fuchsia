@@ -132,6 +132,8 @@ class Process final {
   // Returns the process ID.
   zx_koid_t id() const { return id_; }
 
+  Server* server() { return server_; }
+
   // Returns a mutable handle to the set of breakpoints managed by this process.
   ProcessBreakpointSet* breakpoints() { return &breakpoints_; }
 

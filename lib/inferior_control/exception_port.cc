@@ -57,23 +57,23 @@ ExceptionPort::ExceptionPort(async_dispatcher_t* dispatcher)
 }
 
 ExceptionPort::~ExceptionPort() {
-  if (eport_handle_)
+  if (eport_)
     Quit();
 }
 
 bool ExceptionPort::Run() {
-  FXL_DCHECK(!eport_handle_);
+  FXL_DCHECK(!eport_);
   FXL_DCHECK(!keep_running_);
 
   // Create an I/O port.
-  zx_status_t status = zx::port::create(0, &eport_handle_);
+  zx_status_t status = zx::port::create(0, &eport_);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to create the exception port: "
                    << debugger_utils::ZxErrorString(status);
     return false;
   }
 
-  FXL_DCHECK(eport_handle_);
+  FXL_DCHECK(eport_);
 
   keep_running_ = true;
   io_thread_ = std::thread(fit::bind_member(this, &ExceptionPort::Worker));
@@ -82,7 +82,7 @@ bool ExceptionPort::Run() {
 }
 
 void ExceptionPort::Quit() {
-  FXL_DCHECK(eport_handle_);
+  FXL_DCHECK(eport_);
   FXL_DCHECK(keep_running_);
 
   FXL_LOG(INFO) << "Quitting exception port I/O loop";
@@ -98,7 +98,7 @@ void ExceptionPort::Quit() {
     zx_port_packet_t packet;
     memset(&packet, 0, sizeof(packet));
     packet.type = ZX_PKT_TYPE_USER;
-    eport_handle_.queue(&packet);
+    eport_.queue(&packet);
   }
 
   io_thread_.join();
@@ -110,7 +110,7 @@ ExceptionPort::Key ExceptionPort::Bind(zx_handle_t process_handle,
                                        Callback callback) {
   FXL_DCHECK(process_handle != ZX_HANDLE_INVALID);
   FXL_DCHECK(callback);
-  FXL_DCHECK(eport_handle_);
+  FXL_DCHECK(eport_);
 
   zx_info_handle_basic_t info;
   zx_status_t status =
@@ -133,7 +133,7 @@ ExceptionPort::Key ExceptionPort::Bind(zx_handle_t process_handle,
     return 0;
   }
 
-  status = zx_task_bind_exception_port(process_handle, eport_handle_.get(),
+  status = zx_task_bind_exception_port(process_handle, eport_.get(),
                                        next_key, ZX_EXCEPTION_PORT_DEBUGGER);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to bind exception port: "
@@ -142,7 +142,7 @@ ExceptionPort::Key ExceptionPort::Bind(zx_handle_t process_handle,
   }
 
   // Also watch for process terminated signals.
-  status = zx_object_wait_async(process_handle, eport_handle_.get(), next_key,
+  status = zx_object_wait_async(process_handle, eport_.get(), next_key,
                                 ZX_TASK_TERMINATED, ZX_WAIT_ASYNC_ONCE);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to async wait for process: "
@@ -179,8 +179,13 @@ bool ExceptionPort::Unbind(const Key key) {
   return true;
 }
 
+zx::unowned_port ExceptionPort::GetUnownedExceptionPort() {
+  lock_guard<mutex> lock(eport_mutex_);
+  return zx::unowned_port(eport_.get());
+}
+
 void ExceptionPort::Worker() {
-  FXL_DCHECK(eport_handle_);
+  FXL_DCHECK(eport_);
 
   // Give this thread an identifiable name for debugging purposes.
   fsl::SetCurrentThreadName("exception port reader");
@@ -190,7 +195,7 @@ void ExceptionPort::Worker() {
   zx_handle_t eport;
   {
     lock_guard<mutex> lock(eport_mutex_);
-    eport = eport_handle_.get();
+    eport = eport_.get();
   }
   while (keep_running_) {
     zx_port_packet_t packet;
@@ -271,7 +276,7 @@ void ExceptionPort::Worker() {
   // Close the I/O port.
   {
     lock_guard<mutex> lock(eport_mutex_);
-    eport_handle_.reset();
+    eport_.reset();
   }
 }
 

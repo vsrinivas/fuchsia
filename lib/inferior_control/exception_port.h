@@ -65,6 +65,8 @@ class ExceptionPort final {
   // This must be called AFTER a successful call to Run().
   bool Unbind(const Key key);
 
+  zx::unowned_port GetUnownedExceptionPort();
+
  private:
   struct BindData {
     BindData() = default;
@@ -94,12 +96,12 @@ class ExceptionPort final {
   async_dispatcher_t* const origin_dispatcher_;
 
   // The exception port handle and a mutex for synchronizing access to it.
-  // |io_thread_| only ever reads from |eport_handle_| but a call to Quit() can
-  // set it to 0. This can really only happen if Quit() is called before
-  // Worker() even runs on the |io_thread_| which is extremely unlikely. But we
-  // play safe anyway.
+  // |io_thread_| only ever reads from |eport_| but a call to Quit() can set it
+  // to 0. This can really only happen if Quit() is called before Worker() even
+  // runs on the |io_thread_| which is extremely unlikely. But we play safe
+  // anyway.
   std::mutex eport_mutex_;
-  zx::port eport_handle_;
+  zx::port eport_;
 
   // The thread on which we wait on the exception port.
   std::thread io_thread_;

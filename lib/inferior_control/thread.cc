@@ -17,6 +17,7 @@
 
 #include "arch.h"
 #include "process.h"
+#include "server.h"
 
 namespace inferior_control {
 
@@ -93,6 +94,10 @@ void Thread::Clear() {
   handle_ = ZX_HANDLE_INVALID;
 }
 
+zx_handle_t Thread::GetExceptionPortHandle() {
+  return process_->server()->exception_port().GetUnownedExceptionPort()->get();
+}
+
 fxl::WeakPtr<Thread> Thread::AsWeakPtr() {
   return weak_ptr_factory_.GetWeakPtr();
 }
@@ -142,7 +147,8 @@ bool Thread::Resume() {
   // thread).
   FXL_VLOG(2) << "Thread " << GetName() << " is now running";
 
-  zx_status_t status = zx_task_resume(handle_, ZX_RESUME_EXCEPTION);
+  zx_status_t status =
+      zx_task_resume_from_exception(handle_, GetExceptionPortHandle(), 0);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to resume thread: "
                    << debugger_utils::ZxErrorString(status);
@@ -166,7 +172,8 @@ void Thread::ResumeForExit() {
 
   FXL_VLOG(2) << "Thread " << GetName() << " is exiting";
 
-  auto status = zx_task_resume(handle_, ZX_RESUME_EXCEPTION);
+  auto status =
+      zx_task_resume_from_exception(handle_, GetExceptionPortHandle(), 0);
   if (status < 0) {
     // This might fail if the process has been killed in the interim.
     // It shouldn't otherwise fail. Just log the failure, nothing else
@@ -212,7 +219,8 @@ bool Thread::Step() {
   // thread).
   FXL_LOG(INFO) << "Thread " << GetName() << " is now stepping";
 
-  zx_status_t status = zx_task_resume(handle_, ZX_RESUME_EXCEPTION);
+  zx_status_t status =
+      zx_task_resume_from_exception(handle_, GetExceptionPortHandle(), 0);
   if (status < 0) {
     breakpoints_.RemoveSingleStepBreakpoint();
     FXL_LOG(ERROR) << "Failed to resume thread for step: "
