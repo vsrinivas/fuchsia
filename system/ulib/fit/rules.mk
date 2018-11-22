@@ -9,7 +9,7 @@ fit_srcs := \
     $(LOCAL_DIR)/promise.cpp \
     $(LOCAL_DIR)/scheduler.cpp \
     $(LOCAL_DIR)/sequencer.cpp \
-    $(LOCAL_DIR)/sequential_executor.cpp \
+    $(LOCAL_DIR)/single_threaded_executor.cpp \
 
 #
 # Userspace library.

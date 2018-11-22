@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_SEQUENTIAL_EXECUTOR_H_
-#define LIB_FIT_SEQUENTIAL_EXECUTOR_H_
+#ifndef LIB_FIT_SINGLE_THREADED_EXECUTOR_H_
+#define LIB_FIT_SINGLE_THREADED_EXECUTOR_H_
 
 #include <condition_variable>
 #include <mutex>
@@ -22,13 +22,13 @@ namespace fit {
 // fewer features than more specialized or platform-dependent executors.
 //
 // See documentation of |fit::promise| for more information.
-class sequential_executor final : public executor {
+class single_threaded_executor final : public executor {
 public:
-    sequential_executor();
+    single_threaded_executor();
 
     // Destroys the executor along with all of its remaining scheduled tasks
     // that have yet to complete.
-    ~sequential_executor() override;
+    ~single_threaded_executor() override;
 
     // Schedules a task for eventual execution by the executor.
     //
@@ -42,23 +42,23 @@ public:
     // thread at a time.
     void run();
 
-    sequential_executor(const sequential_executor&) = delete;
-    sequential_executor(sequential_executor&&) = delete;
-    sequential_executor& operator=(const sequential_executor&) = delete;
-    sequential_executor& operator=(sequential_executor&&) = delete;
+    single_threaded_executor(const single_threaded_executor&) = delete;
+    single_threaded_executor(single_threaded_executor&&) = delete;
+    single_threaded_executor& operator=(const single_threaded_executor&) = delete;
+    single_threaded_executor& operator=(single_threaded_executor&&) = delete;
 
 private:
     // The task context for tasks run by the executor.
     class context_impl final : public context {
     public:
-        explicit context_impl(sequential_executor* executor);
+        explicit context_impl(single_threaded_executor* executor);
         ~context_impl() override;
 
-        sequential_executor* executor() const override;
+        single_threaded_executor* executor() const override;
         suspended_task suspend_task() override;
 
     private:
-        sequential_executor* const executor_;
+        single_threaded_executor* const executor_;
     };
 
     // The dispatcher runs tasks and provides the suspended task resolver.
@@ -66,7 +66,7 @@ private:
     // The lifetime of this object is somewhat complex since there are pointers
     // to it from multiple sources which are released in different ways.
     //
-    // - |sequential_executor| holds a pointer in |dispatcher_| which it releases
+    // - |single_threaded_executor| holds a pointer in |dispatcher_| which it releases
     //   after calling |shutdown()| to inform the dispatcher of its own demise
     // - |suspended_task| holds a pointer to the dispatcher's resolver
     //   interface and the number of outstanding pointers corresponds to the
@@ -110,14 +110,14 @@ private:
     dispatcher_impl* dispatcher_;
 };
 
-// Creates a new |fit::sequential_executor|, schedules a promise as a task,
+// Creates a new |fit::single_threaded_executor|, schedules a promise as a task,
 // runs all of the executor's scheduled tasks until none remain, then returns
 // the promise's result.
 template <typename Continuation>
 static typename promise_impl<Continuation>::result_type
-run_sequentially(promise_impl<Continuation> promise) {
+run_single_threaded(promise_impl<Continuation> promise) {
     using result_type = typename promise_impl<Continuation>::result_type;
-    sequential_executor exec;
+    single_threaded_executor exec;
     result_type saved_result;
     exec.schedule_task(promise.then([&saved_result](result_type result) {
         saved_result = std::move(result);
@@ -128,4 +128,4 @@ run_sequentially(promise_impl<Continuation> promise) {
 
 } // namespace fit
 
-#endif // LIB_FIT_SEQUENTIAL_EXECUTOR_H_
+#endif // LIB_FIT_SINGLE_THREADED_EXECUTOR_H_

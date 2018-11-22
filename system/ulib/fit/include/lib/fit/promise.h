@@ -137,7 +137,7 @@ namespace fit {
 // suspended tasks and destroys the task because it is not possible for the task
 // to be resumed or to make progress from that state.
 //
-// See also |fit::sequential_executor| for a simple executor implementation.
+// See also |fit::single_threaded_executor| for a simple executor implementation.
 //
 // BOXED AND UNBOXED PROMISES
 //
@@ -1397,7 +1397,7 @@ protected:
 // a single thread whereas another might dispatch them on an event-driven
 // message loop or use a thread pool.
 //
-// See also |fit::sequential_executor| for a concrete implementation.
+// See also |fit::single_threaded_executor| for a concrete implementation.
 class executor {
 public:
     // Destroys the executor along with all of its remaining scheduled tasks

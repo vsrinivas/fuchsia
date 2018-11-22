@@ -7,7 +7,7 @@
 #include <string>
 
 #include <lib/fit/promise.h>
-#include <lib/fit/sequential_executor.h>
+#include <lib/fit/single_threaded_executor.h>
 
 #include "utils.h"
 
@@ -90,7 +90,7 @@ fit::promise<> prepare_simulation() {
 
 void run() {
     auto simulation = prepare_simulation();
-    fit::run_sequentially(std::move(simulation));
+    fit::run_single_threaded(std::move(simulation));
 }
 
 } // namespace promise_example1
