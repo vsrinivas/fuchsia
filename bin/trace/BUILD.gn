@@ -60,9 +60,12 @@ source_set("spec") {
     "spec.h",
   ]
 
-  deps = [
+  public_deps = [
     "//garnet/lib/measure",
     "//garnet/public/lib/fxl",
+  ]
+
+  deps = [
     "//third_party/rapidjson",
   ]
 }
