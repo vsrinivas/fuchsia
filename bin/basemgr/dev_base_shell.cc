@@ -174,7 +174,7 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell>,
             for (const auto& account : *accounts) {
               FXL_LOG(INFO) << "Found user " << account.display_name;
               if (account.display_name->size() >= settings_.user.size() &&
-                  account.display_name->substr(settings_.user.size()) ==
+                  account.display_name->substr(0, settings_.user.size()) ==
                       settings_.user) {
                 account_id = account.id;
                 break;
