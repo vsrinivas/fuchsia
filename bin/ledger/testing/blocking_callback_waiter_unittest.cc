@@ -102,6 +102,9 @@ TEST(BlockingCallbackWaiterTest, PostCall) {
   ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(1u, nb_run);
   EXPECT_EQ(1u, nb_stop);
+
+  // loop_controller must outlive the waiter.
+  callback.reset();
 }
 
 TEST(BlockingCallbackWaiterTest, MultipleRunUntilCalled) {
@@ -124,6 +127,9 @@ TEST(BlockingCallbackWaiterTest, MultipleRunUntilCalled) {
   ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(2u, nb_run);
   EXPECT_EQ(2u, nb_stop);
+
+  // loop_controller must outlive the waiter.
+  callback.reset();
 }
 
 TEST(BlockingCallbackWaiterTest, InterleaveRunUntilCalledAndCall) {
@@ -150,6 +156,9 @@ TEST(BlockingCallbackWaiterTest, InterleaveRunUntilCalledAndCall) {
   ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(1u, nb_run);
   EXPECT_EQ(1u, nb_stop);
+
+  // loop_controller must outlive the waiter.
+  callback.reset();
 }
 
 TEST(BlockingCallbackWaiterTest, NotCalledYet) {
