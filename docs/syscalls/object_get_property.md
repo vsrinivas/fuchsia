@@ -179,17 +179,6 @@ will result in the deasserting of ZX_SOCKET_WRITE_THRESHOLD. Setting the
 write threshold after the peer has closed is an error, and results in a
 ZX_ERR_PEER_CLOSED error being returned.
 
-### ZX_PROP_CHANNEL_TX_MSG_MAX
-
-*handle* type: **Channel**
-
-*value* type: **size_t**
-
-Allowed operations: **get**
-
-The maximum number of packets a channel endpoint can have pending in
-its outgoing direction.
-
 ### ZX_PROP_JOB_KILL_ON_OOM
 
 *handle* type: **Job**

@@ -107,37 +107,6 @@ static bool job_name_test(void) {
     END_TEST;
 }
 
-static bool channel_name_test(void) {
-    BEGIN_TEST;
-
-    zx_handle_t channel1;
-    zx_handle_t channel2;
-    zx_status_t s = zx_channel_create(0, &channel1, &channel2);
-    EXPECT_EQ(s, ZX_OK, "");
-
-    char name[ZX_MAX_NAME_LEN];
-
-    memset(name, 'A', sizeof(name));
-    EXPECT_EQ(zx_object_get_property(channel1, ZX_PROP_NAME,
-                                     name, sizeof(name)),
-              ZX_OK, "");
-    for (size_t i = 0; i < sizeof(name); i++) {
-        EXPECT_EQ(name[i], '\0', "");
-    }
-
-    memset(name, 'A', sizeof(name));
-    EXPECT_EQ(zx_object_get_property(channel2, ZX_PROP_NAME,
-                                     name, sizeof(name)),
-              ZX_OK, "");
-    for (size_t i = 0; i < sizeof(name); i++) {
-        EXPECT_EQ(name[i], '\0', "");
-    }
-
-    zx_handle_close(channel1);
-    zx_handle_close(channel2);
-    END_TEST;
-}
-
 static bool process_name_test(void) {
     BEGIN_TEST;
 
@@ -304,24 +273,6 @@ static bool socket_buffer_test(void) {
     END_TEST;
 }
 
-static bool channel_depth_test(void) {
-    BEGIN_TEST;
-
-    zx_handle_t channels[2];
-    ASSERT_EQ(zx_channel_create(0, &channels[0], &channels[1]), ZX_OK, "");
-
-    for (int idx = 0; idx < 2; ++idx) {
-        size_t depth = 0u;
-        zx_status_t status = zx_object_get_property(channels[idx], ZX_PROP_CHANNEL_TX_MSG_MAX,
-                                                    &depth, sizeof(depth));
-        ASSERT_EQ(status, ZX_OK, "");
-        // For now, just check that the depth is non-zero.
-        ASSERT_NE(depth, 0u, "");
-    }
-
-    END_TEST;
-}
-
 #if defined(__x86_64__)
 
 static uintptr_t read_gs(void) {
@@ -445,9 +396,7 @@ RUN_TEST(process_name_test);
 RUN_TEST(thread_name_test);
 RUN_TEST(job_name_test);
 RUN_TEST(vmo_name_test);
-RUN_TEST(channel_name_test);
 RUN_TEST(socket_buffer_test);
-RUN_TEST(channel_depth_test);
 #if defined(__x86_64__)
 RUN_TEST(fs_invalid_test)
 RUN_TEST(gs_test)

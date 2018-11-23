@@ -416,10 +416,6 @@ typedef struct zx_info_resource {
 #define ZX_PROP_SOCKET_RX_THRESHOLD         12u
 #define ZX_PROP_SOCKET_TX_THRESHOLD         13u
 
-// Argument is a size_t, describing the number of packets a channel
-// endpoint can have pending in its tx direction.
-#define ZX_PROP_CHANNEL_TX_MSG_MAX          14u
-
 // Terminate this job if the system is low on memory.
 #define ZX_PROP_JOB_KILL_ON_OOM             15u
 

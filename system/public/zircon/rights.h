@@ -40,11 +40,9 @@ typedef uint32_t zx_rights_t;
 
 #define ZX_RIGHTS_POLICY (ZX_RIGHT_GET_POLICY | ZX_RIGHT_SET_POLICY)
 
-// Default rights for objects.
-#define ZX_DEFAULT_CHANNEL_RIGHTS \
-    ((ZX_RIGHTS_BASIC & (~ZX_RIGHT_DUPLICATE)) |\
-     ZX_RIGHTS_IO | ZX_RIGHT_SIGNAL | ZX_RIGHT_SIGNAL_PEER |\
-     ZX_RIGHTS_PROPERTY)
+#define ZX_DEFAULT_CHANNEL_RIGHTS                                                                  \
+    ((ZX_RIGHTS_BASIC & (~ZX_RIGHT_DUPLICATE)) | ZX_RIGHTS_IO | ZX_RIGHT_SIGNAL |                  \
+     ZX_RIGHT_SIGNAL_PEER)
 
 #define ZX_DEFAULT_EVENT_RIGHTS (ZX_RIGHTS_BASIC | ZX_RIGHT_SIGNAL)
 

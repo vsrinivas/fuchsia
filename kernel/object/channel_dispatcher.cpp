@@ -320,10 +320,6 @@ zx_status_t ChannelDispatcher::ResumeInterruptedCall(MessageWaiter* waiter,
     }
 }
 
-size_t ChannelDispatcher::TxMessageMax() const {
-    return SIZE_MAX;
-}
-
 void ChannelDispatcher::WriteSelf(fbl::unique_ptr<MessagePacket> msg) {
     canary_.Assert();
 
