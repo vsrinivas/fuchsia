@@ -4,6 +4,7 @@
 
 #include "peridot/bin/ledger/environment/environment.h"
 
+#include <lib/component/cpp/testing/startup_context_for_test.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/timekeeper/test_clock.h>
 
@@ -12,17 +13,17 @@
 namespace ledger {
 namespace {
 
-using EnvironmentTest = ::gtest::TestLoopFixture;
+class EnvironmentTest : public ::gtest::TestLoopFixture {
+ public:
+  EnvironmentTest()
+      : startup_context_(component::testing::StartupContextForTest::Create()) {}
 
-TEST_F(EnvironmentTest, InitializationOfAsync) {
-  Environment env = EnvironmentBuilder().SetAsync(dispatcher()).Build();
-
-  EXPECT_EQ(dispatcher(), env.dispatcher());
-  EXPECT_EQ(nullptr, env.io_dispatcher());
-}
+  std::unique_ptr<component::testing::StartupContextForTest> startup_context_;
+};
 
 TEST_F(EnvironmentTest, InitializationOfAsyncAndIOAsync) {
   Environment env = EnvironmentBuilder()
+                        .SetStartupContext(startup_context_.get())
                         .SetAsync(dispatcher())
                         .SetIOAsync(dispatcher())
                         .Build();
@@ -35,7 +36,9 @@ TEST_F(EnvironmentTest, InitializationClock) {
   auto clock = std::make_unique<timekeeper::TestClock>();
   auto clock_ptr = clock.get();
   Environment env = EnvironmentBuilder()
+                        .SetStartupContext(startup_context_.get())
                         .SetAsync(dispatcher())
+                        .SetIOAsync(dispatcher())
                         .SetClock(std::move(clock))
                         .Build();
 
@@ -46,7 +49,9 @@ TEST_F(EnvironmentTest, InitializationRandom) {
   auto random = std::make_unique<rng::TestRandom>(0);
   auto random_ptr = random.get();
   Environment env = EnvironmentBuilder()
+                        .SetStartupContext(startup_context_.get())
                         .SetAsync(dispatcher())
+                        .SetIOAsync(dispatcher())
                         .SetRandom(std::move(random))
                         .Build();
 

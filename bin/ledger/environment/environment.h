@@ -18,8 +18,8 @@
 
 namespace ledger {
 
-// Environment for the ledger application. |io_dispatcher| is optional, but if
-// provided in the constructor, |dispatcher| must outlive |io_dispatcher|.
+// Environment for the ledger application. |dispatcher| must outlive
+// |io_dispatcher|.
 class Environment {
  public:
   using BackoffFactory = fit::function<std::unique_ptr<backoff::Backoff>()>;
@@ -78,7 +78,8 @@ class Environment {
 
 // Builder for the environment.
 //
-// The |SetAsync| method must be called before the environment can be build.
+// The |SetAsync|, |SetIOAsync| and |SetStartupContext| methods must be called
+// before the environment can be built.
 class EnvironmentBuilder {
  public:
   EnvironmentBuilder();
@@ -109,7 +110,7 @@ class EnvironmentBuilder {
   async_dispatcher_t* dispatcher_ = nullptr;
   async_dispatcher_t* io_dispatcher_ = nullptr;
   std::string firebase_api_key_;
-  component::StartupContext* startup_context_;
+  component::StartupContext* startup_context_ = nullptr;
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
   Environment::BackoffFactory backoff_factory_;
   std::unique_ptr<timekeeper::Clock> clock_;

@@ -31,6 +31,7 @@ Environment::Environment(
       clock_(std::move(clock)),
       random_(std::move(random)) {
   FXL_DCHECK(dispatcher_);
+  FXL_DCHECK(io_dispatcher_);
   FXL_DCHECK(startup_context_);
   FXL_DCHECK(coroutine_service_);
   FXL_DCHECK(backoff_factory_);
@@ -53,6 +54,7 @@ Environment& Environment::operator=(Environment&& other) noexcept {
   clock_ = std::move(other.clock_);
   random_ = std::move(other.random_);
   FXL_DCHECK(dispatcher_);
+  FXL_DCHECK(io_dispatcher_);
   FXL_DCHECK(startup_context_);
   FXL_DCHECK(coroutine_service_);
   FXL_DCHECK(backoff_factory_);
