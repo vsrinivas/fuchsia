@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.modular.BasemgrMonitor",
+            "fuchsia.modular.ComponentContext",
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.sys.Launcher",
+            "fuchsia.tracelink.Registry"
+        ]
+    }
+}

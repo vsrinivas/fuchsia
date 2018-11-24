@@ -1,0 +1,24 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "features": [
+            "persistent-storage"
+        ],
+        "services": [
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.modular.BasemgrMonitor",
+            "fuchsia.modular.ComponentContext",
+            "fuchsia.sys.Launcher",
+            "fuchsia.testing.runner.TestRunner",
+            "fuchsia.testing.runner.TestRunnerStore",
+            "fuchsia.tracelink.Registry",
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.ui.viewsv1.ViewManager"
+        ],
+        "system": [
+            "data/sysui"
+        ]
+    }
+}

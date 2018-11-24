@@ -1,0 +1,20 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "features": [],
+        "services": [
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.modular.ComponentContext",
+            "fuchsia.modular.ModuleContext",
+            "fuchsia.modular.auth.TokenProvider",
+            "fuchsia.modular.AgentContext",
+            "fuchsia.net.LegacySocketProvider",
+            "fuchsia.net.oldhttp.HttpService",
+            "fuchsia.netconnector.NetConnector",
+            "fuchsia.sys.Launcher",
+            "fuchsia.tracelink.Registry"
+        ]
+    }
+}

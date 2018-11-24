@@ -6,7 +6,12 @@ import("//peridot/build/executable_package.gni")
 import("//peridot/build/tests_package.gni")
 
 executable_package("context_engine") {
-  deprecated_no_cmx = "//build"
+  meta = [
+    {
+      path = "meta/context_engine.cmx"
+      dest = "context_engine.cmx"
+    },
+  ]
 
   sources = [
     "context_engine_main.cc",

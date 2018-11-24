@@ -83,8 +83,12 @@ source_set("story_runner") {
 }
 
 executable_package("dev_story_shell") {
-  deprecated_no_cmx = "//build"
-
+  meta = [
+    {
+      path = "meta/dev_story_shell.cmx"
+      dest = "dev_story_shell.cmx"
+    },
+  ]
   sources = [
     "dev_story_shell.cc",
   ]

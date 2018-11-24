@@ -92,7 +92,12 @@ executable_package("sessionmgr") {
 }
 
 executable_package("dev_session_shell") {
-  deprecated_no_cmx = "//build"
+  meta = [
+    {
+      path = "meta/dev_session_shell.cmx"
+      dest = "dev_session_shell.cmx"
+    },
+  ]
 
   sources = [
     "dev_session_shell.cc",

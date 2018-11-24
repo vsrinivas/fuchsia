@@ -6,7 +6,12 @@ import("//build/fidl/fidl.gni")
 import("//peridot/build/executable_package.gni")
 
 executable_package("simple_agent") {
-  deprecated_no_cmx = "//build"
+  meta = [
+    {
+      path = "meta/simple_agent.cmx"
+      dest = "simple_agent.cmx"
+    },
+  ]
 
   sources = [
     "simple_agent.cc",
@@ -23,7 +28,12 @@ executable_package("simple_agent") {
 }
 
 executable_package("simple_module") {
-  deprecated_no_cmx = "//build"
+  meta = [
+    {
+      path = "meta/simple_module.cmx"
+      dest = "simple_module.cmx"
+    },
+  ]
 
   sources = [
     "simple_module.cc",

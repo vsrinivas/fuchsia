@@ -110,7 +110,12 @@ source_set("lib") {
 }
 
 executable_package("dev_base_shell") {
-  deprecated_no_cmx = "//build"
+  meta = [
+    {
+      path = "meta/dev_base_shell.cmx"
+      dest = "dev_base_shell.cmx"
+    },
+  ]
 
   sources = [
     "dev_base_shell.cc",

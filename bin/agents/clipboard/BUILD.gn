@@ -6,7 +6,12 @@ import("//peridot/build/executable_package.gni")
 import("//peridot/build/tests_package.gni")
 
 executable_package("clipboard_agent") {
-  deprecated_no_cmx = "//build"
+  meta = [
+    {
+      path = "meta/clipboard_agent.cmx"
+      dest = "clipboard_agent.cmx"
+    },
+  ]
 
   sources = [
     "clipboard_agent.cc",

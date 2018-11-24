@@ -5,7 +5,12 @@
 import("//peridot/build/executable_package.gni")
 
 executable_package("dev_token_manager") {
-  deprecated_no_cmx = "//build"
+  meta = [
+    {
+      path = "meta/dev_token_manager.cmx"
+      dest = "dev_token_manager.cmx"
+    },
+  ]
 
   sources = [
     "dev_token_manager.cc",
