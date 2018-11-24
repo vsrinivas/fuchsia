@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/log_settings_command_line.h>
+#include <lib/fxl/logging.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
@@ -15,9 +18,11 @@
 // Note: /data is no longer large enough in qemu sessions
 const char kOutputFilePath[] = "/tmp/test.trace";
 
+static std::unique_ptr<component::StartupContext> g_context;
+
 static void RunAndVerify(const char* tspec_path) {
   ASSERT_TRUE(RunTspec(tspec_path, kOutputFilePath));
-  ASSERT_TRUE(VerifyTspec(tspec_path, kOutputFilePath));
+  ASSERT_TRUE(VerifyTspec(g_context.get(), tspec_path, kOutputFilePath));
 }
 
 TEST(Oneshot, FillBuffer) {
@@ -122,6 +127,10 @@ TEST_F(TwoProvidersOneEngine, ErrorHandling) {
   RunAndVerify("/pkg/data/simple.tspec");
 }
 
+TEST(TwoProvidersTwoEngines, Test) {
+  RunAndVerify("/pkg/data/two_providers_two_engines.tspec");
+}
+
 // Provide our own main so that --verbose,etc. are recognized.
 // This is useful because our verbosity is passed on to each test.
 int main(int argc, char** argv)
@@ -131,6 +140,13 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
 
   testing::InitGoogleTest(&argc, argv);
+
+  // |CreateFromStartupInfo()| needs a loop, it uses the default dispatcher.
+  {
+    async::Loop loop(&kAsyncLoopConfigAttachToThread);
+    g_context = component::StartupContext::CreateFromStartupInfo();
+    FXL_DCHECK(g_context);
+  }
 
   return RUN_ALL_TESTS();
 }

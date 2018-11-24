@@ -2,9 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// This is a utility program for running integration tests by hand.
+
 #include <stdlib.h>
 #include <iostream>
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/log_settings_command_line.h>
 #include <lib/fxl/logging.h>
@@ -15,8 +19,8 @@
 const char kOutputFilePath[] = "/tmp/test.trace";
 
 const char kUsageString[] = {
-  "Usage: run fuchsia-pkg://fuchsia.com/trace_tests#meta/run_integration_test.cmx\\n"
-  "  [options] /pkg/data/test.tspec\n"
+  "Usage: run fuchsia-pkg://fuchsia.com/trace_tests#meta/run_integration_test.cmx\n"
+  "  [options] /pkg/data/<test>.tspec\n"
   "\n"
   "Options:\n"
   "  --quiet[=LEVEL]    set quietness level (opposite of verbose)\n"
@@ -47,8 +51,18 @@ int main(int argc, char *argv[]) {
   if (!RunTspec(tspec_path, kOutputFilePath)) {
     return EXIT_FAILURE;
   }
-  if (!VerifyTspec(tspec_path, kOutputFilePath)) {
+
+  // |CreateFromStartupInfo()| needs a loop, it uses the default dispatcher.
+  std::unique_ptr<component::StartupContext> context;
+  {
+    async::Loop loop(&kAsyncLoopConfigAttachToThread);
+    context = component::StartupContext::CreateFromStartupInfo();
+    FXL_DCHECK(context);
+  }
+
+  if (!VerifyTspec(context.get(), tspec_path, kOutputFilePath)) {
     return EXIT_FAILURE;
   }
+
   return EXIT_SUCCESS;
 }

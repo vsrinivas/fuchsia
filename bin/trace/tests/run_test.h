@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include <lib/component/cpp/startup_context.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
@@ -30,10 +31,17 @@ zx_status_t WaitAndGetExitCode(const std::string& program_name,
                                const zx::process& process,
                                int* out_exit_code);
 
+// We don't need to pass a context to RunTspec because the trace program
+// is currently a system app. If that changes then we will need a context
+// to run the trace too.
 bool RunTspec(const std::string& tspec_file_path,
               const std::string& output_file_path);
 
-bool VerifyTspec(const std::string& tspec_file_path,
+// N.B. This is a synchronous call that uses the default async dispatcher
+// ("synchronous" meaning that it waits for the verifier to complete).
+// Therefore the caller cannot currently be using it.
+bool VerifyTspec(component::StartupContext* context,
+                 const std::string& tspec_file_path,
                  const std::string& output_file_path);
 
 #endif // GARNET_BIN_TRACE_TESTS_RUN_TEST_H

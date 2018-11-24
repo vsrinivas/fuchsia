@@ -1,0 +1,8 @@
+// Run the two_providers_two_engines test.
+{
+  "test_name": "two-providers-two-engines",
+  "app": "fuchsia-pkg://fuchsia.com/trace_tests#meta/two_providers_two_engines_test_app.cmx",
+  "categories": [ "trace:test" ],
+  "buffer_size_in_mb": 1,
+  "buffering_mode": "oneshot"
+}

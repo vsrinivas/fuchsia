@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/run_integration_test"
+        "binary": "bin/two_providers_two_engines_test_app"
     },
     "sandbox": {
         "features": [
@@ -8,10 +8,8 @@
             "system-temp"
         ],
 	"services": [
-            "fuchsia.process.Launcher",
-            "fuchsia.sys.Launcher",
+            "fuchsia.tracelink.Registry",
             "fuchsia.tracing.TraceController"
-        ],
-        "system": [ "bin" ]
+        ]
     }
 }

@@ -5,7 +5,12 @@
 #include <string>
 #include <vector>
 
+#include <fuchsia/sys/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fdio/spawn.h>
+#include <lib/fsl/types/type_converters.h>
+#include <lib/fxl/files/file.h>
 #include <lib/fxl/log_settings.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/join_strings.h>
@@ -16,11 +21,8 @@
 #include <zircon/types.h>
 #include <zircon/status.h>
 
+#include "garnet/bin/trace/spec.h"
 #include "garnet/bin/trace/tests/run_test.h"
-
-// The path to the test subprogram.
-// This path can only be interpreted within the context of the test package.
-#define TEST_APP_PATH "/pkg/bin/basic_integration_test_app"
 
 // The path of the trace program.
 const char kTraceProgramPath[] = "/system/bin/trace";
@@ -72,16 +74,17 @@ static void BuildTraceProgramArgv(const std::string& tspec_path,
                                     tspec_path.c_str()));
 }
 
-static void BuildVerificationProgramArgv(const std::string& tspec_path,
+static void BuildVerificationProgramArgv(const std::string& program_path,
+                                         const std::string& tspec_path,
                                          const std::string& output_file_path,
                                          std::vector<std::string>* argv) {
-  argv->push_back(TEST_APP_PATH);
+  argv->push_back(program_path);
 
   AppendLoggingArgs(argv, "");
 
   argv->push_back("verify");
-  argv->push_back(tspec_path.c_str());
-  argv->push_back(output_file_path.c_str());
+  argv->push_back(tspec_path);
+  argv->push_back(output_file_path);
 }
 
 zx_status_t SpawnProgram(const zx::job& job,
@@ -145,23 +148,9 @@ zx_status_t WaitAndGetExitCode(const std::string& program_name,
   return ZX_OK;
 }
 
-// |verify=false| -> run the test
-// |verify=true| -> verify the test
-static bool RunTspecWorker(const std::string& tspec_path,
-                           const std::string& output_file_path,
-                           bool verify) {
-  const char* operation_name = verify ? "Verifying" : "Running";
-  FXL_LOG(INFO) << operation_name << " tspec " << tspec_path
-                << ", output file " << output_file_path;
+static bool LaunchTool(const std::vector<std::string>& argv) {
   zx::job job{}; // -> default job
   zx::process subprocess;
-
-  std::vector<std::string> argv;
-  if (!verify) {
-    BuildTraceProgramArgv(tspec_path, output_file_path, &argv);
-  } else {
-    BuildVerificationProgramArgv(tspec_path, output_file_path, &argv);
-  }
 
   auto status = SpawnProgram(job, argv, ZX_HANDLE_INVALID, &subprocess);
   if (status != ZX_OK) {
@@ -169,8 +158,7 @@ static bool RunTspecWorker(const std::string& tspec_path,
   }
 
   int exit_code;
-  status = WaitAndGetExitCode(argv[0], subprocess, 
-                              &exit_code);
+  status = WaitAndGetExitCode(argv[0], subprocess, &exit_code);
   if (status != ZX_OK) {
     return false;
   }
@@ -178,16 +166,114 @@ static bool RunTspecWorker(const std::string& tspec_path,
     return false;
   }
 
-  FXL_VLOG(1) << operation_name << " completed OK";
   return true;
+}
+
+static bool LaunchApp(component::StartupContext* context,
+                      const std::string& app,
+                      const std::vector<std::string>& args) {
+  fuchsia::sys::LaunchInfo launch_info;
+  launch_info.url = fidl::StringPtr(app);
+  launch_info.arguments =
+      fxl::To<fidl::VectorPtr<fidl::StringPtr>>(args);
+
+  if (FXL_VLOG_IS_ON(1)) {
+    FXL_VLOG(1) << "Launching: " << launch_info.url << " "
+                << fxl::JoinStrings(args, " ");
+  } else {
+    FXL_LOG(INFO) << "Launching: " << launch_info.url << std::endl;
+  }
+
+  fuchsia::sys::ComponentControllerPtr component_controller;
+  int64_t return_code = INT64_MIN;
+
+  // Attach to the current thread so that it's using the default async
+  // dispatcher, which is what the component controller machinery is using.
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+
+  context->launcher()->CreateComponent(std::move(launch_info),
+                                       component_controller.NewRequest());
+  component_controller.set_error_handler(
+    [&loop, &return_code](zx_status_t error) {
+      // This can get run even after the app has exited, in the destructor.
+      if (return_code == INT64_MIN) {
+        FXL_LOG(INFO) << "Application terminated, status " << error;
+        return_code = error;
+        loop.Quit();
+      }
+  });
+  component_controller.events().OnTerminated =
+    [&loop, &return_code](int64_t rc,
+                          fuchsia::sys::TerminationReason termination_reason) {
+      FXL_LOG(INFO) << "Application exited with return code "
+                    << static_cast<int>(termination_reason) << "/" << rc;
+      switch (termination_reason) {
+      case fuchsia::sys::TerminationReason::UNKNOWN:
+        // Some non-zero value.
+        return_code = 1;
+        break;
+      case fuchsia::sys::TerminationReason::EXITED:
+        return_code = rc;
+        break;
+      default:
+        return_code = static_cast<int64_t>(termination_reason);
+        break;
+      }
+      loop.Quit();
+    };
+
+  // We could add a timeout here but the general rule is to leave it to the
+  // watchdog timer.
+
+  loop.Run();
+
+  FXL_LOG(INFO) << "return_code " << return_code;
+  return return_code == 0;
 }
 
 bool RunTspec(const std::string& tspec_path,
               const std::string& output_file_path) {
-  return RunTspecWorker(tspec_path, output_file_path, false /*run*/);
+  std::vector<std::string> argv;
+  BuildTraceProgramArgv(tspec_path, output_file_path, &argv);
+
+  FXL_LOG(INFO) << "Running tspec " << tspec_path
+                << ", output file " << output_file_path;
+
+  return LaunchTool(argv);
 }
 
-bool VerifyTspec(const std::string& tspec_path,
+bool VerifyTspec(component::StartupContext* context,
+                 const std::string& tspec_path,
                  const std::string& output_file_path) {
-  return RunTspecWorker(tspec_path, output_file_path, true /*verify*/);
+  std::string tspec_contents;
+  if (!files::ReadFileToString(tspec_path, &tspec_contents)) {
+    FXL_LOG(ERROR) << "Can't read test spec: " << tspec_path;
+    return false;
+  }
+
+  tracing::Spec spec;
+  if (!tracing::DecodeSpec(tspec_contents, &spec)) {
+    FXL_LOG(ERROR) << "Error decoding test spec: " << tspec_path;
+    return false;
+  }
+
+  FXL_DCHECK(spec.app);
+  const std::string& program_path = *spec.app;
+
+  std::vector<std::string> argv;
+  BuildVerificationProgramArgv(program_path, tspec_path, output_file_path,
+                               &argv);
+
+  FXL_LOG(INFO) << "Verifying tspec " << tspec_path
+                << ", output file " << output_file_path;
+
+  // For consistency we do the exact same thing that the trace program does.
+  // We also use the same function names for easier comparison.
+  if (spec.spawn) {
+    return LaunchTool(argv);
+  } else {
+    return LaunchApp(context, argv[0],
+                     std::vector<std::string>(argv.begin() + 1,
+                                              argv.end()));
+  }
 }

@@ -25,7 +25,11 @@ source_set("run_test") {
   ]
 
   public_deps = [
+    "//garnet/bin/trace:spec",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]
@@ -51,6 +55,28 @@ source_set("integration_test_utils") {
   ]
 }
 
+# Same as "integration_test_utils" except uses trace-static.
+# This is done in order to ensure trace-engine-static is used.
+source_set("integration_test_utils_with_trace_static") {
+  testonly = true
+
+  sources = [
+    "integration_test_utils.cc",
+    "integration_test_utils.h",
+  ]
+
+  public_deps = [
+    "//garnet/bin/trace:spec",
+    "//garnet/public/lib/fxl",
+    "//third_party/rapidjson",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace-static",
+    "//zircon/public/lib/trace-provider-static",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 executable("trace_integration_tests") {
   testonly = true
   output_name = "trace_integration_tests"
@@ -61,7 +87,9 @@ executable("trace_integration_tests") {
 
   deps = [
     ":run_test",
+    "//garnet/public/lib/component/cpp",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 
@@ -75,6 +103,8 @@ executable("run_integration_test") {
 
   deps = [
     ":run_test",
+    "//garnet/public/lib/component/cpp",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 
@@ -119,6 +149,46 @@ executable("two_providers_one_engine") {
   ]
 }
 
+shared_library("self_contained_provider") {
+  testonly = true
+
+  sources = [
+    "self_contained_provider.cc",
+    "self_contained_provider.h",
+  ]
+
+  deps = [
+    ":integration_test_utils_with_trace_static",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace-static",
+    "//zircon/public/lib/trace-provider-static",
+    "//zircon/public/lib/trace-provider-fdio-connect",
+  ]
+}
+
+executable("two_providers_two_engines_test_app") {
+  testonly = true
+  output_name = "two_providers_two_engines_test_app"
+
+  sources = [
+    "integration_test_main.cc",
+    "self_contained_provider.h",
+    "two_providers_two_engines.cc",
+  ]
+
+  deps = [
+    ":integration_test_utils",
+    ":self_contained_provider",
+    "//garnet/bin/trace:spec",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 package("trace_tests") {
   testonly = true
 
@@ -128,6 +198,7 @@ package("trace_tests") {
     ":trace_integration_tests",
     ":trace_tests_bin",
     ":two_providers_one_engine",
+    ":two_providers_two_engines_test_app",
   ]
 
   tests = [
@@ -149,6 +220,9 @@ package("trace_tests") {
     {
       name = "two_providers_one_engine"
     },
+    {
+      name = "two_providers_two_engines_test_app"
+    },
   ]
 
   meta = [
@@ -163,6 +237,10 @@ package("trace_tests") {
     {
       path = rebase_path("meta/trace_integration_tests.cmx")
       dest = "trace_integration_tests.cmx"
+    },
+    {
+      path = rebase_path("meta/two_providers_two_engines_test_app.cmx")
+      dest = "two_providers_two_engines_test_app.cmx"
     },
   ]
 
@@ -182,6 +260,10 @@ package("trace_tests") {
     {
       path = rebase_path("simple.tspec")
       dest = "simple.tspec"
+    },
+    {
+      path = rebase_path("two_providers_two_engines.tspec")
+      dest = "two_providers_two_engines.tspec"
     },
   ]
 }
