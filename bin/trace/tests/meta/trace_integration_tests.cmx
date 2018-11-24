@@ -18,8 +18,8 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.tracelink.Registry": "trace_manager",
-                "fuchsia.tracing.TraceController": "trace_manager"
+                "fuchsia.tracelink.Registry": [ "trace_manager", "--verbose=2" ],
+                "fuchsia.tracing.TraceController": [ "trace_manager", "--verbose=2" ]
             }
         }
     }
