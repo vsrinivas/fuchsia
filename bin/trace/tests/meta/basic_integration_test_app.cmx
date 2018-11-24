@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/integration_test_app"
+        "binary": "bin/basic_integration_test_app"
     },
     "sandbox": {
         "features": [

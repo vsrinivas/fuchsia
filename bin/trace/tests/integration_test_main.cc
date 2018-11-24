@@ -16,7 +16,6 @@
 #include <iostream>
 #include <stdlib.h>
 
-#include <lib/async-loop/cpp/loop.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/files/file.h>
 #include <lib/fxl/log_settings.h>
@@ -24,14 +23,14 @@
 #include <lib/fxl/logging.h>
 
 #include "garnet/bin/trace/spec.h"
-#include "garnet/bin/trace/tests/integration_tests.h"
+#include "garnet/bin/trace/tests/integration_test_utils.h"
 
 const char kUsageString[] = {
   "Test runner usage:\n"
-  "  integration_test_app [options] run tspec-file\n"
+  "  $program [options] run tspec-file\n"
   "\n"
   "Test verifier usage:\n"
-  "  integration_test_app [options] verify tspec-file trace-output-file\n"
+  "  $program [options] verify tspec-file trace-output-file\n"
   "\n"
   "Options:\n"
   "  --quiet[=LEVEL]    set quietness level (opposite of verbose)\n"
@@ -39,27 +38,8 @@ const char kUsageString[] = {
   "  --log-file=FILE    write log output to FILE\n"
 };
 
-const IntegrationTest* kIntegrationTests[] = {
-  &kFillBufferIntegrationTest,
-  &kSimpleIntegrationTest,
-};
-
-static const IntegrationTest* LookupTest(const std::string& test_name) {
-  for (auto test : kIntegrationTests) {
-    if (test->name == test_name)
-      return test;
-  }
-  return nullptr;
-}
-
 static int RunTest(const tracing::Spec& spec, TestRunner* run) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-  loop.StartThread("provider-thread", nullptr);
-
-  bool success = run(spec, loop.dispatcher());
-
-  loop.Quit();
-  loop.JoinThreads();
+  bool success = run(spec);
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
@@ -85,12 +65,14 @@ int main(int argc, char *argv[]) {
 
   auto args = cl.positional_args();
 
-  if (args.size() == 0) {
-    FXL_LOG(ERROR) << "Missing command";
+  if (args.size() < 2) {
+    PrintUsageString();
     return EXIT_FAILURE;
   }
 
-  const std::string& command = args[0];
+  const std::string command = args[0];
+  const std::string spec_file_path = args[1];
+
   if (command == "run") {
     if (args.size() != 2) {
       FXL_LOG(ERROR) << "Wrong number of arguments to run invocation";
@@ -106,7 +88,6 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
-  const std::string& spec_file_path = args[1];
   std::string spec_file_contents;
   if (!files::ReadFileToString(spec_file_path, &spec_file_contents)) {
     FXL_LOG(ERROR) << "Can't read test spec: " << spec_file_path;
@@ -135,6 +116,7 @@ int main(int argc, char *argv[]) {
   } else {
     FXL_VLOG(1) << "Verifying test " << spec_file_path
                 << ":\"" << test_name << "\"";
-    return VerifyTest(spec, test->verify, args[2]);
+    const std::string& trace_output_file = args[2];
+    return VerifyTest(spec, test->verify, trace_output_file);
   }
 }

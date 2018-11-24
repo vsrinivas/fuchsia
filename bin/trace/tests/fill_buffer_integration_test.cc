@@ -7,15 +7,15 @@
 #include <trace-provider/provider.h>
 #include <zircon/status.h>
 
-#include "garnet/bin/trace/spec.h"
-#include "garnet/bin/trace/tests/integration_tests.h"
+#include "garnet/bin/trace/tests/basic_integration_tests.h"
 
-bool RunFillBufferTest(const tracing::Spec& spec,
-                       async_dispatcher_t* dispatcher) {
-  trace::TraceProvider provider(dispatcher);
-  FXL_DCHECK(provider.is_valid());
-  // Until we have synchronous registration, give registration time to happen.
-  zx::nanosleep(zx::deadline_after(zx::sec(1)));
+static bool RunFillBufferTest(const tracing::Spec& spec) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+
+  fbl::unique_ptr<trace::TraceProvider> provider;
+  if (!CreateProviderSynchronously(loop, "fill-buffer", &provider)) {
+    return false;
+  }
 
   // Generate at least 4MB of test records.
   // This stress tests streaming mode buffer saving (with buffer size of 1MB).
@@ -25,8 +25,8 @@ bool RunFillBufferTest(const tracing::Spec& spec,
   return true;
 }
 
-bool VerifyFillBufferTest(const tracing::Spec& spec,
-                          const std::string& test_output_file) {
+static bool VerifyFillBufferTest(const tracing::Spec& spec,
+                                 const std::string& test_output_file) {
   tracing::BufferingMode buffering_mode;
   if (!tracing::GetBufferingMode(*spec.buffering_mode, &buffering_mode)) {
     FXL_LOG(ERROR) << "Bad buffering mode: " << *spec.buffering_mode;

@@ -16,7 +16,7 @@
 #include <zircon/status.h>
 
 #include "garnet/bin/trace/spec.h"
-#include "garnet/bin/trace/tests/integration_tests.h"
+#include "garnet/bin/trace/tests/integration_test_utils.h"
 
 // The name of the trace events member in the json output file.
 const char kTraceEventsMemberName[] = "traceEvents";
@@ -40,6 +40,34 @@ const char kEventNameMemberName[] = "name";
 // If it's smaller we risk not stress-testing things enough.
 // header-word(8) + ticks(8) + 3 arguments (= 3 * (8 + 8)) = 64
 constexpr size_t kRecordSize = 64;
+
+bool CreateProviderSynchronously(
+    async::Loop& loop, const char* name,
+    fbl::unique_ptr<trace::TraceProvider>* out_provider) {
+  async_dispatcher_t* dispatcher = loop.dispatcher();
+
+  fbl::unique_ptr<trace::TraceProvider> provider;
+  bool already_started;
+  if (!trace::TraceProvider::CreateSynchronously(dispatcher, name, &provider,
+                                                 &already_started)) {
+    FXL_LOG(ERROR) << "Failed to create provider " << name;
+    return false;
+  }
+
+  if (already_started) {
+    // At this point we're registered with trace-manager, and we know tracing
+    // has started. But we haven't received the Start() request yet, which
+    // contains the trace buffer (as a vmo) and other things. So wait for it.
+    if (!WaitForTracingToStart(loop, kStartTimeout)) {
+      FXL_LOG(ERROR) << "Provider " << name
+                     << " failed waiting for tracing to start";
+      return false;
+    }
+  }
+
+  *out_provider = std::move(provider);
+  return true;
+}
 
 void WriteTestEvents(size_t num_records) {
   for (size_t i = 0; i < num_records; ++i) {
@@ -195,13 +223,8 @@ bool VerifyFullBuffer(const std::string& test_output_file,
   return true;
 }
 
-bool WaitForTracingToStart(zx::duration timeout) {
-  // This implementation is more complex than it needs to be.
-  // We don't really need to use an async loop here.
-  // It is written this way as part of the purpose of this program is to
-  // provide examples of tracing usage.
+bool WaitForTracingToStart(async::Loop& loop, zx::duration timeout) {
   trace::TraceObserver trace_observer;
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   bool started = false;
   auto on_trace_state_changed = [&loop, &started]() {

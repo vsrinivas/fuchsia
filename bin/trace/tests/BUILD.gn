@@ -31,6 +31,26 @@ source_set("run_test") {
   ]
 }
 
+source_set("integration_test_utils") {
+  testonly = true
+
+  sources = [
+    "integration_test_utils.cc",
+    "integration_test_utils.h",
+  ]
+
+  public_deps = [
+    "//garnet/bin/trace:spec",
+    "//garnet/public/lib/fxl",
+    "//third_party/rapidjson",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 executable("trace_integration_tests") {
   testonly = true
   output_name = "trace_integration_tests"
@@ -58,23 +78,22 @@ executable("run_integration_test") {
   ]
 }
 
-executable("integration_test_app") {
+executable("basic_integration_test_app") {
   testonly = true
-  output_name = "integration_test_app"
+  output_name = "basic_integration_test_app"
 
   sources = [
+    "basic_integration_tests.cc",
+    "basic_integration_tests.h",
     "fill_buffer_integration_test.cc",
     "integration_test_main.cc",
-    "integration_test_utils.cc",
-    "integration_tests.h",
     "simple_integration_test.cc",
   ]
 
   deps = [
-    "//garnet/bin/trace:spec",
+    ":integration_test_utils",
     "//garnet/lib/measure",
     "//garnet/public/lib/fxl",
-    "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-provider",
@@ -104,7 +123,7 @@ package("trace_tests") {
   testonly = true
 
   deps = [
-    ":integration_test_app",
+    ":basic_integration_test_app",
     ":run_integration_test",
     ":trace_integration_tests",
     ":trace_tests_bin",
@@ -122,7 +141,7 @@ package("trace_tests") {
 
   binaries = [
     {
-      name = "integration_test_app"
+      name = "basic_integration_test_app"
     },
     {
       name = "run_integration_test"
@@ -134,8 +153,8 @@ package("trace_tests") {
 
   meta = [
     {
-      path = rebase_path("meta/integration_test_app.cmx")
-      dest = "integration_test_app.cmx"
+      path = rebase_path("meta/basic_integration_test_app.cmx")
+      dest = "basic_integration_test_app.cmx"
     },
     {
       path = rebase_path("meta/run_integration_test.cmx")
