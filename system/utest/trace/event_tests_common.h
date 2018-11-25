@@ -1050,14 +1050,16 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
     END_TRACE_TEST;
 }
 
+// This function is kept pending resolution of PT-66 when TA_STRING_LITERAL()
+// is re-added.
 static bool test_string_literal_arguments(void) {
     BEGIN_TRACE_TEST;
 
     fixture_start_tracing();
 
-    TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_STRING_LITERAL(NULL));
-    TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_STRING_LITERAL(""));
-    TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_STRING_LITERAL("literal"));
+    TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_STRING(NULL));
+    TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_STRING(""));
+    TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_STRING("literal"));
 
     ASSERT_RECORDS("\
 String(index: 1, \"+enabled\")\n\
@@ -1068,7 +1070,6 @@ String(index: 3, \"name\")\n\
 String(index: 4, \"key\")\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: string(\"\")})\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: string(\"\")})\n\
-String(index: 5, \"literal\")\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: string(\"literal\")})\n\
 ",
                    "");

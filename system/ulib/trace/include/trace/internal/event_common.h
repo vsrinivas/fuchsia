@@ -17,8 +17,7 @@
 //
 // When writing trace events in C++, it is not necessary to wrap each trace
 // argument value with these macros since the compiler can infer the necessary
-// type information, with the exception of |TA_CHAR_ARRAY|, |TA_STRING_LITERAL|,
-// and |TA_KOID|.
+// type information, with the exception of |TA_CHAR_ARRAY| and |TA_KOID|.
 //
 // Use |TA_NULL| for null values.
 // Use |TA_INT32| for signed 32-bit integer values.
@@ -28,9 +27,10 @@
 // Use |TA_DOUBLE| for double-precision floating point values.
 // Use |TA_CHAR_ARRAY| for character arrays with a length (copied rather than cached), required in C++.
 // Use |TA_STRING| for null-terminated dynamic strings (copied rather than cached).
-// Use |TA_STRING_LITERAL| for null-terminated static string constants (cached), required in C++.
 // Use |TA_POINTER| for pointer values (records the memory address, not the target).
 // Use |TA_KOID| for kernel object ids, required in C++.
+//
+// TODO(PT-66): Re-add |TA_STRING_LITERAL|.
 //
 // C or C++ Usage: (argument type macros required in C)
 //
@@ -48,7 +48,7 @@
 //     TRACE_DURATION("category", "name", "arg", TA_DOUBLE(3.14));
 //     TRACE_DURATION("category", "name", "arg", TA_CHAR_ARRAY(chars, length));
 //     TRACE_DURATION("category", "name", "arg", TA_STRING(c_string));
-//     TRACE_DURATION("category", "name", "arg", TA_STRING_LITERAL("Hi!"));
+//     TRACE_DURATION("category", "name", "arg", TA_STRING("Hi!"));
 //     TRACE_DURATION("category", "name", "arg", TA_POINTER(ptr));
 //     TRACE_DURATION("category", "name", "arg", TA_KOID(koid));
 //
@@ -72,7 +72,7 @@
 //     TRACE_DURATION("category", "name", "arg", c_string);
 //     TRACE_DURATION("category", "name", "arg", fbl_string);
 //     TRACE_DURATION("category", "name", "arg", std_string);
-//     TRACE_DURATION("category", "name", "arg", TA_STRING_LITERAL("Hi!"));
+//     TRACE_DURATION("category", "name", "arg", "Hi!");
 //     TRACE_DURATION("category", "name", "arg", ptr);
 //     TRACE_DURATION("category", "name", "arg", TA_KOID(koid));
 //
@@ -88,9 +88,6 @@
 #define TA_STRING(string_value)   \
     (trace_make_string_arg_value( \
         trace_make_inline_c_string_ref(string_value)))
-#define TA_STRING_LITERAL(string_literal_value) \
-    (trace_make_string_arg_value(               \
-        TRACE_INTERNAL_MAKE_LITERAL_STRING_REF(string_literal_value)))
 #define TA_POINTER(pointer_value) (trace_make_pointer_arg_value((uintptr_t)pointer_value))
 #define TA_KOID(koid_value) (trace_make_koid_arg_value(koid_value))
 
