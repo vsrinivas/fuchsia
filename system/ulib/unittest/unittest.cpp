@@ -20,6 +20,11 @@
 #include "crash-list.h"
 #endif // UNITTEST_CRASH_HANDLER_SUPPORTED
 
+// Some strings that are used for comparison purposes can be pretty long, and
+// when printing the failure message it's important to see what the failing
+// text is. That's why this is as large as it is.
+#define PRINT_BUFFER_SIZE (4096)
+
 using nsecs_t = uint64_t;
 
 static nsecs_t now() {

@@ -75,8 +75,6 @@
 #define UNITTEST_CRASH_HANDLER_SUPPORTED
 #endif // __Fuchsia__
 
-#define PRINT_BUFFER_SIZE (512)
-
 // The following helper function makes the "msg" argument optional in
 // C++, so that you can write either of the following:
 //   ASSERT_EQ(x, y, "Check that x equals y");
