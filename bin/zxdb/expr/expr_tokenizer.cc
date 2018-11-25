@@ -104,13 +104,17 @@ void ExprTokenizer::AdvanceToEndOfToken(ExprToken::Type type) {
       break;
 
     case ExprToken::kDot:
+    case ExprToken::kComma:
     case ExprToken::kStar:
     case ExprToken::kAmpersand:
     case ExprToken::kLeftSquare:
     case ExprToken::kRightSquare:
     case ExprToken::kLeftParen:
     case ExprToken::kRightParen:
+    case ExprToken::kLess:
+    case ExprToken::kGreater:
     case ExprToken::kMinus:
+    case ExprToken::kPlus:
       AdvanceOneChar();  // All are one char.
       break;
 
@@ -149,6 +153,8 @@ ExprToken::Type ExprTokenizer::ClassifyCurrent() {
       return ExprToken::kMinus;
     case '.':
       return ExprToken::kDot;
+    case ',':
+      return ExprToken::kComma;
     case '*':
       return ExprToken::kStar;
     case '&':
@@ -161,6 +167,10 @@ ExprToken::Type ExprTokenizer::ClassifyCurrent() {
       return ExprToken::kLeftParen;
     case ')':
       return ExprToken::kRightParen;
+    case '<':
+      return ExprToken::kLess;
+    case '>':
+      return ExprToken::kGreater;
     case ':':
       // Currently only support colons as part of "::", look ahead.
       if (can_advance()) {

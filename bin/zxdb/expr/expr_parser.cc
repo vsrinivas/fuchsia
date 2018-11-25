@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/expr/expr_parser.h"
 
+#include "garnet/bin/zxdb/expr/template_type_extractor.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -52,14 +53,17 @@ using InfixFunc = fxl::RefPtr<ExprNode> (ExprParser::*)(
 // that we support:
 //   https://en.cppreference.com/w/cpp/language/operator_precedence
 
-// Lowest precedence: Most C unary operators like "*", "&", and "-".
-constexpr int kPrecedenceUnary = 10;
+// Lowest precedence: Comma (not currently needed).
+// constexpr int kPrecedenceComma = 10;
+
+// Most C unary operators like "*", "&", and "-".
+constexpr int kPrecedenceUnary = 20;
 
 // () . -> []
-constexpr int kPrecedenceCallAccess = 20;
+constexpr int kPrecedenceCallAccess = 30;
 
 // Highest precedence: "::"
-constexpr int kPrecedenceScope = 30;
+constexpr int kPrecedenceScope = 40;
 
 }  // namespace
 
@@ -76,6 +80,7 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {&ExprParser::NamePrefix,      &ExprParser::NameInfix,       -1},                     // kName
     {&ExprParser::IntegerPrefix,   nullptr,                      -1},                     // kInteger
     {nullptr,                      &ExprParser::DotOrArrowInfix, kPrecedenceCallAccess},  // kDot
+    {nullptr,                      nullptr,                      -1},                     // kComma
     {&ExprParser::StarPrefix,      nullptr,                      kPrecedenceUnary},       // kStar
     {&ExprParser::AmpersandPrefix, nullptr,                      kPrecedenceUnary},       // kAmpersand
     {nullptr,                      &ExprParser::DotOrArrowInfix, kPrecedenceCallAccess},  // kArrow
@@ -83,7 +88,10 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {nullptr,                      nullptr,                      -1},                     // kRightSquare
     {&ExprParser::LeftParenPrefix, nullptr,                      -1},                     // kLeftParen
     {nullptr,                      nullptr,                      -1},                     // kRightParen
+    {nullptr,                      &ExprParser::LessInfix,       kPrecedenceUnary},       // kLess
+    {nullptr,                      nullptr,                      -1},                     // kGreater
     {&ExprParser::MinusPrefix,     nullptr,                      -1},                     // kMinus
+    {nullptr,                      nullptr,                      -1},                     // kPlus (currently unhandled)
     {&ExprParser::ScopePrefix,     &ExprParser::ScopeInfix,      kPrecedenceScope}        // kColonColon
 };
 // clang-format on
@@ -147,6 +155,32 @@ fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence) {
   }
 
   return left;
+}
+
+// A list is any sequence of comma-separated types. We don't parse the types
+// (this is hard) but instead skip over them.
+std::vector<std::string> ExprParser::ParseTemplateList(
+    ExprToken::Type stop_before) {
+  std::vector<std::string> result;
+
+  while (!at_end() && !LookAhead(stop_before)) {
+    TemplateTypeResult type_result = ExtractTemplateType(tokens_, cur_);
+    if (!type_result.success) {
+      SetError(tokens_[type_result.unmatched_error_token],
+               fxl::StringPrintf(
+                   "Unmatched '%s'.",
+                   tokens_[type_result.unmatched_error_token].value().c_str()));
+      return std::vector<std::string>();
+    }
+    cur_ = type_result.end_token;
+    result.push_back(std::move(type_result.canonical_name));
+
+    // Consume a comma if there is one, but don't consume anything else. The
+    // end token will break out of our loop.
+    if (LookAhead(ExprToken::kComma))
+      Consume();
+  }
+  return result;
 }
 
 fxl::RefPtr<ExprNode> ExprParser::AmpersandPrefix(const ExprToken& token) {
@@ -223,6 +257,47 @@ fxl::RefPtr<ExprNode> ExprParser::LeftSquareInfix(fxl::RefPtr<ExprNode> left,
                                                   std::move(inner));
 }
 
+fxl::RefPtr<ExprNode> ExprParser::LessInfix(fxl::RefPtr<ExprNode> left,
+                                            const ExprToken& token) {
+  std::vector<std::string> list = ParseTemplateList(ExprToken::kGreater);
+  if (has_error())
+    return nullptr;
+
+  // Ending ">".
+  const ExprToken& template_end =
+      Consume(ExprToken::kGreater, token, "Expected '>' to match.");
+  if (has_error())
+    return nullptr;
+
+  // For templates the thing on the left should always be an identifier.
+  const IdentifierExprNode* left_ident_node = left->AsIdentifier();
+  if (!left_ident_node) {
+    SetError(token, "Unexpected '<'.");
+    return nullptr;
+  }
+
+  // Find what we're adding the template to.
+  const auto& comps = left_ident_node->ident().components();
+  FXL_DCHECK(!comps.empty());
+  if (comps.back().has_template()) {
+    SetError(token, "Duplicate template specification.");
+    return nullptr;
+  }
+  const auto& back = comps.back();
+
+  // Make a new identifier with the template appended to the last component.
+  auto result = fxl::MakeRefCounted<IdentifierExprNode>();
+  result->ident() = left_ident_node->ident();
+  result->ident().components().back() = Identifier::Component(
+      back.separator(), back.name(), token, std::move(list), template_end);
+  return result;
+}
+
+fxl::RefPtr<ExprNode> ExprParser::GreaterInfix(fxl::RefPtr<ExprNode> left,
+                                               const ExprToken& token) {
+  return nullptr;
+}
+
 fxl::RefPtr<ExprNode> ExprParser::MinusPrefix(const ExprToken& token) {
   // Currently we only implement "-" as a prefix which is for unary "-" when
   // you type "-5" or "-foo[6]". An infix version would be needed to parse the
@@ -253,6 +328,12 @@ fxl::RefPtr<ExprNode> ExprParser::StarPrefix(const ExprToken& token) {
   return fxl::MakeRefCounted<DereferenceExprNode>(std::move(right));
 }
 
+bool ExprParser::LookAhead(ExprToken::Type type) const {
+  if (at_end())
+    return false;
+  return cur_token().type() == type;
+}
+
 const ExprToken& ExprParser::Consume() {
   if (at_end())
     return kInvalidToken;
@@ -265,7 +346,7 @@ const ExprToken& ExprParser::Consume(ExprToken::Type type,
   FXL_DCHECK(!has_error());  // Should have error-checked before calling.
   if (at_end()) {
     SetError(error_token,
-             std::string(error_msg) + " Hit the end if input instead.");
+             std::string(error_msg) + " Hit the end of input instead.");
     return kInvalidToken;
   }
 
@@ -316,8 +397,9 @@ fxl::RefPtr<ExprNode> ExprParser::JoinIdentifiers(fxl::RefPtr<ExprNode> left,
   }
 
   // Append all the right elements, adding the new scope to the first.
-  result->ident().components().emplace_back(scope_token, first_comp.name(),
-                                            first_comp.template_spec());
+  result->ident().components().emplace_back(
+      scope_token, first_comp.name(), first_comp.template_begin(),
+      first_comp.template_contents(), first_comp.template_end());
   for (size_t i = 1; i < right_comps.size(); i++)
     result->ident().components().push_back(right_comps[i]);
 

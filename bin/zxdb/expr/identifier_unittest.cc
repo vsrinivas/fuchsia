@@ -14,20 +14,21 @@ TEST(Identifier, GetFullName) {
 
   // Single name with no "::" at the beginning.
   unqualified.AppendComponent(
-      ExprToken(), ExprToken(ExprToken::kName, "First", 2), ExprToken());
+      ExprToken(), ExprToken(ExprToken::kName, "First", 2));
   EXPECT_EQ("First", unqualified.GetFullName());
 
   // Single name with a "::" at the beginning.
   Identifier qualified;
   qualified.AppendComponent(ExprToken(ExprToken::kColonColon, "::", 0),
-                            ExprToken(ExprToken::kName, "First", 2),
-                            ExprToken());
+                            ExprToken(ExprToken::kName, "First", 2));
   EXPECT_EQ("::First", qualified.GetFullName());
 
   // Append some template stuff.
   qualified.AppendComponent(ExprToken(ExprToken::kColonColon, "::", 7),
                             ExprToken(ExprToken::kName, "Second", 9),
-                            ExprToken(ExprToken::kName, "<int, Foo>", 15));
+                            ExprToken(ExprToken::kLess, "<", 15),
+                            {"int", "Foo"},
+                            ExprToken(ExprToken::kGreater, ">", 24));
   EXPECT_EQ("::First::Second<int, Foo>", qualified.GetFullName());
 }
 

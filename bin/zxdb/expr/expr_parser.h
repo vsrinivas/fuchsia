@@ -37,6 +37,10 @@ class ExprParser {
   // left-to-right), and one less for right-associativity.
   fxl::RefPtr<ExprNode> ParseExpression(int precedence);
 
+  // Parses template parameter lists. The "stop_before" parameter indicates how
+  // the list is expected to end (i.e. ">"). Sets the error on failure.
+  std::vector<std::string> ParseTemplateList(ExprToken::Type stop_before);
+
   fxl::RefPtr<ExprNode> AmpersandPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> ScopeInfix(fxl::RefPtr<ExprNode> left,
                                    const ExprToken& token);
@@ -47,11 +51,18 @@ class ExprParser {
   fxl::RefPtr<ExprNode> LeftParenPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> LeftSquareInfix(fxl::RefPtr<ExprNode> left,
                                         const ExprToken& token);
+  fxl::RefPtr<ExprNode> LessInfix(fxl::RefPtr<ExprNode> left,
+                                  const ExprToken& token);
+  fxl::RefPtr<ExprNode> GreaterInfix(fxl::RefPtr<ExprNode> left,
+                                     const ExprToken& token);
   fxl::RefPtr<ExprNode> MinusPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> NamePrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> NameInfix(fxl::RefPtr<ExprNode> left,
                                   const ExprToken& token);
   fxl::RefPtr<ExprNode> StarPrefix(const ExprToken& token);
+
+  // Returns true if the next token is the given type.
+  bool LookAhead(ExprToken::Type type) const;
 
   // Returns the next token or the invalid token if nothing is left. Advances
   // to the next token.

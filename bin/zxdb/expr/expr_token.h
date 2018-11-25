@@ -20,6 +20,7 @@ class ExprToken {
     kName,         // random_text
     kInteger,      // 123
     kDot,          // .
+    kComma,        // ,
     kStar,         // *
     kAmpersand,    // &
     kArrow,        // ->
@@ -27,7 +28,10 @@ class ExprToken {
     kRightSquare,  // ]
     kLeftParen,    // (
     kRightParen,   // )
+    kLess,         // <
+    kGreater,      // >
     kMinus,        // - (by itself, not part of "->")
+    kPlus,         // +
     kColonColon,   // ::
 
     // Keep last. Not a token, but the count of tokens.

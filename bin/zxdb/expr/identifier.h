@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <string>
 #include <vector>
 
 #include "garnet/bin/zxdb/expr/expr_token.h"
@@ -31,16 +32,25 @@ class Identifier {
   class Component {
    public:
     Component();
-    Component(ExprToken separator, ExprToken name, ExprToken template_spec)
+    Component(ExprToken separator, ExprToken name)
+        : separator_(std::move(separator)), name_(std::move(name)) {}
+
+    // Constructor for names with templates. The contents will be a
+    // vector of somewhat-normalized type string in between the <>.
+    Component(ExprToken separator, ExprToken name, ExprToken template_begin,
+              std::vector<std::string> template_contents,
+              ExprToken template_end)
         : separator_(std::move(separator)),
           name_(std::move(name)),
-          template_spec_(std::move(template_spec)) {}
+          template_begin_(std::move(template_begin)),
+          template_contents_(std::move(template_contents)),
+          template_end_(std::move(template_end)) {}
 
     bool has_separator() const {
       return separator_.type() != ExprToken::kInvalid;
     }
-    bool has_template_spec() const {
-      return template_spec_.type() != ExprToken::kInvalid;
+    bool has_template() const {
+      return template_begin_.type() != ExprToken::kInvalid;
     }
 
     const ExprToken& separator() const { return separator_; }
@@ -48,12 +58,21 @@ class Identifier {
 
     const ExprToken& name() const { return name_; }
 
-    const ExprToken& template_spec() const { return template_spec_; }
+    // This will be kInvalid if there is no template on this component.
+    // The begin and end are the <> tokens, and the contents is the normalized
+    // string in between. Note that the contents may not exactly match the
+    // input string (some whitespace may be removed).
+    const ExprToken& template_begin() const { return template_begin_; }
+    const std::vector<std::string>& template_contents() const { return template_contents_; }
+    const ExprToken& template_end() const { return template_end_; }
 
    private:
     ExprToken separator_;
     ExprToken name_;
-    ExprToken template_spec_;  // Includes the < > on each end.
+
+    ExprToken template_begin_;
+    std::vector<std::string> template_contents_;
+    ExprToken template_end_;
   };
 
   Identifier() = default;
@@ -65,8 +84,10 @@ class Identifier {
   const std::vector<Component>& components() const { return components_; }
 
   void AppendComponent(Component c);
+  void AppendComponent(ExprToken separator, ExprToken name);
   void AppendComponent(ExprToken separator, ExprToken name,
-                       ExprToken template_spec);
+                       ExprToken template_begin, std::vector<std::string> template_contents,
+                       ExprToken template_end);
 
   // Returns the full name with all components concatenated together.
   std::string GetFullName() const;
@@ -75,6 +96,9 @@ class Identifier {
   std::string GetDebugName() const;
 
  private:
+  // Backend for the name getters.
+  std::string GetName(bool include_debug) const;
+
   std::vector<Component> components_;
 };
 
