@@ -1,0 +1,203 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Internal implementation of <trace/event_args.h>.
+// This is not part of the public API: use <trace/event_args.h> instead.
+//
+// TODO(dje): The presence of NEW_ on macros everywhere here is to avoid
+// collisions with external use of our internal macros. Remove "NEW_" when
+// all external usage has been removed.
+
+#ifndef TRACE_INTERNAL_EVENT_ARGS_H_
+#define TRACE_INTERNAL_EVENT_ARGS_H_
+
+#include <assert.h>
+
+#include <zircon/compiler.h>
+
+#include <trace/internal/pairs_internal.h>
+#include <trace-engine/context.h>
+#include <trace-engine/types.h>
+
+// TODO(dje): Remove "NEW_". It exists for now to minimize changes to
+// internal/event_internal.h.
+#define TRACE_INTERNAL_NEW_NUM_ARGS(variable_name) \
+    (sizeof(variable_name) / sizeof((variable_name)[0]))
+
+#ifdef __cplusplus
+
+#define TRACE_INTERNAL_NEW_SCOPE_ARG_LABEL(var_name, idx) \
+    __trace_arg_ ## var_name ## idx
+
+#define TRACE_INTERNAL_NEW_HOLD_ARG(var_name, idx, name_literal, arg_value) \
+    const auto& TRACE_INTERNAL_NEW_SCOPE_ARG_LABEL(var_name, idx) = (arg_value);
+#define TRACE_INTERNAL_NEW_MAKE_ARG(var_name, idx, name_literal, arg_value) \
+    { .name_ref = { .encoded_value = 0, .inline_string = (name_literal) }, \
+      .value = ::trace::internal::MakeArgumentValue(                       \
+          TRACE_INTERNAL_NEW_SCOPE_ARG_LABEL(var_name, idx)) }
+
+#define TRACE_INTERNAL_NEW_DECLARE_ARGS(context, var_name, args...) \
+    TRACE_INTERNAL_APPLY_PAIRWISE(TRACE_INTERNAL_NEW_HOLD_ARG, var_name, args) \
+    trace_arg_t var_name[] = {                                             \
+        TRACE_INTERNAL_APPLY_PAIRWISE_CSV(TRACE_INTERNAL_NEW_MAKE_ARG,     \
+                                          var_name, args) };               \
+    static_assert(TRACE_INTERNAL_NEW_NUM_ARGS(var_name) <= TRACE_MAX_ARGS, "too many args")
+
+#else
+
+#define TRACE_INTERNAL_NEW_MAKE_ARG(var_name, idx, name_literal, arg_value) \
+    { .name_ref = { .encoded_value = 0, .inline_string = (name_literal) }, \
+      .value = (arg_value) }
+
+#define TRACE_INTERNAL_NEW_DECLARE_ARGS(context, var_name, args...) \
+    trace_arg_t var_name[] = {                                      \
+        TRACE_INTERNAL_APPLY_PAIRWISE_CSV(TRACE_INTERNAL_NEW_MAKE_ARG, \
+                                          var_name, args) };        \
+    static_assert(TRACE_INTERNAL_NEW_NUM_ARGS(var_name) <= TRACE_MAX_ARGS, "too many args")
+
+#endif // __cplusplus
+
+__BEGIN_CDECLS
+void trace_internal_complete_args(trace_context_t* context,
+                                  trace_arg_t* args, size_t num_args);
+__END_CDECLS
+
+#define TRACE_INTERNAL_COMPLETE_ARGS(context, args, num_args) \
+    do {                                                             \
+        trace_internal_complete_args((context), (args), (num_args)); \
+    } while (0)
+
+#ifdef __cplusplus
+
+#include <fbl/string_traits.h>
+#include <type_traits>
+
+namespace trace {
+namespace internal {
+
+// Helps construct trace argument values using SFINAE to coerce types.
+template <typename T, typename Enable = void>
+struct ArgumentValueMaker;
+
+template <>
+struct ArgumentValueMaker<trace_arg_value_t> {
+    static trace_arg_value_t Make(trace_arg_value_t value) {
+        return value;
+    }
+};
+
+template <>
+struct ArgumentValueMaker<decltype(nullptr)> {
+    static trace_arg_value_t Make(decltype(nullptr) value) {
+        return trace_make_null_arg_value();
+    }
+};
+
+template <typename T>
+struct ArgumentValueMaker<
+    T,
+    typename std::enable_if<std::is_signed<T>::value &&
+                            std::is_integral<T>::value &&
+                            (sizeof(T) <= sizeof(int32_t))>::type> {
+    static trace_arg_value_t Make(int32_t value) {
+        return trace_make_int32_arg_value(value);
+    }
+};
+
+template <typename T>
+struct ArgumentValueMaker<
+    T,
+    typename std::enable_if<std::is_unsigned<T>::value &&
+                            (sizeof(T) <= sizeof(uint32_t))>::type> {
+    static trace_arg_value_t Make(uint32_t value) {
+        return trace_make_uint32_arg_value(value);
+    }
+};
+
+template <typename T>
+struct ArgumentValueMaker<
+    T,
+    typename std::enable_if<std::is_signed<T>::value &&
+                            std::is_integral<T>::value &&
+                            (sizeof(T) > sizeof(int32_t)) &&
+                            (sizeof(T) <= sizeof(int64_t))>::type> {
+    static trace_arg_value_t Make(int64_t value) {
+        return trace_make_int64_arg_value(value);
+    }
+};
+
+template <typename T>
+struct ArgumentValueMaker<
+    T,
+    typename std::enable_if<std::is_unsigned<T>::value &&
+                            (sizeof(T) > sizeof(uint32_t)) &&
+                            (sizeof(T) <= sizeof(uint64_t))>::type> {
+    static trace_arg_value_t Make(uint64_t value) {
+        return trace_make_uint64_arg_value(value);
+    }
+};
+
+template <typename T>
+struct ArgumentValueMaker<T, typename std::enable_if<std::is_enum<T>::value>::type> {
+    using UnderlyingType = typename std::underlying_type<T>::type;
+    static trace_arg_value_t Make(UnderlyingType value) {
+        return ArgumentValueMaker<UnderlyingType>::Make(value);
+    }
+};
+
+template <typename T>
+struct ArgumentValueMaker<
+    T,
+    typename std::enable_if<std::is_floating_point<T>::value>::type> {
+    static trace_arg_value_t Make(double value) {
+        return trace_make_double_arg_value(value);
+    }
+};
+
+template <size_t n>
+struct ArgumentValueMaker<char[n]> {
+    static trace_arg_value_t Make(const char* value) {
+        return trace_make_string_arg_value(
+            trace_make_inline_string_ref(value, n));
+    }
+};
+
+template <>
+struct ArgumentValueMaker<const char*> {
+    static trace_arg_value_t Make(const char* value) {
+        return trace_make_string_arg_value(
+            trace_make_inline_c_string_ref(value));
+    }
+};
+
+// Works with various string types including fbl::String, fbl::StringView,
+// std::string, and std::string_view.
+template <typename T>
+struct ArgumentValueMaker<T,
+                          typename std::enable_if<fbl::is_string_like<T>::value>::type> {
+    static trace_arg_value_t Make(const T& value) {
+        return trace_make_string_arg_value(
+            trace_make_inline_string_ref(fbl::GetStringData(value),
+                                         fbl::GetStringLength(value)));
+    }
+};
+
+template <typename T>
+struct ArgumentValueMaker<T*> {
+    static trace_arg_value_t Make(const T* pointer) {
+        return trace_make_pointer_arg_value(reinterpret_cast<uintptr_t>(pointer));
+    }
+};
+
+template <typename T>
+trace_arg_value_t MakeArgumentValue(const T& value) {
+    return ArgumentValueMaker<T>::Make(value);
+}
+
+} // namespace internal
+} // namespace trace
+
+#endif // __cplusplus
+
+#endif // TRACE_INTERNAL_EVENT_ARGS_H_

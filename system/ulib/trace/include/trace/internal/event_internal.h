@@ -10,12 +10,10 @@
 #ifndef TRACE_INTERNAL_EVENT_INTERNAL_H_
 #define TRACE_INTERNAL_EVENT_INTERNAL_H_
 
-#include <assert.h>
-
 #include <zircon/compiler.h>
 
 #include <trace-engine/instrumentation.h>
-#include <trace/internal/pairs_internal.h>
+#include <trace/internal/event_args.h>
 
 __BEGIN_CDECLS
 
@@ -25,6 +23,17 @@ __BEGIN_CDECLS
 // Variable used to refer to the current trace category's string ref.
 #define TRACE_INTERNAL_CATEGORY_REF __trace_category_ref
 
+// Variable used to contain the array of arguments.
+#define TRACE_INTERNAL_ARGS __trace_args
+
+// Number of arguments recorded in |TRACE_INTERNAL_ARGS|.
+// TODO(PT-67): Rename this, conventions says TRACE_NUM_ARGS should call this.
+#define TRACE_INTERNAL_NUM_ARGS (sizeof(TRACE_INTERNAL_ARGS) / sizeof(TRACE_INTERNAL_ARGS[0]))
+
+// BEGIN SECTION OF DEPRECATED MACROS, USED BY EXTERNAL CODE
+// TODO(PT-67): These will be replaced with the NEW_ versions when all existing
+// code is cleaned up to not use these.
+
 // Makes a string literal string ref.
 #define TRACE_INTERNAL_MAKE_LITERAL_STRING_REF(string_literal_value) \
     (trace_context_make_registered_string_literal(                   \
@@ -32,33 +41,31 @@ __BEGIN_CDECLS
 
 // Makes a trace argument.
 #ifdef __cplusplus
-#define TRACE_INTERNAL_HOLD_ARG(idx, name_literal, arg_value) \
+#define TRACE_INTERNAL_HOLD_ARG(var_name, idx, name_literal, arg_value) \
     const auto& arg##idx = (arg_value);
-#define TRACE_INTERNAL_MAKE_ARG(idx, name_literal, arg_value)              \
+#define TRACE_INTERNAL_MAKE_ARG(var_name, idx, name_literal, arg_value) \
     { .name_ref = { .encoded_value = 0, .inline_string = (name_literal) }, \
       .value = ::trace::internal::MakeArgumentValue(arg##idx) }
 #else
-#define TRACE_INTERNAL_MAKE_ARG(idx, name_literal, arg_value)              \
+#define TRACE_INTERNAL_MAKE_ARG(var_name, idx, name_literal, arg_value) \
     { .name_ref = { .encoded_value = 0, .inline_string = (name_literal) }, \
       .value = (arg_value) }
 #endif // __cplusplus
 
-// Declares an array of arguments and initializes it.
-#define TRACE_INTERNAL_ARGS __trace_args
-#define TRACE_INTERNAL_NUM_ARGS (sizeof(TRACE_INTERNAL_ARGS) / sizeof(TRACE_INTERNAL_ARGS[0]))
-
 #ifdef __cplusplus
 #define TRACE_INTERNAL_DECLARE_ARGS(args...)                               \
-    TRACE_INTERNAL_APPLY_PAIRWISE(TRACE_INTERNAL_HOLD_ARG, args)           \
+    TRACE_INTERNAL_APPLY_PAIRWISE(TRACE_INTERNAL_HOLD_ARG, ignore, args)   \
     trace_arg_t TRACE_INTERNAL_ARGS[] = {                                  \
-        TRACE_INTERNAL_APPLY_PAIRWISE_CSV(TRACE_INTERNAL_MAKE_ARG, args)}; \
+        TRACE_INTERNAL_APPLY_PAIRWISE_CSV(TRACE_INTERNAL_MAKE_ARG, ignore, args)}; \
     static_assert(TRACE_INTERNAL_NUM_ARGS <= TRACE_MAX_ARGS, "too many args")
 #else
 #define TRACE_INTERNAL_DECLARE_ARGS(args...)                               \
     trace_arg_t TRACE_INTERNAL_ARGS[] = {                                  \
-        TRACE_INTERNAL_APPLY_PAIRWISE_CSV(TRACE_INTERNAL_MAKE_ARG, args)}; \
+        TRACE_INTERNAL_APPLY_PAIRWISE_CSV(TRACE_INTERNAL_MAKE_ARG, ignore, args)}; \
     static_assert(TRACE_INTERNAL_NUM_ARGS <= TRACE_MAX_ARGS, "too many args")
 #endif // __cplusplus
+
+// END SECTION OF DEPRECATED MACROS, USED BY EXTERNAL CODE
 
 // Obtains a unique identifier name within the containing scope.
 #define TRACE_INTERNAL_SCOPE_LABEL() TRACE_INTERNAL_SCOPE_LABEL_(__COUNTER__)
@@ -68,22 +75,26 @@ __BEGIN_CDECLS
 // Scaffolding for a trace macro that does not have a category.
 #ifndef NTRACE
 #define TRACE_INTERNAL_SIMPLE_RECORD(stmt, args...) \
-    do {                                            \
-        trace_context_t* TRACE_INTERNAL_CONTEXT =   \
-            trace_acquire_context();                \
-        if (unlikely(TRACE_INTERNAL_CONTEXT)) {     \
-            TRACE_INTERNAL_DECLARE_ARGS(args);      \
-            stmt;                                   \
-        }                                           \
+    do {                                                            \
+        trace_context_t* TRACE_INTERNAL_CONTEXT =                   \
+            trace_acquire_context();                                \
+        if (unlikely(TRACE_INTERNAL_CONTEXT)) {                     \
+            TRACE_INTERNAL_NEW_DECLARE_ARGS(TRACE_INTERNAL_CONTEXT, \
+                                            TRACE_INTERNAL_ARGS,    \
+                                            args);                  \
+            stmt;                                                   \
+        }                                                           \
     } while (0)
 #else
-#define TRACE_INTERNAL_SIMPLE_RECORD(stmt, args...)      \
-    do {                                                 \
-        if (0) {                                         \
-            trace_context_t* TRACE_INTERNAL_CONTEXT = 0; \
-            TRACE_INTERNAL_DECLARE_ARGS(args);           \
-            stmt;                                        \
-        }                                                \
+#define TRACE_INTERNAL_SIMPLE_RECORD(stmt, args...) \
+    do {                                                            \
+        if (0) {                                                    \
+            trace_context_t* TRACE_INTERNAL_CONTEXT = 0;            \
+            TRACE_INTERNAL_NEW_DECLARE_ARGS(TRACE_INTERNAL_CONTEXT, \
+                                            TRACE_INTERNAL_ARGS,    \
+                                            args);                  \
+            stmt;                                                   \
+        }                                                           \
     } while (0)
 #endif // NTRACE
 
@@ -97,7 +108,9 @@ __BEGIN_CDECLS
                 (category_literal),                                  \
                 &TRACE_INTERNAL_CATEGORY_REF);                       \
         if (unlikely(TRACE_INTERNAL_CONTEXT)) {                      \
-            TRACE_INTERNAL_DECLARE_ARGS(args);                       \
+            TRACE_INTERNAL_NEW_DECLARE_ARGS(TRACE_INTERNAL_CONTEXT,  \
+                                            TRACE_INTERNAL_ARGS,     \
+                                            args);                   \
             stmt;                                                    \
         }                                                            \
     } while (0)
@@ -107,7 +120,9 @@ __BEGIN_CDECLS
         if (0) {                                                     \
             trace_string_ref_t TRACE_INTERNAL_CATEGORY_REF;          \
             trace_context_t* TRACE_INTERNAL_CONTEXT = 0;             \
-            TRACE_INTERNAL_DECLARE_ARGS(args);                       \
+            TRACE_INTERNAL_NEW_DECLARE_ARGS(TRACE_INTERNAL_CONTEXT,  \
+                                            TRACE_INTERNAL_ARGS,     \
+                                            args);                   \
             stmt;                                                    \
         }                                                            \
     } while (0)
@@ -466,137 +481,5 @@ static inline void trace_internal_cleanup_duration_scope(
 #endif // NTRACE
 
 __END_CDECLS
-
-#ifdef __cplusplus
-
-#include <fbl/string_traits.h>
-#include <type_traits>
-
-namespace trace {
-namespace internal {
-
-// Helps construct trace argument values using SFINAE to coerce types.
-template <typename T, typename Enable = void>
-struct ArgumentValueMaker;
-
-template <>
-struct ArgumentValueMaker<trace_arg_value_t> {
-    static trace_arg_value_t Make(trace_arg_value_t value) {
-        return value;
-    }
-};
-
-template <>
-struct ArgumentValueMaker<decltype(nullptr)> {
-    static trace_arg_value_t Make(decltype(nullptr) value) {
-        return trace_make_null_arg_value();
-    }
-};
-
-template <typename T>
-struct ArgumentValueMaker<
-    T,
-    typename std::enable_if<std::is_signed<T>::value &&
-                            std::is_integral<T>::value &&
-                            (sizeof(T) <= sizeof(int32_t))>::type> {
-    static trace_arg_value_t Make(int32_t value) {
-        return trace_make_int32_arg_value(value);
-    }
-};
-
-template <typename T>
-struct ArgumentValueMaker<
-    T,
-    typename std::enable_if<std::is_unsigned<T>::value &&
-                            (sizeof(T) <= sizeof(uint32_t))>::type> {
-    static trace_arg_value_t Make(uint32_t value) {
-        return trace_make_uint32_arg_value(value);
-    }
-};
-
-template <typename T>
-struct ArgumentValueMaker<
-    T,
-    typename std::enable_if<std::is_signed<T>::value &&
-                            std::is_integral<T>::value &&
-                            (sizeof(T) > sizeof(int32_t)) &&
-                            (sizeof(T) <= sizeof(int64_t))>::type> {
-    static trace_arg_value_t Make(int64_t value) {
-        return trace_make_int64_arg_value(value);
-    }
-};
-
-template <typename T>
-struct ArgumentValueMaker<
-    T,
-    typename std::enable_if<std::is_unsigned<T>::value &&
-                            (sizeof(T) > sizeof(uint32_t)) &&
-                            (sizeof(T) <= sizeof(uint64_t))>::type> {
-    static trace_arg_value_t Make(uint64_t value) {
-        return trace_make_uint64_arg_value(value);
-    }
-};
-
-template <typename T>
-struct ArgumentValueMaker<T, typename std::enable_if<std::is_enum<T>::value>::type> {
-    using UnderlyingType = typename std::underlying_type<T>::type;
-    static trace_arg_value_t Make(UnderlyingType value) {
-        return ArgumentValueMaker<UnderlyingType>::Make(value);
-    }
-};
-
-template <typename T>
-struct ArgumentValueMaker<
-    T,
-    typename std::enable_if<std::is_floating_point<T>::value>::type> {
-    static trace_arg_value_t Make(double value) {
-        return trace_make_double_arg_value(value);
-    }
-};
-
-template <size_t n>
-struct ArgumentValueMaker<char[n]> {
-    static trace_arg_value_t Make(const char* value) {
-        return trace_make_string_arg_value(
-            trace_make_inline_string_ref(value, n));
-    }
-};
-
-template <>
-struct ArgumentValueMaker<const char*> {
-    static trace_arg_value_t Make(const char* value) {
-        return trace_make_string_arg_value(
-            trace_make_inline_c_string_ref(value));
-    }
-};
-
-// Works with various string types including fbl::String, fbl::StringView,
-// std::string, and std::string_view.
-template <typename T>
-struct ArgumentValueMaker<T,
-                          typename std::enable_if<fbl::is_string_like<T>::value>::type> {
-    static trace_arg_value_t Make(const T& value) {
-        return trace_make_string_arg_value(
-            trace_make_inline_string_ref(fbl::GetStringData(value),
-                                         fbl::GetStringLength(value)));
-    }
-};
-
-template <typename T>
-struct ArgumentValueMaker<T*> {
-    static trace_arg_value_t Make(const T* pointer) {
-        return trace_make_pointer_arg_value(reinterpret_cast<uintptr_t>(pointer));
-    }
-};
-
-template <typename T>
-trace_arg_value_t MakeArgumentValue(const T& value) {
-    return ArgumentValueMaker<T>::Make(value);
-}
-
-} // namespace internal
-} // namespace trace
-
-#endif // __cplusplus
 
 #endif // TRACE_INTERNAL_EVENT_INTERNAL_H_

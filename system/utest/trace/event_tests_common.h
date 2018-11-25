@@ -11,6 +11,7 @@
 #pragma once
 
 #include <trace/event.h>
+#include <trace/event_args.h>
 
 #include <unittest/unittest.h>
 #include <zircon/syscalls.h>
@@ -1218,6 +1219,70 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {k1
     END_TRACE_TEST;
 }
 
+static bool test_declare_args(void) {
+    BEGIN_TRACE_TEST;
+
+#ifndef NTRACE
+    fixture_start_tracing();
+
+    trace_thread_ref_t thread_ref;
+    trace_string_ref_t category_ref;
+    trace_string_ref_t name_ref;
+    size_t num_args;
+
+    trace_context_t* context =
+        trace_acquire_context_for_category("+enabled", &category_ref);
+    ASSERT_NONNULL(context, "");
+
+    trace_context_register_current_thread(context, &thread_ref);
+    trace_context_register_string_literal(context, "name", &name_ref);
+
+    num_args = 0;
+    TRACE_DECLARE_ARGS(context, args0);
+    ASSERT_EQ(TRACE_NUM_ARGS(args0), num_args, "");
+    TRACE_COMPLETE_ARGS(context, args0, num_args);
+    trace_context_write_duration_begin_event_record(
+        context, zx_ticks_get(), &thread_ref, &category_ref,
+        &name_ref, args0, num_args);
+
+    num_args = 1;
+    TRACE_DECLARE_ARGS(context, args1, STR_ARGS1);
+    ASSERT_EQ(TRACE_NUM_ARGS(args1), num_args, "");
+    TRACE_COMPLETE_ARGS(context, args1, num_args);
+    trace_context_write_duration_begin_event_record(
+        context, zx_ticks_get(), &thread_ref, &category_ref,
+        &name_ref, args1, num_args);
+
+    num_args = 4;
+    TRACE_DECLARE_ARGS(context, args4, STR_ARGS4);
+    ASSERT_EQ(TRACE_NUM_ARGS(args4), num_args, "");
+    TRACE_COMPLETE_ARGS(context, args4, num_args);
+    trace_context_write_duration_begin_event_record(
+        context, zx_ticks_get(), &thread_ref, &category_ref,
+        &name_ref, args4, num_args);
+
+    trace_release_context(context);
+
+    ASSERT_RECORDS("\
+String(index: 1, \"+enabled\")\n\
+String(index: 2, \"process\")\n\
+KernelObject(koid: <>, type: thread, name: \"initial-thread\", {process: koid(<>)})\n\
+Thread(index: 1, <>)\n\
+String(index: 3, \"name\")\n\
+Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {})\n\
+String(index: 4, \"k1\")\n\
+Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {k1: string(\"v1\")})\n\
+String(index: 5, \"k2\")\n\
+String(index: 6, \"k3\")\n\
+String(index: 7, \"k4\")\n\
+Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {k1: string(\"v1\"), k2: string(\"v2\"), k3: string(\"v3\"), k4: string(\"v4\")})\n\
+",
+                   "");
+#endif  // !NTRACE
+
+    END_TRACE_TEST;
+}
+
 #ifdef __cplusplus
 
 #ifndef NTRACE
@@ -1280,6 +1345,7 @@ RUN_TEST(test_koid_arguments_no_optim)
 RUN_TEST(test_koid_arguments)
 #endif
 RUN_TEST(test_all_argument_counts)
+RUN_TEST(test_declare_args)
 _END_TEST_CASE(_NAME)
 
 #undef _LANG
