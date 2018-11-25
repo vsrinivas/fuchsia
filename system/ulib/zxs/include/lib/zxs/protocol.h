@@ -32,6 +32,16 @@ __BEGIN_CDECLS
 #define ZXSIO_SIGNAL_CONNECTED ZX_USER_SIGNAL_3
 #define ZXSIO_SIGNAL_HALFCLOSED ZX_USER_SIGNAL_4
 
+// wire format for datagram messages
+typedef struct fdio_socket_msg {
+    struct sockaddr_storage addr;
+    socklen_t addrlen;
+    int32_t flags;
+    char data[1]; // variable size
+} fdio_socket_msg_t;
+
+#define FDIO_SOCKET_MSG_HEADER_SIZE offsetof(fdio_socket_msg_t, data)
+
 // ZXSIO_GETSOCKNAME
 // ZXSIO_GETPEERNAME
 typedef struct zxrio_sockaddr_reply {
