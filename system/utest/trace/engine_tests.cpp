@@ -445,11 +445,11 @@ bool TestCircularMode() {
     // These records come from the durable buffer.
     const char expected_initial_records[] = "\
 String(index: 1, \"+enabled\")\n\
-String(index: 2, \"k1\")\n\
-String(index: 3, \"process\")\n\
+String(index: 2, \"process\")\n\
 KernelObject(koid: <>, type: thread, name: \"initial-thread\", {process: koid(<>)})\n\
 Thread(index: 1, <>)\n\
-String(index: 4, \"name\")\n\
+String(index: 3, \"name\")\n\
+String(index: 4, \"k1\")\n\
 String(index: 5, \"k2\")\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Instant(scope: global), {k2: int32(2)})\n\
 ";
@@ -578,11 +578,11 @@ bool TestStreamingMode() {
         // These records come from the durable buffer.
         "\
 String(index: 1, \"+enabled\")\n\
-String(index: 2, \"k1\")\n\
-String(index: 3, \"process\")\n\
+String(index: 2, \"process\")\n\
 KernelObject(koid: <>, type: thread, name: \"initial-thread\", {process: koid(<>)})\n\
 Thread(index: 1, <>)\n\
-String(index: 4, \"name\")\n\
+String(index: 3, \"name\")\n\
+String(index: 4, \"k1\")\n\
 String(index: 5, \"k2\")\n\
 String(index: 6, \"k3\")\n"
         // This record is the first record in the rolling buffer

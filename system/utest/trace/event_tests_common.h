@@ -169,11 +169,11 @@ static bool test_counter(void) {
 
     ASSERT_RECORDS("\
 String(index: 1, \"+enabled\")\n\
-String(index: 2, \"k1\")\n\
-String(index: 3, \"process\")\n\
+String(index: 2, \"process\")\n\
 KernelObject(koid: <>, type: thread, name: \"initial-thread\", {process: koid(<>)})\n\
 Thread(index: 1, <>)\n\
-String(index: 4, \"name\")\n\
+String(index: 3, \"name\")\n\
+String(index: 4, \"k1\")\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Counter(id: 1), {k1: int32(1)})\n\
 String(index: 5, \"k2\")\n\
 String(index: 6, \"k3\")\n\
@@ -623,11 +623,11 @@ static bool test_null_arguments(void) {
 
     ASSERT_RECORDS("\
 String(index: 1, \"+enabled\")\n\
-String(index: 2, \"key\")\n\
-String(index: 3, \"process\")\n\
+String(index: 2, \"process\")\n\
 KernelObject(koid: <>, type: thread, name: \"initial-thread\", {process: koid(<>)})\n\
 Thread(index: 1, <>)\n\
-String(index: 4, \"name\")\n\
+String(index: 3, \"name\")\n\
+String(index: 4, \"key\")\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: null})\n\
 ",
                    "\
@@ -653,11 +653,11 @@ static bool test_bool_arguments(void) {
 
     ASSERT_RECORDS("\
 String(index: 1, \"+enabled\")\n\
-String(index: 2, \"key\")\n\
-String(index: 3, \"process\")\n\
+String(index: 2, \"process\")\n\
 KernelObject(koid: <>, type: thread, name: \"initial-thread\", {process: koid(<>)})\n\
 Thread(index: 1, <>)\n\
-String(index: 4, \"name\")\n\
+String(index: 3, \"name\")\n\
+String(index: 4, \"key\")\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: uint32(1)})\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: uint32(0)})\n\
 ",
@@ -692,11 +692,11 @@ static bool test_int32_arguments(void) {
 
     ASSERT_RECORDS("\
 String(index: 1, \"+enabled\")\n\
-String(index: 2, \"key\")\n\
-String(index: 3, \"process\")\n\
+String(index: 2, \"process\")\n\
 KernelObject(koid: <>, type: thread, name: \"initial-thread\", {process: koid(<>)})\n\
 Thread(index: 1, <>)\n\
-String(index: 4, \"name\")\n\
+String(index: 3, \"name\")\n\
+String(index: 4, \"key\")\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: int32(-2147483648)})\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: int32(0)})\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: int32(2147483647)})\n\
@@ -735,11 +735,11 @@ static bool test_uint32_arguments(void) {
 
     ASSERT_RECORDS("\
 String(index: 1, \"+enabled\")\n\
-String(index: 2, \"key\")\n\
-String(index: 3, \"process\")\n\
+String(index: 2, \"process\")\n\
 KernelObject(koid: <>, type: thread, name: \"initial-thread\", {process: koid(<>)})\n\
 Thread(index: 1, <>)\n\
-String(index: 4, \"name\")\n\
+String(index: 3, \"name\")\n\
+String(index: 4, \"key\")\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: uint32(0)})\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: uint32(4294967295)})\n\
 ",
@@ -772,11 +772,11 @@ static bool test_int64_arguments(void) {
 
     ASSERT_RECORDS("\
 String(index: 1, \"+enabled\")\n\
-String(index: 2, \"key\")\n\
-String(index: 3, \"process\")\n\
+String(index: 2, \"process\")\n\
 KernelObject(koid: <>, type: thread, name: \"initial-thread\", {process: koid(<>)})\n\
 Thread(index: 1, <>)\n\
-String(index: 4, \"name\")\n\
+String(index: 3, \"name\")\n\
+String(index: 4, \"key\")\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: int64(-9223372036854775808)})\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: int64(0)})\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: int64(9223372036854775807)})\n\
@@ -805,11 +805,11 @@ static bool test_uint64_arguments(void) {
 
     ASSERT_RECORDS("\
 String(index: 1, \"+enabled\")\n\
-String(index: 2, \"key\")\n\
-String(index: 3, \"process\")\n\
+String(index: 2, \"process\")\n\
 KernelObject(koid: <>, type: thread, name: \"initial-thread\", {process: koid(<>)})\n\
 Thread(index: 1, <>)\n\
-String(index: 4, \"name\")\n\
+String(index: 3, \"name\")\n\
+String(index: 4, \"key\")\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: uint64(0)})\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: uint64(18446744073709551615)})\n\
 ",
@@ -896,11 +896,11 @@ static bool test_enum_arguments(void) {
 
     ASSERT_RECORDS("\
 String(index: 1, \"+enabled\")\n\
-String(index: 2, \"key\")\n\
-String(index: 3, \"process\")\n\
+String(index: 2, \"process\")\n\
 KernelObject(koid: <>, type: thread, name: \"initial-thread\", {process: koid(<>)})\n\
 Thread(index: 1, <>)\n\
-String(index: 4, \"name\")\n\
+String(index: 3, \"name\")\n\
+String(index: 4, \"key\")\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: int32(-2147483648)})\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: int32(0)})\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: int32(2147483647)})\n\
@@ -953,11 +953,11 @@ static bool test_double_arguments(void) {
 
     ASSERT_RECORDS("\
 String(index: 1, \"+enabled\")\n\
-String(index: 2, \"key\")\n\
-String(index: 3, \"process\")\n\
+String(index: 2, \"process\")\n\
 KernelObject(koid: <>, type: thread, name: \"initial-thread\", {process: koid(<>)})\n\
 Thread(index: 1, <>)\n\
-String(index: 4, \"name\")\n\
+String(index: 3, \"name\")\n\
+String(index: 4, \"key\")\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: double(1.000000)})\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: double(1.000000)})\n\
 ",
@@ -987,11 +987,11 @@ static bool test_char_array_arguments(void) {
 
     ASSERT_RECORDS("\
 String(index: 1, \"+enabled\")\n\
-String(index: 2, \"key\")\n\
-String(index: 3, \"process\")\n\
+String(index: 2, \"process\")\n\
 KernelObject(koid: <>, type: thread, name: \"initial-thread\", {process: koid(<>)})\n\
 Thread(index: 1, <>)\n\
-String(index: 4, \"name\")\n\
+String(index: 3, \"name\")\n\
+String(index: 4, \"key\")\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: string(\"\")})\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: string(\"\")})\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: string(\"literal\")})\n\
@@ -1028,11 +1028,11 @@ static bool test_string_arguments(void) {
 
     ASSERT_RECORDS("\
 String(index: 1, \"+enabled\")\n\
-String(index: 2, \"key\")\n\
-String(index: 3, \"process\")\n\
+String(index: 2, \"process\")\n\
 KernelObject(koid: <>, type: thread, name: \"initial-thread\", {process: koid(<>)})\n\
 Thread(index: 1, <>)\n\
-String(index: 4, \"name\")\n\
+String(index: 3, \"name\")\n\
+String(index: 4, \"key\")\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: string(\"\")})\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: string(\"\")})\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: string(\"literal\")})\n\
@@ -1061,11 +1061,11 @@ static bool test_string_literal_arguments(void) {
 
     ASSERT_RECORDS("\
 String(index: 1, \"+enabled\")\n\
-String(index: 2, \"key\")\n\
-String(index: 3, \"process\")\n\
+String(index: 2, \"process\")\n\
 KernelObject(koid: <>, type: thread, name: \"initial-thread\", {process: koid(<>)})\n\
 Thread(index: 1, <>)\n\
-String(index: 4, \"name\")\n\
+String(index: 3, \"name\")\n\
+String(index: 4, \"key\")\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: string(\"\")})\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: string(\"\")})\n\
 String(index: 5, \"literal\")\n\
@@ -1112,11 +1112,11 @@ static bool test_pointer_arguments(void) {
 
     ASSERT_RECORDS("\
 String(index: 1, \"+enabled\")\n\
-String(index: 2, \"key\")\n\
-String(index: 3, \"process\")\n\
+String(index: 2, \"process\")\n\
 KernelObject(koid: <>, type: thread, name: \"initial-thread\", {process: koid(<>)})\n\
 Thread(index: 1, <>)\n\
-String(index: 4, \"name\")\n\
+String(index: 3, \"name\")\n\
+String(index: 4, \"key\")\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: pointer(0)})\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: pointer(0)})\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: pointer(0)})\n\
@@ -1153,11 +1153,11 @@ static bool test_koid_arguments(void) {
 
     ASSERT_RECORDS("\
 String(index: 1, \"+enabled\")\n\
-String(index: 2, \"key\")\n\
-String(index: 3, \"process\")\n\
+String(index: 2, \"process\")\n\
 KernelObject(koid: <>, type: thread, name: \"initial-thread\", {process: koid(<>)})\n\
 Thread(index: 1, <>)\n\
-String(index: 4, \"name\")\n\
+String(index: 3, \"name\")\n\
+String(index: 4, \"key\")\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: koid(<>)})\n\
 ",
                    "");
