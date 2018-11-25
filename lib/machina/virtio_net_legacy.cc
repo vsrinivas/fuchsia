@@ -104,7 +104,7 @@ void VirtioNetLegacy::Stream::OnQueueReady(zx_status_t status, uint16_t index) {
   // best-effort only.
   const trace_async_id_t flow_id = trace_flow_id_->load();
   TRACE_DURATION("machina", "virtio_net_packet_read_from_queue", "direction",
-                 TA_STRING_LITERAL(rx_ ? "RX" : "TX"), "flow_id", flow_id);
+                 TA_STRING(rx_ ? "RX" : "TX"), "flow_id", flow_id);
   if (flow_id != 0) {
     TRACE_FLOW_STEP("machina", "queue_signal", flow_id);
   }
@@ -190,7 +190,7 @@ void VirtioNetLegacy::Stream::OnFifoWritable(async_dispatcher_t* dispatcher,
   // Attempt to correlate the processing of packets with an existing flow.
   const trace_async_id_t flow_id = trace_flow_id_->load();
   TRACE_DURATION("machina", "virtio_net_packet_pipe_to_fifo", "direction",
-                 TA_STRING_LITERAL(rx_ ? "RX" : "TX"), "flow_id", flow_id);
+                 TA_STRING(rx_ ? "RX" : "TX"), "flow_id", flow_id);
   if (flow_id != 0) {
     TRACE_FLOW_STEP("machina", "queue_signal", flow_id);
   }
@@ -234,7 +234,7 @@ void VirtioNetLegacy::Stream::OnFifoReadable(async_dispatcher_t* dispatcher,
   // Attempt to correlate the processing of packets with an existing flow.
   const trace_async_id_t flow_id = trace_flow_id_->exchange(0);
   TRACE_DURATION("machina", "virtio_net_packet_return_to_queue", "direction",
-                 TA_STRING_LITERAL(rx_ ? "RX" : "TX"), "flow_id", flow_id);
+                 TA_STRING(rx_ ? "RX" : "TX"), "flow_id", flow_id);
   if (flow_id != 0) {
     TRACE_FLOW_END("machina", "queue_signal", flow_id);
   }
