@@ -299,7 +299,7 @@ mod tests {
         );
     }
 
-    // TODO(NET-1928): deflake and removed #[ignore]. reproduction:
+    // TODO(FLK-8): deflake and removed #[ignore]. reproduction:
     //
     // run_test_component bt-gap-unittests store_bond_commits_entry --ignored
     #[test]
@@ -309,11 +309,8 @@ mod tests {
         let accessor_proxy =
             create_stash_accessor().expect("failed to create StashAccessor");
         clear_data_in_stash(&accessor_proxy).expect("failed to clear data in stash");
-        let mut stash = exec.run_singlethreaded(Stash::new(accessor_proxy))
+        let mut stash = exec.run_singlethreaded(Stash::new(accessor_proxy.clone()))
             .expect("stash failed to initialize");
-
-        let accessor_proxy_2 =
-            create_stash_accessor().expect("failed to create StashAccessor");
 
         let bonding_data = BondingData {
             identifier: "id-1".to_string(),
@@ -341,7 +338,7 @@ mod tests {
         );
 
         // The new data should be accessible over FIDL.
-        assert_eq!(exec.run_singlethreaded(accessor_proxy_2.get_value("bonding-data:id-1"))
+        assert_eq!(exec.run_singlethreaded(accessor_proxy.get_value("bonding-data:id-1"))
                        .expect("failed to get value")
                        .map(|x| *x),
             Some(Value::Stringval(
