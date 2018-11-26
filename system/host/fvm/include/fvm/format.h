@@ -13,6 +13,7 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
 #include <fvm/fvm.h>
+#include <fvm/fvm-sparse.h>
 #include <minfs/bcache.h>
 #include <minfs/format.h>
 #include <minfs/fsck.h>
@@ -77,20 +78,19 @@ public:
     // Empty the data block (i.e. fill with all 0's)
     virtual zx_status_t EmptyBlock() = 0;
 
+    void GetPartitionInfo(fvm::partition_descriptor_t* partition) const {
+        memcpy(partition->type, type_, sizeof(type_));
+        strncpy(reinterpret_cast<char*>(partition->name), Name(), FVM_NAME_LEN);
+        partition->flags = flags_;
+    }
+
     void Guid(uint8_t* guid) const {
         memcpy(guid, guid_, sizeof(guid_));
     }
 
-    void Type(uint8_t* type) const {
-        memcpy(type, type_, sizeof(type_));
-    }
-
     virtual void* Data() = 0;
-    virtual void Name(char* name) const = 0;
     virtual uint32_t BlockSize() const = 0;
     virtual uint32_t BlocksPerSlice() const = 0;
-
-    uint32_t Flags() const { return flags_; }
 
     uint32_t VpartIndex() const {
         CheckFvmReady();
@@ -119,6 +119,9 @@ protected:
             guid_[i] = static_cast<uint8_t>(rand());
         }
     }
+
+private:
+    virtual const char* Name() const = 0;
 };
 
 class MinfsFormat final : public Format {
@@ -130,12 +133,13 @@ public:
     zx_status_t FillBlock(size_t block_offset) final;
     zx_status_t EmptyBlock() final;
     void* Data() final;
-    void Name(char* name) const final;
     uint32_t BlockSize() const final;
     uint32_t BlocksPerSlice() const final;
     uint8_t datablk[minfs::kMinfsBlockSize];
 
 private:
+    const char* Name() const final;
+
     fbl::unique_ptr<minfs::Bcache> bc_;
 
     // Input superblock
@@ -161,12 +165,13 @@ public:
     zx_status_t FillBlock(size_t block_offset) final;
     zx_status_t EmptyBlock() final;
     void* Data() final;
-    void Name(char* name) const final;
     uint32_t BlockSize() const final;
     uint32_t BlocksPerSlice() const final;
     uint8_t datablk[blobfs::kBlobfsBlockSize];
 
 private:
+    const char* Name() const final;
+
     fbl::unique_fd fd_;
     uint64_t blocks_;
 

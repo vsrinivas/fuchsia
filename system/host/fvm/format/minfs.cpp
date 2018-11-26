@@ -204,8 +204,8 @@ void* MinfsFormat::Data() {
     return datablk;
 }
 
-void MinfsFormat::Name(char* name) const {
-    strcpy(name, kMinfsName);
+const char* MinfsFormat::Name() const {
+    return kMinfsName;
 }
 
 uint32_t MinfsFormat::BlockSize() const {

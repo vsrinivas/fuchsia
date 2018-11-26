@@ -156,8 +156,8 @@ void* BlobfsFormat::Data() {
     return datablk;
 }
 
-void BlobfsFormat::Name(char* name) const {
-    strcpy(name, kBlobfsName);
+const char* BlobfsFormat::Name() const {
+    return kBlobfsName;
 }
 
 uint32_t BlobfsFormat::BlockSize() const {

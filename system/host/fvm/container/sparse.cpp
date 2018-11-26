@@ -332,11 +332,9 @@ zx_status_t SparseContainer::AddPartition(const char* path, const char* type_nam
 
 zx_status_t SparseContainer::AllocatePartition(fbl::unique_ptr<Format> format) {
     partition_info_t partition;
+    format->GetPartitionInfo(&partition.descriptor);
     partition.descriptor.magic = fvm::kPartitionDescriptorMagic;
-    format->Type(partition.descriptor.type);
-    format->Name(reinterpret_cast<char*>(partition.descriptor.name));
     partition.descriptor.extent_count = 0;
-    partition.descriptor.flags = format->Flags();
     image_.header_length += sizeof(fvm::partition_descriptor_t);
     uint32_t part_index = image_.partition_count;
 

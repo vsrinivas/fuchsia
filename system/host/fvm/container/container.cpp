@@ -72,8 +72,8 @@ zx_status_t Container::Create(const char* path, off_t offset, off_t length,
 }
 
 Container::Container(const char* path, size_t slice_size, uint32_t flags)
-    : dirty_(false), slice_size_(slice_size), flags_(flags) {
-    snprintf(path_, sizeof(path_), "%s", path);
+    : slice_size_(slice_size), flags_(flags) {
+    path_.AppendPrintf("%s", path);
 }
 
 Container::~Container() {}
