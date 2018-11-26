@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fxl/arraysize.h>
 #include <lib/fxl/log_level.h>
 #include <lib/fxl/logging.h>
 
@@ -43,9 +44,9 @@ void ColorSource::hsv_color(uint32_t index, uint8_t* r, uint8_t* g,
   uint8_t neg = 0xff - (index & 0xff);
   uint8_t phase = (index >> 8) & 0x7;
   uint8_t phases[6] = {0xff, 0xff, neg, 0x00, 0x00, pos};
-  *r = phases[(phase + 1) % countof(phases)];
-  *g = phases[(phase + 5) % countof(phases)];
-  *b = phases[(phase + 3) % countof(phases)];
+  *r = phases[(phase + 1) % arraysize(phases)];
+  *g = phases[(phase + 5) % arraysize(phases)];
+  *b = phases[(phase + 3) % arraysize(phases)];
 }
 
 void FakeControlImpl::OnFrameAvailable(
