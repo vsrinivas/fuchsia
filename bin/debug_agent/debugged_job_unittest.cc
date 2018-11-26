@@ -14,6 +14,7 @@
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "lib/fxl/arraysize.h"
 
 namespace debug_agent {
 
@@ -52,7 +53,7 @@ class JobDebuggerTest : public ::testing::Test, public ProcessStartHandler {
     char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
     zx_status_t status = fdio_spawn_etc(
         job.get(), FDIO_SPAWN_CLONE_ALL, argv[0], normalized_argv.data(),
-        nullptr, countof(actions), actions, proc, err_msg);
+        nullptr, arraysize(actions), actions, proc, err_msg);
     ASSERT_EQ(status, ZX_OK) << "Failed to spawn command: " << err_msg;
   }
 
