@@ -409,8 +409,8 @@ zx_status_t InfraBss::SendMgmtFrame(MgmtFrame<>&& mgmt_frame) {
     return device_->SendWlan(mgmt_frame.Take(), CBW20, WLAN_PHY_OFDM);
 }
 
-zx_status_t InfraBss::SendEthFrame(EthFrame&& eth_frame) {
-    return device_->SendEthernet(eth_frame.Take());
+zx_status_t InfraBss::DeliverEthernet(Span<const uint8_t> frame) {
+    return device_->DeliverEthernet(frame);
 }
 
 zx_status_t InfraBss::SendNextBu() {

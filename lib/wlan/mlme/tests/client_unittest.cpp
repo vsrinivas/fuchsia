@@ -17,6 +17,7 @@
 
 #include "mock_device.h"
 #include "test_bss.h"
+#include "test_utils.h"
 
 #include <gtest/gtest.h>
 
@@ -340,14 +341,14 @@ TEST_F(ClientTest, ExchangeDataAfterAssociation) {
     ASSERT_TRUE(device.svc_queue.empty());
 
     // Verify queued up ethernet frame is correct.
-    auto pkt = std::move(*eth_frames.begin());
-    ASSERT_EQ(pkt->peer(), Packet::Peer::kEthernet);
-    EthFrameView frame(pkt.get());
-    ASSERT_EQ(std::memcmp(frame.hdr()->src.byte, kClientAddress, 6), 0);
-    ASSERT_EQ(std::memcmp(frame.hdr()->dest.byte, kBssid1, 6), 0);
-    ASSERT_EQ(frame.hdr()->ether_type, 42);
-    ASSERT_EQ(frame.body_len(), sizeof(kTestPayload));
-    ASSERT_EQ(std::memcmp(frame.body()->data, kTestPayload, sizeof(kTestPayload)), 0);
+    auto eth_frame = std::move(*eth_frames.begin());
+    ASSERT_EQ(sizeof(EthernetII) + sizeof(kTestPayload), eth_frame.size());
+    auto eth_header = reinterpret_cast<const EthernetII*>(eth_frame.data());
+    ASSERT_EQ(std::memcmp(eth_header->src.byte, kClientAddress, 6), 0);
+    ASSERT_EQ(std::memcmp(eth_header->dest.byte, kBssid1, 6), 0);
+    ASSERT_EQ(eth_header->ether_type, 42);
+    auto eth_payload = Span<const uint8_t>(eth_frame).subspan(sizeof(EthernetII));
+    ASSERT_RANGES_EQ(eth_payload, kTestPayload);
 
     // Send null data frame which shouldn't queue up any Ethernet frames but instead a "Keep Alive"
     // one.
@@ -356,7 +357,7 @@ TEST_F(ClientTest, ExchangeDataAfterAssociation) {
     ASSERT_TRUE(device.svc_queue.empty());
 
     // Verify queued up "Keep Alive" frame is correct.
-    pkt = std::move(*device.wlan_queue.begin());
+    auto pkt = std::move(*device.wlan_queue.begin());
     ASSERT_EQ(pkt->peer(), Packet::Peer::kWlan);
     auto partially_checked = DataFrameView<>::CheckType(pkt.get());
     ASSERT_TRUE(partially_checked);

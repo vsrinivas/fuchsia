@@ -76,8 +76,8 @@ struct MockDevice : public DeviceInterface {
         return fbl::make_unique<TestTimer>(id, &clock_);
     }
 
-    zx_status_t SendEthernet(fbl::unique_ptr<Packet> packet) override final {
-        eth_queue.push_back(std::move(packet));
+    zx_status_t DeliverEthernet(Span<const uint8_t> eth_frame) override final {
+        eth_queue.push_back({ eth_frame.cbegin(), eth_frame.cend() });
         return ZX_OK;
     }
 
@@ -180,8 +180,10 @@ struct MockDevice : public DeviceInterface {
         return GetPackets(&svc_queue, predicate ? predicate : [](auto pkt) { return true; });
     }
 
-    PacketList GetEthPackets(PacketPredicate predicate = nullptr) {
-        return GetPackets(&eth_queue, predicate ? predicate : [](auto pkt) { return true; });
+    std::vector<std::vector<uint8_t>> GetEthPackets() {
+        std::vector<std::vector<uint8_t>> tmp;
+        tmp.swap(eth_queue);
+        return tmp;
     }
 
     PacketList GetWlanPackets(PacketPredicate predicate = nullptr) {
@@ -196,7 +198,7 @@ struct MockDevice : public DeviceInterface {
     wlanmac_info_t wlanmac_info;
     PacketList wlan_queue;
     PacketList svc_queue;
-    PacketList eth_queue;
+    std::vector<std::vector<uint8_t>> eth_queue;
     fbl::unique_ptr<wlan_bss_config_t> bss_cfg;
     KeyList keys;
     fbl::unique_ptr<Packet> beacon;

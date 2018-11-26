@@ -434,16 +434,13 @@ zx_status_t Device::GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) {
     return ZX_OK;
 }
 
-zx_status_t Device::SendEthernet(fbl::unique_ptr<Packet> packet) {
-    ZX_DEBUG_ASSERT(packet != nullptr);
-
-    if (packet->len() > ETH_FRAME_MAX_SIZE) {
-        errorf("SendEthernet drops Ethernet frame of invalid length: %zu\n", packet->len());
-        ZX_DEBUG_ASSERT(false);
+zx_status_t Device::DeliverEthernet(Span<const uint8_t> eth_frame) {
+    if (eth_frame.size() > ETH_FRAME_MAX_SIZE) {
+        errorf("Attempted to deliver an ethernet frame of invalid length: %zu\n", eth_frame.size());
         return ZX_ERR_INVALID_ARGS;
     }
 
-    if (ethmac_proxy_ != nullptr) { ethmac_proxy_->Recv(packet->data(), packet->len(), 0u); }
+    if (ethmac_proxy_ != nullptr) { ethmac_proxy_->Recv(eth_frame.data(), eth_frame.size(), 0u); }
     return ZX_OK;
 }
 

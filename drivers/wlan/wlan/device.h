@@ -69,7 +69,7 @@ class Device : public DeviceInterface {
 
     // DeviceInterface methods
     zx_status_t GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) override final;
-    zx_status_t SendEthernet(fbl::unique_ptr<Packet> packet) override final;
+    zx_status_t DeliverEthernet(Span<const uint8_t> eth_frame) override final;
     zx_status_t SendWlan(fbl::unique_ptr<Packet> packet, CBW cbw, PHY phy,
                          uint32_t flags) override final;
     zx_status_t SendService(fbl::unique_ptr<Packet> packet) override final;

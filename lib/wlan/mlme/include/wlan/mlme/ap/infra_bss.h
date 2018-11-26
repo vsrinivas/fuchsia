@@ -52,7 +52,7 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
 
     zx_status_t SendMgmtFrame(MgmtFrame<>&& mgmt_frame) override;
     zx_status_t SendDataFrame(DataFrame<>&& data_frame, uint32_t flags = 0) override;
-    zx_status_t SendEthFrame(EthFrame&& eth_frame) override;
+    zx_status_t DeliverEthernet(Span<const uint8_t> frame) override;
 
     seq_t NextSeq(const MgmtFrameHeader& hdr) override;
     seq_t NextSeq(const MgmtFrameHeader& hdr, uint8_t aci) override;

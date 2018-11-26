@@ -696,7 +696,7 @@ zx_status_t Station::HandleLlcFrame(const FrameView<LlcHeader>& llc_frame, size_
 
     packet->set_len(w.WrittenBytes());
 
-    auto status = device_->SendEthernet(std::move(packet));
+    auto status = device_->DeliverEthernet(*packet);
     if (status != ZX_OK) { errorf("could not send ethernet data: %d\n", status); }
     return status;
 }

@@ -44,7 +44,7 @@ struct MockBss : public BssInterface {
     zx_status_t SendDataFrame(DataFrame<>&& data_frame, uint32_t flags) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    zx_status_t SendEthFrame(EthFrame&& eth_frame) { return ZX_ERR_NOT_SUPPORTED; }
+    zx_status_t DeliverEthernet(Span<const uint8_t> frame) { return ZX_ERR_NOT_SUPPORTED; }
 
     void OnPreTbtt() {}
     void OnBcnTxComplete() {}

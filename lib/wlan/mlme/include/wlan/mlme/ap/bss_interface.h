@@ -42,7 +42,7 @@ class BssInterface {
 
     virtual zx_status_t SendMgmtFrame(MgmtFrame<>&& mgmt_frame) = 0;
     virtual zx_status_t SendDataFrame(DataFrame<>&& data_frame, uint32_t flags = 0) = 0;
-    virtual zx_status_t SendEthFrame(EthFrame&& eth_frame) = 0;
+    virtual zx_status_t DeliverEthernet(Span<const uint8_t> frame) = 0;
 
     // Indications reported from lower MAC layer.
     virtual void OnPreTbtt() = 0;

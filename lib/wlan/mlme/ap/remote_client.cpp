@@ -496,7 +496,7 @@ void AssociatedState::HandleDataLlcFrame(DataFrame<LlcHeader>&& frame) {
 
     packet->set_len(w.WrittenBytes());
 
-    auto status = client_->bss()->SendEthFrame(EthFrame(std::move(packet)));
+    auto status = client_->bss()->DeliverEthernet(*packet);
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send ethernet data: %d\n",
                client_->addr().ToString().c_str(), status);

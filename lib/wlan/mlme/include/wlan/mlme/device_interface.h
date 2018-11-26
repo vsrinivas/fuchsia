@@ -50,7 +50,7 @@ class DeviceInterface {
 
     virtual zx_status_t GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) = 0;
 
-    virtual zx_status_t SendEthernet(fbl::unique_ptr<Packet> packet) = 0;
+    virtual zx_status_t DeliverEthernet(Span<const uint8_t> eth_frame) = 0;
     virtual zx_status_t SendWlan(fbl::unique_ptr<Packet> packet, CBW cbw, PHY phy,
                                  uint32_t flags = 0) = 0;
     virtual zx_status_t SendService(fbl::unique_ptr<Packet> packet) = 0;

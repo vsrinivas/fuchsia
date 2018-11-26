@@ -263,15 +263,14 @@ struct Context {
                   0);
     }
 
-    void AssertEthFrame(fbl::unique_ptr<Packet> pkt, std::vector<uint8_t> expected_payload) {
-        ASSERT_EQ(pkt->peer(), Packet::Peer::kEthernet);
-        EthFrameView frame(pkt.get());
-        EXPECT_EQ(std::memcmp(frame.hdr()->src.byte, client_addr.byte, 6), 0);
-        EXPECT_EQ(std::memcmp(frame.hdr()->dest.byte, kBssid1, 6), 0);
-        EXPECT_EQ(frame.hdr()->ether_type, 42);
-        EXPECT_EQ(frame.body_len(), expected_payload.size());
-        EXPECT_EQ(std::memcmp(frame.body()->data, expected_payload.data(), expected_payload.size()),
-                  0);
+    void AssertEthFrame(std::vector<uint8_t> pkt, std::vector<uint8_t> expected_payload) {
+        EXPECT_EQ(sizeof(EthernetII) + expected_payload.size(), pkt.size());
+        auto hdr = reinterpret_cast<const EthernetII*>(pkt.data());
+        EXPECT_EQ(std::memcmp(hdr->src.byte, client_addr.byte, 6), 0);
+        EXPECT_EQ(std::memcmp(hdr->dest.byte, kBssid1, 6), 0);
+        EXPECT_EQ(hdr->ether_type, 42);
+        auto payload = Span<const uint8_t>(pkt).subspan(sizeof(EthernetII));
+        EXPECT_RANGES_EQ(payload, expected_payload);
     }
 
     MockDevice* device;
