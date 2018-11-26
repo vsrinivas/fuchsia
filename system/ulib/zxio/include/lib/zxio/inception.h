@@ -75,6 +75,27 @@ static_assert(sizeof(zxio_pipe_t) <= sizeof(zxio_storage_t),
 
 zx_status_t zxio_pipe_init(zxio_storage_t* pipe, zx_handle_t socket);
 
+// debuglog --------------------------------------------------------------------
+
+typedef struct zxio_debuglog_buffer zxio_debuglog_buffer_t;
+
+// A |zxio_t| backend that uses a debuglog.
+//
+// The |handle| handle is a Zircon debuglog object.
+typedef struct zxio_debuglog {
+    zxio_t io;
+    zx_handle_t handle;
+    zxio_debuglog_buffer_t* buffer;
+} zxio_debuglog_t;
+
+static_assert(sizeof(zxio_debuglog_t) <= sizeof(zxio_storage_t),
+              "zxio_debuglog_t must fit inside zxio_storage_t.");
+
+// Initializes a |zxio_storage_t| to use the given |handle| for output.
+//
+// The |handle| should be a Zircon debuglog object.
+zx_status_t zxio_debuglog_init(zxio_storage_t* storage, zx_handle_t handle);
+
 __END_CDECLS
 
 #endif // LIB_ZXIO_INCEPTION_H_

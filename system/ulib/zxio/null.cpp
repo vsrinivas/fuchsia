@@ -15,19 +15,19 @@ zx_status_t zxio_default_close(zxio_t* io) {
 }
 
 void zxio_default_wait_begin(zxio_t* io, zxio_signals_t zxio_signals,
-                          zx_handle_t* out_handle,
-                          zx_signals_t* out_zx_signals) {
+                             zx_handle_t* out_handle,
+                             zx_signals_t* out_zx_signals) {
     *out_handle = ZX_HANDLE_INVALID;
     *out_zx_signals = ZX_SIGNAL_NONE;
 }
 
 void zxio_default_wait_end(zxio_t* io, zx_signals_t zx_signals,
-                    zxio_signals_t* out_zxio_signals) {
+                           zxio_signals_t* out_zxio_signals) {
     *out_zxio_signals = ZXIO_SIGNAL_NONE;
 }
 
 zx_status_t zxio_default_clone_async(zxio_t* io, uint32_t flags,
-                                  zx_handle_t request) {
+                                     zx_handle_t request) {
     zx_handle_close(request);
     return ZX_ERR_NOT_SUPPORTED;
 }
@@ -41,32 +41,32 @@ zx_status_t zxio_default_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
 }
 
 zx_status_t zxio_default_attr_set(zxio_t* io, uint32_t flags,
-                               const zxio_node_attr_t* attr) {
+                                  const zxio_node_attr_t* attr) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t zxio_default_read(zxio_t* io, void* buffer, size_t capacity,
-                           size_t* out_actual) {
+                              size_t* out_actual) {
     return ZX_ERR_WRONG_TYPE;
 }
 
 zx_status_t zxio_default_read_at(zxio_t* io, size_t offset, void* buffer,
-                              size_t capacity, size_t* out_actual) {
+                                 size_t capacity, size_t* out_actual) {
     return ZX_ERR_WRONG_TYPE;
 }
 
 zx_status_t zxio_default_write(zxio_t* io, const void* buffer, size_t capacity,
-                            size_t* out_actual) {
+                               size_t* out_actual) {
     return ZX_ERR_WRONG_TYPE;
 }
 
 zx_status_t zxio_default_write_at(zxio_t* io, size_t offset, const void* buffer,
-                               size_t capacity, size_t* out_actual) {
+                                  size_t capacity, size_t* out_actual) {
     return ZX_ERR_WRONG_TYPE;
 }
 
 zx_status_t zxio_default_seek(zxio_t* io, size_t offset, zxio_seek_origin_t start,
-                           size_t* out_offset) {
+                              size_t* out_offset) {
     return ZX_ERR_WRONG_TYPE;
 }
 
@@ -83,17 +83,17 @@ zx_status_t zxio_default_flags_set(zxio_t* io, uint32_t flags) {
 }
 
 zx_status_t zxio_default_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo,
-                              size_t* out_size) {
+                                 size_t* out_size) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t zxio_default_open(zxio_t* io, uint32_t flags, uint32_t mode,
-                           const char* path, zxio_t** out_io) {
+                              const char* path, zxio_t** out_io) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t zxio_default_open_async(zxio_t* io, uint32_t flags, uint32_t mode,
-                                 const char* path, zx_handle_t request) {
+                                    const char* path, zx_handle_t request) {
     zx_handle_close(request);
     return ZX_ERR_NOT_SUPPORTED;
 }
@@ -107,19 +107,19 @@ zx_status_t zxio_default_token_get(zxio_t* io, zx_handle_t* out_token) {
 }
 
 zx_status_t zxio_default_rename(zxio_t* io, const char* src_path,
-                             zx_handle_t dst_token, const char* dst_path) {
+                                zx_handle_t dst_token, const char* dst_path) {
     zx_handle_close(dst_token);
     return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t zxio_default_link(zxio_t* io, const char* src_path,
-                           zx_handle_t dst_token, const char* dst_path) {
+                              zx_handle_t dst_token, const char* dst_path) {
     zx_handle_close(dst_token);
     return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t zxio_default_readdir(zxio_t* io, void* buffer, size_t capacity,
-                              size_t* out_actual) {
+                                 size_t* out_actual) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -134,7 +134,7 @@ zx_status_t zxio_null_read(zxio_t* io, void* buffer, size_t capacity,
 }
 
 zx_status_t zxio_null_write(zxio_t* io, const void* buffer, size_t capacity,
-                        size_t* out_actual) {
+                            size_t* out_actual) {
     *out_actual = capacity;
     return ZX_OK;
 }

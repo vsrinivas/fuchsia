@@ -903,3 +903,74 @@ fail:
     zx_handle_close(h1);
     return r;
 }
+
+// Debuglog --------------------------------------------------------------------
+
+static inline zxio_debuglog_t* fdio_get_zxio_debuglog(fdio_t* io) {
+    return (zxio_debuglog_t*)fdio_get_zxio(io);
+}
+
+static zx_status_t fdio_zxio_debuglog_clone(fdio_t* io, zx_handle_t* handles,
+                                            uint32_t* types) {
+    zxio_debuglog_t* pipe = fdio_get_zxio_debuglog(io);
+
+    zx_status_t status = zx_handle_duplicate(pipe->handle, ZX_RIGHT_SAME_RIGHTS,
+                                             &handles[0]);
+    if (status != ZX_OK) {
+        return status;
+    }
+    types[0] = PA_FDIO_LOGGER;
+    return 1;
+}
+
+static fdio_ops_t fdio_zxio_debuglog_ops = {
+    .read = fdio_default_read,
+    .read_at = fdio_default_read_at,
+    .write = fdio_zxio_write,
+    .write_at = fdio_default_write_at,
+    .seek = fdio_default_seek,
+    .misc = fdio_default_misc,
+    .close = fdio_zxio_close,
+    .open = fdio_default_open,
+    .clone = fdio_zxio_debuglog_clone,
+    .ioctl = fdio_default_ioctl,
+    .wait_begin = fdio_default_wait_begin,
+    .wait_end = fdio_default_wait_end,
+    .unwrap = fdio_default_unwrap,
+    .posix_ioctl = fdio_default_posix_ioctl,
+    .get_vmo = fdio_default_get_vmo,
+    .get_token = fdio_default_get_token,
+    .get_attr = fdio_default_get_attr,
+    .set_attr = fdio_default_set_attr,
+    .sync = fdio_default_sync,
+    .readdir = fdio_default_readdir,
+    .rewind = fdio_default_rewind,
+    .unlink = fdio_default_unlink,
+    .truncate = fdio_default_truncate,
+    .rename = fdio_default_rename,
+    .link = fdio_default_link,
+    .get_flags = fdio_default_get_flags,
+    .set_flags = fdio_default_set_flags,
+    .recvfrom = fdio_default_recvfrom,
+    .sendto = fdio_default_sendto,
+    .recvmsg = fdio_default_recvmsg,
+    .sendmsg = fdio_default_sendmsg,
+    .shutdown = fdio_default_shutdown,
+};
+
+__EXPORT
+fdio_t* fdio_logger_create(zx_handle_t handle) {
+    fdio_zxio_t* fv = calloc(1, sizeof(fdio_zxio_t));
+    if (fv == NULL) {
+        zx_handle_close(handle);
+        return NULL;
+    }
+    fv->io.ops = &fdio_zxio_debuglog_ops;
+    fv->io.magic = FDIO_MAGIC;
+    atomic_init(&fv->io.refcount, 1);
+    zx_status_t status = zxio_debuglog_init(&fv->storage, handle);
+    if (status != ZX_OK) {
+        return NULL;
+    }
+    return &fv->io;
+}
