@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/msd_arm_mali_integration_tests"
+        "binary": "test/magma_abi_conformance_tests"
     },
     "sandbox": {
         "features": [
