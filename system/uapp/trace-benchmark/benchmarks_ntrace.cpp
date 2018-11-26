@@ -8,6 +8,7 @@
 
 #define NTRACE
 #include <trace/event.h>
+#include <trace-vthread/event_vthread.h>
 
 #include "runner.h"
 

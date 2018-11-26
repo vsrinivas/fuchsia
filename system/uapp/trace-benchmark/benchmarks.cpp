@@ -12,6 +12,7 @@
 #include <trace-engine/buffer_internal.h>
 #include <trace-engine/instrumentation.h>
 #include <trace/event.h>
+#include <trace-vthread/event_vthread.h>
 
 #include "handler.h"
 #include "runner.h"

@@ -273,71 +273,6 @@ __BEGIN_CDECLS
         }                                                         \
     } while (0)
 
-#define TRACE_INTERNAL_VTHREAD_DURATION_BEGIN(category_literal, name_literal, vthread_literal, \
-                                              vthread_id, args...)                        \
-    do {                                                                                  \
-        TRACE_INTERNAL_EVENT_RECORD(                                                      \
-            (category_literal),                                                           \
-            trace_internal_write_vthread_duration_begin_event_record_and_release_context( \
-                TRACE_INTERNAL_CONTEXT,                                                   \
-                &TRACE_INTERNAL_CATEGORY_REF,                                             \
-                (name_literal), (vthread_literal), (vthread_id), TRACE_INTERNAL_ARGS,     \
-                TRACE_INTERNAL_NUM_ARGS),                                                 \
-            args);                                                                        \
-    } while (0)
-
-#define TRACE_INTERNAL_VTHREAD_DURATION_END(category_literal, name_literal, vthread_literal, \
-                                            vthread_id, args...)                        \
-    do {                                                                                \
-        TRACE_INTERNAL_EVENT_RECORD(                                                    \
-            (category_literal),                                                         \
-            trace_internal_write_vthread_duration_end_event_record_and_release_context( \
-                TRACE_INTERNAL_CONTEXT,                                                 \
-                &TRACE_INTERNAL_CATEGORY_REF,                                           \
-                (name_literal), (vthread_literal), (vthread_id), TRACE_INTERNAL_ARGS,   \
-                TRACE_INTERNAL_NUM_ARGS),                                               \
-            args);                                                                      \
-    } while (0)
-
-#define TRACE_INTERNAL_VTHREAD_FLOW_BEGIN(category_literal, name_literal, vthread_literal, \
-                                          vthread_id, flow_id, args...)                          \
-    do {                                                                                         \
-        TRACE_INTERNAL_EVENT_RECORD(                                                             \
-            (category_literal),                                                                  \
-            trace_internal_write_vthread_flow_begin_event_record_and_release_context(            \
-                TRACE_INTERNAL_CONTEXT,                                                          \
-                &TRACE_INTERNAL_CATEGORY_REF,                                                    \
-                (name_literal), (vthread_literal), (vthread_id), (flow_id), TRACE_INTERNAL_ARGS, \
-                TRACE_INTERNAL_NUM_ARGS),                                                        \
-            args);                                                                               \
-    } while (0)
-
-#define TRACE_INTERNAL_VTHREAD_FLOW_STEP(category_literal, name_literal, vthread_literal, \
-                                         vthread_id, flow_id, args...)                           \
-    do {                                                                                         \
-        TRACE_INTERNAL_EVENT_RECORD(                                                             \
-            (category_literal),                                                                  \
-            trace_internal_write_vthread_flow_step_event_record_and_release_context(             \
-                TRACE_INTERNAL_CONTEXT,                                                          \
-                &TRACE_INTERNAL_CATEGORY_REF,                                                    \
-                (name_literal), (vthread_literal), (vthread_id), (flow_id), TRACE_INTERNAL_ARGS, \
-                TRACE_INTERNAL_NUM_ARGS),                                                        \
-            args);                                                                               \
-    } while (0)
-
-#define TRACE_INTERNAL_VTHREAD_FLOW_END(category_literal, name_literal, vthread_literal, \
-                                        vthread_id, flow_id, args...)                            \
-    do {                                                                                         \
-        TRACE_INTERNAL_EVENT_RECORD(                                                             \
-            (category_literal),                                                                  \
-            trace_internal_write_vthread_flow_end_event_record_and_release_context(              \
-                TRACE_INTERNAL_CONTEXT,                                                          \
-                &TRACE_INTERNAL_CATEGORY_REF,                                                    \
-                (name_literal), (vthread_literal), (vthread_id), (flow_id), TRACE_INTERNAL_ARGS, \
-                TRACE_INTERNAL_NUM_ARGS),                                                        \
-            args);                                                                               \
-    } while (0)
-
 void trace_internal_write_instant_event_record_and_release_context(
     trace_context_t* context,
     const trace_string_ref_t* category_ref,
@@ -416,49 +351,6 @@ void trace_internal_write_blob_record_and_release_context(
     trace_blob_type_t type,
     const char* name_literal,
     const void* blob, size_t blob_size);
-
-void trace_internal_write_vthread_duration_begin_event_record_and_release_context(
-    trace_context_t* context,
-    const trace_string_ref_t* category_ref,
-    const char* name_literal,
-    const char* vthread_literal,
-    trace_vthread_id_t vthread_id,
-    trace_arg_t* args, size_t num_args);
-
-void trace_internal_write_vthread_duration_end_event_record_and_release_context(
-    trace_context_t* context,
-    const trace_string_ref_t* category_ref,
-    const char* name_literal,
-    const char* vthread_literal,
-    trace_vthread_id_t vthread_id,
-    trace_arg_t* args, size_t num_args);
-
-void trace_internal_write_vthread_flow_begin_event_record_and_release_context(
-    trace_context_t* context,
-    const trace_string_ref_t* category_ref,
-    const char* name_literal,
-    const char* vthread_literal,
-    trace_vthread_id_t vthread_id,
-    trace_flow_id_t flow_id,
-    trace_arg_t* args, size_t num_args);
-
-void trace_internal_write_vthread_flow_step_event_record_and_release_context(
-    trace_context_t* context,
-    const trace_string_ref_t* category_ref,
-    const char* name_literal,
-    const char* vthread_literal,
-    trace_vthread_id_t vthread_id,
-    trace_flow_id_t flow_id,
-    trace_arg_t* args, size_t num_args);
-
-void trace_internal_write_vthread_flow_end_event_record_and_release_context(
-    trace_context_t* context,
-    const trace_string_ref_t* category_ref,
-    const char* name_literal,
-    const char* vthread_literal,
-    trace_vthread_id_t vthread_id,
-    trace_flow_id_t flow_id,
-    trace_arg_t* args, size_t num_args);
 
 #ifndef NTRACE
 // When "destroyed" (by the cleanup attribute), writes a duration end event.

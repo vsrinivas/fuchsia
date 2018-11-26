@@ -22,6 +22,7 @@ MODULE_HEADER_DEPS := \
 MODULE_STATIC_LIBS := \
     system/ulib/trace \
     system/ulib/trace-provider.handler \
+    system/ulib/trace-vthread \
     system/ulib/async \
     system/ulib/async.cpp \
     system/ulib/async-loop.cpp \
