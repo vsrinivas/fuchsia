@@ -299,7 +299,11 @@ mod tests {
         );
     }
 
+    // TODO(NET-1928): deflake and removed #[ignore]. reproduction:
+    //
+    // run_test_component bt-gap-unittests store_bond_commits_entry --ignored
     #[test]
+    #[ignore]
     fn store_bond_commits_entry() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let accessor_proxy =
