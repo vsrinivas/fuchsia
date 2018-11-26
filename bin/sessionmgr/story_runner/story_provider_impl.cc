@@ -129,18 +129,17 @@ class StoryProviderImpl::CreateStoryCall : public Operation<fidl::StringPtr> {
 
 class StoryProviderImpl::DeleteStoryCall : public Operation<> {
  public:
-  using StoryControllerImplMap =
-      std::map<std::string, struct StoryControllerImplContainer>;
+  using StoryRuntimesMap = std::map<std::string, struct StoryRuntimeContainer>;
   using PendingDeletion = std::pair<std::string, DeleteStoryCall*>;
 
   DeleteStoryCall(SessionStorage* session_storage, fidl::StringPtr story_id,
-                  StoryControllerImplMap* const story_controller_impls,
+                  StoryRuntimesMap* const story_runtime_containers,
                   MessageQueueManager* const message_queue_manager,
                   const bool already_deleted, ResultCall result_call)
       : Operation("StoryProviderImpl::DeleteStoryCall", std::move(result_call)),
         session_storage_(session_storage),
         story_id_(story_id),
-        story_controller_impls_(story_controller_impls),
+        story_runtime_containers_(story_runtime_containers),
         message_queue_manager_(message_queue_manager),
         already_deleted_(already_deleted) {}
 
@@ -157,13 +156,13 @@ class StoryProviderImpl::DeleteStoryCall : public Operation<> {
   }
 
   void Teardown(FlowToken flow) {
-    auto i = story_controller_impls_->find(story_id_);
-    if (i == story_controller_impls_->end()) {
+    auto i = story_runtime_containers_->find(story_id_);
+    if (i == story_runtime_containers_->end()) {
       return;
     }
 
-    FXL_DCHECK(i->second.impl != nullptr);
-    i->second.impl->StopForDelete([this, flow] { Erase(flow); });
+    FXL_DCHECK(i->second.controller_impl != nullptr);
+    i->second.controller_impl->StopForDelete([this, flow] { Erase(flow); });
   }
 
   void Erase(FlowToken flow) {
@@ -176,7 +175,7 @@ class StoryProviderImpl::DeleteStoryCall : public Operation<> {
     // provided to |this|. To avoid such problems, the delete is invoked
     // through the run loop.
     async::PostTask(async_get_default_dispatcher(), [this, flow] {
-      story_controller_impls_->erase(story_id_);
+      story_runtime_containers_->erase(story_id_);
       message_queue_manager_->DeleteNamespace(
           EncodeModuleComponentNamespace(story_id_), [flow] {});
 
@@ -187,24 +186,22 @@ class StoryProviderImpl::DeleteStoryCall : public Operation<> {
  private:
   SessionStorage* const session_storage_;  // Not owned.
   const fidl::StringPtr story_id_;
-  StoryControllerImplMap* const story_controller_impls_;
+  StoryRuntimesMap* const story_runtime_containers_;
   MessageQueueManager* const message_queue_manager_;
   const bool already_deleted_;  // True if called from OnChange();
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeleteStoryCall);
 };
 
-// 1. Ensure that the story data in the root page isn't dirty due to a crash
-// 2. Retrieve the page specific to this story.
-// 3. Return a controller for this story that contains the page pointer.
-class StoryProviderImpl::GetStoryControllerContainerCall
-    : public Operation<StoryControllerImplContainer*> {
+// Loads a StoryRuntimeContainer object so that the given story is ready to be
+// run.
+class StoryProviderImpl::LoadStoryRuntimeCall
+    : public Operation<StoryRuntimeContainer*> {
  public:
-  GetStoryControllerContainerCall(StoryProviderImpl* const story_provider_impl,
-                                  SessionStorage* const session_storage,
-                                  fidl::StringPtr story_id,
-                                  ResultCall result_call)
-      : Operation("StoryProviderImpl::GetStoryControllerContainerCall",
+  LoadStoryRuntimeCall(StoryProviderImpl* const story_provider_impl,
+                       SessionStorage* const session_storage,
+                       fidl::StringPtr story_id, ResultCall result_call)
+      : Operation("StoryProviderImpl::LoadStoryRuntimeCall",
                   std::move(result_call)),
         story_provider_impl_(story_provider_impl),
         session_storage_(session_storage),
@@ -217,8 +214,8 @@ class StoryProviderImpl::GetStoryControllerContainerCall
     // Use the existing controller, if possible.
     // This won't race against itself because it's managed by an operation
     // queue.
-    auto i = story_provider_impl_->story_controller_impls_.find(story_id_);
-    if (i != story_provider_impl_->story_controller_impls_.end()) {
+    auto i = story_provider_impl_->story_runtime_containers_.find(story_id_);
+    if (i != story_provider_impl_->story_runtime_containers_.end()) {
       story_controller_container_ = &i->second;
       return;
     }
@@ -239,15 +236,15 @@ class StoryProviderImpl::GetStoryControllerContainerCall
     session_storage_->GetStoryStorage(story_id_)->WeakThen(
         GetWeakPtr(),
         [this, flow](std::unique_ptr<StoryStorage> story_storage) {
-          struct StoryControllerImplContainer container;
+          struct StoryRuntimeContainer container;
           container.storage = std::move(story_storage);
-          container.impl = std::make_unique<StoryControllerImpl>(
+          container.controller_impl = std::make_unique<StoryControllerImpl>(
               story_id_, session_storage_, container.storage.get(),
               story_provider_impl_);
           container.current_info = std::move(story_info_);
           container.entity_provider =
               std::make_unique<StoryEntityProvider>(container.storage.get());
-          auto it = story_provider_impl_->story_controller_impls_.emplace(
+          auto it = story_provider_impl_->story_runtime_containers_.emplace(
               story_id_, std::move(container));
           story_controller_container_ = &it.first->second;
         });
@@ -258,12 +255,12 @@ class StoryProviderImpl::GetStoryControllerContainerCall
   const fidl::StringPtr story_id_;
   fuchsia::modular::StoryInfoPtr story_info_;
 
-  StoryControllerImplContainer* story_controller_container_ = nullptr;
+  StoryRuntimeContainer* story_controller_container_ = nullptr;
 
   // Sub operations run in this queue.
   OperationQueue operation_queue_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(GetStoryControllerContainerCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LoadStoryRuntimeCall);
 };
 
 class StoryProviderImpl::StopAllStoriesCall : public Operation<> {
@@ -278,7 +275,7 @@ class StoryProviderImpl::StopAllStoriesCall : public Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    for (auto& it : story_provider_impl_->story_controller_impls_) {
+    for (auto& it : story_provider_impl_->story_runtime_containers_) {
       // Each callback has a copy of |flow| which only goes out-of-scope
       // once the story corresponding to |it| stops.
       //
@@ -287,11 +284,12 @@ class StoryProviderImpl::StopAllStoriesCall : public Operation<> {
       // executes because the fuchsia::modular::StoryController instance is
       // deleted after the DeleteCall finishes. This will then block unless it
       // runs in a timeout.
-      it.second.impl->StopForTeardown([this, story_id = it.first, flow] {
-        // It is okay to erase story_id because story provider binding has
-        // been closed and this callback cannot be invoked synchronously.
-        story_provider_impl_->story_controller_impls_.erase(story_id);
-      });
+      it.second.controller_impl->StopForTeardown(
+          [this, story_id = it.first, flow] {
+            // It is okay to erase story_id because story provider binding has
+            // been closed and this callback cannot be invoked synchronously.
+            story_provider_impl_->story_runtime_containers_.erase(story_id);
+          });
     }
   }
 
@@ -342,9 +340,9 @@ class StoryProviderImpl::GetStoryEntityProviderCall
   void Run() override {
     FlowToken flow{this, &story_entity_provider_};
 
-    operation_queue_.Add(new GetStoryControllerContainerCall(
+    operation_queue_.Add(new LoadStoryRuntimeCall(
         story_provider_impl_, story_provider_impl_->session_storage_, story_id_,
-        [this, flow](StoryControllerImplContainer* story_controller_container) {
+        [this, flow](StoryRuntimeContainer* story_controller_container) {
           if (story_controller_container) {
             story_entity_provider_ =
                 story_controller_container->entity_provider.get();
@@ -444,11 +442,11 @@ void StoryProviderImpl::Teardown(const std::function<void()>& callback) {
 void StoryProviderImpl::Watch(
     fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher) {
   auto watcher_ptr = watcher.Bind();
-  for (const auto& item : story_controller_impls_) {
+  for (const auto& item : story_runtime_containers_) {
     const auto& container = item.second;
     watcher_ptr->OnChange(CloneStruct(*container.current_info),
-                          container.impl->GetStoryState(),
-                          container.impl->GetStoryVisibilityState());
+                          container.controller_impl->GetStoryState(),
+                          container.controller_impl->GetStoryVisibilityState());
   }
   watchers_.AddInterfacePtr(std::move(watcher_ptr));
 }
@@ -457,10 +455,11 @@ void StoryProviderImpl::Watch(
 void StoryProviderImpl::WatchActivity(
     fidl::InterfaceHandle<fuchsia::modular::StoryActivityWatcher> watcher) {
   auto watcher_ptr = watcher.Bind();
-  for (const auto& item : story_controller_impls_) {
+  for (const auto& item : story_runtime_containers_) {
     const auto& container = item.second;
-    watcher_ptr->OnStoryActivityChange(container.impl->GetStoryId(),
-                                       container.impl->GetOngoingActivities());
+    watcher_ptr->OnStoryActivityChange(
+        container.controller_impl->GetStoryId(),
+        container.controller_impl->GetOngoingActivities());
   }
   activity_watchers_.AddInterfacePtr(std::move(watcher_ptr));
 }
@@ -552,10 +551,10 @@ void StoryProviderImpl::CreateStoryWithInfo(
 // |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::DeleteStory(fidl::StringPtr story_id,
                                     DeleteStoryCallback callback) {
-  operation_queue_.Add(
-      new DeleteStoryCall(session_storage_, story_id, &story_controller_impls_,
-                          component_context_info_.message_queue_manager,
-                          false /* already_deleted */, callback));
+  operation_queue_.Add(new DeleteStoryCall(
+      session_storage_, story_id, &story_runtime_containers_,
+      component_context_info_.message_queue_manager,
+      false /* already_deleted */, callback));
 }
 
 // |fuchsia::modular::StoryProvider|
@@ -595,8 +594,8 @@ void StoryProviderImpl::NotifyStoryStateChange(
                   })
                   ->Then([this, story_id, story_state, story_visibility_state](
                              fuchsia::modular::internal::StoryDataPtr data) {
-                    auto it = story_controller_impls_.find(story_id);
-                    if (it == story_controller_impls_.end()) {
+                    auto it = story_runtime_containers_.find(story_id);
+                    if (it == story_runtime_containers_.end()) {
                       // If this call arrives while DeleteStory() is in
                       // progress, the story controller might already be gone
                       // from here.
@@ -622,15 +621,16 @@ void StoryProviderImpl::NotifyStoryActivityChange(
 void StoryProviderImpl::GetController(
     fidl::StringPtr story_id,
     fidl::InterfaceRequest<fuchsia::modular::StoryController> request) {
-  operation_queue_.Add(new GetStoryControllerContainerCall(
+  operation_queue_.Add(new LoadStoryRuntimeCall(
       this, session_storage_, story_id,
-      fxl::MakeCopyable([request = std::move(request)](
-                            StoryControllerImplContainer*
-                                story_controller_container) mutable {
-        if (story_controller_container) {
-          story_controller_container->impl->Connect(std::move(request));
-        }
-      })));
+      fxl::MakeCopyable(
+          [request = std::move(request)](
+              StoryRuntimeContainer* story_controller_container) mutable {
+            if (story_controller_container) {
+              story_controller_container->controller_impl->Connect(
+                  std::move(request));
+            }
+          })));
 }
 
 // |fuchsia::modular::StoryProvider|
@@ -691,9 +691,9 @@ void StoryProviderImpl::RunningStories(RunningStoriesCallback callback) {
   auto on_run = Future<>::Create("StoryProviderImpl.RunningStories.on_run");
   auto done = on_run->Map([this]() {
     auto stories = fidl::VectorPtr<fidl::StringPtr>::New(0);
-    for (const auto& impl_container : story_controller_impls_) {
-      if (impl_container.second.impl->IsRunning()) {
-        stories.push_back(impl_container.second.impl->GetStoryId());
+    for (const auto& impl_container : story_runtime_containers_) {
+      if (impl_container.second.controller_impl->IsRunning()) {
+        stories.push_back(impl_container.second.controller_impl->GetStoryId());
       }
     }
     return stories;
@@ -714,10 +714,10 @@ void StoryProviderImpl::OnStoryStorageUpdated(
   fuchsia::modular::StoryState state = fuchsia::modular::StoryState::STOPPED;
   fuchsia::modular::StoryVisibilityState visibility_state =
       fuchsia::modular::StoryVisibilityState::DEFAULT;
-  auto i = story_controller_impls_.find(story_data.story_info.id);
-  if (i != story_controller_impls_.end()) {
-    state = i->second.impl->GetStoryState();
-    visibility_state = i->second.impl->GetStoryVisibilityState();
+  auto i = story_runtime_containers_.find(story_data.story_info.id);
+  if (i != story_runtime_containers_.end()) {
+    state = i->second.controller_impl->GetStoryState();
+    visibility_state = i->second.controller_impl->GetStoryVisibilityState();
     i->second.current_info = CloneOptional(story_data.story_info);
   }
 
@@ -729,14 +729,14 @@ void StoryProviderImpl::OnStoryStorageDeleted(fidl::StringPtr story_id) {
   // case, either another device deleted the story, or we did and the Ledger
   // is now notifying us. In this case, we pass |already_deleted = true| so
   // that we don't ask to delete the story data again.
-  operation_queue_.Add(
-      new DeleteStoryCall(session_storage_, story_id, &story_controller_impls_,
-                          component_context_info_.message_queue_manager,
-                          true /* already_deleted */, [this, story_id] {
-                            for (const auto& i : watchers_.ptrs()) {
-                              (*i)->OnDelete(story_id);
-                            }
-                          }));
+  operation_queue_.Add(new DeleteStoryCall(
+      session_storage_, story_id, &story_runtime_containers_,
+      component_context_info_.message_queue_manager, true /* already_deleted */,
+      [this, story_id] {
+        for (const auto& i : watchers_.ptrs()) {
+          (*i)->OnDelete(story_id);
+        }
+      }));
 }
 
 // |fuchsia::modular::FocusWatcher|
@@ -751,8 +751,8 @@ void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
           return;
         }
 
-        auto i = story_controller_impls_.find(info->focused_story_id.get());
-        if (i == story_controller_impls_.end()) {
+        auto i = story_runtime_containers_.find(info->focused_story_id.get());
+        if (i == story_runtime_containers_.end()) {
           FXL_LOG(ERROR) << "Story controller not found for focused story "
                          << info->focused_story_id;
           return;

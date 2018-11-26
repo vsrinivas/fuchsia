@@ -270,13 +270,13 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   // Also keeps a cached version of the fuchsia::modular::StoryInfo for every
   // story, to send it to newly registered story provider watchers, and to story
   // provider watchers when only the story state changes.
-  struct StoryControllerImplContainer {
-    std::unique_ptr<StoryControllerImpl> impl;
+  struct StoryRuntimeContainer {
+    std::unique_ptr<StoryControllerImpl> controller_impl;
     std::unique_ptr<StoryStorage> storage;
     std::unique_ptr<StoryEntityProvider> entity_provider;
     fuchsia::modular::StoryInfoPtr current_info;
   };
-  std::map<std::string, StoryControllerImplContainer> story_controller_impls_;
+  std::map<std::string, StoryRuntimeContainer> story_runtime_containers_;
 
   const ComponentContextInfo component_context_info_;
 
@@ -329,7 +329,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   // Operations implemented here.
   class CreateStoryCall;
   class DeleteStoryCall;
-  class GetStoryControllerContainerCall;
+  class LoadStoryRuntimeCall;
   class StopAllStoriesCall;
   class StopStoryShellCall;
   class GetStoryEntityProviderCall;
