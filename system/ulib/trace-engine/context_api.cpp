@@ -108,7 +108,10 @@ struct ThreadEntry : public fbl::SinglyLinkedListable<ThreadEntry*> {
 // duplicate registration of strings across threads.
 struct ContextCache {
     ContextCache() = default;
-    ~ContextCache() { string_table.clear(); }
+    ~ContextCache() {
+        string_table.clear();
+        thread_table.clear();
+    }
 
     // The generation number of the context which last modified this state.
     uint32_t generation{0u};
