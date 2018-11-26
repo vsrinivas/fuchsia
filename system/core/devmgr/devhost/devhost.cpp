@@ -38,6 +38,7 @@
 #include <lib/zx/debuglog.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
+#include <lib/zxio/null.h>
 
 #include "../shared/async-loop-owned-rpc-handler.h"
 #include "main.h"
@@ -832,18 +833,29 @@ __EXPORT void driver_printf(uint32_t flags, const char* fmt, ...) {
 
 namespace devmgr {
 
-static ssize_t devhost_log_write(void* cookie, const void* data, size_t len) {
-    return devhost_log_write_internal(0, data, len);
+static zx_status_t devhost_log_write(zxio_t* io, const void* buffer,
+                                     size_t capacity, size_t* out_actual) {
+    devhost_log_write_internal(0, buffer, capacity);
+    *out_actual = capacity;
+    return ZX_OK;
 }
+
+static constexpr zxio_ops_t devhost_log_ops = []() {
+    zxio_ops_t ops = zxio_default_ops;
+    ops.write = devhost_log_write;
+    return ops;
+}();
 
 static void devhost_io_init() {
     if (zx::debuglog::create(zx::resource(), 0, &devhost_log_handle) < 0) {
         return;
     }
-    fdio_t* io;
-    if ((io = fdio_output_create(devhost_log_write, nullptr)) == nullptr) {
+    fdio_t* io = nullptr;
+    zxio_storage_t* storage = nullptr;
+    if ((io = fdio_zxio_create(&storage)) == nullptr) {
         return;
     }
+    zxio_init(&storage->io, &devhost_log_ops);
     close(1);
     fdio_bind_to_fd(io, 1, 0);
     dup2(1, 2);

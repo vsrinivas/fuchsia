@@ -49,6 +49,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/port \
     system/ulib/zx \
     system/ulib/zxcpp \
+    system/ulib/zxio \
 
 # There are pieces of the trace engine that are always present.
 # They don't provide tracing support, but the tracing API provides

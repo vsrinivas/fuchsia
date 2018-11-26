@@ -75,11 +75,6 @@ fdio_t* fdio_service_create(zx_handle_t);
 // entire log-lines and flush them on newline or buffer full.
 fdio_t* fdio_logger_create(zx_handle_t);
 
-// create a fdio that wraps a function
-// used for plumbing stdout/err to logging subsystems, etc
-fdio_t* fdio_output_create(ssize_t (*func)(void* cookie, const void* data, size_t len),
-                           void* cookie);
-
 typedef struct zxio_storage zxio_storage_t;
 
 // Creates an |fdio_t| that is backed by a |zxio_t|.

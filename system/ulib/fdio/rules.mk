@@ -19,7 +19,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/logger.c \
     $(LOCAL_DIR)/namespace.c \
     $(LOCAL_DIR)/null.c \
-    $(LOCAL_DIR)/output.c \
     $(LOCAL_DIR)/remoteio.c \
     $(LOCAL_DIR)/service.c \
     $(LOCAL_DIR)/socket.c \
