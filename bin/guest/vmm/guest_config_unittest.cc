@@ -8,6 +8,7 @@
 #include <zircon/syscalls.h>
 
 #include "gtest/gtest.h"
+#include "lib/fxl/arraysize.h"
 
 namespace guest {
 namespace {
@@ -57,7 +58,7 @@ TEST(GuestConfigParserTest, ParseArgs) {
                         "--block=/pkg/data/block_path",
                         "--cmdline=kernel_cmdline"};
   ASSERT_EQ(ZX_OK,
-            parser.ParseArgcArgv(countof(argv), const_cast<char**>(argv)));
+            parser.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv)));
   ASSERT_EQ(Kernel::LINUX, config.kernel());
   ASSERT_EQ("linux_path", config.kernel_path());
   ASSERT_EQ("ramdisk_path", config.ramdisk_path());
@@ -73,7 +74,7 @@ TEST(GuestConfigParserTest, UnknownArgument) {
 
   const char* argv[] = {"exe_name", "--invalid-arg"};
   ASSERT_EQ(ZX_ERR_INVALID_ARGS,
-            parser.ParseArgcArgv(countof(argv), const_cast<char**>(argv)));
+            parser.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv)));
 }
 
 TEST(GuestConfigParserTest, BooleanFlag) {
@@ -81,12 +82,12 @@ TEST(GuestConfigParserTest, BooleanFlag) {
   GuestConfigParser parser(&config);
 
   const char* argv_false[] = {"exe_name", "--virtio-net=false"};
-  ASSERT_EQ(ZX_OK, parser.ParseArgcArgv(countof(argv_false),
+  ASSERT_EQ(ZX_OK, parser.ParseArgcArgv(arraysize(argv_false),
                                         const_cast<char**>(argv_false)));
   ASSERT_FALSE(config.virtio_net());
 
   const char* argv_true[] = {"exe_name", "--virtio-net=true"};
-  ASSERT_EQ(ZX_OK, parser.ParseArgcArgv(countof(argv_true),
+  ASSERT_EQ(ZX_OK, parser.ParseArgcArgv(arraysize(argv_true),
                                         const_cast<char**>(argv_true)));
   ASSERT_TRUE(config.virtio_net());
 }
@@ -97,7 +98,7 @@ TEST(GuestConfigParserTest, CommandLineAppend) {
 
   const char* argv[] = {"exe_name", "--cmdline=foo bar", "--cmdline-add=baz"};
   ASSERT_EQ(ZX_OK,
-            parser.ParseArgcArgv(countof(argv), const_cast<char**>(argv)));
+            parser.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv)));
   ASSERT_EQ("foo bar baz", config.cmdline());
 }
 
@@ -108,7 +109,7 @@ TEST(GuestConfigParserTest, BlockSpecArg) {
   const char* argv[] = {"exe_name", "--block=/pkg/data/foo,ro,fdio",
                         "--block=/dev/class/block/001,rw,fdio"};
   ASSERT_EQ(ZX_OK,
-            parser.ParseArgcArgv(countof(argv), const_cast<char**>(argv)));
+            parser.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv)));
   ASSERT_EQ(2, config.block_devices().size());
 
   const BlockSpec& spec0 = config.block_devices()[0];
@@ -153,7 +154,7 @@ TEST(GuestConfigParserTest, BlockSpecJson) {
                                                                               \
     const char* argv[] = {"exe_name", "--memory=" #string};                   \
     ASSERT_EQ(ZX_OK,                                                          \
-              parser.ParseArgcArgv(countof(argv), const_cast<char**>(argv))); \
+              parser.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv))); \
     ASSERT_EQ((result), config.memory());                                     \
   }
 
@@ -168,7 +169,7 @@ TEST_PARSE_MEM_SIZE(4G, 4ul << 30);
                                                                               \
     const char* argv[] = {"exe_name", "--memory=" #string};                   \
     ASSERT_EQ(ZX_ERR_INVALID_ARGS,                                            \
-              parser.ParseArgcArgv(countof(argv), const_cast<char**>(argv))); \
+              parser.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv))); \
   }
 
 TEST_PARSE_MEM_SIZE_ERROR(TooSmall, 1024);
@@ -181,13 +182,13 @@ TEST(GuestConfigParserTest, VirtioGpu) {
 
   const char* virtio_gpu_true_argv[] = {"exe_name", "--virtio-gpu=true"};
   ASSERT_EQ(ZX_OK,
-            parser.ParseArgcArgv(countof(virtio_gpu_true_argv),
+            parser.ParseArgcArgv(arraysize(virtio_gpu_true_argv),
                                  const_cast<char**>(virtio_gpu_true_argv)));
   ASSERT_TRUE(config.virtio_gpu());
 
   const char* virtio_gpu_false_argv[] = {"exe_name", "--virtio-gpu=false"};
   ASSERT_EQ(ZX_OK,
-            parser.ParseArgcArgv(countof(virtio_gpu_false_argv),
+            parser.ParseArgcArgv(arraysize(virtio_gpu_false_argv),
                                  const_cast<char**>(virtio_gpu_false_argv)));
   ASSERT_FALSE(config.virtio_gpu());
 }

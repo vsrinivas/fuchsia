@@ -8,6 +8,7 @@
 
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
+#include <lib/fxl/arraysize.h>
 #include <lib/fxl/logging.h>
 
 #include "garnet/bin/guest/vmm/device/qcow_test_data.h"
@@ -54,7 +55,7 @@ class QcowTest : public testing::Test {
 
   void VerifyPaddingClustersAreEmpty() {
     uint8_t cluster[kClusterSize];
-    for (size_t i = 0; i < countof(kPaddingClusterOffsets); ++i) {
+    for (size_t i = 0; i < arraysize(kPaddingClusterOffsets); ++i) {
       ASSERT_EQ(
           static_cast<int>(kClusterSize),
           pread(fd_.get(), cluster, kClusterSize, kPaddingClusterOffsets[i]));
@@ -72,34 +73,34 @@ class QcowTest : public testing::Test {
 
   void WriteL1Table() {
     // Convert l1 entries to big-endian
-    uint64_t be_table[countof(kL2TableClusterOffsets)];
-    for (size_t i = 0; i < countof(kL2TableClusterOffsets); ++i) {
+    uint64_t be_table[arraysize(kL2TableClusterOffsets)];
+    for (size_t i = 0; i < arraysize(kL2TableClusterOffsets); ++i) {
       be_table[i] = HostToBigEndianTraits::Convert(kL2TableClusterOffsets[i]);
     }
 
     // Write L1 table.
-    WriteAt(be_table, countof(kL2TableClusterOffsets), header_.l1_table_offset);
+    WriteAt(be_table, arraysize(kL2TableClusterOffsets), header_.l1_table_offset);
 
     // Initialize empty L2 tables.
-    for (size_t i = 0; i < countof(kL2TableClusterOffsets); ++i) {
+    for (size_t i = 0; i < arraysize(kL2TableClusterOffsets); ++i) {
       WriteAt(kZeroCluster, sizeof(kZeroCluster), kL2TableClusterOffsets[i]);
     }
   }
 
   void WriteRefcountTable() {
     // Convert entries to big-endian
-    uint64_t be_table[countof(kRefcountBlockClusterOffsets)];
-    for (size_t i = 0; i < countof(kRefcountBlockClusterOffsets); ++i) {
+    uint64_t be_table[arraysize(kRefcountBlockClusterOffsets)];
+    for (size_t i = 0; i < arraysize(kRefcountBlockClusterOffsets); ++i) {
       be_table[i] =
           HostToBigEndianTraits::Convert(kRefcountBlockClusterOffsets[i]);
     }
 
     // Write refcount table
-    WriteAt(be_table, countof(kRefcountBlockClusterOffsets),
+    WriteAt(be_table, arraysize(kRefcountBlockClusterOffsets),
             header_.refcount_table_offset);
 
     // Initialize empty refcount blocks.
-    for (size_t i = 0; i < countof(kRefcountBlockClusterOffsets); ++i) {
+    for (size_t i = 0; i < arraysize(kRefcountBlockClusterOffsets); ++i) {
       WriteAt(kZeroCluster, sizeof(kZeroCluster),
               kRefcountBlockClusterOffsets[i]);
     }
