@@ -110,7 +110,7 @@ typedef uint64_t __be64;
 
 #define roundup(n, m) (((n) % (m) == 0) ? (n) : (n) + ((m) - ((n) % (m))))
 
-#define LINUX_FUNC(name, paramtype, rettype)                                                   \
+#define LINUX_FUNC(name, paramtype, rettype)                            \
     static inline rettype name(paramtype foo, ...) {                                           \
         /*zxlogf(ERROR, "brcmfmac: * * ERROR * * Called linux function %s\n", #name);       */ \
         return (rettype)0;                                                                     \

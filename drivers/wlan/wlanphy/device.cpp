@@ -15,6 +15,8 @@
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 
+#include "lib/fxl/arraysize.h"
+
 #include "driver.h"
 
 namespace wlanphy {
@@ -166,7 +168,7 @@ static void ConvertPhyChannels(wlan_device::ChannelList* Channels,
     // channels
     Channels->channels.resize(0);
     size_t channel_ndx = 0;
-    while ((channel_ndx < countof(phy_channels->channels)) &&
+    while ((channel_ndx < arraysize(phy_channels->channels)) &&
            (phy_channels->channels[channel_ndx] > 0)) {
         Channels->channels.push_back(phy_channels->channels[channel_ndx]);
         channel_ndx++;
@@ -194,7 +196,7 @@ static void ConvertPhyBandInfo(::fidl::VectorPtr<wlan_device::BandInfo>* BandInf
         // basic_rates
         Band.basic_rates.resize(0);
         size_t rate_ndx = 0;
-        while ((rate_ndx < countof(phy_bands->basic_rates)) &&
+        while ((rate_ndx < arraysize(phy_bands->basic_rates)) &&
                (phy_bands->basic_rates[rate_ndx] > 0)) {
             Band.basic_rates.push_back(phy_bands->basic_rates[rate_ndx]);
             rate_ndx++;

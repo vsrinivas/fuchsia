@@ -61,6 +61,7 @@ executable("wlan_minstrel_unittest") {
     "//garnet/lib/wlan/protocol",
     "//garnet/public/lib/timekeeper:testing",
     "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/fbl",
   ]
 
   configs += [ "//garnet/lib/wlan/mlme/tests:wlan_mlme_tests_config" ]

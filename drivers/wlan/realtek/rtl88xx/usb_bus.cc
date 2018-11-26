@@ -8,6 +8,7 @@
 #include <ddk/debug.h>
 #include <ddk/protocol/usb.h>
 #include <ddk/usb/usb.h>
+#include <fbl/algorithm.h>
 #include <lib/zx/time.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
@@ -264,7 +265,7 @@ zx_status_t CreateUsbBus(zx_device_t* bus_device, std::unique_ptr<Bus>* bus) {
                                       sizeof(id_buf), &actual_buflen, &actual_langid) != ZX_OK) {
             actual_buflen = 0;
         }
-        id_buf[std::min(actual_buflen, countof(id_buf) - 1)] = '\0';
+        id_buf[std::min(actual_buflen, fbl::count_of(id_buf) - 1)] = '\0';
         zxlogf(INFO,
                "rtl88xx: CreateUsbBus() vid=%04x pid=%04x interface=%d alternate=%d class=%d "
                "subclass=%d protocol=%d id=\"%s\"\n",
