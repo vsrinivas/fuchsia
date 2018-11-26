@@ -27,7 +27,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/stubs.c \
     $(LOCAL_DIR)/uname.c \
     $(LOCAL_DIR)/unistd.c \
-    $(LOCAL_DIR)/vmofile.c \
     $(LOCAL_DIR)/waitable.c \
     $(LOCAL_DIR)/watcher.c \
     $(LOCAL_DIR)/zxio.c \

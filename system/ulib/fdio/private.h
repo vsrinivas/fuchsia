@@ -145,10 +145,6 @@ fdio_t* fdio_socketpair_create(zx_handle_t h);
 fdio_t* fdio_vmofile_create(zx_handle_t control, zx_handle_t vmo,
                             zx_off_t offset, zx_off_t length, zx_off_t seek);
 
-// Same as above, but uses the zxio backend.
-fdio_t* fdio_zxio_vmofile_create(zx_handle_t control, zx_handle_t vmo,
-                                 zx_off_t offset, zx_off_t length, zx_off_t seek);
-
 // Creates an |fdio_t| from a Zircon socket object.
 //
 // Examines |socket| and determines whether to create a pipe, stream socket, or

@@ -567,9 +567,9 @@ fdio_ops_t fdio_zxio_vmofile_ops = {
     .shutdown = fdio_default_shutdown,
 };
 
-fdio_t* fdio_zxio_vmofile_create(zx_handle_t control, zx_handle_t vmo,
-                                 zx_off_t offset, zx_off_t length,
-                                 zx_off_t seek) {
+fdio_t* fdio_vmofile_create(zx_handle_t control, zx_handle_t vmo,
+                            zx_off_t offset, zx_off_t length,
+                            zx_off_t seek) {
     fdio_zxio_t* fv = fdio_alloc(sizeof(fdio_zxio_t));
     if (fv == NULL) {
         zx_handle_close(control);
@@ -585,6 +585,21 @@ fdio_t* fdio_zxio_vmofile_create(zx_handle_t control, zx_handle_t vmo,
         return NULL;
     }
     return &fv->io;
+}
+
+__EXPORT
+int fdio_vmo_fd(zx_handle_t vmo, uint64_t offset, uint64_t length) {
+    fdio_t* io;
+    int fd;
+    if ((io = fdio_vmofile_create(ZX_HANDLE_INVALID, vmo, offset, length, 0u)) == NULL) {
+        return -1;
+    }
+    if ((fd = fdio_bind_to_fd(io, -1, 0)) < 0) {
+        fdio_close(io);
+        fdio_release(io);
+        return -1;
+    }
+    return fd;
 }
 
 // Pipe ------------------------------------------------------------------------
