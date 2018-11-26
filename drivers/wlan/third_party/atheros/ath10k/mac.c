@@ -2751,6 +2751,11 @@ static zx_status_t ath10k_setup_peer_smps(struct ath10k* ar, struct ath10k_vif* 
         return ZX_ERR_INVALID_ARGS;
     }
 
+    ath10k_info("setting peer smps mode to %s\n", smps == 0 ? "static" :
+                                                  smps == 1 ? "dynamic" :
+                                                  smps == 3 ? "none" :
+                                                  "invalid");
+
     return ath10k_wmi_peer_set_param(ar, arvif->vdev_id, assoc->bssid,
                                      WMI_PEER_SMPS_STATE,
                                      ath10k_smps_map[smps]);
@@ -2940,7 +2945,6 @@ zx_status_t ath10k_mac_bss_assoc(struct ath10k* ar, wlan_assoc_ctx_t* assoc_ctx)
         goto done;
     }
 
-// TODO...
     peer_arg.peer_flags |= ar->wmi.peer_flags->qos;
     peer_arg.peer_phymode = chan_to_phymode(&ar->rx_channel);
 
@@ -2957,6 +2961,21 @@ zx_status_t ath10k_mac_bss_assoc(struct ath10k* ar, wlan_assoc_ctx_t* assoc_ctx)
         ath10k_wmi_peer_delete(ar, arvif->vdev_id, assoc_ctx->bssid);
         goto done;
     }
+
+    ret = ath10k_setup_peer_smps(ar, arvif, assoc_ctx);
+    if (ret != ZX_OK) {
+        ath10k_warn("failed to setup peer SMPS for vdev %i: %s\n", arvif->vdev_id,
+                    zx_status_get_string(ret));
+    }
+
+#if 0 // NEEDS PORTING
+    ret = ath10k_mac_vif_recalc_txbf(ar, vif, vht_cap);
+    if (ret) {
+        ath10k_warn("failed to recalc txbf for vdev %i on bss %pM: %d\n",
+                    arvif->vdev_id, bss_conf->bssid, ret);
+        return;
+    }
+#endif // NEEDS PORTING
 
     ath10k_dbg(ar, ATH10K_DBG_MAC, "mac vdev %d up (associated) bssid %pM aid %d\n",
                arvif->vdev_id, arvif->bssid, arvif->aid);
@@ -2989,102 +3008,7 @@ done:
     return ret;
 }
 
-#if 0
-/* can be called only in mac80211 callbacks due to `key_count` usage */
-static void ath10k_bss_assoc(struct ieee80211_hw* hw,
-                             struct ieee80211_vif* vif,
-                             struct ieee80211_bss_conf* bss_conf) {
-    struct ath10k* ar = hw->priv;
-    struct ath10k_vif* arvif = (void*)vif->drv_priv;
-    struct ieee80211_sta_ht_cap ht_cap;
-    struct ieee80211_sta_vht_cap vht_cap;
-    struct wmi_peer_assoc_complete_arg peer_arg;
-    struct ieee80211_sta* ap_sta;
-    int ret;
-
-    ASSERT_MTX_HELD(&ar->conf_mutex);
-
-    ath10k_dbg(ar, ATH10K_DBG_MAC, "mac vdev %i assoc bssid %pM aid %d\n",
-               arvif->vdev_id, arvif->bssid, arvif->aid);
-
-    rcu_read_lock();
-
-    ap_sta = ieee80211_find_sta(vif, bss_conf->bssid);
-    if (!ap_sta) {
-        ath10k_warn("failed to find station entry for bss %pM vdev %i\n",
-                    bss_conf->bssid, arvif->vdev_id);
-        rcu_read_unlock();
-        return;
-    }
-
-    /* ap_sta must be accessed only within rcu section which must be left
-     * before calling ath10k_setup_peer_smps() which might sleep.
-     */
-    ht_cap = ap_sta->ht_cap;
-    vht_cap = ap_sta->vht_cap;
-
-    ret = ath10k_peer_assoc_prepare(ar, vif, ap_sta, &peer_arg);
-    if (ret) {
-        ath10k_warn("failed to prepare peer assoc for %pM vdev %i: %d\n",
-                    bss_conf->bssid, arvif->vdev_id, ret);
-        rcu_read_unlock();
-        return;
-    }
-
-    rcu_read_unlock();
-
-    ret = ath10k_wmi_peer_assoc(ar, &peer_arg);
-    if (ret) {
-        ath10k_warn("failed to run peer assoc for %pM vdev %i: %d\n",
-                    bss_conf->bssid, arvif->vdev_id, ret);
-        return;
-    }
-
-    ret = ath10k_setup_peer_smps(ar, arvif, bss_conf->bssid, &ht_cap);
-    if (ret) {
-        ath10k_warn("failed to setup peer SMPS for vdev %i: %d\n",
-                    arvif->vdev_id, ret);
-        return;
-    }
-
-    ret = ath10k_mac_vif_recalc_txbf(ar, vif, vht_cap);
-    if (ret) {
-        ath10k_warn("failed to recalc txbf for vdev %i on bss %pM: %d\n",
-                    arvif->vdev_id, bss_conf->bssid, ret);
-        return;
-    }
-
-    ath10k_dbg(ar, ATH10K_DBG_MAC,
-               "mac vdev %d up (associated) bssid %pM aid %d\n",
-               arvif->vdev_id, bss_conf->bssid, bss_conf->aid);
-
-    COND_WARN(arvif->is_up);
-
-    arvif->aid = bss_conf->aid;
-    memcpy(arvif->bssid, bss_conf->bssid, ETH_ALEN);
-
-    ret = ath10k_wmi_vdev_up(ar, arvif->vdev_id, arvif->aid, arvif->bssid);
-    if (ret) {
-        ath10k_warn("failed to set vdev %d up: %d\n",
-                    arvif->vdev_id, ret);
-        return;
-    }
-
-    arvif->is_up = true;
-
-    /* Workaround: Some firmware revisions (tested with qca6174
-     * WLAN.RM.2.0-00073) have buggy powersave state machine and must be
-     * poked with peer param command.
-     */
-    ret = ath10k_wmi_peer_set_param(ar, arvif->vdev_id, arvif->bssid,
-                                    WMI_PEER_DUMMY_VAR, 1);
-    if (ret) {
-        ath10k_warn("failed to poke peer %pM param for ps workaround on vdev %i: %d\n",
-                    arvif->bssid, arvif->vdev_id, ret);
-        return;
-    }
-}
-
+#if 0 // NEEDS PORTING
 static void ath10k_bss_disassoc(struct ieee80211_hw* hw,
                                 struct ieee80211_vif* vif) {
     struct ath10k* ar = hw->priv;
