@@ -22,6 +22,7 @@ int usage(void) {
     fprintf(stderr, " extend : Extends an FVM container to the specified size (length is"
                     " required)\n");
     fprintf(stderr, " sparse : Creates a sparse file. One or more input paths are required.\n");
+    fprintf(stderr, " pave : Creates an FVM container from a sparse file.\n");
     fprintf(stderr, " verify : Report basic information about sparse/fvm files and run fsck on"
                     " contained partitions.\n");
     fprintf(stderr, " size : Prints the minimum size required in order to pave a sparse file."
@@ -291,6 +292,20 @@ int main(int argc, char** argv) {
             printf("%" PRIu64 "\n", sparseContainer.CalculateDiskSize());
         } else if (sparseContainer.CheckDiskSize(disk_size) != ZX_OK) {
             fprintf(stderr, "Sparse container will not fit in target disk size\n");
+            return -1;
+        }
+    } else if (!strcmp(command, "pave")) {
+        char* input_type = argv[i];
+        char* input_path = argv[i + 1];
+
+        if (strcmp(input_type, "--sparse")) {
+            fprintf(stderr, "pave command only accepts --sparse input option\n");
+            usage();
+            return -1;
+        }
+
+        SparseContainer sparseData(input_path, slice_size, flags);
+        if (sparseData.Pave(path, offset, length) != ZX_OK) {
             return -1;
         }
     } else {

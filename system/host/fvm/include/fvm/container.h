@@ -91,7 +91,7 @@ public:
     zx_status_t Write(const fbl::unique_fd& fd, size_t disk_offset, size_t disk_size);
 
     // Allocates new partition (in memory) with a single slice.
-    zx_status_t AllocatePartition(fvm::partition_descriptor_t* partition, uint8_t* guid,
+    zx_status_t AllocatePartition(const fvm::partition_descriptor_t* partition, uint8_t* guid,
                                   uint32_t* vpart_index);
 
     // Allocates new slice for given partition (in memory).
@@ -208,13 +208,50 @@ private:
     size_t offset_ = 0;
 };
 
-class SparseContainer final : public Container {
-    typedef struct {
-        fvm::partition_descriptor_t descriptor;
-        fbl::Vector<fvm::extent_descriptor_t> extents;
-        fbl::unique_ptr<Format> format;
-    } partition_info_t;
+typedef struct {
+    fvm::partition_descriptor_t descriptor;
+    fbl::Vector<fvm::extent_descriptor_t> extents;
+    fbl::unique_ptr<Format> format;
+} partition_info_t;
 
+// Given a target path and partition data from a SparseReader, generates a full FVM image.
+class SparsePaver {
+public:
+    // Creates a SparsePaver with the given attributes.
+    static zx_status_t Create(const char* path, size_t slice_size, size_t disk_offset,
+                              size_t disk_size, fbl::unique_ptr<SparsePaver>* out);
+
+    // Allocates the partition and slices described by |partition| to info_, and writes out
+    // corresponding data from |reader| to the FVM. |partition| will not be modified.
+    zx_status_t AddPartition(const partition_info_t* partition, fvm::SparseReader* reader);
+
+    // Commits the FVM image by writing the metadata to disk.
+    zx_status_t Commit();
+private:
+    SparsePaver(size_t disk_offset, size_t disk_size) : disk_offset_(disk_offset),
+                                                        disk_size_(disk_size) {}
+
+    // Initializes the FVM metadata.
+    zx_status_t Init(const char* path, size_t slice_size);
+
+    // Allocates the extent described by |extent| to the partition at |vpart_index|, as well as
+    // allocating its slices and persisting all associated data.
+    zx_status_t AddExtent(uint32_t vpart_index, fvm::extent_descriptor_t* extent,
+                          fvm::SparseReader* reader);
+
+    // Writes the next slice out to disk, reading as many of |bytes_left| as possible from |reader|
+    // and appending zeroes if necessary.
+    zx_status_t WriteSlice(size_t* bytes_left, fvm::SparseReader* reader);
+
+    FvmInfo info_;
+    fbl::unique_fd fd_;
+    size_t disk_offset_; // Offset into fd_ at which to create FVM.
+    size_t disk_size_; // Number of bytes allocated for the FVM.
+    size_t disk_ptr_; // Marks the current offset within the target image.
+    fbl::unique_ptr<uint8_t[]> data_; // Buffer to hold data to be written to disk.
+};
+
+class SparseContainer final : public Container {
 public:
     static zx_status_t Create(const char* path, size_t slice_size, uint32_t flags,
                               fbl::unique_ptr<SparseContainer>* out);
@@ -223,6 +260,9 @@ public:
     zx_status_t Init() final;
     zx_status_t Verify() const final;
     zx_status_t Commit() final;
+
+    // Unpacks the sparse container and "paves" it to |path|.
+    zx_status_t Pave(const char* path, size_t disk_offset = 0, size_t disk_size = 0);
     size_t SliceSize() const final;
     size_t SliceCount() const;
     zx_status_t AddPartition(const char* path, const char* type_name) final;

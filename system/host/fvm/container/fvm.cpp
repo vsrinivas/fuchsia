@@ -668,7 +668,7 @@ zx_status_t FvmInfo::GrowForSlices(size_t slice_count) {
     return Grow(required_size);
 }
 
-zx_status_t FvmInfo::AllocatePartition(fvm::partition_descriptor_t* partition, uint8_t* guid,
+zx_status_t FvmInfo::AllocatePartition(const fvm::partition_descriptor_t* partition, uint8_t* guid,
                                        uint32_t* vpart_index) {
     CheckValid();
     for (unsigned index = vpart_hint_; index < FVM_MAX_ENTRIES; index++) {
@@ -681,7 +681,7 @@ zx_status_t FvmInfo::AllocatePartition(fvm::partition_descriptor_t* partition, u
 
         // Make sure this vpartition has not already been allocated
         if (vpart->slices == 0) {
-            vpart->init(partition->type, guid, 0, reinterpret_cast<char*>(partition->name),
+            vpart->init(partition->type, guid, 0, reinterpret_cast<const char*>(partition->name),
                         partition->flags);
             vpart_hint_ = index + 1;
             dirty_ = true;
