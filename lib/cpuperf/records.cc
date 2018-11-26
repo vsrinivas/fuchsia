@@ -4,6 +4,8 @@
 
 #include "records.h"
 
+#include <lib/fxl/arraysize.h>
+
 namespace cpuperf {
 
 cpuperf_record_type_t RecordType(const cpuperf_record_header_t* hdr) {
@@ -34,7 +36,7 @@ size_t RecordSize(const cpuperf_record_header_t* hdr) {
       return sizeof(cpuperf_pc_record_t);
     case CPUPERF_RECORD_LAST_BRANCH: {
       auto rec = reinterpret_cast<const cpuperf_last_branch_record_t*>(hdr);
-      if (rec->num_branches > countof(rec->branches))
+      if (rec->num_branches > arraysize(rec->branches))
         return 0;
       return CPUPERF_LAST_BRANCH_RECORD_SIZE(rec);
     }
