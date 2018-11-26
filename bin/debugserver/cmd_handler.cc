@@ -13,6 +13,7 @@
 #include "garnet/lib/inferior_control/registers.h"
 #include "garnet/lib/inferior_control/thread.h"
 
+#include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_number_conversions.h"
@@ -1059,7 +1060,7 @@ bool CommandHandler::HandleQueryXfer(const fxl::StringView& params,
     }
   }
   ADD_AUXV(AT_NULL, 0);
-  FXL_DCHECK(n <= countof(auxv));
+  FXL_DCHECK(n <= arraysize(auxv));
 
 #undef ADD_AUXV
 

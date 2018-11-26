@@ -5,6 +5,7 @@
 #include "thread_action_list.h"
 
 #include "gtest/gtest.h"
+#include "lib/fxl/arraysize.h"
 
 namespace debugserver {
 namespace {
@@ -55,7 +56,7 @@ const ActionTest basic_tests[] = {
 };
 
 TEST(ThreadActionListTest, Basic) {
-  for (size_t i = 0; i < countof(basic_tests); ++i) {
+  for (size_t i = 0; i < arraysize(basic_tests); ++i) {
     const ActionTest* t = &basic_tests[i];
     FXL_LOG(INFO) << "Testing \"" << t->str << "\"";
     ThreadActionList actions(fxl::StringView(t->str), kCurProc);
