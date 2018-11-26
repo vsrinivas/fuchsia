@@ -7,7 +7,7 @@
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/message_part.h>
 
-#include "devcoordinator.h"
+#include "coordinator.h"
 #include "../shared/log.h"
 
 namespace devmgr {

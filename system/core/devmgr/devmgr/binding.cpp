@@ -8,7 +8,7 @@
 
 #include <stdio.h>
 
-#include "devcoordinator.h"
+#include "coordinator.h"
 
 namespace devmgr {
 

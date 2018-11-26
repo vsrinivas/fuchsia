@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "coordinator.h"
+
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -34,7 +36,6 @@
 
 #include <utility>
 
-#include "devcoordinator.h"
 #include "devmgr.h"
 #include "../shared/fdio.h"
 #include "../shared/fidl_txn.h"

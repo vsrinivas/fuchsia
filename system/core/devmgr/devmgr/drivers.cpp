@@ -10,8 +10,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "coordinator.h"
 #include "devmgr.h"
-#include "devcoordinator.h"
 #include "../shared/fdio.h"
 #include "../shared/log.h"
 
