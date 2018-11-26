@@ -84,7 +84,7 @@ bool Compare(const fuchsia::camera::VideoFormat& vf, const UvcFormat& uf) {
       (static_cast<uint64_t>(vf.rate.frames_per_sec_numerator) *
        uvf.rate.frames_per_sec_denominator);
 
-  for (uint32_t i = 0; i < countof(uvf.format.planes); i++) {
+  for (uint32_t i = 0; i < uvf.format.planes.size(); i++) {
     if (vf.format.planes[i].byte_offset != uvf.format.planes[i].byte_offset ||
         vf.format.planes[i].bytes_per_row !=
             uvf.format.planes[i].bytes_per_row) {
