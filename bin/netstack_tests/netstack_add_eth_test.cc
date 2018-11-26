@@ -143,10 +143,10 @@ TEST_F(NetstackLaunchTest, AddEthernetDevice) {
 
   zx::socket sock;
   zx_status_t status = CreateEthertap(&sock);
-  EXPECT_EQ(ZX_OK, status);
+  ASSERT_EQ(ZX_OK, status) << zx_status_get_string(status);
   zx::channel svc;
   status = OpenEthertapDev(&svc);
-  EXPECT_EQ(ZX_OK, status);
+  ASSERT_EQ(ZX_OK, status) << zx_status_get_string(status);
   fprintf(stderr, "found tap device\n");
 
   bool list_ifs = false;
@@ -202,7 +202,7 @@ TEST_F(NetstackLaunchTest, DISABLED_DHCPRequestSent) {
   launch_info.err = component::testing::CloneFileDescriptor(2);
   zx_status_t status = services->AddServiceWithLaunchInfo(
       std::move(launch_info), fuchsia::netstack::Netstack::Name_);
-  ASSERT_TRUE(status == ZX_OK);
+  ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
 
   auto env = CreateNewEnclosingEnvironment("NetstackDHCPTest_RequestSent",
                                            std::move(services));
@@ -210,14 +210,14 @@ TEST_F(NetstackLaunchTest, DISABLED_DHCPRequestSent) {
 
   zx::socket sock;
   status = CreateEthertap(&sock);
-  EXPECT_EQ(ZX_OK, status);
+  ASSERT_EQ(ZX_OK, status) << zx_status_get_string(status);
   zx::channel svc;
   status = OpenEthertapDev(&svc);
-  EXPECT_EQ(ZX_OK, status);
+  ASSERT_EQ(ZX_OK, status) << zx_status_get_string(status);
   fprintf(stderr, "found tap device\n");
 
   status = sock.signal_peer(0u, ETHERTAP_SIGNAL_ONLINE);
-  EXPECT_EQ(ZX_OK, status);
+  ASSERT_EQ(ZX_OK, status) << zx_status_get_string(status);
   fprintf(stderr, "set ethertap link status online\n");
 
   fuchsia::netstack::NetstackPtr netstack;
@@ -235,48 +235,46 @@ TEST_F(NetstackLaunchTest, DISABLED_DHCPRequestSent) {
   netstack->AddEthernetDevice(
       std::move(topo_path), std::move(config),
       fidl::InterfaceHandle<::zircon::ethernet::Device>(std::move(svc)));
-
-  RealLoopFixture::RunLoopWithTimeout();
+  RealLoopFixture::RunLoopUntilIdle();
 
   std::byte* buf = new std::byte[1500];
   size_t attempt_to_read = 1500;
   size_t read;
   size_t parsed = 0;
   zx_signals_t pending = 0;
+
+  // Expected to take about ~150ms; we're being conservative to avoid flakes.
   status = sock.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED |
                              ZX_SOCKET_PEER_WRITE_DISABLED,
-                         zx::clock::get_monotonic() + zx::sec(5), &pending);
-  fprintf(stdout, "wait_one for socket readable: %s\n",
-          zx_status_get_string(status));
-  EXPECT_EQ(ZX_OK, status);
-  ASSERT_TRUE((pending & ZX_SOCKET_READABLE) > 0);
+                         zx::clock::get_monotonic() + zx::msec(500), &pending);
+
+  ASSERT_EQ(ZX_OK, status) << zx_status_get_string(status);
+  ASSERT_GT((pending & ZX_SOCKET_READABLE), 0u) << "socket was not readable; signals: " << pending;
   status = sock.read(0, buf, attempt_to_read, &read);
-  fprintf(stdout, "status: %s; read %zu bytes of %zu requested\n",
-          zx_status_get_string(status), read, attempt_to_read);
-  ASSERT_TRUE(read > 0);
 
-  fprintf(stdout, "parsing ethertap frame\n");
-  // Ethertap prepends a message type to ethernet frames.
-  EXPECT_EQ((unsigned int)buf[0], ETHERTAP_MSG_PACKET);
+  ASSERT_EQ(ZX_OK, status) << zx_status_get_string(status);
+  ASSERT_GT(read, (size_t)0);
+  EXPECT_EQ(read, (size_t)310)
+      << "read " << read << " bytes of " << attempt_to_read << " requested\n";
 
-  fprintf(stdout, "parsing Ethernet frame\n");
+  EXPECT_EQ((unsigned int)buf[0], ETHERTAP_MSG_PACKET)
+      << "ethertap packet header incorrect";
+
   std::byte* eth = &buf[sizeof(ethertap_socket_header_t)];
   parsed += sizeof(ethertap_socket_header_t);
-  // ethertype should be IPv4
-  EXPECT_EQ((int)eth[12], 0x08);
+  std::byte ethertype = eth[12];
+  EXPECT_EQ((int)ethertype, 0x08);
 
-  fprintf(stdout, "parsing IP header\n");
   // TODO(stijlist): add an ETH_FRAME_MIN_HDR_SIZE to ddk's ethernet.h
   size_t eth_frame_min_hdr_size = 14;
   std::byte* ip = &eth[eth_frame_min_hdr_size];
   parsed += eth_frame_min_hdr_size;
-  // protocol should be UDP
-  EXPECT_EQ((int)ip[9], 17);
+  std::byte protocol_number = ip[9];
+  EXPECT_EQ((int)protocol_number, 17);
 
   size_t ihl = (size_t)(ip[0] & (std::byte)0x0f);
   size_t ip_bytes = (ihl * 32u) / 8u;
 
-  fprintf(stdout, "parsing UDP header\n");
   std::byte* udp = &ip[ip_bytes];
   parsed += ip_bytes;
 
@@ -288,7 +286,6 @@ TEST_F(NetstackLaunchTest, DISABLED_DHCPRequestSent) {
   EXPECT_EQ(src_port, 68u);
   EXPECT_EQ(dst_port, 67u);
 
-  fprintf(stdout, "parsing DHCP packet\n");
   std::byte* dhcp = &udp[8];
   // Assert the DHCP op type is DHCP request.
   std::byte dhcp_op_type = dhcp[0];
