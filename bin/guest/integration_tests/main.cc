@@ -27,6 +27,7 @@ class ZirconGuestTest : public GuestTest<ZirconGuestTest> {
     launch_info->url = kZirconGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
+    launch_info->args.push_back("--cmdline-add=kernel.serial=none");
     return true;
   }
 
@@ -57,7 +58,7 @@ class ZirconMultiprocessorGuestTest
   static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
     launch_info->url = kZirconGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
-    launch_info->args.push_back("--cpus=4");
+    launch_info->args.push_back("--cmdline-add=kernel.serial=none");
     return true;
   }
 };
@@ -73,6 +74,7 @@ class LinuxGuestTest : public GuestTest<LinuxGuestTest> {
   static bool LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) {
     launch_info->url = kLinuxGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
+    launch_info->args.push_back("--cpus=1");
     launch_info->args.push_back("--cmdline-add=loglevel=0 console=hvc0");
     return true;
   }

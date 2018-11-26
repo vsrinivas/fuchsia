@@ -23,8 +23,7 @@ guest_package("zircon_guest") {
   ]
   zircon = "$root_out_dir/guest.zbi"
 
-  cmdline =
-      "console.path=/dev/class/console/virtio-console " + "kernel.serial=legacy"
+  cmdline = "console.path=/dev/class/console/virtio-console"
 
   disk_filename = "filesystem.fvm"
   fvm = "$root_out_dir/guest_fvm.blk"

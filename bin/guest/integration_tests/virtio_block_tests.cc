@@ -56,6 +56,7 @@ class ZirconReadOnlyRamdiskGuestTest
     launch_info->url = kZirconGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
+    launch_info->args.push_back("--cmdline-add=kernel.serial=none");
     launch_info->block_devices =
         ramdisk_device(fuchsia::guest::BlockMode::READ_ONLY, ramdisk_path_);
     return true;
@@ -146,6 +147,7 @@ class ZirconReadWriteRamdiskGuestTest
     launch_info->url = kZirconGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
+    launch_info->args.push_back("--cmdline-add=kernel.serial=none");
     launch_info->block_devices =
         ramdisk_device(fuchsia::guest::BlockMode::READ_WRITE, ramdisk_path_);
     return true;
@@ -236,6 +238,7 @@ class ZirconVolatileRamdiskGuestTest
     launch_info->url = kZirconGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
+    launch_info->args.push_back("--cmdline-add=kernel.serial=none");
     launch_info->block_devices = ramdisk_device(
         fuchsia::guest::BlockMode::VOLATILE_WRITE, ramdisk_path_);
     return true;
@@ -411,6 +414,7 @@ class ZirconReadOnlyQcowGuestTest
     launch_info->url = kZirconGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
+    launch_info->args.push_back("--cmdline-add=kernel.serial=none");
     launch_info->block_devices =
         qcow_device(fuchsia::guest::BlockMode::READ_ONLY, qcow_path_);
     return true;
@@ -493,6 +497,7 @@ class ZirconVolatileQcowGuestTest
     launch_info->url = kZirconGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
+    launch_info->args.push_back("--cmdline-add=kernel.serial=none");
     launch_info->block_devices =
         qcow_device(fuchsia::guest::BlockMode::VOLATILE_WRITE, qcow_path_);
     return true;
