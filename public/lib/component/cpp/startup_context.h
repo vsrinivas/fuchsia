@@ -23,7 +23,7 @@ class StartupContext {
   // The constructor is normally called by CreateFromStartupInfo().
   StartupContext(zx::channel service_root, zx::channel directory_request);
 
-  ~StartupContext();
+  virtual ~StartupContext();
 
   StartupContext(const StartupContext&) = delete;
   StartupContext& operator=(const StartupContext&) = delete;

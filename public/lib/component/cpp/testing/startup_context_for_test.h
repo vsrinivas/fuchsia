@@ -24,6 +24,8 @@ class StartupContextForTest : public StartupContext {
                         zx::channel service_root_server,
                         zx::channel directory_request_client,
                         zx::channel directory_request_server);
+  ~StartupContextForTest() override = default;
+
   static std::unique_ptr<StartupContextForTest> Create();
 
   // Defines the testing surface to be used in conjunction with
