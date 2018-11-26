@@ -15,6 +15,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/mt8167-sdio.cpp \
     $(LOCAL_DIR)/mt8167-soc.cpp \
     $(LOCAL_DIR)/mt8167-gpio.cpp \
+    $(LOCAL_DIR)/mt8167-gpu.cpp \
     $(LOCAL_DIR)/mt8167-display.cpp \
     $(LOCAL_DIR)/mt8167-i2c.cpp \
     $(LOCAL_DIR)/mt8167-buttons.cpp \

@@ -14,6 +14,9 @@
 #define MT8167_IOCFG_BASE                                   0x10005900
 #define MT8167_IOCFG_SIZE                                   0x700
 
+#define MT8167_SCPSYS_BASE                                  0x10006000
+#define MT8167_SCPSYS_SIZE                                  0x1000
+
 #define MT8167_EINT_BASE                                    0x1000B000
 #define MT8167_EINT_SIZE                                    0x800
 
@@ -40,6 +43,12 @@
 
 #define MT8167_MSDC2_GPIO_BASE                              0x10005e40
 #define MT8167_MSDC2_GPIO_SIZE                              0x20
+
+#define MT8167_MFG_BASE                                     0x13000000
+#define MT8167_MFG_SIZE                                     0x80000
+
+#define MT8167_MFG_TOP_CONFIG_BASE                          0x13ffe000
+#define MT8167_MFG_TOP_CONFIG_SIZE                          0x1000
 
 // Display Subsystem
 #define MT8167_DISP_OVL_BASE                                0x14007000
@@ -82,6 +91,7 @@
 #define MT8167_IRQ_DISP_RDMA1                               195
 #define MT8167_IRQ_DISP_COLOR                               197
 #define MT8167_IRQ_DISP_DSI0                                203
+#define MT8167_IRQ_RGX                                      217
 #define MT8167_IRQ_WDT                                      230
 #define MT8167_IRQ_I2C3                                     241
 #define MT8167_IRQ_UART2                                    243

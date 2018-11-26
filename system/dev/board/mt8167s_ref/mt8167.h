@@ -44,6 +44,7 @@ private:
     zx_status_t SdioInit();
     zx_status_t SocInit();
     zx_status_t GpioInit();
+    zx_status_t GpuInit();
     zx_status_t DisplayInit();
     zx_status_t I2cInit();
     zx_status_t ButtonsInit();
