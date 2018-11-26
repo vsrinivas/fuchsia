@@ -102,15 +102,15 @@ zx_status_t Bcache::GetDevicePath(size_t buffer_len, char* out_name, size_t* out
 
 }
 
-zx_status_t Bcache::AttachVmo(zx_handle_t vmo, vmoid_t* out) const {
-    zx_handle_t xfer_vmo;
-    zx_status_t status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &xfer_vmo);
+zx_status_t Bcache::AttachVmo(const zx::vmo& vmo, vmoid_t* out) const {
+    zx::vmo xfer_vmo;
+    zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo);
     if (status != ZX_OK) {
         return status;
     }
-    ssize_t r = ioctl_block_attach_vmo(fd_.get(), &xfer_vmo, out);
+    zx_handle_t raw_vmo = xfer_vmo.release();
+    ssize_t r = ioctl_block_attach_vmo(fd_.get(), &raw_vmo, out);
     if (r < 0) {
-        zx_handle_close(xfer_vmo);
         return static_cast<zx_status_t>(r);
     }
     return ZX_OK;

@@ -148,7 +148,10 @@ public:
 
     fbl::unique_ptr<blobfs::WritebackWork> CreateBufferedWork(size_t block_count) {
         fbl::unique_ptr<blobfs::WritebackWork> work = CreateWork();
-        work->Enqueue(1, 0, 0, block_count);
+
+        zx::vmo vmo;
+        ZX_ASSERT(zx::vmo::create(PAGE_SIZE, 0, &vmo) == ZX_OK);
+        work->Enqueue(vmo, 0, 0, block_count);
         work->SetBuffer(2);
         return work;
     }

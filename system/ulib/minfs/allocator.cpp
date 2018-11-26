@@ -102,9 +102,9 @@ zx_status_t Allocator::Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn* tx
     if ((status = bc->AttachVmo(allocator->map_.StorageUnsafe()->GetVmo(), &map_vmoid)) != ZX_OK) {
         return status;
     }
-    auto data = map_vmoid;
+    vmoid_t data = map_vmoid;
 #else
-    auto data = allocator->map_.StorageUnsafe()->GetData();
+    const void* data = allocator->map_.StorageUnsafe()->GetData();
 #endif
     txn->Enqueue(data, 0, allocator->metadata_.MetadataStartBlock(), pool_blocks);
     *out = std::move(allocator);
@@ -241,9 +241,9 @@ void Allocator::Persist(WriteTxn* txn, size_t index, size_t count) {
     blk_t blk_count = BitmapBlocksForSize(count);
 
 #ifdef __Fuchsia__
-    auto data = map_.StorageUnsafe()->GetVmo();
+    zx_handle_t data = map_.StorageUnsafe()->GetVmo().get();
 #else
-    auto data = map_.StorageUnsafe()->GetData();
+    const void* data = map_.StorageUnsafe()->GetData();
 #endif
     txn->Enqueue(data, rel_block, abs_block, blk_count);
 }

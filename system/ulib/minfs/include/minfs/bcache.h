@@ -80,7 +80,7 @@ public:
 
 #ifdef __Fuchsia__
     zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len);
-    zx_status_t AttachVmo(zx_handle_t vmo, vmoid_t* out) const;
+    zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) const;
 
     zx_status_t FVMQuery(fvm_info_t* info) const {
         ssize_t r = ioctl_block_fvm_query(fd_.get(), info);

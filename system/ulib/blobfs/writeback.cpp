@@ -13,13 +13,13 @@ WriteTxn::~WriteTxn() {
     ZX_DEBUG_ASSERT_MSG(requests_.is_empty(), "WriteTxn still has pending requests");
 }
 
-void WriteTxn::Enqueue(zx_handle_t vmo, uint64_t relative_block, uint64_t absolute_block,
+void WriteTxn::Enqueue(const zx::vmo& vmo, uint64_t relative_block, uint64_t absolute_block,
                        uint64_t nblocks) {
-    ZX_DEBUG_ASSERT(vmo != ZX_HANDLE_INVALID);
+    ZX_DEBUG_ASSERT(vmo.is_valid());
     ZX_DEBUG_ASSERT(!IsBuffered());
 
     for (auto& request : requests_) {
-        if (request.vmo != vmo) {
+        if (request.vmo != vmo.get()) {
             continue;
         }
 
@@ -40,7 +40,7 @@ void WriteTxn::Enqueue(zx_handle_t vmo, uint64_t relative_block, uint64_t absolu
     }
 
     WriteRequest request;
-    request.vmo = vmo;
+    request.vmo = vmo.get();
     request.vmo_offset = relative_block;
     request.dev_offset = absolute_block;
     request.length = nblocks;
@@ -185,7 +185,7 @@ zx_status_t Buffer::Create(Blobfs* blobfs, size_t blocks, const char* label,
     }
 
     fbl::unique_ptr<Buffer> buffer(new Buffer(blobfs, std::move(mapper)));
-    if ((status = buffer->blobfs_->AttachVmo(buffer->mapper_.vmo().get(), &buffer->vmoid_))
+    if ((status = buffer->blobfs_->AttachVmo(buffer->mapper_.vmo(), &buffer->vmoid_))
         != ZX_OK) {
         fprintf(stderr, "Buffer: Failed to attach vmo\n");
         return status;
@@ -292,7 +292,7 @@ void Buffer::AddTransaction(size_t start, size_t disk_start, size_t length, Writ
     ZX_DEBUG_ASSERT(length > 0);
     ZX_DEBUG_ASSERT(start + length <= capacity_);
     ZX_DEBUG_ASSERT(work != nullptr);
-    work->Enqueue(mapper_.vmo().get(), start, disk_start, length);
+    work->Enqueue(mapper_.vmo(), start, disk_start, length);
 }
 
 bool Buffer::VerifyTransaction(WriteTxn* txn) const {

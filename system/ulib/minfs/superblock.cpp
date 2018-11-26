@@ -49,7 +49,7 @@ zx_status_t SuperblockManager::Create(Bcache* bc, const Superblock* info,
     }
 
     vmoid_t info_vmoid;
-    if ((status = bc->AttachVmo(mapper.vmo().get(), &info_vmoid)) != ZX_OK) {
+    if ((status = bc->AttachVmo(mapper.vmo(), &info_vmoid)) != ZX_OK) {
         return status;
     }
     memcpy(mapper.start(), info, sizeof(Superblock));

@@ -432,7 +432,7 @@ public:
     zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual);
 
     // Allocate a vmoid registering a VMO with the underlying block device.
-    zx_status_t AttachVmo(zx_handle_t vmo, vmoid_t* out);
+    zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out);
     // Release an allocated vmoid.
     zx_status_t DetachVmo(vmoid_t vmoid);
 

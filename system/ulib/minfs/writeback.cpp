@@ -168,7 +168,7 @@ zx_status_t WritebackBuffer::Create(Bcache* bc, fzl::OwnedVmoMapper mapper,
                                      "minfs-writeback") != thrd_success) {
         return ZX_ERR_NO_RESOURCES;
     }
-    zx_status_t status = wb->bc_->AttachVmo(wb->mapper_.vmo().get(), &wb->buffer_vmoid_);
+    zx_status_t status = wb->bc_->AttachVmo(wb->mapper_.vmo(), &wb->buffer_vmoid_);
     if (status != ZX_OK) {
         return status;
     }

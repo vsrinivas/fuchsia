@@ -147,7 +147,7 @@ public:
 
     void* GetData() { ZX_DEBUG_ASSERT(mapped_addr_ != 0); return (void*) mapped_addr_; }
     const void* GetData() const { ZX_DEBUG_ASSERT(mapped_addr_ != 0); return (void*) mapped_addr_; }
-    zx_handle_t GetVmo() const { ZX_DEBUG_ASSERT(mapped_addr_ != 0); return vmo_.get(); }
+    const zx::vmo& GetVmo() const { ZX_DEBUG_ASSERT(mapped_addr_ != 0); return vmo_; }
 private:
     void Release() {
         if (mapped_addr_ != 0) {

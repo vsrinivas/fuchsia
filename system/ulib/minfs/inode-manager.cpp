@@ -43,7 +43,7 @@ zx_status_t InodeManager::Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn*
     }
 
     vmoid_t vmoid;
-    if ((status = bc->AttachVmo(mgr->inode_table_.vmo().get(), &vmoid)) != ZX_OK) {
+    if ((status = bc->AttachVmo(mgr->inode_table_.vmo(), &vmoid)) != ZX_OK) {
         return status;
     }
     txn->Enqueue(vmoid, 0, start_block, inoblks);

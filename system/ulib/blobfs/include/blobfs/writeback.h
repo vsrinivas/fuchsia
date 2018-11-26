@@ -63,7 +63,7 @@ public:
 
     // Identifies that |nblocks| blocks of data starting at |relative_block| within the |vmo|
     // should be written out to |absolute_block| on disk at a later point in time.
-    void Enqueue(zx_handle_t vmo, uint64_t relative_block, uint64_t absolute_block,
+    void Enqueue(const zx::vmo& vmo, uint64_t relative_block, uint64_t absolute_block,
                  uint64_t nblocks);
 
     fbl::Vector<WriteRequest>& Requests() { return requests_; }
