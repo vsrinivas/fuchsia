@@ -1,0 +1,19 @@
+/dts-v1/;
+
+/ {
+    model = "Qualcomm Technologies, Inc. APQ 8953 Lite";
+    qcom,msm-id = <304 0x0>;
+    qcom,pmic-id = <0x10016 0x20011 0x0 0x0>;
+    qcom,board-id = <0x01010020 0>;
+
+    chosen {
+        // need a dummy bootargs for bootloader to append to
+        bootargs = "";
+    };
+
+    memory {
+        device_type = "memory";
+    };
+};
+
+// [730] Best match DTB tags 304/01010020/0x00000001/0/10016/20011/0/0/a12f1f36/3c2e4

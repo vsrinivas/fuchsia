@@ -33,6 +33,7 @@ MODULE_DEPS += \
 	kernel/dev/power/hisi \
 	kernel/dev/psci \
 	kernel/dev/uart/amlogic_s905 \
+	kernel/dev/uart/msm \
 	kernel/dev/uart/mt8167 \
 	kernel/dev/uart/nxp-imx \
 	kernel/dev/uart/pl011 \
