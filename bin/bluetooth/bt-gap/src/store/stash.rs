@@ -131,22 +131,24 @@ mod tests {
          fuchsia_async as fasync,
          pin_utils::pin_mut};
 
-    fn create_stash_accessor() -> Result<StoreAccessorProxy, Error> {
+    // create_stash_accessor will create a new accessor to stash scoped under the given test name.
+    // All preexisting data in stash under this identity is deleted before the accessor is
+    // returned.
+    fn create_stash_accessor(test_name: &str) -> Result<StoreAccessorProxy, Error> {
         let stashserver = connect_to_service::<StoreMarker>()?;
 
         // Identify
-        stashserver.identify(BONDING_DATA_PREFIX)?;
+        stashserver.identify(&(BONDING_DATA_PREFIX.to_owned() + test_name))?;
 
         // Create an accessor
         let (acc, server_end) = create_proxy()?;
         stashserver.create_accessor(false, server_end)?;
-        Ok(acc)
-    }
 
-    fn clear_data_in_stash(acc: &StoreAccessorProxy) -> Result<(), Error> {
+        // Clear all data in stash under our identity
         acc.delete_prefix("")?;
         acc.commit()?;
-        Ok(())
+
+        Ok(acc)
     }
 
     #[test]
@@ -154,9 +156,8 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
         // Create a Stash service interface.
-        let accessor_proxy =
-            create_stash_accessor().expect("failed to create StashAccessor");
-        clear_data_in_stash(&accessor_proxy).expect("failed to clear data in stash");
+        let accessor_proxy = create_stash_accessor("new_stash_succeeds_with_empty_values")
+                    .expect("failed to create StashAccessor");
         let stash_new_future = Stash::new(accessor_proxy);
         pin_mut!(stash_new_future);
 
@@ -172,8 +173,8 @@ mod tests {
 
         // Create a Stash service interface.
         let accessor_proxy =
-            create_stash_accessor().expect("failed to create StashAccessor");
-        clear_data_in_stash(&accessor_proxy).expect("failed to clear data in stash");
+                create_stash_accessor("new_stash_fails_with_malformed_key_value_entry")
+                    .expect("failed to create StashAccessor");
 
         // Set a key/value that contains a non-string value.
         accessor_proxy.set_value("bonding-data:test1234", &mut Value::Intval(5))
@@ -191,9 +192,8 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
         // Create a mock Stash service interface.
-        let accessor_proxy =
-            create_stash_accessor().expect("failed to create StashAccessor");
-        clear_data_in_stash(&accessor_proxy).expect("failed to clear data in stash");
+        let accessor_proxy = create_stash_accessor("new_stash_fails_with_malformed_json")
+                    .expect("failed to create StashAccessor");
 
         // Set a vector that contains a malformed JSON value
         accessor_proxy.set_value("bonding-data:test1234", &mut Value::Stringval("{0}".to_string()))
@@ -211,9 +211,8 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
         // Create a Stash service interface.
-        let accessor_proxy =
-            create_stash_accessor().expect("failed to create StashAccessor");
-        clear_data_in_stash(&accessor_proxy).expect("failed to clear data in stash");
+        let accessor_proxy = create_stash_accessor("new_stash_succeeds_with_values")
+                    .expect("failed to create StashAccessor");
 
 
         // Insert values into stash that contain bonding data for several devices.
@@ -299,16 +298,11 @@ mod tests {
         );
     }
 
-    // TODO(FLK-8): deflake and removed #[ignore]. reproduction:
-    //
-    // run_test_component bt-gap-unittests store_bond_commits_entry --ignored
     #[test]
-    #[ignore]
     fn store_bond_commits_entry() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let accessor_proxy =
-            create_stash_accessor().expect("failed to create StashAccessor");
-        clear_data_in_stash(&accessor_proxy).expect("failed to clear data in stash");
+        let accessor_proxy = create_stash_accessor("store_bond_commits_entry")
+                    .expect("failed to create StashAccessor");
         let mut stash = exec.run_singlethreaded(Stash::new(accessor_proxy.clone()))
             .expect("stash failed to initialize");
 
@@ -351,9 +345,8 @@ mod tests {
     #[test]
     fn list_bonds() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let accessor_proxy =
-            create_stash_accessor().expect("failed to create StashAccessor");
-        clear_data_in_stash(&accessor_proxy).expect("failed to clear data in stash");
+        let accessor_proxy = create_stash_accessor("list_bonds")
+                    .expect("failed to create StashAccessor");
 
         // Insert values into stash that contain bonding data for several devices.
         accessor_proxy.set_value("bonding-data:id-1", &mut Value::Stringval(
