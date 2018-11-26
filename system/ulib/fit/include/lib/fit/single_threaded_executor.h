@@ -5,13 +5,10 @@
 #ifndef LIB_FIT_SINGLE_THREADED_EXECUTOR_H_
 #define LIB_FIT_SINGLE_THREADED_EXECUTOR_H_
 
-#include <condition_variable>
-#include <mutex>
 #include <utility>
 
 #include "promise.h"
 #include "scheduler.h"
-#include "thread_safety.h"
 
 namespace fit {
 
@@ -48,6 +45,8 @@ public:
     single_threaded_executor& operator=(single_threaded_executor&&) = delete;
 
 private:
+    class dispatcher_impl;
+
     // The task context for tasks run by the executor.
     class context_impl final : public context {
     public:
@@ -61,53 +60,8 @@ private:
         single_threaded_executor* const executor_;
     };
 
-    // The dispatcher runs tasks and provides the suspended task resolver.
-    //
-    // The lifetime of this object is somewhat complex since there are pointers
-    // to it from multiple sources which are released in different ways.
-    //
-    // - |single_threaded_executor| holds a pointer in |dispatcher_| which it releases
-    //   after calling |shutdown()| to inform the dispatcher of its own demise
-    // - |suspended_task| holds a pointer to the dispatcher's resolver
-    //   interface and the number of outstanding pointers corresponds to the
-    //   number of outstanding suspended task tickets tracked by |scheduler_|.
-    //
-    // The dispatcher deletes itself once all pointers have been released.
-    class dispatcher_impl final : public suspended_task::resolver {
-    public:
-        dispatcher_impl();
-
-        void shutdown();
-        void schedule_task(pending_task task);
-        void run(context_impl& context);
-        suspended_task suspend_current_task();
-
-        suspended_task::ticket duplicate_ticket(
-            suspended_task::ticket ticket) override;
-        void resolve_ticket(
-            suspended_task::ticket ticket, bool resume_task) override;
-
-    private:
-        ~dispatcher_impl() override;
-
-        void wait_for_runnable_tasks(
-            fit::subtle::scheduler::task_queue* out_tasks);
-        void run_task(pending_task* task, context& context);
-
-        suspended_task::ticket current_task_ticket_ = 0;
-        std::condition_variable wake_;
-
-        // A bunch of state that is guarded by a mutex.
-        struct {
-            std::mutex mutex_;
-            bool was_shutdown_ FIT_GUARDED(mutex_) = false;
-            bool need_wake_ FIT_GUARDED(mutex_) = false;
-            fit::subtle::scheduler scheduler_ FIT_GUARDED(mutex_);
-        } guarded_;
-    };
-
     context_impl context_;
-    dispatcher_impl* dispatcher_;
+    dispatcher_impl* const dispatcher_;
 };
 
 // Creates a new |fit::single_threaded_executor|, schedules a promise as a task,

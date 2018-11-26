@@ -118,6 +118,11 @@ public:
     // released, or resumed.
     bool has_outstanding_tickets() const { return !tickets_.empty(); }
 
+    scheduler(const scheduler&) = delete;
+    scheduler(scheduler&&) = delete;
+    scheduler& operator=(const scheduler&) = delete;
+    scheduler& operator=(scheduler&&) = delete;
+
 private:
     struct ticket_record {
         ticket_record(ref_count initial_refs)

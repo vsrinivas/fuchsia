@@ -66,6 +66,11 @@ public:
             });
     }
 
+    sequencer(const sequencer&) = delete;
+    sequencer(sequencer&&) = delete;
+    sequencer& operator=(const sequencer&) = delete;
+    sequencer& operator=(sequencer&&) = delete;
+
 private:
     fit::consumer<> swap_prior(fit::consumer<> new_prior);
 
