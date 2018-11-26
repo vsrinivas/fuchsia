@@ -97,7 +97,7 @@ static interrupt_eoi pl011_uart_irq(void* arg) {
     }
     spin_unlock(&uart_spinlock);
 
-    return IRQ_EOI_ISSUE;
+    return IRQ_EOI_DEACTIVATE;
 }
 
 static void pl011_uart_init(const void* driver_data, uint32_t length) {

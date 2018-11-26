@@ -140,14 +140,14 @@ interrupt_eoi InterruptEventDispatcher::IrqHandler(void* ctx) {
         mask_interrupt(self->vector_);
 
     self->InterruptHandler();
-    return IRQ_EOI_ISSUE;
+    return IRQ_EOI_DEACTIVATE;
 }
 
 interrupt_eoi InterruptEventDispatcher::VcpuIrqHandler(void* ctx) {
     InterruptEventDispatcher* self = reinterpret_cast<InterruptEventDispatcher*>(ctx);
     self->VcpuInterruptHandler();
     // Skip the EOI to allow the guest to deactivate the interrupt.
-    return IRQ_EOI_SKIP;
+    return IRQ_EOI_PRIORITY_DROP;
 }
 
 void InterruptEventDispatcher::VcpuInterruptHandler() {

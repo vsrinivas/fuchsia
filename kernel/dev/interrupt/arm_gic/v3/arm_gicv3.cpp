@@ -134,8 +134,8 @@ static void gic_init_percpu_early() {
     // set priority threshold to max.
     gic_write_pmr(0xff);
 
-    // TODO EOI deactivates interrupt - revisit.
-    gic_write_ctlr(0);
+    // ICC_CTLR_EL1.EOImode.
+    gic_write_ctlr(1u << 1);
 
     // enable group 1 interrupts.
     gic_write_igrpen(1);
@@ -172,7 +172,7 @@ static zx_status_t gic_init() {
     gic_wait_for_rwp(GICD_CTLR);
 
     // enable distributor with ARE, group 1 enable
-    GICREG(0, GICD_CTLR) = CTLR_ENALBE_G0 | CTLR_ENABLE_G1NS | CTLR_ARE_S;
+    GICREG(0, GICD_CTLR) = CTLR_ENABLE_G0 | CTLR_ENABLE_G1NS | CTLR_ARE_S;
     gic_wait_for_rwp(GICD_CTLR);
 
     // ensure we're running on cpu 0 and that cpu 0 corresponds to affinity 0.0.0.0
@@ -352,12 +352,13 @@ static void gic_handle_irq(iframe* frame) {
 
     // deliver the interrupt
     struct int_handler_struct* handler = pdev_get_int_handler(vector);
-    interrupt_eoi eoi = IRQ_EOI_ISSUE;
+    interrupt_eoi eoi = IRQ_EOI_DEACTIVATE;
     if (handler->handler) {
         eoi = handler->handler(handler->arg);
     }
-    if (eoi == IRQ_EOI_ISSUE) {
-        gic_write_eoir(vector);
+    gic_write_eoir(vector);
+    if (eoi == IRQ_EOI_DEACTIVATE) {
+        gic_write_dir(vector);
     }
 
     LTRACEF_LEVEL(2, "cpu %u exit\n", cpu);
@@ -389,7 +390,7 @@ static interrupt_eoi arm_ipi_halt_handler(void*) {
     while (true) {
     }
 
-    return IRQ_EOI_ISSUE;
+    return IRQ_EOI_DEACTIVATE;
 }
 
 static void gic_init_percpu() {

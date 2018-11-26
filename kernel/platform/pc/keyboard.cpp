@@ -406,7 +406,7 @@ static interrupt_eoi i8042_interrupt(void* arg) {
 
         // TODO: check other status bits here
     } while (retry);
-    return IRQ_EOI_ISSUE;
+    return IRQ_EOI_DEACTIVATE;
 }
 
 int platform_read_key(char* c) {
