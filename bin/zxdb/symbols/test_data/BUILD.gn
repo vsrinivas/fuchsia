@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# This file is compiled for the target. It is not actually used for the
-# devide, but is read by the zxdb tests on the host to test the symbol handling
-# code.
+# This file is compiled with the target toolchain. It is not actually used for
+# the device, but is read by the zxdb tests on the host to test the symbol
+# handling code.
 
 # This should be the shared library toolchain only. Normally one could
 # reference this in the default toolchain and that will redirect to the shared

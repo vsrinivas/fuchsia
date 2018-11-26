@@ -68,6 +68,8 @@ struct MsgHeader {
   static constexpr uint32_t kSerializedHeaderSize = sizeof(uint32_t) * 3;
 };
 
+const char* MsgHeaderTypeToString(MsgHeader::Type type);
+
 struct HelloRequest {};
 struct HelloReply {
   // Stream signature to make sure we're talking to the right service.

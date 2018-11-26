@@ -65,9 +65,16 @@ class MessageLoopZircon : public MessageLoop {
   // MessageLoop protected implementation.
   void RunImpl() override;
   void StopWatching(int id) override;
+  // Triggers an event signaling that there is a pending event.
   void SetHasTasks() override;
 
-  void DoWork(zx_port_packet_t packet);
+  // Check for any pending C++ tasks and process them.
+  // Returns true if there was an event pending to be processed.
+  bool CheckAndProcessPendingTasks();
+
+  // Handles WatchHandles event. These are all the events that are not C++ tasks
+  // posted to the message loop.
+  void HandleException(zx_port_packet_t packet);
 
   // Handle an event of the given type.
   void OnFdioSignal(int watch_id, const WatchInfo& info,

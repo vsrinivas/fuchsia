@@ -227,18 +227,21 @@ zx_status_t MessageLoopZircon::ResumeFromException(zx::thread& thread,
   return thread.resume_from_exception(port_, options);
 }
 
-void MessageLoopZircon::DoWork(zx_port_packet_t packet) {
+bool MessageLoopZircon::CheckAndProcessPendingTasks() {
+  std::lock_guard<std::mutex> guard(mutex_);
+  // Do a C++ task.
+  if (ProcessPendingTask()) {
+    SetHasTasks();  // Enqueue another task signal.
+    return true;
+  }
+  return false;
+}
+
+void MessageLoopZircon::HandleException(zx_port_packet_t packet) {
   WatchInfo* watch_info = nullptr;
   {
-    std::lock_guard<std::mutex> guard(mutex_);
-    if (packet.key == kTaskSignalKey) {
-      // Do a C++ task.
-      if (ProcessPendingTask())
-        SetHasTasks();  // Enqueue another task signal.
-      return;
-    }
-
     // Some event being watched.
+    std::lock_guard<std::mutex> guard(mutex_);
     auto found = watches_.find(packet.key);
     if (found == watches_.end()) {
       FXL_NOTREACHED();
@@ -277,17 +280,45 @@ void MessageLoopZircon::RunUntilTimeout(zx::duration timeout) {
   zx_status_t status = port_.wait(zx::deadline_after(timeout), &packet);
   FXL_DCHECK(status == ZX_OK || status == ZX_ERR_TIMED_OUT);
   if (status == ZX_OK) {
-    DoWork(packet);
+    HandleException(packet);
   }
 }
 
+// Previously, the approach was to first look for C++ tasks and when handled
+// look for WatchHandle work and finally wait for an event. This worked because
+// handle events didn't post C++ tasks.
+//
+// But some tests do post tasks on handle events. Because C++ tasks are signaled
+// by explicitly signaling an zx::event, without manually checking, the C++
+// tasks will never be checked and we would get blocked until a watch handled
+// is triggered.
+//
+// In order to handle the events properly, we need to check for C++ tasks before
+// and *after* handling watch handle events. This way we always process C++
+// tasks before handle events and will get signaled if one of them posted a new
+// task.
 void MessageLoopZircon::RunImpl() {
   // Init should have been called.
   FXL_DCHECK(Current() == this);
 
   zx_port_packet_t packet;
   while (!should_quit() && port_.wait(zx::time::infinite(), &packet) == ZX_OK) {
-    DoWork(packet);
+    // We check first for pending C++ tasks. If an event was handled, it will
+    // signal the associated zx::event in order to trigger the port once more
+    // (this is the way we process an enqueued event). If there is no enqueued
+    // event, we won't trigger the event and go back to wait on the port.
+    if (packet.key == kTaskSignalKey) {
+      CheckAndProcessPendingTasks();
+      continue;
+    }
+
+    // If it wasn't a task, we check for what kind of exception it was and
+    // handle it.
+    HandleException(packet);
+
+    // The exception handling could have added more pending work, so we have to
+    // re-check in order to correctly signal for new work.
+    CheckAndProcessPendingTasks();
   }
 }
 

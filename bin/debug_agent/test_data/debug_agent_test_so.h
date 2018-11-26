@@ -7,3 +7,9 @@
 // Mark the exported symbols to prevent the linker from stripping them.
 #define EXPORT __attribute__((visibility("default")))
 #define NOINLINE __attribute__((noinline))
+
+extern "C" {
+
+EXPORT void ExportedFunction();
+
+}

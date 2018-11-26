@@ -119,6 +119,7 @@ executable("unittests") {
     "breakpoint_unittest.cc",
     "debugged_job_unittest.cc",
     "debugged_thread_unittest.cc",
+    "integration_tests/breakpoint_test.cc",
     "process_breakpoint_unittest.cc",
     "process_info_unittests.cc",
     "system_info_unittests.cc",
@@ -131,6 +132,7 @@ executable("unittests") {
   deps = [
     ":lib",
     "//garnet/lib/debug_ipc:tests",
+    "//garnet/public/lib/component/cpp:environment_services",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
@@ -144,13 +146,27 @@ package("debug_agent_tests") {
 
   deps = [
     ":unittests",
+    "//garnet/bin/debug_agent/test_data:debug_agent_so_test_exe",
+    "//garnet/bin/debug_agent/test_data:debug_agent_test_so",
   ]
 
-  tests = [
-    {
-      name = "debug_agent_tests"
-    },
-  ]
+  binaries = [{
+    shell = true
+    name = "debug_agent_so_test"
+  }]
+
+  loadable_modules = [{
+    name = "debug_agent_test_so.so"
+  }]
+
+  tests = [{
+    name = "debug_agent_tests"
+  }]
+
+  meta = [{
+    path = "meta/debug_agent_tests.cmx"
+    dest = "debug_agent_tests.cmx"
+  }]
 
   if (include_test_app) {
     deps += [ ":zxdb_test_app" ]

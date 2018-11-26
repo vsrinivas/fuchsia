@@ -24,6 +24,7 @@ static_library("agent") {
     "agent_protocol.cc",
     "agent_protocol.h",
   ]
+
   public_deps = [
     ":shared",
   ]
@@ -34,6 +35,7 @@ static_library("client") {
     "client_protocol.cc",
     "client_protocol.h",
   ]
+
   public_deps = [
     ":shared",
   ]
@@ -49,8 +51,11 @@ source_set("tests") {
   ]
 
   deps = [
+    "//third_party/googletest:gtest",
+  ]
+
+  public_deps = [
     ":agent",
     ":client",
-    "//third_party/googletest:gtest",
   ]
 }

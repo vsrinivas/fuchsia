@@ -30,7 +30,7 @@ class RemoteAPIAdapter {
   RemoteAPI* api() { return api_; }
   debug_ipc::StreamBuffer* stream() { return stream_; }
 
-  // Indicates data is available to read on the stream.
+  // Callback for when data is available to read on the stream.
   void OnStreamReadable();
 
  private:

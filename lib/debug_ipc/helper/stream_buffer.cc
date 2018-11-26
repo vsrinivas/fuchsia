@@ -4,9 +4,9 @@
 
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 
-#include <algorithm>
-
 #include <string.h>
+
+#include <algorithm>
 
 namespace debug_ipc {
 

@@ -1,0 +1,52 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("debug_agent_test_source_set") {
+  testonly = true
+  sources = [
+    "debug_agent_test_so.cc",
+    "debug_agent_test_so.h",
+  ]
+}
+
+executable("debug_agent_so_test_exe") {
+  testonly = true
+  output_name = "debug_agent_so_test"
+  sources = [
+    "debug_agent_so_test_exe.cc",
+  ]
+
+  deps = [
+    ":debug_agent_test_source_set",
+  ]
+}
+
+loadable_module("debug_agent_test_so") {
+  testonly = true
+  sources = [
+    "debug_agent_test_so.cc",
+    "debug_agent_test_so.h",
+  ]
+}
+
+
+
+package("debug_agent_so_test") {
+  testonly = true
+
+  deps = [
+    ":debug_agent_so_test_exe",
+    ":debug_agent_test_so",
+  ]
+
+  binaries = [{
+    name = "debug_agent_so_test"
+  }]
+
+  loadable_modules = [{
+    name = "debug_agent_test_so.so"
+  }]
+}
