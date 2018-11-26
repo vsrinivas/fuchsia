@@ -92,7 +92,7 @@ static int server() {
     printf("server: accept failed: %d\n", errno);
   }
   char buf[5];
-  read(conn, buf, countof(buf));  // wait until client closes
+  read(conn, buf, 5);  // wait until client closes
   close(conn);
   close(conn);  // double close should not crash the network stack
   return -1;
