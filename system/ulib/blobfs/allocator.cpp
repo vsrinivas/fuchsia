@@ -36,9 +36,9 @@ Allocator::~Allocator() {
     }
 }
 
-NewInode* Allocator::GetNode(uint32_t ino) {
+Inode* Allocator::GetNode(uint32_t ino) {
     ZX_DEBUG_ASSERT(ino < node_map_.size() / kBlobfsInodeSize);
-    return &reinterpret_cast<NewInode*>(node_map_.start())[ino];
+    return &reinterpret_cast<Inode*>(node_map_.start())[ino];
 }
 
 bool Allocator::CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
@@ -212,7 +212,7 @@ std::optional<ReservedNode> Allocator::ReserveNode() {
 }
 
 void Allocator::MarkInodeAllocated(const ReservedNode& node) {
-    NewInode* mapped_inode = GetNode(node.index());
+    Inode* mapped_inode = GetNode(node.index());
     mapped_inode->header.flags = kBlobFlagAllocated;
     mapped_inode->header.next_node = 0;
 }

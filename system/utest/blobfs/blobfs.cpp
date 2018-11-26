@@ -2173,9 +2173,23 @@ static bool TestFragmentation(BlobfsTest* blobfsTest) {
     ASSERT_TRUE(blobfsTest->CheckInfo(&total_bytes, &used_bytes));
     ASSERT_GE(total_bytes - used_bytes, kLargeSize);
 
-    // ... Observe that we still cannot allocate the large blob.
-    ASSERT_EQ(-1, ftruncate(fd.get(), info->size_data));
-    ASSERT_EQ(ENOSPC, errno, "Blobfs expected to be out of space");
+    // Now that blobfs supports extents, verify that we can still allocate
+    // a large blob, even if it is fragmented.
+    ASSERT_EQ(0, ftruncate(fd.get(), info->size_data));
+
+    // Sanity check that we can write and read the fragmented blob.
+    ASSERT_EQ(0, StreamAll(write, fd.get(), info->data.get(), info->size_data));
+    fbl::unique_ptr<char[]> buf(new char[info->size_data]);
+    ASSERT_EQ(0, lseek(fd.get(), 0, SEEK_SET));
+    ASSERT_EQ(0, StreamAll(read, fd.get(), buf.get(), info->size_data));
+    ASSERT_EQ(0, memcmp(info->data.get(), buf.get(), info->size_data));
+    ASSERT_EQ(0, close(fd.release()));
+
+    // Sanity check that we can re-open and unlink the fragmented blob.
+    fd.reset(open(info->path, O_RDONLY));
+    ASSERT_TRUE(fd);
+    ASSERT_EQ(0, unlink(info->path));
+    ASSERT_EQ(0, close(fd.release()));
 
     END_HELPER;
 }

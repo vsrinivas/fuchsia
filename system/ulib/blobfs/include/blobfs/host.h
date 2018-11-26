@@ -32,6 +32,8 @@
 #include <stdint.h>
 
 #include <blobfs/common.h>
+#include <blobfs/iterator/allocated-extent-iterator.h>
+#include <blobfs/iterator/extent-iterator.h>
 #include <blobfs/format.h>
 
 namespace blobfs {
@@ -130,7 +132,7 @@ private:
     Inode* inode_;
 };
 
-class Blobfs : public fbl::RefCounted<Blobfs> {
+class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Blobfs);
 
@@ -154,6 +156,24 @@ public:
     zx_status_t WriteNode(fbl::unique_ptr<InodeBlock> ino_block);
     zx_status_t WriteInfo();
 
+    // Access the |ino|-th inode
+    Inode* GetNode(uint32_t ino) final;
+
+    AllocatedExtentIterator GetExtents(uint32_t ino) {
+        return AllocatedExtentIterator(this, ino);
+    }
+
+    // TODO(smklein): Consider deduplicating the host and target allocation systems.
+    bool CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
+                              uint64_t* first_unset = nullptr) const {
+        size_t unset_bit;
+        bool allocated = block_map_.Get(start_block, end_block, &unset_bit);
+        if (!allocated && first_unset != nullptr) {
+            *first_unset = static_cast<uint64_t>(unset_bit);
+        }
+        return allocated;
+    }
+
 private:
     struct BlockCache {
         size_t bno;
@@ -166,9 +186,6 @@ private:
            const fbl::Array<size_t>& extent_lengths);
     zx_status_t LoadBitmap();
 
-    // Access the |index|th inode
-    Inode* GetNode(size_t index);
-
     // Read data from block |bno| into the block cache.
     // If the block cache already contains data from the specified bno, nothing happens.
     // Cannot read while a dirty block is pending.
@@ -179,7 +196,7 @@ private:
 
     zx_status_t ResetCache();
 
-    zx_status_t VerifyBlob(size_t node_index);
+    zx_status_t VerifyBlob(uint32_t node_index);
 
     RawBitmap block_map_{};
 

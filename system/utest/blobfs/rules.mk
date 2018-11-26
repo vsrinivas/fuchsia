@@ -10,7 +10,7 @@ MODULE_TYPE := usertest
 
 MODULE_USERTEST_GROUP := fs
 
-MODULE_NAME := blobfs-test
+MODULE_NAME := blobfs-integration-tests
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/blobfs.cpp

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <blobfs/fsck.h>
+#include <blobfs/iterator/extent-iterator.h>
 #include <fs/trace.h>
 #include <inttypes.h>
 
@@ -21,20 +22,36 @@ namespace blobfs {
 void BlobfsChecker::TraverseInodeBitmap() {
     for (unsigned n = 0; n < blobfs_->info_.inode_count; n++) {
         Inode* inode = blobfs_->GetNode(n);
-        if (inode->start_block >= kStartBlockMinimum) {
+        if (inode->header.IsAllocated()) {
             alloc_inodes_++;
-            inode_blocks_ += static_cast<uint32_t>(inode->num_blocks);
+            if (inode->header.IsExtentContainer()) {
+                // TODO: sanity check these containers.
+                continue;
+            }
 
-            size_t start_block = inode->start_block;
-            size_t end_block = inode->start_block + inode->num_blocks;
             bool valid = true;
 
-            size_t first_unset = 0;
-            if (!blobfs_->block_map_.Get(start_block, end_block, &first_unset)) {
-                FS_TRACE_ERROR("check: ino %u using blocks [%zu, %zu). "
-                               "Not fully allocated in block bitmap; first unset @%zu\n",
-                               n, start_block, end_block, first_unset);
-                valid = false;
+            AllocatedExtentIterator extents = blobfs_->GetExtents(n);
+            while (!extents.Done()) {
+                const Extent* extent;
+                zx_status_t status = extents.Next(&extent);
+                if (status != ZX_OK) {
+                    FS_TRACE_ERROR("check: Failed to acquire extent %u within inode %u.\n",
+                                   extents.ExtentIndex(), n);
+                    valid = false;
+                    break;
+                }
+
+                uint64_t start_block = extent->Start();
+                uint64_t end_block = extent->Start() + extent->Length();
+                uint64_t first_unset = 0;
+                if (!blobfs_->CheckBlocksAllocated(start_block, end_block, &first_unset)) {
+                    FS_TRACE_ERROR("check: ino %u using blocks [%zu, %zu). "
+                                   "Not fully allocated in block bitmap; first unset @%zu\n",
+                                   n, start_block, end_block, first_unset);
+                    valid = false;
+                }
+                inode_blocks_ += extent->Length();
             }
 
             if (blobfs_->VerifyBlob(n) != ZX_OK) {
@@ -50,7 +67,7 @@ void BlobfsChecker::TraverseInodeBitmap() {
 
 void BlobfsChecker::TraverseBlockBitmap() {
     for (uint64_t n = 0; n < blobfs_->info_.data_block_count; n++) {
-        if (blobfs_->block_map_.Get(n, n + 1)) {
+        if (blobfs_->CheckBlocksAllocated(n, n + 1)) {
             alloc_blocks_++;
         }
     }

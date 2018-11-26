@@ -26,7 +26,7 @@
 namespace blobfs {
 constexpr uint64_t kBlobfsMagic0  = (0xac2153479e694d21ULL);
 constexpr uint64_t kBlobfsMagic1  = (0x985000d4d4d3d314ULL);
-constexpr uint32_t kBlobfsVersion = 0x00000006;
+constexpr uint32_t kBlobfsVersion = 0x00000007;
 
 constexpr uint32_t kBlobFlagClean        = 1;
 constexpr uint32_t kBlobFlagDirty        = 2;
@@ -88,7 +88,7 @@ struct Superblock {
     uint64_t journal_block_count; // Number of journal blocks in this area
     uint64_t inode_count;         // Number of blobs in this area
     uint64_t alloc_block_count;   // Total number of allocated blocks
-    uint64_t alloc_inode_count;   // Total number of allocated blobs
+    uint64_t alloc_inode_count;   // Total number of allocated blobs and container nodes
     uint64_t blob_header_next;    // Block containing next blobfs, or zero if this is the last one
     // The following fields are only valid with (flags & kBlobFlagFVM):
     uint64_t slice_size;          // Underlying slice size
@@ -192,11 +192,7 @@ constexpr uint64_t TotalBlocks(const Superblock& info) {
 }
 
 // States of 'Blob' identified via start block.
-constexpr uint64_t kStartBlockFree     = 0;
 constexpr uint64_t kStartBlockMinimum  = 1; // Smallest 'data' block possible.
-
-// Identifies that the on-disk storage of the blob is LZ4 compressed.
-constexpr uint32_t kBlobFlagLZ4Compressed = 0x00000001;
 
 using digest::Digest;
 
@@ -255,8 +251,11 @@ constexpr size_t kMaxBlobExtents = std::numeric_limits<ExtentCountType>::max();
 // Both inodes and extent containers can be allocated.
 constexpr uint16_t kBlobFlagAllocated = 0x0001;
 
+// Identifies that the on-disk storage of the blob is LZ4 compressed.
+constexpr uint16_t kBlobFlagLZ4Compressed = 0x0002;
+
 // Identifies that this node is a container for extents.
-constexpr uint16_t kBlobFlagExtentContainer = 0x0002;
+constexpr uint16_t kBlobFlagExtentContainer = 0x0004;
 
 // The number of extents within a normal inode.
 constexpr uint32_t kInlineMaxExtents = 1;
@@ -281,7 +280,7 @@ struct NodePrelude {
 
 struct ExtentContainer;
 
-struct NewInode {
+struct Inode {
     NodePrelude header;
     uint8_t  merkle_root_hash[Digest::kLength];
     uint64_t blob_size;
@@ -308,18 +307,8 @@ struct ExtentContainer {
     Extent extents[kContainerMaxExtents];
 };
 
-static_assert(sizeof(NewInode) == sizeof(ExtentContainer),
+static_assert(sizeof(Inode) == sizeof(ExtentContainer),
               "Extent nodes must be as large as inodes");
-
-struct Inode {
-    uint8_t  merkle_root_hash[Digest::kLength];
-    uint64_t start_block;
-    uint64_t num_blocks;
-    uint64_t blob_size;
-    uint32_t flags;
-    uint32_t reserved;
-};
-
 static_assert(sizeof(Inode) == kBlobfsInodeSize,
               "Blobfs Inode size is wrong");
 static_assert(kBlobfsBlockSize % kBlobfsInodeSize == 0,

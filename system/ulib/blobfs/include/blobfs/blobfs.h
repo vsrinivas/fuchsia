@@ -25,6 +25,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
 #include <fs/block-txn.h>
 #include <fs/managed-vfs.h>
 #include <fs/ticker.h>
@@ -39,11 +40,16 @@
 #include <lib/zx/vmo.h>
 #include <trace/event.h>
 
+#include <blobfs/allocator.h>
 #include <blobfs/common.h>
+#include <blobfs/extent-reserver.h>
 #include <blobfs/format.h>
+#include <blobfs/iterator/allocated-extent-iterator.h>
+#include <blobfs/iterator/extent-iterator.h>
+#include <blobfs/journal.h>
 #include <blobfs/lz4.h>
 #include <blobfs/metrics.h>
-#include <blobfs/journal.h>
+#include <blobfs/node-reserver.h>
 #include <blobfs/writeback.h>
 
 #include <atomic>
@@ -66,7 +72,7 @@ typedef uint32_t BlobFlags;
 
 // After Open:
 constexpr BlobFlags kBlobStateEmpty       = 0x00000001; // Not yet allocated
-// After Space Allocated:
+// After Space Reserved (but allocation not yet persisted).
 constexpr BlobFlags kBlobStateDataWrite   = 0x00000002; // Data is being written
 // After Writing:
 constexpr BlobFlags kBlobStateReadable    = 0x00000004; // Readable
@@ -81,12 +87,12 @@ constexpr BlobFlags kBlobFlagDeletable    = 0x00000100; // This node should be u
 constexpr BlobFlags kBlobFlagDirectory    = 0x00000200; // This node represents the root directory
 constexpr BlobFlags kBlobOtherMask        = 0x0000FF00;
 
+// clang-format on
+
 enum class EnqueueType {
     kJournal,
     kData,
 };
-
-// clang-format on
 
 class VnodeBlob final : public fs::Vnode, public fbl::Recyclable<VnodeBlob> {
 public:
@@ -117,11 +123,11 @@ public:
         flags_ = (flags_ & ~kBlobStateMask) | new_state;
     }
 
-    size_t GetMapIndex() const {
+    uint32_t GetMapIndex() const {
         return map_index_;
     }
 
-    void PopulateInode(size_t node_index);
+    void PopulateInode(uint32_t node_index);
 
     uint64_t SizeData() const;
 
@@ -156,7 +162,7 @@ public:
     fbl::RefPtr<VnodeBlob> CloneWatcherTeardown();
 
     // Constructs a blob, reads in data, verifies the contents, then destroys the in-memory copy.
-    static zx_status_t VerifyBlob(Blobfs* bs, size_t node_index);
+    static zx_status_t VerifyBlob(Blobfs* bs, uint32_t node_index);
 
 private:
     friend struct TypeWavlTraits;
@@ -289,12 +295,21 @@ private:
     uint8_t digest_[Digest::kLength] = {};
 
     uint32_t fd_count_ = {};
-    size_t map_index_ = {};
+    uint32_t map_index_ = {};
+
+    // TODO(smklein): We are only using a few of these fields, such as:
+    // - blob_size
+    // - block_count
+    // To save space, we could avoid holding onto the entire inode.
     Inode inode_ = {};
 
     // Data used exclusively during writeback.
     struct WritebackInfo {
         uint64_t bytes_written = {};
+
+        fbl::Vector<ReservedExtent> extents;
+        fbl::Vector<ReservedNode> node_indices;
+
         Compressor compressor;
         fzl::OwnedVmoMapper compressed_blob;
     };
@@ -343,7 +358,7 @@ struct MountOptions {
 };
 
 class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>,
-               public fs::TransactionHandler {
+               public fs::TransactionHandler, public SpaceManager {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Blobfs);
     friend class VnodeBlob;
@@ -376,7 +391,38 @@ public:
     }
 
     ////////////////
+    // SpaceManager interface.
+
+    zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final;
+    zx_status_t DetachVmo(vmoid_t vmoid) final;
+    zx_status_t AddInodes(fzl::ResizeableVmoMapper* node_map) final;
+    zx_status_t AddBlocks(size_t nblocks, RawBitmap* block_map) final;
+
+
+    ////////////////
     // Other methods.
+
+    uint64_t DataStart() const {
+        return DataStartBlock(info_);
+    }
+
+    bool CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
+                              uint64_t* first_unset = nullptr) const {
+        return allocator_->CheckBlocksAllocated(start_block, end_block, first_unset);
+    }
+    AllocatedExtentIterator GetExtents(uint32_t ino) {
+        return AllocatedExtentIterator(allocator_.get(), ino);
+    }
+
+    Inode* GetNode(uint32_t ino) {
+        return allocator_->GetNode(ino);
+    }
+    zx_status_t ReserveBlocks(size_t num_blocks, fbl::Vector<ReservedExtent>* out_extents) {
+        return allocator_->ReserveBlocks(num_blocks, out_extents);
+    }
+    zx_status_t ReserveNodes(size_t num_nodes, fbl::Vector<ReservedNode>* out_node) {
+        return allocator_->ReserveNodes(num_nodes, out_node);
+    }
 
     static zx_status_t Create(fbl::unique_fd blockfd, const MountOptions& options,
                               const Superblock* info, fbl::unique_ptr<Blobfs>* out);
@@ -430,17 +476,6 @@ public:
     zx_status_t PurgeBlob(VnodeBlob* blob);
 
     zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual);
-
-    // Allocate a vmoid registering a VMO with the underlying block device.
-    zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out);
-    // Release an allocated vmoid.
-    zx_status_t DetachVmo(vmoid_t vmoid);
-
-    // If possible, attempt to resize the blobfs partition.
-    // Add one additional slice for inodes.
-    zx_status_t AddInodes();
-    // Add enough slices required to hold nblocks additional blocks.
-    zx_status_t AddBlocks(size_t nblocks);
 
     int Fd() const {
         return blockfd_.get();
@@ -521,7 +556,6 @@ private:
     friend class BlobfsChecker;
 
     Blobfs(fbl::unique_fd fd, const Superblock* info);
-    zx_status_t LoadBitmaps();
 
     // Reloads metadata from disk. Useful when metadata on disk
     // may have changed due to journal playback.
@@ -545,53 +579,32 @@ private:
     // Precondition: The Vnode must not exist in |open_hash_|.
     fbl::RefPtr<VnodeBlob> VnodeUpgradeLocked(const uint8_t* key) __TA_REQUIRES(hash_lock_);
 
-    // Searches for |nblocks| free blocks between the block_map_ and reserved_blocks_ bitmaps.
-    zx_status_t FindBlocks(size_t start, size_t nblocks, size_t* blkno_out);
-
-    // Reserves space for a block in memory. Does not update disk.
-    zx_status_t ReserveBlocks(size_t nblocks, size_t* blkno_out);
-
-    // Log information about blobfs' allocation when we run out of space.
-    void LogAllocationFailure(size_t num_blocks) const;
-
-    // Unreserves space for blocks in memory. Does not update disk.
-    void UnreserveBlocks(size_t nblocks, size_t blkno_start);
-
     // Adds reserved blocks to allocated bitmap and writes the bitmap out to disk.
-    void PersistBlocks(WritebackWork* wb, size_t nblocks, size_t blkno);
+    void PersistBlocks(WritebackWork* wb, const ReservedExtent& extent);
 
-    // Frees blocks from the reserved/allocated maps and updates disk if necessary.
-    void FreeBlocks(WritebackWork* wb, size_t nblocks, size_t blkno);
+    // Frees blocks from the allocated map (if allocated) and updates disk if necessary.
+    void FreeExtent(WritebackWork* wb, const Extent& extent);
 
-    // Finds an unallocated node. If it exists, sets |*node_index_out| to the
-    // first available value.
-    zx_status_t FindNode(size_t* node_index_out);
+    // Free a single node. Doesn't attempt to parse the type / traverse nodes;
+    // this function just deletes a single node.
+    void FreeNode(WritebackWork* wb, uint32_t node_index);
 
-    // Finds and reserves space for a blob node in memory. Does not update disk.
-    zx_status_t ReserveNode(size_t* node_index_out);
+    // Frees an inode, from both the reserved map and the inode table. If the
+    // inode was allocated in the inode table, write the deleted inode out to
+    // disk.
+    void FreeInode(WritebackWork* wb, uint32_t node_index);
 
     // Writes node data to the inode table and updates disk.
-    void PersistNode(WritebackWork* wb, size_t node_index, const Inode& inode);
-
-    // Frees a node, from both the reserved map and the inode table. If the inode was allocated
-    // in the inode table, write the deleted inode out to disk.
-    void FreeNode(WritebackWork* wb, size_t node_index);
-
-    // Returns a reference to the |index|th inode of the node map.
-    // This should only be accessed on two occasions:
-    // 1. To populate an existing Vnode on Lookup.
-    // 2. To update with full contents when a Vnode write has completed.
-    // No updates should occur directly on the blobfs's node.
-    Inode* GetNode(size_t index) const;
+    void PersistNode(WritebackWork* wb, uint32_t node_index);
 
     // Given a contiguous number of blocks after a starting block,
     // write out the bitmap to disk for the corresponding blocks.
-    // Should only be called by PersistBlocks and FreeBlocks.
+    // Should only be called by PersistBlocks and FreeExtent.
     void WriteBitmap(WritebackWork* wb, uint64_t nblocks, uint64_t start_block);
 
     // Given a node within the node map at an index, write it to disk.
     // Should only be called by AllocateNode and FreeNode.
-    void WriteNode(WritebackWork* wb, size_t map_index);
+    void WriteNode(WritebackWork* wb, uint32_t map_index);
 
     // Enqueues an update for allocated inode/block counts.
     void WriteInfo(WritebackWork* wb);
@@ -601,7 +614,7 @@ private:
     zx_status_t CreateFsId();
 
     // Verifies that the contents of a blob are valid.
-    zx_status_t VerifyBlob(size_t node_index);
+    zx_status_t VerifyBlob(uint32_t node_index);
 
     // VnodeBlobs exist in the WAVLTree as long as one or more reference exists;
     // when the Vnode is deleted, it is immediately removed from the WAVL tree.
@@ -622,24 +635,12 @@ private:
     std::atomic<groupid_t> next_group_ = {};
     block_client::Client fifo_client_;
 
-    RawBitmap block_map_ = {};
-    vmoid_t block_map_vmoid_ = {};
-    fzl::ResizeableVmoMapper node_map_;
-    vmoid_t node_map_vmoid_ = {};
+    fbl::unique_ptr<Allocator> allocator_;
+
     fzl::ResizeableVmoMapper info_mapping_;
     vmoid_t info_vmoid_ = {};
 
-    // The reserved_blocks_ and reserved_nodes_ bitmaps only hold in-flight reservations.
-    // At a steady state they will be empty.
-    bitmap::RleBitmap reserved_blocks_ = {};
-    bitmap::RleBitmap reserved_nodes_ = {};
     uint64_t fs_id_ = 0;
-
-    // free_node_lower_bound_ is lower bound on free nodes, meaning we are sure that
-    // there are no free nodes with indices less than free_node_lower_bound_. This
-    // doesn't mean that free_node_lower_bound_ is a free node; it just means that one
-    // can start looking for a free node from free_node_lower_bound_
-    size_t free_node_lower_bound_ = 0;
 
     bool collecting_metrics_ = false;
     BlobfsMetrics metrics_ = {};

@@ -69,7 +69,7 @@ bool NullTest() {
 
     // After walking, observe that the inode is allocated.
     const uint32_t node_index = allocated_nodes[0];
-    const NewInode* inode = allocator->GetNode(node_index);
+    const Inode* inode = allocator->GetNode(node_index);
     ASSERT_TRUE(inode->header.IsAllocated());
     ASSERT_EQ(kAllocatedExtents, inode->extent_count);
 
@@ -97,7 +97,7 @@ bool InlineNodeTest() {
 
     // After walking, observe that the inode is allocated.
     const uint32_t node_index = allocated_nodes[0];
-    const NewInode* inode = allocator->GetNode(node_index);
+    const Inode* inode = allocator->GetNode(node_index);
     ASSERT_TRUE(inode->header.IsAllocated());
     ASSERT_EQ(kAllocatedExtents, inode->extent_count);
 
@@ -140,7 +140,7 @@ bool MultiNodeTest() {
 
     // After walking, observe that the inode is allocated.
     const uint32_t node_index = allocated_nodes[0];
-    const NewInode* inode = allocator->GetNode(node_index);
+    const Inode* inode = allocator->GetNode(node_index);
     ASSERT_TRUE(inode->header.IsAllocated());
     ASSERT_EQ(kAllocatedExtents, inode->extent_count);
 
@@ -191,7 +191,7 @@ bool BadInodeNextNodeTest() {
 
     // After walking, observe that the inode is allocated.
     const uint32_t node_index = allocated_nodes[0];
-    NewInode* inode = allocator->GetNode(node_index);
+    Inode* inode = allocator->GetNode(node_index);
     ASSERT_TRUE(inode->header.IsAllocated());
     ASSERT_EQ(kAllocatedExtents, inode->extent_count);
 
@@ -264,7 +264,7 @@ bool BlockIteratorFragmentedTest() {
 
     // After walking, observe that the inode is allocated.
     const uint32_t node_index = allocated_nodes[0];
-    const NewInode* inode = allocator->GetNode(node_index);
+    const Inode* inode = allocator->GetNode(node_index);
     ASSERT_TRUE(inode->header.IsAllocated());
     ASSERT_EQ(kAllocatedExtents, inode->extent_count);
 
@@ -312,7 +312,7 @@ bool BlockIteratorUnfragmentedTest() {
 
     // After walking, observe that the inode is allocated.
     const uint32_t node_index = allocated_nodes[0];
-    const NewInode* inode = allocator->GetNode(node_index);
+    const Inode* inode = allocator->GetNode(node_index);
     ASSERT_TRUE(inode->header.IsAllocated());
     ASSERT_EQ(1, inode->extent_count);
 

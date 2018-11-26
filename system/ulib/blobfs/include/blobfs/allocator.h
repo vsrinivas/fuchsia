@@ -64,7 +64,7 @@ public:
     // TODO(smklein): It may be possible to convert NodeFinder from an interface
     // to a concrete base class if we can reconcile the differences with host.
 
-    NewInode* GetNode(uint32_t ino) final;
+    Inode* GetNode(uint32_t ino) final;
 
     ////////////////
     // Other interfaces.

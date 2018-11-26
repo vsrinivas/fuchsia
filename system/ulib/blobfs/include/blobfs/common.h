@@ -43,7 +43,7 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max);
 zx_status_t GetBlockCount(int fd, uint64_t* out);
 int Mkfs(int fd, uint64_t block_count);
 
-uint64_t MerkleTreeBlocks(const Inode& blobNode);
+uint32_t MerkleTreeBlocks(const Inode& blobNode);
 
 // Get a pointer to the nth block of the bitmap.
 inline void* GetRawBitmapData(const RawBitmap& bm, uint64_t n) {

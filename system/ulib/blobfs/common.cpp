@@ -14,7 +14,6 @@
 
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
-#include <fbl/alloc_checker.h>
 #include <fs/block-txn.h>
 #include <fs/trace.h>
 #include <lib/fdio/debug.h>
@@ -33,9 +32,10 @@ using digest::MerkleTree;
 namespace blobfs {
 
 // Number of blocks reserved for the Merkle Tree
-uint64_t MerkleTreeBlocks(const Inode& blobNode) {
+uint32_t MerkleTreeBlocks(const Inode& blobNode) {
     uint64_t size_merkle = MerkleTree::GetTreeLength(blobNode.blob_size);
-    return fbl::round_up(size_merkle, kBlobfsBlockSize) / kBlobfsBlockSize;
+    ZX_DEBUG_ASSERT(size_merkle <= std::numeric_limits<uint32_t>::max());
+    return fbl::round_up(static_cast<uint32_t>(size_merkle), kBlobfsBlockSize) / kBlobfsBlockSize;
 }
 
 // Sanity check the metadata for the blobfs, given a maximum number of

@@ -63,7 +63,7 @@ private:
     zx_status_t NextContainer();
 
     NodeFinder* finder_;
-    NewInode* inode_;
+    Inode* inode_;
     // The index of the node we're currently observing.
     uint32_t node_index_;
     ExtentContainer* extent_node_ = nullptr;

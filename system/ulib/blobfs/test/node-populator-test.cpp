@@ -91,7 +91,7 @@ bool WalkOneTest() {
     };
 
     // Before walking, observe that the node is not allocated.
-    const NewInode* inode = allocator->GetNode(node_index);
+    const Inode* inode = allocator->GetNode(node_index);
     ASSERT_FALSE(inode->header.IsAllocated());
     ASSERT_FALSE(inode->header.IsExtentContainer());
     ASSERT_EQ(0, inode->header.next_node);
@@ -151,7 +151,7 @@ bool WalkAllInlineExtentsTest() {
     };
 
     // Before walking, observe that the node is not allocated.
-    const NewInode* inode = allocator->GetNode(allocated_nodes[0]);
+    const Inode* inode = allocator->GetNode(allocated_nodes[0]);
     ASSERT_FALSE(inode->header.IsAllocated());
     ASSERT_FALSE(inode->header.IsExtentContainer());
     ASSERT_EQ(0, inode->header.next_node);
@@ -215,7 +215,7 @@ bool WalkManyNodesTest() {
     };
 
     // Before walking, observe that the node is not allocated.
-    NewInode* inode = allocator->GetNode(allocated_nodes[0]);
+    Inode* inode = allocator->GetNode(allocated_nodes[0]);
     ASSERT_FALSE(inode->header.IsAllocated());
     ASSERT_FALSE(inode->header.IsExtentContainer());
     ASSERT_EQ(0, inode->header.next_node);
@@ -278,7 +278,7 @@ bool WalkManyContainersTest() {
     CopyNodes(nodes, &allocated_nodes);
 
     // Before walking, observe that the node is not allocated.
-    NewInode* inode = allocator->GetNode(allocated_nodes[0]);
+    Inode* inode = allocator->GetNode(allocated_nodes[0]);
     ASSERT_FALSE(inode->header.IsAllocated());
     ASSERT_FALSE(inode->header.IsExtentContainer());
     ASSERT_EQ(0, inode->header.next_node);
@@ -367,7 +367,7 @@ bool WalkExtraNodesTest() {
     CopyNodes(nodes, &allocated_nodes);
 
     // Before walking, observe that the node is not allocated.
-    NewInode* inode = allocator->GetNode(allocated_nodes[0]);
+    Inode* inode = allocator->GetNode(allocated_nodes[0]);
     ASSERT_FALSE(inode->header.IsAllocated());
     ASSERT_FALSE(inode->header.IsExtentContainer());
     ASSERT_EQ(0, inode->header.next_node);
@@ -443,7 +443,7 @@ bool WalkExtraExtentsTest() {
     CopyNodes(nodes, &allocated_nodes);
 
     // Before walking, observe that the node is not allocated.
-    NewInode* inode = allocator->GetNode(allocated_nodes[0]);
+    Inode* inode = allocator->GetNode(allocated_nodes[0]);
     ASSERT_FALSE(inode->header.IsAllocated());
     ASSERT_FALSE(inode->header.IsExtentContainer());
     ASSERT_EQ(0, inode->header.next_node);

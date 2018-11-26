@@ -32,7 +32,7 @@ zx_status_t NodePopulator::Walk(OnNodeCallback on_node, OnExtentCallback on_exte
     size_t node_count = 0;
     uint32_t node_index = nodes_[node_count].index();
 
-    NewInode* inode = allocator_->GetNode(node_index);
+    Inode* inode = allocator_->GetNode(node_index);
     allocator_->MarkInodeAllocated(nodes_[node_count]);
 
     ExtentContainer* container = nullptr;
