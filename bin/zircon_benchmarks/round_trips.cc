@@ -15,6 +15,7 @@
 #include <zircon/syscalls/port.h>
 
 #include "lib/fidl/cpp/binding.h"
+#include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"
 
 #include "round_trips.h"
@@ -337,7 +338,7 @@ class PortTest {
                                     &ports_dup[i]) == ZX_OK);
     }
     thread_or_process_.Launch("PortTest::ThreadFunc", ports_dup,
-                              countof(ports_dup), multiproc);
+                              arraysize(ports_dup), multiproc);
   }
 
   ~PortTest() {
@@ -698,7 +699,7 @@ const ThreadFuncEntry thread_funcs[] = {
 // clang-format on
 
 ThreadFunc GetThreadFunc(const char* name) {
-  for (size_t i = 0; i < countof(thread_funcs); ++i) {
+  for (size_t i = 0; i < arraysize(thread_funcs); ++i) {
     if (!strcmp(name, thread_funcs[i].name))
       return thread_funcs[i].func;
   }
