@@ -12,8 +12,6 @@
 
 #include <zircon/compiler.h>
 
-__BEGIN_CDECLS
-
 // Kernel counters are a facility designed to help field diagnostics and
 // to help devs properly dimension the load/clients/size of the kernel
 // constructs. It answers questions like:
@@ -91,5 +89,3 @@ static inline void kcounter_add(const struct k_counter_desc* var,
     *kcounter_slot(var) += add;
 #endif
 }
-
-__END_CDECLS

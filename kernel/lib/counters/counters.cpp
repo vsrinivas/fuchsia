@@ -6,25 +6,21 @@
 
 #include <lib/counters.h>
 
+#include <arch/ops.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/mutex.h>
+#include <kernel/auto_lock.h>
+#include <kernel/cmdline.h>
+#include <kernel/percpu.h>
+#include <kernel/spinlock.h>
+#include <kernel/timer.h>
+#include <lib/console.h>
+#include <lk/init.h>
+#include <platform.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <arch/ops.h>
-#include <platform.h>
-
-#include <kernel/auto_lock.h>
-#include <kernel/cmdline.h>
-#include <kernel/timer.h>
-#include <kernel/percpu.h>
-#include <kernel/spinlock.h>
-
-#include <fbl/alloc_checker.h>
-#include <fbl/mutex.h>
-
-#include <lk/init.h>
-
-#include <lib/console.h>
-#include <lib/counters_private.h>
+#include "counters_private.h"
 
 // The arena is allocated in kernel.ld linker script.
 extern int64_t kcounters_arena[];
@@ -43,7 +39,7 @@ static size_t get_num_counters() {
     return kcountdesc_end - kcountdesc_begin;
 }
 
-static bool prefix_match(const char *pre, const char *str) {
+static bool prefix_match(const char* pre, const char* str) {
     return strncmp(pre, str, strlen(pre)) == 0;
 }
 
@@ -51,8 +47,9 @@ static bool prefix_match(const char *pre, const char *str) {
 // We rely on SORT_BY_NAME() in the linker script for this to work.
 static const k_counter_desc* upper_bound(
     const char* val, const k_counter_desc* first, const k_counter_desc* last) {
-    if (first >= last)
+    if (first >= last) {
         return last;
+    }
 
     const k_counter_desc* it;
     size_t step;
@@ -81,18 +78,18 @@ static void counters_init(unsigned level) {
 
 // Collapse values to only non-zero ones and sort.
 void counters_clean_up_values(const uint64_t* values_in, uint64_t* values_out, size_t* count_out) {
-  assert(values_in != values_out);
+    assert(values_in != values_out);
 
-  *count_out = 0;
-  for (size_t i = 0; i < SMP_MAX_CPUS; ++i) {
-    if (values_in[i] > 0) {
-      values_out[(*count_out)++] = values_in[i];
+    *count_out = 0;
+    for (size_t i = 0; i < SMP_MAX_CPUS; ++i) {
+        if (values_in[i] > 0) {
+            values_out[(*count_out)++] = values_in[i];
+        }
     }
-  }
 
-  qsort(values_out, *count_out, sizeof(uint64_t), [](const void* a, const void* b) {
-      return (*((uint64_t*)a) > *((uint64_t*)b)) - (*((uint64_t*)a) < *((uint64_t*)b));
-  });
+    qsort(values_out, *count_out, sizeof(uint64_t), [](const void* a, const void* b) {
+        return (*((uint64_t*)a) > *((uint64_t*)b)) - (*((uint64_t*)a) < *((uint64_t*)b));
+    });
 }
 
 static constexpr uint64_t DOT8_SHIFT = 8;
@@ -118,8 +115,9 @@ bool counters_has_outlier(const uint64_t* values_in) {
     uint64_t values[SMP_MAX_CPUS];
     size_t count;
     counters_clean_up_values(values_in, values, &count);
-    if (count < 2)
+    if (count < 2) {
         return false;
+    }
 
     // If there's a value that's an outlier per
     // https://en.wikipedia.org/wiki/Outlier#Tukey's_fences, then we deem it
@@ -137,13 +135,13 @@ bool counters_has_outlier(const uint64_t* values_in) {
         q3_dot8 + static_cast<int64_t>(((k_dot8 * q_delta_dot8) >> DOT8_SHIFT));
 
     for (size_t i = 0; i < count; ++i) {
-      if ((static_cast<int64_t>(values[i]) << DOT8_SHIFT) < low_dot8 ||
-          (static_cast<int64_t>(values[i]) << DOT8_SHIFT) > high_dot8) {
-        return true;
-      }
-  }
+        if ((static_cast<int64_t>(values[i]) << DOT8_SHIFT) < low_dot8 ||
+            (static_cast<int64_t>(values[i]) << DOT8_SHIFT) > high_dot8) {
+            return true;
+        }
+    }
 
-  return false;
+    return false;
 }
 
 static void dump_counter(const k_counter_desc* desc, bool verbose) {
@@ -159,8 +157,9 @@ static void dump_counter(const k_counter_desc* desc, bool verbose) {
     }
 
     printf("[%.2zu] %s = %lu\n", counter_index, desc->name, sum);
-    if (sum == 0u)
+    if (sum == 0u) {
         return;
+    }
 
     // Print the per-core counts if verbose (-v) is set and it's not zero, or if
     // a value for one of the cores indicates it's an outlier.
@@ -220,8 +219,9 @@ static int view_counter(int argc, const cmd_args* argv) {
             auto name = argv[1].str;
             auto desc = upper_bound(name, kcountdesc_begin, kcountdesc_end);
             while (desc != kcountdesc_end) {
-                if (!prefix_match(name, desc->name))
+                if (!prefix_match(name, desc->name)) {
                     break;
+                }
                 dump_counter(desc, verbose);
                 ++num_results;
                 ++desc;
@@ -236,8 +236,7 @@ static int view_counter(int argc, const cmd_args* argv) {
         printf(
             "counters view [-v] <counter-name>\n"
             "counters view [-v] <counter-prefix>\n"
-            "counters view [-v] all\n"
-        );
+            "counters view [-v] all\n");
         return 1;
     }
 
@@ -259,7 +258,7 @@ static int watch_counter(int argc, const cmd_args* argv) {
             fbl::AutoLock lock(&watcher_lock);
             watched_counter_t* wc;
             while ((wc = list_remove_head_type(
-                &watcher_list, watched_counter_t, node)) != nullptr) {
+                        &watcher_list, watched_counter_t, node)) != nullptr) {
                 delete wc;
             }
             // The thread exits itself it there are no counters.
@@ -278,8 +277,8 @@ static int watch_counter(int argc, const cmd_args* argv) {
         }
 
         fbl::AllocChecker ac;
-        auto wc = new (&ac) watched_counter_t {
-            LIST_INITIAL_CLEARED_VALUE, &kcountdesc_begin[counter_id] };
+        auto wc = new (&ac) watched_counter_t{
+            LIST_INITIAL_CLEARED_VALUE, &kcountdesc_begin[counter_id]};
         if (!ac.check()) {
             printf("no memory for counter\n");
             return 1;
@@ -303,8 +302,7 @@ static int watch_counter(int argc, const cmd_args* argv) {
     } else {
         printf(
             "counters watch [-v] <counter-id>\n"
-            "counters watch stop\n"
-        );
+            "counters watch stop\n");
     }
 
     return 0;
@@ -323,8 +321,7 @@ static int cmd_counters(int argc, const cmd_args* argv, uint32_t flags) {
     printf(
         "inspect system counters:\n"
         "  counters view [-v] <name>\n"
-        "  counters watch [-v] <id>\n"
-    );
+        "  counters watch [-v] <id>\n");
     return 0;
 }
 
