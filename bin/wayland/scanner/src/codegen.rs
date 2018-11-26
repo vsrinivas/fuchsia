@@ -133,7 +133,9 @@ use fuchsia_wayland_core::{{ArgKind, Arg, Enum, FromArgs, IntoMessage, Message,
                 writeln!(self.w, "    {} {{", message.rust_name())?;
                 for arg in message.args.iter() {
                     if let Some(ref summary) = arg.summary {
-                        writeln!(self.w, "        /// {}", summary.trim())?;
+                        for line in summary.lines() {
+                            writeln!(self.w, "        /// {}", line.trim())?;
+                        }
                     }
                     writeln!(
                         self.w,
@@ -414,7 +416,9 @@ impl FromArgs for Request {{
         writeln!(self.w, "pub enum {} {{", e.rust_name())?;
         for entry in e.entries.iter() {
             if let Some(ref s) = entry.summary {
-                writeln!(self.w, "    /// {},", s.trim())?;
+                for l in s.lines() {
+                    writeln!(self.w, "    /// {},", l.trim())?;
+                }
             }
             writeln!(self.w, "    {},", entry.rust_name())?;
         }
@@ -451,7 +455,9 @@ impl FromArgs for Request {{
         writeln!(self.w, "    pub struct {}: u32 {{", e.rust_name())?;
         for entry in e.entries.iter() {
             if let Some(ref s) = entry.summary {
-                writeln!(self.w, "        /// {},", s.trim())?;
+                for l in s.lines() {
+                    writeln!(self.w, "        /// {},", l.trim())?;
+                }
             }
             writeln!(
                 self.w,
@@ -467,7 +473,9 @@ impl FromArgs for Request {{
 
     fn codegen_description(&mut self, d: &ast::Description, prefix: &str) -> Result {
         writeln!(self.w, "")?;
-        writeln!(self.w, "{}/// {}", prefix, d.summary.as_str().trim())?;
+        for s in d.summary.as_str().trim().lines() {
+            writeln!(self.w, "{}/// {}", prefix, s.trim())?;
+        }
         writeln!(self.w, "{}///", prefix)?;
         for s in d.description.trim().lines() {
             writeln!(self.w, "{}/// {}", prefix, s.trim())?;
