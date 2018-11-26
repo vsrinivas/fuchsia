@@ -84,6 +84,10 @@ int Mt8167::Thread() {
         zxlogf(ERROR, "GpuInit() failed\n");
         return -1;
     }
+    if (ClkInit() != ZX_OK) {
+        zxlogf(ERROR, "ClkInit() failed\n");
+        return -1;
+    }
 
     return 0;
 }

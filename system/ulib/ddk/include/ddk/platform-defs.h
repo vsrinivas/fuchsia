@@ -145,6 +145,7 @@ __BEGIN_CDECLS;
 #define PDEV_DID_MEDIATEK_I2C       4
 #define PDEV_DID_MEDIATEK_SDIO      5
 #define PDEV_DID_MEDIATEK_GPU       6
+#define PDEV_DID_MEDIATEK_CLK       7
 
 // Sony
 #define PDEV_VID_SONY               14
