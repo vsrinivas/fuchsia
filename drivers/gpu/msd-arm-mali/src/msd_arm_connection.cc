@@ -21,6 +21,12 @@
 #include "platform_semaphore.h"
 #include "platform_trace.h"
 
+// This definition of arraysize was stolen from fxl in order to avoid
+// a dynamic library dependency on it.
+template <typename T, size_t N>
+char (&ArraySizeHelper(T (&array)[N]))[N];
+#define arraysize(array) (sizeof(ArraySizeHelper(array)))
+
 void msd_connection_close(msd_connection_t* connection)
 {
     delete MsdArmAbiConnection::cast(connection);
@@ -95,7 +101,7 @@ bool MsdArmConnection::ExecuteAtom(
         std::lock_guard<std::mutex> lock(callback_lock_);
 
         MsdArmAtom::DependencyList dependencies;
-        for (size_t i = 0; i < countof(atom->dependencies); i++) {
+        for (size_t i = 0; i < arraysize(atom->dependencies); i++) {
             uint8_t dependency = atom->dependencies[i].atom_number;
             if (dependency) {
                 if (!outstanding_atoms_[dependency]) {
@@ -117,7 +123,7 @@ bool MsdArmConnection::ExecuteAtom(
         }
         msd_atom->set_dependencies(dependencies);
 
-        static_assert(countof(outstanding_atoms_) - 1 ==
+        static_assert(arraysize(outstanding_atoms_) - 1 ==
                           std::numeric_limits<decltype(magma_arm_mali_atom::atom_number)>::max(),
                       "outstanding_atoms_ size is incorrect");
 

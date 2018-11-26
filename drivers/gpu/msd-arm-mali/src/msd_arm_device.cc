@@ -4,6 +4,7 @@
 
 #include "msd_arm_device.h"
 
+#include <fbl/algorithm.h>
 #include <fbl/string_printf.h>
 
 #include <bitset>
@@ -653,8 +654,8 @@ void MsdArmDevice::DumpRegisters(const GpuFeatures& features, magma::RegisterIo*
         {"Ready", registers::CoreReadyState::StatusType::kReady},
         {"Transitioning", registers::CoreReadyState::StatusType::kPowerTransitioning},
         {"Power active", registers::CoreReadyState::StatusType::kPowerActive}};
-    for (size_t i = 0; i < countof(core_types); i++) {
-        for (size_t j = 0; j < countof(status_types); j++) {
+    for (size_t i = 0; i < fbl::count_of(core_types); i++) {
+        for (size_t j = 0; j < fbl::count_of(status_types); j++) {
             uint64_t bitmask = registers::CoreReadyState::ReadBitmask(io, core_types[i].type,
                                                                       status_types[j].type);
             dump_state->power_states.push_back({core_types[i].name, status_types[j].name, bitmask});
