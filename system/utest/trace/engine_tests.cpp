@@ -13,6 +13,7 @@
 #include <lib/zx/event.h>
 #include <trace/event.h>
 #include <trace-provider/handler.h>
+#include <trace-test-utils/squelch.h>
 
 #include <utility>
 
@@ -439,8 +440,8 @@ bool TestCircularMode() {
     EXPECT_FALSE(fixture_wait_buffer_full_notification());
 
     // Prepare a squelcher to remove timestamps.
-    FixtureSquelch* ts_squelch;
-    ASSERT_TRUE(fixture_create_squelch("ts: ([0-9]+)", &ts_squelch));
+    std::unique_ptr<trace_testing::Squelcher> ts_squelcher =
+        trace_testing::Squelcher::Create("ts: ([0-9]+)");
 
     // These records come from the durable buffer.
     const char expected_initial_records[] = "\
@@ -455,24 +456,25 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Instant(scope: glo
 ";
 
     fbl::Vector<trace::Record> records;
+    size_t skip_count;
     const size_t kDataRecordOffset = 7;
     ASSERT_N_RECORDS(kDataRecordOffset + 1, /*empty*/, expected_initial_records,
-                     &records);
+                     &records, &skip_count);
+
+    // This is the index of the data record in the full list of records.
+    const size_t kDataRecordIndex = skip_count + kDataRecordOffset;
 
     // Verify all trailing records are the same (sans timestamp).
-    auto test_record = records[kDataRecordOffset].ToString();
-    auto test_str = fixture_squelch(ts_squelch, test_record.c_str());
-    for (size_t i = kDataRecordOffset + 1; i < records.size(); ++i) {
+    auto test_record = records[kDataRecordIndex].ToString();
+    auto test_str = ts_squelcher->Squelch(test_record.c_str());
+    for (size_t i = kDataRecordIndex + 1; i < records.size(); ++i) {
         // FIXME(dje): Moved this here from outside the for loop to get things
         // working. Why was it necessary?
         auto test_cstr = test_str.c_str();
-        auto record_str = fixture_squelch(ts_squelch,
-                                          records[i].ToString().c_str());
+        auto record_str = ts_squelcher->Squelch(records[i].ToString().c_str());
         auto record_cstr = record_str.c_str();
         EXPECT_STR_EQ(test_cstr, record_cstr, "bad data record");
     }
-
-    fixture_destroy_squelch(ts_squelch);
 
     END_TRACE_TEST;
 }
@@ -571,8 +573,9 @@ bool TestStreamingMode() {
     // should have the new kind of record. And the newer records should be
     // read after the older ones.
 
-    FixtureSquelch* ts_squelch;
-    ASSERT_TRUE(fixture_create_squelch("ts: ([0-9]+)", &ts_squelch));
+    // Prepare a squelcher to remove timestamps.
+    std::unique_ptr<trace_testing::Squelcher> ts_squelcher =
+        trace_testing::Squelcher::Create("ts: ([0-9]+)");
 
     const char expected_initial_records[] =
         // These records come from the durable buffer.
@@ -594,19 +597,22 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Instant(scope: glo
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Instant(scope: global), {k3: int32(3)})\n";
 
     fbl::Vector<trace::Record> records;
+    size_t skip_count;
     const size_t kDataRecordOffset = 8;
     ASSERT_N_RECORDS(kDataRecordOffset + 1, /*empty*/, expected_initial_records,
-                     &records);
+                     &records, &skip_count);
+
+    // This is the index of the data record in the full list of records.
+    const size_t kDataRecordIndex = skip_count + kDataRecordOffset;
 
     // Verify the first set of data records are the same (sans timestamp).
-    auto test_record = records[kDataRecordOffset].ToString();
-    auto test_str = fixture_squelch(ts_squelch, test_record.c_str());
+    auto test_record = records[kDataRecordIndex].ToString();
+    auto test_str = ts_squelcher->Squelch(test_record.c_str());
     size_t num_data_records = 1;
     size_t i;
-    for (i = kDataRecordOffset + 1; i < records.size(); ++i) {
+    for (i = kDataRecordIndex + 1; i < records.size(); ++i) {
         auto test_cstr = test_str.c_str();
-        auto record_str = fixture_squelch(ts_squelch,
-                                          records[i].ToString().c_str());
+        auto record_str = ts_squelcher->Squelch(records[i].ToString().c_str());
         auto record_cstr = record_str.c_str();
         if (strcmp(test_cstr, record_cstr) != 0)
             break;
@@ -625,16 +631,13 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Instant(scope: glo
 
     // All remaining records should match (sans timestamp).
     test_record = records[i].ToString();
-    test_str = fixture_squelch(ts_squelch, test_record.c_str());
+    test_str = ts_squelcher->Squelch(test_record.c_str());
     for (i = i + 1; i < records.size(); ++i) {
         auto test_cstr = test_str.c_str();
-        auto record_str = fixture_squelch(ts_squelch,
-                                          records[i].ToString().c_str());
+        auto record_str = ts_squelcher->Squelch(records[i].ToString().c_str());
         auto record_cstr = record_str.c_str();
         EXPECT_STR_EQ(test_cstr, record_cstr, "bad data record");
     }
-
-    fixture_destroy_squelch(ts_squelch);
 
     END_TRACE_TEST;
 }

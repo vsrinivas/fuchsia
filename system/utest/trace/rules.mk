@@ -29,6 +29,7 @@ LOCAL_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/trace-provider.handler \
     system/ulib/trace-reader \
+    system/ulib/trace-test-utils \
     system/ulib/zx \
     system/ulib/zxcpp \
 
