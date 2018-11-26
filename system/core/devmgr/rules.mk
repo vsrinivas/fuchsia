@@ -41,6 +41,7 @@ MODULE_HEADER_DEPS := \
 MODULE_STATIC_LIBS := \
     system/ulib/fidl \
     system/ulib/bootdata \
+    system/ulib/bootsvc-protocol \
     system/ulib/loader-service \
     system/ulib/async \
     system/ulib/async.cpp \

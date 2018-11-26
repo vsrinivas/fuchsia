@@ -29,6 +29,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/async-loop.cpp \
     system/ulib/bootdata \
     system/ulib/bootfs \
+    system/ulib/bootsvc-protocol \
     system/ulib/fbl \
     system/ulib/fidl \
     system/ulib/fs \
@@ -62,6 +63,7 @@ MODULE_SRCS := \
 MODULE_NAME := bootsvc-tests
 
 MODULE_STATIC_LIBS := \
+    system/ulib/bootsvc-protocol \
     system/ulib/fbl \
     system/ulib/zx \
     system/ulib/zxcpp

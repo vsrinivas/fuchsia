@@ -14,6 +14,7 @@
 #include <fbl/string_piece.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <lib/bootsvc-protocol/processargs.h>
 #include <lib/fdio/namespace.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
@@ -129,8 +130,9 @@ bool TestNamespace() {
 bool TestStartupHandles() {
     BEGIN_TEST;
 
-    // Check we were given a channel that when read produces a resource handle (should be the root one)
-    zx::channel resource_channel(zx_take_startup_handle(bootsvc::kResourceChannelHandleType));
+    // Check we were given a channel that when read produces a resource handle (should be the
+    // root one)
+    zx::channel resource_channel(zx_take_startup_handle(BOOTSVC_ROOT_RESOURCE_CHANNEL_HND));
     ASSERT_TRUE(resource_channel.is_valid());
 
     zx::handle root_resource;

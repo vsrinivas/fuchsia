@@ -10,6 +10,7 @@
 #include <fbl/vector.h>
 #include <launchpad/launchpad.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/bootsvc-protocol/processargs.h>
 #include <lib/fdio/util.h>
 #include <lib/zx/debuglog.h>
 #include <zircon/boot/bootdata.h>
@@ -133,7 +134,8 @@ struct LaunchNextProcessArgs {
 // - A loader that can load libraries from /boot, serviced by bootsvc
 // - A handle to the root job
 // - A handle to each of the bootdata VMOs the kernel provided
-// - A handle to a channel containing the root resource, with type kResourceChannelHandleType
+// - A handle to a channel containing the root resource, with type
+//   BOOTSVC_ROOT_RESOURCE_CHANNEL_HND
 int LaunchNextProcess(void* raw_ctx) {
     fbl::unique_ptr<LaunchNextProcessArgs> args(static_cast<LaunchNextProcessArgs*>(raw_ctx));
 
@@ -181,7 +183,7 @@ int LaunchNextProcess(void* raw_ctx) {
                                                             FDIO_FLAG_USE_FOR_STDIO | 0));
     }
 
-    launchpad_add_handle(lp, resource_client.release(), bootsvc::kResourceChannelHandleType);
+    launchpad_add_handle(lp, resource_client.release(), BOOTSVC_ROOT_RESOURCE_CHANNEL_HND);
 
     unsigned bootdata_idx = 0;
     for (zx::vmo& bootdata : args->bootdata) {

@@ -10,8 +10,6 @@
 
 namespace bootsvc {
 
-constexpr uint32_t kResourceChannelHandleType = PA_HND(PA_USER0, 0);
-
 // Retrieves all bootdata VMOs from the startup handle table
 fbl::Vector<zx::vmo> RetrieveBootdata();
 

@@ -26,6 +26,7 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/policy.h>
 
+#include <lib/bootsvc-protocol/processargs.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/util.h>
@@ -581,7 +582,8 @@ int main(int argc, char** argv) {
 
     // Read the root resource out of its channel
     {
-        zx::channel root_resource_channel(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
+        zx::channel root_resource_channel(
+                zx_take_startup_handle(BOOTSVC_ROOT_RESOURCE_CHANNEL_HND));
         uint32_t actual_handles = 0;
         zx_status_t status = root_resource_channel.read(0, nullptr, 0, nullptr,
                                                         &root_resource_handle, 1, &actual_handles);
