@@ -132,7 +132,8 @@ zx_status_t SpawnBinaryInRealmAsync(
     *error = "Could not flatten namespace";
     return status;
   }
-  fdio_spawn_action_t actions[flat_ns->count + additional_actions.size()];
+  size_t action_count = flat_ns->count + additional_actions.size();
+  fdio_spawn_action_t actions[action_count];
   for (size_t i = 0; i < flat_ns->count; ++i) {
     zx_handle_t handle;
     if (std::string(flat_ns->path[i]) == "/svc") {
@@ -161,7 +162,7 @@ zx_status_t SpawnBinaryInRealmAsync(
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   status =
       fdio_spawn_etc(job, flags & ~FDIO_SPAWN_CLONE_NAMESPACE, binary_path,
-                     argv, nullptr, countof(actions), actions, proc, err_msg);
+                     argv, nullptr, action_count, actions, proc, err_msg);
   if (status != ZX_OK) {
     *error = fxl::StringPrintf("Failed to launch command: %s", err_msg);
     return status;

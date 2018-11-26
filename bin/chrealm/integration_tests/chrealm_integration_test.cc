@@ -22,6 +22,7 @@
 #include "gtest/gtest.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
 #include "lib/fidl/cpp/binding_set.h"
+#include "lib/fxl/arraysize.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/glob.h"
 #include "lib/fxl/logging.h"
@@ -119,7 +120,7 @@ class ChrealmTest : public component::testing::TestWithEnvironment,
     char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
     zx_status_t status = fdio_spawn_etc(
         ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO,
-        argv[0], normalized_argv.data(), nullptr, countof(actions), actions,
+        argv[0], normalized_argv.data(), nullptr, arraysize(actions), actions,
         proc, err_msg);
     ASSERT_EQ(status, ZX_OK) << "Failed to spawn command: " << err_msg;
   }
