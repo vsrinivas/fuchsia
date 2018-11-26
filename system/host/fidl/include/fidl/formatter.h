@@ -413,6 +413,19 @@ public:
                 }
                 *ptr = ' ';
             }
+
+            // Incorporate the whitespace that came before the ordinal into the
+            // whitespace before the identifier.
+            element->identifier->start_.set_previous_end(
+                element->ordinal->start_.previous_end());
+            element->identifier->end_.set_previous_end(
+                element->ordinal->start_.previous_end());
+
+            // If there are no attributes, the identifier is now the start of
+            // the method.
+            if (element->attributes == nullptr)
+                element->start_ = element->identifier->start_;
+
             element->ordinal.reset(nullptr);
         }
         DeclarationOrderTreeVisitor::OnInterfaceMethod(element);
