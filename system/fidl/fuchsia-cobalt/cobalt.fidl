@@ -95,10 +95,9 @@ interface LoggerFactory {
     // returned Logger is for.
     //
     // |status| Returns OK on success or INVALID_ARGUMENTS if the project
-    //  profile does not contain a valid Cobalt config with only a single
-    //  project_id.
-    1: CreateLogger(ProjectProfile profile,
-                    request<Logger> logger)
+    // profile does not contain a valid Cobalt config with only a single
+    // project_id.
+    1: CreateLogger(ProjectProfile profile, request<Logger> logger)
            -> (Status status);
 
     // Creates a LoggerSimple for the given ProjectProfile.
@@ -107,12 +106,10 @@ interface LoggerFactory {
     // returned Logger is for.
     //
     // |status| Returns OK on success or INVALID_ARGUMENTS if the project
-    //  profile does not contain a valid Cobalt config with only a single
-    //  project_id.
-    2: CreateLoggerSimple(ProjectProfile profile,
-                          request<LoggerSimple> logger)
+    // profile does not contain a valid Cobalt config with only a single
+    // project_id.
+    2: CreateLoggerSimple(ProjectProfile profile, request<LoggerSimple> logger)
            -> (Status status);
-
 
     // Creates a Logger for the project with the given name, using the state of
     // the metrics registry that is bundled with Cobalt.
@@ -181,8 +178,7 @@ interface LoggerFactory {
     // |status| Returns OK on success or INVALID_ARGUMENTS if there is no
     // project with the given name in the version of the metrics registry that
     // is bundled with Cobalt.
-    5: CreateLoggerFromProjectId(uint32 project_id,
-                                 ReleaseStage release_stage,
+    5: CreateLoggerFromProjectId(uint32 project_id, ReleaseStage release_stage,
                                  request<Logger> logger)
            -> (Status status);
 
@@ -209,7 +205,6 @@ interface LoggerFactory {
                                        ReleaseStage release_stage,
                                        request<LoggerSimple> logger)
            -> (Status status);
-
 };
 
 /////////////////////////////////////////////////////////////////////
@@ -237,9 +232,9 @@ interface LoggerBase {
     // from the ProjectProfile used to obtain this Logger, and it must be of
     // type EVENT_OCCURRED.
     //
-    // |event_type_index| The index of the event type that occurred. The indexed
-    //     set of all event types is specified in the metric definition.
-    1: LogEvent(uint32 metric_id, uint32 event_type_index)
+    // |event_code| The index of the event that occurred. The indexed set of all
+    // event codes and their labels is specified in the metric definition.
+    1: LogEvent(uint32 metric_id, uint32 event_code)
            -> (Status status);
 
     // Logs that an event has occurred a given number of times.
@@ -248,26 +243,25 @@ interface LoggerBase {
     // from the ProjectProfile used to obtain this Logger, and it must be of
     // type EVENT_COUNT.
     //
-    // |event_type_index| The index of the event type that occurred. The indexed
-    //     set of all event types is specified in the metric definition.
+    // |event_code| The index of the event that occurred. The indexed set of all
+    // event codes and their labels is specified in the metric definition.
     //
-    // |component| Optionally, a component associated with the event may
-    //     also be logged. Any notion of component that makes sense may be
-    //     used or use the empty string if there is no natural notion of
-    //     component.
+    // |component| Optionally, a component associated with the event may also be
+    // logged. Any notion of component that makes sense may be used or use the
+    // empty string if there is no natural notion of component.
     //
-    // |period_duration_micros| Optionally, the period of time over which
-    //     the |count| events occurred may be logged. If this is not
-    //     relevant the value may be set to 0. Otherwise specify the period
-    //     duration as a number of microseconds.
+    // |period_duration_micros| Optionally, the period of time over which the
+    // |count| events occurred may be logged. If this is not relevant the value
+    // may be set to 0. Otherwise specify the period duration as a number of
+    // microseconds.
     //
-    //  |count| The number of times the event occurred. One may choose to
-    //      always set this value to 1 and always set
-    //     |period_duration_micros| to 0 in order to achieve a semantics
-    //     similar to the LogEventOccurred() method, but with a |component|.
-    2: LogEventCount(uint32 metric_id, uint32 event_type_index,
-                     string:64 component, int64 period_duration_micros,
-                     int64 count)
+    // |count| The number of times the event occurred. One may choose to always
+    // set this value to 1 and always set
+    //
+    // |period_duration_micros| to 0 in order to achieve a semantics similar to
+    // the LogEventOccurred() method, but with a |component|.
+    2: LogEventCount(uint32 metric_id, uint32 event_code, string:64 component,
+                     int64 period_duration_micros, int64 count)
            -> (Status status);
 
     // Logs that an event lasted a given amount of time.
@@ -276,18 +270,17 @@ interface LoggerBase {
     // from the ProjectProfile used to obtain this Logger, and it must be of
     // type ELAPSED_TIME.
     //
-    // |event_type_index| The index of the event type that occurred. The indexed
-    //     set of all event types is specified in the metric definition.
+    // |event_code| The index of the event that occurred. The indexed set of all
+    // event codes and their labels is specified in the metric definition.
     //
-    // |component| Optionally, a component associated with the event may
-    //     also be logged. Any notion of component that makes sense may be
-    //     used or use the empty string if there is no natural notion of
-    //     component.
+    // |component| Optionally, a component associated with the event may also be
+    // logged. Any notion of component that makes sense may be used or use the
+    // empty string if there is no natural notion of component.
     //
-    // |elapsed_micros| The elapsed time of the event, specified as a number
-    //     of microseconds.
-    3: LogElapsedTime(uint32 metric_id, uint32 event_type_index,
-                      string:64 component, int64 elapsed_micros)
+    // |elapsed_micros| The elapsed time of the event, specified as a number of
+    // microseconds.
+    3: LogElapsedTime(uint32 metric_id, uint32 event_code, string:64 component,
+                      int64 elapsed_micros)
            -> (Status status);
 
     // Logs a measured average frame rate.
@@ -296,18 +289,18 @@ interface LoggerBase {
     // from the ProjectProfile used to obtain this Logger, and it must be of
     // type FRAME_RATE.
     //
-    // |event_type_index| The index of the event type that associated with the
-    //     frame-rate measurement. The indexed set of all event types is
-    //     specified in the metric definition.
+    // |event_code| The index of the event that associated with the frame-rate
+    // measurement. The indexed set of all event codes and their labels is
+    // specified in the metric definition.
     //
     // |component| Optionally, a component associated with the frame-rate
-    //     measurement may also be logged. Any notion of component that makes
-    //     sense may be used or use the empty string if there is no natural
-    //     notion of component.
+    // measurement may also be logged. Any notion of component that makes sense
+    // may be used or use the empty string if there is no natural notion of
+    // component.
     //
     // |fps| The average-frame rate in frames-per-second.
-    4: LogFrameRate(uint32 metric_id, uint32 event_type_index,
-                    string:64 component, float32 fps)
+    4: LogFrameRate(uint32 metric_id, uint32 event_code, string:64 component,
+                    float32 fps)
            -> (Status status);
 
     // Logs a measured memory usage.
@@ -316,18 +309,17 @@ interface LoggerBase {
     // from the ProjectProfile used to obtain this Logger, and it must be of
     // type MEMORY_USAGE.
     //
-    // |event_type_index| The index of the event type associated with the memory
-    //     usage. The indexed set of all event types is specified in the metric
-    //     definition.
+    // |event_code| The index of the event type associated with the memory
+    // usage. The indexed set of all event codes and their labels is specified
+    // in the metric definition.
     //
-    // |component| Optionally, a component associated with the memory usage
-    //     may also be logged. Any notion of component that makes sense may be
-    //     used or use the empty string if there is no natural notion of
-    //     component.
+    // |component| Optionally, a component associated with the memory usage may
+    // also be logged. Any notion of component that makes sense may be used or
+    // use the empty string if there is no natural notion of component.
     //
     // |bytes| The memory used, in bytes.
-    5: LogMemoryUsage(uint32 metric_id, uint32 event_type_index,
-                      string:64 component, int64 bytes)
+    5: LogMemoryUsage(uint32 metric_id, uint32 event_code, string:64 component,
+                      int64 bytes)
            -> (Status status);
 
     // Logs the fact that a given string was used, in a specific context.
@@ -346,8 +338,8 @@ interface LoggerBase {
     // from the ProjectProfile used to obtain this Logger, and it must be of
     // type STRING_USED.
     //
-    // |s| The string to log. This should be a human-readable string of
-    //      size no more than 256 bytes.
+    // |s| The string to log. This should be a human-readable string of size no
+    // more than 256 bytes.
     6: LogString(uint32 metric_id, string:256 s) -> (Status status);
 
     // This method is part of Cobalt's helper service for measuring the time
@@ -363,34 +355,32 @@ interface LoggerBase {
     // from the ProjectProfile used to obtain this Logger, and it must be of
     // type ELAPSED_TIME.
     //
-    // |event_type_index| The index of the event type to associate with the
-    // elapsed time. This is passed to LogElapsedTime()
+    // |event_code| The index of the event type to associate with the elapsed
+    // time. This is passed to LogElapsedTime()
     //
-    // |component| Optionally, a component associated with the event may
-    //     also be logged. See the description at LogElapsedTime().
+    // |component| Optionally, a component associated with the event may also be
+    // logged. See the description at LogElapsedTime().
     //
     // |timer_id| The ID of the timer being started. This is an arbitrary
-    //     non-empty string provided by the caller and it is the caller's
-    //     responsibility to ensure that Cobalt receives a pair of
-    //     StartTimer(), EndTimer() calls with this id before the timeout
-    //     and without any intervening additional calls to StartTimer()
-    //     or EndTimer() using the same id. Once such a pair is received
-    //     Cobalt will delete the timer with this ID and after that the
-    //     ID may be re-used.
+    // non-empty string provided by the caller and it is the caller's
+    // responsibility to ensure that Cobalt receives a pair of StartTimer(),
+    // EndTimer() calls with this id before the timeout and without any
+    // intervening additional calls to StartTimer() or EndTimer() using the same
+    // id. Once such a pair is received Cobalt will delete the timer with this
+    // ID and after that the ID may be re-used.
     //
     // |timestamp| The timestamp to set as the start of the timer. The units
-    //     must be microseconds. The absolute value does not matter, only the
-    //     difference between the end and start timestamps will be used.
+    // must be microseconds. The absolute value does not matter, only the
+    // difference between the end and start timestamps will be used.
     //
     // |timeout_s| The number of seconds Cobalt should wait to receive the
-    //     corresponding EndTimer() call with the same |timer_id|. If
-    //     Cobalt has already received the corresponding EndTimer() call
-    //     before receiving this StartTimer() call then this value is
-    //     ignored as the timeout has already been set by the EndTimer()
-    //     call. If Cobalt does not receive the corresponding EndTimer()
-    //     call before the timeout then the timer will be deleted and
-    //     this invocation of StartTimer() will be forgotten. Must be a
-    //     positive value less than 300.
+    // corresponding EndTimer() call with the same |timer_id|. If Cobalt has
+    // already received the corresponding EndTimer() call before receiving this
+    // StartTimer() call then this value is ignored as the timeout has already
+    // been set by the EndTimer() call. If Cobalt does not receive the
+    // corresponding EndTimer() call before the timeout then the timer will be
+    // deleted and this invocation of StartTimer() will be forgotten. Must be a
+    // positive value less than 300.
     //
     // |status| Returns OK on success. There are two success cases:
     //     (i) Cobalt does not currently have any timers with the given
@@ -411,9 +401,8 @@ interface LoggerBase {
     //        will be forgotten.
     //     Any error returned by LogElapsedTime() may also be returned by this
     //     method.
-    7: StartTimer(uint32 metric_id, uint32 event_type_index,
-                  string:64 component, string:64 timer_id,
-                  uint64 timestamp, uint32 timeout_s)
+    7: StartTimer(uint32 metric_id, uint32 event_code, string:64 component,
+                  string:64 timer_id, uint64 timestamp, uint32 timeout_s)
            -> (Status status);
 
     // This method is part of Cobalt's helper service for measuring the time
@@ -426,27 +415,25 @@ interface LoggerBase {
     // call before the StartTimer() call.
     //
     // |timer_id| The ID of the timer being ended. This is an arbitrary
-    //     non-empty string provided by the caller and it is the caller's
-    //     responsibility to ensure that Cobalt receives a pair of
-    //     StartTimer(), EndTimer() calls with this id before the timeout
-    //     and without any intervening additional calls to StartTimer()
-    //     or EndTimer() using the same id. Once such a pair is received
-    //     Cobalt will delete the timer with this ID and after that the
-    //     ID may be re-used.
+    // non-empty string provided by the caller and it is the caller's
+    // responsibility to ensure that Cobalt receives a pair of StartTimer(),
+    // EndTimer() calls with this id before the timeout and without any
+    // intervening additional calls to StartTimer() or EndTimer() using the same
+    // id. Once such a pair is received Cobalt will delete the timer with this
+    // ID and after that the ID may be re-used.
     //
-    // |timestamp| The timestamp to set as the end of the timer. The units
-    //     must be microseconds. The absolute value does not matter, only the
-    //     difference between the end and start timestamps will be used.
+    // |timestamp| The timestamp to set as the end of the timer. The units must
+    // be microseconds. The absolute value does not matter, only the difference
+    // between the end and start timestamps will be used.
     //
     // |timeout_s| The number of seconds Cobalt should wait to receive the
-    //     corresponding EndTimer() call with the same |timer_id|. If
-    //     Cobalt has already received the corresponding EndTimer() call
-    //     before receiving this StartTimer() call then this value is
-    //     ignored as the timeout has already been set by the EndTimer()
-    //     call. If Cobalt does not receive the corresponding EndTimer()
-    //     call before the timeout then the timer will be deleted and
-    //     this invocation of StartTimer() will be forgotten. Must be a
-    //     positive value less than 300.
+    // corresponding EndTimer() call with the same |timer_id|. If Cobalt has
+    // already received the corresponding EndTimer() call before receiving this
+    // StartTimer() call then this value is ignored as the timeout has already
+    // been set by the EndTimer() call. If Cobalt does not receive the
+    // corresponding EndTimer() call before the timeout then the timer will be
+    // deleted and this invocation of StartTimer() will be forgotten. Must be a
+    // positive value less than 300.
     //
     // |status| Returns OK on success. There are two success cases:
     //     (i) Cobalt does not currently have any timers with the given
@@ -524,19 +511,19 @@ interface Logger : LoggerBase {
     // from the ProjectProfile used to obtain this Logger, and it must be of
     // type INT_HISTOGRAM.
     //
-    // |event_type_index| The index of the event type associated with the
-    // integer-valued measurement. The indexed set of all event types is
-    // specified in the metric definition.
+    // |event_code| The index of the event type associated with the
+    // integer-valued measurement. The indexed set of all event codes and their
+    // labels is specified in the metric definition.
     //
     // |component| Optionally, a component associated with integer-valued
-    //     measurements may also be logged. Any notion of component that makes
-    //     sense may be used or use the empty string if there is no natural
-    //     notion of component.
+    // measurements may also be logged. Any notion of component that makes sense
+    // may be used or use the empty string if there is no natural notion of
+    // component.
     //
     // |histogram| The histogram to log. Each HistogramBucket gives the count
-    //     for one bucket of the histogram. The definitions of the buckets is
-    //     given in the Metric definition.
-    100: LogIntHistogram(uint32 metric_id, uint32 event_type_index,
+    // for one bucket of the histogram. The definitions of the buckets is given
+    // in the Metric definition.
+    100: LogIntHistogram(uint32 metric_id, uint32 event_code,
                          string:64 component, vector<HistogramBucket> histogram)
              -> (Status status);
 
@@ -550,8 +537,7 @@ interface Logger : LoggerBase {
     // |event_values| The values for the custom Event. There is one value for
     // each dimension of the Metric. The number and types of the values must
     // be consistent with the dimensions declared in the Metric definition.
-    101: LogCustomEvent(uint32 metric_id,
-                        vector<CustomEventValue> event_values)
+    101: LogCustomEvent(uint32 metric_id, vector<CustomEventValue> event_values)
              -> (Status status);
 };
 
@@ -574,7 +560,7 @@ interface LoggerSimple : LoggerBase {
     // requirements of Simple layout. Instead of a vector of HistogramBucekts
     // this version takes two parallel vectors of bucket indices and the
     // corresponding bucket counts.
-    100: LogIntHistogram(uint32 metric_id, uint32 event_type_index,
+    100: LogIntHistogram(uint32 metric_id, uint32 event_code,
                          string:64 component,
                          vector<uint32>:100 bucket_indices,
                          vector<uint64>:100 bucket_counts)
@@ -601,9 +587,9 @@ interface SystemDataUpdater {
     // Resets Cobalt's view of the system-wide experiment state and replaces it
     // with the given values.
     //
-    // |experiments|  All experiments the device has a notion of and the
-    // arms the device belongs to for each of them. These are the only
-    // experiments the device can collect data for.
+    // |experiments|  All experiments the device has a notion of and the arms
+    // the device belongs to for each of them. These are the only experiments
+    // the device can collect data for.
     1: SetExperimentState(vector<Experiment> experiments)
-            -> (Status status);
+           -> (Status status);
 };
