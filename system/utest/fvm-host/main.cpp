@@ -200,6 +200,12 @@ bool ReportSparse(uint32_t flags) {
     }
 
     ASSERT_TRUE(ReportContainer(sparse_path, 0));
+
+    // Check that the calculated disk size passes inspection, but any size lower doesn't.
+    SparseContainer container(sparse_path, 0, 0);
+    size_t expected_size = container.CalculateDiskSize();
+    ASSERT_EQ(container.CheckDiskSize(expected_size), ZX_OK);
+    ASSERT_NE(container.CheckDiskSize(expected_size - 1), ZX_OK);
     END_HELPER;
 }
 
@@ -218,7 +224,6 @@ bool CreateFvm(bool create_before, off_t offset, size_t slice_size) {
               ZX_OK, "Failed to initialize fvm container");
     ASSERT_TRUE(AddPartitions(fvmContainer.get()));
     ASSERT_EQ(fvmContainer->Commit(), ZX_OK, "Failed to write to fvm file");
-
     END_HELPER;
 }
 
@@ -235,8 +240,10 @@ bool ExtendFvm(off_t length) {
     END_HELPER;
 }
 
-bool ReportFvm(off_t offset) {
-    return ReportContainer(fvm_path, offset);
+bool ReportFvm(off_t offset = 0) {
+    BEGIN_HELPER;
+    ASSERT_TRUE(ReportContainer(fvm_path, offset));
+    END_HELPER;
 }
 
 void GenerateFilename(const char* dir, size_t len, char* out) {
@@ -426,40 +433,59 @@ bool CreatePartitions() {
     END_HELPER;
 }
 
-bool CreateReportDestroy(container_t type, size_t slice_size) {
+bool GetSparseInfo(container_t type, uint32_t* out_flags, char** out_path) {
     BEGIN_HELPER;
     switch (type) {
     case SPARSE: {
-        ASSERT_TRUE(CreateSparse(0, slice_size));
-        ASSERT_TRUE(ReportSparse(0));
-        ASSERT_TRUE(DestroySparse(0));
+        *out_flags = 0;
+        *out_path = sparse_path;
         break;
     }
     case SPARSE_LZ4: {
-        ASSERT_TRUE(CreateSparse(fvm::kSparseFlagLz4, slice_size));
-        ASSERT_TRUE(ReportSparse(fvm::kSparseFlagLz4));
-        ASSERT_TRUE(DestroySparse(fvm::kSparseFlagLz4));
+        *out_flags = fvm::kSparseFlagLz4;
+        *out_path = sparse_lz4_path;
         break;
     }
     case SPARSE_ZXCRYPT: {
-        ASSERT_TRUE(CreateSparse(fvm::kSparseFlagZxcrypt, slice_size));
-        ASSERT_TRUE(ReportSparse(fvm::kSparseFlagZxcrypt));
-        ASSERT_TRUE(DestroySparse(fvm::kSparseFlagZxcrypt));
+        *out_flags = fvm::kSparseFlagZxcrypt;
+        *out_path = sparse_path;
+        break;
+    }
+    default:
+        ASSERT_TRUE(false);
+    }
+    END_HELPER;
+}
+
+bool CreateReportDestroy(container_t type, size_t slice_size) {
+    BEGIN_HELPER;
+    switch (type) {
+    case SPARSE:
+        __FALLTHROUGH;
+    case SPARSE_LZ4:
+        __FALLTHROUGH;
+    case SPARSE_ZXCRYPT: {
+        uint32_t flags;
+        char* path;
+        ASSERT_TRUE(GetSparseInfo(type, &flags, &path));
+        ASSERT_TRUE(CreateSparse(flags, slice_size));
+        ASSERT_TRUE(ReportSparse(flags));
+        ASSERT_TRUE(DestroySparse(flags));
         break;
     }
     case FVM: {
         ASSERT_TRUE(CreateFvm(true, 0, slice_size));
-        ASSERT_TRUE(ReportFvm(0));
+        ASSERT_TRUE(ReportFvm());
         ASSERT_TRUE(ExtendFvm(CONTAINER_SIZE * 2));
-        ASSERT_TRUE(ReportFvm(0));
+        ASSERT_TRUE(ReportFvm());
         ASSERT_TRUE(DestroyFvm());
         break;
     }
     case FVM_NEW: {
         ASSERT_TRUE(CreateFvm(false, 0, slice_size));
-        ASSERT_TRUE(ReportFvm(0));
+        ASSERT_TRUE(ReportFvm());
         ASSERT_TRUE(ExtendFvm(CONTAINER_SIZE * 2));
-        ASSERT_TRUE(ReportFvm(0));
+        ASSERT_TRUE(ReportFvm());
         ASSERT_TRUE(DestroyFvm());
         break;
     }
@@ -493,6 +519,41 @@ bool TestPartitions() {
     ASSERT_TRUE(PopulatePartitions(NumDirs, NumFiles, MaxSize));
     ASSERT_TRUE(CreateReportDestroy(ContainerType, SliceSize));
     ASSERT_TRUE(DestroyPartitions());
+    END_TEST;
+}
+
+template <container_t ContainerType, size_t NumDirs, size_t NumFiles, size_t MaxSize,
+          size_t SliceSize>
+bool TestDiskSizeCalculation() {
+    BEGIN_TEST;
+    ASSERT_TRUE(CreatePartitions());
+    ASSERT_TRUE(PopulatePartitions(NumDirs, NumFiles, MaxSize));
+    uint32_t flags;
+    char* path;
+    ASSERT_TRUE(GetSparseInfo(ContainerType, &flags, &path));
+    ASSERT_TRUE(CreateSparse(flags, SliceSize));
+    ASSERT_TRUE(ReportSparse(flags));
+    SparseContainer sparseContainer(path, 0, 0);
+
+    size_t target_size = sparseContainer.CalculateDiskSize();
+    ASSERT_EQ(sparseContainer.CheckDiskSize(target_size), ZX_OK);
+    ASSERT_NE(sparseContainer.CheckDiskSize(target_size - 1), ZX_OK);
+
+    // TODO(planders): Once we are able to create zxcrypt'd FVM images on host, remove zxcrypt
+    //                 bytes from the size calculation.
+    uint32_t expected_zxcrypt_partitions = 1;
+    uint32_t expected_zxcrypt_bytes = SliceSize * expected_zxcrypt_partitions;
+
+    ASSERT_TRUE(CreateFvm(false, 0, SliceSize));
+    FvmContainer fvmContainer(fvm_path, 0, 0, 0);
+    size_t calculated_size = fvmContainer.CalculateDiskSize();
+    size_t actual_size = fvmContainer.GetDiskSize();
+    ASSERT_EQ(calculated_size, actual_size);
+    ASSERT_EQ(actual_size + expected_zxcrypt_bytes, target_size);
+    ASSERT_TRUE(DestroyFvm());
+
+    ASSERT_TRUE(DestroyPartitions());
+    ASSERT_TRUE(DestroySparse(flags));
     END_TEST;
 }
 
@@ -623,7 +684,10 @@ bool Cleanup() {
     RUN_TEST_MEDIUM((TestEmptyPartitions<SPARSE_ZXCRYPT, slice_size>)) \
     RUN_TEST_MEDIUM((TestEmptyPartitions<FVM, slice_size>)) \
     RUN_TEST_MEDIUM((TestEmptyPartitions<FVM_NEW, slice_size>)) \
-    RUN_TEST_MEDIUM((TestEmptyPartitions<FVM_OFFSET, slice_size>))
+    RUN_TEST_MEDIUM((TestEmptyPartitions<FVM_OFFSET, slice_size>)) \
+    RUN_TEST_MEDIUM((TestDiskSizeCalculation<SPARSE, 0, 0, 0, slice_size>)) \
+    RUN_TEST_MEDIUM((TestDiskSizeCalculation<SPARSE_LZ4, 0, 0, 0, slice_size>)) \
+    RUN_TEST_MEDIUM((TestDiskSizeCalculation<SPARSE_ZXCRYPT, 0, 0, 0, slice_size>))
 
 #define RUN_FOR_ALL_TYPES(num_dirs, num_files, max_size, slice_size) \
     RUN_TEST_MEDIUM((TestPartitions<SPARSE, num_dirs, num_files, max_size, slice_size>)) \
@@ -631,7 +695,12 @@ bool Cleanup() {
     RUN_TEST_MEDIUM((TestPartitions<SPARSE_ZXCRYPT, num_dirs, num_files, max_size, slice_size>)) \
     RUN_TEST_MEDIUM((TestPartitions<FVM, num_dirs, num_files, max_size, slice_size>)) \
     RUN_TEST_MEDIUM((TestPartitions<FVM_NEW, num_dirs, num_files, max_size, slice_size>)) \
-    RUN_TEST_MEDIUM((TestPartitions<FVM_OFFSET, num_dirs, num_files, max_size, slice_size>))
+    RUN_TEST_MEDIUM((TestPartitions<FVM_OFFSET, num_dirs, num_files, max_size, slice_size>)) \
+    RUN_TEST_MEDIUM((TestDiskSizeCalculation<SPARSE, num_dirs, num_files, max_size, slice_size>)) \
+    RUN_TEST_MEDIUM((TestDiskSizeCalculation<SPARSE_LZ4, num_dirs, num_files, max_size, \
+                                             slice_size>)) \
+    RUN_TEST_MEDIUM((TestDiskSizeCalculation<SPARSE_ZXCRYPT, num_dirs, num_files, max_size, \
+                                             slice_size>))
 
 //TODO(planders): add tests for FVM on GPT (with offset)
 BEGIN_TEST_CASE(fvm_host_tests)

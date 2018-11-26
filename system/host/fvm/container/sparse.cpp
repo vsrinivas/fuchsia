@@ -109,7 +109,7 @@ SparseContainer::SparseContainer(const char* path, uint64_t slice_size, uint32_t
         }
 
         memcpy(&image_, reader_->Image(), sizeof(fvm::sparse_image_t));
-
+        slice_size_ = image_.slice_size;
         extent_size_ = disk_size_ - image_.header_length;
 
         uintptr_t partition_ptr = reinterpret_cast<uintptr_t>(reader_->Partitions());
@@ -138,6 +138,11 @@ SparseContainer::SparseContainer(const char* path, uint64_t slice_size, uint32_t
 SparseContainer::~SparseContainer() = default;
 
 zx_status_t SparseContainer::Init() {
+    if (slice_size_ == 0) {
+        fprintf(stderr, "Cannot initialize sparse container with no slice size\n");
+        return ZX_ERR_BAD_STATE;
+    }
+
     image_.magic = fvm::kSparseFormatMagic;
     image_.version = fvm::kSparseFormatVersion;
     image_.slice_size = slice_size_;
@@ -153,10 +158,7 @@ zx_status_t SparseContainer::Init() {
 }
 
 zx_status_t SparseContainer::Verify() const {
-    if (!valid_) {
-        fprintf(stderr, "SparseContainer: Found invalid container\n");
-        return ZX_ERR_INTERNAL;
-    }
+    CheckValid();
 
     if (image_.flags & fvm::kSparseFlagLz4) {
         // Decompression must occur before verification, since all contents must be available for
@@ -213,6 +215,30 @@ zx_status_t SparseContainer::Verify() const {
     }
 
     return ZX_OK;
+}
+
+zx_status_t SparseContainer::CheckDiskSize(uint64_t target_disk_size) const {
+    CheckValid();
+
+    size_t usable_slices = fvm::UsableSlicesCount(target_disk_size, image_.slice_size);
+    size_t required_slices = SliceCount();
+
+    if (usable_slices < required_slices) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    uint64_t required_disk_size = fvm::SlicesStart(target_disk_size, image_.slice_size)
+                                + (required_slices * image_.slice_size);
+    if (target_disk_size < required_disk_size) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    return ZX_OK;
+}
+
+uint64_t SparseContainer::CalculateDiskSize() const {
+    CheckValid();
+    return CalculateDiskSizeForSlices(SliceCount());
 }
 
 zx_status_t SparseContainer::Commit() {
@@ -317,6 +343,23 @@ zx_status_t SparseContainer::Commit() {
 
 size_t SparseContainer::SliceSize() const {
     return image_.slice_size;
+}
+
+size_t SparseContainer::SliceCount() const {
+    CheckValid();
+    size_t slices = 0;
+
+    for (unsigned i = 0; i < image_.partition_count; i++) {
+        if ((partitions_[i].descriptor.flags & fvm::kSparseFlagZxcrypt) != 0) {
+            slices += kZxcryptExtraSlices;
+        }
+
+        for (unsigned j = 0; j < partitions_[i].descriptor.extent_count; j++) {
+            slices += partitions_[i].extents[j].slice_count;
+        }
+    }
+
+    return slices;
 }
 
 zx_status_t SparseContainer::AddPartition(const char* path, const char* type_name) {
@@ -454,4 +497,11 @@ zx_status_t SparseContainer::CompleteWrite() {
     }
 
     return ZX_OK;
+}
+
+void SparseContainer::CheckValid() const {
+    if (!valid_) {
+        fprintf(stderr, "Error: Sparse container is invalid\n");
+        exit(-1);
+    }
 }

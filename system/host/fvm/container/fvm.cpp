@@ -298,7 +298,7 @@ zx_status_t FvmContainer::Verify() const {
 
         fbl::Vector<size_t> extent_lengths;
         size_t last_vslice = 0;
-
+        size_t slice_count = 0;
         for (; slice_index <= sb->pslice_count; ++slice_index) {
             fvm::slice_entry_t* slice = nullptr;
             if ((status = info_.GetSlice(slice_index, &slice)) != ZX_OK) {
@@ -310,6 +310,7 @@ zx_status_t FvmContainer::Verify() const {
             }
 
             end += slice_size_;
+            slice_count++;
 
             if (slice->Vslice() == last_vslice + 1) {
                 extent_lengths[extent_lengths.size() - 1] += slice_size_;
@@ -318,6 +319,11 @@ zx_status_t FvmContainer::Verify() const {
             }
 
             last_vslice = slice->Vslice();
+        }
+
+        if (vpart->slices != slice_count) {
+            fprintf(stderr, "Reported partition slices do not match expected\n");
+            return ZX_ERR_BAD_STATE;
         }
 
         disk_format_t part;
@@ -344,8 +350,8 @@ zx_status_t FvmContainer::Verify() const {
 
 zx_status_t FvmContainer::Extend(size_t disk_size) {
     if (disk_size <= disk_size_) {
-        fprintf(stderr, "Cannot extend to disk size %zu smaller than current size %lu\n", disk_size,
-                disk_size_);
+        fprintf(stderr, "Cannot extend to disk size %zu smaller than current size %" PRIu64 "\n",
+                disk_size, disk_size_);
         return ZX_ERR_INVALID_ARGS;
     } else if (disk_offset_) {
         fprintf(stderr, "Cannot extend FVM within another container\n");
@@ -471,21 +477,8 @@ zx_status_t FvmContainer::Commit() {
             return ZX_ERR_INVALID_ARGS;
         }
 
-        size_t required_size = 0;
-        for (unsigned i = 0; i < partitions_.size(); i++) {
-            required_size += partitions_[i].slice_count * slice_size_;
-        }
-
-        size_t total_size = required_size;
-        size_t metadata_size = 0;
-
-        while (total_size - (metadata_size * 2) < required_size
-               || metadata_size < info_.MetadataSize()) {
-            total_size = required_size + (metadata_size * 2);
-            metadata_size = fvm::MetadataSize(total_size, slice_size_);
-        }
-
-        zx_status_t status = info_.Grow(metadata_size);
+        uint64_t total_size = CalculateDiskSize();
+        zx_status_t status = info_.Grow(fvm::MetadataSize(total_size, slice_size_));
         if (status != ZX_OK) {
             return status;
         }
@@ -602,6 +595,13 @@ zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name) 
         extent_index++;
     }
 
+    fvm::vpart_entry_t* entry;
+    if ((status = info_.GetPartition(format->VpartIndex(), &entry)) != ZX_OK) {
+        return status;
+    }
+
+    ZX_ASSERT(entry->slices == slice_count);
+
     partition_info_t partition;
     partition.format = std::move(format);
     partition.vpart_index = vpart_index;
@@ -609,6 +609,29 @@ zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name) 
     partition.slice_count = slice_count;
     partitions_.push_back(std::move(partition));
     return ZX_OK;
+}
+
+uint64_t FvmContainer::CalculateDiskSize() const {
+    info_.CheckValid();
+
+    size_t required_slices = 0;
+
+    for (size_t index = 1; index < FVM_MAX_ENTRIES; index++) {
+        fvm::vpart_entry_t* vpart;
+        ZX_ASSERT(info_.GetPartition(index, &vpart) == ZX_OK);
+
+        if (vpart->slices == 0) {
+            break;
+        }
+
+        required_slices += vpart->slices;
+    }
+
+    return CalculateDiskSizeForSlices(required_slices);
+}
+
+uint64_t FvmContainer::GetDiskSize() const {
+    return disk_size_;
 }
 
 void FvmInfo::CheckValid() const {
@@ -658,7 +681,7 @@ zx_status_t FvmInfo::AllocatePartition(fvm::partition_descriptor_t* partition, u
 
         // Make sure this vpartition has not already been allocated
         if (vpart->slices == 0) {
-            vpart->init(partition->type, guid, 1, reinterpret_cast<char*>(partition->name),
+            vpart->init(partition->type, guid, 0, reinterpret_cast<char*>(partition->name),
                         partition->flags);
             vpart_hint_ = index + 1;
             dirty_ = true;
@@ -689,8 +712,15 @@ zx_status_t FvmInfo::AllocateSlice(uint32_t vpart, uint32_t vslice, uint32_t* ps
 
         pslice_hint_ = index + 1;
 
+        fvm::vpart_entry_t* partition;
+        if ((status = GetPartition(vpart, &partition)) != ZX_OK) {
+            return status;
+        }
+
         slice->SetVpart(vpart);
         slice->SetVslice(vslice);
+        partition->slices++;
+
         dirty_ = true;
         *pslice = index;
         return ZX_OK;

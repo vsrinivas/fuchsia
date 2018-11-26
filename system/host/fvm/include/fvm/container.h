@@ -15,6 +15,10 @@
 
 #include "format.h"
 
+// The number of additional slices a partition will need to become zxcrypt'd.
+// TODO(planders): Replace this with a value supplied by ulib/zxcrypt.
+constexpr size_t kZxcryptExtraSlices = 1;
+
 // A Container represents a method of storing multiple file system partitions in an
 // FVM-recognizable format
 class Container {
@@ -47,7 +51,13 @@ public:
     // Given a path to a valid file system partition, adds that partition to the container
     virtual zx_status_t AddPartition(const char* path, const char* type_name) = 0;
 
+    // Calculates the minimum disk size required to hold the unpacked contents of the container.
+    virtual uint64_t CalculateDiskSize() const = 0;
 protected:
+    // Returns the minimum disk size necessary to store |slice_count| slices of size |slice_size_|
+    // in an FVM.
+    uint64_t CalculateDiskSizeForSlices(size_t slice_count) const;
+
     fbl::StringBuffer<PATH_MAX> path_;
     fbl::unique_fd fd_;
     size_t slice_size_;
@@ -142,9 +152,13 @@ public:
     size_t SliceSize() const final;
     zx_status_t AddPartition(const char* path, const char* type_name) final;
 
+    uint64_t CalculateDiskSize() const final;
+
+    // Returns the actual disk size.
+    uint64_t GetDiskSize() const;
 private:
-    size_t disk_offset_;
-    size_t disk_size_;
+    uint64_t disk_offset_;
+    uint64_t disk_size_;
     fbl::Vector<partition_info_t> partitions_;
     FvmInfo info_;
 
@@ -210,12 +224,17 @@ public:
     zx_status_t Verify() const final;
     zx_status_t Commit() final;
     size_t SliceSize() const final;
+    size_t SliceCount() const;
     zx_status_t AddPartition(const char* path, const char* type_name) final;
 
     // Decompresses the contents of the sparse file (if they are compressed), and writes the output
     // to |path|.
     zx_status_t Decompress(const char* path);
 
+    uint64_t CalculateDiskSize() const final;
+
+    // Checks whether the container will fit within a disk of size |target_size| (in bytes).
+    zx_status_t CheckDiskSize(uint64_t target_size) const;
 private:
     bool valid_;
     bool dirty_;
@@ -233,4 +252,5 @@ private:
     zx_status_t PrepareWrite(size_t max_len);
     zx_status_t WriteData(const void* data, size_t length);
     zx_status_t CompleteWrite();
+    void CheckValid() const;
 };
