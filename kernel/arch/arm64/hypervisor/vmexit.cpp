@@ -33,10 +33,10 @@
 static constexpr size_t kPageTableLevelShift = 3;
 static constexpr uint16_t kSmcPsci = 0;
 
-enum TimerControl : uint64_t {
-    ENABLE = 1ul << 0,
-    IMASK = 1ul << 1,
-    ISTATUS = 1ul << 2,
+enum TimerControl : uint32_t {
+    ENABLE = 1u << 0,
+    IMASK = 1u << 1,
+    ISTATUS = 1u << 2,
 };
 
 ExceptionSyndrome::ExceptionSyndrome(uint32_t esr) {
@@ -80,11 +80,6 @@ static void next_pc(GuestState* guest_state) {
     guest_state->system_state.elr_el2 += 4;
 }
 
-static void deadline_callback(timer_t* timer, zx_time_t now, void* arg) {
-    auto gich_state = static_cast<GichState*>(arg);
-    gich_state->interrupt_tracker.VirtualInterrupt(kTimerVector);
-}
-
 static bool timer_enabled(GuestState* guest_state) {
     bool enabled = guest_state->cntv_ctl_el0 & TimerControl::ENABLE;
     bool masked = guest_state->cntv_ctl_el0 & TimerControl::IMASK;
@@ -92,8 +87,9 @@ static bool timer_enabled(GuestState* guest_state) {
 }
 
 void timer_maybe_interrupt(GuestState* guest_state, GichState* gich_state) {
-    if (timer_enabled(guest_state) && current_ticks() >= guest_state->cntv_cval_el0) {
-        gich_state->interrupt_tracker.Track(kTimerVector, hypervisor::InterruptType::VIRTUAL);
+    if (timer_enabled(guest_state) && current_ticks() >= guest_state->cntv_cval_el0 &&
+        !gich_state->active_interrupts.GetOne(kTimerVector)) {
+        gich_state->interrupt_tracker.Track(kTimerVector, hypervisor::InterruptType::PHYSICAL);
     }
 }
 
@@ -107,15 +103,14 @@ static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_st
         return ZX_OK;
     }
     ktrace_vcpu_exit(VCPU_WFI_INSTRUCTION, guest_state->system_state.elr_el2);
+    zx_time_t deadline = ZX_TIME_INFINITE;
     if (timer_enabled(guest_state)) {
         if (current_ticks() >= guest_state->cntv_cval_el0) {
             return ZX_OK;
         }
-        timer_cancel(&gich_state->timer);
-        zx_time_t deadline = cntpct_to_zx_time(guest_state->cntv_cval_el0);
-        timer_set_oneshot(&gich_state->timer, deadline, deadline_callback, gich_state);
+        deadline = cntpct_to_zx_time(guest_state->cntv_cval_el0);
     }
-    return gich_state->interrupt_tracker.Wait(nullptr);
+    return gich_state->interrupt_tracker.Wait(deadline, nullptr);
 }
 
 static zx_status_t handle_smc_instruction(uint32_t iss, GuestState* guest_state,

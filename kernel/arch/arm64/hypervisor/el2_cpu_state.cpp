@@ -8,6 +8,8 @@
 
 #include <arch/arm64/el2_state.h>
 #include <arch/arm64/mmu.h>
+#include <arch/hypervisor.h>
+#include <dev/interrupt.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <hypervisor/cpu.h>
@@ -60,17 +62,19 @@ zx_status_t El2CpuState::OnTask(void* context, uint cpu_num) {
     auto cpu_state = static_cast<El2CpuState*>(context);
     El2TranslationTable& table = cpu_state->table_;
     El2Stack& stack = cpu_state->stacks_[cpu_num];
-
     zx_status_t status = arm64_el2_on(table.Base(), stack.Top());
     if (status != ZX_OK) {
         dprintf(CRITICAL, "Failed to turn EL2 on for CPU %u\n", cpu_num);
         return status;
     }
-
+    unmask_interrupt(kMaintenanceVector);
+    unmask_interrupt(kTimerVector);
     return ZX_OK;
 }
 
 static void el2_off_task(void* arg) {
+    mask_interrupt(kTimerVector);
+    mask_interrupt(kMaintenanceVector);
     zx_status_t status = arm64_el2_off();
     if (status != ZX_OK) {
         dprintf(CRITICAL, "Failed to turn EL2 off for CPU %u\n", arch_curr_cpu_num());

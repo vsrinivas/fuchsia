@@ -135,14 +135,16 @@ public:
     }
 
     // Waits for an interrupt.
-    zx_status_t Wait(StateInvalidator* invalidator) {
+    zx_status_t Wait(zx_time_t deadline, StateInvalidator* invalidator) {
         if (invalidator != nullptr) {
             invalidator->Invalidate();
         }
         ktrace_vcpu(TAG_VCPU_BLOCK, VCPU_INTERRUPT);
         do {
-            zx_status_t status = event_wait_deadline(&event_, ZX_TIME_INFINITE, true);
-            if (status != ZX_OK) {
+            zx_status_t status = event_wait_deadline(&event_, deadline, true);
+            if (status == ZX_ERR_TIMED_OUT) {
+                break;
+            } else if (status != ZX_OK) {
                 ktrace_vcpu(TAG_VCPU_UNBLOCK, VCPU_INTERRUPT);
                 return ZX_ERR_CANCELED;
             }

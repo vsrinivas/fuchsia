@@ -83,10 +83,10 @@ uint32_t gic_get_vector_from_lr(uint64_t lr) {
     return gic_ops->get_vector_from_lr(lr);
 }
 
-uint32_t gic_get_num_lrs() {
-    return gic_ops->get_num_lrs();
+bool gic_get_pending_from_lr(uint64_t lr) {
+    return gic_ops->get_pending_from_lr(lr);
 }
 
-uint32_t get_pending_vector() {
-    return gic_ops->get_pending_vector();
+uint32_t gic_get_num_lrs() {
+    return gic_ops->get_num_lrs();
 }

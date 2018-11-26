@@ -16,11 +16,13 @@
 #include <hypervisor/trap_map.h>
 #include <kernel/event.h>
 #include <kernel/spinlock.h>
-#include <kernel/timer.h>
 #include <zircon/types.h>
 
-static constexpr uint16_t kNumInterrupts = 256;
+// See CoreLink GIC-400, Section 2.3.2 PPIs.
+static constexpr uint32_t kMaintenanceVector = 25;
 static constexpr uint32_t kTimerVector = 27;
+static constexpr uint16_t kNumInterrupts = 256;
+static_assert(kMaintenanceVector < kNumInterrupts, "Maintenance vector is out of range");
 static_assert(kTimerVector < kNumInterrupts, "Timer vector is out of range");
 
 typedef struct zx_port_packet zx_port_packet_t;
@@ -56,8 +58,6 @@ private:
 
 // Stores the state of the GICH across VM exits.
 struct GichState {
-    // Timer for ARM generic timer.
-    timer_t timer;
     // Tracks pending interrupts.
     hypervisor::InterruptTracker<kNumInterrupts> interrupt_tracker;
     // Tracks active interrupts.
@@ -74,7 +74,7 @@ struct GichState {
 // Loads a GICH within a given scope.
 class AutoGich {
 public:
-    AutoGich(GichState* gich_state);
+    AutoGich(GichState* gich_state, uint64_t* curr_hcr);
     ~AutoGich();
 
 private:

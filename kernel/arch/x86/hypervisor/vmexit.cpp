@@ -340,7 +340,7 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
 static zx_status_t handle_hlt(const ExitInfo& exit_info, AutoVmcs* vmcs,
                               LocalApicState* local_apic_state) {
     next_rip(exit_info, vmcs);
-    return local_apic_state->interrupt_tracker.Wait(vmcs);
+    return local_apic_state->interrupt_tracker.Wait(ZX_TIME_INFINITE, vmcs);
 }
 
 static zx_status_t handle_cr0_write(AutoVmcs* vmcs, GuestState* guest_state, uint64_t val) {

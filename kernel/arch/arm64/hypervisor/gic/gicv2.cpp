@@ -5,7 +5,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <dev/interrupt/arm_gic_hw_interface.h>
-#include <vm/pmm.h>
 #include <arch/arm64/hypervisor/gic/gicv2.h>
 #include <dev/interrupt/arm_gicv2_regs.h>
 
@@ -84,13 +83,23 @@ static uint64_t gicv2_read_gich_lr(uint32_t idx) {
 }
 
 static void gicv2_write_gich_lr(uint32_t idx, uint64_t val) {
+    if (val & GICH_LR_HARDWARE) {
+        // We are adding a physical interrupt to a list register, therefore we
+        // mark the physical interrupt as active on the physical distributor so
+        // that the guest can deactivate it directly.
+        uint32_t vector = GICH_LR_VIRTUAL_ID(val);
+        uint32_t reg = vector / 32;
+        uint32_t mask = 1u << (vector % 32);
+        GICREG(0, GICD_ISACTIVER(reg)) = mask;
+    }
     gich->lr[idx] = static_cast<uint32_t>(val);
 }
 
 static zx_status_t gicv2_get_gicv(paddr_t* gicv_paddr) {
     // Check for presence of GICv2 virtualisation extensions.
-    if (GICV_OFFSET == 0)
+    if (GICV_OFFSET == 0) {
         return ZX_ERR_NOT_SUPPORTED;
+    }
     *gicv_paddr = vaddr_to_paddr(reinterpret_cast<void*>(GICV_ADDRESS));
     return ZX_OK;
 }
@@ -107,12 +116,12 @@ static uint32_t gicv2_get_vector_from_lr(uint64_t lr) {
     return lr & GICH_LR_VIRTUAL_ID(UINT64_MAX);
 }
 
-static uint32_t gicv2_get_num_lrs() {
-    return (gicv2_read_gich_vtr() & GICH_VTR_LIST_REGS_MASK) + 1;
+static bool gicv2_get_pending_from_lr(uint64_t lr) {
+    return !(lr & GICH_LR_HARDWARE) && (lr & GICH_LR_PENDING);
 }
 
-static uint32_t gicv2_get_pending_vector() {
-    return GICREG(0, GICC_HPPIR) & GICC_HPPIR_INTID_MASK;
+static uint32_t gicv2_get_num_lrs() {
+    return (gicv2_read_gich_vtr() & GICH_VTR_LIST_REGS_MASK) + 1;
 }
 
 static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
@@ -131,8 +140,8 @@ static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
     .get_gicv = gicv2_get_gicv,
     .get_lr_from_vector = gicv2_get_lr_from_vector,
     .get_vector_from_lr = gicv2_get_vector_from_lr,
+    .get_pending_from_lr = gicv2_get_pending_from_lr,
     .get_num_lrs = gicv2_get_num_lrs,
-    .get_pending_vector = gicv2_get_pending_vector,
 };
 
 void gicv2_hw_interface_register() {

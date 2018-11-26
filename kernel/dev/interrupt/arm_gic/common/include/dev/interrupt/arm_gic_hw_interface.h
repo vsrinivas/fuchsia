@@ -26,8 +26,8 @@ struct arm_gic_hw_interface_ops {
     zx_status_t (*get_gicv)(paddr_t* gicv_paddr);
     uint64_t (*get_lr_from_vector)(bool hw, uint8_t prio, uint32_t vector);
     uint32_t (*get_vector_from_lr)(uint64_t lr);
+    bool (*get_pending_from_lr)(uint64_t lr);
     uint32_t (*get_num_lrs)();
-    uint32_t (*get_pending_vector)();
 };
 
 // Returns the GICH_HCR value.
@@ -75,11 +75,11 @@ uint64_t gic_get_lr_from_vector(bool hw, uint8_t prio, uint32_t vector);
 // Returns an interrupt vector based on the given list register.
 uint32_t gic_get_vector_from_lr(uint64_t lr);
 
+// Returns whether the given list register is in the pending state.
+bool gic_get_pending_from_lr(uint64_t lr);
+
 // Returns the number of list registers.
 uint32_t gic_get_num_lrs();
-
-// Returns the highest-priority interrupt vector.
-uint32_t get_pending_vector();
 
 // Registers the ops of the GIC driver initialized with HW interface layer.
 void arm_gic_hw_interface_register(const struct arm_gic_hw_interface_ops* ops);

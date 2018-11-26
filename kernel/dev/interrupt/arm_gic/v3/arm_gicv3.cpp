@@ -33,10 +33,10 @@
 #define IFRAME_PC(frame) ((frame)->elr)
 
 // values read from zbi
-static vaddr_t arm_gicv3_gic_base = 0;
-static uint64_t arm_gicv3_gicd_offset = 0;
-static uint64_t arm_gicv3_gicr_offset = 0;
-static uint64_t arm_gicv3_gicr_stride = 0;
+vaddr_t arm_gicv3_gic_base = 0;
+uint64_t arm_gicv3_gicd_offset = 0;
+uint64_t arm_gicv3_gicr_offset = 0;
+uint64_t arm_gicv3_gicr_stride = 0;
 
 //
 // IMX8M Errata: e11171: CA53: Cannot support single-core runtime wakeup

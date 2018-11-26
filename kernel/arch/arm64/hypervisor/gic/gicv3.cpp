@@ -6,6 +6,7 @@
 
 #include <arch/arm64/hypervisor/gic/el2.h>
 #include <arch/arm64/hypervisor/gic/gicv3.h>
+#include <arch/ops.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>
 #include <dev/interrupt/arm_gicv3_regs.h>
 
@@ -54,6 +55,22 @@ static uint64_t gicv3_read_gich_lr(uint32_t idx) {
 }
 
 static void gicv3_write_gich_lr(uint32_t idx, uint64_t val) {
+    if (val & ICH_LR_HARDWARE) {
+        // We are adding a physical interrupt to a list register, therefore we
+        // mark the physical interrupt as active on the physical distributor so
+        // that the guest can deactivate it directly.
+        uint32_t vector = ICH_LR_VIRTUAL_ID(val);
+        uint32_t reg = vector / 32;
+        uint32_t mask = 1u << (vector % 32);
+        // Since we use affinity routing, if this vector is associated with an
+        // SGI or PPI, we should talk to the redistributor for the current CPU.
+        if (vector < 32) {
+            cpu_num_t cpu_num = arch_curr_cpu_num();
+            GICREG(0, GICR_ISACTIVER0(cpu_num)) = mask;
+        } else {
+            GICREG(0, GICD_ISACTIVER(reg)) = mask;
+        }
+    }
     arm64_el2_gicv3_write_gich_lr(val, idx);
 }
 
@@ -62,7 +79,6 @@ static zx_status_t gicv3_get_gicv(paddr_t* gicv_paddr) {
     // We return ZX_ERR_NOT_FOUND since this API is used to get
     // address of GICV base to map it to guest
     // On GICv3 we do not need to map this region, since we use system registers
-
     return ZX_ERR_NOT_FOUND;
 }
 
@@ -79,12 +95,12 @@ static uint32_t gicv3_get_vector_from_lr(uint64_t lr) {
     return lr & ICH_LR_VIRTUAL_ID(UINT64_MAX);
 }
 
-static uint32_t gicv3_get_num_lrs() {
-    return (gicv3_read_gich_vtr() & ICH_VTR_LIST_REGS_MASK) + 1;
+static bool gicv3_get_pending_from_lr(uint64_t lr) {
+    return !(lr & ICH_LR_HARDWARE) && (lr & ICH_LR_PENDING);
 }
 
-static uint32_t gicv3_get_pending_vector() {
-    return gic_read_hppir() & ICC_HPPIR_INTID_MASK;
+static uint32_t gicv3_get_num_lrs() {
+    return (gicv3_read_gich_vtr() & ICH_VTR_LIST_REGS_MASK) + 1;
 }
 
 static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
@@ -103,8 +119,8 @@ static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
     .get_gicv = gicv3_get_gicv,
     .get_lr_from_vector = gicv3_get_lr_from_vector,
     .get_vector_from_lr = gicv3_get_vector_from_lr,
+    .get_pending_from_lr = gicv3_get_pending_from_lr,
     .get_num_lrs = gicv3_get_num_lrs,
-    .get_pending_vector = gicv3_get_pending_vector,
 };
 
 void gicv3_hw_interface_register() {
