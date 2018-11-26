@@ -40,3 +40,22 @@ test_package("audio_fidl_tests") {
     },
   ]
 }
+
+executable("loopback_test_bin") {
+  testonly = true
+  output_name = "audio_loopback_tests"
+
+  sources = [
+    "audio_fidl_tests_shared.h",
+    "audio_loopback_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.media",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+}
