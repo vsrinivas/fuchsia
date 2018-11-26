@@ -1,7 +1,0 @@
-{
-    "packages": [
-        "//garnet/bin/bluetooth/profiles/bt-a2dp-sink",
-        "//garnet/bin/bluetooth/bt-gap",
-        "//garnet/bin/bluetooth/bt-mgr"
-    ]
-}

@@ -1,0 +1,11 @@
+{
+    "imports": [
+        "garnet/packages/prod/bluetooth_hci"
+    ],
+    "packages": [
+        "//garnet/bin/bluetooth/bt-gap",
+        "//garnet/bin/bluetooth/bt-mgr",
+        "//garnet/bin/bluetooth/bt-snoop",
+        "//garnet/drivers/bluetooth/host"
+    ]
+}

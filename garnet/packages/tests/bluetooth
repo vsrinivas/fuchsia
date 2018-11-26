@@ -1,10 +1,11 @@
 {
     "imports": [
-        "garnet/packages/prod/bluetooth"
+        "garnet/packages/prod/bluetooth_core"
     ],
     "packages": [
         "//garnet/bin/bluetooth/bt-gap:bt-gap-tests",
         "//garnet/bin/bluetooth/tests:bluetooth-tests",
+        "//garnet/drivers/bluetooth/hci/fake",
         "//garnet/lib/rust/fuchsia-bluetooth:bluetooth-crate-tests"
     ]
 }
