@@ -61,6 +61,7 @@ class FXL_EXPORT StringView {
 
   // Capacity methods.
   constexpr size_t size() const { return size_; }
+  constexpr size_t length() const { return size(); }
   constexpr bool empty() const { return size_ == 0u; }
 
   // Element access methods.
