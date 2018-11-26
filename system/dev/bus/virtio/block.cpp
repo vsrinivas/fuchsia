@@ -6,6 +6,7 @@
 
 #include <ddk/debug.h>
 #include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <inttypes.h>
 #include <pretty/hexdump.h>
@@ -74,21 +75,7 @@ void BlockDevice::virtio_block_queue(void* ctx, block_op_t* bop,
     txn->pmt = ZX_HANDLE_INVALID;
     txn->completion_cb = completion_cb;
     txn->cookie = cookie;
-
-    switch (txn->op.command & BLOCK_OP_MASK) {
-    case BLOCK_OP_READ:
-        bd->QueueReadWriteTxn(txn, false);
-        break;
-    case BLOCK_OP_WRITE:
-        bd->QueueReadWriteTxn(txn, true);
-        break;
-    case BLOCK_OP_FLUSH:
-        // TODO: this should complete after any in-flight IO and before any later IO begins.
-        bd->txn_complete(txn, ZX_OK);
-        break;
-    default:
-        bd->txn_complete(txn, ZX_ERR_NOT_SUPPORTED);
-    }
+    bd->SignalWorker(txn);
 }
 
 zx_status_t BlockDevice::virtio_block_ioctl(void* ctx, uint32_t op, const void* in_buf,
@@ -114,15 +101,22 @@ zx_status_t BlockDevice::virtio_block_ioctl(void* ctx, uint32_t op, const void* 
     }
 }
 
+void BlockDevice::virtio_block_unbind(void* ctx) {
+    BlockDevice* bd = static_cast<BlockDevice*>(ctx);
+    bd->Unbind();
+}
+
+void BlockDevice::virtio_block_release(void* ctx) {
+    fbl::unique_ptr<BlockDevice> bd(static_cast<BlockDevice*>(ctx));
+    bd->Release();
+}
+
 BlockDevice::BlockDevice(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend)
     : Device(bus_device, std::move(bti), std::move(backend)) {
     sync_completion_reset(&txn_signal_);
+    sync_completion_reset(&worker_signal_);
 
     memset(&blk_req_buf_, 0, sizeof(blk_req_buf_));
-}
-
-BlockDevice::~BlockDevice() {
-    io_buffer_release(&blk_req_buf_);
 }
 
 zx_status_t BlockDevice::Init() {
@@ -164,6 +158,7 @@ zx_status_t BlockDevice::Init() {
         zxlogf(ERROR, "cannot alloc blk_req buffers %d\n", status);
         return status;
     }
+    auto cleanup = fbl::MakeAutoCall([this]() { io_buffer_release(&blk_req_buf_); });
     blk_req_ = static_cast<virtio_blk_req_t*>(io_buffer_virt(&blk_req_buf_));
 
     LTRACEF("allocated blk request at %p, physical address %#" PRIxPTR "\n", blk_req_,
@@ -179,9 +174,21 @@ zx_status_t BlockDevice::Init() {
     StartIrqThread();
     DriverStatusOk();
 
+    auto thread_entry = [](void* ctx) {
+        auto bd = static_cast<BlockDevice*>(ctx);
+        bd->WorkerThread();
+        return ZX_OK;
+    };
+    int ret = thrd_create_with_name(&worker_thread_, thread_entry, this, "virtio-block-worker");
+    if (ret != thrd_success) {
+        return ZX_ERR_INTERNAL;
+    }
+
     // Initialize and publish the zx_device.
     device_ops_.get_size = &virtio_block_get_size;
     device_ops_.ioctl = &virtio_block_ioctl;
+    device_ops_.unbind = &virtio_block_unbind;
+    device_ops_.release = &virtio_block_release;
 
     block_ops_.query = &virtio_block_query;
     block_ops_.queue = &virtio_block_queue;
@@ -200,7 +207,21 @@ zx_status_t BlockDevice::Init() {
         return status;
     }
 
+    cleanup.cancel();
     return ZX_OK;
+}
+
+void BlockDevice::Release() {
+    thrd_join(worker_thread_, nullptr);
+    io_buffer_release(&blk_req_buf_);
+    Device::Release();
+}
+
+void BlockDevice::Unbind() {
+    worker_shutdown_.store(true);
+    sync_completion_signal(&worker_signal_);
+    sync_completion_signal(&txn_signal_);
+    Device::Unbind();
 }
 
 void BlockDevice::IrqRingUpdate() {
@@ -232,34 +253,27 @@ void BlockDevice::IrqRingUpdate() {
             }
         }
 
-        bool need_signal = false;
         bool need_complete = false;
         block_txn_t* txn = nullptr;
         {
             fbl::AutoLock lock(&txn_lock_);
 
             // Search our pending txn list to see if this completes it.
-            list_for_every_entry (&txn_list_, txn, block_txn_t, node) {
+            list_for_every_entry(&pending_txn_list_, txn, block_txn_t, node) {
                 if (txn->desc == head_desc) {
                     LTRACEF("completes txn %p\n", txn);
-                    free_blk_req((unsigned int)txn->index);
+                    free_blk_req(txn->index);
                     list_delete(&txn->node);
 
                     // We will do this outside of the lock.
                     need_complete = true;
 
-                    // Check to see if QueueTxn is waiting on resources becoming available.
-                    if ((need_signal = txn_wait_)) {
-                        txn_wait_ = false;
-                    }
+                    sync_completion_signal(&txn_signal_);
                     break;
                 }
             }
         }
 
-        if (need_signal) {
-            sync_completion_signal(&txn_signal_);
-        }
         if (need_complete) {
             txn_complete(txn, ZX_OK);
         }
@@ -273,9 +287,8 @@ void BlockDevice::IrqConfigChange() {
     LTRACE_ENTRY;
 }
 
-zx_status_t BlockDevice::QueueTxn(block_txn_t* txn, bool write, size_t bytes, uint64_t* pages,
+zx_status_t BlockDevice::QueueTxn(block_txn_t* txn, uint32_t type, size_t bytes, zx_paddr_t* pages,
                                   size_t pagecount, uint16_t* idx) {
-
     size_t index;
     {
         fbl::AutoLock lock(&txn_lock_);
@@ -287,16 +300,19 @@ zx_status_t BlockDevice::QueueTxn(block_txn_t* txn, bool write, size_t bytes, ui
     }
 
     auto req = &blk_req_[index];
-    req->type = write ? VIRTIO_BLK_T_OUT : VIRTIO_BLK_T_IN;
+    req->type = type;
     req->ioprio = 0;
-    req->sector = txn->op.rw.offset_dev;
+    if (type == VIRTIO_BLK_T_FLUSH) {
+        req->sector = 0;
+    } else {
+        req->sector = txn->op.rw.offset_dev;
+    }
     LTRACEF("blk_req type %u ioprio %u sector %" PRIu64 "\n", req->type, req->ioprio, req->sector);
 
     // Save the request index so we can free it when we complete the transfer.
     txn->index = index;
 
     LTRACEF("page count %lu\n", pagecount);
-    assert(pagecount > 0);
 
     // Put together a transfer.
     uint16_t i;
@@ -344,7 +360,7 @@ zx_status_t BlockDevice::QueueTxn(block_txn_t* txn, bool write, size_t bytes, ui
         LTRACEF("pa %#lx, len %#x\n", desc->addr, desc->len);
 
         // Mark buffer as write-only if its a block read.
-        if (!write) {
+        if (type == VIRTIO_BLK_T_IN) {
             desc->flags |= VRING_DESC_F_WRITE;
         }
 
@@ -364,85 +380,211 @@ zx_status_t BlockDevice::QueueTxn(block_txn_t* txn, bool write, size_t bytes, ui
     return ZX_OK;
 }
 
-void BlockDevice::QueueReadWriteTxn(block_txn_t* txn, bool write) {
-    LTRACEF("txn %p, command %#x\n", txn, txn->op.command);
-
-    fbl::AutoLock lock(&lock_);
-
-    txn->op.rw.offset_vmo *= config_.blk_size;
-
-    // Transaction must fit within device.
-    if ((txn->op.rw.offset_dev >= config_.capacity) ||
-        (config_.capacity - txn->op.rw.offset_dev < txn->op.rw.length)) {
-        LTRACEF("request beyond the end of the device!\n");
-        txn_complete(txn, ZX_ERR_OUT_OF_RANGE);
-        return;
-    }
-
-    if (txn->op.rw.length == 0) {
-        txn_complete(txn, ZX_OK);
-        return;
-    }
-
-    size_t bytes = txn->op.rw.length * config_.blk_size;
-
+static zx_status_t pin_pages(zx_handle_t bti, block_txn_t* txn, size_t bytes, zx_paddr_t* pages,
+                             size_t* num_pages) {
     uint64_t suboffset = txn->op.rw.offset_vmo & PAGE_MASK;
     uint64_t aligned_offset = txn->op.rw.offset_vmo & ~PAGE_MASK;
     size_t pin_size = ROUNDUP(suboffset + bytes, PAGE_SIZE);
-    size_t num_pages = pin_size / PAGE_SIZE;
-    if (num_pages > MAX_SCATTER) {
+    *num_pages = pin_size / PAGE_SIZE;
+    if (*num_pages > MAX_SCATTER) {
         TRACEF("virtio: transaction too large\n");
-        txn_complete(txn, ZX_ERR_INVALID_ARGS);
-        return;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     zx_handle_t vmo = txn->op.rw.vmo;
-    uint64_t pages[MAX_SCATTER];
-    zx_status_t r;
-    if ((r = zx_bti_pin(bti_.get(), ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE, vmo, aligned_offset,
-                        pin_size, pages, num_pages, &txn->pmt)) != ZX_OK) {
-        TRACEF("virtio: could not pin pages\n");
-        txn_complete(txn, ZX_ERR_INTERNAL);
-        return;
+    zx_status_t status;
+    if ((status = zx_bti_pin(bti, ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE, vmo, aligned_offset,
+                             pin_size, pages, *num_pages, &txn->pmt)) != ZX_OK) {
+        TRACEF("virtio: could not pin pages %d\n", status);
+        return ZX_ERR_INTERNAL;
     }
 
     pages[0] += suboffset;
+    return ZX_OK;
+}
 
-    bool cannot_fail = false;
-
-    for (;;) {
-        uint16_t idx;
-
-        // Attempt to setup hw txn.
-        zx_status_t status = QueueTxn(txn, write, bytes, pages, num_pages, &idx);
-        if (status == ZX_OK) {
-            fbl::AutoLock lock(&txn_lock_);
-            list_add_tail(&txn_list_, &txn->node);
-            vring_.SubmitChain(idx);
-            vring_.Kick();
+void BlockDevice::SignalWorker(block_txn_t* txn) {
+    switch (txn->op.command & BLOCK_OP_MASK) {
+    case BLOCK_OP_READ:
+    case BLOCK_OP_WRITE:
+        // Transaction must fit within device.
+        if ((txn->op.rw.offset_dev >= config_.capacity) ||
+            (config_.capacity - txn->op.rw.offset_dev < txn->op.rw.length)) {
+            LTRACEF("request beyond the end of the device!\n");
+            txn_complete(txn, ZX_ERR_OUT_OF_RANGE);
             return;
+        }
+
+        if (txn->op.rw.length == 0) {
+            txn_complete(txn, ZX_OK);
+            return;
+        }
+        LTRACEF("txn %p, command %#x\n", txn, txn->op.command);
+        break;
+    case BLOCK_OP_FLUSH:
+        LTRACEF("txn %p, command FLUSH\n", txn);
+        break;
+    default:
+        txn_complete(txn, ZX_ERR_NOT_SUPPORTED);
+        return;
+    }
+
+    fbl::AutoLock lock(&lock_);
+    if (worker_shutdown_.load()) {
+        txn_complete(txn, ZX_ERR_IO_NOT_PRESENT);
+        return;
+    }
+    list_add_tail(&worker_txn_list_, &txn->node);
+    sync_completion_signal(&worker_signal_);
+}
+
+void BlockDevice::WorkerThread() {
+    auto cleanup = fbl::MakeAutoCall([this]() { CleanupPendingTxns(); });
+    block_txn_t* txn = nullptr;
+    for (;;) {
+        if (worker_shutdown_.load()) {
+            return;
+        }
+
+        // Pull a txn off the list or wait to be signaled.
+        {
+            fbl::AutoLock lock(&lock_);
+            txn = list_remove_head_type(&worker_txn_list_, block_txn_t, node);
+        }
+        if (!txn) {
+            sync_completion_wait(&worker_signal_, ZX_TIME_INFINITE);
+            sync_completion_reset(&worker_signal_);
+            continue;
+        }
+
+        LTRACEF("WorkerThread handling txn %p\n", txn);
+
+        uint32_t type;
+        bool do_flush = false;
+        size_t bytes;
+        zx_paddr_t pages[MAX_SCATTER];
+        size_t num_pages;
+        zx_status_t status = ZX_OK;
+
+        if ((txn->op.command & BLOCK_OP_MASK) == BLOCK_OP_FLUSH) {
+            type = VIRTIO_BLK_T_FLUSH;
+            bytes = 0;
+            num_pages = 0;
+            do_flush = true;
         } else {
-            if (cannot_fail) {
-                TRACEF("virtio-block: failed to queue txn to hw: %d\n", status);
-                txn_complete(txn, status);
-                return;
-            }
-
-            fbl::AutoLock lock(&txn_lock_);
-
-            if (list_is_empty(&txn_list_)) {
-                // We hold the queue lock and the list is empty, if we fail this time around there's
-                // no point in trying again.
-                cannot_fail = true;
-                continue;
+            if ((txn->op.command & BLOCK_OP_MASK) == BLOCK_OP_WRITE) {
+                type = VIRTIO_BLK_T_OUT;
             } else {
-                // Let the completer know we need to wake up.
-                txn_wait_ = true;
+                type = VIRTIO_BLK_T_IN;
+            }
+            txn->op.rw.offset_vmo *= config_.blk_size;
+            bytes = txn->op.rw.length * config_.blk_size;
+            status = pin_pages(bti_.get(), txn, bytes, pages, &num_pages);
+        }
+
+        if (status != ZX_OK) {
+            txn_complete(txn, status);
+            continue;
+        }
+
+        // A flush operation should complete after any inflight transactions, so wait for all
+        // pending txns to complete before submitting a flush txn. This is necessary because
+        // a virtio block device may service requests in any order.
+        if (do_flush) {
+            FlushPendingTxns();
+            if (worker_shutdown_.load()) {
+                return;
             }
         }
 
+        bool cannot_fail = false;
+        for (;;) {
+            uint16_t idx;
+            status = QueueTxn(txn, type, bytes, pages, num_pages, &idx);
+            if (status == ZX_OK) {
+                fbl::AutoLock lock(&txn_lock_);
+                list_add_tail(&pending_txn_list_, &txn->node);
+                vring_.SubmitChain(idx);
+                vring_.Kick();
+                LTRACEF("WorkerThread submitted txn %p\n", txn);
+                break;
+            }
+
+            if (cannot_fail) {
+                TRACEF("virtio-block: failed to queue txn to hw: %d\n", status);
+                {
+                    fbl::AutoLock lock(&txn_lock_);
+                    free_blk_req(txn->index);
+                }
+                txn_complete(txn, status);
+                break;
+            }
+
+            {
+                fbl::AutoLock lock(&txn_lock_);
+                if (list_is_empty(&pending_txn_list_)) {
+                    // We hold the txn lock and the list is empty, if we fail this time around
+                    // there's no point in trying again.
+                    cannot_fail = true;
+                    continue;
+                }
+
+                // Reset the txn signal then wait for one of the pending txns to complete
+                // outside the lock. This should mean that resources have been freed for the next
+                // iteration. We cannot deadlock due to the reset because pending_txn_list_ is not
+                // empty.
+                sync_completion_reset(&txn_signal_);
+            }
+
+            sync_completion_wait(&txn_signal_, ZX_TIME_INFINITE);
+            if (worker_shutdown_.load()) {
+                return;
+            }
+        }
+
+        // A flush operation should complete before any subsequent transactions. So, we wait for all
+        // pending transactions (including the flush) to complete before continuing.
+        if (do_flush) {
+            FlushPendingTxns();
+        }
+    }
+}
+
+void BlockDevice::FlushPendingTxns() {
+    for (;;) {
+        {
+            fbl::AutoLock lock(&txn_lock_);
+            if (list_is_empty(&pending_txn_list_)) {
+                return;
+            }
+            sync_completion_reset(&txn_signal_);
+        }
         sync_completion_wait(&txn_signal_, ZX_TIME_INFINITE);
-        sync_completion_reset(&txn_signal_);
+        if (worker_shutdown_.load()) {
+            return;
+        }
+    }
+}
+
+void BlockDevice::CleanupPendingTxns() {
+    // Virtio specification 3.3.1 Driver Requirements: Device Cleanup
+    // A driver MUST ensure a virtqueue isn’t live (by device reset) before removing exposed
+    // buffers.
+    DeviceReset();
+    block_txn_t* txn = nullptr;
+    block_txn_t* temp_entry = nullptr;
+    {
+        fbl::AutoLock lock(&lock_);
+        list_for_every_entry_safe(&worker_txn_list_, txn, temp_entry, block_txn_t, node) {
+            list_delete(&txn->node);
+            txn_complete(txn, ZX_ERR_IO_NOT_PRESENT);
+        }
+    }
+    fbl::AutoLock lock(&txn_lock_);
+    list_for_every_entry_safe(&pending_txn_list_, txn, temp_entry, block_txn_t, node) {
+        free_blk_req(txn->index);
+        list_delete(&txn->node);
+        txn_complete(txn, ZX_ERR_IO_NOT_PRESENT);
     }
 }
 

@@ -7,6 +7,7 @@
 #include "device.h"
 #include "ring.h"
 
+#include <atomic>
 #include <stdlib.h>
 #include <zircon/compiler.h>
 
@@ -34,9 +35,10 @@ class Ring;
 class BlockDevice : public Device {
 public:
     BlockDevice(zx_device_t* device, zx::bti bti, fbl::unique_ptr<Backend> backend);
-    virtual ~BlockDevice();
 
     virtual zx_status_t Init() override;
+    virtual void Release() override;
+    virtual void Unbind() override;
 
     virtual void IrqRingUpdate() override;
     virtual void IrqConfigChange() override;
@@ -56,11 +58,18 @@ private:
     static void virtio_block_queue(void* ctx, block_op_t* bop,
                                    block_impl_queue_callback completion_cb, void* cookie);
 
+    static void virtio_block_unbind(void* ctx);
+    static void virtio_block_release(void* ctx);
+
     void GetInfo(block_info_t* info);
 
-    zx_status_t QueueTxn(block_txn_t* txn, bool write, size_t bytes, uint64_t* pages,
+    void SignalWorker(block_txn_t* txn);
+    void WorkerThread();
+    void FlushPendingTxns();
+    void CleanupPendingTxns();
+
+    zx_status_t QueueTxn(block_txn_t* txn, uint32_t type, size_t bytes, uint64_t* pages,
                          size_t pagecount, uint16_t* idx);
-    void QueueReadWriteTxn(block_txn_t* txn, bool write);
 
     void txn_complete(block_txn_t* txn, zx_status_t status);
 
@@ -99,11 +108,16 @@ private:
 
     void free_blk_req(size_t i) { blk_req_bitmap_ &= ~(1 << i); }
 
-    // Pending iotxns and waiter state.
+    // Pending txns and completion signal.
     fbl::Mutex txn_lock_;
-    list_node txn_list_ = LIST_INITIAL_VALUE(txn_list_);
-    bool txn_wait_ = false;
+    list_node pending_txn_list_ = LIST_INITIAL_VALUE(pending_txn_list_);
     sync_completion_t txn_signal_;
+
+    // Worker state.
+    thrd_t worker_thread_;
+    list_node worker_txn_list_ = LIST_INITIAL_VALUE(worker_txn_list_);
+    sync_completion_t worker_signal_;
+    std::atomic_bool worker_shutdown_ = false;
 
     block_impl_protocol_ops_t block_ops_ = {};
 };
