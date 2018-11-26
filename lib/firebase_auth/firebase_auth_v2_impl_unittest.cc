@@ -26,8 +26,8 @@ class MockCobaltLogger : public cobalt::CobaltLogger {
 
   MockCobaltLogger(int* called) : called_(called) {}
 
-  void LogEvent(uint32_t metric_id, uint32_t event_type_index) override {}
-  void LogEventCount(uint32_t metric_id, uint32_t event_type_index,
+  void LogEvent(uint32_t metric_id, uint32_t event_code) override {}
+  void LogEventCount(uint32_t metric_id, uint32_t event_code,
                      const std::string& component, zx::duration period_duration,
                      int64_t count) override {
     EXPECT_EQ(4u, metric_id);
@@ -35,22 +35,21 @@ class MockCobaltLogger : public cobalt::CobaltLogger {
     EXPECT_TRUE(component.find("firebase-test") != std::string::npos);
     *called_ += 1;
   }
-  void LogElapsedTime(uint32_t metric_id, uint32_t event_type_index,
+  void LogElapsedTime(uint32_t metric_id, uint32_t event_code,
                       const std::string& component,
                       zx::duration elapsed_time) override {}
-  void LogFrameRate(uint32_t metric_id, uint32_t event_type_index,
+  void LogFrameRate(uint32_t metric_id, uint32_t event_code,
                     const std::string& component, float fps) override {}
-  void LogMemoryUsage(uint32_t metric_id, uint32_t event_type_index,
+  void LogMemoryUsage(uint32_t metric_id, uint32_t event_code,
                       const std::string& component, int64_t bytes) override {}
   void LogString(uint32_t metric_id, const std::string& s) override {}
-  void StartTimer(uint32_t metric_id, uint32_t event_type_index,
+  void StartTimer(uint32_t metric_id, uint32_t event_code,
                   const std::string& component, const std::string& timer_id,
                   zx::time timestamp, zx::duration timeout) override {}
   void EndTimer(const std::string& timer_id, zx::time timestamp,
                 zx::duration timeout) override {}
   void LogIntHistogram(
-      uint32_t metric_id, uint32_t event_type_index,
-      const std::string& component,
+      uint32_t metric_id, uint32_t event_code, const std::string& component,
       std::vector<fuchsia::cobalt::HistogramBucket> histogram) override {}
   void LogCustomEvent(
       uint32_t metric_id,
