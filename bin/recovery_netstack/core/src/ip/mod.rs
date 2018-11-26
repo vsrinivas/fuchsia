@@ -46,8 +46,8 @@ fn dispatch_receive_ip_packet<D: EventDispatcher, I: IpAddr, B: AsRef<[u8]> + As
 ) -> bool {
     increment_counter!(ctx, "dispatch_receive_ip_packet");
     match proto {
-        IpProto::Icmp => icmp::receive_icmp_packet(ctx, src_ip, dst_ip, buffer),
-        _ => crate::transport::receive_ip_packet(ctx, src_ip, dst_ip, proto, buffer),
+        IpProto::Icmp | IpProto::Icmpv6 => icmp::receive_icmp_packet(ctx, src_ip, dst_ip, buffer),
+        IpProto::Tcp | IpProto::Udp => crate::transport::receive_ip_packet(ctx, src_ip, dst_ip, proto, buffer),
     }
 }
 
