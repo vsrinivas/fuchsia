@@ -35,19 +35,18 @@
 
 #if defined(CUBE_USE_IMAGE_PIPE)
 #include <fuchsia/ui/gfx/cpp/fidl.h>
-
 #include <lib/async-loop/cpp/loop.h>
 
-#include "lib/component/cpp/connect.h"
-#include "lib/component/cpp/startup_context.h"
+#include "garnet/lib/vulkan/tests/vkcube/vkcube_view.h"  // nogncheck
+#include "lib/component/cpp/connect.h"                   // nogncheck
+#include "lib/component/cpp/startup_context.h"           // nogncheck
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings.h"
 #include "lib/fxl/logging.h"
-#include "lib/ui/base_view/cpp/view_provider_component.h"
-#include "lib/ui/scenic/cpp/commands.h"
-#include "lib/ui/scenic/cpp/resources.h"
-#include "lib/ui/scenic/cpp/session.h"
-#include "vkcube_view.h"
+#include "lib/ui/base_view/cpp/view_provider_component.h"  // nogncheck
+#include "lib/ui/scenic/cpp/commands.h"                    // nogncheck
+#include "lib/ui/scenic/cpp/resources.h"                   // nogncheck
+#include "lib/ui/scenic/cpp/session.h"                     // nogncheck
 #endif  // defined(CUBE_USE_IMAGE_PIPE)
 
 #include "linmath.h"

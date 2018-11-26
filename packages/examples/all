@@ -18,6 +18,7 @@
         "garnet/packages/examples/tcp",
         "garnet/packages/examples/vkcube",
         "garnet/packages/examples/vkcube_on_scenic",
+        "garnet/packages/examples/vkcube_on_fb",
         "garnet/packages/examples/vulkaninfo"
     ]
 }

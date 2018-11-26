@@ -949,7 +949,7 @@ void demo_prepare_depth(struct demo* demo) {
   assert(!err);
 }
 
-#include "magma.ppm.h"
+#include "garnet/lib/vulkan/tests/vkcube/magma.ppm.h"
 
 /* Load a ppm file into memory */
 bool loadTextureRGBA(const char* filename, uint8_t* rgba_data,
@@ -2167,7 +2167,7 @@ static void demo_create_xcb_window(struct demo* demo) {
 // VK_USE_PLATFORM_XCB_KHR
 #endif
 
-#if defined(VK_USE_PLATFORM_MAGMA_KHR)
+#if defined(CUBE_USE_IMAGE_PIPE)
 static void demo_update_magma_one_frame(struct demo* demo) {
   static constexpr float kMsPerSec =
       std::chrono::milliseconds(std::chrono::seconds(1)).count();
@@ -2367,6 +2367,29 @@ static void demo_init_vk(struct demo* demo) {
     free(instance_extensions);
   }
 
+  if (!platformSurfaceExtFound) {
+    uint32_t count;
+    const char* kFbLayer = "VK_LAYER_GOOGLE_image_pipe_swapchain_fb";
+    VkResult result =
+        vkEnumerateInstanceExtensionProperties(kFbLayer, &count, NULL);
+    if (result == VK_SUCCESS && count > 0) {
+      VkExtensionProperties* extensions =
+          reinterpret_cast<VkExtensionProperties*>(
+              malloc(sizeof(VkExtensionProperties) * count));
+      result =
+          vkEnumerateInstanceExtensionProperties(kFbLayer, &count, extensions);
+      for (uint32_t i = 0; i < count; i++) {
+        if (!strcmp(VK_KHR_MAGMA_SURFACE_EXTENSION_NAME,
+                    extensions[i].extensionName)) {
+          platformSurfaceExtFound = 1;
+          demo->extension_names[demo->enabled_extension_count++] =
+              VK_KHR_MAGMA_SURFACE_EXTENSION_NAME;
+          demo->enabled_layers[demo->enabled_layer_count++] = kFbLayer;
+        }
+      }
+    }
+  }
+
   if (!surfaceExtFound) {
     ERR_EXIT(
         "vkEnumerateInstanceExtensionProperties failed to find "
@@ -2425,7 +2448,7 @@ static void demo_init_vk(struct demo* demo) {
       .pNext = NULL,
       .pApplicationInfo = &app,
       .enabledLayerCount = demo->enabled_layer_count,
-      .ppEnabledLayerNames = (const char* const*)instance_validation_layers,
+      .ppEnabledLayerNames = (const char* const*)demo->enabled_layers,
       .enabledExtensionCount = demo->enabled_extension_count,
       .ppEnabledExtensionNames = (const char* const*)demo->extension_names,
   };
@@ -2961,6 +2984,8 @@ void demo_init(struct demo* demo, int argc, char** argv) {
   // to Vulkan orientation.
 }
 
+#if defined(VK_USE_PLATFORM_MAGMA_KHR)
+
 #if defined(CUBE_USE_IMAGE_PIPE)
 
 void demo_run_image_pipe(struct demo* demo, int argc, char** argv) {
@@ -3002,7 +3027,44 @@ void demo_run_image_pipe(struct demo* demo, int argc, char** argv) {
   }
 }
 
+#else
+
+static void demo_run_magma(struct demo* demo) {
+  uint32_t num_frames = 60;
+  uint32_t elapsed_frames = 0;
+  static const float kMsPerSec =
+      std::chrono::milliseconds(std::chrono::seconds(1)).count();
+
+  float total_ms = 0;
+  auto t0 = std::chrono::high_resolution_clock::now();
+
+  while (!demo->quit) {
+    demo_update_data_buffer(demo);
+
+    auto t1 = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> elapsed = t1 - t0;
+    total_ms += elapsed.count();
+    t0 = t1;
+
+    if (elapsed_frames && (elapsed_frames % num_frames) == 0) {
+      float fps = num_frames / (total_ms / kMsPerSec);
+      printf("Framerate average for last %u frames: %f frames per second\n",
+             num_frames, fps);
+      total_ms = 0;
+      // attempt to log once per second
+      num_frames = fps;
+      elapsed_frames = 0;
+    }
+
+    demo_draw(demo);
+    demo->curFrame++;
+    elapsed_frames++;
+    if (demo->frameCount != INT32_MAX && demo->curFrame == demo->frameCount)
+      demo->quit = true;
+  }
+}
 #endif  // defined(CUBE_USE_IMAGE_PIPE)
+#endif  // VK_USE_PLATFORM_MAGMA_KHR
 
 int cube_main(int argc, char** argv) {
   struct demo demo;

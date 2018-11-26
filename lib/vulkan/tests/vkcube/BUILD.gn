@@ -6,33 +6,17 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 
 executable("vkcube_on_scenic") {
   sources = [
-    "main.cc",
-  ]
-  deps = [
-    ":vkcube_common",
-  ]
-}
-
-config("test_vk_cube") {
-  include_dirs = [ "." ]
-}
-
-source_set("vkcube_common") {
-  public_configs = [ ":test_vk_cube" ]
-
-  defines = [
-    "VK_USE_PLATFORM_MAGMA_KHR",
-    "CUBE_USE_IMAGE_PIPE",
-  ]
-
-  sources = [
     "//garnet/lib/vulkan/third_party/vkcube/cube.cc",
     "//garnet/lib/vulkan/third_party/vkcube/cube.h",
+    "main.cc",
     "test_vk_cube.h",
     "vkcube_view.cc",
     "vkcube_view.h",
   ]
-
+  defines = [
+    "VK_USE_PLATFORM_MAGMA_KHR",
+    "CUBE_USE_IMAGE_PIPE",
+  ]
   deps = [
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:trace",
@@ -48,7 +32,26 @@ source_set("vkcube_common") {
     "//garnet/public/lib/ui/scenic/cpp",
     "//garnet/public/lib/vulkan",
   ]
+  public_deps = [
+    "//zircon/public/lib/fit",
+  ]
+}
 
+executable("vkcube_on_fb") {
+  sources = [
+    "//garnet/lib/vulkan/third_party/vkcube/cube.cc",
+    "//garnet/lib/vulkan/third_party/vkcube/cube.h",
+    "main.cc",
+    "test_vk_cube.h",
+  ]
+  defines = [ "VK_USE_PLATFORM_MAGMA_KHR" ]
+  deps = [
+    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util/platform:trace",
+    "$zircon_build_root/public/lib/trace-provider",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/vulkan",
+  ]
   public_deps = [
     "//zircon/public/lib/fit",
   ]
