@@ -38,6 +38,7 @@
 #include <third_party/crashpad/util/net/http_multipart_builder.h>
 #include <third_party/crashpad/util/net/http_transport.h>
 #include <third_party/crashpad/util/net/url.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
@@ -107,7 +108,7 @@ std::string GetPackageName(const zx::process& process) {
 
 }  // namespace
 
-int CrashpadAnalyzerImpl::UploadReport(
+zx_status_t CrashpadAnalyzerImpl::UploadReport(
     std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> report,
     const std::map<std::string, std::string>& annotations) {
   // We have to build the MIME multipart message ourselves as all the public
@@ -144,14 +145,14 @@ int CrashpadAnalyzerImpl::UploadReport(
         crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
     FX_LOGS(ERROR) << "error uploading local crash report, ID "
                    << report->uuid.ToString();
-    return EXIT_FAILURE;
+    return ZX_ERR_INTERNAL;
   }
   database_->RecordUploadComplete(std::move(report), server_report_id);
   FX_LOGS(INFO) << "successfully uploaded crash report at "
                    "https://crash.corp.google.com/"
                 << server_report_id;
 
-  return EXIT_SUCCESS;
+  return ZX_OK;
 }
 
 std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport>
@@ -168,9 +169,8 @@ CrashpadAnalyzerImpl::GetUploadReport(const crashpad::UUID& local_report_id) {
   return report;
 }
 
-int CrashpadAnalyzerImpl::HandleNativeException(zx::process process,
-                                                zx::thread thread,
-                                                zx::port exception_port) {
+zx_status_t CrashpadAnalyzerImpl::HandleNativeException(
+    zx::process process, zx::thread thread, zx::port exception_port) {
   inspector_print_debug_info(process.get(), thread.get());
 
   const std::string package_name = GetPackageName(process);
@@ -204,14 +204,14 @@ int CrashpadAnalyzerImpl::HandleNativeException(zx::process process,
         crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
     FX_LOGS(ERROR) << "error handling exception for local crash report, ID "
                    << local_report_id.ToString();
-    return EXIT_FAILURE;
+    return ZX_ERR_INTERNAL;
   }
 
   // Read local crash report as an "upload" report.
   std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> report =
       GetUploadReport(local_report_id);
   if (!report) {
-    return EXIT_FAILURE;
+    return ZX_ERR_INTERNAL;
   }
 
   // For userspace, we read back the annotations from the minidump instead of
@@ -226,7 +226,7 @@ int CrashpadAnalyzerImpl::HandleNativeException(zx::process process,
         crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
     FX_LOGS(ERROR) << "error processing minidump for local crash report, ID "
                    << local_report_id.ToString();
-    return EXIT_FAILURE;
+    return ZX_ERR_INTERNAL;
   }
   const std::map<std::string, std::string> augmented_annotations =
       crashpad::BreakpadHTTPFormParametersFromMinidump(
@@ -237,13 +237,13 @@ int CrashpadAnalyzerImpl::HandleNativeException(zx::process process,
         crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
     FX_LOGS(ERROR) << "error processing minidump for local crash report, ID "
                    << local_report_id.ToString();
-    return EXIT_FAILURE;
+    return ZX_ERR_INTERNAL;
   }
 
   return UploadReport(std::move(report), annotations);
 }
 
-int CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
+zx_status_t CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
     fuchsia::mem::Buffer crashlog) {
   FX_LOGS(INFO) << "generating crash report for previous kernel panic";
 
@@ -255,7 +255,7 @@ int CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
   if (database_status != crashpad::CrashReportDatabase::kNoError) {
     FX_LOGS(ERROR) << "error creating local crash report (" << database_status
                    << ")";
-    return EXIT_FAILURE;
+    return ZX_ERR_INTERNAL;
   }
 
   // Prepare annotations and attachments.
@@ -263,15 +263,15 @@ int CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
       MakeAnnotations(/*package_name=*/"kernel");
   crashpad::FileWriter* writer = report->AddAttachment("log");
   if (!writer) {
-    return EXIT_FAILURE;
+    return ZX_ERR_INTERNAL;
   }
   // TODO(frousseau): make crashpad::FileWriter VMO-aware.
   std::unique_ptr<void, decltype(&free)> buffer(malloc(crashlog.size), &free);
   zx_status_t status = crashlog.vmo.read(buffer.get(), 0u, crashlog.size);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "error writing VMO crashlog to buffer: "
+    FX_LOGS(ERROR) << "error writing kernel panic crashlog to buffer: "
                    << zx_status_get_string(status);
-    return EXIT_FAILURE;
+    return ZX_ERR_INTERNAL;
   }
   writer->Write(buffer.get(), crashlog.size);
 
@@ -282,14 +282,14 @@ int CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
   if (database_status != crashpad::CrashReportDatabase::kNoError) {
     FX_LOGS(ERROR) << "error writing local crash report (" << database_status
                    << ")";
-    return EXIT_FAILURE;
+    return ZX_ERR_INTERNAL;
   }
 
   // Read local crash report as an "upload" report and upload it.
   std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport>
       upload_report = GetUploadReport(local_report_id);
   if (!upload_report) {
-    return EXIT_FAILURE;
+    return ZX_ERR_INTERNAL;
   }
   return UploadReport(std::move(upload_report), annotations);
 }
@@ -303,13 +303,12 @@ CrashpadAnalyzerImpl::CrashpadAnalyzerImpl(
 void CrashpadAnalyzerImpl::HandleNativeException(
     zx::process process, zx::thread thread, zx::port exception_port,
     HandleNativeExceptionCallback callback) {
-  // TODO(DX-653): we should return a more meaningful status depending on
-  // the handling.
-  callback(ZX_OK);
-  if (HandleNativeException(std::move(process), std::move(thread),
-                            std::move(exception_port)) != EXIT_SUCCESS) {
-    FX_LOGS(ERROR) << "failed to handle exception. Won't retry.";
+  const zx_status_t status = HandleNativeException(
+      std::move(process), std::move(thread), std::move(exception_port));
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "failed to handle native exception. Won't retry.";
   }
+  callback(status);
 }
 
 void CrashpadAnalyzerImpl::HandleManagedRuntimeException(
@@ -323,12 +322,11 @@ void CrashpadAnalyzerImpl::HandleManagedRuntimeException(
 void CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
     fuchsia::mem::Buffer crashlog,
     ProcessKernelPanicCrashlogCallback callback) {
-  // TODO(DX-653): we should return a more meaningful status depending on
-  // the handling.
-  callback(ZX_OK);
-  if (ProcessKernelPanicCrashlog(std::move(crashlog)) != EXIT_SUCCESS) {
-    FX_LOGS(ERROR) << "failed to process VMO crashlog. Won't retry.";
+  const zx_status_t status = ProcessKernelPanicCrashlog(std::move(crashlog));
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "failed to process kernel panic crashlog. Won't retry.";
   }
+  callback(status);
 }
 
 std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate() {

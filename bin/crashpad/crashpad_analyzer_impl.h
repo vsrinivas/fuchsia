@@ -17,6 +17,7 @@
 #include <lib/zx/thread.h>
 #include <third_party/crashpad/client/crash_report_database.h>
 #include <third_party/crashpad/util/misc/uuid.h>
+#include <zircon/status.h>
 
 namespace fuchsia {
 namespace crash {
@@ -45,11 +46,11 @@ class CrashpadAnalyzerImpl : public Analyzer {
   explicit CrashpadAnalyzerImpl(
       std::unique_ptr<crashpad::CrashReportDatabase> database);
 
-  int HandleNativeException(zx::process process, zx::thread thread,
-                            zx::port exception_port);
-  int ProcessKernelPanicCrashlog(fuchsia::mem::Buffer crashlog);
+  zx_status_t HandleNativeException(zx::process process, zx::thread thread,
+                                    zx::port exception_port);
+  zx_status_t ProcessKernelPanicCrashlog(fuchsia::mem::Buffer crashlog);
 
-  int UploadReport(
+  zx_status_t UploadReport(
       std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> report,
       const std::map<std::string, std::string>& annotations);
   std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport>
