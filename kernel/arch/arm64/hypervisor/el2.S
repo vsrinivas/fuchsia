@@ -155,7 +155,6 @@
 .macro guest_exit_state
     mrs x10, cntv_ctl_el0
     str x10, [x9, GS_CNTV_CTL_EL0]
-    msr cntv_ctl_el0, xzr
     mrs x10, cntv_cval_el0
     str x10, [x9, GS_CNTV_CVAL_EL0]
     mrs x10, esr_el2
