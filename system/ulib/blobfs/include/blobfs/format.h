@@ -251,6 +251,66 @@ typedef uint16_t ExtentCountType;
 // The largest number of extents which can compose a blob.
 constexpr size_t kMaxBlobExtents = std::numeric_limits<ExtentCountType>::max();
 
+// Identifies that the node is allocated.
+// Both inodes and extent containers can be allocated.
+constexpr uint16_t kBlobFlagAllocated = 0x0001;
+
+// Identifies that this node is a container for extents.
+constexpr uint16_t kBlobFlagExtentContainer = 0x0002;
+
+// The number of extents within a normal inode.
+constexpr uint32_t kInlineMaxExtents = 1;
+// The number of extents within an extent container node.
+constexpr uint32_t kContainerMaxExtents = 6;
+
+struct NodePrelude {
+    uint16_t flags;
+    uint16_t version;
+    // The next node containing this blob's extents.
+    // Zero if there are no more extents.
+    uint32_t next_node;
+
+    bool IsAllocated() const {
+        return flags & kBlobFlagAllocated;
+    }
+
+    bool IsExtentContainer() const {
+        return flags & kBlobFlagExtentContainer;
+    }
+};
+
+struct ExtentContainer;
+
+struct NewInode {
+    NodePrelude header;
+    uint8_t  merkle_root_hash[Digest::kLength];
+    uint64_t blob_size;
+
+    // The total number of Blocks used to represent this blob.
+    uint32_t block_count;
+    // The total number of Extent objects necessary to represent this blob.
+    ExtentCountType extent_count;
+    uint16_t reserved;
+    Extent extents[kInlineMaxExtents];
+
+    ExtentContainer* AsExtentContainer() {
+        return reinterpret_cast<ExtentContainer*>(this);
+    }
+};
+
+struct ExtentContainer {
+    NodePrelude header;
+    // The map index of the previous node.
+    uint32_t previous_node;
+    // The number of extents within this container.
+    ExtentCountType extent_count;
+    uint16_t reserved;
+    Extent extents[kContainerMaxExtents];
+};
+
+static_assert(sizeof(NewInode) == sizeof(ExtentContainer),
+              "Extent nodes must be as large as inodes");
+
 struct Inode {
     uint8_t  merkle_root_hash[Digest::kLength];
     uint64_t start_block;

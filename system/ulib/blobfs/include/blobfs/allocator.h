@@ -1,0 +1,199 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#pragma once
+
+#include <optional>
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stdint.h>
+
+#include <bitmap/raw-bitmap.h>
+#include <bitmap/rle-bitmap.h>
+#include <blobfs/common.h>
+#include <blobfs/extent-reserver.h>
+#include <blobfs/format.h>
+#include <blobfs/iterator/extent-iterator.h>
+#include <blobfs/node-reserver.h>
+#include <fbl/algorithm.h>
+#include <fbl/function.h>
+#include <fbl/vector.h>
+#include <fs/trace.h>
+#include <lib/fzl/resizeable-vmo-mapper.h>
+#include <lib/zx/vmo.h>
+#include <zircon/types.h>
+
+namespace blobfs {
+
+// An interface which controls actual access to the underlying storage.
+class SpaceManager {
+public:
+    virtual ~SpaceManager() = default;
+
+    virtual const Superblock& Info() const = 0;
+
+    // Adds any number of nodes to |node_map|, extending the volume if necessary.
+    virtual zx_status_t AddInodes(fzl::ResizeableVmoMapper* node_map) = 0;
+
+    // Adds space for |nblocks| blocks to |map|, extending the volume if necessary.
+    virtual zx_status_t AddBlocks(uint64_t nblocks, RawBitmap* map) = 0;
+
+    // Allocates a vmoid registering a VMO with the underlying block device.
+    virtual zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) = 0;
+
+    // Releases an allocated vmoid.
+    virtual zx_status_t DetachVmo(vmoid_t vmoid) = 0;
+};
+
+// Allocates and frees both block and node entries.
+//
+// Also maintains reservation mappings, to help in-progress allocations avoid
+// from being persisted too early.
+class Allocator : private ExtentReserver, private NodeReserver, public NodeFinder {
+public:
+    Allocator(SpaceManager* space_manager, RawBitmap block_map, fzl::ResizeableVmoMapper node_map);
+    ~Allocator();
+
+    using ExtentReserver::ReservedBlockCount;
+    using NodeReserver::ReservedNodeCount;
+
+    ////////////////
+    // blobfs::NodeFinder interface.
+    //
+    // TODO(smklein): It may be possible to convert NodeFinder from an interface
+    // to a concrete base class if we can reconcile the differences with host.
+
+    NewInode* GetNode(uint32_t ino) final;
+
+    ////////////////
+    // Other interfaces.
+
+    void SetLogging(bool enable) {
+        log_allocation_failure_ = enable;
+    }
+
+    // Returns true if [start_block, end_block) is allocated.
+    //
+    // If any blocks are unallocated, will set the optional output parameter
+    // |out_first_unset| to the first unallocated block within this range.
+    bool CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
+                              uint64_t* out_first_unset = nullptr) const;
+
+    // Resets the size of the block map based on |Info().data_block_count|.
+    //
+    // It is unsafe to call this method while any blocks are reserved.
+    zx_status_t ResetBlockMapSize();
+
+    // Resets the size of the node map based on |Info().inode_count|.
+    //
+    // It is unsafe to call this method while any nodes are reserved.
+    zx_status_t ResetNodeMapSize();
+
+    // Reads the block map and node map from underlying storage, using a
+    // blocking read transaction.
+    //
+    // It is unsafe to call this method while any nodes or blocks are reserved.
+    zx_status_t ResetFromStorage(fs::ReadTxn txn);
+
+    // Provides a read-only view into the block map.
+    const zx::vmo& GetBlockMapVmo() const;
+
+    // Provides a read-only view into the node map.
+    const zx::vmo& GetNodeMapVmo() const;
+
+    // Reserves space for blocks in memory. Does not update disk.
+    //
+    // On success, appends the (possibly non-contiguous) region of allocated
+    // blocks to |out_extents|.
+    // On failure, |out_extents| is cleared.
+    zx_status_t ReserveBlocks(uint64_t num_blocks, fbl::Vector<ReservedExtent>* out_extents);
+
+    // Marks blocks as allocated which have previously been reserved to the bitmap.
+    void MarkBlocksAllocated(const ReservedExtent& reserved_extent);
+
+    // Frees blocks which have already been allocated (in-memory).
+    //
+    // |extent| must represent a portion of the block map which has already been
+    // allocated.
+    void FreeBlocks(const Extent& extent);
+
+    // Reserves space for nodes in memory. Does not update disk.
+    //
+    // On success, appends the (possibly non-contiguous) nodes to |out_nodes|.
+    // On failure, |out_nodes| is cleared.
+    zx_status_t ReserveNodes(uint64_t num_nodes, fbl::Vector<ReservedNode>* out_nodes);
+
+    // Reserves a nodes for allocation (in-memory).
+    std::optional<ReservedNode> ReserveNode();
+
+    // Marks a reserved node by updating the node map to indicate it is an
+    // allocated inode.
+    void MarkInodeAllocated(const ReservedNode& node);
+
+    // Marks a reserved node by updating the node map to indicate it is an
+    // allocated extent container
+    void MarkContainerNodeAllocated(const ReservedNode& node, uint32_t previous_node);
+
+    // Frees a node which has already been committed.
+    void FreeNode(uint32_t node_index);
+
+private:
+    // Returns true if [start_block, end_block) are unallocated.
+    bool CheckBlocksUnallocated(uint64_t start_block, uint64_t end_block) const;
+
+    // Avoids a collision with the committed block map, moving the starting
+    // location / block length to find a region with no collision.
+    //
+    // Returns true if we should restart searching to attempt to maximally munch
+    // from the allocation pool.
+    bool FindUnallocatedExtent(uint64_t start, uint64_t block_length,
+                               uint64_t* out_start, uint64_t* out_block_length);
+
+    // Identifies the subset of blocks which don't collide with pending
+    // reservations. If any collisions exist, maximally munches the available
+    // free space into newly reserved extents.
+    //
+    // It is assumed that [start, start + block_length) is unallocated;
+    // this is internally asserted. |FindUnallocatedExtent| should be invoked
+    // first to provide this guarantee.
+    //
+    // Returns true if we should restart searching to attempt to maximally munch
+    // from the allocation pool. Otherwise, no collisions with pending
+    // reservations exist.
+    bool MunchUnreservedExtents(bitmap::RleBitmap::const_iterator reserved_iterator,
+                                uint64_t remaining_blocks,
+                                uint64_t start,
+                                uint64_t block_length,
+                                fbl::Vector<ReservedExtent>* out_extents,
+                                bitmap::RleBitmap::const_iterator* out_reserved_iterator,
+                                uint64_t* out_remaining_blocks,
+                                uint64_t* out_start,
+                                uint64_t* out_block_length);
+
+    // Searches for |nblocks| free blocks between the block_map_ and reserved_blocks_ bitmaps.
+    //
+    // Appends the (possibly non-contiguous) region of allocated blocks to |out_extents|.
+    //
+    // May fail if not enough blocks can be found. In this case, an error will be returned,
+    // and the number of found blocks will be returned in |out_actual_blocks|. This result
+    // is guaranteed to be less than or equal to |num_blocks|.
+    zx_status_t FindBlocks(uint64_t start, uint64_t num_blocks,
+                           fbl::Vector<ReservedExtent>* out_extents, uint64_t* out_actual_blocks);
+
+    zx_status_t FindNode(uint32_t* node_index_out);
+
+    void LogAllocationFailure(uint64_t num_blocks) const;
+
+    SpaceManager* space_manager_;
+
+    RawBitmap block_map_ = {};
+    fzl::ResizeableVmoMapper node_map_;
+
+    vmoid_t block_map_vmoid_ = VMOID_INVALID;
+    vmoid_t node_map_vmoid_ = VMOID_INVALID;
+
+    bool log_allocation_failure_ = true;
+};
+
+} // namespace blobfs
