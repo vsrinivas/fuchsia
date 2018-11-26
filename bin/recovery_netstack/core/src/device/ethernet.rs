@@ -33,6 +33,8 @@ impl Mac {
     /// be received by all receivers regardless of their local MAC address.
     pub const BROADCAST: Mac = Mac([0xFF; 6]);
 
+    const EUI_MAGIC: [u8; 2] = [0xff, 0xfe];
+
     /// Construct a new MAC address.
     pub const fn new(bytes: [u8; 6]) -> Mac {
         Mac(bytes)
@@ -41,6 +43,34 @@ impl Mac {
     /// Get the bytes of the MAC address.
     pub fn bytes(&self) -> [u8; 6] {
         self.0
+    }
+
+    /// Return the RFC4291 EUI-64 interface identifier for this MAC address.
+    ///
+    /// `eui_magic` is the two bytes that are inserted between the MAC address
+    /// to form the identifier. If None, the standard 0xfffe will be used.
+    ///
+    /// TODO: remove `eui_magic` arg if/once it is unused.
+    pub fn to_eui64(&self, eui_magic: Option<[u8; 2]>) -> [u8; 8] {
+        let mut eui = [0; 8];
+        eui[0..3].copy_from_slice(&self.0[0..3]);
+        eui[3..5].copy_from_slice(&eui_magic.unwrap_or(Self::EUI_MAGIC));
+        eui[5..8].copy_from_slice(&self.0[3..6]);
+        eui[0] ^= 0b0000_0010;
+        eui
+    }
+
+    /// Return the link-local IPv6 address for this MAC address, as per RFC 4862.
+    ///
+    /// `eui_magic` is the two bytes that are inserted between the MAC address
+    /// to form the identifier. If None, the standard 0xfffe will be used.
+    ///
+    /// TODO: remove `eui_magic` arg if/once it is unused.
+    pub fn to_slaac_ipv6(&self, eui_magic: Option<[u8; 2]>) -> Ipv6Addr {
+        let mut ipv6_addr = [0; 16];
+        ipv6_addr[0..2].copy_from_slice(&[0xfe, 0x80]);
+        ipv6_addr[8..16].copy_from_slice(&self.to_eui64(eui_magic));
+        Ipv6Addr::new(ipv6_addr)
     }
 
     /// Is this a unicast MAC address?
@@ -305,5 +335,38 @@ impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
 
     fn get_hardware_addr<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64) -> Mac {
         get_device_state(ctx, device_id).mac
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_mac_to_eui() {
+        assert_eq!(
+            Mac::new([0x00, 0x1a, 0xaa, 0x12, 0x34, 0x56]).to_eui64(None),
+            [0x02, 0x1a, 0xaa, 0xff, 0xfe, 0x12, 0x34, 0x56]
+        );
+        assert_eq!(
+            Mac::new([0x00, 0x1a, 0xaa, 0x12, 0x34, 0x56]).to_eui64(Some([0xfe, 0xfe])),
+            [0x02, 0x1a, 0xaa, 0xfe, 0xfe, 0x12, 0x34, 0x56]
+        );
+    }
+
+    #[test]
+    fn test_slaac() {
+        assert_eq!(
+            Mac::new([0x00, 0x1a, 0xaa, 0x12, 0x34, 0x56]).to_slaac_ipv6(None),
+            Ipv6Addr::new([
+                0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0x02, 0x1a, 0xaa, 0xff, 0xfe, 0x12, 0x34, 0x56
+            ])
+        );
+        assert_eq!(
+            Mac::new([0x00, 0x1a, 0xaa, 0x12, 0x34, 0x56]).to_slaac_ipv6(Some([0xfe, 0xfe])),
+            Ipv6Addr::new([
+                0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0x02, 0x1a, 0xaa, 0xfe, 0xfe, 0x12, 0x34, 0x56
+            ])
+        );
     }
 }
