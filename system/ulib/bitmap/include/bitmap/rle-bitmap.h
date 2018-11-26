@@ -112,6 +112,9 @@ struct RleBitmapElement : public fbl::DoublyLinkedListable<fbl::unique_ptr<RleBi
     // The number of 1-bits in this run.
     size_t bitlen;
 
+    // The (inclusive) start of this run of 1-bits.
+    size_t start() const { return bitoff; }
+
     // The (exclusive) end of this run of 1-bits.
     size_t end() const { return bitoff + bitlen; }
 };

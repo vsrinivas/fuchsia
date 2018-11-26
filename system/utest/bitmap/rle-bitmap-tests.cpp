@@ -18,6 +18,8 @@ static bool VerifyCounts(const RleBitmap& bitmap, size_t rng_expected, size_t bi
     size_t rng_count = 0;
     size_t bit_count = 0;
     for (auto& range : bitmap) {
+        EXPECT_EQ(range.bitoff, range.start());
+        EXPECT_EQ(range.bitoff + range.bitlen, range.end());
         EXPECT_TRUE(cb(rng_count, range.bitoff, range.bitlen));
         rng_count++;
         bit_count += range.bitlen;
