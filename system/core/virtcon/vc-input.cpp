@@ -114,11 +114,6 @@ static bool vc_handle_device_control_keys(uint8_t keycode, int modifiers) {
             return true;
         }
         break;
-
-    case HID_USAGE_KEY_LEFT_GUI:
-        // Also known as the "windows key".
-        vc_toggle_framebuffer();
-        break;
     }
 
     return false;
