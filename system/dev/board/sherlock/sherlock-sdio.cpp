@@ -151,7 +151,7 @@ zx_status_t Sherlock::BCM43458LpoClockInit() {
 
     std::optional<ddk::MmioBuffer> buf;
     zx::unowned_resource res(get_root_resource());
-    status = ddk::MmioBuffer::Create(T931_PWM_BASE, T931_PWM_LENGTH, *res,
+    status = ddk::MmioBuffer::Create(T931_PWM_EF_BASE, T931_PWM_LENGTH, *res,
                                      ZX_CACHE_POLICY_UNCACHED_DEVICE, &buf);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: ddk::MmioBuffer::Create() error: %d\n", __func__, status);

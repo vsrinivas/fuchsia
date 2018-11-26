@@ -18,35 +18,36 @@
 #define T931_I2C2_BASE                  (T931_CBUS_BASE + 0x1d000)
 #define T931_I2C3_BASE                  (T931_CBUS_BASE + 0x1c000)
 
-#define T931_PWM_BASE                   0xffd00000
-#define T931_PWM_LENGTH                 0x1b000
+#define T931_PWM_LENGTH                 0x1000 // applies to each PWM bank
+#define T931_PWM_AB_BASE                0xffd1b000
+#define T931_PWM_PWM_A                  0x0
+#define T931_PWM_PWM_B                  0x4
+#define T931_PWM_MISC_REG_AB            0x8
+#define T931_DS_A_B                     0xc
+#define T931_PWM_TIME_AB                0x10
+#define T931_PWM_A2                     0x14
+#define T931_PWM_B2                     0x18
+#define T931_PWM_BLINK_AB               0x1c
 
-#define T931_PWM_PWM_A                  (0x6c00 * 4)
-#define T931_PWM_PWM_B                  (0x6c01 * 4)
-#define T931_PWM_MISC_REG_AB            (0x6c02 * 4)
-#define T931_DS_A_B                     (0x6c03 * 4)
-#define T931_PWM_TIME_AB                (0x6c04 * 4)
-#define T931_PWM_A2                     (0x6c05 * 4)
-#define T931_PWM_B2                     (0x6c06 * 4)
-#define T931_PWM_BLINK_AB               (0x6c07 * 4)
+#define T931_PWM_CD_BASE                0xffd1a000
+#define T931_PWM_PWM_C                  0x0
+#define T931_PWM_PWM_D                  0x4
+#define T931_PWM_MISC_REG_CD            0x8
+#define T931_DS_C_D                     0xc
+#define T931_PWM_TIME_CD                0x10
+#define T931_PWM_C2                     0x14
+#define T931_PWM_D2                     0x18
+#define T931_PWM_BLINK_CD               0x1c
 
-#define T931_PWM_PWM_C                  (0x6800 * 4)
-#define T931_PWM_PWM_D                  (0x6801 * 4)
-#define T931_PWM_MISC_REG_CD            (0x6802 * 4)
-#define T931_DS_C_D                     (0x6803 * 4)
-#define T931_PWM_TIME_CD                (0x6804 * 4)
-#define T931_PWM_C2                     (0x6805 * 4)
-#define T931_PWM_D2                     (0x6806 * 4)
-#define T931_PWM_BLINK_CD               (0x6807 * 4)
-
-#define T931_PWM_PWM_E                  (0x6400 * 4)
-#define T931_PWM_PWM_F                  (0x6401 * 4)
-#define T931_PWM_MISC_REG_EF            (0x6402 * 4)
-#define T931_DS_E_F                     (0x6403 * 4)
-#define T931_PWM_TIME_EF                (0x6404 * 4)
-#define T931_PWM_E2                     (0x6405 * 4)
-#define T931_PWM_F2                     (0x6406 * 4)
-#define T931_PWM_BLINK_EF               (0x6407 * 4)
+#define T931_PWM_EF_BASE                0xffd19000
+#define T931_PWM_PWM_E                  0x0
+#define T931_PWM_PWM_F                  0x4
+#define T931_PWM_MISC_REG_EF            0x8
+#define T931_DS_E_F                     0xc
+#define T931_PWM_TIME_EF                0x10
+#define T931_PWM_E2                     0x14
+#define T931_PWM_F2                     0x18
+#define T931_PWM_BLINK_EF               0x1c
 
 #define T931_AO_PWM_AB_BASE             0xff807000
 #define T931_AO_PWM_CD_BASE             0xff802000
