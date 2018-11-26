@@ -580,9 +580,9 @@ static int sleeper_kill_thread(void* arg) {
     thread_sleep_relative(ZX_MSEC(100));
 
     zx_time_t t = current_time();
-    zx_status_t err = thread_sleep_etc(t + ZX_SEC(5), true);
+    zx_status_t err = thread_sleep_interruptable(t + ZX_SEC(5));
     zx_duration_t duration = (current_time() - t) / ZX_MSEC(1);
-    TRACEF("thread_sleep_etc returns %d after %" PRIi64 " msecs\n", err, duration);
+    TRACEF("thread_sleep_interruptable returns %d after %" PRIi64 " msecs\n", err, duration);
 
     return 0;
 }

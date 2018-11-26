@@ -44,7 +44,7 @@ int LockDepThread(void* /*arg*/) {
         // Add some hysteresis to avoid re-triggering the loop detector on
         // close successive updates to the graph and to give the inline
         // validation reports a chance to print out first.
-        thread_sleep_etc(ZX_SEC(2), /*interruptible=*/true);
+        thread_sleep_relative(ZX_SEC(2));
 
         lockdep::LoopDetectionPass();
     }

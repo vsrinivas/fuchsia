@@ -97,7 +97,7 @@ zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size
     LTRACEF("count %zu\n", count);
 
     if (!count) {
-        zx_status_t result = thread_sleep_etc(deadline, /*interruptable=*/true);
+        zx_status_t result = thread_sleep_interruptable(deadline);
         if (result != ZX_OK)
             return result;
         return ZX_ERR_TIMED_OUT;

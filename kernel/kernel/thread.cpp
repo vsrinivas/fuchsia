@@ -868,9 +868,13 @@ static uint64_t sleep_slack(zx_time_t deadline, zx_time_t now) {
  * interruptable argument allows this routine to return early if the thread was signaled
  * for something.
  */
-zx_status_t thread_sleep_etc(zx_time_t deadline, bool interruptable) {
+zx_status_t thread_sleep_etc(zx_time_t deadline,
+                             slack_mode slack_type,
+                             zx_duration_t slack,
+                             bool interruptable,
+                             zx_time_t now) {
+
     thread_t* current_thread = get_current_thread();
-    zx_time_t now = current_time();
 
     DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
     DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
@@ -897,8 +901,7 @@ zx_status_t thread_sleep_etc(zx_time_t deadline, bool interruptable) {
     }
 
     // set a one shot timer to wake us up and reschedule
-    timer_set(&timer, deadline,
-              TIMER_SLACK_LATE, sleep_slack(deadline, now), thread_sleep_handler, current_thread);
+    timer_set(&timer, deadline, slack_type, slack, thread_sleep_handler, current_thread);
 
     current_thread->state = THREAD_SLEEPING;
     current_thread->blocked_status = ZX_OK;
@@ -913,9 +916,21 @@ zx_status_t thread_sleep_etc(zx_time_t deadline, bool interruptable) {
     return current_thread->blocked_status;
 }
 
+zx_status_t thread_sleep(zx_time_t deadline) {
+    const zx_time_t now = current_time();
+    return thread_sleep_etc(deadline, TIMER_SLACK_LATE, 0, false, now);
+}
+
 zx_status_t thread_sleep_relative(zx_duration_t delay) {
-    zx_time_t deadline = zx_time_add_duration(current_time(), delay);
-    return thread_sleep(deadline);
+    const zx_time_t now = current_time();
+    const zx_time_t deadline = zx_time_add_duration(now, delay);
+    return thread_sleep_etc(deadline, TIMER_SLACK_LATE, 0, false, now);
+}
+
+zx_status_t thread_sleep_interruptable(zx_time_t deadline) {
+    const zx_time_t now = current_time();
+    const zx_duration_t slack = sleep_slack(deadline, now);
+    return thread_sleep_etc(deadline, TIMER_SLACK_LATE, slack, true, now);
 }
 
 /**

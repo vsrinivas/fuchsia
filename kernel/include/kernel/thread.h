@@ -13,6 +13,7 @@
 #include <debug.h>
 #include <kernel/cpu.h>
 #include <kernel/spinlock.h>
+#include <kernel/timer.h>
 #include <kernel/wait.h>
 #include <list.h>
 #include <sys/types.h>
@@ -283,17 +284,22 @@ static inline bool thread_stopped_in_exception(const thread_t* thread) {
     return !!thread->exception_context;
 }
 
-// wait until after the specified deadline. interruptable may return early with
+// wait until after the specified deadline. if interruptable, may return early with
 // ZX_ERR_INTERNAL_INTR_KILLED if thread is signaled for kill.
-zx_status_t thread_sleep_etc(zx_time_t deadline, bool interruptable);
+zx_status_t thread_sleep_etc(zx_time_t deadline,
+                             slack_mode slack_type,
+                             zx_duration_t slack,
+                             bool interruptable,
+                             zx_time_t now);
 
-// non interruptable version of thread_sleep_etc
-static inline zx_status_t thread_sleep(zx_time_t deadline) {
-    return thread_sleep_etc(deadline, false);
-}
+// non-interruptable version of thread_sleep_etc
+zx_status_t thread_sleep(zx_time_t deadline);
 
 // non-interruptable relative delay version of thread_sleep
 zx_status_t thread_sleep_relative(zx_duration_t delay);
+
+// interruptable version of thread_sleep
+zx_status_t thread_sleep_interruptable(zx_time_t deadline);
 
 // return the number of nanoseconds a thread has been running for
 zx_duration_t thread_runtime(const thread_t* t);
