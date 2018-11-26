@@ -36,7 +36,7 @@ type Daemon struct {
 	srcs   map[string]*source.Source
 
 	events *amber.EventsService
-	aw activationWatcher
+	aw     activationWatcher
 }
 
 // NewDaemon creates a Daemon

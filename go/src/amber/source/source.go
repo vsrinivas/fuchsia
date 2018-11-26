@@ -5,6 +5,7 @@
 package source
 
 import (
+	"amber/atonce"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -24,7 +25,6 @@ import (
 	"sync"
 	"time"
 
-	"amber/atonce"
 	"fidl/fuchsia/amber"
 
 	"fuchsia.googlesource.com/sse"
@@ -291,7 +291,26 @@ func (f *Source) initSource() error {
 	f.mu.Unlock()
 
 	f.AutoWatch()
+
+	f.updateRefreshToken()
+
 	return nil
+}
+
+func (f *Source) processTokenUpdate(clientId, token string) {
+	if !f.Enabled() {
+		return
+	}
+
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	if clientId != f.cfg.Config.Oauth2Config.ClientId {
+		log.Println("source: client ID is unexpected, dropping token")
+		return
+	}
+
+	f.setAuthTokenLocked(&oauth2.Token{RefreshToken: token, TokenType: "Bearer", Expiry: time.Now()})
 }
 
 func oauth2Config(c *amber.OAuth2Config) *oauth2.Config {
@@ -485,7 +504,18 @@ func (f *Source) SetEnabled(enabled bool) {
 	f.mu.Unlock()
 	if enabled {
 		f.AutoWatch()
+		f.updateRefreshToken()
 	}
+}
+
+// try to start a refresh token update. This should not be called while holding
+// the struct mutex as it will be locked during this call
+func (f *Source) updateRefreshToken() {
+	if !f.Enabled() || f.cfg.Config.Oauth2Config == nil {
+		return
+	}
+
+	go defaultTokenLoader.ReadToken(f.processTokenUpdate, f.cfg.Config.Oauth2Config.ClientId)
 }
 
 func (f *Source) GetHttpClient() (*http.Client, error) {
@@ -614,12 +644,15 @@ func (f *Source) Update() error {
 			return nil
 		}
 
-		if err := f.initLocalStoreLocked(); err != nil {
-			return fmt.Errorf("tuf_source: source could not be initialized: %s", err)
-		}
-
+		// update any relevant auth token before initializing the tuf client
+		// because the tuf client will try to use the HTTP context when
+		// initializing
 		if err := f.refreshOauth2TokenLocked(); err != nil {
 			return fmt.Errorf("tuf_source: failed to refresh oauth2 token: %s", err)
+		}
+
+		if err := f.initLocalStoreLocked(); err != nil {
+			return fmt.Errorf("tuf_source: source could not be initialized: %s", err)
 		}
 
 		_, err := f.tufClient.Update()
