@@ -6,6 +6,7 @@
 
 #include "garnet/lib/machina/phys_mem_fake.h"
 #include "garnet/lib/machina/virtio_queue_fake.h"
+#include "lib/fxl/arraysize.h"
 #include "lib/gtest/test_loop_fixture.h"
 
 namespace machina {
@@ -262,7 +263,7 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
   }
 
   void FillRxQueue() {
-    for (size_t i = 0; i < countof(rx_buffers); ++i) {
+    for (size_t i = 0; i < arraysize(rx_buffers); ++i) {
       ASSERT_EQ(
           rx_queue_.BuildDescriptor()
               .AppendWritable(&rx_buffers[i].header,

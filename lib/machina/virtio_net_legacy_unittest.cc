@@ -72,7 +72,7 @@ TEST_F(VirtioNetTest, DrainQueue) {
 
   // Return a descriptor to the queue, this should trigger it to be returned.
   ASSERT_EQ(ZX_OK, zx_fifo_read(fifo_[0], sizeof(entry[0]), entry,
-                                countof(entry), &count));
+                                fifos_.rx_depth, &count));
   ASSERT_EQ(1u, count);
   ASSERT_EQ(ZX_OK,
             zx_fifo_write(fifo_[0], sizeof(entry[0]), &entry[0], 1, nullptr));
@@ -101,7 +101,7 @@ TEST_F(VirtioNetTest, HeaderOnDifferentBuffer) {
 
   // Read the fifo entry.
   ASSERT_EQ(ZX_OK, zx_fifo_read(fifo_[0], sizeof(entry[0]), entry,
-                                countof(entry), &count));
+                                fifos_.rx_depth, &count));
   ASSERT_EQ(1u, count);
   // Expect the first offset in the IoBuffer to be allocated
   ASSERT_EQ(0u, entry[0].offset);
@@ -122,7 +122,7 @@ TEST_F(VirtioNetTest, InvalidDesc) {
   RunLoopUntilIdle();
   zircon_ethernet_FifoEntry entry[fifos_.rx_depth];
   ASSERT_EQ(
-      zx_fifo_read(fifo_[0], sizeof(entry[0]), entry, countof(entry), nullptr),
+      zx_fifo_read(fifo_[0], sizeof(entry[0]), entry, fifos_.rx_depth, nullptr),
       ZX_ERR_SHOULD_WAIT);
 }
 

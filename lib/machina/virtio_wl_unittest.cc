@@ -9,6 +9,7 @@
 
 #include "garnet/lib/machina/phys_mem_fake.h"
 #include "garnet/lib/machina/virtio_queue_fake.h"
+#include "lib/fxl/arraysize.h"
 #include "lib/gtest/test_loop_fixture.h"
 
 namespace machina {
@@ -249,7 +250,7 @@ TEST_F(VirtioWlTest, HandleSend) {
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t actual_bytes, actual_handles;
   ASSERT_EQ(zx_channel_read(channels_[0].get(), 0, &data, handles, sizeof(data),
-                            countof(handles), &actual_bytes, &actual_handles),
+                            arraysize(handles), &actual_bytes, &actual_handles),
             ZX_OK);
   EXPECT_EQ(actual_handles, 2u);
   EXPECT_EQ(actual_bytes, sizeof(data));

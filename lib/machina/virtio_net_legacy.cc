@@ -242,7 +242,7 @@ void VirtioNetLegacy::Stream::OnFifoReadable(async_dispatcher_t* dispatcher,
   // Dequeue entries for the Ethernet device.
   size_t num_entries_read;
   zircon_ethernet_FifoEntry entries[fifo_entries_.size()];
-  status = zx_fifo_read(fifo_, sizeof(entries[0]), entries, countof(entries),
+  status = zx_fifo_read(fifo_, sizeof(entries[0]), entries, fifo_entries_.size(),
                         &num_entries_read);
   if (status == ZX_ERR_SHOULD_WAIT) {
     status = wait->Begin(dispatcher);
