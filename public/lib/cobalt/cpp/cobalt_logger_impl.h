@@ -30,41 +30,41 @@ class Event {
 
 class OccurrenceEvent : public Event {
  public:
-  OccurrenceEvent(uint32_t metric_id, uint32_t event_type_index)
-      : Event(metric_id), event_type_index_(event_type_index) {}
+  OccurrenceEvent(uint32_t metric_id, uint32_t event_code)
+      : Event(metric_id), event_code_(event_code) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fit::function<void(fuchsia::cobalt::Status)> callback) {
-    (*logger)->LogEvent(metric_id(), event_type_index_, std::move(callback));
+    (*logger)->LogEvent(metric_id(), event_code_, std::move(callback));
   }
-  uint32_t event_type_index() const { return event_type_index_; }
+  uint32_t event_code() const { return event_code_; }
 
  private:
-  const uint32_t event_type_index_;
+  const uint32_t event_code_;
 };
 
 class CountEvent : public Event {
  public:
-  CountEvent(uint32_t metric_id, uint32_t event_type_index,
+  CountEvent(uint32_t metric_id, uint32_t event_code,
              const std::string& component, int64_t period_duration_micros,
              int64_t count)
       : Event(metric_id),
-        event_type_index_(event_type_index),
+        event_code_(event_code),
         component_(component),
         period_duration_micros_(period_duration_micros),
         count_(count) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fit::function<void(fuchsia::cobalt::Status)> callback) {
-    (*logger)->LogEventCount(metric_id(), event_type_index_, component_,
+    (*logger)->LogEventCount(metric_id(), event_code_, component_,
                              period_duration_micros_, count_,
                              std::move(callback));
   }
-  uint32_t event_type_index() const { return event_type_index_; }
+  uint32_t event_code() const { return event_code_; }
   const std::string& component() const { return component_; }
   int64_t period_duration_micros() const { return period_duration_micros_; }
   int64_t count() const { return count_; }
 
  private:
-  const uint32_t event_type_index_;
+  const uint32_t event_code_;
   const std::string component_;
   const int64_t period_duration_micros_;
   const int64_t count_;
@@ -72,69 +72,69 @@ class CountEvent : public Event {
 
 class ElapsedTimeEvent : public Event {
  public:
-  ElapsedTimeEvent(uint32_t metric_id, uint32_t event_type_index,
+  ElapsedTimeEvent(uint32_t metric_id, uint32_t event_code,
                    const std::string& component, int64_t elapsed_micros)
       : Event(metric_id),
-        event_type_index_(event_type_index),
+        event_code_(event_code),
         component_(component),
         elapsed_micros_(elapsed_micros) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fit::function<void(fuchsia::cobalt::Status)> callback) {
-    (*logger)->LogElapsedTime(metric_id(), event_type_index_, component_,
+    (*logger)->LogElapsedTime(metric_id(), event_code_, component_,
                               elapsed_micros_, std::move(callback));
   }
-  uint32_t event_type_index() const { return event_type_index_; }
+  uint32_t event_code() const { return event_code_; }
   const std::string& component() const { return component_; }
   int64_t elapsed_micros() const { return elapsed_micros_; }
 
  private:
-  const uint32_t event_type_index_;
+  const uint32_t event_code_;
   const std::string component_;
   const int64_t elapsed_micros_;
 };
 
 class FrameRateEvent : public Event {
  public:
-  FrameRateEvent(uint32_t metric_id, uint32_t event_type_index,
+  FrameRateEvent(uint32_t metric_id, uint32_t event_code,
                  const std::string& component, float fps)
       : Event(metric_id),
-        event_type_index_(event_type_index),
+        event_code_(event_code),
         component_(component),
         fps_(fps) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fit::function<void(fuchsia::cobalt::Status)> callback) {
-    (*logger)->LogFrameRate(metric_id(), event_type_index_, component_, fps_,
+    (*logger)->LogFrameRate(metric_id(), event_code_, component_, fps_,
                             std::move(callback));
   }
-  uint32_t event_type_index() const { return event_type_index_; }
+  uint32_t event_code() const { return event_code_; }
   const std::string& component() const { return component_; }
   float fps() const { return fps_; }
 
  private:
-  const uint32_t event_type_index_;
+  const uint32_t event_code_;
   const std::string component_;
   const float fps_;
 };
 
 class MemoryUsageEvent : public Event {
  public:
-  MemoryUsageEvent(uint32_t metric_id, uint32_t event_type_index,
+  MemoryUsageEvent(uint32_t metric_id, uint32_t event_code,
                    const std::string& component, int64_t bytes)
       : Event(metric_id),
-        event_type_index_(event_type_index),
+        event_code_(event_code),
         component_(component),
         bytes_(bytes) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fit::function<void(fuchsia::cobalt::Status)> callback) {
-    (*logger)->LogMemoryUsage(metric_id(), event_type_index_, component_,
-                              bytes_, std::move(callback));
+    (*logger)->LogMemoryUsage(metric_id(), event_code_, component_, bytes_,
+                              std::move(callback));
   }
-  uint32_t event_type_index() const { return event_type_index_; }
+  uint32_t event_code() const { return event_code_; }
   const std::string& component() const { return component_; }
   int64_t bytes() const { return bytes_; }
 
  private:
-  const uint32_t event_type_index_;
+  const uint32_t event_code_;
   const std::string component_;
   const int64_t bytes_;
 };
@@ -155,28 +155,28 @@ class StringUsedEvent : public Event {
 
 class StartTimerEvent : public Event {
  public:
-  StartTimerEvent(uint32_t metric_id, uint32_t event_type_index,
+  StartTimerEvent(uint32_t metric_id, uint32_t event_code,
                   const std::string& component, const std::string& timer_id,
                   uint64_t timestamp, uint32_t timeout_s)
       : Event(metric_id),
-        event_type_index_(event_type_index),
+        event_code_(event_code),
         component_(component),
         timer_id_(timer_id),
         timestamp_(timestamp),
         timeout_s_(timeout_s) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fit::function<void(fuchsia::cobalt::Status)> callback) {
-    (*logger)->StartTimer(metric_id(), event_type_index_, component_, timer_id_,
+    (*logger)->StartTimer(metric_id(), event_code_, component_, timer_id_,
                           timestamp_, timeout_s_, std::move(callback));
   }
-  uint32_t event_type_index() const { return event_type_index_; }
+  uint32_t event_code() const { return event_code_; }
   const std::string& component() const { return component_; }
   const std::string& timer_id() const { return timer_id_; }
   uint64_t timestamp() const { return timestamp_; }
   uint32_t timeout_s() const { return timeout_s_; }
 
  private:
-  const uint32_t event_type_index_;
+  const uint32_t event_code_;
   const std::string component_;
   const std::string timer_id_;
   const uint64_t timestamp_;
@@ -207,28 +207,28 @@ class EndTimerEvent : public Event {
 
 class IntHistogramEvent : public Event {
  public:
-  IntHistogramEvent(uint32_t metric_id, uint32_t event_type_index,
+  IntHistogramEvent(uint32_t metric_id, uint32_t event_code,
                     const std::string& component,
                     fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram)
       : Event(metric_id),
-        event_type_index_(event_type_index),
+        event_code_(event_code),
         component_(component),
         histogram_(std::move(histogram)) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fit::function<void(fuchsia::cobalt::Status)> callback) {
     fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram;
     FXL_CHECK(fidl::Clone(histogram_, &histogram) == ZX_OK);
-    (*logger)->LogIntHistogram(metric_id(), event_type_index_, component_,
+    (*logger)->LogIntHistogram(metric_id(), event_code_, component_,
                                std::move(histogram), std::move(callback));
   }
-  uint32_t event_type_index() const { return event_type_index_; }
+  uint32_t event_code() const { return event_code_; }
   const std::string& component() const { return component_; }
   const fidl::VectorPtr<fuchsia::cobalt::HistogramBucket>& histogram() const {
     return histogram_;
   }
 
  private:
-  const uint32_t event_type_index_;
+  const uint32_t event_code_;
   const std::string component_;
   const fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram_;
 };
@@ -260,26 +260,25 @@ class CobaltLoggerImpl : public CobaltLogger {
                    component::StartupContext* context,
                    fuchsia::cobalt::ProjectProfile profile);
   ~CobaltLoggerImpl() override;
-  void LogEvent(uint32_t metric_id, uint32_t event_type_index) override;
-  void LogEventCount(uint32_t metric_id, uint32_t event_type_index,
+  void LogEvent(uint32_t metric_id, uint32_t event_code) override;
+  void LogEventCount(uint32_t metric_id, uint32_t event_code,
                      const std::string& component, zx::duration period_duration,
                      int64_t count) override;
-  void LogElapsedTime(uint32_t metric_id, uint32_t event_type_index,
+  void LogElapsedTime(uint32_t metric_id, uint32_t event_code,
                       const std::string& component,
                       zx::duration elapsed_time) override;
-  void LogFrameRate(uint32_t metric_id, uint32_t event_type_index,
+  void LogFrameRate(uint32_t metric_id, uint32_t event_code,
                     const std::string& component, float fps) override;
-  void LogMemoryUsage(uint32_t metric_id, uint32_t event_type_index,
+  void LogMemoryUsage(uint32_t metric_id, uint32_t event_code,
                       const std::string& component, int64_t bytes) override;
   void LogString(uint32_t metric_id, const std::string& s) override;
-  void StartTimer(uint32_t metric_id, uint32_t event_type_index,
+  void StartTimer(uint32_t metric_id, uint32_t event_code,
                   const std::string& component, const std::string& timer_id,
                   zx::time timestamp, zx::duration timeout) override;
   void EndTimer(const std::string& timer_id, zx::time timestamp,
                 zx::duration timeout) override;
   void LogIntHistogram(
-      uint32_t metric_id, uint32_t event_type_index,
-      const std::string& component,
+      uint32_t metric_id, uint32_t event_code, const std::string& component,
       std::vector<fuchsia::cobalt::HistogramBucket> histogram) override;
   void LogCustomEvent(
       uint32_t metric_id,

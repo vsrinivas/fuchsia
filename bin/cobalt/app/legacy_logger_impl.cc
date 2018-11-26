@@ -77,7 +77,7 @@ LegacyLoggerImpl::LegacyLoggerImpl(
 template <class ValueType, class CB>
 void LegacyLoggerImpl::LogThreePartMetric(const std::string& value_part_name,
                                           uint32_t metric_id,
-                                          uint32_t event_type_index,
+                                          uint32_t event_code,
                                           fidl::StringPtr component,
                                           ValueType value, CB callback,
                                           bool value_part_required) {
@@ -100,12 +100,11 @@ void LegacyLoggerImpl::LogThreePartMetric(const std::string& value_part_name,
   // with just a single part while LogEventCount cannot (the user should use
   // LogEvent instead)
   if (encodings.size() == 1 && value_part_required) {
-    if (event_type_index != 0 || !component->empty()) {
-      FXL_LOG(ERROR)
-          << "Metric " << metric_name << " is a single part metric so only "
-          << value_part_name
-          << " must be provided "
-             "(event_type_index must be 0 and component must be empty).";
+    if (event_code != 0 || !component->empty()) {
+      FXL_LOG(ERROR) << "Metric " << metric_name
+                     << " is a single part metric so only " << value_part_name
+                     << " must be provided "
+                        "(event_code must be 0 and component must be empty).";
       callback(Status::INVALID_ARGUMENTS);
       return;
     }
@@ -141,12 +140,11 @@ void LegacyLoggerImpl::LogThreePartMetric(const std::string& value_part_name,
     }
 
     if (!index_part.empty()) {
-      new_value.AddIndexPart(encodings[index_part], index_part,
-                             event_type_index);
-    } else if (index_part.empty() && event_type_index != 0) {
+      new_value.AddIndexPart(encodings[index_part], index_part, event_code);
+    } else if (index_part.empty() && event_code != 0) {
       FXL_LOG(ERROR) << "Metric " << metric_name
                      << " is a two part metric with no index part so "
-                        "event_type_index must be 0";
+                        "event_code must be 0";
       callback(Status::INVALID_ARGUMENTS);
       return;
     }
@@ -218,7 +216,7 @@ uint32_t LegacyLoggerImpl::GetSinglePartMetricEncoding(uint32_t metric_id) {
 }
 
 void LegacyLoggerImpl::LogEvent(
-    uint32_t metric_id, uint32_t event_type_index,
+    uint32_t metric_id, uint32_t event_code,
     fuchsia::cobalt::LoggerBase::LogEventCallback callback) {
   uint32_t encoding_id = GetSinglePartMetricEncoding(metric_id);
   if (encoding_id == 0) {
@@ -226,12 +224,12 @@ void LegacyLoggerImpl::LogEvent(
     return;
   }
 
-  auto result = encoder_.EncodeIndex(metric_id, encoding_id, event_type_index);
+  auto result = encoder_.EncodeIndex(metric_id, encoding_id, event_code);
   AddEncodedObservation(&result, std::move(callback));
 }
 
 void LegacyLoggerImpl::LogEventCount(
-    uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+    uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
     int64_t period_duration_micros, int64_t count,
     fuchsia::cobalt::LoggerBase::LogEventCountCallback callback) {
   const Metric* metric = encoder_.GetMetric(metric_id);
@@ -249,31 +247,31 @@ void LegacyLoggerImpl::LogEventCount(
     callback(Status::INVALID_ARGUMENTS);
     return;
   }
-  LogThreePartMetric("event count", metric_id, event_type_index, component,
-                     count, std::move(callback), false);
+  LogThreePartMetric("event count", metric_id, event_code, component, count,
+                     std::move(callback), false);
 }
 
 void LegacyLoggerImpl::LogElapsedTime(
-    uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+    uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
     int64_t elapsed_micros,
     fuchsia::cobalt::LoggerBase::LogElapsedTimeCallback callback) {
-  LogThreePartMetric("elapsed time", metric_id, event_type_index, component,
+  LogThreePartMetric("elapsed time", metric_id, event_code, component,
                      elapsed_micros, std::move(callback), true);
 }
 
 void LegacyLoggerImpl::LogFrameRate(
-    uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+    uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
     float fps, fuchsia::cobalt::LoggerBase::LogFrameRateCallback callback) {
-  LogThreePartMetric("frame rate", metric_id, event_type_index, component, fps,
+  LogThreePartMetric("frame rate", metric_id, event_code, component, fps,
                      std::move(callback), true);
 }
 
 void LegacyLoggerImpl::LogMemoryUsage(
-    uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+    uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
     int64_t bytes,
     fuchsia::cobalt::LoggerBase::LogMemoryUsageCallback callback) {
-  LogThreePartMetric("memory usage", metric_id, event_type_index, component,
-                     bytes, std::move(callback), true);
+  LogThreePartMetric("memory usage", metric_id, event_code, component, bytes,
+                     std::move(callback), true);
 }
 
 void LegacyLoggerImpl::LogString(
@@ -306,11 +304,11 @@ void LegacyLoggerImpl::AddTimerObservationIfReady(
 }
 
 void LegacyLoggerImpl::StartTimer(
-    uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+    uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
     fidl::StringPtr timer_id, uint64_t timestamp, uint32_t timeout_s,
     fuchsia::cobalt::LoggerBase::StartTimerCallback callback) {
-  if (event_type_index != 0 || !component->empty()) {
-    FXL_LOG(ERROR) << "event_type_index and component are not currently "
+  if (event_code != 0 || !component->empty()) {
+    FXL_LOG(ERROR) << "event_code and component are not currently "
                       "consumed. Pass in 0 and empty string respectively.";
     callback(Status::INVALID_ARGUMENTS);
   }
@@ -348,7 +346,7 @@ void LegacyLoggerImpl::EndTimer(
 }
 
 void LegacyLoggerImpl::LogIntHistogram(
-    uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+    uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
     fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram,
     fuchsia::cobalt::Logger::LogIntHistogramCallback callback) {
   const Metric* metric = encoder_.GetMetric(metric_id);
@@ -358,8 +356,8 @@ void LegacyLoggerImpl::LogIntHistogram(
   }
   const std::string& metric_name = metric->name();
 
-  if (event_type_index != 0) {
-    FXL_LOG(ERROR) << "The parameter |event_type_index| in the method "
+  if (event_code != 0) {
+    FXL_LOG(ERROR) << "The parameter |event_code| in the method "
                       "LogIntHistogram is unsupported in the current version "
                       "of Cobalt. Pass in the value 0 for now. Metric="
                    << metric_name;
@@ -391,7 +389,7 @@ void LegacyLoggerImpl::LogIntHistogram(
 }
 
 void LegacyLoggerImpl::LogIntHistogram(
-    uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+    uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
     fidl::VectorPtr<uint32_t> bucket_indices,
     fidl::VectorPtr<uint64_t> bucket_counts,
     fuchsia::cobalt::LoggerSimple::LogIntHistogramCallback callback) {
@@ -402,8 +400,8 @@ void LegacyLoggerImpl::LogIntHistogram(
   }
   const std::string& metric_name = metric->name();
 
-  if (event_type_index != 0) {
-    FXL_LOG(ERROR) << "The parameter |event_type_index| in the method "
+  if (event_code != 0) {
+    FXL_LOG(ERROR) << "The parameter |event_code| in the method "
                       "LogIntHistogram is unsupported in the current version "
                       "of Cobalt. Pass in the value 0 for now. Metric="
                    << metric_name;

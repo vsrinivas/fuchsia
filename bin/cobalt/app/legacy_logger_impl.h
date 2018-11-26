@@ -38,15 +38,15 @@ class LegacyLoggerImpl : public fuchsia::cobalt::Logger,
   // LogFrameRate to share their codepaths since they have very similar
   // implementations.
   //
-  // If |value_part_required| is true, then |event_type_index| and |component|
+  // If |value_part_required| is true, then |event_code| and |component|
   // are required only if the metric given by |metric_id| has INDEX and STRING
   // parts respectively. If |value_part_required| is false, then at least 2 of
-  // |event_type_index|, |component| and |value| must be supplied and must have
+  // |event_code|, |component| and |value| must be supplied and must have
   // corresponding MetricParts. |value_part_name| is only used to identify the
   // metric that could not be logged when an error occurs.
   template <class ValueType, class CB>
   void LogThreePartMetric(const std::string& value_part_name,
-                          uint32_t metric_id, uint32_t event_type_index,
+                          uint32_t metric_id, uint32_t event_code,
                           fidl::StringPtr component, ValueType value,
                           CB callback, bool value_part_required);
 
@@ -57,27 +57,27 @@ class LegacyLoggerImpl : public fuchsia::cobalt::Logger,
   uint32_t GetSinglePartMetricEncoding(uint32_t metric_id);
 
   void LogEvent(
-      uint32_t metric_id, uint32_t event_type_index,
+      uint32_t metric_id, uint32_t event_code,
       fuchsia::cobalt::LoggerBase::LogEventCallback callback) override;
 
   // In the current implementation, |period_duration_micros| is ignored
   void LogEventCount(
-      uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+      uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
       int64_t period_duration_micros, int64_t count,
       fuchsia::cobalt::LoggerBase::LogEventCountCallback callback) override;
 
   void LogElapsedTime(
-      uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+      uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
       int64_t elapsed_micros,
       fuchsia::cobalt::LoggerBase::LogElapsedTimeCallback callback) override;
 
   void LogFrameRate(
-      uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+      uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
       float fps,
       fuchsia::cobalt::LoggerBase::LogFrameRateCallback callback) override;
 
   void LogMemoryUsage(
-      uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+      uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
       int64_t bytes,
       fuchsia::cobalt::LoggerBase::LogMemoryUsageCallback callback) override;
 
@@ -92,7 +92,7 @@ class LegacyLoggerImpl : public fuchsia::cobalt::Logger,
                                   CB callback);
 
   void StartTimer(
-      uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+      uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
       fidl::StringPtr timer_id, uint64_t timestamp, uint32_t timeout_s,
       fuchsia::cobalt::LoggerBase::StartTimerCallback callback) override;
 
@@ -100,15 +100,15 @@ class LegacyLoggerImpl : public fuchsia::cobalt::Logger,
       fidl::StringPtr timer_id, uint64_t timestamp, uint32_t timeout_s,
       fuchsia::cobalt::LoggerBase::EndTimerCallback callback) override;
 
-  // In the current implementation, |event_type_index| and |component| are
+  // In the current implementation, |event_code| and |component| are
   // ignored.
   void LogIntHistogram(
-      uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+      uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
       fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram,
       fuchsia::cobalt::Logger::LogIntHistogramCallback callback) override;
 
   void LogIntHistogram(
-      uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+      uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
       fidl::VectorPtr<uint32_t> bucket_indices,
       fidl::VectorPtr<uint64_t> bucket_counts,
       fuchsia::cobalt::LoggerSimple::LogIntHistogramCallback callback) override;

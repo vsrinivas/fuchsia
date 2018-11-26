@@ -6,22 +6,19 @@
 
 use {
     failure::{format_err, Error, ResultExt},
-    fdio,
-    fidl,
-    fidl_fuchsia_cobalt::{HistogramBucket, LoggerFactoryMarker, LoggerProxy,
-                          ProjectProfile, ReleaseStage, Status},
-    fidl_fuchsia_mem as fuchsia_mem,
-    futures::{
-        channel::mpsc,
-        prelude::*,
-        StreamExt,
+    fdio, fidl,
+    fidl_fuchsia_cobalt::{
+        HistogramBucket, LoggerFactoryMarker, LoggerProxy, ProjectProfile, ReleaseStage, Status,
     },
+    fidl_fuchsia_mem as fuchsia_mem,
+    futures::{channel::mpsc, prelude::*, StreamExt},
     log::{error, info},
     std::{
         fs::File,
         io::Seek,
         sync::{
-            Arc, atomic::{AtomicBool, Ordering},
+            atomic::{AtomicBool, Ordering},
+            Arc,
         },
     },
 };
@@ -32,11 +29,11 @@ const COBALT_BUFFER_SIZE: usize = 100;
 
 enum EventValue {
     Count {
-        event_type_index: u32,
+        event_code: u32,
         count: i64,
     },
     ElapsedTime {
-        event_type_index: u32,
+        event_code: u32,
         elapsed_micros: i64,
     },
     IntHistogram {
@@ -56,17 +53,14 @@ pub struct CobaltSender {
 }
 
 impl CobaltSender {
-    pub fn log_event_count(&mut self, metric_id: u32, event_type_index: u32, count: i64) {
-        let event_value = EventValue::Count {
-            event_type_index,
-            count,
-        };
+    pub fn log_event_count(&mut self, metric_id: u32, event_code: u32, count: i64) {
+        let event_value = EventValue::Count { event_code, count };
         self.log_event(metric_id, event_value);
     }
 
-    pub fn log_elapsed_time(&mut self, metric_id: u32, event_type_index: u32, elapsed_micros: i64) {
+    pub fn log_elapsed_time(&mut self, metric_id: u32, event_code: u32, elapsed_micros: i64) {
         let event_value = EventValue::ElapsedTime {
-            event_type_index,
+            event_code,
             elapsed_micros,
         };
         self.log_event(metric_id, event_value);
@@ -80,23 +74,29 @@ impl CobaltSender {
     fn log_event(&mut self, metric_id: u32, value: EventValue) {
         let event = Event { metric_id, value };
         if self.sender.try_send(event).is_err() {
-            let was_blocked = self.is_blocked.compare_and_swap(false, true, Ordering::SeqCst);
+            let was_blocked = self
+                .is_blocked
+                .compare_and_swap(false, true, Ordering::SeqCst);
             if !was_blocked {
                 error!("cobalt sender drops a event/events: either buffer is full or no receiver is waiting");
             }
         } else {
-            let was_blocked = self.is_blocked.compare_and_swap(true, false, Ordering::SeqCst);
+            let was_blocked = self
+                .is_blocked
+                .compare_and_swap(true, false, Ordering::SeqCst);
             if was_blocked {
                 info!("cobalt sender recovers and resumes sending")
             }
-
         }
     }
 }
 
 pub fn serve() -> (CobaltSender, impl Future<Output = ()>) {
     let (sender, receiver) = mpsc::channel(COBALT_BUFFER_SIZE);
-    let sender = CobaltSender { sender, is_blocked: Arc::new(AtomicBool::new(false)) };
+    let sender = CobaltSender {
+        sender,
+        is_blocked: Arc::new(AtomicBool::new(false)),
+    };
     let fut = send_cobalt_events(receiver);
     (sender, fut)
 }
@@ -146,13 +146,10 @@ async fn send_cobalt_events(mut receiver: mpsc::Receiver<Event>) {
     let mut is_full = false;
     while let Some(event) = await!(receiver.next()) {
         match event.value {
-            EventValue::Count {
-                event_type_index,
-                count,
-            } => {
+            EventValue::Count { event_code, count } => {
                 let resp = await!(logger.log_event_count(
                     event.metric_id,
-                    event_type_index,
+                    event_code,
                     "",
                     0, // TODO report a period duration once the backend supports it.
                     count
@@ -160,12 +157,12 @@ async fn send_cobalt_events(mut receiver: mpsc::Receiver<Event>) {
                 handle_cobalt_response(resp, event.metric_id, &mut is_full);
             }
             EventValue::ElapsedTime {
-                event_type_index,
+                event_code,
                 elapsed_micros,
             } => {
                 let resp = await!(logger.log_elapsed_time(
                     event.metric_id,
-                    event_type_index,
+                    event_code,
                     "",
                     elapsed_micros
                 ));

@@ -38,53 +38,49 @@ CobaltLoggerImpl::~CobaltLoggerImpl() {
   }
 }
 
-void CobaltLoggerImpl::LogEvent(uint32_t metric_id, uint32_t event_type_index) {
-  LogEvent(std::make_unique<OccurrenceEvent>(metric_id, event_type_index));
+void CobaltLoggerImpl::LogEvent(uint32_t metric_id, uint32_t event_code) {
+  LogEvent(std::make_unique<OccurrenceEvent>(metric_id, event_code));
 }
 
-void CobaltLoggerImpl::LogEventCount(uint32_t metric_id,
-                                     uint32_t event_type_index,
+void CobaltLoggerImpl::LogEventCount(uint32_t metric_id, uint32_t event_code,
                                      const std::string& component,
                                      zx::duration period_duration,
                                      int64_t count) {
-  LogEvent(std::make_unique<CountEvent>(metric_id, event_type_index, component,
+  LogEvent(std::make_unique<CountEvent>(metric_id, event_code, component,
                                         period_duration.to_usecs(), count));
 }
 
-void CobaltLoggerImpl::LogElapsedTime(uint32_t metric_id,
-                                      uint32_t event_type_index,
+void CobaltLoggerImpl::LogElapsedTime(uint32_t metric_id, uint32_t event_code,
                                       const std::string& component,
                                       zx::duration elapsed_time) {
-  LogEvent(std::make_unique<ElapsedTimeEvent>(
-      metric_id, event_type_index, component, elapsed_time.to_usecs()));
+  LogEvent(std::make_unique<ElapsedTimeEvent>(metric_id, event_code, component,
+                                              elapsed_time.to_usecs()));
 }
 
-void CobaltLoggerImpl::LogFrameRate(uint32_t metric_id,
-                                    uint32_t event_type_index,
+void CobaltLoggerImpl::LogFrameRate(uint32_t metric_id, uint32_t event_code,
                                     const std::string& component, float fps) {
-  LogEvent(std::make_unique<FrameRateEvent>(metric_id, event_type_index,
-                                            component, fps));
+  LogEvent(
+      std::make_unique<FrameRateEvent>(metric_id, event_code, component, fps));
 }
 
-void CobaltLoggerImpl::LogMemoryUsage(uint32_t metric_id,
-                                      uint32_t event_type_index,
+void CobaltLoggerImpl::LogMemoryUsage(uint32_t metric_id, uint32_t event_code,
                                       const std::string& component,
                                       int64_t bytes) {
-  LogEvent(std::make_unique<MemoryUsageEvent>(metric_id, event_type_index,
-                                              component, bytes));
+  LogEvent(std::make_unique<MemoryUsageEvent>(metric_id, event_code, component,
+                                              bytes));
 }
 
 void CobaltLoggerImpl::LogString(uint32_t metric_id, const std::string& s) {
   LogEvent(std::make_unique<StringUsedEvent>(metric_id, s));
 }
 
-void CobaltLoggerImpl::StartTimer(uint32_t metric_id, uint32_t event_type_index,
+void CobaltLoggerImpl::StartTimer(uint32_t metric_id, uint32_t event_code,
                                   const std::string& component,
                                   const std::string& timer_id,
                                   zx::time timestamp, zx::duration timeout) {
   LogEvent(std::make_unique<StartTimerEvent>(
-      metric_id, event_type_index, component, timer_id,
-      timestamp.get() / ZX_USEC(1), timeout.to_secs()));
+      metric_id, event_code, component, timer_id, timestamp.get() / ZX_USEC(1),
+      timeout.to_secs()));
 }
 
 void CobaltLoggerImpl::EndTimer(const std::string& timer_id, zx::time timestamp,
@@ -94,10 +90,10 @@ void CobaltLoggerImpl::EndTimer(const std::string& timer_id, zx::time timestamp,
 }
 
 void CobaltLoggerImpl::LogIntHistogram(
-    uint32_t metric_id, uint32_t event_type_index, const std::string& component,
+    uint32_t metric_id, uint32_t event_code, const std::string& component,
     std::vector<fuchsia::cobalt::HistogramBucket> histogram) {
   LogEvent(std::make_unique<IntHistogramEvent>(
-      metric_id, event_type_index, component,
+      metric_id, event_code, component,
       fidl::VectorPtr<fuchsia::cobalt::HistogramBucket>(std::move(histogram))));
 }
 
@@ -166,9 +162,9 @@ void CobaltLoggerImpl::OnConnectionError() {
 
   OnTransitFail();
   logger_.Unbind();
-  async::PostDelayedTask(dispatcher_,
-                         [this]() { ConnectToCobaltApplication(); },
-                         backoff_.GetNext());
+  async::PostDelayedTask(
+      dispatcher_, [this]() { ConnectToCobaltApplication(); },
+      backoff_.GetNext());
 }
 
 void CobaltLoggerImpl::LogEventOnMainThread(std::unique_ptr<Event> event) {
@@ -211,12 +207,13 @@ void CobaltLoggerImpl::SendEvents() {
     }
 
     // A transient error happened, retry after a delay.
-    async::PostDelayedTask(dispatcher_,
-                           [this]() {
-                             OnTransitFail();
-                             SendEvents();
-                           },
-                           backoff_.GetNext());
+    async::PostDelayedTask(
+        dispatcher_,
+        [this]() {
+          OnTransitFail();
+          SendEvents();
+        },
+        backoff_.GetNext());
   });
 }
 

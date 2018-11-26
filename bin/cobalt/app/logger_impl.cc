@@ -15,41 +15,40 @@ LoggerImpl::LoggerImpl(std::unique_ptr<logger::ProjectContext> project_context,
       timer_manager_(timer_manager) {}
 
 void LoggerImpl::LogEvent(
-    uint32_t metric_id, uint32_t event_type_index,
+    uint32_t metric_id, uint32_t event_code,
     fuchsia::cobalt::LoggerBase::LogEventCallback callback) {
-  callback(ToCobaltStatus(logger_.LogEvent(metric_id, event_type_index)));
+  callback(ToCobaltStatus(logger_.LogEvent(metric_id, event_code)));
 }
 
 void LoggerImpl::LogEventCount(
-    uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+    uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
     int64_t period_duration_micros, int64_t count,
     fuchsia::cobalt::LoggerBase::LogEventCountCallback callback) {
-  callback(ToCobaltStatus(
-      logger_.LogEventCount(metric_id, event_type_index, component.get(),
-                            period_duration_micros, count)));
+  callback(ToCobaltStatus(logger_.LogEventCount(
+      metric_id, event_code, component.get(), period_duration_micros, count)));
 }
 
 void LoggerImpl::LogElapsedTime(
-    uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+    uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
     int64_t elapsed_micros,
     fuchsia::cobalt::LoggerBase::LogElapsedTimeCallback callback) {
   callback(ToCobaltStatus(logger_.LogElapsedTime(
-      metric_id, event_type_index, component.get(), elapsed_micros)));
+      metric_id, event_code, component.get(), elapsed_micros)));
 }
 
 void LoggerImpl::LogFrameRate(
-    uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+    uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
     float fps, fuchsia::cobalt::LoggerBase::LogFrameRateCallback callback) {
   callback(ToCobaltStatus(
-      logger_.LogFrameRate(metric_id, event_type_index, component.get(), fps)));
+      logger_.LogFrameRate(metric_id, event_code, component.get(), fps)));
 }
 
 void LoggerImpl::LogMemoryUsage(
-    uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+    uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
     int64_t bytes,
     fuchsia::cobalt::LoggerBase::LogMemoryUsageCallback callback) {
-  callback(ToCobaltStatus(logger_.LogMemoryUsage(metric_id, event_type_index,
-                                                 component.get(), bytes)));
+  callback(ToCobaltStatus(
+      logger_.LogMemoryUsage(metric_id, event_code, component.get(), bytes)));
 }
 
 void LoggerImpl::LogString(
@@ -59,7 +58,7 @@ void LoggerImpl::LogString(
 }
 
 void LoggerImpl::LogIntHistogram(
-    uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+    uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
     fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram,
     fuchsia::cobalt::Logger::LogIntHistogramCallback callback) {
   logger::HistogramPtr histogram_ptr(
@@ -70,11 +69,11 @@ void LoggerImpl::LogIntHistogram(
     bucket->set_count((*it).count);
   }
   callback(ToCobaltStatus(logger_.LogIntHistogram(
-      metric_id, event_type_index, component.get(), std::move(histogram_ptr))));
+      metric_id, event_code, component.get(), std::move(histogram_ptr))));
 }
 
 void LoggerImpl::LogIntHistogram(
-    uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+    uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
     fidl::VectorPtr<uint32_t> bucket_indices,
     fidl::VectorPtr<uint64_t> bucket_counts,
     fuchsia::cobalt::LoggerSimple::LogIntHistogramCallback callback) {
@@ -93,7 +92,7 @@ void LoggerImpl::LogIntHistogram(
   }
 
   callback(ToCobaltStatus(logger_.LogIntHistogram(
-      metric_id, event_type_index, component.get(), std::move(histogram_ptr))));
+      metric_id, event_code, component.get(), std::move(histogram_ptr))));
 }
 
 void LoggerImpl::LogCustomEvent(
@@ -132,19 +131,19 @@ void LoggerImpl::AddTimerObservationIfReady(
   }
 
   callback(ToCobaltStatus(logger_.LogElapsedTime(
-      timer_val_ptr->metric_id, timer_val_ptr->event_type_index,
+      timer_val_ptr->metric_id, timer_val_ptr->event_code,
       timer_val_ptr->component,
       timer_val_ptr->end_timestamp - timer_val_ptr->start_timestamp)));
 }
 
 void LoggerImpl::StartTimer(
-    uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+    uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
     fidl::StringPtr timer_id, uint64_t timestamp, uint32_t timeout_s,
     fuchsia::cobalt::LoggerBase::StartTimerCallback callback) {
   std::unique_ptr<TimerVal> timer_val_ptr;
   auto status = timer_manager_->GetTimerValWithStart(
-      metric_id, event_type_index, component.get(), 0, timer_id.get(),
-      timestamp, timeout_s, &timer_val_ptr);
+      metric_id, event_code, component.get(), 0, timer_id.get(), timestamp,
+      timeout_s, &timer_val_ptr);
 
   if (status != Status::OK) {
     callback(status);

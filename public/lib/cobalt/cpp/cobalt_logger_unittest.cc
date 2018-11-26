@@ -22,12 +22,12 @@ constexpr int32_t kFakeCobaltMetricId = 2;
 
 bool Equals(const OccurrenceEvent* e1, const OccurrenceEvent* e2) {
   return e1->metric_id() == e2->metric_id() &&
-         e1->event_type_index() == e2->event_type_index();
+         e1->event_code() == e2->event_code();
 }
 
 bool Equals(const CountEvent* e1, const CountEvent* e2) {
   return e1->metric_id() == e2->metric_id() &&
-         e1->event_type_index() == e2->event_type_index() &&
+         e1->event_code() == e2->event_code() &&
          e1->component() == e2->component() &&
          e1->period_duration_micros() == e2->period_duration_micros() &&
          e1->count() == e2->count();
@@ -35,20 +35,20 @@ bool Equals(const CountEvent* e1, const CountEvent* e2) {
 
 bool Equals(const ElapsedTimeEvent* e1, const ElapsedTimeEvent* e2) {
   return e1->metric_id() == e2->metric_id() &&
-         e1->event_type_index() == e2->event_type_index() &&
+         e1->event_code() == e2->event_code() &&
          e1->component() == e2->component() &&
          e1->elapsed_micros() == e2->elapsed_micros();
 }
 
 bool Equals(const FrameRateEvent* e1, const FrameRateEvent* e2) {
   return e1->metric_id() == e2->metric_id() &&
-         e1->event_type_index() == e2->event_type_index() &&
+         e1->event_code() == e2->event_code() &&
          e1->component() == e2->component() && e1->fps() == e2->fps();
 }
 
 bool Equals(const MemoryUsageEvent* e1, const MemoryUsageEvent* e2) {
   return e1->metric_id() == e2->metric_id() &&
-         e1->event_type_index() == e2->event_type_index() &&
+         e1->event_code() == e2->event_code() &&
          e1->component() == e2->component() && e1->bytes() == e2->bytes();
 }
 
@@ -58,7 +58,7 @@ bool Equals(const StringUsedEvent* e1, const StringUsedEvent* e2) {
 
 bool Equals(const StartTimerEvent* e1, const StartTimerEvent* e2) {
   return e1->metric_id() == e2->metric_id() &&
-         e1->event_type_index() == e2->event_type_index() &&
+         e1->event_code() == e2->event_code() &&
          e1->component() == e2->component() &&
          e1->timer_id() == e2->timer_id() &&
          e1->timestamp() == e2->timestamp() &&
@@ -73,7 +73,7 @@ bool Equals(const EndTimerEvent* e1, const EndTimerEvent* e2) {
 
 bool Equals(const IntHistogramEvent* e1, const IntHistogramEvent* e2) {
   return e1->metric_id() == e2->metric_id() &&
-         e1->event_type_index() == e2->event_type_index() &&
+         e1->event_code() == e2->event_code() &&
          e1->component() == e2->component() &&
          e1->histogram() == e2->histogram();
 }
@@ -100,46 +100,45 @@ class FakeLoggerImpl : public fuchsia::cobalt::Logger {
  public:
   FakeLoggerImpl() {}
 
-  void LogEvent(uint32_t metric_id, uint32_t event_type_index,
+  void LogEvent(uint32_t metric_id, uint32_t event_code,
                 LogEventCallback callback) override {
     RecordCall(EventType::EVENT_OCCURRED,
-               std::make_unique<OccurrenceEvent>(metric_id, event_type_index));
+               std::make_unique<OccurrenceEvent>(metric_id, event_code));
     callback(fuchsia::cobalt::Status::OK);
   }
 
-  void LogEventCount(uint32_t metric_id, uint32_t event_type_index,
+  void LogEventCount(uint32_t metric_id, uint32_t event_code,
                      fidl::StringPtr component, int64_t period_duration_micros,
                      int64_t count, LogEventCountCallback callback) override {
-    RecordCall(
-        EventType::EVENT_COUNT,
-        std::make_unique<CountEvent>(metric_id, event_type_index, component,
-                                     period_duration_micros, count));
+    RecordCall(EventType::EVENT_COUNT,
+               std::make_unique<CountEvent>(metric_id, event_code, component,
+                                            period_duration_micros, count));
     callback(fuchsia::cobalt::Status::OK);
   }
 
-  void LogElapsedTime(uint32_t metric_id, uint32_t event_type_index,
+  void LogElapsedTime(uint32_t metric_id, uint32_t event_code,
                       fidl::StringPtr component, int64_t elapsed_micros,
                       LogElapsedTimeCallback callback) override {
     RecordCall(EventType::ELAPSED_TIME,
-               std::make_unique<ElapsedTimeEvent>(metric_id, event_type_index,
+               std::make_unique<ElapsedTimeEvent>(metric_id, event_code,
                                                   component, elapsed_micros));
     callback(fuchsia::cobalt::Status::OK);
   }
 
-  void LogFrameRate(uint32_t metric_id, uint32_t event_type_index,
+  void LogFrameRate(uint32_t metric_id, uint32_t event_code,
                     fidl::StringPtr component, float fps,
                     LogFrameRateCallback callback) override {
     RecordCall(EventType::FRAME_RATE,
-               std::make_unique<FrameRateEvent>(metric_id, event_type_index,
+               std::make_unique<FrameRateEvent>(metric_id, event_code,
                                                 component, fps));
     callback(fuchsia::cobalt::Status::OK);
   }
 
-  void LogMemoryUsage(uint32_t metric_id, uint32_t event_type_index,
+  void LogMemoryUsage(uint32_t metric_id, uint32_t event_code,
                       fidl::StringPtr component, int64_t bytes,
                       LogMemoryUsageCallback callback) override {
     RecordCall(EventType::MEMORY_USAGE,
-               std::make_unique<MemoryUsageEvent>(metric_id, event_type_index,
+               std::make_unique<MemoryUsageEvent>(metric_id, event_code,
                                                   component, bytes));
     callback(fuchsia::cobalt::Status::OK);
   }
@@ -151,14 +150,13 @@ class FakeLoggerImpl : public fuchsia::cobalt::Logger {
     callback(fuchsia::cobalt::Status::OK);
   }
 
-  void StartTimer(uint32_t metric_id, uint32_t event_type_index,
+  void StartTimer(uint32_t metric_id, uint32_t event_code,
                   fidl::StringPtr component, fidl::StringPtr timer_id,
                   uint64_t timestamp, uint32_t timeout_s,
                   StartTimerCallback callback) override {
-    RecordCall(EventType::START_TIMER,
-               std::make_unique<StartTimerEvent>(metric_id, event_type_index,
-                                                 component, timer_id, timestamp,
-                                                 timeout_s));
+    RecordCall(EventType::START_TIMER, std::make_unique<StartTimerEvent>(
+                                           metric_id, event_code, component,
+                                           timer_id, timestamp, timeout_s));
     callback(fuchsia::cobalt::Status::OK);
   }
 
@@ -170,12 +168,12 @@ class FakeLoggerImpl : public fuchsia::cobalt::Logger {
   }
 
   void LogIntHistogram(
-      uint32_t metric_id, uint32_t event_type_index, fidl::StringPtr component,
+      uint32_t metric_id, uint32_t event_code, fidl::StringPtr component,
       fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram,
       LogIntHistogramCallback callback) override {
-    RecordCall(EventType::INT_HISTOGRAM, std::make_unique<IntHistogramEvent>(
-                                             metric_id, event_type_index,
-                                             component, std::move(histogram)));
+    RecordCall(EventType::INT_HISTOGRAM,
+               std::make_unique<IntHistogramEvent>(
+                   metric_id, event_code, component, std::move(histogram)));
     callback(fuchsia::cobalt::Status::OK);
   }
 
@@ -354,7 +352,7 @@ TEST_F(CobaltLoggerTest, InitializeCobalt) {
 
 TEST_F(CobaltLoggerTest, LogEvent) {
   OccurrenceEvent event(kFakeCobaltMetricId, 123);
-  cobalt_logger()->LogEvent(event.metric_id(), event.event_type_index());
+  cobalt_logger()->LogEvent(event.metric_id(), event.event_code());
   RunLoopUntilIdle();
   logger()->ExpectCalledOnceWith(EventType::EVENT_OCCURRED, &event);
 }
@@ -362,7 +360,7 @@ TEST_F(CobaltLoggerTest, LogEvent) {
 TEST_F(CobaltLoggerTest, LogEventCount) {
   CountEvent event(kFakeCobaltMetricId, 123, "some_component", 2, 321);
   cobalt_logger()->LogEventCount(
-      event.metric_id(), event.event_type_index(), event.component(),
+      event.metric_id(), event.event_code(), event.component(),
       zx::duration(event.period_duration_micros() * ZX_USEC(1)), event.count());
   RunLoopUntilIdle();
   logger()->ExpectCalledOnceWith(EventType::EVENT_COUNT, &event);
@@ -371,7 +369,7 @@ TEST_F(CobaltLoggerTest, LogEventCount) {
 TEST_F(CobaltLoggerTest, LogElapsedTime) {
   ElapsedTimeEvent event(kFakeCobaltMetricId, 123, "some_component", 321);
   cobalt_logger()->LogElapsedTime(
-      event.metric_id(), event.event_type_index(), event.component(),
+      event.metric_id(), event.event_code(), event.component(),
       zx::duration(event.elapsed_micros() * ZX_USEC(1)));
   RunLoopUntilIdle();
   logger()->ExpectCalledOnceWith(EventType::ELAPSED_TIME, &event);
@@ -379,7 +377,7 @@ TEST_F(CobaltLoggerTest, LogElapsedTime) {
 
 TEST_F(CobaltLoggerTest, LogFrameRate) {
   FrameRateEvent event(kFakeCobaltMetricId, 123, "some_component", 321.5f);
-  cobalt_logger()->LogFrameRate(event.metric_id(), event.event_type_index(),
+  cobalt_logger()->LogFrameRate(event.metric_id(), event.event_code(),
                                 event.component(), event.fps());
   RunLoopUntilIdle();
   logger()->ExpectCalledOnceWith(EventType::FRAME_RATE, &event);
@@ -387,7 +385,7 @@ TEST_F(CobaltLoggerTest, LogFrameRate) {
 
 TEST_F(CobaltLoggerTest, LogMemoryUsage) {
   MemoryUsageEvent event(kFakeCobaltMetricId, 123, "some_component", 534582);
-  cobalt_logger()->LogMemoryUsage(event.metric_id(), event.event_type_index(),
+  cobalt_logger()->LogMemoryUsage(event.metric_id(), event.event_code(),
                                   event.component(), event.bytes());
   RunLoopUntilIdle();
   logger()->ExpectCalledOnceWith(EventType::MEMORY_USAGE, &event);
@@ -404,7 +402,7 @@ TEST_F(CobaltLoggerTest, StartTimer) {
   zx::time timestamp = zx::clock::get_monotonic();
   StartTimerEvent event(kFakeCobaltMetricId, 123, "some_component", "timer_1",
                         timestamp.get() / ZX_USEC(1), 3);
-  cobalt_logger()->StartTimer(event.metric_id(), event.event_type_index(),
+  cobalt_logger()->StartTimer(event.metric_id(), event.event_code(),
                               event.component(), event.timer_id(), timestamp,
                               zx::duration(event.timeout_s() * ZX_SEC(1)));
   RunLoopUntilIdle();
@@ -430,7 +428,7 @@ TEST_F(CobaltLoggerTest, LogIntHistogram) {
 
   IntHistogramEvent event(kFakeCobaltMetricId, 123, "some_component",
                           std::move(histogram_clone));
-  cobalt_logger()->LogIntHistogram(event.metric_id(), event.event_type_index(),
+  cobalt_logger()->LogIntHistogram(event.metric_id(), event.event_code(),
                                    event.component(), histogram.take());
   RunLoopUntilIdle();
   logger()->ExpectCalledOnceWith(EventType::INT_HISTOGRAM, &event);

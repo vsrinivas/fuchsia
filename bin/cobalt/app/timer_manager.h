@@ -29,8 +29,8 @@ struct TimerVal {
   uint32_t metric_id;
   // The encoding_id used in the event we will log.
   uint32_t encoding_id;
-  // The event_type_index for the event.
-  uint32_t event_type_index;
+  // The event_code for the event.
+  uint32_t event_code;
   // The component for the event.
   std::string component;
   // When the timer starts.
@@ -45,7 +45,7 @@ struct TimerVal {
   std::string part_name;
 
   // Stores the start-related arguments in the given TimerVal.
-  void AddStart(uint32_t metric_id, uint32_t event_type_index,
+  void AddStart(uint32_t metric_id, uint32_t event_code,
                 const std::string& component, uint32_t encoding_id,
                 int64_t timestamp);
 
@@ -79,7 +79,7 @@ class TimerManager {
   // same timer_id and different start timestamp exists it returns
   // FAILED_PRECONDITION. If timer_ID or timeout_s is invalid, returns
   // INVALID_ARGUMENTS.
-  Status GetTimerValWithStart(uint32_t metric_id, uint32_t event_type_index,
+  Status GetTimerValWithStart(uint32_t metric_id, uint32_t event_code,
                               const std::string& component,
                               uint32_t encoding_id, const std::string& timer_id,
                               int64_t timestamp, uint32_t timeout_s,

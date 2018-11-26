@@ -24,9 +24,9 @@ class CobaltLogger {
   // from the ProjectProfile used to create this CobaltLogger, and it must be of
   // type EVENT_OCCURRED.
   //
-  // |event_type_index| The index of the event type that occurred. The indexed
+  // |event_code| The index of the event type that occurred. The indexed
   //     set of all event types is specified in the metric definition.
-  virtual void LogEvent(uint32_t metric_id, uint32_t event_type_index) = 0;
+  virtual void LogEvent(uint32_t metric_id, uint32_t event_code) = 0;
 
   // Logs that an event has occurred a given number of times.
   //
@@ -34,7 +34,7 @@ class CobaltLogger {
   // from the ProjectProfile used to create this CobaltLogger, and it must be of
   // type EVENT_COUNT.
   //
-  // |event_type_index| The index of the event type that occurred. The indexed
+  // |event_code| The index of the event type that occurred. The indexed
   //     set of all event types is specified in the metric definition.
   //
   // |component| Optionally, a component associated with the event may
@@ -50,7 +50,7 @@ class CobaltLogger {
   //      always set this value to 1 and always set
   //     |period_duration| to 0 in order to achieve a semantics
   //     similar to the LogEvent() method, but with a |component|.
-  virtual void LogEventCount(uint32_t metric_id, uint32_t event_type_index,
+  virtual void LogEventCount(uint32_t metric_id, uint32_t event_code,
                              const std::string& component,
                              zx::duration period_duration, int64_t count) = 0;
 
@@ -60,7 +60,7 @@ class CobaltLogger {
   // from the ProjectProfile used to create this CobaltLogger, and it must be of
   // type ELAPSED_TIME.
   //
-  // |event_type_index| The index of the event type that occurred. The indexed
+  // |event_code| The index of the event type that occurred. The indexed
   //     set of all event types is specified in the metric definition.
   //
   // |component| Optionally, a component associated with the event may
@@ -69,7 +69,7 @@ class CobaltLogger {
   //     component.
   //
   // |elapsed_time| The elapsed time of the event.
-  virtual void LogElapsedTime(uint32_t metric_id, uint32_t event_type_index,
+  virtual void LogElapsedTime(uint32_t metric_id, uint32_t event_code,
                               const std::string& component,
                               zx::duration elapsed_time) = 0;
 
@@ -79,7 +79,7 @@ class CobaltLogger {
   // from the ProjectProfile used to create this CobaltLogger, and it must be of
   // type FRAME_RATE.
   //
-  // |event_type_index| The index of the event type that associated with the
+  // |event_code| The index of the event type that associated with the
   //     frame-rate measurement. The indexed set of all event types is
   //     specified in the metric definition.
   //
@@ -89,7 +89,7 @@ class CobaltLogger {
   //     notion of component.
   //
   // |fps| The average-frame rate in frames-per-second.
-  virtual void LogFrameRate(uint32_t metric_id, uint32_t event_type_index,
+  virtual void LogFrameRate(uint32_t metric_id, uint32_t event_code,
                             const std::string& component, float fps) = 0;
 
   // Logs a measured memory usage.
@@ -98,7 +98,7 @@ class CobaltLogger {
   // from the ProjectProfile used to create this CobaltLogger, and it must be of
   // type MEMORY_USAGE.
   //
-  // |event_type_index| The index of the event type associated with the memory
+  // |event_code| The index of the event type associated with the memory
   //     usage. The indexed set of all event types is specified in the metric
   //     definition.
   //
@@ -108,7 +108,7 @@ class CobaltLogger {
   //     component.
   //
   // |bytes| The memory used, in bytes.
-  virtual void LogMemoryUsage(uint32_t metric_id, uint32_t event_type_index,
+  virtual void LogMemoryUsage(uint32_t metric_id, uint32_t event_code,
                               const std::string& component, int64_t bytes) = 0;
 
   // Logs the fact that a given string was used, in a specific context.
@@ -144,7 +144,7 @@ class CobaltLogger {
   // from the ProjectProfile used to create this CobaltLogger, and it must be of
   // type ELAPSED_TIME.
   //
-  // |event_type_index| The index of the event type to associate with the
+  // |event_code| The index of the event type to associate with the
   // elapsed time. This is passed to LogElapsedTime()
   //
   // |component| Optionally, a component associated with the event may
@@ -193,7 +193,7 @@ class CobaltLogger {
   //        will be forgotten.
   //     Any error returned by LogElapsedTime() may also be returned by this
   //     method.
-  virtual void StartTimer(uint32_t metric_id, uint32_t event_type_index,
+  virtual void StartTimer(uint32_t metric_id, uint32_t event_code,
                           const std::string& component,
                           const std::string& timer_id, zx::time timestamp,
                           zx::duration timeout) = 0;
@@ -266,7 +266,7 @@ class CobaltLogger {
   // from the ProjectProfile used to create this CobaltLogger, and it must be of
   // type INT_HISTOGRAM.
   //
-  // |event_type_index| The index of the event type associated with the
+  // |event_code| The index of the event type associated with the
   // integer-valued measurement. The indexed set of all event types is
   // specified in the metric definition.
   //
@@ -279,8 +279,7 @@ class CobaltLogger {
   //     for one bucket of the histogram. The definitions of the buckets is
   //     given in the Metric definition.
   virtual void LogIntHistogram(
-      uint32_t metric_id, uint32_t event_type_index,
-      const std::string& component,
+      uint32_t metric_id, uint32_t event_code, const std::string& component,
       std::vector<fuchsia::cobalt::HistogramBucket> histogram) = 0;
 
   // Logs a custom Event. The semantics of the Metric are specified in the
