@@ -1,4 +1,14 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.netstack.Netstack",
+                "fuchsia.net.LegacySocketProvider",
+                "fuchsia.net.Connectivity",
+                "fuchsia.net.stack.Stack"
+            ]
+        }
+    },
     "program": {
         "binary": "test/netstack_integration_test"
     },
@@ -8,6 +18,7 @@
             "class/ethernet"
         ],
         "services": [
+            "fuchsia.net.LegacySocketProvider",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"
         ]

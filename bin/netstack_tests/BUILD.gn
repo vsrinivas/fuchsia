@@ -9,9 +9,12 @@ executable("netstack_integration_test") {
 
   sources = [
     "netstack_add_eth_test.cc",
+    "netstack_filter_test.cc",
   ]
 
   deps = [
+    "//garnet/lib/inet",
+    "//garnet/public/fidl/fuchsia.net.filter",
     "//garnet/public/fidl/fuchsia.netstack",
     "//garnet/public/lib/component/cpp/testing",
     "//third_party/googletest:gtest_main",
