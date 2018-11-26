@@ -2,10 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use failure::{bail, format_err};
 use fidl_fuchsia_wlan_mlme as fidl_mlme;
-use wlan_rsn::rsne::RsnCapabilities;
+use std::sync::{Arc, atomic::{AtomicBool, Ordering}, Mutex};
+use wlan_rsn::{rsna::UpdateSink, rsne::RsnCapabilities};
 
-use crate::{InfoEvent, InfoStream, Ssid, test_utils};
+use crate::{
+    client::rsn::Supplicant,
+    InfoEvent,
+    InfoStream,
+    Ssid,
+    test_utils
+};
 
 fn fake_bss_description(ssid: Ssid, rsn: Option<Vec<u8>>) -> fidl_mlme::BssDescription {
     fidl_mlme::BssDescription {
@@ -302,5 +310,76 @@ pub fn fake_5ghz_band_capabilities() -> fidl_mlme::BandCapabilities {
         cap: fake_capability_info(),
         ht_cap: None,
         vht_cap: None,
+    }
+}
+
+pub fn mock_supplicant() -> (MockSupplicant, MockSupplicantController) {
+    let started = Arc::new(AtomicBool::new(false));
+    let start_failure = Arc::new(Mutex::new(None));
+    let sink = Arc::new(Mutex::new(Ok(UpdateSink::default())));
+    let supplicant = MockSupplicant {
+        started: started.clone(),
+        start_failure: start_failure.clone(),
+        on_eapol_frame: sink.clone(),
+    };
+    let mock = MockSupplicantController {
+        started,
+        start_failure,
+        mock_on_eapol_frame: sink,
+    };
+    (supplicant, mock)
+}
+
+#[derive(Debug)]
+pub struct MockSupplicant {
+    started: Arc<AtomicBool>,
+    start_failure: Arc<Mutex<Option<failure::Error>>>,
+    on_eapol_frame: Arc<Mutex<Result<UpdateSink, failure::Error>>>,
+}
+
+impl Supplicant for MockSupplicant {
+    fn start(&mut self) -> Result<(), failure::Error> {
+        match &*self.start_failure.lock().unwrap() {
+            Some(error) => bail!("{:?}", error),
+            None => {
+                self.started.store(true, Ordering::SeqCst);
+                Ok(())
+            }
+        }
+    }
+
+    fn reset(&mut self) {
+        let _ = self.on_eapol_frame.lock().unwrap().as_mut().map(|updates| updates.clear());
+    }
+
+    fn on_eapol_frame(&mut self, update_sink: &mut UpdateSink, _frame: &eapol::Frame)
+                      -> Result<(), failure::Error> {
+        self.on_eapol_frame.lock().unwrap().as_mut().map(|updates| {
+            update_sink.extend(updates.drain(..));
+        }).map_err(|e| format_err!("{:?}", e))
+    }
+}
+
+pub struct MockSupplicantController {
+    started: Arc<AtomicBool>,
+    start_failure: Arc<Mutex<Option<failure::Error>>>,
+    mock_on_eapol_frame: Arc<Mutex<Result<UpdateSink, failure::Error>>>,
+}
+
+impl MockSupplicantController {
+    pub fn set_start_failure(&self, error: failure::Error) {
+        self.start_failure.lock().unwrap().replace(error);
+    }
+
+    pub fn is_supplicant_started(&self) -> bool {
+        self.started.load(Ordering::SeqCst)
+    }
+
+    pub fn set_on_eapol_frame_results(&self, updates: UpdateSink) {
+        *self.mock_on_eapol_frame.lock().unwrap() = Ok(updates);
+    }
+
+    pub fn set_on_eapol_frame_failure(&self, error: failure::Error) {
+        *self.mock_on_eapol_frame.lock().unwrap() = Err(error);
     }
 }

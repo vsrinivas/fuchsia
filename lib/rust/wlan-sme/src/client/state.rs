@@ -22,15 +22,15 @@ const DEFAULT_AUTH_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
 
 #[derive(Debug, PartialEq)]
 pub enum LinkState<T: Tokens> {
-    EstablishingRsna(Option<T::ConnectToken>, Box<Rsna>),
-    LinkUp(Option<Box<Rsna>>)
+    EstablishingRsna(Option<T::ConnectToken>, Rsna),
+    LinkUp(Option<Rsna>)
 }
 
 #[derive(Debug, PartialEq)]
 pub struct ConnectCommand<T> {
     pub bss: Box<BssDescription>,
     pub token: Option<T>,
-    pub rsna: Option<Box<Rsna>>,
+    pub rsna: Option<Rsna>,
     pub params: ConnectPhyParams
 }
 
@@ -456,12 +456,23 @@ fn handle_supplicant_start_failure<T>(token: Option<T::ConnectToken>, bss: Box<B
 #[cfg(test)]
 mod tests {
     use super::*;
+    use failure::format_err;
     use futures::channel::mpsc;
+    use std::error::Error;
     use std::sync::Arc;
+    use wlan_rsn::{NegotiatedRsne, rsna::UpdateSink, rsne::RsnCapabilities};
 
-    use crate::client::test_utils::{expect_info_event, fake_unprotected_bss_description};
+    use crate::client::test_utils::{
+        expect_info_event,
+        fake_protected_bss_description,
+        fake_unprotected_bss_description,
+        mock_supplicant,
+        MockSupplicant,
+        MockSupplicantController,
+
+    };
     use crate::client::{InfoSink, UserEvent, UserStream, UserSink};
-    use crate::{DeviceInfo, InfoStream, MlmeStream, Ssid};
+    use crate::{DeviceInfo, InfoStream, MlmeStream, Ssid, test_utils};
 
     #[derive(Debug, PartialEq)]
     struct FakeTokens;
@@ -476,69 +487,103 @@ mod tests {
         let mut h = TestHelper::new();
 
         let state = idle_state();
+        let command = connect_command_one();
+        let bss_ssid = command.bss.ssid.clone();
+        let bssid = command.bss.bssid.clone();
+        let command_token = command.token.unwrap();
 
         // Issue a "connect" command
-        let state = state.connect(connect_command_one(), &mut h.context);
+        let state = state.connect(command, &mut h.context);
 
         expect_info_event(&mut h.info_stream, InfoEvent::AssociationStarted { att_id: 1});
-
-        // (sme->mlme) Expect a JoinRequest
-        match h.mlme_stream.try_next().unwrap() {
-            Some(MlmeRequest::Join(req)) => {
-                assert_eq!(connect_command_one().bss.ssid, req.selected_bss.ssid);
-            },
-            other => panic!("expected a Join request, got {:?}", other),
-        }
+        expect_join_request(&mut h.mlme_stream, &bss_ssid);
 
         // (mlme->sme) Send a JoinConf as a response
-        let join_conf = MlmeEvent::JoinConf {
-            resp: fidl_mlme::JoinConfirm {
-                result_code: fidl_mlme::JoinResultCodes::Success
-            }
-        };
-
+        let join_conf = create_join_conf(fidl_mlme::JoinResultCodes::Success);
         let state = state.on_mlme_event(join_conf, &mut h.context);
 
-        // (sme->mlme) Expect an AuthenticateRequest
-        match h.mlme_stream.try_next().unwrap() {
-            Some(MlmeRequest::Authenticate(req)) => {
-                assert_eq!(connect_command_one().bss.bssid, req.peer_sta_address);
-            },
-            other => panic!("expected an Authenticate request, got {:?}", other)
-        }
+        expect_auth_req(&mut h.mlme_stream, bssid);
 
         // (mlme->sme) Send an AuthenticateConf as a response
-        let auth_conf = MlmeEvent::AuthenticateConf {
-            resp: fidl_mlme::AuthenticateConfirm {
-                peer_sta_address: connect_command_one().bss.bssid,
-                auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
-                result_code: fidl_mlme::AuthenticateResultCodes::Success,
-            }
-        };
+        let auth_conf = create_auth_conf(bssid.clone(),
+                                         fidl_mlme::AuthenticateResultCodes::Success);
         let state = state.on_mlme_event(auth_conf, &mut h.context);
 
-        // (sme->mlme) Expect an AssociateRequest
-        match h.mlme_stream.try_next().unwrap() {
-            Some(MlmeRequest::Associate(req)) => {
-                assert_eq!(connect_command_one().bss.bssid, req.peer_sta_address);
-            },
-            other => panic!("expected an Associate request, got {:?}", other)
-        }
+        expect_assoc_req(&mut h.mlme_stream, bssid);
 
         // (mlme->sme) Send an AssociateConf
-        let assoc_conf = MlmeEvent::AssociateConf {
-            resp: fidl_mlme::AssociateConfirm {
-                result_code: fidl_mlme::AssociateResultCodes::Success,
-                association_id: 55,
-            }
-        };
+        let assoc_conf = create_assoc_conf(fidl_mlme::AssociateResultCodes::Success);
         let _state = state.on_mlme_event(assoc_conf, &mut h.context);
 
-        expect_info_event(&mut h.info_stream, InfoEvent::AssociationSuccess { att_id: 1 });
-
         // User should be notified that we are connected
-        expect_connect_result(&mut h.user_stream, connect_command_one().token.unwrap(),
-                              ConnectResult::Success);
+        expect_connect_result(&mut h.user_stream, command_token, ConnectResult::Success);
+
+        expect_info_event(&mut h.info_stream, InfoEvent::AssociationSuccess { att_id: 1 });
+        expect_info_event(
+            &mut h.info_stream,
+            InfoEvent::ConnectFinished { result: ConnectResult::Success, failure: None });
+    }
+
+    #[test]
+    fn associate_happy_path_protected() {
+        let mut h = TestHelper::new();
+        let (supplicant, suppl_mock) = mock_supplicant();
+
+        let state = idle_state();
+        let command = connect_command_rsna(supplicant);
+        let bss_ssid = command.bss.ssid.clone();
+        let bssid = command.bss.bssid.clone();
+        let command_token = command.token.unwrap();
+
+        // Issue a "connect" command
+        let state = state.connect(command, &mut h.context);
+
+        expect_info_event(&mut h.info_stream, InfoEvent::AssociationStarted { att_id: 1});
+        expect_join_request(&mut h.mlme_stream, &bss_ssid);
+
+        // (mlme->sme) Send a JoinConf as a response
+        let join_conf = create_join_conf(fidl_mlme::JoinResultCodes::Success);
+        let state = state.on_mlme_event(join_conf, &mut h.context);
+
+        expect_auth_req(&mut h.mlme_stream, bssid);
+
+        // (mlme->sme) Send an AuthenticateConf as a response
+        let auth_conf = create_auth_conf(bssid.clone(),
+                                         fidl_mlme::AuthenticateResultCodes::Success);
+        let state = state.on_mlme_event(auth_conf, &mut h.context);
+
+        expect_assoc_req(&mut h.mlme_stream, bssid);
+
+        // (mlme->sme) Send an AssociateConf
+        let assoc_conf = create_assoc_conf(fidl_mlme::AssociateResultCodes::Success);
+        let state = state.on_mlme_event(assoc_conf, &mut h.context);
+
+        assert!(suppl_mock.is_supplicant_started());
+        expect_info_event(&mut h.info_stream, InfoEvent::AssociationSuccess { att_id: 1 });
+        expect_info_event(&mut h.info_stream, InfoEvent::RsnaStarted { att_id: 1 });
+
+        // (mlme->sme) Send an EapolInd, mock supplicant with key frame
+        let update = SecAssocUpdate::TxEapolKeyFrame(test_utils::eapol_key_frame());
+        let state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![update]);
+
+        expect_eapol_req(&mut h.mlme_stream, bssid);
+
+        // (mlme->sme) Send an EapolInd, mock supplicant with keys
+        let ptk = SecAssocUpdate::Key(Key::Ptk(test_utils::ptk()));
+        let gtk = SecAssocUpdate::Key(Key::Gtk(test_utils::gtk()));
+        let state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![ptk, gtk]);
+
+        expect_set_keys(&mut h.mlme_stream, bssid);
+
+        // (mlme->sme) Send an EapolInd, mock supplicant with completion status
+        let update = SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished);
+        let _state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![update]);
+
+        expect_connect_result(&mut h.user_stream, command_token, ConnectResult::Success);
+        expect_info_event(&mut h.info_stream, InfoEvent::RsnaEstablished { att_id: 1 });
+        expect_info_event(
+            &mut h.info_stream,
+            InfoEvent::ConnectFinished { result: ConnectResult::Success, failure: None });
     }
 
     #[test]
@@ -653,7 +698,7 @@ mod tests {
         let state = state.connect(connect_command_two(), &mut h.context);
         expect_connect_result(&mut h.user_stream, connect_command_one().token.unwrap(),
                               ConnectResult::Canceled);
-        expect_join_request(&mut h.mlme_stream);
+        expect_join_request(&mut h.mlme_stream, &connect_command_two().bss.ssid);
         assert_eq!(joining_state(connect_command_two()), state);
     }
 
@@ -664,7 +709,7 @@ mod tests {
         let state = state.connect(connect_command_two(), &mut h.context);
         expect_connect_result(&mut h.user_stream, connect_command_one().token.unwrap(),
                               ConnectResult::Canceled);
-        expect_join_request(&mut h.mlme_stream);
+        expect_join_request(&mut h.mlme_stream, &connect_command_two().bss.ssid);
         assert_eq!(joining_state(connect_command_two()), state);
     }
 
@@ -676,8 +721,117 @@ mod tests {
         let state = exchange_deauth(state, &mut h);
         expect_connect_result(&mut h.user_stream, connect_command_one().token.unwrap(),
                               ConnectResult::Canceled);
-        expect_join_request(&mut h.mlme_stream);
+        expect_join_request(&mut h.mlme_stream, &connect_command_two().bss.ssid);
         assert_eq!(joining_state(connect_command_two()), state);
+    }
+
+    #[test]
+    fn supplicant_fails_to_start_while_associating() {
+        let mut h = TestHelper::new();
+        let (supplicant, suppl_mock) = mock_supplicant();
+        let command = connect_command_rsna(supplicant);
+        let bssid = command.bss.bssid.clone();
+        let token = command.token.unwrap();
+        let state = associating_state(command);
+
+        suppl_mock.set_start_failure(format_err!("failed to start supplicant"));
+
+        // (mlme->sme) Send an AssociateConf
+        let assoc_conf = create_assoc_conf(fidl_mlme::AssociateResultCodes::Success);
+        let _state = state.on_mlme_event(assoc_conf, &mut h.context);
+
+        expect_deauth_req(&mut h.mlme_stream, bssid, fidl_mlme::ReasonCode::StaLeaving);
+        expect_connect_result(&mut h.user_stream, token, ConnectResult::Failed);
+        expect_info_event(&mut h.info_stream, InfoEvent::AssociationSuccess { att_id: 0 });
+        expect_info_event(
+            &mut h.info_stream,
+            InfoEvent::ConnectFinished {
+                result: ConnectResult::Failed,
+                failure: Some(ConnectFailure::AssociationFailure(
+                    fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+                )),
+            },
+        );
+    }
+
+    #[test]
+    fn bad_eapol_frame_while_establishing_rsna() {
+        let mut h = TestHelper::new();
+        let (supplicant, suppl_mock) = mock_supplicant();
+        let command = connect_command_rsna(supplicant);
+        let bssid = command.bss.bssid.clone();
+        let state = establishing_rsna_state(command);
+
+        // doesn't matter what we mock here
+        let update = SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished);
+        suppl_mock.set_on_eapol_frame_results(vec![update]);
+
+        // (mlme->sme) Send an EapolInd with bad eapol data
+        let eapol_ind = create_eapol_ind(bssid.clone(), vec![1, 2, 3, 4]);
+        let state = state.on_mlme_event(eapol_ind, &mut h.context);
+
+        match state {
+            State::Associated { link_state, .. } => match link_state {
+                LinkState::EstablishingRsna(..) => (), // expected path
+                _ => panic!("expect link state to still be establishing RSNA"),
+            },
+            _ => panic!("expect state to still be associated"),
+        }
+
+        expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
+        expect_stream_empty(&mut h.user_stream, "unexpected event in user stream");
+        expect_stream_empty(&mut h.info_stream, "unexpected event in info stream");
+    }
+
+    #[test]
+    fn supplicant_fails_to_process_eapol_while_establishing_rsna() {
+        let mut h = TestHelper::new();
+        let (supplicant, suppl_mock) = mock_supplicant();
+        let command = connect_command_rsna(supplicant);
+        let bssid = command.bss.bssid.clone();
+        let state = establishing_rsna_state(command);
+
+        suppl_mock.set_on_eapol_frame_failure(format_err!("supplicant::on_eapol_frame fails"));
+
+        // (mlme->sme) Send an EapolInd
+        let eapol_ind = create_eapol_ind(bssid.clone(), test_utils::eapol_key_frame_bytes());
+        let state = state.on_mlme_event(eapol_ind, &mut h.context);
+
+        match state {
+            State::Associated { link_state, .. } => match link_state {
+                LinkState::EstablishingRsna(..) => (), // expected path
+                _ => panic!("expect link state to still be establishing RSNA"),
+            },
+            _ => panic!("expect state to still be associated"),
+        }
+
+        expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
+        expect_stream_empty(&mut h.user_stream, "unexpected event in user stream");
+        expect_stream_empty(&mut h.info_stream, "unexpected event in info stream");
+    }
+
+    #[test]
+    fn wrong_password_while_establishing_rsna() {
+        let mut h = TestHelper::new();
+        let (supplicant, suppl_mock) = mock_supplicant();
+        let command = connect_command_rsna(supplicant);
+        let bssid = command.bss.bssid.clone();
+        let token = command.token.unwrap();
+        let state = establishing_rsna_state(command);
+
+        // (mlme->sme) Send an EapolInd, mock supplicant with wrong password status
+        let update = SecAssocUpdate::Status(SecAssocStatus::WrongPassword);
+        let _state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![update]);
+
+        expect_deauth_req(&mut h.mlme_stream, bssid, fidl_mlme::ReasonCode::StaLeaving);
+        expect_connect_result(&mut h.user_stream, token, ConnectResult::BadCredentials);
+        expect_info_event(
+            &mut h.info_stream,
+            InfoEvent::ConnectFinished {
+                result: ConnectResult::BadCredentials,
+                failure: None,
+            },
+        );
     }
 
     #[test]
@@ -686,7 +840,7 @@ mod tests {
         let state = link_up_state(connect_command_one().bss);
         let state = state.connect(connect_command_two(), &mut h.context);
         let state = exchange_deauth(state, &mut h);
-        expect_join_request(&mut h.mlme_stream);
+        expect_join_request(&mut h.mlme_stream, &connect_command_two().bss.ssid);
         assert_eq!(joining_state(connect_command_two()), state);
     }
 
@@ -800,6 +954,53 @@ mod tests {
         }
     }
 
+    fn on_eapol_ind(state: State<FakeTokens>, helper: &mut TestHelper, bssid: [u8; 6],
+                    suppl_mock: &MockSupplicantController, update_sink: UpdateSink)
+                    -> State<FakeTokens> {
+        suppl_mock.set_on_eapol_frame_results(update_sink);
+        // (mlme->sme) Send an EapolInd
+        let eapol_ind = create_eapol_ind(bssid.clone(), test_utils::eapol_key_frame_bytes());
+        state.on_mlme_event(eapol_ind, &mut helper.context)
+    }
+
+    fn create_join_conf(result_code: fidl_mlme::JoinResultCodes) -> MlmeEvent {
+        MlmeEvent::JoinConf {
+            resp: fidl_mlme::JoinConfirm {
+                result_code,
+            }
+        }
+    }
+
+    fn create_auth_conf(bssid: [u8; 6], result_code: fidl_mlme::AuthenticateResultCodes)
+                        -> MlmeEvent {
+        MlmeEvent::AuthenticateConf {
+            resp: fidl_mlme::AuthenticateConfirm {
+                peer_sta_address: bssid,
+                auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
+                result_code,
+            }
+        }
+    }
+
+    fn create_assoc_conf(result_code: fidl_mlme::AssociateResultCodes) -> MlmeEvent {
+        MlmeEvent::AssociateConf {
+            resp: fidl_mlme::AssociateConfirm {
+                result_code,
+                association_id: 55,
+            }
+        }
+    }
+
+    fn create_eapol_ind(bssid: [u8; 6], data: Vec<u8>) -> MlmeEvent {
+        MlmeEvent::EapolInd {
+            ind: fidl_mlme::EapolIndication {
+                src_addr: bssid,
+                dst_addr: fake_device_info().addr,
+                data,
+            },
+        }
+    }
+
     fn exchange_deauth(state: State<FakeTokens>, h: &mut TestHelper) -> State<FakeTokens> {
         // (sme->mlme) Expect a DeauthenticateRequest
         match h.mlme_stream.try_next().unwrap() {
@@ -818,13 +1019,81 @@ mod tests {
         state.on_mlme_event(deauth_conf, &mut h.context)
     }
 
-    fn expect_join_request(mlme_stream: &mut MlmeStream) {
+    fn expect_join_request(mlme_stream: &mut MlmeStream, ssid: &[u8]) {
         // (sme->mlme) Expect a JoinRequest
         match mlme_stream.try_next().unwrap() {
-            Some(MlmeRequest::Join(req)) => {
-                assert_eq!(connect_command_two().bss.ssid, req.selected_bss.ssid);
-            },
+            Some(MlmeRequest::Join(req)) => assert_eq!(ssid, &req.selected_bss.ssid[..]),
             other => panic!("expected a Join request, got {:?}", other),
+        }
+    }
+
+    fn expect_auth_req(mlme_stream: &mut MlmeStream, bssid: [u8; 6]) {
+        // (sme->mlme) Expect an AuthenticateRequest
+        match mlme_stream.try_next().unwrap() {
+            Some(MlmeRequest::Authenticate(req)) => assert_eq!(bssid, req.peer_sta_address),
+            other => panic!("expected an Authenticate request, got {:?}", other)
+        }
+    }
+
+    fn expect_deauth_req(mlme_stream: &mut MlmeStream, bssid: [u8; 6],
+                         reason_code: fidl_mlme::ReasonCode) {
+        // (sme->mlme) Expect a DeauthenticateRequest
+        match mlme_stream.try_next().unwrap() {
+            Some(MlmeRequest::Deauthenticate(req)) => {
+                assert_eq!(bssid, req.peer_sta_address);
+                assert_eq!(reason_code, req.reason_code);
+            },
+            other => panic!("expected an Deauthenticate request, got {:?}", other)
+        }
+    }
+
+    fn expect_assoc_req(mlme_stream: &mut MlmeStream, bssid: [u8; 6]) {
+        match mlme_stream.try_next().unwrap() {
+            Some(MlmeRequest::Associate(req)) => assert_eq!(bssid, req.peer_sta_address),
+            other => panic!("expected an Associate request, got {:?}", other),
+        }
+    }
+
+    fn expect_eapol_req(mlme_stream: &mut MlmeStream, bssid: [u8; 6]) {
+        match mlme_stream.try_next().unwrap() {
+            Some(MlmeRequest::Eapol(req)) => {
+                assert_eq!(req.src_addr, fake_device_info().addr);
+                assert_eq!(req.dst_addr, bssid);
+                assert_eq!(req.data, test_utils::eapol_key_frame_bytes());
+            }
+            other => panic!("expected an Eapol request, got {:?}", other),
+        }
+    }
+
+    fn expect_set_keys(mlme_stream: &mut MlmeStream, bssid: [u8; 6]) {
+        match mlme_stream.try_next().unwrap().expect("expect mlme message") {
+            MlmeRequest::SetKeys(set_keys_req) => {
+                assert_eq!(set_keys_req.keylist.len(), 1);
+                let k = set_keys_req.keylist.get(0).expect("expect key descriptor");
+                assert_eq!(k.key, vec![0xCCu8; test_utils::cipher().tk_bytes().unwrap()]);
+                assert_eq!(k.key_id, 0);
+                assert_eq!(k.key_type, fidl_mlme::KeyType::Pairwise);
+                assert_eq!(k.address, bssid);
+                assert_eq!(k.rsc, [0u8; 8]);
+                assert_eq!(k.cipher_suite_oui, [0x00, 0x0F, 0xAC]);
+                assert_eq!(k.cipher_suite_type, 4);
+            },
+            _ => panic!("expect set keys req to MLME"),
+        }
+
+        match mlme_stream.try_next().unwrap().expect("expect mlme message") {
+            MlmeRequest::SetKeys(set_keys_req) => {
+                assert_eq!(set_keys_req.keylist.len(), 1);
+                let k = set_keys_req.keylist.get(0).expect("expect key descriptor");
+                assert_eq!(k.key, test_utils::gtk_bytes());
+                assert_eq!(k.key_id, 2);
+                assert_eq!(k.key_type, fidl_mlme::KeyType::Group);
+                assert_eq!(k.address, [0xFFu8; 6]);
+                assert_eq!(k.rsc, [0u8; 8]);
+                assert_eq!(k.cipher_suite_oui, [0x00, 0x0F, 0xAC]);
+                assert_eq!(k.cipher_suite_type, 4);
+            },
+            _ => panic!("expect set keys req to MLME"),
         }
     }
 
@@ -840,9 +1109,16 @@ mod tests {
         }
     }
 
+    fn expect_stream_empty<T>(stream: &mut mpsc::UnboundedReceiver<T>, error_msg: &str) {
+        match stream.try_next() {
+            Err(e) => assert_eq!(e.description(), "receiver channel is empty"),
+            _ => panic!("{}", error_msg),
+        }
+    }
+
     fn connect_command_one() -> ConnectCommand<u32> {
         ConnectCommand {
-            bss: Box::new(bss(b"foo".to_vec(), [7, 7, 7, 7, 7, 7])),
+            bss: Box::new(unprotected_bss(b"foo".to_vec(), [7, 7, 7, 7, 7, 7])),
             token: Some(123_u32),
             rsna: None,
             params: ConnectPhyParams { phy: None, cbw: None, },
@@ -851,7 +1127,7 @@ mod tests {
 
     fn connect_command_two() -> ConnectCommand<u32> {
         ConnectCommand {
-            bss: Box::new(bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])),
+            bss: Box::new(unprotected_bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])),
             token: Some(456_u32),
             rsna: None,
             params: ConnectPhyParams { phy: None, cbw: None, },
@@ -860,9 +1136,23 @@ mod tests {
 
     fn connect_command_no_token() -> ConnectCommand<u32> {
         ConnectCommand {
-            bss: Box::new(bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])),
+            bss: Box::new(unprotected_bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])),
             token: None,
             rsna: None,
+            params: ConnectPhyParams { phy: None, cbw: None, },
+        }
+    }
+
+    fn connect_command_rsna(supplicant: MockSupplicant) -> ConnectCommand<u32> {
+        let bss = protected_bss(b"foo".to_vec(), [7, 7, 7, 7, 7, 7]);
+        let rsne = test_utils::wpa2_psk_ccmp_rsne_with_caps(RsnCapabilities(0));
+        ConnectCommand {
+            bss: Box::new(bss),
+            token: Some(123_u32),
+            rsna: Some(Rsna {
+                negotiated_rsne: NegotiatedRsne::from_rsne(&rsne).expect("invalid NegotiatedRsne"),
+                supplicant: Box::new(supplicant),
+            }),
             params: ConnectPhyParams { phy: None, cbw: None, },
         }
     }
@@ -883,6 +1173,16 @@ mod tests {
         State::Associating { cmd }
     }
 
+    fn establishing_rsna_state(cmd: ConnectCommand<u32>) -> State<FakeTokens> {
+        let rsna = cmd.rsna.expect("expect rsna for establishing_rsna_state");
+        State::Associated {
+            bss: cmd.bss,
+            last_rssi: None,
+            link_state: LinkState::EstablishingRsna(cmd.token, rsna),
+            params: ConnectPhyParams { phy: None, cbw: None },
+        }
+    }
+
     fn link_up_state(bss: Box<fidl_mlme::BssDescription>) -> State<FakeTokens> {
         State::Associated {
             bss,
@@ -892,7 +1192,14 @@ mod tests {
         }
     }
 
-    fn bss(ssid: Ssid, bssid: [u8; 6]) -> fidl_mlme::BssDescription {
+    fn protected_bss(ssid: Ssid, bssid: [u8; 6]) -> fidl_mlme::BssDescription {
+        fidl_mlme::BssDescription {
+            bssid,
+            .. fake_protected_bss_description(ssid)
+        }
+    }
+
+    fn unprotected_bss(ssid: Ssid, bssid: [u8; 6]) -> fidl_mlme::BssDescription {
         fidl_mlme::BssDescription {
             bssid,
             .. fake_unprotected_bss_description(ssid)

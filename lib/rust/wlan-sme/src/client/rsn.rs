@@ -1,23 +1,54 @@
 use bytes::Bytes;
+use eapol;
 use failure::{bail, ensure, format_err};
 use fidl_fuchsia_wlan_mlme::BssDescription;
+use std::boxed::Box;
 use wlan_rsn::{
+    self,
     akm,
     cipher,
     NegotiatedRsne,
     nonce::NonceReader,
     psk,
+    rsna::UpdateSink,
     rsne::{self, Rsne},
-    Supplicant,
     OUI
 };
 
 use crate::DeviceInfo;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub struct Rsna {
     pub negotiated_rsne: NegotiatedRsne,
-    pub supplicant: Supplicant,
+    pub supplicant: Box<Supplicant>,
+}
+
+impl PartialEq for Rsna {
+    fn eq(&self, other: &Self) -> bool {
+        self.negotiated_rsne == other.negotiated_rsne
+    }
+}
+
+pub trait Supplicant: std::fmt::Debug + std::marker::Send {
+    fn start(&mut self) -> Result<(), failure::Error>;
+    fn reset(&mut self);
+    fn on_eapol_frame(&mut self, update_sink: &mut UpdateSink, frame: &eapol::Frame)
+                      -> Result<(), failure::Error>;
+}
+
+impl Supplicant for wlan_rsn::Supplicant {
+    fn start(&mut self) -> Result<(), failure::Error> {
+        wlan_rsn::Supplicant::start(self)
+    }
+
+    fn reset(&mut self) {
+        wlan_rsn::Supplicant::reset(self)
+    }
+
+    fn on_eapol_frame(&mut self, update_sink: &mut UpdateSink, frame: &eapol::Frame)
+                      -> Result<(), failure::Error> {
+        wlan_rsn::Supplicant::on_eapol_frame(self, update_sink, frame)
+    }
 }
 
 /// Supported Ciphers and AKMs:
@@ -44,7 +75,7 @@ pub fn is_rsn_compatible(a_rsne: &Rsne) -> bool {
 }
 
 pub fn get_rsna(device_info: &DeviceInfo, password: &[u8], bss: &BssDescription)
-    -> Result<Option<Box<Rsna>>, failure::Error>
+    -> Result<Option<Rsna>, failure::Error>
 {
     ensure!(bss.rsn.is_none() == password.is_empty(), "invalid password param for BSS");
     let a_rsne_bytes = match &bss.rsn {
@@ -55,7 +86,7 @@ pub fn get_rsna(device_info: &DeviceInfo, password: &[u8], bss: &BssDescription)
         .map_err(|e| format_err!("invalid RSNE {:?}: {:?}", &a_rsne_bytes[..], e))?;
     let s_rsne = derive_s_rsne(&a_rsne)?;
     let negotiated_rsne = NegotiatedRsne::from_rsne(&s_rsne)?;
-    let supplicant = Supplicant::new_wpa2psk_ccmp128(
+    let supplicant = wlan_rsn::Supplicant::new_wpa2psk_ccmp128(
             // Note: There should be one Reader per device, not per SME.
             // Follow-up with improving on this.
             NonceReader::new(&device_info.addr[..])?,
@@ -63,7 +94,7 @@ pub fn get_rsna(device_info: &DeviceInfo, password: &[u8], bss: &BssDescription)
             device_info.addr, s_rsne,
             bss.bssid, a_rsne)
         .map_err(|e| format_err!("failed to create ESS-SA: {:?}", e))?;
-    Ok(Some(Box::new(Rsna { negotiated_rsne, supplicant })))
+    Ok(Some(Rsna { negotiated_rsne, supplicant: Box::new(supplicant) }))
 }
 
 /// Constructs Supplicant's RSNE with:
