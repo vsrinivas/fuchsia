@@ -14,6 +14,7 @@
 #include <hid/ft3x27.h>
 #include <hid/paradise.h>
 #include <hid/samsung.h>
+#include <lib/fxl/arraysize.h>
 #include <lib/fxl/logging.h>
 #include <lib/fzl/fdio.h>
 #include <zircon/device/device.h>
@@ -338,7 +339,7 @@ bool FdioHidDecoder::ParseGamepadDescriptor(const hid::ReportField* fields,
     if (fields[ix].type != hid::kInput)
       continue;
 
-    for (size_t iy = 0; iy != countof(table); iy++) {
+    for (size_t iy = 0; iy != arraysize(table); iy++) {
       if (fields[ix].attr.usage.usage == table[iy]) {
         // Found a required usage.
         decoder_[iy + 1] =
@@ -422,7 +423,7 @@ bool FdioHidDecoder::ParseButtonsDescriptor(const hid::ReportField* fields,
     if (fields[ix].type != hid::kInput)
       continue;
 
-    for (size_t iy = 0; iy != countof(table); iy++) {
+    for (size_t iy = 0; iy != arraysize(table); iy++) {
       if (fields[ix].attr.usage.usage == table[iy]) {
         // Found a required usage.
         decoder_[iy + 1] =

@@ -26,6 +26,7 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include "garnet/bin/ui/input_reader/fdio_hid_decoder.h"
 #include "lib/fidl/cpp/clone.h"
+#include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_point.h"
 #include "lib/ui/input/cpp/formatting.h"
@@ -792,7 +793,7 @@ bool InputInterpreter::ParseSamsungTouchscreenReport(uint8_t* r, size_t len) {
   size_t index = 0;
   touchscreen_report_->touchscreen->touches.resize(index);
 
-  for (size_t i = 0; i < countof(report.fingers); ++i) {
+  for (size_t i = 0; i < arraysize(report.fingers); ++i) {
     auto fid = report.fingers[i].finger_id;
 
     if (!samsung_finger_id_tswitch(fid))
@@ -824,7 +825,7 @@ bool InputInterpreter::ParseParadiseTouchscreenReport(uint8_t* r, size_t len) {
   size_t index = 0;
   touchscreen_report_->touchscreen->touches.resize(index);
 
-  for (size_t i = 0; i < countof(report.fingers); ++i) {
+  for (size_t i = 0; i < arraysize(report.fingers); ++i) {
     if (!paradise_finger_flags_tswitch(report.fingers[i].flags))
       continue;
 
@@ -1028,7 +1029,7 @@ bool InputInterpreter::ParseEyoyoTouchscreenReport(uint8_t* r, size_t len) {
   size_t index = 0;
   touchscreen_report_->touchscreen->touches.resize(index);
 
-  for (size_t i = 0; i < countof(report.fingers); ++i) {
+  for (size_t i = 0; i < arraysize(report.fingers); ++i) {
     auto fid = report.fingers[i].finger_id;
 
     if (!eyoyo_finger_id_tswitch(fid))
@@ -1059,7 +1060,7 @@ bool InputInterpreter::ParseFt3x27TouchscreenReport(uint8_t* r, size_t len) {
   size_t index = 0;
   touchscreen_report_->touchscreen->touches.resize(index);
 
-  for (size_t i = 0; i < countof(report.fingers); ++i) {
+  for (size_t i = 0; i < arraysize(report.fingers); ++i) {
     auto fid = report.fingers[i].finger_id;
 
     if (!ft3x27_finger_id_tswitch(fid))
