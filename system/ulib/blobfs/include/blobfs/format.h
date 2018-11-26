@@ -13,7 +13,7 @@
 #include <zircon/types.h>
 
 #include <assert.h>
-#include <limits.h>
+#include <limits>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -199,6 +199,57 @@ constexpr uint64_t kStartBlockMinimum  = 1; // Smallest 'data' block possible.
 constexpr uint32_t kBlobFlagLZ4Compressed = 0x00000001;
 
 using digest::Digest;
+
+typedef uint64_t BlockOffsetType;
+constexpr size_t kBlockOffsetBits = 48;
+constexpr BlockOffsetType kBlockOffsetMax = (1LLU << kBlockOffsetBits) - 1;
+constexpr uint64_t kBlockOffsetMask = kBlockOffsetMax;
+
+typedef uint16_t BlockCountType;
+constexpr size_t kBlockCountBits = 16;
+constexpr size_t kBlockCountMax = std::numeric_limits<BlockCountType>::max();
+constexpr uint64_t kBlockCountMask = kBlockCountMax << kBlockOffsetBits;
+
+class Extent {
+public:
+    Extent() : data_(0) {};
+    Extent(BlockOffsetType start, BlockCountType length) : data_(0) {
+        SetStart(start);
+        SetLength(length);
+    }
+
+    BlockOffsetType Start() const {
+        return data_ & kBlockOffsetMask;
+    }
+
+    void SetStart(BlockOffsetType start) {
+        ZX_DEBUG_ASSERT(start <= kBlockOffsetMax);
+        data_ = (data_ & ~kBlockOffsetMask) | (start & kBlockOffsetMask);
+    }
+
+    BlockCountType Length() const {
+        return static_cast<BlockCountType>((data_ & kBlockCountMask) >> kBlockOffsetBits);
+    }
+
+    void SetLength(BlockCountType length) {
+        data_ = (data_ & ~kBlockCountMask) | ((length & kBlockCountMax) << kBlockOffsetBits);
+    }
+
+    bool operator==(const Extent& rhs) const {
+        return Start() == rhs.Start() && Length() == rhs.Length();
+    }
+
+private:
+    uint64_t data_;
+};
+
+static_assert(sizeof(Extent) == sizeof(uint64_t), "Extent class should only contain data");
+
+// The number of extents within a single blob.
+typedef uint16_t ExtentCountType;
+
+// The largest number of extents which can compose a blob.
+constexpr size_t kMaxBlobExtents = std::numeric_limits<ExtentCountType>::max();
 
 struct Inode {
     uint8_t  merkle_root_hash[Digest::kLength];

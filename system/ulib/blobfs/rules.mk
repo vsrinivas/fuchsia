@@ -8,17 +8,22 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
+MODULE_USERTEST_GROUP := fs
+
 MODULE_NAME := blobfs
 
 MODULE_COMPILEFLAGS += -fvisibility=hidden
 
+# Sources common between host, target, and tests.
 COMMON_SRCS := \
     $(LOCAL_DIR)/common.cpp \
     $(LOCAL_DIR)/fsck.cpp \
+    $(LOCAL_DIR)/extent-reserver.cpp \
     $(LOCAL_DIR)/lz4.cpp \
+    $(LOCAL_DIR)/node-reserver.cpp \
 
-# app main
-MODULE_SRCS := \
+# Sources common between target and tests.
+COMMON_TARGET_SRCS := \
     $(COMMON_SRCS) \
     $(LOCAL_DIR)/blobfs.cpp \
     $(LOCAL_DIR)/journal.cpp \
@@ -27,11 +32,12 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/vnode.cpp \
     $(LOCAL_DIR)/writeback.cpp \
 
-MODULE_STATIC_LIBS := \
+TARGET_MODULE_STATIC_LIBS := \
     system/ulib/async \
     system/ulib/async.cpp \
     system/ulib/async-loop \
     system/ulib/async-loop.cpp \
+    system/ulib/bitmap \
     system/ulib/block-client \
     system/ulib/digest \
     system/ulib/fbl \
@@ -45,16 +51,54 @@ MODULE_STATIC_LIBS := \
     third_party/ulib/lz4 \
     third_party/ulib/uboringssl \
 
-MODULE_LIBS := \
+TARGET_MODULE_LIBS := \
     system/ulib/async.default \
-    system/ulib/bitmap \
     system/ulib/c \
     system/ulib/fdio \
     system/ulib/trace-engine \
     system/ulib/zircon \
 
-MODULE_FIDL_LIBS := \
+TARGET_MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io \
+
+# target blobfs lib
+MODULE_SRCS := \
+    $(COMMON_TARGET_SRCS) \
+
+MODULE_STATIC_LIBS := $(TARGET_MODULE_STATIC_LIBS)
+
+MODULE_LIBS := $(TARGET_MODULE_LIBS)
+
+MODULE_FIDL_LIBS := $(TARGET_MODULE_FIDL_LIBS)
+
+include make/module.mk
+
+# target blobfs tests
+
+MODULE := $(LOCAL_DIR).test
+
+MODULE_TYPE := usertest
+
+MODULE_NAME := blobfs-unit-tests
+
+TEST_DIR := $(LOCAL_DIR)/test
+
+MODULE_SRCS := \
+    $(COMMON_TARGET_SRCS) \
+    $(TEST_DIR)/extent-reserver-test.cpp \
+    $(TEST_DIR)/main.cpp \
+    $(TEST_DIR)/node-reserver-test.cpp \
+
+MODULE_STATIC_LIBS := $(TARGET_MODULE_STATIC_LIBS)
+
+MODULE_LIBS := \
+    $(TARGET_MODULE_LIBS) \
+    system/ulib/unittest \
+
+MODULE_FIDL_LIBS := $(TARGET_MODULE_FIDL_LIBS)
+
+MODULE_COMPILEFLAGS := \
+    -I$(LOCAL_DIR) \
 
 include make/module.mk
 
