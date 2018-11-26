@@ -5,50 +5,10 @@
 #include <blobfs/allocator.h>
 #include <unittest/unittest.h>
 
+#include "utils.h"
+
 namespace blobfs {
 namespace {
-
-class MockSpaceManager : public SpaceManager {
-public:
-    Superblock& MutableInfo() {
-        return superblock_;
-    }
-
-    const Superblock& Info() const final {
-        return superblock_;
-    }
-    zx_status_t AddInodes(fzl::ResizeableVmoMapper* node_map) final {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    zx_status_t AddBlocks(uint64_t nblocks, RawBitmap* map) final {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    zx_status_t DetachVmo(vmoid_t vmoid) final {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-private:
-    Superblock superblock_{};
-};
-
-bool InitializeAllocator(uint64_t blocks, uint64_t nodes, MockSpaceManager* space_manager,
-                         fbl::unique_ptr<Allocator>* out) {
-    BEGIN_HELPER;
-    RawBitmap block_map;
-    ASSERT_EQ(ZX_OK, block_map.Reset(blocks));
-    fzl::ResizeableVmoMapper node_map;
-    ASSERT_EQ(ZX_OK, node_map.CreateAndMap(nodes * kBlobfsBlockSize, "node map"));
-
-    space_manager->MutableInfo().inode_count = nodes;
-    space_manager->MutableInfo().data_block_count = blocks;
-    *out = fbl::make_unique<Allocator>(space_manager, std::move(block_map), std::move(node_map));
-    (*out)->SetLogging(false);
-
-    END_HELPER;
-}
 
 bool NullTest() {
     BEGIN_TEST;

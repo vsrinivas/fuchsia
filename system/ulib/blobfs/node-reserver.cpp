@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <limits>
-#include <stdbool.h>
 #include <stdint.h>
 
 #include <bitmap/rle-bitmap.h>

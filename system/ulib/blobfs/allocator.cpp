@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
-#include <stdbool.h>
 #include <stdint.h>
 
 #include <bitmap/raw-bitmap.h>
@@ -219,7 +218,9 @@ void Allocator::MarkInodeAllocated(const ReservedNode& node) {
 }
 
 void Allocator::MarkContainerNodeAllocated(const ReservedNode& node, uint32_t previous_node) {
-    ExtentContainer* container = GetNode(node.index())->AsExtentContainer();
+    const uint32_t index = node.index();
+    GetNode(previous_node)->header.next_node = index;
+    ExtentContainer* container = GetNode(index)->AsExtentContainer();
     container->header.flags = kBlobFlagAllocated | kBlobFlagExtentContainer;
     container->header.next_node = 0;
     container->previous_node = previous_node;

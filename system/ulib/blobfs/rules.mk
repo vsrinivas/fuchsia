@@ -19,6 +19,9 @@ COMMON_SRCS := \
     $(LOCAL_DIR)/common.cpp \
     $(LOCAL_DIR)/fsck.cpp \
     $(LOCAL_DIR)/extent-reserver.cpp \
+    $(LOCAL_DIR)/iterator/allocated-extent-iterator.cpp \
+    $(LOCAL_DIR)/iterator/block-iterator.cpp \
+    $(LOCAL_DIR)/iterator/vector-extent-iterator.cpp \
     $(LOCAL_DIR)/lz4.cpp \
     $(LOCAL_DIR)/node-reserver.cpp \
 
@@ -27,6 +30,7 @@ COMMON_TARGET_SRCS := \
     $(COMMON_SRCS) \
     $(LOCAL_DIR)/allocator.cpp \
     $(LOCAL_DIR)/blobfs.cpp \
+    $(LOCAL_DIR)/iterator/node-populator.cpp \
     $(LOCAL_DIR)/journal.cpp \
     $(LOCAL_DIR)/metrics.cpp \
     $(LOCAL_DIR)/rpc.cpp \
@@ -86,10 +90,14 @@ TEST_DIR := $(LOCAL_DIR)/test
 
 MODULE_SRCS := \
     $(COMMON_TARGET_SRCS) \
+    $(TEST_DIR)/allocated-extent-iterator-test.cpp \
     $(TEST_DIR)/allocator-test.cpp \
     $(TEST_DIR)/extent-reserver-test.cpp \
     $(TEST_DIR)/main.cpp \
+    $(TEST_DIR)/node-populator-test.cpp \
     $(TEST_DIR)/node-reserver-test.cpp \
+    $(TEST_DIR)/utils.cpp \
+    $(TEST_DIR)/vector-extent-iterator-test.cpp \
 
 MODULE_STATIC_LIBS := $(TARGET_MODULE_STATIC_LIBS)
 
