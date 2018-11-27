@@ -23,6 +23,9 @@
 ##             commit in the upstream branch (or against HEAD if no such commit
 ##             is found).  Files that are locally modified, staged or touched by
 ##             any commits introduced on the local branch are formatted.
+##    --remove-ordinals (temporary)
+##             Removes ordinals from FIDL files.  This option will be removed
+##             when ordinals are no longer legal in FIDL files.
 
 set -e
 
@@ -94,6 +97,7 @@ function canonicalize() {
 
 DRY_RUN=
 VERBOSE=
+REMOVE_ORDINALS=
 
 fx-config-read
 
@@ -109,6 +113,8 @@ for ARG in "$@"; do
             "${FUCHSIA_OUT_DIR}/${FUCHSIA_ARCH}" "${ARG#--target=}" sources)) &&
         RUST_ENTRY_POINT=$(canonicalize "${FUCHSIA_DIR}" \
             $(fx rustfmt --print-sources ${ARG#--target=})) ;;
+# TODO(FIDL-372): Remove support for --remove-ordinals
+    --remove-ordinals) REMOVE_ORDINALS="1" ;;
     --help) usage && exit 1 ;;
     *) usage && printf "Unknown flag %s\n" "${ARG}" && exit 1 ;;
   esac
@@ -138,7 +144,11 @@ declare HOST_PLATFORM="${HOST_OS}-${HOST_ARCH}"
 declare CLANG_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/clang/bin/clang-format -style=file -fallback-style=Google -sort-includes -i"
 declare DART_CMD="${FUCHSIA_DIR}/topaz/tools/prebuilt-dart-sdk/${HOST_PLATFORM}/bin/dartfmt -w"
 declare FIDL_BIN="${ZIRCON_TOOLS_DIR}"/fidl-format
-declare FIDL_CMD="${FIDL_BIN} -i"
+if [[ -n "${REMOVE_ORDINALS}" ]]; then
+  declare FIDL_CMD="${FIDL_BIN} -i"
+else
+  declare FIDL_CMD="${FIDL_BIN} -i --remove-ordinals"
+fi
 declare GN_CMD="${BUILDTOOLS_ROOT}/gn format"
 declare GO_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/go/bin/gofmt -w"
 declare JSON_FMT_CMD="${FUCHSIA_DIR}"/scripts/style/json-fmt.py
