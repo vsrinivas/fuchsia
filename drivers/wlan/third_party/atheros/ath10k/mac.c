@@ -2468,8 +2468,7 @@ static void ath10k_peer_assoc_h_vht(struct ath10k* ar,
                                     wlan_assoc_ctx_t* assoc,
                                     struct wmi_peer_assoc_complete_arg* arg) {
     const wlan_vht_caps_t* vht_cap = &assoc->vht_cap;
-    enum nl80211_band band;
-    const uint16_t vht_mcs_mask[] = {0};  // TODO(NET-1682)
+    const uint16_t vht_mcs_mask[] = {0};  // TODO(NET-1958)
     uint8_t ampdu_factor;
     uint8_t max_nss, vht_mcs;
     int i;
@@ -2484,19 +2483,20 @@ static void ath10k_peer_assoc_h_vht(struct ath10k* ar,
         return;
     }
 
-#if 1  // NEEDS PORTING
-    // TODO(NET-1682): Supports other bands.
-    band = NL80211_BAND_2GHZ;
-#else
-    band = def.chan->band;
+#if 0  // NEEDS PORTING
+    // TODO(NET-1958): Supports other bands.
     vht_mcs_mask = arvif->bitrate_mask.control[band].vht_mcs;
 #endif  // NEEDS PORTING
 
     arg->peer_flags |= ar->wmi.peer_flags->vht;
 
+#if 0  // NEEDS PORTING
+    // TODO(NET-1973): 2GHz band supports VHT
+    enum nl80211_band band = NL80211_BAND_2GHZ;
     if (band == NL80211_BAND_2GHZ) {
         arg->peer_flags |= ar->wmi.peer_flags->vht_2g;
     }
+#endif  // NEEDS PORTING
 
     arg->peer_vht_caps = vht_cap->vht_capability_info;
 
@@ -2638,73 +2638,12 @@ static enum wmi_phy_mode ath10k_mac_get_phymode_vht(struct ath10k* ar,
 static void ath10k_peer_assoc_h_phymode(struct ath10k* ar,
                                         wlan_assoc_ctx_t* assoc,
                                         struct wmi_peer_assoc_complete_arg* arg) {
-    // TODO(NET-1709): rewrite with chan_to_phymode().
-    enum wmi_phy_mode phymode = MODE_11NG_HT20;
-#if 0  // NEEDS PORTING
-    struct ath10k_vif* arvif = (void*)vif->drv_priv;
-    struct cfg80211_chan_def def;
-    enum nl80211_band band;
-    const uint8_t* ht_mcs_mask;
-    const uint16_t* vht_mcs_mask;
-    enum wmi_phy_mode phymode = MODE_UNKNOWN;
+    enum wmi_phy_mode phymode = chan_to_phymode(&assoc->chan);
 
-    if (COND_WARN(ath10k_mac_vif_chan(vif, &def))) {
-        return;
-    }
-
-    band = def.chan->band;
-    ht_mcs_mask = arvif->bitrate_mask.control[band].ht_mcs;
-    vht_mcs_mask = arvif->bitrate_mask.control[band].vht_mcs;
-
-    switch (band) {
-    case NL80211_BAND_2GHZ:
-        if (sta->vht_cap.vht_supported &&
-                !ath10k_peer_assoc_h_vht_masked(vht_mcs_mask)) {
-            if (sta->bandwidth == IEEE80211_STA_RX_BW_40) {
-                phymode = MODE_11AC_VHT40;
-            } else {
-                phymode = MODE_11AC_VHT20;
-            }
-        } else if (sta->ht_cap.ht_supported &&
-                   !ath10k_peer_assoc_h_ht_masked(ht_mcs_mask)) {
-            if (sta->bandwidth == IEEE80211_STA_RX_BW_40) {
-                phymode = MODE_11NG_HT40;
-            } else {
-                phymode = MODE_11NG_HT20;
-            }
-        } else if (ath10k_mac_sta_has_ofdm_only(sta)) {
-            phymode = MODE_11G;
-        } else {
-            phymode = MODE_11B;
-        }
-
-        break;
-    case NL80211_BAND_5GHZ:
-        /*
-         * Check VHT first.
-         */
-        if (sta->vht_cap.vht_supported &&
-                !ath10k_peer_assoc_h_vht_masked(vht_mcs_mask)) {
-            phymode = ath10k_mac_get_phymode_vht(ar, sta);
-        } else if (sta->ht_cap.ht_supported &&
-                   !ath10k_peer_assoc_h_ht_masked(ht_mcs_mask)) {
-            if (sta->bandwidth >= IEEE80211_STA_RX_BW_40) {
-                phymode = MODE_11NA_HT40;
-            } else {
-                phymode = MODE_11NA_HT20;
-            }
-        } else {
-            phymode = MODE_11A;
-        }
-
-        break;
-    default:
-        break;
-    }
-#endif  // NEEDS PORTING
-
-    ath10k_dbg(ar, ATH10K_DBG_MAC, "mac peer %pM phymode %s\n",
-               assoc->bssid, ath10k_wmi_phymode_str(phymode));
+    char ethaddr_str[ETH_ALEN * 3];
+    ethaddr_sprintf(ethaddr_str, assoc->bssid);
+    ath10k_dbg(ar, ATH10K_DBG_MAC, "mac peer %s phymode %s\n",
+               ethaddr_str, ath10k_wmi_phymode_str(phymode));
 
     arg->peer_phymode = phymode;
     COND_WARN(phymode == MODE_UNKNOWN);
@@ -2916,7 +2855,7 @@ out:
     return ret;
 }
 
-// Tell the firmware we have associated with a BSS
+// As a client role, tell the firmware we have associated with a BSS.
 zx_status_t ath10k_mac_bss_assoc(struct ath10k* ar, wlan_assoc_ctx_t* assoc_ctx) {
     zx_status_t ret;
 
@@ -3041,6 +2980,7 @@ static void ath10k_bss_disassoc(struct ieee80211_hw* hw,
 }
 #endif  // NEEDS PORTING
 
+// Used by AP role to add a remote client.
 static zx_status_t ath10k_station_assoc(struct ath10k* ar,
                                         wlan_assoc_ctx_t* assoc,
                                         bool reassoc) {
@@ -3056,6 +2996,8 @@ static zx_status_t ath10k_station_assoc(struct ath10k* ar,
                     peer_arg.addr, arvif->vdev_id, zx_status_get_string(ret));
         return ret;
     }
+
+    peer_arg.peer_reassoc = reassoc;
 
     ret = ath10k_wmi_peer_assoc(ar, &peer_arg);
     if (ret != ZX_OK) {

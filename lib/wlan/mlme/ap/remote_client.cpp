@@ -1001,6 +1001,12 @@ wlan_assoc_ctx_t RemoteClient::BuildAssocContext(uint16_t aid) {
     addr().CopyTo(assoc.bssid);
     assoc.aid = aid;
 
+    assoc.listen_interval = 3;  // The listen interval is not really useful for remote client (as
+                                // AP role). The field is mainly for client role. (Maybe we need it
+                                // in the future for Mesh role. Don't know yet) Thus, hard-code a
+                                // number here for ath10k AP mode only. See NET-1816.
+    assoc.chan = bss_->Chan();
+
     auto rates = bss_->Rates();
     assoc.rates_cnt = std::min(rates.size(), static_cast<size_t>(WLAN_MAC_MAX_RATES));
     if (assoc.rates_cnt != rates.size()) {

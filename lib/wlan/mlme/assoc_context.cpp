@@ -210,6 +210,10 @@ wlan_assoc_ctx_t AssocContext::ToDdk() const {
     bssid.CopyTo(ddk.bssid);
     ddk.aid = aid;
 
+    ddk.listen_interval = listen_interval;
+    ddk.phy = phy;
+    ddk.chan = chan;
+
     ddk.rates_cnt = static_cast<uint8_t>(rates.size());
     std::copy(rates.cbegin(), rates.cend(), ddk.rates);
 

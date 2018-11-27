@@ -337,6 +337,8 @@ TEST(AssocContext, MakeBssAssocCtx) {
 }
 
 TEST(AssocContext, ToDdk) {
+    // TODO(NET-1959): Test more fields.
+
     auto ctx = BuildSampleCtx();
     ctx.vht_cap = {};
     ctx.vht_op = {};
