@@ -35,6 +35,12 @@ ChannelManager::ChannelManager(fxl::RefPtr<hci::Transport> hci,
 ChannelManager::~ChannelManager() {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   hci_->acl_data_channel()->SetDataRxHandler(nullptr, nullptr);
+
+  // Explicitly shut down all links to force associated L2CAP channels to
+  // release their strong references.
+  for (auto& [handle, link] : ll_map_) {
+    link->Close();
+  }
 }
 
 void ChannelManager::RegisterACL(
@@ -70,9 +76,15 @@ void ChannelManager::Unregister(hci::ConnectionHandle handle) {
   bt_log(TRACE, "l2cap", "unregister link (handle: %#.4x)", handle);
 
   pending_packets_.erase(handle);
-  auto count = ll_map_.erase(handle);
-  ZX_DEBUG_ASSERT_MSG(
-      count, "attempted to remove unknown connection handle: %#.4x", handle);
+  auto iter = ll_map_.find(handle);
+  ZX_DEBUG_ASSERT_MSG(iter != ll_map_.end(),
+                      "attempted to remove unknown connection handle: %#.4x",
+                      handle);
+
+  // Explicitly shut down the link to force associated L2CAP channels to release
+  // their strong references.
+  iter->second->Close();
+  ll_map_.erase(iter);
 }
 
 fbl::RefPtr<Channel> ChannelManager::OpenFixedChannel(
@@ -188,7 +200,7 @@ internal::LogicalLink* ChannelManager::RegisterInternal(
   ZX_DEBUG_ASSERT_MSG(iter == ll_map_.end(),
                       "connection handle re-used! (handle=%#.4x)", handle);
 
-  auto ll = std::make_unique<internal::LogicalLink>(
+  auto ll = internal::LogicalLink::New(
       handle, ll_type, role, l2cap_dispatcher_, hci_,
       fit::bind_member(this, &ChannelManager::QueryService));
 

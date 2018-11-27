@@ -168,7 +168,7 @@ class ChannelImpl : public Channel {
   friend class internal::LogicalLink;
 
   ChannelImpl(ChannelId id, ChannelId remote_id,
-              fxl::WeakPtr<internal::LogicalLink> link,
+              fbl::RefPtr<internal::LogicalLink> link,
               std::list<PDU> buffered_pdus);
   ~ChannelImpl() override = default;
 
@@ -197,10 +197,7 @@ class ChannelImpl : public Channel {
   // because when a LogicalLink is torn down, it will notify all of its
   // associated channels by calling OnLinkClosed() which sets |link_| to
   // nullptr.
-  //
-  // The WeakPtr itself does not guarantee validity if used on any thread other
-  // than the LogicalLink's creation thread.
-  fxl::WeakPtr<internal::LogicalLink> link_ __TA_GUARDED(mtx_);
+  fbl::RefPtr<internal::LogicalLink> link_ __TA_GUARDED(mtx_);
 
   // The pending SDUs on this channel. Received PDUs are buffered if |rx_cb_| is
   // currently not set.

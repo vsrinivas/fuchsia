@@ -139,7 +139,7 @@ class ChannelManager final {
   async_dispatcher_t* l2cap_dispatcher_;
 
   using LinkMap = std::unordered_map<hci::ConnectionHandle,
-                                     std::unique_ptr<internal::LogicalLink>>;
+                                     fbl::RefPtr<internal::LogicalLink>>;
   LinkMap ll_map_;
 
   // Stores packets received on a connection handle before a link for it has

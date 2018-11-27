@@ -206,6 +206,65 @@ TEST_F(L2CAP_ChannelManagerTest, OpenAndCloseWithLinkMultipleFixedChannels) {
   EXPECT_FALSE(smp_closed);
 }
 
+TEST_F(L2CAP_ChannelManagerTest, SendingPacketDuringCleanUpHasNoEffect) {
+  // LE-U link
+  chanmgr()->RegisterLE(
+      kTestHandle1, hci::Connection::Role::kMaster, [](auto) {}, DoNothing,
+      dispatcher());
+
+  bool data_sent = false;
+  auto data_cb = [&](const auto& bytes) { data_sent = true; };
+  test_device()->SetDataCallback(data_cb, dispatcher());
+
+  bool closed_called = false;
+  auto closed_cb = [&closed_called] { closed_called = true; };
+  auto chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1, closed_cb);
+  ASSERT_TRUE(chan);
+
+  // Send a packet. This should be posted on the L2CAP dispatcher but not
+  // processed yet.
+  EXPECT_TRUE(chan->Send(common::NewBuffer('h', 'i')));
+  ASSERT_FALSE(data_sent);
+
+  chanmgr()->Unregister(kTestHandle1);
+
+  // Once the loop is drained the L2CAP channel should have been notified of
+  // closure but the package should not get sent.
+  RunLoopUntilIdle();
+  EXPECT_TRUE(closed_called);
+  EXPECT_FALSE(data_sent);
+}
+
+// Tests that destroying the ChannelManager cleanly shuts down all channels.
+TEST_F(L2CAP_ChannelManagerTest, DestroyingChannelManagerCleansUpChannels) {
+  // LE-U link
+  chanmgr()->RegisterLE(
+      kTestHandle1, hci::Connection::Role::kMaster, [](auto) {}, DoNothing,
+      dispatcher());
+
+  bool data_sent = false;
+  auto data_cb = [&](const auto& bytes) { data_sent = true; };
+  test_device()->SetDataCallback(data_cb, dispatcher());
+
+  bool closed_called = false;
+  auto closed_cb = [&closed_called] { closed_called = true; };
+  auto chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1, closed_cb);
+  ASSERT_TRUE(chan);
+
+  // Send a packet. This should be posted on the L2CAP dispatcher but not
+  // processed yet.
+  EXPECT_TRUE(chan->Send(common::NewBuffer('h', 'i')));
+  ASSERT_FALSE(data_sent);
+
+  TearDown();
+
+  // Once the loop is drained the L2CAP channel should have been notified of
+  // closure but the package should not get sent.
+  RunLoopUntilIdle();
+  EXPECT_TRUE(closed_called);
+  EXPECT_FALSE(data_sent);
+}
+
 TEST_F(L2CAP_ChannelManagerTest, DeactivateDoesNotCrashOrHang) {
   // Tests that the clean up task posted to the LogicalLink does not crash when
   // a dynamic registry is not present (which is the case for LE links).

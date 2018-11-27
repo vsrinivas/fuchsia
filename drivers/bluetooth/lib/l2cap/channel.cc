@@ -37,7 +37,7 @@ Channel::Channel(ChannelId id, ChannelId remote_id,
 namespace internal {
 
 ChannelImpl::ChannelImpl(ChannelId id, ChannelId remote_id,
-                         fxl::WeakPtr<internal::LogicalLink> link,
+                         fbl::RefPtr<internal::LogicalLink> link,
                          std::list<PDU> buffered_pdus)
     : Channel(id, remote_id, link->type(), link->handle()),
       active_(false),
@@ -98,7 +98,7 @@ void ChannelImpl::Deactivate() {
 
   // De-activating on a closed link has no effect.
   if (!link_ || !active_) {
-    link_.reset();
+    link_ = nullptr;
     return;
   }
 
@@ -109,14 +109,11 @@ void ChannelImpl::Deactivate() {
 
   // Tell the link to release this channel on its thread.
   async::PostTask(link_->dispatcher(), [this, link = link_] {
-    // If |link| is still alive than |this| must be valid since |link| holds a
-    // reference to us.
-    if (link) {
-      link->RemoveChannel(this);
-    }
+    // |link| is expected to ignore this call if it has been closed.
+    link->RemoveChannel(this);
   });
 
-  link_.reset();
+  link_ = nullptr;
 }
 
 void ChannelImpl::SignalLinkError() {
@@ -126,7 +123,10 @@ void ChannelImpl::SignalLinkError() {
   if (!link_ || !active_)
     return;
 
-  async::PostTask(link_->dispatcher(), [link = link_] { link->SignalError(); });
+  async::PostTask(link_->dispatcher(), [link = link_] {
+    // |link| is expected to ignore this call if it has been closed.
+    link->SignalError();
+  });
 }
 
 bool ChannelImpl::Send(common::ByteBufferPtr sdu) {
@@ -151,9 +151,9 @@ bool ChannelImpl::Send(common::ByteBufferPtr sdu) {
 
   async::PostTask(link_->dispatcher(),
                   [id = remote_id(), link = link_, sdu = std::move(sdu)] {
-                    if (link) {
-                      link->SendBasicFrame(id, *sdu);
-                    }
+                    // |link| is expected to ignore this call and drop the
+                    // packet if it has been closed.
+                    link->SendBasicFrame(id, *sdu);
                   });
 
   return true;
@@ -167,7 +167,7 @@ void ChannelImpl::OnClosed() {
     std::lock_guard<std::mutex> lock(mtx_);
 
     if (!link_ || !active_) {
-      link_.reset();
+      link_ = nullptr;
       return;
     }
 
@@ -175,7 +175,7 @@ void ChannelImpl::OnClosed() {
     dispatcher = dispatcher_;
     task = std::move(closed_cb_);
     active_ = false;
-    link_.reset();
+    link_ = nullptr;
     dispatcher_ = nullptr;
   }
 

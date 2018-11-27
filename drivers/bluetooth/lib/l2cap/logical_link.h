@@ -10,6 +10,7 @@
 #include <mutex>
 #include <unordered_map>
 
+#include <fbl/ref_counted.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 #include <zircon/compiler.h>
@@ -27,9 +28,7 @@
 #include "lib/fxl/synchronization/thread_checker.h"
 
 namespace btlib {
-
 namespace l2cap {
-
 namespace internal {
 
 class ChannelImpl;
@@ -39,7 +38,7 @@ class SignalingChannel;
 // Represents a controller logical link. Each instance aids in mapping L2CAP
 // channels to their corresponding controller logical link and vice versa.
 // Instances are created and owned by a ChannelManager.
-class LogicalLink final {
+class LogicalLink final : public fbl::RefCounted<LogicalLink> {
  public:
   // Used to query if ChannelManager has a service registered (identified by
   // |psm|). If it does, return a function that can be used to provide the
@@ -47,31 +46,47 @@ class LogicalLink final {
   using QueryServiceCallback =
       fit::function<ChannelCallback(hci::ConnectionHandle handle, PSM psm)>;
 
-  LogicalLink(hci::ConnectionHandle handle, hci::Connection::LinkType type,
-              hci::Connection::Role role, async_dispatcher_t* dispatcher,
-              fxl::RefPtr<hci::Transport> hci,
-              QueryServiceCallback query_service_cb);
+  // Constructs a new LogicalLink and initializes the signaling fixed channel.
+  static fbl::RefPtr<LogicalLink> New(hci::ConnectionHandle handle,
+                                      hci::Connection::LinkType type,
+                                      hci::Connection::Role role,
+                                      async_dispatcher_t* dispatcher,
+                                      fxl::RefPtr<hci::Transport> hci,
+                                      QueryServiceCallback query_service_cb);
 
-  // When a logical link is destroyed it notifies all of its channels to close
-  // themselves. Data packets will no longer be routed to the associated
-  // channels.
-  ~LogicalLink();
+  // Notifies and closes all open channels on this link. This must be called to
+  // cleanly shut down a LogicalLink. WARNING: Failure to do so will cause the
+  // memory to leak since associated channels hold a reference back to the link.
+  //
+  // The link MUST not be closed when this is called.
+  void Close();
 
   // Opens the channel with |channel_id| over this logical link. See channel.h
   // for documentation on |rx_callback| and |closed_callback|. Returns nullptr
   // if a Channel for |channel_id| already exists.
+  //
+  // The link MUST not be closed when this is called.
   fbl::RefPtr<Channel> OpenFixedChannel(ChannelId channel_id);
 
-  void OpenChannel(PSM psm, ChannelCallback cb, async_dispatcher_t* dispatcher);
+  // Opens a dynamic channel to the requested |psm| and returns a channel
+  // asynchronously via |callback| (posted on the given |dispatcher|).
+  //
+  // The link MUST not be closed when this is called.
+  void OpenChannel(PSM psm, ChannelCallback callback,
+                   async_dispatcher_t* dispatcher);
 
   // Takes ownership of |packet| for PDU processing and routes it to its target
   // channel. This must be called on the HCI I/O thread.
+  //
+  // The link MUST not be closed when this is called.
   void HandleRxPacket(hci::ACLDataPacketPtr packet);
 
   // Sends a B-frame PDU out over the ACL data channel, where |payload| is the
   // B-frame information payload. |remote_id| identifies the destination peer's
   // L2CAP channel endpoint for this frame. This must be called on the creation
   // thread.
+  //
+  // It is safe to call this function on a closed link; it will have no effect.
   void SendBasicFrame(ChannelId remote_id, const common::ByteBuffer& payload);
 
   // Assigns the link error callback to be invoked when a channel signals a link
@@ -92,29 +107,54 @@ class LogicalLink final {
 
  private:
   friend class ChannelImpl;
+  friend fbl::RefPtr<LogicalLink>;
+
+  LogicalLink(hci::ConnectionHandle handle, hci::Connection::LinkType type,
+              hci::Connection::Role role, async_dispatcher_t* dispatcher,
+              fxl::RefPtr<hci::Transport> hci,
+              QueryServiceCallback query_service_cb);
+
+  // Initializes the fragmenter, the fixed signaling channel, and the dynamic
+  // channel registry based on the link type. Called by the factory method
+  // "New()".
+  void Initialize();
+
+  // When a logical link is destroyed it notifies all of its channels to close
+  // themselves. Data packets will no longer be routed to the associated
+  // channels.
+  ~LogicalLink();
 
   bool AllowsFixedChannel(ChannelId id);
 
   // Called by ChannelImpl::Deactivate(). Removes the channel from the given
   // link.
+  //
+  // Does nothing if the link is closed.
   void RemoveChannel(Channel* chan);
 
-  // Called by ChannelImpl::SignalLinkError().
+  // Called by ChannelImpl::SignalLinkError(). Has no effect if the link is
+  // closed.
   void SignalError();
-
-  // Notifies and closes all open channels on this link. Called by the
-  // destructor.
-  void Close();
 
   // If the service identified by |psm| can be opened, return a function to
   // complete the channel open for a newly-opened DynamicChannel. Otherwise,
   // return nullptr.
+  //
+  // This MUST not be called on a closed link.
   DynamicChannelRegistry::DynamicChannelCallback OnServiceRequest(PSM psm);
+
+  // Called by |dynamic_registry_| when the peer requests the closure of a
+  // dynamic channel using a signaling PDU.
+  //
+  // This MUST not be called on a closed link.
+  void OnChannelDisconnectRequest(const DynamicChannel* dyn_chan);
 
   // Given a newly-opened dynamic channel as reported by this link's
   // DynamicChannelRegistry, create a ChannelImpl for it to carry user data,
   // then pass a pointer to it through |open_cb| on |dispatcher|. If |dyn_chan|
   // is null, then pass nullptr into |open_cb|.
+  //
+  // This MUST not be called on a closed link.
   void CompleteDynamicOpen(const DynamicChannel* dyn_chan,
                            ChannelCallback open_cb,
                            async_dispatcher_t* dispatcher);
@@ -129,6 +169,9 @@ class LogicalLink final {
 
   fit::closure link_error_cb_;
   async_dispatcher_t* link_error_dispatcher_;
+
+  // No data packets are processed once this gets set to true.
+  bool closed_;
 
   // Owns and manages the L2CAP signaling channel on this logical link.
   // Depending on |type_| this will either implement the LE or BR/EDR signaling
@@ -150,13 +193,13 @@ class LogicalLink final {
   using PendingPduMap = std::unordered_map<ChannelId, std::list<PDU>>;
   PendingPduMap pending_pdus_;
 
-  // Dynamic channels opened with the remote.
+  // Dynamic channels opened with the remote. The registry is destroyed and all
+  // procedures terminated when this link gets closed.
   std::unique_ptr<DynamicChannelRegistry> dynamic_registry_;
 
   QueryServiceCallback query_service_cb_;
 
   fxl::ThreadChecker thread_checker_;
-  fxl::WeakPtrFactory<LogicalLink> weak_ptr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LogicalLink);
 };

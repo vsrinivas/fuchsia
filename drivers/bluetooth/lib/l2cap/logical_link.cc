@@ -48,6 +48,17 @@ constexpr bool IsValidBREDRFixedChannel(ChannelId id) {
 
 }  // namespace
 
+// static
+fbl::RefPtr<LogicalLink> LogicalLink::New(
+    hci::ConnectionHandle handle, hci::Connection::LinkType type,
+    hci::Connection::Role role, async_dispatcher_t* dispatcher,
+    fxl::RefPtr<hci::Transport> hci, QueryServiceCallback query_service_cb) {
+  auto ll = fbl::AdoptRef(new LogicalLink(handle, type, role, dispatcher, hci,
+                                          std::move(query_service_cb)));
+  ll->Initialize();
+  return ll;
+}
+
 LogicalLink::LogicalLink(hci::ConnectionHandle handle,
                          hci::Connection::LinkType type,
                          hci::Connection::Role role,
@@ -59,65 +70,45 @@ LogicalLink::LogicalLink(hci::ConnectionHandle handle,
       handle_(handle),
       type_(type),
       role_(role),
+      closed_(false),
       fragmenter_(handle),
-      query_service_cb_(std::move(query_service_cb)),
-      weak_ptr_factory_(this) {
+      query_service_cb_(std::move(query_service_cb)) {
   ZX_DEBUG_ASSERT(hci_);
   ZX_DEBUG_ASSERT(dispatcher_);
   ZX_DEBUG_ASSERT(type_ == hci::Connection::LinkType::kLE ||
                   type_ == hci::Connection::LinkType::kACL);
+}
 
+void LogicalLink::Initialize() {
+  ZX_DEBUG_ASSERT(!signaling_channel_);
+  ZX_DEBUG_ASSERT(!dynamic_registry_);
+
+  // Set up the signaling channel and dynamic channels.
   if (type_ == hci::Connection::LinkType::kLE) {
     ZX_DEBUG_ASSERT(hci_->acl_data_channel()->GetLEBufferInfo().IsAvailable());
     fragmenter_.set_max_acl_payload_size(
         hci_->acl_data_channel()->GetLEBufferInfo().max_data_length());
+    signaling_channel_ = std::make_unique<LESignalingChannel>(
+        OpenFixedChannel(kLESignalingChannelId), role_);
+    // TODO(armansito): Initialize LE registry when it exists.
   } else {
     ZX_DEBUG_ASSERT(hci_->acl_data_channel()->GetBufferInfo().IsAvailable());
     fragmenter_.set_max_acl_payload_size(
         hci_->acl_data_channel()->GetBufferInfo().max_data_length());
-  }
-
-  // This is called upon remote-requested dynamic channel closures.
-  auto on_channel_closed =
-      [self = weak_ptr_factory_.GetWeakPtr()](const DynamicChannel* dyn_chan) {
-        if (!self) {
-          return;
-        }
-
-        ZX_DEBUG_ASSERT(dyn_chan);
-        auto iter = self->channels_.find(dyn_chan->local_cid());
-        if (iter == self->channels_.end()) {
-          bt_log(WARN, "l2cap",
-                 "No ChannelImpl found for closing dynamic channel %#.4x",
-                 dyn_chan->local_cid());
-          return;
-        }
-
-        fbl::RefPtr<ChannelImpl> channel = std::move(iter->second);
-        ZX_DEBUG_ASSERT(channel->remote_id() == dyn_chan->remote_cid());
-        self->channels_.erase(iter);
-
-        // Signal closure because this is a remote disconnection.
-        channel->OnClosed();
-      };
-
-  // Set up the signaling channel and dynamic channels.
-  if (type_ == hci::Connection::LinkType::kLE) {
-    signaling_channel_ = std::make_unique<LESignalingChannel>(
-        OpenFixedChannel(kLESignalingChannelId), role_);
-  } else {
     signaling_channel_ = std::make_unique<BrEdrSignalingChannel>(
         OpenFixedChannel(kSignalingChannelId), role_);
     dynamic_registry_ = std::make_unique<BrEdrDynamicChannelRegistry>(
-        signaling_channel_.get(), std::move(on_channel_closed),
+        signaling_channel_.get(),
+        fit::bind_member(this, &LogicalLink::OnChannelDisconnectRequest),
         fit::bind_member(this, &LogicalLink::OnServiceRequest));
   }
 }
 
-LogicalLink::~LogicalLink() { Close(); }
+LogicalLink::~LogicalLink() { ZX_DEBUG_ASSERT(closed_); }
 
 fbl::RefPtr<Channel> LogicalLink::OpenFixedChannel(ChannelId id) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(!closed_);
 
   // We currently only support the pre-defined fixed-channels.
   if (!AllowsFixedChannel(id)) {
@@ -140,34 +131,30 @@ fbl::RefPtr<Channel> LogicalLink::OpenFixedChannel(ChannelId id) {
   }
 
   // A fixed channel's endpoints have the same local and remote identifiers.
-  auto chan = fbl::AdoptRef(new ChannelImpl(id /* id */, id /* remote_id */,
-                                            weak_ptr_factory_.GetWeakPtr(),
-                                            std::move(pending)));
+  auto chan =
+      fbl::AdoptRef(new ChannelImpl(id /* id */, id /* remote_id */,
+                                    fbl::WrapRefPtr(this), std::move(pending)));
   channels_[id] = chan;
 
   return chan;
 }
 
-void LogicalLink::OpenChannel(PSM psm, ChannelCallback cb,
+void LogicalLink::OpenChannel(PSM psm, ChannelCallback callback,
                               async_dispatcher_t* dispatcher) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(!closed_);
 
   // TODO(NET-1437): Implement channels for LE credit-based connections
   if (type_ == hci::Connection::LinkType::kLE) {
     bt_log(WARN, "l2cap", "not opening LE channel for PSM %.4x", psm);
-    CompleteDynamicOpen(nullptr, std::move(cb), dispatcher);
+    CompleteDynamicOpen(nullptr, std::move(callback), dispatcher);
     return;
   }
 
-  auto create_channel = [self = weak_ptr_factory_.GetWeakPtr(),
-                         cb = std::move(cb),
+  auto create_channel = [this, cb = std::move(callback),
                          dispatcher](const DynamicChannel* dyn_chan) mutable {
-    if (!self) {
-      return;
-    }
-    self->CompleteDynamicOpen(dyn_chan, std::move(cb), dispatcher);
+    CompleteDynamicOpen(dyn_chan, std::move(cb), dispatcher);
   };
-
   dynamic_registry_->OpenOutbound(psm, std::move(create_channel));
 }
 
@@ -175,6 +162,7 @@ void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   ZX_DEBUG_ASSERT(!recombiner_.ready());
   ZX_DEBUG_ASSERT(packet);
+  ZX_DEBUG_ASSERT(!closed_);
 
   if (!recombiner_.AddFragment(std::move(packet))) {
     bt_log(TRACE, "l2cap", "ACL data packet rejected (handle: %#.4x)", handle_);
@@ -240,6 +228,11 @@ void LogicalLink::SendBasicFrame(ChannelId id,
                                  const common::ByteBuffer& payload) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
+  if (closed_) {
+    bt_log(TRACE, "l2cap", "Drop out-bound packet on closed link");
+    return;
+  }
+
   // TODO(armansito): The following makes a copy of |payload| when constructing
   // |pdu|. Think about how this could be optimized, especially when |payload|
   // fits inside a single ACL data fragment.
@@ -275,6 +268,11 @@ void LogicalLink::RemoveChannel(Channel* chan) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   ZX_DEBUG_ASSERT(chan);
 
+  if (closed_) {
+    bt_log(TRACE, "l2cap", "Ignore RemoveChannel() on closed link");
+    return;
+  }
+
   const ChannelId id = chan->id();
   auto iter = channels_.find(id);
   if (iter == channels_.end())
@@ -300,6 +298,11 @@ void LogicalLink::RemoveChannel(Channel* chan) {
 void LogicalLink::SignalError() {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
+  if (closed_) {
+    bt_log(TRACE, "l2cap", "Ignore SignalError() on closed link");
+    return;
+  }
+
   if (link_error_cb_) {
     async::PostTask(link_error_dispatcher_, std::move(link_error_cb_));
     link_error_dispatcher_ = nullptr;
@@ -308,18 +311,20 @@ void LogicalLink::SignalError() {
 
 void LogicalLink::Close() {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(!closed_);
+
+  closed_ = true;
 
   auto channels = std::move(channels_);
   for (auto& iter : channels) {
     iter.second->OnClosed();
   }
-
-  ZX_DEBUG_ASSERT(channels_.empty());
 }
 
 DynamicChannelRegistry::DynamicChannelCallback LogicalLink::OnServiceRequest(
     PSM psm) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(!closed_);
 
   // Query upper layer for a service handler attached to this PSM.
   ChannelCallback chan_cb = query_service_cb_(handle_, psm);
@@ -327,22 +332,38 @@ DynamicChannelRegistry::DynamicChannelCallback LogicalLink::OnServiceRequest(
     return nullptr;
   }
 
-  DynamicChannelRegistry::DynamicChannelCallback complete_open =
-      [self = weak_ptr_factory_.GetWeakPtr(),
-       chan_cb = std::move(chan_cb)](const DynamicChannel* dyn_chan) mutable {
-        if (!self)
-          return;
+  return [this, chan_cb = std::move(chan_cb)](
+             const DynamicChannel* dyn_chan) mutable {
+    CompleteDynamicOpen(dyn_chan, std::move(chan_cb), dispatcher_);
+  };
+}
 
-        self->CompleteDynamicOpen(dyn_chan, std::move(chan_cb),
-                                  self->dispatcher_);
-      };
-  return complete_open;
+void LogicalLink::OnChannelDisconnectRequest(const DynamicChannel* dyn_chan) {
+  ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(dyn_chan);
+  ZX_DEBUG_ASSERT(!closed_);
+
+  auto iter = channels_.find(dyn_chan->local_cid());
+  if (iter == channels_.end()) {
+    bt_log(WARN, "l2cap",
+           "No ChannelImpl found for closing dynamic channel %#.4x",
+           dyn_chan->local_cid());
+    return;
+  }
+
+  fbl::RefPtr<ChannelImpl> channel = std::move(iter->second);
+  ZX_DEBUG_ASSERT(channel->remote_id() == dyn_chan->remote_cid());
+  channels_.erase(iter);
+
+  // Signal closure because this is a remote disconnection.
+  channel->OnClosed();
 }
 
 void LogicalLink::CompleteDynamicOpen(const DynamicChannel* dyn_chan,
                                       ChannelCallback open_cb,
                                       async_dispatcher_t* dispatcher) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_DEBUG_ASSERT(!closed_);
 
   if (!dyn_chan) {
     async::PostTask(dispatcher, std::bind(std::move(open_cb), nullptr));
@@ -355,8 +376,8 @@ void LogicalLink::CompleteDynamicOpen(const DynamicChannel* dyn_chan,
          "Link %#.4x: Channel opened with ID %#.4x (remote ID %#.4x)", handle_,
          local_cid, remote_cid);
 
-  auto chan = fbl::AdoptRef(new ChannelImpl(
-      local_cid, remote_cid, weak_ptr_factory_.GetWeakPtr(), {}));
+  auto chan = fbl::AdoptRef(
+      new ChannelImpl(local_cid, remote_cid, fbl::WrapRefPtr(this), {}));
   channels_[local_cid] = chan;
   async::PostTask(dispatcher, std::bind(std::move(open_cb), std::move(chan)));
 }
