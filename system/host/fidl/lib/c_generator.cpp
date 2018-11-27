@@ -382,9 +382,7 @@ void EnumValue(types::PrimitiveSubtype type, const flat::Constant* constant,
     case types::PrimitiveSubtype::kInt8: {
         int8_t value;
         bool success = library->ParseIntegerConstant(constant, &value);
-        if (!success) {
-            __builtin_trap();
-        }
+        assert(success && "Failed to parse enum int8 constant.");
         // The char-sized overloads of operator<< here print
         // the character value, not the numeric value, so cast up.
         member_value << static_cast<int>(value);
@@ -393,36 +391,28 @@ void EnumValue(types::PrimitiveSubtype type, const flat::Constant* constant,
     case types::PrimitiveSubtype::kInt16: {
         int16_t value;
         bool success = library->ParseIntegerConstant(constant, &value);
-        if (!success) {
-            __builtin_trap();
-        }
+        assert(success && "Failed to parse enum int16 constant.");
         member_value << value;
         break;
     }
     case types::PrimitiveSubtype::kInt32: {
         int32_t value;
         bool success = library->ParseIntegerConstant(constant, &value);
-        if (!success) {
-            __builtin_trap();
-        }
+        assert(success && "Failed to parse enum int32 constant.");
         member_value << value;
         break;
     }
     case types::PrimitiveSubtype::kInt64: {
         int64_t value;
         bool success = library->ParseIntegerConstant(constant, &value);
-        if (!success) {
-            __builtin_trap();
-        }
+        assert(success && "Failed to parse enum int64 constant.");
         member_value << value;
         break;
     }
     case types::PrimitiveSubtype::kUint8: {
         uint8_t value;
         bool success = library->ParseIntegerConstant(constant, &value);
-        if (!success) {
-            __builtin_trap();
-        }
+        assert(success && "Failed to parse enum uint8 constant.");
         // The char-sized overloads of operator<< here print
         // the character value, not the numeric value, so cast up.
         member_value << static_cast<unsigned int>(value);
@@ -431,27 +421,21 @@ void EnumValue(types::PrimitiveSubtype type, const flat::Constant* constant,
     case types::PrimitiveSubtype::kUint16: {
         uint16_t value;
         bool success = library->ParseIntegerConstant(constant, &value);
-        if (!success) {
-            __builtin_trap();
-        }
+        assert(success && "Failed to parse enum uint16 constant.");
         member_value << value;
         break;
     }
     case types::PrimitiveSubtype::kUint32: {
         uint32_t value;
         bool success = library->ParseIntegerConstant(constant, &value);
-        if (!success) {
-            __builtin_trap();
-        }
+        assert(success && "Failed to parse enum uint32 constant.");
         member_value << value;
         break;
     }
     case types::PrimitiveSubtype::kUint64: {
         uint64_t value;
         bool success = library->ParseIntegerConstant(constant, &value);
-        if (!success) {
-            __builtin_trap();
-        }
+        assert(success && "Failed to parse enum uint64 constant.");
         member_value << value;
         break;
     }
