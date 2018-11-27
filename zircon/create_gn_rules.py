@@ -27,7 +27,10 @@ from mako.template import Template
 SYSROOT_PACKAGES = ['c', 'zircon']
 
 # Prefixes of Zircon headers that should not appear in SDKs.
-NON_SDK_SYSROOT_HEADER_PREFIXES = ['zircon/device']
+NON_SDK_SYSROOT_HEADER_PREFIXES = [
+    'zircon/device',
+    'zircon/syscalls/definitions.rs',
+]
 # TODO(FIDL-273): remove this allowlist.
 MANDATORY_SDK_HEADERS = [
     'zircon/device/ioctl.h',         # Needed by zircon/device/ramdisk.h
