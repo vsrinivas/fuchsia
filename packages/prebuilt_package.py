@@ -40,6 +40,7 @@ def main():
     parser.add_argument('--system-rsp', help='System response file to generate')
     parser.add_argument('--ids-txt', help='ids.txt file to generate')
     parser.add_argument('--blobs-json', help='blobs.json file to generate')
+    parser.add_argument('--meta-merkle', help='meta.far.merkle file to generate')
 
     args = parser.parse_args()
 
@@ -51,8 +52,7 @@ def main():
 
     bloblist = findblobs(args.workdir)
 
-    meta_merkle_path = meta_far + ".merkle"
-    with open(meta_merkle_path, 'w') as f:
+    with open(args.meta_merkle, 'w') as f:
         f.write(merkle)
 
     with open(args.manifest, 'w') as f:
