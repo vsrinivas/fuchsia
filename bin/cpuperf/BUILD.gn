@@ -72,8 +72,6 @@ package("cpuperf_binary") {
 }
 
 package("cpuperf") {
-  deprecated_no_cmx = "//build"
-
   resources = [
     {
       path = rebase_path("cpspec/basic-cpu-memory.cpspec")

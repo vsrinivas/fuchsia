@@ -43,7 +43,12 @@ executable("bin") {
 }
 
 package("tiles") {
-  deprecated_no_cmx = "//build"
+  meta = [
+    {
+      path = "meta/tiles.cmx"
+      dest = "tiles.cmx"
+    },
+  ]
 
   binary = "tiles"
 

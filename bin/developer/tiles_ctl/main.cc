@@ -64,13 +64,13 @@ ControllerPtr FindTiles() {
     sys.reset(opendir("/"));
     sys_realm_entry = "hub";
   }
-  std::string tiles_name = sys_realm_entry + "/c/tiles/";
+  std::string tiles_name = sys_realm_entry + "/c/tiles.cmx/";
   fxl::UniqueFD tile_component(
       openat(dirfd(sys.get()), tiles_name.c_str(), O_DIRECTORY | O_RDONLY));
   if (!tile_component.is_valid()) {
     fprintf(stderr,
             "Couldn't find tiles component in realm\n"
-            "To start tiles: run -d tiles\n");
+            "To start tiles: run -d fuchsia-pkg://fuchsia.com/tiles#meta/tiles.cmx\n");
     return {};
   }
 

@@ -24,6 +24,13 @@ package("tiles_ctl") {
     ":bin",
   ]
 
+  meta = [
+    {
+      path = "meta/tiles_ctl.cmx"
+      dest = "tiles_ctl.cmx"
+    },
+  ]
+
   binaries = [
     {
       shell = true

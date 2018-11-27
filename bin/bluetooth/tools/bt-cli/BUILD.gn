@@ -27,13 +27,3 @@ rustc_binary("bin") {
     "//third_party/rust-mirrors/rustyline",
   ]
 }
-
-package("bt-cli") {
-  deprecated_no_cmx = "//build"
-
-  deps = [
-    ":bin",
-  ]
-
-  binary = "rust_crates/bt_cli"
-}

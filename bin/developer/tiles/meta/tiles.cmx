@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.ui.viewsv1.ViewManager",
+            "fuchsia.tracelink.Registry"
+        ]
+    }
+}
