@@ -57,7 +57,7 @@ class IoApic : public IoHandler, public PlatformDevice {
   // IO redirection table.
   RedirectEntry redirect_[kNumRedirects] __TA_GUARDED(mutex_) = {};
   // Connected VCPUs.
-  Vcpu* vcpus_[kMaxVcpus] = {};
+  Vcpu* vcpus_[kMaxVcpus] __TA_GUARDED(mutex_) = {};
 
   zx_status_t ReadRegister(uint32_t select_register, IoValue* value) const;
   zx_status_t WriteRegister(uint32_t select_register, const IoValue& value);

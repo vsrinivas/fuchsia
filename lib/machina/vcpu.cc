@@ -131,8 +131,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, uint64_t id) {
     ThreadEntryArgs* thread_args = reinterpret_cast<ThreadEntryArgs*>(arg);
     return thread_args->vcpu->ThreadEntry(thread_args);
   };
-  int ret =
-      thrd_create_with_name(&thread_, thread_entry, &args, name.c_str());
+  int ret = thrd_create_with_name(&thread_, thread_entry, &args, name.c_str());
   if (ret != thrd_success) {
     return ZX_ERR_INTERNAL;
   }

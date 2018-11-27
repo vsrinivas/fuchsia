@@ -58,12 +58,16 @@ class GicDistributor : public IoHandler, public PlatformDevice {
   static constexpr uint8_t kNumSgisAndPpis = 32;
   static constexpr uint8_t kMaxVcpus = 8;
   GicVersion gic_version_ = GicVersion::V2;
-  Vcpu* vcpus_[kMaxVcpus] = {};
-  uint8_t num_vcpus_ = 0;
+
   mutable std::mutex mutex_;
+  Vcpu* vcpus_[kMaxVcpus] __TA_GUARDED(mutex_) = {};
   bool affinity_routing_ __TA_GUARDED(mutex_) = false;
   std::vector<std::unique_ptr<GicRedistributor>> __TA_GUARDED(mutex_)
       redistributors_;
+
+  // Tracks whether interrupts are enabled.
+  //
+  // NOTE(abdulla): This doesn't properly account for banked interrupts.
   uint8_t enabled_[kNumInterrupts / CHAR_BIT] __TA_GUARDED(mutex_) = {};
 
   // SPI routing without affinity routing uses these cpu masks.

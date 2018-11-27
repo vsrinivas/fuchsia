@@ -42,14 +42,15 @@
 namespace machina {
 
 zx_status_t IoApic::Init(Guest* guest) {
-  return guest->CreateMapping(TrapType::MMIO_SYNC, kPhysBase, kMemSize,
-                              0, this);
+  return guest->CreateMapping(TrapType::MMIO_SYNC, kPhysBase, kMemSize, 0,
+                              this);
 }
 
 zx_status_t IoApic::RegisterVcpu(uint8_t local_apic_id, Vcpu* vcpu) {
   if (local_apic_id >= kMaxVcpus) {
     return ZX_ERR_OUT_OF_RANGE;
   }
+  std::lock_guard<std::mutex> lock(mutex_);
   if (vcpus_[local_apic_id] != nullptr) {
     return ZX_ERR_ALREADY_EXISTS;
   }
@@ -94,7 +95,11 @@ zx_status_t IoApic::Interrupt(uint32_t global_irq) {
   uint32_t destmod = bit_shift(entry.lower, 11);
   if (destmod == IO_APIC_DESTMOD_PHYSICAL) {
     uint32_t dest = bits_shift(entry.upper, 27, 24);
-    Vcpu* vcpu = dest < kMaxVcpus ? vcpus_[dest] : nullptr;
+    Vcpu* vcpu;
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      vcpu = dest < kMaxVcpus ? vcpus_[dest] : nullptr;
+    }
     if (vcpu == nullptr) {
       return ZX_ERR_NOT_FOUND;
     }
@@ -109,7 +114,11 @@ zx_status_t IoApic::Interrupt(uint32_t global_irq) {
     if (!(logical_id & dest)) {
       continue;
     }
-    Vcpu* vcpu = vcpus_[local_apic_id];
+    Vcpu* vcpu;
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      vcpu = vcpus_[local_apic_id];
+    }
     if (vcpu == nullptr) {
       continue;
     }

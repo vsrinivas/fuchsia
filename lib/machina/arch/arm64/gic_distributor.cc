@@ -240,7 +240,7 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
 
   switch (static_cast<GicdRegister>(addr)) {
     case GicdRegister::TYPE:
-      value->u32 = typer(kNumInterrupts, num_vcpus_, gic_version_);
+      value->u32 = typer(kNumInterrupts, kMaxVcpus, gic_version_);
       return ZX_OK;
     case GicdRegister::ICFG0:
       // SGIs are RAO/WI.
@@ -371,11 +371,10 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
     }
     case GicdRegister::CTL: {
       std::lock_guard<std::mutex> lock(mutex_);
-      if (gic_version_ == GicVersion::V3 &&
-          (value.u32 & kGicdCtlrARENSMask) > 0) {
+      if (gic_version_ == GicVersion::V3 && (value.u32 & kGicdCtlrARENSMask)) {
         // Affinity routing is being enabled.
         affinity_routing_ = true;
-        memset(broadcast_, true, sizeof(broadcast_));
+        memset(broadcast_, UINT8_MAX, sizeof(broadcast_));
         return ZX_OK;
       }
       // Affinity routing is being disabled.
@@ -423,11 +422,11 @@ zx_status_t GicDistributor::RegisterVcpu(uint8_t vcpu_num, Vcpu* vcpu) {
   if (vcpu_num > kMaxVcpus) {
     return ZX_ERR_OUT_OF_RANGE;
   }
+  std::lock_guard<std::mutex> lock(mutex_);
   if (vcpus_[vcpu_num] != nullptr) {
     return ZX_ERR_ALREADY_EXISTS;
   }
   vcpus_[vcpu_num] = vcpu;
-  num_vcpus_ += 1;
   // We set the default state of all CPU masks to target every registered VCPU.
   uint8_t default_mask = cpu_masks_[0] | 1u << vcpu_num;
   memset(cpu_masks_, default_mask, sizeof(cpu_masks_));
@@ -468,10 +467,18 @@ zx_status_t GicDistributor::TargetInterrupt(uint32_t global_irq,
     }
   }
   for (size_t i = 0; cpu_mask != 0; cpu_mask >>= 1, i++) {
-    if (!(cpu_mask & 1) || vcpus_[i] == nullptr) {
+    if (!(cpu_mask & 1)) {
       continue;
     }
-    zx_status_t status = vcpus_[i]->Interrupt(global_irq);
+    Vcpu* vcpu;
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      vcpu = vcpus_[i];
+    }
+    if (vcpu == nullptr) {
+      continue;
+    }
+    zx_status_t status = vcpu->Interrupt(global_irq);
     if (status != ZX_OK) {
       return status;
     }
