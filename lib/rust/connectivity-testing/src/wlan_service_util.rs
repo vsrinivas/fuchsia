@@ -299,6 +299,62 @@ mod tests {
     }
 
     #[test]
+    fn get_client_sme_valid_iface() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (wlan_service, server) = create_wlan_service_util();
+        let mut next_device_service_req = server.into_future();
+
+        let fut = get_iface_sme_proxy(&wlan_service, 1);
+        pin_mut!(fut);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // pass in that we expect this to succeed
+        send_sme_proxy_response(&mut exec, &mut next_device_service_req, zx::Status::OK);
+
+        match exec.run_until_stalled(&mut fut) {
+            Poll::Ready(Ok(_)) => (),
+            _ => panic!("Expected a status response"),
+        };
+    }
+
+    fn send_sme_proxy_response(
+        exec: &mut fasync::Executor,
+        server: &mut StreamFuture<wlan_service::DeviceServiceRequestStream>,
+        status: zx::Status,
+    ) {
+        let responder = match poll_device_service_req(exec, server) {
+            Poll::Ready(DeviceServiceRequest::GetClientSme { responder, .. }) =>
+                responder,
+            Poll::Pending => panic!("expected a request to be available"),
+            _ => panic!("expected a GetClientSme request"),
+        };
+
+        // now send the response back
+        let _result = responder.send(status.into_raw());
+    }
+
+    #[test]
+    fn get_client_sme_invalid_iface() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (wlan_service, server) = create_wlan_service_util();
+        let mut next_device_service_req = server.into_future();
+
+        let fut = get_iface_sme_proxy(&wlan_service, 1);
+        pin_mut!(fut);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // pass in that we expect this to fail with zx::Status::NOT_FOUND
+        send_sme_proxy_response(&mut exec, &mut next_device_service_req, zx::Status::NOT_FOUND);
+
+        let complete = exec.run_until_stalled(&mut fut);
+
+        match complete {
+            Poll::Ready(Err(_)) => (),
+            _ => panic!("Expected a status response"),
+        };
+    }
+
+    #[test]
     fn connect_to_network_success_returns_true() {
         let connect_result = test_connect("TestAp", "", "TestAp", ConnectResultCode::Success);
         assert!(connect_result);
