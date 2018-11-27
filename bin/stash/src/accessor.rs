@@ -9,7 +9,7 @@ use fidl_fuchsia_stash::{
     ListIteratorRequest, ListIteratorRequestStream, Value, MAX_KEY_SIZE, MAX_STRING_SIZE,
 };
 use fuchsia_async as fasync;
-use fuchsia_syslog::{fx_log, fx_log_err, fx_log_info};
+use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon_sys;
 use futures::{TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;

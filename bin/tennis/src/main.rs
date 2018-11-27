@@ -11,7 +11,7 @@ use failure::{Error, ResultExt};
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_game_tennis::TennisServiceMarker;
 use fuchsia_app::server::ServicesServer;
-use fuchsia_syslog::{fx_log, fx_log_info, init_with_tags};
+use fuchsia_syslog::{fx_log_info, init_with_tags};
 
 fn main() -> Result<(), Error> {
     init_with_tags(&["tennis_service"]).expect("tennis syslog init should not fail");

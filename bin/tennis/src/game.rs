@@ -5,7 +5,7 @@
 use core::f64::consts::PI;
 use fidl_fuchsia_game_tennis as fidl_tennis;
 use fidl_fuchsia_game_tennis::{GameState, PaddleProxy};
-use fuchsia_syslog::{fx_log, fx_log_info};
+use fuchsia_syslog::fx_log_info;
 use futures::prelude::*;
 use parking_lot::Mutex;
 use rand::random;

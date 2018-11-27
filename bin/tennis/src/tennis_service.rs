@@ -7,7 +7,7 @@ use failure::ResultExt;
 use fidl::endpoints::{ClientEnd, RequestStream, ServerEnd};
 use fidl_fuchsia_game_tennis as fidl_tennis;
 use fuchsia_async as fasync;
-use fuchsia_syslog::{fx_log, fx_log_err, fx_log_info};
+use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon::DurationNum;
 use futures::prelude::*;
 use parking_lot::Mutex;

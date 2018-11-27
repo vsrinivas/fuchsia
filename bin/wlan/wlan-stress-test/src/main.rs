@@ -20,7 +20,7 @@ use {
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_app::client::connect_to_service,
     fuchsia_async as fasync,
-    fuchsia_syslog::{self as syslog, fx_log, fx_log_info},
+    fuchsia_syslog::{self as syslog, fx_log_info},
     std::collections::HashMap,
     std::process,
     std::thread::sleep,

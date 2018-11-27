@@ -10,7 +10,7 @@ use fidl::endpoints::{RequestStream, ServiceMarker};
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
 use fuchsia_syslog as syslog;
-use fuchsia_syslog::{fx_log, fx_log_err, fx_log_info};
+use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
 use futures::{future, io, TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;

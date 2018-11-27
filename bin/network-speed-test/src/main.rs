@@ -16,7 +16,7 @@ use {
     fidl_fuchsia_net_oldhttp::{self as http, HttpServiceProxy},
     fuchsia_app::client::connect_to_service,
     fuchsia_async as fasync,
-    fuchsia_syslog::{self as syslog, fx_log, fx_log_info},
+    fuchsia_syslog::{self as syslog, fx_log_info},
     fuchsia_zircon as zx,
     futures::io::{AllowStdIo, AsyncReadExt},
     std::process,

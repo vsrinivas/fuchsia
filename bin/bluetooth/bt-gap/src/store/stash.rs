@@ -20,7 +20,7 @@ use {
 
     // Fuchsia libraries
     fuchsia_bluetooth::error::Error as BtError,
-    fuchsia_syslog::{fx_log, fx_log_info, fx_log_err},
+    fuchsia_syslog::{fx_log_info, fx_log_err},
 
     // FIDL services
     fidl::endpoints::create_proxy,

@@ -13,7 +13,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use failure::{err_msg, Error};
 use fidl_fuchsia_mem;
 use fidl_fuchsia_stash::{KeyValue, ListItem, Value, ValueType};
-use fuchsia_syslog::{fx_log, fx_log_info};
+use fuchsia_syslog::fx_log_info;
 use fuchsia_zircon as zx;
 use std::collections::HashMap;
 use std::fs;

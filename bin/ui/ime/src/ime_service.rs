@@ -6,7 +6,7 @@ use crate::ime::{Ime, ImeState};
 use failure::ResultExt;
 use fidl::endpoints::{ClientEnd, RequestStream, ServerEnd};
 use fidl_fuchsia_ui_input as uii;
-use fuchsia_syslog::{fx_log, fx_log_err};
+use fuchsia_syslog::fx_log_err;
 use futures::prelude::*;
 use parking_lot::Mutex;
 use std::sync::{Arc, Weak};

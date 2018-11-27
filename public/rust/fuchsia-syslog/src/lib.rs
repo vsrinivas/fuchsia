@@ -80,7 +80,7 @@ macro_rules! fx_log {
             $crate::log_helper(format_args!($($arg)+), lvl, $tag);
         }
     });
-    ($lvl:expr, $($arg:tt)+) => (fx_log!(tag: "", $lvl, $($arg)+))
+    ($lvl:expr, $($arg:tt)+) => ($crate::fx_log!(tag: "", $lvl, $($arg)+))
 }
 
 /// Convenience macro to log error.
@@ -94,11 +94,11 @@ macro_rules! fx_log {
 #[macro_export]
 macro_rules! fx_log_err {
     (tag: $tag:expr, $($arg:tt)*) => (
-        fx_log!(tag: $tag, $crate::levels::ERROR, "{}({}): {}",
+        $crate::fx_log!(tag: $tag, $crate::levels::ERROR, "{}({}): {}",
         file!(), line!(), format_args!($($arg)*));
     );
     ($($arg:tt)*) => (
-        fx_log_err!(tag: "", $($arg)*);
+        $crate::fx_log_err!(tag: "", $($arg)*);
     )
 }
 
@@ -113,10 +113,10 @@ macro_rules! fx_log_err {
 #[macro_export]
 macro_rules! fx_log_warn {
     (tag: $tag:expr, $($arg:tt)*) => (
-        fx_log!(tag: $tag, $crate::levels::WARN, $($arg)*);
+        $crate::fx_log!(tag: $tag, $crate::levels::WARN, $($arg)*);
     );
     ($($arg:tt)*) => (
-        fx_log_warn!(tag: "", $($arg)*);
+        $crate::fx_log_warn!(tag: "", $($arg)*);
     )
 }
 
@@ -131,10 +131,10 @@ macro_rules! fx_log_warn {
 #[macro_export]
 macro_rules! fx_log_info {
     (tag: $tag:expr, $($arg:tt)*) => (
-        fx_log!(tag: $tag, $crate::levels::INFO, $($arg)*);
+        $crate::fx_log!(tag: $tag, $crate::levels::INFO, $($arg)*);
     );
     ($($arg:tt)*) => (
-        fx_log_info!(tag: "", $($arg)*);
+        $crate::fx_log_info!(tag: "", $($arg)*);
     )
 }
 
@@ -149,10 +149,10 @@ macro_rules! fx_log_info {
 #[macro_export]
 macro_rules! fx_vlog {
     (tag: $tag:expr, $verbosity:expr, $($arg:tt)*) => (
-        fx_log!(tag: $tag, -$verbosity, $($arg)*);
+        $crate::fx_log!(tag: $tag, -$verbosity, $($arg)*);
     );
     ($verbosity:expr, $($arg:tt)*) => (
-         fx_vlog!(tag: "", $verbosity, $($arg)*);
+         $crate::fx_vlog!(tag: "", $verbosity, $($arg)*);
     )
 }
 

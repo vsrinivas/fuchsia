@@ -11,7 +11,7 @@ fn main() {}
 mod tests {
     use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage};
     use fuchsia_async as fasync;
-    use fuchsia_syslog::{self as syslog, fx_log, fx_log_info};
+    use fuchsia_syslog::{self as syslog, fx_log_info};
     use fuchsia_syslog_listener::{self as syslog_listener, LogProcessor};
     use fuchsia_zircon::DurationNum;
     use futures::TryFutureExt;

@@ -23,7 +23,7 @@ use fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker};
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
 use fuchsia_bluetooth::util;
-use fuchsia_syslog::{self as syslog, fx_log, fx_log_info};
+use fuchsia_syslog::{self as syslog, fx_log_info};
 use futures::{TryFutureExt, TryStreamExt};
 
 mod services;

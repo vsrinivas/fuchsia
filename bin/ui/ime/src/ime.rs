@@ -8,7 +8,7 @@ use fidl::encoding::OutOfLine;
 use fidl::endpoints::RequestStream;
 use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_input::InputMethodEditorRequest as ImeReq;
-use fuchsia_syslog::{fx_log, fx_log_err, fx_log_warn};
+use fuchsia_syslog::{fx_log_err, fx_log_warn};
 use futures::prelude::*;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;

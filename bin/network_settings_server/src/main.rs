@@ -8,7 +8,7 @@ use crate::server::start_server;
 
 use {
     failure::Error,
-    fuchsia_syslog::{self as syslog, fx_log, fx_log_info},
+    fuchsia_syslog::{self as syslog, fx_log_info},
     std::fs,
 };
 

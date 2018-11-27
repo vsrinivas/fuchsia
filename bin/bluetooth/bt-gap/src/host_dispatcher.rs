@@ -33,7 +33,7 @@ use fuchsia_bluetooth::{
     util::clone_remote_device
 };
 use fuchsia_async::{self as fasync, TimeoutExt};
-use fuchsia_syslog::{fx_log, fx_log_err, fx_log_info};
+use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
 use fuchsia_zircon::Duration;
 use futures::{task::{LocalWaker, Waker}, Future, Poll, FutureExt, TryFutureExt};

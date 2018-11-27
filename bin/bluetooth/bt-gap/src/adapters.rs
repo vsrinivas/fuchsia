@@ -1,4 +1,4 @@
-use fuchsia_syslog::{fx_log, fx_log_warn};
+use fuchsia_syslog::fx_log_warn;
 use fuchsia_vfs_watcher as vfs_watcher;
 use fuchsia_vfs_watcher::{WatchEvent, WatchMessage};
 use std::fs::File;

@@ -18,7 +18,7 @@ use fidl_fuchsia_bluetooth_gatt::Server_Marker;
 use fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker};
 use futures::TryFutureExt;
 use parking_lot::Mutex;
-use fuchsia_syslog::{self as syslog, fx_log, fx_log_info};
+use fuchsia_syslog::{self as syslog, fx_log_info};
 use std::sync::Arc;
 
 mod config;

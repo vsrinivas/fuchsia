@@ -9,7 +9,7 @@
 extern crate failure;
 
 use fuchsia_async as fasync;
-use fuchsia_syslog::{fx_log, fx_log_info, fx_log_warn, fx_vlog};
+use fuchsia_syslog::{fx_log_info, fx_log_warn, fx_vlog};
 use fuchsia_zircon as zx;
 use futures::ready;
 use futures::stream::Stream;

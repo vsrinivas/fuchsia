@@ -4,7 +4,7 @@
 
 #![deny(warnings)]
 
-use fuchsia_syslog::{fx_log, fx_log_warn};
+use fuchsia_syslog::fx_log_warn;
 use fuchsia_zircon as zx;
 
 pub(crate) trait TryFrom<T>: Sized {

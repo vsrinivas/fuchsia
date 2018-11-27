@@ -20,7 +20,7 @@ use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;
-use fuchsia_syslog::{self as syslog, fx_log, fx_log_info};
+use fuchsia_syslog::{self as syslog, fx_log_info};
 use fuchsia_zircon as zx;
 use futures::io::{AllowStdIo, AsyncReadExt};
 use std::collections::HashMap;

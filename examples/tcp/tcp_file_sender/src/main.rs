@@ -7,7 +7,7 @@
 use failure::ResultExt;
 use structopt::StructOpt;
 
-use fuchsia_syslog::{fx_log, fx_log_info};
+use fuchsia_syslog::fx_log_info;
 
 #[derive(StructOpt)]
 struct Opt {

@@ -8,7 +8,7 @@ use self::libc::{int32_t, uint32_t};
 
 use fdio::{self, fdio_sys, make_ioctl};
 use fuchsia_async as fasync;
-use fuchsia_syslog::{fx_log, fx_log_err, fx_vlog};
+use fuchsia_syslog::{fx_log_err, fx_vlog};
 use fuchsia_zircon::{self as zx, Signals, sys::zx_handle_t};
 use futures::TryFutureExt;
 use std::fs::File;

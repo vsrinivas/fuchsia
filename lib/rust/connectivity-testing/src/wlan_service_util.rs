@@ -6,7 +6,7 @@ use failure::{bail, format_err, Error, ResultExt};
 use fidl::endpoints;
 use fidl_fuchsia_wlan_device_service::DeviceServiceProxy;
 use fidl_fuchsia_wlan_sme as fidl_sme;
-use fuchsia_syslog::{fx_log, fx_log_err};
+use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon as zx;
 use futures::stream::TryStreamExt;
 

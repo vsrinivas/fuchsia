@@ -16,7 +16,7 @@ use fidl_fuchsia_bluetooth_host::{BondingData, HostEvent, HostProxy};
 use fidl_fuchsia_bluetooth_le::{CentralMarker, CentralProxy};
 use fuchsia_async as fasync;
 use fuchsia_bluetooth::bt_fidl_status;
-use fuchsia_syslog::{fx_log, fx_log_err, fx_log_info};
+use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
 use futures::{Future, StreamExt};
 use parking_lot::RwLock;

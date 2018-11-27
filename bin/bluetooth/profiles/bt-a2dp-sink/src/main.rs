@@ -12,7 +12,7 @@ use bt_avdtp as avdtp;
 use failure::{Error, ResultExt};
 use fidl_fuchsia_bluetooth_bredr::*;
 use fuchsia_async as fasync;
-use fuchsia_syslog::{self, fx_log, fx_log_info, fx_log_warn, fx_vlog};
+use fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog};
 use fuchsia_zircon as zx;
 use futures::{StreamExt, TryFutureExt};
 use std::collections::HashSet;

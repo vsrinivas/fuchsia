@@ -6,7 +6,7 @@ use crate::net_settings_types::*;
 
 use {
     failure::{bail, Error},
-    fuchsia_syslog::{fx_log, fx_log_err, fx_log_info},
+    fuchsia_syslog::{fx_log_err, fx_log_info},
     rouille,
     rouille::{router, Request, Response},
     serde::de::DeserializeOwned,

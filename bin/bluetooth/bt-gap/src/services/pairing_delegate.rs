@@ -8,7 +8,7 @@ use fidl::endpoints::RequestStream;
 use fidl_fuchsia_bluetooth_control::*;
 use fidl_fuchsia_bluetooth_control::PairingDelegateRequest::*;
 use fuchsia_async as fasync;
-use fuchsia_syslog::{fx_log, fx_log_warn};
+use fuchsia_syslog::fx_log_warn;
 use futures::{Future, TryStreamExt};
 
 // Number of concurrent requests allowed to the pairing delegate at a single time

@@ -12,7 +12,7 @@ use fidl_fuchsia_power::{BatteryStatus, PowerManagerMarker, PowerManagerRequest,
                          Status as power_status};
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
-use fuchsia_syslog::{self as syslog, fx_log, fx_log_err, fx_log_info, fx_vlog};
+use fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info, fx_vlog};
 use fuchsia_vfs_watcher as vfs_watcher;
 use fuchsia_zircon as zx;
 use futures::prelude::*;

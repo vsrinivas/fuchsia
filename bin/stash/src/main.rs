@@ -11,7 +11,7 @@ use fidl::endpoints::RequestStream;
 use fidl::endpoints::ServiceMarker;
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
-use fuchsia_syslog::{fx_log, fx_log_err, fx_log_info};
+use fuchsia_syslog::{fx_log_err, fx_log_info};
 use futures::{TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;
 use std::convert::{TryFrom, TryInto};
