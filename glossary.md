@@ -193,6 +193,11 @@ such as memory, i/o, processor time and access to other processes. Userspace can
 kernel objects via [Handles](#Handle).
 - [Reference](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/objects.md)
 
+#### **KOID**
+
+A Kernel Object Identifier.
+- [Kernel Object](#Kernel-Object)
+
 #### **Ledger**
 
 [Ledger](https://fuchsia.googlesource.com/peridot/+/master/docs/ledger/README.md) is a distributed
