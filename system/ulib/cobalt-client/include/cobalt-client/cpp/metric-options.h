@@ -97,37 +97,67 @@ struct HistogramOptions : public MetricOptions {
         kExponential,
     };
 
-    // Returns HistogramOptions for a Histogram whose bucket size follow an exponential progression.
-    // |scalar| * |base|^(current_step) + |offset| - |scalar| = lowerbound(current_step).
-    // offset' = |offset| - |scalar|
-    // |scalar| * |base|^(current_step) + offset' = lowerbound(current_step).
-    static HistogramOptions Exponential(uint32_t bucket_count, uint32_t base, uint32_t scalar,
-                                        int64_t offset);
+    // Returns HistogramOptions that:
+    //   * Exponential bucket range with base 2 => lower_bound[i] = a*2^i-1 - 1
+    //   * Has underflow bucket from (-inf, 0)
+    //   * The first bucket contains [0, 1)
+    //   * a is an integer greater or equal to 1.
+    //   * if |max| % (2^|bucket_count| - 1):
+    //      - Is not 0, then |max| is contained in the last bucket.
+    //      - Is 0, then |max| is the lower bound of the overflow bucket.
+    //
+    //   For example:
+    //       - With bucket_count 12 and max 40950, we get scalar 10, base 2,
+    //         and offset -10.
+    //       - With bucket_count 12 and max 40960, we get scalar 11, base 2,
+    //         and offset -11.
+    static HistogramOptions Exponential(uint32_t bucket_count, int64_t max);
 
-    // Returns HistogramOptions for a Histogram whose bucket size follow an exponential progression.
-    // |scalar| * current_step + offset = lowerbound(current_step).
-    static HistogramOptions Linear(uint32_t bucket_count, uint32_t scalar, int64_t offset);
+    // Returns HistogramOptions that:
+    //   * Exponential bucket range with base 2 => lower_bound[i] = a*2^i-1 - 1
+    //   * Has underflow bucket from (-inf, min)
+    //   * The first bucket contains [min, min+1)
+    //   * a is an integer greater or equal to 1.
+    //   * if |max - min| % (2^|bucket_count| - 1):
+    //      - Is not, then |max| is contained in the last bucket.
+    //      - Is 0, then |max| is the lower bound of the overflow bucket.
+    static HistogramOptions Exponential(uint32_t bucket_count, int64_t min, int64_t max);
+
+    // Returns HistogramOptions that:
+    //   * Has an extra underflow bucket.
+    //   * Has an extra overflow bucket.
+    //   * For every bucket from i = 1 to |bucket_count| has a lower bound defined by:
+    //       scalar * (base^(i-1) - 1) + min
+    static HistogramOptions CustomizedExponential(uint32_t bucket_count, uint32_t base,
+                                                  uint32_t scalar, int64_t min);
+
+    // Returns HistogramOptions that:
+    //   * Linear bucket range with fixed step size ceil(|max|/|bucket_count|).
+    //   * Has underflow bucket from (-inf, 0)
+    //   * The first bucket contains [0, step_size)
+    //   * |max| is contained in the last bucket if its not a multiple of |bucket_count|.
+    static HistogramOptions Linear(uint32_t bucket_count, int64_t max);
+
+    // Returns HistogramOptions that:
+    //   * Linear bucket range with fixed step size ceil(|max|/|bucket_count|).
+    //   * Has underflow bucket from (-inf, 0)
+    //   * The first bucket contains [0, step_size)
+    //   * |max| is contained in the last bucket if its not a multiple of |bucket_count|.
+    static HistogramOptions Linear(uint32_t bucket_count, int64_t min, int64_t max);
+
+    // Returns HistogramOptions that:
+    //   * Has an extra underflow bucket.
+    //   * Has an extra overflow bucket.
+    //   * For every bucket from i = 1 to |bucket_count| has a lower bound defined by:
+    //       min + step_size * (i-1)
+    static HistogramOptions CustomizedLinear(uint32_t bucket_count, uint32_t step_size,
+                                             int64_t min);
 
     HistogramOptions() = default;
     HistogramOptions(const HistogramOptions&);
 
     // Sanity check.
-    bool IsValid() const {
-        switch (type) {
-        case Type::kExponential:
-            if (base == 0) {
-                return false;
-            }
-            __FALLTHROUGH;
-        case Type::kLinear:
-            if (scalar == 0) {
-                return false;
-            }
-            break;
-        }
-
-        return true;
-    }
+    bool IsValid() const;
 
     // This parameters should not be set manually.
 
@@ -146,7 +176,7 @@ struct HistogramOptions : public MetricOptions {
     // This matchest offset', which is calculated depending on the histogram type.
     double offset = 0;
 
-    // Cached upper bound for the histogram.
+    // Bounds for the histogram.
     double max_value = 0;
 
     // Type of the histogram to be constructed.

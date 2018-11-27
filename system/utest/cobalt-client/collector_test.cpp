@@ -76,7 +76,8 @@ HistogramOptions MakeHistogramOptions(uint32_t metric_id = kMetricId,
                                       uint32_t event_code = kEventCode) {
     // | .....| ....| ...| .... |
     // -inf  -2     0    2    +inf
-    HistogramOptions options = HistogramOptions::Linear(kBuckets, /*scalar*/ 2, /*offset*/ -2);
+    HistogramOptions options =
+        HistogramOptions::CustomizedLinear(kBuckets, /*scalar*/ 2, /*offset*/ -2);
     options.SetMode(MetricOptions::Mode::kRemote);
     options.metric_id = metric_id;
     options.event_code = event_code;

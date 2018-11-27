@@ -52,7 +52,7 @@ RemoteMetricInfo MakeRemoteMetricInfo() {
 }
 
 HistogramOptions MakeHistogramOptions() {
-    HistogramOptions options = HistogramOptions::Exponential(kBuckets, 2, 1, 0);
+    HistogramOptions options = HistogramOptions::CustomizedExponential(kBuckets, 2, 1, 0);
     options.SetMode(MetricOptions::Mode::kRemote);
     options.metric_id = kMetricId;
     options.component = kComponent;
@@ -457,9 +457,10 @@ bool TestAddMultiple() {
 bool TestAddAfterFlush() {
     BEGIN_TEST;
     // Buckets 2^i + offset.
-    HistogramOptions options = HistogramOptions::Exponential(/*bucket_count=*/kBuckets,
-                                                             /*base=*/2,
-                                                             /*scalar=*/1, /*offset=*/-10);
+    HistogramOptions options =
+        HistogramOptions::CustomizedExponential(/*bucket_count=*/kBuckets,
+                                                /*base=*/2,
+                                                /*scalar=*/1, /*offset=*/-10);
     options.SetMode(MetricOptions::Mode::kRemote);
     internal::FlushInterface* remote_histogram;
     FakeLogger logger;

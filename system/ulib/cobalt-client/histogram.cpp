@@ -124,24 +124,82 @@ void HistogramUndoFlush(BaseCounter<uint64_t>* buckets, HistogramBucket* bucket_
 
 HistogramOptions::HistogramOptions(const HistogramOptions&) = default;
 
-HistogramOptions HistogramOptions::Exponential(uint32_t bucket_count, uint32_t base,
-                                               uint32_t scalar, int64_t offset) {
+HistogramOptions HistogramOptions::Exponential(uint32_t bucket_count, int64_t max) {
+    return Exponential(bucket_count, 0, max);
+}
+
+HistogramOptions HistogramOptions::Exponential(uint32_t bucket_count, int64_t min, int64_t max) {
+    ZX_DEBUG_ASSERT_MSG(min < max, "min must be smaller than max.");
+    // 2^bucket - 1 is the lower bound of the overflow bucket.
+    uint64_t overflow_limit = (1 << bucket_count) - 1;
+    uint64_t range = max - min;
+    uint32_t scalar = 1;
+
+    // If max is past the overflow limit we need to scale up, and the minimum is 1.
+    if (range - overflow_limit > 0) {
+        scalar = static_cast<uint32_t>(range / overflow_limit);
+        if (range % overflow_limit != 0) {
+            scalar++;
+        }
+    }
+    ZX_DEBUG_ASSERT_MSG(2 * range >= scalar * overflow_limit,
+                        "range is too small for the number of buckets.");
+
+    return CustomizedExponential(bucket_count, 2, scalar, min);
+}
+
+HistogramOptions HistogramOptions::CustomizedExponential(uint32_t bucket_count, uint32_t base,
+                                                         uint32_t scalar, int64_t min) {
     HistogramOptions options;
-    options.base = base;
-    options.scalar = scalar;
-    options.offset = static_cast<double>(offset - scalar);
     options.type = Type::kExponential;
+    options.base = static_cast<double>(base);
+    options.scalar = static_cast<double>(scalar);
+    options.offset = static_cast<double>(min - scalar);
     internal::LoadExponential(bucket_count, &options);
     return options;
 }
 
-HistogramOptions HistogramOptions::Linear(uint32_t bucket_count, uint32_t scalar, int64_t offset) {
+HistogramOptions HistogramOptions::Linear(uint32_t bucket_count, int64_t max) {
+    return Linear(bucket_count, 0, max);
+}
+
+HistogramOptions HistogramOptions::Linear(uint32_t bucket_count, int64_t min, int64_t max) {
+    ZX_DEBUG_ASSERT_MSG(min < max, "min must be smaller than max.");
+    uint64_t range = max - min;
+    ZX_DEBUG_ASSERT_MSG(range >= bucket_count, "range is too small for the number of buckets.");
+    uint64_t scalar = range / bucket_count;
+    if (range % bucket_count != 0) {
+        scalar++;
+    }
+    ZX_DEBUG_ASSERT_MSG(scalar <= std::numeric_limits<uint32_t>::max(), "scalar overflow\n");
+    return CustomizedLinear(bucket_count, static_cast<uint32_t>(scalar), min);
+}
+
+HistogramOptions HistogramOptions::CustomizedLinear(uint32_t bucket_count, uint32_t step_size,
+                                                    int64_t min) {
     HistogramOptions options;
-    options.scalar = scalar;
-    options.offset = static_cast<double>(offset);
+    options.scalar = static_cast<double>(step_size);
+    options.offset = static_cast<double>(min);
     options.type = Type::kLinear;
     internal::LoadLinear(bucket_count, &options);
     return options;
+}
+
+bool HistogramOptions::IsValid() const {
+    switch (type) {
+    case Type::kExponential:
+        if (base == 0) {
+            return false;
+        }
+        __FALLTHROUGH;
+    case Type::kLinear:
+        if (scalar == 0) {
+            return false;
+        }
+        break;
+    }
+
+    return true;
 }
 
 } // namespace cobalt_client
