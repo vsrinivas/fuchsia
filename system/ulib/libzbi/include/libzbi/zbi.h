@@ -49,7 +49,7 @@ typedef zbi_result_t (*zbi_foreach_cb_t)(zbi_header_t* hdr,
                                          void* cookie);
 
 // Creates an empty ZBI container in buffer.
-zbi_result_t zbi_init(void* buffer, const size_t length);
+zbi_result_t zbi_init(void* buffer, size_t length);
 
 // Checks the integrity of the underlying ZBI.
 // If err is not null and an error is found, err will point to the ZBI entry
@@ -96,5 +96,8 @@ zbi_result_t zbi_create_section(void* base, size_t capacity,
                                 uint32_t section_length, uint32_t type,
                                 uint32_t extra, uint32_t flags,
                                 void** payload);
+
+// Extend dst by appending src to the end of it.
+zbi_result_t zbi_extend(void* dst, size_t capacity, const void* src);
 
 __END_CDECLS

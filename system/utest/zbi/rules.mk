@@ -17,7 +17,12 @@ MODULE_NAME := zbi-test
 
 MODULE_LIBS := system/ulib/unittest system/ulib/fdio system/ulib/c
 
-MODULE_STATIC_LIBS += system/ulib/libzbi system/ulib/fbl system/ulib/zxcpp
+MODULE_STATIC_LIBS +=   \
+    system/ulib/libzbi  \
+    system/ulib/fbl     \
+    system/ulib/zxcpp   \
+    system/ulib/pretty  \
+
 
 include make/module.mk
 
@@ -37,6 +42,7 @@ MODULE_COMPILEFLAGS += \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/libzbi/include \
     -Isystem/ulib/unittest/include \
+    -Isystem/ulib/pretty/include \
 
 MODULE_HOST_LIBS += \
     system/ulib/fbl.hostlib \

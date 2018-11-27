@@ -1,20 +1,19 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+#include <libzbi/zbi-cpp.h>
 
 #include <assert.h>
+#include <memory>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <fbl/auto_call.h>
-#include <fbl/unique_ptr.h>
+#include <pretty/hexdump.h>
+#include <unittest/unittest.h>
 #include <zircon/boot/image.h>
 #include <zircon/compiler.h>
-
-#include <unittest/unittest.h>
-
-#include <libzbi/zbi-cpp.h>
 
 const char kTestCmdline[] = "0123";
 constexpr size_t kCmdlinePayloadLen =
@@ -367,7 +366,7 @@ constexpr size_t kTestBufferSize = 1024;
 static bool ZbiTestInit(void) {
     BEGIN_TEST;
 
-    fbl::unique_ptr<uint8_t[]> buffer;
+    std::unique_ptr<uint8_t[]> buffer;
     buffer.reset(new uint8_t[kTestBufferSize]);
 
     zbi::Zbi image(buffer.get(), kTestBufferSize);
@@ -390,7 +389,7 @@ static bool ZbiTestInitTooSmall(void) {
     constexpr uint8_t kSentinel = 0xab;
 
     // If all goes well, we should never write to this buffer.
-    fbl::unique_ptr<uint8_t[]> buffer;
+    std::unique_ptr<uint8_t[]> buffer;
     buffer.reset(new uint8_t[kTestBufferSize]);
 
     // Write a known value into the buffer to ensure that it's not touched.
@@ -412,15 +411,122 @@ static bool ZbiTestInitTooSmall(void) {
     END_TEST;
 }
 
+// Test the happy case.
+// Make two zbi containers, extend the first by tacking the second to the back
+// of it. Observe that everything went okay.
+static bool ZbiTestExtendOkay(void) {
+    BEGIN_TEST;
+
+    // Create a dst zbi that has enough space to contain the src zbi.
+    uint8_t* src_buf = get_test_zbi();
+
+    const size_t kExtraBytes = (reinterpret_cast<zbi_header_t*>(src_buf))->length;
+    const size_t kDstCapacity = kExtraBytes + sizeof(test_zbi);
+    uint8_t* dst_buf = get_test_zbi_extra(kExtraBytes);
+
+    auto cleanup = fbl::MakeAutoCall([src_buf, dst_buf] {
+        free(src_buf);
+        free(dst_buf);
+    });
+
+    // Count the number of sections in the source buffer and the destination
+    // buffer.
+    uint32_t src_sections = 0;
+    uint32_t dst_sections = 0;
+    uint32_t combined_sections = 0;
+
+    ASSERT_EQ(zbi_for_each(src_buf, check_contents, &src_sections), ZBI_RESULT_OK);
+    ASSERT_EQ(zbi_for_each(dst_buf, check_contents, &dst_sections), ZBI_RESULT_OK);
+
+    EXPECT_EQ(zbi_extend(dst_buf, kDstCapacity, src_buf), ZBI_RESULT_OK);
+
+    ASSERT_EQ(zbi_for_each(dst_buf, check_contents, &combined_sections), ZBI_RESULT_OK);
+    ASSERT_EQ(src_sections + dst_sections, combined_sections);
+
+    END_TEST;
+}
+
+static bool ZbiTestNoOverflow(void) {
+    BEGIN_TEST;
+    constexpr size_t kBufferSize = 1024;
+    constexpr size_t kUsableBufferSize = kBufferSize / 2;
+    constexpr uint8_t kSentinel = 0xab;
+
+    static_assert(kBufferSize % ZBI_ALIGNMENT == 0);
+    static_assert(kUsableBufferSize % ZBI_ALIGNMENT == 0);
+
+    uint8_t* dst_buffer = new uint8_t[kBufferSize];
+    std::unique_ptr<uint8_t[]> dst_deleter;
+    dst_deleter.reset(dst_buffer);
+    memset(dst_buffer, kSentinel, kBufferSize);
+
+    uint8_t* src_buffer = new uint8_t[kBufferSize];
+    std::unique_ptr<uint8_t[]> src_deleter;
+    src_deleter.reset(src_buffer);
+    memset(src_buffer, kSentinel, kBufferSize);
+
+    uint8_t* test_data = new uint8_t[kUsableBufferSize];
+    std::unique_ptr<uint8_t[]> test_data_deleter;
+    test_data_deleter.reset(test_data);
+    memset(test_data, 0x12, kUsableBufferSize);
+
+    ASSERT_EQ(zbi_init(dst_buffer, kUsableBufferSize), ZBI_RESULT_OK);
+    ASSERT_EQ(zbi_init(src_buffer, kUsableBufferSize), ZBI_RESULT_OK);
+
+    ASSERT_EQ(zbi_append_section(
+                  src_buffer,
+                  kUsableBufferSize,
+                  kUsableBufferSize - (sizeof(zbi_header_t) * 2), // Leave room for ZBI header _and_ section header
+                  ZBI_TYPE_CMDLINE,
+                  0, // Extra
+                  0, // Flags
+                  test_data),
+              ZBI_RESULT_OK);
+
+    ASSERT_EQ(zbi_extend(dst_buffer, kUsableBufferSize, src_buffer), ZBI_RESULT_OK);
+
+    // Make sure we haven't trampled any bytes that we shouldn't have.
+    for (size_t i = kUsableBufferSize; i < kUsableBufferSize; i++) {
+        ASSERT_EQ(dst_buffer[i], kSentinel);
+    }
+
+    ASSERT_EQ(zbi_init(dst_buffer, kUsableBufferSize), ZBI_RESULT_OK);
+
+    ASSERT_EQ(zbi_init(src_buffer, kUsableBufferSize + 1), ZBI_RESULT_OK);
+
+    ASSERT_EQ(zbi_append_section(
+                  src_buffer,
+                  ZBI_ALIGN(kUsableBufferSize + 1),
+                  (kUsableBufferSize + 1) - (sizeof(zbi_header_t) * 2), // This payload is too big.
+                  ZBI_TYPE_CMDLINE,
+                  0, // Extra
+                  0, // Flags
+                  test_data),
+              ZBI_RESULT_OK);
+
+    ASSERT_NE(zbi_extend(dst_buffer, kUsableBufferSize, src_buffer), ZBI_RESULT_OK);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(zbi_tests)
+// Basic tests.
 RUN_TEST(ZbiTestBasic)
 RUN_TEST(ZbiTestBadContainer)
 RUN_TEST(ZbiTestTruncated)
+
+// Append tests.
 RUN_TEST(ZbiTestAppend)
 RUN_TEST(ZbiTestAppendFull)
 RUN_TEST(ZbiTestAppendMulti)
+
+// Init tests.
 RUN_TEST(ZbiTestInit)
 RUN_TEST(ZbiTestInitTooSmall)
+
+// Extend tests.
+RUN_TEST(ZbiTestExtendOkay)
+RUN_TEST(ZbiTestNoOverflow)
 END_TEST_CASE(zbi_tests)
 
 int main(int argc, char** argv) {

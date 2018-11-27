@@ -55,6 +55,10 @@ public:
                                   payload);
     }
 
+    zbi_result_t Extend(const Zbi& source) {
+        return zbi_extend(base_, capacity_, source.base_);
+    }
+
     const uint8_t* Base() const { return base_; };
     uint32_t Length() const {
         return Header()->length + static_cast<uint32_t>(sizeof(zbi_header_t));

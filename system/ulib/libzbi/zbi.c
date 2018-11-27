@@ -11,6 +11,12 @@ struct check_state {
     bool seen_bootfs;
 };
 
+static bool is_zbi_container(const zbi_header_t* hdr) {
+    return (hdr->type == ZBI_TYPE_CONTAINER) &&
+           (hdr->magic == ZBI_ITEM_MAGIC) &&
+           (hdr->extra == ZBI_CONTAINER_MAGIC);
+}
+
 zbi_result_t zbi_init(void* buffer, const size_t length) {
     if (length < sizeof(zbi_header_t)) {
         return ZBI_RESULT_TOO_BIG;
@@ -184,9 +190,7 @@ zbi_result_t zbi_create_section(void* base, size_t capacity,
     zbi_header_t* hdr = (zbi_header_t*)base;
 
     // Make sure we were actually passed a bootdata container.
-    if ((hdr->type != ZBI_TYPE_CONTAINER) ||
-        (hdr->magic != ZBI_ITEM_MAGIC) ||
-        (hdr->extra != ZBI_CONTAINER_MAGIC)) {
+    if (!is_zbi_container(hdr)) {
         return ZBI_RESULT_BAD_TYPE;
     }
 
@@ -225,6 +229,42 @@ zbi_result_t zbi_create_section(void* base, size_t capacity,
                aligned_length - hdr->length);
         hdr->length = aligned_length;
     }
+
+    return ZBI_RESULT_OK;
+}
+
+zbi_result_t zbi_extend(void* dst_buffer, size_t capacity,
+                        const void* src_buffer) {
+    zbi_header_t* dst = (zbi_header_t*)dst_buffer;
+    zbi_header_t* src = (zbi_header_t*)src_buffer;
+
+    // Extend only works against two zbi containers, if you want to append a zbi
+    // section to the end of a container, use zbi_append_section instead.
+    if (!is_zbi_container(dst) || !is_zbi_container(src)) {
+        return ZBI_RESULT_BAD_TYPE;
+    }
+
+    // Make sure there's enough space in the destination buffer to contain the
+    // source.
+    const uint32_t dst_size = ZBI_ALIGN(dst->length + sizeof(*dst));
+
+    // This captures the situation where there's not even enough space to have
+    // padding between this section and the next.
+    if (dst_size > capacity) {
+        return ZBI_RESULT_TOO_BIG;
+    }
+
+    // This makes sure that there's enough space to perform the copy after
+    const uint32_t remaining_buffer = capacity - dst_size;
+    if (remaining_buffer < src->length) {
+        return ZBI_RESULT_TOO_BIG;
+    }
+
+    // Okay everything looks good, let's do the copy.
+    memcpy(dst_buffer + dst_size, src_buffer + sizeof(*src), src->length);
+
+    // And patch up the length on the destination buffer's header.
+    dst->length += src->length;
 
     return ZBI_RESULT_OK;
 }
