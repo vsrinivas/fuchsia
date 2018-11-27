@@ -1012,7 +1012,7 @@ static fdio_ops_t fdio_zxio_debuglog_ops = {
 
 __EXPORT
 fdio_t* fdio_logger_create(zx_handle_t handle) {
-    fdio_zxio_t* fv = calloc(1, sizeof(fdio_zxio_t));
+    fdio_zxio_t* fv = fdio_alloc(sizeof(fdio_zxio_t));
     if (fv == NULL) {
         zx_handle_close(handle);
         return NULL;
