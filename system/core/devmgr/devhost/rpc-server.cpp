@@ -656,23 +656,25 @@ static const fuchsia_io_Node_ops_t kNodeOps = {
 };
 
 zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie) {
-    fidl_message_header_t* hdr = (fidl_message_header_t*) msg->bytes;
-    if (hdr->ordinal >= fuchsia_io_NodeCloneOrdinal &&
-        hdr->ordinal <= fuchsia_io_NodeIoctlOrdinal) {
-        return fuchsia_io_Node_dispatch(cookie, txn, msg, &kNodeOps);
-    } else if (hdr->ordinal >= fuchsia_io_FileReadOrdinal &&
-               hdr->ordinal <= fuchsia_io_FileGetVmoOrdinal) {
-        return fuchsia_io_File_dispatch(cookie, txn, msg, &kFileOps);
-    } else if (hdr->ordinal >= fuchsia_io_DirectoryOpenOrdinal &&
-               hdr->ordinal <= fuchsia_io_DirectoryWatchOrdinal) {
-        return fuchsia_io_Directory_dispatch(cookie, txn, msg, &kDirectoryOps);
-    } else if (hdr->ordinal >= fuchsia_io_DirectoryAdminMountOrdinal &&
-               hdr->ordinal <= fuchsia_io_DirectoryAdminGetDevicePathOrdinal) {
-        return fuchsia_io_DirectoryAdmin_dispatch(cookie, txn, msg, &kDirectoryAdminOps);
-    } else {
-        auto conn = static_cast<DevfsConnection*>(cookie);
-        return conn->dev->MessageOp(msg, txn);
+    zx_status_t status = fuchsia_io_Node_try_dispatch(cookie, txn, msg, &kNodeOps);
+    if (status != ZX_ERR_NOT_SUPPORTED) {
+        return status;
     }
+    status = fuchsia_io_File_try_dispatch(cookie, txn, msg, &kFileOps);
+    if (status != ZX_ERR_NOT_SUPPORTED) {
+        return status;
+    }
+    status = fuchsia_io_Directory_try_dispatch(cookie, txn, msg, &kDirectoryOps);
+    if (status != ZX_ERR_NOT_SUPPORTED) {
+        return status;
+    }
+    status = fuchsia_io_DirectoryAdmin_try_dispatch(cookie, txn, msg, &kDirectoryAdminOps);
+    if (status != ZX_ERR_NOT_SUPPORTED) {
+        return status;
+    }
+
+    auto conn = static_cast<DevfsConnection*>(cookie);
+    return conn->dev->MessageOp(msg, txn);
 }
 
 } // namespace devmgr

@@ -104,13 +104,7 @@ private:
     }
 
     zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) final {
-        fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-        if (hdr->ordinal >= fuchsia_minfs_MinfsGetMetricsOrdinal &&
-            hdr->ordinal <= fuchsia_minfs_MinfsToggleMetricsOrdinal) {
-            return fuchsia_minfs_Minfs_dispatch(this, txn, msg, Ops());
-        }
-        zx_handle_close_many(msg->handles, msg->num_handles);
-        return ZX_ERR_NOT_SUPPORTED;
+        return fuchsia_minfs_Minfs_dispatch(this, txn, msg, Ops());
     }
 };
 

@@ -85,14 +85,14 @@ const uint32 OPEN_FLAG_STATUS = 0x01000000;
 [Layout="Simple", FragileBase]
 interface Node {
     // Create another connection to the same remote object.
-    0x80000001: Clone(uint32 flags, request<Node> object);
+    Clone(uint32 flags, request<Node> object);
 
     // Terminates connection with object.
-    0x80000002: Close() -> (zx.status s);
+    Close() -> (zx.status s);
 
     // Returns extra information about the type of the object.
     // If the |Describe| operation fails, the connection is closed.
-    0x80000006: Describe() -> (NodeInfo info);
+    Describe() -> (NodeInfo info);
 
     // An event produced eagerly by a fidl server if requested
     // by open flags.
@@ -102,19 +102,19 @@ interface Node {
     // to open, |info| contains descriptive information about
     // the object (the same as would be returned by |Describe|),
     // otherwise it is null.
-    0x80000007: -> OnOpen(zx.status s, NodeInfo? info);
+    -> OnOpen(zx.status s, NodeInfo? info);
 
     // Synchronizes updates to the node to the underlying media, if it exists.
-    0x81000001: Sync() -> (zx.status s);
+    Sync() -> (zx.status s);
 
     // Acquire information about the node.
-    0x81000002: GetAttr() -> (zx.status s, NodeAttributes attributes);
+    GetAttr() -> (zx.status s, NodeAttributes attributes);
 
     // Update information about the node.
-    0x81000003: SetAttr(uint32 flags, NodeAttributes attributes) -> (zx.status s);
+    SetAttr(uint32 flags, NodeAttributes attributes) -> (zx.status s);
 
     // Deprecated. Only for use with compatibility with devhost.
-    0x81000004: Ioctl(uint32 opcode, uint64 max_out, vector<handle>:MAX_IOCTL_HANDLES handles, vector<uint8>:MAX_BUF in)
+    Ioctl(uint32 opcode, uint64 max_out, vector<handle>:MAX_IOCTL_HANDLES handles, vector<uint8>:MAX_BUF in)
         -> (zx.status s, vector<handle>:MAX_IOCTL_HANDLES handles, vector<uint8>:MAX_BUF out);
 };
 
@@ -192,36 +192,36 @@ const uint32 VMO_FLAG_EXACT = 0x00020000;
 interface File : Node {
     // Read 'count' bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
-    0x82000001: Read(uint64 count) -> (zx.status s, vector<uint8>:MAX_BUF data);
+    Read(uint64 count) -> (zx.status s, vector<uint8>:MAX_BUF data);
 
     // Read 'count' bytes at the provided offset.
     // Does not affect the seek offset.
-    0x82000002: ReadAt(uint64 count, uint64 offset) -> (zx.status s, vector<uint8>:MAX_BUF data);
+    ReadAt(uint64 count, uint64 offset) -> (zx.status s, vector<uint8>:MAX_BUF data);
 
     // Write data at the seek offset.
     // The seek offset is moved forward by the number of bytes written.
-    0x82000003: Write(vector<uint8>:MAX_BUF data) -> (zx.status s, uint64 actual);
+    Write(vector<uint8>:MAX_BUF data) -> (zx.status s, uint64 actual);
 
     // Write data to the provided offset.
     // Does not affect the seek offset.
-    0x82000004: WriteAt(vector<uint8>:MAX_BUF data, uint64 offset) -> (zx.status s, uint64 actual);
+    WriteAt(vector<uint8>:MAX_BUF data, uint64 offset) -> (zx.status s, uint64 actual);
 
-    0x82000005: Seek(int64 offset, SeekOrigin start) -> (zx.status s, uint64 offset);
+    Seek(int64 offset, SeekOrigin start) -> (zx.status s, uint64 offset);
 
     // Shrink the file size to 'length' bytes.
-    0x82000006: Truncate(uint64 length) -> (zx.status s);
+    Truncate(uint64 length) -> (zx.status s);
 
     // Acquire the Directory::Open rights and flags used to access this file.
-    0x82000007: GetFlags() -> (zx.status s, uint32 flags);
+    GetFlags() -> (zx.status s, uint32 flags);
 
     // Change the Directory::Open flags used to access the file.
     // Supported flags which can be turned on / off:
     // - OPEN_FLAG_APPEND
-    0x82000008: SetFlags(uint32 flags) -> (zx.status s);
+    SetFlags(uint32 flags) -> (zx.status s);
 
     // Acquire a VMO representing this file, if there is one, with the
     // requested access rights.
-    0x82000009: GetVmo(uint32 flags) -> (zx.status s, handle<vmo>? vmo);
+    GetVmo(uint32 flags) -> (zx.status s, handle<vmo>? vmo);
 };
 
 // Dirent type information associated with the results of ReadDirents.
@@ -275,17 +275,17 @@ struct WatchedEvent {
 [Layout = "Simple"]
 interface DirectoryWatcher {
     // TODO(smklein): Convert this to a vector of WatchedEvents, when possible.
-    0x84000001: OnEvent(vector<uint8>:MAX_BUF events);
+    OnEvent(vector<uint8>:MAX_BUF events);
 };
 
 // Directory defines a node which is capable of containing other Objects.
 [Layout = "Simple", FragileBase]
 interface Directory : Node {
     // Open a new object relative to this directory object.
-    0x83000001: Open(uint32 flags, uint32 mode, string:MAX_PATH path, request<Node> object);
+    Open(uint32 flags, uint32 mode, string:MAX_PATH path, request<Node> object);
 
     // Remove an object relative to this directory object.
-    0x83000002: Unlink(string:MAX_PATH path) -> (zx.status s);
+    Unlink(string:MAX_PATH path) -> (zx.status s);
 
     // Reads a collection of variably sized dirents into a buffer.
     // The number of dirents in a directory may be very large: akin to
@@ -304,22 +304,22 @@ interface Directory : Node {
     //   // Unterminated name of entry.
     //   char name[0];
     // }
-    0x83000003: ReadDirents(uint64 max_bytes) -> (zx.status s, vector<uint8>:MAX_BUF dirents);
+    ReadDirents(uint64 max_bytes) -> (zx.status s, vector<uint8>:MAX_BUF dirents);
 
     // Reset the directory seek offset.
-    0x83000004: Rewind() -> (zx.status s);
+    Rewind() -> (zx.status s);
 
     // Acquire a token to a Directory which can be used to identify
     // access to it at a later point in time.
-    0x83000005: GetToken() -> (zx.status s, handle? token);
+    GetToken() -> (zx.status s, handle? token);
 
     // Within the directory, rename an object named src to the name dst, in
     // a directory represented by token.
-    0x83000006: Rename(string:MAX_PATH src, handle dst_parent_token, string:MAX_PATH dst) -> (zx.status s);
+    Rename(string:MAX_PATH src, handle dst_parent_token, string:MAX_PATH dst) -> (zx.status s);
 
     // Within the directory, create a link to an object named src by the name
     // dst, within a directory represented by token.
-    0x83000007: Link(string:MAX_PATH src, handle dst_parent_token, string:MAX_PATH dst) -> (zx.status s);
+    Link(string:MAX_PATH src, handle dst_parent_token, string:MAX_PATH dst) -> (zx.status s);
 
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
@@ -336,7 +336,7 @@ interface Directory : Node {
     //
     // Mask specifies a bitmask of events to observe.
     // Options must be zero; it is reserved.
-    0x83000008: Watch(uint32 mask, uint32 options, handle<channel> watcher) -> (zx.status s);
+    Watch(uint32 mask, uint32 options, handle<channel> watcher) -> (zx.status s);
 };
 
 const uint32 MOUNT_CREATE_FLAG_REPLACE = 0x00000001;
@@ -379,23 +379,23 @@ interface DirectoryAdmin : Directory {
     // All future requests to this node will be forwarded to the remote filesytem.
     // To re-open a node without forwarding to the remote target, the node
     // should be opened with OPEN_FLAG_NO_RMOTE.
-    0x85000001: Mount(Directory remote) -> (zx.status s);
+    Mount(Directory remote) -> (zx.status s);
 
     // Atomically create a directory with a provided path, and mount the
     // remote handle to the newly created directory.
-    0x85000002: MountAndCreate(Directory remote, string:MAX_FILENAME name, uint32 flags) -> (zx.status s);
+    MountAndCreate(Directory remote, string:MAX_FILENAME name, uint32 flags) -> (zx.status s);
 
     // Unmount this filesystem. After this function returns successfully,
     // all connections to the filesystem will be terminated.
-    0x85000003: Unmount() -> (zx.status s);
+    Unmount() -> (zx.status s);
 
     // Detach a node which was previously attached to this directory
     // with Mount.
-    0x85000004: UnmountNode() -> (zx.status s, Directory? remote);
+    UnmountNode() -> (zx.status s, Directory? remote);
 
     // Query the filesystem for filesystem-specific information.
-    0x85000005: QueryFilesystem() -> (zx.status s, FilesystemInfo? info);
+    QueryFilesystem() -> (zx.status s, FilesystemInfo? info);
 
     // Acquire the path to the device backing this filesystem, if there is one.
-    0x85000006: GetDevicePath() -> (zx.status s, string:MAX_PATH? path);
+    GetDevicePath() -> (zx.status s, string:MAX_PATH? path);
 };

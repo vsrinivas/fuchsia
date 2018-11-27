@@ -59,8 +59,8 @@ struct Metrics {
 [Layout="Simple"]
 interface Minfs {
     // Acquires metrics about the currently running filesystem.
-    0x8A000001: GetMetrics() -> (zx.status status, Metrics? metrics);
+    GetMetrics() -> (zx.status status, Metrics? metrics);
 
     // Toggle the metrics collection system on or off.
-    0x8A000002: ToggleMetrics(bool enable) -> (zx.status status);
+    ToggleMetrics(bool enable) -> (zx.status status);
 };
