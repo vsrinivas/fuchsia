@@ -37,7 +37,7 @@ static int timer_do_one_thread(void* arg) {
     event_init(&event, false, 0);
     timer_init(&timer);
 
-    timer_set(&timer, current_time() + ZX_MSEC(10), TIMER_SLACK_CENTER, 0, timer_diag_cb, &event);
+    timer_set(&timer, current_time() + ZX_MSEC(10), kNoSlack, timer_diag_cb, &event);
     event_wait(&event);
 
     printf("got timer on cpu %u\n", arch_curr_cpu_num());
@@ -80,9 +80,9 @@ static void timer_diag_cb2(timer_t* timer, zx_time_t now, void* arg) {
     thread_preempt_set_pending();
 }
 
-static void timer_diag_coalescing(enum slack_mode mode, uint64_t slack, const zx_time_t* deadline,
+static void timer_diag_coalescing(TimerSlack slack, const zx_time_t* deadline,
                                   const zx_duration_t* expected_adj, size_t count) {
-    printf("testing coalsecing mode %d\n", mode);
+    printf("testing coalsecing mode %u\n", slack.mode());
 
     fbl::atomic<size_t> timer_count(0);
 
@@ -92,7 +92,7 @@ static void timer_diag_coalescing(enum slack_mode mode, uint64_t slack, const zx
     for (size_t ix = 0; ix != count; ++ix) {
         timer_init(&timer[ix]);
         zx_time_t dl = deadline[ix];
-        timer_set(&timer[ix], dl, mode, slack, timer_diag_cb2, &timer_count);
+        timer_set(&timer[ix], dl, slack, timer_diag_cb2, &timer_count);
         printf("[%zu] %" PRIi64 "  -> %" PRIi64 ", %" PRIi64 "\n",
                ix, dl, timer[ix].scheduled_time, timer[ix].slack);
 
@@ -112,7 +112,7 @@ static void timer_diag_coalescing(enum slack_mode mode, uint64_t slack, const zx
 static void timer_diag_coalescing_center(void) {
     zx_time_t when = current_time() + ZX_MSEC(1);
     zx_duration_t off = ZX_USEC(10);
-    zx_duration_t slack = 2u * off;
+    TimerSlack slack = {2u * off, TIMER_SLACK_CENTER};
 
     const zx_time_t deadline[] = {
         when + (6u * off), // non-coalesced, adjustment = 0
@@ -128,14 +128,13 @@ static void timer_diag_coalescing_center(void) {
     const zx_duration_t expected_adj[fbl::count_of(deadline)] = {
         0, 0, ZX_USEC(10), 0, -ZX_USEC(10), 0, ZX_USEC(10), 0};
 
-    timer_diag_coalescing(
-        TIMER_SLACK_CENTER, slack, deadline, expected_adj, fbl::count_of(deadline));
+    timer_diag_coalescing(slack, deadline, expected_adj, fbl::count_of(deadline));
 }
 
 static void timer_diag_coalescing_late(void) {
     zx_time_t when = current_time() + ZX_MSEC(1);
     zx_duration_t off = ZX_USEC(10);
-    zx_duration_t slack = 3u * off;
+    TimerSlack slack = {3u * off, TIMER_SLACK_LATE};
 
     const zx_time_t deadline[] = {
         when + off,        // non-coalesced, adjustment = 0
@@ -150,14 +149,13 @@ static void timer_diag_coalescing_late(void) {
     const zx_duration_t expected_adj[fbl::count_of(deadline)] = {
         0, 0, ZX_USEC(20), 0, 0, 0, ZX_USEC(10)};
 
-    timer_diag_coalescing(
-        TIMER_SLACK_LATE, slack, deadline, expected_adj, fbl::count_of(deadline));
+    timer_diag_coalescing(slack, deadline, expected_adj, fbl::count_of(deadline));
 }
 
 static void timer_diag_coalescing_early(void) {
     zx_time_t when = current_time() + ZX_MSEC(1);
     zx_duration_t off = ZX_USEC(10);
-    zx_duration_t slack = 3u * off;
+    TimerSlack slack = {3u * off, TIMER_SLACK_EARLY};
 
     const zx_time_t deadline[] = {
         when,              // non-coalesced, adjustment = 0
@@ -172,8 +170,7 @@ static void timer_diag_coalescing_early(void) {
     const zx_duration_t expected_adj[fbl::count_of(deadline)] = {
         0, -ZX_USEC(20), 0, 0, 0, -ZX_USEC(10), -ZX_USEC(10)};
 
-    timer_diag_coalescing(
-        TIMER_SLACK_EARLY, slack, deadline, expected_adj, fbl::count_of(deadline));
+    timer_diag_coalescing(slack, deadline, expected_adj, fbl::count_of(deadline));
 }
 
 static void timer_far_deadline(void) {
@@ -183,7 +180,7 @@ static void timer_far_deadline(void) {
     event_init(&event, false, 0);
     timer_init(&timer);
 
-    timer_set(&timer, ZX_TIME_INFINITE - 5, TIMER_SLACK_CENTER, 0, timer_diag_cb, &event);
+    timer_set(&timer, ZX_TIME_INFINITE - 5, kNoSlack, timer_diag_cb, &event);
     zx_status_t st = event_wait_deadline(&event, current_time() + ZX_MSEC(100), false);
     if (st != ZX_ERR_TIMED_OUT) {
         printf("error: unexpected timer fired!\n");
@@ -230,8 +227,7 @@ static int timer_stress_worker(void* void_arg) {
 
         arch_disable_ints();
         uint timer_cpu = arch_curr_cpu_num();
-        timer_set(&t, current_time() + timer_duration, TIMER_SLACK_CENTER, 0, timer_stress_cb,
-                  void_arg);
+        timer_set(&t, current_time() + timer_duration, kNoSlack, timer_stress_cb, void_arg);
         thread_set_cpu_affinity(get_current_thread(), ~cpu_num_to_mask(timer_cpu));
         DEBUG_ASSERT(arch_curr_cpu_num() != timer_cpu);
         arch_enable_ints();
@@ -315,7 +311,7 @@ static bool cancel_before_deadline() {
     BEGIN_TEST;
     timer_args arg{};
     timer_t t = TIMER_INITIAL_VALUE(t);
-    timer_set(&t, current_time() + ZX_HOUR(5), TIMER_SLACK_CENTER, 0, timer_cb, &arg);
+    timer_set(&t, current_time() + ZX_HOUR(5), kNoSlack, timer_cb, &arg);
     ASSERT_TRUE(timer_cancel(&t), "");
     ASSERT_FALSE(atomic_load(&arg.timer_fired), "");
     END_TEST;
@@ -326,7 +322,7 @@ static bool cancel_after_fired() {
     BEGIN_TEST;
     timer_args arg{};
     timer_t t = TIMER_INITIAL_VALUE(t);
-    timer_set(&t, current_time(), TIMER_SLACK_CENTER, 0, timer_cb, &arg);
+    timer_set(&t, current_time(), kNoSlack, timer_cb, &arg);
     while (!atomic_load(&arg.timer_fired)) {
     }
     ASSERT_FALSE(timer_cancel(&t), "");
@@ -345,7 +341,7 @@ static bool cancel_from_callback() {
     timer_args arg{};
     arg.result = 1;
     timer_t t = TIMER_INITIAL_VALUE(t);
-    timer_set(&t, current_time(), TIMER_SLACK_CENTER, 0, timer_cancel_cb, &arg);
+    timer_set(&t, current_time(), kNoSlack, timer_cancel_cb, &arg);
     while (!atomic_load(&arg.timer_fired)) {
     }
     ASSERT_FALSE(arg.result, "");
@@ -356,7 +352,7 @@ static bool cancel_from_callback() {
 static void timer_set_cb(struct timer* t, zx_time_t now, void* void_arg) {
     timer_args* arg = reinterpret_cast<timer_args*>(void_arg);
     if (atomic_add(&arg->remaining, -1) >= 1) {
-        timer_set(t, current_time() + ZX_USEC(10), TIMER_SLACK_CENTER, 0, timer_set_cb, void_arg);
+        timer_set(t, current_time() + ZX_USEC(10), kNoSlack, timer_set_cb, void_arg);
     }
 }
 
@@ -366,7 +362,7 @@ static bool set_from_callback() {
     timer_args arg{};
     arg.remaining = 5;
     timer_t t = TIMER_INITIAL_VALUE(t);
-    timer_set(&t, current_time(), TIMER_SLACK_CENTER, 0, timer_set_cb, &arg);
+    timer_set(&t, current_time(), kNoSlack, timer_set_cb, &arg);
     while (atomic_load(&arg.remaining) > 0) {
     }
 
@@ -410,7 +406,7 @@ static bool trylock_or_cancel_canceled() {
     arch_disable_ints();
 
     uint timer_cpu = arch_curr_cpu_num();
-    timer_set(&t, current_time() + ZX_USEC(100), TIMER_SLACK_CENTER, 0, timer_trylock_cb, &arg);
+    timer_set(&t, current_time() + ZX_USEC(100), kNoSlack, timer_trylock_cb, &arg);
 
     // The timer is set to run on timer_cpu, switch to a different CPU, acquire the spinlock then
     // signal the callback to proceed.
@@ -457,7 +453,7 @@ static bool trylock_or_cancel_get_lock() {
     arch_disable_ints();
 
     uint timer_cpu = arch_curr_cpu_num();
-    timer_set(&t, current_time() + ZX_USEC(100), TIMER_SLACK_CENTER, 0, timer_trylock_cb, &arg);
+    timer_set(&t, current_time() + ZX_USEC(100), kNoSlack, timer_trylock_cb, &arg);
 
     // The timer is set to run on timer_cpu, switch to a different CPU, acquire the spinlock then
     // signal the callback to proceed.

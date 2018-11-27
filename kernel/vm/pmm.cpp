@@ -145,7 +145,8 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
             printf("pmm free: issue the same command to stop.\n");
             timer_init(&timer);
             zx_time_t deadline = zx_time_add_duration(current_time(), ZX_SEC(1));
-            timer_set(&timer, deadline, TIMER_SLACK_CENTER, ZX_MSEC(20), &pmm_dump_timer, nullptr);
+            const TimerSlack slack{ZX_MSEC(20), TIMER_SLACK_CENTER};
+            timer_set(&timer, deadline, slack, &pmm_dump_timer, nullptr);
             show_mem = true;
         } else {
             timer_cancel(&timer);

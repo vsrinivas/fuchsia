@@ -838,6 +838,10 @@ zx_status_t ProcessDispatcher::QueryBasicPolicy(uint32_t condition) const {
     return (action & ZX_POL_ACTION_DENY) ? ZX_ERR_ACCESS_DENIED : ZX_OK;
 }
 
+TimerSlack ProcessDispatcher::GetTimerSlackPolicy() const {
+    return policy_.GetTimerSlack();
+}
+
 uintptr_t ProcessDispatcher::cache_vdso_code_address() {
     Guard<fbl::Mutex> guard{get_lock()};
     vdso_code_address_ = aspace_->vdso_code_address();

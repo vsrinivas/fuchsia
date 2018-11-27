@@ -347,9 +347,13 @@ bool JobDispatcher::Kill() {
 
 zx_status_t JobDispatcher::SetBasicPolicy(
     uint32_t mode, const zx_policy_basic* in_policy, size_t policy_count) {
-    // Can't set policy when there are active processes or jobs.
+
     Guard<fbl::Mutex> guard{get_lock()};
 
+    // Can't set policy when there are active processes or jobs. This constraint ensures that a
+    // process's policy cannot change over its lifetime.  Because a process's policy cannot change,
+    // the risk of TOCTOU bugs is reduced and we are free to apply policy at the ProcessDispatcher
+    // without having to walk up the tree to its containing job.
     if (!procs_.is_empty() || !jobs_.is_empty())
         return ZX_ERR_BAD_STATE;
 

@@ -56,6 +56,7 @@ zx_status_t sys_timer_set(
     if (status != ZX_OK)
         return status;
 
+    // TODO(maniscalco): Clamp slack at or above the value specified by job policy (ZX-931).
     return timer->Set(deadline, slack);
 }
 

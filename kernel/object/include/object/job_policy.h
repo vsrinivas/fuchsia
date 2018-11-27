@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 
+#include <kernel/timer.h>
 #include <zircon/syscalls/policy.h>
 #include <zircon/types.h>
 
@@ -14,8 +15,9 @@ typedef uint64_t pol_cookie_t;
 // JobPolicy is a value type that provides a space-efficient encoding of the policies defined in the
 // policy.h public header.
 //
-// JobPolicy encodes one type of policy, basic, which is logically an array of zx_policy_basic
-// elements. For example:
+// JobPolicy encodes two kinds of policy, basic and timer slack.
+//
+// Basic policy is logically an array of zx_policy_basic elements. For example:
 //
 //   zx_policy_basic policy[] = {
 //      { ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL },
@@ -23,6 +25,8 @@ typedef uint64_t pol_cookie_t;
 //      { ZX_POL_NEW_FIFO, ZX_POL_ACTION_ALLOW | ZX_POL_ACTION_EXCEPTION },
 //      { ZX_POL_VMAR_WX, ZX_POL_ACTION_DENY | ZX_POL_ACTION_KILL }}
 //
+// Timer slack policy defines the type and minimium amount of slack that will be applied to timer
+// and deadline events.
 class JobPolicy {
 public:
     // Merge array |policy| of length |count| into this object.
@@ -49,10 +53,21 @@ public:
     // failure modes.
     uint32_t QueryBasicPolicy(uint32_t condition) const;
 
+    // Sets the timer slack policy.
+    //
+    // |slack.amount| must be >= 0.
+    void SetTimerSlack(TimerSlack slack);
+
+    // Returns the timer slack policy.
+    TimerSlack GetTimerSlack() const;
+
     bool operator==(const JobPolicy& rhs) const;
     bool operator!=(const JobPolicy& rhs) const;
 
 private:
     // Remember, JobPolicy is a value type so think carefully before increasing its size.
+    //
+    // Const instances of JobPolicy must be immutable to ensure thread-safety.
     pol_cookie_t cookie_{};
+    TimerSlack slack_{kNoSlack};
 };

@@ -28,7 +28,7 @@ FutexContext::~FutexContext() {
 
 zx_status_t FutexContext::FutexWait(user_in_ptr<const zx_futex_t> value_ptr,
                                     zx_futex_t current_value, zx_handle_t new_futex_owner,
-                                    zx_time_t deadline) {
+                                    zx_time_t deadline, TimerSlack slack) {
     LTRACE_ENTRY;
 
     uintptr_t futex_key = reinterpret_cast<uintptr_t>(value_ptr.get());
@@ -65,7 +65,7 @@ zx_status_t FutexContext::FutexWait(user_in_ptr<const zx_futex_t> value_ptr,
     QueueNodesLocked(&node);
 
     // Block current thread.  This releases lock_ and does not reacquire it.
-    result = node.BlockThread(guard.take(), deadline);
+    result = node.BlockThread(guard.take(), deadline, slack);
     if (result == ZX_OK) {
         DEBUG_ASSERT(!node.IsInQueue());
         // All the work necessary for removing us from the hash table was done by FutexWake()

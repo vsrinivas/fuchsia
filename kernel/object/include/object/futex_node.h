@@ -44,7 +44,7 @@ public:
 
     // This must be called with a guard held in the calling scope. Releases the
     // guard and does not reacquire it.
-    zx_status_t BlockThread(Guard<fbl::Mutex>&& adopt_guard, zx_time_t deadline);
+    zx_status_t BlockThread(Guard<fbl::Mutex>&& adopt_guard, zx_time_t deadline, TimerSlack slack);
 
     void set_hash_key(uintptr_t key) {
         hash_key_ = key;

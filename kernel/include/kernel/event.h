@@ -9,6 +9,7 @@
 
 #include <err.h>
 #include <kernel/thread.h>
+#include <kernel/timer.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <sys/types.h>
@@ -59,6 +60,10 @@ void event_destroy(event_t*);
 // is signaled for kill.
 zx_status_t event_wait_deadline(event_t*, zx_time_t, bool interruptable);
 
+// Wait until the event occurs, the slack-adjusted deadline has elapsed, or the thread is
+// interrupted.
+zx_status_t event_wait_interruptable(event_t* e, zx_time_t deadline, TimerSlack slack);
+
 // no deadline, non interruptable version of the above.
 static inline zx_status_t event_wait(event_t* e) {
     return event_wait_deadline(e, ZX_TIME_INFINITE, false);
@@ -104,8 +109,8 @@ public:
     // ZX_ERR_TIMED_OUT - time out expired
     // ZX_ERR_INTERNAL_INTR_KILLED - thread killed
     // Or the |status| which the caller specified in Event::Signal(status)
-    zx_status_t Wait(zx_time_t deadline) {
-        return event_wait_deadline(&event_, deadline, true);
+    zx_status_t Wait(zx_time_t deadline, TimerSlack slack) {
+        return event_wait_interruptable(&event_, deadline, slack);
     }
 
     void Signal(zx_status_t status = ZX_OK) {

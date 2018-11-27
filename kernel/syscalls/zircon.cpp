@@ -54,6 +54,9 @@ zx_status_t sys_nanosleep(zx_time_t deadline) {
 
     // This syscall is declared as "blocking" in syscalls.abigen, so a higher
     // layer will automatically retry if we return ZX_ERR_INTERNAL_INTR_RETRY.
+    //
+    // TODO(maniscalco): Replace this call with a call to thread_sleep_etc using the timer slack
+    // from the job policy (ZX-931).
     return thread_sleep_interruptable(deadline);
 }
 

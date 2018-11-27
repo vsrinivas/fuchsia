@@ -21,7 +21,7 @@ public:
 
     void Post();
 
-    zx_status_t Wait(zx_time_t deadline);
+    zx_status_t Wait(zx_time_t deadline, TimerSlack slack);
 
 private:
     int64_t count_;

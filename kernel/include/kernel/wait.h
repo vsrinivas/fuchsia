@@ -11,6 +11,8 @@
 #include <arch/ops.h>
 #include <arch/thread.h>
 #include <kernel/spinlock.h>
+#include <kernel/timer.h>
+#include <kernel/timer_slack.h>
 #include <list.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
@@ -50,12 +52,13 @@ void wait_queue_destroy(wait_queue_t*);
 zx_status_t wait_queue_block(wait_queue_t*, zx_time_t deadline) TA_REQ(thread_lock);
 
 // block on a wait queue, ignoring existing signals in |signal_mask|.
-// return status is whatever the caller of wait_queue_wake_*() specifies.
-// a deadline other than ZX_TIME_INFINITE will abort at the specified time
-// and return ZX_ERR_TIMED_OUT. a deadline in the past will immediately return.
-
-zx_status_t wait_queue_block_with_mask(wait_queue_t*, zx_time_t deadline,
-                                       uint signal_mask) TA_REQ(thread_lock);
+// return status is whatever the caller of wait_queue_wake_*() specifies or
+// ZX_ERR_TIMED_OUT if the slack-adjusted deadline has elapsed or is in the past.
+// will never timeout when called with a deadline of ZX_TIME_INFINITE.
+zx_status_t wait_queue_block_etc(wait_queue_t*,
+                                 zx_time_t deadline,
+                                 TimerSlack slack,
+                                 uint signal_mask) TA_REQ(thread_lock);
 
 // returns the highest priority of all the blocked threads on this wait queue.
 // returns -1 if no threads are blocked.
@@ -105,8 +108,8 @@ public:
     WaitQueue& operator=(WaitQueue&) = delete;
     WaitQueue& operator=(WaitQueue&&) = delete;
 
-    zx_status_t Block(zx_time_t deadline) TA_REQ(thread_lock) {
-        return wait_queue_block(&wq_, deadline);
+    zx_status_t Block(zx_time_t deadline, TimerSlack slack) TA_REQ(thread_lock) {
+        return wait_queue_block_etc(&wq_, deadline, slack, 0);
     }
 
     struct thread* Peek() TA_REQ(thread_lock) {

@@ -66,13 +66,15 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value,
     auto koid = static_cast<uint32_t>(up->GetKoidForHandle(handle_value));
     ktrace(TAG_WAIT_ONE, koid, signals, (uint32_t)deadline, (uint32_t)(deadline >> 32));
 
+    const TimerSlack slack = up->GetTimerSlackPolicy();
+
     // event_wait() will return ZX_OK if already signaled,
     // even if the deadline has passed.  It will return ZX_ERR_TIMED_OUT
     // after the deadline passes if the event has not been
     // signaled.
     {
         ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::WAIT_ONE);
-        result = event.Wait(deadline);
+        result = event.Wait(deadline, slack);
     }
 
     // Regardless of wait outcome, we must call End().
@@ -97,6 +99,8 @@ zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size
     LTRACEF("count %zu\n", count);
 
     if (!count) {
+        // TODO(maniscalco): Replace this call with a call to thread_sleep_etc using the timer slack
+        // from the job policy (ZX-931).
         zx_status_t result = thread_sleep_interruptable(deadline);
         if (result != ZX_OK)
             return result;
@@ -113,11 +117,12 @@ zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size
     WaitStateObserver wait_state_observers[kMaxWaitHandleCount];
     Event event;
 
+    auto up = ProcessDispatcher::GetCurrent();
+
     // We may need to unwind (which can be done outside the lock).
     zx_status_t result = ZX_OK;
     size_t num_added = 0;
     {
-        auto up = ProcessDispatcher::GetCurrent();
         Guard<fbl::Mutex> guard{up->handle_table_lock()};
 
         for (; num_added != count; ++num_added) {
@@ -142,13 +147,15 @@ zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size
         return result;
     }
 
+    const TimerSlack slack = up->GetTimerSlackPolicy();
+
     // event_wait() will return ZX_OK if already signaled,
     // even if deadline has passed.  It will return ZX_ERR_TIMED_OUT
     // after the deadline passes if the event has not been
     // signaled.
     {
         ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::WAIT_MANY);
-        result = event.Wait(deadline);
+        result = event.Wait(deadline, slack);
     }
 
     // Regardless of wait outcome, we must call End().

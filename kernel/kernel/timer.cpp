@@ -180,15 +180,15 @@ static void insert_timer_in_queue(uint cpu, timer_t* timer,
     list_add_tail(&percpu[cpu].timer_queue, &timer->node);
 }
 
-void timer_set(timer_t* timer, zx_time_t deadline,
-               enum slack_mode mode, zx_duration_t slack,
+void timer_set(timer_t* timer, zx_time_t deadline, TimerSlack slack,
                timer_callback callback, void* arg) {
-    LTRACEF("timer %p deadline %" PRIi64 " slack %" PRIi64 " callback %p arg %p\n",
-            timer, deadline, slack, callback, arg);
+    LTRACEF("timer %p deadline %" PRIi64 " slack.amount %" PRIi64
+            " slack.mode %u callback %p arg %p\n",
+            timer, deadline, slack.amount(), slack.mode(), callback, arg);
 
     DEBUG_ASSERT(timer->magic == TIMER_MAGIC);
-    DEBUG_ASSERT(mode <= TIMER_SLACK_EARLY);
-    DEBUG_ASSERT(slack >= 0);
+    DEBUG_ASSERT(slack.mode() <= TIMER_SLACK_EARLY);
+    DEBUG_ASSERT(slack.amount() >= 0);
 
     if (list_in_list(&timer->node)) {
         panic("timer %p already in list\n", timer);
@@ -197,21 +197,21 @@ void timer_set(timer_t* timer, zx_time_t deadline,
     zx_time_t latest_deadline;
     zx_time_t earliest_deadline;
 
-    if (slack == 0u) {
+    if (slack.amount() == 0u) {
         latest_deadline = deadline;
         earliest_deadline = deadline;
     } else {
-        switch (mode) {
+        switch (slack.mode()) {
         case TIMER_SLACK_CENTER:
-            latest_deadline = zx_time_add_duration(deadline, slack);
-            earliest_deadline = zx_time_sub_duration(deadline, slack);
+            latest_deadline = zx_time_add_duration(deadline, slack.amount());
+            earliest_deadline = zx_time_sub_duration(deadline, slack.amount());
             break;
         case TIMER_SLACK_LATE:
-            latest_deadline = zx_time_add_duration(deadline, slack);
+            latest_deadline = zx_time_add_duration(deadline, slack.amount());
             earliest_deadline = deadline;
             break;
         case TIMER_SLACK_EARLY:
-            earliest_deadline = zx_time_sub_duration(deadline, slack);
+            earliest_deadline = zx_time_sub_duration(deadline, slack.amount());
             latest_deadline = deadline;
             break;
         default:

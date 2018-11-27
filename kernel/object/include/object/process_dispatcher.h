@@ -261,6 +261,9 @@ public:
     //     // Ok to create a channel.
     zx_status_t QueryBasicPolicy(uint32_t condition) const;
 
+    // Returns this job's timer slack policy.
+    TimerSlack GetTimerSlackPolicy() const;
+
     // return a cached copy of the vdso code address or compute a new one
     uintptr_t vdso_code_address() {
         if (unlikely(vdso_code_address_ == 0)) {
@@ -314,6 +317,8 @@ private:
     const fbl::RefPtr<JobDispatcher> job_;
 
     // Policy set by the Job during Create().
+    //
+    // It is critical that this field is immutable as it will be accessed without synchronization.
     const JobPolicy policy_;
 
     // The process can belong to either of these lists independently.

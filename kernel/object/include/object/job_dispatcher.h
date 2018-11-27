@@ -102,6 +102,9 @@ public:
 
     // Set policy. |mode| is is either ZX_JOB_POL_RELATIVE or ZX_JOB_POL_ABSOLUTE and
     // in_policy is an array of |count| elements.
+    //
+    // It is an error to set policy on a non-empty job, i.e. a job with one or more sub-jobs or
+    // processes.
     zx_status_t SetBasicPolicy(uint32_t mode,
                                const zx_policy_basic* in_policy,
                                size_t policy_count);

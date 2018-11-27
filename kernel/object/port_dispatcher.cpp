@@ -17,6 +17,7 @@
 #include <lib/counters.h>
 #include <object/excp_port.h>
 #include <object/handle.h>
+#include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
 #include <zircon/compiler.h>
 #include <zircon/rights.h>
@@ -295,7 +296,8 @@ zx_status_t PortDispatcher::Queue(PortPacket* port_packet, zx_signals_t observed
     return ZX_OK;
 }
 
-zx_status_t PortDispatcher::Dequeue(zx_time_t deadline, zx_port_packet_t* out_packet) {
+zx_status_t PortDispatcher::Dequeue(zx_time_t deadline, TimerSlack slack,
+                                    zx_port_packet_t* out_packet) {
     canary_.Assert();
 
     while (true) {
@@ -337,7 +339,7 @@ zx_status_t PortDispatcher::Dequeue(zx_time_t deadline, zx_port_packet_t* out_pa
 
         {
             ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::PORT);
-            zx_status_t st = sema_.Wait(deadline);
+            zx_status_t st = sema_.Wait(deadline, slack);
             if (st != ZX_OK)
                 return st;
         }

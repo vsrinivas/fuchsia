@@ -29,7 +29,7 @@ public:
     void on_zero_handles() final;
 
     // Timer specific ops.
-    zx_status_t Set(zx_time_t deadline, zx_duration_t slack);
+    zx_status_t Set(zx_time_t deadline, zx_duration_t slack_amount);
     zx_status_t Cancel();
 
     // Timer callback.
@@ -44,7 +44,7 @@ private:
     const slack_mode slack_mode_;
     dpc_t timer_dpc_;
     zx_time_t deadline_ TA_GUARDED(get_lock());
-    zx_duration_t slack_ TA_GUARDED(get_lock());
+    zx_duration_t slack_amount_ TA_GUARDED(get_lock());
     bool cancel_pending_ TA_GUARDED(get_lock());
     timer_t timer_ TA_GUARDED(get_lock());
 };

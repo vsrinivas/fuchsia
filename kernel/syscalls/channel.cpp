@@ -401,8 +401,9 @@ zx_status_t sys_channel_call_finish(zx_time_t deadline,
     if (!channel)
         return ZX_ERR_BAD_STATE;
 
+    const TimerSlack slack = up->GetTimerSlackPolicy();
     MessagePacketPtr reply;
-    status = channel->ResumeInterruptedCall(waiter, deadline, &reply);
+    status = channel->ResumeInterruptedCall(waiter, deadline, slack, &reply);
     if (status != ZX_OK)
         return status;
     return channel_call_epilogue(up, ktl::move(reply), &args, actual_bytes, actual_handles);

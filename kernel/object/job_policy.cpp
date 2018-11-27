@@ -6,7 +6,7 @@
 
 #include <assert.h>
 #include <err.h>
-
+#include <kernel/timer_slack.h>
 #include <zircon/syscalls/policy.h>
 
 namespace {
@@ -232,12 +232,21 @@ uint32_t JobPolicy::QueryBasicPolicy(uint32_t condition) const {
     }
 }
 
+void JobPolicy::SetTimerSlack(TimerSlack slack) {
+    slack_ = slack;
+}
+
+TimerSlack JobPolicy::GetTimerSlack() const {
+    return slack_;
+}
+
 bool JobPolicy::operator==(const JobPolicy& rhs) const {
     if (this == &rhs) {
         return true;
     }
 
-    return cookie_ == rhs.cookie_;
+    return cookie_ == rhs.cookie_ &&
+           slack_ == rhs.slack_;
 }
 
 bool JobPolicy::operator!=(const JobPolicy& rhs) const {

@@ -177,7 +177,7 @@ public:
     zx_status_t Queue(PortPacket* port_packet, zx_signals_t observed, uint64_t count);
     zx_status_t QueueUser(const zx_port_packet_t& packet);
     bool QueueInterruptPacket(PortInterruptPacket* port_packet, zx_time_t timestamp);
-    zx_status_t Dequeue(zx_time_t deadline, zx_port_packet_t* packet);
+    zx_status_t Dequeue(zx_time_t deadline, TimerSlack slack, zx_port_packet_t* packet);
     bool RemoveInterruptPacket(PortInterruptPacket* port_packet);
 
     // Decides who is going to destroy the observer. If it returns the

@@ -18,6 +18,8 @@ static bool initial_state() {
     for (uint32_t pol = 0; pol < ZX_POL_MAX; ++pol) {
         EXPECT_EQ(ZX_POL_ACTION_ALLOW, p.QueryBasicPolicy(pol), "");
     }
+    const TimerSlack slack = p.GetTimerSlack();
+    EXPECT_TRUE(slack == kNoSlack, "");
 
     END_TEST;
 }
@@ -83,6 +85,17 @@ static bool add_basic_policy_unmodified_on_error() {
     END_TEST;
 }
 
+static bool set_get_timer_slack() {
+    BEGIN_TEST;
+
+    JobPolicy p;
+    p.SetTimerSlack({1200, TIMER_SLACK_EARLY});
+    ASSERT_EQ(1200, p.GetTimerSlack().amount(), "");
+    ASSERT_EQ(TIMER_SLACK_EARLY, p.GetTimerSlack().mode(), "");
+
+    END_TEST;
+}
+
 } // namespace
 
 UNITTEST_START_TESTCASE(job_policy_tests)
@@ -90,4 +103,5 @@ UNITTEST("initial_state", initial_state)
 UNITTEST("add_basic_policy_absolute", add_basic_policy_absolute)
 UNITTEST("add_basic_policy_relative", add_basic_policy_relative)
 UNITTEST("add_basic_policy_unmodified_on_error", add_basic_policy_unmodified_on_error)
+UNITTEST("set_get_timer_slack", set_get_timer_slack)
 UNITTEST_END_TESTCASE(job_policy_tests, "job_policy", "JobPolicy tests");

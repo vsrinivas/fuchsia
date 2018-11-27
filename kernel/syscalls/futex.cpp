@@ -20,8 +20,10 @@ zx_status_t sys_futex_wait(user_in_ptr<const zx_futex_t> value_ptr, zx_futex_t c
                            zx_handle_t current_futex_owner, zx_time_t deadline) {
     LTRACEF("futex %p current %d\n", value_ptr.get(), current_value);
 
-    return ProcessDispatcher::GetCurrent()->futex_context()->FutexWait(
-        value_ptr, current_value, current_futex_owner, deadline);
+    ProcessDispatcher* dispatcher = ThreadDispatcher::GetCurrent()->process();
+    const TimerSlack slack = dispatcher->GetTimerSlackPolicy();
+    return dispatcher->futex_context()->FutexWait(value_ptr, current_value, current_futex_owner,
+                                                  deadline, slack);
 }
 
 // zx_status_t zx_futex_wake

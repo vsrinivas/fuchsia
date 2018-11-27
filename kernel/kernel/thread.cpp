@@ -856,7 +856,7 @@ static void thread_sleep_handler(timer_t* timer, zx_time_t now, void* arg) {
 #define DIV_SLEEP_SLACK 10u
 
 // computes the amount of slack the thread_sleep timer will use
-static uint64_t sleep_slack(zx_time_t deadline, zx_time_t now) {
+static zx_duration_t sleep_slack(zx_time_t deadline, zx_time_t now) {
     if (deadline < now) {
         return MIN_SLEEP_SLACK;
     }
@@ -868,18 +868,17 @@ static uint64_t sleep_slack(zx_time_t deadline, zx_time_t now) {
  * @brief  Put thread to sleep; deadline specified in ns
  *
  * This function puts the current thread to sleep until the specified
- * deadline has expired.
+ * slack-adjusted deadline has occurred.
  *
  * Note that this function could continue to sleep after the specified deadline
- * if other threads are running.  When the deadline expires, this thread will
+ * if other threads are running.  When the deadline occurrs, this thread will
  * be placed at the head of the run queue.
  *
  * interruptable argument allows this routine to return early if the thread was signaled
  * for something.
  */
 zx_status_t thread_sleep_etc(zx_time_t deadline,
-                             slack_mode slack_type,
-                             zx_duration_t slack,
+                             TimerSlack slack,
                              bool interruptable,
                              zx_time_t now) {
 
@@ -910,7 +909,7 @@ zx_status_t thread_sleep_etc(zx_time_t deadline,
     }
 
     // set a one shot timer to wake us up and reschedule
-    timer_set(&timer, deadline, slack_type, slack, thread_sleep_handler, current_thread);
+    timer_set(&timer, deadline, slack, thread_sleep_handler, current_thread);
 
     current_thread->state = THREAD_SLEEPING;
     current_thread->blocked_status = ZX_OK;
@@ -927,19 +926,19 @@ zx_status_t thread_sleep_etc(zx_time_t deadline,
 
 zx_status_t thread_sleep(zx_time_t deadline) {
     const zx_time_t now = current_time();
-    return thread_sleep_etc(deadline, TIMER_SLACK_LATE, 0, false, now);
+    return thread_sleep_etc(deadline, kNoSlack, false, now);
 }
 
 zx_status_t thread_sleep_relative(zx_duration_t delay) {
     const zx_time_t now = current_time();
     const zx_time_t deadline = zx_time_add_duration(now, delay);
-    return thread_sleep_etc(deadline, TIMER_SLACK_LATE, 0, false, now);
+    return thread_sleep_etc(deadline, kNoSlack, false, now);
 }
 
 zx_status_t thread_sleep_interruptable(zx_time_t deadline) {
     const zx_time_t now = current_time();
-    const zx_duration_t slack = sleep_slack(deadline, now);
-    return thread_sleep_etc(deadline, TIMER_SLACK_LATE, slack, true, now);
+    const TimerSlack slack{sleep_slack(deadline, now), TIMER_SLACK_LATE};
+    return thread_sleep_etc(deadline, slack, true, now);
 }
 
 /**

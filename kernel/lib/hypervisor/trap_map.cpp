@@ -25,7 +25,7 @@ zx_status_t BlockingPortAllocator::Init() {
 
 PortPacket* BlockingPortAllocator::AllocBlocking() {
     ktrace_vcpu(TAG_VCPU_BLOCK, VCPU_PORT);
-    zx_status_t status = semaphore_.Wait(ZX_TIME_INFINITE);
+    zx_status_t status = semaphore_.Wait(ZX_TIME_INFINITE, kNoSlack);
     ktrace_vcpu(TAG_VCPU_UNBLOCK, VCPU_PORT);
     if (status != ZX_OK) {
         return nullptr;

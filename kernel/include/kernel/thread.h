@@ -284,11 +284,12 @@ static inline bool thread_stopped_in_exception(const thread_t* thread) {
     return !!thread->exception_context;
 }
 
-// wait until after the specified deadline. if interruptable, may return early with
-// ZX_ERR_INTERNAL_INTR_KILLED if thread is signaled for kill.
+// wait until the slack-adjusted deadline has occurred.
+//
+// if interruptable, may return early with ZX_ERR_INTERNAL_INTR_KILLED if
+// thread is signaled for kill.
 zx_status_t thread_sleep_etc(zx_time_t deadline,
-                             slack_mode slack_type,
-                             zx_duration_t slack,
+                             TimerSlack slack,
                              bool interruptable,
                              zx_time_t now);
 
