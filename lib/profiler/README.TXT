@@ -1,62 +1,78 @@
-# On target device ...
-/pkgfs/system/bin/profiler_unittest 100 4 /tmp/abc.txt
+This is a port of gperftools to the Fuchsia OS
 
-# On host system ... pull over the profiler data file.
-fx cp --to-host /tmp/profiledata_unittest.tmp /tmp/profiledata_unittest.tmp
+An example of usage of the library is at garnet/examples/profiler
+
+To try things out:
+
+# Run the test app on the target device ...
+fx shell run profiler_example
+
+# Retrieve over the profiler trace
+fx cp --to-host /tmp/profiler_example.ppf /tmp/profiler_example.ppf
 
 # Install the modern go based version of pprof.
 go get -u github.com/google/pprof
 
-# Where is your Fuchsia workspace? The build should be in ${FX}/out/...
-export FX=${HOME}/fuchsia
+# Things to add to your .profile
 
 # Where does the Go pprof execute reside?
 export GO_HOME=${HOME}/go/bin/
 
-# Where does pprof search for shared libraries and executables?
-export PPROF_BINARY_PATH=${FX}/out/x64/exe.unstripped:${FX}/buildtools/mac-x64/clang/lib/clang/8.0.0/x86_64-fuchsia/lib:${FX}/out/x64/sdk/exported/zircon_sysroot/arch/x64/sysroot/debug/:${FX}/out/x64/x64-shared/lib.unstripped:${FX}/out/x64/exe.unstripped
+# Where does pprof search for shared libraries and executables? (macos version, need to adjust for Linux)
+export PPROF_BINARY_PATH=\
+${MY_ROOT}/out/x64/exe.unstripped:\
+${MY_ROOT}/out/x64/x64-shared/lib.unstripped:\
+${MY_ROOT}/buildtools/mac-x64/clang/lib/clang/8.0.0/x86_64-fuchsia/lib:\
+${MY_ROOT}/out/x64/sdk/exported/zircon_sysroot/arch/x64/sysroot/debug
 
-# Where is the tool chain?
-export CLANG_BIN_PATH=${FX}/buildtools/mac-x64/clang/bin/
-export CLANG_BIN_PATH=${FX}/buildtools/linux-x64/clang/bin/
+# Where is the tool chain? (macos version, need to adjust for Linux)
+export PPROF_TOOLS=\
+${MY_ROOT}/buildtools/mac-x64/clang/bin
+
+# It is easier to execute pprof from within ${MY_ROOT}/out/x64 (or whatever appropriate to your case)
+cd ${MY_ROOT}/out/x64
 
 # Execute pprof to extract the distributions and to collate and symbolize the data.
-PATH=$PATH:${CLANG_BIN_PATH} ${GO_HOME}/pprof -lines -text /tmp/profiledata_unittest.tmp
-
-You should obtain something like this:
-
-File: profiler_unittest
-Type: cpu
-Showing nodes accounting for 1.43s, 100% of 1.43s total
+${GO_HOME}/pprof -text -lines -nodecount 35 -compact_labels -source_path /Users/fricc/fuchsia/ -trim_path ../../ exe.unstripped/profiler_example_bin /tmp/profiler_example.ppf
+Showing nodes accounting for 67.56s, 86.67% of 77.95s total
+Dropped 256 nodes (cum <= 0.39s)
+Showing top 35 nodes out of 57
       flat  flat%   sum%        cum   cum%
-     0.90s 62.94% 62.94%      0.90s 62.94%  SYSCALL_zx_futex_wait /Users/fricc/fuchsia/out/build-zircon/build-x64/gen/global/include/zircon/syscalls-x86-64.S:58
-     0.11s  7.69% 70.63%      0.11s  7.69%  test_other_thread ../../third_party/gperftools/src/tests/profiler_unittest.cc:63
-     0.09s  6.29% 76.92%      0.09s  6.29%  test_other_thread ../../third_party/gperftools/src/tests/profiler_unittest.cc:62
-     0.07s  4.90% 81.82%      0.07s  4.90%  __memcpy_fwd ../../zircon/third_party/ulib/musl/src/string/x86_64/memcpy.S:15
-     0.05s  3.50% 85.31%      0.05s  3.50%  test_main_thread ../../third_party/gperftools/src/tests/profiler_unittest.cc:76 (inline)
-     0.04s  2.80% 88.11%      0.04s  2.80%  vsnprintf ../../zircon/third_party/ulib/musl/src/stdio/vsnprintf.c:20
-     0.03s  2.10% 90.21%      0.03s  2.10%  __fwritex ../../zircon/third_party/ulib/musl/src/stdio/fwrite.c:27
-     0.02s  1.40% 91.61%      0.02s  1.40%  __fwritex ../../zircon/third_party/ulib/musl/src/stdio/fwrite.c:4
-     0.02s  1.40% 93.01%      0.02s  1.40%  test_main_thread ../../third_party/gperftools/src/tests/profiler_unittest.cc:75 (inline)
-     0.01s   0.7% 93.71%      0.01s   0.7%  __fwritex ../../zircon/third_party/ulib/musl/src/stdio/fwrite.c:13
-     0.01s   0.7% 94.41%      0.01s   0.7%  _zx_thread_start ??
-     0.01s   0.7% 95.10%      0.01s   0.7%  fmt_u ../../zircon/third_party/ulib/musl/src/stdio/vfprintf.c:722 (inline)
-     0.01s   0.7% 95.80%      0.01s   0.7%  pad.part.1 ../../zircon/third_party/ulib/musl/src/stdio/vfprintf.c:211
-     0.01s   0.7% 96.50%      0.01s   0.7%  pop_arg.part.0 ../../zircon/third_party/ulib/musl/src/stdio/vfprintf.c:148
-     0.01s   0.7% 97.20%      0.01s   0.7%  printf_core ../../zircon/third_party/ulib/musl/src/stdio/vfprintf.c:210
-     0.01s   0.7% 97.90%      0.01s   0.7%  printf_core ../../zircon/third_party/ulib/musl/src/stdio/vfprintf.c:542
-     0.01s   0.7% 98.60%      0.01s   0.7%  printf_core ../../zircon/third_party/ulib/musl/src/stdio/vfprintf.c:581
-     0.01s   0.7% 99.30%      0.01s   0.7%  printf_core ../../zircon/third_party/ulib/musl/src/stdio/vfprintf.c:715
-     0.01s   0.7%   100%      0.01s   0.7%  test_other_thread ../../third_party/gperftools/src/tests/profiler_unittest.cc:61
-         0     0%   100%      1.43s   100%  async::internal::RetainedTask::Handler ../../zircon/system/ulib/async/task.cpp:21
-         0     0%   100%      1.43s   100%  async_loop_dispatch_task ../../zircon/system/ulib/async-loop/loop.c:398 (inline)
-         0     0%   100%      1.43s   100%  async_loop_dispatch_tasks ../../zircon/system/ulib/async-loop/loop.c:378 (inline)
-         0     0%   100%      1.43s   100%  async_loop_run ../../zircon/system/ulib/async-loop/loop.c:240
-         0     0%   100%      1.43s   100%  async_loop_run_once ../../zircon/system/ulib/async-loop/loop.c:274 (inline)
-         0     0%   100%      1.43s   100%  async_loop_run_thread ../../zircon/system/ulib/async-loop/loop.c:749
-         0     0%   100%      1.43s   100%  fbl::internal::Function::operator() ../../zircon/system/ulib/fbl/include/fbl/function.h:238 (inline)
-         0     0%   100%      0.04s  2.80%  main ../../third_party/gperftools/src/tests/profiler_unittest.cc:109
-         0     0%   100%      0.03s  2.10%  main ../../third_party/gperftools/src/tests/profiler_unittest.cc:140
-         0     0%   100%      0.01s   0.7%  printf_core ../../zircon/third_party/ulib/musl/src/stdio/vfprintf.c:722
-         0     0%   100%      1.43s   100%  start_c11 ../../zircon/third_party/ulib/musl/pthread/pthread_create.c:33
-         0     0%   100%      1.43s   100%  thread_trampoline ../../zircon/system/ulib/runtime/thread.c:94
+    21.20s 27.20% 27.20%     21.20s 27.20%  Trie::Map::store garnet/examples/profiler/trie.h:135 (partial-inline)
+    18.40s 23.60% 50.80%     18.40s 23.60%  Trie::Map::retrieve garnet/examples/profiler/trie.h:149 (inline)
+     6.05s  7.76% 58.56%      6.05s  7.76%  std::__2::basic_string::__is_long buildtools/mac-x64/clang/lib/clang/8.0.0/include/c++/v1/string:1413 (inline)
+     2.32s  2.98% 61.54%      2.32s  2.98%  radix_map_performance_print garnet/examples/profiler/words.cc:157
+     2.08s  2.67% 64.21%      2.08s  2.67%  memcmp zircon/third_party/ulib/musl/src/string/memcmp.c:5
+     1.49s  1.91% 66.12%      1.49s  1.91%  check_if_magic garnet/examples/profiler/magic_numbers.cc
+     1.15s  1.48% 67.59%      1.20s  1.54%  Trie::Map::store garnet/examples/profiler/trie.h:131 (partial-inline)
+     1.13s  1.45% 69.04%      1.13s  1.45%  Trie::Map::store garnet/examples/profiler/trie.h
+     1.09s  1.40% 70.44%      1.14s  1.46%  Trie::Map::retrieve garnet/examples/profiler/trie.h:145 (inline)
+     1.04s  1.33% 71.78%      1.04s  1.33%  Trie::Map::retrieve garnet/examples/profiler/trie.h:147 (inline)
+     0.91s  1.17% 72.94%      6.69s  8.58%  std::__2::basic_string::__get_pointer buildtools/mac-x64/clang/lib/clang/8.0.0/include/c++/v1/string:1507 (inline)
+     0.88s  1.13% 74.07%      0.88s  1.13%  memcmp zircon/third_party/ulib/musl/src/string/memcmp.c:7
+     0.86s  1.10% 75.18%      0.86s  1.10%  Trie::Map::retrieve garnet/examples/profiler/trie.h:148 (inline)
+     0.75s  0.96% 76.14%      0.75s  0.96%  std::__2::basic_string::compare buildtools/mac-x64/clang/lib/clang/8.0.0/include/c++/v1/string:3653 (inline)
+     0.66s  0.85% 76.99%      0.66s  0.85%  generate_or_check garnet/examples/profiler/magic_numbers.cc:84
+     0.65s  0.83% 77.82%      0.97s  1.24%  std::__2::__hash_table::__emplace_unique_key_args buildtools/mac-x64/clang/lib/clang/8.0.0/include/c++/v1/__hash_table:2132
+     0.63s  0.81% 78.63%      0.63s  0.81%  check_if_magic garnet/examples/profiler/magic_numbers.cc:49
+     0.63s  0.81% 79.44%      0.63s  0.81%  std::__2::__hash_table::__emplace_unique_key_args buildtools/mac-x64/clang/lib/clang/8.0.0/include/c++/v1/__hash_table:2131
+     0.61s  0.78% 80.22%      0.61s  0.78%  atomic_store /b/s/w/ir/kitchen-workdir/llvm-project/compiler-rt/lib/sanitizer_common/sanitizer_atomic_clang_x86.h:82 (inline)
+     0.57s  0.73% 80.95%      0.57s  0.73%  Trie::Set::store garnet/examples/profiler/trie.h:70
+     0.54s  0.69% 81.64%      4.72s  6.06%  Trie::Map::store garnet/examples/profiler/trie.h:133 (partial-inline)
+     0.52s  0.67% 82.31%      0.52s  0.67%  std::__2::char_traits::compare buildtools/mac-x64/clang/lib/clang/8.0.0/include/c++/v1/__string:249 (inline)
+     0.50s  0.64% 82.95%      0.50s  0.64%  generate_or_check garnet/examples/profiler/magic_numbers.cc:82
+     0.50s  0.64% 83.59%      0.50s  0.64%  std::__2::__constrain_hash buildtools/mac-x64/clang/lib/clang/8.0.0/include/c++/v1/__hash_table:128 (inline)
+     0.50s  0.64% 84.23%      0.50s  0.64%  std::__2::__hash_table::__emplace_unique_key_args buildtools/mac-x64/clang/lib/clang/8.0.0/include/c++/v1/__hash_table
+     0.48s  0.62% 84.85%      0.48s  0.62%  Trie::Map::store garnet/examples/profiler/trie.h:140 (inline)
+     0.48s  0.62% 85.47%      0.48s  0.62%  Trie::Map::~Map garnet/examples/profiler/trie.h:125
+     0.44s  0.56% 86.03%      0.44s  0.56%  std::__2::__tree::__find_equal buildtools/mac-x64/clang/lib/clang/8.0.0/include/c++/v1/__tree:2060 (inline)
+     0.24s  0.31% 86.34%      2.81s  3.60%  std::__2::__tree::__find_equal buildtools/mac-x64/clang/lib/clang/8.0.0/include/c++/v1/__tree:2048 (inline)
+     0.20s  0.26% 86.59%      0.92s  1.18%  check_if_magic garnet/examples/profiler/magic_numbers.cc:48
+     0.05s 0.064% 86.66%      0.49s  0.63%  Trie::Set::store garnet/examples/profiler/trie.h:68
+     0.01s 0.013% 86.67%      7.87s 10.10%  radix_map_performance_print garnet/examples/profiler/words.cc:147
+         0     0% 86.67%      0.49s  0.63%  __scudo::Allocator::allocate /b/s/w/ir/kitchen-workdir/llvm-project/compiler-rt/lib/scudo/scudo_allocator.cpp:377
+         0     0% 86.67%     77.95s   100%  async_loop_dispatch_task zircon/system/ulib/async-loop/loop.c:398 (inline)
+         0     0% 86.67%     77.95s   100%  async_loop_dispatch_tasks zircon/system/ulib/async-loop/loop.c:378
+
+#Or for a more fun browser-based interactive version of the above:
+${GO_HOME}/pprof -http=:8080 -source_path /Users/fricc/fuchsia/ -trim_path ../../ exe.unstripped/profiler_example_bin /tmp/profiler_example.ppf

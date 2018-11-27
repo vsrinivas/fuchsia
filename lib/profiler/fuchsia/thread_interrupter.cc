@@ -198,8 +198,7 @@ void ThreadInterrupter::ThreadInterrupt() {
         log_zx_error(status, "failed to get a handle to [%ld.%ld]", pid, tid);
         continue;  // Skip this thread.
       }
-#if 0
-      // TODO: do we want to skip blocked threads?
+
       zx_info_thread_t thread_info;
       status = zx_object_get_info(thread, ZX_INFO_THREAD, &thread_info, sizeof(thread_info), NULL, NULL);
       if (status != ZX_OK) {
@@ -212,7 +211,7 @@ void ThreadInterrupter::ThreadInterrupt() {
         zx_handle_close(thread);
         continue;
       }
-#endif
+
       // This scope suspends the thread. When we exit the scope, the thread is
       // resumed, and the thread handle is closed.
       ThreadSuspendScope tss(thread);

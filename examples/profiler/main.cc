@@ -6,12 +6,18 @@
 
 #include "gperftools/profiler.h"
 
-int main(int argc, char** argv) {
-  printf("Hello profiler\n");
+void words_tests();
+void magic_numbers_tests();
 
+int main() {
+  printf("Starting profiling tests...\n");
   ProfilerStart("/tmp/profiler_example.ppf");
 
-  ProfilerStop();
+  // Run some fun benchmarks
+  magic_numbers_tests();
+  words_tests();
 
+  ProfilerStop();
+  printf("...Done with profiling tests\n");
   return 0;
 }

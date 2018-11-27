@@ -4,9 +4,12 @@
 
 import("//build/package.gni")
 
-executable("bin") {
+executable("profiler_example_bin") {
   sources = [
+    "magic_numbers.cc",
     "main.cc",
+    "trie.h",
+    "words.cc",
   ]
 
   public_deps = [
@@ -20,10 +23,10 @@ package("profiler_example") {
   deprecated_no_cmx = "//build"
 
   deps = [
-    ":bin",
+    ":profiler_example_bin",
   ]
 
-  binary = "bin"
+  binary = "profiler_example_bin"
 
   meta = [
     {
