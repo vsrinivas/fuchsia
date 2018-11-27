@@ -4,20 +4,19 @@
 
 #include "garnet/bin/network_time/roughtime_server.h"
 
-#include <errno.h>
-#include <lib/fit/defer.h>
-#include <netdb.h>
-#include <poll.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <zircon/syscalls.h>
-#include <zircon/types.h>
-
 #include <string>
 
 #include <client.h>
+#include <errno.h>
+#include <netdb.h>
 #include <openssl/rand.h>
+#include <poll.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
+#include <lib/fit/defer.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/syslog/cpp/logger.h"
 
@@ -56,8 +55,12 @@ Status RoughTimeServer::GetTimeFromServer(
   struct addrinfo* addrs;
   int err = getaddrinfo(host.c_str(), port_str.c_str(), &hints, &addrs);
   if (err != 0) {
-    FX_LOGS(ERROR) << "resolving " << address_ << ": "
-                   << gai_strerror(err);
+    // Log once to cut down on logspam.
+    // TODO: Support general LOG_EVERY_N to solve this kind of problem.
+    if (!logged_once_) {
+      FX_LOGS(ERROR) << "resolving " << address_ << ": " << gai_strerror(err);
+      logged_once_ = true;
+    }
     return NETWORK_ERROR;
   }
   auto ac1 = fit::defer([&]() { freeaddrinfo(addrs); });

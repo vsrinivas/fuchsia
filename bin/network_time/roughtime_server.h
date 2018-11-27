@@ -40,7 +40,8 @@ class RoughTimeServer {
   ~RoughTimeServer() = default;
 
  private:
-  bool valid_;
+  bool valid_ = false;
+  mutable bool logged_once_ = false;
   std::string name_;
   std::string address_;
   uint8_t public_key_[roughtime::kPublicKeyLength];
