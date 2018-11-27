@@ -235,9 +235,17 @@ TEST_F(NetstackLaunchTest, DISABLED_DHCPRequestSent) {
   netstack->AddEthernetDevice(
       std::move(topo_path), std::move(config),
       fidl::InterfaceHandle<::zircon::ethernet::Device>(std::move(svc)));
+
+  // Give zx_channel_write 10ms to enqueue whatever it needs, then run
+  // until idle (reduces flake rate to zero).
+  //
+  // TODO(NET-1967): Figure out why this sleep is required. The call stack in
+  // AddEthernetDevice is AddEthernetDevice -> ProxyController#Send ->
+  // Message#Write -> zx_channel_write, none of which are asynchronous.
+  zx::nanosleep(zx::deadline_after(zx::msec(10)));
   RealLoopFixture::RunLoopUntilIdle();
 
-  std::byte* buf = new std::byte[1500];
+  std::byte buf[1500];
   size_t attempt_to_read = 1500;
   size_t read;
   size_t parsed = 0;
