@@ -25,6 +25,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vim-rtc.c \
     $(LOCAL_DIR)/vim-canvas.c \
     $(LOCAL_DIR)/vim-clk.c \
+    $(LOCAL_DIR)/vim-sysmem.c \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \

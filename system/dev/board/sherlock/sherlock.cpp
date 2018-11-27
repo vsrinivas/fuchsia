@@ -58,6 +58,11 @@ zx_status_t Sherlock::Create(zx_device_t* parent) {
 
 int Sherlock::Thread() {
     // Load protocol implementation drivers first.
+    if (SysmemInit() != ZX_OK) {
+        zxlogf(ERROR, "SysmemInit() failed\n");
+        return -1;
+    }
+
     if (GpioInit() != ZX_OK) {
         zxlogf(ERROR, "GpioInit() failed\n");
         return -1;

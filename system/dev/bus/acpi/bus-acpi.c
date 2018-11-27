@@ -36,7 +36,7 @@
 #include "pciroot.h"
 #include "power.h"
 #include "resources.h"
-
+#include "sysmem.h"
 
 zx_handle_t root_resource_handle;
 
@@ -581,15 +581,29 @@ static zx_status_t acpi_drv_create(void* ctx, zx_device_t* parent, const char* n
         zxlogf(ERROR, "acpi-bus: error %d in iommu_manager_get_dummy_iommu()\n", status);
         return status;
     }
+
+    // Sysmem is started early so zx_vmo_create_contiguous() works.
+    zx_handle_t sysmem_bti;
+    status = zx_bti_create(dummy_iommu_handle, 0, SYSMEM_BTI_ID, &sysmem_bti);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "acpi: error %d in bti_create(sysmem_bti)\n", status);
+        return status;
+    }
+    status = publish_sysmem(sysmem_bti, sys_root);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "publish_sysmem failed: %d\n", status);
+        return status;
+    }
+
     zx_handle_t cpu_trace_bti;
     status = zx_bti_create(dummy_iommu_handle, 0, CPU_TRACE_BTI_ID, &cpu_trace_bti);
     if (status != ZX_OK) {
         zxlogf(ERROR, "acpi: error %d in bti_create(cpu_trace_bti)\n", status);
         return status;
     }
-
     status = publish_cpu_trace(cpu_trace_bti, sys_root);
     if (status != ZX_OK) {
+        zxlogf(ERROR, "publish_cpu_trace failed: %d\n", status);
         return status;
     }
 

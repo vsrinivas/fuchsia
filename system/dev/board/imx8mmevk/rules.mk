@@ -11,6 +11,7 @@ MODULE_TYPE := driver
 MODULE_SRCS += \
     $(LOCAL_DIR)/binding.c \
     $(LOCAL_DIR)/imx8mmevk.cpp \
+    $(LOCAL_DIR)/imx8mmevk-sysmem.cpp \
     $(LOCAL_DIR)/imx8mmevk-gpio.cpp \
 
 MODULE_STATIC_LIBS := \

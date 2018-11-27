@@ -32,6 +32,7 @@ enum {
     BTI_DISPLAY,
     BTI_AUDIO_OUT,
     BTI_AUDIO_IN,
+    BTI_SYSMEM,
 };
 
 // MAC address metadata indices
@@ -65,6 +66,7 @@ private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Sherlock);
 
     zx_status_t Start();
+    zx_status_t SysmemInit();
     zx_status_t GpioInit();
     zx_status_t CanvasInit();
     zx_status_t I2cInit();

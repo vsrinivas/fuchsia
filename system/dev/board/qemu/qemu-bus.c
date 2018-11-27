@@ -17,15 +17,12 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 
+#include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
-#include <zircon/assert.h>
+#include <zircon/threads.h>
 
 #include "qemu-virt.h"
-
-typedef struct {
-    pbus_protocol_t pbus;
-} qemu_bus_t;
 
 static zx_status_t qemu_pci_init(void) {
     zx_status_t status;
@@ -86,6 +83,22 @@ static zx_protocol_device_t qemu_bus_device_protocol = {
     .release = qemu_bus_release,
 };
 
+static const pbus_bti_t pci_btis[] = {
+    {
+        .iommu_index = 0,
+        .bti_id = 0,
+    },
+};
+
+static const pbus_dev_t pci_dev = {
+    .name = "pci",
+    .vid = PDEV_VID_GENERIC,
+    .pid = PDEV_PID_GENERIC,
+    .did = PDEV_DID_KPCI,
+    .bti_list = pci_btis,
+    .bti_count = countof(pci_btis),
+};
+
 static const pbus_mmio_t pl031_mmios[] = {
     {
         .base = RTC_BASE_PHYS,
@@ -101,6 +114,43 @@ static const pbus_dev_t pl031_dev = {
     .mmio_list = pl031_mmios,
     .mmio_count = countof(pl031_mmios),
 };
+
+static int qemu_start_thread(void* arg) {
+    qemu_bus_t* bus = arg;
+    zx_status_t status;
+
+    //
+    // Start protocol drivers before adding platform devices.
+    //
+
+    // Sysmem is started early so zx_vmo_create_contiguous() works.
+    if ((status = qemu_sysmem_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "qemu_sysmem_init failed: %d\n", status);
+        goto fail;
+    }
+
+    //
+    // Start platform devices.
+    //
+
+    status = pbus_device_add(&bus->pbus, &pci_dev);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "qemu_bus_bind could not add pci_dev: %d\n", status);
+        goto fail;
+    }
+
+    status = pbus_device_add(&bus->pbus, &pl031_dev);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "qemu_bus_bind could not add pl031: %d\n", status);
+        goto fail;
+    }
+
+    return ZX_OK;
+
+fail:
+    zxlogf(ERROR, "qemu_start_thread failed, not all devices have been initialized\n");
+    return status;
+}
 
 static zx_status_t qemu_bus_bind(void* ctx, zx_device_t* parent) {
     // we don't really need a context struct yet, but lets create one for future expansion.
@@ -131,30 +181,11 @@ static zx_status_t qemu_bus_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    pbus_bti_t pci_btis[] = {
-        {
-            .iommu_index = 0,
-            .bti_id = 0,
-        },
-    };
-
-    pbus_dev_t pci_dev = {
-        .name = "pci",
-        .vid = PDEV_VID_GENERIC,
-        .pid = PDEV_PID_GENERIC,
-        .did = PDEV_DID_KPCI,
-        .bti_list = pci_btis,
-        .bti_count = countof(pci_btis),
-    };
-
-    status = pbus_device_add(&bus->pbus, &pci_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "qemu_bus_bind could not add pci_dev: %d\n", status);
-    }
-
-    status = pbus_device_add(&bus->pbus, &pl031_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "qemu_bus_bind could not add pl031: %d\n", status);
+    thrd_t t;
+    int thrd_rc = thrd_create_with_name(&t, qemu_start_thread, bus, "qemu_start_thread");
+    if (thrd_rc != thrd_success) {
+        status = thrd_status_to_zx_status(thrd_rc);
+        goto fail;
     }
 
     return ZX_OK;

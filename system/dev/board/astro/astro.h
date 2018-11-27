@@ -24,6 +24,7 @@ enum {
     BTI_AUDIO_IN,
     BTI_AUDIO_OUT,
     BTI_TEE,
+    BTI_SYSMEM,
 };
 
 // MAC address metadata indices
@@ -38,6 +39,9 @@ typedef struct {
     gpio_impl_protocol_t gpio;
     iommu_protocol_t iommu;
 } aml_bus_t;
+
+// astro-sysmem.c
+zx_status_t astro_sysmem_init(aml_bus_t* bus);
 
 // astro-gpio.c
 zx_status_t aml_gpio_init(aml_bus_t* bus);

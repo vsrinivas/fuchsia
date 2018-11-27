@@ -15,7 +15,7 @@ struct ImageFormat {
 
     // Number of layers within a multi-layered image.
     // Defaults to 1 if not specified.
-    uint32 layers;
+    uint32 layers = 1;
 
     // Pixel format.
     PixelFormat pixel_format;
@@ -63,19 +63,45 @@ struct ImageSpec {
 // TODO(ZX-2260): change struct to table
 struct PixelFormat {
     PixelFormatType type;
+    /// This bool effectively makes format_modifier optional, to satisfy
+    /// 'Layout = "Simple"', to satisify "FIDL Simple C Bindings".
+    bool has_format_modifier;
+    FormatModifier format_modifier;
 };
 
 // TODO(ZX-2270): add more formats.
 // The ordering of the channels in the format name reflects how
 // the actual layout of the channel.
+//
+// Each of these values is opinionated re. the color spaces that can be
+// contained within (in contrast with Vulkan).
+//
+// TODO(dustingreen): Add more comment text re. pixel data layout for each of
+// these.
 enum PixelFormatType {
     INVALID = 0;
+
+    // RGB only, 8 bits per each of R/G/B/A sample
     R8G8B8A8 = 1;
-    BGRA32 = 101; // 32bpp BGRA, 1 plane. For UVC compliance.
+
+    // 32bpp BGRA, 1 plane.  RGB only, 8 bits per each of B/G/R/A sample.
+    BGRA32 = 101; // For UVC compliance.
+
+    // YUV only, 8 bits per Y sample
     I420 = 102; // For UVC compliance.
+
+    // YUV only, 8 bits per Y sample
     M420 = 103; // For UVC compliance.
+
+    // YUV only, 8 bits per Y sample
     NV12 = 104; // For UVC compliance.
+
+    // YUV only, 8 bits per Y sample
     YUY2 = 105; // For UVC compliance.
+
+    // TODO(garratt): Please elaborate in a comment here re. what/where the spec
+    // for this is (including any variants that are specified / permitted /
+    // indicated in-band / prohibited).
     MJPEG = 106; // For UVC compliance.
 };
 
@@ -87,13 +113,47 @@ struct ColorSpace {
     ColorSpaceType type;
 };
 
+// This list has a separate entry for each variant of a color space standard.
+//
+// For this reason, should we ever add support for the RGB variant of 709, for
+// example, we'd add a separate entry to this list for that variant.  Similarly
+// for the RGB variants of 2020 or 2100.  Similarly for the YcCbcCrc variant of
+// 2020.  Similarly for the ICtCp variant of 2100.
+//
+// A given ColorSpaceType may permit usage with a PixelFormatType(s) that
+// provides a bits-per-sample that's compatible with the ColorSpaceType's
+// official spec.  Not all spec-valid combinations are necessarily supported.
+// See ImageFormatIsSupportedColorSpaceForPixelFormat() for the best-case degree
+// of support, but a "true" from that function doesn't guarantee that any given
+// combination of participants will all support the desired combination of
+// ColorSpaceType and PixelFormatType.
+//
+// The sysmem service helps find a mutually supported combination and allocate
+// suitable buffers.
+//
+// A ColorSpaceType's spec is not implicitly extended to support
+// outside-the-standard bits-per-sample (R, G, B, or Y sample).  For example,
+// for 2020 and 2100, 8 bits-per-Y-sample is not supported (by sysmem), because
+// 8 bits-per-Y-sample is not in the spec for 2020 or 2100.  A sysmem
+// participant that attempts to advertise support for a PixelFormat + ColorSpace
+// that's non-standard will cause sysmem to reject the combo and fail to
+// allocate (intentionally, to strongly discourage specifying
+// insufficiently-defined combos).
 enum ColorSpaceType {
+    // sRGB
     SRGB = 1;
+    // 601 NTSC ("525 line") YCbCr primaries, narrow
     REC601_NTSC = 2;
+    // 601 NTSC ("525 line") YCbCr primaries, wide
     REC601_NTSC_FULL_RANGE = 3;
+    // 601 PAL ("625 line") YCbCr primaries, narrow
     REC601_PAL = 4;
+    // 601 PAL ("625 line") YCbCr primaries, wide
     REC601_PAL_FULL_RANGE = 5;
+    // 709 YCbCr (not RGB)
     REC709 = 6;
+    // 2020 YCbCr (not RGB, not YcCbcCrc)
     REC2020 = 7;
+    // 2100 YCbCr (not RGB, not ICtCp)
     REC2100 = 8;
 };

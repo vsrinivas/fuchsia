@@ -1,0 +1,15 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.sysmem;
+
+using zx;
+
+[Layout = "ddk-protocol"]
+interface Sysmem {
+    /// Takes the server end of a FIDL connection that'll serve
+    /// fuchsia.sysmem.Allocator2.  If the connection fails, the channel will
+    /// close.
+    Connect(handle<channel> allocator2_request) -> (zx.status s);
+};

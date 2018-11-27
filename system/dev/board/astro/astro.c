@@ -69,6 +69,12 @@ static int aml_start_thread(void* arg) {
     aml_bus_t* bus = arg;
     zx_status_t status;
 
+    // Sysmem is started early so zx_vmo_create_contiguous() works.
+    if ((status = astro_sysmem_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "astro_sysmem_init failed: %d\n", status);
+        return status;
+    }
+
     if ((status = aml_gpio_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "aml_gpio_init failed: %d\n", status);
         return status;

@@ -64,6 +64,10 @@ int Mt8167::Thread() {
         return -1;
     }
     // Load protocol implementation drivers first.
+    if (SysmemInit() != ZX_OK) {
+        zxlogf(ERROR, "SysmemInit() failed\n");
+        return -1;
+    }
     if (GpioInit() != ZX_OK) {
         zxlogf(ERROR, "GpioInit() failed\n");
     }

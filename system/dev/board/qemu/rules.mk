@@ -10,6 +10,7 @@ MODULE_TYPE := driver
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/qemu-bus.c \
+    $(LOCAL_DIR)/qemu-sysmem.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk
 

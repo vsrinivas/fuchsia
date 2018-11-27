@@ -54,6 +54,12 @@ static int vim_start_thread(void* arg) {
     }
 
     // Start protocol drivers before adding platform devices.
+    //
+    // Sysmem is started early so zx_vmo_create_contiguous() works.
+    if ((status = vim_sysmem_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "vim_sysmem_init failed: %d\n", status);
+        goto fail;
+    }
     if ((status = vim_gpio_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "vim_gpio_init failed: %d\n", status);
         goto fail;

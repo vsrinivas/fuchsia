@@ -1,0 +1,34 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sysmem;
+
+using zx;
+
+// Once a channel with this interface is established to a driver (typically in
+// advance), this interface allows asynchronously sending the server end of an
+// Allocator2 channel which will be served by the driver.
+//
+// For now, the only FIDL interface directly served via normal devhost FIDL
+// dispatching code by the sysmem driver is this interface.  Other sysmem
+// interfaces are served by separate dispatching code primarily because we want
+// to be able to establish channels async by sending the server channel toward
+// the driver without needing a round-trip open and without managing the channel
+// as a file descriptor.
+//
+// A secondary current reason tracked by ZX-3091 is that the current devhost
+// dispatching code doesn't permit async processing of requests, which we want
+// for proper functionining of at least the BufferCollection interface since
+// that interface has requests that don't complete until the devhost has
+// constraints from other participants.
+//
+// Needs Layout = "Simple" because used with "FIDL Simple C Bindings".
+[Discoverable, Layout = "Simple"]
+interface DriverConnector {
+    // This one-way message sends in the server end of an Allocator2 channel.
+    //
+    // |allocator_request| will be served by the sysmem driver (or the channel
+    // will close).
+    Connect(request<Allocator2> allocator_request);
+};

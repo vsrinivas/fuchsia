@@ -1,0 +1,54 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sysmem;
+
+struct FormatModifier {
+    /// The upper 8 bits are a vendor code as allocated in FormatModifierVendor
+    /// enum.  The lower 56 bits are vendor-defined.
+    ///
+    /// This field and the values that go in this field are defined this way for
+    /// compatibility reasons.
+    uint64 value;
+};
+
+const uint64 FORMAT_MODIFIER_NONE = 0x0000000000000000;
+
+const uint64 FORMAT_MODIFIER_VENDOR_NONE = 0x0000000000000000;
+const uint64 FORMAT_MODIFIER_VENDOR_INTEL = 0x0100000000000000;
+const uint64 FORMAT_MODIFIER_VENDOR_AMD = 0x0200000000000000;
+const uint64 FORMAT_MODIFIER_VENDOR_NVIDIA = 0x0300000000000000;
+const uint64 FORMAT_MODIFIER_VENDOR_SAMSUNG = 0x0400000000000000;
+const uint64 FORMAT_MODIFIER_VENDOR_QCOM = 0x0500000000000000;
+const uint64 FORMAT_MODIFIER_VENDOR_VIVANTE = 0x0600000000000000;
+const uint64 FORMAT_MODIFIER_VENDOR_BROADCOM = 0x0700000000000000;
+const uint64 FORMAT_MODIFIER_VENDOR_ARM = 0x0800000000000000;
+
+const uint64 FORMAT_MODIFIER_VALUE_RESERVED = 0x00FFFFFFFFFFFFFF;
+
+const uint64 FORMAT_MODIFIER_INVALID = FORMAT_MODIFIER_VALUE_RESERVED;
+
+const uint64 FORMAT_MODIFIER_LINEAR = 0x0000000000000000;
+
+//
+// Fill in (compatible) values below as needed.
+//
+
+// Intel format modifier values
+const uint64 FORMAT_MODIFIER_INTEL_I915_X_TILED = 0x0100000000000001;
+const uint64 FORMAT_MODIFIER_INTEL_I915_Y_TILED = 0x0100000000000002;
+
+// AMD format modifier values
+
+// NVIDIA format modifier values
+
+// SAMSUNG format modifier values
+
+// QCOM format modifier values
+
+// VIVANTE format modifier values
+
+// BROADCOM format modifier values
+
+// ARM format modifier values

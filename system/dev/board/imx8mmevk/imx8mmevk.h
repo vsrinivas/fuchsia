@@ -13,6 +13,11 @@
 
 namespace imx8mmevk {
 
+// BTI IDs for our devices
+enum {
+    BTI_SYSMEM,
+};
+
 #define ERROR(fmt, ...) zxlogf(ERROR, "[%s %d] " fmt, __func__, __LINE__, ##__VA_ARGS__)
 
 class Board;
@@ -28,6 +33,7 @@ public:
 
 private:
     zx_status_t StartAll();
+    zx_status_t StartSysmem();
     zx_status_t StartGpio();
     int Thread();
 

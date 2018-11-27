@@ -10,6 +10,7 @@ MODULE_TYPE := driver
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/machina.c \
+    $(LOCAL_DIR)/machina-sysmem.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk
 

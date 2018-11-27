@@ -25,6 +25,7 @@ enum {
     BTI_USB,
     BTI_AUDIO_OUT,
     BTI_AUDIO_IN,
+    BTI_SYSMEM,
 };
 
 class Mt8167;
@@ -48,6 +49,7 @@ private:
     zx_status_t EmmcInit();
     zx_status_t SdioInit();
     zx_status_t SocInit();
+    zx_status_t SysmemInit();
     zx_status_t GpioInit();
     zx_status_t GpuInit();
     zx_status_t DisplayInit();

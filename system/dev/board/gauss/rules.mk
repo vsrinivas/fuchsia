@@ -12,6 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/gauss.c \
     $(LOCAL_DIR)/gauss-audio.c \
     $(LOCAL_DIR)/gauss-clk.c \
+    $(LOCAL_DIR)/gauss-sysmem.c \
     $(LOCAL_DIR)/gauss-gpio.c \
     $(LOCAL_DIR)/gauss-i2c.c \
     $(LOCAL_DIR)/gauss-pcie.c \

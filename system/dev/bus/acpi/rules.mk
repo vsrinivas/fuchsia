@@ -26,6 +26,7 @@ MODULE_COMPILEFLAGS += -Ithird_party/lib/acpica/source/include \
 MODULE_SRCS := \
     $(LOCAL_DIR)/bus-acpi.c \
     $(LOCAL_DIR)/cpu-trace.c \
+    $(LOCAL_DIR)/sysmem.c \
     $(LOCAL_DIR)/debug.c \
     $(LOCAL_DIR)/dev/dev-battery.c \
     $(LOCAL_DIR)/dev/dev-cros-ec/dev.cpp \
@@ -79,8 +80,10 @@ MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-hidbus \
     system/banjo/ddk-protocol-intelhda-dsp \
     system/banjo/ddk-protocol-pciroot \
+    system/banjo/ddk-protocol-platform-bus \
     system/banjo/ddk-protocol-platform-device \
     system/banjo/ddk-protocol-scpi \
+    system/banjo/ddk-protocol-sysmem \
 
 else # !ARCH=x86
 

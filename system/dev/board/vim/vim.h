@@ -21,6 +21,7 @@ enum {
     BTI_EMMC,
     BTI_SDIO,
     BTI_CANVAS,
+    BTI_SYSMEM,
 };
 
 typedef struct {
@@ -74,3 +75,6 @@ zx_status_t vim2_canvas_init(vim_bus_t* bus);
 
 // vim-clk.c
 zx_status_t vim_clk_init(vim_bus_t* bus);
+
+// vim-sysmem.c
+zx_status_t vim_sysmem_init(vim_bus_t* bus);

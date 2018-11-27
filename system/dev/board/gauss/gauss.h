@@ -26,6 +26,7 @@ enum {
     BTI_AUDIO_OUT,
     BTI_USB_XHCI,
     BTI_AML_RAW_NAND,
+    BTI_SYSMEM,
 };
 
 typedef struct {
@@ -39,6 +40,9 @@ typedef struct {
     thrd_t phy_irq_thread;
     a113_clk_dev_t *clocks;
 } gauss_bus_t;
+
+// gauss-sysmem.c
+zx_status_t gauss_sysmem_init(gauss_bus_t* bus);
 
 // gauss-audio.c
 zx_status_t gauss_audio_init(gauss_bus_t* bus);

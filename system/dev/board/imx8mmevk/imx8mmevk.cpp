@@ -54,10 +54,20 @@ zx_status_t Board::StartAll() {
 }
 
 int Board::Thread() {
-    auto status = StartGpio();
+    zx_status_t status;
+
+    status = StartSysmem();
+    if (status != ZX_OK) {
+        ERROR("could not start sysmem driver: %d\n", status);
+        return status;
+    }
+
+    status = StartGpio();
     if (status != ZX_OK) {
         ERROR("could not start gpio driver: %d\n", status);
+        return status;
     }
+
     return ZX_OK;
 }
 

@@ -23,10 +23,6 @@
 
 #include "machina.h"
 
-typedef struct {
-    pbus_protocol_t pbus;
-} machina_board_t;
-
 static zx_status_t machina_pci_init(void) {
     zx_status_t status;
 
@@ -125,6 +121,12 @@ static zx_status_t machina_board_bind(void* ctx, zx_device_t* parent) {
 
     status = device_add(parent, &args, NULL);
     if (status != ZX_OK) {
+        goto fail;
+    }
+
+    status = machina_sysmem_init(bus);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "machina_board_bind machina_sysmem_init failed: %d\n", status);
         goto fail;
     }
 

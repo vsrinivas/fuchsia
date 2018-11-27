@@ -103,6 +103,12 @@ static int gauss_start_thread(void* arg) {
     gauss_bus_t* bus = arg;
     zx_status_t status;
 
+    // Sysmem is started early so zx_vmo_create_contiguous() works.
+    if ((status = gauss_sysmem_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "gauss_sysmem_init failed: %d\n", status);
+        goto fail;
+    }
+
     if ((status = gauss_clk_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "gauss_clk_init failed: %d\n", status);
         goto fail;
@@ -208,7 +214,7 @@ static zx_status_t gauss_bus_bind(void* ctx, zx_device_t* parent) {
 
     bus->parent = parent;
 
-   device_add_args_t args = {
+    device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "gauss-bus",
         .ctx = bus,

@@ -7,6 +7,13 @@
 
 #pragma once
 
+#include <ddk/protocol/platform/bus.h>
+
+// BTI IDs for our devices
+enum {
+    BTI_SYSMEM,
+};
+
 /* up to 30 GB of ram */
 #define MEMORY_BASE_PHYS     (0x40000000)
 
@@ -91,3 +98,9 @@ static const int a15irqmap[] = {
 
 #define MAX_INT 288
 
+typedef struct {
+    pbus_protocol_t pbus;
+} qemu_bus_t;
+
+// qemu-sysmem.c
+zx_status_t qemu_sysmem_init(qemu_bus_t* bus);

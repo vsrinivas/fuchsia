@@ -57,6 +57,11 @@ static int hikey960_start_thread(void* arg) {
         goto fail;
     }
 
+    status = hikey960_sysmem_init(hikey);
+    if (status != ZX_OK) {
+        goto fail;
+    }
+
     status = hikey960_i2c_init(hikey);
     if (status != ZX_OK) {
         goto fail;
