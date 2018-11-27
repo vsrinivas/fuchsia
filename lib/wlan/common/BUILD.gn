@@ -33,6 +33,7 @@ source_set("common") {
     "include/wlan/common/write_element.h",
     "mac_frame.cpp",
     "macaddr.cpp",
+    "parse_mac_header.cpp",
     "parse_element.cpp",
     "tim_element.cpp",
     "tx_vector.cpp",

@@ -110,6 +110,7 @@ executable("mac_tests") {
     "packet_unittest.cpp",
     "parse_beacon_unittest.cpp",
     "parse_element_unittest.cpp",
+    "parse_mac_header_unittest.cpp",
     "sequence_unittest.cpp",
     "tim_element_unittest.cpp",
     "tim_unittest.cpp",
