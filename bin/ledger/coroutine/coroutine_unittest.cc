@@ -207,6 +207,7 @@ TEST(Coroutine, Interrupt) {
   EXPECT_EQ(ContinuationStatus::INTERRUPTED, status);
 }
 
+#if !__has_feature(address_sanitizer)
 TEST(Coroutine, ReuseStack) {
   CoroutineServiceImpl coroutine_service;
   CoroutineHandler* handler = nullptr;
@@ -235,6 +236,7 @@ TEST(Coroutine, ReuseStack) {
 
   EXPECT_EQ(2u, nb_coroutines_calls);
 }
+#endif  // !__has_feature(address_sanitizer)
 
 TEST(Coroutine, ResumeCoroutineInOtherCoroutineDestructor) {
   CoroutineServiceImpl coroutine_service;
