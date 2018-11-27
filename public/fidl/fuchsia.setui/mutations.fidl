@@ -6,7 +6,6 @@ library fuchsia.setui;
 
 using fuchsia.ui.viewsv1token;
 
-
 /// operations supported by string settings.
 enum StringOperation {
     UPDATE = 1;
@@ -41,17 +40,23 @@ struct WirelessMutation {
     string password;
 };
 
+/// Configuration for time zone mutation.
+struct TimeZoneMutation {
+    TimeZoneInfo value;
+};
+
 /// Container for setting mutations.
 union Mutation {
     AccountMutation account_mutation_value;
     StringMutation string_mutation_value;
     WirelessMutation wireless_mutation_value;
+    TimeZoneMutation time_zone_mutation_value;
 };
 
 struct AccountMutationHandles {
-  fuchsia.ui.viewsv1token.ViewOwner view_owner;
+    fuchsia.ui.viewsv1token.ViewOwner view_owner;
 };
 
 union MutationHandles {
-  AccountMutationHandles account_handles;
+    AccountMutationHandles account_handles;
 };
