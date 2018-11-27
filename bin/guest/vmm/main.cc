@@ -191,7 +191,7 @@ int main(int argc, char** argv) {
     status = balloon.Start(*guest.object(), launcher.get(),
                            guest.device_dispatcher());
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to start console device " << status;
+      FXL_LOG(ERROR) << "Failed to start balloon device " << status;
       return status;
     }
   }
@@ -223,7 +223,7 @@ int main(int argc, char** argv) {
       FXL_LOG(ERROR) << "Unabled to extract handle from FD: " << status;
       return status;
     }
-    std::string id = fxl::StringPrintf("block-%zu", i++);
+    std::string id = fxl::StringPrintf("block-%zu", i);
     auto file = fidl::InterfaceHandle<fuchsia::io::File>(zx::channel(handle));
     block_infos.push_back(
         {std::move(id), block_spec.mode, block_spec.format, std::move(file)});
