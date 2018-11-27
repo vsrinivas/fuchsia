@@ -86,6 +86,8 @@ public:
     const T* end() const { return data_ + actual_; }
     const T* cend() const { return data_ + actual_; }
 
+    size_t size() const { return actual_; }
+
 private:
     T* data_;
     uint32_t capacity_;
