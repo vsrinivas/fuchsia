@@ -6,17 +6,18 @@ The kernel manages a number of different types of Objects. Those which are
 accessible directly via system calls are C++ classes which implement the
 Dispatcher interface. These are implemented in
 [kernel/object](../kernel/object). Many are self-contained higher-level Objects.
-Some wrap lower-level lk primitives.
+Some wrap lower-level [lk](../../docs/glossary.md#lk) primitives.
 
 ## [System Calls](syscalls.md)
 
-Userspace code interacts with kernel objects via system calls, and almost exclusively
-via Handles.  In userspace, a Handle is represented as 32bit integer
-(type zx_handle_t).  When syscalls are executed, the kernel checks that Handle
-parameters refer to an actual handle that exists within the calling process's handle
-table.  The kernel further checks that the Handle is of the correct type (passing
-a Thread Handle to a syscall requiring an event handle will result in an error),
-and that the Handle has the required Rights for the requested operation.
+Userspace code interacts with kernel objects via system calls, and almost
+exclusively via [Handles](handles.md).  In userspace, a Handle is represented as
+32bit integer (type zx_handle_t).  When syscalls are executed, the kernel checks
+that Handle parameters refer to an actual handle that exists within the calling
+process's handle table.  The kernel further checks that the Handle is of the
+correct type (passing a Thread Handle to a syscall requiring an event handle
+will result in an error), and that the Handle has the required Rights for the
+requested operation.
 
 System calls fall into three broad categories, from an access standpoint:
 
@@ -164,7 +165,7 @@ pending Signals.
 See: [port_create](syscalls/port_create.md),
 [port_queue](syscalls/port_queue.md),
 [port_wait](syscalls/port_wait.md),
-[port_cancel](syscalls/port_cancel.md).
+and [port_cancel](syscalls/port_cancel.md).
 
 
 ## Events, Event Pairs.
@@ -210,7 +211,7 @@ See: [vmar_map](syscalls/vmar_map.md),
 [vmar_allocate](syscalls/vmar_allocate.md),
 [vmar_protect](syscalls/vmar_protect.md),
 [vmar_unmap](syscalls/vmar_unmap.md),
-[vmar_destroy](syscalls/vmar_destroy.md),
+and [vmar_destroy](syscalls/vmar_destroy.md),
 
 ## Futexes
 
@@ -222,4 +223,4 @@ mutexes, condition variables, etc, implemented in terms of Futexes.
 
 See: [futex_wait](syscalls/futex_wait.md),
 [futex_wake](syscalls/futex_wake.md),
-[futex_requeue](syscalls/futex_requeue.md).
+and [futex_requeue](syscalls/futex_requeue.md).

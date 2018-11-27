@@ -117,7 +117,7 @@ public:
 
     // Frees |chain| and its buffers.
     static void Free(BufferChain* chain) {
-        // Remove the buffers and vm_page_t's from the chain *before* destorying it.
+        // Remove the buffers and vm_page_t's from the chain *before* destroying it.
         BufferChain::BufferList buffers(fbl::move(*chain->buffers()));
         list_node pages = LIST_INITIAL_VALUE(pages);
         list_move(&chain->pages_, &pages);

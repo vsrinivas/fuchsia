@@ -113,7 +113,7 @@ public:
         return base_value_;
     }
 
-    // To be called once during bringup.
+    // To be called once during bring up.
     static void Init();
 
     // Maps an integer obtained by Handle::base_value() back to a Handle.
@@ -182,7 +182,7 @@ private:
     }
 };
 
-// This can't be defined direclty in the HandleOwner class definition
+// This can't be defined directly in the HandleOwner class definition
 // because Handle is an incomplete type at that point.
 inline void HandleOwner::Destroy() {
     if (h_)
