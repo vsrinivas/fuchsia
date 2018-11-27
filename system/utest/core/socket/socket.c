@@ -184,11 +184,11 @@ static bool socket_signals2(void) {
     ASSERT_EQ(status, ZX_OK, "object_get_property");
     ASSERT_EQ(count, (size_t)SOCKET2_SIGNALTEST_RX_THRESHOLD, "");
 
-    size_t txbufmax;
-    status = zx_object_get_property(h1, ZX_PROP_SOCKET_TX_BUF_MAX,
-                                    &txbufmax, sizeof(size_t));
-    ASSERT_EQ(status, ZX_OK, "object_get_property");
-    size_t write_threshold = txbufmax - (SOCKET2_SIGNALTEST_RX_THRESHOLD + 2);
+    zx_info_socket_t info;
+    memset(&info, 0, sizeof(info));
+    status = zx_object_get_info(h1, ZX_INFO_SOCKET, &info, sizeof(info), NULL, NULL);
+    ASSERT_EQ(status, ZX_OK, "zx_object_get_info");
+    size_t write_threshold = info.tx_buf_max - (SOCKET2_SIGNALTEST_RX_THRESHOLD + 2);
     status = zx_object_set_property(h1, ZX_PROP_SOCKET_TX_THRESHOLD,
                                     &write_threshold, sizeof(size_t));
     ASSERT_EQ(status, ZX_OK, "object_set_property");
@@ -302,7 +302,7 @@ static bool socket_signals2(void) {
      * Bump the write threshold way up and make sure the WRITE THRESHOLD signal gets
      * deasserted (and then restore the write threshold back).
      */
-    count = txbufmax - 10;
+    count = info.tx_buf_max - 10;
     status = zx_object_set_property(h1, ZX_PROP_SOCKET_TX_THRESHOLD,
                                     &count, sizeof(size_t));
     ASSERT_EQ(status, ZX_OK, "object_set_property");
@@ -832,14 +832,14 @@ static bool socket_datagram_no_short_write(void) {
     status = zx_socket_create(ZX_SOCKET_DATAGRAM, &h0, &h1);
     ASSERT_EQ(status, ZX_OK, "");
 
-    size_t tx_buf_size = 0u;
-    status = zx_object_get_property(h0, ZX_PROP_SOCKET_TX_BUF_MAX, &tx_buf_size,
-                                    sizeof(tx_buf_size));
-    EXPECT_EQ(status, ZX_OK, "");
-    EXPECT_GT(tx_buf_size, 0u, "");
+    zx_info_socket_t info;
+    memset(&info, 0, sizeof(info));
+    status = zx_object_get_info(h1, ZX_INFO_SOCKET, &info, sizeof(info), NULL, NULL);
+    ASSERT_EQ(status, ZX_OK, "zx_object_get_info");
+    EXPECT_GT(info.tx_buf_max, 0u, "");
 
     // Pick a size for a huge datagram, and make sure not to overflow.
-    size_t buffer_size = tx_buf_size * 2;
+    size_t buffer_size = info.tx_buf_max * 2;
     EXPECT_GT(buffer_size, 0u, "");
 
     void* buffer = calloc(buffer_size, 1u);

@@ -54,10 +54,6 @@ public:
     zx_status_t Accept(HandleOwner* h);
 
     // Property methods.
-    size_t ReceiveBufferMax() const;
-    size_t ReceiveBufferSize() const;
-    size_t TransmitBufferMax() const;
-    size_t TransmitBufferSize() const;
     size_t GetReadThreshold() const;
     zx_status_t SetReadThreshold(size_t value);
     size_t GetWriteThreshold() const;

@@ -444,35 +444,11 @@ zx_status_t SocketDispatcher::Accept(HandleOwner* h) TA_NO_THREAD_SAFETY_ANALYSI
     return ZX_OK;
 }
 
-size_t SocketDispatcher::ReceiveBufferMax() const {
-    canary_.Assert();
-    Guard<fbl::Mutex> guard{get_lock()};
-    return data_.max_size();
-}
-
-size_t SocketDispatcher::ReceiveBufferSize() const {
-    canary_.Assert();
-    Guard<fbl::Mutex> guard{get_lock()};
-    return data_.size();
-}
-
 // NOTE(abdulla): peer_ is protected by get_lock() while peer_->data_
 // is protected by peer_->get_lock(). These two locks are aliases of
 // one another so must only acquire one of them. Thread-safety
 // analysis does not know they are the same lock so we must disable
 // analysis.
-size_t SocketDispatcher::TransmitBufferMax() const TA_NO_THREAD_SAFETY_ANALYSIS {
-    canary_.Assert();
-    Guard<fbl::Mutex> guard{get_lock()};
-    return peer_ ? peer_->data_.max_size() : 0;
-}
-
-size_t SocketDispatcher::TransmitBufferSize() const TA_NO_THREAD_SAFETY_ANALYSIS {
-    canary_.Assert();
-    Guard<fbl::Mutex> guard{get_lock()};
-    return peer_ ? peer_->data_.size() : 0;
-}
-
 void SocketDispatcher::GetInfo(zx_info_socket_t* info) const TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
     Guard<fbl::Mutex> guard{get_lock()};

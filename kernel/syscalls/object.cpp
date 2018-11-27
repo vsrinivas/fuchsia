@@ -675,42 +675,6 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
         uintptr_t value = process->aspace()->vdso_base_address();
         return _value.reinterpret<uintptr_t>().copy_to_user(value);
     }
-    case ZX_PROP_SOCKET_RX_BUF_MAX: {
-        if (size < sizeof(size_t))
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        auto socket = DownCastDispatcher<SocketDispatcher>(&dispatcher);
-        if (!socket)
-            return ZX_ERR_WRONG_TYPE;
-        size_t value = socket->ReceiveBufferMax();
-        return _value.reinterpret<size_t>().copy_to_user(value);
-    }
-    case ZX_PROP_SOCKET_RX_BUF_SIZE: {
-        if (size < sizeof(size_t))
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        auto socket = DownCastDispatcher<SocketDispatcher>(&dispatcher);
-        if (!socket)
-            return ZX_ERR_WRONG_TYPE;
-        size_t value = socket->ReceiveBufferSize();
-        return _value.reinterpret<size_t>().copy_to_user(value);
-    }
-    case ZX_PROP_SOCKET_TX_BUF_MAX: {
-        if (size < sizeof(size_t))
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        auto socket = DownCastDispatcher<SocketDispatcher>(&dispatcher);
-        if (!socket)
-            return ZX_ERR_WRONG_TYPE;
-        size_t value = socket->TransmitBufferMax();
-        return _value.reinterpret<size_t>().copy_to_user(value);
-    }
-    case ZX_PROP_SOCKET_TX_BUF_SIZE: {
-        if (size < sizeof(size_t))
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        auto socket = DownCastDispatcher<SocketDispatcher>(&dispatcher);
-        if (!socket)
-            return ZX_ERR_WRONG_TYPE;
-        size_t value = socket->TransmitBufferSize();
-        return _value.reinterpret<size_t>().copy_to_user(value);
-    }
     case ZX_PROP_SOCKET_RX_THRESHOLD: {
         if (size < sizeof(size_t))
             return ZX_ERR_BUFFER_TOO_SMALL;

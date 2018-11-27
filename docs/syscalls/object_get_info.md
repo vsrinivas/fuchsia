@@ -364,18 +364,24 @@ typedef struct zx_info_socket {
     // The options passed to zx_socket_create().
     uint32_t options;
 
-    // The value of ZX_PROP_SOCKET_RX_BUF_MAX.
+    // The maximum size of the receive buffer of a socket, in bytes.
+    //
+    // The receive buffer may become full at a capacity less than the maximum
+    // due to overhead.
     size_t rx_buf_max;
 
-    // The value of ZX_PROP_SOCKET_RX_BUF_SIZE.
+    // The size of the receive buffer of a socket, in bytes.
     size_t rx_buf_size;
 
-    // The value of ZX_PROP_SOCKET_TX_BUF_MAX.
+    // The maximum size of the transmit buffer of a socket, in bytes.
+    //
+    // The transmit buffer may become full at a capacity less than the maximum
+    // due to overhead.
     //
     // Will be zero if the peer endpoint is closed.
     size_t tx_buf_max;
 
-    // The value of ZX_PROP_SOCKET_TX_BUF_SIZE.
+    // The size of the transmit buffer of a socket, in bytes.
     //
     // Will be zero if the peer endpoint is closed.
     size_t tx_buf_size;

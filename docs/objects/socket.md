@@ -23,19 +23,6 @@ writing.
 
 The following properties may be queried from a socket object:
 
-**ZX_PROP_SOCKET_RX_BUF_MAX** maximum size of the receive buffer of a socket, in
-bytes. The receive buffer may become full at a capacity less than the maximum
-due to overheads.
-
-**ZX_PROP_SOCKET_RX_BUF_SIZE** size of the receive buffer of a socket, in bytes.
-
-**ZX_PROP_SOCKET_TX_BUF_MAX** maximum size of the transmit buffer of a socket,
-in bytes. The transmit buffer may become full at a capacity less than the
-maximum due to overheads.
-
-**ZX_PROP_SOCKET_TX_BUF_SIZE** size of the transmit buffer of a socket, in
-bytes.
-
 **ZX_PROP_SOCKET_RX_THRESHOLD** size of the read threshold of a socket, in
 bytes. When the bytes queued on the socket (available for reading) is equal to
 or greater than this value, the ZX_SOCKET_READ_THRESHOLD signal is asserted.
