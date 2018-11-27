@@ -764,11 +764,11 @@ TEST_F(VirtioVsockTest, WriteSocketFullReset) {
   HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
   HostConnectOnPortResponse(kVirtioVsockHostPort);
 
-  size_t socket_size = 0;
+  zx_info_socket_t info = {};
   ASSERT_EQ(ZX_OK,
-            connection.socket.get_property(ZX_PROP_SOCKET_TX_BUF_MAX,
-                                           &socket_size, sizeof(socket_size)));
-  size_t buf_size = socket_size + sizeof(virtio_vsock_hdr_t) + 1;
+            connection.socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info),
+                                       nullptr, nullptr));
+  size_t buf_size = info.tx_buf_max + sizeof(virtio_vsock_hdr_t) + 1;
   auto buf = std::make_unique<uint8_t[]>(buf_size);
   memset(buf.get(), 'a', buf_size);
 
@@ -789,11 +789,11 @@ TEST_F(VirtioVsockTest, SendCreditUpdateWhenSocketIsDrained) {
   HostConnectOnPortResponse(kVirtioVsockHostPort);
 
   // Fill socket buffer completely.
-  size_t socket_size = 0;
+  zx_info_socket_t info = {};
   ASSERT_EQ(ZX_OK,
-            connection.socket.get_property(ZX_PROP_SOCKET_TX_BUF_MAX,
-                                           &socket_size, sizeof(socket_size)));
-  size_t buf_size = socket_size + sizeof(virtio_vsock_hdr_t);
+            connection.socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info),
+                                       nullptr, nullptr));
+  size_t buf_size = info.tx_buf_max + sizeof(virtio_vsock_hdr_t);
   auto buf = std::make_unique<uint8_t[]>(buf_size);
   memset(buf.get(), 'a', buf_size);
   HostQueueWriteOnPort(kVirtioVsockHostPort, buf.get(), buf_size);
@@ -815,7 +815,7 @@ TEST_F(VirtioVsockTest, SendCreditUpdateWhenSocketIsDrained) {
   RunLoopUntilIdle();
   RxBuffer* credit_update = DoReceive();
   ASSERT_NE(credit_update, nullptr);
-  ASSERT_EQ(socket_size, credit_update->header.buf_alloc);
+  ASSERT_EQ(info.tx_buf_max, credit_update->header.buf_alloc);
   ASSERT_EQ(actual_len, credit_update->header.fwd_cnt);
 }
 

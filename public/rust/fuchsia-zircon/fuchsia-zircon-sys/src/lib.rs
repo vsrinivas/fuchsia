@@ -290,10 +290,6 @@ multiconst!(zx_obj_props_t, [
     ZX_PROP_PROCESS_VDSO_BASE_ADDRESS = 6;
 
     // Argument is a size_t.
-    ZX_PROP_SOCKET_RX_BUF_MAX         = 8;
-    ZX_PROP_SOCKET_RX_BUF_SIZE        = 9;
-    ZX_PROP_SOCKET_TX_BUF_MAX         = 10;
-    ZX_PROP_SOCKET_TX_BUF_SIZE        = 11;
     ZX_PROP_SOCKET_RX_THRESHOLD       = 12;
     ZX_PROP_SOCKET_TX_THRESHOLD       = 13;
 
