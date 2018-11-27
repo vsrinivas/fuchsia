@@ -6,9 +6,10 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.modular.BasemgrMonitor",
-            "fuchsia.ui.policy.Presenter",
             "fuchsia.sys.Launcher",
-            "fuchsia.tracelink.Registry"
+            "fuchsia.tracelink.Registry",
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.ui.viewsv1.ViewManager"
         ]
     }
 }
