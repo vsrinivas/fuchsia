@@ -101,8 +101,10 @@ enum class GicdRegister : uint64_t {
     IGROUP0       = 0x080,
     IGROUP31      = 0x0FC,
     ISENABLE0     = 0x100,
+    ISENABLE1     = 0x104,
     ISENABLE31    = 0x11c,
     ICENABLE0     = 0x180,
+    ICENABLE1     = 0x184,
     ICENABLE31    = 0x19c,
     ICPEND0       = 0x280,
     ICPEND31      = 0x2bc,
@@ -203,32 +205,36 @@ zx_status_t GicDistributor::Init(Guest* guest, uint8_t num_cpus) {
     return status;
   }
 
+  // Always allocate redistributors to use them for banked registers.
+  redistributors_.reserve(num_cpus);
+  for (uint16_t id = 0; id != num_cpus; id++) {
+    redistributors_.emplace_back(id, id == num_cpus - 1);
+  }
+
+  // Map the GICv2 distributor.
   if (gic_version_ == GicVersion::V2) {
     return guest->CreateMapping(TrapType::MMIO_SYNC, kGicv2DistributorPhysBase,
                                 kGicv2DistributorSize, 0, this);
   }
 
-  // Map the distributor
+  // Map the GICv3 distributor.
   status = guest->CreateMapping(TrapType::MMIO_SYNC, kGicv3DistributorPhysBase,
                                 kGicv3DistributorSize, 0, this);
   if (status != ZX_OK) {
     return status;
   }
 
-  // Map the redistributors, map both RD_BASE and SGI_BASE as one since they
-  // are contiguous. See GIC v3.0/v4.0 Architecture Spec 8.10.
-  for (uint16_t id = 0; id != num_cpus; ++id) {
-    auto redistributor =
-        std::make_unique<GicRedistributor>(id, id == num_cpus - 1);
+  // Map the GICv3 redistributors, map both RD_BASE and SGI_BASE as one since
+  // they are contiguous. See GIC v3.0/v4.0 Architecture Spec 8.10.
+  for (uint16_t id = 0; id != num_cpus; id++) {
     status = guest->CreateMapping(
         TrapType::MMIO_SYNC,
         kGicv3RedistributorPhysBase + (id * kGicv3RedistributorStride),
         kGicv3RedistributorSize + kGicv3RedistributorSgiSize, 0,
-        redistributor.get());
+        &redistributors_[id]);
     if (status != ZX_OK) {
       return status;
     }
-    redistributors_.push_back(std::move(redistributor));
   }
   return status;
 }
@@ -239,9 +245,11 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
   }
 
   switch (static_cast<GicdRegister>(addr)) {
-    case GicdRegister::TYPE:
-      value->u32 = typer(kNumInterrupts, kMaxVcpus, gic_version_);
+    case GicdRegister::TYPE: {
+      std::lock_guard<std::mutex> lock(mutex_);
+      value->u32 = typer(kNumInterrupts, redistributors_.size(), gic_version_);
       return ZX_OK;
+    }
     case GicdRegister::ICFG0:
       // SGIs are RAO/WI.
       value->u32 = UINT32_MAX;
@@ -249,10 +257,16 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
     case GicdRegister::ICFG1... GicdRegister::ICFG31:
       value->u32 = 0;
       return ZX_OK;
-    case GicdRegister::ISENABLE0... GicdRegister::ISENABLE31: {
+    case GicdRegister::ISENABLE0: {
+      uint64_t id = Vcpu::GetCurrent()->id();
+      std::lock_guard<std::mutex> lock(mutex_);
+      return redistributors_[id].Read(
+          static_cast<uint64_t>(GicrRegister::ISENABLE0), value);
+    }
+    case GicdRegister::ISENABLE1... GicdRegister::ISENABLE31: {
       std::lock_guard<std::mutex> lock(mutex_);
       const uint8_t* enable =
-          &enabled_[addr - static_cast<uint64_t>(GicdRegister::ISENABLE0)];
+          &enabled_[addr - static_cast<uint64_t>(GicdRegister::ISENABLE1)];
       value->u32 = *reinterpret_cast<const uint32_t*>(enable);
       return ZX_OK;
     }
@@ -355,17 +369,29 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
       }
       return TargetInterrupt(sgi.vector, cpu_mask);
     }
-    case GicdRegister::ISENABLE0... GicdRegister::ISENABLE31: {
+    case GicdRegister::ISENABLE0: {
+      uint64_t id = Vcpu::GetCurrent()->id();
+      std::lock_guard<std::mutex> lock(mutex_);
+      return redistributors_[id].Write(
+          static_cast<uint64_t>(GicrRegister::ISENABLE0), value);
+    }
+    case GicdRegister::ISENABLE1... GicdRegister::ISENABLE31: {
       std::lock_guard<std::mutex> lock(mutex_);
       uint8_t* enable =
-          &enabled_[addr - static_cast<uint64_t>(GicdRegister::ISENABLE0)];
+          &enabled_[addr - static_cast<uint64_t>(GicdRegister::ISENABLE1)];
       *reinterpret_cast<uint32_t*>(enable) |= value.u32;
       return ZX_OK;
     }
-    case GicdRegister::ICENABLE0... GicdRegister::ICENABLE31: {
+    case GicdRegister::ICENABLE0: {
+      uint64_t id = Vcpu::GetCurrent()->id();
+      std::lock_guard<std::mutex> lock(mutex_);
+      return redistributors_[id].Write(
+          static_cast<uint64_t>(GicrRegister::ICENABLE0), value);
+    }
+    case GicdRegister::ICENABLE1... GicdRegister::ICENABLE31: {
       std::lock_guard<std::mutex> lock(mutex_);
       uint8_t* enable =
-          &enabled_[addr - static_cast<uint64_t>(GicdRegister::ICENABLE0)];
+          &enabled_[addr - static_cast<uint64_t>(GicdRegister::ICENABLE1)];
       *reinterpret_cast<uint32_t*>(enable) &= ~value.u32;
       return ZX_OK;
     }
@@ -437,17 +463,14 @@ zx_status_t GicDistributor::Interrupt(uint32_t global_irq) {
   uint8_t cpu_mask;
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (gic_version_ == GicVersion::V3 && affinity_routing_) {
-      if (global_irq < kNumSgisAndPpis || global_irq >= kNumInterrupts) {
-        return ZX_ERR_INVALID_ARGS;
-      }
-      if (!broadcast_[global_irq - kNumSgisAndPpis]) {
-        cpu_mask = 1 << cpu_routes_[global_irq - kNumSgisAndPpis];
-      } else {
-        cpu_mask = UINT8_MAX;
-      }
-    } else {
+    if (gic_version_ == GicVersion::V2 || !affinity_routing_) {
       cpu_mask = cpu_masks_[global_irq];
+    } else if (global_irq < kNumSgisAndPpis || global_irq >= kNumInterrupts) {
+      return ZX_ERR_INVALID_ARGS;
+    } else if (!broadcast_[global_irq - kNumSgisAndPpis]) {
+      cpu_mask = 1 << cpu_routes_[global_irq - kNumSgisAndPpis];
+    } else {
+      cpu_mask = UINT8_MAX;
     }
   }
   return TargetInterrupt(global_irq, cpu_mask);
@@ -457,11 +480,10 @@ zx_status_t GicDistributor::TargetInterrupt(uint32_t global_irq,
                                             uint8_t cpu_mask) {
   if (global_irq >= kNumInterrupts) {
     return ZX_ERR_INVALID_ARGS;
-  }
-  {
+  } else if (global_irq >= kNumSgisAndPpis) {
     std::lock_guard<std::mutex> lock(mutex_);
-    bool is_enabled =
-        enabled_[global_irq / CHAR_BIT] & (1u << global_irq % CHAR_BIT);
+    uint32_t spi = global_irq - kNumSgisAndPpis;
+    bool is_enabled = enabled_[spi / CHAR_BIT] & (1u << (spi % CHAR_BIT));
     if (!is_enabled) {
       return ZX_OK;
     }
@@ -474,9 +496,10 @@ zx_status_t GicDistributor::TargetInterrupt(uint32_t global_irq,
     {
       std::lock_guard<std::mutex> lock(mutex_);
       vcpu = vcpus_[i];
-    }
-    if (vcpu == nullptr) {
-      continue;
+      if (vcpu == nullptr || (global_irq < kNumSgisAndPpis &&
+                              !redistributors_[i].IsEnabled(global_irq))) {
+        continue;
+      }
     }
     zx_status_t status = vcpu->Interrupt(global_irq);
     if (status != ZX_OK) {
@@ -581,6 +604,9 @@ zx_status_t GicRedistributor::Read(uint64_t addr, IoValue* value) const {
   }
 
   switch (static_cast<GicrRegister>(addr)) {
+    case GicrRegister::ISENABLE0:
+      value->u32 = enabled_;
+      return ZX_OK;
     case GicrRegister::CTL:
     case GicrRegister::WAKE:
     case GicrRegister::ICFG0:
@@ -621,8 +647,12 @@ zx_status_t GicRedistributor::Write(uint64_t addr, const IoValue& value) {
   }
 
   switch (static_cast<GicrRegister>(addr)) {
-    case GicrRegister::ICENABLE0:
     case GicrRegister::ISENABLE0:
+      enabled_ |= value.u32;
+      return ZX_OK;
+    case GicrRegister::ICENABLE0:
+      enabled_ &= ~value.u32;
+      return ZX_OK;
     case GicrRegister::WAKE:
     case GicrRegister::IGROUP0:
     case GicrRegister::ICPEND0:
@@ -636,6 +666,10 @@ zx_status_t GicRedistributor::Write(uint64_t addr, const IoValue& value) {
                      << std::hex << addr;
       return ZX_ERR_NOT_SUPPORTED;
   }
+}
+
+bool GicRedistributor::IsEnabled(uint32_t local_irq) const {
+  return enabled_ & (1u << local_irq);
 }
 
 }  // namespace machina

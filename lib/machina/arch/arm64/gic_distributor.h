@@ -30,9 +30,14 @@ class GicRedistributor : public IoHandler {
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
 
+  bool IsEnabled(uint32_t local_irq) const;
+
  private:
   uint16_t id_;
   bool last_;
+
+  // Tracks whether SGIs and PPIs are enabled.
+  uint32_t enabled_;
 };
 
 // Implements GIC distributor.
@@ -62,15 +67,13 @@ class GicDistributor : public IoHandler, public PlatformDevice {
   mutable std::mutex mutex_;
   Vcpu* vcpus_[kMaxVcpus] __TA_GUARDED(mutex_) = {};
   bool affinity_routing_ __TA_GUARDED(mutex_) = false;
-  std::vector<std::unique_ptr<GicRedistributor>> __TA_GUARDED(mutex_)
-      redistributors_;
+  std::vector<GicRedistributor> __TA_GUARDED(mutex_) redistributors_;
 
-  // Tracks whether interrupts are enabled.
-  //
-  // NOTE(abdulla): This doesn't properly account for banked interrupts.
-  uint8_t enabled_[kNumInterrupts / CHAR_BIT] __TA_GUARDED(mutex_) = {};
+  // Tracks whether SPIs are enabled.
+  uint8_t enabled_[(kNumInterrupts - kNumSgisAndPpis) / CHAR_BIT] __TA_GUARDED(
+      mutex_) = {};
 
-  // SPI routing without affinity routing uses these cpu masks.
+  // SPI routing without affinity routing uses these CPU masks.
   uint8_t cpu_masks_[kNumInterrupts] __TA_GUARDED(mutex_) = {};
 
   // SPI routing with affinity routing either sends the interrupt to all VCPUs
