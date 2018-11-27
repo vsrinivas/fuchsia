@@ -93,6 +93,8 @@ class FakePageStorage : public PageStorageEmptyImpl {
   // this method if they need valid object digests instead.
   virtual ObjectDigest FakeDigest(fxl::StringView value) const;
 
+  PageId page_id_;
+
  private:
   void SendNextObject();
 
@@ -106,7 +108,6 @@ class FakePageStorage : public PageStorageEmptyImpl {
   std::set<CommitId> heads_;
   std::set<CommitWatcher*> watchers_;
   std::vector<fit::closure> object_requests_;
-  PageId page_id_;
   encryption::FakeEncryptionService encryption_service_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakePageStorage);

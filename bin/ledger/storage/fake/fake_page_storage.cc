@@ -27,8 +27,8 @@ namespace fake {
 
 FakePageStorage::FakePageStorage(ledger::Environment* environment,
                                  PageId page_id)
-    : environment_(environment),
-      page_id_(std::move(page_id)),
+    : page_id_(std::move(page_id)),
+      environment_(environment),
       encryption_service_(environment_->dispatcher()) {}
 
 FakePageStorage::~FakePageStorage() {}
