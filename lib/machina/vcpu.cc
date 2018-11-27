@@ -378,8 +378,9 @@ zx_status_t Vcpu::HandleVcpu(const zx_packet_guest_vcpu_t& packet,
       return guest_->Interrupt(packet.interrupt.mask, packet.interrupt.vector);
     case ZX_PKT_GUEST_VCPU_STARTUP:
       if (id_ != 0) {
-        FXL_LOG(ERROR)
-            << "Secondary processors must be started by the primary processor";
+        FXL_LOG(ERROR) << "Failed to start VCPU " << packet.startup.id
+                       << " from VCPU " << id_ << ", secondary processors must"
+                       << " be started by the primary processor";
         return ZX_ERR_BAD_STATE;
       }
       return guest_->StartVcpu(packet.startup.entry, packet.startup.id);
