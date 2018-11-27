@@ -943,6 +943,7 @@ zx_status_t Device::EthQuery(uint32_t options, ethmac_info_t* info) {
 
     // mtu
     info->mtu = 1500;
+    info->netbuf_size = sizeof(ethmac_netbuf_t);
 
     // mac
     std::memcpy(info->mac, query_info_.mac_addr, ETH_ALEN);
