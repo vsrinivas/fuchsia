@@ -600,13 +600,15 @@ const ConsoleContext::ThreadRecord* ConsoleContext::GetThreadRecord(
 Err ConsoleContext::FillOutJobContext(Command* cmd) const {
   int job_context_id = cmd->GetNounIndex(Noun::kJob);
   if (job_context_id == Command::kNoIndex) {
-    // No index: use the active one (which should always exist).
+    // No index: use the active one (may or may not exist).
     job_context_id = active_job_context_id_;
     auto found_job_context = id_to_job_context_.find(job_context_id);
-    FXL_DCHECK(found_job_context != id_to_job_context_.end());
-    cmd->set_job_context(found_job_context->second.job_context);
-
-    FXL_DCHECK(cmd->job_context());  // Default job_context should always exist.
+    if (found_job_context == id_to_job_context_.end()) {
+      // When there are no job contexts, the active ID should be 0.
+      FXL_DCHECK(job_context_id == 0);
+    } else {
+      cmd->set_job_context(found_job_context->second.job_context);
+    }
     return Err();
   }
 

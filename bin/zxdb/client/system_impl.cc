@@ -11,8 +11,8 @@
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/setting_schema_definition.h"
 #include "garnet/bin/zxdb/client/system_observer.h"
-#include "garnet/bin/zxdb/common/string_util.h"
 #include "garnet/bin/zxdb/client/target_impl.h"
+#include "garnet/bin/zxdb/common/string_util.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 
 namespace zxdb {
@@ -20,7 +20,6 @@ namespace zxdb {
 SystemImpl::SystemImpl(Session* session)
     : System(session), weak_factory_(this) {
   AddNewTarget(std::make_unique<TargetImpl>(this));
-  AddNewJobContext(std::make_unique<JobContextImpl>(this));
 
   // Forward all messages from the symbol index to our observers. It's OK to
   // bind |this| because the symbol index is owned by |this|.
@@ -126,7 +125,7 @@ Target* SystemImpl::CreateNewTarget(Target* clone) {
 
 JobContext* SystemImpl::CreateNewJobContext(JobContext* clone) {
   auto job_context = clone ? static_cast<JobContextImpl*>(clone)->Clone(this)
-                           : std::make_unique<JobContextImpl>(this);
+                           : std::make_unique<JobContextImpl>(this, false);
   JobContext* to_return = job_context.get();
   AddNewJobContext(std::move(job_context));
   return to_return;
@@ -193,11 +192,33 @@ void SystemImpl::DidConnect() {
   // for every connection since a new image could have been compiled and
   // launched which will have a different build ID file.
   symbols_.build_id_index().ClearCache();
+
+  // Implicitly attach a job to the component root. If there was already an
+  // implicit job created (from a previous connection) re-use it since there
+  // will be settings on it about what processes to attach to that we want to
+  // preserve.
+  JobContextImpl* implicit_job = nullptr;
+  for (auto& job : job_contexts_) {
+    if (job->is_implicit_component_root()) {
+      implicit_job = job.get();
+      break;
+    }
+  }
+  if (!implicit_job) {
+    // No previous one, create a new implicit job.
+    auto new_job = std::make_unique<JobContextImpl>(this, true);
+    implicit_job = new_job.get();
+    AddNewJobContext(std::move(new_job));
+  }
+  implicit_job->AttachToComponentRoot(
+      [](fxl::WeakPtr<JobContext>, const Err&) {});
 }
 
 void SystemImpl::DidDisconnect() {
   for (auto& target : targets_)
     target->ImplicitlyDetach();
+  for (auto& job : job_contexts_)
+    job->ImplicitlyDetach();
 }
 
 BreakpointImpl* SystemImpl::BreakpointImplForId(uint32_t id) {

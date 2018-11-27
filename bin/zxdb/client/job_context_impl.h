@@ -18,11 +18,20 @@ class SystemImpl;
 class JobContextImpl : public JobContext, public SettingStoreObserver {
  public:
   // The system owns this object and will outlive it.
-  explicit JobContextImpl(SystemImpl* system);
+  JobContextImpl(SystemImpl* system, bool is_implicit_component_root);
+
   ~JobContextImpl() override;
 
   SystemImpl* system() { return system_; }
   JobImpl* job() { return job_.get(); }
+
+  // The implicit component root job is one created automatically on
+  // startup that's attached to the component root. This job will be
+  // automatically reconnected if the connect is reconnected.
+  //
+  // If the job is explicitly detached, this flag will be cleared (because the
+  // user is taking responsibility for where it's attached).
+  bool is_implicit_component_root() const { return is_implicit_component_root_; }
 
   // Allocates a new job_context with the same settings as this one. This isn't
   // a real copy, because any job information is not cloned.
@@ -55,6 +64,7 @@ class JobContextImpl : public JobContext, public SettingStoreObserver {
   // Associated job if there is one.
   std::unique_ptr<JobImpl> job_;
   std::vector<std::string> filters_;
+  bool is_implicit_component_root_;
 
   fxl::WeakPtrFactory<JobContextImpl> impl_weak_factory_;
 

@@ -18,8 +18,12 @@
 
 namespace zxdb {
 
-JobContextImpl::JobContextImpl(SystemImpl* system)
-    : JobContext(system->session()), system_(system), impl_weak_factory_(this) {
+JobContextImpl::JobContextImpl(SystemImpl* system,
+                               bool is_implicit_component_root)
+    : JobContext(system->session()),
+      system_(system),
+      is_implicit_component_root_(is_implicit_component_root),
+      impl_weak_factory_(this) {
   settings_.AddObserver(ClientSettings::Job::kFilters, this);
 }
 
@@ -30,13 +34,12 @@ JobContextImpl::~JobContextImpl() {
 }
 
 std::unique_ptr<JobContextImpl> JobContextImpl::Clone(SystemImpl* system) {
-  auto result = std::make_unique<JobContextImpl>(system);
-  return result;
+  return std::make_unique<JobContextImpl>(system, false);
 }
 
 void JobContextImpl::ImplicitlyDetach() {
   if (GetJob())
-    OnDetachReply(Err(), 0, nullptr);
+    OnDetachReply(Err(), 0, [](fxl::WeakPtr<JobContext>, const Err&) {});
 }
 
 JobContext::State JobContextImpl::GetState() const { return state_; }
@@ -86,8 +89,7 @@ void JobContextImpl::OnAttachReply(Callback callback, const Err& err,
     job_ = std::make_unique<JobImpl>(this, koid, job_name);
   }
 
-  if (callback)
-    callback(GetWeakPtr(), issue_err);
+  callback(GetWeakPtr(), issue_err);
 }
 
 void JobContextImpl::AttachInternal(debug_ipc::AttachRequest::Type type,
@@ -95,7 +97,7 @@ void JobContextImpl::AttachInternal(debug_ipc::AttachRequest::Type type,
   if (state_ != State::kNone) {
     // Avoid reentering caller to dispatch the error.
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [callback, weak_ptr = GetWeakPtr()]() {
+        FROM_HERE, [ callback, weak_ptr = GetWeakPtr() ]() {
           callback(std::move(weak_ptr),
                    Err("Can't attach, job is already running or starting."));
         });
@@ -108,7 +110,7 @@ void JobContextImpl::AttachInternal(debug_ipc::AttachRequest::Type type,
   request.koid = koid;
   request.type = type;
   session()->remote_api()->Attach(
-      request, [callback, weak_job_context = impl_weak_factory_.GetWeakPtr()](
+      request, [ callback, weak_job_context = impl_weak_factory_.GetWeakPtr() ](
                    const Err& err, debug_ipc::AttachReply reply) {
         OnAttachReplyThunk(std::move(weak_job_context), std::move(callback),
                            err, reply.koid, reply.status, reply.name);
@@ -126,27 +128,32 @@ void JobContextImpl::AttachToComponentRoot(Callback callback) {
 void JobContextImpl::Detach(Callback callback) {
   if (!job_.get()) {
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [callback, weak_ptr = GetWeakPtr()]() {
+        FROM_HERE, [ callback, weak_ptr = GetWeakPtr() ]() {
           callback(std::move(weak_ptr), Err("Error detaching: No job."));
         });
     return;
   }
 
+  // This job could have been the one automatically created to watch the
+  // component root. If the user explicitly detaches it, the user is taking
+  // control over what job it's attached to so we don't want to track it
+  // implicitly any more.
+  is_implicit_component_root_ = false;
+
   debug_ipc::DetachRequest request;
   request.koid = job_->GetKoid();
   request.type = debug_ipc::DetachRequest::Type::kJob;
-  session()->remote_api()->Detach(
-      request, [callback, weak_job_context = impl_weak_factory_.GetWeakPtr()](
-                   const Err& err, debug_ipc::DetachReply reply) {
-        if (weak_job_context) {
-          weak_job_context->OnDetachReply(err, reply.status,
-                                          std::move(callback));
-        } else {
-          // The reply that the process was launched came after the local
-          // objects were destroyed. We're still OK to dispatch either way.
-          callback(weak_job_context, err);
-        }
-      });
+  session()->remote_api()->Detach(request, [
+    callback, weak_job_context = impl_weak_factory_.GetWeakPtr()
+  ](const Err& err, debug_ipc::DetachReply reply) {
+    if (weak_job_context) {
+      weak_job_context->OnDetachReply(err, reply.status, std::move(callback));
+    } else {
+      // The reply that the process was launched came after the local
+      // objects were destroyed. We're still OK to dispatch either way.
+      callback(weak_job_context, err);
+    }
+  });
 }
 
 void JobContextImpl::SendAndUpdateFilters(std::vector<std::string> filters,
@@ -162,7 +169,7 @@ void JobContextImpl::SendAndUpdateFilters(std::vector<std::string> filters,
   request.job_koid = job_->GetKoid();
   request.filters = filters;
   session()->remote_api()->JobFilter(
-      request, [filters, weak_job_context = impl_weak_factory_.GetWeakPtr()](
+      request, [ filters, weak_job_context = impl_weak_factory_.GetWeakPtr() ](
                    const Err& err, debug_ipc::JobFilterReply reply) {
         if (reply.status != 0) {
           printf("Error adding filter, error: %s.",
@@ -207,8 +214,7 @@ void JobContextImpl::OnDetachReply(const Err& err, uint32_t status,
     job_.release();
   }
 
-  if (callback)
-    callback(GetWeakPtr(), issue_err);
+  callback(GetWeakPtr(), issue_err);
 }
 
 }  // namespace zxdb

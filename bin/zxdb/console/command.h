@@ -196,8 +196,7 @@ class Command {
   // thread/etc. will be reflected here, and anything that wasn't explicit
   // will inherit the default.
   Target* target_ = nullptr;  // Guaranteed non-null for valid commands.
-  // Guaranteed non-null for valid commands.
-  JobContext* job_context_ = nullptr;
+  JobContext* job_context_ = nullptr;  // May be null.
   Thread* thread_ = nullptr;  // Will be null if not running.
   Frame* frame_ = nullptr;    // Will be null if no valid thread stopped.
   Breakpoint* breakpoint_ = nullptr;  // May be null.

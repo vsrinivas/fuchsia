@@ -137,9 +137,8 @@ Err DoHelp(ConsoleContext* context, const Command& cmd) {
       help = verbs.find(found_string_verb->second)->second.help;
     } else {
       // Not a valid command.
-      out.OutputErr(Err("\"" + on_what +
-                        "\" is not a valid command.\n"
-                        "Try just \"help\" to get a list."));
+      out.OutputErr(Err("\"" + on_what + "\" is not a valid command.\n"
+                                         "Try just \"help\" to get a list."));
       Console::get()->Output(std::move(out));
       return Err();
     }
@@ -241,7 +240,6 @@ Err DoConnect(ConsoleContext* context, const Command& cmd,
     } else {
       OutputBuffer msg;
       msg.Append("Connected successfully.\n");
-      cmd.job_context()->AttachToComponentRoot(nullptr);
 
       // Assume if there's a callback this is not being run interactively.
       // Otherwise, show the usage tip.
@@ -664,7 +662,7 @@ Err DoSet(ConsoleContext* context, const Command& cmd) {
   if (cmd.args().size() < 2) {
     return Err("Wrong amount of Arguments. See \"help set\".");
   }
-const std::string& setting_name = cmd.args()[0];
+  const std::string& setting_name = cmd.args()[0];
   // TODO(donosoc): Support multi word strings.
   const std::string& value = cmd.args()[1];
 
@@ -695,7 +693,6 @@ const std::string& setting_name = cmd.args()[0];
     store = job_context ? &job_context->settings() : nullptr;
     element_id = cmd.GetNounIndex(Noun::kJob);
   }
-
 
   if (!store) {
     // We didn't found an explicit specified store, so we lookup in the current
