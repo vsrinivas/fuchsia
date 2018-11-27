@@ -29,7 +29,7 @@ runbench_exec "${OUT_DIR}/zircon_benchmarks.json" \
     /pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks \
     -p --out="${OUT_DIR}/zircon_benchmarks.json"
 
-if `run vulkan_is_supported`; then
+if `/pkgfs/packages/run/0/bin/run vulkan_is_supported`; then
   # Run the gfx benchmarks in the current shell environment, because they write
   # to (hidden) global state used by runbench_finish.
   . /pkgfs/packages/garnet_benchmarks/0/bin/gfx_benchmarks.sh "$@"
