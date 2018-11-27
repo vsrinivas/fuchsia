@@ -151,6 +151,10 @@ int main(int argc, char** argv) {
         if ((strcmp(de->d_name, ".") == 0) || (strcmp(de->d_name, "..") == 0)) {
             continue;
         }
+        // Don't try to bind the fake sysdev
+        if (strcmp(de->d_name, "sysdev.so") == 0) {
+            continue;
+        }
         test_ioctl_test_report_t one_report;
         memset(&one_report, 0, sizeof(one_report));
         do_one_test(fd, de->d_name, socket[1], &one_report);
