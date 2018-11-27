@@ -118,7 +118,7 @@ There are some cases when a third dot is appropriate, but those cases are rare.
 If you use more than two dots, you should have a specific reason for that
 choice.
 
-Prefer to introduce dependencies from more libraries with more specific names to
+Prefer to introduce dependencies from libraries with more specific names to
 libraries with less specific names rather than the reverse.  For example,
 `fuchsia.foo.bar` might depend on `fuchsia.foo`, but `fuchsia.foo` should not
 depend on `fuchsia.foo.bar`.  This pattern is better for extensibility because
@@ -629,7 +629,7 @@ guide your decision making:
 In FIDL, `string` data must be valid UTF-8, which means strings can represent
 sequences of Unicode code points but cannot represent arbitrary binary data.  In
 contrast, `vector` or `array` can represent arbitrary binary data and do not
-implicate Unicode.
+imply Unicode.
 
 Use `string` for text data:
 
@@ -721,7 +721,7 @@ to represent media codec names because intermediaries might be able to do
 something reasonable with a novel media code name.
 
 If the set of enumerated values is controlled by an external entity, use an
-integer (of an appropriate size) or a `string`.  For example, use an integer (or
+integer (of an appropriate size) or a `string`.  For example, use an integer (of
 some size) to represent USB HID identifiers because the set of USB HID
 identifiers is controlled by an industry consortium.  Similarly, use a `string`
 to represent a MIME type because MIME types are controlled (at least in theory)
