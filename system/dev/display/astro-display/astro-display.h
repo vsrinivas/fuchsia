@@ -29,7 +29,6 @@
 #include <bitmap/storage.h>
 #include "vpu.h"
 #include "osd.h"
-#include "backlight.h"
 #include "astro-clock.h"
 #include "aml-dsi-host.h"
 #include "common.h"
@@ -135,7 +134,6 @@ private:
     // Objects
     fbl::unique_ptr<astro_display::Vpu>                 vpu_;
     fbl::unique_ptr<astro_display::Osd>                 osd_;
-    fbl::unique_ptr<astro_display::Backlight>           backlight_;
     fbl::unique_ptr<astro_display::AstroDisplayClock>   clock_;
     fbl::unique_ptr<astro_display::AmlDsiHost>          dsi_host_;
 };

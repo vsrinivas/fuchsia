@@ -373,21 +373,6 @@ zx_status_t AstroDisplay::SetupDisplayInterface() {
         return status;
     }
 
-    /// Backlight
-    backlight_ = fbl::make_unique_checked<astro_display::Backlight>(&ac);
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-    // Initiazlize backlight object
-    status = backlight_->Init(parent_);
-    if (status != ZX_OK) {
-        DISP_ERROR("Could not initialize Backlight object\n");
-        return status;
-    }
-
-    // Turn on backlight
-    backlight_->Enable();
-
     {
         // Reset imported_images_ bitmap
         fbl::AutoLock lock(&image_lock_);

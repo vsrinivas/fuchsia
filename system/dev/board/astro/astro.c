@@ -107,6 +107,11 @@ static int aml_start_thread(void* arg) {
         goto fail;
     }
 
+    if ((status = astro_backlight_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "astro_backlight_init failed: %d\n", status);
+        goto fail;
+    }
+
     if ((status = aml_display_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "aml_display_init failed: %d\n", status);
         goto fail;

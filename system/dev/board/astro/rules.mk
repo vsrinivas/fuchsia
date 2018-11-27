@@ -26,6 +26,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/astro-audio.c \
     $(LOCAL_DIR)/astro-tee.c \
     $(LOCAL_DIR)/astro-buttons.c \
+    $(LOCAL_DIR)/astro-backlight.c \
 
 MODULE_STATIC_LIBS := \
     system/dev/lib/amlogic \

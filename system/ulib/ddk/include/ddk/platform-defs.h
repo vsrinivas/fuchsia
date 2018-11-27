@@ -153,4 +153,9 @@ __BEGIN_CDECLS;
 #define PDEV_VID_HISILICON          15
 #define PDEV_PID_CORNEL             1
 
+// Texas Instruments
+#define PDEV_VID_TI                 16
+#define PDEV_PID_TI_LP8556          1
+#define PDEV_DID_TI_BACKLIGHT       1
+
 __END_CDECLS;

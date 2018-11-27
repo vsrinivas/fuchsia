@@ -11,7 +11,6 @@ MODULE_TYPE := driver
 MODULE_SRCS += \
     $(LOCAL_DIR)/bind.c \
     $(LOCAL_DIR)/osd.cpp \
-    $(LOCAL_DIR)/backlight.cpp \
     $(LOCAL_DIR)/astro-clock.cpp \
     $(LOCAL_DIR)/dw-mipi-dsi.cpp \
     $(LOCAL_DIR)/aml-mipi-phy.cpp \
