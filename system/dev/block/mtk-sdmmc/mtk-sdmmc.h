@@ -16,6 +16,7 @@
 #include <fbl/auto_lock.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/interrupt.h>
+#include <soc/mt8167/mt8167-sdmmc.h>
 #include <zircon/thread_annotations.h>
 
 #include <utility>
@@ -68,10 +69,10 @@ public:
 private:
     MtkSdmmc(zx_device_t* parent, ddk::MmioBuffer mmio, zx::bti bti, const sdmmc_host_info_t& info,
              zx::interrupt irq, const ddk::GpioProtocolProxy& reset_gpio,
-             const pdev_device_info_t& dev_info)
+             const pdev_device_info_t& dev_info, const board_mt8167::MtkSdmmcConfig& config)
         : DeviceType(parent), mmio_(std::move(mmio)), bti_(std::move(bti)), info_(info),
           irq_(std::move(irq)), req_(nullptr), cmd_status_(ZX_OK), reset_gpio_(reset_gpio),
-          dev_info_(dev_info) {}
+          dev_info_(dev_info), config_(config) {}
 
     zx_status_t Init();
 
@@ -118,6 +119,7 @@ private:
     zx_status_t cmd_status_ TA_GUARDED(mutex_);
     ddk::GpioProtocolProxy reset_gpio_;
     const pdev_device_info_t dev_info_;
+    const board_mt8167::MtkSdmmcConfig config_;
 };
 
 // TuneWindow keeps track of the results of a series of tuning tests. It is expected that either

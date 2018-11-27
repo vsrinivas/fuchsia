@@ -25,7 +25,6 @@
 
 namespace {
 
-constexpr uint32_t kMsdcSrcCkFreq = 188000000;
 constexpr uint32_t kIdentificationModeBusFreq = 400000;
 constexpr int kTuningDelayIterations = 4;
 
@@ -113,11 +112,10 @@ zx_status_t MtkSdmmc::Create(zx_device_t* parent) {
 
     ddk::MmioBuffer mmio_obj(mmio);
 
-    uint32_t fifo_depth;
+    board_mt8167::MtkSdmmcConfig config;
     size_t actual;
-    status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &fifo_depth, sizeof(fifo_depth),
-                                 &actual);
-    if (status != ZX_OK || actual != sizeof(fifo_depth)) {
+    status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &config, sizeof(config), &actual);
+    if (status != ZX_OK || actual != sizeof(config)) {
         zxlogf(ERROR, "%s: DdkGetMetadata failed\n", __FILE__);
         return status;
     }
@@ -125,8 +123,9 @@ zx_status_t MtkSdmmc::Create(zx_device_t* parent) {
     sdmmc_host_info_t info = {
         .caps = SDMMC_HOST_CAP_BUS_WIDTH_8 | SDMMC_HOST_CAP_AUTO_CMD12 | SDMMC_HOST_CAP_ADMA2,
         .max_transfer_size = BLOCK_MAX_TRANSFER_UNBOUNDED,
-        .max_transfer_size_non_dma = fifo_depth,
-        // TODO(bradenkell): Remove this once HS400 has been tested.
+        .max_transfer_size_non_dma = config.fifo_depth,
+        // The datasheet claims that MSDC0 supports EMMC4.5 (and HS400), however there does not
+        // appear to be a data strobe input pin on the chip.
         .prefs = SDMMC_HOST_PREFS_DISABLE_HS400
     };
 
@@ -155,8 +154,8 @@ zx_status_t MtkSdmmc::Create(zx_device_t* parent) {
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<MtkSdmmc> device(new (&ac) MtkSdmmc(parent, std::move(mmio_obj), std::move(bti),
-                                                        info, std::move(irq), reset_gpio,
-                                                        dev_info));
+                                                        info, std::move(irq), reset_gpio, dev_info,
+                                                        config));
 
     if (!ac.check()) {
         zxlogf(ERROR, "%s: MtkSdmmc alloc failed\n", __FILE__);
@@ -267,8 +266,8 @@ zx_status_t MtkSdmmc::SdmmcSetBusFreq(uint32_t bus_freq) {
     uint32_t requested = is_ddr ? bus_freq * 2 : bus_freq;
 
     // Round the divider up, i.e. to a lower frequency.
-    uint32_t ck_div = (((kMsdcSrcCkFreq / requested) + 3) / 4);
-    if (requested >= kMsdcSrcCkFreq / 2) {
+    uint32_t ck_div = (((config_.src_clk_freq / requested) + 3) / 4);
+    if (requested >= config_.src_clk_freq / 2) {
         ck_div = 0;
     } else if (ck_div > 0xff) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -277,9 +276,10 @@ zx_status_t MtkSdmmc::SdmmcSetBusFreq(uint32_t bus_freq) {
     msdc_cfg.set_ck_pwr_down(0).WriteTo(&mmio_);
 
     if (ck_mode == MsdcCfg::kCardCkModeHs400) {
-        hs400_ck_mode = requested >= kMsdcSrcCkFreq ? 1 : 0;
+        hs400_ck_mode = requested >= config_.src_clk_freq ? 1 : 0;
     } else if (!is_ddr) {
-        ck_mode = requested >= kMsdcSrcCkFreq ? MsdcCfg::kCardCkModeNoDiv : MsdcCfg::kCardCkModeDiv;
+        ck_mode = requested >= config_.src_clk_freq ? MsdcCfg::kCardCkModeNoDiv
+                                                    : MsdcCfg::kCardCkModeDiv;
     }
 
     msdc_cfg.set_hs400_ck_mode(hs400_ck_mode)

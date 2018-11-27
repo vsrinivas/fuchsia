@@ -13,6 +13,7 @@
 #include <fbl/algorithm.h>
 #include <hwreg/bitfields.h>
 #include <soc/mt8167/mt8167-hw.h>
+#include <soc/mt8167/mt8167-sdmmc.h>
 
 #include "mt8167.h"
 
@@ -31,6 +32,7 @@ constexpr size_t kGpioSizeAligned = fbl::round_up<size_t, size_t>(
     kGpioOffset + MT8167_MSDC2_GPIO_SIZE, PAGE_SIZE);
 
 constexpr uint32_t kFifoDepth = 128;
+constexpr uint32_t kSrcClkFreq = 188000000;
 
 }  // namespace
 
@@ -79,12 +81,16 @@ zx_status_t Mt8167::SdioInit() {
         }
     };
 
-    uint32_t fifo_depth = kFifoDepth;
+    static const MtkSdmmcConfig sdio_config = {
+        .fifo_depth = kFifoDepth,
+        .src_clk_freq = kSrcClkFreq
+    };
+
     static const pbus_metadata_t sdio_metadata[] = {
         {
             .type = DEVICE_METADATA_PRIVATE,
-            .data_buffer = &fifo_depth,
-            .data_size = sizeof(fifo_depth)
+            .data_buffer = &sdio_config,
+            .data_size = sizeof(sdio_config)
         }
     };
 
@@ -117,12 +123,14 @@ zx_status_t Mt8167::SdioInit() {
     sdio_dev.gpio_list = sdio_gpios;
     sdio_dev.gpio_count = countof(sdio_gpios);
 
-    zx::resource root_resource(get_root_resource());
+    zx::unowned_resource root_resource(get_root_resource());
     std::optional<ddk::MmioBuffer> gpio_mmio;
-    zx_status_t status = ddk::MmioBuffer::Create(kGpioBaseAligned, kGpioSizeAligned, root_resource,
+    zx_status_t status = ddk::MmioBuffer::Create(kGpioBaseAligned, kGpioSizeAligned, *root_resource,
                                                  ZX_CACHE_POLICY_UNCACHED_DEVICE, &gpio_mmio);
-    // We don't own the root resource; release the handle to prevent it from getting closed.
-    __UNUSED auto dummy = root_resource.release();
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: Failed to set MSDC2 GPIOs: %d\n", __FUNCTION__, status);
+        return status;
+    }
 
     // MSDC2 pins are not configured by the bootloader. Set the clk pin to 50k pull-down, all others
     // to 10k pull-up to match the device tree settings.
@@ -147,7 +155,7 @@ zx_status_t Mt8167::SdioInit() {
         .WriteTo(&(*gpio_mmio));
 
     if ((status = pbus_.DeviceAdd(&sdio_dev)) != ZX_OK) {
-        zxlogf(ERROR, "%s: DeviceAdd MSDC2 failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: DeviceAdd MSDC2 failed: %d\n", __FUNCTION__, status);
     }
 
     return status;

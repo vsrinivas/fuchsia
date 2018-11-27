@@ -9,17 +9,35 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <fbl/algorithm.h>
+#include <hwreg/bitfields.h>
 #include <soc/mt8167/mt8167-hw.h>
+#include <soc/mt8167/mt8167-sdmmc.h>
 
 #include "mt8167.h"
 
 namespace {
 
+constexpr uintptr_t kClkBaseAligned =
+    fbl::round_down<uintptr_t, uintptr_t>(MT8167_MSDC0_CLK_MUX_BASE, PAGE_SIZE);
+constexpr size_t kClkOffset = MT8167_MSDC0_CLK_MUX_BASE - kClkBaseAligned;
+constexpr size_t kClkSizeAligned = fbl::round_up<size_t, size_t>(
+    kClkOffset + MT8167_MSDC0_CLK_MUX_SIZE, PAGE_SIZE);
+
 constexpr uint32_t kFifoDepth = 128;
+constexpr uint32_t kSrcClkFreq = 190000000;
 
 }  // namespace
 
 namespace board_mt8167 {
+
+class ClkMuxSel0 : public hwreg::RegisterBase<ClkMuxSel0, uint32_t> {
+public:
+    static constexpr uint32_t kClkMmPllDiv2 = 7;
+
+    static auto Get() { return hwreg::RegisterAddr<ClkMuxSel0>(kClkOffset); }
+
+    DEF_FIELD(13, 11, msdc0_mux_sel);
+};
 
 zx_status_t Mt8167::EmmcInit() {
     static const pbus_mmio_t emmc_mmios[] = {
@@ -36,7 +54,10 @@ zx_status_t Mt8167::EmmcInit() {
         }
     };
 
-    uint32_t fifo_depth = kFifoDepth;
+    static const MtkSdmmcConfig emmc_config = {
+        .fifo_depth = kFifoDepth,
+        .src_clk_freq = kSrcClkFreq
+    };
 
     static const guid_map_t guid_map[] = {
         { "boot_a", GUID_ZIRCON_A_VALUE },
@@ -50,8 +71,8 @@ zx_status_t Mt8167::EmmcInit() {
     static const pbus_metadata_t emmc_metadata[] = {
         {
             .type = DEVICE_METADATA_PRIVATE,
-            .data_buffer = &fifo_depth,
-            .data_size = sizeof(fifo_depth)
+            .data_buffer = &emmc_config,
+            .data_size = sizeof(emmc_config)
         },
         {
             .type = DEVICE_METADATA_GUID_MAP,
@@ -89,9 +110,23 @@ zx_status_t Mt8167::EmmcInit() {
     emmc_dev.gpio_list = emmc_gpios;
     emmc_dev.gpio_count = countof(emmc_gpios);
 
-    zx_status_t status = pbus_.DeviceAdd(&emmc_dev);
+    // TODO(bradenkell): Have the clock driver do this once muxing is supported.
+    zx::unowned_resource root_resource(get_root_resource());
+    std::optional<ddk::MmioBuffer> clk_mmio;
+    zx_status_t status = ddk::MmioBuffer::Create(kClkBaseAligned, kClkSizeAligned, *root_resource,
+                                                 ZX_CACHE_POLICY_UNCACHED_DEVICE, &clk_mmio);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: DeviceAdd MSDC0 failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: Failed to mux MSDC0 clock: %d\n", __FUNCTION__, status);
+        return status;
+    }
+
+    auto clk_sel = ClkMuxSel0::Get().ReadFrom(&(*clk_mmio));
+
+    // The closest we can get to 200 MHz is MMPLL/2, which is 190 MHz using the default settings.
+    clk_sel.set_msdc0_mux_sel(ClkMuxSel0::kClkMmPllDiv2).WriteTo(&(*clk_mmio));
+
+    if ((status = pbus_.DeviceAdd(&emmc_dev)) != ZX_OK) {
+        zxlogf(ERROR, "%s: DeviceAdd MSDC0 failed: %d\n", __FUNCTION__, status);
     }
 
     return status;
