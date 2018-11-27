@@ -11,10 +11,21 @@ MODULE_TYPE := usertest
 MODULE_USERTEST_GROUP := ddk
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/main.c
+    $(LOCAL_DIR)/main.cpp
 
 MODULE_NAME := driver-tests
 
-MODULE_LIBS := system/ulib/fdio system/ulib/c system/ulib/zircon system/ulib/unittest
+MODULE_STATIC_LIBS := \
+	system/ulib/fbl \
+	system/ulib/zx \
+	system/ulib/zxcpp \
+
+MODULE_LIBS := \
+	system/ulib/c \
+	system/ulib/devmgr-integration-test \
+	system/ulib/devmgr-launcher \
+	system/ulib/fdio \
+	system/ulib/unittest \
+	system/ulib/zircon \
 
 include make/module.mk

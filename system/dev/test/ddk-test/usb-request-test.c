@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <limits.h>
+
 #include <ddk/protocol/usb.h>
+#include <lib/fake-bti/bti.h>
 #include <usb/usb-request.h>
 #include <unittest/unittest.h>
 #include <zircon/syscalls/iommu.h>
-
-extern zx_handle_t get_root_resource(void);
 
 static bool test_alloc_zero_size_request(void) {
     BEGIN_TEST;
@@ -19,12 +19,8 @@ static bool test_alloc_zero_size_request(void) {
 
 static bool test_alloc_simple(void) {
     BEGIN_TEST;
-    zx_handle_t iommu_handle;
     zx_handle_t bti_handle;
-    zx_iommu_desc_dummy_t desc;
-    ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
-                              &iommu_handle), ZX_OK, "");
-    ASSERT_EQ(zx_bti_create(iommu_handle, 0, 0, &bti_handle), ZX_OK, "");
+    ASSERT_EQ(fake_bti_create(&bti_handle), ZX_OK, "");
 
     usb_request_t* req;
     ASSERT_EQ(usb_request_alloc(&req, PAGE_SIZE * 3, 1, sizeof(usb_request_t)), ZX_OK, "");
@@ -36,17 +32,12 @@ static bool test_alloc_simple(void) {
     ASSERT_EQ(req->phys_count, 3u, "unexpected phys count");
 
     usb_request_release(req);
-    zx_handle_close(bti_handle);
-    zx_handle_close(iommu_handle);
+    fake_bti_destroy(bti_handle);
     END_TEST;
 }
 
 static bool test_alloc_vmo(void) {
     BEGIN_TEST;
-    zx_handle_t iommu_handle;
-    zx_iommu_desc_dummy_t desc;
-    ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
-                              &iommu_handle), ZX_OK, "");
     zx_handle_t vmo;
     ASSERT_EQ(zx_vmo_create(PAGE_SIZE * 4, 0, &vmo), ZX_OK, "");
 
@@ -68,16 +59,11 @@ static bool test_alloc_vmo(void) {
     free(data);
     free(out_data);
     usb_request_release(req);
-    zx_handle_close(iommu_handle);
     END_TEST;
 }
 
 static bool test_pool(void) {
     BEGIN_TEST;
-    zx_handle_t iommu_handle;
-    zx_iommu_desc_dummy_t desc;
-    ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
-                              &iommu_handle), ZX_OK, "");
     usb_request_t* req;
     uint64_t req_size = sizeof(usb_request_t) + sizeof(usb_req_internal_t);
     ASSERT_EQ(usb_request_alloc(&req, 8u, 1, req_size), ZX_OK, "");
@@ -101,18 +87,13 @@ static bool test_pool(void) {
 
     usb_request_release(req);
     usb_request_release(zero_req);
-    zx_handle_close(iommu_handle);
     END_TEST;
 }
 
 static bool test_phys_iter(void) {
     BEGIN_TEST;
-    zx_handle_t iommu_handle;
     zx_handle_t bti_handle;
-    zx_iommu_desc_dummy_t desc;
-    ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
-                              &iommu_handle), ZX_OK, "");
-    ASSERT_EQ(zx_bti_create(iommu_handle, 0, 0, &bti_handle), ZX_OK, "");
+    ASSERT_EQ(fake_bti_create(&bti_handle), ZX_OK, "");
 
     phys_iter_t iter;
     usb_request_t* req;
@@ -197,7 +178,7 @@ static bool test_phys_iter(void) {
     ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
     usb_request_release(req);
-    zx_handle_close(iommu_handle);
+    fake_bti_destroy(bti_handle);
     END_TEST;
 }
 

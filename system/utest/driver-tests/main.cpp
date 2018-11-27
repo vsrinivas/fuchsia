@@ -12,6 +12,10 @@
 #include <errno.h>
 #include <threads.h>
 
+#include <fbl/unique_fd.h>
+#include <fbl/unique_ptr.h>
+#include <lib/devmgr-integration-test/fixture.h>
+#include <lib/zx/time.h>
 #include <zircon/syscalls.h>
 #include <zircon/device/device.h>
 #include <zircon/device/test.h>
@@ -19,9 +23,15 @@
 
 #define DRIVER_TEST_DIR "/boot/driver/test"
 
-static void do_one_test(int tfd, const char* drv_libname, zx_handle_t output, test_ioctl_test_report_t* report) {
+using devmgr_integration_test::IsolatedDevmgr;
+
+namespace {
+
+void do_one_test(const fbl::unique_ptr<IsolatedDevmgr>& devmgr, const fbl::unique_fd& tfd,
+                 const char* drv_libname, zx_handle_t output, test_ioctl_test_report_t* report) {
     char devpath[1024];
-    ssize_t rc = ioctl_test_create_device(tfd, drv_libname, strlen(drv_libname) + 1, devpath, sizeof(devpath));
+    ssize_t rc = ioctl_test_create_device(tfd.get(), drv_libname, strlen(drv_libname) + 1, devpath,
+                                          sizeof(devpath));
     if (rc < 0) {
         printf("driver-tests: error %zd creating device for %s\n", rc, drv_libname);
         report->n_tests = 1;
@@ -29,14 +39,24 @@ static void do_one_test(int tfd, const char* drv_libname, zx_handle_t output, te
         return;
     }
 
+    const char* kDevPrefix = "/dev/";
+    if (strncmp(devpath, kDevPrefix, strlen(kDevPrefix))) {
+        printf("driver-tests: bad path when creating device for %s: %s\n", drv_libname, devpath);
+        report->n_tests = 1;
+        report->n_failed = 1;
+        return;
+    }
+
+    const char* relative_devpath = devpath + strlen(kDevPrefix);
+
     // TODO some waiting needed before opening..,
     usleep(1000);
 
-    int fd;
+    fbl::unique_fd fd;
     int retry = 0;
     do {
-        fd = open(devpath, O_RDWR);
-        if (fd >= 0) {
+        fd.reset(openat(devmgr->devfs_root().get(), relative_devpath, O_RDWR));
+        if (fd.is_valid()) {
             break;
         }
         usleep(1000);
@@ -46,17 +66,20 @@ static void do_one_test(int tfd, const char* drv_libname, zx_handle_t output, te
         printf("driver-tests: failed to open %s\n", devpath);
         report->n_tests = 1;
         report->n_failed = 1;
-        goto end_device_created;
+        ioctl_test_destroy_device(fd.get());
+        return;
     }
 
     char libpath[PATH_MAX];
     int n = snprintf(libpath, sizeof(libpath), "%s/%s", DRIVER_TEST_DIR, drv_libname);
-    rc = ioctl_device_bind(fd, libpath, n);
+    rc = ioctl_device_bind(fd.get(), libpath, n);
     if (rc < 0) {
         printf("driver-tests: error %zd binding to %s\n", rc, libpath);
         report->n_tests = 1;
         report->n_failed = 1;
-        goto end_device_opened;
+        // TODO(teisenbe): I think ioctl_test_destroy_device() should be called
+        // here?
+        return;
     }
 
     zx_handle_t h;
@@ -65,25 +88,24 @@ static void do_one_test(int tfd, const char* drv_libname, zx_handle_t output, te
         printf("driver-tests: error %d duplicating output socket\n", status);
         report->n_tests = 1;
         report->n_failed = 1;
-        goto end_device_opened;
+        // TODO(teisenbe): I think ioctl_test_destroy_device() should be called
+        // here?
+        return;
     }
 
-    ioctl_test_set_output_socket(fd, &h);
+    ioctl_test_set_output_socket(fd.get(), &h);
 
-    rc = ioctl_test_run_tests(fd, NULL, 0, report);
+    rc = ioctl_test_run_tests(fd.get(), NULL, 0, report);
     if (rc < 0) {
         printf("driver-tests: error %zd running tests\n", rc);
         report->n_tests = 1;
         report->n_failed = 1;
     }
 
-end_device_created:
-    ioctl_test_destroy_device(fd);
-end_device_opened:
-    close(fd);
+    ioctl_test_destroy_device(fd.get());
 }
 
-static int output_thread(void* arg) {
+int output_thread(void* arg) {
     zx_handle_t h = *(zx_handle_t*)arg;
     char buf[1024];
     for (;;) {
@@ -108,17 +130,31 @@ static int output_thread(void* arg) {
     return 0;
 }
 
+} // namespace
+
 int main(int argc, char** argv) {
+    auto args = IsolatedDevmgr::DefaultArgs();
+
+    fbl::unique_ptr<IsolatedDevmgr> devmgr;
+    zx_status_t status = IsolatedDevmgr::Create(args, &devmgr);
+    if (status != ZX_OK) {
+        printf("driver-tests: failed to create isolated devmgr\n");
+        return -1;
+    }
+
     zx_handle_t socket[2];
-    zx_status_t status = zx_socket_create(0u, socket, socket + 1);
+    status = zx_socket_create(0u, socket, socket + 1);
     if (status != ZX_OK) {
         printf("driver-tests: error creating socket\n");
         return -1;
     }
 
-    int fd = open(TEST_CONTROL_DEVICE, O_RDWR);
-    if (fd < 0) {
-        printf("driver-tests: no %s device found\n", TEST_CONTROL_DEVICE);
+    // Wait for /dev/test/test to appear
+    fbl::unique_fd fd;
+    status = devmgr_integration_test::RecursiveWaitForFile(devmgr->devfs_root(), "test/test",
+                                                           zx::deadline_after(zx::sec(5)), &fd);
+    if (status != ZX_OK) {
+        printf("driver-tests: failed to find /dev/test/test\n");
         return -1;
     }
 
@@ -126,7 +162,6 @@ int main(int argc, char** argv) {
     int rc = thrd_create_with_name(&t, output_thread, socket, "driver-test-output");
     if (rc != thrd_success) {
         printf("driver-tests: error %d creating output thread\n", rc);
-        close(fd);
         zx_handle_close(socket[0]);
         zx_handle_close(socket[1]);
         return -1;
@@ -157,12 +192,11 @@ int main(int argc, char** argv) {
         }
         test_ioctl_test_report_t one_report;
         memset(&one_report, 0, sizeof(one_report));
-        do_one_test(fd, de->d_name, socket[1], &one_report);
+        do_one_test(devmgr, fd, de->d_name, socket[1], &one_report);
         final_report.n_tests += one_report.n_tests;
         final_report.n_success += one_report.n_success;
         final_report.n_failed += one_report.n_failed;
     }
-    close(fd);
 
     // close this handle before thrd_join to get PEER_CLOSED in output thread
     zx_handle_close(socket[1]);

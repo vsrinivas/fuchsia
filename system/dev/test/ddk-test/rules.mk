@@ -25,6 +25,7 @@ MODULE_LIBS := \
     system/ulib/driver \
     system/ulib/zircon \
     system/ulib/c \
+    system/dev/lib/fake-bti \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-test \
