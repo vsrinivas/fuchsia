@@ -28,8 +28,9 @@ bool buffer_invariants_hold(const char* buf, size_t size) {
     // to ensure stale data isn't leaked.
     while (idx < size) {
         if (buf[idx] != '\0') {
+            unsigned int byte = buf[idx];
             unittest_printf(
-                "buf[%d] 0x%02x != 0x00\n", idx, buf[idx]);
+                "buf[%u] 0x%02x != 0x00\n", idx, byte);
             return false;
         }
         idx++;

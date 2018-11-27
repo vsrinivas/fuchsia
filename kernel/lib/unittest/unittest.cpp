@@ -163,14 +163,14 @@ static bool run_unittest(const unittest_testcase_registration_t* testcase) {
                    static_cast<int>(max_namelen), test->name ? test->name : "");
         }
 
-        unittest_printf("%s (%" PRIu64 " nSec)\n",
+        unittest_printf("%s (%" PRIi64 " nSec)\n",
                         good ? "PASSED" : "FAILED",
                         test_runtime);
     }
 
     zx_duration_t testcase_runtime = current_time() - testcase_start;
 
-    unittest_printf("%s : %sll tests passed (%zu/%zu) in %" PRIu64 " nSec\n",
+    unittest_printf("%s : %sll tests passed (%zu/%zu) in %" PRIi64 " nSec\n",
                     testcase->name,
                     passed != testcase->test_cnt ? "Not a" : "A",
                     passed, testcase->test_cnt,
@@ -271,7 +271,7 @@ static int run_unittests_locked(int argc, const cmd_args* argv, uint32_t flags) 
         unittest_printf("Test case \"%s\" not found!\n", casename);
         list_cases();
     } else {
-        unittest_printf("SUMMARY: Ran %d test case%s: %d failed\n",
+        unittest_printf("SUMMARY: Ran %zu test case%s: %zu failed\n",
                         chosen, chosen == 1 ? "" : "s", chosen - passed);
         if (passed < chosen) {
             ret = -1;

@@ -28,7 +28,7 @@ static bool pmm_smoke_test() {
 
     zx_status_t status = pmm_alloc_page(0, &page, &pa);
     ASSERT_EQ(ZX_OK, status, "pmm_alloc single page");
-    ASSERT_NE(nullptr, page, "pmm_alloc single page");
+    ASSERT_NONNULL(page, "pmm_alloc single page");
     ASSERT_NE(0u, pa, "pmm_alloc single page");
 
     vm_page_t* page2 = paddr_to_vm_page(pa);
@@ -79,7 +79,7 @@ static bool pmm_alloc_contiguous_one_test() {
     zx_status_t status = pmm_alloc_contiguous(count, 0, PAGE_SIZE_SHIFT, &pa, &list);
     ASSERT_EQ(ZX_OK, status, "pmm_alloc_contiguous returned failure\n");
     ASSERT_EQ(count, list_length(&list), "pmm_alloc_contiguous list size is wrong");
-    ASSERT_NE(nullptr, paddr_to_physmap(pa), "");
+    ASSERT_NONNULL(paddr_to_physmap(pa), "");
     pmm_free(&list);
     END_TEST;
 }
@@ -152,7 +152,7 @@ static bool vmm_alloc_smoke_test() {
     auto err = kaspace->Alloc(
         "test", alloc_size, &ptr, 0, 0, kArchRwFlags);
     ASSERT_EQ(ZX_OK, err, "VmAspace::Alloc region of memory");
-    ASSERT_NE(nullptr, ptr, "VmAspace::Alloc region of memory");
+    ASSERT_NONNULL(ptr, "VmAspace::Alloc region of memory");
 
     // fill with known pattern and test
     if (!fill_and_test(ptr, alloc_size)) {
@@ -178,7 +178,7 @@ static bool vmm_alloc_contiguous_smoke_test() {
                                         alloc_size, &ptr, 0,
                                         VmAspace::VMM_FLAG_COMMIT, kArchRwFlags);
     ASSERT_EQ(ZX_OK, err, "VmAspace::AllocContiguous region of memory");
-    ASSERT_NE(nullptr, ptr, "VmAspace::AllocContiguous region of memory");
+    ASSERT_NONNULL(ptr, "VmAspace::AllocContiguous region of memory");
 
     // fill with known pattern and test
     if (!fill_and_test(ptr, alloc_size)) {
@@ -211,7 +211,7 @@ static bool multiple_regions_test() {
     static const size_t alloc_size = 16 * 1024;
 
     fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test aspace");
-    ASSERT_NE(nullptr, aspace, "VmAspace::Create pointer");
+    ASSERT_NONNULL(aspace, "VmAspace::Create pointer");
 
     vmm_aspace_t* old_aspace = get_current_thread()->aspace;
     vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(aspace.get()));
@@ -219,7 +219,7 @@ static bool multiple_regions_test() {
     // allocate region 0
     zx_status_t err = aspace->Alloc("test0", alloc_size, &ptr, 0, 0, kArchRwFlags);
     ASSERT_EQ(ZX_OK, err, "VmAspace::Alloc region of memory");
-    ASSERT_NE(nullptr, ptr, "VmAspace::Alloc region of memory");
+    ASSERT_NONNULL(ptr, "VmAspace::Alloc region of memory");
 
     // fill with known pattern and test
     if (!fill_and_test(ptr, alloc_size)) {
@@ -229,7 +229,7 @@ static bool multiple_regions_test() {
     // allocate region 1
     err = aspace->Alloc("test1", 16384, &ptr, 0, 0, kArchRwFlags);
     ASSERT_EQ(ZX_OK, err, "VmAspace::Alloc region of memory");
-    ASSERT_NE(nullptr, ptr, "VmAspace::Alloc region of memory");
+    ASSERT_NONNULL(ptr, "VmAspace::Alloc region of memory");
 
     // fill with known pattern and test
     if (!fill_and_test(ptr, alloc_size)) {
@@ -239,7 +239,7 @@ static bool multiple_regions_test() {
     // allocate region 2
     err = aspace->Alloc("test2", 16384, &ptr, 0, 0, kArchRwFlags);
     ASSERT_EQ(ZX_OK, err, "VmAspace::Alloc region of memory");
-    ASSERT_NE(nullptr, ptr, "VmAspace::Alloc region of memory");
+    ASSERT_NONNULL(ptr, "VmAspace::Alloc region of memory");
 
     // fill with known pattern and test
     if (!fill_and_test(ptr, alloc_size)) {

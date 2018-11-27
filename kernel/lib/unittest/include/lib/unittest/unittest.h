@@ -70,7 +70,7 @@ __BEGIN_CDECLS
  * Printf dedicated to the unittest library
  * the default output is the printf
  */
-int unittest_printf(const char* format, ...);
+int unittest_printf(const char* format, ...) __PRINTFLIKE(1, 2);
 
 /*
  * Macros to format the error string
@@ -118,11 +118,12 @@ int unittest_printf(const char* format, ...);
 #define UTCHECK_NE(expected, actual, msg, term)                                \
     do {                                                                       \
         const AUTO_TYPE_VAR(expected) _e = (expected);                         \
-        if (_e == (actual)) {                                                  \
+        const AUTO_TYPE_VAR(actual) _a = (actual);                             \
+        if (_e == (_a)) {                                                      \
             UNITTEST_FAIL_TRACEF(EXPECTED_STRING                               \
                             "%s (%ld), %s"                                     \
                             " to differ, but they are the same %ld\n",         \
-                            msg, #expected, (long)_e, #actual);                \
+                            msg, #expected, (long)_e, #actual, (long)_a);      \
             if (term) return false; else all_ok = false;                       \
         }                                                                      \
     } while (0)
