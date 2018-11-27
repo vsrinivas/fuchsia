@@ -54,16 +54,5 @@ group("no_cmx_whitelist") {
       "//garnet/lib/magma/gnbuild/magma-intel-gen:*",
       "//garnet/lib/magma/gnbuild/magma-vsl-gc:*",
       "//garnet/lib/ui/gfx/tests:*",
-      "//peridot/bin/agents/clipboard:*",
-      "//peridot/bin/basemgr:*",
-      "//peridot/bin/context_engine:*",
-      "//peridot/bin/sessionmgr/story_runner:*",
-      "//peridot/bin/sessionmgr:*",
-      "//peridot/bin/token_manager:*",
-      "//peridot/examples/simple:*",
-      "//peridot/examples/swap_cpp:*",
-      "//peridot/examples/todo_cpp:*",
-      "//topaz/examples/ui/noodles:*",
-      "//topaz/runtime/web_runner_prototype:*",
   ]
 }
