@@ -36,10 +36,10 @@ DeauthenticatingState::DeauthenticatingState(RemoteClient* client,
 
 void DeauthenticatingState::OnEnter() {
     debugfn();
-    client_->ReportDeauthentication();
     service::SendDeauthIndication(client_->device(), client_->addr(), reason_code_);
     if (send_deauth_frame_) { client_->SendDeauthentication(reason_code_); }
     MoveToState<DeauthenticatedState>();
+    client_->ReportDeauthentication();
 }
 
 // DeauthenticatedState implementation.
@@ -96,8 +96,8 @@ void AuthenticatingState::HandleTimeout(zx::time now) {
     if (auth_timeout_.Triggered(now)) {
         auth_timeout_.Cancel();
         warnf("[client] [%s] timed out authenticating\n", client_->addr().ToString().c_str());
-        client_->ReportFailedAuth();
         MoveToState<DeauthenticatedState>();
+        client_->ReportFailedAuth();
     }
 }
 
@@ -124,8 +124,8 @@ zx_status_t AuthenticatingState::FinalizeAuthenticationAttempt(
     if (auth_success && status == ZX_OK) {
         MoveToState<AuthenticatedState>();
     } else {
-        client_->ReportFailedAuth();
         MoveToState<DeauthenticatedState>();
+        client_->ReportFailedAuth();
     }
     return status;
 }
@@ -604,10 +604,10 @@ zx_status_t AssociatedState::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRe
 zx_status_t AssociatedState::HandleMlmeDeauthReq(
     const MlmeMsg<wlan_mlme::DeauthenticateRequest>& req) {
 
-    client_->ReportDeauthentication();
     client_->SendDeauthentication(req.body()->reason_code);
     service::SendDeauthConfirm(client_->device(), client_->addr());
     MoveToState<DeauthenticatedState>();
+    client_->ReportDeauthentication();
     return ZX_OK;
 }
 
