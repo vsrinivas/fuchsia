@@ -19,7 +19,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/namespace.c \
     $(LOCAL_DIR)/null.c \
     $(LOCAL_DIR)/remoteio.c \
-    $(LOCAL_DIR)/service.c \
     $(LOCAL_DIR)/socket.c \
     $(LOCAL_DIR)/spawn.c \
     $(LOCAL_DIR)/stubs.c \
@@ -45,7 +44,8 @@ MODULE_STATIC_LIBS := \
     system/ulib/zxs \
     system/ulib/zx
 
-MODULE_LIBS := system/ulib/zircon \
-    system/ulib/c
+MODULE_LIBS := \
+    system/ulib/zircon \
+    system/ulib/c \
 
 include make/module.mk

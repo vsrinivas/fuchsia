@@ -501,6 +501,50 @@ fdio_t* fdio_remote_create(zx_handle_t control, zx_handle_t event) {
     return &fv->io;
 }
 
+__EXPORT
+zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) {
+    mtx_lock(&fdio_lock);
+    if ((fd < 0) || (fd >= FDIO_MAX_FD) || (fdio_fdtab[fd] == NULL)) {
+        mtx_unlock(&fdio_lock);
+        return ZX_ERR_NOT_FOUND;
+    }
+    fdio_t* io = fdio_fdtab[fd];
+    io->dupcount--;
+    fdio_fdtab[fd] = NULL;
+    if (io->dupcount > 0) {
+        // still alive in other fdtab slots
+        // this fd goes away but we can't give away the handle
+        mtx_unlock(&fdio_lock);
+        fdio_release(io);
+        return ZX_ERR_UNAVAILABLE;
+    } else {
+        mtx_unlock(&fdio_lock);
+        zx_status_t r;
+        if (io->ops == &fdio_zxio_remote_ops) {
+            zxio_remote_t* file = fdio_get_zxio_remote(io);
+            r = zxio_release(&file->io, out);
+        } else {
+            r = ZX_ERR_NOT_SUPPORTED;
+            io->ops->close(io);
+        }
+        fdio_release(io);
+        return r;
+    }
+}
+
+__EXPORT
+zx_handle_t fdio_unsafe_borrow_channel(fdio_t* io) {
+    if (io == NULL) {
+        return ZX_HANDLE_INVALID;
+    }
+
+    if (io->ops == &fdio_zxio_remote_ops) {
+        zxio_remote_t* file = fdio_get_zxio_remote(io);
+        return file->control;
+    }
+    return ZX_HANDLE_INVALID;
+}
+
 // Vmofile ---------------------------------------------------------------------
 
 static inline zxio_vmofile_t* fdio_get_zxio_vmofile(fdio_t* io) {

@@ -526,12 +526,10 @@ static bool spawn_errors_test(void) {
     }
 
     {
-        zx::channel h1, h2;
-        ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
-
         ASSERT_EQ(30, dup2(0, 30));
         ASSERT_EQ(0, close(0));
-        fdio_t* io = fdio_service_create(h1.release());
+        zxio_storage_t* storage = nullptr;
+        fdio_t* io = fdio_zxio_create(&storage);
         ASSERT_EQ(0, fdio_bind_to_fd(io, 0, 0));
         status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
                             kSpawnChild, argv, process.reset_and_get_address());
@@ -542,10 +540,8 @@ static bool spawn_errors_test(void) {
     }
 
     {
-        zx::channel h1, h2;
-        ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
-
-        fdio_t* io = fdio_service_create(h1.release());
+        zxio_storage_t* storage = nullptr;
+        fdio_t* io = fdio_zxio_create(&storage);
         int fd = fdio_bind_to_fd(io, -1, 0);
         ASSERT_GE(fd, 3);
 
@@ -561,10 +557,8 @@ static bool spawn_errors_test(void) {
     }
 
     {
-        zx::channel h1, h2;
-        ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
-
-        fdio_t* io = fdio_service_create(h1.release());
+        zxio_storage_t* storage = nullptr;
+        fdio_t* io = fdio_zxio_create(&storage);
         int fd = fdio_bind_to_fd(io, -1, 0);
         ASSERT_GE(fd, 3);
 

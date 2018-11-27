@@ -66,10 +66,6 @@ fdio_t* fdio_null_create(void);
 // Takes ownership of h and e.
 fdio_t* fdio_remote_create(zx_handle_t h, zx_handle_t event);
 
-// Wraps a channel with an fdio_t using an unknown rpc protocol.
-// Takes ownership of h.
-fdio_t* fdio_service_create(zx_handle_t);
-
 // creates a fdio that wraps a log object
 // this will allocate a per-thread buffer (on demand) to assemble
 // entire log-lines and flush them on newline or buffer full.
