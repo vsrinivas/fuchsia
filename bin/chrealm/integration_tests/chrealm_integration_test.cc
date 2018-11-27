@@ -49,7 +49,7 @@ class ChrealmTest : public component::testing::TestWithEnvironment,
  protected:
   void CreateRealm(std::string* realm_path) {
     const std::string kRealmGlob =
-        fxl::StringPrintf("/hub/r/sys/*/r/%s/*", kRealm);
+        fxl::StringPrintf("/hub/r/%s/*", kRealm);
 
     ASSERT_EQ(files::Glob(kRealmGlob).size(), 0u);
 

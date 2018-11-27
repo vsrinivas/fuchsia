@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/chrealm_integration_test"
+    },
+    "sandbox": {
+        "features": [ "shell" ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Loader",
+            "fuchsia.sys.Environment"
+        ],
+        "system": [ "bin" ]
+    }
+}
