@@ -19,11 +19,11 @@ impl<W: io::Write> Codegen<W> {
         Codegen { w }
     }
 
-    pub fn codegen(&mut self, protocol: ast::Protocol) -> Result {
-        self.codegen_protocol(protocol)
+    pub fn codegen(&mut self, protocol: ast::Protocol, dependencies: &[String]) -> Result {
+        self.codegen_protocol(protocol, dependencies)
     }
 
-    fn codegen_protocol(&mut self, protocol: ast::Protocol) -> Result {
+    fn codegen_protocol(&mut self, protocol: ast::Protocol, dependencies: &[String]) -> Result {
         writeln!(self.w, "// GENERATED FILE -- DO NOT EDIT")?;
         if let Some(ref c) = protocol.copyright {
             writeln!(self.w, "//")?;
@@ -41,6 +41,9 @@ use fuchsia_wayland_core::{{ArgKind, Arg, Enum, FromArgs, IntoMessage, Message,
                             NewId, NewObject, ObjectId, EncodeError, DecodeError,
                             Interface }};"
         )?;
+        for dep in dependencies.iter() {
+            writeln!(self.w, "use {}::*;", dep)?;
+        }
 
         for interface in protocol.interfaces.into_iter() {
             // Most symbols will be defined in a nested module, but re-export

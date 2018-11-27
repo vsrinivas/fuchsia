@@ -4,36 +4,44 @@
 
 #![deny(warnings)]
 
-use std::env;
 use std::fs;
+use std::path::PathBuf;
+use structopt::StructOpt;
 
 use wayland_scanner_lib::{Codegen, Parser, Protocol};
 
-fn usage(exe: &str) {
-    println!("usage: {} <in_protocol.xml> <out_protocol.rs>", exe);
-    println!("");
-    println!("Generates server bindings for the given protocol file.");
+/// Generates wayland server bindings for the given protocol file.
+#[derive(StructOpt, Debug)]
+struct Options {
+    /// Input XML file
+    #[structopt(short = "i", long = "input", parse(from_os_str))]
+    input: PathBuf,
+    /// Generated rust source
+    #[structopt(short = "o", long = "output", parse(from_os_str))]
+    output: PathBuf,
+    /// Additional crate dependencies of this protocol. These should be the
+    /// names of any additional crates that the generated module will depend on.
+    /// This just emits a `use <dep>::*` for each crate, so these crates must
+    /// also be provided to properly build the generated module.
+    #[structopt(name = "dep", short = "d", long = "dep")]
+    dependencies: Vec<String>,
 }
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    if args.len() != 3 {
-        usage(&args[0]);
-        return;
-    }
+    let options = Options::from_args();
 
     // Open input/output files.
-    let infile = match fs::File::open(&args[1]) {
+    let infile = match fs::File::open(&options.input) {
         Ok(file) => file,
         Err(_) => {
-            println!("Failed to open input file {}", &args[1]);
+            println!("Failed to open input file {:?}", &options.input);
             return;
         }
     };
-    let outfile = match fs::File::create(&args[2]) {
+    let outfile = match fs::File::create(&options.output) {
         Ok(file) => file,
         Err(_) => {
-            println!("Failed to open output file {}", &args[2]);
+            println!("Failed to open output file {:?}", &options.output);
             return;
         }
     };
@@ -55,7 +63,7 @@ fn main() {
             return;
         }
     };
-    if let Err(e) = codegen.codegen(protocol) {
+    if let Err(e) = codegen.codegen(protocol, options.dependencies.as_slice()) {
         println!("Failed to codegen rust module {}", e);
     }
 }

@@ -21,6 +21,7 @@ if (host_toolchain == current_toolchain) {
     edition = "2018"
     deps = [
       ":lib",
+      "//third_party/rust-crates/rustc_deps:structopt",
     ]
   }
 }
