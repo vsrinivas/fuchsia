@@ -252,6 +252,14 @@ fdio_t* fdio_zxio_create(zxio_storage_t** out_storage) {
     return &fv->io;
 }
 
+// Null ------------------------------------------------------------------------
+
+__EXPORT
+fdio_t* fdio_null_create(void) {
+    zxio_storage_t* storage = NULL;
+    return fdio_zxio_create(&storage);
+}
+
 // Remote ----------------------------------------------------------------------
 
 // POLL_MASK and POLL_SHIFT intend to convert the lower five POLL events into
