@@ -53,6 +53,17 @@
 #define T931_AO_PWM_CD_BASE             0xff802000
 #define T931_AO_PWM_LENGTH              0x1000
 
+#define T931_UART_LENGTH                0x1000 // applies to each UART bank
+#define T931_UART_A_BASE                0xffd24000
+#define T931_UART_B_BASE                0xffd23000
+#define T931_UART_C_BASE                0xffd22000
+#define T931_UART_WFIFO                 0x0
+#define T931_UART_RFIFO                 0x4
+#define T931_UART_CONTROL               0x8
+#define T931_UART_STATUS                0xc
+#define T931_UART_MISC                  0x10
+#define T931_UART_REGS                  0x14
+
 #define T931_DOS_BASE                   0xff620000
 #define T931_DOS_LENGTH                 0x10000
 
@@ -140,6 +151,9 @@
 #define T931_DOS_MBOX_0_IRQ             75
 #define T931_DOS_MBOX_1_IRQ             76
 #define T931_DOS_MBOX_2_IRQ             77
+#define T931_UART_A_IRQ                 58
+#define T931_UART_B_IRQ                 107
+#define T931_UART_C_IRQ                 125
 #define T931_GPIO_IRQ_0                 96
 #define T931_GPIO_IRQ_1                 97
 #define T931_GPIO_IRQ_2                 98
@@ -207,3 +221,13 @@
 #define T931_WIFI_HOST_WAKE_FN          0
 #define T931_WIFI_LPO_CLK               T931_GPIOX(16)
 #define T931_WIFI_LPO_CLK_FN            1 // PWM_E
+
+// Alternate Funcitons for UART
+#define T931_UART_A_TX                  T931_GPIOX(12)
+#define T931_UART_A_TX_FN               1
+#define T931_UART_A_RX                  T931_GPIOX(13)
+#define T931_UART_A_RX_FN               1
+#define T931_UART_A_CTS                 T931_GPIOX(14)
+#define T931_UART_A_CTS_FN              1
+#define T931_UART_A_RTS                 T931_GPIOX(15)
+#define T931_UART_A_RTS_FN              1

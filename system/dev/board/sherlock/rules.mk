@@ -19,6 +19,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/sherlock-gpio.cpp \
     $(LOCAL_DIR)/sherlock-i2c.cpp \
     $(LOCAL_DIR)/sherlock-mali.cpp \
+    $(LOCAL_DIR)/sherlock-bluetooth.cpp \
     $(LOCAL_DIR)/sherlock-usb.cpp \
     $(LOCAL_DIR)/sherlock-video.cpp \
 
@@ -42,5 +43,6 @@ MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-iommu \
     system/banjo/ddk-protocol-platform-bus \
     system/banjo/ddk-protocol-platform-device \
+    system/banjo/ddk-protocol-serial \
 
 include make/module.mk

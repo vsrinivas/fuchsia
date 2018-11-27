@@ -101,6 +101,11 @@ int Sherlock::Thread() {
         return -1;
     }
 
+    if (BluetoothInit() != ZX_OK) {
+        zxlogf(ERROR, "BluetoothInit() failed\n");
+        return -1;
+    }
+
     if (CameraInit() != ZX_OK) {
         zxlogf(ERROR, "CameraInit() failed\n");
         return -1;

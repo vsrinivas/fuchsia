@@ -65,6 +65,7 @@ private:
     zx_status_t EmmcInit();
     zx_status_t BCM43458LpoClockInit(); // required for BCM43458 wifi/bluetooth chip.
     zx_status_t SdioInit();
+    zx_status_t BluetoothInit();
     zx_status_t ClkInit();
     zx_status_t CameraInit();
     zx_status_t MaliInit();
