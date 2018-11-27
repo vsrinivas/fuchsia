@@ -268,7 +268,7 @@ fdio_t* fdio_null_create(void) {
 #define POLL_SHIFT  24
 #define POLL_MASK   0x1F
 
-zxio_remote_t* fdio_get_zxio_remote(fdio_t* io) {
+static zxio_remote_t* fdio_get_zxio_remote(fdio_t* io) {
     return (zxio_remote_t*)fdio_get_zxio(io);
 }
 
@@ -448,7 +448,7 @@ static zx_status_t fdio_zxio_remote_link(fdio_t* io, const char* src, size_t src
     return io_status != ZX_OK ? io_status : status;
 }
 
-fdio_ops_t fdio_zxio_remote_ops = {
+static fdio_ops_t fdio_zxio_remote_ops = {
     .read = fdio_zxio_read,
     .read_at = fdio_zxio_read_at,
     .write = fdio_zxio_write,
