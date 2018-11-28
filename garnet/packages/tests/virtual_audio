@@ -1,0 +1,7 @@
+{
+    "imports": [
+        "garnet/packages/config/virtual_audio",
+        "garnet/packages/tests/virtual_audio_driver",
+        "garnet/packages/tests/virtual_audio_service"
+    ]
+}

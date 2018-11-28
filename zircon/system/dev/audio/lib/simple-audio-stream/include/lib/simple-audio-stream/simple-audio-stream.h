@@ -286,7 +286,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     audio_stream_unique_id_t unique_id_ __TA_GUARDED(domain_->token()) = {};
     char mfr_name_[64] __TA_GUARDED(domain_->token()) = {};
     char prod_name_[64] __TA_GUARDED(domain_->token()) = {};
-    char device_name_[64] = {};
+    char device_name_[32] = {};
 
     uint32_t frame_size_ __TA_GUARDED(domain_->token()) = 0;
     uint32_t fifo_depth_ __TA_GUARDED(domain_->token()) = 0;

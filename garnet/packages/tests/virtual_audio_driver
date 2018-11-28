@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/drivers/audio/virtual_audio"
+    ]
+}

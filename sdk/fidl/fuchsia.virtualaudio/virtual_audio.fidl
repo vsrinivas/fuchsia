@@ -1,0 +1,199 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.virtualaudio;
+
+using zx;
+
+/// fuchsia.virtualaudio.Forwarder
+///
+/// Using this Simple Layout (C-bound) interface, an intermediary (such as the
+/// virtual audio service) forwards FIDL interface requests to the virtual audio
+/// driver, which enables clients to use more full-featured (C++ based) bindings
+/// with this driver -- specifically the Control, Input and Output interfaces.
+[Layout = "Simple"]
+protocol Forwarder {
+  SendControl(request<Control> control);
+  SendInput(request<Input> input);
+  SendOutput(request<Output> output);
+};
+
+/// fuchsia.virtualaudio.Control
+///
+/// This protocol provides the caller a high-level ON/OFF switch for overall
+/// virtual audio functionality at the system level. When virtualaudio is
+/// Disabled, device configurations can be created and changed, but no devices
+/// can be added. When virtualaudio is Enabled, device configurations can again
+/// be converted into devices by calling Add.
+[Discoverable]
+protocol Control {
+  /// Allow inputs and outputs to be activated, but do not automatically
+  /// reactivate those previously deactivated by Disable(). Does not affect
+  /// existing Configs. By default, virtualaudio is enabled on system startup.
+  Enable();
+
+  /// Deactivate all active inputs and outputs; disallow subsequent activations.
+  Disable();
+};
+
+///
+/// The Input and Output protocols closely correspond to the capabilities
+/// exposed by the Audio Driver Streaming Interface, fully documented at
+/// driver-interfaces/audio.md and declared at device/audio.h. 
+///
+
+/// fuchsia.virtualaudio.Input
+///
+/// This protocol represents an active virtual audio input device. It inherits
+/// the parent protocols Device and Config. This protocol, as well as the
+/// contents of Device, represent actions that can be taken by an active input
+/// device -- actions that should be immediately detected and reacted upon by
+/// the audio subsystem.
+[Discoverable]
+protocol Input {
+  compose Device;
+
+  // TODO(mpuryear): SetCaptureSignal -- indicate what to "capture".
+  // E.g. sinusoid, constant, square, ramp, saw, noise. Can differ by channel.
+
+  // TODO(mpuryear): PairWithOutput -- client passes an output (server) binding;
+  // input device returns as its capture stream what the output is given.
+};
+
+/// fuchsia.virtualaudio.Output
+///
+/// This protocol represents an active virtual audio output device. It inherits
+/// the parent protocols Device and Config. This protocol, as well as the
+/// contents of Device, represent actions that can be taken by an active output
+/// device -- actions that should be immediately detected and reacted upon by
+/// the audio subsystem.
+[Discoverable]
+protocol Output {
+  compose Device;
+
+  // TODO(mpuryear): any render-specific configuration or runtime triggers.
+};
+
+/// This protocol represents the base functionality of active Input and Output
+/// audio devices -- methods that are common to both protocols. This protocol,
+/// as well as the contents of Output and Input, represent actions that can be
+/// taken by an active device -- actions that should be immediately detected and
+/// reacted upon by the audio subsystem.
+[FragileBase]
+protocol Device {
+  compose Config;
+
+  /// Activate (DdkAdd) the virtual audio device as currently configured. The
+  /// device node will be published and detected by the AudioDeviceManager, and
+  /// the driver for the virtual device will be loaded and queried. Device
+  /// arrivals are exposed to clients by fuchsia.media.AudioDevicveEnumerator,
+  /// in GetDevices and ->OnDeviceAdded.
+  Add();
+
+  /// Deactivate (DdkRemove) the active virtual audio device, but retain its
+  /// configuration for future activation. The driver for the virtual device
+  /// will be unloaded, and the device node closed. Device removals are exposed
+  /// to clients by fuchsia.media.AudioDevicveEnumerator, in GetDevices and
+  /// ->OnDeviceRemoved.
+  Remove();
+
+  /// Hot-plug or hot-unplug an active virtual device, at the specified time.
+  /// For devices marked as capable of asynchronously notifying the system of
+  /// plug changes, the driver will now send the values using
+  /// AUDIO_STREAM_PLUG_DETECT_NOTIFY. Else, the values will be reflected when
+  /// the driver is next sent a AUDIO_STREAM_CMD_PLUG_DETECT command. This
+  /// information is used by the system when determining which device is
+  /// default. This, in turn, is exposed to clients by
+  /// fuchsia.media.AudioDeviceEnumerator: in GetDevices, GetDefaultInputDevice/
+  /// GetDefaultOutputDevice and ->OnDefaultDeviceChanged.
+  ChangePlugState(zx.time plug_change_time, bool plugged);
+
+  // TODO(mpuryear): TweakClockRate(uint64 numerator, uint64 denominator) --
+  // emulating a device clock, advance position at given ratio of MONOTONIC
+};
+
+/// This protocol is conceptually a base protocol to Device. It exposes the
+/// methods used to specify the properties of a virtual audio device (its
+/// configuration), before that virtual device is created by calling 'Add'.
+[FragileBase]
+protocol Config {
+  /// Set the virtual audio device's name. This corresponds to the value
+  /// associated with the device node for this virtual device.
+  SetDeviceName(string device_name);
+
+  /// Set the virtual audio device's manufacturer name. Once the device is
+  /// activated, this is returned by the driver in response to a
+  /// AUDIO_STREAM_CMD_GET_STRING command of string ID
+  /// AUDIO_STREAM_STR_ID_MANUFACTURER. This information is exposed to
+  /// clients by fuchsia.media.AudioDeviceEnumerator: returned in an
+  /// AudioDeviceInfo struct by GetDevices or ->OnDeviceAdded.
+  SetManufacturer(string manufacturer_name);
+
+  /// Set the virtual audio device's product name. Once the device is activated,
+  /// this is returned by the driver in response to a
+  /// AUDIO_STREAM_CMD_GET_STRING command of string ID
+  /// AUDIO_STREAM_STR_ID_PRODUCT. This information is exposed to
+  /// clients by fuchsia.media.AudioDeviceEnumerator: returned in an
+  /// AudioDeviceInfo struct by GetDevices or ->OnDeviceAdded.
+  SetProduct(string product_name);
+
+  /// Set the virtual audio device's unique ID, a 16-character string. Once the
+  /// device is activated, this is returned by the driver in response to a
+  /// AUDIO_STREAM_CMD_GET_UNIQUE_ID command. This information is exposed to
+  /// clients by fuchsia.media.AudioDeviceEnumerator: returned in an
+  /// AudioDeviceInfo struct by GetDevices or ->OnDeviceAdded.
+  SetUniqueId(array<uint8>:16 unique_id);
+
+  /// Add a supported format range for this audio device. Once the device is
+  /// activated, format ranges are returned by the driver in response to a
+  /// AUDIO_STREAM_CMD_GET_FORMATS command. sample_format_flags is of type
+  /// audio_sample_format_t, and rate_family_flags is a bit field of possible
+  /// constants beginning with ASF_RANGE_FLAG_FPS_. See audio.h for details.
+  AddFormatRange(uint32 sample_format_flags, uint32 min_frame_rate,
+                 uint32 max_frame_rate, uint8 min_channels, uint8 max_channels,
+                 uint16 rate_family_flags);
+
+  /// Set the virtual audio device's fifo depth, in bytes. Once the device is
+  /// activated, the depth of its FIFO is returned by the driver in response to
+  /// an AUDIO_RB_CMD_GET_FIFO_DEPTH command on the ring buffer channel.
+  SetFifoDepth(uint32 fifo_depth_bytes);
+
+  /// Set the virtual audio device's external delay, in nanoseconds. Once the
+  /// device is activated, this value is returned by the driver in response to a
+  /// AUDIO_STREAM_CMD_SET_FORMAT command.
+  //
+  // Setting this as a static property is inadequate, considering the fact that
+  // the delay is intended to be calculated from the format that was just set.
+  SetExternalDelay(zx.duration external_delay);
+
+  /// Set restrictions for the device ring buffer. Once the device is
+  /// activated, the ring buffer and its size are returned by the driver in
+  /// response to a AUDIO_RB_CMD_GET_BUFFER command on the ring buffer channel.
+  /// Note: both min_frames and max_frames must be multiples of modulo_frames.
+  SetRingBufferRestrictions(uint32 min_frames, uint32 max_frames,
+                            uint32 modulo_frames);
+
+  /// Set gain properties for this virtual device. Once the device is
+  /// activated, gain information is returned by the driver in a
+  /// audio_stream_cmd_get_gain_resp struct, in response to a
+  /// AUDIO_STREAM_CMD_GET_GAIN command. This information is exposed to clients
+  /// by fuchsia.media.AudioDeviceEnumerator: returned in an AudioGainInfo
+  /// struct by GetDeviceGain or ->OnDeviceGainChanged.
+  SetGainProperties(float32 min_gain_db, float32 max_gain_db,
+                    float32 gain_step_db, float32 current_gain_db,
+                    bool can_mute, bool current_mute,
+                    bool can_agc, bool current_agc);
+
+  /// Set plug properties for this virtual device. Once the device is
+  /// activated, plug information is returned by the driver in response to a
+  /// AUDIO_STREAM_CMD_PLUG_DETECT command. This information is used by the
+  /// system when determining which device is default. This, in turn, is
+  /// exposed to clients by fuchsia.media.AudioDeviceEnumerator: in GetDevices,
+  /// GetDefaultInputDevice/GetDefaultOutputDevice and ->OnDefaultDeviceChanged.
+  SetPlugProperties(zx.time plug_change_time, bool plugged, bool hardwired,
+                    bool can_notify);
+
+  /// Return a config to default settings. This has no effect on active devices.
+  ResetConfig();
+};

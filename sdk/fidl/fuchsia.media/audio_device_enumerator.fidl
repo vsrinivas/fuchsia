@@ -19,12 +19,10 @@ struct AudioDeviceInfo {
     uint64 token_id;
     bool is_input;
 
-    // TODO(mpuryear): Verify whether or not we want to leave this stuff in place
-    // or not. Technically it is not needed (all of these things could be
-    // queried), but it seems like useful information to send during device
-    // enumeration as it saves a user a round trip to the server and eliminates
-    // any need to have extra states in a user's state machine when trying to
-    // figure out the current state of a device during initial enumeration.
+    // Technically these additional data are not needed (they are queryable),
+    // but it seems useful to send them during device enumeration, to reduce
+    // server round-trip calls, and to eliminate extra states in a user's state
+    // machine when determining current device state during initial enumeration.
     AudioGainInfo gain_info;
     bool is_default;
 };

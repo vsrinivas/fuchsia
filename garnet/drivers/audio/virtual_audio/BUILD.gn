@@ -1,0 +1,57 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+
+package("virtual_audio") {
+  deprecated_system_image = true
+
+  deps = [
+    ":virtual_audio_driver",
+  ]
+
+  drivers = [
+    {
+      name = "virtual_audio_driver.so"
+    },
+  ]
+}
+
+driver_module("virtual_audio_driver") {
+  output_name = "virtual_audio_driver"
+
+  sources = [
+    "virtual_audio.h",
+    "virtual_audio_bus.cpp",
+    "virtual_audio_config_impl.cpp",
+    "virtual_audio_config_impl.h",
+    "virtual_audio_control_impl.cpp",
+    "virtual_audio_control_impl.h",
+    "virtual_audio_device_impl.cpp",
+    "virtual_audio_device_impl.h",
+    "virtual_audio_input_impl.h",
+    "virtual_audio_output_impl.h",
+    "virtual_audio_stream.cpp",
+    "virtual_audio_stream.h",
+    "virtual_audio_stream_in.h",
+    "virtual_audio_stream_out.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//sdk/fidl/fuchsia.virtualaudio",
+    "//sdk/fidl/fuchsia.virtualaudio:fuchsia.virtualaudio_c",
+    "//zircon/public/lib/audio-driver-proto",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/simple-audio-stream",
+  ]
+
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [
+    "//build/config/fuchsia:static_cpp_standard_library",
+  ]
+}

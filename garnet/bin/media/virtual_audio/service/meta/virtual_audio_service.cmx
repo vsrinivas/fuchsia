@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/virtual_audio_service"
+    },
+    "sandbox": {
+        "dev": [
+            "test/virtual_audio"
+        ]
+    }
+}
