@@ -235,12 +235,17 @@ int pwrbtn_monitor_starter(void* arg) {
     int argc = 1;
 
     zx::job job_copy;
-    g_handles.svc_job.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &job_copy);
+    zx_status_t status =
+        g_handles.svc_job.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &job_copy);
+    if (status != ZX_OK) {
+        printf("svc_job.duplicate failed %s\n", zx_status_get_string(status));
+        return 1;
+    }
 
     launchpad_t* lp;
     launchpad_create(job_copy.get(), name, &lp);
 
-    zx_status_t status = devmgr_launch_load(nullptr, lp, argv[0]);
+    status = devmgr_launch_load(nullptr, lp, argv[0]);
     if (status != ZX_OK) {
         launchpad_abort(lp, status, "cannot load file");
     }
@@ -952,7 +957,11 @@ zx_status_t svchost_start() {
     int argc = require_system ? 2 : 1;
 
     zx::job job_copy;
-    g_handles.svc_job.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_MANAGE_JOB, &job_copy);
+    status = g_handles.svc_job.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_MANAGE_JOB,
+                                         &job_copy);
+    if (status != ZX_OK) {
+        return status;
+    }
 
     launchpad_t* lp = nullptr;
     launchpad_create(job_copy.get(), name, &lp);
@@ -977,7 +986,10 @@ zx_status_t svchost_start() {
 void devmgr_svc_init() {
     printf("devmgr: svc init\n");
 
-    svchost_start();
+    zx_status_t status = svchost_start();
+    if (status != ZX_OK) {
+        printf("devmgr_svc_init failed %s\n", zx_status_get_string(status));
+    }
 }
 
 } // namespace devmgr

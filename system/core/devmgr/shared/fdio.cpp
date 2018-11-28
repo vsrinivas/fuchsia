@@ -16,6 +16,7 @@
 
 #include <zircon/paths.h>
 #include <zircon/processargs.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 
@@ -77,7 +78,11 @@ zx_status_t devmgr_launch(
     envp[envn++] = nullptr;
 
     zx::job job_copy;
-    job.duplicate(CHILD_JOB_RIGHTS, &job_copy);
+    status = job.duplicate(CHILD_JOB_RIGHTS, &job_copy);
+    if (status != ZX_OK) {
+        printf("devmgr_launch failed %s\n", zx_status_get_string(status));
+        return status;
+    }
 
     launchpad_t* lp;
     launchpad_create(job_copy.get(), name, &lp);
