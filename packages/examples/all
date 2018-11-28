@@ -13,7 +13,6 @@
         "garnet/packages/examples/mediaplayer",
         "garnet/packages/examples/netconnector",
         "garnet/packages/examples/netstack",
-        "garnet/packages/examples/overnet",
         "garnet/packages/examples/rust",
         "garnet/packages/examples/scenic",
         "garnet/packages/examples/tcp",

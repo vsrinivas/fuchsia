@@ -5,7 +5,7 @@
 #include "mdns.h"
 #include <fuchsia/mdns/cpp/fidl.h>
 #include "fuchsia_port.h"
-#include "garnet/lib/overnet/labels/node_id.h"
+#include "garnet/lib/overnet/node_id.h"
 #include "garnet/public/lib/fostr/fidl/fuchsia/mdns/formatting.h"
 
 namespace overnetstack {
@@ -13,9 +13,9 @@ namespace overnetstack {
 static const char* kServiceName =
     "__overnet__mdns__test__1db2_6473_a3b1_500c__._udp.";
 
-class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer> {
+class MdnsIntroducer : public fbl::RefCounted<MdnsIntroducer> {
  public:
-  Impl(UdpNub* nub) : nub_(nub) {}
+  MdnsIntroducer(UdpNub* nub) : nub_(nub) {}
 
   void Begin(component::StartupContext* startup_context) {
     std::cerr << "Querying mDNS for overnet services [" << kServiceName
@@ -39,7 +39,7 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer> {
   void RunLoop(uint64_t version) {
     subscription_->GetInstances(
         version,
-        [self = fbl::RefPtr<Impl>(this)](
+        [self = fbl::RefPtr<MdnsIntroducer>(this)](
             uint64_t new_version,
             fidl::VectorPtr<fuchsia::mdns::MdnsServiceInstance> services) {
           // Convert list of services into a service map.
@@ -186,17 +186,10 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer> {
   ServiceMap last_result_;
 };
 
-MdnsIntroducer::MdnsIntroducer(OvernetApp* app, UdpNub* udp_nub)
-    : app_(app), udp_nub_(udp_nub) {}
-
-overnet::Status MdnsIntroducer::Start() {
-  auto impl = fbl::MakeRefCounted<Impl>(udp_nub_);
-  impl_ = std::move(impl);
-  impl_->Begin(app_->startup_context());
-  return overnet::Status::Ok();
+void RunMdnsIntroducer(component::StartupContext* startup_context,
+                       UdpNub* nub) {
+  fbl::MakeRefCounted<MdnsIntroducer>(nub)->Begin(startup_context);
 }
-
-MdnsIntroducer::~MdnsIntroducer() {}
 
 class MdnsAdvertisement::Impl {
  public:
@@ -224,13 +217,9 @@ class MdnsAdvertisement::Impl {
   const overnet::NodeId node_id_;
 };
 
-MdnsAdvertisement::MdnsAdvertisement(OvernetApp* app, UdpNub* udp_nub)
-    : app_(app), udp_nub_(udp_nub) {}
-
-overnet::Status MdnsAdvertisement::Start() {
-  impl_.reset(new Impl(app_->startup_context(), udp_nub_));
-  return overnet::Status::Ok();
-}
+MdnsAdvertisement::MdnsAdvertisement(component::StartupContext* startup_context,
+                                     UdpNub* nub)
+    : impl_(std::make_unique<Impl>(startup_context, nub)) {}
 
 MdnsAdvertisement::~MdnsAdvertisement() {}
 

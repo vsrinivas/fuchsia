@@ -1,13 +1,8 @@
 {
     "packages": [
-        "//garnet/lib/overnet:overnet_tests",
-        "//garnet/lib/overnet:overnet_fuzzers",
-        "//garnet/bin/overnet/overnetstack:overnetstack_tests"
+        "//garnet/lib/overnet:overnet_tests"
     ],
     "host_tests": [
         "//garnet/lib/overnet:overnet_unittests"
-    ],
-    "labels": [
-        "//garnet/lib/overnet:host_fuzzers"
     ]
 }
