@@ -14,11 +14,6 @@
 ## See https://fuchsia.googlesource.com/docs/+/master/development/languages/rust/third_party.md
 ## for more details.
 
-echo "Error: this script is currently broken pending updates."
-echo "Contact cramertj@ for a temporary workaround."
-echo "Apologies for the inconvenience."
-exit 1;
-
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
