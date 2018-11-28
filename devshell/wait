@@ -1,0 +1,18 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### wait for a shell to become available
+
+## usage: fx wait
+##
+## Attempts to SSH to the target repeatedly until the target becomes
+## available.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+
+until fx-command-run shell \
+  -o ConnectionAttempts=1 -o ConnectTimeout=1 echo 2>&1 > /dev/null; do
+  echo -n
+done
