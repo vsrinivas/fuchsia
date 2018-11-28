@@ -13,6 +13,7 @@
 #include <lib/zx/event.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/handle.h>
+#include <lib/zx/iommu.h>
 #include <lib/zx/job.h>
 #include <lib/zx/port.h>
 #include <lib/zx/process.h>
@@ -126,6 +127,13 @@ static bool bti_compilation_test() {
 static bool pmt_compilation_test() {
     BEGIN_TEST;
     zx::pmt pmt;
+    // TODO(teisenbe): test more.
+    END_TEST;
+}
+
+static bool iommu_compilation_test() {
+    BEGIN_TEST;
+    zx::iommu iommu;
     // TODO(teisenbe): test more.
     END_TEST;
 }
@@ -626,6 +634,7 @@ RUN_TEST(event_test)
 RUN_TEST(event_duplicate_test)
 RUN_TEST(bti_compilation_test)
 RUN_TEST(pmt_compilation_test)
+RUN_TEST(iommu_compilation_test)
 RUN_TEST(channel_test)
 RUN_TEST(channel_rw_test)
 RUN_TEST(channel_rw_etc_test)

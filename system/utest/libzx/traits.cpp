@@ -288,6 +288,16 @@ bool traits_test() {
         ASSERT_EQ(zx::object_traits<zx::guest>::has_peer_handle, false);
     }
 
+    {
+        // Creating a zx::iommu is too hard in a generic testing
+        // environment. Instead, we just assert it's got the traits we
+        // want.
+        ASSERT_EQ(zx::object_traits<zx::resource>::supports_duplication, true);
+        ASSERT_EQ(zx::object_traits<zx::resource>::supports_user_signal, true);
+        ASSERT_EQ(zx::object_traits<zx::resource>::supports_wait, true);
+        ASSERT_EQ(zx::object_traits<zx::resource>::has_peer_handle, false);
+    }
+
     END_TEST;
 }
 

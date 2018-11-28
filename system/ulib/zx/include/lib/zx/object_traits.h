@@ -28,6 +28,7 @@ class pmt;
 // - bti
 // - resource
 // - timer
+// - iommu
 template <typename T> struct object_traits {
     static constexpr bool supports_duplication = true;
     static constexpr bool supports_user_signal = true;
