@@ -77,8 +77,7 @@ void ProcessBuilder::AddArgs(const std::vector<std::string>& argv) {
 
 void ProcessBuilder::AddHandle(uint32_t id, zx::handle handle) {
   handles_.push_back(fuchsia::process::HandleInfo{
-      .id = id,
-      .handle = std::move(handle),
+      .id = id, .handle = std::move(handle),
   });
 }
 
@@ -90,8 +89,7 @@ void ProcessBuilder::AddHandles(
 
 void ProcessBuilder::SetDefaultJob(zx::job job) {
   handles_.push_back(fuchsia::process::HandleInfo{
-      .id = PA_JOB_DEFAULT,
-      .handle = std::move(job),
+      .id = PA_JOB_DEFAULT, .handle = std::move(job),
   });
 }
 
@@ -124,8 +122,8 @@ void ProcessBuilder::CloneNamespace() {
     fidl::VectorPtr<fuchsia::process::NameInfo> names;
     for (size_t i = 0; i < flat->count; ++i) {
       names.push_back(fuchsia::process::NameInfo{
-          flat->path[i],
-          fidl::InterfaceHandle<fuchsia::io::Directory>(zx::channel(flat->handle[i])),
+          flat->path[i], fidl::InterfaceHandle<fuchsia::io::Directory>(
+                             zx::channel(flat->handle[i])),
       });
     }
     launcher_->AddNames(std::move(names));
@@ -164,8 +162,7 @@ zx_status_t ProcessBuilder::CloneFileDescriptor(int local_fd, int target_fd) {
     return status;
   for (int i = 0; i < status; ++i) {
     handles_.push_back(fuchsia::process::HandleInfo{
-        .id = fdio_types[i],
-        .handle = zx::handle(fdio_handles[i]),
+        .id = fdio_types[i], .handle = zx::handle(fdio_handles[i]),
     });
   }
   return ZX_OK;
