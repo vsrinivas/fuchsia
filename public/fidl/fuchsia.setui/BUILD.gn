@@ -11,8 +11,5 @@ fidl("fuchsia.setui") {
     "types.fidl",
   ]
 
-  public_deps = [
-    "//garnet/public/fidl/fuchsia.ui.viewsv1",
-    "//garnet/public/fidl/fuchsia.ui.viewsv1token",
-  ]
+  public_deps = []
 }

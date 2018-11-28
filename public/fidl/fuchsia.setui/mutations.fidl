@@ -4,8 +4,6 @@
 
 library fuchsia.setui;
 
-using fuchsia.ui.viewsv1token;
-
 /// operations supported by string settings.
 enum StringOperation {
     UPDATE = 1;
@@ -54,7 +52,7 @@ union Mutation {
 };
 
 struct AccountMutationHandles {
-    fuchsia.ui.viewsv1token.ViewOwner view_owner;
+    handle<eventpair> view_holder_token;
 };
 
 union MutationHandles {
