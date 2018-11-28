@@ -1,8 +1,9 @@
 package metrics
 
 import (
-	"fidl/fuchsia/cobalt"
 	"time"
+
+	"fidl/fuchsia/cobalt"
 )
 
 type metricID uint32
@@ -11,6 +12,7 @@ const (
 	_ metricID = iota
 	metricSystemUpToDate
 	metricOtaStart
+	metricOtaResult
 )
 
 // Log synchronously submits the given metric to cobalt
@@ -50,5 +52,39 @@ func (m OtaStart) log() {
 		newStringValue("source", m.Source),
 		newStringValue("target", m.Target),
 		newIndexValue("when", uint32(m.When.Local().Hour())),
+	})
+}
+
+type OtaResult struct {
+	Initiator      Initiator
+	Source         string
+	Target         string
+	Attempt        int64
+	FreeSpaceStart int64
+	FreeSpaceEnd   int64
+	When           time.Time
+	Duration       time.Duration
+	Phase          Phase
+	ErrorSource    string
+	ErrorText      string
+	ErrorCode      int64
+}
+
+func (m OtaResult) log() {
+	durationInMilliseconds := m.Duration.Nanoseconds() / time.Millisecond.Nanoseconds()
+
+	logCustomEvent(metricOtaResult, []cobalt.CustomEventValue{
+		newIndexValue("initiator", uint32(m.Initiator)),
+		newStringValue("source", m.Source),
+		newStringValue("target", m.Target),
+		newIntValue("attempt", m.Attempt),
+		newIntValue("free_space_start", m.FreeSpaceStart),
+		newIntValue("free_space_end", m.FreeSpaceEnd),
+		newIndexValue("when", uint32(m.When.Local().Hour())),
+		newIntValue("duration", durationInMilliseconds),
+		newIndexValue("phase", uint32(m.Phase)),
+		newStringValue("error_source", m.ErrorSource),
+		newStringValue("error_text", m.ErrorText),
+		newIntValue("error_code", m.ErrorCode),
 	})
 }

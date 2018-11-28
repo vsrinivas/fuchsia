@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"strings"
 	"syscall/zx"
 	"time"
 
@@ -175,10 +176,31 @@ func logElapsedTime(metric metricID, duration time.Duration, index uint32, compo
 	}
 }
 
+func valueString(value cobalt.Value) (string, string) {
+	switch value.ValueTag {
+	case cobalt.ValueStringValue:
+		return "STRING", value.StringValue
+	case cobalt.ValueIntValue:
+		return "INT", fmt.Sprintf("%d", value.IntValue)
+	case cobalt.ValueDoubleValue:
+		return "DOUBLE", fmt.Sprintf("%f", value.DoubleValue)
+	case cobalt.ValueIndexValue:
+		return "INDEX", fmt.Sprintf("%d", value.IndexValue)
+	}
+	return "UNKNOWN", "UNKNOWN"
+}
+
 func logCustomEvent(metric metricID, parts []cobalt.CustomEventValue) {
 	if !ensureConnection() {
 		return
 	}
+
+	partStrings := make([]string, 0, len(parts))
+	for _, part := range parts {
+		t, v := valueString(part.Value)
+		partStrings = append(partStrings, fmt.Sprintf(" - %s: %s = %v", part.DimensionName, t, v))
+	}
+	log.Printf("logCustomEvent(%d)\n%s", uint32(metric), strings.Join(partStrings, "\n"))
 
 	status, err := logger.LogCustomEvent(uint32(metric), parts)
 	if err != nil {

@@ -9,6 +9,17 @@ import("//build/host.gni")
 import("//build/package.gni")
 import("//third_party/cobalt_config/metrics_registry.gni")
 
+go_library("metrics_lib") {
+  name = "metrics"
+  source_dir = "metrics"
+  deps = [
+    "//garnet/public/lib/component/go/src/app",
+    "//garnet/public/lib/syslog/go/src/syslog",
+    "//zircon/public/fidl/fuchsia-cobalt($go_toolchain)",
+    "//zircon/public/fidl/fuchsia-mem($go_toolchain)",
+  ]
+}
+
 go_library("lib") {
   name = "amber"
   deps = [

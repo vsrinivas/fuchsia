@@ -148,9 +148,17 @@ func (upMon *SystemUpdateMonitor) Check(initiator metrics.Initiator) error {
 				When:      start,
 			})
 
-			launchDesc := sys.LaunchInfo{Url: "fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx"}
+			launchDesc := sys.LaunchInfo{
+				Url: "fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx",
+				Arguments: &[]string{
+					fmt.Sprintf("-initiator=%s", initiator),
+					fmt.Sprintf("-start=%d", start.UnixNano()),
+					fmt.Sprintf("-source=%s", upMon.systemImageMerkle),
+					fmt.Sprintf("-target=%s", upMon.latestSystemImageMerkle),
+				},
+			}
 			if err := runProgram(launchDesc); err != nil {
-				log.Printf("sys_upd_mon: updater failed to start: %s", err)
+				log.Printf("sys_upd_mon: updater: %s", err)
 			}
 		} else {
 			log.Println("sys_upd_mon: no newer system version available")
@@ -264,7 +272,6 @@ func (upMon *SystemUpdateMonitor) needsUpdate(latestUpdateMerkle string) bool {
 	return false
 }
 
-// XXX(raggi): this should be blocking - there's no safe way to do this concurrently.
 func runProgram(info sys.LaunchInfo) error {
 	context := context.CreateFromStartupInfo()
 	req, pxy, err := sys.NewLauncherInterfaceRequest()
@@ -274,7 +281,8 @@ func runProgram(info sys.LaunchInfo) error {
 	context.ConnectToEnvService(req)
 	ch := req.ToChannel()
 	defer ch.Close()
-	contReq, _, err := sys.NewComponentControllerInterfaceRequest()
+	contReq, proc, err := sys.NewComponentControllerInterfaceRequest()
+	defer proc.Close()
 	if err != nil {
 		return fmt.Errorf("error creating component controller request: %s", err)
 	}
@@ -282,6 +290,17 @@ func runProgram(info sys.LaunchInfo) error {
 	err = pxy.CreateComponent(info, contReq)
 	if err != nil {
 		return fmt.Errorf("error starting system updater: %s", err)
+	}
+
+	returnCode, terminationReason, err := proc.ExpectOnTerminated()
+	if err != nil {
+		return fmt.Errorf("error waiting for system updater to complete: %s", err)
+	} else if terminationReason == sys.TerminationReasonExited {
+		if returnCode != 0 {
+			return fmt.Errorf("system updater exited with code: %d", returnCode)
+		}
+	} else {
+		return fmt.Errorf("system updater exited with reason: %d", uint32(terminationReason))
 	}
 
 	return nil
