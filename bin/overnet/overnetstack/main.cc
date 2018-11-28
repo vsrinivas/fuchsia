@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/overnet/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async/task.h>
 #include "fuchsia_port.h"
-#include "garnet/lib/overnet/router_endpoint.h"
-#include "lib/component/cpp/startup_context.h"
 #include "mdns.h"
+#include "overnet_app.h"
+#include "service.h"
+#include "udp_nub.h"
 
 namespace overnetstack {
 
@@ -29,7 +27,6 @@ class FuchsiaTimer final : public overnet::Timer {
                           zx_status_t status) {
     FireTimeout(static_cast<Task*>(task)->timeout, ToOvernetStatus(status));
   }
-
   void InitTimeout(overnet::Timeout* timeout,
                    overnet::TimeStamp when) override {
     auto* async_timeout = TimeoutStorage<Task>(timeout);
@@ -41,7 +38,6 @@ class FuchsiaTimer final : public overnet::Timer {
       FireTimeout(timeout, overnet::Status::Cancelled());
     }
   }
-
   void CancelTimeout(overnet::Timeout* timeout,
                      overnet::Status status) override {
     if (async_cancel_task(dispatcher_, TimeoutStorage<Task>(timeout)) ==
@@ -51,10 +47,9 @@ class FuchsiaTimer final : public overnet::Timer {
   }
 };
 
-class FuchsiaLog final : public overnet::TraceSinkInterface {
+class FuchsiaLog final : public overnet::TraceRenderer {
  public:
-  void Done() override {}
-  void Trace(overnet::TraceOutput output) override {
+  void Render(overnet::TraceOutput output) override {
     auto severity = [sev = output.severity] {
       switch (sev) {
         case overnet::Severity::DEBUG:
@@ -70,60 +65,21 @@ class FuchsiaLog final : public overnet::TraceSinkInterface {
     fxl::LogMessage(severity, output.file, output.line, nullptr).stream()
         << output.message;
   }
-};
-
-static FuchsiaLog fuchsia_log;
-static overnet::TraceSink fuchsia_trace_sink(overnet::Severity::INFO,
-                                             &fuchsia_log);
-
-overnet::NodeId GenerateNodeId() {
-  uint64_t out;
-  zx_cprng_draw(&out, sizeof(out));
-  return overnet::NodeId(out);
-}
-
-class OvernetApp final : public fuchsia::overnet::Overnet {
- public:
-  OvernetApp() : context_(component::StartupContext::CreateFromStartupInfo()) {
-    context_->outgoing().AddPublicService(bindings_.GetHandler(this));
-  }
-
-  overnet::Status Start() {
-    return udp_nub_.Start().Then([this]() {
-      mdns_advert_ =
-          std::make_unique<MdnsAdvertisement>(context_.get(), &udp_nub_);
-      RunMdnsIntroducer(context_.get(), &udp_nub_);
-      return overnet::Status::Ok();
-    });
-  }
-
-  //////////////////////////////////////////////////////////////////////////////////////////////////
-  // Method implementations
-
-  void ListPeers(ListPeersCallback callback) override {
-    using Peer = fuchsia::overnet::Peer;
-    std::vector<Peer> response;
-    endpoint_.ForEachPeer([&response](overnet::NodeId node) {
-      response.emplace_back(Peer{node.get()});
-    });
-    callback(fidl::VectorPtr<Peer>(std::move(response)));
-  }
-
- private:
-  FuchsiaTimer timer_;
-  std::unique_ptr<component::StartupContext> context_;
-  fidl::BindingSet<fuchsia::overnet::Overnet> bindings_;
-  overnet::RouterEndpoint endpoint_{&timer_, fuchsia_trace_sink,
-                                    GenerateNodeId(), true};
-  UdpNub udp_nub_{&endpoint_, fuchsia_trace_sink};
-  std::unique_ptr<MdnsAdvertisement> mdns_advert_;
+  void NoteParentChild(overnet::Op, overnet::Op) override {}
 };
 
 }  // namespace overnetstack
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  overnetstack::OvernetApp app;
+  overnetstack::FuchsiaLog fuchsia_log;
+  overnet::ScopedRenderer scoped_renderer(&fuchsia_log);
+  overnetstack::FuchsiaTimer fuchsia_timer;
+  overnetstack::OvernetApp app(&fuchsia_timer);
+  app.InstantiateActor<overnetstack::Service>();
+  auto* udp_nub = app.InstantiateActor<overnetstack::UdpNub>();
+  app.InstantiateActor<overnetstack::MdnsIntroducer>(udp_nub);
+  app.InstantiateActor<overnetstack::MdnsAdvertisement>(udp_nub);
   auto status = app.Start().Then([&]() {
     loop.Run();
     return overnet::Status::Ok();

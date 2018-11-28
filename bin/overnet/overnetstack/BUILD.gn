@@ -4,18 +4,63 @@
 
 import("//build/package.gni")
 
+source_set("overnet_fuchsia_compatibility") {
+  sources = [
+    "fuchsia_port.h",
+  ]
+
+  deps = [
+    "//garnet/lib/overnet",
+  ]
+}
+
+source_set("fidl_utils") {
+  sources = [
+    "fidl_utils.h",
+  ]
+
+  deps = [
+    ":overnet_fuchsia_compatibility",
+    "//garnet/lib/overnet",
+    "//garnet/public/lib/fidl/cpp",
+  ]
+}
+
+executable("overnetstack_unittests") {
+  testonly = true
+
+  sources = [
+    "run_all_tests.cc",
+    "fidl_utils_test.cc",
+  ]
+
+  deps = [
+    ":fidl_utils",
+    "//garnet/public/fidl/fuchsia.overnet",
+    "//third_party/googletest:gtest",
+    "//third_party/googletest:gmock",
+  ]
+}
+
 executable("bin") {
   output_name = "overnetstack"
 
   sources = [
-    "fuchsia_port.h",
+    "bound_channel.h",
+    "bound_channel.cc",
     "main.cc",
     "mdns.h",
     "mdns.cc",
-    "udp_nub.h"
+    "service.h",
+    "service.cc",
+    "overnet_app.h",
+    "overnet_app.cc",
+    "udp_nub.h",
   ]
 
   deps = [
+    ":overnet_fuchsia_compatibility",
+    ":fidl_utils",
     "//garnet/lib/overnet",
     "//garnet/public/fidl/fuchsia.mdns",
     "//garnet/public/fidl/fuchsia.overnet",
@@ -40,5 +85,19 @@ package("overnetstack") {
       path = rebase_path("meta/overnetstack.cmx")
       dest = "overnetstack.cmx"
     },
+  ]
+}
+
+package("overnetstack_tests") {
+  testonly = true
+
+  deps = [
+    ":overnetstack_unittests",
+  ]
+
+  tests = [
+    {
+       name = "overnetstack_unittests"
+    }
   ]
 }

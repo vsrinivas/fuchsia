@@ -1,0 +1,153 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+###############################################################################
+# AGGREGATE LIBRARIES
+
+source_set("lib") {
+}
+
+source_set("tests") {
+  testonly = true
+  deps = [
+    ":ack_frame_test",
+    ":fork_frame_test",
+    ":introduction_test",
+    ":routable_message_test",
+    ":varint_test",
+  ]
+}
+
+###############################################################################
+
+# ack_frame
+source_set("ack_frame") {
+  sources = [
+    "ack_frame.cc",
+    "ack_frame.h",
+  ]
+  deps = [
+    ":varint",
+    "//garnet/lib/overnet/environment:trace",
+    "//garnet/lib/overnet/vocabulary:slice",
+    "//garnet/lib/overnet/vocabulary:status",
+  ]
+}
+
+source_set("ack_frame_test") {
+  testonly = true
+  sources = [
+    "ack_frame_test.cc",
+  ]
+  deps = [
+    ":ack_frame",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+# fork_frame
+# TODO(ctiller): switch to FIDL
+source_set("fork_frame") {
+  sources = [
+    "fork_frame.cc",
+    "fork_frame.h",
+  ]
+  deps = [
+    ":introduction",  # TODO(ctiller): remove once we switch to FIDL
+    "//garnet/lib/overnet/labels:reliability_and_ordering",
+    "//garnet/lib/overnet/labels:stream_id",
+    "//garnet/lib/overnet/vocabulary:slice",
+    "//garnet/lib/overnet/vocabulary:status",
+  ]
+}
+
+source_set("fork_frame_test") {
+  testonly = true
+  sources = [
+    "fork_frame_test.cc",
+  ]
+  deps = [
+    ":fork_frame",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+# introduction
+# TODO(ctiller): switch to FIDL
+source_set("introduction") {
+  sources = [
+    "introduction.h",
+  ]
+  deps = [
+    ":varint",
+    "//garnet/lib/overnet/vocabulary:optional",
+    "//garnet/lib/overnet/vocabulary:slice",
+    "//garnet/lib/overnet/vocabulary:status",
+  ]
+}
+
+source_set("introduction_test") {
+  testonly = true
+  sources = [
+    "introduction_test.cc",
+  ]
+  deps = [
+    ":introduction",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+# routable_message
+source_set("routable_message") {
+  sources = [
+    "routable_message.cc",
+    "routable_message.h",
+  ]
+  deps = [
+    ":varint",
+    "//garnet/lib/overnet/labels:node_id",
+    "//garnet/lib/overnet/labels:seq_num",
+    "//garnet/lib/overnet/labels:stream_id",
+    "//garnet/lib/overnet/vocabulary:optional",
+    "//garnet/lib/overnet/vocabulary:slice",
+    "//garnet/lib/overnet/vocabulary:status",
+  ]
+}
+
+source_set("routable_message_test") {
+  testonly = true
+  sources = [
+    "routable_message_test.cc",
+  ]
+  deps = [
+    ":routable_message",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+# serialization_helpers
+source_set("serialization_helpers") {
+  sources = [
+    "serialization_helpers.h",
+  ]
+}
+
+# varint
+source_set("varint") {
+  sources = [
+    "varint.cc",
+    "varint.h",
+  ]
+}
+
+source_set("varint_test") {
+  testonly = true
+  sources = [
+    "varint_test.cc",
+  ]
+  deps = [
+    ":varint",
+    "//third_party/googletest:gtest",
+  ]
+}
