@@ -135,6 +135,11 @@ int Sherlock::Thread() {
         zxlogf(ERROR, "ButtonsInit() failed\n");
         return -1;
     }
+
+    if (AudioInit() != ZX_OK) {
+        zxlogf(ERROR, "AudioInit() failed\n");
+        return -1;
+    }
     return 0;
 }
 

@@ -65,6 +65,15 @@
 #define S905D2_PULL_UP_REG4 0x3e
 #define S905D2_PULL_UP_REG5 0x3f
 
+#define S905D2_AO_PAD_DS_A  0x07
+#define S905D2_AO_PAD_DS_B  0x08
+#define S905D2_PAD_DS_REG1A 0xd1
+#define S905D2_PAD_DS_REG2A 0xd2
+#define S905D2_PAD_DS_REG2B 0xd3
+#define S905D2_PAD_DS_REG3A 0xd4
+#define S905D2_PAD_DS_REG4A 0xd5
+#define S905D2_PAD_DS_REG5A 0xd6
+
 #define S905D2_PERIPHS_PIN_MUX_0 0xb0
 #define S905D2_PERIPHS_PIN_MUX_1 0xb1
 #define S905D2_PERIPHS_PIN_MUX_2 0xb2
@@ -120,3 +129,12 @@
 #define S905D2_GPIOA_8_PDM_DIN0_FN           1
 #define S905D2_GPIOA_8_TDMC_D2_FN            2
 #define S905D2_GPIOA_8_TDMC_DIN2_FN          3
+
+#define S905D2_GPIOZ_2_TDMC_D0_FN            4
+#define S905D2_GPIOZ_3_TDMC_D1_FN            4
+#define S905D2_GPIOZ_4_TDMC_D2_FN            4
+#define S905D2_GPIOZ_5_TDMC_D3_FN            4
+#define S905D2_GPIOZ_6_TDMC_FS_FN            4
+#define S905D2_GPIOZ_7_TDMC_SCLK_FN          4
+
+#define S905D2_GPIOAO_9_MCLK_FN              5

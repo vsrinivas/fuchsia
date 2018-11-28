@@ -15,3 +15,21 @@
 #define T931_GPIOH(n)       S905D2_GPIOH(n)
 #define T931_GPIOAO(n)      S905D2_GPIOAO(n)
 #define T931_GPIOE(n)       S905D2_GPIOE(n)
+
+#define T931_GPIOZ_2_TDMC_D0_FN            S905D2_GPIOZ_2_TDMC_D0_FN
+#define T931_GPIOZ_3_TDMC_D1_FN            S905D2_GPIOZ_3_TDMC_D1_FN
+#define T931_GPIOZ_4_TDMC_D2_FN            S905D2_GPIOZ_4_TDMC_D2_FN
+#define T931_GPIOZ_5_TDMC_D3_FN            S905D2_GPIOZ_5_TDMC_D3_FN
+#define T931_GPIOZ_6_TDMC_FS_FN            S905D2_GPIOZ_6_TDMC_FS_FN
+#define T931_GPIOZ_7_TDMC_SCLK_FN          S905D2_GPIOZ_7_TDMC_SCLK_FN
+
+#define T931_GPIOAO_9_MCLK_FN              S905D2_GPIOAO_9_MCLK_FN
+
+#define T931_AO_PAD_DS_A                   S905D2_AO_PAD_DS_A
+#define T931_AO_PAD_DS_B                   S905D2_AO_PAD_DS_B
+#define T931_PAD_DS_REG1A                  S905D2_PAD_DS_REG1A
+#define T931_PAD_DS_REG2A                  S905D2_PAD_DS_REG2A
+#define T931_PAD_DS_REG2B                  S905D2_PAD_DS_REG2B
+#define T931_PAD_DS_REG3A                  S905D2_PAD_DS_REG3A
+#define T931_PAD_DS_REG4A                  S905D2_PAD_DS_REG4A
+#define T931_PAD_DS_REG5A                  S905D2_PAD_DS_REG5A

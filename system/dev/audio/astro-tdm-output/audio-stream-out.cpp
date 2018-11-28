@@ -47,7 +47,7 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
     }
 
     status = pdev_->GetBti(0, &bti_);
-    if (status  != ZX_OK) {
+    if (status != ZX_OK) {
         zxlogf(ERROR, "%s could not obtain bti - %d\n", __func__, status);
         return status;
     }
@@ -75,11 +75,23 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
     aml_audio_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr,
                           pinned_ring_buffer_.region(0).size);
 
+    // Setup TDM.
+
+    // 3 bitoffset, 4 slots, 32 bits/slot, 16 bits/sample.
     aml_audio_->ConfigTdmOutSlot(3, 3, 31, 15);
 
-    //Setup appropriate tdm clock signals
+    // Lane0 right channel.
+    aml_audio_->ConfigTdmOutSwaps(0x00000010);
+
+    // Lane 0, unmask first 2 slots (0x00000003),
+    aml_audio_->ConfigTdmOutLane(0, 0x00000003);
+
+    // Setup appropriate tdm clock signals. mclk = 1536MHz/125 = 12.288MHz.
     aml_audio_->SetMclkDiv(124);
 
+    // No need to set mclk pad via SetMClkPad (TAS2770 features "MCLK Free Operation").
+
+    // sclk = 12.288MHz/2 = 6.144MHz, 1 every 128 sclks is frame sync.
     aml_audio_->SetSclkDiv(1, 0, 127);
 
     aml_audio_->Sync();
