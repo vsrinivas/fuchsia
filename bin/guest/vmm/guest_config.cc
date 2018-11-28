@@ -255,6 +255,7 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg)
           {"cpus", parse_number(&cfg_->cpus_, fxl::Base::k10)},
           {"dtb-overlay", save_option(&cfg_->dtb_overlay_path_)},
           {"host-memory", set_flag(&cfg_->host_memory_, true)},
+          {"legacy-net", set_flag(&cfg_->legacy_net_, true)},
           {"linux",
            save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::LINUX)},
           {"memory", parse_mem_size(&cfg_->memory_)},
