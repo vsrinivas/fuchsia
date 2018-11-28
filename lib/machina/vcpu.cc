@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <lib/fit/function.h>
 #include <trace/event.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -115,7 +116,11 @@ Vcpu::Vcpu(uint64_t id, Guest* guest, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr)
     : id_(id), guest_(guest), entry_(entry), boot_ptr_(boot_ptr) {}
 
 void Vcpu::Start() {
-  future_ = std::async(std::launch::async, [this] { return Loop(); });
+  std::promise<void> barrier;
+  std::future<void> barrier_future = barrier.get_future();
+  future_ = std::async(std::launch::async, fit::bind_member(this, &Vcpu::Loop),
+                       std::move(barrier));
+  barrier_future.wait();
 }
 
 zx_status_t Vcpu::Join() { return future_.get(); }
@@ -125,7 +130,7 @@ Vcpu* Vcpu::GetCurrent() {
   return thread_vcpu;
 }
 
-zx_status_t Vcpu::Loop() {
+zx_status_t Vcpu::Loop(std::promise<void> barrier) {
   FXL_DCHECK(thread_vcpu == nullptr) << "Thread has multiple VCPUs";
 
   // Set the thread state.
@@ -135,7 +140,7 @@ zx_status_t Vcpu::Loop() {
     zx_status_t status = zx::thread::self()->set_property(
         ZX_PROP_NAME, name.c_str(), name.size());
     if (status != ZX_OK) {
-      FXL_LOG(WARNING) << "Failed to set VCPU-" << id_ << " thread name "
+      FXL_LOG(WARNING) << "Failed to set VCPU " << id_ << " thread name "
                        << status;
     }
   }
@@ -145,7 +150,7 @@ zx_status_t Vcpu::Loop() {
     std::lock_guard<std::shared_mutex> lock(mutex_);
     zx_status_t status = zx::vcpu::create(*guest_->object(), 0, entry_, &vcpu_);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create VCPU-" << id_ << " " << status;
+      FXL_LOG(ERROR) << "Failed to create VCPU " << id_ << " " << status;
       return status;
     }
   }
@@ -163,10 +168,13 @@ zx_status_t Vcpu::Loop() {
     zx_status_t status =
         vcpu_.write_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to set VCPU-" << id_ << " state " << status;
+      FXL_LOG(ERROR) << "Failed to set VCPU " << id_ << " state " << status;
       return status;
     }
   }
+
+  // Unblock VCPU startup barrier.
+  barrier.set_value();
 
   while (true) {
     zx_port_packet_t packet;
@@ -175,7 +183,7 @@ zx_status_t Vcpu::Loop() {
       return ZX_OK;
     }
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to resume VCPU-" << id_ << " " << status;
+      FXL_LOG(ERROR) << "Failed to resume VCPU " << id_ << " " << status;
       exit(status);
     }
 
@@ -193,7 +201,7 @@ zx_status_t Vcpu::Loop() {
 
 zx_status_t Vcpu::Interrupt(uint32_t vector) {
   std::shared_lock<std::shared_mutex> lock(mutex_);
-  return vcpu_ ? vcpu_.interrupt(vector) : ZX_OK;
+  return vcpu_.interrupt(vector);
 }
 
 zx_status_t Vcpu::HandlePacketLocked(const zx_port_packet_t& packet) {
@@ -310,10 +318,10 @@ zx_status_t Vcpu::HandleVcpu(const zx_packet_guest_vcpu_t& packet,
       return guest_->Interrupt(packet.interrupt.mask, packet.interrupt.vector);
     case ZX_PKT_GUEST_VCPU_STARTUP:
       if (id_ != 0) {
-        FXL_LOG(ERROR) << "Failed to start VCPU " << packet.startup.id
-                       << " from VCPU " << id_ << ", secondary processors must"
-                       << " be started by the primary processor";
-        return ZX_ERR_BAD_STATE;
+        FXL_LOG(WARNING)
+            << "Ignoring startup of VCPU " << packet.startup.id << " from VCPU "
+            << id_ << ", secondary VCPUs must be started by the primary VCPU";
+        return ZX_OK;
       }
       return guest_->StartVcpu(packet.startup.id, packet.startup.entry,
                                boot_ptr_);

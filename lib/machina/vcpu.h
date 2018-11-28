@@ -36,7 +36,7 @@ class Vcpu {
 
  private:
   // Resume the VCPU and handle packets in a loop.
-  zx_status_t Loop();
+  zx_status_t Loop(std::promise<void> barrier);
 
   // Guest packet handlers
   zx_status_t HandlePacketLocked(const zx_port_packet_t& packet);
