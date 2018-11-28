@@ -10,7 +10,7 @@ use {
         commands::{Cmd, CmdHelper, ReplControl},
         types::{AdapterInfo, RemoteDevice},
     },
-    failure::{Error, ResultExt},
+    failure::{bail, Error, ResultExt},
     fidl_fuchsia_bluetooth_control::{
         ControlEvent,
         ControlEventStream,
@@ -77,6 +77,20 @@ async fn get_adapters(control_svc: &ControlProxy) -> Result<String, Error> {
     Ok(String::from("No adapters detected"))
 }
 
+async fn set_active_adapter<'a>(args: &'a[&'a str], control_svc: &'a ControlProxy) -> Result<String, Error> {
+    if args.len() != 1 {
+        bail!("usage: {}", Cmd::SetActiveAdapter.cmd_help());
+    }
+    println!("Setting active adapter");
+    // `args[0]` is the identifier of the adapter to make active
+    let response = await!(control_svc.set_active_adapter(args[0]))?;
+    if response.error.is_some() {
+        Ok(Status::from(response).to_string())
+    } else {
+        Ok(String::new())
+    }
+}
+
 fn get_devices(state: &Mutex<State>) -> String {
     let state = state.lock();
     if state.devices.is_empty() {
@@ -101,17 +115,9 @@ fn get_device<'a>(args: &'a [&'a str], state: &Mutex<State>) -> String {
         .unwrap_or_else(|| String::from("No known device"))
 }
 
-async fn start_discovery(control_svc: &ControlProxy) -> Result<String, Error> {
-    let response = await!(control_svc.request_discovery(true))?;
-    if response.error.is_some() {
-        Ok(Status::from(response).to_string())
-    } else {
-        Ok(String::new())
-    }
-}
-
-async fn stop_discovery(control_svc: &ControlProxy) -> Result<String, Error> {
-    let response = await!(control_svc.request_discovery(false))?;
+async fn set_discovery(discovery: bool, control_svc: &ControlProxy) -> Result<String, Error> {
+    println!("{} Discovery!", if discovery { "Starting" } else { "Stopping" });
+    let response = await!(control_svc.request_discovery(discovery))?;
     if response.error.is_some() {
         Ok(Status::from(response).to_string())
     } else {
@@ -123,6 +129,7 @@ async fn connect<'a>(args: &'a [&'a str], control_svc: &'a ControlProxy) -> Resu
     if args.len() != 1 {
         return Ok(format!("usage: {}", Cmd::Connect.cmd_help()));
     }
+    // `args[0]` is the identifier of the remote device to connect to
     let response = await!(control_svc.connect(args[0]))?;
     if response.error.is_some() {
         Ok(Status::from(response).to_string())
@@ -134,6 +141,11 @@ async fn connect<'a>(args: &'a [&'a str], control_svc: &'a ControlProxy) -> Resu
 async fn set_discoverable(
     discoverable: bool, control_svc: &ControlProxy,
 ) -> Result<String, Error> {
+    if discoverable {
+        println!("Becoming discoverable..");
+    } else {
+        println!("Revoking discoverability..");
+    }
     let response = await!(control_svc.set_discoverable(discoverable))?;
     if response.error.is_some() {
         Ok(Status::from(response).to_string())
@@ -199,28 +211,15 @@ async fn handle_cmd(bt_svc: &ControlProxy, state: Arc<Mutex<State>>, line: Strin
     if let Some((raw_cmd, args)) = components.split_first() {
         let cmd = raw_cmd.parse();
         let res = match cmd {
-            Ok(Cmd::Connect) => {
-                await!(connect(args, &bt_svc))
-            }
-            Ok(Cmd::StartDiscovery) => {
-                println!("Starting Discovery!");
-                await!(start_discovery(&bt_svc))
-            }
-            Ok(Cmd::StopDiscovery) => {
-                println!("Stopping Discovery!");
-                await!(stop_discovery(&bt_svc))
-            }
-            Ok(Cmd::Discoverable) => {
-                println!("Becoming discoverable..");
-                await!(set_discoverable(true, &bt_svc))
-            }
-            Ok(Cmd::NotDiscoverable) => {
-                println!("Revoking discoverability..");
-                await!(set_discoverable(false, &bt_svc))
-            }
+            Ok(Cmd::Connect) => await!(connect(args, &bt_svc)),
+            Ok(Cmd::StartDiscovery) => await!(set_discovery(true, &bt_svc)),
+            Ok(Cmd::StopDiscovery) => await!(set_discovery(false, &bt_svc)),
+            Ok(Cmd::Discoverable) => await!(set_discoverable(true, &bt_svc)),
+            Ok(Cmd::NotDiscoverable) => await!(set_discoverable(false, &bt_svc)),
             Ok(Cmd::GetDevices) => Ok(get_devices(&state)),
             Ok(Cmd::GetDevice) => Ok(get_device(args, &state)),
             Ok(Cmd::GetAdapters) => await!(get_adapters(&bt_svc)),
+            Ok(Cmd::SetActiveAdapter) => await!(set_active_adapter(args, &bt_svc)),
             Ok(Cmd::ActiveAdapter) => await!(get_active_adapter(&bt_svc)),
             Ok(Cmd::Help) => Ok(Cmd::help_msg().to_string()),
             Ok(Cmd::Exit) | Ok(Cmd::Quit) => return Ok(ReplControl::Break),

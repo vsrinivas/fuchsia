@@ -92,6 +92,7 @@ gen_commands! {
     Cmd {
         Connect = ("connect", ["id"], "connect to a remote device"),
         ActiveAdapter = ("adapter", [], "Show the Active Adapter"),
+        SetActiveAdapter = ("set-adapter", ["id"], "Set the Active Adapter"),
         GetAdapters = ("list-adapters", [], "Show all known bluetooth adapters"),
         GetDevices = ("list-devices", [], "Show all known remote devices"),
         GetDevice = ("device", ["addr"], "Show details for a known remote device"),
