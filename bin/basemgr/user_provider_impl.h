@@ -59,7 +59,7 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   UserProviderImpl(
       std::shared_ptr<component::StartupContext> context,
       const fuchsia::modular::AppConfig& sessionmgr,
-      const fuchsia::modular::AppConfig& default_session_shell,
+      const fuchsia::modular::AppConfig& session_shell,
       const fuchsia::modular::AppConfig& story_shell,
       fuchsia::modular::auth::AccountProvider* account_provider,
       fuchsia::auth::TokenManagerFactory* token_manager_factory,
@@ -132,7 +132,7 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   std::shared_ptr<component::StartupContext> context_;
   const fuchsia::modular::AppConfig& sessionmgr_;  // Neither owned nor copied.
   const fuchsia::modular::AppConfig&
-      default_session_shell_;                       // Neither owned nor copied.
+      session_shell_;                               // Neither owned nor copied.
   const fuchsia::modular::AppConfig& story_shell_;  // Neither owned nor copied.
   fuchsia::modular::auth::AccountProvider* const
       account_provider_;  // Neither owned nor copied.

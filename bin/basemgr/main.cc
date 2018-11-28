@@ -16,6 +16,7 @@
 #include "peridot/bin/basemgr/basemgr_impl.h"
 #include "peridot/bin/basemgr/basemgr_settings.h"
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
+#include "peridot/lib/session_shell_settings/session_shell_settings.h"
 
 fit::deferred_action<fit::closure> SetupCobalt(
     modular::BasemgrSettings& settings, async_dispatcher_t* dispatcher,
@@ -34,6 +35,8 @@ int main(int argc, const char** argv) {
   }
 
   modular::BasemgrSettings settings(command_line);
+  auto session_shell_settings =
+      modular::SessionShellSettings::GetSystemSettings();
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProvider trace_provider(loop.dispatcher());
   auto context = std::shared_ptr<component::StartupContext>(
@@ -44,10 +47,11 @@ int main(int argc, const char** argv) {
   // TODO(MF-98): Assess feasibility of injecting the service dependencies
   // explicitly rather than passing the entire startup context, for easier
   // testing.
-  modular::BasemgrImpl basemgr(settings, context, [&loop, &cobalt_cleanup] {
-    cobalt_cleanup.call();
-    loop.Quit();
-  });
+  modular::BasemgrImpl basemgr(settings, session_shell_settings, context,
+                               [&loop, &cobalt_cleanup] {
+                                 cobalt_cleanup.call();
+                                 loop.Quit();
+                               });
   loop.Run();
 
   return 0;

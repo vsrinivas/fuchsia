@@ -111,7 +111,7 @@ fidl::VectorPtr<fuchsia::auth::AuthProviderConfig> GetAuthProviderConfigs() {
 UserProviderImpl::UserProviderImpl(
     std::shared_ptr<component::StartupContext> context,
     const fuchsia::modular::AppConfig& sessionmgr,
-    const fuchsia::modular::AppConfig& default_session_shell,
+    const fuchsia::modular::AppConfig& session_shell,
     const fuchsia::modular::AppConfig& story_shell,
     fuchsia::modular::auth::AccountProvider* account_provider,
     fuchsia::auth::TokenManagerFactory* token_manager_factory,
@@ -120,7 +120,7 @@ UserProviderImpl::UserProviderImpl(
     bool use_token_manager_factory, Delegate* const delegate)
     : context_(std::move(context)),
       sessionmgr_(sessionmgr),
-      default_session_shell_(default_session_shell),
+      session_shell_(session_shell),
       story_shell_(story_shell),
       account_provider_(account_provider),
       token_manager_factory_(token_manager_factory),
@@ -577,10 +577,6 @@ void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
     agent_token_manager = CreateTokenManager(account_id);
   }
 
-  auto session_shell = params.session_shell_config
-                           ? std::move(*params.session_shell_config)
-                           : CloneStruct(default_session_shell_);
-
   auto view_owner =
       delegate_->GetSessionShellViewOwner(std::move(params.view_owner));
   auto service_provider =
@@ -588,7 +584,7 @@ void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
 
   auto controller = std::make_unique<UserControllerImpl>(
       context_->launcher().get(), CloneStruct(sessionmgr_),
-      std::move(session_shell), CloneStruct(story_shell_),
+      CloneStruct(session_shell_), CloneStruct(story_shell_),
       std::move(token_provider_factory), std::move(ledger_token_manager),
       std::move(agent_token_manager), std::move(account), std::move(view_owner),
       std::move(service_provider), std::move(params.user_controller),

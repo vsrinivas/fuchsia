@@ -35,15 +35,19 @@ namespace modular {
 
 BasemgrImpl::BasemgrImpl(
     const modular::BasemgrSettings& settings,
+    const std::vector<SessionShellSettings>& session_shell_settings,
     std::shared_ptr<component::StartupContext> const context,
     std::function<void()> on_shutdown)
     : settings_(settings),
+      session_shell_settings_(session_shell_settings),
       user_provider_impl_("UserProviderImpl"),
       context_(std::move(context)),
       on_shutdown_(std::move(on_shutdown)),
       base_shell_context_binding_(this),
       account_provider_context_binding_(this),
       authentication_context_provider_binding_(this) {
+  update_session_shell_config();
+
   if (!context_->has_environment_services()) {
     FXL_LOG(ERROR) << "Failed to receive services from the environment.";
     exit(1);
@@ -98,6 +102,37 @@ void BasemgrImpl::InitializePresentation(
   AddGlobalKeyboardShortcuts(presentation_state_.presentation);
 
   SetShadowTechnique(presentation_state_.shadow_technique);
+
+  // Set the presentation of the given view to the settings of the active
+  // session shell.
+  if (active_session_shell_settings_index_ >= session_shell_settings_.size()) {
+    FXL_LOG(ERROR) << "Active session shell index is "
+                   << active_session_shell_settings_index_ << ", but only "
+                   << session_shell_settings_.size()
+                   << " session shell settings exist.";
+    return;
+  }
+
+  auto active_session_shell_settings =
+      session_shell_settings_[active_session_shell_settings_index_];
+  if (active_session_shell_settings.display_usage !=
+      fuchsia::ui::policy::DisplayUsage::kUnknown) {
+    FXL_DLOG(INFO) << "Setting display usage: "
+                   << fidl::ToUnderlying(
+                          active_session_shell_settings.display_usage);
+    presentation_state_.presentation->SetDisplayUsage(
+        active_session_shell_settings.display_usage);
+  }
+
+  if (!std::isnan(active_session_shell_settings.screen_width) &&
+      !std::isnan(active_session_shell_settings.screen_height)) {
+    FXL_DLOG(INFO) << "Setting display size: "
+                   << active_session_shell_settings.screen_width << " x "
+                   << active_session_shell_settings.screen_height;
+    presentation_state_.presentation->SetDisplaySizeInMm(
+        active_session_shell_settings.screen_width,
+        active_session_shell_settings.screen_height);
+  }
 }
 
 void BasemgrImpl::StartBaseShell() {
@@ -236,7 +271,7 @@ void BasemgrImpl::Start() {
       account_provider_context_binding_.NewBinding());
 
   user_provider_impl_.reset(new UserProviderImpl(
-      context_, settings_.sessionmgr, settings_.session_shell,
+      context_, settings_.sessionmgr, session_shell_config_,
       settings_.story_shell, account_provider_->primary_service().get(),
       token_manager_factory_.get(),
       authentication_context_provider_binding_.NewBinding().Bind(),
@@ -326,16 +361,6 @@ void BasemgrImpl::DidLogin() {
   }
 
   InitializePresentation(session_shell_view_owner_);
-
-  const auto& settings_vector = SessionShellSettings::GetSystemSettings();
-  if (active_session_shell_index_ >= settings_vector.size()) {
-    FXL_LOG(ERROR) << "Active session shell index is "
-                   << active_session_shell_index_ << ", but only "
-                   << settings_vector.size() << " session shells exist.";
-    return;
-  }
-
-  UpdatePresentation(settings_vector[active_session_shell_index_]);
 }
 
 void BasemgrImpl::DidLogout() {
@@ -410,45 +435,23 @@ void BasemgrImpl::AddGlobalKeyboardShortcuts(
       keyboard_capture_listener_bindings_.AddBinding(this));
 }
 
-void BasemgrImpl::UpdatePresentation(const SessionShellSettings& settings) {
-  if (settings.display_usage != fuchsia::ui::policy::DisplayUsage::kUnknown) {
-    FXL_DLOG(INFO) << "Setting display usage: "
-                   << fidl::ToUnderlying(settings.display_usage);
-    presentation_state_.presentation->SetDisplayUsage(settings.display_usage);
-  }
-
-  if (!std::isnan(settings.screen_width) &&
-      !std::isnan(settings.screen_height)) {
-    FXL_DLOG(INFO) << "Setting display size: " << settings.screen_width << " x "
-                   << settings.screen_height;
-    presentation_state_.presentation->SetDisplaySizeInMm(
-        settings.screen_width, settings.screen_height);
-  }
-}
-
 void BasemgrImpl::SwapSessionShell() {
-  if (SessionShellSettings::GetSystemSettings().empty()) {
+  if (session_shell_settings_.empty()) {
     FXL_DLOG(INFO) << "No session shells has been defined";
     return;
   }
-
-  auto shell_count = SessionShellSettings::GetSystemSettings().size();
-
+  auto shell_count = session_shell_settings_.size();
   if (shell_count <= 1) {
-    FXL_DLOG(INFO) << "Only one session shell has been defined so switch is disabled";
+    FXL_DLOG(INFO)
+        << "Only one session shell has been defined so switch is disabled";
     return;
   }
+  active_session_shell_settings_index_ =
+      (active_session_shell_settings_index_ + 1) % shell_count;
 
-  active_session_shell_index_ =
-      (active_session_shell_index_ + 1) %
-      shell_count;
-  const auto& settings =
-      SessionShellSettings::GetSystemSettings().at(active_session_shell_index_);
+  update_session_shell_config();
 
-  auto session_shell_config = fuchsia::modular::AppConfig::New();
-  session_shell_config->url = settings.name;
-
-  user_provider_impl_->SwapSessionShell(std::move(*session_shell_config))
+  user_provider_impl_->SwapSessionShell(CloneStruct(session_shell_config_))
       ->Then([] { FXL_DLOG(INFO) << "Swapped session shell"; });
 }
 

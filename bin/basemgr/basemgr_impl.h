@@ -25,6 +25,7 @@
 #include "peridot/bin/basemgr/basemgr_settings.h"
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
 #include "peridot/bin/basemgr/user_provider_impl.h"
+#include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/session_shell_settings/session_shell_settings.h"
 
 namespace modular {
@@ -42,9 +43,11 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
                     fuchsia::ui::policy::KeyboardCaptureListenerHACK,
                     modular::UserProviderImpl::Delegate {
  public:
-  explicit BasemgrImpl(const modular::BasemgrSettings& settings,
-                       std::shared_ptr<component::StartupContext> context,
-                       std::function<void()> on_shutdown);
+  explicit BasemgrImpl(
+      const modular::BasemgrSettings& settings,
+      const std::vector<modular::SessionShellSettings>& session_shell_settings,
+      std::shared_ptr<component::StartupContext> context,
+      std::function<void()> on_shutdown);
 
   ~BasemgrImpl() override;
 
@@ -113,7 +116,30 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
 
   void ToggleClipping();
 
+  // Updates the session shell app config to the active session shell. Done once
+  // on initialization and every time the session shells are swapped.
+  void update_session_shell_config() {
+    // The session shell settings overrides the session_shell flag passed via
+    // command line. TODO(MF-113): Consolidate the session shell settings.
+    fuchsia::modular::AppConfig session_shell_config;
+    if (session_shell_settings_.empty()) {
+      session_shell_config = CloneStruct(settings_.session_shell);
+    } else {
+      const auto& settings =
+          session_shell_settings_[active_session_shell_settings_index_];
+      session_shell_config.url = settings.name;
+    }
+
+    session_shell_config_ = std::move(session_shell_config);
+  }
+
   const modular::BasemgrSettings& settings_;  // Not owned nor copied.
+  const std::vector<SessionShellSettings>& session_shell_settings_;
+  fuchsia::modular::AppConfig session_shell_config_;
+  // Used to indicate which settings in |session_shell_settings_| is currently
+  // active.
+  std::vector<SessionShellSettings>::size_type
+      active_session_shell_settings_index_{};
 
   AsyncHolder<UserProviderImpl> user_provider_impl_;
 
@@ -152,8 +178,6 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   } presentation_state_;
 
   component::ServiceNamespace service_namespace_;
-
-  std::vector<SessionShellSettings>::size_type active_session_shell_index_{};
 
   enum class State {
     // normal mode of operation
