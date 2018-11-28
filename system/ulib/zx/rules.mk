@@ -11,6 +11,7 @@ MODULE_TYPE := userlib
 MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/bti.cpp \
     $(LOCAL_DIR)/channel.cpp \
     $(LOCAL_DIR)/debuglog.cpp \
     $(LOCAL_DIR)/event.cpp \
