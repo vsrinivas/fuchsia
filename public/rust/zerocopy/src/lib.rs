@@ -2,6 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Utilities for safe zero-copy parsing and serialization.
+//!
+//! This crate provides utilities which make it easy to perform zero-copy
+//! parsing and serialization by allowing zero-copy conversion to/from byte
+//! slices.
+//!
+//! This is enabled by three core marker traits:
+//! - [`FromBytes`] indicates that a type may safely be converted from an
+//!   arbitrary byte sequence
+//! - [`AsBytes`] indicates that a type may safely be converted *to* a byte
+//!   sequence
+//! - [`Unaligned`] indicates that a type's alignment requirement is 1
+//!
+//! Types which implement a subset of these traits can then be converted to/from
+//! byte sequences with little to no runtime overhead.
+
 #![feature(refcell_map_split)]
 #![cfg_attr(not(test), no_std)]
 
@@ -51,6 +67,17 @@ macro_rules! impl_for_array_sizes {
 /// initialized sequence of bytes of length `size_of::<T>()` as a `T`. If a type
 /// is marked as `FromBytes` which violates this contract, it may cause
 /// undefined behavior.
+///
+/// If a type has the following properties, then it is safe to implement
+/// `FromBytes` for that type:
+/// - If the type is a struct:
+///   - It must be `repr(C)` or `repr(transparent)`
+///   - All of its fields must implement `FromBytes`
+/// - If the type is an enum:
+///   - It must be a C-like enum (meaning that all variants have no fields)
+///   - It must be `repr(u8)`, `repr(u16)`, `repr(u32)`, or `repr(u64)`
+///   - The maximum number of discriminants must be used (so that every possible
+///     bit pattern is a valid one)
 pub unsafe trait FromBytes {}
 
 /// Types which are safe to treat as an immutable byte slice.
@@ -67,6 +94,18 @@ pub unsafe trait FromBytes {}
 /// instance of the type as an immutable `[u8]` of the appropriate length. If a
 /// type is marked as `AsBytes` which violates this contract, it may cause
 /// undefined behavior.
+///
+/// If a type has the following properties, then it is safe to implement
+/// `AsBytes` for that type:
+/// - If the type is a struct:
+///   - It must be `repr(C)` or `repr(transparent)`
+///   - If it is `repr(C)`, its layout must have no inter-field padding (this
+///     can be accomplished either by using `repr(packed)` or by manually adding
+///     padding fields)
+///   - All of its fields must implement `AsBytes`
+/// - If the type is an enum:
+///   - It must be a C-like enum
+///   - It must be `repr(u8)`, `repr(u16)`, `repr(u32)`, or `repr(u64)`
 pub unsafe trait AsBytes {}
 
 impl_for_primitives!(FromBytes);
@@ -108,7 +147,7 @@ impl_for_array_sizes!(Unaligned);
 /// ```rust
 /// use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 ///
-/// #[repr(C, packed)]
+/// #[repr(C)]
 /// struct UdpHeader {
 ///     src_port: [u8; 2],
 ///     dst_port: [u8; 2],
