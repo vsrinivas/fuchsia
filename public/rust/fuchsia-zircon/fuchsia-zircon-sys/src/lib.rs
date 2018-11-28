@@ -593,6 +593,7 @@ pub struct zx_info_socket_t {
     pub options: u32,
     pub rx_buf_max: usize,
     pub rx_buf_size: usize,
+    pub rx_buf_available: usize,
     pub tx_buf_max: usize,
     pub tx_buf_size: usize,
 }

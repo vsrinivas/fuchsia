@@ -12,8 +12,6 @@ use crate::{ObjectQuery, Topic};
 use crate::{Property, PropertyQuery, PropertyQueryGet, PropertyQuerySet};
 use fuchsia_zircon_sys as sys;
 
-use std::ptr;
-
 /// An object representing a Zircon
 /// [socket](https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md#Message-Passing_Sockets-and-Channels).
 ///
@@ -41,6 +39,7 @@ pub struct SocketInfo {
     pub options: SocketOpts,
     pub rx_buf_max: usize,
     pub rx_buf_size: usize,
+    pub rx_buf_available: usize,
     pub tx_buf_max: usize,
     pub tx_buf_size: usize,
 }
@@ -51,6 +50,7 @@ impl Default for SocketInfo {
             options: SocketOpts::STREAM,
             rx_buf_max: 0,
             rx_buf_size: 0,
+            rx_buf_available: 0,
             tx_buf_max: 0,
             tx_buf_size: 0,
         }
@@ -63,6 +63,7 @@ impl From<sys::zx_info_socket_t> for SocketInfo {
             options: SocketOpts::from_bits_truncate(socket.options),
             rx_buf_max: socket.rx_buf_max,
             rx_buf_size: socket.rx_buf_size,
+            rx_buf_available: socket.rx_buf_available,
             tx_buf_max: socket.tx_buf_max,
             tx_buf_size: socket.tx_buf_size,
         }
@@ -155,11 +156,7 @@ impl Socket {
     }
 
     pub fn outstanding_read_bytes(&self) -> Result<usize, Status> {
-        let mut outstanding = 0;
-        let status = unsafe {
-            sys::zx_socket_read(self.raw_handle(), 0, ptr::null_mut(), 0, &mut outstanding)
-        };
-        ok(status).map(|()| outstanding)
+        Ok(self.info()?.rx_buf_available)
     }
 
     pub fn info(&self) -> Result<SocketInfo, Status> {

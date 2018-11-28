@@ -92,6 +92,18 @@ TEST(Logger, WithSeverityMacro) {
   output_compare_helper(std::move(local), FX_LOG_INFO, msg, nullptr, 0);
 }
 
+static zx_status_t GetAvailableBytes(const zx::socket& socket,
+                                     size_t* out_available) {
+    zx_info_socket_t info = {};
+    zx_status_t status = socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info),
+                                         nullptr, nullptr);
+    if (status != ZX_OK) {
+        return status;
+    }
+    *out_available = info.rx_buf_available;
+    return ZX_OK;
+}
+
 TEST(Logger, LogSeverity) {
   Cleanup cleanup;
   zx::socket local, remote;
@@ -100,7 +112,7 @@ TEST(Logger, LogSeverity) {
 
   FX_VLOGS(1) << "just some msg";
   size_t outstanding_bytes = 10u;  // init to non zero value.
-  ASSERT_EQ(ZX_OK, local.read(0, nullptr, 0, &outstanding_bytes));
+  ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
   EXPECT_EQ(0u, outstanding_bytes);
 
   FX_LOGS(WARNING) << "just some msg";
@@ -127,7 +139,7 @@ TEST(Logger, CheckFunction) {
 
   FX_CHECK(1 > 0) << "error msg";
   size_t outstanding_bytes = 10u;  // init to non zero value.
-  ASSERT_EQ(ZX_OK, local.read(0, nullptr, 0, &outstanding_bytes));
+  ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
   EXPECT_EQ(0u, outstanding_bytes);
 }
 
@@ -139,13 +151,13 @@ TEST(Logger, VLog) {
   const char* msg = "test message";
   FX_VLOGS(1) << msg;
   size_t outstanding_bytes = 10u;  // init to non zero value.
-  ASSERT_EQ(ZX_OK, local.read(0, nullptr, 0, &outstanding_bytes));
+  ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
   EXPECT_EQ(0u, outstanding_bytes);
 
   FX_LOG_SET_VERBOSITY(1);
   FX_VLOGS(2) << msg;
   outstanding_bytes = 10u;  // init to non zero value.
-  ASSERT_EQ(ZX_OK, local.read(0, nullptr, 0, &outstanding_bytes));
+  ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
   EXPECT_EQ(0u, outstanding_bytes);
 
   FX_VLOGS(1) << msg;
@@ -161,13 +173,13 @@ TEST(Logger, VLogWithTag) {
   const char* tags[] = {"tag"};
   FX_VLOGST(1, tags[0]) << msg;
   size_t outstanding_bytes = 10u;  // init to non zero value.
-  ASSERT_EQ(ZX_OK, local.read(0, nullptr, 0, &outstanding_bytes));
+  ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
   EXPECT_EQ(0u, outstanding_bytes);
 
   FX_LOG_SET_VERBOSITY(1);
   FX_VLOGST(2, tags[0]) << msg;
   outstanding_bytes = 10u;  // init to non zero value.
-  ASSERT_EQ(ZX_OK, local.read(0, nullptr, 0, &outstanding_bytes));
+  ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
   EXPECT_EQ(0u, outstanding_bytes);
 
   FX_VLOGST(1, tags[0]) << msg;
