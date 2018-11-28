@@ -102,7 +102,7 @@ int AvIoContextOpaque::Read(uint8_t* buffer, size_t bytes_to_read) {
   FXL_DCHECK(position_ >= 0);
 
   if (position_ >= size_) {
-    return 0;
+    return AVERROR_EOF;
   }
 
   FXL_DCHECK(static_cast<uint64_t>(position_) <
