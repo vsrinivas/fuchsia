@@ -33,7 +33,7 @@ off disk.
 By default the device boots from the internal storage first, and you cannot set USB drives as a
 generic default.
 
-Prepare a USB drive, using `fx mkzedboot` (see the [docs](bootloader_setup.md) for details, and see
+Prepare a USB drive, using `fx mkzedboot` (see the [docs](usb_setup.md) for details, and see
 above for how to make a USB stick that can netboot).
 
 Insert the USB drive before powering on the device. Note: if the drive isn’t recognized, try using

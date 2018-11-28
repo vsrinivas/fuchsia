@@ -35,7 +35,7 @@ Otherwise you’ll need to enter the password every time you use the BIOS.
 A password is required to modify the secure boot setting, but “disabled” will persist without one.
 12. Select “Exit” from the tabs at the left
 13. Select “Exit Saving Changes”
-14. Continue to [Bootloader setup with USB flash drive](bootloader_setup.md)
+14. Continue to [Setup with USB flash drive](usb_setup.md)
 
 ## What if you end up in the Windows 10 Setup?
 If you don’t enter the BIOS and haven’t installed another OS, You’ll end up on a blue background “Hi there” screen asking you to select country, language, etc.

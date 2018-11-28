@@ -8,7 +8,7 @@ boot an experimental, in-development OS.
 ## NUC Setup & Configuration
 
 These instructions configure the NUC machine to boot from a USB flash drive.
-This is a necessary step for _network boot_, where the bootloader on your USB
+This is a necessary step for _network boot_, where the system on your USB
 drive pulls your freshly-built OS across the network, from host machine to NUC.
 
 1. Install memory (and optional SSD)
@@ -52,7 +52,7 @@ drive pulls your freshly-built OS across the network, from host machine to NUC.
      + Press F10 (or click the top right (x) button) to Save and Exit, Y to confirm
      + Device will automatically reboot and begin looking for a USB or network boot
 1. Power down the NUC
-1. Continue to [Bootloader setup with USB flash drive](bootloader_setup.md)
+1. Continue to [Setup with USB flash drive](usb_setup.md)
 
 *** promo
 Network booting only works with the NUC's *built-in* ethernet, netbooting via
