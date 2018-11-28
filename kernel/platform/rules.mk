@@ -19,5 +19,3 @@ MODULE_DEPS += \
 	kernel/lib/zxcpp
 
 include make/module.mk
-
-

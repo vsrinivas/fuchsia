@@ -112,7 +112,8 @@ typedef struct {
     macro(ZBI_TYPE_CRASHLOG, "CRASHLOG", ".bin") \
     macro(ZBI_TYPE_NVRAM, "NVRAM", ".bin") \
     macro(ZBI_TYPE_PLATFORM_ID, "PLATFORM_ID", ".bin") \
-    macro(ZBI_TYPE_CPU_CONFIG, "CPU_CONFIG", ".bin") \
+    macro(ZBI_TYPE_CPU_CONFIG, "CPU_CONFIG", ".bin") /* Deprecated */ \
+    macro(ZBI_TYPE_CPU_TOPOLOGY, "CPU_TOPOLOGY", ".bin") \
     macro(ZBI_TYPE_MEM_CONFIG, "MEM_CONFIG", ".bin") \
     macro(ZBI_TYPE_KERNEL_DRIVER, "KERNEL_DRIVER", ".bin") \
     macro(ZBI_TYPE_ACPI_RSDP, "ACPI_RSDP", ".bin") \
@@ -404,6 +405,103 @@ typedef struct {
     // cluster_count entries follow.
     zbi_cpu_cluster_t clusters[];
 } zbi_cpu_config_t;
+#endif
+
+#define ZBI_TYPE_CPU_TOPOLOGY           (0x544F504F) // TOPO
+
+#ifndef __ASSEMBLER__
+
+#define ZBI_MAX_SMT 4
+
+// These are Used in the flags field of zbi_topology_processor_t.
+
+// This is the processor that boots the system and the last to be shutdown.
+#define ZBI_TOPOLOGY_PROCESSOR_PRIMARY 0b1
+
+// This is the processor that handles all interrupts, some architectures will
+// not have one.
+#define ZBI_TOPOLOGY_PROCESSOR_INTERRUPT 0b10
+
+#define ZBI_TOPOLOGY_NO_PARENT 0xFFFF
+
+typedef enum {
+    ZBI_TOPOLOGY_ARCH_UNDEFINED = 0, // Intended primarily for testing.
+    ZBI_TOPOLOGY_ARCH_X86 = 1,
+    ZBI_TOPOLOGY_ARCH_ARM = 2,
+} zbi_topology_architecture_t;
+
+typedef struct {
+    // Cluster ids for each level, one being closest to the cpu.
+    // These map to aff1, aff2, and aff3 values in the ARM registers.
+    uint8_t cluster_1_id;
+    uint8_t cluster_2_id;
+    uint8_t cluster_3_id;
+
+    // Id of the cpu inside of the bottom-most cluster, aff0 value.
+    uint8_t cpu_id;
+
+    // The GIC interface number for this processor.
+    // In GIC v3+ this is not necessary as the processors are addressed by their
+    // affinity routing (all cluster ids followed by cpu_id).
+    uint8_t gic_id;
+}  zbi_topology_arm_info_t;
+
+typedef struct {
+    uint32_t apic_id;
+}  zbi_topology_x86_info_t;
+
+typedef struct {
+    uint16_t logical_ids[ZBI_MAX_SMT];
+    uint8_t logical_id_count;
+
+    uint16_t flags;
+
+    // Should be one of zbi_topology_arm_info_t.
+    // If UNDEFINED then nothing will be set in arch_info.
+    uint8_t architecture;
+    union {
+        zbi_topology_arm_info_t arm;
+        zbi_topology_x86_info_t x86;
+    } architecture_info;
+
+} zbi_topology_processor_t;
+
+typedef struct {
+    // Relative performance level of this processor in the system, with 0
+    // representing the lowest performance.
+    // For example on a two cluster ARM big.LITTLE system 0 would be the little
+    // cores and 1 would represent the big cores.
+    uint8_t performance_class;
+} zbi_topology_cluster_t;
+
+typedef struct {
+  // Starting and ending memory addresses of this numa region.
+  uint64_t start_address;
+  uint64_t end_address;
+} zbi_topology_numa_region_t;
+
+typedef enum {
+    ZBI_TOPOLOGY_ENTITY_UNDEFINED = 0, // Unused default.
+    ZBI_TOPOLOGY_ENTITY_PROCESSOR = 1,
+    ZBI_TOPOLOGY_ENTITY_CLUSTER = 2,
+    ZBI_TOPOLOGY_ENTITY_CACHE = 3,
+    ZBI_TOPOLOGY_ENTITY_DIE = 4,
+    ZBI_TOPOLOGY_ENTITY_SOCKET = 5,
+    ZBI_TOPOLOGY_ENTITY_POWER_PLANE = 6,
+    ZBI_TOPOLOGY_ENTITY_NUMA_REGION = 7,
+} zbi_topology_entity_type_t;
+
+typedef struct {
+    // Should be one of zbi_topology_entity_type_t.
+    uint8_t entity_type;
+    uint16_t parent_index;
+    union {
+        zbi_topology_processor_t processor;
+        zbi_topology_cluster_t cluster;
+        zbi_topology_numa_region_t numa_region;
+    } entity;
+} zbi_topology_node_t;
+
 #endif
 
 // Memory configuration, one or more zbi_mem_range_t entries.
