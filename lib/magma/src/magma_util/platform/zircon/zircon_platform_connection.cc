@@ -46,8 +46,7 @@ ExecuteImmediateCommandsOp* OpCast<ExecuteImmediateCommandsOp>(uint8_t* bytes, u
     return reinterpret_cast<ExecuteImmediateCommandsOp*>(bytes);
 }
 
-class ZirconPlatformConnection : public PlatformConnection,
-                                 public std::enable_shared_from_this<ZirconPlatformConnection> {
+class ZirconPlatformConnection : public PlatformConnection {
 public:
     struct AsyncWait : public async_wait {
         AsyncWait(ZirconPlatformConnection* connection, zx_handle_t object, zx_signals_t trigger)
