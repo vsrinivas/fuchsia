@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include <lib/callback/scoped_callback.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>

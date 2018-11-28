@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 
+#include <lib/callback/scoped_callback.h>
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/memory/ref_ptr.h>

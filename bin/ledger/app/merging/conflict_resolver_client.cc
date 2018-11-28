@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include <lib/callback/scoped_callback.h>
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
