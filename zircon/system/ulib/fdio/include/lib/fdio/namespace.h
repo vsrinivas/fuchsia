@@ -71,8 +71,7 @@ typedef struct fdio_flat_namespace {
 // one provided in 'ns' or the active root namespace, respectively.)
 // The handles are CLONEs of the handles in the namespace and also
 // belong to the caller.
-// The whole data structure can be released with free(), keeping in
-// mind that the handles should be used or closed first.
+// The whole data structure can be released with fdio_ns_free_flat_ns().
 zx_status_t fdio_ns_export(fdio_ns_t* ns, fdio_flat_namespace_t** out);
 zx_status_t fdio_ns_export_root(fdio_flat_namespace_t** out);
 
@@ -91,5 +90,9 @@ zx_status_t fdio_ns_connect(fdio_ns_t* ns, const char* path,
 // no ".." or "." or empty segments.
 zx_status_t fdio_ns_open(fdio_ns_t* ns, const char* path,
                          uint32_t zxflags, zx_handle_t* out);
+
+// Frees a flat namespace.
+// Closes all handles contained within |ns|.
+void fdio_ns_free_flat_ns(fdio_flat_namespace_t* ns);
 
 __END_CDECLS;

@@ -749,3 +749,9 @@ zx_status_t fdio_ns_export_root(fdio_flat_namespace_t** out) {
     mtx_unlock(&fdio_lock);
     return status;
 }
+
+__EXPORT
+void fdio_ns_free_flat_namesapce(fdio_flat_namespace_t* ns) {
+    zx_handle_close_many(ns->handle, ns->count);
+    free(ns);
+}
