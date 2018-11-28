@@ -21,7 +21,7 @@ class LocalSingleCodecFactory : public fuchsia::mediacodec::CodecFactory {
       fidl::InterfaceRequest<CodecFactory> request,
       fit::function<void(std::unique_ptr<CodecImpl>)> factory_done_callback,
       CodecAdmissionControl* codec_admission_control,
-      fit::closure error_handler);
+      fit::function<void(zx_status_t)> error_handler);
 
   virtual void CreateDecoder(
       fuchsia::mediacodec::CreateDecoder_Params decoder_params,

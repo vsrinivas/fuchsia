@@ -12,7 +12,8 @@ LocalSingleCodecFactory::LocalSingleCodecFactory(
     async_dispatcher_t* fidl_dispatcher,
     fidl::InterfaceRequest<CodecFactory> request,
     fit::function<void(std::unique_ptr<CodecImpl>)> factory_done_callback,
-    CodecAdmissionControl* codec_admission_control, fit::closure error_handler)
+    CodecAdmissionControl* codec_admission_control,
+    fit::function<void(zx_status_t)> error_handler)
     : fidl_dispatcher_(fidl_dispatcher),
       binding_(this),
       factory_done_callback_(std::move(factory_done_callback)),

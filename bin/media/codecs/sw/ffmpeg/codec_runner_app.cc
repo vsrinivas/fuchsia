@@ -42,7 +42,7 @@ void CodecRunnerApp::Run() {
                   codec_factory_.reset();
                 },
                 codec_admission_control,
-                [this] {
+                [this](zx_status_t error) {
                   // Drop factory and close factory channel on error.
                   codec_factory_.reset();
                 }));
