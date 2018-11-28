@@ -265,25 +265,17 @@ void JSONGenerator::Generate(const raw::Literal& value) {
 
 void JSONGenerator::Generate(const flat::Constant& value) {
     GenerateObject([&]() {
+        GenerateObjectMember("kind", NameFlatConstantKind(value.kind), Position::kFirst);
+
         switch (value.kind) {
         case flat::Constant::Kind::kIdentifier: {
-            GenerateObjectMember("kind", NameFlatConstantKind(value.kind), Position::kFirst);
             auto type = static_cast<const flat::IdentifierConstant*>(&value);
             GenerateObjectMember("identifier", type->name);
             break;
         }
         case flat::Constant::Kind::kLiteral: {
-            GenerateObjectMember("kind", NameFlatConstantKind(value.kind), Position::kFirst);
             auto type = static_cast<const flat::LiteralConstant*>(&value);
             GenerateObjectMember("literal", type->literal);
-            break;
-        }
-        case flat::Constant::Kind::kSynthesized: {
-            // TODO(pascallouis): We should explore exposing these in the JSON IR, such that the
-            // implicit bounds are made explicit by fidlc, rather than sprinkled throughout all
-            // backends.
-            //
-            // For now, do not emit synthesized constants
             break;
         }
         }
@@ -298,24 +290,21 @@ void JSONGenerator::Generate(const flat::Type& value) {
         case flat::Type::Kind::kArray: {
             auto type = static_cast<const flat::ArrayType*>(&value);
             GenerateObjectMember("element_type", type->element_type);
-            auto element_count = static_cast<const flat::Size&>(type->element_count->Value());
-            GenerateObjectMember("element_count", element_count.value);
+            GenerateObjectMember("element_count", type->element_count.Value());
             break;
         }
         case flat::Type::Kind::kVector: {
             auto type = static_cast<const flat::VectorType*>(&value);
             GenerateObjectMember("element_type", type->element_type);
-            auto element_count = static_cast<const flat::Size&>(type->element_count->Value());
-            if (element_count < flat::Size::Max())
-                GenerateObjectMember("maybe_element_count", element_count.value);
+            if (type->element_count.Value() < flat::Size::Max().Value())
+                GenerateObjectMember("maybe_element_count", type->element_count.Value());
             GenerateObjectMember("nullable", type->nullability);
             break;
         }
         case flat::Type::Kind::kString: {
             auto type = static_cast<const flat::StringType*>(&value);
-            auto max_size = static_cast<const flat::Size&>(type->max_size->Value());
-            if (max_size < flat::Size::Max())
-                GenerateObjectMember("maybe_element_count", max_size.value);
+            if (type->max_size.Value() < flat::Size::Max().Value())
+                GenerateObjectMember("maybe_element_count", type->max_size.Value());
             GenerateObjectMember("nullable", type->nullability);
             break;
         }

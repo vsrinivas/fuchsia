@@ -36,8 +36,8 @@ const bool c = "foo";
 )FIDL");
     ASSERT_FALSE(library.Compile());
     auto errors = library.errors();
-    ASSERT_GE(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "\"foo\" cannot be interpreted as type bool");
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(), "cannot convert \"foo\" (type string:3) to type bool");
 
     END_TEST;
 }
@@ -52,8 +52,8 @@ const bool c = 6;
 )FIDL");
     ASSERT_FALSE(library.Compile());
     auto errors = library.errors();
-    ASSERT_GE(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "6 cannot be interpreted as type bool");
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(), "cannot convert 6 (type int64) to type bool");
 
     END_TEST;
 }
@@ -95,8 +95,8 @@ const int32 c = "foo";
 )FIDL");
     ASSERT_FALSE(library.Compile());
     auto errors = library.errors();
-    ASSERT_GE(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "\"foo\" cannot be interpreted as type int32");
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(), "cannot convert \"foo\" (type string:3) to type int32");
 
     END_TEST;
 }
@@ -111,8 +111,8 @@ const int32 c = true;
 )FIDL");
     ASSERT_FALSE(library.Compile());
     auto errors = library.errors();
-    ASSERT_GE(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "true cannot be interpreted as type int32");
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(), "cannot convert true (type bool) to type int32");
 
     END_TEST;
 }
@@ -154,8 +154,8 @@ const string c = 4;
 )FIDL");
     ASSERT_FALSE(library.Compile());
     auto errors = library.errors();
-    ASSERT_GE(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "4 cannot be interpreted as type string");
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(), "cannot convert 4 (type int64) to type string");
 
     END_TEST;
 }
@@ -170,8 +170,8 @@ const string c = true;
 )FIDL");
     ASSERT_FALSE(library.Compile());
     auto errors = library.errors();
-    ASSERT_GE(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "true cannot be interpreted as type string");
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(), "cannot convert true (type bool) to type string");
 
     END_TEST;
 }
@@ -186,9 +186,8 @@ const string:4 c = "hello";
 )FIDL");
     ASSERT_FALSE(library.Compile());
     auto errors = library.errors();
-    ASSERT_GE(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(),
-                   "\"hello\" (string:5) exceeds the size bound of type string:4");
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(), "cannot convert \"hello\" (type string:5) to type string:4");
 
     END_TEST;
 }
@@ -218,8 +217,8 @@ const foo c = "nope";
 )FIDL");
     ASSERT_FALSE(library.Compile());
     auto errors = library.errors();
-    ASSERT_GE(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "\"nope\" cannot be interpreted as type int32");
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(), "cannot convert \"nope\" (type string:4) to type int32");
 
     END_TEST;
 }
@@ -234,7 +233,7 @@ const string? c = "";
 )FIDL");
     ASSERT_FALSE(library.Compile());
     auto errors = library.errors();
-    ASSERT_GE(errors.size(), 1);
+    ASSERT_EQ(errors.size(), 1);
     ASSERT_STR_STR(errors[0].c_str(), "invalid constant type string?");
 
     END_TEST;
@@ -251,7 +250,7 @@ const MyEnum c = "";
 )FIDL");
     ASSERT_FALSE(library.Compile());
     auto errors = library.errors();
-    ASSERT_GE(errors.size(), 1);
+    ASSERT_EQ(errors.size(), 1);
     ASSERT_STR_STR(errors[0].c_str(), "invalid constant type example/MyEnum");
 
     END_TEST;
@@ -267,7 +266,7 @@ const array<int32>:2 c = -1;
 )FIDL");
     ASSERT_FALSE(library.Compile());
     auto errors = library.errors();
-    ASSERT_GE(errors.size(), 1);
+    ASSERT_EQ(errors.size(), 1);
     ASSERT_STR_STR(errors[0].c_str(), "invalid constant type array<int32>:2");
 
     END_TEST;
@@ -283,7 +282,7 @@ const vector<int32>:2 c = -1;
 )FIDL");
     ASSERT_FALSE(library.Compile());
     auto errors = library.errors();
-    ASSERT_GE(errors.size(), 1);
+    ASSERT_EQ(errors.size(), 1);
     ASSERT_STR_STR(errors[0].c_str(), "invalid constant type vector<int32>:2");
 
     END_TEST;
@@ -299,7 +298,7 @@ const handle<thread> c = -1;
 )FIDL");
     ASSERT_FALSE(library.Compile());
     auto errors = library.errors();
-    ASSERT_GE(errors.size(), 1);
+    ASSERT_EQ(errors.size(), 1);
     ASSERT_STR_STR(errors[0].c_str(), "invalid constant type handle<thread>");
 
     END_TEST;

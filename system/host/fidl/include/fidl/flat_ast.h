@@ -13,7 +13,6 @@
 #include <map>
 #include <memory>
 #include <set>
-#include <type_traits>
 #include <vector>
 
 #include "error_reporter.h"
@@ -87,286 +86,18 @@ private:
     std::unique_ptr<std::string> anonymous_name_;
 };
 
-struct ConstantValue {
-    virtual ~ConstantValue() {}
-
-    enum struct Kind {
-        kInt8,
-        kInt16,
-        kInt32,
-        kInt64,
-        kUint8,
-        kUint16,
-        kUint32,
-        kUint64,
-        kFloat32,
-        kFloat64,
-        kBool,
-        kString,
-    };
-
-    virtual bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const = 0;
-
-    const Kind kind;
-
-protected:
-    explicit ConstantValue(Kind kind)
-        : kind(kind) {}
-};
-
-template <typename ValueType, typename = std::enable_if_t<std::is_arithmetic<ValueType>::value &&
-                                                          !std::is_same<ValueType, bool>::value>>
-struct NumericConstantValue : ConstantValue {
-    NumericConstantValue(ValueType value)
-        : ConstantValue(GetKind()), value(value) {}
-
-    operator ValueType() const { return value; }
-
-    friend bool operator==(const NumericConstantValue<ValueType>& l,
-                           const NumericConstantValue<ValueType>& r) {
-        return l.value == r.value;
-    }
-
-    friend bool operator<(const NumericConstantValue<ValueType>& l,
-                          const NumericConstantValue<ValueType>& r) {
-        return l.value < r.value;
-    }
-
-    friend bool operator>(const NumericConstantValue<ValueType>& l,
-                          const NumericConstantValue<ValueType>& r) {
-        return l.value > r.value;
-    }
-
-    friend bool operator!=(const NumericConstantValue<ValueType>& l,
-                           const NumericConstantValue<ValueType>& r) {
-        return l.value != r.value;
-    }
-
-    friend bool operator<=(const NumericConstantValue<ValueType>& l,
-                           const NumericConstantValue<ValueType>& r) {
-        return l.value <= r.value;
-    }
-
-    friend bool operator>=(const NumericConstantValue<ValueType>& l,
-                           const NumericConstantValue<ValueType>& r) {
-        return l.value >= r.value;
-    }
-
-    virtual bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const override {
-        assert(out_value != nullptr);
-        switch (kind) {
-        case Kind::kInt8: {
-            if (std::is_floating_point<ValueType>::value ||
-                value < std::numeric_limits<int8_t>::min() ||
-                value > std::numeric_limits<int8_t>::max()) {
-                return false;
-            }
-            *out_value = std::make_unique<NumericConstantValue<int8_t>>(
-                static_cast<int8_t>(value));
-            return true;
-        }
-        case Kind::kInt16: {
-            if (std::is_floating_point<ValueType>::value ||
-                value < std::numeric_limits<int16_t>::min() ||
-                value > std::numeric_limits<int16_t>::max()) {
-                return false;
-            }
-            *out_value = std::make_unique<NumericConstantValue<int16_t>>(
-                static_cast<int16_t>(value));
-            return true;
-        }
-        case Kind::kInt32: {
-            if (std::is_floating_point<ValueType>::value ||
-                value < std::numeric_limits<int32_t>::min() ||
-                value > std::numeric_limits<int32_t>::max()) {
-                return false;
-            }
-            *out_value = std::make_unique<NumericConstantValue<int32_t>>(
-                static_cast<int32_t>(value));
-            return true;
-        }
-        case Kind::kInt64: {
-            if (std::is_floating_point<ValueType>::value ||
-                value < std::numeric_limits<int64_t>::min() ||
-                value > std::numeric_limits<int64_t>::max()) {
-                return false;
-            }
-            *out_value = std::make_unique<NumericConstantValue<int64_t>>(
-                static_cast<int64_t>(value));
-            return true;
-        }
-        case Kind::kUint8: {
-            if (std::is_floating_point<ValueType>::value ||
-                value < 0 || value > std::numeric_limits<uint8_t>::max()) {
-                return false;
-            }
-            *out_value = std::make_unique<NumericConstantValue<uint8_t>>(
-                static_cast<uint8_t>(value));
-            return true;
-        }
-        case Kind::kUint16: {
-            if (std::is_floating_point<ValueType>::value ||
-                value < 0 || value > std::numeric_limits<uint16_t>::max()) {
-                return false;
-            }
-            *out_value = std::make_unique<NumericConstantValue<uint16_t>>(
-                static_cast<uint16_t>(value));
-            return true;
-        }
-        case Kind::kUint32: {
-            if (std::is_floating_point<ValueType>::value ||
-                value < 0 || value > std::numeric_limits<uint32_t>::max()) {
-                return false;
-            }
-            *out_value = std::make_unique<NumericConstantValue<uint32_t>>(
-                static_cast<uint32_t>(value));
-            return true;
-        }
-        case Kind::kUint64: {
-            if (std::is_floating_point<ValueType>::value ||
-                value < 0 || value > std::numeric_limits<uint64_t>::max()) {
-                return false;
-            }
-            *out_value = std::make_unique<NumericConstantValue<uint64_t>>(
-                static_cast<uint64_t>(value));
-            return true;
-        }
-        case Kind::kFloat32: {
-            if (!std::is_floating_point<ValueType>::value ||
-                value < std::numeric_limits<float>::min() ||
-                value > std::numeric_limits<float>::max()) {
-                return false;
-            }
-            *out_value = std::make_unique<NumericConstantValue<float>>(static_cast<float>(value));
-            return true;
-        }
-        case Kind::kFloat64: {
-            if (!std::is_floating_point<ValueType>::value ||
-                value < std::numeric_limits<double>::min() ||
-                value > std::numeric_limits<double>::max()) {
-                return false;
-            }
-            *out_value = std::make_unique<NumericConstantValue<double>>(static_cast<double>(value));
-            return true;
-        }
-        case Kind::kString:
-        case Kind::kBool:
-            return false;
-        }
-    }
-
-    static NumericConstantValue<ValueType> Min() {
-        return NumericConstantValue<ValueType>(std::numeric_limits<ValueType>::min());
-    }
-
-    static NumericConstantValue<ValueType> Max() {
-        return NumericConstantValue<ValueType>(std::numeric_limits<ValueType>::max());
-    }
-
-    ValueType value;
-
-private:
-    constexpr static Kind GetKind() {
-        if constexpr (std::is_same_v<ValueType, uint64_t>)
-            return Kind::kUint64;
-        if constexpr (std::is_same_v<ValueType, int64_t>)
-            return Kind::kInt64;
-        if constexpr (std::is_same_v<ValueType, uint32_t>)
-            return Kind::kUint32;
-        if constexpr (std::is_same_v<ValueType, int32_t>)
-            return Kind::kInt32;
-        if constexpr (std::is_same_v<ValueType, uint16_t>)
-            return Kind::kUint16;
-        if constexpr (std::is_same_v<ValueType, int16_t>)
-            return Kind::kInt16;
-        if constexpr (std::is_same_v<ValueType, uint8_t>)
-            return Kind::kUint8;
-        if constexpr (std::is_same_v<ValueType, int8_t>)
-            return Kind::kInt8;
-        if constexpr (std::is_same_v<ValueType, double>)
-            return Kind::kFloat64;
-        if constexpr (std::is_same_v<ValueType, float>)
-            return Kind::kFloat32;
-    }
-};
-
-using Size = NumericConstantValue<uint32_t>;
-
-struct BoolConstantValue : ConstantValue {
-    BoolConstantValue(bool value)
-        : ConstantValue(ConstantValue::Kind::kBool), value(value) {}
-
-    operator bool() const { return value; }
-
-    friend bool operator==(const BoolConstantValue& l, const BoolConstantValue& r) {
-        return l.value == r.value;
-    }
-
-    friend bool operator!=(const BoolConstantValue& l, const BoolConstantValue& r) {
-        return l.value != r.value;
-    }
-
-    virtual bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const override {
-        assert(out_value != nullptr);
-        switch (kind) {
-        case Kind::kBool:
-            *out_value = std::make_unique<BoolConstantValue>(value);
-            return true;
-        default:
-            return false;
-        }
-    }
-
-    bool value;
-};
-
-struct StringConstantValue : ConstantValue {
-    explicit StringConstantValue(StringView value)
-        : ConstantValue(ConstantValue::Kind::kString), value(value) {}
-
-    virtual bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const override {
-        assert(out_value != nullptr);
-        switch (kind) {
-        case Kind::kString:
-            *out_value = std::make_unique<StringConstantValue>(StringView(value));
-            return true;
-        default:
-            return false;
-        }
-    }
-
-    StringView value;
-};
-
 struct Constant {
     virtual ~Constant() {}
 
     enum struct Kind {
         kIdentifier,
         kLiteral,
-        kSynthesized,
     };
 
     explicit Constant(Kind kind)
         : kind(kind) {}
 
-    bool IsResolved() const { return value_ != nullptr; }
-
-    void ResolveTo(std::unique_ptr<ConstantValue> value) {
-        assert(value != nullptr);
-        assert(!IsResolved() && "Constants should only be resolved once!");
-        value_ = std::move(value);
-    }
-
-    const ConstantValue& Value() const {
-        assert(IsResolved());
-        return *value_;
-    }
-
     const Kind kind;
-
-protected:
-    std::unique_ptr<ConstantValue> value_;
 };
 
 struct IdentifierConstant : Constant {
@@ -383,12 +114,27 @@ struct LiteralConstant : Constant {
     std::unique_ptr<raw::Literal> literal;
 };
 
-struct SynthesizedConstant : Constant {
-    explicit SynthesizedConstant(std::unique_ptr<ConstantValue> value)
-        : Constant(Kind::kSynthesized) {
-        ResolveTo(std::move(value));
-    }
+template <typename IntType>
+struct IntConstant {
+    IntConstant(std::unique_ptr<Constant> constant, IntType value)
+        : constant_(std::move(constant)), value_(value) {}
+
+    explicit IntConstant(IntType value)
+        : value_(value) {}
+
+    IntConstant()
+        : value_(0) {}
+
+    IntType Value() const { return value_; }
+
+    static IntConstant Max() { return IntConstant(std::numeric_limits<IntType>::max()); }
+
+private:
+    std::unique_ptr<Constant> constant_;
+    IntType value_;
 };
+
+using Size = IntConstant<uint32_t>;
 
 struct Decl {
     virtual ~Decl() {}
@@ -483,57 +229,49 @@ struct Type {
 };
 
 struct ArrayType : public Type {
-    ArrayType(SourceLocation name, std::unique_ptr<Type> element_type,
-              std::unique_ptr<Constant> element_count)
-        : Type(Kind::kArray, 0u, types::Nullability::kNonnullable), name(name),
+    ArrayType(std::unique_ptr<Type> element_type, Size element_count)
+        : Type(Kind::kArray, 0u, types::Nullability::kNonnullable),
           element_type(std::move(element_type)),
           element_count(std::move(element_count)) {}
 
-    SourceLocation name;
     std::unique_ptr<Type> element_type;
-    std::unique_ptr<Constant> element_count;
+    Size element_count;
 
     Comparison Compare(const Type& other) const override {
         const auto& o = static_cast<const ArrayType&>(other);
         return Type::Compare(o)
-            .Compare(static_cast<const Size&>(element_count->Value()).value,
-                     static_cast<const Size&>(o.element_count->Value()).value)
+            .Compare(element_count.Value(), o.element_count.Value())
             .Compare(*element_type, *o.element_type);
     }
 };
 
 struct VectorType : public Type {
-    VectorType(SourceLocation name, std::unique_ptr<Type> element_type,
-               std::unique_ptr<Constant> element_count, types::Nullability nullability)
-        : Type(Kind::kVector, 16u, nullability), name(name), element_type(std::move(element_type)),
+    VectorType(std::unique_ptr<Type> element_type, Size element_count,
+               types::Nullability nullability)
+        : Type(Kind::kVector, 16u, nullability), element_type(std::move(element_type)),
           element_count(std::move(element_count)) {}
 
-    SourceLocation name;
     std::unique_ptr<Type> element_type;
-    std::unique_ptr<Constant> element_count;
+    Size element_count;
 
     Comparison Compare(const Type& other) const override {
         const auto& o = static_cast<const VectorType&>(other);
         return Type::Compare(o)
-            .Compare(static_cast<const Size&>(element_count->Value()).value,
-                     static_cast<const Size&>(o.element_count->Value()).value)
+            .Compare(element_count.Value(), o.element_count.Value())
             .Compare(*element_type, *o.element_type);
     }
 };
 
 struct StringType : public Type {
-    StringType(SourceLocation name, std::unique_ptr<Constant> max_size,
-               types::Nullability nullability)
-        : Type(Kind::kString, 16u, nullability), name(name), max_size(std::move(max_size)) {}
+    StringType(Size max_size, types::Nullability nullability)
+        : Type(Kind::kString, 16u, nullability), max_size(std::move(max_size)) {}
 
-    SourceLocation name;
-    std::unique_ptr<Constant> max_size;
+    Size max_size;
 
     Comparison Compare(const Type& other) const override {
         const auto& o = static_cast<const StringType&>(other);
         return Type::Compare(o)
-            .Compare(static_cast<const Size&>(max_size->Value()).value,
-                     static_cast<const Size&>(o.max_size->Value()).value);
+            .Compare(max_size.Value(), o.max_size.Value());
     }
 };
 
@@ -832,6 +570,9 @@ private:
 
     bool CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,
                                    SourceLocation location, Name* out_name);
+
+    bool ParseSize(std::unique_ptr<Constant> constant, Size* out_size);
+
     void RegisterConst(Const* decl);
     bool RegisterDecl(Decl* decl);
 
@@ -853,8 +594,12 @@ private:
     bool ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration);
 
     bool TypeCanBeConst(const Type* type);
+    bool TypeInferConstantType(const Constant* constant,
+                               std::unique_ptr<Type>* out_type);
     const Type* TypeResolve(const Type* type);
     bool TypeIsConvertibleTo(const Type* from_type, const Type* to_type);
+
+    bool TypecheckConst(const Const* const_declaration);
 
     // Given a const declaration of the form
     //     const type foo = name;
@@ -901,10 +646,6 @@ private:
     bool CompileIdentifierType(IdentifierType* identifier_type, TypeShape* out_type_metadata);
     bool CompileType(Type* type, TypeShape* out_type_metadata);
 
-    bool ResolveConstant(Constant* constant, const Type* type);
-    bool ResolveIdentifierConstant(IdentifierConstant* identifier_constant, const Type* type);
-    bool ResolveLiteralConstant(LiteralConstant* literal_constant, const Type* type);
-
 public:
     // Returns nullptr when the |name| cannot be resolved to a
     // Name. Otherwise it returns the declaration.
@@ -913,53 +654,38 @@ public:
     // TODO(TO-702) Add a validate literal function. Some things
     // (e.g. array indexes) want to check the value but print the
     // constant, say.
-    template <typename NumericType>
-    bool ParseNumericLiteral(const raw::NumericLiteral* literal, NumericType* out_value) const {
+    template <typename IntType>
+    bool ParseIntegerLiteral(const raw::NumericLiteral* literal, IntType* out_value) const {
         if (!literal) {
             return false;
         }
         auto data = literal->location().data();
         std::string string_data(data.data(), data.data() + data.size());
-        if constexpr (std::is_unsigned<NumericType>::value) {
+        if (std::is_unsigned<IntType>::value) {
             errno = 0;
             unsigned long long value = strtoull(string_data.data(), nullptr, 0);
             if (errno != 0)
                 return false;
-            if (value > std::numeric_limits<NumericType>::max())
+            if (value > std::numeric_limits<IntType>::max())
                 return false;
-            *out_value = static_cast<NumericType>(value);
-        } else if constexpr (std::is_floating_point<NumericType>::value) {
-            errno = 0;
-            double value = strtod(string_data.data(), nullptr);
-            if (errno != 0) {
-                return false;
-            }
-            if (value > std::numeric_limits<NumericType>::max()) {
-                return false;
-            }
-            if (value < std::numeric_limits<NumericType>::min()) {
-                return false;
-            }
-            *out_value = static_cast<NumericType>(value);
+            *out_value = static_cast<IntType>(value);
         } else {
             errno = 0;
             long long value = strtoll(string_data.data(), nullptr, 0);
             if (errno != 0) {
                 return false;
             }
-            if (value > std::numeric_limits<NumericType>::max()) {
+            if (value > std::numeric_limits<IntType>::max()) {
                 return false;
             }
-            if (value < std::numeric_limits<NumericType>::min()) {
+            if (value < std::numeric_limits<IntType>::min()) {
                 return false;
             }
-            *out_value = static_cast<NumericType>(value);
+            *out_value = static_cast<IntType>(value);
         }
         return true;
     }
 
-    // TODO(FIDL-304): Use ResolveConstant() instead. Enum member validation in the C generator
-    // is the last thing that depends on this.
     template <typename IntType>
     bool ParseIntegerConstant(const Constant* constant, IntType* out_value) const {
         if (!constant) {
@@ -985,13 +711,9 @@ public:
             case raw::Literal::Kind::kNumeric: {
                 auto numeric_literal =
                     static_cast<const raw::NumericLiteral*>(literal_constant->literal.get());
-                return ParseNumericLiteral<IntType>(numeric_literal, out_value);
+                return ParseIntegerLiteral<IntType>(numeric_literal, out_value);
             }
             }
-        }
-        case Constant::Kind::kSynthesized: {
-            *out_value = static_cast<const Size&>(constant->Value()).value;
-            return true;
         }
         }
     }
@@ -1015,8 +737,6 @@ public:
     std::vector<Decl*> declaration_order_;
 
 private:
-    const PrimitiveType kSizeType = PrimitiveType(types::PrimitiveSubtype::kUint32);
-
     std::unique_ptr<raw::AttributeList> attributes_;
 
     Dependencies dependencies_;

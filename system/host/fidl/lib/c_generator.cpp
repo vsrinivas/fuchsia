@@ -374,7 +374,7 @@ void EmitLinearizeMessage(std::ostream* file,
 
 void EnumValue(types::PrimitiveSubtype type, const flat::Constant* constant,
                const flat::Library* library, std::string* out_value) {
-    // TODO(FIDL-4): Move this into library resolution and use ResolveConstantValue() instead.
+    // TODO(kulakowski) Move this into library resolution.
 
     std::ostringstream member_value;
 
@@ -471,8 +471,8 @@ void ArrayCountsAndElementTypeName(const flat::Library* library, const flat::Typ
         }
         case flat::Type::Kind::kArray: {
             auto array_type = static_cast<const flat::ArrayType*>(type);
-            auto element_count = static_cast<const flat::Size&>(array_type->element_count->Value());
-            array_counts.push_back(element_count.value);
+            uint32_t element_count = array_type->element_count.Value();
+            array_counts.push_back(element_count);
             type = array_type->element_type.get();
             continue;
         }

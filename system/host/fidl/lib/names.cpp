@@ -203,8 +203,6 @@ std::string NameFlatConstantKind(flat::Constant::Kind kind) {
         return "identifier";
     case flat::Constant::Kind::kLiteral:
         return "literal";
-    case flat::Constant::Kind::kSynthesized:
-        return "synthesized";
     }
 }
 
@@ -265,9 +263,6 @@ std::string NameFlatConstant(const flat::Constant* constant) {
         auto identifier_constant = static_cast<const flat::IdentifierConstant*>(constant);
         return NameName(identifier_constant->name, ".", "/");
     }
-    case flat::Constant::Kind::kSynthesized: {
-        return std::string("synthesized constant");
-    }
     } // switch
 }
 
@@ -278,10 +273,9 @@ void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
         buf << "array<";
         NameFlatTypeHelper(buf, array_type->element_type.get());
         buf << ">";
-        auto element_count = static_cast<const flat::Size&>(array_type->element_count->Value());
-        if (element_count != flat::Size::Max()) {
+        if (array_type->element_count.Value() != flat::Size::Max().Value()) {
             buf << ":";
-            buf << element_count.value;
+            buf << array_type->element_count.Value();
         }
         break;
     }
@@ -290,20 +284,18 @@ void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
         buf << "vector<";
         NameFlatTypeHelper(buf, vector_type->element_type.get());
         buf << ">";
-        auto element_count = static_cast<const flat::Size&>(vector_type->element_count->Value());
-        if (element_count != flat::Size::Max()) {
+        if (vector_type->element_count.Value() != flat::Size::Max().Value()) {
             buf << ":";
-            buf << element_count.value;
+            buf << vector_type->element_count.Value();
         }
         break;
     }
     case flat::Type::Kind::kString: {
         auto string_type = static_cast<const flat::StringType*>(type);
         buf << "string";
-        auto max_size = static_cast<const flat::Size&>(string_type->max_size->Value());
-        if (max_size != flat::Size::Max()) {
+        if (string_type->max_size.Value() != flat::Size::Max().Value()) {
             buf << ":";
-            buf << max_size.value;
+            buf << string_type->max_size.Value();
         }
         break;
     }
@@ -386,9 +378,7 @@ std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind) {
             case flat::Decl::Kind::kInterface: {
                 return "zx_handle_t";
             }
-            default: {
-                abort();
-            }
+            default: { abort(); }
             }
         }
         }

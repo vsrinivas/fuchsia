@@ -348,8 +348,7 @@ const coded::Type* TablesGenerator::CompileType(const flat::Type* type) {
         if (iter != vector_type_map_.end())
             return iter->second;
         auto coded_element_type = CompileType(vector_type->element_type.get());
-        uint32_t max_count =
-            static_cast<const flat::Size&>(vector_type->element_count->Value()).value;
+        uint32_t max_count = vector_type->element_count.Value();
         uint32_t element_size = coded_element_type->size;
         StringView element_name = coded_element_type->coded_name;
         auto name = NameCodedVector(element_name, max_count, vector_type->nullability);
@@ -364,8 +363,7 @@ const coded::Type* TablesGenerator::CompileType(const flat::Type* type) {
         auto iter = string_type_map_.find(string_type);
         if (iter != string_type_map_.end())
             return iter->second;
-        uint32_t max_size =
-            static_cast<const flat::Size&>(string_type->max_size->Value()).value;
+        uint32_t max_size = string_type->max_size.Value();
         auto name = NameCodedString(max_size, string_type->nullability);
         auto coded_string_type = std::make_unique<coded::StringType>(std::move(name), max_size,
                                                                      string_type->nullability);
