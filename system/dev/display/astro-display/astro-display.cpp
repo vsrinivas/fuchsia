@@ -99,7 +99,7 @@ void AstroDisplay::DisplayControllerImplSetDisplayControllerInterface(
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-zx_status_t AstroDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx_handle_t vmo,
+zx_status_t AstroDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo,
                                                               size_t offset) {
     zx_status_t status = ZX_OK;
     fbl::AutoLock lock(&image_lock_);
@@ -118,14 +118,8 @@ zx_status_t AstroDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx
     canvas_info.blkmode         = 0;
     canvas_info.endianness      = 0;
 
-    zx_handle_t dup_vmo;
-    status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
-    if (status != ZX_OK) {
-        return status;
-    }
-
     uint8_t local_canvas_idx;
-    status = canvas_config(&canvas_, dup_vmo, offset, &canvas_info,
+    status = canvas_config(&canvas_, vmo.release(), offset, &canvas_info,
         &local_canvas_idx);
     if (status != ZX_OK) {
         DISP_ERROR("Could not configure canvas: %d\n", status);
@@ -213,8 +207,8 @@ void AstroDisplay::DisplayControllerImplApplyConfiguration( const display_config
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-zx_status_t AstroDisplay::DisplayControllerImplAllocateVmo(uint64_t size, zx_handle_t* vmo_out) {
-    return zx_vmo_create_contiguous(bti_.get(), size, 0, vmo_out);
+zx_status_t AstroDisplay::DisplayControllerImplAllocateVmo(uint64_t size, zx::vmo* vmo_out) {
+    return zx::vmo::create_contiguous(bti_, size, 0, vmo_out);
 }
 
 void AstroDisplay::DdkUnbind() {

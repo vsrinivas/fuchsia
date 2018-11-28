@@ -82,7 +82,9 @@ static void vim_set_display_controller_interface(void* ctx,
     mtx_unlock(&display->display_lock);
 }
 
-static zx_status_t vim_import_vmo_image(void* ctx, image_t* image, zx_handle_t vmo, size_t offset) {
+static zx_status_t vim_import_vmo_image(void* ctx, image_t* image, zx_handle_t vmo_in, size_t offset) {
+    zx::vmo vmo(vmo_in);
+
     fbl::AllocChecker ac;
     fbl::unique_ptr<image_info_t> import_info = fbl::make_unique_checked<image_info_t>(&ac);
     if (!ac.check()) {
@@ -110,13 +112,8 @@ static zx_status_t vim_import_vmo_image(void* ctx, image_t* image, zx_handle_t v
         info.blkmode = 0;
         info.endianness = 0;
 
-        zx_handle_t dup_vmo;
-        status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
-        if (status != ZX_OK) {
-            return status;
-        }
-
-        status = canvas_config(&display->canvas, dup_vmo, offset + image->planes[0].byte_offset,
+        status = canvas_config(&display->canvas, vmo.release(),
+                               offset + image->planes[0].byte_offset,
                                &info, &import_info->canvas_idx[0]);
         if (status != ZX_OK) {
             return ZX_ERR_NO_RESOURCES;
@@ -138,22 +135,17 @@ static zx_status_t vim_import_vmo_image(void* ctx, image_t* image, zx_handle_t v
         // Do 64-bit endianness conversion.
         info.endianness = 7;
 
-        zx_handle_t dup_vmo;
-        status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
+        zx::vmo dup_vmo;
+        status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
         if (status != ZX_OK) {
             return status;
         }
 
-        status = canvas_config(&display->canvas, dup_vmo, offset + image->planes[0].byte_offset,
+        status = canvas_config(&display->canvas, dup_vmo.release(),
+                               offset + image->planes[0].byte_offset,
                                &info, &import_info->canvas_idx[0]);
         if (status != ZX_OK) {
             return ZX_ERR_NO_RESOURCES;
-        }
-
-        status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
-        if (status != ZX_OK) {
-            canvas_free(&display->canvas, import_info->canvas_idx[0]);
-            return status;
         }
 
         info.height /= 2;
@@ -161,7 +153,8 @@ static zx_status_t vim_import_vmo_image(void* ctx, image_t* image, zx_handle_t v
         if (info.stride_bytes == 0)
             info.stride_bytes = stride * ZX_PIXEL_FORMAT_BYTES(image->pixel_format);
 
-        status = canvas_config(&display->canvas, dup_vmo, offset + image->planes[1].byte_offset,
+        status = canvas_config(&display->canvas, vmo.release(),
+                               offset + image->planes[1].byte_offset,
                                &info, &import_info->canvas_idx[1]);
         if (status != ZX_OK) {
             canvas_free(&display->canvas, import_info->canvas_idx[0]);

@@ -219,7 +219,11 @@ void Client::HandleImportVmoImage(const fuchsia_display_ControllerImportVmoImage
         dc_image.planes[i].bytes_per_row = req->image_config.planes[i].bytes_per_row;
     }
 
-    resp->res = controller_->dc()->ImportVmoImage(&dc_image, vmo.get(), req->offset);
+    zx::vmo dup_vmo;
+    resp->res = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
+    if (resp->res == ZX_OK) {
+        resp->res = controller_->dc()->ImportVmoImage(&dc_image, std::move(dup_vmo), req->offset);
+    }
 
     if (resp->res == ZX_OK) {
         fbl::AllocChecker ac;
@@ -865,8 +869,10 @@ void Client::HandleAllocateVmo(const fuchsia_display_ControllerAllocateVmoReques
     auto resp = resp_builder->New<fuchsia_display_ControllerAllocateVmoResponse>();
     *resp_table = &fuchsia_display_ControllerAllocateVmoResponseTable;
 
-    resp->res = controller_->dc()->AllocateVmo(req->size, handle_out);
+    zx::vmo vmo;
+    resp->res = controller_->dc()->AllocateVmo(req->size, &vmo);
     *has_handle_out = resp->res == ZX_OK;
+    *handle_out = vmo.release();
     resp->vmo = *has_handle_out ? FIDL_HANDLE_PRESENT : FIDL_HANDLE_ABSENT;
 }
 

@@ -798,7 +798,7 @@ void Controller::DisplayControllerImplSetDisplayControllerInterface(
     }
 }
 
-zx_status_t Controller::DisplayControllerImplImportVmoImage(image_t* image, zx_handle_t vmo,
+zx_status_t Controller::DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo,
                                                             size_t offset) {
     if (!(image->type == IMAGE_TYPE_SIMPLE || image->type == IMAGE_TYPE_X_TILED
                 || image->type == IMAGE_TYPE_Y_LEGACY_TILED
@@ -844,7 +844,7 @@ zx_status_t Controller::DisplayControllerImplImportVmoImage(image_t* image, zx_h
         gtt_region = std::move(alt_gtt_region);
     }
 
-    status = gtt_region->PopulateRegion(vmo, offset / PAGE_SIZE, length);
+    status = gtt_region->PopulateRegion(vmo.get(), offset / PAGE_SIZE, length);
     if (status != ZX_OK) {
         return status;
     }
@@ -1621,8 +1621,8 @@ uint32_t Controller::DisplayControllerImplComputeLinearStride(uint32_t width,
             get_tile_byte_width(IMAGE_TYPE_SIMPLE, format) / ZX_PIXEL_FORMAT_BYTES(format));
 }
 
-zx_status_t Controller::DisplayControllerImplAllocateVmo(uint64_t size, zx_handle_t* vmo_out) {
-    return zx_vmo_create(size, 0, vmo_out);
+zx_status_t Controller::DisplayControllerImplAllocateVmo(uint64_t size, zx::vmo* vmo_out) {
+    return zx::vmo::create(size, 0, vmo_out);
 }
 
 // Intel GPU core methods

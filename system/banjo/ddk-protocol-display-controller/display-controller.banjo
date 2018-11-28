@@ -325,7 +325,7 @@ enum Client : uint32 {
 
 /// The client guarantees that check_configuration and apply_configuration are always
 /// made from a single thread. The client makes no other threading guarantees.
-[Layout="ddk-protocol", DefaultProtocol]
+[Layout="ddk-protocol", DefaultProtocol, HandleWrappers]
 interface DisplayControllerImpl {
     /// The function will only be called once, and it will be called before any other
     /// functions are called.

@@ -73,6 +73,7 @@ static zx_status_t imx8m_import_vmo_image(void* ctx, image_t* image,
                                           zx_handle_t vmo, size_t offset) {
     image_info_t* import_info = calloc(1, sizeof(image_info_t));
     if (import_info == NULL) {
+        zx_handle_close(vmo);
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -102,14 +103,16 @@ static zx_status_t imx8m_import_vmo_image(void* ctx, image_t* image,
     image->handle = paddr[0];
 
     mtx_unlock(&display->image_lock);
+    zx_handle_close(vmo);
 
     return ZX_OK;
 fail:
     mtx_unlock(&display->image_lock);
 
     if (import_info->pmt != ZX_HANDLE_INVALID) {
-        zx_handle_close(import_info->pmt);
+        zx_pmt_unpin(import_info->pmt);
     }
+    zx_handle_close(vmo);
     free(import_info);
     return status;
 }
@@ -129,7 +132,7 @@ static void imx8m_release_image(void* ctx, image_t* image) {
     mtx_unlock(&display->image_lock);
 
     if (info) {
-        zx_handle_close(info->pmt);
+        zx_pmt_unpin(info->pmt);
         free(info);
     }
 }

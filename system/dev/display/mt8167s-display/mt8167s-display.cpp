@@ -5,6 +5,7 @@
 #include "common.h"
 #include "registers-ovl.h"
 #include <fbl/auto_call.h>
+#include <lib/zx/pmt.h>
 #include <zircon/pixelformat.h>
 
 namespace mt8167s_display {
@@ -15,7 +16,7 @@ zx_pixel_format_t kSupportedPixelFormats[] = {ZX_PIXEL_FORMAT_RGB_x888};
 constexpr uint64_t kDisplayId = PANEL_DISPLAY_ID;
 
 struct ImageInfo {
-    zx_handle_t pmt;
+    zx::pmt pmt;
     zx_paddr_t paddr;
     // TODO(payamm): Use fbl lists instead
     list_node_t node;
@@ -51,15 +52,15 @@ void Mt8167sDisplay::DisplayControllerImplSetDisplayControllerInterface(
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-zx_status_t Mt8167sDisplay::DisplayControllerImplImportVmoImage(image_t* image,
-                                                                zx_handle_t vmo, size_t offset) {
+zx_status_t Mt8167sDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo,
+                                                                size_t offset) {
     ImageInfo* import_info = new(ImageInfo);
     if (import_info == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
     auto cleanup = fbl::MakeAutoCall([&]() {
-        if (import_info->pmt != ZX_HANDLE_INVALID) {
-            zx_pmt_unpin(import_info->pmt);
+        if (import_info->pmt) {
+            import_info->pmt.unpin();
         }
         delete(import_info);
      });
@@ -74,10 +75,9 @@ zx_status_t Mt8167sDisplay::DisplayControllerImplImportVmoImage(image_t* image,
     size_t size = ROUNDUP((stride * image->height * pixel_size) +
                           (offset & (PAGE_SIZE - 1)), PAGE_SIZE);
     zx_paddr_t paddr;
-    zx_status_t status = zx_bti_pin(bti_.get(),
-                                    ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_CONTIGUOUS,
-                                    vmo, offset & ~(PAGE_SIZE - 1), size, &paddr, 1,
-                                    &import_info->pmt);
+    zx_status_t status = bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_CONTIGUOUS,
+                                  vmo, offset & ~(PAGE_SIZE - 1), size, &paddr, 1,
+                                  &import_info->pmt);
     if (status != ZX_OK) {
         DISP_ERROR("Could not pin bit\n");
         return status;
@@ -102,7 +102,7 @@ void Mt8167sDisplay::DisplayControllerImplReleaseImage(image_t* image) {
         }
     }
     if (info) {
-        zx_pmt_unpin(info->pmt);
+        info->pmt.unpin();
         delete(info);
     }
 }
@@ -163,8 +163,8 @@ void Mt8167sDisplay::DisplayControllerImplApplyConfiguration(
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-zx_status_t Mt8167sDisplay::DisplayControllerImplAllocateVmo(uint64_t size, zx_handle_t* vmo_out) {
-    return zx_vmo_create_contiguous(bti_.get(), size, 0, vmo_out);
+zx_status_t Mt8167sDisplay::DisplayControllerImplAllocateVmo(uint64_t size, zx::vmo* vmo_out) {
+    return zx::vmo::create_contiguous(bti_, size, 0, vmo_out);
 }
 
 int Mt8167sDisplay::VSyncThread() {

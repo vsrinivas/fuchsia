@@ -45,13 +45,12 @@ void SimpleDisplay::DisplayControllerImplSetDisplayControllerInterface(
     intf_.OnDisplaysChanged(&args, 1, nullptr, 0, nullptr, 0, nullptr);
 }
 
-zx_status_t SimpleDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx_handle_t vmo,
-                                                           size_t offset) {
+zx_status_t SimpleDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo,
+                                                               size_t offset) {
     zx_info_handle_basic_t import_info;
     size_t actual, avail;
-    zx_status_t status = zx::unowned_vmo(vmo)->get_info(ZX_INFO_HANDLE_BASIC,
-                                                        &import_info, sizeof(import_info), &actual,
-                                                        &avail);
+    zx_status_t status = vmo.get_info(ZX_INFO_HANDLE_BASIC, &import_info, sizeof(import_info),
+                                      &actual, &avail);
     if (status != ZX_OK) {
         return status;
     }
@@ -120,7 +119,7 @@ uint32_t SimpleDisplay::DisplayControllerImplComputeLinearStride(uint32_t width,
     return (width == width_ && format == format_) ? stride_ : 0;
 }
 
-zx_status_t SimpleDisplay::DisplayControllerImplAllocateVmo(uint64_t size, zx_handle_t* vmo_out) {
+zx_status_t SimpleDisplay::DisplayControllerImplAllocateVmo(uint64_t size, zx::vmo* vmo_out) {
     zx_info_handle_count handle_count;
     size_t actual, avail;
     zx_status_t status = framebuffer_mmio_.get_vmo()->get_info(
@@ -134,7 +133,7 @@ zx_status_t SimpleDisplay::DisplayControllerImplAllocateVmo(uint64_t size, zx_ha
     if (size > height_ * stride_ * ZX_PIXEL_FORMAT_BYTES(format_)) {
         return ZX_ERR_OUT_OF_RANGE;
     }
-    return zx_handle_duplicate(framebuffer_mmio_.get_vmo()->get(), ZX_RIGHT_SAME_RIGHTS, vmo_out);
+    return framebuffer_mmio_.get_vmo()->duplicate(ZX_RIGHT_SAME_RIGHTS, vmo_out);
 }
 
 // implement device protocol

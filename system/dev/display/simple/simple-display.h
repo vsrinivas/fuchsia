@@ -33,7 +33,7 @@ public:
 
     void DisplayControllerImplSetDisplayControllerInterface(
             const display_controller_interface_t* intf);
-    zx_status_t DisplayControllerImplImportVmoImage(image_t* image, zx_handle_t vmo, size_t offset);
+    zx_status_t DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo, size_t offset);
     void DisplayControllerImplReleaseImage(image_t* image);
     uint32_t DisplayControllerImplCheckConfiguration(const display_config_t** display_configs,
                                                  size_t display_count, uint32_t** layer_cfg_results,
@@ -41,7 +41,7 @@ public:
     void DisplayControllerImplApplyConfiguration(const display_config_t** display_config,
                                              size_t display_count);
     uint32_t DisplayControllerImplComputeLinearStride(uint32_t width, zx_pixel_format_t format);
-    zx_status_t DisplayControllerImplAllocateVmo(uint64_t size, zx_handle_t* vmo_out);
+    zx_status_t DisplayControllerImplAllocateVmo(uint64_t size, zx::vmo* vmo_out);
 
 private:
     ddk::MmioBuffer framebuffer_mmio_;
